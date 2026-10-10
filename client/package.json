@@ -1,0 +1,22 @@
+{
+  "name": "logibtp-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LogiBTP – client de saisie des documents et moteur de calcul JS",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "exporter-resultats": "node scripts/exporter-resultats.mjs"
+  },
+  "dependencies": {
+    "decimal.js": "^10.4.3",
+    "immer": "^10.1.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "nom": "Lignes de pied : remise HT avant TVA, retenue de garantie après TVA, cautionnement pour mémoire",
+  "description": "Remise de 5 % sur le cumul (réduit la base de TVA), TVA, retenue de 5 % sur le cumul TTC, cautionnement de 5 % du TTC du corps affiché pour mémoire (hors net à payer).",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Travaux", "lig_qte": 1, "lig_pa": 1000, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 8, "lig_libelle_html": "Remise commerciale",
+        "lig_pied_mode": "P", "lig_pied_base": "CUMUL", "lig_pied_valeur": 5, "lig_pied_sens": -1 },
+      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" },
+      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 4, "lig_tyl_id": 9, "lig_libelle_html": "Retenue de garantie",
+        "lig_pied_mode": "P", "lig_pied_base": "CUMUL", "lig_pied_valeur": 5, "lig_pied_sens": -1 },
+      { "lig_id": 5, "lig_parent_id": null, "lig_ordre": 5, "lig_tyl_id": 9, "lig_libelle_html": "Cautionnement",
+        "lig_pied_mode": "P", "lig_pied_base": "TOTAL_TTC", "lig_pied_valeur": 5, "lig_pied_sens": -1, "lig_type_prix": "M" }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 950, "ent_total_tva": 190, "ent_total_ttc": 1140, "ent_net_a_payer": 1083 },
+    "lignes": {
+      "2": { "lig_base_calcul": 1000, "lig_montant_ht": -50 },
+      "3": { "lig_base_calcul": 950, "lig_montant_tva": 190 },
+      "4": { "lig_base_calcul": 1140, "lig_montant_ht": -57 },
+      "5": { "lig_base_calcul": 1200, "lig_montant_ht": -60 }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LogiBTP – Saisie des documents</title>
+</head>
+<body>
+  <header class="barre">
+    <h1>LogiBTP</h1>
+    <div id="barre-documents" class="groupe">
+      <select id="documents" title="Documents"></select>
+      <select id="nouveau-type" title="Type du nouveau document"></select>
+      <button id="nouveau">Nouveau</button>
+    </div>
+    <div class="groupe">
+      <button id="annuler" title="Annuler (Ctrl+Z)">↶</button>
+      <button id="retablir" title="Rétablir (Ctrl+Y)">↷</button>
+      <button id="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
+      <button id="valider" title="Valider et bloquer le document">Valider</button>
+      <button id="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+    </div>
+    <span id="mode" class="mode"></span>
+    <span id="message" class="message" role="status"></span>
+  </header>
+
+  <nav class="onglets" role="tablist">
+    <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
+    <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
+    <span id="resume" class="resume"></span>
+  </nav>
+
+  <main>
+    <section id="vue-entete" class="vue vue-entete" role="tabpanel">
+      <div id="entete" class="panneau entete"></div>
+      <section id="totaux-entete" class="panneau totaux-entete"></section>
+    </section>
+
+    <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
+      <div class="zone-lignes">
+        <section id="ecarts" class="panneau ecarts" hidden></section>
+        <div id="grille"></div>
+        <footer class="pied-lignes">
+          <div id="totaux" class="totaux-compacts"></div>
+          <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Tab / Maj+Tab : niveau · Alt+↑↓ : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
+        </footer>
+      </div>
+      <div id="separateur" class="separateur" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      <aside id="dock" class="dock">
+        <header class="dock-entete">
+          <span class="dock-titre">Détail de la ligne</span>
+          <div class="dock-boutons">
+            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
+            <button data-dock="bas" title="Ancrer en bas">⬓</button>
+            <button data-dock="droite" title="Ancrer à droite">◨</button>
+            <button data-action="reduire" title="Réduire">–</button>
+          </div>
+        </header>
+        <div class="dock-contenu">
+          <section id="detail" class="detail"></section>
+          <section id="controles" class="controles" hidden></section>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <aside id="metre" class="tiroir" hidden></aside>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

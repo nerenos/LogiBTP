@@ -1,0 +1,24 @@
+{
+  "description": "Analyseur d'expressions partagé : priorité mathématique usuelle à l'intérieur d'une formule, virgule ou point décimal, variables résolues par le dictionnaire.",
+  "variables": { "@a": 2, "$$h": 2.5, "lig_qte": 4 },
+  "cas": [
+    { "formule": "(2,5 + 3,5) * 2,5", "resultat": 15 },
+    { "formule": "2 + 3 * 4", "resultat": 14 },
+    { "formule": "(2 + 3) * 4", "resultat": 20 },
+    { "formule": "10 / 4", "resultat": 2.5 },
+    { "formule": "1 / 8 * 8", "resultat": 1 },
+    { "formule": "-2 + 5", "resultat": 3 },
+    { "formule": "2 * -3", "resultat": -6 },
+    { "formule": "--2", "resultat": 2 },
+    { "formule": "2,5 × 2 − 1 ÷ 4", "resultat": 4.75 },
+    { "formule": "{{@a}} * {{$$h}} + {{lig_qte}}", "resultat": 9 },
+    { "formule": " 0.1 + 0.2 ", "resultat": 0.3 },
+    { "formule": "1 / 0", "erreur": "DIVISION_ZERO" },
+    { "formule": "(2 + 3", "erreur": "SYNTAXE" },
+    { "formule": "2 +", "erreur": "SYNTAXE" },
+    { "formule": "2 3", "erreur": "SYNTAXE" },
+    { "formule": "2 # 3", "erreur": "SYNTAXE" },
+    { "formule": "", "erreur": "FORMULE_VIDE" },
+    { "formule": "{{@inconnue}}", "erreur": "VARIABLE_INCONNUE" }
+  ]
+}

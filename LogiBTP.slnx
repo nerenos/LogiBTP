@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
+    <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />
+    <Project Path="src/LogiBTP.Api/LogiBTP.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LogiBTP.Calcul.Tests/LogiBTP.Calcul.Tests.csproj" />
+    <Project Path="tests/LogiBTP.Api.Tests/LogiBTP.Api.Tests.csproj" />
+  </Folder>
+</Solution>

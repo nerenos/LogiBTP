@@ -1,0 +1,38 @@
+{
+  "nom": "Lignes simples, remise, option et TVA multi-taux",
+  "description": "PR = PA × FG, PV = PR × bénéfice, PV remisé arrondi à la précision PV, montant à la précision document. L'option est hors total. Variable de donnée dans un libellé.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [
+      { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" },
+      { "ttv_id": 2, "ttv_code": "T10", "ttv_libelle": "TVA 10 %", "ttv_taux": 10, "ttv_categorie": "N" }
+    ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 1, "lig_libelle_html": "Gros œuvre", "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "<p>Béton {{lig_qte_vendue}} m² &amp; co</p>",
+        "lig_qte": 12.5, "lig_pa": 10, "lig_coef_fg": 1.2, "lig_coef_benef": 1.25, "lig_coef_remise": 0.9, "lig_tva_id": 1 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Isolation",
+        "lig_qte": 3, "lig_pa": 7.333, "lig_coef_benef": 1.1, "lig_tva_id": 2 },
+      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Option peinture",
+        "lig_qte": 1, "lig_pa": 100, "lig_type_prix": "O", "lig_tva_id": 1 },
+      { "lig_id": 5, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 192.96, "ent_total_tva": 36.17, "ent_total_ttc": 229.13, "ent_net_a_payer": 229.13, "ent_coef_fa": 1 },
+    "lignes": {
+      "1": { "lig_montant_ht": 192.96, "lig_numerotation": "1" },
+      "2": { "lig_pr": 12, "lig_pv": 15, "lig_pv_affiche": 15, "lig_pv_remise": 13.5, "lig_montant_ht": 168.75,
+             "lig_montant_pa": 125, "lig_montant_pr": 150, "lig_numerotation": "1.1", "lig_taux_tva": 20,
+             "lig_libelle_affiche": "<p>Béton 12,5 m² &amp; co</p>", "lig_libelle_brut": "Béton 12,5 m² & co" },
+      "3": { "lig_pr": 7.333, "lig_pv": 8.0663, "lig_pv_affiche": 8.07, "lig_montant_ht": 24.21, "lig_montant_pa": 22,
+             "lig_numerotation": "1.2" },
+      "4": { "lig_montant_ht": 100, "lig_numerotation": "2" },
+      "5": { "lig_base_calcul": 192.96, "lig_montant_tva": 36.17, "lig_numerotation": null }
+    },
+    "tva": [
+      { "tva_code": "T10", "tva_base_ht": 24.21, "tva_montant": 2.42, "tva_montant_net": 2.42 },
+      { "tva_code": "T20", "tva_base_ht": 168.75, "tva_montant": 33.75, "tva_montant_net": 33.75 }
+    ]
+  }
+}

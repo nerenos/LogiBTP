@@ -1,0 +1,34 @@
+{
+  "nom": "Quantités relatives et absolues sur plusieurs niveaux, mode déboursé",
+  "description": "Ouvrage de 120 m² : béton 0,15 m³/m² avec perte 1,05 (quantité vendue 0,1575, totale 18,90), coffrage absolu 30 m², sous-ouvrage à 2 unités par m². En mode D, l'ouvrage somme les PA puis applique ses coefficients.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "D", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Dalle béton",
+        "lig_qte": 120, "lig_coef_fg": 1.1, "lig_coef_benef": 1.2, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Béton",
+        "lig_qte": 0.15, "lig_qte_type": "R", "lig_coef_perte": 1.05, "lig_precision_qte": 4, "lig_pa": 100 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Coffrage",
+        "lig_qte": 30, "lig_qte_type": "A", "lig_pa": 5 },
+      { "lig_id": 4, "lig_parent_id": 1, "lig_ordre": 3, "lig_tyl_id": 2, "lig_libelle_html": "Ferraillage",
+        "lig_qte": 2, "lig_qte_type": "R" },
+      { "lig_id": 5, "lig_parent_id": 4, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Acier",
+        "lig_qte": 0.5, "lig_qte_type": "R", "lig_pa": 4 },
+      { "lig_id": 6, "lig_parent_id": 4, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Ligatures",
+        "lig_qte": 10, "lig_qte_type": "A", "lig_pa": 1 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 4910.4, "ent_total_tva": 982.08, "ent_total_ttc": 5892.48, "ent_net_a_payer": 5892.48 },
+    "lignes": {
+      "1": { "lig_qte_vendue": 120, "lig_qte_totale": 120, "lig_pa": 31, "lig_pr": 34.1, "lig_pv": 40.92,
+             "lig_montant_ht": 4910.4, "lig_montant_pa": 3720, "lig_montant_pr": 4092 },
+      "2": { "lig_qte_vendue": 0.1575, "lig_qte_totale": 18.9, "lig_taux_tva": null, "lig_numerotation": "1.1" },
+      "3": { "lig_qte_vendue": 30, "lig_qte_totale": 30 },
+      "4": { "lig_qte_vendue": 2, "lig_qte_totale": 240, "lig_pa": 7, "lig_pv": 7 },
+      "5": { "lig_qte_vendue": 0.5, "lig_qte_totale": 120 },
+      "6": { "lig_qte_vendue": 10, "lig_qte_totale": 1200, "lig_numerotation": "1.3.2" }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "nom": "TVA autoliquidée et intracommunautaire avec ligne d'annulation",
+  "description": "Autoliquidation : TVA non facturée. Intracommunautaire : TVA calculée à 20 % puis annulée, net nul. Normale : TVA facturée.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [
+      { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" },
+      { "ttv_id": 3, "ttv_code": "AL20", "ttv_libelle": "Autoliquidation", "ttv_taux": 20, "ttv_categorie": "A",
+        "ttv_mention": "Autoliquidation – article 283-2 nonies du CGI" },
+      { "ttv_id": 4, "ttv_code": "IC20", "ttv_libelle": "Intracommunautaire", "ttv_taux": 20, "ttv_categorie": "I",
+        "ttv_mention": "Autoliquidation intracommunautaire" }
+    ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Sous-traitance", "lig_qte": 1, "lig_pa": 100, "lig_tva_id": 3 },
+      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Achat intracom", "lig_qte": 1, "lig_pa": 200, "lig_tva_id": 4 },
+      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Fourniture", "lig_qte": 1, "lig_pa": 50, "lig_tva_id": 1 },
+      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 4, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 350, "ent_total_tva": 10, "ent_total_ttc": 360, "ent_net_a_payer": 360 },
+    "tva": [
+      { "tva_code": "AL20", "tva_categorie": "A", "tva_base_ht": 100, "tva_montant": 0, "tva_montant_annulation": 0, "tva_montant_net": 0,
+        "tva_mention": "Autoliquidation – article 283-2 nonies du CGI" },
+      { "tva_code": "IC20", "tva_categorie": "I", "tva_base_ht": 200, "tva_montant": 40, "tva_montant_annulation": -40, "tva_montant_net": 0 },
+      { "tva_code": "T20", "tva_categorie": "N", "tva_base_ht": 50, "tva_montant": 10, "tva_montant_annulation": 0, "tva_montant_net": 10 }
+    ],
+    "lignes": { "4": { "lig_montant_tva": 10, "lig_base_calcul": 350 } }
+  }
+}

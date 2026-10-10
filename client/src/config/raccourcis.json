@@ -1,0 +1,22 @@
+{
+  "_commentaire": "Raccourcis de la grille. Évite AltGr (AZERTY), Alt+Maj (disposition clavier Windows), Alt+← (page précédente) et Ctrl+N/T/W (navigateur).",
+  "insererApres": "Ctrl+Enter",
+  "insererAvant": "Ctrl+Shift+Enter",
+  "insererEnfant": "Alt+Enter",
+  "monter": "Alt+ArrowUp",
+  "descendre": "Alt+ArrowDown",
+  "indenter": "Tab",
+  "desindenter": "Shift+Tab",
+  "etendreHaut": "Shift+ArrowUp",
+  "etendreBas": "Shift+ArrowDown",
+  "couper": "Ctrl+X",
+  "copier": "Ctrl+C",
+  "coller": "Ctrl+V",
+  "dupliquer": "Ctrl+D",
+  "supprimer": "Delete",
+  "annuler": "Ctrl+Z",
+  "retablir": ["Ctrl+Y", "Ctrl+Shift+Z"],
+  "ouvrirMetre": "F4",
+  "replier": "-",
+  "deplier": "+"
+}

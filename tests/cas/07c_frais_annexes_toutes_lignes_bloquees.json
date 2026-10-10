@@ -1,0 +1,18 @@
+{
+  "nom": "Coefficient de frais annexes, toutes les lignes bloquées",
+  "description": "F = 0, A = 110, P = 10 : c = A / (A − P) = 1,1. Le PV avant frais de la ligne bloquée vaut 100.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Forfait",
+        "lig_qte": 1, "lig_pa": 50, "lig_pv_affiche_fixe": true, "lig_pv_affiche": 110, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 8, "lig_libelle_html": "Frais",
+        "lig_pied_mode": "M", "lig_pied_valeur": 10, "lig_pied_sens": 1, "lig_pied_is_fa": true }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_coef_fa": 1.1, "ent_total_ht": 110, "ent_total_tva": 22, "ent_total_ttc": 132 },
+    "lignes": { "1": { "lig_pv": 100, "lig_coef_benef": 2, "lig_pv_affiche": 110, "lig_montant_ht": 110 } }
+  }
+}

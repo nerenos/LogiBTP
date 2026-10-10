@@ -1,0 +1,27 @@
+{
+  "nom": "PV fixe en mode déboursé et cas limites",
+  "description": "Mode D : coef_benef_ouvrage = PV fixe / PR ouvrage (6 décimales). Ouvrage dont le PR est nul : règle du prix non défini (PA = PR = PV = prix fixe, coefficients à 1). Ouvrage sans composante : prix fixe interdit, ligne calculée comme un élément.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "D", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Regard",
+        "lig_qte": 2, "lig_coef_fg": 1.1, "lig_coef_benef": 1.3, "lig_pv_fixe": true, "lig_pv": 250, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Élément béton", "lig_qte": 3, "lig_pa": 20 },
+      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 2, "lig_libelle_html": "Forfait sans déboursé",
+        "lig_qte": 1, "lig_coef_fg": 1.2, "lig_pv_fixe": true, "lig_pv": 80, "lig_tva_id": 1 },
+      { "lig_id": 4, "lig_parent_id": 3, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Prestation", "lig_qte": 1 },
+      { "lig_id": 5, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 2, "lig_libelle_html": "Ouvrage vide",
+        "lig_qte": 1, "lig_pa": 10, "lig_pv_fixe": true, "lig_pv": 50, "lig_tva_id": 1 }
+    ]
+  },
+  "attendu": {
+    "erreurs": ["OUVRAGE_SANS_COMPOSANTE"],
+    "document": { "ent_total_ht": 590, "ent_total_tva": 118, "ent_total_ttc": 708 },
+    "lignes": {
+      "1": { "lig_pa": 60, "lig_pr": 66, "lig_pv": 250, "lig_coef_benef": 3.787879, "lig_montant_ht": 500 },
+      "3": { "lig_pa": 80, "lig_pr": 80, "lig_pv": 80, "lig_coef_fg": 1, "lig_coef_benef": 1, "lig_montant_ht": 80 },
+      "5": { "lig_pv": 10, "lig_montant_ht": 10 }
+    }
+  }
+}

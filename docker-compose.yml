@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: logibtp-postgres
+    environment:
+      POSTGRES_DB: logibtp
+      POSTGRES_USER: logibtp
+      POSTGRES_PASSWORD: logibtp
+    ports:
+      - "5433:5432"
+    volumes:
+      - logibtp-data:/var/lib/postgresql/data
+      # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume.
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logibtp -d logibtp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  logibtp-data:

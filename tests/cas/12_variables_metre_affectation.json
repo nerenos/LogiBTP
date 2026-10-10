@@ -1,0 +1,39 @@
+{
+  "nom": "Variables d'un métré : affectation du résultat et réutilisation",
+  "description": "Le métré de la cloison donne 3 × 2,5 = 7,5 m², affecté à @surface. Les variables de l'onglet Définition, évaluées après les lignes du métré et la quantité, s'affectent les unes aux autres : @@poids = {{@surface}} × {{@@poids_m2}}, @copie = {{@surface}}, @@quantite = {{lig_qte_vendue}}. Une composante calcule sa quantité à partir de {{@@poids}}.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Cloison {{@surface}} m² – {{@@poids}} kg",
+        "lig_qte_source": "M", "lig_mtr_id": 30, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Évacuation (t)",
+        "lig_qte_source": "M", "lig_mtr_id": 31, "lig_precision_qte": 3, "lig_pa": 100 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Plaque de plâtre", "lig_qte": 1, "lig_pa": 20 }
+    ],
+    "metres": [
+      { "mtr_id": 30, "mtr_lig_id": 1, "mtr_libelle": "Surface", "mtr_variable": "@surface" },
+      { "mtr_id": 31, "mtr_lig_id": 2, "mtr_libelle": "Tonnage" }
+    ],
+    "metre_lignes": [
+      { "mli_id": 401, "mli_mtr_id": 30, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "3" },
+      { "mli_id": 402, "mli_mtr_id": 30, "mli_parent_id": null, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "*", "mli_formule": "2,5" },
+      { "mli_id": 501, "mli_mtr_id": 31, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "{{@@poids}} / 1000" }
+    ],
+    "variables": [
+      { "var_id": 10, "var_lig_id": 1, "var_mtr_id": 30, "var_portee": "@@", "var_nom": "poids_m2", "var_operation": "=", "var_formule": "12", "var_ordre": 1 },
+      { "var_id": 11, "var_lig_id": 1, "var_mtr_id": 30, "var_portee": "@@", "var_nom": "poids", "var_operation": "=", "var_formule": "{{@surface}} * {{@@poids_m2}}", "var_ordre": 2 },
+      { "var_id": 12, "var_lig_id": 1, "var_mtr_id": 30, "var_portee": "@", "var_nom": "copie", "var_operation": "=", "var_formule": "{{@surface}}", "var_ordre": 3 },
+      { "var_id": 13, "var_lig_id": 1, "var_mtr_id": 30, "var_portee": "@@", "var_nom": "quantite", "var_operation": "=", "var_formule": "{{lig_qte_vendue}}", "var_ordre": 4 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 217.5, "ent_total_tva": 43.5, "ent_total_ttc": 261 },
+    "metres": { "30": { "mtr_resultat": 7.5 }, "31": { "mtr_resultat": 0.09 } },
+    "variables": { "10": { "var_valeur": 12 }, "11": { "var_valeur": 90 }, "12": { "var_valeur": 7.5 }, "13": { "var_valeur": 7.5 } },
+    "lignes": {
+      "1": { "lig_qte_vendue": 7.5, "lig_pv": 29, "lig_montant_ht": 217.5, "lig_libelle_affiche": "Cloison 7,5 m² – 90 kg" },
+      "2": { "lig_qte_vendue": 0.09, "lig_qte_totale": 0.675 }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "nom": "Lignes de pied : retenue de garantie avant TVA",
+  "description": "Placée avant la ligne de TVA, la retenue est calculée sur le cumul HT. Poste TTC : elle ne modifie pas la base de TVA.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Travaux", "lig_qte": 1, "lig_pa": 1000, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 9, "lig_libelle_html": "Retenue de garantie",
+        "lig_pied_mode": "P", "lig_pied_base": "CUMUL", "lig_pied_valeur": 5, "lig_pied_sens": -1 },
+      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 1000, "ent_total_tva": 200, "ent_total_ttc": 1200, "ent_net_a_payer": 1150 },
+    "lignes": {
+      "2": { "lig_base_calcul": 1000, "lig_montant_ht": -50 },
+      "3": { "lig_base_calcul": 1000, "lig_montant_tva": 200 }
+    }
+  }
+}

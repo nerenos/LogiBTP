@@ -1,0 +1,28 @@
+{
+  "nom": "PV fixe en mode somme des PV : ventilation et ligne d'écart négative",
+  "description": "PV fixe 100 sur trois composantes (contributions 4,5 / 60 / 12). k = 100 / 76,5. Après arrondi et ajustement de la composante principale, il reste −0,003 : une ligne d'écart d'arrondi est créée.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Ouvrage au forfait",
+        "lig_qte": 1, "lig_pv_fixe": true, "lig_pv": 100, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Béton", "lig_nat_id": 1, "lig_qte": 0.15, "lig_pa": 30 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Main-d'œuvre", "lig_nat_id": 2, "lig_ptv_id": 7,
+        "lig_qte": 1, "lig_pa": 50, "lig_coef_benef": 1.2 },
+      { "lig_id": 4, "lig_parent_id": 1, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Fournitures", "lig_nat_id": 1, "lig_qte": 3, "lig_pa": 4 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 100, "ent_total_tva": 20, "ent_total_ttc": 120 },
+    "lignes": {
+      "1": { "lig_pv": 100, "lig_pa": 66.497, "lig_pr": 66.497, "lig_montant_ht": 100, "lig_numerotation": "1" },
+      "2": { "lig_pv": 39.22, "lig_coef_benef": 1.307333, "lig_pv_fixe": true },
+      "3": { "lig_pv": 78.43, "lig_coef_benef": 1.5686, "lig_pv_fixe": true },
+      "4": { "lig_pv": 5.23, "lig_coef_benef": 1.3075, "lig_numerotation": "1.3" },
+      "ecart:1": { "lig_id": -1, "lig_ordre": 4, "lig_pa": -0.003, "lig_pr": -0.003, "lig_pv": -0.003, "lig_qte_vendue": 1,
+                   "lig_nat_id": 2, "lig_ptv_id": 7, "lig_precision_pv": 6, "lig_is_non_editee": true, "lig_numerotation": null,
+                   "lig_libelle_affiche": "Ajustement d'arrondi" }
+    }
+  }
+}

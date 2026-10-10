@@ -1,0 +1,47 @@
+{
+  "nom": "Sous-totaux pointés et depuis le début, numérotation A.1.a, départ et numéro manuel",
+  "description": "Le titre démarre au C. Une ligne a un numéro manuel « X » : la suivante reprend la séquence (c). Les sous-totaux excluent les options et les composantes d'ouvrage.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2,
+                  "ent_num_format": { "separateur": ".", "niveaux": [ { "style": "A" }, { "style": "1" }, { "style": "a" } ] } },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 1, "lig_libelle_html": "Lot C", "lig_num_depart": "C" },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 10, "lig_tva_id": 1 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 1, "lig_libelle_html": "Sous-lot" },
+      { "lig_id": 4, "lig_parent_id": 3, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 20, "lig_tva_id": 1 },
+      { "lig_id": 5, "lig_parent_id": 3, "lig_ordre": 2, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 30, "lig_tva_id": 1,
+        "lig_num_manuelle": true, "lig_numerotation": "X" },
+      { "lig_id": 6, "lig_parent_id": 3, "lig_ordre": 3, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 40, "lig_tva_id": 1 },
+      { "lig_id": 7, "lig_parent_id": 1, "lig_ordre": 3, "lig_tyl_id": 5, "lig_libelle_html": "Sous-total depuis le début" },
+      { "lig_id": 8, "lig_parent_id": 1, "lig_ordre": 4, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 50, "lig_tva_id": 1, "lig_type_prix": "O" },
+      { "lig_id": 9, "lig_parent_id": 1, "lig_ordre": 5, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 60, "lig_tva_id": 1 },
+      { "lig_id": 10, "lig_parent_id": 1, "lig_ordre": 6, "lig_tyl_id": 5, "lig_st_depuis_id": 7, "lig_libelle_html": "Sous-total depuis 7" },
+      { "lig_id": 11, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 4, "lig_libelle_html": "Texte libre" },
+      { "lig_id": 12, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 1, "lig_libelle_html": "Lot D" },
+      { "lig_id": 13, "lig_parent_id": 12, "lig_ordre": 1, "lig_tyl_id": 2, "lig_qte": 1, "lig_tva_id": 1 },
+      { "lig_id": 14, "lig_parent_id": 13, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 5 },
+      { "lig_id": 15, "lig_parent_id": 12, "lig_ordre": 2, "lig_tyl_id": 5, "lig_st_depuis_id": 10 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 165, "ent_total_tva": 33, "ent_total_ttc": 198 },
+    "lignes": {
+      "1": { "lig_numerotation": "C", "lig_montant_ht": 160 },
+      "2": { "lig_numerotation": "C.1" },
+      "3": { "lig_numerotation": "C.2", "lig_montant_ht": 90 },
+      "4": { "lig_numerotation": "C.2.a" },
+      "5": { "lig_numerotation": "X" },
+      "6": { "lig_numerotation": "C.2.c" },
+      "7": { "lig_numerotation": null, "lig_montant_ht": 100 },
+      "8": { "lig_numerotation": "C.3", "lig_montant_ht": 50 },
+      "9": { "lig_numerotation": "C.4" },
+      "10": { "lig_montant_ht": 60 },
+      "11": { "lig_numerotation": null },
+      "12": { "lig_numerotation": "D", "lig_montant_ht": 5 },
+      "13": { "lig_numerotation": "D.1", "lig_montant_ht": 5 },
+      "14": { "lig_numerotation": "D.1.a", "lig_tva_id": null },
+      "15": { "lig_montant_ht": 5 }
+    }
+  }
+}

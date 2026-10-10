@@ -1,0 +1,27 @@
+{
+  "nom": "Ventilation récursive d'un PV fixe sur un sous-ouvrage",
+  "description": "PV fixe 200 : contributions 50 (élément) et 2 × 26,5 = 53 (sous-ouvrage). Le montant ventilé au sous-ouvrage (51,46) devient son propre PV fixe et est ventilé sur ses composantes sans écart. L'ouvrage principal garde un écart de −0,01.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Ouvrage", "lig_qte": 1,
+        "lig_pv_fixe": true, "lig_pv": 200, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 50 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 2, "lig_qte": 2 },
+      { "lig_id": 4, "lig_parent_id": 3, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 1, "lig_pa": 20 },
+      { "lig_id": 5, "lig_parent_id": 3, "lig_ordre": 2, "lig_tyl_id": 3, "lig_qte": 0.5, "lig_pa": 13 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 200, "ent_total_tva": 40 },
+    "lignes": {
+      "1": { "lig_pv": 200, "lig_pa": 102.99, "lig_montant_ht": 200 },
+      "2": { "lig_pv": 97.09, "lig_coef_benef": 1.9418 },
+      "3": { "lig_pv": 51.46, "lig_pa": 26.5, "lig_pv_fixe": true },
+      "4": { "lig_pv": 38.84, "lig_coef_benef": 1.942 },
+      "5": { "lig_pv": 25.24, "lig_coef_benef": 1.941538 },
+      "ecart:1": { "lig_pv": -0.01, "lig_qte_vendue": 1 }
+    }
+  }
+}
