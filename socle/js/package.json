@@ -1,0 +1,23 @@
+{
+  "name": "@logibtp/socle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Socle LogiBTP : calcul décimal, formules, références, libellés et composants d'interface sans métier",
+  "exports": {
+    ".": "./src/calcul/index.js",
+    "./ui": "./src/ui/index.js",
+    "./ui/socle.css": "./src/ui/socle.css",
+    "./testing": "./testing/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "decimal.js": "^10.4.3",
+    "immer": "^10.1.1"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

@@ -2,10 +2,12 @@
 
   <PropertyGroup>
     <RootNamespace>LogiBTP.Calcul</RootNamespace>
+    <Description>Cœur LogiBTP : moteur de devis BTP, spécialisation du moteur du module Document avec le module Métré.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.Domaine\LogiBTP.Domaine.csproj" />
+    <ProjectReference Include="..\..\modules\metre\dotnet\LogiBTP.Metres\LogiBTP.Metres.csproj" />
   </ItemGroup>
 
 </Project>

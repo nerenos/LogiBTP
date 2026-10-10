@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Socle</RootNamespace>
+    <Description>Socle LogiBTP : calcul décimal, arrondi commercial, formules, références, libellés, JSON.</Description>
+  </PropertyGroup>
+
+</Project>

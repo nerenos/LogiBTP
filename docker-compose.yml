@@ -10,8 +10,13 @@ services:
       - "5433:5432"
     volumes:
       - logibtp-data:/var/lib/postgresql/data
-      # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume.
-      - ./db:/docker-entrypoint-initdb.d:ro
+      # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume :
+      # modules (010 Document, 020 Métré) puis cœur BTP (100 et suivants).
+      - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
+      - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
+      - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
+      - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
+      - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U logibtp -d logibtp"]
       interval: 5s

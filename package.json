@@ -1,0 +1,18 @@
+{
+  "name": "logibtp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LogiBTP – socle, modules complémentaires et application",
+  "workspaces": [
+    "socle/js",
+    "modules/metre/js",
+    "modules/document/js",
+    "client"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "dev": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "exporter-resultats": "npm run exporter-resultats --workspaces --if-present"
+  }
+}

@@ -1,7 +1,9 @@
 # LogiBTP
 
 - Répondre et documenter en français ; code, commentaires et noms en français (sauf API techniques).
-- Deux moteurs de calcul miroirs : `client/src/calcul/moteur.js` et `src/LogiBTP.Calcul/MoteurCalcul.cs`. Toute règle modifiée l'est dans les deux, avec un cas dans `tests/cas/`, puis `npm --prefix client test`, `npm --prefix client run exporter-resultats` et `dotnet test LogiBTP.slnx`.
+- Architecture : `socle/` (sans métier) → `modules/<nom>/` (classes mères, méthode patron) → cœur (`src/`, `client/`, `db/`) qui spécialise. Un module ne dépend jamais du cœur ; le module Métré ne dépend pas du module Document.
+- Moteurs miroirs JS / C# : `MoteurDocument` (`modules/document/js/src/moteur-document.js`, `modules/document/dotnet/LogiBTP.Documents/Calcul/MoteurDocument.cs`) et `MoteurDevisBtp` (`client/src/calcul/moteur-btp.js`, `src/LogiBTP.Calcul/MoteurDevisBtp.cs`). Toute règle modifiée l'est dans les deux, avec un cas dans les jeux du module ou du cœur, puis `npm test`, `npm run exporter-resultats` et `dotnet test LogiBTP.slnx`.
 - Jamais de `Number` pour un montant côté JS (decimal.js) ; une seule fonction d'arrondi par moteur (demi vers l'infini).
-- Noms de colonnes du DDL partout (snake_case préfixé) ; les propriétés C# en PascalCase s'y mappent automatiquement. `COLONNES_LIGNE` / `COLONNES_DOCUMENT` (types.js) doivent suivre les entités du domaine (un test le vérifie).
-- Le schéma est géré par `db/*.sql` (pas de migrations EF).
+- Noms de colonnes du DDL partout (snake_case préfixé) ; les propriétés C# en PascalCase s'y mappent automatiquement. Colonnes génériques (`modules/document/js/src/types.js`) et BTP (`client/src/calcul/colonnes-btp.js`) alignées sur les entités (des tests le vérifient).
+- Schéma géré par les scripts SQL de chaque module (`modules/*/db`) puis du cœur (`db/`), pas de migrations EF ; les colonnes métier s'ajoutent par `ALTER TABLE` dans le cœur.
+- Préférences d'affichage dans le `localStorage` du navigateur, jamais en base.

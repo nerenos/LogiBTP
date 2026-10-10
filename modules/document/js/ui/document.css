@@ -1,0 +1,126 @@
+/* @logibtp/document/ui – onglets, vue des lignes et panneau ancrable, entête, détail, totaux, libellés. */
+
+/* Onglets Entête / Lignes : une seule vue affichée à la fois */
+.onglets { display: flex; align-items: end; gap: 0.2rem; padding: 0.4rem 1rem 0; flex: none; }
+.onglets button {
+  border-radius: 6px 6px 0 0; border-bottom: none; padding: 0.35rem 1.2rem; background: var(--fond);
+  color: var(--discret);
+}
+.onglets button.actif { background: var(--surface); color: var(--texte); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
+.onglets .resume { margin-left: auto; color: var(--discret); font-size: 0.9em; padding-bottom: 0.3rem; }
+
+main { flex: 1; min-height: 0; padding: 0 1rem 0.6rem; display: flex; flex-direction: column; }
+.vue[hidden] { display: none !important; }
+.vue-entete { overflow: auto; display: flex; flex-direction: column; gap: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--bord); }
+.totaux-entete { max-width: 28rem; }
+
+/* Vue Lignes : grille + panneau de détail ancrable (gauche, droite, bas), redimensionnable */
+.vue-lignes {
+  flex: 1; min-height: 0; display: grid; gap: 0;
+  border: 1px solid var(--bord); border-radius: 0 6px 6px 6px; background: var(--surface); overflow: hidden;
+}
+.vue-lignes.dock-droite { grid-template-columns: minmax(0, 1fr) 6px var(--dock-largeur); grid-template-areas: "lignes sep dock"; }
+.vue-lignes.dock-gauche { grid-template-columns: var(--dock-largeur) 6px minmax(0, 1fr); grid-template-areas: "dock sep lignes"; }
+.vue-lignes.dock-bas { grid-template-rows: minmax(0, 1fr) 6px var(--dock-hauteur); grid-template-columns: minmax(0, 1fr); grid-template-areas: "lignes" "sep" "dock"; }
+.vue-lignes.dock-reduit.dock-droite { grid-template-columns: minmax(0, 1fr) 6px 2.4rem; }
+.vue-lignes.dock-reduit.dock-gauche { grid-template-columns: 2.4rem 6px minmax(0, 1fr); }
+.vue-lignes.dock-reduit.dock-bas { grid-template-rows: minmax(0, 1fr) 6px 2.2rem; }
+.zone-lignes { grid-area: lignes; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.zone-lignes .ecarts { margin: 0.5rem; flex: none; max-height: 40%; overflow: auto; }
+.separateur { grid-area: sep; background: var(--fond); cursor: col-resize; touch-action: none; }
+.dock-bas .separateur { cursor: row-resize; }
+.separateur:hover, body.redimensionnement .separateur { background: var(--accent-clair); }
+body.redimensionnement { user-select: none; cursor: col-resize; }
+.dock { grid-area: dock; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--surface); }
+.dock-entete { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--bord); flex: none; }
+.dock-titre { font-weight: 600; font-size: 0.9rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock-boutons { display: flex; gap: 0.15rem; }
+.dock-boutons button { padding: 0 0.35rem; line-height: 1.4; }
+.dock-boutons button.actif { background: var(--accent-clair); border-color: var(--accent); }
+.dock-contenu { flex: 1; min-height: 0; overflow: auto; padding: 0.5rem 0.7rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.dock-bas .dock-contenu { flex-direction: row; align-items: flex-start; }
+.dock-bas .detail { flex: 1; }
+.dock-bas .detail .formulaire { flex-direction: row; flex-wrap: wrap; align-items: end; }
+.dock-bas .controles { width: 22rem; }
+.dock-reduit .dock-contenu, .dock-reduit .dock-titre { display: none; }
+.dock-reduit.dock-gauche .dock-entete, .dock-reduit.dock-droite .dock-entete { flex-direction: column; border-bottom: none; }
+.dock-reduit.dock-gauche .dock-boutons, .dock-reduit.dock-droite .dock-boutons { flex-direction: column; }
+.pied-lignes {
+  flex: none; display: flex; align-items: center; gap: 1rem; padding: 0.35rem 0.7rem;
+  border-top: 1px solid var(--bord); background: var(--surface);
+}
+.pied-lignes .aide { margin: 0 0 0 auto; cursor: help; }
+.totaux-compacts { display: flex; gap: 1.2rem; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.totaux-compacts small { color: var(--discret); margin-right: 0.25rem; }
+.totaux-compacts .net { font-weight: 700; }
+.panneau { background: var(--surface); border: 1px solid var(--bord); border-radius: 6px; padding: 0.6rem 0.8rem; }
+.panneau h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.aide { color: var(--discret); font-size: 0.85em; margin: 0.4rem 0 0; }
+
+/* Entête */
+.entete-titre { display: flex; gap: 1rem; align-items: baseline; margin-bottom: 0.4rem; }
+.entete-titre .numero { font-weight: 600; }
+.entete-titre .statut { color: var(--discret); }
+.formulaire { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: end; }
+.formulaire label { display: flex; flex-direction: column; font-size: 0.85em; color: var(--discret); gap: 0.1rem; }
+.formulaire label.large { flex: 1 1 18rem; }
+.formulaire label.large input { width: 100%; }
+.formulaire label.coche { flex-direction: row; align-items: center; gap: 0.3rem; color: var(--texte); }
+.formulaire input, .formulaire select { color: var(--texte); }
+.numerotation { border: 1px solid var(--bord); border-radius: 4px; padding: 0.1rem 0.4rem 0.3rem; display: flex; gap: 0.25rem; }
+.numerotation legend { font-size: 0.85em; color: var(--discret); }
+.numerotation input { width: 2.2rem; text-align: center; }
+.variables-document { margin-top: 0.4rem; }
+.variables-document summary { cursor: pointer; color: var(--discret); }
+table.variables { border-collapse: collapse; margin: 0.3rem 0; }
+table.variables td, table.variables th { padding: 0.1rem 0.3rem; text-align: left; font-weight: normal; color: var(--discret); }
+
+/* Détail, totaux, contrôles */
+.detail .formulaire { flex-direction: column; align-items: stretch; }
+.detail h3 { font-size: 0.9rem; }
+dl.calcul { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; margin: 0.6rem 0 0; font-size: 0.9em; }
+dl.calcul dt { color: var(--discret); }
+dl.calcul dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+table.totaux { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.totaux th { text-align: left; font-weight: normal; color: var(--discret); padding: 0.1rem 0; }
+table.totaux td { text-align: right; padding: 0.1rem 0; }
+table.totaux tr.tva th { padding-left: 0.6rem; font-size: 0.9em; }
+table.totaux tr.annulation td { color: var(--alerte); }
+table.totaux tr.mention td, table.totaux tr.mention th { font-size: 0.8em; color: var(--discret); }
+table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--texte); border-top: 1px solid var(--bord); padding-top: 0.25rem; }
+.controles ul { margin: 0; padding-left: 1rem; max-height: 12rem; overflow: auto; }
+.controles li { cursor: pointer; margin-bottom: 0.2rem; }
+.controles li.erreur { color: var(--erreur); }
+.controles li.avertissement { color: var(--alerte); }
+.ecarts { border-color: var(--alerte); background: var(--alerte-fond); }
+.ecarts table { border-collapse: collapse; margin: 0.3rem 0 0.6rem; }
+.ecarts td, .ecarts th { padding: 0.1rem 0.6rem; text-align: left; }
+.ecarts .boutons { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+
+/* Libellés : affichage complet ou sur une seule ligne (bouton ⇕ / ⇔ de l'entête) */
+.grille td.col-libelle ul, .grille td.col-libelle ol { margin: 0.1rem 0 0.1rem 1.1rem; padding: 0; }
+.grille td.col-libelle h1, .grille td.col-libelle h2, .grille td.col-libelle h3, .grille td.col-libelle h4 { font-size: 1em; margin: 0; }
+.grille.libelles-une-ligne td.col-libelle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+.grille.libelles-une-ligne td.col-libelle > span * { display: inline; margin: 0; padding: 0; }
+.grille.libelles-une-ligne td.col-libelle br { display: none; }
+.grille.libelles-une-ligne td.col-libelle p + p::before, .grille.libelles-une-ligne td.col-libelle li + li::before { content: ' · '; }
+.entete-bouton { padding: 0 0.3rem; line-height: 1.2; font-size: 0.9em; margin-left: 0.3rem; }
+
+/* Lignes du document dans la grille : types, ligne calculée, hors total, contrôles */
+.grille tr.type-titre td { background: var(--titre-fond); font-weight: 600; }
+.grille tr.type-titre.selectionnee td { background: var(--selection); }
+.grille tr.type-ouvrage td { background: var(--ouvrage-fond); font-weight: 500; }
+.grille tr.type-ouvrage.selectionnee td { background: var(--selection); }
+.grille tr.type-sous_total td { font-style: italic; border-top: 1px solid var(--discret); }
+.grille tr.type-texte td { color: var(--discret); }
+.grille tr.type-pied_ht td, .grille tr.type-pied_ttc td, .grille tr.type-tva td { background: var(--pied-fond); }
+.grille tr.type-tva td { font-weight: 600; }
+.grille tr.calculee td { color: var(--discret); font-style: italic; font-size: 0.9em; }
+.grille tr.hors-total td { color: var(--discret); }
+.grille tr.hors-total td.col-montant { text-decoration: line-through; }
+.grille tr.non-editee td.col-libelle { opacity: 0.6; }
+.grille tr.coupee td { opacity: 0.45; }
+.grille tr.erreur td.col-num { color: var(--erreur); }
+.grille tr.erreur td.col-num::after { content: " ⚠"; }
+.grille tr.avertissement td.col-num::after { content: " ⓘ"; color: var(--alerte); }
+.tva-heterogene { color: var(--alerte); cursor: help; }

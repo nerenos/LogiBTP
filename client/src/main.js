@@ -1,16 +1,18 @@
+import '@logibtp/socle/ui/socle.css';
+import '@logibtp/document/ui/document.css';
+import '@logibtp/metre/ui/metre.css';
 import './styles.css';
+import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { Disposition } from '@logibtp/document/ui';
+import { PanneauMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from './calcul/index.js';
 import { api, ErreurApi } from './app/api.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from './app/demo.js';
-import { EditeurDocument } from './app/editeur-document.js';
-import { PanneauMetre } from './app/panneau-metre.js';
-import { rendreDetail, rendreEcarts, rendreEntete, rendreMessages, rendreTotaux } from './app/panneaux.js';
-import { renumeroter } from './app/presse-papiers.js';
-import { echapper, formatNombre } from './app/format.js';
-import { Disposition } from './app/disposition.js';
+import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from './app/editeur-btp.js';
+import { PanneauxBtp } from './app/panneaux-btp.js';
 
 const $ = (s) => document.querySelector(s);
-const etat = { disposition: null, enLigne: false, editeur: null, metre: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
+const etat = { disposition: null, enLigne: false, editeur: null, panneaux: null, metre: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
 
 function message(texte, niveau = 'info') {
   const zone = $('#message');
@@ -39,21 +41,24 @@ const versSaisie = (d) => ({
 
 async function ouvrir(definition, complet) {
   const zone = $('#grille');
+  etat.panneaux = null;
   zone.replaceChildren();
-  etat.editeur = new EditeurDocument(zone, {
+  etat.editeur = new EditeurDevisBtp(zone, {
     definition,
     saisie: versSaisie(complet),
     surSelection: (id) => {
       etat.selection = id;
-      if (etat.editeur) rendreDetail($('#detail'), etat.editeur, id);
+      etat.panneaux?.rendreDetail($('#detail'), id);
       etat.metre?.suivre(id); // le métré ouvert suit la ligne sélectionnée
     },
     surMessage: (t) => message(t),
     ouvrirMetre: (ligId, mtrId) => etat.metre.ouvrir(ligId, mtrId),
   });
+  etat.panneaux = new PanneauxBtp(etat.editeur);
   etat.metre = new PanneauMetre($('#metre'), etat.editeur, {
     fermer: (ligId) => { etat.editeur.grille.selectionner(ligId, { colonne: 3 }); etat.editeur.grille.focus(); },
     message: (t) => message(t),
+    dictionnaire: new DictionnaireBtp(etat.editeur),
   });
   etat.editeur.magasin.abonner(rafraichir);
   etat.ecarts = null;
@@ -64,14 +69,15 @@ async function ouvrir(definition, complet) {
 function rafraichir() {
   const ed = etat.editeur;
   if (!ed) return;
-  rendreEntete($('#entete'), ed);
-  rendreDetail($('#detail'), ed, etat.selection);
-  rendreTotaux($('#totaux'), ed, { compact: true });
-  rendreTotaux($('#totaux-entete'), ed);
+  const p = etat.panneaux;
+  p.rendreEntete($('#entete'));
+  p.rendreDetail($('#detail'), etat.selection);
+  p.rendreTotaux($('#totaux'), { compact: true });
+  p.rendreTotaux($('#totaux-entete'));
   const d = ed.resultat.document;
   $('#resume').textContent = `${ed.saisie.document.ent_numero ?? ''} · ${ed.saisie.document.ent_objet ?? ''} · Net à payer ${formatNombre(d.ent_net_a_payer, ed.saisie.document.ent_precision_montant ?? 2)} €`;
-  rendreMessages($('#controles'), ed, (id) => ed.grille.selectionner(id));
-  rendreEcarts($('#ecarts'), etat.ecarts, arbitrer);
+  p.rendreMessages($('#controles'), (id) => ed.grille.selectionner(id));
+  p.rendreEcarts($('#ecarts'), etat.ecarts, arbitrer);
   $('#annuler').disabled = ed.magasin.pile.length === 0;
   $('#retablir').disabled = ed.magasin.pileRefaire.length === 0;
   const statut = ed.definition.statuts?.find((s) => s.std_id === ed.saisie.document.ent_std_id);
@@ -108,10 +114,10 @@ async function creerDemo() {
   const devis = etat.types.find((t) => t.tyd_code === 'V_DEVIS');
   const cree = await api.creer({ ent_tyd_id: devis.tyd_id, ent_tiers_id: 1, ent_objet: DOCUMENT_DEMO.document.ent_objet,
     ent_num_format: DOCUMENT_DEMO.document.ent_num_format });
-  const contenu = renumeroter({ racines: [], ...DOCUMENT_DEMO }, -1);
+  const contenu = new PressePapiersBtp().renumeroter({ racines: [], ...DOCUMENT_DEMO }, -1);
   for (const l of contenu.lignes) l.lig_origine_id = null;
   const definition = await api.definition('V_DEVIS');
-  const ed = new EditeurDocument(document.createElement('div'), {
+  const ed = new EditeurDevisBtp(document.createElement('div'), {
     definition,
     saisie: { document: { ...cree.document, ent_proprietes: DOCUMENT_DEMO.document.ent_proprietes }, ...contenu },
   });
@@ -146,7 +152,9 @@ async function enregistrer() {
   const saisieEnvoyee = structuredClone(ed.entree(ed.saisie));
   const rep = await api.enregistrer(ed.saisie.document.ent_id, envoi);
   const map = (table, id) => (id === null || id === undefined ? id : table[id] ?? id);
-  const cl = rep.correspondance_lignes, cm = rep.correspondance_metres, cml = rep.correspondance_metre_lignes, cv = rep.correspondance_variables;
+  // Correspondances des compléments du module Métré, par table (réponse générique du module Document).
+  const cl = rep.correspondance_lignes;
+  const { metres: cm = {}, metre_lignes: cml = {}, variables: cv = {} } = rep.correspondances ?? {};
   ed.magasin.appliquerServeur((d) => {
     d.document = rep.document.document;
     for (const l of d.lignes) {

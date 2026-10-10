@@ -12,8 +12,9 @@
     "exporter-resultats": "node scripts/exporter-resultats.mjs"
   },
   "dependencies": {
-    "decimal.js": "^10.4.3",
-    "immer": "^10.1.1"
+    "@logibtp/socle": "0.1.0",
+    "@logibtp/metre": "0.1.0",
+    "@logibtp/document": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

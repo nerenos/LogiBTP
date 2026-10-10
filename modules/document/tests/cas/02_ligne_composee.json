@@ -1,0 +1,27 @@
+{
+  "nom": "Document générique : ligne composée, quantités relatives et absolues",
+  "description": "Le PV d'une ligne composée est la somme des PV de ses composantes ramenées à l'unité : 0,15 × 100 + 30 / 120 × 5 + 2 × (0,5 × 4 + 10 / 2 × 1) = 30,25. Quantités totales dans le document entier.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Kit", "lig_qte": 120, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 0.15, "lig_qte_type": "R", "lig_pv": 100 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_qte": 30, "lig_qte_type": "A", "lig_pv": 5 },
+      { "lig_id": 4, "lig_parent_id": 1, "lig_ordre": 3, "lig_tyl_id": 2, "lig_qte": 2, "lig_qte_type": "R" },
+      { "lig_id": 5, "lig_parent_id": 4, "lig_ordre": 1, "lig_tyl_id": 3, "lig_qte": 0.5, "lig_qte_type": "R", "lig_pv": 4 },
+      { "lig_id": 6, "lig_parent_id": 4, "lig_ordre": 2, "lig_tyl_id": 3, "lig_qte": 10, "lig_qte_type": "A", "lig_pv": 1 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 3630, "ent_total_tva": 726, "ent_total_ttc": 4356, "ent_net_a_payer": 4356 },
+    "lignes": {
+      "1": { "lig_qte_vendue": 120, "lig_qte_totale": 120, "lig_pv": 30.25, "lig_montant_ht": 3630, "lig_numerotation": "1" },
+      "2": { "lig_qte_vendue": 0.15, "lig_qte_totale": 18, "lig_taux_tva": null },
+      "3": { "lig_qte_totale": 30 },
+      "4": { "lig_qte_totale": 240, "lig_pv": 7 },
+      "5": { "lig_qte_totale": 120 },
+      "6": { "lig_qte_totale": 1200, "lig_numerotation": "1.3.2" }
+    }
+  }
+}

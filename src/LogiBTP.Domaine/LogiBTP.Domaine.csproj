@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <RootNamespace>LogiBTP.Domaine</RootNamespace>
+    <Description>Cœur LogiBTP : entités BTP, spécialisations des entités du module Document.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modules\document\dotnet\LogiBTP.Documents\LogiBTP.Documents.csproj" />
+  </ItemGroup>
 
 </Project>

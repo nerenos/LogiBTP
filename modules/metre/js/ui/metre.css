@@ -1,0 +1,61 @@
+/* @logibtp/metre/ui – tiroir de métré, onglets, dictionnaire des variables. */
+
+/* Tiroir de métré */
+.tiroir {
+  position: fixed; right: 0; top: 0; bottom: 0; width: min(56rem, 100vw);
+  background: var(--surface); border-left: 1px solid var(--bord); box-shadow: -8px 0 24px rgb(0 0 0 / 0.15);
+  padding: 0.8rem 1rem; z-index: 10; display: flex; flex-direction: column; gap: 0.6rem; overflow: auto;
+}
+.tiroir[hidden] { display: none; }
+.metre-entete { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.metre-entete h2 { font-size: 1rem; margin: 0; }
+.metre-titre { color: var(--discret); font-weight: normal; }
+.metre-entete nav { display: flex; gap: 0.2rem; }
+.metre-entete nav button.actif { background: var(--accent-clair); border-color: var(--accent); }
+.metre-resultat { margin-left: auto; }
+.metre-resultat .erreur { color: var(--erreur); }
+.metre-lignes .grille { max-height: none; }
+.metre-lignes { min-height: 12rem; }
+.col-formule { min-width: 14rem; }
+
+body.lecture-seule .grille td.editable { cursor: default; }
+body.hors-ligne .mode { color: var(--alerte); }
+
+@media (max-width: 800px) {
+  .vue-lignes.dock-droite, .vue-lignes.dock-gauche { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 6px 40%; grid-template-areas: "lignes" "sep" "dock"; }
+}
+
+/* Métré : zone principale + dictionnaire des variables */
+.tiroir { width: min(72rem, 100vw); }
+.metre-corps { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 0.8rem; flex: 1; min-height: 0; }
+.metre-principal { min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 0.4rem; }
+.metre-principal h3 { font-size: 0.9rem; margin: 0.6rem 0 0.2rem; }
+.metre-vide { padding: 2rem 1rem; text-align: center; color: var(--discret); }
+.metre-variables .grille, .metre-variables { max-height: none; }
+.metre-variables { min-height: 3rem; border: 1px solid var(--bord); border-radius: 4px; }
+.metre-definition > button { align-self: flex-start; }
+.dictionnaire { border-left: 1px solid var(--bord); padding-left: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem; min-height: 0; }
+.dictionnaire h3 { margin: 0; font-size: 0.9rem; }
+.dictionnaire-liste { overflow: auto; display: flex; flex-direction: column; gap: 0.1rem; flex: 1; min-height: 0; }
+.dictionnaire-liste button {
+  display: flex; justify-content: space-between; gap: 0.5rem; text-align: left; border: none; background: none;
+  padding: 0.15rem 0.3rem; border-radius: 3px;
+}
+.dictionnaire-liste button:hover { background: var(--titre-fond); }
+.dictionnaire-liste button span { color: var(--discret); font-variant-numeric: tabular-nums; }
+.dictionnaire .groupe, .liste-deroulante .groupe {
+  margin: 0.4rem 0 0.1rem; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--discret);
+}
+.liste-deroulante .groupe { padding: 0 0.6rem; }
+.liste-deroulante > div { grid-template-columns: minmax(8rem, auto) 1fr auto; }
+.metre-aide { margin: 0; }
+.metre-entete h2 { flex: 1 1 12rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metre-entete .metre-resultat { margin-left: 0; white-space: nowrap; }
+@media (max-width: 900px) {
+  .metre-corps { grid-template-columns: minmax(0, 1fr); }
+  .dictionnaire { border-left: none; border-top: 1px solid var(--bord); padding: 0.5rem 0 0; max-height: 14rem; }
+}
+
+/* Lignes de métré dans la grille */
+.grille tr.metre-D td { font-weight: 600; }
+.grille tr.metre-S td { font-style: italic; border-top: 1px solid var(--discret); }

@@ -4,4 +4,4 @@ obj/
 *.user
 node_modules/
 client/dist/
-tests/resultats-js/
+**/tests/resultats-js/

@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/metre",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Métré LogiBTP : métrés, variables de calcul et panneau de saisie (classes mères à spécialiser)",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/metre.css": "./ui/metre.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

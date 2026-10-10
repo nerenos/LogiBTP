@@ -1,0 +1,22 @@
+{
+  "name": "@logibtp/document",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Document LogiBTP : moteur de document générique, éditeur et panneaux (classes mères à spécialiser)",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/document.css": "./ui/document.css"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "exporter-resultats": "node scripts/exporter-resultats.mjs"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
