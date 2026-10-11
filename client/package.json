@@ -9,12 +9,14 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "exporter-resultats": "node scripts/exporter-resultats.mjs"
+    "exporter-resultats": "node scripts/exporter-resultats.mjs",
+    "generer-vues-liste": "node scripts/generer-vues-liste.mjs"
   },
   "dependencies": {
     "@logibtp/socle": "0.1.0",
     "@logibtp/metre": "0.1.0",
-    "@logibtp/document": "0.1.0"
+    "@logibtp/document": "0.1.0",
+    "@logibtp/liste": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

@@ -1,4 +1,5 @@
 using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Documents.Web;

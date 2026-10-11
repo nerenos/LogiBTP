@@ -1,4 +1,4 @@
-using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -36,21 +36,6 @@ public static class Extensions
         services.AddScoped<TransformationService<TDoc, TLigne, TComplet>>();
         return services;
     }
-
-    /// <summary>Traduit les erreurs métier en réponses JSON avec un code stable exploitable par le client.</summary>
-    public static IApplicationBuilder UseErreursMetier(this IApplicationBuilder app) => app.Use(async (http, next) =>
-    {
-        try
-        {
-            await next(http);
-        }
-        catch (ExceptionMetier e)
-        {
-            http.Response.StatusCode = e.Statut;
-            await http.Response.WriteAsJsonAsync(new { status = e.Statut, code = e.Code, title = e.Message, details = e.Details },
-                JsonCalcul.Options);
-        }
-    });
 
     /// <summary>Routes HTTP du module Document (paramétrage, documents, transformations, cas de test).</summary>
     public static RouteGroupBuilder MapModuleDocument<TDoc, TLigne, TComplet>(this RouteGroupBuilder api)

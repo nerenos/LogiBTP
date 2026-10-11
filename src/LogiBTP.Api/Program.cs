@@ -1,15 +1,15 @@
 using System.Text.Json.Serialization;
 using LogiBTP.Api.Btp;
-using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Listes.Web;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<LogiBtpContext>(o => o
-    .UseNpgsql(builder.Configuration.GetConnectionString("LogiBTP"))
-    .UseSnakeCaseNamingConvention());
+var connexion = builder.Configuration.GetConnectionString("LogiBTP");
+builder.Services.AddDbContext<LogiBtpContext>(o => o.UseNpgsql(connexion).UseSnakeCaseNamingConvention());
 
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
@@ -20,6 +20,8 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 // Module Document spécialisé par le cœur BTP (moteur de devis, métrés, variables).
 builder.Services.AddModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp, LogiBtpContext, SpecialisationBtp>();
+// Module Liste : vues de liste paramétrables sur les sources déclarées par le cœur (db/120, 121).
+builder.Services.AddModuleListe(o => o.UseNpgsql(connexion).UseSnakeCaseNamingConvention());
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -30,5 +32,6 @@ app.UseErreursMetier();
 var api = app.MapGroup("/api");
 api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", version_moteur = s.VersionMoteur }));
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
+api.MapModuleListe();
 
 app.Run();

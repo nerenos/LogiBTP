@@ -7,6 +7,7 @@
     "socle/js",
     "modules/metre/js",
     "modules/document/js",
+    "modules/liste/js",
     "client"
   ],
   "scripts": {

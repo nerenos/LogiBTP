@@ -6,4 +6,5 @@
 - Jamais de `Number` pour un montant côté JS (decimal.js) ; une seule fonction d'arrondi par moteur (demi vers l'infini).
 - Noms de colonnes du DDL partout (snake_case préfixé) ; les propriétés C# en PascalCase s'y mappent automatiquement. Colonnes génériques (`modules/document/js/src/types.js`) et BTP (`client/src/calcul/colonnes-btp.js`) alignées sur les entités (des tests le vérifient).
 - Schéma géré par les scripts SQL de chaque module (`modules/*/db`) puis du cœur (`db/`), pas de migrations EF ; les colonnes métier s'ajoutent par `ALTER TABLE` dans le cœur.
+- Module Liste : la sémantique des requêtes (recherche, segments, tri, curseur) est répliquée entre `modules/liste/js/src/requete.js` et `ConstructeurRequete.cs` (jeux `modules/liste/tests/cas`) ; toute requête de données s'exécute en lecture seule. Les vues par défaut se modifient dans `client/src/app/vues-liste.js`, puis `npm run generer-vues-liste --workspace client`.
 - Préférences d'affichage dans le `localStorage` du navigateur, jamais en base.

@@ -1,6 +1,6 @@
 // Accès à l'API C#. En attendant l'authentification, l'utilisateur et le profil passent par des en-têtes.
 
-const ENTETES = { 'Content-Type': 'application/json', 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' };
+export const ENTETES = { 'Content-Type': 'application/json', 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' };
 
 export class ErreurApi extends Error {
   constructor(statut, code, message, details) {

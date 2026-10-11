@@ -1,0 +1,13 @@
+{
+  "description": "Recherche sans casse ni accents : normaliser() côté JS et f_sans_accent() côté SQL donnent le même texte.",
+  "cas": [
+    { "texte": "Hélène", "attendu": "helene" },
+    { "texte": "GAËLLE", "attendu": "gaelle" },
+    { "texte": "Jérôme Ñuñez", "attendu": "jerome nunez" },
+    { "texte": "Lœtitia Cœur", "attendu": "loetitia coeur" },
+    { "texte": "Ægir", "attendu": "aegir" },
+    { "texte": "Straße", "attendu": "strasse" },
+    { "texte": "Ça a l'air ÉVIDENT", "attendu": "ca a l'air evident" },
+    { "texte": "12,50 € – n°3", "attendu": "12,50 € – n°3" }
+  ]
+}

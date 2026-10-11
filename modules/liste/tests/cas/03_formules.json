@@ -1,0 +1,24 @@
+{
+  "description": "Formules des colonnes calculées et conditions de mise en forme (évaluées sur le poste).",
+  "colonnes": [
+    { "code": "qte_cde", "titre": "Qté commandée" },
+    { "code": "qte_liv", "titre": "Qté livrée" },
+    { "code": "pu", "titre": "Prix unitaire" },
+    { "code": "etat", "titre": "État" }
+  ],
+  "ligne": { "qte_cde": 10, "qte_liv": "4", "pu": "12.5", "etat": "En panne" },
+  "cas": [
+    { "formule": "SI [Qté commandée] > [Qté livrée] ALORS \"Reste à livrer\" SINON \"\"", "attendu": "Reste à livrer" },
+    { "formule": "SI([qte_cde] <= [qte_liv]; \"Soldé\"; \"En cours\")", "attendu": "En cours" },
+    { "formule": "SI ([qte_cde] = 10) ALORS 1 SINON 0", "attendu": "1" },
+    { "formule": "([qte_cde] - [qte_liv]) * [Prix unitaire]", "attendu": "75" },
+    { "formule": "ARRONDI([pu] / 3; 2)", "attendu": "4.17" },
+    { "formule": "[etat] & \" depuis \" & [qte_liv] & \" j\"", "attendu": "En panne depuis 4 j" },
+    { "formule": "[état] = \"En panne\" ET [qte_liv] < 5", "attendu": true },
+    { "formule": "NON ESTVIDE([etat]) OU FAUX", "attendu": true },
+    { "formule": "MAX([qte_liv]; 7; 2,5)", "attendu": "7" },
+    { "formule": "1 / 0", "erreur": "Division par zéro" },
+    { "formule": "[inconnue] + 1", "erreur_compilation": "Colonne inconnue" },
+    { "formule": "SI [qte_cde] > 1 ALORS", "erreur_compilation": "Formule incomplète" }
+  ]
+}

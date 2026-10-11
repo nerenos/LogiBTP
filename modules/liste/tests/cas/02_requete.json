@@ -1,0 +1,43 @@
+{
+  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation.",
+  "source": {
+    "colonnes": [
+      { "code": "id", "type": "integer" },
+      { "code": "nom", "type": "text" },
+      { "code": "ville", "type": "text" },
+      { "code": "service", "type": "text" },
+      { "code": "montant", "type": "numeric" },
+      { "code": "actif", "type": "boolean" }
+    ],
+    "colonne_id": "id",
+    "type_element": "salarie",
+    "lignes": [
+      { "id": 1, "nom": "Hélène Martin", "ville": "lyon", "service": "chantier", "montant": 120.5, "actif": true },
+      { "id": 2, "nom": "Jérôme Durand", "ville": "paris", "service": "bureau", "montant": 80, "actif": false },
+      { "id": 3, "nom": "Gaëlle Petit", "ville": "lyon", "service": "bureau", "montant": null, "actif": true },
+      { "id": 4, "nom": "Lœtitia Robert", "ville": "nantes", "service": "chantier", "montant": 80, "actif": true },
+      { "id": 5, "nom": "Marc Hélie", "ville": null, "service": "atelier", "montant": 300, "actif": true },
+      { "id": 6, "nom": "Paul Lefèvre", "ville": "paris", "service": "chantier", "montant": 15, "actif": false },
+      { "id": 7, "nom": "Zoé Leroy", "ville": "lyon", "service": null, "montant": 80, "actif": true }
+    ]
+  },
+  "recherche": ["nom", "ville", "service"],
+  "cas": [
+    { "nom": "sans filtre, tri par ID", "requete": {}, "attendu": [1, 2, 3, 4, 5, 6, 7] },
+    { "nom": "recherche sans accent", "requete": { "recherche": "HÉL" }, "attendu": [1, 5] },
+    { "nom": "recherche ligature", "requete": { "recherche": "loetitia" }, "attendu": [4] },
+    { "nom": "plusieurs mots, colonnes différentes", "requete": { "recherche": "lyon bur" }, "attendu": [3] },
+    { "nom": "segment simple", "requete": { "segments": { "ville": ["lyon"] } }, "attendu": [1, 3, 7] },
+    { "nom": "segment multiple avec vide", "requete": { "segments": { "service": ["atelier", null] } }, "attendu": [5, 7] },
+    { "nom": "segments croisés", "requete": { "segments": { "ville": ["lyon", "paris"], "service": ["chantier"] } }, "attendu": [1, 6] },
+    { "nom": "segment booléen", "requete": { "segments": { "actif": ["false"] } }, "attendu": [2, 6] },
+    { "nom": "tri numérique croissant, vides en dernier, égalités par ID", "requete": { "tri": [{ "colonne": "montant", "sens": "asc" }] }, "attendu": [6, 2, 4, 7, 1, 5, 3] },
+    { "nom": "tri décroissant, vides toujours en dernier", "requete": { "tri": [{ "colonne": "montant", "sens": "desc" }] }, "attendu": [5, 1, 2, 4, 7, 6, 3] },
+    { "nom": "tri sur deux colonnes", "requete": { "tri": [{ "colonne": "ville", "sens": "asc" }, { "colonne": "montant", "sens": "desc" }] }, "attendu": [1, 7, 3, 4, 2, 6, 5] },
+    { "nom": "recherche et tri", "requete": { "recherche": "chantier", "tri": [{ "colonne": "montant", "sens": "desc" }] }, "attendu": [1, 4, 6] }
+  ],
+  "segments": [
+    { "nom": "comptes par ville", "requete": {}, "colonne": "ville", "attendu": [{ "valeur": "lyon", "nombre": 3 }, { "valeur": "nantes", "nombre": 1 }, { "valeur": "paris", "nombre": 2 }, { "valeur": null, "nombre": 1 }] },
+    { "nom": "comptes sans le segment lui-même", "requete": { "segments": { "ville": ["lyon"], "service": ["chantier"] } }, "colonne": "ville", "attendu": [{ "valeur": "lyon", "nombre": 1 }, { "valeur": "nantes", "nombre": 1 }, { "valeur": "paris", "nombre": 1 }] }
+  ]
+}

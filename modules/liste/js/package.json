@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/liste",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Liste LogiBTP : liste chargée par lots, recherche et segments côté base, filtres et tri façon tableur, concepteur de vues",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/liste.css": "./ui/liste.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

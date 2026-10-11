@@ -1,18 +1,23 @@
 import '@logibtp/socle/ui/socle.css';
 import '@logibtp/document/ui/document.css';
 import '@logibtp/metre/ui/metre.css';
+import '@logibtp/liste/ui/liste.css';
 import './styles.css';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { Disposition } from '@logibtp/document/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
+import { ListeDonnees } from '@logibtp/liste/ui';
 import { VERSION_MOTEUR } from './calcul/index.js';
-import { api, ErreurApi } from './app/api.js';
+import { api, ErreurApi, ENTETES } from './app/api.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from './app/demo.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from './app/editeur-btp.js';
 import { PanneauxBtp } from './app/panneaux-btp.js';
+import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS, simulerModificationsAutres } from './app/listes.js';
 
 const $ = (s) => document.querySelector(s);
-const etat = { disposition: null, enLigne: false, editeur: null, panneaux: null, metre: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
+const etat = { disposition: null, enLigne: false, editeur: null, panneaux: null, metre: null, liste: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
+// Débogage en développement uniquement.
+if (import.meta.env.DEV) window.__logibtp = etat;
 
 function message(texte, niveau = 'info') {
   const zone = $('#message');
@@ -90,23 +95,35 @@ function rafraichir() {
 
 // ------------------------------------------------------------------ documents
 
-async function chargerListe(selection) {
-  const docs = await api.documents();
-  const liste = $('#documents');
-  liste.innerHTML = docs.map((d) => {
-    const type = etat.types.find((t) => t.tyd_id === d.ent_tyd_id);
-    return `<option value="${d.ent_id}">${echapper(type?.tyd_code ?? '')} ${echapper(d.ent_numero ?? '#' + d.ent_id)} ${d.ent_indice !== 'A' ? `(${echapper(d.ent_indice)})` : ''} – ${echapper(d.ent_objet ?? '')}</option>`;
-  }).join('');
-  if (selection) liste.value = String(selection);
-  return docs;
-}
-
 async function ouvrirDocument(id) {
   const complet = await api.document(id);
   const type = etat.types.find((t) => t.tyd_id === complet.document.ent_tyd_id);
   const definition = await api.definition(type.tyd_code);
   await ouvrir(definition, complet);
-  $('#documents').value = String(id);
+}
+
+/** Ouverture de la fiche d'une ligne de liste : l'ID et le type d'élément viennent de la source. */
+async function ouvrirFiche({ id, type }) {
+  if (estTypeDocument(type)) {
+    if (etat.enLigne) await ouvrirDocument(id);
+    else if (id !== DOCUMENT_DEMO.document.ent_id) { message("Démo hors ligne : seul le devis de démonstration s'ouvre", 'avertissement'); return; }
+    etat.disposition.onglet('lignes');
+    return;
+  }
+  message(`Fiche ${LIBELLES_ELEMENTS[type] ?? type} n° ${id} : écran pas encore disponible`, 'avertissement');
+}
+
+/** Liste de l'onglet Liste : vues partagées, ouverture des fiches, rafraîchissement après enregistrement. */
+async function demarrerListe() {
+  etat.liste = new ListeDonnees($('#liste'), {
+    fournisseur: creerFournisseurListe({ enLigne: etat.enLigne, demo: DOCUMENT_DEMO }),
+    ouvrir: (l) => ouvrirFiche(l).catch(erreur),
+    message,
+    // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
+    peutRequete: etat.enLigne && ENTETES['X-Profil'] === 'ADMIN',
+  });
+  $('#liste-demo').hidden = etat.enLigne;
+  await etat.liste.demarrer();
 }
 
 /** Premier lancement : crée un devis de démonstration dans la base. */
@@ -133,8 +150,9 @@ async function nouveau() {
   const code = $('#nouveau-type').value;
   const type = etat.types.find((t) => t.tyd_code === code);
   const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: 1, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
-  await chargerListe(cree.document.ent_id);
   await ouvrirDocument(cree.document.ent_id);
+  etat.disposition.onglet('entete');
+  etat.liste?.verifier();
   message(`${type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé`);
 }
 
@@ -178,6 +196,8 @@ async function enregistrer() {
   etat.ecarts = rep.ecarts.length ? rep.ecarts : null;
   etat.dernierEnvoi = { entree: saisieEnvoyee, client: envoi, serveur: rep.document };
   rafraichir();
+  // Rafraîchissement ciblé de la ligne du document dans la liste.
+  etat.liste?.rafraichirLignes([rep.document.document.ent_id]).catch(() => {});
   message(rep.ecarts.length ? `Enregistré avec ${rep.ecarts.length} écart(s) de calcul à arbitrer` : `Enregistré (version ${rep.document.document.ent_version})`,
     rep.ecarts.length ? 'avertissement' : 'succes');
 }
@@ -198,8 +218,8 @@ async function valider() {
   if (ed.magasin.pile.length && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
   if (ed.magasin.pile.length) await enregistrer();
   const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
-  await chargerListe(rep.document.document.ent_id);
   await ouvrirDocument(rep.document.document.ent_id);
+  etat.liste?.rafraichirLignes([rep.document.document.ent_id]);
   message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
 }
 
@@ -210,8 +230,8 @@ async function transformer() {
   const cible = cibles[Number(choix) - 1];
   if (!cible) return;
   const rep = await api.transformer(ed.saisie.document.ent_id, { cible_tyd_id: cible.tyd_id, lignes: [] });
-  await chargerListe(rep.document.ent_id);
   await ouvrirDocument(rep.document.ent_id);
+  etat.liste?.verifier();
   message(`${cible.tyd_libelle} ${rep.document.ent_numero ?? ''} créé`, 'succes');
 }
 
@@ -223,7 +243,10 @@ function brancher(id, f) {
 
 async function demarrer() {
   etat.disposition = new Disposition({
-    surOnglet: (o) => { if (o === 'lignes') etat.editeur?.grille.focus(); },
+    surOnglet: (o) => {
+      if (o === 'lignes') etat.editeur?.grille.focus();
+      if (o === 'liste') etat.liste?.verifier().catch(() => {});
+    },
   });
   brancher('#enregistrer', enregistrer);
   brancher('#valider', valider);
@@ -231,12 +254,13 @@ async function demarrer() {
   brancher('#nouveau', nouveau);
   brancher('#annuler', () => etat.editeur?.magasin.annuler());
   brancher('#retablir', () => etat.editeur?.magasin.retablir());
-  $('#documents').addEventListener('change', (e) => ouvrirDocument(Number(e.target.value)).catch(erreur));
+  brancher('#simuler', () => message(simulerModificationsAutres(etat.liste.fournisseur)));
   document.addEventListener('keydown', (e) => {
-    // Alt+1 / Alt+2 : onglets Entête et Lignes.
-    if (e.altKey && !e.ctrlKey && (e.key === '1' || e.key === '2' || e.code === 'Digit1' || e.code === 'Digit2')) {
+    // Alt+0 / Alt+1 / Alt+2 : onglets Liste, Entête et Lignes.
+    const onglet = e.altKey && !e.ctrlKey ? { Digit0: 'liste', Digit1: 'entete', Digit2: 'lignes' }[e.code] : null;
+    if (onglet) {
       e.preventDefault();
-      etat.disposition.onglet(e.code === 'Digit1' || e.key === '1' ? 'entete' : 'lignes');
+      etat.disposition.onglet(onglet);
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (!$('#enregistrer').disabled) enregistrer().catch(erreur); }
@@ -248,16 +272,18 @@ async function demarrer() {
   if (!etat.enLigne) {
     $('#barre-documents').hidden = true;
     await ouvrir(DEFINITION_DEMO, DOCUMENT_DEMO);
+    await demarrerListe();
     return;
   }
   etat.types = await api.typesDocument();
   $('#nouveau-type').innerHTML = etat.types.map((t) => `<option value="${t.tyd_code}">${echapper(t.tyd_libelle)}</option>`).join('');
-  let docs = await chargerListe();
+  let docs = await api.documents();
   if (docs.length === 0) {
     await creerDemo();
-    docs = await chargerListe();
+    docs = await api.documents();
   }
   await ouvrirDocument(docs[docs.length - 1].ent_id);
+  await demarrerListe();
 }
 
 demarrer().catch(erreur);

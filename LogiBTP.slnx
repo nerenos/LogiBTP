@@ -3,6 +3,7 @@
     <Project Path="socle/dotnet/LogiBTP.Socle/LogiBTP.Socle.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Testing/LogiBTP.Socle.Testing.csproj" />
     <Project Path="socle/dotnet/LogiBTP.Socle.Tests/LogiBTP.Socle.Tests.csproj" />
+    <Project Path="socle/dotnet/LogiBTP.Socle.Web/LogiBTP.Socle.Web.csproj" />
   </Folder>
   <Folder Name="/modules/metre/">
     <Project Path="modules/metre/dotnet/LogiBTP.Metres/LogiBTP.Metres.csproj" />
@@ -12,6 +13,11 @@
     <Project Path="modules/document/dotnet/LogiBTP.Documents/LogiBTP.Documents.csproj" />
     <Project Path="modules/document/dotnet/LogiBTP.Documents.Web/LogiBTP.Documents.Web.csproj" />
     <Project Path="modules/document/dotnet/LogiBTP.Documents.Tests/LogiBTP.Documents.Tests.csproj" />
+  </Folder>
+  <Folder Name="/modules/liste/">
+    <Project Path="modules/liste/dotnet/LogiBTP.Listes/LogiBTP.Listes.csproj" />
+    <Project Path="modules/liste/dotnet/LogiBTP.Listes.Web/LogiBTP.Listes.Web.csproj" />
+    <Project Path="modules/liste/dotnet/LogiBTP.Listes.Tests/LogiBTP.Listes.Tests.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />

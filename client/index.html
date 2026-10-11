@@ -9,7 +9,6 @@
   <header class="barre">
     <h1>LogiBTP</h1>
     <div id="barre-documents" class="groupe">
-      <select id="documents" title="Documents"></select>
       <select id="nouveau-type" title="Type du nouveau document"></select>
       <button id="nouveau">Nouveau</button>
     </div>
@@ -25,12 +24,21 @@
   </header>
 
   <nav class="onglets" role="tablist">
+    <button role="tab" data-onglet-vue="liste" title="Alt+0">Liste</button>
     <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
     <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
     <span id="resume" class="resume"></span>
   </nav>
 
   <main>
+    <section id="vue-liste" class="vue vue-liste" role="tabpanel">
+      <div id="liste"></div>
+      <div id="liste-demo" class="liste-demo" hidden>
+        <button id="simuler" title="Démo hors ligne : modifie, supprime et crée des matériels comme le ferait un autre poste">Simuler une modification d'un autre utilisateur</button>
+        <span class="aide">Le contrôle des lignes chargées s'exécute toutes les 30 s, au retour sur la fenêtre et avec ⟳.</span>
+      </div>
+    </section>
+
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
       <section id="totaux-entete" class="panneau totaux-entete"></section>

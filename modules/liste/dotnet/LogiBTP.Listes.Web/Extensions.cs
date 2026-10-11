@@ -1,0 +1,48 @@
+using LogiBTP.Socle.Web;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace LogiBTP.Listes.Web;
+
+/// <summary>Branchement du module Liste dans une application ASP.NET Core.</summary>
+public static class Extensions
+{
+    /// <summary>Enregistre le module : contexte EF (options fournies par l'application), spécialisation, service.</summary>
+    public static IServiceCollection AddModuleListe<TSpecialisation>(this IServiceCollection services, Action<DbContextOptionsBuilder> options)
+        where TSpecialisation : SpecialisationListe, new()
+    {
+        services.AddDbContext<ListeDbContext>(options);
+        services.AddSingleton<SpecialisationListe, TSpecialisation>();
+        services.AddSingleton<CacheSchemas>();
+        services.AddScoped<ServiceListe>();
+        return services;
+    }
+
+    public static IServiceCollection AddModuleListe(this IServiceCollection services, Action<DbContextOptionsBuilder> options) =>
+        services.AddModuleListe<SpecialisationListe>(options);
+
+    /// <summary>Routes HTTP du module, sous /listes.</summary>
+    public static RouteGroupBuilder MapModuleListe(this RouteGroupBuilder api)
+    {
+        var g = api.MapGroup("/listes");
+        g.MapGet("/vues", (string? contexte, HttpContext http, ServiceListe s, CancellationToken ct) => s.Vues(contexte, Utilisateur.Depuis(http), ct));
+        g.MapGet("/vues/{id:long}", (long id, HttpContext http, ServiceListe s, CancellationToken ct) => s.Vue(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/vues", (VueListeDto v, HttpContext http, ServiceListe s, CancellationToken ct) => { v.VliId = null; return s.Enregistrer(v, Utilisateur.Depuis(http), ct); });
+        g.MapPut("/vues/{id:long}", (long id, VueListeDto v, HttpContext http, ServiceListe s, CancellationToken ct) => { v.VliId = id; return s.Enregistrer(v, Utilisateur.Depuis(http), ct); });
+        g.MapDelete("/vues/{id:long}", async (long id, HttpContext http, ServiceListe s, CancellationToken ct) =>
+        {
+            await s.Supprimer(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapGet("/sources", (ServiceListe s, CancellationToken ct) => s.Sources(ct));
+        g.MapPost("/sources/requete", (DemandeRequete d, HttpContext http, ServiceListe s, CancellationToken ct) => s.ColonnesRequete(d.Requete, Utilisateur.Depuis(http), ct));
+        g.MapPost("/lot", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Lot(d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/segments", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Segments(d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/controle", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Controle(d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/lignes", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.LignesCiblees(d, Utilisateur.Depuis(http), ct));
+        return api;
+    }
+}

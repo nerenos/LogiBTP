@@ -7,7 +7,7 @@ const POSITIONS = ['gauche', 'droite', 'bas'];
 function lire() {
   const o = lirePreferences();
   return {
-    onglet: o.onglet === 'entete' ? 'entete' : 'lignes',
+    onglet: typeof o.onglet === 'string' ? o.onglet : 'lignes',
     dock: { ...DEFAUT.dock, ...o.dock, position: POSITIONS.includes(o.dock?.position) ? o.dock.position : 'droite' },
   };
 }
@@ -18,6 +18,9 @@ export class Disposition {
   constructor({ surOnglet }) {
     this.p = lire();
     this.surOnglet = surOnglet;
+    // Onglets déclarés par les boutons [data-onglet-vue] ; chacun affiche la section #vue-<nom>.
+    this.onglets = [...document.querySelectorAll('[data-onglet-vue]')].map((b) => b.dataset.ongletVue);
+    if (!this.onglets.includes(this.p.onglet)) this.p.onglet = 'lignes';
     this.vue = document.querySelector('#vue-lignes');
     this.dock = document.querySelector('#dock');
     document.querySelectorAll('[data-onglet-vue]').forEach((b) => b.addEventListener('click', () => this.onglet(b.dataset.ongletVue)));
@@ -34,8 +37,10 @@ export class Disposition {
       b.classList.toggle('actif', actif);
       b.setAttribute('aria-selected', String(actif));
     });
-    document.querySelector('#vue-entete').hidden = onglet !== 'entete';
-    this.vue.hidden = onglet !== 'lignes';
+    for (const nom of this.onglets) {
+      const section = document.querySelector(`#vue-${nom}`);
+      if (section) section.hidden = nom !== onglet;
+    }
     for (const pos of POSITIONS) this.vue.classList.toggle(`dock-${pos}`, dock.position === pos);
     this.vue.classList.toggle('dock-reduit', dock.reduit);
     this.vue.style.setProperty('--dock-largeur', `${dock.largeur}px`);
@@ -47,7 +52,7 @@ export class Disposition {
   }
 
   onglet(nom) {
-    this.p.onglet = nom === 'entete' ? 'entete' : 'lignes';
+    this.p.onglet = this.onglets.includes(nom) ? nom : 'lignes';
     ecrire(this.p);
     this.appliquer();
     this.surOnglet?.(this.p.onglet);

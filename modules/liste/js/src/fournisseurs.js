@@ -1,0 +1,190 @@
+import { normaliserDefinition } from './modele.js';
+import { filtrer, trier, lot, jusqua, comptesSegment, empreinte } from './requete.js';
+
+// Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
+//
+//   vues(contexte)                → [{ vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire, modifiable }]
+//   vue(id)                       → { vli_id, vli_nom, vli_contexte, vli_partage, vli_groupe, vli_version, definition }
+//   enregistrerVue(vue)           → vue enregistrée          supprimerVue(id)
+//   sources()                     → [{ code, libelle, colonnes: [{ code, type }], colonne_id, colonne_type, type_element }]
+//   colonnesRequete(sql)          → [{ code, type }]   (requête manuelle, profil ADMIN)
+//   lot(demande)                  → { lignes, suite }  lignes : données + _id, _type, _h (empreinte)
+//   segments(demande, colonne)    → [{ valeur, nombre }]
+//   controle(demande, jusqua)     → [{ id, h }] lignes du filtre jusqu'au curseur, dans l'ordre
+//   lignes(demande, ids)          → lignes du filtre parmi ces ID (absente = supprimée ou hors filtre)
+//
+// demande = { vue_id, definition, recherche, segments: { colonne: [valeurs] }, tri: [{ colonne, sens }], apres, taille }
+
+export class ErreurFournisseur extends Error {
+  constructor(statut, code, message) {
+    super(message);
+    this.statut = statut;
+    this.code = code;
+  }
+}
+
+/** Fournisseur branché sur les routes du module (MapModuleListe côté serveur). */
+export class FournisseurApi {
+  constructor({ base = '/api/listes', entetes = {} } = {}) {
+    this.base = base;
+    this.entetes = { 'Content-Type': 'application/json', ...entetes };
+  }
+
+  async appel(methode, url, corps) {
+    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
+    const texte = await r.text();
+    const data = texte ? JSON.parse(texte) : null;
+    if (!r.ok) throw new ErreurFournisseur(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText);
+    return data;
+  }
+
+  /** Corps envoyé : la définition sert pour une vue non enregistrée (concepteur) ; le serveur contrôle la source. */
+  corps(demande, extra = {}) {
+    const { vue_id = null, definition = null, recherche = '', segments = {}, tri = [] } = demande;
+    return { vue_id, definition, recherche, segments, tri, ...extra };
+  }
+
+  vues(contexte) { return this.appel('GET', `/vues${contexte ? `?contexte=${encodeURIComponent(contexte)}` : ''}`); }
+  vue(id) { return this.appel('GET', `/vues/${id}`); }
+  enregistrerVue(v) { return v.vli_id ? this.appel('PUT', `/vues/${v.vli_id}`, v) : this.appel('POST', '/vues', v); }
+  supprimerVue(id) { return this.appel('DELETE', `/vues/${id}`); }
+  sources() { return this.appel('GET', '/sources'); }
+  colonnesRequete(requete) { return this.appel('POST', '/sources/requete', { requete }); }
+  lot(d) { return this.appel('POST', '/lot', this.corps(d, { apres: d.apres ?? null, taille: d.taille ?? 100 })); }
+  segments(d, colonne) { return this.appel('POST', '/segments', this.corps(d, { colonne })); }
+  controle(d, curseur) { return this.appel('POST', '/controle', this.corps(d, { jusqua: curseur ?? null })); }
+  lignes(d, ids) { return this.appel('POST', '/lignes', this.corps(d, { ids: ids.map(String) })); }
+}
+
+/**
+ * Fournisseur en mémoire : mêmes règles que le serveur (requete.js). Sources : { code: { libelle, colonnes,
+ * colonne_id, colonne_type, type_element, lignes } }. Les vues sont gardées en mémoire, et dans le
+ * localStorage si `cleStockage` est fourni (démo hors ligne uniquement).
+ */
+export class FournisseurMemoire {
+  constructor({ sources = {}, vues = [], utilisateur = 'demo', cleStockage = null } = {}) {
+    this.sourcesDonnees = sources;
+    this.utilisateur = utilisateur;
+    this.cleStockage = cleStockage;
+    this.vuesStockees = this.#lireStockage() ?? structuredClone(vues);
+    this.prochainId = Math.max(0, ...this.vuesStockees.map((v) => v.vli_id)) + 1;
+  }
+
+  #lireStockage() {
+    if (!this.cleStockage) return null;
+    try { return JSON.parse(localStorage.getItem(this.cleStockage) ?? 'null'); } catch { return null; }
+  }
+
+  #ecrireStockage() {
+    if (!this.cleStockage) return;
+    try { localStorage.setItem(this.cleStockage, JSON.stringify(this.vuesStockees)); } catch { /* stockage indisponible */ }
+  }
+
+  /** Remplace les lignes d'une source (simulation des modifications d'autres utilisateurs). */
+  modifierSource(code, f) {
+    f(this.sourcesDonnees[code].lignes);
+  }
+
+  async vues(contexte) {
+    return this.vuesStockees.filter((v) => !contexte || v.vli_contexte === contexte)
+      .map(({ vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire }) => ({
+        vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire, modifiable: true,
+      }));
+  }
+
+  async vue(id) {
+    const v = this.vuesStockees.find((x) => x.vli_id === Number(id));
+    if (!v) throw new ErreurFournisseur(404, 'INTROUVABLE', `Vue ${id} introuvable`);
+    return structuredClone(v);
+  }
+
+  async enregistrerVue(v) {
+    const copie = structuredClone(v);
+    if (copie.vli_id) {
+      const i = this.vuesStockees.findIndex((x) => x.vli_id === copie.vli_id);
+      if (i < 0) throw new ErreurFournisseur(404, 'INTROUVABLE', `Vue ${copie.vli_id} introuvable`);
+      copie.vli_version = (this.vuesStockees[i].vli_version ?? 1) + 1;
+      this.vuesStockees[i] = copie;
+    } else {
+      copie.vli_id = this.prochainId++;
+      copie.vli_version = 1;
+      copie.vli_proprietaire = this.utilisateur;
+      this.vuesStockees.push(copie);
+    }
+    this.#ecrireStockage();
+    return structuredClone(copie);
+  }
+
+  async supprimerVue(id) {
+    this.vuesStockees = this.vuesStockees.filter((v) => v.vli_id !== Number(id));
+    this.#ecrireStockage();
+  }
+
+  async sources() {
+    return Object.entries(this.sourcesDonnees).map(([code, s]) => ({
+      code, libelle: s.libelle, colonnes: s.colonnes, colonne_id: s.colonne_id, colonne_type: s.colonne_type ?? null, type_element: s.type_element ?? null,
+    }));
+  }
+
+  async colonnesRequete() {
+    throw new ErreurFournisseur(501, 'HORS_LIGNE', 'Requête manuelle indisponible hors ligne');
+  }
+
+  async #definition(d) {
+    if (d.definition) return normaliserDefinition(d.definition);
+    if (d.vue_id) return normaliserDefinition((await this.vue(d.vue_id)).definition);
+    throw new ErreurFournisseur(422, 'VUE', 'Vue ou définition attendue');
+  }
+
+  /** Lignes de la source au format du serveur : colonnes de la vue + _id, _type, _h. */
+  async #lignesSource(d) {
+    const def = await this.#definition(d);
+    if (def.source.mode !== 'vue') throw new ErreurFournisseur(501, 'HORS_LIGNE', 'Requête manuelle indisponible hors ligne');
+    const s = this.sourcesDonnees[def.source.vue];
+    if (!s) throw new ErreurFournisseur(404, 'SOURCE', `Source ${def.source.vue} introuvable`);
+    const connues = new Set(s.colonnes.map((c) => c.code));
+    const codes = def.colonnes.filter((c) => !c.calcul && connues.has(c.code)).map((c) => c.code);
+    // Colonnes de segment et de tri lues même si la vue ne les affiche pas (comme le WHERE / ORDER BY du serveur).
+    const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne)]
+      .filter((c) => connues.has(c) && !codes.includes(c));
+    const colonneId = def.source.colonne_id ?? s.colonne_id;
+    const colonneType = def.source.colonne_type ?? s.colonne_type;
+    const typeConstant = def.source.type_element ?? s.type_element;
+    const lignes = s.lignes.map((src) => {
+      const l = {};
+      for (const c of codes) l[c] = src[c] ?? null;
+      l._id = src[colonneId];
+      l._type = colonneType ? src[colonneType] : typeConstant;
+      l._h = empreinte(l);
+      for (const c of internes) Object.defineProperty(l, c, { value: src[c] ?? null, enumerable: false });
+      return l;
+    });
+    const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
+    const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
+    return { lignes, recherche, tri };
+  }
+
+  async lot(d) {
+    const { lignes, recherche, tri } = await this.#lignesSource(d);
+    return structuredClone(lot(trier(filtrer(lignes, d, recherche), tri), tri, d.apres ?? null, d.taille ?? 100));
+  }
+
+  async segments(d, colonne) {
+    const { lignes, recherche } = await this.#lignesSource({ ...d, segments: { ...(d.segments ?? {}), [colonne]: d.segments?.[colonne] ?? [] } });
+    // Comptes calculés sans le filtre du segment lui-même (les autres segments s'appliquent).
+    const autres = { ...(d.segments ?? {}) };
+    delete autres[colonne];
+    return comptesSegment(filtrer(lignes, { ...d, segments: autres }, recherche), colonne);
+  }
+
+  async controle(d, curseur) {
+    const { lignes, recherche, tri } = await this.#lignesSource(d);
+    return jusqua(trier(filtrer(lignes, d, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
+  }
+
+  async lignes(d, ids) {
+    const { lignes, recherche } = await this.#lignesSource(d);
+    const voulus = new Set(ids.map(String));
+    return structuredClone(filtrer(lignes.filter((l) => voulus.has(String(l._id))), d, recherche));
+  }
+}
