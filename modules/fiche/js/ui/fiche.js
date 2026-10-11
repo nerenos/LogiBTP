@@ -216,7 +216,8 @@ export class FicheBase {
   #rendreBandeau() {
     const b = this.conteneur.querySelector('.fiche-bandeau');
     const v = this.fiche.verrou;
-    if (!v || v.moi) { b.hidden = true; return; }
+    // Son propre verrou (autre fenêtre, onglet fermé) n'est pas annoncé : il sera repris en passant en modification.
+    if (!v || v.moi || v.meme_utilisateur) { b.hidden = true; return; }
     b.hidden = false;
     b.innerHTML = `🔒 En cours de modification par <strong>${echapper(v.utilisateur)}</strong> depuis ${heure(v.depuis)}
       ${this.definition.droits.debloquer && this.definition.droits.modifier ? '<button type="button" data-reprendre>Reprendre la main</button>' : ''}`;

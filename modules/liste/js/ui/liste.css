@@ -44,6 +44,9 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 .segment { display: flex; flex-direction: column; gap: 0.25rem; }
 .segment-valeurs { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .segment-titre { font-weight: 600; color: var(--discret); }
+.segment-valeurs button { display: inline-flex; align-items: center; gap: 0.25rem; }
+.segment-picto { line-height: 1; }
+.segment-image { height: 1.1em; width: auto; vertical-align: middle; }
 .dock-bas .liste-segments { gap: 0.3rem; }
 .dock-bas .segment { flex-direction: row; align-items: center; }
 .dock-bas .segment-titre { min-width: 6rem; }

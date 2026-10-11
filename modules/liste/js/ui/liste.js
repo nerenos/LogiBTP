@@ -579,7 +579,7 @@ export class ListeDonnees {
         ${comptes[i].map((c) => {
           const libelle = c.valeur === null ? '(vide)' : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
           return `<button type="button" data-valeur="${c.valeur === null ? '' : echapper(c.valeur)}" data-vide="${c.valeur === null}"
-            class="${actives.has(c.valeur) ? 'actif' : ''}">${echapper(libelle)} <small>${c.nombre}</small></button>`;
+            class="${actives.has(c.valeur) ? 'actif' : ''}" title="${echapper(libelle)}">${this.#imageSegment(col, c.valeur)}${echapper(libelle)} <small>${c.nombre}</small></button>`;
         }).join('')}
         ${[...actives].filter((v) => !comptes[i].some((c) => c.valeur === v)).map((v) =>
           `<button type="button" class="actif" data-valeur="${echapper(v ?? '')}" data-vide="${v === null}">${echapper(v ?? '(vide)')} <small>0</small></button>`).join('')}
@@ -599,6 +599,16 @@ export class ListeDonnees {
         this.#segmentsModifies();
       }));
     });
+  }
+
+  /** Image associée à une valeur de segment : image ou picto de l'option de la colonne, case pour un oui / non. */
+  #imageSegment(col, valeur) {
+    if (!col || valeur === null) return '';
+    const o = (col.options ?? []).find((x) => String(x.valeur) === String(valeur));
+    if (o?.image) return `<img class="segment-image" src="${echapper(o.image)}" alt="">`;
+    if (o?.picto) return `<span class="segment-picto">${echapper(o.picto)}</span>`;
+    if (col.format === 'coche') return `<span class="segment-picto">${String(valeur) === 'true' ? '☑' : '☐'}</span>`;
+    return '';
   }
 
   #segmentsModifies() {

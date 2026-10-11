@@ -97,7 +97,7 @@ export class EditeurDocument {
   }
 
   /** Ligne modifiable par l'utilisateur (une ligne calculée par le moteur ne l'est pas). */
-  saisissable(l) { return !this.estLigneCalculee(l); }
+  saisissable(l) { return !this.magasin?.lectureSeule && !this.estLigneCalculee(l); }
 
   /** Ligne créée par le moteur (écart d'arrondi…). */
   estLigneCalculee(_l) { return false; }

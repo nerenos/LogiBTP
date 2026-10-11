@@ -11,8 +11,8 @@ export class ErreurApi extends Error {
   }
 }
 
-async function appel(methode, url, corps) {
-  const r = await fetch(`/api${url}`, { method: methode, headers: ENTETES, body: corps === undefined ? undefined : JSON.stringify(corps) });
+async function appel(methode, url, corps, { keepalive = false } = {}) {
+  const r = await fetch(`/api${url}`, { method: methode, headers: ENTETES, body: corps === undefined ? undefined : JSON.stringify(corps), keepalive });
   const texte = await r.text();
   const data = texte ? JSON.parse(texte) : null;
   if (!r.ok) throw new ErreurApi(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details);
@@ -43,4 +43,9 @@ export const api = {
   suivi: (id) => appel('GET', `/documents/${id}/suivi`),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
   casTest: (arbitrage) => appel('POST', '/cas-test', arbitrage),
+  // Verrou de modification d'un document (sans expiration ; déverrouillage manuel par un administrateur).
+  verrouDocument: (id, jeton) => appel('GET', `/documents/${id}/verrou?jeton=${jeton}`),
+  verrouillerDocument: (id, jeton) => appel('POST', `/documents/${id}/verrou`, { jeton }),
+  deverrouillerDocument: (id, jeton) => appel('DELETE', `/documents/${id}/verrou?jeton=${jeton}`, undefined, { keepalive: true }),
+  forcerDeverrouillageDocument: (id) => appel('DELETE', `/documents/${id}/verrou/force`),
 };

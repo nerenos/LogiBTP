@@ -12,8 +12,8 @@
 
 /* Fiche */
 .page-fiche { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.6rem 1rem; }
-.page-fiche-corps { flex: 1; min-height: 0; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.8rem 1rem; display: flex; flex-direction: column; }
-.page-fiche-corps > * { flex: 1; min-height: 0; }
+/* Le corps est la racine .fiche (colonne flex du module) : en-tête et onglets gardent leur hauteur, le contenu défile. */
+.page-fiche-corps { flex: 1; min-height: 0; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.8rem 1rem; }
 
 /* GED */
 .page-ged { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.6rem 1rem; }
@@ -37,3 +37,7 @@
 .definitions { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 0; }
 .definitions dt { color: var(--discret); }
 .definitions dd { margin: 0; }
+.document-verrou { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 1rem 0; padding: 0.35rem 0.7rem; flex: none;
+  border: 1px solid var(--alerte); background: var(--alerte-fond); border-radius: 6px; }
+.document-verrou[hidden] { display: none; }
+.document-verrou button.danger { border-color: var(--erreur); color: var(--erreur); }

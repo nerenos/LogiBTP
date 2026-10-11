@@ -123,7 +123,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         bool confidentiel, DroitsFiche droits, Utilisateur u, Guid? jeton, CancellationToken ct)
     {
         var visible = confidentiel && droits.Confidentiel;
-        var fiche = new FicheDto { Id = l.Id, H = l.H, Verrou = await Verrou(t.Code, l.Id, jeton, ct) };
+        var fiche = new FicheDto { Id = l.Id, H = l.H, Verrou = await Verrou(t.Code, l.Id, jeton, ct, u.Code) };
         foreach (var c in t.Definition.Champs.Where(c => c.Colonne is not null))
         {
             if (c.Confidentiel && !visible) { fiche.Valeurs[c.Code] = null; fiche.Masques.Add(c.Code); }
@@ -169,11 +169,11 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     // ------------------------------------------------------------------ verrou
 
     /// <summary>Verrou actif (non expiré) d'une fiche, ou null.</summary>
-    public virtual async Task<EtatVerrou?> Verrou(string type, string id, Guid? jeton, CancellationToken ct)
+    public virtual async Task<EtatVerrou?> Verrou(string type, string id, Guid? jeton, CancellationToken ct, string? utilisateur = null)
     {
         var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
         var v = await db.Verrous.AsNoTracking().FirstOrDefaultAsync(x => x.VefType == type && x.VefId == id && x.VefRenouvele > limite, ct);
-        return v is null ? null : new EtatVerrou(v.VefUtilisateur, v.VefDepuis, jeton is not null && v.VefJeton == jeton);
+        return v is null ? null : new EtatVerrou(v.VefUtilisateur, v.VefDepuis, jeton is not null && v.VefJeton == jeton, utilisateur is not null && v.VefUtilisateur == utilisateur);
     }
 
     /// <summary>
@@ -187,6 +187,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var t = await Type(code, ct);
         await LigneComplete(t, id, null, null, ct);
         var expiration = (int)specialisation.ExpirationVerrou.TotalSeconds;
+        await PurgerVerrous(ct);
         var pris = await Lire(new RequeteFiche($"""
             INSERT INTO verrou_fiche (vef_type, vef_id, vef_utilisateur, vef_jeton, vef_depuis, vef_renouvele)
             VALUES (@p0, @p1, @p2, CAST(@p3 AS uuid), now(), now())
@@ -194,11 +195,22 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
                 vef_utilisateur = EXCLUDED.vef_utilisateur, vef_jeton = EXCLUDED.vef_jeton, vef_renouvele = now(),
                 vef_depuis = CASE WHEN verrou_fiche.vef_jeton = EXCLUDED.vef_jeton THEN verrou_fiche.vef_depuis ELSE now() END
             WHERE verrou_fiche.vef_jeton = EXCLUDED.vef_jeton
+               OR verrou_fiche.vef_utilisateur = EXCLUDED.vef_utilisateur
                OR verrou_fiche.vef_renouvele < now() - make_interval(secs => {expiration})
                OR CAST(@p4 AS boolean)
             RETURNING vef_utilisateur, vef_depuis
             """, [new("p0", code), new("p1", id), new("p2", u.Code), new("p3", d.Jeton.ToString()), new("p4", d.Forcer ? "true" : "false")]), ct, ecriture: true);
-        return new ReponseVerrou(pris.Count > 0, await Verrou(code, id, d.Jeton, ct));
+        return new ReponseVerrou(pris.Count > 0, await Verrou(code, id, d.Jeton, ct, u.Code));
+    }
+
+    /// <summary>
+    /// Libération automatique des utilisateurs fantômes (connexion perdue, navigateur fermé) : les verrous sans battement
+    /// depuis ExpirationVerrou sont supprimés (ils sont déjà considérés comme libres).
+    /// </summary>
+    public virtual async Task PurgerVerrous(CancellationToken ct)
+    {
+        var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
+        await db.Verrous.Where(v => v.VefRenouvele < limite).ExecuteDeleteAsync(ct);
     }
 
     public virtual async Task Deverrouiller(string code, string id, Guid jeton, CancellationToken ct) =>

@@ -17,6 +17,9 @@ export class Magasin {
     this.pile = [];
     this.pileRefaire = [];
     this.abonnes = new Set();
+    // Lecture seule (document verrouillé par un autre utilisateur…) : toute modification est refusée, surRefus averti.
+    this.lectureSeule = false;
+    this.surRefus = null;
     this.resultat = recalculer(saisie);
   }
 
@@ -32,6 +35,10 @@ export class Magasin {
 
   /** Applique une recette Immer ; renvoie la valeur retournée par la recette. */
   modifier(recette, libelle = '') {
+    if (this.lectureSeule) {
+      this.surRefus?.(libelle);
+      return undefined;
+    }
     let retour;
     const [suivant, patches, inverses] = produceWithPatches(this.saisie, (brouillon) => {
       retour = recette(brouillon);

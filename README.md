@@ -28,7 +28,7 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, `032`, `040`, `050`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
@@ -105,6 +105,16 @@ oui / non, date, liste ; formats e-mail, téléphone, code postal, masque 999.99
 L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche complète (règles des champs puis
 `SpecialisationFiche.ValiderMetier`). Démo hors ligne : profil (ADMIN / SAISIE) dans Paramètres, bouton
 « Simuler un autre utilisateur » dans la fiche.
+
+### Verrous et utilisateurs fantômes
+
+- **Fiches** : verrou renouvelé toutes les 30 s ; sans battement pendant 2 minutes (connexion perdue, navigateur
+  fermé, poste arrêté), il est considéré comme libre et purgé automatiquement à la prise de verrou suivante.
+- **Documents** : verrou posé à l'ouverture d'un document modifiable, **sans expiration** : un document resté ouvert
+  reste bloqué (bandeau « ouvert en modification par… », lecture seule, enregistrement refusé par l'API) jusqu'à sa
+  fermeture ou un **déverrouillage manuel** par un administrateur (`SpecialisationDocument.PeutDeverrouiller`).
+- Dans les deux cas, un utilisateur qui revient sur un élément qu'il avait lui-même verrouillé (autre fenêtre, onglet
+  fermé) reprend son verrou sans avertissement. Fermer l'onglet libère le verrou (requête `keepalive` à la sortie de la page).
 
 ### GED
 

@@ -14,6 +14,9 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
 {
     public virtual string VersionMoteur => MoteurDocument<TDoc, TLigne>.Version;
 
+    /// <summary>Déverrouillage manuel d'un document resté verrouillé par un autre utilisateur : par défaut administrateur.</summary>
+    public virtual bool PeutDeverrouiller(LogiBTP.Socle.Web.Utilisateur u) => u.EstAdmin;
+
     public virtual ComparateurCalcul Comparateur { get; } = new();
 
     // ------------------------------------------------------------------ calcul

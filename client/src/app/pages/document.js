@@ -28,6 +28,7 @@ const GABARIT = `
     </nav>
     <span class="resume"></span>
   </div>
+  <div class="document-verrou" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -118,10 +119,80 @@ export class PageDocument extends PageBase {
   }
 
   async chargerDocument(id) {
+    await this.liberer();
     const complet = await api.document(id);
     const type = this.types.find((t) => t.tyd_id === complet.document.ent_tyd_id);
     const definition = await api.definition(type.tyd_code);
     await this.charger(definition, complet);
+    await this.prendreVerrou();
+  }
+
+  // ---------------------------------------------------------------- verrou de modification (en ligne)
+
+  /** Document modifiable par cet utilisateur (statut, validation, droit) : il est alors verrouillé à l'ouverture. */
+  #modifiable() {
+    const ed = this.editeur;
+    const doc = ed.saisie.document;
+    const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
+    return statut?.std_modifiable !== false && !doc.ent_verrouille && (ed.definition.droits ?? []).includes('MODIFIER');
+  }
+
+  /**
+   * Prise (ou renouvellement) du verrou. Pris par un autre utilisateur : lecture seule et bandeau. Le verrou n'expire
+   * pas : seul un administrateur peut lever celui d'une fenêtre fermée ou d'une connexion perdue. Le même utilisateur
+   * reprend son propre verrou sans avertissement.
+   */
+  async prendreVerrou() {
+    if (!this.app.enLigne || !this.editeur || !this.#modifiable()) { this.#etatVerrou(null); return; }
+    this.jeton ??= crypto.randomUUID();
+    const id = this.editeur.saisie.document.ent_id;
+    const r = await api.verrouillerDocument(id, this.jeton);
+    this.verrouDetenu = r.ok ? id : null;
+    this.#etatVerrou(r.ok ? null : r.verrou);
+    clearInterval(this.battement);
+    // Battement : dernière activité (information pour l'administrateur) ; détecte un déverrouillage forcé.
+    this.battement = setInterval(() => {
+      if (!this.verrouDetenu) return;
+      api.verrouillerDocument(this.verrouDetenu, this.jeton).then((x) => {
+        if (!x.ok) { this.verrouDetenu = null; this.#etatVerrou(x.verrou); this.app.message(`Document repris en modification par ${x.verrou?.utilisateur}`, 'erreur'); }
+      }).catch(() => {});
+    }, 30000);
+  }
+
+  #etatVerrou(verrou) {
+    this.bloque = verrou;
+    const zone = this.$('.document-verrou');
+    const magasin = this.editeur?.magasin;
+    if (magasin) {
+      magasin.lectureSeule = Boolean(verrou);
+      magasin.surRefus = () => this.app.message(`Lecture seule : document ouvert en modification par ${verrou?.utilisateur}`, 'avertissement');
+    }
+    zone.hidden = !verrou;
+    if (verrou) {
+      const h = (d) => new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      zone.innerHTML = `🔒 Document ouvert en modification par <b>${echapper(verrou.utilisateur)}</b> depuis le ${h(verrou.depuis)}
+        <span class="aide">(dernière activité ${h(verrou.vu)}) : lecture seule.</span>
+        <button type="button" data-verrou="reessayer">Réessayer</button>
+        ${this.app.estAdmin() ? '<button type="button" data-verrou="forcer" class="danger" title="Fenêtre fermée, connexion perdue… : le verrou n’expire pas tout seul">Déverrouiller</button>' : ''}`;
+      zone.querySelector('[data-verrou="reessayer"]').addEventListener('click', () => this.prendreVerrou().catch((e) => this.app.erreur(e)));
+      zone.querySelector('[data-verrou="forcer"]')?.addEventListener('click', async () => {
+        if (!confirm(`Déverrouiller le document ? Les modifications non enregistrées de ${verrou.utilisateur} seront perdues.`)) return;
+        try {
+          await api.forcerDeverrouillageDocument(this.editeur.saisie.document.ent_id);
+          await this.prendreVerrou();
+          this.app.message('Document déverrouillé', 'succes');
+        } catch (e) { this.app.erreur(e); }
+      });
+    }
+    this.rafraichir();
+  }
+
+  /** Libération du verrou (changement de document, page quittée, onglet fermé : requête keepalive). */
+  async liberer() {
+    clearInterval(this.battement);
+    const id = this.verrouDetenu;
+    this.verrouDetenu = null;
+    if (id !== null && id !== undefined) await api.deverrouillerDocument(id, this.jeton).catch(() => {});
   }
 
   async charger(definition, complet) {
@@ -174,7 +245,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="annuler"]').disabled = ed.magasin.pile.length === 0;
     this.$('[data-action="retablir"]').disabled = ed.magasin.pileRefaire.length === 0;
     const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
-    const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille;
+    const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille && !this.bloque;
     this.$('[data-action="enregistrer"]').disabled = !enLigne || !modifiable;
     this.$('[data-action="valider"]').disabled = !enLigne || !modifiable;
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length);
@@ -291,6 +362,7 @@ export class PageDocument extends PageBase {
   }
 
   fermer() {
+    this.liberer();
     document.removeEventListener('keydown', this.clavier);
     document.body.classList.remove('avec-document', 'lecture-seule');
   }

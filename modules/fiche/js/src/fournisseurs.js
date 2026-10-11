@@ -7,14 +7,14 @@ import { validerChamp, MESSAGES } from './validation.js';
 //                                               supplementaires, sections, droits { voir, modifier, debloquer, confidentiel }
 //   charger(type, id, { confidentiel })       → { id, valeurs, proprietes, h, masques: [codes, '+code'], verrou }
 //   reveler(type, id)                         → { valeurs, proprietes } des champs confidentiels (accès journalisé)
-//   verrouiller(type, id, { jeton, forcer })  → { ok, verrou: { utilisateur, depuis, moi } }   (battement compris)
+//   verrouiller(type, id, { jeton, forcer })  → { ok, verrou: { utilisateur, depuis, moi, meme_utilisateur } }   (battement compris)
 //   deverrouiller(type, id, jeton)
 //   enregistrer(type, id, { jeton, h, valeurs, proprietes, confidentiel })  → fiche relue ; 409 VERROU_PERDU / FICHE_MODIFIEE
 //   creer(type, { valeurs, proprietes, confidentiel })  → fiche créée (création et copie)
 //   (confidentiel : relire les champs confidentiels, si l'utilisateur les avait affichés et en a le droit)
 //   parametrage(type) / enregistrerParametrage(type, { obligatoires, supplementaires })   (profil ADMIN)
 //
-// verrou : null (personne ne modifie) ou { utilisateur, depuis, moi } ; une erreur 422 VALIDATION porte
+// verrou : null (personne ne modifie) ou { utilisateur, depuis, moi, meme_utilisateur } (le même utilisateur reprend son verrou) ; une erreur 422 VALIDATION porte
 // details = [{ champ, code, message, supplementaire }].
 
 export class ErreurFiche extends Error {
@@ -32,8 +32,8 @@ export class FournisseurFicheApi {
     this.entetes = { 'Content-Type': 'application/json', ...entetes };
   }
 
-  async appel(methode, url, corps) {
-    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
+  async appel(methode, url, corps, { keepalive = false } = {}) {
+    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps), keepalive });
     const texte = await r.text();
     const data = texte ? JSON.parse(texte) : null;
     if (!r.ok) throw new ErreurFiche(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
@@ -48,7 +48,8 @@ export class FournisseurFicheApi {
   charger(type, id, { confidentiel = false } = {}) { return this.appel('GET', this.#u(type, id, confidentiel ? '?confidentiel=true' : '')); }
   reveler(type, id) { return this.appel('POST', this.#u(type, id, '/confidentiel')); }
   verrouiller(type, id, { jeton, forcer = false }) { return this.appel('POST', this.#u(type, id, '/verrou'), { jeton, forcer }); }
-  deverrouiller(type, id, jeton) { return this.appel('DELETE', this.#u(type, id, `/verrou?jeton=${encodeURIComponent(jeton)}`)); }
+  // keepalive : la libération aboutit même si la fenêtre se ferme (onglet fermé sur une fiche en modification).
+  deverrouiller(type, id, jeton) { return this.appel('DELETE', this.#u(type, id, `/verrou?jeton=${encodeURIComponent(jeton)}`), undefined, { keepalive: true }); }
   enregistrer(type, id, corps) { return this.appel('PUT', this.#u(type, id), corps); }
   creer(type, corps) { return this.appel('POST', this.#u(type), corps); }
   parametrage(type) { return this.appel('GET', this.#u(type, null, '/parametrage')); }
@@ -124,7 +125,7 @@ export class FournisseurFicheMemoire {
   }
 
   #vueVerrou(v, jeton) {
-    return v ? { utilisateur: v.utilisateur, depuis: new Date(v.depuis).toISOString(), moi: !!jeton && v.jeton === jeton } : null;
+    return v ? { utilisateur: v.utilisateur, depuis: new Date(v.depuis).toISOString(), moi: !!jeton && v.jeton === jeton, meme_utilisateur: v.utilisateur === this.utilisateur } : null;
   }
 
   async #lire(type, id, { confidentiel = false, jeton = null } = {}) {
@@ -177,7 +178,8 @@ export class FournisseurFicheMemoire {
     this.#exiger(type, 'modifier');
     this.#ligne(type, id);
     const v = this.#verrou(type, id);
-    if (v && v.jeton !== jeton) {
+    // Le même utilisateur reprend son propre verrou (autre fenêtre, fenêtre fermée) sans avertissement.
+    if (v && v.jeton !== jeton && v.utilisateur !== this.utilisateur) {
       if (!forcer) return { ok: false, verrou: this.#vueVerrou(v, jeton) };
       this.#exiger(type, 'debloquer');
     }

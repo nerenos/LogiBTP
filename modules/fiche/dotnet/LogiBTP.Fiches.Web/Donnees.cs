@@ -103,7 +103,8 @@ public sealed class DefinitionFicheDto
     public DroitsFiche Droits { get; set; } = new(false, false, false, false);
 }
 
-public sealed record EtatVerrou(string Utilisateur, DateTimeOffset Depuis, bool Moi);
+/// <summary>Verrou : Moi = cette fenêtre (jeton) ; MemeUtilisateur = l'utilisateur courant (reprise silencieuse).</summary>
+public sealed record EtatVerrou(string Utilisateur, DateTimeOffset Depuis, bool Moi, bool MemeUtilisateur = false);
 
 public sealed class FicheDto
 {

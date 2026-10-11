@@ -34,6 +34,7 @@ public static class Extensions
         services.AddScoped<PersistanceDocument<TDoc, TLigne, TComplet>>();
         services.AddScoped<DocumentService<TDoc, TLigne, TComplet>>();
         services.AddScoped<TransformationService<TDoc, TLigne, TComplet>>();
+        services.AddScoped<VerrouDocumentService<TDoc, TLigne, TComplet>>();
         return services;
     }
 
@@ -59,8 +60,27 @@ public static class Extensions
             var d = await s.Creer(c, Utilisateur.Depuis(http), ct);
             return Results.Created($"/api/documents/{d.Document.EntId}", d);
         });
-        api.MapPut("/documents/{id:long}", (long id, TComplet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
-            s.Enregistrer(id, d, Utilisateur.Depuis(http), ct));
+        api.MapPut("/documents/{id:long}", async (long id, TComplet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            await v.Controler(id, u, ct);
+            return await s.Enregistrer(id, d, u, ct);
+        });
+        // Verrou de modification (sans expiration) : état, prise, libération, déverrouillage manuel.
+        api.MapGet("/documents/{id:long}/verrou", (long id, Guid? jeton, HttpContext http, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
+            v.Etat(id, jeton, Utilisateur.Depuis(http), ct));
+        api.MapPost("/documents/{id:long}/verrou", (long id, DemandeVerrouDocument d, HttpContext http, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
+            v.Verrouiller(id, d, Utilisateur.Depuis(http), ct));
+        api.MapDelete("/documents/{id:long}/verrou", async (long id, Guid jeton, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
+        {
+            await v.Deverrouiller(id, jeton, ct);
+            return Results.NoContent();
+        });
+        api.MapDelete("/documents/{id:long}/verrou/force", async (long id, HttpContext http, VerrouDocumentService<TDoc, TLigne, TComplet> v, CancellationToken ct) =>
+        {
+            await v.Forcer(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         api.MapDelete("/documents/{id:long}", async (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
         {
             await s.Supprimer(id, Utilisateur.Depuis(http), ct);

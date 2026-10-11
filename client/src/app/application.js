@@ -54,6 +54,8 @@ export class Application {
     window.addEventListener('beforeunload', (e) => {
       if (this.routeur.page?.modifiee && !this.fenetres.fermetureSession && !this.fermetureForcee) { e.preventDefault(); e.returnValue = ''; }
     });
+    // Onglet ou fenêtre réellement quitté (après l'avertissement éventuel) : la page libère son verrou (requête keepalive).
+    window.addEventListener('pagehide', () => { this.libererPage(); });
     // Liens internes : navigation dans la fenêtre (Ctrl, Maj ou clic milieu : nouvelle fenêtre).
     document.addEventListener('click', (e) => this.#lien(e));
     document.addEventListener('auxclick', (e) => { if (e.button === 1) this.#lien(e, true); });
@@ -106,7 +108,13 @@ export class Application {
   /** Navigation dans la fenêtre, ou dans une nouvelle fenêtre séparée (autre moniteur). */
   naviguer(url, { nouvelleFenetre = false, remplacer = false } = {}) {
     if (nouvelleFenetre) {
-      if (!this.fenetres.ouvrir(url)) this.message('Fenêtre bloquée par le navigateur : autorisez les fenêtres pop-up pour ce site', 'avertissement');
+      // Ouverture différée hors de l'événement : avec Ctrl ou le clic milieu, le navigateur ouvrirait sinon un onglet en
+      // arrière-plan. La nouvelle fenêtre passe au premier plan.
+      setTimeout(() => {
+        const w = this.fenetres.ouvrir(url);
+        if (w) w.focus();
+        else this.message('Fenêtre bloquée par le navigateur : autorisez les fenêtres pop-up pour ce site', 'avertissement');
+      }, 0);
       return Promise.resolve(false);
     }
     return this.routeur.aller(url, { remplacer });
