@@ -26,7 +26,7 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
   for (const c of jeu.cas) {
     it(c.nom, async () => {
       const f = fournisseur();
-      const demande = { definition, ...c.requete };
+      const demande = { definition: { ...definition, filtres: c.filtres ?? [] }, ...c.requete };
       // Lots de 2 : la concaténation des lots doit donner l'ordre complet.
       const ids = [];
       let apres = null;
@@ -45,7 +45,7 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.segments) {
     it(`segments : ${c.nom}`, async () => {
-      expect(await fournisseur().segments({ definition, ...c.requete }, c.colonne)).toEqual(c.attendu);
+      expect(await fournisseur().segments({ definition: { ...definition, filtres: c.filtres ?? [] }, ...c.requete }, c.colonne)).toEqual(c.attendu);
     });
   }
 

@@ -6,6 +6,6 @@ export {
   filtreActif, correspond, comparerValeurs, valeursDistinctes, formatsPresents, nombreDe, estNumerique,
   OPERATEURS_NOMBRE, OPERATEURS_TEXTE,
 } from './filtres.js';
-export { filtrer, trier, lot, jusqua, comptesSegment, cleTri, comparerCles, texteBrut, empreinte } from './requete.js';
+export { filtrer, correspondFiltreVue, OPERATEURS_VUE, trier, lot, jusqua, comptesSegment, cleTri, comparerCles, texteBrut, empreinte } from './requete.js';
 export { FournisseurApi, FournisseurMemoire, ErreurFournisseur } from './fournisseurs.js';
 export { calculerLargeurs } from './largeurs.js';

@@ -2,6 +2,7 @@ import { motsRecherche, normaliser } from './normaliser.js';
 
 // Sémantique des requêtes de liste (référence du serveur, utilisée par le fournisseur en mémoire et les jeux
 // de test partagés modules/liste/tests/cas) :
+//   filtres     filtres fixes de la vue (définition) : toujours appliqués, en ET, avant tout le reste
 //   recherche   chaque mot doit être contenu (sans casse ni accents) dans au moins une colonne de recherche,
 //               sur le texte brut de la donnée (valeur::text côté SQL)
 //   segments    { colonne: [valeurs] } : la valeur (en texte, null = vide) doit être l'une des valeurs retenues
@@ -17,10 +18,58 @@ export function texteBrut(v) {
   return String(v);
 }
 
-export function filtrer(lignes, { recherche, segments }, colonnesRecherche) {
+/** Opérateurs des filtres fixes d'une vue (même liste que ConstructeurRequete.OperateursVue côté C#). */
+export const OPERATEURS_VUE = [
+  ['=', 'égal à'], ['<>', 'différent de'], ['>', 'supérieur à'], ['>=', 'supérieur ou égal à'], ['<', 'inférieur à'],
+  ['<=', 'inférieur ou égal à'], ['entre', 'entre'], ['contient', 'contient'], ['commence', 'commence par'],
+  ['finit', 'se termine par'], ['dans', 'parmi (valeurs séparées par ;)'], ['vide', 'est vide'], ['nonvide', 'n\'est pas vide'],
+  ['vrai', 'est coché (vrai)'], ['faux', 'n\'est pas coché (faux)'],
+];
+
+const vraiTexte = (v) => ['true', 'vrai', '1', 'oui', 't'].includes(String(v ?? '').trim().toLowerCase());
+
+/** Comparaison d'une donnée avec la valeur saisie dans le filtre (nombre, booléen ou texte). */
+function comparerFiltre(v, ref) {
+  if (typeof v === 'number') return v - Number(String(ref ?? '').replace(',', '.'));
+  if (typeof v === 'boolean') return Number(v) - Number(vraiTexte(ref));
+  return comparerCle(String(v), String(ref ?? ''));
+}
+
+/** La ligne satisfait-elle un filtre fixe de la vue ({ colonne, op, valeur, valeur2, valeurs }) ? */
+export function correspondFiltreVue(ligne, f) {
+  const v = ligne[f.colonne];
+  const vide = v === null || v === undefined || v === '';
+  const texte = normaliser(texteBrut(v) ?? '');
+  switch (f.op) {
+    case 'vide': return vide;
+    case 'nonvide': return !vide;
+    case 'vrai': return v === true;
+    case 'faux': return v === false;
+    case 'dans': return !estVide(v) && (f.valeurs ?? []).some((x) => texteBrut(v) === String(x));
+    case 'contient': return !estVide(v) && texte.includes(normaliser(f.valeur));
+    case 'commence': return !estVide(v) && texte.startsWith(normaliser(f.valeur));
+    case 'finit': return !estVide(v) && texte.endsWith(normaliser(f.valeur));
+    default: break;
+  }
+  if (estVide(v)) return false;
+  const c = comparerFiltre(v, f.valeur);
+  switch (f.op) {
+    case '=': return c === 0;
+    case '<>': return c !== 0;
+    case '>': return c > 0;
+    case '>=': return c >= 0;
+    case '<': return c < 0;
+    case '<=': return c <= 0;
+    case 'entre': return c >= 0 && comparerFiltre(v, f.valeur2) <= 0;
+    default: return false;
+  }
+}
+
+export function filtrer(lignes, { recherche, segments, filtres }, colonnesRecherche) {
   const mots = motsRecherche(recherche ?? '');
   const seg = Object.entries(segments ?? {}).filter(([, v]) => Array.isArray(v) && v.length);
   return lignes.filter((l) => {
+    if (filtres?.length && !filtres.every((f) => correspondFiltreVue(l, f))) return false;
     for (const [col, valeurs] of seg) {
       const t = texteBrut(l[col]);
       if (!valeurs.some((v) => (v === null ? t === null : t === String(v)))) return false;

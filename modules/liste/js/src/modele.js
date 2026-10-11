@@ -9,7 +9,8 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 //   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto }],
 //                style: { couleur, fond, gras, italique, souligne, barre }, regles: [{ condition, style }],
 //                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement }],
-//   segments: [{ colonne, titre }], tri: [{ colonne, sens: 'asc' | 'desc' }], lignes: 'multi' | 'simple', taille_lot
+//   segments: [{ colonne, titre }], tri: [{ colonne, sens: 'asc' | 'desc' }], lignes: 'multi' | 'simple', taille_lot,
+//   filtres: [{ colonne, op, valeur, valeur2, valeurs }]   filtres fixes appliqués par la base (ex. salariés actifs)
 // }
 
 export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto'];
@@ -27,6 +28,7 @@ export function normaliserDefinition(def = {}) {
       largeur: { mode: 'auto', valeur: null, min: null, max: null, ...c.largeur },
     })),
     segments: def.segments ?? [],
+    filtres: def.filtres ?? [],
     tri: def.tri ?? [],
     lignes: def.lignes ?? 'multi',
     taille_lot: def.taille_lot ?? 100,

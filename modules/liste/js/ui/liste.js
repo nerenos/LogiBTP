@@ -4,7 +4,7 @@ import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/f
 import { calculerLargeurs } from '../src/largeurs.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
-import { ConcepteurVue } from './concepteur.js';
+import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
 
 const LARGEUR_COIN = 30;
 const DELAI_RECHERCHE = 350;
@@ -75,8 +75,10 @@ export class ListeDonnees {
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage)">✎</button>
         <button type="button" data-action="nouvelle" title="Nouvelle vue">＋</button>
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
+        <span class="liste-filtres-vue" hidden></span>
         <span class="liste-compteur"></span>
         <button type="button" data-action="effacer" title="Effacer les filtres et le tri des colonnes" hidden>⨯ Filtres</button>
+        <button type="button" data-action="lignes" aria-pressed="false"></button>
         <button type="button" data-action="tout" aria-pressed="false">⇊</button>
         <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
       </div>
@@ -119,6 +121,7 @@ export class ListeDonnees {
     r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
+    r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
       this.filtres.clear();
       this.triLocal = null;
@@ -197,7 +200,13 @@ export class ListeDonnees {
     const zoneErreurs = this.racine.querySelector('.liste-erreurs');
     zoneErreurs.hidden = !erreurs.length;
     zoneErreurs.textContent = erreurs.join(' · ');
-    this.racine.classList.toggle('liste-simple', this.definition.lignes === 'simple');
+    this.#appliquerLignes();
+    // Rappel des filtres fixes de la vue (appliqués par la base).
+    const fv = this.racine.querySelector('.liste-filtres-vue');
+    const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));
+    fv.hidden = !libelles.length;
+    fv.textContent = `⚑ ${libelles.length === 1 ? libelles[0] : `${libelles.length} filtres de vue`}`;
+    fv.title = `Filtres de la vue, appliqués par la base :\n${libelles.join('\n')}`;
     this.#rendreEntete();
     this.recharger();
     this.rafraichirSegments();
@@ -213,6 +222,8 @@ export class ListeDonnees {
       fournisseur: this.fournisseur,
       vue: base,
       peutRequete: this.peutRequete,
+      largeursAjustees: { ...this.#largeursAjustees() },
+      oublierLargeurs: () => { delete this.prefs.colonnes?.[this.#cleLargeurs()]; this.#ecrirePreferences(); },
       appliquer: (v) => this.appliquerVue(v, { nonEnregistree: true }),
       enregistrer: async (v) => {
         const enregistree = await this.fournisseur.enregistrerVue(v);
@@ -292,6 +303,34 @@ export class ListeDonnees {
         this.#rendreSuite();
       }
     }
+  }
+
+  /**
+   * Affichage des lignes : sur une seule ligne ou multiligne. Par défaut celui de la vue ; le bouton le force
+   * pour cet utilisateur (préférence du navigateur, par vue).
+   */
+  get affichageLignes() {
+    return this.prefs.lignes?.[String(this.vue?.vli_id ?? 'nouvelle')] ?? this.definition.lignes;
+  }
+
+  basculerLignes() {
+    const suivant = this.affichageLignes === 'simple' ? 'multi' : 'simple';
+    const cle = String(this.vue?.vli_id ?? 'nouvelle');
+    this.prefs.lignes = { ...this.prefs.lignes, [cle]: suivant };
+    if (suivant === this.definition.lignes) delete this.prefs.lignes[cle];
+    this.#ecrirePreferences();
+    this.#appliquerLignes();
+    this.rendreCorps();
+  }
+
+  #appliquerLignes() {
+    const simple = this.affichageLignes === 'simple';
+    this.racine.classList.toggle('liste-simple', simple);
+    const b = this.racine.querySelector('[data-action="lignes"]');
+    b.textContent = simple ? '⇕' : '⇔';
+    b.classList.toggle('actif', !!this.prefs.lignes?.[String(this.vue?.vli_id ?? 'nouvelle')]);
+    b.setAttribute('aria-pressed', String(simple));
+    b.title = simple ? 'Afficher les lignes en entier (multiligne)' : 'Afficher chaque ligne sur une seule ligne';
   }
 
   /** Interrupteur « Charger toutes les lignes » : conservé lors des rechargements (filtres, segments, tri). */
@@ -502,12 +541,14 @@ export class ListeDonnees {
       const actif = filtreActif(this.filtres.get(c.code));
       th.innerHTML = `<div class="liste-th">
         <span class="liste-th-titre">${echapper(c.titre ?? c.code)}</span>
+        <span class="liste-poignee" title="Glisser pour redimensionner · double-clic : largeur de la vue"></span>
         <span class="liste-th-boutons">
           <button type="button" data-tri class="${sens ? 'actif' : ''} ${triB ? 'base' : ''}" title="${triB ? 'Trié sur toute la base' : triL ? 'Trié sur les lignes chargées' : 'Trier'}">${sens === 'asc' ? '▲' : sens === 'desc' ? '▼' : '⇵'}</button>
           <button type="button" data-filtre class="${actif ? 'actif' : ''}" title="Filtrer les lignes chargées">${actif ? '⧩' : '▾'}</button>
         </span></div>`;
       th.querySelector('[data-tri]').addEventListener('click', () => this.#clicTri(c, sens));
       th.querySelector('[data-filtre]').addEventListener('click', (e) => this.#menu(c, e.currentTarget));
+      this.#poignee(th.querySelector('.liste-poignee'), c.code);
       tr.append(th);
     }
     thead.replaceChildren(tr);
@@ -596,7 +637,7 @@ export class ListeDonnees {
       const contenu = this.formats.contenu(valeur, c, this.modele);
       if (contenu instanceof Node) td.append(contenu); else td.textContent = contenu ?? '';
       appliquerStyle(td, this.modele.style(ligne, c.code));
-      if (this.definition.lignes === 'simple' && typeof contenu === 'string' && contenu.length > 20) td.title = contenu;
+      if (this.affichageLignes === 'simple' && typeof contenu === 'string' && contenu.length > 20) td.title = contenu;
       tr.append(td);
     }
     return tr;
@@ -639,8 +680,60 @@ export class ListeDonnees {
     } else b.textContent = this.lignes.length ? `Fin de la liste · ${this.lignes.length} ligne${this.lignes.length > 1 ? 's' : ''}` : 'Aucune ligne';
   }
 
+  /** Largeurs ajustées à la souris pour la vue courante : préférence du navigateur, jamais en base. */
+  #cleLargeurs() { return String(this.vue?.vli_id ?? 'nouvelle'); }
+
+  #largeursAjustees() { return this.prefs.colonnes?.[this.#cleLargeurs()] ?? {}; }
+
+  /** Redimensionnement d'une colonne par glisser sur le bord droit de l'en-tête ; double-clic : largeur de la vue. */
+  #poignee(poignee, code) {
+    poignee.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      poignee.setPointerCapture(e.pointerId);
+      const i = this.modele.visibles.findIndex((c) => c.code === code);
+      const col = this.table.querySelector('colgroup').children[i + 1];
+      const depart = col.getBoundingClientRect().width;
+      const x0 = e.clientX;
+      let largeur = depart;
+      document.body.classList.add('redimensionnement-colonne');
+      const bouger = (ev) => {
+        largeur = Math.round(Math.max(36, depart + ev.clientX - x0));
+        const ancienne = parseFloat(col.style.width) || depart;
+        col.style.width = `${largeur}px`;
+        this.table.style.width = `${parseFloat(this.table.style.width) + largeur - ancienne}px`;
+      };
+      const finir = () => {
+        poignee.removeEventListener('pointermove', bouger);
+        poignee.removeEventListener('pointerup', finir);
+        poignee.removeEventListener('pointercancel', finir);
+        document.body.classList.remove('redimensionnement-colonne');
+        if (largeur === depart) return;
+        this.prefs.colonnes = { ...this.prefs.colonnes, [this.#cleLargeurs()]: { ...this.#largeursAjustees(), [code]: largeur } };
+        this.#ecrirePreferences();
+        this.#largeurs();
+      };
+      poignee.addEventListener('pointermove', bouger);
+      poignee.addEventListener('pointerup', finir);
+      poignee.addEventListener('pointercancel', finir);
+    });
+    poignee.addEventListener('click', (e) => e.stopPropagation());
+    poignee.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const ajustees = { ...this.#largeursAjustees() };
+      delete ajustees[code];
+      this.prefs.colonnes = { ...this.prefs.colonnes, [this.#cleLargeurs()]: ajustees };
+      this.#ecrirePreferences();
+      this.#largeurs();
+    });
+  }
+
   #largeurs() {
-    const visibles = this.modele.visibles;
+    const ajustees = this.#largeursAjustees();
+    // Une colonne ajustée à la souris devient fixe (pour cet utilisateur) ; les autres se partagent le reste.
+    const visibles = this.modele.visibles.map((c) => (ajustees[c.code]
+      ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : c));
     const dispo = Math.max(this.zone.clientWidth - LARGEUR_COIN - 2, 200);
     const largeurs = calculerLargeurs(visibles, dispo);
     const cg = this.table.querySelector('colgroup');

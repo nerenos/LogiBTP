@@ -40,6 +40,11 @@ segments interrogent la base ; les filtres de colonnes (▾) portent sur les lig
 bouton ⇅ du coin « Trier toute la base » est actif (ou via le menu de la colonne). Double-clic ou Entrée : ouverture de la
 fiche d'après l'ID et le type d'élément de la ligne (les documents s'ouvrent dans l'éditeur). Le concepteur (✎ / ＋) définit la
 mise en forme et les colonnes ; la requête manuelle (SELECT encadré, lecture seule, délai maximal) est réservée au profil ADMIN.
+Les filtres fixes d'une vue (onglet « Colonnes et source » du concepteur, ex. « actif est coché » pour la vue Salariés actifs)
+sont appliqués par la base, toujours, et rappelés par la pastille ⚑ de la barre. Les colonnes se redimensionnent à la souris
+(bord droit de l'en-tête, double-clic pour revenir à la largeur de la vue) et le bouton ⇔ / ⇕ force l'affichage sur une ligne
+ou multiligne : ces réglages sont propres à l'utilisateur, gardés dans le navigateur, et le concepteur peut reprendre les
+largeurs ajustées comme largeurs fixes de la vue.
 Hors ligne, la démo simule les modifications d'un autre poste (bouton sous la liste) pour éprouver le contrôle périodique.
 
 Les tests d'intégration PostgreSQL du module Liste (jeux partagés exécutés sur la base) s'activent avec la variable

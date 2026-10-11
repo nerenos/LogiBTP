@@ -11,6 +11,7 @@ public sealed record RequeteSql(string Texte, IReadOnlyList<ParametreSql> Parame
 /// Construction des requêtes d'une liste sur une source encadrée (<c>SELECT … FROM (source) s</c>). Réplique de la
 /// sémantique de modules/liste/js/src/requete.js (jeux partagés modules/liste/tests/cas) :
 /// <list type="bullet">
+/// <item>filtres fixes de la vue : toujours appliqués, en ET ;</item>
 /// <item>recherche : chaque mot contenu, sans casse ni accents (f_sans_accent), dans au moins une colonne de recherche ;</item>
 /// <item>segments : valeur (texte brut) parmi celles retenues, null = vide ;</item>
 /// <item>tri : colonnes demandées puis identifiant croissant, vides toujours en dernier ;</item>
@@ -22,6 +23,15 @@ public sealed record RequeteSql(string Texte, IReadOnlyList<ParametreSql> Parame
 public partial class ConstructeurRequete
 {
     public const int MotsMax = 10;
+
+    /// <summary>Opérateurs des filtres fixes (même liste que OPERATEURS_VUE côté JS).</summary>
+    public static readonly IReadOnlySet<string> OperateursVue = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "=", "<>", ">", ">=", "<", "<=", "entre", "contient", "commence", "finit", "dans", "vide", "nonvide", "vrai", "faux",
+    };
+
+    [GeneratedRegex(@"^(smallint|integer|bigint|numeric|decimal|real|double precision|money)")]
+    private static partial Regex TypeNumerique();
     public const int ControleMax = 20000;
 
     [GeneratedRegex(@"^[a-z][a-z0-9 _]*(\(\d+(,\d+)?\))?(\[\])?$")]
@@ -90,7 +100,7 @@ public partial class ConstructeurRequete
     /// <summary>Conditions de recherche et de segments (sauf le segment <paramref name="sansSegment"/>).</summary>
     protected virtual List<string> Conditions(string? sansSegment = null)
     {
-        var conditions = new List<string>();
+        var conditions = Definition.Filtres.Select(ConditionFiltre).ToList();
         var colonnes = ColonnesRecherche();
         foreach (var mot in Mots(Demande.Recherche))
         {
@@ -108,6 +118,37 @@ public partial class ConstructeurRequete
             conditions.Add("(" + string.Join(" OR ", parties) + ")");
         }
         return conditions;
+    }
+
+    /// <summary>Valeur saisie convertie au type de la colonne (virgule décimale acceptée pour un nombre).</summary>
+    protected string ValeurFiltre(string colonne, string? valeur)
+    {
+        var type = _colonnes[colonne].Type.ToLowerInvariant();
+        var v = TypeNumerique().IsMatch(type) ? valeur?.Trim().Replace(',', '.') : valeur;
+        return Typee(colonne, v).Valeur;
+    }
+
+    /// <summary>Condition SQL d'un filtre fixe ; même sémantique que correspondFiltreVue (requete.js).</summary>
+    protected virtual string ConditionFiltre(FiltreVue f)
+    {
+        if (!OperateursVue.Contains(f.Op)) throw new ErreurListe("FILTRE_OPERATEUR", $"Opérateur de filtre inconnu : {f.Op}");
+        var col = Col(f.Colonne);
+        string Motif(string debut, string fin) =>
+            $"f_sans_accent({col}::text) LIKE f_sans_accent({P(debut + EchapperLike(f.Valeur ?? "") + fin)}) ESCAPE '\\'";
+        switch (f.Op)
+        {
+            case "vide": return $"({col} IS NULL OR {col}::text = '')";
+            case "nonvide": return $"({col} IS NOT NULL AND {col}::text <> '')";
+            case "vrai": return $"({col})::boolean IS TRUE";
+            case "faux": return $"({col})::boolean IS FALSE";
+            case "dans": return $"{col}::text = ANY({P((f.Valeurs ?? []).ToArray())})";
+            case "contient": return Motif("%", "%");
+            case "commence": return Motif("", "%");
+            case "finit": return Motif("%", "");
+        }
+        var (colonne, _) = Typee(f.Colonne, f.Valeur);
+        if (f.Op == "entre") return $"{colonne} BETWEEN {ValeurFiltre(f.Colonne, f.Valeur)} AND {ValeurFiltre(f.Colonne, f.Valeur2)}";
+        return $"{colonne} {f.Op} {ValeurFiltre(f.Colonne, f.Valeur)}";
     }
 
     /// <summary>

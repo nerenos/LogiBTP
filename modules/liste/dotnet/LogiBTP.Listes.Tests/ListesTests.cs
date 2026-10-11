@@ -71,6 +71,27 @@ public class ConstructeurRequeteTests
     }
 
     [Fact]
+    public void Filtre_de_vue_parametre_et_type()
+    {
+        var def = Def();
+        def.Filtres = [new() { Colonne = "montant", Op = "entre", Valeur = "10,5", Valeur2 = "20" }, new() { Colonne = "nom", Op = "contient", Valeur = "é%" }];
+        var r = new ConstructeurRequete(Source, def, new DemandeListe()).Lot(10);
+        Assert.Contains("s.\"montant\" BETWEEN CAST(@p0 AS numeric) AND CAST(@p1 AS numeric)", r.Texte);
+        Assert.Equal("10.5", r.Parametres[0].Valeur);
+        Assert.Contains(r.Parametres, p => (string?)p.Valeur == "%é\\%%");
+    }
+
+    [Fact]
+    public void Filtre_de_vue_operateur_ou_colonne_inconnus_refuses()
+    {
+        var def = Def();
+        def.Filtres = [new() { Colonne = "nom", Op = "; DROP" }];
+        Assert.Equal("FILTRE_OPERATEUR", Assert.Throws<ErreurListe>(() => new ConstructeurRequete(Source, def, new DemandeListe()).Lot(10)).Code);
+        def.Filtres = [new() { Colonne = "inconnue", Op = "=" }];
+        Assert.Equal("COLONNE_INCONNUE", Assert.Throws<ErreurListe>(() => new ConstructeurRequete(Source, def, new DemandeListe()).Lot(10)).Code);
+    }
+
+    [Fact]
     public void Curseur_incompatible_refuse()
     {
         var d = new DemandeListe { Tri = [new() { Colonne = "nom" }], Apres = ["x"] };
@@ -147,10 +168,14 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean")],
         "id", null, "salarie");
 
-    private DefinitionVue Def()
+    private DefinitionVue Def(JsonNode? filtres = null)
     {
         var recherche = _jeu["recherche"]!.AsArray().Select(n => n!.GetValue<string>()).ToHashSet();
-        return new DefinitionVue { Colonnes = Source().Colonnes.Select(c => new ColonneVue { Code = c.Code, Recherche = recherche.Contains(c.Code) }).ToList() };
+        return new DefinitionVue
+        {
+            Colonnes = Source().Colonnes.Select(c => new ColonneVue { Code = c.Code, Recherche = recherche.Contains(c.Code) }).ToList(),
+            Filtres = filtres?.Deserialize<List<FiltreVue>>(JsonCalcul.Options) ?? [],
+        };
     }
 
     private static DemandeListe Demande(JsonNode? requete) =>
@@ -178,7 +203,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
             var ids = new List<int>();
             for (var tour = 0; tour < 20; tour++)
             {
-                var constructeur = new ConstructeurRequete(Source(), Def(), d);
+                var constructeur = new ConstructeurRequete(Source(), Def(c["filtres"]), d);
                 var tri = constructeur.Tri();
                 var lignes = await Lire(constructeur.Lot(2));
                 var suite = lignes.Count > 2;
@@ -198,7 +223,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         if (_cnx is null) return;
         foreach (var c in _jeu["segments"]!.AsArray())
         {
-            var r = new ConstructeurRequete(Source(), Def(), Demande(c!["requete"])).Segments(c["colonne"]!.GetValue<string>());
+            var r = new ConstructeurRequete(Source(), Def(c!["filtres"]), Demande(c["requete"])).Segments(c["colonne"]!.GetValue<string>());
             var obtenus = (await Lire(r)).Select(l => (l["valeur"] as string, Convert.ToInt64(l["nombre"]))).ToList();
             var attendus = c["attendu"]!.AsArray().Select(a => (a!["valeur"]?.GetValue<string>(), a["nombre"]!.GetValue<long>())).ToList();
             Assert.Equal(attendus, obtenus);

@@ -1,6 +1,18 @@
 import { echapper } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, STYLE_VIDE } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
+import { OPERATEURS_VUE } from '../src/requete.js';
+
+const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
+
+/** Libellé lisible d'un filtre de vue : « Actif est coché (vrai) », « Montant entre 10 et 20 »… */
+export function libelleFiltreVue(f, titre = f.colonne) {
+  const op = OPERATEURS_VUE.find(([v]) => v === f.op)?.[1] ?? f.op;
+  if (SANS_VALEUR.has(f.op)) return `${titre} ${op}`;
+  if (f.op === 'dans') return `${titre} parmi ${(f.valeurs ?? []).join(', ')}`;
+  if (f.op === 'entre') return `${titre} entre ${f.valeur ?? ''} et ${f.valeur2 ?? ''}`;
+  return `${titre} ${op} ${f.valeur ?? ''}`;
+}
 
 // Concepteur de vue de liste, en deux onglets :
 //   Mise en forme        titres (multilignes), bulles, formats, couleurs, gras / italique / souligné / barré,
@@ -26,11 +38,12 @@ export function formatPourType(type) {
 const titreDepuisCode = (code) => code.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
 export class ConcepteurVue {
-  constructor({ fournisseur, vue, peutRequete = false, appliquer, enregistrer, supprimer, message }) {
+  constructor({ fournisseur, vue, peutRequete = false, appliquer, enregistrer, supprimer, message, largeursAjustees = {}, oublierLargeurs }) {
     this.fournisseur = fournisseur;
     this.vue = { ...structuredClone(vue), definition: normaliserDefinition(vue.definition) };
     this.peutRequete = peutRequete;
-    this.cb = { appliquer, enregistrer, supprimer, message: message ?? (() => {}) };
+    this.cb = { appliquer, enregistrer, supprimer, message: message ?? (() => {}), oublierLargeurs };
+    this.largeursAjustees = largeursAjustees;
     this.onglet = 'forme';
     this.selection = this.def.colonnes[0]?.code ?? null;
     this.sources = [];
@@ -143,6 +156,12 @@ export class ConcepteurVue {
     if (!d.source.colonne_id) erreurs.push('Colonne identifiant obligatoire (ouverture de la fiche)');
     if (!d.source.colonne_type && !d.source.type_element) erreurs.push('Type d\'élément obligatoire (colonne ou valeur constante)');
     if (!d.colonnes.length) erreurs.push('Au moins une colonne');
+    for (const f of d.filtres) {
+      if (!f.colonne) erreurs.push('Filtre de la vue : colonne à choisir');
+      else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : valeur à saisir`);
+      else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : seconde valeur à saisir`);
+      else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(`Filtre de la vue sur ${f.colonne} : valeurs à saisir`);
+    }
     const resoudre = resolveurColonnes(d.colonnes);
     for (const c of d.colonnes) {
       const formules = [...(c.calcul ? [c.formule] : []), ...c.regles.map((r) => r.condition)];
@@ -193,6 +212,8 @@ export class ConcepteurVue {
           <fieldset><legend>Vue</legend>
             <label>Hauteur des lignes <select data-def="lignes">${opt('multi', 'Multiligne (texte complet)', d.lignes)}${opt('simple', 'Une ligne', d.lignes)}</select></label>
             <label>Lignes par lot <input type="number" min="20" max="1000" step="10" data-def="taille_lot" value="${d.taille_lot}"></label>
+            ${Object.keys(this.largeursAjustees).length ? `<button type="button" data-action="reprendre-largeurs"
+              title="Les largeurs ajustées à la souris deviennent des largeurs fixes de la vue">Reprendre mes largeurs ajustées (${Object.keys(this.largeursAjustees).length})</button>` : ''}
           </fieldset>
         </aside>
         <section class="concepteur-colonne"></section>
@@ -206,6 +227,15 @@ export class ConcepteurVue {
     });
     this.corps.querySelector('[data-def="lignes"]').addEventListener('change', (e) => { d.lignes = e.target.value; });
     this.corps.querySelector('[data-def="taille_lot"]').addEventListener('change', (e) => { d.taille_lot = Math.min(Math.max(Number(e.target.value) || 100, 20), 1000); });
+    this.corps.querySelector('[data-action="reprendre-largeurs"]')?.addEventListener('click', () => {
+      for (const [code, px] of Object.entries(this.largeursAjustees)) {
+        const c = this.colonne(code);
+        if (c) c.largeur = { ...c.largeur, mode: 'fixe', valeur: px };
+      }
+      this.largeursAjustees = {};
+      this.cb.oublierLargeurs?.();
+      this.#rendreForme();
+    });
     this.#rendreColonneForme();
   }
 
@@ -395,6 +425,21 @@ export class ConcepteurVue {
           </tr>`;
         }).join('') || `<tr><td colspan="6" class="aide">${s.mode === 'requete' ? 'Testez la requête pour obtenir ses colonnes.' : 'Choisissez une source.'}</td></tr>`}</tbody>
       </table>
+      <fieldset class="concepteur-filtres"><legend>Filtres de la vue (appliqués par la base, toujours actifs)</legend>
+        ${d.filtres.map((f, i) => {
+          const src = this.colonnesSource.find((c) => c.code === f.colonne);
+          const date = /date|time/.test(src?.type ?? '');
+          const type = date ? 'date' : 'text';
+          return `<div class="filtre-vue" data-filtre-vue="${i}">
+            <select data-f="colonne">${opt('', '— colonne —', f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
+            <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
+            <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${f.op === 'dans' ? 'valeur ; valeur…' : 'valeur'}">
+            <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="et">
+            <button type="button" data-supprimer-filtre title="Supprimer le filtre">✕</button>
+          </div>`;
+        }).join('') || '<p class="aide">Aucun filtre : toutes les lignes de la source sont proposées (ex. ajouter « actif est coché » pour les salariés actifs).</p>'}
+        <button type="button" data-action="ajouter-filtre" ${this.colonnesSource.length ? '' : 'disabled'}>Ajouter un filtre</button>
+      </fieldset>
       <fieldset class="concepteur-calculees"><legend>Colonnes calculées</legend>
         ${d.colonnes.filter((c) => c.calcul).map((c) => `<span class="pastille-colonne">${echapper(premiereLigne(c.titre))}</span>`).join('') || '<span class="aide">Aucune</span>'}
         <button type="button" data-action="ajouter-calcul">Ajouter une colonne calculée</button>
@@ -430,6 +475,26 @@ export class ConcepteurVue {
         d.tri = e.target.value ? [{ colonne: code, sens: e.target.value }] : [];
         this.#rendreColonnes();
       });
+    });
+    this.corps.querySelectorAll('[data-filtre-vue]').forEach((div) => {
+      const f = d.filtres[Number(div.dataset.filtreVue)];
+      div.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
+        const k = el.dataset.f;
+        if (k === 'valeur' && f.op === 'dans') { f.valeurs = el.value.split(';').map((x) => x.trim()).filter(Boolean); delete f.valeur; }
+        else f[k] = el.value || null;
+        if (k === 'op' || k === 'colonne') {
+          if (f.op === 'dans') { f.valeurs = f.valeur ? [f.valeur] : f.valeurs ?? []; delete f.valeur; } else delete f.valeurs;
+          if (SANS_VALEUR.has(f.op)) { delete f.valeur; delete f.valeur2; }
+          if (f.op !== 'entre') delete f.valeur2;
+          this.#rendreColonnes();
+        }
+      }));
+      div.querySelector('[data-supprimer-filtre]').addEventListener('click', () => { d.filtres.splice(Number(div.dataset.filtreVue), 1); this.#rendreColonnes(); });
+    });
+    this.corps.querySelector('[data-action="ajouter-filtre"]').addEventListener('click', () => {
+      const booleen = this.colonnesSource.find((c) => /bool/.test(c.type ?? ''));
+      d.filtres.push(booleen ? { colonne: booleen.code, op: 'vrai' } : { colonne: this.colonnesSource[0]?.code ?? '', op: '=', valeur: '' });
+      this.#rendreColonnes();
     });
     this.corps.querySelector('[data-action="ajouter-calcul"]').addEventListener('click', () => {
       let n = 1;

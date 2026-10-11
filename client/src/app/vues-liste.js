@@ -81,7 +81,7 @@ export const VUES_LISTE = [
         col('statut', 'Contrat', {
           format: 'combo', ...fixe(90),
           options: [{ valeur: 'CDI', libelle: 'CDI' }, { valeur: 'CDD', libelle: 'CDD' }, { valeur: 'INTERIM', libelle: 'Intérim' }],
-          regles: [{ condition: '[statut] = "INTERIM"', style: { fond: '#fff4e0' } }, { condition: '[statut] = "CDD"', style: { fond: '#e3edfb' } }],
+          regles: [{ condition: '[statut] = "INTERIM"', style: { fond: '#fff4e0', couleur: '#7a4500' } }, { condition: '[statut] = "CDD"', style: { fond: '#e3edfb', couleur: '#1d4f91' } }],
         }),
         col('date_entree', 'Date\nd\'entrée', { format: 'date', ...fixe(92), recherche: false }),
         col('salaire_brut', 'Salaire\nbrut', {
@@ -114,7 +114,7 @@ export const VUES_LISTE = [
             { valeur: 'DISPO', libelle: 'Disponible', picto: '🟢' }, { valeur: 'CHANTIER', libelle: 'En chantier', picto: '🔵' },
             { valeur: 'PANNE', libelle: 'En panne', picto: '🔴' }, { valeur: 'REBUT', libelle: 'Rebut', picto: '⚫' },
           ],
-          regles: [{ condition: '[etat] = "PANNE"', style: { fond: '#fdecea' } }],
+          regles: [{ condition: '[etat] = "PANNE"', style: { fond: '#fdecea', couleur: '#b42318' } }],
         }),
         col('chantier', 'Chantier', { ...prop(1.5, 110) }),
         col('heures_utilisation', 'Heures\nd\'utilisation', { ...nombre(0), ...fixe(96), recherche: false }),
@@ -134,6 +134,13 @@ export const VUES_LISTE = [
     },
   },
 ];
+
+// Vue filtrée par un filtre fixe (appliqué par la base) : les salariés actifs uniquement.
+const salaries = VUES_LISTE.find((v) => v.vli_id === 2);
+VUES_LISTE.push({
+  ...structuredClone(salaries), vli_id: 4, vli_nom: 'Salariés actifs (démo)',
+  definition: { ...structuredClone(salaries.definition), filtres: [{ colonne: 'actif', op: 'vrai' }] },
+});
 
 /** Sources au format du fournisseur (colonnes { code, type }). */
 export function sourcesFournisseur(donnees = {}) {

@@ -66,7 +66,11 @@ export class FournisseurMemoire {
     this.sourcesDonnees = sources;
     this.utilisateur = utilisateur;
     this.cleStockage = cleStockage;
-    this.vuesStockees = this.#lireStockage() ?? structuredClone(vues);
+    // Vues conservées dans le navigateur, complétées des vues par défaut apparues depuis.
+    const stockees = this.#lireStockage();
+    this.vuesStockees = stockees
+      ? [...stockees, ...structuredClone(vues.filter((v) => !stockees.some((x) => x.vli_id === v.vli_id)))]
+      : structuredClone(vues);
     this.prochainId = Math.max(0, ...this.vuesStockees.map((v) => v.vli_id)) + 1;
   }
 
@@ -145,7 +149,8 @@ export class FournisseurMemoire {
     const connues = new Set(s.colonnes.map((c) => c.code));
     const codes = def.colonnes.filter((c) => !c.calcul && connues.has(c.code)).map((c) => c.code);
     // Colonnes de segment et de tri lues même si la vue ne les affiche pas (comme le WHERE / ORDER BY du serveur).
-    const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne)]
+    const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne),
+      ...def.filtres.map((f) => f.colonne)]
       .filter((c) => connues.has(c) && !codes.includes(c));
     const colonneId = def.source.colonne_id ?? s.colonne_id;
     const colonneType = def.source.colonne_type ?? s.colonne_type;
@@ -161,30 +166,31 @@ export class FournisseurMemoire {
     });
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
     const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
-    return { lignes, recherche, tri };
+    const filtres = def.filtres.filter((f) => connues.has(f.colonne));
+    return { lignes, recherche, tri, filtres };
   }
 
   async lot(d) {
-    const { lignes, recherche, tri } = await this.#lignesSource(d);
-    return structuredClone(lot(trier(filtrer(lignes, d, recherche), tri), tri, d.apres ?? null, d.taille ?? 100));
+    const { lignes, recherche, tri, filtres } = await this.#lignesSource(d);
+    return structuredClone(lot(trier(filtrer(lignes, { ...d, filtres }, recherche), tri), tri, d.apres ?? null, d.taille ?? 100));
   }
 
   async segments(d, colonne) {
-    const { lignes, recherche } = await this.#lignesSource({ ...d, segments: { ...(d.segments ?? {}), [colonne]: d.segments?.[colonne] ?? [] } });
+    const { lignes, recherche, filtres } = await this.#lignesSource({ ...d, segments: { ...(d.segments ?? {}), [colonne]: d.segments?.[colonne] ?? [] } });
     // Comptes calculés sans le filtre du segment lui-même (les autres segments s'appliquent).
     const autres = { ...(d.segments ?? {}) };
     delete autres[colonne];
-    return comptesSegment(filtrer(lignes, { ...d, segments: autres }, recherche), colonne);
+    return comptesSegment(filtrer(lignes, { ...d, segments: autres, filtres }, recherche), colonne);
   }
 
   async controle(d, curseur) {
-    const { lignes, recherche, tri } = await this.#lignesSource(d);
-    return jusqua(trier(filtrer(lignes, d, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
+    const { lignes, recherche, tri, filtres } = await this.#lignesSource(d);
+    return jusqua(trier(filtrer(lignes, { ...d, filtres }, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
   }
 
   async lignes(d, ids) {
-    const { lignes, recherche } = await this.#lignesSource(d);
+    const { lignes, recherche, filtres } = await this.#lignesSource(d);
     const voulus = new Set(ids.map(String));
-    return structuredClone(filtrer(lignes.filter((l) => voulus.has(String(l._id))), d, recherche));
+    return structuredClone(filtrer(lignes.filter((l) => voulus.has(String(l._id))), { ...d, filtres }, recherche));
   }
 }

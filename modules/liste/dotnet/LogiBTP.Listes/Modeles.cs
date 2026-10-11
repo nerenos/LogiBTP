@@ -12,7 +12,19 @@ public sealed class DefinitionVue
     public List<ColonneVue> Colonnes { get; set; } = [];
     public List<SegmentVue> Segments { get; set; } = [];
     public List<TriColonne> Tri { get; set; } = [];
+    /// <summary>Filtres fixes de la vue, appliqués par la base en ET (ex. salariés actifs).</summary>
+    public List<FiltreVue> Filtres { get; set; } = [];
     public int TailleLot { get; set; } = 100;
+}
+
+/// <summary>Filtre fixe d'une vue : colonne de la source, opérateur, valeur(s) saisie(s) dans le concepteur.</summary>
+public sealed class FiltreVue
+{
+    public string Colonne { get; set; } = "";
+    public string Op { get; set; } = "=";
+    public string? Valeur { get; set; }
+    public string? Valeur2 { get; set; }
+    public List<string>? Valeurs { get; set; }
 }
 
 public sealed class SourceVue
