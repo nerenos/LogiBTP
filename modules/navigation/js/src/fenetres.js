@@ -41,10 +41,12 @@ export function optionsFenetre(position) {
  * courante qui ne battent plus (navigateur fermé ou arrêté sans fermer la session).
  */
 export function sessionAProposer({ precedente, courante, maintenant, idCourant, expiration = EXPIRATION_MS }) {
-  if (precedente?.fenetres?.length) return precedente;
+  // Une session réduite à des pages d'accueil n'a rien à restaurer.
+  const utile = (fenetres) => fenetres?.some((f) => f.url && f.url.split('?')[0] !== '/');
+  if (precedente?.fenetres?.length) return utile(precedente.fenetres) ? precedente : null;
   const orphelines = Object.values(courante ?? {}).filter((f) => f.id !== idCourant && maintenant - (f.vu ?? 0) > expiration);
   const vivantes = Object.values(courante ?? {}).filter((f) => f.id !== idCourant && maintenant - (f.vu ?? 0) <= expiration);
-  if (!orphelines.length || vivantes.length) return null;
+  if (!orphelines.length || vivantes.length || !utile(orphelines)) return null;
   return { fermeeLe: Math.max(...orphelines.map((f) => f.vu ?? 0)), interrompue: true, fenetres: orphelines };
 }
 

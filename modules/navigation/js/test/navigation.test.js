@@ -213,6 +213,9 @@ describe('fenêtres', () => {
     expect(sessionAProposer({ precedente: null, courante, maintenant: 100000, idCourant: 'moi' })).toMatchObject({ interrompue: true, fermeeLe: 2000 });
     // Une autre fenêtre encore vivante : la session continue, rien à proposer.
     expect(sessionAProposer({ precedente: null, courante: { ...courante, c: { id: 'c', vu: 95000 } }, maintenant: 100000, idCourant: 'moi' })).toBeNull();
+    // Seulement des pages d'accueil : rien à proposer.
+    expect(sessionAProposer({ precedente: null, courante: { a: { id: 'a', url: '/', vu: 1000 } }, maintenant: 100000, idCourant: 'moi' })).toBeNull();
+    expect(sessionAProposer({ precedente: { fenetres: [{ url: '/?session=fermee' }] }, courante: {}, maintenant: 1, idCourant: 'moi' })).toBeNull();
     expect(optionsFenetre(null)).toBe('popup=yes,width=1280,height=860');
   });
 });
