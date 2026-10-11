@@ -107,6 +107,63 @@ export const TYPES_FICHE = {
       ],
     },
   },
+  // Élément de bibliothèque (module Bibliothèque) : l'onglet Article vient de la définition ; Prix, Unités, Tarifs,
+  // Composition (ouvrage) et Image et notices sont des onglets spécifiques de FicheElement. Les prix calculés (PA, PR,
+  // PV net…) sont écrits par le serveur (SpecialisationFicheBtp) ; les champs json sont des colonnes jsonb.
+  element: {
+    libelle: 'Élément', table: 'element', cle: 'ele_id', colonne_proprietes: 'ele_proprietes',
+    definition: {
+      libelle: 'Élément de bibliothèque',
+      titre: '[code] – [libelle]',
+      sous_titre: '[bib_code] · [famille]',
+      sections: [
+        {
+          code: 'article', titre: 'Article',
+          groupes: [
+            { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'actif'] },
+            { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion'] },
+            { titre: 'Libellé', champs: ['libelle_html'], largeur: 'plein' },
+          ],
+        },
+      ],
+      champs: [
+        c('bib_id', 'Bibliothèque', 'ele_bib_id', 'nombre', { obligatoire: true, saisie: 'creation', reference: 'bibliotheque' }),
+        c('code', 'Code', 'ele_code', 'texte', { obligatoire: true, longueur: 30, non_copie: true, format: 'regex:^[^:\\s][^:]*$', aide: "Unique dans la bibliothèque ; sans « : » (réservé à l'appel BIB:CODE)" }),
+        c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage']) }),
+        c('actif', 'Actif', 'ele_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('libelle_html', 'Libellé', 'ele_libelle_html', 'html', { obligatoire: true }),
+        c('libelle', 'Libellé (texte brut)', 'ele_libelle', 'texte', { lecture_seule: true }),
+        c('fam_id', 'Famille', 'ele_fam_id', 'nombre', { reference: 'famille' }),
+        c('nat_id', 'Nature', 'ele_nat_id', 'nombre', { reference: 'nature' }),
+        c('gestion', 'Type de gestion', 'ele_gestion', 'liste', {
+          obligatoire: true, defaut: 'NON_GERE', options: options(['STOCK', 'Stock'], ['ACHAT', 'Achat'], ['SOUS_TRAITANCE', 'Sous-traitance'], ['NON_GERE', 'Non géré']),
+        }),
+        c('unite_stock', 'Unité de stock', 'ele_unt_stock', 'texte', { obligatoire: true, longueur: 10 }),
+        c('unite_achat', "Unité d'achat", 'ele_unt_achat', 'texte', { longueur: 10 }),
+        c('unite_vente', 'Unité de vente', 'ele_unt_vente', 'texte', { longueur: 10 }),
+        c('unites', "Correspondances d'unités", 'ele_unites', 'json'),
+        c('scenario_pa', "Scénario de prix d'achat", 'ele_scenario_pa', 'liste', {
+          obligatoire: true, defaut: 'FIXE', options: options('FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP'),
+        }),
+        c('scenarios', 'Scénarios autorisés', 'ele_scenarios', 'json'),
+        c('pa_fixe', 'Prix fixe', 'ele_pa_fixe', 'nombre'),
+        c('dernier_pa', "Dernier prix d'achat", 'ele_dernier_pa', 'nombre'),
+        c('pmp', 'Prix moyen pondéré', 'ele_pmp', 'nombre'),
+        c('pa', "Prix d'achat", 'ele_pa', 'nombre', { lecture_seule: true }),
+        c('coef_fg', 'Coef. frais généraux', 'ele_coef_fg', 'nombre', { obligatoire: true, defaut: '1.1' }),
+        c('pr', 'Prix de revient', 'ele_pr', 'nombre', { lecture_seule: true }),
+        c('coef_benef', 'Coef. bénéfice', 'ele_coef_benef', 'nombre', { obligatoire: true, defaut: '1.2' }),
+        c('pv', 'Prix de vente', 'ele_pv', 'nombre'),
+        c('pv_fixe', 'PV fixe', 'ele_pv_fixe', 'booleen', { obligatoire: true, defaut: false }),
+        c('coef_remise', 'Coef. de remise', 'ele_coef_remise', 'nombre', { obligatoire: true, defaut: '1' }),
+        c('pv_net', 'PV net', 'ele_pv_net', 'nombre', { lecture_seule: true }),
+        c('composition', 'Composition', 'ele_composition', 'json'),
+        c('image_ged', 'Image', 'ele_image_ged', 'nombre'),
+        c('commentaire_prix', 'Commentaire de la modification de prix', 'ele_commentaire_prix', 'texte', { longueur: 500 }),
+        c('maj_par', 'Modifié par', 'ele_maj_par', 'texte', { lecture_seule: true }),
+      ],
+    },
+  },
 };
 
 /** Droits par profil : ADMIN tout ; SAISIE consulte et modifie, sans confidentiel ni reprise de main sur les salariés. */
@@ -115,10 +172,22 @@ export const DROITS_FICHE = [
   { profil: 'SAISIE', type: 'salarie', action: 'VOIR' }, { profil: 'SAISIE', type: 'salarie', action: 'MODIFIER' },
   { profil: 'SAISIE', type: 'materiel', action: 'VOIR' }, { profil: 'SAISIE', type: 'materiel', action: 'MODIFIER' },
   { profil: 'SAISIE', type: 'materiel', action: 'DEBLOQUER' },
+  ...['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type: 'element', action })),
+  { profil: 'SAISIE', type: 'element', action: 'VOIR' }, { profil: 'SAISIE', type: 'element', action: 'MODIFIER' },
 ];
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */
 export const PARAMETRAGE_FICHE = {
+  // Données techniques des éléments : utilisables dans les formules de correspondance d'unités ({{poids_ml}}…).
+  element: {
+    obligatoires: [],
+    supplementaires: [
+      { code: 'poids_ml', libelle: 'Poids au ml (kg)', type: 'nombre', format: '999.999', aide: 'Acier, profilés…', ordre: 10 },
+      { code: 'masse_volumique', libelle: 'Masse volumique (kg/m³)', type: 'nombre', format: '99999', ordre: 20 },
+      { code: 'surface_plaque', libelle: "Surface d'une plaque (m²)", type: 'nombre', format: '99.999', ordre: 30 },
+      { code: 'reference_fabricant', libelle: 'Référence fabricant', type: 'texte', longueur: 40, ordre: 40 },
+    ].map((x) => ({ ...x, actif: true })),
+  },
   salarie: {
     obligatoires: ['telephone'],
     supplementaires: [
@@ -144,5 +213,6 @@ export function ficheDeLigne({ type, id }) {
   if (m) return { type: m[1] === 'SAL' ? 'salarie' : 'materiel', id: Number(m[2]) };
   if (type === 'salarie' || type === 'interim') return { type: 'salarie', id };
   if (type === 'materiel') return { type: 'materiel', id };
+  if (type === 'element') return { type: 'element', id };
   return null;
 }

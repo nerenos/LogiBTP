@@ -9,11 +9,23 @@ using LogiBTP.Socle.Web;
 namespace LogiBTP.Api.Btp;
 
 /// <summary>
-/// Fiches du cœur (salarié, matériel) : contrôles métier, répliques de FicheSalarie.validerMetier et
-/// FicheMateriel.validerMetier (client/src/app/fiches/fiches.js).
+/// Fiches du cœur (salarié, matériel, élément de bibliothèque) : contrôles métier, répliques de FicheSalarie.validerMetier
+/// et FicheMateriel.validerMetier (client/src/app/fiches/fiches.js) ; prix des éléments recalculés avant écriture.
 /// </summary>
-public sealed class SpecialisationFicheBtp : SpecialisationFiche
+public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : SpecialisationFiche
 {
+    public override async Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
+        IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
+    {
+        if (type != "element")
+        {
+            await base.AvantEcritureAsync(type, creation, id, aEcrire, valeurs, proprietes, u, ct);
+            return;
+        }
+        using var scope = scopes.CreateScope();
+        await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);
+    }
+
     private static string? Date(object? v) => v?.ToString() is { Length: >= 10 } s ? s[..10] : null;
     private static string Aujourdhui => DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 

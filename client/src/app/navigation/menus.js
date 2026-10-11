@@ -36,6 +36,18 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'bibliotheque', libelle: '&Bibliothèque', elements: [
+      { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12' },
+      { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13' },
+      { code: 'elements', libelle: 'Tous les éléments', icone: '📚', url: '/liste/bibliotheque?vue=14' },
+      { separateur: true },
+      { code: 'nouvel-article', libelle: 'Nouvel article', icone: '＋', url: '/fiche/element/nouveau' },
+      { code: 'nouvel-ouvrage', libelle: 'Nouvel ouvrage', icone: '＋', url: '/fiche/element/nouveau?type=OUVRAGE' },
+      { separateur: true },
+      { code: 'parametrage-bibliotheque', libelle: 'Bibliothèques, familles, natures…', icone: '⚙', url: '/parametres/bibliotheque' },
+    ],
+  },
+  {
     code: 'documents-ged', libelle: '&Documents', elements: [
       { code: 'ged', libelle: 'GED : tous les documents', icone: '📎', url: '/ged' },
       { code: 'coffre', libelle: 'Coffre-fort', icone: '🔒', url: '/ged?coffre=1', info: 'Documents administratifs scellés' },
@@ -58,6 +70,9 @@ export function menus(app) {
         { separateur: true, libelle: 'Fiches' },
         { libelle: 'Fiche salarié : champs…', icone: '👷', action: () => app.parametrerFiche('salarie'), desactive: !app.estAdmin() },
         { libelle: 'Fiche matériel : champs…', icone: '🚜', action: () => app.parametrerFiche('materiel'), desactive: !app.estAdmin() },
+        { libelle: 'Fiche élément : données techniques…', icone: '📚', action: () => app.parametrerFiche('element'), desactive: !app.estAdmin() },
+        { separateur: true, libelle: 'Bibliothèque' },
+        { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
       ],

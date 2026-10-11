@@ -19,7 +19,8 @@
     "@logibtp/liste": "0.1.0",
     "@logibtp/fiche": "0.1.0",
     "@logibtp/ged": "0.1.0",
-    "@logibtp/navigation": "0.1.0"
+    "@logibtp/navigation": "0.1.0",
+    "@logibtp/bibliotheque": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

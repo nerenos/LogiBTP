@@ -34,6 +34,10 @@
 .fiche-masque-groupe { letter-spacing: normal; padding: 0.3rem 0; }
 .fiche-champ { display: flex; flex-direction: column; gap: 0.15rem; }
 .fiche-champ.plein { grid-column: 1 / -1; }
+.fiche-html { min-height: 2rem; padding: 0.25rem 0.4rem; border: 1px solid var(--bord); border-radius: 3px; background: var(--surface); cursor: text; }
+.fiche-html.lecture { border-color: transparent; padding-left: 0; cursor: default; }
+.fiche-html p { margin: 0 0 0.2rem; }
+.fiche-html:focus-visible { outline: 2px solid var(--accent); }
 .fiche-champ label { font-size: 0.88em; color: var(--discret); }
 .fiche-champ .obligatoire { color: var(--erreur); font-weight: 700; margin-left: 0.15rem; }
 .fiche-champ .obligatoire-parametre { color: var(--accent); margin-left: 0.15rem; font-size: 0.8em; }

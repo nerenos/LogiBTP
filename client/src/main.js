@@ -5,6 +5,7 @@ import '@logibtp/liste/ui/liste.css';
 import '@logibtp/fiche/ui/fiche.css';
 import '@logibtp/ged/ui/ged.css';
 import '@logibtp/navigation/ui/navigation.css';
+import '@logibtp/bibliotheque/ui/bibliotheque.css';
 import './styles.css';
 import { Application } from './app/application.js';
 

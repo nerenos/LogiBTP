@@ -1,0 +1,517 @@
+{
+  "description": "Calcul d'un élément de bibliothèque (calcul.js / CalculElement.cs) : scénario de PA, conversion des tarifs en unité de stock, PR, PV (fixe ou calculé), PV net, prix par unité, alertes. Date de calcul : 2026-10-11.",
+  "date": "2026-10-11",
+  "cas": [
+    {
+      "nom": "prix fixe, coefficients et remise",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FIXE",
+        "pa_fixe": "100",
+        "coef_fg": "1.1",
+        "coef_benef": "1.25",
+        "coef_remise": "0.95"
+      },
+      "attendu": {
+        "pa": "100",
+        "pr": "110",
+        "pv": "137.5",
+        "coef_benef": "1.25",
+        "pv_net": "130.625",
+        "prix_unites": [
+          {
+            "unite": "u",
+            "ratio": "1",
+            "pa": "100",
+            "pr": "110",
+            "pv_net": "130.625"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "acier : fournisseur principal à la tonne, prix par ml, kg et t",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        },
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "prix": "1150",
+            "unite": "t",
+            "principal": true,
+            "debut": "2026-01-01",
+            "fin": null
+          },
+          {
+            "prix": "1.12",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2026-12-31"
+          },
+          {
+            "prix": "9.20",
+            "unite": "ml",
+            "principal": false,
+            "debut": "2026-06-01",
+            "fin": null
+          },
+          {
+            "prix": "0.90",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2025-12-31"
+          }
+        ],
+        "coef_fg": "1.08",
+        "coef_benef": "1.3"
+      },
+      "attendu": {
+        "pa": "9.0275",
+        "pr": "9.7497",
+        "pv": "12.67461",
+        "coef_benef": "1.3",
+        "pv_net": "12.67461",
+        "prix_unites": [
+          {
+            "unite": "ml",
+            "ratio": "1",
+            "pa": "9.0275",
+            "pr": "9.7497",
+            "pv_net": "12.67461"
+          },
+          {
+            "unite": "kg",
+            "ratio": "0.127389",
+            "pa": "1.15",
+            "pr": "1.242",
+            "pv_net": "1.6146"
+          },
+          {
+            "unite": "t",
+            "ratio": "127.388535",
+            "pa": "1150",
+            "pr": "1242",
+            "pv_net": "1614.6"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "acier : meilleur prix (minimum) parmi les tarifs en vigueur",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        },
+        "scenario": "MEILLEUR_MIN",
+        "tarifs": [
+          {
+            "prix": "1150",
+            "unite": "t",
+            "principal": true,
+            "debut": "2026-01-01",
+            "fin": null
+          },
+          {
+            "prix": "1.12",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2026-12-31"
+          },
+          {
+            "prix": "9.20",
+            "unite": "ml",
+            "principal": false,
+            "debut": "2026-06-01",
+            "fin": null
+          },
+          {
+            "prix": "0.90",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2025-12-31"
+          }
+        ],
+        "coef_fg": "1",
+        "coef_benef": "1"
+      },
+      "attendu": {
+        "pa": "8.792",
+        "pr": "8.792",
+        "pv": "8.792",
+        "coef_benef": "1",
+        "pv_net": "8.792",
+        "prix_unites": [
+          {
+            "unite": "ml",
+            "ratio": "1",
+            "pa": "8.792",
+            "pr": "8.792",
+            "pv_net": "8.792"
+          },
+          {
+            "unite": "kg",
+            "ratio": "0.127389",
+            "pa": "1.12",
+            "pr": "1.12",
+            "pv_net": "1.12"
+          },
+          {
+            "unite": "t",
+            "ratio": "127.388535",
+            "pa": "1120",
+            "pr": "1120",
+            "pv_net": "1120"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "acier : prix maximum",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        },
+        "scenario": "MEILLEUR_MAX",
+        "tarifs": [
+          {
+            "prix": "1150",
+            "unite": "t",
+            "principal": true,
+            "debut": "2026-01-01",
+            "fin": null
+          },
+          {
+            "prix": "1.12",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2026-12-31"
+          },
+          {
+            "prix": "9.20",
+            "unite": "ml",
+            "principal": false,
+            "debut": "2026-06-01",
+            "fin": null
+          },
+          {
+            "prix": "0.90",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2025-12-31"
+          }
+        ],
+        "coef_fg": "1",
+        "coef_benef": "1"
+      },
+      "attendu": {
+        "pa": "9.2",
+        "pr": "9.2",
+        "pv": "9.2",
+        "coef_benef": "1",
+        "pv_net": "9.2",
+        "prix_unites": [
+          {
+            "unite": "ml",
+            "ratio": "1",
+            "pa": "9.2",
+            "pr": "9.2",
+            "pv_net": "9.2"
+          },
+          {
+            "unite": "kg",
+            "ratio": "0.127389",
+            "pa": "1.171975",
+            "pr": "1.171975",
+            "pv_net": "1.171975"
+          },
+          {
+            "unite": "t",
+            "ratio": "127.388535",
+            "pa": "1171.974522",
+            "pr": "1171.974522",
+            "pv_net": "1171.974522"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "PV fixe : coefficient de bénéfice déduit",
+      "entree": {
+        "unite_stock": "m2",
+        "scenario": "FIXE",
+        "pa_fixe": "42.5",
+        "coef_fg": "1.12",
+        "pv": "65",
+        "pv_fixe": true,
+        "coef_benef": "9"
+      },
+      "attendu": {
+        "pa": "42.5",
+        "pr": "47.6",
+        "pv": "65",
+        "coef_benef": "1.365546",
+        "pv_net": "65",
+        "prix_unites": [
+          {
+            "unite": "m2",
+            "ratio": "1",
+            "pa": "42.5",
+            "pr": "47.6",
+            "pv_net": "65"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "dernier PA et PMP",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "PMP",
+        "pmp": "12.345678",
+        "dernier_pa": "13",
+        "coef_fg": "1.1",
+        "coef_benef": "1.2"
+      },
+      "attendu": {
+        "pa": "12.345678",
+        "pr": "13.580246",
+        "pv": "16.296295",
+        "coef_benef": "1.2",
+        "pv_net": "16.296295",
+        "prix_unites": [
+          {
+            "unite": "u",
+            "ratio": "1",
+            "pa": "12.345678",
+            "pr": "13.580246",
+            "pv_net": "16.296295"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "PA indisponible (aucun tarif principal)",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        },
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "tarifs": [
+          {
+            "prix": "1150",
+            "unite": "t",
+            "principal": false,
+            "debut": "2026-01-01",
+            "fin": null
+          },
+          {
+            "prix": "1.12",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2026-12-31"
+          },
+          {
+            "prix": "9.20",
+            "unite": "ml",
+            "principal": false,
+            "debut": "2026-06-01",
+            "fin": null
+          },
+          {
+            "prix": "0.90",
+            "unite": "kg",
+            "principal": false,
+            "debut": null,
+            "fin": "2025-12-31"
+          }
+        ],
+        "coef_fg": "1.1",
+        "coef_benef": "1.2"
+      },
+      "attendu": {
+        "pa": null,
+        "pr": null,
+        "pv": null,
+        "coef_benef": "1.2",
+        "pv_net": null,
+        "prix_unites": [
+          {
+            "unite": "ml",
+            "ratio": "1",
+            "pa": null,
+            "pr": null,
+            "pv_net": null
+          },
+          {
+            "unite": "kg",
+            "ratio": "0.127389",
+            "pa": null,
+            "pr": null,
+            "pv_net": null
+          },
+          {
+            "unite": "t",
+            "ratio": "127.388535",
+            "pa": null,
+            "pr": null,
+            "pv_net": null
+          }
+        ],
+        "alertes": [
+          "PA_INDISPONIBLE"
+        ]
+      }
+    },
+    {
+      "nom": "donnée technique manquante : unités en erreur",
+      "entree": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {},
+        "scenario": "FIXE",
+        "pa_fixe": "5",
+        "coef_fg": "1",
+        "coef_benef": "1"
+      },
+      "attendu": {
+        "pa": "5",
+        "pr": "5",
+        "pv": "5",
+        "coef_benef": "1",
+        "pv_net": "5",
+        "prix_unites": [
+          {
+            "unite": "ml",
+            "ratio": "1",
+            "pa": "5",
+            "pr": "5",
+            "pv_net": "5"
+          },
+          {
+            "unite": "kg",
+            "ratio": null,
+            "pa": null,
+            "pr": null,
+            "pv_net": null,
+            "erreur": "DONNEE"
+          }
+        ],
+        "alertes": [
+          "DONNEE"
+        ]
+      }
+    }
+  ],
+  "conversions": [
+    {
+      "nom": "2,5 t d'acier en ml",
+      "quantite": "2.5",
+      "de": "t",
+      "vers": "ml",
+      "element": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        }
+      },
+      "attendu": "318.471338"
+    },
+    {
+      "nom": "12 ml d'acier en kg",
+      "quantite": "12",
+      "de": "ml",
+      "vers": "kg",
+      "element": {
+        "unite_stock": "ml",
+        "unites": [
+          {
+            "unite": "kg",
+            "formule": "1 / {{poids_ml}}"
+          },
+          {
+            "unite": "t",
+            "formule": "1000 / {{poids_ml}}"
+          }
+        ],
+        "donnees": {
+          "poids_ml": "7.85"
+        }
+      },
+      "attendu": "94.2"
+    }
+  ]
+}

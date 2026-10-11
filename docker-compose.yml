@@ -11,7 +11,7 @@ services:
     volumes:
       - logibtp-data:/var/lib/postgresql/data
       # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume :
-      # modules (010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED) puis cœur BTP (100 et suivants).
+      # modules (010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque) puis cœur BTP (100 et suivants).
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
       - ./modules/document/db/012_document_verrou.sql:/docker-entrypoint-initdb.d/012_document_verrou.sql:ro
@@ -21,8 +21,11 @@ services:
       - ./modules/liste/db/032_liste_saisie.sql:/docker-entrypoint-initdb.d/032_liste_saisie.sql:ro
       - ./modules/fiche/db/040_fiche_schema.sql:/docker-entrypoint-initdb.d/040_fiche_schema.sql:ro
       - ./modules/ged/db/050_ged_schema.sql:/docker-entrypoint-initdb.d/050_ged_schema.sql:ro
+      - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
+      - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro
+      - ./db/116_bibliotheque_demo.sql:/docker-entrypoint-initdb.d/116_bibliotheque_demo.sql:ro
       - ./db/120_listes.sql:/docker-entrypoint-initdb.d/120_listes.sql:ro
       - ./db/121_listes_parametrage.sql:/docker-entrypoint-initdb.d/121_listes_parametrage.sql:ro
       - ./db/130_fiches.sql:/docker-entrypoint-initdb.d/130_fiches.sql:ro

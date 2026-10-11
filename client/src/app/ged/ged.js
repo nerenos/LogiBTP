@@ -1,4 +1,4 @@
-import { FournisseurGedApi, FournisseurGedMemoire } from '@logibtp/ged';
+import { FournisseurGedApi, FournisseurGedMemoire, PARAMETRES_DEFAUT } from '@logibtp/ged';
 import { ENTETES } from '../api.js';
 
 // GED du cœur : fournisseur (API ou démo hors ligne) et documents de démonstration.
@@ -76,6 +76,11 @@ async function semer(ged, { salaries, materiels }) {
     await ged.deposer({ fichier: fichier(pdfSimple('Habilitation electrique B1V', [`${s3.prenom} ${s3.nom}`]), 'Habilitation B1V.pdf'),
       meta: { titre: 'Habilitation électrique B1V', categorie: 'certificat', date_document: '2025-06-02', auteur: 'Organisme de formation', ...lie('salarie', s3.id) } });
   }
+  // Bibliothèque : notice technique de l'acier HA10 (DOE) et image de l'ouvrage « Dalle béton armé ».
+  await ged.deposer({ fichier: fichier(pdfSimple('Fiche technique Acier HA10', ['Fe E500 - NF A 35-080-1', 'Poids : 0,617 kg/ml', 'Marquage CE']), 'FT acier HA10.pdf'),
+    meta: { titre: 'Fiche technique acier HA10', categorie: 'notice_technique', date_document: '2026-02-01', auteur: 'Aciers du Rhône', type_element: 'element', id_element: '1' } });
+  await ged.deposer({ fichier: fichier(svgPlan('Dalle béton armé ép. 15 cm'), 'Dalle BA 15.svg'),
+    meta: { titre: 'Coupe de la dalle', categorie: 'photo', date_document: '2026-02-01', auteur: "Bureau d'études", type_element: 'element', id_element: '7' } });
   for (const m of materiels.slice(0, 2)) {
     await ged.deposer({ fichier: fichier(svgPlan(`Implantation ${m.code}`), `Plan implantation ${m.code}.svg`),
       meta: { titre: `Plan d'implantation ${m.code}`, categorie: 'plan', date_document: '2026-04-15', auteur: 'Bureau d\'études', ...lie('materiel', m.id) } });
@@ -87,7 +92,11 @@ async function semer(ged, { salaries, materiels }) {
 
 export async function creerFournisseurGed({ enLigne, lignes }) {
   if (enLigne) return new FournisseurGedApi({ base: '/api/ged', entetes: ENTETES });
-  const ged = new FournisseurGedMemoire({ utilisateur: ENTETES['X-Utilisateur'] ?? 'demo', profil: ENTETES['X-Profil'] ?? 'ADMIN' });
+  const ged = new FournisseurGedMemoire({
+    utilisateur: ENTETES['X-Utilisateur'] ?? 'demo', profil: ENTETES['X-Profil'] ?? 'ADMIN',
+    // Catégorie du cœur : notices techniques des éléments de bibliothèque, remises au client dans le DOE.
+    parametres: { categories: [...PARAMETRES_DEFAUT.categories, { code: 'notice_technique', libelle: 'Notice technique (DOE)', doe: true }] },
+  });
   await semer(ged, lignes);
   return ged;
 }

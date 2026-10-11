@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Bibliotheque</RootNamespace>
+    <Description>Module Bibliothèque LogiBTP : calcul des prix d'un élément (scénarios de PA, coefficients, remise), conversion des unités, codes d'appel.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+</Project>

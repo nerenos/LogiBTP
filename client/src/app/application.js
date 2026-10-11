@@ -9,6 +9,8 @@ import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS 
 import { creerFournisseurFiche } from './fiches/fiches.js';
 import { ficheDeLigne } from './fiches/definitions.js';
 import { creerFournisseurGed } from './ged/ged.js';
+import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
+import { DEFINITION_DEMO } from './demo.js';
 import { societeCourante } from './societe.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
@@ -21,7 +23,7 @@ const LOGO = `<svg viewBox="0 0 104 24" role="img" aria-label="LogiBTP"><g fill=
   <text x="25" y="18" font-family="system-ui, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="currentColor">Logi<tspan fill="#e8a33d">BTP</tspan></text></svg>`;
 
 /** Pour une fiche, la liste où revenir quand elle a été ouverte directement (fenêtre séparée, session restaurée). */
-export const LISTE_PAR_TYPE = { salarie: '/liste/salaries', materiel: '/liste/materiels' };
+export const LISTE_PAR_TYPE = { salarie: '/liste/salaries', materiel: '/liste/materiels', element: '/liste/bibliotheque' };
 
 export class Application {
   constructor() {
@@ -79,8 +81,10 @@ export class Application {
     this.servicesPrets ??= (async () => {
       const lignes = donneesDemo();
       const ged = await creerFournisseurGed({ enLigne: this.enLigne, lignes });
-      const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged });
-      const fiche = creerFournisseurFiche({ enLigne: this.enLigne, lignes });
+      const bibliotheque = creerFournisseurBibliotheque({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
+      const elements = this.enLigne ? [] : bibliotheque.elements;
+      const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements });
+      const fiche = creerFournisseurFiche({ enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque });
       if (!this.enLigne) {
         fiche.profil = this.preferences.get('profilDemo');
         ged.profil = this.preferences.get('profilDemo');
@@ -91,7 +95,7 @@ export class Application {
           if (v) throw Object.assign(new Error(`Fiche en cours de modification par ${v.utilisateur} : saisie impossible pour l'instant`), { code: 'FICHE_EN_MODIFICATION', statut: 409 });
         };
       }
-      return { liste, fiche, ged };
+      return { liste, fiche, ged, bibliotheque };
     })();
     return this.servicesPrets;
   }
@@ -112,6 +116,7 @@ export class Application {
     const s = await this.services();
     s.fiche.profil = profil;
     s.ged.profil = profil;
+    if ('profil' in s.bibliotheque) s.bibliotheque.profil = profil;
     this.rendreInfos();
     this.message(`Profil de démonstration : ${profil}`);
   }
@@ -131,6 +136,12 @@ export class Application {
       return Promise.resolve(false);
     }
     return this.routeur.aller(url, { remplacer });
+  }
+
+  /** Définition du document qui porte la composition d'un ouvrage (types de lignes, unités, TVA). */
+  definitionDocument() {
+    this.definitionDoc ??= this.enLigne ? api.definition('V_DEVIS') : Promise.resolve(DEFINITION_DEMO);
+    return this.definitionDoc;
   }
 
   /** URL de l'écran d'un élément de liste (document, fiche, document GED), null si aucun écran. */

@@ -41,3 +41,26 @@
   border: 1px solid var(--alerte); background: var(--alerte-fond); border-radius: 6px; }
 .document-verrou[hidden] { display: none; }
 .document-verrou button.danger { border-color: var(--erreur); color: var(--erreur); }
+
+/* Bibliothèque : fiche élément */
+.page-bibliotheque { max-width: none; }
+.element-vignette { height: 3.2rem; width: auto; border-radius: 4px; border: 1px solid var(--bord); object-fit: cover; }
+.element-composition { display: flex; flex-direction: column; gap: 0.4rem; min-height: 24rem; height: 100%; }
+.element-composition-barre { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.element-composition-barre label { display: flex; align-items: center; gap: 0.3rem; color: var(--discret); }
+.element-composition-totaux { margin-left: auto; }
+.element-composition-grille { flex: 1; min-height: 16rem; display: flex; flex-direction: column; }
+.element-composition-grille > * { flex: 1; min-height: 0; }
+.element-medias { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr)); gap: 0.8rem; align-items: start; }
+.element-images { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.element-image { display: flex; flex-direction: column; gap: 0.2rem; width: 9rem; border: 2px solid transparent; border-radius: 6px; padding: 0.2rem; cursor: pointer; }
+.element-image.choisie { border-color: var(--accent); }
+.element-image img { width: 100%; height: 6rem; object-fit: cover; border-radius: 4px; background: var(--fond); }
+.element-image span { font-size: 0.85em; display: flex; gap: 0.2rem; align-items: center; }
+.element-notices { margin: 0; padding-left: 1rem; }
+.element-notices small { color: var(--discret); margin-left: 0.4rem; }
+.element-recherche { width: min(48rem, 100%); }
+.element-recherche input[type="search"] { width: 100%; margin-bottom: 0.4rem; }
+.element-resultats { max-height: 50vh; overflow: auto; }
+.element-resultats tr[data-i] { cursor: pointer; }
+.element-resultats tr[data-i]:hover td, .element-resultats tr[data-i]:focus td { background: var(--accent-clair); }

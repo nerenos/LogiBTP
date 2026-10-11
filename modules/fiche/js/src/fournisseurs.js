@@ -284,5 +284,7 @@ export function convertir(champ, v) {
   if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return null;
   if (champ.type === 'nombre') return typeof v === 'number' ? v : Number(String(v).replace(/[\s  ]/g, '').replace(',', '.'));
   if (champ.type === 'booleen') return v === true || v === 'true';
+  // Colonne jsonb : objet ou tableau conservé tel quel (texte JSON relu).
+  if (champ.type === 'json') { if (typeof v !== 'string') return structuredClone(v); try { return JSON.parse(v); } catch { return v; } }
   return typeof v === 'string' ? v : String(v);
 }

@@ -4,7 +4,12 @@ import { simulerModificationsAutres } from '../listes.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue, app) {
-  const type = { salaries: 'salarie', materiels: 'materiel' }[vue?.definition?.source?.vue];
+  const source = vue?.definition?.source?.vue;
+  if (source === 'elements') {
+    const ouvrage = (vue.definition.filtres ?? []).some((f) => f.colonne === 'type' && f.valeur === 'OUVRAGE');
+    return { libelle: ouvrage ? '＋ Ouvrage' : '＋ Article', action: () => app.naviguer(`/fiche/element/nouveau${ouvrage ? '?type=OUVRAGE' : ''}`) };
+  }
+  const type = { salaries: 'salarie', materiels: 'materiel' }[source];
   if (!type) return null;
   return { libelle: type === 'salarie' ? '＋ Salarié' : '＋ Matériel', action: () => app.naviguer(`/fiche/${type}/nouveau`) };
 }

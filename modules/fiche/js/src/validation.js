@@ -1,7 +1,7 @@
 // Validation des champs d'une fiche : même sémantique que ValidationFiche côté C# (jeu partagé
 // modules/fiche/tests/cas/01_validation.json).
 //
-// Champ : { type: 'texte' | 'zone' | 'nombre' | 'booleen' | 'date' | 'liste', format, longueur, options,
+// Champ : { type: 'texte' | 'zone' | 'html' | 'json' | 'nombre' | 'booleen' | 'date' | 'liste', format, longueur, options,
 //           obligatoire (programme), obligatoire_parametre (paramétrage utilisateur) }
 // Formats : email, telephone, code_postal, masque numérique (999.99 : 3 chiffres entiers, 2 décimales), regex:…
 
@@ -74,6 +74,9 @@ export function validerChamp(champ, valeur) {
     case 'date': return dateValide(valeur) ? null : 'DATE';
     case 'booleen': return typeof valeur === 'boolean' || ['true', 'false'].includes(String(valeur)) ? null : 'BOOLEEN';
     case 'liste': return (champ.options ?? []).some((o) => String(o.valeur) === String(valeur)) ? null : 'LISTE';
+    case 'json':
+      if (typeof valeur !== 'string') return null;
+      try { JSON.parse(valeur); return null; } catch { return 'FORMAT'; }
     default: {
       const t = String(valeur);
       if (champ.longueur && [...t].length > champ.longueur) return 'LONGUEUR';

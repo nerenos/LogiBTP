@@ -1,4 +1,4 @@
-import { echapper, formatLibre } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -73,6 +73,21 @@ export class FicheBase {
 
   /** Boutons supplémentaires de l'en-tête : [{ libelle, titre, action, visible }]. */
   actionsSupplementaires() { return []; }
+
+  /**
+   * Onglets propres à la classe fille, placés après ceux de la définition : [{ code, titre, rendre(corps, { modifiable }) }].
+   * Un onglet modifie la fiche par definirValeur(code, valeur) : la valeur part avec l'enregistrement (verrou, validation).
+   */
+  ongletsSpecifiques() { return []; }
+
+  /** Valeur saisie par un onglet spécifique (tableau, objet JSON, valeur calculée…). */
+  definirValeur(code, valeur) {
+    this.saisie.valeurs[code] = valeur;
+    this.#majTitre();
+  }
+
+  /** Fiche en saisie (modification, création ou copie). */
+  estEnSaisie() { return enSaisie(this.mode); }
 
   apresChargement() {}
 
@@ -156,6 +171,7 @@ export class FicheBase {
       const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
       return { ...x, groupes, champs: groupes.flatMap((g) => g.champs) };
     });
+    for (const o of this.ongletsSpecifiques()) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
     if (this.definition.supplementaires?.length) s.push({ code: '+supplementaires', titre: 'Informations complémentaires', supplementaires: true });
     s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
     return s;
@@ -234,6 +250,11 @@ export class FicheBase {
   #rendreSection(section) {
     const corps = this.conteneur.querySelector('.fiche-corps');
     if (section.pieces) { this.#rendrePieces(corps); return; }
+    if (section.specifique) {
+      corps.innerHTML = '';
+      section.specifique.rendre(corps, { modifiable: enSaisie(this.mode) });
+      return;
+    }
     const groupes = section.supplementaires
       ? [{ titre: 'Champs paramétrés', champs: this.definition.supplementaires.map((c) => ({ ...c, supplementaire: true })), largeur: 'plein' }]
       : section.groupes.map((g) => ({ ...g, champs: g.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) }));
@@ -270,7 +291,7 @@ export class FicheBase {
     const masque = this.masques.has(code);
     const erreur = this.erreurs.find((e) => e.champ === champ.code && !!e.supplementaire === !!champ.supplementaire);
     const div = document.createElement('div');
-    div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
+    div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
     const marques = `${champ.obligatoire ? '<span class="obligatoire" title="Obligatoire (programme)">*</span>' : ''}${champ.obligatoire_parametre ? '<span class="obligatoire-parametre" title="Obligatoire (paramétrage)">◆</span>' : ''}${champ.confidentiel ? '<span class="marque-confidentiel" title="Information confidentielle">🔒</span>' : ''}`;
     div.innerHTML = `<label>${echapper(champ.libelle)} ${marques}</label>`;
     if (champ.aide) div.title = champ.aide;
@@ -295,6 +316,27 @@ export class FicheBase {
         el.rows = 3;
         el.value = valeur ?? '';
         break;
+      case 'html': {
+        // Libellé mis en forme (stocké mis en forme et en texte brut) : éditeur de mise en forme du socle.
+        el = document.createElement('div');
+        el.className = 'fiche-html';
+        el.innerHTML = htmlSur(valeur ?? '') || '<span class="aide">(vide)</span>';
+        if (!lecture) {
+          el.tabIndex = 0;
+          el.title = 'Cliquer pour modifier la mise en forme';
+          const editer = async () => {
+            const html = await editerLibelle({ html: this.valeur(champ.code) ?? '', titre: champ.libelle });
+            if (html === undefined) return;
+            this.saisie.valeurs[champ.code] = html;
+            el.innerHTML = htmlSur(html ?? '') || '<span class="aide">(vide)</span>';
+            this.#majTitre();
+          };
+          el.addEventListener('click', editer);
+          el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); editer(); } });
+        } else el.classList.add('lecture');
+        el.classList.add('fiche-saisie-champ');
+        return el;
+      }
       case 'booleen':
         el = document.createElement('input');
         el.type = 'checkbox';

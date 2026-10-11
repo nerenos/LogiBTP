@@ -3,6 +3,7 @@ import { FournisseurFicheApi, FournisseurFicheMemoire, MODES } from '@logibtp/fi
 import { formatNombre } from '@logibtp/socle/ui';
 import { ENTETES } from '../api.js';
 import { TYPES_FICHE, DROITS_FICHE, PARAMETRAGE_FICHE } from './definitions.js';
+import { apresEcritureElement } from '../bibliotheque/bibliotheque.js';
 
 // Fiches du cœur : spécialisations de FicheBase (module Fiche) pour les salariés et les matériels.
 
@@ -75,7 +76,7 @@ export class FicheMateriel extends FicheLogiBTP {
 export const CLASSES_FICHE = { salarie: FicheSalarie, materiel: FicheMateriel };
 
 /** Fournisseur des fiches : API, ou mémoire hors ligne sur les mêmes lignes que les listes de démonstration. */
-export function creerFournisseurFiche({ enLigne, lignes }) {
+export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null }) {
   if (enLigne) return new FournisseurFicheApi({ base: '/api/fiches', entetes: ENTETES });
   return new FournisseurFicheMemoire({
     types: {
@@ -85,6 +86,13 @@ export function creerFournisseurFiche({ enLigne, lignes }) {
         derivees: (l) => ({ type_element: l.statut === 'INTERIM' ? 'interim' : 'salarie' }),
       },
       materiel: { definition: TYPES_FICHE.materiel.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.materiels },
+      // Éléments de bibliothèque : prix, historique et colonnes de liste recalculés après écriture (rôle du serveur).
+      ...(bibliotheque ? {
+        element: {
+          definition: TYPES_FICHE.element.definition, cle: 'id', proprietes: 'proprietes', lignes: bibliotheque.elements,
+          derivees: (l) => { apresEcritureElement(bibliotheque, l); return {}; },
+        },
+      } : {}),
     },
     droits: DROITS_FICHE,
     profil: ENTETES['X-Profil'] ?? 'ADMIN',

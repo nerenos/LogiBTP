@@ -133,6 +133,9 @@ public static partial class ValidationFiche
             case "liste":
                 var texte = Convert.ToString(valeur, CultureInfo.InvariantCulture);
                 return (champ.Options ?? []).Any(o => o.Valeur == texte) ? null : "LISTE";
+            case "json":
+                try { using var _ = JsonDocument.Parse(Convert.ToString(valeur, CultureInfo.InvariantCulture) ?? ""); return null; }
+                catch (JsonException) { return "FORMAT"; }
             default:
                 var s = Convert.ToString(valeur, CultureInfo.InvariantCulture) ?? "";
                 if (champ.Longueur is int l && s.EnumerateRunes().Count() > l) return "LONGUEUR";

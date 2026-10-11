@@ -69,14 +69,15 @@ public partial class ConstructeurFiche(TypeFicheResolu type)
     public virtual RequeteFiche Verrou(string id) =>
         Fin($"SELECT md5(row_to_json(t)::text) AS h FROM {Table} t WHERE {Cle}::text = {P(id)} FOR UPDATE");
 
-    private string Colonne(string code) =>
-        type.Definition.Champs.FirstOrDefault(c => c.Code == code && c.Colonne is not null && !c.LectureSeule)?.Colonne
+    /// <summary>Colonne d'un champ écrit ; un champ en lecture seule n'est accepté que s'il est calculé par la spécialisation.</summary>
+    private string Colonne(string code, IReadOnlySet<string>? calcules = null) =>
+        type.Definition.Champs.FirstOrDefault(c => c.Code == code && c.Colonne is not null && (!c.LectureSeule || calcules?.Contains(code) == true))?.Colonne
         ?? throw new ErreurFiche("CHAMP", $"Champ {code} non modifiable");
 
     /// <summary>UPDATE des champs modifiés ; les champs supplémentaires sont fusionnés dans la colonne JSONB.</summary>
-    public virtual RequeteFiche MiseAJour(string id, IReadOnlyDictionary<string, string?> valeurs, string? proprietesJson)
+    public virtual RequeteFiche MiseAJour(string id, IReadOnlyDictionary<string, string?> valeurs, string? proprietesJson, IReadOnlySet<string>? calcules = null)
     {
-        var affectations = valeurs.Select(kv => { var col = Colonne(kv.Key); return $"{Identifiant(col)} = {Valeur(col, kv.Value)}"; }).ToList();
+        var affectations = valeurs.Select(kv => { var col = Colonne(kv.Key, calcules); return $"{Identifiant(col)} = {Valeur(col, kv.Value)}"; }).ToList();
         if (proprietesJson is not null)
         {
             var p = Identifiant(type.ColonneProprietes ?? throw new ErreurFiche("PROPRIETES", "Ce type de fiche n'a pas de champs supplémentaires"));
@@ -87,13 +88,13 @@ public partial class ConstructeurFiche(TypeFicheResolu type)
     }
 
     /// <summary>INSERT d'une nouvelle fiche ; renvoie l'identifiant créé.</summary>
-    public virtual RequeteFiche Insertion(IReadOnlyDictionary<string, string?> valeurs, string? proprietesJson)
+    public virtual RequeteFiche Insertion(IReadOnlyDictionary<string, string?> valeurs, string? proprietesJson, IReadOnlySet<string>? calcules = null)
     {
         var colonnes = new List<string>();
         var vals = new List<string>();
         foreach (var (code, v) in valeurs)
         {
-            var col = Colonne(code);
+            var col = Colonne(code, calcules);
             colonnes.Add(Identifiant(col));
             vals.Add(Valeur(col, v));
         }

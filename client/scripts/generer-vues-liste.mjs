@@ -65,3 +65,51 @@ ${supplementaires};
 `;
 fs.writeFileSync(path.join(racine, 'db', '131_fiches_parametrage.sql'), sqlFiches);
 console.log('db/131_fiches_parametrage.sql généré');
+
+// ------------------------------------------------------------------ bibliothèque de démonstration
+const { BIBLIOTHEQUES, NATURES, FAMILLES, ELEMENTS, TARIFS } = await import('../src/app/bibliotheque/donnees.js');
+const { calculerElement, entreeDepuisLigne } = await import('@logibtp/bibliotheque');
+const { texteBrut } = await import('@logibtp/socle');
+const { calculerOuvrage } = await import('../src/app/bibliotheque/bibliotheque.js');
+const j = (v) => (v === null || v === undefined ? 'NULL' : `${q(JSON.stringify(v))}::jsonb`);
+const n = (v) => (v === null || v === undefined || v === '' ? 'NULL' : String(v));
+const b = (v) => (v ? 'TRUE' : 'FALSE');
+const lignesElements = ELEMENTS.map((e) => {
+  const p = e.type === 'OUVRAGE' ? calculerOuvrage(e.composition, e)
+    : calculerElement(entreeDepuisLigne(e, TARIFS.filter((t) => t.ele_id === e.id)));
+  return ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), n(e.fam_id), n(e.nat_id), q(e.gestion),
+    q(e.unite_stock), q(e.unite_achat), q(e.unite_vente), j(e.unites), q(e.scenario_pa), j(e.scenarios), n(e.pa_fixe), n(e.dernier_pa), n(e.pmp),
+    n(p.pa), n(e.coef_fg), n(p.pr), n(p.coef_benef ?? e.coef_benef), n(p.pv), b(e.pv_fixe), n(e.coef_remise), n(p.pv_net), j(e.composition), j(e.proprietes),
+    b(e.actif), q('demo'), q('Données de démonstration')].join(', ')})`;
+}).join(',\n');
+const sqlBibliotheque = `-- =============================================================================
+-- Cœur LogiBTP – bibliothèque de démonstration (référentiels, articles, ouvrage, tarifs fournisseurs).
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/bibliotheque/donnees.js : ne pas modifier.
+-- Prix calculés à la génération (même calcul que l'API) ; l'historique des prix part de ces valeurs.
+-- =============================================================================
+
+INSERT INTO bibliotheque (bib_id, bib_code, bib_libelle, bib_defaut, bib_actif, bib_ordre) VALUES
+${BIBLIOTHEQUES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${b(x.defaut)}, ${b(x.actif)}, ${x.ordre})`).join(',\n')};
+
+INSERT INTO famille_element (fam_id, fam_bib_id, fam_parent_id, fam_code, fam_libelle, fam_ordre) VALUES
+${FAMILLES.map((x) => ` (${x.id}, ${x.bib_id}, ${n(x.parent_id)}, ${q(x.code)}, ${q(x.libelle)}, ${x.ordre})`).join(',\n')};
+
+INSERT INTO nature_element (nat_id, nat_code, nat_libelle, nat_rgn_code, nat_axe_analytique, nat_compte_achat, nat_compte_vente, nat_actif) VALUES
+${NATURES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${q(x.regroupement)}, ${q(x.axe_analytique)}, ${q(x.compte_achat)}, ${q(x.compte_vente)}, ${b(x.actif)})`).join(',\n')};
+
+INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_fam_id, ele_nat_id, ele_gestion, ele_unt_stock, ele_unt_achat,
+  ele_unt_vente, ele_unites, ele_scenario_pa, ele_scenarios, ele_pa_fixe, ele_dernier_pa, ele_pmp, ele_pa, ele_coef_fg, ele_pr, ele_coef_benef, ele_pv,
+  ele_pv_fixe, ele_coef_remise, ele_pv_net, ele_composition, ele_proprietes, ele_actif, ele_maj_par, ele_commentaire_prix) VALUES
+${lignesElements};
+
+INSERT INTO tarif_fournisseur (tfo_id, tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par) VALUES
+${TARIFS.map((t) => ` (${t.id}, ${t.ele_id}, ${q(t.fournisseur)}, ${q(t.reference)}, ${q(t.libelle)}, ${q(t.unite)}, ${t.prix}, ${q(t.debut)}, ${q(t.fin)}, ${b(t.principal)}, ${q(t.lien)}, 'demo')`).join(',\n')};
+
+SELECT setval(pg_get_serial_sequence('bibliotheque', 'bib_id'), (SELECT max(bib_id) FROM bibliotheque));
+SELECT setval(pg_get_serial_sequence('famille_element', 'fam_id'), (SELECT max(fam_id) FROM famille_element));
+SELECT setval(pg_get_serial_sequence('nature_element', 'nat_id'), (SELECT max(nat_id) FROM nature_element));
+SELECT setval(pg_get_serial_sequence('element', 'ele_id'), (SELECT max(ele_id) FROM element));
+SELECT setval(pg_get_serial_sequence('tarif_fournisseur', 'tfo_id'), (SELECT max(tfo_id) FROM tarif_fournisseur));
+`;
+fs.writeFileSync(path.join(racine, 'db', '116_bibliotheque_demo.sql'), sqlBibliotheque);
+console.log('db/116_bibliotheque_demo.sql généré');

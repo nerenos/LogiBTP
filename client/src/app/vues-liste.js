@@ -30,6 +30,15 @@ export const SOURCES_LISTE = {
       ['controle_ok', 'boolean'], ['observations', 'text'],
     ],
   },
+  elements: {
+    libelle: 'Bibliothèque : articles et ouvrages', vue: 'v_liste_elements', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['bib_code', 'text'], ['code', 'text'], ['type', 'text'], ['libelle', 'text'], ['famille', 'text'],
+      ['nature', 'text'], ['regroupement', 'text'], ['gestion', 'text'], ['unite_stock', 'text'], ['scenario_pa', 'text'], ['pa', 'numeric'],
+      ['coef_fg', 'numeric'], ['pr', 'numeric'], ['coef_benef', 'numeric'], ['pv', 'numeric'], ['pv_net', 'numeric'], ['actif', 'boolean'],
+      ['modifie_le', 'timestamp with time zone'],
+    ],
+  },
   ged: {
     libelle: 'Documents (GED)', vue: 'v_liste_ged', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
@@ -73,6 +82,7 @@ export const THEMES_LISTE = [
   },
   { thl_code: 'salaries', thl_libelle: 'Salariés', thl_icone: '👷', thl_ordre: 40, thl_types: [{ code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérimaire' }] },
   { thl_code: 'materiels', thl_libelle: 'Matériels', thl_icone: '🚜', thl_ordre: 50, thl_types: [{ code: 'materiel', libelle: 'Matériel' }] },
+  { thl_code: 'bibliotheque', thl_libelle: 'Bibliothèque', thl_icone: '📚', thl_ordre: 65, thl_types: [{ code: 'element', libelle: 'Élément' }] },
   { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
   {
     thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
@@ -265,6 +275,45 @@ VUES_LISTE.push({
     taille_lot: 100,
   },
 });
+
+// Bibliothèque : articles, ouvrages, tous les éléments (segments bibliothèque, famille, regroupement, gestion).
+const OPTIONS_TYPE_ELEMENT = [{ valeur: 'ARTICLE', libelle: 'Article', picto: '🧱' }, { valeur: 'OUVRAGE', libelle: 'Ouvrage', picto: '🏗️' }];
+const OPTIONS_GESTION = [
+  { valeur: 'STOCK', libelle: 'Stock', picto: '📦' }, { valeur: 'ACHAT', libelle: 'Achat', picto: '🛒' },
+  { valeur: 'SOUS_TRAITANCE', libelle: 'Sous-traitance', picto: '🤝' }, { valeur: 'NON_GERE', libelle: 'Non géré', picto: '➖' },
+];
+const vueElements = (vli_id, vli_nom, filtres) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'bibliotheque',
+    source: { mode: 'vue', vue: 'elements', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres,
+    colonnes: [
+      col('type', '', { format: 'picto', ...fixe(36), options: OPTIONS_TYPE_ELEMENT }),
+      col('bib_code', 'Bib.', { ...fixe(52) }),
+      col('code', 'Code', { ...fixe(90), style: { gras: true } }),
+      col('libelle', 'Libellé', { ...prop(3, 200) }),
+      col('famille', 'Famille', { ...prop(1.6, 120) }),
+      col('regroupement', 'Regroupement', { ...prop(1, 90) }),
+      col('gestion', 'Gestion', { format: 'picto', ...fixe(64), options: OPTIONS_GESTION }),
+      col('unite_stock', 'U.', { ...fixe(44), alignement: 'centre' }),
+      col('pa', 'PA', { ...nombre(4), ...fixe(84), recherche: false }),
+      col('pr', 'PR', { ...nombre(4), ...fixe(84), recherche: false }),
+      col('pv_net', 'PV net', { ...nombre(2), ...fixe(84), recherche: false, style: { gras: true } }),
+      col('coef_benef', 'Coef.\nbénéf.', { ...nombre(4), ...fixe(70), recherche: false, masquee: true }),
+      col('nature', 'Nature', { masquee: true }),
+      col('scenario_pa', 'Scénario PA', { masquee: true }),
+      col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false, regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true } }] }),
+    ],
+    segments: [{ colonne: 'bib_code', titre: 'Bibliothèque' }, { colonne: 'type', titre: 'Type' }, { colonne: 'famille', titre: 'Famille' },
+      { colonne: 'regroupement', titre: 'Regroupement' }, { colonne: 'gestion', titre: 'Gestion' }],
+    tri: [{ colonne: 'code', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(vueElements(12, 'Articles', [{ colonne: 'type', op: '=', valeur: 'ARTICLE' }]), vueElements(13, 'Ouvrages', [{ colonne: 'type', op: '=', valeur: 'OUVRAGE' }]),
+  vueElements(14, 'Tous les éléments', []));
 
 /** Sources au format du fournisseur (colonnes { code, type }). */
 export function sourcesFournisseur(donnees = {}) {

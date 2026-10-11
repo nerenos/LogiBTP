@@ -1,0 +1,31 @@
+/* @logibtp/bibliotheque/ui – référentiels et onglets de la fiche d'un élément. */
+
+.bib-referentiels { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+.bib-onglets { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--bord); }
+.bib-onglets button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; color: var(--discret); }
+.bib-onglets button.actif { background: var(--surface); border-color: var(--bord); color: var(--texte); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
+.bib-zone { overflow: auto; min-height: 0; }
+.bib-table { border-collapse: collapse; width: 100%; font-size: 0.93em; }
+.bib-table th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.2rem 0.35rem; border-bottom: 1px solid var(--bord); white-space: nowrap; }
+.bib-table td { padding: 0.15rem 0.35rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.bib-table tr.ajout td { background: var(--fond); }
+.bib-table tr.stock td { font-weight: 600; }
+.bib-table td input:not([type="checkbox"]):not([type="radio"]), .bib-table td select { width: 100%; min-width: 4rem; }
+.bib-table .nombre { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bib-table td.change { background: var(--alerte-fond); }
+.bib-actions { white-space: nowrap; }
+.bib-actions button { padding: 0.05rem 0.45rem; margin-left: 0.15rem; }
+.bib-ligne { display: flex; align-items: center; gap: 0.35rem; }
+.bib-formulaire { display: flex; flex-direction: column; gap: 0.5rem; max-width: 34rem; }
+.bib-formulaire label { display: flex; flex-direction: column; gap: 0.1rem; }
+.bib-formulaire label.bib-ligne { flex-direction: row; }
+.bib-prix, .bib-unites { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr)); gap: 0.8rem; align-items: start; }
+.bib-prix .plein, .bib-unites .plein { grid-column: 1 / -1; }
+.bib-prix label, .bib-unites label { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.9em; color: var(--discret); }
+.bib-prix label.bib-ligne, .bib-unites label.bib-ligne { flex-direction: row; color: var(--texte); }
+.bib-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.4rem 0.7rem; align-items: end; }
+.bib-synthese { margin: 0.4rem 0 0; color: var(--discret); }
+.bib-prix .alerte { color: var(--alerte); margin: 0.2rem 0 0; }
+.bib-referentiels .erreur, .bib-prix .erreur, .bib-unites .erreur { color: var(--erreur); }
+.bib-exemple { color: var(--discret); white-space: nowrap; }
+.bib-tarifs { overflow: auto; }

@@ -279,11 +279,12 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             Valider(t, valeurs, proprietes);
 
             var aEcrire = d.Valeurs.ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
-            specialisation.AvantEcriture(code, false, aEcrire, u);
+            await specialisation.AvantEcritureAsync(code, false, id, aEcrire, valeurs, proprietes, u, ct);
+            var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
             var json = Requete(() => ProprietesJson(t, d.Proprietes));
             if (aEcrire.Count > 0 || json is not null)
             {
-                await using var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(id, aEcrire, json)));
+                await using var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(id, aEcrire, json, calcules)));
                 await cmd.ExecuteNonQueryAsync(ct);
             }
             await using (var renouveler = Commande(cnx, tx, new RequeteFiche("UPDATE verrou_fiche SET vef_renouvele = now() WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
@@ -303,10 +304,11 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var proprietes = d.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
         Valider(t, valeurs, proprietes);
         var aEcrire = d.Valeurs.Where(kv => Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
-        specialisation.AvantEcriture(code, true, aEcrire, u);
+        await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ct);
+        var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
         var json = Requete(() => ProprietesJson(t, d.Proprietes));
         var id = await Ecrire(async (cnx, tx) =>
-            (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json)), ct)).First()["id"]!, ct);
+            (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
     }
 

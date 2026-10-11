@@ -18,6 +18,7 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `modules/liste` | Module Liste : liste chargée par lots (pagination par clé), recherche « contient » sans casse ni accents et segments appliqués par la base, tri sur les lignes chargées ou sur toute la base, filtres de colonnes façon tableur (valeurs distinctes, conditions numériques et texte, mise en forme), colonnes calculées et mise en forme conditionnelle (formules), rafraîchissement ciblé et contrôle périodique des lignes ajoutées / modifiées / supprimées, concepteur de vues en deux onglets (mise en forme, colonnes et source) ; `LogiBTP.Listes` (construction SQL, validation des requêtes manuelles), `LogiBTP.Listes.Web` (vues, exécution en lecture seule, routes `/api/listes`) ; schéma `db/030` ; jeux `tests/cas` |
 | `modules/fiche` | Module Fiche : fiche d'un élément ouverte par type et ID, modes (consultation, modification, création, copie) changeables une fois ouverte, droits par profil et par type (VOIR, MODIFIER, DEBLOQUER, CONFIDENTIEL), verrou de modification avec battement, expiration et reprise de la main, champs obligatoires du programme et par paramétrage, champs confidentiels masqués (affichage à la demande ou pour la session, accès journalisé), champs supplémentaires paramétrés (JSONB par table), onglet Pièces jointes (option `ged`, vue simplifiée de la GED) ; `LogiBTP.Fiches` (validation partagée, construction SQL), `LogiBTP.Fiches.Web` (routes `/api/fiches/{type}`) ; schéma `db/040` ; jeux `tests/cas` |
 | `modules/ged` | Module GED : documents stockés sur le serveur (contenus rangés par empreinte SHA-256), versions de deux genres (étapes de validation, envoi, signature… toutes conservées ; éditions, 5 dernières conservées), aperçu des images, PDF, textes et mails (contenu chargé à l'affichage), dépôt par sélection ou glisser-déposer avec date, auteur, titre et élément lié pré-remplis, mails `.eml` / `.msg` (objet, expéditeur, destinataires, message, pièces jointes enregistrées à côté du mail), résumé et notes, coffre-fort (journal chaîné horodaté, document verrouillé, vérification d'intégrité), suppression par masquage, purge par un administrateur (jamais au coffre-fort) ; `LogiBTP.Ged` (chaîne du coffre, règle des versions, stockage), `LogiBTP.Ged.Web` (routes `/api/ged`) ; UI `ExplorateurGed`, `DialogueDepot` ; schéma `db/050` (triggers d'immuabilité) ; jeux `tests/cas` |
+| `modules/bibliotheque` | Module Bibliothèque : plusieurs bibliothèques (code d'appel BIB:CODE), familles en arborescence, natures (axe analytique, comptes, regroupements personnalisables), types de gestion, éléments (articles, ouvrages) identifiés par un ID interne et un code unique par bibliothèque, prix PA / FG / PR / bénéfice / PV / remise sur PV avec scénarios de prix d'achat (fixe, fournisseur principal, dernier PA, meilleur prix min / max, PMP), multi-unité (unité de stock et correspondances par formule sur les données techniques), tarifs fournisseurs, historique des prix (trigger) ; `LogiBTP.Bibliotheque` (calcul partagé), `LogiBTP.Bibliotheque.Web` (routes `/api/bibliotheque`) ; UI `GestionReferentiels`, `OngletPrix`, `OngletUnites`, `OngletTarifs` ; schéma `db/060` ; jeux `tests/cas` |
 | `modules/navigation` | Module Navigation (JS) : `Routeur` (URL par écran, historique du navigateur, garde avant de quitter une page modifiée, pages conservées), `GestionFenetres` (fenêtres séparées, liste des fenêtres par BroadcastChannel, mise au premier plan, signalement, fermeture et restauration de session), `Preferences` ; UI `Bandeau` (menus déroulants façon Windows), `PanneauFenetres`, `AccueilBase` (raccourcis et widgets personnalisables), widgets indicateurs, alertes, tableau, graphique |
 | `socle/dotnet/LogiBTP.Socle.Web` | Utilisateur courant (en-têtes `X-Utilisateur`, `X-Profil`, `X-Groupe`), erreurs métier traduites en réponses HTTP, société courante (une base par sous-domaine : `AddSocietes`, `UseSocietes`) |
 | `src/LogiBTP.Domaine` | Cœur : `DocumentBtp`, `DocumentLigneBtp` (colonnes BTP ajoutées aux entités du module Document) |
@@ -28,7 +29,7 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, `060`, puis cœur `100`, `110`, `115`, `116`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
@@ -105,6 +106,28 @@ oui / non, date, liste ; formats e-mail, téléphone, code postal, masque 999.99
 L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche complète (règles des champs puis
 `SpecialisationFiche.ValiderMetier`). Démo hors ligne : profil (ADMIN / SAISIE) dans Paramètres, bouton
 « Simuler un autre utilisateur » dans la fiche.
+
+### Bibliothèque
+
+Menu **Bibliothèque** : listes Articles, Ouvrages et Tous les éléments (segments bibliothèque, type, famille, regroupement,
+gestion), Nouvel article, Nouvel ouvrage, paramétrage (bibliothèques, familles, natures, regroupements, scénarios de prix
+d'achat autorisés et par défaut, coefficients par défaut). La fiche d'un élément (module Fiche) a les onglets :
+
+- **Article** : bibliothèque, code (unique dans la bibliothèque, sans « : »), type, famille, nature, gestion (stock, achat,
+  sous-traitance, non géré), libellé mis en forme (stocké mis en forme et en texte brut).
+- **Prix** : scénario de PA parmi ceux autorisés pour l'élément, PA fixe, dernier PA et PMP (alimentés plus tard par les
+  modules Achats et Stock), coefficients, PV fixe, remise sur PV ; résultat par unité ; **historique des prix** (chaque
+  changement de PA, PR, PV, coefficient ou remise, avec date, auteur et commentaire, enregistré par un trigger).
+- **Unités** : unité de stock (valorisation), unités d'achat et de vente, correspondances par formule sur les données
+  techniques (champs supplémentaires) : acier stocké au ml, acheté à la tonne (`1000 / {{poids_ml}}`), vendu au kg.
+- **Tarifs fournisseurs** (articles) : plusieurs tarifs d'un ou plusieurs fournisseurs, tarif principal, validité, lien ;
+  chaque enregistrement recalcule le prix de l'élément (le module de gestion des tarifs viendra plus tard).
+- **Composition** (ouvrages) : l'éditeur de devis sur les composantes (métrés par F4, articles de la bibliothèque) ; le
+  prix de l'ouvrage est calculé par le moteur de devis (mode déboursé ou somme des PV), côté client et côté serveur.
+- **Image et notices** : image de l'élément et notices techniques (catégorie GED « Notice technique (DOE) »).
+
+Prix calculés par le serveur à l'enregistrement (`SpecialisationFicheBtp`, `CalculElement`, `MoteurDevisBtp`), aperçu
+identique côté client. L'appel des éléments dans les documents (code, préfixe BIB:CODE) viendra dans un second temps.
 
 ### Verrous et utilisateurs fantômes
 
