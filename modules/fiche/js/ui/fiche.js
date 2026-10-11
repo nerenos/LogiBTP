@@ -32,18 +32,18 @@ export function definirConfidentielSession(actif) {
  *
  * Points de spécialisation : sousTitre, champsNonCopies, valeursCreation, validerMetier, rendreChamp,
  * rendreInformations (encart calculé), actionsSupplementaires, apresChargement.
- * Options : conteneur, fournisseur, type, id, mode, message, piecesJointes (fournisseur GED), peutParametrer,
+ * Options : conteneur, fournisseur, type, id, mode, message, ged (vue simplifiée de la GED), peutParametrer,
  * surEnregistre(fiche, { cree }), surFerme().
  */
 export class FicheBase {
-  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, piecesJointes = null, peutParametrer = false, surEnregistre, surFerme }) {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, surEnregistre, surFerme }) {
     this.conteneur = conteneur;
     this.fournisseur = fournisseur;
     this.type = type;
     this.id = id;
     this.mode = mode;
     this.message = message ?? (() => {});
-    this.piecesJointes = piecesJointes;
+    this.ged = ged;
     this.peutParametrer = peutParametrer;
     this.surEnregistre = surEnregistre;
     this.surFerme = surFerme;
@@ -339,23 +339,21 @@ export class FicheBase {
     this.conteneur.querySelector('.fiche-sous-titre').textContent = this.sousTitre(v);
   }
 
+  /**
+   * Onglet Pièces jointes : vue simplifiée de la GED, fournie par l'application (option ged) :
+   * ged({ conteneur, type, id, libelle, modifiable }) → composant (detruire() facultatif).
+   */
   #rendrePieces(corps) {
+    this.composantGed?.detruire?.();
+    this.composantGed = null;
     corps.innerHTML = '<div class="fiche-pieces"></div>';
     const zone = corps.firstElementChild;
-    if (!this.piecesJointes || this.id === null) {
-      zone.innerHTML = `<p class="aide">${this.id === null ? 'Enregistrez la fiche pour joindre des documents.'
-        : 'Pièces jointes : la GED n\'est pas encore branchée. Les documents de la fiche seront déposés et consultés ici (module GED).'}</p>`;
-      return;
-    }
-    // Point d'extension GED : { lister(type, id), deposer(type, id, fichier), telecharger(piece), supprimer(piece) }.
-    this.piecesJointes.lister(this.type, this.id).then((pieces) => {
-      zone.innerHTML = `<ul>${pieces.map((p, i) => `<li><a href="#" data-i="${i}">${echapper(p.nom)}</a> <small>${echapper(p.taille ?? '')}</small>
-        ${enSaisie(this.mode) ? `<button type="button" data-suppr="${i}">✕</button>` : ''}</li>`).join('') || '<li class="aide">Aucune pièce jointe</li>'}</ul>
-        ${enSaisie(this.mode) ? '<input type="file" data-depot>' : ''}`;
-      zone.querySelectorAll('[data-i]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.piecesJointes.telecharger(pieces[Number(a.dataset.i)]); }));
-      zone.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => { await this.piecesJointes.supprimer(pieces[Number(b.dataset.suppr)]); this.rendre(); }));
-      zone.querySelector('[data-depot]')?.addEventListener('change', async (e) => { if (e.target.files[0]) { await this.piecesJointes.deposer(this.type, this.id, e.target.files[0]); this.rendre(); } });
-    }).catch((e) => this.#erreur(e));
+    if (this.id === null) { zone.innerHTML = '<p class="aide">Enregistrez la fiche pour joindre des documents.</p>'; return; }
+    if (!this.ged) { zone.innerHTML = "<p class='aide'>Pièces jointes : la GED n'est pas branchée.</p>"; return; }
+    this.composantGed = this.ged({
+      conteneur: zone, type: this.type, id: this.id, libelle: titreFiche(this.definition.titre, this.valeurs()) || `${this.definition.libelle} ${this.id}`,
+      modifiable: this.definition.droits.modifier,
+    });
   }
 
   #erreur(e) {

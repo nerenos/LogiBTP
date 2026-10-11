@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Ged</RootNamespace>
+    <Description>Module GED LogiBTP : journal chaîné du coffre-fort, règle de conservation des versions, stockage des contenus par empreinte.</Description>
+  </PropertyGroup>
+
+</Project>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <Description>Cœur LogiBTP : API des devis BTP, spécialisation des services des modules Document, Métré, Liste et Fiche.</Description>
+    <Description>Cœur LogiBTP : API des devis BTP, spécialisation des services des modules Document, Métré, Liste, Fiche et GED.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,6 +9,7 @@
     <ProjectReference Include="..\..\modules\document\dotnet\LogiBTP.Documents.Web\LogiBTP.Documents.Web.csproj" />
     <ProjectReference Include="..\..\modules\liste\dotnet\LogiBTP.Listes.Web\LogiBTP.Listes.Web.csproj" />
     <ProjectReference Include="..\..\modules\fiche\dotnet\LogiBTP.Fiches.Web\LogiBTP.Fiches.Web.csproj" />
+    <ProjectReference Include="..\..\modules\ged\dotnet\LogiBTP.Ged.Web\LogiBTP.Ged.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

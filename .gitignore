@@ -5,3 +5,4 @@ obj/
 node_modules/
 client/dist/
 **/tests/resultats-js/
+stockage-ged/

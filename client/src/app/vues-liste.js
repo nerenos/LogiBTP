@@ -30,6 +30,15 @@ export const SOURCES_LISTE = {
       ['controle_ok', 'boolean'], ['observations', 'text'],
     ],
   },
+  ged: {
+    libelle: 'Documents (GED)', vue: 'v_liste_ged', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['titre', 'text'], ['categorie', 'text'], ['nature', 'text'], ['type_lie', 'text'],
+      ['id_lie', 'text'], ['auteur', 'text'], ['date_document', 'date'], ['etat', 'text'], ['coffre', 'boolean'], ['nom_fichier', 'text'],
+      ['type_mime', 'text'], ['taille', 'bigint'], ['version', 'integer'], ['objet_mail', 'text'], ['resume', 'text'], ['notes', 'text'],
+      ['cree_le', 'timestamp with time zone'], ['cree_par', 'text'],
+    ],
+  },
   ressources: {
     libelle: 'Ressources : équipes, salariés, intérimaires, matériels, sous-traitants (démonstration)', vue: 'v_liste_ressources',
     colonne_id: 'id', colonne_type: 'type_element',
@@ -58,6 +67,7 @@ export const THEMES_LISTE = [
   },
   { thl_code: 'salaries', thl_libelle: 'Salariés', thl_icone: '👷', thl_ordre: 40, thl_types: [{ code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérimaire' }] },
   { thl_code: 'materiels', thl_libelle: 'Matériels', thl_icone: '🚜', thl_ordre: 50, thl_types: [{ code: 'materiel', libelle: 'Matériel' }] },
+  { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
   {
     thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
     thl_types: [{ code: 'equipe', libelle: 'Équipe' }, { code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérim' },
@@ -206,6 +216,42 @@ VUES_LISTE.push({
     ],
     segments: [{ colonne: 'type_element', titre: 'Type' }, { colonne: 'categorie', titre: 'Catégorie' }],
     tri: [{ colonne: 'libelle', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+
+// Recherche de documents dans la GED (la vue simplifiée est dans l'onglet Pièces jointes des fiches).
+VUES_LISTE.push({
+  vli_id: 8, vli_nom: 'Documents GED', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'ged',
+    source: { mode: 'vue', vue: 'ged', colonne_id: 'id', colonne_type: 'type_element' },
+    colonnes: [
+      col('nature', '', { format: 'picto', ...fixe(36), options: [{ valeur: 'mail', libelle: 'Mail', picto: '✉️' }, { valeur: 'fichier', libelle: 'Fichier', picto: '📄' }] }),
+      col('titre', 'Titre', { ...prop(3, 180), style: { gras: true } }),
+      col('categorie', 'Catégorie', {
+        format: 'combo', ...prop(1.2, 110),
+        options: [['devis_signe', 'Devis signé'], ['facture_recue', 'Facture reçue'], ['facture_emise', 'Facture émise'], ['contrat', 'Contrat'],
+          ['courrier', 'Courrier'], ['mail', 'Mail'], ['photo', 'Photo'], ['plan', 'Plan'], ['certificat', 'Certificat / habilitation'], ['autre', 'Autre']]
+          .map(([valeur, libelle]) => ({ valeur, libelle })),
+      }),
+      col('date_document', 'Date', { format: 'date', ...fixe(92), recherche: false }),
+      col('auteur', 'Auteur', { ...prop(1.5, 110) }),
+      col('type_lie', 'Élément', { ...fixe(90) }),
+      col('id_lie', 'N°', { ...fixe(56) }),
+      col('etat', 'État', { ...fixe(90) }),
+      col('coffre', 'Coffre', { format: 'coche', ...fixe(60), bulle: 'Archivé au coffre-fort', recherche: false,
+        regles: [{ condition: '[coffre]', style: { fond: '#fff4e0' } }] }),
+      col('version', 'Ver.', { ...nombre(0), ...fixe(48), recherche: false }),
+      col('taille', 'Taille\n(octets)', { ...nombre(0), ...fixe(90), recherche: false }),
+      col('resume', 'Résumé', { ...prop(2.5, 140) }),
+      col('objet_mail', 'Objet du mail', { masquee: true }),
+      col('notes', 'Notes', { masquee: true }),
+      col('nom_fichier', 'Fichier', { masquee: true }),
+    ],
+    segments: [{ colonne: 'categorie', titre: 'Catégorie' }, { colonne: 'type_lie', titre: 'Élément' }],
+    tri: [{ colonne: 'date_document', sens: 'desc' }],
     lignes: 'multi',
     taille_lot: 100,
   },

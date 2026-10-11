@@ -159,7 +159,8 @@ public partial class ConstructeurRequete
             case "commence": return Motif("", "%");
             case "finit": return Motif("%", "");
         }
-        var (colonne, _) = Typee(f.Colonne, f.Valeur);
+        // Colonne seule (sans paramètre) : les valeurs passent par ValeurFiltre.
+        var colonne = TypeSur().IsMatch(_colonnes[f.Colonne].Type.ToLowerInvariant()) ? col : col + "::text";
         if (f.Op == "entre") return $"{colonne} BETWEEN {ValeurFiltre(f.Colonne, f.Valeur)} AND {ValeurFiltre(f.Colonne, f.Valeur2)}";
         return $"{colonne} {f.Op} {ValeurFiltre(f.Colonne, f.Valeur)}";
     }

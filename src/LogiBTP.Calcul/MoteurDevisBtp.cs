@@ -91,7 +91,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     protected override List<DocumentLigneBtp> Composantes(DocumentLigneBtp ouvrage) =>
         base.Composantes(ouvrage).Where(c => !c.LigIsEcartArrondi).ToList();
 
-    protected internal override bool EstNumerotee(DocumentLigneBtp l) => base.EstNumerotee(l) && !l.LigIsEcartArrondi;
+    protected override bool EstNumerotee(DocumentLigneBtp l) => base.EstNumerotee(l) && !l.LigIsEcartArrondi;
 
     protected override decimal LireVariable(string portee, string nom, DocumentLigneBtp? ligne) => _portees.Lire(portee, nom, ligne?.LigId);
 

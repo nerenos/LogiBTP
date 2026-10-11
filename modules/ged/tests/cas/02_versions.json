@@ -1,0 +1,128 @@
+{
+  "description": "Conservation des versions : étapes toutes conservées, éditions limitées aux N dernières (jamais la version courante), aucune purge au coffre-fort. attendu = numéros purgés.",
+  "cas": [
+    {
+      "nom": "moins de N éditions",
+      "conservees": 5,
+      "versions": [
+        {
+          "numero": 1,
+          "genre": "edition"
+        },
+        {
+          "numero": 2,
+          "genre": "edition"
+        },
+        {
+          "numero": 3,
+          "genre": "etape"
+        }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "sixième édition : la plus ancienne purgée",
+      "conservees": 5,
+      "versions": [
+        {
+          "numero": 1,
+          "genre": "edition"
+        },
+        {
+          "numero": 2,
+          "genre": "edition"
+        },
+        {
+          "numero": 3,
+          "genre": "edition"
+        },
+        {
+          "numero": 4,
+          "genre": "edition"
+        },
+        {
+          "numero": 5,
+          "genre": "edition"
+        },
+        {
+          "numero": 6,
+          "genre": "edition"
+        }
+      ],
+      "attendu": [
+        1
+      ]
+    },
+    {
+      "nom": "étapes jamais purgées",
+      "conservees": 2,
+      "versions": [
+        {
+          "numero": 1,
+          "genre": "edition"
+        },
+        {
+          "numero": 2,
+          "genre": "etape"
+        },
+        {
+          "numero": 3,
+          "genre": "edition"
+        },
+        {
+          "numero": 4,
+          "genre": "etape"
+        },
+        {
+          "numero": 5,
+          "genre": "edition"
+        },
+        {
+          "numero": 6,
+          "genre": "edition"
+        }
+      ],
+      "attendu": [
+        1,
+        3
+      ]
+    },
+    {
+      "nom": "version courante gardée même au-delà de N",
+      "conservees": 0,
+      "versions": [
+        {
+          "numero": 1,
+          "genre": "edition"
+        },
+        {
+          "numero": 2,
+          "genre": "edition"
+        }
+      ],
+      "attendu": [
+        1
+      ]
+    },
+    {
+      "nom": "coffre-fort : rien purgé",
+      "conservees": 1,
+      "coffre": true,
+      "versions": [
+        {
+          "numero": 1,
+          "genre": "edition"
+        },
+        {
+          "numero": 2,
+          "genre": "edition"
+        },
+        {
+          "numero": 3,
+          "genre": "edition"
+        }
+      ],
+      "attendu": []
+    }
+  ]
+}

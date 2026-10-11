@@ -3,6 +3,7 @@ import '@logibtp/document/ui/document.css';
 import '@logibtp/metre/ui/metre.css';
 import '@logibtp/liste/ui/liste.css';
 import '@logibtp/fiche/ui/fiche.css';
+import '@logibtp/ged/ui/ged.css';
 import './styles.css';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { Disposition } from '@logibtp/document/ui';
@@ -16,6 +17,8 @@ import { PanneauxBtp } from './app/panneaux-btp.js';
 import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS, simulerModificationsAutres, donneesDemo } from './app/listes.js';
 import { CLASSES_FICHE, creerFournisseurFiche } from './app/fiches/fiches.js';
 import { ficheDeLigne } from './app/fiches/definitions.js';
+import { ExplorateurGed } from '@logibtp/ged/ui';
+import { creerFournisseurGed } from './app/ged/ged.js';
 
 const $ = (s) => document.querySelector(s);
 const etat = { disposition: null, enLigne: false, editeur: null, panneaux: null, metre: null, liste: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
@@ -113,6 +116,7 @@ async function ouvrirFiche({ id, type }) {
     etat.disposition.onglet('lignes');
     return;
   }
+  if (type === 'document_ged') { await ouvrirGed({ documentInitial: Number(id) }); return; }
   const f = ficheDeLigne({ id, type });
   if (f) { await ouvrirFicheElement(f.type, f.id); return; }
   message(`Fiche ${LIBELLES_ELEMENTS[type] ?? type} n° ${id} : écran pas encore disponible`, 'avertissement');
@@ -132,6 +136,11 @@ async function ouvrirFicheElement(type, id, mode = 'consultation') {
   const fiche = new Classe({
     conteneur, fournisseur: etat.fournisseurFiche, type, id, mode, message,
     peutParametrer: (etat.fournisseurFiche.profil ?? ENTETES['X-Profil']) === 'ADMIN',
+    // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
+    ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
+      fournisseur: etat.fournisseurGed, contexte: { type_element: typeElement, id_element: String(idElement), libelle }, compact: true,
+      modifiable, admin: profilCourant() === 'ADMIN', utilisateur: ENTETES['X-Utilisateur'] ?? 'demo', message,
+    }),
     surEnregistre: (f, { cree }) => {
       if (cree) etat.liste?.verifier().catch(() => {});
       else etat.liste?.rafraichirLignes([f.id, `SAL-${f.id}`, `MAT-${f.id}`]).catch(() => {});
@@ -148,6 +157,29 @@ async function ouvrirFicheElement(type, id, mode = 'consultation') {
   panneau.hidden = false;
 }
 
+function profilCourant() {
+  return etat.enLigne ? ENTETES['X-Profil'] : document.querySelector('#profil-demo')?.value ?? 'ADMIN';
+}
+
+/** GED complète (tous les documents) dans le panneau, éventuellement sur un document donné. */
+async function ouvrirGed({ documentInitial = null } = {}) {
+  if (etat.fiche && !(await etat.fiche.fermer())) return;
+  const panneau = $('#fiche');
+  const conteneur = document.createElement('div');
+  conteneur.className = 'ged-panneau';
+  conteneur.innerHTML = '<header class="ged-panneau-entete"><h2>📎 Documents (GED)</h2><button type="button" title="Fermer (Échap)">✕</button></header><div class="ged-panneau-corps"></div>';
+  panneau.replaceChildren(conteneur);
+  const fermer = () => { panneau.hidden = true; panneau.replaceChildren(); etat.fiche = null; etat.liste?.verifier().catch(() => {}); return true; };
+  conteneur.querySelector('header button').addEventListener('click', fermer);
+  new ExplorateurGed(conteneur.querySelector('.ged-panneau-corps'), {
+    fournisseur: etat.fournisseurGed, documentInitial, modifiable: true, admin: profilCourant() === 'ADMIN',
+    utilisateur: ENTETES['X-Utilisateur'] ?? 'demo', message,
+  });
+  // Même interface que les fiches pour Échap et la fermeture avant ouverture d'une autre fiche.
+  etat.fiche = { fermer: async () => fermer(), mode: 'consultation' };
+  panneau.hidden = false;
+}
+
 /** Création d'un élément depuis la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue) {
   const source = vue?.definition?.source?.vue;
@@ -158,8 +190,9 @@ function creationDepuisVue(vue) {
 
 /** Liste de l'onglet Liste : vues partagées, ouverture des fiches, rafraîchissement après enregistrement. */
 async function demarrerListe() {
+  etat.fournisseurGed = await creerFournisseurGed({ enLigne: etat.enLigne, lignes: donneesDemo() });
   etat.liste = new ListeDonnees($('#liste'), {
-    fournisseur: creerFournisseurListe({ enLigne: etat.enLigne, demo: DOCUMENT_DEMO }),
+    fournisseur: creerFournisseurListe({ enLigne: etat.enLigne, demo: DOCUMENT_DEMO, ged: etat.fournisseurGed }),
     ouvrir: (l) => ouvrirFiche(l).catch(erreur),
     message,
     // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
@@ -309,10 +342,12 @@ async function demarrer() {
   brancher('#annuler', () => etat.editeur?.magasin.annuler());
   brancher('#retablir', () => etat.editeur?.magasin.retablir());
   brancher('#simuler', () => message(simulerModificationsAutres(etat.liste.fournisseur)));
+  brancher('#ouvrir-ged', () => ouvrirGed());
   // Démo : profil de l'utilisateur pour les fiches (SAISIE : sans confidentiel ni reprise de main sur les salariés).
   $('#profil-demo').addEventListener('change', async (e) => {
     etat.fournisseurFiche ??= creerFournisseurFiche({ enLigne: false, lignes: donneesDemo() });
     etat.fournisseurFiche.profil = e.target.value;
+    if (etat.fournisseurGed && 'profil' in etat.fournisseurGed) etat.fournisseurGed.profil = e.target.value;
     const f = etat.fiche;
     if (f) { const { type, id } = f; if (await f.fermer()) await ouvrirFicheElement(type, id).catch(erreur); }
     message(`Profil de démonstration : ${e.target.value}`);

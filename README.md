@@ -16,7 +16,8 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `modules/document` | Module Document : moteur générique `MoteurDocument` (JS et C#), numérotation, comparaison client / serveur ; `LogiBTP.Documents.Web` (services, persistance EF, routes HTTP génériques, `SpecialisationDocument`) ; UI `EditeurDocument`, `PanneauxDocument`, `ReglesDocument`, `PressePapiers` ; schéma `db/010`–`011` ; jeux `tests/cas` |
 | `modules/metre` | Module Métré, indépendant de son hôte : `Portees`, `EvaluateurMetre`, variables (JS et C#) ; UI `PanneauMetre` (interface d'hôte) et `DictionnaireMetre` ; schéma `db/020` (sans clé étrangère vers l'hôte) ; jeux `tests/cas` |
 | `modules/liste` | Module Liste : liste chargée par lots (pagination par clé), recherche « contient » sans casse ni accents et segments appliqués par la base, tri sur les lignes chargées ou sur toute la base, filtres de colonnes façon tableur (valeurs distinctes, conditions numériques et texte, mise en forme), colonnes calculées et mise en forme conditionnelle (formules), rafraîchissement ciblé et contrôle périodique des lignes ajoutées / modifiées / supprimées, concepteur de vues en deux onglets (mise en forme, colonnes et source) ; `LogiBTP.Listes` (construction SQL, validation des requêtes manuelles), `LogiBTP.Listes.Web` (vues, exécution en lecture seule, routes `/api/listes`) ; schéma `db/030` ; jeux `tests/cas` |
-| `modules/fiche` | Module Fiche : fiche d'un élément ouverte par type et ID, modes (consultation, modification, création, copie) changeables une fois ouverte, droits par profil et par type (VOIR, MODIFIER, DEBLOQUER, CONFIDENTIEL), verrou de modification avec battement, expiration et reprise de la main, champs obligatoires du programme et par paramétrage, champs confidentiels masqués (affichage à la demande ou pour la session, accès journalisé), champs supplémentaires paramétrés (JSONB par table), onglet Pièces jointes (point d'extension GED) ; `LogiBTP.Fiches` (validation partagée, construction SQL), `LogiBTP.Fiches.Web` (routes `/api/fiches/{type}`) ; schéma `db/040` ; jeux `tests/cas` |
+| `modules/fiche` | Module Fiche : fiche d'un élément ouverte par type et ID, modes (consultation, modification, création, copie) changeables une fois ouverte, droits par profil et par type (VOIR, MODIFIER, DEBLOQUER, CONFIDENTIEL), verrou de modification avec battement, expiration et reprise de la main, champs obligatoires du programme et par paramétrage, champs confidentiels masqués (affichage à la demande ou pour la session, accès journalisé), champs supplémentaires paramétrés (JSONB par table), onglet Pièces jointes (option `ged`, vue simplifiée de la GED) ; `LogiBTP.Fiches` (validation partagée, construction SQL), `LogiBTP.Fiches.Web` (routes `/api/fiches/{type}`) ; schéma `db/040` ; jeux `tests/cas` |
+| `modules/ged` | Module GED : documents stockés sur le serveur (contenus rangés par empreinte SHA-256), versions de deux genres (étapes de validation, envoi, signature… toutes conservées ; éditions, 5 dernières conservées), aperçu des images, PDF, textes et mails (contenu chargé à l'affichage), dépôt par sélection ou glisser-déposer avec date, auteur, titre et élément lié pré-remplis, mails `.eml` / `.msg` (objet, expéditeur, destinataires, message, pièces jointes enregistrées à côté du mail), résumé et notes, coffre-fort (journal chaîné horodaté, document verrouillé, vérification d'intégrité), suppression par masquage, purge par un administrateur (jamais au coffre-fort) ; `LogiBTP.Ged` (chaîne du coffre, règle des versions, stockage), `LogiBTP.Ged.Web` (routes `/api/ged`) ; UI `ExplorateurGed`, `DialogueDepot` ; schéma `db/050` (triggers d'immuabilité) ; jeux `tests/cas` |
 | `socle/dotnet/LogiBTP.Socle.Web` | Utilisateur courant (en-têtes `X-Utilisateur`, `X-Profil`, `X-Groupe`), erreurs métier traduites en réponses HTTP |
 | `src/LogiBTP.Domaine` | Cœur : `DocumentBtp`, `DocumentLigneBtp` (colonnes BTP ajoutées aux entités du module Document) |
 | `src/LogiBTP.Calcul` | Cœur : `MoteurDevisBtp`, spécialisation de `MoteurDocument` avec le module Métré ; `ComparateurBtp` |
@@ -26,12 +27,12 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, `032`, `040`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`.
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, `032`, `040`, `050`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`.
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
 ```bash
-for f in modules/liste/db/030_liste_schema.sql modules/liste/db/031_liste_themes.sql modules/liste/db/032_liste_saisie.sql modules/fiche/db/040_fiche_schema.sql db/120_listes.sql db/121_listes_parametrage.sql db/130_fiches.sql db/131_fiches_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
+for f in modules/liste/db/030_liste_schema.sql modules/liste/db/031_liste_themes.sql modules/liste/db/032_liste_saisie.sql modules/fiche/db/040_fiche_schema.sql modules/ged/db/050_ged_schema.sql db/120_listes.sql db/121_listes_parametrage.sql db/130_fiches.sql db/131_fiches_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
 ```
 
 ### Listes
@@ -75,6 +76,17 @@ oui / non, date, liste ; formats e-mail, téléphone, code postal, masque 999.99
 L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche complète (règles des champs puis
 `SpecialisationFiche.ValiderMetier`). Démo hors ligne : profil des fiches (ADMIN / SAISIE) sous la liste, bouton
 « Simuler un autre utilisateur » dans la fiche.
+
+### GED
+
+Bouton 📎 GED (tous les documents) ou onglet Pièces jointes d'une fiche (documents de l'élément). Déposer par ＋ Ajouter ou
+en glissant des fichiers : le dialogue pré-remplit titre, date, auteur et élément lié ; un mail `.eml` / `.msg` est décodé
+(objet, expéditeur, destinataires, message) et ses pièces jointes sont enregistrées comme documents liés au mail. Une
+catégorie administrative (devis signé, factures, contrat) coche « Coffre-fort » : le document est alors scellé (empreinte
+SHA-256 et horodatage ajoutés au journal chaîné, que la base interdit de modifier), verrouillé (seuls résumé et notes
+changent) et ne peut jamais être purgé ; seul un administrateur peut le masquer. Les étapes (validation, envoi, signature…)
+s'affichent dans « Rechercher une version antérieure ». Les documents se recherchent aussi dans les listes (thème 📎
+Documents). Contenus stockés dans `Ged:Repertoire` (`appsettings.json`, `stockage-ged` par défaut).
 
 Hors ligne, la démo simule les modifications d'un autre poste (bouton sous la liste) pour éprouver le contrôle périodique.
 

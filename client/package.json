@@ -17,7 +17,8 @@
     "@logibtp/metre": "0.1.0",
     "@logibtp/document": "0.1.0",
     "@logibtp/liste": "0.1.0",
-    "@logibtp/fiche": "0.1.0"
+    "@logibtp/fiche": "0.1.0",
+    "@logibtp/ged": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

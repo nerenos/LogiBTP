@@ -1,6 +1,7 @@
 using System.Globalization;
 using LogiBTP.Fiches;
 using LogiBTP.Fiches.Web;
+using LogiBTP.Ged.Web;
 using LogiBTP.Listes;
 using LogiBTP.Listes.Web;
 using LogiBTP.Socle.Web;
@@ -59,4 +60,16 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
             throw ExceptionMetier.Conflit("FICHE_EN_MODIFICATION", $"Fiche en cours de modification par {verrou.Utilisateur} : saisie impossible pour l'instant", verrou);
         }
     }
+}
+
+/// <summary>
+/// GED du cœur : répertoire de stockage et taille maximale lus dans la configuration (section Ged). Un chemin relatif
+/// est pris depuis le répertoire de l'application.
+/// </summary>
+public sealed class SpecialisationGedBtp(IConfiguration configuration, IHostEnvironment environnement) : SpecialisationGed
+{
+    public override string RepertoireStockage =>
+        Path.Combine(environnement.ContentRootPath, configuration["Ged:Repertoire"] ?? "stockage-ged");
+
+    public override long TailleMaxDepot => (configuration.GetValue<long?>("Ged:TailleMaxDepotMo") ?? 200) * 1024 * 1024;
 }

@@ -9,6 +9,7 @@
     "modules/document/js",
     "modules/liste/js",
     "modules/fiche/js",
+    "modules/ged/js",
     "client"
   ],
   "scripts": {

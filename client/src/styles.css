@@ -25,3 +25,7 @@
 }
 .panneau-fiche[hidden] { display: none; }
 .panneau-fiche > div { flex: 1; min-height: 0; }
+.ged-panneau { display: flex; flex-direction: column; gap: 0.4rem; }
+.ged-panneau-entete { display: flex; align-items: center; justify-content: space-between; flex: none; }
+.ged-panneau-entete h2 { margin: 0; font-size: 1.15rem; }
+.ged-panneau-corps { flex: 1; min-height: 0; }

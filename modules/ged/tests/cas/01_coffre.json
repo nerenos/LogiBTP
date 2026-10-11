@@ -1,0 +1,41 @@
+{
+  "description": "Journal chaîné du coffre-fort : empreinte de contenu (SHA-256), texte d entrée « précédente|document|horodatage|n° document|n° version|utilisateur|motif » et son SHA-256 ; même calcul en JS (coffre.js) et en C# (ChaineCoffre).",
+  "entrees": [
+    {
+      "contenu": "%PDF-1.4 devis signé",
+      "document": 1,
+      "version": 10,
+      "empreinte_document": "f112a07356ccc7b241ed1a248ea24cb676a0a6a5b7621e10c952b8984aa24cf6",
+      "horodatage": "2026-10-11T09:56:33.516Z",
+      "utilisateur": "demo",
+      "motif": "Dépôt Devis signé DV2026-00012",
+      "empreinte_precedente": "0000000000000000000000000000000000000000000000000000000000000000",
+      "texte": "0000000000000000000000000000000000000000000000000000000000000000|f112a07356ccc7b241ed1a248ea24cb676a0a6a5b7621e10c952b8984aa24cf6|2026-10-11T09:56:33.516Z|1|10|demo|Dépôt Devis signé DV2026-00012",
+      "empreinte_entree": "20c1db3e971d4bc51786b3c002d4bdf904cb5c054959d8597f7d03e3077885aa"
+    },
+    {
+      "contenu": "%PDF-1.4 facture reçue",
+      "document": 2,
+      "version": 11,
+      "empreinte_document": "3c75387afc65512496126136364fb180b753daca7501c986e0aaa38489e92914",
+      "horodatage": "2026-10-11T09:56:33.517Z",
+      "utilisateur": "demo",
+      "motif": null,
+      "empreinte_precedente": "20c1db3e971d4bc51786b3c002d4bdf904cb5c054959d8597f7d03e3077885aa",
+      "texte": "20c1db3e971d4bc51786b3c002d4bdf904cb5c054959d8597f7d03e3077885aa|3c75387afc65512496126136364fb180b753daca7501c986e0aaa38489e92914|2026-10-11T09:56:33.517Z|2|11|demo|",
+      "empreinte_entree": "ebad282122951f1a61ee43fa78dea3489bb0a22d59de1e3a9e8163feaf607705"
+    },
+    {
+      "contenu": "contrat é ç œ",
+      "document": 3,
+      "version": 12,
+      "empreinte_document": "19185270f1439c2ce1087621f634b120f8091bddd18b460a652d611c1c9ac579",
+      "horodatage": "2026-10-11T09:56:33.518Z",
+      "utilisateur": "m.dupont",
+      "motif": "Dépôt Contrat de sous-traitance",
+      "empreinte_precedente": "ebad282122951f1a61ee43fa78dea3489bb0a22d59de1e3a9e8163feaf607705",
+      "texte": "ebad282122951f1a61ee43fa78dea3489bb0a22d59de1e3a9e8163feaf607705|19185270f1439c2ce1087621f634b120f8091bddd18b460a652d611c1c9ac579|2026-10-11T09:56:33.518Z|3|12|m.dupont|Dépôt Contrat de sous-traitance",
+      "empreinte_entree": "d7c72f90e8239d49fb333cbcbe23df2bf50e2a346db45918733ba60e24c6e01d"
+    }
+  ]
+}
