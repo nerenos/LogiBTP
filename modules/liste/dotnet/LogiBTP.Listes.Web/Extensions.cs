@@ -50,6 +50,7 @@ public static class Extensions
         g.MapPost("/segments", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Segments(d, Utilisateur.Depuis(http), ct));
         g.MapPost("/controle", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Controle(d, Utilisateur.Depuis(http), ct));
         g.MapPost("/lignes", (DemandeListe d, HttpContext http, ServiceListe s, CancellationToken ct) => s.LignesCiblees(d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/modifier", (DemandeModification d, HttpContext http, ServiceListe s, CancellationToken ct) => s.Modifier(d, Utilisateur.Depuis(http), ct));
         return api;
     }
 }

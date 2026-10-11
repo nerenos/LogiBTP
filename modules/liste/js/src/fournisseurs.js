@@ -8,20 +8,23 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte } from './requet
 //   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
 //   vue(id)                       → { vli_id, vli_nom, vli_contexte, vli_partage, vli_groupe, vli_version, definition }
 //   enregistrerVue(vue)           → vue enregistrée          supprimerVue(id)
-//   sources()                     → [{ code, libelle, colonnes: [{ code, type }], colonne_id, colonne_type, type_element }]
+//   sources()                     → [{ code, libelle, colonnes: [{ code, type, modifiable }], colonne_id, colonne_type, type_element, modifiable }]
 //   colonnesRequete(sql)          → [{ code, type }]   (requête manuelle, profil ADMIN)
 //   lot(demande)                  → { lignes, suite }  lignes : données + _id, _type, _h (empreinte)
 //   segments(demande, colonne)    → [{ valeur, nombre }]
 //   controle(demande, jusqua)     → [{ id, h }] lignes du filtre jusqu'au curseur, dans l'ordre
 //   lignes(demande, ids)          → lignes du filtre parmi ces ID (absente = supprimée ou hors filtre)
+//   modifier(demande, id, h, valeurs) → ligne relue après enregistrement ; erreur 409 LIGNE_MODIFIEE (details = ligne
+//                                   actuelle) si l'empreinte h ne correspond plus (modifiée par ailleurs)
 //
 // demande = { vue_id, definition, recherche, segments: { colonne: [valeurs] }, tri: [{ colonne, sens }], apres, taille }
 
 export class ErreurFournisseur extends Error {
-  constructor(statut, code, message) {
+  constructor(statut, code, message, details = null) {
     super(message);
     this.statut = statut;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -36,7 +39,7 @@ export class FournisseurApi {
     const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
     const texte = await r.text();
     const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurFournisseur(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText);
+    if (!r.ok) throw new ErreurFournisseur(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
     return data;
   }
 
@@ -64,6 +67,7 @@ export class FournisseurApi {
   segments(d, colonne) { return this.appel('POST', '/segments', this.corps(d, { colonne })); }
   controle(d, curseur) { return this.appel('POST', '/controle', this.corps(d, { jusqua: curseur ?? null })); }
   lignes(d, ids) { return this.appel('POST', '/lignes', this.corps(d, { ids: ids.map(String) })); }
+  modifier(d, id, h, valeurs) { return this.appel('POST', '/modifier', this.corps(d, { id: String(id), h, valeurs })); }
 }
 
 /**
@@ -164,6 +168,7 @@ export class FournisseurMemoire {
   async sources() {
     return Object.entries(this.sourcesDonnees).map(([code, s]) => ({
       code, libelle: s.libelle, colonnes: s.colonnes, colonne_id: s.colonne_id, colonne_type: s.colonne_type ?? null, type_element: s.type_element ?? null,
+      modifiable: !!s.modifiable,
     }));
   }
 
@@ -224,6 +229,38 @@ export class FournisseurMemoire {
   async controle(d, curseur) {
     const { lignes, recherche, tri, filtres, types } = await this.#lignesSource(d);
     return jusqua(trier(filtrer(lignes, { ...d, filtres, types }, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
+  }
+
+  /**
+   * Saisie dans la liste : mêmes contrôles que le serveur (source et colonnes modifiables, colonne saisissable dans
+   * la vue, empreinte de la ligne inchangée), valeurs converties au type de la colonne.
+   */
+  async modifier(d, id, h, valeurs) {
+    const def = await this.#definition(d);
+    const s = this.sourcesDonnees[def.source.vue];
+    if (def.source.mode !== 'vue' || !s?.modifiable) throw new ErreurFournisseur(422, 'SOURCE_LECTURE_SEULE', 'Cette source n\'est pas modifiable');
+    for (const code of Object.keys(valeurs)) {
+      const col = s.colonnes.find((c) => c.code === code);
+      const vue = def.colonnes.find((c) => c.code === code && !c.calcul);
+      if (!col?.modifiable || !vue?.modifiable) throw new ErreurFournisseur(422, 'COLONNE_NON_MODIFIABLE', `Colonne ${code} non modifiable`);
+    }
+    const colonneId = def.source.colonne_id ?? s.colonne_id;
+    const brute = s.lignes.find((l) => String(l[colonneId]) === String(id));
+    if (!brute) throw new ErreurFournisseur(404, 'INTROUVABLE', `Ligne ${id} introuvable`);
+    const actuelle = async () => (await this.#lignesSource({ definition: def })).lignes.find((l) => String(l._id) === String(id));
+    const avant = await actuelle();
+    if (h && avant._h !== h) throw new ErreurFournisseur(409, 'LIGNE_MODIFIEE', 'La ligne a été modifiée par ailleurs : valeurs actualisées', structuredClone(avant));
+    for (const [code, v] of Object.entries(valeurs)) {
+      const type = s.colonnes.find((c) => c.code === code).type ?? '';
+      if (v === null || v === undefined || v === '') brute[code] = null;
+      else if (/bool/.test(type)) brute[code] = v === true || ['true', '1', 'vrai', 'oui'].includes(String(v).toLowerCase());
+      else if (/int|numeric|decimal|real|double/.test(type)) {
+        const n = Number(String(v).replace(',', '.'));
+        if (Number.isNaN(n)) throw new ErreurFournisseur(422, 'VALEUR', `Valeur numérique invalide pour ${code} : ${v}`);
+        brute[code] = /int/.test(type) ? Math.round(n) : n;
+      } else brute[code] = String(v);
+    }
+    return structuredClone(await actuelle());
   }
 
   async lignes(d, ids) {

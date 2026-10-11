@@ -193,10 +193,30 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     // ------------------------------------------------------------------ sources
 
-    protected static string SqlSource(SourceListe s)
+    /// <summary>Nom SQL de la vue d'une source (identifiants entre guillemets).</summary>
+    protected static string Relation(SourceListe s)
     {
         if (!NomVue().IsMatch(s.SliVue)) throw new ErreurListe("SOURCE", $"Nom de vue invalide : {s.SliVue}");
-        return "SELECT * FROM " + string.Join(".", s.SliVue.Split('.').Select(ConstructeurRequete.Identifiant));
+        return string.Join(".", s.SliVue.Split('.').Select(ConstructeurRequete.Identifiant));
+    }
+
+    protected static string SqlSource(SourceListe s) => "SELECT * FROM " + Relation(s);
+
+    /// <summary>Colonnes d'une source déclarée ; modifiables d'après information_schema si la source l'est.</summary>
+    protected async Task<IReadOnlyList<ColonneSource>> ColonnesSource(SourceListe s, CancellationToken ct)
+    {
+        var colonnes = await Colonnes(SqlSource(s), ct);
+        if (!s.SliModifiable) return colonnes;
+        var cle = "modifiables:" + s.SliVue;
+        if (cache.Colonnes.TryGetValue(cle, out var connues)) return connues;
+        var parties = s.SliVue.Split('.');
+        var (schema, vue) = parties.Length == 2 ? (parties[0], parties[1]) : ("public", parties[0]);
+        var modifiables = (await Lignes(new RequeteSql(
+            "SELECT column_name AS c FROM information_schema.columns WHERE table_schema = @p0 AND table_name = @p1 AND is_updatable = 'YES'",
+            [new ParametreSql("p0", schema), new ParametreSql("p1", vue)]), ct)).Select(l => (string)l["c"]!).ToHashSet(StringComparer.Ordinal);
+        IReadOnlyList<ColonneSource> res = colonnes.Select(c => c with { Modifiable = modifiables.Contains(c.Code) }).ToList();
+        cache.Colonnes[cle] = res;
+        return res;
     }
 
     public virtual async Task<List<SourceDto>> Sources(CancellationToken ct)
@@ -206,7 +226,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         {
             try
             {
-                res.Add(new SourceDto(s.SliCode, s.SliLibelle, await Colonnes(SqlSource(s), ct), s.SliColonneId, s.SliColonneType, s.SliTypeElement));
+                res.Add(new SourceDto(s.SliCode, s.SliLibelle, await ColonnesSource(s, ct), s.SliColonneId, s.SliColonneType, s.SliTypeElement, s.SliModifiable));
             }
             catch (ExceptionMetier)
             {
@@ -257,6 +277,8 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
             var def = d.Definition is { ValueKind: JsonValueKind.Object } json ? LireDefinition(json) : enregistree
                 ?? throw new ErreurListe("VUE", "Vue ou définition attendue");
             string sql;
+            string? table = null, code = null;
+            IReadOnlyList<ColonneSource>? colonnes = null;
             string? colonneId = def.Source.ColonneId, colonneType = def.Source.ColonneType, typeElement = def.Source.TypeElement;
             if (def.Source.Mode == "requete")
             {
@@ -270,12 +292,15 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
                 var s = await db.Sources.AsNoTracking().FirstOrDefaultAsync(x => x.SliCode == def.Source.Vue && x.SliActif, ct)
                     ?? throw new ErreurListe("SOURCE", $"Source {def.Source.Vue} inconnue");
                 sql = SqlSource(s);
+                code = s.SliCode;
+                if (s.SliModifiable) table = Relation(s);
+                colonnes = await ColonnesSource(s, ct);
                 colonneId ??= s.SliColonneId;
                 if (colonneType is null && typeElement is null) { colonneType = s.SliColonneType; typeElement = s.SliTypeElement; }
             }
             if (colonneId is null) throw new ErreurListe("COLONNE_ID", "Colonne identifiant obligatoire");
             if (colonneType is null && typeElement is null) throw new ErreurListe("TYPE_ELEMENT", "Type d'élément obligatoire");
-            return (new SourceResolue(sql, await Colonnes(sql, ct), colonneId, colonneType, typeElement), def);
+            return (new SourceResolue(sql, colonnes ?? await Colonnes(sql, ct), colonneId, colonneType, typeElement, table, code), def);
         }
         catch (ErreurListe e)
         {
@@ -345,6 +370,40 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         return await Lignes(Requete(() => c.Lignes(ids)), ct);
     }
 
+    /// <summary>
+    /// Saisie dans la liste : ligne verrouillée, empreinte comparée à celle du client (409 LIGNE_MODIFIEE avec la ligne
+    /// actuelle si elle a changé), UPDATE sur la vue de la source, ligne relue et renvoyée. Une seule transaction.
+    /// </summary>
+    public virtual async Task<Dictionary<string, object?>> Modifier(DemandeModification d, Utilisateur u, CancellationToken ct)
+    {
+        var demande = new DemandeListe { VueId = d.VueId, Definition = d.Definition };
+        var c = await Constructeur(demande, u, ct);
+        var source = c.SourceResolue;
+        if (source.Table is null) throw ExceptionMetier.Invalide("SOURCE_LECTURE_SEULE", "Cette source n'est pas modifiable dans les listes");
+        if (!specialisation.PeutModifierDonnees(source, u)) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        var valeurs = d.Valeurs.ToDictionary(kv => kv.Key, kv => DemandeModification.Texte(kv.Value), StringComparer.Ordinal);
+        foreach (var code in valeurs.Keys)
+        {
+            if (!c.Saisissable(code)) throw ExceptionMetier.Invalide("COLONNE_NON_MODIFIABLE", $"Colonne {code} non modifiable");
+        }
+        await specialisation.ValiderModification(source, d.Id, valeurs, u, ct);
+        return await Ecrire(async (cnx, tx) =>
+        {
+            var verrou = await LireDans(cnx, tx, Requete(() => c.Verrou(d.Id)), ct);
+            if (verrou.Count == 0) throw ExceptionMetier.Introuvable($"Ligne {d.Id}");
+            if (d.H is not null && (string?)verrou[0]["h"] != d.H)
+            {
+                var actuelle = (await LireDans(cnx, tx, Requete(() => c.LigneBrute(d.Id)), ct)).FirstOrDefault();
+                throw ExceptionMetier.Conflit("LIGNE_MODIFIEE", "La ligne a été modifiée par ailleurs : valeurs actualisées", actuelle);
+            }
+            await using (var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(d.Id, valeurs))))
+            {
+                if (await cmd.ExecuteNonQueryAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Ligne {d.Id}");
+            }
+            return (await LireDans(cnx, tx, Requete(() => c.LigneBrute(d.Id)), ct)).First();
+        }, ct);
+    }
+
     private static RequeteSql Requete(Func<RequeteSql> f)
     {
         try
@@ -371,6 +430,55 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         }
         return res;
     }, ct);
+
+    private static NpgsqlCommand Commande(NpgsqlConnection cnx, NpgsqlTransaction tx, RequeteSql r)
+    {
+        var cmd = new NpgsqlCommand(r.Texte, cnx, tx);
+        foreach (var p in r.Parametres) cmd.Parameters.Add(Parametre(p));
+        return cmd;
+    }
+
+    private static async Task<List<Dictionary<string, object?>>> LireDans(NpgsqlConnection cnx, NpgsqlTransaction tx, RequeteSql r, CancellationToken ct)
+    {
+        await using var cmd = Commande(cnx, tx, r);
+        var res = new List<Dictionary<string, object?>>();
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct))
+        {
+            var l = new Dictionary<string, object?>(rd.FieldCount, StringComparer.Ordinal);
+            for (var i = 0; i < rd.FieldCount; i++) l[rd.GetName(i)] = rd.IsDBNull(i) ? null : rd.GetValue(i);
+            res.Add(l);
+        }
+        return res;
+    }
+
+    /// <summary>Transaction d'écriture (saisie dans les listes), avec le même délai maximal que les lectures.</summary>
+    protected async Task<T> Ecrire<T>(Func<NpgsqlConnection, NpgsqlTransaction, Task<T>> ecrire, CancellationToken ct)
+    {
+        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
+        var ouverte = cnx.State == ConnectionState.Open;
+        if (!ouverte) await cnx.OpenAsync(ct);
+        try
+        {
+            await using var tx = await cnx.BeginTransactionAsync(ct);
+            await using (var cadre = new NpgsqlCommand($"SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            {
+                await cadre.ExecuteNonQueryAsync(ct);
+            }
+            var res = await ecrire(cnx, tx);
+            await tx.CommitAsync(ct);
+            return res;
+        }
+        catch (PostgresException e)
+        {
+            // Valeur refusée par la base : conversion (22P02…), contrainte (23502 NOT NULL, 23514 CHECK…).
+            throw ExceptionMetier.Invalide("VALEUR", $"Valeur refusée par la base : {e.MessageText}");
+        }
+        finally
+        {
+            if (!ouverte) await cnx.CloseAsync();
+        }
+    }
 
     protected async Task<T> Executer<T>(RequeteSql r, Func<NpgsqlCommand, Task<T>> lire, CancellationToken ct)
     {

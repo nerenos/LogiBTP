@@ -52,6 +52,27 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
     });
   }
 
+  it('saisie dans la liste : colonnes autorisées, conversion, conflit', async () => {
+    const source = structuredClone(jeu.source);
+    source.modifiable = true;
+    source.colonnes = source.colonnes.map((c) => ({ ...c, modifiable: c.code !== 'id' && c.code !== 'type_element' }));
+    const f = new FournisseurMemoire({ sources: { s: source } });
+    const def = { ...definition, colonnes: definition.colonnes.map((c) => ({ ...c, modifiable: ['nom', 'montant', 'actif'].includes(c.code) })) };
+    const d = { definition: def };
+    const [l1] = await f.lignes(d, [1]);
+    const apres = await f.modifier(d, 1, l1._h, { montant: '99,5', actif: false, nom: '' });
+    expect([apres.montant, apres.actif, apres.nom]).toEqual([99.5, false, null]);
+    expect(apres._h).not.toBe(l1._h);
+    // Empreinte périmée : conflit, la ligne actuelle est renvoyée.
+    const conflit = await f.modifier(d, 1, l1._h, { montant: 1 }).catch((e) => e);
+    expect([conflit.statut, conflit.code, conflit.details?.montant]).toEqual([409, 'LIGNE_MODIFIEE', 99.5]);
+    // Colonne non saisissable dans la vue, ou non modifiable dans la source.
+    expect((await f.modifier(d, 1, null, { ville: 'x' }).catch((e) => e)).code).toBe('COLONNE_NON_MODIFIABLE');
+    expect((await f.modifier({ definition: { ...def, colonnes: [...def.colonnes, { code: 'id', modifiable: true }] } }, 1, null, { id: 9 }).catch((e) => e)).code)
+      .toBe('COLONNE_NON_MODIFIABLE');
+    expect((await f.modifier(d, 1, null, { montant: 'abc' }).catch((e) => e)).code).toBe('VALEUR');
+  });
+
   it('rafraîchissement ciblé et détection des modifications', async () => {
     const f = fournisseur();
     const d = { definition, segments: { ville: ['lyon'] } };

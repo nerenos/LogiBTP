@@ -131,6 +131,11 @@ export class ConcepteurVue {
     this.rendre();
   }
 
+  /** Source déclarée modifiable par l'application (une requête manuelle ne l'est jamais). */
+  sourceModifiable() {
+    return this.def.source.mode === 'vue' && !!this.sources.find((x) => x.code === this.def.source.vue)?.modifiable;
+  }
+
   #choisirSource(code) {
     const src = this.sources.find((x) => x.code === code);
     const s = this.def.source;
@@ -426,7 +431,8 @@ export class ConcepteurVue {
         </fieldset>
       </div>
       <table class="concepteur-table">
-        <thead><tr><th>Colonne</th><th>Type</th><th>Afficher</th><th title="Incluse dans la barre de recherche (toute la base)">Recherche</th><th title="Filtre par segment (toute la base)">Segment</th><th>Tri par défaut</th></tr></thead>
+        <thead><tr><th>Colonne</th><th>Type</th><th>Afficher</th><th title="Incluse dans la barre de recherche (toute la base)">Recherche</th><th title="Filtre par segment (toute la base)">Segment</th>
+          <th title="Saisie dans la liste (mode ✎ Saisie), si la source et la base le permettent">Modifiable</th><th>Tri par défaut</th></tr></thead>
         <tbody>${this.colonnesSource.map((c) => {
           const v = affichees.get(c.code);
           return `<tr data-code="${echapper(c.code)}">
@@ -434,9 +440,11 @@ export class ConcepteurVue {
             <td><input type="checkbox" data-afficher ${v ? 'checked' : ''}></td>
             <td><input type="checkbox" data-recherche ${v?.recherche ? 'checked' : ''} ${v ? '' : 'disabled'}></td>
             <td><input type="checkbox" data-segment ${segments.has(c.code) ? 'checked' : ''}></td>
+            <td><input type="checkbox" data-modifiable ${v?.modifiable ? 'checked' : ''} ${v && c.modifiable && this.sourceModifiable() ? '' : 'disabled'}
+              title="${!this.sourceModifiable() ? 'Source en lecture seule' : !c.modifiable ? 'Colonne non modifiable dans la base (calculée, jointure…)' : v ? '' : 'Affichez d\'abord la colonne'}"></td>
             <td><select data-tri>${opt('', '—', tri?.colonne === c.code ? tri.sens : '')}${opt('asc', 'Croissant', tri?.colonne === c.code ? tri.sens : '')}${opt('desc', 'Décroissant', tri?.colonne === c.code ? tri.sens : '')}</select></td>
           </tr>`;
-        }).join('') || `<tr><td colspan="6" class="aide">${s.mode === 'requete' ? 'Testez la requête pour obtenir ses colonnes.' : 'Choisissez une source.'}</td></tr>`}</tbody>
+        }).join('') || `<tr><td colspan="7" class="aide">${s.mode === 'requete' ? 'Testez la requête pour obtenir ses colonnes.' : 'Choisissez une source.'}</td></tr>`}</tbody>
       </table>
       <fieldset class="concepteur-filtres"><legend>Filtres de la vue (appliqués par la base, toujours actifs)</legend>
         ${d.filtres.map((f, i) => {
@@ -480,6 +488,7 @@ export class ConcepteurVue {
         this.#rendreColonnes();
       });
       tr.querySelector('[data-recherche]').addEventListener('change', (e) => { const c = affichees.get(code); if (c) c.recherche = e.target.checked; });
+      tr.querySelector('[data-modifiable]').addEventListener('change', (e) => { const c = affichees.get(code); if (c) c.modifiable = e.target.checked; });
       tr.querySelector('[data-segment]').addEventListener('change', (e) => {
         d.segments = d.segments.filter((x) => x.colonne !== code);
         if (e.target.checked) d.segments.push({ colonne: code, titre: affichees.get(code)?.titre ?? titreDepuisCode(code) });

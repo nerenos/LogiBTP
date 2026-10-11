@@ -8,7 +8,8 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 //   source: { mode: 'vue' | 'requete', vue, requete, colonne_id, colonne_type, type_element },
 //   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto }],
 //                style: { couleur, fond, gras, italique, souligne, barre }, regles: [{ condition, style }],
-//                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement }],
+//                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement,
+//                modifiable (saisie dans la liste, si la source et la colonne de la base le permettent) }],
 //   segments: [{ colonne, titre }], tri: [{ colonne, sens: 'asc' | 'desc' }], lignes: 'multi' | 'simple', taille_lot,
 //   filtres: [{ colonne, op, valeur, valeur2, valeurs }]   filtres fixes appliqués par la base (ex. salariés actifs),
 //   theme: code du thème (regroupement des vues ; ses types d'élément restreignent les lignes)
@@ -23,7 +24,7 @@ export function normaliserDefinition(def = {}) {
     source: { mode: 'vue', vue: null, requete: '', colonne_id: null, colonne_type: null, type_element: null, ...def.source },
     colonnes: (def.colonnes ?? []).map((c) => ({
       calcul: false, formule: '', titre: c.code, bulle: '', format: 'texte', decimales: 2, options: [], regles: [],
-      masquee: false, recherche: !c.calcul, alignement: null,
+      masquee: false, recherche: !c.calcul, alignement: null, modifiable: false,
       ...c,
       style: { ...STYLE_VIDE, ...c.style },
       largeur: { mode: 'auto', valeur: null, min: null, max: null, ...c.largeur },

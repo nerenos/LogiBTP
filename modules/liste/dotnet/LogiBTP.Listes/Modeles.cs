@@ -48,6 +48,8 @@ public sealed class ColonneVue
     public bool Calcul { get; set; }
     /// <summary>Incluse dans la barre de recherche (par défaut : toute colonne lue).</summary>
     public bool? Recherche { get; set; }
+    /// <summary>Saisissable dans la liste (si la source et la colonne de la base sont modifiables).</summary>
+    public bool Modifiable { get; set; }
 }
 
 public sealed class SegmentVue
@@ -88,11 +90,36 @@ public sealed class TypeElementTheme
     public string? Libelle { get; set; }
 }
 
-/// <summary>Colonne d'une source : nom et type PostgreSQL (data_type).</summary>
-public sealed record ColonneSource(string Code, string Type);
+/// <summary>Colonne d'une source : nom, type PostgreSQL (data_type), modifiable dans la base (is_updatable).</summary>
+public sealed record ColonneSource(string Code, string Type, bool Modifiable = false);
 
-/// <summary>Source prête à interroger : SELECT encadré, colonnes connues, identifiant et type d'élément.</summary>
-public sealed record SourceResolue(string Sql, IReadOnlyList<ColonneSource> Colonnes, string ColonneId, string? ColonneType, string? TypeElement);
+/// <summary>
+/// Source prête à interroger : SELECT encadré, colonnes connues, identifiant et type d'élément. Table : relation
+/// à mettre à jour (vue déclarée modifiable), null pour une source en lecture seule ou une requête manuelle.
+/// </summary>
+public sealed record SourceResolue(string Sql, IReadOnlyList<ColonneSource> Colonnes, string ColonneId, string? ColonneType, string? TypeElement,
+    string? Table = null, string? Code = null);
+
+/// <summary>Saisie dans la liste : nouvelles valeurs d'une ligne, avec l'empreinte connue du client.</summary>
+public sealed class DemandeModification
+{
+    public long? VueId { get; set; }
+    public JsonElement? Definition { get; set; }
+    public string Id { get; set; } = "";
+    /// <summary>Empreinte de la ligne lue par le client (_h) : refus si la ligne a changé depuis.</summary>
+    public string? H { get; set; }
+    public Dictionary<string, JsonElement> Valeurs { get; set; } = [];
+
+    /// <summary>Valeur JSON en texte (convertie au type de la colonne par CAST), null pour JSON null.</summary>
+    public static string? Texte(JsonElement v) => v.ValueKind switch
+    {
+        JsonValueKind.Null or JsonValueKind.Undefined => null,
+        JsonValueKind.String => v.GetString(),
+        JsonValueKind.True => "true",
+        JsonValueKind.False => "false",
+        _ => v.GetRawText(),
+    };
+}
 
 /// <summary>Erreur de définition ou de requête : traduite en réponse 422 par la couche web.</summary>
 public sealed class ErreurListe(string code, string message) : Exception(message)

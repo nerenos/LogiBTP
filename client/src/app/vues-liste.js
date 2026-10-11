@@ -13,6 +13,8 @@ export const SOURCES_LISTE = {
   },
   salaries: {
     libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', colonne_type: 'type_element',
+    // Saisie dans les listes : vue simple sur une table ; type_element est calculé (lecture seule dans la base).
+    modifiable: true, lecture_seule: ['id', 'type_element'],
     colonnes: [
       ['id', 'integer'], ['type_element', 'text'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
       ['statut', 'text'], ['date_entree', 'date'], ['salaire_brut', 'numeric'], ['heures_mois', 'numeric'], ['actif', 'boolean'],
@@ -21,6 +23,7 @@ export const SOURCES_LISTE = {
   },
   materiels: {
     libelle: 'Matériels (démonstration)', vue: 'v_liste_materiels', colonne_id: 'id', type_element: 'materiel',
+    modifiable: true, lecture_seule: ['id'],
     colonnes: [
       ['id', 'integer'], ['code', 'text'], ['designation', 'text'], ['famille', 'text'], ['etat', 'text'], ['chantier', 'text'],
       ['valeur_achat', 'numeric'], ['date_achat', 'date'], ['heures_utilisation', 'integer'], ['heures_revision', 'integer'],
@@ -101,26 +104,23 @@ export const VUES_LISTE = [
       source: { mode: 'vue', vue: 'salaries', colonne_id: 'id', colonne_type: 'type_element' },
       colonnes: [
         col('matricule', 'Matricule', { ...fixe(90) }),
-        col('nom', 'Nom', {
-          ...prop(1.5, 110), style: { gras: true },
+        col('nom', 'Nom', { modifiable: true, ...prop(1.5, 110), style: { gras: true },
           regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }],
         }),
-        col('prenom', 'Prénom', { ...prop(1.2, 100) }),
-        col('service', 'Service', { ...prop(1.2, 100) }),
-        col('poste', 'Poste', { ...prop(1.5, 120) }),
-        col('statut', 'Contrat', {
-          format: 'combo', ...fixe(90),
+        col('prenom', 'Prénom', { modifiable: true, ...prop(1.2, 100) }),
+        col('service', 'Service', { modifiable: true, ...prop(1.2, 100) }),
+        col('poste', 'Poste', { modifiable: true, ...prop(1.5, 120) }),
+        col('statut', 'Contrat', { modifiable: true, format: 'combo', ...fixe(90),
           options: [{ valeur: 'CDI', libelle: 'CDI' }, { valeur: 'CDD', libelle: 'CDD' }, { valeur: 'INTERIM', libelle: 'Intérim' }],
           regles: [{ condition: '[statut] = "INTERIM"', style: { fond: '#fff4e0', couleur: '#7a4500' } }, { condition: '[statut] = "CDD"', style: { fond: '#e3edfb', couleur: '#1d4f91' } }],
         }),
-        col('date_entree', 'Date\nd\'entrée', { format: 'date', ...fixe(92), recherche: false }),
-        col('salaire_brut', 'Salaire\nbrut', {
-          ...nombre(), ...fixe(96), recherche: false,
+        col('date_entree', 'Date\nd\'entrée', { modifiable: true, format: 'date', ...fixe(92), recherche: false }),
+        col('salaire_brut', 'Salaire\nbrut', { modifiable: true, ...nombre(), ...fixe(96), recherche: false,
           regles: [{ condition: '[salaire_brut] >= 4000', style: { gras: true, couleur: '#067647' } }],
         }),
         col('cout_annuel', 'Coût annuel\nchargé', { calcul: true, formule: 'ARRONDI([Salaire brut] * 12 * 1,45; 0)', ...nombre(0), ...fixe(104), bulle: 'Salaire brut × 12 × 1,45' }),
-        col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false }),
-        col('commentaire', 'Commentaire', { ...prop(2.5, 140) }),
+        col('actif', 'Actif', { modifiable: true, format: 'coche', ...fixe(52), recherche: false }),
+        col('commentaire', 'Commentaire', { modifiable: true, ...prop(2.5, 140) }),
       ],
       segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'statut', titre: 'Contrat' }],
       tri: [{ colonne: 'nom', sens: 'asc' }],
@@ -135,28 +135,26 @@ export const VUES_LISTE = [
       source: { mode: 'vue', vue: 'materiels', colonne_id: 'id', type_element: 'materiel' },
       colonnes: [
         col('code', 'Code', { ...fixe(84), style: { gras: true } }),
-        col('designation', 'Désignation', {
-          ...prop(2.5, 160), regles: [{ condition: '[etat] = "PANNE"', style: { couleur: '#b42318' } }],
+        col('designation', 'Désignation', { modifiable: true, ...prop(2.5, 160), regles: [{ condition: '[etat] = "PANNE"', style: { couleur: '#b42318' } }],
         }),
-        col('famille', 'Famille', { ...prop(1.2, 100) }),
-        col('etat', 'État', {
-          format: 'picto', ...fixe(56),
+        col('famille', 'Famille', { modifiable: true, ...prop(1.2, 100) }),
+        col('etat', 'État', { modifiable: true, format: 'picto', ...fixe(56),
           options: [
             { valeur: 'DISPO', libelle: 'Disponible', picto: '🟢' }, { valeur: 'CHANTIER', libelle: 'En chantier', picto: '🔵' },
             { valeur: 'PANNE', libelle: 'En panne', picto: '🔴' }, { valeur: 'REBUT', libelle: 'Rebut', picto: '⚫' },
           ],
           regles: [{ condition: '[etat] = "PANNE"', style: { fond: '#fdecea', couleur: '#b42318' } }],
         }),
-        col('chantier', 'Chantier', { ...prop(1.5, 110) }),
-        col('heures_utilisation', 'Heures\nd\'utilisation', { ...nombre(0), ...fixe(96), recherche: false }),
-        col('heures_revision', 'Révision\n(heures)', { ...nombre(0), ...fixe(84), recherche: false }),
+        col('chantier', 'Chantier', { modifiable: true, ...prop(1.5, 110) }),
+        col('heures_utilisation', 'Heures\nd\'utilisation', { modifiable: true, ...nombre(0), ...fixe(96), recherche: false }),
+        col('heures_revision', 'Révision\n(heures)', { modifiable: true, ...nombre(0), ...fixe(84), recherche: false }),
         col('revision', 'Révision', {
           calcul: true, formule: 'SI [Heures d\'utilisation] > [heures_revision] ALORS "Révision à prévoir" SINON ""', ...fixe(130),
           regles: [{ condition: '[revision] <> ""', style: { fond: '#fff4e0', gras: true, couleur: '#a15c00' } }],
         }),
-        col('controle_ok', 'Contrôle\nOK', { format: 'coche', ...fixe(64), recherche: false }),
+        col('controle_ok', 'Contrôle\nOK', { modifiable: true, format: 'coche', ...fixe(64), recherche: false }),
         col('valeur_achat', 'Valeur\nd\'achat', { ...nombre(), ...fixe(100), recherche: false }),
-        col('observations', 'Observations', { ...prop(2, 140), masquee: false }),
+        col('observations', 'Observations', { modifiable: true, ...prop(2, 140), masquee: false }),
       ],
       segments: [{ colonne: 'famille', titre: 'Famille' }, { colonne: 'etat', titre: 'État' }],
       tri: [{ colonne: 'code', sens: 'asc' }],
@@ -217,6 +215,8 @@ VUES_LISTE.push({
 export function sourcesFournisseur(donnees = {}) {
   return Object.fromEntries(Object.entries(SOURCES_LISTE).map(([code, s]) => [code, {
     libelle: s.libelle, colonne_id: s.colonne_id, colonne_type: s.colonne_type ?? null, type_element: s.type_element ?? null,
-    colonnes: s.colonnes.map(([c, type]) => ({ code: c, type })), lignes: donnees[code] ?? [],
+    modifiable: !!s.modifiable,
+    colonnes: s.colonnes.map(([c, type]) => ({ code: c, type, modifiable: !!s.modifiable && !(s.lecture_seule ?? []).includes(c) })),
+    lignes: donnees[code] ?? [],
   }]));
 }

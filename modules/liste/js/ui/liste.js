@@ -1,5 +1,5 @@
-import { echapper } from '@logibtp/socle/ui';
-import { ModeleVue, normaliserDefinition } from '../src/modele.js';
+import { echapper, lireNombre } from '@logibtp/socle/ui';
+import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
@@ -91,6 +91,8 @@ export class ListeDonnees {
         <button type="button" data-action="lignes" aria-pressed="false"></button>
         <button type="button" data-action="tout" aria-pressed="false">⇊</button>
         <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
+        <button type="button" data-action="saisie" aria-pressed="false" hidden
+          title="Saisie dans la liste : clic sur une cellule modifiable, Entrée ligne suivante, Tab colonne suivante, Échap annule">✎ Saisie</button>
       </div>
       <p class="liste-erreurs" hidden></p>
       <div class="liste-corps">
@@ -133,6 +135,7 @@ export class ListeDonnees {
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
     r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
+    r.querySelector('[data-action="saisie"]').addEventListener('click', () => this.basculerSaisie());
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
     r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
@@ -152,11 +155,15 @@ export class ListeDonnees {
     });
     this.corps.addEventListener('click', (e) => {
       const tr = e.target.closest('tr[data-id]');
-      if (tr) this.#selectionner(tr.dataset.id);
+      if (!tr) return;
+      this.#selectionner(tr.dataset.id);
+      const td = e.target.closest('td.modifiable');
+      if (td && !td.querySelector('.liste-editeur')) this.#commencerSaisie(tr.dataset.id, td.dataset.code);
     });
     this.corps.addEventListener('dblclick', (e) => {
       const tr = e.target.closest('tr[data-id]');
-      if (tr) this.ouvrir(tr.dataset.id);
+      // En mode saisie, le double-clic sur une cellule modifiable ne doit pas ouvrir la fiche.
+      if (tr && !e.target.closest('td.modifiable')) this.ouvrir(tr.dataset.id);
     });
     this.zone.addEventListener('keydown', (e) => this.#clavier(e));
     this.observateur = new IntersectionObserver((entrees) => {
@@ -259,6 +266,7 @@ export class ListeDonnees {
     zoneErreurs.hidden = !erreurs.length;
     zoneErreurs.textContent = erreurs.join(' · ');
     this.#appliquerLignes();
+    this.#colonnesModifiables().catch(() => {});
     // Rappel des filtres fixes de la vue (appliqués par la base).
     const fv = this.racine.querySelector('.liste-filtres-vue');
     const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));
@@ -706,6 +714,8 @@ export class ListeDonnees {
     for (const c of visibles) {
       const td = document.createElement('td');
       td.className = `aligne-${alignement(c)}`;
+      td.dataset.code = c.code;
+      if (this.modeSaisie && this.modifiables?.has(c.code)) td.classList.add('modifiable');
       const valeur = this.modele.valeur(ligne, c.code);
       const contenu = this.formats.contenu(valeur, c, this.modele);
       if (contenu instanceof Node) td.append(contenu); else td.textContent = contenu ?? '';
@@ -889,6 +899,158 @@ export class ListeDonnees {
       e.preventDefault();
       this.ouvrir(this.selection);
     }
+  }
+
+  // ---------------------------------------------------------------- saisie dans la liste
+
+  /**
+   * Colonnes saisissables de la vue : cochées « modifiable » dans la vue, modifiables dans la source (déclarée
+   * modifiable par l'application, colonne modifiable dans la base), jamais calculées. Le serveur refait ces contrôles.
+   */
+  async #colonnesModifiables() {
+    const vue = this.vue;
+    this.modifiables = new Set();
+    const bouton = this.racine.querySelector('[data-action="saisie"]');
+    bouton.hidden = true;
+    if (!vue || this.definition.source.mode !== 'vue' || !this.definition.colonnes.some((c) => c.modifiable && !c.calcul)) {
+      if (this.modeSaisie) this.basculerSaisie(false);
+      return;
+    }
+    this.sourcesConnues ??= await this.fournisseur.sources();
+    if (vue !== this.vue) return;
+    const s = this.sourcesConnues.find((x) => x.code === this.definition.source.vue);
+    if (!s?.modifiable) return;
+    const colonnes = new Map(s.colonnes.map((c) => [c.code, c]));
+    this.modifiables = new Set(this.definition.colonnes.filter((c) => c.modifiable && !c.calcul && colonnes.get(c.code)?.modifiable).map((c) => c.code));
+    bouton.hidden = this.modifiables.size === 0;
+    if (this.modeSaisie) this.rendreCorps();
+  }
+
+  /** Mode saisie : un clic sur une cellule modifiable l'édite ; hors mode saisie, la liste reste en lecture. */
+  basculerSaisie(actif = !this.modeSaisie) {
+    this.modeSaisie = actif;
+    const b = this.racine.querySelector('[data-action="saisie"]');
+    b.classList.toggle('actif', actif);
+    b.setAttribute('aria-pressed', String(actif));
+    this.racine.classList.toggle('liste-saisie', actif);
+    this.rendreCorps();
+    if (actif) this.message('Saisie : cliquez une cellule modifiable (fond hachuré) · Entrée : ligne suivante · Tab : colonne suivante · Échap : annuler');
+  }
+
+  #td(id, code) {
+    return this.corps.querySelector(`tr[data-id="${CSS.escape(String(id))}"] td[data-code="${CSS.escape(code)}"]`);
+  }
+
+  #commencerSaisie(id, code) {
+    const td = this.#td(id, code);
+    const ligne = this.lignes.find((l) => String(l._id) === String(id));
+    const c = this.modele.parCode.get(code);
+    if (!td || !ligne || !c) return;
+    const valeur = ligne[code];
+    if (c.format === 'coche') { this.#enregistrer(id, code, !vraiDonnee(valeur)); return; }
+    let ed;
+    if (c.format === 'combo' || c.format === 'picto') {
+      ed = document.createElement('select');
+      ed.innerHTML = `<option value=""></option>${c.options.map((o) => `<option value="${echapper(o.valeur)}">${echapper(`${o.picto ?? ''} ${o.libelle ?? o.valeur}`.trim())}</option>`).join('')}`;
+      ed.value = valeur ?? '';
+    } else if (c.format === 'date') {
+      ed = document.createElement('input');
+      ed.type = 'date';
+      ed.value = String(valeur ?? '').slice(0, 10);
+    } else if (c.format === 'texte' && (String(valeur ?? '').includes('\n') || this.affichageLignes === 'multi')) {
+      ed = document.createElement('textarea');
+      ed.value = valeur ?? '';
+      ed.rows = Math.max(1, String(valeur ?? '').split('\n').length);
+    } else {
+      ed = document.createElement('input');
+      ed.value = c.format === 'nombre' && valeur !== null && valeur !== undefined ? String(valeur).replace('.', ',') : valeur ?? '';
+      if (c.format === 'nombre') ed.inputMode = 'decimal';
+    }
+    ed.className = 'liste-editeur';
+    td.replaceChildren(ed);
+    td.classList.add('en-saisie');
+    ed.focus();
+    if (ed.select) ed.select();
+    let fini = false;
+    const terminer = async (mouvement) => {
+      if (fini) return;
+      fini = true;
+      const ok = await this.#enregistrer(id, code, ed.value, { texte: true });
+      if (!ok) { fini = false; ed.focus(); return; }
+      if (mouvement) this.#saisieSuivante(id, code, mouvement);
+    };
+    ed.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fini = true; this.#rendreLigne(id); this.zone.focus(); }
+      else if (e.key === 'Enter' && !(ed.tagName === 'TEXTAREA' && (e.shiftKey || e.altKey))) { e.preventDefault(); terminer(e.shiftKey ? 'haut' : 'bas'); }
+      else if (e.key === 'Tab') { e.preventDefault(); terminer(e.shiftKey ? 'gauche' : 'droite'); }
+    });
+    if (ed.tagName === 'SELECT') ed.addEventListener('change', () => terminer(null));
+    ed.addEventListener('blur', () => { if (!fini) terminer(null); });
+  }
+
+  /** Cellule suivante : même colonne sur la ligne suivante / précédente, ou colonne modifiable suivante / précédente. */
+  #saisieSuivante(id, code, mouvement) {
+    const lignes = [...this.corps.rows].map((tr) => tr.dataset.id);
+    const colonnes = this.#visibles().map((c) => c.code).filter((x) => this.modifiables.has(x) && this.modele.parCode.get(x).format !== 'coche');
+    let i = lignes.indexOf(String(id)), j = colonnes.indexOf(code);
+    if (mouvement === 'bas') i++;
+    else if (mouvement === 'haut') i--;
+    else if (mouvement === 'droite') { j++; if (j >= colonnes.length) { j = 0; i++; } }
+    else { j--; if (j < 0) { j = colonnes.length - 1; i--; } }
+    if (i < 0 || i >= lignes.length || j < 0) return;
+    this.#selectionner(lignes[i]);
+    this.#commencerSaisie(lignes[i], colonnes[j]);
+  }
+
+  /**
+   * Enregistre une valeur saisie : conversion selon le format, envoi au fournisseur avec l'empreinte de la ligne
+   * (verrouillage optimiste), ligne relue en retour. Renvoie false si la saisie est invalide (l'éditeur reste ouvert).
+   */
+  async #enregistrer(id, code, saisie, { texte = false } = {}) {
+    const ligne = this.lignes.find((l) => String(l._id) === String(id));
+    const c = this.modele.parCode.get(code);
+    let valeur = saisie;
+    if (texte) {
+      if (c.format === 'nombre') {
+        valeur = lireNombre(saisie);
+        if (valeur === undefined) { this.message(`Nombre invalide : ${saisie}`, 'erreur'); return false; }
+      } else valeur = saisie === '' ? null : saisie;
+    }
+    const avant = ligne[code];
+    const identique = (avant ?? null) === (valeur ?? null) || (c.format === 'nombre' && valeur !== null && avant !== null && Number(avant) === Number(valeur));
+    if (identique) { this.#rendreLigne(id); return true; }
+    const td = this.#td(id, code);
+    td?.classList.add('enregistrement');
+    try {
+      const relue = await this.fournisseur.modifier(this.demande(), id, ligne._h, { [code]: valeur });
+      this.#remplacerLigne(id, relue);
+      return true;
+    } catch (e) {
+      if (e.code === 'LIGNE_MODIFIEE' && e.details) {
+        this.#remplacerLigne(id, e.details);
+        this.message(e.message, 'avertissement');
+        return true;
+      }
+      this.message(e.message ?? String(e), 'erreur');
+      this.#rendreLigne(id);
+      return true;
+    }
+  }
+
+  #remplacerLigne(id, nouvelle) {
+    const i = this.lignes.findIndex((l) => String(l._id) === String(id));
+    if (i < 0) return;
+    this.modele.oublier(this.lignes[i]);
+    this.lignes[i] = nouvelle;
+    this.marques.set(String(id), 'modifiee');
+    this.#rendreLigne(id);
+    this.#effacerMarques();
+  }
+
+  #rendreLigne(id) {
+    const tr = this.corps.querySelector(`tr[data-id="${CSS.escape(String(id))}"]`);
+    const ligne = this.lignes.find((l) => String(l._id) === String(id));
+    if (tr && ligne) tr.replaceWith(this.#ligneDom(ligne, this.#visibles()));
   }
 
   /** Ouvre la fiche de la ligne : l'ID et le type d'élément sont fournis par la source. */

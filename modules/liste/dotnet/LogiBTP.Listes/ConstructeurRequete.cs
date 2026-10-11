@@ -55,6 +55,9 @@ public partial class ConstructeurRequete
     public IReadOnlyList<string> TypesTheme { get; set; } = [];
 
     protected SourceResolue Source { get; }
+
+    /// <summary>Source interrogée (relation à mettre à jour pour la saisie dans la liste).</summary>
+    public SourceResolue SourceResolue => Source;
     protected DefinitionVue Definition { get; }
     protected DemandeListe Demande { get; }
 
@@ -257,6 +260,40 @@ public partial class ConstructeurRequete
         conditions.Add($"{Id}::text = ANY({P(ids.ToArray())})");
         return Fin($"SELECT {Selection(false)} {Depuis}{Where(conditions)} ORDER BY {OrdreSql(Tri())}");
     }
+
+    // ------------------------------------------------------------------ saisie dans la liste
+
+    /// <summary>Colonne saisissable : cochée modifiable dans la vue, modifiable dans la base, source modifiable.</summary>
+    public bool Saisissable(string code) =>
+        Source.Table is not null && _colonnes.TryGetValue(code, out var c) && c.Modifiable
+        && Definition.Colonnes.Any(x => x.Code == code && x.Modifiable && !x.Calcul);
+
+    private string IdTypee(string id)
+    {
+        var (_, valeur) = Typee(Source.ColonneId, id);
+        return valeur;
+    }
+
+    /// <summary>Verrou et empreinte actuelle de la ligne (même calcul que _h).</summary>
+    public virtual RequeteSql Verrou(string id) =>
+        Fin($"SELECT md5(row_to_json(s)::text) AS h {Depuis} WHERE {Id} = {IdTypee(id)} FOR UPDATE");
+
+    /// <summary>UPDATE de la relation de la source ; chaque colonne est contrôlée, chaque valeur convertie à son type.</summary>
+    public virtual RequeteSql MiseAJour(string id, IReadOnlyDictionary<string, string?> valeurs)
+    {
+        if (Source.Table is null) throw new ErreurListe("SOURCE_LECTURE_SEULE", "Cette source n'est pas modifiable");
+        if (valeurs.Count == 0) throw new ErreurListe("VALEURS", "Aucune valeur à enregistrer");
+        var affectations = new List<string>();
+        foreach (var (code, valeur) in valeurs)
+        {
+            if (!Saisissable(code)) throw new ErreurListe("COLONNE_NON_MODIFIABLE", $"Colonne {code} non modifiable");
+            affectations.Add($"{Identifiant(code)} = {(valeur is null ? "NULL" : ValeurFiltre(code, valeur))}");
+        }
+        return Fin($"UPDATE {Source.Table} SET {string.Join(", ", affectations)} WHERE {Identifiant(Source.ColonneId)} = {IdTypee(id)}");
+    }
+
+    /// <summary>Ligne relue après saisie, sans filtre (elle peut être sortie du filtre de la liste).</summary>
+    public virtual RequeteSql LigneBrute(string id) => Fin($"SELECT {Selection(false)} {Depuis} WHERE {Id} = {IdTypee(id)}");
 
     /// <summary>Colonnes et types d'une source (aucune ligne lue).</summary>
     public static RequeteSql Schema(string sql) => new($"SELECT * FROM ({sql}) s LIMIT 0", []);

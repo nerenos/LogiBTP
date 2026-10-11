@@ -26,6 +26,13 @@ public class SpecialisationListe
     /// <summary>Saisie ou exécution d'une requête manuelle non enregistrée (SELECT encadré) : profil ADMIN.</summary>
     public virtual bool PeutSaisirRequete(Utilisateur u) => u.EstAdmin;
 
+    /// <summary>Saisie dans une liste sur cette source (par défaut : tout utilisateur ; droits affinés plus tard).</summary>
+    public virtual bool PeutModifierDonnees(SourceResolue source, Utilisateur u) => true;
+
+    /// <summary>Contrôles métier d'une saisie avant écriture (lever ExceptionMetier pour refuser).</summary>
+    public virtual Task ValiderModification(SourceResolue source, string id, IReadOnlyDictionary<string, string?> valeurs, Utilisateur u, CancellationToken ct) =>
+        Task.CompletedTask;
+
     /// <summary>Création, modification et suppression des thèmes de vues : profil ADMIN.</summary>
     public virtual bool PeutGererThemes(Utilisateur u) => u.EstAdmin;
 

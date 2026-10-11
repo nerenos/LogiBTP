@@ -103,6 +103,27 @@ public class ConstructeurRequeteTests
     }
 
     [Fact]
+    public void Saisie_colonnes_controlees_valeurs_typees()
+    {
+        var source = Source with
+        {
+            Colonnes = [new("id", "integer"), new("nom", "text", true), new("montant", "numeric", true), new("ville", "text", false)],
+            Table = "\"v\"",
+        };
+        var def = new DefinitionVue { Colonnes = [new() { Code = "nom", Modifiable = true }, new() { Code = "montant", Modifiable = true }, new() { Code = "ville", Modifiable = true }] };
+        var c = new ConstructeurRequete(source, def, new DemandeListe());
+        var r = c.MiseAJour("12", new Dictionary<string, string?> { ["montant"] = "10,5", ["nom"] = null });
+        Assert.Equal("UPDATE \"v\" SET \"montant\" = CAST(@p0 AS numeric), \"nom\" = NULL WHERE \"id\" = CAST(@p1 AS integer)", r.Texte);
+        Assert.Equal("10.5", r.Parametres[0].Valeur);
+        // Colonne non modifiable dans la base, ou non cochée dans la vue, ou source en lecture seule : refus.
+        Assert.Equal("COLONNE_NON_MODIFIABLE", Assert.Throws<ErreurListe>(() => c.MiseAJour("12", new Dictionary<string, string?> { ["ville"] = "x" })).Code);
+        Assert.Equal("COLONNE_NON_MODIFIABLE", Assert.Throws<ErreurListe>(() => c.MiseAJour("12", new Dictionary<string, string?> { ["\"; DROP"] = "x" })).Code);
+        var lecture = new ConstructeurRequete(source with { Table = null }, def, new DemandeListe());
+        Assert.Equal("SOURCE_LECTURE_SEULE", Assert.Throws<ErreurListe>(() => lecture.MiseAJour("12", new Dictionary<string, string?> { ["nom"] = "x" })).Code);
+        Assert.Contains("FOR UPDATE", c.Verrou("12").Texte);
+    }
+
+    [Fact]
     public void Curseur_incompatible_refuse()
     {
         var d = new DemandeListe { Tri = [new() { Colonne = "nom" }], Apres = ["x"] };

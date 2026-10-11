@@ -13,6 +13,8 @@ public class SourceListe
     public string SliColonneId { get; set; } = "";
     public string? SliColonneType { get; set; }
     public string? SliTypeElement { get; set; }
+    /// <summary>Saisie dans les listes autorisée sur cette source (UPDATE sur la vue, colonnes is_updatable).</summary>
+    public bool SliModifiable { get; set; }
     public bool SliActif { get; set; } = true;
 }
 
@@ -98,7 +100,7 @@ public sealed class VueListeDto
 
 public sealed record ResumeVue(long VliId, string VliNom, string? VliContexte, string? VliTheme, string VliPartage, string VliProprietaire, bool Modifiable);
 
-public sealed record SourceDto(string Code, string Libelle, IReadOnlyList<ColonneSource> Colonnes, string ColonneId, string? ColonneType, string? TypeElement);
+public sealed record SourceDto(string Code, string Libelle, IReadOnlyList<ColonneSource> Colonnes, string ColonneId, string? ColonneType, string? TypeElement, bool Modifiable);
 
 public sealed record ReponseLot(List<Dictionary<string, object?>> Lignes, List<string?>? Suite);
 
