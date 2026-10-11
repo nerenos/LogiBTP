@@ -12,6 +12,13 @@ ALTER TABLE demo_salarie
     ADD COLUMN sal_adresse        VARCHAR(200),
     ADD COLUMN sal_code_postal    VARCHAR(5),
     ADD COLUMN sal_ville          VARCHAR(60),
+    ADD COLUMN sal_agence         VARCHAR(30),
+    ADD COLUMN sal_type_mo        VARCHAR(10),
+    ADD COLUMN sal_telephone_perso VARCHAR(20),
+    ADD COLUMN sal_email_perso    VARCHAR(100),
+    ADD COLUMN sal_contact_nom    VARCHAR(100),
+    ADD COLUMN sal_contact_telephone VARCHAR(20),
+    ADD COLUMN sal_note_perso     TEXT,
     ADD COLUMN sal_proprietes     JSONB NOT NULL DEFAULT '{}';
 
 UPDATE demo_salarie s SET
@@ -25,6 +32,13 @@ UPDATE demo_salarie s SET
     sal_ville = (ARRAY['Lyon','Villeurbanne','Vénissieux','Saint-Étienne','Grenoble','Bourg-en-Bresse'])[1 + sal_id % 6];
 UPDATE demo_salarie SET sal_num_secu = (CASE WHEN sal_id % 2 = 1 THEN '1' ELSE '2' END) || ' ' || to_char(sal_date_naissance, 'YY MM') || ' 69 '
     || lpad((100 + sal_id % 900)::text, 3, '0') || ' ' || lpad((sal_id % 1000)::text, 3, '0') || ' ' || lpad((10 + sal_id % 89)::text, 2, '0');
+UPDATE demo_salarie SET
+    sal_agence = (ARRAY['Lyon','Lyon','Saint-Étienne','Grenoble','Bourg-en-Bresse'])[1 + sal_id % 5],
+    sal_type_mo = CASE WHEN sal_service = 'Chantier' OR sal_service = 'Atelier' THEN 'OUVRIER' WHEN sal_poste IN ('Directeur','Conducteur de travaux') THEN 'CADRE' ELSE 'ETAM' END,
+    sal_telephone_perso = '07 ' || lpad(((sal_id * 13) % 100)::text, 2, '0') || ' ' || lpad(((sal_id * 29) % 100)::text, 2, '0') || ' '
+                        || lpad(((sal_id * 43) % 100)::text, 2, '0') || ' ' || lpad(((sal_id * 61) % 100)::text, 2, '0'),
+    sal_contact_nom = CASE WHEN sal_id % 3 = 0 THEN NULL ELSE (ARRAY['Marie','Pierre','Sophie','Julien'])[1 + sal_id % 4] || ' ' || sal_nom || ' (' || (ARRAY['conjoint(e)','parent','frère / sœur'])[1 + sal_id % 3] || ')' END,
+    sal_contact_telephone = CASE WHEN sal_id % 3 = 0 THEN NULL ELSE '06 ' || lpad(((sal_id * 17) % 100)::text, 2, '0') || ' 45 67 ' || lpad(((sal_id * 7) % 100)::text, 2, '0') END;
 CREATE UNIQUE INDEX ux_sal_matricule_fiche ON demo_salarie (sal_matricule);
 
 ALTER TABLE demo_materiel

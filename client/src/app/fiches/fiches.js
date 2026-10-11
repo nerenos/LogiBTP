@@ -15,7 +15,7 @@ export class FicheLogiBTP extends FicheBase {
   actionsSupplementaires() {
     if (typeof this.fournisseur.simulerVerrouAutre !== 'function' || this.id === null) return [];
     return [{
-      libelle: '👤 Simuler un autre utilisateur',
+      libelle: '👤 Autre utilisateur',
       titre: 'Démo : un autre utilisateur ouvre cette fiche en modification',
       action: async () => {
         this.fournisseur.simulerVerrouAutre(this.type, this.id, 'm.dupont');

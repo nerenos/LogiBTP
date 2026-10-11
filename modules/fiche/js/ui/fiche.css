@@ -1,20 +1,22 @@
 /* @logibtp/fiche/ui – fiche d'un élément : en-tête, mode, bandeau de verrou, onglets, champs, confidentiel. */
 
-.fiche { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; height: 100%; }
-.fiche-entete { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; flex: none; }
+.fiche { display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; height: 100%; }
+.fiche-entete { display: flex; align-items: center; gap: 0.5rem 0.8rem; flex-wrap: wrap; flex: none; }
 .fiche-titre { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
 .fiche-type { font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--discret); }
-.fiche-titre h2 { margin: 0; font-size: 1.25rem; }
+.fiche-titre h2 { margin: 0; font-size: 1.15rem; line-height: 1.25; }
 .fiche-sous-titre { color: var(--discret); }
 .fiche-mode { border-radius: 999px; padding: 0.1rem 0.7rem; font-weight: 600; font-size: 0.9em; }
 .fiche-mode.mode-consultation { background: var(--titre-fond); color: var(--discret); }
 .fiche-mode.mode-modification { background: var(--alerte-fond); color: var(--alerte); }
 .fiche-mode.mode-creation, .fiche-mode.mode-copie { background: var(--accent-clair); color: var(--accent); }
-.fiche-actions { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+.fiche-actions { display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap; }
+/* En-tête compact : la place va aux informations. */
+.fiche-actions button { padding: 0.12rem 0.5rem; font-size: 0.9em; }
 .fiche-option { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.88em; color: var(--discret); margin-right: 0.4rem; }
 .fiche-bandeau { flex: none; background: var(--alerte-fond); color: var(--alerte); border: 1px solid var(--alerte); border-radius: 4px; padding: 0.35rem 0.7rem; display: flex; gap: 0.7rem; align-items: center; }
 .fiche-bandeau[hidden], .fiche-informations[hidden], .fiche-erreurs[hidden] { display: none; }
-.fiche-informations { flex: none; display: flex; gap: 1.2rem; flex-wrap: wrap; background: var(--titre-fond); border-radius: 4px; padding: 0.35rem 0.7rem; }
+.fiche-informations { flex: none; display: flex; gap: 1.2rem; flex-wrap: wrap; background: var(--titre-fond); border-radius: 4px; padding: 0.2rem 0.7rem; font-size: 0.92em; }
 .fiche-informations .info small { display: block; color: var(--discret); font-size: 0.8em; }
 .fiche-informations .info.alerte { color: var(--alerte); font-weight: 600; }
 .fiche-erreurs { flex: none; margin: 0; padding: 0.35rem 0.7rem 0.35rem 1.6rem; background: var(--erreur-fond); color: var(--erreur); border-radius: 4px; }
@@ -23,14 +25,20 @@
 .fiche-onglets button.actif { background: var(--surface); border-color: var(--bord); color: var(--texte); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
 .fiche-onglets button.erreur::after { content: " ⚠"; color: var(--erreur); }
 .fiche-corps { flex: 1; min-height: 0; overflow: auto; padding: 0.3rem 0.1rem; }
-.fiche-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.6rem 1rem; align-items: start; }
+/* Groupes de champs : cadres titrés côte à côte (zones de groupe), la largeur pleine pour les notes */
+.fiche-groupes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr)); gap: 0.8rem; align-items: start; }
+.fiche-groupe { margin: 0; min-width: 0; border: 1px solid var(--bord); border-radius: 6px; padding: 0.35rem 0.8rem 0.7rem; }
+.fiche-groupe.plein { grid-column: 1 / -1; }
+.fiche-groupe > legend { padding: 0 0.35rem; font-weight: 600; font-size: 0.92em; color: var(--texte); }
+.fiche-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.45rem 0.8rem; align-items: start; }
+.fiche-masque-groupe { letter-spacing: normal; padding: 0.3rem 0; }
 .fiche-champ { display: flex; flex-direction: column; gap: 0.15rem; }
 .fiche-champ.plein { grid-column: 1 / -1; }
 .fiche-champ label { font-size: 0.88em; color: var(--discret); }
 .fiche-champ .obligatoire { color: var(--erreur); font-weight: 700; margin-left: 0.15rem; }
 .fiche-champ .obligatoire-parametre { color: var(--accent); margin-left: 0.15rem; font-size: 0.8em; }
 .fiche-champ .marque-confidentiel { margin-left: 0.2rem; font-size: 0.8em; }
-.fiche-saisie-champ { width: 100%; }
+.fiche-saisie-champ { width: 100%; font: inherit; color: inherit; }
 .fiche-saisie-champ.nombre { text-align: right; font-variant-numeric: tabular-nums; }
 .fiche-saisie-champ[type="checkbox"] { width: auto; align-self: flex-start; }
 .fiche-saisie-champ[readonly] { background: transparent; border-color: transparent; padding-left: 0; }

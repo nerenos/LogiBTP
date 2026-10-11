@@ -25,6 +25,8 @@ export function definirConfidentielSession(actif) {
  * - Droits du type : VOIR, MODIFIER, DEBLOQUER (reprendre la main), CONFIDENTIEL.
  * - Verrou : passer en modification prend le verrou (renouvelé toutes les 30 s) ; si un autre utilisateur modifie
  *   la fiche, un bandeau l'indique et propose « Reprendre la main » à qui a le droit DEBLOQUER.
+ * - Onglets peu nombreux, composés de groupes de champs (cadres titrés) : section { code, titre, groupes: [{ titre,
+ *   champs, largeur }] } (ou champs à plat : un seul groupe sans titre).
  * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés, champs
  *   confidentiels masqués (affichage à la demande, ou pendant toute la session), onglet Pièces jointes (GED).
  *
@@ -144,9 +146,16 @@ export class FicheBase {
     this.apresChargement();
   }
 
-  /** Sections : celles de la définition, Informations complémentaires (champs supplémentaires), Pièces jointes. */
+  /**
+   * Onglets : ceux de la définition (groupes de champs), Informations complémentaires (champs supplémentaires) et
+   * Pièces jointes (GED). Chaque onglet expose aussi la liste à plat de ses champs (erreurs, navigation).
+   */
   sections() {
-    const s = [...(this.definition.sections ?? [{ code: 'general', titre: 'Général', champs: this.definition.champs.map((c) => c.code) }])];
+    const base = this.definition.sections ?? [{ code: 'general', titre: 'Général', champs: this.definition.champs.map((c) => c.code) }];
+    const s = base.map((x) => {
+      const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
+      return { ...x, groupes, champs: groupes.flatMap((g) => g.champs) };
+    });
     if (this.definition.supplementaires?.length) s.push({ code: '+supplementaires', titre: 'Informations complémentaires', supplementaires: true });
     s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
     return s;
@@ -188,14 +197,14 @@ export class FicheBase {
       { libelle: 'Enregistrer', titre: 'Enregistrer (Ctrl+S)', action: () => this.enregistrer(), visible: saisie, principal: true },
       { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
       { libelle: '⧉ Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
-      { libelle: '👁 Afficher le confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
+      { libelle: '👁 Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
       ...this.actionsSupplementaires(),
       { libelle: '⚙', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
       { libelle: '✕', titre: 'Fermer (Échap)', action: () => this.fermer(), visible: true },
     ].filter((b) => b.visible !== false);
     const zone = this.conteneur.querySelector('.fiche-actions');
     zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)">
-      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Confidentiel visible (session)</label>` : ''}
+      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Visible (session)</label>` : ''}
       ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}" title="${echapper(b.titre ?? '')}">${echapper(b.libelle)}</button>`).join('')}`;
     zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
     zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
@@ -224,13 +233,35 @@ export class FicheBase {
   #rendreSection(section) {
     const corps = this.conteneur.querySelector('.fiche-corps');
     if (section.pieces) { this.#rendrePieces(corps); return; }
-    const champs = section.supplementaires
-      ? this.definition.supplementaires.map((c) => ({ ...c, supplementaire: true }))
-      : section.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean);
-    corps.innerHTML = '<div class="fiche-grille"></div>';
-    const grille = corps.firstElementChild;
-    for (const c of champs) grille.append(this.#bloc(c));
-    if (!champs.length) grille.innerHTML = '<p class="aide">Aucun champ.</p>';
+    const groupes = section.supplementaires
+      ? [{ titre: 'Champs paramétrés', champs: this.definition.supplementaires.map((c) => ({ ...c, supplementaire: true })), largeur: 'plein' }]
+      : section.groupes.map((g) => ({ ...g, champs: g.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) }));
+    corps.innerHTML = '<div class="fiche-groupes"></div>';
+    const zone = corps.firstElementChild;
+    for (const g of groupes.filter((x) => x.champs.length)) zone.append(this.#groupe(g));
+    if (!zone.children.length) zone.innerHTML = '<p class="aide">Aucun champ.</p>';
+  }
+
+  /** Groupe de champs (cadre titré) ; tout masqué : une seule ligne « informations confidentielles ». */
+  #groupe(g) {
+    const fs = document.createElement('fieldset');
+    fs.className = `fiche-groupe ${g.largeur === 'plein' ? 'plein' : ''}`;
+    if (g.titre) fs.innerHTML = `<legend>${echapper(g.titre)}</legend>`;
+    const masques = this.masques;
+    const toutMasque = g.champs.every((c) => masques.has(c.supplementaire ? `+${c.code}` : c.code));
+    if (toutMasque) {
+      const p = document.createElement('div');
+      p.className = 'fiche-masque fiche-masque-groupe';
+      p.innerHTML = `<span>🔒 Informations confidentielles (${g.champs.length})</span>${this.definition.droits.confidentiel ? '<button type="button">Afficher</button>' : '<em>non autorisé</em>'}`;
+      p.querySelector('button')?.addEventListener('click', () => this.reveler().catch((e) => this.#erreur(e)));
+      fs.append(p);
+      return fs;
+    }
+    const grille = document.createElement('div');
+    grille.className = 'fiche-grille';
+    for (const c of g.champs) grille.append(this.#bloc(c));
+    fs.append(grille);
+    return fs;
   }
 
   #bloc(champ) {

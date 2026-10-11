@@ -53,6 +53,13 @@ const sansAccent = (t) => t.normalize('NFD').replace(/\p{M}/gu, '').replace(/œ/
 function completerSalaries(salaries) {
   for (const s of salaries) {
     s.ville = VILLES_CP[s.code_postal];
+    s.agence = ['Lyon', 'Lyon', 'Saint-Étienne', 'Grenoble', 'Bourg-en-Bresse'][s.id % 5];
+    s.type_mo = s.service === 'Chantier' || s.service === 'Atelier' ? 'OUVRIER' : ['Directeur', 'Conducteur de travaux'].includes(s.poste) ? 'CADRE' : 'ETAM';
+    s.telephone_perso = `07 ${[13, 29, 43, 61].map((k) => String((s.id * k) % 100).padStart(2, '0')).join(' ')}`;
+    s.email_perso = null;
+    s.contact_nom = s.id % 3 === 0 ? null : `${['Marie', 'Pierre', 'Sophie', 'Julien'][s.id % 4]} ${s.nom} (${['conjoint(e)', 'parent', 'frère / sœur'][s.id % 3]})`;
+    s.contact_telephone = s.id % 3 === 0 ? null : `06 ${String((s.id * 17) % 100).padStart(2, '0')} 45 67 ${String((s.id * 7) % 100).padStart(2, '0')}`;
+    s.note_perso = null;
     s.email = `${sansAccent(s.prenom)}.${sansAccent(s.nom)}${s.id}@exemple.fr`;
     const [a, m] = s.date_naissance.split('-');
     s.num_secu = `${s.id % 2 ? 1 : 2} ${a.slice(2)} ${m} 69 ${String(100 + (s.id % 900)).padStart(3, '0')} ${String(s.id % 1000).padStart(3, '0')} ${String(10 + (s.id % 89)).padStart(2, '0')}`;

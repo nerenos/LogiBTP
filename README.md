@@ -61,7 +61,10 @@ largeurs ajustées comme largeurs fixes de la vue.
 ### Fiches
 
 Double-clic sur une ligne de liste (salarié, intérimaire, matériel, ressource) ou bouton ＋ Salarié / ＋ Matériel : la fiche
-s'ouvre en consultation. ✎ Modifier prend le verrou (renouvelé toutes les 30 s, libéré à l'enregistrement, à l'annulation ou
+s'ouvre en consultation. Peu d'onglets, des groupes de champs en cadres titrés : pour le salarié, Entreprise (identité, emploi
+avec agence et type de main-d'œuvre, coordonnées professionnelles, rémunération, note professionnelle), Privé (RGPD :
+état civil, coordonnées personnelles, personne à prévenir, note personnelle, tout en confidentiel), Informations
+complémentaires (champs paramétrés) et Pièces jointes (GED). ✎ Modifier prend le verrou (renouvelé toutes les 30 s, libéré à l'enregistrement, à l'annulation ou
 à la fermeture, expiré au bout de 2 minutes sans battement) ; si quelqu'un modifie déjà la fiche, un bandeau l'indique et
 propose « Reprendre la main » avec le droit DEBLOQUER. Une saisie dans une liste est refusée tant que la fiche de la ligne est
 en modification (`SpecialisationListeBtp`). Champs : `*` obligatoire pour le programme, `◆` obligatoire par paramétrage,

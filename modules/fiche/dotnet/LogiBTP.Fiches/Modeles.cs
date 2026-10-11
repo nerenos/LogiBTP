@@ -13,11 +13,21 @@ public sealed class DefinitionFiche
     public List<ChampFiche> Champs { get; set; } = [];
 }
 
+/// <summary>Onglet de fiche : groupes de champs (cadres titrés), ou champs à plat (un seul groupe).</summary>
 public sealed class SectionFiche
 {
     public string Code { get; set; } = "";
     public string Titre { get; set; } = "";
+    public List<string>? Champs { get; set; }
+    public List<GroupeChamps>? Groupes { get; set; }
+}
+
+public sealed class GroupeChamps
+{
+    public string? Titre { get; set; }
     public List<string> Champs { get; set; } = [];
+    /// <summary>« plein » : groupe sur toute la largeur (notes…).</summary>
+    public string? Largeur { get; set; }
 }
 
 /// <summary>
