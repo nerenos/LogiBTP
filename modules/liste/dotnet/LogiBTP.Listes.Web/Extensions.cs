@@ -28,7 +28,14 @@ public static class Extensions
     public static RouteGroupBuilder MapModuleListe(this RouteGroupBuilder api)
     {
         var g = api.MapGroup("/listes");
-        g.MapGet("/vues", (string? contexte, HttpContext http, ServiceListe s, CancellationToken ct) => s.Vues(contexte, Utilisateur.Depuis(http), ct));
+        g.MapGet("/themes", (ServiceListe s, CancellationToken ct) => s.Themes(ct));
+        g.MapPut("/themes/{code}", (string code, ThemeListeDto t, HttpContext http, ServiceListe s, CancellationToken ct) => s.EnregistrerTheme(code, t, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/themes/{code}", async (string code, HttpContext http, ServiceListe s, CancellationToken ct) =>
+        {
+            await s.SupprimerTheme(code, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapGet("/vues", (string? contexte, string? theme, HttpContext http, ServiceListe s, CancellationToken ct) => s.Vues(contexte, theme, Utilisateur.Depuis(http), ct));
         g.MapGet("/vues/{id:long}", (long id, HttpContext http, ServiceListe s, CancellationToken ct) => s.Vue(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/vues", (VueListeDto v, HttpContext http, ServiceListe s, CancellationToken ct) => { v.VliId = null; return s.Enregistrer(v, Utilisateur.Depuis(http), ct); });
         g.MapPut("/vues/{id:long}", (long id, VueListeDto v, HttpContext http, ServiceListe s, CancellationToken ct) => { v.VliId = id; return s.Enregistrer(v, Utilisateur.Depuis(http), ct); });

@@ -1,21 +1,26 @@
 import { FournisseurApi, FournisseurMemoire } from '@logibtp/liste';
 import { ENTETES } from './api.js';
-import { VUES_LISTE, sourcesFournisseur } from './vues-liste.js';
-import { documentsDemo, salariesDemo, materielsDemo } from './donnees-demo-liste.js';
+import { VUES_LISTE, THEMES_LISTE, sourcesFournisseur } from './vues-liste.js';
+import { documentsDemo, salariesDemo, materielsDemo, ressourcesDemo } from './donnees-demo-liste.js';
 
 // Branchement du module Liste dans le cœur : fournisseur (API ou démo hors ligne) et ouverture des fiches.
 
 export function creerFournisseurListe({ enLigne, demo }) {
   if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
+  const salaries = salariesDemo();
+  const materiels = materielsDemo();
   return new FournisseurMemoire({
-    sources: sourcesFournisseur({ documents: documentsDemo(demo), salaries: salariesDemo(), materiels: materielsDemo() }),
+    sources: sourcesFournisseur({
+      documents: documentsDemo(demo), salaries, materiels, ressources: ressourcesDemo(salaries, materiels),
+    }),
     vues: VUES_LISTE,
+    themes: THEMES_LISTE,
     cleStockage: 'logibtp.listes.demo',
   });
 }
 
 /** Libellé d'un type d'élément sans écran de fiche. */
-export const LIBELLES_ELEMENTS = { salarie: 'salarié', materiel: 'matériel' };
+export const LIBELLES_ELEMENTS = { salarie: 'salarié', interim: 'intérimaire', materiel: 'matériel', equipe: 'équipe', sous_traitant: 'sous-traitant' };
 
 /** Les types d'éléments V_*, A_* et S_* sont des documents (code du type de document). */
 export const estTypeDocument = (type) => /^[VAS]_/.test(String(type ?? ''));

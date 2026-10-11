@@ -16,12 +16,34 @@ public class SourceListe
     public bool SliActif { get; set; } = true;
 }
 
+/// <summary>Thème de vues (theme_liste) : regroupement et types d'élément couverts.</summary>
+public class ThemeListe
+{
+    public string ThlCode { get; set; } = "";
+    public string ThlLibelle { get; set; } = "";
+    public string? ThlIcone { get; set; }
+    public int ThlOrdre { get; set; }
+    public JsonDocument ThlTypes { get; set; } = JsonDocument.Parse("[]");
+    public bool ThlActif { get; set; } = true;
+}
+
+public sealed class ThemeListeDto
+{
+    public string ThlCode { get; set; } = "";
+    public string ThlLibelle { get; set; } = "";
+    public string? ThlIcone { get; set; }
+    public int ThlOrdre { get; set; }
+    public List<TypeElementTheme> ThlTypes { get; set; } = [];
+    public bool ThlActif { get; set; } = true;
+}
+
 /// <summary>Vue de liste enregistrée (vue_liste).</summary>
 public class VueListe
 {
     public long VliId { get; set; }
     public string VliNom { get; set; } = "";
     public string? VliContexte { get; set; }
+    public string? VliTheme { get; set; }
     /// <summary>P personnelle, G groupe, T tous.</summary>
     public string VliPartage { get; set; } = "P";
     public string VliProprietaire { get; set; } = "";
@@ -40,10 +62,16 @@ public class ListeDbContext(DbContextOptions<ListeDbContext> options) : DbContex
 {
     public DbSet<SourceListe> Sources => Set<SourceListe>();
     public DbSet<VueListe> Vues => Set<VueListe>();
+    public DbSet<ThemeListe> Themes => Set<ThemeListe>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<SourceListe>().ToTable("source_liste").HasKey(x => x.SliCode);
+        b.Entity<ThemeListe>(e =>
+        {
+            e.ToTable("theme_liste").HasKey(x => x.ThlCode);
+            e.Property(x => x.ThlTypes).HasColumnType("jsonb");
+        });
         b.Entity<VueListe>(e =>
         {
             e.ToTable("vue_liste").HasKey(x => x.VliId);
@@ -59,6 +87,7 @@ public sealed class VueListeDto
     public long? VliId { get; set; }
     public string VliNom { get; set; } = "";
     public string? VliContexte { get; set; }
+    public string? VliTheme { get; set; }
     public string VliPartage { get; set; } = "P";
     public string? VliProprietaire { get; set; }
     public string? VliGroupe { get; set; }
@@ -67,7 +96,7 @@ public sealed class VueListeDto
     public JsonElement Definition { get; set; }
 }
 
-public sealed record ResumeVue(long VliId, string VliNom, string? VliContexte, string VliPartage, string VliProprietaire, bool Modifiable);
+public sealed record ResumeVue(long VliId, string VliNom, string? VliContexte, string? VliTheme, string VliPartage, string VliProprietaire, bool Modifiable);
 
 public sealed record SourceDto(string Code, string Libelle, IReadOnlyList<ColonneSource> Colonnes, string ColonneId, string? ColonneType, string? TypeElement);
 

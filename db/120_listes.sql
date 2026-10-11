@@ -112,7 +112,7 @@ CROSS JOIN LATERAL (
 ) x;
 
 CREATE VIEW v_liste_salaries AS
-SELECT sal_id AS id, sal_matricule AS matricule, sal_nom AS nom, sal_prenom AS prenom, sal_service AS service, sal_poste AS poste,
+SELECT sal_id AS id, CASE WHEN sal_statut = 'INTERIM' THEN 'interim' ELSE 'salarie' END AS type_element, sal_matricule AS matricule, sal_nom AS nom, sal_prenom AS prenom, sal_service AS service, sal_poste AS poste,
        sal_statut AS statut, sal_date_entree AS date_entree, sal_salaire AS salaire_brut, sal_heures_mois AS heures_mois,
        sal_actif AS actif, sal_commentaire AS commentaire
 FROM demo_salarie;
@@ -123,6 +123,68 @@ SELECT mat_id AS id, mat_code AS code, mat_designation AS designation, mat_famil
        mat_heures AS heures_utilisation, mat_heures_revision AS heures_revision, mat_controle_ok AS controle_ok,
        mat_observations AS observations
 FROM demo_materiel;
+
+-- Équipes et sous-traitants (démonstration du thème Ressources, à plusieurs types d'élément).
+CREATE TABLE demo_equipe (
+    equ_id        SERIAL        PRIMARY KEY,
+    equ_code      VARCHAR(10)   NOT NULL,
+    equ_libelle   VARCHAR(100)  NOT NULL,
+    equ_categorie VARCHAR(30)   NOT NULL,
+    equ_chef      VARCHAR(100)  NOT NULL,
+    equ_effectif  INT           NOT NULL,
+    equ_chantier  VARCHAR(100),
+    equ_active    BOOLEAN       NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO demo_equipe (equ_code, equ_libelle, equ_categorie, equ_chef, equ_effectif, equ_chantier, equ_active)
+SELECT 'E' || lpad(i::text, 3, '0'),
+       'Équipe ' || (ARRAY['gros œuvre','second œuvre','VRD','finitions'])[1 + (i - 1) % 4] || ' ' || (1 + (i - 1) / 4),
+       (ARRAY['Gros œuvre','Second œuvre','VRD','Finitions'])[1 + (i - 1) % 4],
+       (SELECT sal_prenom || ' ' || sal_nom FROM demo_salarie WHERE sal_id = i * 37),
+       3 + floor(random() * 6)::int,
+       CASE WHEN random() > 0.3 THEN (ARRAY['Maison Martin – Lyon','Résidence Les Érables','École Jean-Moulin','Pont de la Saône'])[1 + floor(random() * 4)::int] END,
+       random() > 0.3
+FROM generate_series(1, 12) AS i;
+
+CREATE TABLE demo_sous_traitant (
+    sst_id           SERIAL        PRIMARY KEY,
+    sst_code         VARCHAR(10)   NOT NULL,
+    sst_raison       VARCHAR(100)  NOT NULL,
+    sst_metier       VARCHAR(30)   NOT NULL,
+    sst_taux_horaire NUMERIC(18,2) NOT NULL,
+    sst_agree        BOOLEAN       NOT NULL,
+    sst_observations TEXT
+);
+
+INSERT INTO demo_sous_traitant (sst_code, sst_raison, sst_metier, sst_taux_horaire, sst_agree, sst_observations)
+SELECT 'ST' || lpad(i::text, 3, '0'), x.nom || ' ' || x.metier, x.metier, round((38 + random() * 30)::numeric, 2), x.agree,
+       (ARRAY['Lyon','Villeurbanne','Vénissieux','Saint-Étienne','Grenoble','Bourg-en-Bresse'])[1 + floor(random() * 6)::int]
+         || CASE WHEN x.agree THEN '' ELSE chr(10) || 'Attestation URSSAF à fournir' END
+FROM generate_series(1, 40) AS i
+CROSS JOIN LATERAL (
+    SELECT (ARRAY['Martin','Bernard','Dubois','Lefèvre','Moreau','Garçon','Roux','Müller'])[1 + floor(random() * 8)::int] AS nom,
+           (ARRAY['Électricité','Plomberie','Charpente','Étanchéité','Plâtrerie','Peinture','Menuiserie','Terrassement'])[1 + floor(random() * 8)::int] AS metier,
+           random() > 0.25 AS agree,
+           i AS j
+) x;
+
+-- Ressources : union de types d'élément ; l'identifiant est préfixé par le type pour rester unique.
+CREATE VIEW v_liste_ressources AS
+SELECT 'EQU-' || equ_id AS id, 'equipe' AS type_element, equ_code AS code, equ_libelle AS libelle, equ_categorie AS categorie,
+       'Chef : ' || equ_chef AS statut, equ_active AS disponible, (equ_effectif * 42)::numeric AS cout_horaire,
+       equ_chantier AS chantier, 'Effectif ' || equ_effectif AS observations
+FROM demo_equipe
+UNION ALL
+SELECT 'SAL-' || id, type_element, matricule, prenom || ' ' || nom, service, poste, actif,
+       round(salaire_brut * 1.45 / 151.67, 2), NULL, commentaire
+FROM v_liste_salaries
+UNION ALL
+SELECT 'MAT-' || id, 'materiel', code, designation, famille, etat, etat = 'DISPO', round(valeur_achat / 2000, 2), chantier, observations
+FROM v_liste_materiels
+UNION ALL
+SELECT 'SST-' || sst_id, 'sous_traitant', sst_code, sst_raison, sst_metier,
+       CASE WHEN sst_agree THEN 'Agréé' ELSE 'Agrément en cours' END, sst_agree, sst_taux_horaire, NULL, sst_observations
+FROM demo_sous_traitant;
 
 -- Index d'aide aux tris par défaut des vues de démonstration.
 CREATE INDEX ix_sal_nom ON demo_salarie (sal_nom, sal_id);

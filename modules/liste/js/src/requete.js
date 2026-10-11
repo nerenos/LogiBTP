@@ -2,6 +2,7 @@ import { motsRecherche, normaliser } from './normaliser.js';
 
 // Sémantique des requêtes de liste (référence du serveur, utilisée par le fournisseur en mémoire et les jeux
 // de test partagés modules/liste/tests/cas) :
+//   types       types d'élément du thème de la vue (vide = tous) : la ligne doit être de l'un de ces types
 //   filtres     filtres fixes de la vue (définition) : toujours appliqués, en ET, avant tout le reste
 //   recherche   chaque mot doit être contenu (sans casse ni accents) dans au moins une colonne de recherche,
 //               sur le texte brut de la donnée (valeur::text côté SQL)
@@ -65,10 +66,11 @@ export function correspondFiltreVue(ligne, f) {
   }
 }
 
-export function filtrer(lignes, { recherche, segments, filtres }, colonnesRecherche) {
+export function filtrer(lignes, { recherche, segments, filtres, types }, colonnesRecherche) {
   const mots = motsRecherche(recherche ?? '');
   const seg = Object.entries(segments ?? {}).filter(([, v]) => Array.isArray(v) && v.length);
   return lignes.filter((l) => {
+    if (types?.length && !types.includes(String(l._type))) return false;
     if (filtres?.length && !filtres.every((f) => correspondFiltreVue(l, f))) return false;
     for (const [col, valeurs] of seg) {
       const t = texteBrut(l[col]);

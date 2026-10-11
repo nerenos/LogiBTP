@@ -38,12 +38,14 @@ export function formatPourType(type) {
 const titreDepuisCode = (code) => code.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
 export class ConcepteurVue {
-  constructor({ fournisseur, vue, peutRequete = false, appliquer, enregistrer, supprimer, message, largeursAjustees = {}, oublierLargeurs }) {
+  constructor({ fournisseur, vue, peutRequete = false, appliquer, enregistrer, supprimer, message, largeursAjustees = {}, ordreAjuste = null, oublierLargeurs, themes = [] }) {
     this.fournisseur = fournisseur;
     this.vue = { ...structuredClone(vue), definition: normaliserDefinition(vue.definition) };
     this.peutRequete = peutRequete;
     this.cb = { appliquer, enregistrer, supprimer, message: message ?? (() => {}), oublierLargeurs };
     this.largeursAjustees = largeursAjustees;
+    this.ordreAjuste = ordreAjuste;
+    this.themes = themes;
     this.onglet = 'forme';
     this.selection = this.def.colonnes[0]?.code ?? null;
     this.sources = [];
@@ -65,6 +67,8 @@ export class ConcepteurVue {
           <label>Partage <select data-vue="vli_partage">
             ${opt('P', 'Moi seul', this.vue.vli_partage)}${opt('G', 'Mon groupe', this.vue.vli_partage)}${opt('T', 'Tous', this.vue.vli_partage)}</select></label>
           <label class="groupe-partage">Groupe <input data-vue="vli_groupe" value="${echapper(this.vue.vli_groupe ?? '')}"></label>
+          <label title="Regroupement des vues ; les types d'élément du thème restreignent les lignes">Thème <select data-theme>
+            ${opt('', '(aucun)', this.def.theme)}${this.themes.map((t) => opt(t.thl_code, `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), this.def.theme)).join('')}</select></label>
           <nav>
             <button type="button" data-onglet="forme">Mise en forme</button>
             <button type="button" data-onglet="colonnes">Colonnes et source</button>
@@ -88,6 +92,7 @@ export class ConcepteurVue {
       this.#majPartage();
     }));
     this.#majPartage();
+    fond.querySelector('[data-theme]').addEventListener('change', (e) => { this.def.theme = e.target.value || null; });
     fond.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => { this.onglet = b.dataset.onglet; this.rendre(); }));
     fond.querySelector('[data-action="fermer"]').addEventListener('click', () => this.fermer());
     fond.querySelector('[data-action="appliquer"]').addEventListener('click', () => { if (this.#valider(false)) this.cb.appliquer(structuredClone(this.vue)); });
@@ -212,8 +217,8 @@ export class ConcepteurVue {
           <fieldset><legend>Vue</legend>
             <label>Hauteur des lignes <select data-def="lignes">${opt('multi', 'Multiligne (texte complet)', d.lignes)}${opt('simple', 'Une ligne', d.lignes)}</select></label>
             <label>Lignes par lot <input type="number" min="20" max="1000" step="10" data-def="taille_lot" value="${d.taille_lot}"></label>
-            ${Object.keys(this.largeursAjustees).length ? `<button type="button" data-action="reprendre-largeurs"
-              title="Les largeurs ajustées à la souris deviennent des largeurs fixes de la vue">Reprendre mes largeurs ajustées (${Object.keys(this.largeursAjustees).length})</button>` : ''}
+            ${Object.keys(this.largeursAjustees).length || this.ordreAjuste?.length ? `<button type="button" data-action="reprendre-largeurs"
+              title="L'ordre et les largeurs ajustés à la souris deviennent ceux de la vue (largeurs fixes)">Reprendre ma disposition (ordre et largeurs)</button>` : ''}
           </fieldset>
         </aside>
         <section class="concepteur-colonne"></section>
@@ -232,7 +237,15 @@ export class ConcepteurVue {
         const c = this.colonne(code);
         if (c) c.largeur = { ...c.largeur, mode: 'fixe', valeur: px };
       }
+      if (this.ordreAjuste?.length) {
+        const rang = new Map(this.ordreAjuste.map((code, i) => [code, i]));
+        const ordonnees = this.def.colonnes.filter((c) => rang.has(c.code)).sort((a, b) => rang.get(a.code) - rang.get(b.code));
+        let k = 0;
+        // Les colonnes ordonnées reprennent leurs places successives ; les autres (masquées…) ne bougent pas.
+        this.def.colonnes = this.def.colonnes.map((c) => (rang.has(c.code) ? ordonnees[k++] : c));
+      }
       this.largeursAjustees = {};
+      this.ordreAjuste = null;
       this.cb.oublierLargeurs?.();
       this.#rendreForme();
     });

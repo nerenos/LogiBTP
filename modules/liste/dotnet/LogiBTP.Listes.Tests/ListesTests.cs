@@ -92,6 +92,17 @@ public class ConstructeurRequeteTests
     }
 
     [Fact]
+    public void Types_du_theme_sur_la_colonne_type_ou_le_type_constant()
+    {
+        var c = new ConstructeurRequete(Source, Def(), new DemandeListe()) { TypesTheme = ["salarie", "interim"] };
+        var r = c.Lot(10);
+        Assert.Contains("(@p0)::text = ANY(@p1)", r.Texte);
+        Assert.Equal(new[] { "salarie", "interim" }, (string[])r.Parametres[1].Valeur!);
+        var avecColonne = Source with { ColonneType = "ville", TypeElement = null };
+        Assert.Contains("(s.\"ville\")::text = ANY(@p0)", new ConstructeurRequete(avecColonne, Def(), new DemandeListe()) { TypesTheme = ["x"] }.Lot(10).Texte);
+    }
+
+    [Fact]
     public void Curseur_incompatible_refuse()
     {
         var d = new DemandeListe { Tri = [new() { Colonne = "nom" }], Apres = ["x"] };
@@ -116,12 +127,12 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         if (Connexion is null) return;
         _cnx = new NpgsqlConnection(Connexion);
         await _cnx.OpenAsync();
-        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean)");
+        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean, type_element text)");
         foreach (var l in _jeu["source"]!["lignes"]!.AsArray())
         {
-            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif)", _cnx);
+            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif, @type_element)", _cnx);
             cmd.Parameters.AddWithValue("id", l!["id"]!.GetValue<int>());
-            foreach (var c in new[] { "nom", "ville", "service" }) cmd.Parameters.Add(new NpgsqlParameter(c, NpgsqlDbType.Text) { Value = (object?)l[c]?.GetValue<string>() ?? DBNull.Value });
+            foreach (var c in new[] { "nom", "ville", "service", "type_element" }) cmd.Parameters.Add(new NpgsqlParameter(c, NpgsqlDbType.Text) { Value = (object?)l[c]?.GetValue<string>() ?? DBNull.Value });
             cmd.Parameters.Add(new NpgsqlParameter("montant", NpgsqlDbType.Numeric) { Value = (object?)l["montant"]?.GetValue<decimal>() ?? DBNull.Value });
             cmd.Parameters.AddWithValue("actif", l["actif"]!.GetValue<bool>());
             await cmd.ExecuteNonQueryAsync();
@@ -165,8 +176,10 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
     }
 
     private SourceResolue Source() => new($"SELECT * FROM {_table}",
-        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean")],
-        "id", null, "salarie");
+        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean"), new("type_element", "text")],
+        "id", "type_element", null);
+
+    private static IReadOnlyList<string> Types(JsonNode? types) => types?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];
 
     private DefinitionVue Def(JsonNode? filtres = null)
     {
@@ -203,7 +216,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
             var ids = new List<int>();
             for (var tour = 0; tour < 20; tour++)
             {
-                var constructeur = new ConstructeurRequete(Source(), Def(c["filtres"]), d);
+                var constructeur = new ConstructeurRequete(Source(), Def(c["filtres"]), d) { TypesTheme = Types(c["types"]) };
                 var tri = constructeur.Tri();
                 var lignes = await Lire(constructeur.Lot(2));
                 var suite = lignes.Count > 2;
@@ -223,7 +236,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         if (_cnx is null) return;
         foreach (var c in _jeu["segments"]!.AsArray())
         {
-            var r = new ConstructeurRequete(Source(), Def(c!["filtres"]), Demande(c["requete"])).Segments(c["colonne"]!.GetValue<string>());
+            var r = new ConstructeurRequete(Source(), Def(c!["filtres"]), Demande(c["requete"])) { TypesTheme = Types(c["types"]) }.Segments(c["colonne"]!.GetValue<string>());
             var obtenus = (await Lire(r)).Select(l => (l["valeur"] as string, Convert.ToInt64(l["nombre"]))).ToList();
             var attendus = c["attendu"]!.AsArray().Select(a => (a!["valeur"]?.GetValue<string>(), a["nombre"]!.GetValue<long>())).ToList();
             Assert.Equal(attendus, obtenus);

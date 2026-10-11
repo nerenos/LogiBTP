@@ -11,6 +11,7 @@ public sealed record RequeteSql(string Texte, IReadOnlyList<ParametreSql> Parame
 /// Construction des requêtes d'une liste sur une source encadrée (<c>SELECT … FROM (source) s</c>). Réplique de la
 /// sémantique de modules/liste/js/src/requete.js (jeux partagés modules/liste/tests/cas) :
 /// <list type="bullet">
+/// <item>types d'élément du thème de la vue : la ligne doit être de l'un d'eux (aucun = tous) ;</item>
 /// <item>filtres fixes de la vue : toujours appliqués, en ET ;</item>
 /// <item>recherche : chaque mot contenu, sans casse ni accents (f_sans_accent), dans au moins une colonne de recherche ;</item>
 /// <item>segments : valeur (texte brut) parmi celles retenues, null = vide ;</item>
@@ -49,6 +50,9 @@ public partial class ConstructeurRequete
         if (!_colonnes.ContainsKey(source.ColonneId)) throw new ErreurListe("COLONNE_ID", $"Colonne identifiant {source.ColonneId} absente de la source");
         if (source.ColonneType is { } t && !_colonnes.ContainsKey(t)) throw new ErreurListe("COLONNE_TYPE", $"Colonne type d'élément {t} absente de la source");
     }
+
+    /// <summary>Types d'élément du thème de la vue (vide = tous), fixés par le service.</summary>
+    public IReadOnlyList<string> TypesTheme { get; set; } = [];
 
     protected SourceResolue Source { get; }
     protected DefinitionVue Definition { get; }
@@ -100,7 +104,13 @@ public partial class ConstructeurRequete
     /// <summary>Conditions de recherche et de segments (sauf le segment <paramref name="sansSegment"/>).</summary>
     protected virtual List<string> Conditions(string? sansSegment = null)
     {
-        var conditions = Definition.Filtres.Select(ConditionFiltre).ToList();
+        var conditions = new List<string>();
+        if (TypesTheme.Count > 0)
+        {
+            var type = Source.ColonneType is { } t ? Col(t) : P(Source.TypeElement);
+            conditions.Add($"({type})::text = ANY({P(TypesTheme.ToArray())})");
+        }
+        conditions.AddRange(Definition.Filtres.Select(ConditionFiltre));
         var colonnes = ColonnesRecherche();
         foreach (var mot in Mots(Demande.Recherche))
         {

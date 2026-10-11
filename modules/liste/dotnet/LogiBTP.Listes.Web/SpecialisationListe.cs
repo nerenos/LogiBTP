@@ -26,6 +26,9 @@ public class SpecialisationListe
     /// <summary>Saisie ou exécution d'une requête manuelle non enregistrée (SELECT encadré) : profil ADMIN.</summary>
     public virtual bool PeutSaisirRequete(Utilisateur u) => u.EstAdmin;
 
+    /// <summary>Création, modification et suppression des thèmes de vues : profil ADMIN.</summary>
+    public virtual bool PeutGererThemes(Utilisateur u) => u.EstAdmin;
+
     public virtual ConstructeurRequete Constructeur(SourceResolue source, DefinitionVue definition, DemandeListe demande) =>
         new(source, definition, demande);
 }

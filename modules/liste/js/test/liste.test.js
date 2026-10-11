@@ -17,7 +17,10 @@ describe('normalisation (jeu partagé avec f_sans_accent)', () => {
 
 describe('requêtes paginées (jeu partagé avec le serveur)', () => {
   const jeu = lire('02_requete.json');
-  const fournisseur = () => new FournisseurMemoire({ sources: { s: jeu.source } });
+  // Thème « t » portant les types d'élément du cas (vide = tous).
+  const fournisseur = (types = []) => new FournisseurMemoire({
+    sources: { s: jeu.source }, themes: [{ thl_code: 't', thl_libelle: 'Test', thl_types: types.map((code) => ({ code })) }],
+  });
   const definition = {
     source: { mode: 'vue', vue: 's' },
     colonnes: jeu.source.colonnes.map((c) => ({ code: c.code, recherche: jeu.recherche.includes(c.code) })),
@@ -25,8 +28,8 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.cas) {
     it(c.nom, async () => {
-      const f = fournisseur();
-      const demande = { definition: { ...definition, filtres: c.filtres ?? [] }, ...c.requete };
+      const f = fournisseur(c.types);
+      const demande = { definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete };
       // Lots de 2 : la concaténation des lots doit donner l'ordre complet.
       const ids = [];
       let apres = null;
@@ -45,7 +48,7 @@ describe('requêtes paginées (jeu partagé avec le serveur)', () => {
 
   for (const c of jeu.segments) {
     it(`segments : ${c.nom}`, async () => {
-      expect(await fournisseur().segments({ definition: { ...definition, filtres: c.filtres ?? [] }, ...c.requete }, c.colonne)).toEqual(c.attendu);
+      expect(await fournisseur(c.types).segments({ definition: { ...definition, filtres: c.filtres ?? [], theme: 't' }, ...c.requete }, c.colonne)).toEqual(c.attendu);
     });
   }
 

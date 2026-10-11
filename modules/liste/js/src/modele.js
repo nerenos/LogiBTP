@@ -10,7 +10,8 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 //                style: { couleur, fond, gras, italique, souligne, barre }, regles: [{ condition, style }],
 //                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement }],
 //   segments: [{ colonne, titre }], tri: [{ colonne, sens: 'asc' | 'desc' }], lignes: 'multi' | 'simple', taille_lot,
-//   filtres: [{ colonne, op, valeur, valeur2, valeurs }]   filtres fixes appliqués par la base (ex. salariés actifs)
+//   filtres: [{ colonne, op, valeur, valeur2, valeurs }]   filtres fixes appliqués par la base (ex. salariés actifs),
+//   theme: code du thème (regroupement des vues ; ses types d'élément restreignent les lignes)
 // }
 
 export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto'];
@@ -29,6 +30,7 @@ export function normaliserDefinition(def = {}) {
     })),
     segments: def.segments ?? [],
     filtres: def.filtres ?? [],
+    theme: def.theme ?? null,
     tri: def.tri ?? [],
     lignes: def.lignes ?? 'multi',
     taille_lot: def.taille_lot ?? 100,

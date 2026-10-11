@@ -3,6 +3,17 @@
 .liste { display: flex; flex-direction: column; min-height: 0; height: 100%; gap: 0.4rem; }
 .liste-barre { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; flex: none; }
 .liste-vues { max-width: 16rem; }
+.liste-themes { max-width: 12rem; font-weight: 600; }
+.liste-themes[hidden] { display: none; }
+/* Déplacement d'une colonne : en-tête glissé et emplacement de dépôt */
+.liste-table thead th.deplacee { opacity: 0.5; }
+.liste-table thead th.depot-gauche { box-shadow: inset 3px 0 0 var(--accent); }
+.liste-table thead th.depot-droite { box-shadow: inset -3px 0 0 var(--accent); }
+body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !important; user-select: none; }
+.liste-table thead th[data-code] { cursor: grab; }
+.themes-table input.large { width: 100%; min-width: 18rem; }
+.themes > header { align-items: center; }
+.themes > header .aide { margin-right: auto; }
 .liste-recherche { flex: 1 1 14rem; min-width: 10rem; padding: 0.25rem 0.5rem; }
 .liste-compteur { color: var(--discret); font-size: 0.9em; white-space: nowrap; }
 .liste-erreurs { margin: 0; color: var(--erreur); background: var(--erreur-fond); padding: 0.25rem 0.5rem; border-radius: 4px; flex: none; }

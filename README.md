@@ -25,12 +25,12 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, puis cœur `100`, `110`, `120`, `121`.
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, puis cœur `100`, `110`, `120`, `121`.
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
 ```bash
-for f in modules/liste/db/030_liste_schema.sql db/120_listes.sql db/121_listes_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
+for f in modules/liste/db/030_liste_schema.sql modules/liste/db/031_liste_themes.sql db/120_listes.sql db/121_listes_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
 ```
 
 ### Listes
@@ -40,6 +40,11 @@ segments interrogent la base ; les filtres de colonnes (▾) portent sur les lig
 bouton ⇅ du coin « Trier toute la base » est actif (ou via le menu de la colonne). Double-clic ou Entrée : ouverture de la
 fiche d'après l'ID et le type d'élément de la ligne (les documents s'ouvrent dans l'éditeur). Le concepteur (✎ / ＋) définit la
 mise en forme et les colonnes ; la requête manuelle (SELECT encadré, lecture seule, délai maximal) est réservée au profil ADMIN.
+Les vues sont regroupées par **thème** (sélecteur à gauche de la barre ; ⚙ pour les gérer, profil ADMIN). Un thème déclare
+les types d'élément qu'il couvre : plusieurs (Ressources : équipe, salarié, intérim, matériel, sous-traitant, sur la source
+`v_liste_ressources`) ou un seul pour filtrer une source plus large (Devis : `V_DEVIS` parmi tous les documents) ; ses vues
+ne montrent que des lignes de ces types, sans type = tous. La liste des thèmes (`theme_liste`) n'est pas figée.
+Les colonnes se déplacent à la souris en glissant leur en-tête.
 Les filtres fixes d'une vue (onglet « Colonnes et source » du concepteur, ex. « actif est coché » pour la vue Salariés actifs)
 sont appliqués par la base, toujours, et rappelés par la pastille ⚑ de la barre. Les colonnes se redimensionnent à la souris
 (bord droit de l'en-tête, double-clic pour revenir à la largeur de la vue) et le bouton ⇔ / ⇕ force l'affichage sur une ligne

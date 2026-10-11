@@ -121,6 +121,8 @@ async function demarrerListe() {
     message,
     // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
     peutRequete: etat.enLigne && ENTETES['X-Profil'] === 'ADMIN',
+    // Thèmes : gérés par le profil ADMIN (et librement dans la démo hors ligne).
+    peutGererThemes: !etat.enLigne || ENTETES['X-Profil'] === 'ADMIN',
   });
   $('#liste-demo').hidden = etat.enLigne;
   await etat.liste.demarrer();

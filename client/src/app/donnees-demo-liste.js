@@ -33,9 +33,10 @@ export function salariesDemo(n = 5000) {
     const service = choix(r, services);
     const salaire = Math.round((1900 + r() * 3600) * 100) / 100;
     const actif = r() > 0.08;
+    const statut = choix(r, CONTRATS);
     return {
-      id: i + 1, matricule: `S${String(i + 1).padStart(5, '0')}`, nom: choix(r, NOMS), prenom: choix(r, PRENOMS), service,
-      poste: choix(r, SERVICES[service]), statut: choix(r, CONTRATS), date_entree: date(r, 2005, 7600), salaire_brut: salaire,
+      id: i + 1, type_element: statut === 'INTERIM' ? 'interim' : 'salarie', matricule: `S${String(i + 1).padStart(5, '0')}`, nom: choix(r, NOMS),
+      prenom: choix(r, PRENOMS), service, poste: choix(r, SERVICES[service]), statut, date_entree: date(r, 2005, 7600), salaire_brut: salaire,
       heures_mois: 151.67, actif, commentaire: r() > 0.85 ? 'Habilitation électrique\nCACES R482 cat. A' : r() > 0.9 ? 'Temps partiel 80 %' : '',
     };
   });
@@ -57,7 +58,49 @@ export function materielsDemo(n = 3000) {
   });
 }
 
-const TYPES_DOC = [['V_DEVIS', 'Devis client', 'V'], ['V_COMMANDE', 'Commande client', 'V'], ['V_FACTURE', 'Facture', 'V'], ['A_COMMANDE', 'Commande fournisseur', 'A']];
+const METIERS = ['Électricité', 'Plomberie', 'Charpente', 'Étanchéité', 'Plâtrerie', 'Peinture', 'Menuiserie', 'Terrassement'];
+const VILLES = ['Lyon', 'Villeurbanne', 'Vénissieux', 'Saint-Étienne', 'Grenoble', 'Bourg-en-Bresse'];
+
+/**
+ * Ressources : union des équipes, salariés, intérimaires, matériels et sous-traitants (comme v_liste_ressources).
+ * L'identifiant est préfixé par le type : il reste unique dans l'union.
+ */
+export function ressourcesDemo(salaries, materiels) {
+  const r = alea(99);
+  const equipes = Array.from({ length: 12 }, (_, i) => {
+    const effectif = 3 + Math.floor(r() * 6);
+    return {
+      id: `EQU-${i + 1}`, type_element: 'equipe', code: `E${String(i + 1).padStart(3, '0')}`,
+      libelle: `Équipe ${['gros œuvre', 'second œuvre', 'VRD', 'finitions'][i % 4]} ${1 + Math.floor(i / 4)}`, categorie: ['Gros œuvre', 'Second œuvre', 'VRD', 'Finitions'][i % 4],
+      statut: `Chef : ${choix(r, PRENOMS)} ${choix(r, NOMS)}`, disponible: r() > 0.3, cout_horaire: effectif * 42, chantier: r() > 0.3 ? choix(r, CHANTIERS.filter(Boolean)) : null,
+      observations: `Effectif ${effectif}`,
+    };
+  });
+  const sousTraitants = Array.from({ length: 40 }, (_, i) => {
+    const metier = choix(r, METIERS);
+    const agree = r() > 0.25;
+    return {
+      id: `SST-${i + 1}`, type_element: 'sous_traitant', code: `ST${String(i + 1).padStart(3, '0')}`, libelle: `${choix(r, NOMS)} ${metier}`,
+      categorie: metier, statut: agree ? 'Agréé' : 'Agrément en cours', disponible: agree, cout_horaire: Math.round((38 + r() * 30) * 100) / 100,
+      chantier: null, observations: `${choix(r, VILLES)}${agree ? '' : '\nAttestation URSSAF à fournir'}`,
+    };
+  });
+  return [
+    ...equipes,
+    ...salaries.map((s) => ({
+      id: `SAL-${s.id}`, type_element: s.type_element, code: s.matricule, libelle: `${s.prenom} ${s.nom}`, categorie: s.service, statut: s.poste,
+      disponible: s.actif, cout_horaire: Math.round((s.salaire_brut * 1.45 / 151.67) * 100) / 100, chantier: null, observations: s.commentaire,
+    })),
+    ...materiels.map((m) => ({
+      id: `MAT-${m.id}`, type_element: 'materiel', code: m.code, libelle: m.designation, categorie: m.famille, statut: m.etat,
+      disponible: m.etat === 'DISPO', cout_horaire: Math.round(m.valeur_achat / 20) / 100, chantier: m.chantier, observations: m.observations,
+    })),
+    ...sousTraitants,
+  ];
+}
+
+const TYPES_DOC = [['V_DEVIS', 'Devis client', 'V'], ['V_COMMANDE', 'Commande client', 'V'], ['V_FACTURE', 'Facture', 'V'], ['V_AVOIR', 'Avoir', 'V'],
+  ['A_COMMANDE', 'Commande fournisseur', 'A']];
 const STATUTS = ['Brouillon', 'Validé', 'Validé', 'Accepté', 'Facturé', 'Soldé', 'Annulé'];
 
 /** Documents de démonstration : le devis du mode hors ligne (ID 0) puis des documents fictifs. */

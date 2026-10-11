@@ -1,4 +1,4 @@
-// Sources et vues de liste fournies par le cœur. Les mêmes définitions alimentent la démo hors ligne et le
+// Thèmes, sources et vues de liste fournis par le cœur. Les mêmes définitions alimentent la démo hors ligne et le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
 export const SOURCES_LISTE = {
@@ -12,9 +12,9 @@ export const SOURCES_LISTE = {
     ],
   },
   salaries: {
-    libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', type_element: 'salarie',
+    libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
-      ['id', 'integer'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
+      ['id', 'integer'], ['type_element', 'text'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
       ['statut', 'text'], ['date_entree', 'date'], ['salaire_brut', 'numeric'], ['heures_mois', 'numeric'], ['actif', 'boolean'],
       ['commentaire', 'text'],
     ],
@@ -27,6 +27,14 @@ export const SOURCES_LISTE = {
       ['controle_ok', 'boolean'], ['observations', 'text'],
     ],
   },
+  ressources: {
+    libelle: 'Ressources : équipes, salariés, intérimaires, matériels, sous-traitants (démonstration)', vue: 'v_liste_ressources',
+    colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'text'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['categorie', 'text'], ['statut', 'text'],
+      ['disponible', 'boolean'], ['cout_horaire', 'numeric'], ['chantier', 'text'], ['observations', 'text'],
+    ],
+  },
 };
 
 const col = (code, titre, extra = {}) => ({ code, titre, ...extra });
@@ -34,10 +42,31 @@ const nombre = (decimales = 2) => ({ format: 'nombre', decimales });
 const fixe = (valeur) => ({ largeur: { mode: 'fixe', valeur } });
 const prop = (valeur, min, max) => ({ largeur: { mode: 'proportionnel', valeur, min, max } });
 
+/**
+ * Thèmes de vues (liste complétée par les administrateurs). Les types d'élément restreignent les lignes des vues du
+ * thème : plusieurs types (Ressources) ou un seul type d'une source plus large (Devis parmi les documents).
+ */
+export const THEMES_LISTE = [
+  { thl_code: 'documents', thl_libelle: 'Documents', thl_icone: '📄', thl_ordre: 10, thl_types: [] },
+  { thl_code: 'devis', thl_libelle: 'Devis', thl_icone: '📝', thl_ordre: 20, thl_types: [{ code: 'V_DEVIS', libelle: 'Devis client' }] },
+  {
+    thl_code: 'factures', thl_libelle: 'Factures', thl_icone: '💶', thl_ordre: 30,
+    thl_types: [{ code: 'V_FACTURE', libelle: 'Facture' }, { code: 'V_FACTURE_AVT', libelle: 'Facture d\'avancement' }, { code: 'V_AVOIR', libelle: 'Avoir' }],
+  },
+  { thl_code: 'salaries', thl_libelle: 'Salariés', thl_icone: '👷', thl_ordre: 40, thl_types: [{ code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérimaire' }] },
+  { thl_code: 'materiels', thl_libelle: 'Matériels', thl_icone: '🚜', thl_ordre: 50, thl_types: [{ code: 'materiel', libelle: 'Matériel' }] },
+  {
+    thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
+    thl_types: [{ code: 'equipe', libelle: 'Équipe' }, { code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérim' },
+      { code: 'materiel', libelle: 'Matériel' }, { code: 'sous_traitant', libelle: 'Sous-traitant' }],
+  },
+].map((t) => ({ ...t, thl_actif: true }));
+
 export const VUES_LISTE = [
   {
     vli_id: 1, vli_nom: 'Documents', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
     definition: {
+      theme: 'documents',
       source: { mode: 'vue', vue: 'documents', colonne_id: 'id', colonne_type: 'type_element' },
       colonnes: [
         col('type_document', 'Type', { ...prop(1.2, 90, 180) }),
@@ -68,7 +97,8 @@ export const VUES_LISTE = [
   {
     vli_id: 2, vli_nom: 'Salariés (démo)', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
     definition: {
-      source: { mode: 'vue', vue: 'salaries', colonne_id: 'id', type_element: 'salarie' },
+      theme: 'salaries',
+      source: { mode: 'vue', vue: 'salaries', colonne_id: 'id', colonne_type: 'type_element' },
       colonnes: [
         col('matricule', 'Matricule', { ...fixe(90) }),
         col('nom', 'Nom', {
@@ -101,6 +131,7 @@ export const VUES_LISTE = [
   {
     vli_id: 3, vli_nom: 'Matériels (démo)', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
     definition: {
+      theme: 'materiels',
       source: { mode: 'vue', vue: 'materiels', colonne_id: 'id', type_element: 'materiel' },
       colonnes: [
         col('code', 'Code', { ...fixe(84), style: { gras: true } }),
@@ -140,6 +171,46 @@ const salaries = VUES_LISTE.find((v) => v.vli_id === 2);
 VUES_LISTE.push({
   ...structuredClone(salaries), vli_id: 4, vli_nom: 'Salariés actifs (démo)',
   definition: { ...structuredClone(salaries.definition), filtres: [{ colonne: 'actif', op: 'vrai' }] },
+});
+
+// Thèmes filtrants : même source que Documents, restreinte aux types du thème (devis, factures).
+const documents = VUES_LISTE.find((v) => v.vli_id === 1);
+const vueDocuments = (vli_id, vli_nom, theme) => ({
+  ...structuredClone(documents), vli_id, vli_nom,
+  definition: { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'statut', titre: 'Statut' }] },
+});
+VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis'), vueDocuments(6, 'Factures et avoirs', 'factures'));
+
+// Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.
+VUES_LISTE.push({
+  vli_id: 7, vli_nom: 'Ressources (démo)', vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'ressources',
+    source: { mode: 'vue', vue: 'ressources', colonne_id: 'id', colonne_type: 'type_element' },
+    colonnes: [
+      col('type_element', 'Type', {
+        format: 'picto', ...fixe(52),
+        options: [
+          { valeur: 'equipe', libelle: 'Équipe', picto: '👥' }, { valeur: 'salarie', libelle: 'Salarié', picto: '👷' },
+          { valeur: 'interim', libelle: 'Intérimaire', picto: '🧑‍🔧' }, { valeur: 'materiel', libelle: 'Matériel', picto: '🚜' },
+          { valeur: 'sous_traitant', libelle: 'Sous-traitant', picto: '🏢' },
+        ],
+      }),
+      col('code', 'Code', { ...fixe(90), style: { gras: true } }),
+      col('libelle', 'Ressource', { ...prop(2.5, 160) }),
+      col('categorie', 'Catégorie', { ...prop(1.5, 110) }),
+      col('statut', 'Statut /\nfonction', { ...prop(1.5, 110) }),
+      col('disponible', 'Dispo.', { format: 'coche', ...fixe(56), recherche: false,
+        regles: [{ condition: 'NON [disponible]', style: { fond: '#fdecea', couleur: '#b42318' } }] }),
+      col('cout_horaire', 'Coût\nhoraire', { ...nombre(), ...fixe(90), recherche: false }),
+      col('chantier', 'Chantier', { ...prop(1.5, 110) }),
+      col('observations', 'Observations', { ...prop(2, 140) }),
+    ],
+    segments: [{ colonne: 'type_element', titre: 'Type' }, { colonne: 'categorie', titre: 'Catégorie' }],
+    tri: [{ colonne: 'libelle', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
 });
 
 /** Sources au format du fournisseur (colonnes { code, type }). */

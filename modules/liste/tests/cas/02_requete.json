@@ -1,5 +1,5 @@
 {
-  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET.",
+  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET. Types d'élément du thème (« types ») : la ligne doit être de l'un d'eux (vide = tous).",
   "source": {
     "colonnes": [
       {
@@ -25,10 +25,13 @@
       {
         "code": "actif",
         "type": "boolean"
+      },
+      {
+        "code": "type_element",
+        "type": "text"
       }
     ],
     "colonne_id": "id",
-    "type_element": "salarie",
     "lignes": [
       {
         "id": 1,
@@ -36,7 +39,8 @@
         "ville": "lyon",
         "service": "chantier",
         "montant": 120.5,
-        "actif": true
+        "actif": true,
+        "type_element": "salarie"
       },
       {
         "id": 2,
@@ -44,7 +48,8 @@
         "ville": "paris",
         "service": "bureau",
         "montant": 80,
-        "actif": false
+        "actif": false,
+        "type_element": "interim"
       },
       {
         "id": 3,
@@ -52,7 +57,8 @@
         "ville": "lyon",
         "service": "bureau",
         "montant": null,
-        "actif": true
+        "actif": true,
+        "type_element": "salarie"
       },
       {
         "id": 4,
@@ -60,7 +66,8 @@
         "ville": "nantes",
         "service": "chantier",
         "montant": 80,
-        "actif": true
+        "actif": true,
+        "type_element": "materiel"
       },
       {
         "id": 5,
@@ -68,7 +75,8 @@
         "ville": null,
         "service": "atelier",
         "montant": 300,
-        "actif": true
+        "actif": true,
+        "type_element": "salarie"
       },
       {
         "id": 6,
@@ -76,7 +84,8 @@
         "ville": "paris",
         "service": "chantier",
         "montant": 15,
-        "actif": false
+        "actif": false,
+        "type_element": "interim"
       },
       {
         "id": 7,
@@ -84,9 +93,11 @@
         "ville": "lyon",
         "service": null,
         "montant": 80,
-        "actif": true
+        "actif": true,
+        "type_element": "materiel"
       }
-    ]
+    ],
+    "colonne_type": "type_element"
   },
   "recherche": [
     "nom",
@@ -441,6 +452,43 @@
         7,
         3
       ]
+    },
+    {
+      "nom": "thème à un type",
+      "types": [
+        "materiel"
+      ],
+      "requete": {},
+      "attendu": [
+        4,
+        7
+      ]
+    },
+    {
+      "nom": "thème à plusieurs types, avec filtre de vue et tri",
+      "types": [
+        "salarie",
+        "interim"
+      ],
+      "filtres": [
+        {
+          "colonne": "actif",
+          "op": "vrai"
+        }
+      ],
+      "requete": {
+        "tri": [
+          {
+            "colonne": "montant",
+            "sens": "desc"
+          }
+        ]
+      },
+      "attendu": [
+        5,
+        1,
+        3
+      ]
     }
   ],
   "segments": [
@@ -502,6 +550,20 @@
           "colonne": "actif",
           "op": "faux"
         }
+      ],
+      "requete": {},
+      "colonne": "ville",
+      "attendu": [
+        {
+          "valeur": "paris",
+          "nombre": 2
+        }
+      ]
+    },
+    {
+      "nom": "comptes restreints au thème",
+      "types": [
+        "interim"
       ],
       "requete": {},
       "colonne": "ville",

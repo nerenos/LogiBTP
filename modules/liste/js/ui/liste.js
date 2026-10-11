@@ -5,6 +5,7 @@ import { calculerLargeurs } from '../src/largeurs.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
 import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
+import { GestionThemes } from './themes.js';
 
 const LARGEUR_COIN = 30;
 const DELAI_RECHERCHE = 350;
@@ -17,16 +18,23 @@ const DUREE_MARQUE = 4000;
  *
  * Options : fournisseur (FournisseurApi / FournisseurMemoire), contexte (vues proposées), ouvrir({ id, type, ligne }),
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
- * formats (FormatsCellule ou dérivée), cleVue (clé localStorage de la dernière vue ouverte).
+ * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
+ * peutGererThemes (création et modification des thèmes, profil ADMIN).
+ *
+ * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
+ * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, intervalleControle = 30000, formats, cleVue } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue } = {}) {
     this.racine = racine;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
     this.ouvrirExterne = ouvrir;
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
+    this.peutGererThemes = peutGererThemes;
+    this.themes = [];
+    this.theme = null;             // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
     this.cleVue = cleVue ?? `logibtp.liste.${contexte ?? 'toutes'}`;
     this.vues = [];
@@ -71,6 +79,8 @@ export class ListeDonnees {
     r.classList.add('liste');
     r.innerHTML = `
       <div class="liste-barre">
+        <select class="liste-themes" title="Thème : regroupement des vues"></select>
+        <button type="button" data-action="themes" title="Gérer les thèmes" hidden>⚙</button>
         <select class="liste-vues" title="Vue"></select>
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage)">✎</button>
         <button type="button" data-action="nouvelle" title="Nouvelle vue">＋</button>
@@ -116,6 +126,9 @@ export class ListeDonnees {
     this.table = r.querySelector('.liste-table');
     this.corps = this.table.tBodies[0];
     this.basSuite = r.querySelector('.liste-suite');
+    r.querySelector('.liste-themes').addEventListener('change', (e) => this.choisirTheme(e.target.value || null).catch((x) => this.#erreur(x)));
+    r.querySelector('[data-action="themes"]').hidden = !this.peutGererThemes;
+    r.querySelector('[data-action="themes"]').addEventListener('click', () => this.gererThemes());
     r.querySelector('.liste-vues').addEventListener('change', (e) => this.ouvrirVue(Number(e.target.value)).catch((x) => this.#erreur(x)));
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
     r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
@@ -161,17 +174,60 @@ export class ListeDonnees {
 
   // ---------------------------------------------------------------- vues
 
-  /** Charge la liste des vues et ouvre la vue demandée, la dernière utilisée ou la première. */
+  /** Charge les thèmes et les vues, puis ouvre la vue demandée, la dernière utilisée du thème ou la première. */
   async demarrer(vueId = null) {
+    await this.chargerThemes();
+    if (this.theme === null && this.prefs.theme && this.themes.some((t) => t.thl_code === this.prefs.theme)) this.theme = this.prefs.theme;
+    this.racine.querySelector('.liste-themes').value = this.theme ?? '';
     await this.chargerVues();
-    let id = vueId;
-    if (id === null) { try { id = Number(localStorage.getItem(this.cleVue)) || null; } catch { id = null; } }
+    await this.#ouvrirDansTheme(vueId);
+  }
+
+  async chargerThemes() {
+    this.themes = await this.fournisseur.themes?.() ?? [];
+    const sel = this.racine.querySelector('.liste-themes');
+    sel.innerHTML = `<option value="">Toutes les vues</option>${this.themes.map((t) =>
+      `<option value="${echapper(t.thl_code)}" title="${echapper((t.thl_types ?? []).map((x) => x.libelle || x.code).join(', ') || 'Tous les types d\'élément')}">${echapper(`${t.thl_icone ?? ''} ${t.thl_libelle}`.trim())}</option>`).join('')}`;
+    if (this.theme && !this.themes.some((t) => t.thl_code === this.theme)) this.theme = null;
+    sel.value = this.theme ?? '';
+    sel.hidden = !this.themes.length && !this.peutGererThemes;
+  }
+
+  /** Change de thème : vues du thème, puis la dernière ouverte dans ce thème. */
+  async choisirTheme(code) {
+    this.theme = code;
+    this.prefs.theme = code;
+    this.#ecrirePreferences();
+    this.racine.querySelector('.liste-themes').value = code ?? '';
+    await this.chargerVues();
+    await this.#ouvrirDansTheme(null);
+  }
+
+  async #ouvrirDansTheme(vueId) {
+    let id = vueId ?? this.prefs.vueParTheme?.[this.theme ?? ''] ?? null;
+    if (id === null && this.theme === null) { try { id = Number(localStorage.getItem(this.cleVue)) || null; } catch { id = null; } }
     if (!this.vues.some((v) => v.vli_id === id)) id = this.vues[0]?.vli_id ?? null;
-    if (id !== null) await this.ouvrirVue(id);
+    if (id !== null) { await this.ouvrirVue(id); return; }
+    // Thème sans vue : liste vide, le concepteur (＋) en crée une.
+    this.vue = null;
+    this.appliquerVue({ vli_id: null, vli_nom: '', definition: { theme: this.theme } }, { nonEnregistree: false, vide: true });
+    this.message('Aucune vue dans ce thème : ＋ pour en créer une');
+  }
+
+  gererThemes() {
+    new GestionThemes({
+      fournisseur: this.fournisseur,
+      message: this.message,
+      fermer: async () => {
+        await this.chargerThemes();
+        await this.chargerVues();
+        if (!this.vues.some((v) => v.vli_id === this.vue?.vli_id)) await this.#ouvrirDansTheme(null);
+      },
+    });
   }
 
   async chargerVues() {
-    this.vues = await this.fournisseur.vues(this.contexte);
+    this.vues = await this.fournisseur.vues(this.contexte, this.theme);
     const partage = { P: 'personnelle', G: 'groupe', T: 'tous' };
     this.racine.querySelector('.liste-vues').innerHTML = this.vues.map((v) =>
       `<option value="${v.vli_id}" title="Vue ${partage[v.vli_partage] ?? ''} de ${echapper(v.vli_proprietaire ?? '')}">${echapper(v.vli_nom)}</option>`).join('');
@@ -181,15 +237,17 @@ export class ListeDonnees {
   async ouvrirVue(id) {
     const vue = await this.fournisseur.vue(id);
     try { localStorage.setItem(this.cleVue, String(id)); } catch { /* préférence non conservée */ }
+    this.prefs.vueParTheme = { ...this.prefs.vueParTheme, [this.theme ?? '']: id };
+    this.#ecrirePreferences();
     this.racine.querySelector('.liste-vues').value = String(id);
     this.appliquerVue(vue, { nonEnregistree: false });
   }
 
   /** Applique une vue (enregistrée ou issue du concepteur) : en-têtes, segments, rechargement. */
-  appliquerVue(vue, { nonEnregistree = false } = {}) {
-    this.vue = { ...vue, definition: normaliserDefinition(vue.definition) };
+  appliquerVue(vue, { nonEnregistree = false, vide = false } = {}) {
+    this.vue = vide ? null : { ...vue, definition: normaliserDefinition(vue.definition) };
     this.nonEnregistree = nonEnregistree;
-    this.modele = new ModeleVue(this.vue.definition);
+    this.modele = new ModeleVue(vue.definition);
     const codes = new Set(this.modele.colonnes.map((c) => c.code));
     for (const k of [...this.filtres.keys()]) if (!codes.has(k)) this.filtres.delete(k);
     const segs = new Set(this.definition.segments.map((s) => s.colonne));
@@ -216,17 +274,30 @@ export class ListeDonnees {
     fermerMenuFiltre();
     const base = nouvelle || !this.vue
       ? { vli_id: null, vli_nom: 'Nouvelle vue', vli_contexte: this.contexte, vli_partage: 'P', vli_groupe: null,
-        definition: nouvelle && this.vue ? structuredClone(this.vue.definition) : normaliserDefinition({}) }
+        definition: { ...(nouvelle && this.vue ? structuredClone(this.vue.definition) : normaliserDefinition({})), theme: this.theme } }
       : structuredClone(this.vue);
     this.concepteur = new ConcepteurVue({
       fournisseur: this.fournisseur,
       vue: base,
       peutRequete: this.peutRequete,
+      themes: this.themes,
       largeursAjustees: { ...this.#largeursAjustees() },
-      oublierLargeurs: () => { delete this.prefs.colonnes?.[this.#cleLargeurs()]; this.#ecrirePreferences(); },
+      ordreAjuste: this.prefs.ordres?.[this.#cleLargeurs()] ?? null,
+      oublierLargeurs: () => {
+        delete this.prefs.colonnes?.[this.#cleLargeurs()];
+        delete this.prefs.ordres?.[this.#cleLargeurs()];
+        this.#ecrirePreferences();
+      },
       appliquer: (v) => this.appliquerVue(v, { nonEnregistree: true }),
       enregistrer: async (v) => {
         const enregistree = await this.fournisseur.enregistrerVue(v);
+        // Vue rangée dans un autre thème : on suit la vue.
+        const theme = enregistree.definition?.theme ?? null;
+        if (this.theme !== null && theme !== this.theme) {
+          this.theme = theme;
+          this.prefs.theme = theme;
+          this.racine.querySelector('.liste-themes').value = theme ?? '';
+        }
         await this.chargerVues();
         try { localStorage.setItem(this.cleVue, String(enregistree.vli_id)); } catch { /* préférence non conservée */ }
         this.appliquerVue(enregistree, { nonEnregistree: false });
@@ -237,7 +308,8 @@ export class ListeDonnees {
       supprimer: async (v) => {
         await this.fournisseur.supprimerVue(v.vli_id);
         this.vue = null;
-        await this.demarrer();
+        await this.chargerVues();
+        await this.#ouvrirDansTheme(null);
         this.message(`Vue « ${v.vli_nom} » supprimée`, 'succes');
       },
       message: this.message,
@@ -516,7 +588,7 @@ export class ListeDonnees {
   // ---------------------------------------------------------------- en-têtes, tri, filtres
 
   #rendreEntete() {
-    const visibles = this.modele.visibles;
+    const visibles = this.#visibles();
     const thead = this.table.tHead;
     const tr = document.createElement('tr');
     const coin = document.createElement('th');
@@ -549,6 +621,7 @@ export class ListeDonnees {
       th.querySelector('[data-tri]').addEventListener('click', () => this.#clicTri(c, sens));
       th.querySelector('[data-filtre]').addEventListener('click', (e) => this.#menu(c, e.currentTarget));
       this.#poignee(th.querySelector('.liste-poignee'), c.code);
+      this.#deplacement(th, c.code);
       tr.append(th);
     }
     thead.replaceChildren(tr);
@@ -644,7 +717,7 @@ export class ListeDonnees {
   }
 
   rendreCorps() {
-    const visibles = this.modele.visibles;
+    const visibles = this.#visibles();
     const f = document.createDocumentFragment();
     const affichees = this.lignesAffichees();
     for (const l of affichees) f.append(this.#ligneDom(l, visibles));
@@ -656,7 +729,7 @@ export class ListeDonnees {
   /** Nouveau lot : ajouté en fin de tableau, sauf tri local actif (le tableau est alors retrié). */
   #ajouterAuCorps(nouvelles) {
     if (this.triLocal) { this.rendreCorps(); return; }
-    const visibles = this.modele.visibles;
+    const visibles = this.#visibles();
     const f = document.createDocumentFragment();
     for (const l of this.lignesAffichees(nouvelles)) f.append(this.#ligneDom(l, visibles));
     this.corps.append(f);
@@ -680,6 +753,59 @@ export class ListeDonnees {
     } else b.textContent = this.lignes.length ? `Fin de la liste · ${this.lignes.length} ligne${this.lignes.length > 1 ? 's' : ''}` : 'Aucune ligne';
   }
 
+  /** Colonnes visibles, dans l'ordre choisi à la souris par l'utilisateur (sinon celui de la vue). */
+  #visibles() {
+    const visibles = this.modele.visibles;
+    const ordre = this.prefs?.ordres?.[this.#cleLargeurs()];
+    if (!ordre?.length) return visibles;
+    const rang = new Map(ordre.map((code, i) => [code, i]));
+    return [...visibles].sort((a, b) => (rang.get(a.code) ?? Infinity) - (rang.get(b.code) ?? Infinity));
+  }
+
+  /**
+   * Déplacement d'une colonne : glisser l'en-tête (hors boutons et poignée) sur un autre en-tête, à gauche ou à
+   * droite de sa moitié. L'ordre est une préférence du navigateur (le concepteur peut le reprendre dans la vue).
+   */
+  #deplacement(th, code) {
+    th.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('button, .liste-poignee')) return;
+      const x0 = e.clientX, y0 = e.clientY;
+      let actif = false, cible = null;
+      const marquer = (el, cote) => {
+        this.table.tHead.querySelectorAll('th.depot-gauche, th.depot-droite').forEach((x) => x.classList.remove('depot-gauche', 'depot-droite'));
+        if (el) el.classList.add(`depot-${cote}`);
+      };
+      const bouger = (ev) => {
+        if (!actif && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
+        if (!actif) { actif = true; th.setPointerCapture(e.pointerId); th.classList.add('deplacee'); document.body.classList.add('deplacement-colonne'); }
+        const sous = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('th[data-code]');
+        if (!sous || !this.table.contains(sous)) { cible = null; marquer(null); return; }
+        const r = sous.getBoundingClientRect();
+        cible = { code: sous.dataset.code, apres: ev.clientX > r.left + r.width / 2 };
+        marquer(sous, cible.apres ? 'droite' : 'gauche');
+      };
+      const finir = () => {
+        th.removeEventListener('pointermove', bouger);
+        th.removeEventListener('pointerup', finir);
+        th.removeEventListener('pointercancel', finir);
+        if (!actif) return;
+        th.classList.remove('deplacee');
+        document.body.classList.remove('deplacement-colonne');
+        marquer(null);
+        if (!cible || cible.code === code) return;
+        const codes = this.#visibles().map((c) => c.code).filter((x) => x !== code);
+        codes.splice(codes.indexOf(cible.code) + (cible.apres ? 1 : 0), 0, code);
+        this.prefs.ordres = { ...this.prefs.ordres, [this.#cleLargeurs()]: codes };
+        this.#ecrirePreferences();
+        this.#rendreEntete();
+        this.rendreCorps();
+      };
+      th.addEventListener('pointermove', bouger);
+      th.addEventListener('pointerup', finir);
+      th.addEventListener('pointercancel', finir);
+    });
+  }
+
   /** Largeurs ajustées à la souris pour la vue courante : préférence du navigateur, jamais en base. */
   #cleLargeurs() { return String(this.vue?.vli_id ?? 'nouvelle'); }
 
@@ -692,7 +818,7 @@ export class ListeDonnees {
       e.preventDefault();
       e.stopPropagation();
       poignee.setPointerCapture(e.pointerId);
-      const i = this.modele.visibles.findIndex((c) => c.code === code);
+      const i = this.#visibles().findIndex((c) => c.code === code);
       const col = this.table.querySelector('colgroup').children[i + 1];
       const depart = col.getBoundingClientRect().width;
       const x0 = e.clientX;
@@ -732,7 +858,7 @@ export class ListeDonnees {
   #largeurs() {
     const ajustees = this.#largeursAjustees();
     // Une colonne ajustée à la souris devient fixe (pour cet utilisateur) ; les autres se partagent le reste.
-    const visibles = this.modele.visibles.map((c) => (ajustees[c.code]
+    const visibles = this.#visibles().map((c) => (ajustees[c.code]
       ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : c));
     const dispo = Math.max(this.zone.clientWidth - LARGEUR_COIN - 2, 200);
     const largeurs = calculerLargeurs(visibles, dispo);

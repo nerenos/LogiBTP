@@ -3,7 +3,9 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte } from './requet
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
-//   vues(contexte)                → [{ vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire, modifiable }]
+//   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif }]
+//   enregistrerTheme(theme)       supprimerTheme(code)    (profil ADMIN)
+//   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
 //   vue(id)                       → { vli_id, vli_nom, vli_contexte, vli_partage, vli_groupe, vli_version, definition }
 //   enregistrerVue(vue)           → vue enregistrée          supprimerVue(id)
 //   sources()                     → [{ code, libelle, colonnes: [{ code, type }], colonne_id, colonne_type, type_element }]
@@ -44,7 +46,15 @@ export class FournisseurApi {
     return { vue_id, definition, recherche, segments, tri, ...extra };
   }
 
-  vues(contexte) { return this.appel('GET', `/vues${contexte ? `?contexte=${encodeURIComponent(contexte)}` : ''}`); }
+  themes() { return this.appel('GET', '/themes'); }
+  enregistrerTheme(t) { return this.appel('PUT', `/themes/${encodeURIComponent(t.thl_code)}`, t); }
+  supprimerTheme(code) { return this.appel('DELETE', `/themes/${encodeURIComponent(code)}`); }
+  vues(contexte, theme) {
+    const q = new URLSearchParams();
+    if (contexte) q.set('contexte', contexte);
+    if (theme) q.set('theme', theme);
+    return this.appel('GET', `/vues${q.size ? `?${q}` : ''}`);
+  }
   vue(id) { return this.appel('GET', `/vues/${id}`); }
   enregistrerVue(v) { return v.vli_id ? this.appel('PUT', `/vues/${v.vli_id}`, v) : this.appel('POST', '/vues', v); }
   supprimerVue(id) { return this.appel('DELETE', `/vues/${id}`); }
@@ -62,7 +72,7 @@ export class FournisseurApi {
  * localStorage si `cleStockage` est fourni (démo hors ligne uniquement).
  */
 export class FournisseurMemoire {
-  constructor({ sources = {}, vues = [], utilisateur = 'demo', cleStockage = null } = {}) {
+  constructor({ sources = {}, vues = [], themes = [], utilisateur = 'demo', cleStockage = null } = {}) {
     this.sourcesDonnees = sources;
     this.utilisateur = utilisateur;
     this.cleStockage = cleStockage;
@@ -72,16 +82,41 @@ export class FournisseurMemoire {
       ? [...stockees, ...structuredClone(vues.filter((v) => !stockees.some((x) => x.vli_id === v.vli_id)))]
       : structuredClone(vues);
     this.prochainId = Math.max(0, ...this.vuesStockees.map((v) => v.vli_id)) + 1;
+    const themesStockes = this.#lireStockage('.themes');
+    this.themesStockes = themesStockes
+      ? [...themesStockes, ...structuredClone(themes.filter((t) => !themesStockes.some((x) => x.thl_code === t.thl_code)))]
+      : structuredClone(themes);
   }
 
-  #lireStockage() {
+  #lireStockage(suffixe = '') {
     if (!this.cleStockage) return null;
-    try { return JSON.parse(localStorage.getItem(this.cleStockage) ?? 'null'); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem(this.cleStockage + suffixe) ?? 'null'); } catch { return null; }
   }
 
   #ecrireStockage() {
     if (!this.cleStockage) return;
-    try { localStorage.setItem(this.cleStockage, JSON.stringify(this.vuesStockees)); } catch { /* stockage indisponible */ }
+    try {
+      localStorage.setItem(this.cleStockage, JSON.stringify(this.vuesStockees));
+      localStorage.setItem(`${this.cleStockage}.themes`, JSON.stringify(this.themesStockes));
+    } catch { /* stockage indisponible */ }
+  }
+
+  async themes() {
+    return structuredClone(this.themesStockes.filter((t) => t.thl_actif !== false).sort((a, b) => (a.thl_ordre ?? 0) - (b.thl_ordre ?? 0) || a.thl_libelle.localeCompare(b.thl_libelle)));
+  }
+
+  async enregistrerTheme(t) {
+    if (!t.thl_code?.trim() || !t.thl_libelle?.trim()) throw new ErreurFournisseur(422, 'THEME', 'Code et libellé du thème obligatoires');
+    const i = this.themesStockes.findIndex((x) => x.thl_code === t.thl_code);
+    if (i >= 0) this.themesStockes[i] = structuredClone(t); else this.themesStockes.push(structuredClone(t));
+    this.#ecrireStockage();
+    return structuredClone(t);
+  }
+
+  async supprimerTheme(code) {
+    this.themesStockes = this.themesStockes.filter((t) => t.thl_code !== code);
+    for (const v of this.vuesStockees) if (v.definition?.theme === code) { v.definition.theme = null; v.vli_theme = null; }
+    this.#ecrireStockage();
   }
 
   /** Remplace les lignes d'une source (simulation des modifications d'autres utilisateurs). */
@@ -89,10 +124,12 @@ export class FournisseurMemoire {
     f(this.sourcesDonnees[code].lignes);
   }
 
-  async vues(contexte) {
-    return this.vuesStockees.filter((v) => !contexte || v.vli_contexte === contexte)
-      .map(({ vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire }) => ({
-        vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire, modifiable: true,
+  async vues(contexte, theme) {
+    return this.vuesStockees
+      .filter((v) => (!contexte || v.vli_contexte === contexte) && (!theme || (v.definition?.theme ?? null) === theme))
+      .sort((a, b) => a.vli_nom.localeCompare(b.vli_nom))
+      .map(({ vli_id, vli_nom, vli_contexte, vli_partage, vli_proprietaire, definition }) => ({
+        vli_id, vli_nom, vli_contexte, vli_theme: definition?.theme ?? null, vli_partage, vli_proprietaire, modifiable: true,
       }));
   }
 
@@ -167,30 +204,31 @@ export class FournisseurMemoire {
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
     const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
     const filtres = def.filtres.filter((f) => connues.has(f.colonne));
-    return { lignes, recherche, tri, filtres };
+    const types = (this.themesStockes.find((t) => t.thl_code === def.theme)?.thl_types ?? []).map((t) => t.code);
+    return { lignes, recherche, tri, filtres, types };
   }
 
   async lot(d) {
-    const { lignes, recherche, tri, filtres } = await this.#lignesSource(d);
-    return structuredClone(lot(trier(filtrer(lignes, { ...d, filtres }, recherche), tri), tri, d.apres ?? null, d.taille ?? 100));
+    const { lignes, recherche, tri, filtres, types } = await this.#lignesSource(d);
+    return structuredClone(lot(trier(filtrer(lignes, { ...d, filtres, types }, recherche), tri), tri, d.apres ?? null, d.taille ?? 100));
   }
 
   async segments(d, colonne) {
-    const { lignes, recherche, filtres } = await this.#lignesSource({ ...d, segments: { ...(d.segments ?? {}), [colonne]: d.segments?.[colonne] ?? [] } });
+    const { lignes, recherche, filtres, types } = await this.#lignesSource({ ...d, segments: { ...(d.segments ?? {}), [colonne]: d.segments?.[colonne] ?? [] } });
     // Comptes calculés sans le filtre du segment lui-même (les autres segments s'appliquent).
     const autres = { ...(d.segments ?? {}) };
     delete autres[colonne];
-    return comptesSegment(filtrer(lignes, { ...d, segments: autres, filtres }, recherche), colonne);
+    return comptesSegment(filtrer(lignes, { ...d, segments: autres, filtres, types }, recherche), colonne);
   }
 
   async controle(d, curseur) {
-    const { lignes, recherche, tri, filtres } = await this.#lignesSource(d);
-    return jusqua(trier(filtrer(lignes, { ...d, filtres }, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
+    const { lignes, recherche, tri, filtres, types } = await this.#lignesSource(d);
+    return jusqua(trier(filtrer(lignes, { ...d, filtres, types }, recherche), tri), tri, curseur).map((l) => ({ id: l._id, h: l._h }));
   }
 
   async lignes(d, ids) {
-    const { lignes, recherche, filtres } = await this.#lignesSource(d);
+    const { lignes, recherche, filtres, types } = await this.#lignesSource(d);
     const voulus = new Set(ids.map(String));
-    return structuredClone(filtrer(lignes.filter((l) => voulus.has(String(l._id))), { ...d, filtres }, recherche));
+    return structuredClone(filtrer(lignes.filter((l) => voulus.has(String(l._id))), { ...d, filtres, types }, recherche));
   }
 }

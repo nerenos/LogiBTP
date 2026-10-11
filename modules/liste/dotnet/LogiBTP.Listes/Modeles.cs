@@ -14,6 +14,8 @@ public sealed class DefinitionVue
     public List<TriColonne> Tri { get; set; } = [];
     /// <summary>Filtres fixes de la vue, appliqués par la base en ET (ex. salariés actifs).</summary>
     public List<FiltreVue> Filtres { get; set; } = [];
+    /// <summary>Thème de la vue : ses types d'élément restreignent les lignes (aucun type = tous).</summary>
+    public string? Theme { get; set; }
     public int TailleLot { get; set; } = 100;
 }
 
@@ -77,6 +79,13 @@ public sealed class DemandeListe
     public int Taille { get; set; } = 100;
     public List<string>? Ids { get; set; }
     public string? Colonne { get; set; }
+}
+
+/// <summary>Type d'élément couvert par un thème.</summary>
+public sealed class TypeElementTheme
+{
+    public string Code { get; set; } = "";
+    public string? Libelle { get; set; }
 }
 
 /// <summary>Colonne d'une source : nom et type PostgreSQL (data_type).</summary>

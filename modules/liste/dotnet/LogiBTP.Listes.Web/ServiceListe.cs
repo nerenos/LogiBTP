@@ -34,12 +34,64 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     // ------------------------------------------------------------------ vues
 
-    public virtual async Task<List<ResumeVue>> Vues(string? contexte, Utilisateur u, CancellationToken ct)
+    public virtual async Task<List<ResumeVue>> Vues(string? contexte, string? theme, Utilisateur u, CancellationToken ct)
     {
-        var vues = await db.Vues.AsNoTracking().Where(v => contexte == null || v.VliContexte == contexte)
+        var vues = await db.Vues.AsNoTracking()
+            .Where(v => (contexte == null || v.VliContexte == contexte) && (theme == null || v.VliTheme == theme))
             .OrderBy(v => v.VliNom).ToListAsync(ct);
         return vues.Where(v => specialisation.PeutVoir(v, u))
-            .Select(v => new ResumeVue(v.VliId, v.VliNom, v.VliContexte, v.VliPartage, v.VliProprietaire, specialisation.PeutModifier(v, u))).ToList();
+            .Select(v => new ResumeVue(v.VliId, v.VliNom, v.VliContexte, v.VliTheme, v.VliPartage, v.VliProprietaire, specialisation.PeutModifier(v, u))).ToList();
+    }
+
+    // ------------------------------------------------------------------ thèmes
+
+    protected static ThemeListeDto VersDto(ThemeListe t) => new()
+    {
+        ThlCode = t.ThlCode, ThlLibelle = t.ThlLibelle, ThlIcone = t.ThlIcone, ThlOrdre = t.ThlOrdre, ThlActif = t.ThlActif,
+        ThlTypes = t.ThlTypes.Deserialize<List<TypeElementTheme>>(JsonCalcul.Options) ?? [],
+    };
+
+    public virtual async Task<List<ThemeListeDto>> Themes(CancellationToken ct) =>
+        (await db.Themes.AsNoTracking().Where(t => t.ThlActif).OrderBy(t => t.ThlOrdre).ThenBy(t => t.ThlLibelle).ToListAsync(ct)).Select(VersDto).ToList();
+
+    public virtual async Task<ThemeListeDto> EnregistrerTheme(string code, ThemeListeDto dto, Utilisateur u, CancellationToken ct)
+    {
+        if (!specialisation.PeutGererThemes(u)) throw ExceptionMetier.AccesRefuse("THEMES");
+        if (string.IsNullOrWhiteSpace(code) || code.Length > 50) throw ExceptionMetier.Invalide("THEME", "Code de thème obligatoire (50 caractères au plus)");
+        if (string.IsNullOrWhiteSpace(dto.ThlLibelle)) throw ExceptionMetier.Invalide("THEME", "Libellé du thème obligatoire");
+        var types = dto.ThlTypes.Where(t => !string.IsNullOrWhiteSpace(t.Code))
+            .Select(t => new TypeElementTheme { Code = t.Code.Trim(), Libelle = string.IsNullOrWhiteSpace(t.Libelle) ? t.Code.Trim() : t.Libelle.Trim() })
+            .DistinctBy(t => t.Code).ToList();
+        var theme = await db.Themes.FirstOrDefaultAsync(t => t.ThlCode == code, ct);
+        if (theme is null)
+        {
+            theme = new ThemeListe { ThlCode = code.Trim() };
+            db.Themes.Add(theme);
+        }
+        theme.ThlLibelle = dto.ThlLibelle.Trim();
+        theme.ThlIcone = string.IsNullOrWhiteSpace(dto.ThlIcone) ? null : dto.ThlIcone.Trim();
+        theme.ThlOrdre = dto.ThlOrdre;
+        theme.ThlActif = dto.ThlActif;
+        theme.ThlTypes = JsonSerializer.SerializeToDocument(types, JsonCalcul.Options);
+        await db.SaveChangesAsync(ct);
+        return VersDto(theme);
+    }
+
+    /// <summary>Suppression d'un thème : ses vues restent, sans thème (vli_theme à NULL par la clé étrangère).</summary>
+    public virtual async Task SupprimerTheme(string code, Utilisateur u, CancellationToken ct)
+    {
+        if (!specialisation.PeutGererThemes(u)) throw ExceptionMetier.AccesRefuse("THEMES");
+        var theme = await db.Themes.FirstOrDefaultAsync(t => t.ThlCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Thème {code}");
+        db.Themes.Remove(theme);
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Types d'élément d'un thème (vide = tous, ou thème inconnu).</summary>
+    protected async Task<IReadOnlyList<string>> TypesTheme(string? code, CancellationToken ct)
+    {
+        if (code is null) return [];
+        var theme = await db.Themes.AsNoTracking().FirstOrDefaultAsync(t => t.ThlCode == code, ct);
+        return theme is null ? [] : VersDto(theme).ThlTypes.Select(t => t.Code).ToList();
     }
 
     protected async Task<VueListe> Charger(long id, Utilisateur u, CancellationToken ct)
@@ -51,7 +103,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     protected VueListeDto VersDto(VueListe v, Utilisateur u) => new()
     {
-        VliId = v.VliId, VliNom = v.VliNom, VliContexte = v.VliContexte, VliPartage = v.VliPartage, VliProprietaire = v.VliProprietaire,
+        VliId = v.VliId, VliNom = v.VliNom, VliContexte = v.VliContexte, VliTheme = v.VliTheme, VliPartage = v.VliPartage, VliProprietaire = v.VliProprietaire,
         VliGroupe = v.VliGroupe, VliVersion = v.VliVersion, Modifiable = specialisation.PeutModifier(v, u),
         Definition = v.VliDefinition.RootElement.Clone(),
     };
@@ -90,6 +142,10 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
             {
                 throw new ErreurListe("SOURCE", $"Source {def.Source.Vue} inconnue");
             }
+            if (def.Theme is not null && !await db.Themes.AnyAsync(t => t.ThlCode == def.Theme, ct))
+            {
+                throw new ErreurListe("THEME", $"Thème {def.Theme} inconnu");
+            }
         }
         catch (ErreurListe e)
         {
@@ -112,6 +168,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         }
         v.VliNom = dto.VliNom.Trim();
         v.VliContexte = dto.VliContexte;
+        v.VliTheme = def.Theme;
         v.VliPartage = dto.VliPartage;
         v.VliGroupe = dto.VliPartage == "G" ? dto.VliGroupe ?? u.Groupe : null;
         v.VliDefinition = JsonDocument.Parse(dto.Definition.GetRawText());
@@ -229,9 +286,12 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
     protected async Task<ConstructeurRequete> Constructeur(DemandeListe d, Utilisateur u, CancellationToken ct)
     {
         var (source, def) = await Resoudre(d, u, ct);
+        var types = await TypesTheme(def.Theme, ct);
         try
         {
-            return specialisation.Constructeur(source, def, d);
+            var c = specialisation.Constructeur(source, def, d);
+            c.TypesTheme = types;
+            return c;
         }
         catch (ErreurListe e)
         {
