@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, THEMES } from '@logibtp/socle/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 
 /** Paramètres : préférences de navigation, profil (démo), listes, fiches, GED, société, à propos. */
@@ -14,6 +14,11 @@ export class PageParametres extends PageBase {
     const societe = app.societe ?? {};
     this.conteneur.innerHTML = `<div class="page-parametres">
       <h1 class="page-titre">⚙ Paramètres</h1>
+      <section class="carte"><h2>Affichage</h2>
+        <div class="ligne" role="radiogroup" aria-label="Thème">${THEMES.map((t) => `<label class="ligne"><input type="radio" name="theme" value="${t.code}"
+          ${app.preferences.get('theme') === t.code ? 'checked' : ''}> ${t.icone} ${echapper(t.libelle)}</label>`).join('')}</div>
+        <p class="aide">Automatique suit le réglage clair / sombre du système. Le choix s'applique à toutes les fenêtres de ce navigateur.</p>
+      </section>
       <section class="carte"><h2>Navigation</h2>
         <label class="ligne"><input type="checkbox" data-pref="nouvelleFenetre" ${app.preferences.get('nouvelleFenetre') ? 'checked' : ''}>
           Ouvrir les fiches et les documents d'une liste dans une nouvelle fenêtre</label>
@@ -51,6 +56,7 @@ export class PageParametres extends PageBase {
         <dt>Mode</dt><dd>${app.enLigne ? 'API connectée' : 'Démo hors ligne (données de démonstration, calcul local)'}</dd></dl>
       </section>
     </div>`;
+    this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
     this.conteneur.querySelector('[data-pref="nouvelleFenetre"]').addEventListener('change', (e) => app.preferences.set('nouvelleFenetre', e.target.checked));
     this.conteneur.querySelector('[data-action="profil"]')?.addEventListener('change', (e) => app.changerProfilDemo(e.target.value));
     this.conteneur.addEventListener('click', (e) => {

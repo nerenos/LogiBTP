@@ -2,7 +2,7 @@ import { Routeur, GestionFenetres, Preferences } from '@logibtp/navigation';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme } from '@logibtp/socle/ui';
 import { api, ErreurApi, ENTETES } from './api.js';
 import { DOCUMENT_DEMO } from './demo.js';
 import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -27,7 +27,14 @@ export class Application {
   constructor() {
     this.enLigne = false;
     this.societe = null;
-    this.preferences = new Preferences('logibtp.navigation', { nouvelleFenetre: false, profilDemo: 'ADMIN' });
+    this.preferences = new Preferences('logibtp.navigation', { nouvelleFenetre: false, profilDemo: 'ADMIN', theme: 'auto' });
+    appliquerTheme(this.preferences.get('theme'));
+    // Thème changé dans une autre fenêtre de la session (même localStorage) : appliqué ici aussi.
+    window.addEventListener('storage', (e) => {
+      if (e.key !== 'logibtp.navigation') return;
+      this.preferences = new Preferences('logibtp.navigation', this.preferences.defauts);
+      appliquerTheme(this.preferences.get('theme'));
+    });
     this.abonnes = new Map(); // sujet → Set(fonction)
     this.servicesPrets = null;
   }
@@ -93,6 +100,12 @@ export class Application {
   utilisateur() { return ENTETES['X-Utilisateur'] ?? 'demo'; }
   estAdmin() { return this.profil() === 'ADMIN'; }
   peutGererThemes() { return !this.enLigne || this.estAdmin(); }
+
+  /** Thème d'affichage : 'auto' (système), 'clair' ou 'sombre' ; gardé dans le navigateur pour toutes les fenêtres. */
+  changerTheme(theme) {
+    this.preferences.set('theme', theme);
+    appliquerTheme(theme);
+  }
 
   async changerProfilDemo(profil) {
     this.preferences.set('profilDemo', profil);

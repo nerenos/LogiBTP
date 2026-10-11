@@ -20,8 +20,10 @@
   color-scheme: light;
 }
 
+/* Thème sombre : celui du système (Automatique), sauf choix explicite data-theme="light" / "dark" sur <html>
+   (appliquerTheme, préférence de l'utilisateur). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --fond: #16181c;
     --surface: #1f2228;
     --texte: #e6e8eb;
@@ -40,6 +42,26 @@
     --pied-fond: #25222f;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --fond: #16181c;
+  --surface: #1f2228;
+  --texte: #e6e8eb;
+  --discret: #98a2b3;
+  --bord: #394049;
+  --accent: #6ea8ff;
+  --accent-clair: #1d2a3f;
+  --selection: #25385a;
+  --erreur: #ff8a80;
+  --erreur-fond: #3a1f1f;
+  --alerte: #ffb86b;
+  --alerte-fond: #3a2e1a;
+  --succes: #5fd39a;
+  --titre-fond: #262a31;
+  --ouvrage-fond: #1c2027;
+  --pied-fond: #25222f;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

@@ -1,4 +1,5 @@
 import { Bandeau } from '@logibtp/navigation/ui';
+import { THEMES } from '@logibtp/socle/ui';
 
 // Menus du bandeau, regroupés par classe de métier, et catalogue des raccourcis de l'accueil (tous les éléments
 // de menu ayant une URL). Les menus Fenêtres et Paramètres sont construits à l'ouverture (état courant).
@@ -50,6 +51,9 @@ export function menus(app) {
     {
       code: 'parametres', libelle: '&Paramètres', elements: () => [
         { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres' },
+        { separateur: true, libelle: 'Affichage' },
+        ...THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
+        { separateur: true },
         { code: 'themes', libelle: 'Thèmes et vues de liste…', icone: '🗂', action: () => app.gererThemes(), desactive: !app.peutGererThemes() },
         { separateur: true, libelle: 'Fiches' },
         { libelle: 'Fiche salarié : champs…', icone: '👷', action: () => app.parametrerFiche('salarie'), desactive: !app.estAdmin() },

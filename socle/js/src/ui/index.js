@@ -7,3 +7,4 @@ export { lireNombre, formatNombre, formatLibre, htmlSur, echapper, estHtml, deco
 export { lirePreferences, ecrirePreferences } from './preferences.js';
 export { actionDe, combinaison, libelleRaccourci, configurerRaccourcis } from './raccourcis.js';
 export { editerLibelle } from './editeur-riche.js';
+export { THEMES, appliquerTheme } from './theme.js';
