@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using LogiBTP.Api.Btp;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Fiches.Web;
 using LogiBTP.Listes.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,9 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 // Module Document spécialisé par le cœur BTP (moteur de devis, métrés, variables).
 builder.Services.AddModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp, LogiBtpContext, SpecialisationBtp>();
 // Module Liste : vues de liste paramétrables sur les sources déclarées par le cœur (db/120, 121).
-builder.Services.AddModuleListe(o => o.UseNpgsql(connexion).UseSnakeCaseNamingConvention());
+builder.Services.AddModuleListe<SpecialisationListeBtp>(o => o.UseNpgsql(connexion).UseSnakeCaseNamingConvention());
+// Module Fiche : fiches salarié et matériel (db/130, 131), règles métier du cœur.
+builder.Services.AddModuleFiche<SpecialisationFicheBtp>(o => o.UseNpgsql(connexion).UseSnakeCaseNamingConvention());
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -33,5 +36,6 @@ var api = app.MapGroup("/api");
 api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", version_moteur = s.VersionMoteur }));
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
+api.MapModuleFiche();
 
 app.Run();

@@ -16,21 +16,22 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `modules/document` | Module Document : moteur générique `MoteurDocument` (JS et C#), numérotation, comparaison client / serveur ; `LogiBTP.Documents.Web` (services, persistance EF, routes HTTP génériques, `SpecialisationDocument`) ; UI `EditeurDocument`, `PanneauxDocument`, `ReglesDocument`, `PressePapiers` ; schéma `db/010`–`011` ; jeux `tests/cas` |
 | `modules/metre` | Module Métré, indépendant de son hôte : `Portees`, `EvaluateurMetre`, variables (JS et C#) ; UI `PanneauMetre` (interface d'hôte) et `DictionnaireMetre` ; schéma `db/020` (sans clé étrangère vers l'hôte) ; jeux `tests/cas` |
 | `modules/liste` | Module Liste : liste chargée par lots (pagination par clé), recherche « contient » sans casse ni accents et segments appliqués par la base, tri sur les lignes chargées ou sur toute la base, filtres de colonnes façon tableur (valeurs distinctes, conditions numériques et texte, mise en forme), colonnes calculées et mise en forme conditionnelle (formules), rafraîchissement ciblé et contrôle périodique des lignes ajoutées / modifiées / supprimées, concepteur de vues en deux onglets (mise en forme, colonnes et source) ; `LogiBTP.Listes` (construction SQL, validation des requêtes manuelles), `LogiBTP.Listes.Web` (vues, exécution en lecture seule, routes `/api/listes`) ; schéma `db/030` ; jeux `tests/cas` |
+| `modules/fiche` | Module Fiche : fiche d'un élément ouverte par type et ID, modes (consultation, modification, création, copie) changeables une fois ouverte, droits par profil et par type (VOIR, MODIFIER, DEBLOQUER, CONFIDENTIEL), verrou de modification avec battement, expiration et reprise de la main, champs obligatoires du programme et par paramétrage, champs confidentiels masqués (affichage à la demande ou pour la session, accès journalisé), champs supplémentaires paramétrés (JSONB par table), onglet Pièces jointes (point d'extension GED) ; `LogiBTP.Fiches` (validation partagée, construction SQL), `LogiBTP.Fiches.Web` (routes `/api/fiches/{type}`) ; schéma `db/040` ; jeux `tests/cas` |
 | `socle/dotnet/LogiBTP.Socle.Web` | Utilisateur courant (en-têtes `X-Utilisateur`, `X-Profil`, `X-Groupe`), erreurs métier traduites en réponses HTTP |
 | `src/LogiBTP.Domaine` | Cœur : `DocumentBtp`, `DocumentLigneBtp` (colonnes BTP ajoutées aux entités du module Document) |
 | `src/LogiBTP.Calcul` | Cœur : `MoteurDevisBtp`, spécialisation de `MoteurDocument` avec le module Métré ; `ComparateurBtp` |
 | `src/LogiBTP.Api` | Cœur : `LogiBtpContext`, `SpecialisationBtp` (métrés, variables, écarts d'arrondi), `Program.cs` |
 | `client/src/calcul` | Cœur : `MoteurDevisBtp` JS (réplique exacte du C#), colonnes BTP |
 | `client/src/app` | Cœur : `EditeurDevisBtp` (hôte du panneau de métré), `PanneauxBtp`, `ReglesBtp`, `PressePapiersBtp`, `DictionnaireBtp`, accès API, démo |
-| `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
+| `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, `032`, puis cœur `100`, `110`, `120`, `121`.
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `020`, `030`, `031`, `032`, `040`, puis cœur `100`, `110`, `120`, `121`, `130`, `131`.
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
 ```bash
-for f in modules/liste/db/030_liste_schema.sql modules/liste/db/031_liste_themes.sql modules/liste/db/032_liste_saisie.sql db/120_listes.sql db/121_listes_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
+for f in modules/liste/db/030_liste_schema.sql modules/liste/db/031_liste_themes.sql modules/liste/db/032_liste_saisie.sql modules/fiche/db/040_fiche_schema.sql db/120_listes.sql db/121_listes_parametrage.sql db/130_fiches.sql db/131_fiches_parametrage.sql; do docker compose exec -T postgres psql -U logibtp -d logibtp -v ON_ERROR_STOP=1 < $f; done
 ```
 
 ### Listes
@@ -57,6 +58,21 @@ sont appliqués par la base, toujours, et rappelés par la pastille ⚑ de la ba
 (bord droit de l'en-tête, double-clic pour revenir à la largeur de la vue) et le bouton ⇔ / ⇕ force l'affichage sur une ligne
 ou multiligne : ces réglages sont propres à l'utilisateur, gardés dans le navigateur, et le concepteur peut reprendre les
 largeurs ajustées comme largeurs fixes de la vue.
+### Fiches
+
+Double-clic sur une ligne de liste (salarié, intérimaire, matériel, ressource) ou bouton ＋ Salarié / ＋ Matériel : la fiche
+s'ouvre en consultation. ✎ Modifier prend le verrou (renouvelé toutes les 30 s, libéré à l'enregistrement, à l'annulation ou
+à la fermeture, expiré au bout de 2 minutes sans battement) ; si quelqu'un modifie déjà la fiche, un bandeau l'indique et
+propose « Reprendre la main » avec le droit DEBLOQUER. Une saisie dans une liste est refusée tant que la fiche de la ligne est
+en modification (`SpecialisationListeBtp`). Champs : `*` obligatoire pour le programme, `◆` obligatoire par paramétrage,
+`🔒` confidentiel. Les informations confidentielles ne sont envoyées qu'aux profils ayant le droit CONFIDENTIEL, masquées
+jusqu'à « Afficher » (ou l'option « Confidentiel visible (session) »), et chaque affichage est journalisé
+(`journal_confidentiel`). ⚙ (ADMIN) : rendre des champs obligatoires et définir des champs supplémentaires (texte, numérique,
+oui / non, date, liste ; formats e-mail, téléphone, code postal, masque 999.99, regex), stockés dans la colonne JSONB du type.
+L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche complète (règles des champs puis
+`SpecialisationFiche.ValiderMetier`). Démo hors ligne : profil des fiches (ADMIN / SAISIE) sous la liste, bouton
+« Simuler un autre utilisateur » dans la fiche.
+
 Hors ligne, la démo simule les modifications d'un autre poste (bouton sous la liste) pour éprouver le contrôle périodique.
 
 Les tests d'intégration PostgreSQL du module Liste (jeux partagés exécutés sur la base) s'activent avec la variable

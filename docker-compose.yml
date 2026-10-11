@@ -11,17 +11,20 @@ services:
     volumes:
       - logibtp-data:/var/lib/postgresql/data
       # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume :
-      # modules (010 Document, 020 Métré, 030 Liste) puis cœur BTP (100 et suivants).
+      # modules (010 Document, 020 Métré, 030 Liste, 040 Fiche) puis cœur BTP (100 et suivants).
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro
       - ./modules/liste/db/031_liste_themes.sql:/docker-entrypoint-initdb.d/031_liste_themes.sql:ro
       - ./modules/liste/db/032_liste_saisie.sql:/docker-entrypoint-initdb.d/032_liste_saisie.sql:ro
+      - ./modules/fiche/db/040_fiche_schema.sql:/docker-entrypoint-initdb.d/040_fiche_schema.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/120_listes.sql:/docker-entrypoint-initdb.d/120_listes.sql:ro
       - ./db/121_listes_parametrage.sql:/docker-entrypoint-initdb.d/121_listes_parametrage.sql:ro
+      - ./db/130_fiches.sql:/docker-entrypoint-initdb.d/130_fiches.sql:ro
+      - ./db/131_fiches_parametrage.sql:/docker-entrypoint-initdb.d/131_fiches_parametrage.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U logibtp -d logibtp"]
       interval: 5s

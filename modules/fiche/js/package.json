@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/fiche",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Fiche LogiBTP : fiche d'un élément (type + ID), modes, droits, verrou de modification, champs obligatoires, confidentiels et supplémentaires (classes mères à spécialiser)",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/fiche.css": "./ui/fiche.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

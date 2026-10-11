@@ -19,6 +19,11 @@
     <Project Path="modules/liste/dotnet/LogiBTP.Listes.Web/LogiBTP.Listes.Web.csproj" />
     <Project Path="modules/liste/dotnet/LogiBTP.Listes.Tests/LogiBTP.Listes.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/fiche/">
+    <Project Path="modules/fiche/dotnet/LogiBTP.Fiches/LogiBTP.Fiches.csproj" />
+    <Project Path="modules/fiche/dotnet/LogiBTP.Fiches.Web/LogiBTP.Fiches.Web.csproj" />
+    <Project Path="modules/fiche/dotnet/LogiBTP.Fiches.Tests/LogiBTP.Fiches.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

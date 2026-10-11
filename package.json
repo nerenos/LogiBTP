@@ -8,6 +8,7 @@
     "modules/metre/js",
     "modules/document/js",
     "modules/liste/js",
+    "modules/fiche/js",
     "client"
   ],
   "scripts": {

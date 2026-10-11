@@ -19,13 +19,14 @@ const DUREE_MARQUE = 4000;
  * Options : fournisseur (FournisseurApi / FournisseurMemoire), contexte (vues proposées), ouvrir({ id, type, ligne }),
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
- * peutGererThemes (création et modification des thèmes, profil ADMIN).
+ * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
+ * (bouton de création d'un élément, fourni par l'application selon la vue).
  *
  * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation } = {}) {
     this.racine = racine;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
@@ -33,6 +34,7 @@ export class ListeDonnees {
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
     this.peutGererThemes = peutGererThemes;
+    this.creation = creation;
     this.themes = [];
     this.theme = null;             // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
@@ -84,6 +86,7 @@ export class ListeDonnees {
         <select class="liste-vues" title="Vue"></select>
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage)">✎</button>
         <button type="button" data-action="nouvelle" title="Nouvelle vue">＋</button>
+        <button type="button" data-action="creer" class="principal" hidden></button>
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
         <span class="liste-filtres-vue" hidden></span>
         <span class="liste-compteur"></span>
@@ -136,6 +139,7 @@ export class ListeDonnees {
     r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
     r.querySelector('[data-action="saisie"]').addEventListener('click', () => this.basculerSaisie());
+    r.querySelector('[data-action="creer"]').addEventListener('click', () => this.actionCreation?.action());
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
     r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
@@ -267,6 +271,11 @@ export class ListeDonnees {
     zoneErreurs.textContent = erreurs.join(' · ');
     this.#appliquerLignes();
     this.#colonnesModifiables().catch(() => {});
+    this.actionCreation = this.vue ? this.creation?.(this.vue) ?? null : null;
+    const creer = this.racine.querySelector('[data-action="creer"]');
+    creer.hidden = !this.actionCreation;
+    creer.textContent = this.actionCreation?.libelle ?? '';
+    creer.title = this.actionCreation ? `Créer : ${this.actionCreation.libelle.replace('＋', '').trim()}` : '';
     // Rappel des filtres fixes de la vue (appliqués par la base).
     const fv = this.racine.querySelector('.liste-filtres-vue');
     const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));

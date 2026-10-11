@@ -244,6 +244,8 @@ export class FournisseurMemoire {
       const vue = def.colonnes.find((c) => c.code === code && !c.calcul);
       if (!col?.modifiable || !vue?.modifiable) throw new ErreurFournisseur(422, 'COLONNE_NON_MODIFIABLE', `Colonne ${code} non modifiable`);
     }
+    // Contrôle de l'application avant écriture (ex. fiche en cours de modification par un autre utilisateur).
+    await this.verifierModification?.(def.source.vue, id, valeurs);
     const colonneId = def.source.colonne_id ?? s.colonne_id;
     const brute = s.lignes.find((l) => String(l[colonneId]) === String(id));
     if (!brute) throw new ErreurFournisseur(404, 'INTROUVABLE', `Ligne ${id} introuvable`);

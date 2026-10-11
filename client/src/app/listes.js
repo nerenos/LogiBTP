@@ -5,10 +5,17 @@ import { documentsDemo, salariesDemo, materielsDemo, ressourcesDemo } from './do
 
 // Branchement du module Liste dans le cœur : fournisseur (API ou démo hors ligne) et ouverture des fiches.
 
+let donnees = null;
+
+/** Données de démonstration hors ligne, partagées par les listes et les fiches (mêmes objets lignes). */
+export function donneesDemo() {
+  donnees ??= { salaries: salariesDemo(), materiels: materielsDemo() };
+  return donnees;
+}
+
 export function creerFournisseurListe({ enLigne, demo }) {
   if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
-  const salaries = salariesDemo();
-  const materiels = materielsDemo();
+  const { salaries, materiels } = donneesDemo();
   return new FournisseurMemoire({
     sources: sourcesFournisseur({
       documents: documentsDemo(demo), salaries, materiels, ressources: ressourcesDemo(salaries, materiels),

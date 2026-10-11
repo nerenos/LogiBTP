@@ -29,7 +29,7 @@ const choix = (r, t) => t[Math.floor(r() * t.length)];
 export function salariesDemo(n = 5000) {
   const r = alea(42);
   const services = Object.keys(SERVICES);
-  return Array.from({ length: n }, (_, i) => {
+  return completerSalaries(Array.from({ length: n }, (_, i) => {
     const service = choix(r, services);
     const salaire = Math.round((1900 + r() * 3600) * 100) / 100;
     const actif = r() > 0.08;
@@ -37,9 +37,27 @@ export function salariesDemo(n = 5000) {
     return {
       id: i + 1, type_element: statut === 'INTERIM' ? 'interim' : 'salarie', matricule: `S${String(i + 1).padStart(5, '0')}`, nom: choix(r, NOMS),
       prenom: choix(r, PRENOMS), service, poste: choix(r, SERVICES[service]), statut, date_entree: date(r, 2005, 7600), salaire_brut: salaire,
-      heures_mois: 151.67, actif, commentaire: r() > 0.85 ? 'Habilitation électrique\nCACES R482 cat. A' : r() > 0.9 ? 'Temps partiel 80 %' : '',
+      heures_mois: 151.67, actif,
+      date_naissance: date(r, 1962, 15000), num_secu: null, email: null, telephone: `06 ${[0, 0, 0, 0].map(() => String(10 + Math.floor(r() * 90))).join(' ')}`,
+      adresse: `${1 + Math.floor(r() * 120)} rue ${choix(r, ['des Lilas', 'Victor-Hugo', 'de la République', 'Garibaldi', 'des Érables'])}`,
+      code_postal: choix(r, ['69003', '69100', '69200', '42000', '38000', '01000']), ville: null, proprietes: {},
+      commentaire: r() > 0.85 ? 'Habilitation électrique\nCACES R482 cat. A' : r() > 0.9 ? 'Temps partiel 80 %' : '',
     };
-  });
+  }));
+}
+
+const VILLES_CP = { '69003': 'Lyon', '69100': 'Villeurbanne', '69200': 'Vénissieux', '42000': 'Saint-Étienne', '38000': 'Grenoble', '01000': 'Bourg-en-Bresse' };
+const sansAccent = (t) => t.normalize('NFD').replace(/\p{M}/gu, '').replace(/œ/g, 'oe').toLowerCase().replace(/[^a-z]/g, '');
+
+/** Champs dérivés des salariés de démonstration : ville, e-mail, numéro de sécurité sociale. */
+function completerSalaries(salaries) {
+  for (const s of salaries) {
+    s.ville = VILLES_CP[s.code_postal];
+    s.email = `${sansAccent(s.prenom)}.${sansAccent(s.nom)}${s.id}@exemple.fr`;
+    const [a, m] = s.date_naissance.split('-');
+    s.num_secu = `${s.id % 2 ? 1 : 2} ${a.slice(2)} ${m} 69 ${String(100 + (s.id % 900)).padStart(3, '0')} ${String(s.id % 1000).padStart(3, '0')} ${String(10 + (s.id % 89)).padStart(2, '0')}`;
+  }
+  return salaries;
 }
 
 export function materielsDemo(n = 3000) {
@@ -54,6 +72,7 @@ export function materielsDemo(n = 3000) {
       chantier: etat === 'CHANTIER' ? choix(r, CHANTIERS.filter(Boolean)) : null, valeur_achat: Math.round(800 + r() * 180000),
       date_achat: date(r, 2012, 5000), heures_utilisation: Math.floor(revision * (0.4 + r() * 0.8)), heures_revision: revision,
       controle_ok: r() > 0.2, observations: choix(r, OBSERVATIONS),
+      marque: choix(r, ['Kubota', 'Manitou', 'Liebherr', 'Bosch', 'Renault Trucks', 'JCB', 'Hilti']), numero_serie: `SN${(100000 + i * 7919) % 999983}`, proprietes: {},
     };
   });
 }

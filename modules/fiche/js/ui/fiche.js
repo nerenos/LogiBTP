@@ -1,0 +1,481 @@
+import { echapper, formatLibre } from '@logibtp/socle/ui';
+import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
+import { validerFiche, MESSAGES } from '../src/validation.js';
+import { ParametrageFiche } from './parametrage.js';
+
+const BATTEMENT = 30000;
+const CLE_CONFIDENTIEL = 'logibtp.fiche.confidentiel';
+
+const jetonNeuf = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const vide = (v) => v === null || v === undefined || v === '';
+const heure = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+/** Option de session : afficher les informations confidentielles sans les masquer (durée de l'onglet). */
+export function confidentielSession() {
+  try { return sessionStorage.getItem(CLE_CONFIDENTIEL) === '1'; } catch { return false; }
+}
+export function definirConfidentielSession(actif) {
+  try { if (actif) sessionStorage.setItem(CLE_CONFIDENTIEL, '1'); else sessionStorage.removeItem(CLE_CONFIDENTIEL); } catch { /* option non conservée */ }
+}
+
+/**
+ * Fiche d'un élément (classe mère), ouverte à partir d'un type et d'un ID, dans un mode (consultation,
+ * modification, création, copie) qui peut changer une fois la fiche ouverte.
+ *
+ * - Droits du type : VOIR, MODIFIER, DEBLOQUER (reprendre la main), CONFIDENTIEL.
+ * - Verrou : passer en modification prend le verrou (renouvelé toutes les 30 s) ; si un autre utilisateur modifie
+ *   la fiche, un bandeau l'indique et propose « Reprendre la main » à qui a le droit DEBLOQUER.
+ * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés, champs
+ *   confidentiels masqués (affichage à la demande, ou pendant toute la session), onglet Pièces jointes (GED).
+ *
+ * Points de spécialisation : sousTitre, champsNonCopies, valeursCreation, validerMetier, rendreChamp,
+ * rendreInformations (encart calculé), actionsSupplementaires, apresChargement.
+ * Options : conteneur, fournisseur, type, id, mode, message, piecesJointes (fournisseur GED), peutParametrer,
+ * surEnregistre(fiche, { cree }), surFerme().
+ */
+export class FicheBase {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, piecesJointes = null, peutParametrer = false, surEnregistre, surFerme }) {
+    this.conteneur = conteneur;
+    this.fournisseur = fournisseur;
+    this.type = type;
+    this.id = id;
+    this.mode = mode;
+    this.message = message ?? (() => {});
+    this.piecesJointes = piecesJointes;
+    this.peutParametrer = peutParametrer;
+    this.surEnregistre = surEnregistre;
+    this.surFerme = surFerme;
+    this.jeton = jetonNeuf();
+    this.erreurs = [];
+    this.section = null;
+    this.reveles = false;
+    this.saisie = { valeurs: {}, proprietes: {} };
+  }
+
+  // ---------------------------------------------------------------- points de spécialisation
+
+  /** Ligne sous le titre (ex. matricule et poste). */
+  sousTitre(_valeurs) { return this.definition.sous_titre ? titreFiche(this.definition.sous_titre, _valeurs) : ''; }
+
+  /** Champs vidés lors d'une copie (identifiants, numéros uniques…). */
+  champsNonCopies() { return this.definition.champs.filter((c) => c.non_copie).map((c) => c.code); }
+
+  /** Valeurs initiales d'une création. */
+  valeursCreation() { return Object.fromEntries(this.definition.champs.filter((c) => c.defaut !== undefined).map((c) => [c.code, c.defaut])); }
+
+  /** Contrôles métier en plus des règles des champs : [{ champ, message }]. */
+  validerMetier(_valeurs, _proprietes) { return []; }
+
+  /** Encart d'informations calculées affiché sous l'en-tête (HTML), ou ''. */
+  rendreInformations(_valeurs) { return ''; }
+
+  /** Boutons supplémentaires de l'en-tête : [{ libelle, titre, action, visible }]. */
+  actionsSupplementaires() { return []; }
+
+  apresChargement() {}
+
+  // ---------------------------------------------------------------- ouverture et chargement
+
+  async ouvrir() {
+    this.definition = await this.fournisseur.definition(this.type);
+    if (!this.definition.droits.voir) throw new Error(`Accès refusé aux fiches ${this.definition.libelle}`);
+    if (this.mode === MODES.CREATION) {
+      this.fiche = { id: null, valeurs: this.valeursCreation(), proprietes: {}, h: null, masques: [], verrou: null };
+    } else {
+      await this.recharger();
+      if (this.mode === MODES.COPIE) this.#preparerCopie();
+      else if (this.mode === MODES.MODIFICATION) {
+        this.mode = MODES.CONSULTATION;
+        this.#construire();
+        await this.modifier();
+        return this;
+      }
+    }
+    this.#construire();
+    return this;
+  }
+
+  async recharger() {
+    this.fiche = await this.fournisseur.charger(this.type, this.id, { confidentiel: confidentielSession() || this.reveles });
+    this.saisie = { valeurs: {}, proprietes: {} };
+    if (confidentielSession() && this.fiche.masques.length === 0) this.reveles = true;
+  }
+
+  #preparerCopie() {
+    const valeurs = { ...this.fiche.valeurs };
+    for (const c of this.champsNonCopies()) valeurs[c] = null;
+    // Une copie ne reprend pas les informations confidentielles non affichées.
+    for (const m of this.fiche.masques) if (!m.startsWith('+')) valeurs[m] = null;
+    this.copieDe = this.id;
+    this.fiche = { id: null, valeurs, proprietes: { ...this.fiche.proprietes }, h: null, masques: [], verrou: null };
+    this.mode = MODES.COPIE;
+    this.saisie = { valeurs: {}, proprietes: {} };
+  }
+
+  // ---------------------------------------------------------------- valeurs
+
+  valeur(code) { return code in this.saisie.valeurs ? this.saisie.valeurs[code] : this.fiche.valeurs[code]; }
+  propriete(code) { return code in this.saisie.proprietes ? this.saisie.proprietes[code] : this.fiche.proprietes?.[code]; }
+  valeurs() { return { ...this.fiche.valeurs, ...this.saisie.valeurs }; }
+  proprietes() { return { ...this.fiche.proprietes, ...this.saisie.proprietes }; }
+  get modifiee() { return Object.keys(this.saisie.valeurs).length + Object.keys(this.saisie.proprietes).length > 0; }
+  get masques() { return new Set(this.fiche.masques); }
+
+  // ---------------------------------------------------------------- construction
+
+  #construire() {
+    this.conteneur.classList.add('fiche');
+    this.conteneur.innerHTML = `
+      <header class="fiche-entete">
+        <div class="fiche-titre">
+          <span class="fiche-type"></span>
+          <h2></h2>
+          <span class="fiche-sous-titre"></span>
+        </div>
+        <span class="fiche-mode"></span>
+        <div class="fiche-actions"></div>
+      </header>
+      <div class="fiche-bandeau" hidden></div>
+      <div class="fiche-informations" hidden></div>
+      <ul class="fiche-erreurs" hidden></ul>
+      <nav class="fiche-onglets"></nav>
+      <div class="fiche-corps"></div>`;
+    this.rendre();
+    this.apresChargement();
+  }
+
+  /** Sections : celles de la définition, Informations complémentaires (champs supplémentaires), Pièces jointes. */
+  sections() {
+    const s = [...(this.definition.sections ?? [{ code: 'general', titre: 'Général', champs: this.definition.champs.map((c) => c.code) }])];
+    if (this.definition.supplementaires?.length) s.push({ code: '+supplementaires', titre: 'Informations complémentaires', supplementaires: true });
+    s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
+    return s;
+  }
+
+  rendre() {
+    const v = this.valeurs();
+    const def = this.definition;
+    const c = this.conteneur;
+    c.classList.toggle('fiche-saisie', enSaisie(this.mode));
+    c.querySelector('.fiche-type').textContent = def.libelle;
+    c.querySelector('h2').textContent = titreFiche(def.titre, v) || (this.mode === MODES.CREATION || this.mode === MODES.COPIE ? `Nouveau ${def.libelle.toLowerCase()}` : `${def.libelle} ${this.id}`);
+    c.querySelector('.fiche-sous-titre').textContent = this.sousTitre(v);
+    const mode = c.querySelector('.fiche-mode');
+    mode.textContent = LIBELLES_MODES[this.mode] + (this.copieDe ? ` de ${this.copieDe}` : '');
+    mode.className = `fiche-mode mode-${this.mode}`;
+    this.#rendreActions();
+    this.#rendreBandeau();
+    const infos = c.querySelector('.fiche-informations');
+    const html = this.rendreInformations(v);
+    infos.hidden = !html;
+    infos.innerHTML = html;
+    this.#rendreErreurs();
+    const sections = this.sections();
+    if (!sections.some((s) => s.code === this.section)) this.section = sections[0].code;
+    const enErreur = new Set(this.erreurs.map((e) => (e.supplementaire ? '+supplementaires' : sections.find((s) => s.champs?.includes(e.champ))?.code)));
+    c.querySelector('.fiche-onglets').innerHTML = sections.map((s) =>
+      `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''}">${echapper(s.titre)}</button>`).join('');
+    c.querySelectorAll('[data-section]').forEach((b) => b.addEventListener('click', () => { this.section = b.dataset.section; this.rendre(); }));
+    this.#rendreSection(sections.find((s) => s.code === this.section));
+  }
+
+  #rendreActions() {
+    const d = this.definition.droits;
+    const saisie = enSaisie(this.mode);
+    const masques = this.fiche.masques.length > 0;
+    const boutons = [
+      { libelle: '✎ Modifier', titre: 'Passer en modification (verrouille la fiche)', action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
+      { libelle: 'Enregistrer', titre: 'Enregistrer (Ctrl+S)', action: () => this.enregistrer(), visible: saisie, principal: true },
+      { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
+      { libelle: '⧉ Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
+      { libelle: '👁 Afficher le confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
+      ...this.actionsSupplementaires(),
+      { libelle: '⚙', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
+      { libelle: '✕', titre: 'Fermer (Échap)', action: () => this.fermer(), visible: true },
+    ].filter((b) => b.visible !== false);
+    const zone = this.conteneur.querySelector('.fiche-actions');
+    zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)">
+      <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Confidentiel visible (session)</label>` : ''}
+      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}" title="${echapper(b.titre ?? '')}">${echapper(b.libelle)}</button>`).join('')}`;
+    zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
+    zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
+      definirConfidentielSession(e.target.checked);
+      if (e.target.checked && this.fiche.masques.length) this.reveler().catch((x) => this.#erreur(x));
+    });
+  }
+
+  #rendreBandeau() {
+    const b = this.conteneur.querySelector('.fiche-bandeau');
+    const v = this.fiche.verrou;
+    if (!v || v.moi) { b.hidden = true; return; }
+    b.hidden = false;
+    b.innerHTML = `🔒 En cours de modification par <strong>${echapper(v.utilisateur)}</strong> depuis ${heure(v.depuis)}
+      ${this.definition.droits.debloquer && this.definition.droits.modifier ? '<button type="button" data-reprendre>Reprendre la main</button>' : ''}`;
+    b.querySelector('[data-reprendre]')?.addEventListener('click', () => this.modifier({ forcer: true }).catch((e) => this.#erreur(e)));
+  }
+
+  #rendreErreurs() {
+    const z = this.conteneur.querySelector('.fiche-erreurs');
+    z.hidden = !this.erreurs.length;
+    const libelle = (e) => (e.supplementaire ? this.definition.supplementaires : this.definition.champs).find((c) => c.code === e.champ)?.libelle ?? e.champ;
+    z.innerHTML = this.erreurs.map((e) => `<li data-champ="${echapper(e.champ)}">${echapper(libelle(e))} : ${echapper(e.message)}</li>`).join('');
+  }
+
+  #rendreSection(section) {
+    const corps = this.conteneur.querySelector('.fiche-corps');
+    if (section.pieces) { this.#rendrePieces(corps); return; }
+    const champs = section.supplementaires
+      ? this.definition.supplementaires.map((c) => ({ ...c, supplementaire: true }))
+      : section.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean);
+    corps.innerHTML = '<div class="fiche-grille"></div>';
+    const grille = corps.firstElementChild;
+    for (const c of champs) grille.append(this.#bloc(c));
+    if (!champs.length) grille.innerHTML = '<p class="aide">Aucun champ.</p>';
+  }
+
+  #bloc(champ) {
+    const code = champ.supplementaire ? `+${champ.code}` : champ.code;
+    const masque = this.masques.has(code);
+    const erreur = this.erreurs.find((e) => e.champ === champ.code && !!e.supplementaire === !!champ.supplementaire);
+    const div = document.createElement('div');
+    div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
+    const marques = `${champ.obligatoire ? '<span class="obligatoire" title="Obligatoire (programme)">*</span>' : ''}${champ.obligatoire_parametre ? '<span class="obligatoire-parametre" title="Obligatoire (paramétrage)">◆</span>' : ''}${champ.confidentiel ? '<span class="marque-confidentiel" title="Information confidentielle">🔒</span>' : ''}`;
+    div.innerHTML = `<label>${echapper(champ.libelle)} ${marques}</label>`;
+    if (champ.aide) div.title = champ.aide;
+    if (masque) {
+      const m = document.createElement('div');
+      m.className = 'fiche-masque';
+      m.innerHTML = `<span>••••••••</span>${this.definition.droits.confidentiel ? '<button type="button">Afficher</button>' : '<em>non autorisé</em>'}`;
+      m.querySelector('button')?.addEventListener('click', () => this.reveler().catch((e) => this.#erreur(e)));
+      div.append(m);
+    } else div.append(this.rendreChamp(champ, champ.supplementaire ? this.propriete(champ.code) : this.valeur(champ.code)));
+    if (erreur) div.insertAdjacentHTML('beforeend', `<span class="fiche-message">${echapper(erreur.message)}</span>`);
+    return div;
+  }
+
+  /** Champ saisissable selon son type ; lecture seule en consultation (ou champ en lecture seule). */
+  rendreChamp(champ, valeur) {
+    const lecture = !enSaisie(this.mode) || champ.lecture_seule || (champ.saisie === 'creation' && this.mode === MODES.MODIFICATION);
+    let el;
+    switch (champ.type) {
+      case 'zone':
+        el = document.createElement('textarea');
+        el.rows = 3;
+        el.value = valeur ?? '';
+        break;
+      case 'booleen':
+        el = document.createElement('input');
+        el.type = 'checkbox';
+        el.checked = valeur === true;
+        break;
+      case 'liste':
+        el = document.createElement('select');
+        el.innerHTML = `<option value=""></option>${(champ.options ?? []).map((o) => `<option value="${echapper(o.valeur)}">${echapper(o.libelle ?? o.valeur)}</option>`).join('')}`;
+        el.value = valeur ?? '';
+        break;
+      case 'date':
+        el = document.createElement('input');
+        el.type = 'date';
+        el.value = String(valeur ?? '').slice(0, 10);
+        break;
+      case 'nombre':
+        el = document.createElement('input');
+        el.inputMode = 'decimal';
+        el.value = vide(valeur) ? '' : lecture ? formatLibre(valeur) : String(valeur).replace('.', ',');
+        el.classList.add('nombre');
+        break;
+      default:
+        el = document.createElement('input');
+        el.type = champ.format === 'email' ? 'email' : champ.format === 'telephone' ? 'tel' : 'text';
+        el.value = valeur ?? '';
+        if (champ.longueur) el.maxLength = champ.longueur;
+    }
+    el.classList.add('fiche-saisie-champ');
+    if (lecture) { el.disabled = champ.type === 'booleen' || champ.type === 'liste'; el.readOnly = true; return el; }
+    el.addEventListener(champ.type === 'booleen' || champ.type === 'liste' ? 'change' : 'input', () => {
+      const v = champ.type === 'booleen' ? el.checked : el.value;
+      const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
+      cible[champ.code] = v;
+      this.#majTitre();
+    });
+    return el;
+  }
+
+  #majTitre() {
+    const v = this.valeurs();
+    const t = titreFiche(this.definition.titre, v);
+    if (t) this.conteneur.querySelector('h2').textContent = t;
+    this.conteneur.querySelector('.fiche-sous-titre').textContent = this.sousTitre(v);
+  }
+
+  #rendrePieces(corps) {
+    corps.innerHTML = '<div class="fiche-pieces"></div>';
+    const zone = corps.firstElementChild;
+    if (!this.piecesJointes || this.id === null) {
+      zone.innerHTML = `<p class="aide">${this.id === null ? 'Enregistrez la fiche pour joindre des documents.'
+        : 'Pièces jointes : la GED n\'est pas encore branchée. Les documents de la fiche seront déposés et consultés ici (module GED).'}</p>`;
+      return;
+    }
+    // Point d'extension GED : { lister(type, id), deposer(type, id, fichier), telecharger(piece), supprimer(piece) }.
+    this.piecesJointes.lister(this.type, this.id).then((pieces) => {
+      zone.innerHTML = `<ul>${pieces.map((p, i) => `<li><a href="#" data-i="${i}">${echapper(p.nom)}</a> <small>${echapper(p.taille ?? '')}</small>
+        ${enSaisie(this.mode) ? `<button type="button" data-suppr="${i}">✕</button>` : ''}</li>`).join('') || '<li class="aide">Aucune pièce jointe</li>'}</ul>
+        ${enSaisie(this.mode) ? '<input type="file" data-depot>' : ''}`;
+      zone.querySelectorAll('[data-i]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.piecesJointes.telecharger(pieces[Number(a.dataset.i)]); }));
+      zone.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => { await this.piecesJointes.supprimer(pieces[Number(b.dataset.suppr)]); this.rendre(); }));
+      zone.querySelector('[data-depot]')?.addEventListener('change', async (e) => { if (e.target.files[0]) { await this.piecesJointes.deposer(this.type, this.id, e.target.files[0]); this.rendre(); } });
+    }).catch((e) => this.#erreur(e));
+  }
+
+  #erreur(e) {
+    console.error(e);
+    this.message(e.message ?? String(e), 'erreur');
+  }
+
+  // ---------------------------------------------------------------- modes et verrou
+
+  /** Passage en modification : prise du verrou (ou reprise de la main), fiche relue, battement démarré. */
+  async modifier({ forcer = false } = {}) {
+    const r = await this.fournisseur.verrouiller(this.type, this.id, { jeton: this.jeton, forcer });
+    if (!r.ok) {
+      this.fiche.verrou = r.verrou;
+      this.rendre();
+      this.message(`Fiche en cours de modification par ${r.verrou.utilisateur}`, 'avertissement');
+      return false;
+    }
+    if (forcer) this.message('Vous avez repris la main sur la fiche', 'succes');
+    await this.recharger();
+    this.fiche.verrou = r.verrou;
+    this.mode = MODES.MODIFICATION;
+    this.#demarrerBattement();
+    this.rendre();
+    return true;
+  }
+
+  #demarrerBattement() {
+    clearInterval(this.battement);
+    this.battement = setInterval(() => this.controlerVerrou(), BATTEMENT);
+  }
+
+  /** Battement : renouvelle le verrou ; s'il a été repris par un autre, la fiche repasse en consultation. */
+  async controlerVerrou() {
+    if (this.mode !== MODES.MODIFICATION) return;
+    try {
+      const r = await this.fournisseur.verrouiller(this.type, this.id, { jeton: this.jeton });
+      if (!r.ok) this.#verrouPerdu(r.verrou);
+    } catch { /* réseau : nouvel essai au prochain battement */ }
+  }
+
+  #verrouPerdu(verrou) {
+    clearInterval(this.battement);
+    this.mode = MODES.CONSULTATION;
+    this.fiche.verrou = verrou;
+    this.message(`${verrou?.utilisateur ?? 'Un autre utilisateur'} a repris la main : vos modifications non enregistrées ne peuvent plus l'être`, 'erreur');
+    this.rendre();
+  }
+
+  async #liberer() {
+    clearInterval(this.battement);
+    if (this.mode === MODES.MODIFICATION && this.id !== null) await this.fournisseur.deverrouiller(this.type, this.id, this.jeton).catch(() => {});
+  }
+
+  async annuler() {
+    if (this.modifiee && !confirm('Abandonner les modifications ?')) return;
+    if (this.mode === MODES.CREATION || this.mode === MODES.COPIE) { await this.fermer({ sansConfirmation: true }); return; }
+    await this.#liberer();
+    this.mode = MODES.CONSULTATION;
+    this.erreurs = [];
+    await this.recharger();
+    this.rendre();
+  }
+
+  async copier() {
+    this.#preparerCopie();
+    this.erreurs = [];
+    this.rendre();
+  }
+
+  async reveler() {
+    const r = await this.fournisseur.reveler(this.type, this.id);
+    Object.assign(this.fiche.valeurs, r.valeurs);
+    this.fiche.proprietes = { ...this.fiche.proprietes, ...r.proprietes };
+    this.fiche.masques = [];
+    this.reveles = true;
+    this.rendre();
+  }
+
+  // ---------------------------------------------------------------- enregistrement
+
+  async enregistrer() {
+    const valeurs = this.valeurs(), proprietes = this.proprietes();
+    this.erreurs = [
+      ...validerFiche(this.definition, valeurs, proprietes, { masques: this.masques }),
+      ...this.validerMetier(valeurs, proprietes).map((e) => ({ supplementaire: false, code: 'METIER', ...e })),
+    ];
+    if (this.erreurs.length) {
+      this.#allerErreur();
+      this.message(`${this.erreurs.length} erreur(s) à corriger`, 'erreur');
+      return false;
+    }
+    try {
+      let fiche;
+      const cree = this.mode === MODES.CREATION || this.mode === MODES.COPIE;
+      const confidentiel = this.reveles || confidentielSession();
+      if (cree) fiche = await this.fournisseur.creer(this.type, { valeurs: this.#pourCreation(valeurs), proprietes: this.#nonVides(proprietes), confidentiel });
+      else {
+        fiche = await this.fournisseur.enregistrer(this.type, this.id, {
+          jeton: this.jeton, h: this.fiche.h, valeurs: this.saisie.valeurs, proprietes: this.saisie.proprietes, confidentiel,
+        });
+      }
+      await this.#liberer();
+      this.id = fiche.id;
+      this.copieDe = null;
+      this.fiche = { ...fiche, verrou: null };
+      this.saisie = { valeurs: {}, proprietes: {} };
+      this.mode = MODES.CONSULTATION;
+      this.erreurs = [];
+      this.rendre();
+      this.message(cree ? `${this.definition.libelle} créé` : 'Fiche enregistrée', 'succes');
+      this.surEnregistre?.(fiche, { cree });
+      return true;
+    } catch (e) {
+      if (e.code === 'VALIDATION' && Array.isArray(e.details)) { this.erreurs = e.details; this.#allerErreur(); }
+      else if (e.code === 'VERROU_PERDU') { this.#verrouPerdu(e.details); return false; }
+      this.#erreur(e);
+      return false;
+    }
+  }
+
+  #pourCreation(valeurs) {
+    return Object.fromEntries(Object.entries(valeurs).filter(([code, v]) => !vide(v) && !this.definition.champs.find((c) => c.code === code)?.lecture_seule));
+  }
+
+  #nonVides(o) { return Object.fromEntries(Object.entries(o).filter(([, v]) => !vide(v))); }
+
+  #allerErreur() {
+    const e = this.erreurs[0];
+    if (e) this.section = e.supplementaire ? '+supplementaires' : this.sections().find((s) => s.champs?.includes(e.champ))?.code ?? this.section;
+    this.rendre();
+  }
+
+  parametrer() {
+    new ParametrageFiche({
+      fournisseur: this.fournisseur, type: this.type, definition: this.definition, message: this.message,
+      fermer: async (modifie) => {
+        if (!modifie) return;
+        this.definition = await this.fournisseur.definition(this.type);
+        if (this.id !== null && this.mode === MODES.CONSULTATION) await this.recharger();
+        this.rendre();
+      },
+    });
+  }
+
+  async fermer({ sansConfirmation = false } = {}) {
+    if (!sansConfirmation && this.modifiee && !confirm('Des modifications ne sont pas enregistrées. Fermer quand même ?')) return false;
+    await this.#liberer();
+    this.surFerme?.();
+    return true;
+  }
+}
+
+export { MESSAGES };

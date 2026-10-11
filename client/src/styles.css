@@ -17,3 +17,11 @@
 #liste { flex: 1; min-height: 0; }
 .liste-demo { display: flex; align-items: center; gap: 0.6rem; flex: none; }
 .liste-demo[hidden] { display: none; }
+
+/* Fiche ouverte depuis une liste : panneau au-dessus de la vue */
+.panneau-fiche {
+  position: fixed; inset: 3.2rem 1rem 1rem; z-index: 12; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); padding: 0.8rem 1rem; display: flex; flex-direction: column;
+}
+.panneau-fiche[hidden] { display: none; }
+.panneau-fiche > div { flex: 1; min-height: 0; }

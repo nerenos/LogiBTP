@@ -12,7 +12,7 @@ public static class Extensions
 {
     /// <summary>Enregistre le module : contexte EF (options fournies par l'application), spécialisation, service.</summary>
     public static IServiceCollection AddModuleListe<TSpecialisation>(this IServiceCollection services, Action<DbContextOptionsBuilder> options)
-        where TSpecialisation : SpecialisationListe, new()
+        where TSpecialisation : SpecialisationListe
     {
         services.AddDbContext<ListeDbContext>(options);
         services.AddSingleton<SpecialisationListe, TSpecialisation>();

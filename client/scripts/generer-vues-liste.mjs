@@ -1,9 +1,11 @@
-// Génère db/121_listes_parametrage.sql (sources déclarées et vues de liste par défaut) depuis
-// src/app/vues-liste.js, utilisé aussi par la démo hors ligne : une seule source de vérité.
+// Génère db/121_listes_parametrage.sql (sources déclarées, thèmes et vues de liste par défaut) depuis
+// src/app/vues-liste.js, et db/131_fiches_parametrage.sql (types de fiches, droits, paramétrage) depuis
+// src/app/fiches/definitions.js : ces définitions servent aussi à la démo hors ligne (une seule source de vérité).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SOURCES_LISTE, VUES_LISTE, THEMES_LISTE } from '../src/app/vues-liste.js';
+import { TYPES_FICHE, DROITS_FICHE, PARAMETRAGE_FICHE } from '../src/app/fiches/definitions.js';
 
 const racine = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const q = (v) => (v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
@@ -33,3 +35,33 @@ SELECT setval(pg_get_serial_sequence('vue_liste', 'vli_id'), (SELECT max(vli_id)
 `;
 fs.writeFileSync(path.join(racine, 'db', '121_listes_parametrage.sql'), sql);
 console.log('db/121_listes_parametrage.sql généré');
+
+// ------------------------------------------------------------------ fiches
+const types = Object.entries(TYPES_FICHE).map(([code, t]) =>
+  ` (${[code, t.libelle, t.table, t.cle, t.colonne_proprietes].map(q).join(', ')}, ${q(JSON.stringify(t.definition))}::jsonb)`).join(',\n');
+const droits = DROITS_FICHE.map((d) => ` (${[d.profil, d.type, d.action].map(q).join(', ')})`).join(',\n');
+const obligatoires = Object.entries(PARAMETRAGE_FICHE).flatMap(([type, p]) => p.obligatoires.map((c) => ` (${q(type)}, ${q(c)}, TRUE)`)).join(',\n');
+const supplementaires = Object.entries(PARAMETRAGE_FICHE).flatMap(([type, p]) => p.supplementaires.map((c) =>
+  ` (${[type, c.code, c.libelle, c.type, c.format, c.longueur, c.obligatoire ?? false, c.confidentiel ?? false].map((v) => (typeof v === 'boolean' || typeof v === 'number' ? String(v) : q(v))).join(', ')}, `
+  + `${c.options ? `${q(JSON.stringify(c.options))}::jsonb` : 'NULL'}, ${q(c.aide)}, ${c.ordre ?? 0}, ${c.actif !== false})`)).join(',\n');
+
+const sqlFiches = `-- =============================================================================
+-- Cœur LogiBTP – types de fiches (salarié, matériel), droits par profil et paramétrage de démonstration.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/fiches/definitions.js : ne pas modifier.
+-- =============================================================================
+
+INSERT INTO type_fiche (tyf_code, tyf_libelle, tyf_table, tyf_cle, tyf_colonne_proprietes, tyf_definition) VALUES
+${types};
+
+INSERT INTO droit_fiche (drf_profil, drf_type, drf_action) VALUES
+${droits};
+
+INSERT INTO parametre_champ_fiche (pcf_type, pcf_champ, pcf_obligatoire) VALUES
+${obligatoires};
+
+INSERT INTO champ_supplementaire (chs_type, chs_code, chs_libelle, chs_type_donnee, chs_format, chs_longueur, chs_obligatoire,
+                                  chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif) VALUES
+${supplementaires};
+`;
+fs.writeFileSync(path.join(racine, 'db', '131_fiches_parametrage.sql'), sqlFiches);
+console.log('db/131_fiches_parametrage.sql généré');

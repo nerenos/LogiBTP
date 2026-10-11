@@ -2,6 +2,7 @@ import '@logibtp/socle/ui/socle.css';
 import '@logibtp/document/ui/document.css';
 import '@logibtp/metre/ui/metre.css';
 import '@logibtp/liste/ui/liste.css';
+import '@logibtp/fiche/ui/fiche.css';
 import './styles.css';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { Disposition } from '@logibtp/document/ui';
@@ -12,7 +13,9 @@ import { api, ErreurApi, ENTETES } from './app/api.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from './app/demo.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from './app/editeur-btp.js';
 import { PanneauxBtp } from './app/panneaux-btp.js';
-import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS, simulerModificationsAutres } from './app/listes.js';
+import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS, simulerModificationsAutres, donneesDemo } from './app/listes.js';
+import { CLASSES_FICHE, creerFournisseurFiche } from './app/fiches/fiches.js';
+import { ficheDeLigne } from './app/fiches/definitions.js';
 
 const $ = (s) => document.querySelector(s);
 const etat = { disposition: null, enLigne: false, editeur: null, panneaux: null, metre: null, liste: null, types: [], selection: null, ecarts: null, dernierEnvoi: null };
@@ -110,7 +113,47 @@ async function ouvrirFiche({ id, type }) {
     etat.disposition.onglet('lignes');
     return;
   }
+  const f = ficheDeLigne({ id, type });
+  if (f) { await ouvrirFicheElement(f.type, f.id); return; }
   message(`Fiche ${LIBELLES_ELEMENTS[type] ?? type} n° ${id} : écran pas encore disponible`, 'avertissement');
+}
+
+/**
+ * Fiche d'un élément (module Fiche, spécialisée par le cœur) dans le panneau #fiche, au-dessus de la liste.
+ * Après enregistrement, la ligne de la liste est rafraîchie (création : contrôle complet de la liste).
+ */
+async function ouvrirFicheElement(type, id, mode = 'consultation') {
+  if (etat.fiche && !(await etat.fiche.fermer())) return;
+  const Classe = CLASSES_FICHE[type];
+  const panneau = $('#fiche');
+  const conteneur = document.createElement('div');
+  panneau.replaceChildren(conteneur);
+  etat.fournisseurFiche ??= creerFournisseurFiche({ enLigne: etat.enLigne, lignes: donneesDemo() });
+  const fiche = new Classe({
+    conteneur, fournisseur: etat.fournisseurFiche, type, id, mode, message,
+    peutParametrer: (etat.fournisseurFiche.profil ?? ENTETES['X-Profil']) === 'ADMIN',
+    surEnregistre: (f, { cree }) => {
+      if (cree) etat.liste?.verifier().catch(() => {});
+      else etat.liste?.rafraichirLignes([f.id, `SAL-${f.id}`, `MAT-${f.id}`]).catch(() => {});
+    },
+    surFerme: () => { panneau.hidden = true; panneau.replaceChildren(); etat.fiche = null; },
+  });
+  try {
+    await fiche.ouvrir();
+  } catch (e) {
+    panneau.hidden = true;
+    throw e;
+  }
+  etat.fiche = fiche;
+  panneau.hidden = false;
+}
+
+/** Création d'un élément depuis la liste, d'après la source de la vue ouverte. */
+function creationDepuisVue(vue) {
+  const source = vue?.definition?.source?.vue;
+  const type = { salaries: 'salarie', materiels: 'materiel' }[source];
+  if (!type) return null;
+  return { libelle: type === 'salarie' ? '＋ Salarié' : '＋ Matériel', action: () => ouvrirFicheElement(type, null, 'creation').catch(erreur) };
 }
 
 /** Liste de l'onglet Liste : vues partagées, ouverture des fiches, rafraîchissement après enregistrement. */
@@ -123,8 +166,17 @@ async function demarrerListe() {
     peutRequete: etat.enLigne && ENTETES['X-Profil'] === 'ADMIN',
     // Thèmes : gérés par le profil ADMIN (et librement dans la démo hors ligne).
     peutGererThemes: !etat.enLigne || ENTETES['X-Profil'] === 'ADMIN',
+    creation: creationDepuisVue,
   });
   $('#liste-demo').hidden = etat.enLigne;
+  if (!etat.enLigne) {
+    // Démo : comme SpecialisationListeBtp côté serveur, une fiche en cours de modification bloque la saisie dans la liste.
+    etat.liste.fournisseur.verifierModification = (source, id) => {
+      const type = { salaries: 'salarie', materiels: 'materiel' }[source];
+      const v = type && etat.fournisseurFiche?.verrouActif(type, id);
+      if (v) throw Object.assign(new Error(`Fiche en cours de modification par ${v.utilisateur} : saisie impossible pour l'instant`), { code: 'FICHE_EN_MODIFICATION', statut: 409 });
+    };
+  }
   await etat.liste.demarrer();
 }
 
@@ -257,6 +309,22 @@ async function demarrer() {
   brancher('#annuler', () => etat.editeur?.magasin.annuler());
   brancher('#retablir', () => etat.editeur?.magasin.retablir());
   brancher('#simuler', () => message(simulerModificationsAutres(etat.liste.fournisseur)));
+  // Démo : profil de l'utilisateur pour les fiches (SAISIE : sans confidentiel ni reprise de main sur les salariés).
+  $('#profil-demo').addEventListener('change', async (e) => {
+    etat.fournisseurFiche ??= creerFournisseurFiche({ enLigne: false, lignes: donneesDemo() });
+    etat.fournisseurFiche.profil = e.target.value;
+    const f = etat.fiche;
+    if (f) { const { type, id } = f; if (await f.fermer()) await ouvrirFicheElement(type, id).catch(erreur); }
+    message(`Profil de démonstration : ${e.target.value}`);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && etat.fiche && !document.querySelector('.fiche-dialogue-fond, .concepteur-fond, .liste-menu')) etat.fiche.fermer();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && etat.fiche && etat.fiche.mode !== 'consultation') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      etat.fiche.enregistrer();
+    }
+  }, true);
   document.addEventListener('keydown', (e) => {
     // Alt+0 / Alt+1 / Alt+2 : onglets Liste, Entête et Lignes.
     const onglet = e.altKey && !e.ctrlKey ? { Digit0: 'liste', Digit1: 'entete', Digit2: 'lignes' }[e.code] : null;
