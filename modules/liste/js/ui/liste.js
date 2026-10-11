@@ -77,16 +77,40 @@ export class ListeDonnees {
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
         <span class="liste-compteur"></span>
         <button type="button" data-action="effacer" title="Effacer les filtres et le tri des colonnes" hidden>⨯ Filtres</button>
-        <button type="button" data-action="tout" title="Charger toutes les lignes">⇊</button>
+        <button type="button" data-action="tout" aria-pressed="false">⇊</button>
         <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
       </div>
-      <div class="liste-segments" hidden></div>
       <p class="liste-erreurs" hidden></p>
-      <div class="liste-zone" tabindex="0">
-        <table class="liste-table"><colgroup></colgroup><thead></thead><tbody></tbody></table>
-        <div class="liste-suite"></div>
+      <div class="liste-corps">
+        <div class="liste-zone" tabindex="0">
+          <table class="liste-table"><colgroup></colgroup><thead></thead><tbody></tbody></table>
+          <div class="liste-suite"></div>
+        </div>
+        <div class="liste-separateur" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+        <aside class="liste-panneau">
+          <header>
+            <span class="liste-panneau-titre">Segments</span>
+            <button type="button" data-dock="gauche" title="Ancrer à gauche">◧</button>
+            <button type="button" data-dock="bas" title="Ancrer en bas">⬓</button>
+            <button type="button" data-dock="droite" title="Ancrer à droite">◨</button>
+            <button type="button" data-action="reduire">–</button>
+          </header>
+          <div class="liste-segments"></div>
+        </aside>
       </div>`;
     this.zone = r.querySelector('.liste-zone');
+    this.corpsListe = r.querySelector('.liste-corps');
+    this.prefs = this.#lirePreferences();
+    this.modeTout = !!this.prefs.tout;
+    r.querySelectorAll('[data-dock]').forEach((b) => b.addEventListener('click', () => {
+      this.prefs.dock = b.dataset.dock;
+      this.prefs.reduit = false;
+      this.#ecrirePreferences();
+      this.#appliquerDock();
+    }));
+    r.querySelector('.liste-panneau [data-action="reduire"]').addEventListener('click', () => this.#reduire(!this.prefs.reduit));
+    this.#separateur(r.querySelector('.liste-separateur'));
+    this.#appliquerDock();
     this.table = r.querySelector('.liste-table');
     this.corps = this.table.tBodies[0];
     this.basSuite = r.querySelector('.liste-suite');
@@ -94,7 +118,7 @@ export class ListeDonnees {
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
     r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
-    r.querySelector('[data-action="tout"]').addEventListener('click', () => this.toutCharger().catch((x) => this.#erreur(x)));
+    r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
       this.filtres.clear();
       this.triLocal = null;
@@ -236,10 +260,24 @@ export class ListeDonnees {
     this.chargerSuite().catch((e) => this.#erreur(e));
   }
 
+  /**
+   * Charge le lot suivant, puis enchaîne les lots tant que « Charger toutes les lignes » est actif ou que la
+   * zone visible n'est pas encore remplie. Un rechargement (filtre, tri) interrompt la boucle en cours.
+   */
   async chargerSuite() {
     if (!this.vue || this.enCours || this.fin) return;
-    this.enCours = true;
     const gen = this.generation;
+    do {
+      await this.#chargerLot(gen);
+    } while (gen === this.generation && !this.fin && !this.enCours && (this.modeTout || this.#zoneARemplir()));
+  }
+
+  #zoneARemplir() {
+    return this.zone.clientHeight > 0 && this.zone.scrollHeight <= this.zone.clientHeight + 300;
+  }
+
+  async #chargerLot(gen) {
+    this.enCours = true;
     this.#rendreSuite();
     try {
       const r = await this.fournisseur.lot({ ...this.demande(), apres: this.suite, taille: this.definition.taille_lot });
@@ -254,16 +292,14 @@ export class ListeDonnees {
         this.#rendreSuite();
       }
     }
-    // Zone visible mais pas encore remplie : lot suivant sans attendre le défilement.
-    if (gen === this.generation && !this.fin && this.zone.clientHeight > 0 && this.zone.scrollHeight <= this.zone.clientHeight + 300) await this.chargerSuite();
   }
 
-  async toutCharger() {
-    let n = 0;
-    while (!this.fin && this.vue && n++ < 1000) {
-      if (this.enCours) { await new Promise((ok) => setTimeout(ok, 50)); continue; }
-      await this.chargerSuite();
-    }
+  /** Interrupteur « Charger toutes les lignes » : conservé lors des rechargements (filtres, segments, tri). */
+  basculerTout(actif = !this.modeTout) {
+    this.modeTout = actif;
+    this.#ecrirePreferences();
+    this.#appliquerDock();
+    if (actif) this.chargerSuite().catch((e) => this.#erreur(e));
   }
 
   /**
@@ -322,12 +358,81 @@ export class ListeDonnees {
     }, DUREE_MARQUE);
   }
 
+  // ---------------------------------------------------------------- disposition (panneau des segments)
+
+  #lirePreferences() {
+    const defaut = { dock: 'droite', largeur: 260, hauteur: 160, reduit: false, tout: false };
+    try {
+      const p = { ...defaut, ...JSON.parse(localStorage.getItem(`${this.cleVue}.affichage`) ?? '{}') };
+      if (!['gauche', 'droite', 'bas'].includes(p.dock)) p.dock = 'droite';
+      return p;
+    } catch {
+      return defaut;
+    }
+  }
+
+  #ecrirePreferences() {
+    try { localStorage.setItem(`${this.cleVue}.affichage`, JSON.stringify({ ...this.prefs, tout: !!this.modeTout })); } catch { /* préférences non conservées */ }
+  }
+
+  #appliquerDock() {
+    const c = this.corpsListe;
+    for (const pos of ['gauche', 'droite', 'bas']) c.classList.toggle(`dock-${pos}`, this.prefs.dock === pos);
+    c.classList.toggle('dock-reduit', !!this.prefs.reduit);
+    c.style.setProperty('--panneau-largeur', `${this.prefs.largeur}px`);
+    c.style.setProperty('--panneau-hauteur', `${this.prefs.hauteur}px`);
+    this.racine.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('actif', b.dataset.dock === this.prefs.dock));
+    const b = this.racine.querySelector('.liste-panneau [data-action="reduire"]');
+    b.textContent = this.prefs.reduit ? '▢' : '–';
+    b.title = this.prefs.reduit ? 'Agrandir le panneau des segments' : 'Réduire le panneau des segments';
+    const t = this.racine.querySelector('[data-action="tout"]');
+    t.classList.toggle('actif', !!this.modeTout);
+    t.setAttribute('aria-pressed', String(!!this.modeTout));
+    t.title = this.modeTout
+      ? 'Chargement de toutes les lignes : actif, y compris après un filtre (cliquer pour revenir au chargement par lots)'
+      : 'Charger toutes les lignes (reste actif lors des rechargements)';
+  }
+
+  #reduire(reduit) {
+    this.prefs.reduit = reduit;
+    this.#ecrirePreferences();
+    this.#appliquerDock();
+  }
+
+  /** Redimensionnement du panneau par glisser : largeur à gauche ou à droite, hauteur en bas. */
+  #separateur(sep) {
+    sep.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      sep.setPointerCapture(e.pointerId);
+      if (this.prefs.reduit) this.#reduire(false);
+      const rect = this.corpsListe.getBoundingClientRect();
+      const bouger = (ev) => {
+        const p = this.prefs;
+        if (p.dock === 'bas') p.hauteur = Math.round(Math.min(Math.max(rect.bottom - ev.clientY, 60), rect.height * 0.7));
+        else if (p.dock === 'droite') p.largeur = Math.round(Math.min(Math.max(rect.right - ev.clientX, 160), rect.width * 0.6));
+        else p.largeur = Math.round(Math.min(Math.max(ev.clientX - rect.left, 160), rect.width * 0.6));
+        this.#appliquerDock();
+      };
+      const finir = () => {
+        sep.removeEventListener('pointermove', bouger);
+        sep.removeEventListener('pointerup', finir);
+        sep.removeEventListener('pointercancel', finir);
+        this.#ecrirePreferences();
+      };
+      sep.addEventListener('pointermove', bouger);
+      sep.addEventListener('pointerup', finir);
+      sep.addEventListener('pointercancel', finir);
+    });
+    sep.addEventListener('dblclick', () => this.#reduire(!this.prefs.reduit));
+  }
+
   // ---------------------------------------------------------------- segments
 
   async rafraichirSegments() {
     const zone = this.racine.querySelector('.liste-segments');
     const segs = this.definition.segments;
-    zone.hidden = !segs.length;
+    this.corpsListe.classList.toggle('sans-segments', !segs.length);
     if (!segs.length || !this.vue) { zone.replaceChildren(); return; }
     const gen = this.generation;
     const comptes = await Promise.all(segs.map((s) => this.fournisseur.segments(this.demande(), s.colonne).catch(() => [])));
@@ -338,7 +443,7 @@ export class ListeDonnees {
       const titre = s.titre || col?.titre || s.colonne;
       return `<div class="segment" data-segment="${echapper(s.colonne)}">
         <span class="segment-titre">${echapper(titre.replace(/\n/g, ' '))}</span>
-        <button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
+        <span class="segment-valeurs"><button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
         ${comptes[i].map((c) => {
           const libelle = c.valeur === null ? '(vide)' : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
           return `<button type="button" data-valeur="${c.valeur === null ? '' : echapper(c.valeur)}" data-vide="${c.valeur === null}"
@@ -346,7 +451,7 @@ export class ListeDonnees {
         }).join('')}
         ${[...actives].filter((v) => !comptes[i].some((c) => c.valeur === v)).map((v) =>
           `<button type="button" class="actif" data-valeur="${echapper(v ?? '')}" data-vide="${v === null}">${echapper(v ?? '(vide)')} <small>0</small></button>`).join('')}
-      </div>`;
+      </span></div>`;
     }).join('');
     zone.querySelectorAll('[data-segment]').forEach((div) => {
       const col = div.dataset.segment;
