@@ -65,6 +65,12 @@ export const THEMES_LISTE = [
     thl_code: 'factures', thl_libelle: 'Factures', thl_icone: '💶', thl_ordre: 30,
     thl_types: [{ code: 'V_FACTURE', libelle: 'Facture' }, { code: 'V_FACTURE_AVT', libelle: 'Facture d\'avancement' }, { code: 'V_AVOIR', libelle: 'Avoir' }],
   },
+  { thl_code: 'achats_ddp', thl_libelle: 'Demandes de prix', thl_icone: '📨', thl_ordre: 32, thl_types: [{ code: 'A_DEVIS', libelle: 'Demande de prix fournisseur' }] },
+  { thl_code: 'achats_commandes', thl_libelle: 'Commandes fournisseurs', thl_icone: '📦', thl_ordre: 34, thl_types: [{ code: 'A_COMMANDE', libelle: 'Commande fournisseur' }] },
+  {
+    thl_code: 'achats_factures', thl_libelle: 'Factures fournisseurs', thl_icone: '🧾', thl_ordre: 36,
+    thl_types: [{ code: 'A_FACTURE', libelle: 'Facture fournisseur' }, { code: 'A_FACTURE_AVT', libelle: 'Situation fournisseur' }, { code: 'A_AVOIR', libelle: 'Avoir fournisseur' }],
+  },
   { thl_code: 'salaries', thl_libelle: 'Salariés', thl_icone: '👷', thl_ordre: 40, thl_types: [{ code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérimaire' }] },
   { thl_code: 'materiels', thl_libelle: 'Matériels', thl_icone: '🚜', thl_ordre: 50, thl_types: [{ code: 'materiel', libelle: 'Matériel' }] },
   { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
@@ -188,6 +194,9 @@ const vueDocuments = (vli_id, vli_nom, theme) => ({
   definition: { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'statut', titre: 'Statut' }] },
 });
 VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis'), vueDocuments(6, 'Factures et avoirs', 'factures'));
+// Achats (menu Achats du bandeau) : mêmes colonnes, documents filtrés par les types du thème.
+VUES_LISTE.push(vueDocuments(9, 'Demandes de prix', 'achats_ddp'), vueDocuments(10, 'Commandes fournisseurs', 'achats_commandes'),
+  vueDocuments(11, 'Factures fournisseurs', 'achats_factures'));
 
 // Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.
 VUES_LISTE.push({

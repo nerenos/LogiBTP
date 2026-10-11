@@ -126,7 +126,7 @@ export function ressourcesDemo(salaries, materiels) {
 }
 
 const TYPES_DOC = [['V_DEVIS', 'Devis client', 'V'], ['V_COMMANDE', 'Commande client', 'V'], ['V_FACTURE', 'Facture', 'V'], ['V_AVOIR', 'Avoir', 'V'],
-  ['A_COMMANDE', 'Commande fournisseur', 'A']];
+  ['A_COMMANDE', 'Commande fournisseur', 'A'], ['A_DEVIS', 'Demande de prix fournisseur', 'A'], ['A_FACTURE', 'Facture fournisseur', 'A']];
 const STATUTS = ['Brouillon', 'Validé', 'Validé', 'Accepté', 'Facturé', 'Soldé', 'Annulé'];
 
 /** Documents de démonstration : le devis du mode hors ligne (ID 0) puis des documents fictifs. */

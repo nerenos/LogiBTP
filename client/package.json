@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "LogiBTP – client de saisie des documents et moteur de calcul JS",
+  "description": "LogiBTP – application web : accueil, navigation, listes, fiches, documents, GED",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -18,7 +18,8 @@
     "@logibtp/document": "0.1.0",
     "@logibtp/liste": "0.1.0",
     "@logibtp/fiche": "0.1.0",
-    "@logibtp/ged": "0.1.0"
+    "@logibtp/ged": "0.1.0",
+    "@logibtp/navigation": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

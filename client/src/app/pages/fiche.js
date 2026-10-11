@@ -1,0 +1,79 @@
+import { PageBase } from '@logibtp/navigation';
+import { ExplorateurGed } from '@logibtp/ged/ui';
+import { CLASSES_FICHE } from '../fiches/fiches.js';
+import { LISTE_PAR_TYPE } from '../application.js';
+
+const ICONES = { salarie: '👷', materiel: '🚜' };
+
+/**
+ * Fiche d'un élément (module Fiche) : /fiche/<type>/<id>, /fiche/<type>/nouveau (création). Fermer la fiche (✕ ou
+ * Échap) revient à la page précédente de la fenêtre (la liste), sinon à la liste du type. Quitter la page passe
+ * par la fermeture de la fiche : confirmation des modifications et libération du verrou.
+ */
+export class PageFiche extends PageBase {
+  async ouvrir() {
+    const app = this.app;
+    const { type } = this.params;
+    const nouveau = this.params.id === 'nouveau';
+    const Classe = CLASSES_FICHE[type];
+    if (!Classe) throw new Error(`Type de fiche inconnu : ${type}`);
+    this.icone = ICONES[type] ?? '🗂';
+    this.titre = nouveau ? `Nouvelle fiche ${type}` : `Fiche ${type} ${this.params.id}`;
+    this.conteneur.innerHTML = '<div class="page-fiche"><div class="page-fiche-corps"></div></div>';
+    const s = await app.services();
+    this.fiche = new Classe({
+      conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
+      id: nouveau ? null : this.params.id, mode: nouveau ? 'creation' : 'consultation',
+      message: (t, n) => app.message(t, n),
+      peutParametrer: app.estAdmin(),
+      // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
+      ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
+        fournisseur: s.ged, contexte: { type_element: typeElement, id_element: String(idElement), libelle }, compact: true,
+        modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
+      }),
+      surEnregistre: (f, { cree }) => {
+        app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
+        if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);
+        this.#titre();
+      },
+      surFerme: () => {
+        this.ferme = true;
+        if (!this.enQuittant) app.routeur.retour(LISTE_PAR_TYPE[type] ?? '/');
+      },
+    });
+    await this.fiche.ouvrir();
+    this.#titre();
+    // Le titre suit les changements de mode et d'enregistrement.
+    this.observateur = new MutationObserver(() => this.#titre());
+    this.observateur.observe(this.conteneur, { subtree: true, childList: true, characterData: true });
+  }
+
+  #titre() {
+    const h = this.conteneur.querySelector('.fiche-titre h2')?.textContent?.trim();
+    if (h && h !== this.titre) { this.titre = h; this.app.majPage(); }
+  }
+
+  get modifiee() { return !this.ferme && Boolean(this.fiche?.modifiee); }
+
+  async quitter() {
+    if (this.ferme || !this.fiche) return true;
+    this.enQuittant = true;
+    try { return await this.fiche.fermer(); } finally { this.enQuittant = false; }
+  }
+
+  /** Fermeture sans confirmation (session fermée, fenêtre fermée) : le verrou est libéré. */
+  async liberer() {
+    if (this.ferme || !this.fiche) return;
+    this.enQuittant = true;
+    await this.fiche.fermer({ sansConfirmation: true });
+  }
+
+  enregistrer() { if (this.fiche?.mode !== 'consultation') this.fiche.enregistrer(); }
+
+  echap() { this.fiche?.fermer(); }
+
+  fermer() {
+    this.observateur?.disconnect();
+    if (!this.ferme) this.liberer().catch(() => {});
+  }
+}

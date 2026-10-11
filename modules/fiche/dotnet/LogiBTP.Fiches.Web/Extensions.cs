@@ -11,6 +11,11 @@ namespace LogiBTP.Fiches.Web;
 public static class Extensions
 {
     public static IServiceCollection AddModuleFiche<TSpecialisation>(this IServiceCollection services, Action<DbContextOptionsBuilder> options)
+        where TSpecialisation : SpecialisationFiche =>
+        services.AddModuleFiche<TSpecialisation>((_, o) => options(o));
+
+    /// <summary>Options du contexte par requête (ex. base de la société courante, désignée par le sous-domaine).</summary>
+    public static IServiceCollection AddModuleFiche<TSpecialisation>(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> options)
         where TSpecialisation : SpecialisationFiche
     {
         services.AddDbContext<FicheDbContext>(options);

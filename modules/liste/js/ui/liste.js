@@ -16,7 +16,7 @@ const DUREE_MARQUE = 4000;
  * appliqués par la base, tri (lignes chargées ou toute la base), filtres de colonnes façon tableur sur les
  * lignes chargées, rafraîchissement ciblé et contrôle périodique des lignes ajoutées, modifiées ou supprimées.
  *
- * Options : fournisseur (FournisseurApi / FournisseurMemoire), contexte (vues proposées), ouvrir({ id, type, ligne }),
+ * Options : fournisseur (FournisseurApi / FournisseurMemoire), contexte (vues proposées), ouvrir({ id, type, ligne, nouvelleFenetre }), surVue({ theme, vue }),
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
@@ -26,11 +26,13 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue } = {}) {
     this.racine = racine;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
     this.ouvrirExterne = ouvrir;
+    // Thème ou vue changés (l'application reporte le choix dans l'URL de la page).
+    this.surVue = surVue;
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
     this.peutGererThemes = peutGererThemes;
@@ -167,7 +169,7 @@ export class ListeDonnees {
     this.corps.addEventListener('dblclick', (e) => {
       const tr = e.target.closest('tr[data-id]');
       // En mode saisie, le double-clic sur une cellule modifiable ne doit pas ouvrir la fiche.
-      if (tr && !e.target.closest('td.modifiable')) this.ouvrir(tr.dataset.id);
+      if (tr && !e.target.closest('td.modifiable')) this.ouvrir(tr.dataset.id, e);
     });
     this.zone.addEventListener('keydown', (e) => this.#clavier(e));
     this.observateur = new IntersectionObserver((entrees) => {
@@ -223,6 +225,7 @@ export class ListeDonnees {
     this.vue = null;
     this.appliquerVue({ vli_id: null, vli_nom: '', definition: { theme: this.theme } }, { nonEnregistree: false, vide: true });
     this.message('Aucune vue dans ce thème : ＋ pour en créer une');
+    this.surVue?.({ theme: this.theme, vue: null });
   }
 
   gererThemes() {
@@ -252,6 +255,7 @@ export class ListeDonnees {
     this.#ecrirePreferences();
     this.racine.querySelector('.liste-vues').value = String(id);
     this.appliquerVue(vue, { nonEnregistree: false });
+    this.surVue?.({ theme: this.theme, vue: id });
   }
 
   /** Applique une vue (enregistrée ou issue du concepteur) : en-têtes, segments, rechargement. */
@@ -906,7 +910,7 @@ export class ListeDonnees {
       if (lignes[j]) this.#selectionner(lignes[j].dataset.id);
     } else if (e.key === 'Enter' && this.selection) {
       e.preventDefault();
-      this.ouvrir(this.selection);
+      this.ouvrir(this.selection, e);
     }
   }
 
@@ -1062,9 +1066,10 @@ export class ListeDonnees {
     if (tr && ligne) tr.replaceWith(this.#ligneDom(ligne, this.#visibles()));
   }
 
-  /** Ouvre la fiche de la ligne : l'ID et le type d'élément sont fournis par la source. */
-  ouvrir(id) {
+  /** Ouvre la fiche de la ligne : l'ID et le type d'élément sont fournis par la source (Ctrl ou Maj : nouvelle fenêtre). */
+  ouvrir(id, evenement = null) {
     const ligne = this.lignes.find((l) => String(l._id) === String(id));
-    if (ligne) this.ouvrirExterne?.({ id: ligne._id, type: ligne._type, ligne });
+    const nouvelleFenetre = Boolean(evenement?.ctrlKey || evenement?.shiftKey || evenement?.metaKey);
+    if (ligne) this.ouvrirExterne?.({ id: ligne._id, type: ligne._type, ligne, nouvelleFenetre });
   }
 }

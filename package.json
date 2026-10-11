@@ -10,6 +10,7 @@
     "modules/liste/js",
     "modules/fiche/js",
     "modules/ged/js",
+    "modules/navigation/js",
     "client"
   ],
   "scripts": {

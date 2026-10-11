@@ -1,31 +1,39 @@
-/* Application LogiBTP : barre principale. Les styles des composants viennent du socle et des modules. */
+/* Application LogiBTP : pages. Les styles des composants viennent du socle et des modules. */
 
-.barre {
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex: none;
-  padding: 0.4rem 1rem; background: var(--surface); border-bottom: 1px solid var(--bord);
-}
-.barre h1 { font-size: 1.05rem; margin: 0; color: var(--accent); }
 .groupe { display: flex; gap: 0.35rem; align-items: center; }
-.mode { color: var(--discret); font-size: 0.9em; }
-.message { margin-left: auto; font-weight: 500; }
-.message.erreur { color: var(--erreur); }
-.message.avertissement { color: var(--alerte); }
-.message.succes { color: var(--succes); }
+.page-titre { font-size: 1.2rem; margin: 0 0 0.5rem; }
+.page-simple { padding: 2rem; }
 
-/* Vue Liste */
-.vue-liste { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.6rem; border-top: 1px solid var(--bord); }
-#liste { flex: 1; min-height: 0; }
+/* Liste */
+.page-liste { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem 1rem 0.6rem; }
+.page-liste-zone { flex: 1; min-height: 0; }
 .liste-demo { display: flex; align-items: center; gap: 0.6rem; flex: none; }
 .liste-demo[hidden] { display: none; }
 
-/* Fiche ouverte depuis une liste : panneau au-dessus de la vue */
-.panneau-fiche {
-  position: fixed; inset: 3.2rem 1rem 1rem; z-index: 12; background: var(--surface); border: 1px solid var(--bord);
-  border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); padding: 0.8rem 1rem; display: flex; flex-direction: column;
-}
-.panneau-fiche[hidden] { display: none; }
-.panneau-fiche > div { flex: 1; min-height: 0; }
-.ged-panneau { display: flex; flex-direction: column; gap: 0.4rem; }
-.ged-panneau-entete { display: flex; align-items: center; justify-content: space-between; flex: none; }
-.ged-panneau-entete h2 { margin: 0; font-size: 1.15rem; }
-.ged-panneau-corps { flex: 1; min-height: 0; }
+/* Fiche */
+.page-fiche { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.6rem 1rem; }
+.page-fiche-corps { flex: 1; min-height: 0; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.8rem 1rem; display: flex; flex-direction: column; }
+.page-fiche-corps > * { flex: 1; min-height: 0; }
+
+/* GED */
+.page-ged { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.6rem 1rem; }
+.page-ged-corps { flex: 1; min-height: 0; }
+
+/* Document */
+.page-document { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.document-barre { display: flex; align-items: end; gap: 1rem; flex-wrap: wrap; padding: 0.4rem 1rem 0; flex: none; }
+.document-barre .groupe { padding-bottom: 0.3rem; }
+.document-barre .onglets { padding: 0; }
+.document-barre .resume { margin-left: auto; color: var(--discret); font-size: 0.9em; padding-bottom: 0.4rem; }
+.document-zone { flex: 1; min-height: 0; padding: 0 1rem 0.6rem; display: flex; flex-direction: column; }
+
+/* Paramètres */
+.page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 64rem; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.6rem 1rem; }
+.carte h2 { font-size: 1rem; margin: 0 0 0.4rem; }
+.carte .ligne { display: flex; align-items: center; gap: 0.4rem; }
+.carte button { margin: 0.15rem 0.3rem 0.15rem 0; }
+.carte button.danger { border-color: var(--erreur); color: var(--erreur); }
+.definitions { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 1rem; margin: 0; }
+.definitions dt { color: var(--discret); }
+.definitions dd { margin: 0; }

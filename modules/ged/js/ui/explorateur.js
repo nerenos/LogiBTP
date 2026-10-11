@@ -18,7 +18,7 @@ const opt = (v, l, c) => `<option value="${echapper(v)}" ${String(c ?? '') === S
 const libelleEtape = (code) => ETAPES.find(([c]) => c === code)?.[1] ?? code ?? '';
 
 export class ExplorateurGed {
-  constructor(conteneur, { fournisseur, contexte = null, compact = false, modifiable = true, admin = false, utilisateur = '', message, documentInitial = null }) {
+  constructor(conteneur, { fournisseur, contexte = null, compact = false, modifiable = true, admin = false, utilisateur = '', message, documentInitial = null, coffre = false }) {
     this.conteneur = conteneur;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
@@ -30,6 +30,7 @@ export class ExplorateurGed {
     this.selection = documentInitial;
     this.recherche = '';
     this.supprimes = false;
+    this.coffre = coffre;
     this.documents = [];
     this.#construire();
   }
@@ -42,6 +43,7 @@ export class ExplorateurGed {
       <div class="ged-barre">
         <input type="search" class="ged-recherche" placeholder="Rechercher (titre, mail, résumé, notes…)">
         ${this.modifiable ? '<button type="button" class="principal" data-action="ajouter" title="Ajouter des documents (ou glisser-déposer)">＋ Ajouter</button><input type="file" multiple hidden data-fichiers>' : ''}
+        ${this.contexte ? '' : `<label class="ged-option" title="Documents archivés au coffre-fort uniquement"><input type="checkbox" data-coffre${this.coffre ? ' checked' : ''}> Coffre-fort</label>`}
         ${this.admin ? '<label class="ged-option"><input type="checkbox" data-supprimes> Supprimés</label>' : ''}
         ${this.admin && !this.contexte ? '<button type="button" data-action="coffre" title="Vérifier toute la chaîne du coffre-fort">🔒 Vérifier le coffre</button>' : ''}
         <span class="ged-compteur"></span>
@@ -61,6 +63,7 @@ export class ExplorateurGed {
     const entree = c.querySelector('[data-fichiers]');
     c.querySelector('[data-action="ajouter"]')?.addEventListener('click', () => entree.click());
     entree?.addEventListener('change', () => { if (entree.files.length) this.deposer(entree.files); entree.value = ''; });
+    c.querySelector('[data-coffre]')?.addEventListener('change', (e) => { this.coffre = e.target.checked; this.charger().catch((x) => this.#erreur(x)); });
     c.querySelector('[data-supprimes]')?.addEventListener('change', (e) => { this.supprimes = e.target.checked; this.charger().catch((x) => this.#erreur(x)); });
     c.querySelector('[data-action="coffre"]')?.addEventListener('click', () => this.verifierCoffre().catch((x) => this.#erreur(x)));
     if (this.modifiable) this.#glisserDeposer();
@@ -101,7 +104,7 @@ export class ExplorateurGed {
 
   async charger() {
     this.parametres ??= await this.fournisseur.parametres();
-    const filtre = { recherche: this.recherche, supprimes: this.supprimes };
+    const filtre = { recherche: this.recherche, supprimes: this.supprimes, coffre: this.coffre };
     if (this.contexte) Object.assign(filtre, { type_element: this.contexte.type_element, id_element: String(this.contexte.id_element) });
     this.documents = await this.fournisseur.lister(filtre);
     this.#rendreListe();

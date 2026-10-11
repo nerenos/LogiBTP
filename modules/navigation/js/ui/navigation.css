@@ -1,0 +1,150 @@
+/* @logibtp/navigation/ui – bandeau à menus, fenêtres, accueil et widgets. */
+
+/* Bandeau très fin fixé en haut */
+.bandeau {
+  position: relative; flex: none; display: flex; align-items: stretch; gap: 0.2rem; height: 28px; z-index: 40;
+  background: var(--surface); border-bottom: 1px solid var(--bord); padding: 0 0.4rem; font-size: 12.5px; user-select: none;
+}
+.bandeau a { color: inherit; text-decoration: none; }
+.bandeau-accueil { display: flex; align-items: center; padding: 0 0.45rem; font-size: 1.15em; color: var(--accent) !important; }
+.bandeau-menus { display: flex; align-items: stretch; }
+.bandeau-menus button { border: 0; border-radius: 0; background: transparent; padding: 0 0.6rem; height: 100%; }
+.bandeau-menus button:hover, .bandeau-menus button.ouvert, .bandeau-menus button:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
+.bandeau-menus u { text-decoration: none; }
+.bandeau.acces-clavier .bandeau-menus u, .bandeau-deroulant:not([hidden]) ~ * u, .bandeau:has(.bandeau-deroulant:not([hidden])) .bandeau-menus u { text-decoration: underline; }
+.bandeau-message { margin-left: auto; align-self: center; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.bandeau-message.erreur { color: var(--erreur); }
+.bandeau-message.avertissement { color: var(--alerte); }
+.bandeau-message.succes { color: var(--succes); }
+.bandeau-infos { display: flex; align-items: center; gap: 0.4rem; color: var(--discret); padding: 0 0.4rem; white-space: nowrap; }
+.bandeau-societe { background: var(--accent-clair); color: var(--accent); border-radius: 3px; padding: 0 0.4rem; font-weight: 600; }
+.bandeau-logo { display: flex; align-items: center; padding: 0 0.3rem 0 0.5rem; border-left: 1px solid var(--bord); }
+.bandeau-logo svg, .bandeau-logo img { height: 20px; width: auto; display: block; }
+.bandeau-logo-texte { font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+
+.bandeau-deroulant {
+  position: absolute; top: 27px; min-width: 17rem; max-height: calc(100vh - 40px); overflow: auto; padding: 0.2rem 0;
+  background: var(--surface); border: 1px solid var(--bord); box-shadow: 2px 6px 18px rgb(0 0 0 / 0.22);
+}
+.bandeau-deroulant[hidden] { display: none; }
+.bandeau-element { display: grid; grid-template-columns: 1.1rem 1.5rem 1fr auto 1.6rem; align-items: center; gap: 0.2rem; padding: 0.22rem 0.4rem 0.22rem 0.2rem; cursor: default; }
+.bandeau-element.actif { background: var(--accent); color: #fff; }
+.bandeau-element.actif small, .bandeau-element.actif .bandeau-raccourci { color: #e8efff; }
+.bandeau-element.desactive { opacity: 0.45; }
+.bandeau-element.desactive.actif { background: var(--titre-fond); color: inherit; }
+.bandeau-libelle small { display: block; font-size: 0.85em; color: var(--discret); }
+.bandeau-raccourci { color: var(--discret); font-size: 0.9em; padding-left: 1rem; }
+.bandeau-coche { text-align: center; }
+.bandeau-icone { text-align: center; }
+.bandeau-fenetre { border: 0; background: transparent; padding: 0 0.2rem; opacity: 0.55; color: inherit; }
+.bandeau-element:hover .bandeau-fenetre, .bandeau-element.actif .bandeau-fenetre { opacity: 1; }
+.bandeau-fenetre:hover { background: rgb(255 255 255 / 0.25); }
+.bandeau-separateur { border-top: 1px solid var(--bord); margin: 0.25rem 0.3rem; }
+.bandeau-separateur span { display: block; font-size: 0.8em; color: var(--discret); margin-top: 0.15rem; padding-left: 2.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.bandeau-element.fenetre-modifiee .bandeau-libelle::after { content: " ●"; color: var(--alerte); }
+.bandeau-vide { padding: 0.3rem 1rem; color: var(--discret); }
+
+/* Zone des pages */
+.pages { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page[hidden] { display: none !important; }
+
+/* Signalement d'une fenêtre (BroadcastChannel) */
+.nav-signal { position: fixed; inset: 0; z-index: 90; pointer-events: none; border: 6px solid var(--accent); animation: nav-signal 0.6s ease-in-out 4 alternate; }
+.nav-signal span { position: absolute; top: 40%; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 0.6rem 1.2rem; border-radius: 6px; font-size: 1.2rem; font-weight: 600; }
+@keyframes nav-signal { from { opacity: 1; } to { opacity: 0.2; } }
+
+/* Dialogues */
+.nav-dialogue-fond { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.35); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.nav-dialogue { background: var(--surface); border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); width: min(52rem, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.nav-dialogue > header, .nav-dialogue > footer { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; }
+.nav-dialogue > header { border-bottom: 1px solid var(--bord); justify-content: space-between; }
+.nav-dialogue > header h2 { margin: 0; font-size: 1.1rem; }
+.nav-dialogue > footer { border-top: 1px solid var(--bord); justify-content: flex-end; }
+.nav-dialogue-corps { padding: 0.6rem 1rem; overflow: auto; }
+.nav-dialogue button.danger, .accueil button.danger { border-color: var(--erreur); color: var(--erreur); margin-right: auto; }
+.nav-fenetres { width: 100%; border-collapse: collapse; }
+.nav-fenetres th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--bord); }
+.nav-fenetres td { padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.nav-fenetres tr.courante td { background: var(--accent-clair); }
+.nav-fenetres code { word-break: break-all; }
+.nav-actions { white-space: nowrap; text-align: right; }
+.nav-actions button { margin-left: 0.25rem; }
+.nav-modifiee { color: var(--alerte); }
+.aide { color: var(--discret); font-size: 0.9em; }
+
+/* Accueil */
+.accueil { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.accueil-session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.9rem;
+  border: 1px solid var(--accent); background: var(--accent-clair); border-radius: 8px; }
+.accueil-session[hidden] { display: none; }
+.accueil-session .aide { display: block; }
+.accueil-bloquees { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.accueil-entete { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.accueil-salutation h1 { margin: 0; font-size: 1.4rem; }
+.accueil-salutation p { margin: 0.1rem 0 0; color: var(--discret); }
+.accueil-outils { display: flex; gap: 0.35rem; }
+.accueil-outils button.actif { background: var(--accent); color: #fff; border-color: var(--accent); }
+.accueil-bloc h2 { font-size: 0.95rem; margin: 0 0 0.45rem; color: var(--discret); text-transform: uppercase; letter-spacing: 0.05em; }
+.accueil-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.55rem; }
+.accueil-tuile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; min-height: 5.4rem; padding: 0.5rem;
+  background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; color: inherit; text-decoration: none; text-align: center; }
+.accueil-tuile:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgb(29 95 191 / 0.15); }
+.accueil-tuile .icone { font-size: 1.8rem; line-height: 1; }
+.accueil-tuile .libelle { font-weight: 500; }
+.accueil-edition .accueil-tuile[draggable="true"], .accueil-edition .widget[draggable="true"] { cursor: grab; outline: 1px dashed var(--accent); }
+.accueil-retirer { position: absolute; top: 0.2rem; right: 0.2rem; padding: 0 0.35rem; font-size: 0.85em; }
+.accueil-ajout select { width: 100%; }
+.accueil-edition-pied { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.accueil-edition-pied[hidden] { display: none; }
+
+.accueil-grille { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0.7rem; }
+.widget { grid-column: span 6; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; display: flex; flex-direction: column; min-height: 10rem; overflow: hidden; }
+.widget-petit { grid-column: span 4; }
+.widget-large { grid-column: span 12; }
+@media (max-width: 1100px) { .widget, .widget-petit { grid-column: span 6; } .widget-large { grid-column: span 12; } }
+@media (max-width: 700px) { .widget, .widget-petit, .widget-large { grid-column: span 12; } }
+.widget > header { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--bord); background: var(--titre-fond); }
+.widget > header h3 { margin: 0; font-size: 0.95rem; }
+.widget > header a { color: inherit; text-decoration: none; }
+.widget > header a:hover { color: var(--accent); text-decoration: underline; }
+.widget-outils { display: flex; gap: 0.2rem; }
+.widget-outils button { padding: 0 0.4rem; }
+.widget-corps { padding: 0.55rem 0.7rem; flex: 1; overflow: auto; }
+.widget-chargement { opacity: 0.55; }
+.widget-chargement:empty::before { content: "⏳ Chargement…"; color: var(--discret); }
+.widget-erreur { color: var(--erreur); margin: 0; }
+.widget-vide { color: var(--discret); margin: 0; }
+.widget [data-url] { cursor: pointer; }
+.widget-indicateurs { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 0.5rem; }
+.widget-indicateur { border: 1px solid var(--bord); border-radius: 6px; padding: 0.45rem 0.6rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.widget-indicateur:hover { border-color: var(--accent); }
+.widget-indicateur .valeur { font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.widget-indicateur .libelle { color: var(--discret); font-size: 0.9em; }
+.widget-indicateur.alerte .valeur { color: var(--alerte); }
+.widget-indicateur.erreur .valeur { color: var(--erreur); }
+.widget-indicateur.succes .valeur { color: var(--succes); }
+.widget-alertes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.widget-alertes li { display: grid; grid-template-columns: 1.4rem 1fr; gap: 0.3rem; padding: 0.35rem 0.45rem; border-radius: 5px; border-left: 3px solid var(--bord); background: var(--fond); }
+.widget-alertes li.erreur { border-left-color: var(--erreur); }
+.widget-alertes li.alerte { border-left-color: var(--alerte); }
+.widget-alertes li.info { border-left-color: var(--accent); }
+.widget-alertes li:hover { background: var(--accent-clair); }
+.widget-alertes small { display: block; color: var(--discret); }
+.widget-tableau { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+.widget-tableau th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.15rem 0.35rem; border-bottom: 1px solid var(--bord); }
+.widget-tableau td { padding: 0.22rem 0.35rem; border-bottom: 1px solid var(--bord); }
+.widget-tableau .nombre { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.widget-tableau tr[data-url]:hover td { background: var(--accent-clair); }
+.widget-barres { display: flex; flex-direction: column; gap: 0.3rem; }
+.widget-barre { display: grid; grid-template-columns: minmax(6rem, 35%) 1fr auto; align-items: center; gap: 0.5rem; }
+.widget-barre .libelle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.widget-barre .piste { height: 0.9rem; background: var(--fond); border-radius: 3px; overflow: hidden; }
+.widget-barre .remplissage { display: block; height: 100%; background: hsl(var(--teinte, 215) 65% 52%); border-radius: 3px; }
+.widget-barre .valeur { font-variant-numeric: tabular-nums; min-width: 3rem; text-align: right; }
+.widget-barre:hover .libelle { color: var(--accent); }
+.widget-total { color: var(--discret); font-size: 0.88em; text-align: right; margin-top: 0.2rem; }
+.accueil-ajout-widget { border-style: dashed; }
+.accueil-catalogue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.accueil-catalogue button { width: 100%; text-align: left; display: flex; flex-direction: column; }
+.accueil-catalogue small { color: var(--discret); }

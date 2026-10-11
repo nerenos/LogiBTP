@@ -12,11 +12,18 @@ namespace LogiBTP.Ged.Web;
 public static class Extensions
 {
     public static IServiceCollection AddModuleGed<TSpecialisation>(this IServiceCollection services, Action<DbContextOptionsBuilder> options)
+        where TSpecialisation : SpecialisationGed =>
+        services.AddModuleGed<TSpecialisation>((_, o) => options(o));
+
+    /// <summary>Options du contexte par requête (ex. base de la société courante, désignée par le sous-domaine).</summary>
+    public static IServiceCollection AddModuleGed<TSpecialisation>(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> options)
         where TSpecialisation : SpecialisationGed
     {
         services.AddDbContext<GedDbContext>(options);
         services.AddSingleton<SpecialisationGed, TSpecialisation>();
-        services.AddSingleton(sp => new StockageGed(sp.GetRequiredService<SpecialisationGed>().RepertoireStockage));
+        // Un répertoire par société (base principale : « _principale »), sous le répertoire de stockage.
+        services.AddScoped(sp => new StockageGed(Path.Combine(sp.GetRequiredService<SpecialisationGed>().RepertoireStockage,
+            sp.GetService<SocieteCourante>()?.Code ?? "_principale")));
         services.AddScoped<ServiceGed>();
         return services;
     }

@@ -202,12 +202,15 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     protected static string SqlSource(SourceListe s) => "SELECT * FROM " + Relation(s);
 
+    /// <summary>Clé du cache propre à la base (une base par société : mêmes noms de vues, schémas éventuellement différents).</summary>
+    private string CleCache(string cle) => $"{db.Database.GetConnectionString()}|{cle}";
+
     /// <summary>Colonnes d'une source déclarée ; modifiables d'après information_schema si la source l'est.</summary>
     protected async Task<IReadOnlyList<ColonneSource>> ColonnesSource(SourceListe s, CancellationToken ct)
     {
         var colonnes = await Colonnes(SqlSource(s), ct);
         if (!s.SliModifiable) return colonnes;
-        var cle = "modifiables:" + s.SliVue;
+        var cle = CleCache("modifiables:" + s.SliVue);
         if (cache.Colonnes.TryGetValue(cle, out var connues)) return connues;
         var parties = s.SliVue.Split('.');
         var (schema, vue) = parties.Length == 2 ? (parties[0], parties[1]) : ("public", parties[0]);
@@ -252,7 +255,8 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
     /// <summary>Colonnes et types d'une source, lus sans aucune ligne (LIMIT 0).</summary>
     protected async Task<IReadOnlyList<ColonneSource>> Colonnes(string sql, CancellationToken ct)
     {
-        if (cache.Colonnes.TryGetValue(sql, out var connues)) return connues;
+        var cle = CleCache(sql);
+        if (cache.Colonnes.TryGetValue(cle, out var connues)) return connues;
         var colonnes = await Executer(ConstructeurRequete.Schema(sql), async cmd =>
         {
             await using var rd = await cmd.ExecuteReaderAsync(CommandBehavior.SchemaOnly, ct);
@@ -260,7 +264,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         }, ct);
         if (colonnes.Select(c => c.Code).Distinct(StringComparer.Ordinal).Count() != colonnes.Count)
             throw ExceptionMetier.Invalide("COLONNES_DOUBLES", "La source contient des colonnes de même nom : donnez-leur un alias");
-        cache.Colonnes[sql] = colonnes;
+        cache.Colonnes[cle] = colonnes;
         return colonnes;
     }
 

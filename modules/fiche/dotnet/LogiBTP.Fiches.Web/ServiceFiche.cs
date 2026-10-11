@@ -67,12 +67,14 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     protected async Task<IReadOnlyDictionary<string, string>> TypesColonnes(string table, CancellationToken ct)
     {
-        if (cache.Tables.TryGetValue(table, out var connus)) return connus;
+        // Clé propre à la base (une base par société).
+        var cle = $"{db.Database.GetConnectionString()}|{table}";
+        if (cache.Tables.TryGetValue(cle, out var connus)) return connus;
         var lignes = await Lire(new RequeteFiche(
             "SELECT column_name AS c, data_type AS t FROM information_schema.columns WHERE table_schema = 'public' AND table_name = @p0",
             [new ParametreFiche("p0", table)]), ct);
         IReadOnlyDictionary<string, string> types = lignes.ToDictionary(l => (string)l["c"]!, l => (string)l["t"]!, StringComparer.Ordinal);
-        cache.Tables[table] = types;
+        cache.Tables[cle] = types;
         return types;
     }
 

@@ -1,0 +1,297 @@
+import { PageBase } from '@logibtp/navigation';
+import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { Disposition } from '@logibtp/document/ui';
+import { PanneauMetre } from '@logibtp/metre/ui';
+import { VERSION_MOTEUR } from '../../calcul/index.js';
+import { api } from '../api.js';
+import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../demo.js';
+import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
+import { PanneauxBtp } from '../panneaux-btp.js';
+
+// Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
+// local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>.
+
+const GABARIT = `
+  <div class="document-barre">
+    <div class="groupe">
+      <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
+      <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
+      <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
+      <button data-action="valider" title="Valider et bloquer le document">Valider</button>
+      <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+      <select data-nouveau-type title="Type du nouveau document" hidden></select>
+      <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
+    </div>
+    <nav class="onglets" role="tablist">
+      <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
+      <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
+    </nav>
+    <span class="resume"></span>
+  </div>
+  <main class="document-zone">
+    <section id="vue-entete" class="vue vue-entete" role="tabpanel">
+      <div id="entete" class="panneau entete"></div>
+      <section id="totaux-entete" class="panneau totaux-entete"></section>
+    </section>
+    <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
+      <div class="zone-lignes">
+        <section id="ecarts" class="panneau ecarts" hidden></section>
+        <div id="grille"></div>
+        <footer class="pied-lignes">
+          <div id="totaux" class="totaux-compacts"></div>
+          <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Tab / Maj+Tab : niveau · Alt+↑↓ : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
+        </footer>
+      </div>
+      <div id="separateur" class="separateur" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      <aside id="dock" class="dock">
+        <header class="dock-entete">
+          <span class="dock-titre">Détail de la ligne</span>
+          <div class="dock-boutons">
+            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
+            <button data-dock="bas" title="Ancrer en bas">⬓</button>
+            <button data-dock="droite" title="Ancrer à droite">◨</button>
+            <button data-action="reduire" title="Réduire">–</button>
+          </div>
+        </header>
+        <div class="dock-contenu">
+          <section id="detail" class="detail"></section>
+          <section id="controles" class="controles" hidden></section>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <aside id="metre" class="tiroir" hidden></aside>`;
+
+/** Contenu de saisie à partir d'un document complet renvoyé par l'API. */
+const versSaisie = (d) => ({ document: d.document, lignes: d.lignes, metres: d.metres ?? [], metre_lignes: d.metre_lignes ?? [], variables: d.variables ?? [] });
+
+export class PageDocument extends PageBase {
+  icone = '📝';
+
+  $(s) { return this.conteneur.querySelector(s); }
+
+  async ouvrir() {
+    const app = this.app;
+    this.conteneur.innerHTML = GABARIT;
+    this.conteneur.classList.add('page-document');
+    this.disposition = new Disposition({
+      surOnglet: (o) => { if (o === 'lignes') this.editeur?.grille.focus(); },
+    });
+    const actions = {
+      enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(), nouveau: () => this.nouveau(),
+      annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
+    };
+    this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-action]');
+      if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
+    });
+    this.clavier = (e) => {
+      // Alt+1 / Alt+2 : onglets Entête et Lignes.
+      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes' }[e.code] : null;
+      if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
+    };
+    document.addEventListener('keydown', this.clavier);
+    document.body.classList.add('avec-document');
+
+    const { id } = this.params;
+    if (!app.enLigne) {
+      if (id !== 'demo' && Number(id) !== DOCUMENT_DEMO.document.ent_id) throw new Error("Démo hors ligne : seul le devis de démonstration s'ouvre (/document/demo)");
+      await this.charger(DEFINITION_DEMO, DOCUMENT_DEMO);
+      return;
+    }
+    this.types = await api.typesDocument();
+    const choix = this.$('[data-nouveau-type]');
+    choix.innerHTML = this.types.map((t) => `<option value="${t.tyd_code}">${echapper(t.tyd_libelle)}</option>`).join('');
+    choix.hidden = false;
+    this.$('[data-action="nouveau"]').hidden = false;
+    if (id === 'nouveau') {
+      choix.value = this.requete.type ?? 'V_DEVIS';
+      await this.nouveau({ remplacer: true });
+    } else if (id === 'demo') {
+      // Premier lancement : le devis de démonstration est créé dans la base.
+      const docs = await api.documents();
+      const demo = docs.find((d) => d.ent_objet === DOCUMENT_DEMO.document.ent_objet) ?? null;
+      const docId = demo?.ent_id ?? await this.creerDemo();
+      app.routeur.remplacerUrl(`/document/${docId}`);
+      await this.chargerDocument(docId);
+    } else await this.chargerDocument(Number(id));
+  }
+
+  async chargerDocument(id) {
+    const complet = await api.document(id);
+    const type = this.types.find((t) => t.tyd_id === complet.document.ent_tyd_id);
+    const definition = await api.definition(type.tyd_code);
+    await this.charger(definition, complet);
+  }
+
+  async charger(definition, complet) {
+    const zone = this.$('#grille');
+    this.panneaux = null;
+    zone.replaceChildren();
+    this.selection = null;
+    this.editeur = new EditeurDevisBtp(zone, {
+      definition,
+      saisie: versSaisie(complet),
+      surSelection: (id) => {
+        this.selection = id;
+        this.panneaux?.rendreDetail(this.$('#detail'), id);
+        this.metre?.suivre(id); // le métré ouvert suit la ligne sélectionnée
+      },
+      surMessage: (t) => this.app.message(t),
+      ouvrirMetre: (ligId, mtrId) => this.metre.ouvrir(ligId, mtrId),
+    });
+    this.panneaux = new PanneauxBtp(this.editeur);
+    this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
+      fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
+      message: (t) => this.app.message(t),
+      dictionnaire: new DictionnaireBtp(this.editeur),
+    });
+    this.editeur.magasin.abonner(() => this.rafraichir());
+    this.marque = this.editeur.magasin.pile.at(-1);
+    this.ecarts = null;
+    this.rafraichir();
+    if (this.disposition.p.onglet === 'lignes') this.editeur.grille.focus();
+  }
+
+  /** Modifications non enregistrées : la pile d'annulation a changé depuis l'ouverture ou le dernier enregistrement. */
+  get modifiee() { return Boolean(this.editeur) && this.editeur.magasin.pile.at(-1) !== this.marque; }
+
+  rafraichir() {
+    const ed = this.editeur;
+    if (!ed) return;
+    const p = this.panneaux;
+    const enLigne = this.app.enLigne;
+    p.rendreEntete(this.$('#entete'));
+    p.rendreDetail(this.$('#detail'), this.selection);
+    p.rendreTotaux(this.$('#totaux'), { compact: true });
+    p.rendreTotaux(this.$('#totaux-entete'));
+    const doc = ed.saisie.document;
+    const d = ed.resultat.document;
+    this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
+    this.$('.resume').textContent = `${doc.ent_numero ?? ''} · ${doc.ent_objet ?? ''} · Net à payer ${formatNombre(d.ent_net_a_payer, doc.ent_precision_montant ?? 2)} €`;
+    p.rendreMessages(this.$('#controles'), (id) => ed.grille.selectionner(id));
+    p.rendreEcarts(this.$('#ecarts'), this.ecarts, (decision, commentaire) => this.arbitrer(decision, commentaire).catch((x) => this.app.erreur(x)));
+    this.$('[data-action="annuler"]').disabled = ed.magasin.pile.length === 0;
+    this.$('[data-action="retablir"]').disabled = ed.magasin.pileRefaire.length === 0;
+    const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
+    const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille;
+    this.$('[data-action="enregistrer"]').disabled = !enLigne || !modifiable;
+    this.$('[data-action="valider"]').disabled = !enLigne || !modifiable;
+    this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length);
+    document.body.classList.toggle('lecture-seule', !modifiable);
+    this.app.majPage();
+  }
+
+  /** Premier lancement en ligne : crée le devis de démonstration dans la base. */
+  async creerDemo() {
+    const devis = this.types.find((t) => t.tyd_code === 'V_DEVIS');
+    const cree = await api.creer({ ent_tyd_id: devis.tyd_id, ent_tiers_id: 1, ent_objet: DOCUMENT_DEMO.document.ent_objet, ent_num_format: DOCUMENT_DEMO.document.ent_num_format });
+    const contenu = new PressePapiersBtp().renumeroter({ racines: [], ...DOCUMENT_DEMO }, -1);
+    for (const l of contenu.lignes) l.lig_origine_id = null;
+    const definition = await api.definition('V_DEVIS');
+    const ed = new EditeurDevisBtp(document.createElement('div'), {
+      definition, saisie: { document: { ...cree.document, ent_proprietes: DOCUMENT_DEMO.document.ent_proprietes }, ...contenu },
+    });
+    const r = ed.resultat;
+    await api.enregistrer(cree.document.ent_id, {
+      document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables, version_moteur_client: VERSION_MOTEUR,
+    });
+    return cree.document.ent_id;
+  }
+
+  async nouveau({ remplacer = false } = {}) {
+    if (!remplacer && !(await this.quitter())) return;
+    const code = this.$('[data-nouveau-type]').value;
+    const type = this.types.find((t) => t.tyd_code === code);
+    const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: 1, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
+    this.app.routeur.remplacerUrl(`/document/${cree.document.ent_id}`);
+    await this.chargerDocument(cree.document.ent_id);
+    this.disposition.onglet('entete');
+    this.app.publier('enregistre', { type: code, ids: [cree.document.ent_id], cree: true });
+    this.app.message(`${type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé`);
+  }
+
+  /**
+   * Enregistrement en un seul appel : le client envoie ses résultats, le serveur recalcule, compare,
+   * renvoie les ID définitifs et les écarts. La pile d'annulation est conservée.
+   */
+  async enregistrer() {
+    if (this.$('[data-action="enregistrer"]').disabled) return;
+    const ed = this.editeur;
+    const r = ed.resultat;
+    const envoi = { document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables, version_moteur_client: VERSION_MOTEUR };
+    const saisieEnvoyee = structuredClone(ed.entree(ed.saisie));
+    const rep = await api.enregistrer(ed.saisie.document.ent_id, envoi);
+    const map = (table, id) => (id === null || id === undefined ? id : table[id] ?? id);
+    // Correspondances des compléments du module Métré, par table (réponse générique du module Document).
+    const cl = rep.correspondance_lignes;
+    const { metres: cm = {}, metre_lignes: cml = {}, variables: cv = {} } = rep.correspondances ?? {};
+    ed.magasin.appliquerServeur((d) => {
+      d.document = rep.document.document;
+      for (const l of d.lignes) {
+        l.lig_id = map(cl, l.lig_id);
+        l.lig_parent_id = map(cl, l.lig_parent_id);
+        l.lig_st_depuis_id = map(cl, l.lig_st_depuis_id);
+        l.lig_variante_de_id = map(cl, l.lig_variante_de_id);
+        l.lig_mtr_id = map(cm, l.lig_mtr_id);
+        l.lig_ent_id = d.document.ent_id;
+      }
+      for (const m of d.metres) { m.mtr_id = map(cm, m.mtr_id); m.mtr_lig_id = map(cl, m.mtr_lig_id); }
+      for (const x of d.metre_lignes) {
+        x.mli_id = map(cml, x.mli_id); x.mli_mtr_id = map(cm, x.mli_mtr_id);
+        x.mli_parent_id = map(cml, x.mli_parent_id); x.mli_st_depuis_id = map(cml, x.mli_st_depuis_id);
+      }
+      for (const v of d.variables) { v.var_id = map(cv, v.var_id); v.var_lig_id = map(cl, v.var_lig_id); v.var_mtr_id = map(cm, v.var_mtr_id); }
+    });
+    if (this.selection !== null) this.selection = map(cl, this.selection);
+    ed.grille.courant = map(cl, ed.grille.courant);
+    ed.grille.selection = ed.grille.selection.map((id) => map(cl, id));
+    this.ecarts = rep.ecarts.length ? rep.ecarts : null;
+    this.dernierEnvoi = { entree: saisieEnvoyee, client: envoi, serveur: rep.document };
+    this.marque = ed.magasin.pile.at(-1);
+    this.rafraichir();
+    // Rafraîchissement ciblé de la ligne du document dans les listes (cette fenêtre et les autres).
+    this.app.publier('enregistre', { type: rep.document.document.ent_tyd_id, ids: [rep.document.document.ent_id] });
+    this.app.message(rep.ecarts.length ? `Enregistré avec ${rep.ecarts.length} écart(s) de calcul à arbitrer` : `Enregistré (version ${rep.document.document.ent_version})`,
+      rep.ecarts.length ? 'avertissement' : 'succes');
+  }
+
+  async arbitrer(decision, commentaire) {
+    const e = this.dernierEnvoi;
+    const rep = await api.casTest({
+      ent_id: this.editeur.saisie.document.ent_id, cas_decision: decision, cas_commentaire: commentaire || null,
+      version_client: VERSION_MOTEUR, document_entree: e.entree, resultat_client: e.client, resultat_serveur: e.serveur, ecarts: this.ecarts,
+    });
+    this.ecarts = null;
+    this.rafraichir();
+    this.app.message(`Cas de test n° ${rep.cas_id} enregistré (${decision === 'S' ? 'serveur validé' : 'anomalie'})`, 'succes');
+  }
+
+  async valider() {
+    const ed = this.editeur;
+    if (this.modifiee && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
+    if (this.modifiee) await this.enregistrer();
+    const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
+    await this.chargerDocument(rep.document.document.ent_id);
+    this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
+    this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
+  }
+
+  async transformer() {
+    const ed = this.editeur;
+    const cibles = ed.definition.transformations.map((t) => this.types.find((x) => x.tyd_id === t.tra_cible_tyd_id));
+    const choix = prompt(`Transformer en (tout le reliquat) :\n${cibles.map((c, i) => `${i + 1}. ${c.tyd_libelle}`).join('\n')}`, '1');
+    const cible = cibles[Number(choix) - 1];
+    if (!cible) return;
+    const rep = await api.transformer(ed.saisie.document.ent_id, { cible_tyd_id: cible.tyd_id, lignes: [] });
+    this.app.publier('enregistre', { ids: [rep.document.ent_id], cree: true });
+    this.app.message(`${cible.tyd_libelle} ${rep.document.ent_numero ?? ''} créé`, 'succes');
+    // Le nouveau document s'ouvre comme une nouvelle page (le document d'origine reste dans l'historique).
+    await this.app.naviguer(`/document/${rep.document.ent_id}`);
+  }
+
+  fermer() {
+    document.removeEventListener('keydown', this.clavier);
+    document.body.classList.remove('avec-document', 'lecture-seule');
+  }
+}
