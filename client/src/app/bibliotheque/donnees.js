@@ -18,7 +18,8 @@ export const NATURES = [
   { id: 3, code: 'LOC', libelle: "Location d'engins", regroupement: 'ENGIN', axe_analytique: 'ENGIN', compte_achat: '613500', compte_vente: '706000', actif: true },
   { id: 4, code: 'ST', libelle: 'Sous-traitance', regroupement: 'SOUS_TRAITANCE', axe_analytique: 'ST', compte_achat: '604000', compte_vente: '704000', actif: true },
   { id: 5, code: 'OUV', libelle: 'Ouvrages', regroupement: 'VENTE', axe_analytique: 'VENTE', compte_achat: null, compte_vente: '704000', actif: true },
-];
+  { id: 6, code: 'ISO', libelle: 'Isolants', regroupement: 'MATERIAUX', axe_analytique: 'FOURN', compte_achat: '601000', compte_vente: '701000', actif: true, isolant: true },
+].map((n) => ({ isolant: false, ...n }));
 
 export const FAMILLES = [
   { id: 1, bib_id: 1, parent_id: null, code: 'GO', libelle: 'Gros œuvre', ordre: 1 },
@@ -28,20 +29,22 @@ export const FAMILLES = [
   { id: 5, bib_id: 1, parent_id: null, code: 'MO', libelle: "Main-d'œuvre", ordre: 2 },
   { id: 6, bib_id: 1, parent_id: null, code: 'ENG', libelle: 'Engins et matériel', ordre: 3 },
   { id: 7, bib_id: 2, parent_id: null, code: 'PLAT', libelle: 'Plâtrerie', ordre: 1 },
+  { id: 8, bib_id: 2, parent_id: 7, code: 'ISOL', libelle: 'Isolation', ordre: 2 },
 ];
 
 /** Unités ajoutées au référentiel pour la démo (palette, plaque). */
-export const UNITES_BIBLIOTHEQUE = [{ unt_code: 'pal', unt_libelle: 'Palette' }, { unt_code: 'pl', unt_libelle: 'Plaque' }];
+export const UNITES_BIBLIOTHEQUE = [{ unt_code: 'pal', unt_libelle: 'Palette' }, { unt_code: 'pl', unt_libelle: 'Plaque' }, { unt_code: 'rl', unt_libelle: 'Rouleau' }];
 
 const article = (o) => ({
   type: 'ARTICLE', actif: true, gestion: 'NON_GERE', unites: [], scenario_pa: 'FIXE', scenarios: null, pa_fixe: null, dernier_pa: null, pmp: null,
   coef_fg: '1.1', coef_benef: '1.2', pv: null, pv_fixe: false, coef_remise: '1', composition: null, image_ged: null, proprietes: {},
+  poids: null, surface: null, surface_peinture: null, volume: null, hauteur: null, largeur: null, epaisseur: null, isolant_r: null, isolant_lambda: null, isolant_u: null,
   unite_achat: null, unite_vente: null, fam_id: null, nat_id: null, ...o,
 });
 const acier = (id, code, diametre, poids) => article({
   id, bib_id: 1, code, libelle_html: `<p><b>Acier HA${diametre}</b> – barre de 12 m</p><p>Fe E500, NF A 35-080-1</p>`, fam_id: 3, nat_id: 2, gestion: 'STOCK',
-  unite_stock: 'ml', unite_achat: 't', unite_vente: 'kg', unites: [{ unite: 'kg', formule: '1 / {{poids_ml}}' }, { unite: 't', formule: '1000 / {{poids_ml}}' }],
-  proprietes: { poids_ml: poids }, scenario_pa: 'FOURNISSEUR_PRINCIPAL', coef_fg: '1.08', coef_benef: '1.25',
+  unite_stock: 'ml', unite_achat: 't', unite_vente: 'kg', unites: [{ unite: 'kg', formule: '1 / {{poids}}' }, { unite: 't', formule: '1000 / {{poids}}' }],
+  poids, epaisseur: diametre, scenario_pa: 'FOURNISSEUR_PRINCIPAL', coef_fg: '1.08', coef_benef: '1.25',
 });
 
 // Ligne d'ouvrage (format des lignes de document) et ses composantes.
@@ -52,12 +55,13 @@ export const ELEMENTS = [
   acier(2, 'HA12', 12, 0.888),
   article({
     id: 3, bib_id: 1, code: 'BPE25', libelle_html: "<p><b>Béton prêt à l'emploi C25/30</b></p><p>XC1, Dmax 20, S3 – livré toupie</p>", fam_id: 2, nat_id: 2, gestion: 'ACHAT',
-    unite_stock: 'm3', scenario_pa: 'MEILLEUR_MIN', proprietes: { masse_volumique: 2400 },
-    unites: [{ unite: 't', formule: '1000 / {{masse_volumique}}' }],
+    unite_stock: 'm3', scenario_pa: 'MEILLEUR_MIN', poids: 2400, volume: 1, proprietes: { masse_volumique: 2400 },
+    unites: [{ unite: 't', formule: '1000 / {{poids}}' }],
   }),
   article({
     id: 4, bib_id: 1, code: 'PARP20', libelle_html: '<p><b>Parpaing creux 20 × 20 × 50</b></p><p>B40, NF</p>', fam_id: 4, nat_id: 2, gestion: 'STOCK',
-    unite_stock: 'u', unite_achat: 'pal', unite_vente: 'm2', unites: [{ unite: 'pal', formule: '60' }, { unite: 'm2', formule: '10' }],
+    unite_stock: 'u', unite_achat: 'pal', unite_vente: 'm2', poids: 18.5, hauteur: 200, largeur: 500, epaisseur: 200, volume: 0.02, surface_peinture: 0.1,
+    unites: [{ unite: 'pal', formule: '60' }, { unite: 'm2', formule: '1000000 / ({{hauteur}} * {{largeur}})' }],
     scenario_pa: 'DERNIER_PA', dernier_pa: '1.32', pmp: '1.28',
   }),
   article({
@@ -88,8 +92,15 @@ export const ELEMENTS = [
   }),
   article({
     id: 8, bib_id: 2, code: 'BA13', libelle_html: '<p><b>Plaque de plâtre BA13</b> standard</p><p>1,20 × 2,50 m</p>', fam_id: 7, nat_id: 2, gestion: 'STOCK',
-    unite_stock: 'm2', unite_achat: 'pl', unite_vente: 'm2', unites: [{ unite: 'pl', formule: '{{surface_plaque}}' }], proprietes: { surface_plaque: 3 },
+    unite_stock: 'm2', unite_achat: 'pl', unite_vente: 'm2', unites: [{ unite: 'pl', formule: '{{hauteur}} * {{largeur}} / 1000000' }],
+    poids: 8.6, surface: 1, surface_peinture: 1, hauteur: 2500, largeur: 1200, epaisseur: 12.5, proprietes: { reference_fabricant: 'BA13-STD' },
     scenario_pa: 'PMP', pmp: '2.15', dernier_pa: '2.24', coef_fg: '1.12', coef_benef: '1.3',
+  }),
+  article({
+    id: 9, bib_id: 2, code: 'LV100', libelle_html: '<p><b>Laine de verre 100 mm</b> revêtue kraft</p><p>Rouleau 1,20 × 6 m</p>', fam_id: 8, nat_id: 6, gestion: 'STOCK',
+    unite_stock: 'm2', unite_achat: 'rl', unite_vente: 'm2', unites: [{ unite: 'rl', formule: '{{largeur}} * 6000 / 1000000' }],
+    poids: 1.2, surface: 1, hauteur: 6000, largeur: 1200, epaisseur: 100, isolant_lambda: '0.032', isolant_r: '3.15', isolant_u: '0.32',
+    pa_fixe: '4.85', coef_fg: '1.12', coef_benef: '1.3',
   }),
 ];
 

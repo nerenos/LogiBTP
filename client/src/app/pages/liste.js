@@ -1,5 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
+import { PanneauArbres } from '@logibtp/bibliotheque/ui';
 import { simulerModificationsAutres } from '../listes.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
@@ -39,6 +40,8 @@ export class PageListe extends PageBase {
       peutGererThemes: app.peutGererThemes(),
       creation: (vue) => creationDepuisVue(vue, app),
       surVue: ({ theme, vue }) => this.#vueChoisie(theme, vue),
+      // Vues de la bibliothèque : arbres des familles et des natures dans le panneau ancrable (filtres fam_id, nat_id).
+      panneau: ({ vue, conteneur, liste }) => (vue.definition?.source?.vue === 'elements' ? new PanneauArbres({ conteneur, liste, fournisseur: s.bibliotheque }) : null),
     });
     const demo = this.conteneur.querySelector('.liste-demo');
     demo.hidden = app.enLigne;

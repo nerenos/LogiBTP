@@ -36,7 +36,7 @@ export const SOURCES_LISTE = {
       ['id', 'bigint'], ['type_element', 'text'], ['bib_code', 'text'], ['code', 'text'], ['type', 'text'], ['libelle', 'text'], ['famille', 'text'],
       ['nature', 'text'], ['regroupement', 'text'], ['gestion', 'text'], ['unite_stock', 'text'], ['scenario_pa', 'text'], ['pa', 'numeric'],
       ['coef_fg', 'numeric'], ['pr', 'numeric'], ['coef_benef', 'numeric'], ['pv', 'numeric'], ['pv_net', 'numeric'], ['actif', 'boolean'],
-      ['modifie_le', 'timestamp with time zone'],
+      ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
     ],
   },
   ged: {
@@ -305,8 +305,8 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
       col('scenario_pa', 'Scénario PA', { masquee: true }),
       col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false, regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true } }] }),
     ],
-    segments: [{ colonne: 'bib_code', titre: 'Bibliothèque' }, { colonne: 'type', titre: 'Type' }, { colonne: 'famille', titre: 'Famille' },
-      { colonne: 'regroupement', titre: 'Regroupement' }, { colonne: 'gestion', titre: 'Gestion' }],
+    // Familles et natures : arbres du panneau de la liste (filtres fam_id, nat_id) plutôt que des segments.
+    segments: [{ colonne: 'bib_code', titre: 'Bibliothèque' }, { colonne: 'type', titre: 'Type' }, { colonne: 'gestion', titre: 'Gestion' }],
     tri: [{ colonne: 'code', sens: 'asc' }],
     lignes: 'multi',
     taille_lot: 100,

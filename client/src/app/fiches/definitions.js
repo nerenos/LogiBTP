@@ -123,6 +123,8 @@ export const TYPES_FICHE = {
             { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'actif'] },
             { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion'] },
             { titre: 'Libellé', champs: ['libelle_html'], largeur: 'plein' },
+            { titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur'], largeur: 'plein' },
+            { code: 'isolation', titre: 'Isolation', champs: ['isolant_epaisseur', 'isolant_lambda', 'isolant_r', 'isolant_u'] },
           ],
         },
       ],
@@ -159,6 +161,19 @@ export const TYPES_FICHE = {
         c('pv_net', 'PV net', 'ele_pv_net', 'nombre', { lecture_seule: true }),
         c('composition', 'Composition', 'ele_composition', 'json'),
         c('image_ged', 'Image', 'ele_image_ged', 'nombre'),
+        // Données techniques par unité de stock (dimensions en mm) : formules de correspondance d'unités ({{poids}}…).
+        c('poids', 'Poids (kg)', 'ele_poids', 'nombre', { format: '99999999.999999' }),
+        c('surface', 'Surface (m²)', 'ele_surface', 'nombre', { format: '99999999.999999' }),
+        c('surface_peinture', 'Surface à peindre (m²)', 'ele_surface_peinture', 'nombre', { format: '99999999.999999' }),
+        c('volume', 'Volume (m³)', 'ele_volume', 'nombre', { format: '99999999.999999' }),
+        c('hauteur', 'Hauteur (mm)', 'ele_hauteur', 'nombre', { format: '999999999.999' }),
+        c('largeur', 'Largeur (mm)', 'ele_largeur', 'nombre', { format: '999999999.999' }),
+        c('epaisseur', 'Épaisseur (mm)', 'ele_epaisseur', 'nombre', { format: '999999999.999' }),
+        // Isolation (nature isolant) : l'épaisseur est celle des données techniques, reprise pour lecture.
+        c('isolant_epaisseur', 'Épaisseur (mm)', null, 'nombre', { lecture_seule: true, aide: 'Épaisseur des données techniques' }),
+        c('isolant_lambda', 'Conductivité λ (W/m.K)', 'ele_isolant_lambda', 'nombre', { format: '99999.99999' }),
+        c('isolant_r', 'Résistance thermique R (m².K/W)', 'ele_isolant_r', 'nombre', { format: '999999.9999', aide: 'R = épaisseur (m) / λ' }),
+        c('isolant_u', 'Coefficient U (W/m².K)', 'ele_isolant_u', 'nombre', { format: '999999.9999', aide: 'U ≈ 1 / R (paroi seule)' }),
         c('commentaire_prix', 'Commentaire de la modification de prix', 'ele_commentaire_prix', 'texte', { longueur: 500 }),
         c('maj_par', 'Modifié par', 'ele_maj_par', 'texte', { lecture_seule: true }),
       ],
@@ -178,14 +193,12 @@ export const DROITS_FICHE = [
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */
 export const PARAMETRAGE_FICHE = {
-  // Données techniques des éléments : utilisables dans les formules de correspondance d'unités ({{poids_ml}}…).
+  // Champs supplémentaires des éléments : également utilisables dans les formules de correspondance d'unités.
   element: {
     obligatoires: [],
     supplementaires: [
-      { code: 'poids_ml', libelle: 'Poids au ml (kg)', type: 'nombre', format: '999.999', aide: 'Acier, profilés…', ordre: 10 },
+      { code: 'reference_fabricant', libelle: 'Référence fabricant', type: 'texte', longueur: 40, ordre: 10 },
       { code: 'masse_volumique', libelle: 'Masse volumique (kg/m³)', type: 'nombre', format: '99999', ordre: 20 },
-      { code: 'surface_plaque', libelle: "Surface d'une plaque (m²)", type: 'nombre', format: '99.999', ordre: 30 },
-      { code: 'reference_fabricant', libelle: 'Référence fabricant', type: 'texte', longueur: 40, ordre: 40 },
     ].map((x) => ({ ...x, actif: true })),
   },
   salarie: {

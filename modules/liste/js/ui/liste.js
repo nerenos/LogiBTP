@@ -17,6 +17,7 @@ const DUREE_MARQUE = 4000;
  * lignes chargées, rafraîchissement ciblé et contrôle périodique des lignes ajoutées, modifiées ou supprimées.
  *
  * Options : fournisseur (FournisseurApi / FournisseurMemoire), contexte (vues proposées), ouvrir({ id, type, ligne, nouvelleFenetre }), surVue({ theme, vue }),
+ * panneau({ vue, conteneur, liste }) : composant propre à la vue logé dans le panneau ancrable (arbres de filtres…),
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
@@ -26,13 +27,17 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau } = {}) {
     this.racine = racine;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
     this.ouvrirExterne = ouvrir;
     // Thème ou vue changés (l'application reporte le choix dans l'URL de la page).
     this.surVue = surVue;
+    // Panneau propre à une vue (arbres de familles…) et filtres qu'il pose sur des colonnes de la source.
+    this.fabriquePanneau = panneau;
+    this.panneauSpecifique = null;
+    this.filtresExternes = new Map();
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
     this.peutGererThemes = peutGererThemes;
@@ -66,6 +71,7 @@ export class ListeDonnees {
   }
 
   detruire() {
+    this.panneauSpecifique?.detruire?.();
     clearInterval(this.minuterie);
     window.removeEventListener('focus', this.surFocus);
     this.observateur?.disconnect();
@@ -114,7 +120,10 @@ export class ListeDonnees {
             <button type="button" data-dock="droite" title="Ancrer à droite">◨</button>
             <button type="button" data-action="reduire">–</button>
           </header>
-          <div class="liste-segments"></div>
+          <div class="liste-panneau-contenu">
+            <div class="liste-panneau-specifique" hidden></div>
+            <div class="liste-segments"></div>
+          </div>
         </aside>
       </div>`;
     this.zone = r.querySelector('.liste-zone');
@@ -267,6 +276,7 @@ export class ListeDonnees {
     for (const k of [...this.filtres.keys()]) if (!codes.has(k)) this.filtres.delete(k);
     const segs = new Set(this.definition.segments.map((s) => s.colonne));
     for (const k of [...this.segments.keys()]) if (!segs.has(k)) this.segments.delete(k);
+    this.#creerPanneauSpecifique();
     this.triBase = null;
     this.triLocal = null;
     const erreurs = [...this.modele.erreurs].map(([code, m]) => `${this.modele.parCode.get(code)?.titre ?? code} : ${m}`);
@@ -337,10 +347,33 @@ export class ListeDonnees {
     });
   }
 
+  /** Panneau propre à la vue (option panneau) : recréé à chaque vue appliquée ; ses filtres repartent de zéro. */
+  #creerPanneauSpecifique() {
+    this.panneauSpecifique?.detruire?.();
+    this.panneauSpecifique = null;
+    this.filtresExternes.clear();
+    const zone = this.racine.querySelector('.liste-panneau-specifique');
+    zone.replaceChildren();
+    this.panneauSpecifique = this.vue && this.fabriquePanneau ? this.fabriquePanneau({ vue: this.vue, conteneur: zone, liste: this }) : null;
+    zone.hidden = !this.panneauSpecifique;
+    this.racine.querySelector('.liste-panneau-titre').textContent = this.panneauSpecifique ? 'Filtres' : 'Segments';
+  }
+
+  /**
+   * Filtre posé par le panneau propre à la vue : valeurs retenues d'une colonne de la source (null = vide), appliqué par
+   * la base comme un segment ; valeurs null ou vides : filtre retiré.
+   */
+  definirFiltreExterne(colonne, valeurs, { recharger = true } = {}) {
+    if (valeurs?.length) this.filtresExternes.set(colonne, [...valeurs]);
+    else this.filtresExternes.delete(colonne);
+    if (recharger) { this.recharger(); this.rafraichirSegments().catch(() => {}); }
+  }
+
   // ---------------------------------------------------------------- demandes au fournisseur
 
   demande() {
     const segments = {};
+    for (const [col, valeurs] of this.filtresExternes) segments[col] = [...valeurs];
     for (const [col, valeurs] of this.segments) if (valeurs.size) segments[col] = [...valeurs];
     return {
       vue_id: this.vue?.vli_id ?? null,
@@ -564,7 +597,8 @@ export class ListeDonnees {
   async rafraichirSegments() {
     const zone = this.racine.querySelector('.liste-segments');
     const segs = this.definition.segments;
-    this.corpsListe.classList.toggle('sans-segments', !segs.length);
+    this.corpsListe.classList.toggle('sans-segments', !segs.length && !this.panneauSpecifique);
+    this.panneauSpecifique?.rafraichir?.();
     if (!segs.length || !this.vue) { zone.replaceChildren(); return; }
     const gen = this.generation;
     const comptes = await Promise.all(segs.map((s) => this.fournisseur.segments(this.demande(), s.colonne).catch(() => [])));

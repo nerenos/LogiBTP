@@ -50,6 +50,17 @@ export class FicheElement extends FicheLogiBTP {
     return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, v.type === 'OUVRAGE' ? 'Ouvrage' : 'Article'].filter(Boolean).join(' · ');
   }
 
+  /** Nature isolant : le groupe Isolation (R, λ, U) n'apparaît que pour elle. */
+  estIsolant() {
+    return this.referentiels.natures.find((n) => n.id === Number(this.valeur('nat_id')))?.isolant === true;
+  }
+
+  sections() {
+    const isolant = this.estIsolant();
+    return super.sections().map((s) => (s.groupes ? { ...s, groupes: s.groupes.filter((g) => g.code !== 'isolation' || isolant) } : s))
+      .map((s) => (s.groupes ? { ...s, champs: s.groupes.flatMap((g) => g.champs) } : s));
+  }
+
   /** Encart : image de l'élément et prix par unité de stock. */
   rendreInformations(v) {
     if (this.id === null) return '';
@@ -60,6 +71,22 @@ export class FicheElement extends FicheLogiBTP {
 
   /** Bibliothèque, famille (selon la bibliothèque) et nature : listes déroulantes des référentiels. */
   rendreChamp(champ, valeur) {
+    // Isolation : l'épaisseur est celle des données techniques ; R calculé proposé (épaisseur en m / λ).
+    if (champ.code === 'isolant_epaisseur') return super.rendreChamp({ ...champ, lecture_seule: true }, this.valeur('epaisseur'));
+    if (champ.code === 'isolant_r') {
+      const el = super.rendreChamp(champ, valeur);
+      const e = Number(String(this.valeur('epaisseur') ?? '').replace(',', '.'));
+      const l = Number(String(this.valeur('isolant_lambda') ?? '').replace(',', '.'));
+      if (e > 0 && l > 0) {
+        const r = Math.round((e / 1000 / l) * 100) / 100;
+        const bloc = document.createElement('div');
+        bloc.className = 'element-r';
+        bloc.append(el);
+        bloc.insertAdjacentHTML('beforeend', `<small class="aide">e / λ = ${String(r).replace('.', ',')}</small>`);
+        return bloc;
+      }
+      return el;
+    }
     if (!champ.reference) return super.rendreChamp(champ, valeur);
     const { bibliotheques, familles, natures, regroupements } = this.referentiels;
     const bib = Number(this.valeur('bib_id'));
@@ -76,6 +103,7 @@ export class FicheElement extends FicheLogiBTP {
     el.addEventListener('change', () => {
       this.definirValeur(champ.code, el.value === '' ? null : el.value);
       if (champ.code === 'bib_id') { this.definirValeur('fam_id', null); this.rendre(); }
+      if (champ.code === 'nat_id') this.rendre(); // groupe Isolation selon la nature
     });
     return el;
   }
@@ -105,7 +133,8 @@ export class FicheElement extends FicheLogiBTP {
       ...(ouvrage
         ? [{ code: 'composition', titre: 'Composition', champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
         : [{ code: 'tarifs', titre: 'Tarifs fournisseurs', rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
-      { code: 'image', titre: 'Image et notices', champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
+      // Image et notices : sous les groupes de l'onglet Article.
+      { code: 'image', dans: 'article', titre: 'Image et notices', champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
     ];
   }
 

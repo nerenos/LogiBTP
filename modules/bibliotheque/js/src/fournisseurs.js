@@ -65,13 +65,22 @@ export class FournisseurBibliothequeApi {
 
 export const SCENARIOS_TOUS = ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP'];
 
+/** Données techniques de l'élément (par unité de stock ; dimensions en mm), utilisables dans les formules d'unités. */
+export const DONNEES_TECHNIQUES = [
+  ['poids', 'Poids (kg)'], ['surface', 'Surface (m²)'], ['surface_peinture', 'Surface à peindre (m²)'], ['volume', 'Volume (m³)'],
+  ['hauteur', 'Hauteur (mm)'], ['largeur', 'Largeur (mm)'], ['epaisseur', 'Épaisseur (mm)'],
+  ['isolant_r', 'Résistance thermique R'], ['isolant_lambda', 'Conductivité λ'], ['isolant_u', 'Coefficient U'],
+];
+
 const CHAMPS_PRIX = ['scenario', 'pa', 'coef_fg', 'pr', 'coef_benef', 'pv', 'pv_fixe', 'coef_remise', 'pv_net'];
 
 /** Entrée du calcul depuis une ligne d'élément (codes de champs de la fiche et de la liste). */
 export function entreeDepuisLigne(l, tarifs = []) {
   const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
   return {
-    unite_stock: l.unite_stock, unites: json(l.unites, []), donnees: json(l.proprietes, {}),
+    unite_stock: l.unite_stock, unites: json(l.unites, []),
+    // Données des formules : champs supplémentaires puis données techniques de la fiche.
+    donnees: { ...json(l.proprietes, {}), ...Object.fromEntries(DONNEES_TECHNIQUES.map(([c]) => [c, l[c]]).filter(([, v]) => v !== null && v !== undefined && v !== '')) },
     scenario: l.scenario_pa, pa_fixe: l.pa_fixe, dernier_pa: l.dernier_pa, pmp: l.pmp,
     tarifs: tarifs.map((t) => ({ prix: t.prix, unite: t.unite, principal: t.principal, debut: t.debut, fin: t.fin })),
     coef_fg: l.coef_fg, coef_benef: l.coef_benef, pv: l.pv, pv_fixe: l.pv_fixe === true || l.pv_fixe === 'true', coef_remise: l.coef_remise,

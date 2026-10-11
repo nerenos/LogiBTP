@@ -1,6 +1,6 @@
 import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
 import { calculerElement, SCENARIOS_PA } from '../src/calcul.js';
-import { entreeDepuisLigne } from '../src/fournisseurs.js';
+import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 
 // Onglets de la fiche d'un élément (classes mères utilisées par la fiche spécialisée de l'application). Contexte :
 //   valeur(code), definir(code, valeur)      valeurs de la fiche (definir : saisie envoyée avec l'enregistrement)
@@ -145,8 +145,8 @@ export class OngletUnites {
           <td>${modifiable ? '<button type="button" data-supprimer title="Retirer">✕</button>' : ''}</td></tr>`).join('')}
         </tbody></table>
         ${modifiable ? '<button type="button" data-ajouter>＋ Ajouter une unité</button>' : ''}
-        <p class="aide">Données techniques utilisables (champs supplémentaires) : ${donnees.length ? donnees.map((d) => `<code title="${echapper(d.libelle)}">{{${echapper(d.code)}}}</code>`).join(' ') : 'aucune (créez-en dans ⚙ Paramétrer la fiche)'}.
-          Exemple : acier stocké au ml, poids au ml dans la fiche ; kg → <code>1 / {{poids_ml}}</code>, t → <code>1000 / {{poids_ml}}</code>.</p>
+        <p class="aide">Données utilisables (onglet Article, par unité de stock) : ${[...DONNEES_TECHNIQUES.map(([code, libelle]) => ({ code, libelle })), ...donnees].map((d) => `<code title="${echapper(d.libelle)}">{{${echapper(d.code)}}}</code>`).join(' ')}.
+          Exemples : acier stocké au ml (poids au ml) : kg → <code>1 / {{poids}}</code>, t → <code>1000 / {{poids}}</code> ; plaque de plâtre stockée au m² : plaque → <code>{{hauteur}} * {{largeur}} / 1000000</code>.</p>
       </fieldset></div>`;
     this.corps.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('change', () => { this.ctx.definir(el.dataset.v, el.value || null); if (el.dataset.v === 'unite_stock') this.rendre(); }));
     this.corps.querySelectorAll('tr[data-i] [data-c]').forEach((el) => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => this.#enregistrer()));

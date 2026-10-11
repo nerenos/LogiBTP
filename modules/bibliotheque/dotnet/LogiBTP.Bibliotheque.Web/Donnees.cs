@@ -52,6 +52,7 @@ public class NatureElement
     public string? NatAxeAnalytique { get; set; }
     public string? NatCompteAchat { get; set; }
     public string? NatCompteVente { get; set; }
+    public bool NatIsolant { get; set; }
     public bool NatActif { get; set; } = true;
 }
 
@@ -79,6 +80,17 @@ public class Element
     public decimal EleCoefRemise { get; set; } = 1;
     public decimal? ElePvNet { get; set; }
     public JsonDocument EleProprietes { get; set; } = JsonDocument.Parse("{}");
+    // Données techniques (par unité de stock ; dimensions en mm), utilisables dans les formules d'unités.
+    public decimal? ElePoids { get; set; }
+    public decimal? EleSurface { get; set; }
+    public decimal? EleSurfacePeinture { get; set; }
+    public decimal? EleVolume { get; set; }
+    public decimal? EleHauteur { get; set; }
+    public decimal? EleLargeur { get; set; }
+    public decimal? EleEpaisseur { get; set; }
+    public decimal? EleIsolantR { get; set; }
+    public decimal? EleIsolantLambda { get; set; }
+    public decimal? EleIsolantU { get; set; }
     public bool EleActif { get; set; } = true;
     public string? EleCommentairePrix { get; set; }
     public string? EleMajPar { get; set; }
@@ -164,7 +176,7 @@ public sealed class ParametresBibliothequeDto
 public sealed record BibliothequeDto(int Id, string Code, string Libelle, bool Defaut, bool Actif, int Ordre);
 public sealed record FamilleDto(int Id, int BibId, int? ParentId, string Code, string Libelle, int Ordre, string Chemin, int Niveau);
 public sealed record RegroupementDto(string Code, string Libelle, int Ordre);
-public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, string? CompteAchat, string? CompteVente, bool Actif);
+public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, string? CompteAchat, string? CompteVente, bool Actif, bool Isolant = false);
 
 public sealed record TarifDto(long Id, string Fournisseur, long? TiersId, string? Reference, string? Libelle, string Unite, decimal Prix,
     string? Debut, string? Fin, bool Principal, string? Lien, DateTimeOffset MajLe, string? MajPar);

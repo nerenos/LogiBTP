@@ -75,7 +75,8 @@ export class FicheBase {
   actionsSupplementaires() { return []; }
 
   /**
-   * Onglets propres à la classe fille, placés après ceux de la définition : [{ code, titre, rendre(corps, { modifiable }) }].
+   * Onglets propres à la classe fille, placés après ceux de la définition : [{ code, titre, rendre(corps, { modifiable }) }] ;
+   * avec « dans: <code d'onglet> », le contenu est ajouté sous les groupes de cet onglet au lieu d'un onglet séparé.
    * Un onglet modifie la fiche par definirValeur(code, valeur) : la valeur part avec l'enregistrement (verrou, validation).
    */
   ongletsSpecifiques() { return []; }
@@ -171,7 +172,7 @@ export class FicheBase {
       const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
       return { ...x, groupes, champs: groupes.flatMap((g) => g.champs) };
     });
-    for (const o of this.ongletsSpecifiques()) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
+    for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
     if (this.definition.supplementaires?.length) s.push({ code: '+supplementaires', titre: 'Informations complémentaires', supplementaires: true });
     s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
     return s;
@@ -262,6 +263,12 @@ export class FicheBase {
     const zone = corps.firstElementChild;
     for (const g of groupes.filter((x) => x.champs.length)) zone.append(this.#groupe(g));
     if (!zone.children.length) zone.innerHTML = '<p class="aide">Aucun champ.</p>';
+    for (const o of this.ongletsSpecifiques().filter((x) => x.dans === section.code)) {
+      const bloc = document.createElement('div');
+      bloc.className = 'fiche-complement';
+      corps.append(bloc);
+      o.rendre(bloc, { modifiable: enSaisie(this.mode) });
+    }
   }
 
   /** Groupe de champs (cadre titré) ; tout masqué : une seule ligne « informations confidentielles ». */

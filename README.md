@@ -29,7 +29,7 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, `060`, puis cœur `100`, `110`, `115`, `116`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, `060`, `061`, puis cœur `100`, `110`, `115`, `116`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
@@ -109,22 +109,26 @@ L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche compl�
 
 ### Bibliothèque
 
-Menu **Bibliothèque** : listes Articles, Ouvrages et Tous les éléments (segments bibliothèque, type, famille, regroupement,
-gestion), Nouvel article, Nouvel ouvrage, paramétrage (bibliothèques, familles, natures, regroupements, scénarios de prix
+Menu **Bibliothèque** : listes Articles, Ouvrages et Tous les éléments, avec un panneau ancrable en deux parties (délimiteur
+déplaçable) : arbre des familles par bibliothèque et arbre des natures par regroupement, sélection multiple (cocher un
+parent retient tous ses enfants), comptes selon la recherche et les filtres, « Masquer vides » ; segments bibliothèque, type
+et gestion ; Nouvel article, Nouvel ouvrage, paramétrage (bibliothèques, familles, natures, regroupements, scénarios de prix
 d'achat autorisés et par défaut, coefficients par défaut). La fiche d'un élément (module Fiche) a les onglets :
 
 - **Article** : bibliothèque, code (unique dans la bibliothèque, sans « : »), type, famille, nature, gestion (stock, achat,
-  sous-traitance, non géré), libellé mis en forme (stocké mis en forme et en texte brut).
+  sous-traitance, non géré), libellé mis en forme (stocké mis en forme et en texte brut), données techniques par unité de
+  stock (poids, surface, surface à peindre, volume, hauteur, largeur, épaisseur), isolation (R, λ, U) pour une nature
+  « isolant », image de l'élément et notices techniques (catégorie GED « Notice technique (DOE) »).
 - **Prix** : scénario de PA parmi ceux autorisés pour l'élément, PA fixe, dernier PA et PMP (alimentés plus tard par les
   modules Achats et Stock), coefficients, PV fixe, remise sur PV ; résultat par unité ; **historique des prix** (chaque
   changement de PA, PR, PV, coefficient ou remise, avec date, auteur et commentaire, enregistré par un trigger).
 - **Unités** : unité de stock (valorisation), unités d'achat et de vente, correspondances par formule sur les données
-  techniques (champs supplémentaires) : acier stocké au ml, acheté à la tonne (`1000 / {{poids_ml}}`), vendu au kg.
+  techniques et les champs supplémentaires : acier stocké au ml, acheté à la tonne (`1000 / {{poids}}`), vendu au kg ;
+  plaque de plâtre stockée au m² (`{{hauteur}} * {{largeur}} / 1000000`).
 - **Tarifs fournisseurs** (articles) : plusieurs tarifs d'un ou plusieurs fournisseurs, tarif principal, validité, lien ;
   chaque enregistrement recalcule le prix de l'élément (le module de gestion des tarifs viendra plus tard).
 - **Composition** (ouvrages) : l'éditeur de devis sur les composantes (métrés par F4, articles de la bibliothèque) ; le
   prix de l'ouvrage est calculé par le moteur de devis (mode déboursé ou somme des PV), côté client et côté serveur.
-- **Image et notices** : image de l'élément et notices techniques (catégorie GED « Notice technique (DOE) »).
 
 Prix calculés par le serveur à l'enregistrement (`SpecialisationFicheBtp`, `CalculElement`, `MoteurDevisBtp`), aperçu
 identique côté client. L'appel des éléments dans les documents (code, préfixe BIB:CODE) viendra dans un second temps.

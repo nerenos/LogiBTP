@@ -68,3 +68,4 @@ select.fiche-saisie-champ:disabled { opacity: 1; background: transparent; border
 .fiche-param { border-collapse: collapse; width: 100%; }
 .fiche-param th, .fiche-param td { border-bottom: 1px solid var(--bord); padding: 0.2rem 0.4rem; text-align: left; }
 .fiche-param input:not([type="checkbox"]) { width: 100%; }
+.fiche-complement { margin-top: 0.8rem; }

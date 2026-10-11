@@ -73,6 +73,14 @@ public static class ElementsBibliotheque
 
     private static string? S(decimal? d) => d?.ToString(CultureInfo.InvariantCulture);
 
+    /// <summary>Données des formules d'unités : champs supplémentaires puis données techniques de la fiche.</summary>
+    private static Dictionary<string, decimal?> Donnees(IReadOnlyDictionary<string, object?> v, IReadOnlyDictionary<string, object?> proprietes)
+    {
+        var r = proprietes.ToDictionary(kv => kv.Key, kv => Decimal(kv.Value));
+        foreach (var code in ServiceBibliotheque.CodesTechniques) if (Decimal(v.GetValueOrDefault(code)) is { } d) r[code] = d;
+        return r;
+    }
+
     /// <summary>
     /// Avant écriture d'un élément : contrôles (code unique dans la bibliothèque, ouvrage composé), libellé brut, auteur,
     /// prix recalculés (écrits dans aEcrire ; l'historique est alimenté par le trigger de la table).
@@ -105,7 +113,7 @@ public static class ElementsBibliotheque
         {
             UniteStock = Texte(v.GetValueOrDefault("unite_stock")) ?? "",
             Unites = ServiceBibliotheque.Unites(Json(v.GetValueOrDefault("unites"), "[]")),
-            Donnees = proprietes.ToDictionary(kv => kv.Key, kv => Decimal(kv.Value)),
+            Donnees = Donnees(v, proprietes),
             Scenario = Texte(v.GetValueOrDefault("scenario_pa")), PaFixe = Decimal(v.GetValueOrDefault("pa_fixe")),
             DernierPa = Decimal(v.GetValueOrDefault("dernier_pa")), Pmp = Decimal(v.GetValueOrDefault("pmp")), Tarifs = tarifs,
             CoefFg = coefFg, CoefBenef = coefBenef, Pv = Decimal(v.GetValueOrDefault("pv")),

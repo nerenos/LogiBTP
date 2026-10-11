@@ -24,6 +24,8 @@ public sealed class SectionFiche
 
 public sealed class GroupeChamps
 {
+    /// <summary>Code facultatif (la fiche spécialisée peut masquer un groupe selon les valeurs).</summary>
+    public string? Code { get; set; }
     public string? Titre { get; set; }
     public List<string> Champs { get; set; } = [];
     /// <summary>« plein » : groupe sur toute la largeur (notes…).</summary>
@@ -32,7 +34,7 @@ public sealed class GroupeChamps
 
 /// <summary>
 /// Champ d'une fiche : du programme (colonne de la table) ou supplémentaire (clé de la colonne JSONB du type).
-/// Type : texte, zone, nombre, booleen, date, liste. Format : email, telephone, code_postal, 999.99, regex:…
+/// Type : texte, zone, html, json, nombre, booleen, date, liste. Format : email, telephone, code_postal, 999.99, regex:…
 /// </summary>
 public sealed class ChampFiche
 {
@@ -56,6 +58,8 @@ public sealed class ChampFiche
     public string? Aide { get; set; }
     public string? Largeur { get; set; }
     public JsonElement? Defaut { get; set; }
+    /// <summary>Référentiel affiché en liste déroulante par la fiche spécialisée (bibliothèque, famille, nature…).</summary>
+    public string? Reference { get; set; }
     public int Ordre { get; set; }
     public bool Actif { get; set; } = true;
 }

@@ -170,7 +170,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     public virtual async Task<List<NatureDto>> Natures(CancellationToken ct) =>
         (await db.Natures.AsNoTracking().OrderBy(n => n.NatCode).ToListAsync(ct))
-        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatCompteAchat, n.NatCompteVente, n.NatActif)).ToList();
+        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatCompteAchat, n.NatCompteVente, n.NatActif, n.NatIsolant)).ToList();
 
     public virtual async Task<List<NatureDto>> EnregistrerNature(NatureDto d, Utilisateur u, CancellationToken ct)
     {
@@ -180,7 +180,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (Texte(d.Regroupement) is { } rg && !await db.Regroupements.AnyAsync(r => r.RgnCode == rg, ct)) throw ExceptionMetier.Invalide("REGROUPEMENT", $"Regroupement {rg} inconnu");
         var n = d.Id > 0 ? await db.Natures.FirstOrDefaultAsync(x => x.NatId == d.Id, ct) ?? throw ExceptionMetier.Introuvable($"Nature {d.Id}") : new NatureElement();
         n.NatCode = code; n.NatLibelle = Obligatoire(d.Libelle, "Libellé"); n.NatRgnCode = Texte(d.Regroupement); n.NatAxeAnalytique = Texte(d.AxeAnalytique);
-        n.NatCompteAchat = Texte(d.CompteAchat); n.NatCompteVente = Texte(d.CompteVente); n.NatActif = d.Actif;
+        n.NatCompteAchat = Texte(d.CompteAchat); n.NatCompteVente = Texte(d.CompteVente); n.NatActif = d.Actif; n.NatIsolant = d.Isolant;
         if (n.NatId == 0) db.Natures.Add(n);
         await db.SaveChangesAsync(ct);
         return await Natures(ct);
@@ -229,10 +229,28 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     public static List<UniteElement> Unites(JsonElement unites) =>
         unites.ValueKind == JsonValueKind.Array ? unites.Deserialize<List<UniteElement>>(JsonCalcul.Options) ?? [] : [];
 
+    /// <summary>Codes des données techniques dans les formules (mêmes codes que la fiche et DONNEES_TECHNIQUES côté JS).</summary>
+    public static readonly string[] CodesTechniques = ["poids", "surface", "surface_peinture", "volume", "hauteur", "largeur", "epaisseur", "isolant_r", "isolant_lambda", "isolant_u"];
+
+    /// <summary>Données des formules : champs supplémentaires, puis données techniques renseignées.</summary>
+    public static Dictionary<string, decimal?> Donnees(JsonElement proprietes, IReadOnlyDictionary<string, decimal?> techniques)
+    {
+        var r = Donnees(proprietes);
+        foreach (var (code, v) in techniques) if (v is not null) r[code] = v;
+        return r;
+    }
+
+    public static Dictionary<string, decimal?> Techniques(Element e) => new()
+    {
+        ["poids"] = e.ElePoids, ["surface"] = e.EleSurface, ["surface_peinture"] = e.EleSurfacePeinture, ["volume"] = e.EleVolume,
+        ["hauteur"] = e.EleHauteur, ["largeur"] = e.EleLargeur, ["epaisseur"] = e.EleEpaisseur,
+        ["isolant_r"] = e.EleIsolantR, ["isolant_lambda"] = e.EleIsolantLambda, ["isolant_u"] = e.EleIsolantU,
+    };
+
     /// <summary>Entrée du calcul depuis l'élément enregistré et ses tarifs.</summary>
     public static EntreeElement Entree(Element e, List<TarifCalcul> tarifs) => new()
     {
-        UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement),
+        UniteStock = e.EleUntStock, Unites = Unites(e.EleUnites.RootElement), Donnees = Donnees(e.EleProprietes.RootElement, Techniques(e)),
         Scenario = e.EleScenarioPa, PaFixe = e.ElePaFixe, DernierPa = e.EleDernierPa, Pmp = e.ElePmp, Tarifs = tarifs,
         CoefFg = e.EleCoefFg, CoefBenef = e.EleCoefBenef, Pv = e.ElePv, PvFixe = e.ElePvFixe, CoefRemise = e.EleCoefRemise,
     };

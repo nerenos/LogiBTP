@@ -29,3 +29,25 @@
 .bib-referentiels .erreur, .bib-prix .erreur, .bib-unites .erreur { color: var(--erreur); }
 .bib-exemple { color: var(--discret); white-space: nowrap; }
 .bib-tarifs { overflow: auto; }
+
+/* Arbres des familles et des natures (panneau de la liste) : deux parties et un délimiteur déplaçable */
+.bib-arbres { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dock-bas .bib-arbres { flex-direction: row; }
+.bib-arbre-partie { min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.bib-arbre-partie[data-partie="fam"] { flex: var(--bib-arbres-ratio, 0.6) 1 0; }
+.bib-arbre-partie[data-partie="nat"] { flex: calc(1 - var(--bib-arbres-ratio, 0.6)) 1 0; }
+.bib-arbre-partie > header { display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.4rem; font-weight: 600; color: var(--discret); flex: none; }
+.bib-arbre-partie > header small { font-weight: 400; color: var(--accent); margin-right: auto; }
+.bib-arbre-partie > header button { padding: 0 0.35rem; font-size: 0.85em; }
+.bib-arbre-partie > header button.actif { background: var(--accent-clair); color: var(--accent); border-color: var(--accent); }
+.bib-arbre-separateur { flex: none; height: 6px; cursor: row-resize; background: var(--titre-fond); touch-action: none; }
+.dock-bas .bib-arbre-separateur { height: auto; width: 6px; cursor: col-resize; }
+.bib-arbre-separateur:hover { background: var(--accent-clair); }
+.bib-arbre { list-style: none; margin: 0; padding: 0 0.3rem 0.3rem; overflow: auto; flex: 1; min-height: 0; }
+.bib-arbre ul { list-style: none; margin: 0; padding-left: 1rem; }
+.bib-noeud { display: flex; align-items: center; gap: 0.15rem; padding: 0.05rem 0; white-space: nowrap; }
+.bib-noeud label { display: flex; align-items: center; gap: 0.25rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.bib-noeud small { color: var(--discret); font-variant-numeric: tabular-nums; }
+.bib-noeud-bib { font-weight: 600; }
+.bib-ouvrir { width: 1rem; text-align: center; color: var(--discret); cursor: pointer; flex: none; }
+.bib-arbre li.vide > .bib-noeud { opacity: 0.5; }

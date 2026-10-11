@@ -40,6 +40,14 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 .liste-panneau > header button.actif { color: var(--accent); }
 .dock-reduit .liste-panneau-titre, .dock-reduit .liste-panneau [data-dock], .dock-reduit .liste-segments { display: none; }
 .dock-reduit .liste-panneau > header { justify-content: center; border-bottom: none; }
+/* Contenu du panneau : panneau propre à la vue (arbres…) puis segments ; côte à côte quand le panneau est en bas. */
+.liste-panneau-contenu { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dock-bas .liste-panneau-contenu { flex-direction: row; }
+.liste-panneau-specifique { flex: 3 1 0; min-height: 0; min-width: 0; display: flex; flex-direction: column; border-bottom: 1px solid var(--bord); }
+.dock-bas .liste-panneau-specifique { border-bottom: none; border-right: 1px solid var(--bord); }
+.liste-panneau-specifique[hidden] { display: none; }
+.liste-panneau-specifique:not([hidden]) + .liste-segments { flex: 1 1 0; }
+.dock-reduit .liste-panneau-contenu { display: none; }
 .liste-segments { flex: 1; min-height: 0; overflow: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .segment { display: flex; flex-direction: column; gap: 0.25rem; }
 .segment-valeurs { display: flex; flex-wrap: wrap; gap: 0.25rem; }

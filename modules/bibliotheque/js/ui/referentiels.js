@@ -102,13 +102,13 @@ export class GestionReferentiels {
 
   async #natures(zone) {
     const [natures, regroupements] = await Promise.all([this.fournisseur.natures(), this.fournisseur.regroupements()]);
-    zone.innerHTML = '<p class="aide">Axe analytique et comptes de rattachement : repris par le futur module Comptabilité.</p><div></div>';
+    zone.innerHTML = '<p class="aide">Axe analytique et comptes de rattachement : repris par le futur module Comptabilité. Une nature « isolant » affiche les caractéristiques d\'isolation (R, λ, U) dans la fiche.</p><div></div>';
     this.#tableau(zone.lastElementChild, {
-      cle: 'code', lignes: natures, vide: { id: 0, actif: true },
+      cle: 'code', lignes: natures, vide: { id: 0, actif: true, isolant: false },
       colonnes: [{ code: 'code', libelle: 'Code', largeur: '7rem' }, { code: 'libelle', libelle: 'Libellé', largeur: '14rem' },
         { code: 'regroupement', libelle: 'Regroupement', options: regroupements.map((r) => ({ valeur: r.code, libelle: r.libelle })) },
         { code: 'axe_analytique', libelle: 'Axe analytique', largeur: '8rem' }, { code: 'compte_achat', libelle: 'Compte d\'achat', largeur: '7rem' },
-        { code: 'compte_vente', libelle: 'Compte de vente', largeur: '7rem' }, { code: 'actif', libelle: 'Active', type: 'case' }],
+        { code: 'compte_vente', libelle: 'Compte de vente', largeur: '7rem' }, { code: 'isolant', libelle: 'Isolant', type: 'case' }, { code: 'actif', libelle: 'Active', type: 'case' }],
       enregistrer: (v) => this.fournisseur.enregistrerNature(v), supprimer: (l) => this.fournisseur.supprimerNature(l.id),
     });
   }

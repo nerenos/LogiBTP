@@ -80,7 +80,8 @@ const lignesElements = ELEMENTS.map((e) => {
   return ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), n(e.fam_id), n(e.nat_id), q(e.gestion),
     q(e.unite_stock), q(e.unite_achat), q(e.unite_vente), j(e.unites), q(e.scenario_pa), j(e.scenarios), n(e.pa_fixe), n(e.dernier_pa), n(e.pmp),
     n(p.pa), n(e.coef_fg), n(p.pr), n(p.coef_benef ?? e.coef_benef), n(p.pv), b(e.pv_fixe), n(e.coef_remise), n(p.pv_net), j(e.composition), j(e.proprietes),
-    b(e.actif), q('demo'), q('Données de démonstration')].join(', ')})`;
+    b(e.actif), q('demo'), q('Données de démonstration'),
+    ...['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'isolant_r', 'isolant_lambda', 'isolant_u'].map((k) => n(e[k]))].join(', ')})`;
 }).join(',\n');
 const sqlBibliotheque = `-- =============================================================================
 -- Cœur LogiBTP – bibliothèque de démonstration (référentiels, articles, ouvrage, tarifs fournisseurs).
@@ -94,12 +95,13 @@ ${BIBLIOTHEQUES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${b(x.defa
 INSERT INTO famille_element (fam_id, fam_bib_id, fam_parent_id, fam_code, fam_libelle, fam_ordre) VALUES
 ${FAMILLES.map((x) => ` (${x.id}, ${x.bib_id}, ${n(x.parent_id)}, ${q(x.code)}, ${q(x.libelle)}, ${x.ordre})`).join(',\n')};
 
-INSERT INTO nature_element (nat_id, nat_code, nat_libelle, nat_rgn_code, nat_axe_analytique, nat_compte_achat, nat_compte_vente, nat_actif) VALUES
-${NATURES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${q(x.regroupement)}, ${q(x.axe_analytique)}, ${q(x.compte_achat)}, ${q(x.compte_vente)}, ${b(x.actif)})`).join(',\n')};
+INSERT INTO nature_element (nat_id, nat_code, nat_libelle, nat_rgn_code, nat_axe_analytique, nat_compte_achat, nat_compte_vente, nat_actif, nat_isolant) VALUES
+${NATURES.map((x) => ` (${x.id}, ${q(x.code)}, ${q(x.libelle)}, ${q(x.regroupement)}, ${q(x.axe_analytique)}, ${q(x.compte_achat)}, ${q(x.compte_vente)}, ${b(x.actif)}, ${b(x.isolant)})`).join(',\n')};
 
 INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_fam_id, ele_nat_id, ele_gestion, ele_unt_stock, ele_unt_achat,
   ele_unt_vente, ele_unites, ele_scenario_pa, ele_scenarios, ele_pa_fixe, ele_dernier_pa, ele_pmp, ele_pa, ele_coef_fg, ele_pr, ele_coef_benef, ele_pv,
-  ele_pv_fixe, ele_coef_remise, ele_pv_net, ele_composition, ele_proprietes, ele_actif, ele_maj_par, ele_commentaire_prix) VALUES
+  ele_pv_fixe, ele_coef_remise, ele_pv_net, ele_composition, ele_proprietes, ele_actif, ele_maj_par, ele_commentaire_prix,
+  ele_poids, ele_surface, ele_surface_peinture, ele_volume, ele_hauteur, ele_largeur, ele_epaisseur, ele_isolant_r, ele_isolant_lambda, ele_isolant_u) VALUES
 ${lignesElements};
 
 INSERT INTO tarif_fournisseur (tfo_id, tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par) VALUES
