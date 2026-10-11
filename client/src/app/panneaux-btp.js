@@ -7,9 +7,19 @@ import { TL, estChiffree } from '../calcul/index.js';
  * quantité issue du métré, perte et blocages de prix dans le détail, déboursé et marge, coefficient de frais annexes.
  */
 export class PanneauxBtp extends PanneauxDocument {
+  /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
+  constructor(editeur, { bibliotheques = [] } = {}) {
+    super(editeur);
+    this.bibliotheques = bibliotheques;
+  }
+
   champsEntete(d) {
+    const defaut = this.bibliotheques.find((b) => b.defaut);
     return [`<label>Calcul des ouvrages
-      <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}</select></label>`];
+      <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}</select></label>`,
+    `<label title="Bibliothèque des codes saisis sans préfixe ; les autres s'appellent par BIB:CODE">Bibliothèque
+      <select data-champ="ent_bib_id" data-entier>${opt('', `Par défaut${defaut ? ` (${defaut.code})` : ''}`, d.ent_bib_id ?? '')}${this.bibliotheques.filter((b) => b.actif || b.id === d.ent_bib_id)
+        .map((b) => opt(String(b.id), `${b.code} – ${b.libelle}`, d.ent_bib_id === null || d.ent_bib_id === undefined ? '' : String(d.ent_bib_id))).join('')}</select></label>`];
   }
 
   variablesDocument() {

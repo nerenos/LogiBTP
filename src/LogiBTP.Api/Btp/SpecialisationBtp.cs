@@ -55,7 +55,11 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         return c;
     }
 
-    public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie) => cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;
+    public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie)
+    {
+        cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;
+        cible.EntBibId = saisie.EntBibId;
+    }
 
     // ------------------------------------------------------------------ chargement
 

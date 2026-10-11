@@ -131,7 +131,15 @@ d'achat autorisés et par défaut, coefficients par défaut). La fiche d'un él�
   prix de l'ouvrage est calculé par le moteur de devis (mode déboursé ou somme des PV), côté client et côté serveur.
 
 Prix calculés par le serveur à l'enregistrement (`SpecialisationFicheBtp`, `CalculElement`, `MoteurDevisBtp`), aperçu
-identique côté client. L'appel des éléments dans les documents (code, préfixe BIB:CODE) viendra dans un second temps.
+identique côté client.
+
+**Appel dans les documents** (devis, factures… et composition d'un ouvrage) : chaque document a une bibliothèque (entête,
+« Par défaut » sinon). Dans la colonne **Code**, un code seul est cherché dans cette bibliothèque, `BIB:CODE` dans une
+autre ; un code inconnu ouvre la recherche. **F3** (ou 📚 Bibliothèque) recherche par code ou libellé. Un article remplit la
+ligne : code d'appel, libellé, unité de vente, PA converti dans cette unité, coefficients, PV fixe, remise, nature et lien
+vers l'élément (`lig_art_id`) ; quantité et métré de la ligne sont conservés. Un ouvrage est déployé avec ses composantes,
+ses métrés et ses variables (son prix suit alors le mode de calcul des ouvrages du document). Les prix sont copiés dans le
+document ; « ⟳ Prix bibliothèque » les reprend pour les lignes sélectionnées.
 
 ### Verrous et utilisateurs fantômes
 

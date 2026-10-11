@@ -14,7 +14,7 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *  colonnes                [{ cle, titre, classe, valeur(ligne) → texte|{html}, editable(ligne), editeur, options(ligne), lire(ligne), champ(ligne) }]
  *  lignes()                [{ item, calcule, profondeur, aEnfants }] dans l'ordre d'affichage
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
- *                            copier, coller, ouvrirMetre, annuler, retablir, depotAutorise, classeLigne, titreLigne, selection }
+ *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection }
  */
 export class GrilleArbre {
   constructor(conteneur, options) {
@@ -327,6 +327,7 @@ export class GrilleArbre {
     else if (e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); this.#valider(champ, e.shiftKey ? 'precedente' : 'suivante'); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.#fermerListe(); this.edition = null; this.rendre(); this.focus(); }
     else if (e.key === 'F4') { e.preventDefault(); e.stopPropagation(); this.#valider(champ, null); this.o.actions.ouvrirMetre?.(this.courant); }
+    else if (e.key === 'F3') { e.preventDefault(); e.stopPropagation(); this.#valider(champ, null); this.o.actions.rechercher?.(this.courant); }
     else e.stopPropagation();
   }
 
@@ -364,6 +365,7 @@ export class GrilleArbre {
       case 'annuler': return executer(() => a.annuler());
       case 'retablir': return executer(() => a.retablir());
       case 'ouvrirMetre': return executer(() => a.ouvrirMetre?.(this.courant));
+      case 'rechercher': return executer(() => a.rechercher?.(this.courant));
       case 'replier': return executer(() => { this.replies.add(this.courant); this.rendre(); });
       case 'deplier': return executer(() => { this.replies.delete(this.courant); this.rendre(); });
       default: break;

@@ -11,6 +11,8 @@ import { texteBrut } from '@logibtp/socle';
 //   unites()                                              [{ unt_code, unt_libelle }]
 //   tarifs(eleId) / enregistrerTarif(eleId, t) / supprimerTarif(eleId, id)  → { tarifs, prix }  (prix de l'élément recalculé)
 //   historique(eleId)                                     [{ id, date, auteur, commentaire, avant, apres }]
+//   element(id) / appel(code, bibCode)                  élément complet (unités, données techniques, prix, composition) ;
+//                                                        appel : « CODE » dans bibCode (défaut : bibliothèque par défaut), « BIB:CODE » ailleurs
 //   rechercher({ recherche, bib, type })                  [{ id, bib_code, code, type, libelle, libelle_html, unite_stock, pa, pr, pv, pv_net, coef_fg, coef_benef }]
 
 export class ErreurBibliotheque extends Error {
@@ -57,6 +59,8 @@ export class FournisseurBibliothequeApi {
   enregistrerTarif(eleId, t) { return this.appel('POST', `/elements/${eleId}/tarifs`, { id: 0, principal: false, maj_le: new Date().toISOString(), ...t }); }
   supprimerTarif(eleId, id) { return this.appel('DELETE', `/elements/${eleId}/tarifs/${id}`); }
   historique(eleId) { return this.appel('GET', `/elements/${eleId}/historique`); }
+  element(id) { return this.appel('GET', `/elements/${id}`); }
+  appelCode(code, bibCode = null) { return this.appel('GET', `/appel?code=${encodeURIComponent(code)}${bibCode ? `&bib=${encodeURIComponent(bibCode)}` : ''}`); }
   rechercher({ recherche = '', bib = null, type = null } = {}) {
     const q = new URLSearchParams(Object.entries({ recherche, bib, type }).filter(([, v]) => v !== null && v !== '').map(([k, v]) => [k, String(v)]));
     return this.appel('GET', `/elements${q.size ? `?${q}` : ''}`);
@@ -262,6 +266,30 @@ export class FournisseurBibliothequeMemoire {
       });
     }
     e.commentaire_prix = null;
+  }
+
+  #detail(e) {
+    const entree = entreeDepuisLigne(e);
+    return structuredClone({
+      id: e.id, bib_id: e.bib_id, bib_code: this.bibs.find((b) => b.id === e.bib_id)?.code ?? '', code: e.code, type: e.type, libelle_html: e.libelle_html,
+      libelle: e.libelle, fam_id: e.fam_id, nat_id: e.nat_id, unite_stock: e.unite_stock, unite_achat: e.unite_achat, unite_vente: e.unite_vente,
+      unites: entree.unites, donnees: entree.donnees, pa: e.pa, coef_fg: e.coef_fg, pr: e.pr, coef_benef: e.coef_benef, pv: e.pv,
+      pv_fixe: e.pv_fixe === true || e.pv_fixe === 'true', coef_remise: e.coef_remise, pv_net: e.pv_net,
+      composition: typeof e.composition === 'string' ? JSON.parse(e.composition) : e.composition ?? null, actif: e.actif !== false,
+    });
+  }
+
+  async element(id) { return this.#detail(this.#element(id)); }
+
+  async appelCode(code, bibCode = null) {
+    const defaut = bibCode ?? this.bibs.find((b) => b.defaut)?.code ?? null;
+    const s = String(code ?? '').trim();
+    const i = s.indexOf(':');
+    const [bib, c] = i > 0 ? [s.slice(0, i).toUpperCase(), s.slice(i + 1).trim()] : [defaut, s];
+    const b = this.bibs.find((x) => x.code === bib);
+    const e = b && this.elements.find((x) => x.bib_id === b.id && x.code === c && x.actif !== false);
+    if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${c} introuvable dans la bibliothèque ${bib ?? '?'}`);
+    return this.#detail(e);
   }
 
   async rechercher({ recherche = '', bib = null, type = null } = {}) {

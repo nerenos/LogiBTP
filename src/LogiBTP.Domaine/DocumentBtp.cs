@@ -9,4 +9,6 @@ public class DocumentBtp : Document
     public string EntModeCalculOuvrage { get; set; } = "V";
     /// <summary>Coefficient de frais annexes calculé.</summary>
     public decimal EntCoefFa { get; set; } = 1;
+    /// <summary>Bibliothèque des codes appelés sans préfixe (null : bibliothèque par défaut).</summary>
+    public int? EntBibId { get; set; }
 }

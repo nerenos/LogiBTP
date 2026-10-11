@@ -311,6 +311,35 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         return r;
     }
 
+    // ------------------------------------------------------------------ appel dans les documents
+
+    private static ElementDetailDto VersDetail(Element e, string bibCode) => new(e.EleId, e.EleBibId, bibCode, e.EleCode, e.EleType, e.EleLibelleHtml, e.EleLibelle,
+        e.EleFamId, e.EleNatId, e.EleUntStock, e.EleUntAchat, e.EleUntVente, e.EleUnites.RootElement.Clone(), Donnees(e.EleProprietes.RootElement, Techniques(e)),
+        e.ElePa, e.EleCoefFg, e.ElePr, e.EleCoefBenef, e.ElePv, e.ElePvFixe, e.EleCoefRemise, e.ElePvNet, e.EleComposition?.RootElement.Clone(), e.EleActif);
+
+    public virtual async Task<ElementDetailDto> Element(long id, CancellationToken ct)
+    {
+        var x = await (from e in db.Elements.AsNoTracking() join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId where e.EleId == id select new { e, b.BibCode })
+            .FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable($"Élément {id}");
+        return VersDetail(x.e, x.BibCode);
+    }
+
+    /// <summary>
+    /// Appel par code : « CODE » dans la bibliothèque du document (ou la bibliothèque par défaut), « BIB:CODE » dans une
+    /// autre bibliothèque. Élément actif uniquement.
+    /// </summary>
+    public virtual async Task<ElementDetailDto> Appel(string saisie, string? bibliotheque, CancellationToken ct)
+    {
+        var defaut = Texte(bibliotheque)?.ToUpperInvariant()
+            ?? await db.Bibliotheques.AsNoTracking().Where(b => b.BibDefaut).Select(b => b.BibCode).FirstOrDefaultAsync(ct);
+        var (bib, code) = CalculElement.AnalyserCodeAppel(Obligatoire(saisie, "Code"), defaut);
+        var x = await (from e in db.Elements.AsNoTracking() join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId
+                       where b.BibCode == bib && e.EleCode == code && e.EleActif
+                       select new { e, b.BibCode }).FirstOrDefaultAsync(ct)
+            ?? throw ExceptionMetier.Introuvable($"Élément {code} dans la bibliothèque {bib}");
+        return VersDetail(x.e, x.BibCode);
+    }
+
     // ------------------------------------------------------------------ historique et recherche
 
     public virtual async Task<List<HistoriqueDto>> Historique(long eleId, CancellationToken ct) =>

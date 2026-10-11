@@ -115,6 +115,7 @@ export class DictionnaireBtp extends DictionnaireMetre {
 /** Éditeur de devis BTP : spécialise EditeurDocument et sert d'hôte au panneau de métré. */
 export class EditeurDevisBtp extends EditeurDocument {
   constructor(conteneur, { ouvrirMetre, ...options }) {
+    // options.appelerCode / options.rechercher : appel de la bibliothèque (colonne Code, F3), fournis par l'hôte.
     super(conteneur, options);
     this.ouvrirMetreExterne = ouvrirMetre;
   }

@@ -60,7 +60,12 @@
 .element-notices { margin: 0; padding-left: 1rem; }
 .element-notices small { color: var(--discret); margin-left: 0.4rem; }
 .element-recherche { width: min(48rem, 100%); }
-.element-recherche input[type="search"] { width: 100%; margin-bottom: 0.4rem; }
 .element-resultats { max-height: 50vh; overflow: auto; }
 .element-resultats tr[data-i] { cursor: pointer; }
 .element-resultats tr[data-i]:hover td, .element-resultats tr[data-i]:focus td { background: var(--accent-clair); }
+
+/* Appel de la bibliothèque dans les documents */
+.grille .col-code { min-width: 6.5rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.element-recherche-barre { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+.element-recherche-barre input { flex: 1; }
+.element-resultats tr.actif td { background: var(--accent-clair); }

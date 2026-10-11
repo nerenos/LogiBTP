@@ -3,7 +3,8 @@ import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { OngletPrix, OngletUnites, OngletTarifs } from '@logibtp/bibliotheque/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
-import { calculerOuvrage, documentComposition, racineComposition } from '../bibliotheque/bibliotheque.js';
+import { calculerOuvrage, documentComposition } from '../bibliotheque/bibliotheque.js';
+import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { FicheLogiBTP } from './fiches.js';
 
 // Fiche d'un élément de bibliothèque (module Fiche + module Bibliothèque) : référentiels en listes déroulantes,
@@ -153,7 +154,7 @@ export class FicheElement extends FicheLogiBTP {
     corps.innerHTML = `<div class="element-composition">
       <div class="element-composition-barre">
         <label>Calcul de l'ouvrage <select data-mode ${modifiable ? '' : 'disabled'}><option value="D">Déboursé : PR des composantes × coefficients de l'élément</option><option value="V">Somme des PV des composantes</option></select></label>
-        ${modifiable ? '<button type="button" data-article>＋ Article de la bibliothèque</button>' : ''}
+        ${modifiable ? '<button type="button" data-article title="Ou saisir un code dans la colonne Code, ou F3">＋ Élément de la bibliothèque</button>' : ''}
         <span class="element-composition-totaux"></span>
       </div>
       <div class="element-composition-grille"></div>
@@ -163,10 +164,15 @@ export class FicheElement extends FicheLogiBTP {
     const definition = await this.definitionDocument();
     // Le métré est créé après l'éditeur, qui signale déjà sa sélection à sa construction.
     let metre = null;
-    const editeur = new EditeurDevisBtp(corps.querySelector('.element-composition-grille'), {
+    let editeur = null;
+    // Composantes appelées dans la bibliothèque de l'ouvrage (colonne Code, F3, bouton).
+    const bibOuvrage = () => this.referentiels.bibliotheques.find((b) => b.id === Number(this.valeur('bib_id')))?.code ?? null;
+    const appel = new AppelBibliotheque({ fournisseur: this.bibliotheque, editeur: () => editeur, bibliotheque: bibOuvrage, message: this.message });
+    editeur = new EditeurDevisBtp(corps.querySelector('.element-composition-grille'), {
       definition,
       saisie: { document: documentComposition(composition.mode), lignes: composition.lignes, metres: composition.metres ?? [], metre_lignes: composition.metre_lignes ?? [], variables: composition.variables ?? [] },
       surSelection: (id) => metre?.suivre(id), surMessage: (t) => this.message(t), ouvrirMetre: (ligId, mtrId) => metre.ouvrir(ligId, mtrId),
+      appelerCode: (ligId, code) => (modifiable ? appel.appeler(ligId, code) : null), rechercher: (ligId) => (modifiable ? appel.rechercher(ligId) : null),
     });
     metre = new PanneauMetre(corps.querySelector('.element-metre'), editeur, {
       fermer: (ligId) => { editeur.grille.selectionner(ligId, { colonne: 3 }); editeur.grille.focus(); }, message: (t) => this.message(t), dictionnaire: new DictionnaireBtp(editeur),
@@ -184,50 +190,14 @@ export class FicheElement extends FicheLogiBTP {
     };
     editeur.magasin.abonner(() => this.definirValeur('composition', totaux()));
     corps.querySelector('[data-mode]').addEventListener('change', () => this.definirValeur('composition', totaux()));
-    corps.querySelector('[data-article]')?.addEventListener('click', () => this.#choisirArticle((e) => {
-      const racine = racineComposition(editeur.saisie.lignes);
-      if (!racine) return;
-      editeur.magasin.modifier((d) => {
-        const l = editeur.nouvelleLigne(editeur.magasin.prochainId(), 3, 0);
-        const ordre = Math.max(0, ...d.lignes.filter((x) => x.lig_parent_id === racine.lig_id).map((x) => x.lig_ordre)) + 1;
-        Object.assign(l, {
-          lig_parent_id: racine.lig_id, lig_ordre: ordre, lig_libelle_html: e.libelle_html, lig_unt_code: e.unite_stock, lig_qte: 1, lig_qte_type: 'R',
-          lig_pa: e.pa === null ? null : Number(e.pa), lig_coef_fg: Number(e.coef_fg), lig_coef_benef: Number(e.coef_benef),
-          lig_proprietes: { element: { id: e.id, bib: e.bib_code, code: e.code } },
-        });
-        d.lignes.push(l);
-      }, `Composante ${e.code}`);
-      this.message(`${e.code} ajouté à la composition`);
-    }));
+    // Bouton : composante insérée après la ligne courante (sinon sous l'ouvrage).
+    corps.querySelector('[data-article]')?.addEventListener('click', () => {
+      const racine = editeur.saisie.lignes.find((l) => l.lig_parent_id === null);
+      const courante = editeur.grille.courant;
+      const enfant = editeur.saisie.lignes.find((l) => l.lig_id === courante && l.lig_parent_id !== null);
+      appel.rechercher(enfant ? courante : editeur.saisie.lignes.filter((l) => l.lig_parent_id === racine?.lig_id).at(-1)?.lig_id ?? null).catch((e) => this.message(e.message, 'erreur'));
+    });
     totaux();
-  }
-
-  /** Recherche d'un article de la bibliothèque (code ou libellé). */
-  #choisirArticle(choisir) {
-    const fond = document.createElement('div');
-    fond.className = 'fiche-dialogue-fond';
-    fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Article de la bibliothèque">
-      <header><h2>Article de la bibliothèque</h2><button type="button" data-fermer>✕</button></header>
-      <input type="search" placeholder="Code ou libellé…" autofocus><div class="element-resultats"></div></section>`;
-    document.body.append(fond);
-    const fermer = () => fond.remove();
-    fond.querySelector('[data-fermer]').addEventListener('click', fermer);
-    fond.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); fermer(); } });
-    const zone = fond.querySelector('.element-resultats');
-    let resultats = [];
-    const chercher = async (texte) => {
-      resultats = await this.bibliotheque.rechercher({ recherche: texte, type: 'ARTICLE' });
-      zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
-        ${resultats.map((e, i) => `<tr data-i="${i}" tabindex="0"><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td><td>${echapper(e.unite_stock)}</td>
-          <td class="nombre">${prix(e.pa)}</td><td class="nombre">${prix(e.pv_net)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun article.</p>';
-    };
-    let minuterie;
-    fond.querySelector('input').addEventListener('input', (e) => { clearTimeout(minuterie); minuterie = setTimeout(() => chercher(e.target.value), 250); });
-    const prendre = (tr) => { if (tr) { choisir(resultats[Number(tr.dataset.i)]); fermer(); } };
-    zone.addEventListener('dblclick', (e) => prendre(e.target.closest('tr[data-i]')));
-    zone.addEventListener('click', (e) => prendre(e.target.closest('tr[data-i]')));
-    zone.addEventListener('keydown', (e) => { if (e.key === 'Enter') prendre(e.target.closest('tr[data-i]')); });
-    chercher('');
   }
 
   // ---------------------------------------------------------------- image et notices techniques (GED)

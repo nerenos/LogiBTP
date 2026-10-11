@@ -17,6 +17,7 @@
   "annuler": "Ctrl+Z",
   "retablir": ["Ctrl+Y", "Ctrl+Shift+Z"],
   "ouvrirMetre": "F4",
+  "rechercher": "F3",
   "replier": "-",
   "deplier": "+"
 }

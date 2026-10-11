@@ -37,7 +37,7 @@ const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, ...o });
 export const DOCUMENT_DEMO = {
   document: {
     ent_id: 0, ent_tyd_id: 1, ent_numero: 'DÉMO', ent_date: '2026-09-23', ent_objet: 'Extension maison individuelle',
-    ent_std_id: 1, ent_tiers_id: 1, ent_mode_calcul_ouvrage: 'V', ent_precision_montant: 2, ent_version: 1,
+    ent_std_id: 1, ent_tiers_id: 1, ent_mode_calcul_ouvrage: 'V', ent_precision_montant: 2, ent_version: 1, ent_bib_id: null,
     ent_num_format: { separateur: '.', niveaux: [{ style: 'A' }, { style: '1' }, { style: 'a' }] },
     ent_proprietes: { chantier: 'Maison Martin – Lyon', duree_validite: 30 },
   },

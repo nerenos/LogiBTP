@@ -7,6 +7,7 @@ import { api } from '../api.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../demo.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
+import { AppelBibliotheque } from '../bibliotheque/appel.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
 // local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>.
@@ -19,6 +20,8 @@ const GABARIT = `
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+      <button data-action="bibliotheque" title="Insérer un article ou un ouvrage de la bibliothèque (F3 dans la grille ; ou saisir son code dans la colonne Code)">📚 Bibliothèque</button>
+      <button data-action="actualiser" title="Reprendre les prix de la bibliothèque pour les lignes sélectionnées">⟳ Prix bibliothèque</button>
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
     </div>
@@ -81,6 +84,8 @@ export class PageDocument extends PageBase {
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(), nouveau: () => this.nouveau(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
+      bibliotheque: () => this.appel?.rechercher(this.editeur?.grille.courant ?? null),
+      actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
     };
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
@@ -93,6 +98,13 @@ export class PageDocument extends PageBase {
     };
     document.addEventListener('keydown', this.clavier);
     document.body.classList.add('avec-document');
+    // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
+    const s = await app.services();
+    this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    this.appel = new AppelBibliotheque({
+      fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
+      bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
+    });
 
     const { id } = this.params;
     if (!app.enLigne) {
@@ -210,8 +222,10 @@ export class PageDocument extends PageBase {
       },
       surMessage: (t) => this.app.message(t),
       ouvrirMetre: (ligId, mtrId) => this.metre.ouvrir(ligId, mtrId),
+      appelerCode: (ligId, code) => this.appel.appeler(ligId, code),
+      rechercher: (ligId) => this.appel.rechercher(ligId),
     });
-    this.panneaux = new PanneauxBtp(this.editeur);
+    this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
     this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
       fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
       message: (t) => this.app.message(t),

@@ -46,6 +46,8 @@ public static class Extensions
         g.MapDelete("/natures/{id:int}", (int id, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.SupprimerNature(id, Utilisateur.Depuis(http), ct));
 
         g.MapGet("/elements", (string? recherche, int? bib, string? type, ServiceBibliotheque s, CancellationToken ct) => s.Rechercher(recherche, bib, type, ct));
+        g.MapGet("/elements/{id:long}", (long id, ServiceBibliotheque s, CancellationToken ct) => s.Element(id, ct));
+        g.MapGet("/appel", (string code, string? bib, ServiceBibliotheque s, CancellationToken ct) => s.Appel(code, bib, ct));
         g.MapGet("/elements/{id:long}/tarifs", (long id, ServiceBibliotheque s, CancellationToken ct) => s.Tarifs(id, ct));
         g.MapPost("/elements/{id:long}/tarifs", (long id, TarifDto t, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.EnregistrerTarif(id, t, Utilisateur.Depuis(http), ct));
         g.MapDelete("/elements/{id:long}/tarifs/{tarif:long}", (long id, long tarif, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.SupprimerTarif(id, tarif, Utilisateur.Depuis(http), ct));

@@ -65,7 +65,11 @@ public class Element
     public string EleType { get; set; } = "ARTICLE";
     public string EleLibelleHtml { get; set; } = "";
     public string? EleLibelle { get; set; }
+    public int? EleFamId { get; set; }
+    public int? EleNatId { get; set; }
     public string EleUntStock { get; set; } = "";
+    public string? EleUntAchat { get; set; }
+    public string? EleUntVente { get; set; }
     public JsonDocument EleUnites { get; set; } = JsonDocument.Parse("[]");
     public string EleScenarioPa { get; set; } = "FIXE";
     public decimal? ElePaFixe { get; set; }
@@ -79,6 +83,7 @@ public class Element
     public bool ElePvFixe { get; set; }
     public decimal EleCoefRemise { get; set; } = 1;
     public decimal? ElePvNet { get; set; }
+    public JsonDocument? EleComposition { get; set; }
     public JsonDocument EleProprietes { get; set; } = JsonDocument.Parse("{}");
     // Données techniques (par unité de stock ; dimensions en mm), utilisables dans les formules d'unités.
     public decimal? ElePoids { get; set; }
@@ -156,6 +161,7 @@ public class BibliothequeDbContext(DbContextOptions<BibliothequeDbContext> optio
             e.ToTable("element").HasKey(x => x.EleId);
             e.Property(x => x.EleUnites).HasColumnType("jsonb");
             e.Property(x => x.EleProprietes).HasColumnType("jsonb");
+            e.Property(x => x.EleComposition).HasColumnType("jsonb");
         });
         b.Entity<TarifFournisseur>().ToTable("tarif_fournisseur").HasKey(x => x.TfoId);
         b.Entity<HistoriquePrix>(e => { e.ToTable("historique_prix_element").HasKey(x => x.HpeId); e.Property(x => x.HpeAvant).HasColumnType("jsonb"); e.Property(x => x.HpeApres).HasColumnType("jsonb"); });
@@ -186,6 +192,11 @@ public sealed record PrixElementDto(decimal? Pa, decimal? Pr, decimal? Pv, decim
 public sealed record TarifsElementDto(List<TarifDto> Tarifs, PrixElementDto Prix);
 
 public sealed record HistoriqueDto(long Id, DateTimeOffset Date, string? Auteur, string? Commentaire, JsonElement? Avant, JsonElement Apres);
+
+/// <summary>Élément complet pour son appel dans un document (déploiement d'un article ou d'un ouvrage).</summary>
+public sealed record ElementDetailDto(long Id, int BibId, string BibCode, string Code, string Type, string LibelleHtml, string? Libelle, int? FamId, int? NatId,
+    string UniteStock, string? UniteAchat, string? UniteVente, JsonElement Unites, Dictionary<string, decimal?> Donnees,
+    decimal? Pa, decimal CoefFg, decimal? Pr, decimal CoefBenef, decimal? Pv, bool PvFixe, decimal CoefRemise, decimal? PvNet, JsonElement? Composition, bool Actif);
 
 public sealed record ElementRechercheDto(long Id, string BibCode, string Code, string Type, string? Libelle, string LibelleHtml, string UniteStock,
     decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet, decimal CoefFg, decimal CoefBenef);

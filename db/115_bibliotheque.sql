@@ -7,6 +7,9 @@ INSERT INTO unite (unt_code, unt_libelle, unt_precision_qte, unt_ordre) VALUES
  ('pal', 'Palette', 0, 90), ('pl', 'Plaque', 0, 91), ('rl', 'Rouleau', 0, 92)
 ON CONFLICT (unt_code) DO NOTHING;
 
+-- Bibliothèque d'un document : codes appelés sans préfixe (null : bibliothèque par défaut).
+ALTER TABLE document ADD COLUMN IF NOT EXISTS ent_bib_id INT REFERENCES bibliotheque(bib_id);
+
 -- Notices techniques des éléments : remises au client dans le dossier des ouvrages exécutés (DOE).
 UPDATE parametre_ged SET pge_valeur = pge_valeur || '[{"code":"notice_technique","libelle":"Notice technique (DOE)","doe":true}]'::jsonb
 WHERE pge_cle = 'categories' AND NOT pge_valeur @> '[{"code":"notice_technique"}]'::jsonb;

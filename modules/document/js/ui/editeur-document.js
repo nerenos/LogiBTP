@@ -32,10 +32,15 @@ export function insererColonnes(colonnes, avantCle, nouvelles) {
  *
  * Points de spécialisation : calculer (moteur), entree, identifiants, nouvelleLigne, creerRegles, creerPressePapiers,
  * colonnes, saisissable, estLigneCalculee, variablesLibelle, apresSuppression, actions.
+ *
+ * Options de l'hôte : appelerCode(ligId, code) (saisie dans la colonne Code : appel d'une référence, ex. bibliothèque),
+ * rechercher(ligId) (F3 : recherche d'une référence).
  */
 export class EditeurDocument {
-  constructor(conteneur, { definition, saisie, surSelection, surMessage }) {
+  constructor(conteneur, { definition, saisie, surSelection, surMessage, appelerCode = null, rechercher = null }) {
     this.definition = definition;
+    this.appelerCode = appelerCode;
+    this.rechercherExterne = rechercher;
     this.surSelection = surSelection;
     this.surMessage = surMessage;
     this.regles = this.creerRegles();
@@ -154,6 +159,11 @@ export class EditeurDocument {
         champ: () => 'lig_tyl_id', lire: (l) => l.lig_tyl_id,
         options: () => this.definition.types_ligne.map((t) => ({ valeur: t.tyl_id, libelle: t.tyl_libelle })),
         valeur: (r) => this.libelleType(r),
+      },
+      {
+        // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre.
+        cle: 'code', titre: 'Code', classe: 'col-code', editeur: 'texte', editable: saisissable,
+        champ: () => 'lig_code', lire: (l) => l.lig_code ?? '', valeur: (r) => r.calcule.lig_code ?? '',
       },
       {
         // Saisie en ligne pour un texte simple ; éditeur de mise en forme au double-clic.
@@ -303,6 +313,12 @@ export class EditeurDocument {
       }, 'Type de ligne');
       return true;
     }
+    if (champ === 'lig_code') {
+      const code = String(texte ?? '').trim();
+      if (code && this.appelerCode) { this.appelerCode(id, code); return true; }
+      this.modifierLigne(id, 'lig_code', code || null);
+      return true;
+    }
     if (champ === 'lig_tva_id') valeur = texte === '' ? null : Number(texte);
     // Saisie en ligne : texte simple, échappé (la mise en forme passe par l'éditeur riche).
     if (champ === 'lig_libelle_html') valeur = valeur.trim() === '' ? null : echapper(valeur);
@@ -405,6 +421,7 @@ export class EditeurDocument {
       },
 
       modifierRiche: (id, champ, html) => this.modifierLigne(id, champ, html),
+      rechercher: (id) => this.rechercherExterne?.(id),
       annuler: () => m.annuler(),
       retablir: () => m.retablir(),
 
@@ -435,6 +452,29 @@ export class EditeurDocument {
     const apres = lignes.slice(i + 1).find((r) => !sel.has(r.item.lig_id) && !r.estCalculee);
     const avant = lignes.slice(0, Math.max(0, i)).reverse().find((r) => !r.estCalculee);
     return (apres ?? avant)?.item.lig_id ?? null;
+  }
+
+  /**
+   * Insère un contenu (sous-arbres et compléments, format du presse-papiers) après la ligne de référence, ou à sa place
+   * (remplacer : la ligne de référence est retirée dans la même étape d'annulation). Renvoie l'ID de la première racine.
+   */
+  insererContenu(contenu, refId, libelle, { remplacer = false } = {}) {
+    const copie = this.pressePapiers.renumeroter(contenu, this.magasin.prochainId());
+    const ref = this.saisie.lignes.find((l) => l.lig_id === refId);
+    if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, 'apres')) {
+      this.surMessage?.('Position d\'insertion interdite');
+      return null;
+    }
+    this.magasin.modifier((d) => {
+      d.lignes.push(...copie.lignes);
+      this.pressePapiers.insererComplements(d, copie);
+      const racines = copie.racines.map((id) => d.lignes.find((l) => l.lig_id === id));
+      placer(C, d.lignes, racines, ref ? refId : null, ref ? 'apres' : 'racine');
+      if (ref && remplacer) this.apresSuppression(d, supprimer(C, d.lignes, [refId]));
+      for (const r of racines) this.regles.appliquerContexte(d, r.lig_id, this.definition.taux_tva);
+    }, libelle);
+    this.grille.selectionner(copie.racines[0]);
+    return copie.racines[0];
   }
 
   /** Insère une copie (nouveaux ID temporaires) des sous-arbres après la ligne de référence. */
