@@ -51,6 +51,13 @@ public static class ElementsBibliotheque
         catch (JsonException) { return JsonDocument.Parse(defaut).RootElement.Clone(); }
     }
 
+    /// <summary>Recalcul d'un ouvrage enregistré (coefficients d'une période modifiés) : prix de sa composition.</summary>
+    public static void RecalculerOuvrage(Element e)
+    {
+        var (pa, pr, pv, pvNet) = CalculerOuvrage(e.EleComposition?.RootElement.GetRawText(), e.EleCoefFg, e.EleCoefBenef, e.EleCoefRemise);
+        e.ElePa = pa; e.ElePr = pr; e.ElePv = pv; e.ElePvNet = pvNet;
+    }
+
     /// <summary>Prix d'un ouvrage par unité : racine à quantité 1, coefficients de l'élément (mode déboursé).</summary>
     public static (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet) CalculerOuvrage(string? compositionJson, decimal coefFg, decimal coefBenef, decimal coefRemise)
     {
@@ -98,8 +105,15 @@ public static class ElementsBibliotheque
 
         aEcrire["libelle"] = Libelles.TexteBrut(Texte(v.GetValueOrDefault("libelle_html")));
         aEcrire["maj_par"] = u.Code;
-        var coefFg = Decimal(v.GetValueOrDefault("coef_fg")) ?? 1;
-        var coefBenef = Decimal(v.GetValueOrDefault("coef_benef")) ?? 1;
+        // Coefficients effectifs : imposés, sinon ceux de la nature ou globaux en vigueur, sinon par défaut.
+        bool Vrai(string code) => v.GetValueOrDefault(code) is true or "true";
+        var pvFixe = Vrai("pv_fixe");
+        var c = await services.GetRequiredService<ServiceBibliotheque>().Coefficients((int?)Decimal(v.GetValueOrDefault("nat_id")),
+            Decimal(v.GetValueOrDefault("coef_fg")), Vrai("coef_fg_impose"), Decimal(v.GetValueOrDefault("coef_benef")), Vrai("coef_benef_impose") || pvFixe, ct);
+        var coefFg = c.CoefFg;
+        var coefBenef = c.CoefBenef;
+        aEcrire["coef_fg"] = S(coefFg);
+        aEcrire["coef_benef"] = S(coefBenef);
         var coefRemise = Decimal(v.GetValueOrDefault("coef_remise")) ?? 1;
 
         if (Texte(v.GetValueOrDefault("type")) == "OUVRAGE")
@@ -117,7 +131,7 @@ public static class ElementsBibliotheque
             Scenario = Texte(v.GetValueOrDefault("scenario_pa")), PaFixe = Decimal(v.GetValueOrDefault("pa_fixe")),
             DernierPa = Decimal(v.GetValueOrDefault("dernier_pa")), Pmp = Decimal(v.GetValueOrDefault("pmp")), Tarifs = tarifs,
             CoefFg = coefFg, CoefBenef = coefBenef, Pv = Decimal(v.GetValueOrDefault("pv")),
-            PvFixe = v.GetValueOrDefault("pv_fixe") is true or "true", CoefRemise = coefRemise,
+            PvFixe = pvFixe, CoefRemise = coefRemise,
         });
         aEcrire["pa"] = S(r.Pa); aEcrire["pr"] = S(r.Pr); aEcrire["pv"] = S(r.Pv); aEcrire["pv_net"] = S(r.PvNet);
         aEcrire["coef_benef"] = S(r.CoefBenef);

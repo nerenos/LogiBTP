@@ -53,6 +53,7 @@ public class NatureElement
     public string? NatCompteAchat { get; set; }
     public string? NatCompteVente { get; set; }
     public bool NatIsolant { get; set; }
+    public JsonDocument NatTypes { get; set; } = JsonDocument.Parse("[]");
     public bool NatActif { get; set; } = true;
 }
 
@@ -77,6 +78,8 @@ public class Element
     public decimal? ElePmp { get; set; }
     public decimal? ElePa { get; set; }
     public decimal EleCoefFg { get; set; } = 1;
+    public bool EleCoefFgImpose { get; set; }
+    public bool EleCoefBenefImpose { get; set; }
     public decimal? ElePr { get; set; }
     public decimal EleCoefBenef { get; set; } = 1;
     public decimal? ElePv { get; set; }
@@ -130,6 +133,18 @@ public class HistoriquePrix
     public JsonDocument HpeApres { get; set; } = JsonDocument.Parse("{}");
 }
 
+public class CoefficientPeriode
+{
+    public int CopId { get; set; }
+    public int? CopNatId { get; set; }
+    public DateOnly CopDebut { get; set; }
+    public decimal? CopCoefFg { get; set; }
+    public decimal? CopCoefBenef { get; set; }
+    public string? CopCommentaire { get; set; }
+    public DateTimeOffset CopCreeLe { get; set; }
+    public string? CopCreePar { get; set; }
+}
+
 public class ParametreBibliotheque
 {
     public string PbiCle { get; set; } = "";
@@ -148,6 +163,7 @@ public class BibliothequeDbContext(DbContextOptions<BibliothequeDbContext> optio
     public DbSet<TarifFournisseur> Tarifs => Set<TarifFournisseur>();
     public DbSet<HistoriquePrix> Historique => Set<HistoriquePrix>();
     public DbSet<ParametreBibliotheque> Parametres => Set<ParametreBibliotheque>();
+    public DbSet<CoefficientPeriode> Periodes => Set<CoefficientPeriode>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -155,7 +171,8 @@ public class BibliothequeDbContext(DbContextOptions<BibliothequeDbContext> optio
         b.Entity<FamilleElement>().ToTable("famille_element").HasKey(x => x.FamId);
         b.Entity<FamilleChemin>(e => { e.ToView("v_famille_element").HasKey(x => x.FamId); e.Property(x => x.Chemin).HasColumnName("chemin"); e.Property(x => x.Niveau).HasColumnName("niveau"); });
         b.Entity<RegroupementNature>().ToTable("regroupement_nature").HasKey(x => x.RgnCode);
-        b.Entity<NatureElement>().ToTable("nature_element").HasKey(x => x.NatId);
+        b.Entity<NatureElement>(e => { e.ToTable("nature_element").HasKey(x => x.NatId); e.Property(x => x.NatTypes).HasColumnType("jsonb"); });
+        b.Entity<CoefficientPeriode>().ToTable("coefficient_periode").HasKey(x => x.CopId);
         b.Entity<Element>(e =>
         {
             e.ToTable("element").HasKey(x => x.EleId);
@@ -182,7 +199,13 @@ public sealed class ParametresBibliothequeDto
 public sealed record BibliothequeDto(int Id, string Code, string Libelle, bool Defaut, bool Actif, int Ordre);
 public sealed record FamilleDto(int Id, int BibId, int? ParentId, string Code, string Libelle, int Ordre, string Chemin, int Niveau);
 public sealed record RegroupementDto(string Code, string Libelle, int Ordre);
-public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, string? CompteAchat, string? CompteVente, bool Actif, bool Isolant = false);
+public sealed record NatureDto(int Id, string Code, string Libelle, string? Regroupement, string? AxeAnalytique, string? CompteAchat, string? CompteVente, bool Actif,
+    bool Isolant = false, List<string>? Types = null);
+
+/// <summary>Période de coefficients : NatId null = globale ; un coefficient null est repris de la portée supérieure.</summary>
+public sealed record PeriodeDto(int Id, int? NatId, string Debut, decimal? CoefFg, decimal? CoefBenef, string? Commentaire, DateTimeOffset CreeLe, string? CreePar);
+
+public sealed record PeriodeEnregistree(List<PeriodeDto> Periodes, int ElementsRecalcules);
 
 public sealed record TarifDto(long Id, string Fournisseur, long? TiersId, string? Reference, string? Libelle, string Unite, decimal Prix,
     string? Debut, string? Fin, bool Principal, string? Lien, DateTimeOffset MajLe, string? MajPar);

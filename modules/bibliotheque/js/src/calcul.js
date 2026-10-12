@@ -110,3 +110,38 @@ export function analyserCodeAppel(saisie, bibliothequeParDefaut) {
   const i = s.indexOf(':');
   return i > 0 ? { bibliotheque: s.slice(0, i).toUpperCase(), code: s.slice(i + 1).trim() } : { bibliotheque: bibliothequeParDefaut, code: s };
 }
+
+// ---------------------------------------------------------------- coefficients par période
+// Même règle que CoefficientsElement.cs (jeu partagé modules/bibliotheque/tests/cas/02_coefficients.json). Pour chaque
+// coefficient (frais généraux, bénéfice) : imposé par l'élément, sinon la période de la nature de l'élément en vigueur
+// à la date (dernier début ≤ date, coefficient renseigné), sinon la période globale, sinon la valeur par défaut.
+
+export const TYPES_NATURE = [
+  ['MO', "Main-d'œuvre"], ['ENGIN', 'Engin'], ['MATERIAUX', 'Matériaux'], ['SOUS_TRAITANCE', 'Sous-traitance'], ['FRAIS', 'Frais'],
+  ['FACTURATION_INTERNE', 'Facturation interne'], ['AMORTISSEMENT', 'Amortissement'], ['DIVERS', 'Divers'],
+];
+
+function periodeEnVigueur(periodes, natId, champ, date) {
+  return periodes
+    .filter((p) => (p.nat_id ?? null) === natId && String(p.debut).slice(0, 10) <= date && p[champ] !== null && p[champ] !== undefined && p[champ] !== '')
+    .sort((a, b) => String(b.debut).localeCompare(String(a.debut)))[0] ?? null;
+}
+
+/** Coefficient effectif et sa source { portee: 'impose' | 'nature' | 'global' | 'defaut', debut }. */
+function coefficient(e, periodes, date, champ, defaut) {
+  if (e[`${champ}_impose`] === true || e[`${champ}_impose`] === 'true') return { valeur: S(D(e[champ]) ?? D(defaut)), source: { portee: 'impose', debut: null } };
+  const nat = e.nat_id === null || e.nat_id === undefined || e.nat_id === '' ? null : Number(e.nat_id);
+  const p = (nat !== null ? periodeEnVigueur(periodes, nat, champ, date) : null) ?? periodeEnVigueur(periodes, null, champ, date);
+  if (p) return { valeur: S(D(p[champ])), source: { portee: p.nat_id === null || p.nat_id === undefined ? 'global' : 'nature', debut: String(p.debut).slice(0, 10) } };
+  return { valeur: S(D(defaut) ?? D(1)), source: { portee: 'defaut', debut: null } };
+}
+
+/**
+ * Coefficients effectifs d'un élément : { coef_fg, coef_benef, sources: { coef_fg, coef_benef } }.
+ * e : { nat_id, coef_fg, coef_fg_impose, coef_benef, coef_benef_impose } ; periodes : [{ nat_id, debut, coef_fg, coef_benef }].
+ */
+export function coefficientsEffectifs(e, periodes = [], date = new Date().toISOString().slice(0, 10), { coef_fg_defaut = 1, coef_benef_defaut = 1 } = {}) {
+  const fg = coefficient(e, periodes, date, 'coef_fg', coef_fg_defaut);
+  const benef = coefficient(e, periodes, date, 'coef_benef', coef_benef_defaut);
+  return { coef_fg: fg.valeur, coef_benef: benef.valeur, sources: { coef_fg: fg.source, coef_benef: benef.source } };
+}

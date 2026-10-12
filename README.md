@@ -29,7 +29,7 @@ Le projet est découpé en **socle**, **modules complémentaires** et **cœur**.
 | `db/` | Cœur : `100_btp.sql` (colonnes BTP, contraintes, clés étrangères du métré), `110_reference.sql` (types de documents, statuts, TVA, unités…), `120_listes.sql` (vues SQL des listes, données de démonstration : 5 000 salariés, 3 000 matériels), `130_fiches.sql` (colonnes des fiches de démonstration), `131_fiches_parametrage.sql` (types de fiches, droits, paramétrage, **généré** depuis `client/src/app/fiches/definitions.js`), `121_listes_parametrage.sql` (sources et vues par défaut, **généré** par `npm run generer-vues-liste --workspace client` depuis `client/src/app/vues-liste.js`) |
 | `tests/cas/*.json` | Jeux de test BTP **partagés** rejoués par Vitest et xUnit |
 
-Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, `060`, `061`, puis cœur `100`, `110`, `115`, `116`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
+Ordre des scripts SQL (montés par `docker-compose.yml`) : modules `010`, `011`, `012`, `020`, `030`, `031`, `032`, `040`, `050`, `060`, `061`, `062`, puis cœur `100`, `110`, `115`, `116`, `120`, `121`, `130`, `131`, et `900_societe_demo.sh` (base `logibtp_demo` de la société « demo »).
 
 Base déjà créée avant le module Liste : appliquer les nouveaux scripts sans recréer le volume :
 
@@ -108,6 +108,14 @@ L'enregistrement contrôle le verrou, l'empreinte de la ligne et la fiche compl�
 « Simuler un autre utilisateur » dans la fiche.
 
 ### Bibliothèque
+
+**Paramétrage** (menu Bibliothèque) : familles éditées en arbre (＋ crée une famille racine en fin de liste, ou une
+sous-famille sous la famille sélectionnée), natures avec leurs **types** à cocher (main-d'œuvre, engin, matériaux,
+sous-traitance, frais, facturation interne, amortissement, divers) et un regroupement libre (ex. « Fabrication » : natures de
+main-d'œuvre et de sous-traitance), **coefficients de frais généraux et de bénéfice par période**, globaux ou propres à une
+nature (une période commencée n'est plus modifiable : on en crée une nouvelle, l'historique reste ; les éléments
+concernés sont recalculés). Un élément prend les coefficients de sa nature en vigueur, sinon les coefficients globaux,
+sinon ceux par défaut, sauf s'il impose les siens (cases « imposé » de l'onglet Prix).
 
 Menu **Bibliothèque** : listes Articles, Ouvrages et Tous les éléments, avec un panneau ancrable en deux parties (délimiteur
 déplaçable) : arbre des familles par bibliothèque et arbre des natures par regroupement, sélection multiple (cocher un

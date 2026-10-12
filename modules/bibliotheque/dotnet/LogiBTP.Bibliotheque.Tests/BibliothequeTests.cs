@@ -66,3 +66,34 @@ public class CalculElementTests
         Assert.Equal(("GEN", "BET01"), CalculElement.AnalyserCodeAppel("BET01", "GEN"));
     }
 }
+
+public class CoefficientsElementTests
+{
+    private static JsonObject Jeu() => CasPartages.Lire(CasPartages.Chemin("modules", "bibliotheque", "tests", "cas", "02_coefficients.json"));
+
+    public static TheoryData<string> Cas()
+    {
+        var data = new TheoryData<string>();
+        foreach (var c in Jeu()["cas"]!.AsArray()) data.Add(c!["nom"]!.GetValue<string>());
+        return data;
+    }
+
+    /// <summary>Jeu partagé avec coefficientsEffectifs (calcul.js) : valeurs et sources identiques.</summary>
+    [Theory]
+    [MemberData(nameof(Cas))]
+    public void Resolution_identique_au_js(string nom)
+    {
+        var jeu = Jeu();
+        var cas = jeu["cas"]!.AsArray().First(c => c!["nom"]!.GetValue<string>() == nom)!;
+        var periodes = jeu["periodes"].Deserialize<List<PeriodeCoefficients>>(JsonCalcul.Options)!;
+        var e = cas["element"].Deserialize<CoefficientsSaisis>(JsonCalcul.Options)!;
+        var d = jeu["defauts"]!;
+        var r = CoefficientsElement.Resoudre(e, periodes, cas["date"]!.GetValue<string>(), d["coef_fg_defaut"]!.GetValue<decimal>(), d["coef_benef_defaut"]!.GetValue<decimal>());
+        var a = cas["attendu"]!;
+        Assert.True(CasPartages.Egal(JsonValue.Create(r.CoefFg), a["coef_fg"]), $"FG {r.CoefFg}");
+        Assert.True(CasPartages.Egal(JsonValue.Create(r.CoefBenef), a["coef_benef"]), $"Bénéfice {r.CoefBenef}");
+        Assert.Equal(a["sources"]!["coef_fg"]!["portee"]!.GetValue<string>(), r.SourceFg.Portee);
+        Assert.Equal(a["sources"]!["coef_benef"]!["portee"]!.GetValue<string>(), r.SourceBenef.Portee);
+        Assert.Equal(a["sources"]!["coef_fg"]!["debut"]?.GetValue<string>(), r.SourceFg.Debut);
+    }
+}

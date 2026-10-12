@@ -10,16 +10,29 @@ export const BIBLIOTHEQUES = [
 export const REGROUPEMENTS = [
   { code: 'MO', libelle: "Main-d'œuvre", ordre: 10 }, { code: 'MATERIAUX', libelle: 'Matériaux', ordre: 20 }, { code: 'ENGIN', libelle: 'Engins', ordre: 30 },
   { code: 'SOUS_TRAITANCE', libelle: 'Sous-traitance', ordre: 40 }, { code: 'PRESTATION', libelle: 'Prestations', ordre: 50 }, { code: 'VENTE', libelle: 'Vente', ordre: 60 },
+  // Regroupement personnalisé : la fabrication réunit main-d'œuvre d'atelier et sous-traitance.
+  { code: 'FABRICATION', libelle: 'Fabrication', ordre: 70 },
 ];
 
 export const NATURES = [
-  { id: 1, code: 'MO', libelle: "Main-d'œuvre", regroupement: 'MO', axe_analytique: 'MO', compte_achat: '641100', compte_vente: '704000', actif: true },
-  { id: 2, code: 'MAT', libelle: 'Matériaux et fournitures', regroupement: 'MATERIAUX', axe_analytique: 'FOURN', compte_achat: '601000', compte_vente: '701000', actif: true },
-  { id: 3, code: 'LOC', libelle: "Location d'engins", regroupement: 'ENGIN', axe_analytique: 'ENGIN', compte_achat: '613500', compte_vente: '706000', actif: true },
-  { id: 4, code: 'ST', libelle: 'Sous-traitance', regroupement: 'SOUS_TRAITANCE', axe_analytique: 'ST', compte_achat: '604000', compte_vente: '704000', actif: true },
-  { id: 5, code: 'OUV', libelle: 'Ouvrages', regroupement: 'VENTE', axe_analytique: 'VENTE', compte_achat: null, compte_vente: '704000', actif: true },
-  { id: 6, code: 'ISO', libelle: 'Isolants', regroupement: 'MATERIAUX', axe_analytique: 'FOURN', compte_achat: '601000', compte_vente: '701000', actif: true, isolant: true },
-].map((n) => ({ isolant: false, ...n }));
+  { id: 1, code: 'MO', libelle: "Main-d'œuvre", regroupement: 'MO', axe_analytique: 'MO', compte_achat: '641100', compte_vente: '704000', actif: true, types: ['MO'] },
+  { id: 2, code: 'MAT', libelle: 'Matériaux et fournitures', regroupement: 'MATERIAUX', axe_analytique: 'FOURN', compte_achat: '601000', compte_vente: '701000', actif: true, types: ['MATERIAUX'] },
+  { id: 3, code: 'LOC', libelle: "Location d'engins", regroupement: 'ENGIN', axe_analytique: 'ENGIN', compte_achat: '613500', compte_vente: '706000', actif: true, types: ['ENGIN'] },
+  { id: 4, code: 'ST', libelle: 'Sous-traitance', regroupement: 'SOUS_TRAITANCE', axe_analytique: 'ST', compte_achat: '604000', compte_vente: '704000', actif: true, types: ['SOUS_TRAITANCE'] },
+  { id: 5, code: 'OUV', libelle: 'Ouvrages', regroupement: 'VENTE', axe_analytique: 'VENTE', compte_achat: null, compte_vente: '704000', actif: true, types: ['DIVERS'] },
+  { id: 6, code: 'ISO', libelle: 'Isolants', regroupement: 'MATERIAUX', axe_analytique: 'FOURN', compte_achat: '601000', compte_vente: '701000', actif: true, isolant: true, types: ['MATERIAUX'] },
+  { id: 7, code: 'FABAT', libelle: 'Fabrication atelier', regroupement: 'FABRICATION', axe_analytique: 'FAB', compte_achat: '604100', compte_vente: '704000', actif: true, types: ['MO', 'SOUS_TRAITANCE'] },
+  { id: 8, code: 'AMO', libelle: 'Amortissement du matériel', regroupement: 'ENGIN', axe_analytique: 'ENGIN', compte_achat: '681120', compte_vente: null, actif: true, types: ['AMORTISSEMENT', 'FACTURATION_INTERNE'] },
+].map((n) => ({ isolant: false, types: [], ...n }));
+
+/** Coefficients par période : globaux (2025, 2026, 2027 à venir) et propres à des natures. */
+export const PERIODES_COEFFICIENTS = [
+  { id: 1, nat_id: null, debut: '2025-01-01', coef_fg: '1.1', coef_benef: '1.2', commentaire: 'Coefficients 2025', cree_par: 'admin' },
+  { id: 2, nat_id: null, debut: '2026-01-01', coef_fg: '1.12', coef_benef: '1.18', commentaire: 'Révision annuelle 2026', cree_par: 'admin' },
+  { id: 3, nat_id: null, debut: '2027-01-01', coef_fg: '1.15', coef_benef: '1.16', commentaire: 'Prévision 2027', cree_par: 'admin' },
+  { id: 4, nat_id: 1, debut: '2026-01-01', coef_fg: '1.35', coef_benef: '1.15', commentaire: "Charges sociales de la main-d'œuvre", cree_par: 'admin' },
+  { id: 5, nat_id: 3, debut: '2026-01-01', coef_fg: '1.05', coef_benef: null, commentaire: 'Location : frais réduits, bénéfice global', cree_par: 'admin' },
+].map((p) => ({ cree_le: '2025-12-15T09:00:00Z', ...p }));
 
 export const FAMILLES = [
   { id: 1, bib_id: 1, parent_id: null, code: 'GO', libelle: 'Gros œuvre', ordre: 1 },
@@ -38,6 +51,7 @@ export const UNITES_BIBLIOTHEQUE = [{ unt_code: 'pal', unt_libelle: 'Palette' },
 const article = (o) => ({
   type: 'ARTICLE', actif: true, gestion: 'NON_GERE', unites: [], scenario_pa: 'FIXE', scenarios: null, pa_fixe: null, dernier_pa: null, pmp: null,
   coef_fg: '1.1', coef_benef: '1.2', pv: null, pv_fixe: false, coef_remise: '1', composition: null, image_ged: null, proprietes: {},
+  coef_fg_impose: false, coef_benef_impose: false,
   poids: null, surface: null, surface_peinture: null, volume: null, hauteur: null, largeur: null, epaisseur: null, isolant_r: null, isolant_lambda: null, isolant_u: null,
   unite_achat: null, unite_vente: null, fam_id: null, nat_id: null, ...o,
 });
@@ -69,7 +83,7 @@ export const ELEMENTS = [
   }),
   article({
     id: 6, bib_id: 1, code: 'LMP25', libelle_html: '<p><b>Location mini-pelle 2,5 t</b> (journée, sans chauffeur)</p>', fam_id: 6, nat_id: 3, gestion: 'ACHAT',
-    unite_stock: 'j', pa_fixe: '210', coef_fg: '1.05', coef_benef: '1.25', coef_remise: '0.95',
+    unite_stock: 'j', pa_fixe: '210', coef_fg: '1.05', coef_benef: '1.25', coef_benef_impose: true, coef_remise: '0.95',
   }),
   article({
     id: 7, bib_id: 1, code: 'DAL15', type: 'OUVRAGE', libelle_html: '<p><b>Dalle béton armé ép. 15 cm</b></p><p>Béton C25/30, treillis HA10, coulage et talochage</p>',

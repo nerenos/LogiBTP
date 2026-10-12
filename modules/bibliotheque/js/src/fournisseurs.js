@@ -1,4 +1,4 @@
-import { calculerElement } from './calcul.js';
+import { calculerElement, coefficientsEffectifs } from './calcul.js';
 import { texteBrut } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
@@ -8,6 +8,9 @@ import { texteBrut } from '@logibtp/socle';
 //   familles(bibId) / enregistrerFamille(f) / supprimerFamille(id)                  [{ id, bib_id, parent_id, code, libelle, ordre, chemin, niveau }]
 //   regroupements() / enregistrerRegroupement(r) / supprimerRegroupement(code)      [{ code, libelle, ordre }]
 //   natures() / enregistrerNature(n) / supprimerNature(id)                          [{ id, code, libelle, regroupement, axe_analytique, compte_achat, compte_vente, actif }]
+//   periodes() / enregistrerPeriode(p) / supprimerPeriode(id)  [{ id, nat_id, debut, coef_fg, coef_benef, commentaire }] ;
+//                                                        enregistrer/supprimer → { periodes, elements_recalcules }
+//   recalculer()                                         { elements_recalcules } (coefficients en vigueur aujourd'hui)
 //   unites()                                              [{ unt_code, unt_libelle }]
 //   tarifs(eleId) / enregistrerTarif(eleId, t) / supprimerTarif(eleId, id)  → { tarifs, prix }  (prix de l'élément recalculé)
 //   historique(eleId)                                     [{ id, date, auteur, commentaire, avant, apres }]
@@ -51,6 +54,10 @@ export class FournisseurBibliothequeApi {
   natures() { return this.appel('GET', '/natures'); }
   enregistrerNature(n) { return this.appel('PUT', '/natures', { id: 0, actif: true, ...n }); }
   supprimerNature(id) { return this.appel('DELETE', `/natures/${id}`); }
+  periodes() { return this.appel('GET', '/periodes'); }
+  enregistrerPeriode(p) { return this.appel('PUT', '/periodes', { id: 0, nat_id: null, cree_le: new Date().toISOString(), ...p }); }
+  supprimerPeriode(id) { return this.appel('DELETE', `/periodes/${id}`); }
+  recalculer() { return this.appel('POST', '/recalcul'); }
   async unites() {
     const r = await fetch('/api/unites', { headers: this.entetes });
     return r.ok ? r.json() : [];
@@ -97,7 +104,7 @@ export function entreeDepuisLigne(l, tarifs = []) {
  */
 export class FournisseurBibliothequeMemoire {
   constructor({ bibliotheques = [], familles = [], regroupements = [], natures = [], unites = [], elements = [], tarifs = [],
-    parametres = {}, profil = 'ADMIN', utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    parametres = {}, periodes = [], profil = 'ADMIN', utilisateur = 'demo', horloge = () => Date.now() } = {}) {
     this.bibs = structuredClone(bibliotheques);
     this.fams = structuredClone(familles);
     this.rgns = structuredClone(regroupements);
@@ -106,6 +113,7 @@ export class FournisseurBibliothequeMemoire {
     this.elements = elements;
     this.tarifsElements = structuredClone(tarifs);
     this.historiques = [];
+    this.periodesCoefs = structuredClone(periodes);
     this.params = { scenario_defaut: 'FIXE', scenarios_autorises: SCENARIOS_TOUS, coef_fg_defaut: 1, coef_benef_defaut: 1, ...parametres };
     this.profil = profil;
     this.utilisateur = utilisateur;
@@ -216,6 +224,61 @@ export class FournisseurBibliothequeMemoire {
 
   async unites() { return structuredClone(this.unts); }
 
+  #aujourdhui() { return new Date(this.horloge()).toISOString().slice(0, 10); }
+
+  async periodes() {
+    return structuredClone([...this.periodesCoefs].sort((a, b) => (a.nat_id ?? 0) - (b.nat_id ?? 0) || String(b.debut).localeCompare(String(a.debut))));
+  }
+
+  /** Nouvelle période ; une période commencée ne se modifie pas. Les éléments qui suivent les périodes sont recalculés. */
+  async enregistrerPeriode(p) {
+    this.#admin();
+    const debut = String(p.debut ?? '').slice(0, 10);
+    if (!debut) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Début obligatoire');
+    const v = (x) => (x === null || x === undefined || x === '' ? null : String(x));
+    if (v(p.coef_fg) === null && v(p.coef_benef) === null) throw new ErreurBibliotheque(422, 'COEF', 'Au moins un coefficient');
+    if (Number(p.coef_fg) <= 0 || Number(p.coef_benef) <= 0) throw new ErreurBibliotheque(422, 'COEF', 'Coefficients strictement positifs');
+    const existante = this.periodesCoefs.find((x) => x.id === p.id);
+    if (existante && existante.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', 'Période commencée : créez une nouvelle période');
+    const nat = p.nat_id === null || p.nat_id === undefined || p.nat_id === '' ? null : Number(p.nat_id);
+    if (this.periodesCoefs.some((x) => (x.nat_id ?? null) === nat && x.debut === debut && x.id !== p.id)) throw new ErreurBibliotheque(409, 'PERIODE', 'Une période commence déjà à cette date pour cette portée');
+    const ligne = { id: existante?.id ?? Math.max(0, ...this.periodesCoefs.map((x) => x.id)) + 1, nat_id: nat, debut, coef_fg: v(p.coef_fg), coef_benef: v(p.coef_benef),
+      commentaire: p.commentaire || null, cree_le: new Date(this.horloge()).toISOString(), cree_par: this.utilisateur };
+    if (existante) Object.assign(existante, ligne); else this.periodesCoefs.push(ligne);
+    const r = await this.recalculer(`Coefficients ${nat === null ? 'globaux' : 'de la nature'} au ${debut.split('-').reverse().join('/')}`);
+    return { periodes: await this.periodes(), ...r };
+  }
+
+  async supprimerPeriode(id) {
+    this.#admin();
+    const p = this.periodesCoefs.find((x) => x.id === id);
+    if (p && p.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', "Période commencée : elle fait partie de l'historique");
+    this.periodesCoefs = this.periodesCoefs.filter((x) => x.id !== id);
+    return { periodes: await this.periodes(), elements_recalcules: 0 };
+  }
+
+  /** Coefficients effectifs d'une ligne d'élément aujourd'hui. */
+  coefficients(e) {
+    return coefficientsEffectifs(e, this.periodesCoefs, this.#aujourdhui(), { coef_fg_defaut: this.params.coef_fg_defaut, coef_benef_defaut: this.params.coef_benef_defaut });
+  }
+
+  /** Recalcul des éléments qui suivent les coefficients de période (calcul des ouvrages : surRecalculOuvrage). */
+  async recalculer(commentaire = 'Coefficients en vigueur') {
+    let n = 0;
+    for (const e of this.elements) {
+      const c = this.coefficients(e);
+      const pvFixe = e.pv_fixe === true || e.pv_fixe === 'true';
+      if (String(c.coef_fg) === String(e.coef_fg) && (String(c.coef_benef) === String(e.coef_benef) || pvFixe)) continue;
+      e.maj_par = this.utilisateur;
+      e.coef_fg = c.coef_fg;
+      if (!pvFixe) e.coef_benef = c.coef_benef;
+      if (e.type === 'OUVRAGE') this.surRecalculOuvrage?.(e);
+      this.apresEcriture(e, { commentaire });
+      n++;
+    }
+    return { elements_recalcules: n };
+  }
+
   async tarifs(eleId) {
     return structuredClone(this.tarifsElements.filter((t) => String(t.ele_id) === String(eleId))
       .sort((a, b) => Number(b.principal) - Number(a.principal) || a.fournisseur.localeCompare(b.fournisseur) || a.id - b.id));
@@ -253,6 +316,10 @@ export class FournisseurBibliothequeMemoire {
    */
   apresEcriture(e, { creation = false, commentaire = null } = {}) {
     e.libelle = texteBrut(e.libelle_html ?? '') ?? '';
+    // Coefficients non imposés : ceux de la nature ou globaux en vigueur (le bénéfice d'un PV fixe est déduit).
+    const c = this.coefficients(e);
+    e.coef_fg = c.coef_fg;
+    if (!(e.pv_fixe === true || e.pv_fixe === 'true')) e.coef_benef = c.coef_benef;
     if (e.type !== 'OUVRAGE') {
       const r = calculerElement(entreeDepuisLigne(e, this.tarifsElements.filter((t) => String(t.ele_id) === String(e.id))));
       Object.assign(e, { pa: r.pa, pr: r.pr, pv: r.pv, coef_benef: r.coef_benef, pv_net: r.pv_net, alertes: r.alertes });

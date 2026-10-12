@@ -29,9 +29,9 @@ export class FicheElement extends FicheLogiBTP {
 
   async ouvrir() {
     const b = this.bibliotheque;
-    const [bibliotheques, familles, natures, regroupements, unites, parametres] = await Promise.all([
-      b.bibliotheques(), b.familles(), b.natures(), b.regroupements(), b.unites(), b.parametres()]);
-    this.referentiels = { bibliotheques, familles, natures, regroupements, unites, parametres };
+    const [bibliotheques, familles, natures, regroupements, unites, parametres, periodes] = await Promise.all([
+      b.bibliotheques(), b.familles(), b.natures(), b.regroupements(), b.unites(), b.parametres(), b.periodes()]);
+    this.referentiels = { bibliotheques, familles, natures, regroupements, unites, parametres, periodes };
     await super.ouvrir();
     await this.#chargerImage();
   }
@@ -41,7 +41,9 @@ export class FicheElement extends FicheLogiBTP {
     const type = new URLSearchParams(globalThis.location?.search ?? '').get('type') === 'OUVRAGE' ? 'OUVRAGE' : 'ARTICLE';
     return {
       ...super.valeursCreation(), type, bib_id: (bibliotheques.find((x) => x.defaut) ?? bibliotheques[0])?.id ?? null,
+      // Coefficients non imposés : ceux de la nature ou globaux (calculés à l'enregistrement).
       scenario_pa: parametres.scenario_defaut, coef_fg: String(parametres.coef_fg_defaut), coef_benef: String(parametres.coef_benef_defaut), unites: [],
+      coef_fg_impose: false, coef_benef_impose: false,
     };
   }
 
@@ -104,7 +106,7 @@ export class FicheElement extends FicheLogiBTP {
     el.addEventListener('change', () => {
       this.definirValeur(champ.code, el.value === '' ? null : el.value);
       if (champ.code === 'bib_id') { this.definirValeur('fam_id', null); this.rendre(); }
-      if (champ.code === 'nat_id') this.rendre(); // groupe Isolation selon la nature
+      if (champ.code === 'nat_id') this.rendre(); // groupe Isolation et coefficients selon la nature
     });
     return el;
   }
@@ -113,6 +115,7 @@ export class FicheElement extends FicheLogiBTP {
     return {
       valeur: (c) => this.valeur(c), definir: (c, v) => this.definirValeur(c, v), valeurs: () => ({ ...this.valeurs(), proprietes: this.proprietes() }),
       modifiable, id: this.id, fournisseur: this.bibliotheque, message: this.message, unites: this.referentiels.unites, parametres: this.referentiels.parametres,
+      periodes: this.referentiels.periodes,
       donnees: (this.definition.supplementaires ?? []).filter((s) => s.type === 'nombre').map((s) => ({ code: s.code, libelle: s.libelle })),
       surPrix: (p) => { Object.assign(this.fiche.valeurs, { pa: p.pa, pr: p.pr, pv: p.pv, coef_benef: p.coef_benef, pv_net: p.pv_net }); this.#majInformations(); },
     };
@@ -128,7 +131,7 @@ export class FicheElement extends FicheLogiBTP {
   ongletsSpecifiques() {
     const ouvrage = this.valeur('type') === 'OUVRAGE';
     return [
-      { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_benef', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
+      { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
       { code: 'unites', titre: 'Unités', champs: ['unite_stock', 'unite_achat', 'unite_vente', 'unites'], rendre: (corps, { modifiable }) => new OngletUnites(corps, this.#contexte(modifiable)) },
       ...(ouvrage

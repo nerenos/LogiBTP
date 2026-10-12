@@ -51,3 +51,26 @@
 .bib-noeud-bib { font-weight: 600; }
 .bib-ouvrir { width: 1rem; text-align: center; color: var(--discret); cursor: pointer; flex: none; }
 .bib-arbre li.vide > .bib-noeud { opacity: 0.5; }
+
+/* Familles en arbre (paramétrage) */
+.bib-familles { display: grid; grid-template-columns: minmax(16rem, 1fr) minmax(18rem, 1.2fr); gap: 1rem; align-items: start; margin-top: 0.5rem; }
+@media (max-width: 800px) { .bib-familles { grid-template-columns: 1fr; } }
+.bib-familles-arbre { border: 1px solid var(--bord); border-radius: 6px; padding: 0.4rem; background: var(--surface); }
+.bib-familles-outils { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.bib-arbre-familles, .bib-arbre-familles ul { list-style: none; margin: 0; padding: 0; }
+.bib-arbre-familles ul { padding-left: 1.1rem; }
+.bib-famille { display: flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.3rem; border-radius: 4px; cursor: pointer; }
+.bib-famille:hover { background: var(--titre-fond); }
+.bib-famille.choisie { background: var(--accent-clair); color: var(--accent); font-weight: 600; }
+.bib-famille small { color: var(--discret); font-weight: 400; margin-left: auto; }
+.bib-familles-edition h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.bib-referentiels button.danger { border-color: var(--erreur); color: var(--erreur); }
+.bib-cases { display: flex; flex-wrap: wrap; gap: 0.1rem 0.5rem; }
+.bib-cases label { display: inline-flex; align-items: center; gap: 0.15rem; white-space: nowrap; font-size: 0.9em; }
+/* Coefficients par période */
+.bib-coefficients { display: flex; flex-direction: column; gap: 0.6rem; }
+.bib-vigueur { margin: 0; }
+.bib-coefficients tr.periode-en-vigueur td { font-weight: 600; background: var(--accent-clair); }
+.bib-coefficients tr.periode-passee td { color: var(--discret); }
+.bib-coefficients .large { grid-column: span 2; }
+.bib-source { color: var(--discret); font-size: 0.85em; }

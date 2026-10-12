@@ -23,6 +23,7 @@ services:
       - ./modules/ged/db/050_ged_schema.sql:/docker-entrypoint-initdb.d/050_ged_schema.sql:ro
       - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro
       - ./modules/bibliotheque/db/061_bibliotheque_technique.sql:/docker-entrypoint-initdb.d/061_bibliotheque_technique.sql:ro
+      - ./modules/bibliotheque/db/062_bibliotheque_coefficients.sql:/docker-entrypoint-initdb.d/062_bibliotheque_coefficients.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro

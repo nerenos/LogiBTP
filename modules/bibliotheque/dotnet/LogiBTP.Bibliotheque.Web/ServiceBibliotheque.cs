@@ -15,6 +15,12 @@ public class SpecialisationBibliotheque
     public virtual bool PeutParametrer(Utilisateur u) => u.EstAdmin;
 
     public virtual bool PeutModifierTarifs(Utilisateur u) => true;
+
+    /// <summary>
+    /// Prix d'un ouvrage recalculé avec de nouveaux coefficients (période modifiée) : l'application qui sait calculer la
+    /// composition le fait ; par défaut les prix de l'ouvrage restent inchangés.
+    /// </summary>
+    public virtual void RecalculerOuvrage(Element ouvrage) { }
 }
 
 /// <summary>
@@ -170,7 +176,8 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     public virtual async Task<List<NatureDto>> Natures(CancellationToken ct) =>
         (await db.Natures.AsNoTracking().OrderBy(n => n.NatCode).ToListAsync(ct))
-        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatCompteAchat, n.NatCompteVente, n.NatActif, n.NatIsolant)).ToList();
+        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatCompteAchat, n.NatCompteVente, n.NatActif, n.NatIsolant,
+            n.NatTypes.RootElement.ValueKind == JsonValueKind.Array ? n.NatTypes.RootElement.EnumerateArray().Select(x => x.GetString()!).ToList() : [])).ToList();
 
     public virtual async Task<List<NatureDto>> EnregistrerNature(NatureDto d, Utilisateur u, CancellationToken ct)
     {
@@ -181,6 +188,9 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         var n = d.Id > 0 ? await db.Natures.FirstOrDefaultAsync(x => x.NatId == d.Id, ct) ?? throw ExceptionMetier.Introuvable($"Nature {d.Id}") : new NatureElement();
         n.NatCode = code; n.NatLibelle = Obligatoire(d.Libelle, "Libellé"); n.NatRgnCode = Texte(d.Regroupement); n.NatAxeAnalytique = Texte(d.AxeAnalytique);
         n.NatCompteAchat = Texte(d.CompteAchat); n.NatCompteVente = Texte(d.CompteVente); n.NatActif = d.Actif; n.NatIsolant = d.Isolant;
+        var types = (d.Types ?? []).Distinct().ToList();
+        if (types.Any(t => !CoefficientsElement.TypesNature.Contains(t))) throw ExceptionMetier.Invalide("TYPE", "Type de nature inconnu");
+        n.NatTypes = JsonSerializer.SerializeToDocument(types);
         if (n.NatId == 0) db.Natures.Add(n);
         await db.SaveChangesAsync(ct);
         return await Natures(ct);
@@ -191,6 +201,96 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         Parametrage(u);
         await db.Natures.Where(n => n.NatId == id).ExecuteDeleteAsync(ct); // éléments : nature retirée (ON DELETE SET NULL)
         return await Natures(ct);
+    }
+
+    // ------------------------------------------------------------------ coefficients par période
+
+    private static PeriodeDto VersDto(CoefficientPeriode p) => new(p.CopId, p.CopNatId, p.CopDebut.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        p.CopCoefFg, p.CopCoefBenef, p.CopCommentaire, p.CopCreeLe, p.CopCreePar);
+
+    public virtual async Task<List<PeriodeDto>> Periodes(CancellationToken ct) =>
+        (await db.Periodes.AsNoTracking().OrderBy(p => p.CopNatId).ThenByDescending(p => p.CopDebut).ToListAsync(ct)).Select(VersDto).ToList();
+
+    /// <summary>Périodes au format de la résolution (CoefficientsElement).</summary>
+    public virtual async Task<List<PeriodeCoefficients>> PeriodesCalcul(CancellationToken ct) =>
+        (await db.Periodes.AsNoTracking().ToListAsync(ct)).Select(p => new PeriodeCoefficients
+        {
+            NatId = p.CopNatId, Debut = p.CopDebut.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), CoefFg = p.CopCoefFg, CoefBenef = p.CopCoefBenef,
+        }).ToList();
+
+    /// <summary>Coefficients effectifs d'un élément à la date du jour (imposés, nature, global, défaut).</summary>
+    public virtual async Task<CoefficientsResolus> Coefficients(int? natId, decimal? coefFg, bool fgImpose, decimal? coefBenef, bool benefImpose, CancellationToken ct)
+    {
+        var p = await Parametres(ct);
+        return CoefficientsElement.Resoudre(new CoefficientsSaisis { NatId = natId, CoefFg = coefFg, CoefFgImpose = fgImpose, CoefBenef = coefBenef, CoefBenefImpose = benefImpose },
+            await PeriodesCalcul(ct), DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), p.CoefFgDefaut, p.CoefBenefDefaut);
+    }
+
+    /// <summary>
+    /// Nouvelle période (globale ou d'une nature). Une période commencée ne se modifie pas : on en crée une autre. Les
+    /// éléments qui suivent ces coefficients sont recalculés (historique des prix alimenté).
+    /// </summary>
+    public virtual async Task<PeriodeEnregistree> EnregistrerPeriode(PeriodeDto d, Utilisateur u, CancellationToken ct)
+    {
+        Parametrage(u);
+        var debut = DateOnly.ParseExact(Obligatoire(d.Debut, "Début")[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (d.CoefFg is null && d.CoefBenef is null) throw ExceptionMetier.Invalide("COEF", "Au moins un coefficient");
+        if (d.CoefFg <= 0 || d.CoefBenef <= 0) throw ExceptionMetier.Invalide("COEF", "Coefficients strictement positifs");
+        if (d.NatId is { } nat && !await db.Natures.AnyAsync(n => n.NatId == nat, ct)) throw ExceptionMetier.Introuvable($"Nature {nat}");
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
+        var p = d.Id > 0 ? await db.Periodes.FirstOrDefaultAsync(x => x.CopId == d.Id, ct) ?? throw ExceptionMetier.Introuvable($"Période {d.Id}") : new CoefficientPeriode();
+        if (p.CopId > 0 && p.CopDebut <= aujourdhui) throw ExceptionMetier.Invalide("PERIODE_COMMENCEE", "Période commencée : créez une nouvelle période");
+        if (await db.Periodes.AnyAsync(x => x.CopNatId == d.NatId && x.CopDebut == debut && x.CopId != d.Id, ct))
+            throw ExceptionMetier.Conflit("PERIODE", "Une période commence déjà à cette date pour cette portée");
+        p.CopNatId = d.NatId; p.CopDebut = debut; p.CopCoefFg = d.CoefFg; p.CopCoefBenef = d.CoefBenef; p.CopCommentaire = Texte(d.Commentaire);
+        if (p.CopId == 0) { p.CopCreeLe = DateTimeOffset.UtcNow; p.CopCreePar = u.Code; db.Periodes.Add(p); }
+        await db.SaveChangesAsync(ct);
+        var n = await RecalculerElements($"Coefficients {(d.NatId is null ? "globaux" : "de la nature")} au {debut:dd/MM/yyyy}", u, ct);
+        return new PeriodeEnregistree(await Periodes(ct), n);
+    }
+
+    public virtual async Task<PeriodeEnregistree> SupprimerPeriode(int id, Utilisateur u, CancellationToken ct)
+    {
+        Parametrage(u);
+        var p = await db.Periodes.FirstOrDefaultAsync(x => x.CopId == id, ct) ?? throw ExceptionMetier.Introuvable($"Période {id}");
+        if (p.CopDebut <= DateOnly.FromDateTime(DateTime.Today)) throw ExceptionMetier.Invalide("PERIODE_COMMENCEE", "Période commencée : elle fait partie de l'historique");
+        db.Periodes.Remove(p);
+        await db.SaveChangesAsync(ct);
+        return new PeriodeEnregistree(await Periodes(ct), 0);
+    }
+
+    /// <summary>
+    /// Recalcul des éléments qui suivent les coefficients de période (non imposés) : coefficients en vigueur aujourd'hui,
+    /// puis prix ; seuls les éléments dont un coefficient change sont écrits. Renvoie le nombre d'éléments modifiés.
+    /// </summary>
+    public virtual async Task<int> RecalculerElements(string commentaire, Utilisateur u, CancellationToken ct)
+    {
+        var p = await Parametres(ct);
+        var periodes = await PeriodesCalcul(ct);
+        var date = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var elements = await db.Elements.Where(e => !e.EleCoefFgImpose || !e.EleCoefBenefImpose).ToListAsync(ct);
+        var tarifs = (await db.Tarifs.AsNoTracking().ToListAsync(ct)).GroupBy(t => t.TfoEleId)
+            .ToDictionary(g => g.Key, g => g.Select(t => new TarifCalcul { Prix = t.TfoPrix, Unite = t.TfoUntCode, Principal = t.TfoPrincipal, Debut = Date(t.TfoDebut), Fin = Date(t.TfoFin) }).ToList());
+        var n = 0;
+        foreach (var e in elements)
+        {
+            var c = CoefficientsElement.Resoudre(new CoefficientsSaisis { NatId = e.EleNatId, CoefFg = e.EleCoefFg, CoefFgImpose = e.EleCoefFgImpose, CoefBenef = e.EleCoefBenef, CoefBenefImpose = e.EleCoefBenefImpose },
+                periodes, date, p.CoefFgDefaut, p.CoefBenefDefaut);
+            if (c.CoefFg == e.EleCoefFg && (c.CoefBenef == e.EleCoefBenef || e.ElePvFixe)) continue;
+            e.EleCoefFg = c.CoefFg;
+            if (!e.ElePvFixe) e.EleCoefBenef = c.CoefBenef;
+            if (e.EleType == "OUVRAGE") specialisation.RecalculerOuvrage(e);
+            else
+            {
+                var r = CalculElement.Calculer(Entree(e, tarifs.GetValueOrDefault(e.EleId) ?? []));
+                e.ElePa = r.Pa; e.ElePr = r.Pr; e.ElePv = r.Pv; e.EleCoefBenef = r.CoefBenef ?? e.EleCoefBenef; e.ElePvNet = r.PvNet;
+            }
+            e.EleMajPar = u.Code;
+            e.EleCommentairePrix = commentaire;
+            n++;
+        }
+        await db.SaveChangesAsync(ct);
+        return n;
     }
 
     // ------------------------------------------------------------------ tarifs fournisseurs et recalcul

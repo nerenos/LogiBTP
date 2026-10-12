@@ -1,9 +1,9 @@
-import { FournisseurBibliothequeApi, FournisseurBibliothequeMemoire } from '@logibtp/bibliotheque';
+import { FournisseurBibliothequeApi, FournisseurBibliothequeMemoire, coefficientsEffectifs } from '@logibtp/bibliotheque';
 import { arr6, D, S } from '@logibtp/socle';
 import { calculerDocument, TL } from '../../calcul/index.js';
 import { ENTETES } from '../api.js';
 import { DEFINITION_DEMO } from '../demo.js';
-import { BIBLIOTHEQUES, REGROUPEMENTS, NATURES, FAMILLES, ELEMENTS, TARIFS, PARAMETRES_BIBLIOTHEQUE, UNITES_BIBLIOTHEQUE } from './donnees.js';
+import { BIBLIOTHEQUES, REGROUPEMENTS, NATURES, FAMILLES, ELEMENTS, TARIFS, PARAMETRES_BIBLIOTHEQUE, UNITES_BIBLIOTHEQUE, PERIODES_COEFFICIENTS } from './donnees.js';
 
 // Bibliothèque du cœur : fournisseur (API ou démo hors ligne), calcul des ouvrages par le moteur de devis BTP
 // (composition : lignes, métrés, variables), colonnes de la liste dérivées des fiches.
@@ -51,6 +51,10 @@ export function colonnesListe(e, biblio) {
 
 /** Démo hors ligne : prix, historique et colonnes de liste recalculés après chaque écriture d'un élément. */
 export function apresEcritureElement(biblio, e, options) {
+  // Coefficients effectifs (nature, global ou imposés) avant le calcul de la composition.
+  const c = biblio.coefficients(e);
+  e.coef_fg = c.coef_fg;
+  if (!(e.pv_fixe === true || e.pv_fixe === 'true')) e.coef_benef = c.coef_benef;
   if (e.type === 'OUVRAGE') {
     const composition = typeof e.composition === 'string' ? JSON.parse(e.composition) : e.composition;
     Object.assign(e, calculerOuvrage(composition, e), { resultat: undefined });
@@ -63,12 +67,19 @@ export function apresEcritureElement(biblio, e, options) {
 export function creerFournisseurBibliotheque({ enLigne, utilisateur = 'demo', profil = 'ADMIN' }) {
   if (enLigne) return new FournisseurBibliothequeApi({ base: '/api/bibliotheque', entetes: ENTETES });
   const elements = structuredClone(ELEMENTS);
-  // Les ouvrages sont calculés par le moteur de devis avant la reprise (le fournisseur ne connaît que les articles).
-  for (const e of elements) if (e.type === 'OUVRAGE') Object.assign(e, (({ resultat, ...p }) => p)(calculerOuvrage(e.composition, e)));
+  // Les ouvrages sont calculés par le moteur de devis avant la reprise (le fournisseur ne connaît que les articles),
+  // avec les coefficients de leur nature ou globaux en vigueur.
+  for (const e of elements) {
+    if (e.type !== 'OUVRAGE') continue;
+    const c = coefficientsEffectifs(e, PERIODES_COEFFICIENTS, new Date().toISOString().slice(0, 10), PARAMETRES_BIBLIOTHEQUE);
+    Object.assign(e, { coef_fg: c.coef_fg, coef_benef: c.coef_benef });
+    Object.assign(e, (({ resultat, ...p }) => p)(calculerOuvrage(e.composition, e)));
+  }
   const biblio = new FournisseurBibliothequeMemoire({
     bibliotheques: BIBLIOTHEQUES, familles: FAMILLES, regroupements: REGROUPEMENTS, natures: NATURES, elements, tarifs: TARIFS,
-    unites: [...DEFINITION_DEMO.unites, ...UNITES_BIBLIOTHEQUE], parametres: PARAMETRES_BIBLIOTHEQUE, utilisateur, profil,
+    unites: [...DEFINITION_DEMO.unites, ...UNITES_BIBLIOTHEQUE], parametres: PARAMETRES_BIBLIOTHEQUE, periodes: PERIODES_COEFFICIENTS, utilisateur, profil,
   });
   for (const e of elements) Object.assign(e, colonnesListe(e, biblio));
+  biblio.surRecalculOuvrage = (e) => Object.assign(e, (({ resultat, ...p }) => p)(calculerOuvrage(typeof e.composition === 'string' ? JSON.parse(e.composition) : e.composition, e)));
   return biblio;
 }

@@ -45,6 +45,12 @@ public static class Extensions
         g.MapPut("/natures", (NatureDto n, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.EnregistrerNature(n, Utilisateur.Depuis(http), ct));
         g.MapDelete("/natures/{id:int}", (int id, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.SupprimerNature(id, Utilisateur.Depuis(http), ct));
 
+        g.MapGet("/periodes", (ServiceBibliotheque s, CancellationToken ct) => s.Periodes(ct));
+        g.MapPut("/periodes", (PeriodeDto p, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.EnregistrerPeriode(p, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/periodes/{id:int}", (int id, HttpContext http, ServiceBibliotheque s, CancellationToken ct) => s.SupprimerPeriode(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/recalcul", async (HttpContext http, ServiceBibliotheque s, CancellationToken ct) =>
+            Results.Ok(new { elements_recalcules = await s.RecalculerElements("Coefficients en vigueur", Utilisateur.Depuis(http), ct) }));
+
         g.MapGet("/elements", (string? recherche, int? bib, string? type, ServiceBibliotheque s, CancellationToken ct) => s.Rechercher(recherche, bib, type, ct));
         g.MapGet("/elements/{id:long}", (long id, ServiceBibliotheque s, CancellationToken ct) => s.Element(id, ct));
         g.MapGet("/appel", (string code, string? bib, ServiceBibliotheque s, CancellationToken ct) => s.Appel(code, bib, ct));

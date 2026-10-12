@@ -6,10 +6,12 @@ import { creerFournisseurBibliotheque } from '../src/app/bibliotheque/bibliotheq
 describe('appel de la bibliothèque', () => {
   const biblio = creerFournisseurBibliotheque({ enLigne: false });
 
+  // Coefficients non imposés : ceux de la nature ou globaux en vigueur à la date du jour.
   it('article : unité de vente, PA converti, code sans préfixe dans la bibliothèque du document', async () => {
     const e = await biblio.appelCode('HA10', 'GEN');
     const v = valeursArticle(e, 'GEN');
-    expect(v).toMatchObject({ lig_code: 'HA10', lig_art_id: 1, lig_unt_code: 'kg', lig_pa: 1.15, lig_coef_fg: 1.08, lig_coef_benef: 1.25, lig_nat_id: 2 });
+    const c = biblio.coefficients({ nat_id: 2 });
+    expect(v).toMatchObject({ lig_code: 'HA10', lig_art_id: 1, lig_unt_code: 'kg', lig_pa: 1.15, lig_coef_fg: Number(c.coef_fg), lig_coef_benef: Number(c.coef_benef), lig_nat_id: 2 });
     expect(v.lig_proprietes.element).toMatchObject({ id: 1, bib: 'GEN', code: 'HA10', unite: 'kg' });
     // Depuis une autre bibliothèque : préfixe BIB:CODE.
     expect(valeursArticle(e, 'FAB').lig_code).toBe('GEN:HA10');
@@ -30,7 +32,7 @@ describe('appel de la bibliothèque', () => {
     const e = await biblio.appelCode('DAL15');
     const c = contenuOuvrage(e, 'FAB', { quantite: 12 });
     const racine = c.lignes.find((l) => l.lig_id === c.racines[0]);
-    expect(racine).toMatchObject({ lig_code: 'GEN:DAL15', lig_art_id: 7, lig_qte: 12, lig_unt_code: 'm2', lig_coef_fg: 1.1 });
+    expect(racine).toMatchObject({ lig_code: 'GEN:DAL15', lig_art_id: 7, lig_qte: 12, lig_unt_code: 'm2', lig_coef_fg: Number(biblio.coefficients({ nat_id: 5 }).coef_fg) });
     expect(c.lignes.filter((l) => l.lig_parent_id === racine.lig_id)).toHaveLength(3);
     expect(c.metres).toHaveLength(1);
     expect(c.metre_lignes).toHaveLength(2);

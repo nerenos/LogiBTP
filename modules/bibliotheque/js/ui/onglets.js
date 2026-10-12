@@ -1,12 +1,12 @@
 import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
-import { calculerElement, SCENARIOS_PA } from '../src/calcul.js';
+import { calculerElement, coefficientsEffectifs, SCENARIOS_PA } from '../src/calcul.js';
 import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 
 // Onglets de la fiche d'un élément (classes mères utilisées par la fiche spécialisée de l'application). Contexte :
 //   valeur(code), definir(code, valeur)      valeurs de la fiche (definir : saisie envoyée avec l'enregistrement)
 //   valeurs()                                 ligne complète (valeurs et champs supplémentaires sous « proprietes »)
 //   modifiable, id (null en création), fournisseur (FournisseurBibliotheque…), message(texte, niveau)
-//   unites : [{ unt_code, unt_libelle }]      parametres : paramètres de la bibliothèque
+//   unites : [{ unt_code, unt_libelle }]      parametres : paramètres de la bibliothèque ; periodes : coefficients par période
 //   donnees : [{ code, libelle }]             données techniques (champs supplémentaires) utilisables dans les formules
 
 const prix = (v, d = 2) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 && d === 2 ? 4 : d));
@@ -34,11 +34,27 @@ export class OngletPrix {
 
   get ouvrage() { return this.ctx.valeur('type') === 'OUVRAGE'; }
 
+  /** Coefficients effectifs : imposés par l'élément, sinon nature ou global en vigueur, sinon défaut. */
+  effectifs() {
+    return coefficientsEffectifs(this.ctx.valeurs(), this.ctx.periodes ?? [], new Date().toISOString().slice(0, 10), this.ctx.parametres);
+  }
+
   rendre() {
     const { valeur, modifiable, parametres } = this.ctx;
     const ro = modifiable ? '' : 'disabled';
     const autorises = json(valeur('scenarios'), null) ?? parametres.scenarios_autorises;
     const remise = valeur('coef_remise') === null || valeur('coef_remise') === undefined ? '' : formatLibre((1 - Number(valeur('coef_remise'))) * 100, 4);
+    const eff = this.effectifs();
+    const source = (s) => ({ impose: 'imposé pour cet élément', nature: `nature, période du ${String(s.debut).split('-').reverse().join('/')}`,
+      global: `global, période du ${String(s.debut).split('-').reverse().join('/')}`, defaut: 'par défaut' }[s.portee] ?? s.portee);
+    // Coefficient : celui de la nature ou global en vigueur, ou imposé (case cochée : saisie libre).
+    const coefChamp = (code, libelle) => {
+      const impose = valeur(`${code}_impose`) === true || valeur(`${code}_impose`) === 'true';
+      const v = impose ? valeur(code) : eff[code];
+      return `<div class="bib-coef"><label>${echapper(libelle)}<input data-v="${code}" inputmode="decimal" value="${echapper(v === null || v === undefined ? '' : String(v).replace('.', ','))}" ${ro || !impose ? 'readonly' : ''}></label>
+        <label class="bib-ligne"><input type="checkbox" data-impose="${code}" ${impose ? 'checked' : ''} ${ro}> imposé</label>
+        <small class="bib-source">${echapper(source(eff.sources[code]))}</small></div>`;
+    };
     const champ = (code, libelle, aide = '') => `<label title="${echapper(aide)}">${echapper(libelle)}<input data-v="${code}" inputmode="decimal" value="${echapper(valeur(code) === null || valeur(code) === undefined ? '' : String(valeur(code)).replace('.', ','))}" ${ro}></label>`;
     this.corps.innerHTML = `<div class="bib-prix">
       <fieldset class="fiche-groupe"><legend>Prix d'achat</legend>
@@ -48,7 +64,7 @@ export class OngletPrix {
         <details><summary>Scénarios autorisés pour cet élément</summary>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</details>`}
       </fieldset>
       <fieldset class="fiche-groupe"><legend>Coefficients et vente</legend>
-        <div class="bib-grille">${champ('coef_fg', 'Coef. frais généraux')}${champ('coef_benef', 'Coef. bénéfice', 'Déduit du PV quand le PV est fixe')}
+        <div class="bib-grille">${coefChamp('coef_fg', 'Coef. frais généraux')}${coefChamp('coef_benef', 'Coef. bénéfice')}
           <label class="bib-ligne"><input type="checkbox" data-v="pv_fixe" ${valeur('pv_fixe') === true || valeur('pv_fixe') === 'true' ? 'checked' : ''} ${ro}> PV fixe</label>
           ${champ('pv', 'PV (si fixe)')}
           <label title="Remise sur le PV (coefficient de remise = 1 − remise)">Remise sur PV (%)<input data-remise inputmode="decimal" value="${echapper(remise)}" ${ro}></label></div>
@@ -61,6 +77,12 @@ export class OngletPrix {
       const code = el.dataset.v;
       this.ctx.definir(code, el.type === 'checkbox' ? el.checked : el.tagName === 'SELECT' || code === 'commentaire_prix' ? el.value : nombreSaisi(el.value));
       this.majResultat();
+    }));
+    this.corps.querySelectorAll('[data-impose]').forEach((el) => el.addEventListener('change', () => {
+      const code = el.dataset.impose;
+      this.ctx.definir(`${code}_impose`, el.checked);
+      if (el.checked) this.ctx.definir(code, String(this.effectifs()[code] ?? 1));
+      this.rendre();
     }));
     this.corps.querySelector('[data-remise]')?.addEventListener('input', (e) => {
       const r = nombreSaisi(e.target.value);
@@ -84,6 +106,8 @@ export class OngletPrix {
         <p class="aide">Prix issus du calcul de la composition, mis à jour à l'enregistrement.</p>`;
       return;
     }
+    const c = this.effectifs();
+    Object.assign(l, { coef_fg: c.coef_fg, coef_benef: l.pv_fixe === true || l.pv_fixe === 'true' ? l.coef_benef : c.coef_benef });
     let r;
     try { r = calculerElement(entreeDepuisLigne(l, this.tarifs)); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     zone.innerHTML = `<table class="bib-table"><thead><tr><th>Unité</th><th>Quantité en ${echapper(l.unite_stock ?? '')}</th><th>PA</th><th>PR</th><th>PV net</th></tr></thead><tbody>

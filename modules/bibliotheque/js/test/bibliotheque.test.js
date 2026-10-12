@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { calculerElement, convertir, codeAppel, analyserCodeAppel } from '../src/calcul.js';
+import { calculerElement, convertir, codeAppel, analyserCodeAppel, coefficientsEffectifs } from '../src/calcul.js';
 import { FournisseurBibliothequeMemoire } from '../src/fournisseurs.js';
 import { S } from '@logibtp/socle';
 
@@ -20,6 +20,13 @@ describe('calcul (jeu partagé avec CalculElement.cs)', () => {
     expect(codeAppel({ bib_code: 'FOUR', code: 'BET01' }, 'GEN')).toBe('FOUR:BET01');
     expect(analyserCodeAppel('four: BET01', 'GEN')).toEqual({ bibliotheque: 'FOUR', code: 'BET01' });
   });
+});
+
+describe('coefficients par période (jeu partagé avec CoefficientsElement.cs)', () => {
+  const jeuCoefs = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/02_coefficients.json'), 'utf8'));
+  for (const c of jeuCoefs.cas) {
+    it(c.nom, () => expect(coefficientsEffectifs(c.element, jeuCoefs.periodes, c.date, jeuCoefs.defauts)).toEqual(c.attendu));
+  }
 });
 
 describe('fournisseur en mémoire', () => {

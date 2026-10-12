@@ -32,7 +32,7 @@ builder.Services.AddModuleFiche<SpecialisationFicheBtp>(Base);
 // Module GED : documents stockés sur le serveur (Ged:Repertoire), versions, coffre-fort (modules/ged/db/050).
 builder.Services.AddModuleGed<SpecialisationGedBtp>(Base);
 // Module Bibliothèque : bibliothèques, familles, natures, tarifs fournisseurs, historique des prix (modules/bibliotheque/db/060).
-builder.Services.AddModuleBibliotheque(Base);
+builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
