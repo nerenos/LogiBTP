@@ -16,10 +16,18 @@ import { construireGraphe } from './graphe.js';
 //   historiqueCoordonnee(cooId)                     [{ avant, le, par }]
 //   creerParticulier(indId)                         { id } : compte particulier (personne) de l'individu, coordonnées partagées
 //   graphe(type, id, { profondeur, contacts, liens, max_contacts })   graphe relationnel autour d'une fiche (graphe.js)
+//   pageRattachements(type, id, { recherche, page, taille })   page de rattachements : { lignes, total, page, taille }
+//
+// Rattachements (champ géré) : la fiche lit la première page (TAILLE_PAGE_RATTACHEMENTS) et leur nombre
+// (nb_rattachements) ; elle n'enregistre que les rattachements modifiés, ajoutés (sans rat_id) ou retirés
+// ({ rat_id, supprime: true }) : un rattachement absent de la saisie est inchangé.
 //
 // Champs gérés des fiches (module Fiche, champ.gere) : personne → coordonnees, rattachements, liens, enfants ;
 // individu → coordonnees, rattachements. Le fournisseur mémoire les lit et les écrit (geres(type)) ; côté serveur,
 // SpecialisationFiche délègue à ServiceAnnuaire.
+
+/** Rattachements lus avec une fiche (première page) et par page dans l'onglet Contacts. */
+export const TAILLE_PAGE_RATTACHEMENTS = 20;
 
 export class ErreurAnnuaire extends Error {
   constructor(statut, code, message, details = null) {
@@ -58,6 +66,9 @@ export class FournisseurAnnuaireApi {
   coordonneesProposees(type, id) { return this.appel('GET', `/coordonnees/proposees?${new URLSearchParams({ type, id: String(id ?? '') })}`); }
   historiqueCoordonnee(cooId) { return this.appel('GET', `/coordonnees/${cooId}/historique`); }
   creerParticulier(indId) { return this.appel('POST', `/individus/${indId}/particulier`); }
+  pageRattachements(type, id, { recherche = '', page = 1, taille = TAILLE_PAGE_RATTACHEMENTS } = {}) {
+    return this.appel('GET', `/rattachements?${new URLSearchParams({ type, id: String(id), recherche, page: String(page), taille: String(taille) })}`);
+  }
   graphe(type, id, { profondeur = 1, contacts = true, liens = true, max_contacts = 8 } = {}) {
     const q = new URLSearchParams({ type, id: String(id), profondeur: String(profondeur), contacts: String(contacts), liens: String(liens), max_contacts: String(max_contacts) });
     return this.appel('GET', `/graphe?${q}`);
@@ -347,16 +358,33 @@ export class FournisseurAnnuaireMemoire {
 
   // ---------------------------------------------------------------- rattachements et liens
 
-  #rattachementsDe(type, id) {
+  /**
+   * Rattachements d'une fiche, triés (principal, actif, nom de l'autre fiche, identifiant), filtrés par une recherche (nom,
+   * fonction, service) ; page de « taille » lignes, coordonnées lues pour cette page seulement.
+   */
+  #rattachementsDe(type, id, { recherche = '', page = 1, taille = Infinity } = {}) {
     const cle = type === 'personne' ? 'per_id' : 'ind_id';
-    return this.rattachements.filter((r) => r[cle] === Number(id)).map((r) => {
+    const m = mots(recherche);
+    const nom = (r) => (type === 'personne' ? libelleIndividu(this.individus.find((x) => x.id === r.ind_id)) : this.personnes.find((x) => x.id === r.per_id)?.raison_sociale ?? '');
+    const tous = this.rattachements.filter((r) => r[cle] === Number(id)).map((r) => ({ r, nom: nom(r) }))
+      .filter(({ r, nom: n }) => correspond(m, n, r.fonction, r.service))
+      .sort((a, b) => Number(!!b.r.principal) - Number(!!a.r.principal) || Number(b.r.actif !== false) - Number(a.r.actif !== false)
+        || sansAccent(a.nom).localeCompare(sansAccent(b.nom)) || a.r.id - b.r.id);
+    const debut = (Math.max(1, Number(page) || 1) - 1) * taille;
+    const lignes = tous.slice(debut, debut + taille).map(({ r }) => {
       const i = this.individus.find((x) => x.id === r.ind_id), p = this.personnes.find((x) => x.id === r.per_id);
       return {
         rat_id: r.id, ind_id: r.ind_id, per_id: r.per_id, individu: libelleIndividu(i), personne: p?.raison_sociale ?? null, niveau: p?.niveau ?? null,
         fonction: r.fonction ?? null, service: r.service ?? null, principal: !!r.principal, titulaire: !!r.titulaire, debut: date(r.debut), fin: date(r.fin),
         actif: r.actif !== false, commentaire: r.commentaire ?? null, maj: r.modifie_le ?? null, coordonnees: this.#usagesDe('rattachement', r.id),
       };
-    }).sort((a, b) => Number(b.principal) - Number(a.principal) || Number(b.actif) - Number(a.actif) || (type === 'personne' ? a.individu : a.personne ?? '').localeCompare(type === 'personne' ? b.individu : b.personne ?? '', 'fr'));
+    });
+    return { lignes, total: tous.length };
+  }
+
+  async pageRattachements(type, id, { recherche = '', page = 1, taille = TAILLE_PAGE_RATTACHEMENTS } = {}) {
+    const t = Math.min(Math.max(Number(taille) || TAILLE_PAGE_RATTACHEMENTS, 1), 200);
+    return { ...this.#rattachementsDe(type, id, { recherche, page, taille: t }), page: Math.max(1, Number(page) || 1), taille: t };
   }
 
   #liensDe(id) {
@@ -377,12 +405,20 @@ export class FournisseurAnnuaireMemoire {
     const cle = type === 'personne' ? 'per_id' : 'ind_id';
     const autre = type === 'personne' ? 'ind_id' : 'per_id';
     const existants = id === null ? [] : this.rattachements.filter((r) => r[cle] === Number(id));
-    const vus = new Set();
+    const retires = [];
+    // Autres fiches déjà rattachées (hors saisie et hors retraits) : un nouveau rattachement ne peut les doubler.
+    const saisis = new Set(saisies.filter((s) => s.rat_id).map((s) => Number(s.rat_id)));
+    const vus = new Set(existants.filter((r) => !saisis.has(r.id)).map((r) => Number(r[autre])));
     const plans = [];
     for (const [i, s] of saisies.entries()) {
       const r = s.rat_id ? existants.find((x) => x.id === Number(s.rat_id)) : null;
       if (s.rat_id && !r) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Rattachement ${s.rat_id} introuvable`);
       if (r && s.maj && r.modifie_le && s.maj !== r.modifie_le) throw new ErreurAnnuaire(409, 'RATTACHEMENT_MODIFIE', 'Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche');
+      if (s.supprime) {
+        if (!r) throw new ErreurAnnuaire(422, 'VALIDATION', 'Retrait impossible', [{ champ: 'rattachements', code: 'RETRAIT', message: `Rattachement n° ${i + 1} : pas encore enregistré` }]);
+        retires.push(r);
+        continue;
+      }
       const cible = s[autre] ?? null;
       if (!cible && !(type === 'personne' && s.nouvel_individu)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Rattachement incomplet', [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: `Rattachement n° ${i + 1} : ${type === 'personne' ? 'individu' : 'personne'} à choisir` }]);
       if (s.nouvel_individu && !texte(s.nouvel_individu.nom)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Rattachement incomplet', [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: `Contact n° ${i + 1} : nom obligatoire` }]);
@@ -395,14 +431,13 @@ export class FournisseurAnnuaireMemoire {
       const libelle = s.individu ?? s.personne ?? libelleIndividu(s.nouvel_individu);
       plans.push({ s, r, plan: this.#planifier('rattachement', r?.id ?? null, s.coordonnees ?? [], libelle) });
     }
-    return { existants, plans };
+    return { retires, plans };
   }
 
-  #ecrireRattachements(type, id, { existants, plans }) {
+  #ecrireRattachements(type, id, { retires, plans }) {
     const cle = type === 'personne' ? 'per_id' : 'ind_id';
     const autre = type === 'personne' ? 'ind_id' : 'per_id';
-    const gardes = new Set(plans.filter((p) => p.r).map((p) => p.r.id));
-    for (const r of existants.filter((x) => !gardes.has(x.id))) {
+    for (const r of retires) {
       const touchees = this.usages.filter((u) => u.rat_id === r.id).map((u) => u.coo_id);
       this.usages = this.usages.filter((u) => u.rat_id !== r.id);
       this.rattachements = this.rattachements.filter((x) => x.id !== r.id);
@@ -430,6 +465,12 @@ export class FournisseurAnnuaireMemoire {
       // Contact principal d'une personne : les autres rattachements de la personne ne le sont plus.
       if (valeurs.principal) this.rattachements.filter((x) => x.per_id === valeurs.per_id && x.id !== ratId).forEach((x) => { x.principal = false; });
     }
+  }
+
+  /** Champs gérés rattachements (première page) et nb_rattachements. */
+  #premierePage(type, id) {
+    const { lignes, total } = this.#rattachementsDe(type, id, { taille: TAILLE_PAGE_RATTACHEMENTS });
+    return { rattachements: lignes, nb_rattachements: total };
   }
 
   #controlerLiens(id, saisies) {
@@ -479,8 +520,8 @@ export class FournisseurAnnuaireMemoire {
   geres(type) {
     return {
       lire: async (l) => (type === 'personne'
-        ? { coordonnees: this.#usagesDe('personne', l.id), rattachements: this.#rattachementsDe('personne', l.id), liens: this.#liensDe(l.id), enfants: this.#enfantsDe(l.id) }
-        : { coordonnees: this.#usagesDe('individu', l.id), rattachements: this.#rattachementsDe('individu', l.id) }),
+        ? { coordonnees: this.#usagesDe('personne', l.id), ...this.#premierePage('personne', l.id), liens: this.#liensDe(l.id), enfants: this.#enfantsDe(l.id) }
+        : { coordonnees: this.#usagesDe('individu', l.id), ...this.#premierePage('individu', l.id) }),
       valider: async (l, geres) => {
         const id = l?.id ?? null;
         if (geres.coordonnees) this.#planifier(type, id, geres.coordonnees, null);

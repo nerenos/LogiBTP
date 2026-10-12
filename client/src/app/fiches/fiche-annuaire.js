@@ -39,11 +39,34 @@ class FicheAnnuaire extends FicheLogiBTP {
   listesCoordonnees() {
     return [
       { usages: this.valeur('coordonnees'), contexte: null, appliquer: (u) => this.definirValeur('coordonnees', u) },
-      ...(this.valeur('rattachements') ?? []).map((r, i) => ({
+      ...this.modificationsRattachements().map((r, i) => ({
         usages: r.coordonnees, contexte: r.individu ?? r.personne,
-        appliquer: (u) => this.definirValeur('rattachements', this.valeur('rattachements').map((x, j) => (j === i ? { ...x, coordonnees: u } : x))),
+        appliquer: (u) => this.definirValeur('rattachements', this.modificationsRattachements().map((x, j) => (j === i ? { ...x, coordonnees: u } : x))),
       })),
     ];
+  }
+
+  /**
+   * Rattachements saisis : seulement les modifiés, ajoutés ou retirés (les autres, lus par page, restent inchangés).
+   * Les rattachements lus avec la fiche (première page) sont dans fiche.valeurs.rattachements.
+   */
+  modificationsRattachements() { return 'rattachements' in this.saisie.valeurs ? this.saisie.valeurs.rattachements ?? [] : []; }
+
+  /** Rattachements de la première page (lus avec la fiche). */
+  get rattachementsLus() { return this.fiche?.valeurs?.rattachements ?? []; }
+
+  /** Onglet des rattachements : contacts d'une personne ou personnes d'un individu, par page. */
+  ongletRattachements(type, code, titre) {
+    return {
+      code, titre, champs: ['rattachements'],
+      rendre: (corps, { modifiable }) => new EditeurRattachements(corps, {
+        cote: type, premierePage: this.rattachementsLus, total: this.fiche?.valeurs?.nb_rattachements ?? this.rattachementsLus.length,
+        charger: this.id === null ? null : (o) => this.annuaire.pageRattachements(type, this.id, o),
+        modifications: () => this.modificationsRattachements(), definir: (r) => this.definirValeur('rattachements', r), modifiable,
+        annuaire: this.annuaire, niveaux: this.referentiels.niveaux, historique: (id) => this.annuaire.historiqueCoordonnee(id),
+        ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
+      }),
+    };
   }
 
   /** Avant l'enregistrement : choix pour chaque coordonnée partagée modifiée (modification ou autre information). */
@@ -141,7 +164,7 @@ export class FichePersonne extends FicheAnnuaire {
     if (adresse) parts.push(info('Adresse', echapper(adresse)));
     if (tel) parts.push(info('Téléphone', `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
     if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
-    const contact = (v.rattachements ?? []).find((r) => r.principal && r.actif !== false) ?? (v.rattachements ?? []).find((r) => r.actif !== false);
+    const contact = this.rattachementsLus.find((r) => r.principal && r.actif !== false) ?? this.rattachementsLus.find((r) => r.actif !== false);
     if (contact && this.morale) parts.push(info('Contact', echapper([contact.individu, contact.fonction].filter(Boolean).join(' – '))));
     if (v.etat_administratif === 'F') parts.push(info('État', 'Établissement fermé', true));
     if (v.siret && !siretValide(compacter(v.siret))) parts.push(info('SIRET', 'invalide', true));
@@ -236,14 +259,7 @@ export class FichePersonne extends FicheAnnuaire {
     const fournisseur = (this.valeur('casquettes') ?? []).some((c) => c === 'FOURNISSEUR' || c === 'LOUEUR');
     return [
       this.ongletCoordonnees('personne'),
-      {
-        code: 'contacts', titre: this.morale ? 'Contacts' : 'Titulaire', champs: ['rattachements'],
-        rendre: (corps, { modifiable }) => new EditeurRattachements(corps, {
-          cote: 'personne', valeur: () => this.valeur('rattachements') ?? [], definir: (r) => this.definirValeur('rattachements', r), modifiable,
-          annuaire: this.annuaire, niveaux: this.referentiels.niveaux, historique: (id) => this.annuaire.historiqueCoordonnee(id),
-          ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
-        }),
-      },
+      this.ongletRattachements('personne', 'contacts', this.morale ? 'Contacts' : 'Titulaire'),
       {
         code: 'liens', titre: 'Liens', champs: ['liens'],
         rendre: (corps, { modifiable }) => new EditeurLiens(corps, {
@@ -305,7 +321,7 @@ export class FichePersonne extends FicheAnnuaire {
       }
     }
     if (r.dirigeants.length) {
-      const existants = this.valeur('rattachements') ?? [];
+      const existants = this.modificationsRattachements();
       const nouveaux = r.dirigeants.map((d) => ({
         rat_id: null, nouvel_individu: { civilite: null, prenom: d.prenom, nom: d.nom }, individu: [d.prenom, d.nom].filter(Boolean).join(' '),
         fonction: d.qualite, principal: false, actif: true, titulaire: false, coordonnees: [],
@@ -337,14 +353,14 @@ export class FicheIndividu extends FicheAnnuaire {
 
   sousTitre(v) {
     const roles = this.referentiels.roles.filter((r) => (v.roles ?? []).includes(r.code)).map((r) => r.libelle);
-    const personnes = (v.rattachements ?? []).filter((r) => r.actif !== false).map((r) => r.personne).filter(Boolean);
+    const personnes = this.rattachementsLus.filter((r) => r.actif !== false).map((r) => r.personne).filter(Boolean);
     return [...roles, ...personnes].join(' · ');
   }
 
   rendreInformations(v) {
     if (!this.referentiels) return '';
     const parts = [];
-    const pro = (v.rattachements ?? []).filter((r) => r.actif !== false).flatMap((r) => r.coordonnees ?? []);
+    const pro = this.rattachementsLus.filter((r) => r.actif !== false).flatMap((r) => r.coordonnees ?? []);
     const perso = v.coordonnees ?? [];
     const tel = principale(pro.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE') ?? principale(perso.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE');
     const portable = principale(pro.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE') ?? principale(perso.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE');
@@ -352,7 +368,7 @@ export class FicheIndividu extends FicheAnnuaire {
     if (portable) parts.push(info('Portable', `<a href="tel:${echapper(portable.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(portable))}</a>`));
     if (tel) parts.push(info('Téléphone', `<a href="tel:${echapper(tel.replace(/[^0-9+]/g, ''))}">${echapper(formaterTelephone(tel))}</a>`));
     if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
-    const n = (v.rattachements ?? []).length;
+    const n = v.nb_rattachements ?? this.rattachementsLus.length;
     if (n > 1) parts.push(info('Rattachements', `${n} personnes`));
     if (v.salarie) parts.push(info('Salarié', `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ' (sorti)'}`));
     if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info('Homonymes', echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
@@ -414,14 +430,7 @@ export class FicheIndividu extends FicheAnnuaire {
   ongletsSpecifiques() {
     return [
       this.ongletCoordonnees('individu'),
-      {
-        code: 'rattachements', titre: 'Rattachements', champs: ['rattachements'],
-        rendre: (corps, { modifiable }) => new EditeurRattachements(corps, {
-          cote: 'individu', valeur: () => this.valeur('rattachements') ?? [], definir: (r) => this.definirValeur('rattachements', r), modifiable,
-          annuaire: this.annuaire, niveaux: this.referentiels.niveaux, historique: (id) => this.annuaire.historiqueCoordonnee(id),
-          ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
-        }),
-      },
+      this.ongletRattachements('individu', 'rattachements', 'Rattachements'),
       this.ongletGraphe('individu'),
     ];
   }

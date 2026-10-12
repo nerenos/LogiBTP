@@ -260,6 +260,9 @@ public sealed class RattachementDto
     public List<UsageDto> Coordonnees { get; set; } = [];
 }
 
+/// <summary>Page de rattachements d'une fiche (onglet Contacts).</summary>
+public sealed record PageRattachementsDto(List<RattachementDto> Lignes, int Total, int Page, int Taille);
+
 public sealed record LienDto(long LpeId, string TliCode, bool Inverse, long AutreId, string? Autre, string? Commentaire, string? Debut, string? Fin);
 
 public sealed record HistoriqueCoordonneeDto(JsonElement Avant, DateTimeOffset Le, string? Par);
@@ -292,6 +295,8 @@ public sealed class SaisieRattachement
     public bool? Actif { get; set; }
     public string? Commentaire { get; set; }
     public DateTimeOffset? Maj { get; set; }
+    /// <summary>Rattachement retiré (les rattachements non saisis sont inchangés).</summary>
+    public bool Supprime { get; set; }
     public List<SaisieCoordonnee> Coordonnees { get; set; } = [];
 }
 

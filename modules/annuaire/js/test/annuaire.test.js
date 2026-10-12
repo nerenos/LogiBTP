@@ -117,7 +117,11 @@ describe('annuaire en mémoire', () => {
     await a.geres('personne').ecrire(a.personnes[1], { rattachements });
     const lucie = a.individus.find((i) => i.nom === 'Durand');
     expect(lucie).toMatchObject({ personnes: 'ENT Lyon', fonction: 'Assistante', email: 'l.durand@ent.fr' });
+    // Rattachement absent de la saisie : inchangé ; retrait explicite : supprimé avec ses coordonnées propres.
     await a.geres('personne').ecrire(a.personnes[1], { rattachements: [] });
+    expect(a.rattachements.filter((r) => r.per_id === 2)).toHaveLength(1);
+    const g2 = await a.geres('personne').lire(a.personnes[1]);
+    await a.geres('personne').ecrire(a.personnes[1], { rattachements: g2.rattachements.map((r) => ({ rat_id: r.rat_id, supprime: true })) });
     expect(a.rattachements.filter((r) => r.per_id === 2)).toEqual([]);
     expect(a.coordonnees.some((c) => c.valeur === 'l.durand@ent.fr')).toBe(false);
   });
@@ -157,6 +161,43 @@ describe('annuaire en mémoire', () => {
     expect((await a.rechercherPersonnes({ casquette: 'CLIENT' }))).toEqual([]);
     expect((await a.rechercherIndividus({ recherche: 'jean' }))[0].nom_complet).toBe('M. Jean Ab');
     expect(coordonneesParDefaut().map((c) => c.nature)).toEqual(['ADRESSE', 'TELEPHONE', 'EMAIL']);
+  });
+});
+
+describe('rattachements par page', () => {
+  /** Une personne et 45 contacts (dont un principal), noms numérotés. */
+  function nombreux() {
+    const individus = Array.from({ length: 45 }, (_, i) => ({ id: i + 1, nom: `Contact${String(i + 1).padStart(2, '0')}`, prenom: i === 30 ? 'Élodie' : 'Jean', roles: [] }));
+    return new FournisseurAnnuaireMemoire({
+      niveaux: [{ code: 'SOCIETE', libelle: 'Société', ordre: 1 }],
+      personnes: [{ id: 1, code: 'S', niveau: 'SOCIETE', raison_sociale: 'Société S', casquettes: [] }],
+      individus, rattachements: individus.map((i) => ({ id: i.id, per_id: 1, ind_id: i.id, fonction: i.id === 7 ? 'Directeur' : 'Ouvrier', principal: i.id === 40, actif: i.id !== 1 })),
+    });
+  }
+
+  it('la fiche lit la première page et le nombre ; pages suivantes et recherche', async () => {
+    const a = nombreux();
+    const g = await a.geres('personne').lire(a.personnes[0]);
+    expect(g.nb_rattachements).toBe(45);
+    expect(g.rattachements).toHaveLength(20);
+    expect(g.rattachements[0].individu).toBe('Jean Contact40');
+    expect(g.rattachements.at(-1).individu).toBe('Jean Contact19'); // « Élodie » trié sans accent en deuxième
+    const p3 = await a.pageRattachements('personne', 1, { page: 3 });
+    expect(p3).toMatchObject({ total: 45, page: 3, taille: 20 });
+    // Principal, puis actifs par nom, l'inactif en dernier.
+    expect(p3.lignes.map((r) => r.individu)).toEqual(['Jean Contact42', 'Jean Contact43', 'Jean Contact44', 'Jean Contact45', 'Jean Contact01']);
+    expect((await a.pageRattachements('personne', 1, { recherche: 'directeur' })).lignes.map((r) => r.ind_id)).toEqual([7]);
+    expect((await a.pageRattachements('personne', 1, { recherche: 'elodie' })).total).toBe(1);
+  });
+
+  it("enregistrement partiel : modification d'un contact d'une autre page, doublon refusé", async () => {
+    const a = nombreux();
+    const p3 = await a.pageRattachements('personne', 1, { page: 3 });
+    const r = p3.lignes[0];
+    await a.geres('personne').ecrire(a.personnes[0], { rattachements: [{ ...r, fonction: 'Chef de chantier' }] });
+    expect(a.rattachements.find((x) => x.id === r.rat_id).fonction).toBe('Chef de chantier');
+    expect(a.rattachements).toHaveLength(45);
+    await expect(a.geres('personne').valider(a.personnes[0], { rattachements: [{ ind_id: 5, fonction: 'Doublon' }] })).rejects.toMatchObject({ code: 'VALIDATION' });
   });
 });
 

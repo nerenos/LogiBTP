@@ -1,4 +1,4 @@
 export * from './identifiants.js';
 export * from './coordonnees.js';
-export { FournisseurAnnuaireApi, FournisseurAnnuaireMemoire, ErreurAnnuaire, libelleIndividu } from './fournisseurs.js';
+export { FournisseurAnnuaireApi, FournisseurAnnuaireMemoire, ErreurAnnuaire, libelleIndividu, TAILLE_PAGE_RATTACHEMENTS } from './fournisseurs.js';
 export { construireGraphe, fusionnerGraphes, disposerGraphe, PROFONDEUR_MAX, ORDRE_INDIVIDU } from './graphe.js';

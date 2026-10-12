@@ -111,3 +111,16 @@
 .page-graphe { height: 100%; display: flex; flex-direction: column; padding: 0.6rem 0.8rem; gap: 0.4rem; min-height: 0; }
 .page-graphe .graphe { flex: 1; min-height: 0; }
 .page-graphe h1 { margin: 0; font-size: 1.15rem; }
+
+/* Rattachements par page */
+.rattachements-barre { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; }
+.rattachements-barre input[type="search"] { flex: 1 1 16rem; max-width: 26rem; }
+.rattachements-pages { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: auto; }
+.rattachements-pages button { padding: 0 0.5rem; }
+.rattachements-titre { margin: 0.3rem 0 0; font-size: 0.9em; color: var(--discret); }
+.rattachements-liste { display: flex; flex-direction: column; gap: 0.4rem; transition: opacity 0.15s; }
+.rattachements-liste.chargement { opacity: 0.5; }
+.rattachement.modifie { border-color: var(--accent); }
+.rattachement.retire { opacity: 0.6; }
+.rattachement.retire .rattachement-nom { text-decoration: line-through; }
+.rattachement .badge.alerte { background: var(--alerte-fond); color: var(--alerte); }

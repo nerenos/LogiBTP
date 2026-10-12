@@ -444,9 +444,35 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     // ------------------------------------------------------------------ rattachements et liens
 
-    protected async Task<List<RattachementDto>> RattachementsDe(string type, long id, CancellationToken ct)
+    /// <summary>Rattachements lus avec une fiche (première page) et par page dans l'onglet Contacts.</summary>
+    public const int TaillePageRattachements = 20;
+
+    /// <summary>
+    /// Page de rattachements d'une fiche : tri principal, actif, nom de l'autre fiche (sans accents), identifiant ; recherche
+    /// sur ce nom, la fonction et le service (comme pageRattachements de la démo). Coordonnées lues pour la page seulement.
+    /// </summary>
+    public virtual async Task<PageRattachementsDto> PageRattachements(string type, long id, string? recherche, int page, int taille, CancellationToken ct)
     {
-        var rats = await (type == "personne" ? db.Rattachements.Where(r => r.RatPerId == id) : db.Rattachements.Where(r => r.RatIndId == id)).AsNoTracking().OrderBy(r => r.RatId).ToListAsync(ct);
+        if (type is not ("personne" or "individu")) throw ExceptionMetier.Invalide("TYPE", "Type de fiche : personne ou individu");
+        taille = Math.Clamp(taille, 1, 200);
+        page = Math.Max(1, page);
+        var p = new List<object?> { id };
+        string P(object? v) { p.Add(v); return $"@p{p.Count - 1}"; }
+        var nom = type == "personne" ? "concat_ws(' ', i.ind_civilite, i.ind_prenom, i.ind_nom)" : "pe.per_raison_sociale";
+        var conditions = new List<string> { type == "personne" ? "r.rat_per_id = @p0" : "r.rat_ind_id = @p0" };
+        conditions.AddRange(Mots(recherche).Select(m => $"f_annuaire_normaliser(concat_ws(' ', {nom}, r.rat_fonction, r.rat_service)) LIKE '%' || f_annuaire_normaliser({P(m)}) || '%'"));
+        var depuis = $"FROM rattachement r JOIN individu i ON i.ind_id = r.rat_ind_id JOIN personne pe ON pe.per_id = r.rat_per_id WHERE {string.Join(" AND ", conditions)}";
+        var total = Convert.ToInt32((await Lire($"SELECT count(*) AS n {depuis}", p, ct))[0]["n"]);
+        var ids = (await Lire($"SELECT r.rat_id {depuis} ORDER BY r.rat_principal DESC, r.rat_actif DESC, f_annuaire_normaliser({nom}), r.rat_id LIMIT {P(taille)} OFFSET {P((page - 1) * taille)}", p, ct))
+            .Select(l => (long)l["rat_id"]!).ToList();
+        return new(await RattachementsDe(ids, ct), total, page, taille);
+    }
+
+    /// <summary>Rattachements (dans l'ordre des identifiants donnés), avec leurs coordonnées propres.</summary>
+    protected async Task<List<RattachementDto>> RattachementsDe(IReadOnlyList<long> ids, CancellationToken ct)
+    {
+        var parId = await db.Rattachements.AsNoTracking().Where(r => ids.Contains(r.RatId)).ToDictionaryAsync(r => r.RatId, ct);
+        var rats = ids.Where(parId.ContainsKey).Select(x => parId[x]).ToList();
         var indIds = rats.Select(r => r.RatIndId).ToList();
         var individus = await db.Individus.AsNoTracking().Where(i => indIds.Contains(i.IndId)).ToDictionaryAsync(i => i.IndId, ct);
         var perIds = rats.Select(r => r.RatPerId).ToList();
@@ -463,9 +489,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                 Fin = Date(r.RatFin), Actif = r.RatActif, Commentaire = r.RatCommentaire, Maj = r.RatModifieLe, Coordonnees = coordonnees.GetValueOrDefault(r.RatId, []),
             });
         }
-        // Principal, actif, puis libellé de l'autre fiche (comme la démo).
-        var cle = (RattachementDto x) => type == "personne" ? x.Individu : x.Personne ?? "";
-        return res.OrderByDescending(x => x.Principal).ThenByDescending(x => x.Actif).ThenBy(cle, StringComparer.Create(CultureInfo.InvariantCulture, true)).ToList();
+        return res;
     }
 
     protected async Task<List<LienDto>> LiensDe(long id, CancellationToken ct)
@@ -488,10 +512,17 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         public bool? Principal { get; set; }
     }
 
-    private async Task<(List<Rattachement> Existants, List<PlanRattachement> Plans)> PlanRattachements(string type, long? id, List<SaisieRattachement> saisies, CancellationToken ct)
+    /// <summary>
+    /// Plan des rattachements saisis : seuls les rattachements modifiés, ajoutés (sans rat_id) ou retirés (supprime) sont
+    /// saisis ; les autres restent inchangés (fiche à nombreux contacts lus par page).
+    /// </summary>
+    private async Task<(List<Rattachement> Retires, List<PlanRattachement> Plans)> PlanRattachements(string type, long? id, List<SaisieRattachement> saisies, CancellationToken ct)
     {
         var existants = id is not { } n ? [] : await (type == "personne" ? db.Rattachements.Where(r => r.RatPerId == n) : db.Rattachements.Where(r => r.RatIndId == n)).ToListAsync(ct);
-        var vus = new HashSet<long>();
+        var saisis = saisies.Where(s => s.RatId is not null).Select(s => s.RatId!.Value).ToHashSet();
+        // Autres fiches déjà rattachées (hors saisie) : un nouveau rattachement ne peut les doubler.
+        var vus = existants.Where(r => !saisis.Contains(r.RatId)).Select(r => type == "personne" ? r.RatIndId : r.RatPerId).ToHashSet();
+        var retires = new List<Rattachement>();
         var plans = new List<PlanRattachement>();
         for (var i = 0; i < saisies.Count; i++)
         {
@@ -499,6 +530,11 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
             var r = s.RatId is { } rid ? existants.FirstOrDefault(x => x.RatId == rid) ?? throw ExceptionMetier.Introuvable($"Rattachement {rid}") : null;
             if (r is not null && s.Maj is { } maj && maj.UtcTicks != r.RatModifieLe.UtcTicks)
                 throw ExceptionMetier.Conflit("RATTACHEMENT_MODIFIE", "Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche");
+            if (s.Supprime)
+            {
+                retires.Add(r ?? throw Validation("Retrait impossible", "rattachements", "RETRAIT", $"Rattachement n° {i + 1} : pas encore enregistré"));
+                continue;
+            }
             var cible = type == "personne" ? s.IndId : s.PerId;
             if (cible is null && !(type == "personne" && s.NouvelIndividu is not null))
                 throw Validation("Rattachement incomplet", "rattachements", "OBLIGATOIRE", $"Rattachement n° {i + 1} : {(type == "personne" ? "individu" : "personne")} à choisir");
@@ -515,14 +551,13 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
             var libelle = s.Individu ?? s.Personne ?? string.Join(" ", new[] { s.NouvelIndividu?.Civilite, s.NouvelIndividu?.Prenom, s.NouvelIndividu?.Nom }.Where(x => !string.IsNullOrWhiteSpace(x)));
             plans.Add(new(s, r, await Planifier("rattachement", r?.RatId, s.Coordonnees, libelle, ct)));
         }
-        return (existants, plans);
+        return (retires, plans);
     }
 
     private async Task EcrireRattachements(string type, long id, List<SaisieRattachement> saisies, Utilisateur u, CancellationToken ct)
     {
-        var (existants, plans) = await PlanRattachements(type, id, saisies, ct);
-        var gardes = plans.Where(p => p.R is not null).Select(p => p.R!.RatId).ToHashSet();
-        foreach (var r in existants.Where(x => !gardes.Contains(x.RatId)))
+        var (retires, plans) = await PlanRattachements(type, id, saisies, ct);
+        foreach (var r in retires)
         {
             var touchees = await db.Usages.Where(x => x.UcoRatId == r.RatId).Select(x => x.UcoCooId).ToListAsync(ct);
             await db.Usages.Where(x => x.UcoRatId == r.RatId).ExecuteDeleteAsync(ct);
@@ -609,8 +644,10 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         var res = new Dictionary<string, object?>
         {
             ["coordonnees"] = await UsagesDe(type, id, ct),
-            ["rattachements"] = await RattachementsDe(type, id, ct),
         };
+        var page = await PageRattachements(type, id, null, 1, TaillePageRattachements, ct);
+        res["rattachements"] = page.Lignes;
+        res["nb_rattachements"] = page.Total;
         if (type == "personne")
         {
             res["liens"] = await LiensDe(id, ct);

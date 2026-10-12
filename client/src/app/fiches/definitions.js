@@ -285,7 +285,8 @@ export const TYPES_FICHE = {
         c('bc_missions', 'Missions (L, SEI, PS…)', 'per_bc_missions', 'texte', { longueur: 100 }),
         // Champs gérés par l'annuaire (hors table).
         c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
-        c('rattachements', 'Contacts', null, 'json', { gere: true }),
+        c('rattachements', 'Contacts', null, 'json', { gere: true, aide: 'Lus par page ; seuls les contacts modifiés, ajoutés ou retirés sont enregistrés' }),
+        c('nb_rattachements', 'Nombre de contacts', null, 'nombre', { gere: true, lecture_seule: true }),
         c('liens', 'Liens', null, 'json', { gere: true }),
         c('enfants', 'Niveaux inférieurs', null, 'json', { gere: true, lecture_seule: true }),
       ],
@@ -318,6 +319,7 @@ export const TYPES_FICHE = {
         c('commentaire', 'Notes', 'ind_commentaire', 'zone'),
         c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
         c('rattachements', 'Rattachements', null, 'json', { gere: true }),
+        c('nb_rattachements', 'Nombre de rattachements', null, 'nombre', { gere: true, lecture_seule: true }),
         // Fiche salarié liée (module salariés du cœur) : lue par la spécialisation, jamais écrite.
         c('salarie', 'Salarié', null, 'json', { gere: true, lecture_seule: true }),
       ],
