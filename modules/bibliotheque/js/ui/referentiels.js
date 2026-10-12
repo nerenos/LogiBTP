@@ -4,7 +4,7 @@ import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul
 // Paramétrage de la bibliothèque (classe mère) : bibliothèques (code d'appel, bibliothèque par défaut), familles éditées
 // en arbre (ajout d'une racine, ou d'une sous-famille sous la famille sélectionnée), natures (types, regroupement, axe
 // analytique, comptes), regroupements personnalisables, coefficients de frais généraux et de bénéfice par période
-// (globaux ou par nature, historique), scénarios de prix d'achat et coefficients par défaut.
+// (globaux ou par nature, historique), scénarios de prix d'achat.
 
 const ONGLETS = [['bibliotheques', 'Bibliothèques'], ['familles', 'Familles'], ['natures', 'Natures'], ['regroupements', 'Regroupements'],
   ['coefficients', 'Coefficients'], ['prix', 'Prix d\'achat']];
@@ -225,7 +225,7 @@ export class GestionReferentiels {
           return `<tr class="periode-${etat.replace(' ', '-')}"><td>${date(x.debut)}</td><td class="nombre">${coef(x.coef_fg)}</td><td class="nombre">${coef(x.coef_benef)}</td>
             <td>${echapper(x.commentaire ?? '')}</td><td><small>${echapper(x.cree_par ?? '')} ${x.cree_le ? new Date(x.cree_le).toLocaleDateString('fr-FR') : ''}</small></td><td>${etat}</td>
             <td>${this.admin && etat === 'à venir' ? `<button type="button" data-supprimer-periode="${x.id}" title="Supprimer (pas encore commencée)">🗑</button>` : ''}</td></tr>`;
-        }).join('') || `<tr><td colspan="7" class="aide">Aucune période${nat === null ? ' : coefficients par défaut des paramètres (onglet Prix d\'achat)' : ' : les coefficients globaux s\'appliquent'}.</td></tr>`}
+        }).join('') || `<tr><td colspan="7" class="aide">Aucune période${nat === null ? ` : coefficients de repli ${coef(p.coef_fg_defaut)} et ${coef(p.coef_benef_defaut)}, créez une période globale` : ' : les coefficients globaux s\'appliquent'}.</td></tr>`}
       </tbody></table>
       ${this.admin ? `<fieldset class="fiche-groupe"><legend>Nouvelle période</legend><div class="bib-grille">
         <label>Début <input type="date" data-p="debut" value="${jour}"></label>
@@ -257,9 +257,6 @@ export class GestionReferentiels {
     zone.innerHTML = `<div class="bib-formulaire">
       <fieldset><legend>Scénarios de prix d'achat autorisés</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
       <label>Scénario par défaut à la création <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
-      <p class="aide">Coefficients par défaut : utilisés quand aucune période (globale ou de nature) ne s'applique.</p>
-      <label>Coefficient de frais généraux par défaut <input data-fg value="${echapper(String(p.coef_fg_defaut))}" ${ro}></label>
-      <label>Coefficient de bénéfice par défaut <input data-benef value="${echapper(String(p.coef_benef_defaut))}" ${ro}></label>
       <p class="aide">Chaque élément peut restreindre ses scénarios autorisés et choisir le sien dans l'onglet Prix de sa fiche.</p>
       ${this.admin ? '<button type="button" class="principal" data-enregistrer>Enregistrer</button>' : ''}</div>`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
@@ -267,8 +264,8 @@ export class GestionReferentiels {
         await this.fournisseur.enregistrerParametres({
           scenario_defaut: zone.querySelector('[data-defaut]').value,
           scenarios_autorises: [...zone.querySelectorAll('[data-scenario]:checked')].map((x) => x.dataset.scenario),
-          coef_fg_defaut: Number(zone.querySelector('[data-fg]').value.replace(',', '.')),
-          coef_benef_defaut: Number(zone.querySelector('[data-benef]').value.replace(',', '.')),
+          // Coefficients : gérés par période (onglet Coefficients) ; les valeurs de repli des paramètres sont conservées.
+          coef_fg_defaut: p.coef_fg_defaut, coef_benef_defaut: p.coef_benef_defaut,
         });
         this.message('Paramètres de prix enregistrés', 'succes');
       } catch (x) { this.#erreur(x); }
