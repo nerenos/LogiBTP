@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   sirenValide, siretValide, cleTva, tvaValide, ibanValide, bicValide, erreursIdentifiants, planifierCoordonnees,
-  FournisseurAnnuaireMemoire, coordonneesParDefaut,
+  FournisseurAnnuaireMemoire, coordonneesParDefaut, construireGraphe, disposerGraphe, fusionnerGraphes,
 } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
@@ -157,5 +157,36 @@ describe('annuaire en mémoire', () => {
     expect((await a.rechercherPersonnes({ casquette: 'CLIENT' }))).toEqual([]);
     expect((await a.rechercherIndividus({ recherche: 'jean' }))[0].nom_complet).toBe('M. Jean Ab');
     expect(coordonneesParDefaut().map((c) => c.nature)).toEqual(['ADRESSE', 'TELEPHONE', 'EMAIL']);
+  });
+});
+
+describe('graphe relationnel (jeu partagé 03_graphe.json)', () => {
+  const jeu = lire('03_graphe.json');
+  for (const c of jeu.cas) it(c.nom, () => expect(construireGraphe(jeu.donnees, c.depart, c.options)).toEqual(c.attendu));
+
+  it('disposition en couches : groupe en haut, dépôts puis contacts en bas, sans chevauchement', () => {
+    const g = construireGraphe(jeu.donnees, { type: 'personne', id: 3 }, { profondeur: 2, contacts: true, max_contacts: 8 });
+    const { positions } = disposerGraphe(g, { ecartX: 100, ecartY: 50 });
+    const y = (k) => positions.get(k).y;
+    expect(y('P1')).toBeLessThan(y('P2'));
+    expect(y('P2')).toBeLessThan(y('P3'));
+    expect(y('P3')).toBeLessThan(y('P5'));
+    expect(y('P5')).toBeLessThan(y('I1'));
+    for (const [k, p] of positions) for (const [k2, p2] of positions) if (k !== k2 && p.y === p2.y) expect(Math.abs(p.x - p2.x)).toBeGreaterThanOrEqual(100 - 1e-6);
+  });
+
+  it("développement d'un nœud : graphes fusionnés, résumé des contacts retiré quand tous sont affichés", () => {
+    const a = construireGraphe(jeu.donnees, { type: 'personne', id: 3 }, { profondeur: 1, max_contacts: 2 });
+    const b = construireGraphe(jeu.donnees, { type: 'personne', id: 3 }, { profondeur: 1, max_contacts: 20 });
+    const f = fusionnerGraphes(a, b);
+    expect(f.noeuds.some((n) => n.cle === 'G3')).toBe(false);
+    expect(f.noeuds.filter((n) => n.type === 'individu').map((n) => n.cle).sort()).toEqual(['I1', 'I2', 'I3', 'I4']);
+    expect(f.noeuds.filter((n) => n.depart).map((n) => n.cle)).toEqual(['P3']);
+  });
+
+  it('annuaire en mémoire : même construction', async () => {
+    const g = await annuaire().graphe('individu', 1, { profondeur: 1 });
+    expect(g.noeuds.map((n) => n.cle)).toEqual(['P1', 'I1']);
+    expect(g.aretes.map((x) => x.cle)).toEqual(['R1']);
   });
 });

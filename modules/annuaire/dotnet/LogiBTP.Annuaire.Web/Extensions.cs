@@ -1,3 +1,4 @@
+using LogiBTP.Annuaire;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +40,8 @@ public static class Extensions
         g.MapPost("/individus/{id:long}/particulier", (long id, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.CreerParticulier(id, Utilisateur.Depuis(http), ct));
         g.MapGet("/societe", async (ServiceAnnuaire s, CancellationToken ct) => await s.SocieteBase(ct) is { } p ? Results.Ok(p) : Results.Ok());
         g.MapGet("/siret/{siret}", async (string siret, ServiceAnnuaire s, CancellationToken ct) => await s.ParSiret(siret, ct) is { } p ? Results.Ok(p) : Results.Ok());
+        g.MapGet("/graphe", (string type, long id, int? profondeur, bool? contacts, bool? liens, int? max_contacts, ServiceAnnuaire s, CancellationToken ct) =>
+            s.Graphe(type, id, new OptionsGraphe(profondeur ?? 1, contacts ?? true, liens ?? true, Math.Clamp(max_contacts ?? 8, 1, 200)), ct));
         g.MapGet("/coordonnees/proposees", (string type, long? id, ServiceAnnuaire s, CancellationToken ct) => s.CoordonneesProposees(type, id, ct));
         g.MapGet("/coordonnees/{id:long}/historique", (long id, ServiceAnnuaire s, CancellationToken ct) => s.HistoriqueCoordonnee(id, ct));
         return api;

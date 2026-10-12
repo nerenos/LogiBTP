@@ -1,0 +1,743 @@
+{
+  "description": "Graphe relationnel autour d'une fiche (construireGraphe / GrapheAnnuaire.Construire) : parcours en largeur jusqu'à la profondeur (1 à 5) par la hiérarchie (parent, niveaux inférieurs), les liens typés (option liens) et les rattachements (option contacts : contacts actifs, principaux puis par rattachement, au plus max_contacts, au-delà un nœud G<personne> « + N contacts ») ; niveaux supérieurs de la fiche de départ toujours présents ; arêtes entre nœuds présents. Nœuds triés par ordre de niveau (individus : 1000) puis clé ; arêtes par clé.",
+  "donnees": {
+    "niveaux": [
+      {
+        "code": "GROUPE",
+        "ordre": 10,
+        "icone": "🏛️"
+      },
+      {
+        "code": "SOCIETE",
+        "ordre": 20,
+        "icone": "🏢"
+      },
+      {
+        "code": "AGENCE",
+        "ordre": 40,
+        "icone": "🏪"
+      },
+      {
+        "code": "DEPOT",
+        "ordre": 50,
+        "icone": "🏭"
+      }
+    ],
+    "types_lien": [
+      {
+        "code": "FACTURER_A",
+        "libelle": "Facturer à",
+        "libelle_inverse": "Payeur pour"
+      }
+    ],
+    "personnes": [
+      {
+        "id": 1,
+        "parent_id": null,
+        "niveau": "GROUPE",
+        "raison_sociale": "Groupe G",
+        "casquettes": [],
+        "actif": true,
+        "ville": "Lyon"
+      },
+      {
+        "id": 2,
+        "parent_id": 1,
+        "niveau": "SOCIETE",
+        "raison_sociale": "Société S",
+        "casquettes": [
+          "FOURNISSEUR"
+        ],
+        "actif": true,
+        "ville": "Lyon"
+      },
+      {
+        "id": 3,
+        "parent_id": 2,
+        "niveau": "AGENCE",
+        "raison_sociale": "Agence A",
+        "casquettes": [
+          "FOURNISSEUR"
+        ],
+        "actif": true,
+        "ville": "Grenoble"
+      },
+      {
+        "id": 4,
+        "parent_id": 2,
+        "niveau": "AGENCE",
+        "raison_sociale": "Agence B",
+        "casquettes": [
+          "FOURNISSEUR"
+        ],
+        "actif": false,
+        "ville": null
+      },
+      {
+        "id": 5,
+        "parent_id": 3,
+        "niveau": "DEPOT",
+        "raison_sociale": "Dépôt D",
+        "casquettes": [],
+        "actif": true,
+        "ville": "Échirolles"
+      },
+      {
+        "id": 6,
+        "parent_id": null,
+        "niveau": "SOCIETE",
+        "raison_sociale": "Client C",
+        "casquettes": [
+          "CLIENT"
+        ],
+        "actif": true,
+        "ville": null
+      }
+    ],
+    "individus": [
+      {
+        "id": 1,
+        "libelle": "M. Jean A",
+        "actif": true
+      },
+      {
+        "id": 2,
+        "libelle": "M. Paul B",
+        "actif": true
+      },
+      {
+        "id": 3,
+        "libelle": "Mme Marie C",
+        "actif": true
+      },
+      {
+        "id": 4,
+        "libelle": "M. Luc D",
+        "actif": true
+      }
+    ],
+    "rattachements": [
+      {
+        "id": 1,
+        "per_id": 3,
+        "ind_id": 1,
+        "fonction": "Chef d'agence",
+        "principal": true,
+        "actif": true
+      },
+      {
+        "id": 2,
+        "per_id": 3,
+        "ind_id": 2,
+        "fonction": "Commercial",
+        "principal": false,
+        "actif": true
+      },
+      {
+        "id": 3,
+        "per_id": 3,
+        "ind_id": 3,
+        "fonction": "Ancienne assistante",
+        "principal": false,
+        "actif": false
+      },
+      {
+        "id": 4,
+        "per_id": 6,
+        "ind_id": 4,
+        "fonction": "Gérant",
+        "principal": true,
+        "actif": true
+      },
+      {
+        "id": 5,
+        "per_id": 3,
+        "ind_id": 4,
+        "fonction": "Consultant",
+        "principal": false,
+        "actif": true
+      }
+    ],
+    "liens": [
+      {
+        "id": 1,
+        "per_id": 6,
+        "cible_id": 2,
+        "tli_code": "FACTURER_A"
+      }
+    ]
+  },
+  "cas": [
+    {
+      "nom": "agence, profondeur 1 : parent, dépôt, contacts limités (résumé), groupe toujours présent",
+      "depart": {
+        "type": "personne",
+        "id": 3
+      },
+      "options": {
+        "profondeur": 1,
+        "contacts": true,
+        "liens": true,
+        "max_contacts": 2
+      },
+      "attendu": {
+        "noeuds": [
+          {
+            "cle": "P1",
+            "type": "personne",
+            "id": 1,
+            "libelle": "Groupe G",
+            "niveau": "GROUPE",
+            "ordre": 10,
+            "icone": "🏛️",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P2",
+            "type": "personne",
+            "id": 2,
+            "libelle": "Société S",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P3",
+            "type": "personne",
+            "id": 3,
+            "libelle": "Agence A",
+            "niveau": "AGENCE",
+            "ordre": 40,
+            "icone": "🏪",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Grenoble",
+            "distance": 0,
+            "depart": true,
+            "reste": null
+          },
+          {
+            "cle": "P5",
+            "type": "personne",
+            "id": 5,
+            "libelle": "Dépôt D",
+            "niveau": "DEPOT",
+            "ordre": 50,
+            "icone": "🏭",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": "Échirolles",
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "I1",
+            "type": "individu",
+            "id": 1,
+            "libelle": "M. Jean A",
+            "niveau": null,
+            "ordre": 1000,
+            "icone": "👤",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "I2",
+            "type": "individu",
+            "id": 2,
+            "libelle": "M. Paul B",
+            "niveau": null,
+            "ordre": 1000,
+            "icone": "👤",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "G3",
+            "type": "groupe",
+            "id": 3,
+            "libelle": "+ 2 contacts",
+            "niveau": null,
+            "ordre": 1000,
+            "icone": "👥",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 1,
+            "depart": false,
+            "reste": 2
+          }
+        ],
+        "aretes": [
+          {
+            "cle": "G3",
+            "de": "P3",
+            "vers": "G3",
+            "type": "groupe",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H2",
+            "de": "P1",
+            "vers": "P2",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H3",
+            "de": "P2",
+            "vers": "P3",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H5",
+            "de": "P3",
+            "vers": "P5",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "R1",
+            "de": "P3",
+            "vers": "I1",
+            "type": "rattachement",
+            "libelle": "Chef d'agence",
+            "actif": true
+          },
+          {
+            "cle": "R2",
+            "de": "P3",
+            "vers": "I2",
+            "type": "rattachement",
+            "libelle": "Commercial",
+            "actif": true
+          }
+        ]
+      }
+    },
+    {
+      "nom": "agence, profondeur 2 sans contacts : société, agence sœur, client lié",
+      "depart": {
+        "type": "personne",
+        "id": 3
+      },
+      "options": {
+        "profondeur": 2,
+        "contacts": false,
+        "liens": true,
+        "max_contacts": 8
+      },
+      "attendu": {
+        "noeuds": [
+          {
+            "cle": "P1",
+            "type": "personne",
+            "id": 1,
+            "libelle": "Groupe G",
+            "niveau": "GROUPE",
+            "ordre": 10,
+            "icone": "🏛️",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P2",
+            "type": "personne",
+            "id": 2,
+            "libelle": "Société S",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P6",
+            "type": "personne",
+            "id": 6,
+            "libelle": "Client C",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "CLIENT"
+            ],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P3",
+            "type": "personne",
+            "id": 3,
+            "libelle": "Agence A",
+            "niveau": "AGENCE",
+            "ordre": 40,
+            "icone": "🏪",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Grenoble",
+            "distance": 0,
+            "depart": true,
+            "reste": null
+          },
+          {
+            "cle": "P4",
+            "type": "personne",
+            "id": 4,
+            "libelle": "Agence B",
+            "niveau": "AGENCE",
+            "ordre": 40,
+            "icone": "🏪",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": false,
+            "sous_titre": null,
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P5",
+            "type": "personne",
+            "id": 5,
+            "libelle": "Dépôt D",
+            "niveau": "DEPOT",
+            "ordre": 50,
+            "icone": "🏭",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": "Échirolles",
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          }
+        ],
+        "aretes": [
+          {
+            "cle": "H2",
+            "de": "P1",
+            "vers": "P2",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H3",
+            "de": "P2",
+            "vers": "P3",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H4",
+            "de": "P2",
+            "vers": "P4",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": false
+          },
+          {
+            "cle": "H5",
+            "de": "P3",
+            "vers": "P5",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "L1",
+            "de": "P6",
+            "vers": "P2",
+            "type": "lien",
+            "libelle": "Facturer à",
+            "actif": true
+          }
+        ]
+      }
+    },
+    {
+      "nom": "individu rattaché à 2 personnes : ses personnes et leurs niveaux supérieurs",
+      "depart": {
+        "type": "individu",
+        "id": 4
+      },
+      "options": {
+        "profondeur": 1,
+        "contacts": true,
+        "liens": true,
+        "max_contacts": 8
+      },
+      "attendu": {
+        "noeuds": [
+          {
+            "cle": "P1",
+            "type": "personne",
+            "id": 1,
+            "libelle": "Groupe G",
+            "niveau": "GROUPE",
+            "ordre": 10,
+            "icone": "🏛️",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 3,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P2",
+            "type": "personne",
+            "id": 2,
+            "libelle": "Société S",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Lyon",
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P6",
+            "type": "personne",
+            "id": 6,
+            "libelle": "Client C",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "CLIENT"
+            ],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "P3",
+            "type": "personne",
+            "id": 3,
+            "libelle": "Agence A",
+            "niveau": "AGENCE",
+            "ordre": 40,
+            "icone": "🏪",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Grenoble",
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "I4",
+            "type": "individu",
+            "id": 4,
+            "libelle": "M. Luc D",
+            "niveau": null,
+            "ordre": 1000,
+            "icone": "👤",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 0,
+            "depart": true,
+            "reste": null
+          }
+        ],
+        "aretes": [
+          {
+            "cle": "H2",
+            "de": "P1",
+            "vers": "P2",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "H3",
+            "de": "P2",
+            "vers": "P3",
+            "type": "hierarchie",
+            "libelle": null,
+            "actif": true
+          },
+          {
+            "cle": "L1",
+            "de": "P6",
+            "vers": "P2",
+            "type": "lien",
+            "libelle": "Facturer à",
+            "actif": true
+          },
+          {
+            "cle": "R4",
+            "de": "P6",
+            "vers": "I4",
+            "type": "rattachement",
+            "libelle": "Gérant",
+            "actif": true
+          },
+          {
+            "cle": "R5",
+            "de": "P3",
+            "vers": "I4",
+            "type": "rattachement",
+            "libelle": "Consultant",
+            "actif": true
+          }
+        ]
+      }
+    },
+    {
+      "nom": "sans liens typés : le client ne rejoint pas le groupe",
+      "depart": {
+        "type": "personne",
+        "id": 6
+      },
+      "options": {
+        "profondeur": 2,
+        "contacts": true,
+        "liens": false,
+        "max_contacts": 8
+      },
+      "attendu": {
+        "noeuds": [
+          {
+            "cle": "P6",
+            "type": "personne",
+            "id": 6,
+            "libelle": "Client C",
+            "niveau": "SOCIETE",
+            "ordre": 20,
+            "icone": "🏢",
+            "casquettes": [
+              "CLIENT"
+            ],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 0,
+            "depart": true,
+            "reste": null
+          },
+          {
+            "cle": "P3",
+            "type": "personne",
+            "id": 3,
+            "libelle": "Agence A",
+            "niveau": "AGENCE",
+            "ordre": 40,
+            "icone": "🏪",
+            "casquettes": [
+              "FOURNISSEUR"
+            ],
+            "actif": true,
+            "sous_titre": "Grenoble",
+            "distance": 2,
+            "depart": false,
+            "reste": null
+          },
+          {
+            "cle": "I4",
+            "type": "individu",
+            "id": 4,
+            "libelle": "M. Luc D",
+            "niveau": null,
+            "ordre": 1000,
+            "icone": "👤",
+            "casquettes": [],
+            "actif": true,
+            "sous_titre": null,
+            "distance": 1,
+            "depart": false,
+            "reste": null
+          }
+        ],
+        "aretes": [
+          {
+            "cle": "R4",
+            "de": "P6",
+            "vers": "I4",
+            "type": "rattachement",
+            "libelle": "Gérant",
+            "actif": true
+          },
+          {
+            "cle": "R5",
+            "de": "P3",
+            "vers": "I4",
+            "type": "rattachement",
+            "libelle": "Consultant",
+            "actif": true
+          }
+        ]
+      }
+    },
+    {
+      "nom": "profondeur bornée à 5, fiche inconnue : graphe vide",
+      "depart": {
+        "type": "personne",
+        "id": 99
+      },
+      "options": {
+        "profondeur": 9
+      },
+      "attendu": {
+        "noeuds": [],
+        "aretes": []
+      }
+    }
+  ]
+}

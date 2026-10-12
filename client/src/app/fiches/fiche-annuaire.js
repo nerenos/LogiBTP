@@ -1,7 +1,7 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texteCoordonnee, formaterTelephone, siretValide } from '@logibtp/annuaire';
-import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, choixRequis, demanderChoix, choisirPersonne, pastilles } from '@logibtp/annuaire/ui';
+import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGraphe, choixRequis, demanderChoix, choisirPersonne, pastilles } from '@logibtp/annuaire/ui';
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
 import { FicheLogiBTP } from './fiches.js';
 
@@ -22,6 +22,7 @@ class FicheAnnuaire extends FicheLogiBTP {
     super(options);
     this.services = options.services;
     this.ouvrirFiche = options.ouvrirFiche ?? (() => {});
+    this.ouvrirUrl = options.ouvrirUrl ?? (() => {});
   }
 
   get annuaire() { return this.services.annuaire; }
@@ -66,6 +67,23 @@ class FicheAnnuaire extends FicheLogiBTP {
   ouvrirLiee(f, evenement) {
     const cible = f.type === 'rattachement' ? { type: 'individu', id: f.individu_id } : f;
     if (cible.id) this.ouvrirFiche(cible, evenement);
+  }
+
+  /** Onglet Graphe : relations autour de la fiche (recentrage sur place, plein écran dans sa page). */
+  ongletGraphe(type) {
+    return {
+      code: 'graphe', titre: 'Graphe',
+      rendre: (corps) => {
+        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir ses relations.</p>'; return; }
+        corps.classList.add('graphe-hote');
+        this.vueGraphe = new VueGraphe(corps, {
+          annuaire: this.annuaire, depart: { type, id: Number(this.id) }, referentiels: this.referentiels, message: this.message,
+          ouvrirFiche: (f, e) => this.ouvrirFiche(f, e),
+          pleinEcran: (d, r, e) => this.ouvrirUrl(`/annuaire/graphe?${new URLSearchParams({ type: d.type, id: String(d.id), profondeur: String(r.profondeur),
+            contacts: r.contacts ? '1' : '0', liens: r.liens ? '1' : '0', max: String(r.max_contacts) })}`, e),
+        });
+      },
+    };
   }
 
   ongletCoordonnees(type) {
@@ -146,7 +164,7 @@ export class FichePersonne extends FicheAnnuaire {
         return { ...s, groupes, champs: groupes.flatMap((g) => g.champs) };
       })
       .filter((s) => s.code !== 'casquettes' || s.groupes.length)
-      .sort(ordre(['identite', '+coordonnees', '+contacts', 'facturation', 'casquettes', '+liens', '+tarifs', '+supplementaires', '+pieces']));
+      .sort(ordre(['identite', '+coordonnees', '+contacts', 'facturation', 'casquettes', '+liens', '+graphe', '+tarifs', '+supplementaires', '+pieces']));
   }
 
   validerMetier(v) {
@@ -235,6 +253,7 @@ export class FichePersonne extends FicheAnnuaire {
           ouvrirFiche: (f, e) => this.ouvrirFiche(f, e), message: this.message,
         }),
       },
+      this.ongletGraphe('personne'),
       ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
     ];
   }
@@ -341,7 +360,7 @@ export class FicheIndividu extends FicheAnnuaire {
   }
 
   sections() {
-    return super.sections().sort(ordre(['identite', '+coordonnees', '+rattachements', '+supplementaires', '+pieces']));
+    return super.sections().sort(ordre(['identite', '+coordonnees', '+rattachements', '+graphe', '+supplementaires', '+pieces']));
   }
 
   rendreChamp(champ, valeur) {
@@ -403,6 +422,7 @@ export class FicheIndividu extends FicheAnnuaire {
           ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
         }),
       },
+      this.ongletGraphe('individu'),
     ];
   }
 }

@@ -4,3 +4,4 @@ export { EditeurRattachements } from './rattachements.js';
 export { EditeurLiens } from './liens.js';
 export { choisirPersonne, choisirIndividu, pastilles } from './selection.js';
 export { GestionReferentielsAnnuaire } from './referentiels.js';
+export { VueGraphe } from './graphe.js';

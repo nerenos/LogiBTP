@@ -239,33 +239,40 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
     }
 
     /// <summary>Usages d'une fiche (personne, individu ou rattachement), au format des champs gérés.</summary>
-    protected async Task<List<UsageDto>> UsagesDe(string type, long id, CancellationToken ct)
+    protected async Task<List<UsageDto>> UsagesDe(string type, long id, CancellationToken ct) =>
+        (await UsagesDe(type, [id], ct)).GetValueOrDefault(id, []);
+
+    /// <summary>Usages de plusieurs fiches d'un même type, en quelques requêtes (contacts d'une société à nombreux salariés).</summary>
+    protected async Task<Dictionary<long, List<UsageDto>>> UsagesDe(string type, IReadOnlyCollection<long> ids, CancellationToken ct)
     {
+        var liste = ids.Distinct().ToList();
         var q = db.Usages.AsNoTracking();
         q = type switch
         {
-            "personne" => q.Where(u => u.UcoPerId == id),
-            "individu" => q.Where(u => u.UcoIndId == id),
-            _ => q.Where(u => u.UcoRatId == id),
+            "personne" => q.Where(u => u.UcoPerId != null && liste.Contains(u.UcoPerId.Value)),
+            "individu" => q.Where(u => u.UcoIndId != null && liste.Contains(u.UcoIndId.Value)),
+            _ => q.Where(u => u.UcoRatId != null && liste.Contains(u.UcoRatId.Value)),
         };
         var usages = await q.ToListAsync(ct);
         var cooIds = usages.Select(u => u.UcoCooId).Distinct().ToList();
         var coordonnees = await db.Coordonnees.AsNoTracking().Where(c => cooIds.Contains(c.CooId)).ToDictionaryAsync(c => c.CooId, ct);
         var fiches = await Partages(cooIds, ct);
-        return usages.OrderBy(u => coordonnees[u.UcoCooId].CooNature, StringComparer.Ordinal).ThenBy(u => u.UcoOrdre).ThenBy(u => u.UcoId).Select(u =>
-        {
-            var c = coordonnees[u.UcoCooId];
-            var v = Valeurs(c);
-            // Autres fiches qui utilisent la coordonnée (sauf l'usage lu lui-même).
-            var partages = fiches.GetValueOrDefault(c.CooId, []).Where(x => x.UcoId != u.UcoId).Select(x => x.Fiche).ToList();
-            return new UsageDto
+        long Proprietaire(UsageCoordonnee u) => type switch { "personne" => u.UcoPerId!.Value, "individu" => u.UcoIndId!.Value, _ => u.UcoRatId!.Value };
+        return usages.GroupBy(Proprietaire).ToDictionary(g => g.Key, g => g
+            .OrderBy(u => coordonnees[u.UcoCooId].CooNature, StringComparer.Ordinal).ThenBy(u => u.UcoOrdre).ThenBy(u => u.UcoId).Select(u =>
             {
-                UcoId = u.UcoId, CooId = c.CooId, Nature = c.CooNature, Usage = u.UcoUsage, Libelle = u.UcoLibelle, Principal = u.UcoPrincipal,
-                Ligne1 = v.GetValueOrDefault("ligne1"), Ligne2 = v.GetValueOrDefault("ligne2"), Ligne3 = v.GetValueOrDefault("ligne3"),
-                CodePostal = v.GetValueOrDefault("code_postal"), Ville = v.GetValueOrDefault("ville"), Pays = v.GetValueOrDefault("pays"),
-                Valeur = v.GetValueOrDefault("valeur"), Reseau = v.GetValueOrDefault("reseau"), Origine = v, Maj = c.CooModifieLe, Partages = partages,
-            };
-        }).ToList();
+                var c = coordonnees[u.UcoCooId];
+                var v = Valeurs(c);
+                // Autres fiches qui utilisent la coordonnée (sauf l'usage lu lui-même).
+                var partages = fiches.GetValueOrDefault(c.CooId, []).Where(x => x.UcoId != u.UcoId).Select(x => x.Fiche).ToList();
+                return new UsageDto
+                {
+                    UcoId = u.UcoId, CooId = c.CooId, Nature = c.CooNature, Usage = u.UcoUsage, Libelle = u.UcoLibelle, Principal = u.UcoPrincipal,
+                    Ligne1 = v.GetValueOrDefault("ligne1"), Ligne2 = v.GetValueOrDefault("ligne2"), Ligne3 = v.GetValueOrDefault("ligne3"),
+                    CodePostal = v.GetValueOrDefault("code_postal"), Ville = v.GetValueOrDefault("ville"), Pays = v.GetValueOrDefault("pays"),
+                    Valeur = v.GetValueOrDefault("valeur"), Reseau = v.GetValueOrDefault("reseau"), Origine = v, Maj = c.CooModifieLe, Partages = partages,
+                };
+            }).ToList());
     }
 
     /// <summary>Coordonnées des fiches liées, à reprendre avec le même identifiant (mêmes sources que la démo).</summary>
@@ -444,6 +451,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         var individus = await db.Individus.AsNoTracking().Where(i => indIds.Contains(i.IndId)).ToDictionaryAsync(i => i.IndId, ct);
         var perIds = rats.Select(r => r.RatPerId).ToList();
         var personnes = await db.Personnes.AsNoTracking().Where(p => perIds.Contains(p.PerId)).ToDictionaryAsync(p => p.PerId, ct);
+        var coordonnees = await UsagesDe("rattachement", rats.Select(r => r.RatId).ToList(), ct);
         var res = new List<RattachementDto>();
         foreach (var r in rats)
         {
@@ -452,7 +460,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
             {
                 RatId = r.RatId, IndId = r.RatIndId, PerId = r.RatPerId, Individu = LibelleIndividu(individus.GetValueOrDefault(r.RatIndId)), Personne = p?.PerRaisonSociale,
                 Niveau = p?.PerNivCode, Fonction = r.RatFonction, Service = r.RatService, Principal = r.RatPrincipal, Titulaire = r.RatTitulaire, Debut = Date(r.RatDebut),
-                Fin = Date(r.RatFin), Actif = r.RatActif, Commentaire = r.RatCommentaire, Maj = r.RatModifieLe, Coordonnees = await UsagesDe("rattachement", r.RatId, ct),
+                Fin = Date(r.RatFin), Actif = r.RatActif, Commentaire = r.RatCommentaire, Maj = r.RatModifieLe, Coordonnees = coordonnees.GetValueOrDefault(r.RatId, []),
             });
         }
         // Principal, actif, puis libellé de l'autre fiche (comme la démo).
@@ -644,6 +652,26 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                 p = await db.Personnes.Where(x => x.PerId == courant).Select(x => x.PerParentId).FirstOrDefaultAsync(ct);
             }
         }
+    }
+
+    /// <summary>
+    /// Graphe relationnel autour d'une fiche (GrapheAnnuaire) : personnes, individus, rattachements et liens lus en une fois
+    /// (requêtes ensemblistes), puis parcours en mémoire.
+    /// </summary>
+    public virtual async Task<Graphe> Graphe(string type, long id, OptionsGraphe options, CancellationToken ct)
+    {
+        if (type is not ("personne" or "individu")) throw ExceptionMetier.Invalide("TYPE", "Type de fiche : personne ou individu");
+        var personnes = (await Lire("SELECT per_id, per_parent_id, per_niv_code, per_raison_sociale, per_casquettes::text AS casquettes, per_actif, ville FROM v_annuaire_personnes", [], ct))
+            .Select(l => new PersonneGraphe((long)l["per_id"]!, l["per_parent_id"] as long?, (string)l["per_niv_code"]!, (string)l["per_raison_sociale"]!,
+                ListeJson(l["casquettes"]), (bool)l["per_actif"]!, l["ville"] as string)).ToList();
+        var individus = (await Lire("SELECT ind_id, concat_ws(' ', ind_civilite, ind_prenom, ind_nom) AS libelle, ind_actif FROM individu", [], ct))
+            .Select(l => new IndividuGraphe((long)l["ind_id"]!, (string)l["libelle"]!, (bool)l["ind_actif"]!)).ToList();
+        var rattachements = await db.Rattachements.AsNoTracking()
+            .Select(r => new RattachementGraphe(r.RatId, r.RatPerId, r.RatIndId, r.RatFonction, r.RatPrincipal, r.RatActif)).ToListAsync(ct);
+        var liens = await db.Liens.AsNoTracking().Select(l => new LienGraphe(l.LpeId, l.LpePerId, l.LpeCibleId, l.LpeTliCode)).ToListAsync(ct);
+        var niveaux = await db.Niveaux.AsNoTracking().Select(n => new NiveauGraphe(n.NivCode, n.NivOrdre, n.NivIcone)).ToListAsync(ct);
+        var types = await db.TypesLien.AsNoTracking().Select(t => new TypeLienGraphe(t.TliCode, t.TliLibelle)).ToListAsync(ct);
+        return GrapheAnnuaire.Construire(new DonneesGraphe(niveaux, types, personnes, individus, rattachements, liens), type, id, options);
     }
 
     /// <summary>Compte particulier d'un individu : personne titulaire, coordonnées personnelles partagées (même identifiant).</summary>

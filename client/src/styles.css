@@ -69,3 +69,7 @@
 .element-recherche-barre { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
 .element-recherche-barre input { flex: 1; }
 .element-resultats tr.actif td { background: var(--accent-clair); }
+
+/* Onglet Graphe d'une fiche de l'annuaire : hauteur de travail. */
+.graphe-hote { height: calc(100vh - 16rem); min-height: 28rem; }
+.page-graphe-corps.graphe-hote { height: auto; flex: 1; min-height: 0; }

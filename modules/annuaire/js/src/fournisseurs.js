@@ -1,5 +1,6 @@
 import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES } from './coordonnees.js';
 import { compacter } from './identifiants.js';
+import { construireGraphe } from './graphe.js';
 
 // Fournisseurs de l'annuaire. Même interface pour l'API (routes MapModuleAnnuaire) et pour la mémoire (démo hors ligne,
 // tests ; mêmes règles que ServiceAnnuaire) :
@@ -14,6 +15,7 @@ import { compacter } from './identifiants.js';
 //   coordonneesProposees(type, id)                  coordonnées des fiches liées, à reprendre (même identifiant)
 //   historiqueCoordonnee(cooId)                     [{ avant, le, par }]
 //   creerParticulier(indId)                         { id } : compte particulier (personne) de l'individu, coordonnées partagées
+//   graphe(type, id, { profondeur, contacts, liens, max_contacts })   graphe relationnel autour d'une fiche (graphe.js)
 //
 // Champs gérés des fiches (module Fiche, champ.gere) : personne → coordonnees, rattachements, liens, enfants ;
 // individu → coordonnees, rattachements. Le fournisseur mémoire les lit et les écrit (geres(type)) ; côté serveur,
@@ -56,6 +58,10 @@ export class FournisseurAnnuaireApi {
   coordonneesProposees(type, id) { return this.appel('GET', `/coordonnees/proposees?${new URLSearchParams({ type, id: String(id ?? '') })}`); }
   historiqueCoordonnee(cooId) { return this.appel('GET', `/coordonnees/${cooId}/historique`); }
   creerParticulier(indId) { return this.appel('POST', `/individus/${indId}/particulier`); }
+  graphe(type, id, { profondeur = 1, contacts = true, liens = true, max_contacts = 8 } = {}) {
+    const q = new URLSearchParams({ type, id: String(id), profondeur: String(profondeur), contacts: String(contacts), liens: String(liens), max_contacts: String(max_contacts) });
+    return this.appel('GET', `/graphe?${q}`);
+  }
 }
 
 // ------------------------------------------------------------------ mémoire
@@ -510,6 +516,16 @@ export class FournisseurAnnuaireMemoire {
     }
     this.deriver();
     return { id, existant: false };
+  }
+
+  /** Graphe relationnel autour d'une fiche (même construction que GrapheAnnuaire côté serveur). */
+  async graphe(type, id, options = {}) {
+    return construireGraphe({
+      niveaux: this.refs.niveaux, types_lien: this.refs['types-lien'],
+      personnes: this.personnes.map((p) => ({ id: p.id, parent_id: p.parent_id ?? null, niveau: p.niveau, raison_sociale: p.raison_sociale, casquettes: p.casquettes ?? [], actif: p.actif !== false, ville: p.ville ?? null })),
+      individus: this.individus.map((i) => ({ id: i.id, libelle: libelleIndividu(i), actif: i.actif !== false })),
+      rattachements: this.rattachements, liens: this.liens,
+    }, { type, id }, options);
   }
 
   // ---------------------------------------------------------------- colonnes de liste dérivées

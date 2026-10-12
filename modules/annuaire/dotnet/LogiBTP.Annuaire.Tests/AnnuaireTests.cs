@@ -75,3 +75,29 @@ public class PlanCoordonneesTests
         Assert.Equal(attendu["choix_requis"]!.AsArray().Select(e => $"{e!["index"]}:{e["coo_id"]}:{e["partages"]}"), choix);
     }
 }
+
+public class GrapheAnnuaireTests
+{
+    private static JsonObject Jeu() => CasPartages.Lire(CasPartages.Chemin("modules", "annuaire", "tests", "cas", "03_graphe.json"));
+
+    public static TheoryData<string> Cas()
+    {
+        var data = new TheoryData<string>();
+        foreach (var c in Jeu()["cas"]!.AsArray()) data.Add(c!["nom"]!.GetValue<string>());
+        return data;
+    }
+
+    /// <summary>Jeu partagé avec graphe.js : mêmes nœuds et arêtes (JSON snake_case identique).</summary>
+    [Theory]
+    [MemberData(nameof(Cas))]
+    public void Graphe_identique_au_js(string nom)
+    {
+        var jeu = Jeu();
+        var c = jeu["cas"]!.AsArray().First(x => x!["nom"]!.GetValue<string>() == nom)!;
+        var donnees = jeu["donnees"].Deserialize<DonneesGraphe>(JsonCalcul.Options)!;
+        var options = c["options"].Deserialize<OptionsGraphe>(JsonCalcul.Options)!;
+        var g = GrapheAnnuaire.Construire(donnees, c["depart"]!["type"]!.GetValue<string>(), c["depart"]!["id"]!.GetValue<long>(), options);
+        var obtenu = JsonSerializer.SerializeToNode(g, JsonCalcul.Options);
+        Assert.True(JsonNode.DeepEquals(c["attendu"], obtenu), $"{nom} : obtenu {obtenu!.ToJsonString()}");
+    }
+}

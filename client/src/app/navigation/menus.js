@@ -34,6 +34,7 @@ export const MENUS_METIER = [
       { code: 'nouveau-particulier', libelle: 'Nouveau particulier', icone: '＋', url: '/fiche/personne/nouveau?niveau=PARTICULIER&casquette=CLIENT' },
       { code: 'nouvel-individu', libelle: 'Nouvel individu (contact)', icone: '＋', url: '/fiche/individu/nouveau' },
       { separateur: true },
+      { code: 'graphe-relations', libelle: 'Graphe des relations', icone: '🕸️', url: '/annuaire/graphe', info: 'Hiérarchie, liens et contacts (depuis notre société)' },
       { code: 'notre-societe', libelle: 'Notre société', icone: '🏛️', url: '/annuaire/societe', info: 'Fiche de la société de cette base' },
       { code: 'parametrage-annuaire', libelle: 'Niveaux, relations, liens, rôles…', icone: '⚙', url: '/parametres/annuaire' },
     ],
