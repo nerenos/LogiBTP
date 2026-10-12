@@ -181,6 +181,144 @@ export const TYPES_FICHE = {
       ],
     },
   },
+  // Annuaire (module Annuaire) : personnes (morales à un niveau de la hiérarchie, ou particuliers) et individus. Les
+  // coordonnées, rattachements et liens sont des champs gérés (hors table, partagés entre fiches) : onglets spécifiques
+  // de FichePersonne et FicheIndividu. Les groupes de l'onglet Casquettes ne s'affichent que pour les casquettes portées.
+  personne: {
+    libelle: 'Personne', table: 'personne', cle: 'per_id', colonne_proprietes: 'per_proprietes',
+    definition: {
+      libelle: 'Personne',
+      titre: '[raison_sociale]',
+      sous_titre: '[code]',
+      sections: [
+        {
+          code: 'identite', titre: 'Identité',
+          groupes: [
+            { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'actif', 'societe_base'] },
+            { code: 'casquettes', titre: 'Casquettes', champs: ['casquettes'], largeur: 'plein' },
+            { code: 'entreprise', titre: 'Entreprise', champs: ['pays', 'siren', 'siret', 'tva_intra', 'identifiant_etranger', 'naf', 'forme_juridique', 'forme_libelle',
+              'capital', 'rcs', 'date_creation', 'effectif', 'etat_administratif', 'siege', 'service_public'] },
+            { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
+          ],
+        },
+        {
+          code: 'facturation', titre: 'Facturation et règlement',
+          groupes: [
+            { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_code_service', 'fe_engagement'] },
+            { titre: 'Règlement', champs: ['mode_reglement', 'delai_paiement', 'devise', 'iban', 'bic'] },
+          ],
+        },
+        {
+          code: 'casquettes', titre: 'Casquettes',
+          groupes: [
+            { code: 'client', titre: 'Client', champs: ['cli_compte', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
+            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_compte', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
+            { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
+            { code: 'interim', titre: "Agence d'intérim", champs: ['int_garantie_financiere', 'int_coefficient'] },
+            { code: 'architecte', titre: 'Architecte', champs: ['arc_numero_ordre'] },
+            { code: 'controle', titre: 'Bureau de contrôle', champs: ['bc_agrement', 'bc_missions'] },
+          ],
+        },
+      ],
+      champs: [
+        c('code', 'Code', 'per_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code du tiers : T000123 par défaut' }),
+        c('niveau', 'Niveau', 'per_niv_code', 'texte', { obligatoire: true, defaut: 'SOCIETE', reference: 'niveau' }),
+        c('raison_sociale', 'Raison sociale ou nom', 'per_raison_sociale', 'texte', { obligatoire: true, longueur: 150 }),
+        c('nom_commercial', 'Nom commercial (enseigne)', 'per_nom_commercial', 'texte', { longueur: 150 }),
+        c('sigle', 'Sigle', 'per_sigle', 'texte', { longueur: 30 }),
+        c('parent_id', 'Niveau supérieur', 'per_parent_id', 'nombre', { reference: 'personne', aide: 'Groupe d\'une société, société d\'un établissement, d\'une agence…' }),
+        c('casquettes', 'Casquettes', 'per_casquettes', 'json'),
+        c('actif', 'Actif', 'per_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('societe_base', 'Société de cette base', 'per_societe_base', 'booleen', { obligatoire: true, defaut: false, non_copie: true, aide: 'Notre société (une seule par base)' }),
+        c('pays', 'Pays', 'per_pays', 'texte', { obligatoire: true, defaut: 'FR', longueur: 2, format: 'regex:^[A-Za-z]{2}$', aide: 'Code ISO à 2 lettres (FR, BE, DE…)' }),
+        c('siren', 'SIREN', 'per_siren', 'texte', { longueur: 11, non_copie: true }),
+        c('siret', 'SIRET', 'per_siret', 'texte', { longueur: 17, non_copie: true, aide: 'Unique : un établissement n\'est enregistré qu\'une fois' }),
+        c('tva_intra', 'N° de TVA intracommunautaire', 'per_tva_intra', 'texte', { longueur: 20, non_copie: true }),
+        c('identifiant_etranger', 'Identifiant hors France', 'per_identifiant_etranger', 'texte', { longueur: 40, non_copie: true, aide: 'N° d\'enregistrement national (entreprise étrangère)' }),
+        c('naf', 'Code NAF (APE)', 'per_naf', 'texte', { longueur: 6 }),
+        c('forme_juridique', 'Catégorie juridique (code)', 'per_forme_juridique', 'texte', { longueur: 10 }),
+        c('forme_libelle', 'Forme juridique', 'per_forme_libelle', 'texte', { longueur: 100 }),
+        c('capital', 'Capital', 'per_capital', 'nombre', { format: '9999999999999999.99' }),
+        c('rcs', 'RCS', 'per_rcs', 'texte', { longueur: 60 }),
+        c('date_creation', 'Date de création', 'per_date_creation', 'date'),
+        c('effectif', 'Effectif', 'per_effectif', 'texte', { longueur: 40 }),
+        c('etat_administratif', 'État administratif', 'per_etat_administratif', 'liste', { options: options(['A', 'Actif'], ['F', 'Fermé']) }),
+        c('siege', 'Siège', 'per_siege', 'booleen'),
+        c('service_public', 'Service public (Chorus Pro)', 'per_service_public', 'booleen', { obligatoire: true, defaut: false }),
+        c('fe_format', 'Format de facture', 'per_fe_format', 'liste', { options: options(['FACTURX', 'Factur-X'], ['UBL', 'UBL'], ['CII', 'CII']) }),
+        c('fe_plateforme', 'Plateforme de réception (PA)', 'per_fe_plateforme', 'texte', { longueur: 100, aide: 'Plateforme agréée choisie par le destinataire' }),
+        c('fe_adresse', 'Adresse de facturation électronique', 'per_fe_adresse', 'texte', { longueur: 150, aide: 'Identifiant de l\'annuaire de facturation (SIREN, SIREN_SUFFIXE…)' }),
+        c('fe_code_routage', 'Code de routage', 'per_fe_code_routage', 'texte', { longueur: 100 }),
+        c('fe_code_service', 'Code service (Chorus Pro)', 'per_fe_code_service', 'texte', { longueur: 100 }),
+        c('fe_engagement', 'N° d\'engagement obligatoire', 'per_fe_engagement', 'booleen', { obligatoire: true, defaut: false }),
+        c('mode_reglement', 'Mode de règlement', 'per_mode_reglement', 'liste', {
+          options: options(['VIREMENT', 'Virement'], ['PRELEVEMENT', 'Prélèvement'], ['CHEQUE', 'Chèque'], ['LCR', 'LCR'], ['CB', 'Carte bancaire'], ['ESPECES', 'Espèces']),
+        }),
+        c('delai_paiement', 'Délai de paiement', 'per_delai_paiement', 'liste', {
+          options: options(['COMPTANT', 'Comptant'], ['30J', '30 jours'], ['30JFM', '30 jours fin de mois'], ['45JFM', '45 jours fin de mois'], ['60J', '60 jours']),
+        }),
+        c('devise', 'Devise', 'per_devise', 'texte', { obligatoire: true, defaut: 'EUR', longueur: 3 }),
+        c('iban', 'IBAN', 'per_iban', 'texte', { longueur: 42, non_copie: true }),
+        c('bic', 'BIC', 'per_bic', 'texte', { longueur: 11 }),
+        c('commentaire', 'Notes', 'per_commentaire', 'zone'),
+        // Champs déverrouillés par les casquettes (groupes de l'onglet Casquettes).
+        c('cli_compte', 'Compte client', 'per_cli_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (411…)' }),
+        c('cli_categorie', 'Catégorie tarifaire', 'per_cli_categorie', 'texte', { longueur: 40 }),
+        c('cli_encours_max', 'Encours autorisé (€)', 'per_cli_encours_max', 'nombre', { format: '999999999999.99' }),
+        c('cli_remise', 'Remise habituelle (%)', 'per_cli_remise', 'nombre', { format: '999.999' }),
+        c('fou_compte', 'Compte fournisseur', 'per_fou_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (401…)' }),
+        c('fou_numero_client', 'Notre n° de client', 'per_fou_numero_client', 'texte', { longueur: 40 }),
+        c('fou_franco', 'Franco de port (€ HT)', 'per_fou_franco', 'nombre', { format: '999999999999.99' }),
+        c('fou_delai_livraison', 'Délai de livraison (jours)', 'per_fou_delai_livraison', 'nombre', { format: '9999' }),
+        c('st_corps_etat', 'Corps d\'état', 'per_st_corps_etat', 'texte', { longueur: 100 }),
+        c('st_qualifications', 'Qualifications (Qualibat…)', 'per_st_qualifications', 'texte', { longueur: 200 }),
+        c('st_autoliquidation', 'Autoliquidation de la TVA', 'per_st_autoliquidation', 'booleen', { obligatoire: true, defaut: true }),
+        c('st_decennale_assureur', 'Assureur décennale', 'per_st_decennale_assureur', 'texte', { longueur: 100 }),
+        c('st_decennale_police', 'N° de police décennale', 'per_st_decennale_police', 'texte', { longueur: 50 }),
+        c('st_decennale_fin', 'Décennale valable jusqu\'au', 'per_st_decennale_fin', 'date'),
+        c('int_garantie_financiere', 'Garantie financière (organisme)', 'per_int_garantie_financiere', 'texte', { longueur: 100 }),
+        c('int_coefficient', 'Coefficient de facturation', 'per_int_coefficient', 'nombre', { format: '9999.9999' }),
+        c('arc_numero_ordre', 'N° d\'inscription à l\'Ordre', 'per_arc_numero_ordre', 'texte', { longueur: 30 }),
+        c('bc_agrement', 'N° d\'agrément', 'per_bc_agrement', 'texte', { longueur: 50 }),
+        c('bc_missions', 'Missions (L, SEI, PS…)', 'per_bc_missions', 'texte', { longueur: 100 }),
+        // Champs gérés par l'annuaire (hors table).
+        c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
+        c('rattachements', 'Contacts', null, 'json', { gere: true }),
+        c('liens', 'Liens', null, 'json', { gere: true }),
+        c('enfants', 'Niveaux inférieurs', null, 'json', { gere: true, lecture_seule: true }),
+      ],
+    },
+  },
+  individu: {
+    libelle: 'Individu', table: 'individu', cle: 'ind_id', colonne_proprietes: 'ind_proprietes',
+    definition: {
+      libelle: 'Individu',
+      titre: '[civilite] [prenom] [nom]',
+      sections: [
+        {
+          code: 'identite', titre: 'Identité',
+          groupes: [
+            { titre: 'Identité', champs: ['civilite', 'prenom', 'nom', 'date_naissance', 'pays', 'actif'] },
+            { code: 'roles', titre: 'Dans notre société', champs: ['roles', 'utilisateur'], largeur: 'plein' },
+            { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
+          ],
+        },
+      ],
+      champs: [
+        c('civilite', 'Civilité', 'ind_civilite', 'liste', { options: options('M.', 'Mme') }),
+        c('nom', 'Nom', 'ind_nom', 'texte', { obligatoire: true, longueur: 80 }),
+        c('prenom', 'Prénom', 'ind_prenom', 'texte', { longueur: 80 }),
+        c('date_naissance', 'Date de naissance', 'ind_date_naissance', 'date', { confidentiel: true }),
+        c('pays', 'Pays', 'ind_pays', 'texte', { obligatoire: true, defaut: 'FR', longueur: 2, format: 'regex:^[A-Za-z]{2}$' }),
+        c('roles', 'Rôles', 'ind_roles', 'json', { aide: 'Chargé d\'affaires, chiffreur, salarié, intérimaire, utilisateur… : repris par les autres modules' }),
+        c('utilisateur', 'Identifiant de connexion', 'ind_utilisateur', 'texte', { longueur: 50, non_copie: true, aide: 'Pour le futur module des droits' }),
+        c('actif', 'Actif', 'ind_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('commentaire', 'Notes', 'ind_commentaire', 'zone'),
+        c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
+        c('rattachements', 'Rattachements', null, 'json', { gere: true }),
+      ],
+    },
+  },
 };
 
 /** Droits par profil : ADMIN tout ; SAISIE consulte et modifie, sans confidentiel ni reprise de main sur les salariés. */
@@ -191,6 +329,10 @@ export const DROITS_FICHE = [
   { profil: 'SAISIE', type: 'materiel', action: 'DEBLOQUER' },
   ...['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type: 'element', action })),
   { profil: 'SAISIE', type: 'element', action: 'VOIR' }, { profil: 'SAISIE', type: 'element', action: 'MODIFIER' },
+  // Annuaire : la date de naissance des individus est confidentielle.
+  ...['personne', 'individu'].flatMap((type) => ['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type, action }))),
+  { profil: 'ADMIN', type: 'individu', action: 'CONFIDENTIEL' },
+  ...['personne', 'individu'].flatMap((type) => ['VOIR', 'MODIFIER'].map((action) => ({ profil: 'SAISIE', type, action }))),
 ];
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */
@@ -212,6 +354,19 @@ export const PARAMETRAGE_FICHE = {
       { code: 'mutuelle', libelle: 'Mutuelle', type: 'texte', longueur: 60, confidentiel: true, ordre: 50 },
     ].map((x) => ({ ...x, actif: true })),
   },
+  personne: {
+    obligatoires: [],
+    supplementaires: [
+      { code: 'origine', libelle: 'Origine du contact', type: 'liste', options: options('Recommandation', 'Salon', 'Internet', 'Appel d\'offres'), ordre: 10 },
+      { code: 'chiffre_affaires', libelle: 'Chiffre d\'affaires annuel (€)', type: 'nombre', format: '999999999999', ordre: 20 },
+    ].map((x) => ({ ...x, actif: true })),
+  },
+  individu: {
+    obligatoires: [],
+    supplementaires: [
+      { code: 'langue', libelle: 'Langue', type: 'liste', options: options('Français', 'Anglais', 'Italien', 'Espagnol', 'Allemand'), ordre: 10 },
+    ].map((x) => ({ ...x, actif: true })),
+  },
   materiel: {
     obligatoires: [],
     supplementaires: [
@@ -229,5 +384,6 @@ export function ficheDeLigne({ type, id }) {
   if (type === 'salarie' || type === 'interim') return { type: 'salarie', id };
   if (type === 'materiel') return { type: 'materiel', id };
   if (type === 'element') return { type: 'element', id };
+  if (type === 'personne' || type === 'individu') return { type, id };
   return null;
 }

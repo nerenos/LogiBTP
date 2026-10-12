@@ -11,7 +11,7 @@ services:
     volumes:
       - logibtp-data:/var/lib/postgresql/data
       # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume :
-      # modules (010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque) puis cœur BTP (100 et suivants).
+      # modules (010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque, 070 Annuaire) puis cœur BTP (100 et suivants).
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
       - ./modules/document/db/012_document_verrou.sql:/docker-entrypoint-initdb.d/012_document_verrou.sql:ro
@@ -24,6 +24,7 @@ services:
       - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro
       - ./modules/bibliotheque/db/061_bibliotheque_technique.sql:/docker-entrypoint-initdb.d/061_bibliotheque_technique.sql:ro
       - ./modules/bibliotheque/db/062_bibliotheque_coefficients.sql:/docker-entrypoint-initdb.d/062_bibliotheque_coefficients.sql:ro
+      - ./modules/annuaire/db/070_annuaire_schema.sql:/docker-entrypoint-initdb.d/070_annuaire_schema.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro
@@ -32,6 +33,8 @@ services:
       - ./db/121_listes_parametrage.sql:/docker-entrypoint-initdb.d/121_listes_parametrage.sql:ro
       - ./db/130_fiches.sql:/docker-entrypoint-initdb.d/130_fiches.sql:ro
       - ./db/131_fiches_parametrage.sql:/docker-entrypoint-initdb.d/131_fiches_parametrage.sql:ro
+      - ./db/140_annuaire.sql:/docker-entrypoint-initdb.d/140_annuaire.sql:ro
+      - ./db/141_annuaire_demo.sql:/docker-entrypoint-initdb.d/141_annuaire_demo.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

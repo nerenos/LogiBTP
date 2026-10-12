@@ -20,6 +20,25 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'annuaire', libelle: '&Tiers', elements: [
+      { code: 'tiers', libelle: 'Tous les tiers', icone: '🏢', url: '/liste/tiers?vue=20', info: 'Sociétés, établissements, particuliers…' },
+      { code: 'clients', libelle: 'Clients et prospects', icone: '💶', url: '/liste/tiers?vue=21' },
+      { code: 'fournisseurs', libelle: 'Fournisseurs et loueurs', icone: '📦', url: '/liste/tiers?vue=22' },
+      { code: 'sous-traitants', libelle: 'Sous-traitants, cotraitants, intérim', icone: '🤝', url: '/liste/tiers?vue=23' },
+      { code: 'prescripteurs', libelle: 'Prescripteurs et maîtres d\'ouvrage', icone: '📐', url: '/liste/tiers?vue=24' },
+      { separateur: true },
+      { code: 'contacts', libelle: 'Contacts (individus)', icone: '👤', url: '/liste/contacts?vue=25' },
+      { code: 'equipe-interne', libelle: 'Notre société : salariés et rôles', icone: '🎩', url: '/liste/contacts?vue=26' },
+      { separateur: true },
+      { code: 'nouvelle-personne', libelle: 'Nouvelle personne (société…)', icone: '＋', url: '/fiche/personne/nouveau' },
+      { code: 'nouveau-particulier', libelle: 'Nouveau particulier', icone: '＋', url: '/fiche/personne/nouveau?niveau=PARTICULIER&casquette=CLIENT' },
+      { code: 'nouvel-individu', libelle: 'Nouvel individu (contact)', icone: '＋', url: '/fiche/individu/nouveau' },
+      { separateur: true },
+      { code: 'notre-societe', libelle: 'Notre société', icone: '🏛️', url: '/annuaire/societe', info: 'Fiche de la société de cette base' },
+      { code: 'parametrage-annuaire', libelle: 'Niveaux, casquettes, liens, rôles…', icone: '⚙', url: '/parametres/annuaire' },
+    ],
+  },
+  {
     code: 'ventes', libelle: '&Ventes', elements: [
       { code: 'devis', libelle: 'Devis', icone: '📝', url: L('devis') },
       { code: 'factures', libelle: 'Factures, avoirs, situations', icone: '💶', url: L('factures') },
@@ -71,7 +90,10 @@ export function menus(app) {
         { libelle: 'Fiche salarié : champs…', icone: '👷', action: () => app.parametrerFiche('salarie'), desactive: !app.estAdmin() },
         { libelle: 'Fiche matériel : champs…', icone: '🚜', action: () => app.parametrerFiche('materiel'), desactive: !app.estAdmin() },
         { libelle: 'Fiche élément : données techniques…', icone: '📚', action: () => app.parametrerFiche('element'), desactive: !app.estAdmin() },
-        { separateur: true, libelle: 'Bibliothèque' },
+        { libelle: 'Fiche personne : champs…', icone: '🏢', action: () => app.parametrerFiche('personne'), desactive: !app.estAdmin() },
+        { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu'), desactive: !app.estAdmin() },
+        { separateur: true, libelle: 'Annuaire et bibliothèque' },
+        { libelle: 'Annuaire : niveaux, casquettes, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
@@ -107,4 +129,4 @@ export function catalogueRaccourcis() {
   ];
 }
 
-export const RACCOURCIS_DEFAUT = ['salaries', 'materiels', 'devis', 'factures', 'ged', 'coffre', 'nouveau-salarie', 'devis-demo'];
+export const RACCOURCIS_DEFAUT = ['tiers', 'clients', 'contacts', 'salaries', 'materiels', 'devis', 'factures', 'ged', 'coffre', 'devis-demo'];

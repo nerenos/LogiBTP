@@ -148,14 +148,18 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
         if (Connexion is null) return;
         _cnx = new NpgsqlConnection(Connexion);
         await _cnx.OpenAsync();
-        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean, type_element text)");
+        await Executer($"CREATE TABLE {_table} (id integer PRIMARY KEY, nom text, ville text, service text, montant numeric, actif boolean, type_element text, etiquettes text[])");
         foreach (var l in _jeu["source"]!["lignes"]!.AsArray())
         {
-            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif, @type_element)", _cnx);
+            await using var cmd = new NpgsqlCommand($"INSERT INTO {_table} VALUES (@id, @nom, @ville, @service, @montant, @actif, @type_element, @etiquettes)", _cnx);
             cmd.Parameters.AddWithValue("id", l!["id"]!.GetValue<int>());
             foreach (var c in new[] { "nom", "ville", "service", "type_element" }) cmd.Parameters.Add(new NpgsqlParameter(c, NpgsqlDbType.Text) { Value = (object?)l[c]?.GetValue<string>() ?? DBNull.Value });
             cmd.Parameters.Add(new NpgsqlParameter("montant", NpgsqlDbType.Numeric) { Value = (object?)l["montant"]?.GetValue<decimal>() ?? DBNull.Value });
             cmd.Parameters.AddWithValue("actif", l["actif"]!.GetValue<bool>());
+            cmd.Parameters.Add(new NpgsqlParameter("etiquettes", NpgsqlDbType.Array | NpgsqlDbType.Text)
+            {
+                Value = (object?)l["etiquettes"]?.AsArray().Select(n => n!.GetValue<string>()).ToArray() ?? DBNull.Value,
+            });
             await cmd.ExecuteNonQueryAsync();
         }
     }
@@ -197,7 +201,7 @@ public sealed class IntegrationPostgresTests : IAsyncLifetime
     }
 
     private SourceResolue Source() => new($"SELECT * FROM {_table}",
-        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean"), new("type_element", "text")],
+        [new("id", "integer"), new("nom", "text"), new("ville", "text"), new("service", "text"), new("montant", "numeric"), new("actif", "boolean"), new("type_element", "text"), new("etiquettes", "ARRAY")],
         "id", "type_element", null);
 
     private static IReadOnlyList<string> Types(JsonNode? types) => types?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [];

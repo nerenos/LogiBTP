@@ -14,6 +14,9 @@ import { validerChamp, MESSAGES } from './validation.js';
 //   (confidentiel : relire les champs confidentiels, si l'utilisateur les avait affichés et en a le droit)
 //   parametrage(type) / enregistrerParametrage(type, { obligatoires, supplementaires })   (profil ADMIN)
 //
+// Champs gérés (champ.gere, sans colonne) : données liées lues et écrites par le type, hors de la ligne :
+// { geres: { lire(ligne) → { code: valeur }, valider(ligne | null, geres), ecrire(ligne, geres, { creation }) } }.
+//
 // verrou : null (personne ne modifie) ou { utilisateur, depuis, moi, meme_utilisateur } (le même utilisateur reprend son verrou) ; une erreur 422 VALIDATION porte
 // details = [{ champ, code, message, supplementaire }].
 
@@ -142,13 +145,14 @@ export class FournisseurFicheMemoire {
       if (c.confidentiel && !visible) { proprietes[c.code] = null; masques.push(`+${c.code}`); } else proprietes[c.code] = brutes[c.code] ?? null;
     }
     if (visible && masques.length === 0) this.#journaliser(type, id, def);
+    if (t.geres) Object.assign(valeurs, await t.geres.lire(l));
     return { id: l[t.cle], valeurs, proprietes, h: this.#empreinte(type, l), masques, verrou: this.#vueVerrou(this.#verrou(type, id), jeton) };
   }
 
   #empreinte(type, l) {
     const t = this.#type(type);
     const o = {};
-    for (const c of t.definition.champs) o[c.code] = l[c.code] ?? null;
+    for (const c of t.definition.champs.filter((x) => !x.gere)) o[c.code] = l[c.code] ?? null;
     o[t.proprietes] = l[t.proprietes] ?? {};
     return empreinte(o);
   }
@@ -230,9 +234,18 @@ export class FournisseurFicheMemoire {
     if (proprietes && Object.keys(proprietes).length) l[t.proprietes] = { ...(l[t.proprietes] ?? {}), ...proprietes };
   }
 
-  async enregistrer(type, id, { jeton, h, valeurs = {}, proprietes = {}, confidentiel = false }) {
+  /** Valeurs saisies séparées : champs de la ligne et champs gérés par le type. */
+  #separer(type, valeurs) {
+    const geres = new Set(this.#type(type).definition.champs.filter((c) => c.gere).map((c) => c.code));
+    const ligne = {}, autres = {};
+    for (const [k, v] of Object.entries(valeurs ?? {})) (geres.has(k) ? autres : ligne)[k] = v;
+    return [ligne, autres];
+  }
+
+  async enregistrer(type, id, { jeton, h, valeurs: saisies = {}, proprietes = {}, confidentiel = false }) {
     this.#exiger(type, 'modifier');
     const t = this.#type(type);
+    const [valeurs, geres] = this.#separer(type, saisies);
     const l = this.#ligne(type, id);
     const v = this.#verrou(type, id);
     if (!v || v.jeton !== jeton) {
@@ -242,22 +255,27 @@ export class FournisseurFicheMemoire {
     const essai = structuredClone(l);
     this.#ecrire(type, essai, valeurs, proprietes);
     const def = await this.definition(type);
-    await this.#valider(type, Object.fromEntries(def.champs.map((c) => [c.code, essai[c.code] ?? null])), essai[t.proprietes] ?? {});
+    await this.#valider(type, Object.fromEntries(def.champs.filter((c) => !c.gere).map((c) => [c.code, essai[c.code] ?? null])), essai[t.proprietes] ?? {});
+    if (Object.keys(geres).length) await t.geres.valider?.(l, geres);
     Object.assign(l, essai, t.derivees?.(essai) ?? {});
+    if (Object.keys(geres).length) await t.geres.ecrire(l, geres, { creation: false });
     v.renouvele = this.horloge();
     return this.#lire(type, id, { confidentiel, jeton });
   }
 
-  async creer(type, { valeurs = {}, proprietes = {}, confidentiel = false }) {
+  async creer(type, { valeurs: saisies = {}, proprietes = {}, confidentiel = false }) {
     this.#exiger(type, 'modifier');
     const t = this.#type(type);
+    const [valeurs, geres] = this.#separer(type, saisies);
     const l = {};
     this.#ecrire(type, l, valeurs, proprietes);
     const def = await this.definition(type);
-    await this.#valider(type, Object.fromEntries(def.champs.map((c) => [c.code, l[c.code] ?? null])), l[t.proprietes] ?? {});
+    await this.#valider(type, Object.fromEntries(def.champs.filter((c) => !c.gere).map((c) => [c.code, l[c.code] ?? null])), l[t.proprietes] ?? {});
+    if (Object.keys(geres).length) await t.geres.valider?.(null, geres);
     l[t.cle] = Math.max(0, ...t.lignes.map((x) => Number(x[t.cle]) || 0)) + 1;
     Object.assign(l, t.derivees?.(l) ?? {});
     t.lignes.push(l);
+    if (Object.keys(geres).length) await t.geres.ecrire(l, geres, { creation: true });
     return this.#lire(type, l[t.cle], { confidentiel });
   }
 

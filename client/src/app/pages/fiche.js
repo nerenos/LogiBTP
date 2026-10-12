@@ -3,7 +3,7 @@ import { ExplorateurGed } from '@logibtp/ged/ui';
 import { CLASSES_FICHE } from '../fiches/classes.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 
-const ICONES = { salarie: '👷', materiel: '🚜', element: '📚' };
+const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤' };
 
 /**
  * Fiche d'un élément (module Fiche) : /fiche/<type>/<id>, /fiche/<type>/nouveau (création). Fermer la fiche (✕ ou
@@ -28,6 +28,8 @@ export class PageFiche extends PageBase {
       peutParametrer: app.estAdmin(),
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),
+      // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
+      ouvrirFiche: ({ type: t, id }, e) => app.naviguer(`/fiche/${t}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
       ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
         fournisseur: s.ged, contexte: { type_element: typeElement, id_element: String(idElement), libelle }, compact: true,

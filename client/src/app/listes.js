@@ -13,11 +13,13 @@ export function donneesDemo() {
   return donnees;
 }
 
-export function creerFournisseurListe({ enLigne, demo, ged, elements = [] }) {
+export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annuaire = null }) {
   if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
   const { salaries, materiels } = donneesDemo();
   const sources = sourcesFournisseur({
     documents: documentsDemo(demo), salaries, materiels, ressources: ressourcesDemo(salaries, materiels), elements,
+    // Annuaire : mêmes lignes que les fiches (colonnes de liste dérivées par le fournisseur de l'annuaire).
+    personnes: annuaire?.personnes ?? [], individus: annuaire?.individus ?? [],
   });
   // Documents de la GED : lignes recalculées à chaque lecture (comme la vue v_liste_ged).
   if (ged) Object.defineProperty(sources.ged, 'lignes', { get: () => ged.lignesListe() });
@@ -30,7 +32,10 @@ export function creerFournisseurListe({ enLigne, demo, ged, elements = [] }) {
 }
 
 /** Libellé d'un type d'élément sans écran de fiche. */
-export const LIBELLES_ELEMENTS = { salarie: 'salarié', interim: 'intérimaire', materiel: 'matériel', equipe: 'équipe', sous_traitant: 'sous-traitant', document_ged: 'document', element: 'élément' };
+export const LIBELLES_ELEMENTS = {
+  salarie: 'salarié', interim: 'intérimaire', materiel: 'matériel', equipe: 'équipe', sous_traitant: 'sous-traitant', document_ged: 'document', element: 'élément',
+  personne: 'personne', individu: 'individu',
+};
 
 /** Les types d'éléments V_*, A_* et S_* sont des documents (code du type de document). */
 export const estTypeDocument = (type) => /^[VAS]_/.test(String(type ?? ''));

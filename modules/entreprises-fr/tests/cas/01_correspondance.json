@@ -1,0 +1,100 @@
+{
+  "description": "Correspondance d'un résultat de l'API Recherche d'entreprises (entreprise fictive) vers une entreprise : établissement du SIRET cherché (siège ou établissement trouvé), sinon le siège ; adresse détaillée (numéro, indice, type et libellé de voie, complément ; cedex prioritaire) ou adresse sur une ligne découpée avant le code postal ; état A (actif) sinon F ; dirigeants personnes physiques seulement, nom et premier prénom en casse de nom propre.",
+  "resultat": {
+    "siren": "912345006",
+    "nom_complet": "BATI CONFLUENCE (BC)",
+    "nom_raison_sociale": "BATI CONFLUENCE",
+    "sigle": "BC",
+    "nombre_etablissements_ouverts": 2,
+    "activite_principale": "41.20B",
+    "categorie_entreprise": "PME",
+    "date_creation": "2012-04-02",
+    "etat_administratif": "A",
+    "nature_juridique": "5710",
+    "tranche_effectif_salarie": "12",
+    "tva": ["FR95912345006"],
+    "complements": { "est_rge": true, "est_service_public": null, "est_administration": false },
+    "siege": {
+      "siret": "91234500600007",
+      "est_siege": true,
+      "etat_administratif": "A",
+      "activite_principale": "41.20B",
+      "tranche_effectif_salarie": "11",
+      "numero_voie": "12",
+      "indice_repetition": "B",
+      "type_voie": "QUAI",
+      "libelle_voie": "RAMBAUD",
+      "complement_adresse": "BATIMENT A",
+      "code_postal": "69002",
+      "libelle_commune": "LYON",
+      "cedex": null,
+      "libelle_cedex": null,
+      "nom_commercial": null,
+      "liste_enseignes": ["BATI CONFLUENCE"]
+    },
+    "matching_etablissements": [
+      {
+        "siret": "91234500600015",
+        "est_siege": false,
+        "etat_administratif": "F",
+        "activite_principale": "43.99C",
+        "tranche_effectif_salarie": "02",
+        "adresse": "ZA DES PLATIERES 3 RUE DE L'INDUSTRIE 38300 BOURGOIN-JALLIEU",
+        "nom_commercial": "BC ISERE",
+        "liste_enseignes": null
+      }
+    ],
+    "dirigeants": [
+      { "nom": "DUPONT-MARTIN", "prenoms": "JEAN PIERRE", "qualite": "Président de SAS", "type_dirigeant": "personne physique", "date_de_naissance": "1970-01" },
+      { "nom": "JAY (DEBON)", "prenoms": "MARIE-ANGE", "qualite": "Directeur général", "type_dirigeant": "personne physique" },
+      { "siren": "123456789", "denomination": "AUDIT CONSEIL", "qualite": "Commissaire aux comptes titulaire", "type_dirigeant": "personne morale" }
+    ]
+  },
+  "cas": [
+    {
+      "nom": "recherche par nom : siège",
+      "siret": null,
+      "attendu": {
+        "siren": "912345006", "siret": "91234500600007", "raison_sociale": "BATI CONFLUENCE", "nom_commercial": "BATI CONFLUENCE", "sigle": "BC",
+        "naf": "41.20B", "forme_juridique": "5710", "forme_libelle": "Société par actions simplifiée (SAS)", "date_creation": "2012-04-02",
+        "effectif": "10 à 19 salariés", "etat_administratif": "A", "siege": true, "tva_intra": "FR95912345006", "service_public": false, "rge": true,
+        "categorie": "PME", "etablissements_ouverts": 2,
+        "adresse": { "ligne1": "12 B QUAI RAMBAUD", "ligne2": "BATIMENT A", "code_postal": "69002", "ville": "LYON", "pays": "FR" },
+        "dirigeants": [
+          { "nom": "Dupont-Martin", "prenom": "Jean", "qualite": "Président de SAS" },
+          { "nom": "Jay (Debon)", "prenom": "Marie-Ange", "qualite": "Directeur général" }
+        ]
+      }
+    },
+    {
+      "nom": "recherche par SIRET d'un établissement fermé : adresse sur une ligne",
+      "siret": "91234500600015",
+      "attendu": {
+        "siren": "912345006", "siret": "91234500600015", "raison_sociale": "BATI CONFLUENCE", "nom_commercial": "BC ISERE", "sigle": "BC",
+        "naf": "43.99C", "forme_juridique": "5710", "forme_libelle": "Société par actions simplifiée (SAS)", "date_creation": "2012-04-02",
+        "effectif": "3 à 5 salariés", "etat_administratif": "F", "siege": false, "tva_intra": "FR95912345006", "service_public": false, "rge": true,
+        "categorie": "PME", "etablissements_ouverts": 2,
+        "adresse": { "ligne1": "ZA DES PLATIERES 3 RUE DE L'INDUSTRIE", "ligne2": null, "code_postal": "38300", "ville": "BOURGOIN-JALLIEU", "pays": "FR" },
+        "dirigeants": [
+          { "nom": "Dupont-Martin", "prenom": "Jean", "qualite": "Président de SAS" },
+          { "nom": "Jay (Debon)", "prenom": "Marie-Ange", "qualite": "Directeur général" }
+        ]
+      }
+    },
+    {
+      "nom": "SIRET non trouvé parmi les établissements : siège",
+      "siret": "91234500600023",
+      "attendu": {
+        "siren": "912345006", "siret": "91234500600007", "raison_sociale": "BATI CONFLUENCE", "nom_commercial": "BATI CONFLUENCE", "sigle": "BC",
+        "naf": "41.20B", "forme_juridique": "5710", "forme_libelle": "Société par actions simplifiée (SAS)", "date_creation": "2012-04-02",
+        "effectif": "10 à 19 salariés", "etat_administratif": "A", "siege": true, "tva_intra": "FR95912345006", "service_public": false, "rge": true,
+        "categorie": "PME", "etablissements_ouverts": 2,
+        "adresse": { "ligne1": "12 B QUAI RAMBAUD", "ligne2": "BATIMENT A", "code_postal": "69002", "ville": "LYON", "pays": "FR" },
+        "dirigeants": [
+          { "nom": "Dupont-Martin", "prenom": "Jean", "qualite": "Président de SAS" },
+          { "nom": "Jay (Debon)", "prenom": "Marie-Ange", "qualite": "Directeur général" }
+        ]
+      }
+    }
+  ]
+}

@@ -11,6 +11,8 @@
     "modules/fiche/js",
     "modules/ged/js",
     "modules/bibliotheque/js",
+    "modules/annuaire/js",
+    "modules/entreprises-fr/js",
     "modules/navigation/js",
     "client"
   ],

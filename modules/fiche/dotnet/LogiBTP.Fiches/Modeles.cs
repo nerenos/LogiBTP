@@ -60,6 +60,11 @@ public sealed class ChampFiche
     public JsonElement? Defaut { get; set; }
     /// <summary>Référentiel affiché en liste déroulante par la fiche spécialisée (bibliothèque, famille, nature…).</summary>
     public string? Reference { get; set; }
+    /// <summary>
+    /// Champ géré par la spécialisation, hors de la table (sans colonne) : données liées lues et écrites par
+    /// SpecialisationFiche.LireGeresAsync / EcrireGeresAsync (coordonnées partagées, contacts…), type json.
+    /// </summary>
+    public bool Gere { get; set; }
     public int Ordre { get; set; }
     public bool Actif { get; set; } = true;
 }

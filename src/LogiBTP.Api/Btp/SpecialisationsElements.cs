@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Text.Json;
+using LogiBTP.Annuaire;
+using LogiBTP.Annuaire.Web;
 using LogiBTP.Fiches;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -9,21 +12,57 @@ using LogiBTP.Socle.Web;
 namespace LogiBTP.Api.Btp;
 
 /// <summary>
-/// Fiches du cœur (salarié, matériel, élément de bibliothèque) : contrôles métier, répliques de FicheSalarie.validerMetier
-/// et FicheMateriel.validerMetier (client/src/app/fiches/fiches.js) ; prix des éléments recalculés avant écriture.
+/// Fiches du cœur (salarié, matériel, élément de bibliothèque, personne et individu de l'annuaire) : contrôles métier,
+/// répliques de validerMetier (client/src/app/fiches/fiches.js, fiche-annuaire.js) ; prix des éléments recalculés avant
+/// écriture ; champs gérés de l'annuaire (coordonnées, rattachements, liens) délégués à ServiceAnnuaire.
 /// </summary>
 public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : SpecialisationFiche
 {
+    private static bool Annuaire(string type) => type is "personne" or "individu";
+
     public override async Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
         IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
     {
-        if (type != "element")
+        using var scope = scopes.CreateScope();
+        if (type == "element")
         {
-            await base.AvantEcritureAsync(type, creation, id, aEcrire, valeurs, proprietes, u, ct);
+            await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);
             return;
         }
+        if (type == "personne")
+        {
+            // Identifiants enregistrés sans espaces ; pays en majuscules (comme FichePersonne.enregistrer).
+            foreach (var k in new[] { "siren", "siret", "tva_intra", "iban", "bic" })
+                if (aEcrire.TryGetValue(k, out var v) && v is not null) aEcrire[k] = Identifiants.Compacter(v);
+            if (aEcrire.TryGetValue("pays", out var p) && p is not null) aEcrire["pays"] = p.Trim().ToUpperInvariant();
+            await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().ControlerPersonne(id is null ? null : long.Parse(id),
+                Vrai(valeurs.GetValueOrDefault("societe_base")), valeurs.GetValueOrDefault("siret")?.ToString(),
+                ValidationFiche.Nombre(valeurs.GetValueOrDefault("parent_id")) is { } parent ? (long)parent : null, ct);
+        }
+        await base.AvantEcritureAsync(type, creation, id, aEcrire, valeurs, proprietes, u, ct);
+    }
+
+    private static bool Vrai(object? v) => v is true || (v is string s && s == "true") || (v is JsonElement e && e.ValueKind == JsonValueKind.True);
+
+    public override async Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct)
+    {
+        if (!Annuaire(type)) return await base.LireGeresAsync(type, id, u, ct);
         using var scope = scopes.CreateScope();
-        await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);
+        return await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct);
+    }
+
+    public override async Task ValiderGeresAsync(string type, string? id, IReadOnlyDictionary<string, JsonElement> geres, IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct)
+    {
+        if (!Annuaire(type) || geres.Count == 0) return;
+        using var scope = scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().ValiderGeres(type, id is null ? null : long.Parse(id), geres, ct);
+    }
+
+    public override async Task EcrireGeresAsync(string type, string id, bool creation, IReadOnlyDictionary<string, JsonElement> geres, IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct)
+    {
+        if (!Annuaire(type)) { await base.EcrireGeresAsync(type, id, creation, geres, valeurs, u, ct); return; }
+        using var scope = scopes.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().EcrireGeres(type, long.Parse(id), geres, u, ct);
     }
 
     private static string? Date(object? v) => v?.ToString() is { Length: >= 10 } s ? s[..10] : null;
@@ -33,6 +72,10 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         switch (type)
         {
+            case "personne":
+                string? T(string k) => v.GetValueOrDefault(k)?.ToString();
+                foreach (var e in Identifiants.Erreurs(new(T("pays"), T("siren"), T("siret"), T("tva_intra"), T("iban"), T("bic")))) yield return new(e.Champ, "METIER", e.Message);
+                break;
             case "salarie":
                 var entree = Date(v.GetValueOrDefault("date_entree"));
                 var naissance = Date(v.GetValueOrDefault("date_naissance"));

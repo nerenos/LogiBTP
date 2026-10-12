@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "LogiBTP – application web : accueil, navigation, listes, fiches, documents, GED",
+  "description": "LogiBTP – application web : accueil, navigation, listes, fiches, documents, GED, bibliothèque, annuaire",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -20,7 +20,9 @@
     "@logibtp/fiche": "0.1.0",
     "@logibtp/ged": "0.1.0",
     "@logibtp/navigation": "0.1.0",
-    "@logibtp/bibliotheque": "0.1.0"
+    "@logibtp/bibliotheque": "0.1.0",
+    "@logibtp/annuaire": "0.1.0",
+    "@logibtp/entreprises-fr": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

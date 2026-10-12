@@ -134,6 +134,8 @@ export class ModeleVue {
   /** Texte affiché d'une valeur (filtres par valeur, recherche locale, bulles). */
   texte(valeur, colonne) {
     if (estVide(valeur)) return '';
+    // Colonne multivaluée : chaque valeur mise en forme, jointes par « , ».
+    if (Array.isArray(valeur)) return valeur.filter((x) => !estVide(x)).map((x) => this.texte(x, colonne)).join(', ');
     switch (colonne.format) {
       case 'nombre': return Number.isNaN(Number(valeur)) ? String(valeur) : formatNombre(valeur, colonne.decimales ?? 2);
       case 'date': return dateFr(valeur);

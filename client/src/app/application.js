@@ -10,6 +10,7 @@ import { creerFournisseurFiche } from './fiches/fiches.js';
 import { ficheDeLigne } from './fiches/definitions.js';
 import { creerFournisseurGed } from './ged/ged.js';
 import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
+import { creerFournisseurAnnuaire, creerFournisseurEntreprises, relierTarifs } from './annuaire/annuaire.js';
 import { DEFINITION_DEMO } from './demo.js';
 import { societeCourante } from './societe.js';
 import { menus } from './navigation/menus.js';
@@ -23,7 +24,9 @@ const LOGO = `<svg viewBox="0 0 104 24" role="img" aria-label="LogiBTP"><g fill=
   <text x="25" y="18" font-family="system-ui, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="currentColor">Logi<tspan fill="#e8a33d">BTP</tspan></text></svg>`;
 
 /** Pour une fiche, la liste où revenir quand elle a été ouverte directement (fenêtre séparée, session restaurée). */
-export const LISTE_PAR_TYPE = { salarie: '/liste/salaries', materiel: '/liste/materiels', element: '/liste/bibliotheque' };
+export const LISTE_PAR_TYPE = {
+  salarie: '/liste/salaries', materiel: '/liste/materiels', element: '/liste/bibliotheque', personne: '/liste/tiers', individu: '/liste/contacts',
+};
 
 export class Application {
   constructor() {
@@ -83,8 +86,11 @@ export class Application {
       const ged = await creerFournisseurGed({ enLigne: this.enLigne, lignes });
       const bibliotheque = creerFournisseurBibliotheque({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
       const elements = this.enLigne ? [] : bibliotheque.elements;
-      const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements });
-      const fiche = creerFournisseurFiche({ enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque });
+      const annuaire = creerFournisseurAnnuaire({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
+      const entreprises = creerFournisseurEntreprises({ enLigne: this.enLigne });
+      if (!this.enLigne) relierTarifs(bibliotheque);
+      const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements, annuaire: this.enLigne ? null : annuaire });
+      const fiche = creerFournisseurFiche({ enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque, annuaire: this.enLigne ? null : annuaire });
       if (!this.enLigne) {
         fiche.profil = this.preferences.get('profilDemo');
         ged.profil = this.preferences.get('profilDemo');
@@ -95,7 +101,7 @@ export class Application {
           if (v) throw Object.assign(new Error(`Fiche en cours de modification par ${v.utilisateur} : saisie impossible pour l'instant`), { code: 'FICHE_EN_MODIFICATION', statut: 409 });
         };
       }
-      return { liste, fiche, ged, bibliotheque };
+      return { liste, fiche, ged, bibliotheque, annuaire, entreprises };
     })();
     return this.servicesPrets;
   }
@@ -117,6 +123,7 @@ export class Application {
     s.fiche.profil = profil;
     s.ged.profil = profil;
     if ('profil' in s.bibliotheque) s.bibliotheque.profil = profil;
+    if ('profil' in s.annuaire) s.annuaire.profil = profil;
     this.rendreInfos();
     this.message(`Profil de démonstration : ${profil}`);
   }

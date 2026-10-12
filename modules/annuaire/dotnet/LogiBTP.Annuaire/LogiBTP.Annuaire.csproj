@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Annuaire</RootNamespace>
+    <Description>Module Annuaire LogiBTP : contrôles des identifiants (SIREN, SIRET, TVA, IBAN, BIC), plan d'enregistrement des coordonnées partagées.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+</Project>

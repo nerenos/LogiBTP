@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
+using LogiBTP.Annuaire.Web;
 using LogiBTP.Api.Btp;
 using LogiBTP.Bibliotheque.Web;
 using LogiBTP.Documents.Web;
+using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -33,6 +35,11 @@ builder.Services.AddModuleFiche<SpecialisationFicheBtp>(Base);
 builder.Services.AddModuleGed<SpecialisationGedBtp>(Base);
 // Module Bibliothèque : bibliothèques, familles, natures, tarifs fournisseurs, historique des prix (modules/bibliotheque/db/060).
 builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
+// Module Annuaire : personnes, individus, rattachements, liens, coordonnées partagées (modules/annuaire/db/070) ;
+// fiches personne et individu par le module Fiche (champs gérés délégués à ServiceAnnuaire).
+builder.Services.AddModuleAnnuaire(Base);
+// Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
+builder.Services.AddModuleEntreprisesFr();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -50,5 +57,7 @@ api.MapModuleListe();
 api.MapModuleFiche();
 api.MapModuleGed();
 api.MapModuleBibliotheque();
+api.MapModuleAnnuaire();
+api.MapModuleEntreprisesFr();
 
 app.Run();

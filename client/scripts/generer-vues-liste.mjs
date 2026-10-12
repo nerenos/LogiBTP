@@ -128,3 +128,72 @@ SELECT setval(pg_get_serial_sequence('coefficient_periode', 'cop_id'), (SELECT m
 `;
 fs.writeFileSync(path.join(racine, 'db', '116_bibliotheque_demo.sql'), sqlBibliotheque);
 console.log('db/116_bibliotheque_demo.sql généré');
+
+// ------------------------------------------------------------------ annuaire : référentiels et démonstration
+const A = await import('../src/app/annuaire/donnees.js');
+const champsTable = (type) => TYPES_FICHE[type].definition.champs.filter((c) => c.colonne && !c.gere);
+const valeurSql = (c, v) => {
+  if (v === null || v === undefined || v === '') return c.type === 'json' ? `'[]'::jsonb` : 'NULL';
+  if (c.type === 'json') return j(v);
+  if (c.type === 'booleen') return b(v);
+  if (c.type === 'nombre') return String(v);
+  return q(v);
+};
+const lignesTable = (type, lignes, cle) => {
+  const champs = champsTable(type).filter((c) => lignes.some((l) => l[c.code] !== undefined));
+  return {
+    colonnes: [cle, ...champs.map((c) => c.colonne)].join(', '),
+    valeurs: lignes.map((l) => ` (${[l.id, ...champs.map((c) => valeurSql(c, l[c.code]))].join(', ')})`).join(',\n'),
+  };
+};
+const per = lignesTable('personne', A.PERSONNES, 'per_id');
+const ind = lignesTable('individu', A.INDIVIDUS, 'ind_id');
+const sqlAnnuaire = `-- =============================================================================
+-- Cœur LogiBTP – annuaire : référentiels (niveaux, casquettes, types de lien, rôles) et données de démonstration
+-- (personnes, individus, rattachements, liens, coordonnées partagées, tarifs reliés aux fournisseurs).
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/annuaire/donnees.js : ne pas modifier.
+-- =============================================================================
+
+INSERT INTO niveau_personne (niv_code, niv_libelle, niv_icone, niv_morale, niv_ordre, niv_actif) VALUES
+${A.NIVEAUX.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.icone)}, ${b(x.morale)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
+
+INSERT INTO casquette (cas_code, cas_libelle, cas_icone, cas_groupes, cas_ordre, cas_actif) VALUES
+${A.CASQUETTES.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.icone)}, ${j(x.groupes)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
+
+INSERT INTO type_lien (tli_code, tli_libelle, tli_libelle_inverse, tli_ordre, tli_actif) VALUES
+${A.TYPES_LIEN.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.libelle_inverse)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
+
+INSERT INTO role_individu (rol_code, rol_libelle, rol_icone, rol_ordre, rol_actif) VALUES
+${A.ROLES.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.icone)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
+
+-- Personnes : parents insérés avant leurs niveaux inférieurs (ordre des identifiants).
+INSERT INTO personne (${per.colonnes}) VALUES
+${per.valeurs};
+
+INSERT INTO individu (${ind.colonnes}) VALUES
+${ind.valeurs};
+
+INSERT INTO rattachement (rat_id, rat_ind_id, rat_per_id, rat_fonction, rat_service, rat_principal, rat_titulaire, rat_debut, rat_fin, rat_actif, rat_commentaire) VALUES
+${A.RATTACHEMENTS.map((r) => ` (${r.id}, ${r.ind_id}, ${r.per_id}, ${q(r.fonction)}, ${q(r.service)}, ${b(r.principal)}, ${b(r.titulaire)}, ${q(r.debut)}, ${q(r.fin)}, ${b(r.actif)}, ${q(r.commentaire)})`).join(',\n')};
+
+INSERT INTO lien_personne (lpe_id, lpe_per_id, lpe_cible_id, lpe_tli_code, lpe_commentaire, lpe_debut, lpe_fin) VALUES
+${A.LIENS.map((l) => ` (${l.id}, ${l.per_id}, ${l.cible_id}, ${q(l.tli_code)}, ${q(l.commentaire)}, ${q(l.debut)}, ${q(l.fin)})`).join(',\n')};
+
+INSERT INTO coordonnee (coo_id, coo_nature, coo_valeur, coo_ligne1, coo_ligne2, coo_ligne3, coo_code_postal, coo_ville, coo_pays, coo_reseau, coo_modifie_le, coo_modifie_par) VALUES
+${A.COORDONNEES.map((c) => ` (${c.id}, ${q(c.nature)}, ${q(c.valeur)}, ${q(c.ligne1)}, ${q(c.ligne2)}, ${q(c.ligne3)}, ${q(c.code_postal)}, ${q(c.ville)}, ${q(c.pays)}, ${q(c.reseau)}, ${q(c.modifie_le)}, ${q(c.modifie_par)})`).join(',\n')};
+
+INSERT INTO usage_coordonnee (uco_id, uco_coo_id, uco_per_id, uco_ind_id, uco_rat_id, uco_usage, uco_libelle, uco_principal, uco_ordre) VALUES
+${A.USAGES.map((u) => ` (${u.id}, ${u.coo_id}, ${n(u.per_id)}, ${n(u.ind_id)}, ${n(u.rat_id)}, ${q(u.usage)}, ${q(u.libelle)}, ${b(u.principal)}, ${u.ordre})`).join(',\n')};
+
+-- Tarifs de la bibliothèque de démonstration reliés à leurs fournisseurs.
+${Object.entries(A.TIERS_TARIFS).map(([nom, id]) => `UPDATE tarif_fournisseur SET tfo_tiers_id = ${id} WHERE tfo_fournisseur = ${q(nom)};`).join('\n')}
+
+SELECT setval(pg_get_serial_sequence('personne', 'per_id'), (SELECT max(per_id) FROM personne));
+SELECT setval(pg_get_serial_sequence('individu', 'ind_id'), (SELECT max(ind_id) FROM individu));
+SELECT setval(pg_get_serial_sequence('rattachement', 'rat_id'), (SELECT max(rat_id) FROM rattachement));
+SELECT setval(pg_get_serial_sequence('lien_personne', 'lpe_id'), (SELECT max(lpe_id) FROM lien_personne));
+SELECT setval(pg_get_serial_sequence('coordonnee', 'coo_id'), (SELECT max(coo_id) FROM coordonnee));
+SELECT setval(pg_get_serial_sequence('usage_coordonnee', 'uco_id'), (SELECT max(uco_id) FROM usage_coordonnee));
+`;
+fs.writeFileSync(path.join(racine, 'db', '141_annuaire_demo.sql'), sqlAnnuaire);
+console.log('db/141_annuaire_demo.sql généré');

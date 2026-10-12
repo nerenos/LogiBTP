@@ -1,5 +1,5 @@
 {
-  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET. Types d'élément du thème (« types ») : la ligne doit être de l'un d'eux (vide = tous).",
+  "description": "Recherche (chaque mot dans au moins une colonne), segments, tri avec vides en dernier puis ID, pagination par clé. Textes de tri en minuscules ASCII : même ordre quelle que soit la collation. Filtres fixes de la vue (« filtres ») : toujours appliqués, en ET. Types d'élément du thème (« types ») : la ligne doit être de l'un d'eux (vide = tous). Colonne multivaluée (tableau, « etiquettes ») : un segment ou un filtre « parmi » retient la ligne si l'une de ses valeurs est retenue (vide = tableau vide ou absent) ; les comptes portent sur chaque valeur ; la recherche et « contient » portent sur les valeurs jointes par « , ».",
   "source": {
     "colonnes": [
       {
@@ -29,6 +29,10 @@
       {
         "code": "type_element",
         "type": "text"
+      },
+      {
+        "code": "etiquettes",
+        "type": "ARRAY"
       }
     ],
     "colonne_id": "id",
@@ -40,7 +44,11 @@
         "service": "chantier",
         "montant": 120.5,
         "actif": true,
-        "type_element": "salarie"
+        "type_element": "salarie",
+        "etiquettes": [
+          "Client",
+          "Fournisseur"
+        ]
       },
       {
         "id": 2,
@@ -49,7 +57,10 @@
         "service": "bureau",
         "montant": 80,
         "actif": false,
-        "type_element": "interim"
+        "type_element": "interim",
+        "etiquettes": [
+          "Client"
+        ]
       },
       {
         "id": 3,
@@ -58,7 +69,8 @@
         "service": "bureau",
         "montant": null,
         "actif": true,
-        "type_element": "salarie"
+        "type_element": "salarie",
+        "etiquettes": []
       },
       {
         "id": 4,
@@ -67,7 +79,11 @@
         "service": "chantier",
         "montant": 80,
         "actif": true,
-        "type_element": "materiel"
+        "type_element": "materiel",
+        "etiquettes": [
+          "Fournisseur",
+          "Sous-traitant"
+        ]
       },
       {
         "id": 5,
@@ -76,7 +92,8 @@
         "service": "atelier",
         "montant": 300,
         "actif": true,
-        "type_element": "salarie"
+        "type_element": "salarie",
+        "etiquettes": null
       },
       {
         "id": 6,
@@ -85,7 +102,10 @@
         "service": "chantier",
         "montant": 15,
         "actif": false,
-        "type_element": "interim"
+        "type_element": "interim",
+        "etiquettes": [
+          "Sous-traitant"
+        ]
       },
       {
         "id": 7,
@@ -94,7 +114,10 @@
         "service": null,
         "montant": 80,
         "actif": true,
-        "type_element": "materiel"
+        "type_element": "materiel",
+        "etiquettes": [
+          "Client"
+        ]
       }
     ],
     "colonne_type": "type_element"
@@ -102,7 +125,8 @@
   "recherche": [
     "nom",
     "ville",
-    "service"
+    "service",
+    "etiquettes"
   ],
   "cas": [
     {
@@ -489,6 +513,114 @@
         1,
         3
       ]
+    },
+    {
+      "nom": "segment multivalué : une des valeurs",
+      "requete": {
+        "segments": {
+          "etiquettes": [
+            "Fournisseur"
+          ]
+        }
+      },
+      "attendu": [
+        1,
+        4
+      ]
+    },
+    {
+      "nom": "segment multivalué avec vide",
+      "requete": {
+        "segments": {
+          "etiquettes": [
+            "Sous-traitant",
+            null
+          ]
+        }
+      },
+      "attendu": [
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "nom": "segments multivalué et simple croisés",
+      "requete": {
+        "segments": {
+          "etiquettes": [
+            "Client"
+          ],
+          "ville": [
+            "lyon"
+          ]
+        }
+      },
+      "attendu": [
+        1,
+        7
+      ]
+    },
+    {
+      "nom": "recherche dans une colonne multivaluée",
+      "requete": {
+        "recherche": "sous-trait"
+      },
+      "attendu": [
+        4,
+        6
+      ]
+    },
+    {
+      "nom": "filtre de vue multivalué : parmi",
+      "filtres": [
+        {
+          "colonne": "etiquettes",
+          "op": "dans",
+          "valeurs": [
+            "Client",
+            "Sous-traitant"
+          ]
+        }
+      ],
+      "requete": {},
+      "attendu": [
+        1,
+        2,
+        4,
+        6,
+        7
+      ]
+    },
+    {
+      "nom": "filtre de vue multivalué : vide",
+      "filtres": [
+        {
+          "colonne": "etiquettes",
+          "op": "vide"
+        }
+      ],
+      "requete": {},
+      "attendu": [
+        3,
+        5
+      ]
+    },
+    {
+      "nom": "filtre de vue multivalué : contient",
+      "filtres": [
+        {
+          "colonne": "etiquettes",
+          "op": "contient",
+          "valeur": "four"
+        }
+      ],
+      "requete": {},
+      "attendu": [
+        1,
+        4
+      ]
     }
   ],
   "segments": [
@@ -571,6 +703,53 @@
         {
           "valeur": "paris",
           "nombre": 2
+        }
+      ]
+    },
+    {
+      "nom": "comptes par valeur d'une colonne multivaluée",
+      "requete": {},
+      "colonne": "etiquettes",
+      "attendu": [
+        {
+          "valeur": "Client",
+          "nombre": 3
+        },
+        {
+          "valeur": "Fournisseur",
+          "nombre": 2
+        },
+        {
+          "valeur": "Sous-traitant",
+          "nombre": 2
+        },
+        {
+          "valeur": null,
+          "nombre": 2
+        }
+      ]
+    },
+    {
+      "nom": "comptes multivalués sans le segment lui-même",
+      "requete": {
+        "segments": {
+          "etiquettes": [
+            "Client"
+          ],
+          "ville": [
+            "paris"
+          ]
+        }
+      },
+      "colonne": "etiquettes",
+      "attendu": [
+        {
+          "valeur": "Client",
+          "nombre": 1
+        },
+        {
+          "valeur": "Sous-traitant",
+          "nombre": 1
         }
       ]
     }

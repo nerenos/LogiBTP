@@ -14,7 +14,8 @@ public sealed record RequeteSql(string Texte, IReadOnlyList<ParametreSql> Parame
 /// <item>types d'élément du thème de la vue : la ligne doit être de l'un d'eux (aucun = tous) ;</item>
 /// <item>filtres fixes de la vue : toujours appliqués, en ET ;</item>
 /// <item>recherche : chaque mot contenu, sans casse ni accents (f_sans_accent), dans au moins une colonne de recherche ;</item>
-/// <item>segments : valeur (texte brut) parmi celles retenues, null = vide ;</item>
+/// <item>segments : valeur (texte brut) parmi celles retenues, null = vide ; colonne multivaluée (tableau) : l'une de ses
+/// valeurs retenue, null = tableau vide ou absent ; comptes par valeur du tableau ;</item>
 /// <item>tri : colonnes demandées puis identifiant croissant, vides toujours en dernier ;</item>
 /// <item>pagination par clé : lignes strictement après le curseur (valeurs de tri de la dernière ligne, puis ID).</item>
 /// </list>
@@ -87,6 +88,15 @@ public partial class ConstructeurRequete
 
     protected string Id => Col(Source.ColonneId);
 
+    /// <summary>Colonne multivaluée (tableau PostgreSQL : data_type ARRAY).</summary>
+    protected bool EstTableau(string code) => Connue(code) &&
+        (_colonnes[code].Type.Equals("ARRAY", StringComparison.OrdinalIgnoreCase) || _colonnes[code].Type.EndsWith("[]", StringComparison.Ordinal));
+
+    /// <summary>Texte brut d'une colonne (tableau : valeurs jointes par « , », comme texteBrut côté JS).</summary>
+    protected string Texte(string code) => EstTableau(code) ? $"array_to_string({Col(code)}, ', ')" : $"{Col(code)}::text";
+
+    private string Vide(string code) => EstTableau(code) ? $"({Col(code)} IS NULL OR cardinality({Col(code)}) = 0)" : $"{Col(code)} IS NULL";
+
     /// <summary>Colonnes lues : colonnes non calculées de la vue présentes dans la source.</summary>
     protected virtual IReadOnlyList<string> ColonnesLues() =>
         Definition.Colonnes.Where(c => !c.Calcul && Connue(c.Code)).Select(c => c.Code).Distinct(StringComparer.Ordinal).ToList();
@@ -119,15 +129,15 @@ public partial class ConstructeurRequete
         {
             if (colonnes.Count == 0) { conditions.Add("FALSE"); break; }
             var p = P("%" + EchapperLike(mot) + "%");
-            conditions.Add("(" + string.Join(" OR ", colonnes.Select(c => $"f_sans_accent({Col(c)}::text) LIKE f_sans_accent({p}) ESCAPE '\\'")) + ")");
+            conditions.Add("(" + string.Join(" OR ", colonnes.Select(c => $"f_sans_accent({Texte(c)}) LIKE f_sans_accent({p}) ESCAPE '\\'")) + ")");
         }
         foreach (var (colonne, valeurs) in Demande.Segments.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             if (valeurs is not { Count: > 0 } || colonne == sansSegment) continue;
             var parties = new List<string>();
             var nonVides = valeurs.Where(v => v is not null).Cast<string>().ToArray();
-            if (nonVides.Length > 0) parties.Add($"{Col(colonne)}::text = ANY({P(nonVides)})");
-            if (valeurs.Any(v => v is null)) parties.Add($"{Col(colonne)} IS NULL");
+            if (nonVides.Length > 0) parties.Add(EstTableau(colonne) ? $"{Col(colonne)}::text[] && {P(nonVides)}" : $"{Col(colonne)}::text = ANY({P(nonVides)})");
+            if (valeurs.Any(v => v is null)) parties.Add(Vide(colonne));
             conditions.Add("(" + string.Join(" OR ", parties) + ")");
         }
         return conditions;
@@ -147,7 +157,16 @@ public partial class ConstructeurRequete
         if (!OperateursVue.Contains(f.Op)) throw new ErreurListe("FILTRE_OPERATEUR", $"Opérateur de filtre inconnu : {f.Op}");
         var col = Col(f.Colonne);
         string Motif(string debut, string fin) =>
-            $"f_sans_accent({col}::text) LIKE f_sans_accent({P(debut + EchapperLike(f.Valeur ?? "") + fin)}) ESCAPE '\\'";
+            $"f_sans_accent({Texte(f.Colonne)}) LIKE f_sans_accent({P(debut + EchapperLike(f.Valeur ?? "") + fin)}) ESCAPE '\\'";
+        if (EstTableau(f.Colonne))
+        {
+            switch (f.Op)
+            {
+                case "vide": return Vide(f.Colonne);
+                case "nonvide": return $"NOT {Vide(f.Colonne)}";
+                case "dans": return $"{col}::text[] && {P((f.Valeurs ?? []).ToArray())}";
+            }
+        }
         switch (f.Op)
         {
             case "vide": return $"({col} IS NULL OR {col}::text = '')";
@@ -242,6 +261,10 @@ public partial class ConstructeurRequete
     public virtual RequeteSql Segments(string colonne, int max = 500)
     {
         var col = Col(colonne);
+        // Colonne multivaluée : une ligne par valeur du tableau (tableau vide ou absent : une ligne vide).
+        if (EstTableau(colonne))
+            return Fin($"SELECT x.v AS valeur, count(*) AS nombre {Depuis} LEFT JOIN LATERAL (SELECT DISTINCT u FROM unnest({col}::text[]) AS u WHERE u IS NOT NULL) AS x(v) ON TRUE"
+                + $"{Where(Conditions(colonne))} GROUP BY 1 ORDER BY 1 NULLS LAST LIMIT {P(max)}");
         return Fin($"SELECT {col}::text AS valeur, count(*) AS nombre {Depuis}{Where(Conditions(colonne))} GROUP BY 1 ORDER BY 1 NULLS LAST LIMIT {P(max)}");
     }
 

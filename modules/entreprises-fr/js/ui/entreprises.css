@@ -1,0 +1,15 @@
+/* @logibtp/entreprises-fr/ui – recherche dans l'annuaire des entreprises. */
+
+.entreprises-recherche { width: min(52rem, 100%); }
+.entreprises-barre { display: flex; gap: 0.4rem; padding: 0.6rem 1rem 0; }
+.entreprises-barre input { flex: 1; }
+.entreprises-zone { min-height: 12rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.entreprise { border: 1px solid var(--bord); border-radius: 6px; padding: 0.4rem 0.6rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; }
+.entreprise:hover { border-color: var(--accent); }
+.entreprise.actif { border-color: var(--accent); background: var(--accent-clair); box-shadow: inset 3px 0 0 var(--accent); }
+.entreprise-titre { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.entreprise-ferme, .entreprise-siege { font-size: 0.75em; border-radius: 3px; padding: 0 0.3rem; }
+.entreprise-ferme { background: var(--erreur-fond); color: var(--erreur); }
+.entreprise-siege { background: var(--accent-clair); color: var(--accent); }
+.entreprise details label { display: block; margin-left: 1rem; }
+.entreprises-pages { display: flex; justify-content: center; gap: 0.5rem; }

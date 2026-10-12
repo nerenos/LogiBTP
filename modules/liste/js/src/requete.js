@@ -6,15 +6,17 @@ import { motsRecherche, normaliser } from './normaliser.js';
 //   filtres     filtres fixes de la vue (définition) : toujours appliqués, en ET, avant tout le reste
 //   recherche   chaque mot doit être contenu (sans casse ni accents) dans au moins une colonne de recherche,
 //               sur le texte brut de la donnée (valeur::text côté SQL)
-//   segments    { colonne: [valeurs] } : la valeur (en texte, null = vide) doit être l'une des valeurs retenues
+//   segments    { colonne: [valeurs] } : la valeur (en texte, null = vide) doit être l'une des valeurs retenues ;
+//               colonne multivaluée (tableau) : l'une de ses valeurs doit être retenue (null = tableau vide ou absent)
 //   tri         [{ colonne, sens }] puis identifiant croissant ; vides toujours en dernier
 //   pagination  par clé (keyset) : le curseur est la liste des valeurs de tri de la dernière ligne, puis son ID
 
 const estVide = (v) => v === null || v === undefined;
 
-/** Texte brut d'une donnée, comme valeur::text en SQL. */
+/** Texte brut d'une donnée, comme valeur::text en SQL (tableau : valeurs jointes par « , », comme array_to_string). */
 export function texteBrut(v) {
   if (estVide(v)) return null;
+  if (Array.isArray(v)) return v.filter((x) => !estVide(x)).map(String).join(', ');
   if (typeof v === 'boolean') return v ? 'true' : 'false';
   return String(v);
 }
@@ -39,14 +41,16 @@ function comparerFiltre(v, ref) {
 /** La ligne satisfait-elle un filtre fixe de la vue ({ colonne, op, valeur, valeur2, valeurs }) ? */
 export function correspondFiltreVue(ligne, f) {
   const v = ligne[f.colonne];
-  const vide = v === null || v === undefined || v === '';
+  const vide = v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
   const texte = normaliser(texteBrut(v) ?? '');
   switch (f.op) {
     case 'vide': return vide;
     case 'nonvide': return !vide;
     case 'vrai': return v === true;
     case 'faux': return v === false;
-    case 'dans': return !estVide(v) && (f.valeurs ?? []).some((x) => texteBrut(v) === String(x));
+    case 'dans':
+      if (Array.isArray(v)) return v.some((e) => (f.valeurs ?? []).some((x) => String(e) === String(x)));
+      return !estVide(v) && (f.valeurs ?? []).some((x) => texteBrut(v) === String(x));
     case 'contient': return !estVide(v) && texte.includes(normaliser(f.valeur));
     case 'commence': return !estVide(v) && texte.startsWith(normaliser(f.valeur));
     case 'finit': return !estVide(v) && texte.endsWith(normaliser(f.valeur));
@@ -73,6 +77,10 @@ export function filtrer(lignes, { recherche, segments, filtres, types }, colonne
     if (types?.length && !types.includes(String(l._type))) return false;
     if (filtres?.length && !filtres.every((f) => correspondFiltreVue(l, f))) return false;
     for (const [col, valeurs] of seg) {
+      if (Array.isArray(l[col]) || (l[col] === null && valeurs.some((v) => v === null))) {
+        if (!correspondSegmentTableau(l[col], valeurs)) return false;
+        continue;
+      }
       const t = texteBrut(l[col]);
       if (!valeurs.some((v) => (v === null ? t === null : t === String(v)))) return false;
     }
@@ -80,6 +88,12 @@ export function filtrer(lignes, { recherche, segments, filtres, types }, colonne
     const textes = colonnesRecherche.map((c) => normaliser(texteBrut(l[c]) ?? ''));
     return mots.every((m) => textes.some((t) => t.includes(m)));
   });
+}
+
+/** Segment sur une colonne multivaluée : l'une des valeurs retenue, ou null retenu et tableau vide ou absent. */
+function correspondSegmentTableau(v, valeurs) {
+  const elements = (v ?? []).filter((x) => !estVide(x)).map(String);
+  return valeurs.some((x) => (x === null ? elements.length === 0 : elements.includes(String(x))));
 }
 
 /** Comparaison de deux valeurs de tri non vides : nombres, booléens, puis textes. */
@@ -125,12 +139,20 @@ export function jusqua(lignesTriees, tri, curseur) {
   return curseur ? lignesTriees.filter((l) => comparerCles(cleTri(l, tri), curseur, tri) <= 0) : lignesTriees;
 }
 
-/** Comptes par valeur d'une colonne de segment (texte brut, null = vide), triés par valeur. */
+/**
+ * Comptes par valeur d'une colonne de segment (texte brut, null = vide), triés par valeur ; colonne multivaluée :
+ * chaque valeur du tableau est comptée (tableau vide = vide).
+ */
 export function comptesSegment(lignes, colonne) {
   const m = new Map();
+  const compter = (t) => m.set(t, (m.get(t) ?? 0) + 1);
   for (const l of lignes) {
-    const t = texteBrut(l[colonne]);
-    m.set(t, (m.get(t) ?? 0) + 1);
+    const v = l[colonne];
+    if (Array.isArray(v)) {
+      const elements = [...new Set(v.filter((x) => !estVide(x)).map(String))];
+      if (!elements.length) compter(null);
+      elements.forEach(compter);
+    } else compter(texteBrut(v));
   }
   return [...m].map(([valeur, nombre]) => ({ valeur, nombre }))
     .sort((a, b) => (a.valeur === null ? 1 : b.valeur === null ? -1 : comparerCle(a.valeur, b.valeur)));

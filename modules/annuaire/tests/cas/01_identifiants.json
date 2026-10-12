@@ -1,0 +1,99 @@
+{
+  "description": "Identifiants des personnes : SIREN (9 chiffres, Luhn ; La Poste 356000000 fait exception), SIRET (14 chiffres, Luhn ; La Poste : somme des chiffres multiple de 5, sauf le siège 35600000000048), clé de TVA française (12 + 3 × (SIREN mod 97)) mod 97, TVA intracommunautaire (préfixe pays, France : clé contrôlée), IBAN (modulo 97), BIC. Les valeurs sont compactées (espaces, points, tirets retirés, majuscules) avant contrôle, sauf pour SIREN et SIRET contrôlés tels quels par les fonctions. Contrôles d'une personne : erreurs { champ, code } dans l'ordre pays, siren, siret, tva_intra, iban, bic.",
+  "siren": [
+    { "valeur": "404833048", "attendu": true },
+    { "valeur": "552100554", "attendu": true },
+    { "valeur": "356000000", "attendu": true },
+    { "valeur": "123456789", "attendu": false },
+    { "valeur": "40483304", "attendu": false },
+    { "valeur": "40483304A", "attendu": false }
+  ],
+  "siret": [
+    { "valeur": "40483304800022", "attendu": true },
+    { "valeur": "40483304800023", "attendu": false },
+    { "valeur": "55210055400013", "attendu": true },
+    { "valeur": "35600000000048", "attendu": true },
+    { "valeur": "35600000049837", "attendu": true },
+    { "valeur": "35600000049838", "attendu": false },
+    { "valeur": "4048330480002", "attendu": false }
+  ],
+  "cle_tva": [
+    { "siren": "404833048", "attendu": "83" },
+    { "siren": "552100554", "attendu": "96" },
+    { "siren": "356000000", "attendu": "39" },
+    { "siren": "542051180", "attendu": "59" }
+  ],
+  "tva": [
+    { "valeur": "FR83404833048", "attendu": true },
+    { "valeur": "fr 83 404 833 048", "attendu": true },
+    { "valeur": "FR84404833048", "attendu": false },
+    { "valeur": "FRA1404833048", "attendu": true },
+    { "valeur": "FR8340483304", "attendu": false },
+    { "valeur": "DE123456789", "attendu": true },
+    { "valeur": "EL094014201", "attendu": true },
+    { "valeur": "ZZ123456", "attendu": false },
+    { "valeur": "DE1", "attendu": false }
+  ],
+  "iban": [
+    { "valeur": "FR7630006000011234567890189", "attendu": true },
+    { "valeur": "FR76 3000 6000 0112 3456 7890 189", "attendu": true },
+    { "valeur": "FR7630006000011234567890188", "attendu": false },
+    { "valeur": "DE89370400440532013000", "attendu": true },
+    { "valeur": "GB82WEST12345698765432", "attendu": true },
+    { "valeur": "FR76300", "attendu": false }
+  ],
+  "bic": [
+    { "valeur": "BNPAFRPPXXX", "attendu": true },
+    { "valeur": "BNPAFRPP", "attendu": true },
+    { "valeur": "bnpa fr pp", "attendu": true },
+    { "valeur": "BNP", "attendu": false },
+    { "valeur": "BNPAFRPPXX", "attendu": false }
+  ],
+  "personnes": [
+    {
+      "nom": "société française complète et cohérente",
+      "valeurs": { "pays": "FR", "siren": "404833048", "siret": "40483304800022", "tva_intra": "FR83404833048", "iban": "FR7630006000011234567890189", "bic": "BNPAFRPPXXX" },
+      "erreurs": []
+    },
+    {
+      "nom": "valeurs vides : aucune erreur",
+      "valeurs": { "pays": null, "siren": null, "siret": "", "tva_intra": " ", "iban": null, "bic": null },
+      "erreurs": []
+    },
+    {
+      "nom": "SIREN, SIRET et IBAN invalides",
+      "valeurs": { "pays": "FR", "siren": "123456789", "siret": "40483304800023", "iban": "FR7630006000011234567890188" },
+      "erreurs": [{ "champ": "siren", "code": "SIREN" }, { "champ": "siret", "code": "SIRET" }, { "champ": "iban", "code": "IBAN" }]
+    },
+    {
+      "nom": "SIRET d'une autre entreprise que le SIREN",
+      "valeurs": { "pays": "FR", "siren": "404833048", "siret": "55210055400013" },
+      "erreurs": [{ "champ": "siret", "code": "SIRET_SIREN" }]
+    },
+    {
+      "nom": "TVA française d'un autre SIREN (clé valide)",
+      "valeurs": { "pays": "FR", "siren": "404833048", "tva_intra": "FR96552100554" },
+      "erreurs": [{ "champ": "tva_intra", "code": "TVA_SIREN" }]
+    },
+    {
+      "nom": "TVA comparée au SIREN du SIRET si le SIREN est vide",
+      "valeurs": { "pays": "FR", "siret": "55210055400013", "tva_intra": "FR83404833048" },
+      "erreurs": [{ "champ": "tva_intra", "code": "TVA_SIREN" }]
+    },
+    {
+      "nom": "TVA à clé erronée",
+      "valeurs": { "pays": "FR", "siren": "404833048", "tva_intra": "FR84404833048" },
+      "erreurs": [{ "champ": "tva_intra", "code": "TVA" }]
+    },
+    {
+      "nom": "entreprise étrangère : TVA étrangère, BIC invalide, pays invalide",
+      "valeurs": { "pays": "DEU", "tva_intra": "DE123456789", "bic": "DEUT" },
+      "erreurs": [{ "champ": "pays", "code": "PAYS" }, { "champ": "bic", "code": "BIC" }]
+    },
+    {
+      "nom": "valeurs saisies avec espaces",
+      "valeurs": { "pays": "fr", "siren": "404 833 048", "siret": "404 833 048 00022", "tva_intra": "FR 83 404833048", "iban": "FR76 3000 6000 0112 3456 7890 189" },
+      "erreurs": []
+    }
+  ]
+}

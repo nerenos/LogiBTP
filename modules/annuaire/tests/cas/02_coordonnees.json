@@ -1,0 +1,193 @@
+{
+  "description": "Plan d'enregistrement des coordonnées d'une fiche (planifierCoordonnees / PlanCoordonnees.Planifier). existantes : usages actuels ; saisies : usages saisis dans l'ordre ; partages : nombre d'autres usages de chaque coordonnée. Saisie vide ignorée (usage existant vidé : supprimé). Coordonnée modifiée et partagée : choix requis (MODIFICATION : coordonnée modifiée pour toutes les fiches ; AUTRE : nouvelle coordonnée pour cette fiche). Un principal par nature (premier coché, sinon premier), ordre = rang dans la nature. Valeurs normalisées : textes sans espaces de bord, vides à null, pays d'une adresse FR par défaut et en majuscules, e-mail en minuscules. Erreurs comparées sur index, champ et code.",
+  "cas": [
+    {
+      "nom": "création : saisies vides ignorées, nouvelles coordonnées, principal par nature",
+      "existantes": [],
+      "partages": {},
+      "saisies": [
+        { "nature": "ADRESSE", "usage": "PRINCIPALE", "principal": true, "pays": "FR" },
+        { "nature": "TELEPHONE", "usage": "FIXE", "principal": true, "valeur": "04 72 00 00 01" },
+        { "nature": "EMAIL", "usage": "PRO", "principal": true, "valeur": " Contact@Exemple.fr " },
+        { "nature": "TELEPHONE", "usage": "PORTABLE", "principal": true, "valeur": "06 11 22 33 44", "libelle": "Astreinte" }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "AJOUTER", "index": 1, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "04 72 00 00 01" }, "nature": "TELEPHONE", "usage": "FIXE", "libelle": null, "principal": true, "ordre": 0 },
+          { "op": "AJOUTER", "index": 2, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "contact@exemple.fr" }, "nature": "EMAIL", "usage": "PRO", "libelle": null, "principal": true, "ordre": 0 },
+          { "op": "AJOUTER", "index": 3, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "06 11 22 33 44" }, "nature": "TELEPHONE", "usage": "PORTABLE", "libelle": "Astreinte", "principal": false, "ordre": 1 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "coordonnée non partagée modifiée, autre inchangée",
+      "existantes": [10, 11],
+      "partages": { "100": 0, "101": 0 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "TELEPHONE", "usage": "FIXE", "principal": true, "valeur": "04 72 00 00 02", "origine": { "valeur": "04 72 00 00 01" } },
+        { "uco_id": 11, "coo_id": 101, "nature": "EMAIL", "usage": "PRO", "principal": true, "valeur": "a@b.fr", "origine": { "valeur": "a@b.fr" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "MAJ", "index": 0, "uco_id": 10, "coo_id": 100, "coordonnee": "MODIFIER", "valeurs": { "valeur": "04 72 00 00 02" }, "nature": "TELEPHONE", "usage": "FIXE", "libelle": null, "principal": true, "ordre": 0 },
+          { "op": "MAJ", "index": 1, "uco_id": 11, "coo_id": 101, "coordonnee": "GARDER", "nature": "EMAIL", "usage": "PRO", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "coordonnée partagée modifiée sans choix : choix requis",
+      "existantes": [10],
+      "partages": { "100": 2 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "ADRESSE", "usage": "PRINCIPALE", "principal": true, "ligne1": "5 rue Neuve", "code_postal": "69002", "ville": "Lyon",
+          "origine": { "ligne1": "3 rue Neuve", "code_postal": "69002", "ville": "Lyon", "pays": "FR" } }
+      ],
+      "attendu": { "operations": [], "erreurs": [], "choix_requis": [{ "index": 0, "coo_id": 100, "partages": 2 }] }
+    },
+    {
+      "nom": "coordonnée partagée : choix modification (toutes les fiches)",
+      "existantes": [10],
+      "partages": { "100": 2 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "ADRESSE", "usage": "PRINCIPALE", "principal": true, "ligne1": "5 rue Neuve", "code_postal": "69002", "ville": "Lyon", "choix": "MODIFICATION",
+          "origine": { "ligne1": "3 rue Neuve", "code_postal": "69002", "ville": "Lyon", "pays": "FR" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "MAJ", "index": 0, "uco_id": 10, "coo_id": 100, "coordonnee": "MODIFIER", "valeurs": { "ligne1": "5 rue Neuve", "ligne2": null, "ligne3": null, "code_postal": "69002", "ville": "Lyon", "pays": "FR" },
+            "nature": "ADRESSE", "usage": "PRINCIPALE", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "coordonnée partagée : choix autre information (cette fiche seulement)",
+      "existantes": [10],
+      "partages": { "100": 1 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "TELEPHONE", "usage": "PORTABLE", "principal": true, "valeur": "07 00 00 00 01", "choix": "AUTRE", "origine": { "valeur": "06 00 00 00 01" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "MAJ", "index": 0, "uco_id": 10, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "07 00 00 00 01" }, "nature": "TELEPHONE", "usage": "PORTABLE", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "usage supprimé et usage vidé : suppressions d'abord",
+      "existantes": [10, 11, 12],
+      "partages": { "100": 0, "101": 3 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "EMAIL", "usage": "PRO", "valeur": "a@b.fr", "origine": { "valeur": "a@b.fr" } },
+        { "uco_id": 11, "coo_id": 101, "nature": "TELEPHONE", "usage": "FIXE", "valeur": "  ", "origine": { "valeur": "04 00 00 00 00" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "SUPPRIMER", "uco_id": 11 },
+          { "op": "SUPPRIMER", "uco_id": 12 },
+          { "op": "MAJ", "index": 0, "uco_id": 10, "coo_id": 100, "coordonnee": "GARDER", "nature": "EMAIL", "usage": "PRO", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "reprise d'une coordonnée d'une autre fiche (même identifiant)",
+      "existantes": [],
+      "partages": { "200": 1 },
+      "saisies": [
+        { "coo_id": 200, "nature": "ADRESSE", "usage": "FACTURATION", "ligne1": "12 avenue Foch", "code_postal": "75016", "ville": "Paris", "pays": "FR",
+          "origine": { "ligne1": "12 avenue Foch", "code_postal": "75016", "ville": "Paris", "pays": "FR" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "AJOUTER", "index": 0, "uco_id": null, "coo_id": 200, "coordonnee": "GARDER", "nature": "ADRESSE", "usage": "FACTURATION", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "reprise modifiée avant enregistrement : choix requis",
+      "existantes": [],
+      "partages": { "200": 1 },
+      "saisies": [
+        { "coo_id": 200, "nature": "ADRESSE", "usage": "FACTURATION", "ligne1": "14 avenue Foch", "code_postal": "75016", "ville": "Paris", "pays": "FR",
+          "origine": { "ligne1": "12 avenue Foch", "code_postal": "75016", "ville": "Paris", "pays": "FR" } }
+      ],
+      "attendu": { "operations": [], "erreurs": [], "choix_requis": [{ "index": 0, "coo_id": 200, "partages": 1 }] }
+    },
+    {
+      "nom": "contrôles : e-mail, adresse sans ligne ni ville, téléphone, pays ; lien web sans valeur ignoré",
+      "existantes": [],
+      "partages": {},
+      "saisies": [
+        { "nature": "EMAIL", "usage": "PRO", "valeur": "pas-un-mail" },
+        { "nature": "ADRESSE", "usage": "PRINCIPALE", "code_postal": "69003" },
+        { "nature": "TELEPHONE", "usage": "FIXE", "valeur": "abc" },
+        { "nature": "WEB", "usage": "RESEAU", "reseau": "LINKEDIN" },
+        { "nature": "ADRESSE", "usage": "AUTRE", "ligne1": "1 rue X", "pays": "FRA" },
+        { "nature": "TELEPHONE", "usage": "FIXE", "valeur": "12 34" }
+      ],
+      "attendu": {
+        "operations": [],
+        "erreurs": [
+          { "index": 0, "champ": "valeur", "code": "EMAIL" },
+          { "index": 1, "champ": "ligne1", "code": "ADRESSE" },
+          { "index": 2, "champ": "valeur", "code": "TELEPHONE" },
+          { "index": 4, "champ": "pays", "code": "PAYS" },
+          { "index": 5, "champ": "valeur", "code": "TELEPHONE" }
+        ],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "un seul principal par nature (premier coché), ordre dans la nature",
+      "existantes": [],
+      "partages": {},
+      "saisies": [
+        { "nature": "TELEPHONE", "usage": "FIXE", "valeur": "04 00 00 00 01" },
+        { "nature": "EMAIL", "usage": "PRO", "valeur": "x@y.fr" },
+        { "nature": "TELEPHONE", "usage": "PORTABLE", "valeur": "06 00 00 00 01", "principal": true },
+        { "nature": "TELEPHONE", "usage": "FAX", "valeur": "04 00 00 00 09", "principal": true },
+        { "nature": "WEB", "usage": "SITE", "valeur": "https://exemple.fr", "reseau": null }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "AJOUTER", "index": 0, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "04 00 00 00 01" }, "nature": "TELEPHONE", "usage": "FIXE", "libelle": null, "principal": false, "ordre": 0 },
+          { "op": "AJOUTER", "index": 1, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "x@y.fr" }, "nature": "EMAIL", "usage": "PRO", "libelle": null, "principal": true, "ordre": 0 },
+          { "op": "AJOUTER", "index": 2, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "06 00 00 00 01" }, "nature": "TELEPHONE", "usage": "PORTABLE", "libelle": null, "principal": true, "ordre": 1 },
+          { "op": "AJOUTER", "index": 3, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "04 00 00 00 09" }, "nature": "TELEPHONE", "usage": "FAX", "libelle": null, "principal": false, "ordre": 2 },
+          { "op": "AJOUTER", "index": 4, "uco_id": null, "coo_id": null, "coordonnee": "NOUVELLE", "valeurs": { "valeur": "https://exemple.fr", "reseau": null }, "nature": "WEB", "usage": "SITE", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    },
+    {
+      "nom": "espaces et casse seuls : coordonnée inchangée",
+      "existantes": [10, 11],
+      "partages": { "100": 4, "101": 4 },
+      "saisies": [
+        { "uco_id": 10, "coo_id": 100, "nature": "ADRESSE", "usage": "PRINCIPALE", "principal": true, "ligne1": " 3 place Bellecour ", "ligne2": "", "code_postal": "69002", "ville": "Lyon", "pays": "fr",
+          "origine": { "ligne1": "3 place Bellecour", "code_postal": "69002", "ville": "Lyon", "pays": "FR" } },
+        { "uco_id": 11, "coo_id": 101, "nature": "EMAIL", "usage": "PRO", "principal": true, "valeur": "Contact@Exemple.FR", "origine": { "valeur": "contact@exemple.fr" } }
+      ],
+      "attendu": {
+        "operations": [
+          { "op": "MAJ", "index": 0, "uco_id": 10, "coo_id": 100, "coordonnee": "GARDER", "nature": "ADRESSE", "usage": "PRINCIPALE", "libelle": null, "principal": true, "ordre": 0 },
+          { "op": "MAJ", "index": 1, "uco_id": 11, "coo_id": 101, "coordonnee": "GARDER", "nature": "EMAIL", "usage": "PRO", "libelle": null, "principal": true, "ordre": 0 }
+        ],
+        "erreurs": [],
+        "choix_requis": []
+      }
+    }
+  ]
+}

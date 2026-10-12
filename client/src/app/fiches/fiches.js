@@ -76,7 +76,7 @@ export class FicheMateriel extends FicheLogiBTP {
 export const CLASSES_FICHE = { salarie: FicheSalarie, materiel: FicheMateriel };
 
 /** Fournisseur des fiches : API, ou mémoire hors ligne sur les mêmes lignes que les listes de démonstration. */
-export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null }) {
+export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, annuaire = null }) {
   if (enLigne) return new FournisseurFicheApi({ base: '/api/fiches', entetes: ENTETES });
   return new FournisseurFicheMemoire({
     types: {
@@ -91,6 +91,18 @@ export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null }) 
         element: {
           definition: TYPES_FICHE.element.definition, cle: 'id', proprietes: 'proprietes', lignes: bibliotheque.elements,
           derivees: (l) => { apresEcritureElement(bibliotheque, l); return {}; },
+        },
+      } : {}),
+      // Annuaire : coordonnées, rattachements et liens en champs gérés ; contrôles avant écriture (société de la base unique,
+      // SIRET unique, hiérarchie sans boucle) et colonnes de liste recalculées (rôle du serveur et des vues).
+      ...(annuaire ? {
+        personne: {
+          definition: TYPES_FICHE.personne.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.personnes, geres: annuaire.geres('personne'),
+          derivees: (l) => { annuaire.controlerPersonne(l.id ?? null, l); queueMicrotask(() => annuaire.deriver()); return {}; },
+        },
+        individu: {
+          definition: TYPES_FICHE.individu.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.individus, geres: annuaire.geres('individu'),
+          derivees: () => { queueMicrotask(() => annuaire.deriver()); return {}; },
         },
       } : {}),
     },

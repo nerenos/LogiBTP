@@ -1,3 +1,5 @@
+import { CASQUETTES, NIVEAUX, ROLES } from './annuaire/donnees.js';
+
 // Thèmes, sources et vues de liste fournis par le cœur. Les mêmes définitions alimentent la démo hors ligne et le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
@@ -37,6 +39,24 @@ export const SOURCES_LISTE = {
       ['nature', 'text'], ['regroupement', 'text'], ['gestion', 'text'], ['unite_stock', 'text'], ['scenario_pa', 'text'], ['pa', 'numeric'],
       ['coef_fg', 'numeric'], ['pr', 'numeric'], ['coef_benef', 'numeric'], ['pv', 'numeric'], ['pv_net', 'numeric'], ['actif', 'boolean'],
       ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
+    ],
+  },
+  // Annuaire : casquettes et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
+  personnes: {
+    libelle: 'Annuaire : personnes (sociétés, établissements, particuliers…)', vue: 'v_liste_personnes', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['code', 'text'], ['raison_sociale', 'text'], ['nom_commercial', 'text'], ['niveau', 'text'],
+      ['casquettes', 'ARRAY'], ['parent', 'text'], ['chemin', 'text'], ['siren', 'text'], ['siret', 'text'], ['tva_intra', 'text'], ['pays', 'text'],
+      ['adresse', 'text'], ['code_postal', 'text'], ['ville', 'text'], ['telephone', 'text'], ['email', 'text'], ['contact', 'text'],
+      ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'],
+    ],
+  },
+  individus: {
+    libelle: 'Annuaire : individus (contacts, salariés, particuliers…)', vue: 'v_liste_individus', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['civilite', 'text'], ['nom', 'text'], ['prenom', 'text'], ['nom_complet', 'text'], ['personnes', 'text'],
+      ['fonction', 'text'], ['roles', 'ARRAY'], ['telephone', 'text'], ['portable', 'text'], ['email', 'text'], ['ville', 'text'], ['utilisateur', 'text'],
+      ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'],
     ],
   },
   ged: {
@@ -83,6 +103,8 @@ export const THEMES_LISTE = [
   { thl_code: 'salaries', thl_libelle: 'Salariés', thl_icone: '👷', thl_ordre: 40, thl_types: [{ code: 'salarie', libelle: 'Salarié' }, { code: 'interim', libelle: 'Intérimaire' }] },
   { thl_code: 'materiels', thl_libelle: 'Matériels', thl_icone: '🚜', thl_ordre: 50, thl_types: [{ code: 'materiel', libelle: 'Matériel' }] },
   { thl_code: 'bibliotheque', thl_libelle: 'Bibliothèque', thl_icone: '📚', thl_ordre: 65, thl_types: [{ code: 'element', libelle: 'Élément' }] },
+  { thl_code: 'tiers', thl_libelle: 'Tiers', thl_icone: '🏢', thl_ordre: 15, thl_types: [{ code: 'personne', libelle: 'Personne' }] },
+  { thl_code: 'contacts', thl_libelle: 'Contacts', thl_icone: '👤', thl_ordre: 16, thl_types: [{ code: 'individu', libelle: 'Individu' }] },
   { thl_code: 'ged', thl_libelle: 'Documents (GED)', thl_icone: '📎', thl_ordre: 70, thl_types: [{ code: 'document_ged', libelle: 'Document' }] },
   {
     thl_code: 'ressources', thl_libelle: 'Ressources', thl_icone: '🧰', thl_ordre: 60,
@@ -324,3 +346,75 @@ export function sourcesFournisseur(donnees = {}) {
     lignes: donnees[code] ?? [],
   }]));
 }
+
+// Annuaire : tiers (personnes) par casquette, contacts (individus).
+const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.libelle, picto: c.icone }));
+const OPTIONS_NIVEAUX = NIVEAUX.map((n) => ({ valeur: n.code, libelle: n.libelle, picto: n.icone }));
+const OPTIONS_ROLES = ROLES.map((r) => ({ valeur: r.code, libelle: r.libelle, picto: r.icone }));
+const vuePersonnes = (vli_id, vli_nom, casquettes = null) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'tiers',
+    source: { mode: 'vue', vue: 'personnes', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres: casquettes ? [{ colonne: 'casquettes', op: 'dans', valeurs: casquettes }] : [],
+    colonnes: [
+      col('niveau', '', { format: 'picto', ...fixe(36), options: OPTIONS_NIVEAUX }),
+      col('code', 'Code', { ...fixe(84) }),
+      col('raison_sociale', 'Raison sociale', { ...prop(2.6, 180), style: { gras: true },
+        regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }] }),
+      col('casquettes', 'Casquettes', { format: 'combo', ...prop(1.6, 120), options: OPTIONS_CASQUETTES }),
+      col('parent', 'Niveau supérieur', { ...prop(1.4, 110) }),
+      col('ville', 'Ville', { ...prop(1, 90) }),
+      col('telephone', 'Téléphone', { ...fixe(118) }),
+      col('email', 'E-mail', { ...prop(1.4, 120) }),
+      col('contact', 'Contact', { ...prop(1.2, 100) }),
+      col('siret', 'SIRET', { ...fixe(120), masquee: true }),
+      col('nom_commercial', 'Nom commercial', { masquee: true }),
+      col('chemin', 'Hiérarchie', { masquee: true }),
+      col('tva_intra', 'TVA intracom.', { masquee: true }),
+      col('code_postal', 'CP', { masquee: true }),
+      col('pays', 'Pays', { ...fixe(48), masquee: true }),
+      col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false }),
+    ],
+    segments: [{ colonne: 'niveau', titre: 'Niveau' }, { colonne: 'casquettes', titre: 'Casquette' }, { colonne: 'ville', titre: 'Ville' }],
+    tri: [{ colonne: 'raison_sociale', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(
+  vuePersonnes(20, 'Tous les tiers'),
+  vuePersonnes(21, 'Clients et prospects', ['CLIENT', 'PROSPECT']),
+  vuePersonnes(22, 'Fournisseurs et loueurs', ['FOURNISSEUR', 'LOUEUR']),
+  vuePersonnes(23, 'Sous-traitants, cotraitants, intérim', ['SOUS_TRAITANT', 'COTRAITANT', 'INTERIM']),
+  vuePersonnes(24, 'Prescripteurs et maîtres d\'ouvrage', ['ARCHITECTE', 'MOE', 'BE', 'BC', 'MOA']),
+);
+const vueIndividus = (vli_id, vli_nom, filtres = []) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'contacts',
+    source: { mode: 'vue', vue: 'individus', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres,
+    colonnes: [
+      col('nom_complet', 'Nom', { ...prop(1.6, 140), style: { gras: true },
+        regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }] }),
+      col('personnes', 'Rattaché à', { ...prop(2.2, 160) }),
+      col('fonction', 'Fonction', { ...prop(1.4, 110) }),
+      col('roles', 'Rôles', { format: 'combo', ...prop(1.4, 110), options: OPTIONS_ROLES }),
+      col('portable', 'Portable', { ...fixe(118) }),
+      col('telephone', 'Téléphone', { ...fixe(118) }),
+      col('email', 'E-mail', { ...prop(1.6, 140) }),
+      col('ville', 'Ville', { ...prop(0.8, 80), masquee: true }),
+      col('utilisateur', 'Identifiant', { masquee: true }),
+      col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false }),
+    ],
+    segments: [{ colonne: 'roles', titre: 'Rôle' }],
+    tri: [{ colonne: 'nom_complet', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(
+  vueIndividus(25, 'Tous les contacts'),
+  vueIndividus(26, 'Notre société (rôles internes)', [{ colonne: 'roles', op: 'nonvide' }]),
+);

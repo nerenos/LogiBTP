@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/annuaire",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Annuaire LogiBTP : personnes (morales, particuliers), individus, rattachements, liens, casquettes, coordonnées partagées, identifiants (SIREN, SIRET, TVA, IBAN)",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/annuaire.css": "./ui/annuaire.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

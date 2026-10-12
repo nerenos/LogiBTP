@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.EntreprisesFr.Web</RootNamespace>
+    <Description>Module Entreprises françaises LogiBTP : recherche dans l'annuaire des entreprises (API Recherche d'entreprises) par nom, SIREN ou SIRET, correspondance vers une fiche, routes HTTP.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

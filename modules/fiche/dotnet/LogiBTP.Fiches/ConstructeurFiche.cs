@@ -49,7 +49,8 @@ public partial class ConstructeurFiche(TypeFicheResolu type)
     {
         if (valeur is null) return "NULL";
         var sqlType = type.TypesColonnes.GetValueOrDefault(colonne)?.ToLowerInvariant();
-        if (sqlType is null || !TypeSur().IsMatch(sqlType)) return P(valeur);
+        // « character » (CHAR(n)) sans longueur tronquerait la valeur à un caractère : texte converti à l'affectation.
+        if (sqlType is null || sqlType == "character" || !TypeSur().IsMatch(sqlType)) return P(valeur);
         if (Regex.IsMatch(sqlType, "^(smallint|integer|bigint|numeric|decimal|real|double precision)")) valeur = valeur.Trim().Replace(',', '.').Replace(" ", "");
         return $"CAST({P(valeur)} AS {sqlType})";
     }

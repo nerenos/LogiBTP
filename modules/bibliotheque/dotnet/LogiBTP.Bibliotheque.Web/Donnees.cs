@@ -210,6 +210,10 @@ public sealed record PeriodeEnregistree(List<PeriodeDto> Periodes, int ElementsR
 public sealed record TarifDto(long Id, string Fournisseur, long? TiersId, string? Reference, string? Libelle, string Unite, decimal Prix,
     string? Debut, string? Fin, bool Principal, string? Lien, DateTimeOffset MajLe, string? MajPar);
 
+/// <summary>Tarif d'un fournisseur de l'annuaire, avec l'élément (onglet Tarifs de la fiche du fournisseur).</summary>
+public sealed record TarifTiersDto(long Id, long EleId, string BibCode, string Code, string? Element, string? UniteStock, string Fournisseur, string? Reference,
+    string? Libelle, string Unite, decimal Prix, string? Debut, string? Fin, bool Principal, string? Lien);
+
 public sealed record PrixElementDto(decimal? Pa, decimal? Pr, decimal? Pv, decimal CoefBenef, decimal? PvNet, List<string> Alertes);
 
 public sealed record TarifsElementDto(List<TarifDto> Tarifs, PrixElementDto Prix);

@@ -30,6 +30,18 @@ public class ValidationFicheTests
 
 public class ConstructeurFicheTests
 {
+    /// <summary>Colonne CHAR(n) (information_schema : « character ») : valeur passée en texte, jamais CAST AS character (1 caractère).</summary>
+    [Fact]
+    public void Colonne_char_non_tronquee()
+    {
+        var t = new TypeFicheResolu("personne", "personne", "per_id", null,
+            new DefinitionFiche { Champs = [new() { Code = "siren", Colonne = "per_siren", Type = "texte" }] },
+            [], new Dictionary<string, string> { ["per_siren"] = "character" });
+        var r = new ConstructeurFiche(t).Insertion(new Dictionary<string, string?> { ["siren"] = "404833048" }, null);
+        Assert.DoesNotContain("AS character", r.Texte);
+        Assert.Equal("404833048", r.Parametres[0].Valeur);
+    }
+
     private static TypeFicheResolu Type() => new("salarie", "demo_salarie", "sal_id", "sal_proprietes",
         new DefinitionFiche
         {

@@ -92,10 +92,11 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     // ------------------------------------------------------------------ lecture
 
-    /// <summary>Valeur lue pour le client : date au format ISO, le reste tel quel.</summary>
+    /// <summary>Valeur lue pour le client : date au format ISO, colonne jsonb en JSON (comme le fournisseur en mémoire), le reste tel quel.</summary>
     protected static object? PourClient(ChampFiche c, object? v) => v switch
     {
         null or DBNull => null,
+        string s when c.Type == "json" => JsonDocument.Parse(s).RootElement.Clone(),
         DateTime d when c.Type == "date" => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         DateOnly d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         _ => v,
@@ -134,6 +135,11 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             object? v = l.Proprietes.TryGetValue(c.Code, out var e) ? ValidationFiche.Normaliser(e) : null;
             if (c.Confidentiel && !visible) { fiche.Proprietes[c.Code] = null; fiche.Masques.Add("+" + c.Code); }
             else fiche.Proprietes[c.Code] = v;
+        }
+        if (t.Definition.Champs.Any(c => c.Gere))
+        {
+            var geres = await specialisation.LireGeresAsync(t.Code, l.Id, u, ct);
+            foreach (var c in t.Definition.Champs.Where(c => c.Gere)) fiche.Valeurs[c.Code] = geres.GetValueOrDefault(c.Code);
         }
         if (visible) await Journaliser(t, l.Id, u, ct);
         return fiche;
@@ -238,6 +244,10 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             kv => kv.Value.ValueKind == JsonValueKind.String && kv.Value.GetString()!.Trim().Length == 0 ? (JsonElement?)null : kv.Value));
     }
 
+    /// <summary>Valeurs saisies des champs gérés par la spécialisation (hors table).</summary>
+    protected static Dictionary<string, JsonElement> Geres(TypeFicheResolu t, Dictionary<string, JsonElement> saisies) =>
+        saisies.Where(kv => t.Definition.Champs.Any(c => c.Code == kv.Key && c.Gere)).ToDictionary(kv => kv.Key, kv => kv.Value);
+
     protected void Valider(TypeFicheResolu t, Dictionary<string, object?> valeurs, Dictionary<string, object?> proprietes)
     {
         var erreurs = ValidationFiche.ValiderFiche(t, valeurs, proprietes);
@@ -255,6 +265,9 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             var champ = t.Definition.Champs.FirstOrDefault(x => x.Code == k);
             if (champ is null || champ.LectureSeule || champ.Saisie == "creation") throw ExceptionMetier.Invalide("CHAMP", $"Champ {k} non modifiable");
         }
+        // Champs gérés par la spécialisation : contrôlés avant l'écriture, écrits après celle de la ligne.
+        var geres = Geres(t, d.Valeurs);
+        IReadOnlyDictionary<string, object?> valide = new Dictionary<string, object?>();
         await Ecrire(async (cnx, tx) =>
         {
             var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
@@ -277,8 +290,10 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             var proprietes = actuelle.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
             foreach (var (k, v) in d.Proprietes) proprietes[k] = ValidationFiche.Normaliser(v);
             Valider(t, valeurs, proprietes);
+            await specialisation.ValiderGeresAsync(code, id, geres, valeurs, u, ct);
+            valide = valeurs;
 
-            var aEcrire = d.Valeurs.ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
+            var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
             await specialisation.AvantEcritureAsync(code, false, id, aEcrire, valeurs, proprietes, u, ct);
             var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
             var json = Requete(() => ProprietesJson(t, d.Proprietes));
@@ -293,6 +308,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             }
             return true;
         }, ct);
+        if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, false, geres, valide, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, d.Jeton, ct);
     }
 
@@ -302,13 +318,17 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var t = await Type(code, ct);
         var valeurs = t.Definition.Champs.Where(c => c.Colonne is not null).ToDictionary(c => c.Code, c => d.Valeurs.TryGetValue(c.Code, out var v) ? ValidationFiche.Normaliser(v) : null);
         var proprietes = d.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
+        var geres = Geres(t, d.Valeurs);
+        foreach (var (k, v) in geres) valeurs[k] = ValidationFiche.Normaliser(v);
         Valider(t, valeurs, proprietes);
-        var aEcrire = d.Valeurs.Where(kv => Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
+        await specialisation.ValiderGeresAsync(code, null, geres, valeurs, u, ct);
+        var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key) && Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
         await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ct);
         var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
         var json = Requete(() => ProprietesJson(t, d.Proprietes));
         var id = await Ecrire(async (cnx, tx) =>
             (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!, ct);
+        if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, true, geres, valeurs, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
     }
 

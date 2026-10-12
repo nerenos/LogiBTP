@@ -5,6 +5,7 @@ import { PageDocument } from './document.js';
 import { PageGed } from './ged.js';
 import { PageParametres } from './parametres.js';
 import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
+import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageIntrouvable } from './introuvable.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -17,5 +18,7 @@ export const ROUTES = [
   { nom: 'ged', chemin: '/ged/:id?', page: PageGed, titre: 'Documents (GED)' },
   { nom: 'parametres', chemin: '/parametres', page: PageParametres, titre: 'Paramètres' },
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
+  { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
+  { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },
 ];

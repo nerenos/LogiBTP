@@ -304,6 +304,17 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         (await db.Tarifs.AsNoTracking().Where(t => t.TfoEleId == eleId).OrderByDescending(t => t.TfoPrincipal).ThenBy(t => t.TfoFournisseur).ThenBy(t => t.TfoId).ToListAsync(ct))
         .Select(VersDto).ToList();
 
+    /// <summary>Tarifs d'un fournisseur de l'annuaire (tfo_tiers_id), avec l'élément ; par code d'élément.</summary>
+    public virtual async Task<List<TarifTiersDto>> TarifsTiers(long tiersId, CancellationToken ct) =>
+        (await (from t in db.Tarifs.AsNoTracking()
+                join e in db.Elements.AsNoTracking() on t.TfoEleId equals e.EleId
+                join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId
+                where t.TfoTiersId == tiersId
+                orderby e.EleCode, t.TfoPrincipal descending, t.TfoId
+                select new { t, e.EleCode, e.EleLibelle, e.EleUntStock, b.BibCode }).ToListAsync(ct))
+        .Select(x => new TarifTiersDto(x.t.TfoId, x.t.TfoEleId, x.BibCode, x.EleCode, x.EleLibelle, x.EleUntStock, x.t.TfoFournisseur, x.t.TfoReference, x.t.TfoLibelle,
+            x.t.TfoUntCode, x.t.TfoPrix, Date(x.t.TfoDebut), Date(x.t.TfoFin), x.t.TfoPrincipal, x.t.TfoLien)).ToList();
+
     /// <summary>Tarifs au format du calcul (prix, unité, principal, validité).</summary>
     public virtual async Task<List<TarifCalcul>> TarifsCalcul(long eleId, CancellationToken ct) =>
         (await db.Tarifs.AsNoTracking().Where(t => t.TfoEleId == eleId).ToListAsync(ct))

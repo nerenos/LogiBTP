@@ -17,6 +17,7 @@ import { texteBrut } from '@logibtp/socle';
 //   element(id) / appel(code, bibCode)                  élément complet (unités, données techniques, prix, composition) ;
 //                                                        appel : « CODE » dans bibCode (défaut : bibliothèque par défaut), « BIB:CODE » ailleurs
 //   rechercher({ recherche, bib, type })                  [{ id, bib_code, code, type, libelle, libelle_html, unite_stock, pa, pr, pv, pv_net, coef_fg, coef_benef }]
+//   tarifsTiers(tiersId)                                 tarifs d'un fournisseur de l'annuaire, avec l'élément : [{ …tarif, ele_id, bib_code, code, element }]
 
 export class ErreurBibliotheque extends Error {
   constructor(statut, code, message) {
@@ -72,6 +73,7 @@ export class FournisseurBibliothequeApi {
     const q = new URLSearchParams(Object.entries({ recherche, bib, type }).filter(([, v]) => v !== null && v !== '').map(([k, v]) => [k, String(v)]));
     return this.appel('GET', `/elements${q.size ? `?${q}` : ''}`);
   }
+  tarifsTiers(tiersId) { return this.appel('GET', `/tarifs?tiers=${encodeURIComponent(tiersId)}`); }
 }
 
 export const SCENARIOS_TOUS = ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP'];
@@ -357,6 +359,13 @@ export class FournisseurBibliothequeMemoire {
     const e = b && this.elements.find((x) => x.bib_id === b.id && x.code === c && x.actif !== false);
     if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${c} introuvable dans la bibliothèque ${bib ?? '?'}`);
     return this.#detail(e);
+  }
+
+  async tarifsTiers(tiersId) {
+    return this.tarifsElements.filter((t) => t.tiers_id !== null && t.tiers_id !== undefined && String(t.tiers_id) === String(tiersId)).map((t) => {
+      const e = this.elements.find((x) => x.id === Number(t.ele_id));
+      return { ...structuredClone(t), bib_code: this.bibs.find((b) => b.id === Number(e?.bib_id))?.code ?? null, code: e?.code ?? null, element: e?.libelle ?? null, unite_stock: e?.unite_stock ?? null };
+    }).sort((a, b) => String(a.code).localeCompare(String(b.code)) || Number(b.principal) - Number(a.principal) || a.id - b.id);
   }
 
   async rechercher({ recherche = '', bib = null, type = null } = {}) {

@@ -1,0 +1,79 @@
+/* @logibtp/annuaire/ui – coordonnées partagées, rattachements, liens, référentiels de l'annuaire. */
+
+.coord { display: flex; flex-direction: column; gap: 0.6rem; }
+.coord-nature h4 { margin: 0 0 0.25rem; font-size: 0.95em; color: var(--discret); font-weight: 600; }
+.coord.compact .coord-nature h4 { display: none; }
+.coord-ligne { display: flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0; flex-wrap: wrap; }
+.coord-ligne select[data-c="usage"] { width: 9rem; }
+.coord-ligne .coord-libelle { width: 9rem; }
+.coord-valeurs { flex: 1 1 18rem; display: flex; gap: 0.3rem; min-width: 0; }
+.coord-valeurs > input { flex: 1; min-width: 0; }
+.coord-adresse { flex: 1; display: grid; grid-template-columns: 2fr 1.4fr 5rem 1.2fr 3rem; gap: 0.3rem; min-width: 0; }
+.coord-adresse input { min-width: 0; }
+.coord-principal { width: 1.6rem; display: inline-flex; align-items: center; gap: 0.1rem; color: var(--accent); flex: none; }
+.coord-principal input { margin: 0; }
+.coord-ligne.lecture { gap: 0.6rem; flex-wrap: nowrap; }
+.coord-ligne.lecture .coord-usage { width: 11rem; color: var(--discret); flex: none; }
+.coord-ligne.lecture .coord-valeur { flex: 1; min-width: 0; }
+.coord-partage { font-size: 0.8em; border-radius: 3px; padding: 0 0.35rem; background: var(--accent-clair); color: var(--accent); border: 1px solid transparent; white-space: nowrap; }
+.coord-partage.change { background: var(--alerte-fond); color: var(--alerte); }
+.coord-histo { padding: 0 0.3rem; }
+.coord-ajouts { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.2rem 0 0; }
+.coord-table { border-collapse: collapse; width: 100%; font-size: 0.93em; }
+.coord-table th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.2rem 0.35rem; border-bottom: 1px solid var(--bord); }
+.coord-table td { padding: 0.2rem 0.35rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.coord-table.selectionnable tr { cursor: pointer; }
+.coord-table.selectionnable tr.actif td { background: var(--selection); }
+.coord-fiches { margin: 0.2rem 0; }
+@media (max-width: 760px) { .coord-adresse { grid-template-columns: 1fr 1fr; } }
+
+.annuaire-dialogue { width: min(46rem, 100%); }
+.annuaire-dialogue.large { width: min(60rem, 100%); }
+.annuaire-recherche { display: flex; margin-bottom: 0.4rem; }
+.annuaire-recherche input { flex: 1; }
+.annuaire-resultats { max-height: 50vh; overflow: auto; min-height: 6rem; }
+.annuaire-nouveau { margin-top: 0.6rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; border: 1px solid var(--bord); border-radius: 6px; }
+.annuaire-nouveau p { flex-basis: 100%; margin: 0.2rem 0 0; }
+.partage-choix { border: 1px solid var(--bord); border-radius: 6px; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.partage-choix legend { font-weight: 600; }
+.partage-valeurs { margin: 0 0 0.2rem; }
+.partage-valeurs s { color: var(--discret); }
+.partage-tout { display: flex; gap: 0.4rem; }
+
+.annuaire-pastilles { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pastille { display: inline-flex; align-items: center; gap: 0.25rem; border: 1px solid var(--bord); border-radius: 999px; padding: 0.1rem 0.6rem; cursor: pointer; font-size: 0.92em; user-select: none; }
+.pastille input { display: none; }
+.pastille.cochee { background: var(--accent-clair); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.annuaire-pastilles input:disabled + * , .pastille:has(input:disabled) { cursor: default; }
+
+.rattachements { display: flex; flex-direction: column; gap: 0.4rem; }
+.rattachement { border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.rattachement.inactif { opacity: 0.65; }
+.rattachement > header { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.5rem; flex-wrap: wrap; }
+.rattachement-nom { font-weight: 600; }
+.rattachement-fonction { color: var(--discret); }
+.rattachement-coords { margin-left: auto; color: var(--discret); font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.rattachement .badge { font-size: 0.75em; border-radius: 3px; padding: 0 0.35rem; background: var(--accent-clair); color: var(--accent); }
+.rattachement .badge.gris { background: var(--fond); color: var(--discret); }
+.rattachement > header button { padding: 0 0.4rem; }
+.rattachement-detail { border-top: 1px solid var(--bord); padding: 0.4rem 0.6rem 0.6rem; }
+.rattachement-detail h4 { margin: 0.5rem 0 0.2rem; font-size: 0.95em; color: var(--discret); }
+.rattachement-champs { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.3rem 0.7rem; }
+.rattachement-champs label { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.9em; color: var(--discret); }
+.rattachement-champs label.ligne { flex-direction: row; align-items: center; gap: 0.3rem; color: var(--texte); }
+.rattachement-champs label.plein { grid-column: 1 / -1; }
+
+.liens fieldset { margin-bottom: 0.6rem; }
+.annuaire-referentiels { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+/* Tableau et onglets du paramétrage (mêmes règles que ceux de la bibliothèque, sans en dépendre). */
+.annuaire-referentiels .bib-onglets { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--bord); }
+.annuaire-referentiels .bib-onglets button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; color: var(--discret); }
+.annuaire-referentiels .bib-onglets button.actif { background: var(--surface); border-color: var(--bord); color: var(--texte); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
+.annuaire-referentiels .bib-zone { overflow: auto; min-height: 0; }
+.annuaire-referentiels .bib-table { border-collapse: collapse; width: 100%; font-size: 0.93em; }
+.annuaire-referentiels .bib-table th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.2rem 0.35rem; border-bottom: 1px solid var(--bord); white-space: nowrap; }
+.annuaire-referentiels .bib-table td { padding: 0.15rem 0.35rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.annuaire-referentiels .bib-table tr.ajout td { background: var(--fond); }
+.annuaire-referentiels .bib-table td input:not([type="checkbox"]) { width: 100%; min-width: 3rem; }
+.annuaire-referentiels .bib-actions { white-space: nowrap; }
+.annuaire-referentiels .bib-cases { display: flex; flex-wrap: wrap; gap: 0.1rem 0.6rem; }

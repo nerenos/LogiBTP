@@ -27,6 +27,12 @@ export class FormatsCellule {
   /** Petite image : picto de l'option (emoji ou URL d'image), sinon la valeur elle-même si c'est une image. */
   picto(valeur, colonne, modele) {
     if (valeur === null || valeur === undefined || valeur === '') return '';
+    // Colonne multivaluée : un picto par valeur.
+    if (Array.isArray(valeur)) {
+      const s = document.createElement('span');
+      for (const v of valeur) s.append(this.picto(v, colonne, modele));
+      return s;
+    }
     const o = modele.option(colonne, valeur);
     const picto = o?.picto || (estUrl(valeur) ? valeur : null);
     const libelle = o?.libelle ?? String(valeur);

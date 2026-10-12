@@ -59,8 +59,8 @@ export class FicheBase {
   /** Ligne sous le titre (ex. matricule et poste). */
   sousTitre(_valeurs) { return this.definition.sous_titre ? titreFiche(this.definition.sous_titre, _valeurs) : ''; }
 
-  /** Champs vidés lors d'une copie (identifiants, numéros uniques…). */
-  champsNonCopies() { return this.definition.champs.filter((c) => c.non_copie).map((c) => c.code); }
+  /** Champs vidés lors d'une copie (identifiants, numéros uniques… et champs gérés : données liées à la fiche copiée). */
+  champsNonCopies() { return this.definition.champs.filter((c) => c.non_copie || c.gere).map((c) => c.code); }
 
   /** Valeurs initiales d'une création. */
   valeursCreation() { return Object.fromEntries(this.definition.champs.filter((c) => c.defaut !== undefined).map((c) => [c.code, c.defaut])); }

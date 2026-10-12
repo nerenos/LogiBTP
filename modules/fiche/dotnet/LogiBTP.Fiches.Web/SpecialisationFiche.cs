@@ -36,4 +36,20 @@ public class SpecialisationFiche
     }
 
     public virtual ConstructeurFiche Constructeur(TypeFicheResolu type) => new(type);
+
+    /// <summary>Valeurs des champs gérés (ChampFiche.Gere) d'une fiche : code du champ → valeur (objet, tableau…).</summary>
+    public virtual Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyDictionary<string, object?>>(new Dictionary<string, object?>());
+
+    /// <summary>
+    /// Contrôle des champs gérés saisis, avant toute écriture (id null à la création) : lève une ExceptionMetier
+    /// (VALIDATION, CHOIX_REQUIS, conflit…) pour refuser l'enregistrement.
+    /// </summary>
+    public virtual Task ValiderGeresAsync(string type, string? id, IReadOnlyDictionary<string, System.Text.Json.JsonElement> geres,
+        IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>Écriture des champs gérés saisis, après celle de la ligne (id de la fiche créée à la création).</summary>
+    public virtual Task EcrireGeresAsync(string type, string id, bool creation, IReadOnlyDictionary<string, System.Text.Json.JsonElement> geres,
+        IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct) =>
+        geres.Count == 0 ? Task.CompletedTask : throw ExceptionMetier.Invalide("CHAMP", $"Champs gérés non pris en charge : {string.Join(", ", geres.Keys)}");
 }

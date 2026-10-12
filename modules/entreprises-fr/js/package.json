@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/entreprises-fr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Entreprises françaises LogiBTP : recherche dans l'annuaire des entreprises (API Recherche d'entreprises, sans clé) par nom, SIREN ou SIRET, correspondance vers une fiche (identité, adresse, dirigeants)",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/entreprises.css": "./ui/entreprises.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
