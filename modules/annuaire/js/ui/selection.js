@@ -2,7 +2,7 @@ import { echapper } from '@logibtp/socle/ui';
 import { dialogue } from './coordonnees.js';
 
 // Sélections de l'annuaire : choix d'une personne ou d'un individu (recherche, création d'un nouvel individu), cases
-// de codes (casquettes, rôles) en pastilles.
+// de codes (relations, rôles) en pastilles.
 
 const CIVILITES = ['M.', 'Mme'];
 

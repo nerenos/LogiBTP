@@ -257,50 +257,61 @@ WITH RECURSIVE h AS (
 )
 SELECT per_id, chemin, profondeur FROM h;
 
--- Coordonnée principale d'une nature : usages d'une personne, d'un individu ou des rattachements actifs d'un individu,
--- restreints à des usages (ou en excluant), dans l'ordre principal, rang, identifiant.
-CREATE FUNCTION f_coordonnee_principale(p_nature TEXT, p_per BIGINT, p_ind BIGINT, p_rattachements_de BIGINT,
-                                        p_usages TEXT[] DEFAULT NULL, p_exclure TEXT[] DEFAULT NULL) RETURNS coordonnee
-    LANGUAGE sql STABLE AS $$
-    SELECT c.* FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id
-    WHERE c.coo_nature = p_nature
-      AND (u.uco_per_id = p_per OR u.uco_ind_id = p_ind
-           OR u.uco_rat_id IN (SELECT r.rat_id FROM rattachement r WHERE r.rat_ind_id = p_rattachements_de AND r.rat_actif))
-      AND (p_usages IS NULL OR u.uco_usage = ANY(p_usages))
-      AND (p_exclure IS NULL OR u.uco_usage IS NULL OR NOT u.uco_usage = ANY(p_exclure))
-    ORDER BY u.uco_principal DESC, u.uco_ordre, u.uco_id
-    LIMIT 1
-$$;
+-- Usages de coordonnées par fiche, avec la coordonnée : personne, individu (coordonnées personnelles) ou individu par
+-- ses rattachements actifs (coordonnées professionnelles). Ordre d'une coordonnée principale : principal, rang, usage.
+CREATE VIEW v_annuaire_usages AS
+SELECT u.uco_per_id AS per_id, coalesce(u.uco_ind_id, r.rat_ind_id) AS ind_id, (u.uco_rat_id IS NOT NULL) AS pro,
+       u.uco_id, u.uco_usage, u.uco_principal, u.uco_ordre, c.coo_nature, c.coo_ville, c.coo_code_postal, f_texte_coordonnee(c) AS texte
+FROM usage_coordonnee u
+JOIN coordonnee c ON c.coo_id = u.uco_coo_id
+LEFT JOIN rattachement r ON r.rat_id = u.uco_rat_id
+WHERE u.uco_rat_id IS NULL OR r.rat_actif;
 
 -- Personnes avec niveau, parent, chemin, ville, coordonnées principales et contact principal (listes, recherches).
 CREATE VIEW v_annuaire_personnes AS
+WITH adr AS (SELECT DISTINCT ON (per_id) per_id, coo_ville, coo_code_postal, texte FROM v_annuaire_usages
+             WHERE per_id IS NOT NULL AND coo_nature = 'ADRESSE' ORDER BY per_id, uco_principal DESC, uco_ordre, uco_id),
+     tel AS (SELECT DISTINCT ON (per_id) per_id, texte FROM v_annuaire_usages
+             WHERE per_id IS NOT NULL AND coo_nature = 'TELEPHONE' ORDER BY per_id, uco_principal DESC, uco_ordre, uco_id),
+     mel AS (SELECT DISTINCT ON (per_id) per_id, texte FROM v_annuaire_usages
+             WHERE per_id IS NOT NULL AND coo_nature = 'EMAIL' ORDER BY per_id, uco_principal DESC, uco_ordre, uco_id),
+     contact AS (SELECT DISTINCT ON (r.rat_per_id) r.rat_per_id AS per_id, concat_ws(' ', i.ind_civilite, i.ind_prenom, i.ind_nom) AS libelle
+                 FROM rattachement r JOIN individu i ON i.ind_id = r.rat_ind_id WHERE r.rat_actif
+                 ORDER BY r.rat_per_id, r.rat_principal DESC, r.rat_id)
 SELECT p.per_id, p.per_code, p.per_niv_code, n.niv_libelle, n.niv_icone, n.niv_morale, p.per_raison_sociale, p.per_nom_commercial,
        p.per_parent_id, par.per_raison_sociale AS parent, h.chemin, p.per_casquettes, p.per_pays, p.per_siren, p.per_siret,
        p.per_tva_intra, p.per_societe_base, p.per_actif, p.per_modifie_le,
-       adr.coo_ville AS ville, adr.coo_code_postal AS code_postal, f_texte_coordonnee(adr) AS adresse,
-       f_texte_coordonnee(tel) AS telephone, f_texte_coordonnee(mel) AS email,
-       (SELECT concat_ws(' ', i.ind_civilite, i.ind_prenom, i.ind_nom) FROM rattachement r JOIN individu i ON i.ind_id = r.rat_ind_id
-        WHERE r.rat_per_id = p.per_id AND r.rat_actif ORDER BY r.rat_principal DESC, r.rat_id LIMIT 1) AS contact
+       adr.coo_ville AS ville, adr.coo_code_postal AS code_postal, adr.texte AS adresse, tel.texte AS telephone, mel.texte AS email, contact.libelle AS contact
 FROM personne p
 JOIN niveau_personne n ON n.niv_code = p.per_niv_code
 LEFT JOIN personne par ON par.per_id = p.per_parent_id
 LEFT JOIN v_personne_chemin h ON h.per_id = p.per_id
-LEFT JOIN LATERAL f_coordonnee_principale('ADRESSE', p.per_id, NULL, NULL) adr ON TRUE
-LEFT JOIN LATERAL f_coordonnee_principale('TELEPHONE', p.per_id, NULL, NULL) tel ON TRUE
-LEFT JOIN LATERAL f_coordonnee_principale('EMAIL', p.per_id, NULL, NULL) mel ON TRUE;
+LEFT JOIN adr ON adr.per_id = p.per_id
+LEFT JOIN tel ON tel.per_id = p.per_id
+LEFT JOIN mel ON mel.per_id = p.per_id
+LEFT JOIN contact ON contact.per_id = p.per_id;
 
 -- Individus avec personnes rattachées, fonction, téléphone et e-mail (professionnels d'abord), portable, ville.
 CREATE VIEW v_annuaire_individus AS
+WITH tel AS (SELECT DISTINCT ON (ind_id) ind_id, texte FROM v_annuaire_usages
+             WHERE ind_id IS NOT NULL AND coo_nature = 'TELEPHONE' AND uco_usage IS DISTINCT FROM 'PORTABLE'
+             ORDER BY ind_id, pro DESC, uco_principal DESC, uco_ordre, uco_id),
+     portable AS (SELECT DISTINCT ON (ind_id) ind_id, texte FROM v_annuaire_usages
+                  WHERE ind_id IS NOT NULL AND coo_nature = 'TELEPHONE' AND uco_usage = 'PORTABLE'
+                  ORDER BY ind_id, pro DESC, uco_principal DESC, uco_ordre, uco_id),
+     mel AS (SELECT DISTINCT ON (ind_id) ind_id, texte FROM v_annuaire_usages
+             WHERE ind_id IS NOT NULL AND coo_nature = 'EMAIL' ORDER BY ind_id, pro DESC, uco_principal DESC, uco_ordre, uco_id),
+     adr AS (SELECT DISTINCT ON (ind_id) ind_id, coo_ville FROM v_annuaire_usages
+             WHERE ind_id IS NOT NULL AND NOT pro AND coo_nature = 'ADRESSE' ORDER BY ind_id, uco_principal DESC, uco_ordre, uco_id),
+     rats AS (SELECT r.rat_ind_id AS ind_id, string_agg(p.per_raison_sociale, ', ' ORDER BY r.rat_id) AS personnes,
+                     (array_agg(r.rat_fonction ORDER BY r.rat_id) FILTER (WHERE r.rat_fonction IS NOT NULL))[1] AS fonction
+              FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id WHERE r.rat_actif GROUP BY r.rat_ind_id)
 SELECT i.ind_id, i.ind_civilite, i.ind_nom, i.ind_prenom, concat_ws(' ', upper(i.ind_nom), i.ind_prenom) AS nom_complet,
        concat_ws(' ', i.ind_civilite, i.ind_prenom, i.ind_nom) AS libelle, i.ind_roles, i.ind_utilisateur, i.ind_actif, i.ind_modifie_le,
-       (SELECT string_agg(p.per_raison_sociale, ', ' ORDER BY r.rat_id) FROM rattachement r JOIN personne p ON p.per_id = r.rat_per_id
-        WHERE r.rat_ind_id = i.ind_id AND r.rat_actif) AS personnes,
-       (SELECT r.rat_fonction FROM rattachement r WHERE r.rat_ind_id = i.ind_id AND r.rat_actif AND r.rat_fonction IS NOT NULL ORDER BY r.rat_id LIMIT 1) AS fonction,
-       coalesce(f_texte_coordonnee(f_coordonnee_principale('TELEPHONE', NULL, NULL, i.ind_id, NULL, ARRAY['PORTABLE'])),
-                f_texte_coordonnee(f_coordonnee_principale('TELEPHONE', NULL, i.ind_id, NULL, NULL, ARRAY['PORTABLE']))) AS telephone,
-       coalesce(f_texte_coordonnee(f_coordonnee_principale('TELEPHONE', NULL, NULL, i.ind_id, ARRAY['PORTABLE'])),
-                f_texte_coordonnee(f_coordonnee_principale('TELEPHONE', NULL, i.ind_id, NULL, ARRAY['PORTABLE']))) AS portable,
-       coalesce(f_texte_coordonnee(f_coordonnee_principale('EMAIL', NULL, NULL, i.ind_id)),
-                f_texte_coordonnee(f_coordonnee_principale('EMAIL', NULL, i.ind_id, NULL))) AS email,
-       (f_coordonnee_principale('ADRESSE', NULL, i.ind_id, NULL)).coo_ville AS ville
-FROM individu i;
+       rats.personnes, rats.fonction, tel.texte AS telephone, portable.texte AS portable, mel.texte AS email, adr.coo_ville AS ville
+FROM individu i
+LEFT JOIN rats ON rats.ind_id = i.ind_id
+LEFT JOIN tel ON tel.ind_id = i.ind_id
+LEFT JOIN portable ON portable.ind_id = i.ind_id
+LEFT JOIN mel ON mel.ind_id = i.ind_id
+LEFT JOIN adr ON adr.ind_id = i.ind_id;

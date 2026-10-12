@@ -18,7 +18,7 @@ export const TYPES_FICHE = {
         {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
-            { titre: 'Identité', champs: ['matricule', 'nom', 'prenom'] },
+            { titre: 'Identité', champs: ['matricule', 'nom', 'prenom', 'ind_id'] },
             { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'type_mo', 'statut', 'date_entree', 'actif'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois'] },
@@ -38,6 +38,7 @@ export const TYPES_FICHE = {
       champs: [
         c('matricule', 'Matricule', 'sal_matricule', 'texte', { obligatoire: true, longueur: 10, saisie: 'creation', non_copie: true, aide: 'Identifiant unique, saisi à la création' }),
         c('nom', 'Nom', 'sal_nom', 'texte', { obligatoire: true, longueur: 60 }),
+        c('ind_id', 'Individu (annuaire)', 'sal_ind_id', 'nombre', { reference: 'individu', non_copie: true, aide: "Fiche de l'individu dans l'annuaire : identité et coordonnées partagées avec les autres modules" }),
         c('prenom', 'Prénom', 'sal_prenom', 'texte', { obligatoire: true, longueur: 60 }),
         c('date_naissance', 'Date de naissance', 'sal_date_naissance', 'date', { confidentiel: true }),
         c('num_secu', 'N° de sécurité sociale', 'sal_num_secu', 'texte', {
@@ -183,7 +184,8 @@ export const TYPES_FICHE = {
   },
   // Annuaire (module Annuaire) : personnes (morales à un niveau de la hiérarchie, ou particuliers) et individus. Les
   // coordonnées, rattachements et liens sont des champs gérés (hors table, partagés entre fiches) : onglets spécifiques
-  // de FichePersonne et FicheIndividu. Les groupes de l'onglet Casquettes ne s'affichent que pour les casquettes portées.
+  // de FichePersonne et FicheIndividu. Les groupes de l'onglet « Par relation » ne s'affichent que pour les relations
+  // de la personne (client, fournisseur… : « casquettes » dans le code).
   personne: {
     libelle: 'Personne', table: 'personne', cle: 'per_id', colonne_proprietes: 'per_proprietes',
     definition: {
@@ -195,7 +197,7 @@ export const TYPES_FICHE = {
           code: 'identite', titre: 'Identité',
           groupes: [
             { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'actif', 'societe_base'] },
-            { code: 'casquettes', titre: 'Casquettes', champs: ['casquettes'], largeur: 'plein' },
+            { code: 'casquettes', titre: 'Relations avec nous', champs: ['casquettes'], largeur: 'plein' },
             { code: 'entreprise', titre: 'Entreprise', champs: ['pays', 'siren', 'siret', 'tva_intra', 'identifiant_etranger', 'naf', 'forme_juridique', 'forme_libelle',
               'capital', 'rcs', 'date_creation', 'effectif', 'etat_administratif', 'siege', 'service_public'] },
             { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
@@ -209,7 +211,7 @@ export const TYPES_FICHE = {
           ],
         },
         {
-          code: 'casquettes', titre: 'Casquettes',
+          code: 'casquettes', titre: 'Par relation',
           groupes: [
             { code: 'client', titre: 'Client', champs: ['cli_compte', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
             { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_compte', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
@@ -227,7 +229,7 @@ export const TYPES_FICHE = {
         c('nom_commercial', 'Nom commercial (enseigne)', 'per_nom_commercial', 'texte', { longueur: 150 }),
         c('sigle', 'Sigle', 'per_sigle', 'texte', { longueur: 30 }),
         c('parent_id', 'Niveau supérieur', 'per_parent_id', 'nombre', { reference: 'personne', aide: 'Groupe d\'une société, société d\'un établissement, d\'une agence…' }),
-        c('casquettes', 'Casquettes', 'per_casquettes', 'json'),
+        c('casquettes', 'Relations', 'per_casquettes', 'json', { aide: 'Client, fournisseur, sous-traitant… : une personne peut en avoir plusieurs' }),
         c('actif', 'Actif', 'per_actif', 'booleen', { obligatoire: true, defaut: true }),
         c('societe_base', 'Société de cette base', 'per_societe_base', 'booleen', { obligatoire: true, defaut: false, non_copie: true, aide: 'Notre société (une seule par base)' }),
         c('pays', 'Pays', 'per_pays', 'texte', { obligatoire: true, defaut: 'FR', longueur: 2, format: 'regex:^[A-Za-z]{2}$', aide: 'Code ISO à 2 lettres (FR, BE, DE…)' }),
@@ -261,7 +263,7 @@ export const TYPES_FICHE = {
         c('iban', 'IBAN', 'per_iban', 'texte', { longueur: 42, non_copie: true }),
         c('bic', 'BIC', 'per_bic', 'texte', { longueur: 11 }),
         c('commentaire', 'Notes', 'per_commentaire', 'zone'),
-        // Champs déverrouillés par les casquettes (groupes de l'onglet Casquettes).
+        // Champs déverrouillés par les relations (groupes de l'onglet Par relation).
         c('cli_compte', 'Compte client', 'per_cli_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (411…)' }),
         c('cli_categorie', 'Catégorie tarifaire', 'per_cli_categorie', 'texte', { longueur: 40 }),
         c('cli_encours_max', 'Encours autorisé (€)', 'per_cli_encours_max', 'nombre', { format: '999999999999.99' }),
@@ -316,6 +318,8 @@ export const TYPES_FICHE = {
         c('commentaire', 'Notes', 'ind_commentaire', 'zone'),
         c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
         c('rattachements', 'Rattachements', null, 'json', { gere: true }),
+        // Fiche salarié liée (module salariés du cœur) : lue par la spécialisation, jamais écrite.
+        c('salarie', 'Salarié', null, 'json', { gere: true, lecture_seule: true }),
       ],
     },
   },

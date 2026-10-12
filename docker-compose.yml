@@ -35,6 +35,7 @@ services:
       - ./db/131_fiches_parametrage.sql:/docker-entrypoint-initdb.d/131_fiches_parametrage.sql:ro
       - ./db/140_annuaire.sql:/docker-entrypoint-initdb.d/140_annuaire.sql:ro
       - ./db/141_annuaire_demo.sql:/docker-entrypoint-initdb.d/141_annuaire_demo.sql:ro
+      - ./db/142_annuaire_salaries.sql:/docker-entrypoint-initdb.d/142_annuaire_salaries.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

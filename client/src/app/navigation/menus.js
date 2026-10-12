@@ -35,7 +35,7 @@ export const MENUS_METIER = [
       { code: 'nouvel-individu', libelle: 'Nouvel individu (contact)', icone: '＋', url: '/fiche/individu/nouveau' },
       { separateur: true },
       { code: 'notre-societe', libelle: 'Notre société', icone: '🏛️', url: '/annuaire/societe', info: 'Fiche de la société de cette base' },
-      { code: 'parametrage-annuaire', libelle: 'Niveaux, casquettes, liens, rôles…', icone: '⚙', url: '/parametres/annuaire' },
+      { code: 'parametrage-annuaire', libelle: 'Niveaux, relations, liens, rôles…', icone: '⚙', url: '/parametres/annuaire' },
     ],
   },
   {
@@ -93,7 +93,7 @@ export function menus(app) {
         { libelle: 'Fiche personne : champs…', icone: '🏢', action: () => app.parametrerFiche('personne'), desactive: !app.estAdmin() },
         { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu'), desactive: !app.estAdmin() },
         { separateur: true, libelle: 'Annuaire et bibliothèque' },
-        { libelle: 'Annuaire : niveaux, casquettes, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
+        { libelle: 'Annuaire : niveaux, relations, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },

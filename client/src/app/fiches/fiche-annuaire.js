@@ -131,7 +131,7 @@ export class FichePersonne extends FicheAnnuaire {
     return parts.join('');
   }
 
-  /** Groupes visibles : entreprise et facturation électronique pour une personne morale ; casquettes portées. */
+  /** Groupes visibles : entreprise et facturation électronique pour une personne morale ; relations de la personne (casquettes). */
   sections() {
     const morale = this.morale;
     const deverrouilles = new Set(this.#casquettes().flatMap((c) => c.groupes ?? []));
@@ -335,6 +335,7 @@ export class FicheIndividu extends FicheAnnuaire {
     if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
     const n = (v.rattachements ?? []).length;
     if (n > 1) parts.push(info('Rattachements', `${n} personnes`));
+    if (v.salarie) parts.push(info('Salarié', `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ' (sorti)'}`));
     if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info('Homonymes', echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
     return parts.join('');
   }
@@ -365,7 +366,15 @@ export class FicheIndividu extends FicheAnnuaire {
 
   actionsSupplementaires() {
     const particulier = (this.fiche?.valeurs?.rattachements ?? []).find((r) => r.titulaire && r.niveau === 'PARTICULIER');
+    const salarie = this.fiche?.valeurs?.salarie ?? null;
+    const roles = this.fiche?.valeurs?.roles ?? [];
     return [
+      {
+        libelle: salarie ? `👷 Salarié ${salarie.matricule}` : '👷 Créer la fiche salarié',
+        titre: salarie ? `Ouvrir la fiche salarié (${salarie.poste ?? ''}${salarie.agence ? `, ${salarie.agence}` : ''})` : 'Créer la fiche salarié à partir de cet individu (identité, agence, coordonnées professionnelles)',
+        visible: !this.estEnSaisie() && this.id !== null && (!!salarie || roles.includes('SALARIE') || roles.includes('INTERIMAIRE')),
+        action: () => this.ouvrirFiche({ type: 'salarie', id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),
+      },
       {
         libelle: particulier ? '🏠 Compte particulier' : '🏠 Créer le compte particulier',
         titre: particulier ? 'Ouvrir son compte particulier (client)' : 'Créer une personne « Particulier » dont il est titulaire, avec ses coordonnées personnelles partagées',

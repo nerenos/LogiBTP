@@ -1,7 +1,9 @@
 import { luhn, tvaDepuisSiren } from '@logibtp/annuaire';
 
-// Annuaire de démonstration (entreprises et personnes fictives) : référentiels (niveaux, casquettes, types de lien,
-// rôles), personnes à plusieurs niveaux (société de la base et ses agences, groupe › société › établissement…),
+// Annuaire de démonstration (entreprises et personnes fictives) : référentiels (niveaux, relations — « casquettes » dans
+// le code —, types de lien, rôles), personnes à plusieurs niveaux (société de la base et ses agences, groupe de location
+// › société › agences dans plusieurs villes › dépôts, groupe › société › établissement…), tiers à plusieurs relations
+// (client et fournisseur…), plusieurs contacts par personne,
 // individus rattachés, coordonnées partagées. Exemple : Antoine Abel, commercial de Matériaux Rhône-Alpes à Gerland
 // (fournisseur), est aussi client particulier ; son adresse et ses coordonnées personnelles sont partagées (même
 // identifiant) entre sa fiche individu et son compte particulier. Alimente la démo hors ligne et db/141 (généré).
@@ -80,6 +82,7 @@ const fr = (base8, nic = '0001', extra = {}) => {
 
 const NOTRE = siren('84251731');
 const MRA = siren('52310440');
+const LOCAPRO = siren('43312876');
 
 export const PERSONNES = [
   P(1, 'SOCIETE', 'LogiBTP Démo', {
@@ -98,7 +101,8 @@ export const PERSONNES = [
   }),
   P(6, 'ETABLISSEMENT', 'Matériaux Rhône-Alpes – Lyon Gerland', { parent_id: 5, siren: MRA, siret: siret(MRA, '0002'), siege: false, casquettes: ['FOURNISSEUR'], naf: '46.73A' }),
   P(7, 'SOCIETE', 'Électricité Rhône-Alpes', {
-    ...fr('49215837'), casquettes: ['SOUS_TRAITANT'], forme_juridique: '5499', forme_libelle: 'Société à responsabilité limitée (SARL)', naf: '43.21A', siege: true,
+    ...fr('49215837'), casquettes: ['SOUS_TRAITANT', 'CLIENT', 'COTRAITANT'], cli_compte: '411ELECRA',
+    commentaire: 'Sous-traitant sur nos chantiers ; client pour l\'extension de ses locaux ; cotraitant sur le lot technique de la ZAC.', forme_juridique: '5499', forme_libelle: 'Société à responsabilité limitée (SARL)', naf: '43.21A', siege: true,
     st_corps_etat: 'Électricité courants forts et faibles', st_qualifications: 'Qualifelec E2', st_decennale_assureur: 'Assurances Bâtisseurs Mutuelle',
     st_decennale_police: 'DEC-2026-11874', st_decennale_fin: '2026-12-31',
   }),
@@ -106,7 +110,7 @@ export const PERSONNES = [
     ...fr('80135562'), casquettes: ['SOUS_TRAITANT'], forme_juridique: '5498', forme_libelle: 'SARL unipersonnelle (EURL)', naf: '43.22A', siege: true,
     st_corps_etat: 'Plomberie, chauffage', st_qualifications: 'Qualibat 5211', st_decennale_assureur: 'Assurances Bâtisseurs Mutuelle', st_decennale_fin: '2026-03-31',
   }),
-  P(9, 'AGENCE', "Loca'Pro Matériel – Lyon Est", { ...fr('43312876', '0012'), casquettes: ['LOUEUR', 'FOURNISSEUR'], naf: '77.32Z', siege: false, fou_compte: '401LOCA' }),
+  P(9, 'AGENCE', 'LocaPro – Agence Lyon Est', { parent_id: 28, ...agenceLocapro('0012'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
   P(10, 'AGENCE', 'Intérim BTP Services – Lyon', { ...fr('39845123', '0021'), casquettes: ['INTERIM'], naf: '78.20Z', siege: false, int_garantie_financiere: 'Caisse de garantie du travail temporaire', int_coefficient: 1.92 }),
   P(11, 'SOCIETE', "Atelier d'architecture Durand et associés", { ...fr('75223418'), casquettes: ['ARCHITECTE', 'MOE'], naf: '71.11Z', siege: true, arc_numero_ordre: 'S12345' }),
   P(12, 'SOCIETE', 'BET Structure Confluence', { ...fr('81904577'), casquettes: ['BE'], naf: '71.12B', siege: true }),
@@ -127,8 +131,57 @@ export const PERSONNES = [
   }),
   P(22, 'SOCIETE', 'Aciers du Rhône', { ...fr('42876519'), casquettes: ['FOURNISSEUR'], naf: '46.72Z', siege: true, fou_compte: '401ACIERS' }),
   P(23, 'SOCIETE', 'Métal Distribution', { ...fr('38712466'), casquettes: ['FOURNISSEUR'], naf: '46.72Z', siege: true }),
-  P(24, 'SOCIETE', 'Béton Lyonnais', { ...fr('50466213'), casquettes: ['FOURNISSEUR'], naf: '23.63Z', siege: true }),
+  P(24, 'SOCIETE', 'Béton Lyonnais', {
+    ...fr('50466213'), casquettes: ['FOURNISSEUR', 'CLIENT'], naf: '23.63Z', siege: true, cli_compte: '411BETONLY', fou_compte: '401BETONLY',
+    commentaire: 'Fournisseur de béton prêt à l\'emploi ; client pour la construction de sa nouvelle centrale à Corbas.',
+  }),
+  // Agences de notre société (rattachement des salariés selon leur agence).
+  P(25, 'AGENCE', 'LogiBTP Démo – Agence de Saint-Étienne', { parent_id: 1, siren: NOTRE, siret: siret(NOTRE, '0004'), siege: false, naf: '41.20B' }),
+  P(26, 'AGENCE', 'LogiBTP Démo – Agence de Bourg-en-Bresse', { parent_id: 1, siren: NOTRE, siret: siret(NOTRE, '0005'), siege: false, naf: '41.20B' }),
+  // Groupe de location de matériel : société, agences dans plusieurs villes, dépôts rattachés à une agence.
+  P(27, 'GROUPE', 'Groupe LocaPro', { ...fr('39017264'), forme_juridique: '5599', forme_libelle: "SA à conseil d'administration", naf: '70.10Z', siege: true }),
+  P(28, 'SOCIETE', 'LocaPro Location', {
+    parent_id: 27, siren: LOCAPRO, siret: siret(LOCAPRO, '0001'), tva_intra: tvaDepuisSiren(LOCAPRO), siege: true, casquettes: ['LOUEUR', 'FOURNISSEUR', 'CLIENT'],
+    forme_juridique: '5710', forme_libelle: 'Société par actions simplifiée (SAS)', naf: '77.32Z', fou_compte: '401LOCAPRO', fou_numero_client: 'LP-778412',
+    cli_compte: '411LOCAPRO', mode_reglement: 'PRELEVEMENT', delai_paiement: '30JFM', fe_format: 'UBL',
+    commentaire: 'Loueur de matériel (fournisseur) ; client pour l\'aménagement de ses dépôts.',
+  }),
+  P(29, 'AGENCE', 'LocaPro – Agence Lyon Ouest', { parent_id: 28, ...agenceLocapro('0020'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
+  P(30, 'AGENCE', 'LocaPro – Agence Grenoble', { parent_id: 28, ...agenceLocapro('0038'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
+  P(31, 'AGENCE', 'LocaPro – Agence Saint-Étienne', { parent_id: 28, ...agenceLocapro('0046'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
+  P(32, 'AGENCE', 'LocaPro – Agence Villefranche-sur-Saône', { parent_id: 28, ...agenceLocapro('0053'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
+  P(33, 'AGENCE', 'LocaPro – Agence Chambéry', { parent_id: 28, ...agenceLocapro('0061'), casquettes: ['LOUEUR', 'FOURNISSEUR'] }),
+  P(34, 'DEPOT', 'LocaPro – Dépôt de Saint-Priest', { parent_id: 9, ...agenceLocapro('0079'), casquettes: ['LOUEUR'] }),
+  P(35, 'DEPOT', 'LocaPro – Dépôt de Corbas', { parent_id: 9, ...agenceLocapro('0087'), casquettes: ['LOUEUR'] }),
+  P(36, 'DEPOT', "LocaPro – Dépôt d'Échirolles", { parent_id: 30, ...agenceLocapro('0095'), casquettes: ['LOUEUR'] }),
+  P(37, 'SOCIETE', 'LocaPro Modulaires', { parent_id: 27, ...fr('48261937'), casquettes: ['LOUEUR', 'FOURNISSEUR'], naf: '77.39Z', siege: true, commentaire: 'Bungalows et bases vie de chantier.' }),
+  // Tiers à plusieurs relations.
+  P(38, 'SOCIETE', 'Charpentes du Lyonnais', {
+    ...fr('51293846'), casquettes: ['SOUS_TRAITANT', 'FOURNISSEUR'], forme_juridique: '5499', forme_libelle: 'Société à responsabilité limitée (SARL)', naf: '16.23Z', siege: true,
+    st_corps_etat: 'Charpente bois, ossature bois', st_qualifications: 'Qualibat 2312', st_decennale_assureur: 'Assurances Bâtisseurs Mutuelle', st_decennale_fin: '2027-06-30',
+    commentaire: 'Sous-traitant en pose ; fournisseur de bois de charpente en fourniture seule.',
+  }),
+  P(39, 'SOCIETE', 'Rhône Habitat', {
+    ...fr('27690012'), casquettes: ['CLIENT', 'MOA'], naf: '68.20A', siege: true, service_public: true, fe_plateforme: 'Chorus Pro', fe_code_service: 'PATRIMOINE',
+    fe_engagement: true, cli_compte: '411RHONEHAB', delai_paiement: '30J', mode_reglement: 'VIREMENT', commentaire: 'Bailleur social (office public de l\'habitat).',
+  }),
+  P(40, 'SOCIETE', 'Garage Poids Lourds Martin', {
+    ...fr('40518327'), casquettes: ['FOURNISSEUR', 'CLIENT'], naf: '45.20B', siege: true, fou_compte: '401GPLM', cli_compte: '411GPLM',
+    commentaire: 'Entretient nos camions (fournisseur) ; nous agrandissons son atelier (client).',
+  }),
+  P(41, 'SOCIETE', 'Énergies Solaires du Rhône', {
+    ...fr('83465201'), casquettes: ['CLIENT', 'FOURNISSEUR', 'COTRAITANT'], naf: '43.21B', siege: true, cli_compte: '411ESR', fou_compte: '401ESR',
+    commentaire: 'Fournit les panneaux photovoltaïques, cotraitant en groupement, et client pour ses bureaux.',
+  }),
+  P(42, 'SOCIETE', 'Menuiseries Alpines', {
+    ...fr('79256410'), casquettes: ['FOURNISSEUR', 'SOUS_TRAITANT'], naf: '16.23Z', siege: true, st_corps_etat: 'Menuiseries extérieures', st_qualifications: 'Qualibat 3512',
+  }),
 ];
+
+/** Agence de LocaPro Location : SIRET de la société (NIC de l'agence), NAF de la location de matériel. */
+function agenceLocapro(nic) {
+  return { siren: LOCAPRO, siret: siret(LOCAPRO, nic), siege: false, naf: '77.32Z' };
+}
 
 const I = (id, civilite, prenom, nom, extra = {}) => ({ id, civilite, prenom, nom, date_naissance: null, pays: 'FR', roles: [], utilisateur: null, actif: true, commentaire: null, proprietes: {}, ...extra });
 
@@ -149,6 +202,23 @@ export const INDIVIDUS = [
   I(14, 'Mme', 'Julie', 'Fontaine'),
   I(15, 'M.', 'Giorgio', 'Rossi', { pays: 'IT' }),
   I(16, 'M.', 'Nicolas', 'Faure', { roles: ['SALARIE', 'CHEF_CHANTIER'] }),
+  I(17, 'M.', 'Olivier', 'Chevalier'),
+  I(18, 'Mme', 'Camille', 'Robin'),
+  I(19, 'M.', 'Yanis', 'Benali', { commentaire: 'Commercial itinérant : couvre les agences Lyon Est et Lyon Ouest.' }),
+  I(20, 'Mme', 'Laura', 'Mercier'),
+  I(21, 'M.', 'Kévin', 'Girard'),
+  I(22, 'Mme', 'Sarah', 'Lopez'),
+  I(23, 'M.', 'Romain', 'Fabre'),
+  I(24, 'Mme', 'Inès', 'Garcia'),
+  I(25, 'M.', 'Damien', 'Perrin'),
+  I(26, 'Mme', 'Chloé', 'Blanc'),
+  I(27, 'M.', 'Patrick', 'Vidal'),
+  I(28, 'Mme', 'Aurélie', 'Masson'),
+  I(29, 'M.', 'Bruno', 'Leclerc'),
+  I(30, 'M.', 'Fabien', 'Marchand'),
+  I(31, 'Mme', 'Manon', 'Roche'),
+  I(32, 'M.', 'Hervé', 'Collet'),
+  I(33, 'Mme', 'Émilie', 'Garnier'),
 ];
 
 // Rattachements : [id, individu, personne, fonction, extra]
@@ -173,6 +243,26 @@ export const RATTACHEMENTS = [
   R(16, 14, 5, 'Comptabilité fournisseurs', { service: 'Comptabilité', principal: true }),
   R(17, 15, 21, 'Amministratore', { principal: true }),
   R(18, 16, 3, 'Chef de dépôt', { principal: true }),
+  // Plusieurs contacts par personne (LocaPro, MRA, Électricité Rhône-Alpes, Rhône Habitat…).
+  R(19, 17, 28, 'Directeur régional', { principal: true, service: 'Direction régionale Rhône-Alpes' }),
+  R(20, 22, 28, 'Administration des ventes', { service: 'ADV et facturation' }),
+  R(21, 18, 9, "Cheffe d'agence", { principal: true }),
+  R(22, 19, 9, 'Commercial itinérant', { service: 'Ventes' }),
+  R(23, 19, 29, 'Commercial itinérant', { service: 'Ventes' }),
+  R(24, 20, 30, "Cheffe d'agence", { principal: true }),
+  R(25, 21, 34, 'Responsable de dépôt', { principal: true }),
+  R(26, 23, 5, 'Directeur commercial', { service: 'Commercial' }),
+  R(27, 24, 6, 'Assistante ADV', { service: 'Ventes' }),
+  R(28, 25, 7, "Chef d'équipe", { service: 'Chantiers' }),
+  R(29, 26, 7, 'Secrétaire', { service: 'Administration' }),
+  R(30, 27, 38, 'Gérant', { principal: true }),
+  R(31, 29, 39, 'Directeur du patrimoine', { principal: true, service: 'Patrimoine' }),
+  R(32, 28, 39, "Chargée d'opérations", { service: 'Maîtrise d\'ouvrage' }),
+  R(33, 30, 41, 'Gérant', { principal: true }),
+  R(34, 31, 42, 'Commerciale', { principal: true }),
+  R(35, 32, 40, 'Chef d\'atelier', { principal: true }),
+  R(36, 33, 40, 'Comptable', { service: 'Comptabilité' }),
+  R(37, 32, 37, 'Ancien responsable technique', { actif: false, fin: '2024-12-31' }),
 ];
 
 export const LIENS = [
@@ -181,6 +271,9 @@ export const LIENS = [
   { id: 3, per_id: 7, cible_id: 20, tli_code: 'ASSURE_PAR', commentaire: 'Décennale et RC pro', debut: null, fin: null },
   { id: 4, per_id: 1, cible_id: 19, tli_code: 'BANQUE', commentaire: null, debut: null, fin: null },
   { id: 5, per_id: 21, cible_id: 7, tli_code: 'PARTENAIRE', commentaire: 'Groupement pour les façades', debut: null, fin: null },
+  { id: 6, per_id: 9, cible_id: 28, tli_code: 'FACTURER_A', commentaire: 'Factures des agences émises par LocaPro Location', debut: null, fin: null },
+  { id: 7, per_id: 41, cible_id: 7, tli_code: 'PARTENAIRE', commentaire: 'Groupement ZAC des Gaulnes (lot technique)', debut: '2026-03-01', fin: null },
+  { id: 8, per_id: 38, cible_id: 20, tli_code: 'ASSURE_PAR', commentaire: 'Décennale', debut: null, fin: null },
 ];
 
 // Coordonnées et usages : chaque coordonnée est stockée une fois ; ses usages la relient aux fiches.
@@ -221,6 +314,28 @@ pour({ per: 6 }, [adresse('112 avenue Jean-Jaurès', '69007', 'Lyon'), 'PRINCIPA
 pour({ per: 7 }, [adresse('3 rue des Artisans', '69800', 'Saint-Priest'), 'SIEGE'], [tel('04 72 23 45 67'), 'FIXE'], [mail('contact@electricite-ra.example'), 'PRO']);
 pour({ per: 8 }, [adresse('27 chemin des Vignes', '69340', 'Francheville'), 'SIEGE'], [tel('04 78 59 12 34'), 'FIXE'], [mail('plomberie.dupuis@exemple.fr'), 'PRO']);
 pour({ per: 9 }, [adresse('5 rue de l\'Industrie', '69800', 'Saint-Priest'), 'PRINCIPALE'], [tel('04 72 90 80 70'), 'STANDARD'], [mail('lyon-est@locapro.example'), 'COMMANDE']);
+pour({ per: 25 }, [adresse('12 rue de la Résistance', '42000', 'Saint-Étienne'), 'PRINCIPALE'], [tel('04 77 00 00 00'), 'STANDARD'], [mail('saint-etienne@logibtp-demo.fr'), 'PRO']);
+pour({ per: 26 }, [adresse('6 avenue Alsace-Lorraine', '01000', 'Bourg-en-Bresse'), 'PRINCIPALE'], [tel('04 74 00 00 10'), 'STANDARD'], [mail('bourg@logibtp-demo.fr'), 'PRO']);
+// Groupe LocaPro : siège du groupe partagé avec la société ; e-mail de facturation de la société partagé par les agences.
+const siegeLocapro = coo(adresse('2 rue des Frères-Lumière', '69680', 'Chassieu'));
+const factLocapro = coo(mail('factures@locapro.example'));
+pour({ per: 27 }, [siegeLocapro, 'SIEGE'], [web('https://www.locapro.example'), 'SITE'], [web('https://www.linkedin.com/company/locapro', 'LINKEDIN'), 'RESEAU']);
+pour({ per: 28 }, [siegeLocapro, 'SIEGE'], [tel('04 72 47 00 00'), 'STANDARD'], [mail('contact@locapro.example'), 'PRO'], [factLocapro, 'FACTURATION']);
+usage(factLocapro, { per: 9 }, 'FACTURATION');
+pour({ per: 29 }, [adresse('48 avenue de la République', '69160', 'Tassin-la-Demi-Lune'), 'PRINCIPALE'], [tel('04 78 34 00 00'), 'STANDARD'], [mail('lyon-ouest@locapro.example'), 'COMMANDE'], [factLocapro, 'FACTURATION']);
+pour({ per: 30 }, [adresse('15 rue Jean-Pain', '38100', 'Grenoble'), 'PRINCIPALE'], [tel('04 76 22 00 00'), 'STANDARD'], [mail('grenoble@locapro.example'), 'COMMANDE'], [factLocapro, 'FACTURATION']);
+pour({ per: 31 }, [adresse('80 rue de la Montat', '42100', 'Saint-Étienne'), 'PRINCIPALE'], [tel('04 77 33 00 00'), 'STANDARD'], [mail('saint-etienne@locapro.example'), 'COMMANDE'], [factLocapro, 'FACTURATION']);
+pour({ per: 32 }, [adresse('3 route de Riottier', '69400', 'Villefranche-sur-Saône'), 'PRINCIPALE'], [tel('04 74 62 00 00'), 'STANDARD'], [mail('villefranche@locapro.example'), 'COMMANDE'], [factLocapro, 'FACTURATION']);
+pour({ per: 33 }, [adresse('210 avenue des Landiers', '73000', 'Chambéry'), 'PRINCIPALE'], [tel('04 79 69 00 00'), 'STANDARD'], [mail('chambery@locapro.example'), 'COMMANDE'], [factLocapro, 'FACTURATION']);
+pour({ per: 34 }, [adresse('ZI Mi-Plaine, 9 rue Ferdinand-Perrier', '69800', 'Saint-Priest'), 'PRINCIPALE'], [tel('04 72 90 80 79'), 'FIXE'], [adresse('ZI Mi-Plaine, quai 4', '69800', 'Saint-Priest'), 'LIVRAISON']);
+pour({ per: 35 }, [adresse('31 rue Marcel-Mérieux', '69960', 'Corbas'), 'PRINCIPALE'], [tel('04 72 50 70 70'), 'FIXE']);
+pour({ per: 36 }, [adresse('7 avenue de Grugliasco', '38130', 'Échirolles'), 'PRINCIPALE'], [tel('04 76 09 00 00'), 'FIXE']);
+pour({ per: 37 }, [adresse('2 rue des Frères-Lumière', '69680', 'Chassieu', { ligne2: 'Bâtiment B' }), 'SIEGE'], [tel('04 72 47 10 00'), 'STANDARD'], [mail('contact@locapro-modulaires.example'), 'PRO']);
+pour({ per: 38 }, [adresse('45 route de Lyon', '69440', 'Mornant'), 'SIEGE'], [tel('04 78 44 00 00'), 'FIXE'], [mail('contact@charpentes-lyonnais.example'), 'PRO'], [mail('commandes@charpentes-lyonnais.example'), 'COMMANDE']);
+pour({ per: 39 }, [adresse('53 avenue Jean-Jaurès', '69007', 'Lyon'), 'SIEGE'], [adresse('Service patrimoine, 53 avenue Jean-Jaurès', '69007', 'Lyon'), 'FACTURATION'], [tel('04 72 00 30 00'), 'STANDARD']);
+pour({ per: 40 }, [adresse('14 rue de l\'Artisanat', '69330', 'Meyzieu'), 'SIEGE'], [tel('04 78 31 00 00'), 'FIXE'], [mail('atelier@gplm.example'), 'PRO']);
+pour({ per: 41 }, [adresse('6 rue Jacquard', '69100', 'Villeurbanne'), 'SIEGE'], [tel('04 78 93 00 00'), 'FIXE'], [mail('contact@esr-solaire.example'), 'PRO'], [web('https://www.esr-solaire.example'), 'SITE']);
+pour({ per: 42 }, [adresse('ZA Les Iles, 2 rue du Lac', '74000', 'Annecy'), 'SIEGE'], [tel('04 50 00 00 00'), 'FIXE'], [mail('ventes@menuiseries-alpines.example'), 'COMMANDE']);
 pour({ per: 10 }, [adresse('61 cours Gambetta', '69003', 'Lyon'), 'PRINCIPALE'], [tel('04 78 95 00 00'), 'STANDARD'], [mail('lyon@interim-btp.example'), 'PRO']);
 pour({ per: 11 }, [adresse('9 quai Saint-Antoine', '69002', 'Lyon'), 'SIEGE'], [tel('04 78 42 11 22'), 'FIXE'], [mail('atelier@durand-architectes.example'), 'PRO'],
   [web('https://www.instagram.com/durand.architectes', 'INSTAGRAM'), 'RESEAU']);
@@ -268,6 +383,30 @@ pour({ rat: 14 }, [mail('gestion@sci-erables.example'), 'PRO'], [portableGarnier
 pour({ rat: 15 }, [mail('p.garnier@batir-ensemble.example'), 'PRO'], [portableGarnier, 'PORTABLE'], [tel('04 78 24 00 15'), 'PRO', { libelle: 'Ligne directe' }]);
 pour({ rat: 16 }, [mail('j.fontaine@mra.example'), 'PRO'], [tel('04 72 10 20 35'), 'PRO']);
 pour({ rat: 17 }, [mail('g.rossi@costruzioni-alpine.example'), 'PRO'], [tel('+39 333 123 4567'), 'PORTABLE']);
+
+// Contacts multiples : coordonnées professionnelles par rattachement (Yanis Benali : même portable pour ses 2 agences).
+const portableBenali = coo(tel('06 60 70 80 90'));
+pour({ rat: 19 }, [mail('o.chevalier@locapro.example'), 'PRO'], [tel('06 60 10 20 30'), 'PORTABLE']);
+pour({ rat: 20 }, [mail('adv@locapro.example'), 'PRO'], [tel('04 72 47 00 05'), 'PRO', { libelle: 'Ligne directe' }]);
+pour({ rat: 21 }, [mail('c.robin@locapro.example'), 'PRO'], [tel('06 60 11 22 33'), 'PORTABLE']);
+pour({ rat: 22 }, [mail('y.benali@locapro.example'), 'PRO'], [portableBenali, 'PORTABLE']);
+pour({ rat: 23 }, [mail('y.benali@locapro.example'), 'PRO'], [portableBenali, 'PORTABLE']);
+pour({ rat: 24 }, [mail('l.mercier@locapro.example'), 'PRO'], [tel('06 60 44 55 66'), 'PORTABLE']);
+pour({ rat: 25 }, [tel('06 60 77 88 99'), 'PORTABLE'], [mail('depot.saint-priest@locapro.example'), 'PRO']);
+pour({ rat: 26 }, [mail('r.fabre@mra.example'), 'PRO'], [tel('06 71 00 00 01'), 'PORTABLE']);
+pour({ rat: 27 }, [mail('adv.gerland@mra.example'), 'PRO'], [tel('04 78 61 00 15'), 'PRO', { libelle: 'Ligne directe' }]);
+pour({ rat: 28 }, [tel('06 71 00 00 02'), 'PORTABLE']);
+pour({ rat: 29 }, [mail('secretariat@electricite-ra.example'), 'PRO']);
+pour({ rat: 30 }, [mail('p.vidal@charpentes-lyonnais.example'), 'PRO'], [tel('06 71 00 00 03'), 'PORTABLE']);
+pour({ rat: 31 }, [mail('b.leclerc@rhone-habitat.example'), 'PRO'], [tel('04 72 00 30 12'), 'PRO', { libelle: 'Secrétariat' }]);
+pour({ rat: 32 }, [mail('a.masson@rhone-habitat.example'), 'PRO'], [tel('06 71 00 00 04'), 'PORTABLE']);
+pour({ rat: 33 }, [mail('f.marchand@esr-solaire.example'), 'PRO'], [tel('06 71 00 00 05'), 'PORTABLE']);
+pour({ rat: 34 }, [mail('m.roche@menuiseries-alpines.example'), 'PRO'], [tel('06 71 00 00 06'), 'PORTABLE']);
+pour({ rat: 35 }, [tel('06 71 00 00 07'), 'PORTABLE']);
+pour({ rat: 36 }, [mail('compta@gplm.example'), 'PRO']);
+
+/** Agences de notre société (personnes) par agence des salariés de démonstration. */
+export const AGENCES_SALARIES = { Lyon: 1, Grenoble: 2, 'Saint-Étienne': 25, 'Bourg-en-Bresse': 26 };
 
 /** Fournisseurs des tarifs de la bibliothèque de démonstration : tfo_tiers_id. */
 export const TIERS_TARIFS = { 'Aciers du Rhône': 22, 'Métal Distribution': 23, 'Béton Lyonnais': 24, 'Matériaux Rhône-Alpes': 5 };

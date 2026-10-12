@@ -516,29 +516,60 @@ export class FournisseurAnnuaireMemoire {
 
   /** Colonnes des listes (comme v_liste_personnes et v_liste_individus) recalculées sur toutes les lignes. */
   deriver() {
+    // Index (annuaire de démonstration volumineux : salariés) : coordonnées, usages par fiche, rattachements, fiches.
+    const coordonnees = new Map(this.coordonnees.map((c) => [c.id, c]));
+    const usagesPar = { per_id: new Map(), ind_id: new Map(), rat_id: new Map() };
+    for (const u of this.usages) {
+      const cle = u.per_id ? 'per_id' : u.ind_id ? 'ind_id' : 'rat_id';
+      if (!usagesPar[cle].has(u[cle])) usagesPar[cle].set(u[cle], []);
+      usagesPar[cle].get(u[cle]).push(u);
+    }
+    // Même ordre que #usagesDe : nature, rang, identifiant.
+    const usagesDe = (cle, id) => (usagesPar[cle].get(id) ?? []).map((u) => {
+      const c = coordonnees.get(u.coo_id);
+      return { nature: c.nature, usage: u.usage ?? null, principal: !!u.principal, ordre: u.ordre, id: u.id, ...valeursCoordonnee(c) };
+    }).sort((a, b) => a.nature.localeCompare(b.nature) || a.ordre - b.ordre || a.id - b.id);
+    const personnes = new Map(this.personnes.map((p) => [p.id, p]));
+    const individus = new Map(this.individus.map((i) => [i.id, i]));
+    const ratsPar = (cle) => {
+      const m = new Map();
+      for (const r of this.rattachements) {
+        if (r.actif === false) continue;
+        if (!m.has(r[cle])) m.set(r[cle], []);
+        m.get(r[cle]).push(r);
+      }
+      return m;
+    };
+    const ratsPersonne = ratsPar('per_id'), ratsIndividu = ratsPar('ind_id');
+    const chemin = (p) => {
+      const noms = [];
+      const vus = new Set();
+      for (let x = p; x && !vus.has(x.id); x = personnes.get(Number(x.parent_id))) { vus.add(x.id); noms.unshift(x.raison_sociale); }
+      return noms.join(' › ');
+    };
+    const adresse = (usages) => usages.filter((u) => u.nature === 'ADRESSE').sort((a, b) => Number(b.principal) - Number(a.principal))[0];
     for (const p of this.personnes) {
-      const usages = this.#usagesDe('personne', p.id);
-      const parent = this.personnes.find((x) => x.id === Number(p.parent_id));
-      const contact = this.rattachements.filter((r) => r.per_id === p.id && r.actif !== false).sort((a, b) => Number(b.principal) - Number(a.principal))[0];
-      const adresse = usages.filter((u) => u.nature === 'ADRESSE').sort((a, b) => Number(b.principal) - Number(a.principal))[0];
+      const usages = usagesDe('per_id', p.id);
+      const contact = [...(ratsPersonne.get(p.id) ?? [])].sort((a, b) => Number(b.principal) - Number(a.principal))[0];
+      const a = adresse(usages);
       Object.assign(p, {
-        type_element: 'personne', parent: parent?.raison_sociale ?? null, ville: adresse?.ville ?? null, code_postal: adresse?.code_postal ?? null,
+        type_element: 'personne', parent: personnes.get(Number(p.parent_id))?.raison_sociale ?? null, ville: a?.ville ?? null, code_postal: a?.code_postal ?? null,
         telephone: principale(usages, 'TELEPHONE'), email: principale(usages, 'EMAIL'), adresse: principale(usages, 'ADRESSE'),
-        contact: contact ? libelleIndividu(this.individus.find((i) => i.id === contact.ind_id)) : null, chemin: this.#chemin(p.id),
+        contact: contact ? libelleIndividu(individus.get(contact.ind_id)) : null, chemin: chemin(p),
       });
     }
     for (const i of this.individus) {
-      const usages = this.#usagesDe('individu', i.id);
-      const rats = this.rattachements.filter((r) => r.ind_id === i.id && r.actif !== false);
-      const pro = rats.flatMap((r) => this.#usagesDe('rattachement', r.id));
-      const adresse = usages.filter((u) => u.nature === 'ADRESSE').sort((a, b) => Number(b.principal) - Number(a.principal))[0];
+      const usages = usagesDe('ind_id', i.id);
+      const rats = ratsIndividu.get(i.id) ?? [];
+      const pro = rats.flatMap((r) => usagesDe('rat_id', r.id));
+      const portable = (l, oui) => l.filter((u) => (u.usage === 'PORTABLE') === oui);
       Object.assign(i, {
         type_element: 'individu', nom_complet: [i.nom?.toUpperCase(), i.prenom].filter(Boolean).join(' '),
-        personnes: rats.map((r) => this.personnes.find((p) => p.id === r.per_id)?.raison_sociale).filter(Boolean).join(', ') || null,
+        personnes: rats.map((r) => personnes.get(r.per_id)?.raison_sociale).filter(Boolean).join(', ') || null,
         fonction: rats.map((r) => r.fonction).find(Boolean) ?? null,
-        telephone: principale(pro.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE') ?? principale(usages.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE'),
-        portable: principale(pro.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE') ?? principale(usages.filter((u) => u.usage === 'PORTABLE'), 'TELEPHONE'),
-        email: principale(pro, 'EMAIL') ?? principale(usages, 'EMAIL'), ville: adresse?.ville ?? null,
+        telephone: principale(portable(pro, false), 'TELEPHONE') ?? principale(portable(usages, false), 'TELEPHONE'),
+        portable: principale(portable(pro, true), 'TELEPHONE') ?? principale(portable(usages, true), 'TELEPHONE'),
+        email: principale(pro, 'EMAIL') ?? principale(usages, 'EMAIL'), ville: adresse(usages)?.ville ?? null,
       });
     }
   }

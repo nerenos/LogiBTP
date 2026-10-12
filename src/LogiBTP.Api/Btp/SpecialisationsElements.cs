@@ -29,6 +29,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);
             return;
         }
+        if (type == "salarie") await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
         if (type == "personne")
         {
             // Identifiants enregistrés sans espaces ; pays en majuscules (comme FichePersonne.enregistrer).
@@ -48,7 +49,10 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         if (!Annuaire(type)) return await base.LireGeresAsync(type, id, u, ct);
         using var scope = scopes.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct);
+        var geres = new Dictionary<string, object?>(await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct));
+        // Fiche individu : salarié lié (module salariés du cœur).
+        if (type == "individu") geres["salarie"] = await SalariesAnnuaire.Salarie(scope.ServiceProvider, long.Parse(id), ct);
+        return geres;
     }
 
     public override async Task ValiderGeresAsync(string type, string? id, IReadOnlyDictionary<string, JsonElement> geres, IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct)

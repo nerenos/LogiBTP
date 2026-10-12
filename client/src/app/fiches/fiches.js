@@ -1,9 +1,13 @@
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, FournisseurFicheMemoire, MODES } from '@logibtp/fiche';
-import { formatNombre } from '@logibtp/socle/ui';
+import { formatNombre, echapper } from '@logibtp/socle/ui';
+import { principale } from '@logibtp/annuaire';
+import { choisirIndividu } from '@logibtp/annuaire/ui';
 import { ENTETES } from '../api.js';
 import { TYPES_FICHE, DROITS_FICHE, PARAMETRAGE_FICHE } from './definitions.js';
 import { apresEcritureElement } from '../bibliotheque/bibliotheque.js';
+import { synchroniserSalarie, rolesSalarie } from '../annuaire/salaries.js';
+import { AGENCES_SALARIES } from '../annuaire/donnees.js';
 
 // Fiches du cœur : spécialisations de FicheBase (module Fiche) pour les salariés et les matériels.
 
@@ -27,7 +31,96 @@ export class FicheLogiBTP extends FicheBase {
   }
 }
 
+/**
+ * Fiche salarié : liée à l'individu de l'annuaire (identité, coordonnées professionnelles, rattachement à l'agence). Un
+ * salarié créé depuis un individu en reprend l'identité ; un salarié sans individu peut le créer ou être lié à un individu
+ * existant. À l'enregistrement, l'individu reprend l'identité, le rôle et le rattachement (SalariesAnnuaire côté serveur).
+ */
 export class FicheSalarie extends FicheLogiBTP {
+  constructor(options) {
+    super(options);
+    this.services = options.services;
+    this.ouvrirFiche = options.ouvrirFiche ?? (() => {});
+  }
+
+  /** Création depuis un individu (?individu=ID) : sa fiche est lue pour préremplir le salarié. */
+  async ouvrir() {
+    const ind = Number(new URLSearchParams(globalThis.location?.search ?? '').get('individu')) || null;
+    if (this.mode === MODES.CREATION && ind) this.individuSource = await this.fournisseur.charger('individu', ind).catch(() => null);
+    return super.ouvrir();
+  }
+
+  valeursCreation() {
+    const v = super.valeursCreation();
+    const i = this.individuSource;
+    if (!i) return v;
+    const iv = i.valeurs;
+    const rat = (iv.rattachements ?? []).find((r) => Object.values(AGENCES_SALARIES).includes(Number(r.per_id))) ?? null;
+    const agence = Object.entries(AGENCES_SALARIES).find(([, id]) => id === Number(rat?.per_id))?.[0] ?? null;
+    return {
+      ...v, ind_id: Number(i.id), nom: iv.nom, prenom: iv.prenom, agence, poste: rat?.fonction ?? null, statut: (iv.roles ?? []).includes('INTERIMAIRE') ? 'INTERIM' : v.statut,
+      email: principale(rat?.coordonnees ?? [], 'EMAIL'), telephone: principale(rat?.coordonnees ?? [], 'TELEPHONE'),
+    };
+  }
+
+  /** Individu de l'annuaire : lien vers sa fiche ; en saisie, lier à un individu existant ou le créer. */
+  rendreChamp(champ, valeur) {
+    if (champ.code !== 'ind_id') return super.rendreChamp(champ, valeur);
+    const el = document.createElement('div');
+    el.className = 'fiche-saisie-champ annuaire-parent';
+    const saisie = this.estEnSaisie();
+    el.innerHTML = valeur ? `<a href="/fiche/individu/${valeur}" data-ouvrir>👤 ${echapper(this.libelleIndividu ?? `Individu ${valeur}`)}</a>` : '<span class="aide">Non lié à l\'annuaire</span>';
+    if (saisie) {
+      el.insertAdjacentHTML('beforeend', ` <button type="button" data-lier title="Lier à un individu existant de l'annuaire">…</button>
+        ${valeur ? '<button type="button" data-delier title="Retirer le lien">✕</button>' : '<button type="button" data-creer title="Créer l\'individu dans l\'annuaire (rattaché à l\'agence)">＋ Créer dans l\'annuaire</button>'}`);
+    }
+    el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: 'individu', id: valeur }, e); });
+    el.querySelector('[data-delier]')?.addEventListener('click', () => { this.definirValeur('ind_id', null); this.rendre(); });
+    el.querySelector('[data-lier]')?.addEventListener('click', async () => {
+      const r = await choisirIndividu({ annuaire: this.services.annuaire, titre: 'Individu du salarié', nom: [this.valeur('nom'), this.valeur('prenom')].filter(Boolean).join(' ') });
+      if (!r) return;
+      if (r.nouveau) { await this.#creerIndividu(r.nouveau); return; }
+      this.libelleIndividu = r.individu.nom_complet;
+      this.definirValeur('ind_id', r.individu.id);
+      this.rendre();
+    });
+    el.querySelector('[data-creer]')?.addEventListener('click', () => this.#creerIndividu({ nom: this.valeur('nom'), prenom: this.valeur('prenom') }).catch((e) => this.message(e.message, 'erreur')));
+    if (valeur && !this.libelleIndividu) {
+      this.services.annuaire.individu(valeur).then((i) => { this.libelleIndividu = i.nom_complet; const a = el.querySelector('[data-ouvrir]'); if (a) a.textContent = `👤 ${i.nom_complet}`; }).catch(() => {});
+    }
+    return el;
+  }
+
+  /** Individu créé dans l'annuaire, rattaché à l'agence du salarié avec ses coordonnées professionnelles. */
+  async #creerIndividu({ civilite = null, nom, prenom }) {
+    if (!nom) { this.message('Saisissez d\'abord le nom du salarié', 'avertissement'); return; }
+    const v = this.valeurs();
+    const coordonnees = [
+      v.email ? { nature: 'EMAIL', usage: 'PRO', valeur: v.email, principal: true } : null,
+      v.telephone ? { nature: 'TELEPHONE', usage: 'PORTABLE', valeur: v.telephone, principal: true } : null,
+    ].filter(Boolean);
+    const agence = AGENCES_SALARIES[v.agence] ?? AGENCES_SALARIES.Lyon;
+    const i = await this.fournisseur.creer('individu', {
+      valeurs: {
+        civilite, nom, prenom, pays: 'FR', actif: true, roles: rolesSalarie(v),
+        rattachements: [{ per_id: agence, fonction: v.poste ?? null, service: v.service ?? null, debut: v.date_entree ?? null, actif: true, coordonnees }],
+      },
+      proprietes: {},
+    });
+    this.libelleIndividu = [nom?.toUpperCase(), prenom].filter(Boolean).join(' ');
+    this.definirValeur('ind_id', Number(i.id));
+    this.rendre();
+    this.message('Individu créé dans l\'annuaire et rattaché à l\'agence : enregistrez le salarié pour conserver le lien', 'succes');
+  }
+
+  actionsSupplementaires() {
+    const ind = this.valeur('ind_id');
+    return [
+      { libelle: '👤 Fiche annuaire', titre: 'Ouvrir la fiche de l\'individu (coordonnées, rattachements)', visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: 'individu', id: ind }) },
+      ...super.actionsSupplementaires(),
+    ];
+  }
+
   rendreInformations(v) {
     const parts = [];
     const anciennete = jours(v.date_entree);
@@ -75,6 +168,12 @@ export class FicheMateriel extends FicheLogiBTP {
 
 export const CLASSES_FICHE = { salarie: FicheSalarie, materiel: FicheMateriel };
 
+/** Résumé de la fiche salarié liée à un individu (champ géré « salarie » de la fiche individu), ou null. */
+export function salarieDe(salaries, indId) {
+  const s = salaries.find((x) => Number(x.ind_id) === Number(indId));
+  return s ? { id: s.id, matricule: s.matricule, poste: s.poste, agence: s.agence, statut: s.statut, actif: s.actif !== false } : null;
+}
+
 /** Fournisseur des fiches : API, ou mémoire hors ligne sur les mêmes lignes que les listes de démonstration. */
 export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, annuaire = null }) {
   if (enLigne) return new FournisseurFicheApi({ base: '/api/fiches', entetes: ENTETES });
@@ -83,7 +182,11 @@ export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, an
       salarie: {
         definition: TYPES_FICHE.salarie.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.salaries,
         // Colonnes de la vue de liste dérivées de la fiche (comme v_liste_salaries).
-        derivees: (l) => ({ type_element: l.statut === 'INTERIM' ? 'interim' : 'salarie' }),
+        // Individu de l'annuaire mis à jour après écriture (identité, rôle, rattachement à l'agence).
+        derivees: (l) => {
+          if (annuaire && l.ind_id) queueMicrotask(() => synchroniserSalarie(annuaire, lignes.salaries.find((x) => x.id === l.id) ?? l));
+          return { type_element: l.statut === 'INTERIM' ? 'interim' : 'salarie' };
+        },
       },
       materiel: { definition: TYPES_FICHE.materiel.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.materiels },
       // Éléments de bibliothèque : prix, historique et colonnes de liste recalculés après écriture (rôle du serveur).
@@ -101,7 +204,12 @@ export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, an
           derivees: (l) => { annuaire.controlerPersonne(l.id ?? null, l); queueMicrotask(() => annuaire.deriver()); return {}; },
         },
         individu: {
-          definition: TYPES_FICHE.individu.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.individus, geres: annuaire.geres('individu'),
+          definition: TYPES_FICHE.individu.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.individus,
+          // Fiche salarié liée, en plus des champs gérés par l'annuaire.
+          geres: (() => {
+            const g = annuaire.geres('individu');
+            return { ...g, lire: async (l) => ({ ...(await g.lire(l)), salarie: salarieDe(lignes.salaries, l.id) }) };
+          })(),
           derivees: () => { queueMicrotask(() => annuaire.deriver()); return {}; },
         },
       } : {}),

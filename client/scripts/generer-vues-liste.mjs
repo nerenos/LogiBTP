@@ -146,7 +146,9 @@ const lignesTable = (type, lignes, cle) => {
     valeurs: lignes.map((l) => ` (${[l.id, ...champs.map((c) => valeurSql(c, l[c.code]))].join(', ')})`).join(',\n'),
   };
 };
-const per = lignesTable('personne', A.PERSONNES, 'per_id');
+// Parents insérés avant leurs niveaux inférieurs (profondeur dans la hiérarchie, puis identifiant).
+const profondeur = (p) => { let n = 0; for (let x = p; x?.parent_id; x = A.PERSONNES.find((y) => y.id === x.parent_id)) n++; return n; };
+const per = lignesTable('personne', [...A.PERSONNES].sort((a, b2) => profondeur(a) - profondeur(b2) || a.id - b2.id), 'per_id');
 const ind = lignesTable('individu', A.INDIVIDUS, 'ind_id');
 const sqlAnnuaire = `-- =============================================================================
 -- Cœur LogiBTP – annuaire : référentiels (niveaux, casquettes, types de lien, rôles) et données de démonstration
@@ -166,7 +168,7 @@ ${A.TYPES_LIEN.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.libelle_invers
 INSERT INTO role_individu (rol_code, rol_libelle, rol_icone, rol_ordre, rol_actif) VALUES
 ${A.ROLES.map((x) => ` (${q(x.code)}, ${q(x.libelle)}, ${q(x.icone)}, ${x.ordre}, ${b(x.actif)})`).join(',\n')};
 
--- Personnes : parents insérés avant leurs niveaux inférieurs (ordre des identifiants).
+-- Personnes : parents insérés avant leurs niveaux inférieurs.
 INSERT INTO personne (${per.colonnes}) VALUES
 ${per.valeurs};
 

@@ -1,9 +1,10 @@
 import { echapper } from '@logibtp/socle/ui';
 
-// Paramétrage de l'annuaire (classe mère) : niveaux de personne (morale ou particulier), casquettes (groupes de champs
+// Paramétrage de l'annuaire (classe mère) : niveaux de personne (morale ou particulier), relations (« casquettes » dans le
+// code : client, fournisseur…, avec les groupes de champs
 // de la fiche qu'elles déverrouillent), types de lien (libellé vu depuis la cible), rôles internes des individus.
 
-const ONGLETS = [['niveaux', 'Niveaux'], ['casquettes', 'Casquettes'], ['types-lien', 'Types de lien'], ['roles', 'Rôles des individus']];
+const ONGLETS = [['niveaux', 'Niveaux'], ['casquettes', 'Relations'], ['types-lien', 'Types de lien'], ['roles', 'Rôles des individus']];
 const CLE_REFERENTIELS = { niveaux: 'niveaux', casquettes: 'casquettes', 'types-lien': 'types_lien', roles: 'roles' };
 
 export class GestionReferentielsAnnuaire {
@@ -61,7 +62,7 @@ export class GestionReferentielsAnnuaire {
         ${colonnes.map((c) => `<td>${champ(c, l)}</td>`).join('')}
         <td class="bib-actions">${ro ? '' : `<button type="button" data-action="enregistrer">${l._nouveau ? '＋ Ajouter' : '✓'}</button>${l._nouveau ? '' : '<button type="button" data-action="supprimer" title="Supprimer (si non utilisé)">🗑</button>'}`}</td></tr>`).join('')}
       </tbody></table>
-      ${this.onglet === 'casquettes' ? '<p class="aide">Une casquette sans groupe de champs sert de filtre (listes, recherches). Les groupes cochés apparaissent dans l\'onglet Casquettes de la fiche d\'une personne qui la porte.</p>' : ''}
+      ${this.onglet === 'casquettes' ? '<p class="aide">Relations d\'une personne avec notre société (client, fournisseur, sous-traitant… ; plusieurs possibles). Une relation sans groupe de champs sert de filtre (listes, recherches) ; les groupes cochés apparaissent dans l\'onglet « Par relation » des personnes qui l\'ont.</p>' : ''}
       ${this.onglet === 'niveaux' ? '<p class="aide">Les personnes s\'organisent en hiérarchie (groupe › société › établissement, agence, dépôt…) par leur niveau supérieur.</p>' : ''}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const l = [...lignes, { _nouveau: true }][Number(tr.dataset.i)];

@@ -2,7 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { GestionReferentielsAnnuaire } from '@logibtp/annuaire/ui';
 import { TYPES_FICHE } from '../fiches/definitions.js';
 
-/** Paramétrage de l'annuaire : niveaux, casquettes (groupes de champs déverrouillés), types de lien, rôles des individus. */
+/** Paramétrage de l'annuaire : niveaux, relations (groupes de champs déverrouillés), types de lien, rôles des individus. */
 export class PageParametresAnnuaire extends PageBase {
   icone = '🏢';
 
@@ -11,7 +11,7 @@ export class PageParametresAnnuaire extends PageBase {
     this.titre = 'Paramétrage de l\'annuaire';
     this.conteneur.innerHTML = '<div class="page-parametres page-bibliotheque"><h1 class="page-titre">🏢 Paramétrage de l\'annuaire</h1><div class="page-bibliotheque-corps"></div></div>';
     const s = await app.services();
-    // Groupes déverrouillables par une casquette : ceux de l'onglet Casquettes de la fiche personne.
+    // Groupes déverrouillables par une relation : ceux de l'onglet Par relation de la fiche personne.
     const groupes = TYPES_FICHE.personne.definition.sections.find((x) => x.code === 'casquettes').groupes.map((g) => ({ code: g.code, titre: g.titre }));
     const gestion = new GestionReferentielsAnnuaire(this.conteneur.querySelector('.page-bibliotheque-corps'), {
       fournisseur: s.annuaire, groupes, message: (t, n) => app.message(t, n), admin: app.estAdmin(),

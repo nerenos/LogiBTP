@@ -41,7 +41,7 @@ export const SOURCES_LISTE = {
       ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
     ],
   },
-  // Annuaire : casquettes et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
+  // Annuaire : relations (casquettes) et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
   personnes: {
     libelle: 'Annuaire : personnes (sociétés, établissements, particuliers…)', vue: 'v_liste_personnes', colonne_id: 'id', colonne_type: 'type_element',
     colonnes: [
@@ -347,7 +347,7 @@ export function sourcesFournisseur(donnees = {}) {
   }]));
 }
 
-// Annuaire : tiers (personnes) par casquette, contacts (individus).
+// Annuaire : tiers (personnes) par relation, contacts (individus).
 const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.libelle, picto: c.icone }));
 const OPTIONS_NIVEAUX = NIVEAUX.map((n) => ({ valeur: n.code, libelle: n.libelle, picto: n.icone }));
 const OPTIONS_ROLES = ROLES.map((r) => ({ valeur: r.code, libelle: r.libelle, picto: r.icone }));
@@ -362,7 +362,7 @@ const vuePersonnes = (vli_id, vli_nom, casquettes = null) => ({
       col('code', 'Code', { ...fixe(84) }),
       col('raison_sociale', 'Raison sociale', { ...prop(2.6, 180), style: { gras: true },
         regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }] }),
-      col('casquettes', 'Casquettes', { format: 'combo', ...prop(1.6, 120), options: OPTIONS_CASQUETTES }),
+      col('casquettes', 'Relations', { format: 'combo', ...prop(1.6, 120), options: OPTIONS_CASQUETTES }),
       col('parent', 'Niveau supérieur', { ...prop(1.4, 110) }),
       col('ville', 'Ville', { ...prop(1, 90) }),
       col('telephone', 'Téléphone', { ...fixe(118) }),
@@ -376,7 +376,7 @@ const vuePersonnes = (vli_id, vli_nom, casquettes = null) => ({
       col('pays', 'Pays', { ...fixe(48), masquee: true }),
       col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false }),
     ],
-    segments: [{ colonne: 'niveau', titre: 'Niveau' }, { colonne: 'casquettes', titre: 'Casquette' }, { colonne: 'ville', titre: 'Ville' }],
+    segments: [{ colonne: 'niveau', titre: 'Niveau' }, { colonne: 'casquettes', titre: 'Relation' }, { colonne: 'ville', titre: 'Ville' }],
     tri: [{ colonne: 'raison_sociale', sens: 'asc' }],
     lignes: 'multi',
     taille_lot: 100,

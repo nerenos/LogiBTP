@@ -10,7 +10,7 @@ function creationDepuisVue(vue, app) {
     const ouvrage = (vue.definition.filtres ?? []).some((f) => f.colonne === 'type' && f.valeur === 'OUVRAGE');
     return { libelle: ouvrage ? '＋ Ouvrage' : '＋ Article', action: () => app.naviguer(`/fiche/element/nouveau${ouvrage ? '?type=OUVRAGE' : ''}`) };
   }
-  // Annuaire : création avec la première casquette filtrée par la vue (Clients, Fournisseurs…).
+  // Annuaire : création avec la première relation (casquette) filtrée par la vue (Clients, Fournisseurs…).
   if (source === 'personnes') {
     const casquette = (vue.definition.filtres ?? []).find((f) => f.colonne === 'casquettes')?.valeurs?.[0];
     return { libelle: '＋ Personne', action: () => app.naviguer(`/fiche/personne/nouveau${casquette ? `?casquette=${casquette}` : ''}`) };

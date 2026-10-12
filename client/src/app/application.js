@@ -86,7 +86,7 @@ export class Application {
       const ged = await creerFournisseurGed({ enLigne: this.enLigne, lignes });
       const bibliotheque = creerFournisseurBibliotheque({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
       const elements = this.enLigne ? [] : bibliotheque.elements;
-      const annuaire = creerFournisseurAnnuaire({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
+      const annuaire = creerFournisseurAnnuaire({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo'), salaries: lignes.salaries });
       const entreprises = creerFournisseurEntreprises({ enLigne: this.enLigne });
       if (!this.enLigne) relierTarifs(bibliotheque);
       const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements, annuaire: this.enLigne ? null : annuaire });
