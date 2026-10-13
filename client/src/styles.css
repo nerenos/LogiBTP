@@ -87,3 +87,17 @@ dialog.dialogue-structure .grille-champs .large { grid-column: 1 / -1; }
 dialog.dialogue-structure .grille-champs input, dialog.dialogue-structure .grille-champs select { width: 100%; }
 dialog.dialogue-structure .erreur { color: var(--erreur, #c0392b); min-height: 1em; }
 dialog.dialogue-structure .boutons { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Intervenants (petit annuaire) des fiches de la structure et des documents. */
+.intervenants { width: 100%; overflow-x: auto; }
+.table-intervenants { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+.table-intervenants th { text-align: left; color: var(--discret); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--bord); }
+.table-intervenants td { padding: 3px 6px; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.table-intervenants td.tiers { white-space: nowrap; }
+.table-intervenants td.tiers input { width: 220px; }
+.table-intervenants td.coordonnees { font-size: 0.9em; white-space: nowrap; }
+.table-intervenants td.coordonnees a, .table-intervenants a { text-decoration: none; }
+.table-intervenants .pd-details { display: inline-flex; gap: 4px; margin-left: 4px; }
+.intervenants-pied { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.intervenants-pd { color: var(--discret); font-size: 0.9em; }
+.annuaire-document { margin: 8px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 6px 10px; }

@@ -2,6 +2,8 @@ import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
+import { TableIntervenants } from './structure/intervenants.js';
+import { intervenantPropre } from './structure/structure.js';
 
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
@@ -9,13 +11,66 @@ import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranc
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null } = {}) {
     super(editeur);
     this.bibliotheques = bibliotheques;
     // Structure des affaires : référentiels (projets, affaires, chantiers, marchés) et rattachement (page : document
     // modifiable → saisie ; validé → classement direct par l'API).
     this.structure = structure;
     this.rattacher = rattacher;
+    // Annuaire du document : annuaire du cœur (recherche des tiers, contacts) ; intervenants(type, id) de la structure.
+    this.annuaire = annuaire;
+    this.intervenantsStructure = intervenants;
+  }
+
+  /** Tiers saisi dans l'annuaire du document (première ligne : client ou fournisseur). */
+  champTiers(d) { return this.annuaire ? '' : super.champTiers(d); }
+
+  /** Fonction du tiers du document : fournisseur pour un achat, client sinon. */
+  fonctionTiers() { return this.editeur.definition.type?.tyd_famille === 'A' ? 'FOURNISSEUR' : 'CLIENT'; }
+
+  /** Intervenants du document, le tiers du document (ent_tiers_id) en première ligne. */
+  intervenantsDocument(d = this.editeur.saisie.document) {
+    const liste = [...(d.ent_intervenants ?? [])];
+    const fixe = this.fonctionTiers();
+    const i = liste.findIndex((x) => x.fonction === fixe);
+    const tiers = i >= 0 ? liste.splice(i, 1)[0] : d.ent_tiers_id ? { fonction: fixe, per_id: d.ent_tiers_id, principal: true } : null;
+    return tiers ? [tiers, ...liste] : liste;
+  }
+
+  /** Enregistre la liste dans la saisie ; le tiers de la première ligne devient le tiers du document. */
+  modifierIntervenants(liste, libelle = 'Annuaire du document') {
+    const fixe = this.fonctionTiers();
+    this.editeur.magasin.modifier((b) => {
+      b.document.ent_intervenants = liste.map(intervenantPropre);
+      const tiers = liste.find((x) => x.fonction === fixe);
+      if (tiers?.per_id) b.document.ent_tiers_id = Number(tiers.per_id);
+    }, libelle);
+  }
+
+  /**
+   * Reprise des intervenants du marché, du chantier puis du projet (fonctions proposées dans les documents), sans
+   * doublon (même fonction, même tiers et même contact) ni seconde occurrence d'une fonction unique. Retourne le
+   * nombre d'intervenants ajoutés.
+   */
+  async reprendreIntervenants() {
+    const d = this.editeur.saisie.document;
+    if (!this.intervenantsStructure || this.editeur.magasin.lectureSeule) return 0;
+    const sources = [['marche', d.ent_marche_id], ['chantier', d.ent_chantier_id], ['projet', d.ent_projet_id]].filter(([, id]) => id);
+    const fonctions = this.structure?.fonctions ?? [];
+    const liste = this.intervenantsDocument();
+    let ajoutes = 0;
+    for (const [type, id] of sources) {
+      for (const x of await this.intervenantsStructure(type, id).catch(() => [])) {
+        const f = fonctions.find((y) => y.code === x.fonction);
+        if (!f || f.portee === 'S') continue;
+        if (liste.some((y) => y.fonction === x.fonction && (f.unique || (y.per_id === x.per_id && y.ind_id === x.ind_id)))) continue;
+        liste.push({ ...x });
+        ajoutes++;
+      }
+    }
+    if (ajoutes) this.modifierIntervenants(liste, 'Reprise des intervenants');
+    return ajoutes;
   }
 
   champsEntete(d) {
@@ -51,6 +106,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const varsDoc = this.variablesDocument();
     const calc = new Map(this.editeur.resultat.variables.map((v) => [v.var_id, v.var_valeur]));
     return `${this.sectionRattachement(this.editeur.saisie.document)}
+      ${this.annuaire ? '<fieldset class="annuaire-document"><legend>Annuaire du document</legend><div data-intervenants></div></fieldset>' : ''}
       <details class="variables-document" ${varsDoc.length ? 'open' : ''}><summary>Variables du document ($$)</summary>
         <table class="variables"><tbody>${varsDoc.map((v) => `
           <tr data-var="${v.var_id}"><td>$$<input data-vchamp="var_nom" value="${echapper(v.var_nom)}"></td>
@@ -63,6 +119,19 @@ export class PanneauxBtp extends PanneauxDocument {
 
   lierEntete(zone) {
     const m = this.editeur.magasin;
+    const conteneur = zone.querySelector('[data-intervenants]');
+    if (conteneur) {
+      const d = this.editeur.saisie.document;
+      const lecture = !!m.lectureSeule;
+      conteneur.append(new TableIntervenants({
+        annuaire: this.annuaire, fonctions: this.structure?.fonctions ?? [], portee: 'D', lecture, fixe: this.fonctionTiers(),
+        surChange: (liste) => this.modifierIntervenants(liste),
+        actions: !lecture && (d.ent_marche_id || d.ent_chantier_id || d.ent_projet_id) ? [{
+          libelle: '↧ Reprendre du marché / chantier', titre: 'Ajoute les intervenants du marché, du chantier et du projet (client, payeur, sous-traitants…)',
+          action: () => this.reprendreIntervenants().then((n) => this.editeur.surMessage?.(n ? `${n} intervenant(s) repris` : 'Aucun intervenant à reprendre')),
+        }] : [],
+      }).rendre(this.intervenantsDocument(d)));
+    }
     zone.querySelectorAll('[data-rattachement]').forEach((el) => el.addEventListener('change', () => {
       const d = this.editeur.saisie.document;
       const r = { ent_projet_id: d.ent_projet_id ?? null, ent_affaire_id: d.ent_affaire_id ?? null, ent_chantier_id: d.ent_chantier_id ?? null, ent_marche_id: d.ent_marche_id ?? null };

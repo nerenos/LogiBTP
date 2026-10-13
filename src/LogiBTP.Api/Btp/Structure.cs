@@ -27,7 +27,9 @@ public static class Structure
                          'cha_id', mar_cha_id, 'ent_id', mar_ent_id, 'tiers_id', mar_tiers_id, 'montant_ht', mar_montant_ht) ORDER BY mar_code), '[]') FROM marche),
           'commandes', (SELECT coalesce(json_agg(json_build_object('id', d.ent_id, 'numero', d.ent_numero, 'objet', d.ent_objet,
                          'total_ht', d.ent_total_ht, 'tiers_id', d.ent_tiers_id) ORDER BY d.ent_id DESC), '[]')
-                        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE t.tyd_code = 'V_COMMANDE'))
+                        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE t.tyd_code = 'V_COMMANDE'),
+          'fonctions', (SELECT coalesce(json_agg(json_build_object('code', fin_code, 'libelle', fin_libelle, 'portee', fin_portee, 'unique', fin_unique,
+                         'paiement_direct', fin_paiement_direct, 'actif', fin_actif) ORDER BY fin_ordre, fin_code), '[]') FROM fonction_intervenant))
         """;
 
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
@@ -61,6 +63,9 @@ public static class Structure
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { ent_projet_id = doc.EntProjetId, ent_affaire_id = doc.EntAffaireId, ent_chantier_id = doc.EntChantierId, ent_marche_id = doc.EntMarcheId });
         });
+        // Intervenants d'un projet, d'une affaire, d'un chantier ou d'un marché (reprise dans l'annuaire d'un document).
+        g.MapGet("/intervenants/{type}/{id:long}", async (string type, long id, LogiBtpContext db, CancellationToken ct) =>
+            Intervenants.Gere(type) ? Results.Json(await Intervenants.Lire(db, type, id, ct)) : throw ExceptionMetier.Introuvable($"Type {type}"));
         return api;
     }
 }

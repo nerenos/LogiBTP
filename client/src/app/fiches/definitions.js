@@ -339,8 +339,12 @@ export const TYPES_FICHE = {
           { titre: 'Suivi commercial', champs: ['statut', 'date_remise', 'date_decision', 'montant_estime', 'responsable'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
+      }, {
+        code: 'intervenants', titre: 'Intervenants',
+        groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
+        c('intervenants', 'Intervenants', null, 'json', { gere: true, largeur: 'plein', aide: 'Tiers et contacts de l\'annuaire avec leur fonction (client, architecte, sous-traitant, payeur…)' }),
         c('code', 'Code', 'prj_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
         c('libelle', 'Libellé', 'prj_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
         c('tiers_id', 'Client', 'prj_tiers_id', 'nombre', { reference: 'tiers' }),
@@ -369,8 +373,12 @@ export const TYPES_FICHE = {
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_cloture', 'responsable'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
+      }, {
+        code: 'intervenants', titre: 'Intervenants',
+        groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
+        c('intervenants', 'Intervenants', null, 'json', { gere: true, largeur: 'plein', aide: 'Tiers et contacts de l\'annuaire avec leur fonction (client, architecte, sous-traitant, payeur…)' }),
         c('code', 'Code', 'aff_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
         c('libelle', 'Libellé', 'aff_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
         c('nature', 'Nature', 'aff_nature', 'liste', {
@@ -397,8 +405,12 @@ export const TYPES_FICHE = {
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
+      }, {
+        code: 'intervenants', titre: 'Intervenants',
+        groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
+        c('intervenants', 'Intervenants', null, 'json', { gere: true, largeur: 'plein', aide: 'Tiers et contacts de l\'annuaire avec leur fonction (client, architecte, sous-traitant, payeur…)' }),
         c('code', 'Code', 'cha_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
         c('libelle', 'Libellé', 'cha_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
         c('aff_id', 'Affaire', 'cha_aff_id', 'nombre', { reference: 'affaire', aide: 'Affaire qui regroupe ce chantier' }),
@@ -426,8 +438,12 @@ export const TYPES_FICHE = {
           { titre: 'Conditions', champs: ['nature', 'montant_ht', 'retenue_pct', 'date', 'statut'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
+      }, {
+        code: 'intervenants', titre: 'Intervenants',
+        groupes: [{ titre: 'Petit annuaire', champs: ['intervenants'], largeur: 'plein' }],
       }],
       champs: [
+        c('intervenants', 'Intervenants', null, 'json', { gere: true, largeur: 'plein', aide: 'Tiers et contacts de l\'annuaire avec leur fonction (client, architecte, sous-traitant, payeur…)' }),
         c('code', 'Code', 'mar_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
         c('libelle', 'Libellé', 'mar_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
         c('cha_id', 'Chantier', 'mar_cha_id', 'nombre', { obligatoire: true, reference: 'chantier' }),

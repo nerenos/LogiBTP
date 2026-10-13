@@ -51,7 +51,7 @@ public sealed class CreationDocument
     public int EntTydId { get; set; }
     public DateOnly? EntDate { get; set; }
     public string? EntObjet { get; set; }
-    public long EntTiersId { get; set; }
+    public long? EntTiersId { get; set; }
     public JsonDocument? EntAdresseFacturation { get; set; }
     public JsonDocument? EntAdresseLivraison { get; set; }
     public JsonDocument? EntNumFormat { get; set; }

@@ -153,6 +153,7 @@ export class PageDocument extends PageBase {
     // Structure des affaires : listes de choix du rattachement (entête) et marché proposé à la validation d'une commande.
     this.servicesStructure = s.structure;
     this.servicesFiche = s.fiche;
+    this.servicesAnnuaire = s.annuaire;
     this.structure = await s.structure?.referentiels().catch(() => null) ?? null;
     // Mise à jour ou création d'éléments de la bibliothèque depuis les lignes du document.
     this.envoi = new EnvoiBibliotheque({
@@ -290,6 +291,7 @@ export class PageDocument extends PageBase {
     });
     this.panneaux = new PanneauxBtp(this.editeur, {
       bibliotheques: this.bibliotheques, structure: this.structure, rattacher: (r) => this.rattacher(r).catch((x) => this.app.erreur(x)),
+      annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
@@ -381,7 +383,7 @@ export class PageDocument extends PageBase {
   /** Premier lancement en ligne : crée le devis de démonstration dans la base. */
   async creerDemo() {
     const devis = this.types.find((t) => t.tyd_code === 'V_DEVIS');
-    const cree = await api.creer({ ent_tyd_id: devis.tyd_id, ent_tiers_id: 1, ent_objet: DOCUMENT_DEMO.document.ent_objet, ent_num_format: DOCUMENT_DEMO.document.ent_num_format });
+    const cree = await api.creer({ ent_tyd_id: devis.tyd_id, ent_tiers_id: DOCUMENT_DEMO.document.ent_tiers_id, ent_objet: DOCUMENT_DEMO.document.ent_objet, ent_num_format: DOCUMENT_DEMO.document.ent_num_format });
     const contenu = new PressePapiersBtp().renumeroter({ racines: [], ...DOCUMENT_DEMO }, -1);
     for (const l of contenu.lignes) l.lig_origine_id = null;
     const definition = await api.definition('V_DEVIS');
@@ -399,7 +401,8 @@ export class PageDocument extends PageBase {
     if (!remplacer && !(await this.quitter())) return;
     const code = this.$('[data-nouveau-type]').value;
     const type = this.types.find((t) => t.tyd_code === code);
-    const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: 1, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
+    // Tiers choisi ensuite dans l'annuaire du document (obligatoire à la validation).
+    const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
     this.app.routeur.remplacerUrl(`/document/${cree.document.ent_id}`);
     await this.chargerDocument(cree.document.ent_id);
     this.disposition.onglet('entete');
@@ -473,6 +476,11 @@ export class PageDocument extends PageBase {
     const complet = completerRattachement(r, this.structure ?? { chantiers: [], marches: [] });
     if (!this.app.enLigne || (this.#modifiable() && !this.bloque && !ed.magasin.lectureSeule)) {
       ed.magasin.modifier((b) => { Object.assign(b.document, complet); }, 'Rattachement');
+      // Annuaire encore vide (tiers seul) : intervenants du marché ou du chantier repris d'office.
+      if (this.panneaux.intervenantsDocument().length <= 1) {
+        const n = await this.panneaux.reprendreIntervenants();
+        if (n) this.app.message(`${n} intervenant(s) repris du rattachement`);
+      }
       return;
     }
     const doc = ed.saisie.document;
@@ -500,7 +508,10 @@ export class PageDocument extends PageBase {
     const doc = this.editeur.saisie.document;
     const r = await proposerMarche({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
-      creerMarche: (valeurs) => this.servicesFiche.creer('marche', { valeurs, proprietes: {} }),
+      // Le marché reprend les intervenants du chantier.
+      creerMarche: async (valeurs) => this.servicesFiche.creer('marche', {
+        valeurs: { ...valeurs, intervenants: await this.servicesStructure.intervenants('chantier', valeurs.cha_id).catch(() => []) }, proprietes: {},
+      }),
     });
     if (!r) return;
     this.structure = await this.servicesStructure.referentiels();

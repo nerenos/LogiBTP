@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LogiBTP.Documents;
 
 namespace LogiBTP.Domaine;
@@ -16,4 +17,6 @@ public class DocumentBtp : Document
     public int? EntAffaireId { get; set; }
     public int? EntChantierId { get; set; }
     public int? EntMarcheId { get; set; }
+    /// <summary>Annuaire du document (db/162_intervenants.sql) : instantané des intervenants (client, payeur, sous-traitants…).</summary>
+    public JsonDocument? EntIntervenants { get; set; }
 }

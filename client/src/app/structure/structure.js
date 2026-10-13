@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { AFFAIRES, PROJETS, CHANTIERS, MARCHES } from './donnees.js';
+import { AFFAIRES, PROJETS, CHANTIERS, MARCHES, FONCTIONS_INTERVENANT, INTERVENANTS } from './donnees.js';
 
 // Structure des affaires côté client : référentiels des listes de choix (projets, affaires, chantiers, marchés,
 // commandes clients) et rattachement d'un document. En ligne : routes /api/structure ; hors ligne : mémoire sur les
@@ -13,8 +13,45 @@ export function completerRattachement(r, { chantiers, marches }) {
   return res;
 }
 
+/**
+ * Contrôles des intervenants (réplique d'Intervenants.Controler, src/LogiBTP.Api/Btp/Intervenants.cs) : fonction
+ * connue, active et de la portée (S structure, D document) ; tiers ou contact ; une seule occurrence d'une fonction
+ * unique ; paiement direct réservé aux fonctions qui l'admettent ; montant positif. Retourne les messages d'erreur.
+ */
+export function controlerIntervenants(liste, fonctions, portee) {
+  const erreurs = [];
+  const vues = new Map();
+  (liste ?? []).forEach((x, i) => {
+    const n = i + 1;
+    const f = fonctions.find((y) => y.code === x.fonction);
+    if (!f) { erreurs.push(`Intervenant ${n} : fonction inconnue`); return; }
+    if (f.portee !== 'T' && f.portee !== portee) erreurs.push(`Intervenant ${n} : fonction « ${f.libelle} » non proposée ici`);
+    if (!x.per_id && !x.ind_id) erreurs.push(`Intervenant ${n} : tiers ou contact à choisir`);
+    vues.set(f.code, (vues.get(f.code) ?? 0) + 1);
+    if (f.unique && vues.get(f.code) === 2) erreurs.push(`Un seul intervenant « ${f.libelle} »`);
+    if (x.paiement_direct && !f.paiement_direct) erreurs.push(`Intervenant ${n} : paiement direct réservé aux sous-traitants`);
+    if (x.montant_ht !== null && x.montant_ht !== undefined && Number(x.montant_ht) < 0) erreurs.push(`Intervenant ${n} : montant négatif`);
+  });
+  return erreurs;
+}
+
+/** Intervenant saisi réduit à ses champs (ordre de la saisie). */
+export function intervenantPropre(x) {
+  return {
+    fonction: x.fonction ?? null, per_id: x.per_id ? Number(x.per_id) : null, tiers: x.tiers ?? null, ind_id: x.ind_id ? Number(x.ind_id) : null,
+    contact: x.contact ?? null, principal: !!x.principal, paiement_direct: !!x.paiement_direct,
+    montant_ht: x.montant_ht === '' || x.montant_ht === null || x.montant_ht === undefined ? null : Number(x.montant_ht),
+    date_agrement: x.date_agrement || null, commentaire: x.commentaire || null,
+  };
+}
+
 export function creerFournisseurStructure({ enLigne, annuaire = null, documents = () => [] }) {
-  if (enLigne) return { referentiels: () => api.structureReferentiels(), rattacher: (id, r) => api.rattacherDocument(id, r) };
+  if (enLigne) {
+    return {
+      referentiels: () => api.structureReferentiels(), rattacher: (id, r) => api.rattacherDocument(id, r),
+      intervenants: (type, id) => api.structureIntervenants(type, id),
+    };
+  }
   return new FournisseurStructureMemoire({ annuaire, documents });
 }
 
@@ -25,6 +62,8 @@ export class FournisseurStructureMemoire {
     this.projets = structuredClone(PROJETS);
     this.chantiers = structuredClone(CHANTIERS);
     this.marches = structuredClone(MARCHES);
+    this.fonctions = structuredClone(FONCTIONS_INTERVENANT).map((f) => ({ ...f, actif: true }));
+    this.lignesIntervenants = structuredClone(INTERVENANTS);
     this.annuaire = annuaire;
     this.documents = documents;
   }
@@ -37,6 +76,32 @@ export class FournisseurStructureMemoire {
       chantiers: this.chantiers.map((c) => p(c, 'aff_id', 'prj_id', 'tiers_id', 'ville')),
       marches: this.marches.map((m) => p(m, 'cha_id', 'ent_id', 'tiers_id', 'montant_ht')),
       commandes: [],
+      fonctions: this.fonctions,
+    };
+  }
+
+  /** Intervenants d'un objet, avec les noms de l'annuaire (comme Intervenants.Lire). */
+  async intervenants(type, id) {
+    const ind = (i) => this.annuaire?.individus?.find((x) => x.id === Number(i));
+    return this.lignesIntervenants.filter((x) => x.objet === type && x.objet_id === Number(id)).map((x) => intervenantPropre({
+      ...x, tiers: this.nomTiers(x.per_id), contact: ind(x.ind_id) ? [ind(x.ind_id).prenom, ind(x.ind_id).nom].filter(Boolean).join(' ') : null,
+    }));
+  }
+
+  /** Champ géré « intervenants » des fiches hors ligne (lecture, contrôle, remplacement). */
+  geres(type) {
+    return {
+      lire: async (l) => ({ intervenants: await this.intervenants(type, l.id) }),
+      valider: async (_l, g) => {
+        const erreurs = controlerIntervenants(g.intervenants ?? [], this.fonctions, 'S');
+        if (erreurs.length) throw Object.assign(new Error('Intervenants incorrects'), { code: 'VALIDATION', details: erreurs.map((message) => ({ champ: 'intervenants', code: 'METIER', message })) });
+      },
+      ecrire: async (l, g) => {
+        if (!('intervenants' in g)) return;
+        this.lignesIntervenants = this.lignesIntervenants.filter((x) => !(x.objet === type && x.objet_id === Number(l.id)));
+        let id = Math.max(0, ...this.lignesIntervenants.map((x) => x.id));
+        for (const x of g.intervenants ?? []) this.lignesIntervenants.push({ ...intervenantPropre(x), id: ++id, objet: type, objet_id: Number(l.id) });
+      },
     };
   }
 

@@ -1,6 +1,8 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { FicheLogiBTP } from './fiches.js';
+import { TableIntervenants } from '../structure/intervenants.js';
+import { controlerIntervenants } from '../structure/structure.js';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
@@ -33,7 +35,18 @@ export class FicheStructure extends FicheLogiBTP {
 
   async ouvrir() {
     this.refs = await this.services.structure.referentiels();
+    // Création depuis un projet ou un chantier : ses intervenants sont repris (fonctions proposées ici).
+    const source = this.mode === MODES.CREATION ? this.sourceIntervenants() : null;
+    this.intervenantsRepris = source ? await this.services.structure.intervenants(...source).catch(() => []) : [];
     await super.ouvrir();
+  }
+
+  /** [type, id] de l'objet dont la création reprend les intervenants (null : aucun). */
+  sourceIntervenants() { return null; }
+
+  /** Intervenants contrôlés comme côté serveur (Intervenants.Controler). */
+  validerMetier(v) {
+    return controlerIntervenants(v.intervenants ?? [], this.refs.fonctions ?? [], 'S').map((message) => ({ champ: 'intervenants', message }));
   }
 
   /** Recharge les référentiels (après une création liée). */
@@ -41,6 +54,7 @@ export class FicheStructure extends FicheLogiBTP {
 
   valeursCreation() {
     const v = { ...super.valeursCreation(), code: prochainCode(this.type, (this.refs[LISTES[this.type]] ?? []).map((x) => x.code)) };
+    if (this.intervenantsRepris?.length) v.intervenants = this.intervenantsRepris;
     for (const c of this.definition.champs) if (c.type === 'date' && c.obligatoire && !v[c.code]) v[c.code] = aujourdhui();
     return v;
   }
@@ -57,6 +71,12 @@ export class FicheStructure extends FicheLogiBTP {
   }
 
   rendreChamp(champ, valeur) {
+    if (champ.code === 'intervenants') {
+      return new TableIntervenants({
+        annuaire: this.services.annuaire, fonctions: this.refs.fonctions ?? [], portee: 'S', lecture: !this.estEnSaisie(),
+        surChange: (liste) => this.definirValeur('intervenants', liste),
+      }).rendre(valeur ?? []);
+    }
     if (!champ.reference) return super.rendreChamp(champ, valeur);
     const lecture = !this.estEnSaisie() || champ.lecture_seule;
     if (champ.reference === 'tiers') return this.#champTiers(champ, valeur, lecture);
@@ -154,6 +174,8 @@ export class FicheAffaire extends FicheStructure {
 }
 
 export class FicheChantier extends FicheStructure {
+  sourceIntervenants() { return parametre('projet') ? ['projet', parametre('projet')] : null; }
+
   /** Création depuis un projet obtenu (?projet=) : libellé, client et ville du projet. */
   valeursCreation() {
     const v = super.valeursCreation();
@@ -184,6 +206,8 @@ export class FicheChantier extends FicheStructure {
 }
 
 export class FicheMarche extends FicheStructure {
+  sourceIntervenants() { return parametre('chantier') ? ['chantier', parametre('chantier')] : null; }
+
   /** Code du marché : M-<année>-<n° du chantier>-<rang> ; création depuis un chantier (?chantier=) ou une commande (?commande=). */
   valeursCreation() {
     const v = super.valeursCreation();

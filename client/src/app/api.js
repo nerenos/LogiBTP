@@ -51,6 +51,7 @@ export const api = {
   // Structure des affaires : référentiels des listes de choix, rattachement d'un document (même validé).
   structureReferentiels: () => appel('GET', '/structure/referentiels'),
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
+  structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),

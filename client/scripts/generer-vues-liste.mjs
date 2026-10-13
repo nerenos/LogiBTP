@@ -247,3 +247,23 @@ WHERE ent_objet = 'Extension maison individuelle' AND ent_chantier_id IS NULL;
 `;
 fs.writeFileSync(path.join(racine, 'db', '161_structure_demo.sql'), sqlStructure);
 console.log('db/161_structure_demo.sql généré');
+
+// ------------------------------------------------------------------ intervenants de démonstration
+const colonneObjet = { projet: 'itv_prj_id', affaire: 'itv_aff_id', chantier: 'itv_cha_id', marche: 'itv_mar_id' };
+const sqlIntervenants = `-- =============================================================================
+-- Cœur LogiBTP – intervenants de démonstration des projets, affaires, chantiers et marchés ; annuaire du devis de
+-- démonstration.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/structure/donnees.js : ne pas modifier.
+-- =============================================================================
+
+${S.INTERVENANTS.map((i) => `INSERT INTO intervenant (itv_id, ${colonneObjet[i.objet]}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_montant_ht, itv_date_agrement, itv_commentaire, itv_ordre)
+VALUES (${i.id}, ${i.objet_id}, ${q(i.fonction)}, ${n(i.per_id)}, ${n(i.ind_id)}, ${b(i.principal)}, ${b(i.paiement_direct)}, ${n(i.montant_ht)}, ${q(i.date_agrement)}, ${q(i.commentaire)}, ${i.id});`).join('\n')}
+
+SELECT setval(pg_get_serial_sequence('intervenant', 'itv_id'), (SELECT max(itv_id) FROM intervenant));
+
+-- Devis de démonstration (créé au premier lancement) : annuaire repris ici s'il existe déjà.
+UPDATE document SET ent_intervenants = ${j(S.INTERVENANTS_DEVIS_DEMO)}, ent_tiers_id = ${S.INTERVENANTS_DEVIS_DEMO[0].per_id}
+WHERE ent_objet = 'Extension maison individuelle' AND ent_intervenants IS NULL;
+`;
+fs.writeFileSync(path.join(racine, 'db', '163_intervenants_demo.sql'), sqlIntervenants);
+console.log('db/163_intervenants_demo.sql généré');

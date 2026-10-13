@@ -103,7 +103,7 @@ CREATE TABLE document (
     ent_date                DATE         NOT NULL,
     ent_objet               VARCHAR(200),
     ent_std_id              INT          NOT NULL REFERENCES statut_document(std_id),
-    ent_tiers_id            BIGINT       NOT NULL,
+    ent_tiers_id            BIGINT,                                       -- obligatoire à la validation
     ent_adresse_facturation JSONB,                                        -- copiée, ne suit plus la fiche tiers
     ent_adresse_livraison   JSONB,
     ent_devise              CHAR(3)      NOT NULL DEFAULT 'EUR',

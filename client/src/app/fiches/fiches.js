@@ -191,7 +191,7 @@ export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, an
       materiel: { definition: TYPES_FICHE.materiel.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.materiels },
       // Structure des affaires : mêmes lignes que les listes de démonstration.
       ...(structure ? Object.fromEntries([['projet', 'projets'], ['affaire', 'affaires'], ['chantier', 'chantiers'], ['marche', 'marches']]
-        .map(([type, tableau]) => [type, { definition: TYPES_FICHE[type].definition, cle: 'id', proprietes: 'proprietes', lignes: structure[tableau] }])) : {}),
+        .map(([type, tableau]) => [type, { definition: TYPES_FICHE[type].definition, cle: 'id', proprietes: 'proprietes', lignes: structure[tableau], geres: structure.geres(type) }])) : {}),
       // Éléments de bibliothèque : prix, historique et colonnes de liste recalculés après écriture (rôle du serveur).
       ...(bibliotheque ? {
         element: {

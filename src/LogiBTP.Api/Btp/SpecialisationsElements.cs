@@ -47,6 +47,11 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 
     public override async Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
+        if (Intervenants.Gere(type))
+        {
+            using var s = scopes.CreateScope();
+            return new Dictionary<string, object?> { ["intervenants"] = await Intervenants.Lire(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, long.Parse(id), ct) };
+        }
         if (!Annuaire(type)) return await base.LireGeresAsync(type, id, u, ct);
         using var scope = scopes.CreateScope();
         var geres = new Dictionary<string, object?>(await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct));
@@ -57,6 +62,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 
     public override async Task ValiderGeresAsync(string type, string? id, IReadOnlyDictionary<string, JsonElement> geres, IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct)
     {
+        if (Intervenants.Gere(type) && geres.TryGetValue("intervenants", out var itv))
+        {
+            using var s = scopes.CreateScope();
+            await Intervenants.Valider(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), Intervenants.Lus(itv), 'S', ct);
+            return;
+        }
         if (!Annuaire(type) || geres.Count == 0) return;
         using var scope = scopes.CreateScope();
         await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().ValiderGeres(type, id is null ? null : long.Parse(id), geres, ct);
@@ -64,6 +75,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 
     public override async Task EcrireGeresAsync(string type, string id, bool creation, IReadOnlyDictionary<string, JsonElement> geres, IReadOnlyDictionary<string, object?> valeurs, Utilisateur u, CancellationToken ct)
     {
+        if (Intervenants.Gere(type))
+        {
+            if (!geres.TryGetValue("intervenants", out var itv)) return;
+            using var s = scopes.CreateScope();
+            await Intervenants.Ecrire(s.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, long.Parse(id), Intervenants.Lus(itv), ct);
+            return;
+        }
         if (!Annuaire(type)) { await base.EcrireGeresAsync(type, id, creation, geres, valeurs, u, ct); return; }
         using var scope = scopes.CreateScope();
         await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().EcrireGeres(type, long.Parse(id), geres, u, ct);

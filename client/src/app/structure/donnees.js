@@ -31,3 +31,62 @@ export const MARCHES = [
 
 /** Rattachement du devis de démonstration. */
 export const RATTACHEMENT_DEVIS_DEMO = { ent_projet_id: 1, ent_chantier_id: 1 };
+
+/**
+ * Fonctions des intervenants (réplique de db/162_intervenants.sql, vérifiée par client/test/structure.test.js) :
+ * portée S structure, D document, T tous ; unique : un seul intervenant de cette fonction par objet ;
+ * paiement_direct : sous-traitant payé directement par le maître d'ouvrage.
+ */
+export const FONCTIONS_INTERVENANT = [
+  { code: 'CLIENT', libelle: "Client / maître d'ouvrage", portee: 'T', unique: true, paiement_direct: false, ordre: 10 },
+  { code: 'MOA_DELEGUE', libelle: "Maître d'ouvrage délégué", portee: 'S', unique: false, paiement_direct: false, ordre: 20 },
+  { code: 'ARCHITECTE', libelle: 'Architecte', portee: 'S', unique: false, paiement_direct: false, ordre: 30 },
+  { code: 'MOE', libelle: "Maître d'œuvre", portee: 'S', unique: false, paiement_direct: false, ordre: 40 },
+  { code: 'BE', libelle: "Bureau d'études", portee: 'S', unique: false, paiement_direct: false, ordre: 50 },
+  { code: 'BC', libelle: 'Bureau de contrôle', portee: 'S', unique: false, paiement_direct: false, ordre: 60 },
+  { code: 'CSPS', libelle: 'Coordonnateur SPS', portee: 'S', unique: false, paiement_direct: false, ordre: 70 },
+  { code: 'ECONOMISTE', libelle: 'Économiste', portee: 'S', unique: false, paiement_direct: false, ordre: 80 },
+  { code: 'MANDATAIRE', libelle: 'Mandataire du groupement', portee: 'S', unique: true, paiement_direct: false, ordre: 90 },
+  { code: 'COTRAITANT', libelle: 'Cotraitant', portee: 'S', unique: false, paiement_direct: false, ordre: 100 },
+  { code: 'SOUS_TRAITANT', libelle: 'Sous-traitant', portee: 'T', unique: false, paiement_direct: true, ordre: 110 },
+  { code: 'PAYEUR', libelle: 'Payeur', portee: 'T', unique: true, paiement_direct: false, ordre: 120 },
+  { code: 'DESTINATAIRE', libelle: 'Destinataire des documents', portee: 'T', unique: false, paiement_direct: false, ordre: 130 },
+  { code: 'VALIDATION_SITUATION', libelle: 'Validation des situations', portee: 'T', unique: false, paiement_direct: false, ordre: 140 },
+  { code: 'FOURNISSEUR', libelle: 'Fournisseur', portee: 'D', unique: true, paiement_direct: false, ordre: 150 },
+  { code: 'LIVRAISON', libelle: 'Contact de livraison', portee: 'D', unique: false, paiement_direct: false, ordre: 160 },
+  { code: 'AUTRE', libelle: 'Autre', portee: 'T', unique: false, paiement_direct: false, ordre: 990 },
+];
+
+// Intervenants de démonstration (personnes et contacts de l'annuaire de démonstration : architecte 11 / Mme 10,
+// BET 12 / 11, contrôle 13, SCI 14 / 13, commune 15 / 12, Bâtir Ensemble 16 / 13, électricien 7 / 8, plombier 8 / 9).
+const I = (id, objet, objet_id, fonction, per_id, ind_id = null, autres = {}) => ({
+  id, objet, objet_id, fonction, per_id, ind_id, principal: false, paiement_direct: false, montant_ht: null, date_agrement: null, commentaire: null, ...autres,
+});
+export const INTERVENANTS = [
+  I(1, 'projet', 3, 'CLIENT', 15, 12, { principal: true }),
+  I(2, 'projet', 3, 'ARCHITECTE', 11, 10),
+  I(3, 'affaire', 1, 'CLIENT', 14, 13, { principal: true }),
+  I(4, 'affaire', 1, 'MOA_DELEGUE', 16, 13),
+  I(5, 'chantier', 1, 'CLIENT', 18, 2, { principal: true }),
+  I(6, 'chantier', 1, 'ARCHITECTE', 11, 10),
+  I(7, 'chantier', 1, 'SOUS_TRAITANT', 8, 9, { commentaire: 'Plomberie sanitaire' }),
+  I(8, 'chantier', 2, 'CLIENT', 14, 13, { principal: true }),
+  I(9, 'chantier', 2, 'MOA_DELEGUE', 16, 13),
+  I(10, 'chantier', 2, 'ARCHITECTE', 11, 10),
+  I(11, 'chantier', 2, 'BE', 12, 11),
+  I(12, 'chantier', 2, 'BC', 13, null),
+  I(13, 'chantier', 2, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, montant_ht: 64000, date_agrement: '2026-03-02', commentaire: 'Lot électricité' }),
+  I(14, 'chantier', 2, 'SOUS_TRAITANT', 38, null, { paiement_direct: true, montant_ht: 38500, date_agrement: '2026-04-10', commentaire: 'Charpente' }),
+  I(15, 'marche', 1, 'PAYEUR', 16, 13, { principal: true }),
+  I(16, 'marche', 1, 'VALIDATION_SITUATION', 11, 10),
+  I(17, 'marche', 1, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, montant_ht: 64000, date_agrement: '2026-03-02', commentaire: 'Lot électricité' }),
+  I(18, 'marche', 3, 'CLIENT', 15, 12, { principal: true }),
+  I(19, 'marche', 3, 'PAYEUR', 15, null, { commentaire: 'Trésorerie municipale (mandatement)' }),
+  I(20, 'marche', 3, 'VALIDATION_SITUATION', 15, 12),
+];
+
+/** Annuaire du devis de démonstration (instantané du document). */
+export const INTERVENANTS_DEVIS_DEMO = [
+  { fonction: 'CLIENT', per_id: 18, tiers: 'Mme DURAND Claire', ind_id: 2, contact: 'Claire Durand', principal: true },
+  { fonction: 'SOUS_TRAITANT', per_id: 8, tiers: 'Plomberie Dupuis et Fils', ind_id: 9, contact: 'Marc Dupuis', principal: false, paiement_direct: false },
+];

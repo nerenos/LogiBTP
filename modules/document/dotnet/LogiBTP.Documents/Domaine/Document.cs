@@ -15,7 +15,7 @@ public class Document
     public DateOnly EntDate { get; set; }
     public string? EntObjet { get; set; }
     public int EntStdId { get; set; }
-    public long EntTiersId { get; set; }
+    public long? EntTiersId { get; set; }
     public JsonDocument? EntAdresseFacturation { get; set; }
     public JsonDocument? EntAdresseLivraison { get; set; }
     public string EntDevise { get; set; } = "EUR";

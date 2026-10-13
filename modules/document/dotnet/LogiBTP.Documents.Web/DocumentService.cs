@@ -281,6 +281,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         handler.AvantValidation(ctx, controles);
         var r = handler.Calculer(entree);
         controles.AddRange(r.Erreurs);
+        // Un brouillon peut attendre son tiers ; un document validé l'a toujours.
+        if (avant.Document.EntTiersId is null) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);

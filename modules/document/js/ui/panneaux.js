@@ -56,6 +56,9 @@ export class PanneauxDocument {
   /** Champs propres à la spécialisation, ajoutés après les champs génériques (data-champ sur le document). */
   champsEntete(_d) { return []; }
 
+  /** Champ du tiers de l'entête (identifiant) ; une spécialisation peut le saisir ailleurs (annuaire du document). */
+  champTiers(d) { return `<label>Tiers <input data-champ="ent_tiers_id" data-entier value="${echapper(d.ent_tiers_id ?? '')}"></label>`; }
+
   /** Sections HTML ajoutées sous le formulaire d'entête. */
   sectionsEntete() { return ''; }
 
@@ -81,7 +84,7 @@ export class PanneauxDocument {
       <div class="formulaire">
         <label class="large">Objet <input data-champ="ent_objet" value="${echapper(d.ent_objet ?? '')}"></label>
         <label>Date <input type="date" data-champ="ent_date" value="${echapper(d.ent_date ?? '')}"></label>
-        <label>Tiers <input data-champ="ent_tiers_id" data-entier value="${echapper(d.ent_tiers_id ?? '')}"></label>
+        ${this.champTiers(d)}
         ${def.modeles?.length ? `<label title="Modèle de saisie : vue de colonnes proposée par défaut">Modèle <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
         <label>Décimales montants <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
