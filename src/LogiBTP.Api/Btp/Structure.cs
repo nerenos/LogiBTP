@@ -10,7 +10,7 @@ public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, i
 /// <summary>
 /// Structure des affaires (db/160_structure.sql) : référentiels pour les listes de choix (projets, affaires, chantiers,
 /// marchés, commandes clients) et rattachement d'un document, même validé (classement, pas modification du contenu).
-/// La hiérarchie est complétée : un marché donne son chantier, un chantier son affaire. Les fiches (création,
+/// La hiérarchie est complétée : un marché donne son chantier, un chantier son affaire et son projet. Les fiches (création,
 /// modification) passent par le module Fiche.
 /// </summary>
 public static class Structure
@@ -45,6 +45,7 @@ public static class Structure
             var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
             var chantier = r.EntChantierId;
             var affaire = r.EntAffaireId;
+            var projet = r.EntProjetId;
             if (r.EntMarcheId is int m)
             {
                 chantier = await db.Database.SqlQuery<int>($"SELECT mar_cha_id AS \"Value\" FROM marche WHERE mar_id = {m}").FirstOrDefaultAsync(ct);
@@ -55,8 +56,9 @@ public static class Structure
                 var aff = await db.Database.SqlQuery<int?>($"SELECT cha_aff_id AS \"Value\" FROM chantier WHERE cha_id = {c}").ToListAsync(ct);
                 if (aff.Count == 0) throw ExceptionMetier.Introuvable($"Chantier {c}");
                 affaire = aff[0] ?? affaire;
+                projet = (await db.Database.SqlQuery<int?>($"SELECT cha_prj_id AS \"Value\" FROM chantier WHERE cha_id = {c}").ToListAsync(ct))[0] ?? projet;
             }
-            doc.EntProjetId = r.EntProjetId;
+            doc.EntProjetId = projet;
             doc.EntAffaireId = affaire;
             doc.EntChantierId = chantier;
             doc.EntMarcheId = r.EntMarcheId;

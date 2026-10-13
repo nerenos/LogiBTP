@@ -18,7 +18,11 @@ const opt = (v, l, c) => `<option value="${echapper(v)}" ${String(c ?? '') === S
 const libelleEtape = (code) => ETAPES.find(([c]) => c === code)?.[1] ?? code ?? '';
 
 export class ExplorateurGed {
-  constructor(conteneur, { fournisseur, contexte = null, compact = false, modifiable = true, admin = false, utilisateur = '', message, documentInitial = null, coffre = false }) {
+  /**
+   * envoi : marquage des pièces jointes à envoyer avec l'élément lié (module Mail) : case par document dans la liste
+   * et le détail, filtre « À envoyer ».
+   */
+  constructor(conteneur, { fournisseur, contexte = null, compact = false, modifiable = true, admin = false, utilisateur = '', message, documentInitial = null, coffre = false, envoi = false }) {
     this.conteneur = conteneur;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
@@ -31,6 +35,8 @@ export class ExplorateurGed {
     this.recherche = '';
     this.supprimes = false;
     this.coffre = coffre;
+    this.envoi = envoi;
+    this.aEnvoyerSeuls = false;
     this.documents = [];
     this.#construire();
   }
@@ -44,6 +50,7 @@ export class ExplorateurGed {
         <input type="search" class="ged-recherche" placeholder="Rechercher (titre, mail, résumé, notes…)">
         ${this.modifiable ? '<button type="button" class="principal" data-action="ajouter" title="Ajouter des documents (ou glisser-déposer)">＋ Ajouter</button><input type="file" multiple hidden data-fichiers>' : ''}
         ${this.contexte ? '' : `<label class="ged-option" title="Documents archivés au coffre-fort uniquement"><input type="checkbox" data-coffre${this.coffre ? ' checked' : ''}> Coffre-fort</label>`}
+        ${this.envoi ? '<label class="ged-option" title="Pièces jointes à envoyer avec cet élément (module Mail)"><input type="checkbox" data-a-envoyer> 📧 À envoyer</label>' : ''}
         ${this.admin ? '<label class="ged-option"><input type="checkbox" data-supprimes> Supprimés</label>' : ''}
         ${this.admin && !this.contexte ? '<button type="button" data-action="coffre" title="Vérifier toute la chaîne du coffre-fort">🔒 Vérifier le coffre</button>' : ''}
         <span class="ged-compteur"></span>
@@ -65,6 +72,7 @@ export class ExplorateurGed {
     entree?.addEventListener('change', () => { if (entree.files.length) this.deposer(entree.files); entree.value = ''; });
     c.querySelector('[data-coffre]')?.addEventListener('change', (e) => { this.coffre = e.target.checked; this.charger().catch((x) => this.#erreur(x)); });
     c.querySelector('[data-supprimes]')?.addEventListener('change', (e) => { this.supprimes = e.target.checked; this.charger().catch((x) => this.#erreur(x)); });
+    c.querySelector('[data-a-envoyer]')?.addEventListener('change', (e) => { this.aEnvoyerSeuls = e.target.checked; this.#rendreListe(); });
     c.querySelector('[data-action="coffre"]')?.addEventListener('click', () => this.verifierCoffre().catch((x) => this.#erreur(x)));
     if (this.modifiable) this.#glisserDeposer();
     this.charger().catch((x) => this.#erreur(x));
@@ -113,9 +121,20 @@ export class ExplorateurGed {
 
   libelleCategorie(code) { return this.parametres?.categories?.find((c) => c.code === code)?.libelle ?? code ?? ''; }
 
+  /** Marque (ou non) le document comme pièce jointe à envoyer. */
+  async marquerEnvoi(id, valeur) {
+    await this.fournisseur.modifier(id, { a_envoyer: valeur });
+    const d = this.documents.find((x) => x.id === id);
+    if (d) d.a_envoyer = valeur;
+    if (this.doc?.id === id) this.doc.a_envoyer = valeur;
+    this.#rendreListe();
+    this.message(valeur ? 'Pièce jointe à envoyer' : 'Pièce jointe retirée de l\'envoi', 'succes');
+  }
+
   #rendreListe() {
-    const docs = this.documents;
-    this.conteneur.querySelector('.ged-compteur').textContent = `${docs.length} document${docs.length > 1 ? 's' : ''}`;
+    const docs = this.aEnvoyerSeuls ? this.documents.filter((d) => d.a_envoyer) : this.documents;
+    const nbEnvoi = this.documents.filter((d) => d.a_envoyer).length;
+    this.conteneur.querySelector('.ged-compteur').textContent = `${docs.length} document${docs.length > 1 ? 's' : ''}${this.envoi && nbEnvoi ? ` · ${nbEnvoi} à envoyer` : ''}`;
     if (!docs.length) {
       this.liste.innerHTML = `<p class="aide ged-vide">${this.recherche ? 'Aucun document trouvé.' : 'Aucun document.'}${this.modifiable ? ' Glissez des fichiers ici ou utilisez ＋ Ajouter.' : ''}</p>`;
       return;
@@ -125,10 +144,11 @@ export class ExplorateurGed {
     const racines = docs.filter((d) => !d.parent_id || !ids.has(d.parent_id));
     const ordonnes = racines.flatMap((d) => [d, ...docs.filter((x) => x.parent_id === d.id)]);
     this.liste.innerHTML = `<table class="ged-table"><thead><tr>
-        <th></th><th>Titre</th>${this.compact ? '' : '<th>Catégorie</th>'}<th>Date</th>${this.compact ? '' : '<th>Auteur</th><th>Élément</th>'}<th>Taille</th></tr></thead>
+        <th></th>${this.envoi ? '<th title="Pièce jointe à envoyer (module Mail)">📧</th>' : ''}<th>Titre</th>${this.compact ? '' : '<th>Catégorie</th>'}<th>Date</th>${this.compact ? '' : '<th>Auteur</th><th>Élément</th>'}<th>Taille</th></tr></thead>
       <tbody>${ordonnes.map((d) => `
         <tr data-id="${d.id}" class="${d.id === this.selection ? 'selectionnee' : ''} ${d.supprime ? 'supprime' : ''} ${d.parent_id && ids.has(d.parent_id) ? 'piece' : ''}" draggable="false">
           <td class="ged-ico">${icone(d)}</td>
+          ${this.envoi ? `<td class="ged-envoi"><input type="checkbox" data-envoi="${d.id}" ${d.a_envoyer ? 'checked' : ''} ${this.modifiable && !d.supprime ? '' : 'disabled'} title="Pièce jointe à envoyer"></td>` : ''}
           <td><span class="ged-titre">${echapper(d.titre)}</span>
             ${d.coffre ? '<span class="ged-badge coffre" title="Coffre-fort : verrouillé, horodaté">🔒</span>' : ''}
             ${d.nb_pieces ? `<span class="ged-badge" title="Pièces jointes">📎 ${d.nb_pieces}</span>` : ''}
@@ -139,7 +159,11 @@ export class ExplorateurGed {
           ${this.compact ? '' : `<td>${echapper(d.auteur ?? '')}</td><td>${echapper(d.type_element ? `${d.type_element} ${d.id_element ?? ''}` : '')}</td>`}
           <td class="nombre">${formatTaille(d.version?.taille)}</td>
         </tr>`).join('')}</tbody></table>`;
-    this.liste.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => this.selectionner(Number(tr.dataset.id)).catch((x) => this.#erreur(x))));
+    this.liste.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', (e) => {
+      if (e.target.closest('[data-envoi]')) return;
+      this.selectionner(Number(tr.dataset.id)).catch((x) => this.#erreur(x));
+    }));
+    this.liste.querySelectorAll('[data-envoi]').forEach((c) => c.addEventListener('change', () => this.marquerEnvoi(Number(c.dataset.envoi), c.checked).catch((x) => this.#erreur(x))));
   }
 
   // ---------------------------------------------------------------- détail
@@ -190,6 +214,8 @@ export class ExplorateurGed {
       <div class="ged-apercu"></div>
       ${d.parent ? `<p class="ged-lien-mail">📎 Pièce jointe du mail <a href="#" data-ouvrir="${d.parent.id}">${echapper(d.parent.titre)}</a></p>` : ''}
       ${d.pieces?.length ? `<div class="ged-pieces"><b>Pièces jointes du mail</b>${d.pieces.map((p) => `<a href="#" data-ouvrir="${p.id}">${icone(p)} ${echapper(p.titre)}</a>`).join('')}</div>` : ''}
+      ${this.envoi ? `<label class="ged-option ged-envoi-detail"><input type="checkbox" data-envoi-detail ${d.a_envoyer ? 'checked' : ''} ${this.modifiable && !d.supprime ? '' : 'disabled'}>
+        📧 Pièce jointe à envoyer (module Mail)</label>` : ''}
       <details class="ged-section" open><summary>Informations</summary>
         <div class="ged-formulaire">
           ${champ('titre', 'Titre')}
@@ -234,6 +260,7 @@ export class ExplorateurGed {
     }));
     z.querySelectorAll('[data-ouvrir]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.selectionner(Number(a.dataset.ouvrir)).catch((x) => this.#erreur(x)); }));
     z.querySelectorAll('[data-m]').forEach((el) => el.addEventListener('change', () => this.#modifier({ [el.dataset.m]: el.value }).catch((x) => this.#erreur(x))));
+    z.querySelector('[data-envoi-detail]')?.addEventListener('change', (e) => this.marquerEnvoi(d.id, e.target.checked).catch((x) => this.#erreur(x)));
     z.querySelector('[data-filtre-etapes]')?.addEventListener('input', (e) => {
       const t = e.target.value.toLowerCase();
       z.querySelectorAll('.ged-etapes tr[data-texte]').forEach((tr) => { tr.hidden = !!t && !tr.dataset.texte.includes(t); });

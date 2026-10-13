@@ -35,14 +35,14 @@ describe('Structure des affaires', () => {
 
   it('contrôle les intervenants comme le serveur (Intervenants.Controler)', () => {
     const f = FONCTIONS_INTERVENANT;
-    expect(controlerIntervenants([{ fonction: 'CLIENT', per_id: 1 }, { fonction: 'SOUS_TRAITANT', per_id: 2, paiement_direct: true, montant_ht: 10 }], f, 'S')).toEqual([]);
+    expect(controlerIntervenants([{ fonction: 'CLIENT', per_id: 1 }, { fonction: 'SOUS_TRAITANT', per_id: 2, paiement_direct: true }], f, 'S')).toEqual([]);
     expect(controlerIntervenants([
       { fonction: 'PAYEUR', per_id: 1 }, { fonction: 'PAYEUR', ind_id: 3 }, { fonction: 'BC', per_id: 4, paiement_direct: true },
-      { fonction: 'LIVRAISON', per_id: 5 }, { fonction: 'ARCHITECTE' }, { fonction: 'XX', per_id: 1 }, { fonction: 'SOUS_TRAITANT', per_id: 2, montant_ht: -1 },
+      { fonction: 'LIVRAISON', per_id: 5 }, { fonction: 'ARCHITECTE' }, { fonction: 'XX', per_id: 1 },
     ], f, 'S')).toEqual([
       'Un seul intervenant « Payeur »', 'Intervenant 3 : paiement direct réservé aux sous-traitants',
       'Intervenant 4 : fonction « Contact de livraison » non proposée ici', 'Intervenant 5 : tiers ou contact à choisir',
-      'Intervenant 6 : fonction inconnue', 'Intervenant 7 : montant négatif',
+      'Intervenant 6 : fonction inconnue',
     ]);
     expect(controlerIntervenants([{ fonction: 'ARCHITECTE', per_id: 1 }], f, 'D')).toHaveLength(1);
   });

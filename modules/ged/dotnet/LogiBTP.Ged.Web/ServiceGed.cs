@@ -20,8 +20,8 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     /// <summary>Fichiers de contenus devenus inutiles, effacés du disque une fois la transaction validée.</summary>
     private readonly List<string> aEffacer = [];
 
-    private static readonly string[] ModifiablesCoffre = ["resume", "notes"];
-    private static readonly string[] Modifiables = ["titre", "categorie", "date_document", "auteur", "type_element", "id_element", "resume", "notes"];
+    private static readonly string[] ModifiablesCoffre = ["resume", "notes", "a_envoyer"];
+    private static readonly string[] Modifiables = ["titre", "categorie", "date_document", "auteur", "type_element", "id_element", "resume", "notes", "a_envoyer"];
 
     // ------------------------------------------------------------------ paramètres
 
@@ -80,7 +80,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         dto.TypeElement = d.DgeTypeElement; dto.IdElement = d.DgeIdElement; dto.Auteur = d.DgeAuteur;
         dto.DateDocument = d.DgeDateDocument?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture); dto.ParentId = d.DgeParentId;
         dto.Mail = d.DgeMail?.RootElement.Clone(); dto.Resume = d.DgeResume; dto.Notes = d.DgeNotes; dto.Etat = d.DgeEtat;
-        dto.Coffre = d.DgeCoffre; dto.CoffreLe = d.DgeCoffreLe; dto.Supprime = d.DgeSupprime; dto.SupprimeLe = d.DgeSupprimeLe;
+        dto.Coffre = d.DgeCoffre; dto.CoffreLe = d.DgeCoffreLe; dto.AEnvoyer = d.DgeAEnvoyer; dto.Supprime = d.DgeSupprime; dto.SupprimeLe = d.DgeSupprimeLe;
         dto.SupprimePar = d.DgeSupprimePar; dto.CreeLe = d.DgeCreeLe; dto.CreePar = d.DgeCreePar; dto.ModifieLe = d.DgeModifieLe;
         dto.Version = v is null ? null : new(v.VgeId, v.VgeNumero, v.VgeNomFichier, v.VgeTypeMime, v.VgeTaille, v.VgeGenre);
         dto.NbPieces = nbPieces;
@@ -280,6 +280,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
                 case "id_element": d.DgeIdElement = Texte(texte); break;
                 case "resume": d.DgeResume = Texte(texte); break;
                 case "notes": d.DgeNotes = Texte(texte); break;
+                case "a_envoyer": d.DgeAEnvoyer = texte == "true"; break;
             }
         }
         d.DgeModifieLe = DateTimeOffset.UtcNow;

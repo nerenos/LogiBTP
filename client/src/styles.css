@@ -75,9 +75,6 @@
 .page-graphe-corps.graphe-hote { height: auto; flex: 1; min-height: 0; }
 
 /* Structure des affaires : rattachement du document (entête) et marché proposé à la validation d'une commande. */
-.rattachement-document { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 6px 10px; }
-.rattachement-document label { display: flex; flex-direction: column; font-size: 0.85em; min-width: 180px; flex: 1 1 180px; }
-.rattachement-document a { text-decoration: none; }
 dialog.dialogue-structure { max-width: min(640px, calc(100vw - 32px)); width: 100%; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); padding: 16px; }
 dialog.dialogue-structure::backdrop { background: rgba(0, 0, 0, 0.35); }
 dialog.dialogue-structure label { display: block; margin: 6px 0; }
@@ -101,3 +98,24 @@ dialog.dialogue-structure .boutons { display: flex; justify-content: flex-end; g
 .intervenants-pied { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .intervenants-pd { color: var(--discret); font-size: 0.9em; }
 .annuaire-document { margin: 8px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 6px 10px; }
+
+/* Rattachement du document : libellé, zone de code (double-clic : liste), libellé de l'élément en lien vers la fiche. */
+.rattachement-document { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 6px 10px; }
+.rattachement-champ { display: flex; flex-direction: column; gap: 2px; min-width: 200px; flex: 1 1 200px; }
+.rattachement-champ label { display: flex; align-items: center; gap: 6px; font-size: 0.85em; }
+.rattachement-champ input { width: 9.5em; font-family: inherit; }
+.rattachement-libelle { font-size: 0.85em; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rattachement-libelle a { text-decoration: none; }
+dialog.dialogue-selection { max-width: min(860px, calc(100vw - 32px)); }
+dialog.dialogue-selection .selection-barre { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+dialog.dialogue-selection .selection-barre input[type=search] { flex: 1 1 240px; }
+dialog.dialogue-selection .selection-barre label { display: inline-flex; gap: 4px; margin: 0; }
+dialog.dialogue-selection .selection-liste { max-height: 55vh; overflow: auto; border: 1px solid var(--bord); border-radius: 4px; }
+.table-selection { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+.table-selection th { position: sticky; top: 0; background: var(--surface); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--bord); }
+.table-selection td { padding: 3px 6px; border-bottom: 1px solid var(--bord); cursor: pointer; }
+.table-selection tr.courante td { background: var(--selection, rgba(80, 140, 255, 0.25)); }
+/* Détail de la ligne : actions de la bibliothèque, variables du document de la section. */
+.actions-ligne { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.vue-pieces { padding: 8px; overflow: auto; }
+.ged-envoi, .ged-envoi-detail { text-align: center; }

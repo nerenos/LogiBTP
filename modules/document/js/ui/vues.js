@@ -108,7 +108,7 @@ export class GestionVuesDocument {
         ${miennes.length ? `<optgroup label="Mes vues">${miennes.map(option).join('')}</optgroup>` : ''}
         ${this.courante && !this.vues.includes(this.courante) ? `<option value="tmp" selected>${echapper(this.courante.nom)} (non enregistrée)</option>` : ''}
       </select>
-      <button type="button" data-colonnes title="Colonnes affichées, ordre, mode débogage, enregistrement de la vue">▦ Colonnes…</button>`;
+      <button type="button" data-colonnes title="Colonnes… : colonnes affichées, ordre, mode débogage, enregistrement de la vue">▦</button>`;
     c.querySelector('[data-vue]').addEventListener('change', (e) => {
       if (e.target.value === 'tmp') return;
       this.appliquer(this.vues.find((v) => v.id === Number(e.target.value)) ?? null);

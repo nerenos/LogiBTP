@@ -4,6 +4,7 @@ import { TL, estChiffree, estTranche } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre } from './structure/structure.js';
+import { choisirRattachement } from './structure/selection.js';
 
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
@@ -11,7 +12,7 @@ import { intervenantPropre } from './structure/structure.js';
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null } = {}) {
     super(editeur);
     this.bibliotheques = bibliotheques;
     // Structure des affaires : référentiels (projets, affaires, chantiers, marchés) et rattachement (page : document
@@ -21,6 +22,8 @@ export class PanneauxBtp extends PanneauxDocument {
     // Annuaire du document : annuaire du cœur (recherche des tiers, contacts) ; intervenants(type, id) de la structure.
     this.annuaire = annuaire;
     this.intervenantsStructure = intervenants;
+    this.actualiserPrix = actualiserPrix;
+    this.versBibliotheque = versBibliotheque;
   }
 
   /** Tiers saisi dans l'annuaire du document (première ligne : client ou fournisseur). */
@@ -86,35 +89,61 @@ export class PanneauxBtp extends PanneauxDocument {
     return this.editeur.saisie.variables.filter((v) => v.var_lig_id === null && v.var_mtr_id === null);
   }
 
-  /** Rattachement à la structure des affaires : listes filtrées (marchés du chantier, chantiers de l'affaire). */
+  /**
+   * Rattachement à la structure des affaires : pour chaque niveau, libellé, zone de saisie du code (double-clic ou F4 :
+   * liste de choix) et, dessous, le libellé de l'élément en lien vers sa fiche.
+   */
   sectionRattachement(d) {
-    const s = this.structure;
-    if (!s) return '';
-    const choix = (champ, liste, valeur, filtre = () => true) => `<select data-rattachement="${champ}">${opt('', '—', valeur ?? '')}${liste
-      .filter((x) => x.id === Number(valeur) || (filtre(x) && !['CLOSE', 'CLOS', 'PERDU', 'ABANDONNE', 'RESILIE'].includes(x.statut)))
-      .map((x) => opt(String(x.id), `${x.code} – ${x.libelle}`, valeur === null || valeur === undefined ? '' : String(valeur))).join('')}</select>`;
-    const lien = (type, id) => (id ? ` <a href="/fiche/${type}/${Number(id)}" title="Ouvrir la fiche">↗</a>` : '');
+    if (!this.structure) return '';
+    const champ = (type, cle, liste, valeur, titre) => {
+      const x = (this.structure[liste] ?? []).find((y) => y.id === Number(valeur));
+      return `<div class="rattachement-champ"><label>${titre}
+          <input data-rattachement="${cle}" data-type="${type}" value="${echapper(x?.code ?? '')}" placeholder="Code" title="Code (double-clic ou F4 : choisir dans la liste)" autocomplete="off"></label>
+        <span class="rattachement-libelle">${x ? `<a href="/fiche/${type}/${x.id}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span></div>`;
+    };
     return `<fieldset class="rattachement-document"><legend>Rattachement</legend>
-      <label>Projet${lien('projet', d.ent_projet_id)} ${choix('ent_projet_id', s.projets, d.ent_projet_id)}</label>
-      <label>Affaire${lien('affaire', d.ent_affaire_id)} ${choix('ent_affaire_id', s.affaires, d.ent_affaire_id)}</label>
-      <label>Chantier${lien('chantier', d.ent_chantier_id)} ${choix('ent_chantier_id', s.chantiers, d.ent_chantier_id, (c) => !d.ent_affaire_id || c.aff_id === d.ent_affaire_id)}</label>
-      <label>Marché${lien('marche', d.ent_marche_id)} ${choix('ent_marche_id', s.marches, d.ent_marche_id, (m) => !d.ent_chantier_id || m.cha_id === d.ent_chantier_id)}</label>
+      ${champ('projet', 'ent_projet_id', 'projets', d.ent_projet_id, 'Projet')}
+      ${champ('affaire', 'ent_affaire_id', 'affaires', d.ent_affaire_id, 'Affaire')}
+      ${champ('chantier', 'ent_chantier_id', 'chantiers', d.ent_chantier_id, 'Chantier')}
+      ${champ('marche', 'ent_marche_id', 'marches', d.ent_marche_id, 'Marché')}
     </fieldset>`;
   }
 
+  /** Rattachement modifié sur un niveau : les parents suivent (completerRattachement), un enfant incohérent est retiré. */
+  changerRattachement(cle, id) {
+    const d = this.editeur.saisie.document;
+    const s = this.structure;
+    const r = { ent_projet_id: d.ent_projet_id ?? null, ent_affaire_id: d.ent_affaire_id ?? null, ent_chantier_id: d.ent_chantier_id ?? null, ent_marche_id: d.ent_marche_id ?? null };
+    r[cle] = id;
+    if (cle === 'ent_affaire_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.aff_id !== id) { r.ent_chantier_id = null; r.ent_marche_id = null; }
+    if (cle === 'ent_chantier_id' && r.ent_marche_id && s.marches.find((x) => x.id === r.ent_marche_id)?.cha_id !== id) r.ent_marche_id = null;
+    if (cle === 'ent_projet_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.prj_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.prj_id !== id) {
+      r.ent_chantier_id = null; r.ent_marche_id = null;
+    }
+    this.rattacher?.(r);
+  }
+
+  /** Liste de choix d'un niveau ; propose de la restreindre au parent déjà choisi. */
+  async choisirRattachement(el) {
+    const d = this.editeur.saisie.document;
+    const type = el.dataset.type;
+    const liste = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' }[type];
+    const titres = { projet: 'Choisir le projet', affaire: 'Choisir l\'affaire', chantier: 'Choisir le chantier', marche: 'Choisir le marché' };
+    const filtre = type === 'chantier' && d.ent_affaire_id ? { libelle: 'Chantiers de l\'affaire', test: (x) => x.aff_id === d.ent_affaire_id }
+      : type === 'marche' && d.ent_chantier_id ? { libelle: 'Marchés du chantier', test: (x) => x.cha_id === d.ent_chantier_id } : null;
+    const x = await choisirRattachement({ type, titre: titres[type], liste: this.structure[liste] ?? [], refs: this.structure, courant: d[el.dataset.rattachement] ?? null, filtre });
+    el.blur(); // le dialogue rend le focus à la zone : l'entête ne se redessinerait pas
+    if (x) this.changerRattachement(el.dataset.rattachement, x.id);
+    else this.rendreEntete(el.closest('#entete') ?? el.closest('.entete'));
+  }
+
   sectionsEntete() {
-    const varsDoc = this.variablesDocument();
-    const calc = new Map(this.editeur.resultat.variables.map((v) => [v.var_id, v.var_valeur]));
+    // Variables du document ($$) : dans le métré de la ligne de section (F4) ; sans section, rappel seulement.
+    const section = this.editeur.saisie.lignes.some((l) => l.lig_tyl_id === TL.SECTION);
+    const nbVars = this.variablesDocument().length;
     return `${this.sectionRattachement(this.editeur.saisie.document)}
       ${this.annuaire ? '<fieldset class="annuaire-document"><legend>Annuaire du document</legend><div data-intervenants></div></fieldset>' : ''}
-      <details class="variables-document" ${varsDoc.length ? 'open' : ''}><summary>Variables du document ($$)</summary>
-        <table class="variables"><tbody>${varsDoc.map((v) => `
-          <tr data-var="${v.var_id}"><td>$$<input data-vchamp="var_nom" value="${echapper(v.var_nom)}"></td>
-          <td><select data-vchamp="var_operation">${opt('=', '=', v.var_operation)}${opt('+=', '+=', v.var_operation)}</select></td>
-          <td><input data-vchamp="var_formule" value="${echapper(v.var_formule)}"></td>
-          <td class="col-nombre">${formatLibre(calc.get(v.var_id))}</td><td><button data-supprimer="${v.var_id}">✕</button></td></tr>`).join('')}
-        </tbody></table><button data-action="ajouter-variable">Ajouter</button>
-      </details>`;
+      ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}`;
   }
 
   lierEntete(zone) {
@@ -132,34 +161,21 @@ export class PanneauxBtp extends PanneauxDocument {
         }] : [],
       }).rendre(this.intervenantsDocument(d)));
     }
-    zone.querySelectorAll('[data-rattachement]').forEach((el) => el.addEventListener('change', () => {
-      const d = this.editeur.saisie.document;
-      const r = { ent_projet_id: d.ent_projet_id ?? null, ent_affaire_id: d.ent_affaire_id ?? null, ent_chantier_id: d.ent_chantier_id ?? null, ent_marche_id: d.ent_marche_id ?? null };
-      r[el.dataset.rattachement] = el.value === '' ? null : Number(el.value);
-      el.blur(); // l'entête se redessine (listes filtrées) une fois le focus sorti
-      // Cohérence descendante : une autre affaire libère le chantier et le marché, un autre chantier le marché.
-      const s = this.structure;
-      if (el.dataset.rattachement === 'ent_affaire_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.aff_id !== r.ent_affaire_id) {
-        r.ent_chantier_id = null; r.ent_marche_id = null;
-      }
-      if (el.dataset.rattachement === 'ent_chantier_id' && r.ent_marche_id && s.marches.find((x) => x.id === r.ent_marche_id)?.cha_id !== r.ent_chantier_id) r.ent_marche_id = null;
-      this.rattacher?.(r);
-    }));
-    zone.querySelectorAll('[data-vchamp]').forEach((el) => el.addEventListener('change', () => {
-      const id = Number(el.closest('tr').dataset.var);
-      m.modifier((b) => { b.variables.find((v) => v.var_id === id)[el.dataset.vchamp] = el.value; }, 'Variable');
-    }));
-    zone.querySelectorAll('[data-supprimer]').forEach((b) => b.addEventListener('click', () => {
-      const id = Number(b.dataset.supprimer);
-      m.modifier((s) => { s.variables = s.variables.filter((v) => v.var_id !== id); }, 'Variable');
-    }));
-    zone.querySelector('[data-action="ajouter-variable"]').addEventListener('click', () => {
-      const id = m.prochainId();
-      const ordre = this.variablesDocument().length + 1;
-      m.modifier((s) => {
-        s.variables.push({ var_id: id, var_ent_id: s.document.ent_id, var_lig_id: null, var_mtr_id: null, var_portee: '$$',
-          var_nom: 'variable', var_operation: '=', var_formule: '0', var_ordre: ordre });
-      }, 'Variable');
+    zone.querySelectorAll('[data-rattachement]').forEach((el) => {
+      const liste = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' }[el.dataset.type];
+      el.addEventListener('dblclick', () => this.choisirRattachement(el));
+      el.addEventListener('keydown', (e) => { if (e.key === 'F4') { e.preventDefault(); this.choisirRattachement(el); } });
+      // Code saisi : exact, sinon seul code commençant ainsi ; inconnu → liste de choix filtrée.
+      el.addEventListener('change', () => {
+        const code = el.value.trim().toLowerCase();
+        el.blur();
+        if (!code) { this.changerRattachement(el.dataset.rattachement, null); return; }
+        const tous = this.structure[liste] ?? [];
+        const x = tous.find((y) => y.code.toLowerCase() === code) ?? (tous.filter((y) => y.code.toLowerCase().startsWith(code)).length === 1
+          ? tous.find((y) => y.code.toLowerCase().startsWith(code)) : null);
+        if (x) this.changerRattachement(el.dataset.rattachement, x.id);
+        else this.choisirRattachement(el);
+      });
     });
   }
 
@@ -206,12 +222,34 @@ export class PanneauxBtp extends PanneauxDocument {
     return Number(d.ent_coef_fa) !== 1 ? [['Coef. frais annexes', formatLibre(d.ent_coef_fa)]] : [];
   }
 
-  /** Détail d'une tranche (titre, section) : ses paramètres ($largeur, $hauteur…) sous le formulaire. */
+  /**
+   * Détail de la ligne : actions de la bibliothèque (prix, envoi) sur la sélection ou la ligne ; pour une tranche
+   * (titre, section), ses paramètres ($largeur, $hauteur…) sous le formulaire ; pour la section, les variables du
+   * document ($$) dans son métré (F4).
+   */
   rendreDetail(zone, ligId) {
     if (zone.contains(document.activeElement)) return;
     super.rendreDetail(zone, ligId);
     const l = this.editeur.saisie.lignes.find((x) => x.lig_id === ligId);
-    if (!l || !estTranche(l)) return;
+    if (!l) return;
+    const lecture = !!this.editeur.magasin.lectureSeule;
+    const ids = () => {
+      const sel = this.editeur.grille.selection ?? [];
+      return sel.includes(ligId) ? sel : [ligId];
+    };
+    const actions = [
+      this.actualiserPrix && !lecture ? '<button type="button" data-action-ligne="prix" title="Reprendre les prix de la bibliothèque (lignes sélectionnées ou cette ligne)">⟳ Prix bibliothèque</button>' : '',
+      this.versBibliotheque && !lecture ? '<button type="button" data-action-ligne="envoi" title="Mettre à jour ou créer les éléments de la bibliothèque (élément → article, ouvrage → ouvrage, titre → ensemble)">📤 Vers la bibliothèque</button>' : '',
+      l.lig_tyl_id === TL.SECTION ? '<button type="button" data-action-ligne="variables" title="Variables du document ($$) dans le métré de la section (F4)">$$ Variables du document</button>' : '',
+    ].filter(Boolean);
+    if (actions.length) {
+      const h3 = zone.querySelector('h3');
+      (h3 ?? zone.firstChild)?.insertAdjacentHTML?.('afterend', `<div class="actions-ligne">${actions.join('')}</div>`);
+      zone.querySelector('[data-action-ligne="prix"]')?.addEventListener('click', () => this.actualiserPrix(ids()));
+      zone.querySelector('[data-action-ligne="envoi"]')?.addEventListener('click', () => this.versBibliotheque(ids()));
+      zone.querySelector('[data-action-ligne="variables"]')?.addEventListener('click', () => this.editeur.creerMetre(ligId));
+    }
+    if (!estTranche(l)) return;
     zone.insertAdjacentHTML('beforeend', sectionVariablesTranche(this.editeur, ligId, { modifiable: !this.editeur.magasin.lectureSeule }));
     lierVariablesTranche(zone, this.editeur);
   }

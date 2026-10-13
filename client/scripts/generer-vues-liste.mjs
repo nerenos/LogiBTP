@@ -256,8 +256,8 @@ const sqlIntervenants = `-- ====================================================
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/structure/donnees.js : ne pas modifier.
 -- =============================================================================
 
-${S.INTERVENANTS.map((i) => `INSERT INTO intervenant (itv_id, ${colonneObjet[i.objet]}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_montant_ht, itv_date_agrement, itv_commentaire, itv_ordre)
-VALUES (${i.id}, ${i.objet_id}, ${q(i.fonction)}, ${n(i.per_id)}, ${n(i.ind_id)}, ${b(i.principal)}, ${b(i.paiement_direct)}, ${n(i.montant_ht)}, ${q(i.date_agrement)}, ${q(i.commentaire)}, ${i.id});`).join('\n')}
+${S.INTERVENANTS.map((i) => `INSERT INTO intervenant (itv_id, ${colonneObjet[i.objet]}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre)
+VALUES (${i.id}, ${i.objet_id}, ${q(i.fonction)}, ${n(i.per_id)}, ${n(i.ind_id)}, ${b(i.principal)}, ${b(i.paiement_direct)}, ${q(i.commentaire)}, ${i.id});`).join('\n')}
 
 SELECT setval(pg_get_serial_sequence('intervenant', 'itv_id'), (SELECT max(itv_id) FROM intervenant));
 

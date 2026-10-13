@@ -12,7 +12,7 @@ namespace LogiBTP.Api.Btp;
 public sealed record FonctionIntervenant(string Code, string Libelle, string Portee, bool Unique, bool PaiementDirect, bool Actif);
 
 /// <summary>Intervenant saisi (fiche ou document) : tiers et/ou contact de l'annuaire avec une fonction.</summary>
-public sealed record IntervenantSaisi(string? Fonction, long? PerId, long? IndId, bool Principal, bool PaiementDirect, decimal? MontantHt, string? DateAgrement, string? Commentaire);
+public sealed record IntervenantSaisi(string? Fonction, long? PerId, long? IndId, bool Principal, bool PaiementDirect, string? Commentaire);
 
 /// <summary>
 /// Intervenants (petit annuaire) des projets, affaires, chantiers et marchés : champ géré « intervenants » des fiches
@@ -48,8 +48,7 @@ public static class Intervenants
         var sql = $"""
             SELECT coalesce(json_agg(json_build_object('fonction', i.itv_fin_code, 'per_id', i.itv_per_id, 'tiers', p.per_raison_sociale,
                    'ind_id', i.itv_ind_id, 'contact', nullif(trim(concat_ws(' ', d.ind_prenom, d.ind_nom)), ''), 'principal', i.itv_principal,
-                   'paiement_direct', i.itv_paiement_direct, 'montant_ht', i.itv_montant_ht, 'date_agrement', i.itv_date_agrement,
-                   'commentaire', i.itv_commentaire) ORDER BY i.itv_ordre, i.itv_id), '[]')::text AS "Value"
+                   'paiement_direct', i.itv_paiement_direct, 'commentaire', i.itv_commentaire) ORDER BY i.itv_ordre, i.itv_id), '[]')::text AS "Value"
             FROM intervenant i LEFT JOIN personne p ON p.per_id = i.itv_per_id LEFT JOIN individu d ON d.ind_id = i.itv_ind_id
             WHERE i.{Colonnes[type]} = {"{0}"}
             """;
@@ -64,17 +63,15 @@ public static class Intervenants
         static string? Texte(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String && v.GetString()!.Trim() != "" ? v.GetString()!.Trim() : null;
         static long? Entier(JsonElement e, string k) => e.TryGetProperty(k, out var v)
             ? v.ValueKind == JsonValueKind.Number ? v.GetInt64() : v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var n) ? n : null : null;
-        static decimal? Montant(JsonElement e, string k) => e.TryGetProperty(k, out var v)
-            ? v.ValueKind == JsonValueKind.Number ? v.GetDecimal()
-              : v.ValueKind == JsonValueKind.String && decimal.TryParse(v.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var n) ? n : null : null;
         static bool Vrai(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.True;
         return liste.EnumerateArray().Select(e => new IntervenantSaisi(Texte(e, "fonction"), Entier(e, "per_id"), Entier(e, "ind_id"), Vrai(e, "principal"),
-            Vrai(e, "paiement_direct"), Montant(e, "montant_ht"), Texte(e, "date_agrement"), Texte(e, "commentaire"))).ToList();
+            Vrai(e, "paiement_direct"), Texte(e, "commentaire"))).ToList();
     }
 
     /// <summary>
     /// Contrôles : fonction connue, active et de la portée (S structure, D document) ; tiers ou contact ; une seule
-    /// occurrence d'une fonction unique ; paiement direct réservé aux fonctions qui l'admettent ; montant positif.
+    /// occurrence d'une fonction unique ; paiement direct réservé aux fonctions qui l'admettent (information seulement :
+    /// montants et agréments relèveront de la gestion de la sous-traitance).
     /// </summary>
     public static List<string> Controler(IReadOnlyList<IntervenantSaisi> liste, IReadOnlyList<FonctionIntervenant> fonctions, char portee)
     {
@@ -91,7 +88,6 @@ public static class Intervenants
             vues[f.Code] = vues.GetValueOrDefault(f.Code) + 1;
             if (f.Unique && vues[f.Code] == 2) erreurs.Add($"Un seul intervenant « {f.Libelle} »");
             if (x.PaiementDirect && !f.PaiementDirect) erreurs.Add($"Intervenant {n} : paiement direct réservé aux sous-traitants");
-            if (x.MontantHt < 0) erreurs.Add($"Intervenant {n} : montant négatif");
         }
         return erreurs;
     }
@@ -114,14 +110,13 @@ public static class Intervenants
         foreach (var x in liste)
         {
             ordre++;
-            DateOnly? agrement = DateOnly.TryParse(x.DateAgrement?[..Math.Min(10, x.DateAgrement.Length)], CultureInfo.InvariantCulture, out var d) ? d : null;
             static NpgsqlParameter P(string nom, NpgsqlDbType type, object? v) => new(nom, type) { Value = v ?? DBNull.Value };
             await db.Database.ExecuteSqlRawAsync($"""
-                INSERT INTO intervenant ({col}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_montant_ht, itv_date_agrement, itv_commentaire, itv_ordre)
-                VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @montant, @agrement, @commentaire, @ordre)
+                INSERT INTO intervenant ({col}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre)
+                VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)
                 """, [P("objet", NpgsqlDbType.Integer, (int)id), P("fonction", NpgsqlDbType.Varchar, x.Fonction), P("per", NpgsqlDbType.Bigint, x.PerId),
                     P("ind", NpgsqlDbType.Bigint, x.IndId), P("principal", NpgsqlDbType.Boolean, x.Principal), P("pd", NpgsqlDbType.Boolean, x.PaiementDirect),
-                    P("montant", NpgsqlDbType.Numeric, x.MontantHt), P("agrement", NpgsqlDbType.Date, agrement), P("commentaire", NpgsqlDbType.Text, x.Commentaire),
+                    P("commentaire", NpgsqlDbType.Text, x.Commentaire),
                     P("ordre", NpgsqlDbType.Integer, ordre)], ct);
         }
     }

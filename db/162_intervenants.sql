@@ -45,9 +45,7 @@ CREATE TABLE intervenant (
     itv_per_id          BIGINT        REFERENCES personne(per_id) ON DELETE CASCADE,  -- tiers
     itv_ind_id          BIGINT        REFERENCES individu(ind_id) ON DELETE SET NULL, -- contact
     itv_principal       BOOLEAN       NOT NULL DEFAULT FALSE,
-    itv_paiement_direct BOOLEAN       NOT NULL DEFAULT FALSE,
-    itv_montant_ht      NUMERIC(15,2),                          -- sous-traitance acceptée (paiement direct)
-    itv_date_agrement   DATE,                                   -- agrément des conditions de paiement
+    itv_paiement_direct BOOLEAN       NOT NULL DEFAULT FALSE,   -- information (montants : gestion de la sous-traitance)
     itv_commentaire     TEXT,
     itv_ordre           INT           NOT NULL DEFAULT 0,
     CONSTRAINT itv_un_objet CHECK (num_nonnulls(itv_prj_id, itv_aff_id, itv_cha_id, itv_mar_id) = 1),
@@ -60,7 +58,7 @@ CREATE INDEX ix_intervenant_mar ON intervenant (itv_mar_id) WHERE itv_mar_id IS 
 CREATE INDEX ix_intervenant_per ON intervenant (itv_per_id);
 CREATE INDEX ix_intervenant_ind ON intervenant (itv_ind_id);
 
--- Documents : [{ fonction, per_id, tiers, ind_id, contact, principal, paiement_direct, montant_ht, date_agrement, commentaire }]
+-- Documents : [{ fonction, per_id, tiers, ind_id, contact, principal, paiement_direct, commentaire }]
 -- (tiers et contact : noms au moment de la saisie, pour l'affichage et l'impression).
 ALTER TABLE document ADD COLUMN ent_intervenants JSONB;
 
@@ -72,7 +70,7 @@ SELECT CASE WHEN i.itv_prj_id IS NOT NULL THEN 'projet' WHEN i.itv_aff_id IS NOT
        coalesce(i.itv_prj_id, i.itv_aff_id, i.itv_cha_id, i.itv_mar_id)::BIGINT AS objet_id,
        i.itv_fin_code AS fonction, f.fin_libelle AS fonction_libelle, i.itv_per_id AS per_id, p.per_raison_sociale AS tiers,
        i.itv_ind_id AS ind_id, nullif(trim(concat_ws(' ', d.ind_prenom, d.ind_nom)), '') AS contact, i.itv_principal AS principal,
-       i.itv_paiement_direct AS paiement_direct, i.itv_montant_ht AS montant_ht
+       i.itv_paiement_direct AS paiement_direct
 FROM intervenant i
 JOIN fonction_intervenant f ON f.fin_code = i.itv_fin_code
 LEFT JOIN personne p ON p.per_id = i.itv_per_id
@@ -80,7 +78,7 @@ LEFT JOIN individu d ON d.ind_id = i.itv_ind_id
 UNION ALL
 SELECT 'document', e.ent_id, x->>'fonction', f.fin_libelle, (x->>'per_id')::BIGINT, coalesce(p.per_raison_sociale, x->>'tiers'),
        (x->>'ind_id')::BIGINT, coalesce(nullif(trim(concat_ws(' ', d.ind_prenom, d.ind_nom)), ''), x->>'contact'),
-       coalesce((x->>'principal')::BOOLEAN, FALSE), coalesce((x->>'paiement_direct')::BOOLEAN, FALSE), (x->>'montant_ht')::NUMERIC
+       coalesce((x->>'principal')::BOOLEAN, FALSE), coalesce((x->>'paiement_direct')::BOOLEAN, FALSE)
 FROM document e
 CROSS JOIN LATERAL jsonb_array_elements(coalesce(e.ent_intervenants, '[]'::JSONB)) x
 LEFT JOIN fonction_intervenant f ON f.fin_code = x->>'fonction'

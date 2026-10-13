@@ -31,6 +31,7 @@ CREATE TABLE document_ged (
     dge_notes           TEXT,
     dge_etat            VARCHAR(30),                               -- dernière étape (VALIDE, ENVOYE, SIGNE…)
     dge_coffre          BOOLEAN       NOT NULL DEFAULT FALSE,
+    dge_a_envoyer       BOOLEAN       NOT NULL DEFAULT FALSE,      -- pièce jointe à envoyer (module Mail) avec l'élément lié
     dge_coffre_le       TIMESTAMPTZ,
     dge_supprime        BOOLEAN       NOT NULL DEFAULT FALSE,
     dge_supprime_le     TIMESTAMPTZ,

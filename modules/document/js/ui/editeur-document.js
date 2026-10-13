@@ -577,9 +577,11 @@ export class EditeurDocument {
         valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', tva: 'Taux', tranche: 'Pied' }[r.virtuelle.type] : this.libelleType(r)),
       },
       {
-        // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre.
+        // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre. Section sans code : numéro
+        // du document qu'elle représente (le document lui-même ; plus tard, chaque document intégré).
         cle: 'code', titre: 'Code', classe: 'col-code', editeur: 'texte', editable: saisissable,
-        champ: () => 'lig_code', lire: (l) => l.lig_code ?? '', valeur: (r) => r.calcule.lig_code ?? '',
+        champ: () => 'lig_code', lire: (l) => l.lig_code ?? '',
+        valeur: (r) => r.calcule.lig_code ?? (r.item?.lig_tyl_id === TL.SECTION ? this.saisie.document.ent_numero ?? '' : ''),
       },
       {
         // Saisie en ligne pour un texte simple ; éditeur de mise en forme au double-clic.

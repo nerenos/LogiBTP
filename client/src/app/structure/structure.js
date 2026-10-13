@@ -5,18 +5,22 @@ import { AFFAIRES, PROJETS, CHANTIERS, MARCHES, FONCTIONS_INTERVENANT, INTERVENA
 // commandes clients) et rattachement d'un document. En ligne : routes /api/structure ; hors ligne : mémoire sur les
 // données de démonstration, partagées avec les fiches et les listes (lignes calculées comme les vues v_liste_*).
 
-/** Rattachement complété : un marché donne son chantier, un chantier son affaire. */
+/** Rattachement complété (les parents suivent l'enfant) : un marché donne son chantier, un chantier son affaire et son projet. */
 export function completerRattachement(r, { chantiers, marches }) {
   const res = { ent_projet_id: r.ent_projet_id ?? null, ent_affaire_id: r.ent_affaire_id ?? null, ent_chantier_id: r.ent_chantier_id ?? null, ent_marche_id: r.ent_marche_id ?? null };
   if (res.ent_marche_id) res.ent_chantier_id = marches.find((m) => m.id === Number(res.ent_marche_id))?.cha_id ?? res.ent_chantier_id;
-  if (res.ent_chantier_id) res.ent_affaire_id = chantiers.find((c) => c.id === Number(res.ent_chantier_id))?.aff_id ?? res.ent_affaire_id;
+  const chantier = res.ent_chantier_id ? chantiers.find((c) => c.id === Number(res.ent_chantier_id)) : null;
+  if (chantier) {
+    res.ent_affaire_id = chantier.aff_id ?? res.ent_affaire_id;
+    res.ent_projet_id = chantier.prj_id ?? res.ent_projet_id;
+  }
   return res;
 }
 
 /**
  * Contrôles des intervenants (réplique d'Intervenants.Controler, src/LogiBTP.Api/Btp/Intervenants.cs) : fonction
  * connue, active et de la portée (S structure, D document) ; tiers ou contact ; une seule occurrence d'une fonction
- * unique ; paiement direct réservé aux fonctions qui l'admettent ; montant positif. Retourne les messages d'erreur.
+ * unique ; paiement direct réservé aux fonctions qui l'admettent (information). Retourne les messages d'erreur.
  */
 export function controlerIntervenants(liste, fonctions, portee) {
   const erreurs = [];
@@ -30,7 +34,6 @@ export function controlerIntervenants(liste, fonctions, portee) {
     vues.set(f.code, (vues.get(f.code) ?? 0) + 1);
     if (f.unique && vues.get(f.code) === 2) erreurs.push(`Un seul intervenant « ${f.libelle} »`);
     if (x.paiement_direct && !f.paiement_direct) erreurs.push(`Intervenant ${n} : paiement direct réservé aux sous-traitants`);
-    if (x.montant_ht !== null && x.montant_ht !== undefined && Number(x.montant_ht) < 0) erreurs.push(`Intervenant ${n} : montant négatif`);
   });
   return erreurs;
 }
@@ -40,8 +43,7 @@ export function intervenantPropre(x) {
   return {
     fonction: x.fonction ?? null, per_id: x.per_id ? Number(x.per_id) : null, tiers: x.tiers ?? null, ind_id: x.ind_id ? Number(x.ind_id) : null,
     contact: x.contact ?? null, principal: !!x.principal, paiement_direct: !!x.paiement_direct,
-    montant_ht: x.montant_ht === '' || x.montant_ht === null || x.montant_ht === undefined ? null : Number(x.montant_ht),
-    date_agrement: x.date_agrement || null, commentaire: x.commentaire || null,
+    commentaire: x.commentaire || null,
   };
 }
 

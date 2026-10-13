@@ -244,6 +244,9 @@ export class EditeurDevisBtp extends EditeurDocument {
     return l && this.saisie.metres.some((m) => m.mtr_id === l.lig_mtr_id) ? l.lig_mtr_id : null;
   }
 
+  /** Section du document : son métré présente les variables du document ($$). */
+  variablesDocumentSur(ligId) { return this.saisie.lignes.find((x) => x.lig_id === ligId)?.lig_tyl_id === TL.SECTION; }
+
   peutAvoirMetre(ligId) {
     const l = this.saisie.lignes.find((x) => x.lig_id === ligId);
     return !!l && estChiffree(l) && !l.lig_is_ecart_arrondi;
@@ -252,7 +255,8 @@ export class EditeurDevisBtp extends EditeurDocument {
   /** F4 : ouvre le métré de la ligne chiffrée, en le créant au besoin (une seule étape d'annulation). */
   creerMetre(id) {
     const l = this.saisie.lignes.find((x) => x.lig_id === id);
-    if (!this.peutAvoirMetre(id)) { this.surMessage?.('Le métré concerne les lignes chiffrées'); return; }
+    if (this.variablesDocumentSur(id)) { this.ouvrirMetreExterne?.(id, null); return; }
+    if (!this.peutAvoirMetre(id)) { this.surMessage?.('Le métré concerne les lignes chiffrées (F4 sur la section : variables du document)'); return; }
     let mtrId = this.metreDeLigne(id);
     if (mtrId === null) {
       mtrId = this.magasin.prochainId();

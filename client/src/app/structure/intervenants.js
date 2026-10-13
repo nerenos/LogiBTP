@@ -1,9 +1,10 @@
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper } from '@logibtp/socle/ui';
 import { intervenantPropre } from './structure.js';
 
 // Intervenants (petit annuaire) d'un projet, d'une affaire, d'un chantier, d'un marché ou d'un document : fonction,
 // tiers de l'annuaire (recherche), contact choisi parmi les rattachements du tiers, coordonnées du contact (courriel,
-// téléphone), principal, paiement direct des sous-traitants (montant, date d'agrément), commentaire. Le composant
+// téléphone), principal, paiement direct des sous-traitants (information : montants et agréments relèveront de la
+// gestion de la sous-traitance), commentaire. Le composant
 // tient sa liste et son DOM : chaque modification est signalée par surChange(liste) sans redessiner la page.
 
 const nature = (coordonnees, n) => (coordonnees ?? []).filter((c) => c.nature === n && c.valeur).sort((a, b) => Number(b.principal) - Number(a.principal))[0]?.valeur ?? null;
@@ -51,7 +52,6 @@ export class TableIntervenants {
   #dessiner() {
     const l = this.liste;
     const pd = l.filter((x) => x.paiement_direct);
-    const totalPd = pd.reduce((s, x) => s + Number(x.montant_ht ?? 0), 0);
     this.el.innerHTML = `
       <table class="table-intervenants ${this.lecture ? 'lecture' : ''}"><thead><tr>
         <th>Fonction</th><th>Tiers</th><th>Contact</th><th>Coordonnées</th><th title="Intervenant principal de la fonction">Princ.</th>
@@ -60,7 +60,7 @@ export class TableIntervenants {
       <div class="intervenants-pied">
         ${this.lecture ? '' : '<button type="button" data-ajouter>＋ Intervenant</button>'}
         ${this.actions.map((a, i) => `<button type="button" data-action-sup="${i}" title="${echapper(a.titre ?? '')}">${echapper(a.libelle)}</button>`).join('')}
-        ${pd.length ? `<span class="intervenants-pd">Paiement direct : ${pd.length} sous-traitant(s), ${formatNombre(totalPd, 2)} € HT</span>` : ''}
+        ${pd.length ? `<span class="intervenants-pd">Paiement direct : ${pd.length} sous-traitant(s)</span>` : ''}
       </div>`;
     this.#lier();
     l.forEach((x, i) => this.#coordonnees(x, i));
@@ -73,10 +73,8 @@ export class TableIntervenants {
     const lienContact = x.ind_id ? `<a href="/fiche/individu/${Number(x.ind_id)}" title="Ouvrir la fiche du contact">${echapper(x.contact ?? `Contact ${x.ind_id}`)}</a>` : '—';
     const paiement = f?.paiement_direct
       ? (this.lecture
-        ? (x.paiement_direct ? `Oui${x.montant_ht !== null && x.montant_ht !== undefined ? ` · ${formatNombre(x.montant_ht, 2)} € HT` : ''}${x.date_agrement ? ` · agréé le ${echapper(x.date_agrement)}` : ''}` : 'Non')
-        : `<label class="pd"><input type="checkbox" data-champ="paiement_direct" ${x.paiement_direct ? 'checked' : ''}> Oui</label>
-           <span ${x.paiement_direct ? '' : 'hidden'} class="pd-details"><input data-champ="montant_ht" data-nombre size="9" placeholder="Montant HT" value="${x.montant_ht ?? ''}">
-           <input type="date" data-champ="date_agrement" title="Agrément des conditions de paiement" value="${echapper(x.date_agrement ?? '')}"></span>`)
+        ? (x.paiement_direct ? 'Oui' : 'Non')
+        : `<label class="pd"><input type="checkbox" data-champ="paiement_direct" ${x.paiement_direct ? 'checked' : ''}> Oui</label>`)
       : '';
     if (this.lecture) {
       return `<tr data-i="${i}"><td>${echapper(f?.libelle ?? x.fonction ?? '')}</td><td>${lienTiers}</td><td>${lienContact}</td><td class="coordonnees"></td>
@@ -144,8 +142,8 @@ export class TableIntervenants {
     this.el.querySelectorAll('[data-champ]').forEach((el) => el.addEventListener('change', () => {
       const x = ligne(el);
       const champ = el.dataset.champ;
-      x[champ] = el.type === 'checkbox' ? el.checked : el.dataset.nombre !== undefined ? (el.value.trim() === '' ? null : Number(el.value.replace(/\s/g, '').replace(',', '.'))) : el.value || null;
-      if (champ === 'fonction' && !this.fonction(x.fonction)?.paiement_direct) Object.assign(x, { paiement_direct: false, montant_ht: null, date_agrement: null });
+      x[champ] = el.type === 'checkbox' ? el.checked : el.value || null;
+      if (champ === 'fonction' && !this.fonction(x.fonction)?.paiement_direct) x.paiement_direct = false;
       if (champ === 'fonction' || champ === 'paiement_direct') this.#dessiner();
       this.#changer();
     }));

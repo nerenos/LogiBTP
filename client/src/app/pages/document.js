@@ -1,4 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
+import { ExplorateurGed } from '@logibtp/ged/ui';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
@@ -23,6 +24,7 @@ const GABARIT = `
       <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
       <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
       <button role="tab" data-onglet-vue="analyse" title="Alt+3 : coefficients par nature ou par tranche">Analyse</button>
+      <button role="tab" data-onglet-vue="pieces" title="Alt+4 : documents de la GED liés au document, pièces jointes à envoyer">Pièces</button>
     </nav>
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
@@ -30,16 +32,11 @@ const GABARIT = `
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
-      <button data-action="bibliotheque" title="Ouvrir la bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, ou saisir son code dans la colonne Code)">📚 Bibliothèque</button>
-      <button data-action="actualiser" title="Reprendre les prix de la bibliothèque pour les lignes sélectionnées">⟳ Prix bibliothèque</button>
-      <button data-action="versBibliotheque" title="Mettre à jour ou créer les éléments de la bibliothèque depuis les lignes sélectionnées (élément → article, ouvrage → ouvrage, titre → ensemble)">📤 Vers la bibliothèque</button>
-      <select data-nouveau-type title="Type du nouveau document" hidden></select>
-      <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
+      <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
     </div>
-    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
-      <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍 Rechercher</button></span>
     <span class="groupe" data-vues></span>
-    <span class="resume"></span>
+    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
+      <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
   </div>
   <div class="document-verrou" hidden></div>
   <main class="document-zone">
@@ -48,6 +45,7 @@ const GABARIT = `
       <section id="totaux-entete" class="panneau totaux-entete"></section>
     </section>
     <section id="vue-analyse" class="vue vue-analyse" role="tabpanel"></section>
+    <section id="vue-pieces" class="vue vue-pieces" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
       <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -113,18 +111,17 @@ export class PageDocument extends PageBase {
       surOnglet: (o) => {
         if (o === 'lignes') this.editeur?.grille.focus();
         if (o === 'analyse') this.analyse?.rendre();
+        if (o === 'pieces') this.afficherPieces();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
     });
     const actions = {
-      enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(), nouveau: () => this.nouveau(),
+      enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
-      actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
-      versBibliotheque: () => this.envoi?.ouvrir(this.editeur?.grille.selection ?? []),
     };
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
@@ -134,7 +131,7 @@ export class PageDocument extends PageBase {
     });
     this.clavier = (e) => {
       // Alt+1 / Alt+2 : onglets Entête et Lignes.
-      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse' }[e.code] : null;
+      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse', Digit4: 'pieces' }[e.code] : null;
       if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
       // Ctrl+F : recherche dans les lignes (sans filtre), à la place de la recherche du navigateur.
       // Onglet Analyse : recherche dans la liste des éléments.
@@ -154,6 +151,7 @@ export class PageDocument extends PageBase {
     this.servicesStructure = s.structure;
     this.servicesFiche = s.fiche;
     this.servicesAnnuaire = s.annuaire;
+    this.servicesGed = s.ged;
     this.structure = await s.structure?.referentiels().catch(() => null) ?? null;
     // Mise à jour ou création d'éléments de la bibliothèque depuis les lignes du document.
     this.envoi = new EnvoiBibliotheque({
@@ -176,13 +174,9 @@ export class PageDocument extends PageBase {
       return;
     }
     this.types = await api.typesDocument();
-    const choix = this.$('[data-nouveau-type]');
-    choix.innerHTML = this.types.map((t) => `<option value="${t.tyd_code}">${echapper(t.tyd_libelle)}</option>`).join('');
-    choix.hidden = false;
-    this.$('[data-action="nouveau"]').hidden = false;
+    // Création depuis les listes : /document/nouveau?type=<code>.
     if (id === 'nouveau') {
-      choix.value = this.requete.type ?? 'V_DEVIS';
-      await this.nouveau({ remplacer: true });
+      await this.nouveau(this.requete.type ?? 'V_DEVIS');
     } else if (id === 'demo') {
       // Premier lancement : le devis de démonstration est créé dans la base.
       const docs = await api.documents();
@@ -291,6 +285,8 @@ export class PageDocument extends PageBase {
     });
     this.panneaux = new PanneauxBtp(this.editeur, {
       bibliotheques: this.bibliotheques, structure: this.structure, rattacher: (r) => this.rattacher(r).catch((x) => this.app.erreur(x)),
+      // Bibliothèque depuis le détail de la ligne (lignes sélectionnées, ou la ligne du détail).
+      actualiserPrix: (ids) => this.appel?.actualiser(ids), versBibliotheque: (ids) => this.envoi?.ouvrir(ids),
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
@@ -366,7 +362,6 @@ export class PageDocument extends PageBase {
     const d = ed.resultat.document;
     this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
     // Le net à payer est affiché dans les totaux sous la grille.
-    this.$('.resume').textContent = [doc.ent_numero, doc.ent_objet].filter(Boolean).join(' · ');
     p.rendreMessages(this.$('#controles'), (id) => ed.grille.selectionner(id));
     p.rendreEcarts(this.$('#ecarts'), this.ecarts, (decision, commentaire) => this.arbitrer(decision, commentaire).catch((x) => this.app.erreur(x)));
     this.$('[data-action="annuler"]').disabled = ed.magasin.pile.length === 0;
@@ -377,6 +372,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="valider"]').disabled = !enLigne || !modifiable;
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length);
     document.body.classList.toggle('lecture-seule', !modifiable);
+    if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
     this.app.majPage();
   }
 
@@ -397,10 +393,9 @@ export class PageDocument extends PageBase {
     return cree.document.ent_id;
   }
 
-  async nouveau({ remplacer = false } = {}) {
-    if (!remplacer && !(await this.quitter())) return;
-    const code = this.$('[data-nouveau-type]').value;
+  async nouveau(code) {
     const type = this.types.find((t) => t.tyd_code === code);
+    if (!type) throw new Error(`Type de document inconnu : ${code}`);
     // Tiers choisi ensuite dans l'annuaire du document (obligatoire à la validation).
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
     this.app.routeur.remplacerUrl(`/document/${cree.document.ent_id}`);
@@ -488,6 +483,28 @@ export class PageDocument extends PageBase {
     this.app.publier('enregistre', { ids: [doc.ent_id] });
     this.app.message('Rattachement enregistré', 'succes');
     this.rafraichir();
+  }
+
+  /**
+   * Onglet Pièces : documents de la GED liés au document (type du document, groupe des indices : les pièces suivent
+   * les nouveaux indices), marquage des pièces jointes à envoyer (module Mail). Recréé quand le document change.
+   */
+  afficherPieces() {
+    const zone = this.$('#vue-pieces');
+    const d = this.editeur?.saisie.document;
+    if (!d) return;
+    const cle = `${d.ent_tyd_id}-${d.ent_groupe_id ?? d.ent_id}`;
+    if (this.ged && this.gedCle === cle) return;
+    this.ged?.detruire?.();
+    zone.replaceChildren();
+    if (!this.servicesGed) { zone.innerHTML = '<p class="aide">La GED n\'est pas branchée.</p>'; return; }
+    const type = this.editeur.definition.type;
+    this.gedCle = cle;
+    this.ged = new ExplorateurGed(zone, {
+      fournisseur: this.servicesGed, envoi: true, modifiable: true, admin: this.app.estAdmin(), utilisateur: this.app.utilisateur(),
+      contexte: { type_element: type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id), libelle: `${type?.tyd_libelle ?? 'Document'} ${d.ent_numero ?? ''}`.trim() },
+      message: (t, n) => this.app.message(t, n),
+    });
   }
 
   async valider() {

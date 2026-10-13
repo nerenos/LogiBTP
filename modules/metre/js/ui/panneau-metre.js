@@ -26,6 +26,8 @@ const RE_NOM = /^[\p{L}_][\p{L}\p{N}_]*$/u;
  *   metreDeLigne(ligId)         ID du métré de la ligne, ou null
  *   peutAvoirMetre(ligId)       la ligne accepte-t-elle un métré ?
  *   creerMetre(ligId)           crée le métré de la ligne (une étape d'annulation) et l'ouvre
+ *   variablesDocumentSur(ligId) facultatif : la ligne (section du document) présente les variables du document ($$,
+ *                               sans ligne ni métré) au lieu d'un métré
  * Options : fermer(ligId), message(texte), dictionnaire (instance de DictionnaireMetre ou dérivée).
  */
 export class PanneauMetre {
@@ -50,7 +52,7 @@ export class PanneauMetre {
           <section class="metre-vide" hidden></section>
           <section class="metre-definition">
             <div class="metre-formulaire"></div>
-            <h3>Variables définies ou incrémentées par ce métré</h3>
+            <h3 class="metre-variables-titre">Variables définies ou incrémentées par ce métré</h3>
             <div class="metre-variables"></div>
             <p class="aide">Évaluées après les lignes du métré et la quantité de la ligne, dans l'ordre du tableau :
               une variable peut reprendre le résultat (<code>{{@surface}}</code>) ou une autre variable.
@@ -91,6 +93,15 @@ export class PanneauMetre {
   }
 
   get saisie() { return this.hote.saisie; }
+
+  /** Variables du document présentées sur la ligne (section) au lieu d'un métré. */
+  get modeDocument() { return this.ligId !== null && !!this.hote.variablesDocumentSur?.(this.ligId); }
+
+  /** Variable affichée dans l'onglet Définition : celles du métré, ou celles du document (mode document). */
+  variableAffichee(v) {
+    return this.modeDocument ? (v.var_lig_id === null || v.var_lig_id === undefined) && (v.var_mtr_id === null || v.var_mtr_id === undefined)
+      : v.var_mtr_id === this.mtrId && this.mtrId !== null;
+  }
   metre() { return this.saisie.metres.find((m) => m.mtr_id === this.mtrId) ?? null; }
 
   ouvrir(ligId, mtrId) {
@@ -123,6 +134,9 @@ export class PanneauMetre {
   }
 
   rendre() {
+    if (this.modeDocument) { this.rendreVariablesDocument(); return; }
+    this.racine.classList.remove('metre-mode-document');
+    this.racine.querySelector('.metre-variables-titre').textContent = 'Variables définies ou incrémentées par ce métré';
     const m = this.metre();
     this.racine.querySelector('.metre-titre').textContent = this.ligId === null ? '' : this.hote.titreLigne(this.ligId);
     this.racine.querySelectorAll('[data-onglet]').forEach((b) => { b.classList.toggle('actif', b.dataset.onglet === this.onglet); b.disabled = !m; });
@@ -149,6 +163,22 @@ export class PanneauMetre {
       this.rendreFormulaire(m);
       this.grilleVariables.rendre();
     } else this.grille.rendre();
+  }
+
+  /** Section du document : onglet Définition réduit aux variables du document ($$), sans formulaire ni lignes. */
+  rendreVariablesDocument() {
+    this.onglet = 'definition';
+    this.racine.classList.add('metre-mode-document');
+    this.racine.querySelector('.metre-titre').textContent = `${this.hote.titreLigne(this.ligId)} · variables du document`;
+    this.racine.querySelectorAll('[data-onglet]').forEach((b) => { b.classList.toggle('actif', b.dataset.onglet === 'definition'); b.disabled = b.dataset.onglet !== 'definition'; });
+    this.racine.querySelector('.metre-vide').hidden = true;
+    this.racine.querySelector('.metre-lignes').hidden = true;
+    this.racine.querySelector('.metre-definition').hidden = false;
+    this.racine.querySelector('.metre-formulaire').innerHTML = '';
+    this.racine.querySelector('.metre-resultat').textContent = '';
+    this.racine.querySelector('.metre-variables-titre').textContent = 'Variables du document ($$) : évaluées avant toutes les lignes';
+    this.rendreDictionnaire();
+    this.grilleVariables.rendre();
   }
 
   /** Message quand la ligne sélectionnée ne peut pas porter de métré. */
@@ -207,7 +237,7 @@ export class PanneauMetre {
   variables() {
     const calc = new Map(this.hote.resultat.variables.map((v) => [v.var_id, v]));
     return this.saisie.variables
-      .filter((v) => v.var_mtr_id === this.mtrId && this.mtrId !== null)
+      .filter((v) => this.variableAffichee(v))
       .sort((a, b) => (a.var_ordre - b.var_ordre) || (a.var_id - b.var_id))
       .map((v) => ({ item: v, calcule: calc.get(v.var_id) ?? v, profondeur: 0, aEnfants: false }));
   }
@@ -238,7 +268,7 @@ export class PanneauMetre {
 
   actionsVariables() {
     const m = () => this.hote.magasin;
-    const liste = (d) => d.variables.filter((v) => v.var_mtr_id === this.mtrId).sort((a, b) => (a.var_ordre - b.var_ordre) || (a.var_id - b.var_id));
+    const liste = (d) => d.variables.filter((v) => this.variableAffichee(v)).sort((a, b) => (a.var_ordre - b.var_ordre) || (a.var_id - b.var_id));
     const renumeroter = (vars) => vars.forEach((v, i) => { v.var_ordre = i + 1; });
     return {
       modifier: (id, champ, valeur) => {
@@ -255,8 +285,8 @@ export class PanneauMetre {
           const vars = liste(d);
           const ref = vars.find((v) => v.var_id === refId);
           const nouvelle = {
-            var_id: id, var_ent_id: d.document.ent_id, var_lig_id: this.ligId, var_mtr_id: this.mtrId,
-            var_portee: ref?.var_portee ?? '@', var_nom: nom, var_operation: memeType && ref ? ref.var_operation : '=',
+            var_id: id, var_ent_id: d.document.ent_id, var_lig_id: this.modeDocument ? null : this.ligId, var_mtr_id: this.modeDocument ? null : this.mtrId,
+            var_portee: ref?.var_portee ?? (this.modeDocument ? '$$' : '@'), var_nom: nom, var_operation: memeType && ref ? ref.var_operation : '=',
             var_formule: '0', var_ordre: 0,
           };
           d.variables.push(nouvelle);

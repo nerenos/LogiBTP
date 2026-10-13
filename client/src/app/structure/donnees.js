@@ -60,7 +60,7 @@ export const FONCTIONS_INTERVENANT = [
 // Intervenants de démonstration (personnes et contacts de l'annuaire de démonstration : architecte 11 / Mme 10,
 // BET 12 / 11, contrôle 13, SCI 14 / 13, commune 15 / 12, Bâtir Ensemble 16 / 13, électricien 7 / 8, plombier 8 / 9).
 const I = (id, objet, objet_id, fonction, per_id, ind_id = null, autres = {}) => ({
-  id, objet, objet_id, fonction, per_id, ind_id, principal: false, paiement_direct: false, montant_ht: null, date_agrement: null, commentaire: null, ...autres,
+  id, objet, objet_id, fonction, per_id, ind_id, principal: false, paiement_direct: false, commentaire: null, ...autres,
 });
 export const INTERVENANTS = [
   I(1, 'projet', 3, 'CLIENT', 15, 12, { principal: true }),
@@ -75,11 +75,11 @@ export const INTERVENANTS = [
   I(10, 'chantier', 2, 'ARCHITECTE', 11, 10),
   I(11, 'chantier', 2, 'BE', 12, 11),
   I(12, 'chantier', 2, 'BC', 13, null),
-  I(13, 'chantier', 2, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, montant_ht: 64000, date_agrement: '2026-03-02', commentaire: 'Lot électricité' }),
-  I(14, 'chantier', 2, 'SOUS_TRAITANT', 38, null, { paiement_direct: true, montant_ht: 38500, date_agrement: '2026-04-10', commentaire: 'Charpente' }),
+  I(13, 'chantier', 2, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, commentaire: 'Lot électricité' }),
+  I(14, 'chantier', 2, 'SOUS_TRAITANT', 38, null, { paiement_direct: true, commentaire: 'Charpente' }),
   I(15, 'marche', 1, 'PAYEUR', 16, 13, { principal: true }),
   I(16, 'marche', 1, 'VALIDATION_SITUATION', 11, 10),
-  I(17, 'marche', 1, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, montant_ht: 64000, date_agrement: '2026-03-02', commentaire: 'Lot électricité' }),
+  I(17, 'marche', 1, 'SOUS_TRAITANT', 7, 8, { paiement_direct: true, commentaire: 'Lot électricité' }),
   I(18, 'marche', 3, 'CLIENT', 15, 12, { principal: true }),
   I(19, 'marche', 3, 'PAYEUR', 15, null, { commentaire: 'Trésorerie municipale (mandatement)' }),
   I(20, 'marche', 3, 'VALIDATION_SITUATION', 15, 12),

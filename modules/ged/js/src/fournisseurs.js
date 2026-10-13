@@ -8,7 +8,8 @@ import { editionsAPurger, GENRES } from './versions.js';
 //   document(id)                         → document + versions (éditions et étapes) + pieces (pièces jointes d'un mail)
 //   deposer({ fichier, meta })           → document créé (meta : titre, categorie, date_document, auteur, type_element,
 //                                          id_element, resume, notes, nature, mail, parent_id, coffre)
-//   modifier(id, meta)                   → document (informations seulement ; le contenu passe par une version)
+//   modifier(id, meta)                   → document (informations seulement ; le contenu passe par une version ;
+//                                          a_envoyer : pièce jointe à envoyer avec l'élément lié, module Mail)
 //   nouvelleVersion(id, { fichier, genre, etape, etat, commentaire })  → document (édition : N dernières conservées)
 //   etape(id, { etape, etat, commentaire })   → document (étape sans nouveau fichier)
 //   contenu(versionId) → Blob            urlContenu(versionId, { telecharger }) → URL
@@ -35,7 +36,9 @@ export class FournisseurGedApi {
     const formulaire = corps instanceof FormData;
     const r = await fetch(`${this.base}${url}`, {
       method: methode,
-      headers: formulaire ? this.entetes : { 'Content-Type': 'application/json', ...this.entetes },
+      // Formulaire : le navigateur pose le Content-Type multipart (avec sa frontière) ; jamais celui des en-têtes communs.
+      headers: formulaire ? Object.fromEntries(Object.entries(this.entetes).filter(([k]) => k.toLowerCase() !== 'content-type'))
+        : { 'Content-Type': 'application/json', ...this.entetes },
       body: corps === undefined ? undefined : formulaire ? corps : JSON.stringify(corps),
     });
     const texte = await r.text();
@@ -196,7 +199,7 @@ export class FournisseurGedMemoire {
       id: Math.max(0, ...this.documents.map((x) => x.id)) + 1, titre: meta.titre.trim(), categorie: meta.categorie ?? null, nature: meta.nature ?? 'fichier',
       type_element: meta.type_element ?? null, id_element: meta.id_element ?? null, auteur: meta.auteur ?? this.utilisateur,
       date_document: meta.date_document ?? new Date(this.horloge()).toISOString().slice(0, 10), parent_id: meta.parent_id ?? null,
-      mail: meta.mail ?? null, resume: meta.resume ?? null, notes: meta.notes ?? null, etat: null, coffre: false, coffre_le: null,
+      mail: meta.mail ?? null, resume: meta.resume ?? null, notes: meta.notes ?? null, etat: null, coffre: false, coffre_le: null, a_envoyer: false,
       supprime: false, supprime_le: null, supprime_par: null, cree_le: new Date(this.horloge()).toISOString(), cree_par: this.utilisateur, modifie_le: null,
     };
     this.documents.push(d);
@@ -207,13 +210,13 @@ export class FournisseurGedMemoire {
 
   async modifier(id, meta) {
     const d = this.#doc(id);
-    const autorises = d.coffre ? ['resume', 'notes'] : ['titre', 'categorie', 'date_document', 'auteur', 'type_element', 'id_element', 'resume', 'notes'];
+    const autorises = d.coffre ? ['resume', 'notes', 'a_envoyer'] : ['titre', 'categorie', 'date_document', 'auteur', 'type_element', 'id_element', 'resume', 'notes', 'a_envoyer'];
     for (const [k, v] of Object.entries(meta)) {
       if (!autorises.includes(k)) {
         if (d.coffre && v !== d[k]) throw new ErreurGed(422, 'COFFRE', 'Document du coffre-fort : seuls le résumé et les notes sont modifiables');
         continue;
       }
-      d[k] = v === '' ? null : v;
+      d[k] = k === 'a_envoyer' ? v === true || v === 'true' : v === '' ? null : v;
     }
     if (!d.titre) throw new ErreurGed(422, 'TITRE', 'Titre obligatoire');
     d.modifie_le = new Date(this.horloge()).toISOString();
