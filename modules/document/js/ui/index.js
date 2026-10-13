@@ -7,3 +7,4 @@ export { Disposition } from './disposition.js';
 export { GestionVuesDocument, FournisseurVuesMemoire, vueParDefaut } from './vues.js';
 export { ParametrageAffichageDocument, FournisseurAffichageMemoire, controlerEtiquettes } from './parametrage.js';
 export { PlanDocument } from './plan.js';
+export { RechercheLignes } from './recherche.js';

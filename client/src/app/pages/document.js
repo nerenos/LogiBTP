@@ -1,6 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
-import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument } from '@logibtp/document/ui';
+import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
@@ -32,7 +32,8 @@ const GABARIT = `
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
     </div>
-    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button></span>
+    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
+      <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍 Rechercher</button></span>
     <span class="groupe" data-vues></span>
     <span class="resume"></span>
   </div>
@@ -49,6 +50,7 @@ const GABARIT = `
       <div class="zone-lignes">
         <section id="ecarts" class="panneau ecarts" hidden></section>
         <div class="barre-filtre" hidden></div>
+        <div id="recherche-lignes" hidden></div>
         <div id="grille"></div>
         <footer class="pied-lignes">
           <div id="totaux" class="totaux-compacts"></div>
@@ -116,6 +118,7 @@ export class PageDocument extends PageBase {
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       bibliotheque: () => this.appel?.rechercher(this.editeur?.grille.courant ?? null),
       actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
+      rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
     };
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
@@ -127,6 +130,12 @@ export class PageDocument extends PageBase {
       // Alt+1 / Alt+2 : onglets Entête et Lignes.
       const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse' }[e.code] : null;
       if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
+      // Ctrl+F : recherche dans les lignes (sans filtre), à la place de la recherche du navigateur.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === 'KeyF' && this.recherche) {
+        e.preventDefault();
+        this.disposition.onglet('lignes');
+        this.recherche.ouvrir();
+      }
     };
     document.addEventListener('keydown', this.clavier);
     document.body.classList.add('avec-document');
@@ -264,6 +273,7 @@ export class PageDocument extends PageBase {
     });
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
+    this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.surFiltre = () => this.afficherFiltre();

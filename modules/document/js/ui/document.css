@@ -309,3 +309,15 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .partie-entete .analyse-colonnes .menu-colonnes { z-index: 30; }
 .table-elements td .metre { margin-right: 0.3rem; cursor: help; }
 .table-elements td input[data-cle="qt"] { width: 7.5em; }
+.table-elements tbody tr.edite > * { background: var(--selection); }
+.table-elements tbody tr.edite td.divergent { background: var(--alerte-fond); box-shadow: inset 0 0 0 999px rgba(80, 130, 230, 0.12); }
+
+/* Recherche dans les lignes (sans filtre) : barre au-dessus de la grille, lignes trouvées surlignées. */
+.barre-recherche { flex: none; display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-bottom: 1px solid var(--bord); background: var(--surface); }
+.barre-recherche[hidden] { display: none; }
+.barre-recherche input { flex: 0 1 26rem; min-width: 10rem; }
+.barre-recherche .compteur { color: var(--discret); font-size: 0.85em; min-width: 6rem; font-variant-numeric: tabular-nums; }
+.barre-recherche.sans-resultat input { border-color: var(--erreur); background: var(--erreur-fond); }
+.barre-recherche button { padding: 0 0.45rem; }
+.grille tr.trouvee td { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.18); }
+.grille tr.trouvee-courante td { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.45); }

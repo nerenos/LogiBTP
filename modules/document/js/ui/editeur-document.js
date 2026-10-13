@@ -414,13 +414,23 @@ export class EditeurDocument {
   }
 
   /** Va à une ligne : tranches parentes dépliées, filtre retiré si la ligne est hors du filtre, ligne en haut de la grille. */
-  allerA(id) {
+  allerA(id, { focus = true } = {}) {
     this.deplierAscendants(id);
+    // Ligne du pied : la tranche du pied et ses groupes sont dépliés.
+    if ((this.resultat.pied ?? []).some((e) => e.lig_id === id || e.lignes?.includes(id))) {
+      for (const r of [...this.grille.replies]) if (r === ID_PIED || r <= -1e12) this.grille.replies.delete(r);
+    }
     this.grille.rendre();
     if ((this.filtre !== null || this.filtreMarqueursActif()) && !this.grille.index?.has(id)) this.retirerFiltres();
     this.grille.selectionner(id);
-    this.grille.tbody.querySelector(`tr[data-id="${id}"]`)?.scrollIntoView({ block: 'start' });
-    this.grille.focus();
+    this.grille.tbody.querySelector(`tr[data-id="${id}"]`)?.scrollIntoView({ block: focus ? 'start' : 'center' });
+    if (focus) this.grille.focus();
+  }
+
+  /** Lignes marquées par la recherche (surlignées), la ligne courante de la recherche ; null : aucune. */
+  marquer(ids, courant = null) {
+    this.marques = ids ? { ids, courant } : null;
+    this.grille.rendre();
   }
 
   /**
@@ -818,6 +828,7 @@ export class EditeurDocument {
         (r.calcule.lig_type_prix ?? 'V') !== 'V' ? 'hors-total' : '',
         r.calcule.lig_is_non_editee ? 'non-editee' : '',
         this.coupees.has(r.item.lig_id) ? 'coupee' : '',
+        this.marques?.ids.has(r.item.lig_id) ? (r.item.lig_id === this.marques.courant ? 'trouvee trouvee-courante' : 'trouvee') : '',
       ].join(' '),
 
       titreLigne: (r) => r.messages.map((x) => x.message).join('\n'),

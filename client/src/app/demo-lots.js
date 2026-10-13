@@ -258,3 +258,27 @@ export function lignesLotsDemo(ligne, premierId = 1000, premierOrdre = 3) {
 
 /** Nombre de lots ajoutés (les lignes de pied du devis se placent après). */
 export const NB_LOTS_DEMO = LOTS.length;
+
+/**
+ * Codes des lignes chiffrées du devis de démonstration (sans code) : ouvrages OUV-nnn ; éléments préfixés par leur
+ * nature (MAT-, ISO-, LOC-, ST-, MO-), un même libellé ayant toujours le même code (regroupement dans l'analyse).
+ */
+export function coderDemo(lignes) {
+  const prefixes = { [NAT.MO]: 'MO', [NAT.MAT]: 'MAT', [NAT.LOC]: 'LOC', [NAT.ST]: 'ST', [NAT.ISO]: 'ISO' };
+  const parLibelle = new Map();
+  const compteurs = new Map();
+  const suivant = (prefixe) => {
+    const n = (compteurs.get(prefixe) ?? 0) + 1;
+    compteurs.set(prefixe, n);
+    return `${prefixe}-${String(n).padStart(3, '0')}`;
+  };
+  for (const l of lignes) {
+    if (l.lig_code || !(l.lig_tyl_id === 2 || l.lig_tyl_id === 3)) continue;
+    const libelle = String(l.lig_libelle_html ?? '').replace(/<[^>]+>/g, '').trim();
+    if (l.lig_tyl_id === 2) { l.lig_code = suivant('OUV'); continue; }
+    const cle = `${l.lig_nat_id}|${libelle}`;
+    if (!parLibelle.has(cle)) parLibelle.set(cle, suivant(prefixes[l.lig_nat_id] ?? 'DIV'));
+    l.lig_code = parLibelle.get(cle);
+  }
+  return lignes;
+}

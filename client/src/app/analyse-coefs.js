@@ -74,6 +74,10 @@ export class AnalyseCoefficients {
     this.partageGauche = Number.isFinite(p.partageGauche) ? Math.min(85, Math.max(15, p.partageGauche)) : 60;
     this.tri = p.tri && TRIS_ELEMENTS[p.tri.cle] ? { cle: p.tri.cle, sens: p.tri.sens === -1 ? -1 : 1 } : null;
     this.filtresElements = new Map(); // filtre par colonne de la liste des éléments (module Liste), le temps de la page
+    // Après une saisie dans la liste des éléments : ordre et lignes affichés figés (la ligne modifiée ne bouge pas avec
+    // le tri ni ne disparaît d'un filtre) jusqu'au prochain changement de tri, de filtre, de recherche ou de portée.
+    this.ordreFige = null;
+    this.saisieElement = null; // { cle, colonne } : cellule à reprendre après le recalcul
     this.colonnesElements = new Set(Array.isArray(p.colonnesElements) ? p.colonnesElements.filter((k) => TRIS_ELEMENTS[k]) : COLONNES_ELEMENTS);
     this.colonnesElements.add('libelle');
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
@@ -87,6 +91,7 @@ export class AnalyseCoefficients {
     conteneur.addEventListener('input', (e) => {
       if (!e.target.matches('[data-recherche]')) return;
       this.recherche = e.target.value;
+      this.ordreFige = null;
       this.rendreElements();
     });
   }
@@ -303,10 +308,13 @@ export class AnalyseCoefficients {
     const tous = elementsAnalyse(this.feuilles ?? []);
     this.groupesElements = tous;
     const actifs = [...this.filtresElements].filter(([, f]) => filtreActif(f));
-    const groupes = tous.filter((g) => (!r || `${g.code} ${g.libelle}`.toLowerCase().includes(r))
+    let groupes = tous.filter((g) => (!r || `${g.code} ${g.libelle}`.toLowerCase().includes(r))
       && actifs.every(([k, f]) => correspond(f, this.celluleElement(g, k), colonneFiltre(k))));
     // Tri choisi (sinon : montant décroissant) ; valeurs absentes en fin de liste.
-    if (this.tri) {
+    if (this.ordreFige) {
+      const parCle = new Map(tous.map((g) => [g.cle, g]));
+      groupes = this.ordreFige.map((k) => parCle.get(k)).filter(Boolean);
+    } else if (this.tri) {
       const t = TRIS_ELEMENTS[this.tri.cle];
       const sens = this.tri.sens;
       groupes.sort((a, b) => {
@@ -359,11 +367,22 @@ export class AnalyseCoefficients {
       nature: (g) => `<td class="${g.natures.size > 1 ? 'divergent' : ''}">${echapper(natures(g))}</td>`,
     };
     const visibles = COLONNES_ELEMENTS.filter((k) => this.colonnesElements.has(k));
-    corps.innerHTML = groupes.map((g) => `<tr>${visibles.map((k) => (cellules[k] ? cellules[k](g) : valeur(g, k))).join('')}</tr>`).join('')
+    const edite = this.saisieElement?.cle;
+    corps.innerHTML = groupes.map((g) => `<tr data-groupe="${echapper(g.cle)}" class="${g.cle === edite ? 'edite' : ''}">${visibles.map((k) => (cellules[k] ? cellules[k](g) : valeur(g, k))).join('')}</tr>`).join('')
       || `<tr><td colspan="${visibles.length}" class="aide">Aucun élément.</td></tr>`;
-    const filtres = actifs.length || r;
+    this.affiches = groupes.map((g) => g.cle);
+    // Ligne modifiée : reste visible, sa cellule reprend le focus.
+    if (this.saisieElement) {
+      const tr = [...corps.querySelectorAll('tr[data-groupe]')].find((x) => x.dataset.groupe === this.saisieElement.cle);
+      tr?.scrollIntoView({ block: 'nearest' });
+      const input = tr?.querySelector(`input[data-cle="${this.saisieElement.colonne}"]`);
+      if (input && this.conteneur.isConnected && !this.conteneur.closest('[hidden]')) { input.focus({ preventScroll: true }); input.select(); }
+      this.saisieElement = null;
+    }
+    const filtres = actifs.length || r || this.ordreFige;
     this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${groupes.length}${filtres ? ` sur ${tous.length}` : ''} groupe(s), `
-      + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`;
+      + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`
+      + `${this.ordreFige ? ' <button type="button" class="lien" data-liberer-ordre title="Ordre figé après une saisie : réappliquer le tri et les filtres">Réappliquer tri et filtres</button>' : ''}`;
   }
 
   /** Cellule d'un groupe pour le filtre (valeur : celle du tri, minimum si les lignes diffèrent ; texte affiché). */
@@ -390,10 +409,12 @@ export class AnalyseCoefficients {
     ouvrirMenuFiltre({
       ancre, colonne: colonneFiltre(cle), modele, lignes: this.groupesElements ?? [], filtre: this.filtresElements.get(cle), triBase: false, miseEnForme: false,
       appliquer: (f) => {
+        this.ordreFige = null;
         if (f) this.filtresElements.set(cle, f); else this.filtresElements.delete(cle);
         this.rendreElements();
       },
       trier: (sens) => {
+        this.ordreFige = null;
         this.tri = { cle, sens: sens === 'desc' ? -1 : 1 };
         this.memoriser();
         this.rendreElements();
@@ -427,6 +448,8 @@ export class AnalyseCoefficients {
   appliquerElement(cleGroupe, cle, valeur) {
     const g = this.elements?.get(cleGroupe);
     if (!g) return;
+    this.ordreFige ??= [...(this.affiches ?? [])];
+    this.saisieElement = { cle: cleGroupe, colonne: cle };
     if (cle === 'qt') {
       if (Number(valeur) < 0) { this.message('Quantité invalide'); this.rendre(); return; }
       this.appliquerQuantite(g, valeur);
@@ -442,7 +465,7 @@ export class AnalyseCoefficients {
     this.message(`${titre} ${formatLibre(valeur)} écrit sur ${modifs.size} ligne(s) « ${g.libelle || g.code} »${cle === 'pv' ? ' (prix fixe)' : ''}`);
   }
 
-  /** Arbre des natures des lignes de la portée : regroupements puis natures, avec le nombre de lignes ; filtre. */
+  /** Arbre des natures des lignes de la portée : regroupements puis natures ; filtre. */
   arbreNatures() {
     const comptes = new Map();
     for (const f of this.feuillesPortee ?? []) comptes.set(f.nature ?? null, (comptes.get(f.nature ?? null) ?? 0) + 1);
@@ -458,8 +481,7 @@ export class AnalyseCoefficients {
     const noeud = (cle, libelle, n, profondeur, { pli = null, classe = '' } = {}) => `
       <li class="${classe} ${this.filtreNature === cle ? 'courant' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem">
         <span class="pli" ${pli ? `data-nature-pli="${echapper(pli)}"` : ''}>${pli ? (this.naturesReplies.has(pli) ? '▸' : '▾') : ''}</span>
-        <button type="button" class="lien" data-nature-filtre="${echapper(cle ?? '')}" title="${echapper(libelle)}">${echapper(libelle)}</button>
-        <span class="mt">${n}</span></li>`;
+        <button type="button" class="lien" data-nature-filtre="${echapper(cle ?? '')}" title="${echapper(libelle)}">${echapper(libelle)}</button></li>`;
     const items = [noeud(null, 'Toutes les natures', total, 0, { classe: 'global' })];
     for (const [reg, natures] of [...regroupements].sort((a, b) => a[0].localeCompare(b[0]))) {
       items.push(noeud(`r:${reg}`, reg, natures.reduce((a, x) => a + x.n, 0), 1, { pli: reg }));
@@ -495,6 +517,9 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    if (e.target.closest('[data-liberer-ordre]')) { this.ordreFige = null; this.rendreElements(); return; }
+    // Tri, filtre, portée ou nature : l'ordre figé après une saisie est abandonné.
+    if (e.target.closest('th[data-tri], [data-effacer-filtres], [data-portee-id], [data-nature-filtre]')) this.ordreFige = null;
     const filtre = e.target.closest('[data-filtre-colonne]');
     if (filtre) { e.stopPropagation(); this.menuFiltreElement(filtre.dataset.filtreColonne, filtre); return; }
     if (e.target.closest('[data-effacer-filtres]')) { this.filtresElements.clear(); fermerMenuFiltre(); this.rendreElements(); return; }
@@ -552,7 +577,7 @@ export class AnalyseCoefficients {
 
   #changement(e) {
     const t = e.target;
-    if (t.matches('[data-hors-total]')) { this.horsTotal = t.checked; this.memoriser(); this.rendre(); return; }
+    if (t.matches('[data-hors-total]')) { this.ordreFige = null; this.horsTotal = t.checked; this.memoriser(); this.rendre(); return; }
     if (t.matches('[data-colonne]')) {
       const partie = t.dataset.colonneDe;
       const cible = partie === 'elements' ? this.colonnesElements : this.colonnes;

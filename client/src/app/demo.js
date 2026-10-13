@@ -1,6 +1,6 @@
 // Document de démonstration, utilisé quand l'API n'est pas joignable (calcul local complet).
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX, MODELES_DOCUMENT } from './vues-document.js';
-import { lignesLotsDemo, natureDemo } from './demo-lots.js';
+import { lignesLotsDemo, natureDemo, coderDemo } from './demo-lots.js';
 
 export const DEFINITION_DEMO = {
   type: { tyd_id: 1, tyd_code: 'V_DEVIS', tyd_libelle: 'Devis client', tyd_famille: 'V' },
@@ -44,8 +44,8 @@ const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, ...o });
 export const ID_SECTION_DEMO = 900;
 
 /**
- * Corps du devis englobé dans une section (les lignes de pied restent à la racine) ; natures des lignes chiffrées
- * déduites de leur type et de leur libellé.
+ * Corps du devis englobé dans une section (les lignes de pied restent à la racine) ; natures et codes des lignes
+ * chiffrées déduits de leur type et de leur libellé.
  */
 function preparerDemo(lignes) {
   const pied = new Set([8, 9, 10]);
@@ -55,7 +55,7 @@ function preparerDemo(lignes) {
     lig_parent_id: l.lig_parent_id === null && !pied.has(l.lig_tyl_id) && !(l.lig_tyl_id === 5 && l.lig_ordre >= 100) ? ID_SECTION_DEMO : l.lig_parent_id,
     lig_nat_id: l.lig_nat_id ?? natureDemo(l, parId.get(l.lig_parent_id) ?? null),
   }));
-  return [L({ lig_id: ID_SECTION_DEMO, lig_parent_id: null, lig_ordre: 0, lig_tyl_id: 11, lig_libelle_html: '<b>Extension maison individuelle</b>' }), ...corps];
+  return [L({ lig_id: ID_SECTION_DEMO, lig_parent_id: null, lig_ordre: 0, lig_tyl_id: 11, lig_libelle_html: '<b>Extension maison individuelle</b>' }), ...coderDemo(corps)];
 }
 
 export const DOCUMENT_DEMO = {
@@ -102,3 +102,6 @@ export const DOCUMENT_DEMO = {
   ],
   tva: [],
 };
+
+/** Code de chaque libellé du devis de démonstration (complète les devis déjà enregistrés). */
+export const CODES_DEMO = new Map(DOCUMENT_DEMO.lignes.filter((l) => l.lig_code).map((l) => [l.lig_libelle_html, l.lig_code]));
