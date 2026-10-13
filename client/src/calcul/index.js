@@ -18,3 +18,4 @@ export const cleLigneBtp = (l) => (l.lig_is_ecart_arrondi ? `ecart:${l.lig_paren
 export function comparerResultats(client, serveur) {
   return comparerDocument(client, serveur, { champsDocument: CHAMPS_DOCUMENT_BTP, champsLigne: CHAMPS_LIGNE_BTP, cle: cleLigneBtp });
 }
+export { natureObligatoire, controlesValidation } from './controles-btp.js';

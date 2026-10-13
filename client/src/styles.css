@@ -119,3 +119,7 @@ dialog.dialogue-selection .selection-liste { max-height: 55vh; overflow: auto; b
 .actions-ligne { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
 .vue-pieces { padding: 8px; overflow: auto; }
 .ged-envoi, .ged-envoi-detail { text-align: center; }
+
+/* Colonne Nature des lignes : obligatoire sur les lignes de prix pour valider. */
+.col-nature { width: 4.5em; }
+td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 22%, transparent); box-shadow: inset 0 0 0 1px var(--erreur, #c0392b); }

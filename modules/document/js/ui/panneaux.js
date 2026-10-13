@@ -315,9 +315,13 @@ export class PanneauxDocument {
       </table>`;
   }
 
+  /** Contrôles de la spécialisation affichés avec ceux du calcul : [{ lig_id, code, message, niveau }]. */
+  controlesSupplementaires() { return []; }
+
   rendreMessages(zone, selectionner) {
     const r = this.editeur.resultat;
-    const items = [...r.erreurs.map((e) => ({ ...e, niveau: 'erreur' })), ...r.avertissements.map((e) => ({ ...e, niveau: 'avertissement' }))];
+    const items = [...r.erreurs.map((e) => ({ ...e, niveau: 'erreur' })), ...this.controlesSupplementaires(),
+      ...r.avertissements.map((e) => ({ ...e, niveau: 'avertissement' }))];
     zone.hidden = items.length === 0;
     zone.innerHTML = `<h3>Contrôles (${items.length})</h3><ul>${items.map((e) =>
       `<li class="${e.niveau}" data-lig="${e.lig_id ?? ''}"><code>${echapper(e.code)}</code> ${echapper(e.message)}</li>`).join('')}</ul>`;

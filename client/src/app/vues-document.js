@@ -7,21 +7,21 @@ const cols = (...cles) => cles.map((cle) => ({ cle }));
 export const VUES_DOCUMENT = [
   {
     id: 1, nom: 'Complet', tyd_id: null, mod_code: 'COMPLET', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva'), debogage: false, systeme: [] },
   },
   {
     id: 2, nom: 'Chiffrage', tyd_id: null, mod_code: 'CHIFFRAGE', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'pvnet', 'montant'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'pvnet', 'montant'), debogage: false, systeme: [] },
   },
   {
     id: 3, nom: 'À la volée', tyd_id: null, mod_code: 'VOLEE', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'code', 'libelle', 'qte', 'unite', 'pv', 'montant', 'tva'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'code', 'libelle', 'nature', 'qte', 'unite', 'pv', 'montant', 'tva'), debogage: false, systeme: [] },
   },
   {
     // Débogage : colonnes système (identifiants, liens, valeurs calculées masquées) pour comprendre une erreur.
     id: 4, nom: 'Débogage', tyd_id: null, mod_code: null, globale: true, proprietaire: null, par_defaut: false,
     definition: {
-      colonnes: cols('num', 'type', 'code', 'libelle', 'qte', 'pv', 'montant', 'tva'), debogage: true,
+      colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'qte', 'pv', 'montant', 'tva'), debogage: true,
       systeme: ['_controles', 'lig_id', 'lig_parent_id', 'lig_ordre', 'lig_tyl_id', 'lig_type_prix', 'lig_variante_de_id', 'lig_st_depuis_id',
         'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_base_calcul', 'lig_qte_totale', 'lig_montant_pr', 'lig_etiquette'],
     },

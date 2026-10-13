@@ -55,6 +55,16 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         return c;
     }
 
+    /// <summary>
+    /// Nature obligatoire sur les lignes de prix (éléments, ouvrages et composantes), hors écart d'arrondi : exigée à la
+    /// validation. Réplique de controlesValidation (client/src/calcul/controles-btp.js).
+    /// </summary>
+    public override void ControlerValidation(EntreeDocument<DocumentBtp, DocumentLigneBtp> entree, List<MessageCalcul> erreurs)
+    {
+        foreach (var l in entree.Lignes.Where(l => TL.EstChiffree(l) && !l.LigIsEcartArrondi && l.LigNatId is null))
+            erreurs.Add(new MessageCalcul(l.LigId, "NATURE_OBLIGATOIRE", "Nature obligatoire sur une ligne de prix"));
+    }
+
     public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie)
     {
         cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;

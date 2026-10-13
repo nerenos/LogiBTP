@@ -295,6 +295,7 @@ export class PageDocument extends PageBase {
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
     this.editeur.coefsDefaut = this.coefsDefaut;
+    this.editeur.natures = this.natures;
     this.editeur.surFiltre = () => this.afficherFiltre();
     this.afficherFiltre();
     // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.

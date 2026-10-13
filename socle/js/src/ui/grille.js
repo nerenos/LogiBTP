@@ -11,7 +11,8 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *
  * options :
  *  cle                     nom de la colonne identifiant
- *  colonnes                [{ cle, titre, classe, valeur(ligne) → texte|{html}, editable(ligne), editeur, options(ligne), lire(ligne), champ(ligne) }]
+ *  colonnes                [{ cle, titre, classe, valeur(ligne) → texte|{html}, editable(ligne), editeur, options(ligne), lire(ligne), champ(ligne),
+ *                            classeCellule(ligne) et titreCellule(ligne) facultatifs : classe et bulle propres à la cellule }]
  *  lignes()                [{ item, calcule, profondeur, aEnfants }] dans l'ordre d'affichage
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
  *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
@@ -130,7 +131,9 @@ export class GrilleArbre {
       this.o.colonnes.forEach((c, i) => {
         const td = document.createElement('td');
         td.dataset.col = i;
-        td.className = [c.classe ?? '', c.editable?.(r.item) ? 'editable' : '', id === this.courant && i === this.colonne ? 'cellule' : ''].join(' ');
+        td.className = [c.classe ?? '', c.classeCellule?.(r) ?? '', c.editable?.(r.item) ? 'editable' : '', id === this.courant && i === this.colonne ? 'cellule' : ''].join(' ');
+        const bulle = c.titreCellule?.(r);
+        if (bulle) td.title = bulle;
         if (i === 0) td.style.paddingLeft = `${0.4 + r.profondeur * 1.1}rem`;
         if (c.arbre) {
           const b = document.createElement('span');

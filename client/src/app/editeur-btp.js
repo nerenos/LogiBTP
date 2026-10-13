@@ -3,7 +3,7 @@ import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes, LIBELLES_TYPE,
 } from '@logibtp/document/ui';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
-import { calculerDocument, TL, CODES_TL, estChiffree } from '../calcul/index.js';
+import { calculerDocument, TL, CODES_TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
 // lignes d'écart d'arrondi calculées, métrés et variables (module Métré). L'éditeur sert aussi d'hôte au
@@ -173,6 +173,17 @@ export class EditeurDevisBtp extends EditeurDocument {
         return estChiffree(r.calcule) && r.calcule.lig_qte_source === 'M' ? `ⓜ ${v}` : v;
       },
     });
+    // Nature (comme les articles de la bibliothèque) : obligatoire sur les lignes de prix pour valider.
+    const nature = (id) => (this.natures ?? []).find((n) => n.id === Number(id));
+    const manquante = (r) => !r.virtuelle && natureObligatoire(r.item) && (r.item.lig_nat_id === null || r.item.lig_nat_id === undefined);
+    insererColonnes(colonnes, 'qte', [{
+      cle: 'nature', titre: 'Nature', classe: 'col-nature', editeur: 'select', editable: chiffree,
+      champ: () => 'lig_nat_id', lire: (l) => l.lig_nat_id ?? '',
+      options: () => [{ valeur: '', libelle: '—' }, ...(this.natures ?? []).filter((n) => n.actif !== false).map((n) => ({ valeur: n.id, libelle: `${n.code} – ${n.libelle}` }))],
+      valeur: (r) => (r.virtuelle || !estChiffree(r.item) ? '' : nature(r.item.lig_nat_id)?.code ?? (r.item.lig_nat_id ? `#${r.item.lig_nat_id}` : '')),
+      classeCellule: (r) => (manquante(r) ? 'manquant' : ''),
+      titreCellule: (r) => (manquante(r) ? 'Nature obligatoire pour valider le document' : nature(r.item?.lig_nat_id)?.libelle ?? ''),
+    }]);
     insererColonnes(colonnes, 'pv', [
       {
         cle: 'pa', titre: 'PA', classe: 'col-nombre', ...this.colonneNombre('lig_pa', (l) => chiffree(l) && !this.estCompose(l)),
@@ -207,6 +218,10 @@ export class EditeurDevisBtp extends EditeurDocument {
   }
 
   modifierCellule(id, champ, texte, colonne) {
+    if (champ === 'lig_nat_id') {
+      this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_nat_id = texte === '' || texte === null ? null : Number(texte); }, 'Nature');
+      return true;
+    }
     if (champ !== 'lig_pv') return super.modifierCellule(id, champ, texte, colonne);
     const valeur = lireNombre(texte);
     if (valeur === undefined) { this.surMessage?.('Nombre invalide'); return false; }

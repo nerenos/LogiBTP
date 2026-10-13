@@ -1,6 +1,6 @@
 import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
-import { TL, estChiffree, estTranche } from '../calcul/index.js';
+import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre } from './structure/structure.js';
@@ -179,6 +179,11 @@ export class PanneauxBtp extends PanneauxDocument {
     });
   }
 
+  /** Contrôles exigés à la validation (nature des lignes de prix), affichés pendant la saisie. */
+  controlesSupplementaires() {
+    return controlesValidation(this.editeur.saisie.lignes).map((e) => ({ ...e, niveau: 'erreur' }));
+  }
+
   aideLigneAbsente(calculee) {
     return calculee?.lig_is_ecart_arrondi
       ? '<p class="aide">Ligne d\'écart d\'arrondi : calculée, non modifiable, masquée à l\'impression.</p>'
@@ -199,6 +204,10 @@ export class PanneauxBtp extends PanneauxDocument {
         blocages.push(f.coche('lig_pv_affiche_fixe', 'PV affiché fixe (avec frais annexes)'), f.txt('lig_pv_affiche', 'PV affiché imposé', true));
       }
       champs.splice(j, 0, ...blocages);
+      // Nature (obligatoire pour valider) : avant le code article.
+      const natures = (this.editeur.natures ?? []).filter((n) => n.actif !== false || n.id === l.lig_nat_id);
+      const k = champs.findIndex((c) => c.includes('data-champ="lig_code"'));
+      champs.splice(k < 0 ? 0 : k, 0, f.sel('lig_nat_id', `Nature${natureObligatoire(l) ? ' *' : ''}`, [['', '—'], ...natures.map((n) => [n.id, `${n.code} – ${n.libelle}`])], true));
     }
     if (l.lig_tyl_id === TL.PIED_HT) {
       const k = champs.findIndex((c) => c.includes('data-champ="lig_is_non_editee"'));

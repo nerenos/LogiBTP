@@ -279,6 +279,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var ctx = new ContexteDocument<TDoc, TLigne> { Type = type, Proprietes = await Proprietes(type.TydId, ct), Entree = entree };
         handler.Controler(ctx, controles);
         handler.AvantValidation(ctx, controles);
+        specialisation.ControlerValidation(entree, controles);
         var r = handler.Calculer(entree);
         controles.AddRange(r.Erreurs);
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours.
