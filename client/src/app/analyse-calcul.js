@@ -142,3 +142,68 @@ export function forcerMontant(feuilles, cle, cible, { coefFa = 1, modeDebourse =
 export function paEcart(cle, ecart, coefFa = 1) {
   return cle === 'client' ? arrondir(D(ecart).div(D(coefFa)), 6) : arrondir(D(ecart), 6);
 }
+
+// ---------------------------------------------------------------- éléments regroupés par code et libellé
+
+/** Valeurs d'un élément comparées entre les lignes d'un groupe (champ du résultat de calcul). */
+export const VALEURS_ELEMENT = {
+  pa: { champ: 'lig_pa', titre: 'PA', decimales: 4 },
+  fg: { champ: 'lig_coef_fg', titre: 'FG', decimales: 4, coef: true },
+  pr: { champ: 'lig_pr', titre: 'PR', decimales: 4 },
+  benef: { champ: 'lig_coef_benef', titre: 'Bénéf.', decimales: 4, coef: true },
+  pv: { champ: 'lig_pv', titre: 'PV', decimales: 4 },
+};
+
+/** Clé de regroupement d'un élément : code et libellé (sans balises), insensible à la casse et aux espaces. */
+export const cleElement = (l) => `${String(l.lig_code ?? '').trim().toUpperCase()}|${String(l.lig_libelle_brut ?? '').replace(/\s+/g, ' ').trim().toLowerCase()}`;
+
+/**
+ * Éléments (lignes de type Élément, hors lignes d'écart du moteur) regroupés par code et libellé : quantité totale,
+ * montant (Σ qt × PV), unités, natures, et pour chaque valeur le minimum et le maximum (divergente si différents).
+ */
+export function elementsAnalyse(feuilles) {
+  const groupes = new Map();
+  for (const f of feuilles) {
+    const l = f.ligne;
+    if (l.lig_tyl_id !== 3 || l.lig_is_ecart_arrondi) continue;
+    const cle = cleElement(l);
+    if (!groupes.has(cle)) groupes.set(cle, { cle, code: l.lig_code ?? '', libelle: l.lig_libelle_brut ?? '', feuilles: [], unites: new Set(), natures: new Set(), qt: 0, montant: 0, valeurs: {} });
+    const g = groupes.get(cle);
+    g.feuilles.push(f);
+    g.unites.add(l.lig_unt_code ?? '');
+    g.natures.add(f.nature);
+    const qt = Number(l.lig_qte_totale ?? 0);
+    g.qt += qt;
+    g.montant += qt * Number(l.lig_pv ?? 0);
+    for (const [k, v] of Object.entries(VALEURS_ELEMENT)) {
+      const x = l[v.champ] === null || l[v.champ] === undefined ? null : Number(l[v.champ]);
+      if (x === null) continue;
+      const s = g.valeurs[k] ?? { min: x, max: x };
+      g.valeurs[k] = { min: Math.min(s.min, x), max: Math.max(s.max, x) };
+    }
+  }
+  for (const g of groupes.values()) for (const s of Object.values(g.valeurs)) s.divergent = Math.abs(s.max - s.min) > 1e-9;
+  return [...groupes.values()].sort((a, b) => b.montant - a.montant || a.libelle.localeCompare(b.libelle));
+}
+
+/**
+ * Modifications de saisie pour écrire une valeur sur les lignes d'un groupe d'éléments : PA, FG et bénéfice
+ * directement ; PR par le coefficient de frais généraux (PR / PA) ; PV en prix fixe. Renvoie Map(lig_id → champs) ou
+ * une erreur.
+ */
+export function modificationsElement(groupe, cle, valeur) {
+  const v = D(valeur);
+  const modifs = new Map();
+  for (const f of groupe.feuilles) {
+    const id = f.ligne.lig_id;
+    if (cle === 'pa') modifs.set(id, { lig_pa: Number(v) });
+    else if (cle === 'fg') modifs.set(id, { lig_coef_fg: Number(v) });
+    else if (cle === 'benef') modifs.set(id, { lig_coef_benef: Number(v) });
+    else if (cle === 'pr') {
+      const pa = D(f.ligne.lig_pa ?? 0);
+      if (pa.isZero()) return { erreur: `PR impossible sans PA (${groupe.libelle || groupe.code})` };
+      modifs.set(id, { lig_coef_fg: Number(arrondir(v.div(pa), 6)) });
+    } else if (cle === 'pv') modifs.set(id, { lig_pv: Number(v), lig_pv_fixe: true, lig_pv_affiche_fixe: false });
+  }
+  return { modifs };
+}

@@ -240,7 +240,9 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 /* Analyse : arbre des portées (document entier, sections, titres) à gauche du tableau. */
 .vue-analyse.analyse-coefs { flex-direction: row; align-items: stretch; gap: 0.8rem; overflow: hidden; min-height: 0; }
-.analyse-arbre { flex: none; width: 17rem; min-width: 12rem; max-width: 40%; resize: horizontal; overflow: auto; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.analyse-gauche { flex: none; width: 17rem; min-width: 12rem; max-width: 40%; resize: horizontal; overflow: hidden; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+.analyse-arbre { flex: 1 1 0; min-height: 6rem; overflow: auto; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.analyse-arbre.analyse-natures { flex: 0 1 auto; max-height: 45%; }
 .analyse-arbre-titre { position: sticky; top: 0; padding: 0.35rem 0.6rem; font-weight: 600; font-size: 0.9rem; border-bottom: 1px solid var(--bord); background: var(--surface); }
 .analyse-arbre ul { list-style: none; margin: 0; padding: 0.3rem 0; font-size: 0.88rem; }
 .analyse-arbre li { display: flex; align-items: baseline; gap: 0.35rem; padding: 0.15rem 0.5rem 0.15rem 0.3rem; border-radius: 4px; }
@@ -255,5 +257,20 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .analyse-principal { flex: 1; min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; }
 @media (max-width: 760px) {
   .vue-analyse.analyse-coefs { flex-direction: column; }
-  .analyse-arbre { width: auto; max-width: none; max-height: 14rem; resize: vertical; }
+  .analyse-gauche { width: auto; max-width: none; resize: none; }
+  .analyse-arbre { max-height: 14rem; }
 }
+
+/* Analyse : éléments regroupés par code et libellé. */
+.analyse-elements { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+.analyse-elements-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; }
+.analyse-elements-entete h3 { margin: 0; font-size: 1rem; }
+.analyse-elements-entete h3 small { color: var(--discret); font-weight: 400; }
+.analyse-elements-entete input[type="search"] { min-width: 16rem; }
+.analyse-elements-entete .aide { margin: 0; flex-basis: 100%; }
+.table-elements tbody th { font-weight: 400; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; }
+.table-elements td input { width: 7.5em; }
+.table-analyse td.divergent { background: var(--alerte-fond); }
+.table-analyse td.divergent input { background: transparent; }
+.table-analyse td.divergent input::placeholder { color: var(--alerte); opacity: 1; }
+.table-elements thead th:nth-child(-n+3) { text-align: left; }

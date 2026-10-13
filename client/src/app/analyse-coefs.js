@@ -1,9 +1,14 @@
 import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { TL, estPied, estTranche } from '../calcul/index.js';
-import { feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES } from './analyse-calcul.js';
+import {
+  feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT,
+} from './analyse-calcul.js';
 
 // Onglet Analyse : ventilation par nature de la portée choisie dans l'arbre des tranches (document entier, section,
-// titres), avec le total de la portée ; du déboursé au prix client, frais annexes ventilés, marges brute et nette. Aide à la saisie : un
+// titres), avec le total de la portée ; du déboursé au prix client, frais annexes ventilés, marges brute et nette.
+// Un arbre des natures (regroupements, natures) filtre aussi les lignes. Partie Éléments : les éléments regroupés par
+// code et libellé, avec leurs prix et coefficients (deux extrêmes sur fond coloré quand les lignes diffèrent) ; une
+// valeur saisie est écrite sur toutes les lignes du groupe dans le filtre. Aide à la saisie : un
 // coefficient ou un montant saisi est écrit sur les lignes (une étape d'annulation) ; les montants sont les vraies
 // valeurs (voir analyse-calcul.js : absorption de l'arrondi, ligne d'écart en dernier recours).
 
@@ -40,9 +45,34 @@ export class AnalyseCoefficients {
     this.colonnes = new Set(Array.isArray(p.colonnes) ? p.colonnes : COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
+    this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
+    this.naturesReplies = new Set();
+    this.recherche = '';
     conteneur.classList.add('analyse-coefs');
     conteneur.addEventListener('change', (e) => this.#changement(e));
     conteneur.addEventListener('click', (e) => this.#clic(e));
+    conteneur.addEventListener('input', (e) => {
+      if (!e.target.matches('[data-recherche]')) return;
+      this.recherche = e.target.value;
+      this.rendreElements();
+    });
+  }
+
+  /** Feuille retenue par le filtre de nature (regroupement, nature ou sans nature). */
+  correspondNature(f) {
+    const n = this.filtreNature;
+    if (n === null) return true;
+    if (n === 'n:') return f.nature === null || f.nature === undefined;
+    if (n.startsWith('n:')) return f.nature === Number(n.slice(2));
+    return this.natures.get(f.nature)?.regroupement === n.slice(2);
+  }
+
+  libelleFiltreNature() {
+    const n = this.filtreNature;
+    if (n === null) return null;
+    if (n === 'n:') return 'sans nature';
+    if (n.startsWith('n:')) { const x = this.natures.get(Number(n.slice(2))); return x ? x.libelle : `nature ${n.slice(2)}`; }
+    return `regroupement ${n.slice(2)}`;
   }
 
   get resultat() { return this.editeur.resultat; }
@@ -64,8 +94,12 @@ export class AnalyseCoefficients {
 
   /** Groupes du tableau : les natures de la portée [{ cle, libelle, feuilles, agregat, nature }], et le total de la portée. */
   groupes() {
-    const feuilles = feuillesAnalyse(this.resultat, this.editeur.saisie, { portee: this.portee, horsTotal: this.horsTotal });
-    const total = { cle: 'total', libelle: this.portee === null ? 'Total du document' : 'Total de la portée', feuilles, agregat: agreger(feuilles, this.coefFa) };
+    const portee = feuillesAnalyse(this.resultat, this.editeur.saisie, { portee: this.portee, horsTotal: this.horsTotal });
+    this.feuillesPortee = portee;
+    const feuilles = portee.filter((f) => this.correspondNature(f));
+    this.feuilles = feuilles;
+    const libelleTotal = this.filtreNature !== null ? `Total (${this.libelleFiltreNature()})` : this.portee === null ? 'Total du document' : 'Total de la portée';
+    const total = { cle: 'total', libelle: libelleTotal, feuilles, agregat: agreger(feuilles, this.coefFa) };
     const groupes = new Map();
     for (const f of feuilles) {
       const cle = `n:${f.nature ?? ''}`;
@@ -121,10 +155,11 @@ export class AnalyseCoefficients {
     const parentEstTranche = parent !== null && tranches.some((t) => t.ligne.lig_id === parent);
 
     this.conteneur.innerHTML = `
-      ${this.arbre(tranches, pm)}
+      <div class="analyse-gauche">${this.arbre(tranches, pm)}${this.arbreNatures(pm)}</div>
       <div class="analyse-principal">
       <div class="analyse-barre">
-        <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong></span>
+        <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong>
+          ${this.filtreNature !== null ? ` · <strong>${echapper(this.libelleFiltreNature())}</strong> <button type="button" data-nature-filtre="" title="Toutes les natures">✕</button>` : ''}</span>
         ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
         <label class="coche" title="Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)">
           <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> Options et pour mémoire</label>
@@ -146,8 +181,95 @@ export class AnalyseCoefficients {
       <p class="aide">Aide à la saisie : un coefficient ou un montant saisi est écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies
         valeurs, l'arrondi est absorbé par les plus fortes lignes, et en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées ;
         les montants peuvent différer de quelques centimes des montants arrondis ligne à ligne.</p>
+      <section class="analyse-elements">
+        <div class="analyse-elements-entete">
+          <h3>Éléments <small data-nb-elements></small></h3>
+          <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}">
+          <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; une valeur saisie est écrite sur toutes les lignes du groupe
+            dans la portée et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
+        </div>
+        <div class="analyse-tableau"><table class="table-analyse table-elements">
+          <thead><tr><th>Code</th><th>Libellé</th><th>U</th><th title="Nombre de lignes">Lignes</th><th>Qté totale</th>
+            ${Object.values(VALEURS_ELEMENT).map((v) => `<th>${echapper(v.titre)}</th>`).join('')}<th>Montant PV</th><th>Nature</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </section>
       </div>`;
     this.dernier = { liste, total };
+    this.rendreElements();
+  }
+
+  /** Partie Éléments : groupes par code et libellé des feuilles filtrées (portée, nature, recherche). */
+  rendreElements() {
+    const corps = this.conteneur.querySelector('.table-elements tbody');
+    if (!corps) return;
+    const pm = this.editeur.saisie.document.ent_precision_montant ?? 2;
+    const lectureSeule = this.editeur.magasin?.lectureSeule;
+    const r = this.recherche.trim().toLowerCase();
+    const groupes = elementsAnalyse(this.feuilles ?? []).filter((g) => !r || `${g.code} ${g.libelle}`.toLowerCase().includes(r));
+    this.elements = new Map(groupes.map((g) => [g.cle, g]));
+    const nombre = (v, d) => formatLibre(Math.round(v * 10 ** d) / 10 ** d, d);
+    const valeur = (g, k) => {
+      const s = g.valeurs[k];
+      const def = VALEURS_ELEMENT[k];
+      if (!s) return '<td></td>';
+      const txt = s.divergent ? `${nombre(s.min, def.decimales)} – ${nombre(s.max, def.decimales)}` : nombre(s.min, def.decimales);
+      if (lectureSeule) return `<td class="nombre ${s.divergent ? 'divergent' : ''}">${txt}</td>`;
+      return `<td class="nombre ${s.divergent ? 'divergent' : ''}" title="${s.divergent ? `Valeurs différentes : de ${txt.replace(' – ', ' à ')}` : ''}">
+        <input data-saisie="element" data-element="${echapper(g.cle)}" data-cle="${k}" value="${s.divergent ? '' : echapper(txt)}"
+          placeholder="${echapper(txt)}" title="Saisir le ${echapper(def.titre)} de toutes les lignes du groupe (${g.feuilles.length})"></td>`;
+    };
+    const natures = (g) => [...g.natures].map((n) => this.natures.get(n)?.code ?? (n ? String(n) : '—')).join(', ');
+    corps.innerHTML = groupes.map((g) => `<tr>
+      <td>${echapper(g.code)}</td><th title="${echapper(g.libelle)}">${echapper(g.libelle)}</th>
+      <td class="${g.unites.size > 1 ? 'divergent' : ''}">${echapper([...g.unites].join(' / '))}</td>
+      <td class="nombre">${g.feuilles.length}</td><td class="nombre">${nombre(g.qt, 3)}</td>
+      ${Object.keys(VALEURS_ELEMENT).map((k) => valeur(g, k)).join('')}
+      <td class="nombre">${formatNombre(g.montant, pm)}</td><td class="${g.natures.size > 1 ? 'divergent' : ''}">${echapper(natures(g))}</td></tr>`).join('')
+      || '<tr><td colspan="12" class="aide">Aucun élément.</td></tr>';
+    this.conteneur.querySelector('[data-nb-elements]').textContent = `(${groupes.length} groupe(s), ${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))`;
+  }
+
+  /** Valeur saisie dans la partie Éléments : écrite sur toutes les lignes du groupe (une étape d'annulation). */
+  appliquerElement(cleGroupe, cle, valeur) {
+    const g = this.elements?.get(cleGroupe);
+    if (!g) return;
+    if (Number(valeur) < 0 || (cle !== 'pa' && cle !== 'pv' && Number(valeur) <= 0)) { this.message('Valeur invalide'); this.rendre(); return; }
+    const { modifs, erreur } = modificationsElement(g, cle, valeur);
+    if (erreur) { this.message(erreur, 'erreur'); this.rendre(); return; }
+    const titre = VALEURS_ELEMENT[cle].titre;
+    this.editeur.magasin.modifier((d) => {
+      for (const l of d.lignes) if (modifs.has(l.lig_id)) Object.assign(l, modifs.get(l.lig_id));
+    }, `Analyse : ${titre} de « ${g.libelle || g.code} »`);
+    this.message(`${titre} ${formatLibre(valeur)} écrit sur ${modifs.size} ligne(s) « ${g.libelle || g.code} »${cle === 'pv' ? ' (prix fixe)' : ''}`);
+  }
+
+  /** Arbre des natures des lignes de la portée : regroupements puis natures, avec le nombre de lignes ; filtre. */
+  arbreNatures() {
+    const comptes = new Map();
+    for (const f of this.feuillesPortee ?? []) comptes.set(f.nature ?? null, (comptes.get(f.nature ?? null) ?? 0) + 1);
+    const regroupements = new Map();
+    for (const [id, n] of comptes) {
+      if (id === null) continue;
+      const nat = this.natures.get(id);
+      const reg = nat?.regroupement ?? 'AUTRE';
+      if (!regroupements.has(reg)) regroupements.set(reg, []);
+      regroupements.get(reg).push({ id, libelle: nat ? `${nat.code} · ${nat.libelle}` : `Nature ${id}`, n });
+    }
+    const total = [...comptes.values()].reduce((a, b) => a + b, 0);
+    const noeud = (cle, libelle, n, profondeur, { pli = null, classe = '' } = {}) => `
+      <li class="${classe} ${this.filtreNature === cle ? 'courant' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem">
+        <span class="pli" ${pli ? `data-nature-pli="${echapper(pli)}"` : ''}>${pli ? (this.naturesReplies.has(pli) ? '▸' : '▾') : ''}</span>
+        <button type="button" class="lien" data-nature-filtre="${echapper(cle ?? '')}" title="${echapper(libelle)}">${echapper(libelle)}</button>
+        <span class="mt">${n}</span></li>`;
+    const items = [noeud(null, 'Toutes les natures', total, 0, { classe: 'global' })];
+    for (const [reg, natures] of [...regroupements].sort((a, b) => a[0].localeCompare(b[0]))) {
+      items.push(noeud(`r:${reg}`, reg, natures.reduce((a, x) => a + x.n, 0), 1, { pli: reg }));
+      if (this.naturesReplies.has(reg)) continue;
+      for (const x of natures.sort((a, b) => a.libelle.localeCompare(b.libelle))) items.push(noeud(`n:${x.id}`, x.libelle, x.n, 2));
+    }
+    if (comptes.has(null)) items.push(noeud('n:', 'Sans nature', comptes.get(null), 1));
+    return `<aside class="analyse-arbre analyse-natures" aria-label="Filtre par nature"><div class="analyse-arbre-titre">Natures</div><ul>${items.join('')}</ul></aside>`;
   }
 
   /**
@@ -175,6 +297,15 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const naturePli = e.target.closest('[data-nature-pli]');
+    if (naturePli) {
+      const k = naturePli.dataset.naturePli;
+      if (this.naturesReplies.has(k)) this.naturesReplies.delete(k); else this.naturesReplies.add(k);
+      this.rendre();
+      return;
+    }
+    const nature = e.target.closest('[data-nature-filtre]');
+    if (nature) { this.filtreNature = nature.dataset.natureFiltre || null; this.rendre(); return; }
     const arbrePli = e.target.closest('[data-arbre-pli]');
     if (arbrePli) {
       const id = Number(arbrePli.dataset.arbrePli);
@@ -205,6 +336,13 @@ export class AnalyseCoefficients {
       this.memoriser();
       this.rendre();
       this.conteneur.querySelector('.menu-colonnes').hidden = false;
+      return;
+    }
+    if (t.matches('input[data-saisie="element"]')) {
+      const v = lireNombre(t.value);
+      t.blur();
+      if (v === undefined || v === null) { if (v === undefined) this.message('Nombre attendu'); this.rendre(); return; }
+      this.appliquerElement(t.dataset.element, t.dataset.cle, Number(v));
       return;
     }
     if (!t.matches('input[data-saisie]')) return;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculerDocument } from '../src/calcul/index.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../src/app/demo.js';
-import { feuillesAnalyse, agreger, forcerMontant, paEcart } from '../src/app/analyse-calcul.js';
+import { feuillesAnalyse, agreger, forcerMontant, paEcart, elementsAnalyse, modificationsElement } from '../src/app/analyse-calcul.js';
 
 // Onglet Analyse : un montant saisi est atteint au centime après recalcul par le moteur (coefficients des feuilles,
 // absorption de l'arrondi par les plus fortes lignes, ligne d'écart en dernier recours).
@@ -67,5 +67,29 @@ describe('Analyse des coefficients : montants forcés', () => {
     const r = calculer(saisieDemo());
     const res = forcerMontant(feuillesAnalyse(r, saisieDemo()).filter((f) => f.nature === 1), 'rev', -10);
     expect(res.erreur).toMatch(/trop faible/);
+  });
+});
+
+describe('Analyse : éléments regroupés par code et libellé', () => {
+  it("regroupe les composantes « Main-d'œuvre », signale les valeurs divergentes et réécrit le PA sur toutes les lignes", () => {
+    const saisie = saisieDemo();
+    const r = calculer(saisie);
+    const groupes = elementsAnalyse(feuillesAnalyse(r, saisie));
+    const mo = groupes.find((g) => g.libelle === "Main-d'œuvre");
+    expect(mo.feuilles.length).toBeGreaterThan(90);
+    expect(mo.valeurs.pa.divergent).toBe(false);
+    expect(mo.valeurs.fg.divergent).toBe(false);
+    // Les coefficients de bénéfice des éléments diffèrent d'un lot à l'autre (pose des fenêtres 1,4).
+    expect(groupes.find((g) => g.libelle === 'Pose').valeurs.pa.min).toBe(38);
+    const { modifs } = modificationsElement(mo, 'pa', 45);
+    for (const l of saisie.lignes) Object.assign(l, modifs.get(l.lig_id) ?? {});
+    const apres = elementsAnalyse(feuillesAnalyse(calculer(saisie), saisie)).find((g) => g.libelle === "Main-d'œuvre");
+    expect(apres.valeurs.pa).toMatchObject({ min: 45, max: 45, divergent: false });
+  });
+
+  it('PR saisi : coefficient de frais généraux recalculé ligne à ligne', () => {
+    const ligne = { lig_id: 1, lig_tyl_id: 3, lig_pa: '80' };
+    const { modifs } = modificationsElement({ feuilles: [{ ligne }], libelle: 'x' }, 'pr', 100);
+    expect(modifs.get(1)).toEqual({ lig_coef_fg: 1.25 });
   });
 });
