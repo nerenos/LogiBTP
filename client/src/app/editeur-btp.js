@@ -171,11 +171,11 @@ export class EditeurDevisBtp extends EditeurDocument {
       },
       {
         cle: 'fg', titre: 'FG', classe: 'col-coef', ...this.colonneNombre('lig_coef_fg', chiffree),
-        valeur: (r) => (estChiffree(r.calcule) ? formatLibre(r.calcule.lig_coef_fg, 4) : ''),
+        valeur: (r) => (estChiffree(r.calcule) ? this.coefAffiche(r.calcule.lig_coef_fg, this.coefsDefaut?.fg) : ''),
       },
       {
         cle: 'benef', titre: 'Bénéf.', classe: 'col-coef', ...this.colonneNombre('lig_coef_benef', chiffree),
-        valeur: (r) => (estChiffree(r.calcule) ? formatLibre(r.calcule.lig_coef_benef, 4) : ''),
+        valeur: (r) => (estChiffree(r.calcule) ? this.coefAffiche(r.calcule.lig_coef_benef, this.coefsDefaut?.benef) : ''),
       },
     ]);
     // Saisir un PV impose un prix fixe (avant frais annexes et remise) ; vider la cellule le retire.

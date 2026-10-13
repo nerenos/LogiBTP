@@ -15,6 +15,10 @@ import { AppelBibliotheque } from '../bibliotheque/appel.js';
 
 const GABARIT = `
   <div class="document-barre">
+    <nav class="onglets" role="tablist">
+      <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
+      <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
+    </nav>
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
       <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
@@ -28,10 +32,6 @@ const GABARIT = `
     </div>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button></span>
     <span class="groupe" data-vues></span>
-    <nav class="onglets" role="tablist">
-      <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
-      <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
-    </nav>
     <span class="resume"></span>
   </div>
   <div class="document-verrou" hidden></div>
@@ -127,6 +127,9 @@ export class PageDocument extends PageBase {
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
     this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    // Coefficients par défaut (bibliothèque) : couleur des coefficients des lignes.
+    const params = await s.bibliotheque.parametres?.().catch(() => null);
+    this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
     this.appel = new AppelBibliotheque({
       fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
       bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
@@ -254,8 +257,9 @@ export class PageDocument extends PageBase {
     });
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
-    this.editeur.surFiltre = (id) => this.afficherFiltre(id);
-    this.afficherFiltre(null);
+    this.editeur.coefsDefaut = this.coefsDefaut;
+    this.editeur.surFiltre = () => this.afficherFiltre();
+    this.afficherFiltre();
     // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.
     this.vues = new GestionVuesDocument(this.$('[data-vues]'), {
       editeur: this.editeur, fournisseur: this.fournisseurVues(), admin: () => this.app.estAdmin(), message: (t) => this.app.message(t),
@@ -278,15 +282,16 @@ export class PageDocument extends PageBase {
   get modifiee() { return Boolean(this.editeur) && this.editeur.magasin.pile.at(-1) !== this.marque; }
 
   /** Bandeau au-dessus de la grille quand l'affichage est filtré sur une tranche. */
-  afficherFiltre(id) {
+  afficherFiltre() {
     const barre = this.$('.barre-filtre');
     const ed = this.editeur;
-    barre.hidden = id === null;
-    if (id === null) { this.plan?.rendre(); return; }
-    const l = ed.resultat.lignes.find((x) => x.lig_id === id);
-    const nom = l ? `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut ?? ''}`.trim() : 'Pied du document';
-    barre.innerHTML = `<span>Affichage filtré sur la tranche <strong>${echapper(nom)}</strong> (saisie et totaux sur tout le document)</span><button type="button">✕ Tout afficher</button>`;
-    barre.querySelector('button').addEventListener('click', () => ed.filtrer(null));
+    const description = ed.descriptionFiltres();
+    barre.hidden = description === null;
+    barre.replaceChildren();
+    if (description !== null) {
+      barre.innerHTML = `<span>Affichage filtré : <strong>${echapper(description)}</strong> (saisie et totaux sur tout le document)</span><button type="button">✕ Tout afficher</button>`;
+      barre.querySelector('button').addEventListener('click', () => { ed.retirerFiltres(); ed.grille.focus(); });
+    }
     this.plan?.rendre();
   }
 
@@ -318,7 +323,8 @@ export class PageDocument extends PageBase {
     const doc = ed.saisie.document;
     const d = ed.resultat.document;
     this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
-    this.$('.resume').textContent = `${doc.ent_numero ?? ''} · ${doc.ent_objet ?? ''} · Net à payer ${formatNombre(d.ent_net_a_payer, doc.ent_precision_montant ?? 2)} €`;
+    // Le net à payer est affiché dans les totaux sous la grille.
+    this.$('.resume').textContent = [doc.ent_numero, doc.ent_objet].filter(Boolean).join(' · ');
     p.rendreMessages(this.$('#controles'), (id) => ed.grille.selectionner(id));
     p.rendreEcarts(this.$('#ecarts'), this.ecarts, (decision, commentaire) => this.arbitrer(decision, commentaire).catch((x) => this.app.erreur(x)));
     this.$('[data-action="annuler"]').disabled = ed.magasin.pile.length === 0;

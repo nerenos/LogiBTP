@@ -5,6 +5,8 @@ import { ID_PIED } from './editeur-document.js';
 // Plan du document : les tranches (titres) en arbre, avec leur montant, puis le pied. Deux modes au clic :
 // « Aller à » sélectionne la tranche dans la grille (tranches parentes dépliées), « Filtrer » limite l'affichage de la
 // grille à la tranche (la saisie et le calcul portent toujours sur tout le document). Le mode est gardé dans le navigateur.
+// Glisser-déposer d'une tranche sur une autre : avant, après (bords) ou dedans (milieu), avec les règles de dépôt de
+// l'éditeur ; la tranche est déplacée avec tout son contenu (une étape d'annulation).
 
 export class PlanDocument {
   constructor(conteneur, { editeur }) {
@@ -14,6 +16,7 @@ export class PlanDocument {
     this.mode = lirePreferences().planMode === 'filtrer' ? 'filtrer' : 'aller';
     conteneur.classList.add('plan-document');
     conteneur.addEventListener('click', (e) => this.#clic(e));
+    this.#glisser(conteneur);
   }
 
   /** Tranches : titres dans l'ordre d'affichage, avec profondeur parmi les titres et présence de sous-tranches. */
@@ -56,7 +59,7 @@ export class PlanDocument {
     const courante = this.trancheCourante();
     const filtre = ed.filtre;
     const item = (id, num, libelle, montant, { profondeur = 0, aEnfants = false, classe = '' } = {}) => `
-      <li data-id="${id}" class="${classe} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(libelle)}">
+      <li data-id="${id}" ${id !== ID_PIED && !ed.magasin?.lectureSeule ? 'draggable="true"' : ''} class="${classe} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(libelle)}">
         <span class="pli" ${aEnfants ? 'data-pli' : ''}>${aEnfants ? (this.replies.has(id) ? '▸' : '▾') : ''}</span>
         <span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span><span class="mt">${formatNombre(montant, pm)}</span></li>`;
     const net = ed.resultat.document.ent_net_a_payer;
@@ -71,6 +74,56 @@ export class PlanDocument {
         ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', 'Pied du document', net, { classe: 'pied' }) : ''}
       </ul>
       ${tranches.length ? '' : '<p class="aide">Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.</p>'}`;
+  }
+
+  #glisser(conteneur) {
+    const nettoyer = () => conteneur.querySelectorAll('.depot-avant, .depot-apres, .depot-enfant, .depot-interdit, .glisse')
+      .forEach((x) => x.classList.remove('depot-avant', 'depot-apres', 'depot-enfant', 'depot-interdit', 'glisse'));
+    const position = (li, e) => {
+      const r = li.getBoundingClientRect();
+      const y = (e.clientY - r.top) / r.height;
+      return y < 0.3 ? 'avant' : y > 0.7 ? 'apres' : 'enfant';
+    };
+    conteneur.addEventListener('dragstart', (e) => {
+      const li = e.target.closest('li[draggable="true"]');
+      if (!li) return;
+      this.glisse = Number(li.dataset.id);
+      li.classList.add('glisse');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', li.dataset.id);
+    });
+    conteneur.addEventListener('dragover', (e) => {
+      const li = e.target.closest('li[data-id]');
+      if (this.glisse === undefined || !li) return;
+      const cible = Number(li.dataset.id);
+      const pos = position(li, e);
+      conteneur.querySelectorAll('.depot-avant, .depot-apres, .depot-enfant, .depot-interdit').forEach((x) => x.classList.remove('depot-avant', 'depot-apres', 'depot-enfant', 'depot-interdit'));
+      const ok = this.depotAutorise(this.glisse, cible, pos);
+      li.classList.add(ok ? `depot-${pos}` : 'depot-interdit');
+      if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+    });
+    conteneur.addEventListener('drop', (e) => {
+      const li = e.target.closest('li[data-id]');
+      const id = this.glisse;
+      this.glisse = undefined;
+      nettoyer();
+      if (id === undefined || !li) return;
+      e.preventDefault();
+      const cible = Number(li.dataset.id);
+      const pos = position(li, e);
+      if (!this.depotAutorise(id, cible, pos)) return;
+      this.editeur.grille.o.actions.deplacer([id], cible, pos);
+      this.editeur.allerA(id);
+    });
+    conteneur.addEventListener('dragend', () => { this.glisse = undefined; nettoyer(); });
+  }
+
+  /** Dépôt d'une tranche : pas sur elle-même ni dans ses sous-tranches, pas dans le pied ; règles de l'éditeur. */
+  depotAutorise(id, cible, position) {
+    if (id === cible || cible === ID_PIED) return false;
+    const parId = new Map(this.editeur.saisie.lignes.map((l) => [l.lig_id, l]));
+    for (let x = parId.get(cible); x; x = parId.get(x.lig_parent_id)) if (x.lig_id === id) return false;
+    return this.editeur.grille.o.actions.depotAutorise([id], cible, position);
   }
 
   #clic(e) {

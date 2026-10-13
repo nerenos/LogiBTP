@@ -23,7 +23,7 @@
 .page-document { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .document-barre { display: flex; align-items: end; gap: 1rem; flex-wrap: wrap; padding: 0.4rem 1rem 0; flex: none; }
 .document-barre .groupe { padding-bottom: 0.3rem; }
-.document-barre .onglets { padding: 0; }
+.document-barre .onglets { padding: 0; order: -1; }
 .document-barre .resume { margin-left: auto; color: var(--discret); font-size: 0.9em; padding-bottom: 0.4rem; }
 .document-zone { flex: 1; min-height: 0; padding: 0 1rem 0.6rem; display: flex; flex-direction: column; }
 

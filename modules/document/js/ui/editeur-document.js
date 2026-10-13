@@ -24,6 +24,8 @@ const lireJson = (v, defaut) => (typeof v === 'string' ? (() => { try { return J
 /** Texte brut d'une valeur (colonnes système du mode débogage). */
 const texteSysteme = (v) => (v === null || v === undefined ? '∅' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 
+export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante' };
+
 export const LIBELLES_TYPE = {
   TITRE: 'Titre', OUVRAGE: 'Ouvrage', ELEMENT: 'Élément', TEXTE: 'Texte', SOUS_TOTAL: 'S-total',
   IMAGE: 'Image', SAUT_PAGE: 'Saut', PIED_HT: 'Pied HT', PIED_TTC: 'Pied TTC', TVA: 'TVA',
@@ -62,6 +64,8 @@ export class EditeurDocument {
     this.definition = definition;
     this.vue = vue;
     this.filtre = null;
+    // Filtre d'affichage par pastille : étiquettes ('' : sans étiquette) et modes de vente (V, O, M, A).
+    this.filtreMarqueurs = { etiquettes: new Set(), types: new Set() };
     this.appelerCode = appelerCode;
     this.rechercherExterne = rechercher;
     this.surSelection = surSelection;
@@ -247,15 +251,144 @@ export class EditeurDocument {
     return this.filtrerLignes(this.lignesPied(lignes, replies));
   }
 
-  /** Filtre d'affichage sur une tranche (titre ou pied) : la tranche et ses descendants seulement. */
+  /**
+   * Filtres d'affichage : tranche (titre ou pied : la tranche et ses descendants), puis pastilles (lignes dont
+   * l'étiquette et le mode de vente sont cochés, avec leurs tranches parentes pour le contexte).
+   */
   filtrerLignes(lignes) {
-    if (this.filtre === null || this.filtre === undefined) return lignes;
-    const i = lignes.findIndex((r) => r.item.lig_id === this.filtre);
-    if (i < 0) return lignes;
-    const base = lignes[i].profondeur;
-    let j = i + 1;
-    while (j < lignes.length && lignes[j].profondeur > base) j += 1;
-    return lignes.slice(i, j).map((r) => ({ ...r, profondeur: r.profondeur - base }));
+    let res = lignes;
+    if (this.filtre !== null && this.filtre !== undefined) {
+      const i = res.findIndex((r) => r.item.lig_id === this.filtre);
+      if (i >= 0) {
+        const base = res[i].profondeur;
+        let j = i + 1;
+        while (j < res.length && res[j].profondeur > base) j += 1;
+        res = res.slice(i, j).map((r) => ({ ...r, profondeur: r.profondeur - base }));
+      }
+    }
+    if (!this.filtreMarqueursActif()) return res;
+    const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
+    const garder = new Set();
+    const trouvees = new Set(this.saisie.lignes.filter((l) => this.correspondMarqueurs(l)).map((l) => l.lig_id));
+    for (const id of trouvees) {
+      for (let x = parId.get(id); x && !garder.has(x.lig_id); x = parId.get(x.lig_parent_id)) garder.add(x.lig_id);
+    }
+    // Contenu des lignes trouvées (composantes d'un ouvrage…) affiché aussi, sauf les sous-tranches.
+    for (const l of this.saisie.lignes) {
+      if (l.lig_tyl_id === TL.TITRE) continue;
+      for (let x = parId.get(l.lig_parent_id); x; x = parId.get(x.lig_parent_id)) {
+        if (trouvees.has(x.lig_id) && x.lig_tyl_id !== TL.TITRE) { garder.add(l.lig_id); break; }
+      }
+    }
+    return res.filter((r) => garder.has(r.item.lig_id));
+  }
+
+  filtreMarqueursActif() { return this.filtreMarqueurs.etiquettes.size > 0 || this.filtreMarqueurs.types.size > 0; }
+
+  correspondMarqueurs(l) {
+    const { etiquettes, types } = this.filtreMarqueurs;
+    return (!etiquettes.size || etiquettes.has(l.lig_etiquette ?? '')) && (!types.size || types.has(l.lig_type_prix ?? 'V'));
+  }
+
+  /** Filtre par pastille : étiquettes et modes de vente cochés (ensembles vides : pas de filtre). */
+  filtrerMarqueurs({ etiquettes = [], types = [] } = {}) {
+    this.filtreMarqueurs = { etiquettes: new Set(etiquettes), types: new Set(types) };
+    this.grille.rendre();
+    this.majEntetePoignee();
+    this.surFiltre?.(this.filtre);
+  }
+
+  /** Tous les filtres d'affichage retirés (tranche et pastilles). */
+  retirerFiltres() {
+    document.querySelector('.menu-filtre-marqueurs')?.remove();
+    this.filtreMarqueurs = { etiquettes: new Set(), types: new Set() };
+    this.majEntetePoignee();
+    this.filtrer(null);
+  }
+
+  /** Description des filtres actifs (bandeau au-dessus de la grille), null sans filtre. */
+  descriptionFiltres() {
+    const parts = [];
+    if (this.filtre !== null) {
+      const l = this.resultat.lignes.find((x) => x.lig_id === this.filtre);
+      parts.push(`tranche ${l ? `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut ?? ''}`.trim() : 'Pied du document'}`);
+    }
+    const { etiquettes, types } = this.filtreMarqueurs;
+    if (etiquettes.size) {
+      const libelles = new Map(this.etiquettes().map((e) => [e.code, e.libelle]));
+      parts.push(`étiquettes ${[...etiquettes].map((c) => (c ? libelles.get(c) ?? c : 'sans étiquette')).join(', ')}`);
+    }
+    if (types.size) parts.push(`modes de vente ${[...types].map((t) => LIBELLES_TYPE_PRIX[t] ?? t).join(', ')}`);
+    return parts.length ? parts.join(' · ') : null;
+  }
+
+  /** Bouton de filtre dans l'entête de la colonne des pastilles. */
+  entetePoignee(th) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'filtre-marqueurs';
+    b.textContent = '⏷';
+    b.title = 'Filtrer par étiquette et mode de vente';
+    b.addEventListener('mousedown', (e) => e.preventDefault());
+    b.addEventListener('click', (e) => { e.stopPropagation(); this.menuFiltreMarqueurs(b); });
+    th.append(b);
+    this.boutonFiltreMarqueurs = b;
+    this.majEntetePoignee();
+  }
+
+  majEntetePoignee() {
+    this.boutonFiltreMarqueurs?.classList.toggle('actif', Boolean(this.filtreMarqueurs) && this.filtreMarqueursActif());
+  }
+
+  menuFiltreMarqueurs(ancre) {
+    if (document.querySelector('.menu-filtre-marqueurs')) { document.querySelector('.menu-filtre-marqueurs').remove(); return; }
+    document.querySelector('.menu-etiquettes')?.remove();
+    const { etiquettes, types } = this.filtreMarqueurs;
+    const compte = new Map();
+    for (const l of this.saisie.lignes) {
+      const k = `e:${l.lig_etiquette ?? ''}`;
+      compte.set(k, (compte.get(k) ?? 0) + 1);
+      const t = `t:${l.lig_type_prix ?? 'V'}`;
+      compte.set(t, (compte.get(t) ?? 0) + 1);
+    }
+    const ligne = (attr, valeur, couleur, libelle, coche, n) => `<label><input type="checkbox" ${attr}="${echapper(valeur)}" ${coche ? 'checked' : ''}>
+      <span class="pastille" style="${couleur ? `background:${echapper(couleur)}` : ''}"></span>${echapper(libelle)} <small>${n ?? 0}</small></label>`;
+    const menu = document.createElement('div');
+    menu.className = 'menu-etiquettes menu-filtre-marqueurs';
+    menu.innerHTML = `<strong>Étiquettes</strong>
+      ${this.etiquettes().map((e) => ligne('data-etq', e.code, e.couleur, e.libelle, etiquettes.has(e.code), compte.get(`e:${e.code}`))).join('')}
+      ${ligne('data-etq', '', null, 'Sans étiquette', etiquettes.has(''), compte.get('e:'))}
+      <strong>Modes de vente</strong>
+      ${['V', 'O', 'M', 'A'].map((t) => ligne('data-type', t, this.couleurTypePrix(t)?.couleur, LIBELLES_TYPE_PRIX[t], types.has(t), compte.get(`t:${t}`))).join('')}
+      <div class="boutons"><button type="button" data-effacer>Effacer</button></div>`;
+    const r = ancre.getBoundingClientRect();
+    menu.style.left = `${r.left}px`;
+    menu.style.top = `${r.bottom + 2}px`;
+    document.body.append(menu);
+    const fermer = () => { menu.remove(); document.removeEventListener('mousedown', dehors, true); };
+    const dehors = (e) => { if (!menu.contains(e.target) && e.target !== ancre) fermer(); };
+    document.addEventListener('mousedown', dehors, true);
+    const appliquer = () => this.filtrerMarqueurs({
+      etiquettes: [...menu.querySelectorAll('[data-etq]:checked')].map((x) => x.dataset.etq),
+      types: [...menu.querySelectorAll('[data-type]:checked')].map((x) => x.dataset.type),
+    });
+    menu.addEventListener('change', appliquer);
+    menu.querySelector('[data-effacer]').addEventListener('click', () => {
+      menu.querySelectorAll('input').forEach((x) => { x.checked = false; });
+      appliquer();
+    });
+  }
+
+  /** Coefficient coloré : < 1 rouge, entre 1 et la valeur par défaut orange, à partir de la valeur par défaut vert. */
+  coefAffiche(valeur, defaut = 1, decimales = 4) {
+    if (valeur === null || valeur === undefined || valeur === '') return '';
+    const v = Number(valeur);
+    const d = Number(defaut ?? 1);
+    const s = document.createElement('span');
+    s.className = v < 1 ? 'coef-bas' : v < d ? 'coef-moyen' : 'coef-ok';
+    s.textContent = formatLibre(valeur, decimales);
+    s.title = v < 1 ? 'Coefficient inférieur à 1' : v < d ? `Coefficient inférieur à la valeur par défaut (${formatLibre(d)})` : `Coefficient au moins égal à la valeur par défaut (${formatLibre(d)})`;
+    return s;
   }
 
   /** Affichage limité à une tranche (null : tout afficher) ; la saisie et le calcul portent toujours sur tout le document. */
@@ -284,7 +417,7 @@ export class EditeurDocument {
   allerA(id) {
     this.deplierAscendants(id);
     this.grille.rendre();
-    if (this.filtre !== null && !this.grille.index?.has(id)) this.filtrer(null);
+    if ((this.filtre !== null || this.filtreMarqueursActif()) && !this.grille.index?.has(id)) this.retirerFiltres();
     this.grille.selectionner(id);
     this.grille.tbody.querySelector(`tr[data-id="${id}"]`)?.scrollIntoView({ block: 'start' });
     this.grille.focus();
@@ -456,7 +589,7 @@ export class EditeurDocument {
       },
       {
         cle: 'remise', titre: 'Remise', classe: 'col-coef', ...this.colonneNombre('lig_coef_remise', chiffree),
-        valeur: (r) => (estChiffree(r.calcule) && Number(r.calcule.lig_coef_remise) !== 1 ? formatLibre(r.calcule.lig_coef_remise, 4) : ''),
+        valeur: (r) => (estChiffree(r.calcule) && Number(r.calcule.lig_coef_remise) !== 1 ? this.coefAffiche(r.calcule.lig_coef_remise, 1) : ''),
       },
       {
         cle: 'pvnet', titre: 'PV net', classe: 'col-nombre', editable: () => false,
@@ -673,6 +806,7 @@ export class EditeurDocument {
       },
 
       marqueur: (r) => this.marqueur(r),
+      entetePoignee: (th) => this.entetePoignee(th),
       choisirMarqueur: (id, ancre) => this.choisirEtiquette(id, ancre),
 
       classeLigne: (r) => [

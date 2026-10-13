@@ -15,7 +15,8 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *  lignes()                [{ item, calcule, profondeur, aEnfants }] dans l'ordre d'affichage
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
  *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
- *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element) }
+ *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element),
+ *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées) }
  *
  * Les colonnes affichées se remplacent par definirColonnes (vues de colonnes).
  */
@@ -46,6 +47,8 @@ export class GrilleArbre {
   #entete() {
     const tr = document.createElement('tr');
     tr.innerHTML = '<th class="poignee"></th>';
+    // Entête de la colonne des poignées (ex. filtre par pastille).
+    this.o.actions.entetePoignee?.(tr.firstElementChild);
     for (const c of this.o.colonnes) {
       const th = document.createElement('th');
       th.className = c.classe ?? '';
