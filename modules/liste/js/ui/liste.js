@@ -29,7 +29,8 @@ const DUREE_MARQUE = 4000;
 export class ListeDonnees {
   constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser } = {}) {
     this.racine = racine;
-    // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte } | null.
+    // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
+    // plusieurs lignes sélectionnées : tableau des valeurs, type de la ligne de plus haut rang.
     this.glisser = glisser ?? null;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
@@ -63,7 +64,9 @@ export class ListeDonnees {
     this.enCours = false;
     this.generation = 0;
     this.marques = new Map();      // id → 'nouvelle' | 'modifiee'
-    this.selection = null;
+    this.selection = null;         // ligne courante (Entrée, ↑↓, saisie)
+    this.selections = new Set();   // lignes sélectionnées (Ctrl+clic, Maj+clic, Maj+↑↓) : glisser plusieurs lignes
+    this.ancre = null;
     this.#construire();
     if (intervalleControle > 0) {
       this.minuterie = setInterval(() => { if (this.visible()) this.verifier().catch(() => {}); }, intervalleControle);
@@ -173,6 +176,12 @@ export class ListeDonnees {
     this.corps.addEventListener('click', (e) => {
       const tr = e.target.closest('tr[data-id]');
       if (!tr) return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      // Ctrl ou Maj : sélection multiple (le second clic d'un double-clic ne rebascule pas la ligne).
+      if (ctrl || e.shiftKey) {
+        if (e.detail < 2) this.#selectionner(tr.dataset.id, { basculer: ctrl && !e.shiftKey, etendre: e.shiftKey });
+        return;
+      }
       this.#selectionner(tr.dataset.id);
       const td = e.target.closest('td.modifiable');
       if (td && !td.querySelector('.liste-editeur')) this.#commencerSaisie(tr.dataset.id, td.dataset.code);
@@ -182,10 +191,18 @@ export class ListeDonnees {
       const ligne = tr && this.lignes.find((l) => String(l._id) === tr.dataset.id);
       const g = ligne && this.glisser?.({ ligne, definition: this.definition });
       if (!g) { e.preventDefault(); return; }
+      // Ligne glissée faisant partie de la sélection multiple : toutes les lignes sélectionnées, dans l'ordre affiché.
+      let paquet = [g];
+      if (this.selections.size > 1 && this.selections.has(tr.dataset.id)) {
+        paquet = [...this.corps.rows].filter((x) => this.selections.has(x.dataset.id))
+          .map((x) => this.lignes.find((l) => String(l._id) === x.dataset.id))
+          .map((l) => l && this.glisser({ ligne: l, definition: this.definition })).filter(Boolean);
+      } else this.#selectionner(tr.dataset.id);
+      // Type annoncé : celui de la ligne de plus haut rang (le plus contraignant pour la cible du dépôt).
+      const type = paquet.reduce((a, x) => ((x.rang ?? 0) > (a.rang ?? 0) ? x : a), paquet[0]).type;
       e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData(g.type, JSON.stringify(g.valeur));
-      e.dataTransfer.setData('text/plain', g.texte ?? '');
-      this.#selectionner(tr.dataset.id);
+      e.dataTransfer.setData(type, JSON.stringify(paquet.length > 1 ? paquet.map((x) => x.valeur) : g.valeur));
+      e.dataTransfer.setData('text/plain', paquet.map((x) => x.texte ?? '').join('\n'));
     });
     this.corps.addEventListener('dblclick', (e) => {
       const tr = e.target.closest('tr[data-id]');
@@ -781,7 +798,7 @@ export class ListeDonnees {
       tr.classList.add('glissable');
       tr.title = "Glisser vers un document pour l'insérer";
     }
-    if (this.selection === id) tr.classList.add('selectionnee');
+    if (this.selection === id || this.selections.has(id)) tr.classList.add('selectionnee');
     const coin = document.createElement('td');
     coin.className = 'liste-coin';
     tr.append(coin);
@@ -953,12 +970,27 @@ export class ListeDonnees {
 
   // ---------------------------------------------------------------- sélection, ouverture
 
-  #selectionner(id) {
+  /** Ligne courante ; Ctrl : ajoute ou retire de la sélection ; Maj : plage depuis l'ancre. */
+  #selectionner(id, { basculer = false, etendre = false } = {}) {
     this.selection = id;
-    this.corps.querySelectorAll('tr.selectionnee').forEach((tr) => tr.classList.remove('selectionnee'));
-    const tr = this.corps.querySelector(`tr[data-id="${CSS.escape(id)}"]`);
-    tr?.classList.add('selectionnee');
-    tr?.scrollIntoView({ block: 'nearest' });
+    if (etendre && this.ancre !== null) {
+      // Plage depuis l'ancre, dans l'ordre affiché (filtres et tri compris).
+      const ids = [...this.corps.rows].map((tr) => tr.dataset.id);
+      const a = ids.indexOf(this.ancre), b = ids.indexOf(id);
+      if (a >= 0 && b >= 0) this.selections = new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1));
+    } else if (basculer) {
+      if (this.selections.size === 0 && this.ancre !== null) this.selections.add(this.ancre);
+      if (this.selections.has(id)) this.selections.delete(id); else this.selections.add(id);
+      this.ancre = id;
+    } else {
+      this.selections = new Set([id]);
+      this.ancre = id;
+    }
+    for (const tr of this.corps.rows) {
+      tr.classList.toggle('selectionnee', this.selections.has(tr.dataset.id));
+      tr.classList.toggle('courante', tr.dataset.id === id);
+    }
+    this.corps.querySelector(`tr[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' });
   }
 
   #clavier(e) {
@@ -968,11 +1000,17 @@ export class ListeDonnees {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const j = Math.min(Math.max(i + (e.key === 'ArrowDown' ? 1 : -1), 0), lignes.length - 1);
-      if (lignes[j]) this.#selectionner(lignes[j].dataset.id);
+      if (lignes[j]) this.#selectionner(lignes[j].dataset.id, { etendre: e.shiftKey });
     } else if (e.key === 'Enter' && this.selection) {
       e.preventDefault();
       this.ouvrir(this.selection, e);
     }
+  }
+
+  /** Lignes sélectionnées (données), dans l'ordre affiché. */
+  lignesSelectionnees() {
+    return [...this.corps.rows].filter((tr) => this.selections.has(tr.dataset.id))
+      .map((tr) => this.lignes.find((l) => String(l._id) === tr.dataset.id)).filter(Boolean);
   }
 
   // ---------------------------------------------------------------- saisie dans la liste

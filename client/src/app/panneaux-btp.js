@@ -1,6 +1,7 @@
 import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
-import { TL, estChiffree } from '../calcul/index.js';
+import { TL, estChiffree, estTranche } from '../calcul/index.js';
+import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
@@ -101,5 +102,15 @@ export class PanneauxBtp extends PanneauxDocument {
 
   lignesTotaux(d) {
     return Number(d.ent_coef_fa) !== 1 ? [['Coef. frais annexes', formatLibre(d.ent_coef_fa)]] : [];
+  }
+
+  /** Détail d'une tranche (titre, section) : ses paramètres ($largeur, $hauteur…) sous le formulaire. */
+  rendreDetail(zone, ligId) {
+    if (zone.contains(document.activeElement)) return;
+    super.rendreDetail(zone, ligId);
+    const l = this.editeur.saisie.lignes.find((x) => x.lig_id === ligId);
+    if (!l || !estTranche(l)) return;
+    zone.insertAdjacentHTML('beforeend', sectionVariablesTranche(this.editeur, ligId, { modifiable: !this.editeur.magasin.lectureSeule }));
+    lierVariablesTranche(zone, this.editeur);
   }
 }

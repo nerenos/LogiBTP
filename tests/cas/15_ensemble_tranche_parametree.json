@@ -1,0 +1,304 @@
+{
+  "nom": "Ensemble : tranche paramétrée, option et variante",
+  "description": "Structure d'un ensemble de la bibliothèque : variables $largeur = 1,2 et $hauteur = 1,35 sur la tranche, lues par les métrés (fenêtre 1,62 m², volet 1,2 × (1,35 + 0,2) = 1,86 m²). Le volet en option et la couleur en variante sont hors total : la tranche vaut la fenêtre seule (PA 1,62 × 280 + 2,5 × 42 = 558,60 ; PR 640,71 ; HT 761,76).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2,
+      "ent_num_format": {
+        "separateur": ".",
+        "niveaux": [
+          {
+            "style": "1"
+          },
+          {
+            "style": "1"
+          },
+          {
+            "style": "1"
+          }
+        ]
+      }
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T10",
+        "ttv_libelle": "TVA 10 %",
+        "ttv_taux": 10,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 2,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "V",
+        "lig_qte_source": "S",
+        "lig_coef_perte": 1,
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "<b>Fenêtre PVC {{$largeur}} × {{$hauteur}} m</b>"
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 2,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "V",
+        "lig_qte_source": "S",
+        "lig_coef_perte": 1,
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "<b>Fenêtre PVC oscillo-battante</b> double vitrage 4/16/4 – {{$largeur}} × {{$hauteur}} m",
+        "lig_qte": 1,
+        "lig_unt_code": "u",
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 5,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 3,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "V",
+        "lig_qte_source": "M",
+        "lig_coef_perte": 1,
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Châssis PVC et vitrage (surface)",
+        "lig_mtr_id": 20,
+        "lig_qte_type": "R",
+        "lig_unt_code": "m2",
+        "lig_pa": 280,
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 2
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 2,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "V",
+        "lig_qte_source": "S",
+        "lig_coef_perte": 1,
+        "lig_id": 4,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Pose en tableau et calfeutrement",
+        "lig_qte": 2.5,
+        "lig_qte_type": "R",
+        "lig_unt_code": "h",
+        "lig_pa": 42,
+        "lig_coef_fg": 1.35,
+        "lig_coef_benef": 1.15,
+        "lig_nat_id": 1
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 2,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "O",
+        "lig_qte_source": "S",
+        "lig_coef_perte": 1,
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "<b>Option : volet roulant électrique</b> – {{$largeur}} × {{$hauteur}} m",
+        "lig_qte": 1,
+        "lig_unt_code": "u",
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 5,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 3,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "O",
+        "lig_qte_source": "M",
+        "lig_coef_perte": 1,
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Tablier aluminium et coffre (surface)",
+        "lig_mtr_id": 21,
+        "lig_qte_type": "R",
+        "lig_unt_code": "m2",
+        "lig_pa": 165,
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 2
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 2,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "O",
+        "lig_qte_source": "S",
+        "lig_coef_perte": 1,
+        "lig_id": 7,
+        "lig_parent_id": 5,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Moteur radio et pose",
+        "lig_qte": 1,
+        "lig_qte_type": "R",
+        "lig_unt_code": "u",
+        "lig_pa": 120,
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 2
+      },
+      {
+        "lig_ent_id": 0,
+        "lig_proprietes": {},
+        "lig_coef_remise": 1,
+        "lig_precision_qte": 3,
+        "lig_precision_pv": 2,
+        "lig_type_prix": "A",
+        "lig_qte_source": "M",
+        "lig_coef_perte": 1,
+        "lig_id": 8,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Variante : couleur hors standard (RAL au choix, plaxage 2 faces)",
+        "lig_mtr_id": 22,
+        "lig_unt_code": "m2",
+        "lig_pa": 45,
+        "lig_coef_fg": 1.1,
+        "lig_coef_benef": 1.2,
+        "lig_nat_id": 2,
+        "lig_tva_id": 1
+      }
+    ],
+    "metres": [
+      {
+        "mtr_id": 20,
+        "mtr_lig_id": 3,
+        "mtr_libelle": "Surface de la fenêtre",
+        "mtr_unt_code": "m2",
+        "mtr_variable": null
+      },
+      {
+        "mtr_id": 21,
+        "mtr_lig_id": 6,
+        "mtr_libelle": "Surface du volet (hauteur + coffre)",
+        "mtr_unt_code": "m2",
+        "mtr_variable": null
+      },
+      {
+        "mtr_id": 22,
+        "mtr_lig_id": 8,
+        "mtr_libelle": "Surface plaxée",
+        "mtr_unt_code": "m2",
+        "mtr_variable": null
+      }
+    ],
+    "metre_lignes": [
+      {
+        "mli_id": 30,
+        "mli_mtr_id": 20,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "{{$largeur}} * {{$hauteur}}",
+        "mli_commentaire": "Largeur × hauteur de la tranche"
+      },
+      {
+        "mli_id": 31,
+        "mli_mtr_id": 21,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "{{$largeur}} * ({{$hauteur}} + 0,2)",
+        "mli_commentaire": "Largeur × (hauteur + coffre 20 cm)"
+      },
+      {
+        "mli_id": 32,
+        "mli_mtr_id": 22,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "{{$largeur}} * {{$hauteur}}",
+        "mli_commentaire": "Surface de la fenêtre"
+      }
+    ],
+    "variables": [
+      {
+        "var_id": 40,
+        "var_lig_id": 1,
+        "var_mtr_id": null,
+        "var_portee": "$",
+        "var_nom": "largeur",
+        "var_operation": "=",
+        "var_formule": "1,2",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 41,
+        "var_lig_id": 1,
+        "var_mtr_id": null,
+        "var_portee": "$",
+        "var_nom": "hauteur",
+        "var_operation": "=",
+        "var_formule": "1,35",
+        "var_ordre": 2
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_total_ht": 761.76
+    },
+    "lignes": {
+      "1": {
+        "lig_montant_ht": 761.76,
+        "lig_montant_pa": 558.6,
+        "lig_montant_pr": 640.71
+      },
+      "3": {
+        "lig_qte_vendue": 1.62
+      },
+      "5": {
+        "lig_montant_ht": 563.51
+      },
+      "6": {
+        "lig_qte_vendue": 1.86
+      },
+      "8": {
+        "lig_qte_vendue": 1.62
+      }
+    }
+  }
+}

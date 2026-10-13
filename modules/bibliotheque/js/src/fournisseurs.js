@@ -274,7 +274,7 @@ export class FournisseurBibliothequeMemoire {
       e.maj_par = this.utilisateur;
       e.coef_fg = c.coef_fg;
       if (!pvFixe) e.coef_benef = c.coef_benef;
-      if (e.type === 'OUVRAGE') this.surRecalculOuvrage?.(e);
+      if (e.type === 'OUVRAGE' || e.type === 'ENSEMBLE') this.surRecalculOuvrage?.(e);
       this.apresEcriture(e, { commentaire });
       n++;
     }
@@ -322,7 +322,8 @@ export class FournisseurBibliothequeMemoire {
     const c = this.coefficients(e);
     e.coef_fg = c.coef_fg;
     if (!(e.pv_fixe === true || e.pv_fixe === 'true')) e.coef_benef = c.coef_benef;
-    if (e.type !== 'OUVRAGE') {
+    // Ouvrage et ensemble : prix de leur composition (calculés par le cœur avant l'écriture).
+    if (e.type !== 'OUVRAGE' && e.type !== 'ENSEMBLE') {
       const r = calculerElement(entreeDepuisLigne(e, this.tarifsElements.filter((t) => String(t.ele_id) === String(e.id))));
       Object.assign(e, { pa: r.pa, pr: r.pr, pv: r.pv, coef_benef: r.coef_benef, pv_net: r.pv_net, alertes: r.alertes });
     }

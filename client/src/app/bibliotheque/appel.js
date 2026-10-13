@@ -62,6 +62,23 @@ export function contenuOuvrage(e, bibDocument, { quantite = 1 } = {}) {
   return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), metre_lignes: structuredClone(c.metre_lignes ?? []), variables: structuredClone(c.variables ?? []) };
 }
 
+/**
+ * Contenu à insérer pour un ensemble (structure réutilisable) : la tranche racine (titre) reçoit l'appel et le lien vers
+ * l'élément ; ses lignes (vendues, options, variantes), métrés et variables de tranche suivent.
+ */
+export function contenuEnsemble(e, bibDocument) {
+  const c = e.composition ?? { lignes: [] };
+  const lignes = structuredClone(c.lignes ?? []).map((l) => ({ ...l, lig_origine_id: null }));
+  const racine = lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.TITRE);
+  if (!racine) return null;
+  // Le libellé de la tranche est celui de la composition (il peut citer les paramètres : {{$largeur}}…).
+  Object.assign(racine, {
+    lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: racine.lig_libelle_html || e.libelle_html,
+    lig_proprietes: { ...(racine.lig_proprietes ?? {}), element: lien(e) },
+  });
+  return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), metre_lignes: structuredClone(c.metre_lignes ?? []), variables: structuredClone(c.variables ?? []) };
+}
+
 /** Ligne sans contenu saisi (le code vient d'y être tapé) : elle peut être remplacée. */
 const ligneVide = (l) => !l.lig_libelle_html && (l.lig_pa === null || l.lig_pa === undefined) && !l.lig_art_id;
 
@@ -113,7 +130,12 @@ export class AppelBibliotheque {
     const l = ed.saisie.lignes.find((x) => x.lig_id === ligId) ?? null;
     const aEnfants = l && ed.saisie.lignes.some((x) => x.lig_parent_id === ligId);
     const surPlace = Boolean(l) && !aEnfants && (ligneVide(l) || (surLigne && l.lig_tyl_id === TL.ELEMENT));
-    if (e.type === 'OUVRAGE') {
+    if (e.type === 'ENSEMBLE') {
+      // Ensemble : sa tranche et ses lignes, après la ligne (ou à sa place si elle est vide).
+      const contenu = contenuEnsemble(e, bib);
+      if (!contenu) { this.message(`${e.code} : ensemble sans tranche racine`, 'avertissement'); return; }
+      ed.insererContenu(contenu, ligId, `Ensemble ${e.code}`, { remplacer: surPlace && ligneVide(l) });
+    } else if (e.type === 'OUVRAGE') {
       const contenu = contenuOuvrage(e, bib, { quantite: surPlace && l.lig_qte ? l.lig_qte : 1 });
       if (!contenu) { this.message(`${e.code} : ouvrage sans composition`, 'avertissement'); return; }
       ed.insererContenu(contenu, ligId, `Ouvrage ${e.code}`, { remplacer: surPlace });
@@ -133,33 +155,56 @@ export class AppelBibliotheque {
     this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''}`.slice(0, 120));
   }
 
+  /** Contenu à insérer pour un élément (format du presse-papiers) : article, ouvrage ou ensemble. */
+  contenuElement(e, bib) {
+    const ed = this.editeur();
+    if (e.type === 'OUVRAGE') return contenuOuvrage(e, bib);
+    if (e.type === 'ENSEMBLE') return contenuEnsemble(e, bib);
+    const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
+    return { racines: [1], lignes: [ligne], metres: [], metre_lignes: [], variables: [] };
+  }
+
   /**
-   * Élément glissé depuis la fenêtre de la bibliothèque, déposé avant ou après une ligne (même niveau) ou dans une ligne
-   * (composante d'un ouvrage, fin d'une tranche). L'élément doit venir de la même société (même base).
+   * Éléments glissés depuis la fenêtre de la bibliothèque (un ou plusieurs, dans l'ordre de la liste), déposés avant
+   * ou après une ligne (même niveau) ou dans une ligne (composante d'un ouvrage, fin d'une tranche) : une seule étape
+   * d'annulation. Les éléments doivent venir de la même société (même base).
    */
   async deposer(donnees, refId, position) {
     try {
-      if (donnees.societe && donnees.societe !== location.host) {
+      const liste = Array.isArray(donnees) ? donnees : [donnees];
+      if (liste.some((d) => d.societe && d.societe !== location.host)) {
         this.message("Élément d'une autre société : glissez-le depuis la bibliothèque de cette société", 'avertissement');
         return;
       }
-      const e = await this.fournisseur.element(donnees.id);
       const ed = this.editeur();
       const bib = await this.bibDocument();
-      let contenu;
-      if (e.type === 'OUVRAGE') {
-        contenu = contenuOuvrage(e, bib);
-        if (!contenu) { this.message(`${e.code} : ouvrage sans composition`, 'avertissement'); return; }
-      } else {
-        const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
-        contenu = { racines: [1], lignes: [ligne], metres: [], metre_lignes: [], variables: [] };
+      const elements = await Promise.all(liste.map((d) => this.fournisseur.element(d.id)));
+      // Contenus renumérotés à la suite (identifiants temporaires distincts), puis réunis.
+      const total = { racines: [], lignes: [], metres: [], metre_lignes: [], variables: [] };
+      let suivant = -1;
+      const ignores = [];
+      for (const e of elements) {
+        const contenu = this.contenuElement(e, bib);
+        if (!contenu) { ignores.push(e.code); continue; }
+        const copie = ed.pressePapiers.renumeroter(contenu, suivant);
+        for (const l of copie.lignes) l.lig_origine_id = null;
+        for (const k of Object.keys(total)) total[k].push(...(copie[k] ?? []));
+        const ids = [...copie.lignes.map((l) => l.lig_id), ...(copie.metres ?? []).map((m) => m.mtr_id),
+          ...(copie.metre_lignes ?? []).map((m) => m.mli_id), ...(copie.variables ?? []).map((v) => v.var_id)];
+        suivant = Math.min(suivant, ...ids) - 1;
       }
-      const id = ed.insererContenu(contenu, refId, `${e.type === 'OUVRAGE' ? 'Ouvrage' : 'Article'} ${e.code} (glissé)`, { position });
-      if (id !== null) this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''} inséré`.slice(0, 120));
+      if (ignores.length) this.message(`${ignores.join(', ')} : sans composition, non inséré(s)`, 'avertissement');
+      if (!total.racines.length) return;
+      const libelle = elements.length > 1 ? `${elements.length} éléments (glissés)` : `${elements[0].code} (glissé)`;
+      const id = ed.insererContenu(total, refId, libelle, { position });
+      if (id !== null) {
+        this.message(elements.length > 1 ? `${total.racines.length} élément(s) insérés` : `${codeAppel(elements[0], bib)} – ${elements[0].libelle ?? ''} inséré`.slice(0, 120));
+      }
     } catch (x) {
       this.message(x.message ?? String(x), 'erreur');
     }
   }
+
 
   /** Reprend les prix de la bibliothèque (articles) pour les lignes choisies ; quantités et libellés conservés. */
   async actualiser(ids) {
@@ -188,7 +233,7 @@ export class AppelBibliotheque {
       fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Bibliothèque">
         <header><h2>📚 Bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
         <div class="element-recherche-barre"><input type="search" placeholder="Code ou libellé…" value="${echapper(texte)}">
-          <select data-type><option value="">Articles et ouvrages</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option></select></div>
+          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option></select></div>
         <div class="element-resultats"></div>
         <p class="aide">Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer</p></section>`;
       document.body.append(fond);
@@ -202,7 +247,7 @@ export class AppelBibliotheque {
         resultats = await this.fournisseur.rechercher({ recherche: entree.value, type: fond.querySelector('[data-type]').value || null });
         actif = 0;
         zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
-          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${e.type === 'OUVRAGE' ? '🏗️' : '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
+          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
             <td>${echapper(e.unite_stock)}</td><td class="nombre">${prix(e.pa)}</td><td class="nombre">${prix(e.pv_net)}</td></tr>`).join('')}</tbody></table>`
           : '<p class="aide">Aucun élément.</p>';
         surligner();

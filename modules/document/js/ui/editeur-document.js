@@ -26,9 +26,11 @@ const texteSysteme = (v) => (v === null || v === undefined ? '∅' : typeof v ==
 
 /**
  * Types MIME des éléments glissés depuis une autre fenêtre (bibliothèque) et type de ligne créé : un article donne
- * un élément, un ouvrage un ouvrage avec ses composantes.
+ * un élément, un ouvrage un ouvrage avec ses composantes, un ensemble une tranche (titre) avec ses lignes.
  */
-export const TYPES_DEPOT = { 'application/x-logibtp-article': TL.ELEMENT, 'application/x-logibtp-ouvrage': TL.OUVRAGE };
+export const TYPES_DEPOT = {
+  'application/x-logibtp-article': TL.ELEMENT, 'application/x-logibtp-ouvrage': TL.OUVRAGE, 'application/x-logibtp-ensemble': TL.TITRE,
+};
 
 export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante' };
 

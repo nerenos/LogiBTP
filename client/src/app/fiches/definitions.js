@@ -132,7 +132,8 @@ export const TYPES_FICHE = {
       champs: [
         c('bib_id', 'Bibliothèque', 'ele_bib_id', 'nombre', { obligatoire: true, saisie: 'creation', reference: 'bibliotheque' }),
         c('code', 'Code', 'ele_code', 'texte', { obligatoire: true, longueur: 30, non_copie: true, format: 'regex:^[^:\\s][^:]*$', aide: "Unique dans la bibliothèque ; sans « : » (réservé à l'appel BIB:CODE)" }),
-        c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage']) }),
+        c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage'], ['ENSEMBLE', 'Ensemble']),
+          aide: 'Ensemble : structure de lignes réutilisable (lignes vendues, options, variantes) paramétrée par sa tranche' }),
         c('actif', 'Actif', 'ele_actif', 'booleen', { obligatoire: true, defaut: true }),
         c('libelle_html', 'Libellé', 'ele_libelle_html', 'html', { obligatoire: true }),
         c('libelle', 'Libellé (texte brut)', 'ele_libelle', 'texte', { lecture_seule: true }),

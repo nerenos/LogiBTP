@@ -6,6 +6,7 @@ import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { calculerOuvrage, documentComposition } from '../bibliotheque/bibliotheque.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { FicheLogiBTP } from './fiches.js';
+import { sectionVariablesTranche, lierVariablesTranche } from '../variables-tranche.js';
 
 // Fiche d'un élément de bibliothèque (module Fiche + module Bibliothèque) : référentiels en listes déroulantes,
 // onglets Prix (scénarios, coefficients, remise, historique), Unités (correspondances par formule), Tarifs
@@ -38,7 +39,8 @@ export class FicheElement extends FicheLogiBTP {
 
   valeursCreation() {
     const { bibliotheques, parametres } = this.referentiels;
-    const type = new URLSearchParams(globalThis.location?.search ?? '').get('type') === 'OUVRAGE' ? 'OUVRAGE' : 'ARTICLE';
+    const demande = new URLSearchParams(globalThis.location?.search ?? '').get('type');
+    const type = ['OUVRAGE', 'ENSEMBLE'].includes(demande) ? demande : 'ARTICLE';
     return {
       ...super.valeursCreation(), type, bib_id: (bibliotheques.find((x) => x.defaut) ?? bibliotheques[0])?.id ?? null,
       // Coefficients non imposés : ceux de la nature ou globaux (calculés à l'enregistrement).
@@ -50,7 +52,7 @@ export class FicheElement extends FicheLogiBTP {
   sousTitre(v) {
     const bib = this.referentiels.bibliotheques.find((b) => b.id === Number(v.bib_id));
     const fam = this.referentiels.familles.find((f) => f.id === Number(v.fam_id));
-    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, v.type === 'OUVRAGE' ? 'Ouvrage' : 'Article'].filter(Boolean).join(' · ');
+    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
   }
 
   /** Nature isolant : le groupe Isolation (R, λ, U) n'apparaît que pour elle. */
@@ -129,7 +131,8 @@ export class FicheElement extends FicheLogiBTP {
   }
 
   ongletsSpecifiques() {
-    const ouvrage = this.valeur('type') === 'OUVRAGE';
+    // Ouvrage et ensemble : onglet Composition (éditeur de devis) ; article : tarifs fournisseurs.
+    const ouvrage = ['OUVRAGE', 'ENSEMBLE'].includes(this.valeur('type'));
     return [
       { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
@@ -144,7 +147,20 @@ export class FicheElement extends FicheLogiBTP {
 
   // ---------------------------------------------------------------- composition d'un ouvrage
 
+  get ensemble() { return this.valeur('type') === 'ENSEMBLE'; }
+
   #compositionInitiale() {
+    if (this.ensemble) {
+      // Ensemble : une tranche racine paramétrée (largeur, hauteur) ; ses lignes s'ajoutent dessous.
+      return {
+        mode: 'V', metres: [], metre_lignes: [],
+        variables: [
+          { var_id: 101, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'largeur', var_operation: '=', var_formule: '1', var_ordre: 1 },
+          { var_id: 102, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'hauteur', var_operation: '=', var_formule: '1', var_ordre: 2 },
+        ],
+        lignes: [L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 1, lig_libelle_html: this.valeur('libelle_html') || 'Ensemble' })],
+      };
+    }
     return {
       mode: 'D', metres: [], metre_lignes: [], variables: [],
       lignes: [L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: this.valeur('libelle_html') || 'Ouvrage', lig_qte: 1, lig_unt_code: this.valeur('unite_stock') ?? 'u' })],
@@ -156,12 +172,15 @@ export class FicheElement extends FicheLogiBTP {
     const composition = json(this.valeur('composition'), null) ?? this.#compositionInitiale();
     corps.innerHTML = `<div class="element-composition">
       <div class="element-composition-barre">
-        <label>Calcul de l'ouvrage <select data-mode ${modifiable ? '' : 'disabled'}><option value="D">Déboursé : PR des composantes × coefficients de l'élément</option><option value="V">Somme des PV des composantes</option></select></label>
+        <label ${this.ensemble ? 'hidden' : ''}>Calcul de l'ouvrage <select data-mode ${modifiable ? '' : 'disabled'}><option value="D">Déboursé : PR des composantes × coefficients de l'élément</option><option value="V">Somme des PV des composantes</option></select></label>
         ${modifiable ? '<button type="button" data-article title="Ou saisir un code dans la colonne Code, ou F3">＋ Élément de la bibliothèque</button>' : ''}
         <span class="element-composition-totaux"></span>
       </div>
+      ${this.ensemble ? '<div class="element-parametres"></div>' : ''}
       <div class="element-composition-grille"></div>
-      <p class="aide">Quantités par unité d'ouvrage (${echapper(this.valeur('unite_stock') ?? '?')}). F4 sur une composante : métré. Les coefficients de l'élément (onglet Prix) s'appliquent à l'ouvrage.</p>
+      <p class="aide">${this.ensemble
+    ? 'Ensemble : lignes sous la tranche, vendues ou en option, variante, pour mémoire (détail de la ligne). Les paramètres de la tranche ({{$largeur}}…) sont repris par les métrés (F4) et les libellés ; le prix est celui des lignes vendues, chacune avec ses coefficients.'
+    : `Quantités par unité d'ouvrage (${echapper(this.valeur('unite_stock') ?? '?')}). F4 sur une composante : métré. Les coefficients de l'élément (onglet Prix) s'appliquent à l'ouvrage.`}</p>
       <aside class="tiroir element-metre" hidden></aside></div>`;
     corps.querySelector('[data-mode]').value = composition.mode ?? 'D';
     const definition = await this.definitionDocument();
@@ -188,10 +207,19 @@ export class FicheElement extends FicheLogiBTP {
       let r;
       try { r = calculerOuvrage(c, { coef_fg: this.valeur('coef_fg'), coef_benef: this.valeur('coef_benef'), coef_remise: this.valeur('coef_remise') }); } catch (e) { r = { erreur: e.message }; }
       corps.querySelector('.element-composition-totaux').innerHTML = r.erreur ? `<span class="erreur">${echapper(r.erreur)}</span>`
-        : `PA ${prix(r.pa)} · PR ${prix(r.pr)} · PV ${prix(r.pv)} · <b>PV net ${prix(r.pv_net)}</b> / ${echapper(this.valeur('unite_stock') ?? '')}`;
+        : `PA ${prix(r.pa)} · PR ${prix(r.pr)} · PV ${prix(r.pv)} · <b>PV net ${prix(r.pv_net)}</b> ${this.ensemble ? '(lignes vendues)' : `/ ${echapper(this.valeur('unite_stock') ?? '')}`}`;
       return c;
     };
-    editeur.magasin.abonner(() => this.definirValeur('composition', totaux()));
+    // Ensemble : paramètres de la tranche racine (variables $) au-dessus de la grille.
+    const parametres = () => {
+      const zone = corps.querySelector('.element-parametres');
+      const racine = editeur.saisie.lignes.find((l) => l.lig_parent_id === null);
+      if (!zone || !racine || zone.contains(document.activeElement)) return;
+      zone.innerHTML = sectionVariablesTranche(editeur, racine.lig_id, { modifiable, titre: "Paramètres de l'ensemble ($)" });
+      lierVariablesTranche(zone, editeur);
+    };
+    editeur.magasin.abonner(() => { this.definirValeur('composition', totaux()); parametres(); });
+    parametres();
     corps.querySelector('[data-mode]').addEventListener('change', () => this.definirValeur('composition', totaux()));
     // Bouton : composante insérée après la ligne courante (sinon sous l'ouvrage).
     corps.querySelector('[data-article]')?.addEventListener('click', () => {

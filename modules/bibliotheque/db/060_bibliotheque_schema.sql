@@ -53,7 +53,7 @@ CREATE TABLE element (
     ele_id               BIGSERIAL     PRIMARY KEY,
     ele_bib_id           INT           NOT NULL REFERENCES bibliotheque(bib_id),
     ele_code             VARCHAR(30)   NOT NULL,
-    ele_type             VARCHAR(10)   NOT NULL DEFAULT 'ARTICLE' CHECK (ele_type IN ('ARTICLE','OUVRAGE')),
+    ele_type             VARCHAR(10)   NOT NULL DEFAULT 'ARTICLE' CHECK (ele_type IN ('ARTICLE','OUVRAGE','ENSEMBLE')),
     ele_libelle_html     TEXT          NOT NULL,                 -- libellé mis en forme
     ele_libelle          TEXT,                                   -- libellé brut (recherche, listes)
     ele_fam_id           INT           REFERENCES famille_element(fam_id) ON DELETE SET NULL,
@@ -80,7 +80,7 @@ CREATE TABLE element (
     ele_pv_fixe          BOOLEAN       NOT NULL DEFAULT FALSE,
     ele_coef_remise      NUMERIC(12,6) NOT NULL DEFAULT 1,
     ele_pv_net           NUMERIC(18,6),
-    ele_composition      JSONB,                                  -- ouvrage : { mode, lignes, metres, metre_lignes, variables }
+    ele_composition      JSONB,                                  -- ouvrage, ensemble : { mode, lignes, metres, metre_lignes, variables }
     ele_image_ged        BIGINT,                                 -- document image de la GED (module GED, sans clé étrangère)
     ele_proprietes       JSONB         NOT NULL DEFAULT '{}',    -- champs supplémentaires (données techniques)
     ele_actif            BOOLEAN       NOT NULL DEFAULT TRUE,

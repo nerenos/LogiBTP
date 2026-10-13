@@ -78,7 +78,7 @@ const lignesElements = ELEMENTS.map((e0) => {
   // Coefficients effectifs (imposés, nature, global) à la génération, comme l'API.
   const c = coefficientsEffectifs(e0, PERIODES_COEFFICIENTS, new Date().toISOString().slice(0, 10), PARAMETRES_BIBLIOTHEQUE);
   const e = { ...e0, coef_fg: c.coef_fg, coef_benef: e0.pv_fixe ? e0.coef_benef : c.coef_benef };
-  const p = e.type === 'OUVRAGE' ? calculerOuvrage(e.composition, e)
+  const p = e.type === 'OUVRAGE' || e.type === 'ENSEMBLE' ? calculerOuvrage(e.composition, e)
     : calculerElement(entreeDepuisLigne(e, TARIFS.filter((t) => t.ele_id === e.id)));
   return ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), n(e.fam_id), n(e.nat_id), q(e.gestion),
     q(e.unite_stock), q(e.unite_achat), q(e.unite_vente), j(e.unites), q(e.scenario_pa), j(e.scenarios), n(e.pa_fixe), n(e.dernier_pa), n(e.pmp),

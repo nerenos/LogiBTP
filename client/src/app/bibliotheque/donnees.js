@@ -116,6 +116,39 @@ export const ELEMENTS = [
     poids: 1.2, surface: 1, hauteur: 6000, largeur: 1200, epaisseur: 100, isolant_lambda: '0.032', isolant_r: '3.15', isolant_u: '0.32',
     pa_fixe: '4.85', coef_fg: '1.12', coef_benef: '1.3',
   }),
+  // Ensemble : fenêtre paramétrable (largeur × hauteur de la tranche), volet roulant en option aux mêmes dimensions,
+  // couleur hors standard en variante. Inséré dans un devis, on ajuste $largeur et $hauteur sur le titre.
+  article({
+    id: 10, bib_id: 1, code: 'FENPAR', type: 'ENSEMBLE', libelle_html: '<p><b>Fenêtre PVC paramétrable</b> avec volet roulant en option</p>',
+    nat_id: 5, unite_stock: 'u', coef_fg: '1.1', coef_benef: '1.2',
+    composition: {
+      mode: 'V',
+      lignes: [
+        L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 1, lig_libelle_html: '<b>Fenêtre PVC {{$largeur}} × {{$hauteur}} m</b>' }),
+        L({ lig_id: 2, lig_parent_id: 1, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: '<b>Fenêtre PVC oscillo-battante</b> double vitrage 4/16/4 – {{$largeur}} × {{$hauteur}} m', lig_qte: 1, lig_unt_code: 'u', lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 5 }),
+        L({ lig_id: 3, lig_parent_id: 2, lig_ordre: 1, lig_tyl_id: 3, lig_libelle_html: 'Châssis PVC et vitrage (surface)', lig_qte_source: 'M', lig_mtr_id: 20, lig_qte_type: 'R', lig_precision_qte: 3, lig_unt_code: 'm2', lig_pa: 280, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2 }),
+        L({ lig_id: 4, lig_parent_id: 2, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Pose en tableau et calfeutrement', lig_qte: 2.5, lig_qte_type: 'R', lig_unt_code: 'h', lig_pa: 42, lig_coef_fg: 1.35, lig_coef_benef: 1.15, lig_nat_id: 1 }),
+        L({ lig_id: 5, lig_parent_id: 1, lig_ordre: 2, lig_tyl_id: 2, lig_libelle_html: '<b>Option : volet roulant électrique</b> – {{$largeur}} × {{$hauteur}} m', lig_type_prix: 'O', lig_qte: 1, lig_unt_code: 'u', lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 5 }),
+        L({ lig_id: 6, lig_parent_id: 5, lig_ordre: 1, lig_tyl_id: 3, lig_libelle_html: 'Tablier aluminium et coffre (surface)', lig_type_prix: 'O', lig_qte_source: 'M', lig_mtr_id: 21, lig_qte_type: 'R', lig_precision_qte: 3, lig_unt_code: 'm2', lig_pa: 165, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2 }),
+        L({ lig_id: 7, lig_parent_id: 5, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Moteur radio et pose', lig_type_prix: 'O', lig_qte: 1, lig_qte_type: 'R', lig_unt_code: 'u', lig_pa: 120, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2 }),
+        L({ lig_id: 8, lig_parent_id: 1, lig_ordre: 3, lig_tyl_id: 3, lig_libelle_html: 'Variante : couleur hors standard (RAL au choix, plaxage 2 faces)', lig_type_prix: 'A', lig_qte_source: 'M', lig_mtr_id: 22, lig_precision_qte: 3, lig_unt_code: 'm2', lig_pa: 45, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2 }),
+      ],
+      metres: [
+        { mtr_id: 20, mtr_lig_id: 3, mtr_libelle: 'Surface de la fenêtre', mtr_unt_code: 'm2', mtr_variable: null },
+        { mtr_id: 21, mtr_lig_id: 6, mtr_libelle: 'Surface du volet (hauteur + coffre)', mtr_unt_code: 'm2', mtr_variable: null },
+        { mtr_id: 22, mtr_lig_id: 8, mtr_libelle: 'Surface plaxée', mtr_unt_code: 'm2', mtr_variable: null },
+      ],
+      metre_lignes: [
+        { mli_id: 30, mli_mtr_id: 20, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * {{$hauteur}}', mli_commentaire: 'Largeur × hauteur de la tranche' },
+        { mli_id: 31, mli_mtr_id: 21, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * ({{$hauteur}} + 0,2)', mli_commentaire: 'Largeur × (hauteur + coffre 20 cm)' },
+        { mli_id: 32, mli_mtr_id: 22, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * {{$hauteur}}', mli_commentaire: 'Surface de la fenêtre' },
+      ],
+      variables: [
+        { var_id: 40, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'largeur', var_operation: '=', var_formule: '1,2', var_ordre: 1 },
+        { var_id: 41, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'hauteur', var_operation: '=', var_formule: '1,35', var_ordre: 2 },
+      ],
+    },
+  }),
 ];
 
 export const TARIFS = [

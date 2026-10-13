@@ -299,7 +299,10 @@ VUES_LISTE.push({
 });
 
 // Bibliothèque : articles, ouvrages, tous les éléments (segments bibliothèque, famille, regroupement, gestion).
-const OPTIONS_TYPE_ELEMENT = [{ valeur: 'ARTICLE', libelle: 'Article', picto: '🧱' }, { valeur: 'OUVRAGE', libelle: 'Ouvrage', picto: '🏗️' }];
+const OPTIONS_TYPE_ELEMENT = [
+  { valeur: 'ARTICLE', libelle: 'Article', picto: '🧱' }, { valeur: 'OUVRAGE', libelle: 'Ouvrage', picto: '🏗️' },
+  { valeur: 'ENSEMBLE', libelle: 'Ensemble', picto: '🧩' },
+];
 const OPTIONS_GESTION = [
   { valeur: 'STOCK', libelle: 'Stock', picto: '📦' }, { valeur: 'ACHAT', libelle: 'Achat', picto: '🛒' },
   { valeur: 'SOUS_TRAITANCE', libelle: 'Sous-traitance', picto: '🤝' }, { valeur: 'NON_GERE', libelle: 'Non géré', picto: '➖' },
@@ -335,7 +338,7 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
   },
 });
 VUES_LISTE.push(vueElements(12, 'Articles', [{ colonne: 'type', op: '=', valeur: 'ARTICLE' }]), vueElements(13, 'Ouvrages', [{ colonne: 'type', op: '=', valeur: 'OUVRAGE' }]),
-  vueElements(14, 'Tous les éléments', []));
+  vueElements(14, 'Tous les éléments', []), vueElements(15, 'Ensembles', [{ colonne: 'type', op: '=', valeur: 'ENSEMBLE' }]));
 
 /** Sources au format du fournisseur (colonnes { code, type }). */
 export function sourcesFournisseur(donnees = {}) {

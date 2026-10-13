@@ -7,8 +7,9 @@ import { simulerModificationsAutres } from '../listes.js';
 function creationDepuisVue(vue, app) {
   const source = vue?.definition?.source?.vue;
   if (source === 'elements') {
-    const ouvrage = (vue.definition.filtres ?? []).some((f) => f.colonne === 'type' && f.valeur === 'OUVRAGE');
-    return { libelle: ouvrage ? '＋ Ouvrage' : '＋ Article', action: () => app.naviguer(`/fiche/element/nouveau${ouvrage ? '?type=OUVRAGE' : ''}`) };
+    const type = (vue.definition.filtres ?? []).find((f) => f.colonne === 'type' && ['OUVRAGE', 'ENSEMBLE'].includes(f.valeur))?.valeur ?? null;
+    const libelle = { OUVRAGE: '＋ Ouvrage', ENSEMBLE: '＋ Ensemble' }[type] ?? '＋ Article';
+    return { libelle, action: () => app.naviguer(`/fiche/element/nouveau${type ? `?type=${type}` : ''}`) };
   }
   // Annuaire : création avec la première relation (casquette) filtrée par la vue (Clients, Fournisseurs…).
   if (source === 'personnes') {
@@ -53,7 +54,8 @@ export class PageListe extends PageBase {
       // (sinon article : l'élément est relu au dépôt, un ouvrage est inséré avec ses composantes).
       glisser: ({ ligne, definition }) => (definition?.source?.vue === 'elements' && ligne._id
         ? {
-          type: ligne.type === 'OUVRAGE' ? 'application/x-logibtp-ouvrage' : 'application/x-logibtp-article',
+          type: ligne.type === 'ENSEMBLE' ? 'application/x-logibtp-ensemble' : ligne.type === 'OUVRAGE' ? 'application/x-logibtp-ouvrage' : 'application/x-logibtp-article',
+          rang: { ENSEMBLE: 2, OUVRAGE: 1 }[ligne.type] ?? 0,
           valeur: { id: Number(ligne._id), code: ligne.code, bib: ligne.bib_code, type: ligne.type ?? null, societe: location.host },
           texte: `${ligne.code ?? ''} ${ligne.libelle ?? ''}`.trim(),
         }

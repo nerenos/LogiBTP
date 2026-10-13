@@ -17,6 +17,12 @@ export const documentComposition = (mode = 'V') => ({
 /** Ligne racine (ouvrage) d'une composition. */
 export const racineComposition = (lignes) => lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.OUVRAGE) ?? null;
 
+/** Ligne racine (tranche) d'un ensemble : structure de lignes vendues, en option ou en variante. */
+export const racineEnsemble = (lignes) => lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.TITRE) ?? null;
+
+/** Élément composé (ouvrage ou ensemble) : son prix vient de sa composition. */
+export const estCompose = (type) => type === 'OUVRAGE' || type === 'ENSEMBLE';
+
 /**
  * Prix d'un ouvrage par unité : la racine (quantité 1, coefficients de l'élément en mode déboursé) est calculée par le
  * moteur de devis ; PA = montant PA de la racine, PR et PV unitaires, PV net = PV × remise. Même calcul côté serveur
@@ -24,7 +30,7 @@ export const racineComposition = (lignes) => lignes.find((l) => l.lig_parent_id 
  */
 export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef_remise = 1 } = {}) {
   const lignes = composition?.lignes ?? [];
-  if (!racineComposition(lignes)) return { pa: null, pr: null, pv: null, pv_net: null, resultat: null };
+  if (!racineComposition(lignes)) return racineEnsemble(lignes) ? calculerEnsemble(composition) : { pa: null, pr: null, pv: null, pv_net: null, resultat: null };
   const entree = {
     document: documentComposition(composition.mode),
     lignes: lignes.map((l) => (l === racineComposition(lignes) ? { ...l, lig_qte: 1, lig_coef_fg: Number(coef_fg), lig_coef_benef: Number(coef_benef) } : l)),
@@ -38,6 +44,23 @@ export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef
     pa: S(arr6(D(r.lig_montant_pa) ?? D(0))), pr: S(arr6(D(r.lig_pr) ?? D(0))), pv: S(arr6(pv ?? D(0))),
     pv_net: S(arr6((pv ?? D(0)).times(D(coef_remise) ?? D(1)))), resultat,
   };
+}
+
+/**
+ * Prix d'un ensemble : totaux de sa tranche racine calculés par le moteur de devis (lignes vendues seulement : options,
+ * variantes et lignes pour mémoire hors total) ; chaque ligne garde ses coefficients. Même calcul côté serveur
+ * (ElementsBibliotheque.CalculerOuvrage).
+ */
+export function calculerEnsemble(composition) {
+  const lignes = composition?.lignes ?? [];
+  if (!racineEnsemble(lignes)) return { pa: null, pr: null, pv: null, pv_net: null, resultat: null };
+  const resultat = calculerDocument({
+    document: documentComposition(composition.mode), lignes, taux_tva: DEFINITION_DEMO.taux_tva, entites: {}, options: {},
+    metres: composition.metres ?? [], metre_lignes: composition.metre_lignes ?? [], variables: composition.variables ?? [],
+  });
+  const r = racineEnsemble(resultat.lignes);
+  const pv = S(arr6(D(r.lig_montant_ht) ?? D(0)));
+  return { pa: S(arr6(D(r.lig_montant_pa) ?? D(0))), pr: S(arr6(D(r.lig_montant_pr) ?? D(0))), pv, pv_net: pv, resultat };
 }
 
 /** Colonnes de la liste « éléments » dérivées de la fiche (comme v_liste_elements). */
@@ -55,7 +78,7 @@ export function apresEcritureElement(biblio, e, options) {
   const c = biblio.coefficients(e);
   e.coef_fg = c.coef_fg;
   if (!(e.pv_fixe === true || e.pv_fixe === 'true')) e.coef_benef = c.coef_benef;
-  if (e.type === 'OUVRAGE') {
+  if (estCompose(e.type)) {
     const composition = typeof e.composition === 'string' ? JSON.parse(e.composition) : e.composition;
     Object.assign(e, calculerOuvrage(composition, e), { resultat: undefined });
     delete e.resultat;
@@ -70,7 +93,7 @@ export function creerFournisseurBibliotheque({ enLigne, utilisateur = 'demo', pr
   // Les ouvrages sont calculés par le moteur de devis avant la reprise (le fournisseur ne connaît que les articles),
   // avec les coefficients de leur nature ou globaux en vigueur.
   for (const e of elements) {
-    if (e.type !== 'OUVRAGE') continue;
+    if (!estCompose(e.type)) continue;
     const c = coefficientsEffectifs(e, PERIODES_COEFFICIENTS, new Date().toISOString().slice(0, 10), PARAMETRES_BIBLIOTHEQUE);
     Object.assign(e, { coef_fg: c.coef_fg, coef_benef: c.coef_benef });
     Object.assign(e, (({ resultat, ...p }) => p)(calculerOuvrage(e.composition, e)));

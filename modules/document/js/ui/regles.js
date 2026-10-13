@@ -1,5 +1,5 @@
 import { CFG_LIGNES as C, ancetres, descendants, parId } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied, accepteEnfants } from '../src/index.js';
+import { TL, estChiffree, estPied, accepteEnfants, estTranche } from '../src/index.js';
 
 /**
  * Règles de saisie des lignes de document : héritages obligatoires et TVA (sections 4, 11 et 14).
@@ -44,6 +44,12 @@ export class ReglesDocument {
       l.lig_tva_id ??= this.tauxParDefaut(lignes, id, tauxTva);
       l.lig_taux_tva = null;
       for (const c of cibles) if (c !== l && estChiffree(c)) { c.lig_tva_id = null; c.lig_taux_tva = null; }
+    }
+    // Tranche insérée (ensemble de la bibliothèque, collage) : ses lignes de prix sans taux prennent le taux par défaut.
+    if (estTranche(l)) {
+      for (const c of cibles) {
+        if (c !== l && !c.lig_tva_id && this.estLigneDePrix(lignes, c)) c.lig_tva_id = this.tauxParDefaut(lignes, c.lig_id, tauxTva);
+      }
     }
   }
 

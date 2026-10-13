@@ -279,7 +279,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
             if (c.CoefFg == e.EleCoefFg && (c.CoefBenef == e.EleCoefBenef || e.ElePvFixe)) continue;
             e.EleCoefFg = c.CoefFg;
             if (!e.ElePvFixe) e.EleCoefBenef = c.CoefBenef;
-            if (e.EleType == "OUVRAGE") specialisation.RecalculerOuvrage(e);
+            if (e.EleType is "OUVRAGE" or "ENSEMBLE") specialisation.RecalculerOuvrage(e);
             else
             {
                 var r = CalculElement.Calculer(Entree(e, tarifs.GetValueOrDefault(e.EleId) ?? []));
@@ -373,7 +373,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     public virtual async Task<PrixElementDto> Recalculer(long eleId, string commentaire, Utilisateur u, CancellationToken ct)
     {
         var e = await db.Elements.FirstOrDefaultAsync(x => x.EleId == eleId, ct) ?? throw ExceptionMetier.Introuvable($"Élément {eleId}");
-        if (e.EleType == "OUVRAGE") return new PrixElementDto(e.ElePa, e.ElePr, e.ElePv, e.EleCoefBenef, e.ElePvNet, []);
+        if (e.EleType is "OUVRAGE" or "ENSEMBLE") return new PrixElementDto(e.ElePa, e.ElePr, e.ElePv, e.EleCoefBenef, e.ElePvNet, []);
         var r = CalculElement.Calculer(Entree(e, await TarifsCalcul(eleId, ct)));
         e.ElePa = r.Pa; e.ElePr = r.Pr; e.ElePv = r.Pv; e.EleCoefBenef = r.CoefBenef ?? e.EleCoefBenef; e.ElePvNet = r.PvNet;
         e.EleMajPar = u.Code;

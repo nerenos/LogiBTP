@@ -28,7 +28,11 @@ public sealed class CompositionOuvrage
 /// </summary>
 public static class ElementsBibliotheque
 {
-    private const int TypeOuvrage = 2; // type_ligne OUVRAGE (db/110)
+    private const int TypeOuvrage = 2; // type_ligne OUVRAGE (modules/document/db/011)
+    private const int TypeTitre = 1;   // type_ligne TITRE : racine d'un ensemble
+
+    /// <summary>Élément composé (ouvrage ou ensemble) : son prix vient de sa composition.</summary>
+    public static bool EstCompose(string? type) => type is "OUVRAGE" or "ENSEMBLE";
 
     private static readonly JsonDocument FormatNumerotation =
         JsonDocument.Parse("""{"separateur":".","niveaux":[{"style":"1"},{"style":"1"},{"style":"1"}]}""");
@@ -64,7 +68,7 @@ public static class ElementsBibliotheque
         if (string.IsNullOrWhiteSpace(compositionJson)) return (null, null, null, null);
         var c = JsonSerializer.Deserialize<CompositionOuvrage>(compositionJson, JsonCalcul.Options) ?? new CompositionOuvrage();
         var racine = c.Lignes.FirstOrDefault(l => l.LigParentId is null && l.LigTylId == TypeOuvrage);
-        if (racine is null) return (null, null, null, null);
+        if (racine is null) return CalculerEnsemble(c);
         racine.LigQte = 1;
         racine.LigCoefFg = coefFg;
         racine.LigCoefBenef = coefBenef;
@@ -76,6 +80,25 @@ public static class ElementsBibliotheque
         var x = r.Lignes.First(l => l.LigId == racine.LigId);
         var pv = ArrondiCalcul.Arr6(x.LigPv ?? 0);
         return (ArrondiCalcul.Arr6(x.LigMontantPa ?? 0), ArrondiCalcul.Arr6(x.LigPr ?? 0), pv, ArrondiCalcul.Arr6(pv * coefRemise));
+    }
+
+    /// <summary>
+    /// Prix d'un ensemble : totaux de sa tranche racine (titre) calculés par le moteur (lignes vendues seulement :
+    /// options, variantes et lignes pour mémoire hors total) ; chaque ligne garde ses coefficients. Réplique de
+    /// calculerEnsemble (bibliotheque.js).
+    /// </summary>
+    private static (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet) CalculerEnsemble(CompositionOuvrage c)
+    {
+        var racine = c.Lignes.FirstOrDefault(l => l.LigParentId is null && l.LigTylId == TypeTitre);
+        if (racine is null) return (null, null, null, null);
+        var r = MoteurDevisBtp.Calculer(new EntreeCalcul
+        {
+            Document = new DocumentBtp { EntModeCalculOuvrage = c.Mode, EntPrecisionMontant = 2, EntNumFormat = FormatNumerotation },
+            Lignes = c.Lignes, Metres = c.Metres, MetreLignes = c.MetreLignes, Variables = c.Variables,
+        });
+        var x = r.Lignes.First(l => l.LigId == racine.LigId);
+        var pv = ArrondiCalcul.Arr6(x.LigMontantHt ?? 0);
+        return (ArrondiCalcul.Arr6(x.LigMontantPa ?? 0), ArrondiCalcul.Arr6(x.LigMontantPr ?? 0), pv, pv);
     }
 
     private static string? S(decimal? d) => d?.ToString(CultureInfo.InvariantCulture);
@@ -116,7 +139,7 @@ public static class ElementsBibliotheque
         aEcrire["coef_benef"] = S(coefBenef);
         var coefRemise = Decimal(v.GetValueOrDefault("coef_remise")) ?? 1;
 
-        if (Texte(v.GetValueOrDefault("type")) == "OUVRAGE")
+        if (EstCompose(Texte(v.GetValueOrDefault("type"))))
         {
             var (pa, pr, pv, pvNet) = CalculerOuvrage(Texte(v.GetValueOrDefault("composition")), coefFg, coefBenef, coefRemise);
             aEcrire["pa"] = S(pa); aEcrire["pr"] = S(pr); aEcrire["pv"] = S(pv); aEcrire["pv_net"] = S(pvNet);
