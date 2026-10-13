@@ -34,6 +34,22 @@ export const COLONNES_ANALYSE = [
 
 const LIBELLES_COEF = { fg: 'frais généraux', benef: 'bénéfice', prorata: 'prorata' };
 
+/** Tri de la liste des éléments : valeur comparée par colonne (valeurs divergentes : le minimum). */
+const TRIS_ELEMENTS = {
+  code: { titre: 'Code', texte: true, valeur: (g) => g.code },
+  libelle: { titre: 'Libellé', texte: true, valeur: (g) => g.libelle },
+  unite: { titre: 'U', texte: true, valeur: (g) => [...g.unites].join(' / ') },
+  nb: { titre: 'Lignes', valeur: (g) => g.feuilles.length, aide: 'Nombre de lignes' },
+  qt: { titre: 'Qté totale', valeur: (g) => g.qt },
+  pa: { titre: VALEURS_ELEMENT.pa.titre, valeur: (g) => g.valeurs.pa?.min ?? null },
+  fg: { titre: VALEURS_ELEMENT.fg.titre, valeur: (g) => g.valeurs.fg?.min ?? null },
+  pr: { titre: VALEURS_ELEMENT.pr.titre, valeur: (g) => g.valeurs.pr?.min ?? null },
+  benef: { titre: VALEURS_ELEMENT.benef.titre, valeur: (g) => g.valeurs.benef?.min ?? null },
+  pv: { titre: VALEURS_ELEMENT.pv.titre, valeur: (g) => g.valeurs.pv?.min ?? null },
+  montant: { titre: 'Montant PV', valeur: (g) => g.montant },
+  nature: { titre: 'Nature', texte: true, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
+};
+
 export class AnalyseCoefficients {
   constructor(conteneur, { editeur, natures = [], message = () => {} }) {
     this.conteneur = conteneur;
@@ -46,6 +62,9 @@ export class AnalyseCoefficients {
     // Partage de la zone : part des coefficients (en %) et partie masquée ('coefs', 'elements' ou null).
     this.partage = Number.isFinite(p.partage) ? Math.min(85, Math.max(15, p.partage)) : 45;
     this.masquee = ['coefs', 'elements'].includes(p.masquee) ? p.masquee : null;
+    // Part de l'arbre des tranches dans la colonne de gauche (en %), tri de la liste des éléments.
+    this.partageGauche = Number.isFinite(p.partageGauche) ? Math.min(85, Math.max(15, p.partageGauche)) : 60;
+    this.tri = p.tri && TRIS_ELEMENTS[p.tri.cle] ? { cle: p.tri.cle, sens: p.tri.sens === -1 ? -1 : 1 } : null;
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
@@ -82,7 +101,9 @@ export class AnalyseCoefficients {
   get coefFa() { return Number(this.resultat.document.ent_coef_fa ?? 1); }
 
   memoriser() {
-    ecrirePreferences({ analyse: { horsTotal: this.horsTotal, colonnes: [...this.colonnes], partage: this.partage, masquee: this.masquee } });
+    ecrirePreferences({ analyse: {
+      horsTotal: this.horsTotal, colonnes: [...this.colonnes], partage: this.partage, masquee: this.masquee, partageGauche: this.partageGauche, tri: this.tri,
+    } });
   }
 
   /** Partage appliqué : hauteur de la partie Coefficients, partie masquée. */
@@ -99,20 +120,16 @@ export class AnalyseCoefficients {
     }
   }
 
-  /** Limite entre les deux parties déplacée par glisser (Pointer Events) ; double-clic : partage par défaut. */
-  #separateur(sep) {
+  /** Limite verticale déplacée par glisser (Pointer Events) : part en % de la zone (15 à 85) ; double-clic : défaut. */
+  #separateur(sep, { zone, fixer, defaut }) {
+    if (!sep) return;
     sep.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       sep.setPointerCapture(e.pointerId);
-      const principal = this.conteneur.querySelector('.analyse-principal');
-      const haut = principal.querySelector('.analyse-parties').getBoundingClientRect();
-      this.masquee = null;
+      const haut = zone().getBoundingClientRect();
       document.body.classList.add('redimensionnement-vertical');
-      const bouger = (ev) => {
-        this.partage = Math.round(Math.min(85, Math.max(15, ((ev.clientY - haut.top) / haut.height) * 100)));
-        this.appliquerPartage();
-      };
+      const bouger = (ev) => fixer(Math.round(Math.min(85, Math.max(15, ((ev.clientY - haut.top) / haut.height) * 100))));
       const finir = () => {
         sep.removeEventListener('pointermove', bouger);
         sep.removeEventListener('pointerup', finir);
@@ -124,7 +141,7 @@ export class AnalyseCoefficients {
       sep.addEventListener('pointerup', finir);
       sep.addEventListener('pointercancel', finir);
     });
-    sep.addEventListener('dblclick', () => { this.partage = 45; this.masquee = null; this.appliquerPartage(); this.memoriser(); });
+    sep.addEventListener('dblclick', () => { fixer(defaut); this.memoriser(); });
   }
 
   /** Tranches (sections, titres) dans l'ordre du document avec leur profondeur. */
@@ -202,7 +219,9 @@ export class AnalyseCoefficients {
     const parentEstTranche = parent !== null && tranches.some((t) => t.ligne.lig_id === parent);
 
     this.conteneur.innerHTML = `
-      <div class="analyse-gauche">${this.arbre(tranches, pm)}${this.arbreNatures(pm)}</div>
+      <div class="analyse-gauche" style="--part-tranches:${this.partageGauche}%">${this.arbre(tranches, pm)}
+        <div class="analyse-separateur" data-separateur="gauche" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
+        ${this.arbreNatures(pm)}</div>
       <div class="analyse-principal">
       <div class="analyse-barre">
         <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong>
@@ -234,7 +253,7 @@ export class AnalyseCoefficients {
         </table>
         ${liste.length ? '' : '<p class="aide">Aucune ligne chiffrée dans cette portée.</p>'}</div>
       </section>
-      <div class="analyse-separateur" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
+      <div class="analyse-separateur" data-separateur="parties" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
       <section class="analyse-partie analyse-elements" data-partie="elements">
         <header class="partie-entete">
           <button type="button" class="partie-bascule" data-masquer-partie="elements"></button>
@@ -244,8 +263,8 @@ export class AnalyseCoefficients {
             et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
         </header>
         <div class="partie-corps"><table class="table-analyse table-elements">
-          <thead><tr><th>Code</th><th>Libellé</th><th>U</th><th title="Nombre de lignes">Lignes</th><th>Qté totale</th>
-            ${Object.values(VALEURS_ELEMENT).map((v) => `<th>${echapper(v.titre)}</th>`).join('')}<th>Montant PV</th><th>Nature</th></tr></thead>
+          <thead><tr>${Object.entries(TRIS_ELEMENTS).map(([k, t]) => `<th data-tri="${k}" class="triable" aria-sort="none"
+            title="${echapper(t.aide ?? t.titre)} : cliquer pour trier (croissant, décroissant, ordre par défaut)">${echapper(t.titre)}<span class="sens-tri"></span></th>`).join('')}</tr></thead>
           <tbody></tbody>
         </table></div>
       </section>
@@ -253,7 +272,16 @@ export class AnalyseCoefficients {
       </div>`;
     this.dernier = { liste, total };
     this.appliquerPartage();
-    this.#separateur(this.conteneur.querySelector('.analyse-separateur'));
+    this.#separateur(this.conteneur.querySelector('[data-separateur="parties"]'), {
+      zone: () => this.conteneur.querySelector('.analyse-parties'),
+      fixer: (v) => { this.partage = v; this.masquee = null; this.appliquerPartage(); },
+      defaut: 45,
+    });
+    this.#separateur(this.conteneur.querySelector('[data-separateur="gauche"]'), {
+      zone: () => this.conteneur.querySelector('.analyse-gauche'),
+      fixer: (v) => { this.partageGauche = v; this.conteneur.querySelector('.analyse-gauche').style.setProperty('--part-tranches', `${v}%`); },
+      defaut: 60,
+    });
     this.rendreElements();
   }
 
@@ -265,6 +293,22 @@ export class AnalyseCoefficients {
     const lectureSeule = this.editeur.magasin?.lectureSeule;
     const r = this.recherche.trim().toLowerCase();
     const groupes = elementsAnalyse(this.feuilles ?? []).filter((g) => !r || `${g.code} ${g.libelle}`.toLowerCase().includes(r));
+    // Tri choisi (sinon : montant décroissant) ; valeurs absentes en fin de liste.
+    if (this.tri) {
+      const t = TRIS_ELEMENTS[this.tri.cle];
+      const sens = this.tri.sens;
+      groupes.sort((a, b) => {
+        const va = t.valeur(a, this.natures), vb = t.valeur(b, this.natures);
+        if (va === null || va === '') return vb === null || vb === '' ? 0 : 1;
+        if (vb === null || vb === '') return -1;
+        return (t.texte ? String(va).localeCompare(String(vb), 'fr', { numeric: true, sensitivity: 'base' }) : va - vb) * sens;
+      });
+    }
+    for (const th of this.conteneur.querySelectorAll('.table-elements th[data-tri]')) {
+      const actif = this.tri?.cle === th.dataset.tri;
+      th.setAttribute('aria-sort', actif ? (this.tri.sens === 1 ? 'ascending' : 'descending') : 'none');
+      th.querySelector('.sens-tri').textContent = actif ? (this.tri.sens === 1 ? ' ▲' : ' ▼') : '';
+    }
     this.elements = new Map(groupes.map((g) => [g.cle, g]));
     const nombre = (v, d) => formatLibre(Math.round(v * 10 ** d) / 10 ** d, d);
     const valeur = (g, k) => {
@@ -355,6 +399,15 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const tri = e.target.closest('th[data-tri]');
+    if (tri) {
+      // Croissant, décroissant, puis ordre par défaut (montant décroissant).
+      const cle = tri.dataset.tri;
+      this.tri = this.tri?.cle !== cle ? { cle, sens: 1 } : this.tri.sens === 1 ? { cle, sens: -1 } : null;
+      this.memoriser();
+      this.rendreElements();
+      return;
+    }
     const bascule = e.target.closest('[data-masquer-partie]');
     if (bascule) {
       const partie = bascule.dataset.masquerPartie;

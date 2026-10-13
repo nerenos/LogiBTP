@@ -241,8 +241,9 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 /* Analyse : arbre des portées (document entier, sections, titres) à gauche du tableau. */
 .vue-analyse.analyse-coefs { flex: 1; flex-direction: row; align-items: stretch; gap: 0.8rem; overflow: hidden; min-height: 0; }
 .analyse-gauche { flex: none; width: 17rem; min-width: 12rem; max-width: 40%; resize: horizontal; overflow: hidden; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
-.analyse-arbre { flex: 1 1 0; min-height: 6rem; overflow: auto; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
-.analyse-arbre.analyse-natures { flex: 0 1 auto; max-height: 45%; }
+.analyse-arbre { flex: 1 1 0; min-height: 3rem; overflow: auto; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.analyse-gauche > .analyse-arbre:first-child { flex: 0 0 var(--part-tranches, 60%); }
+.analyse-gauche { gap: 0; }
 .analyse-arbre-titre { position: sticky; top: 0; padding: 0.35rem 0.6rem; font-weight: 600; font-size: 0.9rem; border-bottom: 1px solid var(--bord); background: var(--surface); }
 .analyse-arbre ul { list-style: none; margin: 0; padding: 0.3rem 0; font-size: 0.88rem; }
 .analyse-arbre li { display: flex; align-items: baseline; gap: 0.35rem; padding: 0.15rem 0.5rem 0.15rem 0.3rem; border-radius: 4px; }
@@ -295,3 +296,9 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .analyse-separateur:hover, body.redimensionnement-vertical .analyse-separateur { background: var(--accent-clair); }
 .analyse-principal[data-masquee="coefs"] .analyse-separateur, .analyse-principal[data-masquee="elements"] .analyse-separateur { visibility: hidden; }
 body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
+
+/* Tri de la liste des éléments. */
+.table-elements th.triable { cursor: pointer; user-select: none; white-space: nowrap; }
+.table-elements th.triable:hover { color: var(--accent); }
+.table-elements th[aria-sort="ascending"], .table-elements th[aria-sort="descending"] { color: var(--accent); }
+.table-elements .sens-tri { font-size: 0.8em; }
