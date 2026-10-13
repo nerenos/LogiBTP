@@ -3,6 +3,7 @@
 -- =============================================================================
 
 -- Types de lignes : identifiants fixes, repris par les deux moteurs de calcul (TL).
+-- SECTION : tranche racine non numérotée englobant le corps d'un document (un document spécifique en intègre plusieurs).
 INSERT INTO type_ligne (tyl_id, tyl_code, tyl_libelle, tyl_est_chiffree, tyl_est_numerotee, tyl_accepte_enfants, tyl_est_pied) VALUES
  ( 1, 'TITRE',      'Titre',             FALSE, TRUE,  TRUE,  FALSE),
  ( 2, 'OUVRAGE',    'Ouvrage',           TRUE,  TRUE,  TRUE,  FALSE),
@@ -13,4 +14,5 @@ INSERT INTO type_ligne (tyl_id, tyl_code, tyl_libelle, tyl_est_chiffree, tyl_est
  ( 7, 'SAUT_PAGE',  'Saut de page',      FALSE, FALSE, FALSE, FALSE),
  ( 8, 'PIED_HT',    'Poste de pied HT',  FALSE, FALSE, FALSE, TRUE),
  ( 9, 'PIED_TTC',   'Poste de pied TTC', FALSE, FALSE, FALSE, TRUE),
- (10, 'TVA',        'Ventilation TVA',   FALSE, FALSE, FALSE, TRUE);
+ (10, 'TVA',        'Ventilation TVA',   FALSE, FALSE, FALSE, TRUE),
+ (11, 'SECTION',    'Section',           FALSE, FALSE, TRUE,  FALSE);

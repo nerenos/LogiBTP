@@ -392,13 +392,20 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     private List<DocumentLigneBtp> LignesDePrixEnTotal() =>
         Ordre.Where(l => !TL.EstPied(l) && EstLigneDePrix(l) && !HorsTotal(l) && !EnErreur.Contains(l.LigId) && Px.ContainsKey(l.LigId)).ToList();
 
+    /// <summary>
+    /// PV affiché imposé hors prorata : le coefficient de prorata s'applique au prix affiché après la ventilation des
+    /// frais annexes, avant la remise, et n'entre pas dans le calcul du coefficient de frais annexes.
+    /// </summary>
+    private static decimal AfficheHorsProrata(DocumentLigneBtp l) =>
+        l.LigCoefProrata == 1 ? l.LigPvAffiche!.Value : Arr6(l.LigPvAffiche!.Value / l.LigCoefProrata);
+
     protected override void ApresPrix()
     {
         decimal f = 0, a = 0, p = 0;
         foreach (var l in LignesDePrixEnTotal())
         {
             var qv = l.LigQteVendue ?? 0;
-            if (FixeDe(l) == Blocage.Affiche) a += l.LigPvAffiche!.Value * qv;
+            if (FixeDe(l) == Blocage.Affiche) a += AfficheHorsProrata(l) * qv;
             else f += Px[l.LigId].Pv * qv;
         }
         foreach (var pied in EnfantsDe(null))
@@ -430,7 +437,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         {
             if (FixeDe(l) != Blocage.Affiche || !Px.ContainsKey(l.LigId)) continue;
             var y = PxBtp(l.LigId);
-            var pvFixe = Arr6(l.LigPvAffiche!.Value / c);
+            var pvFixe = Arr6(AfficheHorsProrata(l) / c);
             if (EstCompose(l))
             {
                 y.Pv = pvFixe;
@@ -459,7 +466,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     }
 
     protected override decimal PvAffiche(DocumentLigneBtp l, Prix y) =>
-        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * _coefFa, l.LigPrecisionPv);
+        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * _coefFa * l.LigCoefProrata, l.LigPrecisionPv);
 
     protected override void EcrireMontants(DocumentLigneBtp l, Prix prix, decimal pvAff, decimal pvRem, decimal qv)
     {

@@ -21,6 +21,7 @@ ALTER TABLE document_ligne ADD COLUMN lig_coef_fg            NUMERIC(18,6) NOT N
 ALTER TABLE document_ligne ADD COLUMN lig_pr                 NUMERIC(18,6);
 ALTER TABLE document_ligne ADD COLUMN lig_coef_benef         NUMERIC(18,6) NOT NULL DEFAULT 1;
 ALTER TABLE document_ligne ADD COLUMN lig_coef_fa            NUMERIC(18,6) NOT NULL DEFAULT 1;
+ALTER TABLE document_ligne ADD COLUMN lig_coef_prorata       NUMERIC(18,6) NOT NULL DEFAULT 1; -- après frais annexes, avant remise
 ALTER TABLE document_ligne ADD COLUMN lig_pv_affiche         NUMERIC(18,6);
 ALTER TABLE document_ligne ADD COLUMN lig_pv_fixe            BOOLEAN      NOT NULL DEFAULT FALSE; -- PV avant frais annexes et remise
 ALTER TABLE document_ligne ADD COLUMN lig_pv_affiche_fixe    BOOLEAN      NOT NULL DEFAULT FALSE; -- PV avec frais annexes

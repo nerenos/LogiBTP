@@ -1,6 +1,6 @@
 // Document de démonstration, utilisé quand l'API n'est pas joignable (calcul local complet).
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX, MODELES_DOCUMENT } from './vues-document.js';
-import { lignesLotsDemo } from './demo-lots.js';
+import { lignesLotsDemo, natureDemo } from './demo-lots.js';
 
 export const DEFINITION_DEMO = {
   type: { tyd_id: 1, tyd_code: 'V_DEVIS', tyd_libelle: 'Devis client', tyd_famille: 'V' },
@@ -23,6 +23,7 @@ export const DEFINITION_DEMO = {
     { tyl_id: 8, tyl_code: 'PIED_HT', tyl_libelle: 'Poste de pied HT' },
     { tyl_id: 9, tyl_code: 'PIED_TTC', tyl_libelle: 'Poste de pied TTC' },
     { tyl_id: 10, tyl_code: 'TVA', tyl_libelle: 'Ventilation TVA' },
+    { tyl_id: 11, tyl_code: 'SECTION', tyl_libelle: 'Section' },
   ],
   taux_tva: [
     { ttv_id: 1, ttv_code: 'T20', ttv_libelle: 'TVA 20 %', ttv_taux: 20, ttv_categorie: 'N' },
@@ -39,6 +40,24 @@ export const DEFINITION_DEMO = {
 
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, ...o });
 
+/** Identifiant de la section qui englobe le corps du devis de démonstration. */
+export const ID_SECTION_DEMO = 900;
+
+/**
+ * Corps du devis englobé dans une section (les lignes de pied restent à la racine) ; natures des lignes chiffrées
+ * déduites de leur type et de leur libellé.
+ */
+function preparerDemo(lignes) {
+  const pied = new Set([8, 9, 10]);
+  const parId = new Map(lignes.map((l) => [l.lig_id, l]));
+  const corps = lignes.map((l) => ({
+    ...l,
+    lig_parent_id: l.lig_parent_id === null && !pied.has(l.lig_tyl_id) && !(l.lig_tyl_id === 5 && l.lig_ordre >= 100) ? ID_SECTION_DEMO : l.lig_parent_id,
+    lig_nat_id: l.lig_nat_id ?? natureDemo(l, parId.get(l.lig_parent_id) ?? null),
+  }));
+  return [L({ lig_id: ID_SECTION_DEMO, lig_parent_id: null, lig_ordre: 0, lig_tyl_id: 11, lig_libelle_html: '<b>Extension maison individuelle</b>' }), ...corps];
+}
+
 export const DOCUMENT_DEMO = {
   document: {
     ent_id: 0, ent_tyd_id: 1, ent_numero: 'DÉMO', ent_date: '2026-09-23', ent_objet: 'Extension maison individuelle',
@@ -46,7 +65,7 @@ export const DOCUMENT_DEMO = {
     ent_num_format: { separateur: '.', niveaux: [{ style: 'A' }, { style: '1' }, { style: 'a' }] },
     ent_proprietes: { chantier: 'Maison Martin – Lyon', duree_validite: 30 },
   },
-  lignes: [
+  lignes: preparerDemo([
     L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 1, lig_libelle_html: '<b>Gros œuvre</b>', lig_tva_id: 1 }),
     L({ lig_id: 16, lig_parent_id: 1, lig_ordre: 0, lig_tyl_id: 4, lig_libelle_html: "<p><b>Conditions d'exécution</b></p><p>Accès chantier par la rue des Lilas.<br>Stationnement et évacuation des gravats à la charge de l'entreprise.</p>" }),
     L({ lig_id: 2, lig_etiquette: 'PRIX_CONFIRME', lig_parent_id: 1, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: '<p><b>Dalle béton armé ép. 15 cm</b></p><p>Béton C25/30 dosé à 350 kg/m³, treillis soudé ST25 compris.<br>Finition talochée, joints de retrait tous les 25 m².</p>', lig_qte: 120, lig_unt_code: 'm2', lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_tva_id: 1 }),
@@ -68,7 +87,7 @@ export const DOCUMENT_DEMO = {
     L({ lig_id: 18, lig_parent_id: null, lig_ordre: 102, lig_tyl_id: 8, lig_libelle_html: 'Compte prorata 2,5 %', lig_pied_mode: 'P', lig_pied_base: 'LIGNE', lig_pied_base_id: 17, lig_pied_valeur: 2.5, lig_pied_sens: -1 }),
     L({ lig_id: 14, lig_parent_id: null, lig_ordre: 103, lig_tyl_id: 10, lig_libelle_html: 'TVA' }),
     L({ lig_id: 15, lig_parent_id: null, lig_ordre: 104, lig_tyl_id: 9, lig_libelle_html: 'Retenue de garantie 5 %', lig_pied_mode: 'P', lig_pied_base: 'CUMUL', lig_pied_valeur: 5, lig_pied_sens: -1 }),
-  ],
+  ]),
   metres: [{ mtr_id: 100, mtr_lig_id: 6, mtr_libelle: 'Surface des murs', mtr_unt_code: 'm2', mtr_variable: '@surface' }],
   metre_lignes: [
     { mli_id: 101, mli_mtr_id: 100, mli_parent_id: null, mli_ordre: 1, mli_type: 'D', mli_operateur: '+', mli_commentaire: 'Linéaire de murs' },

@@ -16,9 +16,13 @@ public static class TL
     public const short PiedHt = 8;
     public const short PiedTtc = 9;
     public const short Tva = 10;
+    /// <summary>Tranche racine non numérotée englobant le corps d'un document ; totalisée comme un titre.</summary>
+    public const short Section = 11;
 
     public static bool EstChiffree(DocumentLigne l) => l.LigTylId is Ouvrage or Element;
     public static bool EstPied(DocumentLigne l) => l.LigTylId is PiedHt or PiedTtc or Tva;
     public static bool EstTypeNumerote(DocumentLigne l) => l.LigTylId is Titre or Ouvrage or Element;
-    public static bool AccepteEnfants(DocumentLigne l) => l.LigTylId is Titre or Ouvrage;
+    public static bool AccepteEnfants(DocumentLigne l) => l.LigTylId is Titre or Ouvrage or Section;
+    /// <summary>Tranche : ligne de regroupement totalisée (Titre, Section).</summary>
+    public static bool EstTranche(DocumentLigne l) => l.LigTylId is Titre or Section;
 }

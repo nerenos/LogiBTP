@@ -8,6 +8,7 @@ import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../demo.js';
 import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
+import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
@@ -18,6 +19,7 @@ const GABARIT = `
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
       <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
+      <button role="tab" data-onglet-vue="analyse" title="Alt+3 : coefficients par nature ou par tranche">Analyse</button>
     </nav>
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
@@ -40,6 +42,7 @@ const GABARIT = `
       <div id="entete" class="panneau entete"></div>
       <section id="totaux-entete" class="panneau totaux-entete"></section>
     </section>
+    <section id="vue-analyse" class="vue vue-analyse" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
       <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -101,7 +104,10 @@ export class PageDocument extends PageBase {
     this.conteneur.innerHTML = GABARIT;
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
-      surOnglet: (o) => { if (o === 'lignes') this.editeur?.grille.focus(); },
+      surOnglet: (o) => {
+        if (o === 'lignes') this.editeur?.grille.focus();
+        if (o === 'analyse') this.analyse?.rendre();
+      },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
     });
@@ -119,7 +125,7 @@ export class PageDocument extends PageBase {
     });
     this.clavier = (e) => {
       // Alt+1 / Alt+2 : onglets Entête et Lignes.
-      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes' }[e.code] : null;
+      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse' }[e.code] : null;
       if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
     };
     document.addEventListener('keydown', this.clavier);
@@ -130,6 +136,7 @@ export class PageDocument extends PageBase {
     // Coefficients par défaut (bibliothèque) : couleur des coefficients des lignes.
     const params = await s.bibliotheque.parametres?.().catch(() => null);
     this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
+    this.natures = await s.bibliotheque.natures?.().catch(() => []) ?? [];
     this.appel = new AppelBibliotheque({
       fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
       bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
@@ -257,6 +264,7 @@ export class PageDocument extends PageBase {
     });
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
+    this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.surFiltre = () => this.afficherFiltre();
     this.afficherFiltre();
@@ -317,6 +325,7 @@ export class PageDocument extends PageBase {
     const enLigne = this.app.enLigne;
     p.rendreEntete(this.$('#entete'));
     this.plan?.rendre();
+    if (this.disposition.p.onglet === 'analyse') this.analyse?.rendre();
     p.rendreDetail(this.$('#detail'), this.selection);
     p.rendreTotaux(this.$('#totaux'), { compact: true });
     p.rendreTotaux(this.$('#totaux-entete'));

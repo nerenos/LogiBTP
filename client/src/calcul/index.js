@@ -2,7 +2,7 @@
 import { comparerResultats as comparerDocument, CHAMPS_DOCUMENT, CHAMPS_LIGNE } from '@logibtp/document';
 
 export { MoteurDevisBtp, calculerDocument } from './moteur-btp.js';
-export { VERSION_MOTEUR, TL, CODES_TL, estChiffree, estPied, accepteEnfants } from '@logibtp/document';
+export { VERSION_MOTEUR, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche } from '@logibtp/document';
 export { evaluerExpression, referencesDe, ErreurCalcul, arrondir, formatNombre, Dec, D, S } from '@logibtp/socle';
 
 // Champs comparés entre les moteurs client et serveur : génériques + BTP (même liste que ComparateurCalcul côté C#).

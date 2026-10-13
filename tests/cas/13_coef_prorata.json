@@ -1,0 +1,97 @@
+{
+  "nom": "Coefficient de prorata après les frais annexes",
+  "description": "Comme 07b, avec un prorata de 1,02 sur le carrelage et de 1,05 sur les seuils à PV affiché imposé. Le prorata n'entre pas dans le coefficient de frais annexes : la ligne imposée y compte pour 2 × 60 / 1,05 = 2 × 57,142857, d'où c = 1,167865. Carrelage : 10 × c × 1,02 = 11,91 ; plinthes : 100 × c = 116,79 ; seuils : PV affiché 60 conservé, PV avant frais 57,142857 / c = 48,929334.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Carrelage",
+        "lig_qte": 10,
+        "lig_pa": 10,
+        "lig_tva_id": 1,
+        "lig_coef_prorata": 1.02
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Plinthes",
+        "lig_qte": 1,
+        "lig_pa": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Seuils (prix catalogue)",
+        "lig_qte": 2,
+        "lig_pa": 30,
+        "lig_pv_affiche_fixe": true,
+        "lig_pv_affiche": 60,
+        "lig_tva_id": 1,
+        "lig_coef_prorata": 1.05
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": null,
+        "lig_ordre": 4,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Frais de déplacement",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 50,
+        "lig_pied_sens": 1,
+        "lig_pied_is_fa": true
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": null,
+        "lig_ordre": 5,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_coef_fa": 1.167865,
+      "ent_total_ht": 355.89,
+      "ent_total_tva": 71.18
+    },
+    "lignes": {
+      "1": {
+        "lig_pv_affiche": 11.91,
+        "lig_montant_ht": 119.1
+      },
+      "2": {
+        "lig_pv_affiche": 116.79,
+        "lig_montant_ht": 116.79
+      },
+      "3": {
+        "lig_pv": 48.929334,
+        "lig_coef_benef": 1.630978,
+        "lig_pv_affiche": 60,
+        "lig_montant_ht": 120
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@ import {
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
   editerLibelle, lirePreferences, ecrirePreferences,
 } from '@logibtp/socle/ui';
-import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants } from '../src/index.js';
+import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
@@ -28,7 +28,7 @@ export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire',
 
 export const LIBELLES_TYPE = {
   TITRE: 'Titre', OUVRAGE: 'Ouvrage', ELEMENT: 'Élément', TEXTE: 'Texte', SOUS_TOTAL: 'S-total',
-  IMAGE: 'Image', SAUT_PAGE: 'Saut', PIED_HT: 'Pied HT', PIED_TTC: 'Pied TTC', TVA: 'TVA',
+  IMAGE: 'Image', SAUT_PAGE: 'Saut', PIED_HT: 'Pied HT', PIED_TTC: 'Pied TTC', TVA: 'TVA', SECTION: 'Section',
 };
 
 /** Remplace (fusionne) la colonne `cle` d'une liste de colonnes. */
@@ -275,9 +275,9 @@ export class EditeurDocument {
     }
     // Contenu des lignes trouvées (composantes d'un ouvrage…) affiché aussi, sauf les sous-tranches.
     for (const l of this.saisie.lignes) {
-      if (l.lig_tyl_id === TL.TITRE) continue;
+      if (estTranche(l)) continue;
       for (let x = parId.get(l.lig_parent_id); x; x = parId.get(x.lig_parent_id)) {
-        if (trouvees.has(x.lig_id) && x.lig_tyl_id !== TL.TITRE) { garder.add(l.lig_id); break; }
+        if (trouvees.has(x.lig_id) && !estTranche(x)) { garder.add(l.lig_id); break; }
       }
     }
     return res.filter((r) => garder.has(r.item.lig_id));
@@ -520,7 +520,7 @@ export class EditeurDocument {
     return [
       {
         cle: 'num', titre: 'N°', classe: 'col-num', arbre: true, editeur: 'texte',
-        editable: (l) => saisissable(l) && (l.lig_tyl_id <= 3),
+        editable: (l) => saisissable(l) && estTypeNumerote(l),
         champ: () => 'lig_numerotation', lire: (l) => (l.lig_num_manuelle ? l.lig_numerotation ?? '' : ''),
         valeur: (r) => (r.calcule.lig_numerotation ?? '') + (r.item.lig_num_manuelle ? ' ✎' : ''),
       },
@@ -678,7 +678,8 @@ export class EditeurDocument {
       const l = this.saisie.lignes.find((x) => x.lig_id === id);
       const aEnfants = this.saisie.lignes.some((x) => x.lig_parent_id === id);
       if (aEnfants && !accepteEnfants({ lig_tyl_id: type })) { this.surMessage?.('Ce type n\'accepte pas de lignes enfants'); return false; }
-      if ((type >= TL.PIED_HT) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.('Les lignes de pied sont au niveau racine'); return false; }
+      if (estPied({ lig_tyl_id: type }) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.('Les lignes de pied sont au niveau racine'); return false; }
+      if (type === TL.SECTION && l.lig_parent_id !== null) { this.surMessage?.('Une section est au niveau racine'); return false; }
       m.modifier((d) => {
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_tyl_id = type;

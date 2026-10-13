@@ -4,7 +4,7 @@ import {
 } from '@logibtp/socle';
 import { numeroter } from './numerotation.js';
 import {
-  TL, estChiffree, estPied, estTypeNumerote, accepteEnfants,
+  TL, estChiffree, estPied, estTypeNumerote, accepteEnfants, estTranche,
   COLONNES_DOCUMENT, COLONNES_LIGNE, COLONNES_DECIMALES, COLONNES_DATES, COLONNES_PRIX_CALCULES, COLONNES_QTE_CALCULEES,
 } from './types.js';
 
@@ -258,6 +258,7 @@ export class MoteurDocument {
       const p = this.parent(l);
       if (estPied(l) && p) this.erreur(l.lig_id, 'PIED_RACINE', 'Les lignes de pied sont au niveau racine');
       if (p && !accepteEnfants(p)) this.erreur(l.lig_id, 'PARENT_INVALIDE', 'Le type de la ligne parente n\'accepte pas d\'enfants');
+      if (l.lig_tyl_id === TL.SECTION && p) this.erreur(l.lig_id, 'SECTION_RACINE', 'Une section est au niveau racine');
       this.validerLigne(l);
     }
   }
@@ -411,7 +412,7 @@ export class MoteurDocument {
     const ecrire = (l, s) => { for (const c of champs) l[c] = S(s[c]); };
 
     corps.forEach((l, i) => {
-      if (l.lig_tyl_id === TL.TITRE) {
+      if (estTranche(l)) {
         const desc = [];
         for (let j = i + 1; j < corps.length && this.descendDe(corps[j], l); j++) desc.push(corps[j]);
         ecrire(l, somme(desc.filter((x) => this.estLigneDePrix(x) && !this.horsTotal(x, l) && !this.enErreur.has(x.lig_id) && x.lig_montant_ht !== null)));

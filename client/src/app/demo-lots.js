@@ -3,6 +3,25 @@
 
 const MO = 42; // taux horaire de main-d'œuvre (prix d'achat)
 
+/** Natures de la bibliothèque de démonstration (identifiants de nature_element). */
+export const NAT = { MO: 1, MAT: 2, LOC: 3, ST: 4, OUV: 5, ISO: 6 };
+
+/**
+ * Nature d'une ligne du devis de démonstration, déduite de son type, de son libellé et de son unité (sert aussi à
+ * compléter les devis déjà enregistrés) : ouvrage, main-d'œuvre, location, isolant, prestation, matériaux.
+ */
+export function natureDemo(l, parent = null) {
+  if (l.lig_tyl_id === 2) return NAT.OUV;
+  if (l.lig_tyl_id !== 3) return null;
+  const lib = String(l.lig_libelle_html ?? '').replace(/<[^>]+>/g, '');
+  if (/main-d.œuvre|^pose$/i.test(lib) || (l.lig_unt_code === 'h' && parent?.lig_tyl_id === 2)) return NAT.MO;
+  if (/^location/i.test(lib)) return NAT.LOC;
+  if (/laine|isolant|PSE|pare-vapeur|complexe de doublage/i.test(lib)) return NAT.ISO;
+  // Prestation directement dans une tranche : forfait sous-traité, heures de main-d'œuvre.
+  if (parent && parent.lig_tyl_id !== 2) return l.lig_unt_code === 'h' ? NAT.MO : l.lig_unt_code === 'ft' ? NAT.ST : NAT.MAT;
+  return NAT.MAT;
+}
+
 // [libellé, unité, quantité, fourniture, PA fourniture, heures par unité, options]
 const LOTS = [
   {
@@ -220,6 +239,7 @@ export function lignesLotsDemo(ligne, premierId = 1000, premierOrdre = 3) {
     lig_parent_id: parent, lig_ordre: ordre, lig_tyl_id: 3, lig_libelle_html: libelle, lig_qte: qte, lig_unt_code: unite, lig_pa: pa,
     lig_coef_fg: 1.1, lig_coef_benef: 1.25, lig_tva_id: tva,
   });
+  const parId = new Map();
   LOTS.forEach((lot, i) => {
     const t = ajouter({ lig_parent_id: null, lig_ordre: premierOrdre + i, lig_tyl_id: 1, lig_libelle_html: `<b>${lot.titre}</b>`, lig_tva_id: lot.tva });
     let ordre = 1;
@@ -231,6 +251,8 @@ export function lignesLotsDemo(ligne, premierId = 1000, premierOrdre = 3) {
     }
     ajouter({ lig_parent_id: t, lig_ordre: ordre, lig_tyl_id: 5, lig_libelle_html: `Sous-total ${lot.titre.toLowerCase()}` });
   });
+  for (const l of lignes) parId.set(l.lig_id, l);
+  for (const l of lignes) l.lig_nat_id = natureDemo(l, parId.get(l.lig_parent_id) ?? null);
   return lignes;
 }
 

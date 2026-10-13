@@ -1,5 +1,5 @@
 import { CFG_LIGNES as C, ancetres, descendants, parId } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied } from '../src/index.js';
+import { TL, estChiffree, estPied, accepteEnfants } from '../src/index.js';
 
 /**
  * Règles de saisie des lignes de document : héritages obligatoires et TVA (sections 4, 11 et 14).
@@ -101,7 +101,9 @@ export class ReglesDocument {
       if (!estPied(cible) && position !== 'apres') return false;
       return true;
     }
-    if (parent && !(parent.lig_tyl_id === TL.TITRE || parent.lig_tyl_id === TL.OUVRAGE)) return false;
+    if (parent && !accepteEnfants(parent)) return false;
+    // Une section reste à la racine.
+    if (parent && deplaces.some((l) => l?.lig_tyl_id === TL.SECTION)) return false;
     if (!parent && estPied(cible) && position !== 'avant') return false;
     if (!parent && estPied(cible)) {
       const racine = lignes.filter((l) => !l.lig_parent_id).sort((a, b) => a.lig_ordre - b.lig_ordre);

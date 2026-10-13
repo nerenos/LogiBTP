@@ -93,7 +93,7 @@ export class PanneauxBtp extends PanneauxDocument {
     return [
       ['Qté vendue', formatLibre(c.lig_qte_vendue)], ['Qté totale', formatLibre(c.lig_qte_totale)],
       ['PR', formatNombre(c.lig_pr, 4)], ['PV affiché', formatNombre(c.lig_pv_affiche, c.lig_precision_pv ?? 2)],
-      ['Coef FA', formatLibre(c.lig_coef_fa)], ['Déboursé', formatNombre(c.lig_montant_pa, 2)],
+      ['Coef FA', formatLibre(c.lig_coef_fa)], ['Coef prorata', formatLibre(c.lig_coef_prorata ?? 1)], ['Déboursé', formatNombre(c.lig_montant_pa, 2)],
       ['Revient', formatNombre(c.lig_montant_pr, 2)], ['Marge', formatNombre(Number(c.lig_montant_ht ?? 0) - Number(c.lig_montant_pr ?? 0), 2)],
     ];
   }

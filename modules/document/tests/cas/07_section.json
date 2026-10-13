@@ -1,0 +1,154 @@
+{
+  "nom": "Document générique : section englobant le corps",
+  "description": "Une section (type 11) à la racine englobe deux titres et un élément ; elle n'est pas numérotée (la numérotation du corps est inchangée), son total est celui de ses lignes de prix hors options. Une seconde section imbriquée est refusée (SECTION_RACINE). Le pied reste à la racine après la section.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2,
+      "ent_num_format": {
+        "separateur": ".",
+        "niveaux": [
+          {
+            "style": "A"
+          },
+          {
+            "style": "1"
+          }
+        ]
+      }
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Section principale"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Lot A"
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_qte": 2,
+        "lig_tva_id": 1,
+        "lig_pv": 50
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_qte": 1,
+        "lig_tva_id": 1,
+        "lig_pv": 30,
+        "lig_type_prix": "O"
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Lot B"
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_qte": 3,
+        "lig_tva_id": 1,
+        "lig_pv": 20
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_qte": 1,
+        "lig_tva_id": 1,
+        "lig_pv": 40
+      },
+      {
+        "lig_id": 8,
+        "lig_parent_id": 1,
+        "lig_ordre": 4,
+        "lig_tyl_id": 5,
+        "lig_libelle_html": "Sous-total section"
+      },
+      {
+        "lig_id": 9,
+        "lig_parent_id": 5,
+        "lig_ordre": 2,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Section imbriquée"
+      },
+      {
+        "lig_id": 10,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise",
+        "lig_pied_mode": "P",
+        "lig_pied_base": "CUMUL",
+        "lig_pied_valeur": 10,
+        "lig_pied_sens": -1
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_total_ht": 180,
+      "ent_net_a_payer": 216
+    },
+    "lignes": {
+      "1": {
+        "lig_numerotation": null,
+        "lig_montant_ht": 200
+      },
+      "2": {
+        "lig_numerotation": "A",
+        "lig_montant_ht": 100
+      },
+      "3": {
+        "lig_numerotation": "A.1"
+      },
+      "5": {
+        "lig_numerotation": "B",
+        "lig_montant_ht": 60
+      },
+      "6": {
+        "lig_numerotation": "B.1"
+      },
+      "7": {
+        "lig_numerotation": "C",
+        "lig_montant_ht": 40
+      },
+      "8": {
+        "lig_montant_ht": 200
+      },
+      "10": {
+        "lig_montant_ht": -20
+      }
+    },
+    "erreurs": [
+      "SECTION_RACINE"
+    ]
+  }
+}

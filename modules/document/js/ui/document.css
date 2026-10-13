@@ -116,6 +116,8 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 /* Lignes du document dans la grille : types, ligne calculée, hors total, contrôles */
 .grille tr.type-titre td { background: var(--titre-fond); font-weight: 600; }
 .grille tr.type-titre.selectionnee td { background: var(--selection); }
+.grille tr.type-section td { background: var(--accent-clair); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-top: 2px solid var(--accent); }
+.grille tr.type-section.selectionnee td { background: var(--selection); }
 .grille tr.type-ouvrage td { background: var(--ouvrage-fond); font-weight: 500; }
 .grille tr.type-ouvrage.selectionnee td { background: var(--selection); }
 .grille tr.type-sous_total td { font-style: italic; border-top: 1px solid var(--discret); }
@@ -212,3 +214,21 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .plan-arbre li.depot-apres { box-shadow: inset 0 -2px 0 var(--accent); }
 .plan-arbre li.depot-enfant { background: var(--accent-clair); outline: 1px dashed var(--accent); }
 .plan-arbre li.depot-interdit { background: var(--erreur-fond); }
+
+/* Onglet Analyse : coefficients par nature ou par tranche (aide à la saisie). */
+.vue-analyse { overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.6rem 0.8rem; border-top: 1px solid var(--bord); background: var(--surface); }
+.analyse-barre { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; align-items: center; }
+.analyse-axe button.actif { background: var(--accent-clair); border-color: var(--accent); }
+.analyse-fa { color: var(--discret); margin-left: auto; }
+.analyse-tableau { overflow-x: auto; }
+.table-analyse { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
+.table-analyse th, .table-analyse td { padding: 0.3rem 0.55rem; border-bottom: 1px solid var(--bord); white-space: nowrap; }
+.table-analyse thead th { text-align: right; color: var(--discret); font-weight: 600; font-size: 0.88em; position: sticky; top: 0; background: var(--surface); }
+.table-analyse thead th:first-child, .table-analyse tbody th, .table-analyse tfoot th { text-align: left; }
+.table-analyse tbody th { font-weight: 500; }
+.table-analyse td.nombre { text-align: right; }
+.table-analyse td input { width: 6.5em; text-align: right; font: inherit; padding: 0.1rem 0.3rem; }
+.table-analyse tfoot tr td, .table-analyse tfoot tr th { font-weight: 700; border-top: 2px solid var(--bord); background: var(--titre-fond); }
+.table-analyse .coef-bas { color: var(--erreur); font-weight: 600; }
+.table-analyse .coef-moyen { color: var(--alerte); }
+.table-analyse .coef-ok { color: var(--succes); }

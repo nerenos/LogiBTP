@@ -317,7 +317,7 @@ export class MoteurDevisBtp extends MoteurDocument {
       lig_unt_code: null,
       lig_precision_qte: 6,
       lig_pa: r, lig_coef_fg: '1', lig_pr: r, lig_coef_benef: '1', lig_pv: r,
-      lig_coef_fa: '1', lig_pv_affiche: null, lig_coef_remise: '1', lig_pv_remise: null,
+      lig_coef_fa: '1', lig_coef_prorata: '1', lig_pv_affiche: null, lig_coef_remise: '1', lig_pv_remise: null,
       lig_precision_pv: 6,
       lig_pv_fixe: false,
       lig_pv_affiche_fixe: false,
@@ -351,11 +351,23 @@ export class MoteurDevisBtp extends MoteurDocument {
       && !this.enErreur.has(l.lig_id) && this.px.has(l.lig_id));
   }
 
+  /**
+   * Coefficient de prorata de la ligne : appliqué au prix affiché après la ventilation des frais annexes, avant la
+   * remise. Il n'entre pas dans le calcul du coefficient de frais annexes (un PV affiché imposé en est d'abord retiré).
+   */
+  prorata(l) { return coef(l.lig_coef_prorata); }
+
+  /** PV affiché imposé hors prorata. */
+  afficheHorsProrata(l) {
+    const k = this.prorata(l);
+    return k.eq(UN) ? D(l.lig_pv_affiche) : arr6(D(l.lig_pv_affiche).div(k));
+  }
+
   apresPrix() {
     let F = ZERO, A = ZERO, P = ZERO;
     for (const l of this.lignesDePrixEnTotal()) {
       const qv = Dz(l.lig_qte_vendue);
-      if (this.fixe.get(l.lig_id) === 'AFF') A = A.plus(D(l.lig_pv_affiche).times(qv));
+      if (this.fixe.get(l.lig_id) === 'AFF') A = A.plus(this.afficheHorsProrata(l).times(qv));
       else F = F.plus(this.px.get(l.lig_id).pv.times(qv));
     }
     for (const p of this.enfantsDe(null)) {
@@ -383,7 +395,7 @@ export class MoteurDevisBtp extends MoteurDocument {
 
     for (const l of this.ordre) {
       if (this.fixe.get(l.lig_id) !== 'AFF' || !this.px.has(l.lig_id)) continue;
-      const pvFixe = arr6(D(l.lig_pv_affiche).div(c));
+      const pvFixe = arr6(this.afficheHorsProrata(l).div(c));
       if (this.estCompose(l)) {
         this.px.get(l.lig_id).pv = pvFixe;
         this.ventiler(l, pvFixe);
@@ -403,7 +415,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   }
 
   pvAffiche(l, y, prec) {
-    return this.fixe.get(l.lig_id) === 'AFF' ? D(l.lig_pv_affiche) : arrondir(y.pv.times(this.coefFa), prec);
+    return this.fixe.get(l.lig_id) === 'AFF' ? D(l.lig_pv_affiche) : arrondir(y.pv.times(this.coefFa).times(this.prorata(l)), prec);
   }
 
   ecrireMontants(l, y, montants) {

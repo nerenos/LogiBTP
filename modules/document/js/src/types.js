@@ -1,5 +1,7 @@
 // Types de lignes (table type_ligne, identifiants fixes livrés par le module Document).
-// OUVRAGE est la ligne composée : son prix est calculé à partir de ses composantes.
+// OUVRAGE est la ligne composée : son prix est calculé à partir de ses composantes. SECTION est une tranche racine
+// non numérotée qui englobe le corps d'un document (un document spécifique pourra en intégrer plusieurs) ; son total
+// se calcule comme celui d'un titre.
 export const TL = Object.freeze({
   TITRE: 1,
   OUVRAGE: 2,
@@ -11,6 +13,7 @@ export const TL = Object.freeze({
   PIED_HT: 8,
   PIED_TTC: 9,
   TVA: 10,
+  SECTION: 11,
 });
 
 export const CODES_TL = Object.freeze(Object.fromEntries(Object.entries(TL).map(([k, v]) => [v, k])));
@@ -18,7 +21,9 @@ export const CODES_TL = Object.freeze(Object.fromEntries(Object.entries(TL).map(
 export const estChiffree = (l) => l.lig_tyl_id === TL.OUVRAGE || l.lig_tyl_id === TL.ELEMENT;
 export const estPied = (l) => l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC || l.lig_tyl_id === TL.TVA;
 export const estTypeNumerote = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === TL.OUVRAGE || l.lig_tyl_id === TL.ELEMENT;
-export const accepteEnfants = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === TL.OUVRAGE;
+export const accepteEnfants = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === TL.OUVRAGE || l.lig_tyl_id === TL.SECTION;
+/** Tranche : ligne de regroupement totalisée (Titre, Section). */
+export const estTranche = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === TL.SECTION;
 
 // Colonnes génériques accessibles par les variables {{table.colonne}}. Elles reprennent le DDL du module
 // (modules/document/db) et doivent rester alignées avec LogiBTP.Document (Document, DocumentLigne).

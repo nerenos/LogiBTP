@@ -34,7 +34,7 @@ if (titre && !lignes.some((l) => (l.lig_libelle_html ?? '').includes('Conditions
   lignes.push({
     lig_id: -1, lig_ent_id: id, lig_parent_id: titre.lig_id, lig_ordre: 0, lig_tyl_id: 4,
     lig_libelle_html: '<p><b>Conditions d\'exécution</b></p><p>Accès chantier par la rue des Lilas.<br>Stationnement et évacuation des gravats à la charge de l\'entreprise.</p>',
-    lig_qte_source: 'S', lig_coef_perte: 1, lig_coef_fg: 1, lig_coef_benef: 1, lig_coef_fa: 1, lig_coef_remise: 1,
+    lig_qte_source: 'S', lig_coef_perte: 1, lig_coef_fg: 1, lig_coef_benef: 1, lig_coef_fa: 1, lig_coef_prorata: 1, lig_coef_remise: 1,
     lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_proprietes: {},
   });
 }

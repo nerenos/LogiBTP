@@ -11,7 +11,7 @@ import { calculerDocument, TL, CODES_TL, estChiffree } from '../calcul/index.js'
 
 /** Règles BTP : coefficients hérités de l'ouvrage, exclusivité des blocages de prix, quantité saisie. */
 export class ReglesBtp extends ReglesDocument {
-  get champsHeritesOuvrage() { return ['lig_coef_fg', 'lig_coef_benef', ...super.champsHeritesOuvrage]; }
+  get champsHeritesOuvrage() { return ['lig_coef_fg', 'lig_coef_benef', 'lig_coef_prorata', ...super.champsHeritesOuvrage]; }
 
   apresModification(brouillon, id, champ) {
     super.apresModification(brouillon, id, champ);
@@ -138,7 +138,7 @@ export class EditeurDevisBtp extends EditeurDocument {
   nouvelleLigne(id, type, entId) {
     return {
       ...super.nouvelleLigne(id, type, entId),
-      lig_qte_source: 'S', lig_coef_perte: 1, lig_pa: null, lig_coef_fg: 1, lig_coef_benef: 1,
+      lig_qte_source: 'S', lig_coef_perte: 1, lig_pa: null, lig_coef_fg: 1, lig_coef_benef: 1, lig_coef_prorata: 1,
       lig_pv_fixe: false, lig_pv_affiche_fixe: false, lig_is_ecart_arrondi: false, lig_pied_is_fa: false,
     };
   }
@@ -176,6 +176,11 @@ export class EditeurDevisBtp extends EditeurDocument {
       {
         cle: 'benef', titre: 'Bénéf.', classe: 'col-coef', ...this.colonneNombre('lig_coef_benef', chiffree),
         valeur: (r) => (estChiffree(r.calcule) ? this.coefAffiche(r.calcule.lig_coef_benef, this.coefsDefaut?.benef) : ''),
+      },
+      {
+        // Prorata : appliqué au prix affiché après les frais annexes, avant la remise (lignes de prix).
+        cle: 'prorata', titre: 'Prorata', classe: 'col-coef', ...this.colonneNombre('lig_coef_prorata', chiffree),
+        valeur: (r) => (estChiffree(r.calcule) && Number(r.calcule.lig_coef_prorata ?? 1) !== 1 ? this.coefAffiche(r.calcule.lig_coef_prorata, 1) : ''),
       },
     ]);
     // Saisir un PV impose un prix fixe (avant frais annexes et remise) ; vider la cellule le retire.

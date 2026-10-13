@@ -24,6 +24,8 @@ public class DocumentLigneBtp : DocumentLigne
     public decimal? LigPr { get; set; }
     public decimal LigCoefBenef { get; set; } = 1;
     public decimal LigCoefFa { get; set; } = 1;
+    /// <summary>Coefficient de prorata : appliqué au prix affiché après les frais annexes, avant la remise.</summary>
+    public decimal LigCoefProrata { get; set; } = 1;
     public decimal? LigPvAffiche { get; set; }
     /// <summary>PV fixe avant frais annexes et remise.</summary>
     public bool LigPvFixe { get; set; }

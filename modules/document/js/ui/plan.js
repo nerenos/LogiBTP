@@ -1,5 +1,5 @@
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
-import { TL } from '../src/index.js';
+import { TL, estTranche } from '../src/index.js';
 import { ID_PIED } from './editeur-document.js';
 
 // Plan du document : les tranches (titres) en arbre, avec leur montant, puis le pied. Deux modes au clic :
@@ -22,7 +22,7 @@ export class PlanDocument {
   /** Tranches : titres dans l'ordre d'affichage, avec profondeur parmi les titres et présence de sous-tranches. */
   tranches() {
     const r = this.editeur.resultat;
-    const titres = ordreAffichage(C, r.lignes, new Set()).map((x) => x.item).filter((l) => l.lig_tyl_id === TL.TITRE);
+    const titres = ordreAffichage(C, r.lignes, new Set()).map((x) => x.item).filter(estTranche);
     const ids = new Set(titres.map((l) => l.lig_id));
     const parId = new Map(r.lignes.map((l) => [l.lig_id, l]));
     const parentTitre = (l) => {
@@ -45,8 +45,8 @@ export class PlanDocument {
     const parId = new Map(ed.saisie.lignes.map((l) => [l.lig_id, l]));
     let l = parId.get(id);
     if (!l) return id === ID_PIED || id <= -1e12 ? ID_PIED : null;
-    if (l.lig_parent_id === null && l.lig_tyl_id !== TL.TITRE && (ed.resultat.pied ?? []).some((e) => e.lig_id === l.lig_id || e.lignes?.includes(l.lig_id))) return ID_PIED;
-    while (l && l.lig_tyl_id !== TL.TITRE) l = parId.get(l.lig_parent_id);
+    if (l.lig_parent_id === null && !estTranche(l) && (ed.resultat.pied ?? []).some((e) => e.lig_id === l.lig_id || e.lignes?.includes(l.lig_id))) return ID_PIED;
+    while (l && !estTranche(l)) l = parId.get(l.lig_parent_id);
     return l?.lig_id ?? null;
   }
 
@@ -70,7 +70,7 @@ export class PlanDocument {
         ${filtre !== null ? '<button type="button" data-tout class="filtre" title="Retirer le filtre d\'affichage">✕ Tout afficher</button>' : ''}
       </div>
       <ul class="plan-arbre">
-        ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || 'Titre', t.ligne.lig_montant_ht, t)).join('')}
+        ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || (t.ligne.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre'), t.ligne.lig_montant_ht, t)).join('')}
         ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', 'Pied du document', net, { classe: 'pied' }) : ''}
       </ul>
       ${tranches.length ? '' : '<p class="aide">Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.</p>'}`;

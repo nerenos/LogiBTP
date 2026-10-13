@@ -306,6 +306,7 @@ public class MoteurDocument<TDoc, TLigne>
             var p = Parent(l);
             if (TL.EstPied(l) && p is not null) Erreur(l.LigId, "PIED_RACINE", "Les lignes de pied sont au niveau racine");
             if (p is not null && !TL.AccepteEnfants(p)) Erreur(l.LigId, "PARENT_INVALIDE", "Le type de la ligne parente n'accepte pas d'enfants");
+            if (l.LigTylId == TL.Section && p is not null) Erreur(l.LigId, "SECTION_RACINE", "Une section est au niveau racine");
             ValiderLigne(l);
         }
     }
@@ -470,7 +471,7 @@ public class MoteurDocument<TDoc, TLigne>
         for (var i = 0; i < corps.Count; i++)
         {
             var l = corps[i];
-            if (l.LigTylId == TL.Titre)
+            if (TL.EstTranche(l))
             {
                 var desc = new List<TLigne>();
                 for (var j = i + 1; j < corps.Count && DescendDe(corps[j], l); j++) desc.Add(corps[j]);
