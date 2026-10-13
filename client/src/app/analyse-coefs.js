@@ -23,8 +23,8 @@ export const COLONNES_ANALYSE = [
   { cle: 'global', titre: 'Coef. global', type: 'coef', defaut: false, aide: 'Prix client / déboursé' },
   { cle: 'margeBrute', titre: 'Marge brute', type: 'montant', defaut: true, aide: 'Prix client − déboursé (PA)' },
   { cle: 'tauxBrute', titre: '% brute', type: 'pct', defaut: false, aide: 'Marge brute / prix client' },
-  { cle: 'margeNette', titre: 'Marge nette', type: 'montant', defaut: true, aide: 'PV remisé sans frais annexes (prorata compris) − revient' },
-  { cle: 'tauxNette', titre: '% nette', type: 'pct', defaut: true, aide: 'Marge nette / PV remisé sans frais annexes' },
+  { cle: 'margeNette', titre: 'Marge nette', type: 'montant', defaut: true, aide: 'PV remisé sans frais annexes ni prorata − revient' },
+  { cle: 'tauxNette', titre: '% nette', type: 'pct', defaut: true, aide: 'Marge nette / PV remisé sans frais annexes ni prorata' },
 ];
 
 const LIBELLES_COEF = { fg: 'frais généraux', benef: 'bénéfice', prorata: 'prorata' };

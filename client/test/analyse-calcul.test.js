@@ -53,6 +53,16 @@ describe('Analyse des coefficients : montants forcés', () => {
     expect(res.nature).toBe(2);
   });
 
+  it('marges : brute sur le prix client, nette sans frais annexes ni prorata', () => {
+    // 10 × (PA 100, PR 110, PV 132), FA 1,05, prorata 1,1, remise 0,95 sur la ligne vendue.
+    const ligne = { lig_id: 1, lig_tyl_id: 3, lig_qte_totale: '10', lig_pa: '100', lig_pr: '110', lig_pv: '132', lig_coef_prorata: '1.1', lig_coef_remise: '0.95' };
+    const a = agreger([{ ligne, saisie: ligne, prix: ligne, chaine: [ligne], hors: false, nature: 2, tranches: [] }], 1.05);
+    expect(a.client).toBeCloseTo(1320 * 1.05 * 1.1 * 0.95, 6);
+    expect(a.margeBrute).toBeCloseTo(1320 * 1.05 * 1.1 * 0.95 - 1000, 6);
+    expect(a.margeNette).toBeCloseTo(1320 * 0.95 - 1100, 6);
+    expect(a.tauxNette).toBeCloseTo((1320 * 0.95 - 1100) / (1320 * 0.95), 9);
+  });
+
   it('montant impossible : erreur sans modification', () => {
     const r = calculer(saisieDemo());
     const res = forcerMontant(feuillesAnalyse(r, saisieDemo()).filter((f) => f.nature === 1), 'rev', -10);

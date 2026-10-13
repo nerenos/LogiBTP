@@ -6,8 +6,8 @@ import { estChiffree, estPied, estTranche } from '../calcul/index.js';
 // Feuille : ligne chiffrée sans composante, quantité totale dans le document qt. Pour une feuille :
 //   déboursé = qt × PA ; revient = qt × PR ; PV = qt × PV (avant frais annexes) ; PV avec FA = PV × c (coefficient de
 //   frais annexes du document) ; FA = PV avec FA − PV ; prix client = PV avec FA × prorata × remise de la ligne vendue ;
-//   PV remisé sans FA = PV × prorata × remise.
-//   Marge brute = prix client − déboursé ; marge nette = PV remisé sans FA − revient.
+//   PV remisé sans FA ni prorata = PV × remise.
+//   Marge brute = prix client − déboursé ; marge nette = PV remisé sans FA ni prorata − revient.
 // Les montants sont les vraies valeurs : un montant saisi recalcule les coefficients des feuilles du groupe, puis les
 // plus fortes feuilles absorbent l'écart d'arrondi ; en dernier recours, une ligne d'écart d'arrondi est ajoutée.
 
@@ -43,7 +43,7 @@ export function montantsFeuille(f, coefFa) {
   const rev = qt * Number(f.ligne.lig_pr ?? 0);
   const pv = qt * Number(f.ligne.lig_pv ?? 0);
   const pvFa = pv * coefFa;
-  return { ds, rev, pv, pvFa, fa: pvFa - pv, client: pvFa * prorata * remise, pvRemise: pv * prorata * remise, avantProrata: pvFa * remise };
+  return { ds, rev, pv, pvFa, fa: pvFa - pv, client: pvFa * prorata * remise, pvRemise: pv * remise, avantProrata: pvFa * remise };
 }
 
 /** Agrégat d'un groupe de feuilles : montants, coefficients moyens pondérés et marges. */
