@@ -35,6 +35,7 @@ public static class Extensions
         services.AddScoped<DocumentService<TDoc, TLigne, TComplet>>();
         services.AddScoped<TransformationService<TDoc, TLigne, TComplet>>();
         services.AddScoped<VerrouDocumentService<TDoc, TLigne, TComplet>>();
+        services.AddScoped<AffichageDocumentService<TDoc, TLigne>>();
         return services;
     }
 
@@ -51,6 +52,20 @@ public static class Extensions
             s.Definition(code, Utilisateur.Depuis(http), ct));
         api.MapGet("/unites", async (DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
             await db.Unites.AsNoTracking().Where(x => x.UntActif).OrderBy(x => x.UntOrdre).ThenBy(x => x.UntCode).ToListAsync(ct));
+
+        // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, modèles, vues de colonnes.
+        api.MapGet("/etiquettes-ligne", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Etiquettes(ct));
+        api.MapPut("/etiquettes-ligne", (List<EtiquetteDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerEtiquettes(l, Utilisateur.Depuis(http), ct));
+        api.MapGet("/couleurs-type-prix", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.CouleursTypePrix(ct));
+        api.MapPut("/couleurs-type-prix", (List<CouleurTypePrixDto> l, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerCouleurs(l, Utilisateur.Depuis(http), ct));
+        api.MapGet("/modeles-document", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Modeles(ct));
+        api.MapGet("/vues-document", (string? type, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Vues(type, Utilisateur.Depuis(http), ct));
+        api.MapPut("/vues-document", (VueDocumentDto v, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.EnregistrerVue(v, Utilisateur.Depuis(http), ct));
+        api.MapDelete("/vues-document/{id:int}", async (int id, HttpContext http, AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) =>
+        {
+            await s.SupprimerVue(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
 
         // Documents
         api.MapGet("/documents", (string? type, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Lister(type, ct));

@@ -92,6 +92,7 @@ public class PersistanceDocument<TDoc, TLigne, TComplet>(DocumentDbContext<TDoc,
                 copie.LigParentId = l.LigParentId is long p ? ids.GetValueOrDefault(p, p) : null;
                 copie.LigStDepuisId = null;
                 copie.LigVarianteDeId = null;
+                copie.LigPiedBaseId = null;
                 copie.LigOrigineId = l.LigOrigineId is long o && originesValides.Contains(o) ? o : null;
                 copie.LigProprietes ??= Vide();
                 specialisation.PreparerLigneAEcrire(copie);
@@ -120,6 +121,7 @@ public class PersistanceDocument<TDoc, TLigne, TComplet>(DocumentDbContext<TDoc,
             var e = await db.Lignes.FindAsync([ids[l.LigId]], ct);
             e!.LigStDepuisId = l.LigStDepuisId is long st && ids.TryGetValue(st, out var st2) ? st2 : null;
             e.LigVarianteDeId = l.LigVarianteDeId is long va && ids.TryGetValue(va, out var va2) ? va2 : null;
+            e.LigPiedBaseId = l.LigPiedBaseId is long pb && ids.TryGetValue(pb, out var pb2) ? pb2 : null;
         }
         await db.SaveChangesAsync(ct);
     }

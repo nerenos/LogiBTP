@@ -126,6 +126,8 @@ CREATE TABLE document (
     ent_cree_par            VARCHAR(50)  NOT NULL,
     ent_modifie_le          TIMESTAMPTZ,
     ent_modifie_par         VARCHAR(50),
+    ent_modele              VARCHAR(20),                                  -- modèle de saisie : vue de colonnes par défaut
+    ent_etiquettes          JSONB        NOT NULL DEFAULT '[]',           -- étiquettes de lignes propres au document
     CONSTRAINT ux_ent_numero_indice UNIQUE (ent_tyd_id, ent_numero, ent_indice)
 );
 CREATE INDEX ix_ent_proprietes ON document USING GIN (ent_proprietes);
@@ -178,8 +180,9 @@ CREATE TABLE document_ligne (
     lig_montant_ht         NUMERIC(18,6),
 
     -- Lignes de pied
-    lig_pied_mode          CHAR(1)      CHECK (lig_pied_mode IN ('P','M')),
-    lig_pied_base          VARCHAR(10)  CHECK (lig_pied_base IN ('CUMUL','TOTAL_HT','TOTAL_TTC')),
+    lig_pied_mode          CHAR(1)      CHECK (lig_pied_mode IN ('P','M','C')),         -- %, montant, coefficient
+    lig_pied_base          VARCHAR(10)  CHECK (lig_pied_base IN ('CUMUL','TOTAL_HT','HT_NET','TOTAL_TTC','LIGNE')),
+    lig_pied_base_id       BIGINT       REFERENCES document_ligne(lig_id) ON DELETE SET NULL, -- sous-total de pied (LIGNE)
     lig_pied_sens          SMALLINT     CHECK (lig_pied_sens IN (1,-1)),
     lig_pied_valeur        NUMERIC(18,6),
     lig_base_calcul        NUMERIC(18,6),
@@ -193,7 +196,8 @@ CREATE TABLE document_ligne (
     lig_commentaire        TEXT,
     lig_is_non_editee      BOOLEAN      NOT NULL DEFAULT FALSE,
     lig_origine_id         BIGINT       REFERENCES document_ligne(lig_id) ON DELETE SET NULL,
-    lig_proprietes         JSONB        NOT NULL DEFAULT '{}'
+    lig_proprietes         JSONB        NOT NULL DEFAULT '{}',
+    lig_etiquette          VARCHAR(20)                                    -- étiquette de couleur (à vérifier…)
 );
 
 CREATE INDEX ix_lig_entete  ON document_ligne (lig_ent_id);

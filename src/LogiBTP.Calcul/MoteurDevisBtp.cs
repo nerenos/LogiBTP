@@ -483,6 +483,14 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         cible.LigMontantPr = lignes.Sum(l => l.LigMontantPr ?? 0);
     }
 
+    /// <summary>Sous-total de pied : le cumul HT ; déboursé et revient sans objet (comme champsCumules en JS).</summary>
+    protected override void EcrireSousTotalPied(DocumentLigneBtp l, decimal cumul)
+    {
+        base.EcrireSousTotalPied(l, cumul);
+        l.LigMontantPa = null;
+        l.LigMontantPr = null;
+    }
+
     /// <summary>Frais annexe déjà ventilé dans les prix, ou poste pour mémoire : affiché, hors cumul.</summary>
     protected override bool HorsCumulPied(DocumentLigneBtp p) => p.LigPiedIsFa || base.HorsCumulPied(p);
 

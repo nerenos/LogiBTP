@@ -55,10 +55,11 @@ public class DocumentLigne
     public decimal? LigMontantHt { get; set; }
 
     // Lignes de pied
-    /// <summary>P pourcentage, M montant.</summary>
+    /// <summary>P pourcentage, M montant, C coefficient (base × (valeur − 1)).</summary>
     public string? LigPiedMode { get; set; }
-    /// <summary>CUMUL, TOTAL_HT, TOTAL_TTC.</summary>
+    /// <summary>CUMUL, TOTAL_HT, HT_NET, TOTAL_TTC, LIGNE (sous-total de pied LigPiedBaseId).</summary>
     public string? LigPiedBase { get; set; }
+    public long? LigPiedBaseId { get; set; }
     public short? LigPiedSens { get; set; }
     public decimal? LigPiedValeur { get; set; }
     public decimal? LigBaseCalcul { get; set; }
@@ -73,4 +74,6 @@ public class DocumentLigne
     public bool LigIsNonEditee { get; set; }
     public long? LigOrigineId { get; set; }
     public JsonDocument? LigProprietes { get; set; }
+    /// <summary>Étiquette de couleur de la ligne (à vérifier, prix confirmé…).</summary>
+    public string? LigEtiquette { get; set; }
 }

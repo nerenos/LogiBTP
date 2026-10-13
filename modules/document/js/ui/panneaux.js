@@ -1,5 +1,11 @@
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre } from '@logibtp/socle/ui';
 import { TL, estChiffree, estPied } from '../src/index.js';
+import { LIBELLES_BASE_PIED } from './editeur-document.js';
+
+const lireEtiquettes = (v) => {
+  const x = typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  return Array.isArray(x) ? x : [];
+};
 
 // Panneaux autour de la grille : entête, détail de la ligne, totaux, messages, écarts.
 // Chaque champ modifié forme une étape d'annulation ; un panneau ne se redessine pas pendant une saisie.
@@ -76,6 +82,7 @@ export class PanneauxDocument {
         <label class="large">Objet <input data-champ="ent_objet" value="${echapper(d.ent_objet ?? '')}"></label>
         <label>Date <input type="date" data-champ="ent_date" value="${echapper(d.ent_date ?? '')}"></label>
         <label>Tiers <input data-champ="ent_tiers_id" data-entier value="${echapper(d.ent_tiers_id ?? '')}"></label>
+        ${def.modeles?.length ? `<label title="Modèle de saisie : vue de colonnes proposée par défaut">Modèle <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
         <label>Décimales montants <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
         <fieldset class="numerotation"><legend>Numérotation</legend>
@@ -94,9 +101,11 @@ export class PanneauxDocument {
           return `<label>${libelle}<input type="${type}" data-prop="${p.prd_code}" data-type="${p.prd_type_donnee}" value="${echapper(v)}"></label>`;
         }).join('')}
       </div>
+      ${this.sectionEtiquettes(d)}
       ${this.sectionsEntete()}`;
 
     const m = editeur.magasin;
+    this.lierEtiquettes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, 'Entête'));
     const majFormat = () => {
       const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
@@ -111,6 +120,52 @@ export class PanneauxDocument {
       m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, 'Propriété');
     }));
     this.lierEntete(zone);
+  }
+
+  /**
+   * Étiquettes propres au document (ent_etiquettes) : une étiquette de même code qu'une étiquette globale la
+   * personnalise (libellé, couleur) dans ce document seulement.
+   */
+  sectionEtiquettes(d) {
+    const propres = lireEtiquettes(d.ent_etiquettes);
+    const globales = (this.editeur.definition.etiquettes ?? []).filter((e) => e.actif !== false);
+    return `<fieldset class="etiquettes-document"><legend>Étiquettes de lignes</legend>
+      <p class="aide">Globales : ${globales.map((e) => `<span class="pastille-couleur" style="background:${echapper(e.couleur)}"></span> ${echapper(e.libelle)}`).join(' · ') || 'aucune'}</p>
+      <table class="etiquettes"><tbody>
+        ${propres.map((e, i) => `<tr data-i="${i}">
+          <td><input data-etq="code" value="${echapper(e.code)}" size="10" title="Code (reprendre un code global pour le personnaliser)"></td>
+          <td><input data-etq="libelle" value="${echapper(e.libelle ?? '')}"></td>
+          <td><input data-etq="couleur" type="color" value="${echapper(e.couleur ?? '#999999')}"></td>
+          <td><button type="button" data-etq-suppr title="Retirer">✕</button></td></tr>`).join('')}
+      </tbody></table>
+      <button type="button" data-etq-ajout>Ajouter une étiquette au document</button>
+    </fieldset>`;
+  }
+
+  lierEtiquettes(zone) {
+    const m = this.editeur.magasin;
+    const ecrire = (modif, libelle) => m.modifier((b) => {
+      const liste = lireEtiquettes(b.document.ent_etiquettes).map((e) => ({ ...e }));
+      modif(liste);
+      b.document.ent_etiquettes = liste;
+    }, libelle);
+    zone.querySelectorAll('[data-etq]').forEach((el) => el.addEventListener('change', () => {
+      const i = Number(el.closest('tr').dataset.i);
+      const champ = el.dataset.etq;
+      const v = champ === 'code' ? el.value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_') : el.value;
+      ecrire((l) => { l[i][champ] = v; }, 'Étiquettes du document');
+    }));
+    zone.querySelectorAll('[data-etq-suppr]').forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.closest('tr').dataset.i);
+      ecrire((l) => l.splice(i, 1), 'Étiquettes du document');
+    }));
+    zone.querySelector('[data-etq-ajout]')?.addEventListener('click', () => {
+      ecrire((l) => {
+        let n = l.length + 1;
+        while (l.some((e) => e.code === `DOC_${n}`)) n += 1;
+        l.push({ code: `DOC_${n}`, libelle: `Étiquette ${n}`, couleur: '#64748b' });
+      }, 'Étiquettes du document');
+    });
   }
 
   // ------------------------------------------------------------------ détail de la ligne
@@ -145,14 +200,31 @@ export class PanneauxDocument {
       champs.push(f.sel('lig_st_depuis_id', 'Additionner depuis', [['', 'Le début du document'], ...precedents.map((x) => [x.lig_id, `Sous-total : ${x.lig_libelle_html ?? x.lig_id}`])], true));
     }
     if (l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC) {
-      champs.push(f.sel('lig_pied_mode', 'Mode', [['P', 'Pourcentage'], ['M', 'Montant']]));
-      champs.push(f.sel('lig_pied_base', 'Base', [['CUMUL', 'Cumul à ce point'], ['TOTAL_HT', 'Total HT du corps'], ['TOTAL_TTC', 'Total TTC du corps']]));
+      champs.push(f.sel('lig_pied_mode', 'Mode', [['P', 'Pourcentage'], ['C', 'Coefficient'], ['M', 'Montant']]));
+      if ((l.lig_pied_mode ?? 'M') !== 'M') {
+        champs.push(f.sel('lig_pied_base', 'Base', Object.entries(LIBELLES_BASE_PIED)));
+        if (l.lig_pied_base === 'LIGNE') {
+          const st = this.sousTotauxPiedAvant(l.lig_id);
+          champs.push(f.sel('lig_pied_base_id', 'Sous-total de base', [['', '—'], ...st.map((x) => [x.lig_id, `${x.lig_libelle_brut || 'Sous-total'} (${formatNombre(x.lig_montant_ht, 2)})`])], true));
+        }
+      }
       champs.push(f.sel('lig_pied_sens', 'Sens', [[1, 'Ajout'], [-1, 'Déduction']], true));
       champs.push(f.txt('lig_pied_valeur', 'Valeur', true));
       champs.push(f.sel('lig_type_prix', 'Traitement', [['V', 'Dans le net à payer'], ['M', 'Pour mémoire']]));
     }
     if (!estPied(l)) champs.push(f.coche('lig_is_non_editee', 'Ne pas imprimer'));
+    const etiquettes = this.editeur.etiquettes();
+    if (etiquettes.length) champs.push(f.sel('lig_etiquette', 'Étiquette', [['', '—'], ...etiquettes.map((e) => [e.code, e.libelle])]));
     return champs;
+  }
+
+  /** Sous-totaux de pied placés avant la ligne de pied `ligId` (bases possibles d'un pourcentage ou coefficient). */
+  sousTotauxPiedAvant(ligId) {
+    const r = this.editeur.resultat;
+    const pied = r.pied ?? [];
+    const i = pied.findIndex((e) => e.lig_id === ligId || e.lignes?.includes(ligId));
+    const ids = pied.slice(0, i < 0 ? pied.length : i).filter((e) => e.genre === 'ligne').map((e) => e.lig_id);
+    return ids.map((id) => r.lignes.find((x) => x.lig_id === id)).filter(Boolean);
   }
 
   /** Valeurs calculées affichées sous le formulaire : [libellé, valeur formatée]. */
@@ -161,7 +233,9 @@ export class PanneauxDocument {
       return [['Qté vendue', formatLibre(c.lig_qte_vendue)], ['Qté totale', formatLibre(c.lig_qte_totale)],
         ['PV net', formatNombre(c.lig_pv_remise, c.lig_precision_pv ?? 2)], ['Montant HT', formatNombre(c.lig_montant_ht, 2)]];
     }
-    if (estPied(c) && c.lig_base_calcul !== undefined) return [['Base', formatNombre(c.lig_base_calcul, 2)]];
+    if (estPied(c) && c.lig_base_calcul !== undefined && c.lig_base_calcul !== null) {
+      return [['Base', `${formatNombre(c.lig_base_calcul, 2)} <small>(${echapper(this.editeur.libelleBasePied(c))})</small>`]];
+    }
     return [];
   }
 
@@ -187,7 +261,11 @@ export class PanneauxDocument {
       ${calcul.length ? `<dl class="calcul">${calcul.map(([t, v]) => `<dt>${echapper(t)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
 
     const m = editeur.magasin;
-    lier(zone, '[data-champ]', (champ, v, el) => editeur.modifierLigne(ligId, champ, champ === 'lig_art_id' ? (v === '' ? null : Number(v)) : valeurChamp(el, v)));
+    lier(zone, '[data-champ]', (champ, v, el) => {
+      // Champs qui changent le formulaire (base proposée selon le mode…) : le panneau se redessine.
+      if (['lig_pied_mode', 'lig_pied_base'].includes(champ)) el.blur();
+      editeur.modifierLigne(ligId, champ, champ === 'lig_art_id' ? (v === '' ? null : Number(v)) : valeurChamp(el, v));
+    });
     zone.querySelectorAll('[data-prop]').forEach((el) => el.addEventListener('change', () => {
       m.modifier((b) => {
         const x = b.lignes.find((y) => y.lig_id === ligId);

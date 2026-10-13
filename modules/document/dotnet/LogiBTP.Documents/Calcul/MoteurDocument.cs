@@ -58,6 +58,7 @@ public class MoteurDocument<TDoc, TLigne>
     protected TLigne? QteEnCours { get; set; }
     protected decimal TotalCorps { get; set; }
     protected List<DocumentTva> Tva { get; set; } = [];
+    protected List<EntreePied> Pied { get; set; } = [];
 
     /// <param name="entree">Entrée déjà copiée : le moteur la modifie.</param>
     public MoteurDocument(EntreeDocument<TDoc, TLigne> entree)
@@ -443,9 +444,27 @@ public class MoteurDocument<TDoc, TLigne>
     protected virtual void EcrireSomme(TLigne cible, IReadOnlyList<TLigne> lignes) =>
         cible.LigMontantHt = lignes.Sum(l => l.LigMontantHt!.Value);
 
+    /// <summary>
+    /// Sous-total de pied : sous-total à la racine placé après une ligne de pied ; il vaut le cumul du pied à ce point et
+    /// peut servir de base de calcul (LigPiedBase = LIGNE).
+    /// </summary>
+    protected bool EstSousTotalPied(TLigne l)
+    {
+        if (l.LigTylId != TL.SousTotal || Parent(l) is not null) return false;
+        foreach (var x in EnfantsDe(null))
+        {
+            if (x == l) return false;
+            if (TL.EstPied(x)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Montants d'un sous-total de pied : le cumul (une spécialisation vide ses autres montants cumulés).</summary>
+    protected virtual void EcrireSousTotalPied(TLigne l, decimal cumul) => l.LigMontantHt = cumul;
+
     protected virtual void PasseTotaux()
     {
-        var corps = Ordre.Where(l => !TL.EstPied(l)).ToList();
+        var corps = Ordre.Where(l => !TL.EstPied(l) && !EstSousTotalPied(l)).ToList();
         bool EnTotal(TLigne l) => EstLigneDePrix(l) && !HorsTotal(l) && !EnErreur.Contains(l.LigId) && l.LigMontantHt is not null;
 
         for (var i = 0; i < corps.Count; i++)
@@ -540,9 +559,42 @@ public class MoteurDocument<TDoc, TLigne>
         var totalTtc = totalHt + CalculerTva(bases).Net;
         var cumul = totalHt;
         VentilationTva? tva = null;
+        var htNet = totalHt;
+        var sousTotaux = new Dictionary<long, decimal>();
+
+        // Structure du pied (affichage) : totaux calculés et groupes (postes HT, TVA, postes TTC), dans l'ordre du calcul.
+        var pied = new List<(string Genre, string Cle, long? LigId, List<long>? Lignes, decimal Montant)> { ("total", "TOTAL_HT", null, null, totalHt) };
+        (string Cle, List<long> Lignes, decimal Montant)? groupe = null;
+        // Fermeture d'un groupe : suivi d'un total calculé, sauf s'il est fermé par un sous-total de pied saisi.
+        void Fermer(bool avecTotal = true)
+        {
+            if (groupe is not { } g) return;
+            pied.Add(("groupe", g.Cle, null, g.Lignes, g.Montant));
+            if (g.Cle == "HT" && tva is null) htNet = cumul;
+            groupe = null;
+            if (!avecTotal) return;
+            if (g.Cle == "HT" && tva is null) pied.Add(("total", "HT_NET", null, null, cumul));
+            else if (g.Cle == "TVA") pied.Add(("total", "TOTAL_TTC", null, null, cumul));
+            else pied.Add(("total", "SOUS_TOTAL", null, null, cumul));
+        }
+        void Dans(string cle, long? id, decimal montant)
+        {
+            if (groupe?.Cle != cle) { Fermer(); groupe = (cle, [], 0m); }
+            var g = groupe!.Value;
+            if (id is long x) g.Lignes.Add(x);
+            groupe = (g.Cle, g.Lignes, g.Montant + montant);
+        }
 
         foreach (var p in EnfantsDe(null))
         {
+            if (EstSousTotalPied(p))
+            {
+                Fermer(false);
+                EcrireSousTotalPied(p, cumul);
+                sousTotaux[p.LigId] = cumul;
+                pied.Add(("ligne", "SOUS_TOTAL", p.LigId, null, cumul));
+                continue;
+            }
             if (!TL.EstPied(p)) continue;
             p.LigBaseCalcul = null;
             p.LigMontantTva = null;
@@ -554,34 +606,77 @@ public class MoteurDocument<TDoc, TLigne>
                     Erreur(p.LigId, "TVA_DOUBLE", "Une seule ligne de ventilation TVA par document", false);
                     continue;
                 }
+                Fermer();
                 tva = CalculerTva(bases);
                 p.LigBaseCalcul = tva.Base;
                 p.LigMontantTva = tva.Net;
                 cumul += tva.Net;
+                Dans("TVA", p.LigId, tva.Net);
+                Fermer();
                 continue;
             }
-            var codeBase = p.LigPiedBase ?? "CUMUL";
-            var baseCalcul = codeBase == "TOTAL_HT" ? totalHt : codeBase == "TOTAL_TTC" ? totalTtc : cumul;
+            var baseCalcul = BasePied(p, cumul, totalHt, totalTtc, htNet, sousTotaux);
+            var mode = p.LigPiedMode ?? "M";
             var sens = p.LigPiedSens == -1 ? -1 : 1;
-            var pourcentage = (p.LigPiedMode ?? "M") == "P";
-            var montant = (pourcentage
-                ? Arrondir(baseCalcul * (p.LigPiedValeur ?? 0) / 100, PrecMontant)
-                : Arrondir(p.LigPiedValeur ?? 0, PrecMontant)) * sens;
-            p.LigBaseCalcul = pourcentage ? baseCalcul : null;
+            var valeur = p.LigPiedValeur ?? 0;
+            var montant = mode switch
+            {
+                "P" => Arrondir(baseCalcul * valeur / 100, PrecMontant) * sens,
+                "C" => Arrondir(baseCalcul * (valeur - 1), PrecMontant),
+                _ => Arrondir(valeur, PrecMontant) * sens,
+            };
+            p.LigBaseCalcul = mode == "M" ? null : baseCalcul;
             p.LigMontantHt = montant;
-            if (HorsCumulPied(p)) continue;
+            var hors = HorsCumulPied(p);
+            Dans(p.LigTylId == TL.PiedHt ? "HT" : "TTC", p.LigId, hors ? 0 : montant);
+            if (hors) continue;
             cumul += montant;
             if (p.LigTylId == TL.PiedHt && tva is null) RepartirSurBases(bases, montant, p);
         }
         if (tva is null)
         {
+            Fermer();
             tva = CalculerTva(bases);
             cumul += tva.Net;
+            Dans("TVA", null, tva.Net);
         }
+        // Le dernier groupe n'a pas de sous-total : le net à payer le suit.
+        if (groupe is { } dernier) pied.Add(("groupe", dernier.Cle, null, dernier.Lignes, dernier.Montant));
+        pied.Add(("total", "NET", null, null, cumul));
+        Pied = MasquerTotaux(pied);
 
         Tva = tva.Lignes;
         EcrireTotaux(tva, cumul);
     }
+
+    /// <summary>Base d'une ligne de pied en pourcentage ou coefficient (LigPiedBase).</summary>
+    protected decimal BasePied(TLigne p, decimal cumul, decimal totalHt, decimal totalTtc, decimal htNet, IReadOnlyDictionary<long, decimal> sousTotaux)
+    {
+        switch (p.LigPiedBase ?? "CUMUL")
+        {
+            case "TOTAL_HT": return totalHt;
+            case "TOTAL_TTC": return totalTtc;
+            case "HT_NET": return htNet;
+            case "LIGNE":
+                if (p.LigPiedBaseId is long id && sousTotaux.TryGetValue(id, out var st)) return st;
+                Erreur(p.LigId, "PIED_BASE", "La base doit être un sous-total de pied placé avant la ligne", false);
+                return cumul;
+            default: return cumul;
+        }
+    }
+
+    /// <summary>Un total calculé égal au total suivant (calculé ou sous-total de pied saisi) est masqué : une seule ligne affichée.</summary>
+    private static List<EntreePied> MasquerTotaux(List<(string Genre, string Cle, long? LigId, List<long>? Lignes, decimal Montant)> pied) =>
+        pied.Select((e, i) =>
+        {
+            var masque = false;
+            if (e.Genre == "total" && e.Cle != "NET")
+            {
+                var suivant = pied.Skip(i + 1).FirstOrDefault(x => x.Genre != "groupe");
+                masque = suivant.Genre is not null && suivant.Montant == e.Montant;
+            }
+            return new EntreePied(e.Genre, e.Cle, e.LigId, e.Lignes, e.Montant, masque);
+        }).ToList();
 
     /// <summary>Totaux de l'entête ; une spécialisation y ajoute ses propres valeurs.</summary>
     protected virtual void EcrireTotaux(VentilationTva tva, decimal cumul)
@@ -686,6 +781,7 @@ public class MoteurDocument<TDoc, TLigne>
         r.Document = Doc;
         r.Lignes = Ordre;
         r.Tva = Tva;
+        r.Pied = Pied;
         r.Erreurs = Erreurs;
         r.Avertissements = Avertissements;
         return r;

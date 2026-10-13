@@ -124,3 +124,39 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .grille tr.erreur td.col-num::after { content: " ⚠"; }
 .grille tr.avertissement td.col-num::after { content: " ⓘ"; color: var(--alerte); }
 .tva-heterogene { color: var(--alerte); cursor: help; }
+
+/* Pied en tranches : totaux calculés, groupes (postes HT, TVA, postes TTC) et détail de la TVA par taux. */
+.grille tr.pied-calcule td { font-style: normal; font-size: 1em; color: inherit; }
+.grille tr.pied-total td { font-weight: 600; border-top: 1px solid var(--bord); background: var(--titre-fond); }
+.grille tr.pied-groupe td { font-weight: 600; color: var(--discret); }
+.grille tr.pied-tva td { color: var(--discret); font-size: 0.92em; }
+.grille .base-pied { color: var(--discret); font-size: 0.9em; cursor: help; border-bottom: 1px dotted var(--discret); }
+.grille td.col-systeme { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; color: var(--alerte); white-space: nowrap; max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
+.grille th.col-systeme { color: var(--alerte); font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; }
+
+/* Menu de choix de l'étiquette d'une ligne (pastille de la poignée). */
+.menu-etiquettes { position: fixed; z-index: 1000; display: flex; flex-direction: column; min-width: 12em; padding: 4px; background: var(--surface); border: 1px solid var(--bord); border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); }
+.menu-etiquettes button { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 4px; color: inherit; font: inherit; }
+.menu-etiquettes button:hover { background: var(--selection); }
+.menu-etiquettes .pastille, .pastille-couleur { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.2); flex: none; }
+
+/* Gestion des vues de colonnes. */
+.vues-document { display: inline-flex; align-items: center; gap: 4px; }
+.dialogue-vue .colonnes-vue { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; border: 1px solid var(--bord); border-radius: 4px; }
+.dialogue-vue .colonnes-vue li { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-bottom: 1px solid var(--bord); }
+.dialogue-vue .colonnes-vue li.systeme { font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; }
+.dialogue-vue .colonnes-vue li span { flex: 1; }
+.dialogue-vue .colonnes-vue button { padding: 0 6px; }
+dialog.dialogue-vue { max-width: min(880px, calc(100vw - 32px)); width: 100%; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); padding: 16px; }
+dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
+.dialogue-vue h3 { margin: 0 0 8px; }
+.dialogue-vue h4 { margin: 6px 0; font-size: 0.95em; }
+.dialogue-vue .dialogue-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .dialogue-vue .dialogue-colonnes { grid-template-columns: 1fr; } }
+.dialogue-vue fieldset.enregistrement { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 12px 0; border: 1px solid var(--bord); border-radius: 4px; }
+.dialogue-vue .boutons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.etiquettes-document table.etiquettes input[type="color"] { width: 3em; padding: 0; height: 1.8em; }
+.table-parametres { border-collapse: collapse; margin: 8px 0; }
+.table-parametres th, .table-parametres td { padding: 4px 8px; border-bottom: 1px solid var(--bord); text-align: left; }
+.table-parametres input[type="color"] { width: 3em; height: 1.8em; padding: 0; }
+.grille tr.pied-calcule td.poignee { visibility: hidden; }

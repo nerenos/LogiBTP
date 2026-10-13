@@ -1,10 +1,11 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
-import { Disposition } from '@logibtp/document/ui';
+import { Disposition, GestionVuesDocument, FournisseurVuesMemoire } from '@logibtp/document/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../demo.js';
+import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
@@ -25,6 +26,7 @@ const GABARIT = `
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
     </div>
+    <span class="groupe" data-vues></span>
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
       <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
@@ -226,6 +228,12 @@ export class PageDocument extends PageBase {
       rechercher: (ligId) => this.appel.rechercher(ligId),
     });
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
+    // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.
+    this.vues = new GestionVuesDocument(this.$('[data-vues]'), {
+      editeur: this.editeur, fournisseur: this.fournisseurVues(), admin: () => this.app.estAdmin(), message: (t) => this.app.message(t),
+    });
+    this.modeleAffiche = this.editeur.saisie.document.ent_modele ?? null;
+    await this.vues.charger();
     this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
       fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
       message: (t) => this.app.message(t),
@@ -241,9 +249,24 @@ export class PageDocument extends PageBase {
   /** Modifications non enregistrées : la pile d'annulation a changé depuis l'ouverture ou le dernier enregistrement. */
   get modifiee() { return Boolean(this.editeur) && this.editeur.magasin.pile.at(-1) !== this.marque; }
 
+  /** Vues de colonnes : API en ligne, mémoire (vues du cœur) hors ligne, partagée par les documents ouverts. */
+  fournisseurVues() {
+    if (this.app.enLigne) {
+      return { vues: (type) => api.vuesDocument(type), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) };
+    }
+    PageDocument.vuesDemo ??= new FournisseurVuesMemoire({ vues: VUES_DOCUMENT, utilisateur: () => this.app.utilisateur(), admin: () => this.app.estAdmin() });
+    return PageDocument.vuesDemo;
+  }
+
   rafraichir() {
     const ed = this.editeur;
     if (!ed) return;
+    // Modèle du document changé : vue mémorisée ou par défaut de ce modèle.
+    const modele = ed.saisie.document.ent_modele ?? null;
+    if (this.vues && modele !== this.modeleAffiche) {
+      this.modeleAffiche = modele;
+      this.vues.changerModele().catch((x) => this.app.erreur(x));
+    }
     const p = this.panneaux;
     const enLigne = this.app.enLigne;
     p.rendreEntete(this.$('#entete'));
@@ -318,6 +341,7 @@ export class PageDocument extends PageBase {
         l.lig_parent_id = map(cl, l.lig_parent_id);
         l.lig_st_depuis_id = map(cl, l.lig_st_depuis_id);
         l.lig_variante_de_id = map(cl, l.lig_variante_de_id);
+        l.lig_pied_base_id = map(cl, l.lig_pied_base_id);
         l.lig_mtr_id = map(cm, l.lig_mtr_id);
         l.lig_ent_id = d.document.ent_id;
       }

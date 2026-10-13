@@ -199,3 +199,19 @@ SELECT setval(pg_get_serial_sequence('usage_coordonnee', 'uco_id'), (SELECT max(
 `;
 fs.writeFileSync(path.join(racine, 'db', '141_annuaire_demo.sql'), sqlAnnuaire);
 console.log('db/141_annuaire_demo.sql généré');
+
+// ------------------------------------------------------------------ vues de colonnes des documents
+const { VUES_DOCUMENT } = await import('../src/app/vues-document.js');
+const sqlVuesDocument = `-- =============================================================================
+-- Cœur LogiBTP – vues de colonnes de la grille des lignes : vue par défaut par modèle de saisie, vue de débogage.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/vues-document.js : ne pas modifier.
+-- =============================================================================
+
+INSERT INTO vue_document (vdo_id, vdo_nom, vdo_tyd_id, vdo_mod_code, vdo_proprietaire, vdo_par_defaut, vdo_definition, vdo_modifie_par) VALUES
+${VUES_DOCUMENT.map((v) => ` (${v.id}, ${q(v.nom)}, ${n(v.tyd_id)}, ${q(v.mod_code)}, ${q(v.proprietaire)}, ${b(v.par_defaut)}, ${j(v.definition)}, 'systeme')`).join(',\n')}
+ON CONFLICT (vdo_id) DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('vue_document', 'vdo_id'), (SELECT max(vdo_id) FROM vue_document));
+`;
+fs.writeFileSync(path.join(racine, 'db', '150_documents_vues.sql'), sqlVuesDocument);
+console.log('db/150_documents_vues.sql généré');

@@ -54,6 +54,7 @@ public class HandlerStandard<TDoc, TLigne>(Func<EntreeDocument<TDoc, TLigne>, Re
     public virtual void Initialiser(TDoc document, TypeDocument type)
     {
         document.EntProprietes ??= JsonDocument.Parse("{}");
+        document.EntEtiquettes ??= JsonDocument.Parse("[]");
     }
 
     public virtual void Controler(ContexteDocument<TDoc, TLigne> ctx, List<MessageCalcul> erreurs)

@@ -28,7 +28,7 @@ export const COLONNES_DOCUMENT = new Set([
   'ent_adresse_facturation', 'ent_adresse_livraison', 'ent_devise', 'ent_num_format', 'ent_precision_montant',
   'ent_version_calcul', 'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer', 'ent_proprietes',
   'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_version',
-  'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par',
+  'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_modele', 'ent_etiquettes',
 ]);
 
 export const COLONNES_LIGNE = new Set([
@@ -38,9 +38,9 @@ export const COLONNES_LIGNE = new Set([
   'lig_qte', 'lig_qte_type', 'lig_qte_vendue', 'lig_qte_totale', 'lig_unt_code', 'lig_precision_qte',
   'lig_pv', 'lig_coef_remise', 'lig_pv_remise', 'lig_precision_pv', 'lig_type_prix', 'lig_variante_de_id', 'lig_st_depuis_id',
   'lig_montant_ht',
-  'lig_pied_mode', 'lig_pied_base', 'lig_pied_sens', 'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva',
+  'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_pied_sens', 'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva',
   'lig_tva_id', 'lig_taux_tva',
-  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_proprietes',
+  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_proprietes', 'lig_etiquette',
 ]);
 
 // Colonnes NUMERIC(18,6) : le moteur JS les manipule en chaînes décimales exactes.
@@ -59,6 +59,14 @@ export const COLONNES_PRIX_CALCULES = new Set([
 ]);
 
 export const COLONNES_QTE_CALCULEES = new Set(['lig_qte_vendue', 'lig_qte_totale']);
+
+/**
+ * Pied : modes (P pourcentage de la base, M montant, C coefficient : base × (valeur − 1), le signe venant du
+ * coefficient) et bases (CUMUL à ce point, TOTAL_HT et TOTAL_TTC du corps, HT_NET dernier total HT net,
+ * LIGNE : sous-total de pied désigné par lig_pied_base_id).
+ */
+export const MODES_PIED = ['P', 'M', 'C'];
+export const BASES_PIED = ['CUMUL', 'TOTAL_HT', 'HT_NET', 'TOTAL_TTC', 'LIGNE'];
 
 /** Union d'ensembles de colonnes (spécialisation d'un module). */
 export const union = (...ensembles) => new Set(ensembles.flatMap((e) => [...e]));

@@ -39,6 +39,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             Unites = await db.Unites.AsNoTracking().Where(x => x.UntActif).OrderBy(x => x.UntOrdre).ThenBy(x => x.UntCode).ToListAsync(ct),
             Transformations = await db.TransformationsAutorisees.AsNoTracking().Where(t => t.TraSourceTydId == type.TydId).ToListAsync(ct),
             Droits = await db.DroitsDocument.AsNoTracking().Where(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId).Select(d => d.DrtAction).ToListAsync(ct),
+            Etiquettes = (await db.Set<EtiquetteLigne>().AsNoTracking().Where(e => e.EtlActif).OrderBy(e => e.EtlOrdre).ToListAsync(ct))
+                .Select(e => new EtiquetteDto(e.EtlCode, e.EtlLibelle, e.EtlCouleur, e.EtlOrdre, e.EtlActif)).ToList(),
+            CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
+            Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
         };
     }
 
@@ -186,6 +190,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntNumFormat = d.Document.EntNumFormat ?? e.EntNumFormat;
         e.EntPrecisionMontant = d.Document.EntPrecisionMontant;
         e.EntProprietes = d.Document.EntProprietes ?? e.EntProprietes;
+        e.EntModele = d.Document.EntModele;
+        e.EntEtiquettes = d.Document.EntEtiquettes ?? e.EntEtiquettes;
         specialisation.CopierEnteteSaisie(e, d.Document);
         foreach (var l in d.Lignes)
         {
@@ -232,6 +238,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         entite.EntModifieLe = DateTimeOffset.UtcNow;
         entite.EntModifiePar = u.Code;
         entite.EntProprietes ??= JsonDocument.Parse("{}");
+        entite.EntEtiquettes ??= JsonDocument.Parse("[]");
         db.Entry(entite).Property(x => x.EntVersion).OriginalValue = versionAvant;
         try
         {
@@ -383,6 +390,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         doc.EntModifiePar = null;
         preparer(doc);
         doc.EntProprietes ??= JsonDocument.Parse("{}");
+        doc.EntEtiquettes ??= JsonDocument.Parse("[]");
         db.Documents.Add(doc);
         await db.SaveChangesAsync(ct);
         if (doc.EntGroupeId is null)
@@ -412,6 +420,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             l.LigParentId = Map(l.LigParentId);
             l.LigStDepuisId = Map(l.LigStDepuisId);
             l.LigVarianteDeId = Map(l.LigVarianteDeId);
+            l.LigPiedBaseId = Map(l.LigPiedBaseId);
         }
         specialisation.RenumeroterComplements(d, lig, ref n);
         return d;

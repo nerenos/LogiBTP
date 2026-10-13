@@ -6,6 +6,7 @@ import { PageGed } from './ged.js';
 import { PageParametres } from './parametres.js';
 import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
+import { PageParametresDocuments } from './parametres-documents.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 
@@ -20,6 +21,7 @@ export const ROUTES = [
   { nom: 'parametres', chemin: '/parametres', page: PageParametres, titre: 'Paramètres' },
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
+  { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },

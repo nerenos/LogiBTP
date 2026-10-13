@@ -39,6 +39,10 @@ public class Document
     public string EntCreePar { get; set; } = "";
     public DateTimeOffset? EntModifieLe { get; set; }
     public string? EntModifiePar { get; set; }
+    /// <summary>Modèle de saisie (COMPLET, VOLEE…) : vue de colonnes par défaut.</summary>
+    public string? EntModele { get; set; }
+    /// <summary>Étiquettes de lignes propres au document (ajoutées ou personnalisées) : [{ code, libelle, couleur }].</summary>
+    public JsonDocument? EntEtiquettes { get; set; }
 }
 
 /// <summary>Ventilation de TVA du document (table document_tva).</summary>

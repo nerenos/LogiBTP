@@ -45,6 +45,20 @@ public class CasDocumentTests
             var code = att!["tva_code"]!.GetValue<string>();
             CasPartages.Verifier(att.AsObject(), CasPartages.Trouver(r["tva"]!.AsArray(), "tva_code", code), $"tva[{code}]", fautes);
         }
+        if (a["pied"] is JsonArray pied)
+        {
+            var obtenu = r["pied"]!.AsArray();
+            Assert.Equal(pied.Count, obtenu.Count);
+            for (var i = 0; i < pied.Count; i++)
+            {
+                // Lignes d'un groupe : tableau comparé à part (Verifier compare des valeurs).
+                var att = pied[i]!.AsObject().DeepClone().AsObject();
+                var lignes = att["lignes"];
+                att.Remove("lignes");
+                CasPartages.Verifier(att, obtenu[i]!.AsObject(), $"pied[{i}]", fautes);
+                if (!JsonNode.DeepEquals(lignes, obtenu[i]!["lignes"])) fautes.Add($"pied[{i}].lignes : attendu {lignes?.ToJsonString()}, obtenu {obtenu[i]!["lignes"]?.ToJsonString()}");
+            }
+        }
         Assert.Empty(fautes);
     }
 

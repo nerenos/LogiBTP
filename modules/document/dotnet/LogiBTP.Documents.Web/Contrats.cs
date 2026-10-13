@@ -118,4 +118,8 @@ public sealed class DefinitionType
     public List<Unite> Unites { get; set; } = [];
     public List<TransformationAutorisee> Transformations { get; set; } = [];
     public List<string> Droits { get; set; } = [];
+    /// <summary>Étiquettes de lignes globales (le document peut en ajouter : ent_etiquettes).</summary>
+    public List<EtiquetteDto> Etiquettes { get; set; } = [];
+    public List<CouleurTypePrixDto> CouleursTypePrix { get; set; } = [];
+    public List<ModeleDto> Modeles { get; set; } = [];
 }

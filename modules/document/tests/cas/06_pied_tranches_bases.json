@@ -1,0 +1,232 @@
+{
+  "nom": "Pied en tranches : sous-total de pied, bases au choix, coefficient, totaux masqués",
+  "description": "Montant HT 1 209 ; remise de 9 € ; sous-total de pied (1 200) ; frais de 2,5 % calculés sur ce sous-total (30) et non sur le HT ; participation de 1 % du dernier HT net (12) ; TVA sur 1 242 ; retenue de garantie par coefficient 0,95 sur le cumul TTC (−74,52) ; base pointant un sous-total absent : erreur PIED_BASE et calcul sur le cumul. Structure du pied : totaux calculés, groupes (postes HT, TVA, postes TTC) ; un total égal au suivant est masqué.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Travaux",
+        "lig_qte": 1,
+        "lig_pv": 1209,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 9,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 5,
+        "lig_libelle_html": "Sous-total après remise"
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": null,
+        "lig_ordre": 4,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Frais de gestion",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 2.5,
+        "lig_pied_sens": 1,
+        "lig_pied_base": "LIGNE",
+        "lig_pied_base_id": 3
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": null,
+        "lig_ordre": 5,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Participation",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 1,
+        "lig_pied_sens": 1,
+        "lig_pied_base": "HT_NET"
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": null,
+        "lig_ordre": 6,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": null,
+        "lig_ordre": 7,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Retenue de garantie",
+        "lig_pied_mode": "C",
+        "lig_pied_valeur": 0.95,
+        "lig_pied_sens": -1,
+        "lig_pied_base": "CUMUL"
+      },
+      {
+        "lig_id": 8,
+        "lig_parent_id": null,
+        "lig_ordre": 8,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Prorata",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 1,
+        "lig_pied_sens": -1,
+        "lig_pied_base": "LIGNE",
+        "lig_pied_base_id": 99
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "PIED_BASE"
+    ],
+    "document": {
+      "ent_total_ht": 1242,
+      "ent_total_tva": 248.4,
+      "ent_total_ttc": 1490.4,
+      "ent_net_a_payer": 1401.72
+    },
+    "lignes": {
+      "2": {
+        "lig_montant_ht": -9,
+        "lig_base_calcul": null
+      },
+      "3": {
+        "lig_montant_ht": 1200
+      },
+      "4": {
+        "lig_montant_ht": 30,
+        "lig_base_calcul": 1200
+      },
+      "5": {
+        "lig_montant_ht": 12,
+        "lig_base_calcul": 1200
+      },
+      "6": {
+        "lig_base_calcul": 1242,
+        "lig_montant_tva": 248.4
+      },
+      "7": {
+        "lig_montant_ht": -74.52,
+        "lig_base_calcul": 1490.4
+      },
+      "8": {
+        "lig_montant_ht": -14.16,
+        "lig_base_calcul": 1415.88
+      }
+    },
+    "tva": [
+      {
+        "tva_code": "T20",
+        "tva_base_ht": 1242,
+        "tva_montant_net": 248.4
+      }
+    ],
+    "pied": [
+      {
+        "genre": "total",
+        "cle": "TOTAL_HT",
+        "lig_id": null,
+        "lignes": null,
+        "montant": 1209,
+        "masque": false
+      },
+      {
+        "genre": "groupe",
+        "cle": "HT",
+        "lig_id": null,
+        "lignes": [
+          2
+        ],
+        "montant": -9,
+        "masque": false
+      },
+      {
+        "genre": "ligne",
+        "cle": "SOUS_TOTAL",
+        "lig_id": 3,
+        "lignes": null,
+        "montant": 1200,
+        "masque": false
+      },
+      {
+        "genre": "groupe",
+        "cle": "HT",
+        "lig_id": null,
+        "lignes": [
+          4,
+          5
+        ],
+        "montant": 42,
+        "masque": false
+      },
+      {
+        "genre": "total",
+        "cle": "HT_NET",
+        "lig_id": null,
+        "lignes": null,
+        "montant": 1242,
+        "masque": false
+      },
+      {
+        "genre": "groupe",
+        "cle": "TVA",
+        "lig_id": null,
+        "lignes": [
+          6
+        ],
+        "montant": 248.4,
+        "masque": false
+      },
+      {
+        "genre": "total",
+        "cle": "TOTAL_TTC",
+        "lig_id": null,
+        "lignes": null,
+        "montant": 1490.4,
+        "masque": false
+      },
+      {
+        "genre": "groupe",
+        "cle": "TTC",
+        "lig_id": null,
+        "lignes": [
+          7,
+          8
+        ],
+        "montant": -88.68,
+        "masque": false
+      },
+      {
+        "genre": "total",
+        "cle": "NET",
+        "lig_id": null,
+        "lignes": null,
+        "montant": 1401.72,
+        "masque": false
+      }
+    ]
+  }
+}

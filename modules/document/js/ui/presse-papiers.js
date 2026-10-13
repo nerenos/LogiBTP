@@ -61,6 +61,7 @@ export class PressePapiers {
       lig_parent_id: lig.has(l.lig_parent_id) ? lig.get(l.lig_parent_id) : l.lig_parent_id,
       lig_st_depuis_id: correspondance(lig, l.lig_st_depuis_id),
       lig_variante_de_id: correspondance(lig, l.lig_variante_de_id),
+      lig_pied_base_id: correspondance(lig, l.lig_pied_base_id),
       lig_origine_id: l.lig_id > 0 ? l.lig_id : l.lig_origine_id ?? null,
       lig_numerotation: l.lig_num_manuelle ? l.lig_numerotation : null,
     }));

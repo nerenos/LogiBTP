@@ -40,6 +40,7 @@ export class MoteurDocument {
     this.qteEnCours = null;
     this.px = new Map();
     this.tva = [];
+    this.pied = [];
     this.lignes = this.preparerLignes(e.lignes ?? []);
     this.construireArbre();
   }
@@ -385,8 +386,21 @@ export class MoteurDocument {
     return ['lig_montant_ht'];
   }
 
+  /**
+   * Sous-total de pied : sous-total à la racine placé après une ligne de pied ; il vaut le cumul du pied à ce point et
+   * peut servir de base de calcul (lig_pied_base = LIGNE).
+   */
+  estSousTotalPied(l) {
+    if (l.lig_tyl_id !== TL.SOUS_TOTAL || this.parent(l)) return false;
+    for (const x of this.enfantsDe(null)) {
+      if (x === l) return false;
+      if (estPied(x)) return true;
+    }
+    return false;
+  }
+
   passeTotaux() {
-    const corps = this.ordre.filter((l) => !estPied(l));
+    const corps = this.ordre.filter((l) => !estPied(l) && !this.estSousTotalPied(l));
     const champs = this.champsCumules;
     const enTotal = (l) => this.estLigneDePrix(l) && !this.horsTotal(l) && !this.enErreur.has(l.lig_id) && l.lig_montant_ht !== null;
     const somme = (lignes) => {
@@ -471,38 +485,111 @@ export class MoteurDocument {
     const totalTTC = totalHT.plus(this.calculerTva(bases).net);
     let cumul = totalHT;
     let tva = null;
+    let htNet = totalHT;
+    const sousTotaux = new Map();
+
+    // Structure du pied (affichage) : totaux calculés et groupes (postes HT, TVA, postes TTC), dans l'ordre du calcul.
+    const pied = [{ genre: 'total', cle: 'TOTAL_HT', montant: totalHT, lig_id: null }];
+    let groupe = null;
+    // Fermeture d'un groupe : suivi d'un total calculé, sauf s'il est fermé par un sous-total de pied saisi.
+    const fermer = (avecTotal = true) => {
+      if (!groupe) return;
+      pied.push({ ...groupe, montant: groupe.montant });
+      if (groupe.cle === 'HT' && !tva) htNet = cumul;
+      if (!avecTotal) { groupe = null; return; }
+      if (groupe.cle === 'HT' && !tva) {
+        pied.push({ genre: 'total', cle: 'HT_NET', montant: cumul, lig_id: null });
+      } else if (groupe.cle === 'TVA') pied.push({ genre: 'total', cle: 'TOTAL_TTC', montant: cumul, lig_id: null });
+      else pied.push({ genre: 'total', cle: 'SOUS_TOTAL', montant: cumul, lig_id: null });
+      groupe = null;
+    };
+    const dans = (cle, id, montant) => {
+      if (groupe?.cle !== cle) { fermer(); groupe = { genre: 'groupe', cle, montant: ZERO, lignes: [] }; }
+      if (id !== null) groupe.lignes.push(id);
+      groupe.montant = groupe.montant.plus(montant);
+    };
 
     for (const p of this.enfantsDe(null)) {
+      if (this.estSousTotalPied(p)) {
+        fermer(false);
+        for (const c of this.champsCumules) p[c] = c === 'lig_montant_ht' ? S(cumul) : null;
+        sousTotaux.set(p.lig_id, cumul);
+        pied.push({ genre: 'ligne', cle: 'SOUS_TOTAL', montant: cumul, lig_id: p.lig_id });
+        continue;
+      }
       if (!estPied(p)) continue;
       p.lig_base_calcul = null;
       p.lig_montant_tva = null;
       if (p.lig_tyl_id === TL.TVA) {
         p.lig_montant_ht = null;
         if (tva) { this.erreur(p.lig_id, 'TVA_DOUBLE', 'Une seule ligne de ventilation TVA par document', false); continue; }
+        fermer();
         tva = this.calculerTva(bases);
         p.lig_base_calcul = S(tva.base);
         p.lig_montant_tva = S(tva.net);
         cumul = cumul.plus(tva.net);
+        dans('TVA', p.lig_id, tva.net);
+        fermer();
         continue;
       }
-      const codeBase = p.lig_pied_base ?? 'CUMUL';
-      const base = codeBase === 'TOTAL_HT' ? totalHT : codeBase === 'TOTAL_TTC' ? totalTTC : cumul;
+      const base = this.basePied(p, { cumul, totalHT, totalTTC, htNet, sousTotaux });
+      const mode = p.lig_pied_mode ?? 'M';
       const sens = p.lig_pied_sens === -1 ? -1 : 1;
-      const pourcentage = (p.lig_pied_mode ?? 'M') === 'P';
-      const montant = (pourcentage ? arrondir(base.times(Dz(p.lig_pied_valeur)).div(100), pm) : arrondir(Dz(p.lig_pied_valeur), pm)).times(sens);
-      p.lig_base_calcul = pourcentage ? S(base) : null;
+      const valeur = Dz(p.lig_pied_valeur);
+      const montant = mode === 'P' ? arrondir(base.times(valeur).div(100), pm).times(sens)
+        : mode === 'C' ? arrondir(base.times(valeur.minus(1)), pm)
+          : arrondir(valeur, pm).times(sens);
+      p.lig_base_calcul = mode === 'M' ? null : S(base);
       p.lig_montant_ht = S(montant);
-      if (this.horsCumulPied(p)) continue;
+      const hors = this.horsCumulPied(p);
+      dans(p.lig_tyl_id === TL.PIED_HT ? 'HT' : 'TTC', p.lig_id, hors ? ZERO : montant);
+      if (hors) continue;
       cumul = cumul.plus(montant);
       if (p.lig_tyl_id === TL.PIED_HT && !tva) this.repartirSurBases(bases, montant, p);
     }
     if (!tva) {
+      fermer();
       tva = this.calculerTva(bases);
       cumul = cumul.plus(tva.net);
+      dans('TVA', null, tva.net);
     }
+    // Le dernier groupe n'a pas de sous-total : le net à payer le suit.
+    if (groupe) { pied.push(groupe); groupe = null; }
+    pied.push({ genre: 'total', cle: 'NET', montant: cumul, lig_id: null });
+    this.pied = this.masquerTotaux(pied);
 
     this.tva = tva.lignes;
     this.ecrireTotaux(tva, cumul);
+  }
+
+  /** Base d'une ligne de pied en pourcentage ou coefficient (lig_pied_base). */
+  basePied(p, { cumul, totalHT, totalTTC, htNet, sousTotaux }) {
+    switch (p.lig_pied_base ?? 'CUMUL') {
+      case 'TOTAL_HT': return totalHT;
+      case 'TOTAL_TTC': return totalTTC;
+      case 'HT_NET': return htNet;
+      case 'LIGNE': {
+        const id = p.lig_pied_base_id;
+        if (id !== null && id !== undefined && sousTotaux.has(Number(id))) return sousTotaux.get(Number(id));
+        this.erreur(p.lig_id, 'PIED_BASE', 'La base doit être un sous-total de pied placé avant la ligne', false);
+        return cumul;
+      }
+      default: return cumul;
+    }
+  }
+
+  /**
+   * Un total calculé égal au total suivant (calculé ou sous-total de pied saisi) est masqué : une seule ligne affichée.
+   * Montants en chaînes.
+   */
+  masquerTotaux(pied) {
+    return pied.map((e, i) => {
+      const suivant = e.genre === 'total' && e.cle !== 'NET' ? pied.slice(i + 1).find((x) => x.genre !== 'groupe') : null;
+      return {
+        genre: e.genre, cle: e.cle, lig_id: e.lig_id ?? null, lignes: e.lignes ?? null, montant: S(e.montant),
+        masque: !!suivant && e.montant.equals(suivant.montant),
+      };
+    });
   }
 
   /** Totaux de l'entête ; une spécialisation y ajoute ses propres valeurs. */
@@ -595,6 +682,7 @@ export class MoteurDocument {
       document: this.doc,
       lignes: this.ordre,
       tva: this.tva,
+      pied: this.pied,
       erreurs: this.erreurs,
       avertissements: this.avertissements,
     });

@@ -48,4 +48,12 @@ export const api = {
   verrouillerDocument: (id, jeton) => appel('POST', `/documents/${id}/verrou`, { jeton }),
   deverrouillerDocument: (id, jeton) => appel('DELETE', `/documents/${id}/verrou?jeton=${jeton}`, undefined, { keepalive: true }),
   forcerDeverrouillageDocument: (id) => appel('DELETE', `/documents/${id}/verrou/force`),
+  // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
+  etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
+  enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),
+  couleursTypePrix: () => appel('GET', '/couleurs-type-prix'),
+  enregistrerCouleursTypePrix: (liste) => appel('PUT', '/couleurs-type-prix', liste),
+  vuesDocument: (type) => appel('GET', `/vues-document${type?.tyd_code ? `?type=${encodeURIComponent(type.tyd_code)}` : ''}`),
+  enregistrerVueDocument: (vue) => appel('PUT', '/vues-document', vue),
+  supprimerVueDocument: (id) => appel('DELETE', `/vues-document/${id}`),
 };

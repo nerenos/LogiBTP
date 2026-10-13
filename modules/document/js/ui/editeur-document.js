@@ -7,6 +7,20 @@ import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants } 
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
+/** Libellés des totaux calculés et des groupes du pied (structure résultat.pied du moteur). */
+export const LIBELLES_PIED = {
+  TOTAL_HT: 'Total HT', HT_NET: 'Total HT net', TOTAL_TTC: 'Total TTC', SOUS_TOTAL: 'Sous-total', NET: 'Net à payer',
+  HT: 'Postes de pied HT', TTC: 'Postes de pied TTC', TVA: 'TVA',
+};
+
+/** Libellés des bases de calcul d'une ligne de pied (lig_pied_base). */
+export const LIBELLES_BASE_PIED = { CUMUL: 'Cumul à ce point', TOTAL_HT: 'Total HT du corps', HT_NET: 'Dernier total HT net', TOTAL_TTC: 'Total TTC du corps', LIGNE: 'Sous-total de pied' };
+
+const lireJson = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
+
+/** Texte brut d'une valeur (colonnes système du mode débogage). */
+const texteSysteme = (v) => (v === null || v === undefined ? '∅' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+
 export const LIBELLES_TYPE = {
   TITRE: 'Titre', OUVRAGE: 'Ouvrage', ELEMENT: 'Élément', TEXTE: 'Texte', SOUS_TOTAL: 'S-total',
   IMAGE: 'Image', SAUT_PAGE: 'Saut', PIED_HT: 'Pied HT', PIED_TTC: 'Pied TTC', TVA: 'TVA',
@@ -34,11 +48,16 @@ export function insererColonnes(colonnes, avantCle, nouvelles) {
  * colonnes, saisissable, estLigneCalculee, variablesLibelle, apresSuppression, actions.
  *
  * Options de l'hôte : appelerCode(ligId, code) (saisie dans la colonne Code : appel d'une référence, ex. bibliothèque),
- * rechercher(ligId) (F3 : recherche d'une référence).
+ * rechercher(ligId) (F3 : recherche d'une référence), vue (vue de colonnes : { colonnes: [{ cle }], debogage, systeme }).
+ *
+ * Affichage : pastille de début de ligne (étiquette en haut à gauche, mode de vente en bas à droite), colonnes de la
+ * vue choisie (colonnes système en mode débogage), pied en tranches (postes HT, TVA par taux, postes TTC) avec les
+ * totaux calculés (un total égal au suivant n'est pas affiché).
  */
 export class EditeurDocument {
-  constructor(conteneur, { definition, saisie, surSelection, surMessage, appelerCode = null, rechercher = null }) {
+  constructor(conteneur, { definition, saisie, surSelection, surMessage, appelerCode = null, rechercher = null, vue = null }) {
     this.definition = definition;
+    this.vue = vue;
     this.appelerCode = appelerCode;
     this.rechercherExterne = rechercher;
     this.surSelection = surSelection;
@@ -54,7 +73,7 @@ export class EditeurDocument {
     });
     this.grille = new GrilleArbre(conteneur, {
       cle: 'lig_id',
-      colonnes: this.colonnes(),
+      colonnes: this.colonnesAffichees(),
       lignes: (replies) => this.lignesGrille(replies),
       actions: this.actions(),
     });
@@ -101,8 +120,99 @@ export class EditeurDocument {
     return [...saisie.lignes.map((l) => l.lig_id), ...(resultat?.lignes ?? []).map((l) => l.lig_id)];
   }
 
-  /** Ligne modifiable par l'utilisateur (une ligne calculée par le moteur ne l'est pas). */
-  saisissable(l) { return !this.magasin?.lectureSeule && !this.estLigneCalculee(l); }
+  /** Ligne modifiable par l'utilisateur (une ligne calculée par le moteur ou un total du pied ne l'est pas). */
+  saisissable(l) { return !this.magasin?.lectureSeule && !l._virtuelle && !this.estLigneCalculee(l); }
+
+  // ---------------------------------------------------------------- vues de colonnes
+
+  /** Colonnes de la vue (dans son ordre), et colonnes système en mode débogage ; sans vue : toutes les colonnes. */
+  colonnesAffichees() {
+    const catalogue = this.colonnes();
+    if (!this.vue?.colonnes?.length) return catalogue;
+    const parCle = new Map(catalogue.map((c) => [c.cle, c]));
+    const res = this.vue.colonnes.map((c) => parCle.get(c.cle)).filter(Boolean);
+    if (!res.length) return catalogue;
+    // La première colonne porte l'arborescence (repli des lignes).
+    if (!res[0].arbre) res[0] = { ...res[0], arbre: true };
+    if (this.vue.debogage) {
+      const choisis = this.vue.systeme ?? [];
+      res.push(...this.colonnesSysteme().filter((c) => !choisis.length || choisis.includes(c.champ)));
+    }
+    return res;
+  }
+
+  /** Vue de colonnes appliquée à la grille. */
+  appliquerVue(vue) {
+    this.vue = vue;
+    this.grille.definirColonnes(this.colonnesAffichees());
+  }
+
+  /** Champs des lignes (saisie et calcul) affichables en mode débogage, plus les contrôles de la ligne. */
+  champsSysteme() {
+    const champs = new Set();
+    for (const l of [...this.saisie.lignes, ...(this.resultat?.lignes ?? [])]) for (const k of Object.keys(l)) champs.add(k);
+    return ['_controles', ...[...champs].filter((k) => !k.startsWith('_')).sort()];
+  }
+
+  /** Colonnes système (débogage) : valeurs brutes calculées, en lecture seule. */
+  colonnesSysteme() {
+    return this.champsSysteme().map((champ) => ({
+      cle: `sys:${champ}`, champ, titre: champ === '_controles' ? 'Contrôles' : champ, classe: 'col-systeme', editable: () => false,
+      valeur: (r) => (champ === '_controles' ? r.messages.map((m) => m.code).join(' ') : r.virtuelle ? '' : texteSysteme(r.calcule[champ] ?? r.item[champ])),
+    }));
+  }
+
+  // ---------------------------------------------------------------- étiquettes et pastille
+
+  /** Étiquettes de lignes : globales (définition), complétées ou personnalisées par le document (ent_etiquettes). */
+  etiquettes() {
+    const m = new Map((this.definition.etiquettes ?? []).filter((e) => e.actif !== false).map((e) => [e.code, { ...e, origine: 'globale' }]));
+    for (const e of lireJson(this.saisie.document.ent_etiquettes, [])) {
+      if (e?.code) m.set(e.code, { ...m.get(e.code), ...e, origine: m.has(e.code) ? 'personnalisee' : 'document' });
+    }
+    return [...m.values()];
+  }
+
+  couleurTypePrix(type) { return (this.definition.couleurs_type_prix ?? []).find((c) => c.type === type) ?? null; }
+
+  /** Pastille : couleur de l'étiquette (haut gauche), couleur du mode de vente hors « vendu » (bas droite). */
+  marqueur(r) {
+    if (r.virtuelle) return null;
+    const l = r.item;
+    const e = l.lig_etiquette ? this.etiquettes().find((x) => x.code === l.lig_etiquette) : null;
+    const t = (l.lig_type_prix ?? 'V') !== 'V' ? this.couleurTypePrix(l.lig_type_prix) : null;
+    const c1 = e?.couleur ?? null, c2 = t?.couleur ?? null;
+    const fond = c1 && c2 ? `linear-gradient(135deg, ${c1} 50%, ${c2} 50%)` : c1 ?? (c2 ? `linear-gradient(135deg, transparent 50%, ${c2} 50%)` : 'transparent');
+    const titre = [e ? e.libelle : (l.lig_etiquette ? `Étiquette ${l.lig_etiquette}` : 'Sans étiquette'), t?.libelle].filter(Boolean).join(' · ');
+    return { fond, titre: `${titre} — cliquer pour choisir l'étiquette` };
+  }
+
+  /** Choix de l'étiquette (lignes sélectionnées si la ligne en fait partie). */
+  choisirEtiquette(id, ancre) {
+    document.querySelector('.menu-etiquettes')?.remove();
+    const ids = this.grille.selection.includes(id) ? this.grille.selection : [id];
+    const lignes = ids.filter((x) => this.saisie.lignes.some((l) => l.lig_id === x));
+    if (!lignes.length) return;
+    if (this.magasin.lectureSeule) { this.magasin.surRefus?.(); return; }
+    const menu = document.createElement('div');
+    menu.className = 'menu-etiquettes';
+    menu.innerHTML = `${this.etiquettes().map((e) => `<button type="button" data-code="${echapper(e.code)}"><span class="pastille" style="background:${echapper(e.couleur)}"></span>${echapper(e.libelle)}${e.origine === 'document' ? ' <small>(document)</small>' : ''}</button>`).join('')}
+      <button type="button" data-code=""><span class="pastille"></span>Aucune étiquette</button>`;
+    const r = ancre.getBoundingClientRect();
+    menu.style.left = `${r.left}px`;
+    menu.style.top = `${r.bottom + 2}px`;
+    document.body.append(menu);
+    const fermer = () => { menu.remove(); document.removeEventListener('mousedown', dehors, true); };
+    const dehors = (e) => { if (!menu.contains(e.target)) fermer(); };
+    document.addEventListener('mousedown', dehors, true);
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-code]');
+      if (!b) return;
+      fermer();
+      this.magasin.modifier((d) => { for (const l of d.lignes) if (lignes.includes(l.lig_id)) l.lig_etiquette = b.dataset.code || null; }, 'Étiquette');
+      this.grille.focus();
+    });
+  }
 
   /** Ligne créée par le moteur (écart d'arrondi…). */
   estLigneCalculee(_l) { return false; }
@@ -122,7 +232,7 @@ export class EditeurDocument {
       erreurs.get(e.lig_id).push(e);
     }
     const avecEnfants = new Set(calc.map((l) => l.lig_parent_id).filter((p) => p !== null));
-    return ordreAffichage(C, calc, replies).map(({ item, profondeur }) => ({
+    const lignes = ordreAffichage(C, calc, replies).map(({ item, profondeur }) => ({
       item: saisies.get(item.lig_id) ?? item,
       calcule: item,
       profondeur,
@@ -130,6 +240,81 @@ export class EditeurDocument {
       messages: erreurs.get(item.lig_id) ?? [],
       estCalculee: this.estLigneCalculee(item),
     }));
+    return this.lignesPied(lignes, replies);
+  }
+
+  /**
+   * Pied en tranches : les lignes de pied sont regroupées sous des lignes calculées (postes de pied HT, TVA détaillée
+   * par taux, postes de pied TTC), entre les totaux calculés (total HT, HT net, TTC, net à payer) ; un total égal au
+   * suivant n'est pas affiché (une seule ligne).
+   */
+  lignesPied(lignes, replies) {
+    const pied = this.resultat.pied ?? [];
+    if (!pied.length) return lignes;
+    const dansPied = new Set(pied.flatMap((e) => [...(e.lignes ?? []), ...(e.lig_id !== null ? [e.lig_id] : [])]));
+    const parId = new Map(lignes.map((r) => [r.item.lig_id, r]));
+    const res = lignes.filter((r) => !dansPied.has(r.item.lig_id) && !estPied(r.calcule));
+    const pm = this.saisie.document.ent_precision_montant ?? 2;
+    // Identifiant stable par position dans le pied (le repli d'un groupe ne décale pas les suivants).
+    const virtuelle = (cle, type, libelle, montant, { aEnfants = false, profondeur = 0, html = null, rang = 0 } = {}) => {
+      const id = -1e12 - Number(cle.match(/\d+/)[0]) * 1000 - rang;
+      return {
+        item: { lig_id: id, _virtuelle: true, lig_parent_id: null },
+        calcule: { lig_id: id, lig_libelle_affiche: html ?? echapper(libelle), lig_montant_ht: montant, _virtuelle: true },
+        profondeur, aEnfants, messages: [], estCalculee: true, virtuelle: { cle, type },
+      };
+    };
+    pied.forEach((e, i) => {
+      if (e.genre === 'total') {
+        if (!e.masque) res.push(virtuelle(`T${i}`, 'total', LIBELLES_PIED[e.cle] ?? e.cle, e.montant));
+        return;
+      }
+      if (e.genre === 'ligne') {
+        const r = parId.get(e.lig_id);
+        if (r) res.push({ ...r, profondeur: 0 });
+        return;
+      }
+      // Groupe : ligne calculée parente (ou la ligne de ventilation TVA saisie), puis ses lignes.
+      const tvaSaisie = e.cle === 'TVA' ? parId.get(e.lignes?.[0]) : null;
+      let parent;
+      if (tvaSaisie) parent = { ...tvaSaisie, profondeur: 0, aEnfants: true };
+      else parent = virtuelle(`G${i}`, 'groupe', LIBELLES_PIED[e.cle] ?? e.cle, e.montant, { aEnfants: true });
+      res.push(parent);
+      if (replies.has(parent.item.lig_id)) return;
+      if (e.cle === 'TVA') {
+        for (const t of this.resultat.tva) {
+          const libelle = `${t.tva_code} · ${formatLibre(t.tva_taux)} % sur ${formatNombre(t.tva_base_ht, pm)}${t.tva_mention ? ` — ${t.tva_mention}` : ''}`;
+          res.push(virtuelle(`V${i}-${t.tva_code}`, 'tva', libelle, t.tva_montant_net, { profondeur: 1, rang: 1 + this.resultat.tva.indexOf(t) }));
+        }
+        return;
+      }
+      for (const id of e.lignes ?? []) {
+        const r = parId.get(id);
+        if (r) res.push({ ...r, profondeur: 1 });
+      }
+    });
+    // Lignes de pied hors structure (ventilation TVA en double…) : à la fin.
+    for (const r of lignes) if (estPied(r.calcule) && !dansPied.has(r.item.lig_id)) res.push(r);
+    return res;
+  }
+
+  /** Base d'une ligne de pied en pourcentage ou coefficient (« sur 1 200,00 », origine en infobulle), sinon null. */
+  baseAffichee(c) {
+    if (!estPied(c) || c.lig_tyl_id === TL.TVA || !c.lig_pied_mode || c.lig_pied_mode === 'M' || c.lig_base_calcul === null || c.lig_base_calcul === undefined) return null;
+    const s = document.createElement('span');
+    s.className = 'base-pied';
+    s.textContent = `sur ${formatNombre(c.lig_base_calcul, this.saisie.document.ent_precision_montant ?? 2)}`;
+    s.title = `Base : ${this.libelleBasePied(c)}`;
+    return s;
+  }
+
+  /** Texte de la base d'une ligne de pied en pourcentage ou coefficient. */
+  libelleBasePied(c) {
+    if (c.lig_pied_base === 'LIGNE') {
+      const st = this.resultat.lignes.find((x) => x.lig_id === c.lig_pied_base_id);
+      return st ? `Sous-total : ${st.lig_libelle_brut || st.lig_id}` : 'Sous-total introuvable';
+    }
+    return LIBELLES_BASE_PIED[c.lig_pied_base ?? 'CUMUL'];
   }
 
   libelleTaux = (id) => this.definition.taux_tva.find((t) => t.ttv_id === id)?.ttv_code ?? '—';
@@ -158,7 +343,7 @@ export class EditeurDocument {
         cle: 'type', titre: 'Type', classe: 'col-type', editeur: 'select', editable: saisissable,
         champ: () => 'lig_tyl_id', lire: (l) => l.lig_tyl_id,
         options: () => this.definition.types_ligne.map((t) => ({ valeur: t.tyl_id, libelle: t.tyl_libelle })),
-        valeur: (r) => this.libelleType(r),
+        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', tva: 'Taux' }[r.virtuelle.type] : this.libelleType(r)),
       },
       {
         // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre.
@@ -199,7 +384,11 @@ export class EditeurDocument {
         lire: (l) => formatLibre(estPied(l) ? l.lig_pied_valeur : l.lig_qte),
         valeur: (r) => {
           const c = r.calcule;
-          if (estPied(c)) return c.lig_tyl_id === TL.TVA ? '' : `${formatLibre(c.lig_pied_valeur)}${c.lig_pied_mode === 'P' ? ' %' : ' €'}`;
+          if (estPied(c)) {
+            if (c.lig_tyl_id === TL.TVA) return '';
+            if (c.lig_pied_mode === 'C') return `× ${formatLibre(c.lig_pied_valeur)}`;
+            return `${formatLibre(c.lig_pied_valeur)}${c.lig_pied_mode === 'P' ? ' %' : ' €'}`;
+          }
           if (!estChiffree(c)) return '';
           return formatNombre(c.lig_qte_vendue, c.lig_precision_qte ?? 2);
         },
@@ -211,7 +400,7 @@ export class EditeurDocument {
       },
       {
         cle: 'pv', titre: 'PV', classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
-        valeur: (r) => (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
+        valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
       },
       {
         cle: 'remise', titre: 'Remise', classe: 'col-coef', ...this.colonneNombre('lig_coef_remise', chiffree),
@@ -431,7 +620,11 @@ export class EditeurDocument {
         return regles.depotAutorise(this.saisie.lignes, racinesSelection(C, this.saisie.lignes, ids).map((r) => r.lig_id), cible, position);
       },
 
+      marqueur: (r) => this.marqueur(r),
+      choisirMarqueur: (id, ancre) => this.choisirEtiquette(id, ancre),
+
       classeLigne: (r) => [
+        r.virtuelle ? `pied-calcule pied-${r.virtuelle.type}` : '',
         `type-${(CODES_TL[r.calcule.lig_tyl_id] ?? '').toLowerCase()}`,
         r.estCalculee ? 'calculee' : '',
         r.messages.some((x) => this.resultat.erreurs.includes(x)) ? 'erreur' : r.messages.length ? 'avertissement' : '',

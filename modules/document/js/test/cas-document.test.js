@@ -17,6 +17,13 @@ describe('Module Document : jeux de test partagés du moteur générique', () =>
       if (a.document) verifier(a.document, res.document, 'document', fautes);
       for (const [id, att] of Object.entries(a.lignes ?? {})) verifier(att, res.lignes.find((l) => l.lig_id === Number(id)), `lignes[${id}]`, fautes);
       for (const att of a.tva ?? []) verifier(att, res.tva.find((t) => t.tva_code === att.tva_code), `tva[${att.tva_code}]`, fautes);
+      if (a.pied) {
+        expect(res.pied).toHaveLength(a.pied.length);
+        a.pied.forEach(({ lignes, ...att }, i) => {
+          verifier(att, res.pied[i], `pied[${i}]`, fautes);
+          expect(res.pied[i].lignes).toEqual(lignes);
+        });
+      }
       expect(fautes).toEqual([]);
     });
 

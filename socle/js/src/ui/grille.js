@@ -14,7 +14,10 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *  colonnes                [{ cle, titre, classe, valeur(ligne) → texte|{html}, editable(ligne), editeur, options(ligne), lire(ligne), champ(ligne) }]
  *  lignes()                [{ item, calcule, profondeur, aEnfants }] dans l'ordre d'affichage
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
- *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection }
+ *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
+ *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element) }
+ *
+ * Les colonnes affichées se remplacent par definirColonnes (vues de colonnes).
  */
 export class GrilleArbre {
   constructor(conteneur, options) {
@@ -63,6 +66,17 @@ export class GrilleArbre {
     this.thead.replaceChildren(tr);
   }
 
+  /** Colonnes affichées remplacées (vue de colonnes) : entête redessiné, colonne courante conservée si possible. */
+  definirColonnes(colonnes) {
+    const cle = this.o.colonnes[this.colonne]?.cle;
+    this.edition = null;
+    this.o.colonnes = colonnes;
+    const i = colonnes.findIndex((c) => c.cle === cle);
+    this.colonne = i >= 0 ? i : 0;
+    this.#entete();
+    this.rendre();
+  }
+
   get lignesAffichees() {
     return this.o.lignes(this.replies);
   }
@@ -89,7 +103,19 @@ export class GrilleArbre {
       if (titre) tr.title = titre;
       const poignee = document.createElement('td');
       poignee.className = 'poignee';
-      poignee.textContent = '⋮⋮';
+      // Pastille colorée (étiquette, mode de vente…) : un clic ouvre le choix de l'hôte.
+      const m = this.o.actions.marqueur?.(r);
+      if (m) {
+        const pastille = document.createElement('span');
+        pastille.className = 'marqueur';
+        pastille.style.background = m.fond;
+        if (m.titre) pastille.title = m.titre;
+        pastille.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+        pastille.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        pastille.addEventListener('click', (ev) => { ev.stopPropagation(); this.o.actions.choisirMarqueur?.(id, pastille); });
+        poignee.appendChild(pastille);
+      }
+      poignee.append('⋮⋮');
       tr.appendChild(poignee);
       this.o.colonnes.forEach((c, i) => {
         const td = document.createElement('td');
