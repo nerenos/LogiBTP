@@ -60,8 +60,11 @@ export const DOCUMENT_DEMO = {
     L({ lig_id: 11, lig_parent_id: 9, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Pose', lig_qte: 3.5, lig_unt_code: 'h', lig_pa: 38, lig_coef_benef: 1.4 }),
     L({ lig_id: 12, lig_etiquette: 'ATTENTE_PRIX', lig_parent_id: 8, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Option : volets roulants motorisés', lig_qte: 4, lig_unt_code: 'u', lig_pa: 310, lig_coef_benef: 1.3, lig_type_prix: 'O', lig_tva_id: 2 }),
     L({ lig_id: 13, lig_parent_id: null, lig_ordre: 3, lig_tyl_id: 8, lig_libelle_html: 'Remise commerciale', lig_pied_mode: 'P', lig_pied_base: 'CUMUL', lig_pied_valeur: 3, lig_pied_sens: -1 }),
-    L({ lig_id: 14, lig_parent_id: null, lig_ordre: 4, lig_tyl_id: 10, lig_libelle_html: 'TVA' }),
-    L({ lig_id: 15, lig_parent_id: null, lig_ordre: 5, lig_tyl_id: 9, lig_libelle_html: 'Retenue de garantie 5 %', lig_pied_mode: 'P', lig_pied_base: 'CUMUL', lig_pied_valeur: 5, lig_pied_sens: -1 }),
+    // Sous-total de pied (après la remise) servant de base au compte prorata, calculé sur 2,5 % de ce sous-total.
+    L({ lig_id: 17, lig_parent_id: null, lig_ordre: 4, lig_tyl_id: 5, lig_libelle_html: 'Sous-total après remise' }),
+    L({ lig_id: 18, lig_parent_id: null, lig_ordre: 5, lig_tyl_id: 8, lig_libelle_html: 'Compte prorata 2,5 %', lig_pied_mode: 'P', lig_pied_base: 'LIGNE', lig_pied_base_id: 17, lig_pied_valeur: 2.5, lig_pied_sens: -1 }),
+    L({ lig_id: 14, lig_parent_id: null, lig_ordre: 6, lig_tyl_id: 10, lig_libelle_html: 'TVA' }),
+    L({ lig_id: 15, lig_parent_id: null, lig_ordre: 7, lig_tyl_id: 9, lig_libelle_html: 'Retenue de garantie 5 %', lig_pied_mode: 'P', lig_pied_base: 'CUMUL', lig_pied_valeur: 5, lig_pied_sens: -1 }),
   ],
   metres: [{ mtr_id: 100, mtr_lig_id: 6, mtr_libelle: 'Surface des murs', mtr_unt_code: 'm2', mtr_variable: '@surface' }],
   metre_lignes: [
