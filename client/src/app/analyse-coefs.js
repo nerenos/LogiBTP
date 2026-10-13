@@ -2,8 +2,8 @@ import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrir
 import { TL, estPied, estTranche } from '../calcul/index.js';
 import { feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES } from './analyse-calcul.js';
 
-// Onglet Analyse : ventilation du devis par nature ou par tranche (plan des tranches repliable, clic pour en faire la
-// portée), du déboursé au prix client, avec frais annexes ventilés, marges brute et nette. Aide à la saisie : un
+// Onglet Analyse : ventilation par nature de la portée choisie dans l'arbre des tranches (document entier, section,
+// titres), avec le total de la portée ; du déboursé au prix client, frais annexes ventilés, marges brute et nette. Aide à la saisie : un
 // coefficient ou un montant saisi est écrit sur les lignes (une étape d'annulation) ; les montants sont les vraies
 // valeurs (voir analyse-calcul.js : absorption de l'arrondi, ligne d'écart en dernier recours).
 
@@ -36,11 +36,9 @@ export class AnalyseCoefficients {
     this.natures = new Map(natures.map((n) => [n.id, n]));
     this.message = message;
     const p = lirePreferences().analyse ?? {};
-    this.axe = p.axe === 'tranche' ? 'tranche' : 'nature';
     this.horsTotal = Boolean(p.horsTotal);
     this.colonnes = new Set(Array.isArray(p.colonnes) ? p.colonnes : COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
-    this.replies = new Set();
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     conteneur.classList.add('analyse-coefs');
     conteneur.addEventListener('change', (e) => this.#changement(e));
@@ -50,7 +48,7 @@ export class AnalyseCoefficients {
   get resultat() { return this.editeur.resultat; }
   get coefFa() { return Number(this.resultat.document.ent_coef_fa ?? 1); }
 
-  memoriser() { ecrirePreferences({ analyse: { axe: this.axe, horsTotal: this.horsTotal, colonnes: [...this.colonnes] } }); }
+  memoriser() { ecrirePreferences({ analyse: { horsTotal: this.horsTotal, colonnes: [...this.colonnes] } }); }
 
   /** Tranches (sections, titres) dans l'ordre du document avec leur profondeur. */
   tranches() {
@@ -64,46 +62,21 @@ export class AnalyseCoefficients {
     return `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut || (l.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre')}`.trim();
   }
 
-  #descendDe(l, ancetreId) {
-    const parId = new Map(this.resultat.lignes.map((x) => [x.lig_id, x]));
-    for (let x = parId.get(l.lig_parent_id); x; x = parId.get(x.lig_parent_id)) if (x.lig_id === ancetreId) return true;
-    return false;
-  }
-
-  /** Groupes du tableau selon l'axe : [{ cle, libelle, feuilles, agregat, profondeur?, tranche?, aEnfants? }], et le total. */
+  /** Groupes du tableau : les natures de la portée [{ cle, libelle, feuilles, agregat, nature }], et le total de la portée. */
   groupes() {
     const feuilles = feuillesAnalyse(this.resultat, this.editeur.saisie, { portee: this.portee, horsTotal: this.horsTotal });
     const total = { cle: 'total', libelle: this.portee === null ? 'Total du document' : 'Total de la portée', feuilles, agregat: agreger(feuilles, this.coefFa) };
-    if (this.axe === 'nature') {
-      const groupes = new Map();
-      for (const f of feuilles) {
-        const cle = `n:${f.nature ?? ''}`;
-        if (!groupes.has(cle)) {
-          const n = this.natures.get(f.nature);
-          groupes.set(cle, { cle, libelle: n ? `${n.code} · ${n.libelle}` : f.nature ? `Nature ${f.nature}` : 'Sans nature', feuilles: [], nature: f.nature });
-        }
-        groupes.get(cle).feuilles.push(f);
+    const groupes = new Map();
+    for (const f of feuilles) {
+      const cle = `n:${f.nature ?? ''}`;
+      if (!groupes.has(cle)) {
+        const n = this.natures.get(f.nature);
+        groupes.set(cle, { cle, libelle: n ? `${n.code} · ${n.libelle}` : f.nature ? `Nature ${f.nature}` : 'Sans nature', feuilles: [], nature: f.nature });
       }
-      const liste = [...groupes.values()].map((g) => ({ ...g, agregat: agreger(g.feuilles, this.coefFa) })).sort((a, b) => b.agregat.ds - a.agregat.ds);
-      return { liste, total };
+      groupes.get(cle).feuilles.push(f);
     }
-    // Par tranche : le plan des tranches sous la portée (repliable), puis les lignes hors tranche.
-    const toutes = this.tranches();
-    const base = this.portee === null ? -1 : toutes.find((t) => t.ligne.lig_id === this.portee)?.profondeur ?? -1;
-    const dansPortee = toutes.filter((t) => t.ligne.lig_id !== this.portee && (this.portee === null || this.#descendDe(t.ligne, this.portee)));
-    const ids = new Set(dansPortee.map((t) => t.ligne.lig_id));
-    const avecEnfants = new Set(dansPortee.map((t) => t.parent).filter((p) => ids.has(p)));
-    const liste = [];
-    const masques = new Set();
-    for (const t of dansPortee) {
-      const id = t.ligne.lig_id;
-      if (masques.has(t.parent) || this.replies.has(t.parent)) { masques.add(id); continue; }
-      const fs = feuilles.filter((f) => f.tranches.includes(id));
-      liste.push({ cle: `t:${id}`, libelle: this.libelleTranche(t.ligne), feuilles: fs, tranche: id, profondeur: t.profondeur - base - 1, aEnfants: avecEnfants.has(id) });
-    }
-    const hors = feuilles.filter((f) => !f.tranches.some((x) => ids.has(x)));
-    if (hors.length) liste.push({ cle: 't:', libelle: 'Hors tranche', feuilles: hors, tranche: this.portee, horsTranche: true, profondeur: 0, aEnfants: false });
-    return { liste: liste.map((g) => ({ ...g, agregat: agreger(g.feuilles, this.coefFa) })), total };
+    const liste = [...groupes.values()].map((g) => ({ ...g, agregat: agreger(g.feuilles, this.coefFa) })).sort((a, b) => b.agregat.ds - a.agregat.ds);
+    return { liste, total };
   }
 
   rendre() {
@@ -132,8 +105,8 @@ export class AnalyseCoefficients {
         txt = formatNombre(v, pm);
         if (c.cle.startsWith('marge') && v < 0) classe = 'coef-bas';
       }
-      // Prorata : saisi sur les lignes vendues, donc par tranche ou sur le total (pas par nature).
-      const saisissable = c.saisie && !lectureSeule && g.feuilles.length && (c.saisie !== 'prorata' || estTotal || this.axe === 'tranche');
+      // Prorata : saisi sur les lignes vendues, donc au total de la portée (pas par nature).
+      const saisissable = c.saisie && !lectureSeule && g.feuilles.length && (c.saisie !== 'prorata' || estTotal);
       if (!saisissable) return `<td class="nombre ${classe}">${txt}</td>`;
       const valeur = c.type === 'montant' ? formatNombre(arr(v, pm), pm) : txt;
       const aide = c.saisie === 'montant'
@@ -142,14 +115,8 @@ export class AnalyseCoefficients {
       return `<td class="nombre"><input class="${classe} ${c.type === 'montant' ? 'montant' : ''}" data-saisie="${c.saisie}" data-groupe="${echapper(g.cle)}" data-cle="${c.cle}"
         value="${echapper(valeur)}" title="${echapper(aide)}"></td>`;
     };
-    const ligne = (g, estTotal = false) => {
-      const nom = g.tranche !== undefined && g.tranche !== null && !g.horsTranche
-        ? `<span class="pli" ${g.aEnfants ? `data-pli="${g.tranche}"` : ''}>${g.aEnfants ? (this.replies.has(g.tranche) ? '▸' : '▾') : ''}</span>`
-          + `<button type="button" class="lien" data-portee-id="${g.tranche}" title="Analyser cette tranche (portée)">${echapper(g.libelle)}</button>`
-        : echapper(g.libelle);
-      return `<tr class="${estTotal ? 'total' : ''}"><th style="padding-left:${0.55 + (g.profondeur ?? 0) * 1.1}rem">${nom}</th>
+    const ligne = (g, estTotal = false) => `<tr class="${estTotal ? 'total' : ''}"><th>${echapper(g.libelle)}</th>
         ${colonnes.map((c) => cellule(g, c, estTotal)).join('')}</tr>`;
-    };
     const parent = this.portee === null ? null : tranches.find((t) => t.ligne.lig_id === this.portee)?.parent ?? null;
     const parentEstTranche = parent !== null && tranches.some((t) => t.ligne.lig_id === parent);
 
@@ -159,10 +126,6 @@ export class AnalyseCoefficients {
       <div class="analyse-barre">
         <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong></span>
         ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
-        <span class="analyse-axe" role="group" aria-label="Ventilation">
-          <button type="button" data-axe="nature" class="${this.axe === 'nature' ? 'actif' : ''}">Par nature</button>
-          <button type="button" data-axe="tranche" class="${this.axe === 'tranche' ? 'actif' : ''}">Par tranche</button>
-        </span>
         <label class="coche" title="Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)">
           <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> Options et pour mémoire</label>
         <span class="analyse-colonnes">
@@ -175,7 +138,7 @@ export class AnalyseCoefficients {
         <span class="analyse-fa">Coef. frais annexes : <strong>${formatLibre(this.coefFa)}</strong></span>
       </div>
       <div class="analyse-tableau"><table class="table-analyse">
-        <thead><tr><th>${this.axe === 'nature' ? 'Nature' : 'Tranche'}</th>${colonnes.map((c) => `<th title="${echapper(c.aide)}">${echapper(c.titre)}</th>`).join('')}</tr></thead>
+        <thead><tr><th>Nature</th>${colonnes.map((c) => `<th title="${echapper(c.aide)}">${echapper(c.titre)}</th>`).join('')}</tr></thead>
         <tbody>${liste.map((g) => ligne(g)).join('')}</tbody>
         <tfoot>${ligne(total, true)}</tfoot>
       </table></div>
@@ -212,19 +175,10 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
-    const axe = e.target.closest('[data-axe]');
-    if (axe) { this.axe = axe.dataset.axe; this.memoriser(); this.rendre(); return; }
     const arbrePli = e.target.closest('[data-arbre-pli]');
     if (arbrePli) {
       const id = Number(arbrePli.dataset.arbrePli);
       if (this.arbreReplies.has(id)) this.arbreReplies.delete(id); else this.arbreReplies.add(id);
-      this.rendre();
-      return;
-    }
-    const pli = e.target.closest('[data-pli]');
-    if (pli) {
-      const id = Number(pli.dataset.pli);
-      if (this.replies.has(id)) this.replies.delete(id); else this.replies.add(id);
       this.rendre();
       return;
     }
@@ -281,7 +235,7 @@ export class AnalyseCoefficients {
 
   /**
    * Montant forcé : coefficients recalculés sur les feuilles du groupe (plus fortes lignes pour l'arrondi) et, en dernier
-   * recours, ligne d'écart d'arrondi dans la tranche du groupe (ou la portée), avec la nature du groupe.
+   * recours, ligne d'écart d'arrondi dans la tranche de la portée (ou la section), avec la nature du groupe.
    */
   forcer(groupe, cle, cible) {
     const ed = this.editeur;
@@ -290,7 +244,7 @@ export class AnalyseCoefficients {
     const champ = MONTANTS_FORCABLES[cle].champ;
     const nature = groupe.nature !== undefined ? groupe.nature : res.nature;
     const idEcart = res.ecart !== null ? ed.magasin.prochainId() : null;
-    const conteneur = groupe.tranche ?? this.portee ?? ed.saisie.lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.SECTION)?.lig_id ?? null;
+    const conteneur = this.portee ?? ed.saisie.lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.SECTION)?.lig_id ?? null;
     const libelle = MONTANTS_FORCABLES[cle].libelle;
     ed.magasin.modifier((d) => {
       for (const l of d.lignes) if (res.coefs.has(l.lig_id)) l[champ] = Number(res.coefs.get(l.lig_id));

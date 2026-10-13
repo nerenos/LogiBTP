@@ -218,7 +218,6 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 /* Onglet Analyse : coefficients par nature ou par tranche (aide à la saisie). */
 .vue-analyse { overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.6rem 0.8rem; border-top: 1px solid var(--bord); background: var(--surface); }
 .analyse-barre { display: flex; flex-wrap: wrap; gap: 0.8rem 1.2rem; align-items: center; }
-.analyse-axe button.actif { background: var(--accent-clair); border-color: var(--accent); }
 .analyse-fa { color: var(--discret); margin-left: auto; }
 .analyse-tableau { overflow-x: auto; }
 .table-analyse { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 100%; }
@@ -237,9 +236,6 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .analyse-colonnes .menu-colonnes[hidden] { display: none; }
 .analyse-colonnes .menu-colonnes label { display: flex; gap: 0.35rem; align-items: center; white-space: nowrap; }
 .analyse-colonnes .menu-colonnes button { grid-column: 1 / -1; justify-self: end; }
-.table-analyse th .pli { display: inline-block; width: 1em; color: var(--discret); cursor: pointer; }
-.table-analyse th .lien { background: none; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
-.table-analyse th .lien:hover { color: var(--accent); text-decoration: underline; }
 .table-analyse td input.montant { width: 8.5em; }
 
 /* Analyse : arbre des portées (document entier, sections, titres) à gauche du tableau. */
