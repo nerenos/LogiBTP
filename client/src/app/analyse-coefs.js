@@ -43,6 +43,9 @@ export class AnalyseCoefficients {
     const p = lirePreferences().analyse ?? {};
     this.horsTotal = Boolean(p.horsTotal);
     this.colonnes = new Set(Array.isArray(p.colonnes) ? p.colonnes : COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
+    // Partage de la zone : part des coefficients (en %) et partie masquée ('coefs', 'elements' ou null).
+    this.partage = Number.isFinite(p.partage) ? Math.min(85, Math.max(15, p.partage)) : 45;
+    this.masquee = ['coefs', 'elements'].includes(p.masquee) ? p.masquee : null;
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
@@ -78,7 +81,51 @@ export class AnalyseCoefficients {
   get resultat() { return this.editeur.resultat; }
   get coefFa() { return Number(this.resultat.document.ent_coef_fa ?? 1); }
 
-  memoriser() { ecrirePreferences({ analyse: { horsTotal: this.horsTotal, colonnes: [...this.colonnes] } }); }
+  memoriser() {
+    ecrirePreferences({ analyse: { horsTotal: this.horsTotal, colonnes: [...this.colonnes], partage: this.partage, masquee: this.masquee } });
+  }
+
+  /** Partage appliqué : hauteur de la partie Coefficients, partie masquée. */
+  appliquerPartage() {
+    const principal = this.conteneur.querySelector('.analyse-principal');
+    if (!principal) return;
+    principal.style.setProperty('--part-coefs', `${this.partage}%`);
+    principal.dataset.masquee = this.masquee ?? '';
+    for (const b of principal.querySelectorAll('[data-masquer-partie]')) {
+      const masquee = this.masquee === b.dataset.masquerPartie;
+      b.textContent = masquee ? '▸' : '▾';
+      b.title = masquee ? 'Afficher cette partie' : 'Masquer cette partie (l\'autre prend toute la place)';
+      b.setAttribute('aria-expanded', String(!masquee));
+    }
+  }
+
+  /** Limite entre les deux parties déplacée par glisser (Pointer Events) ; double-clic : partage par défaut. */
+  #separateur(sep) {
+    sep.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      sep.setPointerCapture(e.pointerId);
+      const principal = this.conteneur.querySelector('.analyse-principal');
+      const haut = principal.querySelector('.analyse-parties').getBoundingClientRect();
+      this.masquee = null;
+      document.body.classList.add('redimensionnement-vertical');
+      const bouger = (ev) => {
+        this.partage = Math.round(Math.min(85, Math.max(15, ((ev.clientY - haut.top) / haut.height) * 100)));
+        this.appliquerPartage();
+      };
+      const finir = () => {
+        sep.removeEventListener('pointermove', bouger);
+        sep.removeEventListener('pointerup', finir);
+        sep.removeEventListener('pointercancel', finir);
+        document.body.classList.remove('redimensionnement-vertical');
+        this.memoriser();
+      };
+      sep.addEventListener('pointermove', bouger);
+      sep.addEventListener('pointerup', finir);
+      sep.addEventListener('pointercancel', finir);
+    });
+    sep.addEventListener('dblclick', () => { this.partage = 45; this.masquee = null; this.appliquerPartage(); this.memoriser(); });
+  }
 
   /** Tranches (sections, titres) dans l'ordre du document avec leur profondeur. */
   tranches() {
@@ -172,30 +219,41 @@ export class AnalyseCoefficients {
         </span>
         <span class="analyse-fa">Coef. frais annexes : <strong>${formatLibre(this.coefFa)}</strong></span>
       </div>
-      <div class="analyse-tableau"><table class="table-analyse">
+      <div class="analyse-parties">
+      <section class="analyse-partie" data-partie="coefs">
+        <header class="partie-entete">
+          <button type="button" class="partie-bascule" data-masquer-partie="coefs"></button>
+          <h3>Coefficients par nature</h3>
+          <span class="aide">Coefficient ou montant saisi écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies valeurs, l'arrondi est
+            absorbé par les plus fortes lignes, en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées.</span>
+        </header>
+        <div class="partie-corps"><table class="table-analyse">
         <thead><tr><th>Nature</th>${colonnes.map((c) => `<th title="${echapper(c.aide)}">${echapper(c.titre)}</th>`).join('')}</tr></thead>
         <tbody>${liste.map((g) => ligne(g)).join('')}</tbody>
         <tfoot>${ligne(total, true)}</tfoot>
-      </table></div>
-      ${liste.length ? '' : '<p class="aide">Aucune ligne chiffrée dans cette portée.</p>'}
-      <p class="aide">Aide à la saisie : un coefficient ou un montant saisi est écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies
-        valeurs, l'arrondi est absorbé par les plus fortes lignes, et en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées ;
-        les montants peuvent différer de quelques centimes des montants arrondis ligne à ligne.</p>
-      <section class="analyse-elements">
-        <div class="analyse-elements-entete">
+        </table>
+        ${liste.length ? '' : '<p class="aide">Aucune ligne chiffrée dans cette portée.</p>'}</div>
+      </section>
+      <div class="analyse-separateur" role="separator" aria-orientation="horizontal" title="Glisser pour déplacer la limite · double-clic : partage par défaut"></div>
+      <section class="analyse-partie analyse-elements" data-partie="elements">
+        <header class="partie-entete">
+          <button type="button" class="partie-bascule" data-masquer-partie="elements"></button>
           <h3>Éléments <small data-nb-elements></small></h3>
           <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}">
-          <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; une valeur saisie est écrite sur toutes les lignes du groupe
-            dans la portée et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
-        </div>
-        <div class="analyse-tableau"><table class="table-analyse table-elements">
+          <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée
+            et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
+        </header>
+        <div class="partie-corps"><table class="table-analyse table-elements">
           <thead><tr><th>Code</th><th>Libellé</th><th>U</th><th title="Nombre de lignes">Lignes</th><th>Qté totale</th>
             ${Object.values(VALEURS_ELEMENT).map((v) => `<th>${echapper(v.titre)}</th>`).join('')}<th>Montant PV</th><th>Nature</th></tr></thead>
           <tbody></tbody>
         </table></div>
       </section>
+      </div>
       </div>`;
     this.dernier = { liste, total };
+    this.appliquerPartage();
+    this.#separateur(this.conteneur.querySelector('.analyse-separateur'));
     this.rendreElements();
   }
 
@@ -297,6 +355,14 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const bascule = e.target.closest('[data-masquer-partie]');
+    if (bascule) {
+      const partie = bascule.dataset.masquerPartie;
+      this.masquee = this.masquee === partie ? null : partie;
+      this.appliquerPartage();
+      this.memoriser();
+      return;
+    }
     const naturePli = e.target.closest('[data-nature-pli]');
     if (naturePli) {
       const k = naturePli.dataset.naturePli;

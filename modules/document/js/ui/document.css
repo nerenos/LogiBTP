@@ -239,7 +239,7 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .table-analyse td input.montant { width: 8.5em; }
 
 /* Analyse : arbre des portées (document entier, sections, titres) à gauche du tableau. */
-.vue-analyse.analyse-coefs { flex-direction: row; align-items: stretch; gap: 0.8rem; overflow: hidden; min-height: 0; }
+.vue-analyse.analyse-coefs { flex: 1; flex-direction: row; align-items: stretch; gap: 0.8rem; overflow: hidden; min-height: 0; }
 .analyse-gauche { flex: none; width: 17rem; min-width: 12rem; max-width: 40%; resize: horizontal; overflow: hidden; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
 .analyse-arbre { flex: 1 1 0; min-height: 6rem; overflow: auto; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
 .analyse-arbre.analyse-natures { flex: 0 1 auto; max-height: 45%; }
@@ -254,7 +254,7 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .analyse-arbre .lien { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: none; border: none; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .analyse-arbre .lien:hover { color: var(--accent); }
 .analyse-arbre .mt { color: var(--discret); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.analyse-principal { flex: 1; min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+.analyse-principal { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.5rem; }
 @media (max-width: 760px) {
   .vue-analyse.analyse-coefs { flex-direction: column; }
   .analyse-gauche { width: auto; max-width: none; resize: none; }
@@ -262,15 +262,36 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 }
 
 /* Analyse : éléments regroupés par code et libellé. */
-.analyse-elements { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
-.analyse-elements-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; }
-.analyse-elements-entete h3 { margin: 0; font-size: 1rem; }
-.analyse-elements-entete h3 small { color: var(--discret); font-weight: 400; }
-.analyse-elements-entete input[type="search"] { min-width: 16rem; }
-.analyse-elements-entete .aide { margin: 0; flex-basis: 100%; }
 .table-elements tbody th { font-weight: 400; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; }
 .table-elements td input { width: 7.5em; }
 .table-analyse td.divergent { background: var(--alerte-fond); }
 .table-analyse td.divergent input { background: transparent; }
 .table-analyse td.divergent input::placeholder { color: var(--alerte); opacity: 1; }
 .table-elements thead th:nth-child(-n+3) { text-align: left; }
+
+/* Analyse : deux parties (coefficients, éléments) séparées par une limite déplaçable ; chacune défile avec ses
+   en-têtes figés et peut être masquée (l'autre prend toute la place). */
+.analyse-parties { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.analyse-partie { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.analyse-partie[data-partie="coefs"] { flex: 0 0 var(--part-coefs, 45%); }
+.analyse-partie[data-partie="elements"] { flex: 1 1 0; margin-top: 0; }
+.analyse-principal[data-masquee="coefs"] .analyse-partie[data-partie="coefs"] { flex: 0 0 auto; }
+.analyse-principal[data-masquee="elements"] .analyse-partie[data-partie="coefs"] { flex: 1 1 0; }
+.analyse-principal[data-masquee="elements"] .analyse-partie[data-partie="elements"] { flex: 0 0 auto; }
+.analyse-principal[data-masquee="coefs"] [data-partie="coefs"] .partie-corps,
+.analyse-principal[data-masquee="elements"] [data-partie="elements"] .partie-corps { display: none; }
+.analyse-principal[data-masquee="coefs"] [data-partie="coefs"] .partie-entete .aide,
+.analyse-principal[data-masquee="elements"] [data-partie="elements"] .partie-entete :is(.aide, input) { display: none; }
+.partie-entete { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--bord); }
+.partie-entete h3 { margin: 0; font-size: 0.95rem; }
+.partie-entete h3 small { color: var(--discret); font-weight: 400; }
+.partie-entete .aide { margin: 0; flex: 1 1 24rem; font-size: 0.8em; }
+.partie-entete input[type="search"] { min-width: 14rem; }
+.partie-bascule { padding: 0 0.35rem; line-height: 1.4; }
+.partie-corps { flex: 1; min-height: 0; overflow: auto; }
+.partie-corps .table-analyse thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--bord); }
+.partie-corps .table-analyse tfoot :is(th, td) { position: sticky; bottom: 0; z-index: 2; }
+.analyse-separateur { flex: none; height: 6px; margin: 2px 0; border-radius: 3px; background: var(--fond); cursor: row-resize; touch-action: none; }
+.analyse-separateur:hover, body.redimensionnement-vertical .analyse-separateur { background: var(--accent-clair); }
+.analyse-principal[data-masquee="coefs"] .analyse-separateur, .analyse-principal[data-masquee="elements"] .analyse-separateur { visibility: hidden; }
+body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
