@@ -4,7 +4,7 @@ import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } f
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre } from './structure/structure.js';
-import { choisirRattachement } from './structure/selection.js';
+import { champRattachement } from './structure/selection.js';
 
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
@@ -91,22 +91,10 @@ export class PanneauxBtp extends PanneauxDocument {
 
   /**
    * Rattachement à la structure des affaires : pour chaque niveau, libellé, zone de saisie du code (double-clic ou F4 :
-   * liste de choix) et, dessous, le libellé de l'élément en lien vers sa fiche.
+   * liste de choix) et, dessous, le libellé de l'élément en lien vers sa fiche (composant champRattachement).
    */
-  sectionRattachement(d) {
-    if (!this.structure) return '';
-    const champ = (type, cle, liste, valeur, titre) => {
-      const x = (this.structure[liste] ?? []).find((y) => y.id === Number(valeur));
-      return `<div class="rattachement-champ"><label>${titre}
-          <input data-rattachement="${cle}" data-type="${type}" value="${echapper(x?.code ?? '')}" placeholder="Code" title="Code (double-clic ou F4 : choisir dans la liste)" autocomplete="off"></label>
-        <span class="rattachement-libelle">${x ? `<a href="/fiche/${type}/${x.id}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span></div>`;
-    };
-    return `<fieldset class="rattachement-document"><legend>Rattachement</legend>
-      ${champ('projet', 'ent_projet_id', 'projets', d.ent_projet_id, 'Projet')}
-      ${champ('affaire', 'ent_affaire_id', 'affaires', d.ent_affaire_id, 'Affaire')}
-      ${champ('chantier', 'ent_chantier_id', 'chantiers', d.ent_chantier_id, 'Chantier')}
-      ${champ('marche', 'ent_marche_id', 'marches', d.ent_marche_id, 'Marché')}
-    </fieldset>`;
+  sectionRattachement() {
+    return this.structure ? '<fieldset class="rattachement-document"><legend>Rattachement</legend><div class="rattachements" data-rattachements></div></fieldset>' : '';
   }
 
   /** Rattachement modifié sur un niveau : les parents suivent (completerRattachement), un enfant incohérent est retiré. */
@@ -121,20 +109,6 @@ export class PanneauxBtp extends PanneauxDocument {
       r.ent_chantier_id = null; r.ent_marche_id = null;
     }
     this.rattacher?.(r);
-  }
-
-  /** Liste de choix d'un niveau ; propose de la restreindre au parent déjà choisi. */
-  async choisirRattachement(el) {
-    const d = this.editeur.saisie.document;
-    const type = el.dataset.type;
-    const liste = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' }[type];
-    const titres = { projet: 'Choisir le projet', affaire: 'Choisir l\'affaire', chantier: 'Choisir le chantier', marche: 'Choisir le marché' };
-    const filtre = type === 'chantier' && d.ent_affaire_id ? { libelle: 'Chantiers de l\'affaire', test: (x) => x.aff_id === d.ent_affaire_id }
-      : type === 'marche' && d.ent_chantier_id ? { libelle: 'Marchés du chantier', test: (x) => x.cha_id === d.ent_chantier_id } : null;
-    const x = await choisirRattachement({ type, titre: titres[type], liste: this.structure[liste] ?? [], refs: this.structure, courant: d[el.dataset.rattachement] ?? null, filtre });
-    el.blur(); // le dialogue rend le focus à la zone : l'entête ne se redessinerait pas
-    if (x) this.changerRattachement(el.dataset.rattachement, x.id);
-    else this.rendreEntete(el.closest('#entete') ?? el.closest('.entete'));
   }
 
   sectionsEntete() {
@@ -161,27 +135,19 @@ export class PanneauxBtp extends PanneauxDocument {
         }] : [],
       }).rendre(this.intervenantsDocument(d)));
     }
-    zone.querySelectorAll('[data-rattachement]').forEach((el) => {
-      const liste = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' }[el.dataset.type];
-      el.addEventListener('dblclick', () => this.choisirRattachement(el));
-      el.addEventListener('keydown', (e) => { if (e.key === 'F4') { e.preventDefault(); this.choisirRattachement(el); } });
-      // Code saisi : exact, sinon seul code commençant ainsi ; inconnu → liste de choix filtrée.
-      el.addEventListener('change', () => {
-        const code = el.value.trim().toLowerCase();
-        el.blur();
-        if (!code) { this.changerRattachement(el.dataset.rattachement, null); return; }
-        const tous = this.structure[liste] ?? [];
-        const x = tous.find((y) => y.code.toLowerCase() === code) ?? (tous.filter((y) => y.code.toLowerCase().startsWith(code)).length === 1
-          ? tous.find((y) => y.code.toLowerCase().startsWith(code)) : null);
-        if (x) this.changerRattachement(el.dataset.rattachement, x.id);
-        else this.choisirRattachement(el);
+    const ratt = zone.querySelector('[data-rattachements]');
+    if (ratt) {
+      const d = this.editeur.saisie.document;
+      const niveau = (type, cle, titre, filtre = null) => champRattachement({
+        type, titre, refs: this.structure, valeur: d[cle], filtre, choisir: (id) => this.changerRattachement(cle, id),
       });
-    });
-  }
-
-  /** Contrôles exigés à la validation (nature des lignes de prix), affichés pendant la saisie. */
-  controlesSupplementaires() {
-    return controlesValidation(this.editeur.saisie.lignes).map((e) => ({ ...e, niveau: 'erreur' }));
+      ratt.append(
+        niveau('projet', 'ent_projet_id', 'Projet'),
+        niveau('affaire', 'ent_affaire_id', 'Affaire'),
+        niveau('chantier', 'ent_chantier_id', 'Chantier', d.ent_affaire_id ? { libelle: 'Chantiers de l\'affaire', test: (x) => x.aff_id === d.ent_affaire_id } : null),
+        niveau('marche', 'ent_marche_id', 'Marché', d.ent_chantier_id ? { libelle: 'Marchés du chantier', test: (x) => x.cha_id === d.ent_chantier_id } : null),
+      );
+    }
   }
 
   aideLigneAbsente(calculee) {

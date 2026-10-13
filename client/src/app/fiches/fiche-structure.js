@@ -3,6 +3,7 @@ import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
 import { controlerIntervenants } from '../structure/structure.js';
+import { champRattachement } from '../structure/selection.js';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
@@ -87,17 +88,17 @@ export class FicheStructure extends FicheLogiBTP {
       span.innerHTML = valeur ? `<a href="/document/${Number(valeur)}">${echapper(c ? `${c.numero ?? ''} ${c.objet ?? ''}` : `Document ${valeur}`)}</a>` : '—';
       return span;
     }
-    const liste = { affaire: 'affaires', projet: 'projets', chantier: 'chantiers' }[champ.reference];
-    const el = document.createElement('select');
-    el.className = 'fiche-saisie-champ';
-    el.innerHTML = `<option value=""></option>${(this.refs[liste] ?? []).filter((x) => !['CLOSE', 'CLOS'].includes(x.statut) || x.id === Number(valeur))
-      .map((x) => `<option value="${x.id}" ${x.id === Number(valeur) ? 'selected' : ''}>${echapper(`${x.code} – ${x.libelle}`)}</option>`).join('')}`;
-    el.disabled = lecture;
-    el.addEventListener('change', () => this.choisirReference(champ.code, el.value === '' ? null : Number(el.value)));
-    return el;
+    // Zone de code, libellé en lien vers la fiche, double-clic ou F4 : liste de choix.
+    return champRattachement({
+      type: champ.reference, refs: this.refs, valeur, lecture, filtre: this.filtreReference(champ),
+      choisir: (id) => { this.choisirReference(champ.code, id); this.rendre(); },
+    });
   }
 
-  /** Choix d'une référence : une spécialisation complète les champs liés (client du projet…). */
+  /** Restriction proposée dans la liste de choix d'une référence (aucune par défaut). */
+  filtreReference(_champ) { return null; }
+
+  /** Choix d'une référence : une spécialisation complète les champs liés (parents, client du projet…). */
   choisirReference(code, id) { this.definirValeur(code, id); }
 
   /** Tiers de l'annuaire : recherche par code ou raison sociale (liste proposée), l'ID est enregistré. */
@@ -191,7 +192,6 @@ export class FicheChantier extends FicheStructure {
     const prj = (this.refs.projets ?? []).find((p) => p.id === id);
     if (prj && !this.valeur('tiers_id')) this.definirValeur('tiers_id', prj.tiers_id);
     if (prj && !this.valeur('ville')) this.definirValeur('ville', prj.ville);
-    this.rendre();
   }
 
   liens(v) {
@@ -225,7 +225,6 @@ export class FicheMarche extends FicheStructure {
     if (cha) {
       this.definirValeur('code', codeMarche(cha, this.refs.marches ?? []));
       if (!this.valeur('tiers_id')) this.definirValeur('tiers_id', cha.tiers_id);
-      this.rendre();
     }
   }
 

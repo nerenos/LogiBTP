@@ -80,3 +80,42 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
     $('[data-recherche]').focus();
   });
 }
+
+const LISTES = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' };
+const TITRES_CHOIX = { projet: 'Choisir le projet', affaire: "Choisir l'affaire", chantier: 'Choisir le chantier', marche: 'Choisir le marché' };
+
+/**
+ * Zone de rattachement (projet, affaire, chantier, marché) : saisie du code (exact, ou seul code commençant ainsi),
+ * double-clic ou F4 : liste de choix ; sous la zone, le libellé de l'élément en lien vers sa fiche. Un code inconnu
+ * ouvre la liste. choisir(id | null) reçoit le rattachement retenu ; filtre : restriction proposée dans la liste.
+ * Utilisée par l'entête des documents (avec son libellé) et les fiches de la structure (libellé du bloc de la fiche).
+ */
+export function champRattachement({ type, refs, valeur, choisir, titre = null, lecture = false, filtre = null }) {
+  const liste = refs[LISTES[type]] ?? [];
+  const x = liste.find((y) => y.id === Number(valeur)) ?? null;
+  const div = document.createElement('div');
+  div.className = 'rattachement-champ champ-rattachement';
+  div.innerHTML = `${titre ? `<label>${echapper(titre)} </label>` : ''}
+    <input class="rattachement-code" value="${echapper(x?.code ?? '')}" placeholder="${lecture ? '' : 'Code'}" autocomplete="off"
+      ${lecture ? 'readonly' : 'title="Code (double-clic ou F4 : choisir dans la liste)"'}>
+    <span class="rattachement-libelle">${x ? `<a href="/fiche/${type}/${x.id}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span>`;
+  const input = div.querySelector('input');
+  if (titre) div.querySelector('label').append(input);
+  if (lecture) return div;
+  const ouvrir = async () => {
+    const choix = await choisirRattachement({ type, titre: TITRES_CHOIX[type], liste, refs, courant: x?.id ?? null, filtre });
+    input.blur(); // le dialogue rend le focus à la zone : l'appelant redessine
+    if (choix) choisir(choix.id);
+    else input.value = x?.code ?? '';
+  };
+  input.addEventListener('dblclick', () => ouvrir());
+  input.addEventListener('keydown', (e) => { if (e.key === 'F4') { e.preventDefault(); ouvrir(); } });
+  input.addEventListener('change', () => {
+    const code = input.value.trim().toLowerCase();
+    if (!code) { input.blur(); choisir(null); return; }
+    const debut = liste.filter((y) => y.code.toLowerCase().startsWith(code));
+    const trouve = liste.find((y) => y.code.toLowerCase() === code) ?? (debut.length === 1 ? debut[0] : null);
+    if (trouve) { input.blur(); choisir(trouve.id); } else ouvrir();
+  });
+  return div;
+}

@@ -123,3 +123,10 @@ dialog.dialogue-selection .selection-liste { max-height: 55vh; overflow: auto; b
 /* Colonne Nature des lignes : obligatoire sur les lignes de prix pour valider. */
 .col-nature { width: 4.5em; }
 td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 22%, transparent); box-shadow: inset 0 0 0 1px var(--erreur, #c0392b); }
+
+/* Fiches de la structure : libellé et zone de code sur une ligne, libellé de l'élément en lien dessous. */
+.fiche-champ:has(> .champ-rattachement) { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 2px; align-items: center; }
+.fiche-champ > .champ-rattachement { display: contents; }
+.fiche-champ > .champ-rattachement input { width: 10em; justify-self: start; }
+.fiche-champ > .champ-rattachement .rattachement-libelle, .fiche-champ:has(> .champ-rattachement) > .fiche-message { grid-column: 1 / -1; }
+.rattachement-code[readonly] { border-color: transparent; background: transparent; }
