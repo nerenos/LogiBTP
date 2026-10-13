@@ -151,7 +151,7 @@ export class AnalyseCoefficients {
         <span class="analyse-fa">Coef. frais annexes du document : <strong>${formatLibre(r.document.ent_coef_fa ?? 1)}</strong></span>
       </div>
       <p class="aide">Aide à la saisie : un coefficient saisi est écrit sur les lignes de la ligne du tableau (FG et bénéfice sur les lignes chiffrées
-        sans composante, prorata sur les lignes de prix) ; les lignes restent la référence et chaque saisie s'annule par Ctrl+Z.
+        sans composante, prorata sur les lignes vendues, jamais sur leurs composantes) ; les lignes restent la référence et chaque saisie s'annule par Ctrl+Z.
         Moyennes pondérées ; options, variantes et lignes pour mémoire exclues.</p>
       <div class="analyse-tableau"><table class="table-analyse">
         <thead><tr><th>${this.axe === 'nature' ? 'Nature' : 'Tranche'}</th><th>Lignes</th><th>Déboursé</th><th>FG</th><th>Revient</th><th>Bénéf.</th>
@@ -187,17 +187,13 @@ export class AnalyseCoefficients {
     this.appliquer(g, input.dataset.champ, Number(v));
   }
 
-  /** Écrit le coefficient sur les lignes du groupe (prorata : lignes de prix et leurs composantes). */
+  /** Écrit le coefficient sur les lignes du groupe (prorata : lignes vendues seulement). */
   appliquer(groupe, champ, valeur) {
     const ed = this.editeur;
     let ids;
     if (champ === 'prorata') {
-      const prix = new Set(groupe.feuilles.map((f) => f.prix.lig_id));
-      const parId = new Map(ed.saisie.lignes.map((l) => [l.lig_id, l]));
-      ids = new Set(ed.saisie.lignes.filter((l) => {
-        for (let x = l; x; x = parId.get(x.lig_parent_id)) if (prix.has(x.lig_id)) return estChiffree(l);
-        return false;
-      }).map((l) => l.lig_id));
+      // Le prorata reste sur les lignes vendues (lignes de prix), jamais sur leurs composantes.
+      ids = new Set(groupe.feuilles.map((f) => f.prix.lig_id));
     } else {
       ids = new Set(groupe.feuilles.map((f) => f.ligne.lig_id));
       // Mode déboursé : le coefficient d'un ouvrage s'applique à l'ouvrage lui-même.

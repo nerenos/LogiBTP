@@ -1,4 +1,4 @@
-import { CFG_LIGNES as C, parId, ancetres, formatNombre, formatLibre, lireNombre } from '@logibtp/socle/ui';
+import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre } from '@logibtp/socle/ui';
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes, LIBELLES_TYPE,
 } from '@logibtp/document/ui';
@@ -11,7 +11,16 @@ import { calculerDocument, TL, CODES_TL, estChiffree } from '../calcul/index.js'
 
 /** Règles BTP : coefficients hérités de l'ouvrage, exclusivité des blocages de prix, quantité saisie. */
 export class ReglesBtp extends ReglesDocument {
-  get champsHeritesOuvrage() { return ['lig_coef_fg', 'lig_coef_benef', 'lig_coef_prorata', ...super.champsHeritesOuvrage]; }
+  get champsHeritesOuvrage() { return ['lig_coef_fg', 'lig_coef_benef', ...super.champsHeritesOuvrage]; }
+
+  /** Le prorata reste sur les lignes vendues : une ligne entrée dans un ouvrage (et son contenu) repasse à 1. */
+  appliquerContexte(brouillon, id, tauxTva) {
+    super.appliquerContexte(brouillon, id, tauxTva);
+    const lignes = brouillon.lignes;
+    if (!this.ouvrageAncetre(lignes, id)) return;
+    const ids = new Set([id, ...descendants(C, lignes, id)]);
+    for (const l of lignes) if (ids.has(l.lig_id)) l.lig_coef_prorata = 1;
+  }
 
   apresModification(brouillon, id, champ) {
     super.apresModification(brouillon, id, champ);
@@ -179,8 +188,10 @@ export class EditeurDevisBtp extends EditeurDocument {
       },
       {
         // Prorata : appliqué au prix affiché après les frais annexes, avant la remise (lignes de prix).
-        cle: 'prorata', titre: 'Prorata', classe: 'col-coef', ...this.colonneNombre('lig_coef_prorata', chiffree),
-        valeur: (r) => (estChiffree(r.calcule) && Number(r.calcule.lig_coef_prorata ?? 1) !== 1 ? this.coefAffiche(r.calcule.lig_coef_prorata, 1) : ''),
+        cle: 'prorata', titre: 'Prorata', classe: 'col-coef',
+        ...this.colonneNombre('lig_coef_prorata', (l) => chiffree(l) && this.regles.estLigneDePrix(this.saisie.lignes, l)),
+        valeur: (r) => (this.regles.estLigneDePrix(this.saisie.lignes, r.item) && Number(r.calcule.lig_coef_prorata ?? 1) !== 1
+          ? this.coefAffiche(r.calcule.lig_coef_prorata, 1) : ''),
       },
     ]);
     // Saisir un PV impose un prix fixe (avant frais annexes et remise) ; vider la cellule le retire.

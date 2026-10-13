@@ -352,10 +352,11 @@ export class MoteurDevisBtp extends MoteurDocument {
   }
 
   /**
-   * Coefficient de prorata de la ligne : appliqué au prix affiché après la ventilation des frais annexes, avant la
-   * remise. Il n'entre pas dans le calcul du coefficient de frais annexes (un PV affiché imposé en est d'abord retiré).
+   * Coefficient de prorata de la ligne vendue (ligne de prix ; une composante d'ouvrage n'en a pas) : appliqué au prix
+   * affiché après la ventilation des frais annexes, avant la remise. Il n'entre pas dans le calcul du coefficient de
+   * frais annexes (un PV affiché imposé en est d'abord retiré).
    */
-  prorata(l) { return coef(l.lig_coef_prorata); }
+  prorata(l) { return this.estLigneDePrix(l) ? coef(l.lig_coef_prorata) : UN; }
 
   /** PV affiché imposé hors prorata. */
   afficheHorsProrata(l) {

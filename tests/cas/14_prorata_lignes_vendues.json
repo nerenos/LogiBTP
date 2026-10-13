@@ -1,0 +1,73 @@
+{
+  "nom": "Prorata des seules lignes vendues",
+  "description": "Le prorata s'applique aux lignes vendues (lignes de prix) : l'ouvrage a un prorata de 1,1, sa composante un prorata de 1,5 qui est ignoré (PV affiché de la composante 100, celui de l'ouvrage 100 × 1,1 = 110). L'élément vendu seul a un prorata de 1,05 : 40 × 1,05 = 42.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "Ouvrage",
+        "lig_qte": 2,
+        "lig_tva_id": 1,
+        "lig_coef_prorata": 1.1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Composante",
+        "lig_qte": 1,
+        "lig_qte_type": "R",
+        "lig_pa": 100,
+        "lig_coef_prorata": 1.5
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Élément vendu",
+        "lig_qte": 1,
+        "lig_pa": 40,
+        "lig_tva_id": 1,
+        "lig_coef_prorata": 1.05
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_total_ht": 262
+    },
+    "lignes": {
+      "1": {
+        "lig_pv": 100,
+        "lig_pv_affiche": 110,
+        "lig_montant_ht": 220
+      },
+      "2": {
+        "lig_pv_affiche": 100
+      },
+      "3": {
+        "lig_pv_affiche": 42,
+        "lig_montant_ht": 42
+      }
+    }
+  }
+}

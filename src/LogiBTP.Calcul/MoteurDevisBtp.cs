@@ -393,11 +393,14 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         Ordre.Where(l => !TL.EstPied(l) && EstLigneDePrix(l) && !HorsTotal(l) && !EnErreur.Contains(l.LigId) && Px.ContainsKey(l.LigId)).ToList();
 
     /// <summary>
-    /// PV affiché imposé hors prorata : le coefficient de prorata s'applique au prix affiché après la ventilation des
-    /// frais annexes, avant la remise, et n'entre pas dans le calcul du coefficient de frais annexes.
+    /// Coefficient de prorata de la ligne vendue (ligne de prix ; une composante d'ouvrage n'en a pas) : appliqué au
+    /// prix affiché après la ventilation des frais annexes, avant la remise.
     /// </summary>
-    private static decimal AfficheHorsProrata(DocumentLigneBtp l) =>
-        l.LigCoefProrata == 1 ? l.LigPvAffiche!.Value : Arr6(l.LigPvAffiche!.Value / l.LigCoefProrata);
+    private decimal Prorata(DocumentLigneBtp l) => EstLigneDePrix(l) ? l.LigCoefProrata : 1;
+
+    /// <summary>PV affiché imposé hors prorata : le prorata n'entre pas dans le calcul du coefficient de frais annexes.</summary>
+    private decimal AfficheHorsProrata(DocumentLigneBtp l) =>
+        Prorata(l) == 1 ? l.LigPvAffiche!.Value : Arr6(l.LigPvAffiche!.Value / Prorata(l));
 
     protected override void ApresPrix()
     {
@@ -466,7 +469,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     }
 
     protected override decimal PvAffiche(DocumentLigneBtp l, Prix y) =>
-        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * _coefFa * l.LigCoefProrata, l.LigPrecisionPv);
+        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * _coefFa * Prorata(l), l.LigPrecisionPv);
 
     protected override void EcrireMontants(DocumentLigneBtp l, Prix prix, decimal pvAff, decimal pvRem, decimal qv)
     {
