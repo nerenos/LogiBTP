@@ -41,6 +41,7 @@ export class AnalyseCoefficients {
     this.colonnes = new Set(Array.isArray(p.colonnes) ? p.colonnes : COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.replies = new Set();
+    this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     conteneur.classList.add('analyse-coefs');
     conteneur.addEventListener('change', (e) => this.#changement(e));
     conteneur.addEventListener('click', (e) => this.#clic(e));
@@ -149,13 +150,14 @@ export class AnalyseCoefficients {
       return `<tr class="${estTotal ? 'total' : ''}"><th style="padding-left:${0.55 + (g.profondeur ?? 0) * 1.1}rem">${nom}</th>
         ${colonnes.map((c) => cellule(g, c, estTotal)).join('')}</tr>`;
     };
-    const option = (t) => `<option value="${t.ligne.lig_id}" ${t.ligne.lig_id === this.portee ? 'selected' : ''}>${'  '.repeat(t.profondeur)}${echapper(this.libelleTranche(t.ligne))}</option>`;
     const parent = this.portee === null ? null : tranches.find((t) => t.ligne.lig_id === this.portee)?.parent ?? null;
     const parentEstTranche = parent !== null && tranches.some((t) => t.ligne.lig_id === parent);
 
     this.conteneur.innerHTML = `
+      ${this.arbre(tranches, pm)}
+      <div class="analyse-principal">
       <div class="analyse-barre">
-        <label>Portée <select data-portee><option value="">Document entier</option>${tranches.map(option).join('')}</select></label>
+        <span class="analyse-portee">Portée : <strong>${echapper(this.portee === null ? 'Document entier' : this.libelleTranche(tranches.find((t) => t.ligne.lig_id === this.portee).ligne))}</strong></span>
         ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
         <span class="analyse-axe" role="group" aria-label="Ventilation">
           <button type="button" data-axe="nature" class="${this.axe === 'nature' ? 'actif' : ''}">Par nature</button>
@@ -180,13 +182,45 @@ export class AnalyseCoefficients {
       ${liste.length ? '' : '<p class="aide">Aucune ligne chiffrée dans cette portée.</p>'}
       <p class="aide">Aide à la saisie : un coefficient ou un montant saisi est écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies
         valeurs, l'arrondi est absorbé par les plus fortes lignes, et en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées ;
-        les montants peuvent différer de quelques centimes des montants arrondis ligne à ligne.</p>`;
+        les montants peuvent différer de quelques centimes des montants arrondis ligne à ligne.</p>
+      </div>`;
     this.dernier = { liste, total };
+  }
+
+  /**
+   * Arbre hiérarchique des portées : le document entier (global), puis les sections, titres et sous-titres, avec
+   * leur montant HT ; clic sur un nœud pour l'analyser, repli des nœuds.
+   */
+  arbre(tranches, pm) {
+    const ids = new Set(tranches.map((t) => t.ligne.lig_id));
+    const avecEnfants = new Set(tranches.map((t) => t.parent).filter((x) => ids.has(x)));
+    const masques = new Set();
+    const noeud = (id, libelle, montant, profondeur, aEnfants, classe = '') => `
+      <li class="${classe} ${id === this.portee ? 'courant' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem">
+        <span class="pli" ${aEnfants && id !== null ? `data-arbre-pli="${id}"` : ''}>${aEnfants && id !== null ? (this.arbreReplies.has(id) ? '▸' : '▾') : ''}</span>
+        <button type="button" class="lien" data-portee-id="${id ?? ''}" title="${echapper(libelle)}">${echapper(libelle)}</button>
+        <span class="mt">${formatNombre(montant, pm)}</span></li>`;
+    // Document entier : total HT du corps (avant postes de pied), comme le tableau.
+    const totalCorps = (this.resultat.pied ?? []).find((e) => e.cle === 'TOTAL_HT')?.montant ?? this.resultat.document.ent_total_ht;
+    const items = [noeud(null, 'Document entier', totalCorps, 0, false, 'global')];
+    for (const t of tranches) {
+      const id = t.ligne.lig_id;
+      if (masques.has(t.parent) || this.arbreReplies.has(t.parent)) { masques.add(id); continue; }
+      items.push(noeud(id, this.libelleTranche(t.ligne), t.ligne.lig_montant_ht, t.profondeur + 1, avecEnfants.has(id), t.ligne.lig_tyl_id === TL.SECTION ? 'section' : ''));
+    }
+    return `<aside class="analyse-arbre" aria-label="Portée de l'analyse"><div class="analyse-arbre-titre">Tranches</div><ul>${items.join('')}</ul></aside>`;
   }
 
   #clic(e) {
     const axe = e.target.closest('[data-axe]');
     if (axe) { this.axe = axe.dataset.axe; this.memoriser(); this.rendre(); return; }
+    const arbrePli = e.target.closest('[data-arbre-pli]');
+    if (arbrePli) {
+      const id = Number(arbrePli.dataset.arbrePli);
+      if (this.arbreReplies.has(id)) this.arbreReplies.delete(id); else this.arbreReplies.add(id);
+      this.rendre();
+      return;
+    }
     const pli = e.target.closest('[data-pli]');
     if (pli) {
       const id = Number(pli.dataset.pli);
@@ -211,7 +245,6 @@ export class AnalyseCoefficients {
 
   #changement(e) {
     const t = e.target;
-    if (t.matches('[data-portee]')) { this.portee = t.value === '' ? null : Number(t.value); this.rendre(); return; }
     if (t.matches('[data-hors-total]')) { this.horsTotal = t.checked; this.memoriser(); this.rendre(); return; }
     if (t.matches('[data-colonne]')) {
       if (t.checked) this.colonnes.add(t.dataset.colonne); else this.colonnes.delete(t.dataset.colonne);
