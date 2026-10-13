@@ -113,18 +113,31 @@ describe("Analyse : quantité totale d'un groupe d'éléments reventilée", () =
     expect(avant).not.toBe(1000);
   });
 
-  it("les lignes issues d'un métré ne changent pas et comptent dans le total", () => {
+  it("une ligne issue d'un métré prend la quantité saisie (métré désactivé)", () => {
     const saisie = saisieDemo();
     const r = calculer(saisie);
-    const feuilles = feuillesAnalyse(r, saisie);
-    const murs = feuilles.find((f) => f.saisie.lig_qte_source === 'M');
-    const autre = feuilles.find((f) => /Installation de chantier/.test(f.ligne.lig_libelle_brut));
-    const groupe = { feuilles: [murs, autre], libelle: 'test' };
-    const qMurs = Number(murs.ligne.lig_qte_totale);
-    const res = repartirQuantite(groupe, qMurs + 10, r);
+    const murs = feuillesAnalyse(r, saisie).find((f) => f.saisie.lig_qte_source === 'M');
+    const res = repartirQuantite({ feuilles: [murs], libelle: 'murs' }, 60, r);
     expect(res.metres).toBe(1);
-    expect(res.qtes.has(murs.ligne.lig_id)).toBe(false);
-    expect(res.qtes.get(autre.ligne.lig_id)).toBeCloseTo(10, 6); // total visé − quantité du métré
-    expect(repartirQuantite({ feuilles: [murs], libelle: 'x' }, 5, r).erreur).toMatch(/métrés/);
+    const l = saisie.lignes.find((x) => x.lig_id === murs.ligne.lig_id);
+    Object.assign(l, { lig_qte: res.qtes.get(l.lig_id), lig_qte_source: 'S' });
+    const apres = calculer(saisie).lignes.find((x) => x.lig_id === l.lig_id);
+    expect(Number(apres.lig_qte_totale)).toBe(60);
+    expect(l.lig_mtr_id).toBe(100); // métré conservé, désactivé
+  });
+
+  it('quantité totale avec coefficient de perte et quantité de l’ouvrage parent', () => {
+    // Béton C25/30 : 0,15 m³ par m² de dalle (120 m²), perte 1,05, précision 4.
+    const saisie = saisieDemo();
+    const r = calculer(saisie);
+    const groupe = elementsAnalyse(feuillesAnalyse(r, saisie)).find((g) => g.libelle === 'Béton C25/30');
+    expect(groupe.qt).toBeCloseTo(0.1575 * 120, 6); // quantité totale affichée : perte et ouvrage compris
+    const res = repartirQuantite(groupe, 20, r);
+    const id = groupe.feuilles[0].ligne.lig_id;
+    // 20 / 120 / 1,05 = 0,15873 → 0,1587 donne 19,992 m³ ; 0,1588 donne 20,004 m³, plus proche : retenu.
+    expect(res.qtes.get(id)).toBeCloseTo(0.1588, 4);
+    for (const l of saisie.lignes) if (res.qtes.has(l.lig_id)) l.lig_qte = res.qtes.get(l.lig_id);
+    const apres = elementsAnalyse(feuillesAnalyse(calculer(saisie), saisie)).find((g) => g.libelle === 'Béton C25/30');
+    expect(Math.abs(apres.qt - 20)).toBeLessThan((0.0001 * 120) / 2); // au plus un demi-pas (précision × quantité de l'ouvrage)
   });
 });

@@ -339,14 +339,15 @@ export class AnalyseCoefficients {
           placeholder="${echapper(txt)}" title="Saisir le ${echapper(def.titre)} de toutes les lignes du groupe (${g.feuilles.length})"></td>`;
     };
     const natures = (g) => [...g.natures].map((n) => this.natures.get(n)?.code ?? (n ? String(n) : '—')).join(', ');
-    // Quantité totale : modifiable (reventilée au prorata) ; 📐 si au moins une ligne a sa quantité issue d'un métré.
+    // Quantité totale (perte et quantité des ouvrages parents comprises) : modifiable, reventilée au prorata ;
+    // 📐 si au moins une ligne a sa quantité issue d'un métré (la saisie la désactive).
     const quantite = (g) => {
       const metres = g.feuilles.filter((f) => (f.saisie?.lig_qte_source ?? 'S') === 'M').length;
-      const marque = metres ? `<span class="metre" title="${metres} ligne(s) dont la quantité est issue d'un métré : inchangée(s), les autres lignes absorbent la différence">📐</span>` : '';
+      const marque = metres ? `<span class="metre" title="${metres} ligne(s) dont la quantité est issue d'un métré : une nouvelle quantité la remplace par une quantité saisie (métré conservé, désactivé)">📐</span>` : '';
       const txt = nombre(g.qt, 3);
-      if (lectureSeule || metres === g.feuilles.length) return `<td class="nombre">${marque}${txt}</td>`;
+      if (lectureSeule) return `<td class="nombre">${marque}${txt}</td>`;
       return `<td class="nombre">${marque}<input data-saisie="element" data-element="${echapper(g.cle)}" data-cle="qt" value="${echapper(txt)}"
-        title="Nouvelle quantité totale : reventilée au prorata des lignes (${g.feuilles.length - metres}), la quantité saisie des lignes est écrasée"></td>`;
+        title="Nouvelle quantité totale (perte et ouvrages compris) : reventilée au prorata des ${g.feuilles.length} ligne(s), quantités saisies recalculées"></td>`;
     };
     const cellules = {
       code: (g) => `<td>${echapper(g.code)}</td>`,
@@ -411,7 +412,7 @@ export class AnalyseCoefficients {
     </span>`;
   }
 
-  /** Nouvelle quantité totale d'un groupe : reventilée au prorata, quantités saisies écrasées (métrés inchangés). */
+  /** Nouvelle quantité totale d'un groupe : reventilée au prorata, quantités saisies recalculées (métrés désactivés). */
   appliquerQuantite(g, valeur) {
     const res = repartirQuantite(g, valeur, this.resultat);
     if (res.erreur) { this.message(res.erreur, 'erreur'); this.rendre(); return; }
@@ -419,7 +420,7 @@ export class AnalyseCoefficients {
       for (const l of d.lignes) if (res.qtes.has(l.lig_id)) { l.lig_qte = res.qtes.get(l.lig_id); l.lig_qte_source = 'S'; }
     }, `Analyse : quantité de « ${g.libelle || g.code} »`);
     this.message(`Quantité totale ${formatLibre(valeur)} reventilée sur ${res.qtes.size} ligne(s) « ${g.libelle || g.code} »`
-      + `${res.metres ? ` ; ${res.metres} ligne(s) issue(s) d'un métré inchangée(s)` : ''}`);
+      + `${res.metres ? ` ; ${res.metres} métré(s) désactivé(s) (conservé(s), quantité saisie)` : ''}`);
   }
 
   /** Valeur saisie dans la partie Éléments : écrite sur toutes les lignes du groupe (une étape d'annulation). */
