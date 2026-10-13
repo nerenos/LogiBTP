@@ -36,6 +36,9 @@ export const COLONNES_ANALYSE = [
 
 const LIBELLES_COEF = { fg: 'frais généraux', benef: 'bénéfice', prorata: 'prorata' };
 
+/** Texte comparé sans casse ni accents (recherche dans la liste des éléments). */
+const normaliser = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 /** Tri de la liste des éléments : valeur comparée par colonne (valeurs divergentes : le minimum). */
 const TRIS_ELEMENTS = {
   code: { titre: 'Code', texte: true, valeur: (g) => g.code },
@@ -84,15 +87,28 @@ export class AnalyseCoefficients {
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
     this.naturesReplies = new Set();
-    this.recherche = '';
+    this.recherche = ''; // recherche sans filtre dans la liste des éléments
+    this.resultatRecherche = -1; // index du groupe trouvé courant
     conteneur.classList.add('analyse-coefs');
     conteneur.addEventListener('change', (e) => this.#changement(e));
     conteneur.addEventListener('click', (e) => this.#clic(e));
     conteneur.addEventListener('input', (e) => {
       if (!e.target.matches('[data-recherche]')) return;
       this.recherche = e.target.value;
-      this.ordreFige = null;
-      this.rendreElements();
+      this.resultatRecherche = 0;
+      this.rendreElements({ allerAuResultat: true });
+    });
+    conteneur.addEventListener('keydown', (e) => {
+      if (!e.target.matches('[data-recherche]')) return;
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.resultatSuivant(e.shiftKey || e.key === 'ArrowUp' ? -1 : 1);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.target.value = '';
+        this.recherche = '';
+        this.rendreElements();
+      }
     });
   }
 
@@ -270,7 +286,13 @@ export class AnalyseCoefficients {
           <button type="button" class="partie-bascule" data-masquer-partie="elements"></button>
           <h3>Éléments <small data-nb-elements></small></h3>
           ${this.menuColonnes('elements', COLONNES_ELEMENTS.filter((k) => k !== 'libelle').map((k) => ({ cle: k, titre: TRIS_ELEMENTS[k].titre, aide: TRIS_ELEMENTS[k].aide })), this.colonnesElements)}
-          <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}">
+          <span class="recherche-elements">
+            <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}"
+              title="Recherche sans filtre : Entrée / Maj+Entrée pour passer de résultat en résultat, Échap pour effacer">
+            <span class="compteur" data-compteur-recherche aria-live="polite"></span>
+            <button type="button" data-resultat="-1" title="Résultat précédent (Maj+Entrée)">▲</button>
+            <button type="button" data-resultat="1" title="Résultat suivant (Entrée)">▼</button>
+          </span>
           <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée
             et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
         </header>
@@ -298,18 +320,16 @@ export class AnalyseCoefficients {
     this.rendreElements();
   }
 
-  /** Partie Éléments : groupes par code et libellé des feuilles filtrées (portée, nature, recherche). */
-  rendreElements() {
+  /** Partie Éléments : groupes par code et libellé des feuilles filtrées (portée, nature, filtres de colonnes). */
+  rendreElements({ allerAuResultat = false } = {}) {
     const corps = this.conteneur.querySelector('.table-elements tbody');
     if (!corps) return;
     const pm = this.editeur.saisie.document.ent_precision_montant ?? 2;
     const lectureSeule = this.editeur.magasin?.lectureSeule;
-    const r = this.recherche.trim().toLowerCase();
     const tous = elementsAnalyse(this.feuilles ?? []);
     this.groupesElements = tous;
     const actifs = [...this.filtresElements].filter(([, f]) => filtreActif(f));
-    let groupes = tous.filter((g) => (!r || `${g.code} ${g.libelle}`.toLowerCase().includes(r))
-      && actifs.every(([k, f]) => correspond(f, this.celluleElement(g, k), colonneFiltre(k))));
+    let groupes = tous.filter((g) => actifs.every(([k, f]) => correspond(f, this.celluleElement(g, k), colonneFiltre(k))));
     // Tri choisi (sinon : montant décroissant) ; valeurs absentes en fin de liste.
     if (this.ordreFige) {
       const parCle = new Map(tous.map((g) => [g.cle, g]));
@@ -371,6 +391,7 @@ export class AnalyseCoefficients {
     corps.innerHTML = groupes.map((g) => `<tr data-groupe="${echapper(g.cle)}" class="${g.cle === edite ? 'edite' : ''}">${visibles.map((k) => (cellules[k] ? cellules[k](g) : valeur(g, k))).join('')}</tr>`).join('')
       || `<tr><td colspan="${visibles.length}" class="aide">Aucun élément.</td></tr>`;
     this.affiches = groupes.map((g) => g.cle);
+    this.marquerRecherche(groupes, { allerAuResultat });
     // Ligne modifiée : reste visible, sa cellule reprend le focus.
     if (this.saisieElement) {
       const tr = [...corps.querySelectorAll('tr[data-groupe]')].find((x) => x.dataset.groupe === this.saisieElement.cle);
@@ -379,10 +400,50 @@ export class AnalyseCoefficients {
       if (input && this.conteneur.isConnected && !this.conteneur.closest('[hidden]')) { input.focus({ preventScroll: true }); input.select(); }
       this.saisieElement = null;
     }
-    const filtres = actifs.length || r || this.ordreFige;
+    const filtres = actifs.length || this.ordreFige;
     this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${groupes.length}${filtres ? ` sur ${tous.length}` : ''} groupe(s), `
       + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`
       + `${this.ordreFige ? ' <button type="button" class="lien" data-liberer-ordre title="Ordre figé après une saisie : réappliquer le tri et les filtres">Réappliquer tri et filtres</button>' : ''}`;
+  }
+
+  /**
+   * Recherche sans filtre : groupes dont le code et le libellé contiennent tous les mots (sans casse ni accents),
+   * surlignés ; le résultat courant est amené dans la vue.
+   */
+  marquerRecherche(groupes, { allerAuResultat = false } = {}) {
+    const mots = normaliser(this.recherche).split(/\s+/).filter(Boolean);
+    const trouves = mots.length ? groupes.filter((g) => mots.every((m) => normaliser(`${g.code} ${g.libelle}`).includes(m))).map((g) => g.cle) : [];
+    this.trouves = trouves;
+    if (this.resultatRecherche >= trouves.length) this.resultatRecherche = trouves.length ? 0 : -1;
+    if (trouves.length && this.resultatRecherche < 0) this.resultatRecherche = 0;
+    const courant = trouves[this.resultatRecherche] ?? null;
+    const ensemble = new Set(trouves);
+    for (const tr of this.conteneur.querySelectorAll('.table-elements tbody tr[data-groupe]')) {
+      tr.classList.toggle('trouvee', ensemble.has(tr.dataset.groupe));
+      tr.classList.toggle('trouvee-courante', tr.dataset.groupe === courant);
+    }
+    const compteur = this.conteneur.querySelector('[data-compteur-recherche]');
+    if (compteur) compteur.textContent = mots.length ? (trouves.length ? `${this.resultatRecherche + 1} / ${trouves.length}` : 'Aucun résultat') : '';
+    this.conteneur.querySelector('.recherche-elements')?.classList.toggle('sans-resultat', mots.length > 0 && !trouves.length);
+    if (allerAuResultat && courant !== null) {
+      [...this.conteneur.querySelectorAll('.table-elements tbody tr[data-groupe]')].find((tr) => tr.dataset.groupe === courant)?.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  /** Résultat suivant (1) ou précédent (-1) de la recherche, en boucle. */
+  resultatSuivant(sens) {
+    const n = this.trouves?.length ?? 0;
+    if (!n) return;
+    this.resultatRecherche = (this.resultatRecherche + sens + n) % n;
+    this.marquerRecherche(this.affiches.map((k) => this.elements.get(k)).filter(Boolean), { allerAuResultat: true });
+  }
+
+  /** Ctrl+F dans l'onglet Analyse : curseur dans la recherche de la liste des éléments. */
+  ouvrirRecherche() {
+    if (this.masquee === 'elements') { this.masquee = null; this.appliquerPartage(); this.memoriser(); }
+    const champ = this.conteneur.querySelector('[data-recherche]');
+    champ?.focus();
+    champ?.select();
   }
 
   /** Cellule d'un groupe pour le filtre (valeur : celle du tri, minimum si les lignes diffèrent ; texte affiché). */
@@ -517,6 +578,8 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const resultat = e.target.closest('[data-resultat]');
+    if (resultat) { this.resultatSuivant(Number(resultat.dataset.resultat)); return; }
     if (e.target.closest('[data-liberer-ordre]')) { this.ordreFige = null; this.rendreElements(); return; }
     // Tri, filtre, portée ou nature : l'ordre figé après une saisie est abandonné.
     if (e.target.closest('th[data-tri], [data-effacer-filtres], [data-portee-id], [data-nature-filtre]')) this.ordreFige = null;

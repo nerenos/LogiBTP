@@ -319,5 +319,9 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .barre-recherche .compteur { color: var(--discret); font-size: 0.85em; min-width: 6rem; font-variant-numeric: tabular-nums; }
 .barre-recherche.sans-resultat input { border-color: var(--erreur); background: var(--erreur-fond); }
 .barre-recherche button { padding: 0 0.45rem; }
-.grille tr.trouvee td { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.18); }
-.grille tr.trouvee-courante td { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.45); }
+.grille tr.trouvee td, .table-elements tr.trouvee > * { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.18); }
+.grille tr.trouvee-courante td, .table-elements tr.trouvee-courante > * { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, 0.45); }
+.recherche-elements { display: inline-flex; align-items: center; gap: 0.3rem; }
+.recherche-elements .compteur { color: var(--discret); font-size: 0.85em; min-width: 5.5rem; font-variant-numeric: tabular-nums; }
+.recherche-elements.sans-resultat input { border-color: var(--erreur); background: var(--erreur-fond); }
+.recherche-elements button { padding: 0 0.4rem; }

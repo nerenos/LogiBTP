@@ -131,8 +131,10 @@ export class PageDocument extends PageBase {
       const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse' }[e.code] : null;
       if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
       // Ctrl+F : recherche dans les lignes (sans filtre), à la place de la recherche du navigateur.
+      // Onglet Analyse : recherche dans la liste des éléments.
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === 'KeyF' && this.recherche) {
         e.preventDefault();
+        if (this.disposition.p.onglet === 'analyse') { this.analyse?.ouvrirRecherche(); return; }
         this.disposition.onglet('lignes');
         this.recherche.ouvrir();
       }
