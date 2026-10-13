@@ -1,37 +1,58 @@
-// Environnement d'affichage : onglet actif, position et taille du panneau de détail.
+// Environnement d'affichage : onglet actif et panneaux ancrables (détail de la ligne, plan du document…).
+// Trois zones autour de la grille (gauche, droite, bas), chacune redimensionnable ; plusieurs panneaux peuvent partager
+// une zone (empilés). Chaque panneau a sa position, son état réduit et sa visibilité, gardés dans le navigateur.
 import { lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 
-const DEFAUT = { onglet: 'lignes', dock: { position: 'droite', largeur: 340, hauteur: 260, reduit: false } };
 const POSITIONS = ['gauche', 'droite', 'bas'];
+const ZONES = { gauche: 280, droite: 340, bas: 260 };
+const DOCKS = { detail: { position: 'droite', reduit: false, visible: true }, plan: { position: 'gauche', reduit: false, visible: true } };
 
 function lire() {
   const o = lirePreferences();
-  return {
-    onglet: typeof o.onglet === 'string' ? o.onglet : 'lignes',
-    dock: { ...DEFAUT.dock, ...o.dock, position: POSITIONS.includes(o.dock?.position) ? o.dock.position : 'droite' },
-  };
+  const docks = {};
+  for (const [id, defaut] of Object.entries(DOCKS)) {
+    // Ancienne préférence (un seul panneau, `dock`) reprise pour le détail.
+    const ancien = id === 'detail' && o.dock && !o.docks ? { position: o.dock.position, reduit: o.dock.reduit } : {};
+    const p = { ...defaut, ...ancien, ...o.docks?.[id] };
+    if (!POSITIONS.includes(p.position)) p.position = defaut.position;
+    docks[id] = p;
+  }
+  const zones = { ...ZONES, ...(o.dock && !o.zones ? { [o.dock.position]: o.dock.position === 'bas' ? o.dock.hauteur : o.dock.largeur } : {}), ...o.zones };
+  return { onglet: typeof o.onglet === 'string' ? o.onglet : 'lignes', docks, zones };
 }
 
-const ecrire = (p) => ecrirePreferences({ onglet: p.onglet, dock: p.dock });
+const ecrire = (p) => ecrirePreferences({ onglet: p.onglet, docks: p.docks, zones: p.zones });
 
 export class Disposition {
-  constructor({ surOnglet }) {
+  /**
+   * Panneaux : éléments `.dock[data-dock-id]` (boutons [data-dock] de position, [data-action="reduire"],
+   * [data-action="fermer"]) ; zones : `[data-zone]` et séparateurs `[data-sep]` dans #vue-lignes.
+   */
+  constructor({ surOnglet, surDock = null }) {
     this.p = lire();
     this.surOnglet = surOnglet;
+    this.surDock = surDock;
     // Onglets déclarés par les boutons [data-onglet-vue] ; chacun affiche la section #vue-<nom>.
     this.onglets = [...document.querySelectorAll('[data-onglet-vue]')].map((b) => b.dataset.ongletVue);
     if (!this.onglets.includes(this.p.onglet)) this.p.onglet = 'lignes';
     this.vue = document.querySelector('#vue-lignes');
-    this.dock = document.querySelector('#dock');
+    this.docks = new Map([...document.querySelectorAll('.dock[data-dock-id]')].map((d) => [d.dataset.dockId, d]));
     document.querySelectorAll('[data-onglet-vue]').forEach((b) => b.addEventListener('click', () => this.onglet(b.dataset.ongletVue)));
-    this.dock.querySelectorAll('[data-dock]').forEach((b) => b.addEventListener('click', () => this.positionner(b.dataset.dock)));
-    this.dock.querySelector('[data-action="reduire"]').addEventListener('click', () => this.reduire(!this.p.dock.reduit));
-    this.#separateur(document.querySelector('#separateur'));
+    for (const [id, dock] of this.docks) {
+      this.p.docks[id] ??= { position: 'droite', reduit: false, visible: true };
+      dock.querySelectorAll('[data-dock]').forEach((b) => b.addEventListener('click', () => this.positionner(id, b.dataset.dock)));
+      dock.querySelector('[data-action="reduire"]')?.addEventListener('click', () => this.reduire(id, !this.p.docks[id].reduit));
+      dock.querySelector('[data-action="fermer"]')?.addEventListener('click', () => this.afficher(id, false));
+    }
+    this.vue.querySelectorAll('[data-sep]').forEach((s) => this.#separateur(s, s.dataset.sep));
     this.appliquer();
   }
 
+  /** Panneaux visibles d'une zone, dans l'ordre du document. */
+  dansZone(zone) { return [...this.docks.keys()].filter((id) => this.p.docks[id].visible && this.p.docks[id].position === zone); }
+
   appliquer() {
-    const { onglet, dock } = this.p;
+    const { onglet, docks, zones } = this.p;
     document.querySelectorAll('[data-onglet-vue]').forEach((b) => {
       const actif = b.dataset.ongletVue === onglet;
       b.classList.toggle('actif', actif);
@@ -41,14 +62,30 @@ export class Disposition {
       const section = document.querySelector(`#vue-${nom}`);
       if (section) section.hidden = nom !== onglet;
     }
-    for (const pos of POSITIONS) this.vue.classList.toggle(`dock-${pos}`, dock.position === pos);
-    this.vue.classList.toggle('dock-reduit', dock.reduit);
-    this.vue.style.setProperty('--dock-largeur', `${dock.largeur}px`);
-    this.vue.style.setProperty('--dock-hauteur', `${dock.hauteur}px`);
-    this.dock.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('actif', b.dataset.dock === dock.position));
-    const bouton = this.dock.querySelector('[data-action="reduire"]');
-    bouton.textContent = dock.reduit ? '▢' : '–';
-    bouton.title = dock.reduit ? 'Agrandir le panneau de détail' : 'Réduire le panneau de détail';
+    for (const zone of POSITIONS) {
+      const conteneur = this.vue.querySelector(`[data-zone="${zone}"]`);
+      const ids = this.dansZone(zone);
+      for (const id of ids) if (this.docks.get(id).parentElement !== conteneur) conteneur.append(this.docks.get(id));
+      const reduite = ids.length > 0 && ids.every((id) => docks[id].reduit);
+      const taille = !ids.length ? '0px' : reduite ? (zone === 'bas' ? '2.2rem' : '2.4rem') : `${zones[zone]}px`;
+      this.vue.style.setProperty(`--zone-${zone}`, taille);
+      this.vue.style.setProperty(`--sep-${zone}`, ids.length ? '6px' : '0px');
+      conteneur.hidden = !ids.length;
+      conteneur.classList.toggle('zone-reduite', reduite);
+      this.vue.querySelector(`[data-sep="${zone}"]`).hidden = !ids.length;
+    }
+    for (const [id, dock] of this.docks) {
+      const d = docks[id];
+      dock.hidden = !d.visible;
+      dock.classList.toggle('dock-reduit', d.reduit);
+      dock.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('actif', b.dataset.dock === d.position));
+      const bouton = dock.querySelector('[data-action="reduire"]');
+      if (bouton) {
+        bouton.textContent = d.reduit ? '▢' : '–';
+        bouton.title = d.reduit ? 'Agrandir le panneau' : 'Réduire le panneau';
+      }
+    }
+    document.querySelectorAll('[data-basculer-dock]').forEach((b) => b.classList.toggle('actif', Boolean(docks[b.dataset.basculerDock]?.visible)));
   }
 
   onglet(nom) {
@@ -58,33 +95,41 @@ export class Disposition {
     this.surOnglet?.(this.p.onglet);
   }
 
-  positionner(position) {
-    this.p.dock.position = position;
-    this.p.dock.reduit = false;
+  positionner(id, position) {
+    Object.assign(this.p.docks[id], { position, reduit: false, visible: true });
     ecrire(this.p);
     this.appliquer();
   }
 
-  reduire(reduit) {
-    this.p.dock.reduit = reduit;
+  reduire(id, reduit) {
+    this.p.docks[id].reduit = reduit;
     ecrire(this.p);
     this.appliquer();
   }
 
-  /** Redimensionnement du panneau par glisser (Pointer Events) : largeur à gauche ou à droite, hauteur en bas. */
-  #separateur(sep) {
+  /** Panneau affiché ou fermé (bouton de la barre [data-basculer-dock], croix du panneau). */
+  afficher(id, visible = !this.p.docks[id].visible) {
+    Object.assign(this.p.docks[id], { visible, reduit: false });
+    ecrire(this.p);
+    this.appliquer();
+    this.surDock?.(id, visible);
+  }
+
+  /** Redimensionnement d'une zone par glisser (Pointer Events) : largeur à gauche ou à droite, hauteur en bas. */
+  #separateur(sep, zone) {
     sep.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       sep.setPointerCapture(e.pointerId);
-      if (this.p.dock.reduit) this.reduire(false);
+      for (const id of this.dansZone(zone)) this.p.docks[id].reduit = false;
+      this.appliquer();
       const rect = this.vue.getBoundingClientRect();
       document.body.classList.add('redimensionnement');
       const bouger = (ev) => {
-        const d = this.p.dock;
-        if (d.position === 'bas') d.hauteur = Math.round(Math.min(Math.max(rect.bottom - ev.clientY, 120), rect.height * 0.8));
-        else if (d.position === 'droite') d.largeur = Math.round(Math.min(Math.max(rect.right - ev.clientX, 220), rect.width * 0.7));
-        else d.largeur = Math.round(Math.min(Math.max(ev.clientX - rect.left, 220), rect.width * 0.7));
+        const z = this.p.zones;
+        if (zone === 'bas') z.bas = Math.round(Math.min(Math.max(rect.bottom - ev.clientY, 120), rect.height * 0.8));
+        else if (zone === 'droite') z.droite = Math.round(Math.min(Math.max(rect.right - ev.clientX, 180), rect.width * 0.6));
+        else z.gauche = Math.round(Math.min(Math.max(ev.clientX - rect.left, 180), rect.width * 0.6));
         this.appliquer();
       };
       const finir = () => {
@@ -98,7 +143,13 @@ export class Disposition {
       sep.addEventListener('pointerup', finir);
       sep.addEventListener('pointercancel', finir);
     });
-    // Double-clic sur le séparateur : réduire ou agrandir.
-    sep.addEventListener('dblclick', () => this.reduire(!this.p.dock.reduit));
+    // Double-clic sur le séparateur : réduire ou agrandir les panneaux de la zone.
+    sep.addEventListener('dblclick', () => {
+      const ids = this.dansZone(zone);
+      const reduit = !ids.every((id) => this.p.docks[id].reduit);
+      for (const id of ids) this.p.docks[id].reduit = reduit;
+      ecrire(this.p);
+      this.appliquer();
+    });
   }
 }

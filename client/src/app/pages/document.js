@@ -1,6 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
-import { Disposition, GestionVuesDocument, FournisseurVuesMemoire } from '@logibtp/document/ui';
+import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument } from '@logibtp/document/ui';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
@@ -26,6 +26,7 @@ const GABARIT = `
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
     </div>
+    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button></span>
     <span class="groupe" data-vues></span>
     <nav class="onglets" role="tablist">
       <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
@@ -40,16 +41,35 @@ const GABARIT = `
       <section id="totaux-entete" class="panneau totaux-entete"></section>
     </section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
+      <div class="zone-dock" data-zone="gauche"></div>
+      <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
       <div class="zone-lignes">
         <section id="ecarts" class="panneau ecarts" hidden></section>
+        <div class="barre-filtre" hidden></div>
         <div id="grille"></div>
         <footer class="pied-lignes">
           <div id="totaux" class="totaux-compacts"></div>
           <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Tab / Maj+Tab : niveau · Alt+↑↓ : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
         </footer>
       </div>
-      <div id="separateur" class="separateur" title="Glisser pour redimensionner · double-clic pour réduire"></div>
-      <aside id="dock" class="dock">
+      <div class="separateur" data-sep="droite" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      <div class="zone-dock" data-zone="droite"></div>
+      <div class="separateur" data-sep="bas" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      <div class="zone-dock" data-zone="bas"></div>
+      <aside class="dock" data-dock-id="plan">
+        <header class="dock-entete">
+          <span class="dock-titre">Plan du document</span>
+          <div class="dock-boutons">
+            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
+            <button data-dock="bas" title="Ancrer en bas">⬓</button>
+            <button data-dock="droite" title="Ancrer à droite">◨</button>
+            <button data-action="reduire" title="Réduire">–</button>
+            <button data-action="fermer" title="Fermer le plan (bouton Plan de la barre pour le rouvrir)">✕</button>
+          </div>
+        </header>
+        <div class="dock-contenu"><section id="plan"></section></div>
+      </aside>
+      <aside class="dock" data-dock-id="detail">
         <header class="dock-entete">
           <span class="dock-titre">Détail de la ligne</span>
           <div class="dock-boutons">
@@ -82,6 +102,8 @@ export class PageDocument extends PageBase {
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
       surOnglet: (o) => { if (o === 'lignes') this.editeur?.grille.focus(); },
+      // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
+      surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
     });
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(), nouveau: () => this.nouveau(),
@@ -90,6 +112,8 @@ export class PageDocument extends PageBase {
       actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
     };
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
+      const plan = e.target.closest('[data-basculer-dock]');
+      if (plan) { this.disposition.afficher(plan.dataset.basculerDock); return; }
       const b = e.target.closest('button[data-action]');
       if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
     });
@@ -219,6 +243,7 @@ export class PageDocument extends PageBase {
       saisie: versSaisie(complet),
       surSelection: (id) => {
         this.selection = id;
+        this.plan?.rendre();
         this.panneaux?.rendreDetail(this.$('#detail'), id);
         this.metre?.suivre(id); // le métré ouvert suit la ligne sélectionnée
       },
@@ -228,6 +253,9 @@ export class PageDocument extends PageBase {
       rechercher: (ligId) => this.appel.rechercher(ligId),
     });
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
+    this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
+    this.editeur.surFiltre = (id) => this.afficherFiltre(id);
+    this.afficherFiltre(null);
     // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.
     this.vues = new GestionVuesDocument(this.$('[data-vues]'), {
       editeur: this.editeur, fournisseur: this.fournisseurVues(), admin: () => this.app.estAdmin(), message: (t) => this.app.message(t),
@@ -248,6 +276,19 @@ export class PageDocument extends PageBase {
 
   /** Modifications non enregistrées : la pile d'annulation a changé depuis l'ouverture ou le dernier enregistrement. */
   get modifiee() { return Boolean(this.editeur) && this.editeur.magasin.pile.at(-1) !== this.marque; }
+
+  /** Bandeau au-dessus de la grille quand l'affichage est filtré sur une tranche. */
+  afficherFiltre(id) {
+    const barre = this.$('.barre-filtre');
+    const ed = this.editeur;
+    barre.hidden = id === null;
+    if (id === null) { this.plan?.rendre(); return; }
+    const l = ed.resultat.lignes.find((x) => x.lig_id === id);
+    const nom = l ? `${l.lig_numerotation ?? ''} ${l.lig_libelle_brut ?? ''}`.trim() : 'Pied du document';
+    barre.innerHTML = `<span>Affichage filtré sur la tranche <strong>${echapper(nom)}</strong> (saisie et totaux sur tout le document)</span><button type="button">✕ Tout afficher</button>`;
+    barre.querySelector('button').addEventListener('click', () => ed.filtrer(null));
+    this.plan?.rendre();
+  }
 
   /** Vues de colonnes : API en ligne, mémoire (vues du cœur) hors ligne, partagée par les documents ouverts. */
   fournisseurVues() {
@@ -270,6 +311,7 @@ export class PageDocument extends PageBase {
     const p = this.panneaux;
     const enLigne = this.app.enLigne;
     p.rendreEntete(this.$('#entete'));
+    this.plan?.rendre();
     p.rendreDetail(this.$('#detail'), this.selection);
     p.rendreTotaux(this.$('#totaux'), { compact: true });
     p.rendreTotaux(this.$('#totaux-entete'));
