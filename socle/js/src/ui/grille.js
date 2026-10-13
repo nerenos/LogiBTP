@@ -274,15 +274,13 @@ export class GrilleArbre {
     const c = this.o.colonnes[colonne];
     this.#figerColonnes();
     let champ;
-    if (c.editeur === 'select') {
-      champ = document.createElement('select');
-      for (const o of c.options(r.item)) {
-        const opt = document.createElement('option');
-        opt.value = o.valeur ?? '';
-        opt.textContent = o.libelle;
-        champ.appendChild(opt);
-      }
-      champ.value = String(c.lire(r.item) ?? '');
+    // Liste de choix (combo) : saisie qui filtre la liste ou désigne directement l'option (libellé ou code).
+    const options = c.editeur === 'select' ? c.options(r.item).map((o) => ({ valeur: String(o.valeur ?? ''), libelle: String(o.libelle ?? '') })) : null;
+    const courante = String(c.lire(r.item) ?? '');
+    if (options) {
+      champ = document.createElement('input');
+      champ.autocomplete = 'off';
+      champ.value = texteInitial ?? (courante === '' ? '' : options.find((o) => o.valeur === courante)?.libelle ?? '');
     } else {
       champ = document.createElement('input');
       champ.value = texteInitial ?? String(c.lire(r.item) ?? '');
@@ -295,6 +293,11 @@ export class GrilleArbre {
     champ.focus();
     if (texteInitial === null && champ.select) champ.select();
     this.#fermerListe();
+    if (options) {
+      this.liste = new ListeDeroulante(champ, options, { strict: true, courante: texteInitial === null ? courante : null });
+      if (texteInitial !== null) this.liste.filtrer(texteInitial);
+      this.liste.surChoix = () => this.#valider(champ, 'suivante');
+    }
     if (c.editeur === 'liste') {
       // Saisie libre avec liste de choix filtrée sur le texte déjà tapé.
       this.liste = new ListeDeroulante(champ, c.suggestions(r.item));
@@ -314,14 +317,22 @@ export class GrilleArbre {
   }
 
   #valider(champ, suite) {
-    this.#fermerListe();
     const { id, colonne } = this.edition;
     const c = this.o.colonnes[colonne];
     const r = this.ligneCourante();
     const avant = String(c.lire(r.item) ?? '');
+    // Combo : la valeur est l'option reconnue ; un texte qui n'en désigne aucune reste en saisie (invalide).
+    const valeur = c.editeur === 'select' ? this.liste?.resoudre() : champ.value;
+    this.#fermerListe();
+    if (valeur === undefined) {
+      this.edition = { id, colonne, texteInitial: champ.value };
+      this.rendre();
+      this.edition.champ?.classList.add('invalide');
+      return;
+    }
     this.edition = null;
-    if (champ.value !== avant) {
-      const ok = this.o.actions.modifier(id, c.champ(r.item), champ.value, c);
+    if (valeur !== avant) {
+      const ok = this.o.actions.modifier(id, c.champ(r.item), valeur, c);
       if (ok === false) {
         this.edition = { id, colonne, texteInitial: champ.value };
         this.rendre();
@@ -421,7 +432,7 @@ export class GrilleArbre {
       case 'Enter': return executer(() => this.editer());
       default:
         // Frappe directe : démarre l'édition de la cellule avec le caractère saisi, comme un tableur.
-        if (e.key.length === 1 && this.o.colonnes[this.colonne]?.editeur !== 'select') executer(() => this.editer(this.colonne, e.key));
+        if (e.key.length === 1) executer(() => this.editer(this.colonne, e.key));
     }
   }
 

@@ -7,11 +7,17 @@ const normaliser = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '
  * existantes filtrées sur le texte déjà tapé (code ou libellé, sans tenir compte des accents).
  * ↑ / ↓ : parcourir · Entrée ou Tab : retenir la proposition active · Échap : fermer la liste.
  * La liste est placée dans <body> pour ne pas être rognée par le défilement de la grille.
+ *
+ * Mode strict (combo, `{ strict: true, courante }`) : le champ montre le libellé, la valeur retenue est celle de
+ * l'option (identifiant) ; la saisie filtre la liste et la première proposition est active ; `resoudre()` donne la
+ * valeur choisie ou reconnue dans le texte (libellé ou code exact, ou seule option restante), sinon undefined.
  */
 export class ListeDeroulante {
-  constructor(champ, options) {
+  constructor(champ, options, { strict = false, courante = null } = {}) {
     this.champ = champ;
     this.options = options; // [{ valeur, libelle, detail? }]
+    this.strict = strict;
+    this.valeurChoisie = strict ? courante : undefined;
     this.initiale = champ.value;
     this.actif = -1;
     this.filtrees = [];
@@ -24,10 +30,26 @@ export class ListeDeroulante {
       const li = e.target.closest('[data-index]');
       if (li) this.choisir(Number(li.dataset.index), true);
     });
-    champ.addEventListener('input', () => this.filtrer(champ.value));
+    champ.addEventListener('input', () => {
+      if (this.strict) this.valeurChoisie = undefined; // texte modifié : la valeur est à reconnaître
+      this.filtrer(champ.value);
+    });
     this.surChoix = null;
     // Valeur d'origine sélectionnée : toute la liste est proposée, la valeur courante en évidence.
-    this.filtrer('', { courante: champ.value });
+    this.filtrer('', { courante: strict ? courante : champ.value });
+  }
+
+  /** Mode strict : valeur choisie, ou reconnue dans le texte saisi ; undefined si le texte ne désigne aucune option. */
+  resoudre() {
+    if (this.valeurChoisie !== undefined) return this.valeurChoisie;
+    const t = normaliser(this.champ.value).trim();
+    const vide = this.options.find((o) => o.valeur === '' || o.valeur === null);
+    if (!t) return vide ? vide.valeur : undefined;
+    const code = (o) => normaliser(String(o.libelle).split(' – ')[0]);
+    const exacte = this.options.find((o) => normaliser(o.libelle) === t || code(o) === t || normaliser(o.valeur) === t);
+    if (exacte) return exacte.valeur;
+    const restantes = this.options.filter((o) => o !== vide && normaliser(o.libelle).includes(t));
+    return restantes.length === 1 ? restantes[0].valeur : undefined;
   }
 
   get ouverte() {
@@ -37,6 +59,11 @@ export class ListeDeroulante {
   filtrer(texte, { courante = null } = {}) {
     const t = normaliser(texte);
     const rang = (o) => {
+      if (this.strict) {
+        const l = normaliser(o.libelle);
+        if (!t) return 3;
+        return l === t ? 0 : l.startsWith(t) ? 1 : l.includes(t) ? 2 : -1;
+      }
       const code = normaliser(o.valeur);
       if (!t) return 3;
       if (code === t) return 0;
@@ -52,6 +79,7 @@ export class ListeDeroulante {
     // Proposition active seulement si le code commence par la saisie : une saisie libre
     // qui ne correspond qu'à un libellé n'est pas remplacée par Entrée.
     if (courante !== null) this.actif = this.filtrees.findIndex((o) => o.valeur === courante);
+    else if (this.strict) this.actif = t && this.filtrees.length ? 0 : -1;
     else this.actif = t && this.filtrees.length && normaliser(this.filtrees[0].valeur).startsWith(t) ? 0 : -1;
     this.rendre();
   }
@@ -61,7 +89,7 @@ export class ListeDeroulante {
     this.popup.hidden = false;
     this.popup.innerHTML = this.filtrees.map((o, i) => `
       <div role="option" data-index="${i}" class="${i === this.actif ? 'active' : ''}" aria-selected="${i === this.actif}">
-        <strong>${echapper(o.valeur)}</strong><span>${echapper(o.libelle)}</span>${o.detail ? `<em>${echapper(o.detail)}</em>` : ''}
+        ${this.strict ? '' : `<strong>${echapper(o.valeur)}</strong>`}<span>${echapper(o.libelle)}</span>${o.detail ? `<em>${echapper(o.detail)}</em>` : ''}
       </div>`).join('');
     this.positionner();
     this.popup.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
@@ -87,7 +115,10 @@ export class ListeDeroulante {
   choisir(index, valider = false) {
     const o = this.filtrees[index];
     if (!o) return false;
-    this.champ.value = o.valeur;
+    if (this.strict) {
+      this.champ.value = o.valeur === '' || o.valeur === null ? '' : o.libelle;
+      this.valeurChoisie = o.valeur;
+    } else this.champ.value = o.valeur;
     this.fermer();
     if (valider) this.surChoix?.();
     return true;
