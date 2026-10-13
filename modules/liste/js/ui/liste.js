@@ -27,8 +27,10 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser } = {}) {
     this.racine = racine;
+    // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte } | null.
+    this.glisser = glisser ?? null;
     this.fournisseur = fournisseur;
     this.contexte = contexte;
     this.ouvrirExterne = ouvrir;
@@ -174,6 +176,16 @@ export class ListeDonnees {
       this.#selectionner(tr.dataset.id);
       const td = e.target.closest('td.modifiable');
       if (td && !td.querySelector('.liste-editeur')) this.#commencerSaisie(tr.dataset.id, td.dataset.code);
+    });
+    this.corps.addEventListener('dragstart', (e) => {
+      const tr = e.target.closest?.('tr[data-id]');
+      const ligne = tr && this.lignes.find((l) => String(l._id) === tr.dataset.id);
+      const g = ligne && this.glisser?.({ ligne, definition: this.definition });
+      if (!g) { e.preventDefault(); return; }
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData(g.type, JSON.stringify(g.valeur));
+      e.dataTransfer.setData('text/plain', g.texte ?? '');
+      this.#selectionner(tr.dataset.id);
     });
     this.corps.addEventListener('dblclick', (e) => {
       const tr = e.target.closest('tr[data-id]');
@@ -764,6 +776,11 @@ export class ListeDonnees {
     tr.dataset.id = id;
     const marque = this.marques.get(id);
     if (marque) tr.classList.add(marque);
+    if (this.glisser?.({ ligne, definition: this.definition })) {
+      tr.draggable = true;
+      tr.classList.add('glissable');
+      tr.title = "Glisser vers un document pour l'insérer";
+    }
     if (this.selection === id) tr.classList.add('selectionnee');
     const coin = document.createElement('td');
     coin.className = 'liste-coin';

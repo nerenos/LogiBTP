@@ -48,6 +48,16 @@ export class PageListe extends PageBase {
       surVue: ({ theme, vue }) => this.#vueChoisie(theme, vue),
       // Vues de la bibliothèque : arbres des familles et des natures dans le panneau ancrable (filtres fam_id, nat_id).
       panneau: ({ vue, conteneur, liste }) => (vue.definition?.source?.vue === 'elements' ? new PanneauArbres({ conteneur, liste, fournisseur: s.bibliotheque }) : null),
+      // Éléments de la bibliothèque glissables vers un document (autre fenêtre) : article ou ouvrage, même société.
+      // Identifiant : _id (colonne id de la source) ; type ARTICLE / OUVRAGE par la colonne type si elle est affichée
+      // (sinon article : l'élément est relu au dépôt, un ouvrage est inséré avec ses composantes).
+      glisser: ({ ligne, definition }) => (definition?.source?.vue === 'elements' && ligne._id
+        ? {
+          type: ligne.type === 'OUVRAGE' ? 'application/x-logibtp-ouvrage' : 'application/x-logibtp-article',
+          valeur: { id: Number(ligne._id), code: ligne.code, bib: ligne.bib_code, type: ligne.type ?? null, societe: location.host },
+          texte: `${ligne.code ?? ''} ${ligne.libelle ?? ''}`.trim(),
+        }
+        : null),
     });
     const demo = this.conteneur.querySelector('.liste-demo');
     demo.hidden = app.enLigne;

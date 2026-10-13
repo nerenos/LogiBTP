@@ -198,3 +198,4 @@ textarea.liste-editeur { display: block; }
 @media (max-width: 760px) {
   .concepteur-forme, .concepteur-source { grid-template-columns: 1fr; }
 }
+.liste-table tr.glissable { cursor: grab; }

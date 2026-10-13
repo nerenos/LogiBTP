@@ -133,6 +133,34 @@ export class AppelBibliotheque {
     this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''}`.slice(0, 120));
   }
 
+  /**
+   * Élément glissé depuis la fenêtre de la bibliothèque, déposé avant ou après une ligne (même niveau) ou dans une ligne
+   * (composante d'un ouvrage, fin d'une tranche). L'élément doit venir de la même société (même base).
+   */
+  async deposer(donnees, refId, position) {
+    try {
+      if (donnees.societe && donnees.societe !== location.host) {
+        this.message("Élément d'une autre société : glissez-le depuis la bibliothèque de cette société", 'avertissement');
+        return;
+      }
+      const e = await this.fournisseur.element(donnees.id);
+      const ed = this.editeur();
+      const bib = await this.bibDocument();
+      let contenu;
+      if (e.type === 'OUVRAGE') {
+        contenu = contenuOuvrage(e, bib);
+        if (!contenu) { this.message(`${e.code} : ouvrage sans composition`, 'avertissement'); return; }
+      } else {
+        const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
+        contenu = { racines: [1], lignes: [ligne], metres: [], metre_lignes: [], variables: [] };
+      }
+      const id = ed.insererContenu(contenu, refId, `${e.type === 'OUVRAGE' ? 'Ouvrage' : 'Article'} ${e.code} (glissé)`, { position });
+      if (id !== null) this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''} inséré`.slice(0, 120));
+    } catch (x) {
+      this.message(x.message ?? String(x), 'erreur');
+    }
+  }
+
   /** Reprend les prix de la bibliothèque (articles) pour les lignes choisies ; quantités et libellés conservés. */
   async actualiser(ids) {
     const ed = this.editeur();

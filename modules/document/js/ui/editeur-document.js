@@ -24,6 +24,12 @@ const lireJson = (v, defaut) => (typeof v === 'string' ? (() => { try { return J
 /** Texte brut d'une valeur (colonnes système du mode débogage). */
 const texteSysteme = (v) => (v === null || v === undefined ? '∅' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 
+/**
+ * Types MIME des éléments glissés depuis une autre fenêtre (bibliothèque) et type de ligne créé : un article donne
+ * un élément, un ouvrage un ouvrage avec ses composantes.
+ */
+export const TYPES_DEPOT = { 'application/x-logibtp-article': TL.ELEMENT, 'application/x-logibtp-ouvrage': TL.OUVRAGE };
+
 export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante' };
 
 export const LIBELLES_TYPE = {
@@ -427,6 +433,34 @@ export class EditeurDocument {
     if (focus) this.grille.focus();
   }
 
+  /** Texte du badge pendant un glisser : comment la ligne sera intégrée. */
+  libelleDepot(cibleId, position) {
+    const c = this.saisie.lignes.find((l) => l.lig_id === cibleId);
+    if (!c) return position;
+    const nom = `${this.resultat.lignes.find((l) => l.lig_id === cibleId)?.lig_numerotation ?? ''} ${String(c.lig_libelle_html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`.trim().slice(0, 40);
+    if (position === 'enfant') return c.lig_tyl_id === TL.OUVRAGE ? `Comme composante de « ${nom} »` : `Dans « ${nom} » (en fin)`;
+    return `${position === 'avant' ? 'Avant' : 'Après'} « ${nom} » (même niveau)`;
+  }
+
+  /** Dépôt glissé depuis une autre fenêtre : type de ligne déduit du type MIME (article : élément, ouvrage). */
+  depotExterneAutorise(cibleId, position, types) {
+    if (this.magasin.lectureSeule) return false;
+    const type = types.map((t) => TYPES_DEPOT[t]).find(Boolean);
+    const cible = this.saisie.lignes.find((l) => l.lig_id === cibleId);
+    if (!type || !cible) return false;
+    const fictive = { lig_id: -9e15, lig_parent_id: null, lig_ordre: 0, lig_tyl_id: type };
+    return this.regles.depotAutorise([...this.saisie.lignes, fictive], [fictive.lig_id], cible, position);
+  }
+
+  /** Données déposées : transmises à l'hôte (surDepotExterne), qui insère l'élément à la position. */
+  deposerExterne(cibleId, position, dt) {
+    const type = Object.keys(TYPES_DEPOT).find((t) => dt.types.includes(t));
+    let donnees = null;
+    try { donnees = JSON.parse(dt.getData(type)); } catch { donnees = null; }
+    if (!donnees) return;
+    this.surDepotExterne?.(donnees, cibleId, position);
+  }
+
   /** Lignes marquées par la recherche (surlignées), la ligne courante de la recherche ; null : aucune. */
   marquer(ids, courant = null) {
     this.marques = ids ? { ids, courant } : null;
@@ -816,6 +850,12 @@ export class EditeurDocument {
         return regles.depotAutorise(this.saisie.lignes, racinesSelection(C, this.saisie.lignes, ids).map((r) => r.lig_id), cible, position);
       },
 
+      libelleDepot: (cibleId, position) => this.libelleDepot(cibleId, position),
+      depotExterne: {
+        types: Object.keys(TYPES_DEPOT),
+        autorise: (cibleId, position, types) => this.depotExterneAutorise(cibleId, position, types),
+        deposer: (cibleId, position, dt) => this.deposerExterne(cibleId, position, dt),
+      },
       marqueur: (r) => this.marqueur(r),
       entetePoignee: (th) => this.entetePoignee(th),
       choisirMarqueur: (id, ancre) => this.choisirEtiquette(id, ancre),
@@ -849,10 +889,10 @@ export class EditeurDocument {
    * Insère un contenu (sous-arbres et compléments, format du presse-papiers) après la ligne de référence, ou à sa place
    * (remplacer : la ligne de référence est retirée dans la même étape d'annulation). Renvoie l'ID de la première racine.
    */
-  insererContenu(contenu, refId, libelle, { remplacer = false } = {}) {
+  insererContenu(contenu, refId, libelle, { remplacer = false, position = 'apres' } = {}) {
     const copie = this.pressePapiers.renumeroter(contenu, this.magasin.prochainId());
     const ref = this.saisie.lignes.find((l) => l.lig_id === refId);
-    if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, 'apres')) {
+    if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, position)) {
       this.surMessage?.('Position d\'insertion interdite');
       return null;
     }
@@ -860,7 +900,7 @@ export class EditeurDocument {
       d.lignes.push(...copie.lignes);
       this.pressePapiers.insererComplements(d, copie);
       const racines = copie.racines.map((id) => d.lignes.find((l) => l.lig_id === id));
-      placer(C, d.lignes, racines, ref ? refId : null, ref ? 'apres' : 'racine');
+      placer(C, d.lignes, racines, ref ? refId : null, ref ? position : 'racine');
       if (ref && remplacer) this.apresSuppression(d, supprimer(C, d.lignes, [refId]));
       for (const r of racines) this.regles.appliquerContexte(d, r.lig_id, this.definition.taux_tva);
     }, libelle);

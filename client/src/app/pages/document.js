@@ -54,7 +54,7 @@ const GABARIT = `
         <div id="grille"></div>
         <footer class="pied-lignes">
           <div id="totaux" class="totaux-compacts"></div>
-          <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Tab / Maj+Tab : niveau · Alt+↑↓ : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
+          <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Ctrl+→ / Ctrl+← (ou Tab / Maj+Tab) : niveau · Ctrl+↑↓ (ou Alt+↑↓) : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
         </footer>
       </div>
       <div class="separateur" data-sep="droite" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -277,6 +277,8 @@ export class PageDocument extends PageBase {
     this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
+    // Éléments glissés depuis la fenêtre de la bibliothèque.
+    this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.surFiltre = () => this.afficherFiltre();

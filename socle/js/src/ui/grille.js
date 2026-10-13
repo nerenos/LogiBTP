@@ -16,7 +16,10 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
  *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
  *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element),
- *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées) }
+ *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées),
+ *                            libelleDepot(cibleId, position) → texte du badge pendant un glisser (avant, après, composant…),
+ *                            depotExterne : { types, autorise(cibleId, position, types), deposer(cibleId, position, dataTransfer) }
+ *                            (dépôt glissé depuis une autre fenêtre, ex. la bibliothèque) }
  *
  * Les colonnes affichées se remplacent par definirColonnes (vues de colonnes).
  */
@@ -41,6 +44,10 @@ export class GrilleArbre {
     conteneur.addEventListener('keydown', (e) => this.#clavier(e));
     this.tbody.addEventListener('mousedown', (e) => this.#clic(e));
     this.tbody.addEventListener('pointerdown', (e) => this.#debutGlisser(e));
+    // Dépôt glissé depuis une autre fenêtre (HTML5 drag and drop).
+    conteneur.addEventListener('dragover', (e) => this.#survolExterne(e));
+    conteneur.addEventListener('dragleave', (e) => { if (!conteneur.contains(e.relatedTarget)) this.#finDepot(); });
+    conteneur.addEventListener('drop', (e) => this.#depotExterne(e));
     conteneur.addEventListener('scroll', () => this.liste?.positionner());
   }
 
@@ -451,6 +458,63 @@ export class GrilleArbre {
 
   // ---------------------------------------------------------------- glisser-déposer (Pointer Events)
 
+  /** Cible de dépôt sous le pointeur : ligne et position (tiers haut avant, tiers bas après, milieu enfant). */
+  #cibleSous(x, y) {
+    const tr = document.elementFromPoint(x, y)?.closest?.('tr[data-id]');
+    if (!tr || !this.tbody.contains(tr)) return null;
+    const r = tr.getBoundingClientRect();
+    const t = (y - r.top) / r.height;
+    return { tr, cibleId: Number(tr.dataset.id), position: t < 1 / 3 ? 'avant' : t > 2 / 3 ? 'apres' : 'enfant' };
+  }
+
+  /** Marque la ligne cible et affiche le badge près du pointeur (comment la ligne sera intégrée). */
+  #indiquerDepot(cible, autorise, x, y) {
+    this.tbody.querySelectorAll('.depot-avant,.depot-apres,.depot-enfant,.depot-interdit')
+      .forEach((t) => t.classList.remove('depot-avant', 'depot-apres', 'depot-enfant', 'depot-interdit'));
+    if (!cible) { this.badge?.remove(); this.badge = null; return; }
+    cible.tr.classList.add(autorise ? `depot-${cible.position}` : 'depot-interdit');
+    if (!this.badge) {
+      this.badge = document.createElement('div');
+      this.badge.className = 'badge-depot';
+      document.body.append(this.badge);
+    }
+    this.badge.classList.toggle('interdit', !autorise);
+    this.badge.textContent = autorise ? (this.o.actions.libelleDepot?.(cible.cibleId, cible.position) ?? cible.position) : 'Dépôt impossible ici';
+    this.badge.style.left = `${x + 14}px`;
+    this.badge.style.top = `${y + 16}px`;
+  }
+
+  #finDepot() {
+    this.#indiquerDepot(null);
+    this.conteneur.classList.remove('glissement-externe');
+  }
+
+  #survolExterne(e) {
+    const ext = this.o.actions.depotExterne;
+    const types = [...(e.dataTransfer?.types ?? [])];
+    if (!ext || !types.some((t) => ext.types.includes(t))) return;
+    const cible = this.#cibleSous(e.clientX, e.clientY);
+    const autorise = Boolean(cible) && ext.autorise(cible.cibleId, cible.position, types);
+    this.conteneur.classList.add('glissement-externe');
+    this.#indiquerDepot(cible, autorise, e.clientX, e.clientY);
+    // Défilement automatique près des bords.
+    const rect = this.conteneur.getBoundingClientRect();
+    if (e.clientY < rect.top + 40) this.conteneur.scrollTop -= 12;
+    else if (e.clientY > rect.bottom - 40) this.conteneur.scrollTop += 12;
+    if (autorise) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+  }
+
+  #depotExterne(e) {
+    const ext = this.o.actions.depotExterne;
+    const cible = this.#cibleSous(e.clientX, e.clientY);
+    const types = [...(e.dataTransfer?.types ?? [])];
+    this.#finDepot();
+    if (!ext || !cible || !types.some((t) => ext.types.includes(t)) || !ext.autorise(cible.cibleId, cible.position, types)) return;
+    e.preventDefault();
+    ext.deposer(cible.cibleId, cible.position, e.dataTransfer);
+    this.focus();
+  }
+
   #debutGlisser(e) {
     const poignee = e.target.closest('td.poignee');
     if (!poignee || e.button !== 0) return;
@@ -479,16 +543,11 @@ export class GrilleArbre {
       // Défilement automatique près des bords de la grille.
       defilement = ev.clientY < rect.top + 40 ? -12 : ev.clientY > rect.bottom - 40 ? 12 : 0;
       nettoyer();
-      const trCible = document.elementFromPoint(ev.clientX, ev.clientY)?.closest?.('tr[data-id]');
-      if (!trCible || !this.tbody.contains(trCible)) { cible = null; return; }
-      const r = trCible.getBoundingClientRect();
-      const y = (ev.clientY - r.top) / r.height;
-      // Tiers haut = avant, tiers bas = après, milieu = enfant.
-      const position = y < 1 / 3 ? 'avant' : y > 2 / 3 ? 'apres' : 'enfant';
-      const cibleId = Number(trCible.dataset.id);
-      const autorise = this.o.actions.depotAutorise(ids, cibleId, position);
-      trCible.classList.add(autorise ? `depot-${position}` : 'depot-interdit');
-      cible = autorise ? { cibleId, position } : null;
+      // Tiers haut = avant, tiers bas = après, milieu = enfant ; badge : comment la ligne sera intégrée.
+      const c = this.#cibleSous(ev.clientX, ev.clientY);
+      const autorise = Boolean(c) && this.o.actions.depotAutorise(ids, c.cibleId, c.position);
+      this.#indiquerDepot(c, autorise, ev.clientX, ev.clientY);
+      cible = autorise ? { cibleId: c.cibleId, position: c.position } : null;
     };
 
     const finir = () => {
@@ -498,6 +557,7 @@ export class GrilleArbre {
       document.removeEventListener('pointercancel', finir);
       conteneur.classList.remove('glissement');
       nettoyer();
+      this.#indiquerDepot(null);
       if (cible) this.o.actions.deplacer(ids, cible.cibleId, cible.position);
       this.focus();
     };
