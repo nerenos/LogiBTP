@@ -12,6 +12,7 @@ export const SOURCES_LISTE = {
       ['total_ht', 'numeric'], ['total_ttc', 'numeric'], ['net_a_payer', 'numeric'], ['reference', 'boolean'],
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
+      ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
     ],
   },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.

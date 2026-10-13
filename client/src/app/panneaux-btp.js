@@ -3,7 +3,7 @@ import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
-import { intervenantPropre } from './structure/structure.js';
+import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
 
 /**
@@ -99,16 +99,7 @@ export class PanneauxBtp extends PanneauxDocument {
 
   /** Rattachement modifié sur un niveau : les parents suivent (completerRattachement), un enfant incohérent est retiré. */
   changerRattachement(cle, id) {
-    const d = this.editeur.saisie.document;
-    const s = this.structure;
-    const r = { ent_projet_id: d.ent_projet_id ?? null, ent_affaire_id: d.ent_affaire_id ?? null, ent_chantier_id: d.ent_chantier_id ?? null, ent_marche_id: d.ent_marche_id ?? null };
-    r[cle] = id;
-    if (cle === 'ent_affaire_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.aff_id !== id) { r.ent_chantier_id = null; r.ent_marche_id = null; }
-    if (cle === 'ent_chantier_id' && r.ent_marche_id && s.marches.find((x) => x.id === r.ent_marche_id)?.cha_id !== id) r.ent_marche_id = null;
-    if (cle === 'ent_projet_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.prj_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.prj_id !== id) {
-      r.ent_chantier_id = null; r.ent_marche_id = null;
-    }
-    this.rattacher?.(r);
+    this.rattacher?.(changerNiveau(this.editeur.saisie.document, cle, id, this.structure));
   }
 
   sectionsEntete() {

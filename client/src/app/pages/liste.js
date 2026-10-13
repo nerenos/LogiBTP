@@ -2,6 +2,8 @@ import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
 import { PanneauArbres } from '@logibtp/bibliotheque/ui';
 import { simulerModificationsAutres } from '../listes.js';
+import { SOURCES_LISTE } from '../vues-liste.js';
+import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue, app, themes = []) {
@@ -32,7 +34,8 @@ function creationDepuisVue(vue, app, themes = []) {
 }
 
 /**
- * Liste (module Liste) : /liste/<thème>?vue=<id>. Le thème et la vue choisis sont reportés dans l'URL. La page est
+ * Liste (module Liste) : /liste/<thème>?vue=<id>[&projet=CODE&affaire=CODE&chantier=CODE&marche=CODE] (filtre par
+ * rattachement : barre des listes de documents, colonnes de même nom des autres listes). Le thème et la vue choisis sont reportés dans l'URL. La page est
  * conservée quand on ouvre une fiche : au retour, elle retrouve ses lignes et sa position, puis se contrôle.
  */
 export class PageListe extends PageBase {
@@ -41,12 +44,16 @@ export class PageListe extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-zone"></div>
+    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div>
       <div class="liste-demo" hidden>
         <button type="button" data-action="simuler" title="Démo hors ligne : modifie, supprime et crée des matériels comme le ferait un autre poste">Simuler une modification d'un autre utilisateur</button>
         <span class="aide">Le contrôle des lignes chargées s'exécute toutes les 30 s, au retour sur la fenêtre et avec ⟳. Double-clic : ouvrir · Ctrl+double-clic : nouvelle fenêtre.</span>
       </div></div>`;
     const s = await app.services();
+    // Rattachement demandé par l'adresse (raccourcis des fiches projet, affaire, chantier, marché).
+    const codes = Object.fromEntries(NIVEAUX.filter((n) => this.requete[n.type]).map((n) => [n.type, this.requete[n.type]]));
+    const refs = await s.structure?.referentiels().catch(() => null) ?? null;
+    let premier = true;
     this.liste = new ListeDonnees(this.conteneur.querySelector('.page-liste-zone'), {
       fournisseur: s.liste,
       ouvrir: (l) => app.ouvrirElement(l, { nouvelleFenetre: l.nouvelleFenetre }),
@@ -55,7 +62,15 @@ export class PageListe extends PageBase {
       peutRequete: app.enLigne && app.estAdmin(),
       peutGererThemes: app.peutGererThemes(),
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
-      surVue: ({ theme, vue }) => this.#vueChoisie(theme, vue),
+      surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#vueChoisie(theme, vue); },
+      filtresVue: (vue) => {
+        if (!this.filtre) return {};
+        const source = vue?.definition?.source?.vue ?? null;
+        const colonnes = (SOURCES_LISTE[source]?.colonnes ?? []).map((c) => c[0]);
+        const f = this.filtre.filtresPour(source, colonnes, premier ? codes : null);
+        premier = false;
+        return f;
+      },
       // Vues de la bibliothèque : arbres des familles et des natures dans le panneau ancrable (filtres fam_id, nat_id).
       panneau: ({ vue, conteneur, liste }) => (vue.definition?.source?.vue === 'elements' ? new PanneauArbres({ conteneur, liste, fournisseur: s.bibliotheque }) : null),
       // Éléments de la bibliothèque glissables vers un document (autre fenêtre) : article ou ouvrage, même société.
@@ -70,6 +85,11 @@ export class PageListe extends PageBase {
         }
         : null),
     });
+    if (refs) {
+      this.filtre = new FiltreRattachement(this.conteneur.querySelector('.page-liste-filtre'), {
+        liste: this.liste, refs, surChange: () => this.#vueChoisie(this.liste.theme, this.liste.vue?.vli_id ?? null),
+      });
+    }
     const demo = this.conteneur.querySelector('.liste-demo');
     demo.hidden = app.enLigne;
     demo.querySelector('[data-action="simuler"]').addEventListener('click', () => app.message(simulerModificationsAutres(s.liste)));
@@ -86,7 +106,7 @@ export class PageListe extends PageBase {
     const t = this.liste.themes.find((x) => x.thl_code === theme);
     this.icone = t?.thl_icone || '📋';
     this.titre = [t?.thl_libelle, this.liste.vue?.vli_nom].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(' – ') || 'Listes';
-    const url = this.app.routeur.url('liste', { theme }, { vue });
+    const url = this.app.routeur.url('liste', { theme }, { vue, ...(this.filtre?.codes() ?? {}) });
     if (this.app.routeur.page === this) this.app.routeur.remplacerUrl(url);
     this.app.majPage();
   }

@@ -21,13 +21,14 @@ const DUREE_MARQUE = 4000;
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
- * (bouton de création d'un élément, fourni par l'application selon la vue).
+ * (bouton de création d'un élément, fourni par l'application selon la vue), filtresVue(vue) → { colonne: [valeurs] | null }
+ * (filtres externes propres à la vue, posés avant son premier chargement ; null retire le filtre de la colonne).
  *
  * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue } = {}) {
     this.racine = racine;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
     // plusieurs lignes sélectionnées : tableau des valeurs, type de la ligne de plus haut rang.
@@ -41,6 +42,7 @@ export class ListeDonnees {
     this.fabriquePanneau = panneau;
     this.panneauSpecifique = null;
     this.filtresExternes = new Map();
+    this.filtresVue = filtresVue ?? null;
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
     this.peutGererThemes = peutGererThemes;
@@ -306,6 +308,10 @@ export class ListeDonnees {
     const segs = new Set(this.definition.segments.map((s) => s.colonne));
     for (const k of [...this.segments.keys()]) if (!segs.has(k)) this.segments.delete(k);
     this.#creerPanneauSpecifique();
+    // Filtres externes propres à la vue (application) : posés après le panneau (qui vide les filtres), avant le chargement.
+    for (const [col, valeurs] of Object.entries(this.filtresVue?.(vide ? null : vue) ?? {})) {
+      if (valeurs?.length) this.filtresExternes.set(col, [...valeurs]); else this.filtresExternes.delete(col);
+    }
     this.triBase = null;
     this.triLocal = null;
     const erreurs = [...this.modele.erreurs].map(([code, m]) => `${this.modele.parCode.get(code)?.titre ?? code} : ${m}`);

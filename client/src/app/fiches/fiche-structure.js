@@ -19,6 +19,15 @@ const LIBELLES_STATUT = {
 const parametre = (nom) => Number(new URLSearchParams(globalThis.location?.search ?? '').get(nom)) || null;
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
+/** Raccourcis des fiches vers les listes (thème, libellé), filtrées par le code de la fiche (?projet=CODE…). */
+const RACCOURCIS = {
+  projet: [['documents', 'Documents'], ['devis', 'Devis'], ['chantiers', 'Chantiers']],
+  affaire: [['documents', 'Documents'], ['chantiers', 'Chantiers'], ['marches', 'Marchés'], ['factures', 'Factures']],
+  chantier: [['documents', 'Documents'], ['devis', 'Devis'], ['commandes', 'Commandes'], ['situations', 'Situations'], ['factures', 'Factures'],
+    ['marches', 'Marchés'], ['achats_commandes', 'Commandes fournisseurs'], ['achats_factures', 'Factures fournisseurs']],
+  marche: [['documents', 'Documents'], ['situations', 'Situations'], ['factures', 'Factures']],
+};
+
 /** Prochain code de l'année : PRJ-2026-006 (le plus grand numéro existant + 1). */
 export function prochainCode(type, existants, annee = new Date().getFullYear()) {
   const prefixe = `${PREFIXES[type]}-${annee}-`;
@@ -137,11 +146,14 @@ export class FicheStructure extends FicheLogiBTP {
     return span;
   }
 
-  /** Liens vers les éléments rattachés (en tête de fiche). */
+  /** Liens vers les éléments rattachés et raccourcis vers les listes filtrées par le code de la fiche (en tête de fiche). */
   rendreInformations(v) {
     const liens = this.liens(v).filter((l) => l.elements.length);
+    const raccourcis = this.id !== null && v.code ? RACCOURCIS[this.type] ?? [] : [];
     return liens.map((l) => `<div class="fiche-info"><span>${echapper(l.titre)}</span>
-      <b>${l.elements.map((x) => `<a href="/fiche/${l.type}/${x.id}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('');
+      <b>${l.elements.map((x) => `<a href="/fiche/${l.type}/${x.id}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('')
+      + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>Listes</span><b>${raccourcis.map(([theme, libelle]) =>
+        `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${echapper(`${libelle} filtrés sur ${v.code} (Ctrl : nouvelle fenêtre)`)}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '');
   }
 
   liens() { return []; }

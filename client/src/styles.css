@@ -130,3 +130,10 @@ td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 2
 .fiche-champ > .champ-rattachement input { width: 10em; justify-self: start; }
 .fiche-champ > .champ-rattachement .rattachement-libelle, .fiche-champ:has(> .champ-rattachement) > .fiche-message { grid-column: 1 / -1; }
 .rattachement-code[readonly] { border-color: transparent; background: transparent; }
+
+/* Listes : filtre par rattachement (barre des listes de documents, pastille des autres listes). */
+.page-liste-filtre { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 14px; padding: 4px 8px; border-bottom: 1px solid var(--bord); }
+.page-liste-filtre .rattachement-champ { min-width: 170px; flex: 0 1 220px; }
+.filtre-rattachement-titre { font-weight: 600; color: var(--discret); align-self: center; }
+.page-liste-filtre > button { align-self: center; }
+.fiche-raccourcis a { margin: 0 2px; }

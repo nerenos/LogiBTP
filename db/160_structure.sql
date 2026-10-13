@@ -154,12 +154,16 @@ SELECT d.ent_id                                   AS id,
        pe.per_raison_sociale                      AS client,
        pr.prj_code                                AS projet,
        af.aff_code                                AS affaire,
-       ma.mar_code                                AS marche
+       ma.mar_code                                AS marche,
+       pr.prj_id                                  AS projet_id,   -- identifiants : filtres des listes par rattachement
+       af.aff_id                                  AS affaire_id,
+       ch.cha_id                                  AS chantier_id,
+       ma.mar_id                                  AS marche_id
 FROM document d
 JOIN type_document t ON t.tyd_id = d.ent_tyd_id
 JOIN statut_document s ON s.std_id = d.ent_std_id
 LEFT JOIN personne pe ON pe.per_id = d.ent_tiers_id
-LEFT JOIN projet pr ON pr.prj_id = d.ent_projet_id
+LEFT JOIN projet pr ON pr.prj_id = coalesce(d.ent_projet_id, (SELECT cha_prj_id FROM chantier WHERE cha_id = d.ent_chantier_id))
 LEFT JOIN affaire af ON af.aff_id = coalesce(d.ent_affaire_id, (SELECT cha_aff_id FROM chantier WHERE cha_id = d.ent_chantier_id))
 LEFT JOIN chantier ch ON ch.cha_id = d.ent_chantier_id
 LEFT JOIN marche ma ON ma.mar_id = d.ent_marche_id;

@@ -137,6 +137,7 @@ export function documentsDemo(demo, n = 400) {
     id: d.ent_id, type_element: 'V_DEVIS', type_document: 'Devis client', famille: 'V', numero: d.ent_numero, indice: 'A',
     date_document: d.ent_date, objet: d.ent_objet, chantier: d.ent_proprietes?.chantier ?? null, statut: 'Brouillon', tiers: d.ent_tiers_id,
     total_ht: null, total_ttc: null, net_a_payer: null, reference: true, verrouille: false, modifie_le: null,
+    projet_id: d.ent_projet_id ?? null, affaire_id: d.ent_affaire_id ?? null, chantier_id: d.ent_chantier_id ?? null, marche_id: d.ent_marche_id ?? null,
   }];
   for (let i = 1; i <= n; i++) {
     const [code, libelle, famille] = choix(r, TYPES_DOC);

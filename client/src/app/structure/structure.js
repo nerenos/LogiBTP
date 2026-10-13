@@ -47,6 +47,22 @@ export function intervenantPropre(x) {
   };
 }
 
+/**
+ * Changement d'un niveau du rattachement (cle : ent_projet_id, ent_affaire_id, ent_chantier_id, ent_marche_id) : les
+ * parents suivent l'enfant (completerRattachement) ; un enfant devenu incohérent avec le nouveau parent est retiré.
+ */
+export function changerNiveau(r, cle, id, refs) {
+  const res = { ent_projet_id: r.ent_projet_id ?? null, ent_affaire_id: r.ent_affaire_id ?? null, ent_chantier_id: r.ent_chantier_id ?? null, ent_marche_id: r.ent_marche_id ?? null };
+  res[cle] = id;
+  const chantier = (cid) => refs.chantiers?.find((c) => c.id === cid);
+  if (cle === 'ent_affaire_id' && res.ent_chantier_id && chantier(res.ent_chantier_id)?.aff_id !== id) { res.ent_chantier_id = null; res.ent_marche_id = null; }
+  if (cle === 'ent_projet_id' && res.ent_chantier_id && chantier(res.ent_chantier_id)?.prj_id && chantier(res.ent_chantier_id)?.prj_id !== id) {
+    res.ent_chantier_id = null; res.ent_marche_id = null;
+  }
+  if (cle === 'ent_chantier_id' && res.ent_marche_id && refs.marches?.find((x) => x.id === res.ent_marche_id)?.cha_id !== id) res.ent_marche_id = null;
+  return completerRattachement(res, { chantiers: refs.chantiers ?? [], marches: refs.marches ?? [] });
+}
+
 export function creerFournisseurStructure({ enLigne, annuaire = null, documents = () => [] }) {
   if (enLigne) {
     return {
