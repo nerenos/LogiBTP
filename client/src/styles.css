@@ -137,3 +137,7 @@ td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 2
 .filtre-rattachement-titre { font-weight: 600; color: var(--discret); align-self: center; }
 .page-liste-filtre > button { align-self: center; }
 .fiche-raccourcis a { margin: 0 2px; }
+.filtre-types { display: inline-flex; align-self: center; border: 1px solid var(--bord); border-radius: 6px; overflow: hidden; }
+.filtre-types button { border: 0; border-radius: 0; padding: 2px 10px; background: transparent; }
+.filtre-types button + button { border-left: 1px solid var(--bord); }
+.filtre-types button.actif { background: var(--accent); color: var(--surface, #fff); }
