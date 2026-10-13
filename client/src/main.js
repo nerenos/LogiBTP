@@ -6,6 +6,7 @@ import '@logibtp/fiche/ui/fiche.css';
 import '@logibtp/ged/ui/ged.css';
 import '@logibtp/navigation/ui/navigation.css';
 import '@logibtp/bibliotheque/ui/bibliotheque.css';
+import '@logibtp/graphe/ui/graphe.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';
 import './styles.css';

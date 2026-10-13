@@ -1,7 +1,7 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texteCoordonnee, formaterTelephone, siretValide } from '@logibtp/annuaire';
-import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGraphe, choixRequis, demanderChoix, choisirPersonne, pastilles } from '@logibtp/annuaire/ui';
+import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuaire, choixRequis, demanderChoix, choisirPersonne, pastilles } from '@logibtp/annuaire/ui';
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
 import { FicheLogiBTP } from './fiches.js';
 
@@ -99,7 +99,7 @@ class FicheAnnuaire extends FicheLogiBTP {
       rendre: (corps) => {
         if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir ses relations.</p>'; return; }
         corps.classList.add('graphe-hote');
-        this.vueGraphe = new VueGraphe(corps, {
+        this.vueGraphe = new VueGrapheAnnuaire(corps, {
           annuaire: this.annuaire, depart: { type, id: Number(this.id) }, referentiels: this.referentiels, message: this.message,
           ouvrirFiche: (f, e) => this.ouvrirFiche(f, e),
           pleinEcran: (d, r, e) => this.ouvrirUrl(`/annuaire/graphe?${new URLSearchParams({ type: d.type, id: String(d.id), profondeur: String(r.profondeur),

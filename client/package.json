@@ -21,6 +21,7 @@
     "@logibtp/ged": "0.1.0",
     "@logibtp/navigation": "0.1.0",
     "@logibtp/bibliotheque": "0.1.0",
+    "@logibtp/graphe": "0.1.0",
     "@logibtp/annuaire": "0.1.0",
     "@logibtp/entreprises-fr": "0.1.0"
   },

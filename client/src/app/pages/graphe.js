@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { VueGraphe } from '@logibtp/annuaire/ui';
+import { VueGrapheAnnuaire } from '@logibtp/annuaire/ui';
 
 /**
  * Graphe relationnel de l'annuaire en pleine page : /annuaire/graphe?type=personne&id=1&profondeur=2&contacts=1&liens=1&max=8.
@@ -29,7 +29,7 @@ export class PageGraphe extends PageBase {
     };
     const url = (d, r) => app.routeur.url('graphe', {}, { type: d.type, id: d.id, profondeur: r.profondeur, contacts: r.contacts ? 1 : 0, liens: r.liens ? 1 : 0, max: r.max_contacts });
     const referentiels = await s.annuaire.referentiels();
-    this.vue = new VueGraphe(this.conteneur.querySelector('.page-graphe-corps'), {
+    this.vue = new VueGrapheAnnuaire(this.conteneur.querySelector('.page-graphe-corps'), {
       annuaire: s.annuaire, depart, referentiels, reglages, message: (t, n) => app.message(t, n),
       ouvrirFiche: ({ type, id }, e) => app.naviguer(`/fiche/${type}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       recentrer: (d, r) => app.naviguer(url(d, r)),

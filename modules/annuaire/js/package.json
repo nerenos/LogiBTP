@@ -13,7 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@logibtp/socle": "0.1.0"
+    "@logibtp/socle": "0.1.0",
+    "@logibtp/graphe": "0.1.0"
   },
   "devDependencies": {
     "vitest": "^3.2.4"

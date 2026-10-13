@@ -4,8 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   sirenValide, siretValide, cleTva, tvaValide, ibanValide, bicValide, erreursIdentifiants, planifierCoordonnees,
-  FournisseurAnnuaireMemoire, coordonneesParDefaut, construireGraphe, disposerGraphe, fusionnerGraphes,
+  FournisseurAnnuaireMemoire, coordonneesParDefaut, construireGraphe, fusionnerGraphes, enColonneAnnuaire,
 } from '../src/index.js';
+import { disposerGraphe } from '@logibtp/graphe';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
 const lire = (f) => JSON.parse(fs.readFileSync(path.join(dossier, f), 'utf-8'));
@@ -207,7 +208,7 @@ describe('graphe relationnel (jeu partagé 03_graphe.json)', () => {
 
   it('disposition en couches : groupe en haut, dépôts puis contacts en bas, sans chevauchement', () => {
     const g = construireGraphe(jeu.donnees, { type: 'personne', id: 3 }, { profondeur: 2, contacts: true, max_contacts: 8 });
-    const { positions } = disposerGraphe(g, { ecartX: 100, ecartY: 50 });
+    const { positions } = disposerGraphe(g, { ecartX: 100, ecartY: 50, enColonne: enColonneAnnuaire });
     const y = (k) => positions.get(k).y;
     expect(y('P1')).toBeLessThan(y('P2'));
     expect(y('P2')).toBeLessThan(y('P3'));
