@@ -27,7 +27,7 @@ const GABARIT = `
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
-      <button data-action="bibliotheque" title="Insérer un article ou un ouvrage de la bibliothèque (F3 dans la grille ; ou saisir son code dans la colonne Code)">📚 Bibliothèque</button>
+      <button data-action="bibliotheque" title="Ouvrir la bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, ou saisir son code dans la colonne Code)">📚 Bibliothèque</button>
       <button data-action="actualiser" title="Reprendre les prix de la bibliothèque pour les lignes sélectionnées">⟳ Prix bibliothèque</button>
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
@@ -116,7 +116,8 @@ export class PageDocument extends PageBase {
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(), nouveau: () => this.nouveau(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
-      bibliotheque: () => this.appel?.rechercher(this.editeur?.grille.courant ?? null),
+      // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
+      bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
     };
