@@ -3,7 +3,7 @@ import { correspond, filtreActif } from '@logibtp/liste';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from '@logibtp/liste/ui';
 import { TL, estPied, estTranche } from '../calcul/index.js';
 import {
-  feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT,
+  feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT, repartirQuantite,
 } from './analyse-calcul.js';
 
 // Onglet Analyse : ventilation par nature de la portée choisie dans l'arbre des tranches (document entier, section,
@@ -49,8 +49,11 @@ const TRIS_ELEMENTS = {
   benef: { titre: VALEURS_ELEMENT.benef.titre, valeur: (g) => g.valeurs.benef?.min ?? null },
   pv: { titre: VALEURS_ELEMENT.pv.titre, valeur: (g) => g.valeurs.pv?.min ?? null },
   montant: { titre: 'Montant PV', valeur: (g) => g.montant },
-  nature: { titre: 'Nature', texte: true, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
+  nature: { titre: 'Nature', texte: true, filtrable: false, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
 };
+
+/** Colonnes de la liste des éléments (toutes affichées par défaut). */
+const COLONNES_ELEMENTS = Object.keys(TRIS_ELEMENTS);
 
 /** Colonne au format du module Liste (menu de filtre) : nombres et textes ; tri local seulement. */
 const colonneFiltre = (cle) => ({ code: cle, titre: TRIS_ELEMENTS[cle].titre, format: TRIS_ELEMENTS[cle].texte ? 'texte' : 'nombre', calcul: true });
@@ -71,6 +74,8 @@ export class AnalyseCoefficients {
     this.partageGauche = Number.isFinite(p.partageGauche) ? Math.min(85, Math.max(15, p.partageGauche)) : 60;
     this.tri = p.tri && TRIS_ELEMENTS[p.tri.cle] ? { cle: p.tri.cle, sens: p.tri.sens === -1 ? -1 : 1 } : null;
     this.filtresElements = new Map(); // filtre par colonne de la liste des éléments (module Liste), le temps de la page
+    this.colonnesElements = new Set(Array.isArray(p.colonnesElements) ? p.colonnesElements.filter((k) => TRIS_ELEMENTS[k]) : COLONNES_ELEMENTS);
+    this.colonnesElements.add('libelle');
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
@@ -109,6 +114,7 @@ export class AnalyseCoefficients {
   memoriser() {
     ecrirePreferences({ analyse: {
       horsTotal: this.horsTotal, colonnes: [...this.colonnes], partage: this.partage, masquee: this.masquee, partageGauche: this.partageGauche, tri: this.tri,
+      colonnesElements: [...this.colonnesElements],
     } });
   }
 
@@ -235,13 +241,6 @@ export class AnalyseCoefficients {
         ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
         <label class="coche" title="Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)">
           <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> Options et pour mémoire</label>
-        <span class="analyse-colonnes">
-          <button type="button" data-choix-colonnes aria-expanded="false">Colonnes ▾</button>
-          <div class="menu-colonnes" hidden>
-            ${COLONNES_ANALYSE.map((c) => `<label title="${echapper(c.aide)}"><input type="checkbox" data-colonne="${c.cle}" ${this.colonnes.has(c.cle) ? 'checked' : ''}> ${echapper(c.titre)}</label>`).join('')}
-            <button type="button" data-colonnes-defaut>Colonnes par défaut</button>
-          </div>
-        </span>
         <span class="analyse-fa">Coef. frais annexes : <strong>${formatLibre(this.coefFa)}</strong></span>
       </div>
       <div class="analyse-parties">
@@ -249,6 +248,7 @@ export class AnalyseCoefficients {
         <header class="partie-entete">
           <button type="button" class="partie-bascule" data-masquer-partie="coefs"></button>
           <h3>Coefficients par nature</h3>
+          ${this.menuColonnes('coefs', COLONNES_ANALYSE.map((c) => ({ cle: c.cle, titre: c.titre, aide: c.aide })), this.colonnes)}
           <span class="aide">Coefficient ou montant saisi écrit sur les lignes (Ctrl+Z pour annuler) ; les montants restent les vraies valeurs, l'arrondi est
             absorbé par les plus fortes lignes, en dernier recours par une ligne d'écart d'arrondi dans la nature. Moyennes pondérées.</span>
         </header>
@@ -264,14 +264,15 @@ export class AnalyseCoefficients {
         <header class="partie-entete">
           <button type="button" class="partie-bascule" data-masquer-partie="elements"></button>
           <h3>Éléments <small data-nb-elements></small></h3>
+          ${this.menuColonnes('elements', COLONNES_ELEMENTS.filter((k) => k !== 'libelle').map((k) => ({ cle: k, titre: TRIS_ELEMENTS[k].titre, aide: TRIS_ELEMENTS[k].aide })), this.colonnesElements)}
           <input type="search" data-recherche placeholder="Rechercher un code ou un libellé" value="${echapper(this.recherche)}">
           <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée
             et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
         </header>
         <div class="partie-corps"><table class="table-analyse table-elements">
-          <thead><tr>${Object.entries(TRIS_ELEMENTS).map(([k, t]) => `<th data-tri="${k}" class="triable" aria-sort="none"
+          <thead><tr>${COLONNES_ELEMENTS.filter((k) => this.colonnesElements.has(k)).map((k) => [k, TRIS_ELEMENTS[k]]).map(([k, t]) => `<th data-tri="${k}" class="triable" aria-sort="none"
             title="${echapper(t.aide ?? t.titre)} : cliquer pour trier (croissant, décroissant, ordre par défaut)">${echapper(t.titre)}<span class="sens-tri"></span>
-            <button type="button" class="filtre-colonne" data-filtre-colonne="${k}" title="Filtrer cette colonne">▾</button></th>`).join('')}</tr></thead>
+            ${t.filtrable === false ? '' : `<button type="button" class="filtre-colonne" data-filtre-colonne="${k}" title="Filtrer cette colonne">▾</button>`}</th>`).join('')}</tr></thead>
           <tbody></tbody>
         </table></div>
       </section>
@@ -320,6 +321,7 @@ export class AnalyseCoefficients {
       th.setAttribute('aria-sort', actif ? (this.tri.sens === 1 ? 'ascending' : 'descending') : 'none');
       th.querySelector('.sens-tri').textContent = actif ? (this.tri.sens === 1 ? ' ▲' : ' ▼') : '';
       const b = th.querySelector('[data-filtre-colonne]');
+      if (!b) continue;
       const filtre = filtreActif(this.filtresElements.get(th.dataset.tri));
       b.classList.toggle('actif', filtre);
       b.textContent = filtre ? '⧩' : '▾';
@@ -337,13 +339,27 @@ export class AnalyseCoefficients {
           placeholder="${echapper(txt)}" title="Saisir le ${echapper(def.titre)} de toutes les lignes du groupe (${g.feuilles.length})"></td>`;
     };
     const natures = (g) => [...g.natures].map((n) => this.natures.get(n)?.code ?? (n ? String(n) : '—')).join(', ');
-    corps.innerHTML = groupes.map((g) => `<tr>
-      <td>${echapper(g.code)}</td><th title="${echapper(g.libelle)}">${echapper(g.libelle)}</th>
-      <td class="${g.unites.size > 1 ? 'divergent' : ''}">${echapper([...g.unites].join(' / '))}</td>
-      <td class="nombre">${g.feuilles.length}</td><td class="nombre">${nombre(g.qt, 3)}</td>
-      ${Object.keys(VALEURS_ELEMENT).map((k) => valeur(g, k)).join('')}
-      <td class="nombre">${formatNombre(g.montant, pm)}</td><td class="${g.natures.size > 1 ? 'divergent' : ''}">${echapper(natures(g))}</td></tr>`).join('')
-      || '<tr><td colspan="12" class="aide">Aucun élément.</td></tr>';
+    // Quantité totale : modifiable (reventilée au prorata) ; 📐 si au moins une ligne a sa quantité issue d'un métré.
+    const quantite = (g) => {
+      const metres = g.feuilles.filter((f) => (f.saisie?.lig_qte_source ?? 'S') === 'M').length;
+      const marque = metres ? `<span class="metre" title="${metres} ligne(s) dont la quantité est issue d'un métré : inchangée(s), les autres lignes absorbent la différence">📐</span>` : '';
+      const txt = nombre(g.qt, 3);
+      if (lectureSeule || metres === g.feuilles.length) return `<td class="nombre">${marque}${txt}</td>`;
+      return `<td class="nombre">${marque}<input data-saisie="element" data-element="${echapper(g.cle)}" data-cle="qt" value="${echapper(txt)}"
+        title="Nouvelle quantité totale : reventilée au prorata des lignes (${g.feuilles.length - metres}), la quantité saisie des lignes est écrasée"></td>`;
+    };
+    const cellules = {
+      code: (g) => `<td>${echapper(g.code)}</td>`,
+      libelle: (g) => `<th title="${echapper(g.libelle)}">${echapper(g.libelle)}</th>`,
+      unite: (g) => `<td class="${g.unites.size > 1 ? 'divergent' : ''}">${echapper([...g.unites].join(' / '))}</td>`,
+      nb: (g) => `<td class="nombre">${g.feuilles.length}</td>`,
+      qt: quantite,
+      montant: (g) => `<td class="nombre">${formatNombre(g.montant, pm)}</td>`,
+      nature: (g) => `<td class="${g.natures.size > 1 ? 'divergent' : ''}">${echapper(natures(g))}</td>`,
+    };
+    const visibles = COLONNES_ELEMENTS.filter((k) => this.colonnesElements.has(k));
+    corps.innerHTML = groupes.map((g) => `<tr>${visibles.map((k) => (cellules[k] ? cellules[k](g) : valeur(g, k))).join('')}</tr>`).join('')
+      || `<tr><td colspan="${visibles.length}" class="aide">Aucun élément.</td></tr>`;
     const filtres = actifs.length || r;
     this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${groupes.length}${filtres ? ` sur ${tous.length}` : ''} groupe(s), `
       + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`;
@@ -384,10 +400,37 @@ export class AnalyseCoefficients {
     });
   }
 
+  /** Menu de choix des colonnes d'une partie (coefs, elements). */
+  menuColonnes(partie, colonnes, actives) {
+    return `<span class="analyse-colonnes">
+      <button type="button" data-choix-colonnes aria-expanded="false">Colonnes ▾</button>
+      <div class="menu-colonnes" hidden>
+        ${colonnes.map((c) => `<label title="${echapper(c.aide ?? c.titre)}"><input type="checkbox" data-colonne-de="${partie}" data-colonne="${c.cle}" ${actives.has(c.cle) ? 'checked' : ''}> ${echapper(c.titre)}</label>`).join('')}
+        <button type="button" data-colonnes-defaut="${partie}">Colonnes par défaut</button>
+      </div>
+    </span>`;
+  }
+
+  /** Nouvelle quantité totale d'un groupe : reventilée au prorata, quantités saisies écrasées (métrés inchangés). */
+  appliquerQuantite(g, valeur) {
+    const res = repartirQuantite(g, valeur, this.resultat);
+    if (res.erreur) { this.message(res.erreur, 'erreur'); this.rendre(); return; }
+    this.editeur.magasin.modifier((d) => {
+      for (const l of d.lignes) if (res.qtes.has(l.lig_id)) { l.lig_qte = res.qtes.get(l.lig_id); l.lig_qte_source = 'S'; }
+    }, `Analyse : quantité de « ${g.libelle || g.code} »`);
+    this.message(`Quantité totale ${formatLibre(valeur)} reventilée sur ${res.qtes.size} ligne(s) « ${g.libelle || g.code} »`
+      + `${res.metres ? ` ; ${res.metres} ligne(s) issue(s) d'un métré inchangée(s)` : ''}`);
+  }
+
   /** Valeur saisie dans la partie Éléments : écrite sur toutes les lignes du groupe (une étape d'annulation). */
   appliquerElement(cleGroupe, cle, valeur) {
     const g = this.elements?.get(cleGroupe);
     if (!g) return;
+    if (cle === 'qt') {
+      if (Number(valeur) < 0) { this.message('Quantité invalide'); this.rendre(); return; }
+      this.appliquerQuantite(g, valeur);
+      return;
+    }
     if (Number(valeur) < 0 || (cle !== 'pa' && cle !== 'pv' && Number(valeur) <= 0)) { this.message('Valeur invalide'); this.rendre(); return; }
     const { modifs, erreur } = modificationsElement(g, cle, valeur);
     if (erreur) { this.message(erreur, 'erreur'); this.rendre(); return; }
@@ -489,14 +532,18 @@ export class AnalyseCoefficients {
     }
     const portee = e.target.closest('[data-portee-id]');
     if (portee) { this.portee = portee.dataset.porteeId === '' ? null : Number(portee.dataset.porteeId); this.rendre(); return; }
-    if (e.target.closest('[data-choix-colonnes]')) {
-      const menu = this.conteneur.querySelector('.menu-colonnes');
+    const choix = e.target.closest('[data-choix-colonnes]');
+    if (choix) {
+      const menu = choix.closest('.analyse-colonnes').querySelector('.menu-colonnes');
+      for (const m of this.conteneur.querySelectorAll('.menu-colonnes')) if (m !== menu) m.hidden = true;
       menu.hidden = !menu.hidden;
-      e.target.closest('[data-choix-colonnes]').setAttribute('aria-expanded', String(!menu.hidden));
+      choix.setAttribute('aria-expanded', String(!menu.hidden));
       return;
     }
-    if (e.target.closest('[data-colonnes-defaut]')) {
-      this.colonnes = new Set(COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
+    const defaut = e.target.closest('[data-colonnes-defaut]');
+    if (defaut) {
+      if (defaut.dataset.colonnesDefaut === 'elements') this.colonnesElements = new Set(COLONNES_ELEMENTS);
+      else this.colonnes = new Set(COLONNES_ANALYSE.filter((c) => c.defaut).map((c) => c.cle));
       this.memoriser();
       this.rendre();
     }
@@ -506,10 +553,14 @@ export class AnalyseCoefficients {
     const t = e.target;
     if (t.matches('[data-hors-total]')) { this.horsTotal = t.checked; this.memoriser(); this.rendre(); return; }
     if (t.matches('[data-colonne]')) {
-      if (t.checked) this.colonnes.add(t.dataset.colonne); else this.colonnes.delete(t.dataset.colonne);
+      const partie = t.dataset.colonneDe;
+      const cible = partie === 'elements' ? this.colonnesElements : this.colonnes;
+      if (t.checked) cible.add(t.dataset.colonne); else cible.delete(t.dataset.colonne);
       this.memoriser();
       this.rendre();
-      this.conteneur.querySelector('.menu-colonnes').hidden = false;
+      // Le menu de la partie reste ouvert pour cocher d'autres colonnes.
+      const menu = this.conteneur.querySelector(`[data-colonne-de="${partie}"]`)?.closest('.menu-colonnes');
+      if (menu) menu.hidden = false;
       return;
     }
     if (t.matches('input[data-saisie="element"]')) {

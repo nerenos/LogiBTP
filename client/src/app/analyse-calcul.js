@@ -207,3 +207,50 @@ export function modificationsElement(groupe, cle, valeur) {
   }
   return { modifs };
 }
+
+/**
+ * Nouvelle quantité totale d'un groupe d'éléments, reventilée au prorata des quantités totales actuelles : la quantité
+ * saisie (lig_qte) des lignes est écrasée ; les lignes dont la quantité vient d'un métré restent inchangées et comptent
+ * dans le total. Une composante d'ouvrage tient compte de la quantité de l'ouvrage (relative ou absolue) ; perte et
+ * précision de la ligne comprises ; la plus forte ligne absorbe l'arrondi.
+ * Renvoie { qtes: Map(lig_id → lig_qte), metres: nombre de lignes issues d'un métré, ecart } ou { erreur }.
+ */
+export function repartirQuantite(groupe, cible, resultat) {
+  const parId = new Map(resultat.lignes.map((l) => [l.lig_id, l]));
+  const facteur = (l) => {
+    const p = parId.get(l.lig_parent_id);
+    if (!p || !(p.lig_tyl_id === 2 || p.lig_tyl_id === 3)) return D(1);
+    const pqt = D(p.lig_qte_totale ?? 0);
+    if ((l.lig_qte_type ?? 'R') !== 'A') return pqt;
+    const pqv = D(p.lig_qte_vendue ?? 0);
+    return pqv.isZero() ? D(0) : pqt.div(pqv);
+  };
+  const perte = (f) => D(f.saisie?.lig_coef_perte ?? f.ligne.lig_coef_perte ?? 1);
+  const prec = (f) => Number(f.saisie?.lig_precision_qte ?? f.ligne.lig_precision_qte ?? 2);
+  const totale = (f, qte) => arrondir(D(qte).times(perte(f)), prec(f)).times(facteur(f.ligne));
+  const metres = groupe.feuilles.filter((f) => (f.saisie?.lig_qte_source ?? 'S') === 'M');
+  const lignes = groupe.feuilles.filter((f) => !metres.includes(f) && !facteur(f.ligne).isZero() && !perte(f).isZero());
+  if (!lignes.length) return { erreur: 'Aucune ligne dont la quantité est saisie (quantités issues de métrés)' };
+  const fixe = metres.reduce((s, f) => s.plus(D(f.ligne.lig_qte_totale ?? 0)), D(0));
+  const T = D(cible).minus(fixe);
+  if (T.lt(0)) return { erreur: `Quantité inférieure à celle des lignes issues de métrés (${arrondir(fixe, 3)})` };
+  const actuelles = lignes.map((f) => D(f.ligne.lig_qte_totale ?? 0));
+  const somme = actuelles.reduce((s, x) => s.plus(x), D(0));
+  const qtes = new Map();
+  lignes.forEach((f, i) => {
+    // Prorata des quantités actuelles (parts égales si elles sont toutes nulles).
+    const part = somme.isZero() ? T.div(lignes.length) : T.times(actuelles[i]).div(somme);
+    qtes.set(f.ligne.lig_id, arrondir(part.div(facteur(f.ligne)).div(perte(f)), prec(f)));
+  });
+  const atteint = () => lignes.reduce((s, f) => s.plus(totale(f, qtes.get(f.ligne.lig_id))), D(0));
+  // Les plus fortes lignes absorbent l'arrondi, puis les plus faibles affinent (pas : précision de la quantité × quantité de l'ouvrage).
+  const ordre = [...lignes].sort((a, b) => totale(b, qtes.get(b.ligne.lig_id)).cmp(totale(a, qtes.get(a.ligne.lig_id))));
+  for (const f of ordre) {
+    const ecart = T.minus(atteint());
+    if (ecart.abs().lt(1e-9)) break;
+    const id = f.ligne.lig_id;
+    const corrige = arrondir(qtes.get(id).plus(ecart.div(facteur(f.ligne)).div(perte(f))), prec(f));
+    if (corrige.gte(0)) qtes.set(id, corrige);
+  }
+  return { qtes: new Map([...qtes].map(([id, q]) => [id, Number(q)])), metres: metres.length, ecart: Number(T.minus(atteint())) };
+}

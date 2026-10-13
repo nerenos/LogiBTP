@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculerDocument } from '../src/calcul/index.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../src/app/demo.js';
-import { feuillesAnalyse, agreger, forcerMontant, paEcart, elementsAnalyse, modificationsElement } from '../src/app/analyse-calcul.js';
+import { feuillesAnalyse, agreger, forcerMontant, paEcart, elementsAnalyse, modificationsElement, repartirQuantite } from '../src/app/analyse-calcul.js';
 
 // Onglet Analyse : un montant saisi est atteint au centime après recalcul par le moteur (coefficients des feuilles,
 // absorption de l'arrondi par les plus fortes lignes, ligne d'écart en dernier recours).
@@ -91,5 +91,40 @@ describe('Analyse : éléments regroupés par code et libellé', () => {
     const ligne = { lig_id: 1, lig_tyl_id: 3, lig_pa: '80' };
     const { modifs } = modificationsElement({ feuilles: [{ ligne }], libelle: 'x' }, 'pr', 100);
     expect(modifs.get(1)).toEqual({ lig_coef_fg: 1.25 });
+  });
+});
+
+describe("Analyse : quantité totale d'un groupe d'éléments reventilée", () => {
+  it("reventile au prorata, quantités des composantes ramenées à l'unité de l'ouvrage", () => {
+    const saisie = saisieDemo();
+    const r = calculer(saisie);
+    const groupe = elementsAnalyse(feuillesAnalyse(r, saisie)).find((g) => g.libelle === "Main-d'œuvre");
+    const avant = groupe.qt;
+    const res = repartirQuantite(groupe, 1000, r);
+    expect(res.erreur).toBeUndefined();
+    for (const l of saisie.lignes) if (res.qtes.has(l.lig_id)) l.lig_qte = res.qtes.get(l.lig_id);
+    const apres = elementsAnalyse(feuillesAnalyse(calculer(saisie), saisie)).find((g) => g.libelle === "Main-d'œuvre");
+    expect(Math.abs(apres.qt - 1000)).toBeLessThan(0.0005);
+    // Prorata conservé (à l'arrondi près) : la plus forte ligne reste la plus forte.
+    const part = (g, f) => Number(f.ligne.lig_qte_totale) / g.qt;
+    const max = (g) => g.feuilles.reduce((m, f) => (Number(f.ligne.lig_qte_totale) > Number(m.ligne.lig_qte_totale) ? f : m));
+    expect(max(apres).ligne.lig_id).toBe(max(groupe).ligne.lig_id);
+    expect(part(apres, max(apres))).toBeCloseTo(part(groupe, max(groupe)), 3);
+    expect(avant).not.toBe(1000);
+  });
+
+  it("les lignes issues d'un métré ne changent pas et comptent dans le total", () => {
+    const saisie = saisieDemo();
+    const r = calculer(saisie);
+    const feuilles = feuillesAnalyse(r, saisie);
+    const murs = feuilles.find((f) => f.saisie.lig_qte_source === 'M');
+    const autre = feuilles.find((f) => /Installation de chantier/.test(f.ligne.lig_libelle_brut));
+    const groupe = { feuilles: [murs, autre], libelle: 'test' };
+    const qMurs = Number(murs.ligne.lig_qte_totale);
+    const res = repartirQuantite(groupe, qMurs + 10, r);
+    expect(res.metres).toBe(1);
+    expect(res.qtes.has(murs.ligne.lig_id)).toBe(false);
+    expect(res.qtes.get(autre.ligne.lig_id)).toBeCloseTo(10, 6); // total visé − quantité du métré
+    expect(repartirQuantite({ feuilles: [murs], libelle: 'x' }, 5, r).erreur).toMatch(/métrés/);
   });
 });
