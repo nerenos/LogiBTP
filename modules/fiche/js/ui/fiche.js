@@ -36,7 +36,7 @@ export function definirConfidentielSession(actif) {
  * surEnregistre(fiche, { cree }), surFerme().
  */
 export class FicheBase {
-  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, surEnregistre, surFerme }) {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, surEnregistre, surFerme, surSupprime }) {
     this.conteneur = conteneur;
     this.fournisseur = fournisseur;
     this.type = type;
@@ -47,6 +47,7 @@ export class FicheBase {
     this.peutParametrer = peutParametrer;
     this.surEnregistre = surEnregistre;
     this.surFerme = surFerme;
+    this.surSupprime = surSupprime;
     this.jeton = jetonNeuf();
     this.erreurs = [];
     this.section = null;
@@ -214,6 +215,7 @@ export class FicheBase {
       { libelle: 'Enregistrer', titre: 'Enregistrer (Ctrl+S)', action: () => this.enregistrer(), visible: saisie, principal: true },
       { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
       { libelle: '⧉ Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
+      { libelle: '🗑 Supprimer', titre: 'Supprimer cette fiche (refusé si elle est utilisée ailleurs)', action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
       { libelle: '👁 Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
       ...this.actionsSupplementaires(),
       { libelle: '⚙', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
@@ -547,6 +549,17 @@ export class FicheBase {
         this.rendre();
       },
     });
+  }
+
+  /** Suppression après confirmation ; la fiche se ferme (surSupprime, sinon surFerme). */
+  async supprimer() {
+    const titre = titreFiche(this.definition.titre, this.valeurs()) || `${this.definition.libelle} ${this.id}`;
+    if (!confirm(`Supprimer « ${titre} » ? Cette suppression est définitive.`)) return false;
+    await this.fournisseur.supprimer(this.type, this.id);
+    this.message(`${this.definition.libelle} supprimé`, 'succes');
+    this.surSupprime?.(this.id);
+    await this.fermer({ sansConfirmation: true });
+    return true;
   }
 
   async fermer({ sansConfirmation = false } = {}) {

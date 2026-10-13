@@ -4,6 +4,7 @@ import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
 import { controlerIntervenants } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
+import { VueGrapheStructure } from '../structure/graphe-structure.js';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
@@ -57,6 +58,13 @@ export class FicheStructure extends FicheLogiBTP {
   /** Intervenants contrôlés comme côté serveur (Intervenants.Controler). */
   validerMetier(v) {
     return controlerIntervenants(v.intervenants ?? [], this.refs.fonctions ?? [], 'S').map((message) => ({ champ: 'intervenants', message }));
+  }
+
+  /** Copie : code suivant proposé (le code n'est pas copié). */
+  async copier() {
+    await super.copier();
+    this.definirValeur('code', prochainCode(this.type, (this.refs[LISTES[this.type]] ?? []).map((x) => x.code)));
+    this.rendre();
   }
 
   /** Recharge les référentiels (après une création liée). */
@@ -157,6 +165,21 @@ export class FicheStructure extends FicheLogiBTP {
   }
 
   liens() { return []; }
+
+  /** Onglet Graphe : liens de la structure et documents rattachés (module Graphe). */
+  ongletsSpecifiques() {
+    return [{
+      code: 'graphe', titre: 'Graphe',
+      rendre: (corps) => {
+        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir ses liens et ses documents.</p>'; return; }
+        corps.classList.add('graphe-hote');
+        this.vueGraphe = new VueGrapheStructure(corps, {
+          structure: this.services.structure, depart: { type: this.type, id: Number(this.id) }, message: this.message,
+          naviguer: (url, e) => this.ouvrirUrl(url, e),
+        });
+      },
+    }];
+  }
 }
 
 export class FicheProjet extends FicheStructure {

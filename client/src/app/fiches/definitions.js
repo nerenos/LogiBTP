@@ -477,6 +477,8 @@ export const DROITS_FICHE = [
     ...['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type, action })),
     ...['VOIR', 'MODIFIER'].map((action) => ({ profil: 'SAISIE', type, action })),
   ]),
+  // Suppression (listes et fiches) : profil ADMIN, refusée si la fiche est utilisée ailleurs.
+  ...['salarie', 'materiel', 'element', 'personne', 'individu', 'projet', 'affaire', 'chantier', 'marche'].map((type) => ({ profil: 'ADMIN', type, action: 'SUPPRIMER' })),
 ];
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */

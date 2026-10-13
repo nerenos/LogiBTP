@@ -38,6 +38,11 @@ public static class Extensions
         g.MapPost("", (string type, DemandeEnregistrement d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Creer(type, d, Utilisateur.Depuis(http), ct));
         g.MapGet("/{id}", (string type, string id, bool? confidentiel, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Charger(type, id, confidentiel == true, Utilisateur.Depuis(http), ct));
         g.MapPut("/{id}", (string type, string id, DemandeEnregistrement d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Enregistrer(type, id, d, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/{id}", async (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) =>
+        {
+            await s.Supprimer(type, id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         g.MapPost("/{id}/confidentiel", (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Reveler(type, id, Utilisateur.Depuis(http), ct));
         g.MapPost("/{id}/verrou", (string type, string id, DemandeVerrou d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Verrouiller(type, id, d, Utilisateur.Depuis(http), ct));
         g.MapDelete("/{id}/verrou", async (string type, string id, Guid jeton, ServiceFiche s, CancellationToken ct) =>

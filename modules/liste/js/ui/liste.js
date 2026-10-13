@@ -21,14 +21,15 @@ const DUREE_MARQUE = 4000;
  * message(texte, niveau), peutRequete (requête manuelle dans le concepteur), intervalleControle (ms, 0 = jamais),
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
- * (bouton de création d'un élément, fourni par l'application selon la vue), filtresVue(vue) → { colonne: [valeurs] | null }
+ * (bouton de création d'un élément, fourni par l'application selon la vue), actionsElements(vue) → { consulter(ligne, e),
+ * copier(ligne), supprimer(lignes) } ou null (boutons sur la sélection : thème d'un seul type de fiche ou de documents), filtresVue(vue) → { colonne: [valeurs] | null }
  * (filtres externes propres à la vue, posés avant son premier chargement ; null retire le filtre de la colonne).
  *
  * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements } = {}) {
     this.racine = racine;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
     // plusieurs lignes sélectionnées : tableau des valeurs, type de la ligne de plus haut rang.
@@ -47,6 +48,8 @@ export class ListeDonnees {
     this.peutRequete = peutRequete;
     this.peutGererThemes = peutGererThemes;
     this.creation = creation;
+    this.fabriqueActions = actionsElements ?? null;
+    this.actionsElements = null;
     this.themes = [];
     this.theme = null;             // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
@@ -97,11 +100,14 @@ export class ListeDonnees {
     r.innerHTML = `
       <div class="liste-barre">
         <select class="liste-themes" title="Thème : regroupement des vues"></select>
-        <button type="button" data-action="themes" title="Gérer les thèmes" hidden>⚙</button>
         <select class="liste-vues" title="Vue"></select>
-        <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage)">✎</button>
-        <button type="button" data-action="nouvelle" title="Nouvelle vue">＋</button>
-        <button type="button" data-action="creer" class="principal" hidden></button>
+        <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage, enregistrer comme nouvelle vue)">✎</button>
+        <span class="liste-elements">
+          <button type="button" data-action="creer" class="principal" hidden></button>
+          <button type="button" data-element="consulter" title="Consulter l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" hidden>👁 Consulter</button>
+          <button type="button" data-element="copier" title="Créer un nouvel élément à partir de l'élément sélectionné" hidden>⧉ Copier</button>
+          <button type="button" data-element="supprimer" title="Supprimer les éléments sélectionnés" hidden>🗑 Supprimer</button>
+        </span>
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
         <span class="liste-filtres-vue" hidden></span>
         <span class="liste-compteur"></span>
@@ -150,11 +156,9 @@ export class ListeDonnees {
     this.corps = this.table.tBodies[0];
     this.basSuite = r.querySelector('.liste-suite');
     r.querySelector('.liste-themes').addEventListener('change', (e) => this.choisirTheme(e.target.value || null).catch((x) => this.#erreur(x)));
-    r.querySelector('[data-action="themes"]').hidden = !this.peutGererThemes;
-    r.querySelector('[data-action="themes"]').addEventListener('click', () => this.gererThemes());
     r.querySelector('.liste-vues').addEventListener('change', (e) => this.ouvrirVue(Number(e.target.value)).catch((x) => this.#erreur(x)));
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
-    r.querySelector('[data-action="nouvelle"]').addEventListener('click', () => this.concevoir(true));
+    r.querySelectorAll('[data-element]').forEach((b) => b.addEventListener('click', (e) => this.#actionElement(b.dataset.element, e).catch((x) => this.#erreur(x))));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
     r.querySelector('[data-action="saisie"]').addEventListener('click', () => this.basculerSaisie());
     r.querySelector('[data-action="creer"]').addEventListener('click', () => this.actionCreation?.action());
@@ -325,6 +329,8 @@ export class ListeDonnees {
     creer.hidden = !this.actionCreation;
     creer.textContent = this.actionCreation?.libelle ?? '';
     creer.title = this.actionCreation ? `Créer : ${this.actionCreation.libelle.replace('＋', '').trim()}` : '';
+    this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
+    this.#majActionsElements();
     // Rappel des filtres fixes de la vue (appliqués par la base).
     const fv = this.racine.querySelector('.liste-filtres-vue');
     const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));
@@ -997,6 +1003,46 @@ export class ListeDonnees {
       tr.classList.toggle('courante', tr.dataset.id === id);
     }
     this.corps.querySelector(`tr[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' });
+    this.#majActionsElements();
+  }
+
+  /** Lignes sélectionnées (dans l'ordre affiché). */
+  lignesSelectionnees() {
+    const ids = this.selections.size ? [...this.selections] : this.selection !== null && this.selection !== undefined ? [String(this.selection)] : [];
+    return ids.map((id) => this.lignes.find((l) => String(l._id) === String(id))).filter(Boolean);
+  }
+
+  /** Boutons Consulter, Copier (une ligne) et Supprimer (une ou plusieurs) selon la vue et la sélection. */
+  #majActionsElements() {
+    const a = this.actionsElements;
+    const n = this.lignesSelectionnees().length;
+    for (const [code, min, max] of [['consulter', 1, 1], ['copier', 1, 1], ['supprimer', 1, Infinity]]) {
+      const b = this.racine.querySelector(`[data-element="${code}"]`);
+      if (!b) continue;
+      b.hidden = !a?.[code];
+      b.disabled = n < min || n > max;
+    }
+  }
+
+  async #actionElement(code, evenement) {
+    const lignes = this.lignesSelectionnees();
+    const a = this.actionsElements;
+    if (!a?.[code] || !lignes.length) return;
+    if (code === 'consulter') { a.consulter(lignes[0], evenement); return; }
+    if (code === 'copier') { await a.copier(lignes[0], evenement); return; }
+    const libelle = lignes.length > 1 ? `${lignes.length} éléments` : `« ${lignes[0].numero ?? lignes[0].code ?? lignes[0].libelle ?? lignes[0].nom ?? lignes[0]._id} »`;
+    if (!confirm(`Supprimer ${libelle} ? Cette suppression est définitive.`)) return;
+    const refus = [];
+    let supprimes = 0;
+    for (const l of lignes) {
+      try { await a.supprimer(l); supprimes++; } catch (e) { refus.push(`${l.numero ?? l.code ?? l._id} : ${e.message}`); }
+    }
+    if (supprimes) this.message(`${supprimes} élément(s) supprimé(s)`, 'succes');
+    if (refus.length) this.message(`Suppression refusée — ${refus.join(' · ')}`, 'erreur');
+    this.selections = new Set();
+    this.selection = null;
+    await this.verifier();
+    this.#majActionsElements();
   }
 
   #clavier(e) {

@@ -66,6 +66,9 @@ public partial class ConstructeurFiche(TypeFicheResolu type)
         return Fin($"SELECT {string.Join(", ", colonnes)} FROM {Table} t WHERE {Cle}::text = {P(id)}");
     }
 
+    /// <summary>Suppression de la ligne de la fiche.</summary>
+    public virtual RequeteFiche Suppression(string id) => Fin($"DELETE FROM {Table} t WHERE {Cle}::text = {P(id)}");
+
     /// <summary>Ligne verrouillée pendant l'enregistrement, avec son empreinte actuelle.</summary>
     public virtual RequeteFiche Verrou(string id) =>
         Fin($"SELECT md5(row_to_json(t)::text) AS h FROM {Table} t WHERE {Cle}::text = {P(id)} FOR UPDATE");

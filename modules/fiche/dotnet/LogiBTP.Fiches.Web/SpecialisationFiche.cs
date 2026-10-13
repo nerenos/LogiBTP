@@ -28,6 +28,9 @@ public class SpecialisationFiche
     /// qui demandent des données (prix d'un élément selon ses tarifs…). aEcrire reçoit les colonnes à écrire en plus.
     /// Par défaut : AvantEcriture.
     /// </summary>
+    /// <summary>Contrôles et nettoyage avant la suppression d'une fiche (données liées hors clés étrangères…).</summary>
+    public virtual Task AvantSuppressionAsync(string type, string id, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
+
     public virtual Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
         IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
     {

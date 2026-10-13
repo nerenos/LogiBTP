@@ -88,7 +88,7 @@ public class FicheDbContext(DbContextOptions<FicheDbContext> options) : DbContex
 
 // ------------------------------------------------------------------ contrats HTTP
 
-public sealed record DroitsFiche(bool Voir, bool Modifier, bool Debloquer, bool Confidentiel);
+public sealed record DroitsFiche(bool Voir, bool Modifier, bool Debloquer, bool Confidentiel, bool Supprimer = false);
 
 /// <summary>Définition envoyée au client : champs (avec obligatoire_parametre), champs supplémentaires, droits.</summary>
 public sealed class DefinitionFicheDto

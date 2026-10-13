@@ -63,7 +63,16 @@ INSERT INTO droit_fiche (drf_profil, drf_type, drf_action) VALUES
  ('ADMIN', 'marche', 'MODIFIER'),
  ('ADMIN', 'marche', 'DEBLOQUER'),
  ('SAISIE', 'marche', 'VOIR'),
- ('SAISIE', 'marche', 'MODIFIER');
+ ('SAISIE', 'marche', 'MODIFIER'),
+ ('ADMIN', 'salarie', 'SUPPRIMER'),
+ ('ADMIN', 'materiel', 'SUPPRIMER'),
+ ('ADMIN', 'element', 'SUPPRIMER'),
+ ('ADMIN', 'personne', 'SUPPRIMER'),
+ ('ADMIN', 'individu', 'SUPPRIMER'),
+ ('ADMIN', 'projet', 'SUPPRIMER'),
+ ('ADMIN', 'affaire', 'SUPPRIMER'),
+ ('ADMIN', 'chantier', 'SUPPRIMER'),
+ ('ADMIN', 'marche', 'SUPPRIMER');
 
 INSERT INTO parametre_champ_fiche (pcf_type, pcf_champ, pcf_obligatoire) VALUES
  ('salarie', 'telephone', TRUE);

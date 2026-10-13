@@ -68,6 +68,7 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
     return {
       referentiels: () => api.structureReferentiels(), rattacher: (id, r) => api.rattacherDocument(id, r),
       intervenants: (type, id) => api.structureIntervenants(type, id),
+      documents: (perimetre) => api.structureDocuments(perimetre),
     };
   }
   return new FournisseurStructureMemoire({ annuaire, documents });
@@ -83,7 +84,7 @@ export class FournisseurStructureMemoire {
     this.fonctions = structuredClone(FONCTIONS_INTERVENANT).map((f) => ({ ...f, actif: true }));
     this.lignesIntervenants = structuredClone(INTERVENANTS);
     this.annuaire = annuaire;
-    this.documents = documents;
+    this.lignesDocuments = documents;
   }
 
   async referentiels() {
@@ -96,6 +97,15 @@ export class FournisseurStructureMemoire {
       commandes: [],
       fonctions: this.fonctions,
     };
+  }
+
+  /** Documents rattachés au périmètre (comme la route /structure/documents) : lignes de démonstration de la liste. */
+  async documents({ projets = [], affaires = [], chantiers = [], marches = [] } = {}) {
+    const dans = (l, v) => v !== null && v !== undefined && l.includes(Number(v));
+    const documents = this.lignesDocuments().filter((d) => dans(projets, d.projet_id) || dans(affaires, d.affaire_id) || dans(chantiers, d.chantier_id) || dans(marches, d.marche_id))
+      .map((d) => ({ id: d.id, numero: d.numero, type: d.type_element, type_libelle: d.type_document, famille: d.famille, statut: d.statut, objet: d.objet,
+        total_ht: d.total_ht, projet_id: d.projet_id ?? null, affaire_id: d.affaire_id ?? null, chantier_id: d.chantier_id ?? null, marche_id: d.marche_id ?? null }));
+    return { documents, liens: [] };
   }
 
   /** Intervenants d'un objet, avec les noms de l'annuaire (comme Intervenants.Lire). */
@@ -129,7 +139,7 @@ export class FournisseurStructureMemoire {
 
   /** Lignes des listes (comme v_liste_projets, v_liste_affaires, v_liste_chantiers, v_liste_marches). */
   lignesListe(source) {
-    const docs = this.documents();
+    const docs = this.lignesDocuments();
     const factures = (filtre) => docs.filter(filtre).reduce((s, d) => s + (['V_FACTURE', 'V_FACTURE_AVT'].includes(d.type_element) ? Number(d.total_ht ?? 0)
       : d.type_element === 'V_AVOIR' ? -Number(d.total_ht ?? 0) : 0), 0);
     const somme = (l) => l.reduce((s, m) => s + Number(m.montant_ht ?? 0), 0);

@@ -6,7 +6,8 @@ import { echapper } from '@logibtp/socle/ui';
 //
 // menus : [{ code, libelle: '&Ressources' (lettre d'accès après &), elements: [...] ou () => [...] }]
 // élément : { libelle, icone, url, action, separateur, desactive, info, raccourci, coche, fenetre (⧉ proposé,
-//             vrai par défaut pour une URL), titre (bulle) }
+//             vrai par défaut pour une URL), titre (bulle), creation ({ url, titre } : bouton ＋ de création rapide
+//             sur la même ligne ; Ctrl : nouvelle fenêtre) }
 // naviguer(url, { nouvelleFenetre }) : navigation demandée (Ctrl, Maj ou clic milieu, ou ⧉ : nouvelle fenêtre).
 
 const lettre = (libelle) => /&(.)/.exec(libelle)?.[1]?.toLowerCase() ?? null;
@@ -99,6 +100,7 @@ export class Bandeau {
         <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
         <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
         <span class="bandeau-raccourci">${echapper(x.raccourci ?? '')}</span>
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation title="${echapper(x.creation.titre ?? 'Créer')} (Ctrl : nouvelle fenêtre)">＋</button>` : '<span></span>'}
         ${fenetre ? '<button type="button" class="bandeau-fenetre" data-fenetre title="Ouvrir dans une nouvelle fenêtre (Ctrl+clic)">⧉</button>' : '<span></span>'}
       </div>`;
     }).join('') || '<div class="bandeau-vide">(vide)</div>';
@@ -159,8 +161,15 @@ export class Bandeau {
     const li = e.target.closest('[data-index]');
     if (!li) return;
     e.preventDefault();
-    const fenetre = Boolean(e.target.closest('[data-fenetre]'));
-    this.#activer(Number(li.dataset.index), fenetre || milieu || e.ctrlKey || e.shiftKey || e.metaKey);
+    const nouvelleFenetre = Boolean(e.target.closest('[data-fenetre]')) || milieu || e.ctrlKey || e.shiftKey || e.metaKey;
+    // ＋ : création rapide (fiche ou document du type de la liste).
+    const x = this.elementsOuverts?.[Number(li.dataset.index)];
+    if (e.target.closest('[data-creation]') && x?.creation) {
+      this.fermer();
+      this.naviguer(x.creation.url, { nouvelleFenetre: milieu || e.ctrlKey || e.shiftKey || e.metaKey });
+      return;
+    }
+    this.#activer(Number(li.dataset.index), nouvelleFenetre);
   }
 
   #clavier(e) {

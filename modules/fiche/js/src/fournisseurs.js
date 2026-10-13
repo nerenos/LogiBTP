@@ -11,6 +11,7 @@ import { validerChamp, MESSAGES } from './validation.js';
 //   deverrouiller(type, id, jeton)
 //   enregistrer(type, id, { jeton, h, valeurs, proprietes, confidentiel })  → fiche relue ; 409 VERROU_PERDU / FICHE_MODIFIEE
 //   creer(type, { valeurs, proprietes, confidentiel })  → fiche créée (création et copie)
+//   supprimer(type, id)                       → droit SUPPRIMER ; 409 FICHE_EN_MODIFICATION (verrou d'un autre), FICHE_UTILISEE
 //   (confidentiel : relire les champs confidentiels, si l'utilisateur les avait affichés et en a le droit)
 //   parametrage(type) / enregistrerParametrage(type, { obligatoires, supplementaires })   (profil ADMIN)
 //
@@ -55,6 +56,7 @@ export class FournisseurFicheApi {
   deverrouiller(type, id, jeton) { return this.appel('DELETE', this.#u(type, id, `/verrou?jeton=${encodeURIComponent(jeton)}`), undefined, { keepalive: true }); }
   enregistrer(type, id, corps) { return this.appel('PUT', this.#u(type, id), corps); }
   creer(type, corps) { return this.appel('POST', this.#u(type), corps); }
+  supprimer(type, id) { return this.appel('DELETE', this.#u(type, id)); }
   parametrage(type) { return this.appel('GET', this.#u(type, null, '/parametrage')); }
   enregistrerParametrage(type, p) { return this.appel('PUT', this.#u(type, null, '/parametrage'), p); }
 }
@@ -94,7 +96,7 @@ export class FournisseurFicheMemoire {
 
   #droits(type) {
     const a = new Set(this.droits.filter((d) => d.profil === this.profil && d.type === type).map((d) => d.action));
-    return { voir: a.has('VOIR'), modifier: a.has('MODIFIER'), debloquer: a.has('DEBLOQUER'), confidentiel: a.has('CONFIDENTIEL') };
+    return { voir: a.has('VOIR'), modifier: a.has('MODIFIER'), debloquer: a.has('DEBLOQUER'), confidentiel: a.has('CONFIDENTIEL'), supprimer: a.has('SUPPRIMER') };
   }
 
   #exiger(type, droit) {
@@ -277,6 +279,19 @@ export class FournisseurFicheMemoire {
     t.lignes.push(l);
     if (Object.keys(geres).length) await t.geres.ecrire(l, geres, { creation: true });
     return this.#lire(type, l[t.cle], { confidentiel });
+  }
+
+  /** Suppression (droit SUPPRIMER) : refusée si un autre utilisateur modifie la fiche. */
+  async supprimer(type, id) {
+    this.#exiger(type, 'supprimer');
+    const t = this.#type(type);
+    const v = this.verrous.get(`${type}:${id}`);
+    if (v && v.utilisateur !== this.utilisateur) throw new ErreurFiche(409, 'FICHE_EN_MODIFICATION', `Fiche en cours de modification par ${v.utilisateur} : suppression impossible`);
+    const i = t.lignes.findIndex((x) => String(x[t.cle]) === String(id));
+    if (i < 0) throw new ErreurFiche(404, 'INTROUVABLE', `Fiche ${type} ${id} introuvable`);
+    await t.avantSuppression?.(t.lignes[i]);
+    t.lignes.splice(i, 1);
+    this.verrous.delete(`${type}:${id}`);
   }
 
   async parametrage(type) {

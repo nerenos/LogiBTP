@@ -303,12 +303,18 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
         await VerifierDroit(u, doc.EntTydId, "SUPPRIMER", ct);
         await VerifierModifiable(doc, ct);
-        if (await db.DocumentsLien.AnyAsync(l => l.LieSourceEntId == id || l.LieCibleEntId == id, ct))
+        // Seules les transformations (suivi des quantités) empêchent la suppression ; un lien de copie n'est qu'une trace.
+        if (await db.DocumentsLien.AnyAsync(l => (l.LieSourceEntId == id || l.LieCibleEntId == id) && l.LieType != "COPIE", ct))
         {
-            throw ExceptionMetier.Conflit("DOCUMENT_LIE", "Le document est lié à d'autres documents");
+            throw ExceptionMetier.Conflit("DOCUMENT_LIE", "Le document est lié à d'autres documents par une transformation");
         }
+        // Liens de copie retirés avant le document (pas de navigation EF entre eux : ordre explicite).
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        db.DocumentsLien.RemoveRange(await db.DocumentsLien.Where(l => l.LieSourceEntId == id || l.LieCibleEntId == id).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
         db.Documents.Remove(doc);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
     }
 
     // ------------------------------------------------------------------ indices, référence, copie

@@ -1,8 +1,13 @@
 using System.Text.Json;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace LogiBTP.Api.Btp;
+
+/// <summary>Éléments de la structure dont on veut les documents (graphe des fiches projet, affaire, chantier, marché).</summary>
+public sealed record PerimetreStructure(List<int>? Projets, List<int>? Affaires, List<int>? Chantiers, List<int>? Marches);
 
 /// <summary>Rattachement d'un document à la structure des affaires (champs facultatifs).</summary>
 public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, int? EntChantierId, int? EntMarcheId);
@@ -68,6 +73,27 @@ public static class Structure
         // Intervenants d'un projet, d'une affaire, d'un chantier ou d'un marché (reprise dans l'annuaire d'un document).
         g.MapGet("/intervenants/{type}/{id:long}", async (string type, long id, LogiBtpContext db, CancellationToken ct) =>
             Intervenants.Gere(type) ? Results.Json(await Intervenants.Lire(db, type, id, ct)) : throw ExceptionMetier.Introuvable($"Type {type}"));
+        // Documents rattachés aux éléments demandés (graphe d'une fiche) et liens de transformation entre eux.
+        g.MapPost("/documents", async (PerimetreStructure p, LogiBtpContext db, CancellationToken ct) =>
+        {
+            static NpgsqlParameter T(string nom, List<int>? ids) => new(nom, NpgsqlDbType.Array | NpgsqlDbType.Integer) { Value = (ids ?? []).ToArray() };
+            var json = await db.Database.SqlQueryRaw<string>(DocumentsPerimetre, T("prj", p.Projets), T("aff", p.Affaires), T("cha", p.Chantiers), T("mar", p.Marches)).FirstAsync(ct);
+            return Results.Content(json, "application/json");
+        });
         return api;
     }
+
+    private const string DocumentsPerimetre = """
+        WITH docs AS (
+          SELECT d.ent_id, d.ent_numero, t.tyd_code, t.tyd_libelle, t.tyd_famille, s.std_libelle, d.ent_objet, d.ent_total_ht,
+                 d.ent_projet_id, d.ent_affaire_id, d.ent_chantier_id, d.ent_marche_id
+          FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+          WHERE d.ent_projet_id = ANY(@prj) OR d.ent_affaire_id = ANY(@aff) OR d.ent_chantier_id = ANY(@cha) OR d.ent_marche_id = ANY(@mar))
+        SELECT json_build_object(
+          'documents', (SELECT coalesce(json_agg(json_build_object('id', ent_id, 'numero', ent_numero, 'type', tyd_code, 'type_libelle', tyd_libelle,
+                          'famille', tyd_famille, 'statut', std_libelle, 'objet', ent_objet, 'total_ht', ent_total_ht, 'projet_id', ent_projet_id,
+                          'affaire_id', ent_affaire_id, 'chantier_id', ent_chantier_id, 'marche_id', ent_marche_id) ORDER BY ent_id), '[]') FROM docs),
+          'liens', (SELECT coalesce(json_agg(json_build_object('source', l.lie_source_ent_id, 'cible', l.lie_cible_ent_id, 'type', l.lie_type)), '[]')
+                    FROM document_lien l WHERE l.lie_source_ent_id IN (SELECT ent_id FROM docs) AND l.lie_cible_ent_id IN (SELECT ent_id FROM docs)))::text AS "Value"
+        """;
 }

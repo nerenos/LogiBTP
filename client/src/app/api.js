@@ -38,6 +38,7 @@ export const api = {
   enregistrer: (id, doc) => appel('PUT', `/documents/${id}`, doc),
   valider: (id, version) => appel('POST', `/documents/${id}/valider`, { ent_version: version }),
   copier: (id) => appel('POST', `/documents/${id}/copie`),
+  supprimerDocument: (id) => appel('DELETE', `/documents/${id}`),
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),
   transformer: (id, demande) => appel('POST', `/documents/${id}/transformer`, demande),
   suivi: (id) => appel('GET', `/documents/${id}/suivi`),
@@ -52,6 +53,7 @@ export const api = {
   structureReferentiels: () => appel('GET', '/structure/referentiels'),
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
   structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
+  structureDocuments: (perimetre) => appel('POST', '/structure/documents', perimetre),
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),

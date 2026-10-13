@@ -35,7 +35,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var actions = await db.Droits.AsNoTracking().Where(d => d.DrfType == type && d.DrfProfil == u.Profil).Select(d => d.DrfAction).ToListAsync(ct);
         var plus = specialisation.DroitsSupplementaires(type, u);
         return new DroitsFiche(actions.Contains("VOIR") || plus.Voir, actions.Contains("MODIFIER") || plus.Modifier,
-            actions.Contains("DEBLOQUER") || plus.Debloquer, actions.Contains("CONFIDENTIEL") || plus.Confidentiel);
+            actions.Contains("DEBLOQUER") || plus.Debloquer, actions.Contains("CONFIDENTIEL") || plus.Confidentiel, actions.Contains("SUPPRIMER") || plus.Supprimer);
     }
 
     protected async Task<DroitsFiche> Exiger(string type, Utilisateur u, Func<DroitsFiche, bool> droit, string action, CancellationToken ct)
@@ -330,6 +330,42 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!, ct);
         if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, true, geres, valeurs, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
+    }
+
+    /// <summary>
+    /// Suppression d'une fiche (droit SUPPRIMER) : refusée si quelqu'un la modifie (verrou actif d'un autre utilisateur)
+    /// ou si elle est utilisée ailleurs (clé étrangère). La spécialisation contrôle et nettoie avant (AvantSuppressionAsync).
+    /// </summary>
+    public virtual async Task Supprimer(string code, string id, Utilisateur u, CancellationToken ct)
+    {
+        await Exiger(code, u, x => x.Supprimer, "SUPPRIMER", ct);
+        var t = await Type(code, ct);
+        await specialisation.AvantSuppressionAsync(code, id, u, ct);
+        try
+        {
+            await Ecrire(async (cnx, tx) =>
+            {
+                var limite = DateTimeOffset.UtcNow - specialisation.ExpirationVerrou;
+                var verrou = (await LireDans(cnx, tx, new RequeteFiche(
+                    "SELECT vef_utilisateur, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
+                    [new("p0", code), new("p1", id)]), ct)).FirstOrDefault();
+                if (verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime && (string)verrou["vef_utilisateur"]! != u.Code)
+                    throw ExceptionMetier.Conflit("FICHE_EN_MODIFICATION", $"Fiche en cours de modification par {verrou["vef_utilisateur"]} : suppression impossible");
+                await using (var cmd = Commande(cnx, tx, Requete(() => specialisation.Constructeur(t).Suppression(id))))
+                {
+                    if (await cmd.ExecuteNonQueryAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
+                }
+                await using (var lib = Commande(cnx, tx, new RequeteFiche("DELETE FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1", [new("p0", code), new("p1", id)])))
+                {
+                    await lib.ExecuteNonQueryAsync(ct);
+                }
+                return true;
+            }, ct);
+        }
+        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        {
+            throw ExceptionMetier.Conflit("FICHE_UTILISEE", "Cet élément est utilisé ailleurs : suppression impossible");
+        }
     }
 
     // ------------------------------------------------------------------ paramétrage

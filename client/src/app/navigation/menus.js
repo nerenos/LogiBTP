@@ -5,6 +5,9 @@ import { THEMES } from '@logibtp/socle/ui';
 // de menu ayant une URL). Les menus Fenêtres et Paramètres sont construits à l'ouverture (état courant).
 
 const L = (theme) => `/liste/${theme}`;
+/** Création rapide (bouton ＋ sur la ligne du menu) : fiche ou document. */
+const F = (type, titre, requete = '') => ({ url: `/fiche/${type}/nouveau${requete}`, titre });
+const D = (code, titre) => ({ url: `/document/nouveau?type=${code}`, titre });
 
 /** Menus métier (statiques). */
 export const MENUS_METIER = [
@@ -12,27 +15,20 @@ export const MENUS_METIER = [
     code: 'ressources', libelle: '&Ressources', elements: [
       { code: 'ressources', libelle: 'Toutes les ressources', icone: '🧰', url: L('ressources'), info: 'Équipes, salariés, intérim, matériel, sous-traitants' },
       { separateur: true },
-      { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries') },
-      { code: 'nouveau-salarie', libelle: 'Nouveau salarié', icone: '＋', url: '/fiche/salarie/nouveau' },
-      { separateur: true },
-      { code: 'materiels', libelle: 'Matériels', icone: '🚜', url: L('materiels') },
-      { code: 'nouveau-materiel', libelle: 'Nouveau matériel', icone: '＋', url: '/fiche/materiel/nouveau' },
+      { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries'), creation: F('salarie', 'Nouveau salarié') },
+      { code: 'materiels', libelle: 'Matériels', icone: '🚜', url: L('materiels'), creation: F('materiel', 'Nouveau matériel') },
     ],
   },
   {
     code: 'annuaire', libelle: '&Tiers', elements: [
-      { code: 'tiers', libelle: 'Tous les tiers', icone: '🏢', url: '/liste/tiers?vue=20', info: 'Sociétés, établissements, particuliers…' },
-      { code: 'clients', libelle: 'Clients et prospects', icone: '💶', url: '/liste/tiers?vue=21' },
-      { code: 'fournisseurs', libelle: 'Fournisseurs et loueurs', icone: '📦', url: '/liste/tiers?vue=22' },
-      { code: 'sous-traitants', libelle: 'Sous-traitants, cotraitants, intérim', icone: '🤝', url: '/liste/tiers?vue=23' },
-      { code: 'prescripteurs', libelle: 'Prescripteurs et maîtres d\'ouvrage', icone: '📐', url: '/liste/tiers?vue=24' },
+      { code: 'tiers', libelle: 'Tous les tiers', icone: '🏢', url: '/liste/tiers?vue=20', info: 'Sociétés, établissements, particuliers…', creation: F('personne', 'Nouvelle personne (société…)') },
+      { code: 'clients', libelle: 'Clients et prospects', icone: '💶', url: '/liste/tiers?vue=21', creation: F('personne', 'Nouveau client', '?casquette=CLIENT') },
+      { code: 'fournisseurs', libelle: 'Fournisseurs et loueurs', icone: '📦', url: '/liste/tiers?vue=22', creation: F('personne', 'Nouveau fournisseur', '?casquette=FOURNISSEUR') },
+      { code: 'sous-traitants', libelle: 'Sous-traitants, cotraitants, intérim', icone: '🤝', url: '/liste/tiers?vue=23', creation: F('personne', 'Nouveau sous-traitant', '?casquette=SOUS_TRAITANT') },
+      { code: 'prescripteurs', libelle: 'Prescripteurs et maîtres d\'ouvrage', icone: '📐', url: '/liste/tiers?vue=24', creation: F('personne', 'Nouveau prescripteur', '?casquette=ARCHITECTE') },
       { separateur: true },
-      { code: 'contacts', libelle: 'Contacts (individus)', icone: '👤', url: '/liste/contacts?vue=25' },
-      { code: 'equipe-interne', libelle: 'Notre société : salariés et rôles', icone: '🎩', url: '/liste/contacts?vue=26' },
-      { separateur: true },
-      { code: 'nouvelle-personne', libelle: 'Nouvelle personne (société…)', icone: '＋', url: '/fiche/personne/nouveau' },
-      { code: 'nouveau-particulier', libelle: 'Nouveau particulier', icone: '＋', url: '/fiche/personne/nouveau?niveau=PARTICULIER&casquette=CLIENT' },
-      { code: 'nouvel-individu', libelle: 'Nouvel individu (contact)', icone: '＋', url: '/fiche/individu/nouveau' },
+      { code: 'contacts', libelle: 'Contacts (individus)', icone: '👤', url: '/liste/contacts?vue=25', creation: F('individu', 'Nouvel individu (contact)') },
+      { code: 'equipe-interne', libelle: 'Notre société : salariés et rôles', icone: '🎩', url: '/liste/contacts?vue=26', creation: F('individu', 'Nouvel individu') },
       { separateur: true },
       { code: 'graphe-relations', libelle: 'Graphe des relations', icone: '🕸️', url: '/annuaire/graphe', info: 'Hiérarchie, liens et contacts (depuis notre société)' },
       { code: 'notre-societe', libelle: 'Notre société', icone: '🏛️', url: '/annuaire/societe', info: 'Fiche de la société de cette base' },
@@ -41,19 +37,19 @@ export const MENUS_METIER = [
   },
   {
     code: 'affaires', libelle: 'A&ffaires', elements: [
-      { code: 'projets', libelle: 'Projets (chiffrage)', icone: '🎯', url: L('projets') },
-      { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)' },
-      { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers') },
-      { code: 'marches', libelle: 'Marchés', icone: '📜', url: L('marches'), info: 'Ouverts à la validation des commandes clients : suivi de la facturation' },
+      { code: 'projets', libelle: 'Projets (chiffrage)', icone: '🎯', url: L('projets'), creation: F('projet', 'Nouveau projet') },
+      { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)', creation: F('affaire', 'Nouvelle affaire') },
+      { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers'), creation: F('chantier', 'Nouveau chantier') },
+      { code: 'marches', libelle: 'Marchés', icone: '📜', url: L('marches'), info: 'Ouverts à la validation des commandes clients : suivi de la facturation', creation: F('marche', 'Nouveau marché') },
     ],
   },
   {
     code: 'ventes', libelle: '&Ventes', elements: [
-      { code: 'devis', libelle: 'Devis', icone: '📝', url: L('devis') },
-      { code: 'commandes', libelle: 'Commandes clients', icone: '🤝', url: L('commandes') },
-      { code: 'livraisons', libelle: 'Bons de livraison et de retour', icone: '🚚', url: L('livraisons') },
-      { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations') },
-      { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures') },
+      { code: 'devis', libelle: 'Devis', icone: '📝', url: L('devis'), creation: D('V_DEVIS', 'Nouveau devis') },
+      { code: 'commandes', libelle: 'Commandes clients', icone: '🤝', url: L('commandes'), creation: D('V_COMMANDE', 'Nouvelle commande client') },
+      { code: 'livraisons', libelle: 'Bons de livraison et de retour', icone: '🚚', url: L('livraisons'), creation: D('V_RECEPTION', 'Nouveau bon de livraison') },
+      { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations'), creation: D('V_SITUATION', 'Nouvelle situation de travaux') },
+      { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures'), creation: D('V_FACTURE', 'Nouvelle facture') },
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
       { separateur: true },
       { code: 'devis-demo', libelle: 'Devis de démonstration', icone: '🏠', url: '/document/demo', info: 'Éditeur de devis : métrés, ouvrages, totaux' },
@@ -61,21 +57,18 @@ export const MENUS_METIER = [
   },
   {
     code: 'achats', libelle: '&Achats', elements: [
-      { code: 'ddp', libelle: 'Demandes de prix (DDP)', icone: '📨', url: L('achats_ddp') },
-      { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes') },
-      { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons') },
-      { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures') },
+      { code: 'ddp', libelle: 'Demandes de prix (DDP)', icone: '📨', url: L('achats_ddp'), creation: D('A_DEVIS', 'Nouvelle demande de prix') },
+      { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes'), creation: D('A_COMMANDE', 'Nouvelle commande fournisseur') },
+      { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons'), creation: D('A_RECEPTION', 'Nouveau bon de livraison fournisseur') },
+      { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures'), creation: D('A_FACTURE', 'Nouvelle facture fournisseur') },
     ],
   },
   {
     code: 'bibliotheque', libelle: '&Bibliothèque', elements: [
-      { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12' },
-      { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13' },
-      { code: 'ensembles', libelle: 'Ensembles (structures réutilisables)', icone: '🧩', url: '/liste/bibliotheque?vue=15' },
-      { code: 'elements', libelle: 'Tous les éléments', icone: '📚', url: '/liste/bibliotheque?vue=14' },
-      { separateur: true },
-      { code: 'nouvel-article', libelle: 'Nouvel article', icone: '＋', url: '/fiche/element/nouveau' },
-      { code: 'nouvel-ouvrage', libelle: 'Nouvel ouvrage', icone: '＋', url: '/fiche/element/nouveau?type=OUVRAGE' },
+      { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12', creation: F('element', 'Nouvel article') },
+      { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13', creation: F('element', 'Nouvel ouvrage', '?type=OUVRAGE') },
+      { code: 'ensembles', libelle: 'Ensembles (structures réutilisables)', icone: '🧩', url: '/liste/bibliotheque?vue=15', creation: F('element', 'Nouvel ensemble', '?type=ENSEMBLE') },
+      { code: 'elements', libelle: 'Tous les éléments', icone: '📚', url: '/liste/bibliotheque?vue=14', creation: F('element', 'Nouvel article') },
       { separateur: true },
       { code: 'parametrage-bibliotheque', libelle: 'Bibliothèques, familles, natures…', icone: '⚙', url: '/parametres/bibliotheque' },
     ],

@@ -41,12 +41,19 @@ export class PageFiche extends PageBase {
         if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);
         this.#titre();
       },
+      // Fiche supprimée : les listes ouvertes se contrôlent (ligne disparue).
+      surSupprime: (id) => app.publier('enregistre', { type, ids: [id], cree: true }),
       surFerme: () => {
         this.ferme = true;
         if (!this.enQuittant) app.routeur.retour(LISTE_PAR_TYPE[type] ?? '/');
       },
     });
     await this.fiche.ouvrir();
+    // Copie demandée par une liste (/fiche/<type>/<id>?copie=1) : nouvelle fiche à partir de celle-ci.
+    if (!nouveau && this.requete.copie === '1') {
+      await this.fiche.copier();
+      app.routeur.remplacerUrl(`/fiche/${type}/${this.params.id}`);
+    }
     this.#titre();
     // Le titre suit les changements de mode et d'enregistrement.
     this.observateur = new MutationObserver(() => this.#titre());

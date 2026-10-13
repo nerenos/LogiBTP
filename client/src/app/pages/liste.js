@@ -4,6 +4,7 @@ import { PanneauArbres } from '@logibtp/bibliotheque/ui';
 import { simulerModificationsAutres } from '../listes.js';
 import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
+import { api } from '../api.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue, app, themes = []) {
@@ -31,6 +32,43 @@ function creationDepuisVue(vue, app, themes = []) {
   const type = { salaries: 'salarie', materiels: 'materiel' }[source];
   if (!type) return null;
   return { libelle: type === 'salarie' ? '＋ Salarié' : '＋ Matériel', action: () => app.naviguer(`/fiche/${type}/nouveau`) };
+}
+
+/** Fiche de chaque source de liste (thèmes d'un seul type de fiche). */
+const FICHE_PAR_SOURCE = {
+  salaries: 'salarie', materiels: 'materiel', elements: 'element', personnes: 'personne', individus: 'individu',
+  projets: 'projet', affaires: 'affaire', chantiers: 'chantier', marches: 'marche',
+};
+
+/**
+ * Consulter, copier, supprimer les éléments sélectionnés : thème d'un seul type de fiche, ou documents (en ligne).
+ * Suppression proposée au profil ADMIN (droit SUPPRIMER des fiches ; documents : droit du type, contrôlé par le serveur).
+ */
+function actionsDepuisVue(vue, app, services, themes = []) {
+  const source = vue?.definition?.source?.vue;
+  const theme = themes.find((t) => t.thl_code === vue?.definition?.theme);
+  const consulter = (l, e) => app.ouvrirElement({ id: l._id, type: l._type, ligne: l }, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) });
+  if (source === 'documents') {
+    if (!app.enLigne) return null;
+    return {
+      consulter,
+      copier: async (l) => {
+        const rep = await api.copier(l._id);
+        const id = rep.document?.ent_id ?? rep.ent_id;
+        app.publier('enregistre', { ids: [id], cree: true });
+        app.message(`Copie créée : ${rep.document?.ent_numero ?? ''}`, 'succes');
+        await app.naviguer(`/document/${id}`);
+      },
+      supprimer: app.estAdmin() ? (l) => api.supprimerDocument(l._id) : null,
+    };
+  }
+  const type = FICHE_PAR_SOURCE[source];
+  if (!type || (theme?.thl_types?.length ?? 0) > 1) return null;
+  return {
+    consulter,
+    copier: (l, e) => app.naviguer(`/fiche/${type}/${l._id}?copie=1`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+    supprimer: app.estAdmin() ? (l) => services.fiche.supprimer(type, l._id) : null,
+  };
 }
 
 /**
@@ -62,6 +100,7 @@ export class PageListe extends PageBase {
       peutRequete: app.enLigne && app.estAdmin(),
       peutGererThemes: app.peutGererThemes(),
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
+      actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
       surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#vueChoisie(theme, vue); },
       filtresVue: (vue) => {
         if (!this.filtre) return {};
