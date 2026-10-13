@@ -1,4 +1,6 @@
 import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { correspond, filtreActif } from '@logibtp/liste';
+import { ouvrirMenuFiltre, fermerMenuFiltre } from '@logibtp/liste/ui';
 import { TL, estPied, estTranche } from '../calcul/index.js';
 import {
   feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT,
@@ -50,6 +52,9 @@ const TRIS_ELEMENTS = {
   nature: { titre: 'Nature', texte: true, valeur: (g, natures) => [...g.natures].map((n) => natures.get(n)?.code ?? '').join(', ') },
 };
 
+/** Colonne au format du module Liste (menu de filtre) : nombres et textes ; tri local seulement. */
+const colonneFiltre = (cle) => ({ code: cle, titre: TRIS_ELEMENTS[cle].titre, format: TRIS_ELEMENTS[cle].texte ? 'texte' : 'nombre', calcul: true });
+
 export class AnalyseCoefficients {
   constructor(conteneur, { editeur, natures = [], message = () => {} }) {
     this.conteneur = conteneur;
@@ -65,6 +70,7 @@ export class AnalyseCoefficients {
     // Part de l'arbre des tranches dans la colonne de gauche (en %), tri de la liste des éléments.
     this.partageGauche = Number.isFinite(p.partageGauche) ? Math.min(85, Math.max(15, p.partageGauche)) : 60;
     this.tri = p.tri && TRIS_ELEMENTS[p.tri.cle] ? { cle: p.tri.cle, sens: p.tri.sens === -1 ? -1 : 1 } : null;
+    this.filtresElements = new Map(); // filtre par colonne de la liste des éléments (module Liste), le temps de la page
     this.portee = null; // null : document entier ; sinon identifiant d'une tranche
     this.arbreReplies = new Set(); // nœuds repliés de l'arbre des tranches (portée)
     this.filtreNature = null; // null : toutes ; 'r:<regroupement>', 'n:<id>' ou 'n:' (sans nature)
@@ -264,7 +270,8 @@ export class AnalyseCoefficients {
         </header>
         <div class="partie-corps"><table class="table-analyse table-elements">
           <thead><tr>${Object.entries(TRIS_ELEMENTS).map(([k, t]) => `<th data-tri="${k}" class="triable" aria-sort="none"
-            title="${echapper(t.aide ?? t.titre)} : cliquer pour trier (croissant, décroissant, ordre par défaut)">${echapper(t.titre)}<span class="sens-tri"></span></th>`).join('')}</tr></thead>
+            title="${echapper(t.aide ?? t.titre)} : cliquer pour trier (croissant, décroissant, ordre par défaut)">${echapper(t.titre)}<span class="sens-tri"></span>
+            <button type="button" class="filtre-colonne" data-filtre-colonne="${k}" title="Filtrer cette colonne">▾</button></th>`).join('')}</tr></thead>
           <tbody></tbody>
         </table></div>
       </section>
@@ -292,7 +299,11 @@ export class AnalyseCoefficients {
     const pm = this.editeur.saisie.document.ent_precision_montant ?? 2;
     const lectureSeule = this.editeur.magasin?.lectureSeule;
     const r = this.recherche.trim().toLowerCase();
-    const groupes = elementsAnalyse(this.feuilles ?? []).filter((g) => !r || `${g.code} ${g.libelle}`.toLowerCase().includes(r));
+    const tous = elementsAnalyse(this.feuilles ?? []);
+    this.groupesElements = tous;
+    const actifs = [...this.filtresElements].filter(([, f]) => filtreActif(f));
+    const groupes = tous.filter((g) => (!r || `${g.code} ${g.libelle}`.toLowerCase().includes(r))
+      && actifs.every(([k, f]) => correspond(f, this.celluleElement(g, k), colonneFiltre(k))));
     // Tri choisi (sinon : montant décroissant) ; valeurs absentes en fin de liste.
     if (this.tri) {
       const t = TRIS_ELEMENTS[this.tri.cle];
@@ -308,6 +319,10 @@ export class AnalyseCoefficients {
       const actif = this.tri?.cle === th.dataset.tri;
       th.setAttribute('aria-sort', actif ? (this.tri.sens === 1 ? 'ascending' : 'descending') : 'none');
       th.querySelector('.sens-tri').textContent = actif ? (this.tri.sens === 1 ? ' ▲' : ' ▼') : '';
+      const b = th.querySelector('[data-filtre-colonne]');
+      const filtre = filtreActif(this.filtresElements.get(th.dataset.tri));
+      b.classList.toggle('actif', filtre);
+      b.textContent = filtre ? '⧩' : '▾';
     }
     this.elements = new Map(groupes.map((g) => [g.cle, g]));
     const nombre = (v, d) => formatLibre(Math.round(v * 10 ** d) / 10 ** d, d);
@@ -329,7 +344,44 @@ export class AnalyseCoefficients {
       ${Object.keys(VALEURS_ELEMENT).map((k) => valeur(g, k)).join('')}
       <td class="nombre">${formatNombre(g.montant, pm)}</td><td class="${g.natures.size > 1 ? 'divergent' : ''}">${echapper(natures(g))}</td></tr>`).join('')
       || '<tr><td colspan="12" class="aide">Aucun élément.</td></tr>';
-    this.conteneur.querySelector('[data-nb-elements]').textContent = `(${groupes.length} groupe(s), ${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))`;
+    const filtres = actifs.length || r;
+    this.conteneur.querySelector('[data-nb-elements]').innerHTML = `(${groupes.length}${filtres ? ` sur ${tous.length}` : ''} groupe(s), `
+      + `${groupes.reduce((n, g) => n + g.feuilles.length, 0)} ligne(s))${actifs.length ? ' <button type="button" class="lien" data-effacer-filtres>Effacer les filtres</button>' : ''}`;
+  }
+
+  /** Cellule d'un groupe pour le filtre (valeur : celle du tri, minimum si les lignes diffèrent ; texte affiché). */
+  celluleElement(g, cle) {
+    const t = TRIS_ELEMENTS[cle];
+    const valeur = t.valeur(g, this.natures);
+    return { valeur, texte: this.texteFiltre(valeur, cle), style: {} };
+  }
+
+  texteFiltre(v, cle) {
+    if (v === null || v === undefined || v === '') return '';
+    if (TRIS_ELEMENTS[cle].texte) return String(v);
+    const d = cle === 'nb' ? 0 : cle === 'qt' ? 3 : cle === 'montant' ? 2 : 4;
+    return formatLibre(Math.round(Number(v) * 10 ** d) / 10 ** d, d);
+  }
+
+  /** Menu de filtre d'une colonne (module Liste) : tri, valeurs à cocher, condition. */
+  menuFiltreElement(cle, ancre) {
+    const modele = {
+      valeur: (g, k) => TRIS_ELEMENTS[k].valeur(g, this.natures),
+      texte: (v, c) => this.texteFiltre(v, c.code),
+      style: () => ({}),
+    };
+    ouvrirMenuFiltre({
+      ancre, colonne: colonneFiltre(cle), modele, lignes: this.groupesElements ?? [], filtre: this.filtresElements.get(cle), triBase: false, miseEnForme: false,
+      appliquer: (f) => {
+        if (f) this.filtresElements.set(cle, f); else this.filtresElements.delete(cle);
+        this.rendreElements();
+      },
+      trier: (sens) => {
+        this.tri = { cle, sens: sens === 'desc' ? -1 : 1 };
+        this.memoriser();
+        this.rendreElements();
+      },
+    });
   }
 
   /** Valeur saisie dans la partie Éléments : écrite sur toutes les lignes du groupe (une étape d'annulation). */
@@ -399,6 +451,9 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const filtre = e.target.closest('[data-filtre-colonne]');
+    if (filtre) { e.stopPropagation(); this.menuFiltreElement(filtre.dataset.filtreColonne, filtre); return; }
+    if (e.target.closest('[data-effacer-filtres]')) { this.filtresElements.clear(); fermerMenuFiltre(); this.rendreElements(); return; }
     const tri = e.target.closest('th[data-tri]');
     if (tri) {
       // Croissant, décroissant, puis ordre par défaut (montant décroissant).

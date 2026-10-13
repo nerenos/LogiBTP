@@ -22,8 +22,9 @@ const triEtat = (nom, libelle, v) => `<label>${libelle}<select data-format="${no
 /**
  * Ouvre le menu sous `ancre`. `appliquer(filtre | null)` reçoit le nouveau filtre ; `trier(sens, base)` trie
  * les lignes chargées (base = false) ou toute la base (base = true, indisponible pour une colonne calculée).
+ * Options : `triBase` (boutons de tri de toute la base) et `miseEnForme` (filtre par mise en forme), affichés par défaut.
  */
-export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appliquer, trier }) {
+export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appliquer, trier, triBase = true, miseEnForme = true }) {
   fermerMenuFiltre();
   const distinctes = valeursDistinctes(lignes, colonne, modele);
   const formats = formatsPresents(lignes, colonne, modele);
@@ -45,8 +46,8 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
     <div class="liste-menu-tri">
       <button type="button" data-tri="asc" title="Trier les lignes chargées">${numerique ? '1 → 9' : 'A → Z'}</button>
       <button type="button" data-tri="desc" title="Trier les lignes chargées">${numerique ? '9 → 1' : 'Z → A'}</button>
-      <button type="button" data-tri-base="asc" ${colonne.calcul ? 'disabled title="Colonne calculée : tri des lignes chargées uniquement"' : 'title="Recharge la liste depuis la base dans cet ordre"'}>Toute la base ▲</button>
-      <button type="button" data-tri-base="desc" ${colonne.calcul ? 'disabled' : ''}>Toute la base ▼</button>
+      ${triBase ? `<button type="button" data-tri-base="asc" ${colonne.calcul ? 'disabled title="Colonne calculée : tri des lignes chargées uniquement"' : 'title="Recharge la liste depuis la base dans cet ordre"'}>Toute la base ▲</button>
+      <button type="button" data-tri-base="desc" ${colonne.calcul ? 'disabled' : ''}>Toute la base ▼</button>` : ''}
     </div>
     <details open><summary>Valeurs (${distinctes.length})</summary>
       <input type="search" data-recherche placeholder="Rechercher une valeur…">
@@ -63,7 +64,7 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
         <input data-b value="${echapper(cond.b ?? '')}" placeholder="et">
       </div>
     </details>
-    <details ${filtreActif({ format: fmt }) ? 'open' : ''}><summary>Mise en forme</summary>
+    <details ${filtreActif({ format: fmt }) ? 'open' : ''} ${miseEnForme ? '' : 'hidden'}><summary>Mise en forme</summary>
       <div class="liste-menu-format">
         <span>Couleur de fond</span>${pastilles('fond', formats.fonds, fmt.fond)}
         <span>Couleur de police</span>${pastilles('couleur', formats.couleurs, fmt.couleur)}

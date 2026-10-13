@@ -302,3 +302,7 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .table-elements th.triable:hover { color: var(--accent); }
 .table-elements th[aria-sort="ascending"], .table-elements th[aria-sort="descending"] { color: var(--accent); }
 .table-elements .sens-tri { font-size: 0.8em; }
+.table-elements .filtre-colonne { margin-left: 0.2rem; padding: 0 0.2rem; font-size: 0.75em; line-height: 1.2; border: 1px solid transparent; background: none; color: var(--discret); cursor: pointer; }
+.table-elements .filtre-colonne:hover { border-color: var(--bord); }
+.table-elements .filtre-colonne.actif { color: var(--surface); background: var(--accent); border-color: var(--accent); }
+.partie-entete h3 small .lien { background: none; border: none; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
