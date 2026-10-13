@@ -9,6 +9,7 @@ import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
+import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
@@ -29,6 +30,7 @@ const GABARIT = `
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="bibliotheque" title="Ouvrir la bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, ou saisir son code dans la colonne Code)">📚 Bibliothèque</button>
       <button data-action="actualiser" title="Reprendre les prix de la bibliothèque pour les lignes sélectionnées">⟳ Prix bibliothèque</button>
+      <button data-action="versBibliotheque" title="Mettre à jour ou créer les éléments de la bibliothèque depuis les lignes sélectionnées (élément → article, ouvrage → ouvrage, titre → ensemble)">📤 Vers la bibliothèque</button>
       <select data-nouveau-type title="Type du nouveau document" hidden></select>
       <button data-action="nouveau" title="Créer un document de ce type" hidden>Nouveau</button>
     </div>
@@ -120,6 +122,7 @@ export class PageDocument extends PageBase {
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       actualiser: () => this.appel?.actualiser(this.editeur?.grille.selection ?? []),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
+      versBibliotheque: () => this.envoi?.ouvrir(this.editeur?.grille.selection ?? []),
     };
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
@@ -145,6 +148,11 @@ export class PageDocument extends PageBase {
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
     this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    // Mise à jour ou création d'éléments de la bibliothèque depuis les lignes du document.
+    this.envoi = new EnvoiBibliotheque({
+      fiche: s.fiche, bibliotheque: s.bibliotheque, editeur: () => this.editeur, bibDocument: () => this.appel.bibDocument(),
+      message: (t, n) => app.message(t, n),
+    });
     // Coefficients par défaut (bibliothèque) : couleur des coefficients des lignes.
     const params = await s.bibliotheque.parametres?.().catch(() => null);
     this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
