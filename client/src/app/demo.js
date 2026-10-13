@@ -1,6 +1,7 @@
 // Document de démonstration, utilisé quand l'API n'est pas joignable (calcul local complet).
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX, MODELES_DOCUMENT } from './vues-document.js';
 import { lignesLotsDemo, natureDemo, coderDemo } from './demo-lots.js';
+import { RATTACHEMENT_DEVIS_DEMO } from './structure/donnees.js';
 
 export const DEFINITION_DEMO = {
   type: { tyd_id: 1, tyd_code: 'V_DEVIS', tyd_libelle: 'Devis client', tyd_famille: 'V' },
@@ -64,6 +65,7 @@ export const DOCUMENT_DEMO = {
     ent_std_id: 1, ent_tiers_id: 1, ent_mode_calcul_ouvrage: 'V', ent_modele: 'COMPLET', ent_precision_montant: 2, ent_version: 1, ent_bib_id: null,
     ent_num_format: { separateur: '.', niveaux: [{ style: 'A' }, { style: '1' }, { style: 'a' }] },
     ent_proprietes: { chantier: 'Maison Martin – Lyon', duree_validite: 30 },
+    ...RATTACHEMENT_DEVIS_DEMO,
   },
   lignes: preparerDemo([
     L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 1, lig_libelle_html: '<b>Gros œuvre</b>', lig_tva_id: 1 }),

@@ -73,3 +73,17 @@
 /* Onglet Graphe d'une fiche de l'annuaire : hauteur de travail. */
 .graphe-hote { height: calc(100vh - 16rem); min-height: 28rem; }
 .page-graphe-corps.graphe-hote { height: auto; flex: 1; min-height: 0; }
+
+/* Structure des affaires : rattachement du document (entête) et marché proposé à la validation d'une commande. */
+.rattachement-document { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0; border: 1px solid var(--bord); border-radius: 6px; padding: 6px 10px; }
+.rattachement-document label { display: flex; flex-direction: column; font-size: 0.85em; min-width: 180px; flex: 1 1 180px; }
+.rattachement-document a { text-decoration: none; }
+dialog.dialogue-structure { max-width: min(640px, calc(100vw - 32px)); width: 100%; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); padding: 16px; }
+dialog.dialogue-structure::backdrop { background: rgba(0, 0, 0, 0.35); }
+dialog.dialogue-structure label { display: block; margin: 6px 0; }
+dialog.dialogue-structure fieldset { border: 1px solid var(--bord); border-radius: 6px; margin: 8px 0; }
+dialog.dialogue-structure .grille-champs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; }
+dialog.dialogue-structure .grille-champs .large { grid-column: 1 / -1; }
+dialog.dialogue-structure .grille-champs input, dialog.dialogue-structure .grille-champs select { width: 100%; }
+dialog.dialogue-structure .erreur { color: var(--erreur, #c0392b); min-height: 1em; }
+dialog.dialogue-structure .boutons { display: flex; justify-content: flex-end; gap: 8px; }

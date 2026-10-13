@@ -11,6 +11,7 @@ import { ficheDeLigne } from './fiches/definitions.js';
 import { creerFournisseurGed } from './ged/ged.js';
 import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
 import { creerFournisseurAnnuaire, creerFournisseurEntreprises, relierTarifs } from './annuaire/annuaire.js';
+import { creerFournisseurStructure } from './structure/structure.js';
 import { DEFINITION_DEMO } from './demo.js';
 import { societeCourante } from './societe.js';
 import { menus } from './navigation/menus.js';
@@ -26,6 +27,7 @@ const LOGO = `<svg viewBox="0 0 104 24" role="img" aria-label="LogiBTP"><g fill=
 /** Pour une fiche, la liste où revenir quand elle a été ouverte directement (fenêtre séparée, session restaurée). */
 export const LISTE_PAR_TYPE = {
   salarie: '/liste/salaries', materiel: '/liste/materiels', element: '/liste/bibliotheque', personne: '/liste/tiers', individu: '/liste/contacts',
+  projet: '/liste/projets', affaire: '/liste/affaires', chantier: '/liste/chantiers', marche: '/liste/marches',
 };
 
 export class Application {
@@ -89,8 +91,13 @@ export class Application {
       const annuaire = creerFournisseurAnnuaire({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo'), salaries: lignes.salaries });
       const entreprises = creerFournisseurEntreprises({ enLigne: this.enLigne });
       if (!this.enLigne) relierTarifs(bibliotheque);
-      const liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements, annuaire: this.enLigne ? null : annuaire });
-      const fiche = creerFournisseurFiche({ enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque, annuaire: this.enLigne ? null : annuaire });
+      // Structure des affaires (projets, affaires, chantiers, marchés) : hors ligne, mêmes lignes pour les listes et les fiches.
+      let liste = null;
+      const structure = creerFournisseurStructure({ enLigne: this.enLigne, annuaire, documents: () => liste?.sourcesDonnees?.documents?.lignes ?? [] });
+      liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure });
+      const fiche = creerFournisseurFiche({
+        enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure,
+      });
       if (!this.enLigne) {
         fiche.profil = this.preferences.get('profilDemo');
         ged.profil = this.preferences.get('profilDemo');
@@ -101,7 +108,7 @@ export class Application {
           if (v) throw Object.assign(new Error(`Fiche en cours de modification par ${v.utilisateur} : saisie impossible pour l'instant`), { code: 'FICHE_EN_MODIFICATION', statut: 409 });
         };
       }
-      return { liste, fiche, ged, bibliotheque, annuaire, entreprises };
+      return { liste, fiche, ged, bibliotheque, annuaire, entreprises, structure };
     })();
     return this.servicesPrets;
   }

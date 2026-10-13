@@ -4,8 +4,17 @@ import { PanneauArbres } from '@logibtp/bibliotheque/ui';
 import { simulerModificationsAutres } from '../listes.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
-function creationDepuisVue(vue, app) {
+function creationDepuisVue(vue, app, themes = []) {
   const source = vue?.definition?.source?.vue;
+  // Documents (en ligne) : premier type du thème (Commandes clients → commande client).
+  if (source === 'documents') {
+    const type = themes.find((t) => t.thl_code === vue.definition.theme)?.thl_types?.[0];
+    if (!type || !app.enLigne) return null;
+    return { libelle: `＋ ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
+  }
+  // Structure des affaires : fiches projet, affaire, chantier, marché.
+  const structure = { projets: ['projet', 'Projet'], affaires: ['affaire', 'Affaire'], chantiers: ['chantier', 'Chantier'], marches: ['marche', 'Marché'] }[source];
+  if (structure) return { libelle: `＋ ${structure[1]}`, action: () => app.naviguer(`/fiche/${structure[0]}/nouveau`) };
   if (source === 'elements') {
     const type = (vue.definition.filtres ?? []).find((f) => f.colonne === 'type' && ['OUVRAGE', 'ENSEMBLE'].includes(f.valeur))?.valeur ?? null;
     const libelle = { OUVRAGE: '＋ Ouvrage', ENSEMBLE: '＋ Ensemble' }[type] ?? '＋ Article';
@@ -45,7 +54,7 @@ export class PageListe extends PageBase {
       // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
       peutRequete: app.enLigne && app.estAdmin(),
       peutGererThemes: app.peutGererThemes(),
-      creation: (vue) => creationDepuisVue(vue, app),
+      creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
       surVue: ({ theme, vue }) => this.#vueChoisie(theme, vue),
       // Vues de la bibliothèque : arbres des familles et des natures dans le panneau ancrable (filtres fam_id, nat_id).
       panneau: ({ vue, conteneur, liste }) => (vue.definition?.source?.vue === 'elements' ? new PanneauArbres({ conteneur, liste, fournisseur: s.bibliotheque }) : null),

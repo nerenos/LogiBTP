@@ -59,5 +59,6 @@ api.MapModuleGed();
 api.MapModuleBibliotheque();
 api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
+api.MapStructure();
 
 app.Run();

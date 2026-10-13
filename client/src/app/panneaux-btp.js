@@ -9,9 +9,13 @@ import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranc
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [] } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null } = {}) {
     super(editeur);
     this.bibliotheques = bibliotheques;
+    // Structure des affaires : référentiels (projets, affaires, chantiers, marchés) et rattachement (page : document
+    // modifiable → saisie ; validé → classement direct par l'API).
+    this.structure = structure;
+    this.rattacher = rattacher;
   }
 
   champsEntete(d) {
@@ -27,10 +31,26 @@ export class PanneauxBtp extends PanneauxDocument {
     return this.editeur.saisie.variables.filter((v) => v.var_lig_id === null && v.var_mtr_id === null);
   }
 
+  /** Rattachement à la structure des affaires : listes filtrées (marchés du chantier, chantiers de l'affaire). */
+  sectionRattachement(d) {
+    const s = this.structure;
+    if (!s) return '';
+    const choix = (champ, liste, valeur, filtre = () => true) => `<select data-rattachement="${champ}">${opt('', '—', valeur ?? '')}${liste
+      .filter((x) => x.id === Number(valeur) || (filtre(x) && !['CLOSE', 'CLOS', 'PERDU', 'ABANDONNE', 'RESILIE'].includes(x.statut)))
+      .map((x) => opt(String(x.id), `${x.code} – ${x.libelle}`, valeur === null || valeur === undefined ? '' : String(valeur))).join('')}</select>`;
+    const lien = (type, id) => (id ? ` <a href="/fiche/${type}/${Number(id)}" title="Ouvrir la fiche">↗</a>` : '');
+    return `<fieldset class="rattachement-document"><legend>Rattachement</legend>
+      <label>Projet${lien('projet', d.ent_projet_id)} ${choix('ent_projet_id', s.projets, d.ent_projet_id)}</label>
+      <label>Affaire${lien('affaire', d.ent_affaire_id)} ${choix('ent_affaire_id', s.affaires, d.ent_affaire_id)}</label>
+      <label>Chantier${lien('chantier', d.ent_chantier_id)} ${choix('ent_chantier_id', s.chantiers, d.ent_chantier_id, (c) => !d.ent_affaire_id || c.aff_id === d.ent_affaire_id)}</label>
+      <label>Marché${lien('marche', d.ent_marche_id)} ${choix('ent_marche_id', s.marches, d.ent_marche_id, (m) => !d.ent_chantier_id || m.cha_id === d.ent_chantier_id)}</label>
+    </fieldset>`;
+  }
+
   sectionsEntete() {
     const varsDoc = this.variablesDocument();
     const calc = new Map(this.editeur.resultat.variables.map((v) => [v.var_id, v.var_valeur]));
-    return `
+    return `${this.sectionRattachement(this.editeur.saisie.document)}
       <details class="variables-document" ${varsDoc.length ? 'open' : ''}><summary>Variables du document ($$)</summary>
         <table class="variables"><tbody>${varsDoc.map((v) => `
           <tr data-var="${v.var_id}"><td>$$<input data-vchamp="var_nom" value="${echapper(v.var_nom)}"></td>
@@ -43,6 +63,19 @@ export class PanneauxBtp extends PanneauxDocument {
 
   lierEntete(zone) {
     const m = this.editeur.magasin;
+    zone.querySelectorAll('[data-rattachement]').forEach((el) => el.addEventListener('change', () => {
+      const d = this.editeur.saisie.document;
+      const r = { ent_projet_id: d.ent_projet_id ?? null, ent_affaire_id: d.ent_affaire_id ?? null, ent_chantier_id: d.ent_chantier_id ?? null, ent_marche_id: d.ent_marche_id ?? null };
+      r[el.dataset.rattachement] = el.value === '' ? null : Number(el.value);
+      el.blur(); // l'entête se redessine (listes filtrées) une fois le focus sorti
+      // Cohérence descendante : une autre affaire libère le chantier et le marché, un autre chantier le marché.
+      const s = this.structure;
+      if (el.dataset.rattachement === 'ent_affaire_id' && r.ent_chantier_id && s.chantiers.find((c) => c.id === r.ent_chantier_id)?.aff_id !== r.ent_affaire_id) {
+        r.ent_chantier_id = null; r.ent_marche_id = null;
+      }
+      if (el.dataset.rattachement === 'ent_chantier_id' && r.ent_marche_id && s.marches.find((x) => x.id === r.ent_marche_id)?.cha_id !== r.ent_chantier_id) r.ent_marche_id = null;
+      this.rattacher?.(r);
+    }));
     zone.querySelectorAll('[data-vchamp]').forEach((el) => el.addEventListener('change', () => {
       const id = Number(el.closest('tr').dataset.var);
       m.modifier((b) => { b.variables.find((v) => v.var_id === id)[el.dataset.vchamp] = el.value; }, 'Variable');

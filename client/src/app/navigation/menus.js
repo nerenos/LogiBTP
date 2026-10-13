@@ -40,9 +40,20 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'affaires', libelle: 'A&ffaires', elements: [
+      { code: 'projets', libelle: 'Projets (chiffrage)', icone: '🎯', url: L('projets') },
+      { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)' },
+      { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers') },
+      { code: 'marches', libelle: 'Marchés', icone: '📜', url: L('marches'), info: 'Ouverts à la validation des commandes clients : suivi de la facturation' },
+    ],
+  },
+  {
     code: 'ventes', libelle: '&Ventes', elements: [
       { code: 'devis', libelle: 'Devis', icone: '📝', url: L('devis') },
-      { code: 'factures', libelle: 'Factures, avoirs, situations', icone: '💶', url: L('factures') },
+      { code: 'commandes', libelle: 'Commandes clients', icone: '🤝', url: L('commandes') },
+      { code: 'livraisons', libelle: 'Bons de livraison et de retour', icone: '🚚', url: L('livraisons') },
+      { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations') },
+      { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures') },
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
       { separateur: true },
       { code: 'devis-demo', libelle: 'Devis de démonstration', icone: '🏠', url: '/document/demo', info: 'Éditeur de devis : métrés, ouvrages, totaux' },
@@ -52,6 +63,7 @@ export const MENUS_METIER = [
     code: 'achats', libelle: '&Achats', elements: [
       { code: 'ddp', libelle: 'Demandes de prix (DDP)', icone: '📨', url: L('achats_ddp') },
       { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes') },
+      { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons') },
       { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures') },
     ],
   },

@@ -11,4 +11,9 @@ public class DocumentBtp : Document
     public decimal EntCoefFa { get; set; } = 1;
     /// <summary>Bibliothèque des codes appelés sans préfixe (null : bibliothèque par défaut).</summary>
     public int? EntBibId { get; set; }
+    /// <summary>Structure des affaires (db/160_structure.sql) : projet, affaire, chantier, marché.</summary>
+    public int? EntProjetId { get; set; }
+    public int? EntAffaireId { get; set; }
+    public int? EntChantierId { get; set; }
+    public int? EntMarcheId { get; set; }
 }

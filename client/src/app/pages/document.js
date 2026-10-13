@@ -11,6 +11,8 @@ import { PanneauxBtp } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
+import { completerRattachement } from '../structure/structure.js';
+import { proposerMarche } from '../structure/marche-commande.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
 // local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>.
@@ -148,6 +150,10 @@ export class PageDocument extends PageBase {
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
     this.bibliotheques = await s.bibliotheque.bibliotheques().catch(() => []);
+    // Structure des affaires : listes de choix du rattachement (entête) et marché proposé à la validation d'une commande.
+    this.servicesStructure = s.structure;
+    this.servicesFiche = s.fiche;
+    this.structure = await s.structure?.referentiels().catch(() => null) ?? null;
     // Mise à jour ou création d'éléments de la bibliothèque depuis les lignes du document.
     this.envoi = new EnvoiBibliotheque({
       fiche: s.fiche, bibliotheque: s.bibliotheque, editeur: () => this.editeur, bibDocument: () => this.appel.bibDocument(),
@@ -282,7 +288,9 @@ export class PageDocument extends PageBase {
       appelerCode: (ligId, code) => this.appel.appeler(ligId, code),
       rechercher: (ligId) => this.appel.rechercher(ligId),
     });
-    this.panneaux = new PanneauxBtp(this.editeur, { bibliotheques: this.bibliotheques });
+    this.panneaux = new PanneauxBtp(this.editeur, {
+      bibliotheques: this.bibliotheques, structure: this.structure, rattacher: (r) => this.rattacher(r).catch((x) => this.app.erreur(x)),
+    });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
     // Éléments glissés depuis la fenêtre de la bibliothèque.
@@ -456,6 +464,24 @@ export class PageDocument extends PageBase {
     this.app.message(`Cas de test n° ${rep.cas_id} enregistré (${decision === 'S' ? 'serveur validé' : 'anomalie'})`, 'succes');
   }
 
+  /**
+   * Rattachement à la structure (marché → chantier → affaire complétés). Document modifiable : modification de la
+   * saisie (enregistrée avec le document) ; validé : classement direct, sans toucher au contenu.
+   */
+  async rattacher(r) {
+    const ed = this.editeur;
+    const complet = completerRattachement(r, this.structure ?? { chantiers: [], marches: [] });
+    if (!this.app.enLigne || (this.#modifiable() && !this.bloque && !ed.magasin.lectureSeule)) {
+      ed.magasin.modifier((b) => { Object.assign(b.document, complet); }, 'Rattachement');
+      return;
+    }
+    const doc = ed.saisie.document;
+    Object.assign(doc, await this.servicesStructure.rattacher(doc.ent_id, complet));
+    this.app.publier('enregistre', { ids: [doc.ent_id] });
+    this.app.message('Rattachement enregistré', 'succes');
+    this.rafraichir();
+  }
+
   async valider() {
     const ed = this.editeur;
     if (this.modifiee && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
@@ -464,6 +490,23 @@ export class PageDocument extends PageBase {
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
+    if (this.editeur.definition.type?.tyd_code === 'V_COMMANDE' && !this.editeur.saisie.document.ent_marche_id) await this.proposerMarche();
+  }
+
+  /** Commande client validée sans marché : création du marché sur un chantier, ou rattachement à un marché existant. */
+  async proposerMarche() {
+    if (!this.servicesStructure || !this.servicesFiche) return;
+    this.structure = await this.servicesStructure.referentiels();
+    const doc = this.editeur.saisie.document;
+    const r = await proposerMarche({
+      refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
+      creerMarche: (valeurs) => this.servicesFiche.creer('marche', { valeurs, proprietes: {} }),
+    });
+    if (!r) return;
+    this.structure = await this.servicesStructure.referentiels();
+    this.panneaux.structure = this.structure;
+    await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
+    if (r.cree) this.app.message('Marché créé et commande rattachée', 'succes');
   }
 
   async transformer() {

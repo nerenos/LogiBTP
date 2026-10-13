@@ -3,7 +3,7 @@ import { ExplorateurGed } from '@logibtp/ged/ui';
 import { CLASSES_FICHE } from '../fiches/classes.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 
-const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤' };
+const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
 
 /**
  * Fiche d'un élément (module Fiche) : /fiche/<type>/<id>, /fiche/<type>/nouveau (création). Fermer la fiche (✕ ou

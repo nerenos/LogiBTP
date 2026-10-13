@@ -215,3 +215,35 @@ SELECT setval(pg_get_serial_sequence('vue_document', 'vdo_id'), (SELECT max(vdo_
 `;
 fs.writeFileSync(path.join(racine, 'db', '150_documents_vues.sql'), sqlVuesDocument);
 console.log('db/150_documents_vues.sql généré');
+
+// ------------------------------------------------------------------ structure des affaires de démonstration
+const S = await import('../src/app/structure/donnees.js');
+const sqlStructure = `-- =============================================================================
+-- Cœur LogiBTP – structure des affaires de démonstration : affaires, projets, chantiers, marchés ; rattachement
+-- des devis de démonstration.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/structure/donnees.js : ne pas modifier.
+-- =============================================================================
+
+INSERT INTO affaire (aff_id, aff_code, aff_libelle, aff_nature, aff_tiers_id, aff_responsable, aff_statut, aff_date_ouverture, aff_commentaire) VALUES
+${S.AFFAIRES.map((a) => ` (${a.id}, ${q(a.code)}, ${q(a.libelle)}, ${q(a.nature)}, ${n(a.tiers_id)}, ${q(a.responsable)}, ${q(a.statut)}, ${q(a.date_ouverture)}, ${q(a.commentaire)})`).join(',\n')};
+
+INSERT INTO projet (prj_id, prj_code, prj_libelle, prj_tiers_id, prj_statut, prj_date_remise, prj_date_decision, prj_montant_estime, prj_responsable, prj_ville) VALUES
+${S.PROJETS.map((p) => ` (${p.id}, ${q(p.code)}, ${q(p.libelle)}, ${n(p.tiers_id)}, ${q(p.statut)}, ${q(p.date_remise)}, ${q(p.date_decision)}, ${n(p.montant_estime)}, ${q(p.responsable)}, ${q(p.ville)})`).join(',\n')};
+
+INSERT INTO chantier (cha_id, cha_code, cha_libelle, cha_aff_id, cha_prj_id, cha_tiers_id, cha_adresse, cha_code_postal, cha_ville, cha_statut, cha_date_ouverture, cha_date_fin_prevue, cha_conducteur) VALUES
+${S.CHANTIERS.map((c) => ` (${c.id}, ${q(c.code)}, ${q(c.libelle)}, ${n(c.aff_id)}, ${n(c.prj_id)}, ${n(c.tiers_id)}, ${q(c.adresse)}, ${q(c.code_postal)}, ${q(c.ville)}, ${q(c.statut)}, ${q(c.date_ouverture)}, ${q(c.date_fin_prevue)}, ${q(c.conducteur)})`).join(',\n')};
+
+INSERT INTO marche (mar_id, mar_code, mar_libelle, mar_cha_id, mar_tiers_id, mar_nature, mar_montant_ht, mar_retenue_pct, mar_date, mar_statut) VALUES
+${S.MARCHES.map((m) => ` (${m.id}, ${q(m.code)}, ${q(m.libelle)}, ${m.cha_id}, ${n(m.tiers_id)}, ${q(m.nature)}, ${n(m.montant_ht)}, ${n(m.retenue_pct)}, ${q(m.date)}, ${q(m.statut)})`).join(',\n')};
+
+SELECT setval(pg_get_serial_sequence('affaire', 'aff_id'), (SELECT max(aff_id) FROM affaire));
+SELECT setval(pg_get_serial_sequence('projet', 'prj_id'), (SELECT max(prj_id) FROM projet));
+SELECT setval(pg_get_serial_sequence('chantier', 'cha_id'), (SELECT max(cha_id) FROM chantier));
+SELECT setval(pg_get_serial_sequence('marche', 'mar_id'), (SELECT max(mar_id) FROM marche));
+
+-- Devis de démonstration (créé au premier lancement) : rattaché ici s'il existe déjà.
+UPDATE document SET ent_projet_id = ${S.RATTACHEMENT_DEVIS_DEMO.ent_projet_id}, ent_chantier_id = ${S.RATTACHEMENT_DEVIS_DEMO.ent_chantier_id}
+WHERE ent_objet = 'Extension maison individuelle' AND ent_chantier_id IS NULL;
+`;
+fs.writeFileSync(path.join(racine, 'db', '161_structure_demo.sql'), sqlStructure);
+console.log('db/161_structure_demo.sql généré');

@@ -13,7 +13,7 @@ export function donneesDemo() {
   return donnees;
 }
 
-export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annuaire = null }) {
+export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annuaire = null, structure = null }) {
   if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
   const { salaries, materiels } = donneesDemo();
   const sources = sourcesFournisseur({
@@ -23,6 +23,12 @@ export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annua
   });
   // Documents de la GED : lignes recalculées à chaque lecture (comme la vue v_liste_ged).
   if (ged) Object.defineProperty(sources.ged, 'lignes', { get: () => ged.lignesListe() });
+  // Structure des affaires : lignes recalculées à chaque lecture (comme les vues v_liste_projets…).
+  if (structure) {
+    for (const source of ['projets', 'affaires', 'chantiers', 'marches']) {
+      Object.defineProperty(sources[source], 'lignes', { get: () => structure.lignesListe(source) });
+    }
+  }
   return new FournisseurMemoire({
     sources,
     vues: VUES_LISTE,
@@ -34,7 +40,7 @@ export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annua
 /** Libellé d'un type d'élément sans écran de fiche. */
 export const LIBELLES_ELEMENTS = {
   salarie: 'salarié', interim: 'intérimaire', materiel: 'matériel', equipe: 'équipe', sous_traitant: 'sous-traitant', document_ged: 'document', element: 'élément',
-  personne: 'personne', individu: 'individu',
+  personne: 'personne', individu: 'individu', projet: 'projet', affaire: 'affaire', chantier: 'chantier', marche: 'marché',
 };
 
 /** Les types d'éléments V_*, A_* et S_* sont des documents (code du type de document). */

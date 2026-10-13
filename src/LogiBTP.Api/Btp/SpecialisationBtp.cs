@@ -59,6 +59,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;
         cible.EntBibId = saisie.EntBibId;
+        cible.EntProjetId = saisie.EntProjetId;
+        cible.EntAffaireId = saisie.EntAffaireId;
+        cible.EntChantierId = saisie.EntChantierId;
+        cible.EntMarcheId = saisie.EntMarcheId;
     }
 
     // ------------------------------------------------------------------ chargement

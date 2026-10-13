@@ -326,6 +326,122 @@ export const TYPES_FICHE = {
       ],
     },
   },
+  // Structure des affaires (db/160_structure.sql) : projets (chiffrage), affaires (regroupement de chantiers ou affaire de
+  // gestion), chantiers (ouverts quand un projet est obtenu), marchés (ouverts à la validation d'une commande client).
+  projet: {
+    libelle: 'Projet', table: 'projet', cle: 'prj_id', colonne_proprietes: 'prj_proprietes',
+    definition: {
+      libelle: 'Projet', titre: '[code] – [libelle]', sous_titre: '[ville]',
+      sections: [{
+        code: 'informations', titre: 'Projet',
+        groupes: [
+          { titre: 'Identification', champs: ['code', 'libelle', 'tiers_id', 'ville'] },
+          { titre: 'Suivi commercial', champs: ['statut', 'date_remise', 'date_decision', 'montant_estime', 'responsable'] },
+          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
+        ],
+      }],
+      champs: [
+        c('code', 'Code', 'prj_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
+        c('libelle', 'Libellé', 'prj_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
+        c('tiers_id', 'Client', 'prj_tiers_id', 'nombre', { reference: 'tiers' }),
+        c('statut', 'Statut', 'prj_statut', 'liste', {
+          obligatoire: true, defaut: 'EN_COURS',
+          options: options(['EN_COURS', 'En cours de chiffrage'], ['REMIS', 'Offre remise'], ['OBTENU', 'Obtenu'], ['PERDU', 'Perdu'], ['ABANDONNE', 'Abandonné']),
+          aide: 'Obtenu : propose d\'ouvrir le chantier',
+        }),
+        c('date_remise', 'Date de remise', 'prj_date_remise', 'date'),
+        c('date_decision', 'Date de décision', 'prj_date_decision', 'date'),
+        c('montant_estime', 'Montant estimé HT', 'prj_montant_estime', 'nombre', { format: '999999999999.99' }),
+        c('responsable', 'Responsable', 'prj_responsable', 'texte', { longueur: 100 }),
+        c('ville', 'Ville', 'prj_ville', 'texte', { longueur: 100 }),
+        c('commentaire', 'Commentaire', 'prj_commentaire', 'zone'),
+      ],
+    },
+  },
+  affaire: {
+    libelle: 'Affaire', table: 'affaire', cle: 'aff_id', colonne_proprietes: 'aff_proprietes',
+    definition: {
+      libelle: 'Affaire', titre: '[code] – [libelle]', sous_titre: '[responsable]',
+      sections: [{
+        code: 'informations', titre: 'Affaire',
+        groupes: [
+          { titre: 'Identification', champs: ['code', 'libelle', 'nature', 'tiers_id'] },
+          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_cloture', 'responsable'] },
+          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
+        ],
+      }],
+      champs: [
+        c('code', 'Code', 'aff_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
+        c('libelle', 'Libellé', 'aff_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
+        c('nature', 'Nature', 'aff_nature', 'liste', {
+          obligatoire: true, defaut: 'C', options: options(['C', 'Regroupement de chantiers'], ['G', 'Gestion (frais hors chantier)']),
+        }),
+        c('tiers_id', 'Client', 'aff_tiers_id', 'nombre', { reference: 'tiers' }),
+        c('statut', 'Statut', 'aff_statut', 'liste', { obligatoire: true, defaut: 'OUVERTE', options: options(['OUVERTE', 'Ouverte'], ['CLOSE', 'Close']) }),
+        c('date_ouverture', 'Ouverture', 'aff_date_ouverture', 'date', { obligatoire: true }),
+        c('date_cloture', 'Clôture', 'aff_date_cloture', 'date'),
+        c('responsable', 'Responsable', 'aff_responsable', 'texte', { longueur: 100 }),
+        c('commentaire', 'Commentaire', 'aff_commentaire', 'zone'),
+      ],
+    },
+  },
+  chantier: {
+    libelle: 'Chantier', table: 'chantier', cle: 'cha_id', colonne_proprietes: 'cha_proprietes',
+    definition: {
+      libelle: 'Chantier', titre: '[code] – [libelle]', sous_titre: '[ville]',
+      sections: [{
+        code: 'informations', titre: 'Chantier',
+        groupes: [
+          { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
+          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville'] },
+          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur'] },
+          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
+        ],
+      }],
+      champs: [
+        c('code', 'Code', 'cha_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
+        c('libelle', 'Libellé', 'cha_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
+        c('aff_id', 'Affaire', 'cha_aff_id', 'nombre', { reference: 'affaire', aide: 'Affaire qui regroupe ce chantier' }),
+        c('prj_id', 'Projet', 'cha_prj_id', 'nombre', { reference: 'projet', aide: 'Projet obtenu à l\'origine du chantier' }),
+        c('tiers_id', 'Client', 'cha_tiers_id', 'nombre', { reference: 'tiers' }),
+        c('adresse', 'Adresse', 'cha_adresse', 'texte', { longueur: 200, largeur: 'plein' }),
+        c('code_postal', 'Code postal', 'cha_code_postal', 'texte', { longueur: 10 }),
+        c('ville', 'Ville', 'cha_ville', 'texte', { longueur: 100 }),
+        c('statut', 'Statut', 'cha_statut', 'liste', { obligatoire: true, defaut: 'OUVERT', options: options(['OUVERT', 'Ouvert'], ['TERMINE', 'Terminé'], ['CLOS', 'Clos']) }),
+        c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date', { obligatoire: true }),
+        c('date_fin_prevue', 'Fin prévue', 'cha_date_fin_prevue', 'date'),
+        c('conducteur', 'Conducteur de travaux', 'cha_conducteur', 'texte', { longueur: 100 }),
+        c('commentaire', 'Commentaire', 'cha_commentaire', 'zone'),
+      ],
+    },
+  },
+  marche: {
+    libelle: 'Marché', table: 'marche', cle: 'mar_id', colonne_proprietes: 'mar_proprietes',
+    definition: {
+      libelle: 'Marché', titre: '[code] – [libelle]', sous_titre: '',
+      sections: [{
+        code: 'informations', titre: 'Marché',
+        groupes: [
+          { titre: 'Identification', champs: ['code', 'libelle', 'cha_id', 'tiers_id', 'ent_id'] },
+          { titre: 'Conditions', champs: ['nature', 'montant_ht', 'retenue_pct', 'date', 'statut'] },
+          { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
+        ],
+      }],
+      champs: [
+        c('code', 'Code', 'mar_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
+        c('libelle', 'Libellé', 'mar_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
+        c('cha_id', 'Chantier', 'mar_cha_id', 'nombre', { obligatoire: true, reference: 'chantier' }),
+        c('tiers_id', 'Client', 'mar_tiers_id', 'nombre', { reference: 'tiers' }),
+        c('ent_id', 'Commande client', 'mar_ent_id', 'nombre', { reference: 'commande', aide: 'Commande dont la validation a ouvert le marché' }),
+        c('nature', 'Nature', 'mar_nature', 'liste', { obligatoire: true, defaut: 'P', options: options(['P', 'Marché privé'], ['U', 'Marché public']) }),
+        c('montant_ht', 'Montant HT', 'mar_montant_ht', 'nombre', { format: '999999999999.99', aide: 'Commande et avenants' }),
+        c('retenue_pct', 'Retenue de garantie (%)', 'mar_retenue_pct', 'nombre', { format: '999.99' }),
+        c('date', 'Date', 'mar_date', 'date', { obligatoire: true }),
+        c('statut', 'Statut', 'mar_statut', 'liste', { obligatoire: true, defaut: 'EN_COURS', options: options(['EN_COURS', 'En cours'], ['SOLDE', 'Soldé'], ['RESILIE', 'Résilié']) }),
+        c('commentaire', 'Commentaire', 'mar_commentaire', 'zone'),
+      ],
+    },
+  },
 };
 
 /** Droits par profil : ADMIN tout ; SAISIE consulte et modifie, sans confidentiel ni reprise de main sur les salariés. */
@@ -340,6 +456,11 @@ export const DROITS_FICHE = [
   ...['personne', 'individu'].flatMap((type) => ['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type, action }))),
   { profil: 'ADMIN', type: 'individu', action: 'CONFIDENTIEL' },
   ...['personne', 'individu'].flatMap((type) => ['VOIR', 'MODIFIER'].map((action) => ({ profil: 'SAISIE', type, action }))),
+  // Structure des affaires : ADMIN tout, SAISIE consulte et modifie.
+  ...['projet', 'affaire', 'chantier', 'marche'].flatMap((type) => [
+    ...['VOIR', 'MODIFIER', 'DEBLOQUER'].map((action) => ({ profil: 'ADMIN', type, action })),
+    ...['VOIR', 'MODIFIER'].map((action) => ({ profil: 'SAISIE', type, action })),
+  ]),
 ];
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */
@@ -392,5 +513,6 @@ export function ficheDeLigne({ type, id }) {
   if (type === 'materiel') return { type: 'materiel', id };
   if (type === 'element') return { type: 'element', id };
   if (type === 'personne' || type === 'individu') return { type, id };
+  if (['projet', 'affaire', 'chantier', 'marche'].includes(type)) return { type, id };
   return null;
 }

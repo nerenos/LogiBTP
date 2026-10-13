@@ -11,6 +11,39 @@ export const SOURCES_LISTE = {
       ['date_document', 'date'], ['objet', 'text'], ['chantier', 'text'], ['statut', 'text'], ['tiers', 'bigint'],
       ['total_ht', 'numeric'], ['total_ttc', 'numeric'], ['net_a_payer', 'numeric'], ['reference', 'boolean'],
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
+      ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
+    ],
+  },
+  // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
+  projets: {
+    libelle: 'Projets (chiffrage)', vue: 'v_liste_projets', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['client', 'text'], ['statut', 'text'],
+      ['date_remise', 'date'], ['date_decision', 'date'], ['montant_estime', 'numeric'], ['ville', 'text'], ['responsable', 'text'],
+      ['chantier', 'text'], ['nb_documents', 'bigint'],
+    ],
+  },
+  affaires: {
+    libelle: 'Affaires', vue: 'v_liste_affaires', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['nature', 'text'], ['client', 'text'], ['statut', 'text'],
+      ['date_ouverture', 'date'], ['responsable', 'text'], ['nb_chantiers', 'bigint'], ['montant_marches', 'numeric'], ['facture_ht', 'numeric'],
+    ],
+  },
+  chantiers: {
+    libelle: 'Chantiers', vue: 'v_liste_chantiers', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['affaire', 'text'], ['projet', 'text'], ['client', 'text'],
+      ['ville', 'text'], ['statut', 'text'], ['date_ouverture', 'date'], ['date_fin_prevue', 'date'], ['conducteur', 'text'],
+      ['nb_marches', 'bigint'], ['montant_marches', 'numeric'], ['facture_ht', 'numeric'],
+    ],
+  },
+  marches: {
+    libelle: 'Marchés', vue: 'v_liste_marches', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['chantier', 'text'], ['affaire', 'text'], ['client', 'text'],
+      ['commande', 'text'], ['nature', 'text'], ['montant_ht', 'numeric'], ['statut', 'text'], ['date_marche', 'date'],
+      ['facture_ht', 'numeric'], ['reste_a_facturer', 'numeric'],
     ],
   },
   salaries: {
@@ -90,12 +123,26 @@ const prop = (valeur, min, max) => ({ largeur: { mode: 'proportionnel', valeur, 
 export const THEMES_LISTE = [
   { thl_code: 'documents', thl_libelle: 'Documents', thl_icone: '📄', thl_ordre: 10, thl_types: [] },
   { thl_code: 'devis', thl_libelle: 'Devis', thl_icone: '📝', thl_ordre: 20, thl_types: [{ code: 'V_DEVIS', libelle: 'Devis client' }] },
+  { thl_code: 'commandes', thl_libelle: 'Commandes clients', thl_icone: '🤝', thl_ordre: 22, thl_types: [{ code: 'V_COMMANDE', libelle: 'Commande client' }] },
+  {
+    thl_code: 'livraisons', thl_libelle: 'Livraisons et retours', thl_icone: '🚚', thl_ordre: 24,
+    thl_types: [{ code: 'V_RECEPTION', libelle: 'Bon de livraison' }, { code: 'V_RETOUR', libelle: 'Bon de retour client' }],
+  },
+  { thl_code: 'situations', thl_libelle: 'Situations de travaux', thl_icone: '📈', thl_ordre: 26, thl_types: [{ code: 'V_SITUATION', libelle: 'Situation de travaux' }] },
   {
     thl_code: 'factures', thl_libelle: 'Factures', thl_icone: '💶', thl_ordre: 30,
     thl_types: [{ code: 'V_FACTURE', libelle: 'Facture' }, { code: 'V_FACTURE_AVT', libelle: 'Facture d\'avancement' }, { code: 'V_AVOIR', libelle: 'Avoir' }],
   },
   { thl_code: 'achats_ddp', thl_libelle: 'Demandes de prix', thl_icone: '📨', thl_ordre: 32, thl_types: [{ code: 'A_DEVIS', libelle: 'Demande de prix fournisseur' }] },
   { thl_code: 'achats_commandes', thl_libelle: 'Commandes fournisseurs', thl_icone: '📦', thl_ordre: 34, thl_types: [{ code: 'A_COMMANDE', libelle: 'Commande fournisseur' }] },
+  {
+    thl_code: 'achats_livraisons', thl_libelle: 'Livraisons et retours fournisseurs', thl_icone: '🚛', thl_ordre: 35,
+    thl_types: [{ code: 'A_RECEPTION', libelle: 'Bon de livraison fournisseur' }, { code: 'A_RETOUR', libelle: 'Bon de retour fournisseur' }],
+  },
+  { thl_code: 'projets', thl_libelle: 'Projets', thl_icone: '🎯', thl_ordre: 11, thl_types: [{ code: 'projet', libelle: 'Projet' }] },
+  { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
+  { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
+  { thl_code: 'marches', thl_libelle: 'Marchés', thl_icone: '📜', thl_ordre: 14, thl_types: [{ code: 'marche', libelle: 'Marché' }] },
   {
     thl_code: 'achats_factures', thl_libelle: 'Factures fournisseurs', thl_icone: '🧾', thl_ordre: 36,
     thl_types: [{ code: 'A_FACTURE', libelle: 'Facture fournisseur' }, { code: 'A_FACTURE_AVT', libelle: 'Situation fournisseur' }, { code: 'A_AVOIR', libelle: 'Avoir fournisseur' }],
@@ -125,7 +172,11 @@ export const VUES_LISTE = [
         col('indice', 'Ind.', { ...fixe(48), alignement: 'centre' }),
         col('date_document', 'Date', { format: 'date', ...fixe(92), recherche: false }),
         col('objet', 'Objet', { ...prop(3, 160) }),
+        col('client', 'Tiers', { ...prop(2, 120) }),
         col('chantier', 'Chantier', { ...prop(2, 120) }),
+        col('affaire', 'Affaire', { ...fixe(90), masquee: true }),
+        col('projet', 'Projet', { ...fixe(90), masquee: true }),
+        col('marche', 'Marché', { ...fixe(90), masquee: true }),
         col('statut', 'Statut', {
           format: 'picto', ...fixe(64),
           options: [
@@ -229,6 +280,46 @@ VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis'), vueDocuments(6, 'Factures et 
 // Achats (menu Achats du bandeau) : mêmes colonnes, documents filtrés par les types du thème.
 VUES_LISTE.push(vueDocuments(9, 'Demandes de prix', 'achats_ddp'), vueDocuments(10, 'Commandes fournisseurs', 'achats_commandes'),
   vueDocuments(11, 'Factures fournisseurs', 'achats_factures'));
+VUES_LISTE.push(vueDocuments(27, 'Commandes clients', 'commandes'), vueDocuments(28, 'Livraisons et retours', 'livraisons'),
+  vueDocuments(29, 'Situations de travaux', 'situations'), vueDocuments(30, 'Livraisons et retours fournisseurs', 'achats_livraisons'));
+
+// Structure des affaires : projets, affaires, chantiers, marchés (fiches du même nom).
+const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colonne: 'code', sens: 'desc' }]) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme, source: { mode: 'vue', vue: theme, colonne_id: 'id', colonne_type: 'type_element' },
+    colonnes, segments, tri, lignes: 'multi', taille_lot: 100,
+  },
+});
+const montant = (code, titre, extra = {}) => col(code, titre, { ...nombre(), ...fixe(110), recherche: false, ...extra });
+const statut = (options) => col('statut', 'Statut', { format: 'picto', ...fixe(64), options });
+VUES_LISTE.push(
+  vueStructure(31, 'Projets', 'projets', [
+    col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Projet', { ...prop(3, 160) }), col('client', 'Client', { ...prop(2, 120) }),
+    statut([{ valeur: 'EN_COURS', libelle: 'En cours', picto: '✏️' }, { valeur: 'REMIS', libelle: 'Offre remise', picto: '📨' },
+      { valeur: 'OBTENU', libelle: 'Obtenu', picto: '🏆' }, { valeur: 'PERDU', libelle: 'Perdu', picto: '❌' }, { valeur: 'ABANDONNE', libelle: 'Abandonné', picto: '⛔' }]),
+    col('date_remise', 'Remise', { format: 'date', ...fixe(92), recherche: false }), montant('montant_estime', 'Montant\nestimé'),
+    col('ville', 'Ville', { ...prop(1, 90) }), col('chantier', 'Chantier', { ...fixe(100) }), col('responsable', 'Responsable', { masquee: true }),
+    col('nb_documents', 'Docs', { ...nombre(0), ...fixe(56), recherche: false }),
+  ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'responsable', titre: 'Responsable' }]),
+  vueStructure(32, 'Affaires', 'affaires', [
+    col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Affaire', { ...prop(3, 160) }), col('nature', 'Nature', { ...fixe(90) }),
+    col('client', 'Client', { ...prop(2, 120) }), col('statut', 'Statut', { ...fixe(80) }), col('nb_chantiers', 'Chantiers', { ...nombre(0), ...fixe(70), recherche: false }),
+    montant('montant_marches', 'Marchés\nHT'), montant('facture_ht', 'Facturé\nHT'), col('responsable', 'Responsable', { masquee: true }),
+  ], [{ colonne: 'nature', titre: 'Nature' }, { colonne: 'statut', titre: 'Statut' }]),
+  vueStructure(33, 'Chantiers', 'chantiers', [
+    col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Chantier', { ...prop(3, 160) }), col('affaire', 'Affaire', { ...fixe(90) }),
+    col('client', 'Client', { ...prop(2, 120) }), col('ville', 'Ville', { ...prop(1, 90) }), col('statut', 'Statut', { ...fixe(80) }),
+    col('conducteur', 'Conducteur', { masquee: true }), col('projet', 'Projet', { masquee: true }),
+    col('nb_marches', 'Marchés', { ...nombre(0), ...fixe(64), recherche: false }), montant('montant_marches', 'Marchés\nHT'), montant('facture_ht', 'Facturé\nHT'),
+  ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'affaire', titre: 'Affaire' }]),
+  vueStructure(34, 'Marchés', 'marches', [
+    col('code', 'Code', { ...fixe(110), style: { gras: true } }), col('libelle', 'Marché', { ...prop(3, 160) }), col('chantier', 'Chantier', { ...fixe(100) }),
+    col('client', 'Client', { ...prop(2, 120) }), col('commande', 'Commande', { ...fixe(110) }), col('nature', 'Nature', { ...fixe(70) }),
+    montant('montant_ht', 'Montant\nHT'), montant('facture_ht', 'Facturé\nHT'), montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }),
+    col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
+  ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'chantier', titre: 'Chantier' }]),
+);
 
 // Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.
 VUES_LISTE.push({

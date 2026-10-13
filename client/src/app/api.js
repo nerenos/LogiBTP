@@ -48,6 +48,9 @@ export const api = {
   verrouillerDocument: (id, jeton) => appel('POST', `/documents/${id}/verrou`, { jeton }),
   deverrouillerDocument: (id, jeton) => appel('DELETE', `/documents/${id}/verrou?jeton=${jeton}`, undefined, { keepalive: true }),
   forcerDeverrouillageDocument: (id) => appel('DELETE', `/documents/${id}/verrou/force`),
+  // Structure des affaires : référentiels des listes de choix, rattachement d'un document (même validé).
+  structureReferentiels: () => appel('GET', '/structure/referentiels'),
+  rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),
