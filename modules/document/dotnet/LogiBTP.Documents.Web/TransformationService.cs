@@ -76,6 +76,9 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             foreach (var l in source.Lignes.Where(l => EstDescendant(l, id, parId))) garder.Add(l.LigId);
         }
         foreach (var l in source.Lignes.Where(l => l.LigTylId is TL.PiedHt or TL.PiedTtc or TL.Tva)) garder.Add(l.LigId);
+        // Sous-totaux de pied (racine) et bases des lignes de pied (sous-total désigné par LigPiedBaseId) : conservés.
+        foreach (var l in source.Lignes.Where(l => l.LigTylId == TL.SousTotal && l.LigParentId is null)) garder.Add(l.LigId);
+        foreach (var l in source.Lignes.Where(l => garder.Contains(l.LigId) && l.LigPiedBaseId is long)) garder.Add(l.LigPiedBaseId!.Value);
 
         var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
         var cible = await documents.Dupliquer(source, d =>
