@@ -22,7 +22,7 @@ const DUREE_MARQUE = 4000;
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
  * (bouton de création d'un élément, fourni par l'application selon la vue), actionsElements(vue) → { consulter(ligne, e),
- * copier(ligne), supprimer(lignes) } ou null (boutons sur la sélection : thème d'un seul type de fiche ou de documents), filtresVue(vue) → { colonne: [valeurs] | null }
+ * copier(ligne), supprimer(lignes), autres: [{ code, libelle, titre, max (1 par défaut), actif(lignes), action(lignes, e) }] } ou null (boutons sur la sélection : thème d'un seul type de fiche ou de documents), filtresVue(vue) → { colonne: [valeurs] | null }
  * (filtres externes propres à la vue, posés avant son premier chargement ; null retire le filtre de la colonne).
  *
  * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
@@ -107,6 +107,7 @@ export class ListeDonnees {
           <button type="button" data-element="consulter" title="Consulter l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" hidden>👁 Consulter</button>
           <button type="button" data-element="copier" title="Créer un nouvel élément à partir de l'élément sélectionné" hidden>⧉ Copier</button>
           <button type="button" data-element="supprimer" title="Supprimer les éléments sélectionnés" hidden>🗑 Supprimer</button>
+          <span class="liste-elements-autres"></span>
         </span>
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
         <span class="liste-filtres-vue" hidden></span>
@@ -330,6 +331,13 @@ export class ListeDonnees {
     creer.textContent = this.actionCreation?.libelle ?? '';
     creer.title = this.actionCreation ? `Créer : ${this.actionCreation.libelle.replace('＋', '').trim()}` : '';
     this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
+    // Actions supplémentaires de l'application (transformer…) : un bouton chacune.
+    const autres = this.racine.querySelector('.liste-elements-autres');
+    autres.innerHTML = (this.actionsElements?.autres ?? []).map((x, i) => `<button type="button" data-autre="${i}" title="${echapper(x.titre ?? '')}">${echapper(x.libelle)}</button>`).join('');
+    autres.querySelectorAll('[data-autre]').forEach((b) => b.addEventListener('click', (e) => {
+      const x = this.actionsElements?.autres?.[Number(b.dataset.autre)];
+      if (x) Promise.resolve(x.action(this.lignesSelectionnees(), e)).catch((err) => this.#erreur(err));
+    }));
     this.#majActionsElements();
     // Rappel des filtres fixes de la vue (appliqués par la base).
     const fv = this.racine.querySelector('.liste-filtres-vue');
@@ -1022,6 +1030,11 @@ export class ListeDonnees {
       b.hidden = !a?.[code];
       b.disabled = n < min || n > max;
     }
+    const lignes = this.lignesSelectionnees();
+    this.racine.querySelectorAll('[data-autre]').forEach((b) => {
+      const x = a?.autres?.[Number(b.dataset.autre)];
+      b.disabled = !x || n < 1 || n > (x.max ?? 1) || (x.actif ? !x.actif(lignes) : false);
+    });
   }
 
   async #actionElement(code, evenement) {

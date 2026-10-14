@@ -5,6 +5,7 @@ import { simulerModificationsAutres } from '../listes.js';
 import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
 import { api } from '../api.js';
+import { transformerDocument } from '../documents/transformation.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue, app, themes = []) {
@@ -60,6 +61,18 @@ function actionsDepuisVue(vue, app, services, themes = []) {
         await app.naviguer(`/document/${id}`);
       },
       supprimer: app.estAdmin() ? (l) => api.supprimerDocument(l._id) : null,
+      // Transformation d'un document validé (même fenêtre de choix que la page document) ; le document créé s'ouvre.
+      autres: [{
+        code: 'transformer', libelle: '⇢ Transformer', titre: 'Transformer le document validé (commande, livraison, situation, facture…)',
+        actif: ([l]) => (l.verrouille ?? (l.statut ? l.statut !== 'Brouillon' : true)) !== false,
+        action: async ([l], e) => {
+          const cree = await transformerDocument({ entId: l._id, typeCode: l._type, numero: l.numero, objet: l.objet, message: (t, n) => app.message(t, n) });
+          if (!cree) return;
+          app.publier('enregistre', { ids: [cree.ent_id], cree: true });
+          app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé`, 'succes');
+          await app.naviguer(`/document/${cree.ent_id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) });
+        },
+      }],
     };
   }
   const type = FICHE_PAR_SOURCE[source];

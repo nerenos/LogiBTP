@@ -141,3 +141,18 @@ td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 2
 .filtre-types button { border: 0; border-radius: 0; padding: 2px 10px; background: transparent; }
 .filtre-types button + button { border-left: 1px solid var(--bord); }
 .filtre-types button.actif { background: var(--accent); color: var(--surface, #fff); }
+/* Rattachement de l'entête des documents : les quatre niveaux côte à côte. */
+.rattachement-niveaux { display: flex; flex-wrap: wrap; gap: 6px 18px; width: 100%; }
+.rattachement-niveaux .rattachement-champ { flex: 0 1 240px; min-width: 200px; }
+.rattachement-niveaux .rattachement-champ label { justify-content: space-between; }
+
+/* Transformation d'un document : choix du type cible, regroupé par étape. */
+dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
+.transformation-choix { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow: auto; }
+.transformation-choix h4 { margin: 0 0 4px; font-size: 0.95em; }
+.transformation-choix h4 small { font-weight: normal; color: var(--discret); margin-left: 6px; }
+.transformation-cible { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 6px 10px; margin: 2px 0; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.transformation-cible:hover, .transformation-cible:focus { border-color: var(--accent); outline: none; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.transformation-cible small { display: block; color: var(--discret); font-size: 0.85em; }
+.transformation-icone { font-size: 1.3em; }
+.liste-elements-autres { display: inline-flex; gap: 4px; }

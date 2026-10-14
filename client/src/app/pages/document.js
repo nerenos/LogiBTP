@@ -14,6 +14,7 @@ import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { completerRattachement } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
+import { transformerDocument } from '../documents/transformation.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
 // local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>.
@@ -108,6 +109,7 @@ export class PageDocument extends PageBase {
     this.conteneur.innerHTML = GABARIT;
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
+      racine: this.conteneur,
       surOnglet: (o) => {
         if (o === 'lignes') this.editeur?.grille.focus();
         if (o === 'analyse') this.analyse?.rendre();
@@ -540,15 +542,17 @@ export class PageDocument extends PageBase {
 
   async transformer() {
     const ed = this.editeur;
-    const cibles = ed.definition.transformations.map((t) => this.types.find((x) => x.tyd_id === t.tra_cible_tyd_id));
-    const choix = prompt(`Transformer en (tout le reliquat) :\n${cibles.map((c, i) => `${i + 1}. ${c.tyd_libelle}`).join('\n')}`, '1');
-    const cible = cibles[Number(choix) - 1];
-    if (!cible) return;
-    const rep = await api.transformer(ed.saisie.document.ent_id, { cible_tyd_id: cible.tyd_id, lignes: [] });
-    this.app.publier('enregistre', { ids: [rep.document.ent_id], cree: true });
-    this.app.message(`${cible.tyd_libelle} ${rep.document.ent_numero ?? ''} créé`, 'succes');
+    const d = ed.saisie.document;
+    if (this.modifiee) { this.app.message('Enregistrez le document avant de le transformer', 'avertissement'); return; }
+    const cree = await transformerDocument({
+      entId: d.ent_id, typeCode: ed.definition.type.tyd_code, numero: d.ent_numero, objet: d.ent_objet, types: this.types,
+      definition: ed.definition, message: (t, n) => this.app.message(t, n),
+    });
+    if (!cree) return;
+    this.app.publier('enregistre', { ids: [cree.ent_id], cree: true });
+    this.app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé`, 'succes');
     // Le nouveau document s'ouvre comme une nouvelle page (le document d'origine reste dans l'historique).
-    await this.app.naviguer(`/document/${rep.document.ent_id}`);
+    await this.app.naviguer(`/document/${cree.ent_id}`);
   }
 
   fermer() {

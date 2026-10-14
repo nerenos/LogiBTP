@@ -26,18 +26,20 @@ const ecrire = (p) => ecrirePreferences({ onglet: p.onglet, docks: p.docks, zone
 export class Disposition {
   /**
    * Panneaux : éléments `.dock[data-dock-id]` (boutons [data-dock] de position, [data-action="reduire"],
-   * [data-action="fermer"]) ; zones : `[data-zone]` et séparateurs `[data-sep]` dans #vue-lignes.
+   * [data-action="fermer"]) ; zones : `[data-zone]` et séparateurs `[data-sep]` dans #vue-lignes. racine : conteneur de
+   * la page (les éléments d'une page qui se ferme peuvent être encore présents dans le document).
    */
-  constructor({ surOnglet, surDock = null }) {
+  constructor({ surOnglet, surDock = null, racine = document }) {
+    this.racine = racine;
     this.p = lire();
     this.surOnglet = surOnglet;
     this.surDock = surDock;
     // Onglets déclarés par les boutons [data-onglet-vue] ; chacun affiche la section #vue-<nom>.
-    this.onglets = [...document.querySelectorAll('[data-onglet-vue]')].map((b) => b.dataset.ongletVue);
+    this.onglets = [...this.racine.querySelectorAll('[data-onglet-vue]')].map((b) => b.dataset.ongletVue);
     if (!this.onglets.includes(this.p.onglet)) this.p.onglet = 'lignes';
-    this.vue = document.querySelector('#vue-lignes');
-    this.docks = new Map([...document.querySelectorAll('.dock[data-dock-id]')].map((d) => [d.dataset.dockId, d]));
-    document.querySelectorAll('[data-onglet-vue]').forEach((b) => b.addEventListener('click', () => this.onglet(b.dataset.ongletVue)));
+    this.vue = this.racine.querySelector('#vue-lignes');
+    this.docks = new Map([...this.racine.querySelectorAll('.dock[data-dock-id]')].map((d) => [d.dataset.dockId, d]));
+    this.racine.querySelectorAll('[data-onglet-vue]').forEach((b) => b.addEventListener('click', () => this.onglet(b.dataset.ongletVue)));
     for (const [id, dock] of this.docks) {
       this.p.docks[id] ??= { position: 'droite', reduit: false, visible: true };
       dock.querySelectorAll('[data-dock]').forEach((b) => b.addEventListener('click', () => this.positionner(id, b.dataset.dock)));
@@ -53,13 +55,13 @@ export class Disposition {
 
   appliquer() {
     const { onglet, docks, zones } = this.p;
-    document.querySelectorAll('[data-onglet-vue]').forEach((b) => {
+    this.racine.querySelectorAll('[data-onglet-vue]').forEach((b) => {
       const actif = b.dataset.ongletVue === onglet;
       b.classList.toggle('actif', actif);
       b.setAttribute('aria-selected', String(actif));
     });
     for (const nom of this.onglets) {
-      const section = document.querySelector(`#vue-${nom}`);
+      const section = this.racine.querySelector(`#vue-${nom}`);
       if (section) section.hidden = nom !== onglet;
     }
     for (const zone of POSITIONS) {
@@ -85,7 +87,7 @@ export class Disposition {
         bouton.title = d.reduit ? 'Agrandir le panneau' : 'Réduire le panneau';
       }
     }
-    document.querySelectorAll('[data-basculer-dock]').forEach((b) => b.classList.toggle('actif', Boolean(docks[b.dataset.basculerDock]?.visible)));
+    this.racine.querySelectorAll('[data-basculer-dock]').forEach((b) => b.classList.toggle('actif', Boolean(docks[b.dataset.basculerDock]?.visible)));
   }
 
   onglet(nom) {

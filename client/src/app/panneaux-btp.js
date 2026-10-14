@@ -94,7 +94,7 @@ export class PanneauxBtp extends PanneauxDocument {
    * liste de choix) et, dessous, le libellé de l'élément en lien vers sa fiche (composant champRattachement).
    */
   sectionRattachement() {
-    return this.structure ? '<fieldset class="rattachement-document"><legend>Rattachement</legend><div class="rattachements" data-rattachements></div></fieldset>' : '';
+    return this.structure ? '<fieldset class="rattachement-document"><legend>Rattachement</legend><div class="rattachement-niveaux" data-rattachements></div></fieldset>' : '';
   }
 
   /** Rattachement modifié sur un niveau : les parents suivent (completerRattachement), un enfant incohérent est retiré. */
