@@ -1014,12 +1014,6 @@ export class ListeDonnees {
     this.#majActionsElements();
   }
 
-  /** Lignes sélectionnées (dans l'ordre affiché). */
-  lignesSelectionnees() {
-    const ids = this.selections.size ? [...this.selections] : this.selection !== null && this.selection !== undefined ? [String(this.selection)] : [];
-    return ids.map((id) => this.lignes.find((l) => String(l._id) === String(id))).filter(Boolean);
-  }
-
   /** Boutons Consulter, Copier (une ligne) et Supprimer (une ou plusieurs) selon la vue et la sélection. */
   #majActionsElements() {
     const a = this.actionsElements;
@@ -1072,9 +1066,11 @@ export class ListeDonnees {
     }
   }
 
-  /** Lignes sélectionnées (données), dans l'ordre affiché. */
+  /** Lignes sélectionnées (données), dans l'ordre affiché ; sans sélection multiple, la ligne courante. */
   lignesSelectionnees() {
-    return [...this.corps.rows].filter((tr) => this.selections.has(tr.dataset.id))
+    const ids = this.selections.size ? this.selections
+      : new Set(this.selection !== null && this.selection !== undefined ? [String(this.selection)] : []);
+    return [...this.corps.rows].filter((tr) => ids.has(tr.dataset.id))
       .map((tr) => this.lignes.find((l) => String(l._id) === tr.dataset.id)).filter(Boolean);
   }
 
