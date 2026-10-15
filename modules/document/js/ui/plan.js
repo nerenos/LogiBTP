@@ -18,6 +18,9 @@ export class PlanDocument {
     conteneur.classList.add('plan-document');
     conteneur.addEventListener('click', (e) => this.#clic(e));
     this.#glisser(conteneur);
+    // Largeur du plan modifiée (dock redimensionné, déplacé) : libellés des boutons masqués ou réaffichés.
+    this.observateur = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.#ajusterBarre());
+    this.observateur?.observe(conteneur);
   }
 
   /** Tranches : titres dans l'ordre d'affichage, avec profondeur parmi les titres et présence de sous-tranches. */
@@ -65,25 +68,39 @@ export class PlanDocument {
         <span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span><span class="mt">${formatNombre(montant, pm)}</span></li>`;
     const net = ed.resultat.document.ent_net_a_payer;
     this.conteneur.innerHTML = `
-      <div class="plan-modes" role="group" aria-label="Clic sur une tranche">
-        <button type="button" data-mode="aller" class="${this.mode === 'aller' ? 'actif' : ''}" title="Clic : aller à la ligne de la tranche dans la grille">↧ Aller à</button>
-        <button type="button" data-mode="filtrer" class="${this.mode === 'filtrer' ? 'actif' : ''}" title="Clic : n'afficher que la tranche dans la grille (affichage seulement)">⧩ Filtrer</button>
-        ${filtre !== null ? '<button type="button" data-tout class="filtre" title="Retirer le filtre d\'affichage">✕ Tout afficher</button>' : ''}
-      </div>
-      <div class="plan-plis" role="group" aria-label="Lignes de la grille">
-        ${this.boutonPli('ouvrages', 'Ouvrages', 'les lignes d\'ouvrage (composantes)', ed.toutReplie({ ouvrages: true }), ed.lignesRepliables({ ouvrages: true }).length > 0)}
-        ${this.boutonPli('tout', 'Tout', 'toutes les lignes (titres, ouvrages, pied)', ed.toutReplie(), ed.lignesRepliables().length > 0)}
+      <div class="plan-barre">
+        <span class="plan-modes" role="group" aria-label="Clic sur une tranche">
+          <button type="button" data-mode="aller" class="${this.mode === 'aller' ? 'actif' : ''}" title="Clic : aller à la ligne de la tranche dans la grille">↧<span class="lib-bouton"> Aller à</span></button>
+          <button type="button" data-mode="filtrer" class="${this.mode === 'filtrer' ? 'actif' : ''}" title="Clic : n'afficher que la tranche dans la grille (affichage seulement)">⧩<span class="lib-bouton"> Filtrer</span></button>
+        </span>
+        <span class="plan-plis" role="group" aria-label="Lignes de la grille">
+          ${this.boutonPli('ouvrages', 'Ouvrages', 'les lignes d\'ouvrage (composantes)', ed.toutReplie({ ouvrages: true }), ed.lignesRepliables({ ouvrages: true }).length > 0)}
+          ${this.boutonPli('tout', 'Tout', 'toutes les lignes (titres, ouvrages, pied)', ed.toutReplie(), ed.lignesRepliables().length > 0)}
+        </span>
+        ${filtre !== null ? '<button type="button" data-tout class="filtre" title="Retirer le filtre d\'affichage">✕<span class="lib-bouton"> Tout afficher</span></button>' : ''}
       </div>
       <ul class="plan-arbre">
         ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || (t.ligne.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre'), t.ligne.lig_montant_ht, t)).join('')}
         ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', 'Pied du document', net, { classe: 'pied' }) : ''}
       </ul>
       ${tranches.length ? '' : '<p class="aide">Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.</p>'}`;
+    this.#ajusterBarre();
   }
 
   /** Bouton d'ouverture / réduction des lignes de la grille : réduit tant qu'une ligne est ouverte, sinon ouvre tout. */
   boutonPli(code, libelle, quoi, replie, actif) {
-    return `<button type="button" data-plis="${code}" ${actif ? '' : 'disabled'} title="${replie ? 'Ouvrir' : 'Réduire'} ${quoi}">${replie ? '⊞' : '⊟'} ${libelle}</button>`;
+    return `<button type="button" data-plis="${code}" ${actif ? '' : 'disabled'} title="${replie ? 'Ouvrir' : 'Réduire'} ${quoi}">${replie ? '⊞' : '⊟'}<span class="lib-bouton"> ${libelle}</span></button>`;
+  }
+
+  /**
+   * Barre des boutons sur une seule ligne : sans la place (plan étroit), les libellés sont masqués et seules les
+   * icônes restent (le libellé reste en bulle).
+   */
+  #ajusterBarre() {
+    const barre = this.conteneur.querySelector('.plan-barre');
+    if (!barre) return;
+    barre.classList.remove('compacte');
+    if (barre.scrollWidth > barre.clientWidth + 1) barre.classList.add('compacte');
   }
 
   #glisser(conteneur) {
