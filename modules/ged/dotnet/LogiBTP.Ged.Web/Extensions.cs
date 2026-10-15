@@ -21,11 +21,30 @@ public static class Extensions
     {
         services.AddDbContext<GedDbContext>(options);
         services.AddSingleton<SpecialisationGed, TSpecialisation>();
-        // Un répertoire par société (base principale : « _principale »), sous le répertoire de stockage.
-        services.AddScoped(sp => new StockageGed(Path.Combine(sp.GetRequiredService<SpecialisationGed>().RepertoireStockage,
-            sp.GetService<SocieteCourante>()?.Code ?? "_principale")));
+        // Un répertoire par société, nommé comme sa base (logibtp, logibtp_demo…), sous le répertoire de stockage.
+        services.AddScoped(sp => new StockageGed(RepertoireSociete(sp.GetRequiredService<SpecialisationGed>().RepertoireStockage, sp.GetService<SocieteCourante>())));
         services.AddScoped<ServiceGed>();
         return services;
+    }
+
+    private static readonly Lock VerrouRepertoires = new();
+
+    /// <summary>
+    /// Répertoire des documents d'une société : nom de sa base (à défaut, code de la société ou « _principale »).
+    /// Un ancien répertoire nommé d'après le code de la société (« _principale », « demo »…) est renommé au premier accès.
+    /// </summary>
+    public static string RepertoireSociete(string racine, SocieteCourante? societe)
+    {
+        var ancien = societe?.Code ?? "_principale";
+        var nom = societe?.Base ?? ancien;
+        var dossier = Path.Combine(racine, nom);
+        if (nom == ancien) return dossier;
+        lock (VerrouRepertoires)
+        {
+            var anciennement = Path.Combine(racine, ancien);
+            if (!Directory.Exists(dossier) && Directory.Exists(anciennement)) Directory.Move(anciennement, dossier);
+        }
+        return dossier;
     }
 
     public static IServiceCollection AddModuleGed(this IServiceCollection services, Action<DbContextOptionsBuilder> options) =>

@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,24 @@ public sealed class SocieteConfiguree
 public sealed record SocieteCourante(string? Code, string Libelle, string Connexion)
 {
     public bool Principale => Code is null;
+
+    /// <summary>
+    /// Nom de la base de la société (Database de la chaîne de connexion) : sert à nommer ce qui lui est propre hors de
+    /// la base (répertoire des documents de la GED…). Null si la connexion n'en désigne pas.
+    /// </summary>
+    public string? Base => NomBase(Connexion);
+
+    /// <summary>Nom de base d'une chaîne de connexion (Database ou Initial Catalog), réduit aux caractères sûrs pour un nom de dossier.</summary>
+    public static string? NomBase(string? connexion)
+    {
+        if (string.IsNullOrWhiteSpace(connexion)) return null;
+        var c = new DbConnectionStringBuilder();
+        try { c.ConnectionString = connexion; } catch (ArgumentException) { return null; }
+        var nom = (c.TryGetValue("Database", out var d) ? d : c.TryGetValue("Initial Catalog", out var i) ? i : null)?.ToString()?.Trim();
+        if (string.IsNullOrEmpty(nom)) return null;
+        var sur = new string(nom.Select(x => char.IsLetterOrDigit(x) || x is '_' or '-' or '.' ? x : '_').ToArray()).Trim('.');
+        return sur.Length == 0 ? null : sur;
+    }
 }
 
 public static class ExtensionsSocietes

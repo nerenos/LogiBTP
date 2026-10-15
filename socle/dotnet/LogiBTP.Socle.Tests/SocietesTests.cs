@@ -20,4 +20,13 @@ public class SocietesTests
     [InlineData("", null)]
     public void Sous_domaine_designe_la_societe(string hote, string? attendu) =>
         Assert.Equal(attendu, ExtensionsSocietes.SousDomaine(hote, Domaines));
+
+    [Theory]
+    [InlineData("Host=localhost;Port=5433;Database=logibtp_demo;Username=logibtp;Password=logibtp", "logibtp_demo")]
+    [InlineData("Server=x;Initial Catalog=LogiBTP Acme;", "LogiBTP_Acme")]
+    [InlineData("Host=localhost;Username=logibtp", null)]
+    [InlineData("", null)]
+    [InlineData("Database=../secret", "_secret")]
+    public void Nom_de_base_de_la_connexion(string connexion, string? attendu) =>
+        Assert.Equal(attendu, SocieteCourante.NomBase(connexion));
 }

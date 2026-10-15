@@ -62,7 +62,7 @@ choix restent dans le navigateur.
 **Une base par société** : le sous-domaine désigne la société (`demo.localhost:5173` en développement, `acme.logibtp.fr` en
 production), sans sous-domaine la base principale. L'API la résout depuis l'en-tête Host (section `Societes` de
 `appsettings.json` : domaines de base et connexion de chaque société ; sous-domaine inconnu : 404). Le stockage GED a un
-répertoire par société. Le localStorage et le BroadcastChannel étant propres à chaque origine, deux sociétés ouvertes en
+répertoire par société, nommé comme sa base (`stockage-ged/logibtp`, `stockage-ged/logibtp_demo`). Le localStorage et le BroadcastChannel étant propres à chaque origine, deux sociétés ouvertes en
 même temps ne partagent ni fenêtres, ni session, ni préférences.
 
 ### Listes

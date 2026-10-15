@@ -25,7 +25,7 @@
 - Vue `v_liste_ged` (documents non supprimés + dernière version) pour le module Liste.
 
 ## Points de spécialisation
-- `SpecialisationGed` (C#) : `RepertoireStockage` (un sous-répertoire par société, `_principale` sinon), `TailleMaxDepot` (200 Mo), `Visibles(query, u)`, `PeutDeposer`, `PeutModifier`, `PeutPurger` (admin), `PeutSupprimerCoffre` (admin), `ControlerDepot(meta, nom, taille, u)`.
+- `SpecialisationGed` (C#) : `RepertoireStockage` (racine ; un sous-répertoire par société nommé comme sa base : `logibtp`, `logibtp_demo`… via `SocieteCourante.Base`, `Extensions.RepertoireSociete`, ancien dossier au nom du code renommé au premier accès), `TailleMaxDepot` (200 Mo), `Visibles(query, u)`, `PeutDeposer`, `PeutModifier`, `PeutPurger` (admin), `PeutSupprimerCoffre` (admin), `ControlerDepot(meta, nom, taille, u)`.
 - `ServiceGed` : méthodes `virtual` (Lister, Deposer, NouvelleVersion, Etape, Modifier, MettreAuCoffre, Verifier, VerifierCoffre, Supprimer, Restaurer, Purger, Contenu).
 - `ExplorateurGed(conteneur, { fournisseur, contexte: { type_element, id_element, libelle } | null, compact, modifiable, admin, utilisateur, message, documentInitial, coffre, envoi })` : `contexte` null = recherche globale ; `envoi` = case « 📧 À envoyer » (`dge_a_envoyer`, module Mail à venir) ; `compact` = vue des fiches.
 - Fournisseurs : `FournisseurGedApi({ base: '/api/ged', entetes })` ou `FournisseurGedMemoire({ utilisateur, profil, parametres, horloge })` (démo hors ligne, tests ; mêmes règles que `ServiceGed`).
