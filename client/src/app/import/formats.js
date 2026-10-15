@@ -6,8 +6,9 @@ export const FORMATS_IMPORT = {
   OptimBTP: { libelle: 'OptimBTP', extensions: '.optim,.zip,.xml', type: 'V_DEVIS', lire: (octets) => lireFichierOptim(octets), page: '/import/optimbtp' },
 };
 
+/** Format d'après son code ou son libellé (origine enregistrée : dor_format = libellé). */
 export function formatImport(code) {
-  const f = FORMATS_IMPORT[code];
+  const f = FORMATS_IMPORT[code] ?? Object.values(FORMATS_IMPORT).find((x) => x.libelle === code);
   if (!f) throw new Error(`Format d'import inconnu : ${code}`);
   return f;
 }

@@ -38,6 +38,10 @@ services:
       - ./db/141_annuaire_demo.sql:/docker-entrypoint-initdb.d/141_annuaire_demo.sql:ro
       - ./db/142_annuaire_salaries.sql:/docker-entrypoint-initdb.d/142_annuaire_salaries.sql:ro
       - ./db/150_documents_vues.sql:/docker-entrypoint-initdb.d/150_documents_vues.sql:ro
+      - ./db/160_structure.sql:/docker-entrypoint-initdb.d/160_structure.sql:ro
+      - ./db/161_structure_demo.sql:/docker-entrypoint-initdb.d/161_structure_demo.sql:ro
+      - ./db/162_intervenants.sql:/docker-entrypoint-initdb.d/162_intervenants.sql:ro
+      - ./db/163_intervenants_demo.sql:/docker-entrypoint-initdb.d/163_intervenants_demo.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

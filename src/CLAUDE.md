@@ -1,0 +1,50 @@
+# Serveur LogiBTP (cœur .NET)
+
+## Rôle
+- API ASP.NET Core du cœur : branche les modules (Document, Métré, Liste, Fiche, GED, Bibliothèque, Annuaire, Entreprises françaises) et les spécialise pour le BTP. Les modules ne dépendent jamais de `src/`.
+- Trois projets : `LogiBTP.Domaine` (entités BTP), `LogiBTP.Calcul` (moteur de devis BTP), `LogiBTP.Api` (hôte, spécialisations, routes propres au cœur). Tests : `tests/LogiBTP.Calcul.Tests`.
+
+## Structure
+- `LogiBTP.Api/Program.cs` (branchement, dans cet ordre) :
+  - `AddSocietes` / `UseSocietes` : une base par société, choisie par le sous-domaine (en-tête Host) ; contextes EF sur `SocieteCourante.Connexion` + `UseSnakeCaseNamingConvention` (fonction locale `Base`).
+  - JSON : `SnakeCaseLower`, `JsonNumberHandling.AllowReadingFromString` (mêmes conventions que les jeux de test).
+  - `AddModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp, LogiBtpContext, SpecialisationBtp>`.
+  - `AddModuleListe<SpecialisationListeBtp>`, `AddModuleFiche<SpecialisationFicheBtp>`, `AddModuleGed<SpecialisationGedBtp>`, `AddModuleBibliotheque<SpecialisationBibliothequeBtp>`, `AddModuleAnnuaire`, `AddModuleEntreprisesFr`.
+  - CORS `http://localhost:5173`, `UseErreursMetier` ; groupe `/api` : `MapModuleDocument<…>`, `MapModuleListe`, `MapModuleFiche`, `MapModuleGed`, `MapModuleBibliotheque`, `MapModuleAnnuaire`, `MapModuleEntreprisesFr`, `MapStructure`.
+- `LogiBTP.Api.csproj` : références aux projets `*.Web` des modules + `LogiBTP.Calcul` ; paquets `Npgsql.EntityFrameworkCore.PostgreSQL`, `EFCore.NamingConventions`.
+- `appsettings.json` : `ConnectionStrings:LogiBTP` (base `logibtp`, port 5433), `Societes` (`Domaines`, `Liste.demo` → base `logibtp_demo`), `Ged:Repertoire` (`stockage-ged`, un répertoire par société), `Ged:TailleMaxDepotMo`. `Properties/launchSettings.json` : profil `http` sur `http://localhost:5080`.
+- `Btp/SpecialisationBtp.cs` : `DocumentCompletBtp` (+ `Metres`, `MetreLignes`, `Variables`) et `SpecialisationBtp : SpecialisationDocument` (`Calculer` → `MoteurDevisBtp`, `Comparateur` = `ComparateurBtp`, `ControlerValidation` NATURE_OBLIGATOIRE, `CopierEnteteSaisie` (mode, bibliothèque, rattachement, `EntIntervenants`, rédacteur), `ChargerComplements` / `EcrireComplements` (métrés, variables), `RenumeroterComplements`, `FiltrerComplements`, `EstLigneCalculee` (écart d'arrondi), `AjusterLigneTransformee`).
+- `Btp/LogiBtpContext.cs` : `LogiBtpContext : DocumentDbContext<DocumentBtp, DocumentLigneBtp>` + `Metres`, `MetreLignes`, `Variables` (tables `metre`, `metre_ligne`, `variable_definition`).
+- `Btp/SpecialisationsElements.cs` : `SpecialisationFicheBtp` (fiches `salarie`, `materiel`, `element`, `personne`, `individu`, `projet|affaire|chantier|marche` ; `ValiderMetier`, `AvantEcritureAsync`, champs gérés `Lire/Valider/EcrireGeresAsync`), `SpecialisationListeBtp` (saisie refusée si la fiche `salarie`/`materiel` est verrouillée), `SpecialisationGedBtp` (`RepertoireStockage`, `TailleMaxDepot`).
+- `Btp/SpecialisationBibliothequeBtp.cs` : `RecalculerOuvrage` → `ElementsBibliotheque.RecalculerOuvrage`.
+- `Btp/ElementsBibliotheque.cs` : `CompositionOuvrage`, `CalculerOuvrage` / `CalculerEnsemble` par le moteur de devis, `AvantEcriture` (prix recalculés avant écriture d'une fiche `element`).
+- `Btp/Structure.cs` : `MapStructure` (routes ci-dessous), `PerimetreStructure`, `RattachementDocument`.
+- `Btp/Intervenants.cs` : `FonctionIntervenant`, `IntervenantSaisi`, `Intervenants` (`Colonnes` projet→`itv_prj_id`…, `Gere`, `Fonctions`, `Lire`, `Lus`, `Controler`, `Valider`, `Ecrire`).
+- `Btp/SalariesAnnuaire.cs` : `Salarie` (champ géré `salarie` de la fiche individu), `Synchroniser` (individu repris de la fiche salarié : identité, rôle, rattachement à l'agence).
+- `LogiBTP.Calcul/MoteurDevisBtp.cs` : `MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBtp>`, `Calculer(EntreeCalcul)`. `Modeles.cs` : `EntreeCalcul`, `ResultatCalcul` (+ `LignesSupprimees`), `ComparateurBtp` (ligne d'écart appariée `ecart:<parent>`).
+- `LogiBTP.Domaine/DocumentBtp.cs` : `EntModeCalculOuvrage` (D/V), `EntCoefFa`, `EntBibId`, `EntProjetId`, `EntAffaireId`, `EntChantierId`, `EntMarcheId`, `EntIntervenants` (`JsonDocument`), `EntRedacteurId`. `DocumentLigneBtp.cs` : nature, poste, métré, quantités, PA/FG/PR/bénéfice/FA/prorata, PV affiché et blocages, écart d'arrondi, `LigPiedIsFa`.
+
+## Routes propres au cœur
+- `GET /api/sante` (version du moteur), `GET /api/societe` (code, libellé, principale ; jamais la connexion).
+- `GET /api/structure/referentiels` (affaires, projets, chantiers, marchés, commandes `V_COMMANDE`, fonctions).
+- `PUT /api/structure/documents/{id}/rattachement` (même validé ; marché → chantier → affaire et projet complétés).
+- `GET /api/structure/intervenants/{type}/{id}` ; `POST /api/structure/documents` (documents du périmètre + liens `document_lien`).
+- Le reste (`/documents`, `/fiches`, `/listes`, `/ged`, `/bibliotheque`, `/annuaire`…) vient des `MapModule…()` des modules.
+
+## Spécialisation des modules
+- Document + Métré : `SpecialisationBtp`, `LogiBtpContext`, `DocumentBtp`, `DocumentLigneBtp`, `MoteurDevisBtp`, `ComparateurBtp`.
+- Liste : `SpecialisationListeBtp`. Fiche : `SpecialisationFicheBtp` (+ `Intervenants`, `SalariesAnnuaire`, `ElementsBibliotheque`). GED : `SpecialisationGedBtp`.
+- Bibliothèque : `SpecialisationBibliothequeBtp`, `ElementsBibliotheque`. Annuaire : `ServiceAnnuaire` appelé par `SpecialisationFicheBtp` (`ControlerPersonne`, `Identifiants.Compacter`, champs gérés).
+
+## Conventions et pièges
+- Toute règle de `MoteurDevisBtp.cs` se reporte dans `client/src/calcul/moteur-btp.js` (cas dans `tests/cas/*.json`) ; propriétés de `DocumentBtp` / `DocumentLigneBtp` alignées sur `client/src/calcul/colonnes-btp.js` (test `Colonnes_btp_alignees_avec_le_moteur_js`).
+- Répliques JS : `ControlerValidation` ↔ `controlesValidation` ; `Intervenants.Controler` ↔ `controlerIntervenants` ; `SalariesAnnuaire.Synchroniser` ↔ `synchroniserSalarie` ; `ValiderMetier` ↔ `fiches.js` / `fiche-annuaire.js`.
+- Pas de migrations EF : nouvelle colonne = `ALTER TABLE` dans `db/` + propriété PascalCase (mappée en snake_case).
+- SQL brut paramétré uniquement ; noms de colonnes jamais saisis (`Intervenants.Colonnes` est une liste fermée). Cache singleton dépendant du schéma : indexé par base.
+- `TIERS_OBLIGATOIRE` et la plupart des contrôles de validation sont dans le module Document (`DocumentService`), pas ici.
+
+## Commandes
+- Arrêter l'API avant `dotnet build LogiBTP.slnx` (binaires verrouillés). Lancement : `dotnet run --no-build --project src\LogiBTP.Api --launch-profile http` (5080) ; Vite (5173) proxifie `/api` ; société « demo » par http://demo.localhost:5173.
+- `dotnet test LogiBTP.slnx` ; parité complète : `npm run exporter-resultats` puis `dotnet test LogiBTP.slnx` (`Parite_avec_le_moteur_js` lit `tests/resultats-js`).
+- `tests/LogiBTP.Calcul.Tests/CasPartagesTests.cs` : `Cas_partage`, `Stabilite_recalculer_le_resultat_ne_change_rien`, `Parite_avec_le_moteur_js` (jeux `tests/cas/*.json`, aussi rejoués par `client/test/cas-partages.test.js`), `Colonnes_btp_alignees_avec_le_moteur_js`.
+- Tests d'intégration PostgreSQL (module Liste) : variable `LOGIBTP_TEST_PG` = `Host=localhost;Port=5433;Database=logibtp;Username=logibtp;Password=logibtp`.

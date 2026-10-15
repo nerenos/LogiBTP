@@ -17,6 +17,7 @@ import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
+import { formatImport } from '../import/formats.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
 // local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>,
@@ -528,7 +529,7 @@ export class PageDocument extends PageBase {
       entId: d.ent_id, ged: this.servicesGed, debogage: Boolean(this.editeur.vue?.debogage),
       naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
       // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
-      reimporter: (o) => this.app.naviguer(`/import/optimbtp?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
+      reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
