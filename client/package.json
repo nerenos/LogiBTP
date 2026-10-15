@@ -1,6 +1,6 @@
 {
   "name": "logibtp-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "LogiBTP – application web : accueil, navigation, listes, fiches, documents, GED, bibliothèque, annuaire",
@@ -13,18 +13,18 @@
     "generer-vues-liste": "node scripts/generer-vues-liste.mjs"
   },
   "dependencies": {
-    "@logibtp/socle": "0.1.0",
-    "@logibtp/metre": "0.1.0",
-    "@logibtp/document": "0.1.0",
-    "@logibtp/liste": "0.1.0",
-    "@logibtp/fiche": "0.1.0",
-    "@logibtp/ged": "0.1.0",
-    "@logibtp/navigation": "0.1.0",
-    "@logibtp/bibliotheque": "0.1.0",
-    "@logibtp/graphe": "0.1.0",
-    "@logibtp/annuaire": "0.1.0",
-    "@logibtp/entreprises-fr": "0.1.0",
-    "@logibtp/import": "0.1.0"
+    "@logibtp/socle": "0.2.0",
+    "@logibtp/metre": "0.2.0",
+    "@logibtp/document": "0.2.0",
+    "@logibtp/liste": "0.2.0",
+    "@logibtp/fiche": "0.2.0",
+    "@logibtp/ged": "0.2.0",
+    "@logibtp/navigation": "0.2.0",
+    "@logibtp/bibliotheque": "0.2.0",
+    "@logibtp/graphe": "0.2.0",
+    "@logibtp/annuaire": "0.2.0",
+    "@logibtp/entreprises-fr": "0.2.0",
+    "@logibtp/import": "0.2.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

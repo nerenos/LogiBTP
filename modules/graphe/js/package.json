@@ -1,6 +1,6 @@
 {
   "name": "@logibtp/graphe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Module Graphe LogiBTP : graphe de nœuds et d'arêtes (fusion, disposition en couches) et vue SVG interactive (zoom, déplacements, survol, panneau du nœud, développement, export SVG), spécialisée par chaque module",
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@logibtp/socle": "0.1.0"
+    "@logibtp/socle": "0.2.0"
   },
   "devDependencies": {
     "vitest": "^3.2.4"

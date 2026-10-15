@@ -1,6 +1,6 @@
 {
   "name": "@logibtp/bibliotheque",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Module Bibliothèque LogiBTP : éléments (articles, ouvrages), familles, natures, multi-unité, scénarios de prix, tarifs fournisseurs, historique des prix",
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@logibtp/socle": "0.1.0"
+    "@logibtp/socle": "0.2.0"
   },
   "devDependencies": {
     "vitest": "^3.2.4"

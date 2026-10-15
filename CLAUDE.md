@@ -1,6 +1,7 @@
 # LogiBTP
 
 - Contexte : liens entre modules dans [MODULES.md](MODULES.md) ; contexte condensé de chaque partie dans son `CLAUDE.md` (`socle/`, `modules/<nom>/`, `client/`, `src/`, `db/`), chargé quand on travaille dans le dossier.
+- Tâches à faire et décisions reportées : [TACHES.md](TACHES.md) (à mettre à jour quand une tâche est faite ou reportée).
 
 - Répondre et documenter en français ; code, commentaires et noms en français (sauf API techniques).
 - Architecture : `socle/` (sans métier) → `modules/<nom>/` (classes mères, méthode patron) → cœur (`src/`, `client/`, `db/`) qui spécialise. Un module ne dépend jamais du cœur ; le module Métré ne dépend pas du module Document.

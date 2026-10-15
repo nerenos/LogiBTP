@@ -1,6 +1,6 @@
 {
   "name": "@logibtp/navigation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Module Navigation LogiBTP : routeur, fenêtres multiples (BroadcastChannel), session restaurable, bandeau à menus, accueil personnalisable et widgets",
@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@logibtp/socle": "0.1.0"
+    "@logibtp/socle": "0.2.0"
   },
   "devDependencies": {
     "vitest": "^3.2.4"
