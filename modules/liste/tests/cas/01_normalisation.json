@@ -8,6 +8,7 @@
     { "texte": "Ægir", "attendu": "aegir" },
     { "texte": "Straße", "attendu": "strasse" },
     { "texte": "Ça a l'air ÉVIDENT", "attendu": "ca a l'air evident" },
-    { "texte": "12,50 € – n°3", "attendu": "12,50 € – n°3" }
+    { "texte": "12,50 € – n°3", "attendu": "12,50 € – n°3" },
+    { "texte": "« Œuvre » … l’ÉTÉ — Øre", "attendu": "« oeuvre » … l’ete — ore" }
   ]
 }

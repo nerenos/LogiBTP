@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Développeur LogiBTP - Analyse par Module</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        h3 {
+            border-left: 3px solid #2ecc71;
+            padding-left: 10px;
+            color: #27ae60;
+        }
+        .module-card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .faiblesses {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .informations-manquantes {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .recommandations {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-structure {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .badge-js {
+            background-color: #f3e5f5;
+            color: #6a1b9a;
+        }
+        .badge-dotnet {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .badge-db {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        .badge-tests {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .timestamp {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 30px;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Documentation Développeur LogiBTP</h1>
+        <p>Analyse complète par module - Faiblesses identifiées et informations manquantes à ajouter en BDD</p>
+
+        <input type="text" class="search-box" placeholder="Rechercher un module ou un terme..." id="searchInput">
+
+        <div id="content">
+
+            <!-- Module Annuaire -->
+            <div class="module-card">
+                <h2>Module Annuaire <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL complet (070_annuaire_schema.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Annuaire)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de contraintes d'intégrité référentielle sur certaines tables de liaison</li>
+                        <li>Absence d'index composés pour optimiser les requêtes fréquentes de recherche par critères multiples</li>
+                        <li>Pas de déclencheur pour mettre à jour automatiquement les champs de modification (per_modifie_le, ind_modifie_le)</li>
+                        <li>Manque de validation côté base pour les codes postaux et numéros de téléphone selon les pays</li>
+                        <li>Absence de journalisation détaillée des modifications critiques (changement de casquette, modification de SIREN/SIRET)</li>
+                        <li>Pas de contraintes CHECK pour valider les formats d'email, d'URL ou de numéros de téléphone</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les préférences de notification par utilisateur</li>
+                        <li>Champ pour tracker l'origine des données (import manuel, API externe, synchronisation)</li>
+                        <li>Table d'héritage pour gérer les différents types de pièces jointes aux coordonnées</li>
+                        <li>Champs pour stocker les métadonnées de géolocalisation (latitude, longitude) des adresses</li>
+                        <li>Table pour gérer les historiques de changement de statut (actif/inactif) avec période de validité</li>
+                        <li>Champ pour stocker le score de fiabilité des données basé sur les sources et validations</li>
+                        <li>Table pour gérer les relations de dépendance entre personnes (ex: filiale, filiale de)</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des déclencheur pour automatiser la mise à jour des champs *_modifie_le</li>
+                        <li>Implémenter des index GIN sur les colonnes JSONB pour améliorer les performances de recherche</li>
+                        <li>Ajouter des contraintes CHECK pour valider les formats d'email, téléphone, SIREN, SIRET</li>
+                        <li>Créer une table d'audit spécifique pour les modifications sensibles des données tiers</li>
+                        <li>Implémenter un système de versionnement léger pour les coordonnées partagées</li>
+                        <li>Ajouter des champs pour tracker le RGPD (date de consentement, objet du traitement)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Bibliothèque -->
+            <div class="module-card">
+                <h2>Module Bibliothèque <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL (060_bibliotheque_schema.sql, 061_bibliotheque_technique.sql, 062_bibliotheque_coefficients.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Bibliotheque)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de contraintes pour empêcher les scénarios de prix contradictoires</li>
+                        <li>Absence de validation pour empêcher les coefficients négatifs ou nuls</li>
+                        <li>Pas de contraintes pour garantir que le PV_net est toujours calculé correctement</li>
+                        <li>Manque d'index sur les colonnes fréquemment utilisées dans les joints (ele_bib_id, ele_fam_id, ele_nat_id)</li>
+                        <li>Absence de déclencheur pour empêcher la modification des éléments utilisés dans des documents actifs</li>
+                        <li>Pas de validation pour garantir la cohérence entre les différents scénarios de prix</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les historiques détaillés des changements de fournisseur avec raison</li>
+                        <li>Champ pour tracker l'origine géographique des éléments (pays d'origine, zone de préférence)</li>
+                        <li>Table pour gérer les substitutions d'équivalents acceptés entre éléments</li>
+                        <li>Champs pour stocker les caractéristiques environnementales (empreinte carbone, recyclabilité)</li>
+                        <li>Table pour gérer les certificats et normes associés aux éléments (ISO, CE, etc.)</li>
+                        <li>Champ pour stocker la date de dernière réévaluation du prix de marché</li>
+                        <li>Table pour gérer les contrats-cadres avec fournisseurs et leurs conditions particulières</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des contraintes CHECK pour valider la cohérence des prix (PV_net <= PV, etc.)</li>
+                        <li>Implémenter des déclencheur pour empêcher la suppression des éléments référencés</li>
+                        <li>Ajouter des index sur les colonnes de recherche fréquente (ele_code, ele_libelle)</li>
+                        <li>Créer une vue matérialisée pour les statistiques de rotation des stocks</li>
+                        <li>Implémenter un système de validation des scénarios de prix avant enregistrement</li>
+                        <li>Ajouter des champs pour tracker l'obsolescence programmée et les dates de fin de vie</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Document -->
+            <div class="module-card">
+                <h2>Module Document <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL complet (010_document_schema.sql à 013_document_affichage.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Document)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires et scénarios de test</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Complexité élevée du schéma avec de nombreuses tables annexes rendant la maintenance difficile</li>
+                        <li>Manque de contraintes pour empêcher les références circulaires dans les liaisons de lignes</li>
+                        <li>Absence de validation pour empêcher les totaux incohérents entre entête et lignes</li>
+                        <li>Pas de déclencheur pour mettre à jour automatiquement les totaux de l'entête lors de modification des lignes</li>
+                        <li>Manque d'index optimisés pour les recherches plein texte sur le libellé des lignes</li>
+                        <li>Absence de partitionnement pour améliorer les performances sur les gros volumes de documents historiques</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les modèles de calcul réutilisables entre documents</li>
+                        <li>Champ pour tracker l'origine des données de prix (catalogue fournisseur, tarif spécial, etc.)</li>
+                        <li>Table pour gérer les versions alternatives d'un même document (scénarios différents)</li>
+                        <li>Champs pour stocker les métadonnées de signature électronique et horodatage</li>
+                        <li>Table pour gérer les dépendances entre documents (documents liés, suites, etc.)</li>
+                        <li>Champ pour stocker le hash cryptographique du contenu pour détecter les altérations</li>
+                        <li>Table pour gérer les workflows de validation et d'approbation associés aux documents</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Implémenter des déclencheur pour automatiser le calcul des totaux de l'entête</li>
+                        <li>Ajouter des contraintes pour empêcher les références circulaires dans les hiérarchies de lignes</li>
+                        <li>Créer des index de recherche plein texte sur les champs libellé et description</li>
+                        <li>Implémenter un système de versionnement sémantique pour les documents</li>
+                        <li>Ajouter des champs pour tracker les étapes de workflow et les responsables associés</li>
+                        <li>Partitionner les tables historiques par année pour améliorer les performances</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Fiche -->
+            <div class="module-card">
+                <h2>Module Fiche <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL (040_fiche_schema.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Fiche)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de validation côté base pour les types de données complexes stockés en JSONB</li>
+                        <li>Absence de contraintes pour empêcher la suppression des types de fiches utilisés</li>
+                        <li>Pas de déclencheur pour maintenir l'historique des définitions de types de fiches</li>
+                        <li>Manque d'index pour accélérer la recherche par critères dans les champs JSONB</li>
+                        <li>Absence de validation pour garantir l'unicité des codes de champs dans chaque type de fiche</li>
+                        <li>Pas de contraintes pour empêcher les références circulaires dans les définitions de champs</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les modèles de fiches réutilisables entre différents contextes</li>
+                        <li>Champ pour tracker l'utilisation réelle de chaque champ dans les fiches créées</li>
+                        <li>Table pour gérer les dépendances entre types de fiches (héritage, composition)</li>
+                        <li>Champs pour stocker les métadonnées de création et d'évolution des définitions</li>
+                        <li>Table pour gérer les groupes de champs conditionnels (affichage masqué/montré selon valeurs)</li>
+                        <li>Champ pour stocker le score de complexité d'utilisation de chaque type de fiche</li>
+                        <li>Table pour gérer les traductions multilingues des libellés et aides des champs</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des contraintes pour garantir l'intégrité référentielle des définitions de champs</li>
+                        <li>Implémenter des index GIN sur les colonnes JSONB pour améliorer les recherches</li>
+                        <li>Créer un système de versionning pour les définitions de types de fiches</li>
+                        <li>Ajouter des déclencheur pour empêcher la suppression des types de fiches utilisés</li>
+                        <li>Implémenter une validation côté base pour les formats de données complexes (email, téléphone, etc.)</li>
+                        <li>Ajouter des champs pour tracker les statistiques d'utilisation de chaque type de fiche</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module GED -->
+            <div class="module-card">
+                <h2>Module GED <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL (050_ged_schema.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.GED)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de contraintes pour empêcher la création de boucles dans la hiérarchie des pièces jointes</li>
+                        <li>Absence de validation pour empêcher les références vers des éléments inexistants</li>
+                        <li>Pas de déclencheur pour mettre à jour automatiquement les statistiques d'utilisation</li>
+                        <li>Manque d'index optimisés pour les recherches par métadonnées et contenu</li>
+                        <li>Absence de contraintes pour garantir l'unicité des empreintes dans le coffre-fort</li>
+                        <li>Pas de validation pour empêcher l'insertion de versions dupliquées consécutives</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les règles de rétention et d'archivage automatique par type de document</li>
+                        <li>Champ pour tracker le niveau de confidentialité et les restrictions d'accès</li>
+                        <li>Table pour gérer les certificats et preuves d'authenticité des documents numériques</li>
+                        <li>Champs pour stocker les métadonnées d'indexation plein texte pour améliorer la recherche</li>
+                        <li>Table pour gérer les relations de derivation entre documents (versions, traductions, adaptations)</li>
+                        <li>Champ pour stocker le score de pertinence basé sur l'utilisation historique</li>
+                        <li>Table pour gérer les workflows de validation et d'approbation des documents</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des déclencheur pour mettre à jour automatiquement le compteur de versions</li>
+                        <li>Implémenter des index de recherche plein texte sur les contenus indexables</li>
+                        <li>Ajouter des contraintes pour empêcher les références circulaires dans la hiérarchie des pièces jointes</li>
+                        <li>Créer une table d'archivage séparée pour améliorer les performances des recherches actives</li>
+                        <li>Implémenter un système de classification automatique basé sur le contenu et les métadonnées</li>
+                        <li>Ajouter des champs pour tracker les événements du cycle de vie (création, modification, consultation, archivage)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Graphe -->
+            <div class="module-card">
+                <h2>Module Graphe <span class="badge badge-js">JS</span> <span class="badge badge-ui">UI</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript (visualisation et manipulation de graphes)</li>
+                    <li>Aucun composant serveur dédié - utilise les services des autres modules</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de persistance côté serveur pour les mises en page personnalisées des graphes</li>
+                        <li>Absence de validation pour empêcher la création de graphes avec des cycles non désirés</li>
+                        <li>Pas de mécanismes de caching pour améliorer les performances sur les gros graphes</li>
+                        <li>Manque de soutien pour l'export/import de formats de graphes standards (GraphML, GEXF)</li>
+                        <li>Absence de fonctionnalités d'analyse de graphe avancées (centralité, communauté, chemins critiques)</li>
+                        <li>Pas de gestion des niveaux de détail (LOD) pour les très grands graphes</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les mises en page personnalisées et les préférences d'affichage par utilisateur</li>
+                        <li>Champ pour tracker les métadonnées sémantiques des nœuds et arêtes pour améliorer la recherche</li>
+                        <li>Table pour gérer les modèles de graphe réutilisables entre différents contextes d'analyse</li>
+                        <li>Champs pour stocker les poids et métriques calculés (centralité, densité, etc.)</li>
+                        <li>Table pour gérer les historiques de navigation et d'exploration dans les graphes</li>
+                        <li>Champ pour stocker les couleurs et styles personnalisés par type de nœud/arête</li>
+                        <li>Table pour gérer les filtres et vues sauvegardés des explorations de graphes</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Implémenter un service de persistance côté serveur pour les configurations de graphe</li>
+                        <li>Ajouter le soutien pour les formats de graphes standards d'import/export</li>
+                        <li>Implémenter des algorithmes d'analyse de graphe de base (parcours, connexité, chemins)</li>
+                        <li>Ajouter des mécanismes de caching pour améliorer les performances sur les requêtes répétées</li>
+                        <li>Créer une API dédiée pour les opérations de graphe côté serveur</li>
+                        <li>Implémenter le soutien pour les niveaux de détail (LOD) sur les très grands graphes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Liste -->
+            <div class="module-card">
+                <h2>Module Liste <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL (030_liste_schema.sql, 031_liste_themes.sql, 032_liste_saisie.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Liste)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de contraintes pour empêcher la suppression des vues de liste utilisées comme vues par défaut</li>
+                        <li>Absence de validation pour empêcher les définitions de vues trop complexes impactant les performances</li>
+                        <li>Pas de déclencheur pour maintenir l'historique des changements de définition des vues</li>
+                        <li>Manque d'index optimisés pour les recherches dans les définitions JSONB des vues</li>
+                        <li>Absence de contraintes pour garantir l'unicité des noms de vues dans un même contexte et partage</li>
+                        <li>Pas de validation pour empêcher les références vers des sources de liste inexistantes ou inaccessibles</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les modèles de vues de liste réutilisables entre différents contextes</li>
+                        <li>Champ pour tracker les statistiques d'utilisation réelle de chaque vue de liste</li>
+                        <li>Table pour gérer les dépendances entre vues de liste (hérédité, spécialisation)</li>
+                        <li>Champs pour stocker les métadonnées de performance et les temps d'exécution moyens</li>
+                        <li>Table pour gérer les groupes de colonnes conditionnels (affichage selon critères ou rôles)</li>
+                        <li>Champ pour stocker le score de pertinence basé sur l'utilisation et les retours utilisateurs</li>
+                        <li>Table pour gérer les préférences de tri et de regroupement sauvegardés par utilisateur</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des contraintes pour empêcher la suppression des vues de liste utilisées comme vues par défaut</li>
+                        <li>Implémenter des index GIN sur les colonnes JSONB pour améliorer les recherches dans les définitions</li>
+                        <li>Créer un système de versionning pour les définitions de vues de liste</li>
+                        <li>Ajouter des déclencheur pour maintenir l'historique des changements de définition</li>
+                        <li>Implémenter une validation côté base pour limiter la complexité des définitions de vues</li>
+                        <li>Ajouter des champs pour tracker les métriques de performance et d'utilisation de chaque vue</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Métre -->
+            <div class="module-card">
+                <h2>Module Métre <span class="badge badge-structure">Structure</span> <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-db">DB</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>db/</strong> : Schéma SQL (020_metre_schema.sql)</li>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.Metre)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript</li>
+                    <li><strong>tests/</strong> : Tests unitaires</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de contraintes pour empêcher les références circulaires dans les hiérarchies de lignes de métré</li>
+                        <li>Absence de validation pour empêcher les références vers des lignes ou documents inexistants</li>
+                        <li>Pas de déclencheur pour mettre à jour automatiquement les totaux lorsqu'une ligne de métré change</li>
+                        <li>Manque d'index optimisés pour les recherches par ligne ou document hôte</li>
+                        <li>Absence de contraintes pour garantir l'unicité des noms de variables dans un même contexte de portée</li>
+                        <li>Pas de validation pour empêcher les formules de métré qui référencent des variables inexistantes</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les modèles de métré réutilisables entre différents types de lignes</li>
+                        <li>Champ pour tracker l'origine des mesures (mesure directe, calcul, extrapolation, etc.)</li>
+                        <li>Table pour gérer les dépendances entre variables de métré (hérédité, substitution)</li>
+                        <li>Champs pour stocker les métadonnées de précision et d'incertitude associée à chaque mesure</li>
+                        <li>Table pour gérer les historiques des valeurs calculées avec traçabilité complète</li>
+                        <li>Champ pour stocker le score de confiance basé sur les sources et méthodes utilisées</li>
+                        <li>Table pour gérer les templates de formules de métré fréquemment utilisées</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Ajouter des déclencheur pour mettre à jour automatiquement les totaux lorsqu'une ligne de métré change</li>
+                        <li>Implémenter des contraintes pour empêcher les références circulaires dans les hiérarchies de lignes de métré</li>
+                        <li>Ajouter des index optimisés pour les recherches par mtr_lig_id et var_ent_id/var_lig_id</li>
+                        <li>Implémenter une validation pour empêcher les références vers des lignes/documents inexistants</li>
+                        <li>Ajouter des champs pour tracker l'origine et la fiabilité de chaque mesure</li>
+                        <li>Créer une table d'historique pour tracer l'évolution des valeurs de métré dans le temps</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Navigation -->
+            <div class="module-card">
+                <h2>Module Navigation <span class="badge badge-js">JS</span> <span class="badge badge-ui">UI</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript (gestion de l'interface utilisateur)</li>
+                    <li>Aucun composant serveur dédié - utilise les services des autres modules</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de persistance côté serveur pour les préférences d'interface utilisateur personnalisées</li>
+                        <li>Absence de validation pour empêcher les configurations de navigation qui créent des boucles</li>
+                        <li>Pas de mécanismes de contrôle d'accès côté serveur pour sécuriser les routes protégées</li>
+                        <li>Manque de soutien pour la navigation basée sur les rôles et les permissions dynamiques</li>
+                        <li>Absence de fonctionnalités d'audit pour tracker les parcours utilisateurs dans l'application</li>
+                        <li>Pas de gestion des états de navigation pour permettre les boutons retour/avant avancés</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker les préférences d'interface utilisateur sauvegardées par utilisateur</li>
+                        <li>Champ pour tracker l'historique de navigation et les parcours fréquents</li>
+                        <li>Table pour gérer les rôles et permissions personnalisés au-delà du système de base</li>
+                        <li>Champs pour stocker les métadonnées de contexte et d'état pour restaurer les vues précédentes</li>
+                        <li>Table pour gérer les modèles de navigation réutilisables entre différents profils d'utilisateurs</li>
+                        <li>Champ pour stocker le score d'accessibilité basé sur l'utilisation et les retours</li>
+                        <li>Table pour gérer les notifications et alertes configurables par utilisateur</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Implémenter un service de persistance côté serveur pour les préférences utilisateur</li>
+                        <li>Ajouter des mécanismes de contrôle d'accès côté serveur pour toutes les routes protégées</li>
+                        <li>Implémenter le soutien pour la navigation basée sur les rôles et permissions dynamiques</li>
+                        <li>Créer un système d'audit pour tracker les parcours utilisateurs et les accès aux fonctionnalités</li>
+                        <li>Ajouter des champs pour tracker les métriques d'utilisation et de performance de l'interface</li>
+                        <li>Implémenter la gestion des états de navigation pour les boutons retour/avant avancés</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Module Entreprises Françaises -->
+            <div class="module-card">
+                <h2>Module Entreprises Françaises <span class="badge badge-js">JS</span> <span class="badge badge-dotnet">.NET</span> <span class="badge badge-tests">Tests</span></h2>
+
+                <h3>Structure du module</h3>
+                <ul>
+                    <li><strong>dotnet/</strong> : Implémentation C# (LogiBTP.EntreprisesFr)</li>
+                    <li><strong>js/</strong> : Implémentation JavaScript/TypeScript (interface de recherche d'entreprises)</li>
+                    <li>Aucun composant base de données dédié - utilise les services des autres modules</li>
+                </ul>
+
+                <h3>Faiblesses identifiées</h3>
+                <div class="faiblesses">
+                    <ul>
+                        <li>Manque de persistance côté serveur pour mettre en cache les résultats des recherches d'entreprises</li>
+                        <li>Absence de validation pour empêcher les appels excessifs vers l'API externe de recherche d'entreprises</li>
+                        <li>Pas de mécanismes pour gérer les limites de taux et les quotas de l'API officielle</li>
+                        <li>Manque de soutien pour la recherche hors ligne avec données locales mises en cache</li>
+                        <li>Absence de fonctionnalités pour enrichir les résultats avec des données complémentaires internes</li>
+                        <li>Pas de validation pour empêcher l'affichage de données d'entreprises obsolètes ou incorrectes</li>
+                    </ul>
+                </div>
+
+                <h3>Informations manquantes à ajouter en BDD</h3>
+                <div class="informations-manquantes">
+                    <ul>
+                        <li>Table pour stocker en cache les résultats des recherches d'entreprises avec timestamp d'expiration</li>
+                        <li>Champ pour tracker la source des données (API officielle, cache local, saisie manuelle)</li>
+                        <li>Table pour gérer les listes blanches et noires d'entreprises pour filtrage personnalisé</li>
+                        <li>Champs pour stocker les métadonnées de qualité et de fiabilité des informations d'entreprise</li>
+                        <li>Table pour gérer l'historique des changements importants des entreprises suivies</li>
+                        <li>Champ pour stocker le score de pertinence basé sur l'utilisation historique des recherches</li>
+                        <li>Table pour gérer les métadonnées complémentaires enrichies provenant des autres modules</li>
+                    </ul>
+                </div>
+
+                <h3>Recommandations d'amélioration</h3>
+                <div class="recommandations">
+                    <ul>
+                        <li>Implémenter un système de mise en cache côté serveur pour les résultats des recherches d'entreprises</li>
+                        <li>Ajouter des mécanismes de limitation de taux pour respecter les quotas de l'API officielle</li>
+                        <li>Implémenter le soutien pour la recherche hors ligne avec données locales mises en cache</li>
+                        <li>Créer des tables de référence pour stocker les données d'entreprises fréquemment utilisées</li>
+                        <li>Ajouter des champs pour tracker la fraîcheur et la fiabilité des données affichées</li>
+                        <li>Implémenter des fonctions d'enrichissement pour combiner les données API avec les données internes</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="timestamp">
+            Documentation générée le 14 octobre 2026<br>
+            LogiBTP - Analyse complète par module
+        </div>
+    </div>
+
+    <script>
+        // Fonction de recherche simple
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const modules = document.querySelectorAll('.module-card');
+
+            modules.forEach(module => {
+                const text = module.textContent.toLowerCase();
+                if (text.includes(searchTerm) || searchTerm === '') {
+                    module.style.display = '';
+                } else {
+                    module.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

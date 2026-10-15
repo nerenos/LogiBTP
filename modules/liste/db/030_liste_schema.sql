@@ -4,13 +4,14 @@
 -- dans source_liste ; une vue de liste peut aussi reposer sur une requête SELECT saisie par un ADMIN.
 -- =============================================================================
 
-CREATE EXTENSION IF NOT EXISTS unaccent;
-
--- Recherche « contient » sans casse ni accents : même normalisation que normaliser() côté JS.
--- IMMUTABLE (dictionnaire nommé explicitement) pour pouvoir servir dans un index d'expression.
+-- Recherche « contient » sans casse ni accents : exactement normaliser() côté JS (ligatures développées, décomposition
+-- NFD, marques diacritiques retirées, minuscules). Pas d'unaccent : son dictionnaire transforme aussi la ponctuation
+-- (« – » → « - », « … » → « ... »), ce que le JS ne fait pas. IMMUTABLE pour servir dans un index d'expression.
 CREATE OR REPLACE FUNCTION f_sans_accent(texte TEXT) RETURNS TEXT
     LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
-    AS $$ SELECT lower(public.unaccent('public.unaccent'::regdictionary, texte)) $$;
+    AS $$ SELECT lower(regexp_replace(normalize(
+        replace(replace(replace(replace(replace(translate(texte, 'øØđĐłŁ', 'oOdDlL'), 'œ', 'oe'), 'Œ', 'oe'), 'æ', 'ae'), 'Æ', 'ae'), 'ß', 'ss'),
+        NFD), '[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]', '', 'g')) $$;
 
 -- Sources déclarées par l'application : une vue SQL par type de liste, avec la colonne
 -- identifiant et le type d'élément (colonne ou constante) qui permettent d'ouvrir la fiche.
