@@ -175,6 +175,8 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .plan-modes { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; padding: 0.1rem 0; }
 .plan-modes button.actif { background: var(--accent-clair); border-color: var(--accent); }
 .plan-modes .filtre { margin-left: auto; color: var(--accent); font-size: 0.85em; }
+.plan-plis { display: flex; gap: 0.3rem; padding: 0.1rem 0 0.2rem; }
+.plan-plis button { font-size: 0.85em; }
 .plan-arbre { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
 .plan-arbre li { display: flex; align-items: baseline; gap: 0.4rem; padding: 0.15rem 0.3rem; border-radius: 4px; cursor: pointer; }
 .plan-arbre li:hover { background: var(--titre-fond); }

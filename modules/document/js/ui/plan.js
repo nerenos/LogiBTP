@@ -7,6 +7,7 @@ import { ID_PIED } from './editeur-document.js';
 // grille à la tranche (la saisie et le calcul portent toujours sur tout le document). Le mode est gardé dans le navigateur.
 // Glisser-déposer d'une tranche sur une autre : avant, après (bords) ou dedans (milieu), avec les règles de dépôt de
 // l'éditeur ; la tranche est déplacée avec tout son contenu (une étape d'annulation).
+// Boutons Ouvrages et Tout : réduire (ou ouvrir) d'un coup les lignes d'ouvrage, ou toutes les lignes, de la grille.
 
 export class PlanDocument {
   constructor(conteneur, { editeur }) {
@@ -69,11 +70,20 @@ export class PlanDocument {
         <button type="button" data-mode="filtrer" class="${this.mode === 'filtrer' ? 'actif' : ''}" title="Clic : n'afficher que la tranche dans la grille (affichage seulement)">⧩ Filtrer</button>
         ${filtre !== null ? '<button type="button" data-tout class="filtre" title="Retirer le filtre d\'affichage">✕ Tout afficher</button>' : ''}
       </div>
+      <div class="plan-plis" role="group" aria-label="Lignes de la grille">
+        ${this.boutonPli('ouvrages', 'Ouvrages', 'les lignes d\'ouvrage (composantes)', ed.toutReplie({ ouvrages: true }), ed.lignesRepliables({ ouvrages: true }).length > 0)}
+        ${this.boutonPli('tout', 'Tout', 'toutes les lignes (titres, ouvrages, pied)', ed.toutReplie(), ed.lignesRepliables().length > 0)}
+      </div>
       <ul class="plan-arbre">
         ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || (t.ligne.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre'), t.ligne.lig_montant_ht, t)).join('')}
         ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', 'Pied du document', net, { classe: 'pied' }) : ''}
       </ul>
       ${tranches.length ? '' : '<p class="aide">Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.</p>'}`;
+  }
+
+  /** Bouton d'ouverture / réduction des lignes de la grille : réduit tant qu'une ligne est ouverte, sinon ouvre tout. */
+  boutonPli(code, libelle, quoi, replie, actif) {
+    return `<button type="button" data-plis="${code}" ${actif ? '' : 'disabled'} title="${replie ? 'Ouvrir' : 'Réduire'} ${quoi}">${replie ? '⊞' : '⊟'} ${libelle}</button>`;
   }
 
   #glisser(conteneur) {
@@ -133,6 +143,12 @@ export class PlanDocument {
       ecrirePreferences({ planMode: this.mode });
       // Passage en mode « Aller à » : le filtre éventuel est retiré.
       if (this.mode === 'aller' && this.editeur.filtre !== null) this.editeur.filtrer(null);
+      this.rendre();
+      return;
+    }
+    const plis = e.target.closest('[data-plis]');
+    if (plis) {
+      this.editeur.basculerPlis({ ouvrages: plis.dataset.plis === 'ouvrages' });
       this.rendre();
       return;
     }

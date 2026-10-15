@@ -412,6 +412,39 @@ export class EditeurDocument {
     this.surFiltre?.(this.filtre);
   }
 
+  /** Lignes repliables de la grille (lignes avec enfants, pied compris) ; ouvrages : lignes d'ouvrage seulement. */
+  lignesRepliables({ ouvrages = false } = {}) {
+    return this.lignesGrille(new Set()).filter((r) => r.aEnfants && (!ouvrages || r.item.lig_tyl_id === TL.OUVRAGE)).map((r) => r.item.lig_id);
+  }
+
+  /** Toutes les lignes repliables (ou tous les ouvrages) sont repliées. */
+  toutReplie(options = {}) {
+    const ids = this.lignesRepliables(options);
+    return ids.length > 0 && ids.every((id) => this.grille.replies.has(id));
+  }
+
+  /**
+   * Replie les ouvrages (ou toutes les lignes), ou les déplie s'ils sont déjà tous repliés. La ligne courante, si elle
+   * devient masquée, est remplacée par sa ligne visible la plus proche (ligne repliée qui la contient).
+   */
+  basculerPlis(options = {}) {
+    const ids = this.lignesRepliables(options);
+    const replier = !this.toutReplie(options);
+    for (const id of ids) {
+      if (replier) this.grille.replies.add(id);
+      else this.grille.replies.delete(id);
+    }
+    this.grille.rendre();
+    const courant = this.grille.courant;
+    if (replier && courant !== null && courant !== undefined && !this.grille.index?.has(courant)) {
+      const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
+      let l = parId.get(courant);
+      while (l && !this.grille.index?.has(l.lig_id)) l = parId.get(l.lig_parent_id);
+      if (l) this.grille.selectionner(l.lig_id);
+    }
+    return replier;
+  }
+
   /** Les tranches parentes d'une ligne sont dépliées (la ligne devient visible). */
   deplierAscendants(id) {
     const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
