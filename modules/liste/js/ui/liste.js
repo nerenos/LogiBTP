@@ -1,4 +1,4 @@
-import { echapper, lireNombre } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -1123,9 +1123,11 @@ export class ListeDonnees {
     if (c.format === 'coche') { this.#enregistrer(id, code, !vraiDonnee(valeur)); return; }
     let ed;
     if (c.format === 'combo' || c.format === 'picto') {
-      ed = document.createElement('select');
-      ed.innerHTML = `<option value=""></option>${c.options.map((o) => `<option value="${echapper(o.valeur)}">${echapper(`${o.picto ?? ''} ${o.libelle ?? o.valeur}`.trim())}</option>`).join('')}`;
-      ed.value = valeur ?? '';
+      // Combo saisissable : la saisie filtre les options ou désigne directement l'option (libellé ou code).
+      ed = creerCombo({
+        options: c.options.map((o) => ({ valeur: String(o.valeur), libelle: `${o.picto ?? ''} ${o.libelle ?? o.valeur}`.trim() })),
+        valeur: valeur === null || valeur === undefined ? '' : String(valeur),
+      });
     } else if (c.format === 'date') {
       ed = document.createElement('input');
       ed.type = 'date';
@@ -1139,7 +1141,7 @@ export class ListeDonnees {
       ed.value = c.format === 'nombre' && valeur !== null && valeur !== undefined ? String(valeur).replace('.', ',') : valeur ?? '';
       if (c.format === 'nombre') ed.inputMode = 'decimal';
     }
-    ed.className = 'liste-editeur';
+    ed.classList.add('liste-editeur');
     td.replaceChildren(ed);
     td.classList.add('en-saisie');
     ed.focus();
@@ -1148,7 +1150,9 @@ export class ListeDonnees {
     const terminer = async (mouvement) => {
       if (fini) return;
       fini = true;
-      const ok = await this.#enregistrer(id, code, ed.value, { texte: true });
+      const saisie = ed.resoudre ? ed.resoudre() : ed.value;
+      if (saisie === undefined) { this.message(`Valeur inconnue : ${ed.value}`, 'erreur'); fini = false; ed.focus(); return; }
+      const ok = await this.#enregistrer(id, code, saisie, { texte: true });
       if (!ok) { fini = false; ed.focus(); return; }
       if (mouvement) this.#saisieSuivante(id, code, mouvement);
     };
@@ -1157,7 +1161,8 @@ export class ListeDonnees {
       else if (e.key === 'Enter' && !(ed.tagName === 'TEXTAREA' && (e.shiftKey || e.altKey))) { e.preventDefault(); terminer(e.shiftKey ? 'haut' : 'bas'); }
       else if (e.key === 'Tab') { e.preventDefault(); terminer(e.shiftKey ? 'gauche' : 'droite'); }
     });
-    if (ed.tagName === 'SELECT') ed.addEventListener('change', () => terminer(null));
+    // Combo : un choix à la souris termine la saisie.
+    if (ed.resoudre) ed.addEventListener('change', () => terminer(null));
     ed.addEventListener('blur', () => { if (!fini) terminer(null); });
   }
 

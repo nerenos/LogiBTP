@@ -53,7 +53,7 @@
 - `D('')`, `D(null)` → null ; `Dz` → 0 ; `coef` → 1.
 - Le socle ne connaît aucun module : pas d'import de `modules/` ni du cœur ; toute spécialisation passe par options / rappels (`actions` de la grille, `recalculer` du Magasin, `resoudre` des formules).
 - Préférences d'affichage uniquement via `lirePreferences` / `ecrirePreferences` (navigateur, jamais en base) ; écrire = fusion, pas remplacement.
-- Combos : `ListeDeroulante` strict (libellé affiché, valeur = identifiant) ; ne pas créer de `<select>` simple.
+- Combos : hors grille, `creerCombo({ options, valeur, vide })` (`src/ui/combo.js` : champ texte + `ListeDeroulante` strict, `valeurCombo`, `resoudre()`, `definirValeur()`, événement `change`, classe `combo`) ; dans la grille, `editeur: 'select'`. Ne pas créer de `<select>` simple.
 - Raccourcis de la grille dans `raccourcis.json` (éviter AltGr, Alt+Maj, Alt+←, Ctrl+N/T/W).
 - `htmlSur` et le nettoyage HTML serveur doivent garder la même liste blanche de balises et de styles.
 - C# : `TargetFramework` net10.0, `InvariantGlobalization` (Directory.Build.props) ; sérialiser avec `JsonCalcul.Options` pour garder les noms de colonnes du DDL.

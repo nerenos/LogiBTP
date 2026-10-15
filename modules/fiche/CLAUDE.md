@@ -51,7 +51,7 @@
 - Identifiants SQL tirés de la définition du type (contrôlés, entre guillemets), valeurs en paramètres converties au type `information_schema` (`CacheTypesColonnes`, indexé par base).
 - Types, droits et paramétrage du cœur : modifier `client/src/app/fiches/definitions.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/131_fiches_parametrage.sql` avec `db/121`, 116, 141, 150, 161, 163) ; ne jamais éditer `db/131` à la main.
 - Colonnes métier ajoutées par `ALTER TABLE` dans le cœur ; noms DDL snake_case préfixés.
-- `rendreChamp` rend encore les champs `liste` par un `<select>` simple (règle projet : combo saisissable du socle).
+- Champs `liste` : `creerCombo` du socle (valeur lue par `valeurCombo`, événement `change` ; en lecture, champ en lecture seule sans flèche).
 - Dans `SpecialisationFiche.cs`, le commentaire de `AvantEcritureAsync` est mal placé (au-dessus de `AvantSuppressionAsync`).
 
 ## Tests

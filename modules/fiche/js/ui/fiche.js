@@ -1,4 +1,4 @@
-import { echapper, formatLibre, htmlSur, editerLibelle } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -352,9 +352,11 @@ export class FicheBase {
         el.checked = valeur === true;
         break;
       case 'liste':
-        el = document.createElement('select');
-        el.innerHTML = `<option value=""></option>${(champ.options ?? []).map((o) => `<option value="${echapper(o.valeur)}">${echapper(o.libelle ?? o.valeur)}</option>`).join('')}`;
-        el.value = valeur ?? '';
+        // Combo saisissable : la saisie filtre les options ou désigne directement l'option (libellé ou code).
+        el = creerCombo({
+          options: (champ.options ?? []).map((o) => ({ valeur: o.valeur, libelle: o.libelle ?? String(o.valeur) })),
+          valeur: valeur ?? '',
+        });
         break;
       case 'date':
         el = document.createElement('input');
@@ -374,9 +376,9 @@ export class FicheBase {
         if (champ.longueur) el.maxLength = champ.longueur;
     }
     el.classList.add('fiche-saisie-champ');
-    if (lecture) { el.disabled = champ.type === 'booleen' || champ.type === 'liste'; el.readOnly = true; return el; }
+    if (lecture) { el.disabled = champ.type === 'booleen'; el.readOnly = true; return el; }
     el.addEventListener(champ.type === 'booleen' || champ.type === 'liste' ? 'change' : 'input', () => {
-      const v = champ.type === 'booleen' ? el.checked : el.value;
+      const v = champ.type === 'booleen' ? el.checked : champ.type === 'liste' ? el.valeurCombo : el.value;
       const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
       cible[champ.code] = v;
       this.#majTitre();

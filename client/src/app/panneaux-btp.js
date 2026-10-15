@@ -1,4 +1,4 @@
-import { echapper, formatNombre, formatLibre, ListeDeroulante } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, creerCombo } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
@@ -114,34 +114,23 @@ export class PanneauxBtp extends PanneauxDocument {
     return this.redacteursCharges?.find((r) => r.valeur === Number(id))?.libelle ?? `#${id}`;
   }
 
-  /** Rédacteur : combo saisissable (la saisie filtre, le texte reconnu désigne l'individu). */
+  /** Rédacteur : combo saisissable du socle (la saisie filtre, le texte reconnu désigne l'individu). */
   async lierRedacteur(zone) {
-    const champ = zone.querySelector('[data-redacteur]');
-    if (!champ) return;
+    const place = zone.querySelector('[data-redacteur]');
+    if (!place) return;
     const m = this.editeur.magasin;
     this.redacteursCharges = await this.redacteurs();
-    const courant = this.editeur.saisie.document.ent_redacteur_id ?? null;
-    champ.value = this.libelleRedacteur(courant);
-    champ.disabled = !!m.lectureSeule;
-    let liste = null;
-    const valider = () => {
-      const v = liste?.resoudre();
-      liste?.detruire();
-      liste = null;
-      if (v === undefined) { champ.value = this.libelleRedacteur(this.editeur.saisie.document.ent_redacteur_id); return; }
+    if (!place.isConnected) return; // entête redessiné pendant le chargement
+    const champ = creerCombo({ options: this.redacteursCharges, valeur: this.editeur.saisie.document.ent_redacteur_id ?? '' });
+    champ.dataset.redacteur = '';
+    champ.title = place.title;
+    champ.readOnly = !!m.lectureSeule;
+    champ.addEventListener('change', () => {
+      const v = champ.valeurCombo;
       const id = v === '' || v === null ? null : Number(v);
       if (id !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = id; }, 'Rédacteur');
-    };
-    champ.addEventListener('focus', () => {
-      liste = new ListeDeroulante(champ, [{ valeur: '', libelle: '—' }, ...this.redacteursCharges], { strict: true, courante: this.editeur.saisie.document.ent_redacteur_id ?? '' });
-      liste.surChoix = () => champ.blur();
-      champ.select();
     });
-    champ.addEventListener('keydown', (e) => {
-      if (liste?.clavier(e)) e.preventDefault();
-      if (e.key === 'Enter') champ.blur();
-    });
-    champ.addEventListener('blur', valider);
+    place.replaceWith(champ);
   }
 
   variablesDocument() {
