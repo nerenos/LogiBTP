@@ -29,7 +29,8 @@ export const estTranche = (l) => l.lig_tyl_id === TL.TITRE || l.lig_tyl_id === T
 // (modules/document/db) et doivent rester alignées avec LogiBTP.Document (Document, DocumentLigne).
 // Un module ou le cœur qui spécialise le document ajoute ses colonnes (voir MoteurDocument.colonnes…).
 export const COLONNES_DOCUMENT = new Set([
-  'ent_id', 'ent_tyd_id', 'ent_numero', 'ent_date', 'ent_objet', 'ent_std_id', 'ent_tiers_id',
+  'ent_id', 'ent_tyd_id', 'ent_numero', 'ent_date', 'ent_objet', 'ent_notre_reference', 'ent_reference_externe',
+  'ent_validite_jours', 'ent_date_validite', 'ent_std_id', 'ent_tiers_id',
   'ent_adresse_facturation', 'ent_adresse_livraison', 'ent_devise', 'ent_num_format', 'ent_precision_montant',
   'ent_version_calcul', 'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer', 'ent_proprietes',
   'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_version',

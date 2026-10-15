@@ -19,6 +19,8 @@ public class TypeDocument
     public bool TydMouvementeStock { get; set; }
     /// <summary>Handler spécifique (IDocumentHandler) ; null = standard.</summary>
     public string? TydHandler { get; set; }
+    /// <summary>Durée de validité proposée à la création (offres) ; null : sans validité.</summary>
+    public short? TydValiditeJours { get; set; }
     public bool TydActif { get; set; } = true;
 }
 

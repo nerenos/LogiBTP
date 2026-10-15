@@ -139,6 +139,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             EntTydId = type.TydId,
             EntDate = c.EntDate ?? DateOnly.FromDateTime(DateTime.Today),
             EntObjet = c.EntObjet,
+            EntNotreReference = c.EntNotreReference,
+            EntReferenceExterne = c.EntReferenceExterne,
+            EntValiditeJours = c.EntValiditeJours ?? type.TydValiditeJours,
             EntStdId = (await Statut(type.TydId, "BROUILLON", ct)).StdId,
             EntTiersId = c.EntTiersId,
             EntAdresseFacturation = c.EntAdresseFacturation,
@@ -184,6 +187,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var e = JsonCalcul.Cloner(avant.Document); // « avant » reste intact pour l'historique
         e.EntDate = d.Document.EntDate == default ? e.EntDate : d.Document.EntDate;
         e.EntObjet = d.Document.EntObjet;
+        e.EntNotreReference = d.Document.EntNotreReference;
+        e.EntReferenceExterne = d.Document.EntReferenceExterne;
+        e.EntValiditeJours = d.Document.EntValiditeJours;
         e.EntTiersId = d.Document.EntTiersId;
         e.EntAdresseFacturation = d.Document.EntAdresseFacturation;
         e.EntAdresseLivraison = d.Document.EntAdresseLivraison;
@@ -293,6 +299,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
         r.Document.EntStdId = (await Statut(type.TydId, "VALIDE", ct)).StdId;
         r.Document.EntVerrouille = true;
+        // Fin de validité : à partir du jour de la validation.
+        r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
         var reponse = await Persister(id, r, u, ct);
         await tx.CommitAsync(ct);
         return reponse;
@@ -392,6 +400,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         doc.EntVersion = 1;
         doc.EntVerrouille = false;
         doc.EntCopieDeId = null;
+        doc.EntDateValidite = null;
         doc.EntStdId = (await Statut(doc.EntTydId, "BROUILLON", ct)).StdId;
         doc.EntCreeLe = DateTimeOffset.UtcNow;
         doc.EntCreePar = u.Code;

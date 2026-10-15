@@ -23,7 +23,8 @@
     "@logibtp/bibliotheque": "0.1.0",
     "@logibtp/graphe": "0.1.0",
     "@logibtp/annuaire": "0.1.0",
-    "@logibtp/entreprises-fr": "0.1.0"
+    "@logibtp/entreprises-fr": "0.1.0",
+    "@logibtp/import": "0.1.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

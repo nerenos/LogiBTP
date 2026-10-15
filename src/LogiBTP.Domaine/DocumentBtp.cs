@@ -19,4 +19,6 @@ public class DocumentBtp : Document
     public int? EntMarcheId { get; set; }
     /// <summary>Annuaire du document (db/162_intervenants.sql) : instantané des intervenants (client, payeur, sous-traitants…).</summary>
     public JsonDocument? EntIntervenants { get; set; }
+    /// <summary>Rédacteur du document : individu de l'annuaire.</summary>
+    public long? EntRedacteurId { get; set; }
 }

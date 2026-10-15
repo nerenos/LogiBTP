@@ -161,6 +161,7 @@ export class EditeurDocument {
   appliquerVue(vue) {
     this.vue = vue;
     this.grille.definirColonnes(this.colonnesAffichees());
+    this.surVue?.(vue); // l'hôte suit le mode débogage de la vue
   }
 
   /** Champs des lignes (saisie et calcul) affichables en mode débogage, plus les contrôles de la ligne. */

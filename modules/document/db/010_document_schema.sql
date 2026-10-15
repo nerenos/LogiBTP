@@ -20,6 +20,7 @@ CREATE TABLE type_document (
     tyd_numerotation_continue BOOLEAN      NOT NULL DEFAULT FALSE,        -- factures, avoirs
     tyd_mouvemente_stock      BOOLEAN      NOT NULL DEFAULT FALSE,
     tyd_handler               VARCHAR(100),                               -- NULL = standard
+    tyd_validite_jours        SMALLINT,                                   -- durée de validité proposée (offres)
     tyd_actif                 BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
@@ -102,6 +103,10 @@ CREATE TABLE document (
     ent_numero              VARCHAR(30),                                  -- attribué à la validation
     ent_date                DATE         NOT NULL,
     ent_objet               VARCHAR(200),
+    ent_notre_reference     VARCHAR(50),                                  -- notre référence (dossier, logiciel d'origine)
+    ent_reference_externe   VARCHAR(100),                                 -- référence du client ou du fournisseur
+    ent_validite_jours      SMALLINT     CHECK (ent_validite_jours > 0),  -- durée de validité du document
+    ent_date_validite       DATE,                                         -- fin de validité : calculée à la validation
     ent_std_id              INT          NOT NULL REFERENCES statut_document(std_id),
     ent_tiers_id            BIGINT,                                       -- obligatoire à la validation
     ent_adresse_facturation JSONB,                                        -- copiée, ne suit plus la fiche tiers
@@ -257,6 +262,20 @@ CREATE TABLE document_lien (
     PRIMARY KEY (lie_source_ent_id, lie_cible_ent_id)
 );
 CREATE INDEX ix_lie_cible ON document_lien (lie_cible_ent_id);
+
+-- Origine d'un document créé par un import (traçabilité) : format, fichier source conservé (identifiant fourni par
+-- l'application, la GED pour le cœur) pour pouvoir le réutiliser, rapport des champs non repris.
+CREATE TABLE document_origine (
+    dor_ent_id         BIGINT        PRIMARY KEY REFERENCES document(ent_id) ON DELETE CASCADE,
+    dor_type           VARCHAR(20)   NOT NULL DEFAULT 'IMPORT' CHECK (dor_type IN ('IMPORT')),
+    dor_format         VARCHAR(30)   NOT NULL,                            -- OptimBTP…
+    dor_fichier_id     BIGINT,
+    dor_nom_fichier    VARCHAR(300),
+    dor_reference      VARCHAR(100),                                      -- référence dans le logiciel d'origine
+    dor_rapport        JSONB,                                             -- champs non repris, écarts de calcul
+    dor_date           TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    dor_utilisateur    VARCHAR(50)   NOT NULL
+);
 
 CREATE TABLE document_ligne_lien (
     lil_id             BIGSERIAL PRIMARY KEY,

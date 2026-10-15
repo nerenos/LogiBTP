@@ -74,6 +74,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntChantierId = saisie.EntChantierId;
         cible.EntMarcheId = saisie.EntMarcheId;
         cible.EntIntervenants = saisie.EntIntervenants ?? cible.EntIntervenants;
+        cible.EntRedacteurId = saisie.EntRedacteurId;
     }
 
     // ------------------------------------------------------------------ chargement

@@ -156,3 +156,29 @@ dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
 .transformation-cible small { display: block; color: var(--discret); font-size: 0.85em; }
 .transformation-icone { font-size: 1.3em; }
 .liste-elements-autres { display: inline-flex; gap: 4px; }
+
+/* Import d'un devis (OptimBTP) : dépôt du fichier, aperçu, champs non repris, contrôle des montants. */
+.page-import { max-width: 1100px; overflow-y: auto; }
+.import-depot { display: block; border: 2px dashed var(--bord); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; color: var(--discret); margin: 1rem 0; }
+.import-depot.survol, .import-depot:hover { border-color: var(--accent); color: var(--texte); }
+.import-resume dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.import-resume dt { color: var(--discret); }
+.import-resume dd { margin: 0; }
+.import-avertissements { padding-left: 1.2rem; color: var(--avertissement, #b26b00); }
+.table-import td { vertical-align: top; }
+.table-import td:nth-child(3) { max-width: 420px; overflow-wrap: anywhere; }
+
+/* Devis importé à vérifier : bandeau au-dessus des onglets ; rapport détaillé en mode débogage. */
+.document-import[hidden] { display: none; }
+.document-import { flex: none; padding: 6px 12px; background: var(--surface); border-bottom: 2px solid var(--accent); max-height: 45vh; overflow: auto; }
+.document-import .import-etat { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.document-import .import-avertissements { margin: 4px 0; font-size: 0.9em; }
+.document-import details summary { cursor: pointer; font-weight: 600; margin-top: 4px; }
+
+/* Onglet Traçabilité : origine, documents liés, historique. */
+.vue-tracabilite { overflow: auto; padding: 1rem; }
+.tracabilite { max-width: 1000px; display: flex; flex-direction: column; gap: 1rem; }
+.trac-bloc h3 { margin: 0 0 6px; font-size: 1rem; }
+.trac-liens { list-style: none; padding: 0; margin: 0; }
+.trac-liens li { padding: 3px 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.trac-rapport summary { cursor: pointer; font-weight: 600; }

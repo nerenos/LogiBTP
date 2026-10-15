@@ -85,6 +85,11 @@ export class PanneauxDocument {
         <label class="large">Objet <input data-champ="ent_objet" value="${echapper(d.ent_objet ?? '')}"></label>
         <label>Date <input type="date" data-champ="ent_date" value="${echapper(d.ent_date ?? '')}"></label>
         ${this.champTiers(d)}
+        <label>Notre référence <input data-champ="ent_notre_reference" maxlength="50" value="${echapper(d.ent_notre_reference ?? '')}"></label>
+        <label>Référence externe <input data-champ="ent_reference_externe" maxlength="100" title="Référence du client ou du fournisseur" value="${echapper(d.ent_reference_externe ?? '')}"></label>
+        <label title="Durée de validité ; la date de fin est calculée à la validation du document">Validité (jours)
+          <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
+        ${d.ent_date_validite ? `<label>Valable jusqu'au <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
         ${def.modeles?.length ? `<label title="Modèle de saisie : vue de colonnes proposée par défaut">Modèle <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
         <label>Décimales montants <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>

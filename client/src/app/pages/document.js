@@ -15,9 +15,12 @@ import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { completerRattachement } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
+import { afficherTracabilite } from '../documents/tracabilite.js';
+import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
-// local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>.
+// local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>,
+// /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert par la page d'import).
 
 const GABARIT = `
   <div class="document-barre">
@@ -26,6 +29,7 @@ const GABARIT = `
       <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
       <button role="tab" data-onglet-vue="analyse" title="Alt+3 : coefficients par nature ou par tranche">Analyse</button>
       <button role="tab" data-onglet-vue="pieces" title="Alt+4 : documents de la GED liés au document, pièces jointes à envoyer">Pièces</button>
+      <button role="tab" data-onglet-vue="tracabilite" title="Alt+5 : origine (import), documents liés, historique des versions">Traçabilité</button>
     </nav>
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
@@ -40,6 +44,7 @@ const GABARIT = `
       <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
   </div>
   <div class="document-verrou" hidden></div>
+  <div class="document-import" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
       <div id="entete" class="panneau entete"></div>
@@ -47,6 +52,7 @@ const GABARIT = `
     </section>
     <section id="vue-analyse" class="vue vue-analyse" role="tabpanel"></section>
     <section id="vue-pieces" class="vue vue-pieces" role="tabpanel"></section>
+    <section id="vue-tracabilite" class="vue vue-tracabilite" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
       <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -114,6 +120,7 @@ export class PageDocument extends PageBase {
         if (o === 'lignes') this.editeur?.grille.focus();
         if (o === 'analyse') this.analyse?.rendre();
         if (o === 'pieces') this.afficherPieces();
+        if (o === 'tracabilite') this.afficherTracabilite();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
@@ -133,7 +140,7 @@ export class PageDocument extends PageBase {
     });
     this.clavier = (e) => {
       // Alt+1 / Alt+2 : onglets Entête et Lignes.
-      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse', Digit4: 'pieces' }[e.code] : null;
+      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse', Digit4: 'pieces', Digit5: 'tracabilite' }[e.code] : null;
       if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
       // Ctrl+F : recherche dans les lignes (sans filtre), à la place de la recherche du navigateur.
       // Onglet Analyse : recherche dans la liste des éléments.
@@ -179,6 +186,8 @@ export class PageDocument extends PageBase {
     // Création depuis les listes : /document/nouveau?type=<code>.
     if (id === 'nouveau') {
       await this.nouveau(this.requete.type ?? 'V_DEVIS');
+    } else if (id === 'import') {
+      await ouvrirImport(this, this.requete.jeton);
     } else if (id === 'demo') {
       // Premier lancement : le devis de démonstration est créé dans la base.
       const docs = await api.documents();
@@ -191,6 +200,7 @@ export class PageDocument extends PageBase {
 
   async chargerDocument(id) {
     await this.liberer();
+    this.importEnCours = null;
     const complet = await api.document(id);
     const type = this.types.find((t) => t.tyd_id === complet.document.ent_tyd_id);
     const definition = await api.definition(type.tyd_code);
@@ -299,6 +309,11 @@ export class PageDocument extends PageBase {
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.surFiltre = () => this.afficherFiltre();
+    // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
+    this.editeur.surVue = () => {
+      rendreBandeauImport(this);
+      if (this.disposition.p.onglet === 'tracabilite') this.afficherTracabilite();
+    };
     this.afficherFiltre();
     // Vues de colonnes : vue mémorisée (navigateur) ou vue par défaut du type et du modèle du document.
     this.vues = new GestionVuesDocument(this.$('[data-vues]'), {
@@ -372,10 +387,13 @@ export class PageDocument extends PageBase {
     const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
     const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille && !this.bloque;
     this.$('[data-action="enregistrer"]').disabled = !enLigne || !modifiable;
-    this.$('[data-action="valider"]').disabled = !enLigne || !modifiable;
-    this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length);
+    this.$('[data-action="enregistrer"]').textContent = this.importEnCours ? 'Créer le devis' : 'Enregistrer';
+    this.$('[data-action="valider"]').disabled = !enLigne || !modifiable || Boolean(this.importEnCours);
+    this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
+    rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
+    if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
     this.app.majPage();
   }
 
@@ -414,6 +432,7 @@ export class PageDocument extends PageBase {
    */
   async enregistrer() {
     if (this.$('[data-action="enregistrer"]').disabled) return;
+    if (this.importEnCours) { await creerDepuisImport(this); return; }
     const ed = this.editeur;
     const r = ed.resultat;
     const envoi = { document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables, version_moteur_client: VERSION_MOTEUR };
@@ -492,10 +511,32 @@ export class PageDocument extends PageBase {
    * Onglet Pièces : documents de la GED liés au document (type du document, groupe des indices : les pièces suivent
    * les nouveaux indices), marquage des pièces jointes à envoyer (module Mail). Recréé quand le document change.
    */
+  /** Clé de l'onglet Traçabilité : document et version (rafraîchi après un enregistrement ou une validation). */
+  cleTracabilite() {
+    const d = this.editeur?.saisie.document;
+    return d ? `${d.ent_id}-${d.ent_version}-${this.importEnCours ? 'import' : ''}-${this.editeur.vue?.debogage ? 'dbg' : ''}` : null;
+  }
+
+  afficherTracabilite() {
+    const zone = this.$('#vue-tracabilite');
+    const d = this.editeur?.saisie.document;
+    if (!d) return;
+    this.tracabiliteCle = this.cleTracabilite();
+    if (this.importEnCours) { tracabiliteImport(this, zone); return; }
+    if (!this.app.enLigne || !d.ent_id) { zone.innerHTML = '<p class="aide">Traçabilité disponible pour les documents enregistrés.</p>'; return; }
+    afficherTracabilite(zone, {
+      entId: d.ent_id, ged: this.servicesGed, debogage: Boolean(this.editeur.vue?.debogage),
+      naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
+      // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
+      reimporter: (o) => this.app.naviguer(`/import/optimbtp?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
+    }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
+  }
+
   afficherPieces() {
     const zone = this.$('#vue-pieces');
     const d = this.editeur?.saisie.document;
     if (!d) return;
+    if (this.importEnCours) { zone.innerHTML = '<p class="aide">Le fichier importé sera conservé dans les pièces du devis à sa création.</p>'; return; }
     const cle = `${d.ent_tyd_id}-${d.ent_groupe_id ?? d.ent_id}`;
     if (this.ged && this.gedCle === cle) return;
     this.ged?.detruire?.();

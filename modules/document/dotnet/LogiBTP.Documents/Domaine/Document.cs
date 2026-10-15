@@ -14,6 +14,14 @@ public class Document
     public string? EntNumero { get; set; }
     public DateOnly EntDate { get; set; }
     public string? EntObjet { get; set; }
+    /// <summary>Notre référence (dossier interne, numéro dans le logiciel d'origine d'un import).</summary>
+    public string? EntNotreReference { get; set; }
+    /// <summary>Référence du client ou du fournisseur.</summary>
+    public string? EntReferenceExterne { get; set; }
+    /// <summary>Durée de validité en jours.</summary>
+    public short? EntValiditeJours { get; set; }
+    /// <summary>Fin de validité : date de validation + durée, calculée par le serveur à la validation.</summary>
+    public DateOnly? EntDateValidite { get; set; }
     public int EntStdId { get; set; }
     public long? EntTiersId { get; set; }
     public JsonDocument? EntAdresseFacturation { get; set; }
@@ -66,6 +74,21 @@ public class DocumentLien
     public long LieCibleEntId { get; set; }
     /// <summary>TRANSFORMATION ou COPIE.</summary>
     public string LieType { get; set; } = "TRANSFORMATION";
+}
+
+/// <summary>Origine d'un document importé (table document_origine) : traçabilité et réutilisation du fichier source.</summary>
+public class DocumentOrigine
+{
+    public long DorEntId { get; set; }
+    public string DorType { get; set; } = "IMPORT";
+    public string DorFormat { get; set; } = "";
+    /// <summary>Fichier source conservé (identifiant fourni par l'application : document de la GED).</summary>
+    public long? DorFichierId { get; set; }
+    public string? DorNomFichier { get; set; }
+    public string? DorReference { get; set; }
+    public JsonDocument? DorRapport { get; set; }
+    public DateTimeOffset DorDate { get; set; }
+    public string DorUtilisateur { get; set; } = "";
 }
 
 public class DocumentHistorique

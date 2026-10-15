@@ -35,6 +35,7 @@ public static class Extensions
         services.AddScoped<DocumentService<TDoc, TLigne, TComplet>>();
         services.AddScoped<TransformationService<TDoc, TLigne, TComplet>>();
         services.AddScoped<VerrouDocumentService<TDoc, TLigne, TComplet>>();
+        services.AddScoped<TracabiliteService<TDoc, TLigne, TComplet>>();
         services.AddScoped<AffichageDocumentService<TDoc, TLigne>>();
         return services;
     }
@@ -112,6 +113,13 @@ public static class Extensions
         api.MapGet("/documents/{id:long}/historique", async (long id, DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
             await db.Historiques.AsNoTracking().Where(h => h.HisEntId == id).OrderByDescending(h => h.HisId)
                 .Select(h => new { h.HisId, h.HisVersion, h.HisAction, h.HisDate, h.HisUtilisateur }).ToListAsync(ct));
+        // Traçabilité : origine d'un import, documents liés, historique.
+        api.MapGet("/documents/{id:long}/tracabilite", (long id, TracabiliteService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Lire(id, ct));
+        api.MapPut("/documents/{id:long}/origine", async (long id, OrigineDocumentDto o, HttpContext http, TracabiliteService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+        {
+            await s.EnregistrerOrigine(id, o, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         api.MapGet("/historique/{hisId:long}", async (long hisId, DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
             await db.Historiques.AsNoTracking().FirstOrDefaultAsync(h => h.HisId == hisId, ct) is { } h
                 ? Results.Ok(h) : Results.NotFound());

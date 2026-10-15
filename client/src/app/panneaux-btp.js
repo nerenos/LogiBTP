@@ -1,10 +1,26 @@
-import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, ListeDeroulante } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
+
+/** Individus actifs rattachés à notre société (annuaire) : rédacteurs proposés, [{ valeur (ind_id), libelle, detail }]. */
+export async function individusSociete(annuaire) {
+  const societe = await annuaire.societeBase().catch(() => null);
+  if (!societe) return [];
+  // Toutes les pages de rattachements (200 au plus par page).
+  const lignes = [];
+  for (let page = 1; page <= 50; page++) {
+    const r = await annuaire.pageRattachements('personne', societe.id, { page, taille: 200 }).catch(() => ({ lignes: [], total: 0 }));
+    lignes.push(...r.lignes);
+    if (!r.lignes.length || lignes.length >= (r.total ?? 0)) break;
+  }
+  const vus = new Set();
+  return lignes.filter((x) => x.actif !== false && !vus.has(x.ind_id) && vus.add(x.ind_id))
+    .map((x) => ({ valeur: x.ind_id, libelle: x.individu, detail: x.fonction ?? '' }));
+}
 
 /**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
@@ -78,11 +94,54 @@ export class PanneauxBtp extends PanneauxDocument {
 
   champsEntete(d) {
     const defaut = this.bibliotheques.find((b) => b.defaut);
-    return [`<label>Calcul des ouvrages
+    return [...(this.annuaire ? [`<label title="Rédacteur du document : salarié de notre société (annuaire) ; saisir pour filtrer">Rédacteur
+      <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : []),
+    `<label>Calcul des ouvrages
       <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}</select></label>`,
     `<label title="Bibliothèque des codes saisis sans préfixe ; les autres s'appellent par BIB:CODE">Bibliothèque
       <select data-champ="ent_bib_id" data-entier>${opt('', `Par défaut${defaut ? ` (${defaut.code})` : ''}`, d.ent_bib_id ?? '')}${this.bibliotheques.filter((b) => b.actif || b.id === d.ent_bib_id)
         .map((b) => opt(String(b.id), `${b.code} – ${b.libelle}`, d.ent_bib_id === null || d.ent_bib_id === undefined ? '' : String(d.ent_bib_id))).join('')}</select></label>`];
+  }
+
+  /** Individus de notre société (annuaire), proposés comme rédacteurs : [{ valeur, libelle, detail }]. */
+  async redacteurs() {
+    this.listeRedacteurs ??= individusSociete(this.annuaire);
+    return this.listeRedacteurs;
+  }
+
+  libelleRedacteur(id) {
+    if (id === null || id === undefined) return '';
+    return this.redacteursCharges?.find((r) => r.valeur === Number(id))?.libelle ?? `#${id}`;
+  }
+
+  /** Rédacteur : combo saisissable (la saisie filtre, le texte reconnu désigne l'individu). */
+  async lierRedacteur(zone) {
+    const champ = zone.querySelector('[data-redacteur]');
+    if (!champ) return;
+    const m = this.editeur.magasin;
+    this.redacteursCharges = await this.redacteurs();
+    const courant = this.editeur.saisie.document.ent_redacteur_id ?? null;
+    champ.value = this.libelleRedacteur(courant);
+    champ.disabled = !!m.lectureSeule;
+    let liste = null;
+    const valider = () => {
+      const v = liste?.resoudre();
+      liste?.detruire();
+      liste = null;
+      if (v === undefined) { champ.value = this.libelleRedacteur(this.editeur.saisie.document.ent_redacteur_id); return; }
+      const id = v === '' || v === null ? null : Number(v);
+      if (id !== (this.editeur.saisie.document.ent_redacteur_id ?? null)) m.modifier((b) => { b.document.ent_redacteur_id = id; }, 'Rédacteur');
+    };
+    champ.addEventListener('focus', () => {
+      liste = new ListeDeroulante(champ, [{ valeur: '', libelle: '—' }, ...this.redacteursCharges], { strict: true, courante: this.editeur.saisie.document.ent_redacteur_id ?? '' });
+      liste.surChoix = () => champ.blur();
+      champ.select();
+    });
+    champ.addEventListener('keydown', (e) => {
+      if (liste?.clavier(e)) e.preventDefault();
+      if (e.key === 'Enter') champ.blur();
+    });
+    champ.addEventListener('blur', valider);
   }
 
   variablesDocument() {
@@ -113,6 +172,7 @@ export class PanneauxBtp extends PanneauxDocument {
 
   lierEntete(zone) {
     const m = this.editeur.magasin;
+    this.lierRedacteur(zone).catch(() => {});
     const conteneur = zone.querySelector('[data-intervenants]');
     if (conteneur) {
       const d = this.editeur.saisie.document;

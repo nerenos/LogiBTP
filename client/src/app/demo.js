@@ -4,10 +4,9 @@ import { lignesLotsDemo, natureDemo, coderDemo } from './demo-lots.js';
 import { RATTACHEMENT_DEVIS_DEMO, INTERVENANTS_DEVIS_DEMO } from './structure/donnees.js';
 
 export const DEFINITION_DEMO = {
-  type: { tyd_id: 1, tyd_code: 'V_DEVIS', tyd_libelle: 'Devis client', tyd_famille: 'V' },
+  type: { tyd_id: 1, tyd_code: 'V_DEVIS', tyd_libelle: 'Devis client', tyd_famille: 'V', tyd_validite_jours: 30 },
   proprietes: [
     { prd_id: 1, prd_niveau: 'E', prd_code: 'chantier', prd_libelle: 'Chantier', prd_type_donnee: 'texte', prd_obligatoire: true, prd_groupe: 'Chantier', prd_ordre: 1 },
-    { prd_id: 2, prd_niveau: 'E', prd_code: 'duree_validite', prd_libelle: 'Durée de validité (jours)', prd_type_donnee: 'entier', prd_ordre: 2 },
   ],
   statuts: [{ std_id: 1, std_code: 'BROUILLON', std_libelle: 'Brouillon', std_modifiable: true }],
   etiquettes: ETIQUETTES_LIGNE,
@@ -64,7 +63,8 @@ export const DOCUMENT_DEMO = {
     ent_id: 0, ent_tyd_id: 1, ent_numero: 'DÉMO', ent_date: '2026-09-23', ent_objet: 'Extension maison individuelle',
     ent_std_id: 1, ent_tiers_id: 18, ent_mode_calcul_ouvrage: 'V', ent_modele: 'COMPLET', ent_precision_montant: 2, ent_version: 1, ent_bib_id: null,
     ent_num_format: { separateur: '.', niveaux: [{ style: 'A' }, { style: '1' }, { style: 'a' }] },
-    ent_proprietes: { chantier: 'Maison Martin – Lyon', duree_validite: 30 },
+    ent_validite_jours: 30, ent_notre_reference: 'MARTIN-2026', ent_reference_externe: 'Demande du 15/09/2026',
+    ent_proprietes: { chantier: 'Maison Martin – Lyon' },
     ...RATTACHEMENT_DEVIS_DEMO,
     ent_intervenants: INTERVENANTS_DEVIS_DEMO,
   },

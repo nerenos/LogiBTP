@@ -28,6 +28,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
     public DbSet<DocumentLigneLien> LignesLien => Set<DocumentLigneLien>();
     public DbSet<DocumentLigneSolde> LignesSolde => Set<DocumentLigneSolde>();
     public DbSet<DocumentHistorique> Historiques => Set<DocumentHistorique>();
+    public DbSet<DocumentOrigine> Origines => Set<DocumentOrigine>();
     public DbSet<CalculCasTest> CasTest => Set<CalculCasTest>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -63,6 +64,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         b.Entity<DocumentLigneLien>().ToTable("document_ligne_lien").HasKey(x => x.LilId);
         b.Entity<DocumentLigneSolde>().ToTable("document_ligne_solde").HasKey(x => x.LsoId);
         b.Entity<DocumentHistorique>().ToTable("document_historique").HasKey(x => x.HisId);
+        b.Entity<DocumentOrigine>(e => { e.ToTable("document_origine").HasKey(x => x.DorEntId); e.Property(x => x.DorEntId).ValueGeneratedNever(); });
         b.Entity<CalculCasTest>().ToTable("calcul_cas_test").HasKey(x => x.CasId);
         // Affichage de la saisie (013_document_affichage.sql).
         b.Entity<EtiquetteLigne>().ToTable("etiquette_ligne").HasKey(x => x.EtlCode);

@@ -43,6 +43,8 @@ export const api = {
   transformer: (id, demande) => appel('POST', `/documents/${id}/transformer`, demande),
   suivi: (id) => appel('GET', `/documents/${id}/suivi`),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
+  tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),
+  enregistrerOrigine: (id, origine) => appel('PUT', `/documents/${id}/origine`, origine),
   casTest: (arbitrage) => appel('POST', '/cas-test', arbitrage),
   // Verrou de modification d'un document (sans expiration ; déverrouillage manuel par un administrateur).
   verrouDocument: (id, jeton) => appel('GET', `/documents/${id}/verrou?jeton=${jeton}`),

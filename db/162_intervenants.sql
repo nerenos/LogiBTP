@@ -61,6 +61,8 @@ CREATE INDEX ix_intervenant_ind ON intervenant (itv_ind_id);
 -- Documents : [{ fonction, per_id, tiers, ind_id, contact, principal, paiement_direct, commentaire }]
 -- (tiers et contact : noms au moment de la saisie, pour l'affichage et l'impression).
 ALTER TABLE document ADD COLUMN ent_intervenants JSONB;
+-- Rédacteur du document : individu de l'annuaire (salarié de notre société).
+ALTER TABLE document ADD COLUMN ent_redacteur_id BIGINT REFERENCES individu(ind_id) ON DELETE SET NULL;
 
 -- Intervenants de tous les objets (structure et documents) avec leurs noms : où intervient un tiers ou un contact,
 -- destinataires d'un courriel.

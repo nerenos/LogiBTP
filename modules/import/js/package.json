@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/import",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Import LogiBTP : lecture dans le navigateur de documents d'autres logiciels (archive zip, XML, libellés RTF) et conversion en un devis neutre, avec la liste des champs non repris (OptimBTP)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

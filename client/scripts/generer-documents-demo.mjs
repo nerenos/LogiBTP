@@ -61,7 +61,7 @@ async function transformer(source, cible, { part = 1, nb = null, avancement = nu
 async function copieDevis(objet, tiers, ratt, date, chantier) {
   const c = id(await appel('POST', `/documents/${idDemo}/copie`));
   // Chantier de la structure (rattachement) : la propriété libre « chantier » du devis copié est retirée.
-  await entete(c, { ent_objet: objet, ent_tiers_id: tiers, ent_date: date, ent_proprietes: { chantier, duree_validite: 30 } });
+  await entete(c, { ent_objet: objet, ent_tiers_id: tiers, ent_date: date, ent_validite_jours: 30, ent_proprietes: { chantier } });
   if (ratt) await rattacher(c, { ent_projet_id: null, ent_affaire_id: null, ent_chantier_id: null, ent_marche_id: null, ...ratt });
   return c;
 }

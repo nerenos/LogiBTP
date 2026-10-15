@@ -9,6 +9,7 @@ import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
+import { PageImportOptim } from './import-optim.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -24,5 +25,6 @@ export const ROUTES = [
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
+  { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },
 ];

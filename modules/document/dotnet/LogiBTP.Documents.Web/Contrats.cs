@@ -51,6 +51,10 @@ public sealed class CreationDocument
     public int EntTydId { get; set; }
     public DateOnly? EntDate { get; set; }
     public string? EntObjet { get; set; }
+    public string? EntNotreReference { get; set; }
+    public string? EntReferenceExterne { get; set; }
+    /// <summary>Durée de validité ; à défaut, celle du type de document.</summary>
+    public short? EntValiditeJours { get; set; }
     public long? EntTiersId { get; set; }
     public JsonDocument? EntAdresseFacturation { get; set; }
     public JsonDocument? EntAdresseLivraison { get; set; }
