@@ -37,7 +37,10 @@
   décisions prises. **Lot 1 réalisé** (16/10/2026 : reste à solder, solde des lignes, seuils, Ddp → facture, liens
   recalculés et remontés à l'origine ; `015` et `168` appliqués aux deux bases). Restent : facture sur plusieurs
   documents (Q10, 13.4 bis, après les pieds de section), puis lots 3 à 7 (§ 10 ; **lot 2 réalisé** : options et
-  variantes, devis → facture par une commande intermédiaire, `016` et `169` appliqués aux deux bases) ; § 13.14 sans décision
+  variantes, devis → facture par une commande intermédiaire, `016` et `169` appliqués aux deux bases ; **lot 3 réalisé** :
+  marché obligatoire, base et avenants, montant calculé, `170` et définition de la fiche marché appliqués aux deux
+  bases ; reste de Q19 — refuser BL, situation et facture d'avancement directs d'une commande d'un marché — à faire avec
+  la création depuis le marché, lots 5 et 6) ; § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.

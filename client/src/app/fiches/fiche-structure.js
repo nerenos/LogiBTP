@@ -249,7 +249,7 @@ export class FicheMarche extends FicheStructure {
     const cha = (this.refs.chantiers ?? []).find((c) => c.id === parametre('chantier'));
     if (cha) Object.assign(v, { cha_id: cha.id, tiers_id: cha.tiers_id, code: codeMarche(cha, this.refs.marches ?? []) });
     const cde = (this.refs.commandes ?? []).find((c) => c.id === parametre('commande'));
-    if (cde) Object.assign(v, { ent_id: cde.id, libelle: cde.objet, montant_ht: cde.total_ht, tiers_id: v.tiers_id ?? cde.tiers_id });
+    if (cde) Object.assign(v, { ent_id: cde.id, libelle: cde.objet, tiers_id: v.tiers_id ?? cde.tiers_id });
     return v;
   }
 
@@ -276,6 +276,19 @@ export class FicheMarche extends FicheStructure {
 
   liens(v) {
     return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
+  }
+
+  /** Commandes du marché (db/170 : marche_document) : la commande de base puis les avenants, avec leur montant. */
+  rendreInformations(v) {
+    const commandes = (this.refs.marche_documents ?? []).filter((x) => x.mar_id === Number(this.id));
+    if (!commandes.length) return super.rendreInformations(v);
+    const ligne = (x) => `<a href="/document/${Number(x.ent_id)}">${echapper(x.numero ?? `Document ${x.ent_id}`)}</a> ${echapper(x.objet ?? '')}`
+      + ` <small>${formatNombre(x.total_ht ?? 0, 2)} € HT</small>`;
+    const base = commandes.filter((x) => x.role === 'BASE');
+    const avenants = commandes.filter((x) => x.role === 'AVENANT');
+    return super.rendreInformations(v)
+      + (base.length ? `<div class="fiche-info"><span>Commande</span> <b>${base.map(ligne).join(' · ')}</b></div>` : '')
+      + (avenants.length ? `<div class="fiche-info"><span>Avenants</span> <b>${avenants.map((x) => `n° ${x.rang} : ${ligne(x)}`).join(' · ')}</b></div>` : '');
   }
 }
 

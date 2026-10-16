@@ -239,3 +239,6 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 .table-raccourcis .actions { white-space: nowrap; }
 .table-raccourcis .actions button { padding: 0.05rem 0.45rem; }
 .table-raccourcis .capture { color: var(--accent); font-style: italic; }
+/* Fenêtre du marché d'une commande : combos à la largeur du dialogue. */
+dialog.dialogue-structure label.large > span { display: block; }
+dialog.dialogue-structure label.large input.combo { width: 100%; }

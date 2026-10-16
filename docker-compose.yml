@@ -53,6 +53,7 @@ services:
       - ./db/167_ventilation_frais.sql:/docker-entrypoint-initdb.d/167_ventilation_frais.sql:ro
       - ./db/168_transformations_achats.sql:/docker-entrypoint-initdb.d/168_transformations_achats.sql:ro
       - ./db/169_transformations_ventes.sql:/docker-entrypoint-initdb.d/169_transformations_ventes.sql:ro
+      - ./db/170_marches.sql:/docker-entrypoint-initdb.d/170_marches.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

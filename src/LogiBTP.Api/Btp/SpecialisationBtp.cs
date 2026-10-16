@@ -98,6 +98,26 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             erreurs.Add(new MessageCalcul(l.LigId, "NATURE_OBLIGATOIRE", "Nature obligatoire sur une ligne de prix"));
     }
 
+    /// <summary>
+    /// Commande client : un marché est obligatoire pour la valider (créé ou choisi par l'utilisateur), sauf la commande
+    /// intermédiaire d'un devis facturé directement (CONCEPTION-ACHATS-MARCHES.md, Q16 et 13.1).
+    /// </summary>
+    public override Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        if (type.TydCode == "V_COMMANDE" && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
+        {
+            erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Commande client validée : inscrite à son marché (base ou avenant), montant du marché recalculé (db/170).</summary>
+    public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
+    {
+        if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
+    }
+
     public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie)
     {
         cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;

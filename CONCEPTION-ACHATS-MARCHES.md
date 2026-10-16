@@ -1010,3 +1010,22 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Vérifié sur la base de démo : refus sans choix, option retenue reprise en vendu, non retenues absentes, devis
   Accepté, devis → facture (commande intermédiaire validée, facture en brouillon). Non vérifié en base : variante
   (aucune dans les données de démonstration ; règle couverte par le jeu partagé).
+
+### Lot 3 – marché, commande de base et avenants (16/10/2026)
+
+- Q16, 13.2 : valider une commande client exige un marché (`MARCHE_OBLIGATOIRE`, `SpecialisationBtp.ControlerValidationAsync`,
+  nouveau point d'accroche du module Document), sauf la commande intermédiaire d'un devis facturé directement (13.1).
+  Avant la validation, la page document ouvre la fenêtre du marché (`structure/marche-commande.js`) : chantier de la
+  commande ou de son projet, ou nouveau chantier pré-rempli (code, libellé, ville du projet, affaire, client) que
+  l'utilisateur complète ; puis nouveau marché (la commande en est la base) ou avenant d'un marché en cours du chantier.
+  Plus de bouton « Plus tard » : Annuler abandonne la validation.
+- Q17 : `marche_document` (`db/170_marches.sql`) tenu par `f_marche_commande` à la validation (`ApresValidationAsync`)
+  et au rattachement d'une commande validée ; base au rang 0, avenants 1, 2… ; `mar_montant_ht` calculé
+  (`f_marche_recalculer` : commandes validées, avenants en moins-value compris), en lecture seule dans la fiche ; la fiche
+  marché liste la commande et les avenants ; liste des marchés : nombre d'avenants.
+- Q19 : transformations `V_DEVIS → V_SITUATION | V_FACTURE_AVT` supprimées. Le refus des BL, situations et factures
+  d'avancement directs d'une commande d'un marché viendra avec leur création depuis le marché (lots 5 et 6), pour ne pas
+  les bloquer avant. Q18 (commandes prises en compte, ajout d'un avenant à une situation en cours) : lots 5 et 6.
+- Vérifié sur la base de démo : validation refusée sans marché ; commande validée avec un nouveau chantier et un nouveau
+  marché (base) ; seconde commande validée comme avenant (rang 1) ; montant du marché = somme des deux commandes ;
+  fiche marché (commande, avenant, montant).

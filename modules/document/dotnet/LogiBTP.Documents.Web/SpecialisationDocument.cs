@@ -43,6 +43,17 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// <summary>Résultat calculé à la validation, avant son enregistrement (compléments figés…).</summary>
     public virtual void PreparerValidation(ResultatDocument<TDoc, TLigne> r) { }
 
+    /// <summary>
+    /// Contrôles de validation qui lisent la base (rattachements, documents liés…), après ceux de la saisie ; le type
+    /// donne le code du document (commande, facture…).
+    /// </summary>
+    public virtual Task ControlerValidationAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type, List<MessageCalcul> erreurs, CancellationToken ct) =>
+        Task.CompletedTask;
+
+    /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
+    public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
+        Task.CompletedTask;
+
     // ------------------------------------------------------------------ persistance des compléments
 
     /// <summary>Chargement des compléments du document (métrés, variables…).</summary>

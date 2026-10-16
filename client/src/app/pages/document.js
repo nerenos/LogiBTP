@@ -594,6 +594,9 @@ export class PageDocument extends PageBase {
   async valider() {
     const ed = this.editeur;
     if (this.modifiee && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
+    // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
+    const d = ed.saisie.document;
+    if (ed.definition.type?.tyd_code === 'V_COMMANDE' && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
     if (orphelines.length && !confirm(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
@@ -603,7 +606,6 @@ export class PageDocument extends PageBase {
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
-    if (this.editeur.definition.type?.tyd_code === 'V_COMMANDE' && !this.editeur.saisie.document.ent_marche_id) await this.proposerMarche();
   }
 
   /**
@@ -620,23 +622,28 @@ export class PageDocument extends PageBase {
     }
   }
 
-  /** Commande client validée sans marché : création du marché sur un chantier, ou rattachement à un marché existant. */
-  async proposerMarche() {
-    if (!this.servicesStructure || !this.servicesFiche) return;
+  /**
+   * Commande client à valider sans marché : chantier (existant ou nouveau, pré-rempli) puis création du marché, ou
+   * rattachement comme avenant d'un marché en cours. Renvoie vrai si la commande est rattachée (validation à suivre).
+   */
+  async choisirMarche() {
+    if (!this.servicesStructure || !this.servicesFiche) { this.app.message('Marché obligatoire : structure des affaires indisponible', 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();
     const doc = this.editeur.saisie.document;
     const r = await proposerMarche({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
+      creerChantier: async (valeurs) => this.servicesFiche.creer('chantier', { valeurs, proprietes: {} }),
       // Le marché reprend les intervenants du chantier.
       creerMarche: async (valeurs) => this.servicesFiche.creer('marche', {
         valeurs: { ...valeurs, intervenants: await this.servicesStructure.intervenants('chantier', valeurs.cha_id).catch(() => []) }, proprietes: {},
       }),
     });
-    if (!r) return;
+    if (!r) return false;
     this.structure = await this.servicesStructure.referentiels();
     this.panneaux.structure = this.structure;
     await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
-    if (r.cree) this.app.message('Marché créé et commande rattachée', 'succes');
+    this.app.message(r.cree ? 'Marché créé et commande rattachée' : 'Commande rattachée comme avenant du marché', 'succes');
+    return true;
   }
 
   async transformer() {

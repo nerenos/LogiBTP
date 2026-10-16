@@ -451,7 +451,7 @@ export const TYPES_FICHE = {
         c('tiers_id', 'Client', 'mar_tiers_id', 'nombre', { reference: 'tiers' }),
         c('ent_id', 'Commande client', 'mar_ent_id', 'nombre', { reference: 'commande', aide: 'Commande dont la validation a ouvert le marché' }),
         c('nature', 'Nature', 'mar_nature', 'liste', { obligatoire: true, defaut: 'P', options: options(['P', 'Marché privé'], ['U', 'Marché public']) }),
-        c('montant_ht', 'Montant HT', 'mar_montant_ht', 'nombre', { format: '999999999999.99', aide: 'Commande et avenants' }),
+        c('montant_ht', 'Montant HT', 'mar_montant_ht', 'nombre', { format: '999999999999.99', lecture_seule: true, aide: 'Calculé : total des commandes validées du marché (commande de base et avenants)' }),
         c('retenue_pct', 'Retenue de garantie (%)', 'mar_retenue_pct', 'nombre', { format: '999.99' }),
         c('date', 'Date', 'mar_date', 'date', { obligatoire: true }),
         c('statut', 'Statut', 'mar_statut', 'liste', { obligatoire: true, defaut: 'EN_COURS', options: options(['EN_COURS', 'En cours'], ['SOLDE', 'Soldé'], ['RESILIE', 'Résilié']) }),

@@ -96,6 +96,7 @@ export class FournisseurStructureMemoire {
       chantiers: this.chantiers.map((c) => p(c, 'aff_id', 'prj_id', 'tiers_id', 'ville')),
       marches: this.marches.map((m) => p(m, 'cha_id', 'ent_id', 'tiers_id', 'montant_ht')),
       commandes: [],
+      marche_documents: [],
       fonctions: this.fonctions,
     };
   }

@@ -299,6 +299,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         handler.Controler(ctx, controles);
         handler.AvantValidation(ctx, controles);
         specialisation.ControlerValidation(entree, controles);
+        await specialisation.ControlerValidationAsync(db, avant, type, controles, ct);
         var r = handler.Calculer(entree);
         controles.AddRange(r.Erreurs);
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours.
@@ -317,6 +318,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
         if (await EcrireSoldes(id, type, u, ct)) reponse.Document = await persistance.Charger(id, ct);
+        await specialisation.ApresValidationAsync(db, id, type, ct);
         return reponse;
     }
 
