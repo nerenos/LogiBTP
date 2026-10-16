@@ -56,6 +56,12 @@ export const api = {
   piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
   annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),
   seuilsSolde: () => appel('GET', '/parametres-documents/seuils-solde'),
+  // Conditions de paiement (écriture : administrateur), conditions par défaut (ventes, achats), échéancier d'une pièce.
+  conditionsPaiement: () => appel('GET', '/conditions-paiement'),
+  enregistrerConditionsPaiement: (liste) => appel('PUT', '/conditions-paiement', liste),
+  conditionsDefaut: () => appel('GET', '/parametres-documents/conditions-paiement'),
+  enregistrerConditionsDefaut: (v) => appel('PUT', '/parametres-documents/conditions-paiement', v),
+  modifierEcheances: (id, liste) => appel('PUT', `/documents/${id}/echeances`, liste),
   enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),

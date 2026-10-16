@@ -14,6 +14,10 @@ public class DocumentComplet<TDoc, TLigne>
     public TDoc Document { get; set; } = new();
     public List<TLigne> Lignes { get; set; } = [];
     public List<DocumentTva> Tva { get; set; } = [];
+    /// <summary>Échéancier enregistré à la validation (modifié par PUT /documents/{id}/echeances).</summary>
+    public List<DocumentEcheance> Echeances { get; set; } = [];
+    /// <summary>Condition et mode de règlement du tiers (spécialisation), proposés quand le document n'en a pas.</summary>
+    public ReglementTiers? ReglementTiers { get; set; }
     /// <summary>Version du moteur client, transmise à l'enregistrement.</summary>
     public string? VersionMoteurClient { get; set; }
 }
@@ -175,4 +179,23 @@ public sealed class DefinitionType
     public List<EtiquetteDto> Etiquettes { get; set; } = [];
     public List<CouleurTypePrixDto> CouleursTypePrix { get; set; } = [];
     public List<ModeleDto> Modeles { get; set; } = [];
+    /// <summary>Conditions de paiement actives et condition par défaut de la famille du type (ventes ou achats).</summary>
+    public List<ConditionPaiementDto> ConditionsPaiement { get; set; } = [];
+    public string? ConditionDefaut { get; set; }
 }
+
+/// <summary>Condition et mode de règlement d'un tiers.</summary>
+public sealed record ReglementTiers(string? Condition, string? Mode);
+
+/// <summary>Condition de paiement : lignes de l'échéancier (règle Echeances).</summary>
+public sealed record ConditionPaiementDto(string Code, string Libelle, List<LigneCondition> Lignes, short Ordre, bool Actif);
+
+/// <summary>Conditions de paiement par défaut : ventes et achats.</summary>
+public sealed class ConditionsDefaut
+{
+    public string? Vente { get; set; }
+    public string? Achat { get; set; }
+}
+
+/// <summary>Échéance saisie (modification manuelle de l'échéancier d'une pièce validée).</summary>
+public sealed record EcheanceSaisie(DateOnly? Date, decimal Montant, string? Mode, string Nature);

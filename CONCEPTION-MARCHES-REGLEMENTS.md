@@ -402,3 +402,24 @@ Développement lancé le 17/10/2026 : pour les questions sans décision, la prop
   pas de saisie d'avancement dans l'onglet.
 - Vérifié sur la base de démo (marché M-2026-005-1).
 
+### Lot 2 – conditions de paiement et échéancier (module Document)
+
+- `modules/document/db/019b_document_echeances.sql` : `condition_paiement` (lignes { pct, delai, base NET / FIN_MOIS / JOUR,
+  jour, mode }, mêmes codes que le délai de paiement des tiers), conditions par défaut ventes / achats
+  (`parametre_document.conditions_paiement`), `ent_cpa_code`, `ent_mode_reglement`, `lig_pied_retenue` (poste de pied
+  retenue de garantie), `document_echeance` (rang, date, montant, mode, nature NORMALE / RETENUE, manuel).
+- Règle répliquée `calculerEcheances` (`echeances.js`) ↔ `Echeances.Calculer` (jeu `tests/echeances/01_echeances.json`) :
+  pourcentages du net à payer arrondis, reste sur la dernière ; FIN_MOIS = date + délai puis fin de mois ; JOUR = prochain
+  jour fixe (dernier du mois s'il est plus court) ; sans ligne : comptant ; retenue : échéance RETENUE sans date.
+- Validation d'une pièce à numérotation continue (factures, avoirs) : condition et mode figés (document, sinon tiers par
+  `SpecialisationDocument.ReglementTiersAsync` — cœur : `per_delai_paiement`, `per_mode_reglement` —, sinon défaut), puis
+  échéancier écrit (`EcheancierDocument`). Le document complet porte `echeances` et `reglement_tiers`.
+- Routes : `GET|PUT /conditions-paiement`, `GET|PUT /parametres-documents/conditions-paiement`,
+  `PUT /documents/{id}/echeances` (découpage manuel, totaux par nature inchangés, droit MODIFIER).
+- Client : section Règlement de l'entête (combos condition et mode, aperçu de l'échéancier ou échéancier enregistré),
+  case « Retenue de garantie » des postes de pied TTC, conditions et défauts dans `/parametres/documents` (échéances
+  écrites « 30% 0j; 70% 30j FM »).
+- Reportés : écran de modification manuelle de l'échéancier et date de libération des retenues (lot 5, Règlements) ;
+  liste du délai de paiement des tiers toujours fixe (les codes ajoutés aux conditions n'y apparaissent pas).
+- Vérifié sur la base de démo (facture FA2026-00002 : 30 jours par défaut, mode du tiers ; découpage manuel).
+

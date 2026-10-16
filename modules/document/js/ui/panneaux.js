@@ -1,5 +1,5 @@
-import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied, estTranche } from '../src/index.js';
+import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
 const lireEtiquettes = (v) => {
@@ -111,10 +111,12 @@ export class PanneauxDocument {
         }).join('')}
       </div>
       ${this.sectionEtiquettes(d)}
+      ${this.sectionReglement()}
       ${this.sectionsEntete()}`;
 
     const m = editeur.magasin;
     this.lierEtiquettes(zone);
+    this.lierReglement(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, 'Entête'));
     const majFormat = () => {
       const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
@@ -129,6 +131,88 @@ export class PanneauxDocument {
       m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, 'Propriété');
     }));
     this.lierEntete(zone);
+  }
+
+  // ------------------------------------------------------------------ règlement et échéancier
+
+  /** Section Règlement de l'entête : condition de paiement, mode de règlement et échéancier (aperçu ou enregistré). */
+  sectionReglement() {
+    if (!this.editeur.definition.conditions_paiement?.length) return '';
+    return `<fieldset class="reglement-document"><legend>Règlement</legend>
+      <div class="formulaire">
+        <label title="Vide : condition du tiers, sinon la condition par défaut (figée à la validation)">Condition de paiement <span data-condition-paiement></span></label>
+        <label title="Vide : mode de règlement du tiers">Mode de règlement <span data-mode-reglement></span></label>
+      </div>
+      <div data-echeancier></div></fieldset>`;
+  }
+
+  /**
+   * Condition et mode effectifs : ceux du document, sinon du tiers (reglement_tiers, chargé avec le document), sinon
+   * la condition par défaut du type (ventes ou achats). { condition, origine, mode }.
+   */
+  reglementEffectif() {
+    const s = this.editeur.saisie;
+    const d = s.document;
+    const conditions = this.editeur.definition.conditions_paiement ?? [];
+    const tiers = s.reglement_tiers ?? null;
+    const connue = (c) => conditions.find((x) => x.code === c);
+    let condition = connue(d.ent_cpa_code);
+    let origine = 'document';
+    if (!condition && tiers?.condition && connue(tiers.condition)) { condition = connue(tiers.condition); origine = 'tiers'; }
+    if (!condition) { condition = connue(this.editeur.definition.condition_defaut); origine = 'défaut'; }
+    return { condition: condition ?? null, origine, mode: d.ent_mode_reglement ?? tiers?.mode ?? null };
+  }
+
+  lierReglement(zone) {
+    const place = zone.querySelector('[data-condition-paiement]');
+    if (!place) return;
+    const m = this.editeur.magasin;
+    const d = this.editeur.saisie.document;
+    const combo = (options, valeur, champ, titre) => {
+      const c = creerCombo({ options, valeur: valeur ?? '' });
+      c.readOnly = !!m.lectureSeule;
+      c.title = titre;
+      c.addEventListener('change', () => {
+        m.modifier((b) => { b.document[champ] = c.valeurCombo || null; }, 'Règlement');
+        this.rendreEcheancier(zone.querySelector('[data-echeancier]'));
+      });
+      return c;
+    };
+    place.replaceWith(combo(this.editeur.definition.conditions_paiement.map((x) => ({ valeur: x.code, libelle: x.libelle, detail: x.code })),
+      d.ent_cpa_code, 'ent_cpa_code', place.parentElement.title));
+    const mode = zone.querySelector('[data-mode-reglement]');
+    mode.replaceWith(combo(MODES_REGLEMENT.map(([valeur, libelle]) => ({ valeur, libelle })), d.ent_mode_reglement, 'ent_mode_reglement', mode.parentElement.title));
+    this.rendreEcheancier(zone.querySelector('[data-echeancier]'));
+  }
+
+  /**
+   * Échéancier : enregistré à la validation d'une pièce (factures, avoirs), sinon aperçu calculé sur le net à payer
+   * (calculerEcheances, règle répliquée dans Echeances.cs) ; retenue de garantie (postes lig_pied_retenue) à part.
+   */
+  rendreEcheancier(div) {
+    if (!div) return;
+    const s = this.editeur.saisie;
+    const r = this.editeur.resultat;
+    const { condition, origine, mode } = this.reglementEffectif();
+    const libelleMode = (v) => MODES_REGLEMENT.find(([c]) => c === v)?.[1] ?? v ?? '';
+    let lignes;
+    let titre;
+    if (s.echeances?.length) {
+      lignes = s.echeances.map((e) => ({ rang: e.ech_rang, date: e.ech_date, montant: e.ech_montant, mode: e.ech_mode, nature: e.ech_nature, manuel: e.ech_manuel }));
+      titre = `Échéancier enregistré${s.document.ent_cpa_code ? ` (${echapper(condition?.libelle ?? s.document.ent_cpa_code)})` : ''}`;
+    } else {
+      if (!r?.document || !s.document.ent_date) { div.innerHTML = ''; return; }
+      lignes = calculerEcheances({
+        date: s.document.ent_date, montant: r.document.ent_net_a_payer ?? 0, lignes: condition?.lignes ?? [],
+        retenue: montantRetenue(r.lignes), mode, precision: s.document.ent_precision_montant ?? 2,
+      });
+      titre = `Aperçu${condition ? ` : ${echapper(condition.libelle)} (${origine})` : ' : comptant'}`;
+    }
+    div.innerHTML = `<p class="aide">${titre}</p>
+      <table class="echeancier"><thead><tr><th>N°</th><th>Échéance</th><th class="nombre">Montant</th><th>Mode</th></tr></thead>
+      <tbody>${lignes.map((e) => `<tr${e.nature === 'RETENUE' ? ' class="retenue"' : ''}><td>${e.rang}</td>
+        <td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · libérée le ${echapper(e.date)}` : ' (à la libération)'}` : echapper(e.date ?? '')}${e.manuel ? ' ✎' : ''}</td>
+        <td class="nombre">${formatNombre(e.montant, s.document.ent_precision_montant ?? 2)}</td><td>${echapper(libelleMode(e.mode))}</td></tr>`).join('')}</tbody></table>`;
   }
 
   /**
@@ -226,6 +310,7 @@ export class PanneauxDocument {
       champs.push(f.sel('lig_pied_sens', 'Sens', [[1, 'Ajout'], [-1, 'Déduction']], true));
       champs.push(f.txt('lig_pied_valeur', 'Valeur', true));
       champs.push(f.sel('lig_type_prix', 'Traitement', [['V', 'Dans le net à payer'], ['M', 'Pour mémoire']]));
+      if (l.lig_tyl_id === TL.PIED_TTC) champs.push(f.coche('lig_pied_retenue', 'Retenue de garantie (échéance à part)'));
     }
     if (!estPied(l)) {
       champs.push(l.lig_type_prix === 'F'

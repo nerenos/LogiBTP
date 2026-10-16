@@ -53,6 +53,10 @@ public class Document
     public string? EntEtatCompta { get; set; }
     /// <summary>Numéro de situation (par marché ; modifiable pour une reprise d'un autre logiciel).</summary>
     public int? EntRangAvancement { get; set; }
+    /// <summary>Condition de paiement (condition_paiement) ; vide : celle du tiers, sinon la condition par défaut (figée à la validation).</summary>
+    public string? EntCpaCode { get; set; }
+    /// <summary>Mode de règlement ; vide : celui du tiers.</summary>
+    public string? EntModeReglement { get; set; }
     /// <summary>Version d'enregistrement, verrouillage optimiste.</summary>
     public int EntVersion { get; set; } = 1;
     public DateTimeOffset EntCreeLe { get; set; }

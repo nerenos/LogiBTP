@@ -1,0 +1,24 @@
+{
+  "description": "Échéancier d'une pièce (echeances.js ↔ Echeances.cs) : bases NET, FIN_MOIS, JOUR ; pourcentages arrondis, reste sur la dernière ; comptant sans ligne ; retenue de garantie sans date ; montant négatif d'un avoir.",
+  "cas": [
+    { "nom": "sans condition : comptant", "date": "2026-03-15", "montant": "1200", "lignes": [], "retenue": "0", "mode": "VIREMENT",
+      "attendu": [ { "rang": 1, "date": "2026-03-15", "montant": "1200", "mode": "VIREMENT", "nature": "NORMALE" } ] },
+    { "nom": "30 jours net", "date": "2026-01-31", "montant": "1000", "lignes": [ { "pct": 100, "delai": 30, "base": "NET" } ], "retenue": "0", "mode": null,
+      "attendu": [ { "rang": 1, "date": "2026-03-02", "montant": "1000", "mode": null, "nature": "NORMALE" } ] },
+    { "nom": "45 jours fin de mois", "date": "2026-01-20", "montant": "500", "lignes": [ { "pct": 100, "delai": 45, "base": "FIN_MOIS", "mode": "LCR" } ], "retenue": "0", "mode": "VIREMENT",
+      "attendu": [ { "rang": 1, "date": "2026-03-31", "montant": "500", "mode": "LCR", "nature": "NORMALE" } ] },
+    { "nom": "30 % comptant, 70 % à 30 jours : reste sur la dernière", "date": "2026-05-10", "montant": "100.01",
+      "lignes": [ { "pct": 30, "delai": 0, "base": "NET" }, { "pct": 70, "delai": 30, "base": "NET" } ], "retenue": "0", "mode": null,
+      "attendu": [ { "rang": 1, "date": "2026-05-10", "montant": "30", "mode": null, "nature": "NORMALE" },
+                   { "rang": 2, "date": "2026-06-09", "montant": "70.01", "mode": null, "nature": "NORMALE" } ] },
+    { "nom": "jour fixe le 10 après 30 jours", "date": "2026-02-25", "montant": "300", "lignes": [ { "pct": 100, "delai": 30, "base": "JOUR", "jour": 10 } ], "retenue": "0", "mode": null,
+      "attendu": [ { "rang": 1, "date": "2026-04-10", "montant": "300", "mode": null, "nature": "NORMALE" } ] },
+    { "nom": "jour fixe le 31 en février : dernier jour du mois", "date": "2026-02-01", "montant": "300", "lignes": [ { "pct": 100, "delai": 0, "base": "JOUR", "jour": 31 } ], "retenue": "0", "mode": null,
+      "attendu": [ { "rang": 1, "date": "2026-02-28", "montant": "300", "mode": null, "nature": "NORMALE" } ] },
+    { "nom": "avoir : montant négatif", "date": "2026-06-30", "montant": "-250.5", "lignes": [ { "pct": 100, "delai": 30, "base": "FIN_MOIS" } ], "retenue": "0", "mode": null,
+      "attendu": [ { "rang": 1, "date": "2026-07-31", "montant": "-250.5", "mode": null, "nature": "NORMALE" } ] },
+    { "nom": "retenue de garantie : échéance sans date", "date": "2026-09-15", "montant": "9500", "lignes": [ { "pct": 100, "delai": 30, "base": "NET" } ], "retenue": "500", "mode": "VIREMENT",
+      "attendu": [ { "rang": 1, "date": "2026-10-15", "montant": "9500", "mode": "VIREMENT", "nature": "NORMALE" },
+                   { "rang": 2, "date": null, "montant": "500", "mode": "VIREMENT", "nature": "RETENUE" } ] }
+  ]
+}

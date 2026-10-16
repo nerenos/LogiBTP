@@ -4,4 +4,5 @@ export { numeroter, lireFormat, formaterRang, lireDepart } from './numerotation.
 export { comparerResultats, CHAMPS_DOCUMENT, CHAMPS_LIGNE } from './comparaison.js';
 export { etatSolde } from './soldes.js';
 export { unitesOptionnelles } from './options.js';
+export { calculerEcheances, dateEcheance, montantRetenue, MODES_REGLEMENT } from './echeances.js';
 export * from './types.js';

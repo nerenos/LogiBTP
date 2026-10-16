@@ -22,6 +22,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 {
     protected DocumentDbContext<TDoc, TLigne> Db => db;
     protected SpecialisationDocument<TDoc, TLigne, TComplet> Specialisation => specialisation;
+    /// <summary>Conditions de paiement et échéancier des pièces.</summary>
+    public EcheancierDocument<TDoc, TLigne, TComplet> Echeancier => field ??= new(db, specialisation);
 
     // ------------------------------------------------------------------ paramétrage
 
@@ -43,6 +45,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
                 .Select(e => new EtiquetteDto(e.EtlCode, e.EtlLibelle, e.EtlCouleur, e.EtlOrdre, e.EtlActif)).ToList(),
             CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
             Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
+            ConditionsPaiement = await Echeancier.Conditions(false, ct),
+            ConditionDefaut = await Echeancier.Defaut(type.TydFamille, ct),
         };
     }
 
@@ -207,6 +211,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntModele = d.Document.EntModele;
         e.EntEtiquettes = d.Document.EntEtiquettes ?? e.EntEtiquettes;
         e.EntRangAvancement = d.Document.EntRangAvancement;
+        e.EntCpaCode = string.IsNullOrEmpty(d.Document.EntCpaCode) ? null : d.Document.EntCpaCode;
+        e.EntModeReglement = string.IsNullOrEmpty(d.Document.EntModeReglement) ? null : d.Document.EntModeReglement;
         specialisation.CopierEnteteSaisie(e, d.Document);
         foreach (var l in d.Lignes)
         {
@@ -334,8 +340,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         r.Document.EntVerrouille = true;
         // Fin de validité : à partir du jour de la validation.
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
+        // Pièce comptable : condition et mode de règlement figés (document, tiers ou défaut), échéancier après l'écriture.
+        if (type.TydNumerotationContinue) await Echeancier.Figer(r.Document, type, ct);
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
+        if (type.TydNumerotationContinue) await Echeancier.Ecrire(id, ct);
         await EcrireSoldes(id, type, u, ct);
         await specialisation.ApresValidationAsync(db, id, type, ct);
         // Relu après les soldes et le point d'accroche (lignes soldées, numéro de situation…).
@@ -483,6 +492,14 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
         await db.SaveChangesAsync(ct);
         return marquee;
+    }
+
+    /// <summary>Échéancier d'une pièce validée modifié à la main (droit MODIFIER du type).</summary>
+    public async Task<List<DocumentEcheance>> ModifierEcheances(long id, List<EcheanceSaisie> saisie, Utilisateur u, CancellationToken ct)
+    {
+        var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
+        await VerifierDroit(u, doc.EntTydId, "MODIFIER", ct);
+        return await Echeancier.Modifier(id, saisie, ct);
     }
 
     public async Task Supprimer(long id, Utilisateur u, CancellationToken ct)

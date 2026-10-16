@@ -145,6 +145,15 @@ public static class Extensions
         api.MapGet("/parametres-documents/seuils-solde", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LireSeuilsSolde(ct));
         api.MapPut("/parametres-documents/seuils-solde", (SeuilsSolde v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.EnregistrerSeuilsSolde(v, Utilisateur.Depuis(http), ct));
+        // Conditions de paiement (écriture : administrateur) et échéancier des pièces.
+        api.MapGet("/conditions-paiement", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Echeancier.Conditions(true, ct));
+        api.MapPut("/conditions-paiement", (List<ConditionPaiementDto> v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Echeancier.EnregistrerConditions(v, Utilisateur.Depuis(http), ct));
+        api.MapGet("/parametres-documents/conditions-paiement", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Echeancier.Defauts(ct));
+        api.MapPut("/parametres-documents/conditions-paiement", (ConditionsDefaut v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Echeancier.EnregistrerDefauts(v, Utilisateur.Depuis(http), ct));
+        api.MapPut("/documents/{id:long}/echeances", (long id, List<EcheanceSaisie> v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.ModifierEcheances(id, v, Utilisateur.Depuis(http), ct));
         api.MapGet("/documents/{id:long}/lot-archivage", (long id, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LotArchivage(id, ct));
 
         // Calcul serveur sans enregistrement et arbitrage des écarts

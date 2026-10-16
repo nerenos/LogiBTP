@@ -257,3 +257,9 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .tableau-gestion tfoot th { border-top: 2px solid var(--bord); }
 .tableau-gestion tr.annulee td { color: var(--discret); text-decoration: line-through; }
 
+
+/* Règlement de l'entête des documents : échéancier (aperçu ou enregistré). */
+.echeancier { border-collapse: collapse; margin-top: 4px; }
+.echeancier th, .echeancier td { padding: 2px 8px; border-bottom: 1px solid var(--bord); text-align: left; }
+.echeancier .nombre { text-align: right; white-space: nowrap; }
+.echeancier tr.retenue td { font-style: italic; }

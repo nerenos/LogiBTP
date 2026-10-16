@@ -28,6 +28,8 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
     public DbSet<DocumentLigneLien> LignesLien => Set<DocumentLigneLien>();
     public DbSet<DocumentLigneSolde> LignesSolde => Set<DocumentLigneSolde>();
     public DbSet<ParametreDocument> ParametresDocument => Set<ParametreDocument>();
+    public DbSet<ConditionPaiement> ConditionsPaiement => Set<ConditionPaiement>();
+    public DbSet<DocumentEcheance> Echeances => Set<DocumentEcheance>();
     public DbSet<DocumentHistorique> Historiques => Set<DocumentHistorique>();
     public DbSet<DocumentOrigine> Origines => Set<DocumentOrigine>();
     public DbSet<CalculCasTest> CasTest => Set<CalculCasTest>();
@@ -65,6 +67,9 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         b.Entity<DocumentLigneLien>().ToTable("document_ligne_lien").HasKey(x => x.LilId);
         b.Entity<DocumentLigneSolde>().ToTable("document_ligne_solde").HasKey(x => x.LsoId);
         b.Entity<ParametreDocument>(e => { e.ToTable("parametre_document").HasKey(x => x.PdoCle); e.Property(x => x.PdoValeur).HasColumnType("jsonb"); });
+        // Conditions de paiement et échéancier (019b_document_echeances.sql).
+        b.Entity<ConditionPaiement>(e => { e.ToTable("condition_paiement").HasKey(x => x.CpaCode); e.Property(x => x.CpaLignes).HasColumnType("jsonb"); });
+        b.Entity<DocumentEcheance>().ToTable("document_echeance").HasKey(x => x.EchId);
         b.Entity<DocumentHistorique>().ToTable("document_historique").HasKey(x => x.HisId);
         b.Entity<DocumentOrigine>(e => { e.ToTable("document_origine").HasKey(x => x.DorEntId); e.Property(x => x.DorEntId).ValueGeneratedNever(); });
         b.Entity<CalculCasTest>().ToTable("calcul_cas_test").HasKey(x => x.CasId);

@@ -147,6 +147,18 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             """, ct);
     }
 
+    /// <summary>Délai de paiement (mêmes codes que les conditions de paiement) et mode de règlement du tiers (annuaire).</summary>
+    public override async Task<ReglementTiers?> ReglementTiersAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentBtp document, CancellationToken ct)
+    {
+        if (document.EntTiersId is not long tiers) return null;
+        var v = await db.Database.SqlQuery<string>($"""
+            SELECT coalesce(per_delai_paiement, '') || '|' || coalesce(per_mode_reglement, '') AS "Value" FROM personne WHERE per_id = {tiers}
+            """).FirstOrDefaultAsync(ct);
+        if (v is null) return null;
+        var x = v.Split('|');
+        return new ReglementTiers(x[0] == "" ? null : x[0], x[1] == "" ? null : x[1]);
+    }
+
     public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie)
     {
         cible.EntModeCalculOuvrage = saisie.EntModeCalculOuvrage;

@@ -32,6 +32,8 @@ public class PersistanceDocument<TDoc, TLigne, TComplet>(DocumentDbContext<TDoc,
             Lignes = lignes,
             Tva = await db.DocumentsTva.AsNoTracking().Where(t => t.TvaEntId == entId).OrderBy(t => t.TvaCode).ToListAsync(ct),
         };
+        complet.Echeances = await db.Echeances.AsNoTracking().Where(x => x.EchEntId == entId).OrderBy(x => x.EchRang).ToListAsync(ct);
+        complet.ReglementTiers = await specialisation.ReglementTiersAsync(db, doc, ct);
         await specialisation.ChargerComplements(db, complet, lignes.Select(l => l.LigId).ToList(), ct);
         return complet;
     }

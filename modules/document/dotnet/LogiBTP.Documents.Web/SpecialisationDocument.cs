@@ -54,6 +54,13 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;
 
+    /// <summary>
+    /// Condition et mode de règlement du tiers du document (échéancier : document, sinon tiers, sinon la condition par
+    /// défaut) ; null sans tiers ou sans annuaire.
+    /// </summary>
+    public virtual Task<ReglementTiers?> ReglementTiersAsync(DocumentDbContext<TDoc, TLigne> db, TDoc document, CancellationToken ct) =>
+        Task.FromResult<ReglementTiers?>(null);
+
     // ------------------------------------------------------------------ persistance des compléments
 
     /// <summary>Chargement des compléments du document (métrés, variables…).</summary>

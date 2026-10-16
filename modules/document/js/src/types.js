@@ -36,6 +36,7 @@ export const COLONNES_DOCUMENT = new Set([
   'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_intermediaire', 'ent_version',
   'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_modele', 'ent_etiquettes',
   'ent_avt_presentation', 'ent_avt_depassement', 'ent_nature_avoir', 'ent_etat_compta', 'ent_rang_avancement',
+  'ent_cpa_code', 'ent_mode_reglement',
 ]);
 
 export const COLONNES_LIGNE = new Set([
@@ -47,7 +48,7 @@ export const COLONNES_LIGNE = new Set([
   'lig_montant_ht',
   'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_pied_sens', 'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva',
   'lig_tva_id', 'lig_taux_tva',
-  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_solde', 'lig_proprietes', 'lig_etiquette',
+  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_solde', 'lig_pied_retenue', 'lig_proprietes', 'lig_etiquette',
   'lig_avt_mode', 'lig_avt_valeur', 'lig_avt_qte_marche', 'lig_avt_montant_marche', 'lig_avt_montant_precedent',
   'lig_avt_qte_precedent', 'lig_avt_pct_precedent', 'lig_avt_montant_cumul', 'lig_avt_qte_cumul', 'lig_avt_pct', 'lig_avt_source_lig_id',
 ]);
