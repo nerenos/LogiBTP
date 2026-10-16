@@ -1,0 +1,51 @@
+{
+  "description": "Unités d'options et de variantes (options.js ↔ Options.cs) : ligne O ou A la plus haute du bloc (parent absent ou vendu) ; base_id = ligne dont une variante est la variante.",
+  "cas": [
+    {
+      "nom": "devis sans option",
+      "lignes": [
+        { "lig_id": 1, "lig_parent_id": null, "lig_type_prix": "V" },
+        { "lig_id": 2, "lig_parent_id": 1, "lig_type_prix": "V" }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "ligne option isolée et tranche option (descendance non comptée)",
+      "lignes": [
+        { "lig_id": 1, "lig_parent_id": null, "lig_type_prix": "V" },
+        { "lig_id": 2, "lig_parent_id": 1, "lig_type_prix": "O" },
+        { "lig_id": 3, "lig_parent_id": null, "lig_type_prix": "O" },
+        { "lig_id": 4, "lig_parent_id": 3, "lig_type_prix": "O" },
+        { "lig_id": 5, "lig_parent_id": 4, "lig_type_prix": "O" }
+      ],
+      "attendu": [
+        { "lig_id": 2, "type_prix": "O", "base_id": null },
+        { "lig_id": 3, "type_prix": "O", "base_id": null }
+      ]
+    },
+    {
+      "nom": "variante et sa ligne de base",
+      "lignes": [
+        { "lig_id": 10, "lig_parent_id": null, "lig_type_prix": "V" },
+        { "lig_id": 11, "lig_parent_id": 10, "lig_type_prix": "V" },
+        { "lig_id": 12, "lig_parent_id": 10, "lig_type_prix": "A", "lig_variante_de_id": 11 },
+        { "lig_id": 13, "lig_parent_id": 12, "lig_type_prix": "A" }
+      ],
+      "attendu": [
+        { "lig_id": 12, "type_prix": "A", "base_id": 11 }
+      ]
+    },
+    {
+      "nom": "variante sans base connue, pour mémoire et frais annexes ignorés",
+      "lignes": [
+        { "lig_id": 20, "lig_parent_id": null, "lig_type_prix": "A", "lig_variante_de_id": 99 },
+        { "lig_id": 21, "lig_parent_id": null, "lig_type_prix": "M" },
+        { "lig_id": 22, "lig_parent_id": null, "lig_type_prix": "F" },
+        { "lig_id": 23, "lig_parent_id": 22, "lig_type_prix": "F" }
+      ],
+      "attendu": [
+        { "lig_id": 20, "type_prix": "A", "base_id": null }
+      ]
+    }
+  ]
+}

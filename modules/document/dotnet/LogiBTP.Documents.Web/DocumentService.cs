@@ -275,10 +275,22 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var avant = await persistance.Charger(id, ct);
-        var type = await Type(avant.Document.EntTydId, ct);
-        await VerifierDroit(u, type.TydId, "VALIDER", ct);
-        await VerifierModifiable(avant.Document, ct);
+        await VerifierDroit(u, avant.Document.EntTydId, "VALIDER", ct);
         if (v.EntVersion != avant.Document.EntVersion) throw ExceptionMetier.Conflit("VERSION", "Le document a été modifié par un autre utilisateur");
+        var reponse = await ValiderDans(id, u, ct);
+        await tx.CommitAsync(ct);
+        return reponse;
+    }
+
+    /// <summary>
+    /// Validation dans la transaction de l'appelant, sans contrôle du droit VALIDER : document intermédiaire validé
+    /// automatiquement par une transformation (le droit TRANSFORMER de la source suffit).
+    /// </summary>
+    protected internal async Task<ReponseEnregistrement<TComplet>> ValiderDans(long id, Utilisateur u, CancellationToken ct)
+    {
+        var avant = await persistance.Charger(id, ct);
+        var type = await Type(avant.Document.EntTydId, ct);
+        await VerifierModifiable(avant.Document, ct);
 
         var entree = await Entree(JsonCalcul.Cloner(avant), ct);
         var handler = handlers.Pour(type);
@@ -305,7 +317,6 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
         if (await EcrireSoldes(id, type, u, ct)) reponse.Document = await persistance.Charger(id, ct);
-        await tx.CommitAsync(ct);
         return reponse;
     }
 
@@ -502,6 +513,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         doc.EntVersion = 1;
         doc.EntVerrouille = false;
         doc.EntCopieDeId = null;
+        doc.EntIntermediaire = false;
         doc.EntDateValidite = null;
         doc.EntStdId = (await Statut(doc.EntTydId, "BROUILLON", ct)).StdId;
         doc.EntCreeLe = DateTimeOffset.UtcNow;

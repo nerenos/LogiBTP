@@ -18,6 +18,7 @@ services:
       - ./modules/document/db/013_document_affichage.sql:/docker-entrypoint-initdb.d/013_document_affichage.sql:ro
       - ./modules/document/db/014_document_frais_annexes.sql:/docker-entrypoint-initdb.d/014_document_frais_annexes.sql:ro
       - ./modules/document/db/015_document_soldes.sql:/docker-entrypoint-initdb.d/015_document_soldes.sql:ro
+      - ./modules/document/db/016_document_options.sql:/docker-entrypoint-initdb.d/016_document_options.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/metre/db/021_metre_script.sql:/docker-entrypoint-initdb.d/021_metre_script.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro
@@ -51,6 +52,7 @@ services:
       - ./db/166_lignes_comptes.sql:/docker-entrypoint-initdb.d/166_lignes_comptes.sql:ro
       - ./db/167_ventilation_frais.sql:/docker-entrypoint-initdb.d/167_ventilation_frais.sql:ro
       - ./db/168_transformations_achats.sql:/docker-entrypoint-initdb.d/168_transformations_achats.sql:ro
+      - ./db/169_transformations_ventes.sql:/docker-entrypoint-initdb.d/169_transformations_ventes.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

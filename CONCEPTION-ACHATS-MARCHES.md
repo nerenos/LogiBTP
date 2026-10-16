@@ -992,3 +992,21 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
   (reste seul repris, lignes soldées grisées), facture du BL liée au BL et à la commande.
 - Reste du lot : facture sur plusieurs documents (Q10, 13.4 bis), après les pieds de section (lot 4). § 13.14 : les
   propositions sont retenues par défaut tant qu'aucune décision n'est saisie.
+
+### Lot 2 – options et variantes à la transformation (16/10/2026)
+
+- Q11 : fenêtre « Options et variantes » (`choisirOptions`, `client/src/app/documents/transformation.js`) après le choix
+  de la cible ; chaque unité (`unitesOptionnelles` ↔ `Options.Unites`, jeu `modules/document/tests/options/01_unites.json`)
+  est retenue ou non ; sans choix : refus `OPTION_NON_TRAITEE` ; choix tracés dans `document_lien.lie_choix`
+  (`modules/document/db/016_document_options.sql`).
+- Q12 : la ligne de base d'une variante est proposée aussi (gardée par défaut, écartable) : base et variante peuvent
+  être gardées ensemble. Une option ou variante retenue passe en prix vendu (V), sans lien de variante.
+- Q13 : lignes pour mémoire reprises (hors total) ; tranches F conservées. Q14 : prix du devis conservés.
+- Q15, 13.1 : devis → facture passe par une commande créée et validée automatiquement (`tra_intermediaire_tyd_id`,
+  `db/169_transformations_ventes.sql`), marquée `ent_intermediaire` (pas de marché obligatoire au lot 3) ; le devis passe
+  au statut Accepté dès l'étape commande. Les achats (demande de prix → facture) restent directs.
+- Correctif : la TVA d'un document écrit deux fois dans le même contexte (intermédiaire créé puis validé) est détachée
+  avant réécriture (`PersistanceDocument.Ecrire`).
+- Vérifié sur la base de démo : refus sans choix, option retenue reprise en vendu, non retenues absentes, devis
+  Accepté, devis → facture (commande intermédiaire validée, facture en brouillon). Non vérifié en base : variante
+  (aucune dans les données de démonstration ; règle couverte par le jeu partagé).

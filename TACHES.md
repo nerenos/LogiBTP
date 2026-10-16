@@ -36,7 +36,8 @@
   variantes à la transformation, marché et avenants, pieds de section et pied global, avancement, avoirs en cascade) ;
   décisions prises. **Lot 1 réalisé** (16/10/2026 : reste à solder, solde des lignes, seuils, Ddp → facture, liens
   recalculés et remontés à l'origine ; `015` et `168` appliqués aux deux bases). Restent : facture sur plusieurs
-  documents (Q10, 13.4 bis, après les pieds de section), puis lots 2 à 7 (§ 10) ; § 13.14 sans décision
+  documents (Q10, 13.4 bis, après les pieds de section), puis lots 3 à 7 (§ 10 ; **lot 2 réalisé** : options et
+  variantes, devis → facture par une commande intermédiaire, `016` et `169` appliqués aux deux bases) ; § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.

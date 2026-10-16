@@ -162,6 +162,15 @@ dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
 .transformation-cible { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 6px 10px; margin: 2px 0; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
 .transformation-cible:hover, .transformation-cible:focus { border-color: var(--accent); outline: none; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 .transformation-cible small { display: block; color: var(--discret); font-size: 0.85em; }
+/* Choix des options et variantes à la transformation. */
+dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
+.options-choix { max-height: 55vh; overflow: auto; }
+.options-choix table { border-collapse: collapse; width: 100%; }
+.options-choix td { padding: 3px 6px; border-bottom: 1px solid var(--bord); white-space: nowrap; }
+.options-choix td.libelle { white-space: normal; }
+.options-choix td.nombre { text-align: right; }
+.options-choix tbody.groupe-variante { border-top: 2px solid var(--bord); }
+.options-choix tr[data-genre="base"] td { color: var(--discret); }
 .transformation-icone { font-size: 1.3em; }
 .liste-elements-autres { display: inline-flex; gap: 4px; }
 

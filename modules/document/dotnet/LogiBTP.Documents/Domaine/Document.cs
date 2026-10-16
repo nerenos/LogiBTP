@@ -41,6 +41,8 @@ public class Document
     public bool EntIsReference { get; set; } = true;
     public bool EntVerrouille { get; set; }
     public long? EntCopieDeId { get; set; }
+    /// <summary>Document créé et validé automatiquement par une transformation directe (commande d'un devis facturé).</summary>
+    public bool EntIntermediaire { get; set; }
     /// <summary>Version d'enregistrement, verrouillage optimiste.</summary>
     public int EntVersion { get; set; } = 1;
     public DateTimeOffset EntCreeLe { get; set; }
@@ -74,6 +76,8 @@ public class DocumentLien
     public long LieCibleEntId { get; set; }
     /// <summary>TRANSFORMATION ou COPIE.</summary>
     public string LieType { get; set; } = "TRANSFORMATION";
+    /// <summary>Choix des options et variantes à la transformation : [{ lig_id, retenue }].</summary>
+    public JsonDocument? LieChoix { get; set; }
 }
 
 /// <summary>Origine d'un document importé (table document_origine) : traçabilité et réutilisation du fichier source.</summary>

@@ -93,6 +93,8 @@ public class TransformationAutorisee
     /// <summary>RECEPTION, FACTURATION, RETOUR…</summary>
     public string TraEtape { get; set; } = "";
     public string[]? TraVautEtapes { get; set; }
+    /// <summary>Type du document intermédiaire, créé et validé automatiquement (devis → commande → facture).</summary>
+    public int? TraIntermediaireTydId { get; set; }
 }
 
 public class DroitDocument

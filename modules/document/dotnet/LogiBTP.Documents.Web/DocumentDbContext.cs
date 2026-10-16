@@ -61,7 +61,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         });
 
         b.Entity<DocumentTva>().ToTable("document_tva").HasKey(x => new { x.TvaEntId, x.TvaCode });
-        b.Entity<DocumentLien>().ToTable("document_lien").HasKey(x => new { x.LieSourceEntId, x.LieCibleEntId });
+        b.Entity<DocumentLien>(e => { e.ToTable("document_lien").HasKey(x => new { x.LieSourceEntId, x.LieCibleEntId }); e.Property(x => x.LieChoix).HasColumnType("jsonb"); });
         b.Entity<DocumentLigneLien>().ToTable("document_ligne_lien").HasKey(x => x.LilId);
         b.Entity<DocumentLigneSolde>().ToTable("document_ligne_solde").HasKey(x => x.LsoId);
         b.Entity<ParametreDocument>(e => { e.ToTable("parametre_document").HasKey(x => x.PdoCle); e.Property(x => x.PdoValeur).HasColumnType("jsonb"); });

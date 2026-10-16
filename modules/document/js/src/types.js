@@ -33,7 +33,7 @@ export const COLONNES_DOCUMENT = new Set([
   'ent_validite_jours', 'ent_date_validite', 'ent_std_id', 'ent_tiers_id',
   'ent_adresse_facturation', 'ent_adresse_livraison', 'ent_devise', 'ent_num_format', 'ent_precision_montant',
   'ent_version_calcul', 'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer', 'ent_proprietes',
-  'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_version',
+  'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_intermediaire', 'ent_version',
   'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_modele', 'ent_etiquettes',
 ]);
 

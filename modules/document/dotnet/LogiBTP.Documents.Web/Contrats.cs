@@ -86,6 +86,15 @@ public sealed class DemandeTransformation
     public int CibleTydId { get; set; }
     /// <summary>Lignes de prix à transformer ; vide = tout le reliquat.</summary>
     public List<LigneATransformer> Lignes { get; set; } = [];
+    /// <summary>Choix des options et variantes (toutes obligatoires) et des lignes de base des variantes (gardées par défaut).</summary>
+    public List<ChoixOption> Choix { get; set; } = [];
+}
+
+/// <summary>Option ou variante retenue (passe en prix vendu) ou non (non reprise) ; ligne de base d'une variante gardée ou non.</summary>
+public sealed class ChoixOption
+{
+    public long LigId { get; set; }
+    public bool Retenue { get; set; }
 }
 
 public sealed class LigneATransformer

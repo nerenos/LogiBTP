@@ -48,6 +48,8 @@ public class PersistanceDocument<TDoc, TLigne, TComplet>(DocumentDbContext<TDoc,
 
         // Ventilation de TVA : table de référence recalculée à chaque enregistrement.
         await db.DocumentsTva.Where(t => t.TvaEntId == entId).ExecuteDeleteAsync(ct);
+        // Lignes de TVA d'une écriture précédente dans le même contexte (document intermédiaire créé puis validé).
+        foreach (var e in db.ChangeTracker.Entries<DocumentTva>().Where(e => e.Entity.TvaEntId == entId).ToList()) e.State = EntityState.Detached;
         foreach (var t in r.Tva)
         {
             var copie = JsonCalcul.Cloner(t);
