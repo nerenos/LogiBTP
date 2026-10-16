@@ -385,6 +385,37 @@ public class MoteurDocument<TDoc, TLigne>
         return a;
     }
 
+    /// <summary>
+    /// Poste de pied en montant d'un document d'avancement (Q28, 13.10 ; avancementPied() de moteur-document.js) : montant
+    /// de la commande au prorata de l'avancement global de la portée (mode A), ou saisi en % (P) ou en montant cumulé (M) ;
+    /// plafond : le montant de la commande (LIGNE_DEPASSEE). Montant de la ligne (cumul ou période), ou null.
+    /// </summary>
+    protected decimal? AvancementPied(TLigne p, IReadOnlyList<TLigne> lignes)
+    {
+        var mode = p.LigAvtMode;
+        if (string.IsNullOrEmpty(mode) || string.IsNullOrEmpty(Doc.EntAvtPresentation)) return null;
+        var mc = p.LigAvtMontantMarche ?? 0;
+        var v = p.LigAvtValeur ?? 0;
+        decimal m;
+        if (mode == "M") m = Arrondir(v, PrecMontant);
+        else if (mode == "P") m = Arrondir(mc * v / 100, PrecMontant);
+        else
+        {
+            decimal cumul = 0, marche = 0;
+            foreach (var l in lignes)
+            {
+                if (AvancementLigne(l) is null) continue;
+                cumul += l.LigAvtMontantCumul ?? 0;
+                marche += l.LigAvtMontantMarche ?? 0;
+            }
+            m = marche == 0 ? 0 : Arrondir(mc * cumul / marche, PrecMontant);
+        }
+        if (Math.Abs(m) > Math.Abs(mc)) Erreur(p.LigId, "LIGNE_DEPASSEE", "Poste du pied au-delà de son montant dans la commande", false);
+        p.LigAvtMontantCumul = m;
+        p.LigAvtPct = mc == 0 ? 0 : Arr6(m / mc * 100);
+        return Doc.EntAvtPresentation == "P" ? m - (p.LigAvtMontantPrecedent ?? 0) : m;
+    }
+
     protected virtual void PasseQuantites()
     {
         avancements.Clear();
@@ -741,7 +772,19 @@ public class MoteurDocument<TDoc, TLigne>
                 Fermer();
                 continue;
             }
-            var montant = MontantPied(p, BasePied(p, cumul, totalHt, totalTtc, htNet, sousTotaux));
+            var baseCalcul = BasePied(p, cumul, totalHt, totalTtc, htNet, sousTotaux);
+            // Poste en montant d'un document d'avancement : au prorata de l'avancement (Q28, 13.10).
+            decimal montant;
+            if ((p.LigPiedMode ?? "M") == "M" && AvancementPied(p, lignes) is decimal avt)
+            {
+                p.LigBaseCalcul = null;
+                p.LigMontantHt = avt;
+                montant = avt;
+            }
+            else
+            {
+                montant = MontantPied(p, baseCalcul);
+            }
             var hors = HorsCumulPied(p);
             Dans(p.LigTylId == TL.PiedHt ? "HT" : "TTC", p.LigId, hors ? 0 : montant);
             if (hors) continue;

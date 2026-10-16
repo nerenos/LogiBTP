@@ -110,6 +110,29 @@ public static class Structure
                   AND NOT EXISTS (SELECT 1 FROM document_lien l WHERE l.lie_source_ent_id = x.mdo_ent_id AND l.lie_cible_ent_id = d.ent_id)
                 ORDER BY x.mdo_rang
                 """).ToListAsync(ct));
+        // Bloc de déduction d'un document d'avancement (13.7) : numéro de situation, documents précédents du marché (figés
+        // à la validation d'une facture, sinon lus), à déduire du cumul.
+        g.MapGet("/documents/{id:long}/avancement", async (long id, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var json = await db.Database.SqlQuery<string>($"""
+                SELECT json_build_object(
+                  'rang', d.ent_rang_avancement,
+                  'precedents', CASE WHEN EXISTS (SELECT 1 FROM document_deduction WHERE ded_ent_id = d.ent_id)
+                    THEN (SELECT json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', t.tyd_libelle, 'rang', k.ded_rang,
+                            'date', x.ent_date, 'total_ht', k.ded_montant_ht, 'total_ttc', k.ded_montant_ttc) ORDER BY k.ded_rang NULLS FIRST, x.ent_id)
+                          FROM document_deduction k JOIN document x ON x.ent_id = k.ded_deduit_ent_id JOIN type_document t ON t.tyd_id = x.ent_tyd_id
+                          WHERE k.ded_ent_id = d.ent_id)
+                    ELSE (SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', tx.tyd_libelle, 'rang', x.ent_rang_avancement,
+                            'date', x.ent_date, 'total_ht', x.ent_total_ht, 'total_ttc', x.ent_total_ttc) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]')
+                          FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                          WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+                            AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+                            AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement))
+                  END) AS "Value"
+                FROM document d WHERE d.ent_id = {id}
+                """).FirstAsync(ct);
+            return Results.Content(json, "application/json");
+        });
         // Intervenants d'un projet, d'une affaire, d'un chantier ou d'un marché (reprise dans l'annuaire d'un document).
         g.MapGet("/intervenants/{type}/{id:long}", async (string type, long id, LogiBtpContext db, CancellationToken ct) =>
             Intervenants.Gere(type) ? Results.Json(await Intervenants.Lire(db, type, id, ct)) : throw ExceptionMetier.Introuvable($"Type {type}"));

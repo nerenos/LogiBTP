@@ -337,6 +337,37 @@ export class MoteurDocument {
     return a;
   }
 
+  /**
+   * Poste de pied en montant d'un document d'avancement (CONCEPTION-ACHATS-MARCHES.md, Q28, 13.10) : montant de la
+   * commande (lig_avt_montant_marche, signé) au prorata de l'avancement global de la portée (mode A : montants cumulés /
+   * montants du marché de ses lignes), ou saisi en % (P) ou en montant cumulé (M) ; plafond : le montant de la commande
+   * (LIGNE_DEPASSEE, sans option). Renvoie le montant de la ligne (cumul ou période), ou null sans avancement.
+   */
+  avancementPied(p, lignes) {
+    const mode = p.lig_avt_mode;
+    if (!mode || !this.doc.ent_avt_presentation) return null;
+    const pm = this.precMontant;
+    const mc = Dz(p.lig_avt_montant_marche);
+    const v = Dz(p.lig_avt_valeur);
+    let m;
+    if (mode === 'M') m = arrondir(v, pm);
+    else if (mode === 'P') m = arrondir(mc.times(v).div(100), pm);
+    else {
+      let cumul = ZERO;
+      let marche = ZERO;
+      for (const l of lignes) {
+        if (!this.avancement(l)) continue;
+        cumul = cumul.plus(Dz(l.lig_avt_montant_cumul));
+        marche = marche.plus(Dz(l.lig_avt_montant_marche));
+      }
+      m = marche.isZero() ? ZERO : arrondir(mc.times(cumul).div(marche), pm);
+    }
+    if (m.abs().gt(mc.abs())) this.erreur(p.lig_id, 'LIGNE_DEPASSEE', 'Poste du pied au-delà de son montant dans la commande', false);
+    p.lig_avt_montant_cumul = S(m);
+    p.lig_avt_pct = mc.isZero() ? S(ZERO) : S(arr6(m.div(mc).times(100)));
+    return this.doc.ent_avt_presentation === 'P' ? m.minus(Dz(p.lig_avt_montant_precedent)) : m;
+  }
+
   passeQuantites() {
     this.avancements = new Map();
     this.avantQuantites();
@@ -655,9 +686,11 @@ export class MoteurDocument {
       const mode = p.lig_pied_mode ?? 'M';
       const sens = p.lig_pied_sens === -1 ? -1 : 1;
       const valeur = Dz(p.lig_pied_valeur);
-      const montant = mode === 'P' ? arrondir(base.times(valeur).div(100), pm).times(sens)
+      // Poste en montant d'un document d'avancement : au prorata de l'avancement (Q28, 13.10).
+      const avt = mode === 'M' ? this.avancementPied(p, lignes) : null;
+      const montant = avt ?? (mode === 'P' ? arrondir(base.times(valeur).div(100), pm).times(sens)
         : mode === 'C' ? arrondir(base.times(valeur.minus(1)), pm)
-          : arrondir(valeur, pm).times(sens);
+          : arrondir(valeur, pm).times(sens));
       p.lig_base_calcul = mode === 'M' ? null : S(base);
       p.lig_montant_ht = S(montant);
       const hors = this.horsCumulPied(p);

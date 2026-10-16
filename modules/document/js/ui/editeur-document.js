@@ -920,7 +920,7 @@ export class EditeurDocument {
         titreCellule: (r) => (tranche(r.item) ? 'Saisir un % pour l\'appliquer à toutes les lignes de la tranche' : avt(r.item) ? 'Avancement cumulé en % du montant de la ligne du marché' : ''),
       },
       {
-        cle: 'avt_qte', titre: 'Qté cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l),
+        cle: 'avt_qte', titre: 'Qté cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l) && !estPied(l),
         champ: () => 'avt:Q', lire: (l) => formatLibre(l.lig_avt_mode === 'Q' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_qte_cumul),
         valeur: (r) => (avt(r.item) ? saisi(r, 'Q', nombre(r.calcule.lig_avt_qte_cumul, r.calcule.lig_precision_qte ?? 2)) : ''),
         titreCellule: (r) => (avt(r.item) ? `Quantité du marché : ${nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2)}` : ''),

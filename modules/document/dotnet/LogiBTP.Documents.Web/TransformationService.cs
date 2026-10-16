@@ -114,8 +114,22 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             l.LigAvtSourceLigId = cle;
             DocumentService<TDoc, TLigne, TComplet>.EcrirePrecedent(l, precedent);
         }
+        // Postes du pied en montant (remise forfaitaire, port…) : au prorata de l'avancement global, modifiables (Q28, 13.10).
+        foreach (var l in c.Lignes.Where(l => l.LigOrigineId is long o && sources.TryGetValue(o, out var s) && EstPosteEnMontant(s)))
+        {
+            var src = sources[l.LigOrigineId!.Value];
+            var cle = src.LigAvtSourceLigId ?? src.LigId;
+            l.LigAvtMode = src.LigAvtMode ?? "A";
+            l.LigAvtValeur = src.LigAvtValeur;
+            l.LigAvtMontantMarche = src.LigAvtMontantMarche ?? src.LigMontantHt;
+            l.LigAvtSourceLigId = cle;
+            DocumentService<TDoc, TLigne, TComplet>.EcrirePrecedent(l, p.Precedents?.GetValueOrDefault(cle));
+        }
         return c;
     }
+
+    /// <summary>Poste de pied HT ou TTC en montant (pas une ventilation de TVA ni un pourcentage).</summary>
+    private static bool EstPosteEnMontant(TLigne l) => l.LigTylId is TL.PiedHt or TL.PiedTtc && (l.LigPiedMode ?? "M") == "M";
 
     /// <summary>
     /// Préparation d'une source : contrôles, options et variantes, quantités retenues (tout le reliquat, ou les lignes
@@ -239,7 +253,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
 
         // Avancement : précédents des lignes du marché (lignes de la commande, ou suivies par la situation source).
         var precedents = typeCible.TydAvancement is null ? null : await documents.Precedents(
-            retenues.Keys.Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList(), null, ct);
+            retenues.Keys.Concat(source.Lignes.Where(EstPosteEnMontant).Select(l => l.LigId))
+                .Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList(), null, ct);
         return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix, typeCible, precedents);
     }
 

@@ -112,10 +112,38 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         return Task.CompletedTask;
     }
 
-    /// <summary>Commande client validée : inscrite à son marché (base ou avenant), montant du marché recalculé (db/170).</summary>
+    /// <summary>
+    /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
+    /// d'avancement d'un marché : numéro de situation (Q29 : le suivant, sauf numéro saisi) et, pour une facture ou un
+    /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction).
+    /// </summary>
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
         if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
+        var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
+        if (doc.EntAvtPresentation is null || doc.EntMarcheId is null) return;
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE document d SET ent_rang_avancement = 1 + coalesce((
+                SELECT max(x.ent_rang_avancement) FROM document x
+                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                JOIN type_document td ON td.tyd_id = d.ent_tyd_id
+                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S' AND x.ent_is_reference
+                           ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
+            WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL
+            """, ct);
+        if (doc.EntAvtPresentation != "P") return;
+        await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM document_deduction WHERE ded_ent_id = {entId}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO document_deduction (ded_ent_id, ded_deduit_ent_id, ded_rang, ded_montant_ht, ded_montant_ttc)
+            SELECT d.ent_id, x.ent_id, x.ent_rang_avancement, x.ent_total_ht, x.ent_total_ttc
+            FROM document d
+            JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille
+            JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id
+            JOIN statut_document s ON s.std_id = x.ent_std_id
+            WHERE d.ent_id = {entId} AND s.std_code <> 'ANNULE' AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+              AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement)
+            """, ct);
     }
 
     public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie)
@@ -356,7 +384,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override void ControlerTransformation(DocumentCompletBtp source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs)
     {
         if (!depuisPlusieurs && typeSource.TydCode == "V_COMMANDE" && source.Document.EntMarcheId is not null
-            && typeCible.TydCode is "V_RECEPTION" or "V_SITUATION" or "V_FACTURE_AVT")
+            && typeCible.TydCode is "V_RECEPTION" or "V_SITUATION" or "V_FACTURE_AVT" or "V_REPRISE_AVT")
         {
             throw LogiBTP.Socle.Web.ExceptionMetier.Invalide("MARCHE_CREATION", "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)");
         }

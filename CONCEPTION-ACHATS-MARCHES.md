@@ -1087,3 +1087,25 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
   → 38 131,85 € HT, validée ; facture suivante : précédent 30 %, période nulle.
 - Reste au lot 6b : avoir automatique (Q26), facture à 0 et état comptable (13.9), révisions et numéro de situation
   (Q29), reprise d'un autre logiciel (13.11), bloc de déduction (13.7), lignes de pied en montant fixe (Q28, 13.10).
+
+### Lot 6b – avoir d'avancement, révisions, reprise, déduction (16/10/2026)
+
+- Q28, 13.10 : un poste de pied en montant de la commande (remise forfaitaire, port…) suit l'avancement : proposé au
+  prorata de l'avancement global de sa portée (mode A), modifiable en % ou en montant cumulé, plafonné au montant de la
+  commande (`LIGNE_DEPASSEE`) ; répliqué dans les deux moteurs (jeu `12_avancement_pied.json`). Corrige un défaut du lot
+  6a (le poste était recopié en entier dans chaque facture).
+- Q26 : une facture d'avancement dont la période est négative devient, à sa validation, un avoir d'avancement (type
+  `V_AVOIR`, nature AVANCEMENT, numéro d'avoir) ; le facturé du marché le compte avec son signe ; il reste un précédent
+  des factures suivantes.
+- 13.9 : état comptable des pièces (à transférer, transférée, sans écriture si le total est nul), préparé pour le module
+  Comptabilité. Proposer les marchés à facturer pour une période (13.9) : non fait (écran à concevoir).
+- Q29 : numéro de situation par marché attribué à la validation (situations de référence d'un côté ; factures, avoirs
+  d'avancement et reprises de l'autre), saisissable dans l'entête ; une situation validée se révise par un nouvel indice
+  qui devient la référence, refusé si une facture non annulée en est issue (`SITUATION_FACTUREE`).
+- 13.11 : reprise d'avancement (`V_REPRISE_AVT`, non comptable) créée depuis la fiche du marché : cumul déjà facturé dans
+  un autre logiciel, compté comme précédent.
+- 13.7 : bloc de déduction sous les totaux de l'entête (cumul HT, documents précédents déduits, période HT), figé à la
+  validation d'une facture (`document_deduction`).
+- Vérifié sur la base de démo : retour de 30 % à 20 % → période −12 710,63, avoir d'avancement AV2026-00002 à la
+  validation, bloc de déduction affiché ; situation validée puis révisée (indice B de référence) ; reprise créée depuis
+  le marché, refusée depuis une commande.

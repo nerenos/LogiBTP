@@ -98,7 +98,10 @@ export class PanneauxBtp extends PanneauxDocument {
 
   champsEntete(d) {
     const defaut = this.bibliotheques.find((b) => b.defaut);
-    return [...(this.annuaire ? [`<label title="Rédacteur du document : salarié de notre société (annuaire) ; saisir pour filtrer">Rédacteur
+    // Document d'avancement : numéro de situation (attribué à la validation, modifiable : reprise d'un autre logiciel).
+    const rang = d.ent_avt_presentation ? [`<label title="Numéro de situation du marché : attribué à la validation s'il est vide (saisi : reprise d'un autre logiciel)">N° de situation
+      <input data-champ="ent_rang_avancement" data-entier inputmode="numeric" size="4" value="${d.ent_rang_avancement ?? ''}"></label>`] : [];
+    return [...rang,...(this.annuaire ? [`<label title="Rédacteur du document : salarié de notre société (annuaire) ; saisir pour filtrer">Rédacteur
       <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : []),
     `<label>Calcul des ouvrages
       <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}${opt('B', 'Bordereau (PV fixe sans ventilation)', d.ent_mode_calcul_ouvrage)}</select></label>`,

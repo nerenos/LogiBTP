@@ -206,6 +206,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntProprietes = d.Document.EntProprietes ?? e.EntProprietes;
         e.EntModele = d.Document.EntModele;
         e.EntEtiquettes = d.Document.EntEtiquettes ?? e.EntEtiquettes;
+        e.EntRangAvancement = d.Document.EntRangAvancement;
         specialisation.CopierEnteteSaisie(e, d.Document);
         foreach (var l in d.Lignes)
         {
@@ -316,6 +317,15 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
+        // Facture d'avancement dont la période est négative (retour en arrière) : elle devient un avoir d'avancement (Q26).
+        if (type.TydAvancement == "F" && r.Document.EntTotalHt < 0 && type.TydAvoirTydId is int avoir)
+        {
+            type = await Type(avoir, ct);
+            r.Document.EntTydId = type.TydId;
+            r.Document.EntNatureAvoir = "AVANCEMENT";
+        }
+        // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
+        if (type.TydNumerotationContinue) r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
         if (type.TydNumerotationContinue && r.Document.EntNumero is null)
         {
             r.Document.EntNumero = await AttribuerNumero(type, r.Document.EntDate, ct);
@@ -326,8 +336,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
-        if (await EcrireSoldes(id, type, u, ct)) reponse.Document = await persistance.Charger(id, ct);
+        await EcrireSoldes(id, type, u, ct);
         await specialisation.ApresValidationAsync(db, id, type, ct);
+        // Relu après les soldes et le point d'accroche (lignes soldées, numéro de situation…).
+        reponse.Document = await persistance.Charger(id, ct);
         return reponse;
     }
 
@@ -501,21 +513,40 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var source = await persistance.Charger(id, ct);
         await VerifierDroit(u, source.Document.EntTydId, "CREER", ct);
-        if (source.Document.EntVerrouille)
+        var typeSource = await Type(source.Document.EntTydId, ct);
+        // Situation de travaux (non comptable, Q29) : une situation validée se révise par un nouvel indice, qui devient la
+        // référence, tant qu'aucune facture non annulée n'en est issue.
+        var revision = source.Document.EntVerrouille && typeSource.TydAvancement == "S";
+        if (source.Document.EntVerrouille && !revision)
         {
             throw ExceptionMetier.Conflit("DOCUMENT_VALIDE", "Document validé et bloqué : créez une copie plutôt qu'un indice");
         }
+        if (revision && await (from l in db.DocumentsLien
+                               join d in db.Documents on l.LieCibleEntId equals d.EntId
+                               join s in db.StatutsDocument on d.EntStdId equals s.StdId
+                               where l.LieSourceEntId == id && l.LieType == "TRANSFORMATION" && s.StdCode != "ANNULE"
+                               select l).AnyAsync(ct))
+        {
+            throw ExceptionMetier.Conflit("SITUATION_FACTUREE", "Situation déjà facturée : la correction passe par la situation suivante");
+        }
         var indices = await db.Documents.Where(d => d.EntGroupeId == source.Document.EntGroupeId).Select(d => d.EntIndice).ToListAsync(ct);
         var suivant = Numerotation.FormaterRang(indices.Select(i => Numerotation.LireDepart(i) ?? 0).Max() + 1, "A");
+        // Révision : l'ancienne référence cède sa place avant l'insertion (une seule référence par groupe).
+        if (revision)
+        {
+            await db.Documents.Where(d => d.EntGroupeId == source.Document.EntGroupeId)
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.EntIsReference, false), ct);
+        }
         var copie = await Dupliquer(source, d =>
         {
             d.EntIndice = suivant;
-            d.EntIsReference = false;
+            d.EntIsReference = revision;
             d.EntGroupeId = source.Document.EntGroupeId;
             d.EntNumero = source.Document.EntNumero;
+            d.EntRangAvancement = source.Document.EntRangAvancement;
         }, u, ct);
         await tx.CommitAsync(ct);
-        return copie.Document;
+        return revision ? await persistance.Charger(copie.Document.Document.EntId, ct) : copie.Document;
     }
 
     /// <summary>Désigne l'indice de référence du groupe (transformations, statistiques).</summary>

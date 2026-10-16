@@ -47,6 +47,12 @@ public class Document
     public string? EntAvtPresentation { get; set; }
     /// <summary>Dépassement du montant du marché permis (option du marché).</summary>
     public bool EntAvtDepassement { get; set; }
+    /// <summary>Avoir : ANNULATION (annule une facture) ou AVANCEMENT (facture d'avancement à période négative).</summary>
+    public string? EntNatureAvoir { get; set; }
+    /// <summary>Pièce comptable : A à transférer, T transférée, S sans écriture (total nul).</summary>
+    public string? EntEtatCompta { get; set; }
+    /// <summary>Numéro de situation (par marché ; modifiable pour une reprise d'un autre logiciel).</summary>
+    public int? EntRangAvancement { get; set; }
     /// <summary>Version d'enregistrement, verrouillage optimiste.</summary>
     public int EntVersion { get; set; } = 1;
     public DateTimeOffset EntCreeLe { get; set; }

@@ -50,6 +50,7 @@ export const api = {
   documentsEnAttente: (cible, tiers) => appel('GET', `/documents/en-attente?cible=${cible}${tiers ? `&tiers=${tiers}` : ''}`),
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
+  avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
   seuilsSolde: () => appel('GET', '/parametres-documents/seuils-solde'),
   enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),

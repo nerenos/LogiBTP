@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre, actionDe } from '@logibtp/socle/ui';
+import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
@@ -364,6 +365,7 @@ export class PageDocument extends PageBase {
     this.modeleAffiche = this.editeur.saisie.document.ent_modele ?? null;
     await this.vues.charger();
     await this.chargerRestes();
+    await this.chargerAvancement();
     this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
       fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
       message: (t) => this.app.message(t),
@@ -432,6 +434,7 @@ export class PageDocument extends PageBase {
     p.rendreDetail(this.$('#detail'), this.selection);
     p.rendreTotaux(this.$('#totaux'), { compact: true });
     p.rendreTotaux(this.$('#totaux-entete'));
+    this.rendreAvancement(this.$('#totaux-entete'));
     const doc = ed.saisie.document;
     const d = ed.resultat.document;
     this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
@@ -630,6 +633,41 @@ export class PageDocument extends PageBase {
     } catch (e) {
       this.app.message(`Restes à solder indisponibles : ${e.message}`, 'avertissement');
     }
+  }
+
+  /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */
+  async chargerAvancement() {
+    const d = this.editeur.saisie.document;
+    this.avancement = null;
+    if (!this.app.enLigne || !d.ent_avt_presentation || !d.ent_marche_id) return;
+    try { this.avancement = await api.avancementDocument(d.ent_id); } catch { this.avancement = null; }
+    this.rendreAvancement(this.$('#totaux-entete'));
+  }
+
+  /**
+   * Bloc de déduction sous les totaux : cumul HT = documents précédents + ce document ; facture d'avancement : chaque
+   * document précédent (numéro de situation, numéro, HT) est déduit du cumul, le reste est la période facturée.
+   */
+  rendreAvancement(zone) {
+    const a = this.avancement;
+    const d = this.editeur?.resultat?.document;
+    if (!zone || !a || !d) return;
+    zone.querySelector('.bloc-avancement')?.remove();
+    const pm = this.editeur.saisie.document.ent_precision_montant ?? 2;
+    const precedents = a.precedents ?? [];
+    const periode = this.editeur.saisie.document.ent_avt_presentation === 'P';
+    const deduit = precedents.reduce((s, x) => s.plus(D(x.total_ht ?? 0)), D(0));
+    const cumul = periode ? deduit.plus(D(d.ent_total_ht ?? 0)) : D(d.ent_total_ht ?? 0);
+    const f = (v) => formatNombre(v, pm);
+    const bloc = document.createElement('section');
+    bloc.className = 'bloc-avancement';
+    bloc.innerHTML = `<h4>Avancement${a.rang ? ` — situation n° ${a.rang}` : ''}</h4>
+      <table><tbody>
+        <tr><th>Cumul HT</th><td class="nombre">${f(cumul)}</td></tr>
+        ${periode ? `${precedents.map((x) => `<tr><td>À déduire : ${x.rang ? `n° ${x.rang} · ` : ''}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}</td><td class="nombre">−${f(x.total_ht)}</td></tr>`).join('')}
+        <tr><th>Période HT (ce document)</th><td class="nombre">${f(d.ent_total_ht)}</td></tr>` : `<tr><td colspan="2"><small>Situation : état cumulé, non comptable${precedents.length ? ` ; déjà facturé ${f(deduit)} HT` : ''}</small></td></tr>`}
+      </tbody></table>`;
+    zone.append(bloc);
   }
 
   /**

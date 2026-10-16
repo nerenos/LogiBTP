@@ -23,6 +23,8 @@ public class TypeDocument
     public short? TydValiditeJours { get; set; }
     /// <summary>Avancement : S situation (cumul), F facture d'avancement (période), R reprise d'avancement ; null sinon.</summary>
     public string? TydAvancement { get; set; }
+    /// <summary>Type de l'avoir que devient une facture d'avancement à période négative.</summary>
+    public int? TydAvoirTydId { get; set; }
     public bool TydActif { get; set; } = true;
 }
 

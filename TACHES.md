@@ -45,7 +45,9 @@
   plusieurs sources (BL du marché, facture de plusieurs BL, avenants chargés), Q19, composantes du BL ; restent 13.14 :
   regroupement des BL par commande (une section par document pour l'instant) et chantier par ligne (`lig_cha_id`) ;
   **lot 6a réalisé** (avancement : règle, situations et factures d'avancement depuis le marché, précédents, grille ;
-  `017`, `171` et fiche marché appliqués aux deux bases) ; § 13.14 sans décision
+  `017`, `171` et fiche marché appliqués aux deux bases) ; **lot 6b réalisé** (pied en montant, avoir d'avancement,
+  état comptable, numéro de situation, révisions, reprise, bloc de déduction ; `018`, `172` appliqués) ; la facture
+  d'avancement d'essai SI2026-00002 de la démo (validée avant le lot 6b) n'a pas de numéro de situation ; § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.

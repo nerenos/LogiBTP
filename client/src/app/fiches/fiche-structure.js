@@ -291,6 +291,7 @@ export class FicheMarche extends FicheStructure {
       { libelle: '🚚 Nouveau BL', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)', action: nouveau('V_RECEPTION', 'Bon de livraison'), visible },
       { libelle: '📈 Nouvelle situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)', action: nouveau('V_SITUATION', 'Situation'), visible },
       { libelle: "📊 Nouvelle facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période", action: nouveau('V_FACTURE_AVT', "Facture d'avancement"), visible },
+      { libelle: '↺ Reprise', titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)", action: nouveau('V_REPRISE_AVT', "Reprise d'avancement"), visible },
     ];
   }
 

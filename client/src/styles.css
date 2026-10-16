@@ -242,3 +242,10 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 /* Fenêtre du marché d'une commande : combos à la largeur du dialogue. */
 dialog.dialogue-structure label.large > span { display: block; }
 dialog.dialogue-structure label.large input.combo { width: 100%; }
+/* Bloc de déduction d'un document d'avancement (sous les totaux de l'entête). */
+.bloc-avancement { margin-top: 10px; }
+.bloc-avancement h4 { margin: 0 0 4px; }
+.bloc-avancement table { border-collapse: collapse; }
+.bloc-avancement td, .bloc-avancement th { padding: 2px 8px; text-align: left; font-weight: normal; }
+.bloc-avancement th { font-weight: 600; }
+.bloc-avancement td.nombre { text-align: right; }
