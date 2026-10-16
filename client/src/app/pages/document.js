@@ -623,7 +623,8 @@ export class PageDocument extends PageBase {
    */
   async chargerRestes() {
     const ed = this.editeur;
-    if (!this.app.enLigne || !ed.saisie.lignes.some((l) => l.lig_origine_id)) return;
+    // Documents d'avancement : l'avancement remplace le reste à solder.
+    if (!this.app.enLigne || ed.saisie.document.ent_avt_presentation || !ed.saisie.lignes.some((l) => l.lig_origine_id)) return;
     try {
       ed.definirRestes(await api.restes(ed.saisie.document.ent_id));
     } catch (e) {

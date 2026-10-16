@@ -286,10 +286,12 @@ export class FicheMarche extends FicheStructure {
       this.message(`${libelle} ${r.document.ent_numero ?? ''} créé`, 'succes');
       this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
     };
-    return [{
-      libelle: '🚚 Nouveau BL', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)',
-      action: nouveau('V_RECEPTION', 'Bon de livraison'), visible: this.id !== null && commandes && !this.estEnSaisie() && Boolean(this.services.structure.documentMarche),
-    }];
+    const visible = this.id !== null && commandes && !this.estEnSaisie() && Boolean(this.services.structure.documentMarche);
+    return [
+      { libelle: '🚚 Nouveau BL', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)', action: nouveau('V_RECEPTION', 'Bon de livraison'), visible },
+      { libelle: '📈 Nouvelle situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)', action: nouveau('V_SITUATION', 'Situation'), visible },
+      { libelle: "📊 Nouvelle facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période", action: nouveau('V_FACTURE_AVT', "Facture d'avancement"), visible },
+    ];
   }
 
   /** Commandes du marché (db/170 : marche_document) : la commande de base puis les avenants, avec leur montant. */

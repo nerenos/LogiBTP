@@ -215,6 +215,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
         var saisie = JsonCalcul.Cloner(d);
         saisie.Document = e;
+        // Avancement : précédents relus (un autre document d'avancement a pu être validé entre-temps).
+        if (e.EntAvtPresentation is not null) await AppliquerPrecedents(saisie.Lignes, id, ct);
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
         var controles = new List<MessageCalcul>();
@@ -333,19 +335,62 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     /// <summary>
     /// Quantités des liens de transformation recalculées depuis les lignes du document cible (quantité modifiée après
-    /// la transformation) ; une ligne supprimée a emporté ses liens. Les avancements (situations) gardent les leurs.
+    /// la transformation) ; une ligne supprimée a emporté ses liens. Une situation (état cumulé, présentation C) ne
+    /// consomme pas de reste : quantité 0 ; une facture d'avancement : quantité de la période.
     /// </summary>
     private async Task RecalculerLiens(long id, CancellationToken ct)
     {
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE document_ligne_lien x
-            SET lil_qte = CASE WHEN EXISTS (SELECT 1 FROM document_ligne_lien y
+            SET lil_qte = CASE WHEN d.ent_avt_presentation = 'C' THEN 0
+                               WHEN EXISTS (SELECT 1 FROM document_ligne_lien y
                                             WHERE y.lil_cible_lig_id = x.lil_cible_lig_id AND y.lil_etape IN ('RETOUR', 'AVOIR'))
                                THEN -coalesce(l.lig_qte_vendue, 0) ELSE coalesce(l.lig_qte_vendue, 0) END,
                 lil_montant_ht = l.lig_montant_ht
-            FROM document_ligne l
+            FROM document_ligne l JOIN document d ON d.ent_id = l.lig_ent_id
             WHERE l.lig_id = x.lil_cible_lig_id AND l.lig_ent_id = {id} AND x.lil_avancement_pct IS NULL
             """, ct);
+    }
+
+    /// <summary>Précédent d'une ligne du marché : montant, quantité et % cumulés du dernier document d'avancement.</summary>
+    public sealed record Precedent(decimal Montant, decimal Qte, decimal Pct);
+
+    /// <summary>
+    /// Précédents des lignes du marché (lig_avt_source_lig_id) : dernier document validé, non annulé, qui facture
+    /// l'avancement (présentation P) ou le reprend d'un autre logiciel (type R), hors le document lui-même (Q31, 13.11).
+    /// </summary>
+    protected internal async Task<Dictionary<long, Precedent>> Precedents(IReadOnlyCollection<long> sources, long? exclure, CancellationToken ct)
+    {
+        if (sources.Count == 0) return [];
+        var lignes = await (from l in db.Lignes.AsNoTracking()
+                            join d in db.Documents.AsNoTracking() on l.LigEntId equals d.EntId
+                            join t in db.TypesDocument.AsNoTracking() on d.EntTydId equals t.TydId
+                            join s in db.StatutsDocument.AsNoTracking() on d.EntStdId equals s.StdId
+                            where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value) && d.EntVerrouille
+                                && d.EntId != (exclure ?? 0) && s.StdCode != "ANNULE"
+                                && (d.EntAvtPresentation == "P" || t.TydAvancement == "R")
+                            select new { Source = l.LigAvtSourceLigId!.Value, d.EntId, l.LigAvtMontantCumul, l.LigAvtQteCumul, l.LigAvtPct })
+            .ToListAsync(ct);
+        return lignes.GroupBy(x => x.Source).ToDictionary(g => g.Key, g =>
+        {
+            var x = g.OrderByDescending(y => y.EntId).First();
+            return new Precedent(x.LigAvtMontantCumul ?? 0, x.LigAvtQteCumul ?? 0, x.LigAvtPct ?? 0);
+        });
+    }
+
+    /// <summary>Précédents écrits sur les lignes d'avancement (0 sans document précédent).</summary>
+    protected internal async Task AppliquerPrecedents(IEnumerable<TLigne> lignes, long? exclure, CancellationToken ct)
+    {
+        var avt = lignes.Where(l => l.LigAvtSourceLigId is not null).ToList();
+        var p = await Precedents(avt.Select(l => l.LigAvtSourceLigId!.Value).Distinct().ToList(), exclure, ct);
+        foreach (var l in avt) EcrirePrecedent(l, p.GetValueOrDefault(l.LigAvtSourceLigId!.Value));
+    }
+
+    public static void EcrirePrecedent(TLigne l, Precedent? p)
+    {
+        l.LigAvtMontantPrecedent = p?.Montant ?? 0;
+        l.LigAvtQtePrecedent = p?.Qte ?? 0;
+        l.LigAvtPctPrecedent = p?.Pct ?? 0;
     }
 
     /// <summary>Seuils de solde automatique d'une famille (A achats, sinon ventes) : (% de la quantité du parent, quantité).</summary>

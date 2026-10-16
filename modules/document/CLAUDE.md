@@ -65,7 +65,7 @@
 
 ## Règles répliquées JS / C# et jeux de cas
 - Toute règle de `MoteurDocument` / `Numerotation` / `TL` existe dans les deux langages ; ajouter un cas dans `tests/cas`.
-- Jeux : 01 PV saisi, remise, option, TVA multi-taux ; 02 ligne composée (qté relatives/absolues) ; 03 pied remise HT, retenue après TVA, caution pour mémoire ; 04 TVA autoliquidée / intracom ; 05 sous-totaux pointés, numérotation A.1.a, départ, numéro manuel ; 06 pied en tranches, bases, coefficient, totaux masqués ; 07 section ; 08 pieds de section et pied global consolidé ; 09 contrôles des pieds de section. Cœur : `tests/cas/18_lignes_frais_annexes.json` (lignes F).
+- Jeux : 01 PV saisi, remise, option, TVA multi-taux ; 02 ligne composée (qté relatives/absolues) ; 03 pied remise HT, retenue après TVA, caution pour mémoire ; 04 TVA autoliquidée / intracom ; 05 sous-totaux pointés, numérotation A.1.a, départ, numéro manuel ; 06 pied en tranches, bases, coefficient, totaux masqués ; 07 section ; 08 pieds de section et pied global consolidé ; 09 contrôles des pieds de section ; 10 avancement d'une facture (période) ; 11 avancement d'une situation (cumul). Cœur : `tests/cas/18_lignes_frais_annexes.json` (lignes F).
 - C# (`CasDocumentTests`) : `Cas_partage`, `Stabilite`, `Parite_avec_le_moteur_js` (lit `tests/resultats-js`, régénéré par `exporter-resultats`), `Colonnes_generiques_alignees_avec_le_module_js`.
 - Écarts client/serveur détectés à l'enregistrement (`ComparateurCalcul`, `comparerResultats`) puis arbitrés dans `calcul_cas_test`.
 
@@ -76,6 +76,7 @@
 - Numéro : à la création sauf `tyd_numerotation_continue` (factures, avoirs : à la validation). Validation : statut VALIDE, `ent_verrouille`, `ent_date_validite` = aujourd'hui + jours (serveur).
 - Enregistrement : l'entête saisi est recopié champ par champ (ajouter les champs métier dans `CopierEnteteSaisie`) ; libellés HTML nettoyés par `NettoyageHtml` ; ID négatifs temporaires → `CorrespondanceLignes`.
 - Suppression bloquée si le document est la source d'une TRANSFORMATION ; un brouillon cible se supprime avec ses liens (COPIE retiré avec le document).
+- Avancement : `MoteurDocument.avancement(l)` (quantité et montant de la ligne = cumul ou période selon `ent_avt_presentation`, sorties `lig_avt_montant_cumul`, `lig_avt_pct`, `lig_avt_qte_cumul`) ; `TransformationService.PreparerAvancement` (ligne du marché, précédent, saisie initiale = % précédent) ; `DocumentService.Precedents` / `AppliquerPrecedents` (dernier document validé non annulé en présentation P ou de type R) ; liens d'une situation à quantité 0 ; type `tyd_avancement` S / F / R ; colonnes de grille `COLONNES_AVANCEMENT` (saisie `avt:P|Q|M`).
 - Plusieurs sources : `TransformerPlusieurs`, `AjouterSources` (`DocumentService.EnregistrerDans`), `EnAttente` ; `Preparer` (une source : options, retenues, lignes gardées ; reste = minimum des étapes couvertes), `ContenuSource` (`RenumeroterTemporaire(d, ref n)`), `EnSection`, `Fusionner`, `EcrireLiens` ; `SOURCE_DEJA_REPRISE`, `SOURCES`.
 - Colonne Commentaire (`lig_commentaire`, première ligne dans la grille, zone de texte dans le détail) ; `lig_cpt_code` sans règle dans le module (colonne Compte et compte hérité : cœur).
 - Lignes virtuelles du pied : `_virtuelle`, `ID_PIED` (−9·10¹¹), ids ≤ −10¹², jamais saisissables.

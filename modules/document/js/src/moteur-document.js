@@ -289,7 +289,56 @@ export class MoteurDocument {
 
   // ---------------------------------------------------------------- passe 1 : quantités
 
+  // ---------------------------------------------------------------- avancement (situations, factures d'avancement)
+
+  /**
+   * Avancement d'une ligne de prix (CONCEPTION-ACHATS-MARCHES.md, Q24) : saisi en % (P), en quantité (Q) ou en montant
+   * (M) cumulés ; la référence est le montant cumulé (le % pour une ligne sans prix), les deux autres valeurs en sont
+   * déduites avec le montant et la quantité de la ligne du marché (lig_avt_montant_marche, lig_avt_qte_marche).
+   * Présentation du document (ent_avt_presentation) : C cumul (situation : quantité et montant cumulés), P période
+   * (facture d'avancement : cumul − précédent). Dépassement du marché refusé sauf option (LIGNE_DEPASSEE).
+   * Renvoie null pour une ligne sans avancement.
+   */
+  avancement(l) {
+    if (this.avancements.has(l.lig_id)) return this.avancements.get(l.lig_id);
+    const mode = l.lig_avt_mode;
+    if (!mode || !this.doc.ent_avt_presentation || !this.estLigneDePrix(l)) { this.avancements.set(l.lig_id, null); return null; }
+    const pm = this.precMontant;
+    const pq = l.lig_precision_qte ?? 2;
+    const mc = Dz(l.lig_avt_montant_marche);
+    const qc = Dz(l.lig_avt_qte_marche);
+    const v = Dz(l.lig_avt_valeur);
+    let m;
+    let pct;
+    let q;
+    if (mode === 'M') m = arrondir(v, pm);
+    else if (mode === 'Q') m = qc.isZero() ? ZERO : arrondir(mc.times(v).div(qc), pm);
+    else m = arrondir(mc.times(v).div(100), pm);
+    if (!mc.isZero()) pct = arr6(m.div(mc).times(100));
+    else if (mode === 'P') pct = arr6(v);
+    else if (mode === 'Q') pct = qc.isZero() ? ZERO : arr6(v.div(qc).times(100));
+    else pct = ZERO;
+    if (mode === 'Q') q = arrondir(v, pq);
+    else if (!mc.isZero()) q = arrondir(qc.times(m).div(mc), pq);
+    else q = arrondir(qc.times(pct).div(100), pq);
+    const depasse = mc.isZero() ? pct.gt(100) : m.abs().gt(mc.abs());
+    if (depasse && !this.doc.ent_avt_depassement) {
+      this.erreur(l.lig_id, 'LIGNE_DEPASSEE', 'Avancement au-delà du montant du marché pour cette ligne', false);
+    }
+    l.lig_avt_montant_cumul = S(m);
+    l.lig_avt_pct = S(pct);
+    l.lig_avt_qte_cumul = S(q);
+    const periode = this.doc.ent_avt_presentation === 'P';
+    const a = {
+      montant: periode ? m.minus(Dz(l.lig_avt_montant_precedent)) : m,
+      qte: periode ? q.minus(Dz(l.lig_avt_qte_precedent)) : q,
+    };
+    this.avancements.set(l.lig_id, a);
+    return a;
+  }
+
   passeQuantites() {
+    this.avancements = new Map();
     this.avantQuantites();
     for (const l of this.ordre) {
       if (!estPied(l) && !this.enErreur.has(l.lig_id)) {
@@ -314,7 +363,8 @@ export class MoteurDocument {
     l.lig_qte_vendue = null;
     l.lig_qte_totale = null;
     const base = this.quantiteBase(l);
-    const qv = this.quantiteVendue(l, base);
+    // Avancement : quantité cumulée (situation) ou de la période (facture d'avancement).
+    const qv = this.avancement(l)?.qte ?? this.quantiteVendue(l, base);
     const p = this.parent(l);
     let totale = qv;
     if (p && estChiffree(p)) {
@@ -387,6 +437,9 @@ export class MoteurDocument {
       const pvAff = this.pvAffiche(l, y, prec);
       const pvRem = arrondir(pvAff.times(coef(l.lig_coef_remise)), prec);
       this.ecrireMontants(l, y, { pvAff, pvRem, qv: Dz(l.lig_qte_vendue) });
+      // Avancement : le montant est le cumul (situation) ou la période (facture), pas quantité × prix.
+      const a = this.avancement(l);
+      if (a) l.lig_montant_ht = S(a.montant);
     }
   }
 

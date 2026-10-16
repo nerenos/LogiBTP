@@ -75,6 +75,20 @@ public class DocumentLigne
     public long? LigOrigineId { get; set; }
     /// <summary>Ligne issue d'une transformation : solde la ligne du parent à la validation (reste clos).</summary>
     public bool LigSolde { get; set; }
+
+    // Avancement (situations, factures d'avancement) : saisie P / Q / M, ligne du marché, précédent, cumul calculé.
+    public string? LigAvtMode { get; set; }
+    public decimal? LigAvtValeur { get; set; }
+    public decimal? LigAvtQteMarche { get; set; }
+    public decimal? LigAvtMontantMarche { get; set; }
+    public decimal? LigAvtMontantPrecedent { get; set; }
+    public decimal? LigAvtQtePrecedent { get; set; }
+    public decimal? LigAvtPctPrecedent { get; set; }
+    public decimal? LigAvtMontantCumul { get; set; }
+    public decimal? LigAvtQteCumul { get; set; }
+    public decimal? LigAvtPct { get; set; }
+    /// <summary>Ligne de la commande (du marché) suivie par l'avancement : précédents des documents d'avancement.</summary>
+    public long? LigAvtSourceLigId { get; set; }
     public JsonDocument? LigProprietes { get; set; }
     /// <summary>Étiquette de couleur de la ligne (à vérifier, prix confirmé…).</summary>
     public string? LigEtiquette { get; set; }

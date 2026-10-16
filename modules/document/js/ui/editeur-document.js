@@ -20,6 +20,9 @@ export const ID_PIED = -9e11;
 /** Colonnes du reste à solder (documents issus d'une transformation : BL, factures, avoirs). */
 export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
+/** Colonnes de l'avancement (situations, factures d'avancement). */
+export const COLONNES_AVANCEMENT = ['avt_pct_prec', 'avt_pct', 'avt_qte', 'avt_montant', 'avt_precedent'];
+
 /** Libellés des bases de calcul d'une ligne de pied (lig_pied_base). */
 export const LIBELLES_BASE_PIED = { CUMUL: 'Cumul à ce point', TOTAL_HT: 'Total HT du corps', HT_NET: 'Dernier total HT net', TOTAL_TTC: 'Total TTC du corps', LIGNE: 'Sous-total de pied' };
 
@@ -153,10 +156,14 @@ export class EditeurDocument {
     // Document issu d'une transformation : colonnes du reste à solder ajoutées après la quantité si la vue n'en a
     // aucune (vues créées avant elles).
     const colonnesVue = [...this.vue.colonnes];
-    if (this.restes?.parLigne.size && !colonnesVue.some((c) => COLONNES_RESTE.includes(c.cle))) {
+    const ajouter = (cles) => {
+      if (colonnesVue.some((c) => cles.includes(c.cle))) return;
       const i = colonnesVue.findIndex((c) => c.cle === 'qte');
-      colonnesVue.splice(i < 0 ? colonnesVue.length : i + 1, 0, ...COLONNES_RESTE.map((cle) => ({ cle })));
-    }
+      colonnesVue.splice(i < 0 ? colonnesVue.length : i + 1, 0, ...cles.map((cle) => ({ cle })));
+    };
+    if (this.restes?.parLigne.size) ajouter(COLONNES_RESTE);
+    // Document d'avancement : colonnes de l'avancement après la quantité si la vue n'en a aucune.
+    if (this.saisie.document.ent_avt_presentation) ajouter(COLONNES_AVANCEMENT);
     // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
     const res = colonnesVue.filter((c) => parCle.has(c.cle))
       .map((c, i) => ({ ...parCle.get(c.cle), largeur: c.largeur ?? null, arbre: i === 0 }));
@@ -778,6 +785,7 @@ export class EditeurDocument {
         },
       },
       ...this.colonnesReste(saisissable),
+      ...this.colonnesAvancement(saisissable),
       {
         cle: 'unite', titre: 'U', classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
@@ -883,6 +891,75 @@ export class EditeurDocument {
     ];
   }
 
+  /**
+   * Colonnes de l'avancement (CONCEPTION-ACHATS-MARCHES.md, Q24) : % précédent, % / quantité / montant cumulés
+   * (saisissables : le mode suit la dernière saisie, marquée ✎), montant précédent ; la colonne Montant HT donne la
+   * période (facture d'avancement) ou le cumul (situation). Sur un titre ou une section : % cumulé de ses lignes, une
+   * saisie l'applique à toutes.
+   */
+  colonnesAvancement(saisissable) {
+    if (!this.saisie.document.ent_avt_presentation) return [];
+    const nombre = (v, d = 2) => (v === null || v === undefined ? '' : formatNombre(v, d));
+    const avt = (l) => Boolean(l?.lig_avt_mode);
+    const tranche = (l) => estTranche(l) && this.lignesAvancement(l.lig_id).length > 0;
+    const saisi = (r, mode, texte) => (r.item.lig_avt_mode === mode ? { html: `<b>${echapper(texte)}</b> ✎` } : texte);
+    return [
+      {
+        cle: 'avt_pct_prec', titre: '% préc.', classe: 'col-coef', editable: () => false,
+        valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_pct_precedent, 2) : ''),
+        titreCellule: () => '% cumulé du dernier document d\'avancement validé (facture ou reprise)',
+      },
+      {
+        cle: 'avt_pct', titre: '% cumul', classe: 'col-coef', editeur: 'nombre',
+        editable: (l) => saisissable(l) && (avt(l) || tranche(l)),
+        champ: () => 'avt:P', lire: (l) => (avt(l) ? formatLibre(l.lig_avt_mode === 'P' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_pct) : ''),
+        valeur: (r) => {
+          if (avt(r.item)) return saisi(r, 'P', nombre(r.calcule.lig_avt_pct, 2));
+          return tranche(r.item) ? nombre(this.pctTranche(r.item.lig_id), 2) : '';
+        },
+        titreCellule: (r) => (tranche(r.item) ? 'Saisir un % pour l\'appliquer à toutes les lignes de la tranche' : avt(r.item) ? 'Avancement cumulé en % du montant de la ligne du marché' : ''),
+      },
+      {
+        cle: 'avt_qte', titre: 'Qté cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l),
+        champ: () => 'avt:Q', lire: (l) => formatLibre(l.lig_avt_mode === 'Q' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_qte_cumul),
+        valeur: (r) => (avt(r.item) ? saisi(r, 'Q', nombre(r.calcule.lig_avt_qte_cumul, r.calcule.lig_precision_qte ?? 2)) : ''),
+        titreCellule: (r) => (avt(r.item) ? `Quantité du marché : ${nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2)}` : ''),
+      },
+      {
+        cle: 'avt_montant', titre: 'Montant cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l),
+        champ: () => 'avt:M', lire: (l) => formatLibre(l.lig_avt_mode === 'M' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_montant_cumul),
+        valeur: (r) => (avt(r.item) ? saisi(r, 'M', nombre(r.calcule.lig_avt_montant_cumul, this.saisie.document.ent_precision_montant ?? 2)) : ''),
+        titreCellule: (r) => (avt(r.item) ? `Montant du marché : ${nombre(r.item.lig_avt_montant_marche)}` : ''),
+      },
+      {
+        cle: 'avt_precedent', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_montant_precedent, this.saisie.document.ent_precision_montant ?? 2) : ''),
+        titreCellule: () => 'Montant cumulé du dernier document d\'avancement validé',
+      },
+    ];
+  }
+
+  /** Ligne calculée correspondant à une ligne saisie. */
+  calculee(l) { return this.resultat?.lignes.find((x) => x.lig_id === l.lig_id) ?? null; }
+
+  /** Lignes d'avancement d'une tranche (descendantes avec un mode d'avancement). */
+  lignesAvancement(id) {
+    const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
+    const dans = (l) => { for (let x = parId.get(l.lig_parent_id); x; x = parId.get(x.lig_parent_id)) if (x.lig_id === id) return true; return false; };
+    return this.saisie.lignes.filter((l) => l.lig_avt_mode && dans(l));
+  }
+
+  /** % cumulé d'une tranche : montants cumulés / montants du marché de ses lignes. */
+  pctTranche(id) {
+    let m = Dz(null);
+    let mc = Dz(null);
+    for (const l of this.lignesAvancement(id)) {
+      m = m.plus(Dz(this.calculee(l)?.lig_avt_montant_cumul));
+      mc = mc.plus(Dz(l.lig_avt_montant_marche));
+    }
+    return mc.isZero() ? null : m.div(mc).times(100).toDecimalPlaces(2).toString();
+  }
+
   /** Variables proposées dans l'éditeur de libellé : données de la ligne et du document. */
   variablesLibelle() {
     return [
@@ -950,6 +1027,18 @@ export class EditeurDocument {
     }
     if (champ === 'lig_tva_id') valeur = texte === '' ? null : Number(texte);
     if (champ === 'lig_solde') valeur = texte === '1' || texte === true;
+    // Avancement : la saisie fixe le mode (P, Q, M) et sa valeur ; sur une tranche, le % s'applique à toutes ses lignes.
+    if (champ.startsWith('avt:')) {
+      const mode = champ.slice(4);
+      const ids = this.saisie.lignes.find((x) => x.lig_id === id)?.lig_avt_mode ? [id] : this.lignesAvancement(id).map((x) => x.lig_id);
+      m.modifier((d) => {
+        for (const x of d.lignes.filter((y) => ids.includes(y.lig_id))) {
+          x.lig_avt_mode = mode;
+          x.lig_avt_valeur = valeur === null ? '0' : valeur;
+        }
+      }, 'Avancement');
+      return true;
+    }
     // Saisie en ligne : texte simple, échappé (la mise en forme passe par l'éditeur riche).
     if (champ === 'lig_libelle_html') valeur = valeur.trim() === '' ? null : echapper(valeur);
     if (champ === 'lig_unt_code' && valeur.trim() === '') valeur = null;

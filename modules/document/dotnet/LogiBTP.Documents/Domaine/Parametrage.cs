@@ -21,6 +21,8 @@ public class TypeDocument
     public string? TydHandler { get; set; }
     /// <summary>Durée de validité proposée à la création (offres) ; null : sans validité.</summary>
     public short? TydValiditeJours { get; set; }
+    /// <summary>Avancement : S situation (cumul), F facture d'avancement (période), R reprise d'avancement ; null sinon.</summary>
+    public string? TydAvancement { get; set; }
     public bool TydActif { get; set; } = true;
 }
 

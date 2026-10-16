@@ -1,0 +1,177 @@
+{
+  "nom": "Avancement d'une facture : montants de la période",
+  "description": "Facture d'avancement (ent_avt_presentation P) : avancement saisi en % (ligne 1, 10 % déjà facturé), en quantité (2), en montant (3), ligne sans prix (4 : le % est la référence), dépassement du marché sans option (5 : LIGNE_DEPASSEE), retour en arrière (6 : cumul 20 % après 30 % facturés, période négative). Montant et quantité de la ligne = cumul − précédent.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2,
+      "ent_avt_presentation": "P"
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 1",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 30,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 10,
+        "lig_avt_montant_precedent": 100,
+        "lig_avt_qte_precedent": 1,
+        "lig_avt_pct_precedent": 10
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 2",
+        "lig_qte": 8,
+        "lig_pv": 154.32,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "Q",
+        "lig_avt_valeur": 4,
+        "lig_avt_montant_marche": 1234.56,
+        "lig_avt_qte_marche": 8,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0,
+        "lig_avt_pct_precedent": 0
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 3",
+        "lig_qte": 3,
+        "lig_pv": 333.33,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "M",
+        "lig_avt_valeur": 333.33,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 3,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0,
+        "lig_avt_pct_precedent": 0
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": null,
+        "lig_ordre": 4,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 4",
+        "lig_qte": 5,
+        "lig_pv": 0,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 40,
+        "lig_avt_montant_marche": 0,
+        "lig_avt_qte_marche": 5,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0,
+        "lig_avt_pct_precedent": 0
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": null,
+        "lig_ordre": 5,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 5",
+        "lig_qte": 5,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 120,
+        "lig_avt_montant_marche": 500,
+        "lig_avt_qte_marche": 5,
+        "lig_avt_montant_precedent": 0,
+        "lig_avt_qte_precedent": 0,
+        "lig_avt_pct_precedent": 0
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": null,
+        "lig_ordre": 6,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne 6",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1,
+        "lig_avt_mode": "P",
+        "lig_avt_valeur": 20,
+        "lig_avt_montant_marche": 1000,
+        "lig_avt_qte_marche": 10,
+        "lig_avt_montant_precedent": 300,
+        "lig_avt_qte_precedent": 3,
+        "lig_avt_pct_precedent": 30
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "LIGNE_DEPASSEE"
+    ],
+    "document": {
+      "ent_total_ht": 1650.61,
+      "ent_total_tva": 330.12
+    },
+    "lignes": {
+      "1": {
+        "lig_avt_montant_cumul": 300,
+        "lig_avt_pct": 30,
+        "lig_avt_qte_cumul": 3,
+        "lig_montant_ht": 200,
+        "lig_qte_vendue": 2
+      },
+      "2": {
+        "lig_avt_montant_cumul": 617.28,
+        "lig_avt_pct": 50,
+        "lig_avt_qte_cumul": 4,
+        "lig_montant_ht": 617.28,
+        "lig_qte_vendue": 4
+      },
+      "3": {
+        "lig_avt_montant_cumul": 333.33,
+        "lig_avt_pct": 33.333,
+        "lig_avt_qte_cumul": 1,
+        "lig_montant_ht": 333.33,
+        "lig_qte_vendue": 1
+      },
+      "4": {
+        "lig_avt_montant_cumul": 0,
+        "lig_avt_pct": 40,
+        "lig_avt_qte_cumul": 2,
+        "lig_montant_ht": 0,
+        "lig_qte_vendue": 2
+      },
+      "5": {
+        "lig_avt_montant_cumul": 600,
+        "lig_avt_pct": 120,
+        "lig_avt_qte_cumul": 6,
+        "lig_montant_ht": 600,
+        "lig_qte_vendue": 6
+      },
+      "6": {
+        "lig_avt_montant_cumul": 200,
+        "lig_avt_pct": 20,
+        "lig_avt_qte_cumul": 2,
+        "lig_montant_ht": -100,
+        "lig_qte_vendue": -1
+      }
+    }
+  }
+}

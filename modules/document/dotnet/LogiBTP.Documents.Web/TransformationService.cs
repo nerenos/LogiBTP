@@ -54,7 +54,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     /// <summary>Source préparée pour une transformation : quantités retenues, lignes gardées, options, étapes.</summary>
     private sealed record Preparation(TComplet Source, TypeDocument TypeSource, TransformationAutorisee Regle, List<string> Etapes,
         Dictionary<long, decimal> Retenues, Dictionary<long, decimal?> Avancements, HashSet<long> Garder, HashSet<long> EnVendu,
-        List<UniteOption> Unites, Dictionary<long, bool> Choix);
+        List<UniteOption> Unites, Dictionary<long, bool> Choix, TypeDocument TypeCible,
+        Dictionary<long, DocumentService<TDoc, TLigne, TComplet>.Precedent>? Precedents);
 
     /// <summary>Une transformation, dans la transaction de l'appelant ; renvoie l'identifiant du document créé.</summary>
     private async Task<long> TransformerDans(long sourceId, DemandeTransformation dem, Utilisateur u, CancellationToken ct, bool intermediaire = false)
@@ -64,7 +65,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             ?? throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
         var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
         var cible = await documents.Dupliquer(p.Source, d => PreparerEntete(d, typeCible, numero, intermediaire), u, ct,
-            contenu => Filtrer(contenu, p.Garder, p.Retenues, p.EnVendu));
+            contenu => PreparerAvancement(Filtrer(contenu, p.Garder, p.Retenues, p.EnVendu), p));
         await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
         return cible.Document.Document.EntId;
     }
@@ -78,6 +79,42 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         d.EntNumero = numero;
         d.EntDate = DateOnly.FromDateTime(DateTime.Today);
         d.EntIntermediaire = intermediaire;
+        // Avancement : situation et reprise en cumul, facture d'avancement en période.
+        d.EntAvtPresentation = typeCible.TydAvancement switch { "F" => "P", "S" or "R" => "C", _ => null };
+    }
+
+    /// <summary>
+    /// Document d'avancement : chaque ligne de prix suit sa ligne du marché (montant et quantité de la commande, ou repris
+    /// d'une situation avec son avancement saisi) ; précédent du dernier document d'avancement ; sans saisie, l'avancement
+    /// part du % précédent (période nulle).
+    /// </summary>
+    private static TComplet PreparerAvancement(TComplet c, Preparation p)
+    {
+        if (p.TypeCible.TydAvancement is null) return c;
+        var sources = p.Source.Lignes.ToDictionary(l => l.LigId);
+        foreach (var l in c.Lignes.Where(l => l.LigOrigineId is long o && p.Retenues.ContainsKey(o)))
+        {
+            var src = sources[l.LigOrigineId!.Value];
+            var cle = src.LigAvtSourceLigId ?? src.LigId;
+            var precedent = p.Precedents?.GetValueOrDefault(cle);
+            if (src.LigAvtMode is not null)
+            {
+                l.LigAvtMode = src.LigAvtMode;
+                l.LigAvtValeur = src.LigAvtValeur;
+                l.LigAvtMontantMarche = src.LigAvtMontantMarche;
+                l.LigAvtQteMarche = src.LigAvtQteMarche;
+            }
+            else
+            {
+                l.LigAvtMode = "P";
+                l.LigAvtValeur = precedent?.Pct ?? 0;
+                l.LigAvtMontantMarche = src.LigMontantHt;
+                l.LigAvtQteMarche = src.LigQteVendue;
+            }
+            l.LigAvtSourceLigId = cle;
+            DocumentService<TDoc, TLigne, TComplet>.EcrirePrecedent(l, precedent);
+        }
+        return c;
     }
 
     /// <summary>
@@ -157,7 +194,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             retenues[src.LigId] = qte;
             avancements[src.LigId] = d.AvancementPct;
         }
-        if (retenues.Values.All(q => q == 0))
+        // Avancement : toutes les lignes du marché sont reprises, même entièrement facturées (retour en arrière possible).
+        if (retenues.Values.All(q => q == 0) && typeCible.TydAvancement is null)
         {
             if (accepterVide) return null;
             throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
@@ -199,7 +237,10 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         }
         foreach (var l in source.Lignes.Where(l => garder.Contains(l.LigId) && l.LigPiedBaseId is long)) garder.Add(l.LigPiedBaseId!.Value);
 
-        return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix);
+        // Avancement : précédents des lignes du marché (lignes de la commande, ou suivies par la situation source).
+        var precedents = typeCible.TydAvancement is null ? null : await documents.Precedents(
+            retenues.Keys.Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList(), null, ct);
+        return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix, typeCible, precedents);
     }
 
     /// <summary>
@@ -350,7 +391,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     private TComplet ContenuSource(Preparation p, bool enSection, ref long n)
     {
         var c = documents.RenumeroterTemporaire(JsonCalcul.Cloner(p.Source), ref n);
-        c = Filtrer(c, p.Garder, p.Retenues, p.EnVendu);
+        c = PreparerAvancement(Filtrer(c, p.Garder, p.Retenues, p.EnVendu), p);
         specialisation.PreparerContenuSource(c, p.Source.Document);
         if (enSection) EnSection(c, $"{p.TypeSource.TydLibelle} {p.Source.Document.EntNumero ?? ""}{(string.IsNullOrWhiteSpace(p.Source.Document.EntObjet) ? "" : " – " + p.Source.Document.EntObjet)}".Trim(), p.Source.Document.EntNumero, ref n);
         return c;

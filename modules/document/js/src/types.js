@@ -35,6 +35,7 @@ export const COLONNES_DOCUMENT = new Set([
   'ent_version_calcul', 'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer', 'ent_proprietes',
   'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_intermediaire', 'ent_version',
   'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_modele', 'ent_etiquettes',
+  'ent_avt_presentation', 'ent_avt_depassement',
 ]);
 
 export const COLONNES_LIGNE = new Set([
@@ -47,6 +48,8 @@ export const COLONNES_LIGNE = new Set([
   'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_pied_sens', 'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva',
   'lig_tva_id', 'lig_taux_tva',
   'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_solde', 'lig_proprietes', 'lig_etiquette',
+  'lig_avt_mode', 'lig_avt_valeur', 'lig_avt_qte_marche', 'lig_avt_montant_marche', 'lig_avt_montant_precedent',
+  'lig_avt_qte_precedent', 'lig_avt_pct_precedent', 'lig_avt_montant_cumul', 'lig_avt_qte_cumul', 'lig_avt_pct', 'lig_avt_source_lig_id',
 ]);
 
 // Colonnes NUMERIC(18,6) : le moteur JS les manipule en chaînes décimales exactes.
@@ -54,6 +57,8 @@ export const COLONNES_DECIMALES = new Set([
   'ent_total_ht', 'ent_total_tva', 'ent_total_ttc', 'ent_net_a_payer',
   'lig_qte', 'lig_qte_vendue', 'lig_qte_totale', 'lig_pv', 'lig_coef_remise', 'lig_pv_remise', 'lig_montant_ht',
   'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva', 'lig_taux_tva',
+  'lig_avt_valeur', 'lig_avt_qte_marche', 'lig_avt_montant_marche', 'lig_avt_montant_precedent', 'lig_avt_qte_precedent',
+  'lig_avt_pct_precedent', 'lig_avt_montant_cumul', 'lig_avt_qte_cumul', 'lig_avt_pct',
 ]);
 
 export const COLONNES_DATES = new Set(['ent_date', 'ent_cree_le', 'ent_modifie_le']);

@@ -93,7 +93,12 @@ public static class Structure
                 WHERE x.mdo_mar_id = {id} AND c.ent_verrouille ORDER BY x.mdo_rang
                 """).ToListAsync(ct);
             if (commandes.Count == 0) throw ExceptionMetier.Invalide("MARCHE_SANS_COMMANDE", "Le marché n'a pas de commande validée");
-            return await transformations.TransformerPlusieurs(new DemandeTransformationMultiple { CibleTydId = tyd, Sources = commandes }, Utilisateur.Depuis(http), ct);
+            var cree = await transformations.TransformerPlusieurs(new DemandeTransformationMultiple { CibleTydId = tyd, Sources = commandes }, Utilisateur.Depuis(http), ct);
+            // Avancement : l'option du marché permet (ou non) de dépasser son montant (Q27).
+            var entId = cree.Document.EntId;
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_avt_depassement = (SELECT mar_depassement_autorise FROM marche WHERE mar_id = {id}) WHERE ent_id = {entId} AND ent_avt_presentation IS NOT NULL", ct);
+            cree.Document.EntAvtDepassement = await db.Database.SqlQuery<bool>($"SELECT ent_avt_depassement AS \"Value\" FROM document WHERE ent_id = {entId}").FirstAsync(ct);
+            return cree;
         });
         // Commandes du marché validées pas encore reprises dans un document (avenant à charger dans un brouillon, Q18).
         g.MapGet("/documents/{id:long}/commandes-marche", async (long id, LogiBtpContext db, CancellationToken ct) =>

@@ -436,7 +436,7 @@ export const TYPES_FICHE = {
         code: 'informations', titre: 'Marché',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'cha_id', 'tiers_id', 'ent_id'] },
-          { titre: 'Conditions', champs: ['nature', 'montant_ht', 'retenue_pct', 'date', 'statut'] },
+          { titre: 'Conditions', champs: ['nature', 'montant_ht', 'depassement_autorise', 'retenue_pct', 'date', 'statut'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
@@ -452,6 +452,7 @@ export const TYPES_FICHE = {
         c('ent_id', 'Commande client', 'mar_ent_id', 'nombre', { reference: 'commande', aide: 'Commande dont la validation a ouvert le marché' }),
         c('nature', 'Nature', 'mar_nature', 'liste', { obligatoire: true, defaut: 'P', options: options(['P', 'Marché privé'], ['U', 'Marché public']) }),
         c('montant_ht', 'Montant HT', 'mar_montant_ht', 'nombre', { format: '999999999999.99', lecture_seule: true, aide: 'Calculé : total des commandes validées du marché (commande de base et avenants)' }),
+        c('depassement_autorise', 'Dépassement autorisé', 'mar_depassement_autorise', 'booleen', { obligatoire: true, defaut: false, aide: "L'avancement peut dépasser le montant du marché (travaux publics : quantités réelles)" }),
         c('retenue_pct', 'Retenue de garantie (%)', 'mar_retenue_pct', 'nombre', { format: '999.99' }),
         c('date', 'Date', 'mar_date', 'date', { obligatoire: true }),
         c('statut', 'Statut', 'mar_statut', 'liste', { obligatoire: true, defaut: 'EN_COURS', options: options(['EN_COURS', 'En cours'], ['SOLDE', 'Soldé'], ['RESILIE', 'Résilié']) }),

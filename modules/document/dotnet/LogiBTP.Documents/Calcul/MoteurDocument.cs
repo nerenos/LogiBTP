@@ -332,8 +332,62 @@ public class MoteurDocument<TDoc, TLigne>
 
     // ------------------------------------------------------------------ passe 1 : quantités
 
+    // ------------------------------------------------------------------ avancement (situations, factures d'avancement)
+
+    /// <summary>Quantité et montant d'une ligne d'avancement : cumul (situation) ou période (facture d'avancement).</summary>
+    protected sealed record Avancement(decimal Montant, decimal Qte);
+
+    private readonly Dictionary<long, Avancement?> avancements = [];
+
+    /// <summary>
+    /// Avancement d'une ligne de prix (CONCEPTION-ACHATS-MARCHES.md, Q24 ; avancement() de moteur-document.js) : saisi en %
+    /// (P), en quantité (Q) ou en montant (M) cumulés ; la référence est le montant cumulé (le % pour une ligne sans prix),
+    /// les deux autres valeurs en sont déduites avec le montant et la quantité de la ligne du marché. Présentation
+    /// (EntAvtPresentation) : C cumul, P période (cumul − précédent). Dépassement refusé sauf option (LIGNE_DEPASSEE).
+    /// </summary>
+    protected Avancement? AvancementLigne(TLigne l)
+    {
+        if (avancements.TryGetValue(l.LigId, out var deja)) return deja;
+        var mode = l.LigAvtMode;
+        if (string.IsNullOrEmpty(mode) || string.IsNullOrEmpty(Doc.EntAvtPresentation) || !EstLigneDePrix(l))
+        {
+            avancements[l.LigId] = null;
+            return null;
+        }
+        var pq = l.LigPrecisionQte;
+        var mc = l.LigAvtMontantMarche ?? 0;
+        var qc = l.LigAvtQteMarche ?? 0;
+        var v = l.LigAvtValeur ?? 0;
+        var m = mode switch
+        {
+            "M" => Arrondir(v, PrecMontant),
+            "Q" => qc == 0 ? 0 : Arrondir(mc * v / qc, PrecMontant),
+            _ => Arrondir(mc * v / 100, PrecMontant),
+        };
+        var pct = mc != 0 ? Arr6(m / mc * 100)
+            : mode == "P" ? Arr6(v)
+            : mode == "Q" ? (qc == 0 ? 0 : Arr6(v / qc * 100))
+            : 0;
+        var q = mode == "Q" ? Arrondir(v, pq)
+            : mc != 0 ? Arrondir(qc * m / mc, pq)
+            : Arrondir(qc * pct / 100, pq);
+        var depasse = mc == 0 ? pct > 100 : Math.Abs(m) > Math.Abs(mc);
+        if (depasse && !Doc.EntAvtDepassement)
+        {
+            Erreur(l.LigId, "LIGNE_DEPASSEE", "Avancement au-delà du montant du marché pour cette ligne", false);
+        }
+        l.LigAvtMontantCumul = m;
+        l.LigAvtPct = pct;
+        l.LigAvtQteCumul = q;
+        var periode = Doc.EntAvtPresentation == "P";
+        var a = new Avancement(periode ? m - (l.LigAvtMontantPrecedent ?? 0) : m, periode ? q - (l.LigAvtQtePrecedent ?? 0) : q);
+        avancements[l.LigId] = a;
+        return a;
+    }
+
     protected virtual void PasseQuantites()
     {
+        avancements.Clear();
         AvantQuantites();
         foreach (var l in Ordre)
         {
@@ -364,7 +418,8 @@ public class MoteurDocument<TDoc, TLigne>
         l.LigQteVendue = null;
         l.LigQteTotale = null;
         var qteBase = QuantiteBase(l);
-        var qv = QuantiteVendue(l, qteBase);
+        // Avancement : quantité cumulée (situation) ou de la période (facture d'avancement).
+        var qv = AvancementLigne(l)?.Qte ?? QuantiteVendue(l, qteBase);
         var p = Parent(l);
         var totale = qv;
         if (p is not null && TL.EstChiffree(p))
@@ -436,6 +491,8 @@ public class MoteurDocument<TDoc, TLigne>
             var pvAff = PvAffiche(l, y);
             var pvRem = Arrondir(pvAff * l.LigCoefRemise, l.LigPrecisionPv);
             EcrireMontants(l, y, pvAff, pvRem, l.LigQteVendue ?? 0);
+            // Avancement : le montant est le cumul (situation) ou la période (facture), pas quantité × prix.
+            if (AvancementLigne(l) is { } a) l.LigMontantHt = a.Montant;
         }
     }
 

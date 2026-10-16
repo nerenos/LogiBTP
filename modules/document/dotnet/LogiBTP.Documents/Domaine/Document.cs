@@ -43,6 +43,10 @@ public class Document
     public long? EntCopieDeId { get; set; }
     /// <summary>Document créé et validé automatiquement par une transformation directe (commande d'un devis facturé).</summary>
     public bool EntIntermediaire { get; set; }
+    /// <summary>Avancement : C cumul (situation, reprise), P période (facture d'avancement) ; null sans avancement.</summary>
+    public string? EntAvtPresentation { get; set; }
+    /// <summary>Dépassement du montant du marché permis (option du marché).</summary>
+    public bool EntAvtDepassement { get; set; }
     /// <summary>Version d'enregistrement, verrouillage optimiste.</summary>
     public int EntVersion { get; set; } = 1;
     public DateTimeOffset EntCreeLe { get; set; }

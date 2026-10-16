@@ -1069,3 +1069,21 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Vérifié sur la base de démo : BL du marché (deux sections, numéros des commandes, pieds dans les sections, totaux des
   deux commandes), refus du BL direct, documents en attente du fournisseur, ajout d'un second BL à une facture
   brouillon (deux sections, deux sources), bouton et composantes dans la page.
+
+### Lot 6a – avancement : saisie, précédents, création depuis le marché (16/10/2026)
+
+- Q24 : règle d'avancement dans les deux `MoteurDocument` (jeux `10_avancement_periode.json`, `11_avancement_cumul.json`,
+  valeurs vérifiées à la main) : saisie en % (P), quantité (Q) ou montant (M) cumulés, référence = montant (le % pour une
+  ligne sans prix), les deux autres valeurs déduites ; situation : quantité et montant cumulés ; facture d'avancement :
+  cumul − précédent (une période négative est possible : retour en arrière). Le % est enregistré (analyses).
+- Q25, Q31 : situations et factures d'avancement créées depuis la fiche du marché (toutes ses commandes validées) ; une
+  facture créée depuis une situation reprend son avancement ; précédent = dernier document d'avancement validé non
+  annulé de la même ligne de commande (avenant tardif : précédent nul), relu à chaque enregistrement.
+- Q27 : `LIGNE_DEPASSEE` (bloque la validation) sauf l'option « Dépassement autorisé » du marché, reportée sur le
+  document.
+- Grille : colonnes % préc., % cumul, Qté cumul, Montant cumul (saisissables, mode marqué ✎), Montant préc. ; un %
+  saisi sur un titre ou une section s'applique à toutes ses lignes. Les colonnes du reste à solder ne s'affichent pas.
+- Vérifié sur la base de démo : facture d'avancement du marché 4 (204 lignes suivies), 30 % sur la première commande
+  → 38 131,85 € HT, validée ; facture suivante : précédent 30 %, période nulle.
+- Reste au lot 6b : avoir automatique (Q26), facture à 0 et état comptable (13.9), révisions et numéro de situation
+  (Q29), reprise d'un autre logiciel (13.11), bloc de déduction (13.7), lignes de pied en montant fixe (Q28, 13.10).
