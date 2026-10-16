@@ -120,6 +120,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
         if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
+        // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
+        if (type.TydAvancement == "F" || type.TydCode == "V_AVOIR") await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
         // Un avoir d'annulation reprend la pièce annulée (son numéro de situation) : ni numéro ni déduction.
         if (doc.EntAvtPresentation is null || doc.EntMarcheId is null || doc.EntNatureAvoir == "ANNULATION") return;
@@ -154,6 +156,11 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override async Task CompleterValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp saisie, TypeDocument type, CancellationToken ct)
     {
         if (PostesMarche.Portee(type, saisie.Document) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
+        // Facture d'avancement d'un marché : déductions des acomptes émis (Q12, 11.2).
+        if (type.TydAvancement == "F" && saisie.Document.EntMarcheId is not null && saisie.Document.EntNatureAvoir is null)
+        {
+            await Acomptes.Appliquer((LogiBtpContext)db, saisie, ct);
+        }
     }
 
     /// <summary>Délai de paiement (mêmes codes que les conditions de paiement) et mode de règlement du tiers (annuaire).</summary>

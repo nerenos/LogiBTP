@@ -35,7 +35,8 @@ export class PageParametresDocuments extends PageBase {
     this.titre = 'Paramétrage des documents';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🏷 Étiquettes et couleurs des lignes</h1><div class="corps"></div>
       <h2>Solde des lignes</h2><div class="seuils-solde"></div>
-      <h2>Conditions de paiement</h2><div class="conditions-paiement"></div></div>`;
+      <h2>Conditions de paiement</h2><div class="conditions-paiement"></div>
+      <h2>Acomptes</h2><div class="mode-acomptes"></div></div>`;
     // Hors ligne : les listes de la définition de démonstration sont modifiées en place (visibles dans le devis de démo).
     const fournisseur = app.enLigne
       ? {
@@ -47,6 +48,29 @@ export class PageParametresDocuments extends PageBase {
     await p.ouvrir();
     await this.ouvrirSeuils(this.conteneur.querySelector('.seuils-solde'));
     await this.ouvrirConditions(this.conteneur.querySelector('.conditions-paiement'));
+    await this.ouvrirAcomptes(this.conteneur.querySelector('.mode-acomptes'));
+  }
+
+  /**
+   * Mode d'acompte de la société (CONCEPTION-MARCHES-REGLEMENTS.md, 11.1) : avance de trésorerie (reçu sans TVA) ou
+   * chiffre d'affaires (facture d'acompte avec TVA) ; il ne change plus une fois un acompte créé.
+   */
+  async ouvrirAcomptes(zone) {
+    const app = this.app;
+    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Mode d\'acompte disponible en ligne seulement.</p>'; return; }
+    const mode = await api.modeAcomptes();
+    zone.innerHTML = `<p class="aide">Avance de trésorerie : demande puis reçu d'acompte (non comptable, sans TVA), déduction TTC au pied des factures.
+      Chiffre d'affaires : demande puis facture d'acompte (TVA du marché, comptée dans le facturé), déduction HT dans le pied de chaque commande.</p>
+      <p>Mode <span data-mode></span> ${app.estAdmin() ? '<button type="button" class="principal" data-enregistrer>Enregistrer le mode</button>' : ''}</p>`;
+    const combo = creerCombo({ options: [{ valeur: 'TRESORERIE', libelle: 'Avance de trésorerie' }, { valeur: 'CA', libelle: 'Chiffre d\'affaires' }], valeur: mode.mode, vide: false });
+    combo.readOnly = !app.estAdmin();
+    zone.querySelector('[data-mode]').replaceWith(combo);
+    zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+      try {
+        await api.enregistrerModeAcomptes(combo.valeurCombo);
+        app.message('Mode d\'acompte enregistré', 'succes');
+      } catch (e) { app.message(e.message, 'erreur'); }
+    });
   }
 
   /**

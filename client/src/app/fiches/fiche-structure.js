@@ -337,8 +337,10 @@ export class FicheMarche extends FicheStructure {
         <th class="nombre">Total HT</th></tr></thead><tbody>${g.autres.map((x) => `<tr><td>${lien(x)}</td><td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td>
         <td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}
 
+      <h3>Acomptes</h3><div data-acomptes></div>
       <h3>Postes de pied</h3><div data-postes></div>
     </div>`;
+    this.rendreAcomptes(corps.querySelector('[data-acomptes]'), corps);
     this.rendrePostes(corps.querySelector('[data-postes]'));
     const recharger = () => this.rendreGestion(corps);
     const action = (fn) => async (e) => {
@@ -362,6 +364,65 @@ export class FicheMarche extends FicheStructure {
       const r = await this.services.structure.annuler(id);
       this.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours' : ''}`, 'succes');
     })));
+  }
+
+  /**
+   * Acomptes du marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q10 à Q13, 11.1, 11.2) : demande (% du marché HT ou montant,
+   * mode de déduction), facture (mode chiffre d'affaires) ou reçu (avance de trésorerie) émis depuis la demande validée,
+   * déduit par les factures d'avancement validées (non annulées) et reste à déduire.
+   */
+  async rendreAcomptes(zone, corps) {
+    if (!zone || !this.services.structure.acomptes) return;
+    let acomptes;
+    let mode;
+    try {
+      [acomptes, mode] = await Promise.all([this.services.structure.acomptes(Number(this.id)), this.services.structure.modeAcomptes()]);
+    } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const ca = mode.mode === 'CA';
+    const DEDUCTIONS = [['LINEAIRE', 'Linéaire (au prorata de l\'avancement)'], ['PREMIERE', 'Première facture'], ['DERNIERE', 'Dernière facture']];
+    const f = (v) => formatNombre(v ?? 0, 2);
+    const lien = (x) => (x ? `<a href="/document/${Number(x.ent_id)}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small>${echapper(x.statut ?? '')}</small>` : '');
+    zone.innerHTML = `<p class="aide">Mode de la société : ${ca ? 'chiffre d\'affaires (facture d\'acompte avec TVA, déduction HT par commande)'
+      : 'avance de trésorerie (reçu sans TVA, déduction TTC au pied global)'} ; montants ${ca ? 'HT' : 'TTC'}. La déduction est calculée à la validation
+      de chaque facture d'avancement, une fois la facture ou le reçu de l'acompte validé.</p>
+      ${acomptes.length ? `<table class="tableau-gestion"><thead><tr><th>N°</th><th>Libellé</th><th class="nombre">Montant</th><th>Déduction</th>
+        <th>Demande</th><th>${ca ? 'Facture' : 'Reçu'}</th><th class="nombre">Déduit</th><th class="nombre">Reste à déduire</th><th></th></tr></thead>
+        <tbody>${acomptes.map((a) => `<tr><td>${a.rang}</td><td>${echapper(a.libelle)}</td><td class="nombre">${f(a.montant)}</td>
+          <td>${echapper(DEDUCTIONS.find(([c]) => c === a.deduction)?.[1] ?? a.deduction)}</td><td>${lien(a.demande)}</td><td>${lien(a.piece)}</td>
+          <td class="nombre">${f(a.deduit)}</td><td class="nombre">${f(Dz(a.montant).minus(Dz(a.deduit)).toString())}</td>
+          <td>${!a.piece || a.piece.annule ? `<button type="button" data-emettre="${a.id}" title="Valide la demande si besoin, puis crée la pièce">${ca ? 'Facturer' : 'Reçu'}</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucun acompte.</p>'}
+      <div class="formulaire acompte-nouveau">
+        <label>Acompte <input data-a="valeur" size="10" inputmode="decimal" placeholder="10"></label>
+        <label>En <span data-a="saisie"></span></label>
+        <label>Déduction <span data-a="deduction"></span></label>
+        <label class="large">Libellé <input data-a="libelle" maxlength="150" placeholder="Acompte n° ${acomptes.length + 1}"></label>
+        <button type="button" data-demander>＋ Demande d'acompte</button>
+      </div>`;
+    const saisie = creerCombo({ options: [{ valeur: 'P', libelle: '% du marché HT' }, { valeur: 'M', libelle: `Montant ${ca ? 'HT' : 'TTC'}` }], valeur: 'P', vide: false });
+    const deduction = creerCombo({ options: DEDUCTIONS.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'LINEAIRE', vide: false });
+    zone.querySelector('[data-a="saisie"]').replaceWith(saisie);
+    zone.querySelector('[data-a="deduction"]').replaceWith(deduction);
+    zone.querySelector('[data-demander]').addEventListener('click', async (e) => {
+      const valeur = lireNombre(zone.querySelector('[data-a="valeur"]').value);
+      if (valeur === null || valeur === undefined || Dz(valeur).lte(0)) { this.message('Acompte : valeur positive', 'avertissement'); return; }
+      try {
+        const r = await this.services.structure.demanderAcompte(Number(this.id), {
+          libelle: zone.querySelector('[data-a="libelle"]').value.trim() || null, saisie: saisie.valeurCombo, valeur, deduction: deduction.valeurCombo,
+        });
+        this.message(`Demande d'acompte créée : ${r.document.ent_numero ?? ''}`, 'succes');
+        this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+        this.rendreGestion(corps);
+      } catch (x) { this.message(x.message, 'erreur'); }
+    });
+    zone.querySelectorAll('[data-emettre]').forEach((b) => b.addEventListener('click', async (e) => {
+      try {
+        const r = await this.services.structure.emettreAcompte(Number(b.dataset.emettre));
+        this.message(`${ca ? 'Facture' : 'Reçu'} d'acompte créé : à valider`, 'succes');
+        this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+        this.rendreGestion(corps);
+      } catch (x) { this.message(x.message, 'erreur'); }
+    }));
   }
 
   /**

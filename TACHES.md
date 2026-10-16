@@ -63,6 +63,7 @@
   défaut (17/10/2026). **Lot 1 réalisé** : onglet Gestion de la fiche marché.
   **Lot 2 réalisé** : conditions de paiement et échéancier des pièces (module Document).
   **Lot 3 réalisé** : postes de pied du marché (retenue de garantie, paiement direct, modèle de pied des commandes).
+  **Lot 4 réalisé** : acomptes (mode de la société, demande, facture ou reçu, déductions des factures d'avancement).
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
 - [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après

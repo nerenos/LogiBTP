@@ -441,3 +441,27 @@ Développement lancé le 17/10/2026 : pour les questions sans décision, la prop
 - Vérifié sur la base de démo : facture d'avancement SI2026-00004 (retenue en échéance RETENUE, paiement direct de
   1 000 €), commande CC2026-00003 rattachée au marché 1 (compte prorata du modèle inséré avant la TVA).
 
+### Lot 4 – acomptes
+
+- `db/174_acomptes.sql` : types `V_DEMANDE_ACOMPTE` (non comptable), `V_FACTURE_ACOMPTE` (numérotation continue, avoir
+  `V_AVOIR`), `V_RECU_ACOMPTE` (non comptable), transformations demande → facture ou reçu (étape ACOMPTE) ; mode de la
+  société `parametre_document.acomptes` (TRESORERIE par défaut, ou CA ; ne change plus dès qu'un acompte existe) ;
+  `marche_acompte` (rang, libellé, mode figé, % du marché HT ou montant, déduction PREMIERE / DERNIERE / LINEAIRE,
+  demande, pièce) ; `acompte_deduction` (déductions des factures validées) ; `v_facturation_document` compte la facture
+  d'acompte dans le facturé (sa déduction HT le retire).
+- `Acomptes` (cœur) : demande au client du marché (une ligne d'acompte, PV fixe, nature OUV ; TVA du marché en mode CA,
+  exonérée en trésorerie), émission (« Facturer » / « Reçu » : la demande est validée puis transformée), déductions
+  posées avant le calcul de la validation des factures d'avancement (`CompleterValidationAsync`, montants de la période
+  et du cumul lus sur les lignes enregistrées) une fois la pièce de l'acompte validée : PREMIERE = min(reste, période),
+  DERNIERE = reste quand le cumul atteint le marché, LINEAIRE = acompte × cumul / marché − déjà déduit (une baisse
+  d'avancement reprend une partie de la déduction). Trésorerie : poste TTC du pied global ; CA : poste HT dans le pied
+  de chaque commande, avant sa TVA, au prorata de sa période (11.2 a). Lignes système « A<mac_id> » ;
+  `acompte_deduction` écrit après la validation (facture ou avoir d'avancement) ; une pièce annulée ne compte plus.
+- Routes : `GET|PUT /api/structure/acomptes/mode`, `GET|POST /api/structure/marches/{id}/acomptes`,
+  `POST /api/structure/acomptes/{id}/emettre`. Fiche marché, onglet Gestion : section Acomptes (montant, déduction,
+  demande, facture ou reçu, déduit, reste, nouvelle demande) ; `/parametres/documents` : mode d'acompte.
+- Reportés : avance forfaitaire « entre deux seuils » (Q12), écritures comptables (11.6), aperçu des déductions avant
+  la validation.
+- Vérifié sur la base de démo : acompte de 10 % du marché M-2026-005-1 (reçu RAC2026-00001), déduction linéaire de
+  5 084,24 TTC sur SI2026-00005 (cumul 20 %), puis en mode CA (essai) 2 × 1 271,06 HT dans les pieds des commandes.
+

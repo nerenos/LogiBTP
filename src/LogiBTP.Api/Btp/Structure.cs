@@ -109,6 +109,18 @@ public static class Structure
             return cree;
         });
         // Postes de pied du marché (Q5 à Q9, 11.3) : lecture ; écriture (droit MODIFIER de la fiche marché vérifié par la fiche).
+        // Acomptes (Q10 à Q13) : mode de la société (écriture : administrateur, tant qu'aucun acompte n'existe), acomptes du
+        // marché, nouvelle demande, émission de la facture ou du reçu.
+        g.MapGet("/acomptes/mode", (LogiBtpContext db, CancellationToken ct) => Acomptes.Mode(db, ct));
+        g.MapPut("/acomptes/mode", (ModeAcomptes m, HttpContext http, LogiBtpContext db, CancellationToken ct) => Acomptes.EnregistrerMode(db, m, Utilisateur.Depuis(http), ct));
+        g.MapGet("/marches/{id:int}/acomptes", (int id, LogiBtpContext db, CancellationToken ct) => Acomptes.Lire(db, id, ct));
+        g.MapPost("/marches/{id:int}/acomptes", async (int id, DemandeAcompte d, HttpContext http, LogiBtpContext db,
+            DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+            // Création et enregistrement de la demande ont chacun leur transaction (pas de transaction englobante).
+            await Acomptes.Creer(db, documents, id, d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/acomptes/{id:int}/emettre", async (int id, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
+            TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, CancellationToken ct) =>
+            await Acomptes.Emettre(db, documents, transformations, id, Utilisateur.Depuis(http), ct));
         g.MapGet("/marches/{id:int}/postes", (int id, LogiBtpContext db, CancellationToken ct) => PostesMarche.Lire(db, id, ct));
         g.MapPut("/marches/{id:int}/postes", (int id, List<PosteMarche> postes, LogiBtpContext db, CancellationToken ct) => PostesMarche.Enregistrer(db, id, postes, ct));
         // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,

@@ -75,6 +75,10 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
       gestion: (marche) => api.gestionMarche(marche),
       // Postes de pied du marché (pied global des factures, modèle de pied des commandes).
       postes: (marche) => api.postesMarche(marche),
+      acomptes: (marche) => api.acomptesMarche(marche),
+      modeAcomptes: () => api.modeAcomptes(),
+      demanderAcompte: (marche, demande) => api.demanderAcompte(marche, demande),
+      emettreAcompte: (id) => api.emettreAcompte(id),
       enregistrerPostes: (marche, postes) => api.enregistrerPostesMarche(marche, postes),
       facturerSituation: async (id) => {
         const cible = (await api.typesDocument()).find((t) => t.tyd_code === 'V_FACTURE_AVT');

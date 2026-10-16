@@ -51,6 +51,12 @@ export const api = {
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
   postesMarche: (marche) => appel('GET', `/structure/marches/${marche}/postes`),
+  // Acomptes : mode de la société, acomptes d'un marché, demande, émission de la facture ou du reçu.
+  modeAcomptes: () => appel('GET', '/structure/acomptes/mode'),
+  enregistrerModeAcomptes: (mode) => appel('PUT', '/structure/acomptes/mode', { mode }),
+  acomptesMarche: (marche) => appel('GET', `/structure/marches/${marche}/acomptes`),
+  demanderAcompte: (marche, demande) => appel('POST', `/structure/marches/${marche}/acomptes`, demande),
+  emettreAcompte: (id) => appel('POST', `/structure/acomptes/${id}/emettre`),
   enregistrerPostesMarche: (marche, postes) => appel('PUT', `/structure/marches/${marche}/postes`, postes),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),

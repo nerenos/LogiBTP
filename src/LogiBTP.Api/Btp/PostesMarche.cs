@@ -118,7 +118,8 @@ public static class PostesMarche
         voulus.AddRange(postes.Select(p => (p.Id!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), p, false)));
 
         var change = false;
-        var systeme = d.Lignes.Where(l => l.LigParentId is null && Cle(l) is not null).ToList();
+        // Lignes des postes seulement (« R » ou identifiant) : les déductions d'acompte (« A… ») sont gérées par Acomptes.
+        var systeme = d.Lignes.Where(l => l.LigParentId is null && Cle(l) is string c && (c == CleRetenue || c.All(char.IsDigit))).ToList();
         foreach (var l in systeme.Where(l => voulus.All(v => v.Cle != Cle(l))))
         {
             d.Lignes.Remove(l);
