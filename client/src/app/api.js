@@ -49,6 +49,7 @@ export const api = {
   ajouterSources: (id, sources) => appel('POST', `/documents/${id}/sources`, { sources }),
   documentsEnAttente: (cible, tiers) => appel('GET', `/documents/en-attente?cible=${cible}${tiers ? `&tiers=${tiers}` : ''}`),
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
+  gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
   // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.

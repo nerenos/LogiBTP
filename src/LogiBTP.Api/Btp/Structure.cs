@@ -100,6 +100,11 @@ public static class Structure
             cree.Document.EntAvtDepassement = await db.Database.SqlQuery<bool>($"SELECT ent_avt_depassement AS \"Value\" FROM document WHERE ent_id = {entId}").FirstAsync(ct);
             return cree;
         });
+        // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,
+        // situé (dernière situation de référence), facturé (factures et avoirs d'avancement non annulés) et reste ;
+        // situations (références), pièces d'avancement (annulées comprises, marquées), autres documents, totaux.
+        g.MapGet("/marches/{id:int}/gestion", async (int id, LogiBtpContext db, CancellationToken ct) =>
+            Results.Content(await db.Database.SqlQueryRaw<string>(SqlGestionMarche, new NpgsqlParameter("id", id)).FirstAsync(ct), "application/json"));
         // Commandes du marché validées pas encore reprises dans un document (avenant à charger dans un brouillon, Q18).
         g.MapGet("/documents/{id:long}/commandes-marche", async (long id, LogiBtpContext db, CancellationToken ct) =>
             await db.Database.SqlQuery<long>($"""
@@ -192,6 +197,60 @@ public static class Structure
     /// Pièces annulées avec la pièce {id} (alias x) : elle-même, et dans un marché les pièces d'avancement validées non
     /// annulées qui la suivent (numéro de situation, puis ordre de création).
     /// </summary>
+    private const string SqlGestionMarche = """
+        WITH cmd AS (
+            SELECT x.mdo_ent_id AS ent_id, x.mdo_role, x.mdo_rang, c.ent_numero, c.ent_date, c.ent_objet, c.ent_total_ht
+            FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id
+            WHERE x.mdo_mar_id = @id AND c.ent_verrouille),
+        lignes AS (SELECT l.lig_ent_id AS cmd_id, l.lig_id FROM document_ligne l WHERE l.lig_ent_id IN (SELECT ent_id FROM cmd)),
+        travaux AS (
+            SELECT l.lig_ent_id AS cmd_id, sum(l.lig_montant_ht) AS mt
+            FROM document_ligne l LEFT JOIN document_ligne p ON p.lig_id = l.lig_parent_id
+            WHERE l.lig_ent_id IN (SELECT ent_id FROM cmd) AND l.lig_tyl_id IN (2, 3) AND coalesce(p.lig_tyl_id, 0) <> 2 AND l.lig_type_prix = 'V'
+            GROUP BY l.lig_ent_id),
+        doc AS (
+            SELECT d.*, t.tyd_code, t.tyd_libelle, t.tyd_avancement, s.std_code, s.std_libelle
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE d.ent_marche_id = @id),
+        sit AS (
+            SELECT ent_id FROM doc WHERE tyd_avancement = 'S' AND ent_verrouille AND ent_is_reference AND std_code <> 'ANNULE'
+            ORDER BY ent_rang_avancement DESC NULLS LAST, ent_id DESC LIMIT 1),
+        facture AS (
+            SELECT li.cmd_id, sum(l.lig_montant_ht) AS mt
+            FROM document_ligne l JOIN lignes li ON li.lig_id = l.lig_avt_source_lig_id JOIN doc d ON d.ent_id = l.lig_ent_id
+            WHERE d.ent_verrouille AND d.ent_avt_presentation = 'P' AND d.std_code <> 'ANNULE'
+            GROUP BY li.cmd_id),
+        situe AS (
+            SELECT li.cmd_id, sum(l.lig_avt_montant_cumul) AS mt
+            FROM document_ligne l JOIN lignes li ON li.lig_id = l.lig_avt_source_lig_id
+            WHERE l.lig_ent_id = (SELECT ent_id FROM sit)
+            GROUP BY li.cmd_id)
+        SELECT json_build_object(
+          'montant_ht', (SELECT mar_montant_ht FROM marche WHERE mar_id = @id),
+          'facture_ht', (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_marche_id = @id),
+          'derniere_situation', (SELECT ent_id FROM sit),
+          'commandes', (SELECT coalesce(json_agg(json_build_object('ent_id', c.ent_id, 'role', c.mdo_role, 'rang', c.mdo_rang,
+                'numero', c.ent_numero, 'date', c.ent_date, 'objet', c.ent_objet, 'prevu_ht', c.ent_total_ht, 'travaux_ht', w.mt,
+                'situe_ht', s.mt, 'facture_ht', coalesce(f.mt, 0)) ORDER BY c.mdo_rang), '[]')
+              FROM cmd c LEFT JOIN travaux w ON w.cmd_id = c.ent_id LEFT JOIN facture f ON f.cmd_id = c.ent_id LEFT JOIN situe s ON s.cmd_id = c.ent_id),
+          'situations', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'numero', d.ent_numero, 'indice', d.ent_indice,
+                'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille, 'total_ht', d.ent_total_ht,
+                'facturee', EXISTS (SELECT 1 FROM document_lien k JOIN doc f ON f.ent_id = k.lie_cible_ent_id
+                                    WHERE k.lie_source_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND f.std_code <> 'ANNULE'),
+                'indices', (SELECT count(*) FROM document g WHERE g.ent_groupe_id = d.ent_groupe_id))
+                ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
+              FROM doc d WHERE d.tyd_avancement = 'S' AND d.ent_is_reference),
+          'factures', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'code', d.tyd_code, 'numero', d.ent_numero,
+                'rang', d.ent_rang_avancement, 'date', d.ent_date, 'statut', d.std_libelle, 'valide', d.ent_verrouille,
+                'annule', d.std_code = 'ANNULE', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
+              FROM doc d WHERE d.ent_avt_presentation = 'P'),
+          'autres', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'numero', d.ent_numero,
+                'date', d.ent_date, 'statut', d.std_libelle, 'total_ht', d.ent_total_ht) ORDER BY d.ent_id), '[]')
+              FROM doc d WHERE d.ent_avt_presentation IS NULL AND d.ent_id NOT IN (SELECT ent_id FROM cmd))
+        ) AS "Value"
+        """;
+
     private const string SqlListeCascade = """
         SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', t.tyd_libelle,
             'rang', x.ent_rang_avancement, 'total_ht', x.ent_total_ht) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]') AS "Value"

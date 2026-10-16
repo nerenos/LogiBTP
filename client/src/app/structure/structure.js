@@ -71,6 +71,15 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
       documents: (perimetre) => api.structureDocuments(perimetre),
       descendants: (id) => api.structureDescendants(id),
       documentMarche: (marche, type) => api.documentMarche(marche, type),
+      // Onglet Gestion du marché : lecture, facturation d'une situation, révision, annulation par avoir.
+      gestion: (marche) => api.gestionMarche(marche),
+      facturerSituation: async (id) => {
+        const cible = (await api.typesDocument()).find((t) => t.tyd_code === 'V_FACTURE_AVT');
+        return api.transformer(id, { cible_tyd_id: cible.tyd_id, lignes: [] });
+      },
+      reviser: (id) => api.creerIndice(id),
+      piecesAnnulation: (id) => api.piecesAnnulation(id),
+      annuler: (id) => api.annulerParAvoir(id),
     };
   }
   return new FournisseurStructureMemoire({ annuaire, documents });

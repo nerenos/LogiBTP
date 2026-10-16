@@ -249,3 +249,11 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .bloc-avancement td, .bloc-avancement th { padding: 2px 8px; text-align: left; font-weight: normal; }
 .bloc-avancement th { font-weight: 600; }
 .bloc-avancement td.nombre { text-align: right; }
+/* Onglet Gestion de la fiche marché. */
+.gestion-marche h3 { margin: 14px 0 6px; }
+.tableau-gestion { border-collapse: collapse; }
+.tableau-gestion th, .tableau-gestion td { padding: 3px 8px; border-bottom: 1px solid var(--bord); text-align: left; }
+.tableau-gestion .nombre { text-align: right; white-space: nowrap; }
+.tableau-gestion tfoot th { border-top: 2px solid var(--bord); }
+.tableau-gestion tr.annulee td { color: var(--discret); text-decoration: line-through; }
+

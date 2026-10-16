@@ -56,6 +56,11 @@
   marché M-2026-005-1, BL, factures et avoirs d'avancement, situations). § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
+- [ ] **Gestion du marché, postes globaux, acomptes, échéances, règlements** (17/10/2026) : analyse dans
+  [CONCEPTION-MARCHES-REGLEMENTS.md](CONCEPTION-MARCHES-REGLEMENTS.md) (onglet Gestion de la fiche marché, retenue de
+  garantie, compte prorata, paiement direct, acomptes et leurs déductions, conditions de paiement et échéancier, module
+  Règlements avec pointage et cautions) ; décisions Q6, Q10, Q13, Q14 prises, les autres propositions retenues par
+  défaut (17/10/2026). **Lot 1 réalisé** : onglet Gestion de la fiche marché.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
 - [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après

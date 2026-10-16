@@ -1,5 +1,6 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { D, Dz } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
 import { controlerIntervenants } from '../structure/structure.js';
@@ -276,6 +277,88 @@ export class FicheMarche extends FicheStructure {
 
   liens(v) {
     return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
+  }
+
+  /** Onglet Gestion (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q4) avant le graphe. */
+  ongletsSpecifiques() {
+    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...super.ongletsSpecifiques()];
+  }
+
+  /**
+   * Gestion du marché : récapitulatif par commande (marché, TS : prévu, travaux, situé, facturé, reste), situations de
+   * référence, factures et avoirs d'avancement (annulés masqués, réaffichables), autres documents ; création par les
+   * boutons de la fiche, ouverture des documents, facturation et révision d'une situation, annulation par avoir.
+   */
+  async rendreGestion(corps) {
+    if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour gérer le marché.</p>'; return; }
+    if (!this.services.structure.gestion) { corps.innerHTML = '<p class="aide">Gestion du marché disponible en ligne seulement.</p>'; return; }
+    corps.innerHTML = '<p class="aide">Chargement…</p>';
+    let g;
+    try { g = await this.services.structure.gestion(Number(this.id)); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+    const pct = (n, d) => (Dz(d).isZero() || n === null || n === undefined ? '' : `${formatNombre(D(n).div(D(d)).times(100).toDecimalPlaces(1).toString(), 1)} %`);
+    const lien = (x) => `<a href="/document/${Number(x.ent_id)}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
+    const total = (cle) => g.commandes.reduce((s, c) => s.plus(Dz(c[cle])), D(0));
+    const prevu = total('prevu_ht');
+    const factures = g.factures.filter((x) => this.voirAnnulees || !x.annule);
+    const nbAnnulees = g.factures.filter((x) => x.annule).length;
+    corps.innerHTML = `<div class="gestion-marche">
+      <h3>Récapitulatif</h3>
+      <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">Prévu HT</th><th class="nombre">Travaux HT</th>
+        <th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
+      <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? 'Marché' : `TS ${c.rang}`}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
+        <td class="nombre">${f(c.prevu_ht)}</td><td class="nombre">${f(c.travaux_ht)}</td><td class="nombre">${f(c.situe_ht)}</td>
+        <td class="nombre">${pct(c.situe_ht, c.travaux_ht)}</td><td class="nombre">${f(c.facture_ht)}</td>
+        <td class="nombre">${f(Dz(c.travaux_ht).minus(Dz(c.facture_ht)).toString())}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(prevu.toString())}</th><th class="nombre">${f(total('travaux_ht').toString())}</th>
+        <th class="nombre">${f(total('situe_ht').toString())}</th><th class="nombre">${pct(total('situe_ht').toString(), total('travaux_ht').toString())}</th>
+        <th class="nombre">${f(g.facture_ht)}</th><th class="nombre">${f(Dz(g.montant_ht).minus(Dz(g.facture_ht)).toString())}</th></tr></tfoot></table>
+      <p class="aide">Situé : dernière situation de référence ; facturé par commande : factures et avoirs d'avancement non annulés (travaux) ;
+        facturé du marché : toutes ses factures et avoirs validés. Reste du marché = montant du marché − facturé.</p>
+
+      <h3>Situations</h3>
+      ${g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
+        <th class="nombre">Cumul HT</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
+        <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>(${x.indices} indices)</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
+        <td>${echapper(x.statut ?? '')}${x.facturee ? ' · facturée' : ''}</td><td class="nombre">${f(x.total_ht)}</td>
+        <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">Facturer</button> <button type="button" data-reviser="${x.ent_id}">Réviser</button>` : ''}</td></tr>`).join('')}
+        </tbody></table>` : '<p class="aide">Aucune situation : bouton « 📈 Nouvelle situation ».</p>'}
+
+      <h3>Factures et avoirs d'avancement</h3>
+      ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> Afficher les pièces annulées (${nbAnnulees})</label>` : ''}
+      ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Pièce</th><th>Type</th><th>Date</th><th>Statut</th>
+        <th class="nombre">Période HT</th><th class="nombre">TTC</th><th class="nombre">Net à payer</th><th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
+        <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ' (annulation)' : x.nature === 'AVANCEMENT' ? " (d'avancement)" : ''}</td>
+        <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
+        <td class="nombre">${f(x.net_a_payer)}</td><td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">Annuler par avoir…</button>` : ''}</td></tr>`).join('')}
+        </tbody></table>` : '<p class="aide">Aucune facture d\'avancement : bouton « 📊 Nouvelle facture d\'avancement ».</p>'}
+
+      ${g.autres.length ? `<h3>Autres documents</h3><table class="tableau-gestion"><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Statut</th>
+        <th class="nombre">Total HT</th></tr></thead><tbody>${g.autres.map((x) => `<tr><td>${lien(x)}</td><td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td>
+        <td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}
+    </div>`;
+    const recharger = () => this.rendreGestion(corps);
+    const action = (fn) => async (e) => {
+      try { await fn(Number(e.currentTarget.dataset.facturer ?? e.currentTarget.dataset.reviser ?? e.currentTarget.dataset.annuler), e); await recharger(); } catch (x) { this.message(x.message, 'erreur'); }
+    };
+    corps.querySelector('[data-annulees]')?.addEventListener('change', (e) => { this.voirAnnulees = e.target.checked; recharger(); });
+    corps.querySelectorAll('[data-facturer]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
+      const r = await this.services.structure.facturerSituation(id);
+      this.message(`Facture d'avancement créée depuis la situation`, 'succes');
+      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+    })));
+    corps.querySelectorAll('[data-reviser]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
+      const r = await this.services.structure.reviser(id);
+      this.message(`Révision créée (indice ${r.document.ent_indice})`, 'succes');
+      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+    })));
+    corps.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', action(async (id) => {
+      const pieces = await this.services.structure.piecesAnnulation(id);
+      const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''}`).join('\n');
+      if (!globalThis.confirm?.(`Pièces annulées par avoir :\n\n${liste}\n\nAnnuler ?`)) return;
+      const r = await this.services.structure.annuler(id);
+      this.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours' : ''}`, 'succes');
+    })));
   }
 
   /** Documents créés depuis le marché (toutes ses commandes validées, une section et un pied par commande). */
