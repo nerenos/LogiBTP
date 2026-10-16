@@ -70,6 +70,7 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
       intervenants: (type, id) => api.structureIntervenants(type, id),
       documents: (perimetre) => api.structureDocuments(perimetre),
       descendants: (id) => api.structureDescendants(id),
+      documentMarche: (marche, type) => api.documentMarche(marche, type),
     };
   }
   return new FournisseurStructureMemoire({ annuaire, documents });

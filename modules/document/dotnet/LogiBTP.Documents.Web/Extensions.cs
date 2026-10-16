@@ -134,6 +134,13 @@ public static class Extensions
             await s.Solder(ligId, d, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        // Plusieurs documents sources : création (une section par source), ajout à un brouillon, documents en attente.
+        api.MapPost("/documents/plusieurs", (DemandeTransformationMultiple d, HttpContext http, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.TransformerPlusieurs(d, Utilisateur.Depuis(http), ct));
+        api.MapPost("/documents/{id:long}/sources", (long id, DemandeSources d, HttpContext http, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.AjouterSources(id, d.Sources, Utilisateur.Depuis(http), ct));
+        api.MapGet("/documents/en-attente", (int cible, long? tiers, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.EnAttente(cible, tiers, ct));
         api.MapGet("/documents/{id:long}/restes", (long id, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Restes(id, ct));
         api.MapGet("/parametres-documents/seuils-solde", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LireSeuilsSolde(ct));
         api.MapPut("/parametres-documents/seuils-solde", (SeuilsSolde v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

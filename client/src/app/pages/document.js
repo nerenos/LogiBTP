@@ -17,6 +17,11 @@ import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { completerRattachement } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
+import { choisirSources } from '../documents/sources.js';
+
+/** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
+const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|AVOIR)$/;
+const MARCHE_TYPES = ['V_RECEPTION', 'V_SITUATION', 'V_FACTURE_AVT'];
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
@@ -40,6 +45,7 @@ const GABARIT = `
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+      <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
     </div>
     <span class="groupe" data-vues></span>
@@ -146,6 +152,7 @@ export class PageDocument extends PageBase {
     });
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
+      sources: () => this.ajouterSources(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
@@ -439,6 +446,8 @@ export class PageDocument extends PageBase {
     this.$('[data-action="enregistrer"]').textContent = this.importEnCours ? 'Créer le devis' : 'Enregistrer';
     this.$('[data-action="valider"]').disabled = !enLigne || !modifiable || Boolean(this.importEnCours);
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
+    // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
+    this.$('[data-action="sources"]').hidden = !enLigne || !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
@@ -644,6 +653,32 @@ export class PageDocument extends PageBase {
     await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
     this.app.message(r.cree ? 'Marché créé et commande rattachée' : 'Commande rattachée comme avenant du marché', 'succes');
     return true;
+  }
+
+  /**
+   * Ajoute des documents sources au brouillon (CONCEPTION-ACHATS-MARCHES.md Q10, Q18) : document d'un marché, les
+   * commandes (avenants) du marché pas encore reprises ; sinon les documents validés en attente du même tiers. Chaque
+   * document devient une section avec son pied ; le document est rechargé.
+   */
+  async ajouterSources() {
+    const ed = this.editeur;
+    const d = ed.saisie.document;
+    if (this.modifiee) await this.enregistrer();
+    let sources;
+    if (d.ent_marche_id && MARCHE_TYPES.includes(ed.definition.type?.tyd_code)) {
+      const ids = await api.commandesMarche(d.ent_id);
+      if (!ids.length) { this.app.message('Toutes les commandes validées du marché sont déjà reprises', 'avertissement'); return; }
+      if (!confirm(`${ids.length} commande(s) du marché (avenants) pas encore reprise(s) : les ajouter ?`)) return;
+      sources = ids;
+    } else {
+      const attente = await api.documentsEnAttente(d.ent_tyd_id, d.ent_tiers_id ?? null);
+      sources = await choisirSources({ documents: attente, titre: `Documents à reprendre dans ${ed.definition.type?.tyd_libelle ?? 'le document'}` });
+      if (!sources?.length) return;
+    }
+    await api.ajouterSources(d.ent_id, sources);
+    await this.chargerDocument(d.ent_id);
+    this.app.publier('enregistre', { ids: [d.ent_id] });
+    this.app.message(`${sources.length} document(s) repris`, 'succes');
   }
 
   async transformer() {

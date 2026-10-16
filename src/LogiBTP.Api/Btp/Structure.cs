@@ -1,4 +1,6 @@
 using System.Text.Json;
+using LogiBTP.Documents.Web;
+using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -8,6 +10,9 @@ namespace LogiBTP.Api.Btp;
 
 /// <summary>Éléments de la structure dont on veut les documents (graphe des fiches projet, affaire, chantier, marché).</summary>
 public sealed record PerimetreStructure(List<int>? Projets, List<int>? Affaires, List<int>? Chantiers, List<int>? Marches);
+
+/// <summary>Document à créer depuis un marché : code du type (V_RECEPTION…).</summary>
+public sealed record DocumentMarche(string Type);
 
 /// <summary>Rattachement d'un document à la structure des affaires (champs facultatifs).</summary>
 public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, int? EntChantierId, int? EntMarcheId);
@@ -76,6 +81,30 @@ public static class Structure
             await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({id})", ct);
             return Results.Ok(new { ent_projet_id = doc.EntProjetId, ent_affaire_id = doc.EntAffaireId, ent_chantier_id = doc.EntChantierId, ent_marche_id = doc.EntMarcheId });
         });
+        // Document créé depuis un marché (BL…) : toutes les commandes validées du marché, dans l'ordre (base puis avenants),
+        // une section et un bloc de pied par commande (CONCEPTION-ACHATS-MARCHES.md, Q18, Q23).
+        g.MapPost("/marches/{id:int}/documents", async (int id, DocumentMarche d, HttpContext http, LogiBtpContext db,
+            TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, CancellationToken ct) =>
+        {
+            var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == d.Type).Select(t => (int?)t.TydId).FirstOrDefaultAsync(ct)
+                ?? throw ExceptionMetier.Introuvable($"Type {d.Type}");
+            var commandes = await db.Database.SqlQuery<long>($"""
+                SELECT x.mdo_ent_id AS "Value" FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id
+                WHERE x.mdo_mar_id = {id} AND c.ent_verrouille ORDER BY x.mdo_rang
+                """).ToListAsync(ct);
+            if (commandes.Count == 0) throw ExceptionMetier.Invalide("MARCHE_SANS_COMMANDE", "Le marché n'a pas de commande validée");
+            return await transformations.TransformerPlusieurs(new DemandeTransformationMultiple { CibleTydId = tyd, Sources = commandes }, Utilisateur.Depuis(http), ct);
+        });
+        // Commandes du marché validées pas encore reprises dans un document (avenant à charger dans un brouillon, Q18).
+        g.MapGet("/documents/{id:long}/commandes-marche", async (long id, LogiBtpContext db, CancellationToken ct) =>
+            await db.Database.SqlQuery<long>($"""
+                SELECT x.mdo_ent_id AS "Value" FROM document d
+                JOIN marche_document x ON x.mdo_mar_id = d.ent_marche_id
+                JOIN document c ON c.ent_id = x.mdo_ent_id
+                WHERE d.ent_id = {id} AND c.ent_verrouille
+                  AND NOT EXISTS (SELECT 1 FROM document_lien l WHERE l.lie_source_ent_id = x.mdo_ent_id AND l.lie_cible_ent_id = d.ent_id)
+                ORDER BY x.mdo_rang
+                """).ToListAsync(ct));
         // Intervenants d'un projet, d'une affaire, d'un chantier ou d'un marché (reprise dans l'annuaire d'un document).
         g.MapGet("/intervenants/{type}/{id:long}", async (string type, long id, LogiBtpContext db, CancellationToken ct) =>
             Intervenants.Gere(type) ? Results.Json(await Intervenants.Lire(db, type, id, ct)) : throw ExceptionMetier.Introuvable($"Type {type}"));

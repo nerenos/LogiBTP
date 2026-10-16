@@ -173,6 +173,14 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<ReponseEnregistrement<TComplet>> Enregistrer(long id, TComplet d, Utilisateur u, CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var reponse = await EnregistrerDans(id, d, u, ct);
+        await tx.CommitAsync(ct);
+        return reponse;
+    }
+
+    /// <summary>Enregistrement dans la transaction de l'appelant (ajout de documents sources…).</summary>
+    protected internal async Task<ReponseEnregistrement<TComplet>> EnregistrerDans(long id, TComplet d, Utilisateur u, CancellationToken ct)
+    {
         var avant = await persistance.Charger(id, ct);
         var type = await Type(avant.Document.EntTydId, ct);
         await VerifierDroit(u, type.TydId, "MODIFIER", ct);
@@ -219,7 +227,6 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await Historiser(avant, "MODIFICATION", u, ct);
         var reponse = await Persister(id, r, u, ct);
         reponse.Ecarts = ecarts.Select(x => x with { LigId = x.LigId is long l ? reponse.CorrespondanceLignes.GetValueOrDefault(l, l) : null }).ToList();
-        await tx.CommitAsync(ct);
         return reponse;
     }
 
@@ -426,10 +433,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
         await VerifierDroit(u, doc.EntTydId, "SUPPRIMER", ct);
         await VerifierModifiable(doc, ct);
-        // Seules les transformations (suivi des quantités) empêchent la suppression ; un lien de copie n'est qu'une trace.
-        if (await db.DocumentsLien.AnyAsync(l => (l.LieSourceEntId == id || l.LieCibleEntId == id) && l.LieType != "COPIE", ct))
+        // Un document déjà transformé (source) ne se supprime pas ; un brouillon issu d'une transformation (cible) se
+        // supprime avec ses liens (ses quantités ne comptent plus dans le reste de ses sources). Copie : simple trace.
+        if (await db.DocumentsLien.AnyAsync(l => l.LieSourceEntId == id && l.LieType != "COPIE", ct))
         {
-            throw ExceptionMetier.Conflit("DOCUMENT_LIE", "Le document est lié à d'autres documents par une transformation");
+            throw ExceptionMetier.Conflit("DOCUMENT_LIE", "Le document a été transformé en d'autres documents");
         }
         // Liens de copie retirés avant le document (pas de navigation EF entre eux : ordre explicite).
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -543,8 +551,14 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Remplace tous les ID par des ID temporaires négatifs ; lig_origine_id garde la ligne source.</summary>
     protected TComplet RenumeroterTemporaire(TComplet d)
     {
-        var lig = new Dictionary<long, long>();
         long n = 0;
+        return RenumeroterTemporaire(d, ref n);
+    }
+
+    /// <summary>Renumérotation temporaire à partir de n (contenus de plusieurs sources réunis dans un document).</summary>
+    protected internal TComplet RenumeroterTemporaire(TComplet d, ref long n)
+    {
+        var lig = new Dictionary<long, long>();
         foreach (var l in d.Lignes) lig[l.LigId] = --n;
         long? Map(long? id) => id is long v && lig.TryGetValue(v, out var r) ? r : null;
         foreach (var l in d.Lignes)

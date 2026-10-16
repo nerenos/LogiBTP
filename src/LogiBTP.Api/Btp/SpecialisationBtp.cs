@@ -327,6 +327,41 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         c.Ventilations = FigerVentilation(c.VentilationsLignes, c.Lignes, c.Document.EntId);
     }
 
+    /// <summary>Plusieurs sources : métrés, variables, clés et détail de ventilation mis bout à bout (identifiants distincts).</summary>
+    public override void FusionnerComplements(DocumentCompletBtp cible, DocumentCompletBtp ajout)
+    {
+        cible.Metres.AddRange(ajout.Metres);
+        cible.Variables.AddRange(ajout.Variables);
+        cible.Ventilations.AddRange(ajout.Ventilations);
+        cible.VentilationsLignes.AddRange(ajout.VentilationsLignes);
+    }
+
+    /// <summary>
+    /// Document créé depuis plusieurs sources : un rattachement (projet, affaire, chantier, marché) n'est gardé que s'il
+    /// est commun à toutes (une facture fournisseur peut couvrir plusieurs chantiers).
+    /// </summary>
+    public override void PreparerEntetePlusieurs(DocumentBtp cible, IReadOnlyList<DocumentBtp> sources)
+    {
+        static T? Commun<T>(IEnumerable<T?> v) where T : struct => v.Distinct().Count() == 1 ? v.First() : null;
+        cible.EntProjetId = Commun(sources.Select(s => s.EntProjetId));
+        cible.EntAffaireId = Commun(sources.Select(s => s.EntAffaireId));
+        cible.EntChantierId = Commun(sources.Select(s => s.EntChantierId));
+        cible.EntMarcheId = Commun(sources.Select(s => s.EntMarcheId));
+    }
+
+    /// <summary>
+    /// Une commande client d'un marché ne se transforme pas seule en BL, situation ou facture d'avancement : ces
+    /// documents se créent depuis le marché, avec toutes ses commandes (CONCEPTION-ACHATS-MARCHES.md, Q19).
+    /// </summary>
+    public override void ControlerTransformation(DocumentCompletBtp source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs)
+    {
+        if (!depuisPlusieurs && typeSource.TydCode == "V_COMMANDE" && source.Document.EntMarcheId is not null
+            && typeCible.TydCode is "V_RECEPTION" or "V_SITUATION" or "V_FACTURE_AVT")
+        {
+            throw LogiBTP.Socle.Web.ExceptionMetier.Invalide("MARCHE_CREATION", "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)");
+        }
+    }
+
     public override bool EstLigneCalculee(DocumentLigneBtp l) => l.LigIsEcartArrondi;
 
     public override void AjusterLigneTransformee(DocumentLigneBtp l)

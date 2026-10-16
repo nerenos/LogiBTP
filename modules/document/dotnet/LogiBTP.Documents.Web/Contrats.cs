@@ -90,6 +90,23 @@ public sealed class DemandeTransformation
     public List<ChoixOption> Choix { get; set; } = [];
 }
 
+/// <summary>Document créé depuis plusieurs documents sources (une section par source).</summary>
+public sealed class DemandeTransformationMultiple
+{
+    public int CibleTydId { get; set; }
+    public List<long> Sources { get; set; } = [];
+}
+
+/// <summary>Documents sources ajoutés à un document brouillon.</summary>
+public sealed class DemandeSources
+{
+    public List<long> Sources { get; set; } = [];
+}
+
+/// <summary>Document validé qui peut alimenter un document d'un type donné (lignes encore ouvertes).</summary>
+public sealed record DocumentEnAttente(long EntId, string TypeCode, string TypeLibelle, string? Numero, DateOnly Date, string? Objet,
+    long? TiersId, decimal TotalHt, int LignesOuvertes);
+
 /// <summary>Option ou variante retenue (passe en prix vendu) ou non (non reprise) ; ligne de base d'une variante gardée ou non.</summary>
 public sealed class ChoixOption
 {

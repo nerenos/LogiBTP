@@ -41,7 +41,9 @@
   marché obligatoire, base et avenants, montant calculé, `170` et définition de la fiche marché appliqués aux deux
   bases ; reste de Q19 — refuser BL, situation et facture d'avancement directs d'une commande d'un marché — à faire avec
   la création depuis le marché, lots 5 et 6) ; **lot 4 réalisé** : pieds de section et pied global consolidé dans les
-  deux moteurs (les postes HT du pied global, ex. compte prorata, restent à traiter : PIED_GLOBAL) ; § 13.14 sans décision
+  deux moteurs (les postes HT du pied global, ex. compte prorata, restent à traiter : PIED_GLOBAL) ; **lot 5 réalisé** :
+  plusieurs sources (BL du marché, facture de plusieurs BL, avenants chargés), Q19, composantes du BL ; restent 13.14 :
+  regroupement des BL par commande (une section par document pour l'instant) et chantier par ligne (`lig_cha_id`) ; § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.

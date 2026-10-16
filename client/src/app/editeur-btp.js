@@ -166,6 +166,17 @@ export class EditeurDevisBtp extends EditeurDocument {
 
   estLigneCalculee(l) { return !!l.lig_is_ecart_arrondi; }
 
+  /**
+   * Bon de livraison : les composantes d'un ouvrage ne se saisissent pas, elles suivent la quantité livrée de l'ouvrage
+   * (CONCEPTION-ACHATS-MARCHES.md, Q23, 13.8).
+   */
+  saisissable(l) {
+    if (!super.saisissable(l)) return false;
+    if (!/_RECEPTION$/.test(this.definition.type?.tyd_code ?? '')) return true;
+    const parent = l.lig_parent_id === null || l.lig_parent_id === undefined ? null : this.saisie.lignes.find((x) => x.lig_id === l.lig_parent_id);
+    return parent?.lig_tyl_id !== TL.OUVRAGE;
+  }
+
   /** Plan : part ventilée d'une tranche de frais annexes (ventilé / prévu). */
   complementTranche(ligne) {
     const b = bilanTranche(this.resultat, ligne.lig_id);

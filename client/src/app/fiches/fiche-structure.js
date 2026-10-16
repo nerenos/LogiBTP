@@ -278,6 +278,20 @@ export class FicheMarche extends FicheStructure {
     return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
   }
 
+  /** Documents créés depuis le marché (toutes ses commandes validées, une section et un pied par commande). */
+  actionsSupplementaires() {
+    const commandes = (this.refs.marche_documents ?? []).some((x) => x.mar_id === Number(this.id));
+    const nouveau = (type, libelle) => async (e) => {
+      const r = await this.services.structure.documentMarche(Number(this.id), type);
+      this.message(`${libelle} ${r.document.ent_numero ?? ''} créé`, 'succes');
+      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+    };
+    return [{
+      libelle: '🚚 Nouveau BL', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)',
+      action: nouveau('V_RECEPTION', 'Bon de livraison'), visible: this.id !== null && commandes && !this.estEnSaisie() && Boolean(this.services.structure.documentMarche),
+    }];
+  }
+
   /** Commandes du marché (db/170 : marche_document) : la commande de base puis les avenants, avec leur montant. */
   rendreInformations(v) {
     const commandes = (this.refs.marche_documents ?? []).filter((x) => x.mar_id === Number(this.id));

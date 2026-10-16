@@ -1048,3 +1048,24 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Grille : tranche « Pied de la section » repliable en fin de chaque section, pied global avec ses lignes
   « Consolidé ». Vérifié dans le navigateur sur un devis d'essai (supprimé ensuite) : nets de section 1 117,20 et
   687,99, pied global 1 705,19 (moteur BTP du serveur identique).
+
+### Lot 5 – plusieurs sources, BL du marché (16/10/2026)
+
+- Q10, 13.4 bis : `TransformerPlusieurs` et `AjouterSources` (module Document) ; une section par document source (la
+  sienne, ou une section créée à son nom), son bloc de pied y est déplacé, sa colonne Code porte le numéro de la source ;
+  le contenu existant d'un brouillon devient lui aussi une section. Fenêtre « Documents en attente » (`EnAttente` :
+  même tiers, lignes encore ouvertes pour toutes les étapes de la transformation) par le bouton « ＋ Documents » de la
+  page document. Entête : rattachement gardé seulement s'il est commun aux sources (13.4 bis a).
+- Une cible qui couvre plusieurs étapes (facture qui vaut réception) ne reprend que le plus petit reste : une facture
+  directe d'une commande ne refacture pas ce qu'un BL a livré (13.4 bis a).
+- Q18, Q23 : BL du marché depuis la fiche (« 🚚 Nouveau BL » : toutes les commandes validées, base puis avenants) ;
+  « ＋ Documents » d'un document du marché charge les avenants validés pas encore repris ; composantes d'ouvrage non
+  saisissables dans un BL (quantités unitaires × quantité de l'ouvrage, 13.8).
+- Q19 : BL, situation et facture d'avancement directs d'une commande d'un marché refusés (`MARCHE_CREATION`).
+- Suppression : un brouillon issu d'une transformation se supprime avec ses liens (sinon un BL brouillon créé par erreur
+  bloquait le reste de ses sources, Q5) ; un document déjà transformé reste protégé.
+- Non fait (13.14 sans décision) : regroupement des BL d'une même commande en tranches dans la section de la commande,
+  chantier par ligne (`lig_cha_id`).
+- Vérifié sur la base de démo : BL du marché (deux sections, numéros des commandes, pieds dans les sections, totaux des
+  deux commandes), refus du BL direct, documents en attente du fournisseur, ajout d'un second BL à une facture
+  brouillon (deux sections, deux sources), bouton et composantes dans la page.

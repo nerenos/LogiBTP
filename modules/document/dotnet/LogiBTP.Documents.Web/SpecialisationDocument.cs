@@ -80,4 +80,19 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
 
     /// <summary>Ligne de prix recopiée avec la quantité transformée (quantité saisie forcée, perte neutralisée…).</summary>
     public virtual void AjusterLigneTransformee(TLigne l) { }
+
+    /// <summary>
+    /// Contrôle propre à la spécialisation avant une transformation (lève une ExceptionMetier pour la refuser) ;
+    /// depuisPlusieurs : création depuis plusieurs documents (marché, facture de plusieurs BL…).
+    /// </summary>
+    public virtual void ControlerTransformation(TComplet source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs) { }
+
+    /// <summary>Entête d'un document créé depuis plusieurs sources (il part de la première) : rattachements communs…</summary>
+    public virtual void PreparerEntetePlusieurs(TDoc cible, IReadOnlyList<TDoc> sources) { }
+
+    /// <summary>Contenu repris d'une source d'un document à plusieurs sources (identifiants temporaires).</summary>
+    public virtual void PreparerContenuSource(TComplet contenu, TDoc source) { }
+
+    /// <summary>Ajoute à un contenu les compléments d'un autre (métrés, variables… ; identifiants temporaires distincts).</summary>
+    public virtual void FusionnerComplements(TComplet cible, TComplet ajout) { }
 }

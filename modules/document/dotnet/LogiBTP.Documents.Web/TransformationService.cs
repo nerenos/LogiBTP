@@ -51,12 +51,44 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         return await documents.Charger(cibleId, ct);
     }
 
+    /// <summary>Source préparée pour une transformation : quantités retenues, lignes gardées, options, étapes.</summary>
+    private sealed record Preparation(TComplet Source, TypeDocument TypeSource, TransformationAutorisee Regle, List<string> Etapes,
+        Dictionary<long, decimal> Retenues, Dictionary<long, decimal?> Avancements, HashSet<long> Garder, HashSet<long> EnVendu,
+        List<UniteOption> Unites, Dictionary<long, bool> Choix);
+
     /// <summary>Une transformation, dans la transaction de l'appelant ; renvoie l'identifiant du document créé.</summary>
     private async Task<long> TransformerDans(long sourceId, DemandeTransformation dem, Utilisateur u, CancellationToken ct, bool intermediaire = false)
     {
+        var typeCible = await documents.Type(dem.CibleTydId, ct);
+        var p = await Preparer(sourceId, typeCible, dem, u, depuisPlusieurs: false, ct)
+            ?? throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
+        var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
+        var cible = await documents.Dupliquer(p.Source, d => PreparerEntete(d, typeCible, numero, intermediaire), u, ct,
+            contenu => Filtrer(contenu, p.Garder, p.Retenues, p.EnVendu));
+        await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
+        return cible.Document.Document.EntId;
+    }
+
+    private static void PreparerEntete(TDoc d, TypeDocument typeCible, string? numero, bool intermediaire)
+    {
+        d.EntTydId = typeCible.TydId;
+        d.EntIndice = "A";
+        d.EntIsReference = true;
+        d.EntGroupeId = null;
+        d.EntNumero = numero;
+        d.EntDate = DateOnly.FromDateTime(DateTime.Today);
+        d.EntIntermediaire = intermediaire;
+    }
+
+    /// <summary>
+    /// Préparation d'une source : contrôles, options et variantes, quantités retenues (tout le reliquat, ou les lignes
+    /// demandées), lignes gardées. Renvoie null si rien n'est à transformer et que l'appelant l'accepte (plusieurs sources).
+    /// </summary>
+    private async Task<Preparation?> Preparer(long sourceId, TypeDocument typeCible, DemandeTransformation dem, Utilisateur u, bool depuisPlusieurs,
+        CancellationToken ct, bool accepterVide = false)
+    {
         var source = await documents.Charger(sourceId, ct);
         var typeSource = await documents.Type(source.Document.EntTydId, ct);
-        var typeCible = await documents.Type(dem.CibleTydId, ct);
         await documents.VerifierDroit(u, typeSource.TydId, "TRANSFORMER", ct);
         await documents.VerifierDroit(u, typeCible.TydId, "CREER", ct);
         var regle = await db.TransformationsAutorisees.AsNoTracking()
@@ -66,10 +98,12 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         {
             throw ExceptionMetier.Invalide("SOURCE_NON_VALIDEE", "Seul un document validé peut être transformé");
         }
+        specialisation.ControlerTransformation(source, typeSource, typeCible, depuisPlusieurs);
 
         var suivi = await Suivi(source, ct);
         var parId = source.Lignes.ToDictionary(l => l.LigId);
         var handler = handlers.Pour(typeCible);
+        var etapes = new[] { regle.TraEtape }.Concat(regle.TraVautEtapes ?? []).Distinct().ToList();
 
         // Options et variantes (Q11, Q12) : chaque unité doit être retenue (passe en prix vendu) ou non (non reprise) ;
         // la ligne de base d'une variante peut aussi être écartée. Choix tracés sur le lien des documents.
@@ -100,6 +134,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
 
         // Tout le reliquat : toutes les lignes de prix sont reprises, celles qui n'ont plus de reste à 0 (structure du
         // parent conservée, lien créé pour suivre une quantité saisie ensuite) ; lignes choisies : seulement celles-ci.
+        // Une cible qui couvre plusieurs étapes (facture qui vaut réception) ne reprend que le reste de toutes : une
+        // facture directe d'une commande ne refacture pas ce qu'un BL a livré.
         var toutes = dem.Lignes.Count == 0;
         var retenues = new Dictionary<long, decimal>();
         var avancements = new Dictionary<long, decimal?>();
@@ -109,16 +145,23 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             {
                 throw ExceptionMetier.Invalide("LIGNE_INVALIDE", $"La ligne {d.LigId} n'est pas une ligne de prix du document");
             }
-            var etape = suivi.FirstOrDefault(s => s.LigId == d.LigId)?.Etapes.FirstOrDefault(e => e.Etape == regle.TraEtape);
+            var suiviLigne = suivi.FirstOrDefault(s => s.LigId == d.LigId);
+            var etape = suiviLigne?.Etapes.FirstOrDefault(e => e.Etape == regle.TraEtape);
             var deja = etape?.Transforme ?? dejaOptions.GetValueOrDefault(d.LigId);
-            var reliquat = etape?.Reliquat ?? (src.LigQteVendue ?? 0) - deja;
-            var qte = handler.QuantiteCible(new LigneTransformee(src, d.Qte ?? reliquat, d.AvancementPct), deja);
+            var reliquat = EstNegative(regle.TraEtape)
+                ? etape?.Reliquat
+                : suiviLigne?.Etapes.Where(e => etapes.Contains(e.Etape)).Select(e => (decimal?)e.Reliquat).Min();
+            var qte = handler.QuantiteCible(new LigneTransformee(src, d.Qte ?? reliquat ?? (src.LigQteVendue ?? 0) - deja, d.AvancementPct), deja);
             if (toutes && !EstNegative(regle.TraEtape) && qte < 0) qte = 0;
             if (qte == 0 && !toutes) continue;
             retenues[src.LigId] = qte;
             avancements[src.LigId] = d.AvancementPct;
         }
-        if (retenues.Values.All(q => q == 0)) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
+        if (retenues.Values.All(q => q == 0))
+        {
+            if (accepterVide) return null;
+            throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer");
+        }
 
         // Lignes conservées : lignes de prix retenues avec leur sous-arbre, leurs titres ancêtres, les lignes de pied.
         var garder = new HashSet<long>();
@@ -131,7 +174,14 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             }
             foreach (var l in source.Lignes.Where(l => EstDescendant(l, id, parId))) garder.Add(l.LigId);
         }
-        foreach (var l in source.Lignes.Where(l => l.LigTylId is TL.PiedHt or TL.PiedTtc or TL.Tva)) garder.Add(l.LigId);
+        foreach (var l in source.Lignes.Where(l => l.LigTylId is TL.PiedHt or TL.PiedTtc or TL.Tva))
+        {
+            for (var x = l; ; x = parId[x.LigParentId!.Value])
+            {
+                garder.Add(x.LigId);
+                if (x.LigParentId is null) break;
+            }
+        }
         // Frais annexes (type F) et lignes pour mémoire (M) : conservées avec leurs tranches ancêtres, hors total.
         foreach (var l in source.Lignes.Where(l => l.LigTypePrix is "F" or "M" && !exclues.Contains(l.LigId)))
         {
@@ -141,36 +191,35 @@ public class TransformationService<TDoc, TLigne, TComplet>(
                 if (x.LigParentId is null) break;
             }
         }
-        // Sous-totaux de pied (racine) et bases des lignes de pied (sous-total désigné par LigPiedBaseId) : conservés.
-        foreach (var l in source.Lignes.Where(l => l.LigTylId == TL.SousTotal && l.LigParentId is null)) garder.Add(l.LigId);
+        // Sous-totaux de pied (racine ou section) et bases des lignes de pied (sous-total désigné par LigPiedBaseId).
+        foreach (var l in source.Lignes.Where(l => l.LigTylId == TL.SousTotal
+            && (l.LigParentId is null || (parId[l.LigParentId.Value].LigTylId == TL.Section && parId[l.LigParentId.Value].LigParentId is null))))
+        {
+            garder.Add(l.LigId);
+        }
         foreach (var l in source.Lignes.Where(l => garder.Contains(l.LigId) && l.LigPiedBaseId is long)) garder.Add(l.LigPiedBaseId!.Value);
 
-        var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
-        var cible = await documents.Dupliquer(source, d =>
-        {
-            d.EntTydId = typeCible.TydId;
-            d.EntIndice = "A";
-            d.EntIsReference = true;
-            d.EntGroupeId = null;
-            d.EntNumero = numero;
-            d.EntDate = DateOnly.FromDateTime(DateTime.Today);
-            d.EntIntermediaire = intermediaire;
-        }, u, ct, contenu => Filtrer(contenu, garder, retenues, enVendu));
+        return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix);
+    }
 
-        // Liens document et lignes : étape de la règle et étapes sautées couvertes (facture qui vaut réception).
+    /// <summary>
+    /// Liens de la cible vers sa source : document (choix des options), lignes (étape de la règle et étapes sautées),
+    /// retours et avoirs (quantité négative en amont, soldes retirés), remontée à l'origine ; source acceptée.
+    /// </summary>
+    private async Task EcrireLiens(Preparation p, long cibleId, IEnumerable<TLigne> lignesCible, CancellationToken ct)
+    {
+        var sourceId = p.Source.Document.EntId;
         db.DocumentsLien.Add(new DocumentLien
         {
-            LieSourceEntId = sourceId, LieCibleEntId = cible.Document.Document.EntId,
-            LieChoix = unites.Count == 0 ? null : JsonSerializer.SerializeToDocument(
-                choix.Select(kv => new { lig_id = kv.Key, retenue = kv.Value }).OrderBy(c => c.lig_id).ToList()),
+            LieSourceEntId = sourceId, LieCibleEntId = cibleId,
+            LieChoix = p.Unites.Count == 0 ? null : JsonSerializer.SerializeToDocument(
+                p.Choix.Select(kv => new { lig_id = kv.Key, retenue = kv.Value }).OrderBy(c => c.lig_id).ToList()),
         });
-        var lignesCible = cible.Document.Lignes.Where(l => l.LigOrigineId is long o && retenues.ContainsKey(o)).ToList();
-        var etapes = new[] { regle.TraEtape }.Concat(regle.TraVautEtapes ?? []).Distinct().ToList();
-        foreach (var lc in lignesCible)
+        foreach (var lc in lignesCible.Where(l => l.LigOrigineId is long o && p.Retenues.ContainsKey(o)))
         {
             var src = lc.LigOrigineId!.Value;
-            var qte = retenues[src];
-            foreach (var etape in etapes)
+            var qte = p.Retenues[src];
+            foreach (var etape in p.Etapes)
             {
                 db.LignesLien.Add(new DocumentLigneLien
                 {
@@ -179,12 +228,12 @@ public class TransformationService<TDoc, TLigne, TComplet>(
                     LilEtape = etape,
                     LilQte = EstNegative(etape) ? -qte : qte,
                     LilMontantHt = lc.LigMontantHt,
-                    LilAvancementPct = avancements[src],
+                    LilAvancementPct = p.Avancements[src],
                 });
             }
             // Retours et avoirs : quantité négative sur l'étape amont, qui rouvre le reliquat du document d'origine ; les
             // soldes demandés par la ligne annulée sont retirés.
-            if (EstNegative(regle.TraEtape))
+            if (EstNegative(p.Regle.TraEtape))
             {
                 var amont = await db.LignesLien.AsNoTracking().Where(x => x.LilCibleLigId == src && !EtapesFacultatives.Contains(x.LilEtape)).ToListAsync(ct);
                 foreach (var a in amont)
@@ -202,7 +251,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
                     .Select(x => x.LilSourceLigId).Distinct().ToListAsync(ct);
                 foreach (var o in origines)
                 {
-                    foreach (var etape in etapes)
+                    foreach (var etape in p.Etapes)
                     {
                         db.LignesLien.Add(new DocumentLigneLien { LilSourceLigId = o, LilCibleLigId = lc.LigId, LilEtape = etape, LilQte = qte, LilMontantHt = lc.LigMontantHt });
                     }
@@ -212,13 +261,185 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         await db.SaveChangesAsync(ct);
 
         // Devis transformé en commande (ou en document qui vaut commande) : statut Accepté, s'il existe pour son type.
-        if (etapes.Contains("COMMANDE"))
+        if (p.Etapes.Contains("COMMANDE"))
         {
             var accepte = await db.StatutsDocument.AsNoTracking()
-                .Where(s => s.StdTydId == typeSource.TydId && s.StdCode == "ACCEPTE").Select(s => (int?)s.StdId).FirstOrDefaultAsync(ct);
+                .Where(s => s.StdTydId == p.TypeSource.TydId && s.StdCode == "ACCEPTE").Select(s => (int?)s.StdId).FirstOrDefaultAsync(ct);
             if (accepte is int std) await db.Documents.Where(d => d.EntId == sourceId).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntStdId, std), ct);
         }
-        return cible.Document.Document.EntId;
+    }
+
+    // ------------------------------------------------------------------ plusieurs sources
+
+    /// <summary>
+    /// Document créé depuis plusieurs documents (BL d'un marché depuis ses commandes, facture de plusieurs BL…,
+    /// CONCEPTION-ACHATS-MARCHES.md Q10, Q20) : chaque source apporte son reliquat dans une section (la sienne, ou une
+    /// section créée à son nom) avec son bloc de pied ; le pied global du document les consolide. Une source sans reste
+    /// est ignorée. Avec une seule source retenue : document ordinaire (pas de section ajoutée).
+    /// </summary>
+    public async Task<TComplet> TransformerPlusieurs(DemandeTransformationMultiple dem, Utilisateur u, CancellationToken ct)
+    {
+        if (dem.Sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var typeCible = await documents.Type(dem.CibleTydId, ct);
+        var preparations = await PreparerSources(dem.Sources, typeCible, u, ct);
+        if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
+        long n = 0;
+        var contenus = preparations.Select(p => ContenuSource(p, preparations.Count > 1, ref n)).ToList();
+        var numero = typeCible.TydNumerotationContinue ? null : await documents.AttribuerNumero(typeCible, DateOnly.FromDateTime(DateTime.Today), ct);
+        var cible = await documents.Dupliquer(preparations[0].Source, d =>
+        {
+            PreparerEntete(d, typeCible, numero, intermediaire: false);
+            specialisation.PreparerEntetePlusieurs(d, preparations.Select(p => p.Source.Document).ToList());
+        }, u, ct, _ => Fusionner(contenus));
+        foreach (var p in preparations) await EcrireLiens(p, cible.Document.Document.EntId, cible.Document.Lignes, ct);
+        await tx.CommitAsync(ct);
+        return await documents.Charger(cible.Document.Document.EntId, ct);
+    }
+
+    /// <summary>
+    /// Ajoute des documents sources à un document brouillon (facture de plusieurs BL, avenant chargé dans un document du
+    /// marché) : le contenu existant et chaque source deviennent des sections dès qu'il y a plusieurs sources.
+    /// </summary>
+    public async Task<TComplet> AjouterSources(long cibleId, List<long> sources, Utilisateur u, CancellationToken ct)
+    {
+        if (sources.Count == 0) throw ExceptionMetier.Invalide("SOURCES", "Aucun document source");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var cible = await documents.Charger(cibleId, ct);
+        var typeCible = await documents.Type(cible.Document.EntTydId, ct);
+        var deja = await db.DocumentsLien.AsNoTracking().Where(l => l.LieCibleEntId == cibleId && l.LieType == "TRANSFORMATION").Select(l => l.LieSourceEntId).ToListAsync(ct);
+        var doublons = sources.Where(deja.Contains).ToList();
+        if (doublons.Count > 0) throw ExceptionMetier.Invalide("SOURCE_DEJA_REPRISE", "Document déjà repris dans ce document", doublons);
+        var preparations = await PreparerSources(sources, typeCible, u, ct);
+        if (preparations.Count == 0) throw ExceptionMetier.Invalide("RIEN_A_TRANSFORMER", "Aucune quantité à transformer dans ces documents");
+        var enSections = deja.Count + preparations.Count > 1 || (cible.Lignes.Count > 0 && preparations.Count > 0);
+        long n = 0;
+        var existant = JsonCalcul.Cloner(cible);
+        if (enSections && existant.Lignes.Count > 0)
+        {
+            var libelle = deja.Count > 0
+                ? await LibelleDocument(deja[0], ct)
+                : $"{typeCible.TydLibelle} {cible.Document.EntNumero ?? ""}".Trim();
+            var code = deja.Count > 0 ? await db.Documents.AsNoTracking().Where(x => x.EntId == deja[0]).Select(x => x.EntNumero).FirstAsync(ct) : null;
+            EnSection(existant, libelle, code, ref n);
+        }
+        var contenus = new List<TComplet> { existant };
+        contenus.AddRange(preparations.Select(p => ContenuSource(p, enSections, ref n)));
+        var fusion = Fusionner(contenus);
+        fusion.Document = cible.Document;
+        await documents.EnregistrerDans(cibleId, fusion, u, ct);
+        var apres = await documents.Charger(cibleId, ct);
+        foreach (var p in preparations) await EcrireLiens(p, cibleId, apres.Lignes, ct);
+        await tx.CommitAsync(ct);
+        return await documents.Charger(cibleId, ct);
+    }
+
+    /// <summary>Préparation de chaque source (sans choix d'options : les commandes et BL n'en ont plus) ; sources vides écartées.</summary>
+    private async Task<List<Preparation>> PreparerSources(List<long> sources, TypeDocument typeCible, Utilisateur u, CancellationToken ct)
+    {
+        var res = new List<Preparation>();
+        foreach (var id in sources.Distinct())
+        {
+            var p = await Preparer(id, typeCible, new DemandeTransformation { CibleTydId = typeCible.TydId }, u, depuisPlusieurs: true, ct, accepterVide: true);
+            if (p is not null) res.Add(p);
+        }
+        return res;
+    }
+
+    /// <summary>Contenu repris d'une source (identifiants temporaires), dans une section à son nom s'il y a plusieurs sources.</summary>
+    private TComplet ContenuSource(Preparation p, bool enSection, ref long n)
+    {
+        var c = documents.RenumeroterTemporaire(JsonCalcul.Cloner(p.Source), ref n);
+        c = Filtrer(c, p.Garder, p.Retenues, p.EnVendu);
+        specialisation.PreparerContenuSource(c, p.Source.Document);
+        if (enSection) EnSection(c, $"{p.TypeSource.TydLibelle} {p.Source.Document.EntNumero ?? ""}{(string.IsNullOrWhiteSpace(p.Source.Document.EntObjet) ? "" : " – " + p.Source.Document.EntObjet)}".Trim(), p.Source.Document.EntNumero, ref n);
+        return c;
+    }
+
+    /// <summary>Contenus mis bout à bout (sections dans l'ordre des sources), compléments de la spécialisation fusionnés.</summary>
+    private TComplet Fusionner(List<TComplet> contenus)
+    {
+        var res = JsonCalcul.Cloner(contenus[0]);
+        for (var i = 1; i < contenus.Count; i++)
+        {
+            res.Lignes.AddRange(contenus[i].Lignes);
+            specialisation.FusionnerComplements(res, contenus[i]);
+        }
+        var rang = 0;
+        foreach (var l in res.Lignes.Where(l => l.LigParentId is null).ToList()) l.LigOrdre = ++rang;
+        return res;
+    }
+
+    /// <summary>
+    /// Met le contenu d'une source dans une section à la racine (la sienne si elle en a une seule, sinon une section
+    /// créée au libellé donné) ; ses lignes de pied et sous-totaux de pied deviennent le pied de la section. La section
+    /// sans code prend le numéro du document source (colonne Code).
+    /// </summary>
+    private static void EnSection(TComplet c, string libelle, string? code, ref long n)
+    {
+        var racine = c.Lignes.Where(l => l.LigParentId is null).OrderBy(l => l.LigOrdre).ThenBy(l => l.LigId).ToList();
+        var sections = racine.Where(l => l.LigTylId == TL.Section).ToList();
+        if (sections.Count > 1) return;
+        TLigne section;
+        if (sections.Count == 1)
+        {
+            section = sections[0];
+        }
+        else
+        {
+            section = new TLigne { LigId = --n, LigEntId = c.Document.EntId, LigTylId = TL.Section, LigLibelleHtml = System.Net.WebUtility.HtmlEncode(libelle), LigOrdre = 0 };
+            c.Lignes.Add(section);
+        }
+        if (string.IsNullOrWhiteSpace(section.LigCode) && !string.IsNullOrWhiteSpace(code)) section.LigCode = code;
+        var ordre = c.Lignes.Where(l => l.LigParentId == section.LigId).Select(l => l.LigOrdre).DefaultIfEmpty(0).Max();
+        var corps = new List<TLigne>();
+        var pied = new List<TLigne>();
+        var vuPied = false;
+        foreach (var l in racine.Where(l => l != section))
+        {
+            if (TL.EstPied(l)) { vuPied = true; pied.Add(l); }
+            else if (l.LigTylId == TL.SousTotal && vuPied) pied.Add(l);
+            else corps.Add(l);
+        }
+        foreach (var l in corps.Concat(pied))
+        {
+            l.LigParentId = section.LigId;
+            l.LigOrdre = ++ordre;
+        }
+    }
+
+    /// <summary>Libellé d'un document source : type, numéro, objet.</summary>
+    private async Task<string> LibelleDocument(long entId, CancellationToken ct)
+    {
+        var d = await db.Documents.AsNoTracking().FirstAsync(x => x.EntId == entId, ct);
+        var t = await documents.Type(d.EntTydId, ct);
+        return $"{t.TydLibelle} {d.EntNumero ?? ""}{(string.IsNullOrWhiteSpace(d.EntObjet) ? "" : " – " + d.EntObjet)}".Trim();
+    }
+
+    /// <summary>
+    /// Documents validés qui peuvent alimenter un document du type donné (facture de plusieurs BL…) : types sources
+    /// déclarés vers ce type, même tiers si demandé, avec un reste pour toutes les étapes de la transformation.
+    /// </summary>
+    public async Task<List<DocumentEnAttente>> EnAttente(int cibleTydId, long? tiersId, CancellationToken ct)
+    {
+        var regles = await db.TransformationsAutorisees.AsNoTracking().Where(t => t.TraCibleTydId == cibleTydId).ToListAsync(ct);
+        var types = regles.Select(r => r.TraSourceTydId).ToList();
+        var docs = await db.Documents.AsNoTracking()
+            .Where(d => types.Contains(d.EntTydId) && d.EntVerrouille && (tiersId == null || d.EntTiersId == tiersId))
+            .OrderByDescending(d => d.EntId).Take(200).ToListAsync(ct);
+        var res = new List<DocumentEnAttente>();
+        foreach (var d in docs)
+        {
+            var regle = regles.First(r => r.TraSourceTydId == d.EntTydId);
+            if (EstNegative(regle.TraEtape)) continue;
+            var etapes = new[] { regle.TraEtape }.Concat(regle.TraVautEtapes ?? []).Distinct().ToList();
+            var suivi = await Suivi(await documents.Charger(d.EntId, ct), ct);
+            var ouvertes = suivi.Count(l => l.Etapes.Where(e => etapes.Contains(e.Etape)).Select(e => e.Reliquat).DefaultIfEmpty(0).Min() > 0);
+            if (ouvertes == 0) continue;
+            var type = await documents.Type(d.EntTydId, ct);
+            res.Add(new DocumentEnAttente(d.EntId, type.TydCode, type.TydLibelle, d.EntNumero, d.EntDate, d.EntObjet, d.EntTiersId, d.EntTotalHt, ouvertes));
+        }
+        return res;
     }
 
     /// <summary>
