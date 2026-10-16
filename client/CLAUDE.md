@@ -2,7 +2,7 @@
 
 ## Rôle
 - Application web du cœur (`logibtp-client`, workspace npm) : spécialise les paquets JS des modules (`@logibtp/socle`, `metre`, `document`, `liste`, `fiche`, `ged`, `navigation`, `bibliotheque`, `graphe`, `annuaire`, `entreprises-fr`, `import`) ; aucun module ne dépend du client.
-- En ligne : API C# par `/api` (proxy Vite vers `http://localhost:5080`, `Host` conservé pour choisir la société). API injoignable (`api.disponible()` sur `/api/sante`) : **démo hors ligne**, calcul local complet, fournisseurs `…Memoire` sans enregistrement.
+- En ligne : API C# par `/api` (proxy Vite vers `http://localhost:5080`, ou `LOGIBTP_API` pour une autre instance ; `Host` conservé pour choisir la société). API injoignable (`api.disponible()` sur `/api/sante`) : **démo hors ligne**, calcul local complet, fournisseurs `…Memoire` sans enregistrement.
 
 ## Structure
 - `src/main.js` : CSS des modules puis `new Application().demarrer()` (`window.__logibtp` en développement).
@@ -21,7 +21,7 @@
 - `src/app/documents/` : `transformation.js` (`ciblesTransformation`, `choisirTransformation`, `transformerDocument`), `tracabilite.js` (`afficherTracabilite`).
 - `src/app/import/` : `formats.js` (`FORMATS_IMPORT`), `depot-import.js` (IndexedDB, jeton), `devis-importe.js` (`saisieDevisImporte`, `ecartsImport`), `devis-a-verifier.js` (`ouvrirImport`, `creerDepuisImport`), `rapport-import.js`.
 - `src/app/bibliotheque/` : `bibliotheque.js` (`creerFournisseurBibliotheque`, `calculerOuvrage`, `calculerEnsemble`), `appel.js` (`AppelBibliotheque` : code, F3, dépôt), `envoi.js` (`EnvoiBibliotheque`, `compositionDepuisContenu`), `donnees.js` (démo).
-- `src/app/annuaire/` : `annuaire.js` (`creerFournisseurAnnuaire`, `creerFournisseurEntreprises`, `relierTarifs`), `salaries.js` (`annuaireDesSalaries`, `synchroniserSalarie`), `donnees.js` (démo) ; `src/app/ged/ged.js` (`creerFournisseurGed`, démo) ; `src/app/listes.js` (`creerFournisseurListe`, `donneesDemo`, `estTypeDocument`).
+- `src/app/annuaire/` : `annuaire.js` (`creerFournisseurAnnuaire`, `creerFournisseurEntreprises`, `relierTarifs`), `salaries.js` (`annuaireDesSalaries`, `synchroniserSalarie`), `donnees.js` (démo) ; `src/app/ged/ged.js` (`creerFournisseurGed`, démo), `ged/arborescence.js` (`ArborescenceBtp` : dossiers automatiques de la structure et des documents) ; `src/app/listes.js` (`creerFournisseurListe`, `donneesDemo`, `estTypeDocument`).
 - `src/calcul/` : `moteur-btp.js` (`MoteurDevisBtp extends MoteurDocument`, `calculerDocument`), `colonnes-btp.js` (`COLONNES_DOCUMENT_BTP`, `COLONNES_LIGNE_BTP`, décimales, calculées), `controles-btp.js` (`controlesValidation`, `natureObligatoire`), `index.js` (`CHAMPS_*_BTP`, `cleLigneBtp`, `comparerResultats`).
 - `scripts/` : `generer-vues-liste.mjs` (SQL générés du cœur, voir `db/CLAUDE.md`), `exporter-resultats.mjs` (résultats JS → `tests/resultats-js/`), `generer-documents-demo.mjs <host> <id devis>` (documents de démo par l'API), `exemples-multilignes.mjs`.
 - `test/` (Vitest) : `cas-partages` (`tests/cas/*.json`), `analyse-calcul`, `bibliotheque-appel`, `envoi-bibliotheque`, `controles-btp`, `import-devis`, `societe`, `structure` (dont parité `FONCTIONS_INTERVENANT` ↔ `db/162`).
@@ -31,7 +31,7 @@
 - **Métré** : `DictionnaireBtp extends DictionnaireMetre`, `PanneauMetre` dans la page document et la fiche élément ; moteur via `Portees`, `EvaluateurMetre`.
 - **Liste** : `listes.js` + `vues-liste.js` ; `pages/liste.js` (`ListeDonnees`, options `filtresVue` → `FiltreRattachement`, `actionsElements`, `glisser`).
 - **Fiche** : `fiches/*` (classes dérivées de `FicheBase` via `FicheLogiBTP`), `pages/fiche.js`.
-- **GED** : `ged/ged.js`, `ExplorateurGed` dans `pages/ged.js`, `pages/fiche.js`, `pages/document.js`.
+- **GED** : `ged/ged.js`, `ged/arborescence.js` (`ArborescenceBtp extends ArborescenceGed`), `ExplorateurGed` dans `pages/ged.js` (racine : documents sans élément, Affaires, Projets), `pages/fiche.js` (racine : la fiche), `pages/document.js` (racine : le document, enfants par `structure.descendants`).
 - **Bibliothèque** : `bibliotheque/*`, `fiche-element.js`, `pages/parametres-bibliotheque.js`, `PanneauArbres` dans `pages/liste.js`.
 - **Annuaire / Entreprises FR** : `annuaire/*`, `fiche-annuaire.js`, `pages/graphe.js` (`VueGrapheAnnuaire`), `pages/parametres-annuaire.js`.
 - **Graphe** : `structure/graphe-structure.js` (`VueGrapheStructure extends VueGraphe`). **Navigation** : `application.js`, `navigation/*`, pages. **Import** : `import/*`, `pages/import-optim.js`.

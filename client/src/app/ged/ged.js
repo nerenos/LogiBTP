@@ -56,8 +56,10 @@ async function semer(ged, { salaries, materiels }) {
   await ged.mettreAuCoffre(devis.id, 'Devis signé');
 
   if (s1) {
+    // Dossier créé dans l'explorateur de la fiche du salarié.
+    const formations = await ged.creerRepertoire({ nom: 'Formations', ...lie('salarie', s1.id) });
     await ged.deposer({ fichier: fichier(pdfSimple('Attestation CACES R482', [`${s1.prenom} ${s1.nom}`, 'Catégorie A - valable jusqu\'au 31/12/2028']), 'CACES R482.pdf'),
-      meta: { titre: 'CACES R482 cat. A', categorie: 'certificat', date_document: '2024-03-12', auteur: 'Organisme de formation', ...lie('salarie', s1.id) } });
+      meta: { titre: 'CACES R482 cat. A', categorie: 'certificat', date_document: '2024-03-12', auteur: 'Organisme de formation', repertoire_id: formations.id } });
     await ged.deposer({ fichier: fichier(new Blob([`Entretien annuel ${s1.prenom} ${s1.nom}\n\nObjectifs : habilitation électrique B1V.\nSouhaits : formation conduite d'engins.`], { type: 'text/plain' }), 'Entretien annuel.txt'),
       meta: { titre: 'Compte rendu d\'entretien annuel', categorie: 'courrier', date_document: '2026-01-20', auteur: 'Direction', ...lie('salarie', s1.id), notes: 'À revoir en juin.' } });
     // Mail reçu avec pièce jointe enregistrée à côté de lui.

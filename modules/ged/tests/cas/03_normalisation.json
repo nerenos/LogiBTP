@@ -1,0 +1,11 @@
+{
+  "description": "Normalisation de la recherche GED : normaliserRecherche (JS), NormalisationGed.Normaliser (C#) et f_ged_normaliser (SQL) donnent le même texte.",
+  "cas": [
+    { "texte": "Hélène", "attendu": "helene" },
+    { "texte": "GAËLLE Ñuñez", "attendu": "gaelle nunez" },
+    { "texte": "Lœtitia Cœur Ægir", "attendu": "loetitia coeur aegir" },
+    { "texte": "Straße Øre Łódź Đorđe", "attendu": "strasse ore lodz dorde" },
+    { "texte": "Arrêt de travail – « reçu » …", "attendu": "arret de travail – « recu » …" },
+    { "texte": "Devis DV2026-00012.pdf", "attendu": "devis dv2026-00012.pdf" }
+  ]
+}

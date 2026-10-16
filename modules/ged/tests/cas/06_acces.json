@@ -1,0 +1,26 @@
+{
+  "description": "Confidentialité et restrictions d'accès : acces.js (accesAutorise) et AccesGed.cs (filtre des requêtes) donnent le même résultat.",
+  "utilisateurs": {
+    "auteur": { "code": "marie", "profil": "CONDUCTEUR" },
+    "admin": { "code": "admin", "profil": "ADMIN" },
+    "collegue": { "code": "paul", "profil": "CONDUCTEUR" },
+    "rh": { "code": "lea", "profil": "RH" },
+    "liste": { "code": "jean", "profil": "COMPTABLE" }
+  },
+  "cas": [
+    { "nom": "interne sans restriction", "document": { "cree_par": "marie", "confidentialite": "INTERNE", "acces_profils": [], "acces_utilisateurs": [] },
+      "attendu": { "auteur": true, "admin": true, "collegue": true, "rh": true, "liste": true } },
+    { "nom": "public restreint à un profil", "document": { "cree_par": "marie", "confidentialite": "PUBLIC", "acces_profils": ["RH"], "acces_utilisateurs": [] },
+      "attendu": { "auteur": true, "admin": true, "collegue": false, "rh": true, "liste": false } },
+    { "nom": "interne restreint à un utilisateur", "document": { "cree_par": "marie", "confidentialite": "INTERNE", "acces_profils": [], "acces_utilisateurs": ["jean"] },
+      "attendu": { "auteur": true, "admin": true, "collegue": false, "rh": false, "liste": true } },
+    { "nom": "confidentiel sans liste : auteur et administrateurs", "document": { "cree_par": "marie", "confidentialite": "CONFIDENTIEL", "acces_profils": [], "acces_utilisateurs": [] },
+      "attendu": { "auteur": true, "admin": true, "collegue": false, "rh": false, "liste": false } },
+    { "nom": "confidentiel avec profil", "document": { "cree_par": "marie", "confidentialite": "CONFIDENTIEL", "acces_profils": ["RH"], "acces_utilisateurs": [] },
+      "attendu": { "auteur": true, "admin": true, "collegue": false, "rh": true, "liste": false } },
+    { "nom": "secret : ni l'administrateur ni les autres", "document": { "cree_par": "marie", "confidentialite": "SECRET", "acces_profils": [], "acces_utilisateurs": ["jean"] },
+      "attendu": { "auteur": true, "admin": false, "collegue": false, "rh": false, "liste": true } },
+    { "nom": "secret avec profil ADMIN listé", "document": { "cree_par": "marie", "confidentialite": "SECRET", "acces_profils": ["ADMIN"], "acces_utilisateurs": [] },
+      "attendu": { "auteur": true, "admin": true, "collegue": false, "rh": false, "liste": false } }
+  ]
+}

@@ -69,6 +69,7 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
       referentiels: () => api.structureReferentiels(), rattacher: (id, r) => api.rattacherDocument(id, r),
       intervenants: (type, id) => api.structureIntervenants(type, id),
       documents: (perimetre) => api.structureDocuments(perimetre),
+      descendants: (id) => api.structureDescendants(id),
     };
   }
   return new FournisseurStructureMemoire({ annuaire, documents });
@@ -104,9 +105,13 @@ export class FournisseurStructureMemoire {
     const dans = (l, v) => v !== null && v !== undefined && l.includes(Number(v));
     const documents = this.lignesDocuments().filter((d) => dans(projets, d.projet_id) || dans(affaires, d.affaire_id) || dans(chantiers, d.chantier_id) || dans(marches, d.marche_id))
       .map((d) => ({ id: d.id, numero: d.numero, type: d.type_element, type_libelle: d.type_document, famille: d.famille, statut: d.statut, objet: d.objet,
-        total_ht: d.total_ht, projet_id: d.projet_id ?? null, affaire_id: d.affaire_id ?? null, chantier_id: d.chantier_id ?? null, marche_id: d.marche_id ?? null }));
+        total_ht: d.total_ht, projet_id: d.projet_id ?? null, affaire_id: d.affaire_id ?? null, chantier_id: d.chantier_id ?? null, marche_id: d.marche_id ?? null,
+        groupe_id: d.id, reference: true, date: d.date ?? null }));
     return { documents, liens: [] };
   }
+
+  /** Documents enfants d'un document (comme la route /structure/documents/{id}/descendants) : aucun lien hors ligne. */
+  async descendants() { return { documents: [], liens: [] }; }
 
   /** Intervenants d'un objet, avec les noms de l'annuaire (comme Intervenants.Lire). */
   async intervenants(type, id) {

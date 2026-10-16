@@ -1,0 +1,29 @@
+{
+  "description": "Classification automatique : tous les critères renseignés d'une règle doivent être remplis ; catégorie de la première règle applicable (priorité, id), confidentialité la plus stricte, mots-clés cumulés. classification.js et ClassificationGed.cs donnent le même résultat.",
+  "regles": [
+    { "id": 1, "libelle": "Mails", "priorite": 10, "extensions": ["eml", "msg"], "types_mime": [], "mots": [], "expediteur": null, "type_element": null, "categorie": "mail", "confidentialite": null, "mots_cles": [], "actif": true },
+    { "id": 2, "libelle": "Factures", "priorite": 20, "extensions": [], "types_mime": [], "mots": ["facture"], "expediteur": null, "type_element": null, "categorie": "facture_recue", "confidentialite": null, "mots_cles": ["facture"], "actif": true },
+    { "id": 3, "libelle": "Contrats", "priorite": 20, "extensions": [], "types_mime": [], "mots": ["contrat"], "expediteur": null, "type_element": null, "categorie": "contrat", "confidentialite": "CONFIDENTIEL", "mots_cles": ["contrat"], "actif": true },
+    { "id": 4, "libelle": "Photos", "priorite": 40, "extensions": ["jpg", "jpeg", "png"], "types_mime": ["image/"], "mots": [], "expediteur": null, "type_element": null, "categorie": "photo", "confidentialite": null, "mots_cles": [], "actif": true },
+    { "id": 5, "libelle": "RH", "priorite": 15, "extensions": [], "types_mime": [], "mots": ["arrêt de travail", "bulletin de paie"], "expediteur": null, "type_element": null, "categorie": null, "confidentialite": "SECRET", "mots_cles": ["rh"], "actif": true },
+    { "id": 6, "libelle": "Fournisseur Aciers", "priorite": 25, "extensions": [], "types_mime": [], "mots": [], "expediteur": "aciers-du-rhone", "type_element": null, "categorie": "facture_recue", "confidentialite": null, "mots_cles": ["acier", "facture"], "actif": true },
+    { "id": 7, "libelle": "Plans de chantier", "priorite": 30, "extensions": ["pdf"], "types_mime": [], "mots": ["plan"], "expediteur": null, "type_element": "chantier", "categorie": "plan", "confidentialite": null, "mots_cles": ["plan"], "actif": true },
+    { "id": 8, "libelle": "Inactive", "priorite": 1, "extensions": ["pdf"], "types_mime": [], "mots": [], "expediteur": null, "type_element": null, "categorie": "autre", "confidentialite": "SECRET", "mots_cles": [], "actif": false }
+  ],
+  "cas": [
+    { "nom": "mot dans le texte extrait, sans accent ni casse", "document": { "nom_fichier": "scan_0042.pdf", "type_mime": "application/pdf", "titre": "scan 0042", "texte": "FACTURE n° 2026-118 — Béton C25/30", "expediteur": null, "type_element": "projet" },
+      "attendu": { "categorie": "facture_recue", "confidentialite": null, "mots_cles": ["facture"], "regles": [2] } },
+    { "nom": "mail d'un fournisseur : extension et expéditeur, catégorie de la plus prioritaire", "document": { "nom_fichier": "Votre facture.EML", "type_mime": "message/rfc822", "titre": "Votre facture", "texte": "", "expediteur": "Compta <compta@Aciers-du-Rhone.fr>", "type_element": null },
+      "attendu": { "categorie": "mail", "confidentialite": null, "mots_cles": ["facture", "acier"], "regles": [1, 2, 6] } },
+    { "nom": "confidentialité la plus stricte, catégorie d'une autre règle", "document": { "nom_fichier": "contrat.pdf", "type_mime": "application/pdf", "titre": "Contrat de travail", "texte": "Bulletin de paie joint", "expediteur": null, "type_element": "salarie" },
+      "attendu": { "categorie": "contrat", "confidentialite": "SECRET", "mots_cles": ["rh", "contrat"], "regles": [5, 3] } },
+    { "nom": "critères cumulés : extension, mot et type d'élément", "document": { "nom_fichier": "Plan RDC.pdf", "type_mime": "application/pdf", "titre": "Plan RDC", "texte": null, "expediteur": null, "type_element": "chantier" },
+      "attendu": { "categorie": "plan", "confidentialite": null, "mots_cles": ["plan"], "regles": [7] } },
+    { "nom": "un critère manquant : règle non appliquée", "document": { "nom_fichier": "Plan RDC.pdf", "type_mime": "application/pdf", "titre": "Plan RDC", "texte": null, "expediteur": null, "type_element": "projet" },
+      "attendu": { "categorie": null, "confidentialite": null, "mots_cles": [], "regles": [] } },
+    { "nom": "type MIME par préfixe", "document": { "nom_fichier": "IMG_2041.HEIC", "type_mime": "image/heic", "titre": "IMG 2041", "texte": null, "expediteur": null, "type_element": null },
+      "attendu": { "categorie": null, "confidentialite": null, "mots_cles": [], "regles": [] } },
+    { "nom": "extension et type MIME", "document": { "nom_fichier": "IMG_2041.JPG", "type_mime": "image/jpeg", "titre": "IMG 2041", "texte": null, "expediteur": null, "type_element": null },
+      "attendu": { "categorie": "photo", "confidentialite": null, "mots_cles": [], "regles": [4] } }
+  ]
+}

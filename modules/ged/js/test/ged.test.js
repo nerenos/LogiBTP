@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sha256, texteEntree, empreinteEntree, verifierChaine, editionsAPurger, FournisseurGedMemoire, lireMail, genreApercu } from '../src/index.js';
+import { sha256, texteEntree, empreinteEntree, verifierChaine, editionsAPurger, FournisseurGedMemoire, lireMail, genreApercu, normaliserRecherche } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
 const lire = (f) => JSON.parse(fs.readFileSync(path.join(dossier, f), 'utf8'));
@@ -104,5 +104,60 @@ describe('mails et aperçus', () => {
 
   it('genres d\'aperçu', () => {
     expect(['photo.JPG', 'plan.pdf', 'note.txt', 'mail.msg', 'devis.docx', 'tableau.xlsx'].map((n) => genreApercu(n))).toEqual(['image', 'pdf', 'texte', 'mail', null, null]);
+  });
+});
+
+describe('intégrité, statistiques et recherche', () => {
+  const fichier = (t, nom = 'note.txt') => new File([t], nom, { type: 'text/plain' });
+
+  it('normalisation de recherche (jeu partagé avec le C# et le SQL)', () => {
+    for (const c of lire('03_normalisation.json').cas) expect(normaliserRecherche(c.texte)).toBe(c.attendu);
+  });
+
+  it('élément lié complet, existant et de type connu', async () => {
+    const connus = { salarie: new Set(['1', '2']) };
+    const g = new FournisseurGedMemoire({ elementExiste: (type, id) => (connus[type] ? connus[type].has(id) : null) });
+    const depot = (meta) => g.deposer({ fichier: fichier('x'), meta: { titre: 'Doc', ...meta } }).catch((e) => e.code);
+    expect(await depot({ type_element: 'salarie' })).toBe('ELEMENT');
+    expect(await depot({ type_element: 'salarie', id_element: '9' })).toBe('ELEMENT_INEXISTANT');
+    expect(await depot({ type_element: 'inconnu', id_element: '1' })).toBe('ELEMENT_TYPE');
+    const d = await g.deposer({ fichier: fichier('x'), meta: { titre: 'Doc', type_element: 'salarie', id_element: '1' } });
+    expect((await g.modifier(d.id, { id_element: '9' }).catch((e) => e)).code).toBe('ELEMENT_INEXISTANT');
+    expect(g.documents[0].id_element).toBe('1');
+    expect((await g.modifier(d.id, { id_element: '2' })).id_element).toBe('2');
+  });
+
+  it('pièces jointes sans boucle et parent existant', async () => {
+    const g = new FournisseurGedMemoire();
+    const mail = await g.deposer({ fichier: fichier('m', 'mail.eml'), meta: { titre: 'Mail' } });
+    const piece = await g.deposer({ fichier: fichier('p'), meta: { titre: 'Pièce', parent_id: mail.id } });
+    expect(() => g.controlerParent(mail.id, piece.id)).toThrow(/pièce jointe de lui-même/);
+    expect(() => g.controlerParent(mail.id, mail.id)).toThrow(/pièce jointe de lui-même/);
+    expect(() => g.controlerParent(piece.id, mail.id)).not.toThrow();
+    expect((await g.deposer({ fichier: fichier('p'), meta: { titre: 'Orpheline', parent_id: 999 } }).catch((e) => e)).code).toBe('INTROUVABLE');
+  });
+
+  it('statistiques d\'utilisation tenues à jour (documents, versions, volume, consultations)', async () => {
+    const g = new FournisseurGedMemoire();
+    const a = await g.deposer({ fichier: fichier('abc'), meta: { titre: 'A', type_element: 'salarie', id_element: '1' } });
+    await g.deposer({ fichier: fichier('de'), meta: { titre: 'B', type_element: 'salarie', id_element: '1' } });
+    await g.deposer({ fichier: fichier('autre'), meta: { titre: 'C' } });
+    await g.nouvelleVersion(a.id, { fichier: fichier('abcd') });
+    await g.contenu(g.versions[0].id);
+    await g.contenu(g.versions[0].id);
+    await g.supprimer(a.id);
+    const s = await g.statistiques({ type_element: 'salarie', id_element: '1' });
+    expect([s.nb_documents, s.nb_supprimes, s.nb_versions, s.taille, s.nb_consultations]).toEqual([1, 1, 3, 9, 2]);
+    expect((await g.statistiques()).nb_versions).toBe(4);
+    expect((await g.document(a.id)).nb_consultations).toBe(2);
+  });
+
+  it('recherche dans les métadonnées, le mail et les noms de fichiers', async () => {
+    const g = new FournisseurGedMemoire();
+    await g.deposer({ fichier: fichier('x', 'Plan Œuvre.pdf'), meta: { titre: 'Plan' } });
+    await g.deposer({ fichier: fichier('y', 'mail.eml'), meta: { titre: 'Mail', nature: 'mail', mail: { objet: 'Relance', message: 'Merci de régler la facture' } } });
+    const titres = async (r) => (await g.lister({ recherche: r })).map((d) => d.titre);
+    expect(await titres('oeuvre')).toEqual(['Plan']);
+    expect(await titres('REGLER facture')).toEqual(['Mail']);
   });
 });

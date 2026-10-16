@@ -28,7 +28,7 @@
 - `GET /api/sante` (version du moteur), `GET /api/societe` (code, libellé, principale ; jamais la connexion).
 - `GET /api/structure/referentiels` (affaires, projets, chantiers, marchés, commandes `V_COMMANDE`, fonctions).
 - `PUT /api/structure/documents/{id}/rattachement` (même validé ; marché → chantier → affaire et projet complétés).
-- `GET /api/structure/intervenants/{type}/{id}` ; `POST /api/structure/documents` (documents du périmètre + liens `document_lien`).
+- `GET /api/structure/intervenants/{type}/{id}` ; `POST /api/structure/documents` (documents du périmètre + liens `document_lien`, groupe d'indices `groupe_id`, `reference`) ; `GET /api/structure/documents/{id}/descendants` (le document et ses enfants par `document_lien`, à toute profondeur : arborescence de la GED).
 - Le reste (`/documents`, `/fiches`, `/listes`, `/ged`, `/bibliotheque`, `/annuaire`…) vient des `MapModule…()` des modules.
 
 ## Spécialisation des modules

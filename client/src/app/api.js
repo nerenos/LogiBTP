@@ -56,6 +56,7 @@ export const api = {
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
   structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
   structureDocuments: (perimetre) => appel('POST', '/structure/documents', perimetre),
+  structureDescendants: (id) => appel('GET', `/structure/documents/${id}/descendants`),
   // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, vues de colonnes.
   etiquettesLigne: () => appel('GET', '/etiquettes-ligne'),
   enregistrerEtiquettesLigne: (liste) => appel('PUT', '/etiquettes-ligne', liste),

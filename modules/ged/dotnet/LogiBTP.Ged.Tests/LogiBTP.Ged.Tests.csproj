@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LogiBTP.Ged\LogiBTP.Ged.csproj" />
+    <ProjectReference Include="..\LogiBTP.Ged.Web\LogiBTP.Ged.Web.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Testing\LogiBTP.Socle.Testing.csproj" />
   </ItemGroup>
 

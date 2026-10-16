@@ -18,6 +18,13 @@
   déduction du paiement direct.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
+- [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après
+  redémarrage de l'API, indexer les documents déposés avant (`POST /api/ged/indexation`, administrateur, lots de 200).
+- [ ] GED : rétention appliquée à la main (bouton ⏳ de la GED globale, `POST /api/ged/retention/appliquer`) ; planifier
+  l'archivage automatique (tâche de fond par base de société) et la revue des fins de conservation (DETRUIRE : purge
+  proposée, jamais pour le coffre-fort).
+- [ ] GED : écran de paramétrage des règles de rétention et de classification (routes `PUT /api/ged/regles/*` prêtes,
+  administrateur) ; texte des images (OCR) et des .msg non extrait ; résumé automatique (agent IA local).
 - [ ] Import OptimBTP : décider du sort des champs non repris (heures, poste de travaux, compléments de pied,
   première page et texte de fin…) ; rattachement automatique du client à l'annuaire.
 

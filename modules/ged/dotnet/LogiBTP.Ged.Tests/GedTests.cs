@@ -111,3 +111,35 @@ public sealed class StockageGedTests : IDisposable
     public void Chemin_hors_du_stockage_refuse() =>
         Assert.Throws<ArgumentException>(() => new StockageGed(racine).Existe(Path.Combine("..", "autre", "fichier")));
 }
+
+/// <summary>
+/// Normalisation de la recherche (jeu 03_normalisation.json partagé avec normaliserRecherche en JS) : NormalisationGed et,
+/// si LOGIBTP_TEST_PG désigne une base où le schéma GED est chargé, la fonction SQL f_ged_normaliser (colonne dge_recherche).
+/// </summary>
+public class NormalisationGedTests
+{
+    private static IEnumerable<(string Texte, string Attendu)> Cas() =>
+        CasPartages.Lire(CasPartages.Chemin("modules", "ged", "tests", "cas", "03_normalisation.json"))["cas"]!.AsArray()
+            .Select(c => (c!["texte"]!.GetValue<string>(), c["attendu"]!.GetValue<string>()));
+
+    [Fact]
+    public void Normalisation_identique_au_js()
+    {
+        foreach (var (texte, attendu) in Cas()) Assert.Equal(attendu, NormalisationGed.Normaliser(texte));
+    }
+
+    [Fact]
+    public async Task Normalisation_identique_en_sql()
+    {
+        var connexion = Environment.GetEnvironmentVariable("LOGIBTP_TEST_PG");
+        if (connexion is null) return;
+        await using var cnx = new Npgsql.NpgsqlConnection(connexion);
+        await cnx.OpenAsync();
+        foreach (var (texte, attendu) in Cas())
+        {
+            await using var cmd = new Npgsql.NpgsqlCommand("SELECT f_ged_normaliser(@t)", cnx);
+            cmd.Parameters.AddWithValue("t", texte);
+            Assert.Equal(attendu, (string?)await cmd.ExecuteScalarAsync());
+        }
+    }
+}

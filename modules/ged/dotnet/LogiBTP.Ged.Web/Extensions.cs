@@ -55,9 +55,13 @@ public static class Extensions
     {
         var g = api.MapGroup("/ged");
         g.MapGet("/parametres", (ServiceGed s, CancellationToken ct) => s.Parametres(ct));
-        g.MapGet("/documents", (string? type_element, string? id_element, string? recherche, bool? supprimes, bool? coffre, HttpContext http, ServiceGed s, CancellationToken ct) =>
-            s.Lister(new FiltreGed { TypeElement = type_element, IdElement = id_element, Recherche = recherche, Supprimes = supprimes == true, Coffre = coffre == true },
-                Utilisateur.Depuis(http), ct));
+        g.MapGet("/documents", (string? type_element, string? id_element, string? recherche, bool? supprimes, bool? coffre, bool? archives, bool? sans_element,
+                HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.Lister(new FiltreGed
+            {
+                TypeElement = type_element, IdElement = id_element, Recherche = recherche, Supprimes = supprimes == true, Coffre = coffre == true,
+                Archives = archives == true, SansElement = sans_element == true,
+            }, Utilisateur.Depuis(http), ct));
         // Dépôts en multipart (champ « fichier » + champ « donnees » JSON), lus par le service : pas de liaison IFormFile.
         g.MapPost("/documents", (HttpContext http, ServiceGed s, CancellationToken ct) => s.Deposer(http.Request, Utilisateur.Depuis(http), ct)).DisableAntiforgery();
         g.MapGet("/documents/{id:long}", (long id, HttpContext http, ServiceGed s, CancellationToken ct) => s.Document(id, Utilisateur.Depuis(http), ct));
@@ -79,6 +83,42 @@ public static class Extensions
         g.MapGet("/versions/{versionId:long}/contenu", (long versionId, bool? telecharger, HttpContext http, ServiceGed s, CancellationToken ct) =>
             s.Contenu(versionId, telecharger == true, http, Utilisateur.Depuis(http), ct));
         g.MapGet("/coffre/verification", (ServiceGed s, CancellationToken ct) => s.VerifierCoffre(ct));
+        g.MapGet("/statistiques", (string? type_element, string? id_element, ServiceGed s, CancellationToken ct) => s.Statistiques(type_element, id_element, ct));
+
+        // Répertoires de l'explorateur (sous un élément lié, ou globaux).
+        g.MapGet("/repertoires", (string? type_element, string? id_element, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.Repertoires(type_element, id_element, Utilisateur.Depuis(http), ct));
+        g.MapPost("/repertoires", (DemandeRepertoire r, HttpContext http, ServiceGed s, CancellationToken ct) => s.CreerRepertoire(r, Utilisateur.Depuis(http), ct));
+        g.MapPut("/repertoires/{id:long}", (long id, Dictionary<string, JsonElement> r, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.ModifierRepertoire(id, r, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/repertoires/{id:long}", async (long id, HttpContext http, ServiceGed s, CancellationToken ct) =>
+        {
+            await s.SupprimerRepertoire(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+
+        // Dérivations (la cible dérive du document de la route), indexation plein texte.
+        g.MapPost("/documents/{id:long}/derivations", (long id, DemandeDerivation d, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.AjouterDerivation(id, d, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/derivations/{id:long}", async (long id, HttpContext http, ServiceGed s, CancellationToken ct) =>
+        {
+            await s.SupprimerDerivation(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapPost("/documents/{id:long}/indexer", (long id, HttpContext http, ServiceGed s, CancellationToken ct) => s.Indexer(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/indexation", (HttpContext http, ServiceGed s, CancellationToken ct) => s.IndexerEnAttente(Utilisateur.Depuis(http), ct));
+
+        // Rétention, archive séparée, règles (rétention et classification).
+        g.MapPost("/documents/{id:long}/archiver", async (long id, DemandeArchivage d, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            Results.Ok(new { archives = await s.Archiver(id, d, Utilisateur.Depuis(http), ct) }));
+        g.MapPost("/documents/{id:long}/desarchiver", (long id, HttpContext http, ServiceGed s, CancellationToken ct) => s.RestaurerArchive(id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/retention/echeances", (HttpContext http, ServiceGed s, CancellationToken ct) => s.Echeances(Utilisateur.Depuis(http), ct));
+        g.MapPost("/retention/appliquer", (HttpContext http, ServiceGed s, CancellationToken ct) => s.AppliquerRetention(Utilisateur.Depuis(http), ct));
+        g.MapGet("/regles", (ServiceGed s, CancellationToken ct) => s.Regles(ct));
+        g.MapPut("/regles/retention", (List<RegleRetentionDto> r, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.RemplacerReglesRetention(r, Utilisateur.Depuis(http), ct));
+        g.MapPut("/regles/classification", (List<RegleClassificationDto> r, HttpContext http, ServiceGed s, CancellationToken ct) =>
+            s.RemplacerReglesClassification(r, Utilisateur.Depuis(http), ct));
         return api;
     }
 }

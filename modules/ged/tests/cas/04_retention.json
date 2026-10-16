@@ -1,0 +1,33 @@
+{
+  "description": "Rétention et archivage : règle applicable (la plus précise, puis priorité, puis id) et échéances en mois (fin de mois ramenée au dernier jour). retention.js et RegleRetention.cs donnent le même résultat.",
+  "regles": [
+    { "id": 1, "libelle": "Factures reçues", "categorie": "facture_recue", "type_element": null, "duree_active_mois": 24, "duree_conservation_mois": 120, "action_fin": "REVOIR", "priorite": 10, "actif": true },
+    { "id": 2, "libelle": "Factures reçues des chantiers", "categorie": "facture_recue", "type_element": "chantier", "duree_active_mois": 12, "duree_conservation_mois": 120, "action_fin": "REVOIR", "priorite": 90, "actif": true },
+    { "id": 3, "libelle": "Documents de chantier", "categorie": null, "type_element": "chantier", "duree_active_mois": 36, "duree_conservation_mois": null, "action_fin": "REVOIR", "priorite": 5, "actif": true },
+    { "id": 4, "libelle": "Mails", "categorie": "mail", "type_element": null, "duree_active_mois": 1, "duree_conservation_mois": 13, "action_fin": "DETRUIRE", "priorite": 50, "actif": true },
+    { "id": 5, "libelle": "Mails (ancienne règle)", "categorie": "mail", "type_element": null, "duree_active_mois": 6, "duree_conservation_mois": 6, "action_fin": "DETRUIRE", "priorite": 1, "actif": false },
+    { "id": 6, "libelle": "Autres A", "categorie": null, "type_element": null, "duree_active_mois": 60, "duree_conservation_mois": null, "action_fin": "REVOIR", "priorite": 1000, "actif": true },
+    { "id": 7, "libelle": "Autres B (même priorité, id plus grand)", "categorie": null, "type_element": null, "duree_active_mois": 1, "duree_conservation_mois": null, "action_fin": "REVOIR", "priorite": 1000, "actif": true }
+  ],
+  "cas": [
+    { "nom": "catégorie et type : la plus précise malgré sa priorité", "document": { "categorie": "facture_recue", "type_element": "chantier", "date_document": "2025-01-15" }, "aujourdhui": "2026-01-15",
+      "attendu": { "regle": 2, "base": "2025-01-15", "archiver_le": "2026-01-15", "fin_le": "2035-01-15", "action_fin": "REVOIR", "statut": "A_ARCHIVER" } },
+    { "nom": "catégorie seule avant type seul", "document": { "categorie": "facture_recue", "type_element": "projet", "date_document": "2025-01-15" }, "aujourdhui": "2026-01-14",
+      "attendu": { "regle": 1, "base": "2025-01-15", "archiver_le": "2027-01-15", "fin_le": "2035-01-15", "action_fin": "REVOIR", "statut": "ACTIF" } },
+    { "nom": "type seul", "document": { "categorie": "photo", "type_element": "chantier", "date_document": "2020-06-30" }, "aujourdhui": "2026-10-15",
+      "attendu": { "regle": 3, "base": "2020-06-30", "archiver_le": "2023-06-30", "fin_le": null, "action_fin": "REVOIR", "statut": "A_ARCHIVER" } },
+    { "nom": "règle inactive ignorée, fin de mois ramenée (31 janvier + 1 mois)", "document": { "categorie": "mail", "type_element": null, "date_document": "2024-01-31" }, "aujourdhui": "2025-02-28",
+      "attendu": { "regle": 4, "base": "2024-01-31", "archiver_le": "2024-02-29", "fin_le": "2025-02-28", "action_fin": "DETRUIRE", "statut": "FIN_CONSERVATION" } },
+    { "nom": "à priorité égale, le plus petit id ; sans date : date UTC du dépôt", "document": { "categorie": "autre", "type_element": null, "date_document": null, "cree_le": "2026-03-31T23:30:00Z" }, "aujourdhui": "2031-03-30",
+      "attendu": { "regle": 6, "base": "2026-03-31", "archiver_le": "2031-03-31", "fin_le": null, "action_fin": "REVOIR", "statut": "ACTIF" } },
+    { "nom": "aucune règle applicable", "document": { "categorie": "photo", "type_element": "projet", "date_document": "2026-01-01" }, "regles": [1, 2, 3, 4],
+      "aujourdhui": "2030-01-01", "attendu": { "regle": null, "base": "2026-01-01", "archiver_le": null, "fin_le": null, "action_fin": null, "statut": "ACTIF" } }
+  ],
+  "ajouter_mois": [
+    { "date": "2024-01-31", "mois": 1, "attendu": "2024-02-29" },
+    { "date": "2023-01-31", "mois": 1, "attendu": "2023-02-28" },
+    { "date": "2024-12-15", "mois": 1, "attendu": "2025-01-15" },
+    { "date": "2024-03-31", "mois": 0, "attendu": "2024-03-31" },
+    { "date": "2024-08-31", "mois": 18, "attendu": "2026-02-28" }
+  ]
+}

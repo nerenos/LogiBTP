@@ -29,7 +29,7 @@ graph TD
 | metre | socle | `LogiBTP.Metres` → Socle | 020 | cœur (moteur BTP, page document, fiche élément) |
 | liste | socle | `LogiBTP.Listes(.Web)` | 030–032 | cœur |
 | fiche | socle | `LogiBTP.Fiches(.Web)` | 040 | cœur |
-| ged | socle, msgreader, postal-mime | `LogiBTP.Ged(.Web)` | 050 | cœur |
+| ged | socle, msgreader, postal-mime ; PdfPig (C#, texte des PDF) | `LogiBTP.Ged(.Web)` | 050, 051 | cœur |
 | bibliotheque | socle | `LogiBTP.Bibliotheque(.Web)` | 060–062 | cœur |
 | annuaire | socle, **graphe** | `LogiBTP.Annuaire(.Web)` | 070 | cœur |
 | entreprises-fr | socle | `LogiBTP.EntreprisesFr.Web` | — | cœur |
@@ -48,7 +48,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | metre | `DictionnaireBtp`, hôte de `PanneauMetre` (page document, fiche élément) | `MoteurDevisBtp`, compléments de `SpecialisationBtp` | 100 (FK vers les lignes) |
 | liste | `vues-liste.js` (`SOURCES_LISTE`, `THEMES_LISTE`, `VUES_LISTE`), `pages/liste.js`, `structure/filtre-rattachement.js` | `SpecialisationListeBtp` | 120, 121 (+ vues de 115, 140, 160) |
 | fiche | `fiches/*` (`definitions.js` : `TYPES_FICHE`, `DROITS_FICHE`), `pages/fiche.js` | `SpecialisationFicheBtp` | 130, 131 |
-| ged | `ged/ged.js`, `ExplorateurGed` (page GED, fiches, onglet Pièces) | `SpecialisationGedBtp` | catégories 115, 140 |
+| ged | `ged/ged.js`, `ged/arborescence.js` (`ArborescenceBtp`), `ExplorateurGed` (page GED, fiches, onglet Pièces) | `SpecialisationGedBtp`, `GET /api/structure/documents/{id}/descendants` | catégories 115, 140 ; `f_ged_element_existe` 164 |
 | bibliotheque | `bibliotheque/*` (appel, envoi, données), `fiches/fiche-element.js` | `SpecialisationBibliothequeBtp`, `ElementsBibliotheque` | 115, 116 |
 | annuaire | `annuaire/*`, `fiches/fiche-annuaire.js`, `pages/graphe.js`, `pages/parametres-annuaire.js` | `ServiceAnnuaire` via `SpecialisationFicheBtp`, `SalariesAnnuaire` | 140, 141, 142 |
 | entreprises-fr | `creerFournisseurEntreprises` (`annuaire/annuaire.js`), fiche personne | `AddModuleEntreprisesFr` | — |
@@ -67,6 +67,10 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
   société (`individusSociete`).
 - **Document ↔ GED** : onglet Pièces (`type_element` = code du type, `id_element` = `ent_groupe_id ?? ent_id`),
   pièces à envoyer (`dge_a_envoyer`, module Mail à venir) ; fichier source d'un import (catégorie `import`).
+- **Structure / Document ↔ GED** : arborescence de l'explorateur (`ArborescenceBtp`) : Projet › Affaire › Chantier ›
+  Marché › documents (dossiers liés aux pièces de chaque document, rangés sous le rattachement le plus précis) ; dans
+  un regroupement, liens symboliques vers les documents enfants ; depuis un document, ses enfants imbriqués
+  (`document_lien`, route `descendants`). Un dépôt dans un dossier lie la pièce à l'élément de ce dossier.
 - **Document ↔ Bibliothèque** : appel par code, `BIB:CODE`, F3 ou glisser-déposer entre fenêtres (`AppelBibliotheque`,
   `lig_art_id`) ; envoi des lignes vers la bibliothèque (`EnvoiBibliotheque`, écritures par la fiche `element`) ;
   ouvrages et ensembles de la bibliothèque calculés par le moteur de devis (`calculerOuvrage` ↔
@@ -97,7 +101,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | metre | évaluateur | `LogiBTP.Metres` | `modules/metre/tests/cas` |
 | liste | `requete.js`, `normaliser.js` | `ConstructeurRequete.cs`, `f_sans_accent` | `modules/liste/tests/cas` |
 | fiche | `validation.js` | `ValidationFiche.cs` | `modules/fiche/tests/cas` |
-| ged | `coffre.js`, `versions.js` | `ChaineCoffre.cs`, `RegleVersions.cs` | `01_coffre`, `02_versions` |
+| ged | `coffre.js`, `versions.js`, `recherche.js`, `retention.js`, `classification.js`, `acces.js` | `ChaineCoffre.cs`, `RegleVersions.cs`, `NormalisationGed.cs`, `RegleRetention.cs`, `ClassificationGed.cs`, `AccesGed.cs` | `01`–`06` |
 | bibliotheque | `calcul.js` | `CalculElement.cs`, `CoefficientsElement.cs` | `01_calcul`, `02_coefficients` |
 | annuaire | `identifiants.js`, `coordonnees.js`, `graphe.js` | `Identifiants.cs`, `PlanCoordonnees.cs`, `GrapheAnnuaire.cs` | `01`–`03` |
 | entreprises-fr | `correspondance.js` | `Correspondance.cs` | `01_correspondance` |

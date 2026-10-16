@@ -1,5 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
+import { ArborescenceBtp } from '../ged/arborescence.js';
 import { CLASSES_FICHE } from '../fiches/classes.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 
@@ -32,8 +33,11 @@ export class PageFiche extends PageBase {
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       ouvrirFiche: ({ type: t, id }, e) => app.naviguer(`/fiche/${t}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
+      // Arborescence : la fiche est la racine (projet, affaire, chantier, marché : structure et documents rattachés).
       ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
-        fournisseur: s.ged, contexte: { type_element: typeElement, id_element: String(idElement), libelle }, compact: true,
+        fournisseur: s.ged, contexte: { type_element: typeElement, id_element: String(idElement), libelle, icone: ICONES[typeElement] }, compact: true,
+        arborescence: new ArborescenceBtp({ type_element: typeElement, id_element: String(idElement), libelle, icone: ICONES[typeElement] }, { structure: s.structure }),
+        ouvrirUrl: (url) => app.naviguer(url, { nouvelleFenetre: true }),
         modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
       }),
       surEnregistre: (f, { cree }) => {

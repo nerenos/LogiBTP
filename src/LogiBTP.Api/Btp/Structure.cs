@@ -80,20 +80,43 @@ public static class Structure
             var json = await db.Database.SqlQueryRaw<string>(DocumentsPerimetre, T("prj", p.Projets), T("aff", p.Affaires), T("cha", p.Chantiers), T("mar", p.Marches)).FirstAsync(ct);
             return Results.Content(json, "application/json");
         });
+        // Document et ses documents enfants (transformations et copies, à toute profondeur) : arborescence de la GED d'un document.
+        g.MapGet("/documents/{id:long}/descendants", async (long id, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var json = await db.Database.SqlQueryRaw<string>(DocumentsDescendants, new NpgsqlParameter("id", id)).FirstAsync(ct);
+            return Results.Content(json, "application/json");
+        });
         return api;
     }
 
-    private const string DocumentsPerimetre = """
-        WITH docs AS (
+    // Colonnes d'un document (CTE docs) : groupe d'indices (rattachement des pièces de la GED), indice de référence.
+    private const string ColonnesDocument = """
           SELECT d.ent_id, d.ent_numero, t.tyd_code, t.tyd_libelle, t.tyd_famille, s.std_libelle, d.ent_objet, d.ent_total_ht,
-                 d.ent_projet_id, d.ent_affaire_id, d.ent_chantier_id, d.ent_marche_id
+                 d.ent_projet_id, d.ent_affaire_id, d.ent_chantier_id, d.ent_marche_id, coalesce(d.ent_groupe_id, d.ent_id) AS groupe_id,
+                 d.ent_is_reference, d.ent_date
           FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-          WHERE d.ent_projet_id = ANY(@prj) OR d.ent_affaire_id = ANY(@aff) OR d.ent_chantier_id = ANY(@cha) OR d.ent_marche_id = ANY(@mar))
+        """;
+
+    private const string ResultatDocuments = """
         SELECT json_build_object(
           'documents', (SELECT coalesce(json_agg(json_build_object('id', ent_id, 'numero', ent_numero, 'type', tyd_code, 'type_libelle', tyd_libelle,
                           'famille', tyd_famille, 'statut', std_libelle, 'objet', ent_objet, 'total_ht', ent_total_ht, 'projet_id', ent_projet_id,
-                          'affaire_id', ent_affaire_id, 'chantier_id', ent_chantier_id, 'marche_id', ent_marche_id) ORDER BY ent_id), '[]') FROM docs),
+                          'affaire_id', ent_affaire_id, 'chantier_id', ent_chantier_id, 'marche_id', ent_marche_id, 'groupe_id', groupe_id,
+                          'reference', ent_is_reference, 'date', ent_date) ORDER BY ent_id), '[]') FROM docs),
           'liens', (SELECT coalesce(json_agg(json_build_object('source', l.lie_source_ent_id, 'cible', l.lie_cible_ent_id, 'type', l.lie_type)), '[]')
                     FROM document_lien l WHERE l.lie_source_ent_id IN (SELECT ent_id FROM docs) AND l.lie_cible_ent_id IN (SELECT ent_id FROM docs)))::text AS "Value"
         """;
+
+    private const string DocumentsPerimetre = "WITH docs AS (" + ColonnesDocument + """
+          WHERE d.ent_projet_id = ANY(@prj) OR d.ent_affaire_id = ANY(@aff) OR d.ent_chantier_id = ANY(@cha) OR d.ent_marche_id = ANY(@mar))
+        """ + ResultatDocuments;
+
+    private const string DocumentsDescendants = """
+        WITH RECURSIVE descendants(ent_id, profondeur) AS (
+          SELECT @id::BIGINT, 0
+          UNION SELECT l.lie_cible_ent_id, x.profondeur + 1 FROM document_lien l JOIN descendants x ON l.lie_source_ent_id = x.ent_id WHERE x.profondeur < 50),
+        docs AS (
+        """ + ColonnesDocument + """
+          WHERE d.ent_id IN (SELECT ent_id FROM descendants))
+        """ + ResultatDocuments;
 }
