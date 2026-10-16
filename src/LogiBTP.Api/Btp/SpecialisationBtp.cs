@@ -147,6 +147,15 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             """, ct);
     }
 
+    /// <summary>
+    /// Pièce d'un marché : postes de pied du marché synchronisés avant le calcul de la validation (retenue de garantie et
+    /// postes TTC des factures, modèle de pied des commandes ; CONCEPTION-MARCHES-REGLEMENTS.md, Q5 à Q9, 11.3).
+    /// </summary>
+    public override async Task CompleterValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp saisie, TypeDocument type, CancellationToken ct)
+    {
+        if (PostesMarche.Portee(type, saisie.Document) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
+    }
+
     /// <summary>Délai de paiement (mêmes codes que les conditions de paiement) et mode de règlement du tiers (annuaire).</summary>
     public override async Task<ReglementTiers?> ReglementTiersAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentBtp document, CancellationToken ct)
     {

@@ -1,5 +1,5 @@
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { D, Dz } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
@@ -336,7 +336,10 @@ export class FicheMarche extends FicheStructure {
       ${g.autres.length ? `<h3>Autres documents</h3><table class="tableau-gestion"><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Statut</th>
         <th class="nombre">Total HT</th></tr></thead><tbody>${g.autres.map((x) => `<tr><td>${lien(x)}</td><td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td>
         <td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}
+
+      <h3>Postes de pied</h3><div data-postes></div>
     </div>`;
+    this.rendrePostes(corps.querySelector('[data-postes]'));
     const recharger = () => this.rendreGestion(corps);
     const action = (fn) => async (e) => {
       try { await fn(Number(e.currentTarget.dataset.facturer ?? e.currentTarget.dataset.reviser ?? e.currentTarget.dataset.annuler), e); await recharger(); } catch (x) { this.message(x.message, 'erreur'); }
@@ -359,6 +362,81 @@ export class FicheMarche extends FicheStructure {
       const r = await this.services.structure.annuler(id);
       this.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours' : ''}`, 'succes');
     })));
+  }
+
+  /**
+   * Postes de pied du marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q5 à Q9, 11.3, 11.4) : factures (pied global, après TVA :
+   * paiement direct d'un sous-traitant, autres retenues ; la retenue de garantie vient du % des conditions) et modèle de
+   * pied des commandes (compte prorata, remise… HT ou TTC). Lignes système des pièces, mises à jour à leur validation.
+   */
+  async rendrePostes(zone) {
+    if (!zone || !this.services.structure.postes) return;
+    let postes = await this.services.structure.postes(Number(this.id)).catch((e) => { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return null; });
+    if (!postes) return;
+    const TYPES = [['PAIEMENT_DIRECT', 'Paiement direct'], ['PRORATA', 'Compte prorata'], ['REMISE', 'Remise'], ['AUTRE', 'Autre']];
+    const PORTEES = [['G', 'Factures (pied global)'], ['C', 'Commandes (modèle)']];
+    const MODES = [['P', '%'], ['M', 'Montant']];
+    const SENS = [[-1, 'Déduction'], [1, 'Ajout']];
+    // Sous-traitants du paiement direct : tiers des intervenants du marché.
+    const tiers = new Map();
+    for (const x of this.valeur('intervenants') ?? []) if (x.per_id) tiers.set(Number(x.per_id), x.tiers ?? x.raison_sociale ?? `#${x.per_id}`);
+    const rendre = () => {
+      zone.innerHTML = `<p class="aide">Retenue de garantie : % des conditions du marché (${formatLibre(this.valeur('retenue_pct') ?? 0)} %), sur le TTC de chaque facture.
+        Le pied global des factures ne reçoit que des postes après TVA (TTC) ; un paiement direct se chiffre sur chaque facture.</p>
+        ${postes.length ? `<table class="tableau-gestion"><thead><tr><th>Pièces</th><th>Type</th><th>Libellé</th><th>Niveau</th><th>Mode</th>
+          <th class="nombre">Valeur</th><th>Sens</th><th>Sous-traitant</th><th>Actif</th><th></th></tr></thead><tbody>${postes.map((p, i) => `<tr data-i="${i}">
+          <td data-combo="portee"></td><td data-combo="type"></td><td><input data-c="libelle" size="26" maxlength="150" value="${echapper(p.libelle)}"></td>
+          <td data-combo="niveau"></td><td data-combo="mode"></td><td><input data-c="valeur" size="8" inputmode="decimal" value="${formatLibre(p.valeur)}"></td>
+          <td data-combo="sens"></td><td data-combo="per_id"></td><td><input type="checkbox" data-c="actif" ${p.actif ? 'checked' : ''}></td>
+          <td><button type="button" data-retirer title="Retirer le poste">✕</button></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun poste.</p>'}
+        <div class="boutons"><button type="button" data-ajouter>＋ Poste</button> <button type="button" class="principal" data-enregistrer>Enregistrer les postes</button></div>`;
+      zone.querySelectorAll('tbody tr').forEach((tr) => {
+        const p = postes[Number(tr.dataset.i)];
+        const combo = (cle, liste, vide = false) => {
+          const c = creerCombo({ options: liste.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p[cle] ?? '', vide });
+          c.addEventListener('change', () => {
+            p[cle] = c.valeurCombo === '' ? null : c.valeurCombo;
+            if (cle === 'portee' && p.portee === 'G') { p.niveau = 'TTC'; rendre(); }
+          });
+          tr.querySelector(`[data-combo="${cle}"]`).append(c);
+        };
+        combo('portee', PORTEES);
+        combo('type', TYPES);
+        combo('niveau', p.portee === 'G' ? [['TTC', 'Après TVA']] : [['HT', 'Avant TVA'], ['TTC', 'Après TVA']]);
+        combo('mode', MODES);
+        combo('sens', SENS);
+        combo('per_id', [...tiers].map(([id, nom]) => [id, nom]), true);
+      });
+      zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { lire(); postes.splice(Number(b.closest('tr').dataset.i), 1); rendre(); }));
+      zone.querySelector('[data-ajouter]').addEventListener('click', () => {
+        lire();
+        postes.push({ id: null, portee: 'G', type: 'PAIEMENT_DIRECT', libelle: 'Paiement direct', niveau: 'TTC', mode: 'M', valeur: 0, sens: -1, per_id: null, ordre: postes.length + 1, actif: true });
+        rendre();
+      });
+      zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+        if (!lire()) return;
+        try {
+          postes = await this.services.structure.enregistrerPostes(Number(this.id), postes);
+          this.message('Postes du marché enregistrés : appliqués aux factures et commandes à leur validation', 'succes');
+          rendre();
+        } catch (e) { this.message(e.message, 'erreur'); }
+      });
+    };
+    // Saisie relue dans la liste ; faux si une valeur est invalide.
+    const lire = () => {
+      for (const tr of zone.querySelectorAll('tbody tr')) {
+        const p = postes[Number(tr.dataset.i)];
+        p.libelle = tr.querySelector('[data-c="libelle"]').value.trim();
+        p.actif = tr.querySelector('[data-c="actif"]').checked;
+        const v = lireNombre(tr.querySelector('[data-c="valeur"]').value);
+        if (v === null || v === undefined) { this.message(`${p.libelle || 'Poste'} : valeur invalide`, 'avertissement'); return false; }
+        p.valeur = v;
+        p.sens = Number(p.sens);
+        p.per_id = p.per_id === null || p.per_id === '' ? null : Number(p.per_id);
+      }
+      return true;
+    };
+    rendre();
   }
 
   /** Documents créés depuis le marché (toutes ses commandes validées, une section et un pied par commande). */

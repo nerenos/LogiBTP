@@ -21,6 +21,7 @@
 - `Btp/ElementsBibliotheque.cs` : `CompositionOuvrage`, `CalculerOuvrage` / `CalculerEnsemble` par le moteur de devis, `AvantEcriture` (prix recalculés avant écriture d'une fiche `element`).
 - `Btp/Comptes.cs` : `MapComptes` (`GET /api/comptes-comptables` : plan de comptes minimal de `db/166`).
 - `Btp/Structure.cs` : `MapStructure` (routes ci-dessous), `PerimetreStructure`, `RattachementDocument`.
+- `Btp/PostesMarche.cs` : postes de pied du marché (`Lire`, `Enregistrer`, `Portee`, `Appliquer` : lignes système `lig_proprietes.poste_marche`, retenue de garantie de `mar_retenue_pct`) ; appelé par `SpecialisationBtp.CompleterValidationAsync` et la création d'un document depuis le marché. `SpecialisationBtp.ReglementTiersAsync` : délai et mode de règlement du tiers (échéancier).
 - `Btp/Intervenants.cs` : `FonctionIntervenant`, `IntervenantSaisi`, `Intervenants` (`Colonnes` projet→`itv_prj_id`…, `Gere`, `Fonctions`, `Lire`, `Lus`, `Controler`, `Valider`, `Ecrire`).
 - `Btp/SalariesAnnuaire.cs` : `Salarie` (champ géré `salarie` de la fiche individu), `Synchroniser` (individu repris de la fiche salarié : identité, rôle, rattachement à l'agence).
 - `LogiBTP.Calcul/MoteurDevisBtp.cs` : `MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBtp>`, `Calculer(EntreeCalcul)`. `Modeles.cs` : `EntreeCalcul` (+ `Ventilations`), `ResultatCalcul` (+ `LignesSupprimees`, `Scripts` : `DiagnosticScript` par métré en script, `VentilationsLignes`, `FraisAnnexes` : `BilanFraisAnnexes`) ; `LogiBTP.Domaine/VentilationFrais.cs` (`VentilationFrais`, `VentilationFraisLigne`, tables de `db/167`), `ComparateurBtp` (ligne d'écart appariée `ecart:<parent>`).
@@ -31,6 +32,7 @@
 - `GET /api/comptes-comptables` ([{ code, libelle, actif }]).
 - `GET /api/structure/referentiels` (affaires, projets, chantiers, marchés, commandes `V_COMMANDE`, fonctions).
 - `PUT /api/structure/documents/{id}/rattachement` (même validé ; marché → chantier → affaire et projet complétés).
+- `GET|PUT /api/structure/marches/{id}/postes` (postes de pied du marché).
 - `GET /api/structure/intervenants/{type}/{id}` ; `POST /api/structure/documents` (documents du périmètre + liens `document_lien`, groupe d'indices `groupe_id`, `reference`) ; `GET /api/structure/documents/{id}/descendants` (le document et ses enfants par `document_lien`, à toute profondeur : arborescence de la GED).
 - Le reste (`/documents`, `/fiches`, `/listes`, `/ged`, `/bibliotheque`, `/annuaire`…) vient des `MapModule…()` des modules.
 

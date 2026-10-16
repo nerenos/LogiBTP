@@ -423,3 +423,21 @@ Développement lancé le 17/10/2026 : pour les questions sans décision, la prop
   liste du délai de paiement des tiers toujours fixe (les codes ajoutés aux conditions n'y apparaissent pas).
 - Vérifié sur la base de démo (facture FA2026-00002 : 30 jours par défaut, mode du tiers ; découpage manuel).
 
+### Lot 3 – postes de pied du marché
+
+- `db/173_marche_postes.sql` : `marche_poste` (portée G : pied global des factures, après TVA seulement — contrainte, Q6 ;
+  portée C : modèle de pied des commandes, HT ou TTC ; types PAIEMENT_DIRECT, PRORATA, REMISE, AUTRE ; mode % ou montant,
+  sens, sous-traitant), `mar_date_reception` (fiche marché, Q7).
+- Retenue de garantie : `mar_retenue_pct` du marché, poste TTC en % du cumul (TTC net) en tête du pied global des
+  factures, marqué `lig_pied_retenue` (échéance RETENUE du lot 2). La base TOTAL_TTC du moteur (TTC du corps avant
+  remises) ne convient pas. Ne pas saisir aussi une retenue dans le pied des commandes (elle serait comptée deux fois).
+- `PostesMarche` (cœur) : lignes système repérées par `lig_proprietes.poste_marche` ('R' : retenue, sinon `mpo_id`),
+  ajoutées, mises à jour ou retirées ; HT avant la TVA de la racine, TTC à la fin ; un paiement direct garde la valeur
+  saisie sur la facture. Application : à la création d'une facture depuis le marché (pied visible tout de suite) et à
+  la validation (nouveau point d'accroche du module `SpecialisationDocument.CompleterValidationAsync`, avant le calcul) ;
+  factures de vente du marché (hors avoirs) en portée G, commandes clients (hors intermédiaires) en portée C.
+- Routes `GET|PUT /api/structure/marches/{id}/postes` ; fiche marché, onglet Gestion : section « Postes de pied »
+  (combos, sous-traitant parmi les intervenants du marché).
+- Vérifié sur la base de démo : facture d'avancement SI2026-00004 (retenue en échéance RETENUE, paiement direct de
+  1 000 €), commande CC2026-00003 rattachée au marché 1 (compte prorata du modèle inséré avant la TVA).
+

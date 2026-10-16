@@ -84,7 +84,8 @@ public static class Structure
         // Document créé depuis un marché (BL…) : toutes les commandes validées du marché, dans l'ordre (base puis avenants),
         // une section et un bloc de pied par commande (CONCEPTION-ACHATS-MARCHES.md, Q18, Q23).
         g.MapPost("/marches/{id:int}/documents", async (int id, DocumentMarche d, HttpContext http, LogiBtpContext db,
-            TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, CancellationToken ct) =>
+            TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations,
+            DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
         {
             var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == d.Type).Select(t => (int?)t.TydId).FirstOrDefaultAsync(ct)
                 ?? throw ExceptionMetier.Introuvable($"Type {d.Type}");
@@ -98,8 +99,18 @@ public static class Structure
             var entId = cree.Document.EntId;
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_avt_depassement = (SELECT mar_depassement_autorise FROM marche WHERE mar_id = {id}) WHERE ent_id = {entId} AND ent_avt_presentation IS NOT NULL", ct);
             cree.Document.EntAvtDepassement = await db.Database.SqlQuery<bool>($"SELECT ent_avt_depassement AS \"Value\" FROM document WHERE ent_id = {entId}").FirstAsync(ct);
+            // Facture : retenue de garantie et postes TTC du marché posés dans le pied global (Q5, 11.4), visibles dès la saisie.
+            var type = await db.TypesDocument.AsNoTracking().FirstAsync(t => t.TydId == tyd, ct);
+            var complet = await documents.Charger(entId, ct);
+            if (PostesMarche.Portee(type, complet.Document) is string portee && await PostesMarche.Appliquer(db, complet, portee, ct))
+            {
+                return (await documents.Enregistrer(entId, complet, Utilisateur.Depuis(http), ct)).Document ?? cree;
+            }
             return cree;
         });
+        // Postes de pied du marché (Q5 à Q9, 11.3) : lecture ; écriture (droit MODIFIER de la fiche marché vérifié par la fiche).
+        g.MapGet("/marches/{id:int}/postes", (int id, LogiBtpContext db, CancellationToken ct) => PostesMarche.Lire(db, id, ct));
+        g.MapPut("/marches/{id:int}/postes", (int id, List<PosteMarche> postes, LogiBtpContext db, CancellationToken ct) => PostesMarche.Enregistrer(db, id, postes, ct));
         // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,
         // situé (dernière situation de référence), facturé (factures et avoirs d'avancement non annulés) et reste ;
         // situations (références), pièces d'avancement (annulées comprises, marquées), autres documents, totaux.

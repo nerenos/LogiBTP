@@ -60,6 +60,7 @@ services:
       - ./db/170_marches.sql:/docker-entrypoint-initdb.d/170_marches.sql:ro
       - ./db/171_avancement.sql:/docker-entrypoint-initdb.d/171_avancement.sql:ro
       - ./db/172_avancement_suite.sql:/docker-entrypoint-initdb.d/172_avancement_suite.sql:ro
+      - ./db/173_marche_postes.sql:/docker-entrypoint-initdb.d/173_marche_postes.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

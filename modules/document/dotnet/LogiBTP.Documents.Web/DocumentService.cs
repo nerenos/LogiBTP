@@ -308,7 +308,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var type = await Type(avant.Document.EntTydId, ct);
         await VerifierModifiable(avant.Document, ct);
 
-        var entree = await Entree(JsonCalcul.Cloner(avant), ct);
+        var saisie = JsonCalcul.Cloner(avant);
+        await specialisation.CompleterValidationAsync(db, saisie, type, ct);
+        var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);
         var controles = new List<MessageCalcul>();
         var ctx = new ContexteDocument<TDoc, TLigne> { Type = type, Proprietes = await Proprietes(type.TydId, ct), Entree = entree };

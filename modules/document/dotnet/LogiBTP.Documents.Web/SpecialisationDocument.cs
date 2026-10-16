@@ -50,6 +50,13 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     public virtual Task ControlerValidationAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type, List<MessageCalcul> erreurs, CancellationToken ct) =>
         Task.CompletedTask;
 
+    /// <summary>
+    /// Saisie complétée avant le calcul de la validation (lignes système : postes de pied d'un marché…) ; nouvelles
+    /// lignes en identifiants négatifs.
+    /// </summary>
+    public virtual Task CompleterValidationAsync(DocumentDbContext<TDoc, TLigne> db, TComplet saisie, TypeDocument type, CancellationToken ct) =>
+        Task.CompletedTask;
+
     /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;
