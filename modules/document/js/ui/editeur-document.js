@@ -3,7 +3,8 @@ import {
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
   editerLibelle, lirePreferences, ecrirePreferences,
 } from '@logibtp/socle/ui';
-import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote } from '../src/index.js';
+import { Dz } from '@logibtp/socle';
+import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
@@ -15,6 +16,9 @@ export const LIBELLES_PIED = {
 
 /** Identifiant de la tranche calculée « Pied du document » (lignes virtuelles : identifiants ≤ −9·10¹¹). */
 export const ID_PIED = -9e11;
+
+/** Colonnes du reste à solder (documents issus d'une transformation : BL, factures, avoirs). */
+export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
 /** Libellés des bases de calcul d'une ligne de pied (lig_pied_base). */
 export const LIBELLES_BASE_PIED = { CUMUL: 'Cumul à ce point', TOTAL_HT: 'Total HT du corps', HT_NET: 'Dernier total HT net', TOTAL_TTC: 'Total TTC du corps', LIGNE: 'Sous-total de pied' };
@@ -146,8 +150,15 @@ export class EditeurDocument {
     const catalogue = this.colonnes();
     if (!this.vue?.colonnes?.length) return catalogue;
     const parCle = new Map(catalogue.map((c) => [c.cle, c]));
+    // Document issu d'une transformation : colonnes du reste à solder ajoutées après la quantité si la vue n'en a
+    // aucune (vues créées avant elles).
+    const colonnesVue = [...this.vue.colonnes];
+    if (this.restes?.parLigne.size && !colonnesVue.some((c) => COLONNES_RESTE.includes(c.cle))) {
+      const i = colonnesVue.findIndex((c) => c.cle === 'qte');
+      colonnesVue.splice(i < 0 ? colonnesVue.length : i + 1, 0, ...COLONNES_RESTE.map((cle) => ({ cle })));
+    }
     // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
-    const res = this.vue.colonnes.filter((c) => parCle.has(c.cle))
+    const res = colonnesVue.filter((c) => parCle.has(c.cle))
       .map((c, i) => ({ ...parCle.get(c.cle), largeur: c.largeur ?? null, arbre: i === 0 }));
     if (!res.length) return catalogue;
     if (this.vue.debogage) {
@@ -155,6 +166,33 @@ export class EditeurDocument {
       res.push(...this.colonnesSysteme().filter((c) => !choisis.length || choisis.includes(c.champ)));
     }
     return res;
+  }
+
+  /**
+   * Restes à solder d'un document issu d'une transformation (GET /documents/{id}/restes, posé par l'hôte) :
+   * { seuil_pct, seuil_qte, lignes: [{ lig_id, source_lig_id, etape, qte_parent, autres, autres_brouillons, solde }] }.
+   * Ajoute les colonnes Qté parent, Reste et Soldé ; null les retire.
+   */
+  definirRestes(restes) {
+    this.restes = restes?.lignes?.length
+      ? { seuilPct: restes.seuil_pct ?? 0, seuilQte: restes.seuil_qte ?? 0, parLigne: new Map(restes.lignes.map((l) => [l.lig_id, l])) }
+      : null;
+    this.grille.definirColonnes(this.colonnesAffichees());
+  }
+
+  /**
+   * État de solde d'une ligne : { info, etat, avant } ou null. etat : avec la quantité en cours de saisie et la case
+   * Soldé ; avant : sans ce document (ligne déjà entièrement transformée ou soldée ailleurs).
+   */
+  soldeLigne(r) {
+    const info = r.virtuelle ? null : this.restes?.parLigne.get(r.item.lig_id);
+    if (!info) return null;
+    const base = { qte_parent: info.qte_parent, solde: info.solde, seuil_pct: this.restes.seuilPct, seuil_qte: this.restes.seuilQte };
+    return {
+      info,
+      etat: etatSolde({ ...base, transforme: Dz(info.autres).plus(Dz(r.calcule.lig_qte_vendue)), force: Boolean(r.item.lig_solde) }),
+      avant: etatSolde({ ...base, transforme: info.autres, force: false }),
+    };
   }
 
   /** Vue de colonnes appliquée à la grille. */
@@ -697,6 +735,7 @@ export class EditeurDocument {
           return formatNombre(c.lig_qte_vendue, c.lig_precision_qte ?? 2);
         },
       },
+      ...this.colonnesReste(saisissable),
       {
         cle: 'unite', titre: 'U', classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
@@ -751,6 +790,53 @@ export class EditeurDocument {
         champ: () => 'lig_commentaire', lire: (l) => l.lig_commentaire ?? '',
         valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_commentaire ?? '').split('\n')[0]),
         titreCellule: (r) => (r.virtuelle ? '' : r.item.lig_commentaire ?? ''),
+      },
+    ];
+  }
+
+  /**
+   * Colonnes du reste à solder (document issu d'une transformation, restes posés par definirRestes) : quantité du
+   * parent, reste (parent − autres documents − ce document − soldé), case Soldé (solde la ligne du parent à la
+   * validation ; « seuil » : soldée automatiquement, le reste étant sous le seuil des paramètres).
+   */
+  colonnesReste(saisissable) {
+    if (!this.restes?.parLigne.size) return [];
+    const precision = (r) => r.calcule.lig_precision_qte ?? 2;
+    return [
+      {
+        cle: 'qte_parent', titre: 'Qté parent', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => { const s = this.soldeLigne(r); return s ? formatNombre(s.info.qte_parent, precision(r)) : ''; },
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Quantité de la ligne du document parent' : ''),
+      },
+      {
+        cle: 'reste', titre: 'Reste', classe: 'col-nombre col-reste', editable: () => false,
+        valeur: (r) => { const s = this.soldeLigne(r); return s ? formatNombre(s.etat.reste, precision(r)) : ''; },
+        classeCellule: (r) => { const s = this.soldeLigne(r); return s && Dz(s.etat.reste).isNegative() ? 'reste-negatif' : ''; },
+        titreCellule: (r) => {
+          const s = this.soldeLigne(r);
+          if (!s) return '';
+          const f = (v) => formatNombre(v, precision(r));
+          return `Reste à solder = parent ${f(s.info.qte_parent)} − autres documents ${f(s.info.autres)}`
+            + `${Dz(s.info.autres_brouillons).isZero() ? '' : ` (dont brouillons ${f(s.info.autres_brouillons)})`}`
+            + ` − ce document ${f(r.calcule.lig_qte_vendue)}${Dz(s.info.solde).isZero() ? '' : ` − soldé ${f(s.info.solde)}`}`;
+        },
+      },
+      {
+        cle: 'solde', titre: 'Soldé', classe: 'col-solde', editeur: 'select',
+        editable: (l) => saisissable(l) && this.restes.parLigne.has(l.lig_id),
+        champ: () => 'lig_solde', lire: (l) => (l.lig_solde ? '1' : ''),
+        options: () => [{ valeur: '', libelle: '—' }, { valeur: '1', libelle: 'Soldée' }],
+        valeur: (r) => {
+          const s = this.soldeLigne(r);
+          if (!s) return '';
+          return r.item.lig_solde ? '✔' : s.etat.soldee ? { html: '<span class="solde-seuil">✔ seuil</span>' } : '';
+        },
+        titreCellule: (r) => {
+          const s = this.soldeLigne(r);
+          if (!s) return '';
+          if (r.item.lig_solde) return 'Ligne soldée : à la validation, le reste de la ligne du parent est clos';
+          return s.etat.soldee ? 'Reste sous le seuil des paramètres : la ligne sera soldée à la validation' : 'Choisir « Soldée » pour clore le reste sans attendre';
+        },
       },
     ];
   }
@@ -821,6 +907,7 @@ export class EditeurDocument {
       return true;
     }
     if (champ === 'lig_tva_id') valeur = texte === '' ? null : Number(texte);
+    if (champ === 'lig_solde') valeur = texte === '1' || texte === true;
     // Saisie en ligne : texte simple, échappé (la mise en forme passe par l'éditeur riche).
     if (champ === 'lig_libelle_html') valeur = valeur.trim() === '' ? null : echapper(valeur);
     if (champ === 'lig_unt_code' && valeur.trim() === '') valeur = null;
@@ -952,6 +1039,7 @@ export class EditeurDocument {
         !r.virtuelle && this.typePrixEffectif(r.calcule) !== 'V' ? 'hors-total' : '',
         !r.virtuelle && r.calcule.lig_tyl_id === TL.TITRE && r.calcule.lig_type_prix === 'F' ? 'tranche-frais' : '',
         r.calcule.lig_is_non_editee ? 'non-editee' : '',
+        this.restes && Number(r.calcule.lig_qte_vendue ?? 0) === 0 && this.soldeLigne(r)?.avant.soldee ? 'ligne-soldee' : '',
         this.coupees.has(r.item.lig_id) ? 'coupee' : '',
         this.marques?.ids.has(r.item.lig_id) ? (r.item.lig_id === this.marques.courant ? 'trouvee trouvee-courante' : 'trouvee') : '',
       ].join(' '),

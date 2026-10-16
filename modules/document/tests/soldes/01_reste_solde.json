@@ -1,0 +1,29 @@
+{
+  "description": "Solde des lignes transformées (soldes.js ↔ Soldes.cs) : reste = parent − transformé − soldé ; soldée si la case est cochée, si le reste ≤ seuil en quantité ou ≤ parent × seuil % / 100 ; un reste négatif est soldé ; a_solder = reste positif d'une ligne soldée.",
+  "cas": [
+    { "nom": "rien de transformé", "qte_parent": "10", "transforme": "0", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "10", "soldee": false, "a_solder": "0" } },
+    { "nom": "deux BL, reste ouvert", "qte_parent": "10", "transforme": "6.3", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "3.7", "soldee": false, "a_solder": "0" } },
+    { "nom": "tout livré : soldée sans écriture", "qte_parent": "10", "transforme": "10", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "0", "soldee": true, "a_solder": "0" } },
+    { "nom": "acier livré au poids mesuré : reste négatif soldé", "qte_parent": "10", "transforme": "10.3", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "-0.3", "soldee": true, "a_solder": "0" } },
+    { "nom": "case cochée : le reste est soldé", "qte_parent": "10", "transforme": "9.8", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": true,
+      "attendu": { "reste": "0.2", "soldee": true, "a_solder": "0.2" } },
+    { "nom": "seuil en % atteint (3 % de 10 = 0,3)", "qte_parent": "10", "transforme": "9.75", "solde": "0", "seuil_pct": "3", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "0.25", "soldee": true, "a_solder": "0.25" } },
+    { "nom": "seuil en % non atteint", "qte_parent": "10", "transforme": "9.5", "solde": "0", "seuil_pct": "3", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "0.5", "soldee": false, "a_solder": "0" } },
+    { "nom": "seuil en quantité atteint (l'un des deux suffit)", "qte_parent": "10", "transforme": "9.5", "solde": "0", "seuil_pct": "3", "seuil_qte": "0.5", "force": false,
+      "attendu": { "reste": "0.5", "soldee": true, "a_solder": "0.5" } },
+    { "nom": "solde déjà écrit déduit", "qte_parent": "10", "transforme": "4", "solde": "6", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "0", "soldee": true, "a_solder": "0" } },
+    { "nom": "ligne négative : lue au signe près", "qte_parent": "-5", "transforme": "-3", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "-2", "soldee": false, "a_solder": "0" } },
+    { "nom": "ligne négative soldée à la main", "qte_parent": "-5", "transforme": "-3", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": true,
+      "attendu": { "reste": "-2", "soldee": true, "a_solder": "-2" } },
+    { "nom": "arrondi à 6 décimales", "qte_parent": "1", "transforme": "0.3333333", "solde": "0", "seuil_pct": "0", "seuil_qte": "0", "force": false,
+      "attendu": { "reste": "0.666667", "soldee": false, "a_solder": "0" } }
+  ]
+}

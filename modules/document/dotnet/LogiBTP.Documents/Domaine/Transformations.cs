@@ -14,7 +14,7 @@ public class DocumentLigneLien
     public decimal? LilAvancementQte { get; set; }
 }
 
-/// <summary>Solde d'un reliquat sans création de document.</summary>
+/// <summary>Solde d'un reliquat : sans document, ou demandé par une ligne d'un document validé (LsoCibleLigId).</summary>
 public class DocumentLigneSolde
 {
     public long LsoId { get; set; }
@@ -24,4 +24,13 @@ public class DocumentLigneSolde
     public DateTimeOffset LsoDate { get; set; }
     public string LsoUtilisateur { get; set; } = "";
     public string? LsoMotif { get; set; }
+    /// <summary>Ligne du document qui a soldé (case Soldé ou seuil) ; le solde disparaît avec elle.</summary>
+    public long? LsoCibleLigId { get; set; }
+}
+
+/// <summary>Paramètre global du module (clé → valeur JSON) : parametre_document.</summary>
+public class ParametreDocument
+{
+    public string PdoCle { get; set; } = "";
+    public System.Text.Json.JsonDocument PdoValeur { get; set; } = System.Text.Json.JsonDocument.Parse("null");
 }

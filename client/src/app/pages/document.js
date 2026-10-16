@@ -356,6 +356,7 @@ export class PageDocument extends PageBase {
     });
     this.modeleAffiche = this.editeur.saisie.document.ent_modele ?? null;
     await this.vues.charger();
+    await this.chargerRestes();
     this.metre = new PanneauMetre(this.$('#metre'), this.editeur, {
       fermer: (ligId) => { this.editeur.grille.selectionner(ligId, { colonne: 3 }); this.editeur.grille.focus(); },
       message: (t) => this.app.message(t),
@@ -603,6 +604,20 @@ export class PageDocument extends PageBase {
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
     if (this.editeur.definition.type?.tyd_code === 'V_COMMANDE' && !this.editeur.saisie.document.ent_marche_id) await this.proposerMarche();
+  }
+
+  /**
+   * Document issu d'une transformation (BL, facture, avoir…) : restes à solder des lignes liées à leur parent
+   * (colonnes Qté parent, Reste, Soldé de la grille).
+   */
+  async chargerRestes() {
+    const ed = this.editeur;
+    if (!this.app.enLigne || !ed.saisie.lignes.some((l) => l.lig_origine_id)) return;
+    try {
+      ed.definirRestes(await api.restes(ed.saisie.document.ent_id));
+    } catch (e) {
+      this.app.message(`Restes à solder indisponibles : ${e.message}`, 'avertissement');
+    }
   }
 
   /** Commande client validée sans marché : création du marché sur un chantier, ou rattachement à un marché existant. */

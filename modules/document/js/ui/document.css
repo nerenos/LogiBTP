@@ -129,6 +129,11 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .grille tr.hors-total td { color: var(--discret); }
 .grille tr.hors-total td.col-montant { text-decoration: line-through; }
 .grille tr.non-editee td.col-libelle { opacity: 0.6; }
+/* Reste à solder (documents issus d'une transformation) : ligne déjà soldée ailleurs grisée, reste négatif signalé. */
+.grille tr.ligne-soldee td { color: var(--discret); opacity: 0.7; }
+.grille td.reste-negatif { color: var(--alerte); }
+.grille td.col-solde { text-align: center; }
+.grille .solde-seuil { color: var(--discret); font-style: italic; }
 /* Tranche de frais annexes : son montant (frais à ventiler) en italique, hors total mais pas barré. */
 .grille tr.tranche-frais td.col-montant { text-decoration: none; font-style: italic; }
 .grille tr.coupee td { opacity: 0.45; }

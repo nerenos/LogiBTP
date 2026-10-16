@@ -1,5 +1,6 @@
 // Vues de colonnes de la grille des lignes fournies par le cœur : une vue par défaut par modèle de saisie (tous types
-// de documents) et une vue de débogage. Les mêmes définitions alimentent la démo hors ligne et le script
+// de documents) et une vue de débogage. Les colonnes du reste à solder (qte_parent, reste, solde) n'apparaissent que
+// dans un document issu d'une transformation. Les mêmes définitions alimentent la démo hors ligne et le script
 // db/150_documents_vues.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
 const cols = (...cles) => cles.map((cle) => ({ cle }));
@@ -7,7 +8,7 @@ const cols = (...cles) => cles.map((cle) => ({ cle }));
 export const VUES_DOCUMENT = [
   {
     id: 1, nom: 'Complet', tyd_id: null, mod_code: 'COMPLET', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'compte', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva', 'commentaire'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'compte', 'qte', 'qte_parent', 'reste', 'solde', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva', 'commentaire'), debogage: false, systeme: [] },
   },
   {
     id: 2, nom: 'Chiffrage', tyd_id: null, mod_code: 'CHIFFRAGE', globale: true, proprietaire: null, par_defaut: true,
@@ -15,7 +16,7 @@ export const VUES_DOCUMENT = [
   },
   {
     id: 3, nom: 'À la volée', tyd_id: null, mod_code: 'VOLEE', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'code', 'libelle', 'nature', 'qte', 'unite', 'pv', 'montant', 'tva'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'code', 'libelle', 'nature', 'qte', 'qte_parent', 'reste', 'solde', 'unite', 'pv', 'montant', 'tva'), debogage: false, systeme: [] },
   },
   {
     // Débogage : colonnes système (identifiants, liens, valeurs calculées masquées) pour comprendre une erreur.

@@ -46,7 +46,7 @@ export const COLONNES_LIGNE = new Set([
   'lig_montant_ht',
   'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_pied_sens', 'lig_pied_valeur', 'lig_base_calcul', 'lig_montant_tva',
   'lig_tva_id', 'lig_taux_tva',
-  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_proprietes', 'lig_etiquette',
+  'lig_commentaire', 'lig_is_non_editee', 'lig_origine_id', 'lig_solde', 'lig_proprietes', 'lig_etiquette',
 ]);
 
 // Colonnes NUMERIC(18,6) : le moteur JS les manipule en chaînes décimales exactes.

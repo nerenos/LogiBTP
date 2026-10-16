@@ -134,6 +134,10 @@ public static class Extensions
             await s.Solder(ligId, d, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        api.MapGet("/documents/{id:long}/restes", (long id, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Restes(id, ct));
+        api.MapGet("/parametres-documents/seuils-solde", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LireSeuilsSolde(ct));
+        api.MapPut("/parametres-documents/seuils-solde", (SeuilsSolde v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.EnregistrerSeuilsSolde(v, Utilisateur.Depuis(http), ct));
         api.MapGet("/documents/{id:long}/lot-archivage", (long id, TransformationService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LotArchivage(id, ct));
 
         // Calcul serveur sans enregistrement et arbitrage des écarts

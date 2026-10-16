@@ -256,6 +256,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
 
         var corr = await persistance.Ecrire(id, specialisation.VersComplet(r), ct);
+        await RecalculerLiens(id, ct);
         static Dictionary<long, long> Nouveaux(Dictionary<long, long> d) => d.Where(kv => kv.Key != kv.Value).ToDictionary();
         return new ReponseEnregistrement<TComplet>
         {
@@ -303,8 +304,108 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
+        if (await EcrireSoldes(id, type, u, ct)) reponse.Document = await persistance.Charger(id, ct);
         await tx.CommitAsync(ct);
         return reponse;
+    }
+
+    // ------------------------------------------------------------------ liens de transformation et soldes
+
+    /// <summary>
+    /// Quantités des liens de transformation recalculées depuis les lignes du document cible (quantité modifiée après
+    /// la transformation) ; une ligne supprimée a emporté ses liens. Les avancements (situations) gardent les leurs.
+    /// </summary>
+    private async Task RecalculerLiens(long id, CancellationToken ct)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE document_ligne_lien x
+            SET lil_qte = CASE WHEN EXISTS (SELECT 1 FROM document_ligne_lien y
+                                            WHERE y.lil_cible_lig_id = x.lil_cible_lig_id AND y.lil_etape IN ('RETOUR', 'AVOIR'))
+                               THEN -coalesce(l.lig_qte_vendue, 0) ELSE coalesce(l.lig_qte_vendue, 0) END,
+                lil_montant_ht = l.lig_montant_ht
+            FROM document_ligne l
+            WHERE l.lig_id = x.lil_cible_lig_id AND l.lig_ent_id = {id} AND x.lil_avancement_pct IS NULL
+            """, ct);
+    }
+
+    /// <summary>Seuils de solde automatique d'une famille (A achats, sinon ventes) : (% de la quantité du parent, quantité).</summary>
+    public async Task<(decimal Pct, decimal Qte)> SeuilsSolde(string famille, CancellationToken ct)
+    {
+        var s = await LireSeuilsSolde(ct);
+        var f = famille == "A" ? s.Achat : s.Vente;
+        return (f.Pct, f.Qte);
+    }
+
+    /// <summary>Seuils de solde (parametre_document « seuils_solde ») ; 0 par défaut.</summary>
+    public async Task<SeuilsSolde> LireSeuilsSolde(CancellationToken ct)
+    {
+        var p = await db.ParametresDocument.AsNoTracking().FirstOrDefaultAsync(x => x.PdoCle == "seuils_solde", ct);
+        return p?.PdoValeur.Deserialize<SeuilsSolde>(JsonCalcul.Options) ?? new SeuilsSolde();
+    }
+
+    /// <summary>Seuils de solde (administrateur) : valeurs positives, % au plus 100.</summary>
+    public async Task<SeuilsSolde> EnregistrerSeuilsSolde(SeuilsSolde s, Utilisateur u, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        foreach (var f in new[] { s.Achat, s.Vente })
+        {
+            if (f.Pct < 0 || f.Qte < 0) throw ExceptionMetier.Invalide("SEUIL", "Un seuil de solde est positif ou nul");
+            if (f.Pct > 100) throw ExceptionMetier.Invalide("SEUIL", "Un seuil en % ne dépasse pas 100");
+        }
+        var valeur = JsonSerializer.SerializeToDocument(s, JsonCalcul.Options);
+        var p = await db.ParametresDocument.FirstOrDefaultAsync(x => x.PdoCle == "seuils_solde", ct);
+        if (p is null) db.ParametresDocument.Add(new ParametreDocument { PdoCle = "seuils_solde", PdoValeur = valeur });
+        else p.PdoValeur = valeur;
+        await db.SaveChangesAsync(ct);
+        return s;
+    }
+
+    /// <summary>
+    /// Validation d'un document issu d'une transformation : chaque ligne liée à sa ligne parente (lig_origine_id) dont
+    /// la case Soldé est cochée, ou dont le reste passe sous le seuil, solde la ligne parente pour l'étape
+    /// (document_ligne_solde rattaché à la ligne : retiré avec elle). Renvoie vrai si une ligne a été marquée soldée.
+    /// </summary>
+    private async Task<bool> EcrireSoldes(long id, TypeDocument type, Utilisateur u, CancellationToken ct)
+    {
+        var lignes = await db.Lignes.Where(l => l.LigEntId == id && l.LigOrigineId != null).ToListAsync(ct);
+        if (lignes.Count == 0) return false;
+        var ids = lignes.Select(l => l.LigId).ToList();
+        var facultatives = TransformationService<TDoc, TLigne, TComplet>.EtapesFacultatives;
+        var directs = (await db.LignesLien.AsNoTracking().Where(x => ids.Contains(x.LilCibleLigId)).ToListAsync(ct))
+            .Where(x => !facultatives.Contains(x.LilEtape) && lignes.Any(l => l.LigId == x.LilCibleLigId && l.LigOrigineId == x.LilSourceLigId))
+            .ToList();
+        if (directs.Count == 0) return false;
+        var parentsIds = directs.Select(x => x.LilSourceLigId).Distinct().ToList();
+        var parents = await db.Lignes.AsNoTracking().Where(l => parentsIds.Contains(l.LigId)).ToDictionaryAsync(l => l.LigId, ct);
+        var liens = await db.LignesLien.AsNoTracking().Where(x => parentsIds.Contains(x.LilSourceLigId)).ToListAsync(ct);
+        var soldes = await db.LignesSolde.AsNoTracking().Where(x => parentsIds.Contains(x.LsoLigId)).ToListAsync(ct);
+        var (pct, qte) = await SeuilsSolde(type.TydFamille, ct);
+        var marquee = false;
+        foreach (var l in lignes)
+        {
+            // Étape principale : la première écrite à la transformation (une facture qui vaut réception en a deux).
+            var lien = directs.Where(x => x.LilCibleLigId == l.LigId).OrderBy(x => x.LilId).FirstOrDefault();
+            if (lien is null || !parents.TryGetValue(lien.LilSourceLigId, out var parent)) continue;
+            var transforme = liens.Where(x => x.LilSourceLigId == parent.LigId && x.LilEtape == lien.LilEtape).Sum(x => x.LilQte);
+            var solde = soldes.Where(x => x.LsoLigId == parent.LigId && x.LsoEtape == lien.LilEtape).Sum(x => x.LsoQte);
+            var etat = Soldes.Etat(parent.LigQteVendue ?? 0, transforme, solde, pct, qte, l.LigSolde);
+            if (!etat.Soldee) continue;
+            if (etat.ASolder != 0)
+            {
+                db.LignesSolde.Add(new DocumentLigneSolde
+                {
+                    LsoLigId = parent.LigId, LsoEtape = lien.LilEtape, LsoQte = etat.ASolder, LsoDate = DateTimeOffset.UtcNow,
+                    LsoUtilisateur = u.Code, LsoMotif = l.LigSolde ? "Soldé à la main" : "Soldé sous le seuil", LsoCibleLigId = l.LigId,
+                });
+            }
+            if (!l.LigSolde)
+            {
+                l.LigSolde = true;
+                marquee = true;
+            }
+        }
+        await db.SaveChangesAsync(ct);
+        return marquee;
     }
 
     public async Task Supprimer(long id, Utilisateur u, CancellationToken ct)

@@ -104,6 +104,29 @@ public sealed class DemandeSolde
     public string? Motif { get; set; }
 }
 
+/// <summary>Seuils de solde automatique d'une famille : % de la quantité du parent et quantité.</summary>
+public sealed class SeuilSolde
+{
+    public decimal Pct { get; set; }
+    public decimal Qte { get; set; }
+}
+
+/// <summary>Seuils de solde automatique (parametre_document « seuils_solde »), achats et ventes.</summary>
+public sealed class SeuilsSolde
+{
+    public SeuilSolde Achat { get; set; } = new();
+    public SeuilSolde Vente { get; set; } = new();
+}
+
+/// <summary>
+/// Reste à solder d'une ligne d'un document issu d'une transformation : quantité du parent, quantités des autres
+/// documents à la même étape (dont brouillons), quantité déjà soldée par d'autres lignes.
+/// </summary>
+public sealed record ResteLigne(long LigId, long SourceLigId, string Etape, decimal QteParent, decimal Autres, decimal AutresBrouillons, decimal Solde);
+
+/// <summary>Restes à solder d'un document et seuils de sa famille (colonnes Qté parent, Reste, Soldé de la grille).</summary>
+public sealed record RestesDocument(decimal SeuilPct, decimal SeuilQte, List<ResteLigne> Lignes);
+
 public sealed record SuiviEtape(string Etape, decimal Transforme, decimal Solde, decimal Reliquat);
 
 public sealed record SuiviLigne(long LigId, string? Numerotation, string? Libelle, decimal Qte, List<SuiviEtape> Etapes);

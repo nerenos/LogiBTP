@@ -28,7 +28,8 @@
 - `Web/VerrouDocument.cs` : `VerrouDocumentService` (`Etat`, `Verrouiller`, `Deverrouiller`, `Forcer`, `Controler`).
 - `Web/AffichageDocument.cs` : `AffichageDocumentService` (étiquettes, couleurs, modèles, vues) + entités `EtiquetteLigne`, `VueDocument`…
 - `Web/SpecialisationDocument.cs`, `Handlers.cs`, `Contrats.cs` (`DocumentComplet`, `ReponseEnregistrement`, `CreationDocument`, `DemandeTransformation`, `DefinitionType`…), `DocumentDbContext.cs` (abstrait), `Infrastructure.cs` (`NettoyageHtml`), `Extensions.cs`.
-- `db/010` schéma, `011` type_ligne, `012` verrou, `013` affichage, `014` type de prix F (rejouable).
+- `db/010` schéma, `011` type_ligne, `012` verrou, `013` affichage, `014` type de prix F, `015` soldes des lignes (`lig_solde`, `lso_cible_lig_id`, `parametre_document`) (rejouables).
+- `js/src/soldes.js` `etatSolde` ↔ `Calcul/Soldes.cs` `Soldes.Etat` (reste, soldée, quantité à solder ; jeu `tests/soldes/01_reste_solde.json`).
 - `tests/cas/*.json` (jeux partagés), `tests/resultats-js/` (sorties JS pour la parité C#).
 
 ## Modèle de données
@@ -37,6 +38,7 @@
 - `document_ligne` (`lig_*`) : `lig_parent_id`, `lig_chemin` LTREE (trigger), `lig_ordre`, `lig_tyl_id`, numérotation (`lig_num_depart`, `lig_num_manuelle`), libellés html/affiché/brut, `lig_qte` + `lig_qte_type` R/A, `lig_pv`, `lig_coef_remise` (0,90 = 10 %), `lig_type_prix` V/O/M/A/F (F frais annexes, `014`), `lig_variante_de_id`, `lig_st_depuis_id`, pied (`lig_pied_mode` P/M/C, `lig_pied_base`, `lig_pied_base_id`, `lig_pied_sens`, `lig_pied_valeur`, `lig_base_calcul`), TVA, `lig_origine_id`, `lig_proprietes`, `lig_etiquette`.
 - TL (`011`, ids fixes) : 1 TITRE, 2 OUVRAGE, 3 ELEMENT, 4 TEXTE, 5 SOUS_TOTAL, 6 IMAGE, 7 SAUT_PAGE, 8 PIED_HT, 9 PIED_TTC, 10 TVA, 11 SECTION.
 - Liens : `document_lien` (TRANSFORMATION | COPIE), `document_ligne_lien` (`lil_etape`, `lil_qte` négative pour retour, avancement % / qté), `document_ligne_solde`. Étapes facultatives RETOUR, AVOIR.
+- Transformation (tout le reliquat) : toutes les lignes de prix reprises, à 0 quand plus rien ne reste ; une cible est aussi liée aux lignes d'origine de sa source (facture d'un BL → commande) ; `lil_qte` / `lil_montant_ht` recalculées à chaque enregistrement de la cible (`DocumentService.RecalculerLiens`, hors avancements). Validation : une ligne soldée (`lig_solde`) ou sous le seuil (`parametre_document.seuils_solde`, achats / ventes, % et quantité) écrit `document_ligne_solde` avec `lso_cible_lig_id` (retiré par un avoir ou la suppression de la ligne). Client : `EditeurDocument.definirRestes` (colonnes `COLONNES_RESTE` : qte_parent, reste, solde ; ajoutées après la quantité si la vue n'en a aucune ; ligne déjà soldée ailleurs : `ligne-soldee`).
 - `document_origine` (IMPORT, format, fichier GED, rapport) ; `document_historique` (CREATION, MODIFICATION, VALIDATION, ANNULATION ; `his_instantane` JSONB lz4 de l'état avant) ; `document_tva` ; `calcul_cas_test` (écarts client/serveur arbitrés S/A).
 - `verrou_document` (`vdo_jeton` UUID par fenêtre, sans expiration).
 - `013` : `etiquette_ligne` (globales ; `ent_etiquettes` complète par document), `couleur_type_prix` (O/M/A/F, seconde couleur de la pastille).
@@ -57,7 +59,7 @@
 - Paramétrage : `GET /types-document`, `GET /types-document/{code}/definition`, `GET /unites`, `GET|PUT /etiquettes-ligne`, `GET|PUT /couleurs-type-prix`, `GET /modeles-document`, `GET|PUT /vues-document`, `DELETE /vues-document/{id}`.
 - Documents : `GET /documents?type=`, `GET|PUT|DELETE /documents/{id}`, `POST /documents`, `POST …/valider|indices|reference|copie`, `GET …/historique`, `GET /historique/{hisId}`, `GET …/tracabilite`, `PUT …/origine`.
 - Verrou : `GET|POST|DELETE /documents/{id}/verrou` (jeton), `DELETE …/verrou/force` ; `PUT /documents/{id}` contrôle le verrou.
-- Transformations : `POST …/transformer`, `GET …/suivi`, `POST /lignes/{ligId}/soldes`, `GET …/lot-archivage`.
+- Transformations : `POST …/transformer`, `GET …/suivi`, `GET …/restes`, `POST /lignes/{ligId}/soldes`, `GET …/lot-archivage` ; `GET|PUT /parametres-documents/seuils-solde` (écriture : administrateur).
 - Calcul : `POST /calcul` (recalcul serveur), `POST /cas-test`, `GET /cas-test/{id}/export`.
 
 ## Règles répliquées JS / C# et jeux de cas

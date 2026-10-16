@@ -73,6 +73,8 @@ public class DocumentLigne
     public string? LigCommentaire { get; set; }
     public bool LigIsNonEditee { get; set; }
     public long? LigOrigineId { get; set; }
+    /// <summary>Ligne issue d'une transformation : solde la ligne du parent à la validation (reste clos).</summary>
+    public bool LigSolde { get; set; }
     public JsonDocument? LigProprietes { get; set; }
     /// <summary>Étiquette de couleur de la ligne (à vérifier, prix confirmé…).</summary>
     public string? LigEtiquette { get; set; }

@@ -42,6 +42,10 @@ export const api = {
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),
   transformer: (id, demande) => appel('POST', `/documents/${id}/transformer`, demande),
   suivi: (id) => appel('GET', `/documents/${id}/suivi`),
+  // Restes à solder des lignes d'un document issu d'une transformation ; seuils de solde automatique (paramètres).
+  restes: (id) => appel('GET', `/documents/${id}/restes`),
+  seuilsSolde: () => appel('GET', '/parametres-documents/seuils-solde'),
+  enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),
   tracabilite: (id) => appel('GET', `/documents/${id}/tracabilite`),
   enregistrerOrigine: (id, origine) => appel('PUT', `/documents/${id}/origine`, origine),

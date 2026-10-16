@@ -31,6 +31,14 @@
 
 - [ ] Phase 2 de la structure des affaires : traçabilité des quantités, situations cumulées, transformation partielle,
   déduction du paiement direct.
+- [ ] **Chaîne des achats et gestion des marchés** (16/10/2026) : analyse dans
+  [CONCEPTION-ACHATS-MARCHES.md](CONCEPTION-ACHATS-MARCHES.md) (reste à solder et solde des lignes, options et
+  variantes à la transformation, marché et avenants, pieds de section et pied global, avancement, avoirs en cascade) ;
+  décisions prises. **Lot 1 réalisé** (16/10/2026 : reste à solder, solde des lignes, seuils, Ddp → facture, liens
+  recalculés et remontés à l'origine ; `015` et `168` appliqués aux deux bases). Restent : facture sur plusieurs
+  documents (Q10, 13.4 bis, après les pieds de section), puis lots 2 à 7 (§ 10) ; § 13.14 sans décision
+  (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
+  reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
 - [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après
