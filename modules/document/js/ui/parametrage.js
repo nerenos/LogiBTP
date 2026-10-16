@@ -87,7 +87,7 @@ export class ParametrageAffichageDocument {
       </section>
       <section class="panneau">
         <h2>Couleurs des modes de vente</h2>
-        <p class="aide">Seconde couleur de la pastille (coin bas droit, coupé en diagonale) : une ligne vendue n'en a pas ; option, pour mémoire et variante ont chacune leur couleur.</p>
+        <p class="aide">Seconde couleur de la pastille (coin bas droit, coupé en diagonale) : une ligne vendue n'en a pas ; option, pour mémoire, variante et frais annexes ont chacune leur couleur.</p>
         <table class="table-parametres"><thead><tr><th></th><th>Mode de vente</th><th>Couleur</th></tr></thead>
         <tbody>${this.couleurs.map((c, i) => `<tr data-i="${i}"><td>${apercu(this.etiquettes[0]?.couleur, c.couleur)}</td><td>${echapper(c.libelle)}</td>
           <td><input data-couleur type="color" value="${echapper(c.couleur)}" ${ro}></td></tr>`).join('')}</tbody></table>

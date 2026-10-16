@@ -37,7 +37,6 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
   let n = 0;
   for (const l of contenu.lignes) ids.set(l.lig_id, ++n);
   const mtr = new Map((contenu.metres ?? []).map((m) => [m.mtr_id, ++n]));
-  const mli = new Map((contenu.metre_lignes ?? []).map((m) => [m.mli_id, ++n]));
   const racine = contenu.racines[0];
   const dansContenu = new Set(contenu.lignes.map((l) => l.lig_id));
   const relative = (l) => {
@@ -62,10 +61,6 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
     mode,
     lignes,
     metres: (contenu.metres ?? []).map((m) => ({ ...structuredClone(m), mtr_id: mtr.get(m.mtr_id), mtr_lig_id: ids.get(m.mtr_lig_id) ?? null })),
-    metre_lignes: (contenu.metre_lignes ?? []).map((m) => ({
-      ...structuredClone(m), mli_id: mli.get(m.mli_id), mli_mtr_id: mtr.get(m.mli_mtr_id), mli_parent_id: mli.get(m.mli_parent_id) ?? null,
-      mli_st_depuis_id: mli.get(m.mli_st_depuis_id) ?? null,
-    })),
     variables: (contenu.variables ?? []).map((v, i) => {
       const { var_ent_id: _e, var_valeur: _v, ...reste } = structuredClone(v);
       return { ...reste, var_id: ++n + i, var_lig_id: ids.get(v.var_lig_id) ?? null, var_mtr_id: mtr.get(v.var_mtr_id) ?? null };
@@ -222,7 +217,8 @@ export class EnvoiBibliotheque {
         if (c.type !== 'ARTICLE') {
           const contenu = ed.pressePapiers.extraire(ed.saisie, [l.lig_id], { entId: ed.saisie.document.ent_id, coupe: false });
           const qtes = new Map(ed.resultat.lignes.map((x) => [x.lig_id, x.lig_qte_vendue]));
-          composition = compositionDepuisContenu(contenu, ed.saisie.document.ent_mode_calcul_ouvrage ?? 'V', qtes);
+          // Bibliothèque : déboursé (D) ou somme des PV (V) ; un document en bordereau (B) envoie sa composition en V.
+          composition = compositionDepuisContenu(contenu, ed.saisie.document.ent_mode_calcul_ouvrage === 'D' ? 'D' : 'V', qtes);
         }
         let id;
         if (c.action === 'creer') {

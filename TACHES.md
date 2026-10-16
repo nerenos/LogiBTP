@@ -14,17 +14,30 @@
 
 ## Fonctionnel
 
+- [ ] **Métré en script, bases existantes** : appliquer 021 (Métré), 061 (Bibliothèque, `ele_longueur`), 165 et le 131
+  régénéré à `logibtp` et `logibtp_demo` ; sauvegarder avant le premier démarrage de l'API, qui convertit les métrés en
+  lignes et supprime `metre_ligne` (irréversible).
+- [ ] Métré : les variables chaîne et booléen d'un script ne sont pas publiées dans les portées (`Portees` ne stocke
+  que des décimaux) ; les fonctions propres à l'hôte (option `fonctions`) ne sont branchées ni aux moteurs ni à l'éditeur.
+
 - [ ] Phase 2 de la structure des affaires : traçabilité des quantités, situations cumulées, transformation partielle,
   déduction du paiement direct.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
 - [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après
   redémarrage de l'API, indexer les documents déposés avant (`POST /api/ged/indexation`, administrateur, lots de 200).
-- [ ] GED : rétention appliquée à la main (bouton ⏳ de la GED globale, `POST /api/ged/retention/appliquer`) ; planifier
-  l'archivage automatique (tâche de fond par base de société) et la revue des fins de conservation (DETRUIRE : purge
-  proposée, jamais pour le coffre-fort).
-- [ ] GED : écran de paramétrage des règles de rétention et de classification (routes `PUT /api/ged/regles/*` prêtes,
-  administrateur) ; texte des images (OCR) et des .msg non extrait ; résumé automatique (agent IA local).
+- [ ] GED : revue des fins de conservation (DETRUIRE : purge proposée, jamais pour le coffre-fort) ; l'archivage
+  automatique de nuit (`ArchivageGed`) ne voit pas les documents SECRET d'autrui (filtre d'accès de l'utilisateur
+  système) ; texte des images (OCR) et des .msg non extrait ; résumé automatique (agent IA local).
+- [ ] **Module Comptabilité** : règle définitive du compte comptable des lignes (aujourd'hui provisoire : compte de la
+  ligne, sinon de la nature selon la famille du document, sinon du tiers ; à remplacer par `definirRegleCompte` de
+  `client/src/app/comptes.js`, côté serveur aussi s'il faut le compte effectif) ; vrai plan de comptes à la place de
+  `compte_comptable` (db/166, minimal, sans écran de gestion). Le compte du tiers (`per_cli_compte` / `per_fou_compte`)
+  est un compte auxiliaire (411 / 401) : son usage comme compte de produit ou de charge est à confirmer.
+- [ ] Vue de colonnes « Complet » des bases existantes : `db/150` (`ON CONFLICT DO NOTHING`) n'y ajoute pas les colonnes
+  Compte et Commentaire (à ajouter par le dialogue des colonnes, ou par une mise à jour de `vue_document`).
+- [ ] Lignes de frais annexes (type de prix F) : l'onglet Analyse les traite comme hors total sans détailler leur
+  ventilation ; l'impression (à venir) doit les ignorer (`lig_is_non_editee` forcé par les moteurs).
 - [ ] Import OptimBTP : décider du sort des champs non repris (heures, poste de travaux, compléments de pied,
   première page et texte de fin…) ; rattachement automatique du client à l'annuaire.
 

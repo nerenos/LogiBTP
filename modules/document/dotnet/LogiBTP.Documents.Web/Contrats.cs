@@ -22,7 +22,7 @@ public class DocumentComplet<TDoc, TLigne>
 public sealed class Correspondances
 {
     public Dictionary<long, long> Lignes { get; } = [];
-    /// <summary>Par table complémentaire : « metres », « metre_lignes », « variables »…</summary>
+    /// <summary>Par table complémentaire : « metres », « variables »…</summary>
     public Dictionary<string, Dictionary<long, long>> Complements { get; } = new(StringComparer.Ordinal);
 
     public Dictionary<long, long> Complement(string nom)
@@ -39,7 +39,7 @@ public sealed class ReponseEnregistrement<TComplet>
     public List<EcartCalcul> Ecarts { get; set; } = [];
     /// <summary>ID temporaires (négatifs) côté client → ID définitifs.</summary>
     public Dictionary<long, long> CorrespondanceLignes { get; set; } = [];
-    /// <summary>Correspondances des compléments, par table (« metres », « metre_lignes », « variables »…).</summary>
+    /// <summary>Correspondances des compléments, par table (« metres », « variables »…).</summary>
     public Dictionary<string, Dictionary<long, long>> Correspondances { get; set; } = [];
     public List<MessageCalcul> Erreurs { get; set; } = [];
     public List<MessageCalcul> Avertissements { get; set; } = [];

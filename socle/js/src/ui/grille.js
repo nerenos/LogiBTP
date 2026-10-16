@@ -1,6 +1,11 @@
 import { actionDe } from './raccourcis.js';
 import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
 
+const LARGEUR_MIN = 28;
+
+/** Largeurs réglées des colonnes (colonne.largeur en px). */
+const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur) > 0).map((c) => [c.cle, Number(c.largeur)]));
+
 /**
  * Grille arborescente partagée par les lignes du document et les lignes de métré :
  * même saisie en cascade, mêmes raccourcis, même glisser-déposer.
@@ -23,6 +28,11 @@ import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
  *                            (dépôt glissé depuis une autre fenêtre, ex. la bibliothèque) }
  *
  * Les colonnes affichées se remplacent par definirColonnes (vues de colonnes).
+ *
+ * Disposition des colonnes (si actions.colonnesModifiees est fourni) : la bordure droite d'un entête se glisse pour
+ * régler la largeur (double-clic : largeur automatique), l'entête se glisse pour déplacer la colonne. colonne.largeur
+ * (px) donne la largeur initiale ; sans aucune largeur, le tableau se dispose seul. Après chaque réglage,
+ * colonnesModifiees([{ cle, largeur }]) reçoit l'ordre et les largeurs (null : automatique) ; l'hôte les mémorise.
  */
 export class GrilleArbre {
   constructor(conteneur, options) {
@@ -34,6 +44,7 @@ export class GrilleArbre {
     this.colonne = 0;
     this.edition = null;
     this.replies = new Set();
+    this.largeurs = largeursDe(options.colonnes);
 
     conteneur.classList.add('grille');
     conteneur.tabIndex = 0;
@@ -53,14 +64,28 @@ export class GrilleArbre {
   }
 
   #entete() {
+    // Colonnes redessinées : les largeurs sont recalculées au prochain rendu.
+    this.#relacherLargeurs();
+    const disposable = Boolean(this.o.actions.colonnesModifiees);
     const tr = document.createElement('tr');
     tr.innerHTML = '<th class="poignee"></th>';
     // Entête de la colonne des poignées (ex. filtre par pastille).
     this.o.actions.entetePoignee?.(tr.firstElementChild);
-    for (const c of this.o.colonnes) {
+    for (const [i, c] of this.o.colonnes.entries()) {
       const th = document.createElement('th');
       th.className = c.classe ?? '';
+      th.dataset.col = i;
       th.append(c.titre);
+      if (disposable) {
+        th.classList.add('deplacable');
+        th.title = 'Glisser l\'entête pour déplacer la colonne, sa bordure droite pour la largeur (double-clic : automatique)';
+        th.addEventListener('pointerdown', (e) => this.#debutDeplacementColonne(e, i));
+        const bord = document.createElement('span');
+        bord.className = 'redim';
+        bord.addEventListener('pointerdown', (e) => this.#debutRedimension(e, i));
+        bord.addEventListener('dblclick', (e) => { e.stopPropagation(); this.#largeurAutomatique(i); });
+        th.append(bord);
+      }
       // Bouton d'entête de colonne (ex. libellés sur une ligne / en entier).
       if (c.enteteBouton) {
         const b = document.createElement('button');
@@ -69,6 +94,7 @@ export class GrilleArbre {
         b.textContent = c.enteteBouton.texte();
         b.title = c.enteteBouton.titre();
         b.addEventListener('mousedown', (e) => e.preventDefault());
+        b.addEventListener('pointerdown', (e) => e.stopPropagation());
         b.addEventListener('click', () => { c.enteteBouton.clic(); this.#entete(); this.rendre(); this.focus(); });
         th.append(' ', b);
       }
@@ -82,6 +108,7 @@ export class GrilleArbre {
     const cle = this.o.colonnes[this.colonne]?.cle;
     this.edition = null;
     this.o.colonnes = colonnes;
+    this.largeurs = largeursDe(colonnes);
     const i = colonnes.findIndex((c) => c.cle === cle);
     this.colonne = i >= 0 ? i : 0;
     this.#entete();
@@ -167,7 +194,9 @@ export class GrilleArbre {
   #figerColonnes() {
     const table = this.tbody.parentElement;
     if (table.classList.contains('figee')) return;
-    const largeurs = [...this.thead.querySelectorAll('th')].map((th) => th.getBoundingClientRect().width);
+    // Largeurs réglées par l'utilisateur ; les autres colonnes gardent leur largeur naturelle (mesurée).
+    const mesurees = [...this.thead.querySelectorAll('th')].map((th) => th.getBoundingClientRect().width);
+    const largeurs = mesurees.map((l, i) => (i === 0 ? l : this.largeurs.get(this.o.colonnes[i - 1]?.cle) ?? l));
     const colgroup = document.createElement('colgroup');
     for (const l of largeurs) {
       const col = document.createElement('col');
@@ -179,12 +208,120 @@ export class GrilleArbre {
     table.classList.add('figee');
   }
 
+  /** Retour en mode ligne : largeurs libres, sauf si des largeurs sont réglées (le tableau reste figé). */
   #libererColonnes() {
+    if (this.largeurs.size) { this.#figerColonnes(); return; }
+    this.#relacherLargeurs();
+  }
+
+  #relacherLargeurs() {
     const table = this.tbody.parentElement;
     if (!table.classList.contains('figee')) return;
     table.querySelector('colgroup')?.remove();
     table.style.width = '';
     table.classList.remove('figee');
+  }
+
+  // ---------------------------------------------------------------- disposition des colonnes (largeur, ordre)
+
+  /** Ordre et largeurs des colonnes (null : largeur automatique). */
+  dispositionColonnes() {
+    return this.o.colonnes.map((c) => ({ cle: c.cle, largeur: this.largeurs.get(c.cle) ?? null }));
+  }
+
+  #signalerDisposition() {
+    this.o.actions.colonnesModifiees?.(this.dispositionColonnes());
+  }
+
+  /** Glisser de la bordure droite d'un entête : largeur de la colonne, appliquée en direct. */
+  #debutRedimension(e, i) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.edition) this.edition.champ?.blur();
+    this.#figerColonnes();
+    const table = this.tbody.parentElement;
+    const cols = [...table.querySelectorAll('colgroup col')];
+    const col = cols[i + 1];
+    if (!col) return;
+    const depart = e.clientX;
+    const initiale = col.getBoundingClientRect().width || parseFloat(col.style.width) || 80;
+    const autres = cols.reduce((s, c, j) => (j === i + 1 ? s : s + (parseFloat(c.style.width) || 0)), 0);
+    let largeur = initiale;
+    this.conteneur.classList.add('redimension');
+    const bouger = (ev) => {
+      largeur = Math.max(LARGEUR_MIN, Math.round(initiale + ev.clientX - depart));
+      col.style.width = `${largeur}px`;
+      table.style.width = `${autres + largeur}px`;
+    };
+    const finir = () => {
+      document.removeEventListener('pointermove', bouger);
+      document.removeEventListener('pointerup', finir);
+      document.removeEventListener('pointercancel', finir);
+      this.conteneur.classList.remove('redimension');
+      if (Math.abs(largeur - initiale) < 1) return;
+      this.largeurs.set(this.o.colonnes[i].cle, largeur);
+      this.#signalerDisposition();
+      this.focus();
+    };
+    document.addEventListener('pointermove', bouger);
+    document.addEventListener('pointerup', finir);
+    document.addEventListener('pointercancel', finir);
+  }
+
+  /** Double-clic sur la bordure : la colonne reprend sa largeur naturelle. */
+  #largeurAutomatique(i) {
+    if (!this.largeurs.delete(this.o.colonnes[i].cle)) return;
+    this.#relacherLargeurs();
+    this.rendre();
+    this.#signalerDisposition();
+  }
+
+  /** Glisser d'un entête : la colonne est déplacée à la position indiquée par le repère vertical. */
+  #debutDeplacementColonne(e, i) {
+    if (e.button !== 0 || e.target.closest('.redim, button, input')) return;
+    const depart = e.clientX;
+    let cible = null;
+    let repere = null;
+    const ths = () => [...this.thead.querySelectorAll('th[data-col]')];
+    const bouger = (ev) => {
+      if (cible === null && Math.abs(ev.clientX - depart) < 6) return;
+      this.conteneur.classList.add('deplacement-colonne');
+      // Position d'insertion : avant la colonne dont le milieu est à droite du pointeur.
+      const liste = ths();
+      const k = liste.findIndex((th) => { const r = th.getBoundingClientRect(); return ev.clientX < r.left + r.width / 2; });
+      cible = k < 0 ? liste.length : k;
+      const ref = liste[Math.min(cible, liste.length - 1)].getBoundingClientRect();
+      const x = cible < liste.length ? ref.left : ref.right;
+      if (!repere) {
+        repere = document.createElement('div');
+        repere.className = 'repere-colonne';
+        document.body.append(repere);
+      }
+      const zone = this.conteneur.getBoundingClientRect();
+      Object.assign(repere.style, { left: `${x - 1}px`, top: `${zone.top}px`, height: `${zone.height}px` });
+    };
+    const finir = () => {
+      document.removeEventListener('pointermove', bouger);
+      document.removeEventListener('pointerup', finir);
+      document.removeEventListener('pointercancel', finir);
+      repere?.remove();
+      this.conteneur.classList.remove('deplacement-colonne');
+      if (cible === null || cible === i || cible === i + 1) return;
+      const colonnes = [...this.o.colonnes];
+      const [c] = colonnes.splice(i, 1);
+      colonnes.splice(cible > i ? cible - 1 : cible, 0, c);
+      const courante = this.o.colonnes[this.colonne]?.cle;
+      this.o.colonnes = colonnes;
+      this.colonne = Math.max(0, colonnes.findIndex((x) => x.cle === courante));
+      this.#entete();
+      this.rendre();
+      this.#signalerDisposition();
+      this.focus();
+    };
+    document.addEventListener('pointermove', bouger);
+    document.addEventListener('pointerup', finir);
+    document.addEventListener('pointercancel', finir);
   }
 
   /** Insère une référence dans la cellule en cours de saisie (ou démarre la saisie de la colonne indiquée). */

@@ -5,7 +5,7 @@
 const PORTEES = { '$$': 'document', '$': 'titre', '@@': 'ouvrage', '@': 'ligne' };
 
 export class DictionnaireMetre {
-  /** `hote` : { saisie, resultat } avec metres, metre_lignes et variables. */
+  /** `hote` : { saisie, resultat } avec metres et variables. */
   constructor(hote) {
     this.hote = hote;
   }
@@ -22,22 +22,20 @@ export class DictionnaireMetre {
    */
   entrees(ligId, options = {}) {
     const { saisie, resultat: res } = this.hote;
-    const valeursVar = new Map(res.variables.map((v) => [v.var_id, v.var_valeur]));
     const metresCalc = new Map(res.metres.map((m) => [m.mtr_id, m]));
-    const mliCalc = new Map(res.metre_lignes.map((m) => [m.mli_id, m]));
     const vus = new Map();
     const ajouter = (cible, proprietaireId, valeur, source) => {
       const m = /^(\$\$|\$|@@|@)(.+)$/.exec((cible ?? '').trim());
       if (!m || !this.accessible(m[1], proprietaireId ?? null, ligId)) return;
       vus.set(`${m[1]}${m[2]}`, { valeur, source, portee: m[1] });
     };
-    for (const v of saisie.variables) ajouter(`${v.var_portee}${v.var_nom}`, v.var_lig_id, valeursVar.get(v.var_id), v.var_lig_id ? 'variable de ligne' : 'variable du document');
-    for (const m of saisie.metres) if (m.mtr_variable) ajouter(m.mtr_variable, m.mtr_lig_id, metresCalc.get(m.mtr_id)?.mtr_resultat, 'résultat de métré');
-    for (const x of saisie.metre_lignes) {
-      if (!x.mli_variable) continue;
-      const m = saisie.metres.find((y) => y.mtr_id === x.mli_mtr_id);
-      ajouter(x.mli_variable, m?.mtr_lig_id, mliCalc.get(x.mli_id)?.mli_valeur, 'ligne de métré');
+    // Variables du résultat : celles de la saisie et celles produites par les scripts des métrés.
+    for (const v of res.variables ?? saisie.variables) {
+      const source = v.var_mtr_id !== null && v.var_mtr_id !== undefined ? 'variable de métré' : v.var_lig_id ? 'variable de ligne' : 'variable du document';
+      const valeur = (v.var_type ?? 'N') === 'N' ? v.var_valeur : v.var_valeur_texte;
+      ajouter(`${v.var_portee}${v.var_nom}`, v.var_lig_id, valeur, source);
     }
+    for (const m of saisie.metres) if (m.mtr_variable) ajouter(m.mtr_variable, m.mtr_lig_id, metresCalc.get(m.mtr_id)?.mtr_resultat, 'résultat de métré');
     const entrees = [...vus].sort(([a], [b]) => a.localeCompare(b)).map(([ref, v]) => ({
       valeur: `{{${ref}}}`, libelle: `${PORTEES[v.portee]} · ${v.source}`, detail: v.valeur ?? '—', groupe: 'Variables',
     }));

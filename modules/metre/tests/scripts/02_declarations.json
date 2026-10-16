@@ -1,0 +1,107 @@
+{
+  "nom": "Déclarations",
+  "description": "Types, valeurs par défaut, variables locales, paramètres (jamais réaffectés), variables de boucle implicites, casse et accents des mots-clés.",
+  "cas": [
+    {
+      "nom": "Types et valeurs par défaut",
+      "entree": {
+        "script": [
+          "Texte est une chaîne",
+          "Nombre est un numérique",
+          "Drapeau est un booléen",
+          "local Interne est un numérique = 2,5",
+          "Double est un numérique = Interne * 2",
+          "Renvoyer Double"
+        ]
+      },
+      "attendu": {
+        "resultat": 5,
+        "nb_variables": 5,
+        "variables": {
+          "Texte": {
+            "valeur": "",
+            "type": "C",
+            "parametre": true,
+            "defaut": null
+          },
+          "Nombre": {
+            "valeur": 0,
+            "type": "N",
+            "parametre": true
+          },
+          "Drapeau": {
+            "valeur": false,
+            "type": "B",
+            "parametre": true
+          },
+          "Interne": {
+            "valeur": 2.5,
+            "local": true,
+            "parametre": false,
+            "defaut": "2,5"
+          },
+          "Double": {
+            "valeur": 5,
+            "parametre": true,
+            "defaut": "Interne * 2"
+          }
+        }
+      }
+    },
+    {
+      "nom": "Variable réaffectée : plus un paramètre ; variable de boucle implicite non listée",
+      "entree": {
+        "script": [
+          "A est un numérique = 1",
+          "B est un numérique = 2",
+          "C est un numérique",
+          "C = A + B",
+          "A += 1",
+          "Pour i = 1 à 2",
+          "Fin",
+          "Renvoyer C"
+        ]
+      },
+      "attendu": {
+        "resultat": 3,
+        "nb_variables": 3,
+        "variables": {
+          "A": {
+            "valeur": 2,
+            "parametre": false
+          },
+          "B": {
+            "valeur": 2,
+            "parametre": true
+          },
+          "C": {
+            "valeur": 3,
+            "parametre": false
+          }
+        }
+      }
+    },
+    {
+      "nom": "Mots-clés insensibles à la casse et aux accents",
+      "entree": {
+        "script": [
+          "x EST UNE CHAINE = \"a\"",
+          "local n est un NUMERIQUE = 1",
+          "b est un Bool = vrai",
+          "SI b ALORS",
+          "  n++",
+          "FIN",
+          "RENVOYER n"
+        ]
+      },
+      "attendu": {
+        "resultat": 2,
+        "variables": {
+          "x": "a",
+          "b": true,
+          "n": 2
+        }
+      }
+    }
+  ]
+}

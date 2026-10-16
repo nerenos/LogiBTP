@@ -1,0 +1,336 @@
+{
+  "nom": "Erreurs d'exécution",
+  "description": "L'exécution s'arrête à la première erreur ; pas de résultat, les variables gardent leur dernière valeur.",
+  "cas": [
+    {
+      "nom": "Type : chaîne affectée à un numérique",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "x = \"a\"",
+          "Renvoyer x"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 2,
+            "colonne": 3
+          }
+        ],
+        "variables": {
+          "x": 0
+        }
+      }
+    },
+    {
+      "nom": "Type : condition non booléenne",
+      "entree": {
+        "script": [
+          "Si 1 alors",
+          "Fin",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 1,
+            "colonne": 4
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Type : booléen dans un calcul",
+      "entree": {
+        "script": [
+          "Renvoyer Vrai * 2"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 1,
+            "colonne": 15
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Type : comparaison chaîne et nombre",
+      "entree": {
+        "script": [
+          "Si \"a\" = 1 alors",
+          "Fin"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 1,
+            "colonne": 8
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Type : incrémentation d'une chaîne",
+      "entree": {
+        "script": [
+          "local c est une chaîne",
+          "c++"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 2,
+            "colonne": 2
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Division par zéro",
+      "entree": {
+        "script": [
+          "local x est un numérique = 0",
+          "Renvoyer 1 / x"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "DIVISION_ZERO",
+            "ligne": 2,
+            "colonne": 12
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Modulo zéro",
+      "entree": {
+        "script": [
+          "Renvoyer 5 modulo 0"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "DIVISION_ZERO",
+            "ligne": 1,
+            "colonne": 12
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Renvoyer une chaîne",
+      "entree": {
+        "script": [
+          "Renvoyer \"a\""
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "RESULTAT_TYPE",
+            "ligne": 1,
+            "colonne": 1
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Pas nul",
+      "entree": {
+        "script": [
+          "Pour i = 1 à 2 pas 0",
+          "Fin",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "BOUCLE_INFINIE",
+            "ligne": 1,
+            "colonne": 1
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Trop de tours",
+      "entree": {
+        "script": [
+          "Pour i = 1 à 20000",
+          "Fin",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "BOUCLE_INFINIE",
+            "ligne": 1,
+            "colonne": 1
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Trop d'instructions",
+      "entree": {
+        "script": [
+          "local s est un numérique",
+          "Pour i = 1 à 5000",
+          "    Pour j = 1 à 5000",
+          "        s++",
+          "    Fin",
+          "Fin"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "BOUCLE_INFINIE",
+            "ligne": 4,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Variable de portée inconnue en lecture",
+      "entree": {
+        "script": [
+          "Renvoyer @@Absente"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "VARIABLE_INCONNUE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Incrémentation d'une variable de portée inconnue",
+      "entree": {
+        "script": [
+          "@@Inconnue += 1",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "VARIABLE_INCONNUE",
+            "ligne": 1,
+            "colonne": 12
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Racine négative",
+      "entree": {
+        "script": [
+          "Renvoyer Racine(-1)"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "RACINE_NEGATIVE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Nombre de décimales non entier",
+      "entree": {
+        "script": [
+          "Renvoyer Arrondi(1; 2.5)"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "ARGUMENTS",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Dépassement",
+      "entree": {
+        "script": [
+          "Renvoyer Puissance(10; 30)"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "DEPASSEMENT",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Donnée inconnue",
+      "entree": {
+        "script": [
+          "Renvoyer {{lig_xxx}}"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "COLONNE_INCONNUE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Donnée non modifiable",
+      "entree": {
+        "script": [
+          "{{lig_qte}} = 3",
+          "Renvoyer 1"
+        ],
+        "donnees": {
+          "lig_qte": 1
+        }
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "ECRITURE_INTERDITE",
+            "ligne": 1,
+            "colonne": 13
+          }
+        ]
+      }
+    }
+  ]
+}

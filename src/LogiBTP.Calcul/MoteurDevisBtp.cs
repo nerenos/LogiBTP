@@ -1,6 +1,7 @@
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Metres;
+using LogiBTP.Metres.Script;
 using LogiBTP.Socle;
 using static LogiBTP.Socle.ArrondiCalcul;
 
@@ -12,8 +13,10 @@ namespace LogiBTP.Calcul;
 /// client/src/calcul/moteur-btp.js : toute règle modifiée l'est dans les deux, avec un cas dans tests/cas.
 ///
 /// Ajouts BTP : variables ($$, $ titre, @@ ouvrage, @ ligne), métrés, coefficient de perte, déboursé
-/// (PA × FG × bénéfice), ouvrages en mode déboursé (D) ou somme des PV (V), PV fixe et ventilation avec
-/// ligne d'écart d'arrondi, PV affiché fixe et coefficient de frais annexes, montants PA / PR.
+/// (PA × FG × bénéfice), ouvrages en mode déboursé (D), somme des PV (V) ou bordereau (B : PV fixe sans ventilation),
+/// PV fixe et ventilation avec ligne d'écart d'arrondi, PV affiché fixe et coefficient de frais annexes, montants PA / PR.
+/// Métrés en script (module Métré) : quantité renvoyée, erreurs non bloquantes (la quantité saisie est conservée),
+/// libellé calculé ({{lig_libelle_html}} inscriptible), variables non locales régénérées à chaque calcul.
 /// </summary>
 public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBtp>
 {
@@ -47,6 +50,11 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     private readonly Dictionary<long, Metre?> _metreDeLigne = [];
     private readonly Portees _portees;
     private RepartitionVariables _variables = new([], [], []);
+    private readonly List<VariableDefinition> _definitions;
+    private readonly Dictionary<long, List<VariableDefinition>> _variablesScript = [];
+    private readonly Dictionary<long, string> _libellesScript = [];
+    private readonly List<DiagnosticScript> _scripts = [];
+    private long _prochainVarId;
     private long _prochainId;
     private decimal _coefFa = 1;
 
@@ -54,6 +62,16 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     {
         _e = e;
         _mode = Doc.EntModeCalculOuvrage;
+        // Variables des métrés : produites par leur script à chaque calcul, jamais évaluées comme définitions.
+        var scripts = e.Metres.Select(m => m.MtrId).ToHashSet();
+        _definitions = e.Variables.Where(v => v.VarMtrId is not long m || !scripts.Contains(m)).ToList();
+        foreach (var v in e.Variables)
+        {
+            if (v.VarMtrId is not long m || !scripts.Contains(m)) continue;
+            if (!_variablesScript.TryGetValue(m, out var liste)) _variablesScript[m] = liste = [];
+            liste.Add(v);
+        }
+        _prochainVarId = Math.Min(0, e.Variables.Count == 0 ? 0 : e.Variables.Min(v => v.VarId)) - 1;
         // $ : titres englobants (la ligne elle-même si c'est un titre) ; @@ : ouvrages englobants.
         _portees = new Portees(ChainePortee, p => p switch
         {
@@ -127,8 +145,8 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
 
     protected override void AvantQuantites()
     {
-        foreach (var v in _e.Variables) v.VarValeur = null;
-        _variables = Variables.Repartir(_e.Variables);
+        foreach (var v in _definitions) v.VarValeur = null;
+        _variables = Variables.Repartir(_definitions);
         foreach (var v in _variables.Document)
         {
             try { EvaluerVariable(v, null); }
@@ -144,15 +162,12 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         QteEnCours = l;
         try
         {
-            if (metre is not null)
-            {
-                new EvaluateurMetre(Resolveur(l, PhaseCalcul.Calcul), (portee, nom, valeur) => _portees.Affecter(portee, nom, "=", valeur, l.LigId))
-                    .Evaluer(metre, _e.MetreLignes);
-            }
+            if (metre is not null) EvaluerScript(l, metre);
             if (l.LigQteSource == "M")
             {
                 if (metre is null) throw new ErreurCalcul("METRE_ABSENT", "La quantité est issue d'un métré absent");
-                return metre.MtrResultat ?? 0;
+                // Script sans résultat (sans « Renvoyer » ou en erreur) : la quantité saisie est conservée.
+                return metre.MtrResultat ?? l.LigQte ?? 0;
             }
             return l.LigQte ?? 0;
         }
@@ -161,6 +176,58 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
             QteEnCours = null;
         }
     }
+
+    /// <summary>Script du métré de la ligne : erreurs non bloquantes, libellé calculé, lignes de variables.</summary>
+    private void EvaluerScript(DocumentLigneBtp l, Metre metre)
+    {
+        var r = ScriptMetre.Evaluer(metre, new ContexteScript
+        {
+            Resoudre = ResolveurScript(l), Ecrire = (reference, valeur) => EcrireScript(l, reference, valeur), Portees = _portees, LigneId = l.LigId,
+        });
+        foreach (var e in r.Erreurs) Erreur(l.LigId, e.Code, ScriptMetre.Message(e), false);
+        if (r.Erreurs.Count > 0) _libellesScript.Remove(l.LigId);
+        else if (r.Resultat is null && l.LigQteSource == "M")
+        {
+            Avertir(l.LigId, "METRE_SANS_RESULTAT", "Le métré ne renvoie pas de quantité (« Renvoyer » absent) : quantité saisie conservée");
+        }
+        _variablesScript[metre.MtrId] = ScriptMetre.LignesVariables(metre, r, _variablesScript.GetValueOrDefault(metre.MtrId) ?? [],
+            Doc.EntId, () => _prochainVarId--);
+        _scripts.Add(new DiagnosticScript(metre.MtrId, l.LigId, r.Resultat, r.Erreurs, r.Avertissements));
+    }
+
+    /// <summary>Lecture d'un script : variables et données typées ; {{lig_libelle_html}} = libellé courant (déjà écrit par le script).</summary>
+    private Func<string, object?> ResolveurScript(DocumentLigneBtp l) => texte =>
+    {
+        var reference = References.Analyser(texte);
+        if (reference is ReferenceVariable v) return LireVariable(v.Portee, v.Nom, l);
+        var d = (ReferenceDonnee)reference;
+        if (d.Table is null && d.Colonne == "lig_libelle_html") return _libellesScript.GetValueOrDefault(l.LigId) ?? l.LigLibelleHtml ?? "";
+        return LireDonnee(d, l, PhaseCalcul.Calcul);
+    };
+
+    /// <summary>Écriture d'un script : seul le libellé de la ligne ({{lig_libelle_html}}), dans le libellé calculé.</summary>
+    private void EcrireScript(DocumentLigneBtp l, string texte, object valeur)
+    {
+        if (References.Analyser(texte) is not ReferenceDonnee { Table: null, Colonne: "lig_libelle_html" })
+        {
+            throw new ErreurCalcul("ECRITURE_INTERDITE", $"{{{{{texte}}}}} ne peut pas être modifié par un métré (seul {{{{lig_libelle_html}}}} l'est)");
+        }
+        if (valeur is not string ecrit) throw new ErreurCalcul("TYPE", "Libellé : chaîne attendue");
+        _libellesScript[l.LigId] = LibelleEcrit(_libellesScript.GetValueOrDefault(l.LigId) ?? l.LigLibelleHtml ?? "", ecrit);
+    }
+
+    /// <summary>
+    /// Libellé écrit par un script : le texte ajouté avant ou après le libellé courant (HTML sûr) est échappé ; un texte
+    /// qui ne le contient pas est échappé en entier (libelleEcrit côté JS).
+    /// </summary>
+    public static string LibelleEcrit(string avant, string ecrit)
+    {
+        if (ecrit.StartsWith(avant, StringComparison.Ordinal)) return avant + Libelles.EchapperHtml(ecrit[avant.Length..]);
+        if (ecrit.EndsWith(avant, StringComparison.Ordinal)) return Libelles.EchapperHtml(ecrit[..^avant.Length]) + avant;
+        return Libelles.EchapperHtml(ecrit);
+    }
+
+    protected override string? SourceLibelle(DocumentLigneBtp l) => _libellesScript.GetValueOrDefault(l.LigId) ?? base.SourceLibelle(l);
 
     protected override decimal QuantiteVendue(DocumentLigneBtp l, decimal qteBase) => Arrondir(qteBase * l.LigCoefPerte, l.LigPrecisionQte);
 
@@ -263,6 +330,14 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     {
         var x = PxBtp(ouvrage.LigId);
         SupprimerEcartCree(ouvrage);
+
+        // Bordereau (B) : prix unitaire imposé comme dans un BPU ; le sous-détail garde ses prix (PA, PR = sommes des
+        // composantes), sans ventilation ni écart d'arrondi.
+        if (_mode == "B")
+        {
+            x.Pv = pvFixe;
+            return;
+        }
 
         if (_mode == "D")
         {
@@ -396,7 +471,17 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     /// Coefficient de prorata de la ligne vendue (ligne de prix ; une composante d'ouvrage n'en a pas) : appliqué au
     /// prix affiché après la ventilation des frais annexes, avant la remise.
     /// </summary>
-    private decimal Prorata(DocumentLigneBtp l) => EstLigneDePrix(l) ? l.LigCoefProrata : 1;
+    private decimal Prorata(DocumentLigneBtp l) => EstLigneDePrix(l) && !EstFraisAnnexes(l) ? l.LigCoefProrata : 1;
+
+    /// <summary>Coefficient de frais annexes appliqué au PV affiché : une ligne de frais annexes garde son propre prix.</summary>
+    private decimal CoefFaDe(DocumentLigneBtp l) => EstFraisAnnexes(l) ? 1 : _coefFa;
+
+    /// <summary>Montant HT d'une ligne de frais annexes (PV affiché remisé × quantité vendue), ventilé sur les lignes vendues.</summary>
+    private decimal MontantFraisAnnexes(DocumentLigneBtp l)
+    {
+        var pvRem = Arrondir(PvAffiche(l, Px[l.LigId]) * l.LigCoefRemise, l.LigPrecisionPv);
+        return Arrondir((l.LigQteVendue ?? 0) * pvRem, PrecMontant);
+    }
 
     /// <summary>PV affiché imposé hors prorata : le prorata n'entre pas dans le calcul du coefficient de frais annexes.</summary>
     private decimal AfficheHorsProrata(DocumentLigneBtp l) =>
@@ -421,6 +506,12 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
             }
             p += Arrondir(pied.LigPiedValeur ?? 0, PrecMontant) * (pied.LigPiedSens == -1 ? -1 : 1);
         }
+        // Lignes de frais annexes (type F) : hors total, leur montant est ventilé sur les lignes vendues.
+        foreach (var l in Ordre)
+        {
+            if (TL.EstPied(l) || !EstLigneDePrix(l) || !EstFraisAnnexes(l) || EnErreur.Contains(l.LigId) || !Px.ContainsKey(l.LigId)) continue;
+            p += MontantFraisAnnexes(l);
+        }
 
         decimal c = 1;
         if (p != 0)
@@ -440,7 +531,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         {
             if (FixeDe(l) != Blocage.Affiche || !Px.ContainsKey(l.LigId)) continue;
             var y = PxBtp(l.LigId);
-            var pvFixe = Arr6(AfficheHorsProrata(l) / c);
+            var pvFixe = Arr6(AfficheHorsProrata(l) / CoefFaDe(l));
             if (EstCompose(l))
             {
                 y.Pv = pvFixe;
@@ -469,7 +560,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     }
 
     protected override decimal PvAffiche(DocumentLigneBtp l, Prix y) =>
-        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * _coefFa * Prorata(l), l.LigPrecisionPv);
+        FixeDe(l) == Blocage.Affiche ? l.LigPvAffiche!.Value : Arrondir(y.Pv * CoefFaDe(l) * Prorata(l), l.LigPrecisionPv);
 
     protected override void EcrireMontants(DocumentLigneBtp l, Prix prix, decimal pvAff, decimal pvRem, decimal qv)
     {
@@ -479,7 +570,7 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         l.LigPr = y.Pr;
         if (y.CoefFg is decimal fg) l.LigCoefFg = fg;
         if (y.CoefBenef is decimal bn) l.LigCoefBenef = bn;
-        l.LigCoefFa = _coefFa;
+        l.LigCoefFa = CoefFaDe(l);
         l.LigPvAffiche = pvAff;
         l.LigMontantPa = Arrondir(qv * y.Pa, PrecMontant);
         l.LigMontantPr = Arrondir(qv * y.Pr, PrecMontant);
@@ -514,8 +605,8 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     {
         var r = Remplir(new ResultatCalcul());
         r.Metres = _e.Metres;
-        r.MetreLignes = _e.MetreLignes;
-        r.Variables = _e.Variables;
+        r.Variables = [.. _definitions, .. _variablesScript.Values.SelectMany(v => v)];
+        r.Scripts = _scripts;
         r.LignesSupprimees = _ecartsExistants.Values.Select(l => l.LigId).ToList();
         return r;
     }

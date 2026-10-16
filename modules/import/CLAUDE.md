@@ -19,7 +19,7 @@
 ## API publique et points de spécialisation
 - Devis neutre (`convertirOptim`) : `{ format, entete, intervenants, lignes, complements, parametres, couleurs, non_repris, avertissements }`.
   - `entete` : reference, notre_reference, reference_externe, redacteur, validite_jours, date, objet, chantier, client, mode_reglement, taux_tva_defaut, `controle` (totaux d'origine).
-  - ligne : `{ id, parent, type (TITRE | OUVRAGE | ELEMENT | TEXTE | SAUT_PAGE), source, composante, code, libelle_html, non_editee, numero, num_depart, unite, qte, qte_absolue, precision_qte, coef_benef, nature, taux_tva, prix_achat, coef_fg, pv_fixe, etiquette, controle }`.
+  - ligne : `{ id, parent, type (TITRE | OUVRAGE | ELEMENT | TEXTE | SAUT_PAGE), source, composante, code, libelle_html, non_editee, numero, num_depart, unite, qte, qte_absolue, precision_qte, coef_benef, nature, taux_tva, prix_achat, coef_fg, pv_fixe, pv_unitaire (PVU d'origine, null si vide ou nul : le cœur l'impose aux ouvrages et composantes, mode bordereau), etiquette, controle }`.
   - `non_repris` : `[{ zone, champ, motif, valeurs (≤ 3), nombre, lignes (≤ 5) }]`.
 - OptimBTP : TypeLigne 4 / 3 → TITRE, 2 → OUVRAGE, 1 → ELEMENT ; `IsVideTexte` → TEXTE ; `IsSousDetail` → composante (quantité relative, `QteFixe` → absolue × qté du parent) ; `IsFA` (globalisations) écartées, coût inclus via PGU dans `coef_fg` ; `coef_benef` de la ligne de prix propagé aux composantes (calcul « somme des PV ») ; `COUL_xx` → `etiquette` ; paramètre `VALIDITE_OFFRE` → `validite_jours`.
 - Rapprochements : référentiels passés sous forme neutre par l'appelant (`{ code, libelle }`, `{ id, code, libelle, regroupement }`, `{ id, taux, categorie }`).

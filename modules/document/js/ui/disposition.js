@@ -7,10 +7,10 @@ const POSITIONS = ['gauche', 'droite', 'bas'];
 const ZONES = { gauche: 280, droite: 340, bas: 260 };
 const DOCKS = { detail: { position: 'droite', reduit: false, visible: true }, plan: { position: 'gauche', reduit: false, visible: true } };
 
-function lire() {
+function lire(defauts) {
   const o = lirePreferences();
   const docks = {};
-  for (const [id, defaut] of Object.entries(DOCKS)) {
+  for (const [id, defaut] of Object.entries({ ...DOCKS, ...defauts })) {
     // Ancienne préférence (un seul panneau, `dock`) reprise pour le détail.
     const ancien = id === 'detail' && o.dock && !o.docks ? { position: o.dock.position, reduit: o.dock.reduit } : {};
     const p = { ...defaut, ...ancien, ...o.docks?.[id] };
@@ -27,11 +27,12 @@ export class Disposition {
   /**
    * Panneaux : éléments `.dock[data-dock-id]` (boutons [data-dock] de position, [data-action="reduire"],
    * [data-action="fermer"]) ; zones : `[data-zone]` et séparateurs `[data-sep]` dans #vue-lignes. racine : conteneur de
-   * la page (les éléments d'une page qui se ferme peuvent être encore présents dans le document).
+   * la page (les éléments d'une page qui se ferme peuvent être encore présents dans le document). docks : état par
+   * défaut des panneaux propres à la page ({ id: { position, reduit, visible } }).
    */
-  constructor({ surOnglet, surDock = null, racine = document }) {
+  constructor({ surOnglet, surDock = null, racine = document, docks = {} }) {
     this.racine = racine;
-    this.p = lire();
+    this.p = lire(docks);
     this.surOnglet = surOnglet;
     this.surDock = surDock;
     // Onglets déclarés par les boutons [data-onglet-vue] ; chacun affiche la section #vue-<nom>.

@@ -73,7 +73,8 @@ body.redimensionnement { user-select: none; cursor: col-resize; }
 .formulaire label.large { flex: 1 1 18rem; }
 .formulaire label.large input { width: 100%; }
 .formulaire label.coche { flex-direction: row; align-items: center; gap: 0.3rem; color: var(--texte); }
-.formulaire input, .formulaire select { color: var(--texte); }
+.formulaire input, .formulaire select, .formulaire textarea { color: var(--texte); }
+.formulaire textarea { width: 100%; font: inherit; resize: vertical; }
 .numerotation { border: 1px solid var(--bord); border-radius: 4px; padding: 0.1rem 0.4rem 0.3rem; display: flex; gap: 0.25rem; }
 .numerotation legend { font-size: 0.85em; color: var(--discret); }
 .numerotation input { width: 2.2rem; text-align: center; }
@@ -189,6 +190,8 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .plan-arbre .lib { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-arbre .mt { color: var(--discret); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .plan-arbre .pli { width: 1em; color: var(--discret); flex: none; text-align: center; }
+/* Demi-pastille du mode de vente de la tranche (option, frais annexes…), coin bas droit comme dans la grille. */
+.plan-arbre .type-prix { width: 0.6rem; height: 0.9rem; flex: none; align-self: center; border-radius: 2px; }
 .plan-arbre li.pied { border-top: 1px solid var(--bord); margin-top: 0.3rem; padding-top: 0.3rem; }
 .barre-filtre { flex: none; display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0.7rem; background: var(--accent-clair); border-bottom: 1px solid var(--bord); font-size: 0.9em; }
 .grille tr.pied-tranche td { font-weight: 700; background: var(--pied-fond); border-top: 2px solid var(--bord); }
@@ -330,3 +333,4 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .recherche-elements .compteur { color: var(--discret); font-size: 0.85em; min-width: 5.5rem; font-variant-numeric: tabular-nums; }
 .recherche-elements.sans-resultat input { border-color: var(--erreur); background: var(--erreur-fond); }
 .recherche-elements button { padding: 0 0.4rem; }
+.grille td.col-commentaire { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; color: var(--discret); }

@@ -153,7 +153,7 @@ export class FicheElement extends FicheLogiBTP {
     if (this.ensemble) {
       // Ensemble : une tranche racine paramétrée (largeur, hauteur) ; ses lignes s'ajoutent dessous.
       return {
-        mode: 'V', metres: [], metre_lignes: [],
+        mode: 'V', metres: [],
         variables: [
           { var_id: 101, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'largeur', var_operation: '=', var_formule: '1', var_ordre: 1 },
           { var_id: 102, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'hauteur', var_operation: '=', var_formule: '1', var_ordre: 2 },
@@ -162,7 +162,7 @@ export class FicheElement extends FicheLogiBTP {
       };
     }
     return {
-      mode: 'D', metres: [], metre_lignes: [], variables: [],
+      mode: 'D', metres: [], variables: [],
       lignes: [L({ lig_id: 1, lig_parent_id: null, lig_ordre: 1, lig_tyl_id: 2, lig_libelle_html: this.valeur('libelle_html') || 'Ouvrage', lig_qte: 1, lig_unt_code: this.valeur('unite_stock') ?? 'u' })],
     };
   }
@@ -192,7 +192,7 @@ export class FicheElement extends FicheLogiBTP {
     const appel = new AppelBibliotheque({ fournisseur: this.bibliotheque, editeur: () => editeur, bibliotheque: bibOuvrage, message: this.message });
     editeur = new EditeurDevisBtp(corps.querySelector('.element-composition-grille'), {
       definition,
-      saisie: { document: documentComposition(composition.mode), lignes: composition.lignes, metres: composition.metres ?? [], metre_lignes: composition.metre_lignes ?? [], variables: composition.variables ?? [] },
+      saisie: { document: documentComposition(composition.mode), lignes: composition.lignes, metres: composition.metres ?? [], variables: composition.variables ?? [] },
       surSelection: (id) => metre?.suivre(id), surMessage: (t) => this.message(t), ouvrirMetre: (ligId, mtrId) => metre.ouvrir(ligId, mtrId),
       appelerCode: (ligId, code) => (modifiable ? appel.appeler(ligId, code) : null), rechercher: (ligId) => (modifiable ? appel.rechercher(ligId) : null),
     });
@@ -203,7 +203,7 @@ export class FicheElement extends FicheLogiBTP {
     editeur.magasin.surRefus = () => this.message('Passez la fiche en modification pour changer la composition', 'avertissement');
     const mode = () => corps.querySelector('[data-mode]').value;
     const totaux = () => {
-      const c = { mode: mode(), lignes: editeur.saisie.lignes, metres: editeur.saisie.metres, metre_lignes: editeur.saisie.metre_lignes, variables: editeur.saisie.variables };
+      const c = { mode: mode(), lignes: editeur.saisie.lignes, metres: editeur.saisie.metres, variables: editeur.saisie.variables };
       let r;
       try { r = calculerOuvrage(c, { coef_fg: this.valeur('coef_fg'), coef_benef: this.valeur('coef_benef'), coef_remise: this.valeur('coef_remise') }); } catch (e) { r = { erreur: e.message }; }
       corps.querySelector('.element-composition-totaux').innerHTML = r.erreur ? `<span class="erreur">${echapper(r.erreur)}</span>`

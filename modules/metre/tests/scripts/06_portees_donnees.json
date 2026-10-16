@@ -1,0 +1,90 @@
+{
+  "nom": "Variables de portée et données de l'hôte",
+  "description": "Lecture et écriture des variables $$, $, @@, @ (avec ou sans accolades), lecture des données, écriture du libellé.",
+  "cas": [
+    {
+      "nom": "Lecture",
+      "entree": {
+        "script": [
+          "Renvoyer @@Perte * {{$largeur}} + $$taux + {{lig_qte}}"
+        ],
+        "donnees": {
+          "lig_qte": 4
+        },
+        "variables_existantes": {
+          "@@Perte": 1.1,
+          "$largeur": 2,
+          "$$taux": 0.5
+        }
+      },
+      "attendu": {
+        "resultat": 6.7
+      }
+    },
+    {
+      "nom": "Écriture et opérations composées",
+      "entree": {
+        "script": [
+          "@@Poids = 12",
+          "@@Poids += 3",
+          "$Surface = 2 * 3",
+          "$Surface *= 2",
+          "{{@Copie}} = @@Poids",
+          "Renvoyer $Surface"
+        ]
+      },
+      "attendu": {
+        "resultat": 12,
+        "portees": {
+          "@@Poids": 15,
+          "$Surface": 12,
+          "@Copie": 15
+        }
+      }
+    },
+    {
+      "nom": "Libellé de la ligne",
+      "entree": {
+        "script": [
+          "Std est un booléen = Faux",
+          "Si Std alors",
+          "    {{lig_libelle_html}} += \" RAL standard\"",
+          "Sinon",
+          "    {{lig_libelle_html}} = {{lig_libelle_html}} + \" RAL \" + {{lig_qte}}",
+          "Fin",
+          "Renvoyer {{lig_qte}}"
+        ],
+        "donnees": {
+          "lig_libelle_html": "Fenêtre",
+          "lig_qte": 2.5
+        },
+        "ecrivables": [
+          "lig_libelle_html"
+        ]
+      },
+      "attendu": {
+        "resultat": 2.5,
+        "donnees": {
+          "lig_libelle_html": "Fenêtre RAL 2,5"
+        }
+      }
+    },
+    {
+      "nom": "Donnée booléenne",
+      "entree": {
+        "script": [
+          "Si {{lig_is_option}} alors",
+          "    Renvoyer 1",
+          "Fin",
+          "Renvoyer 0"
+        ],
+        "donnees": {
+          "lig_is_option": true
+        }
+      },
+      "attendu": {
+        "resultat": 1
+      }
+    }
+  ]
+}

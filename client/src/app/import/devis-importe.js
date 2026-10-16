@@ -2,8 +2,10 @@ import { associerUnite, associerNature, associerTaux, associerOption, normaliser
 import { TL } from '../../calcul/index.js';
 
 // Traduction d'un devis neutre (module Import) dans le modèle du devis BTP : lignes de saisie (ID négatifs) sous une
-// section, unités, natures et taux de TVA rapprochés des référentiels, propriétés de l'entête. Calcul « somme des PV »
-// (V) : chaque composante porte le coefficient de vente de sa ligne de prix, comme dans le logiciel d'origine.
+// section, unités, natures et taux de TVA rapprochés des référentiels, propriétés de l'entête. Calcul en bordereau (B) :
+// les ouvrages (et leurs composantes) gardent le PV unitaire du logiciel d'origine en PV fixe, sans ventilation sur le
+// sous-détail, pour ne pas dépendre des différences de calcul entre les deux logiciels ; chaque composante porte aussi le
+// coefficient de vente de sa ligne de prix, comme dans le logiciel d'origine.
 
 const TYPES = { TITRE: TL.TITRE, OUVRAGE: TL.OUVRAGE, ELEMENT: TL.ELEMENT, TEXTE: TL.TEXTE, SAUT_PAGE: TL.SAUT_PAGE };
 
@@ -49,6 +51,7 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
   const ordres = new Map();
   const controles = new Map();
   const lignes = [section];
+  const parents = new Set(devis.lignes.map((l) => l.parent));
   for (const l of devis.lignes) {
     const parent = l.parent === null ? section.lig_id : idDe(l.parent);
     const ordre = (ordres.get(parent) ?? 0) + 1;
@@ -64,7 +67,10 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
       x.lig_precision_qte = l.precision_qte ?? 2;
       x.lig_coef_benef = l.coef_benef ?? 1;
       if (l.type === 'ELEMENT') { x.lig_pa = l.prix_achat ?? 0; x.lig_coef_fg = l.coef_fg ?? 1; }
-      if (l.pv_fixe !== undefined && l.pv_fixe !== null) { x.lig_pv_fixe = true; x.lig_pv = l.pv_fixe; }
+      // PV fixe : prix fixe d'origine, sinon PV unitaire imposé aux ouvrages (avec composantes) et aux composantes.
+      const impose = (l.type === 'OUVRAGE' && parents.has(l.id)) || (l.composante && l.type !== 'OUVRAGE');
+      const pvFixe = l.pv_fixe ?? (impose ? l.pv_unitaire ?? null : null);
+      if (pvFixe !== undefined && pvFixe !== null) { x.lig_pv_fixe = true; x.lig_pv = pvFixe; }
       if (l.unite) {
         x.lig_unt_code = associerUnite(l.unite, unites);
         if (!x.lig_unt_code) unitesInconnues.set(l.unite, (unitesInconnues.get(l.unite) ?? 0) + 1);
@@ -93,7 +99,7 @@ export function saisieDevisImporte(devis, { definition, natures, redacteurs = []
   const redacteur = nomRedacteur ? redacteurs.find((r) => normaliser(r.libelle) === nomRedacteur || mots(r.libelle) === mots(devis.entete.redacteur)) ?? null : null;
   return {
     document: {
-      ent_date: devis.entete.date ?? undefined, ent_objet: devis.entete.objet ?? 'Devis importé', ent_mode_calcul_ouvrage: 'V',
+      ent_date: devis.entete.date ?? undefined, ent_objet: devis.entete.objet ?? 'Devis importé', ent_mode_calcul_ouvrage: 'B',
       ent_notre_reference: devis.entete.notre_reference ?? null, ent_reference_externe: devis.entete.reference_externe ?? null,
       ent_validite_jours: devis.entete.validite_jours ?? definition.type?.tyd_validite_jours ?? null,
       ent_redacteur_id: redacteur?.valeur ?? null, ent_etiquettes: etiquettesDocument,

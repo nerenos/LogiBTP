@@ -2,7 +2,6 @@
 // cfg = { id, parent, ordre } : noms des colonnes. parent + ordre sont la source de vérité.
 
 export const CFG_LIGNES = { id: 'lig_id', parent: 'lig_parent_id', ordre: 'lig_ordre' };
-export const CFG_METRE = { id: 'mli_id', parent: 'mli_parent_id', ordre: 'mli_ordre' };
 
 const pid = (cfg, x) => x[cfg.parent] ?? null;
 

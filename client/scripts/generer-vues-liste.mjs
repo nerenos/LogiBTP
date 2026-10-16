@@ -84,7 +84,7 @@ const lignesElements = ELEMENTS.map((e0) => {
     q(e.unite_stock), q(e.unite_achat), q(e.unite_vente), j(e.unites), q(e.scenario_pa), j(e.scenarios), n(e.pa_fixe), n(e.dernier_pa), n(e.pmp),
     n(p.pa), n(e.coef_fg), n(p.pr), n(p.coef_benef ?? e.coef_benef), n(p.pv), b(e.pv_fixe), n(e.coef_remise), n(p.pv_net), j(e.composition), j(e.proprietes),
     b(e.actif), q('demo'), q('Données de démonstration'),
-    ...['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'isolant_r', 'isolant_lambda', 'isolant_u'].map((k) => n(e[k])),
+    ...['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur', 'isolant_r', 'isolant_lambda', 'isolant_u'].map((k) => n(e[k])),
     b(e.coef_fg_impose), b(e.coef_benef_impose)].join(', ')})`;
 }).join(',\n');
 const sqlBibliotheque = `-- =============================================================================
@@ -112,7 +112,7 @@ ${PERIODES_COEFFICIENTS.map((x) => ` (${x.id}, ${n(x.nat_id)}, ${q(x.debut)}, ${
 INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_fam_id, ele_nat_id, ele_gestion, ele_unt_stock, ele_unt_achat,
   ele_unt_vente, ele_unites, ele_scenario_pa, ele_scenarios, ele_pa_fixe, ele_dernier_pa, ele_pmp, ele_pa, ele_coef_fg, ele_pr, ele_coef_benef, ele_pv,
   ele_pv_fixe, ele_coef_remise, ele_pv_net, ele_composition, ele_proprietes, ele_actif, ele_maj_par, ele_commentaire_prix,
-  ele_poids, ele_surface, ele_surface_peinture, ele_volume, ele_hauteur, ele_largeur, ele_epaisseur, ele_isolant_r, ele_isolant_lambda, ele_isolant_u,
+  ele_poids, ele_surface, ele_surface_peinture, ele_volume, ele_hauteur, ele_largeur, ele_epaisseur, ele_longueur, ele_isolant_r, ele_isolant_lambda, ele_isolant_u,
   ele_coef_fg_impose, ele_coef_benef_impose) VALUES
 ${lignesElements};
 

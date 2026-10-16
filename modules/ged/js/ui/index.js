@@ -4,3 +4,4 @@ export { ArborescenceGed } from './arborescence.js';
 export { DialogueDepot } from './depot.js';
 export { rendreApercu, libererApercu } from './apercu.js';
 export { separateur } from './separateur.js';
+export { ParametrageReglesGed, listeDepuisTexte, entierOuNul } from './regles.js';

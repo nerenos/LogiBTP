@@ -40,11 +40,11 @@ if (titre && !lignes.some((l) => (l.lig_libelle_html ?? '').includes('Conditions
 }
 
 const r = calculerDocument({
-  document: complet.document, lignes, metres: complet.metres, metre_lignes: complet.metre_lignes,
+  document: complet.document, lignes, metres: complet.metres,
   variables: complet.variables, taux_tva: definition.taux_tva,
 });
 const rep = await appel('PUT', `/documents/${id}`, {
-  document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables,
+  document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables,
   version_moteur_client: r.version_moteur,
 });
 console.log(`Document ${id} enregistré en version ${rep.document.document.ent_version}, ${rep.ecarts.length} écart(s)`);

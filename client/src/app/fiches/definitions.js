@@ -124,7 +124,7 @@ export const TYPES_FICHE = {
             { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'actif'] },
             { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion'] },
             { titre: 'Libellé', champs: ['libelle_html'], largeur: 'plein' },
-            { titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur'], largeur: 'plein' },
+            { titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur'], largeur: 'plein' },
             { code: 'isolation', titre: 'Isolation', champs: ['isolant_epaisseur', 'isolant_lambda', 'isolant_r', 'isolant_u'] },
           ],
         },
@@ -173,6 +173,7 @@ export const TYPES_FICHE = {
         c('hauteur', 'Hauteur (mm)', 'ele_hauteur', 'nombre', { format: '999999999.999' }),
         c('largeur', 'Largeur (mm)', 'ele_largeur', 'nombre', { format: '999999999.999' }),
         c('epaisseur', 'Épaisseur (mm)', 'ele_epaisseur', 'nombre', { format: '999999999.999' }),
+        c('longueur', 'Longueur (mm)', 'ele_longueur', 'nombre', { format: '999999999.999', aide: 'Longueur de barre, de rouleau… (recopiée en mètres sur la ligne du document)' }),
         // Isolation (nature isolant) : l'épaisseur est celle des données techniques, reprise pour lecture.
         c('isolant_epaisseur', 'Épaisseur (mm)', null, 'nombre', { lecture_seule: true, aide: 'Épaisseur des données techniques' }),
         c('isolant_lambda', 'Conductivité λ (W/m.K)', 'ele_isolant_lambda', 'nombre', { format: '99999.99999' }),

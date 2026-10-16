@@ -12,13 +12,11 @@ namespace LogiBTP.Api.Btp;
 public sealed class LogiBtpContext(DbContextOptions<LogiBtpContext> options) : DocumentDbContext<DocumentBtp, DocumentLigneBtp>(options)
 {
     public DbSet<Metre> Metres => Set<Metre>();
-    public DbSet<MetreLigne> MetreLignes => Set<MetreLigne>();
     public DbSet<VariableDefinition> Variables => Set<VariableDefinition>();
 
     protected override void ConfigurerComplements(ModelBuilder b)
     {
         b.Entity<Metre>().ToTable("metre").HasKey(x => x.MtrId);
-        b.Entity<MetreLigne>().ToTable("metre_ligne").HasKey(x => x.MliId);
         b.Entity<VariableDefinition>().ToTable("variable_definition").HasKey(x => x.VarId);
     }
 }

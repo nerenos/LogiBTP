@@ -35,7 +35,7 @@ export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef
     document: documentComposition(composition.mode),
     lignes: lignes.map((l) => (l === racineComposition(lignes) ? { ...l, lig_qte: 1, lig_coef_fg: Number(coef_fg), lig_coef_benef: Number(coef_benef) } : l)),
     taux_tva: DEFINITION_DEMO.taux_tva, entites: {}, options: {},
-    metres: composition.metres ?? [], metre_lignes: composition.metre_lignes ?? [], variables: composition.variables ?? [],
+    metres: composition.metres ?? [], variables: composition.variables ?? [],
   };
   const resultat = calculerDocument(entree);
   const r = racineComposition(resultat.lignes);
@@ -56,7 +56,7 @@ export function calculerEnsemble(composition) {
   if (!racineEnsemble(lignes)) return { pa: null, pr: null, pv: null, pv_net: null, resultat: null };
   const resultat = calculerDocument({
     document: documentComposition(composition.mode), lignes, taux_tva: DEFINITION_DEMO.taux_tva, entites: {}, options: {},
-    metres: composition.metres ?? [], metre_lignes: composition.metre_lignes ?? [], variables: composition.variables ?? [],
+    metres: composition.metres ?? [], variables: composition.variables ?? [],
   });
   const r = racineEnsemble(resultat.lignes);
   const pv = S(arr6(D(r.lig_montant_ht) ?? D(0)));

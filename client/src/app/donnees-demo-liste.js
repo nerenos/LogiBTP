@@ -129,16 +129,10 @@ const TYPES_DOC = [['V_DEVIS', 'Devis client', 'V'], ['V_COMMANDE', 'Commande cl
   ['A_COMMANDE', 'Commande fournisseur', 'A'], ['A_DEVIS', 'Demande de prix fournisseur', 'A'], ['A_FACTURE', 'Facture fournisseur', 'A']];
 const STATUTS = ['Brouillon', 'Validé', 'Validé', 'Accepté', 'Facturé', 'Soldé', 'Annulé'];
 
-/** Documents de démonstration : le devis du mode hors ligne (ID 0) puis des documents fictifs. */
-export function documentsDemo(demo, n = 400) {
+/** Documents fictifs des listes hors ligne (aucun ne s'ouvre : les documents se lisent dans la base). */
+export function documentsDemo(n = 400) {
   const r = alea(2026);
-  const d = demo.document;
-  const lignes = [{
-    id: d.ent_id, type_element: 'V_DEVIS', type_document: 'Devis client', famille: 'V', numero: d.ent_numero, indice: 'A',
-    date_document: d.ent_date, objet: d.ent_objet, chantier: d.ent_proprietes?.chantier ?? null, statut: 'Brouillon', tiers: d.ent_tiers_id,
-    total_ht: null, total_ttc: null, net_a_payer: null, reference: true, verrouille: false, modifie_le: null,
-    projet_id: d.ent_projet_id ?? null, affaire_id: d.ent_affaire_id ?? null, chantier_id: d.ent_chantier_id ?? null, marche_id: d.ent_marche_id ?? null,
-  }];
+  const lignes = [];
   for (let i = 1; i <= n; i++) {
     const [code, libelle, famille] = choix(r, TYPES_DOC);
     const ht = Math.round(r() * 250000) / 100;

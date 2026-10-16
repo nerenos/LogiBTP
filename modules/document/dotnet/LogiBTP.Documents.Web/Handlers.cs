@@ -63,7 +63,7 @@ public class HandlerStandard<TDoc, TLigne>(Func<EntreeDocument<TDoc, TLigne>, Re
         var defLignes = ctx.Proprietes.Where(p => p.PrdNiveau == "L").ToList();
         foreach (var l in ctx.Entree.Lignes) ControlerProprietes(defLignes, l.LigProprietes, l.LigId, erreurs);
 
-        // Le type de prix est hérité : un descendant d'une ligne Option / Mémoire / Variante ne peut pas être Vendu.
+        // Le type de prix est hérité : un descendant d'une ligne Option / Mémoire / Variante / Frais annexes ne peut pas être Vendu.
         var parId = ctx.Entree.Lignes.ToDictionary(l => l.LigId);
         foreach (var l in ctx.Entree.Lignes)
         {

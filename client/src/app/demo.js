@@ -1,4 +1,5 @@
-// Document de démonstration, utilisé quand l'API n'est pas joignable (calcul local complet).
+// Devis et définition de démonstration : jeu de données des tests (calcul, analyse, bibliothèque, import) et des
+// listes hors ligne. L'application ne l'ouvre plus : les documents s'ouvrent depuis la base.
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX, MODELES_DOCUMENT } from './vues-document.js';
 import { lignesLotsDemo, natureDemo, coderDemo } from './demo-lots.js';
 import { RATTACHEMENT_DEVIS_DEMO, INTERVENANTS_DEVIS_DEMO } from './structure/donnees.js';
@@ -91,15 +92,18 @@ export const DOCUMENT_DEMO = {
     L({ lig_id: 14, lig_parent_id: null, lig_ordre: 103, lig_tyl_id: 10, lig_libelle_html: 'TVA' }),
     L({ lig_id: 15, lig_parent_id: null, lig_ordre: 104, lig_tyl_id: 9, lig_libelle_html: 'Retenue de garantie 5 %', lig_pied_mode: 'P', lig_pied_base: 'CUMUL', lig_pied_valeur: 5, lig_pied_sens: -1 }),
   ]),
-  metres: [{ mtr_id: 100, mtr_lig_id: 6, mtr_libelle: 'Surface des murs', mtr_unt_code: 'm2', mtr_variable: '@surface' }],
-  metre_lignes: [
-    { mli_id: 101, mli_mtr_id: 100, mli_parent_id: null, mli_ordre: 1, mli_type: 'D', mli_operateur: '+', mli_commentaire: 'Linéaire de murs' },
-    { mli_id: 102, mli_mtr_id: 100, mli_parent_id: 101, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '8,4', mli_commentaire: 'Façade nord' },
-    { mli_id: 103, mli_mtr_id: 100, mli_parent_id: 101, mli_ordre: 2, mli_type: 'V', mli_operateur: '+', mli_formule: '6,2', mli_commentaire: 'Pignon est' },
-    { mli_id: 104, mli_mtr_id: 100, mli_parent_id: 101, mli_ordre: 3, mli_type: 'V', mli_operateur: '+', mli_formule: '8,4', mli_commentaire: 'Façade sud' },
-    { mli_id: 105, mli_mtr_id: 100, mli_parent_id: null, mli_ordre: 2, mli_type: 'V', mli_operateur: '*', mli_formule: '{{$$hauteur_etage}}', mli_commentaire: 'Hauteur d\'étage' },
-    { mli_id: 106, mli_mtr_id: 100, mli_parent_id: null, mli_ordre: 3, mli_type: 'V', mli_operateur: '-', mli_formule: '2 * 1,2 * 1,35', mli_commentaire: 'Deux fenêtres' },
-  ],
+  metres: [{
+    mtr_id: 100, mtr_lig_id: 6, mtr_libelle: 'Surface des murs', mtr_unt_code: 'm2', mtr_variable: '@surface',
+    mtr_script: [
+      '// Surface des murs : linéaire × hauteur d\'étage, moins les fenêtres',
+      'NombreFenetres est un numérique = 2',
+      'LargeurFenetre est un numérique = 1.2',
+      'HauteurFenetre est un numérique = 1.35',
+      'local Lineaire est un numérique = 8.4 + 6.2 + 8.4   // façade nord, pignon est, façade sud',
+      '',
+      'Renvoyer Lineaire * {{$$hauteur_etage}} - NombreFenetres * LargeurFenetre * HauteurFenetre',
+    ].join('\n'),
+  }],
   variables: [
     { var_id: 1, var_ent_id: 0, var_lig_id: null, var_mtr_id: null, var_portee: '$$', var_nom: 'hauteur_etage', var_operation: '=', var_formule: '2,5', var_ordre: 1 },
   ],

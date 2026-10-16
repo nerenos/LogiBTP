@@ -1,0 +1,147 @@
+{
+  "nom": "Exemple de la conception : profilés d'une fenêtre",
+  "description": "Déclarations typées (paramètres et locales), expression sur plusieurs lignes avec commentaires, fonction, variable d'ouvrage, donnée de la ligne, libellé calculé, résultat.",
+  "cas": [
+    {
+      "nom": "Couleur standard : 1,1 × 2 × 2,35 + 2 = 7,17 ; 7,17 / 6 → 2 barres",
+      "entree": {
+        "script": [
+          "MaChaine est une chaîne",
+          "NombrePoint est un numérique",
+          "MaLargeur est un numérique = 1.500",
+          "MaHauteur est un numérique = 0.85",
+          "local Longueur_profile est un numérique",
+          "local NombreMontant est un numérique",
+          "MaCouleurEstStandard est un bool = Vrai",
+          "",
+          "NombrePoint = ( ",
+          "\t\t\t\t+ 2 \t// En haut",
+          "\t\t\t\t+ 3 \t// à gauche",
+          "\t\t\t\t+ 3 - 1 // sur la droite à cause de la poignée",
+          "\t\t\t\t- 2 \t// en bas",
+          "\t\t\t)",
+          "\t\t\t* 2 \t\t// car il y a 2 côtés",
+          "",
+          "NombreMontant = EntierSuperieur(MaLargeur / 1.200)",
+          "Longueur_profile = @@Perte * 2 * (MaLargeur + MaHauteur) + NombreMontant",
+          "Longueur_profile = EntierSuperieur(Longueur_profile / {{lig_longueur}})",
+          "",
+          "Si MaCouleurEstStandard alors",
+          "\t{{lig_libelle_html}} += \" RAL standard\"",
+          "Sinon",
+          "\t{{lig_libelle_html}} += \" RAL personnalisable\"",
+          "Fin",
+          "\t",
+          "Renvoyer Longueur_profile"
+        ],
+        "donnees": {
+          "lig_longueur": 6,
+          "lig_libelle_html": "Fenêtre PVC"
+        },
+        "ecrivables": [
+          "lig_libelle_html"
+        ],
+        "variables_existantes": {
+          "@@Perte": 1.1
+        }
+      },
+      "attendu": {
+        "resultat": 2,
+        "variables": {
+          "MaChaine": {
+            "valeur": "",
+            "type": "C",
+            "local": false,
+            "parametre": true
+          },
+          "NombrePoint": {
+            "valeur": 10,
+            "type": "N",
+            "parametre": false
+          },
+          "MaLargeur": {
+            "valeur": 1.5,
+            "parametre": true,
+            "defaut": "1.500"
+          },
+          "MaHauteur": {
+            "valeur": 0.85,
+            "parametre": true
+          },
+          "Longueur_profile": {
+            "valeur": 2,
+            "local": true,
+            "parametre": false
+          },
+          "NombreMontant": {
+            "valeur": 2,
+            "local": true
+          },
+          "MaCouleurEstStandard": {
+            "valeur": true,
+            "type": "B",
+            "parametre": true
+          }
+        },
+        "nb_variables": 7,
+        "donnees": {
+          "lig_libelle_html": "Fenêtre PVC RAL standard"
+        }
+      }
+    },
+    {
+      "nom": "Couleur personnalisée : 1,5 × 2 × 2,35 + 2 = 9,05 ; 9,05 / 4 → 3 barres",
+      "entree": {
+        "script": [
+          "MaChaine est une chaîne",
+          "NombrePoint est un numérique",
+          "MaLargeur est un numérique = 1.500",
+          "MaHauteur est un numérique = 0.85",
+          "local Longueur_profile est un numérique",
+          "local NombreMontant est un numérique",
+          "MaCouleurEstStandard est un bool = Faux",
+          "",
+          "NombrePoint = ( ",
+          "\t\t\t\t+ 2 \t// En haut",
+          "\t\t\t\t+ 3 \t// à gauche",
+          "\t\t\t\t+ 3 - 1 // sur la droite à cause de la poignée",
+          "\t\t\t\t- 2 \t// en bas",
+          "\t\t\t)",
+          "\t\t\t* 2 \t\t// car il y a 2 côtés",
+          "",
+          "NombreMontant = EntierSuperieur(MaLargeur / 1.200)",
+          "Longueur_profile = @@Perte * 2 * (MaLargeur + MaHauteur) + NombreMontant",
+          "Longueur_profile = EntierSuperieur(Longueur_profile / {{lig_longueur}})",
+          "",
+          "Si MaCouleurEstStandard alors",
+          "\t{{lig_libelle_html}} += \" RAL standard\"",
+          "Sinon",
+          "\t{{lig_libelle_html}} += \" RAL personnalisable\"",
+          "Fin",
+          "\t",
+          "Renvoyer Longueur_profile"
+        ],
+        "donnees": {
+          "lig_longueur": 4,
+          "lig_libelle_html": "Fenêtre PVC"
+        },
+        "ecrivables": [
+          "lig_libelle_html"
+        ],
+        "variables_existantes": {
+          "@@Perte": 1.5
+        }
+      },
+      "attendu": {
+        "resultat": 3,
+        "variables": {
+          "MaCouleurEstStandard": false,
+          "NombrePoint": 10
+        },
+        "donnees": {
+          "lig_libelle_html": "Fenêtre PVC RAL personnalisable"
+        }
+      }
+    }
+  ]
+}

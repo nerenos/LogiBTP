@@ -1,0 +1,115 @@
+{
+  "nom": "Somme de produits par sous-détails imbriqués",
+  "description": "(2 + 3) × 2 + (1 + 1,5) × ((2 + 2) × 1) = 20 : le niveau le plus bas est calculé en premier, puis on remonte.",
+  "entree": {
+    "metre": {
+      "mtr_id": 11
+    },
+    "metre_lignes": [
+      {
+        "mli_id": 201,
+        "mli_mtr_id": 11,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "D",
+        "mli_operateur": "+"
+      },
+      {
+        "mli_id": 202,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 201,
+        "mli_ordre": 1,
+        "mli_type": "D",
+        "mli_operateur": "+"
+      },
+      {
+        "mli_id": 203,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 202,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "2"
+      },
+      {
+        "mli_id": 204,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 202,
+        "mli_ordre": 2,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "3"
+      },
+      {
+        "mli_id": 205,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 201,
+        "mli_ordre": 2,
+        "mli_type": "V",
+        "mli_operateur": "*",
+        "mli_formule": "2"
+      },
+      {
+        "mli_id": 206,
+        "mli_mtr_id": 11,
+        "mli_parent_id": null,
+        "mli_ordre": 2,
+        "mli_type": "D",
+        "mli_operateur": "+"
+      },
+      {
+        "mli_id": 207,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 206,
+        "mli_ordre": 1,
+        "mli_type": "D",
+        "mli_operateur": "+"
+      },
+      {
+        "mli_id": 208,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 207,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "1"
+      },
+      {
+        "mli_id": 209,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 207,
+        "mli_ordre": 2,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "1,5"
+      },
+      {
+        "mli_id": 210,
+        "mli_mtr_id": 11,
+        "mli_parent_id": 206,
+        "mli_ordre": 2,
+        "mli_type": "V",
+        "mli_operateur": "*",
+        "mli_formule": "(2 + 2) * 1"
+      }
+    ]
+  },
+  "attendu": {
+    "mtr_resultat": 20,
+    "mtr_variable": null,
+    "script": [
+      "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).",
+      "local L1_1_1 est un numérique = 2",
+      "local L1_1_2 est un numérique = 3",
+      "local L2_1_1 est un numérique = 1",
+      "local L2_1_2 est un numérique = 1,5",
+      "local L1_1 est un numérique = L1_1_1 + L1_1_2",
+      "local L1_2 est un numérique = 2",
+      "local L2_1 est un numérique = L2_1_1 + L2_1_2",
+      "local L2_2 est un numérique = (2 + 2) * 1",
+      "local L1 est un numérique = L1_1 * L1_2",
+      "local L2 est un numérique = L2_1 * L2_2",
+      "Renvoyer L1 + L2"
+    ]
+  }
+}

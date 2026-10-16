@@ -341,7 +341,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         unites.ValueKind == JsonValueKind.Array ? unites.Deserialize<List<UniteElement>>(JsonCalcul.Options) ?? [] : [];
 
     /// <summary>Codes des données techniques dans les formules (mêmes codes que la fiche et DONNEES_TECHNIQUES côté JS).</summary>
-    public static readonly string[] CodesTechniques = ["poids", "surface", "surface_peinture", "volume", "hauteur", "largeur", "epaisseur", "isolant_r", "isolant_lambda", "isolant_u"];
+    public static readonly string[] CodesTechniques = ["poids", "surface", "surface_peinture", "volume", "hauteur", "largeur", "epaisseur", "longueur", "isolant_r", "isolant_lambda", "isolant_u"];
 
     /// <summary>Données des formules : champs supplémentaires, puis données techniques renseignées.</summary>
     public static Dictionary<string, decimal?> Donnees(JsonElement proprietes, IReadOnlyDictionary<string, decimal?> techniques)
@@ -354,7 +354,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     public static Dictionary<string, decimal?> Techniques(Element e) => new()
     {
         ["poids"] = e.ElePoids, ["surface"] = e.EleSurface, ["surface_peinture"] = e.EleSurfacePeinture, ["volume"] = e.EleVolume,
-        ["hauteur"] = e.EleHauteur, ["largeur"] = e.EleLargeur, ["epaisseur"] = e.EleEpaisseur,
+        ["hauteur"] = e.EleHauteur, ["largeur"] = e.EleLargeur, ["epaisseur"] = e.EleEpaisseur, ["longueur"] = e.EleLongueur,
         ["isolant_r"] = e.EleIsolantR, ["isolant_lambda"] = e.EleIsolantLambda, ["isolant_u"] = e.EleIsolantU,
     };
 

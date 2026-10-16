@@ -1,45 +1,171 @@
 {
   "nom": "Variables : incrémentation du poids d'un ouvrage et variable non définie",
-  "description": "L'ouvrage définit @@poids = 0, chaque matériau ajoute {{article.art_poids}} × {{lig_qte_vendue}}, la manutention calcule sa quantité par métré à partir de {{@@poids}}. Une ligne lit une variable inconnue : elle est bloquée et signalée.",
+  "description": "L'ouvrage définit @@poids = 0, chaque matériau ajoute {{article.art_poids}} × {{lig_qte_vendue}}, la manutention calcule sa quantité par métré à partir de {{@@poids}}. Une ligne lit une variable inconnue : l'erreur du métré (script) est signalée sans bloquer la ligne, qui garde sa quantité saisie (vide : 0).",
   "entree": {
-    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
-    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
     "entites": {
-      "article": { "prefixe": "art", "enregistrements": [ { "art_id": 1, "art_poids": 25 }, { "art_id": 2, "art_poids": 40 } ] }
+      "article": {
+        "prefixe": "art",
+        "enregistrements": [
+          {
+            "art_id": 1,
+            "art_poids": 25
+          },
+          {
+            "art_id": 2,
+            "art_poids": 40
+          }
+        ]
+      }
     },
     "variables": [
-      { "var_id": 1, "var_lig_id": 1, "var_portee": "@@", "var_nom": "poids", "var_operation": "=", "var_formule": "0", "var_ordre": 1 },
-      { "var_id": 2, "var_lig_id": 2, "var_portee": "@@", "var_nom": "poids", "var_operation": "+=", "var_formule": "{{article.art_poids}} * {{lig_qte_vendue}}", "var_ordre": 1 },
-      { "var_id": 3, "var_lig_id": 3, "var_portee": "@@", "var_nom": "poids", "var_operation": "+=", "var_formule": "{{article.art_poids}} * {{lig_qte_vendue}}", "var_ordre": 1 }
+      {
+        "var_id": 1,
+        "var_lig_id": 1,
+        "var_portee": "@@",
+        "var_nom": "poids",
+        "var_operation": "=",
+        "var_formule": "0",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 2,
+        "var_lig_id": 2,
+        "var_portee": "@@",
+        "var_nom": "poids",
+        "var_operation": "+=",
+        "var_formule": "{{article.art_poids}} * {{lig_qte_vendue}}",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 3,
+        "var_lig_id": 3,
+        "var_portee": "@@",
+        "var_nom": "poids",
+        "var_operation": "+=",
+        "var_formule": "{{article.art_poids}} * {{lig_qte_vendue}}",
+        "var_ordre": 1
+      }
     ],
     "lignes": [
-      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Mur parpaings", "lig_qte": 10, "lig_tva_id": 1 },
-      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Parpaings, poids cumulé {{@@poids}} kg",
-        "lig_qte": 2, "lig_art_id": 1, "lig_pa": 5 },
-      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Mortier", "lig_qte": 1, "lig_art_id": 2, "lig_pa": 8 },
-      { "lig_id": 4, "lig_parent_id": 1, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Manutention",
-        "lig_qte_source": "M", "lig_mtr_id": 20, "lig_precision_qte": 3, "lig_pa": 30 },
-      { "lig_id": 5, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Ligne en erreur",
-        "lig_qte_source": "M", "lig_mtr_id": 21, "lig_pa": 10, "lig_tva_id": 1 }
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "Mur parpaings",
+        "lig_qte": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Parpaings, poids cumulé {{@@poids}} kg",
+        "lig_qte": 2,
+        "lig_art_id": 1,
+        "lig_pa": 5
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Mortier",
+        "lig_qte": 1,
+        "lig_art_id": 2,
+        "lig_pa": 8
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Manutention",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 20,
+        "lig_precision_qte": 3,
+        "lig_pa": 30
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Ligne en erreur",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 21,
+        "lig_pa": 10,
+        "lig_tva_id": 1
+      }
     ],
     "metres": [
-      { "mtr_id": 20, "mtr_lig_id": 4, "mtr_libelle": "Tonnage" },
-      { "mtr_id": 21, "mtr_lig_id": 5, "mtr_libelle": "Inconnue" }
-    ],
-    "metre_lignes": [
-      { "mli_id": 301, "mli_mtr_id": 20, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "{{@@poids}} / 1000" },
-      { "mli_id": 302, "mli_mtr_id": 21, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "{{$$inconnue}} * 2" }
+      {
+        "mtr_id": 20,
+        "mtr_lig_id": 4,
+        "mtr_libelle": "Tonnage",
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1 est un numérique = {{@@poids}} / 1000\nRenvoyer L1",
+        "mtr_variable": null
+      },
+      {
+        "mtr_id": 21,
+        "mtr_lig_id": 5,
+        "mtr_libelle": "Inconnue",
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1 est un numérique = {{$$inconnue}} * 2\nRenvoyer L1",
+        "mtr_variable": null
+      }
     ]
   },
   "attendu": {
-    "erreurs": ["VARIABLE_INCONNUE"],
-    "document": { "ent_total_ht": 207, "ent_total_tva": 41.4, "ent_total_ttc": 248.4 },
-    "variables": { "1": { "var_valeur": 0 }, "2": { "var_valeur": 50 }, "3": { "var_valeur": 90 } },
+    "erreurs": [
+      "VARIABLE_INCONNUE"
+    ],
+    "document": {
+      "ent_total_ht": 207,
+      "ent_total_tva": 41.4,
+      "ent_total_ttc": 248.4
+    },
+    "variables": {
+      "1": {
+        "var_valeur": 0
+      },
+      "2": {
+        "var_valeur": 50
+      },
+      "3": {
+        "var_valeur": 90
+      }
+    },
     "lignes": {
-      "1": { "lig_pv": 20.7, "lig_montant_ht": 207 },
-      "2": { "lig_libelle_affiche": "Parpaings, poids cumulé 90 kg" },
-      "4": { "lig_qte_vendue": 0.09, "lig_qte_totale": 0.9 },
-      "5": { "lig_qte_vendue": null, "lig_montant_ht": null }
+      "1": {
+        "lig_pv": 20.7,
+        "lig_montant_ht": 207
+      },
+      "2": {
+        "lig_libelle_affiche": "Parpaings, poids cumulé 90 kg"
+      },
+      "4": {
+        "lig_qte_vendue": 0.09,
+        "lig_qte_totale": 0.9
+      },
+      "5": {
+        "lig_qte_vendue": 0,
+        "lig_montant_ht": 0
+      }
     }
   }
 }

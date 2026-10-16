@@ -1,0 +1,238 @@
+{
+  "nom": "Instructions",
+  "description": "Affectations composées, incrémentation, Si / SinonSi / Sinon Si / Sinon, Pour avec pas, Sortir, Continuer, Renvoyer, script sans résultat.",
+  "cas": [
+    {
+      "nom": "Affectations composées et incrémentation",
+      "entree": {
+        "script": [
+          "local x est un numérique = 10",
+          "x += 5",
+          "x -= 3",
+          "x *= 2",
+          "x /= 8",
+          "x++",
+          "x--",
+          "x++",
+          "Renvoyer x"
+        ]
+      },
+      "attendu": {
+        "resultat": 4
+      }
+    },
+    {
+      "nom": "Si / SinonSi / Sinon Si (alors facultatif) / Sinon : note 17",
+      "entree": {
+        "script": [
+          "Note est un numérique = 17",
+          "Mention est une chaîne",
+          "Si Note >= 16 alors",
+          "    Mention = \"TB\"",
+          "SinonSi Note >= 14 alors",
+          "    Mention = \"B\"",
+          "Sinon Si Note >= 12",
+          "    Mention = \"AB\"",
+          "Sinon",
+          "    Mention = \"P\"",
+          "Fin",
+          "Renvoyer Taille(Mention)"
+        ]
+      },
+      "attendu": {
+        "resultat": 2,
+        "variables": {
+          "Mention": "TB",
+          "Note": {
+            "parametre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Si / SinonSi / Sinon Si (alors facultatif) / Sinon : note 15",
+      "entree": {
+        "script": [
+          "Note est un numérique = 15",
+          "Mention est une chaîne",
+          "Si Note >= 16 alors",
+          "    Mention = \"TB\"",
+          "SinonSi Note >= 14 alors",
+          "    Mention = \"B\"",
+          "Sinon Si Note >= 12",
+          "    Mention = \"AB\"",
+          "Sinon",
+          "    Mention = \"P\"",
+          "Fin",
+          "Renvoyer Taille(Mention)"
+        ]
+      },
+      "attendu": {
+        "resultat": 1,
+        "variables": {
+          "Mention": "B",
+          "Note": {
+            "parametre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Si / SinonSi / Sinon Si (alors facultatif) / Sinon : note 12",
+      "entree": {
+        "script": [
+          "Note est un numérique = 12",
+          "Mention est une chaîne",
+          "Si Note >= 16 alors",
+          "    Mention = \"TB\"",
+          "SinonSi Note >= 14 alors",
+          "    Mention = \"B\"",
+          "Sinon Si Note >= 12",
+          "    Mention = \"AB\"",
+          "Sinon",
+          "    Mention = \"P\"",
+          "Fin",
+          "Renvoyer Taille(Mention)"
+        ]
+      },
+      "attendu": {
+        "resultat": 2,
+        "variables": {
+          "Mention": "AB",
+          "Note": {
+            "parametre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Si / SinonSi / Sinon Si (alors facultatif) / Sinon : note 5",
+      "entree": {
+        "script": [
+          "Note est un numérique = 5",
+          "Mention est une chaîne",
+          "Si Note >= 16 alors",
+          "    Mention = \"TB\"",
+          "SinonSi Note >= 14 alors",
+          "    Mention = \"B\"",
+          "Sinon Si Note >= 12",
+          "    Mention = \"AB\"",
+          "Sinon",
+          "    Mention = \"P\"",
+          "Fin",
+          "Renvoyer Taille(Mention)"
+        ]
+      },
+      "attendu": {
+        "resultat": 1,
+        "variables": {
+          "Mention": "P",
+          "Note": {
+            "parametre": true
+          }
+        }
+      }
+    },
+    {
+      "nom": "Pour avec pas positif et négatif",
+      "entree": {
+        "script": [
+          "local s est un numérique",
+          "Pour i = 1 à 5",
+          "    s += i",
+          "Fin",
+          "Pour j = 10 à 1 pas -3",
+          "    s += j",
+          "Fin",
+          "Renvoyer s"
+        ]
+      },
+      "attendu": {
+        "resultat": 37
+      }
+    },
+    {
+      "nom": "Sortir et Continuer",
+      "entree": {
+        "script": [
+          "local s est un numérique",
+          "Pour i = 1 à 100",
+          "    Si i modulo 2 = 0 alors",
+          "        Continuer",
+          "    Fin",
+          "    Si i > 7 alors",
+          "        Sortir",
+          "    Fin",
+          "    s += i",
+          "Fin",
+          "Renvoyer s"
+        ]
+      },
+      "attendu": {
+        "resultat": 16
+      }
+    },
+    {
+      "nom": "Renvoyer dans une boucle termine le script",
+      "entree": {
+        "script": [
+          "Pour i = 1 à 10",
+          "    Si i * i > 20 alors",
+          "        Renvoyer i",
+          "    Fin",
+          "Fin",
+          "Renvoyer 0"
+        ]
+      },
+      "attendu": {
+        "resultat": 5
+      }
+    },
+    {
+      "nom": "Boucle sans tour",
+      "entree": {
+        "script": [
+          "local s est un numérique",
+          "Pour i = 5 à 1",
+          "    s = 99",
+          "Fin",
+          "Renvoyer s"
+        ]
+      },
+      "attendu": {
+        "resultat": 0
+      }
+    },
+    {
+      "nom": "Les instructions après Renvoyer ne sont pas exécutées",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "Renvoyer 1",
+          "x = 1 / 0"
+        ]
+      },
+      "attendu": {
+        "resultat": 1
+      }
+    },
+    {
+      "nom": "Sans Renvoyer : pas de quantité, avertissement",
+      "entree": {
+        "script": [
+          "x est un numérique = 2",
+          "x *= 3"
+        ]
+      },
+      "attendu": {
+        "resultat": null,
+        "variables": {
+          "x": 6
+        },
+        "avertissements": [
+          "METRE_SANS_RESULTAT"
+        ]
+      }
+    }
+  ]
+}

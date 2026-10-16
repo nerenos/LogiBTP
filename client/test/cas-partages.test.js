@@ -23,7 +23,6 @@ export function controlerCas(cas, res) {
   if (a.document) verifier(a.document, res.document, 'document', fautes);
   for (const [cle, att] of Object.entries(a.lignes ?? {})) verifier(att, trouverLigne(res.lignes, cle), `lignes[${cle}]`, fautes);
   for (const [id, att] of Object.entries(a.metres ?? {})) verifier(att, res.metres.find((m) => m.mtr_id === Number(id)), `metres[${id}]`, fautes);
-  for (const [id, att] of Object.entries(a.metre_lignes ?? {})) verifier(att, res.metre_lignes.find((m) => m.mli_id === Number(id)), `metre_lignes[${id}]`, fautes);
   for (const [id, att] of Object.entries(a.variables ?? {})) verifier(att, res.variables.find((v) => v.var_id === Number(id)), `variables[${id}]`, fautes);
   for (const att of a.tva ?? []) verifier(att, res.tva.find((t) => t.tva_code === att.tva_code), `tva[${att.tva_code}]`, fautes);
   return fautes;
@@ -40,7 +39,7 @@ describe('Cœur BTP : jeux de test partagés du moteur de calcul', () => {
       const r1 = calculerDocument(cas.entree);
       const r2 = calculerDocument({
         ...cas.entree,
-        document: r1.document, lignes: r1.lignes, metres: r1.metres, metre_lignes: r1.metre_lignes, variables: r1.variables,
+        document: r1.document, lignes: r1.lignes, metres: r1.metres, variables: r1.variables,
       });
       expect(comparerResultats(r1, r2)).toEqual([]);
     });

@@ -4,7 +4,7 @@ export { ReglesDocument } from './regles.js';
 export { PressePapiers, correspondance } from './presse-papiers.js';
 export { PanneauxDocument, opt, lier, valeurChamp, champsFormulaire } from './panneaux.js';
 export { Disposition } from './disposition.js';
-export { GestionVuesDocument, FournisseurVuesMemoire, vueParDefaut } from './vues.js';
+export { GestionVuesDocument, FournisseurVuesMemoire, vueParDefaut, fusionnerDisposition } from './vues.js';
 export { ParametrageAffichageDocument, FournisseurAffichageMemoire, controlerEtiquettes } from './parametrage.js';
 export { PlanDocument } from './plan.js';
 export { RechercheLignes } from './recherche.js';

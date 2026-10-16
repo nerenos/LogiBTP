@@ -1,0 +1,47 @@
+{
+  "nom": "Fonctions",
+  "description": "Fonctions du langage (noms insensibles à la casse et aux accents, arguments séparés par un point-virgule).",
+  "cas": [
+    {
+      "nom": "Toutes les fonctions",
+      "entree": {
+        "script": [
+          "a est un numérique = EntierSupérieur(1.2)",
+          "b est un numérique = EntierSuperieur(-1.2)",
+          "c est un numérique = EntierInférieur(-1.2)",
+          "d est un numérique = Arrondi(2.5)",
+          "e est un numérique = Arrondi(-2.345; 2)",
+          "f est un numérique = Tronque(-2.349; 2)",
+          "g est un numérique = Tronque(7.9)",
+          "h est un numérique = Min(3; -1; 2)",
+          "k est un numérique = Max(3; -1; 2)",
+          "m est un numérique = Abs(-4.5)",
+          "n est un numérique = Racine(2)",
+          "p est un numérique = Puissance(1.5; 3)",
+          "q est un numérique = Puissance(2; -2)",
+          "t est un numérique = Taille(\"Métré\")",
+          "Renvoyer ARRONDI(Racine(16) + puissance(10; 0); 0)"
+        ]
+      },
+      "attendu": {
+        "resultat": 5,
+        "variables": {
+          "a": 2,
+          "b": -1,
+          "c": -2,
+          "d": 3,
+          "e": -2.35,
+          "f": -2.34,
+          "g": 7,
+          "h": -1,
+          "k": 3,
+          "m": 4.5,
+          "n": 1.414214,
+          "p": 3.375,
+          "q": 0.25,
+          "t": 5
+        }
+      }
+    }
+  ]
+}

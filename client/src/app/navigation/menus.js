@@ -53,7 +53,6 @@ export const MENUS_METIER = [
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
       { separateur: true },
       { code: 'import-optim', libelle: 'Importer un devis OptimBTP', icone: '📥', url: '/import/optimbtp', info: 'Fichier .optim : lignes, prix et coefficients repris, champs non repris listés' },
-      { code: 'devis-demo', libelle: 'Devis de démonstration', icone: '🏠', url: '/document/demo', info: 'Éditeur de devis : métrés, ouvrages, totaux' },
     ],
   },
   {
@@ -102,6 +101,7 @@ export function menus(app) {
         { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu'), desactive: !app.estAdmin() },
         { separateur: true, libelle: 'Documents' },
         { libelle: 'Étiquettes et couleurs des lignes…', icone: '🏷', url: '/parametres/documents' },
+        { libelle: 'GED : rétention et classification…', icone: '⏳', url: '/parametres/ged' },
         { separateur: true, libelle: 'Annuaire et bibliothèque' },
         { libelle: 'Annuaire : niveaux, relations, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
@@ -139,4 +139,4 @@ export function catalogueRaccourcis() {
   ];
 }
 
-export const RACCOURCIS_DEFAUT = ['tiers', 'clients', 'contacts', 'salaries', 'materiels', 'devis', 'factures', 'ged', 'coffre', 'devis-demo'];
+export const RACCOURCIS_DEFAUT = ['tiers', 'clients', 'contacts', 'salaries', 'materiels', 'devis', 'factures', 'ged', 'coffre'];

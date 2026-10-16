@@ -7,11 +7,14 @@ export const COLONNES_LIGNE_BTP = new Set([
   'lig_nat_id', 'lig_ptv_id', 'lig_mtr_id', 'lig_qte_source', 'lig_qte_base', 'lig_coef_perte',
   'lig_pa', 'lig_coef_fg', 'lig_pr', 'lig_coef_benef', 'lig_coef_fa', 'lig_coef_prorata', 'lig_pv_affiche',
   'lig_pv_fixe', 'lig_pv_affiche_fixe', 'lig_is_ecart_arrondi', 'lig_montant_pa', 'lig_montant_pr', 'lig_pied_is_fa',
+  // Données techniques (db/165) : recopiées de l'élément de bibliothèque, dimensions en mètres.
+  'lig_poids', 'lig_surface', 'lig_volume', 'lig_hauteur', 'lig_largeur', 'lig_epaisseur', 'lig_longueur',
 ]);
 
 export const COLONNES_DECIMALES_BTP = new Set([
   'ent_coef_fa', 'lig_qte_base', 'lig_coef_perte', 'lig_pa', 'lig_coef_fg', 'lig_pr', 'lig_coef_benef',
   'lig_coef_fa', 'lig_coef_prorata', 'lig_pv_affiche', 'lig_montant_pa', 'lig_montant_pr',
+  'lig_poids', 'lig_surface', 'lig_volume', 'lig_hauteur', 'lig_largeur', 'lig_epaisseur', 'lig_longueur',
 ]);
 
 export const COLONNES_PRIX_CALCULES_BTP = new Set([

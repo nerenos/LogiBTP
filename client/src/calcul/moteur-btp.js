@@ -1,6 +1,8 @@
-import { D, Dz, S, ZERO, UN, coef, arrondir, arr6, ErreurCalcul } from '@logibtp/socle';
+import { D, Dz, S, ZERO, UN, coef, arrondir, arr6, ErreurCalcul, analyserReference, echapperHtml } from '@logibtp/socle';
 import { MoteurDocument, TL, estChiffree, estPied, union } from '@logibtp/document';
-import { Portees, EvaluateurMetre, evaluerVariable, repartirVariables } from '@logibtp/metre';
+import {
+  Portees, evaluerVariable, repartirVariables, evaluerScriptMetre, lignesVariablesScript, messageErreurScript,
+} from '@logibtp/metre';
 import {
   COLONNES_DOCUMENT_BTP, COLONNES_LIGNE_BTP, COLONNES_DECIMALES_BTP, COLONNES_PRIX_CALCULES_BTP, COLONNES_QTE_CALCULEES_BTP,
 } from './colonnes-btp.js';
@@ -10,18 +12,42 @@ import {
  * module Métré pour les métrés et les variables de calcul.
  *
  * Ajouts BTP : variables ($$, $ titre, @@ ouvrage, @ ligne), métrés, coefficient de perte, déboursé
- * (PA × FG × bénéfice), ouvrages en mode déboursé (D) ou somme des PV (V), PV fixe et ventilation avec
- * ligne d'écart d'arrondi, PV affiché fixe et coefficient de frais annexes, montants PA / PR.
+ * (PA × FG × bénéfice), ouvrages en mode déboursé (D), somme des PV (V) ou bordereau (B : PV fixe sans ventilation),
+ * PV fixe et ventilation avec ligne d'écart d'arrondi, PV affiché fixe et coefficient de frais annexes (lignes de pied
+ * « frais annexe ventilé » et lignes de type de prix F, hors total), montants PA / PR.
+ * Métrés en script (module Métré) : quantité renvoyée, erreurs non bloquantes (la quantité saisie est conservée),
+ * libellé calculé ({{lig_libelle_html}} inscriptible), variables non locales régénérées à chaque calcul.
  * Réplique exacte de MoteurDevisBtp (C#).
  */
+
+/**
+ * Libellé écrit par un script : le texte ajouté avant ou après le libellé courant (HTML sûr) est échappé ; un texte
+ * qui ne le contient pas est échappé en entier.
+ */
+export function libelleEcrit(avant, ecrit) {
+  if (ecrit.startsWith(avant)) return avant + echapperHtml(ecrit.slice(avant.length));
+  if (ecrit.endsWith(avant)) return echapperHtml(ecrit.slice(0, ecrit.length - avant.length)) + avant;
+  return echapperHtml(ecrit);
+}
 export class MoteurDevisBtp extends MoteurDocument {
   constructor(entree) {
     super(entree);
     const e = this.entree;
     this.mode = this.doc.ent_mode_calcul_ouvrage ?? 'V';
     this.metres = e.metres ?? [];
-    this.metreLignes = e.metre_lignes ?? [];
-    this.variables = e.variables ?? [];
+    // Variables des métrés : produites par leur script à chaque calcul, jamais évaluées comme définitions.
+    const toutes = e.variables ?? [];
+    const scripts = new Set(this.metres.map((m) => m.mtr_id));
+    this.variables = toutes.filter((v) => !scripts.has(v.var_mtr_id));
+    this.variablesScript = new Map();
+    for (const v of toutes) {
+      if (!scripts.has(v.var_mtr_id)) continue;
+      if (!this.variablesScript.has(v.var_mtr_id)) this.variablesScript.set(v.var_mtr_id, []);
+      this.variablesScript.get(v.var_mtr_id).push(v);
+    }
+    this.prochainVarId = Math.min(0, ...toutes.map((v) => Number(v.var_id))) - 1;
+    this.libellesScript = new Map();
+    this.scripts = [];
     this.fixe = new Map();
     this.pvVentiles = new Set();
     this.ecartsCrees = new Map();
@@ -112,20 +138,56 @@ export class MoteurDevisBtp extends MoteurDocument {
     this.metreDeLigne.set(l.lig_id, metre ?? null);
     this.qteEnCours = l;
     try {
-      if (metre) {
-        new EvaluateurMetre({
-          resolveur: this.resolveur(l, 'calcul'),
-          affecter: (portee, nom, valeur) => this.portees.affecter(portee, nom, '=', valeur, l.lig_id),
-        }).evaluer(metre, this.metreLignes);
-      }
+      if (metre) this.evaluerScript(l, metre);
       if ((l.lig_qte_source ?? 'S') === 'M') {
         if (!metre) throw new ErreurCalcul('METRE_ABSENT', 'La quantité est issue d\'un métré absent');
-        return D(metre.mtr_resultat);
+        // Script sans résultat (sans « Renvoyer » ou en erreur) : la quantité saisie est conservée.
+        return metre.mtr_resultat === null ? Dz(l.lig_qte) : D(metre.mtr_resultat);
       }
       return Dz(l.lig_qte);
     } finally {
       this.qteEnCours = null;
     }
+  }
+
+  /** Script du métré de la ligne : erreurs non bloquantes, libellé calculé, lignes de variables. */
+  evaluerScript(l, metre) {
+    const r = evaluerScriptMetre(metre, {
+      resoudre: this.resolveurScript(l), ecrire: (ref, valeur) => this.ecrireScript(l, ref, valeur), portees: this.portees, ligneId: l.lig_id,
+    });
+    for (const e of r.erreurs) this.erreur(l.lig_id, e.code, messageErreurScript(e), false);
+    if (r.erreurs.length > 0) this.libellesScript.delete(l.lig_id);
+    else if (r.resultat === null && (l.lig_qte_source ?? 'S') === 'M') {
+      this.avertir(l.lig_id, 'METRE_SANS_RESULTAT', 'Le métré ne renvoie pas de quantité (« Renvoyer » absent) : quantité saisie conservée');
+    }
+    this.variablesScript.set(metre.mtr_id, lignesVariablesScript(metre, r, this.variablesScript.get(metre.mtr_id) ?? [], {
+      entId: this.doc.ent_id ?? null, nouvelId: () => this.prochainVarId--,
+    }));
+    this.scripts.push({ mtr_id: metre.mtr_id, lig_id: l.lig_id, resultat: r.resultat, erreurs: r.erreurs, avertissements: r.avertissements });
+  }
+
+  /** Lecture d'un script : variables et données typées ; {{lig_libelle_html}} = libellé courant (déjà écrit par le script). */
+  resolveurScript(l) {
+    return (texte) => {
+      const ref = analyserReference(texte);
+      if (ref.genre === 'variable') return this.lireVariable(ref.portee, ref.nom, l);
+      if (!ref.table && ref.colonne === 'lig_libelle_html') return this.libellesScript.get(l.lig_id) ?? l.lig_libelle_html ?? '';
+      return this.lireDonnee(ref, l, 'calcul').valeur;
+    };
+  }
+
+  /** Écriture d'un script : seul le libellé de la ligne ({{lig_libelle_html}}), dans le libellé calculé. */
+  ecrireScript(l, texte, valeur) {
+    const ref = analyserReference(texte);
+    if (ref.genre !== 'donnee' || ref.table || ref.colonne !== 'lig_libelle_html') {
+      throw new ErreurCalcul('ECRITURE_INTERDITE', `{{${texte}}} ne peut pas être modifié par un métré (seul {{lig_libelle_html}} l'est)`);
+    }
+    if (typeof valeur !== 'string') throw new ErreurCalcul('TYPE', 'Libellé : chaîne attendue');
+    this.libellesScript.set(l.lig_id, libelleEcrit(this.libellesScript.get(l.lig_id) ?? l.lig_libelle_html ?? '', valeur));
+  }
+
+  sourceLibelle(l) {
+    return this.libellesScript.get(l.lig_id) ?? super.sourceLibelle(l);
   }
 
   quantiteVendue(l, base) {
@@ -214,6 +276,13 @@ export class MoteurDevisBtp extends MoteurDocument {
   ventiler(ouvrage, pvFixe) {
     const x = this.px.get(ouvrage.lig_id);
     this.supprimerEcartCree(ouvrage);
+
+    // Bordereau (B) : prix unitaire imposé comme dans un BPU ; le sous-détail garde ses prix (PA, PR = sommes des
+    // composantes), sans ventilation ni écart d'arrondi.
+    if (this.mode === 'B') {
+      x.pv = pvFixe;
+      return;
+    }
 
     if (this.mode === 'D') {
       if (x.pr.isZero()) {
@@ -356,7 +425,17 @@ export class MoteurDevisBtp extends MoteurDocument {
    * affiché après la ventilation des frais annexes, avant la remise. Il n'entre pas dans le calcul du coefficient de
    * frais annexes (un PV affiché imposé en est d'abord retiré).
    */
-  prorata(l) { return this.estLigneDePrix(l) ? coef(l.lig_coef_prorata) : UN; }
+  prorata(l) { return this.estLigneDePrix(l) && !this.estFraisAnnexes(l) ? coef(l.lig_coef_prorata) : UN; }
+
+  /** Coefficient de frais annexes appliqué au PV affiché : une ligne de frais annexes garde son propre prix. */
+  coefFaDe(l) { return this.estFraisAnnexes(l) ? UN : this.coefFa; }
+
+  /** Montant HT d'une ligne de frais annexes (PV affiché remisé × quantité vendue), ventilé sur les lignes vendues. */
+  montantFraisAnnexes(l) {
+    const prec = l.lig_precision_pv ?? 2;
+    const pvRem = arrondir(this.pvAffiche(l, this.px.get(l.lig_id), prec).times(coef(l.lig_coef_remise)), prec);
+    return arrondir(Dz(l.lig_qte_vendue).times(pvRem), this.precMontant);
+  }
 
   /** PV affiché imposé hors prorata. */
   afficheHorsProrata(l) {
@@ -379,6 +458,11 @@ export class MoteurDevisBtp extends MoteurDocument {
       }
       P = P.plus(arrondir(Dz(p.lig_pied_valeur), this.precMontant).times(p.lig_pied_sens === -1 ? -1 : 1));
     }
+    // Lignes de frais annexes (type F) : hors total, leur montant est ventilé sur les lignes vendues.
+    for (const l of this.ordre) {
+      if (estPied(l) || !this.estLigneDePrix(l) || !this.estFraisAnnexes(l) || this.enErreur.has(l.lig_id) || !this.px.has(l.lig_id)) continue;
+      P = P.plus(this.montantFraisAnnexes(l));
+    }
 
     let c = UN;
     if (!P.isZero()) {
@@ -396,7 +480,7 @@ export class MoteurDevisBtp extends MoteurDocument {
 
     for (const l of this.ordre) {
       if (this.fixe.get(l.lig_id) !== 'AFF' || !this.px.has(l.lig_id)) continue;
-      const pvFixe = arr6(this.afficheHorsProrata(l).div(c));
+      const pvFixe = arr6(this.afficheHorsProrata(l).div(this.coefFaDe(l)));
       if (this.estCompose(l)) {
         this.px.get(l.lig_id).pv = pvFixe;
         this.ventiler(l, pvFixe);
@@ -416,7 +500,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   }
 
   pvAffiche(l, y, prec) {
-    return this.fixe.get(l.lig_id) === 'AFF' ? D(l.lig_pv_affiche) : arrondir(y.pv.times(this.coefFa).times(this.prorata(l)), prec);
+    return this.fixe.get(l.lig_id) === 'AFF' ? D(l.lig_pv_affiche) : arrondir(y.pv.times(this.coefFaDe(l)).times(this.prorata(l)), prec);
   }
 
   ecrireMontants(l, y, montants) {
@@ -427,7 +511,7 @@ export class MoteurDevisBtp extends MoteurDocument {
     l.lig_pr = S(y.pr);
     if (y.coefFg) l.lig_coef_fg = S(y.coefFg);
     if (y.coefBenef) l.lig_coef_benef = S(y.coefBenef);
-    l.lig_coef_fa = S(this.coefFa);
+    l.lig_coef_fa = S(this.coefFaDe(l));
     l.lig_pv_affiche = S(pvAff);
     l.lig_montant_pa = S(arrondir(qv.times(y.pa), pm));
     l.lig_montant_pr = S(arrondir(qv.times(y.pr), pm));
@@ -452,8 +536,8 @@ export class MoteurDevisBtp extends MoteurDocument {
     return {
       ...resultat,
       metres: this.metres,
-      metre_lignes: this.metreLignes,
-      variables: this.variables,
+      variables: [...this.variables, ...[...this.variablesScript.values()].flat()],
+      scripts: this.scripts,
       lignes_supprimees: [...this.ecartsExistants.values()].map((l) => l.lig_id),
     };
   }

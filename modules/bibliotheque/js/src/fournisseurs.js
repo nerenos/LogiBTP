@@ -81,7 +81,7 @@ export const SCENARIOS_TOUS = ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'M
 /** Données techniques de l'élément (par unité de stock ; dimensions en mm), utilisables dans les formules d'unités. */
 export const DONNEES_TECHNIQUES = [
   ['poids', 'Poids (kg)'], ['surface', 'Surface (m²)'], ['surface_peinture', 'Surface à peindre (m²)'], ['volume', 'Volume (m³)'],
-  ['hauteur', 'Hauteur (mm)'], ['largeur', 'Largeur (mm)'], ['epaisseur', 'Épaisseur (mm)'],
+  ['hauteur', 'Hauteur (mm)'], ['largeur', 'Largeur (mm)'], ['epaisseur', 'Épaisseur (mm)'], ['longueur', 'Longueur (mm)'],
   ['isolant_r', 'Résistance thermique R'], ['isolant_lambda', 'Conductivité λ'], ['isolant_u', 'Coefficient U'],
 ];
 

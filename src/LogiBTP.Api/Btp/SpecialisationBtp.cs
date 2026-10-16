@@ -12,19 +12,17 @@ namespace LogiBTP.Api.Btp;
 public sealed class DocumentCompletBtp : DocumentComplet<DocumentBtp, DocumentLigneBtp>
 {
     public List<Metre> Metres { get; set; } = [];
-    public List<MetreLigne> MetreLignes { get; set; } = [];
     public List<VariableDefinition> Variables { get; set; } = [];
 }
 
 /// <summary>
 /// Spécialisation BTP des services du module Document : moteur MoteurDevisBtp, mode de calcul des ouvrages,
-/// persistance des métrés et des variables (correspondances « metres », « metre_lignes », « variables »),
+/// persistance des métrés (scripts) et des variables (correspondances « metres », « variables »),
 /// lignes d'écart d'arrondi calculées.
 /// </summary>
 public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>
 {
     public const string ComplementMetres = "metres";
-    public const string ComplementMetreLignes = "metre_lignes";
     public const string ComplementVariables = "variables";
 
     public override ComparateurCalcul Comparateur { get; } = new ComparateurBtp();
@@ -34,7 +32,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override EntreeDocument<DocumentBtp, DocumentLigneBtp> CreerEntree(DocumentCompletBtp saisie, List<TauxTva> tauxTva, OptionsCalcul options) => new EntreeCalcul
     {
         Document = saisie.Document, Lignes = saisie.Lignes, TauxTva = tauxTva, Options = options,
-        Metres = saisie.Metres, MetreLignes = saisie.MetreLignes, Variables = saisie.Variables,
+        Metres = saisie.Metres, Variables = saisie.Variables,
     };
 
     public override ResultatDocument<DocumentBtp, DocumentLigneBtp> Calculer(EntreeDocument<DocumentBtp, DocumentLigneBtp> entree) =>
@@ -49,7 +47,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         if (r is ResultatCalcul b)
         {
             c.Metres = b.Metres;
-            c.MetreLignes = b.MetreLignes;
             c.Variables = b.Variables;
         }
         return c;
@@ -85,9 +82,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         var db = (LogiBtpContext)contexte;
         var entId = complet.Document.EntId;
         complet.Metres = await db.Metres.AsNoTracking().Where(m => lignes.Contains(m.MtrLigId)).OrderBy(m => m.MtrId).ToListAsync(ct);
-        var mids = complet.Metres.Select(m => m.MtrId).ToList();
-        complet.MetreLignes = await db.MetreLignes.AsNoTracking().Where(x => mids.Contains(x.MliMtrId))
-            .OrderBy(x => x.MliMtrId).ThenBy(x => x.MliOrdre).ToListAsync(ct);
         complet.Variables = await db.Variables.AsNoTracking().Where(v => v.VarEntId == entId)
             .OrderBy(v => v.VarOrdre).ThenBy(v => v.VarId).ToListAsync(ct);
     }
@@ -109,7 +103,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         var ids = corr.Lignes;
         var cMetres = corr.Complement(ComplementMetres);
-        var cLignes = corr.Complement(ComplementMetreLignes);
         var lignesDoc = ids.Values.ToList();
         var existants = await db.Metres.Where(m => lignesDoc.Contains(m.MtrLigId)).ToDictionaryAsync(m => m.MtrId, ct);
         var nouveaux = new List<(long Temp, Metre Entite)>();
@@ -140,49 +133,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             e!.LigMtrId = l.LigMtrId is long mt && cMetres.TryGetValue(mt, out var mt2) ? mt2 : null;
         }
 
-        // Lignes de métré : conservées par ID, insérées par niveau de sous-détail.
-        var mids = cMetres.Values.ToList();
-        var lignesExistantes = await db.MetreLignes.Where(x => mids.Contains(x.MliMtrId)).ToDictionaryAsync(x => x.MliId, ct);
-        var saisies = r.MetreLignes.Where(x => cMetres.ContainsKey(x.MliMtrId)).ToDictionary(x => x.MliId);
-        int Profondeur(MetreLigne x)
-        {
-            var p = 0;
-            for (var y = x; y.MliParentId is long pid && saisies.TryGetValue(pid, out var parent); y = parent) p++;
-            return p;
-        }
-        foreach (var niveau in saisies.Values.GroupBy(Profondeur).OrderBy(g => g.Key))
-        {
-            var ajout = new List<(long Temp, MetreLigne Entite)>();
-            foreach (var x in niveau)
-            {
-                var copie = JsonCalcul.Cloner(x);
-                copie.MliMtrId = cMetres[x.MliMtrId];
-                copie.MliParentId = x.MliParentId is long p ? cLignes.GetValueOrDefault(p, p) : null;
-                copie.MliStDepuisId = null;
-                if (lignesExistantes.TryGetValue(x.MliId, out var entite))
-                {
-                    db.Entry(entite).CurrentValues.SetValues(copie);
-                    cLignes[x.MliId] = x.MliId;
-                }
-                else
-                {
-                    copie.MliId = 0;
-                    db.MetreLignes.Add(copie);
-                    ajout.Add((x.MliId, copie));
-                }
-            }
-            await db.SaveChangesAsync(ct);
-            foreach (var (temp, e) in ajout) cLignes[temp] = e.MliId;
-        }
-        // Suppressions après les mises à jour : un sous-détail supprimé n'emporte pas une ligne déplacée.
-        var aSupprimer = lignesExistantes.Keys.Where(id => !saisies.ContainsKey(id)).ToList();
-        await db.MetreLignes.Where(x => aSupprimer.Contains(x.MliId)).ExecuteDeleteAsync(ct);
-        foreach (var id in aSupprimer) db.Entry(lignesExistantes[id]).State = EntityState.Detached;
-        foreach (var x in saisies.Values)
-        {
-            var e = await db.MetreLignes.FindAsync([cLignes[x.MliId]], ct);
-            e!.MliStDepuisId = x.MliStDepuisId is long s && cLignes.TryGetValue(s, out var s2) ? s2 : null;
-        }
         await db.SaveChangesAsync(ct);
     }
 
@@ -222,9 +172,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override void RenumeroterComplements(DocumentCompletBtp d, IReadOnlyDictionary<long, long> lig, ref long n)
     {
         var mtr = new Dictionary<long, long>();
-        var mli = new Dictionary<long, long>();
         foreach (var m in d.Metres) mtr[m.MtrId] = --n;
-        foreach (var x in d.MetreLignes) mli[x.MliId] = --n;
         static long? Map(IReadOnlyDictionary<long, long> t, long? id) => id is long v && t.TryGetValue(v, out var r) ? r : null;
         // Les lignes portent déjà leur nouvel ID ; seul lig_mtr_id reste à convertir.
         foreach (var l in d.Lignes) l.LigMtrId = Map(mtr, l.LigMtrId);
@@ -232,13 +180,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             m.MtrId = mtr[m.MtrId];
             m.MtrLigId = lig[m.MtrLigId];
-        }
-        foreach (var x in d.MetreLignes)
-        {
-            x.MliId = mli[x.MliId];
-            x.MliMtrId = mtr[x.MliMtrId];
-            x.MliParentId = Map(mli, x.MliParentId);
-            x.MliStDepuisId = Map(mli, x.MliStDepuisId);
         }
         foreach (var v in d.Variables)
         {
@@ -251,7 +192,6 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         c.Metres = c.Metres.Where(m => lignes.Contains(m.MtrLigId)).ToList();
         var mids = c.Metres.Select(m => m.MtrId).ToHashSet();
-        c.MetreLignes = c.MetreLignes.Where(x => mids.Contains(x.MliMtrId)).ToList();
         c.Variables = c.Variables.Where(v => (v.VarLigId is null || lignes.Contains(v.VarLigId.Value))
             && (v.VarMtrId is null || mids.Contains(v.VarMtrId.Value))).ToList();
         foreach (var l in c.Lignes.Where(l => l.LigMtrId is long m && !mids.Contains(m))) l.LigMtrId = null;

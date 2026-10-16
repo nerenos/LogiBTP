@@ -652,13 +652,17 @@ export class ListeDonnees {
     const gen = this.generation;
     const comptes = await Promise.all(segs.map((s) => this.fournisseur.segments(this.demande(), s.colonne).catch(() => [])));
     if (gen !== this.generation) return;
+    const reduits = this.#segmentsReduits();
     zone.innerHTML = segs.map((s, i) => {
       const col = this.modele.parCode.get(s.colonne);
       const actives = this.segments.get(s.colonne) ?? new Set();
       const titre = s.titre || col?.titre || s.colonne;
-      return `<div class="segment" data-segment="${echapper(s.colonne)}">
-        <span class="segment-titre">${echapper(titre.replace(/\n/g, ' '))}</span>
-        <span class="segment-valeurs"><button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
+      const reduit = reduits.has(s.colonne);
+      // Titre : replie / déplie le segment ; réduit, il indique le nombre de valeurs filtrées.
+      return `<div class="segment${reduit ? ' reduit' : ''}" data-segment="${echapper(s.colonne)}">
+        <button type="button" class="segment-titre" data-replier aria-expanded="${!reduit}"
+          title="${reduit ? 'Déplier' : 'Réduire'} ce segment (mémorisé pour cette vue)"><span class="segment-chevron">${reduit ? '▸' : '▾'}</span>${echapper(titre.replace(/\n/g, ' '))}${actives.size ? ` <small class="segment-filtre">(${actives.size})</small>` : ''}</button>
+        <span class="segment-valeurs"${reduit ? ' hidden' : ''}><button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
         ${comptes[i].map((c) => {
           const libelle = c.valeur === null ? '(vide)' : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
           return `<button type="button" data-valeur="${c.valeur === null ? '' : echapper(c.valeur)}" data-vide="${c.valeur === null}"
@@ -670,6 +674,7 @@ export class ListeDonnees {
     }).join('');
     zone.querySelectorAll('[data-segment]').forEach((div) => {
       const col = div.dataset.segment;
+      div.querySelector('[data-replier]').addEventListener('click', () => this.#replierSegment(div, col));
       div.querySelector('[data-tout]').addEventListener('click', () => { this.segments.delete(col); this.#segmentsModifies(); });
       div.querySelectorAll('[data-valeur]').forEach((b) => b.addEventListener('click', (e) => {
         const v = b.dataset.vide === 'true' ? null : b.dataset.valeur;
@@ -682,6 +687,29 @@ export class ListeDonnees {
         this.#segmentsModifies();
       }));
     });
+  }
+
+  /** Segments réduits de la vue courante (préférence du navigateur ; par défaut, tous dépliés). */
+  #segmentsReduits() {
+    return new Set(this.prefs.segmentsReduits?.[String(this.vue?.vli_id ?? 'nouvelle')] ?? []);
+  }
+
+  /** Replie ou déplie un segment et mémorise le choix pour la vue (sans recharger la liste). */
+  #replierSegment(div, col) {
+    const cle = String(this.vue?.vli_id ?? 'nouvelle');
+    const reduits = this.#segmentsReduits();
+    const reduit = !reduits.has(col);
+    if (reduit) reduits.add(col);
+    else reduits.delete(col);
+    this.prefs.segmentsReduits = { ...this.prefs.segmentsReduits, [cle]: [...reduits] };
+    if (!reduits.size) delete this.prefs.segmentsReduits[cle];
+    this.#ecrirePreferences();
+    div.classList.toggle('reduit', reduit);
+    div.querySelector('.segment-valeurs').hidden = reduit;
+    const b = div.querySelector('[data-replier]');
+    b.setAttribute('aria-expanded', String(!reduit));
+    b.title = `${reduit ? 'Déplier' : 'Réduire'} ce segment (mémorisé pour cette vue)`;
+    b.querySelector('.segment-chevron').textContent = reduit ? '▸' : '▾';
   }
 
   /** Image associée à une valeur de segment : image ou picto de l'option de la colonne, case pour un oui / non. */

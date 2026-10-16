@@ -6,7 +6,7 @@
 
 -- Entête : mode de calcul des ouvrages, coefficient de frais annexes.
 ALTER TABLE document ADD COLUMN ent_mode_calcul_ouvrage CHAR(1)      NOT NULL DEFAULT 'V'
-                            CHECK (ent_mode_calcul_ouvrage IN ('D','V'));
+                            CHECK (ent_mode_calcul_ouvrage IN ('D','V'));  -- B (bordereau) ajouté par 166
 ALTER TABLE document ADD COLUMN ent_coef_fa             NUMERIC(18,6) NOT NULL DEFAULT 1;
 
 -- Lignes : nature, poste, métré, perte, déboursé (PA, FG, PR, bénéfice), frais annexes, blocages de prix.

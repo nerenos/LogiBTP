@@ -76,7 +76,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
   ouvrages et ensembles de la bibliothèque calculés par le moteur de devis (`calculerOuvrage` ↔
   `ElementsBibliotheque.CalculerOuvrage`).
 - **Document ↔ Métré** : `lig_mtr_id`, `lig_qte_source = 'M'`, variables `$$` / `$` / `@@` / `@` (`Portees`,
-  `EvaluateurMetre`) dans le moteur BTP ; la ligne SECTION porte les variables du document.
+  `evaluerScriptMetre` : script du métré, `Renvoyer` = quantité) dans le moteur BTP ; la ligne SECTION porte les variables du document.
 - **Document ↔ Import** : devis importé vérifié dans `/document/import?jeton=` puis créé ; origine
   (`PUT /api/documents/{id}/origine`, `document_origine`) et onglet Traçabilité (`GET /api/documents/{id}/tracabilite`,
   « Réutiliser l'import » = page du format `?ged=<id>`).

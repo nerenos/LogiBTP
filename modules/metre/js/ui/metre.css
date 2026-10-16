@@ -1,8 +1,10 @@
 /* @logibtp/metre/ui – tiroir de métré, onglets, dictionnaire des variables. */
 
 /* Tiroir de métré */
+/* Sous le bandeau de l'hôte (--decalage-tiroir), un peu moins haut que la fenêtre. */
 .tiroir {
-  position: fixed; right: 0; top: 0; bottom: 0; width: min(56rem, 100vw);
+  position: fixed; right: 0.5rem; top: calc(var(--decalage-tiroir, 0px) + 0.6rem); bottom: 0.6rem; width: min(56rem, 100vw);
+  border-radius: 6px; border: 1px solid var(--bord);
   background: var(--surface); border-left: 1px solid var(--bord); box-shadow: -8px 0 24px rgb(0 0 0 / 0.15);
   padding: 0.8rem 1rem; z-index: 10; display: flex; flex-direction: column; gap: 0.6rem; overflow: auto;
 }
@@ -14,8 +16,6 @@
 .metre-entete nav button.actif { background: var(--accent-clair); border-color: var(--accent); }
 .metre-resultat { margin-left: auto; }
 .metre-resultat .erreur { color: var(--erreur); }
-.metre-lignes .grille { max-height: none; }
-.metre-lignes { min-height: 12rem; }
 .col-formule { min-width: 14rem; }
 
 body.lecture-seule .grille td.editable { cursor: default; }
@@ -56,6 +56,47 @@ body.hors-ligne .mode { color: var(--alerte); }
   .dictionnaire { border-left: none; border-top: 1px solid var(--bord); padding: 0.5rem 0 0; max-height: 14rem; }
 }
 
-/* Lignes de métré dans la grille */
-.grille tr.metre-D td { font-weight: 600; }
-.grille tr.metre-S td { font-style: italic; border-top: 1px solid var(--discret); }
+/* Script du métré : éditeur de code (couleurs du langage surchargeables par le thème) */
+:root {
+  --code-mot: #7c3aed; --code-type: #0e7490; --code-commentaire: #6b7280; --code-nombre: #b45309; --code-chaine: #15803d;
+  --code-reference: #be185d; --code-fonction: #1d4ed8; --code-operateur: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
+    --code-reference: #f9a8d4; --code-fonction: #93c5fd;
+  }
+}
+:root[data-theme="dark"] {
+  --code-mot: #c4b5fd; --code-type: #67e8f9; --code-commentaire: #9ca3af; --code-nombre: #fcd34d; --code-chaine: #86efac;
+  --code-reference: #f9a8d4; --code-fonction: #93c5fd;
+}
+.metre-script { display: flex; flex-direction: column; gap: 0.4rem; }
+.metre-editeur .cm-editor { min-height: 16rem; max-height: 60vh; }
+.metre-editeur .cm-scroller { overflow: auto; }
+.dictionnaire details { border-bottom: 1px solid var(--bord); padding: 0.2rem 0; }
+.dictionnaire summary { cursor: pointer; font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--discret); }
+.dictionnaire details > button { width: 100%; }
+.dictionnaire .branches { padding-left: 0.6rem; }
+.dictionnaire .branches details { border-bottom: none; padding: 0.1rem 0; }
+.dictionnaire .branches summary { text-transform: none; letter-spacing: 0; font-size: 0.85em; font-weight: 600; }
+
+/* Notifications des métrés (panneau ancrable de l'hôte) */
+.notifications-metre ul { list-style: none; margin: 0; padding: 0; }
+.notifications-metre li button {
+  display: flex; flex-wrap: wrap; gap: 0.1rem 0.5rem; align-items: baseline; width: 100%; text-align: left; border: none;
+  background: none; padding: 0.2rem 0.4rem; border-radius: 3px;
+}
+.notifications-metre li button:hover { background: var(--titre-fond); }
+.notifications-metre .ligne { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(22rem, 100%); }
+.notifications-metre code { color: var(--discret); }
+.notifications-metre .erreur .message { color: var(--erreur); }
+.notifications-metre .avertissement .message { color: var(--alerte); }
+.metre-messages { display: flex; flex-direction: column; gap: 0.1rem; }
+.metre-messages button { text-align: left; border: none; background: none; padding: 0.1rem 0.3rem; border-radius: 3px; }
+.metre-messages button:hover { background: var(--titre-fond); }
+.metre-messages .erreur { color: var(--erreur); }
+.metre-messages .avertissement, .metre-resultat .avertissement { color: var(--alerte); }
+.metre-table-variables { border-collapse: collapse; width: 100%; }
+.metre-table-variables th, .metre-table-variables td { text-align: left; padding: 0.15rem 0.4rem; border-bottom: 1px solid var(--bord); }
+.metre-table-variables input { width: 100%; }

@@ -1,9 +1,10 @@
-import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre } from '@logibtp/socle/ui';
+import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper } from '@logibtp/socle/ui';
 import {
   EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes, LIBELLES_TYPE,
 } from '@logibtp/document/ui';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, CODES_TL, estChiffree, natureObligatoire } from '../calcul/index.js';
+import { compteLigne, libelleCompte } from './comptes.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
 // lignes d'écart d'arrondi calculées, métrés et variables (module Métré). L'éditeur sert aussi d'hôte au
@@ -32,31 +33,25 @@ export class ReglesBtp extends ReglesDocument {
   }
 }
 
-/** Presse-papiers BTP : les métrés, lignes de métré et variables suivent les lignes copiées. */
+/** Presse-papiers BTP : les métrés (scripts) et les variables suivent les lignes copiées. */
 export class PressePapiersBtp extends PressePapiers {
   extraireComplements(saisie, garder) {
     const metres = saisie.metres.filter((m) => garder.has(m.mtr_lig_id));
     const mids = new Set(metres.map((m) => m.mtr_id));
     return {
       metres,
-      metre_lignes: saisie.metre_lignes.filter((x) => mids.has(x.mli_mtr_id)),
       variables: saisie.variables.filter((v) => (v.var_lig_id !== null && garder.has(v.var_lig_id)) || (v.var_mtr_id !== null && mids.has(v.var_mtr_id))),
     };
   }
 
   renumeroterComplements(contenu, lignes, lig, compteur) {
-    const metres = contenu.metres ?? [], metreLignes = contenu.metre_lignes ?? [], variables = contenu.variables ?? [];
-    const mtr = new Map(), mli = new Map();
+    const metres = contenu.metres ?? [], variables = contenu.variables ?? [];
+    const mtr = new Map();
     for (const m of metres) mtr.set(m.mtr_id, compteur.suivant());
-    for (const x of metreLignes) mli.set(x.mli_id, compteur.suivant());
     const vars = variables.map(() => compteur.suivant());
     contenu.lignes.forEach((source, i) => { lignes[i].lig_mtr_id = correspondance(mtr, source.lig_mtr_id); });
     return {
       metres: metres.map((m) => ({ ...structuredClone(m), mtr_id: mtr.get(m.mtr_id), mtr_lig_id: lig.get(m.mtr_lig_id) })),
-      metre_lignes: metreLignes.map((x) => ({
-        ...structuredClone(x), mli_id: mli.get(x.mli_id), mli_mtr_id: mtr.get(x.mli_mtr_id),
-        mli_parent_id: correspondance(mli, x.mli_parent_id), mli_st_depuis_id: correspondance(mli, x.mli_st_depuis_id),
-      })),
       variables: variables.map((v, i) => ({
         ...structuredClone(v), var_id: vars[i], var_lig_id: correspondance(lig, v.var_lig_id), var_mtr_id: correspondance(mtr, v.var_mtr_id),
       })),
@@ -65,7 +60,6 @@ export class PressePapiersBtp extends PressePapiers {
 
   insererComplements(d, copie) {
     d.metres.push(...copie.metres);
-    d.metre_lignes.push(...copie.metre_lignes);
     d.variables.push(...copie.variables.map((v) => ({ ...v, var_ent_id: d.document.ent_id })));
   }
 }
@@ -108,9 +102,25 @@ export class DictionnaireBtp extends DictionnaireMetre {
   donnees(ligId, { pourDefinition = false } = {}) {
     const ligne = this.index.get(ligId);
     const res = this.hote.resultat;
-    const liste = [['lig_qte', 'Quantité saisie'], ['lig_pa', 'Prix d\'achat'], ['lig_coef_perte', 'Coefficient de perte']];
+    // Données lisibles par un métré (avant la quantité vendue : ni prix calculés, ni quantités calculées).
+    const liste = [
+      ['lig_qte', 'Quantité saisie'], ['lig_unt_code', 'Unité'], ['lig_code', 'Code'],
+      ['lig_libelle_html', 'Libellé (modifiable par le script : libellé calculé)'],
+      ['lig_pa', 'Prix d\'achat'], ['lig_coef_perte', 'Coefficient de perte'], ['lig_coef_fg', 'Coefficient de frais généraux'],
+      ['lig_coef_benef', 'Coefficient de bénéfice'], ['lig_coef_remise', 'Coefficient de remise'],
+      ['lig_poids', 'Poids (kg, élément)'], ['lig_surface', 'Surface (m², élément)'], ['lig_volume', 'Volume (m³, élément)'],
+      ['lig_hauteur', 'Hauteur (m, élément)'], ['lig_largeur', 'Largeur (m, élément)'], ['lig_epaisseur', 'Épaisseur (m, élément)'],
+      ['lig_longueur', 'Longueur (m, élément)'],
+    ];
     if (pourDefinition) liste.push(['lig_qte_vendue', 'Quantité vendue'], ['lig_qte_totale', 'Quantité totale']);
-    const entrees = liste.map(([col, lib]) => ({ valeur: `{{${col}}}`, libelle: lib, detail: ligne[col] ?? '', groupe: 'Ligne' }));
+    const brut = (v) => (typeof v === 'string' && v.includes('<') ? v.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : v);
+    const entrees = liste.map(([col, lib]) => ({ valeur: `{{${col}}}`, libelle: lib, detail: brut(ligne[col]) ?? '', groupe: 'Ligne' }));
+    const doc = this.hote.saisie.document;
+    for (const [col, lib] of [
+      ['ent_numero', 'Numéro du document'], ['ent_date', 'Date du document'], ['ent_objet', 'Objet'],
+      ['ent_notre_reference', 'Notre référence'], ['ent_reference_externe', 'Référence externe'], ['ent_validite_jours', 'Validité (jours)'],
+      ['ent_mode_calcul_ouvrage', 'Mode de calcul des ouvrages (D / V / B)'], ['ent_precision_montant', 'Décimales des montants'],
+    ]) entrees.push({ valeur: `{{document.${col}}}`, libelle: lib, detail: doc?.[col] ?? '', groupe: 'Entête' });
     const parent = this.index.get(ligne.lig_parent_id);
     if (parent && estChiffree(parent)) {
       const pc = res.lignes.find((l) => l.lig_id === parent.lig_id);
@@ -134,13 +144,13 @@ export class EditeurDevisBtp extends EditeurDocument {
   calculer(entree) { return calculerDocument(entree); }
 
   entree(saisie) {
-    return { ...super.entree(saisie), metres: saisie.metres, metre_lignes: saisie.metre_lignes, variables: saisie.variables };
+    return { ...super.entree(saisie), metres: saisie.metres, variables: saisie.variables };
   }
 
   identifiants(saisie, resultat) {
     return [
       ...super.identifiants(saisie, resultat),
-      ...saisie.metres.map((m) => m.mtr_id), ...saisie.metre_lignes.map((m) => m.mli_id), ...saisie.variables.map((v) => v.var_id),
+      ...saisie.metres.map((m) => m.mtr_id), ...saisie.variables.map((v) => v.var_id),
     ];
   }
 
@@ -159,7 +169,6 @@ export class EditeurDevisBtp extends EditeurDocument {
   apresSuppression(d, supprimees) {
     const metres = new Set(d.metres.filter((x) => supprimees.has(x.mtr_lig_id)).map((x) => x.mtr_id));
     d.metres = d.metres.filter((x) => !metres.has(x.mtr_id));
-    d.metre_lignes = d.metre_lignes.filter((x) => !metres.has(x.mli_mtr_id));
     d.variables = d.variables.filter((v) => !supprimees.has(v.var_lig_id) && !metres.has(v.var_mtr_id));
   }
 
@@ -167,11 +176,10 @@ export class EditeurDevisBtp extends EditeurDocument {
     const chiffree = (l) => this.saisissable(l) && estChiffree(l);
     const colonnes = super.colonnes();
     const qte = colonnes.find((c) => c.cle === 'qte');
+    const metreQte = (r) => estChiffree(r.calcule) && r.calcule.lig_qte_source === 'M';
     modifierColonne(colonnes, 'qte', {
-      valeur: (r) => {
-        const v = qte.valeur(r);
-        return estChiffree(r.calcule) && r.calcule.lig_qte_source === 'M' ? `ⓜ ${v}` : v;
-      },
+      valeur: (r) => (metreQte(r) ? `ⓜ ${qte.valeur(r)}` : qte.valeur(r)),
+      titreCellule: (r) => (metreQte(r) ? 'ⓜ Quantité calculée par le métré de la ligne (F4 : ouvrir le métré)' : qte.titreCellule?.(r) ?? ''),
     });
     // Nature (comme les articles de la bibliothèque) : obligatoire sur les lignes de prix pour valider.
     const nature = (id) => (this.natures ?? []).find((n) => n.id === Number(id));
@@ -183,6 +191,22 @@ export class EditeurDevisBtp extends EditeurDocument {
       valeur: (r) => (r.virtuelle || !estChiffree(r.item) ? '' : nature(r.item.lig_nat_id)?.code ?? (r.item.lig_nat_id ? `#${r.item.lig_nat_id}` : '')),
       classeCellule: (r) => (manquante(r) ? 'manquant' : ''),
       titreCellule: (r) => (manquante(r) ? 'Nature obligatoire pour valider le document' : nature(r.item?.lig_nat_id)?.libelle ?? ''),
+    }, {
+      // Compte comptable : celui de la ligne, sinon le compte hérité (nature, tiers) souligné ; saisie libre proposant le plan de comptes.
+      cle: 'compte', titre: 'Compte', classe: 'col-compte', editeur: 'liste', editable: chiffree,
+      champ: () => 'lig_cpt_code', lire: (l) => l.lig_cpt_code ?? '',
+      suggestions: () => (this.comptes ?? []).filter((c) => c.actif !== false).map((c) => ({ valeur: c.code, libelle: c.libelle })),
+      valeur: (r) => {
+        const c = r.virtuelle ? null : this.compteLigne(r.item);
+        if (!c) return '';
+        return c.herite ? { html: `<u class="compte-herite">${echapper(c.code)}</u>` } : c.code;
+      },
+      titreCellule: (r) => {
+        const c = r.virtuelle ? null : this.compteLigne(r.item);
+        if (!c) return '';
+        const lib = libelleCompte(c.code, this.comptes);
+        return c.herite ? `${lib} — hérité (${c.detail}) : saisir un compte pour l'imposer à la ligne` : lib;
+      },
     }]);
     insererColonnes(colonnes, 'pv', [
       {
@@ -210,14 +234,27 @@ export class EditeurDevisBtp extends EditeurDocument {
       editable: chiffree,
       lire: (l) => (l.lig_pv_fixe ? formatLibre(l.lig_pv) : ''),
       valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? `${r.item.lig_pv_fixe ? '🔒 ' : r.calcule.lig_pv_fixe ? '⇣ ' : ''}${formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2)}` : ''),
+      titreCellule: (r) => (!estChiffree(r.calcule) || this.baseAffichee(r.calcule) !== null ? ''
+        : r.item.lig_pv_fixe ? '🔒 PV fixe saisi (avant frais annexes et remise) : vider la cellule pour le retirer'
+          : r.calcule.lig_pv_fixe ? '⇣ PV imposé par la ventilation du prix fixe d\'un ouvrage parent' : ''),
     });
     modifierColonne(colonnes, 'pvnet', {
       valeur: (r) => (estChiffree(r.calcule) ? `${r.item.lig_pv_affiche_fixe ? '🔒 ' : ''}${formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2)}` : ''),
+      titreCellule: (r) => (estChiffree(r.calcule) && r.item.lig_pv_affiche_fixe ? '🔒 PV affiché fixe (avec frais annexes) : les frais annexes s\'ajustent' : ''),
     });
     return colonnes;
   }
 
+  /** Compte comptable (grille ou détail) : code sans espaces, 20 caractères ; vide = compte hérité. */
+  modifierLigne(id, champ, valeur) {
+    super.modifierLigne(id, champ, champ === 'lig_cpt_code' ? String(valeur ?? '').trim().slice(0, 20) || null : valeur);
+  }
+
   modifierCellule(id, champ, texte, colonne) {
+    if (champ === 'lig_cpt_code') {
+      this.modifierLigne(id, champ, texte);
+      return true;
+    }
     if (champ === 'lig_nat_id') {
       this.magasin.modifier((d) => { d.lignes.find((y) => y.lig_id === id).lig_nat_id = texte === '' || texte === null ? null : Number(texte); }, 'Nature');
       return true;
@@ -234,12 +271,19 @@ export class EditeurDevisBtp extends EditeurDocument {
     return true;
   }
 
+  /**
+   * Compte comptable de la ligne ({ code, herite, origine, detail } ou null) : règle de comptes.js, avec les natures,
+   * la famille du document (vente / achat) et le compte du tiers posés par la page (compteTiers).
+   */
+  compteLigne(l) {
+    return compteLigne(l, { natures: this.natures ?? [], famille: this.definition.type?.tyd_famille ?? 'V', compteTiers: this.compteTiers ?? null });
+  }
+
   /** Variables de libellé : données génériques + variables de calcul et de métré. */
   variablesLibelle() {
     const calcul = new Set();
     for (const v of this.resultat.variables) calcul.add(`${v.var_portee}${v.var_nom}`);
     for (const m of this.saisie.metres) if (m.mtr_variable) calcul.add(m.mtr_variable.trim());
-    for (const x of this.saisie.metre_lignes) if (x.mli_variable) calcul.add(x.mli_variable.trim());
     return [...super.variablesLibelle(), ...[...calcul].sort().map((v) => ({ valeur: `{{${v}}}`, libelle: `Variable {{${v}}}` }))];
   }
 
@@ -275,10 +319,10 @@ export class EditeurDevisBtp extends EditeurDocument {
     let mtrId = this.metreDeLigne(id);
     if (mtrId === null) {
       mtrId = this.magasin.prochainId();
-      const mliId = mtrId - 1;
+      // Script de départ : la quantité saisie.
+      const script = `// Métré de la ligne\nRenvoyer ${l.lig_qte ? String(l.lig_qte).replace(',', '.') : '0'}`;
       this.magasin.modifier((d) => {
-        d.metres.push({ mtr_id: mtrId, mtr_lig_id: id, mtr_libelle: null, mtr_unt_code: l.lig_unt_code ?? null, mtr_variable: null, mtr_resultat: null });
-        d.metre_lignes.push({ mli_id: mliId, mli_mtr_id: mtrId, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: l.lig_qte ? String(l.lig_qte).replace('.', ',') : '', mli_commentaire: null });
+        d.metres.push({ mtr_id: mtrId, mtr_lig_id: id, mtr_libelle: null, mtr_unt_code: l.lig_unt_code ?? null, mtr_variable: null, mtr_resultat: null, mtr_script: script });
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_mtr_id = mtrId;
         x.lig_qte_source = 'M';

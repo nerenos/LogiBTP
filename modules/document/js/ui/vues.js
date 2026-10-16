@@ -1,8 +1,11 @@
 import { echapper, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 
-// Vues de colonnes de la grille des lignes : choix de la vue, dialogue des colonnes (visibilité, ordre, mode débogage
-// et colonnes système), enregistrement personnel ou global, vue par défaut d'un type et d'un modèle de document.
+// Vues de colonnes de la grille des lignes : choix de la vue, dialogue des colonnes (visibilité, ordre, largeurs, mode
+// débogage et colonnes système), enregistrement personnel ou global, vue par défaut d'un type et d'un modèle de document.
 // La vue choisie est gardée dans le navigateur par type et modèle (préférence d'affichage, jamais dans la base).
+// Colonnes déplacées ou redimensionnées dans la grille : disposition gardée dans le navigateur pour cette vue
+// (dispositionColonnes, par identifiant de vue, « toutes » sans vue) ; enregistrer la vue (dialogue) y écrit l'ordre et
+// les largeurs (colonnes [{ cle, largeur }]) et efface la disposition du navigateur.
 
 /**
  * Fournisseur en mémoire (démo hors ligne) : mêmes règles que le service serveur (vue globale ou par défaut réservée
@@ -48,6 +51,24 @@ export class FournisseurVuesMemoire {
   }
 }
 
+/**
+ * Définition de la vue complétée par la disposition du navigateur ({ colonnes: [{ cle, largeur }] }) : colonnes de la vue
+ * dans l'ordre de la disposition (les autres à la suite), largeur de la disposition sinon de la vue. Sans vue : toutes
+ * les colonnes du catalogue (`cles`).
+ */
+export function fusionnerDisposition(definition, disposition, cles = []) {
+  if (!disposition?.colonnes?.length) return definition;
+  const base = definition?.colonnes?.length ? definition.colonnes : cles.map((cle) => ({ cle }));
+  const parCle = new Map(base.map((c) => [c.cle, c]));
+  const reglees = new Map(disposition.colonnes.map((c) => [c.cle, c]));
+  const ordre = [...disposition.colonnes.map((c) => c.cle).filter((k) => parCle.has(k)), ...base.map((c) => c.cle).filter((k) => !reglees.has(k))];
+  const colonnes = ordre.map((cle) => {
+    const largeur = reglees.has(cle) ? reglees.get(cle).largeur : parCle.get(cle).largeur;
+    return largeur ? { cle, largeur } : { cle };
+  });
+  return { debogage: false, systeme: [], ...definition, colonnes };
+}
+
 /** Vue par défaut d'un type et d'un modèle : la plus précise (type et modèle, puis modèle seul, type seul, aucun). */
 export function vueParDefaut(vues, tydId, modele) {
   const defaut = vues.filter((v) => v.par_defaut);
@@ -69,6 +90,24 @@ export class GestionVuesDocument {
     this.message = message;
     this.vues = [];
     this.courante = null;
+    editeur.surDisposition = (vue) => this.memoriserDisposition(vue);
+  }
+
+  /** Clé de la disposition du navigateur : vue enregistrée, ou « toutes » sans vue (vue appliquée sans enregistrement : aucune). */
+  get cleDisposition() { return this.courante ? (this.courante.id ? `vue:${this.courante.id}` : null) : 'toutes'; }
+
+  memoriserDisposition(vue) {
+    const cle = this.cleDisposition;
+    if (cle === null) { if (this.courante) this.courante = { ...this.courante, definition: vue }; return; }
+    const p = lirePreferences().dispositionColonnes ?? {};
+    ecrirePreferences({ dispositionColonnes: { ...p, [cle]: { colonnes: vue.colonnes } } });
+  }
+
+  oublierDisposition(cle) {
+    const p = { ...(lirePreferences().dispositionColonnes ?? {}) };
+    if (!(cle in p)) return;
+    delete p[cle];
+    ecrirePreferences({ dispositionColonnes: p });
   }
 
   get type() { return this.editeur.definition.type ?? {}; }
@@ -87,7 +126,9 @@ export class GestionVuesDocument {
 
   appliquer(vue, { memoriser = true } = {}) {
     this.courante = vue ?? null;
-    this.editeur.appliquerVue(vue?.definition ?? null);
+    const cle = this.cleDisposition;
+    const disposition = cle ? lirePreferences().dispositionColonnes?.[cle] : null;
+    this.editeur.appliquerVue(fusionnerDisposition(vue?.definition ?? null, disposition, this.editeur.colonnes().map((c) => c.cle)));
     if (memoriser) {
       const p = lirePreferences().vuesDocument ?? {};
       ecrirePreferences({ vuesDocument: { ...p, [this.clePreference]: vue?.id ?? null } });
@@ -121,7 +162,8 @@ export class GestionVuesDocument {
   ouvrirDialogue() {
     const ed = this.editeur;
     const catalogue = ed.colonnes();
-    const base = this.courante?.definition;
+    // Point de départ : la vue affichée, disposition du navigateur comprise (ordre et largeurs réglés dans la grille).
+    const base = ed.vue ?? this.courante?.definition;
     const visibles = base?.colonnes?.length ? base.colonnes.map((c) => c.cle).filter((k) => catalogue.some((c) => c.cle === k)) : catalogue.map((c) => c.cle);
     // Ordre : colonnes visibles dans leur ordre, puis les colonnes masquées.
     const etat = {
@@ -129,6 +171,7 @@ export class GestionVuesDocument {
       visibles: new Set(visibles),
       debogage: Boolean(base?.debogage),
       systeme: new Set(base?.systeme ?? []),
+      largeurs: new Map((base?.colonnes ?? []).filter((c) => c.largeur).map((c) => [c.cle, c.largeur])),
     };
     const titres = new Map(catalogue.map((c) => [c.cle, c.titre]));
     const champsSysteme = ed.champsSysteme();
@@ -148,6 +191,8 @@ export class GestionVuesDocument {
       <div class="dialogue-colonnes">
         <section><h4>Colonnes (ordre d'affichage)</h4><ul class="colonnes-vue" data-liste>${listeColonnes()}</ul></section>
         <section>
+          <p class="aide">Ordre et largeurs se règlent aussi dans la grille (glisser l'entête ou sa bordure droite) ; enregistrer la vue les conserve.
+            <button type="button" data-largeurs ${etat.largeurs.size ? '' : 'disabled'}>Largeurs automatiques</button></p>
           <h4><label><input type="checkbox" data-debogage ${etat.debogage ? 'checked' : ''}> Mode débogage</label></h4>
           <p class="aide">Ajoute les colonnes système (valeurs brutes, identifiants, liens, contrôles) masquées en saisie, pour comprendre une erreur. Aucune cochée : toutes.</p>
           <ul class="colonnes-vue" data-systeme ${etat.debogage ? '' : 'hidden'}>${listeSysteme()}</ul>
@@ -199,7 +244,7 @@ export class GestionVuesDocument {
     });
 
     const definition = () => ({
-      colonnes: etat.ordre.filter((k) => etat.visibles.has(k)).map((cle) => ({ cle })),
+      colonnes: etat.ordre.filter((k) => etat.visibles.has(k)).map((cle) => (etat.largeurs.has(cle) ? { cle, largeur: etat.largeurs.get(cle) } : { cle })),
       debogage: etat.debogage,
       systeme: etat.debogage ? champsSysteme.filter((k) => etat.systeme.has(k)) : [],
     });
@@ -226,6 +271,8 @@ export class GestionVuesDocument {
           globale: globale || parDefaut, par_defaut: parDefaut, definition: definition(),
         });
         this.vues = await this.fournisseur.vues(this.type);
+        // L'ordre et les largeurs sont maintenant dans la vue : la disposition du navigateur n'a plus lieu d'être.
+        this.oublierDisposition(`vue:${sauvee.id}`);
         fermer();
         this.appliquer(this.vues.find((x) => x.id === sauvee.id) ?? sauvee);
         this.message(`Vue « ${sauvee.nom} » enregistrée`);
@@ -246,6 +293,10 @@ export class GestionVuesDocument {
         fermer();
         this.appliquer(vueParDefaut(this.vues, this.type.tyd_id ?? null, this.modele));
       } catch (e) { this.message(e.message); }
+    });
+    dlg.querySelector('[data-largeurs]').addEventListener('click', (e) => {
+      etat.largeurs.clear();
+      e.target.disabled = true;
     });
     dlg.querySelector('[data-tout]').addEventListener('click', () => {
       etat.ordre = catalogue.map((c) => c.cle);

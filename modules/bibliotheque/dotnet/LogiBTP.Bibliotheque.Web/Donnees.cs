@@ -96,6 +96,8 @@ public class Element
     public decimal? EleHauteur { get; set; }
     public decimal? EleLargeur { get; set; }
     public decimal? EleEpaisseur { get; set; }
+    /// <summary>Longueur en mm (barre, rouleau…).</summary>
+    public decimal? EleLongueur { get; set; }
     public decimal? EleIsolantR { get; set; }
     public decimal? EleIsolantLambda { get; set; }
     public decimal? EleIsolantU { get; set; }

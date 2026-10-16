@@ -1,0 +1,73 @@
+{
+  "nom": "Cas limites : premier opérateur, sous-détail vide, formule vide, sous-total pointé invalide",
+  "description": "Première ligne en × (elle initialise le cumul), sous-détail sans ligne (0), formule vide et sous-total pointé sur une valeur : convertis en 0 avec un commentaire d'avertissement. (4 − 0 + 0) = 4, puis − 1,5 → 2,5.",
+  "entree": {
+    "metre": {
+      "mtr_id": 50
+    },
+    "metre_lignes": [
+      {
+        "mli_id": 1,
+        "mli_mtr_id": 50,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "*",
+        "mli_formule": "4",
+        "mli_commentaire": "Initialise le cumul"
+      },
+      {
+        "mli_id": 2,
+        "mli_mtr_id": 50,
+        "mli_parent_id": null,
+        "mli_ordre": 2,
+        "mli_type": "D",
+        "mli_operateur": "-",
+        "mli_formule": null,
+        "mli_commentaire": "Sous-détail vide"
+      },
+      {
+        "mli_id": 3,
+        "mli_mtr_id": 50,
+        "mli_parent_id": null,
+        "mli_ordre": 3,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "",
+        "mli_commentaire": "Oubli"
+      },
+      {
+        "mli_id": 4,
+        "mli_mtr_id": 50,
+        "mli_parent_id": null,
+        "mli_ordre": 4,
+        "mli_type": "S",
+        "mli_operateur": null,
+        "mli_formule": null,
+        "mli_st_depuis_id": 1
+      },
+      {
+        "mli_id": 5,
+        "mli_mtr_id": 50,
+        "mli_parent_id": null,
+        "mli_ordre": 5,
+        "mli_type": "V",
+        "mli_operateur": "-",
+        "mli_formule": "1,5"
+      }
+    ]
+  },
+  "attendu": {
+    "mtr_resultat": 2.5,
+    "mtr_variable": null,
+    "script": [
+      "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).",
+      "local L1 est un numérique = 4 // Initialise le cumul",
+      "local L2 est un numérique = 0 // Sous-détail vide",
+      "local L3 est un numérique = 0 // ⚠ formule vide dans le métré d'origine – Oubli",
+      "local L4 est un numérique = 0 // ⚠ sous-total pointé invalide dans le métré d'origine",
+      "local L5 est un numérique = 1,5",
+      "Renvoyer L1 - L2 + L3 - L5"
+    ]
+  }
+}

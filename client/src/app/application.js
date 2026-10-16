@@ -4,7 +4,6 @@ import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
 import { echapper, appliquerTheme } from '@logibtp/socle/ui';
 import { api, ErreurApi, ENTETES } from './api.js';
-import { DOCUMENT_DEMO } from './demo.js';
 import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
 import { creerFournisseurFiche } from './fiches/fiches.js';
 import { ficheDeLigne } from './fiches/definitions.js';
@@ -46,9 +45,9 @@ export class Application {
     this.servicesPrets = null;
   }
 
+  async demarrer() {
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
-  async demarrer() {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP',
     });
@@ -97,7 +96,7 @@ export class Application {
       // Structure des affaires (projets, affaires, chantiers, marchés) : hors ligne, mêmes lignes pour les listes et les fiches.
       let liste = null;
       const structure = creerFournisseurStructure({ enLigne: this.enLigne, annuaire, documents: () => liste?.sourcesDonnees?.documents?.lignes ?? [] });
-      liste = creerFournisseurListe({ enLigne: this.enLigne, demo: DOCUMENT_DEMO, ged, elements, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure });
+      liste = creerFournisseurListe({ enLigne: this.enLigne, ged, elements, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure });
       const fiche = creerFournisseurFiche({
         enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure,
       });
@@ -164,8 +163,7 @@ export class Application {
   /** URL de l'écran d'un élément de liste (document, fiche, document GED), null si aucun écran. */
   urlElement({ id, type }) {
     if (estTypeDocument(type)) {
-      if (this.enLigne) return `/document/${id}`;
-      return Number(id) === DOCUMENT_DEMO.document.ent_id ? '/document/demo' : null;
+      return this.enLigne ? `/document/${id}` : null;
     }
     if (type === 'document_ged') return `/ged/${id}`;
     const f = ficheDeLigne({ id, type });
@@ -176,7 +174,7 @@ export class Application {
   ouvrirElement(element, { nouvelleFenetre = false } = {}) {
     const url = this.urlElement(element);
     if (!url) {
-      const quoi = estTypeDocument(element.type) ? "Démo hors ligne : seul le devis de démonstration s'ouvre" : `Fiche ${LIBELLES_ELEMENTS[element.type] ?? element.type} n° ${element.id} : écran pas encore disponible`;
+      const quoi = estTypeDocument(element.type) ? "Hors ligne : les documents s'ouvrent depuis la base, l'API est indisponible" : `Fiche ${LIBELLES_ELEMENTS[element.type] ?? element.type} n° ${element.id} : écran pas encore disponible`;
       this.message(quoi, 'avertissement');
       return;
     }
@@ -334,4 +332,4 @@ export class Application {
   }
 }
 
-export { api, DOCUMENT_DEMO };
+export { api };

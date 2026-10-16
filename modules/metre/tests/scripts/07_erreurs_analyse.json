@@ -1,0 +1,244 @@
+{
+  "nom": "Erreurs d'analyse",
+  "description": "Toutes les erreurs détectables sans exécution sont signalées (reprise à l'instruction suivante) ; le script n'est pas exécuté.",
+  "cas": [
+    {
+      "nom": "Plusieurs erreurs de syntaxe",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "x = 2 3",
+          "x = * 2",
+          "Renvoyer x)"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 2,
+            "colonne": 7
+          },
+          {
+            "code": "SYNTAXE",
+            "ligne": 3,
+            "colonne": 5
+          },
+          {
+            "code": "SYNTAXE",
+            "ligne": 4,
+            "colonne": 11
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Variables et fonctions inconnues, déclaration double, nombre d'arguments",
+      "entree": {
+        "script": [
+          "a est un numérique = b",
+          "a est un numérique",
+          "c est un numérique = Inconnue(1) + Arrondi()",
+          "Renvoyer d"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "VARIABLE_INCONNUE",
+            "ligne": 1,
+            "colonne": 22
+          },
+          {
+            "code": "DECLARATION_DOUBLE",
+            "ligne": 2,
+            "colonne": 1
+          },
+          {
+            "code": "FONCTION_INCONNUE",
+            "ligne": 3,
+            "colonne": 22
+          },
+          {
+            "code": "ARGUMENTS",
+            "ligne": 3,
+            "colonne": 36
+          },
+          {
+            "code": "VARIABLE_INCONNUE",
+            "ligne": 4,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Déclaration après une instruction, Sortir hors boucle",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "x = 1",
+          "local y est un numérique",
+          "Sortir",
+          "Renvoyer x"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 3,
+            "colonne": 1
+          },
+          {
+            "code": "SYNTAXE",
+            "ligne": 4,
+            "colonne": 1
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Fin manquant",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "Si x = 0 alors",
+          "    x = 1",
+          "Renvoyer x"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 4,
+            "colonne": 11
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Fin sans Si",
+      "entree": {
+        "script": [
+          "Renvoyer 1",
+          "Fin"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 2,
+            "colonne": 1
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Virgule entre arguments",
+      "entree": {
+        "script": [
+          "Renvoyer Max(1, 2)"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 1,
+            "colonne": 15
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Chaîne non fermée",
+      "entree": {
+        "script": [
+          "x est une chaîne = \"abc",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 1,
+            "colonne": 20
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Référence invalide",
+      "entree": {
+        "script": [
+          "Renvoyer {{lig qte}}"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "REFERENCE_INVALIDE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Type inconnu",
+      "entree": {
+        "script": [
+          "x est un entier",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Comparaisons enchaînées",
+      "entree": {
+        "script": [
+          "Renvoyer 1 < 2 < 3"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 1,
+            "colonne": 16
+          }
+        ]
+      }
+    },
+    {
+      "nom": "Nombre trop grand",
+      "entree": {
+        "script": [
+          "Renvoyer 79228162514264337593543950336"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "SYNTAXE",
+            "ligne": 1,
+            "colonne": 10
+          }
+        ]
+      }
+    }
+  ]
+}

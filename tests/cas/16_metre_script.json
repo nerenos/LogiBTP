@@ -1,0 +1,161 @@
+{
+  "nom": "Métrés en script : quantité, variables, libellé calculé, erreurs non bloquantes",
+  "description": "Ouvrage « Fenêtre » (@@Perte = 1,1). Profilé : script de la conception (barres de {{lig_longueur}} = 6 m) → 2, résultat affecté à @@barres, libellé complété et paramètre @MaLargeur publié, lignes de variables régénérées (MaLargeur garde son identifiant 50). Joint : script sans « Renvoyer » → quantité saisie 4, texte ajouté au libellé échappé. Mastic : division par zéro → erreur non bloquante, quantité saisie 3, libellé inchangé.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "Fenêtre – {{@@barres}} barres",
+        "lig_qte": 1,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Profilé PVC {{@MaLargeur}} m",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 40,
+        "lig_longueur": 6,
+        "lig_pa": 30
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Joint",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 41,
+        "lig_qte": 4,
+        "lig_pa": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Mastic",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 42,
+        "lig_qte": 3,
+        "lig_pa": 2
+      }
+    ],
+    "metres": [
+      {
+        "mtr_id": 40,
+        "mtr_lig_id": 2,
+        "mtr_libelle": "Barres de profilé",
+        "mtr_variable": "@@barres",
+        "mtr_script": "MaChaine est une chaîne\nNombrePoint est un numérique\nMaLargeur est un numérique = 1.500\nMaHauteur est un numérique = 0.85\nlocal Longueur_profile est un numérique\nlocal NombreMontant est un numérique\nMaCouleurEstStandard est un bool = Vrai\n\nNombrePoint = (\n\t\t+ 2 \t// En haut\n\t\t+ 3 \t// à gauche\n\t\t+ 3 - 1 // sur la droite à cause de la poignée\n\t\t- 2 \t// en bas\n\t)\n\t* 2 \t\t// car il y a 2 côtés\n\nNombreMontant = EntierSuperieur(MaLargeur / 1.200)\nLongueur_profile = @@Perte * 2 * (MaLargeur + MaHauteur) + NombreMontant\nLongueur_profile = EntierSuperieur(Longueur_profile / {{lig_longueur}})\n\nSi MaCouleurEstStandard alors\n\t{{lig_libelle_html}} += \" RAL standard\"\nSinon\n\t{{lig_libelle_html}} += \" RAL personnalisable\"\nFin\n\nRenvoyer Longueur_profile"
+      },
+      {
+        "mtr_id": 41,
+        "mtr_lig_id": 3,
+        "mtr_libelle": "Joint",
+        "mtr_script": "local x est un numérique = 2\n{{lig_libelle_html}} += \" <b>\" + x + \"</b>\""
+      },
+      {
+        "mtr_id": 42,
+        "mtr_lig_id": 4,
+        "mtr_libelle": "Mastic",
+        "mtr_script": "local z est un numérique\n{{lig_libelle_html}} += \" X\"\nRenvoyer 1 / z"
+      }
+    ],
+    "variables": [
+      {
+        "var_id": 10,
+        "var_lig_id": 1,
+        "var_mtr_id": null,
+        "var_portee": "@@",
+        "var_nom": "Perte",
+        "var_operation": "=",
+        "var_formule": "1,1",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 50,
+        "var_lig_id": 2,
+        "var_mtr_id": 40,
+        "var_portee": "@",
+        "var_nom": "MaLargeur",
+        "var_operation": "=",
+        "var_formule": "9",
+        "var_ordre": 1,
+        "var_type": "N"
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "DIVISION_ZERO"
+    ],
+    "document": {
+      "ent_total_ht": 70
+    },
+    "metres": {
+      "40": {
+        "mtr_resultat": 2
+      },
+      "41": {
+        "mtr_resultat": null
+      },
+      "42": {
+        "mtr_resultat": null
+      }
+    },
+    "variables": {
+      "10": {
+        "var_valeur": 1.1
+      },
+      "50": {
+        "var_nom": "MaLargeur",
+        "var_mtr_id": 40,
+        "var_lig_id": 2,
+        "var_formule": "1.500",
+        "var_valeur": 1.5,
+        "var_type": "N",
+        "var_ordre": 3
+      }
+    },
+    "lignes": {
+      "1": {
+        "lig_pv": 70,
+        "lig_libelle_affiche": "Fenêtre – 2 barres"
+      },
+      "2": {
+        "lig_qte_vendue": 2,
+        "lig_libelle_html": "Profilé PVC {{@MaLargeur}} m",
+        "lig_libelle_affiche": "Profilé PVC 1,5 m RAL standard"
+      },
+      "3": {
+        "lig_qte_vendue": 4,
+        "lig_libelle_affiche": "Joint &lt;b&gt;2&lt;/b&gt;",
+        "lig_libelle_brut": "Joint <b>2</b>"
+      },
+      "4": {
+        "lig_qte_vendue": 3,
+        "lig_libelle_affiche": "Mastic"
+      }
+    }
+  }
+}

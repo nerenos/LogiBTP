@@ -2,57 +2,128 @@
   "nom": "Métrés : sous-détails, sous-totaux, variables",
   "description": "Surface de murs (2,5 + 3,5 + 2,8) × {{$$hauteur_etage}}, sous-total, déduction d'une ouverture puis sous-total pointé. Second métré : somme de produits (2 + 3) × 2 + (1 + 1,5) × 4 par sous-détails imbriqués. Le résultat est affecté à @surface et repris dans le libellé.",
   "entree": {
-    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
-    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
     "variables": [
-      { "var_id": 1, "var_lig_id": null, "var_mtr_id": null, "var_portee": "$$", "var_nom": "hauteur_etage", "var_operation": "=", "var_formule": "2,5", "var_ordre": 1 },
-      { "var_id": 2, "var_lig_id": 1, "var_mtr_id": null, "var_portee": "$", "var_nom": "longueur_facade", "var_operation": "=", "var_formule": "12", "var_ordre": 1 }
+      {
+        "var_id": 1,
+        "var_lig_id": null,
+        "var_mtr_id": null,
+        "var_portee": "$$",
+        "var_nom": "hauteur_etage",
+        "var_operation": "=",
+        "var_formule": "2,5",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 2,
+        "var_lig_id": 1,
+        "var_mtr_id": null,
+        "var_portee": "$",
+        "var_nom": "longueur_facade",
+        "var_operation": "=",
+        "var_formule": "12",
+        "var_ordre": 1
+      }
     ],
     "lignes": [
-      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 1, "lig_libelle_html": "Enduits", "lig_tva_id": 1 },
-      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Enduit {{@surface}} m²",
-        "lig_qte": 99, "lig_qte_source": "M", "lig_mtr_id": 10, "lig_pa": 20, "lig_tva_id": 1 },
-      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Peinture",
-        "lig_qte_source": "M", "lig_mtr_id": 11, "lig_pa": 1, "lig_tva_id": 1 }
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Enduits",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Enduit {{@surface}} m²",
+        "lig_qte": 99,
+        "lig_qte_source": "M",
+        "lig_mtr_id": 10,
+        "lig_pa": 20,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Peinture",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 11,
+        "lig_pa": 1,
+        "lig_tva_id": 1
+      }
     ],
     "metres": [
-      { "mtr_id": 10, "mtr_lig_id": 2, "mtr_libelle": "Surface des murs", "mtr_unt_code": "m2", "mtr_variable": "@surface" },
-      { "mtr_id": 11, "mtr_lig_id": 3, "mtr_libelle": "Somme de produits", "mtr_unt_code": "m2" }
-    ],
-    "metre_lignes": [
-      { "mli_id": 101, "mli_mtr_id": 10, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "D", "mli_operateur": "+", "mli_commentaire": "Linéaire de murs" },
-      { "mli_id": 102, "mli_mtr_id": 10, "mli_parent_id": 101, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "2,5", "mli_commentaire": "Mur nord" },
-      { "mli_id": 103, "mli_mtr_id": 10, "mli_parent_id": 101, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "+", "mli_formule": "3,5", "mli_commentaire": "Mur est" },
-      { "mli_id": 104, "mli_mtr_id": 10, "mli_parent_id": 101, "mli_ordre": 3, "mli_type": "V", "mli_operateur": "+", "mli_formule": "2.8", "mli_commentaire": "Mur sud" },
-      { "mli_id": 105, "mli_mtr_id": 10, "mli_parent_id": null, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "*", "mli_formule": "{{$$hauteur_etage}}", "mli_commentaire": "Hauteur d'étage" },
-      { "mli_id": 106, "mli_mtr_id": 10, "mli_parent_id": null, "mli_ordre": 3, "mli_type": "S", "mli_variable": "@surface_brute" },
-      { "mli_id": 107, "mli_mtr_id": 10, "mli_parent_id": null, "mli_ordre": 4, "mli_type": "V", "mli_operateur": "-", "mli_formule": "{{$longueur_facade}} / 12", "mli_commentaire": "Porte" },
-      { "mli_id": 108, "mli_mtr_id": 10, "mli_parent_id": null, "mli_ordre": 5, "mli_type": "S", "mli_st_depuis_id": 106 },
-
-      { "mli_id": 201, "mli_mtr_id": 11, "mli_parent_id": null, "mli_ordre": 1, "mli_type": "D", "mli_operateur": "+" },
-      { "mli_id": 202, "mli_mtr_id": 11, "mli_parent_id": 201, "mli_ordre": 1, "mli_type": "D", "mli_operateur": "+" },
-      { "mli_id": 203, "mli_mtr_id": 11, "mli_parent_id": 202, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "2" },
-      { "mli_id": 204, "mli_mtr_id": 11, "mli_parent_id": 202, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "+", "mli_formule": "3" },
-      { "mli_id": 205, "mli_mtr_id": 11, "mli_parent_id": 201, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "*", "mli_formule": "2" },
-      { "mli_id": 206, "mli_mtr_id": 11, "mli_parent_id": null, "mli_ordre": 2, "mli_type": "D", "mli_operateur": "+" },
-      { "mli_id": 207, "mli_mtr_id": 11, "mli_parent_id": 206, "mli_ordre": 1, "mli_type": "D", "mli_operateur": "+" },
-      { "mli_id": 208, "mli_mtr_id": 11, "mli_parent_id": 207, "mli_ordre": 1, "mli_type": "V", "mli_operateur": "+", "mli_formule": "1" },
-      { "mli_id": 209, "mli_mtr_id": 11, "mli_parent_id": 207, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "+", "mli_formule": "1,5" },
-      { "mli_id": 210, "mli_mtr_id": 11, "mli_parent_id": 206, "mli_ordre": 2, "mli_type": "V", "mli_operateur": "*", "mli_formule": "(2 + 2) * 1" }
+      {
+        "mtr_id": 10,
+        "mtr_lig_id": 2,
+        "mtr_libelle": "Surface des murs",
+        "mtr_unt_code": "m2",
+        "mtr_variable": "@surface",
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1_1 est un numérique\nlocal L1_2 est un numérique\nlocal L1_3 est un numérique\nlocal L1 est un numérique\nlocal L2 est un numérique\nlocal L3 est un numérique\nlocal L4 est un numérique\nlocal L5 est un numérique\n\nL1_1 = 2,5 // Mur nord\nL1_2 = 3,5 // Mur est\nL1_3 = 2.8 // Mur sud\nL1 = L1_1 + L1_2 + L1_3 // Linéaire de murs\nL2 = {{$$hauteur_etage}} // Hauteur d'étage\nL3 = L1 * L2\n@surface_brute = L3\nL4 = {{$longueur_facade}} / 12 // Porte\nL5 = -L4\nRenvoyer L1 * L2 - L4"
+      },
+      {
+        "mtr_id": 11,
+        "mtr_lig_id": 3,
+        "mtr_libelle": "Somme de produits",
+        "mtr_unt_code": "m2",
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1_1_1 est un numérique = 2\nlocal L1_1_2 est un numérique = 3\nlocal L2_1_1 est un numérique = 1\nlocal L2_1_2 est un numérique = 1,5\nlocal L1_1 est un numérique = L1_1_1 + L1_1_2\nlocal L1_2 est un numérique = 2\nlocal L2_1 est un numérique = L2_1_1 + L2_1_2\nlocal L2_2 est un numérique = (2 + 2) * 1\nlocal L1 est un numérique = L1_1 * L1_2\nlocal L2 est un numérique = L2_1 * L2_2\nRenvoyer L1 + L2",
+        "mtr_variable": null
+      }
     ]
   },
   "attendu": {
-    "document": { "ent_total_ht": 440, "ent_total_tva": 88, "ent_total_ttc": 528 },
-    "metres": { "10": { "mtr_resultat": 21 }, "11": { "mtr_resultat": 20 } },
-    "metre_lignes": {
-      "101": { "mli_valeur": 8.8 }, "102": { "mli_valeur": 2.5 }, "104": { "mli_valeur": 2.8 },
-      "105": { "mli_valeur": 2.5 }, "106": { "mli_valeur": 22 }, "107": { "mli_valeur": 1 }, "108": { "mli_valeur": -1 },
-      "201": { "mli_valeur": 10 }, "202": { "mli_valeur": 5 }, "206": { "mli_valeur": 10 }, "207": { "mli_valeur": 2.5 }, "210": { "mli_valeur": 4 }
+    "document": {
+      "ent_total_ht": 440,
+      "ent_total_tva": 88,
+      "ent_total_ttc": 528
     },
-    "variables": { "1": { "var_valeur": 2.5 }, "2": { "var_valeur": 12 } },
+    "metres": {
+      "10": {
+        "mtr_resultat": 21
+      },
+      "11": {
+        "mtr_resultat": 20
+      }
+    },
+    "variables": {
+      "1": {
+        "var_valeur": 2.5
+      },
+      "2": {
+        "var_valeur": 12
+      }
+    },
     "lignes": {
-      "2": { "lig_qte": 99, "lig_qte_base": 21, "lig_qte_vendue": 21, "lig_montant_ht": 420, "lig_libelle_affiche": "Enduit 21 m²" },
-      "3": { "lig_qte_base": 20, "lig_montant_ht": 20 }
+      "2": {
+        "lig_qte": 99,
+        "lig_qte_base": 21,
+        "lig_qte_vendue": 21,
+        "lig_montant_ht": 420,
+        "lig_libelle_affiche": "Enduit 21 m²"
+      },
+      "3": {
+        "lig_qte_base": 20,
+        "lig_montant_ht": 20
+      }
     }
   }
 }

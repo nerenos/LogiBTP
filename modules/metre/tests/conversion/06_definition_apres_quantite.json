@@ -1,0 +1,82 @@
+{
+  "nom": "Définitions : reprises dans le script jusqu'à la première qui lit une quantité calculée",
+  "description": "@@a = 2 est reprise dans le script (après l'affectation du résultat à @surface) ; @@b = {{lig_qte_vendue}} et la suivante restent des variables de ligne.",
+  "entree": {
+    "donnees": {
+      "lig_qte": 3
+    },
+    "metre": {
+      "mtr_id": 60,
+      "mtr_lig_id": 1,
+      "mtr_variable": "@surface"
+    },
+    "metre_lignes": [
+      {
+        "mli_id": 1,
+        "mli_mtr_id": 60,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "{{lig_qte}} * 2"
+      }
+    ],
+    "definitions": [
+      {
+        "var_id": 1,
+        "var_mtr_id": 60,
+        "var_lig_id": 1,
+        "var_portee": "@@",
+        "var_nom": "a",
+        "var_operation": "=",
+        "var_formule": "{{@surface}} + 1",
+        "var_ordre": 1
+      },
+      {
+        "var_id": 2,
+        "var_mtr_id": 60,
+        "var_lig_id": 1,
+        "var_portee": "@@",
+        "var_nom": "b",
+        "var_operation": "=",
+        "var_formule": "{{lig_qte_vendue}}",
+        "var_ordre": 2
+      },
+      {
+        "var_id": 3,
+        "var_mtr_id": 60,
+        "var_lig_id": 1,
+        "var_portee": "@@",
+        "var_nom": "a",
+        "var_operation": "+=",
+        "var_formule": "1",
+        "var_ordre": 3
+      }
+    ]
+  },
+  "attendu": {
+    "mtr_resultat": 6,
+    "variables": {
+      "@surface": 6,
+      "@@a": 7
+    },
+    "variables_ligne": [
+      2,
+      3
+    ],
+    "mtr_variable": null,
+    "script": [
+      "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).",
+      "local L1 est un numérique",
+      "local Resultat est un numérique",
+      "",
+      "L1 = {{lig_qte}} * 2",
+      "Resultat = L1",
+      "@surface = Resultat",
+      "",
+      "// Variables définies par le métré",
+      "@@a = {{@surface}} + 1",
+      "Renvoyer Resultat"
+    ]
+  }
+}

@@ -147,11 +147,23 @@ public class MoteurDocument<TDoc, TLigne>
     /// <summary>Ligne chiffrée sans ancêtre composé : porte la TVA et entre dans les totaux.</summary>
     protected bool EstLigneDePrix(TLigne l) => TL.EstChiffree(l) && !AUnAncetreOuvrage(l);
 
-    /// <summary>Type de prix hérité : Option, Pour mémoire et Variante sont hors total.</summary>
+    /// <summary>Type de prix hérité : Option, Pour mémoire, Variante et Frais annexes sont hors total.</summary>
     protected bool HorsTotal(TLigne l, TLigne? jusqua = null)
     {
         for (var x = l; x is not null && x != jusqua; x = Parent(x)) if (x.LigTypePrix != "V") return true;
         return false;
+    }
+
+    /// <summary>Frais annexes (type F, hérité) : hors total, jamais imprimé ; ventilés sur les autres lignes en spécialisation.</summary>
+    protected bool EstFraisAnnexes(TLigne l)
+    {
+        var f = false;
+        for (var x = l; x is not null; x = Parent(x))
+        {
+            if (x.LigTypePrix == "F") f = true;
+            else if (x.LigTypePrix != "V") return false;
+        }
+        return f;
     }
 
     protected virtual List<TLigne> Composantes(TLigne compose) => EnfantsDe(compose.LigId).Where(c => TL.EstChiffree(c)).ToList();
@@ -307,6 +319,7 @@ public class MoteurDocument<TDoc, TLigne>
             if (TL.EstPied(l) && p is not null) Erreur(l.LigId, "PIED_RACINE", "Les lignes de pied sont au niveau racine");
             if (p is not null && !TL.AccepteEnfants(p)) Erreur(l.LigId, "PARENT_INVALIDE", "Le type de la ligne parente n'accepte pas d'enfants");
             if (l.LigTylId == TL.Section && p is not null) Erreur(l.LigId, "SECTION_RACINE", "Une section est au niveau racine");
+            if (EstFraisAnnexes(l)) l.LigIsNonEditee = true;
             ValiderLigne(l);
         }
     }
@@ -753,6 +766,9 @@ public class MoteurDocument<TDoc, TLigne>
 
     // ------------------------------------------------------------------ passe 6 : libellés
 
+    /// <summary>Libellé HTML d'où part le libellé affiché (une spécialisation peut le calculer : métré en script…).</summary>
+    protected virtual string? SourceLibelle(TLigne l) => l.LigLibelleHtml;
+
     protected virtual void PasseLibelles()
     {
         if (Entree.Options.LibellesFiges) return;
@@ -764,7 +780,7 @@ public class MoteurDocument<TDoc, TLigne>
                 if (r is ReferenceVariable v) return LireVariable(v.Portee, v.Nom, l);
                 return LireDonnee((ReferenceDonnee)r, l, PhaseCalcul.Libelle);
             }
-            var (texteAffiche, inconnues) = Libelles.Remplacer(l.LigLibelleHtml, Resoudre);
+            var (texteAffiche, inconnues) = Libelles.Remplacer(SourceLibelle(l), Resoudre);
             foreach (var (_, message) in inconnues) Avertir(l.LigId, "VARIABLE_LIBELLE", $"Libellé : {message}");
             l.LigLibelleAffiche = texteAffiche;
             l.LigLibelleBrut = Libelles.TexteBrut(texteAffiche);

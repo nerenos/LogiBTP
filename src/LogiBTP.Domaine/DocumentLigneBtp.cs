@@ -40,4 +40,13 @@ public class DocumentLigneBtp : DocumentLigne
     // Lignes de pied
     /// <summary>Frais annexe ventilé dans les prix (entre dans le coefficient de frais annexes).</summary>
     public bool LigPiedIsFa { get; set; }
+
+    // Données techniques (db/165) : recopiées de l'élément de bibliothèque, dimensions en mètres
+    public decimal? LigPoids { get; set; }
+    public decimal? LigSurface { get; set; }
+    public decimal? LigVolume { get; set; }
+    public decimal? LigHauteur { get; set; }
+    public decimal? LigLargeur { get; set; }
+    public decimal? LigEpaisseur { get; set; }
+    public decimal? LigLongueur { get; set; }
 }

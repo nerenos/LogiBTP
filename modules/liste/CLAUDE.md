@@ -52,7 +52,7 @@
 - Saisie : colonne saisissable = cochée `modifiable` + source `sli_modifiable` + `is_updatable` dans `information_schema` ; ligne verrouillée, empreinte `_h` comparée, UPDATE sur la vue.
 - `CacheSchemas` indexé par base (une base par société).
 - Vues, sources et thèmes par défaut : modifier `client/src/app/vues-liste.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/121_listes_parametrage.sql`, et aussi `db/131`, 116, 141, 150, 161, 163) ; ne jamais éditer `db/121` à la main.
-- Préférences d'affichage (`cleVue`, dock, largeurs) dans le `localStorage`, jamais en base.
+- Préférences d'affichage (`cleVue`, dock, largeurs, segments réduits par vue `segmentsReduits`) dans le `localStorage`, jamais en base. Segments : tous dépliés par défaut ; le titre replie / déplie (le nombre de valeurs filtrées reste affiché).
 - `lignesSelectionnees()` : lignes de `selections` dans l'ordre affiché ; sans sélection multiple, la ligne courante (`selection`). Sert aux boutons Consulter / Copier / Supprimer et aux actions `autres`.
 - Saisie des formats combo / picto : `creerCombo` du socle (la saisie filtre ou désigne l'option ; texte inconnu refusé ; choix à la souris = saisie terminée).
 

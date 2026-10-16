@@ -9,24 +9,8 @@ public class Metre
     /// <summary>Affectation du résultat à une variable, par exemple @surface.</summary>
     public string? MtrVariable { get; set; }
     public decimal? MtrResultat { get; set; }
-}
-
-public class MetreLigne
-{
-    public long MliId { get; set; }
-    public long MliMtrId { get; set; }
-    /// <summary>Ligne de sous-détail parente.</summary>
-    public long? MliParentId { get; set; }
-    public int MliOrdre { get; set; }
-    /// <summary>V valeur, D sous-détail, S sous-total.</summary>
-    public string MliType { get; set; } = "V";
-    /// <summary>+, -, *, /.</summary>
-    public string? MliOperateur { get; set; }
-    public string? MliFormule { get; set; }
-    public decimal? MliValeur { get; set; }
-    public long? MliStDepuisId { get; set; }
-    public string? MliVariable { get; set; }
-    public string? MliCommentaire { get; set; }
+    /// <summary>Script du métré (déclarations, instructions, « Renvoyer » = quantité) ; null = lignes de métré.</summary>
+    public string? MtrScript { get; set; }
 }
 
 public class VariableDefinition
@@ -45,4 +29,8 @@ public class VariableDefinition
     public string VarFormule { get; set; } = "";
     public int VarOrdre { get; set; }
     public decimal? VarValeur { get; set; }
+    /// <summary>N numérique, C chaîne, B booléen (variables d'un script).</summary>
+    public string VarType { get; set; } = "N";
+    /// <summary>Dernière valeur calculée d'une variable chaîne ou booléenne (Vrai / Faux).</summary>
+    public string? VarValeurTexte { get; set; }
 }

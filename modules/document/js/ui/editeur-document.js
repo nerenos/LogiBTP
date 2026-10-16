@@ -32,7 +32,7 @@ export const TYPES_DEPOT = {
   'application/x-logibtp-article': TL.ELEMENT, 'application/x-logibtp-ouvrage': TL.OUVRAGE, 'application/x-logibtp-ensemble': TL.TITRE,
 };
 
-export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante' };
+export const LIBELLES_TYPE_PRIX = { V: 'Vendu', O: 'Option', M: 'Pour mémoire', A: 'Variante', F: 'Frais annexes' };
 
 export const LIBELLES_TYPE = {
   TITRE: 'Titre', OUVRAGE: 'Ouvrage', ELEMENT: 'Élément', TEXTE: 'Texte', SOUS_TOTAL: 'S-total',
@@ -146,10 +146,10 @@ export class EditeurDocument {
     const catalogue = this.colonnes();
     if (!this.vue?.colonnes?.length) return catalogue;
     const parCle = new Map(catalogue.map((c) => [c.cle, c]));
-    const res = this.vue.colonnes.map((c) => parCle.get(c.cle)).filter(Boolean);
+    // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
+    const res = this.vue.colonnes.filter((c) => parCle.has(c.cle))
+      .map((c, i) => ({ ...parCle.get(c.cle), largeur: c.largeur ?? null, arbre: i === 0 }));
     if (!res.length) return catalogue;
-    // La première colonne porte l'arborescence (repli des lignes).
-    if (!res[0].arbre) res[0] = { ...res[0], arbre: true };
     if (this.vue.debogage) {
       const choisis = this.vue.systeme ?? [];
       res.push(...this.colonnesSysteme().filter((c) => !choisis.length || choisis.includes(c.champ)));
@@ -162,6 +162,19 @@ export class EditeurDocument {
     this.vue = vue;
     this.grille.definirColonnes(this.colonnesAffichees());
     this.surVue?.(vue); // l'hôte suit le mode débogage de la vue
+  }
+
+  /**
+   * Colonnes déplacées ou redimensionnées dans la grille ([{ cle, largeur }]) : la vue affichée prend cet ordre et ces
+   * largeurs (colonnes système exclues : elles restent à la fin) ; l'hôte les mémorise (surDisposition(vue)).
+   */
+  modifierDisposition(disposition) {
+    const colonnes = disposition.filter((c) => !c.cle.startsWith('sys:')).map(({ cle, largeur }) => (largeur ? { cle, largeur } : { cle }));
+    this.vue = { debogage: false, systeme: [], ...this.vue, colonnes };
+    // La grille a déjà appliqué l'ordre et les largeurs ; colonnes redéfinies si l'arborescence n'est plus portée
+    // par la première colonne seule.
+    if (this.grille.o.colonnes.some((c, i) => Boolean(c.arbre) !== (i === 0))) this.grille.definirColonnes(this.colonnesAffichees());
+    this.surDisposition?.(this.vue);
   }
 
   /** Champs des lignes (saisie et calcul) affichables en mode débogage, plus les contrôles de la ligne. */
@@ -192,12 +205,32 @@ export class EditeurDocument {
 
   couleurTypePrix(type) { return (this.definition.couleurs_type_prix ?? []).find((c) => c.type === type) ?? null; }
 
+  /** Type de prix effectif : celui de la ligne, sinon hérité de la tranche (ou de l'ouvrage) englobante. */
+  typePrixEffectif(l) {
+    if ((l.lig_type_prix ?? 'V') !== 'V') return l.lig_type_prix;
+    if (this.typesPrixDe?.resultat !== this.resultat) {
+      this.typesPrixDe = { resultat: this.resultat, parId: new Map((this.resultat?.lignes ?? []).map((x) => [x.lig_id, x])) };
+    }
+    const parId = this.typesPrixDe.parId;
+    for (let x = parId.get(l.lig_parent_id); x; x = parId.get(x.lig_parent_id)) if ((x.lig_type_prix ?? 'V') !== 'V') return x.lig_type_prix;
+    return 'V';
+  }
+
+  /** Demi-pastille du mode de vente (hors « vendu ») : { fond, libelle } ou null. */
+  pastilleTypePrix(l) {
+    const type = this.typePrixEffectif(l);
+    if (type === 'V') return null;
+    const c = this.couleurTypePrix(type);
+    return { fond: `linear-gradient(135deg, transparent 50%, ${c?.couleur ?? 'var(--discret)'} 50%)`, libelle: c?.libelle ?? LIBELLES_TYPE_PRIX[type] ?? type };
+  }
+
   /** Pastille : couleur de l'étiquette (haut gauche), couleur du mode de vente hors « vendu » (bas droite). */
   marqueur(r) {
     if (r.virtuelle) return null;
     const l = r.item;
     const e = l.lig_etiquette ? this.etiquettes().find((x) => x.code === l.lig_etiquette) : null;
-    const t = (l.lig_type_prix ?? 'V') !== 'V' ? this.couleurTypePrix(l.lig_type_prix) : null;
+    const type = this.typePrixEffectif(l);
+    const t = type !== 'V' ? this.couleurTypePrix(type) ?? { libelle: LIBELLES_TYPE_PRIX[type] ?? type, couleur: '#94a3b8' } : null;
     const c1 = e?.couleur ?? null, c2 = t?.couleur ?? null;
     const fond = c1 && c2 ? `linear-gradient(135deg, ${c1} 50%, ${c2} 50%)` : c1 ?? (c2 ? `linear-gradient(135deg, transparent 50%, ${c2} 50%)` : 'transparent');
     const titre = [e ? e.libelle : (l.lig_etiquette ? `Étiquette ${l.lig_etiquette}` : 'Sans étiquette'), t?.libelle].filter(Boolean).join(' · ');
@@ -368,7 +401,7 @@ export class EditeurDocument {
       ${this.etiquettes().map((e) => ligne('data-etq', e.code, e.couleur, e.libelle, etiquettes.has(e.code), compte.get(`e:${e.code}`))).join('')}
       ${ligne('data-etq', '', null, 'Sans étiquette', etiquettes.has(''), compte.get('e:'))}
       <strong>Modes de vente</strong>
-      ${['V', 'O', 'M', 'A'].map((t) => ligne('data-type', t, this.couleurTypePrix(t)?.couleur, LIBELLES_TYPE_PRIX[t], types.has(t), compte.get(`t:${t}`))).join('')}
+      ${Object.keys(LIBELLES_TYPE_PRIX).map((t) => ligne('data-type', t, this.couleurTypePrix(t)?.couleur, LIBELLES_TYPE_PRIX[t], types.has(t), compte.get(`t:${t}`))).join('')}
       <div class="boutons"><button type="button" data-effacer>Effacer</button></div>`;
     const r = ancre.getBoundingClientRect();
     menu.style.left = `${r.left}px`;
@@ -603,6 +636,7 @@ export class EditeurDocument {
         editable: (l) => saisissable(l) && estTypeNumerote(l),
         champ: () => 'lig_numerotation', lire: (l) => (l.lig_num_manuelle ? l.lig_numerotation ?? '' : ''),
         valeur: (r) => (r.calcule.lig_numerotation ?? '') + (r.item.lig_num_manuelle ? ' ✎' : ''),
+        titreCellule: (r) => (r.item?.lig_num_manuelle ? '✎ Numéro saisi manuellement (vider la cellule : numérotation automatique)' : ''),
       },
       {
         cle: 'type', titre: 'Type', classe: 'col-type', editeur: 'select', editable: saisissable,
@@ -708,6 +742,13 @@ export class EditeurDocument {
           return l.lig_tva_id ? this.libelleTaux(l.lig_tva_id) : '';
         },
       },
+      {
+        // Commentaire interne de la ligne (non imprimé) : première ligne dans la cellule, texte entier en bulle.
+        cle: 'commentaire', titre: 'Commentaire', classe: 'col-commentaire', editeur: 'texte', editable: saisissable,
+        champ: () => 'lig_commentaire', lire: (l) => l.lig_commentaire ?? '',
+        valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_commentaire ?? '').split('\n')[0]),
+        titreCellule: (r) => (r.virtuelle ? '' : r.item.lig_commentaire ?? ''),
+      },
     ];
   }
 
@@ -781,6 +822,7 @@ export class EditeurDocument {
     if (champ === 'lig_libelle_html') valeur = valeur.trim() === '' ? null : echapper(valeur);
     if (champ === 'lig_unt_code' && valeur.trim() === '') valeur = null;
     if (champ === 'lig_unt_code' && valeur) valeur = valeur.trim().slice(0, 10);
+    if (champ === 'lig_commentaire') valeur = valeur.trim() === '' ? null : valeur;
     this.modifierLigne(id, champ, valeur);
     return true;
   }
@@ -792,6 +834,7 @@ export class EditeurDocument {
     const pp = this.pressePapiers;
     return {
       modifier: (id, champ, texte, colonne) => this.modifierCellule(id, champ, texte, colonne),
+      colonnesModifiees: (disposition) => this.modifierDisposition(disposition),
 
       inserer: (position, refId, { memeType = false } = {}) => {
         const ref = this.saisie.lignes.find((x) => x.lig_id === refId);
@@ -903,7 +946,7 @@ export class EditeurDocument {
         `type-${(CODES_TL[r.calcule.lig_tyl_id] ?? '').toLowerCase()}`,
         r.estCalculee ? 'calculee' : '',
         r.messages.some((x) => this.resultat.erreurs.includes(x)) ? 'erreur' : r.messages.length ? 'avertissement' : '',
-        (r.calcule.lig_type_prix ?? 'V') !== 'V' ? 'hors-total' : '',
+        !r.virtuelle && this.typePrixEffectif(r.calcule) !== 'V' ? 'hors-total' : '',
         r.calcule.lig_is_non_editee ? 'non-editee' : '',
         this.coupees.has(r.item.lig_id) ? 'coupee' : '',
         this.marques?.ids.has(r.item.lig_id) ? (r.item.lig_id === this.marques.courant ? 'trouvee trouvee-courante' : 'trouvee') : '',

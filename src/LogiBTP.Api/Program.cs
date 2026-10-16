@@ -33,6 +33,8 @@ builder.Services.AddModuleListe<SpecialisationListeBtp>(Base);
 builder.Services.AddModuleFiche<SpecialisationFicheBtp>(Base);
 // Module GED : documents stockés sur le serveur (Ged:Repertoire), versions, coffre-fort (modules/ged/db/050).
 builder.Services.AddModuleGed<SpecialisationGedBtp>(Base);
+// Archivage automatique de la GED chaque nuit, pour chaque base de société (Ged:Archivage, désactivable).
+builder.Services.AddArchivageGed(builder.Configuration.GetSection("Ged:Archivage"));
 // Module Bibliothèque : bibliothèques, familles, natures, tarifs fournisseurs, historique des prix (modules/bibliotheque/db/060).
 builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 // Module Annuaire : personnes, individus, rattachements, liens, coordonnées partagées (modules/annuaire/db/070) ;
@@ -43,6 +45,9 @@ builder.Services.AddModuleEntreprisesFr();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+
+// Métrés saisis en lignes : convertis en scripts au démarrage, dans chaque base qui a encore la table metre_ligne.
+await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
 
 app.UseCors();
 app.UseErreursMetier();
@@ -60,5 +65,6 @@ api.MapModuleBibliotheque();
 api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
 api.MapStructure();
+api.MapComptes();
 
 app.Run();

@@ -17,7 +17,6 @@ public sealed class CompositionOuvrage
     public string Mode { get; set; } = "V";
     public List<DocumentLigneBtp> Lignes { get; set; } = [];
     public List<Metre> Metres { get; set; } = [];
-    public List<MetreLigne> MetreLignes { get; set; } = [];
     public List<VariableDefinition> Variables { get; set; } = [];
 }
 
@@ -75,7 +74,7 @@ public static class ElementsBibliotheque
         var r = MoteurDevisBtp.Calculer(new EntreeCalcul
         {
             Document = new DocumentBtp { EntModeCalculOuvrage = c.Mode, EntPrecisionMontant = 2, EntNumFormat = FormatNumerotation },
-            Lignes = c.Lignes, Metres = c.Metres, MetreLignes = c.MetreLignes, Variables = c.Variables,
+            Lignes = c.Lignes, Metres = c.Metres, Variables = c.Variables,
         });
         var x = r.Lignes.First(l => l.LigId == racine.LigId);
         var pv = ArrondiCalcul.Arr6(x.LigPv ?? 0);
@@ -94,7 +93,7 @@ public static class ElementsBibliotheque
         var r = MoteurDevisBtp.Calculer(new EntreeCalcul
         {
             Document = new DocumentBtp { EntModeCalculOuvrage = c.Mode, EntPrecisionMontant = 2, EntNumFormat = FormatNumerotation },
-            Lignes = c.Lignes, Metres = c.Metres, MetreLignes = c.MetreLignes, Variables = c.Variables,
+            Lignes = c.Lignes, Metres = c.Metres, Variables = c.Variables,
         });
         var x = r.Lignes.First(l => l.LigId == racine.LigId);
         var pv = ArrondiCalcul.Arr6(x.LigMontantHt ?? 0);

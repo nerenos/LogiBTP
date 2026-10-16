@@ -45,8 +45,6 @@ public class CasPartagesTests
             CasPartages.Verifier(att!.AsObject(), TrouverLigne(r["lignes"]!.AsArray(), cle), $"lignes[{cle}]", fautes);
         foreach (var (id, att) in a["metres"]?.AsObject() ?? [])
             CasPartages.Verifier(att!.AsObject(), CasPartages.Trouver(r["metres"]!.AsArray(), "mtr_id", id), $"metres[{id}]", fautes);
-        foreach (var (id, att) in a["metre_lignes"]?.AsObject() ?? [])
-            CasPartages.Verifier(att!.AsObject(), CasPartages.Trouver(r["metre_lignes"]!.AsArray(), "mli_id", id), $"metre_lignes[{id}]", fautes);
         foreach (var (id, att) in a["variables"]?.AsObject() ?? [])
             CasPartages.Verifier(att!.AsObject(), CasPartages.Trouver(r["variables"]!.AsArray(), "var_id", id), $"variables[{id}]", fautes);
         foreach (var att in a["tva"]?.AsArray() ?? [])
@@ -74,7 +72,6 @@ public class CasPartagesTests
         entree.Document = r1.Document;
         entree.Lignes = r1.Lignes;
         entree.Metres = r1.Metres;
-        entree.MetreLignes = r1.MetreLignes;
         entree.Variables = r1.Variables;
         var r2 = MoteurDevisBtp.Calculer(entree);
         Assert.Empty(new ComparateurBtp().Comparer(r1, r2));

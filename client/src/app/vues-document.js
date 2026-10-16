@@ -7,7 +7,7 @@ const cols = (...cles) => cles.map((cle) => ({ cle }));
 export const VUES_DOCUMENT = [
   {
     id: 1, nom: 'Complet', tyd_id: null, mod_code: 'COMPLET', globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva'), debogage: false, systeme: [] },
+    definition: { colonnes: cols('num', 'type', 'code', 'libelle', 'nature', 'compte', 'qte', 'unite', 'pa', 'fg', 'benef', 'pv', 'remise', 'pvnet', 'montant', 'tva', 'commentaire'), debogage: false, systeme: [] },
   },
   {
     id: 2, nom: 'Chiffrage', tyd_id: null, mod_code: 'CHIFFRAGE', globale: true, proprietaire: null, par_defaut: true,
@@ -48,4 +48,5 @@ export const COULEURS_TYPE_PRIX = [
   { type: 'O', libelle: 'Option', couleur: '#06b6d4' },
   { type: 'M', libelle: 'Pour mémoire', couleur: '#94a3b8' },
   { type: 'A', libelle: 'Variante', couleur: '#ec4899' },
+  { type: 'F', libelle: 'Frais annexes', couleur: '#f97316' },
 ];

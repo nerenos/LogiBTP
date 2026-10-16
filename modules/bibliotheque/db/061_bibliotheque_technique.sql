@@ -12,6 +12,7 @@ ALTER TABLE element
     ADD COLUMN IF NOT EXISTS ele_hauteur          NUMERIC(12,3),   -- mm
     ADD COLUMN IF NOT EXISTS ele_largeur          NUMERIC(12,3),   -- mm
     ADD COLUMN IF NOT EXISTS ele_epaisseur        NUMERIC(12,3),   -- mm
+    ADD COLUMN IF NOT EXISTS ele_longueur         NUMERIC(12,3),   -- mm (longueur de barre…)
     ADD COLUMN IF NOT EXISTS ele_isolant_r        NUMERIC(10,4),   -- résistance thermique R (m².K/W)
     ADD COLUMN IF NOT EXISTS ele_isolant_lambda   NUMERIC(10,5),   -- conductivité λ (W/m.K)
     ADD COLUMN IF NOT EXISTS ele_isolant_u        NUMERIC(10,4);   -- coefficient de transmission U (W/m².K)

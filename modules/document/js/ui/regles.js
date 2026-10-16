@@ -61,6 +61,9 @@ export class ReglesDocument {
     if (!l) return;
     const desc = () => [...descendants(C, lignes, id)].map((d) => index.get(d));
     if (champ === 'lig_type_prix') for (const d of desc()) d.lig_type_prix = l.lig_type_prix;
+    // Frais annexes : jamais imprimés (le moteur le force aussi).
+    if (l.lig_type_prix === 'F' && (champ === 'lig_type_prix' || champ === 'lig_is_non_editee')) l.lig_is_non_editee = true;
+    if (champ === 'lig_type_prix' && l.lig_type_prix === 'F') for (const d of desc()) d.lig_is_non_editee = true;
     if (champ === 'lig_is_non_editee') for (const d of desc()) d.lig_is_non_editee = l.lig_is_non_editee;
     if (l.lig_tyl_id === TL.OUVRAGE && this.champsHeritesOuvrage.includes(champ)) for (const d of desc()) d[champ] = l[champ];
     if (champ === 'lig_tva_id') l.lig_taux_tva = null;

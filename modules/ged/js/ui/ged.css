@@ -193,3 +193,10 @@ body.ged-redim-y, body.ged-redim-y * { cursor: row-resize !important; user-selec
 .ged-depot-fichiers th { text-align: left; color: var(--discret); font-weight: 600; padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--bord); }
 .ged-depot-fichiers td { padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--bord); vertical-align: middle; }
 .ged-depot-fichiers input { width: 100%; font: inherit; }
+
+/* Paramétrage des règles (rétention, classification). */
+.ged-regles { display: flex; flex-direction: column; gap: 0.8rem; }
+.ged-regles-defilement { overflow-x: auto; }
+.ged-regles .table-parametres td { white-space: nowrap; }
+.ged-regles input[type="number"] { width: 5.5em; }
+.ged-regles-actions button { padding: 0 0.35rem; }

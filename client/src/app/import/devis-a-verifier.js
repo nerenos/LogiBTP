@@ -98,7 +98,7 @@ export async function creerDepuisImport(page) {
   const r = ed.calculer(ed.entree({ ...ed.saisie, document }));
   try {
     await api.enregistrer(id, {
-      document: r.document, lignes: r.lignes, metres: r.metres ?? ed.saisie.metres, metre_lignes: r.metre_lignes ?? ed.saisie.metre_lignes,
+      document: r.document, lignes: r.lignes, metres: r.metres ?? ed.saisie.metres,
       variables: r.variables ?? ed.saisie.variables, version_moteur_client: VERSION_MOTEUR,
     });
   } catch (e) {

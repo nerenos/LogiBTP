@@ -3,12 +3,11 @@ import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
-import { PanneauMetre } from '@logibtp/metre/ui';
+import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
-import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../demo.js';
 import { VUES_DOCUMENT } from '../vues-document.js';
-import { EditeurDevisBtp, PressePapiersBtp, DictionnaireBtp } from '../editeur-btp.js';
+import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
@@ -20,9 +19,9 @@ import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
 
-// Document (devis, facture…) dans l'éditeur du cœur : /document/<id>, /document/demo (devis de démonstration :
-// local hors ligne, créé dans la base au premier lancement en ligne), /document/nouveau?type=<code>,
-// /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert par la page d'import).
+// Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
+// /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
+// par la page d'import). Sans l'API (hors ligne), aucun document ne s'ouvre.
 
 const GABARIT = `
   <div class="document-barre">
@@ -43,6 +42,7 @@ const GABARIT = `
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
+      <button data-basculer-dock="notifications" class="compteur-metres" title="Erreurs et avertissements des métrés (sans blocage de l'enregistrement)">⚠ 0</button>
       <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
   </div>
   <div class="document-verrou" hidden></div>
@@ -100,12 +100,25 @@ const GABARIT = `
           <section id="controles" class="controles" hidden></section>
         </div>
       </aside>
+      <aside class="dock" data-dock-id="notifications">
+        <header class="dock-entete">
+          <span class="dock-titre">Métrés : erreurs et avertissements</span>
+          <div class="dock-boutons">
+            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
+            <button data-dock="bas" title="Ancrer en bas">⬓</button>
+            <button data-dock="droite" title="Ancrer à droite">◨</button>
+            <button data-action="reduire" title="Réduire">–</button>
+            <button data-action="fermer" title="Fermer (bouton ⚠ de la barre pour le rouvrir)">✕</button>
+          </div>
+        </header>
+        <div class="dock-contenu"><section id="notifications-metre"></section></div>
+      </aside>
     </section>
   </main>
   <aside id="metre" class="tiroir" hidden></aside>`;
 
 /** Contenu de saisie à partir d'un document complet renvoyé par l'API. */
-const versSaisie = (d) => ({ document: d.document, lignes: d.lignes, metres: d.metres ?? [], metre_lignes: d.metre_lignes ?? [], variables: d.variables ?? [] });
+const versSaisie = (d) => ({ document: d.document, lignes: d.lignes, metres: d.metres ?? [], variables: d.variables ?? [] });
 
 export class PageDocument extends PageBase {
   icone = '📝';
@@ -118,6 +131,8 @@ export class PageDocument extends PageBase {
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
       racine: this.conteneur,
+      // Notifications des métrés : en bas, ouvertes par le compteur ⚠ de la barre.
+      docks: { notifications: { position: 'bas', reduit: false, visible: false } },
       surOnglet: (o) => {
         if (o === 'lignes') this.editeur?.grille.focus();
         if (o === 'analyse') this.analyse?.rendre();
@@ -173,30 +188,20 @@ export class PageDocument extends PageBase {
     const params = await s.bibliotheque.parametres?.().catch(() => null);
     this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
     this.natures = await s.bibliotheque.natures?.().catch(() => []) ?? [];
+    this.comptes = app.enLigne ? await api.comptesComptables().catch(() => []) : [];
     this.appel = new AppelBibliotheque({
       fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
       bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
     });
 
     const { id } = this.params;
-    if (!app.enLigne) {
-      if (id !== 'demo' && Number(id) !== DOCUMENT_DEMO.document.ent_id) throw new Error("Démo hors ligne : seul le devis de démonstration s'ouvre (/document/demo)");
-      await this.charger(DEFINITION_DEMO, DOCUMENT_DEMO);
-      return;
-    }
+    if (!app.enLigne) throw new Error('Hors ligne : les documents s\'ouvrent depuis la base, l\'API est indisponible');
     this.types = await api.typesDocument();
     // Création depuis les listes : /document/nouveau?type=<code>.
     if (id === 'nouveau') {
       await this.nouveau(this.requete.type ?? 'V_DEVIS');
     } else if (id === 'import') {
       await ouvrirImport(this, this.requete.jeton);
-    } else if (id === 'demo') {
-      // Premier lancement : le devis de démonstration est créé dans la base.
-      const docs = await api.documents();
-      const demo = docs.find((d) => d.ent_objet === DOCUMENT_DEMO.document.ent_objet) ?? null;
-      const docId = demo?.ent_id ?? await this.creerDemo();
-      app.routeur.remplacerUrl(`/document/${docId}`);
-      await this.chargerDocument(docId);
     } else await this.chargerDocument(Number(id));
   }
 
@@ -270,6 +275,25 @@ export class PageDocument extends PageBase {
     this.rafraichir();
   }
 
+  /**
+   * Compte du tiers du document (compte client, ou fournisseur pour un achat : fiche personne) : compte hérité des
+   * lignes sans compte ni nature qui en porte un. Relu quand le tiers change.
+   */
+  suivreCompteTiers() {
+    const ed = this.editeur;
+    const tiers = ed?.saisie.document.ent_tiers_id ?? null;
+    if (!ed || tiers === this.tiersCompte) return;
+    this.tiersCompte = tiers;
+    ed.compteTiers = null;
+    if (!tiers || !this.servicesFiche) return;
+    const champ = ed.definition.type?.tyd_famille === 'A' ? 'fou_compte' : 'cli_compte';
+    this.servicesFiche.charger('personne', tiers).then((f) => {
+      if (this.editeur !== ed || this.tiersCompte !== tiers) return;
+      ed.compteTiers = f?.valeurs?.[champ] || null;
+      if (ed.compteTiers) { ed.grille.rendre(); this.panneaux?.rendreDetail(this.$('#detail'), this.selection); }
+    }).catch(() => {});
+  }
+
   /** Libération du verrou (changement de document, page quittée, onglet fermé : requête keepalive). */
   async liberer() {
     clearInterval(this.battement);
@@ -310,6 +334,9 @@ export class PageDocument extends PageBase {
     this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
+    this.editeur.comptes = this.comptes;
+    this.tiersCompte = undefined;
+    this.suivreCompteTiers();
     this.editeur.surFiltre = () => this.afficherFiltre();
     // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
     this.editeur.surVue = () => {
@@ -328,7 +355,20 @@ export class PageDocument extends PageBase {
       message: (t) => this.app.message(t),
       dictionnaire: new DictionnaireBtp(this.editeur),
     });
-    this.editeur.magasin.abonner(() => this.rafraichir());
+    this.notifications = new NotificationsMetre(this.$('#notifications-metre'), this.editeur, {
+      ouvrir: (ligId, mtrId, position) => {
+        this.disposition.onglet('lignes');
+        this.editeur.grille.selectionner(ligId, { colonne: 3 });
+        this.metre.ouvrir(ligId, mtrId, position);
+      },
+      surCompte: ({ erreurs, avertissements }) => {
+        const b = this.$('.compteur-metres');
+        b.textContent = `${erreurs ? '⛔' : '⚠'} ${erreurs + avertissements}`;
+        b.classList.toggle('avec-erreurs', erreurs > 0);
+        b.classList.toggle('avec-avertissements', !erreurs && avertissements > 0);
+      },
+    });
+    this.editeur.magasin.abonner(() => { this.suivreCompteTiers(); this.rafraichir(); });
     this.marque = this.editeur.magasin.pile.at(-1);
     this.ecarts = null;
     this.rafraichir();
@@ -399,23 +439,6 @@ export class PageDocument extends PageBase {
     this.app.majPage();
   }
 
-  /** Premier lancement en ligne : crée le devis de démonstration dans la base. */
-  async creerDemo() {
-    const devis = this.types.find((t) => t.tyd_code === 'V_DEVIS');
-    const cree = await api.creer({ ent_tyd_id: devis.tyd_id, ent_tiers_id: DOCUMENT_DEMO.document.ent_tiers_id, ent_objet: DOCUMENT_DEMO.document.ent_objet, ent_num_format: DOCUMENT_DEMO.document.ent_num_format });
-    const contenu = new PressePapiersBtp().renumeroter({ racines: [], ...DOCUMENT_DEMO }, -1);
-    for (const l of contenu.lignes) l.lig_origine_id = null;
-    const definition = await api.definition('V_DEVIS');
-    const ed = new EditeurDevisBtp(document.createElement('div'), {
-      definition, saisie: { document: { ...cree.document, ent_proprietes: DOCUMENT_DEMO.document.ent_proprietes }, ...contenu },
-    });
-    const r = ed.resultat;
-    await api.enregistrer(cree.document.ent_id, {
-      document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables, version_moteur_client: VERSION_MOTEUR,
-    });
-    return cree.document.ent_id;
-  }
-
   async nouveau(code) {
     const type = this.types.find((t) => t.tyd_code === code);
     if (!type) throw new Error(`Type de document inconnu : ${code}`);
@@ -437,13 +460,13 @@ export class PageDocument extends PageBase {
     if (this.importEnCours) { await creerDepuisImport(this); return; }
     const ed = this.editeur;
     const r = ed.resultat;
-    const envoi = { document: r.document, lignes: r.lignes, metres: r.metres, metre_lignes: r.metre_lignes, variables: r.variables, version_moteur_client: VERSION_MOTEUR };
+    const envoi = { document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables, version_moteur_client: VERSION_MOTEUR };
     const saisieEnvoyee = structuredClone(ed.entree(ed.saisie));
     const rep = await api.enregistrer(ed.saisie.document.ent_id, envoi);
     const map = (table, id) => (id === null || id === undefined ? id : table[id] ?? id);
     // Correspondances des compléments du module Métré, par table (réponse générique du module Document).
     const cl = rep.correspondance_lignes;
-    const { metres: cm = {}, metre_lignes: cml = {}, variables: cv = {} } = rep.correspondances ?? {};
+    const { metres: cm = {}, variables: cv = {} } = rep.correspondances ?? {};
     ed.magasin.appliquerServeur((d) => {
       d.document = rep.document.document;
       for (const l of d.lignes) {
@@ -456,10 +479,6 @@ export class PageDocument extends PageBase {
         l.lig_ent_id = d.document.ent_id;
       }
       for (const m of d.metres) { m.mtr_id = map(cm, m.mtr_id); m.mtr_lig_id = map(cl, m.mtr_lig_id); }
-      for (const x of d.metre_lignes) {
-        x.mli_id = map(cml, x.mli_id); x.mli_mtr_id = map(cm, x.mli_mtr_id);
-        x.mli_parent_id = map(cml, x.mli_parent_id); x.mli_st_depuis_id = map(cml, x.mli_st_depuis_id);
-      }
       for (const v of d.variables) { v.var_id = map(cv, v.var_id); v.var_lig_id = map(cl, v.var_lig_id); v.var_mtr_id = map(cm, v.var_mtr_id); }
     });
     if (this.selection !== null) this.selection = map(cl, this.selection);

@@ -20,6 +20,20 @@ public sealed class OptionsSocietes
     public string? Principale { get; set; }
     public string LibellePrincipale { get; set; } = "Société principale";
     public Dictionary<string, SocieteConfiguree> Liste { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Toutes les sociétés configurées : la principale puis celles de la liste (connexion renseignée).</summary>
+    public IEnumerable<SocieteCourante> Societes()
+    {
+        if (!string.IsNullOrEmpty(Principale)) yield return new SocieteCourante(null, LibellePrincipale, Principale);
+        foreach (var (code, s) in Liste)
+            if (!string.IsNullOrEmpty(s.Connexion)) yield return new SocieteCourante(code, string.IsNullOrEmpty(s.Libelle) ? code.ToUpperInvariant() : s.Libelle, s.Connexion);
+    }
+}
+
+/// <summary>Société imposée à une portée de services hors requête HTTP (tâches de fond) : voir CreerPorteeSociete.</summary>
+public sealed class PorteeSociete
+{
+    public SocieteCourante? Imposee { get; set; }
 }
 
 public sealed class SocieteConfiguree
@@ -84,13 +98,26 @@ public static class ExtensionsSocietes
         services.Configure<OptionsSocietes>(configuration.GetSection("Societes"));
         services.PostConfigure<OptionsSocietes>(o => o.Principale ??= configuration.GetConnectionString("LogiBTP"));
         services.AddHttpContextAccessor();
+        services.AddScoped<PorteeSociete>();
         services.AddScoped(sp =>
         {
             var o = sp.GetRequiredService<IOptions<OptionsSocietes>>().Value;
-            return sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.Items[Cle] as SocieteCourante
+            return sp.GetRequiredService<PorteeSociete>().Imposee
+                ?? sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.Items[Cle] as SocieteCourante
                 ?? new SocieteCourante(null, o.LibellePrincipale, o.Principale ?? "");
         });
         return services;
+    }
+
+    /// <summary>
+    /// Portée de services travaillant sur la base d'une société donnée, hors requête HTTP (tâche de fond) : les
+    /// contextes EF et services de la portée prennent la connexion de cette société.
+    /// </summary>
+    public static AsyncServiceScope CreerPorteeSociete(this IServiceProvider services, SocieteCourante societe)
+    {
+        var portee = services.CreateAsyncScope();
+        portee.ServiceProvider.GetRequiredService<PorteeSociete>().Imposee = societe;
+        return portee;
     }
 
     /// <summary>

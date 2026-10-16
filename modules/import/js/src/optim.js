@@ -190,7 +190,7 @@ export async function lireFichierOptim(octets) {
  * Devis neutre depuis le XML OptimBTP :
  * { entete, intervenants, lignes, complements, parametres, non_repris, avertissements }.
  * Lignes : { id, parent, ordre, type (TITRE, OUVRAGE, ELEMENT, TEXTE, SAUT_PAGE), numero, num_depart, code, libelle_html,
- * unite, qte, qte_absolue, precision_qte, prix_achat, coef_fg, coef_benef, pv_fixe, taux_tva, nature, non_editee,
+ * unite, qte, qte_absolue, precision_qte, prix_achat, coef_fg, coef_benef, pv_fixe, pv_unitaire (PVU d'origine), taux_tva, nature, non_editee,
  * composante, controle { pru, pvu, montant_ht }, source (identifiant OptimBTP) }.
  */
 export function convertirOptim(xml) {
@@ -349,6 +349,8 @@ export function convertirOptim(xml) {
           if (pau > 0) { l.prix_achat = pau; l.coef_fg = arr(cout / pau, 6); } else { l.prix_achat = arr(cout, 6); l.coef_fg = 1; }
         }
         if (v.IsMntFixe === '1' && !composante) l.pv_fixe = nombre(v.PVU);
+        // PV unitaire d'origine (absent ou nul : null) : le cœur l'impose aux ouvrages et composantes (mode bordereau).
+        l.pv_unitaire = estVide(v.PVU) ? null : nombre(v.PVU);
       }
       lignes.push(l);
       parcourir(id, l, coefVente);

@@ -52,7 +52,7 @@ const article = (o) => ({
   type: 'ARTICLE', actif: true, gestion: 'NON_GERE', unites: [], scenario_pa: 'FIXE', scenarios: null, pa_fixe: null, dernier_pa: null, pmp: null,
   coef_fg: '1.1', coef_benef: '1.2', pv: null, pv_fixe: false, coef_remise: '1', composition: null, image_ged: null, proprietes: {},
   coef_fg_impose: false, coef_benef_impose: false,
-  poids: null, surface: null, surface_peinture: null, volume: null, hauteur: null, largeur: null, epaisseur: null, isolant_r: null, isolant_lambda: null, isolant_u: null,
+  poids: null, surface: null, surface_peinture: null, volume: null, hauteur: null, largeur: null, epaisseur: null, longueur: null, isolant_r: null, isolant_lambda: null, isolant_u: null,
   unite_achat: null, unite_vente: null, fam_id: null, nat_id: null, ...o,
 });
 const acier = (id, code, diametre, poids) => article({
@@ -96,11 +96,10 @@ export const ELEMENTS = [
         L({ lig_id: 3, lig_parent_id: 1, lig_ordre: 2, lig_tyl_id: 3, lig_libelle_html: 'Acier HA10 (treillis 20 × 20)', lig_qte: 10, lig_qte_type: 'R', lig_coef_perte: 1.1, lig_unt_code: 'ml', lig_pa: 0.71, lig_coef_fg: 1.08, lig_coef_benef: 1.25, lig_proprietes: { element: { id: 1, bib: 'GEN', code: 'HA10' } } }),
         L({ lig_id: 4, lig_parent_id: 1, lig_ordre: 3, lig_tyl_id: 3, lig_libelle_html: 'Heure de maçon (coulage, talochage)', lig_qte: 0.45, lig_qte_type: 'R', lig_unt_code: 'h', lig_pa: 38, lig_coef_fg: 1.35, lig_coef_benef: 1.15, lig_proprietes: { element: { id: 5, bib: 'GEN', code: 'MOMAC' } } }),
       ],
-      metres: [{ mtr_id: 10, mtr_lig_id: 2, mtr_libelle: 'Volume de béton par m²', mtr_unt_code: 'm3', mtr_variable: null }],
-      metre_lignes: [
-        { mli_id: 11, mli_mtr_id: 10, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '1', mli_commentaire: 'Surface (1 m²)' },
-        { mli_id: 12, mli_mtr_id: 10, mli_parent_id: null, mli_ordre: 2, mli_type: 'V', mli_operateur: '*', mli_formule: '0,15', mli_commentaire: 'Épaisseur' },
-      ],
+      metres: [{
+        mtr_id: 10, mtr_lig_id: 2, mtr_libelle: 'Volume de béton par m²', mtr_unt_code: 'm3', mtr_variable: null,
+        mtr_script: 'Epaisseur est un numérique = 0.15   // m\n\nRenvoyer 1 * Epaisseur   // 1 m² de dalle',
+      }],
       variables: [],
     },
   }),
@@ -134,14 +133,12 @@ export const ELEMENTS = [
         L({ lig_id: 8, lig_parent_id: 1, lig_ordre: 3, lig_tyl_id: 3, lig_libelle_html: 'Variante : couleur hors standard (RAL au choix, plaxage 2 faces)', lig_type_prix: 'A', lig_qte_source: 'M', lig_mtr_id: 22, lig_precision_qte: 3, lig_unt_code: 'm2', lig_pa: 45, lig_coef_fg: 1.1, lig_coef_benef: 1.2, lig_nat_id: 2 }),
       ],
       metres: [
-        { mtr_id: 20, mtr_lig_id: 3, mtr_libelle: 'Surface de la fenêtre', mtr_unt_code: 'm2', mtr_variable: null },
-        { mtr_id: 21, mtr_lig_id: 6, mtr_libelle: 'Surface du volet (hauteur + coffre)', mtr_unt_code: 'm2', mtr_variable: null },
-        { mtr_id: 22, mtr_lig_id: 8, mtr_libelle: 'Surface plaxée', mtr_unt_code: 'm2', mtr_variable: null },
-      ],
-      metre_lignes: [
-        { mli_id: 30, mli_mtr_id: 20, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * {{$hauteur}}', mli_commentaire: 'Largeur × hauteur de la tranche' },
-        { mli_id: 31, mli_mtr_id: 21, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * ({{$hauteur}} + 0,2)', mli_commentaire: 'Largeur × (hauteur + coffre 20 cm)' },
-        { mli_id: 32, mli_mtr_id: 22, mli_parent_id: null, mli_ordre: 1, mli_type: 'V', mli_operateur: '+', mli_formule: '{{$largeur}} * {{$hauteur}}', mli_commentaire: 'Surface de la fenêtre' },
+        { mtr_id: 20, mtr_lig_id: 3, mtr_libelle: 'Surface de la fenêtre', mtr_unt_code: 'm2', mtr_variable: null,
+          mtr_script: 'Renvoyer $largeur * $hauteur   // largeur × hauteur de la tranche' },
+        { mtr_id: 21, mtr_lig_id: 6, mtr_libelle: 'Surface du volet (hauteur + coffre)', mtr_unt_code: 'm2', mtr_variable: null,
+          mtr_script: 'Coffre est un numérique = 0.2   // hauteur du coffre (m)\n\nRenvoyer $largeur * ($hauteur + Coffre)' },
+        { mtr_id: 22, mtr_lig_id: 8, mtr_libelle: 'Surface plaxée', mtr_unt_code: 'm2', mtr_variable: null,
+          mtr_script: 'Renvoyer $largeur * $hauteur   // surface de la fenêtre' },
       ],
       variables: [
         { var_id: 40, var_lig_id: 1, var_mtr_id: null, var_portee: '$', var_nom: 'largeur', var_operation: '=', var_formule: '1,2', var_ordre: 1 },

@@ -1,10 +1,11 @@
-import { echapper, formatNombre, formatLibre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
+import { libelleCompte } from './comptes.js';
 
 /** Individus actifs rattachés à notre société (annuaire) : rédacteurs proposés, [{ valeur (ind_id), libelle, detail }]. */
 export async function individusSociete(annuaire) {
@@ -97,7 +98,7 @@ export class PanneauxBtp extends PanneauxDocument {
     return [...(this.annuaire ? [`<label title="Rédacteur du document : salarié de notre société (annuaire) ; saisir pour filtrer">Rédacteur
       <input data-redacteur autocomplete="off" value="${echapper(this.libelleRedacteur(d.ent_redacteur_id))}"></label>`] : []),
     `<label>Calcul des ouvrages
-      <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}</select></label>`,
+      <select data-champ="ent_mode_calcul_ouvrage">${opt('V', 'Somme des PV', d.ent_mode_calcul_ouvrage)}${opt('D', 'Déboursé', d.ent_mode_calcul_ouvrage)}${opt('B', 'Bordereau (PV fixe sans ventilation)', d.ent_mode_calcul_ouvrage)}</select></label>`,
     `<label title="Bibliothèque des codes saisis sans préfixe ; les autres s'appellent par BIB:CODE">Bibliothèque
       <select data-champ="ent_bib_id" data-entier>${opt('', `Par défaut${defaut ? ` (${defaut.code})` : ''}`, d.ent_bib_id ?? '')}${this.bibliotheques.filter((b) => b.actif || b.id === d.ent_bib_id)
         .map((b) => opt(String(b.id), `${b.code} – ${b.libelle}`, d.ent_bib_id === null || d.ent_bib_id === undefined ? '' : String(d.ent_bib_id))).join('')}</select></label>`];
@@ -213,13 +214,35 @@ export class PanneauxBtp extends PanneauxDocument {
       // Nature (obligatoire pour valider) : avant le code article.
       const natures = (this.editeur.natures ?? []).filter((n) => n.actif !== false || n.id === l.lig_nat_id);
       const k = champs.findIndex((c) => c.includes('data-champ="lig_code"'));
-      champs.splice(k < 0 ? 0 : k, 0, f.sel('lig_nat_id', `Nature${natureObligatoire(l) ? ' *' : ''}`, [['', '—'], ...natures.map((n) => [n.id, `${n.code} – ${n.libelle}`])], true));
+      champs.splice(k < 0 ? 0 : k, 0, f.sel('lig_nat_id', `Nature${natureObligatoire(l) ? ' *' : ''}`, [['', '—'], ...natures.map((n) => [n.id, `${n.code} – ${n.libelle}`])], true),
+        this.champCompte(l));
     }
     if (l.lig_tyl_id === TL.PIED_HT) {
       const k = champs.findIndex((c) => c.includes('data-champ="lig_is_non_editee"'));
       champs.splice(k < 0 ? champs.length : k, 0, f.coche('lig_pied_is_fa', 'Frais annexe ventilé dans les prix'));
     }
     return champs;
+  }
+
+  /** Compte comptable : saisie libre (plan de comptes proposé), code et libellé dessous ; compte hérité souligné. */
+  champCompte(l) {
+    const c = this.editeur.compteLigne(l);
+    const lib = c ? echapper(libelleCompte(c.code, this.editeur.comptes)) : '';
+    const info = !c ? 'Aucun compte' : c.herite ? `<u class="compte-herite">${lib}</u> <em>(hérité : ${echapper(c.detail)})</em>` : lib;
+    return `<label class="large" title="Vide : compte hérité de la nature (vente ou achat selon le document), sinon du tiers">Compte comptable
+      <input data-champ="lig_cpt_code" data-comptes maxlength="20" autocomplete="off" value="${echapper(l.lig_cpt_code ?? '')}" placeholder="${c?.herite ? echapper(c.code) : ''}">
+      <small class="compte-libelle">${info}</small></label>`;
+  }
+
+  /** Liste du plan de comptes sur le champ du compte (saisie libre : un code absent du plan reste accepté). */
+  lierCompte(zone) {
+    const champ = zone.querySelector('[data-comptes]');
+    if (!champ) return;
+    const options = (this.editeur.comptes ?? []).filter((c) => c.actif !== false).map((c) => ({ valeur: c.code, libelle: c.libelle }));
+    let liste = null;
+    champ.addEventListener('focus', () => { if (!liste && !champ.readOnly) liste = new ListeDeroulante(champ, options); });
+    champ.addEventListener('keydown', (e) => { if (liste?.clavier(e)) e.preventDefault(); });
+    champ.addEventListener('blur', () => { liste?.detruire(); liste = null; });
   }
 
   calculDetail(c) {
@@ -247,6 +270,7 @@ export class PanneauxBtp extends PanneauxDocument {
     super.rendreDetail(zone, ligId);
     const l = this.editeur.saisie.lignes.find((x) => x.lig_id === ligId);
     if (!l) return;
+    this.lierCompte(zone);
     const lecture = !!this.editeur.magasin.lectureSeule;
     const ids = () => {
       const sel = this.editeur.grille.selection ?? [];

@@ -65,4 +65,6 @@ export const api = {
   vuesDocument: (type) => appel('GET', `/vues-document${type?.tyd_code ? `?type=${encodeURIComponent(type.tyd_code)}` : ''}`),
   enregistrerVueDocument: (vue) => appel('PUT', '/vues-document', vue),
   supprimerVueDocument: (id) => appel('DELETE', `/vues-document/${id}`),
+  // Plan de comptes minimal (db/166) : libellés des comptes comptables des lignes.
+  comptesComptables: () => appel('GET', '/comptes-comptables'),
 };

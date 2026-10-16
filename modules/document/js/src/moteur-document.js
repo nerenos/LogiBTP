@@ -109,10 +109,21 @@ export class MoteurDocument {
     return estChiffree(l) && !this.aUnAncetreOuvrage(l);
   }
 
-  /** Type de prix hérité : Option, Pour mémoire et Variante sont hors total. */
+  /** Type de prix hérité : Option, Pour mémoire, Variante et Frais annexes sont hors total. */
   horsTotal(l, jusqua = null) {
     for (let x = l; x && x !== jusqua; x = this.parent(x)) if ((x.lig_type_prix ?? 'V') !== 'V') return true;
     return false;
+  }
+
+  /** Frais annexes (type F, hérité) : hors total, jamais imprimé ; ventilés sur les autres lignes en spécialisation. */
+  estFraisAnnexes(l) {
+    let f = false;
+    for (let x = l; x; x = this.parent(x)) {
+      const t = x.lig_type_prix ?? 'V';
+      if (t === 'F') f = true;
+      else if (t !== 'V') return false;
+    }
+    return f;
   }
 
   composantes(compose) {
@@ -259,6 +270,7 @@ export class MoteurDocument {
       if (estPied(l) && p) this.erreur(l.lig_id, 'PIED_RACINE', 'Les lignes de pied sont au niveau racine');
       if (p && !accepteEnfants(p)) this.erreur(l.lig_id, 'PARENT_INVALIDE', 'Le type de la ligne parente n\'accepte pas d\'enfants');
       if (l.lig_tyl_id === TL.SECTION && p) this.erreur(l.lig_id, 'SECTION_RACINE', 'Une section est au niveau racine');
+      if (this.estFraisAnnexes(l)) l.lig_is_non_editee = true;
       this.validerLigne(l);
     }
   }
@@ -659,6 +671,11 @@ export class MoteurDocument {
 
   // ---------------------------------------------------------------- passe 6 : libellés
 
+  /** Libellé HTML d'où part le libellé affiché (une spécialisation peut le calculer : métré en script…). */
+  sourceLibelle(l) {
+    return l.lig_libelle_html;
+  }
+
   passeLibelles() {
     if (this.options.libelles_figes) return;
     for (const l of this.ordre) {
@@ -668,7 +685,7 @@ export class MoteurDocument {
         const { valeur, colonne } = this.lireDonnee(ref, l, 'libelle');
         return { valeur, type: this.colonnesDates.has(colonne) ? 'date' : this.colonnesDecimales.has(colonne) ? 'decimale' : null };
       };
-      const { texte, inconnues } = remplacerVariables(l.lig_libelle_html, resoudre);
+      const { texte, inconnues } = remplacerVariables(this.sourceLibelle(l), resoudre);
       for (const i of inconnues) this.avertir(l.lig_id, 'VARIABLE_LIBELLE', `Libellé : ${i.message}`);
       l.lig_libelle_affiche = texte;
       l.lig_libelle_brut = texteBrut(texte);

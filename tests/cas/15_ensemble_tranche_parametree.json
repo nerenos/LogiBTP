@@ -205,53 +205,24 @@
         "mtr_lig_id": 3,
         "mtr_libelle": "Surface de la fenêtre",
         "mtr_unt_code": "m2",
-        "mtr_variable": null
+        "mtr_variable": null,
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1 est un numérique = {{$largeur}} * {{$hauteur}} // Largeur × hauteur de la tranche\nRenvoyer L1"
       },
       {
         "mtr_id": 21,
         "mtr_lig_id": 6,
         "mtr_libelle": "Surface du volet (hauteur + coffre)",
         "mtr_unt_code": "m2",
-        "mtr_variable": null
+        "mtr_variable": null,
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1 est un numérique = {{$largeur}} * ({{$hauteur}} + 0,2) // Largeur × (hauteur + coffre 20 cm)\nRenvoyer L1"
       },
       {
         "mtr_id": 22,
         "mtr_lig_id": 8,
         "mtr_libelle": "Surface plaxée",
         "mtr_unt_code": "m2",
-        "mtr_variable": null
-      }
-    ],
-    "metre_lignes": [
-      {
-        "mli_id": 30,
-        "mli_mtr_id": 20,
-        "mli_parent_id": null,
-        "mli_ordre": 1,
-        "mli_type": "V",
-        "mli_operateur": "+",
-        "mli_formule": "{{$largeur}} * {{$hauteur}}",
-        "mli_commentaire": "Largeur × hauteur de la tranche"
-      },
-      {
-        "mli_id": 31,
-        "mli_mtr_id": 21,
-        "mli_parent_id": null,
-        "mli_ordre": 1,
-        "mli_type": "V",
-        "mli_operateur": "+",
-        "mli_formule": "{{$largeur}} * ({{$hauteur}} + 0,2)",
-        "mli_commentaire": "Largeur × (hauteur + coffre 20 cm)"
-      },
-      {
-        "mli_id": 32,
-        "mli_mtr_id": 22,
-        "mli_parent_id": null,
-        "mli_ordre": 1,
-        "mli_type": "V",
-        "mli_operateur": "+",
-        "mli_formule": "{{$largeur}} * {{$hauteur}}",
-        "mli_commentaire": "Surface de la fenêtre"
+        "mtr_variable": null,
+        "mtr_script": "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).\nlocal L1 est un numérique = {{$largeur}} * {{$hauteur}} // Surface de la fenêtre\nRenvoyer L1"
       }
     ],
     "variables": [

@@ -1,0 +1,39 @@
+{
+  "nom": "Variable inconnue dans une formule de métré",
+  "description": "Une formule lit {{$$inconnue}} : le métré est en erreur VARIABLE_INCONNUE.",
+  "entree": {
+    "metre": {
+      "mtr_id": 40
+    },
+    "metre_lignes": [
+      {
+        "mli_id": 501,
+        "mli_mtr_id": 40,
+        "mli_parent_id": null,
+        "mli_ordre": 1,
+        "mli_type": "V",
+        "mli_operateur": "+",
+        "mli_formule": "3"
+      },
+      {
+        "mli_id": 502,
+        "mli_mtr_id": 40,
+        "mli_parent_id": null,
+        "mli_ordre": 2,
+        "mli_type": "V",
+        "mli_operateur": "*",
+        "mli_formule": "{{$$inconnue}}"
+      }
+    ]
+  },
+  "attendu": {
+    "erreur": "VARIABLE_INCONNUE",
+    "mtr_variable": null,
+    "script": [
+      "// Métré converti depuis la saisie en lignes (valeurs, sous-détails, sous-totaux).",
+      "local L1 est un numérique = 3",
+      "local L2 est un numérique = {{$$inconnue}}",
+      "Renvoyer L1 * L2"
+    ]
+  }
+}

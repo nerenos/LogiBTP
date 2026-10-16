@@ -62,10 +62,15 @@ export class PlanDocument {
     for (const t of tranches) if (t.parent !== null && (this.replies.has(t.parent) || masquees.has(t.parent))) masquees.add(t.ligne.lig_id);
     const courante = this.trancheCourante();
     const filtre = ed.filtre;
-    const item = (id, num, libelle, montant, { profondeur = 0, aEnfants = false, classe = '' } = {}) => `
+    const item = (id, num, libelle, montant, { profondeur = 0, aEnfants = false, classe = '', ligne = null } = {}) => {
+      // Demi-pastille du mode de vente (option, frais annexes…) de la tranche, comme dans la grille.
+      const t = ligne ? ed.pastilleTypePrix(ligne) : null;
+      const pastille = `<span class="type-prix" ${t ? `style="background:${echapper(t.fond)}" title="${echapper(t.libelle)}"` : ''}></span>`;
+      return `
       <li data-id="${id}" ${id !== ID_PIED && !ed.magasin?.lectureSeule ? 'draggable="true"' : ''} class="${classe} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(libelle)}">
         <span class="pli" ${aEnfants ? 'data-pli' : ''}>${aEnfants ? (this.replies.has(id) ? '▸' : '▾') : ''}</span>
-        <span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span><span class="mt">${formatNombre(montant, pm)}</span></li>`;
+        ${pastille}<span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span><span class="mt">${formatNombre(montant, pm)}</span></li>`;
+    };
     const net = ed.resultat.document.ent_net_a_payer;
     this.conteneur.innerHTML = `
       <div class="plan-barre">

@@ -13,11 +13,11 @@ export function donneesDemo() {
   return donnees;
 }
 
-export function creerFournisseurListe({ enLigne, demo, ged, elements = [], annuaire = null, structure = null }) {
+export function creerFournisseurListe({ enLigne, ged, elements = [], annuaire = null, structure = null }) {
   if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
   const { salaries, materiels } = donneesDemo();
   const sources = sourcesFournisseur({
-    documents: documentsDemo(demo), salaries, materiels, ressources: ressourcesDemo(salaries, materiels), elements,
+    documents: documentsDemo(), salaries, materiels, ressources: ressourcesDemo(salaries, materiels), elements,
     // Annuaire : mêmes lignes que les fiches (colonnes de liste dérivées par le fournisseur de l'annuaire).
     personnes: annuaire?.personnes ?? [], individus: annuaire?.individus ?? [],
   });

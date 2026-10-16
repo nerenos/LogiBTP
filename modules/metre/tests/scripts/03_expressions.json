@@ -1,0 +1,164 @@
+{
+  "nom": "Expressions",
+  "description": "Priorités, unaires, modulo, virgule ou point décimal, continuation de ligne, opérateurs Unicode, comparaisons, logique (court-circuit), concaténation, arrondi à l'affectation.",
+  "cas": [
+    {
+      "nom": "Priorité mathématique",
+      "entree": {
+        "script": [
+          "Renvoyer 2 + 3 * 4 - 10 / 4"
+        ]
+      },
+      "attendu": {
+        "resultat": 11.5
+      }
+    },
+    {
+      "nom": "Unaires et parenthèses",
+      "entree": {
+        "script": [
+          "Renvoyer -(2 - 5) * -2 + +1"
+        ]
+      },
+      "attendu": {
+        "resultat": -5
+      }
+    },
+    {
+      "nom": "Modulo (reste tronqué, signe du dividende)",
+      "entree": {
+        "script": [
+          "Renvoyer 17 modulo 5 + -7 modulo 3"
+        ]
+      },
+      "attendu": {
+        "resultat": 1
+      }
+    },
+    {
+      "nom": "Virgule ou point décimal",
+      "entree": {
+        "script": [
+          "Renvoyer 1,5 + 1.25"
+        ]
+      },
+      "attendu": {
+        "resultat": 2.75
+      }
+    },
+    {
+      "nom": "Continuation : parenthèse ouverte, opérateur en début ou en fin de ligne",
+      "entree": {
+        "script": [
+          "local x est un numérique",
+          "x = (",
+          "    + 2     // a",
+          "    + 3",
+          "    )",
+          "    * 2",
+          "x = x +",
+          "    1",
+          "Renvoyer x"
+        ]
+      },
+      "attendu": {
+        "resultat": 11
+      }
+    },
+    {
+      "nom": "Opérateurs Unicode × ÷ −",
+      "entree": {
+        "script": [
+          "Renvoyer 6 × 2 ÷ 4 − 1"
+        ]
+      },
+      "attendu": {
+        "resultat": 2
+      }
+    },
+    {
+      "nom": "Comparaisons et logique",
+      "entree": {
+        "script": [
+          "local r est un numérique",
+          "Si 2 < 3 et pas (3 <= 2) ou Faux alors",
+          "    r += 1",
+          "Fin",
+          "Si \"abc\" < \"abd\" et 1,0 = 1 et Vrai <> Faux alors",
+          "    r += 10",
+          "Fin",
+          "Si 2 >= 2 et 3 > 2 et 4 <> 5 alors",
+          "    r += 100",
+          "Fin",
+          "Renvoyer r"
+        ]
+      },
+      "attendu": {
+        "resultat": 111
+      }
+    },
+    {
+      "nom": "Court-circuit de et / ou",
+      "entree": {
+        "script": [
+          "local r est un numérique = 1",
+          "Si Faux et 1 / 0 = 1 alors",
+          "    r = 0",
+          "Fin",
+          "Si Vrai ou 1 / 0 = 1 alors",
+          "    r += 1",
+          "Fin",
+          "Renvoyer r"
+        ]
+      },
+      "attendu": {
+        "resultat": 2
+      }
+    },
+    {
+      "nom": "Concaténation : nombres en virgule décimale, booléens Vrai / Faux",
+      "entree": {
+        "script": [
+          "Lib est une chaîne = \"L = \"",
+          "local l est un numérique = 1.5",
+          "Lib = Lib + l + \" m, ok : \" + Vrai",
+          "Lib += \" !\"",
+          "Renvoyer Taille(Lib)"
+        ]
+      },
+      "attendu": {
+        "resultat": 22,
+        "variables": {
+          "Lib": "L = 1,5 m, ok : Vrai !"
+        }
+      }
+    },
+    {
+      "nom": "Guillemet doublé dans une chaîne",
+      "entree": {
+        "script": [
+          "x est une chaîne = \"Dit \"\"oui\"\"\"",
+          "Renvoyer Taille(x)"
+        ]
+      },
+      "attendu": {
+        "resultat": 9,
+        "variables": {
+          "x": "Dit \"oui\""
+        }
+      }
+    },
+    {
+      "nom": "Valeur numérique arrondie à 6 décimales à l'affectation",
+      "entree": {
+        "script": [
+          "local x est un numérique = 1 / 3",
+          "Renvoyer x * 3"
+        ]
+      },
+      "attendu": {
+        "resultat": 0.999999
+      }
+    }
+  ]
+}

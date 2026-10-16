@@ -35,6 +35,6 @@ describe('appel de la bibliothèque', () => {
     expect(racine).toMatchObject({ lig_code: 'GEN:DAL15', lig_art_id: 7, lig_qte: 12, lig_unt_code: 'm2', lig_coef_fg: Number(biblio.coefficients({ nat_id: 5 }).coef_fg) });
     expect(c.lignes.filter((l) => l.lig_parent_id === racine.lig_id)).toHaveLength(3);
     expect(c.metres).toHaveLength(1);
-    expect(c.metre_lignes).toHaveLength(2);
+    expect(c.metres[0].mtr_script).toContain('Renvoyer');
   });
 });

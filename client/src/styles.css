@@ -123,6 +123,10 @@ dialog.dialogue-selection .selection-liste { max-height: 55vh; overflow: auto; b
 /* Colonne Nature des lignes : obligatoire sur les lignes de prix pour valider. */
 .col-nature { width: 4.5em; }
 td.col-nature.manquant { background: color-mix(in srgb, var(--erreur, #c0392b) 22%, transparent); box-shadow: inset 0 0 0 1px var(--erreur, #c0392b); }
+/* Compte comptable : hérité (nature, tiers) souligné et estompé, libellé dans le détail. */
+.col-compte { width: 5.5em; }
+.compte-herite { color: var(--discret); text-underline-offset: 2px; }
+.compte-libelle { color: var(--texte); font-size: 0.95em; }
 
 /* Fiches de la structure : libellé et zone de code sur une ligne, libellé de l'élément en lien dessous. */
 .fiche-champ:has(> .champ-rattachement) { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 2px; align-items: center; }
@@ -182,3 +186,10 @@ dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
 .trac-liens { list-style: none; padding: 0; margin: 0; }
 .trac-liens li { padding: 3px 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .trac-rapport summary { cursor: pointer; font-weight: 600; }
+
+/* Page document : compteur des erreurs et avertissements des métrés (ouvre le panneau des notifications) */
+.compteur-metres.avec-erreurs { color: var(--erreur); border-color: var(--erreur); }
+.compteur-metres.avec-avertissements { color: var(--alerte); }
+
+/* Tiroirs (métré) : sous le bandeau de navigation (28 px, modules/navigation). */
+:root { --decalage-tiroir: 28px; }

@@ -1,0 +1,30 @@
+{
+  "nom": "Mode bordereau (B) : PV fixe d'ouvrage sans ventilation",
+  "description": "Comme un BPU (et l'import OptimBTP) : l'ouvrage 1 au PV fixe 100 garde ce prix, ses composantes gardent le leur (béton au PV fixe importé 40, main-d'œuvre 50 × 1,1 × 1,2 = 66), sans ventilation ni ligne d'écart. PA et PR de l'ouvrage = sommes du sous-détail (0,15 × 30 + 50 = 54,5 ; 0,15 × 30 + 55 = 59,5). L'ouvrage 4 sans PV fixe est en somme des PV (2 × 10 × 1,5 = 30).",
+  "entree": {
+    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "B", "ent_precision_montant": 2 },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 2, "lig_libelle_html": "Dalle au prix du bordereau",
+        "lig_qte": 2, "lig_pv_fixe": true, "lig_pv": 100, "lig_tva_id": 1 },
+      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Béton", "lig_nat_id": 1,
+        "lig_qte": 0.15, "lig_pa": 30, "lig_pv_fixe": true, "lig_pv": 40 },
+      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Main-d'œuvre", "lig_nat_id": 2,
+        "lig_qte": 1, "lig_pa": 50, "lig_coef_fg": 1.1, "lig_coef_benef": 1.2 },
+      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 2, "lig_libelle_html": "Ouvrage sans prix fixe",
+        "lig_qte": 1, "lig_tva_id": 1 },
+      { "lig_id": 5, "lig_parent_id": 4, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Fournitures", "lig_nat_id": 1,
+        "lig_qte": 2, "lig_pa": 10, "lig_coef_benef": 1.5 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 230, "ent_total_tva": 46, "ent_total_ttc": 276 },
+    "lignes": {
+      "1": { "lig_pv": 100, "lig_pa": 54.5, "lig_pr": 59.5, "lig_montant_ht": 200, "lig_montant_pa": 109, "lig_montant_pr": 119 },
+      "2": { "lig_pv": 40, "lig_pr": 30, "lig_coef_benef": 1.333333, "lig_pv_fixe": true },
+      "3": { "lig_pv": 66, "lig_pr": 55, "lig_coef_benef": 1.2 },
+      "4": { "lig_pv": 30, "lig_pa": 20, "lig_montant_ht": 30 },
+      "5": { "lig_pv": 15 }
+    }
+  }
+}

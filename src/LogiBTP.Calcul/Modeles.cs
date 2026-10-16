@@ -1,14 +1,14 @@
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Metres;
+using LogiBTP.Metres.Script;
 
 namespace LogiBTP.Calcul;
 
-/// <summary>Entrée du moteur BTP : entrée du document générique + métrés et variables (module Métré).</summary>
+/// <summary>Entrée du moteur BTP : entrée du document générique + métrés (scripts) et variables (module Métré).</summary>
 public sealed class EntreeCalcul : EntreeDocument<DocumentBtp, DocumentLigneBtp>
 {
     public List<Metre> Metres { get; set; } = [];
-    public List<MetreLigne> MetreLignes { get; set; } = [];
     public List<VariableDefinition> Variables { get; set; } = [];
 }
 
@@ -16,11 +16,16 @@ public sealed class EntreeCalcul : EntreeDocument<DocumentBtp, DocumentLigneBtp>
 public sealed class ResultatCalcul : ResultatDocument<DocumentBtp, DocumentLigneBtp>
 {
     public List<Metre> Metres { get; set; } = [];
-    public List<MetreLigne> MetreLignes { get; set; } = [];
     public List<VariableDefinition> Variables { get; set; } = [];
+    /// <summary>Exécution des métrés en script : résultat, erreurs positionnées (pour l'éditeur), avertissements.</summary>
+    public List<DiagnosticScript> Scripts { get; set; } = [];
     /// <summary>Lignes d'écart d'arrondi existantes qui n'ont pas été recréées.</summary>
     public List<long> LignesSupprimees { get; set; } = [];
 }
+
+/// <summary>Exécution du script d'un métré (scripts du résultat, comme côté JS).</summary>
+public sealed record DiagnosticScript(long MtrId, long LigId, decimal? Resultat, IReadOnlyList<ErreurScript> Erreurs,
+    IReadOnlyList<AvertissementScript> Avertissements);
 
 /// <summary>Comparaison client / serveur : champs génériques + BTP ; la ligne d'écart est appariée par son ouvrage.</summary>
 public sealed class ComparateurBtp : ComparateurCalcul

@@ -51,7 +51,13 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 .liste-segments { flex: 1; min-height: 0; overflow: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .segment { display: flex; flex-direction: column; gap: 0.25rem; }
 .segment-valeurs { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-.segment-titre { font-weight: 600; color: var(--discret); }
+.segment .segment-titre {
+  display: flex; align-items: center; gap: 0.3rem; font-weight: 600; color: var(--discret); text-align: left;
+  border: none; background: none; padding: 0; border-radius: 0; font-size: inherit; cursor: pointer;
+}
+.segment .segment-titre:hover { color: var(--texte); }
+.segment-chevron { width: 0.8em; display: inline-block; }
+.segment .segment-filtre { color: var(--accent); margin: 0; }
 .segment-valeurs button { display: inline-flex; align-items: center; gap: 0.25rem; }
 .segment-picto { line-height: 1; }
 .segment-image { height: 1.1em; width: auto; vertical-align: middle; }

@@ -36,6 +36,15 @@ export function prixArticle(e) {
   };
 }
 
+/** Données techniques de l'élément recopiées sur la ligne (db/165) : dimensions converties de mm en mètres. */
+export function techniquesLigne(e) {
+  const metres = (v) => (v === null || v === undefined || v === '' ? null : nombre(D(v).div(1000)));
+  return {
+    lig_poids: nombre(e.poids), lig_surface: nombre(e.surface), lig_volume: nombre(e.volume),
+    lig_hauteur: metres(e.hauteur), lig_largeur: metres(e.largeur), lig_epaisseur: metres(e.epaisseur), lig_longueur: metres(e.longueur),
+  };
+}
+
 /** Lien d'une ligne vers l'élément de la bibliothèque. */
 const lien = (e, extra = {}) => ({ id: e.id, bib: e.bib_code, code: e.code, type: e.type, ...extra });
 
@@ -43,7 +52,7 @@ const lien = (e, extra = {}) => ({ id: e.id, bib: e.bib_code, code: e.code, type
 export function valeursArticle(e, bibDocument, proprietes = {}) {
   const { ratio: r, ...p } = prixArticle(e);
   return {
-    ...p, lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: e.libelle_html,
+    ...p, ...techniquesLigne(e), lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: e.libelle_html,
     lig_proprietes: { ...proprietes, element: lien(e, { unite: p.lig_unt_code, ratio: r }) },
   };
 }
@@ -55,11 +64,12 @@ export function contenuOuvrage(e, bibDocument, { quantite = 1 } = {}) {
   const racine = lignes.find((l) => l.lig_parent_id === null && l.lig_tyl_id === TL.OUVRAGE);
   if (!racine) return null;
   Object.assign(racine, {
+    ...techniquesLigne(e),
     lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: e.libelle_html, lig_unt_code: e.unite_stock,
     lig_qte: quantite, lig_coef_fg: nombre(e.coef_fg ?? 1), lig_coef_benef: nombre(e.coef_benef ?? 1), lig_coef_remise: nombre(e.coef_remise ?? 1),
     lig_proprietes: { ...(racine.lig_proprietes ?? {}), element: lien(e, { unite: e.unite_stock }) },
   });
-  return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), metre_lignes: structuredClone(c.metre_lignes ?? []), variables: structuredClone(c.variables ?? []) };
+  return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), variables: structuredClone(c.variables ?? []) };
 }
 
 /**
@@ -76,7 +86,7 @@ export function contenuEnsemble(e, bibDocument) {
     lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: racine.lig_libelle_html || e.libelle_html,
     lig_proprietes: { ...(racine.lig_proprietes ?? {}), element: lien(e) },
   });
-  return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), metre_lignes: structuredClone(c.metre_lignes ?? []), variables: structuredClone(c.variables ?? []) };
+  return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), variables: structuredClone(c.variables ?? []) };
 }
 
 /** Ligne sans contenu saisi (le code vient d'y être tapé) : elle peut être remplacée. */
@@ -150,7 +160,7 @@ export class AppelBibliotheque {
       }, `Article ${e.code}`);
     } else {
       const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
-      ed.insererContenu({ racines: [1], lignes: [ligne], metres: [], metre_lignes: [], variables: [] }, ligId, `Article ${e.code}`);
+      ed.insererContenu({ racines: [1], lignes: [ligne], metres: [], variables: [] }, ligId, `Article ${e.code}`);
     }
     this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''}`.slice(0, 120));
   }
@@ -161,7 +171,7 @@ export class AppelBibliotheque {
     if (e.type === 'OUVRAGE') return contenuOuvrage(e, bib);
     if (e.type === 'ENSEMBLE') return contenuEnsemble(e, bib);
     const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
-    return { racines: [1], lignes: [ligne], metres: [], metre_lignes: [], variables: [] };
+    return { racines: [1], lignes: [ligne], metres: [], variables: [] };
   }
 
   /**
@@ -180,7 +190,7 @@ export class AppelBibliotheque {
       const bib = await this.bibDocument();
       const elements = await Promise.all(liste.map((d) => this.fournisseur.element(d.id)));
       // Contenus renumérotés à la suite (identifiants temporaires distincts), puis réunis.
-      const total = { racines: [], lignes: [], metres: [], metre_lignes: [], variables: [] };
+      const total = { racines: [], lignes: [], metres: [], variables: [] };
       let suivant = -1;
       const ignores = [];
       for (const e of elements) {
@@ -190,7 +200,7 @@ export class AppelBibliotheque {
         for (const l of copie.lignes) l.lig_origine_id = null;
         for (const k of Object.keys(total)) total[k].push(...(copie[k] ?? []));
         const ids = [...copie.lignes.map((l) => l.lig_id), ...(copie.metres ?? []).map((m) => m.mtr_id),
-          ...(copie.metre_lignes ?? []).map((m) => m.mli_id), ...(copie.variables ?? []).map((v) => v.var_id)];
+          ...(copie.variables ?? []).map((v) => v.var_id)];
         suivant = Math.min(suivant, ...ids) - 1;
       }
       if (ignores.length) this.message(`${ignores.join(', ')} : sans composition, non inséré(s)`, 'avertissement');
@@ -206,7 +216,7 @@ export class AppelBibliotheque {
   }
 
 
-  /** Reprend les prix de la bibliothèque (articles) pour les lignes choisies ; quantités et libellés conservés. */
+  /** Reprend les prix et les données techniques de la bibliothèque (articles) pour les lignes choisies ; quantités et libellés conservés. */
   async actualiser(ids) {
     const ed = this.editeur();
     const lignes = ed.saisie.lignes.filter((l) => ids.includes(l.lig_id) && l.lig_art_id && l.lig_tyl_id === TL.ELEMENT);
@@ -219,7 +229,7 @@ export class AppelBibliotheque {
       for (const [id, e] of elements) {
         const x = d.lignes.find((y) => y.lig_id === id);
         const { ratio: r, ...p } = prixArticle(e);
-        Object.assign(x, p, { lig_proprietes: { ...(x.lig_proprietes ?? {}), element: lien(e, { unite: p.lig_unt_code, ratio: r }) } });
+        Object.assign(x, p, techniquesLigne(e), { lig_proprietes: { ...(x.lig_proprietes ?? {}), element: lien(e, { unite: p.lig_unt_code, ratio: r }) } });
       }
     }, 'Prix de la bibliothèque');
     this.message(`${elements.size} ligne(s) actualisée(s) depuis la bibliothèque`, 'succes');
