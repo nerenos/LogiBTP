@@ -20,6 +20,14 @@ export function controlerCas(cas, res) {
   const a = cas.attendu;
   const fautes = [];
   verifierErreurs(a.erreurs, res.erreurs, fautes);
+  if (a.avertissements) verifierErreurs(a.avertissements, res.avertissements, fautes);
+  // Ventilation des frais annexes : détail (tranche, ligne, montant) et bilan par tranche.
+  if (a.ventilations_lignes) {
+    const obtenu = res.ventilations_lignes.map((v) => [v.vfl_source_lig_id, v.vfl_lig_id, Number(v.vfl_montant)]);
+    const attendu = a.ventilations_lignes.map((v) => [v.vfl_source_lig_id, v.vfl_lig_id, Number(v.vfl_montant)]);
+    if (JSON.stringify(obtenu) !== JSON.stringify(attendu)) fautes.push(`ventilations_lignes : attendu ${JSON.stringify(attendu)}, obtenu ${JSON.stringify(obtenu)}`);
+  }
+  for (const [id, att] of Object.entries(a.frais_annexes ?? {})) verifier(att, res.frais_annexes.find((f) => f.lig_id === Number(id)), `frais_annexes[${id}]`, fautes);
   if (a.document) verifier(a.document, res.document, 'document', fautes);
   for (const [cle, att] of Object.entries(a.lignes ?? {})) verifier(att, trouverLigne(res.lignes, cle), `lignes[${cle}]`, fautes);
   for (const [id, att] of Object.entries(a.metres ?? {})) verifier(att, res.metres.find((m) => m.mtr_id === Number(id)), `metres[${id}]`, fautes);
@@ -39,7 +47,7 @@ describe('Cœur BTP : jeux de test partagés du moteur de calcul', () => {
       const r1 = calculerDocument(cas.entree);
       const r2 = calculerDocument({
         ...cas.entree,
-        document: r1.document, lignes: r1.lignes, metres: r1.metres, variables: r1.variables,
+        document: r1.document, lignes: r1.lignes, metres: r1.metres, variables: r1.variables, ventilations: r1.ventilations,
       });
       expect(comparerResultats(r1, r2)).toEqual([]);
     });

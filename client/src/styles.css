@@ -193,3 +193,27 @@ dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
 
 /* Tiroirs (métré) : sous le bandeau de navigation (28 px, modules/navigation). */
 :root { --decalage-tiroir: 28px; }
+
+/* Frais annexes : détail de la ligne et vue de l'onglet Analyse (frais-annexes-ui.js). */
+.detail-frais { margin-top: 0.6rem; border-top: 1px solid var(--bord); padding-top: 0.4rem; }
+.detail-frais h4 { margin: 0 0 0.3rem; font-size: 0.9em; }
+.table-frais { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.table-frais th, .table-frais td { padding: 0.15rem 0.3rem; text-align: left; }
+.table-frais td.nombre, .table-frais input.nombre { text-align: right; }
+.table-frais input.nombre { width: 6rem; }
+.table-frais .combo { width: 7.5rem; }
+.analyse-vue-frais { overflow: auto; }
+.analyse-frais { padding: 0.4rem; overflow: auto; }
+.frais-reglages { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.5rem; }
+.frais-reglages .combo { width: 22rem; margin-left: 0.3rem; }
+.frais-messages { margin: 0 0 0.5rem; padding-left: 1.2rem; color: var(--avertissement, #b45309); font-size: 0.85em; }
+.table-frais-bilan .actions { white-space: nowrap; }
+.table-frais-bilan .pli { border: none; background: none; cursor: pointer; padding: 0 0.2rem; }
+.table-frais-bilan tr.frais-detail > td { background: var(--fond-secondaire, transparent); }
+.frais-parties { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 0.8rem; }
+.frais-parties h4 { margin: 0.2rem 0; }
+.frais-parties .saisie-cle { display: inline-flex; gap: 0.2rem; }
+.frais-parties .saisie-cle input.nombre { width: 5rem; text-align: right; }
+.frais-parties .saisie-cle .combo { width: 7.5rem; }
+.frais-parties tr.groupe th { font-weight: 600; }
+.frais-parties td.indent { padding-left: 1rem; }

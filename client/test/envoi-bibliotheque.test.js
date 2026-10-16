@@ -40,10 +40,18 @@ describe('Envoi vers la bibliothèque', () => {
     expect(Number(p.pa)).toBeCloseTo(parUnite, 2);
   });
 
-  it('valeurs d\'un article : PA ramené à l\'unité de stock, coefficients imposés', () => {
-    const l = { lig_tyl_id: 3, lig_libelle_html: 'Plaque', lig_pa: 5.375, lig_coef_fg: 1.12, lig_coef_benef: 1.3, lig_unt_code: 'pl', lig_proprietes: { element: { ratio: '2.5' } } };
+  it('valeurs d\'un article : PA ramené à l\'unité de stock, coefficients par défaut, sans frais annexes', () => {
+    const l = { lig_tyl_id: 3, lig_libelle_html: 'Plaque', lig_pa: 5.375, lig_coef_fg: 1.12, lig_coef_benef: 1.3, lig_coef_fa: 1.2, lig_unt_code: 'pl', lig_proprietes: { element: { ratio: '2.5' } } };
     const v = valeursDepuisLigne(l, 'ARTICLE', { creation: true });
-    expect(v).toMatchObject({ pa_fixe: '2.15', coef_fg: '1.12', coef_fg_impose: true, coef_benef_impose: true, unite_stock: 'pl', scenario_pa: 'FIXE' });
+    expect(v).toMatchObject({ pa_fixe: '2.15', coef_fg_impose: false, coef_benef_impose: false, unite_stock: 'pl', scenario_pa: 'FIXE', pv_fixe: false });
+    expect(v.coef_fg).toBeUndefined();
+    // Mise à jour : les coefficients de l'élément (éventuellement forcés dans la bibliothèque) ne sont pas touchés.
+    expect(valeursDepuisLigne(l, 'ARTICLE').coef_fg_impose).toBeUndefined();
+  });
+
+  it('valeurs d\'une ligne à PV fixe : PV et coefficients imposés', () => {
+    const l = { lig_tyl_id: 3, lig_libelle_html: 'Plaque', lig_pa: 5, lig_coef_fg: 1.12, lig_coef_benef: 1.3, lig_pv_fixe: true, lig_pv: 9, lig_unt_code: 'u' };
+    expect(valeursDepuisLigne(l, 'ARTICLE')).toMatchObject({ pv_fixe: true, pv: '9', coef_fg: '1.12', coef_benef: '1.3', coef_fg_impose: true, coef_benef_impose: true });
   });
 
   it('doublons par code (même bibliothèque) ou par libellé, code proposé', () => {

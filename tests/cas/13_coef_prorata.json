@@ -1,6 +1,6 @@
 {
   "nom": "Coefficient de prorata après les frais annexes",
-  "description": "Comme 07b, avec un prorata de 1,02 sur le carrelage et de 1,05 sur les seuils à PV affiché imposé. Le prorata n'entre pas dans le coefficient de frais annexes : la ligne imposée y compte pour 2 × 60 / 1,05 = 2 × 57,142857, d'où c = 1,167865. Carrelage : 10 × c × 1,02 = 11,91 ; plinthes : 100 × c = 116,79 ; seuils : PV affiché 60 conservé, PV avant frais 57,142857 / c = 48,929334.",
+  "description": "Comme 07b, avec un prorata de 1,02 sur le carrelage et de 1,05 sur les seuils à PV affiché imposé. Le prorata n'entre pas dans la base de ventilation : carrelage 10 × 1,25 × 1,02 = 12,75 ; plinthes 125 ; seuils : PV affiché 60 conservé, PV hors prorata 57,142857, bénéfice 1,904762. Coefficient moyen : (200 + 114,285714 + 50) / 314,285714 = 1,159091. Ventilé réel (montants HT avec − sans frais, prorata compris des deux côtés) : 25,5 + 25.",
   "entree": {
     "document": {
       "ent_id": 1,
@@ -21,6 +21,13 @@
         "lig_id": 1,
         "lig_parent_id": null,
         "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
         "lig_tyl_id": 3,
         "lig_libelle_html": "Carrelage",
         "lig_qte": 10,
@@ -29,8 +36,8 @@
         "lig_coef_prorata": 1.02
       },
       {
-        "lig_id": 2,
-        "lig_parent_id": null,
+        "lig_id": 3,
+        "lig_parent_id": 1,
         "lig_ordre": 2,
         "lig_tyl_id": 3,
         "lig_libelle_html": "Plinthes",
@@ -39,8 +46,8 @@
         "lig_tva_id": 1
       },
       {
-        "lig_id": 3,
-        "lig_parent_id": null,
+        "lig_id": 4,
+        "lig_parent_id": 1,
         "lig_ordre": 3,
         "lig_tyl_id": 3,
         "lig_libelle_html": "Seuils (prix catalogue)",
@@ -52,20 +59,29 @@
         "lig_coef_prorata": 1.05
       },
       {
-        "lig_id": 4,
-        "lig_parent_id": null,
+        "lig_id": 5,
+        "lig_parent_id": 1,
         "lig_ordre": 4,
-        "lig_tyl_id": 8,
-        "lig_libelle_html": "Frais de déplacement",
-        "lig_pied_mode": "M",
-        "lig_pied_valeur": 50,
-        "lig_pied_sens": 1,
-        "lig_pied_is_fa": true
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Frais de chantier",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
       },
       {
-        "lig_id": 5,
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Frais de déplacement",
+        "lig_qte": 1,
+        "lig_pa": 50,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 7,
         "lig_parent_id": null,
-        "lig_ordre": 5,
+        "lig_ordre": 2,
         "lig_tyl_id": 10,
         "lig_libelle_html": "TVA"
       }
@@ -73,25 +89,35 @@
   },
   "attendu": {
     "document": {
-      "ent_coef_fa": 1.167865,
-      "ent_total_ht": 355.89,
-      "ent_total_tva": 71.18
+      "ent_coef_fa": 1.159091,
+      "ent_total_ht": 372.5,
+      "ent_total_tva": 74.5
     },
     "lignes": {
-      "1": {
-        "lig_pv_affiche": 11.91,
-        "lig_montant_ht": 119.1
-      },
       "2": {
-        "lig_pv_affiche": 116.79,
-        "lig_montant_ht": 116.79
+        "lig_coef_fa": 1.25,
+        "lig_pv_affiche": 12.75,
+        "lig_montant_ht": 127.5
       },
       "3": {
-        "lig_pv": 48.929334,
-        "lig_coef_benef": 1.630978,
+        "lig_pv_affiche": 125,
+        "lig_montant_ht": 125
+      },
+      "4": {
+        "lig_pv": 57.142857,
+        "lig_coef_benef": 1.904762,
+        "lig_coef_fa": 1,
         "lig_pv_affiche": 60,
         "lig_montant_ht": 120
       }
-    }
+    },
+    "frais_annexes": {
+      "5": {
+        "prevu": 50,
+        "ventile": 50,
+        "ventile_reel": 50.5
+      }
+    },
+    "avertissements": []
   }
 }

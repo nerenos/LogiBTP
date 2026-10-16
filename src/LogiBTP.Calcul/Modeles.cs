@@ -10,6 +10,8 @@ public sealed class EntreeCalcul : EntreeDocument<DocumentBtp, DocumentLigneBtp>
 {
     public List<Metre> Metres { get; set; } = [];
     public List<VariableDefinition> Variables { get; set; } = [];
+    /// <summary>Clés de ventilation des frais annexes (db/167).</summary>
+    public List<VentilationFrais> Ventilations { get; set; } = [];
 }
 
 /// <summary>Résultat du moteur BTP : résultat générique + métrés, variables et lignes d'écart supprimées.</summary>
@@ -21,7 +23,14 @@ public sealed class ResultatCalcul : ResultatDocument<DocumentBtp, DocumentLigne
     public List<DiagnosticScript> Scripts { get; set; } = [];
     /// <summary>Lignes d'écart d'arrondi existantes qui n'ont pas été recréées.</summary>
     public List<long> LignesSupprimees { get; set; } = [];
+    /// <summary>Clés de ventilation des frais annexes (inchangées) ; détail calculé ; bilan par tranche de frais.</summary>
+    public List<VentilationFrais> Ventilations { get; set; } = [];
+    public List<VentilationFraisLigne> VentilationsLignes { get; set; } = [];
+    public List<BilanFraisAnnexes> FraisAnnexes { get; set; } = [];
 }
+
+/// <summary>Bilan d'une tranche de frais annexes : prévu, ventilé par les clés, ventilé réel (après arrondi du PV), écart.</summary>
+public sealed record BilanFraisAnnexes(long LigId, long? PorteeId, bool Cles, decimal Prevu, decimal Ventile, decimal VentileReel, decimal Ecart);
 
 /// <summary>Exécution du script d'un métré (scripts du résultat, comme côté JS).</summary>
 public sealed record DiagnosticScript(long MtrId, long LigId, decimal? Resultat, IReadOnlyList<ErreurScript> Erreurs,

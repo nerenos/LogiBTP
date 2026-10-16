@@ -5,7 +5,7 @@ import { estChiffree, estPied, estTranche } from '../calcul/index.js';
 //
 // Feuille : ligne chiffrée sans composante, quantité totale dans le document qt. Pour une feuille :
 //   déboursé = qt × PA ; revient = qt × PR ; PV = qt × PV (avant frais annexes) ; PV avec FA = PV × c (coefficient de
-//   frais annexes du document) ; FA = PV avec FA − PV ; prix client = PV avec FA × prorata × remise de la ligne vendue ;
+//   frais annexes de la ligne de prix : frais reçus des tranches de frais) ; FA = PV avec FA − PV ; prix client = PV avec FA × prorata × remise de la ligne vendue ;
 //   PV remisé sans FA ni prorata = PV × remise.
 //   Marge brute = prix client − déboursé ; marge nette = PV remisé sans FA ni prorata − revient.
 // Les montants sont les vraies valeurs : un montant saisi recalcule les coefficients des feuilles du groupe, puis les
@@ -33,10 +33,11 @@ export function feuillesAnalyse(resultat, saisie, { portee = null, horsTotal = f
   return res;
 }
 
-/** Montants d'une feuille (nombres). */
+/** Montants d'une feuille (nombres) ; coefficient de frais annexes de sa ligne de prix (à défaut, `coefFa`). */
 export function montantsFeuille(f, coefFa) {
   const qt = Number(f.ligne.lig_qte_totale ?? 0);
   const p = f.prix;
+  coefFa = Number(p.lig_coef_fa ?? coefFa ?? 1);
   const prorata = Number(p.lig_coef_prorata ?? 1); // ligne vendue qui porte la feuille
   const remise = Number(p.lig_coef_remise ?? 1);
   const ds = qt * Number(f.ligne.lig_pa ?? 0);
@@ -74,7 +75,7 @@ export const MONTANTS_FORCABLES = {
     champ: 'lig_coef_benef', libelle: 'prix client', base: (f) => D(f.ligne.lig_pr ?? 0),
     facteur: (f, c) => {
       const p = f.prix;
-      return D(c).times(D(p.lig_coef_prorata ?? 1)).times(D(p.lig_coef_remise ?? 1));
+      return D(p.lig_coef_fa ?? c).times(D(p.lig_coef_prorata ?? 1)).times(D(p.lig_coef_remise ?? 1));
     },
   },
 };

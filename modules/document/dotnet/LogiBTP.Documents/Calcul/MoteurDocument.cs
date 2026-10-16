@@ -171,7 +171,8 @@ public class MoteurDocument<TDoc, TLigne>
     protected bool EstCompose(TLigne l) => l.LigTylId == TL.Ouvrage && EnfantsDe(l.LigId).Count > 0;
 
     /// <summary>Ligne numérotée (Titre, Ouvrage, Élément) ; spécialisable pour exclure des lignes calculées.</summary>
-    protected internal virtual bool EstNumerotee(TLigne l) => TL.EstTypeNumerote(l);
+    /// <summary>Les frais annexes (tranche F et son contenu) ne sont jamais édités : pas de numéro.</summary>
+    protected internal virtual bool EstNumerotee(TLigne l) => TL.EstTypeNumerote(l) && !EstFraisAnnexes(l);
 
     /// <summary>Quantité d'une composante ramenée à l'unité du composé.</summary>
     protected static decimal Qu(TLigne c, TLigne compose)
@@ -488,7 +489,10 @@ public class MoteurDocument<TDoc, TLigne>
             {
                 var desc = new List<TLigne>();
                 for (var j = i + 1; j < corps.Count && DescendDe(corps[j], l); j++) desc.Add(corps[j]);
-                EcrireSomme(l, desc.Where(x => EstLigneDePrix(x) && !HorsTotal(x, l) && !EnErreur.Contains(x.LigId) && x.LigMontantHt is not null).ToList());
+                // Tranche de frais annexes : montant de ses frais (hors total du document).
+                var fa = EstFraisAnnexes(l);
+                EcrireSomme(l, desc.Where(x => EstLigneDePrix(x) && (fa ? EstFraisAnnexes(x) : !HorsTotal(x, l))
+                    && !EnErreur.Contains(x.LigId) && x.LigMontantHt is not null).ToList());
             }
             else if (l.LigTylId == TL.SousTotal)
             {
@@ -510,7 +514,7 @@ public class MoteurDocument<TDoc, TLigne>
         TotalCorps = corps.Where(EnTotal).Sum(l => l.LigMontantHt!.Value);
     }
 
-    private bool DescendDe(TLigne l, TLigne ancetre)
+    protected bool DescendDe(TLigne l, TLigne ancetre)
     {
         for (var x = Parent(l); x is not null; x = Parent(x)) if (x == ancetre) return true;
         return false;

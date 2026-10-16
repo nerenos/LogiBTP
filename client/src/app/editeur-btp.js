@@ -5,6 +5,7 @@ import {
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, CODES_TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 import { compteLigne, libelleCompte } from './comptes.js';
+import { fraisRecus, bilanTranche } from './frais-annexes.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
 // lignes d'écart d'arrondi calculées, métrés et variables (module Métré). L'éditeur sert aussi d'hôte au
@@ -144,13 +145,14 @@ export class EditeurDevisBtp extends EditeurDocument {
   calculer(entree) { return calculerDocument(entree); }
 
   entree(saisie) {
-    return { ...super.entree(saisie), metres: saisie.metres, variables: saisie.variables };
+    return { ...super.entree(saisie), metres: saisie.metres, variables: saisie.variables, ventilations: saisie.ventilations ?? [] };
   }
 
   identifiants(saisie, resultat) {
     return [
       ...super.identifiants(saisie, resultat),
       ...saisie.metres.map((m) => m.mtr_id), ...saisie.variables.map((v) => v.var_id),
+      ...(saisie.ventilations ?? []).map((k) => k.vfr_id),
     ];
   }
 
@@ -163,6 +165,13 @@ export class EditeurDevisBtp extends EditeurDocument {
   }
 
   estLigneCalculee(l) { return !!l.lig_is_ecart_arrondi; }
+
+  /** Plan : part ventilée d'une tranche de frais annexes (ventilé / prévu). */
+  complementTranche(ligne) {
+    const b = bilanTranche(this.resultat, ligne.lig_id);
+    if (!b || Number(b.prevu) === 0) return null;
+    return `ventilé ${formatLibre(Math.round(Number(b.ventile) / Number(b.prevu) * 1000) / 10, 1)} %`;
+  }
 
   libelleType(r) { return r.estCalculee ? 'Écart' : super.libelleType(r); }
 
@@ -227,6 +236,20 @@ export class EditeurDevisBtp extends EditeurDocument {
         ...this.colonneNombre('lig_coef_prorata', (l) => chiffree(l) && this.regles.estLigneDePrix(this.saisie.lignes, l)),
         valeur: (r) => (this.regles.estLigneDePrix(this.saisie.lignes, r.item) && Number(r.calcule.lig_coef_prorata ?? 1) !== 1
           ? this.coefAffiche(r.calcule.lig_coef_prorata, 1) : ''),
+      },
+      {
+        // Frais annexes reçus (ventilation des tranches F) et coefficient qui en résulte.
+        cle: 'coef_fa', titre: 'Coef. FA', classe: 'col-coef',
+        valeur: (r) => (!r.virtuelle && estChiffree(r.calcule) && Number(r.calcule.lig_coef_fa ?? 1) !== 1 ? this.coefAffiche(r.calcule.lig_coef_fa, 1) : ''),
+        titreCellule: () => 'Coefficient de frais annexes : 1 + frais reçus / montant hors frais',
+      },
+      {
+        cle: 'fa_recus', titre: 'FA reçus', classe: 'col-nombre',
+        valeur: (r) => {
+          const v = r.virtuelle ? null : fraisRecus(this.resultat, r.item.lig_id);
+          return v ? formatNombre(v, this.saisie.document.ent_precision_montant ?? 2) : '';
+        },
+        titreCellule: () => 'Frais annexes reçus par la ligne (somme des parts des tranches de frais)',
       },
     ]);
     // Saisir un PV impose un prix fixe (avant frais annexes et remise) ; vider la cellule le retire.

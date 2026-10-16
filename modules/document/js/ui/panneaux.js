@@ -195,13 +195,17 @@ export class PanneauxDocument {
       champs.push('<button data-action="appliquer-tva" title="Écrase le taux de toutes les lignes de prix descendantes">Appliquer ce taux aux lignes</button>');
       champs.push(f.txt('lig_num_depart', 'Départ de numérotation'));
     }
-    // Type de prix d'une tranche : appliqué à toute sa descendance (hérité).
-    if (estTranche(l)) champs.push(f.sel('lig_type_prix', 'Type de prix (toute la tranche)', Object.entries(LIBELLES_TYPE_PRIX)));
+    // Type de prix d'une tranche : appliqué à toute sa descendance (hérité). Frais annexes : titres seulement.
+    if (estTranche(l)) {
+      const types = Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || l.lig_tyl_id === TL.TITRE);
+      champs.push(f.sel('lig_type_prix', 'Type de prix (toute la tranche)', types));
+    }
     if (estChiffree(l)) {
       if (this.regles.ouvrageAncetre(lignes, l.lig_id)) champs.push(f.sel('lig_qte_type', 'Quantité', [['R', 'Relative (par unité du parent)'], ['A', 'Absolue pour le parent']]));
       champs.push(f.sel('lig_precision_qte', 'Décimales quantité', [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
       champs.push(f.sel('lig_precision_pv', 'Décimales PV', [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
-      champs.push(f.sel('lig_type_prix', 'Type de prix', Object.entries(LIBELLES_TYPE_PRIX)));
+      // Frais annexes : choisis sur un titre (la ligne l'hérite) ; une ligne seule ne peut pas en être.
+      champs.push(f.sel('lig_type_prix', 'Type de prix', Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || l.lig_type_prix === 'F')));
       champs.push(f.txt('lig_code', 'Code article'));
       champs.push(f.txt('lig_art_id', 'ID article'));
       champs.push(f.txt('lig_num_depart', 'Départ de numérotation'));

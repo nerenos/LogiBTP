@@ -1,7 +1,7 @@
 // Calcul du cœur BTP : spécialisation du module Document et du module Métré.
 import { comparerResultats as comparerDocument, CHAMPS_DOCUMENT, CHAMPS_LIGNE } from '@logibtp/document';
 
-export { MoteurDevisBtp, calculerDocument } from './moteur-btp.js';
+export { MoteurDevisBtp, calculerDocument, cleElementVentilation } from './moteur-btp.js';
 export { VERSION_MOTEUR, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche } from '@logibtp/document';
 export { evaluerExpression, referencesDe, ErreurCalcul, arrondir, formatNombre, Dec, D, S } from '@logibtp/socle';
 

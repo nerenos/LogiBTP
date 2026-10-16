@@ -1,24 +1,131 @@
 {
-  "nom": "Coefficient de frais annexes sans ligne bloquée",
-  "description": "F = 200, P = 50, A = 0 : c = 1 + P / F = 1,25. Le poste de frais annexes est affiché dans le pied mais n'entre pas dans le cumul, il est déjà ventilé dans les prix.",
+  "nom": "Tranche de frais annexes ventilée sans clé",
+  "description": "Section : carrelage 10 × 10 et plinthes 1 × 100 (200), tranche de frais annexes de 50. Sans clé, les frais sont ventilés au prorata du montant hors frais : 25 + 25, coefficient 1,25 sur chaque ligne. La tranche affiche son montant (50) hors total et n'est pas numérotée ; ses lignes sont non imprimées.",
   "entree": {
-    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
-    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
     "lignes": [
-      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Carrelage", "lig_qte": 10, "lig_pa": 10, "lig_tva_id": 1 },
-      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Plinthes", "lig_qte": 1, "lig_pa": 100, "lig_tva_id": 1 },
-      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 8, "lig_libelle_html": "Frais de déplacement",
-        "lig_pied_mode": "M", "lig_pied_valeur": 50, "lig_pied_sens": 1, "lig_pied_is_fa": true },
-      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 4, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Carrelage",
+        "lig_qte": 10,
+        "lig_pa": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Plinthes",
+        "lig_qte": 1,
+        "lig_pa": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Frais de chantier",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 4,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Frais de déplacement",
+        "lig_qte": 1,
+        "lig_pa": 50,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
     ]
   },
   "attendu": {
-    "document": { "ent_coef_fa": 1.25, "ent_total_ht": 250, "ent_total_tva": 50, "ent_total_ttc": 300, "ent_net_a_payer": 300 },
+    "document": {
+      "ent_coef_fa": 1.25,
+      "ent_total_ht": 250,
+      "ent_total_tva": 50,
+      "ent_total_ttc": 300,
+      "ent_net_a_payer": 300
+    },
     "lignes": {
-      "1": { "lig_pv": 10, "lig_coef_fa": 1.25, "lig_pv_affiche": 12.5, "lig_montant_ht": 125 },
-      "2": { "lig_pv_affiche": 125, "lig_montant_ht": 125 },
-      "3": { "lig_montant_ht": 50 },
-      "4": { "lig_montant_tva": 50 }
-    }
+      "2": {
+        "lig_pv": 10,
+        "lig_coef_fa": 1.25,
+        "lig_pv_affiche": 12.5,
+        "lig_montant_ht": 125
+      },
+      "3": {
+        "lig_coef_fa": 1.25,
+        "lig_pv_affiche": 125,
+        "lig_montant_ht": 125
+      },
+      "4": {
+        "lig_montant_ht": 50,
+        "lig_numerotation": null,
+        "lig_is_non_editee": true
+      },
+      "5": {
+        "lig_coef_fa": 1,
+        "lig_montant_ht": 50,
+        "lig_numerotation": null,
+        "lig_is_non_editee": true
+      }
+    },
+    "ventilations_lignes": [
+      {
+        "vfl_source_lig_id": 4,
+        "vfl_lig_id": 2,
+        "vfl_montant": 25
+      },
+      {
+        "vfl_source_lig_id": 4,
+        "vfl_lig_id": 3,
+        "vfl_montant": 25
+      }
+    ],
+    "frais_annexes": {
+      "4": {
+        "portee_id": 1,
+        "prevu": 50,
+        "ventile": 50,
+        "ventile_reel": 50,
+        "ecart": 0
+      }
+    },
+    "avertissements": []
   }
 }

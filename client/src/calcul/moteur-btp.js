@@ -1,4 +1,4 @@
-import { D, Dz, S, ZERO, UN, coef, arrondir, arr6, ErreurCalcul, analyserReference, echapperHtml } from '@logibtp/socle';
+import { D, Dz, S, ZERO, UN, coef, arrondir, arr6, ErreurCalcul, analyserReference, echapperHtml, texteBrut } from '@logibtp/socle';
 import { MoteurDocument, TL, estChiffree, estPied, union } from '@logibtp/document';
 import {
   Portees, evaluerVariable, repartirVariables, evaluerScriptMetre, lignesVariablesScript, messageErreurScript,
@@ -29,6 +29,14 @@ export function libelleEcrit(avant, ecrit) {
   if (ecrit.endsWith(avant)) return echapperHtml(ecrit.slice(0, ecrit.length - avant.length)) + avant;
   return echapperHtml(ecrit);
 }
+/**
+ * Clé d'un élément pour la ventilation des frais annexes : code (majuscules) et libellé saisi sans balises (minuscules,
+ * espaces réduits). Réplique de MoteurDevisBtp.CleElementVentilation (C#).
+ */
+export function cleElementVentilation(l, libelleHtml = l.lig_libelle_html) {
+  return `${String(l.lig_code ?? '').trim().toUpperCase()}|${texteBrut(libelleHtml ?? '').replace(/\s+/g, ' ').trim().toLowerCase()}`;
+}
+
 export class MoteurDevisBtp extends MoteurDocument {
   constructor(entree) {
     super(entree);
@@ -53,6 +61,13 @@ export class MoteurDevisBtp extends MoteurDocument {
     this.ecartsCrees = new Map();
     this.metreDeLigne = new Map();
     this.coefFa = UN;
+    // Frais annexes : clés saisies (ventilation_frais), coefficients par ligne, détail et bilan par tranche de frais.
+    this.ventilations = e.ventilations ?? [];
+    this.coefsFa = new Map();
+    this.partsFa = new Map();
+    this.ventilationsLignes = [];
+    this.frais = [];
+    this.ecartsFaReels = new Map();
     // $ : titres englobants (la ligne elle-même si c'est un titre) ; @@ : ouvrages englobants.
     this.portees = new Portees({
       chaine: (portee, ligneId) => {
@@ -415,6 +430,7 @@ export class MoteurDevisBtp extends MoteurDocument {
 
   // ---------------------------------------------------------------- après les prix : frais annexes
 
+  /** Lignes de prix vendues entrant dans le total (base du coefficient moyen de frais annexes). */
   lignesDePrixEnTotal() {
     return this.ordre.filter((l) => !estPied(l) && this.estLigneDePrix(l) && !this.horsTotal(l)
       && !this.enErreur.has(l.lig_id) && this.px.has(l.lig_id));
@@ -422,20 +438,9 @@ export class MoteurDevisBtp extends MoteurDocument {
 
   /**
    * Coefficient de prorata de la ligne vendue (ligne de prix ; une composante d'ouvrage n'en a pas) : appliqué au prix
-   * affiché après la ventilation des frais annexes, avant la remise. Il n'entre pas dans le calcul du coefficient de
-   * frais annexes (un PV affiché imposé en est d'abord retiré).
+   * affiché après les frais annexes, avant la remise.
    */
   prorata(l) { return this.estLigneDePrix(l) && !this.estFraisAnnexes(l) ? coef(l.lig_coef_prorata) : UN; }
-
-  /** Coefficient de frais annexes appliqué au PV affiché : une ligne de frais annexes garde son propre prix. */
-  coefFaDe(l) { return this.estFraisAnnexes(l) ? UN : this.coefFa; }
-
-  /** Montant HT d'une ligne de frais annexes (PV affiché remisé × quantité vendue), ventilé sur les lignes vendues. */
-  montantFraisAnnexes(l) {
-    const prec = l.lig_precision_pv ?? 2;
-    const pvRem = arrondir(this.pvAffiche(l, this.px.get(l.lig_id), prec).times(coef(l.lig_coef_remise)), prec);
-    return arrondir(Dz(l.lig_qte_vendue).times(pvRem), this.precMontant);
-  }
 
   /** PV affiché imposé hors prorata. */
   afficheHorsProrata(l) {
@@ -443,44 +448,221 @@ export class MoteurDevisBtp extends MoteurDocument {
     return k.eq(UN) ? D(l.lig_pv_affiche) : arr6(D(l.lig_pv_affiche).div(k));
   }
 
-  apresPrix() {
-    let F = ZERO, A = ZERO, P = ZERO;
-    for (const l of this.lignesDePrixEnTotal()) {
-      const qv = Dz(l.lig_qte_vendue);
-      if (this.fixe.get(l.lig_id) === 'AFF') A = A.plus(this.afficheHorsProrata(l).times(qv));
-      else F = F.plus(this.px.get(l.lig_id).pv.times(qv));
+  /**
+   * Coefficient de frais annexes de la ligne : celui de sa ligne de prix (une composante suit son ouvrage, sauf en
+   * mode bordereau où les frais restent sur l'ouvrage) ; 1 pour les frais eux-mêmes.
+   */
+  coefFaDe(l) {
+    if (this.estFraisAnnexes(l)) return UN;
+    let x = l;
+    if (!this.estLigneDePrix(l)) {
+      if (this.mode === 'B') return UN;
+      while (x && !this.estLigneDePrix(x)) x = this.parent(x);
+      if (!x) return UN;
     }
-    for (const p of this.enfantsDe(null)) {
-      if (!estPied(p) || p.lig_tyl_id === TL.TVA || !p.lig_pied_is_fa || (p.lig_type_prix ?? 'V') !== 'V') continue;
-      if ((p.lig_pied_mode ?? 'M') !== 'M') {
-        this.erreur(p.lig_id, 'FA_POURCENTAGE', 'Un frais annexe ventilé doit être saisi en montant', false);
+    return this.coefsFa.get(x.lig_id) ?? UN;
+  }
+
+  /** Montant HT d'une ligne de frais annexes (PV remisé × quantité vendue). */
+  montantFraisAnnexes(l) {
+    const prec = l.lig_precision_pv ?? 2;
+    const pvRem = arrondir(this.pvAffiche(l, this.px.get(l.lig_id), prec).times(coef(l.lig_coef_remise)), prec);
+    return arrondir(Dz(l.lig_qte_vendue).times(pvRem), this.precMontant);
+  }
+
+  /** Type de prix effectif : le premier type non vendu de la ligne ou de ses ancêtres. */
+  typePrixEffectif(l) {
+    for (let x = l; x; x = this.parent(x)) if ((x.lig_type_prix ?? 'V') !== 'V') return x.lig_type_prix;
+    return 'V';
+  }
+
+  /** Tranche F de plus haut niveau contenant la ligne (null : la ligne n'est pas dans une tranche de frais annexes). */
+  uniteDe(l) {
+    let u = null;
+    for (let x = l; x; x = this.parent(x)) if (x.lig_tyl_id === TL.TITRE && (x.lig_type_prix ?? 'V') === 'F') u = x;
+    return u && this.estFraisAnnexes(l) ? u : null;
+  }
+
+  /** Feuilles chiffrées du sous-arbre d'une ligne de prix (la ligne elle-même si elle n'a pas de composante). */
+  feuillesDe(l) {
+    const enfants = this.enfantsDe(l.lig_id).filter(estChiffree);
+    if (!enfants.length) return [l];
+    return enfants.flatMap((c) => this.feuillesDe(c));
+  }
+
+  /** Poids d'une feuille : quantité totale × PV (montant avant frais annexes, comme l'onglet Analyse). */
+  poidsFeuille(x) {
+    const y = this.px.get(x.lig_id);
+    return y ? Dz(x.lig_qte_totale).times(y.pv) : ZERO;
+  }
+
+  /**
+   * Répartit `montant` sur des cibles { w } au prorata des poids (parts égales si tous sont nuls), arrondi au montant ;
+   * la cible de plus fort poids (la première à égalité) absorbe l'écart d'arrondi.
+   */
+  repartirMontant(montant, cibles) {
+    if (!cibles.length) return [];
+    const W = cibles.reduce((s, c) => s.plus(c.w), ZERO);
+    const parts = cibles.map((c) => arrondir(W.isZero() ? montant.div(cibles.length) : montant.times(c.w).div(W), this.precMontant));
+    let im = 0;
+    for (let i = 1; i < cibles.length; i++) if (cibles[i].w.gt(cibles[im].w)) im = i;
+    parts[im] = parts[im].plus(montant.minus(parts.reduce((s, p) => s.plus(p), ZERO)));
+    return parts;
+  }
+
+  /**
+   * Unités de frais annexes : tranches (titres) F de plus haut niveau. Leurs frais sont ventilés sur les lignes de prix
+   * de la tranche parente (portée), qui doit être dans une section ; une ligne cumule les parts de toutes ses portées.
+   * Clés (ventilation_frais) par priorité : ligne > élément > nature de l'unité > nature globale ; sans aucune clé,
+   * prorata du montant hors frais ; avec des clés, le reste n'est pas ventilé (FA_ECART). Lignes à PV affiché fixe
+   * exclues ; options / variantes (et pour mémoire) selon ent_fa_lignes, dans la base (ent_fa_mode B) ou au coefficient
+   * moyen des lignes vendues de la portée (C).
+   */
+  ventilerFraisAnnexes() {
+    const pm = this.precMontant;
+    const horsVente = this.doc.ent_fa_lignes ?? 'V';
+    const modeBase = (this.doc.ent_fa_mode ?? 'C') === 'B';
+    const parties = new Map(); // lig_id → somme des parts
+    const ajouter = (u, l, montant, vfrId) => {
+      if (montant.isZero()) return;
+      this.ventilationsLignes.push({ vfl_source_lig_id: u.lig_id, vfl_lig_id: l.lig_id, vfl_montant: S(montant), vfl_vfr_id: vfrId });
+      parties.set(l.lig_id, (parties.get(l.lig_id) ?? ZERO).plus(montant));
+    };
+    this.partsFa = parties;
+
+    for (const l of this.ordre) {
+      if (estPied(l) && l.lig_pied_is_fa) {
+        this.avertir(l.lig_id, 'FA_PIED', 'Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes');
+      }
+      if (!estPied(l) && this.estLigneDePrix(l) && this.estFraisAnnexes(l) && !this.uniteDe(l)) {
+        this.avertir(l.lig_id, 'FA_HORS_TRANCHE', 'Ligne de frais annexes hors d\'une tranche de frais annexes : non ventilée');
+      }
+    }
+
+    const unites = this.ordre.filter((l) => l.lig_tyl_id === TL.TITRE && this.uniteDe(l) === l);
+    for (const u of unites) {
+      const prevu = this.ordre
+        .filter((l) => this.estLigneDePrix(l) && this.descendDe(l, u) && !this.enErreur.has(l.lig_id) && this.px.has(l.lig_id))
+        .reduce((s, l) => s.plus(this.montantFraisAnnexes(l)), ZERO);
+      const portee = this.parent(u);
+      const bilan = { lig_id: u.lig_id, portee_id: portee?.lig_id ?? null, prevu, ventile: ZERO, cles: false, receptrices: new Set() };
+      this.frais.push(bilan);
+      let section = false;
+      for (let x = portee; x; x = this.parent(x)) if (x.lig_tyl_id === TL.SECTION) section = true;
+      if (!section) {
+        this.avertir(u.lig_id, 'FA_HORS_SECTION', 'Tranche de frais annexes hors d\'une section : non ventilée');
         continue;
       }
-      P = P.plus(arrondir(Dz(p.lig_pied_valeur), this.precMontant).times(p.lig_pied_sens === -1 ? -1 : 1));
-    }
-    // Lignes de frais annexes (type F) : hors total, leur montant est ventilé sur les lignes vendues.
-    for (const l of this.ordre) {
-      if (estPied(l) || !this.estLigneDePrix(l) || !this.estFraisAnnexes(l) || this.enErreur.has(l.lig_id) || !this.px.has(l.lig_id)) continue;
-      P = P.plus(this.montantFraisAnnexes(l));
-    }
 
-    let c = UN;
-    if (!P.isZero()) {
-      if (F.gt(0)) {
-        // Racine positive de F·c² − (F + P − A)·c − A = 0.
-        const b = F.plus(P).minus(A);
-        c = arr6(b.plus(b.times(b).plus(F.times(A).times(4)).sqrt()).div(F.times(2)));
-      } else if (A.gt(P)) {
-        c = arr6(A.div(A.minus(P)));
+      // Lignes de prix de la portée : réceptrices R (base), dérivées D (coefficient moyen, mode C) ou exclues X.
+      const statut = new Map();
+      for (const l of this.ordre) {
+        if (estPied(l) || !this.estLigneDePrix(l) || !this.descendDe(l, portee) || this.estFraisAnnexes(l) || l.lig_is_ecart_arrondi
+          || this.enErreur.has(l.lig_id) || !this.px.has(l.lig_id)) continue;
+        const base = arr6(this.px.get(l.lig_id).pv.times(Dz(l.lig_qte_vendue)));
+        const type = this.typePrixEffectif(l);
+        const eligible = type === 'V' || ((type === 'O' || type === 'A') && horsVente !== 'V') || (type === 'M' && horsVente === 'OAM');
+        const role = !eligible || this.fixe.get(l.lig_id) === 'AFF' || base.lte(0) ? 'X' : type === 'V' || modeBase ? 'R' : 'D';
+        statut.set(l.lig_id, { l, base, role });
+      }
+      const receptrices = [...statut.values()].filter((s) => s.role === 'R');
+      bilan.receptrices = new Set(receptrices.map((s) => s.l.lig_id));
+      if (!receptrices.length) {
+        this.avertir(u.lig_id, 'FA_SANS_RECEPTRICE', 'Aucune ligne pour recevoir les frais annexes de la tranche');
+        continue;
+      }
+
+      const globale = (k) => k.vfr_source_lig_id === null || k.vfr_source_lig_id === undefined;
+      const cles = this.ventilations.filter((k) => k.vfr_source_lig_id === u.lig_id || (globale(k) && k.vfr_cible === 'NATURE'));
+      bilan.cles = cles.length > 0;
+      const couvertes = new Set();
+      if (!bilan.cles) {
+        const parts = this.repartirMontant(prevu, receptrices.map((s) => ({ w: s.base })));
+        receptrices.forEach((s, i) => ajouter(u, s.l, parts[i], null));
+        bilan.ventile = prevu;
       } else {
-        this.erreur(null, 'FRAIS_ANNEXES', 'Les frais annexes doivent rester inférieurs à la somme des prix affichés fixes');
+        // Clés en % : réparties ensemble pour que 100 % fassent exactement le montant prévu.
+        const enPct = cles.filter((k) => k.vfr_mode === 'P' && Dz(k.vfr_valeur).gte(0));
+        const totalPct = enPct.reduce((s, k) => s.plus(Dz(k.vfr_valeur)), ZERO);
+        const montantsPct = new Map();
+        const partsPct = this.repartirMontant(arrondir(prevu.times(totalPct).div(100), pm), enPct.map((k) => ({ w: Dz(k.vfr_valeur) })));
+        enPct.forEach((k, i) => montantsPct.set(k, partsPct[i]));
+        // Clé en montant : par unité de quantité pour une ligne, total pour un élément ou une nature.
+        const montantCle = (k, cible) => {
+          if (k.vfr_mode === 'P') return montantsPct.get(k) ?? null;
+          const v = D(k.vfr_valeur);
+          if (v === null || v.lt(0)) return null;
+          return arrondir(cible ? v.times(Dz(cible.lig_qte_vendue)) : v, pm);
+        };
+
+        // 1. Clés de ligne.
+        const niveauLigne = [];
+        for (const k of cles.filter((x) => x.vfr_cible === 'LIGNE' && x.vfr_source_lig_id === u.lig_id)) {
+          const s = statut.get(k.vfr_lig_id);
+          if (!s) { this.avertir(u.lig_id, 'FA_CLE_ORPHELINE', `Clé de ventilation sur une ligne absente de la portée (${k.vfr_lig_id})`); continue; }
+          if (s.role === 'X') { this.avertir(u.lig_id, 'FA_CLE_BLOQUEE', `Clé de ventilation sur une ligne qui ne reçoit pas de frais (${k.vfr_lig_id})`); continue; }
+          const montant = montantCle(k, s.l);
+          if (montant === null) { this.avertir(u.lig_id, 'FA_CLE_ORPHELINE', 'Clé de ventilation de valeur invalide'); continue; }
+          niveauLigne.push(s.l.lig_id);
+          ajouter(u, s.l, montant, k.vfr_id ?? null);
+          if (s.role === 'R') bilan.ventile = bilan.ventile.plus(montant);
+        }
+        for (const id of niveauLigne) couvertes.add(id);
+
+        // 2. Éléments, 3. natures de l'unité, 4. natures globales : au prorata des feuilles visées des lignes non couvertes.
+        const niveaux = [
+          cles.filter((x) => x.vfr_cible === 'ELEMENT' && x.vfr_source_lig_id === u.lig_id),
+          cles.filter((x) => x.vfr_cible === 'NATURE' && x.vfr_source_lig_id === u.lig_id),
+          cles.filter((x) => x.vfr_cible === 'NATURE' && globale(x)),
+        ];
+        for (const niveau of niveaux) {
+          const vues = [];
+          for (const k of niveau) {
+            const vise = k.vfr_cible === 'ELEMENT'
+              ? (x) => x.lig_tyl_id === TL.ELEMENT && !x.lig_is_ecart_arrondi && cleElementVentilation(x, this.sourceLibelle(x)) === k.vfr_element
+              : (x) => !x.lig_is_ecart_arrondi && x.lig_nat_id !== null && x.lig_nat_id !== undefined && Number(x.lig_nat_id) === Number(k.vfr_nat_id);
+            const cibles = [];
+            for (const s of receptrices) {
+              if (couvertes.has(s.l.lig_id)) continue;
+              const w = this.feuillesDe(s.l).filter(vise).reduce((t, x) => t.plus(this.poidsFeuille(x)), ZERO);
+              if (w.gt(0)) cibles.push({ l: s.l, w });
+            }
+            if (!cibles.length) {
+              this.avertir(u.lig_id, 'FA_CLE_ORPHELINE', `Clé de ventilation sans ligne visée (${k.vfr_cible === 'ELEMENT' ? k.vfr_element : `nature ${k.vfr_nat_id}`})`);
+              continue;
+            }
+            const montant = montantCle(k, null);
+            if (montant === null) { this.avertir(u.lig_id, 'FA_CLE_ORPHELINE', 'Clé de ventilation de valeur invalide'); continue; }
+            const parts = this.repartirMontant(montant, cibles);
+            cibles.forEach((c, i) => { ajouter(u, c.l, parts[i], k.vfr_id ?? null); vues.push(c.l.lig_id); });
+            bilan.ventile = bilan.ventile.plus(montant);
+          }
+          for (const id of vues) couvertes.add(id);
+        }
+        if (!bilan.ventile.eq(prevu)) this.avertir(u.lig_id, 'FA_ECART', `Frais annexes ventilés ${S(bilan.ventile)} pour ${S(prevu)} prévus`);
+      }
+
+      // Mode C : options et variantes reçoivent le coefficient moyen des lignes vendues de la portée.
+      const baseR = receptrices.reduce((s, x) => s.plus(x.base), ZERO);
+      for (const s of statut.values()) {
+        if (s.role !== 'D' || couvertes.has(s.l.lig_id) || baseR.isZero()) continue;
+        ajouter(u, s.l, arrondir(s.base.times(bilan.ventile).div(baseR), pm), null);
       }
     }
-    this.coefFa = c;
 
+    // Coefficient de chaque ligne qui reçoit des frais : 1 + parts / montant hors frais.
+    for (const [id, part] of parties) {
+      const l = this.parId.get(id);
+      const base = this.px.get(id).pv.times(Dz(l.lig_qte_vendue));
+      if (!base.isZero()) this.coefsFa.set(id, arr6(UN.plus(part.div(base))));
+    }
+  }
+
+  apresPrix() {
+    // PV affiché fixe : prix imposé hors frais annexes (la ligne ne reçoit pas de frais).
     for (const l of this.ordre) {
       if (this.fixe.get(l.lig_id) !== 'AFF' || !this.px.has(l.lig_id)) continue;
-      const pvFixe = arr6(this.afficheHorsProrata(l).div(this.coefFaDe(l)));
+      const pvFixe = this.afficheHorsProrata(l);
       if (this.estCompose(l)) {
         this.px.get(l.lig_id).pv = pvFixe;
         this.ventiler(l, pvFixe);
@@ -491,6 +673,16 @@ export class MoteurDevisBtp extends MoteurDocument {
       }
     }
     this.reconstruireOrdre();
+    this.ventilerFraisAnnexes();
+
+    // Coefficient moyen du document (information) : lignes vendues.
+    let base = ZERO, avec = ZERO;
+    for (const l of this.lignesDePrixEnTotal()) {
+      const b = this.px.get(l.lig_id).pv.times(Dz(l.lig_qte_vendue));
+      base = base.plus(b);
+      avec = avec.plus(b).plus(this.partsFa.get(l.lig_id) ?? ZERO);
+    }
+    this.coefFa = base.isZero() ? UN : arr6(avec.div(base));
   }
 
   // ---------------------------------------------------------------- montants, totaux, pied
@@ -516,6 +708,12 @@ export class MoteurDevisBtp extends MoteurDocument {
     l.lig_montant_pa = S(arrondir(qv.times(y.pa), pm));
     l.lig_montant_pr = S(arrondir(qv.times(y.pr), pm));
     if (this.pvVentiles.has(l.lig_id)) l.lig_pv_fixe = true;
+    // Frais réellement ventilés (après arrondi du PV) : montant HT avec frais − montant HT sans frais.
+    if (this.partsFa.has(l.lig_id)) {
+      const prec = l.lig_precision_pv ?? 2;
+      const sans = arrondir(arrondir(y.pv.times(this.prorata(l)), prec).times(coef(l.lig_coef_remise)), prec);
+      this.ecartsFaReels.set(l.lig_id, D(l.lig_montant_ht).minus(arrondir(qv.times(sans), pm)));
+    }
   }
 
   get champsCumules() {
@@ -539,7 +737,32 @@ export class MoteurDevisBtp extends MoteurDocument {
       variables: [...this.variables, ...[...this.variablesScript.values()].flat()],
       scripts: this.scripts,
       lignes_supprimees: [...this.ecartsExistants.values()].map((l) => l.lig_id),
+      ventilations: this.ventilations,
+      ventilations_lignes: this.ventilationsLignes,
+      frais_annexes: this.bilanFrais(),
     };
+  }
+
+  /**
+   * Bilan par tranche de frais annexes : prévu, ventilé (clés), ventilé réel (montants HT après arrondi du PV, la
+   * différence de chaque ligne répartie entre ses tranches au prorata de leurs parts) et écart = prévu − ventilé.
+   */
+  bilanFrais() {
+    const pm = this.precMontant;
+    return this.frais.map((b) => {
+      let reel = ZERO;
+      for (const v of this.ventilationsLignes) {
+        if (v.vfl_source_lig_id !== b.lig_id || !b.receptrices.has(v.vfl_lig_id)) continue;
+        const total = this.partsFa.get(v.vfl_lig_id);
+        const diff = this.ecartsFaReels.get(v.vfl_lig_id);
+        if (!total || total.isZero() || !diff) continue;
+        reel = reel.plus(diff.times(D(v.vfl_montant)).div(total));
+      }
+      return {
+        lig_id: b.lig_id, portee_id: b.portee_id, cles: b.cles,
+        prevu: S(b.prevu), ventile: S(b.ventile), ventile_reel: S(arrondir(reel, pm)), ecart: S(b.prevu.minus(b.ventile)),
+      };
+    });
   }
 }
 

@@ -216,6 +216,9 @@ export class EditeurDocument {
     return 'V';
   }
 
+  /** Complément affiché après le montant d'une tranche dans le plan (ventilation des frais annexes… en spécialisation). */
+  complementTranche(_ligne) { return null; }
+
   /** Demi-pastille du mode de vente (hors « vendu ») : { fond, libelle } ou null. */
   pastilleTypePrix(l) {
     const type = this.typePrixEffectif(l);
@@ -947,6 +950,7 @@ export class EditeurDocument {
         r.estCalculee ? 'calculee' : '',
         r.messages.some((x) => this.resultat.erreurs.includes(x)) ? 'erreur' : r.messages.length ? 'avertissement' : '',
         !r.virtuelle && this.typePrixEffectif(r.calcule) !== 'V' ? 'hors-total' : '',
+        !r.virtuelle && r.calcule.lig_tyl_id === TL.TITRE && r.calcule.lig_type_prix === 'F' ? 'tranche-frais' : '',
         r.calcule.lig_is_non_editee ? 'non-editee' : '',
         this.coupees.has(r.item.lig_id) ? 'coupee' : '',
         this.marques?.ids.has(r.item.lig_id) ? (r.item.lig_id === this.marques.courant ? 'trouvee trouvee-courante' : 'trouvee') : '',

@@ -10,6 +10,7 @@ import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
+import { messagesFrais } from '../frais-annexes.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { completerRattachement } from '../structure/structure.js';
@@ -118,7 +119,7 @@ const GABARIT = `
   <aside id="metre" class="tiroir" hidden></aside>`;
 
 /** Contenu de saisie à partir d'un document complet renvoyé par l'API. */
-const versSaisie = (d) => ({ document: d.document, lignes: d.lignes, metres: d.metres ?? [], variables: d.variables ?? [] });
+const versSaisie = (d) => ({ document: d.document, lignes: d.lignes, metres: d.metres ?? [], variables: d.variables ?? [], ventilations: d.ventilations ?? [] });
 
 export class PageDocument extends PageBase {
   icone = '📝';
@@ -460,13 +461,16 @@ export class PageDocument extends PageBase {
     if (this.importEnCours) { await creerDepuisImport(this); return; }
     const ed = this.editeur;
     const r = ed.resultat;
-    const envoi = { document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables, version_moteur_client: VERSION_MOTEUR };
+    const envoi = {
+      document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables, ventilations: r.ventilations ?? [],
+      ventilations_lignes: r.ventilations_lignes ?? [], version_moteur_client: VERSION_MOTEUR,
+    };
     const saisieEnvoyee = structuredClone(ed.entree(ed.saisie));
     const rep = await api.enregistrer(ed.saisie.document.ent_id, envoi);
     const map = (table, id) => (id === null || id === undefined ? id : table[id] ?? id);
     // Correspondances des compléments du module Métré, par table (réponse générique du module Document).
     const cl = rep.correspondance_lignes;
-    const { metres: cm = {}, variables: cv = {} } = rep.correspondances ?? {};
+    const { metres: cm = {}, variables: cv = {}, ventilations: cf = {} } = rep.correspondances ?? {};
     ed.magasin.appliquerServeur((d) => {
       d.document = rep.document.document;
       for (const l of d.lignes) {
@@ -480,6 +484,12 @@ export class PageDocument extends PageBase {
       }
       for (const m of d.metres) { m.mtr_id = map(cm, m.mtr_id); m.mtr_lig_id = map(cl, m.mtr_lig_id); }
       for (const v of d.variables) { v.var_id = map(cv, v.var_id); v.var_lig_id = map(cl, v.var_lig_id); v.var_mtr_id = map(cm, v.var_mtr_id); }
+      for (const k of d.ventilations ?? []) {
+        k.vfr_id = map(cf, k.vfr_id);
+        k.vfr_source_lig_id = map(cl, k.vfr_source_lig_id);
+        k.vfr_lig_id = map(cl, k.vfr_lig_id);
+        k.vfr_ent_id = d.document.ent_id;
+      }
     });
     if (this.selection !== null) this.selection = map(cl, this.selection);
     ed.grille.courant = map(cl, ed.grille.courant);
@@ -578,6 +588,10 @@ export class PageDocument extends PageBase {
   async valider() {
     const ed = this.editeur;
     if (this.modifiee && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
+    // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
+    const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
+    if (orphelines.length && !confirm(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
+      + `${orphelines.map((m) => `• ${m.message}`).join('\n')}\n\nValider ?`)) return;
     if (this.modifiee) await this.enregistrer();
     const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
     await this.chargerDocument(rep.document.document.ent_id);

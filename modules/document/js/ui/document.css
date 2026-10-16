@@ -129,6 +129,8 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .grille tr.hors-total td { color: var(--discret); }
 .grille tr.hors-total td.col-montant { text-decoration: line-through; }
 .grille tr.non-editee td.col-libelle { opacity: 0.6; }
+/* Tranche de frais annexes : son montant (frais à ventiler) en italique, hors total mais pas barré. */
+.grille tr.tranche-frais td.col-montant { text-decoration: none; font-style: italic; }
 .grille tr.coupee td { opacity: 0.45; }
 .grille tr.erreur td.col-num { color: var(--erreur); }
 .grille tr.erreur td.col-num::after { content: " ⚠"; }
@@ -191,6 +193,8 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 .plan-arbre .mt { color: var(--discret); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .plan-arbre .pli { width: 1em; color: var(--discret); flex: none; text-align: center; }
 /* Demi-pastille du mode de vente de la tranche (option, frais annexes…), coin bas droit comme dans la grille. */
+.plan-arbre li.tranche-frais .mt { font-style: italic; }
+.plan-arbre .complement { color: var(--discret); font-size: 0.8em; white-space: nowrap; }
 .plan-arbre .type-prix { width: 0.6rem; height: 0.9rem; flex: none; align-self: center; border-radius: 2px; }
 .plan-arbre li.pied { border-top: 1px solid var(--bord); margin-top: 0.3rem; padding-top: 0.3rem; }
 .barre-filtre { flex: none; display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0.7rem; background: var(--accent-clair); border-bottom: 1px solid var(--bord); font-size: 0.9em; }

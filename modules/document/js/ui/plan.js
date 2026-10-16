@@ -66,10 +66,13 @@ export class PlanDocument {
       // Demi-pastille du mode de vente (option, frais annexes…) de la tranche, comme dans la grille.
       const t = ligne ? ed.pastilleTypePrix(ligne) : null;
       const pastille = `<span class="type-prix" ${t ? `style="background:${echapper(t.fond)}" title="${echapper(t.libelle)}"` : ''}></span>`;
+      // Tranche de frais annexes : montant en italique (hors total) et complément (part ventilée).
+      const frais = ligne?.lig_tyl_id === TL.TITRE && ligne.lig_type_prix === 'F';
+      const complement = ligne ? ed.complementTranche(ligne) : null;
       return `
-      <li data-id="${id}" ${id !== ID_PIED && !ed.magasin?.lectureSeule ? 'draggable="true"' : ''} class="${classe} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(libelle)}">
+      <li data-id="${id}" ${id !== ID_PIED && !ed.magasin?.lectureSeule ? 'draggable="true"' : ''} class="${classe} ${frais ? 'tranche-frais' : ''} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(complement ? `${libelle} — ${complement}` : libelle)}">
         <span class="pli" ${aEnfants ? 'data-pli' : ''}>${aEnfants ? (this.replies.has(id) ? '▸' : '▾') : ''}</span>
-        ${pastille}<span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span><span class="mt">${formatNombre(montant, pm)}</span></li>`;
+        ${pastille}<span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span>${complement ? `<small class="complement">${echapper(complement)}</small>` : ''}<span class="mt">${formatNombre(montant, pm)}</span></li>`;
     };
     const net = ed.resultat.document.ent_net_a_payer;
     this.conteneur.innerHTML = `

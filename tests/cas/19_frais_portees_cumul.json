@@ -1,0 +1,198 @@
+{
+  "nom": "Frais annexes : portées d'un titre et de la section cumulées",
+  "description": "Le levage (80, tranche F du titre A) est ventilé sur le seul titre A (béton 600, coffrage 200 : 60 + 20) ; l'installation (100, tranche F de la section) sur toute la section (béton, coffrage, fenêtre : 60 + 20 + 20). Le béton et le coffrage cumulent leurs parts (coefficient 1,2), la fenêtre 1,1.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Gros œuvre",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Béton",
+        "lig_qte": 1,
+        "lig_pa": 600,
+        "lig_tva_id": 1,
+        "lig_nat_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Coffrage",
+        "lig_qte": 1,
+        "lig_pa": 200,
+        "lig_tva_id": 1,
+        "lig_nat_id": 2
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 2,
+        "lig_ordre": 3,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Levage",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Grue",
+        "lig_qte": 1,
+        "lig_pa": 80,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Menuiseries",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 8,
+        "lig_parent_id": 7,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Fenêtre",
+        "lig_qte": 1,
+        "lig_pa": 200,
+        "lig_tva_id": 1,
+        "lig_nat_id": 1
+      },
+      {
+        "lig_id": 9,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Installation de chantier",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 10,
+        "lig_parent_id": 9,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Base vie",
+        "lig_qte": 1,
+        "lig_pa": 100,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 11,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_coef_fa": 1.18,
+      "ent_total_ht": 1180,
+      "ent_total_tva": 236
+    },
+    "lignes": {
+      "2": {
+        "lig_montant_ht": 960
+      },
+      "3": {
+        "lig_coef_fa": 1.2,
+        "lig_pv_affiche": 720
+      },
+      "4": {
+        "lig_coef_fa": 1.2,
+        "lig_pv_affiche": 240
+      },
+      "5": {
+        "lig_montant_ht": 80
+      },
+      "7": {
+        "lig_montant_ht": 220
+      },
+      "8": {
+        "lig_coef_fa": 1.1,
+        "lig_pv_affiche": 220
+      },
+      "9": {
+        "lig_montant_ht": 100
+      }
+    },
+    "ventilations_lignes": [
+      {
+        "vfl_source_lig_id": 5,
+        "vfl_lig_id": 3,
+        "vfl_montant": 60
+      },
+      {
+        "vfl_source_lig_id": 5,
+        "vfl_lig_id": 4,
+        "vfl_montant": 20
+      },
+      {
+        "vfl_source_lig_id": 9,
+        "vfl_lig_id": 3,
+        "vfl_montant": 60
+      },
+      {
+        "vfl_source_lig_id": 9,
+        "vfl_lig_id": 4,
+        "vfl_montant": 20
+      },
+      {
+        "vfl_source_lig_id": 9,
+        "vfl_lig_id": 8,
+        "vfl_montant": 20
+      }
+    ],
+    "frais_annexes": {
+      "5": {
+        "portee_id": 2,
+        "prevu": 80,
+        "ventile": 80
+      },
+      "9": {
+        "portee_id": 1,
+        "prevu": 100,
+        "ventile": 100
+      }
+    },
+    "avertissements": []
+  }
+}

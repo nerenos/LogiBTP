@@ -36,8 +36,13 @@
   est un compte auxiliaire (411 / 401) : son usage comme compte de produit ou de charge est à confirmer.
 - [ ] Vue de colonnes « Complet » des bases existantes : `db/150` (`ON CONFLICT DO NOTHING`) n'y ajoute pas les colonnes
   Compte et Commentaire (à ajouter par le dialogue des colonnes, ou par une mise à jour de `vue_document`).
-- [ ] Lignes de frais annexes (type de prix F) : l'onglet Analyse les traite comme hors total sans détailler leur
-  ventilation ; l'impression (à venir) doit les ignorer (`lig_is_non_editee` forcé par les moteurs).
+- [ ] Frais annexes : redémarrer l'API (nouvelles colonnes et tables de `db/167`, appliqué aux deux bases le
+  16/10/2026) ; l'envoi vers la bibliothèque d'un ouvrage à PV fixe n'envoie pas son PV (le prix d'un ouvrage de la
+  bibliothèque est celui de sa composition) ; les clés de ventilation ne suivent pas un copier-coller de lignes ;
+  impression : ignorer les lignes non éditées (tranches F).
+- [ ] Écran de récupération d'une version précédente d'un document (instantanés `his_instantane`, y compris les clés
+  de ventilation des frais annexes).
+- [ ] Export et impression du rapport de ventilation des frais annexes (au moment des modules Export / Impression).
 - [ ] Import OptimBTP : décider du sort des champs non repris (heures, poste de travaux, compléments de pied,
   première page et texte de fin…) ; rattachement automatique du client à l'annuaire.
 

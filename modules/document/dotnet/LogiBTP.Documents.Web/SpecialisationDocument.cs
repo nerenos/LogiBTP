@@ -40,6 +40,9 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// <summary>Contrôles de saisie de la spécialisation exigés à la validation (un brouillon incomplet s'enregistre).</summary>
     public virtual void ControlerValidation(EntreeDocument<TDoc, TLigne> entree, List<MessageCalcul> erreurs) { }
 
+    /// <summary>Résultat calculé à la validation, avant son enregistrement (compléments figés…).</summary>
+    public virtual void PreparerValidation(ResultatDocument<TDoc, TLigne> r) { }
+
     // ------------------------------------------------------------------ persistance des compléments
 
     /// <summary>Chargement des compléments du document (métrés, variables…).</summary>

@@ -47,6 +47,7 @@ services:
       - ./db/163_intervenants_demo.sql:/docker-entrypoint-initdb.d/163_intervenants_demo.sql:ro
       - ./db/165_lignes_techniques.sql:/docker-entrypoint-initdb.d/165_lignes_techniques.sql:ro
       - ./db/166_lignes_comptes.sql:/docker-entrypoint-initdb.d/166_lignes_comptes.sql:ro
+      - ./db/167_ventilation_frais.sql:/docker-entrypoint-initdb.d/167_ventilation_frais.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

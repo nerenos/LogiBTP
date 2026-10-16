@@ -301,6 +301,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         r.Document.EntVerrouille = true;
         // Fin de validité : à partir du jour de la validation.
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
+        specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
         await tx.CommitAsync(ct);
         return reponse;

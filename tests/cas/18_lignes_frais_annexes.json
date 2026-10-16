@@ -1,30 +1,139 @@
 {
-  "nom": "Lignes de frais annexes (type de prix F) ventilées dans les prix",
-  "description": "Comme 07a, mais les frais annexes sont saisis en lignes : une tranche « Installation de chantier » de type F (hérité par ses lignes). Base vie 1 × 30 (son prorata de 1,1 est ignoré) et nettoyage 2 × 10 : P = 50, F = 200, A = 0, d'où c = 1,25. Les lignes de frais annexes gardent leur prix (coefficient de frais annexes 1), sont hors des totaux (titre à 0, total HT 250) et forcées en « ne pas imprimer ».",
+  "nom": "Tranche de frais annexes : lignes hors total, non imprimées, sans numéro",
+  "description": "Section avec un titre « Revêtements » (carrelage 10 × 10, plinthes 1 × 100) et une tranche « Installation de chantier » de type F (hérité par ses lignes) : base vie 1 × 30 (son prorata de 1,1 est ignoré) et nettoyage 2 × 10, soit 50 de frais ventilés sur toute la section : coefficient 1,25. Les lignes de frais gardent leur prix (coefficient 1), sont hors des totaux, non numérotées et forcées en « ne pas imprimer ».",
   "entree": {
-    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
-    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
     "lignes": [
-      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 1, "lig_libelle_html": "Revêtements", "lig_tva_id": 1 },
-      { "lig_id": 2, "lig_parent_id": 1, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Carrelage", "lig_qte": 10, "lig_pa": 10, "lig_tva_id": 1 },
-      { "lig_id": 3, "lig_parent_id": 1, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Plinthes", "lig_qte": 1, "lig_pa": 100, "lig_tva_id": 1 },
-      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 1, "lig_libelle_html": "Installation de chantier", "lig_type_prix": "F", "lig_tva_id": 1 },
-      { "lig_id": 5, "lig_parent_id": 4, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Base vie", "lig_qte": 1, "lig_pa": 30, "lig_type_prix": "F",
-        "lig_coef_prorata": 1.1, "lig_is_non_editee": false, "lig_tva_id": 1 },
-      { "lig_id": 6, "lig_parent_id": 4, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Nettoyage", "lig_qte": 2, "lig_pa": 10, "lig_type_prix": "F", "lig_tva_id": 1 },
-      { "lig_id": 7, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Revêtements",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Carrelage",
+        "lig_qte": 10,
+        "lig_pa": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Plinthes",
+        "lig_qte": 1,
+        "lig_pa": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Installation de chantier",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Base vie",
+        "lig_qte": 1,
+        "lig_pa": 30,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1,
+        "lig_coef_prorata": 1.1,
+        "lig_is_non_editee": false
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": 5,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Nettoyage",
+        "lig_qte": 2,
+        "lig_pa": 10,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 8,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
     ]
   },
   "attendu": {
-    "document": { "ent_coef_fa": 1.25, "ent_total_ht": 250, "ent_total_tva": 50, "ent_total_ttc": 300, "ent_net_a_payer": 300 },
+    "document": {
+      "ent_coef_fa": 1.25,
+      "ent_total_ht": 250,
+      "ent_total_tva": 50,
+      "ent_total_ttc": 300,
+      "ent_net_a_payer": 300
+    },
     "lignes": {
-      "1": { "lig_montant_ht": 250 },
-      "2": { "lig_coef_fa": 1.25, "lig_pv_affiche": 12.5, "lig_montant_ht": 125 },
-      "3": { "lig_pv_affiche": 125, "lig_montant_ht": 125 },
-      "4": { "lig_montant_ht": 0, "lig_is_non_editee": true },
-      "5": { "lig_coef_fa": 1, "lig_pv_affiche": 30, "lig_montant_ht": 30, "lig_is_non_editee": true },
-      "6": { "lig_coef_fa": 1, "lig_pv_affiche": 10, "lig_montant_ht": 20, "lig_is_non_editee": true },
-      "7": { "lig_montant_tva": 50 }
-    }
+      "2": {
+        "lig_montant_ht": 250
+      },
+      "3": {
+        "lig_coef_fa": 1.25,
+        "lig_pv_affiche": 12.5,
+        "lig_montant_ht": 125
+      },
+      "4": {
+        "lig_pv_affiche": 125,
+        "lig_montant_ht": 125
+      },
+      "5": {
+        "lig_montant_ht": 50,
+        "lig_numerotation": null,
+        "lig_is_non_editee": true
+      },
+      "6": {
+        "lig_coef_fa": 1,
+        "lig_pv_affiche": 30,
+        "lig_montant_ht": 30,
+        "lig_numerotation": null,
+        "lig_is_non_editee": true
+      },
+      "7": {
+        "lig_coef_fa": 1,
+        "lig_pv_affiche": 10,
+        "lig_montant_ht": 20,
+        "lig_is_non_editee": true
+      }
+    },
+    "avertissements": []
   }
 }

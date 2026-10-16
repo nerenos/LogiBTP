@@ -5,6 +5,7 @@ import { TL, estPied, estTranche } from '../calcul/index.js';
 import {
   feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT, repartirQuantite,
 } from './analyse-calcul.js';
+import { RapportFraisAnnexes } from './frais-annexes-ui.js';
 
 // Onglet Analyse : ventilation par nature de la portée choisie dans l'arbre des tranches (document entier, section,
 // titres), avec le total de la portée ; du déboursé au prix client, frais annexes ventilés, marges brute et nette.
@@ -73,6 +74,8 @@ export class AnalyseCoefficients {
     // Partage de la zone : part des coefficients (en %) et partie masquée ('coefs', 'elements' ou null).
     this.partage = Number.isFinite(p.partage) ? Math.min(85, Math.max(15, p.partage)) : 45;
     this.masquee = ['coefs', 'elements'].includes(p.masquee) ? p.masquee : null;
+    // Vue de l'onglet : coefficients et éléments, ou rapport de ventilation des frais annexes.
+    this.vue = p.vue === 'frais' ? 'frais' : 'coefs';
     // Part de l'arbre des tranches dans la colonne de gauche (en %), tri de la liste des éléments.
     this.partageGauche = Number.isFinite(p.partageGauche) ? Math.min(85, Math.max(15, p.partageGauche)) : 60;
     this.tri = p.tri && TRIS_ELEMENTS[p.tri.cle] ? { cle: p.tri.cle, sens: p.tri.sens === -1 ? -1 : 1 } : null;
@@ -135,7 +138,7 @@ export class AnalyseCoefficients {
   memoriser() {
     ecrirePreferences({ analyse: {
       horsTotal: this.horsTotal, colonnes: [...this.colonnes], partage: this.partage, masquee: this.masquee, partageGauche: this.partageGauche, tri: this.tri,
-      colonnesElements: [...this.colonnesElements],
+      colonnesElements: [...this.colonnesElements], vue: this.vue,
     } });
   }
 
@@ -212,6 +215,7 @@ export class AnalyseCoefficients {
 
   rendre() {
     if (this.conteneur.contains(document.activeElement) && document.activeElement.matches('input[data-saisie]')) return;
+    if (this.vue === 'frais') { this.rendreFrais(); return; }
     const pm = this.editeur.saisie.document.ent_precision_montant ?? 2;
     const tranches = this.tranches();
     if (this.portee !== null && !tranches.some((t) => t.ligne.lig_id === this.portee)) this.portee = null;
@@ -262,7 +266,8 @@ export class AnalyseCoefficients {
         ${this.portee !== null ? `<button type="button" data-portee-id="${parentEstTranche ? parent : ''}" title="Remonter d'un niveau">↑</button>` : ''}
         <label class="coche" title="Options, variantes et lignes pour mémoire comprises dans l'analyse (et dans les saisies)">
           <input type="checkbox" data-hors-total ${this.horsTotal ? 'checked' : ''}> Options et pour mémoire</label>
-        <span class="analyse-fa">Coef. frais annexes : <strong>${formatLibre(this.coefFa)}</strong></span>
+        <span class="analyse-fa">Coef. frais annexes moyen : <strong>${formatLibre(this.coefFa)}</strong></span>
+        <button type="button" data-vue-analyse="frais" title="Répartition des frais annexes par tranche de frais, nature, élément et ligne ; clés de ventilation">Frais annexes</button>
       </div>
       <div class="analyse-parties">
       <section class="analyse-partie" data-partie="coefs">
@@ -318,6 +323,20 @@ export class AnalyseCoefficients {
       defaut: 60,
     });
     this.rendreElements();
+  }
+
+  /** Vue « Frais annexes » : rapport de ventilation (frais-annexes-ui.js). */
+  rendreFrais() {
+    if (this.conteneur.contains(document.activeElement) && document.activeElement.closest('.analyse-frais input')) return;
+    this.conteneur.innerHTML = `<div class="analyse-principal analyse-vue-frais">
+        <div class="analyse-barre"><button type="button" data-vue-analyse="coefs">← Coefficients et éléments</button>
+          <strong>Ventilation des frais annexes</strong>
+          <span class="aide">Clés par priorité : ligne (détail de la ligne), élément, nature de la tranche, nature globale ; sans clé, prorata du montant hors frais.
+            Avec des clés, le reste n'est pas ventilé (écart) : « Répartir le reste » ou ajouter des clés. La validation fige la ventilation.</span></div>
+        <div class="analyse-frais"></div></div>`;
+    this.rapportFrais ??= new RapportFraisAnnexes(null, { editeur: this.editeur, natures: this.natures, message: this.message });
+    this.rapportFrais.conteneur = this.conteneur.querySelector('.analyse-frais');
+    this.rapportFrais.rendre();
   }
 
   /** Partie Éléments : groupes par code et libellé des feuilles filtrées (portée, nature, filtres de colonnes). */
@@ -578,6 +597,8 @@ export class AnalyseCoefficients {
   }
 
   #clic(e) {
+    const vue = e.target.closest('[data-vue-analyse]');
+    if (vue) { this.vue = vue.dataset.vueAnalyse; this.memoriser(); this.rendre(); return; }
     const resultat = e.target.closest('[data-resultat]');
     if (resultat) { this.resultatSuivant(Number(resultat.dataset.resultat)); return; }
     if (e.target.closest('[data-liberer-ordre]')) { this.ordreFige = null; this.rendreElements(); return; }

@@ -1,25 +1,126 @@
 {
-  "nom": "Coefficient de frais annexes avec PV affiché fixe",
-  "description": "F = 200, A = 2 × 60 = 120, P = 50. c racine positive de F·c² − (F + P − A)·c − A = 0 : c = (130 + √112900) / 400 = 1,165015. La ligne bloquée garde son PV affiché, son PV avant frais vaut 60 / c.",
+  "nom": "Frais annexes : ligne à PV affiché fixe exclue",
+  "description": "Comme 07a avec des seuils à PV affiché imposé (2 × 60, PA 30) : la ligne ne reçoit pas de frais et garde son PV affiché (PV 60, bénéfice 2, coefficient de frais 1). Les 50 de frais vont au carrelage et aux plinthes (1,25). Coefficient moyen du document : (200 + 120 + 50) / 320 = 1,15625.",
   "entree": {
-    "document": { "ent_id": 1, "ent_mode_calcul_ouvrage": "V", "ent_precision_montant": 2 },
-    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "V",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
     "lignes": [
-      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Carrelage", "lig_qte": 10, "lig_pa": 10, "lig_tva_id": 1 },
-      { "lig_id": 2, "lig_parent_id": null, "lig_ordre": 2, "lig_tyl_id": 3, "lig_libelle_html": "Plinthes", "lig_qte": 1, "lig_pa": 100, "lig_tva_id": 1 },
-      { "lig_id": 3, "lig_parent_id": null, "lig_ordre": 3, "lig_tyl_id": 3, "lig_libelle_html": "Seuils (prix catalogue)",
-        "lig_qte": 2, "lig_pa": 30, "lig_pv_affiche_fixe": true, "lig_pv_affiche": 60, "lig_tva_id": 1 },
-      { "lig_id": 4, "lig_parent_id": null, "lig_ordre": 4, "lig_tyl_id": 8, "lig_libelle_html": "Frais de déplacement",
-        "lig_pied_mode": "M", "lig_pied_valeur": 50, "lig_pied_sens": 1, "lig_pied_is_fa": true },
-      { "lig_id": 5, "lig_parent_id": null, "lig_ordre": 5, "lig_tyl_id": 10, "lig_libelle_html": "TVA" }
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Carrelage",
+        "lig_qte": 10,
+        "lig_pa": 10,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Plinthes",
+        "lig_qte": 1,
+        "lig_pa": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Seuils (prix catalogue)",
+        "lig_qte": 2,
+        "lig_pa": 30,
+        "lig_pv_affiche_fixe": true,
+        "lig_pv_affiche": 60,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 4,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Frais de chantier",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Frais de déplacement",
+        "lig_qte": 1,
+        "lig_pa": 50,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
     ]
   },
   "attendu": {
-    "document": { "ent_coef_fa": 1.165015, "ent_total_ht": 353, "ent_total_tva": 70.6, "ent_total_ttc": 423.6 },
+    "document": {
+      "ent_coef_fa": 1.15625,
+      "ent_total_ht": 370,
+      "ent_total_tva": 74
+    },
     "lignes": {
-      "1": { "lig_pv_affiche": 11.65, "lig_montant_ht": 116.5 },
-      "2": { "lig_pv_affiche": 116.5, "lig_montant_ht": 116.5 },
-      "3": { "lig_pv": 51.501483, "lig_coef_benef": 1.716716, "lig_pv_affiche": 60, "lig_montant_ht": 120 }
-    }
+      "2": {
+        "lig_coef_fa": 1.25,
+        "lig_pv_affiche": 12.5,
+        "lig_montant_ht": 125
+      },
+      "3": {
+        "lig_pv_affiche": 125,
+        "lig_montant_ht": 125
+      },
+      "4": {
+        "lig_pv": 60,
+        "lig_coef_benef": 2,
+        "lig_coef_fa": 1,
+        "lig_pv_affiche": 60,
+        "lig_montant_ht": 120
+      }
+    },
+    "ventilations_lignes": [
+      {
+        "vfl_source_lig_id": 5,
+        "vfl_lig_id": 2,
+        "vfl_montant": 25
+      },
+      {
+        "vfl_source_lig_id": 5,
+        "vfl_lig_id": 3,
+        "vfl_montant": 25
+      }
+    ],
+    "avertissements": []
   }
 }

@@ -8,8 +8,10 @@ import { TL, estTranche } from '../../calcul/index.js';
 //   - lien : l'ID de l'élément (lig_art_id, lig_proprietes.element.id) ; une ligne liée met à jour son élément ;
 //   - ligne non liée : recherche d'éléments de même code ou de même libellé (doublons) ; l'utilisateur choisit de la
 //     rattacher à l'un d'eux (mise à jour) ou de créer un nouvel élément (code et bibliothèque à choisir) ;
-//   - les coefficients de la ligne sont imposés à l'élément (ils ne suivent plus la nature) ; la ligne reçoit ensuite
-//     le lien, le code d'appel et le type de l'élément.
+//   - prix : les PA sont envoyés ; les frais annexes ventilés ne vont jamais dans la bibliothèque. Les coefficients FG
+//     et bénéfice de l'élément sont ceux par défaut (nature ou globaux) à la création, inchangés à la mise à jour
+//     (l'utilisateur les force dans la bibliothèque) ; seule une ligne à PV fixe (avant frais annexes) envoie son PV
+//     (article) et impose ses coefficients. La ligne reçoit ensuite le lien, le code d'appel et le type de l'élément.
 // Les écritures passent par les fiches « element » (contrôles, unicité du code, historique des prix).
 
 /** Type d'élément pour une ligne de document (null : ligne non transférable). */
@@ -69,16 +71,20 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
 }
 
 /**
- * Valeurs de la fiche « element » écrites depuis une ligne : libellé, nature, coefficients imposés, remise ; article :
- * unité, PA fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage et ensemble : composition.
+ * Valeurs de la fiche « element » écrites depuis une ligne : libellé, nature, remise ; coefficients imposés seulement
+ * pour une ligne à PV fixe (sinon : ceux par défaut à la création, inchangés à la mise à jour) ; article : unité, PA
+ * fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage et ensemble : composition (le prix d'un
+ * ouvrage de la bibliothèque est toujours celui de sa composition).
  */
 export function valeursDepuisLigne(l, type, { composition = null, creation = false } = {}) {
   const ratio = Number(l.lig_proprietes?.element?.ratio ?? 1) || 1;
   const v = {
     libelle_html: l.lig_libelle_html || texteBrut(l.lig_libelle_html ?? '') || 'Élément', nat_id: l.lig_nat_id ?? null,
-    coef_fg: String(l.lig_coef_fg ?? 1), coef_benef: String(l.lig_coef_benef ?? 1), coef_fg_impose: true, coef_benef_impose: true,
     coef_remise: String(l.lig_coef_remise ?? 1),
   };
+  if (l.lig_pv_fixe) {
+    Object.assign(v, { coef_fg: String(l.lig_coef_fg ?? 1), coef_benef: String(l.lig_coef_benef ?? 1), coef_fg_impose: true, coef_benef_impose: true });
+  } else if (creation) Object.assign(v, { coef_fg_impose: false, coef_benef_impose: false });
   if (type === 'ARTICLE') {
     Object.assign(v, {
       pa_fixe: l.lig_pa === null || l.lig_pa === undefined ? null : String(Number(l.lig_pa) / ratio),
@@ -168,7 +174,7 @@ export class EnvoiBibliotheque {
     dlg.innerHTML = `<form method="dialog">
       <h3>Enregistrer dans la bibliothèque</h3>
       <p class="aide">Une ligne liée met à jour son élément. Pour une ligne non liée, les éléments de même code ou de même libellé sont proposés :
-        rattachez-la à l'un d'eux (mise à jour) ou créez un nouvel élément. Les coefficients de la ligne sont imposés à l'élément.</p>
+        rattachez-la à l'un d'eux (mise à jour) ou créez un nouvel élément. Les PA sont envoyés sans les frais annexes ; les coefficients restent ceux de la bibliothèque (imposés seulement pour une ligne à PV fixe).</p>
       <table class="table-analyse"><thead><tr><th>Ligne</th><th>Type</th><th>Action</th></tr></thead><tbody>
       ${lignes.map((x, i) => `<tr data-i="${i}"><td><b>${echapper(x.ligne.lig_code ?? '')}</b> ${echapper(texteBrut(x.ligne.lig_libelle_html ?? '').slice(0, 70))}
           <br><small>${montant(x.ligne) !== undefined ? `${formatNombre(montant(x.ligne), 2)} € HT` : ''}</small></td>

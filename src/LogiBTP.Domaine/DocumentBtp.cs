@@ -8,8 +8,12 @@ public class DocumentBtp : Document
 {
     /// <summary>D déboursé, V somme des PV, B bordereau (PV fixe d'ouvrage sans ventilation, db/166).</summary>
     public string EntModeCalculOuvrage { get; set; } = "V";
-    /// <summary>Coefficient de frais annexes calculé.</summary>
+    /// <summary>Coefficient de frais annexes moyen des lignes vendues (information).</summary>
     public decimal EntCoefFa { get; set; } = 1;
+    /// <summary>Lignes hors vente qui reçoivent des frais annexes : V aucune, OA options et variantes, OAM et pour mémoire (db/167).</summary>
+    public string? EntFaLignes { get; set; } = "V";
+    /// <summary>Options reçoivent les frais : C au coefficient moyen des lignes vendues, B dans la base de répartition.</summary>
+    public string? EntFaMode { get; set; } = "C";
     /// <summary>Bibliothèque des codes appelés sans préfixe (null : bibliothèque par défaut).</summary>
     public int? EntBibId { get; set; }
     /// <summary>Structure des affaires (db/160_structure.sql) : projet, affaire, chantier, marché.</summary>

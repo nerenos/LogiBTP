@@ -1,4 +1,4 @@
-import { echapper, formatNombre, formatLibre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
@@ -6,6 +6,9 @@ import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
 import { libelleCompte } from './comptes.js';
+import {
+  bilanTranche, partsLigne, dansPortee, cleLigne, ecrireCle, figerVentilation, repartirReste, remplacerCles,
+} from './frais-annexes.js';
 
 /** Individus actifs rattachés à notre société (annuaire) : rédacteurs proposés, [{ valeur (ind_id), libelle, detail }]. */
 export async function individusSociete(annuaire) {
@@ -217,10 +220,6 @@ export class PanneauxBtp extends PanneauxDocument {
       champs.splice(k < 0 ? 0 : k, 0, f.sel('lig_nat_id', `Nature${natureObligatoire(l) ? ' *' : ''}`, [['', '—'], ...natures.map((n) => [n.id, `${n.code} – ${n.libelle}`])], true),
         this.champCompte(l));
     }
-    if (l.lig_tyl_id === TL.PIED_HT) {
-      const k = champs.findIndex((c) => c.includes('data-champ="lig_is_non_editee"'));
-      champs.splice(k < 0 ? champs.length : k, 0, f.coche('lig_pied_is_fa', 'Frais annexe ventilé dans les prix'));
-    }
     return champs;
   }
 
@@ -288,8 +287,80 @@ export class PanneauxBtp extends PanneauxDocument {
       zone.querySelector('[data-action-ligne="envoi"]')?.addEventListener('click', () => this.versBibliotheque(ids()));
       zone.querySelector('[data-action-ligne="variables"]')?.addEventListener('click', () => this.editeur.creerMetre(ligId));
     }
+    this.sectionFrais(zone, l);
     if (!estTranche(l)) return;
     zone.insertAdjacentHTML('beforeend', sectionVariablesTranche(this.editeur, ligId, { modifiable: !this.editeur.magasin.lectureSeule }));
     lierVariablesTranche(zone, this.editeur);
+  }
+
+  /**
+   * Frais annexes dans le détail : sur une tranche F, bilan (prévu, ventilé, écart) et actions (répartir le reste,
+   * figer) ; sur une ligne de prix, part reçue de chaque tranche de frais de sa portée et clé de ligne (% de la
+   * tranche ou montant par unité ; vide : pas de clé).
+   */
+  sectionFrais(zone, l) {
+    const ed = this.editeur;
+    const r = ed.resultat;
+    const pm = ed.saisie.document.ent_precision_montant ?? 2;
+    const lecture = !!ed.magasin.lectureSeule;
+    const m = ed.magasin;
+    const bilan = bilanTranche(r, l.lig_id);
+    const libelle = (id) => r.lignes.find((x) => x.lig_id === id)?.lig_libelle_brut || 'Frais annexes';
+    if (bilan) {
+      const pct = Number(bilan.prevu) ? ` (${formatLibre(Math.round(Number(bilan.ventile) / Number(bilan.prevu) * 1000) / 10, 1)} %)` : '';
+      zone.insertAdjacentHTML('beforeend', `<section class="detail-frais"><h4>Ventilation des frais annexes</h4>
+        <dl class="calcul">
+          <dt>Prévu</dt><dd>${formatNombre(bilan.prevu, pm)}</dd>
+          <dt>Ventilé${bilan.cles ? ' (clés)' : ' (prorata)'}</dt><dd>${formatNombre(bilan.ventile, pm)}${pct}</dd>
+          <dt>Ventilé réel</dt><dd title="Montants HT avec frais − sans frais, après arrondi des PV">${formatNombre(bilan.ventile_reel, pm)}</dd>
+          <dt>Écart</dt><dd class="${Number(bilan.ecart) ? 'manquant' : ''}">${formatNombre(bilan.ecart, pm)}</dd>
+          <dt>Portée</dt><dd>${echapper(bilan.portee_id ? libelle(bilan.portee_id) : '—')}</dd>
+        </dl>
+        ${lecture ? '' : `<div class="actions-ligne">
+          <button type="button" data-frais="reste" title="Fige la ventilation actuelle en clés de ligne et répartit le montant non ventilé au prorata sur les lignes qui ne reçoivent encore rien de cette tranche">Répartir le reste</button>
+          <button type="button" data-frais="figer" title="Remplace les clés de la tranche par des clés de ligne en montant par unité : les prix ne bougeront plus si le devis change">Figer la ventilation</button>
+          ${bilan.cles ? '<button type="button" data-frais="prorata" title="Supprime les clés de la tranche : ventilation au prorata du montant hors frais">Revenir au prorata</button>' : ''}
+        </div>`}</section>`);
+      const action = (quoi) => {
+        // Identifiants temporaires négatifs consécutifs (prochainId du magasin ne change qu'après modification).
+        let n = m.prochainId() + 1;
+        const prochainId = () => --n;
+        const cles = quoi === 'prorata' ? [] : quoi === 'figer' ? figerVentilation(r, { source: l.lig_id, prochainId }) : repartirReste(ed.entree(ed.saisie), r, l.lig_id, prochainId);
+        if (!cles) { ed.surMessage?.('Aucune ligne pour recevoir les frais'); return; }
+        m.modifier((d) => remplacerCles(d, l.lig_id, cles), { reste: 'Répartir le reste des frais', figer: 'Figer la ventilation', prorata: 'Ventilation au prorata' }[quoi]);
+      };
+      zone.querySelectorAll('[data-frais]').forEach((b) => b.addEventListener('click', () => action(b.dataset.frais)));
+      return;
+    }
+    if (!this.regles.estLigneDePrix(ed.saisie.lignes, l) || l.lig_type_prix === 'F') return;
+    const unites = (r.frais_annexes ?? []).filter((b) => dansPortee(ed.saisie.lignes, b, l.lig_id));
+    if (!unites.length) return;
+    const parts = partsLigne(r, l.lig_id);
+    zone.insertAdjacentHTML('beforeend', `<section class="detail-frais"><h4>Frais annexes reçus</h4>
+      <table class="table-frais"><thead><tr><th>Tranche de frais</th><th>Part reçue</th><th>Clé de la ligne</th><th></th></tr></thead><tbody>
+      ${unites.map((b) => {
+        const k = cleLigne(ed.saisie.ventilations, b.lig_id, l.lig_id);
+        const part = parts.filter((p) => p.source === b.lig_id).reduce((s, p) => s + Number(p.montant), 0);
+        return `<tr data-source="${b.lig_id}"><td>${echapper(libelle(b.lig_id))}</td><td class="nombre">${part ? formatNombre(part, pm) : '—'}</td>
+          <td><input class="nombre" data-cle-valeur value="${echapper(k ? formatLibre(k.vfr_valeur) : '')}" ${lecture ? 'disabled' : ''}
+            title="Vide : pas de clé (prorata, ou part décidée par les clés d'élément et de nature)"></td><td data-cle-mode></td></tr>`;
+      }).join('')}
+      </tbody></table></section>`);
+    zone.querySelectorAll('.table-frais tr[data-source]').forEach((tr) => {
+      const source = Number(tr.dataset.source);
+      const k = cleLigne(ed.saisie.ventilations, source, l.lig_id);
+      const mode = creerCombo({ options: [{ valeur: 'P', libelle: '% de la tranche' }, { valeur: 'M', libelle: '€ par unité' }], valeur: k?.vfr_mode ?? 'M', vide: false });
+      mode.disabled = lecture;
+      tr.querySelector('[data-cle-mode]').append(mode);
+      const ecrire = () => {
+        const saisie = tr.querySelector('[data-cle-valeur]').value.trim();
+        const v = saisie === '' ? null : lireNombre(saisie);
+        if (v === undefined) { ed.surMessage?.('Nombre invalide'); return; }
+        const id = m.prochainId();
+        m.modifier((d) => ecrireCle(d, source, { vfr_cible: 'LIGNE', vfr_lig_id: l.lig_id }, mode.valeurCombo || 'M', v, () => id), 'Clé de frais annexes');
+      };
+      tr.querySelector('[data-cle-valeur]').addEventListener('change', ecrire);
+      mode.addEventListener('change', () => { if (tr.querySelector('[data-cle-valeur]').value.trim() !== '') ecrire(); });
+    });
   }
 }

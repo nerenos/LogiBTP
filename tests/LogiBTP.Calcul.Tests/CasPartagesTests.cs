@@ -40,6 +40,16 @@ public class CasPartagesTests
         var r = JsonSerializer.SerializeToNode(res, JsonCalcul.Options)!.AsObject();
         var fautes = new List<string>();
         CasPartages.VerifierErreurs(a["erreurs"], res.Erreurs.Select(e => e.Code), fautes);
+        if (a["avertissements"] is JsonArray av) CasPartages.VerifierErreurs(av, res.Avertissements.Select(e => e.Code), fautes);
+        // Ventilation des frais annexes : détail (tranche, ligne, montant) et bilan par tranche.
+        if (a["ventilations_lignes"] is JsonArray vl)
+        {
+            var attendu = vl.Select(n => (n!["vfl_source_lig_id"]!.GetValue<long>(), n["vfl_lig_id"]!.GetValue<long>(), n["vfl_montant"]!.GetValue<decimal>())).ToList();
+            var obtenu = res.VentilationsLignes.Select(v => (v.VflSourceLigId, v.VflLigId, v.VflMontant)).ToList();
+            if (!attendu.SequenceEqual(obtenu)) fautes.Add($"ventilations_lignes : attendu [{string.Join(", ", attendu)}], obtenu [{string.Join(", ", obtenu)}]");
+        }
+        foreach (var (id, att) in a["frais_annexes"]?.AsObject() ?? [])
+            CasPartages.Verifier(att!.AsObject(), CasPartages.Trouver(r["frais_annexes"]!.AsArray(), "lig_id", id), $"frais_annexes[{id}]", fautes);
         if (a["document"] is JsonObject doc) CasPartages.Verifier(doc, r["document"]!.AsObject(), "document", fautes);
         foreach (var (cle, att) in a["lignes"]?.AsObject() ?? [])
             CasPartages.Verifier(att!.AsObject(), TrouverLigne(r["lignes"]!.AsArray(), cle), $"lignes[{cle}]", fautes);
@@ -73,6 +83,7 @@ public class CasPartagesTests
         entree.Lignes = r1.Lignes;
         entree.Metres = r1.Metres;
         entree.Variables = r1.Variables;
+        entree.Ventilations = r1.Ventilations;
         var r2 = MoteurDevisBtp.Calculer(entree);
         Assert.Empty(new ComparateurBtp().Comparer(r1, r2));
     }
@@ -92,6 +103,10 @@ public class CasPartagesTests
         Assert.Empty(new ComparateurBtp().Comparer(js, cs));
         Assert.Equal(js.Tva.Select(t => (t.TvaCode, t.TvaBaseHt, t.TvaMontantNet)), cs.Tva.Select(t => (t.TvaCode, t.TvaBaseHt, t.TvaMontantNet)));
         Assert.Equal(js.Erreurs.Select(e => (e.LigId, e.Code)), cs.Erreurs.Select(e => (e.LigId, e.Code)));
+        Assert.Equal(js.Avertissements.Select(e => (e.LigId, e.Code)), cs.Avertissements.Select(e => (e.LigId, e.Code)));
+        Assert.Equal(js.VentilationsLignes.Select(v => (v.VflSourceLigId, v.VflLigId, v.VflMontant, v.VflVfrId)),
+            cs.VentilationsLignes.Select(v => (v.VflSourceLigId, v.VflLigId, v.VflMontant, v.VflVfrId)));
+        Assert.Equal(js.FraisAnnexes, cs.FraisAnnexes);
     }
 
     /// <summary>Colonnes BTP = colonnes génériques du module Document + colonnes du cœur (colonnes-btp.js).</summary>

@@ -14,11 +14,12 @@ namespace LogiBTP.Calcul;
 ///
 /// Ajouts BTP : variables ($$, $ titre, @@ ouvrage, @ ligne), métrés, coefficient de perte, déboursé
 /// (PA × FG × bénéfice), ouvrages en mode déboursé (D), somme des PV (V) ou bordereau (B : PV fixe sans ventilation),
-/// PV fixe et ventilation avec ligne d'écart d'arrondi, PV affiché fixe et coefficient de frais annexes, montants PA / PR.
+/// PV fixe et ventilation avec ligne d'écart d'arrondi, PV affiché fixe, ventilation des frais annexes (tranches F) par
+/// portée et par clés, montants PA / PR.
 /// Métrés en script (module Métré) : quantité renvoyée, erreurs non bloquantes (la quantité saisie est conservée),
 /// libellé calculé ({{lig_libelle_html}} inscriptible), variables non locales régénérées à chaque calcul.
 /// </summary>
-public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBtp>
+public sealed partial class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBtp>
 {
     /// <summary>Calcule un devis BTP. L'entrée n'est pas modifiée.</summary>
     public static ResultatCalcul Calculer(EntreeCalcul entree) =>
@@ -57,11 +58,19 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
     private long _prochainVarId;
     private long _prochainId;
     private decimal _coefFa = 1;
+    // Frais annexes : clés saisies (ventilation_frais), coefficients par ligne, détail et bilan par tranche de frais.
+    private readonly List<VentilationFrais> _ventilations;
+    private readonly Dictionary<long, decimal> _coefsFa = [];
+    private readonly Dictionary<long, decimal> _partsFa = [];
+    private readonly List<VentilationFraisLigne> _ventilationsLignes = [];
+    private readonly List<Bilan> _frais = [];
+    private readonly Dictionary<long, decimal> _ecartsFaReels = [];
 
     private MoteurDevisBtp(EntreeCalcul e) : base(e)
     {
         _e = e;
         _mode = Doc.EntModeCalculOuvrage;
+        _ventilations = e.Ventilations;
         // Variables des métrés : produites par leur script à chaque calcul, jamais évaluées comme définitions.
         var scripts = e.Metres.Select(m => m.MtrId).ToHashSet();
         _definitions = e.Variables.Where(v => v.VarMtrId is not long m || !scripts.Contains(m)).ToList();
@@ -464,74 +473,295 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
 
     // ------------------------------------------------------------------ après les prix : frais annexes
 
+    /// <summary>Lignes de prix vendues entrant dans le total (base du coefficient moyen de frais annexes).</summary>
     private List<DocumentLigneBtp> LignesDePrixEnTotal() =>
         Ordre.Where(l => !TL.EstPied(l) && EstLigneDePrix(l) && !HorsTotal(l) && !EnErreur.Contains(l.LigId) && Px.ContainsKey(l.LigId)).ToList();
 
     /// <summary>
     /// Coefficient de prorata de la ligne vendue (ligne de prix ; une composante d'ouvrage n'en a pas) : appliqué au
-    /// prix affiché après la ventilation des frais annexes, avant la remise.
+    /// prix affiché après les frais annexes, avant la remise.
     /// </summary>
     private decimal Prorata(DocumentLigneBtp l) => EstLigneDePrix(l) && !EstFraisAnnexes(l) ? l.LigCoefProrata : 1;
 
-    /// <summary>Coefficient de frais annexes appliqué au PV affiché : une ligne de frais annexes garde son propre prix.</summary>
-    private decimal CoefFaDe(DocumentLigneBtp l) => EstFraisAnnexes(l) ? 1 : _coefFa;
+    /// <summary>PV affiché imposé hors prorata.</summary>
+    private decimal AfficheHorsProrata(DocumentLigneBtp l) =>
+        Prorata(l) == 1 ? l.LigPvAffiche!.Value : Arr6(l.LigPvAffiche!.Value / Prorata(l));
 
-    /// <summary>Montant HT d'une ligne de frais annexes (PV affiché remisé × quantité vendue), ventilé sur les lignes vendues.</summary>
+    /// <summary>
+    /// Coefficient de frais annexes de la ligne : celui de sa ligne de prix (une composante suit son ouvrage, sauf en
+    /// mode bordereau où les frais restent sur l'ouvrage) ; 1 pour les frais eux-mêmes.
+    /// </summary>
+    private decimal CoefFaDe(DocumentLigneBtp l)
+    {
+        if (EstFraisAnnexes(l)) return 1;
+        DocumentLigneBtp? x = l;
+        if (!EstLigneDePrix(l))
+        {
+            if (_mode == "B") return 1;
+            while (x is not null && !EstLigneDePrix(x)) x = Parent(x);
+            if (x is null) return 1;
+        }
+        return _coefsFa.GetValueOrDefault(x.LigId, 1);
+    }
+
+    /// <summary>Montant HT d'une ligne de frais annexes (PV remisé × quantité vendue).</summary>
     private decimal MontantFraisAnnexes(DocumentLigneBtp l)
     {
         var pvRem = Arrondir(PvAffiche(l, Px[l.LigId]) * l.LigCoefRemise, l.LigPrecisionPv);
         return Arrondir((l.LigQteVendue ?? 0) * pvRem, PrecMontant);
     }
 
-    /// <summary>PV affiché imposé hors prorata : le prorata n'entre pas dans le calcul du coefficient de frais annexes.</summary>
-    private decimal AfficheHorsProrata(DocumentLigneBtp l) =>
-        Prorata(l) == 1 ? l.LigPvAffiche!.Value : Arr6(l.LigPvAffiche!.Value / Prorata(l));
+    /// <summary>Type de prix effectif : le premier type non vendu de la ligne ou de ses ancêtres.</summary>
+    private string TypePrixEffectif(DocumentLigneBtp l)
+    {
+        for (DocumentLigneBtp? x = l; x is not null; x = Parent(x)) if (x.LigTypePrix != "V") return x.LigTypePrix;
+        return "V";
+    }
+
+    /// <summary>Tranche F de plus haut niveau contenant la ligne (null : la ligne n'est pas dans une tranche de frais annexes).</summary>
+    private DocumentLigneBtp? UniteDe(DocumentLigneBtp l)
+    {
+        DocumentLigneBtp? u = null;
+        for (DocumentLigneBtp? x = l; x is not null; x = Parent(x)) if (x.LigTylId == TL.Titre && x.LigTypePrix == "F") u = x;
+        return u is not null && EstFraisAnnexes(l) ? u : null;
+    }
+
+    /// <summary>Feuilles chiffrées du sous-arbre d'une ligne de prix (la ligne elle-même si elle n'a pas de composante).</summary>
+    private List<DocumentLigneBtp> FeuillesDe(DocumentLigneBtp l)
+    {
+        var enfants = EnfantsDe(l.LigId).Where(c => TL.EstChiffree(c)).ToList();
+        return enfants.Count == 0 ? [l] : enfants.SelectMany(FeuillesDe).ToList();
+    }
+
+    /// <summary>Poids d'une feuille : quantité totale × PV (montant avant frais annexes, comme l'onglet Analyse).</summary>
+    private decimal PoidsFeuille(DocumentLigneBtp x) => Px.TryGetValue(x.LigId, out var y) ? (x.LigQteTotale ?? 0) * y.Pv : 0;
+
+    /// <summary>
+    /// Clé d'un élément pour la ventilation des frais annexes : code (majuscules) et libellé saisi sans balises (minuscules,
+    /// espaces réduits). Réplique de cleElementVentilation (moteur-btp.js).
+    /// </summary>
+    public static string CleElementVentilation(DocumentLigneBtp l, string? libelleHtml) =>
+        $"{(l.LigCode ?? "").Trim().ToUpperInvariant()}|{Espaces().Replace(Libelles.TexteBrut(libelleHtml ?? "") ?? "", " ").Trim().ToLowerInvariant()}";
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    private static partial System.Text.RegularExpressions.Regex Espaces();
+
+    /// <summary>
+    /// Répartit <paramref name="montant"/> au prorata des poids (parts égales si tous sont nuls), arrondi au montant ;
+    /// la cible de plus fort poids (la première à égalité) absorbe l'écart d'arrondi.
+    /// </summary>
+    private List<decimal> RepartirMontant(decimal montant, IReadOnlyList<decimal> poids)
+    {
+        if (poids.Count == 0) return [];
+        var w = poids.Sum();
+        var parts = poids.Select(p => Arrondir(w == 0 ? montant / poids.Count : montant * p / w, PrecMontant)).ToList();
+        var im = 0;
+        for (var i = 1; i < poids.Count; i++) if (poids[i] > poids[im]) im = i;
+        parts[im] += montant - parts.Sum();
+        return parts;
+    }
+
+    private sealed class Bilan
+    {
+        public long LigId;
+        public long? PorteeId;
+        public decimal Prevu, Ventile;
+        public bool Cles;
+        public HashSet<long> Receptrices = [];
+    }
+
+    private sealed record Statut(DocumentLigneBtp L, decimal Base, char Role);
+
+    /// <summary>
+    /// Unités de frais annexes : tranches (titres) F de plus haut niveau. Leurs frais sont ventilés sur les lignes de prix
+    /// de la tranche parente (portée), qui doit être dans une section ; une ligne cumule les parts de toutes ses portées.
+    /// Clés (ventilation_frais) par priorité : ligne > élément > nature de l'unité > nature globale ; sans aucune clé,
+    /// prorata du montant hors frais ; avec des clés, le reste n'est pas ventilé (FA_ECART). Lignes à PV affiché fixe
+    /// exclues ; options / variantes (et pour mémoire) selon ent_fa_lignes, dans la base (ent_fa_mode B) ou au
+    /// coefficient moyen des lignes vendues de la portée (C). Réplique de ventilerFraisAnnexes (moteur-btp.js).
+    /// </summary>
+    private void VentilerFraisAnnexes()
+    {
+        var pm = PrecMontant;
+        var horsVente = Doc.EntFaLignes ?? "V";
+        var modeBase = (Doc.EntFaMode ?? "C") == "B";
+        void Ajouter(DocumentLigneBtp u, DocumentLigneBtp l, decimal montant, long? vfrId)
+        {
+            if (montant == 0) return;
+            _ventilationsLignes.Add(new VentilationFraisLigne { VflSourceLigId = u.LigId, VflLigId = l.LigId, VflMontant = montant, VflVfrId = vfrId });
+            _partsFa[l.LigId] = _partsFa.GetValueOrDefault(l.LigId) + montant;
+        }
+
+        foreach (var l in Ordre)
+        {
+            if (TL.EstPied(l) && l.LigPiedIsFa)
+                Avertir(l.LigId, "FA_PIED", "Frais annexe de pied non ventilé : à remplacer par une tranche de frais annexes");
+            if (!TL.EstPied(l) && EstLigneDePrix(l) && EstFraisAnnexes(l) && UniteDe(l) is null)
+                Avertir(l.LigId, "FA_HORS_TRANCHE", "Ligne de frais annexes hors d'une tranche de frais annexes : non ventilée");
+        }
+
+        var unites = Ordre.Where(l => l.LigTylId == TL.Titre && UniteDe(l) == l).ToList();
+        foreach (var u in unites)
+        {
+            var prevu = Ordre.Where(l => EstLigneDePrix(l) && DescendDe(l, u) && !EnErreur.Contains(l.LigId) && Px.ContainsKey(l.LigId))
+                .Aggregate(0m, (s, l) => s + MontantFraisAnnexes(l));
+            var portee = Parent(u);
+            var bilan = new Bilan { LigId = u.LigId, PorteeId = portee?.LigId, Prevu = prevu };
+            _frais.Add(bilan);
+            var section = false;
+            for (var x = portee; x is not null; x = Parent(x)) if (x.LigTylId == TL.Section) section = true;
+            if (!section)
+            {
+                Avertir(u.LigId, "FA_HORS_SECTION", "Tranche de frais annexes hors d'une section : non ventilée");
+                continue;
+            }
+
+            // Lignes de prix de la portée : réceptrices R (base), dérivées D (coefficient moyen, mode C) ou exclues X.
+            var statut = new Dictionary<long, Statut>();
+            var ordreStatut = new List<Statut>();
+            foreach (var l in Ordre)
+            {
+                if (TL.EstPied(l) || !EstLigneDePrix(l) || !DescendDe(l, portee!) || EstFraisAnnexes(l) || l.LigIsEcartArrondi
+                    || EnErreur.Contains(l.LigId) || !Px.ContainsKey(l.LigId)) continue;
+                var bas = Arr6(Px[l.LigId].Pv * (l.LigQteVendue ?? 0));
+                var type = TypePrixEffectif(l);
+                var eligible = type == "V" || ((type == "O" || type == "A") && horsVente != "V") || (type == "M" && horsVente == "OAM");
+                var role = !eligible || FixeDe(l) == Blocage.Affiche || bas <= 0 ? 'X' : type == "V" || modeBase ? 'R' : 'D';
+                var s = new Statut(l, bas, role);
+                statut[l.LigId] = s;
+                ordreStatut.Add(s);
+            }
+            var receptrices = ordreStatut.Where(s => s.Role == 'R').ToList();
+            bilan.Receptrices = receptrices.Select(s => s.L.LigId).ToHashSet();
+            if (receptrices.Count == 0)
+            {
+                Avertir(u.LigId, "FA_SANS_RECEPTRICE", "Aucune ligne pour recevoir les frais annexes de la tranche");
+                continue;
+            }
+
+            var cles = _ventilations.Where(k => k.VfrSourceLigId == u.LigId || (k.VfrSourceLigId is null && k.VfrCible == "NATURE")).ToList();
+            bilan.Cles = cles.Count > 0;
+            var couvertes = new HashSet<long>();
+            if (!bilan.Cles)
+            {
+                var parts = RepartirMontant(prevu, receptrices.Select(s => s.Base).ToList());
+                for (var i = 0; i < receptrices.Count; i++) Ajouter(u, receptrices[i].L, parts[i], null);
+                bilan.Ventile = prevu;
+            }
+            else
+            {
+                // Clés en % : réparties ensemble pour que 100 % fassent exactement le montant prévu.
+                var enPct = cles.Where(k => k.VfrMode == "P" && k.VfrValeur >= 0).ToList();
+                var totalPct = enPct.Sum(k => k.VfrValeur);
+                var partsPct = RepartirMontant(Arrondir(prevu * totalPct / 100, pm), enPct.Select(k => k.VfrValeur).ToList());
+                var montantsPct = new Dictionary<VentilationFrais, decimal>(ReferenceEqualityComparer.Instance);
+                for (var i = 0; i < enPct.Count; i++) montantsPct[enPct[i]] = partsPct[i];
+                // Clé en montant : par unité de quantité pour une ligne, total pour un élément ou une nature.
+                decimal? MontantCle(VentilationFrais k, DocumentLigneBtp? cible)
+                {
+                    if (k.VfrMode == "P") return montantsPct.TryGetValue(k, out var m) ? m : null;
+                    if (k.VfrValeur < 0) return null;
+                    return Arrondir(cible is null ? k.VfrValeur : k.VfrValeur * (cible.LigQteVendue ?? 0), pm);
+                }
+
+                // 1. Clés de ligne.
+                var niveauLigne = new List<long>();
+                foreach (var k in cles.Where(x => x.VfrCible == "LIGNE" && x.VfrSourceLigId == u.LigId))
+                {
+                    if (k.VfrLigId is not long kl || !statut.TryGetValue(kl, out var s))
+                    {
+                        Avertir(u.LigId, "FA_CLE_ORPHELINE", $"Clé de ventilation sur une ligne absente de la portée ({k.VfrLigId})");
+                        continue;
+                    }
+                    if (s.Role == 'X')
+                    {
+                        Avertir(u.LigId, "FA_CLE_BLOQUEE", $"Clé de ventilation sur une ligne qui ne reçoit pas de frais ({k.VfrLigId})");
+                        continue;
+                    }
+                    if (MontantCle(k, s.L) is not decimal montant)
+                    {
+                        Avertir(u.LigId, "FA_CLE_ORPHELINE", "Clé de ventilation de valeur invalide");
+                        continue;
+                    }
+                    niveauLigne.Add(s.L.LigId);
+                    Ajouter(u, s.L, montant, k.VfrId);
+                    if (s.Role == 'R') bilan.Ventile += montant;
+                }
+                foreach (var id in niveauLigne) couvertes.Add(id);
+
+                // 2. Éléments, 3. natures de l'unité, 4. natures globales : au prorata des feuilles visées des lignes non couvertes.
+                var niveaux = new[]
+                {
+                    cles.Where(x => x.VfrCible == "ELEMENT" && x.VfrSourceLigId == u.LigId).ToList(),
+                    cles.Where(x => x.VfrCible == "NATURE" && x.VfrSourceLigId == u.LigId).ToList(),
+                    cles.Where(x => x.VfrCible == "NATURE" && x.VfrSourceLigId is null).ToList(),
+                };
+                foreach (var niveau in niveaux)
+                {
+                    var vues = new List<long>();
+                    foreach (var k in niveau)
+                    {
+                        Func<DocumentLigneBtp, bool> vise = k.VfrCible == "ELEMENT"
+                            ? x => x.LigTylId == TL.Element && !x.LigIsEcartArrondi && CleElementVentilation(x, SourceLibelle(x)) == k.VfrElement
+                            : x => !x.LigIsEcartArrondi && x.LigNatId is not null && x.LigNatId == k.VfrNatId;
+                        var cibles = new List<(DocumentLigneBtp L, decimal W)>();
+                        foreach (var s in receptrices)
+                        {
+                            if (couvertes.Contains(s.L.LigId)) continue;
+                            var w = FeuillesDe(s.L).Where(vise).Aggregate(0m, (t, x) => t + PoidsFeuille(x));
+                            if (w > 0) cibles.Add((s.L, w));
+                        }
+                        if (cibles.Count == 0)
+                        {
+                            Avertir(u.LigId, "FA_CLE_ORPHELINE", $"Clé de ventilation sans ligne visée ({(k.VfrCible == "ELEMENT" ? k.VfrElement : $"nature {k.VfrNatId}")})");
+                            continue;
+                        }
+                        if (MontantCle(k, null) is not decimal montant)
+                        {
+                            Avertir(u.LigId, "FA_CLE_ORPHELINE", "Clé de ventilation de valeur invalide");
+                            continue;
+                        }
+                        var parts = RepartirMontant(montant, cibles.Select(c => c.W).ToList());
+                        for (var i = 0; i < cibles.Count; i++)
+                        {
+                            Ajouter(u, cibles[i].L, parts[i], k.VfrId);
+                            vues.Add(cibles[i].L.LigId);
+                        }
+                        bilan.Ventile += montant;
+                    }
+                    foreach (var id in vues) couvertes.Add(id);
+                }
+                if (bilan.Ventile != prevu) Avertir(u.LigId, "FA_ECART", $"Frais annexes ventilés {Texte(bilan.Ventile)} pour {Texte(prevu)} prévus");
+            }
+
+            // Mode C : options et variantes reçoivent le coefficient moyen des lignes vendues de la portée.
+            var baseR = receptrices.Sum(x => x.Base);
+            foreach (var s in ordreStatut)
+            {
+                if (s.Role != 'D' || couvertes.Contains(s.L.LigId) || baseR == 0) continue;
+                Ajouter(u, s.L, Arrondir(s.Base * bilan.Ventile / baseR, pm), null);
+            }
+        }
+
+        // Coefficient de chaque ligne qui reçoit des frais : 1 + parts / montant hors frais.
+        foreach (var (id, part) in _partsFa)
+        {
+            var l = ParId[id];
+            var bas = Px[id].Pv * (l.LigQteVendue ?? 0);
+            if (bas != 0) _coefsFa[id] = Arr6(1 + part / bas);
+        }
+    }
+
+    private static string Texte(decimal v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     protected override void ApresPrix()
     {
-        decimal f = 0, a = 0, p = 0;
-        foreach (var l in LignesDePrixEnTotal())
-        {
-            var qv = l.LigQteVendue ?? 0;
-            if (FixeDe(l) == Blocage.Affiche) a += AfficheHorsProrata(l) * qv;
-            else f += Px[l.LigId].Pv * qv;
-        }
-        foreach (var pied in EnfantsDe(null))
-        {
-            if (!TL.EstPied(pied) || pied.LigTylId == TL.Tva || !pied.LigPiedIsFa || pied.LigTypePrix != "V") continue;
-            if ((pied.LigPiedMode ?? "M") != "M")
-            {
-                Erreur(pied.LigId, "FA_POURCENTAGE", "Un frais annexe ventilé doit être saisi en montant", false);
-                continue;
-            }
-            p += Arrondir(pied.LigPiedValeur ?? 0, PrecMontant) * (pied.LigPiedSens == -1 ? -1 : 1);
-        }
-        // Lignes de frais annexes (type F) : hors total, leur montant est ventilé sur les lignes vendues.
-        foreach (var l in Ordre)
-        {
-            if (TL.EstPied(l) || !EstLigneDePrix(l) || !EstFraisAnnexes(l) || EnErreur.Contains(l.LigId) || !Px.ContainsKey(l.LigId)) continue;
-            p += MontantFraisAnnexes(l);
-        }
-
-        decimal c = 1;
-        if (p != 0)
-        {
-            if (f > 0)
-            {
-                // Racine positive de F·c² − (F + P − A)·c − A = 0.
-                var b = f + p - a;
-                c = Arr6((b + Racine(b * b + 4 * f * a)) / (2 * f));
-            }
-            else if (a > p) c = Arr6(a / (a - p));
-            else Erreur(null, "FRAIS_ANNEXES", "Les frais annexes doivent rester inférieurs à la somme des prix affichés fixes");
-        }
-        _coefFa = c;
-
+        // PV affiché fixe : prix imposé hors frais annexes (la ligne ne reçoit pas de frais).
         foreach (var l in Ordre)
         {
             if (FixeDe(l) != Blocage.Affiche || !Px.ContainsKey(l.LigId)) continue;
             var y = PxBtp(l.LigId);
-            var pvFixe = Arr6(AfficheHorsProrata(l) / CoefFaDe(l));
+            var pvFixe = AfficheHorsProrata(l);
             if (EstCompose(l))
             {
                 y.Pv = pvFixe;
@@ -549,7 +779,35 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
             }
         }
         ReconstruireOrdre();
+        VentilerFraisAnnexes();
+
+        // Coefficient moyen du document (information) : lignes vendues.
+        decimal bas = 0, avec = 0;
+        foreach (var l in LignesDePrixEnTotal())
+        {
+            var b = Px[l.LigId].Pv * (l.LigQteVendue ?? 0);
+            bas += b;
+            avec += b + _partsFa.GetValueOrDefault(l.LigId);
+        }
+        _coefFa = bas == 0 ? 1 : Arr6(avec / bas);
     }
+
+    /// <summary>
+    /// Bilan par tranche de frais annexes : prévu, ventilé (clés), ventilé réel (montants HT après arrondi du PV, la
+    /// différence de chaque ligne répartie entre ses tranches au prorata de leurs parts) et écart = prévu − ventilé.
+    /// </summary>
+    private List<BilanFraisAnnexes> BilanFrais() => _frais.Select(b =>
+    {
+        decimal reel = 0;
+        foreach (var v in _ventilationsLignes)
+        {
+            if (v.VflSourceLigId != b.LigId || !b.Receptrices.Contains(v.VflLigId)) continue;
+            var total = _partsFa.GetValueOrDefault(v.VflLigId);
+            if (total == 0 || !_ecartsFaReels.TryGetValue(v.VflLigId, out var diff)) continue;
+            reel += diff * v.VflMontant / total;
+        }
+        return new BilanFraisAnnexes(b.LigId, b.PorteeId, b.Cles, b.Prevu, b.Ventile, Arrondir(reel, PrecMontant), b.Prevu - b.Ventile);
+    }).ToList();
 
     // ------------------------------------------------------------------ montants, totaux, pied
 
@@ -575,6 +833,12 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         l.LigMontantPa = Arrondir(qv * y.Pa, PrecMontant);
         l.LigMontantPr = Arrondir(qv * y.Pr, PrecMontant);
         if (_pvVentiles.Contains(l.LigId)) l.LigPvFixe = true;
+        // Frais réellement ventilés (après arrondi du PV) : montant HT avec frais − montant HT sans frais.
+        if (_partsFa.ContainsKey(l.LigId))
+        {
+            var sans = Arrondir(Arrondir(y.Pv * Prorata(l), l.LigPrecisionPv) * l.LigCoefRemise, l.LigPrecisionPv);
+            _ecartsFaReels[l.LigId] = l.LigMontantHt!.Value - Arrondir(qv * sans, PrecMontant);
+        }
     }
 
     protected override void EcrireSomme(DocumentLigneBtp cible, IReadOnlyList<DocumentLigneBtp> lignes)
@@ -608,6 +872,9 @@ public sealed class MoteurDevisBtp : MoteurDocument<DocumentBtp, DocumentLigneBt
         r.Variables = [.. _definitions, .. _variablesScript.Values.SelectMany(v => v)];
         r.Scripts = _scripts;
         r.LignesSupprimees = _ecartsExistants.Values.Select(l => l.LigId).ToList();
+        r.Ventilations = _ventilations;
+        r.VentilationsLignes = _ventilationsLignes;
+        r.FraisAnnexes = BilanFrais();
         return r;
     }
 }

@@ -1,0 +1,106 @@
+{
+  "nom": "Frais annexes en mode bordereau : sur l'ouvrage seul",
+  "description": "Mode B (bordereau) : l'ouvrage à PV fixe 100 reçoit les 10 de frais (1,1, PV affiché 110) ; son sous-détail garde ses prix et un coefficient de frais de 1.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "B",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Travaux"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 2,
+        "lig_libelle_html": "Mur",
+        "lig_qte": 1,
+        "lig_tva_id": 1,
+        "lig_pv_fixe": true,
+        "lig_pv": 100
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Parpaing",
+        "lig_qte": 1,
+        "lig_pa": 30
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Main d'œuvre",
+        "lig_qte": 1,
+        "lig_pa": 50
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Frais",
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 5,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Installation",
+        "lig_qte": 1,
+        "lig_pa": 10,
+        "lig_type_prix": "F",
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 7,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      }
+    ]
+  },
+  "attendu": {
+    "document": {
+      "ent_total_ht": 110
+    },
+    "lignes": {
+      "2": {
+        "lig_coef_fa": 1.1,
+        "lig_pv_affiche": 110,
+        "lig_montant_ht": 110
+      },
+      "3": {
+        "lig_coef_fa": 1,
+        "lig_pv_affiche": 30
+      },
+      "4": {
+        "lig_coef_fa": 1,
+        "lig_pv_affiche": 50
+      }
+    },
+    "avertissements": []
+  }
+}

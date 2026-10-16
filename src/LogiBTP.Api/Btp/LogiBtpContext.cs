@@ -13,10 +13,14 @@ public sealed class LogiBtpContext(DbContextOptions<LogiBtpContext> options) : D
 {
     public DbSet<Metre> Metres => Set<Metre>();
     public DbSet<VariableDefinition> Variables => Set<VariableDefinition>();
+    public DbSet<VentilationFrais> VentilationsFrais => Set<VentilationFrais>();
+    public DbSet<VentilationFraisLigne> VentilationsFraisLignes => Set<VentilationFraisLigne>();
 
     protected override void ConfigurerComplements(ModelBuilder b)
     {
         b.Entity<Metre>().ToTable("metre").HasKey(x => x.MtrId);
         b.Entity<VariableDefinition>().ToTable("variable_definition").HasKey(x => x.VarId);
+        b.Entity<VentilationFrais>().ToTable("ventilation_frais").HasKey(x => x.VfrId);
+        b.Entity<VentilationFraisLigne>().ToTable("ventilation_frais_ligne").HasKey(x => x.VflId);
     }
 }

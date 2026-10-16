@@ -135,8 +135,9 @@ export class MoteurDocument {
   }
 
   /** Ligne numérotée (Titre, Ouvrage, Élément) ; spécialisable pour exclure des lignes calculées. */
+  /** Les frais annexes (tranche F et son contenu) ne sont jamais édités : pas de numéro. */
   estNumerotee(l) {
-    return estTypeNumerote(l);
+    return estTypeNumerote(l) && !this.estFraisAnnexes(l);
   }
 
   /** Quantité d'une composante ramenée à l'unité du composé. */
@@ -427,7 +428,10 @@ export class MoteurDocument {
       if (estTranche(l)) {
         const desc = [];
         for (let j = i + 1; j < corps.length && this.descendDe(corps[j], l); j++) desc.push(corps[j]);
-        ecrire(l, somme(desc.filter((x) => this.estLigneDePrix(x) && !this.horsTotal(x, l) && !this.enErreur.has(x.lig_id) && x.lig_montant_ht !== null)));
+        // Tranche de frais annexes : montant de ses frais (hors total du document).
+        const fa = this.estFraisAnnexes(l);
+        ecrire(l, somme(desc.filter((x) => this.estLigneDePrix(x) && (fa ? this.estFraisAnnexes(x) : !this.horsTotal(x, l))
+          && !this.enErreur.has(x.lig_id) && x.lig_montant_ht !== null)));
       } else if (l.lig_tyl_id === TL.SOUS_TOTAL) {
         let debut = 0;
         if (l.lig_st_depuis_id !== null && l.lig_st_depuis_id !== undefined) {
