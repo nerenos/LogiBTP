@@ -1109,3 +1109,19 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Vérifié sur la base de démo : retour de 30 % à 20 % → période −12 710,63, avoir d'avancement AV2026-00002 à la
   validation, bloc de déduction affiché ; situation validée puis révisée (indice B de référence) ; reprise créée depuis
   le marché, refusée depuis une commande.
+
+### Lot 7 – annulation en cascade (16/10/2026)
+
+- Q30, 13.12 bis : « Annuler par avoir… » sur une facture ou un avoir d'avancement validé : la pièce et toutes les
+  pièces d'avancement suivantes du marché (numéro de situation, puis ordre de création), non annulées, sont annulées en
+  une transaction après confirmation (liste des pièces) ; chaque facture par un avoir d'annulation qui la reprend
+  entièrement, chaque avoir d'avancement par un avoir d'avoir (extourne) ; toutes passent au statut Annulé, hors
+  avancement (précédents, déductions, numéros de situation : la suivante reprend après la dernière valable) ; le
+  facturé du marché revient au net ; la dernière situation qui avait servi est remise en cours (nouvel indice de
+  référence, avancements conservés). Bloc de déduction : « Afficher les pièces annulées ». Hors marché : la pièce seule.
+- Précision apportée au lot 6 : la saisie initiale d'une ligne d'avancement repart du montant précédent (référence),
+  le % seulement pour une ligne sans prix — repartir du % arrondi pouvait décaler le montant d'un centime.
+- Vérifié sur la base de démo : facture SI2026-00002 et avoir d'avancement AV2026-00002 annulés (AV2026-00003 et
+  -00004), facturé du marché 0 ; facture issue d'une situation annulée → situation remise en cours (indice C).
+
+**Analyse réalisée en entier (lots 1 à 7).** Points restants : voir TACHES.md.

@@ -121,7 +121,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
-        if (doc.EntAvtPresentation is null || doc.EntMarcheId is null) return;
+        // Un avoir d'annulation reprend la pièce annulée (son numéro de situation) : ni numéro ni déduction.
+        if (doc.EntAvtPresentation is null || doc.EntMarcheId is null || doc.EntNatureAvoir == "ANNULATION") return;
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE document d SET ent_rang_avancement = 1 + coalesce((
                 SELECT max(x.ent_rang_avancement) FROM document x

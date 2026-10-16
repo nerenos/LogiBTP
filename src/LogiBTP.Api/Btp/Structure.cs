@@ -128,10 +128,46 @@ public static class Structure
                           WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
                             AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
                             AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement))
-                  END) AS "Value"
+                  END,
+                  -- Pièces d'avancement annulées du marché (masquées de l'avancement, réaffichables pour contrôle).
+                  'annules', (SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', tx.tyd_libelle,
+                        'rang', x.ent_rang_avancement, 'total_ht', x.ent_total_ht, 'nature', x.ent_nature_avoir) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]')
+                      FROM document x JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                      WHERE x.ent_marche_id = d.ent_marche_id AND s.std_code = 'ANNULE' AND x.ent_avt_presentation = 'P')) AS "Value"
                 FROM document d WHERE d.ent_id = {id}
                 """).FirstAsync(ct);
             return Results.Content(json, "application/json");
+        });
+        // Annulation d'une pièce d'avancement (Q30, 13.12 bis) : elle et toutes les pièces d'avancement suivantes du marché
+        // (factures, avoirs d'avancement) sont annulées par avoir, en une transaction ; la dernière situation qui les a
+        // servies est remise en cours (nouvel indice, avancements conservés). Hors avancement : la pièce seule.
+        g.MapGet("/documents/{id:long}/annulation", async (long id, LogiBtpContext db, CancellationToken ct) =>
+            Results.Content(await db.Database.SqlQueryRaw<string>(SqlListeCascade, new NpgsqlParameter("id", id)).FirstAsync(ct), "application/json"));
+        g.MapPost("/documents/{id:long}/annulation", async (long id, HttpContext http, LogiBtpContext db,
+            TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations,
+            DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            var avoirs = new List<long>();
+            long? situation;
+            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            {
+                var pieces = await db.Database.SqlQueryRaw<long>("SELECT x.ent_id AS \"Value\" FROM " + SqlCascade + " ORDER BY x.ent_rang_avancement DESC NULLS LAST, x.ent_id DESC",
+                    new NpgsqlParameter("id", id)).ToListAsync(ct);
+                if (pieces.Count == 0) throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", "Pièce déjà annulée ou non validée");
+                foreach (var p in pieces) avoirs.Add(await transformations.AnnulerParAvoirDans(p, u, ct));
+                // Dernière situation (de référence) dont une pièce annulée est issue.
+                situation = await db.Database.SqlQuery<long?>($"""
+                    SELECT s.ent_id AS "Value" FROM document s
+                    JOIN type_document t ON t.tyd_id = s.ent_tyd_id AND t.tyd_avancement = 'S'
+                    JOIN document_lien l ON l.lie_source_ent_id = s.ent_id AND l.lie_type = 'TRANSFORMATION'
+                    WHERE l.lie_cible_ent_id = ANY({pieces.ToArray()}) AND s.ent_is_reference AND s.ent_verrouille
+                    ORDER BY s.ent_rang_avancement DESC NULLS LAST, s.ent_id DESC LIMIT 1
+                    """).FirstOrDefaultAsync(ct);
+                await tx.CommitAsync(ct);
+            }
+            long? revision = situation is long sid ? (await documents.CreerIndice(sid, u, ct)).Document.EntId : null;
+            return Results.Ok(new { avoirs, situation = revision });
         });
         // Intervenants d'un projet, d'une affaire, d'un chantier ou d'un marché (reprise dans l'annuaire d'un document).
         g.MapGet("/intervenants/{type}/{id:long}", async (string type, long id, LogiBtpContext db, CancellationToken ct) =>
@@ -151,6 +187,27 @@ public static class Structure
         });
         return api;
     }
+
+    /// <summary>
+    /// Pièces annulées avec la pièce {id} (alias x) : elle-même, et dans un marché les pièces d'avancement validées non
+    /// annulées qui la suivent (numéro de situation, puis ordre de création).
+    /// </summary>
+    private const string SqlListeCascade = """
+        SELECT coalesce(json_agg(json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero, 'type', t.tyd_libelle,
+            'rang', x.ent_rang_avancement, 'total_ht', x.ent_total_ht) ORDER BY x.ent_rang_avancement NULLS FIRST, x.ent_id), '[]') AS "Value"
+        FROM
+        """ + " " + SqlCascade;
+
+    private const string SqlCascade = """
+        document d
+        JOIN document x ON x.ent_verrouille AND (x.ent_id = d.ent_id OR (d.ent_marche_id IS NOT NULL AND d.ent_avt_presentation = 'P'
+            AND x.ent_marche_id = d.ent_marche_id AND x.ent_avt_presentation = 'P'
+            AND (coalesce(x.ent_rang_avancement, 0) > coalesce(d.ent_rang_avancement, 0)
+                 OR (coalesce(x.ent_rang_avancement, 0) = coalesce(d.ent_rang_avancement, 0) AND x.ent_id > d.ent_id))))
+        JOIN type_document t ON t.tyd_id = x.ent_tyd_id
+        JOIN statut_document st ON st.std_id = x.ent_std_id AND st.std_code <> 'ANNULE'
+        WHERE d.ent_id = @id
+        """;
 
     // Colonnes d'un document (CTE docs) : groupe d'indices (rattachement des pièces de la GED), indice de référence.
     private const string ColonnesDocument = """

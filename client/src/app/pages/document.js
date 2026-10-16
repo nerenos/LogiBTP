@@ -46,6 +46,7 @@ const GABARIT = `
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+      <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
     </div>
@@ -154,6 +155,7 @@ export class PageDocument extends PageBase {
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
       sources: () => this.ajouterSources(),
+      'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
@@ -450,6 +452,9 @@ export class PageDocument extends PageBase {
     this.$('[data-action="valider"]').disabled = !enLigne || !modifiable || Boolean(this.importEnCours);
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
+    // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
+    this.$('[data-action="annuler-avoir"]').hidden = !enLigne || !doc.ent_verrouille || statut?.std_code === 'ANNULE'
+      || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
     this.$('[data-action="sources"]').hidden = !enLigne || !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
@@ -635,6 +640,23 @@ export class PageDocument extends PageBase {
     }
   }
 
+  /**
+   * Annulation par avoir (Q30, 13.12 bis) : la pièce et, dans un marché, toutes les pièces d'avancement suivantes sont
+   * annulées par avoir après confirmation ; la dernière situation concernée est remise en cours (nouvel indice).
+   */
+  async annulerParAvoir() {
+    const d = this.editeur.saisie.document;
+    const pieces = await api.piecesAnnulation(d.ent_id);
+    if (!pieces.length) { this.app.message('Rien à annuler', 'avertissement'); return; }
+    const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''} (${formatNombre(x.total_ht, 2)} € HT)`).join('\n');
+    if (!confirm(`${pieces.length > 1 ? `Les ${pieces.length} pièces suivantes seront annulées` : 'La pièce suivante sera annulée'} par avoir (pièces comptables : un avoir chacune) :\n\n${liste}\n\nAnnuler ?`)) return;
+    const r = await api.annulerParAvoir(d.ent_id);
+    this.app.publier('enregistre', { ids: [d.ent_id, ...r.avoirs] });
+    await this.chargerDocument(d.ent_id);
+    this.app.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours (nouvel indice)' : ''}`, 'succes');
+    if (r.situation && confirm('Ouvrir la situation remise en cours ?')) await this.app.naviguer(`/document/${r.situation}`, { nouvelleFenetre: true });
+  }
+
   /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */
   async chargerAvancement() {
     const d = this.editeur.saisie.document;
@@ -666,7 +688,10 @@ export class PageDocument extends PageBase {
         <tr><th>Cumul HT</th><td class="nombre">${f(cumul)}</td></tr>
         ${periode ? `${precedents.map((x) => `<tr><td>À déduire : ${x.rang ? `n° ${x.rang} · ` : ''}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}</td><td class="nombre">−${f(x.total_ht)}</td></tr>`).join('')}
         <tr><th>Période HT (ce document)</th><td class="nombre">${f(d.ent_total_ht)}</td></tr>` : `<tr><td colspan="2"><small>Situation : état cumulé, non comptable${precedents.length ? ` ; déjà facturé ${f(deduit)} HT` : ''}</small></td></tr>`}
-      </tbody></table>`;
+      </tbody></table>
+      ${(a.annules ?? []).length ? `<label class="coche"><input type="checkbox" data-annules ${this.voirAnnules ? 'checked' : ''}> Afficher les pièces annulées (${a.annules.length})</label>
+        ${this.voirAnnules ? `<table class="annules"><tbody>${a.annules.map((x) => `<tr><td>${x.rang ? `n° ${x.rang} · ` : ''}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}${x.nature === 'ANNULATION' ? ' (avoir d\'annulation)' : ''}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}` : ''}`;
+    bloc.querySelector('[data-annules]')?.addEventListener('change', (e) => { this.voirAnnules = e.target.checked; this.rendreAvancement(zone); });
     zone.append(bloc);
   }
 

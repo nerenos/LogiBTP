@@ -47,7 +47,13 @@
   **lot 6a réalisé** (avancement : règle, situations et factures d'avancement depuis le marché, précédents, grille ;
   `017`, `171` et fiche marché appliqués aux deux bases) ; **lot 6b réalisé** (pied en montant, avoir d'avancement,
   état comptable, numéro de situation, révisions, reprise, bloc de déduction ; `018`, `172` appliqués) ; la facture
-  d'avancement d'essai SI2026-00002 de la démo (validée avant le lot 6b) n'a pas de numéro de situation ; § 13.14 sans décision
+  d'avancement d'essai SI2026-00002 de la démo (validée avant le lot 6b) n'a pas de numéro de situation ;
+  **lot 7 réalisé** (annulation en cascade, `019` appliqué). **Analyse entièrement réalisée** ; restent : 13.14 sans
+  décision (BL regroupés par commande, chantier par ligne `lig_cha_id`), postes HT du pied global (compte prorata),
+  proposition des marchés à facturer pour une période (13.9), déduction d'un règlement ou d'un avoir sur une facture
+  suivante (module Comptabilité), retenue de garantie et révision de prix à affiner (Q22), écran de transformation
+  ligne à ligne. Documents d'essai créés dans `logibtp_demo` pendant le développement (commandes CC2026-00003…7,
+  marché M-2026-005-1, BL, factures et avoirs d'avancement, situations). § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.

@@ -51,6 +51,9 @@ export const api = {
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   commandesMarche: (id) => appel('GET', `/structure/documents/${id}/commandes-marche`),
   avancementDocument: (id) => appel('GET', `/structure/documents/${id}/avancement`),
+  // Annulation par avoir (pièce et, dans un marché, pièces d'avancement suivantes) : liste puis annulation.
+  piecesAnnulation: (id) => appel('GET', `/structure/documents/${id}/annulation`),
+  annulerParAvoir: (id) => appel('POST', `/structure/documents/${id}/annulation`),
   seuilsSolde: () => appel('GET', '/parametres-documents/seuils-solde'),
   enregistrerSeuilsSolde: (seuils) => appel('PUT', '/parametres-documents/seuils-solde', seuils),
   historique: (id) => appel('GET', `/documents/${id}/historique`),

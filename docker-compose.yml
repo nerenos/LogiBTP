@@ -21,6 +21,7 @@ services:
       - ./modules/document/db/016_document_options.sql:/docker-entrypoint-initdb.d/016_document_options.sql:ro
       - ./modules/document/db/017_document_avancement.sql:/docker-entrypoint-initdb.d/017_document_avancement.sql:ro
       - ./modules/document/db/018_document_avancement_suite.sql:/docker-entrypoint-initdb.d/018_document_avancement_suite.sql:ro
+      - ./modules/document/db/019_document_annulation.sql:/docker-entrypoint-initdb.d/019_document_annulation.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/metre/db/021_metre_script.sql:/docker-entrypoint-initdb.d/021_metre_script.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro

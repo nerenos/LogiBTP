@@ -86,7 +86,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     /// <summary>
     /// Document d'avancement : chaque ligne de prix suit sa ligne du marché (montant et quantité de la commande, ou repris
     /// d'une situation avec son avancement saisi) ; précédent du dernier document d'avancement ; sans saisie, l'avancement
-    /// part du % précédent (période nulle).
+    /// part du précédent (période nulle) : montant cumulé, ou % pour une ligne sans prix.
     /// </summary>
     private static TComplet PreparerAvancement(TComplet c, Preparation p)
     {
@@ -106,8 +106,10 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             }
             else
             {
-                l.LigAvtMode = "P";
-                l.LigAvtValeur = precedent?.Pct ?? 0;
+                // Saisie initiale = précédent (période nulle) : en montant (la référence), en % pour une ligne sans prix.
+                var sansPrix = (src.LigMontantHt ?? 0) == 0;
+                l.LigAvtMode = sansPrix ? "P" : "M";
+                l.LigAvtValeur = sansPrix ? precedent?.Pct ?? 0 : precedent?.Montant ?? 0;
                 l.LigAvtMontantMarche = src.LigMontantHt;
                 l.LigAvtQteMarche = src.LigQteVendue;
             }
@@ -388,6 +390,52 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         foreach (var p in preparations) await EcrireLiens(p, cibleId, apres.Lignes, ct);
         await tx.CommitAsync(ct);
         return await documents.Charger(cibleId, ct);
+    }
+
+    // ------------------------------------------------------------------ annulation par avoir
+
+    /// <summary>
+    /// Annule une pièce validée par un avoir qui la reprend entièrement (CONCEPTION-ACHATS-MARCHES.md, Q30) : facture →
+    /// avoir de son type d'avoir ; avoir d'avancement → avoir d'avoir (extourne). L'avoir, de nature ANNULATION, est validé
+    /// d'office ; la pièce et son avoir passent au statut Annulé (hors avancement), reliés par un lien ANNULATION. Dans la
+    /// transaction de l'appelant ; renvoie l'identifiant de l'avoir.
+    /// </summary>
+    public async Task<long> AnnulerParAvoirDans(long entId, Utilisateur u, CancellationToken ct)
+    {
+        var source = await documents.Charger(entId, ct);
+        var type = await documents.Type(source.Document.EntTydId, ct);
+        var statut = await db.StatutsDocument.AsNoTracking().FirstAsync(s => s.StdId == source.Document.EntStdId, ct);
+        if (!source.Document.EntVerrouille || statut.StdCode == "ANNULE")
+        {
+            throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", "Seule une pièce validée et non annulée s'annule par un avoir");
+        }
+        var avoirTydId = type.TydAvoirTydId
+            ?? (source.Document.EntNatureAvoir is not null ? type.TydId
+                : throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", $"Le type {type.TydCode} ne s'annule pas par un avoir"));
+        var typeAvoir = await documents.Type(avoirTydId, ct);
+        await documents.VerifierDroit(u, typeAvoir.TydId, "CREER", ct);
+        var avoir = await documents.Dupliquer(source, d =>
+        {
+            d.EntTydId = typeAvoir.TydId;
+            d.EntIndice = "A";
+            d.EntIsReference = true;
+            d.EntGroupeId = null;
+            d.EntNumero = null;
+            d.EntDate = DateOnly.FromDateTime(DateTime.Today);
+            d.EntNatureAvoir = "ANNULATION";
+            d.EntEtatCompta = null;
+        }, u, ct);
+        var avoirId = avoir.Document.Document.EntId;
+        db.DocumentsLien.Add(new DocumentLien { LieSourceEntId = entId, LieCibleEntId = avoirId, LieType = "ANNULATION" });
+        await db.SaveChangesAsync(ct);
+        await documents.ValiderDans(avoirId, u, ct);
+        foreach (var (id, tyd) in new[] { (entId, type.TydId), (avoirId, typeAvoir.TydId) })
+        {
+            var annule = await db.StatutsDocument.AsNoTracking().Where(s => s.StdTydId == tyd && s.StdCode == "ANNULE").Select(s => (int?)s.StdId).FirstOrDefaultAsync(ct)
+                ?? throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", "Statut Annulé absent du type");
+            await db.Documents.Where(d => d.EntId == id).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntStdId, annule), ct);
+        }
+        return avoirId;
     }
 
     /// <summary>Préparation de chaque source (sans choix d'options : les commandes et BL n'en ont plus) ; sources vides écartées.</summary>
