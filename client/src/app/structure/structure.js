@@ -76,6 +76,7 @@ export function creerFournisseurStructure({ enLigne, annuaire = null, documents 
       // Postes de pied du marché (pied global des factures, modèle de pied des commandes).
       postes: (marche) => api.postesMarche(marche),
       acomptes: (marche) => api.acomptesMarche(marche),
+      etatPieces: (pieces) => api.etatPieces(pieces),
       modeAcomptes: () => api.modeAcomptes(),
       demanderAcompte: (marche, demande) => api.demanderAcompte(marche, demande),
       emettreAcompte: (id) => api.emettreAcompte(id),

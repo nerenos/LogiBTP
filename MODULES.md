@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -16,10 +16,10 @@ par le cœur.
 
 ```mermaid
 graph TD
-  socle[socle] --> document & metre & liste & fiche & ged & bibliotheque & annuaire & entreprises[entreprises-fr] & graphe & navigation
+  socle[socle] --> document & metre & liste & fiche & ged & bibliotheque & annuaire & entreprises[entreprises-fr] & graphe & navigation & reglement
   graphe --> annuaire
   import[import : aucune dépendance]
-  document & metre & liste & fiche & ged & bibliotheque & annuaire & entreprises & graphe & navigation & import --> coeur[cœur : client + src + db]
+  document & metre & liste & fiche & ged & bibliotheque & annuaire & entreprises & graphe & navigation & import & reglement --> coeur[cœur : client + src + db]
 ```
 
 | Module | JS (`@logibtp/…`) dépend de | .NET | Scripts SQL | Utilisé directement par |
@@ -36,6 +36,7 @@ graph TD
 | graphe | socle | — (JS seul) | — | annuaire, cœur |
 | navigation | socle | — (JS seul) | — | cœur (client) |
 | import | — | — (JS seul) | — | cœur (client) |
+| reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 
 Branchement serveur : `src/LogiBTP.Api/Program.cs` (`AddModule…` / `MapModule…` de chaque module, sociétés par
 sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Domaine` → `LogiBTP.Documents` + `LogiBTP.Metres`.
@@ -54,9 +55,14 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `creerFournisseurEntreprises` (`annuaire/annuaire.js`), fiche personne | `AddModuleEntreprisesFr` | — |
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
+| reglement | `pages/reglements.js` (`/reglements?sens=E|D&tiers=`), colonnes réglé / reste de l'onglet Gestion (`fiche-structure.js`) | `SpecialisationReglementBtp` (échéances `document_echeance`) | 175 (clé étrangère des pointages) |
 | import | `import/*` (`formats.js`, `devis-importe.js`, `devis-a-verifier.js`, `depot-import.js`, `rapport-import.js`), `pages/import-optim.js` | — (origine enregistrée par le module Document) | — |
 
 ## Liens transverses (fonctionnels)
+
+- **Document ↔ Règlements** (facultatif) : échéancier des pièces validées (`document_echeance`, module Document) fourni
+  au module Règlements par `SpecialisationReglementBtp` ; pointage par règlements et cautions (retenues de garantie) ;
+  une échéance pointée ne se modifie plus (`db/175`, `ECHEANCES_POINTEES`).
 
 - **Document ↔ Structure des affaires** (cœur, `db/160`) : `ent_projet_id`, `ent_affaire_id`, `ent_chantier_id`,
   `ent_marche_id` ; parents complétés (`completerRattachement` ↔ `PUT /api/structure/documents/{id}/rattachement`) ;

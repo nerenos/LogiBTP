@@ -24,7 +24,8 @@
     "@logibtp/graphe": "0.2.0",
     "@logibtp/annuaire": "0.2.0",
     "@logibtp/entreprises-fr": "0.2.0",
-    "@logibtp/import": "0.2.0"
+    "@logibtp/import": "0.2.0",
+    "@logibtp/reglement": "0.2.0"
   },
   "devDependencies": {
     "vite": "^7.1.0",

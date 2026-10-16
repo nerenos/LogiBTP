@@ -144,7 +144,15 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
         {
             EchEntId = entId, EchRang = ++rang, EchDate = x.Date, EchMontant = x.Montant, EchMode = x.Mode, EchNature = x.Nature, EchManuel = true,
         }));
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Une application peut référencer les échéances (pointages des règlements) : elles ne se suppriment plus.
+            throw ExceptionMetier.Conflit("ECHEANCES_POINTEES", "Échéancier déjà pointé par des règlements : il ne se modifie plus");
+        }
         return await db.Echeances.AsNoTracking().Where(x => x.EchEntId == entId).OrderBy(x => x.EchRang).ToListAsync(ct);
     }
 }

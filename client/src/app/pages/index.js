@@ -12,6 +12,7 @@ import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
+import { PageReglements } from './reglements.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -30,5 +31,6 @@ export const ROUTES = [
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
+  { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },
 ];

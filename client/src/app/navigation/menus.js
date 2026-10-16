@@ -51,6 +51,7 @@ export const MENUS_METIER = [
       { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations'), creation: D('V_SITUATION', 'Nouvelle situation de travaux') },
       { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures'), creation: D('V_FACTURE', 'Nouvelle facture') },
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
+      { code: 'reglements-clients', libelle: 'Règlements clients', icone: '💳', url: '/reglements?sens=E', info: 'Échéances, règlements, pointage et cautions (module Règlements)' },
       { separateur: true },
       { code: 'import-optim', libelle: 'Importer un devis OptimBTP', icone: '📥', url: '/import/optimbtp', info: 'Fichier .optim : lignes, prix et coefficients repris, champs non repris listés' },
     ],
@@ -61,6 +62,7 @@ export const MENUS_METIER = [
       { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes'), creation: D('A_COMMANDE', 'Nouvelle commande fournisseur') },
       { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons'), creation: D('A_RECEPTION', 'Nouveau bon de livraison fournisseur') },
       { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures'), creation: D('A_FACTURE', 'Nouvelle facture fournisseur') },
+      { code: 'reglements-fournisseurs', libelle: 'Règlements fournisseurs', icone: '💳', url: '/reglements?sens=D', info: 'Échéances à payer, règlements émis et pointage (module Règlements)' },
     ],
   },
   {

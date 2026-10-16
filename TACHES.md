@@ -56,7 +56,7 @@
   marché M-2026-005-1, BL, factures et avoirs d'avancement, situations). § 13.14 sans décision
   (propositions retenues par défaut). Les vues de colonnes des bases existantes (`db/150`) n'ont pas les colonnes du
   reste : elles s'ajoutent seules après la quantité.
-- [ ] **Gestion du marché, postes globaux, acomptes, échéances, règlements** (17/10/2026) : analyse dans
+- [x] **Gestion du marché, postes globaux, acomptes, échéances, règlements** (17/10/2026) : analyse dans
   [CONCEPTION-MARCHES-REGLEMENTS.md](CONCEPTION-MARCHES-REGLEMENTS.md) (onglet Gestion de la fiche marché, retenue de
   garantie, compte prorata, paiement direct, acomptes et leurs déductions, conditions de paiement et échéancier, module
   Règlements avec pointage et cautions) ; décisions Q6, Q10, Q13, Q14 prises, les autres propositions retenues par
@@ -64,6 +64,14 @@
   **Lot 2 réalisé** : conditions de paiement et échéancier des pièces (module Document).
   **Lot 3 réalisé** : postes de pied du marché (retenue de garantie, paiement direct, modèle de pied des commandes).
   **Lot 4 réalisé** : acomptes (mode de la société, demande, facture ou reçu, déductions des factures d'avancement).
+  **Lot 5 réalisé** : module Règlements (règlements, pointage, cautions, reste à payer, colonnes réglé / reste).
+- [ ] Suites des marchés et règlements (reportées du chantier ci-dessus) : saisie de l'échéancier à la main et date de
+  libération des retenues à l'écran (route `PUT /documents/{id}/echeances` prête), onglet Règlements de la page
+  document, avance forfaitaire « entre deux seuils », aperçu des déductions d'acompte avant validation, liste du délai
+  de paiement des tiers reliée à `condition_paiement`, relances.
+- [ ] Module Comptabilité (11.6, à préparer) : plan de comptes complet, journaux, exercices, comptes auxiliaires des
+  tiers (411 / 401), comptes de TVA par taux, comptes d'acompte (selon le mode de la société), schéma des écritures des
+  factures, avoirs, acomptes et règlements (encaissements du module Règlements), export vers un logiciel comptable.
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 - [ ] Gestion de la sous-traitance (montants et agréments du paiement direct).
 - [ ] GED, bases existantes : `modules/ged/db/051` déjà appliqué à `logibtp` et `logibtp_demo` (16/10/2026) ; après

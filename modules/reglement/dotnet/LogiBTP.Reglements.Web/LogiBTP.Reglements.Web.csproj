@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Reglements.Web</RootNamespace>
+    <Description>Module Règlements LogiBTP : règlements, cautions et pointages (EF Core), routes HTTP ; échéances fournies par la spécialisation de l'application.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.Reglements\LogiBTP.Reglements.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

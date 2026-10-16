@@ -36,6 +36,7 @@ services:
       - ./modules/bibliotheque/db/061_bibliotheque_technique.sql:/docker-entrypoint-initdb.d/061_bibliotheque_technique.sql:ro
       - ./modules/bibliotheque/db/062_bibliotheque_coefficients.sql:/docker-entrypoint-initdb.d/062_bibliotheque_coefficients.sql:ro
       - ./modules/annuaire/db/070_annuaire_schema.sql:/docker-entrypoint-initdb.d/070_annuaire_schema.sql:ro
+      - ./modules/reglement/db/080_reglement_schema.sql:/docker-entrypoint-initdb.d/080_reglement_schema.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro
@@ -62,6 +63,7 @@ services:
       - ./db/172_avancement_suite.sql:/docker-entrypoint-initdb.d/172_avancement_suite.sql:ro
       - ./db/173_marche_postes.sql:/docker-entrypoint-initdb.d/173_marche_postes.sql:ro
       - ./db/174_acomptes.sql:/docker-entrypoint-initdb.d/174_acomptes.sql:ro
+      - ./db/175_reglements.sql:/docker-entrypoint-initdb.d/175_reglements.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

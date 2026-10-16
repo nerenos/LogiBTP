@@ -302,6 +302,15 @@ export class FicheMarche extends FicheStructure {
     const prevu = total('prevu_ht');
     const factures = g.factures.filter((x) => this.voirAnnulees || !x.annule);
     const nbAnnulees = g.factures.filter((x) => x.annule).length;
+    // Module Règlements (facultatif, 11.5) : réglé et reste à payer des pièces validées ; sans lui, pas de colonnes.
+    const etats = new Map();
+    if (this.services.structure.etatPieces && factures.some((x) => x.valide)) {
+      const liste = await this.services.structure.etatPieces(factures.filter((x) => x.valide).map((x) => Number(x.ent_id))).catch(() => null);
+      for (const e of liste ?? []) etats.set(Number(e.piece_id), e);
+    }
+    const reglements = etats.size > 0;
+    const regle = (x) => (reglements ? `<td class="nombre">${etats.has(Number(x.ent_id)) ? f(etats.get(Number(x.ent_id)).pointe) : ''}</td>
+      <td class="nombre">${etats.has(Number(x.ent_id)) ? f(etats.get(Number(x.ent_id)).reste) : ''}</td>` : '');
     corps.innerHTML = `<div class="gestion-marche">
       <h3>Récapitulatif</h3>
       <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">Prévu HT</th><th class="nombre">Travaux HT</th>
@@ -327,10 +336,10 @@ export class FicheMarche extends FicheStructure {
       <h3>Factures et avoirs d'avancement</h3>
       ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> Afficher les pièces annulées (${nbAnnulees})</label>` : ''}
       ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Pièce</th><th>Type</th><th>Date</th><th>Statut</th>
-        <th class="nombre">Période HT</th><th class="nombre">TTC</th><th class="nombre">Net à payer</th><th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
+        <th class="nombre">Période HT</th><th class="nombre">TTC</th><th class="nombre">Net à payer</th>${reglements ? '<th class="nombre">Réglé</th><th class="nombre">Reste à payer</th>' : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
         <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ' (annulation)' : x.nature === 'AVANCEMENT' ? " (d'avancement)" : ''}</td>
         <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
-        <td class="nombre">${f(x.net_a_payer)}</td><td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">Annuler par avoir…</button>` : ''}</td></tr>`).join('')}
+        <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">Annuler par avoir…</button>` : ''}</td></tr>`).join('')}
         </tbody></table>` : '<p class="aide">Aucune facture d\'avancement : bouton « 📊 Nouvelle facture d\'avancement ».</p>'}
 
       ${g.autres.length ? `<h3>Autres documents</h3><table class="tableau-gestion"><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Statut</th>

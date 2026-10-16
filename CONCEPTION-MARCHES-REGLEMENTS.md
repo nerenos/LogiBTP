@@ -465,3 +465,21 @@ Développement lancé le 17/10/2026 : pour les questions sans décision, la prop
 - Vérifié sur la base de démo : acompte de 10 % du marché M-2026-005-1 (reçu RAC2026-00001), déduction linéaire de
   5 084,24 TTC sur SI2026-00005 (cumul 20 %), puis en mode CA (essai) 2 × 1 271,06 HT dans les pieds des commandes.
 
+### Lot 5 – module Règlements
+
+- Nouveau module facultatif `modules/reglement` (JS `@logibtp/reglement`, `LogiBTP.Reglements(.Web)`, `db/080`) :
+  `reglement` (tiers, sens E / D, date, mode, montant, référence), `caution` (organisme, montant, validité, mainlevée,
+  objet : marché), `pointage` (règlement ou caution → échéance). Sans dépendance au module Document : les échéances
+  viennent de la spécialisation (`SpecialisationReglementBtp` : `document_echeance` des pièces validées non annulées,
+  ventes E, achats D) ; `db/175` ajoute la clé étrangère vers `document_echeance` (une échéance pointée ne se supprime
+  plus : `ECHEANCES_POINTEES` à la modification manuelle de l'échéancier).
+- Règle répliquée `reste.js` ↔ `ResteAPayer.cs` (jeu `tests/cas/01_reste.json`) : reste d'une échéance et d'une pièce
+  (REGLEE / PARTIELLE / A_REGLER), non pointé d'un règlement (trop-perçu, compensation facture / avoir), proposition de
+  pointage (plus ancienne d'abord, sans date en dernier, même signe). Seuil d'écart : 0 (point d'accroche `Seuil`).
+- Contrôles : même tiers et sens, signe de l'échéance, échéance et source non dépassées, caution sur retenues seulement.
+- Écrans : `/reglements?sens=E|D&tiers=` (menus Ventes et Achats) : échéances avec reste et saisie « à pointer »,
+  règlement (Répartir, Enregistrer), règlements du tiers, cautions pointant les retenues ; onglet Gestion du marché :
+  colonnes Réglé / Reste à payer des factures quand le module répond (11.5 : sans lui, pas de colonnes).
+- Vérifié sur la base de démo : virement de 30 000 € pointé sur SI2026-00004 et SI2026-00005, caution de 5 000 € sur la
+  retenue de SI2026-00004 (pièce réglée), refus d'un pointage au-delà de l'échéance.
+

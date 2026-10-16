@@ -53,6 +53,16 @@ export const api = {
   postesMarche: (marche) => appel('GET', `/structure/marches/${marche}/postes`),
   // Acomptes : mode de la société, acomptes d'un marché, demande, émission de la facture ou du reçu.
   modeAcomptes: () => appel('GET', '/structure/acomptes/mode'),
+  // Module Règlements (facultatif) : tiers, échéances avec leur reste, état des pièces, règlements, cautions.
+  tiersReglements: () => appel('GET', '/reglements/tiers'),
+  echeancesReglement: ({ tiers, sens, piece, ouvertes } = {}) => appel('GET', `/reglements/echeances?${new URLSearchParams(Object.entries({ tiers, sens, piece, ouvertes }).filter(([, v]) => v !== undefined && v !== null)).toString()}`),
+  etatPieces: (pieces) => appel('POST', '/reglements/etat', { pieces }),
+  reglements: ({ tiers, sens } = {}) => appel('GET', `/reglements?${new URLSearchParams(Object.entries({ tiers, sens }).filter(([, v]) => v !== undefined && v !== null)).toString()}`),
+  enregistrerReglement: (r) => appel('POST', '/reglements', r),
+  supprimerReglement: (id) => appel('DELETE', `/reglements/${id}`),
+  cautions: ({ tiers } = {}) => appel('GET', `/reglements/cautions${tiers ? `?tiers=${tiers}` : ''}`),
+  enregistrerCaution: (c) => appel('POST', '/reglements/cautions', c),
+  supprimerCaution: (id) => appel('DELETE', `/reglements/cautions/${id}`),
   enregistrerModeAcomptes: (mode) => appel('PUT', '/structure/acomptes/mode', { mode }),
   acomptesMarche: (marche) => appel('GET', `/structure/marches/${marche}/acomptes`),
   demanderAcompte: (marche, demande) => appel('POST', `/structure/marches/${marche}/acomptes`, demande),

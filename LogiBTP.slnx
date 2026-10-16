@@ -43,6 +43,11 @@
     <Project Path="modules/entreprises-fr/dotnet/LogiBTP.EntreprisesFr.Web/LogiBTP.EntreprisesFr.Web.csproj" />
     <Project Path="modules/entreprises-fr/dotnet/LogiBTP.EntreprisesFr.Tests/LogiBTP.EntreprisesFr.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/reglement/">
+    <Project Path="modules/reglement/dotnet/LogiBTP.Reglements/LogiBTP.Reglements.csproj" />
+    <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Web/LogiBTP.Reglements.Web.csproj" />
+    <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Tests/LogiBTP.Reglements.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

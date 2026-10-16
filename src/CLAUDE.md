@@ -9,7 +9,7 @@
   - `AddSocietes` / `UseSocietes` : une base par société, choisie par le sous-domaine (en-tête Host) ; contextes EF sur `SocieteCourante.Connexion` + `UseSnakeCaseNamingConvention` (fonction locale `Base`).
   - JSON : `SnakeCaseLower`, `JsonNumberHandling.AllowReadingFromString` (mêmes conventions que les jeux de test).
   - `AddModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp, LogiBtpContext, SpecialisationBtp>`.
-  - `AddModuleListe<SpecialisationListeBtp>`, `AddModuleFiche<SpecialisationFicheBtp>`, `AddModuleGed<SpecialisationGedBtp>`, `AddModuleBibliotheque<SpecialisationBibliothequeBtp>`, `AddModuleAnnuaire`, `AddModuleEntreprisesFr`.
+  - `AddModuleListe<SpecialisationListeBtp>`, `AddModuleFiche<SpecialisationFicheBtp>`, `AddModuleGed<SpecialisationGedBtp>`, `AddModuleBibliotheque<SpecialisationBibliothequeBtp>`, `AddModuleAnnuaire`, `AddModuleReglement<SpecialisationReglementBtp>` (facultatif), `AddModuleEntreprisesFr`.
   - `ConversionMetresBases.ConvertirAsync` (métrés en lignes → scripts), CORS `http://localhost:5173`, `UseErreursMetier` ; groupe `/api` : `MapModuleDocument<…>`, `MapModuleListe`, `MapModuleFiche`, `MapModuleGed`, `MapModuleBibliotheque`, `MapModuleAnnuaire`, `MapModuleEntreprisesFr`, `MapStructure`, `MapComptes`.
 - `LogiBTP.Api.csproj` : références aux projets `*.Web` des modules + `LogiBTP.Calcul` ; paquets `Npgsql.EntityFrameworkCore.PostgreSQL`, `EFCore.NamingConventions`.
 - `appsettings.json` : `ConnectionStrings:LogiBTP` (base `logibtp`, port 5433), `Societes` (`Domaines`, `Liste.demo` → base `logibtp_demo`), `Ged:Repertoire` (`stockage-ged`, un répertoire par société nommé comme sa base : `logibtp`, `logibtp_demo`), `Ged:TailleMaxDepotMo`. `Properties/launchSettings.json` : profil `http` sur `http://localhost:5080`.
@@ -22,6 +22,7 @@
 - `Btp/Comptes.cs` : `MapComptes` (`GET /api/comptes-comptables` : plan de comptes minimal de `db/166`).
 - `Btp/Structure.cs` : `MapStructure` (routes ci-dessous), `PerimetreStructure`, `RattachementDocument`.
 - `Btp/PostesMarche.cs` : postes de pied du marché (`Lire`, `Enregistrer`, `Portee`, `Appliquer` : lignes système `lig_proprietes.poste_marche`, retenue de garantie de `mar_retenue_pct`) ; appelé par `SpecialisationBtp.CompleterValidationAsync` et la création d'un document depuis le marché. `SpecialisationBtp.ReglementTiersAsync` : délai et mode de règlement du tiers (échéancier).
+- `Btp/SpecialisationReglementBtp.cs` : échéances des pièces validées non annulées (`document_echeance`, sens E ventes / D achats, objet = marché) et tiers pour le module Règlements.
 - `Btp/Acomptes.cs` : acomptes des marchés (`Mode` / `EnregistrerMode`, `Lire`, `Creer` : demande d'acompte, `Emettre` : facture ou reçu, `Montant` : règle de déduction, `Appliquer` : lignes système « A<mac_id> » des factures d'avancement, `Ecrire` : `acompte_deduction`).
 - `Btp/Intervenants.cs` : `FonctionIntervenant`, `IntervenantSaisi`, `Intervenants` (`Colonnes` projet→`itv_prj_id`…, `Gere`, `Fonctions`, `Lire`, `Lus`, `Controler`, `Valider`, `Ecrire`).
 - `Btp/SalariesAnnuaire.cs` : `Salarie` (champ géré `salarie` de la fiche individu), `Synchroniser` (individu repris de la fiche salarié : identité, rôle, rattachement à l'agence).

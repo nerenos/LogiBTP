@@ -1,0 +1,147 @@
+import { PageBase } from '@logibtp/navigation';
+import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { Dz } from '@logibtp/socle';
+import { MODES_REGLEMENT } from '@logibtp/document';
+import { proposerPointage, nonPointe } from '@logibtp/reglement';
+import { api } from '../api.js';
+
+/** Date du jour (locale) au format ISO. */
+const aujourdhui = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+/**
+ * Règlements d'un tiers (module Règlements, CONCEPTION-MARCHES-REGLEMENTS.md, Q15 à Q18) : `/reglements?sens=E|D&tiers=`.
+ * Échéances ouvertes des pièces validées (reste à payer), saisie d'un règlement avec pointage (répartition proposée :
+ * plus ancienne d'abord), règlements du tiers (non pointé), cautions pointant les retenues de garantie.
+ */
+export class PageReglements extends PageBase {
+  icone = '💳';
+
+  async ouvrir() {
+    const app = this.app;
+    this.sens = this.requete.sens === 'D' ? 'D' : 'E';
+    this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
+    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Règlements disponibles en ligne seulement.</p>'; return; }
+    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><h1 class="page-titre">💳 ${echapper(this.titre)}</h1>
+      <p>Tiers <span data-tiers></span> <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></p>
+      <div data-corps><p class="aide">Choisissez un tiers.</p></div></div>`;
+    let tiers = [];
+    try { tiers = (await api.tiersReglements()).filter((t) => t.sens === this.sens); } catch (e) { app.message(e.message, 'erreur'); }
+    const combo = creerCombo({ options: tiers.map((t) => ({ valeur: t.id, libelle: t.nom })), valeur: this.requete.tiers ? Number(this.requete.tiers) : '' });
+    combo.addEventListener('change', () => { this.tiers = combo.valeurCombo === '' ? null : Number(combo.valeurCombo); this.rendre(); });
+    this.conteneur.querySelector('[data-tiers]').replaceWith(combo);
+    this.conteneur.querySelector('[data-toutes]').addEventListener('change', (e) => { this.toutes = e.target.checked; this.rendre(); });
+    this.tiers = this.requete.tiers ? Number(this.requete.tiers) : null;
+    if (this.tiers) await this.rendre();
+  }
+
+  urlCourante() {
+    return `/reglements?sens=${this.sens}${this.tiers ? `&tiers=${this.tiers}` : ''}`;
+  }
+
+  async rendre() {
+    const corps = this.conteneur.querySelector('[data-corps]');
+    if (!this.tiers) { corps.innerHTML = '<p class="aide">Choisissez un tiers.</p>'; return; }
+    let toutes; let reglements; let cautions;
+    try {
+      [toutes, reglements, cautions] = await Promise.all([
+        api.echeancesReglement({ tiers: this.tiers, sens: this.sens }),
+        api.reglements({ tiers: this.tiers, sens: this.sens }),
+        api.cautions({ tiers: this.tiers }),
+      ]);
+    } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const f = (v) => formatNombre(v ?? 0, 2);
+    // Toutes les échéances du tiers (pièces des règlements), affichées ouvertes seulement sauf demande.
+    const parId = new Map(toutes.map((e) => [e.id, e]));
+    const echeances = this.toutes ? toutes : toutes.filter((e) => !e.reglee);
+    const lien = (e) => `<a href="/document/${Number(e.piece_id)}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
+    corps.innerHTML = `
+      <h2>Échéances</h2>
+      ${echeances.length ? `<table><thead><tr><th>Pièce</th><th>Type</th><th>Échéance</th><th class="nombre">Montant</th><th class="nombre">Pointé</th>
+        <th class="nombre">Reste</th><th class="nombre">À pointer</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
+        <td>${lien(e)}</td><td>${echapper(e.type)}</td><td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
+        <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
+        <td class="nombre"><input data-pointer="${e.id}" size="10" inputmode="decimal" ${e.reglee ? 'disabled' : ''}></td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucune échéance ouverte.</p>'}
+      <h2>Nouveau règlement</h2>
+      <div class="formulaire">
+        <label>Date <input type="date" data-r="date" value="${aujourdhui()}"></label>
+        <label>Mode <span data-r="mode"></span></label>
+        <label>Montant <input data-r="montant" size="12" inputmode="decimal"></label>
+        <label>Référence <input data-r="reference" maxlength="100"></label>
+        <button type="button" data-repartir title="Répartit le montant sur les échéances, de la plus ancienne à la plus récente">Répartir</button>
+        <button type="button" class="principal" data-enregistrer>Enregistrer le règlement</button>
+      </div>
+      <h2>Règlements</h2>
+      ${reglements.length ? `<table><thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th class="nombre">Montant</th><th class="nombre">Non pointé</th><th>Pièces</th><th></th></tr></thead>
+        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(MODES_REGLEMENT.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
+        <td>${echapper(r.reference ?? '')}</td><td class="nombre">${f(r.montant)}</td><td class="nombre">${f(r.non_pointe)}</td>
+        <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? `échéance ${p.echeance_id}`)).join(', ')}</td>
+        <td><button type="button" data-supprimer="${r.id}" title="Supprimer le règlement et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucun règlement.</p>'}
+      <h2>Cautions</h2>
+      ${cautions.length ? `<table><thead><tr><th>Organisme</th><th>Référence</th><th>Date</th><th>Fin</th><th>Mainlevée</th><th class="nombre">Montant</th>
+        <th class="nombre">Non pointé</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
+        <td>${echapper(c.date)}</td><td>${echapper(c.date_fin ?? '')}</td><td>${echapper(c.mainlevee ?? '')}</td><td class="nombre">${f(c.montant)}</td>
+        <td class="nombre">${f(c.non_pointe)}</td><td><button type="button" data-supprimer-caution="${c.id}" title="Supprimer la caution et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucune caution.</p>'}
+      <div class="formulaire">
+        <label>Organisme <input data-c="organisme" maxlength="150"></label>
+        <label>Montant <input data-c="montant" size="12" inputmode="decimal"></label>
+        <label>Date <input type="date" data-c="date" value="${aujourdhui()}"></label>
+        <label>Fin <input type="date" data-c="date_fin"></label>
+        <label>Référence <input data-c="reference" maxlength="100"></label>
+        <button type="button" data-caution title="Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente">＋ Caution sur les retenues</button>
+      </div>`;
+    const mode = creerCombo({ options: MODES_REGLEMENT.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'VIREMENT', vide: false });
+    corps.querySelector('[data-r="mode"]').replaceWith(mode);
+    const champ = (cle) => corps.querySelector(`[data-r="${cle}"]`);
+    const pointages = () => [...corps.querySelectorAll('[data-pointer]')].map((el) => ({ echeance_id: Number(el.dataset.pointer), montant: lireNombre(el.value) }))
+      .filter((p) => p.montant !== null && p.montant !== undefined && !Dz(p.montant).isZero());
+    corps.querySelector('[data-repartir]').addEventListener('click', () => {
+      const montant = lireNombre(champ('montant').value);
+      if (montant === null || montant === undefined) { this.app.message('Montant du règlement à saisir', 'avertissement'); return; }
+      const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee && e.nature !== 'RETENUE').map((e) => ({ id: e.id, date: e.date, reste: e.reste })))
+        .map((p) => [p.id, p.montant]));
+      corps.querySelectorAll('[data-pointer]').forEach((el) => { el.value = proposes.has(Number(el.dataset.pointer)) ? formatNombre(proposes.get(Number(el.dataset.pointer)), 2) : ''; });
+      const reste = nonPointe(montant, [...proposes.values()].map((m) => ({ montant: m })));
+      if (!Dz(reste).isZero()) this.app.message(`Non pointé : ${formatNombre(reste, 2)} (trop-perçu)`, 'avertissement');
+    });
+    corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      const montant = lireNombre(champ('montant').value);
+      if (montant === null || montant === undefined || Dz(montant).isZero()) { this.app.message('Montant du règlement à saisir', 'avertissement'); return; }
+      try {
+        await api.enregistrerReglement({
+          tiers_id: this.tiers, sens: this.sens, date: champ('date').value, mode: mode.valeurCombo, montant,
+          reference: champ('reference').value.trim() || null, commentaire: null, pointages: pointages(),
+        });
+        this.app.message('Règlement enregistré', 'succes');
+        await this.rendre();
+      } catch (e) { this.app.message(e.message, 'erreur'); }
+    });
+    corps.querySelectorAll('[data-supprimer]').forEach((b) => b.addEventListener('click', async () => {
+      if (!globalThis.confirm?.('Supprimer ce règlement et ses pointages ?')) return;
+      try { await api.supprimerReglement(Number(b.dataset.supprimer)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
+    }));
+    corps.querySelectorAll('[data-supprimer-caution]').forEach((b) => b.addEventListener('click', async () => {
+      if (!globalThis.confirm?.('Supprimer cette caution et ses pointages ?')) return;
+      try { await api.supprimerCaution(Number(b.dataset.supprimerCaution)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
+    }));
+    corps.querySelector('[data-caution]').addEventListener('click', async () => {
+      const c = (cle) => corps.querySelector(`[data-c="${cle}"]`).value.trim();
+      const montant = lireNombre(c('montant'));
+      if (!c('organisme') || montant === null || montant === undefined || Dz(montant).lte(0)) { this.app.message('Organisme et montant de la caution à saisir', 'avertissement'); return; }
+      // Retenues de garantie ouvertes pointées par la caution (plus anciennes d'abord).
+      const retenues = echeances.filter((e) => !e.reglee && e.nature === 'RETENUE');
+      const objet = retenues.find((e) => e.objet_id)?.objet_id ?? null;
+      try {
+        await api.enregistrerCaution({
+          tiers_id: this.tiers, objet: objet ? 'marche' : null, objet_id: objet, organisme: c('organisme'), montant, date: c('date'),
+          date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: null,
+          pointages: proposerPointage(montant, retenues.map((e) => ({ id: e.id, date: e.date, reste: e.reste }))).map((p) => ({ echeance_id: p.id, montant: p.montant })),
+        });
+        this.app.message('Caution enregistrée', 'succes');
+        await this.rendre();
+      } catch (e) { this.app.message(e.message, 'erreur'); }
+    });
+  }
+}

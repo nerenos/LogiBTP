@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\modules\ged\dotnet\LogiBTP.Ged.Web\LogiBTP.Ged.Web.csproj" />
     <ProjectReference Include="..\..\modules\bibliotheque\dotnet\LogiBTP.Bibliotheque.Web\LogiBTP.Bibliotheque.Web.csproj" />
     <ProjectReference Include="..\..\modules\annuaire\dotnet\LogiBTP.Annuaire.Web\LogiBTP.Annuaire.Web.csproj" />
+    <ProjectReference Include="..\..\modules\reglement\dotnet\LogiBTP.Reglements.Web\LogiBTP.Reglements.Web.csproj" />
     <ProjectReference Include="..\..\modules\entreprises-fr\dotnet\LogiBTP.EntreprisesFr.Web\LogiBTP.EntreprisesFr.Web.csproj" />
   </ItemGroup>
 

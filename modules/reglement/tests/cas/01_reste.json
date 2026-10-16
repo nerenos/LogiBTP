@@ -1,0 +1,33 @@
+{
+  "description": "Reste à payer et pointage (reste.js ↔ ResteAPayer.cs) : échéance, pièce (statuts), non pointé d'un règlement, proposition de pointage (plus ancienne d'abord, sans date en dernier, même signe).",
+  "echeances": [
+    { "nom": "échéance réglée", "montant": "1200", "pointe": "1200", "seuil": "0", "attendu": { "reste": "0", "reglee": true } },
+    { "nom": "échéance partielle", "montant": "1200", "pointe": "1000", "seuil": "0", "attendu": { "reste": "200", "reglee": false } },
+    { "nom": "écart sous le seuil", "montant": "1200", "pointe": "1199.99", "seuil": "0.01", "attendu": { "reste": "0.01", "reglee": true } },
+    { "nom": "avoir remboursé", "montant": "-300", "pointe": "-300", "seuil": "0", "attendu": { "reste": "0", "reglee": true } },
+    { "nom": "trop pointé", "montant": "500", "pointe": "600", "seuil": "0", "attendu": { "reste": "-100", "reglee": false } }
+  ],
+  "pieces": [
+    { "nom": "pièce à régler", "echeances": [ { "montant": "300", "pointe": "0" }, { "montant": "700", "pointe": "0" } ], "seuil": "0",
+      "attendu": { "montant": "1000", "pointe": "0", "reste": "1000", "statut": "A_REGLER" } },
+    { "nom": "pièce partielle", "echeances": [ { "montant": "300", "pointe": "300" }, { "montant": "700", "pointe": "0" } ], "seuil": "0",
+      "attendu": { "montant": "1000", "pointe": "300", "reste": "700", "statut": "PARTIELLE" } },
+    { "nom": "pièce réglée avec retenue cautionnée", "echeances": [ { "montant": "9500", "pointe": "9500" }, { "montant": "500", "pointe": "500" } ], "seuil": "0",
+      "attendu": { "montant": "10000", "pointe": "10000", "reste": "0", "statut": "REGLEE" } }
+  ],
+  "non_pointes": [
+    { "nom": "trop-perçu", "montant": "1000", "pointages": [ { "montant": "700" }, { "montant": "250.5" } ], "attendu": "49.5" },
+    { "nom": "compensation facture et avoir", "montant": "800", "pointages": [ { "montant": "1000" }, { "montant": "-200" } ], "attendu": "0" }
+  ],
+  "propositions": [
+    { "nom": "plus ancienne d'abord, la dernière en partie", "disponible": "1500",
+      "echeances": [ { "id": 3, "date": "2026-03-01", "reste": "800" }, { "id": 1, "date": "2026-01-31", "reste": "1000" }, { "id": 2, "date": null, "reste": "400" } ],
+      "attendu": [ { "id": 1, "montant": "1000" }, { "id": 3, "montant": "500" } ] },
+    { "nom": "sans date en dernier, échéances réglées ou de signe contraire ignorées", "disponible": "1000",
+      "echeances": [ { "id": 5, "date": null, "reste": "600" }, { "id": 4, "date": "2026-02-01", "reste": "0" }, { "id": 6, "date": "2026-01-01", "reste": "-100" }, { "id": 7, "date": "2026-02-15", "reste": "300" } ],
+      "attendu": [ { "id": 7, "montant": "300" }, { "id": 5, "montant": "600" } ] },
+    { "nom": "remboursement d'avoirs (montant négatif)", "disponible": "-250",
+      "echeances": [ { "id": 8, "date": "2026-04-01", "reste": "-100" }, { "id": 9, "date": "2026-05-01", "reste": "-200" }, { "id": 10, "date": "2026-03-01", "reste": "900" } ],
+      "attendu": [ { "id": 8, "montant": "-100" }, { "id": 9, "montant": "-150" } ] }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/reglement",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Règlements LogiBTP : règlements reçus et émis, cautions, pointage des échéances, reste à payer",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

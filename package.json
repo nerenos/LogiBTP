@@ -14,6 +14,7 @@
     "modules/graphe/js",
     "modules/annuaire/js",
     "modules/entreprises-fr/js",
+    "modules/reglement/js",
     "modules/navigation/js",
     "modules/import/js",
     "client"

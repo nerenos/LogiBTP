@@ -8,6 +8,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
 using LogiBTP.Listes.Web;
+using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,6 +44,8 @@ builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 // Module Annuaire : personnes, individus, rattachements, liens, coordonnées partagées (modules/annuaire/db/070) ;
 // fiches personne et individu par le module Fiche (champs gérés délégués à ServiceAnnuaire).
 builder.Services.AddModuleAnnuaire(Base);
+// Module Règlements (facultatif) : règlements, cautions, pointage des échéances des pièces (modules/reglement/db/080, db/175).
+builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
 builder.Services.AddModuleEntreprisesFr();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
@@ -67,6 +70,7 @@ api.MapModuleGed();
 api.MapModuleBibliotheque();
 api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
+api.MapModuleReglement();
 api.MapStructure();
 api.MapComptes();
 
