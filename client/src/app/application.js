@@ -1,4 +1,4 @@
-import { Routeur, GestionFenetres, Preferences } from '@logibtp/navigation';
+import { Routeur, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
@@ -46,6 +46,8 @@ export class Application {
     this.servicesPrets = null;
   }
 
+    // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
+    afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
   async demarrer() {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP',
@@ -69,7 +71,8 @@ export class Application {
       if (this.routeur.page?.modifiee && !this.fenetres.fermetureSession && !this.fermetureForcee) { e.preventDefault(); e.returnValue = ''; }
     });
     // Onglet ou fenêtre réellement quitté (après l'avertissement éventuel) : la page libère son verrou (requête keepalive).
-    window.addEventListener('pagehide', () => { this.libererPage(); });
+    // Avant : onglet, défilement et aperçu de la page mémorisés pour un rechargement.
+    window.addEventListener('pagehide', () => { this.routeur.memoriser(); this.libererPage(); });
     // Liens internes : navigation dans la fenêtre (Ctrl, Maj ou clic milieu : nouvelle fenêtre).
     document.addEventListener('click', (e) => this.#lien(e));
     document.addEventListener('auxclick', (e) => { if (e.button === 1) this.#lien(e, true); });

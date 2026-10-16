@@ -52,6 +52,8 @@ export class PageFiche extends PageBase {
         if (!this.enQuittant) app.routeur.retour(LISTE_PAR_TYPE[type] ?? '/');
       },
     });
+    // Rechargement ou retour : onglet de la fiche retrouvé (ignoré s'il n'existe plus).
+    if (this.affichage?.section) this.fiche.section = this.affichage.section;
     await this.fiche.ouvrir();
     // Copie demandée par une liste (/fiche/<type>/<id>?copie=1) : nouvelle fiche à partir de celle-ci.
     if (!nouveau && this.requete.copie === '1') {
@@ -70,6 +72,8 @@ export class PageFiche extends PageBase {
   }
 
   get modifiee() { return !this.ferme && Boolean(this.fiche?.modifiee); }
+
+  etatAffichage() { return this.fiche?.section ? { section: this.fiche.section } : null; }
 
   async quitter() {
     if (this.ferme || !this.fiche) return true;

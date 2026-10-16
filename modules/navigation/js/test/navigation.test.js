@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { correspondre, construire, analyser, Routeur, PageBase } from '../src/routeur.js';
+import { correspondre, construire, analyser, Routeur, PageBase, afficherApercu, CLE_APERCU } from '../src/routeur.js';
 import { GestionFenetres, sessionAProposer, optionsFenetre, CLE_PRECEDENTE, CLE_SESSION } from '../src/fenetres.js';
 import { Preferences, deplacer } from '../src/preferences.js';
 
@@ -87,6 +87,38 @@ describe('routeur', () => {
     r.page.modif = false;
     expect(await r.aller('/liste')).toBe(true);
     expect(r.page).toBeInstanceOf(PageListe);
+  });
+
+  it('onglet retrouvé au retour et après un rechargement de la fenêtre', async () => {
+    class PageOnglets extends PageBase {
+      async ouvrir() { this.onglet = this.affichage?.onglet ?? 'general'; }
+      etatAffichage() { return { onglet: this.onglet }; }
+    }
+    const routesOnglets = [{ nom: 'fiche', chemin: '/fiche/:type/:id', page: PageOnglets }, { nom: '404', chemin: '/404', page: PageBase }];
+    const { h, emplacement } = historiqueSimule('/fiche/salarie/1');
+    const s = stockage();
+    const r = new Routeur({ routes: routesOnglets, conteneur: conteneurSimule(), historique: h, emplacement, stockage: s });
+    await r.demarrer();
+    r.page.onglet = 'pieces';
+    await r.aller('/fiche/salarie/2');
+    expect(r.page.onglet).toBe('general');
+    h.back();
+    await r.surPopstate({ state: h.state });
+    expect(r.page.onglet).toBe('pieces');
+    // Rechargement : pagehide mémorise (le navigateur y ignore replaceState, simulé ici), un nouveau routeur reprend l'onglet.
+    r.page.onglet = 'adresses';
+    r.page.conteneur.outerHTML = '<div class="page"></div>';
+    const remplacer = h.replaceState;
+    h.replaceState = () => {};
+    r.memoriser();
+    h.replaceState = remplacer;
+    expect(JSON.parse(s.getItem(CLE_APERCU)).url).toBe('/fiche/salarie/1');
+    const r2 = new Routeur({ routes: routesOnglets, conteneur: conteneurSimule(), historique: h, emplacement, stockage: s });
+    await r2.demarrer();
+    expect(r2.page.onglet).toBe('adresses');
+    // Aperçu d'une autre page : ignoré et consommé.
+    expect(afficherApercu(conteneurSimule(), '/fiche/salarie/9', { stockage: s })).toBeNull();
+    expect(s.getItem(CLE_APERCU)).toBeNull();
   });
 
   it('route inconnue : page 404, URL de la liste mise à jour sans navigation', async () => {

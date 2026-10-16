@@ -45,7 +45,9 @@
 .bandeau-vide { padding: 0.3rem 1rem; color: var(--discret); }
 
 /* Zone des pages */
-.pages { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pages { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+/* Copie de la page pendant un rechargement : par-dessus la page qui se reconstruit, retirée quand elle est prête. */
+.page-apercu { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; background: var(--fond); pointer-events: none; }
 .page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page[hidden] { display: none !important; }
 

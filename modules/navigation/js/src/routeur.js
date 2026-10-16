@@ -46,6 +46,60 @@ export function analyser(url) {
   return { pathname: u.pathname, requete: Object.fromEntries(u.searchParams), url: `${u.pathname}${u.search}` };
 }
 
+/** Positions de défilement d'un élément et de ses descendants : [{ chemin (indices d'enfants), classe, haut, gauche }]. */
+export function defilements(racine, max = 50) {
+  if (!racine?.querySelectorAll) return [];
+  const res = [];
+  for (const el of [racine, ...racine.querySelectorAll('*')]) {
+    if (!el.scrollTop && !el.scrollLeft) continue;
+    const chemin = [];
+    for (let e = el; e !== racine; e = e.parentElement) chemin.unshift([...e.parentElement.children].indexOf(e));
+    res.push({ chemin, classe: el.className, haut: el.scrollTop, gauche: el.scrollLeft });
+    if (res.length >= max) break;
+  }
+  return res;
+}
+
+/** Réapplique des positions de défilement (élément retrouvé par son chemin et sa classe, ignoré sinon). */
+export function appliquerDefilements(racine, liste = []) {
+  for (const d of liste) {
+    let el = racine;
+    for (const i of d.chemin) el = el?.children[i];
+    if (!el || el.className !== d.classe) continue;
+    el.scrollTop = d.haut;
+    el.scrollLeft = d.gauche;
+  }
+}
+
+/** Clé (sessionStorage, propre à l'onglet du navigateur) de l'aperçu de la page gardé pendant un rechargement. */
+export const CLE_APERCU = 'logibtp.apercu';
+/** Clé (sessionStorage) de l'état d'affichage gardé pendant un rechargement (history.replaceState est ignoré dans pagehide). */
+export const CLE_AFFICHAGE = 'logibtp.affichage';
+const TAILLE_MAX_APERCU = 1_500_000;
+
+/**
+ * Rechargement de la fenêtre : affiche tout de suite la copie de la page quittée (inerte, par-dessus), au lieu d'un
+ * écran vide pendant le démarrage. Le routeur la retire quand la vraie page est ouverte (délai de secours sinon).
+ */
+export function afficherApercu(conteneur, url, { stockage = globalThis.sessionStorage, delaiMax = 10000 } = {}) {
+  let a = null;
+  try { a = JSON.parse(stockage?.getItem(CLE_APERCU) ?? 'null'); stockage?.removeItem(CLE_APERCU); } catch { return null; }
+  if (!a || a.url !== url || !conteneur?.ownerDocument) return null;
+  // Déjà posé par un script de la page HTML (avant le chargement des modules) : seulement le défilement.
+  let el = conteneur.querySelector?.(':scope > .page-apercu');
+  if (!el) {
+    el = conteneur.ownerDocument.createElement('div');
+    el.className = 'page-apercu';
+    el.inert = true;
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = a.html;
+    conteneur.append(el);
+  }
+  appliquerDefilements(el.firstElementChild, a.defilement);
+  setTimeout(() => el.remove(), delaiMax);
+  return el;
+}
+
 /**
  * Page de l'application (classe mère). Le routeur la crée pour une route, l'ouvre dans son conteneur, lui demande
  * avant de la quitter (modifications en cours), la masque si elle est conservée, puis la ferme.
@@ -56,16 +110,21 @@ export function analyser(url) {
 export class PageBase {
   static conserver = false;
 
-  constructor({ conteneur, params = {}, requete = {}, app = null, route = null }) {
+  constructor({ conteneur, params = {}, requete = {}, app = null, route = null, affichage = null }) {
     this.conteneur = conteneur;
     this.params = params;
     this.requete = requete;
     this.app = app;
     this.route = route;
     this.titre = route?.titre ?? '';
+    // État d'affichage mémorisé pour cette entrée d'historique (rechargement, retour) : repris par ouvrir().
+    this.affichage = affichage;
   }
 
   async ouvrir() {}
+
+  /** État d'affichage à retrouver après un rechargement ou un retour (onglet actif…) : objet JSON ou null. */
+  etatAffichage() { return null; }
 
   get modifiee() { return false; }
 
@@ -88,15 +147,16 @@ export class PageBase {
 
 /**
  * Routeur. routes : [{ nom, chemin, page: ClassePage, titre }]. historique / emplacement : window.history et
- * window.location (remplaçables pour les tests).
+ * window.location, stockage : window.sessionStorage (remplaçables pour les tests).
  */
 export class Routeur {
-  constructor({ routes, conteneur, app = null, historique = globalThis.history, emplacement = globalThis.location, surPage = null, maxConservees = 3 }) {
+  constructor({ routes, conteneur, app = null, historique = globalThis.history, emplacement = globalThis.location, stockage = globalThis.sessionStorage, surPage = null, maxConservees = 3 }) {
     this.routes = routes;
     this.conteneur = conteneur;
     this.app = app;
     this.historique = historique;
     this.emplacement = emplacement;
+    this.stockage = stockage;
     this.surPage = surPage;
     this.maxConservees = maxConservees;
     this.page = null;
@@ -125,8 +185,17 @@ export class Routeur {
   demarrer() {
     this.index = this.historique.state?.index ?? 0;
     if (this.historique.state?.index === undefined) this.historique.replaceState({ index: 0 }, '', this.#urlEmplacement());
+    this.#reprendreAffichage();
     globalThis.addEventListener?.('popstate', (e) => this.surPopstate(e));
     return this.#afficher(this.#urlEmplacement());
+  }
+
+  /** Rechargement : état d'affichage mémorisé par pagehide replacé dans l'entrée d'historique courante. */
+  #reprendreAffichage() {
+    let m = null;
+    try { m = JSON.parse(this.stockage?.getItem(CLE_AFFICHAGE) ?? 'null'); this.stockage?.removeItem(CLE_AFFICHAGE); } catch { return; }
+    if (m?.index !== this.index || m.affichage?.url !== this.#urlEmplacement()) return;
+    this.historique.replaceState({ ...this.historique.state, affichage: m.affichage }, '', this.#urlEmplacement());
   }
 
   #urlEmplacement() { return `${this.emplacement.pathname}${this.emplacement.search}`; }
@@ -137,6 +206,8 @@ export class Routeur {
       if (url === this.cle && !remplacer && !forcer) return true;
       // forcer : sans demander à la page (fermeture de session, modifications déjà abandonnées).
       if (!forcer && !(await this.#quitterPage())) return false;
+      // Onglet et défilement de la page quittée : retrouvés au retour (précédent du navigateur).
+      if (!remplacer) this.memoriserAffichage();
       if (remplacer) this.historique.replaceState({ index: this.index }, '', url);
       else this.historique.pushState({ index: ++this.index }, '', url);
       await this.#afficher(url, { dejaQuittee: true });
@@ -159,6 +230,31 @@ export class Routeur {
     this.cle = url;
     this.historique.replaceState({ index: this.index }, '', url);
     this.surPage?.(this.page);
+  }
+
+  /** État d'affichage de la page courante (onglet, défilement) gardé dans son entrée d'historique. */
+  memoriserAffichage() {
+    if (!this.page || !this.cle) return null;
+    let page = null;
+    try { page = this.page.etatAffichage(); } catch { /* état facultatif */ }
+    const affichage = { url: this.cle, page, defilement: defilements(this.page.conteneur) };
+    this.historique.replaceState({ ...this.historique.state, index: this.index, affichage }, '', this.cle);
+    return affichage;
+  }
+
+  /**
+   * Fenêtre quittée ou rechargée (pagehide) : état d'affichage dans l'historique (conservé par le rechargement) et
+   * copie de la page pour l'aperçu affiché pendant le redémarrage (afficherApercu).
+   */
+  memoriser() {
+    const stockage = this.stockage;
+    const affichage = this.memoriserAffichage();
+    const html = this.page?.conteneur?.outerHTML;
+    try {
+      if (affichage) stockage?.setItem(CLE_AFFICHAGE, JSON.stringify({ index: this.index, affichage }));
+      if (affichage && html && html.length <= TAILLE_MAX_APERCU) stockage?.setItem(CLE_APERCU, JSON.stringify({ url: this.cle, html, defilement: affichage.defilement }));
+      else stockage?.removeItem(CLE_APERCU);
+    } catch { /* stockage plein ou indisponible : pas d'aperçu */ }
   }
 
   /** Précédent / suivant du navigateur (écouteur popstate). */
@@ -209,7 +305,10 @@ export class Routeur {
       element.className = `page page-${cible.route.nom}`;
       this.conteneur.append(element);
       const Page = cible.route.page;
-      this.page = new Page({ conteneur: element, params: cible.params, requete: cible.requete, app: this.app, route: cible.route });
+      // Entrée d'historique déjà affichée (rechargement, précédent / suivant) : onglet et défilement retrouvés.
+      const memo = this.historique.state?.affichage;
+      const affichage = memo?.url === cible.url ? memo : null;
+      this.page = new Page({ conteneur: element, params: cible.params, requete: cible.requete, app: this.app, route: cible.route, affichage: affichage?.page ?? null });
       if (Page.conserver) {
         this.conservees.set(cible.url, { page: this.page, element });
         this.#evincer();
@@ -217,14 +316,25 @@ export class Routeur {
       try {
         await this.page.ouvrir();
       } catch (e) {
+        this.#nettoyer();
         this.surPage?.(this.page);
         throw e;
       }
+      if (affichage?.defilement?.length) {
+        appliquerDefilements(element, affichage.defilement);
+        // Contenu mis en page après coup (grilles, hauteurs calculées) : seconde application.
+        globalThis.requestAnimationFrame?.(() => appliquerDefilements(element, affichage.defilement));
+      }
     }
-    for (const el of [...this.conteneur.children]) {
-      if (![...this.conservees.values()].some((c) => c.element === el) && el !== this.page.conteneur) el.remove();
-    }
+    this.#nettoyer();
     this.surPage?.(this.page);
+  }
+
+  /** Retire les éléments qui ne sont ni la page courante ni une page conservée (ancienne page, aperçu de rechargement). */
+  #nettoyer() {
+    for (const el of [...this.conteneur.children]) {
+      if (![...this.conservees.values()].some((c) => c.element === el) && el !== this.page?.conteneur) el.remove();
+    }
   }
 
   #evincer() {
