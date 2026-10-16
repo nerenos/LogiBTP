@@ -157,4 +157,19 @@ public static partial class ValidationFiche
         }
         return erreurs;
     }
+
+    /// <summary>
+    /// Requête d'une liste acceptable : une seule instruction SELECT (ou WITH … SELECT), sans point-virgule intermédiaire.
+    /// Même règle que erreurRequete (validation.js) ; la requête est de toute façon exécutée par ServiceFiche dans une
+    /// transaction en lecture seule, avec un délai maximal.
+    /// </summary>
+    public static string? ErreurRequete(string? sql)
+    {
+        var t = (sql ?? "").Trim().TrimEnd(';').Trim();
+        if (t.Length == 0) return "Requête vide";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(t, @"^(select|with)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            return "La requête doit commencer par SELECT (ou WITH)";
+        if (t.Contains(';')) return "Une seule instruction est permise";
+        return null;
+    }
 }

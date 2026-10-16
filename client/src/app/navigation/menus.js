@@ -106,6 +106,7 @@ export function menus(app) {
         { libelle: 'Annuaire : niveaux, relations, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true },
+        { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
       ],
     },

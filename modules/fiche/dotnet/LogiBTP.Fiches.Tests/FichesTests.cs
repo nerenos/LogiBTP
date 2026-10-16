@@ -88,3 +88,16 @@ public class ConstructeurFicheTests
         Assert.Equal("{}", r.Parametres[1].Valeur);
     }
 }
+
+public class RequeteListeTests
+{
+    /// <summary>Même règle que erreurRequete (validation.js) : une seule instruction SELECT ou WITH.</summary>
+    [Theory]
+    [InlineData("select code, libelle from t;", true)]
+    [InlineData("WITH x AS (SELECT 1) SELECT * FROM x", true)]
+    [InlineData("delete from t", false)]
+    [InlineData("select 1; drop table t", false)]
+    [InlineData("  ", false)]
+    public void Requete_acceptee(string sql, bool acceptee) =>
+        Assert.Equal(acceptee, ValidationFiche.ErreurRequete(sql) is null);
+}

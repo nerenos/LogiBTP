@@ -1,4 +1,5 @@
-import { actionDe } from './raccourcis.js';
+import { actionDe, libelleRaccourci } from './raccourcis.js';
+import { ouvrirMenuContextuel } from './menu-contextuel.js';
 import { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
 
 const LARGEUR_MIN = 28;
@@ -25,7 +26,11 @@ const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur
  *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées),
  *                            libelleDepot(cibleId, position) → texte du badge pendant un glisser (avant, après, composant…),
  *                            depotExterne : { types, autorise(cibleId, position, types), deposer(cibleId, position, dataTransfer) }
- *                            (dépôt glissé depuis une autre fenêtre, ex. la bibliothèque) }
+ *                            (dépôt glissé depuis une autre fenêtre, ex. la bibliothèque),
+ *                            menuContextuel(elements, id) → elements (complète ou filtre le menu du clic droit) }
+ *
+ * Clic droit (ou touche Menu, Maj+F10) : menu court des fonctions de la ligne avec leurs raccourcis (aide-mémoire) ;
+ * toutes restent accessibles au clavier.
  *
  * Les colonnes affichées se remplacent par definirColonnes (vues de colonnes).
  *
@@ -55,6 +60,12 @@ export class GrilleArbre {
 
     conteneur.addEventListener('keydown', (e) => this.#clavier(e));
     this.tbody.addEventListener('mousedown', (e) => this.#clic(e));
+    conteneur.addEventListener('contextmenu', (e) => {
+      if (this.edition) return;
+      if (e.target.closest('tbody tr[data-id]')) this.#menu(e);
+      // Touche Menu sur la grille elle-même : le menu de la ligne courante plutôt que celui du navigateur.
+      else if (e.target === conteneur) { e.preventDefault(); this.#menu(null); }
+    });
     this.tbody.addEventListener('pointerdown', (e) => this.#debutGlisser(e));
     // Dépôt glissé depuis une autre fenêtre (HTML5 drag and drop).
     conteneur.addEventListener('dragover', (e) => this.#survolExterne(e));
@@ -529,34 +540,72 @@ export class GrilleArbre {
     this.selectionner(lignes[j].item[this.o.cle], { etendre });
   }
 
+  /** Fonctions de la grille (raccourcis clavier et menu contextuel) : fonction à exécuter, ou null si indisponible. */
+  #fonction(action) {
+    const a = this.o.actions;
+    return {
+      insererApres: () => this.#apresInsertion(a.inserer('apres', this.courant)),
+      insererAvant: () => this.#apresInsertion(a.inserer('avant', this.courant)),
+      insererEnfant: () => this.#apresInsertion(a.inserer('enfant', this.courant)),
+      monter: () => a.decaler(this.courant, -1),
+      descendre: () => a.decaler(this.courant, 1),
+      indenter: () => a.indenter(this.selection),
+      desindenter: () => a.desindenter(this.selection),
+      etendreHaut: () => this.#deplacerSelection(-1, true),
+      etendreBas: () => this.#deplacerSelection(1, true),
+      couper: a.copier && (() => a.copier(this.selection, true)),
+      copier: a.copier && (() => a.copier(this.selection, false)),
+      coller: a.coller && (() => a.coller(this.courant)),
+      dupliquer: () => a.dupliquer(this.selection),
+      supprimer: () => a.supprimer(this.selection),
+      annuler: () => a.annuler(),
+      retablir: () => a.retablir(),
+      ouvrirMetre: a.ouvrirMetre && (() => a.ouvrirMetre(this.courant)),
+      rechercher: a.rechercher && (() => a.rechercher(this.courant)),
+      replier: () => { this.replies.add(this.courant); this.rendre(); },
+      deplier: () => { this.replies.delete(this.courant); this.rendre(); },
+      menu: () => this.#menu(null),
+    }[action] ?? null;
+  }
+
+  /** Menu contextuel de la ligne courante : fonctions et raccourcis (aide-mémoire). */
+  #menu(e) {
+    if (this.edition) return;
+    if (e) {
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      const id = Number(tr.dataset.id);
+      // Clic droit hors de la sélection : la ligne cliquée devient la sélection.
+      if (!this.selection.includes(id)) this.selectionner(id);
+      this.conteneur.focus({ preventScroll: true });
+    }
+    if (this.courant === null || this.courant === undefined) return;
+    const ligne = this.ligneCourante();
+    const element = (action, libelle) => {
+      const f = this.#fonction(action);
+      return f ? { libelle, raccourci: libelleRaccourci(action), action: f } : null;
+    };
+    let elements = [
+      element('insererApres', 'Insérer après'), element('insererAvant', 'Insérer avant'), element('insererEnfant', 'Insérer un enfant'),
+      { separateur: true },
+      element('couper', 'Couper'), element('copier', 'Copier'), element('coller', 'Coller'), element('dupliquer', 'Dupliquer'), element('supprimer', 'Supprimer'),
+      { separateur: true },
+      element('monter', 'Monter'), element('descendre', 'Descendre'), element('indenter', 'Augmenter le niveau'), element('desindenter', 'Diminuer le niveau'),
+      ...(ligne?.aEnfants ? [this.replies.has(this.courant) ? element('deplier', 'Déplier') : element('replier', 'Replier')] : []),
+      { separateur: true },
+      element('ouvrirMetre', 'Métré'), element('rechercher', 'Bibliothèque'),
+      { separateur: true },
+      element('annuler', 'Annuler'), element('retablir', 'Rétablir'),
+    ].filter(Boolean);
+    elements = this.o.actions.menuContextuel?.(elements, this.courant) ?? elements;
+    const cible = e ?? { target: this.tbody.querySelector(`tr[data-id="${this.courant}"]`) ?? this.conteneur };
+    ouvrirMenuContextuel(e ?? cible, elements);
+  }
+
   #clavier(e) {
     if (this.edition) return;
-    const a = this.o.actions;
-    const action = actionDe(e);
-    const executer = (f) => { e.preventDefault(); f(); };
-    switch (action) {
-      case 'insererApres': return executer(() => this.#apresInsertion(a.inserer('apres', this.courant)));
-      case 'insererAvant': return executer(() => this.#apresInsertion(a.inserer('avant', this.courant)));
-      case 'insererEnfant': return executer(() => this.#apresInsertion(a.inserer('enfant', this.courant)));
-      case 'monter': return executer(() => a.decaler(this.courant, -1));
-      case 'descendre': return executer(() => a.decaler(this.courant, 1));
-      case 'indenter': return executer(() => a.indenter(this.selection));
-      case 'desindenter': return executer(() => a.desindenter(this.selection));
-      case 'etendreHaut': return executer(() => this.#deplacerSelection(-1, true));
-      case 'etendreBas': return executer(() => this.#deplacerSelection(1, true));
-      case 'couper': return executer(() => a.copier?.(this.selection, true));
-      case 'copier': return executer(() => a.copier?.(this.selection, false));
-      case 'coller': return executer(() => a.coller?.(this.courant));
-      case 'dupliquer': return executer(() => a.dupliquer(this.selection));
-      case 'supprimer': return executer(() => a.supprimer(this.selection));
-      case 'annuler': return executer(() => a.annuler());
-      case 'retablir': return executer(() => a.retablir());
-      case 'ouvrirMetre': return executer(() => a.ouvrirMetre?.(this.courant));
-      case 'rechercher': return executer(() => a.rechercher?.(this.courant));
-      case 'replier': return executer(() => { this.replies.add(this.courant); this.rendre(); });
-      case 'deplier': return executer(() => { this.replies.delete(this.courant); this.rendre(); });
-      default: break;
-    }
+    const f = this.#fonction(actionDe(e));
+    if (f) { e.preventDefault(); f(); return; }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     switch (e.key) {
       case 'ArrowDown': return executer(() => this.#deplacerSelection(1, false));
@@ -583,7 +632,8 @@ export class GrilleArbre {
 
   #clic(e) {
     const tr = e.target.closest('tr[data-id]');
-    if (!tr || e.target.closest('.editeur')) return;
+    // Bouton droit : menu contextuel (#menu), sans passer en édition.
+    if (!tr || e.target.closest('.editeur') || e.button === 2) return;
     const id = Number(tr.dataset.id);
     const td = e.target.closest('td[data-col]');
     const colonne = td ? Number(td.dataset.col) : null;

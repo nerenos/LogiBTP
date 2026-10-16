@@ -78,16 +78,17 @@ INSERT INTO parametre_champ_fiche (pcf_type, pcf_champ, pcf_obligatoire) VALUES
  ('salarie', 'telephone', TRUE);
 
 INSERT INTO champ_supplementaire (chs_type, chs_code, chs_libelle, chs_type_donnee, chs_format, chs_longueur, chs_obligatoire,
-                                  chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif) VALUES
- ('element', 'reference_fabricant', 'Référence fabricant', 'texte', NULL, 40, false, false, NULL, NULL, 10, true),
- ('element', 'masse_volumique', 'Masse volumique (kg/m³)', 'nombre', '99999', NULL, false, false, NULL, NULL, 20, true),
- ('salarie', 'taille_vetement', 'Taille de vêtement', 'liste', NULL, NULL, false, false, '[{"valeur":"S","libelle":"S"},{"valeur":"M","libelle":"M"},{"valeur":"L","libelle":"L"},{"valeur":"XL","libelle":"XL"},{"valeur":"XXL","libelle":"XXL"}]'::jsonb, NULL, 10, true),
- ('salarie', 'pointure', 'Pointure', 'nombre', '99', NULL, false, false, NULL, NULL, 20, true),
- ('salarie', 'permis_c', 'Permis C', 'booleen', NULL, NULL, false, false, NULL, NULL, 30, true),
- ('salarie', 'mutuelle', 'Mutuelle', 'texte', NULL, 60, false, true, NULL, NULL, 50, true),
- ('personne', 'origine', 'Origine du contact', 'liste', NULL, NULL, false, false, '[{"valeur":"Recommandation","libelle":"Recommandation"},{"valeur":"Salon","libelle":"Salon"},{"valeur":"Internet","libelle":"Internet"},{"valeur":"Appel d''offres","libelle":"Appel d''offres"}]'::jsonb, NULL, 10, true),
- ('personne', 'chiffre_affaires', 'Chiffre d''affaires annuel (€)', 'nombre', '999999999999', NULL, false, false, NULL, NULL, 20, true),
- ('individu', 'langue', 'Langue', 'liste', NULL, NULL, false, false, '[{"valeur":"Français","libelle":"Français"},{"valeur":"Anglais","libelle":"Anglais"},{"valeur":"Italien","libelle":"Italien"},{"valeur":"Espagnol","libelle":"Espagnol"},{"valeur":"Allemand","libelle":"Allemand"}]'::jsonb, NULL, 10, true),
- ('materiel', 'immatriculation', 'Immatriculation', 'texte', 'regex:^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$', 9, false, false, NULL, 'AA-123-AA', 10, true),
- ('materiel', 'assureur', 'Assureur', 'texte', NULL, 60, false, false, NULL, NULL, 20, true),
- ('materiel', 'puissance_kw', 'Puissance (kW)', 'nombre', '9999.9', NULL, false, false, NULL, NULL, 30, true);
+                                  chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif, chs_requete, chs_section, chs_groupe) VALUES
+ ('element', 'reference_fabricant', 'Référence fabricant', 'texte', NULL, 40, false, false, NULL, NULL, 10, true, NULL, NULL, NULL),
+ ('element', 'masse_volumique', 'Masse volumique (kg/m³)', 'nombre', '99999', NULL, false, false, NULL, NULL, 20, true, NULL, NULL, NULL),
+ ('salarie', 'taille_vetement', 'Taille de vêtement', 'liste', NULL, NULL, false, false, '[{"valeur":"S","libelle":"S"},{"valeur":"M","libelle":"M"},{"valeur":"L","libelle":"L"},{"valeur":"XL","libelle":"XL"},{"valeur":"XXL","libelle":"XXL"}]'::jsonb, NULL, 10, true, NULL, NULL, 'Équipement'),
+ ('salarie', 'pointure', 'Pointure', 'nombre', '99', NULL, false, false, NULL, NULL, 20, true, NULL, NULL, 'Équipement'),
+ ('salarie', 'permis_c', 'Permis C', 'booleen', NULL, NULL, false, false, NULL, NULL, 30, true, NULL, NULL, 'Habilitations'),
+ ('salarie', 'mutuelle', 'Mutuelle', 'texte', NULL, 60, false, true, NULL, NULL, 50, true, NULL, NULL, NULL),
+ ('personne', 'origine', 'Origine du contact', 'liste', NULL, NULL, false, false, '[{"valeur":"Recommandation","libelle":"Recommandation"},{"valeur":"Salon","libelle":"Salon"},{"valeur":"Internet","libelle":"Internet"},{"valeur":"Appel d''offres","libelle":"Appel d''offres"}]'::jsonb, NULL, 10, true, NULL, NULL, NULL),
+ ('personne', 'chiffre_affaires', 'Chiffre d''affaires annuel (€)', 'nombre', '999999999999', NULL, false, false, NULL, NULL, 20, true, NULL, NULL, NULL),
+ ('individu', 'langue', 'Langue', 'liste', NULL, NULL, false, false, '[{"valeur":"Français","libelle":"Français"},{"valeur":"Anglais","libelle":"Anglais"},{"valeur":"Italien","libelle":"Italien"},{"valeur":"Espagnol","libelle":"Espagnol"},{"valeur":"Allemand","libelle":"Allemand"}]'::jsonb, NULL, 10, true, NULL, NULL, NULL),
+ ('materiel', 'immatriculation', 'Immatriculation', 'texte', 'regex:^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$', 9, false, false, NULL, 'AA-123-AA', 10, true, NULL, NULL, NULL),
+ ('materiel', 'assureur', 'Assureur', 'texte', NULL, 60, false, false, NULL, NULL, 20, true, NULL, NULL, NULL),
+ ('materiel', 'puissance_kw', 'Puissance (kW)', 'nombre', '9999.9', NULL, false, false, NULL, NULL, 30, true, NULL, NULL, NULL),
+ ('materiel', 'code_antivol', 'Code antivol', 'motdepasse', NULL, 40, false, false, NULL, NULL, 40, true, NULL, NULL, 'Accès');

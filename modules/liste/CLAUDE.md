@@ -33,6 +33,7 @@
 - `ConcepteurVue` : édition de la définition (colonnes, formules, règles, segments, tri, filtres fixes, thème, requête si `peutRequete`) ; `appliquerVue(vue, { nonEnregistree })` pour l'aperçu non enregistré.
 - `GestionThemes` (`typesVersTexte`, `texteVersTypes`) : thèmes et types couverts, réservé à `peutGererThemes`.
 - `FormatsCellule` (dérivable) : rendu par format, `appliquerStyle`, `alignement`.
+- Clic droit sur une ligne : menu court (`ouvrirMenuContextuel` du socle) : ouvrir, nouvelle fenêtre, actions de `actionsElements` sur la sélection (mêmes règles que les boutons), rappel des raccourcis.
 - Méthodes publiques utiles : `appliquerVue`, `definirFiltreExterne(colonne, valeurs)`, `recharger`, `lignesSelectionnees`, `basculerSaisie`, `trier`, `ouvrir`, `detruire`.
 
 ## Routes HTTP (sous `/api/listes`)

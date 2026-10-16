@@ -12,6 +12,9 @@ using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+// Secrets de l'installation (.env hors du dépôt) : chaîne de chiffrement des valeurs secrètes (mots de passe des fiches).
+builder.Configuration.AjouterFichierEnv(builder.Environment.ContentRootPath);
+builder.Services.AddChiffrement(builder.Configuration);
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);

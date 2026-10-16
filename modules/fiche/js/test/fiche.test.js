@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validerChamp, FournisseurFicheMemoire, titreFiche } from '../src/index.js';
+import { validerChamp, erreurRequete, FournisseurFicheMemoire, titreFiche } from '../src/index.js';
 
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas');
 const lire = (f) => JSON.parse(fs.readFileSync(path.join(dossier, f), 'utf8'));
@@ -100,5 +100,66 @@ describe('fournisseur mémoire', () => {
     const copie = await f.creer('salarie', { valeurs: { nom: 'Martin', prenom: 'Copie', email: 'c@exemple.fr', salaire: '2500,5' }, confidentiel: true });
     expect([copie.id, copie.valeurs.salaire]).toEqual([2, 2500.5]);
     expect((await f.creer('salarie', { valeurs: { prenom: 'Sans nom' } }).catch((e) => e)).code).toBe('VALIDATION');
+  });
+});
+
+describe('paramétrage étendu : RGPD, groupes, requête SQL, mot de passe', () => {
+  const definition = {
+    libelle: 'Matériel',
+    sections: [{ code: 'general', titre: 'Général', champs: ['nom', 'serie'] }],
+    champs: [
+      { code: 'nom', libelle: 'Nom', type: 'texte', obligatoire: true },
+      { code: 'serie', libelle: 'N° de série', type: 'texte' },
+      { code: 'acces', libelle: 'Mot de passe', type: 'motdepasse', longueur: 10 },
+    ],
+  };
+  const creer = (requete = null) => new FournisseurFicheMemoire({
+    types: { materiel: { definition, cle: 'id', proprietes: 'proprietes', lignes: [{ id: 1, nom: 'Pelle', serie: 'S-1', acces: 'secret', proprietes: { code: '1234' } }] } },
+    droits: ['VOIR', 'MODIFIER', 'CONFIDENTIEL'].map((action) => ({ profil: 'ADMIN', type: 'materiel', action })),
+    requete,
+  });
+
+  it('requête de liste : SELECT seul', () => {
+    expect(erreurRequete('select code, libelle from t;')).toBeNull();
+    expect(erreurRequete('WITH x AS (SELECT 1) SELECT * FROM x')).toBeNull();
+    expect(erreurRequete('delete from t')).toMatch(/SELECT/);
+    expect(erreurRequete('select 1; drop table t')).toMatch(/instruction/);
+  });
+
+  it('champ du logiciel rendu confidentiel, groupe et onglet conservés, options de la requête', async () => {
+    const f = creer(async (sql) => (sql.includes('agence') ? [['LYO', 'Lyon'], { valeur: 'PAR', libelle: 'Paris' }] : []));
+    await f.enregistrerParametrage('materiel', {
+      obligatoires: [], confidentiels: ['serie', 'inconnu'],
+      supplementaires: [
+        { code: 'agence', libelle: 'Agence', type: 'liste', requete: 'SELECT code, nom FROM agence', section: 'general', groupe: ' Rattachement ', ordre: 10 },
+        { code: 'code', libelle: 'Code', type: 'motdepasse', section: 'absent', ordre: 20 },
+      ],
+    });
+    const p = await f.parametrage('materiel');
+    expect(p.confidentiels).toEqual(['serie']);
+    expect(p.supplementaires.map((c) => [c.section, c.groupe])).toEqual([['general', 'Rattachement'], [null, null]]);
+    const def = await f.definition('materiel');
+    expect(def.champs.find((c) => c.code === 'serie')).toMatchObject({ confidentiel: true, confidentiel_parametre: true });
+    expect(def.supplementaires[0].options).toEqual([{ valeur: 'LYO', libelle: 'Lyon' }, { valeur: 'PAR', libelle: 'Paris' }]);
+    expect(def.supplementaires[0].requete).toBeUndefined();
+    const fiche = await f.charger('materiel', 1);
+    expect(fiche.masques).toEqual(['serie']);
+    expect((await f.enregistrerParametrage('materiel', { supplementaires: [{ code: 'x', libelle: 'X', type: 'liste', requete: 'update t set a = 1' }] }).catch((e) => e)).code).toBe('REQUETE');
+  });
+
+  it('mot de passe : jamais chargé, révélé et journalisé, ressaisi', async () => {
+    const f = creer();
+    await f.enregistrerParametrage('materiel', { supplementaires: [{ code: 'code', libelle: 'Code', type: 'motdepasse', confidentiel: true }] });
+    const fiche = await f.charger('materiel', 1);
+    expect([fiche.valeurs.acces, fiche.proprietes.code, fiche.secrets, fiche.masques]).toEqual([null, null, ['acces', '+code'], []]);
+    expect(await f.revelerSecret('materiel', 1, 'acces')).toEqual({ valeur: 'secret' });
+    expect(await f.revelerSecret('materiel', 1, '+code')).toEqual({ valeur: '1234' });
+    expect(f.journal.map((j) => j.champs)).toEqual([['acces'], ['+code']]);
+    expect((await f.revelerSecret('materiel', 1, 'nom').catch((e) => e)).code).toBe('CHAMP');
+    await f.verrouiller('materiel', 1, { jeton: 'j' });
+    const erreur = await f.enregistrer('materiel', 1, { jeton: 'j', h: fiche.h, valeurs: { acces: 'beaucoup-trop-long' } }).catch((e) => e);
+    expect(erreur.details.map((x) => x.code)).toEqual(['LONGUEUR']);
+    await f.enregistrer('materiel', 1, { jeton: 'j', h: fiche.h, valeurs: { acces: 'nouveau' } });
+    expect(await f.revelerSecret('materiel', 1, 'acces')).toEqual({ valeur: 'nouveau' });
   });
 });

@@ -23,6 +23,7 @@ services:
       - ./modules/liste/db/031_liste_themes.sql:/docker-entrypoint-initdb.d/031_liste_themes.sql:ro
       - ./modules/liste/db/032_liste_saisie.sql:/docker-entrypoint-initdb.d/032_liste_saisie.sql:ro
       - ./modules/fiche/db/040_fiche_schema.sql:/docker-entrypoint-initdb.d/040_fiche_schema.sql:ro
+      - ./modules/fiche/db/041_fiche_parametrage.sql:/docker-entrypoint-initdb.d/041_fiche_parametrage.sql:ro
       - ./modules/ged/db/050_ged_schema.sql:/docker-entrypoint-initdb.d/050_ged_schema.sql:ro
       - ./modules/ged/db/051_ged_organisation.sql:/docker-entrypoint-initdb.d/051_ged_organisation.sql:ro
       - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro

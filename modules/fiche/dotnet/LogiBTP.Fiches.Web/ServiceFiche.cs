@@ -20,10 +20,14 @@ public sealed class CacheTypesColonnes
 /// <summary>
 /// Services du module Fiche (classe mère) : définition complétée par le paramétrage, lecture (confidentiel masqué
 /// ou journalisé), verrou de modification (prise, battement, reprise de la main, expiration), enregistrement
-/// (verrou détenu, empreinte inchangée, ligne complète validée), création, paramétrage.
+/// (verrou détenu, empreinte inchangée, ligne complète validée), création, paramétrage. Mots de passe (type motdepasse) :
+/// chiffrés en base par la chaîne de l'installation, déchiffrés en mémoire, jamais envoyés sans demande (RevelerSecret).
 /// </summary>
-public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache)
+public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache, Chiffrement chiffrement)
 {
+    /// <summary>Nombre maximal de valeurs lues par la requête d'une liste.</summary>
+    public const int MaxOptionsRequete = 1000;
+
     protected FicheDbContext Db => db;
 
     private static ExceptionMetier Invalide(ErreurFiche e) => ExceptionMetier.Invalide(e.Code, e.Message);
@@ -51,8 +55,16 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var t = await db.Types.AsNoTracking().FirstOrDefaultAsync(x => x.TyfCode == code && x.TyfActif, ct)
             ?? throw ExceptionMetier.Introuvable($"Type de fiche {code}");
         var def = t.TyfDefinition.Deserialize<DefinitionFiche>(JsonCalcul.Options) ?? new DefinitionFiche();
-        var obligatoires = (await db.Parametres.AsNoTracking().Where(p => p.PcfType == code && p.PcfObligatoire).Select(p => p.PcfChamp).ToListAsync(ct)).ToHashSet();
-        foreach (var c in def.Champs) c.ObligatoireParametre = !c.Obligatoire && obligatoires.Contains(c.Code);
+        var parametres = await db.Parametres.AsNoTracking().Where(p => p.PcfType == code).ToListAsync(ct);
+        var obligatoires = parametres.Where(p => p.PcfObligatoire).Select(p => p.PcfChamp).ToHashSet();
+        var confidentiels = parametres.Where(p => p.PcfConfidentiel).Select(p => p.PcfChamp).ToHashSet();
+        foreach (var c in def.Champs)
+        {
+            c.ObligatoireParametre = !c.Obligatoire && obligatoires.Contains(c.Code);
+            // RGPD : un champ du logiciel rendu confidentiel par le paramétrage est masqué, révélé et journalisé comme les autres.
+            c.ConfidentielParametre = !c.Confidentiel && !c.Gere && confidentiels.Contains(c.Code);
+            c.Confidentiel |= c.ConfidentielParametre;
+        }
         var supplementaires = (await db.Supplementaires.AsNoTracking().Where(s => s.ChsType == code && s.ChsActif).OrderBy(s => s.ChsOrdre).ThenBy(s => s.ChsCode).ToListAsync(ct))
             .Select(VersChamp).ToList();
         return new TypeFicheResolu(code, t.TyfTable, t.TyfCle, t.TyfColonneProprietes, def, supplementaires, await TypesColonnes(t.TyfTable, ct));
@@ -62,8 +74,85 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     {
         Code = s.ChsCode, Libelle = s.ChsLibelle, Type = s.ChsTypeDonnee, Format = s.ChsFormat, Longueur = s.ChsLongueur,
         Obligatoire = s.ChsObligatoire, Confidentiel = s.ChsConfidentiel, Aide = s.ChsAide, Ordre = s.ChsOrdre, Actif = s.ChsActif,
-        Options = s.ChsOptions?.Deserialize<List<OptionChamp>>(JsonCalcul.Options),
+        Options = s.ChsOptions?.Deserialize<List<OptionChamp>>(JsonCalcul.Options), Requete = s.ChsRequete, Section = s.ChsSection, Groupe = s.ChsGroupe,
     };
+
+    // ------------------------------------------------------------------ listes de valeurs par requête SQL
+
+    /// <summary>
+    /// Valeurs d'une requête : première colonne = valeur, deuxième = libellé (sinon la valeur), au plus MaxOptionsRequete
+    /// lignes ; exécutée en lecture seule (transaction READ ONLY annulée, délai de la spécialisation).
+    /// </summary>
+    public virtual async Task<List<OptionChamp>> OptionsRequete(string sql, CancellationToken ct)
+    {
+        if (ValidationFiche.ErreurRequete(sql) is { } erreur) throw ExceptionMetier.Invalide("REQUETE", erreur);
+        var cnx = (NpgsqlConnection)db.Database.GetDbConnection();
+        var ouverte = cnx.State == ConnectionState.Open;
+        if (!ouverte) await cnx.OpenAsync(ct);
+        try
+        {
+            await using var tx = await cnx.BeginTransactionAsync(ct);
+            await using (var cadre = new NpgsqlCommand($"SET TRANSACTION READ ONLY; SET LOCAL statement_timeout = {specialisation.DelaiRequeteMs}", cnx, tx))
+            {
+                await cadre.ExecuteNonQueryAsync(ct);
+            }
+            var options = new List<OptionChamp>();
+            await using (var cmd = new NpgsqlCommand($"SELECT * FROM ({sql.Trim().TrimEnd(';')}) AS q LIMIT {MaxOptionsRequete}", cnx, tx))
+            await using (var rd = await cmd.ExecuteReaderAsync(ct))
+            {
+                while (await rd.ReadAsync(ct))
+                {
+                    if (rd.IsDBNull(0)) continue;
+                    var valeur = Convert.ToString(rd.GetValue(0), CultureInfo.InvariantCulture) ?? "";
+                    var libelle = rd.FieldCount > 1 && !rd.IsDBNull(1) ? Convert.ToString(rd.GetValue(1), CultureInfo.InvariantCulture) : valeur;
+                    options.Add(new OptionChamp { Valeur = valeur, Libelle = libelle });
+                }
+            }
+            await tx.RollbackAsync(ct);
+            return options;
+        }
+        catch (PostgresException e)
+        {
+            throw ExceptionMetier.Invalide("REQUETE", $"Requête de la liste refusée : {e.MessageText}");
+        }
+        finally
+        {
+            if (!ouverte) await cnx.CloseAsync();
+        }
+    }
+
+    /// <summary>Options des listes alimentées par une requête (définition envoyée au client, validation de l'enregistrement).</summary>
+    protected async Task ResoudreOptions(TypeFicheResolu t, CancellationToken ct)
+    {
+        foreach (var c in t.Supplementaires.Where(c => c.Type == "liste" && !string.IsNullOrWhiteSpace(c.Requete)))
+            c.Options = await OptionsRequete(c.Requete!, ct);
+    }
+
+    // ------------------------------------------------------------------ mots de passe (chiffrés en base)
+
+    private string? Chiffrer(string? texte)
+    {
+        try
+        {
+            return chiffrement.Chiffrer(texte);
+        }
+        catch (ErreurChiffrement e)
+        {
+            throw ExceptionMetier.Invalide("CHIFFREMENT", e.Message);
+        }
+    }
+
+    private string? Dechiffrer(string? valeur)
+    {
+        try
+        {
+            return chiffrement.Dechiffrer(valeur);
+        }
+        catch (ErreurChiffrement e)
+        {
+            throw ExceptionMetier.Invalide("CHIFFREMENT", e.Message);
+        }
+    }
 
     protected async Task<IReadOnlyDictionary<string, string>> TypesColonnes(string table, CancellationToken ct)
     {
@@ -82,11 +171,13 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     {
         var droits = await Exiger(code, u, d => d.Voir, "VOIR", ct);
         var t = await Type(code, ct);
+        await ResoudreOptions(t, ct);
         return new DefinitionFicheDto
         {
             Type = code, Libelle = t.Definition.Libelle, Titre = t.Definition.Titre, SousTitre = t.Definition.SousTitre,
             Sections = t.Definition.Sections, Champs = t.Definition.Champs.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Colonne = null; return copie; }).ToList(),
-            Supplementaires = t.Supplementaires.ToList(), Droits = droits,
+            // La requête d'une liste reste sur le serveur (paramétrage seulement) : le client reçoit ses valeurs.
+            Supplementaires = t.Supplementaires.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Requete = null; return copie; }).ToList(), Droits = droits,
         };
     }
 
@@ -117,7 +208,13 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var lignes = cnx is null ? await Lire(r, ct) : await LireDans(cnx, tx!, r, ct);
         var l = lignes.FirstOrDefault() ?? throw ExceptionMetier.Introuvable($"Fiche {t.Code} {id}");
         var valeurs = t.Definition.Champs.Where(c => c.Colonne is not null).ToDictionary(c => c.Code, c => PourClient(c, l.GetValueOrDefault(c.Code)));
-        return (valeurs, Proprietes(l["_proprietes"]), (string)l["_h"]!, (string)l["_id"]!);
+        var proprietes = Proprietes(l["_proprietes"]);
+        // Mots de passe déchiffrés en mémoire seulement : la ligne complète sert à la validation et à la révélation.
+        foreach (var c in t.Definition.Champs.Where(c => c.EstSecret && c.Colonne is not null))
+            if (valeurs.GetValueOrDefault(c.Code) is string v) valeurs[c.Code] = Dechiffrer(v);
+        foreach (var c in t.Supplementaires.Where(c => c.EstSecret))
+            if (proprietes.TryGetValue(c.Code, out var e) && e.ValueKind == JsonValueKind.String) proprietes[c.Code] = JsonSerializer.SerializeToElement(Dechiffrer(e.GetString()));
+        return (valeurs, proprietes, (string)l["_h"]!, (string)l["_id"]!);
     }
 
     protected async Task<FicheDto> VersFiche(TypeFicheResolu t, (Dictionary<string, object?> Valeurs, Dictionary<string, JsonElement> Proprietes, string H, string Id) l,
@@ -127,13 +224,16 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var fiche = new FicheDto { Id = l.Id, H = l.H, Verrou = await Verrou(t.Code, l.Id, jeton, ct, u.Code) };
         foreach (var c in t.Definition.Champs.Where(c => c.Colonne is not null))
         {
-            if (c.Confidentiel && !visible) { fiche.Valeurs[c.Code] = null; fiche.Masques.Add(c.Code); }
+            // Mot de passe : jamais envoyé, seulement signalé s'il est enregistré (révélé à la demande).
+            if (c.EstSecret) { fiche.Valeurs[c.Code] = null; if (l.Valeurs.GetValueOrDefault(c.Code) is not null) fiche.Secrets.Add(c.Code); }
+            else if (c.Confidentiel && !visible) { fiche.Valeurs[c.Code] = null; fiche.Masques.Add(c.Code); }
             else fiche.Valeurs[c.Code] = l.Valeurs.GetValueOrDefault(c.Code);
         }
         foreach (var c in t.Supplementaires)
         {
             object? v = l.Proprietes.TryGetValue(c.Code, out var e) ? ValidationFiche.Normaliser(e) : null;
-            if (c.Confidentiel && !visible) { fiche.Proprietes[c.Code] = null; fiche.Masques.Add("+" + c.Code); }
+            if (c.EstSecret) { fiche.Proprietes[c.Code] = null; if (v is not null) fiche.Secrets.Add("+" + c.Code); }
+            else if (c.Confidentiel && !visible) { fiche.Proprietes[c.Code] = null; fiche.Masques.Add("+" + c.Code); }
             else fiche.Proprietes[c.Code] = v;
         }
         if (t.Definition.Champs.Any(c => c.Gere))
@@ -148,7 +248,13 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     /// <summary>Accès aux informations confidentielles journalisé (RGPD : qui, quoi, quand).</summary>
     protected async Task Journaliser(TypeFicheResolu t, string id, Utilisateur u, CancellationToken ct)
     {
-        var champs = t.Definition.Champs.Where(c => c.Confidentiel).Select(c => c.Code).Concat(t.Supplementaires.Where(c => c.Confidentiel).Select(c => "+" + c.Code)).ToArray();
+        var champs = t.Definition.Champs.Where(c => c.Confidentiel && !c.EstSecret).Select(c => c.Code)
+            .Concat(t.Supplementaires.Where(c => c.Confidentiel && !c.EstSecret).Select(c => "+" + c.Code)).ToArray();
+        await Journaliser(t, id, champs, u, ct);
+    }
+
+    protected async Task Journaliser(TypeFicheResolu t, string id, string[] champs, Utilisateur u, CancellationToken ct)
+    {
         if (champs.Length == 0) return;
         db.Journal.Add(new JournalConfidentiel { JcfType = t.Code, JcfElement = id, JcfUtilisateur = u.Code, JcfChamps = champs, JcfDate = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(ct);
@@ -168,8 +274,27 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var l = await LigneComplete(t, id, null, null, ct);
         await Journaliser(t, l.Id, u, ct);
         return new ReponseConfidentiel(
-            t.Definition.Champs.Where(c => c.Confidentiel && c.Colonne is not null).ToDictionary(c => c.Code, c => l.Valeurs.GetValueOrDefault(c.Code)),
-            t.Supplementaires.Where(c => c.Confidentiel).ToDictionary(c => c.Code, c => l.Proprietes.TryGetValue(c.Code, out var e) ? ValidationFiche.Normaliser(e) : null));
+            t.Definition.Champs.Where(c => c.Confidentiel && !c.EstSecret && c.Colonne is not null).ToDictionary(c => c.Code, c => l.Valeurs.GetValueOrDefault(c.Code)),
+            t.Supplementaires.Where(c => c.Confidentiel && !c.EstSecret).ToDictionary(c => c.Code, c => l.Proprietes.TryGetValue(c.Code, out var e) ? ValidationFiche.Normaliser(e) : null));
+    }
+
+    /// <summary>
+    /// Mot de passe en clair d'une fiche (droit VOIR, et CONFIDENTIEL si le champ est confidentiel) : accès journalisé
+    /// (journal_confidentiel). champ = code, ou « +code » pour un champ supplémentaire.
+    /// </summary>
+    public virtual async Task<ReponseSecret> RevelerSecret(string code, string id, string champ, Utilisateur u, CancellationToken ct)
+    {
+        var droits = await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        var t = await Type(code, ct);
+        var supplementaire = champ.StartsWith('+');
+        var c = supplementaire ? t.Supplementaires.FirstOrDefault(x => x.Code == champ[1..]) : t.Definition.Champs.FirstOrDefault(x => x.Code == champ && x.Colonne is not null);
+        if (c is null || !c.EstSecret) throw ExceptionMetier.Invalide("CHAMP", $"Champ {champ} : pas un mot de passe");
+        if (c.Confidentiel && !droits.Confidentiel) throw ExceptionMetier.AccesRefuse("CONFIDENTIEL");
+        var l = await LigneComplete(t, id, null, null, ct);
+        await Journaliser(t, l.Id, [champ], u, ct);
+        return new ReponseSecret(supplementaire
+            ? (l.Proprietes.TryGetValue(c.Code, out var e) ? ValidationFiche.Normaliser(e) as string : null)
+            : l.Valeurs.GetValueOrDefault(c.Code) as string);
     }
 
     // ------------------------------------------------------------------ verrou
@@ -234,14 +359,24 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     };
 
     /// <summary>Champs supplémentaires saisis : seuls les champs déclarés sont acceptés ; vides retirés.</summary>
-    private static string? ProprietesJson(TypeFicheResolu t, Dictionary<string, JsonElement> saisies)
+    private string? ProprietesJson(TypeFicheResolu t, Dictionary<string, JsonElement> saisies)
     {
         if (saisies.Count == 0) return null;
-        var connus = t.Supplementaires.Select(c => c.Code).ToHashSet();
-        foreach (var k in saisies.Keys) if (!connus.Contains(k)) throw new ErreurFiche("CHAMP", $"Champ supplémentaire inconnu : {k}");
-        // Saisie vide : null (la clé est conservée pour effacer la valeur précédente dans la fusion JSONB).
-        return JsonSerializer.Serialize(saisies.ToDictionary(kv => kv.Key,
-            kv => kv.Value.ValueKind == JsonValueKind.String && kv.Value.GetString()!.Trim().Length == 0 ? (JsonElement?)null : kv.Value));
+        var connus = t.Supplementaires.ToDictionary(c => c.Code);
+        foreach (var k in saisies.Keys) if (!connus.ContainsKey(k)) throw new ErreurFiche("CHAMP", $"Champ supplémentaire inconnu : {k}");
+        // Saisie vide : null (la clé est conservée pour effacer la valeur précédente dans la fusion JSONB) ; mot de passe chiffré.
+        return JsonSerializer.Serialize(saisies.ToDictionary(kv => kv.Key, kv =>
+        {
+            if (kv.Value.ValueKind == JsonValueKind.String && kv.Value.GetString()!.Trim().Length == 0) return (JsonElement?)null;
+            return connus[kv.Key].EstSecret && kv.Value.ValueKind == JsonValueKind.String ? JsonSerializer.SerializeToElement(Chiffrer(kv.Value.GetString())) : kv.Value;
+        }));
+    }
+
+    /// <summary>Mots de passe du programme chiffrés juste avant l'écriture de la ligne.</summary>
+    private void ChiffrerSecrets(TypeFicheResolu t, Dictionary<string, string?> aEcrire)
+    {
+        foreach (var c in t.Definition.Champs.Where(c => c.EstSecret))
+            if (aEcrire.TryGetValue(c.Code, out var v) && v is not null) aEcrire[c.Code] = Chiffrer(v);
     }
 
     /// <summary>Valeurs saisies des champs gérés par la spécialisation (hors table).</summary>
@@ -259,6 +394,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     {
         var droits = await Exiger(code, u, x => x.Modifier, "MODIFIER", ct);
         var t = await Type(code, ct);
+        await ResoudreOptions(t, ct);
         var c = specialisation.Constructeur(t);
         foreach (var k in d.Valeurs.Keys)
         {
@@ -296,6 +432,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
             await specialisation.AvantEcritureAsync(code, false, id, aEcrire, valeurs, proprietes, u, ct);
             var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
+            ChiffrerSecrets(t, aEcrire);
             var json = Requete(() => ProprietesJson(t, d.Proprietes));
             if (aEcrire.Count > 0 || json is not null)
             {
@@ -316,6 +453,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     {
         var droits = await Exiger(code, u, x => x.Modifier, "MODIFIER", ct);
         var t = await Type(code, ct);
+        await ResoudreOptions(t, ct);
         var valeurs = t.Definition.Champs.Where(c => c.Colonne is not null).ToDictionary(c => c.Code, c => d.Valeurs.TryGetValue(c.Code, out var v) ? ValidationFiche.Normaliser(v) : null);
         var proprietes = d.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
         var geres = Geres(t, d.Valeurs);
@@ -325,6 +463,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key) && Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
         await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ct);
         var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
+        ChiffrerSecrets(t, aEcrire);
         var json = Requete(() => ProprietesJson(t, d.Proprietes));
         var id = await Ecrire(async (cnx, tx) =>
             (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!, ct);
@@ -373,10 +512,12 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     public virtual async Task<ParametrageFicheDto> Parametrage(string code, Utilisateur u, CancellationToken ct)
     {
         await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        var parametres = await db.Parametres.AsNoTracking().Where(p => p.PcfType == code).ToListAsync(ct);
         return new ParametrageFicheDto
         {
-            Obligatoires = await db.Parametres.AsNoTracking().Where(p => p.PcfType == code && p.PcfObligatoire).Select(p => p.PcfChamp).ToListAsync(ct),
-            Supplementaires = (await db.Supplementaires.AsNoTracking().Where(s => s.ChsType == code).OrderBy(s => s.ChsOrdre).ToListAsync(ct)).Select(VersChamp).ToList(),
+            Obligatoires = parametres.Where(p => p.PcfObligatoire).Select(p => p.PcfChamp).ToList(),
+            Confidentiels = parametres.Where(p => p.PcfConfidentiel).Select(p => p.PcfChamp).ToList(),
+            Supplementaires = (await db.Supplementaires.AsNoTracking().Where(s => s.ChsType == code).OrderBy(s => s.ChsOrdre).ThenBy(s => s.ChsCode).ToListAsync(ct)).Select(VersChamp).ToList(),
         };
     }
 
@@ -390,19 +531,33 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             if (!System.Text.RegularExpressions.Regex.IsMatch(c.Code ?? "", "^[a-z][a-z0-9_]{0,62}$"))
                 throw ExceptionMetier.Invalide("CODE", $"Code de champ invalide : {c.Code} (minuscules, chiffres, _)");
             if (!codes.Add(c.Code!) || t.Definition.Champs.Any(x => x.Code == c.Code)) throw ExceptionMetier.Invalide("CODE", $"Code de champ déjà utilisé : {c.Code}");
-            if (c.Type is not ("texte" or "nombre" or "booleen" or "date" or "liste")) throw ExceptionMetier.Invalide("TYPE", $"Type de champ invalide : {c.Type}");
+            if (c.Type is not ("texte" or "nombre" or "booleen" or "date" or "liste" or "motdepasse")) throw ExceptionMetier.Invalide("TYPE", $"Type de champ invalide : {c.Type}");
             if (string.IsNullOrWhiteSpace(c.Libelle)) throw ExceptionMetier.Invalide("LIBELLE", $"Libellé obligatoire pour le champ {c.Code}");
+            c.Requete = c.Type == "liste" && !string.IsNullOrWhiteSpace(c.Requete) ? c.Requete.Trim() : null;
+            // Requête essayée avant l'enregistrement : une erreur de syntaxe ou de table est signalée tout de suite.
+            if (c.Requete is not null) await OptionsRequete(c.Requete, ct);
+            if (c.Section is not null && !t.Definition.Sections.Any(s => s.Code == c.Section)) c.Section = null;
+            c.Groupe = string.IsNullOrWhiteSpace(c.Groupe) ? null : c.Groupe.Trim();
         }
-        var programme = t.Definition.Champs.Select(c => c.Code).ToHashSet();
+        if (p.Supplementaires.Any(c => c.EstSecret) && !chiffrement.EstConfigure)
+            throw ExceptionMetier.Invalide("CHIFFREMENT", "Mot de passe impossible : la chaîne de chiffrement de l'installation n'est pas définie (LOGIBTP_CLE_CHIFFREMENT dans .env)");
+        var programme = t.Definition.Champs.ToDictionary(c => c.Code);
+        // Confidentiel du programme : déjà confidentiel, sans effet ; champs gérés exclus (données liées hors de la fiche).
+        var obligatoires = p.Obligatoires.Where(programme.ContainsKey).ToHashSet();
+        var confidentiels = p.Confidentiels.Where(c => programme.TryGetValue(c, out var x) && !x.Gere && !(x.Confidentiel && !x.ConfidentielParametre)).ToHashSet();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Parametres.Where(x => x.PcfType == code).ExecuteDeleteAsync(ct);
-        db.Parametres.AddRange(p.Obligatoires.Where(programme.Contains).Distinct().Select(c => new ParametreChampFiche { PcfType = code, PcfChamp = c, PcfObligatoire = true }));
+        db.Parametres.AddRange(obligatoires.Union(confidentiels).Select(c => new ParametreChampFiche
+        {
+            PcfType = code, PcfChamp = c, PcfObligatoire = obligatoires.Contains(c), PcfConfidentiel = confidentiels.Contains(c),
+        }));
         await db.Supplementaires.Where(x => x.ChsType == code).ExecuteDeleteAsync(ct);
         db.Supplementaires.AddRange(p.Supplementaires.Select(c => new ChampSupplementaire
         {
             ChsType = code, ChsCode = c.Code, ChsLibelle = c.Libelle.Trim(), ChsTypeDonnee = c.Type, ChsFormat = c.Format, ChsLongueur = c.Longueur,
             ChsObligatoire = c.Obligatoire, ChsConfidentiel = c.Confidentiel, ChsAide = c.Aide, ChsOrdre = c.Ordre, ChsActif = c.Actif,
             ChsOptions = c.Options is null ? null : JsonSerializer.SerializeToDocument(c.Options, JsonCalcul.Options),
+            ChsRequete = c.Requete, ChsSection = c.Section, ChsGroupe = c.Groupe,
         }));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

@@ -1,7 +1,8 @@
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe } from '@logibtp/socle/ui';
+import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
@@ -156,18 +157,22 @@ export class PageDocument extends PageBase {
       const b = e.target.closest('button[data-action]');
       if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
     });
+    // Raccourcis de la page (groupe document, personnalisables) : Alt+1… onglets, Ctrl+F recherche dans les lignes
+    // (sans filtre, à la place de celle du navigateur ; onglet Analyse : dans la liste des éléments), fonctions de la barre.
     this.clavier = (e) => {
-      // Alt+1 / Alt+2 : onglets Entête et Lignes.
-      const onglet = e.altKey && !e.ctrlKey ? { Digit1: 'entete', Digit2: 'lignes', Digit3: 'analyse', Digit4: 'pieces', Digit5: 'tracabilite' }[e.code] : null;
-      if (onglet) { e.preventDefault(); this.disposition.onglet(onglet); }
-      // Ctrl+F : recherche dans les lignes (sans filtre), à la place de la recherche du navigateur.
-      // Onglet Analyse : recherche dans la liste des éléments.
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.code === 'KeyF' && this.recherche) {
+      if (e.defaultPrevented) return;
+      const action = actionDe(e, 'document');
+      if (!action) return;
+      if (ONGLETS_DOCUMENT[action]) { e.preventDefault(); this.disposition.onglet(ONGLETS_DOCUMENT[action]); return; }
+      if (action === 'rechercher') {
+        if (!this.recherche) return;
         e.preventDefault();
         if (this.disposition.p.onglet === 'analyse') { this.analyse?.ouvrirRecherche(); return; }
         this.disposition.onglet('lignes');
         this.recherche.ouvrir();
+        return;
       }
+      if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => app.erreur(x)); }
     };
     document.addEventListener('keydown', this.clavier);
     document.body.classList.add('avec-document');

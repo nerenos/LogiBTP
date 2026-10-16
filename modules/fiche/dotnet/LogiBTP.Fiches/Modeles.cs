@@ -34,7 +34,8 @@ public sealed class GroupeChamps
 
 /// <summary>
 /// Champ d'une fiche : du programme (colonne de la table) ou supplémentaire (clé de la colonne JSONB du type).
-/// Type : texte, zone, html, json, nombre, booleen, date, liste. Format : email, telephone, code_postal, 999.99, regex:…
+/// Type : texte, zone, html, json, nombre, booleen, date, liste, motdepasse (chiffré en base, jamais envoyé sans demande).
+/// Format : email, telephone, code_postal, 999.99, regex:…
 /// </summary>
 public sealed class ChampFiche
 {
@@ -50,11 +51,15 @@ public sealed class ChampFiche
     /// <summary>Rendu obligatoire par le paramétrage utilisateur.</summary>
     public bool ObligatoireParametre { get; set; }
     public bool Confidentiel { get; set; }
+    /// <summary>Rendu confidentiel (RGPD) par le paramétrage utilisateur.</summary>
+    public bool ConfidentielParametre { get; set; }
     public bool LectureSeule { get; set; }
     /// <summary>« creation » : saisissable à la création et à la copie seulement (identifiant…).</summary>
     public string? Saisie { get; set; }
     public bool NonCopie { get; set; }
     public List<OptionChamp>? Options { get; set; }
+    /// <summary>Liste : requête SQL (SELECT valeur, libelle…) exécutée en lecture seule à la place des options saisies.</summary>
+    public string? Requete { get; set; }
     public string? Aide { get; set; }
     public string? Largeur { get; set; }
     public JsonElement? Defaut { get; set; }
@@ -67,6 +72,13 @@ public sealed class ChampFiche
     public bool Gere { get; set; }
     public int Ordre { get; set; }
     public bool Actif { get; set; } = true;
+    /// <summary>Champ supplémentaire : onglet de la définition où il s'affiche (sinon Informations complémentaires).</summary>
+    public string? Section { get; set; }
+    /// <summary>Champ supplémentaire : cadre titré qui le regroupe avec d'autres.</summary>
+    public string? Groupe { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool EstSecret => Type == "motdepasse";
 }
 
 public sealed class OptionChamp

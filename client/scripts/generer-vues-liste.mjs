@@ -43,7 +43,8 @@ const droits = DROITS_FICHE.map((d) => ` (${[d.profil, d.type, d.action].map(q).
 const obligatoires = Object.entries(PARAMETRAGE_FICHE).flatMap(([type, p]) => p.obligatoires.map((c) => ` (${q(type)}, ${q(c)}, TRUE)`)).join(',\n');
 const supplementaires = Object.entries(PARAMETRAGE_FICHE).flatMap(([type, p]) => p.supplementaires.map((c) =>
   ` (${[type, c.code, c.libelle, c.type, c.format, c.longueur, c.obligatoire ?? false, c.confidentiel ?? false].map((v) => (typeof v === 'boolean' || typeof v === 'number' ? String(v) : q(v))).join(', ')}, `
-  + `${c.options ? `${q(JSON.stringify(c.options))}::jsonb` : 'NULL'}, ${q(c.aide)}, ${c.ordre ?? 0}, ${c.actif !== false})`)).join(',\n');
+  + `${c.options ? `${q(JSON.stringify(c.options))}::jsonb` : 'NULL'}, ${q(c.aide)}, ${c.ordre ?? 0}, ${c.actif !== false}, `
+  + `${q(c.requete)}, ${q(c.section)}, ${q(c.groupe)})`)).join(',\n');
 
 const sqlFiches = `-- =============================================================================
 -- Cœur LogiBTP – types de fiches (salarié, matériel), droits par profil et paramétrage de démonstration.
@@ -60,7 +61,7 @@ INSERT INTO parametre_champ_fiche (pcf_type, pcf_champ, pcf_obligatoire) VALUES
 ${obligatoires};
 
 INSERT INTO champ_supplementaire (chs_type, chs_code, chs_libelle, chs_type_donnee, chs_format, chs_longueur, chs_obligatoire,
-                                  chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif) VALUES
+                                  chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif, chs_requete, chs_section, chs_groupe) VALUES
 ${supplementaires};
 `;
 fs.writeFileSync(path.join(racine, 'db', '131_fiches_parametrage.sql'), sqlFiches);

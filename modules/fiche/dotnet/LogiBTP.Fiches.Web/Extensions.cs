@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LogiBTP.Fiches.Web;
 
@@ -21,6 +22,8 @@ public static class Extensions
         services.AddDbContext<FicheDbContext>(options);
         services.AddSingleton<SpecialisationFiche, TSpecialisation>();
         services.AddSingleton<CacheTypesColonnes>();
+        // Chiffrement des mots de passe : celui de l'application (AddChiffrement) s'il est enregistré, sinon non configuré.
+        services.TryAddSingleton(new LogiBTP.Socle.Chiffrement(null));
         services.AddScoped<ServiceFiche>();
         return services;
     }
@@ -44,6 +47,7 @@ public static class Extensions
             return Results.NoContent();
         });
         g.MapPost("/{id}/confidentiel", (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Reveler(type, id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/{id}/secret", (string type, string id, DemandeSecret d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.RevelerSecret(type, id, d.Champ, Utilisateur.Depuis(http), ct));
         g.MapPost("/{id}/verrou", (string type, string id, DemandeVerrou d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Verrouiller(type, id, d, Utilisateur.Depuis(http), ct));
         g.MapDelete("/{id}/verrou", async (string type, string id, Guid jeton, ServiceFiche s, CancellationToken ct) =>
         {

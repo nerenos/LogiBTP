@@ -27,6 +27,7 @@ public class ParametreChampFiche
     public string PcfType { get; set; } = "";
     public string PcfChamp { get; set; } = "";
     public bool PcfObligatoire { get; set; }
+    public bool PcfConfidentiel { get; set; }
 }
 
 public class ChampSupplementaire
@@ -40,9 +41,12 @@ public class ChampSupplementaire
     public bool ChsObligatoire { get; set; }
     public bool ChsConfidentiel { get; set; }
     public JsonDocument? ChsOptions { get; set; }
+    public string? ChsRequete { get; set; }
     public string? ChsAide { get; set; }
     public int ChsOrdre { get; set; }
     public bool ChsActif { get; set; } = true;
+    public string? ChsSection { get; set; }
+    public string? ChsGroupe { get; set; }
 }
 
 public class VerrouFiche
@@ -114,6 +118,8 @@ public sealed class FicheDto
     public string? H { get; set; }
     /// <summary>Champs confidentiels non envoyés : code (programme) ou « +code » (supplémentaire).</summary>
     public List<string> Masques { get; set; } = [];
+    /// <summary>Mots de passe enregistrés (valeur jamais envoyée, révélée à la demande) : code ou « +code ».</summary>
+    public List<string> Secrets { get; set; } = [];
     public EtatVerrou? Verrou { get; set; }
 }
 
@@ -135,10 +141,20 @@ public sealed class DemandeEnregistrement
     public bool Confidentiel { get; set; }
 }
 
+/// <summary>Révélation d'un mot de passe : code du champ (« +code » pour un champ supplémentaire).</summary>
+public sealed class DemandeSecret
+{
+    public string Champ { get; set; } = "";
+}
+
+public sealed record ReponseSecret(string? Valeur);
+
 public sealed record ReponseConfidentiel(Dictionary<string, object?> Valeurs, Dictionary<string, object?> Proprietes);
 
 public sealed class ParametrageFicheDto
 {
     public List<string> Obligatoires { get; set; } = [];
+    /// <summary>Champs du logiciel rendus confidentiels (RGPD) par le paramétrage.</summary>
+    public List<string> Confidentiels { get; set; } = [];
     public List<ChampFiche> Supplementaires { get; set; } = [];
 }

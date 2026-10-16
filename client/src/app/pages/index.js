@@ -8,6 +8,7 @@ import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresGed } from './parametres-ged.js';
+import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
@@ -25,6 +26,7 @@ export const ROUTES = [
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
+  { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },

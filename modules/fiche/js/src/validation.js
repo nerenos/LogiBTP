@@ -1,8 +1,9 @@
 // Validation des champs d'une fiche : même sémantique que ValidationFiche côté C# (jeu partagé
 // modules/fiche/tests/cas/01_validation.json).
 //
-// Champ : { type: 'texte' | 'zone' | 'html' | 'json' | 'nombre' | 'booleen' | 'date' | 'liste', format, longueur, options,
-//           obligatoire (programme), obligatoire_parametre (paramétrage utilisateur) }
+// Champ : { type: 'texte' | 'zone' | 'html' | 'json' | 'nombre' | 'booleen' | 'date' | 'liste' | 'motdepasse', format, longueur,
+//           options, obligatoire (programme), obligatoire_parametre (paramétrage utilisateur) } ; un mot de passe se valide
+//           comme un texte (longueur, format), sur sa valeur en clair.
 // Formats : email, telephone, code_postal, masque numérique (999.99 : 3 chiffres entiers, 2 décimales), regex:…
 
 export const MESSAGES = {
@@ -59,6 +60,18 @@ function respecteFormat(texte, format) {
       }
       return true;
   }
+}
+
+/**
+ * Requête SQL d'une liste de valeurs (champ supplémentaire) : une seule instruction SELECT (ou WITH … SELECT). Message
+ * d'erreur, ou null si elle est acceptable (même règle que ServiceFiche.ErreurRequete ; le serveur l'exécute en lecture seule).
+ */
+export function erreurRequete(sql) {
+  const t = String(sql ?? '').trim().replace(/;+\s*$/, '').trim();
+  if (!t) return 'Requête vide';
+  if (!/^(select|with)\b/i.test(t)) return 'La requête doit commencer par SELECT (ou WITH)';
+  if (t.includes(';')) return 'Une seule instruction est permise';
+  return null;
 }
 
 /** Code d'erreur d'un champ pour une valeur, ou null si la valeur est acceptée. */

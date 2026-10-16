@@ -29,6 +29,10 @@
 
 /* Paramètres */
 .page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 64rem; }
+/* Vues de paramétrage : un tableau prend la largeur de son contenu, calé à gauche, au lieu d'étirer ses colonnes sur
+   toute la largeur (lisibilité) ; un tableau qui doit occuper la largeur porte la classe pleine-largeur. */
+.page-parametres table:not(.pleine-largeur), .themes-table, .concepteur-table { width: auto; max-width: 100%; }
+.page-parametres table:not(.pleine-largeur) td input:not([type="checkbox"]):not([type="radio"]):not([type="color"]) { width: auto; min-width: 4rem; }
 .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.6rem 1rem; }
 .carte h2 { font-size: 1rem; margin: 0 0 0.4rem; }
 .carte .ligne { display: flex; align-items: center; gap: 0.4rem; }
@@ -217,3 +221,12 @@ dialog.dialogue-transformation { max-width: min(640px, calc(100vw - 32px)); }
 .frais-parties .saisie-cle .combo { width: 7.5rem; }
 .frais-parties tr.groupe th { font-weight: 600; }
 .frais-parties td.indent { padding-left: 1rem; }
+
+/* Raccourcis clavier */
+.table-raccourcis { border-collapse: collapse; }
+.table-raccourcis th, .table-raccourcis td { padding: 0.2rem 0.6rem; border-bottom: 1px solid var(--bord); text-align: left; }
+.table-raccourcis tr.personnalise td:first-child { font-weight: 600; }
+.table-raccourcis kbd { font: inherit; font-size: 0.9em; padding: 0 0.35rem; border: 1px solid var(--bord); border-radius: 3px; background: var(--fond); }
+.table-raccourcis .actions { white-space: nowrap; }
+.table-raccourcis .actions button { padding: 0.05rem 0.45rem; }
+.table-raccourcis .capture { color: var(--accent); font-style: italic; }

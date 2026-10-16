@@ -1,19 +1,24 @@
-import { validerChamp, MESSAGES } from './validation.js';
+import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 
 // Fournisseurs de données des fiches. Même interface pour l'API (routes MapModuleFiche) et pour la mémoire
 // (démo hors ligne, tests) :
 //
 //   definition(type)                          → définition complétée : champs du programme (+ obligatoire_parametre),
 //                                               supplementaires, sections, droits { voir, modifier, debloquer, confidentiel }
-//   charger(type, id, { confidentiel })       → { id, valeurs, proprietes, h, masques: [codes, '+code'], verrou }
+//   charger(type, id, { confidentiel })       → { id, valeurs, proprietes, h, masques: [codes, '+code'], secrets, verrou }
 //   reveler(type, id)                         → { valeurs, proprietes } des champs confidentiels (accès journalisé)
+//   revelerSecret(type, id, champ)            → { valeur } d'un mot de passe (champ = code ou '+code' ; accès journalisé)
 //   verrouiller(type, id, { jeton, forcer })  → { ok, verrou: { utilisateur, depuis, moi, meme_utilisateur } }   (battement compris)
 //   deverrouiller(type, id, jeton)
 //   enregistrer(type, id, { jeton, h, valeurs, proprietes, confidentiel })  → fiche relue ; 409 VERROU_PERDU / FICHE_MODIFIEE
 //   creer(type, { valeurs, proprietes, confidentiel })  → fiche créée (création et copie)
 //   supprimer(type, id)                       → droit SUPPRIMER ; 409 FICHE_EN_MODIFICATION (verrou d'un autre), FICHE_UTILISEE
 //   (confidentiel : relire les champs confidentiels, si l'utilisateur les avait affichés et en a le droit)
-//   parametrage(type) / enregistrerParametrage(type, { obligatoires, supplementaires })   (profil ADMIN)
+//   parametrage(type) / enregistrerParametrage(type, { obligatoires, confidentiels, supplementaires })   (profil ADMIN)
+//
+// Mots de passe (type motdepasse) : jamais envoyés au chargement (valeur null, code dans secrets s'il est enregistré),
+// révélés à la demande ; chiffrés en base par le serveur. Listes de valeurs par requête SQL (champ supplémentaire
+// requete) : exécutées par le serveur en lecture seule, la définition reçoit les options (jamais la requête).
 //
 // Champs gérés (champ.gere, sans colonne) : données liées lues et écrites par le type, hors de la ligne :
 // { geres: { lire(ligne) → { code: valeur }, valider(ligne | null, geres), ecrire(ligne, geres, { creation }) } }.
@@ -51,6 +56,7 @@ export class FournisseurFicheApi {
   definition(type) { return this.appel('GET', this.#u(type, null, '/definition')); }
   charger(type, id, { confidentiel = false } = {}) { return this.appel('GET', this.#u(type, id, confidentiel ? '?confidentiel=true' : '')); }
   reveler(type, id) { return this.appel('POST', this.#u(type, id, '/confidentiel')); }
+  revelerSecret(type, id, champ) { return this.appel('POST', this.#u(type, id, '/secret'), { champ }); }
   verrouiller(type, id, { jeton, forcer = false }) { return this.appel('POST', this.#u(type, id, '/verrou'), { jeton, forcer }); }
   // keepalive : la libération aboutit même si la fenêtre se ferme (onglet fermé sur une fiche en modification).
   deverrouiller(type, id, jeton) { return this.appel('DELETE', this.#u(type, id, `/verrou?jeton=${encodeURIComponent(jeton)}`), undefined, { keepalive: true }); }
@@ -70,15 +76,20 @@ function empreinte(o) {
   return (h >>> 0).toString(16);
 }
 
+const estSecret = (c) => c.type === 'motdepasse';
+const TYPES_SUPPLEMENTAIRES = ['texte', 'nombre', 'booleen', 'date', 'liste', 'motdepasse'];
+
 /**
- * Fournisseur en mémoire (démo hors ligne, tests) : mêmes règles que le serveur. Types :
+ * Fournisseur en mémoire (démo hors ligne, tests) : mêmes règles que le serveur (mots de passe gardés en clair, en
+ * mémoire seulement ; requête d'une liste exécutée par l'option requete(sql) → [{ valeur, libelle }], sinon options saisies). Types :
  * { code: { definition, lignes, cle, proprietes (nom de la propriété JSON des champs supplémentaires), derivees(ligne) } } ;
  * derivees : colonnes recalculées après écriture (colonnes dérivées d'une vue de liste partagée). Les lignes
  * sont indexées par code de champ (elles peuvent être partagées avec une source de liste en mémoire).
  */
 export class FournisseurFicheMemoire {
-  constructor({ types = {}, droits = [], profil = 'ADMIN', utilisateur = 'demo', parametrage = {}, horloge = () => Date.now() } = {}) {
+  constructor({ types = {}, droits = [], profil = 'ADMIN', utilisateur = 'demo', parametrage = {}, horloge = () => Date.now(), requete = null } = {}) {
     this.types = types;
+    this.requete = requete;
     this.droits = droits;
     this.profil = profil;
     this.utilisateur = utilisateur;
@@ -107,13 +118,32 @@ export class FournisseurFicheMemoire {
     const t = this.#type(type);
     const p = this.parametres[type] ?? {};
     const obligatoires = new Set(p.obligatoires ?? []);
+    const confidentiels = new Set(p.confidentiels ?? []);
+    const supplementaires = structuredClone((p.supplementaires ?? []).filter((c) => c.actif !== false).sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0)));
+    for (const c of supplementaires) {
+      if (c.type === 'liste' && c.requete && this.requete) c.options = await this.#options(c.requete);
+      delete c.requete;
+    }
     return {
       ...structuredClone(t.definition),
       type,
-      champs: t.definition.champs.map((c) => ({ ...structuredClone(c), obligatoire_parametre: obligatoires.has(c.code) && !c.obligatoire })),
-      supplementaires: structuredClone((p.supplementaires ?? []).filter((c) => c.actif !== false).sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0))),
+      champs: t.definition.champs.map((c) => {
+        const confidentielParametre = !c.confidentiel && !c.gere && confidentiels.has(c.code);
+        return { ...structuredClone(c), obligatoire_parametre: obligatoires.has(c.code) && !c.obligatoire, confidentiel_parametre: confidentielParametre, confidentiel: !!c.confidentiel || confidentielParametre };
+      }),
+      supplementaires,
       droits: this.#droits(type),
     };
+  }
+
+  async #options(sql) {
+    const e = erreurRequete(sql);
+    if (e) throw new ErreurFiche(422, 'REQUETE', e);
+    const lignes = await this.requete(sql);
+    return lignes.slice(0, 1000).map((l) => {
+      const v = Array.isArray(l) ? l : [l.valeur ?? Object.values(l)[0], l.libelle ?? Object.values(l)[1]];
+      return { valeur: String(v[0]), libelle: String(v[1] ?? v[0]) };
+    }).filter((o) => o.valeur !== 'null' && o.valeur !== 'undefined');
   }
 
   #ligne(type, id) {
@@ -138,17 +168,19 @@ export class FournisseurFicheMemoire {
     const def = await this.definition(type);
     const l = this.#ligne(type, id);
     const visible = confidentiel && def.droits.confidentiel;
-    const valeurs = {}, proprietes = {}, masques = [];
+    const valeurs = {}, proprietes = {}, masques = [], secrets = [];
     for (const c of def.champs) {
-      if (c.confidentiel && !visible) { valeurs[c.code] = null; masques.push(c.code); } else valeurs[c.code] = l[c.code] ?? null;
+      if (estSecret(c)) { valeurs[c.code] = null; if ((l[c.code] ?? null) !== null) secrets.push(c.code); }
+      else if (c.confidentiel && !visible) { valeurs[c.code] = null; masques.push(c.code); } else valeurs[c.code] = l[c.code] ?? null;
     }
     const brutes = l[t.proprietes] ?? {};
     for (const c of def.supplementaires) {
-      if (c.confidentiel && !visible) { proprietes[c.code] = null; masques.push(`+${c.code}`); } else proprietes[c.code] = brutes[c.code] ?? null;
+      if (estSecret(c)) { proprietes[c.code] = null; if ((brutes[c.code] ?? null) !== null) secrets.push(`+${c.code}`); }
+      else if (c.confidentiel && !visible) { proprietes[c.code] = null; masques.push(`+${c.code}`); } else proprietes[c.code] = brutes[c.code] ?? null;
     }
     if (visible && masques.length === 0) this.#journaliser(type, id, def);
     if (t.geres) Object.assign(valeurs, await t.geres.lire(l));
-    return { id: l[t.cle], valeurs, proprietes, h: this.#empreinte(type, l), masques, verrou: this.#vueVerrou(this.#verrou(type, id), jeton) };
+    return { id: l[t.cle], valeurs, proprietes, h: this.#empreinte(type, l), masques, secrets, verrou: this.#vueVerrou(this.#verrou(type, id), jeton) };
   }
 
   #empreinte(type, l) {
@@ -159,8 +191,8 @@ export class FournisseurFicheMemoire {
     return empreinte(o);
   }
 
-  #journaliser(type, id, def) {
-    const champs = [...def.champs.filter((c) => c.confidentiel).map((c) => c.code), ...def.supplementaires.filter((c) => c.confidentiel).map((c) => `+${c.code}`)];
+  #journaliser(type, id, def, champs = [...def.champs.filter((c) => c.confidentiel && !estSecret(c)).map((c) => c.code),
+    ...def.supplementaires.filter((c) => c.confidentiel && !estSecret(c)).map((c) => `+${c.code}`)]) {
     if (champs.length) this.journal.push({ type, element: String(id), utilisateur: this.utilisateur, champs, date: new Date(this.horloge()).toISOString() });
   }
 
@@ -175,9 +207,21 @@ export class FournisseurFicheMemoire {
     const f = await this.#lire(type, id, { confidentiel: true });
     const def = await this.definition(type);
     return {
-      valeurs: Object.fromEntries(def.champs.filter((c) => c.confidentiel).map((c) => [c.code, f.valeurs[c.code]])),
-      proprietes: Object.fromEntries(def.supplementaires.filter((c) => c.confidentiel).map((c) => [c.code, f.proprietes[c.code]])),
+      valeurs: Object.fromEntries(def.champs.filter((c) => c.confidentiel && !estSecret(c)).map((c) => [c.code, f.valeurs[c.code]])),
+      proprietes: Object.fromEntries(def.supplementaires.filter((c) => c.confidentiel && !estSecret(c)).map((c) => [c.code, f.proprietes[c.code]])),
     };
+  }
+
+  async revelerSecret(type, id, champ) {
+    this.#exiger(type, 'voir');
+    const def = await this.definition(type);
+    const supplementaire = String(champ).startsWith('+');
+    const c = supplementaire ? def.supplementaires.find((x) => x.code === champ.slice(1)) : def.champs.find((x) => x.code === champ);
+    if (!c || !estSecret(c)) throw new ErreurFiche(422, 'CHAMP', `Champ ${champ} : pas un mot de passe`);
+    if (c.confidentiel) this.#exiger(type, 'confidentiel');
+    const l = this.#ligne(type, id);
+    this.#journaliser(type, id, def, [champ]);
+    return { valeur: (supplementaire ? l[this.#type(type).proprietes]?.[c.code] : l[c.code]) ?? null };
   }
 
   async verrouiller(type, id, { jeton, forcer = false }) {
@@ -296,7 +340,7 @@ export class FournisseurFicheMemoire {
 
   async parametrage(type) {
     this.#type(type);
-    return structuredClone({ obligatoires: [], supplementaires: [], ...this.parametres[type] });
+    return structuredClone({ obligatoires: [], confidentiels: [], supplementaires: [], ...this.parametres[type] });
   }
 
   async enregistrerParametrage(type, p) {
@@ -305,8 +349,25 @@ export class FournisseurFicheMemoire {
     for (const c of p.supplementaires ?? []) {
       if (!/^[a-z][a-z0-9_]{0,62}$/.test(c.code ?? '')) throw new ErreurFiche(422, 'CODE', `Code de champ invalide : ${c.code ?? ''} (minuscules, chiffres, _)`);
       if (codes.has(c.code) || this.#type(type).definition.champs.some((x) => x.code === c.code)) throw new ErreurFiche(422, 'CODE', `Code de champ déjà utilisé : ${c.code}`);
+      if (!TYPES_SUPPLEMENTAIRES.includes(c.type)) throw new ErreurFiche(422, 'TYPE', `Type de champ invalide : ${c.type}`);
+      if (!String(c.libelle ?? '').trim()) throw new ErreurFiche(422, 'LIBELLE', `Libellé obligatoire pour le champ ${c.code}`);
+      if (c.type === 'liste' && c.requete?.trim()) {
+        const e = erreurRequete(c.requete);
+        if (e) throw new ErreurFiche(422, 'REQUETE', e);
+      }
       codes.add(c.code);
     }
+    const def = this.#type(type).definition;
+    const programme = new Map(def.champs.map((c) => [c.code, c]));
+    const sections = new Set((def.sections ?? []).map((s) => s.code));
+    p = {
+      ...p,
+      confidentiels: (p.confidentiels ?? []).filter((c) => programme.has(c) && !programme.get(c).gere && !programme.get(c).confidentiel),
+      supplementaires: (p.supplementaires ?? []).map((c) => ({
+        ...c, requete: c.type === 'liste' && c.requete?.trim() ? c.requete.trim() : null,
+        section: c.section && sections.has(c.section) ? c.section : null, groupe: c.groupe?.trim() || null,
+      })),
+    };
     this.parametres[type] = structuredClone(p);
     return this.parametrage(type);
   }

@@ -24,11 +24,13 @@ CREATE TABLE droit_fiche (
     PRIMARY KEY (drf_profil, drf_type, drf_action)
 );
 
--- Paramétrage utilisateur des champs du programme : rendre obligatoire un champ facultatif.
+-- Paramétrage utilisateur des champs du programme : rendre obligatoire un champ facultatif, rendre confidentiel
+-- (RGPD : masqué, révélé et journalisé) un champ du logiciel.
 CREATE TABLE parametre_champ_fiche (
-    pcf_type        VARCHAR(50)  NOT NULL REFERENCES type_fiche(tyf_code) ON DELETE CASCADE,
-    pcf_champ       VARCHAR(63)  NOT NULL,
-    pcf_obligatoire BOOLEAN      NOT NULL DEFAULT FALSE,
+    pcf_type         VARCHAR(50)  NOT NULL REFERENCES type_fiche(tyf_code) ON DELETE CASCADE,
+    pcf_champ        VARCHAR(63)  NOT NULL,
+    pcf_obligatoire  BOOLEAN      NOT NULL DEFAULT FALSE,
+    pcf_confidentiel BOOLEAN      NOT NULL DEFAULT FALSE,
     PRIMARY KEY (pcf_type, pcf_champ)
 );
 
@@ -37,13 +39,16 @@ CREATE TABLE champ_supplementaire (
     chs_type         VARCHAR(50)   NOT NULL REFERENCES type_fiche(tyf_code) ON DELETE CASCADE,
     chs_code         VARCHAR(63)   NOT NULL,
     chs_libelle      VARCHAR(100)  NOT NULL,
-    chs_type_donnee  VARCHAR(20)   NOT NULL CHECK (chs_type_donnee IN ('texte','nombre','booleen','date','liste')),
+    chs_type_donnee  VARCHAR(20)   NOT NULL CHECK (chs_type_donnee IN ('texte','nombre','booleen','date','liste','motdepasse')),
     chs_format       VARCHAR(100),                                  -- email, telephone, code_postal, 999.99, regex:…
     chs_longueur     INT,
     chs_obligatoire  BOOLEAN       NOT NULL DEFAULT FALSE,
     chs_confidentiel BOOLEAN       NOT NULL DEFAULT FALSE,
     chs_options      JSONB,                                         -- liste : [{ "valeur": "A", "libelle": "…" }]
+    chs_requete      TEXT,                                          -- liste : SELECT valeur, libelle … (lecture seule)
     chs_aide         VARCHAR(200),
+    chs_section      VARCHAR(50),                                   -- onglet de la définition (sinon Informations complémentaires)
+    chs_groupe       VARCHAR(100),                                  -- cadre titré qui regroupe les champs
     chs_ordre        INT           NOT NULL DEFAULT 0,
     chs_actif        BOOLEAN       NOT NULL DEFAULT TRUE,
     PRIMARY KEY (chs_type, chs_code)

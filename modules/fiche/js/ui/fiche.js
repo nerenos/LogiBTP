@@ -27,8 +27,10 @@ export function definirConfidentielSession(actif) {
  *   la fiche, un bandeau l'indique et propose « Reprendre la main » à qui a le droit DEBLOQUER.
  * - Onglets peu nombreux, composés de groupes de champs (cadres titrés) : section { code, titre, groupes: [{ titre,
  *   champs, largeur }] } (ou champs à plat : un seul groupe sans titre).
- * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés, champs
- *   confidentiels masqués (affichage à la demande, ou pendant toute la session), onglet Pièces jointes (GED).
+ * - Champs obligatoires du programme (*) et par paramétrage (◆), champs supplémentaires paramétrés (regroupés en
+ *   cadres, dans un onglet de la définition ou dans Informations complémentaires), champs confidentiels masqués
+ *   (affichage à la demande, ou pendant toute la session), mots de passe (jamais chargés, révélés à la demande :
+ *   accès journalisé), onglet Pièces jointes (GED).
  *
  * Points de spécialisation : sousTitre, champsNonCopies, valeursCreation, validerMetier, rendreChamp,
  * rendreInformations (encart calculé), actionsSupplementaires, apresChargement.
@@ -52,6 +54,7 @@ export class FicheBase {
     this.erreurs = [];
     this.section = null;
     this.reveles = false;
+    this.secretsReveles = new Map();
     this.saisie = { valeurs: {}, proprietes: {} };
   }
 
@@ -117,6 +120,7 @@ export class FicheBase {
   async recharger() {
     this.fiche = await this.fournisseur.charger(this.type, this.id, { confidentiel: confidentielSession() || this.reveles });
     this.saisie = { valeurs: {}, proprietes: {} };
+    this.secretsReveles = new Map();
     if (confidentielSession() && this.fiche.masques.length === 0) this.reveles = true;
   }
 
@@ -126,7 +130,9 @@ export class FicheBase {
     // Une copie ne reprend pas les informations confidentielles non affichées.
     for (const m of this.fiche.masques) if (!m.startsWith('+')) valeurs[m] = null;
     this.copieDe = this.id;
-    this.fiche = { id: null, valeurs, proprietes: { ...this.fiche.proprietes }, h: null, masques: [], verrou: null };
+    // Les mots de passe ne sont pas copiés (jamais chargés) : à ressaisir.
+    this.fiche = { id: null, valeurs, proprietes: { ...this.fiche.proprietes }, h: null, masques: [], secrets: [], verrou: null };
+    this.secretsReveles = new Map();
     this.mode = MODES.COPIE;
     this.saisie = { valeurs: {}, proprietes: {} };
   }
@@ -164,19 +170,41 @@ export class FicheBase {
   }
 
   /**
-   * Onglets : ceux de la définition (groupes de champs), Informations complémentaires (champs supplémentaires) et
-   * Pièces jointes (GED). Chaque onglet expose aussi la liste à plat de ses champs (erreurs, navigation).
+   * Onglets : ceux de la définition (groupes de champs), Informations complémentaires (champs supplémentaires sans
+   * onglet) et Pièces jointes (GED). Les champs supplémentaires sont regroupés par cadre (groupe paramétré), dans
+   * l'ordre paramétré, après les groupes de l'onglet choisi. Chaque onglet expose la liste à plat de ses champs
+   * (champs : programme, supplementairesSection : codes supplémentaires) pour les erreurs et la navigation.
    */
   sections() {
     const base = this.definition.sections ?? [{ code: 'general', titre: 'Général', champs: this.definition.champs.map((c) => c.code) }];
+    const supplementaires = (this.definition.supplementaires ?? []).map((c) => ({ ...c, supplementaire: true }));
+    const codes = new Set(base.map((x) => x.code));
+    const parGroupe = (champs, titre) => {
+      const m = new Map();
+      for (const c of champs) {
+        const t = c.groupe || titre;
+        if (!m.has(t)) m.set(t, []);
+        m.get(t).push(c);
+      }
+      return [...m].map(([t, cs]) => ({ titre: t, champs: cs, supplementaire: true, largeur: m.size === 1 && !titre ? 'plein' : null }));
+    };
     const s = base.map((x) => {
       const groupes = x.groupes ?? [{ titre: null, champs: x.champs ?? [] }];
-      return { ...x, groupes, champs: groupes.flatMap((g) => g.champs) };
+      const ajout = parGroupe(supplementaires.filter((c) => c.section === x.code), 'Informations complémentaires');
+      return { ...x, groupes: [...groupes, ...ajout], champs: groupes.flatMap((g) => g.champs), supplementairesSection: ajout.flatMap((g) => g.champs.map((c) => c.code)) };
     });
     for (const o of this.ongletsSpecifiques().filter((x) => !x.dans)) s.push({ code: `+${o.code}`, titre: o.titre, specifique: o, champs: o.champs ?? [] });
-    if (this.definition.supplementaires?.length) s.push({ code: '+supplementaires', titre: 'Informations complémentaires', supplementaires: true });
+    const reste = supplementaires.filter((c) => !c.section || !codes.has(c.section));
+    if (reste.length) {
+      s.push({ code: '+supplementaires', titre: 'Informations complémentaires', groupes: parGroupe(reste, null), champs: [], supplementairesSection: reste.map((c) => c.code) });
+    }
     s.push({ code: '+pieces', titre: 'Pièces jointes', pieces: true });
     return s;
+  }
+
+  /** Onglet qui contient le champ d'une erreur. */
+  #sectionErreur(sections, e) {
+    return sections.find((s) => (e.supplementaire ? s.supplementairesSection?.includes(e.champ) : s.champs?.includes(e.champ)))?.code;
   }
 
   rendre() {
@@ -199,7 +227,7 @@ export class FicheBase {
     this.#rendreErreurs();
     const sections = this.sections();
     if (!sections.some((s) => s.code === this.section)) this.section = sections[0].code;
-    const enErreur = new Set(this.erreurs.map((e) => (e.supplementaire ? '+supplementaires' : sections.find((s) => s.champs?.includes(e.champ))?.code)));
+    const enErreur = new Set(this.erreurs.map((e) => this.#sectionErreur(sections, e)));
     c.querySelector('.fiche-onglets').innerHTML = sections.map((s) =>
       `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''}">${echapper(s.titre)}</button>`).join('');
     c.querySelectorAll('[data-section]').forEach((b) => b.addEventListener('click', () => { this.section = b.dataset.section; this.rendre(); }));
@@ -258,9 +286,7 @@ export class FicheBase {
       section.specifique.rendre(corps, { modifiable: enSaisie(this.mode) });
       return;
     }
-    const groupes = section.supplementaires
-      ? [{ titre: 'Champs paramétrés', champs: this.definition.supplementaires.map((c) => ({ ...c, supplementaire: true })), largeur: 'plein' }]
-      : section.groupes.map((g) => ({ ...g, champs: g.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) }));
+    const groupes = section.groupes.map((g) => (g.supplementaire ? g : { ...g, champs: g.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) }));
     corps.innerHTML = '<div class="fiche-groupes"></div>';
     const zone = corps.firstElementChild;
     for (const g of groupes.filter((x) => x.champs.length)) zone.append(this.#groupe(g));
@@ -346,6 +372,7 @@ export class FicheBase {
         el.classList.add('fiche-saisie-champ');
         return el;
       }
+      case 'motdepasse': return this.#champSecret(champ, lecture);
       case 'booleen':
         el = document.createElement('input');
         el.type = 'checkbox';
@@ -384,6 +411,45 @@ export class FicheBase {
       this.#majTitre();
     });
     return el;
+  }
+
+  /**
+   * Mot de passe : jamais chargé avec la fiche ; 👁 l'affiche (demandé au serveur, accès journalisé) ou le masque.
+   * Une saisie remplace la valeur enregistrée ; un champ laissé intact ne change pas.
+   */
+  #champSecret(champ, lecture) {
+    const cle = champ.supplementaire ? `+${champ.code}` : champ.code;
+    const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
+    const enregistre = (this.fiche.secrets ?? []).includes(cle);
+    const zone = document.createElement('div');
+    zone.className = 'fiche-secret';
+    const el = document.createElement('input');
+    el.type = 'password';
+    el.autocomplete = 'new-password';
+    el.className = 'fiche-saisie-champ';
+    if (champ.longueur) el.maxLength = champ.longueur;
+    const revele = this.secretsReveles.get(cle);
+    el.value = champ.code in cible ? cible[champ.code] ?? '' : revele ?? '';
+    if (!(champ.code in cible) && revele === undefined) el.placeholder = enregistre ? '•••••••• (enregistré)' : lecture ? '(aucun)' : '';
+    const oeil = document.createElement('button');
+    oeil.type = 'button';
+    oeil.textContent = '👁';
+    oeil.title = 'Afficher / masquer le mot de passe (accès journalisé)';
+    oeil.disabled = lecture && !enregistre;
+    oeil.addEventListener('click', () => (async () => {
+      if (el.type === 'text') { el.type = 'password'; return; }
+      if (enregistre && !(champ.code in cible) && !this.secretsReveles.has(cle) && this.id !== null) {
+        const r = await this.fournisseur.revelerSecret(this.type, this.id, cle);
+        this.secretsReveles.set(cle, r.valeur ?? '');
+        el.value = r.valeur ?? '';
+        el.placeholder = '';
+      }
+      el.type = 'text';
+    })().catch((e) => this.#erreur(e)));
+    if (lecture) el.readOnly = true;
+    else el.addEventListener('input', () => { cible[champ.code] = el.value; });
+    zone.append(el, oeil);
+    return zone;
   }
 
   #majTitre() {
@@ -492,7 +558,8 @@ export class FicheBase {
   async enregistrer() {
     const valeurs = this.valeurs(), proprietes = this.proprietes();
     this.erreurs = [
-      ...validerFiche(this.definition, valeurs, proprietes, { masques: this.masques }),
+      // Mots de passe enregistrés et non ressaisis : inconnus du poste, contrôlés par le serveur.
+      ...validerFiche(this.definition, valeurs, proprietes, { masques: new Set([...this.masques, ...this.#secretsIntacts()]) }),
       ...this.validerMetier(valeurs, proprietes).map((e) => ({ supplementaire: false, code: 'METIER', ...e })),
     ];
     if (this.erreurs.length) {
@@ -529,6 +596,10 @@ export class FicheBase {
     }
   }
 
+  #secretsIntacts() {
+    return (this.fiche.secrets ?? []).filter((k) => (k.startsWith('+') ? !(k.slice(1) in this.saisie.proprietes) : !(k in this.saisie.valeurs)));
+  }
+
   #pourCreation(valeurs) {
     return Object.fromEntries(Object.entries(valeurs).filter(([code, v]) => !vide(v) && !this.definition.champs.find((c) => c.code === code)?.lecture_seule));
   }
@@ -537,7 +608,7 @@ export class FicheBase {
 
   #allerErreur() {
     const e = this.erreurs[0];
-    if (e) this.section = e.supplementaire ? '+supplementaires' : this.sections().find((s) => s.champs?.includes(e.champ))?.code ?? this.section;
+    if (e) this.section = this.#sectionErreur(this.sections(), e) ?? this.section;
     this.rendre();
   }
 

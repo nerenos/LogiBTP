@@ -14,6 +14,15 @@
 
 ## Fonctionnel
 
+- [ ] **Module d'installation** : générer et conserver la chaîne de chiffrement de l'installation (aujourd'hui
+  `LOGIBTP_CLE_CHIFFREMENT` dans `.env`, générée à la main ; la perdre ou la changer rend illisibles les mots de passe
+  des fiches), rotation de clé (rechiffrer les valeurs `chiffre:v1:`).
+- [ ] Fiches, paramétrage étendu (16/10/2026) : `modules/fiche/db/041` appliqué à `logibtp` et `logibtp_demo` ; redémarrer
+  l'API (nouveau `.env` lu au démarrage). Restent : un mot de passe d'une colonne du programme saisi dans une liste
+  (module Liste, saisie en ligne) serait écrit en clair, et les listes affichent la valeur chiffrée d'un champ
+  supplémentaire mot de passe (à exclure des colonnes proposées) ; listes par requête SQL indisponibles hors ligne
+  (démo : options saisies) ; groupes de démonstration (`db/131`) absents des bases existantes (régénéré, non rejoué).
+
 - [ ] **Métré en script, bases existantes** : appliquer 021 (Métré), 061 (Bibliothèque, `ele_longueur`), 165 et le 131
   régénéré à `logibtp` et `logibtp_demo` ; sauvegarder avant le premier démarrage de l'API, qui convertit les métrés en
   lignes et supprime `metre_ligne` (irréversible).
@@ -48,6 +57,9 @@
 
 ## Interface
 
-- [ ] Remplacer les derniers `<select>` par `creerCombo` : conception des vues de liste, menu de filtre, paramétrage
-  des fiches, sélecteurs de thème et de vue des listes.
+- [ ] Remplacer les derniers `<select>` par `creerCombo` : conception des vues de liste, menu de filtre, sélecteurs de
+  thème et de vue des listes, profil de démonstration (paramètres).
+- [ ] Raccourcis clavier : déclarer aussi les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
+  `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
+  contextuel à étendre (fiches, explorateur GED, entête du document).
 - [ ] Module Fiche : `AvantSuppressionAsync` n'est surchargé nulle part dans le cœur (contrôles métier avant suppression).

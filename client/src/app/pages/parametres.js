@@ -19,6 +19,11 @@ export class PageParametres extends PageBase {
           ${app.preferences.get('theme') === t.code ? 'checked' : ''}> ${t.icone} ${echapper(t.libelle)}</label>`).join('')}</div>
         <p class="aide">Automatique suit le réglage clair / sombre du système. Le choix s'applique à toutes les fenêtres de ce navigateur.</p>
       </section>
+      <section class="carte"><h2>Raccourcis clavier</h2>
+        <p class="aide">Toutes les fonctions qui acceptent un raccourci, avec leurs touches ; chaque raccourci se remplace (gardé dans ce navigateur).
+          Le clic droit sur une ligne les rappelle.</p>
+        <p><a href="/parametres/raccourcis">⌨ Personnaliser les raccourcis…</a></p>
+      </section>
       <section class="carte"><h2>Navigation</h2>
         <label class="ligne"><input type="checkbox" data-pref="nouvelleFenetre" ${app.preferences.get('nouvelleFenetre') ? 'checked' : ''}>
           Ouvrir les fiches et les documents d'une liste dans une nouvelle fenêtre</label>

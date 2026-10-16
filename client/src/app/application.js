@@ -2,7 +2,8 @@ import { Routeur, GestionFenetres, Preferences, afficherApercu } from '@logibtp/
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, actionDe, definirAideRaccourcis } from '@logibtp/socle/ui';
+import './raccourcis.js';
 import { api, ErreurApi, ENTETES } from './api.js';
 import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
 import { creerFournisseurFiche } from './fiches/fiches.js';
@@ -76,6 +77,8 @@ export class Application {
     document.addEventListener('click', (e) => this.#lien(e));
     document.addEventListener('auxclick', (e) => { if (e.button === 1) this.#lien(e, true); });
     document.addEventListener('keydown', (e) => this.#clavier(e));
+    // Menus contextuels : lien vers la personnalisation des raccourcis (nouvelle fenêtre, la page courante reste).
+    definirAideRaccourcis(() => this.naviguer('/parametres/raccourcis', { nouvelleFenetre: true }));
     // Changements de titre ou de modifications de la page : diffusés aux autres fenêtres.
     this.minuterie = setInterval(() => this.majPage(), 1000);
     await this.routeur.demarrer();
@@ -193,10 +196,18 @@ export class Application {
 
   #clavier(e) {
     const page = this.routeur?.page;
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); this.listeFenetres(); return; }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's' && page?.enregistrer) {
+    // Raccourcis de l'application (personnalisables : /parametres/raccourcis).
+    const fonctions = {
+      enregistrer: page?.enregistrer && (() => page.enregistrer()),
+      fenetres: () => this.listeFenetres(),
+      accueil: () => this.naviguer('/'),
+      parametres: () => this.naviguer('/parametres'),
+      raccourcis: () => this.naviguer('/parametres/raccourcis'),
+    };
+    const f = !e.defaultPrevented && fonctions[actionDe(e, 'application')];
+    if (f) {
       e.preventDefault();
-      Promise.resolve(page.enregistrer()).catch((x) => this.erreur(x));
+      Promise.resolve(f()).catch((x) => this.erreur(x));
       return;
     }
     const dialogue = document.querySelector('.fiche-dialogue-fond, .concepteur-fond, .liste-menu, .nav-dialogue-fond, .ged-dialogue-fond, .themes-fond, .tiroir:not([hidden])');

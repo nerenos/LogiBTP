@@ -1,4 +1,4 @@
-import { echapper, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -217,6 +217,13 @@ export class ListeDonnees {
       if (tr && !e.target.closest('td.modifiable')) this.ouvrir(tr.dataset.id, e);
     });
     this.zone.addEventListener('keydown', (e) => this.#clavier(e));
+    // Clic droit : menu court des actions sur la sélection, avec leurs raccourcis (aide-mémoire) ; tout reste accessible sans.
+    this.corps.addEventListener('contextmenu', (e) => {
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr || (this.modeSaisie && e.target.closest('td.modifiable'))) return;
+      if (!this.lignesSelectionnees().some((l) => String(l._id) === tr.dataset.id)) this.#selectionner(tr.dataset.id);
+      this.#menuLigne(e, tr.dataset.id);
+    });
     this.observateur = new IntersectionObserver((entrees) => {
       if (entrees.some((x) => x.isIntersecting)) this.chargerSuite().catch((x) => this.#erreur(x));
     }, { root: this.zone, rootMargin: '300px' });
@@ -1078,6 +1085,28 @@ export class ListeDonnees {
     this.selection = null;
     await this.verifier();
     this.#majActionsElements();
+  }
+
+  /** Menu contextuel d'une ligne : ouvrir, actions de la vue sur la sélection (mêmes règles que les boutons). */
+  #menuLigne(e, id) {
+    const a = this.actionsElements;
+    const lignes = this.lignesSelectionnees();
+    const n = lignes.length;
+    const executer = (f) => () => Promise.resolve(f()).catch((x) => this.#erreur(x));
+    ouvrirMenuContextuel(e, [
+      { libelle: 'Ouvrir', raccourci: 'Entrée · double-clic', action: () => this.ouvrir(id), actif: n === 1 },
+      { libelle: 'Ouvrir dans une nouvelle fenêtre', raccourci: 'Ctrl+Entrée · Ctrl+clic', action: () => this.ouvrir(id, { ctrlKey: true }), actif: n === 1 },
+      { separateur: true },
+      ...(a?.consulter ? [{ libelle: 'Consulter', action: executer(() => this.#actionElement('consulter')), actif: n === 1 }] : []),
+      ...(a?.copier ? [{ libelle: 'Copier', action: executer(() => this.#actionElement('copier')), actif: n === 1 }] : []),
+      ...(a?.supprimer ? [{ libelle: n > 1 ? `Supprimer (${n})` : 'Supprimer', action: executer(() => this.#actionElement('supprimer')), actif: n >= 1 }] : []),
+      ...(a?.autres ?? []).map((x) => ({
+        libelle: x.libelle, titre: x.titre, action: executer(() => x.action(lignes, e)),
+        actif: n >= 1 && n <= (x.max ?? 1) && (x.actif ? x.actif(lignes) : true),
+      })),
+      { separateur: true },
+      { libelle: 'Sélection multiple', raccourci: 'Ctrl+clic · Maj+clic · Maj+↑↓', actif: false },
+    ]);
   }
 
   #clavier(e) {

@@ -180,13 +180,14 @@ export class FichePersonne extends FicheAnnuaire {
       .map((s) => {
         if (!s.groupes) return s;
         const groupes = s.groupes.filter((g) => {
+          if (g.supplementaire) return true;
           if (g.code === 'entreprise' || g.code === 'facturation_electronique') return morale;
           if (s.code === 'casquettes') return deverrouilles.has(g.code);
           return true;
         });
-        return { ...s, groupes, champs: groupes.flatMap((g) => g.champs) };
+        return { ...s, groupes, champs: groupes.filter((g) => !g.supplementaire).flatMap((g) => g.champs) };
       })
-      .filter((s) => s.code !== 'casquettes' || s.groupes.length)
+      .filter((s) => s.code !== 'casquettes' || s.groupes.some((g) => !g.supplementaire))
       .sort(ordre(['identite', '+coordonnees', '+contacts', 'facturation', 'casquettes', '+liens', '+graphe', '+tarifs', '+supplementaires', '+pieces']));
   }
 

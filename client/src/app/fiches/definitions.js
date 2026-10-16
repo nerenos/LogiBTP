@@ -495,9 +495,9 @@ export const PARAMETRAGE_FICHE = {
   salarie: {
     obligatoires: ['telephone'],
     supplementaires: [
-      { code: 'taille_vetement', libelle: 'Taille de vêtement', type: 'liste', options: options('S', 'M', 'L', 'XL', 'XXL'), ordre: 10 },
-      { code: 'pointure', libelle: 'Pointure', type: 'nombre', format: '99', ordre: 20 },
-      { code: 'permis_c', libelle: 'Permis C', type: 'booleen', ordre: 30 },
+      { code: 'taille_vetement', libelle: 'Taille de vêtement', type: 'liste', options: options('S', 'M', 'L', 'XL', 'XXL'), groupe: 'Équipement', ordre: 10 },
+      { code: 'pointure', libelle: 'Pointure', type: 'nombre', format: '99', groupe: 'Équipement', ordre: 20 },
+      { code: 'permis_c', libelle: 'Permis C', type: 'booleen', groupe: 'Habilitations', ordre: 30 },
       { code: 'mutuelle', libelle: 'Mutuelle', type: 'texte', longueur: 60, confidentiel: true, ordre: 50 },
     ].map((x) => ({ ...x, actif: true })),
   },
@@ -520,6 +520,7 @@ export const PARAMETRAGE_FICHE = {
       { code: 'immatriculation', libelle: 'Immatriculation', type: 'texte', longueur: 9, format: 'regex:^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$', aide: 'AA-123-AA', ordre: 10 },
       { code: 'assureur', libelle: 'Assureur', type: 'texte', longueur: 60, ordre: 20 },
       { code: 'puissance_kw', libelle: 'Puissance (kW)', type: 'nombre', format: '9999.9', ordre: 30 },
+      { code: 'code_antivol', libelle: 'Code antivol', type: 'motdepasse', longueur: 40, groupe: 'Accès', ordre: 40 },
     ].map((x) => ({ ...x, actif: true })),
   },
 };

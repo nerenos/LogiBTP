@@ -21,12 +21,13 @@
 - `js/src/ui/arbre.js` : opérations d'arbre pures paramétrées par `cfg` (`enfants`, `ordreAffichage`, `parId`, `ancetres`, `descendants`, `racinesSelection`, `renumeroter`, `placer`, `indenter`, `desindenter`, `decaler`, `supprimer`).
 - `js/src/ui/format.js` : `lireNombre`, `formatNombre` (Intl fr-FR), `formatLibre`, `htmlSur` (liste blanche alignée sur HtmlSanitizer serveur), `echapper`, `estHtml`, `decoderEntites`.
 - `js/src/ui/preferences.js` : `lirePreferences` / `ecrirePreferences` (clé `localStorage` `logibtp.affichage`, fusion).
-- `js/src/ui/raccourcis.js` + `raccourcis.json` : raccourcis de la grille (`combinaison`, `actionDe`, `libelleRaccourci`, `configurerRaccourcis`).
+- `js/src/ui/raccourcis.js` + `raccourcis.json` : registre des raccourcis personnalisables par groupe (`declarerRaccourcis(groupe, { libelle, actions: { code: { libelle, defaut } } })`, `actionDe(e, groupe = 'grille')`, `combinaison` (Ctrl/Alt + rangée des chiffres → chiffre), `libelleRaccourci`, `libelleTouches`, `touchesDe`, `catalogueRaccourcis`, `conflitsRaccourci` (bloquant : même groupe ou application), `personnaliserRaccourci` (null = défaut, [] = aucun), `reinitialiserRaccourcis`, `definirAideRaccourcis` / `ouvrirAideRaccourcis`) ; groupe `grille` = `raccourcis.json` ; personnalisation dans le `localStorage` (`logibtp.raccourcis`, relue sur l'événement `storage`).
+- `js/src/ui/menu-contextuel.js` : `ouvrirMenuContextuel(e, [{ libelle, raccourci, action, actif, titre } | { separateur }])` (aide-mémoire des raccourcis, ↑↓ Entrée Échap, lien « Personnaliser les raccourcis… » si l'application l'a défini), `fermerMenuContextuel`. Grille : clic droit / touche Menu / Maj+F10 sur une ligne (`actions.menuContextuel(elements, id)` pour compléter).
 - `js/src/ui/editeur-riche.js` : `editerLibelle({ html, titre, variables })` → Promise (HTML, null si vidé, undefined si annulé).
 - `js/src/ui/theme.js` : `THEMES` (auto / clair / sombre), `appliquerTheme` (`<html data-theme>`) ; `socle.css` (importé par `client/src/main.js`).
 - `js/testing/index.js` : `lireCas`, `egal`, `verifier`, `verifierErreurs` (Node, pour les suites de jeux partagés).
-- `dotnet/LogiBTP.Socle/` : `ArrondiCalcul.cs`, `Expression.cs`, `References.cs`, `Libelles.cs`, `ErreurCalcul.cs`, `JsonCalcul.cs`, `AccesColonnes.cs`.
-- `dotnet/LogiBTP.Socle.Web/` : `Societes.cs`, `Web.cs`. `dotnet/LogiBTP.Socle.Testing/CasPartages.cs`. `dotnet/LogiBTP.Socle.Tests/` : `SocleTests.cs`, `SocietesTests.cs`.
+- `dotnet/LogiBTP.Socle/` : `ArrondiCalcul.cs`, `Expression.cs`, `References.cs`, `Libelles.cs`, `ErreurCalcul.cs`, `JsonCalcul.cs`, `AccesColonnes.cs`, `Chiffrement.cs` (`Chiffrement` : AES-256-GCM, clé PBKDF2 de la chaîne de l'installation, valeurs `chiffre:v1:…`, `ErreurChiffrement`).
+- `dotnet/LogiBTP.Socle.Web/` : `Societes.cs`, `Web.cs`, `Configuration.cs` (`AjouterFichierEnv(dossier)` : `.env` du dossier de l'application ou d'un parent, variables système prioritaires ; `AddChiffrement(configuration)` : `LOGIBTP_CLE_CHIFFREMENT`). `dotnet/LogiBTP.Socle.Testing/CasPartages.cs`. `dotnet/LogiBTP.Socle.Tests/` : `SocleTests.cs`, `SocietesTests.cs`.
 - `tests/expressions.json` : jeu partagé de l'analyseur (variables + cas `resultat` ou `erreur`).
 
 ## API publique
@@ -54,7 +55,8 @@
 - Le socle ne connaît aucun module : pas d'import de `modules/` ni du cœur ; toute spécialisation passe par options / rappels (`actions` de la grille, `recalculer` du Magasin, `resoudre` des formules).
 - Préférences d'affichage uniquement via `lirePreferences` / `ecrirePreferences` (navigateur, jamais en base) ; écrire = fusion, pas remplacement.
 - Combos : hors grille, `creerCombo({ options, valeur, vide })` (`src/ui/combo.js` : champ texte + `ListeDeroulante` strict, `valeurCombo`, `resoudre()`, `definirValeur()`, événement `change`, classe `combo`) ; dans la grille, `editeur: 'select'`. Ne pas créer de `<select>` simple.
-- Raccourcis de la grille dans `raccourcis.json` (éviter AltGr, Alt+Maj, Alt+←, Ctrl+N/T/W).
+- Raccourcis de la grille dans `raccourcis.json` (éviter AltGr, Alt+Maj, Alt+←, Ctrl+N/T/W) ; tout nouveau raccourci passe par `declarerRaccourcis` + `actionDe(e, groupe)` (personnalisable), jamais par un test de touche en dur.
+- Chiffrement : la chaîne de l'installation (`.env`, hors dépôt ; `.env.exemple` versionné) ne doit jamais changer une fois des valeurs chiffrées (illisibles sinon) ; module d'installation à venir.
 - `htmlSur` et le nettoyage HTML serveur doivent garder la même liste blanche de balises et de styles.
 - C# : `TargetFramework` net10.0, `InvariantGlobalization` (Directory.Build.props) ; sérialiser avec `JsonCalcul.Options` pour garder les noms de colonnes du DDL.
 - Cache singleton dépendant du schéma : l'indexer par base (`SocieteCourante.Connexion`).

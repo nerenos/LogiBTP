@@ -19,5 +19,6 @@
   "ouvrirMetre": "F4",
   "rechercher": "F3",
   "replier": "-",
-  "deplier": "+"
+  "deplier": "+",
+  "menu": []
 }
