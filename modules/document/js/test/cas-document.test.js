@@ -24,6 +24,16 @@ describe('Module Document : jeux de test partagés du moteur générique', () =>
           expect(res.pied[i].lignes).toEqual(lignes);
         });
       }
+      // Pieds de section (documents à plusieurs sections) : structure de chaque pied.
+      for (const ps of a.pieds_sections ?? []) {
+        const obtenu = (res.pieds_sections ?? []).find((x) => x.lig_id === ps.lig_id);
+        expect(obtenu, `pieds_sections[${ps.lig_id}]`).toBeTruthy();
+        expect(obtenu.pied).toHaveLength(ps.pied.length);
+        ps.pied.forEach(({ lignes, ...att }, i) => {
+          verifier(att, obtenu.pied[i], `pieds_sections[${ps.lig_id}][${i}]`, fautes);
+          expect(obtenu.pied[i].lignes).toEqual(lignes);
+        });
+      }
       expect(fautes).toEqual([]);
     });
 

@@ -241,7 +241,9 @@ export class PanneauxDocument {
   /** Sous-totaux de pied placés avant la ligne de pied `ligId` (bases possibles d'un pourcentage ou coefficient). */
   sousTotauxPiedAvant(ligId) {
     const r = this.editeur.resultat;
-    const pied = r.pied ?? [];
+    // Ligne d'un pied de section : sous-totaux de ce pied ; sinon ceux du pied du document.
+    const contient = (structure) => structure.some((e) => e.lig_id === ligId || (e.genre !== 'consolide' && e.lignes?.includes(ligId)));
+    const pied = (r.pieds_sections ?? []).find((s) => contient(s.pied))?.pied ?? r.pied ?? [];
     const i = pied.findIndex((e) => e.lig_id === ligId || e.lignes?.includes(ligId));
     const ids = pied.slice(0, i < 0 ? pied.length : i).filter((e) => e.genre === 'ligne').map((e) => e.lig_id);
     return ids.map((id) => r.lignes.find((x) => x.lig_id === id)).filter(Boolean);

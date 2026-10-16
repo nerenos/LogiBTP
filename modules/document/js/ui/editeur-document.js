@@ -533,8 +533,9 @@ export class EditeurDocument {
   allerA(id, { focus = true } = {}) {
     this.deplierAscendants(id);
     // Ligne du pied : la tranche du pied et ses groupes sont dépliés.
-    if ((this.resultat.pied ?? []).some((e) => e.lig_id === id || e.lignes?.includes(id))) {
-      for (const r of [...this.grille.replies]) if (r === ID_PIED || r <= -1e12) this.grille.replies.delete(r);
+    const structures = [this.resultat.pied ?? [], ...(this.resultat.pieds_sections ?? []).map((s) => s.pied)];
+    if (structures.some((pied) => pied.some((e) => e.lig_id === id || e.lignes?.includes(id)))) {
+      for (const r of [...this.grille.replies]) if (r <= ID_PIED) this.grille.replies.delete(r);
     }
     this.grille.rendre();
     if ((this.filtre !== null || this.filtreMarqueursActif()) && !this.grille.index?.has(id)) this.retirerFiltres();
@@ -585,20 +586,56 @@ export class EditeurDocument {
   lignesPied(lignes, replies) {
     const pied = this.resultat.pied ?? [];
     if (!pied.length) return lignes;
-    const dansPied = new Set(pied.flatMap((e) => [...(e.lignes ?? []), ...(e.lig_id !== null ? [e.lig_id] : [])]));
+    const sections = this.resultat.pieds_sections ?? [];
+    const ids = (structure) => structure.flatMap((e) => [...(e.lignes ?? []), ...(e.lig_id !== null ? [e.lig_id] : [])]);
+    const dansPied = new Set([...ids(pied), ...sections.flatMap((s) => ids(s.pied))]);
     const parId = new Map(lignes.map((r) => [r.item.lig_id, r]));
     const res = lignes.filter((r) => !dansPied.has(r.item.lig_id) && !estPied(r.calcule));
+    // Pied de chaque section (document à plusieurs sections) : tranche repliable à la fin de la section.
+    sections.forEach((s, k) => {
+      const section = parId.get(s.lig_id);
+      if (!section || replies.has(s.lig_id)) return;
+      const i = res.indexOf(section);
+      let fin = i + 1;
+      while (fin < res.length && res[fin].profondeur > section.profondeur) fin++;
+      const tranche = this.ligneVirtuelle(`PS${k}`, 'tranche', 'Pied de la section', s.pied.at(-1)?.montant ?? null,
+        { aEnfants: true, profondeur: section.profondeur + 1, id: ID_PIED - (k + 1) });
+      const contenu = replies.has(tranche.item.lig_id) ? []
+        : this.structurePied(s.pied, { parId, replies, decalage: (k + 1) * 1e9, tvaDetaillee: false })
+          .map((r) => ({ ...r, profondeur: r.profondeur + section.profondeur + 2 }));
+      res.splice(fin, 0, tranche, ...contenu);
+    });
+    const p = this.structurePied(pied, { parId, replies, decalage: 0, tvaDetaillee: true, global: sections.length > 0 });
+    // Lignes de pied hors structure (ventilation TVA en double…) : à la fin.
+    for (const r of lignes) if (estPied(r.calcule) && !dansPied.has(r.item.lig_id)) p.push(r);
+    // Tout le pied dans une tranche repliable (montant : net à payer).
+    const net = pied.at(-1)?.montant ?? null;
+    res.push(this.ligneVirtuelle('PIED', 'tranche', sections.length ? 'Pied global' : 'Pied du document', net, { aEnfants: true, id: ID_PIED }));
+    if (!replies.has(ID_PIED)) res.push(...p.map((r) => ({ ...r, profondeur: r.profondeur + 1 })));
+    return res;
+  }
+
+  /**
+   * Ligne calculée du pied (jamais saisissable) ; identifiant stable par position dans le pied (le repli d'un groupe ne
+   * décale pas les suivants), décalé pour le pied d'une section.
+   */
+  ligneVirtuelle(cle, type, libelle, montant, { aEnfants = false, profondeur = 0, html = null, rang = 0, decalage = 0, id = null, titre = null } = {}) {
+    const lig = id ?? -1e12 - decalage - Number(cle.match(/\d+/)[0]) * 1000 - rang;
+    return {
+      item: { lig_id: lig, _virtuelle: true, lig_parent_id: null },
+      calcule: { lig_id: lig, lig_libelle_affiche: html ?? echapper(libelle), lig_libelle_brut: titre, lig_montant_ht: montant, _virtuelle: true },
+      profondeur, aEnfants, messages: [], estCalculee: true, virtuelle: { cle, type },
+    };
+  }
+
+  /**
+   * Lignes d'une structure de pied (résultat.pied ou pied d'une section) : totaux calculés, sous-totaux saisis, groupes
+   * (ligne calculée ou ligne de ventilation TVA saisie, puis leurs lignes), lignes consolidées du pied global.
+   */
+  structurePied(pied, { parId, replies, decalage, tvaDetaillee, global = false }) {
     const p = [];
     const pm = this.saisie.document.ent_precision_montant ?? 2;
-    // Identifiant stable par position dans le pied (le repli d'un groupe ne décale pas les suivants).
-    const virtuelle = (cle, type, libelle, montant, { aEnfants = false, profondeur = 0, html = null, rang = 0 } = {}) => {
-      const id = cle === 'PIED' ? ID_PIED : -1e12 - Number(cle.match(/\d+/)[0]) * 1000 - rang;
-      return {
-        item: { lig_id: id, _virtuelle: true, lig_parent_id: null },
-        calcule: { lig_id: id, lig_libelle_affiche: html ?? echapper(libelle), lig_montant_ht: montant, _virtuelle: true },
-        profondeur, aEnfants, messages: [], estCalculee: true, virtuelle: { cle, type },
-      };
-    };
+    const virtuelle = (cle, type, libelle, montant, o = {}) => this.ligneVirtuelle(cle, type, libelle, montant, { ...o, decalage });
     pied.forEach((e, i) => {
       if (e.genre === 'total') {
         if (!e.masque) p.push(virtuelle(`T${i}`, 'total', LIBELLES_PIED[e.cle] ?? e.cle, e.montant));
@@ -609,14 +646,25 @@ export class EditeurDocument {
         if (r) p.push({ ...r, profondeur: 0 });
         return;
       }
+      if (e.genre === 'consolide') {
+        // Ligne du pied global : lignes de même nature et de même libellé des pieds de section.
+        const detail = e.mode === 'P' && e.taux !== null ? ` ${formatLibre(e.taux)} %` : e.mode === 'C' && e.taux !== null ? ` × ${formatLibre(e.taux)}` : '';
+        const base = e.base !== null ? ` <small>sur ${formatNombre(e.base, pm)}</small>` : '';
+        p.push(virtuelle(`C${i}`, 'consolide', e.libelle, e.montant, {
+          profondeur: 0, html: `${echapper(e.libelle || LIBELLES_PIED[e.cle] || e.cle)}${echapper(detail)}${base}`,
+          titre: e.libelle,
+        }));
+        return;
+      }
       // Groupe : ligne calculée parente (ou la ligne de ventilation TVA saisie), puis ses lignes.
-      const tvaSaisie = e.cle === 'TVA' ? parId.get(e.lignes?.[0]) : null;
+      const tvaSaisie = e.cle === 'TVA' && !global ? parId.get(e.lignes?.[0]) : null;
       let parent;
-      if (tvaSaisie) parent = { ...tvaSaisie, profondeur: 0, aEnfants: true };
+      if (tvaSaisie) parent = { ...tvaSaisie, profondeur: 0, aEnfants: tvaDetaillee };
       else parent = virtuelle(`G${i}`, 'groupe', LIBELLES_PIED[e.cle] ?? e.cle, e.montant, { aEnfants: true });
       p.push(parent);
       if (replies.has(parent.item.lig_id)) return;
       if (e.cle === 'TVA') {
+        if (!tvaDetaillee) return;
         for (const t of this.resultat.tva) {
           const libelle = `${t.tva_code} · ${formatLibre(t.tva_taux)} % sur ${formatNombre(t.tva_base_ht, pm)}${t.tva_mention ? ` — ${t.tva_mention}` : ''}`;
           p.push(virtuelle(`V${i}-${t.tva_code}`, 'tva', libelle, t.tva_montant_net, { profondeur: 1, rang: 1 + this.resultat.tva.indexOf(t) }));
@@ -628,13 +676,7 @@ export class EditeurDocument {
         if (r) p.push({ ...r, profondeur: 1 });
       }
     });
-    // Lignes de pied hors structure (ventilation TVA en double…) : à la fin.
-    for (const r of lignes) if (estPied(r.calcule) && !dansPied.has(r.item.lig_id)) p.push(r);
-    // Tout le pied dans une tranche repliable (montant : net à payer).
-    const net = pied.at(-1)?.montant ?? null;
-    res.push(virtuelle('PIED', 'tranche', 'Pied du document', net, { aEnfants: true }));
-    if (!replies.has(ID_PIED)) res.push(...p.map((r) => ({ ...r, profondeur: r.profondeur + 1 })));
-    return res;
+    return p;
   }
 
   /** Base d'une ligne de pied en pourcentage ou coefficient (« sur 1 200,00 », origine en infobulle), sinon null. */
@@ -683,7 +725,7 @@ export class EditeurDocument {
         cle: 'type', titre: 'Type', classe: 'col-type', editeur: 'select', editable: saisissable,
         champ: () => 'lig_tyl_id', lire: (l) => l.lig_tyl_id,
         options: () => this.definition.types_ligne.map((t) => ({ valeur: t.tyl_id, libelle: t.tyl_libelle })),
-        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', tva: 'Taux', tranche: 'Pied' }[r.virtuelle.type] : this.libelleType(r)),
+        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', tva: 'Taux', tranche: 'Pied', consolide: 'Consolidé' }[r.virtuelle.type] : this.libelleType(r)),
       },
       {
         // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre. Section sans code : numéro

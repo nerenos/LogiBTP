@@ -59,6 +59,23 @@ public class CasDocumentTests
                 if (!JsonNode.DeepEquals(lignes, obtenu[i]!["lignes"])) fautes.Add($"pied[{i}].lignes : attendu {lignes?.ToJsonString()}, obtenu {obtenu[i]!["lignes"]?.ToJsonString()}");
             }
         }
+        // Pieds de section (documents à plusieurs sections) : structure de chaque pied.
+        foreach (var ps in a["pieds_sections"]?.AsArray() ?? [])
+        {
+            var id = ps!["lig_id"]!.GetValue<long>();
+            var obtenu = r["pieds_sections"]!.AsArray().FirstOrDefault(x => x!["lig_id"]!.GetValue<long>() == id)?["pied"]?.AsArray();
+            if (obtenu is null) { fautes.Add($"pieds_sections[{id}] absent"); continue; }
+            var attendu = ps["pied"]!.AsArray();
+            Assert.Equal(attendu.Count, obtenu.Count);
+            for (var i = 0; i < attendu.Count; i++)
+            {
+                var att = attendu[i]!.AsObject().DeepClone().AsObject();
+                var lignes = att["lignes"];
+                att.Remove("lignes");
+                CasPartages.Verifier(att, obtenu[i]!.AsObject(), $"pieds_sections[{id}][{i}]", fautes);
+                if (!JsonNode.DeepEquals(lignes, obtenu[i]!["lignes"])) fautes.Add($"pieds_sections[{id}][{i}].lignes : attendu {lignes?.ToJsonString()}, obtenu {obtenu[i]!["lignes"]?.ToJsonString()}");
+            }
+        }
         Assert.Empty(fautes);
     }
 

@@ -1,0 +1,98 @@
+{
+  "nom": "Pieds de section : contrôles",
+  "description": "Une seule section portant un pied : PIED_SECTION_INTERDIT (le pied de section n'existe que dans un document à plusieurs sections). Pied global : un poste HT saisi à la racine est refusé (PIED_GLOBAL, montant vide). Une ligne de pied sous un titre : PIED_RACINE. Les montants de la section restent calculés.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Commande"
+      },
+      {
+        "lig_id": 4,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Lot A"
+      },
+      {
+        "lig_id": 6,
+        "lig_parent_id": 4,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Béton",
+        "lig_qte": 1,
+        "lig_pv": 1000,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 5,
+        "lig_parent_id": 4,
+        "lig_ordre": 2,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Poste mal placé",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 10,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 10,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise globale",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 50,
+        "lig_pied_sens": -1
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [
+      "PIED_GLOBAL",
+      "PIED_RACINE",
+      "PIED_SECTION_INTERDIT"
+    ],
+    "document": {
+      "ent_total_ht": 900,
+      "ent_total_tva": 180,
+      "ent_net_a_payer": 1080
+    },
+    "lignes": {
+      "1": {
+        "lig_montant_ht": 1000
+      },
+      "2": {
+        "lig_montant_ht": -100
+      },
+      "3": {
+        "lig_montant_ht": null
+      }
+    }
+  }
+}

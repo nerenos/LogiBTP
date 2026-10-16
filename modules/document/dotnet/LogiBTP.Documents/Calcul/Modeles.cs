@@ -27,6 +27,8 @@ public class ResultatDocument<TDoc, TLigne>
     public List<DocumentTva> Tva { get; set; } = [];
     /// <summary>Structure du pied : totaux calculés, groupes (postes HT, TVA, postes TTC), sous-totaux de pied.</summary>
     public List<EntreePied> Pied { get; set; } = [];
+    /// <summary>Pieds des sections qui portent le leur (document à plusieurs sections) ; Pied est alors le pied global.</summary>
+    public List<PiedSection> PiedsSections { get; set; } = [];
     public List<MessageCalcul> Erreurs { get; set; } = [];
     public List<MessageCalcul> Avertissements { get; set; } = [];
 }
@@ -34,8 +36,14 @@ public class ResultatDocument<TDoc, TLigne>
 /// <summary>
 /// Entrée de la structure du pied, dans l'ordre du calcul : total calculé (TOTAL_HT, HT_NET, TOTAL_TTC, SOUS_TOTAL, NET),
 /// groupe (HT, TVA, TTC) de lignes de pied, ou sous-total de pied saisi (ligne). Un total égal au suivant est masqué.
+/// Pied global d'un document à pieds de section : lignes consolidées (genre « consolide » : libellé, mode, sens, base
+/// additionnée, taux commun).
 /// </summary>
-public sealed record EntreePied(string Genre, string Cle, long? LigId, List<long>? Lignes, decimal Montant, bool Masque);
+public sealed record EntreePied(string Genre, string Cle, long? LigId, List<long>? Lignes, decimal Montant, bool Masque,
+    string? Libelle = null, string? Mode = null, int? Sens = null, decimal? Base = null, decimal? Taux = null);
+
+/// <summary>Pied d'une section qui porte le sien (structure comme celle du pied du document).</summary>
+public sealed record PiedSection(long LigId, List<EntreePied> Pied);
 
 public sealed class EntiteLiee
 {

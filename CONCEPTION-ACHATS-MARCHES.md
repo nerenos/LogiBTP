@@ -1029,3 +1029,22 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Vérifié sur la base de démo : validation refusée sans marché ; commande validée avec un nouveau chantier et un nouveau
   marché (base) ; seconde commande validée comme avenant (rang 1) ; montant du marché = somme des deux commandes ;
   fiche marché (commande, avenant, montant).
+
+### Lot 4 – pieds de section et pied global (16/10/2026)
+
+- Q20 a : une SECTION à la racine peut porter son pied (lignes de pied et sous-totaux de pied filles de la section,
+  `PIED_RACINE` assoupli) ; chaque section calcule son pied sur ses propres lignes (`pieds_sections` du résultat) ; sans
+  pied de section, le calcul est inchangé. Répliqué entre les deux `MoteurDocument` (`calculerPortee` / `CalculerPortee`,
+  `consoliderPied` / `ConsoliderPied`), jeux `modules/document/tests/cas/08_pieds_sections.json` (deux sections,
+  montants vérifiés à la main) et `09_pieds_sections_controles.json`.
+- Q21 : pied global = total HT des sections, lignes des pieds de section consolidées par nature (type, mode, sens) et
+  libellé (sans accents ni casse, table d'accents explicite identique JS / C#), montants et bases additionnés, taux
+  affiché s'il est commun ; TVA additionnée par taux ; postes HT, TVA, postes TTC ; net global = somme des nets de
+  section.
+- Q22 (premier temps) : le pied global ne reçoit que des postes après TVA saisis à la racine (retenue de garantie,
+  acompte…) ; un poste HT ou une ventilation TVA à la racine est refusé (`PIED_GLOBAL`). À affiner (compte prorata).
+- 13.6 : un pied de section dans un document à moins de deux sections est une erreur (`PIED_SECTION_INTERDIT`) : un
+  devis ou une commande saisis à la main n'en ont pas.
+- Grille : tranche « Pied de la section » repliable en fin de chaque section, pied global avec ses lignes
+  « Consolidé ». Vérifié dans le navigateur sur un devis d'essai (supprimé ensuite) : nets de section 1 117,20 et
+  687,99, pied global 1 705,19 (moteur BTP du serveur identique).

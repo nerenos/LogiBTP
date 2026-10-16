@@ -1,0 +1,400 @@
+{
+  "nom": "Pieds de section et pied global consolidé",
+  "description": "Document à deux sections (commande et avenant), chacune avec son pied : remise en % (libellés « Remise » et « rémise » regroupés : sans accents ni casse, taux différents : pas de taux commun), port en montant (section 2 seulement, réparti sur les bases de TVA), ventilation TVA, retenue de garantie 5 % après TVA (taux commun). Pied global : total HT des sections, postes HT consolidés, TVA additionnée par taux, postes TTC consolidés, puis l'acompte saisi à la racine. Net global = somme des nets de section − acompte.",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      },
+      {
+        "ttv_id": 2,
+        "ttv_code": "T10",
+        "ttv_libelle": "TVA 10 %",
+        "ttv_taux": 10,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Commande CC-1"
+      },
+      {
+        "lig_id": 11,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Béton",
+        "lig_qte": 10,
+        "lig_pv": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 12,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Remise",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 2,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 13,
+        "lig_parent_id": 1,
+        "lig_ordre": 3,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      },
+      {
+        "lig_id": 14,
+        "lig_parent_id": 1,
+        "lig_ordre": 4,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Retenue de garantie",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 5,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": null,
+        "lig_ordre": 2,
+        "lig_tyl_id": 11,
+        "lig_libelle_html": "Avenant CC-2"
+      },
+      {
+        "lig_id": 21,
+        "lig_parent_id": 2,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Fenêtre",
+        "lig_qte": 2,
+        "lig_pv": 250,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 22,
+        "lig_parent_id": 2,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Pose",
+        "lig_qte": 1,
+        "lig_pv": 100,
+        "lig_tva_id": 2
+      },
+      {
+        "lig_id": 23,
+        "lig_parent_id": 2,
+        "lig_ordre": 3,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "rémise ",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 3,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 26,
+        "lig_parent_id": 2,
+        "lig_ordre": 4,
+        "lig_tyl_id": 8,
+        "lig_libelle_html": "Port",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 30,
+        "lig_pied_sens": 1
+      },
+      {
+        "lig_id": 24,
+        "lig_parent_id": 2,
+        "lig_ordre": 5,
+        "lig_tyl_id": 10,
+        "lig_libelle_html": "TVA"
+      },
+      {
+        "lig_id": 25,
+        "lig_parent_id": 2,
+        "lig_ordre": 6,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Retenue de <b>garantie</b>",
+        "lig_pied_mode": "P",
+        "lig_pied_valeur": 5,
+        "lig_pied_sens": -1
+      },
+      {
+        "lig_id": 30,
+        "lig_parent_id": null,
+        "lig_ordre": 3,
+        "lig_tyl_id": 9,
+        "lig_libelle_html": "Acompte versé",
+        "lig_pied_mode": "M",
+        "lig_pied_valeur": 100,
+        "lig_pied_sens": -1
+      }
+    ]
+  },
+  "attendu": {
+    "erreurs": [],
+    "document": {
+      "ent_total_ht": 1592,
+      "ent_total_tva": 308.2,
+      "ent_total_ttc": 1900.2,
+      "ent_net_a_payer": 1705.19
+    },
+    "lignes": {
+      "1": {
+        "lig_montant_ht": 1000
+      },
+      "2": {
+        "lig_montant_ht": 600
+      },
+      "12": {
+        "lig_montant_ht": -20,
+        "lig_base_calcul": 1000
+      },
+      "13": {
+        "lig_montant_tva": 196
+      },
+      "14": {
+        "lig_montant_ht": -58.8,
+        "lig_base_calcul": 1176
+      },
+      "23": {
+        "lig_montant_ht": -18,
+        "lig_base_calcul": 600
+      },
+      "26": {
+        "lig_montant_ht": 30
+      },
+      "24": {
+        "lig_montant_tva": 112.2
+      },
+      "25": {
+        "lig_montant_ht": -36.21,
+        "lig_base_calcul": 724.2
+      },
+      "30": {
+        "lig_montant_ht": -100
+      }
+    },
+    "tva": [
+      {
+        "tva_code": "T10",
+        "tva_base_ht": 102,
+        "tva_montant_net": 10.2
+      },
+      {
+        "tva_code": "T20",
+        "tva_base_ht": 1490,
+        "tva_montant_net": 298
+      }
+    ],
+    "pied": [
+      {
+        "genre": "total",
+        "cle": "TOTAL_HT",
+        "montant": 1600,
+        "masque": false,
+        "lignes": null
+      },
+      {
+        "genre": "consolide",
+        "cle": "HT",
+        "libelle": "Remise",
+        "mode": "P",
+        "sens": -1,
+        "montant": -38,
+        "base": 1600,
+        "taux": null,
+        "lignes": [
+          12,
+          23
+        ]
+      },
+      {
+        "genre": "consolide",
+        "cle": "HT",
+        "libelle": "Port",
+        "mode": "M",
+        "sens": 1,
+        "montant": 30,
+        "base": null,
+        "taux": null,
+        "lignes": [
+          26
+        ]
+      },
+      {
+        "genre": "total",
+        "cle": "HT_NET",
+        "montant": 1592,
+        "masque": false,
+        "lignes": null
+      },
+      {
+        "genre": "groupe",
+        "cle": "TVA",
+        "montant": 308.2,
+        "lignes": [
+          13,
+          24
+        ]
+      },
+      {
+        "genre": "total",
+        "cle": "TOTAL_TTC",
+        "montant": 1900.2,
+        "masque": false,
+        "lignes": null
+      },
+      {
+        "genre": "consolide",
+        "cle": "TTC",
+        "libelle": "Retenue de garantie",
+        "mode": "P",
+        "sens": -1,
+        "montant": -95.01,
+        "base": 1900.2,
+        "taux": 5,
+        "lignes": [
+          14,
+          25
+        ]
+      },
+      {
+        "genre": "groupe",
+        "cle": "TTC",
+        "montant": -100,
+        "lignes": [
+          30
+        ]
+      },
+      {
+        "genre": "total",
+        "cle": "NET",
+        "montant": 1705.19,
+        "masque": false,
+        "lignes": null
+      }
+    ],
+    "pieds_sections": [
+      {
+        "lig_id": 1,
+        "pied": [
+          {
+            "genre": "total",
+            "cle": "TOTAL_HT",
+            "montant": 1000,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "HT",
+            "montant": -20,
+            "lignes": [
+              12
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "HT_NET",
+            "montant": 980,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "TVA",
+            "montant": 196,
+            "lignes": [
+              13
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "TOTAL_TTC",
+            "montant": 1176,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "TTC",
+            "montant": -58.8,
+            "lignes": [
+              14
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "NET",
+            "montant": 1117.2,
+            "lignes": null
+          }
+        ]
+      },
+      {
+        "lig_id": 2,
+        "pied": [
+          {
+            "genre": "total",
+            "cle": "TOTAL_HT",
+            "montant": 600,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "HT",
+            "montant": 12,
+            "lignes": [
+              23,
+              26
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "HT_NET",
+            "montant": 612,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "TVA",
+            "montant": 112.2,
+            "lignes": [
+              24
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "TOTAL_TTC",
+            "montant": 724.2,
+            "lignes": null
+          },
+          {
+            "genre": "groupe",
+            "cle": "TTC",
+            "montant": -36.21,
+            "lignes": [
+              25
+            ]
+          },
+          {
+            "genre": "total",
+            "cle": "NET",
+            "montant": 687.99,
+            "lignes": null
+          }
+        ]
+      }
+    ]
+  }
+}
