@@ -68,7 +68,8 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 - **Document ↔ GED** : onglet Pièces (`type_element` = code du type, `id_element` = `ent_groupe_id ?? ent_id`),
   pièces à envoyer (`dge_a_envoyer`, module Mail à venir) ; fichier source d'un import (catégorie `import`).
 - **Structure / Document ↔ GED** : arborescence de l'explorateur (`ArborescenceBtp`) : Projet › Affaire › Chantier ›
-  Marché › documents (dossiers liés aux pièces de chaque document, rangés sous le rattachement le plus précis) ; dans
+  Marché › Ventes / Achats / Stock › type de document › documents (dossiers virtuels pour la famille et le type ; dossiers
+  liés aux pièces de chaque document, rangés sous le rattachement le plus précis) ; dans
   un regroupement, liens symboliques vers les documents enfants ; depuis un document, ses enfants imbriqués
   (`document_lien`, route `descendants`). Un dépôt dans un dossier lie la pièce à l'élément de ce dossier.
 - **Document ↔ Bibliothèque** : appel par code, `BIB:CODE`, F3 ou glisser-déposer entre fenêtres (`AppelBibliotheque`,

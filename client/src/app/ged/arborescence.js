@@ -4,7 +4,8 @@ import { ArborescenceGed } from '@logibtp/ged/ui';
 // affaires, dans le sens Projet › Affaire › Chantier › Marché › Documents, chaque document (groupe d'indices) étant
 // un dossier lié à ses pièces (type_element = code du type, id_element = groupe).
 //   - racine : la fiche ou le document ouvert ; GED globale : regroupements « Affaires » et « Projets » ;
-//   - un document est rangé sous l'élément le plus précis de son rattachement (marché, chantier, affaire, projet) ;
+//   - un document est rangé sous l'élément le plus précis de son rattachement (marché, chantier, affaire, projet),
+//     dans des dossiers virtuels par famille (Ventes, Achats, Stock) puis par type (Devis client, Commande client…) ;
 //   - regroupement de documents (projet, affaire, chantier, marché) : les documents enfants (transformations, copies)
 //     ne sont pas imbriqués ; le dossier d'un document montre des liens symboliques vers ses enfants ;
 //   - racine sur un document : chemin des documents enfants (devis › commande › facture…), imbriqués.
@@ -12,6 +13,12 @@ import { ArborescenceGed } from '@logibtp/ged/ui';
 const ICONES = { projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
 const PREFIXES = { projet: 'P', affaire: 'A', chantier: 'C', marche: 'M' };
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
+const FAMILLES = [['V', 'Ventes', '💶'], ['A', 'Achats', '🛒'], ['S', 'Stock', '📦']];
+// Ordre des types dans une famille : cycle du document (suffixe du code), les autres ensuite par libellé.
+const ORDRE_TYPES = ['DEVIS', 'DEMANDE', 'COMMANDE', 'RESERVATION', 'RECEPTION', 'ENTREE', 'SORTIE', 'TRANSFERT', 'RETOUR', 'SITUATION',
+  'REPRISE_AVT', 'FACTURE_AVT', 'FACTURE', 'AVOIR', 'INVENTAIRE'];
+const rangType = (code) => { const i = ORDRE_TYPES.indexOf(String(code ?? '').replace(/^[A-Z]_/, '')); return i < 0 ? ORDRE_TYPES.length : i; };
+const familleDe = (d) => d.famille ?? String(d.type ?? '').charAt(0);
 
 export class ArborescenceBtp extends ArborescenceGed {
   /**
@@ -73,6 +80,8 @@ export class ArborescenceBtp extends ArborescenceGed {
       return (n.niveau === 'affaire' ? refs.affaires : refs.projets).map((x) => this.#noeudStructure(n.niveau, x));
     }
     if (STRUCTURE.includes(n.type)) return this.#enfantsStructure(n);
+    if (n.type === 'famille') return this.#enfantsFamille(n);
+    if (n.type === 'type_document') return this.#groupes(n.documents).map((d) => this.#noeudDocument(d, 'regroupement', n.contexte));
     if (n.type === 'document') return this.#enfantsDocument(n);
     return [];
   }
@@ -102,8 +111,30 @@ export class ArborescenceBtp extends ArborescenceGed {
     }
     // Documents rangés sous ce nœud : rattachement le plus précis égal au nœud.
     const ici = contexte.documents.filter((d) => this.#placement(d) === n.cle && (!projet || !d.projet_id || d.projet_id === projet));
-    const documents = this.#groupes(ici).map((d) => this.#noeudDocument(d, 'regroupement', { ...contexte, base: n }));
-    return [...sous, ...documents];
+    // Dossiers virtuels par famille (Ventes, Achats, Stock), sans documents propres.
+    const familles = FAMILLES.map(([code, libelle, icone]) => ({ code, libelle, icone, documents: ici.filter((d) => familleDe(d) === code) }))
+      .filter((f) => f.documents.length)
+      .map((f) => ({ cle: `F${f.code}`, type: 'famille', famille: f.code, libelle: f.libelle, icone: f.icone, groupe: true, element: null,
+        sous_titre: this.#compte(f.documents), documents: f.documents, contexte: { ...contexte, base: n } }));
+    return [...sous, ...familles];
+  }
+
+  #compte(docs) {
+    const n = new Set(docs.map((d) => d.groupe_id ?? d.id)).size;
+    return `${n} document${n > 1 ? 's' : ''}`;
+  }
+
+  /** Dossiers virtuels par type de document dans une famille, dans l'ordre du cycle (devis, commande, livraison…). */
+  #enfantsFamille(n) {
+    const types = new Map();
+    for (const d of n.documents) {
+      if (!types.has(d.type)) types.set(d.type, { code: d.type, libelle: d.type_libelle ?? d.type, documents: [] });
+      types.get(d.type).documents.push(d);
+    }
+    return [...types.values()]
+      .sort((a, b) => rangType(a.code) - rangType(b.code) || a.libelle.localeCompare(b.libelle, 'fr'))
+      .map((t) => ({ cle: `T${t.code}`, type: 'type_document', libelle: t.libelle, icone: '📂', groupe: true, element: null,
+        sous_titre: this.#compte(t.documents), documents: t.documents, contexte: n.contexte }));
   }
 
   /** Clé du nœud où un document est rangé : marché, chantier, affaire, puis projet. */
@@ -111,11 +142,11 @@ export class ArborescenceBtp extends ArborescenceGed {
     return d.marche_id ? `M${d.marche_id}` : d.chantier_id ? `C${d.chantier_id}` : d.affaire_id ? `A${d.affaire_id}` : d.projet_id ? `P${d.projet_id}` : null;
   }
 
-  /** Chemin d'un document depuis un nœud de regroupement (projet › affaire › chantier › marché › document). */
+  /** Chemin d'un document depuis un nœud de regroupement (projet › affaire › chantier › marché › famille › type › document). */
   #cheminDepuis(base, d) {
     const chaine = [d.projet_id && `P${d.projet_id}`, d.affaire_id && `A${d.affaire_id}`, d.chantier_id && `C${d.chantier_id}`, d.marche_id && `M${d.marche_id}`].filter(Boolean);
     const i = chaine.indexOf(base.cle);
-    return i < 0 ? null : [...chaine.slice(i + 1), `D${d.groupe_id ?? d.id}`];
+    return i < 0 ? null : [...chaine.slice(i + 1), `F${familleDe(d)}`, `T${d.type}`, `D${d.groupe_id ?? d.id}`];
   }
 
   /** Un document par groupe d'indices : l'indice de référence, sinon le plus récent. */

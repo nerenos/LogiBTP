@@ -51,6 +51,7 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 .liste-segments { flex: 1; min-height: 0; overflow: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .segment { display: flex; flex-direction: column; gap: 0.25rem; }
 .segment-valeurs { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.segment-valeurs[hidden] { display: none; }
 .segment .segment-titre {
   display: flex; align-items: center; gap: 0.3rem; font-weight: 600; color: var(--discret); text-align: left;
   border: none; background: none; padding: 0; border-radius: 0; font-size: inherit; cursor: pointer;
