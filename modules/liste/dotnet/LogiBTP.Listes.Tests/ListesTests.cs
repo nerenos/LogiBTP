@@ -129,6 +129,16 @@ public class ConstructeurRequeteTests
         var d = new DemandeListe { Tri = [new() { Colonne = "nom" }], Apres = ["x"] };
         Assert.Equal("CURSEUR", Assert.Throws<ErreurListe>(() => new ConstructeurRequete(Source, Def(), d).Lot(10)).Code);
     }
+
+    [Fact]
+    public void Valeurs_chiffrees_masquees()
+    {
+        var m = LogiBTP.Listes.Web.ServiceListe.SecretMasque;
+        Assert.Equal(m, LogiBTP.Listes.Web.ServiceListe.MasquerSecret("chiffre:v1:QUJD+/=="));
+        Assert.Equal($"{{\"code\": \"{m}\", \"x\": 1}}", LogiBTP.Listes.Web.ServiceListe.MasquerSecret("{\"code\": \"chiffre:v1:QUJD\", \"x\": 1}"));
+        Assert.Equal("texte", LogiBTP.Listes.Web.ServiceListe.MasquerSecret("texte"));
+        Assert.Equal(12, LogiBTP.Listes.Web.ServiceListe.MasquerSecret(12));
+    }
 }
 
 /// <summary>

@@ -429,11 +429,27 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         while (await rd.ReadAsync(ct))
         {
             var l = new Dictionary<string, object?>(rd.FieldCount, StringComparer.Ordinal);
-            for (var i = 0; i < rd.FieldCount; i++) l[rd.GetName(i)] = rd.IsDBNull(i) ? null : rd.GetValue(i);
+            for (var i = 0; i < rd.FieldCount; i++) l[rd.GetName(i)] = rd.IsDBNull(i) ? null : MasquerSecret(rd.GetValue(i));
             res.Add(l);
         }
         return res;
     }, ct);
+
+    /// <summary>Texte affiché à la place d'une valeur chiffrée (mot de passe d'une fiche).</summary>
+    public const string SecretMasque = "••••••";
+
+    [GeneratedRegex(@"chiffre:v1:[A-Za-z0-9+/=]*")]
+    private static partial Regex ValeurChiffree();
+
+    /// <summary>
+    /// Une valeur chiffrée (champ mot de passe d'une fiche, <see cref="Chiffrement"/>) ne sort jamais d'une liste : la
+    /// valeur seule ou incluse dans un texte (colonne JSONB des champs supplémentaires) est remplacée par
+    /// <see cref="SecretMasque"/>. Le mot de passe se révèle depuis la fiche (journalisé).
+    /// </summary>
+    public static object MasquerSecret(object valeur) =>
+        valeur is string t && t.Contains(Chiffrement.Prefixe, StringComparison.Ordinal)
+            ? (Chiffrement.EstChiffre(t) ? SecretMasque : ValeurChiffree().Replace(t, SecretMasque))
+            : valeur;
 
     private static NpgsqlCommand Commande(NpgsqlConnection cnx, NpgsqlTransaction tx, RequeteSql r)
     {
@@ -450,7 +466,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         while (await rd.ReadAsync(ct))
         {
             var l = new Dictionary<string, object?>(rd.FieldCount, StringComparer.Ordinal);
-            for (var i = 0; i < rd.FieldCount; i++) l[rd.GetName(i)] = rd.IsDBNull(i) ? null : rd.GetValue(i);
+            for (var i = 0; i < rd.FieldCount; i++) l[rd.GetName(i)] = rd.IsDBNull(i) ? null : MasquerSecret(rd.GetValue(i));
             res.Add(l);
         }
         return res;

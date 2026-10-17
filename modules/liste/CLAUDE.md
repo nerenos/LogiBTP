@@ -49,6 +49,7 @@
 
 ## Conventions et pièges
 - Toute requête de données : sous-requête encadrée, `SET TRANSACTION READ ONLY` + `statement_timeout` ; identifiants jamais pris du client (colonnes connues de la source), valeurs en paramètres.
+- Valeurs chiffrées (`chiffre:v1:…`, mots de passe des fiches) jamais renvoyées : `ServiceListe.MasquerSecret` les remplace par `••••••`, seules ou dans un texte (JSONB des champs supplémentaires).
 - Requête manuelle : `ValidationRequete.Valider` (SELECT/WITH seul, mots-clés interdits, `$$` refusé) n'est qu'une première barrière.
 - Saisie : colonne saisissable = cochée `modifiable` + source `sli_modifiable` + `is_updatable` dans `information_schema` ; ligne verrouillée, empreinte `_h` comparée, UPDATE sur la vue.
 - `CacheSchemas` indexé par base (une base par société).
