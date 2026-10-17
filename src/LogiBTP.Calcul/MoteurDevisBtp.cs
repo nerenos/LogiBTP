@@ -122,6 +122,10 @@ public sealed partial class MoteurDevisBtp : MoteurDocument<DocumentBtp, Documen
 
     protected override decimal LireVariable(string portee, string nom, DocumentLigneBtp? ligne) => _portees.Lire(portee, nom, ligne?.LigId);
 
+    /// <summary>Libellé : variables chaîne et booléen des métrés affichées telles quelles (Vrai / Faux).</summary>
+    protected override object? LireVariableLibelle(string portee, string nom, DocumentLigneBtp? ligne) =>
+        _portees.LireValeur(portee, nom, ligne?.LigId) is bool b ? (b ? "Vrai" : "Faux") : _portees.LireValeur(portee, nom, ligne?.LigId);
+
     // ------------------------------------------------------------------ validation : blocages de prix
 
     protected override void ValiderLigne(DocumentLigneBtp l)
@@ -192,6 +196,7 @@ public sealed partial class MoteurDevisBtp : MoteurDocument<DocumentBtp, Documen
         var r = ScriptMetre.Evaluer(metre, new ContexteScript
         {
             Resoudre = ResolveurScript(l), Ecrire = (reference, valeur) => EcrireScript(l, reference, valeur), Portees = _portees, LigneId = l.LigId,
+            Fonctions = FonctionsScript,
         });
         foreach (var e in r.Erreurs) Erreur(l.LigId, e.Code, ScriptMetre.Message(e), false);
         if (r.Erreurs.Count > 0) _libellesScript.Remove(l.LigId);
@@ -204,11 +209,14 @@ public sealed partial class MoteurDevisBtp : MoteurDocument<DocumentBtp, Documen
         _scripts.Add(new DiagnosticScript(metre.MtrId, l.LigId, r.Resultat, r.Erreurs, r.Avertissements));
     }
 
+    /// <summary>Fonctions propres à l'hôte proposées aux scripts (FonctionsBtp ↔ fonctions-btp.js).</summary>
+    private static IReadOnlyDictionary<string, FonctionScript> FonctionsScript => FonctionsBtp.Catalogue;
+
     /// <summary>Lecture d'un script : variables et données typées ; {{lig_libelle_html}} = libellé courant (déjà écrit par le script).</summary>
     private Func<string, object?> ResolveurScript(DocumentLigneBtp l) => texte =>
     {
         var reference = References.Analyser(texte);
-        if (reference is ReferenceVariable v) return LireVariable(v.Portee, v.Nom, l);
+        if (reference is ReferenceVariable v) return _portees.LireValeur(v.Portee, v.Nom, l.LigId);
         var d = (ReferenceDonnee)reference;
         if (d.Table is null && d.Colonne == "lig_libelle_html") return _libellesScript.GetValueOrDefault(l.LigId) ?? l.LigLibelleHtml ?? "";
         return LireDonnee(d, l, PhaseCalcul.Calcul);

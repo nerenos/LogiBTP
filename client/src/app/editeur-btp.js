@@ -4,6 +4,7 @@ import {
 } from '@logibtp/document/ui';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, CODES_TL, estChiffree, natureObligatoire } from '../calcul/index.js';
+import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
 import { compteLigne, libelleCompte } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
 
@@ -91,6 +92,9 @@ export class PressePapiersBtp extends PressePapiers {
  * (et ouvrages englobants), @ ligne courante ; seules les variables définies avant la ligne sont lisibles.
  */
 export class DictionnaireBtp extends DictionnaireMetre {
+  /** Fonctions BTP des scripts (celles du moteur) : complétion, dictionnaire et contrôle de l'éditeur. */
+  fonctions() { return FONCTIONS_BTP; }
+
   entrees(ligId, options = {}) {
     const lignes = this.hote.saisie.lignes;
     this.index = parId(C, lignes);

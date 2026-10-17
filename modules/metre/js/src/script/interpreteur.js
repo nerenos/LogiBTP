@@ -198,7 +198,6 @@ export function executerScript(texteScript, contexte = {}) {
         // Écriture au contexte le plus proche (=) ou là où la variable existe (opérations composées).
         if (!contexte.portees) throw new ErreurCalcul('PORTEE', `${c.ref} : aucune portée disponible`);
         if (n.op === '=') {
-          if (v.t !== 'N') throw new Interruption('TYPE', `${c.ref} : numérique attendu`, n);
           contexte.portees.affecter(c.portee, c.nom, '=', v.v, contexte.ligneId);
           return;
         }

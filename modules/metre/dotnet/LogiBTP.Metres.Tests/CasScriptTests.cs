@@ -65,7 +65,7 @@ public class CasScriptTests
         {
             Resoudre = texte => References.Analyser(texte) switch
             {
-                ReferenceVariable v => portees.Lire(v.Portee, v.Nom, 1),
+                ReferenceVariable v => portees.LireValeur(v.Portee, v.Nom, 1),
                 ReferenceDonnee d => donnees.TryGetValue(d.Colonne, out var x) ? x : throw new ErreurCalcul("COLONNE_INCONNUE", $"Colonne inconnue {d.Colonne}"),
                 _ => throw new InvalidOperationException(),
             },
@@ -96,8 +96,8 @@ public class CasScriptTests
         foreach (var (cible, v) in a["portees"]?.AsObject() ?? [])
         {
             var rv = (ReferenceVariable)References.Analyser(cible);
-            var valeur = portees.Lire(rv.Portee, rv.Nom, 1);
-            if (valeur != v!.GetValue<decimal>()) fautes.Add($"portée {cible} : attendu {v}, obtenu {valeur}");
+            var valeur = portees.LireValeur(rv.Portee, rv.Nom, 1);
+            if (!CasPartages.Egal(v, Noeud(valeur))) fautes.Add($"portée {cible} : attendu {v}, obtenu {valeur}");
         }
         foreach (var (col, v) in a["donnees"]?.AsObject() ?? [])
         {

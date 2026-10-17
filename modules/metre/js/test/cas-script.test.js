@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { D, analyserReference, ErreurCalcul } from '@logibtp/socle';
+import { D, Dec, analyserReference, ErreurCalcul } from '@logibtp/socle';
 import { egal } from '@logibtp/socle/testing';
 import { Portees, executerScript, modifierDeclaration, litteral } from '../src/index.js';
 
@@ -19,7 +19,7 @@ function executer(entree) {
   }
   const resoudre = (texte) => {
     const r = analyserReference(texte);
-    if (r.genre === 'variable') return portees.lire(r.portee, r.nom, 1);
+    if (r.genre === 'variable') return portees.lireValeur(r.portee, r.nom, 1);
     if (!(r.colonne in donnees)) throw new ErreurCalcul('COLONNE_INCONNUE', `Colonne inconnue ${r.colonne}`);
     const v = donnees[r.colonne];
     return typeof v === 'number' ? D(v) : v;
@@ -49,7 +49,8 @@ function comparer(attendu, { r, portees, donnees }) {
   }
   for (const [cible, v] of Object.entries(attendu.portees ?? {})) {
     const ref = analyserReference(cible);
-    const obtenu = portees.lire(ref.portee, ref.nom, 1).toString();
+    const valeur = portees.lireValeur(ref.portee, ref.nom, 1);
+    const obtenu = valeur instanceof Dec ? valeur.toString() : valeur;
     if (!egal(v, obtenu)) fautes.push(`portée ${cible} : attendu ${v}, obtenu ${obtenu}`);
   }
   for (const [col, v] of Object.entries(attendu.donnees ?? {})) {

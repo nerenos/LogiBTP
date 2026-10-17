@@ -1,0 +1,77 @@
+{
+  "nom": "Métrés en script : variables chaîne et booléen publiées dans les portées, fonction BTP",
+  "description": "Titre « Volets ». Volet : script qui déclare Teinte (chaîne) et Pose (booléen), publiés en @ de la ligne, et écrit $Finition (chaîne) dans le titre ; quantité 3. Le libellé du volet lit {{@Teinte}} et {{@Pose}} (Vrai), celui de la peinture {{$Finition}}. Quantité du volet : Conditionnements(7; 2,5) = 3 (fonction propre au BTP).",
+  "entree": {
+    "document": {
+      "ent_id": 1,
+      "ent_mode_calcul_ouvrage": "D",
+      "ent_precision_montant": 2
+    },
+    "taux_tva": [
+      {
+        "ttv_id": 1,
+        "ttv_code": "T20",
+        "ttv_libelle": "TVA 20 %",
+        "ttv_taux": 20,
+        "ttv_categorie": "N"
+      }
+    ],
+    "lignes": [
+      {
+        "lig_id": 1,
+        "lig_parent_id": null,
+        "lig_ordre": 1,
+        "lig_tyl_id": 1,
+        "lig_libelle_html": "Volets"
+      },
+      {
+        "lig_id": 2,
+        "lig_parent_id": 1,
+        "lig_ordre": 1,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Volet {{@Teinte}} posé : {{@Pose}}",
+        "lig_qte_source": "M",
+        "lig_mtr_id": 40,
+        "lig_pa": 100,
+        "lig_tva_id": 1
+      },
+      {
+        "lig_id": 3,
+        "lig_parent_id": 1,
+        "lig_ordre": 2,
+        "lig_tyl_id": 3,
+        "lig_libelle_html": "Peinture {{$Finition}}",
+        "lig_qte": 2,
+        "lig_pa": 10,
+        "lig_tva_id": 1
+      }
+    ],
+    "metres": [
+      {
+        "mtr_id": 40,
+        "mtr_lig_id": 2,
+        "mtr_libelle": "Volets",
+        "mtr_script": "Teinte est une chaîne = \"RAL \" + 7016\nPose est un booléen = Vrai\n$Finition = \"satinée\"\nRenvoyer Conditionnements(7; 2,5)"
+      }
+    ],
+    "variables": []
+  },
+  "attendu": {
+    "erreurs": [],
+    "metres": {
+      "40": {
+        "mtr_resultat": 3
+      }
+    },
+    "lignes": {
+      "2": {
+        "lig_qte_vendue": 3,
+        "lig_libelle_affiche": "Volet RAL 7016 posé : Vrai"
+      },
+      "3": {
+        "lig_qte_vendue": 2,
+        "lig_libelle_affiche": "Peinture satinée"
+      }
+    }
+  }
+}

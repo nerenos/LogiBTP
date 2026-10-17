@@ -14,7 +14,7 @@ public static class ScriptMetre
 
     /// <summary>
     /// Exécute le script du métré. Renseigne MtrResultat (null sans « Renvoyer » ou en erreur) ; sans erreur, publie
-    /// les variables numériques non locales en portée @ de la ligne et affecte le résultat à MtrVariable.
+    /// les variables non locales (numériques, chaînes, booléens) en portée @ de la ligne et affecte le résultat à MtrVariable.
     /// Le contexte doit fournir les portées et la ligne.
     /// </summary>
     public static ResultatScript Evaluer(Metre metre, ContexteScript contexte)
@@ -25,7 +25,7 @@ public static class ScriptMetre
         var portees = contexte.Portees!;
         foreach (var v in r.Variables)
         {
-            if (!v.Local && v.Type == 'N') portees.Affecter("@", v.Nom, "=", (decimal)v.Valeur!, contexte.LigneId);
+            if (!v.Local && v.Valeur is not null) portees.AffecterValeur("@", v.Nom, v.Valeur, contexte.LigneId);
         }
         if (!string.IsNullOrEmpty(metre.MtrVariable) && r.Resultat is decimal resultat)
         {

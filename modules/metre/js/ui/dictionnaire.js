@@ -16,6 +16,9 @@ export class DictionnaireMetre {
   /** Données de l'hôte proposées : [{ valeur: '{{ref}}', libelle, detail, groupe }]. */
   donnees(_ligId, _options) { return []; }
 
+  /** Fonctions propres à l'hôte (nom normalisé → définition), les mêmes que celles que son moteur passe aux scripts. */
+  fonctions() { return {}; }
+
   /**
    * Entrées du dictionnaire pour une ligne : [{ valeur: '{{ref}}', libelle, detail, groupe }].
    * `pourDefinition` : formules de l'onglet Définition (évaluées après la quantité de la ligne).

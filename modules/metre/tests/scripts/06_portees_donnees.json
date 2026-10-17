@@ -1,6 +1,6 @@
 {
   "nom": "Variables de portée et données de l'hôte",
-  "description": "Lecture et écriture des variables $$, $, @@, @ (avec ou sans accolades), lecture des données, écriture du libellé.",
+  "description": "Lecture et écriture des variables $$, $, @@, @ (avec ou sans accolades ; numériques, chaînes, booléens), lecture des données, écriture du libellé.",
   "cas": [
     {
       "nom": "Lecture",
@@ -40,6 +40,47 @@
           "$Surface": 12,
           "@Copie": 15
         }
+      }
+    },
+    {
+      "nom": "Chaîne et booléen dans les portées",
+      "entree": {
+        "script": [
+          "$Teinte = \"RAL \" + 9010",
+          "@@Pose = Vrai",
+          "{{@Note}} = $Teinte + \" mat\"",
+          "Si @@Pose alors",
+          "    Renvoyer 1",
+          "Fin",
+          "Renvoyer 0"
+        ]
+      },
+      "attendu": {
+        "resultat": 1,
+        "portees": {
+          "$Teinte": "RAL 9010",
+          "@@Pose": true,
+          "@Note": "RAL 9010 mat"
+        }
+      }
+    },
+    {
+      "nom": "Opération composée sur une chaîne de portée",
+      "entree": {
+        "script": [
+          "$$x = \"a\"",
+          "$$x += 1",
+          "Renvoyer 1"
+        ]
+      },
+      "attendu": {
+        "erreurs": [
+          {
+            "code": "TYPE",
+            "ligne": 2,
+            "colonne": 5
+          }
+        ]
       }
     },
     {

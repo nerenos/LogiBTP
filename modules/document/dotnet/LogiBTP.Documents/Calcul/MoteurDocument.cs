@@ -202,6 +202,9 @@ public class MoteurDocument<TDoc, TLigne>
     protected virtual decimal LireVariable(string portee, string nom, TLigne? ligne) =>
         throw new ErreurCalcul("VARIABLE_INCONNUE", $"Variable {{{{{portee}{nom}}}}} non définie à ce point du document");
 
+    /// <summary>Variable lue par un libellé : nombre par défaut ; une spécialisation peut rendre un texte (variable chaîne d'un métré).</summary>
+    protected virtual object? LireVariableLibelle(string portee, string nom, TLigne? ligne) => LireVariable(portee, nom, ligne);
+
     protected internal Func<string, decimal> Resolveur(TLigne? ligne, PhaseCalcul phase) => texte =>
     {
         var reference = References.Analyser(texte);
@@ -1097,7 +1100,7 @@ public class MoteurDocument<TDoc, TLigne>
             object? Resoudre(string texte)
             {
                 var r = References.Analyser(texte);
-                if (r is ReferenceVariable v) return LireVariable(v.Portee, v.Nom, l);
+                if (r is ReferenceVariable v) return LireVariableLibelle(v.Portee, v.Nom, l);
                 return LireDonnee((ReferenceDonnee)r, l, PhaseCalcul.Libelle);
             }
             var (texteAffiche, inconnues) = Libelles.Remplacer(SourceLibelle(l), Resoudre);

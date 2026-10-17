@@ -179,6 +179,11 @@ export class MoteurDocument {
     throw new ErreurCalcul('VARIABLE_INCONNUE', `Variable {{${portee}${nom}}} non définie à ce point du document`);
   }
 
+  /** Variable lue par un libellé : nombre par défaut ; une spécialisation peut rendre un texte (variable chaîne d'un métré). */
+  lireVariableLibelle(portee, nom, ligne) {
+    return this.lireVariable(portee, nom, ligne);
+  }
+
   resolveur(ligne, phase) {
     return (texte) => {
       const ref = analyserReference(texte);
@@ -930,7 +935,7 @@ export class MoteurDocument {
     for (const l of this.ordre) {
       const resoudre = (texte) => {
         const ref = analyserReference(texte);
-        if (ref.genre === 'variable') return { valeur: this.lireVariable(ref.portee, ref.nom, l), type: null };
+        if (ref.genre === 'variable') return { valeur: this.lireVariableLibelle(ref.portee, ref.nom, l), type: null };
         const { valeur, colonne } = this.lireDonnee(ref, l, 'libelle');
         return { valeur, type: this.colonnesDates.has(colonne) ? 'date' : this.colonnesDecimales.has(colonne) ? 'decimale' : null };
       };

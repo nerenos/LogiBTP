@@ -6,6 +6,7 @@ import {
 import {
   COLONNES_DOCUMENT_BTP, COLONNES_LIGNE_BTP, COLONNES_DECIMALES_BTP, COLONNES_PRIX_CALCULES_BTP, COLONNES_QTE_CALCULEES_BTP,
 } from './colonnes-btp.js';
+import { FONCTIONS_BTP } from './fonctions-btp.js';
 
 /**
  * Moteur de calcul d'un devis BTP : spécialise MoteurDocument (module Document) et s'appuie sur le
@@ -111,6 +112,12 @@ export class MoteurDevisBtp extends MoteurDocument {
     return this.portees.lire(portee, nom, ligne?.lig_id ?? null);
   }
 
+  /** Libellé : variables chaîne et booléen des métrés affichées telles quelles (Vrai / Faux). */
+  lireVariableLibelle(portee, nom, ligne) {
+    const v = this.portees.lireValeur(portee, nom, ligne?.lig_id ?? null);
+    return typeof v === 'boolean' ? (v ? 'Vrai' : 'Faux') : v;
+  }
+
   // ---------------------------------------------------------------- validation : blocages de prix
 
   validerLigne(l) {
@@ -169,6 +176,7 @@ export class MoteurDevisBtp extends MoteurDocument {
   evaluerScript(l, metre) {
     const r = evaluerScriptMetre(metre, {
       resoudre: this.resolveurScript(l), ecrire: (ref, valeur) => this.ecrireScript(l, ref, valeur), portees: this.portees, ligneId: l.lig_id,
+      fonctions: this.fonctionsScript,
     });
     for (const e of r.erreurs) this.erreur(l.lig_id, e.code, messageErreurScript(e), false);
     if (r.erreurs.length > 0) this.libellesScript.delete(l.lig_id);
@@ -181,11 +189,14 @@ export class MoteurDevisBtp extends MoteurDocument {
     this.scripts.push({ mtr_id: metre.mtr_id, lig_id: l.lig_id, resultat: r.resultat, erreurs: r.erreurs, avertissements: r.avertissements });
   }
 
+  /** Fonctions propres à l'hôte proposées aux scripts (fonctions-btp.js ↔ FonctionsBtp.cs). */
+  get fonctionsScript() { return FONCTIONS_BTP; }
+
   /** Lecture d'un script : variables et données typées ; {{lig_libelle_html}} = libellé courant (déjà écrit par le script). */
   resolveurScript(l) {
     return (texte) => {
       const ref = analyserReference(texte);
-      if (ref.genre === 'variable') return this.lireVariable(ref.portee, ref.nom, l);
+      if (ref.genre === 'variable') return this.portees.lireValeur(ref.portee, ref.nom, l.lig_id);
       if (!ref.table && ref.colonne === 'lig_libelle_html') return this.libellesScript.get(l.lig_id) ?? l.lig_libelle_html ?? '';
       return this.lireDonnee(ref, l, 'calcul').valeur;
     };

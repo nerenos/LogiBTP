@@ -238,8 +238,7 @@ public sealed class Interpreteur
                     var portees = _contexte.Portees ?? throw new ErreurCalcul("PORTEE", $"{c.Ref} : aucune portée disponible");
                     if (n.Op == "=")
                     {
-                        if (v!.Value.Type != 'N') throw new Interruption("TYPE", $"{c.Ref} : numérique attendu", n);
-                        portees.Affecter(c.Portee, c.Nom, "=", v.Value.Nombre, _contexte.LigneId);
+                        portees.AffecterValeur(c.Portee, c.Nom, v!.Value.Type == 'N' ? v.Value.Nombre : v.Value.Exposer(), _contexte.LigneId);
                         return;
                     }
                     var ancienne = Valeur.N(portees.Lire(c.Portee, c.Nom, _contexte.LigneId));

@@ -9,7 +9,7 @@ export const estScript = (metre) => typeof metre?.mtr_script === 'string';
 
 /**
  * Exécute le script du métré. Renseigne mtr_resultat (null sans « Renvoyer » ou en erreur) ; sans erreur, publie
- * les variables numériques non locales en portée @ de la ligne et affecte le résultat à mtr_variable.
+ * les variables non locales (numériques, chaînes, booléens) en portée @ de la ligne et affecte le résultat à mtr_variable.
  * contexte : celui de executerScript ({ resoudre, ecrire, portees, ligneId, fonctions }).
  * Renvoie le résultat de executerScript.
  */
@@ -19,7 +19,7 @@ export function evaluerScriptMetre(metre, contexte) {
   if (r.erreurs.length > 0) return r;
   const { portees, ligneId } = contexte;
   for (const v of r.variables) {
-    if (!v.local && v.type === 'N') portees.affecter('@', v.nom, '=', D(v.valeur), ligneId);
+    if (!v.local && v.valeur !== null && v.valeur !== undefined) portees.affecter('@', v.nom, '=', v.type === 'N' ? D(v.valeur) : v.valeur, ligneId);
   }
   if (metre.mtr_variable && r.resultat !== null) {
     const c = analyserCibleVariable(metre.mtr_variable);

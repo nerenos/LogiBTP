@@ -38,13 +38,16 @@ const afficher = (v) => (v === null || v === undefined || v === '' ? '—'
  *   creerMetre(ligId)           crée le métré de la ligne (une étape d'annulation) et l'ouvre
  *   variablesDocumentSur(ligId) facultatif : la ligne (section du document) présente les variables du document ($$,
  *                               sans ligne ni métré) au lieu d'un métré
- * Options : fermer(ligId), message(texte), dictionnaire (instance de DictionnaireMetre ou dérivée).
+ * Options : fermer(ligId), message(texte), dictionnaire (instance de DictionnaireMetre ou dérivée), fonctions (fonctions
+ * propres à l'hôte, les mêmes que celles passées au moteur : complétion, dictionnaire et contrôle de l'éditeur ; par
+ * défaut `dictionnaire.fonctions()`).
  */
 export class PanneauMetre {
-  constructor(racine, hote, { fermer, message, dictionnaire } = {}) {
+  constructor(racine, hote, { fermer, message, dictionnaire, fonctions } = {}) {
     this.racine = racine;
     this.hote = hote;
     this.dictionnaire = dictionnaire ?? new DictionnaireMetre(hote);
+    this.fonctionsHote = fonctions ?? this.dictionnaire.fonctions?.() ?? {};
     this.fermerExterne = fermer;
     this.message = message;
     this.mtrId = null;
@@ -95,6 +98,7 @@ export class PanneauMetre {
       surChangement: () => this.planifierEnregistrement(),
       surEchap: () => this.fermer(),
       dictionnaire: () => (this.ligId === null ? [] : this.entreesDictionnaire()),
+      fonctions: () => this.fonctionsHote,
       // Erreurs d'exécution : seulement pour le texte que le moteur a calculé.
       diagnostics: (texte) => (texte === (this.metre()?.mtr_script ?? '') ? this.diagnostic() : null),
     });
@@ -273,7 +277,7 @@ export class PanneauMetre {
   }
 
   /** Fonctions proposées : celles du langage (l'hôte peut surcharger pour ajouter les siennes). */
-  fonctions() { return FONCTIONS; }
+  fonctions() { return { ...FONCTIONS, ...this.fonctionsHote }; }
 
   /**
    * Dictionnaire en groupes repliables : variables et données (avec valeurs), fonctions (signature, description),

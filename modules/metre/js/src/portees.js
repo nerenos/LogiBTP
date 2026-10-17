@@ -1,11 +1,12 @@
-import { arr6, ErreurCalcul } from '@logibtp/socle';
+import { Dec, arr6, ErreurCalcul } from '@logibtp/socle';
 
 /**
  * Magasins de variables de calcul, indépendants de la structure du document hôte.
  *  $$ : document ;  @ : ligne courante ;
  *  autres portées ($, @@…) : contextes fournis par l'hôte, du plus proche au plus lointain
  *  (dans LogiBTP : $ = titres englobants, @@ = ouvrages englobants).
- * L'écriture vise le contexte le plus proche, la lecture remonte la chaîne. Valeurs arrondies à 6 décimales.
+ * L'écriture vise le contexte le plus proche, la lecture remonte la chaîne. Valeurs typées : décimal (arrondi à 6
+ * décimales), chaîne ou booléen (variables d'un script) ; `lire` exige un décimal (formules), `lireValeur` non.
  *
  * hote = {
  *   chaine(portee, ligneId) → identifiants des contextes (tableau vide si aucun),
@@ -42,7 +43,8 @@ export class Portees {
     return contextes.map((c) => `${portee}:${c}`);
   }
 
-  lire(portee, nom, ligneId) {
+  /** Valeur typée d'une variable : décimal, chaîne ou booléen. */
+  lireValeur(portee, nom, ligneId) {
     for (const cle of this.cles(portee, ligneId)) {
       const m = this.magasin(cle, false);
       if (m && m.has(nom)) return m.get(nom);
@@ -50,12 +52,21 @@ export class Portees {
     throw new ErreurCalcul('VARIABLE_INCONNUE', `Variable {{${portee}${nom}}} non définie à ce point du document`);
   }
 
+  /** Valeur numérique d'une variable (formules, quantités) : une chaîne ou un booléen est une erreur TYPE. */
+  lire(portee, nom, ligneId) {
+    const v = this.lireValeur(portee, nom, ligneId);
+    if (!(v instanceof Dec)) throw new ErreurCalcul('TYPE', `Variable {{${portee}${nom}}} : numérique attendu`);
+    return v;
+  }
+
+  /** `=` : décimal, chaîne ou booléen ; `+=` : décimaux seulement. */
   affecter(portee, nom, operation, valeur, ligneId) {
-    const v = arr6(valeur);
+    const v = typeof valeur === 'string' || typeof valeur === 'boolean' ? valeur : arr6(valeur);
     const cles = this.cles(portee, ligneId);
     if (operation === '+=') {
       const m = cles.map((c) => this.magasin(c, false)).find((x) => x && x.has(nom));
       if (!m) throw new ErreurCalcul('VARIABLE_INCONNUE', `Variable {{${portee}${nom}}} non définie : incrémentation impossible`);
+      if (!(m.get(nom) instanceof Dec) || !(v instanceof Dec)) throw new ErreurCalcul('TYPE', `Variable {{${portee}${nom}}} : numérique attendu`);
       const r = arr6(m.get(nom).plus(v));
       m.set(nom, r);
       return r;
