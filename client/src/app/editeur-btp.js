@@ -34,7 +34,12 @@ export class ReglesBtp extends ReglesDocument {
   }
 }
 
-/** Presse-papiers BTP : les métrés (scripts) et les variables suivent les lignes copiées. */
+/**
+ * Presse-papiers BTP : les métrés (scripts), les variables et les clés de ventilation des frais annexes suivent les
+ * lignes copiées. Une clé est recréée sur la copie comme si elle avait été saisie sur la nouvelle ligne : clé de ligne
+ * d'une ligne copiée (sa tranche de frais copiée avec elle, ou la même tranche quand on colle dans le même document),
+ * clé d'élément ou de nature d'une tranche de frais copiée (ses clés de ligne vers des lignes non copiées sont perdues).
+ */
 export class PressePapiersBtp extends PressePapiers {
   extraireComplements(saisie, garder) {
     const metres = saisie.metres.filter((m) => garder.has(m.mtr_lig_id));
@@ -42,6 +47,7 @@ export class PressePapiersBtp extends PressePapiers {
     return {
       metres,
       variables: saisie.variables.filter((v) => (v.var_lig_id !== null && garder.has(v.var_lig_id)) || (v.var_mtr_id !== null && mids.has(v.var_mtr_id))),
+      ventilations: (saisie.ventilations ?? []).filter((k) => garder.has(k.vfr_source_lig_id) || (k.vfr_cible === 'LIGNE' && garder.has(k.vfr_lig_id))),
     };
   }
 
@@ -56,12 +62,27 @@ export class PressePapiersBtp extends PressePapiers {
       variables: variables.map((v, i) => ({
         ...structuredClone(v), var_id: vars[i], var_lig_id: correspondance(lig, v.var_lig_id), var_mtr_id: correspondance(mtr, v.var_mtr_id),
       })),
+      ventilations: (contenu.ventilations ?? [])
+        .filter((k) => k.vfr_cible !== 'LIGNE' || lig.has(k.vfr_lig_id))
+        .map((k) => ({
+          ...structuredClone(k), vfr_id: compteur.suivant(),
+          vfr_source_lig_id: lig.has(k.vfr_source_lig_id) ? lig.get(k.vfr_source_lig_id) : k.vfr_source_lig_id,
+          vfr_lig_id: k.vfr_cible === 'LIGNE' ? lig.get(k.vfr_lig_id) : null,
+          // Tranche de frais restée dans le document d'origine : la clé ne vaut que si l'on colle dans ce document.
+          _source_externe: !lig.has(k.vfr_source_lig_id),
+        })),
+      source_ent_id: contenu.source_ent_id ?? null,
     };
   }
 
   insererComplements(d, copie) {
     d.metres.push(...copie.metres);
     d.variables.push(...copie.variables.map((v) => ({ ...v, var_ent_id: d.document.ent_id })));
+    const memeDocument = (copie.source_ent_id ?? null) === (d.document.ent_id ?? null);
+    const cles = (copie.ventilations ?? [])
+      .filter((k) => !k._source_externe || (memeDocument && d.lignes.some((l) => l.lig_id === k.vfr_source_lig_id)))
+      .map(({ _source_externe, ...k }) => ({ ...k, vfr_ent_id: d.document.ent_id ?? null }));
+    if (cles.length) (d.ventilations ??= []).push(...cles);
   }
 }
 
