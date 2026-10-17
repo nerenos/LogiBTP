@@ -43,6 +43,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         await base.AvantEcritureAsync(type, creation, id, aEcrire, valeurs, proprietes, u, ct);
     }
 
+    public override async Task AvantSuppressionAsync(string type, string id, Utilisateur u, CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        await SuppressionFiches.Controler(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
+    }
+
     private static bool Vrai(object? v) => v is true || (v is string s && s == "true") || (v is JsonElement e && e.ValueKind == JsonValueKind.True);
 
     public override async Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct)
