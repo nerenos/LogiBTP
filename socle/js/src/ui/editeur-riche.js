@@ -42,7 +42,7 @@ export function editerLibelle({ html, titre, variables = [], lecture = false }) 
             ${variables.map((v) => `<option value="${echapper(v.valeur)}">${echapper(v.libelle)}</option>`).join('')}
           </select>
         </div>
-        <div class="zone-saisie" contenteditable="${lecture ? 'false' : 'true'}" spellcheck="true"></div>
+        <div class="zone-saisie${lecture ? ' lecture' : ''}" contenteditable="${lecture ? 'false' : 'true'}" spellcheck="${lecture ? 'false' : 'true'}"></div>
         <footer>
           ${lecture ? '<span class="aide">Consultation seule : libellé non modifiable · Échap : fermer</span><button type="button" class="principal" data-action="annuler">Fermer</button>'
     : `<span class="aide">Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler</span>
@@ -91,6 +91,8 @@ export function editerLibelle({ html, titre, variables = [], lecture = false }) 
 
     // Les boutons ne prennent pas le focus : la sélection du texte est conservée.
     if (lecture) {
+      for (const type of ['beforeinput', 'paste', 'drop', 'cut']) zone.addEventListener(type, (e) => e.preventDefault());
+      zone.setAttribute('aria-readonly', 'true');
       fond.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); fermer(undefined); } });
       fond.querySelector('[data-action="annuler"]').addEventListener('click', () => fermer(undefined));
       fond.addEventListener('mousedown', (e) => { if (e.target === fond) fermer(undefined); });

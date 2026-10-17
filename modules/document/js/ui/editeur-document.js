@@ -146,7 +146,9 @@ export class EditeurDocument {
   // ---------------------------------------------------------------- document d'avancement
 
   /** Situation, facture d'avancement, reprise : lignes reprises du marché, seuls l'avancement et le commentaire se saisissent. */
-  get estAvancement() { return Boolean(this.saisie.document.ent_avt_presentation); }
+  get estAvancement() {
+    return Boolean(this.saisie.document.ent_avt_presentation) || ['S', 'F', 'R'].includes(this.definition.type?.tyd_avancement);
+  }
 
   /** Ligne reprise du document parent (commande du marché) dans un document d'avancement. */
   ligneDuParent(l) { return this.estAvancement && l?.lig_origine_id !== null && l?.lig_origine_id !== undefined; }
@@ -225,7 +227,14 @@ export class EditeurDocument {
   }
 
   /** Ligne modifiable par l'utilisateur (une ligne calculée par le moteur ou un total du pied ne l'est pas). */
-  saisissable(l) { return !this.magasin?.lectureSeule && !l._virtuelle && !this.estLigneCalculee(l); }
+  saisissable(l) { return !this.magasin?.lectureSeule && !this.fige && !l._virtuelle && !this.estLigneCalculee(l); }
+
+  /** Document figé : validé (verrouillé) ou dans un statut non modifiable ; les lignes se consultent seulement. */
+  get fige() {
+    const d = this.saisie.document;
+    const statut = this.definition.statuts?.find((s) => s.std_id === d.ent_std_id);
+    return Boolean(d.ent_verrouille) || statut?.std_modifiable === false;
+  }
 
   // ---------------------------------------------------------------- vues de colonnes
 
@@ -1170,6 +1179,7 @@ export class EditeurDocument {
   // ---------------------------------------------------------------- actions
 
   modifierLigne(id, champ, valeur) {
+    if (this.fige) { this.surMessage?.('Document validé : consultation seule'); return; }
     if (this.champVerrouille(this.saisie.lignes.find((x) => x.lig_id === id), champ)) {
       this.surMessage?.('Information reprise du document parent : non modifiable');
       return;
@@ -1244,6 +1254,18 @@ export class EditeurDocument {
   }
 
   actions() {
+    const actions = this.#actions();
+    for (const nom of ['modifier', 'modifierRiche', 'inserer', 'deplacer', 'indenter', 'desindenter', 'decaler', 'supprimer', 'dupliquer', 'coller']) {
+      const action = actions[nom];
+      actions[nom] = (...args) => {
+        if (this.fige) { this.surMessage?.('Document validé : consultation seule'); return nom === 'modifier' ? false : undefined; }
+        return action(...args);
+      };
+    }
+    return actions;
+  }
+
+  #actions() {
     const m = this.magasin;
     const taux = this.definition.taux_tva;
     const regles = this.regles;

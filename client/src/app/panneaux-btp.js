@@ -82,7 +82,8 @@ export class PanneauxBtp extends PanneauxDocument {
   rendreContact(bloc, role) {
     const d = this.editeur.saisie.document;
     const c = d[PanneauxBtp.colonneContact(role)] ?? null;
-    const lecture = !!this.editeur.magasin.lectureSeule;
+    // Document validé : coordonnées figées (complétées par le serveur à la validation), ni rechargement ni remplissage.
+    const lecture = !!this.editeur.magasin.lectureSeule || this.editeur.fige;
     const titre = role === 'PAYEUR' ? 'Payeur' : this.editeur.definition.type?.tyd_famille === 'A' ? 'Fournisseur' : 'Client';
     const a = c?.adresse ?? {};
     const lignes = c ? [

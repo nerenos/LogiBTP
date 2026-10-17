@@ -371,7 +371,7 @@ export class PanneauxDocument {
 
     const m = editeur.magasin;
     // Ligne reprise du parent d'un document d'avancement : informations du parent en lecture seule.
-    zone.querySelectorAll('[data-champ]').forEach((el) => { if (editeur.champVerrouille?.(l, el.dataset.champ)) el.disabled = true; });
+    zone.querySelectorAll('[data-champ]').forEach((el) => { if (editeur.fige || editeur.champVerrouille?.(l, el.dataset.champ)) el.disabled = true; });
     lier(zone, '[data-champ]', (champ, v, el) => {
       // Champs qui changent le formulaire (base proposée selon le mode…) : le panneau se redessine.
       if (['lig_pied_mode', 'lig_pied_base'].includes(champ)) el.blur();
