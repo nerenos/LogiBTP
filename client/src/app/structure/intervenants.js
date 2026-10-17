@@ -15,7 +15,7 @@ export class TableIntervenants {
    * portee : 'S' (structure) ou 'D' (document) ; lecture : consultation ; actions : boutons supplémentaires
    * [{ libelle, titre, action }] ; fixe : fonction de la ligne imposée (tiers du document), non supprimable.
    */
-  constructor({ annuaire, fonctions = [], portee = 'S', lecture = false, surChange = () => {}, actions = [], fixe = null }) {
+  constructor({ annuaire, fonctions = [], portee = 'S', lecture = false, surChange = () => {}, actions = [], fixe = null, tiersFige = false }) {
     this.annuaire = annuaire;
     this.fonctions = fonctions.filter((f) => f.actif !== false);
     this.portee = portee;
@@ -23,6 +23,8 @@ export class TableIntervenants {
     this.surChange = surChange;
     this.actions = actions;
     this.fixe = fixe;
+    // Document issu d'une transformation : le tiers de la ligne imposée ne change plus (P12).
+    this.tiersFige = tiersFige;
     this.contacts = new Map(); // per_id → Promise<rattachements>
     this.el = document.createElement('div');
     this.el.className = 'intervenants';
@@ -82,7 +84,7 @@ export class TableIntervenants {
     }
     return `<tr data-i="${i}">
       <td><select data-champ="fonction" ${fixe ? 'disabled' : ''}>${this.fonctionsProposees(x.fonction).map((y) => `<option value="${y.code}" ${y.code === x.fonction ? 'selected' : ''}>${echapper(y.libelle)}</option>`).join('')}</select></td>
-      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers"><datalist id="itv-tiers-${i}"></datalist>
+      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
         ${x.per_id ? `<a href="/fiche/personne/${Number(x.per_id)}" title="Ouvrir la fiche du tiers">↗</a>` : ''}</td>
       <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
       <td class="coordonnees"></td>

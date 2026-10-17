@@ -178,7 +178,12 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// </summary>
     public override async Task CompleterValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp saisie, TypeDocument type, CancellationToken ct)
     {
-        if (PostesMarche.Portee(type, saisie.Document) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
+        if (await PostesMarche.Portee(db, type, saisie.Document, ct) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
+        // Stock : le tiers est notre société (P6).
+        if (type.TydFamille == "S" && saisie.Document.EntTiersId is null)
+        {
+            saisie.Document.EntTiersId = (await db.Database.SqlQuery<long?>($"SELECT per_id AS \"Value\" FROM personne WHERE per_societe_base LIMIT 1").ToListAsync(ct)).FirstOrDefault();
+        }
         // Coordonnées figées du client et du payeur : prises dans l'annuaire si l'entête n'en a pas encore.
         await ContactsDocument.Completer(db, saisie.Document, type.TydFamille, ct);
         // Facture d'avancement d'un marché : déductions des acomptes émis (Q12, 11.2).

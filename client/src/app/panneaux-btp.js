@@ -239,6 +239,7 @@ export class PanneauxBtp extends PanneauxDocument {
       const lecture = !!m.lectureSeule;
       conteneur.append(new TableIntervenants({
         annuaire: this.annuaire, fonctions: this.structure?.fonctions ?? [], portee: 'D', lecture, fixe: this.fonctionTiers(),
+        tiersFige: this.editeur.saisie.lignes.some((l) => l.lig_origine_id),
         surChange: (liste) => this.modifierIntervenants(liste),
         actions: !lecture && (d.ent_marche_id || d.ent_chantier_id || d.ent_projet_id) ? [{
           libelle: '↧ Reprendre du marché / chantier', titre: 'Ajoute les intervenants du marché, du chantier et du projet (client, payeur, sous-traitants…)',

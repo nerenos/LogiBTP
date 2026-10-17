@@ -88,6 +88,7 @@ export class PanneauxDocument {
         ${this.champTiers(d)}
         <label>Notre référence <input data-champ="ent_notre_reference" maxlength="50" value="${echapper(d.ent_notre_reference ?? '')}"></label>
         <label>Référence externe <input data-champ="ent_reference_externe" maxlength="100" title="Référence du client ou du fournisseur" value="${echapper(d.ent_reference_externe ?? '')}"></label>
+        ${def.type?.tyd_famille === 'A' ? `<label title="Date de la pièce du fournisseur : date comptable et départ de l'échéancier">Date fournisseur <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
         <label title="Durée de validité ; la date de fin est calculée à la validation du document">Validité (jours)
           <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
         ${d.ent_date_validite ? `<label>Valable jusqu'au <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}

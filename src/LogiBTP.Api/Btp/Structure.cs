@@ -105,7 +105,7 @@ public static class Structure
             // Facture : retenue de garantie et postes TTC du marché posés dans le pied global (Q5, 11.4), visibles dès la saisie.
             var type = await db.TypesDocument.AsNoTracking().FirstAsync(t => t.TydId == tyd, ct);
             var complet = await documents.Charger(entId, ct);
-            if (PostesMarche.Portee(type, complet.Document) is string portee && await PostesMarche.Appliquer(db, complet, portee, ct))
+            if (await PostesMarche.Portee(db, type, complet.Document, ct) is string portee && await PostesMarche.Appliquer(db, complet, portee, ct))
             {
                 return (await documents.Enregistrer(entId, complet, Utilisateur.Depuis(http), ct)).Document ?? cree;
             }

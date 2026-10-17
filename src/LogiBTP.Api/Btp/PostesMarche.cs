@@ -85,15 +85,16 @@ public static class PostesMarche
     }
 
     /// <summary>
-    /// Portée des postes pour un type de pièce : G pour les factures de vente (numérotation continue, hors avoirs), C pour
-    /// une commande client (hors commande intermédiaire) ; null sinon.
+    /// Portée des postes pour un type de pièce : G pour les factures de la règle POSTES_MARCHE, C pour une commande client
+    /// (hors commande intermédiaire) ; null sinon.
     /// </summary>
-    public static string? Portee(TypeDocument type, DocumentBtp doc)
+    public static async Task<string?> Portee(DbContext db, TypeDocument type, DocumentBtp doc, CancellationToken ct)
     {
         if (doc.EntMarcheId is null || doc.EntNatureAvoir is not null) return null;
         if (type.TydCode == "V_COMMANDE") return doc.EntIntermediaire ? null : "C";
-        // Avoirs (V_AVOIR…) : ils reprennent les lignes de la pièce qu'ils corrigent.
-        return type.TydFamille == "V" && type.TydNumerotationContinue && !type.TydCode.EndsWith("_AVOIR", StringComparison.Ordinal) ? "G" : null;
+        // Factures qui reçoivent les postes du marché : règle POSTES_MARCHE (factures d'avancement et simples ; I2).
+        var regle = await db.Database.SqlQuery<string>($"SELECT coalesce(f_regle_document('POSTES_MARCHE', {type.TydId})::text, 'false') AS \"Value\"").FirstAsync(ct);
+        return regle == "true" ? "G" : null;
     }
 
     /// <summary>Postes de la portée appliqués au document du marché (lignes système ajoutées, mises à jour ou retirées).</summary>

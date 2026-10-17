@@ -105,7 +105,6 @@ INSERT INTO propriete_definition (prd_tyd_id, prd_niveau, prd_code, prd_libelle,
 SELECT t.tyd_id, p.niveau, p.code, p.libelle, p.type, p.obligatoire, p.defaut::jsonb, p.options::jsonb, p.groupe, p.ordre
 FROM type_document t
 CROSS JOIN (VALUES
-    ('E', 'chantier',        'Chantier',                'texte',   TRUE,  NULL,   NULL, 'Chantier', 1),
     ('E', 'mode_reglement',  'Mode de règlement',       'liste',   FALSE, '"VIR"',
         '[{"code":"VIR","libelle":"Virement"},{"code":"CHQ","libelle":"Chèque"},{"code":"LCR","libelle":"LCR"}]', 'Conditions', 3),
     ('L', 'lot_technique',   'Lot technique',           'texte',   FALSE, NULL,   NULL, NULL, 1)

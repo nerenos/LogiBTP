@@ -570,3 +570,17 @@ Développement lancé le 17/10/2026 (un commit par lot).
 - Page document : bouton « Dévalider… » (droit DEVALIDER ou FORCER), ouverture de la nouvelle version.
 - Vérifié : FA2026-00003 dévalidée (indice B, échéance pointable conservée), revalidée (ENVOYE).
 
+### Lot 4 – corrections
+
+- Pièce comptable par la règle PIECE_COMPTABLE (P9) : état comptable et, pour les ventes et les achats, échéancier
+  (factures et avoirs fournisseurs compris) ; la numérotation continue reste une règle de numérotation.
+- Date de la pièce du fournisseur (`ent_date_externe`, `modules/document/db/019e`, champ « Date fournisseur » de l'entête
+  des achats) : départ de l'échéancier.
+- Postes du marché par la règle POSTES_MARCHE (I2 : plus de retenue sur les factures d'acompte).
+- Stock : tiers = notre société, posé à la validation (P6) ; contrôle du tiers après les compléments.
+- Propriété « chantier » du devis retirée (I8, `db/180`, `db/110`).
+- Tiers figé d'un document issu d'une transformation (P12) : refus serveur `TIERS_FIGE`, champ verrouillé dans
+  l'annuaire du document.
+- Vérifié : FF2026-00003 validée (état comptable A, échéance au 31/10 depuis la date du fournisseur), changement de tiers
+  refusé sur FF2026-00002.
+

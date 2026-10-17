@@ -25,6 +25,7 @@ services:
       - ./modules/document/db/019b_document_echeances.sql:/docker-entrypoint-initdb.d/019b_document_echeances.sql:ro
       - ./modules/document/db/019c_document_regles.sql:/docker-entrypoint-initdb.d/019c_document_regles.sql:ro
       - ./modules/document/db/019d_document_cycle.sql:/docker-entrypoint-initdb.d/019d_document_cycle.sql:ro
+      - ./modules/document/db/019e_document_pieces.sql:/docker-entrypoint-initdb.d/019e_document_pieces.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/metre/db/021_metre_script.sql:/docker-entrypoint-initdb.d/021_metre_script.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro
@@ -70,6 +71,7 @@ services:
       - ./db/177_contacts_document.sql:/docker-entrypoint-initdb.d/177_contacts_document.sql:ro
       - ./db/178_regles_documents.sql:/docker-entrypoint-initdb.d/178_regles_documents.sql:ro
       - ./db/179_cycle_documents.sql:/docker-entrypoint-initdb.d/179_cycle_documents.sql:ro
+      - ./db/180_regles_corrections.sql:/docker-entrypoint-initdb.d/180_regles_corrections.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

@@ -205,6 +205,12 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntObjet = d.Document.EntObjet;
         e.EntNotreReference = d.Document.EntNotreReference;
         e.EntReferenceExterne = d.Document.EntReferenceExterne;
+        e.EntDateExterne = d.Document.EntDateExterne;
+        // Document issu d'une transformation : son tiers ne change plus (P12) ; payeur et coordonnées restent modifiables.
+        if (avant.Document.EntTiersId is long tiersFige && d.Document.EntTiersId != tiersFige && avant.Lignes.Any(l => l.LigOrigineId is not null))
+        {
+            throw ExceptionMetier.Invalide("TIERS_FIGE", "Document issu d'une transformation : le tiers ne change plus");
+        }
         e.EntValiditeJours = d.Document.EntValiditeJours;
         e.EntTiersId = d.Document.EntTiersId;
         e.EntAdresseFacturation = d.Document.EntAdresseFacturation;
@@ -324,8 +330,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await specialisation.ControlerValidationAsync(db, avant, type, controles, ct);
         var r = handler.Calculer(entree);
         controles.AddRange(r.Erreurs);
-        // Un brouillon peut attendre son tiers ; un document validé l'a toujours.
-        if (avant.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
+        // Un brouillon peut attendre son tiers ; un document validé l'a toujours (stock : notre société, posée par la spécialisation).
+        if (saisie.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
@@ -338,7 +344,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
         // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
         // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).
-        if (type.TydNumerotationContinue && r.Document.EntEtatCompta != "T") r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
+        // Pièce comptable (règle PIECE_COMPTABLE, P9) : état comptable ; échéancier pour les ventes et les achats.
+        var comptable = await Regles.Booleen("PIECE_COMPTABLE", type, ct);
+        var echeancier = comptable && type.TydFamille is "V" or "A";
+        if (comptable && r.Document.EntEtatCompta != "T") r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
         if (type.TydNumerotationContinue && r.Document.EntNumero is null)
         {
             r.Document.EntNumero = await AttribuerNumero(type, r.Document.EntDate, ct);
@@ -357,10 +366,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Fin de validité : à partir du jour de la validation.
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
         // Pièce comptable : condition et mode de règlement figés (document, tiers ou défaut), échéancier après l'écriture.
-        if (type.TydNumerotationContinue) await Echeancier.Figer(r.Document, type, ct);
+        if (echeancier) await Echeancier.Figer(r.Document, type, ct);
         specialisation.PreparerValidation(r);
         var reponse = await Persister(id, r, u, ct);
-        if (type.TydNumerotationContinue) await Echeancier.Ecrire(id, ct);
+        if (echeancier) await Echeancier.Ecrire(id, ct);
         await EcrireSoldes(id, type, u, ct);
         await specialisation.ApresValidationAsync(db, id, type, ct);
         // Statut du document et de ses documents d'origine (facturation, solde : P4).

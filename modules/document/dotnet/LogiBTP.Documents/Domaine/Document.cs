@@ -59,6 +59,8 @@ public class Document
     public string? EntModeReglement { get; set; }
     /// <summary>Cycle de vie (019d) : approbation interne, envoi (validation de l'entreprise), validation du tiers.</summary>
     public DateTimeOffset? EntApprouveLe { get; set; }
+    /// <summary>Date de la pièce externe (achats : date de la facture du fournisseur, date comptable).</summary>
+    public DateOnly? EntDateExterne { get; set; }
     public DateTimeOffset? EntEnvoyeLe { get; set; }
     public DateTimeOffset? EntValideTiersLe { get; set; }
     /// <summary>État de paiement posé par l'application (module Règlements) : P partiel, T total.</summary>

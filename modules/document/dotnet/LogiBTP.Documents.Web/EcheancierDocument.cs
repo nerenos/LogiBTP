@@ -113,7 +113,8 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
             .Where(l => l.LigEntId == entId && l.LigPiedRetenue && l.LigTypePrix != "M")
             .SumAsync(l => l.LigMontantHt ?? 0, ct));
         var condition = doc.EntCpaCode is null ? null : await db.ConditionsPaiement.AsNoTracking().FirstOrDefaultAsync(c => c.CpaCode == doc.EntCpaCode, ct);
-        var calcul = Echeances.Calculer(doc.EntDate, doc.EntNetAPayer, condition is null ? [] : Lignes(condition), retenue, doc.EntModeReglement, doc.EntPrecisionMontant);
+        // Départ : date de la pièce externe (facture du fournisseur), sinon date du document.
+        var calcul = Echeances.Calculer(doc.EntDateExterne ?? doc.EntDate, doc.EntNetAPayer, condition is null ? [] : Lignes(condition), retenue, doc.EntModeReglement, doc.EntPrecisionMontant);
         // Mise à jour en place par rang : une échéance déjà pointée (nouvelle version d'une pièce dévalidée) garde son
         // identifiant ; les échéances en trop sont retirées (refus si elles sont pointées).
         var existantes = await db.Echeances.Where(x => x.EchEntId == entId).ToListAsync(ct);
