@@ -71,7 +71,8 @@
   de paiement des tiers reliée à `condition_paiement`, relances.
 - [ ] **Règles des documents** (17/10/2026) : analyse dans [CONCEPTION-REGLES-DOCUMENTS.md](CONCEPTION-REGLES-DOCUMENTS.md)
   (règles globales, par famille et par type, déjà programmées ; incohérences I1 à I10 ; catalogue R1 à R20 paramétrable
-  à trois niveaux) ; décisions Q1 à Q7 à prendre avant le développement.
+  à trois niveaux) ; toutes les décisions prises (Q1 à Q7, P1 à P25, 17/10/2026) : cycle de vie APPROUVE / ENVOYE /
+  VALIDE du tiers, statuts automatiques et de paiement, dévalidation par indice, droits APPROUVER / DEVALIDER / FORCER.
 - [ ] Module Comptabilité (11.6, à préparer) : plan de comptes complet, journaux, exercices, comptes auxiliaires des
   tiers (411 / 401), comptes de TVA par taux, comptes d'acompte (selon le mode de la société), schéma des écritures des
   factures, avoirs, acomptes et règlements (encaissements du module Règlements), export vers un logiciel comptable.
