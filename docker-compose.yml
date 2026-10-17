@@ -23,6 +23,7 @@ services:
       - ./modules/document/db/018_document_avancement_suite.sql:/docker-entrypoint-initdb.d/018_document_avancement_suite.sql:ro
       - ./modules/document/db/019_document_annulation.sql:/docker-entrypoint-initdb.d/019_document_annulation.sql:ro
       - ./modules/document/db/019b_document_echeances.sql:/docker-entrypoint-initdb.d/019b_document_echeances.sql:ro
+      - ./modules/document/db/019c_document_regles.sql:/docker-entrypoint-initdb.d/019c_document_regles.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/metre/db/021_metre_script.sql:/docker-entrypoint-initdb.d/021_metre_script.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro
@@ -66,6 +67,7 @@ services:
       - ./db/175_reglements.sql:/docker-entrypoint-initdb.d/175_reglements.sql:ro
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/176_documents_vues_types.sql:ro
       - ./db/177_contacts_document.sql:/docker-entrypoint-initdb.d/177_contacts_document.sql:ro
+      - ./db/178_regles_documents.sql:/docker-entrypoint-initdb.d/178_regles_documents.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

@@ -5,4 +5,5 @@ export { comparerResultats, CHAMPS_DOCUMENT, CHAMPS_LIGNE } from './comparaison.
 export { etatSolde } from './soldes.js';
 export { unitesOptionnelles } from './options.js';
 export { calculerEcheances, dateEcheance, montantRetenue, MODES_REGLEMENT } from './echeances.js';
+export { regle, FAMILLES_REGLE } from './regles-type.js';
 export * from './types.js';

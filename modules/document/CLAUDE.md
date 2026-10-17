@@ -33,6 +33,7 @@
 - `js/src/soldes.js` `etatSolde` ↔ `Calcul/Soldes.cs` `Soldes.Etat` (reste, soldée, quantité à solder ; jeu `tests/soldes/01_reste_solde.json`).
 - `js/src/options.js` `unitesOptionnelles` ↔ `Calcul/Options.cs` `Options.Unites` (unités d'options et de variantes, base des variantes ; jeu `tests/options/01_unites.json`) ; `db/016` : `lie_choix`, `tra_intermediaire_tyd_id`, `ent_intermediaire`.
 - `js/src/echeances.js` `calculerEcheances`, `montantRetenue`, `MODES_REGLEMENT` ↔ `Calcul/Echeances.cs` (jeu `tests/echeances/01_echeances.json`) ; `Web/EcheancierDocument.cs` (conditions, défauts, `Figer` et `Ecrire` à la validation des pièces à numérotation continue, `Modifier`) ; `db/019b` : `condition_paiement`, `document_echeance`, `ent_cpa_code`, `ent_mode_reglement`, `lig_pied_retenue`.
+- Règles à trois niveaux : `db/019c` `regle_document` (global, famille, type ; le plus précis l'emporte, sinon le défaut du catalogue) ; `Domaine/RegleDocument.cs` (`DefinitionRegle`, `CatalogueRegles.Module`), `SpecialisationDocument.Regles` (catalogue étendu par la spécialisation), `Web/ReglesDocuments.cs` (`Valeur`, `Booleen`, `Nombre`, `Texte`, `Resolues`, `Lire`, `Enregistrer`) ; `DefinitionType.Regles` (valeurs résolues) ; JS `regle(definition, code)` ; routes `GET|PUT /regles-documents`.
 - `tests/cas/*.json` (jeux partagés), `tests/resultats-js/` (sorties JS pour la parité C#).
 
 ## Modèle de données

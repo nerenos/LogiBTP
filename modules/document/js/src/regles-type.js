@@ -1,0 +1,12 @@
+// Règles des documents résolues pour un type (CONCEPTION-REGLES-DOCUMENTS.md, § 6.1) : la définition du type
+// (GET /types-document/{code}/definition) porte `regles` : code → valeur (type, sinon famille, sinon global, sinon
+// défaut du catalogue). Valeur absente : `defaut`.
+
+/** Valeur d'une règle pour le type d'une définition. */
+export function regle(definition, code, defaut = null) {
+  const v = definition?.regles?.[code];
+  return v === undefined || v === null ? defaut : v;
+}
+
+/** Libellés des niveaux de règle. */
+export const FAMILLES_REGLE = [['V', 'Ventes'], ['A', 'Achats'], ['S', 'Stock']];

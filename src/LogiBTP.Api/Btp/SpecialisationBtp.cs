@@ -31,6 +31,19 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     public override ComparateurCalcul Comparateur { get; } = new ComparateurBtp();
 
+    /// <summary>Règles du cœur ajoutées au catalogue du module (CONCEPTION-REGLES-DOCUMENTS.md, § 6.2 et § 8).</summary>
+    public override IEnumerable<DefinitionRegle> Regles => base.Regles.Concat(
+    [
+        new("NATURE_OBLIGATOIRE", "Nature obligatoire", "Nature des lignes de prix exigée à la validation (analyses).", "BOOLEEN", true, null, "BLOQUANT"),
+        new("POSTES_MARCHE", "Postes du marché", "Retenue de garantie et postes du marché posés au pied des factures du marché.", "BOOLEEN", false),
+        new("FRAIS_ANNEXES", "Frais annexes et prorata", "Frais annexes et coefficient de prorata utilisables (ventes).", "BOOLEEN", false),
+        new("REMISE_MAX", "Remise maximale (%)", "Remise de ligne ou de pied au-delà de ce % : avertissement (-1 : pas de seuil).", "NOMBRE", -1, null, "AVERTISSEMENT"),
+        new("MARGE_MIN", "Marge minimale (%)", "Marge nette sous ce % à la validation d'un devis ou d'une facture directe : avertissement (-1 : pas de seuil).", "NOMBRE", -1, null, "AVERTISSEMENT"),
+        new("ENCOURS_CLIENT", "Encours client maximal", "Encours du client au-delà de ce montant : avertissement (-1 : pas de seuil ; la fiche du tiers l'emporte).", "NOMBRE", -1, null, "AVERTISSEMENT"),
+        new("PRIX_ACHAT_ECART", "Écart de prix d'achat (%)", "Prix facturé différent de la commande au-delà de ce % : avertissement (-1 : pas de contrôle).", "NOMBRE", -1, null, "AVERTISSEMENT"),
+        new("REFERENCE_MARCHE_PUBLIC", "Référence d'une commande de marché public", "Référence externe exigée sur une commande d'un marché public.", "BOOLEEN", false, null, "BLOQUANT"),
+    ]);
+
     // ------------------------------------------------------------------ calcul
 
     public override EntreeDocument<DocumentBtp, DocumentLigneBtp> CreerEntree(DocumentCompletBtp saisie, List<TauxTva> tauxTva, OptionsCalcul options) => new EntreeCalcul

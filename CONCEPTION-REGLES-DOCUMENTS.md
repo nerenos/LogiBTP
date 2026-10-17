@@ -520,3 +520,18 @@ développement suit l'ordre du § 8.3, complété par le cycle de vie décidé e
 VALIDE du tiers, REMPLACE, statuts automatiques et de paiement, dévalidation par indice, droits APPROUVER, DEVALIDER,
 FORCER). Données de démonstration à corriger (documents VALIDE → ENVOYE, devis ACCEPTE → VALIDE), sans script de reprise.
 
+## 9. Réalisation
+
+Développement lancé le 17/10/2026 (un commit par lot).
+
+### Lot 1 – socle des règles
+
+- `modules/document/db/019c` : `regle_document` (code, famille ou type, valeur JSON, active) ; catalogue dans le code
+  (`CatalogueRegles.Module`, étendu par `SpecialisationBtp.Regles` : nature obligatoire, postes du marché, frais annexes,
+  remise maximale, marge minimale, encours, écart de prix d'achat, référence des marchés publics).
+- `ReglesDocuments` : valeur du type, sinon de la famille, sinon globale, sinon défaut ; valeurs résolues transmises
+  dans la définition du type (`regles`), lues côté client par `regle(definition, code)`.
+- `db/178` : valeurs initiales (§ 8) ; `TIERS_OBLIGATOIRE` lu par la validation.
+- `/parametres/documents`, section « Règles des documents » : défaut et valeurs par niveau (combo Global / famille /
+  type), ajout, retrait, enregistrement (administrateur).
+

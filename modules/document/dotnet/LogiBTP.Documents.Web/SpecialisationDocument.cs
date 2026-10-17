@@ -19,6 +19,9 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
 
     public virtual ComparateurCalcul Comparateur { get; } = new();
 
+    /// <summary>Catalogue des règles des documents : celles du module, plus celles de la spécialisation.</summary>
+    public virtual IEnumerable<DefinitionRegle> Regles => CatalogueRegles.Module;
+
     // ------------------------------------------------------------------ calcul
 
     public virtual EntreeDocument<TDoc, TLigne> CreerEntree(TComplet saisie, List<TauxTva> tauxTva, OptionsCalcul options) => new()

@@ -145,6 +145,10 @@ public static class Extensions
         api.MapGet("/parametres-documents/seuils-solde", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.LireSeuilsSolde(ct));
         api.MapPut("/parametres-documents/seuils-solde", (SeuilsSolde v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.EnregistrerSeuilsSolde(v, Utilisateur.Depuis(http), ct));
+        // Règles des documents à trois niveaux (écriture : administrateur).
+        api.MapGet("/regles-documents", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Regles.Lire(ct));
+        api.MapPut("/regles-documents", (List<RegleSaisie> v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Regles.Enregistrer(v, Utilisateur.Depuis(http), ct));
         // Conditions de paiement (écriture : administrateur) et échéancier des pièces.
         api.MapGet("/conditions-paiement", (DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Echeancier.Conditions(true, ct));
         api.MapPut("/conditions-paiement", (List<ConditionPaiementDto> v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

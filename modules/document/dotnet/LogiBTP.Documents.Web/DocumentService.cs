@@ -24,6 +24,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     protected SpecialisationDocument<TDoc, TLigne, TComplet> Specialisation => specialisation;
     /// <summary>Conditions de paiement et échéancier des pièces.</summary>
     public EcheancierDocument<TDoc, TLigne, TComplet> Echeancier => field ??= new(db, specialisation);
+    /// <summary>Règles des documents à trois niveaux (global, famille, type).</summary>
+    public ReglesDocuments<TDoc, TLigne, TComplet> Regles => field ??= new(db, specialisation);
 
     // ------------------------------------------------------------------ paramétrage
 
@@ -47,6 +49,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
             ConditionsPaiement = await Echeancier.Conditions(false, ct),
             ConditionDefaut = await Echeancier.Defaut(type.TydFamille, ct),
+            Regles = await Regles.Resolues(type, ct),
         };
     }
 
@@ -321,7 +324,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var r = handler.Calculer(entree);
         controles.AddRange(r.Erreurs);
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours.
-        if (avant.Document.EntTiersId is null) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
+        if (avant.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
         if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);

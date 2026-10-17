@@ -1,6 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { ParametrageAffichageDocument, FournisseurAffichageMemoire } from '@logibtp/document/ui';
 import { echapper, lireNombre, formatLibre, creerCombo } from '@logibtp/socle/ui';
+import { FAMILLES_REGLE } from '@logibtp/document';
 import { api } from '../api.js';
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX } from '../vues-document.js';
 
@@ -36,7 +37,8 @@ export class PageParametresDocuments extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🏷 Étiquettes et couleurs des lignes</h1><div class="corps"></div>
       <h2>Solde des lignes</h2><div class="seuils-solde"></div>
       <h2>Conditions de paiement</h2><div class="conditions-paiement"></div>
-      <h2>Acomptes</h2><div class="mode-acomptes"></div></div>`;
+      <h2>Acomptes</h2><div class="mode-acomptes"></div>
+      <h2>Règles des documents</h2><div class="regles-documents"></div></div>`;
     // Hors ligne : les listes de la définition de démonstration sont modifiées en place (visibles dans le devis de démo).
     const fournisseur = app.enLigne
       ? {
@@ -49,6 +51,81 @@ export class PageParametresDocuments extends PageBase {
     await this.ouvrirSeuils(this.conteneur.querySelector('.seuils-solde'));
     await this.ouvrirConditions(this.conteneur.querySelector('.conditions-paiement'));
     await this.ouvrirAcomptes(this.conteneur.querySelector('.mode-acomptes'));
+    await this.ouvrirRegles(this.conteneur.querySelector('.regles-documents'));
+  }
+
+  /**
+   * Règles des documents (CONCEPTION-REGLES-DOCUMENTS.md, § 6) : par règle du catalogue, valeur globale (ou défaut) et
+   * surcharges par famille ou par type ; le plus précis l'emporte.
+   */
+  async ouvrirRegles(zone) {
+    const app = this.app;
+    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Règles des documents disponibles en ligne seulement.</p>'; return; }
+    let [p, types] = await Promise.all([api.reglesDocuments(), api.typesDocument()]);
+    const admin = app.estAdmin();
+    const niveaux = [{ valeur: '', libelle: 'Global' }, ...FAMILLES_REGLE.map(([v, l]) => ({ valeur: `F:${v}`, libelle: l })),
+      ...types.map((t) => ({ valeur: `T:${t.tyd_code}`, libelle: t.tyd_libelle, detail: t.tyd_code }))];
+    const niveauDe = (r) => (r.type ? `T:${r.type}` : r.famille ? `F:${r.famille}` : '');
+    const texteValeur = (d, v) => (d.genre === 'BOOLEEN' ? (v ? 'oui' : 'non') : v === null || v === undefined ? '—' : String(v));
+    const EFFETS = { BLOQUANT: '⛔', AVERTISSEMENT: '⚠', PARAMETRE: '' };
+    const rendre = () => {
+      zone.innerHTML = `<p class="aide">Valeur d'une règle pour un document : celle de son type, sinon de sa famille, sinon la valeur globale,
+        sinon le défaut. ⛔ bloque la validation, ⚠ avertit sans bloquer. -1 : pas de seuil.</p>
+        <table><thead><tr><th>Règle</th><th>Défaut</th><th>Valeurs paramétrées</th><th></th></tr></thead><tbody>
+        ${p.catalogue.map((d) => `<tr data-code="${d.code}"><td title="${echapper(d.description)}">${EFFETS[d.effet] ?? ''} ${echapper(d.libelle)}
+          <br><small class="aide">${echapper(d.description)}</small></td><td>${echapper(texteValeur(d, d.defaut))}</td>
+          <td>${p.regles.map((r, i) => (r.code === d.code ? `<div class="regle-niveau" data-i="${i}"><span data-niveau></span> <span data-valeur></span>
+            ${admin ? '<button type="button" data-retirer title="Retirer cette valeur">✕</button>' : ''}</div>` : '')).join('')}</td>
+          <td>${admin ? '<button type="button" data-ajouter title="Valeur pour un niveau (global, famille, type)">＋</button>' : ''}</td></tr>`).join('')}
+        </tbody></table>
+        ${admin ? '<div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer les règles</button></div>' : ''}`;
+      const catalogue = new Map(p.catalogue.map((d) => [d.code, d]));
+      zone.querySelectorAll('.regle-niveau').forEach((div) => {
+        const r = p.regles[Number(div.dataset.i)];
+        const d = catalogue.get(r.code);
+        const niveau = creerCombo({ options: niveaux, valeur: niveauDe(r), vide: false });
+        niveau.readOnly = !admin;
+        niveau.addEventListener('change', () => {
+          const v = niveau.valeurCombo;
+          r.famille = v.startsWith('F:') ? v.slice(2) : null;
+          r.type = v.startsWith('T:') ? v.slice(2) : null;
+        });
+        div.querySelector('[data-niveau]').replaceWith(niveau);
+        let champ;
+        if (d.genre === 'BOOLEEN') {
+          champ = document.createElement('input');
+          champ.type = 'checkbox';
+          champ.checked = r.valeur === true;
+          champ.disabled = !admin;
+          champ.addEventListener('change', () => { r.valeur = champ.checked; });
+        } else if (d.genre === 'CHOIX') {
+          champ = creerCombo({ options: (d.choix ?? []).map((c) => ({ valeur: c, libelle: c })), valeur: r.valeur ?? '', vide: false });
+          champ.readOnly = !admin;
+          champ.addEventListener('change', () => { r.valeur = champ.valeurCombo; });
+        } else {
+          champ = document.createElement('input');
+          champ.size = 8;
+          champ.value = r.valeur ?? '';
+          champ.disabled = !admin;
+          champ.addEventListener('change', () => { const n = lireNombre(champ.value); r.valeur = n === null || n === undefined ? null : Number(n); });
+        }
+        div.querySelector('[data-valeur]').replaceWith(champ);
+      });
+      zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { p.regles.splice(Number(b.closest('.regle-niveau').dataset.i), 1); rendre(); }));
+      zone.querySelectorAll('[data-ajouter]').forEach((b) => b.addEventListener('click', () => {
+        const d = catalogue.get(b.closest('tr').dataset.code);
+        p.regles.push({ code: d.code, famille: null, type: null, valeur: d.defaut, actif: true });
+        rendre();
+      }));
+      zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+        try {
+          p = await api.enregistrerReglesDocuments(p.regles);
+          app.message('Règles des documents enregistrées', 'succes');
+          rendre();
+        } catch (e) { app.message(e.message, 'erreur'); }
+      });
+    };
+    rendre();
   }
 
   /**

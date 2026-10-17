@@ -70,6 +70,8 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         // Conditions de paiement et échéancier (019b_document_echeances.sql).
         b.Entity<ConditionPaiement>(e => { e.ToTable("condition_paiement").HasKey(x => x.CpaCode); e.Property(x => x.CpaLignes).HasColumnType("jsonb"); });
         b.Entity<DocumentEcheance>().ToTable("document_echeance").HasKey(x => x.EchId);
+        // Règles des documents à trois niveaux (019c_document_regles.sql).
+        b.Entity<RegleDocument>(e => { e.ToTable("regle_document").HasKey(x => x.RdoId); e.Property(x => x.RdoValeur).HasColumnType("jsonb"); });
         b.Entity<DocumentHistorique>().ToTable("document_historique").HasKey(x => x.HisId);
         b.Entity<DocumentOrigine>(e => { e.ToTable("document_origine").HasKey(x => x.DorEntId); e.Property(x => x.DorEntId).ValueGeneratedNever(); });
         b.Entity<CalculCasTest>().ToTable("calcul_cas_test").HasKey(x => x.CasId);
