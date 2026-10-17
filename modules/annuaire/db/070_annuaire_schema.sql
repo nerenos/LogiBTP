@@ -8,11 +8,15 @@
 -- Les valeurs remplacées sont historisées (coordonnee_historique).
 -- =============================================================================
 
--- Recherche sans accents ni casse (personnes, individus).
-CREATE EXTENSION IF NOT EXISTS unaccent;
-CREATE FUNCTION f_annuaire_normaliser(texte TEXT) RETURNS TEXT
+-- Recherche sans accents ni casse (personnes, individus) : même règle que f_sans_accent du module Liste et que
+-- sansAccent du fournisseur mémoire (ligatures développées, décomposition NFD, diacritiques retirés, minuscules).
+-- Pas d'unaccent : son dictionnaire transforme aussi la ponctuation (« – » → « - »). Rejouable seule sur une base
+-- existante (CREATE OR REPLACE).
+CREATE OR REPLACE FUNCTION f_annuaire_normaliser(texte TEXT) RETURNS TEXT
     LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
-    AS $$ SELECT lower(public.unaccent('public.unaccent'::regdictionary, texte)) $$;
+    AS $$ SELECT lower(regexp_replace(normalize(
+        replace(replace(replace(replace(replace(translate(texte, 'øØđĐłŁ', 'oOdDlL'), 'œ', 'oe'), 'Œ', 'oe'), 'æ', 'ae'), 'Æ', 'ae'), 'ß', 'ss'),
+        NFD), '[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]', '', 'g')) $$;
 
 -- Niveaux de personne : groupe, société, établissement, agence, dépôt… ; particulier (personne physique cliente).
 CREATE TABLE niveau_personne (

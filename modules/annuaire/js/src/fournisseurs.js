@@ -78,7 +78,9 @@ export class FournisseurAnnuaireApi {
 // ------------------------------------------------------------------ mémoire
 
 const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
-const sansAccent = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').toLowerCase();
+// Même règle que f_annuaire_normaliser (SQL) : ligatures développées, diacritiques retirés, ponctuation conservée.
+const SPECIAUX = { 'œ': 'oe', 'Œ': 'oe', 'æ': 'ae', 'Æ': 'ae', 'ß': 'ss', 'ø': 'o', 'Ø': 'o', 'đ': 'd', 'Đ': 'd', 'ł': 'l', 'Ł': 'l' };
+const sansAccent = (s) => String(s ?? '').replace(/[œŒæÆßøØđĐłŁ]/g, (c) => SPECIAUX[c]).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const correspond = (mots, ...textes) => {
   const t = sansAccent(textes.filter(Boolean).join(' '));
   return mots.every((m) => t.includes(m));
