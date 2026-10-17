@@ -111,6 +111,9 @@ public static class Extensions
             s.Devalider(id, d.Motif, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/rejeter", (long id, DemandeRejet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Rejeter(id, d.Motif, Utilisateur.Depuis(http), ct));
+        // Avertissements de gestion avant une action (VALIDER, TRANSFORMER) : l'utilisateur choisit de poursuivre.
+        api.MapGet("/documents/{id:long}/avertissements", (long id, string action, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Avertissements(id, action.ToUpperInvariant(), ct));
         api.MapPost("/documents/{id:long}/valider", (long id, DemandeVersion v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Valider(id, v, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/indices", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

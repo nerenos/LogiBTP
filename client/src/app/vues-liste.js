@@ -13,6 +13,7 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
+      ['alerte', 'text'],
     ],
   },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
@@ -190,6 +191,8 @@ export const VUES_LISTE = [
         col('net_a_payer', 'Net à\npayer', { ...nombre(), ...fixe(100), recherche: false, style: { gras: true } }),
         col('reference', 'Réf.', { format: 'coche', ...fixe(48), bulle: 'Indice de référence du groupe', recherche: false }),
         col('famille', 'Famille', { masquee: true }),
+        // Alertes (CONCEPTION-REGLES-DOCUMENTS.md, R3, P25) : document rejeté à annuler, validité dépassée.
+        col('alerte', 'Alerte', { ...prop(1.5, 90, 220), style: { couleur: '#b42318' } }),
       ],
       segments: [{ colonne: 'type_document', titre: 'Type' }, { colonne: 'statut', titre: 'Statut' }],
       tri: [{ colonne: 'date_document', sens: 'desc' }],

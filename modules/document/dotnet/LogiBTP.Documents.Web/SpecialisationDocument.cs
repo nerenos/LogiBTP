@@ -50,6 +50,14 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// Contrôles de validation qui lisent la base (rattachements, documents liés…), après ceux de la saisie ; le type
     /// donne le code du document (commande, facture…).
     /// </summary>
+    /// <summary>
+    /// Avertissements de gestion du cœur (non bloquants) avant une action (VALIDER, TRANSFORMER) : règles résolues du type
+    /// fournies (remise, marge, encours…).
+    /// </summary>
+    public virtual Task AvertissementsAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type,
+        IReadOnlyDictionary<string, System.Text.Json.Nodes.JsonNode?> regles, string action, List<MessageCalcul> avertissements, CancellationToken ct) =>
+        Task.CompletedTask;
+
     public virtual Task ControlerValidationAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type, List<MessageCalcul> erreurs, CancellationToken ct) =>
         Task.CompletedTask;
 

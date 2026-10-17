@@ -598,3 +598,27 @@ Développement lancé le 17/10/2026 (un commit par lot).
 - Vérifié : acompte de 10 000 € en mode CA sur le marché de démo (5 630,32 à 10 %, 4 369,68 à 20 %, essai retiré) ;
   commande fournisseur avec un coefficient de prorata refusée (FRAIS_ANNEXES_INTERDITS).
 
+### Lot 6 – contrôles de gestion
+
+- Avertissements (non bloquants) : `GET /documents/{id}/avertissements?action=VALIDER|TRANSFORMER`
+  (`DocumentService.Avertissements`, point d'accroche `SpecialisationDocument.AvertissementsAsync` avec les règles
+  résolues du type) ; le client les affiche avant la validation et avant la transformation (page document et bouton des
+  listes) et l'utilisateur choisit de poursuivre (`client/src/app/documents/avertissements.js`).
+  - Module : R8 total nul (MONTANT_NUL), R12 / P16 référence externe en double pour le même type et le même tiers
+    (REFERENCE_EXTERNE_UNIQUE), R17 quantité au-delà du reste du parent (QUANTITE_DEPASSEE = AVERTISSEMENT,
+    `DocumentService.Depassements`), à la transformation R3 validité dépassée (VALIDITE_ALERTE) et P25 document rejeté.
+  - Cœur : R13 remise de ligne ou de pied au-delà de REMISE_MAX, R14 / P15 marge nette (PV sans frais annexes ni
+    prorata − revient) sous MARGE_MIN pour un document qui n'est pas issu d'une transformation, R15 encours du client
+    (échéances non pointées des pièces validées + commandes en cours non facturées + ce document) au-delà du plafond de
+    la fiche du tiers ou d'ENCOURS_CLIENT, R16 prix facturé différent de la commande au-delà de PRIX_ACHAT_ECART.
+- Refus à la validation : R7 DATE_PIECE (`DATE_FUTURE` : date du document ou du fournisseur dans le futur ;
+  `DATE_ANTERIEURE` : pièce à numérotation continue antérieure à la dernière pièce numérotée du type), R12
+  REFERENCE_EXTERNE_OBLIGATOIRE, REFERENCE_MARCHE_PUBLIC (commande d'un marché public, `SpecialisationBtp`), R17
+  QUANTITE_DEPASSEE = REFUS.
+- Listes : colonne « Alerte » de `v_liste_documents` (`db/182` : « Rejeté, à annuler : motif », « Validité dépassée »
+  pour un document approuvé ou envoyé si VALIDITE_ALERTE) ajoutée aux vues des documents ; DATE_PIECE activée pour les
+  achats (date du fournisseur).
+- Vérifié sur la démo : validité dépassée (liste et transformation de DV2026-00003), encours et marge avec des seuils
+  d'essai (remis à -1), référence en double (FF2026-00003), quantité dépassée (essai remis), date future et antérieure,
+  référence d'une commande de marché public refusées.
+

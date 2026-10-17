@@ -332,6 +332,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         controles.AddRange(r.Erreurs);
         // Un brouillon peut attendre son tiers ; un document validé l'a toujours (stock : notre société, posée par la spécialisation).
         if (saisie.Document.EntTiersId is null && await Regles.Booleen("TIERS_OBLIGATOIRE", type, ct)) controles.Add(new MessageCalcul(null, "TIERS_OBLIGATOIRE", "Tiers du document à choisir avant la validation"));
+        await ControlerRegles(saisie.Document, type, controles, ct);
         if (controles.Count > 0) throw ExceptionMetier.Invalide("VALIDATION", "Le document comporte des erreurs", controles);
 
         await Historiser(avant, "VALIDATION", u, ct);
@@ -377,6 +378,119 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Relu après les soldes et le point d'accroche (lignes soldées, numéro de situation…).
         reponse.Document = await persistance.Charger(id, ct);
         return reponse;
+    }
+
+    // ------------------------------------------------------------------ contrôles de gestion (CONCEPTION-REGLES-DOCUMENTS.md, lot 6)
+
+    private static DateOnly Aujourdhui => DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>Règles bloquantes de la validation : chronologie des pièces (R7), référence externe (R12), quantité dépassée (R17).</summary>
+    private async Task ControlerRegles(TDoc d, TypeDocument type, List<MessageCalcul> controles, CancellationToken ct)
+    {
+        if (await Regles.Booleen("DATE_PIECE", type, ct))
+        {
+            if (d.EntDate > Aujourdhui) controles.Add(new MessageCalcul(null, "DATE_FUTURE", "La date du document est dans le futur"));
+            if (d.EntDateExterne > Aujourdhui) controles.Add(new MessageCalcul(null, "DATE_FUTURE", "La date du fournisseur est dans le futur"));
+            // Numérotation continue : pas avant la dernière pièce numérotée du même type.
+            if (type.TydNumerotationContinue && d.EntNumero is null)
+            {
+                var derniere = await db.Documents.AsNoTracking()
+                    .Where(x => x.EntTydId == type.TydId && x.EntNumero != null && x.EntId != d.EntId && x.EntDate > d.EntDate)
+                    .OrderByDescending(x => x.EntDate).Select(x => new { x.EntNumero, x.EntDate }).FirstOrDefaultAsync(ct);
+                if (derniere is not null)
+                {
+                    controles.Add(new MessageCalcul(null, "DATE_ANTERIEURE",
+                        $"La pièce {derniere.EntNumero} est datée du {derniere.EntDate:dd/MM/yyyy} : la date du document ne peut pas la précéder"));
+                }
+            }
+        }
+        if (string.IsNullOrWhiteSpace(d.EntReferenceExterne) && await Regles.Booleen("REFERENCE_EXTERNE_OBLIGATOIRE", type, ct))
+        {
+            controles.Add(new MessageCalcul(null, "REFERENCE_EXTERNE_OBLIGATOIRE", "Référence externe à saisir avant la validation"));
+        }
+        if (type.TydAvancement is null && await Regles.Texte("QUANTITE_DEPASSEE", type, ct) == "REFUS")
+        {
+            controles.AddRange(await Depassements(d.EntId, "QUANTITE_DEPASSEE", ct));
+        }
+    }
+
+    private static string Quantite(decimal q) => q.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+
+    private sealed record DepassementSql(long LigId, string? Numero, decimal Qte, decimal Reste);
+
+    /// <summary>
+    /// Lignes transformées au-delà du reste de leur parent (R17) : quantité du parent moins celles des autres documents
+    /// validés non annulés à la même étape et les soldes écrits ailleurs (valeurs absolues : retours et avoirs).
+    /// </summary>
+    public async Task<List<MessageCalcul>> Depassements(long entId, string code, CancellationToken ct)
+    {
+        var lignes = await db.Database.SqlQuery<DepassementSql>($"""
+            SELECT DISTINCT ON (l.lig_id) l.lig_id AS lig_id, l.lig_numerotation AS numero, abs(coalesce(l.lig_qte_vendue, 0)) AS qte,
+                   abs(coalesce(p.lig_qte_vendue, 0))
+                   - coalesce((SELECT abs(sum(x2.lil_qte)) FROM document_ligne_lien x2
+                               JOIN document_ligne l2 ON l2.lig_id = x2.lil_cible_lig_id
+                               JOIN document d2 ON d2.ent_id = l2.lig_ent_id
+                               JOIN statut_document s2 ON s2.std_id = d2.ent_std_id
+                               WHERE x2.lil_source_lig_id = x.lil_source_lig_id AND x2.lil_etape = x.lil_etape
+                                 AND l2.lig_ent_id <> l.lig_ent_id AND d2.ent_verrouille AND s2.std_code NOT IN ('ANNULE', 'REMPLACE')), 0)
+                   - coalesce((SELECT sum(s.lso_qte) FROM document_ligne_solde s
+                               WHERE s.lso_lig_id = x.lil_source_lig_id AND s.lso_etape = x.lil_etape
+                                 AND (s.lso_cible_lig_id IS NULL OR s.lso_cible_lig_id NOT IN (SELECT lig_id FROM document_ligne WHERE lig_ent_id = l.lig_ent_id))), 0) AS reste
+            FROM document_ligne l
+            JOIN document_ligne_lien x ON x.lil_cible_lig_id = l.lig_id AND x.lil_source_lig_id = l.lig_origine_id
+            JOIN document_ligne p ON p.lig_id = x.lil_source_lig_id
+            WHERE l.lig_ent_id = {entId} AND l.lig_tyl_id IN (2, 3)
+            ORDER BY l.lig_id, x.lil_id
+            """).ToListAsync(ct);
+        return lignes.Where(l => l.Qte > Math.Max(l.Reste, 0))
+            .Select(l => new MessageCalcul(l.LigId, code, $"Ligne {l.Numero} : quantité {Quantite(l.Qte)} au-delà du reste du parent ({Quantite(Math.Max(l.Reste, 0))})"))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Avertissements de gestion (non bloquants) avant une action : VALIDER (total nul R8, référence externe en double
+    /// R12, quantité dépassée R17, puis ceux du cœur) ou TRANSFORMER (fin de validité R3, document rejeté P25).
+    /// </summary>
+    public async Task<List<MessageCalcul>> Avertissements(long id, string action, CancellationToken ct)
+    {
+        var complet = await persistance.Charger(id, ct);
+        var d = complet.Document;
+        var type = await Type(d.EntTydId, ct);
+        var res = new List<MessageCalcul>();
+        if (action == "TRANSFORMER")
+        {
+            if (d.EntRejeteLe is not null) res.Add(new MessageCalcul(null, "DOCUMENT_REJETE", $"Document rejeté par le tiers : {d.EntRejetMotif}"));
+            if (d.EntDateValidite is DateOnly fin && fin < Aujourdhui && await Regles.Booleen("VALIDITE_ALERTE", type, ct))
+            {
+                res.Add(new MessageCalcul(null, "VALIDITE_DEPASSEE", $"Validité dépassée depuis le {fin:dd/MM/yyyy}"));
+            }
+        }
+        else if (action == "VALIDER")
+        {
+            if (d.EntTotalHt == 0 && await Regles.Texte("MONTANT_NUL", type, ct) == "AVERTISSEMENT")
+            {
+                res.Add(new MessageCalcul(null, "MONTANT_NUL", "Le total du document est nul"));
+            }
+            if (!string.IsNullOrWhiteSpace(d.EntReferenceExterne) && d.EntTiersId is not null && await Regles.Booleen("REFERENCE_EXTERNE_UNIQUE", type, ct))
+            {
+                var reference = d.EntReferenceExterne.Trim();
+                var doublons = await (from x in db.Documents.AsNoTracking()
+                                      join s in db.StatutsDocument.AsNoTracking() on x.EntStdId equals s.StdId
+                                      where x.EntTydId == d.EntTydId && x.EntTiersId == d.EntTiersId && x.EntGroupeId != d.EntGroupeId
+                                            && x.EntReferenceExterne != null && x.EntReferenceExterne.Trim() == reference && s.StdCode != "ANNULE" && s.StdCode != "REMPLACE"
+                                      select x.EntNumero ?? "(brouillon)").ToListAsync(ct);
+                if (doublons.Count > 0)
+                {
+                    res.Add(new MessageCalcul(null, "REFERENCE_EXTERNE_DOUBLE", $"Référence externe « {reference} » déjà portée par {string.Join(", ", doublons)}"));
+                }
+            }
+            if (type.TydAvancement is null && await Regles.Texte("QUANTITE_DEPASSEE", type, ct) == "AVERTISSEMENT")
+            {
+                res.AddRange(await Depassements(id, "QUANTITE_DEPASSEE", ct));
+            }
+        }
+        await specialisation.AvertissementsAsync(db, complet, type, await Regles.Resolues(type, ct), action, res, ct);
+        return res;
     }
 
     // ------------------------------------------------------------------ cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17 à P25)

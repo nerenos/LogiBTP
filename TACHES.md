@@ -69,7 +69,7 @@
   libération des retenues à l'écran (route `PUT /documents/{id}/echeances` prête), onglet Règlements de la page
   document, avance forfaitaire « entre deux seuils », aperçu des déductions d'acompte avant validation, liste du délai
   de paiement des tiers reliée à `condition_paiement`, relances.
-- [ ] **Règles des documents** (17/10/2026) : analyse dans [CONCEPTION-REGLES-DOCUMENTS.md](CONCEPTION-REGLES-DOCUMENTS.md)
+- [x] **Règles des documents** (17/10/2026, réalisé en six lots : § 9 de la conception) : analyse dans [CONCEPTION-REGLES-DOCUMENTS.md](CONCEPTION-REGLES-DOCUMENTS.md)
   (règles globales, par famille et par type, déjà programmées ; incohérences I1 à I10 ; catalogue R1 à R20 paramétrable
   à trois niveaux) ; toutes les décisions prises (Q1 à Q7, P1 à P25, 17/10/2026) : cycle de vie APPROUVE / ENVOYE /
   VALIDE du tiers, statuts automatiques et de paiement, dévalidation par indice, droits APPROUVER / DEVALIDER / FORCER.

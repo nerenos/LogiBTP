@@ -18,6 +18,7 @@ import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { completerRattachement } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
+import { confirmerAvertissements } from '../documents/avertissements.js';
 import { choisirSources } from '../documents/sources.js';
 
 /** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
@@ -655,6 +656,8 @@ export class PageDocument extends PageBase {
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
+    // Contrôles de gestion (lot 6 des règles) : avertissements non bloquants, l'utilisateur choisit.
+    if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', 'Valider'))) return;
   }
 
   /** Étape du cycle de vie (envoi, validation du tiers, rejet) puis rechargement du document. */

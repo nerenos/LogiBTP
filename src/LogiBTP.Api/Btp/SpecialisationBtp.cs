@@ -135,7 +135,130 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
-        return ControlerFraisAnnexes(db, document, type, erreurs, ct);
+        return ControlerMarchePublic(db, document, type, erreurs, ct);
+    }
+
+    /// <summary>Commande d'un marché public : référence externe (engagement) exigée si la règle REFERENCE_MARCHE_PUBLIC l'active (R12).</summary>
+    private static async Task ControlerMarchePublic(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        var d = document.Document;
+        if (type.TydCode == "V_COMMANDE" && d.EntMarcheId is int marche && string.IsNullOrWhiteSpace(d.EntReferenceExterne)
+            && await Regle(db, "REFERENCE_MARCHE_PUBLIC", type.TydId, ct) == "true"
+            && await db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM marche WHERE mar_id = {marche} AND mar_nature = 'U'").FirstAsync(ct) > 0)
+        {
+            erreurs.Add(new MessageCalcul(null, "REFERENCE_MARCHE_PUBLIC", "Commande d'un marché public : référence externe (n° d'engagement) à saisir"));
+        }
+        await ControlerFraisAnnexes(db, document, type, erreurs, ct);
+    }
+
+    /// <summary>Valeur d'une règle des documents (texte JSON, null si non paramétrée : défaut du catalogue).</summary>
+    private static async Task<string?> Regle(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, string code, int tydId, CancellationToken ct) =>
+        (await db.Database.SqlQuery<string?>($"SELECT f_regle_document({code}, {tydId})::text AS \"Value\"").ToListAsync(ct)).FirstOrDefault();
+
+    /// <summary>Montant à la française (l'API tourne sans globalisation) : 12 345,67 €.</summary>
+    private static string Euros(decimal m) =>
+        m.ToString("#,##0.00", System.Globalization.CultureInfo.InvariantCulture).Replace(',', ' ').Replace('.', ',') + " €";
+
+    private static string Nombre(decimal n) => n.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+
+    private static decimal? Seuil(IReadOnlyDictionary<string, System.Text.Json.Nodes.JsonNode?> regles, string code) =>
+        regles.TryGetValue(code, out var v) && v is System.Text.Json.Nodes.JsonValue j && j.TryGetValue<decimal>(out var n) && n >= 0 ? n : null;
+
+    /// <summary>
+    /// Avertissements de gestion à la validation (CONCEPTION-REGLES-DOCUMENTS.md, lot 6) : remise au-delà du seuil (R13),
+    /// marge nette sous le minimum (R14, devis et factures directes), encours client dépassé (R15), prix d'achat facturé
+    /// différent de la commande (R16).
+    /// </summary>
+    public override async Task AvertissementsAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        IReadOnlyDictionary<string, System.Text.Json.Nodes.JsonNode?> regles, string action, List<MessageCalcul> avertissements, CancellationToken ct)
+    {
+        if (action != "VALIDER") return;
+        var d = document.Document;
+        var parId = document.Lignes.ToDictionary(l => l.LigId);
+        // Lignes vendues : lignes de prix hors composantes d'ouvrage, options et frais annexes.
+        var vendues = document.Lignes.Where(l => TL.EstChiffree(l) && !(l.LigParentId is long p && parId.TryGetValue(p, out var parent) && parent.LigTylId == TL.Ouvrage)
+            && l.LigTypePrix == "V").ToList();
+
+        if (Seuil(regles, "REMISE_MAX") is decimal remiseMax)
+        {
+            foreach (var l in vendues.Where(l => (1 - l.LigCoefRemise) * 100 > remiseMax))
+            {
+                avertissements.Add(new MessageCalcul(l.LigId, "REMISE_MAX", $"Ligne {l.LigNumerotation} : remise de {Nombre((1 - l.LigCoefRemise) * 100)} % au-delà de {Nombre(remiseMax)} %"));
+            }
+            foreach (var p in document.Lignes.Where(l => l.LigTylId == TL.PiedHt && !l.LigPiedRetenue))
+            {
+                var pct = p.LigPiedMode switch
+                {
+                    "P" when p.LigPiedSens == -1 => p.LigPiedValeur ?? 0,
+                    "C" => (1 - (p.LigPiedValeur ?? 1)) * 100,
+                    _ => p.LigBaseCalcul is decimal b && b != 0 && p.LigMontantHt < 0 ? -(p.LigMontantHt ?? 0) / b * 100 : 0,
+                };
+                if (pct > remiseMax) avertissements.Add(new MessageCalcul(p.LigId, "REMISE_MAX", $"Remise de pied de {Nombre(pct)} % au-delà de {Nombre(remiseMax)} %"));
+            }
+        }
+
+        // Marge nette (onglet Analyse) : PV remisé sans frais annexes ni prorata − revient, sur le PV ; factures : directes seulement.
+        if (Seuil(regles, "MARGE_MIN") is decimal margeMin
+            && await db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM document_lien WHERE lie_cible_ent_id = {d.EntId} AND lie_type = 'TRANSFORMATION'").FirstAsync(ct) == 0)
+        {
+            decimal vente = 0, revient = 0;
+            foreach (var l in vendues)
+            {
+                var coef = l.LigCoefFa * l.LigCoefProrata;
+                vente += coef == 0 ? 0 : (l.LigMontantHt ?? 0) / coef;
+                revient += l.LigMontantPr ?? 0;
+            }
+            if (vente > 0 && (vente - revient) / vente * 100 < margeMin)
+            {
+                avertissements.Add(new MessageCalcul(null, "MARGE_MIN", $"Marge nette de {Nombre((vente - revient) / vente * 100)} % sous le minimum de {Nombre(margeMin)} %"));
+            }
+        }
+
+        // Encours du client : échéances non réglées des pièces validées + commandes en cours + ce document (la fiche du tiers l'emporte).
+        if (type.TydFamille == "V" && d.EntTiersId is long tiers && (type.TydCode == "V_COMMANDE" || type.TydNumerotationContinue))
+        {
+            var plafond = (await db.Database.SqlQuery<decimal?>($"SELECT per_cli_encours_max AS \"Value\" FROM personne WHERE per_id = {tiers}").ToListAsync(ct)).FirstOrDefault()
+                ?? Seuil(regles, "ENCOURS_CLIENT");
+            if (plafond is decimal max && max >= 0)
+            {
+                var encours = await db.Database.SqlQuery<decimal>($"""
+                    SELECT coalesce((SELECT sum(e.ech_montant - coalesce((SELECT sum(p.poi_montant) FROM pointage p WHERE p.poi_echeance_id = e.ech_id), 0))
+                                     FROM document_echeance e JOIN document x ON x.ent_id = e.ech_ent_id JOIN type_document t ON t.tyd_id = x.ent_tyd_id
+                                     JOIN statut_document s ON s.std_id = x.ent_std_id
+                                     WHERE x.ent_tiers_id = {tiers} AND t.tyd_famille = 'V' AND x.ent_verrouille AND s.std_code NOT IN ('ANNULE', 'REMPLACE')), 0)
+                         + coalesce((SELECT sum(x.ent_total_ttc) FROM document x JOIN type_document t ON t.tyd_id = x.ent_tyd_id
+                                     JOIN statut_document s ON s.std_id = x.ent_std_id
+                                     WHERE x.ent_tiers_id = {tiers} AND t.tyd_code = 'V_COMMANDE' AND x.ent_verrouille AND x.ent_id <> {d.EntId}
+                                       AND s.std_code NOT IN ('FACTURE', 'SOLDE', 'ANNULE', 'REMPLACE')), 0) AS "Value"
+                    """).FirstAsync(ct);
+                var total = encours + d.EntNetAPayer;
+                if (total > max)
+                {
+                    avertissements.Add(new MessageCalcul(null, "ENCOURS_CLIENT", $"Encours du client de {Euros(total)} (ce document compris) au-delà du plafond de {Euros(max)}"));
+                }
+            }
+        }
+
+        // Facture fournisseur : prix unitaire différent de celui de la commande (ligne d'origine) au-delà du seuil.
+        if (Seuil(regles, "PRIX_ACHAT_ECART") is decimal ecartMax && type.TydFamille == "A")
+        {
+            var origines = vendues.Where(l => l.LigOrigineId is not null).Select(l => l.LigOrigineId!.Value).ToList();
+            if (origines.Count > 0)
+            {
+                var prix = await db.Lignes.AsNoTracking().Where(l => origines.Contains(l.LigId))
+                    .ToDictionaryAsync(l => l.LigId, l => l.LigPvRemise ?? l.LigPv ?? 0, ct);
+                foreach (var l in vendues.Where(l => l.LigOrigineId is long o && prix.ContainsKey(o)))
+                {
+                    var avant = prix[l.LigOrigineId!.Value];
+                    var maintenant = l.LigPvRemise ?? l.LigPv ?? 0;
+                    if (avant != 0 && Math.Abs(maintenant - avant) / Math.Abs(avant) * 100 > ecartMax)
+                    {
+                        avertissements.Add(new MessageCalcul(l.LigId, "PRIX_ACHAT_ECART", $"Ligne {l.LigNumerotation} : prix {Euros(maintenant)} au lieu de {Euros(avant)} à la commande"));
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>Frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES, P11 ; controlesValidation).</summary>

@@ -1,6 +1,7 @@
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { unitesOptionnelles } from '@logibtp/document';
 import { api } from '../api.js';
+import { confirmerAvertissements } from './avertissements.js';
 
 // Transformation d'un document (devis → commande, commande → livraison, situation, facture…) : fenêtre de choix du
 // type cible, regroupée par étape (commande, livraison, situation, facturation, retour et avoir) puis ventes / achats,
@@ -165,6 +166,8 @@ export async function transformerDocument({ entId, typeCode, numero, objet, type
   const def = definition ?? await api.definition(typeCode);
   const cibles = ciblesTransformation(def, lesTypes);
   if (!cibles.length) { message('Ce type de document ne se transforme pas', 'avertissement'); return null; }
+  // Validité dépassée, document rejeté : avertissement, l'utilisateur choisit (R3, P25).
+  if (!(await confirmerAvertissements(entId, 'TRANSFORMER', 'Transformer'))) return null;
   const cible = await choisirTransformation({ source: { numero, objet, libelle_type: def.type?.tyd_libelle }, cibles });
   if (!cible) return null;
   const complet = await api.document(entId);

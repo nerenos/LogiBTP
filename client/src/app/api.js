@@ -49,6 +49,7 @@ export const api = {
   suivi: (id) => appel('GET', `/documents/${id}/suivi`),
   // Restes à solder des lignes d'un document issu d'une transformation ; seuils de solde automatique (paramètres).
   restes: (id) => appel('GET', `/documents/${id}/restes`),
+  avertissements: (id, action) => appel('GET', `/documents/${id}/avertissements?action=${action}`),
   // Plusieurs documents sources : création, ajout à un brouillon, documents en attente ; documents d'un marché.
   transformerPlusieurs: (demande) => appel('POST', '/documents/plusieurs', demande),
   ajouterSources: (id, sources) => appel('POST', `/documents/${id}/sources`, { sources }),
