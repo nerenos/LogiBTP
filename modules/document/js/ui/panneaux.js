@@ -319,7 +319,9 @@ export class PanneauxDocument {
     }
     const etiquettes = this.editeur.etiquettes();
     if (etiquettes.length) champs.push(f.sel('lig_etiquette', 'Étiquette', [['', '—'], ...etiquettes.map((e) => [e.code, e.libelle])]));
-    champs.push(f.zone('lig_commentaire', 'Commentaire (non imprimé)'));
+    const parent = l.lig_proprietes?.commentaire_parent;
+    if (parent) champs.push(`<label class="large">Commentaire du parent<textarea rows="2" disabled>${echapper(parent)}</textarea></label>`);
+    champs.push(f.zone('lig_commentaire', parent ? 'Commentaire du document (non imprimé)' : 'Commentaire (non imprimé)'));
     return champs;
   }
 
@@ -368,6 +370,8 @@ export class PanneauxDocument {
       ${calcul.length ? `<dl class="calcul">${calcul.map(([t, v]) => `<dt>${echapper(t)}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
 
     const m = editeur.magasin;
+    // Ligne reprise du parent d'un document d'avancement : informations du parent en lecture seule.
+    zone.querySelectorAll('[data-champ]').forEach((el) => { if (editeur.champVerrouille?.(l, el.dataset.champ)) el.disabled = true; });
     lier(zone, '[data-champ]', (champ, v, el) => {
       // Champs qui changent le formulaire (base proposée selon le mode…) : le panneau se redessine.
       if (['lig_pied_mode', 'lig_pied_base'].includes(champ)) el.blur();

@@ -22,6 +22,8 @@ export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
 /** Colonnes de l'avancement (situations, factures d'avancement). */
 export const COLONNES_AVANCEMENT = ['avt_pct_prec', 'avt_pct', 'avt_qte', 'avt_montant', 'avt_precedent'];
+// Champs libres d'une ligne reprise du parent dans un document d'avancement (avec la saisie de l'avancement, avt:…).
+const CHAMPS_LIBRES_AVANCEMENT = ['lig_commentaire', 'lig_etiquette', 'lig_is_non_editee', 'lig_solde'];
 // Colonnes de ventilation (clés des documents transformés) dans un document d'avancement : [clé, colonne d'avancement, titre].
 export const ALIAS_AVANCEMENT = [
   ['qte_parent', 'avt_qte_marche', 'Qté parent'], ['montant_parent', 'avt_montant_marche', 'Montant parent'],
@@ -116,6 +118,43 @@ export class EditeurDocument {
     this.grille.rendre();
   }
 
+  // ---------------------------------------------------------------- document d'avancement
+
+  /** Situation, facture d'avancement, reprise : lignes reprises du marché, seuls l'avancement et le commentaire se saisissent. */
+  get estAvancement() { return Boolean(this.saisie.document.ent_avt_presentation); }
+
+  /** Ligne reprise du document parent (commande du marché) dans un document d'avancement. */
+  ligneDuParent(l) { return this.estAvancement && l?.lig_origine_id !== null && l?.lig_origine_id !== undefined; }
+
+  /**
+   * Champ non modifiable : sur une ligne reprise du parent d'un document d'avancement, tout sauf l'avancement (avt:…),
+   * le commentaire du document et l'affichage (étiquette, impression).
+   */
+  champVerrouille(l, champ) {
+    if (!this.ligneDuParent(l) || champ === null || champ === undefined) return false;
+    return !String(champ).startsWith('avt:') && !CHAMPS_LIBRES_AVANCEMENT.includes(champ);
+  }
+
+  /** Lignes ajoutables : dans un document d'avancement, du texte ou des lignes de pied seulement. */
+  ajoutAutorise(lignes) {
+    return !this.estAvancement || lignes.every((l) => l.lig_tyl_id === TL.TEXTE || estPied(l));
+  }
+
+  /** Aucune ligne reprise du parent parmi les lignes (suppression, déplacement d'un document d'avancement). */
+  #sansLigneDuParent(ids, action) {
+    const parId = new Map(this.saisie.lignes.map((l) => [l.lig_id, l]));
+    if (!ids.some((id) => this.ligneDuParent(parId.get(id)))) return true;
+    this.surMessage?.(`${action} impossible : ligne reprise du document parent`);
+    return false;
+  }
+
+  /** Colonnes saisissables seulement si le champ n'est pas verrouillé (lignes reprises d'un document d'avancement). */
+  #verrouiller(colonnes) {
+    if (!this.estAvancement) return colonnes;
+    return colonnes.map((c) => (typeof c.editable !== 'function' ? c
+      : { ...c, editable: (l) => c.editable(l) && !this.champVerrouille(l, c.champ?.(l) ?? null) }));
+  }
+
   /** Document issu d'une transformation (lignes liées à un parent) ou document d'avancement. */
   static estTransforme(saisie) {
     return Boolean(saisie.document?.ent_avt_presentation) || (saisie.lignes ?? []).some((l) => l.lig_origine_id);
@@ -167,7 +206,7 @@ export class EditeurDocument {
 
   /** Colonnes de la vue (dans son ordre), et colonnes système en mode débogage ; sans vue : toutes les colonnes. */
   colonnesAffichees() {
-    const catalogue = this.colonnes();
+    const catalogue = this.#verrouiller(this.colonnes());
     if (!this.vue?.colonnes?.length) return catalogue;
     const parCle = new Map(catalogue.map((c) => [c.cle, c]));
     // Document issu d'une transformation : colonnes du reste à solder ajoutées après la quantité si la vue n'en a
@@ -579,7 +618,7 @@ export class EditeurDocument {
 
   /** Dépôt glissé depuis une autre fenêtre : type de ligne déduit du type MIME (article : élément, ouvrage). */
   depotExterneAutorise(cibleId, position, types) {
-    if (this.magasin.lectureSeule) return false;
+    if (this.magasin.lectureSeule || this.estAvancement) return false;
     const type = types.map((t) => TYPES_DEPOT[t]).find(Boolean);
     const cible = this.saisie.lignes.find((l) => l.lig_id === cibleId);
     if (!type || !cible) return false;
@@ -856,8 +895,23 @@ export class EditeurDocument {
         // Commentaire interne de la ligne (non imprimé) : première ligne dans la cellule, texte entier en bulle.
         cle: 'commentaire', titre: 'Commentaire', classe: 'col-commentaire', editeur: 'texte', editable: saisissable,
         champ: () => 'lig_commentaire', lire: (l) => l.lig_commentaire ?? '',
-        valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_commentaire ?? '').split('\n')[0]),
-        titreCellule: (r) => (r.virtuelle ? '' : r.item.lig_commentaire ?? ''),
+        valeur: (r) => {
+          if (r.virtuelle) return '';
+          const parent = r.item.lig_proprietes?.commentaire_parent;
+          if (!r.item.lig_commentaire && parent) return { html: `<i class="commentaire-parent">${echapper(String(parent).split('\n')[0])}</i>` };
+          return String(r.item.lig_commentaire ?? '').split('\n')[0];
+        },
+        titreCellule: (r) => {
+          if (r.virtuelle) return '';
+          const parent = r.item.lig_proprietes?.commentaire_parent;
+          return [r.item.lig_commentaire, parent ? `Parent : ${parent}` : null].filter(Boolean).join('\n\n');
+        },
+      },
+      {
+        // Commentaire de la ligne du document parent (repris à la transformation d'avancement), en lecture seule.
+        cle: 'commentaire_parent', titre: 'Commentaire parent', classe: 'col-commentaire', editable: () => false,
+        valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_proprietes?.commentaire_parent ?? '').split('\n')[0]),
+        titreCellule: (r) => (r.virtuelle ? '' : r.item.lig_proprietes?.commentaire_parent ?? ''),
       },
     ];
   }
@@ -1084,6 +1138,10 @@ export class EditeurDocument {
   // ---------------------------------------------------------------- actions
 
   modifierLigne(id, champ, valeur) {
+    if (this.champVerrouille(this.saisie.lignes.find((x) => x.lig_id === id), champ)) {
+      this.surMessage?.('Information reprise du document parent : non modifiable');
+      return;
+    }
     this.magasin.modifier((d) => {
       const l = d.lignes.find((x) => x.lig_id === id);
       if (!l) return;
@@ -1098,6 +1156,10 @@ export class EditeurDocument {
    */
   modifierCellule(id, champ, texte, colonne) {
     const m = this.magasin;
+    if (this.champVerrouille(this.saisie.lignes.find((x) => x.lig_id === id), champ)) {
+      this.surMessage?.('Information reprise du document parent : non modifiable');
+      return false;
+    }
     const taux = this.definition.taux_tva;
     let valeur = texte;
     if (colonne.editeur === 'nombre') {
@@ -1111,6 +1173,7 @@ export class EditeurDocument {
       if (aEnfants && !accepteEnfants({ lig_tyl_id: type })) { this.surMessage?.('Ce type n\'accepte pas de lignes enfants'); return false; }
       if (estPied({ lig_tyl_id: type }) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.('Les lignes de pied sont au niveau racine'); return false; }
       if (type === TL.SECTION && l.lig_parent_id !== null) { this.surMessage?.('Une section est au niveau racine'); return false; }
+      if (!this.ajoutAutorise([{ lig_tyl_id: type }])) { this.surMessage?.('Document d\'avancement : texte ou ligne de pied seulement'); return false; }
       m.modifier((d) => {
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_tyl_id = type;
@@ -1166,6 +1229,11 @@ export class EditeurDocument {
           if (memeType || pos !== 'enfant') type = ref.lig_tyl_id === TL.TVA ? TL.PIED_TTC : ref.lig_tyl_id;
           if (!memeType && pos !== 'enfant' && (type === TL.SOUS_TOTAL || type === TL.TEXTE)) type = TL.ELEMENT;
         }
+        // Document d'avancement : une ligne de pied dans le pied, du texte ailleurs (jamais dans un ouvrage).
+        if (this.estAvancement && !estPied({ lig_tyl_id: type })) {
+          type = TL.TEXTE;
+          if (pos === 'enfant' && ref && !estTranche(ref)) pos = 'apres';
+        }
         const id = m.prochainId();
         m.modifier((d) => {
           d.lignes.push(this.nouvelleLigne(id, type, d.document.ent_id));
@@ -1178,6 +1246,7 @@ export class EditeurDocument {
       },
 
       deplacer: (ids, cibleId, position) => {
+        if (!this.#sansLigneDuParent(ids, 'Déplacement')) return;
         m.modifier((d) => {
           const racines = racinesSelection(C, d.lignes, ids);
           placer(C, d.lignes, racines, cibleId, position);
@@ -1186,21 +1255,22 @@ export class EditeurDocument {
         this.coupees.clear();
       },
 
-      indenter: (ids) => m.modifier((d) => {
+      indenter: (ids) => this.#sansLigneDuParent(ids, 'Changement de niveau') && m.modifier((d) => {
         for (const r of racinesSelection(C, d.lignes, ids)) {
           if (!estPied(r) && indenter(C, d.lignes, r.lig_id, accepteEnfants)) regles.appliquerContexte(d, r.lig_id, taux);
         }
       }, 'Descendre d\'un niveau'),
 
-      desindenter: (ids) => m.modifier((d) => {
+      desindenter: (ids) => this.#sansLigneDuParent(ids, 'Changement de niveau') && m.modifier((d) => {
         for (const r of racinesSelection(C, d.lignes, ids).reverse()) {
           if (desindenter(C, d.lignes, r.lig_id)) regles.appliquerContexte(d, r.lig_id, taux);
         }
       }, 'Remonter d\'un niveau'),
 
-      decaler: (id, sens) => m.modifier((d) => { decaler(C, d.lignes, id, sens); }, 'Ordre'),
+      decaler: (id, sens) => this.#sansLigneDuParent([id], 'Déplacement') && m.modifier((d) => { decaler(C, d.lignes, id, sens); }, 'Ordre'),
 
       supprimer: (ids) => {
+        if (!this.#sansLigneDuParent(ids, 'Suppression')) return;
         const suivante = this.#ligneApres(ids);
         m.modifier((d) => {
           const supprimees = supprimer(C, d.lignes, racinesSelection(C, d.lignes, ids).map((r) => r.lig_id));
@@ -1294,6 +1364,10 @@ export class EditeurDocument {
    * (remplacer : la ligne de référence est retirée dans la même étape d'annulation). Renvoie l'ID de la première racine.
    */
   insererContenu(contenu, refId, libelle, { remplacer = false, position = 'apres' } = {}) {
+    if (!this.ajoutAutorise(contenu.lignes ?? [])) {
+      this.surMessage?.('Document d\'avancement : seuls du texte et des lignes de pied s\'ajoutent');
+      return null;
+    }
     const copie = this.pressePapiers.renumeroter(contenu, this.magasin.prochainId());
     const ref = this.saisie.lignes.find((l) => l.lig_id === refId);
     if (ref && !this.regles.depotAutorise([...this.saisie.lignes, ...copie.lignes], copie.racines, ref, position)) {

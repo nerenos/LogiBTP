@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +92,17 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     private static TComplet PreparerAvancement(TComplet c, Preparation p)
     {
         if (p.TypeCible.TydAvancement is null) return c;
+        // Commentaire de la ligne du parent : gardé à part (lig_proprietes.commentaire_parent, affiché en lecture seule),
+        // le commentaire de la ligne restant celui du document.
+        foreach (var l in c.Lignes.Where(l => l.LigOrigineId is not null && !string.IsNullOrEmpty(l.LigCommentaire)))
+        {
+            var props = l.LigProprietes is { } pr && pr.RootElement.ValueKind == JsonValueKind.Object
+                ? JsonNode.Parse(pr.RootElement.GetRawText())!.AsObject() : new JsonObject();
+            if (props["commentaire_parent"] is not null) continue;
+            props["commentaire_parent"] = l.LigCommentaire;
+            l.LigProprietes = JsonSerializer.SerializeToDocument(props);
+            l.LigCommentaire = null;
+        }
         var sources = p.Source.Lignes.ToDictionary(l => l.LigId);
         foreach (var l in c.Lignes.Where(l => l.LigOrigineId is long o && p.Retenues.ContainsKey(o)))
         {

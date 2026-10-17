@@ -279,7 +279,7 @@ export class PanneauxBtp extends PanneauxDocument {
       return sel.includes(ligId) ? sel : [ligId];
     };
     const actions = [
-      this.actualiserPrix && !lecture ? '<button type="button" data-action-ligne="prix" title="Reprendre les prix de la bibliothèque (lignes sélectionnées ou cette ligne)">⟳ Prix bibliothèque</button>' : '',
+      this.actualiserPrix && !lecture && !this.editeur.estAvancement ? '<button type="button" data-action-ligne="prix" title="Reprendre les prix de la bibliothèque (lignes sélectionnées ou cette ligne)">⟳ Prix bibliothèque</button>' : '',
       this.versBibliotheque && !lecture ? '<button type="button" data-action-ligne="envoi" title="Mettre à jour ou créer les éléments de la bibliothèque (élément → article, ouvrage → ouvrage, titre → ensemble)">📤 Vers la bibliothèque</button>' : '',
       l.lig_tyl_id === TL.SECTION ? '<button type="button" data-action-ligne="variables" title="Variables du document ($$) dans le métré de la section (F4)">$$ Variables du document</button>' : '',
     ].filter(Boolean);

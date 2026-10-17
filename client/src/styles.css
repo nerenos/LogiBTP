@@ -263,3 +263,6 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .echeancier th, .echeancier td { padding: 2px 8px; border-bottom: 1px solid var(--bord); text-align: left; }
 .echeancier .nombre { text-align: right; white-space: nowrap; }
 .echeancier tr.retenue td { font-style: italic; }
+
+/* Commentaire de la ligne du document parent (documents d'avancement), affiché faute de commentaire propre. */
+.commentaire-parent { color: var(--discret); }
