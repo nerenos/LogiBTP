@@ -8,8 +8,8 @@ const cols = (...cles) => cles.map((cle) => ({ cle }));
 // Documents issus d'une transformation : vue par défaut de leur type (sans modèle choisi) qui privilégie la
 // ventilation (parent, précédent, ce document, cumul, %, reste) ; pas de coefficients ; ventes : PV net seul.
 const ENTETE = ['num', 'type', 'code', 'libelle', 'nature', 'unite'];
-const VENTILATION = ['qte_parent', 'montant_parent', 'qte_prec', 'montant_prec', 'qte', 'montant', 'qte_cumul', 'montant_cumul', 'pct_cumul', 'reste', 'solde'];
-const AVANCEMENT = ['avt_montant_marche', 'avt_pct_prec', 'avt_qte_prec', 'avt_precedent', 'avt_pct', 'avt_qte', 'avt_montant', 'qte', 'montant'];
+const VENTILATION = ['qte_parent', 'montant_parent', 'pct_prec', 'qte_prec', 'montant_prec', 'pct_periode', 'qte', 'montant', 'pct_cumul', 'qte_cumul', 'montant_cumul', 'reste', 'solde'];
+const AVANCEMENT = ['avt_montant_marche', 'avt_pct_prec', 'avt_qte_prec', 'avt_precedent', 'avt_pct_periode', 'qte', 'montant', 'avt_pct', 'avt_qte', 'avt_montant'];
 const VUES_TRANSFORMES = [
   { nom: 'Ventilation (ventes)', types: ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_FACTURE', 'V_AVOIR'], colonnes: [...ENTETE, 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
   { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT'], colonnes: [...ENTETE, 'pvnet', ...AVANCEMENT, 'tva', 'commentaire'] },

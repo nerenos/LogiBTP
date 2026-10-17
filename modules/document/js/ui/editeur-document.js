@@ -858,6 +858,11 @@ export class EditeurDocument {
     const avec = (r, f) => { const s = this.soldeLigne(r); return s ? f(s.info, r) : ''; };
     const qteCumul = (i, r) => Dz(i.autres).plus(Dz(r.calcule.lig_qte_vendue));
     const montantCumul = (i, r) => Dz(i.autres_montant).plus(Dz(r.calcule.lig_montant_ht));
+    // % du parent : de la quantité ; une ligne sans quantité (forfait) : du montant.
+    const pct = (i, qte, montant) => {
+      const [n, d] = Dz(i.qte_parent).isZero() ? [Dz(montant), Dz(i.montant_parent)] : [Dz(qte), Dz(i.qte_parent)];
+      return d.isZero() ? '' : formatNombre(n.div(d).times(100).toDecimalPlaces(2).toString(), 2);
+    };
     return [
       {
         cle: 'qte_parent', titre: 'Qté parent', classe: 'col-nombre', editable: () => false,
@@ -870,6 +875,11 @@ export class EditeurDocument {
         titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT de la ligne du document parent' : ''),
       },
       {
+        cle: 'pct_prec', titre: '% préc.', classe: 'col-coef', editable: () => false,
+        valeur: (r) => avec(r, (i) => pct(i, i.autres, i.autres_montant)),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Part du parent reprise par les documents précédents' : ''),
+      },
+      {
         cle: 'qte_prec', titre: 'Qté préc.', classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.autres, precision(r))),
         titreCellule: (r) => avec(r, (i) => `Quantité des documents précédents à la même étape${Dz(i.autres_brouillons).isZero() ? '' : ` (dont brouillons ${formatNombre(i.autres_brouillons, precision(r))})`}`),
@@ -878,6 +888,11 @@ export class EditeurDocument {
         cle: 'montant_prec', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,
         valeur: (r) => avec(r, (i) => formatNombre(i.autres_montant, pm())),
         titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT des documents précédents à la même étape' : ''),
+      },
+      {
+        cle: 'pct_periode', titre: '% période', classe: 'col-coef', editable: () => false,
+        valeur: (r) => avec(r, (i) => pct(i, r.calcule.lig_qte_vendue, r.calcule.lig_montant_ht)),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Part du parent reprise par ce document' : ''),
       },
       {
         cle: 'qte_cumul', titre: 'Qté cumul', classe: 'col-nombre', editable: () => false,
@@ -891,11 +906,7 @@ export class EditeurDocument {
       },
       {
         cle: 'pct_cumul', titre: '% cumul', classe: 'col-coef', editable: () => false,
-        // % de la quantité du parent ; une ligne sans quantité (forfait) : % du montant.
-        valeur: (r) => avec(r, (i) => {
-          const [n, d] = Dz(i.qte_parent).isZero() ? [montantCumul(i, r), Dz(i.montant_parent)] : [qteCumul(i, r), Dz(i.qte_parent)];
-          return d.isZero() ? '' : formatNombre(n.div(d).times(100).toDecimalPlaces(2).toString(), 2);
-        }),
+        valeur: (r) => avec(r, (i) => pct(i, qteCumul(i, r), montantCumul(i, r))),
         titreCellule: (r) => (this.soldeLigne(r) ? 'Part cumulée du parent (quantité, ou montant sans quantité)' : ''),
       },
       {
@@ -958,6 +969,12 @@ export class EditeurDocument {
           return tranche(r.item) ? nombre(this.pctTranche(r.item.lig_id), 2) : '';
         },
         titreCellule: (r) => (tranche(r.item) ? 'Saisir un % pour l\'appliquer à toutes les lignes de la tranche' : avt(r.item) ? 'Avancement cumulé en % du montant de la ligne du marché' : ''),
+      },
+      {
+        cle: 'avt_pct_periode', titre: '% période', classe: 'col-coef', editable: () => false,
+        valeur: (r) => (avt(r.item) && r.calcule.lig_avt_pct !== null && r.calcule.lig_avt_pct !== undefined
+          ? nombre(Dz(r.calcule.lig_avt_pct).minus(Dz(r.item.lig_avt_pct_precedent)).toString(), 2) : ''),
+        titreCellule: () => 'Avancement de la période : % cumulé − % précédent',
       },
       {
         cle: 'avt_qte', titre: 'Qté cumul', classe: 'col-nombre', editeur: 'nombre', editable: (l) => saisissable(l) && avt(l) && !estPied(l),
