@@ -1,6 +1,7 @@
 # Module Document – contexte
 
 ## Rôle
+- Règles globales, par famille et par type (recensement, incohérences, catalogue proposé) : [CONCEPTION-REGLES-DOCUMENTS.md](../../CONCEPTION-REGLES-DOCUMENTS.md).
 - Document commercial générique (sans métier BTP) : entête, arbre de lignes, pied en tranches, TVA par catégorie, numérotation, statuts, indices, copies, transformations, verrou, historique, traçabilité, affichage de la saisie.
 - Cycle : création en BROUILLON → validation (statut VALIDE, verrouillé) ; indices A, B… d'un même groupe (un seul de référence) ; copie = nouveau document, indice A, lien COPIE.
 - Fournit des classes mères (méthode patron) que le cœur spécialise ; moteur de calcul répliqué JS / C#.
