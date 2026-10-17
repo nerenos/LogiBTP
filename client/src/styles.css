@@ -266,3 +266,9 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 
 /* Commentaire de la ligne du document parent (documents d'avancement), affiché faute de commentaire propre. */
 .commentaire-parent { color: var(--discret); }
+
+/* Coordonnées figées du document (client, payeur) dans l'entête. */
+.contacts-blocs { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.contact-document { min-width: 220px; line-height: 1.45; }
+.contact-document .contact-titre { margin-bottom: 2px; }
+

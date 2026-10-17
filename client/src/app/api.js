@@ -50,6 +50,8 @@ export const api = {
   documentsEnAttente: (cible, tiers) => appel('GET', `/documents/en-attente?cible=${cible}${tiers ? `&tiers=${tiers}` : ''}`),
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
+  // Coordonnées figées d'un document : instantané d'une personne et de son contact dans l'annuaire.
+  contactDocument: (perId, indId) => appel('GET', `/structure/contact?per_id=${perId}${indId ? `&ind_id=${indId}` : ''}`),
   postesMarche: (marche) => appel('GET', `/structure/marches/${marche}/postes`),
   // Acomptes : mode de la société, acomptes d'un marché, demande, émission de la facture ou du reçu.
   modeAcomptes: () => appel('GET', '/structure/acomptes/mode'),

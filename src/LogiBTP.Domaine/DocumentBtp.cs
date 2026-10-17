@@ -25,4 +25,8 @@ public class DocumentBtp : Document
     public JsonDocument? EntIntervenants { get; set; }
     /// <summary>Rédacteur du document : individu de l'annuaire.</summary>
     public long? EntRedacteurId { get; set; }
+    /// <summary>Coordonnées figées du client (ou du fournisseur) : instantané de l'annuaire pour les éditions (db/177).</summary>
+    public JsonDocument? EntContactClient { get; set; }
+    /// <summary>Coordonnées figées du payeur (ventes).</summary>
+    public JsonDocument? EntContactPayeur { get; set; }
 }

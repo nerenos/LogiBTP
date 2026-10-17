@@ -108,6 +108,9 @@ public static class Structure
             }
             return cree;
         });
+        // Coordonnées figées d'un document : instantané d'une personne et de son contact (bouton ⟳ de l'entête).
+        g.MapGet("/contact", async (long per_id, long? ind_id, LogiBtpContext db, CancellationToken ct) =>
+            await ContactsDocument.Instantane(db, per_id, ind_id, ct) is { } c ? Results.Ok(c) : Results.NotFound());
         // Postes de pied du marché (Q5 à Q9, 11.3) : lecture ; écriture (droit MODIFIER de la fiche marché vérifié par la fiche).
         // Acomptes (Q10 à Q13) : mode de la société (écriture : administrateur, tant qu'aucun acompte n'existe), acomptes du
         // marché, nouvelle demande, émission de la facture ou du reçu.

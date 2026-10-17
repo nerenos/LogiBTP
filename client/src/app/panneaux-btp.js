@@ -6,6 +6,7 @@ import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
 import { libelleCompte } from './comptes.js';
+import { api } from './api.js';
 import {
   bilanTranche, partsLigne, dansPortee, cleLigne, ecrireCle, figerVentilation, repartirReste, remplacerCles,
 } from './frais-annexes.js';
@@ -48,6 +49,64 @@ export class PanneauxBtp extends PanneauxDocument {
 
   /** Tiers saisi dans l'annuaire du document (première ligne : client ou fournisseur). */
   champTiers(d) { return this.annuaire ? '' : super.champTiers(d); }
+
+  // ------------------------------------------------------------------ coordonnées figées (client, payeur)
+
+  /** Colonne de l'entête d'un rôle : CLIENT (client ou fournisseur du document) ou PAYEUR. */
+  static colonneContact(role) { return role === 'PAYEUR' ? 'ent_contact_payeur' : 'ent_contact_client'; }
+
+  /**
+   * Personne et contact d'un rôle d'après l'annuaire du document (ContactsDocument.Source côté serveur) : le tiers du
+   * document pour CLIENT ; l'intervenant PAYEUR, sinon le client, pour PAYEUR.
+   */
+  sourceContact(role) {
+    const liste = this.intervenantsDocument();
+    const tiers = liste.find((x) => x.fonction === this.fonctionTiers() && x.per_id);
+    const x = role === 'PAYEUR' ? liste.find((y) => y.fonction === 'PAYEUR' && y.per_id) ?? tiers : tiers;
+    return x ? { per_id: Number(x.per_id), ind_id: x.ind_id ? Number(x.ind_id) : null } : null;
+  }
+
+  /** Recharge les coordonnées d'un rôle depuis l'annuaire (instantané enregistré dans l'entête). */
+  async rechargerContact(role, { silencieux = false } = {}) {
+    const source = this.sourceContact(role);
+    if (!source) { if (!silencieux) this.editeur.surMessage?.(`${role === 'PAYEUR' ? 'Payeur' : 'Tiers'} à choisir dans l'annuaire du document`); return; }
+    const c = await api.contactDocument(source.per_id, source.ind_id);
+    this.editeur.magasin.modifier((b) => { b.document[PanneauxBtp.colonneContact(role)] = c; }, 'Coordonnées du document');
+    if (!silencieux) this.editeur.surMessage?.('Coordonnées rechargées depuis l\'annuaire');
+  }
+
+  /**
+   * Bloc de coordonnées figées : raison sociale, contact, adresse, courriel, téléphone, SIRET, TVA, date du relevé ;
+   * bouton ⟳ (document modifiable). Vide et tiers connu : rempli d'office depuis l'annuaire (document modifiable).
+   */
+  rendreContact(bloc, role) {
+    const d = this.editeur.saisie.document;
+    const c = d[PanneauxBtp.colonneContact(role)] ?? null;
+    const lecture = !!this.editeur.magasin.lectureSeule;
+    const titre = role === 'PAYEUR' ? 'Payeur' : this.editeur.definition.type?.tyd_famille === 'A' ? 'Fournisseur' : 'Client';
+    const a = c?.adresse ?? {};
+    const lignes = c ? [
+      `<strong>${echapper(c.raison_sociale ?? '')}</strong>${c.code ? ` <small>${echapper(c.code)}</small>` : ''}`,
+      c.contact?.nom ? `${echapper(c.contact.nom)}${c.contact.fonction ? ` — ${echapper(c.contact.fonction)}` : ''}` : '',
+      ...[a.ligne1, a.ligne2, a.ligne3].filter(Boolean).map(echapper),
+      [a.code_postal, a.ville].filter(Boolean).map(echapper).join(' ') + (a.pays && a.pays !== 'FR' ? ` (${echapper(a.pays)})` : ''),
+      [c.email ? `✉ ${echapper(c.email)}` : '', c.telephone ? `☎ ${echapper(c.telephone)}` : ''].filter(Boolean).join(' · '),
+      [c.siret ? `SIRET ${echapper(c.siret)}` : '', c.tva_intra ? `TVA ${echapper(c.tva_intra)}` : ''].filter(Boolean).join(' · '),
+      c.releve_le ? `<small class="aide">relevé le ${echapper(c.releve_le)}</small>` : '',
+    ].filter((x) => x && x.trim()) : ['<span class="aide">Non renseignées</span>'];
+    bloc.className = 'contact-document';
+    bloc.innerHTML = `<div class="contact-titre"><b>${titre}</b>${lecture ? '' : ' <button type="button" class="bouton-icone" data-recharger title="Recharger depuis l\'annuaire">⟳</button>'}</div>
+      <div>${lignes.join('<br>')}</div>`;
+    bloc.querySelector('[data-recharger]')?.addEventListener('click', () => this.rechargerContact(role).catch((e) => this.editeur.surMessage?.(e.message)));
+    // Vide : instantané pris d'office (une fois par rôle et par tiers).
+    const source = this.sourceContact(role);
+    const cle = `${role}:${source?.per_id}:${source?.ind_id}`;
+    this.contactsRemplis ??= new Set();
+    if (!c && !lecture && source && !this.contactsRemplis.has(cle)) {
+      this.contactsRemplis.add(cle);
+      this.rechargerContact(role, { silencieux: true }).catch(() => {});
+    }
+  }
 
   /** Fonction du tiers du document : fournisseur pour un achat, client sinon. */
   fonctionTiers() { return this.editeur.definition.type?.tyd_famille === 'A' ? 'FOURNISSEUR' : 'CLIENT'; }
@@ -163,12 +222,16 @@ export class PanneauxBtp extends PanneauxDocument {
     const nbVars = this.variablesDocument().length;
     return `${this.sectionRattachement(this.editeur.saisie.document)}
       ${this.annuaire ? '<fieldset class="annuaire-document"><legend>Annuaire du document</legend><div data-intervenants></div></fieldset>' : ''}
+      ${this.annuaire ? `<fieldset class="contacts-document"><legend>Coordonnées du document</legend>
+        <p class="aide">Enregistrées dans le document pour les éditions et conservées à la transformation ; ⟳ les recharge depuis l'annuaire.</p>
+        <div class="contacts-blocs"><div data-contact="CLIENT"></div>${this.editeur.definition.type?.tyd_famille === 'A' ? '' : '<div data-contact="PAYEUR"></div>'}</div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}`;
   }
 
   lierEntete(zone) {
     const m = this.editeur.magasin;
     this.lierRedacteur(zone).catch(() => {});
+    zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     const conteneur = zone.querySelector('[data-intervenants]');
     if (conteneur) {
       const d = this.editeur.saisie.document;

@@ -156,6 +156,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override async Task CompleterValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp saisie, TypeDocument type, CancellationToken ct)
     {
         if (PostesMarche.Portee(type, saisie.Document) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
+        // Coordonnées figées du client et du payeur : prises dans l'annuaire si l'entête n'en a pas encore.
+        await ContactsDocument.Completer(db, saisie.Document, type.TydFamille, ct);
         // Facture d'avancement d'un marché : déductions des acomptes émis (Q12, 11.2).
         if (type.TydAvancement == "F" && saisie.Document.EntMarcheId is not null && saisie.Document.EntNatureAvoir is null)
         {
@@ -185,6 +187,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntMarcheId = saisie.EntMarcheId;
         cible.EntIntervenants = saisie.EntIntervenants ?? cible.EntIntervenants;
         cible.EntRedacteurId = saisie.EntRedacteurId;
+        // Coordonnées figées : remplacées seulement quand l'entête en porte (rechargées depuis l'annuaire).
+        cible.EntContactClient = saisie.EntContactClient ?? cible.EntContactClient;
+        cible.EntContactPayeur = saisie.EntContactPayeur ?? cible.EntContactPayeur;
         cible.EntFaLignes = saisie.EntFaLignes ?? "V";
         cible.EntFaMode = saisie.EntFaMode ?? "C";
     }

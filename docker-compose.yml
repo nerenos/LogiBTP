@@ -65,6 +65,7 @@ services:
       - ./db/174_acomptes.sql:/docker-entrypoint-initdb.d/174_acomptes.sql:ro
       - ./db/175_reglements.sql:/docker-entrypoint-initdb.d/175_reglements.sql:ro
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/176_documents_vues_types.sql:ro
+      - ./db/177_contacts_document.sql:/docker-entrypoint-initdb.d/177_contacts_document.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:
