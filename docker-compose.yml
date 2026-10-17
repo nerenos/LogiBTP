@@ -72,6 +72,7 @@ services:
       - ./db/178_regles_documents.sql:/docker-entrypoint-initdb.d/178_regles_documents.sql:ro
       - ./db/179_cycle_documents.sql:/docker-entrypoint-initdb.d/179_cycle_documents.sql:ro
       - ./db/180_regles_corrections.sql:/docker-entrypoint-initdb.d/180_regles_corrections.sql:ro
+      - ./db/181_nature_prestation.sql:/docker-entrypoint-initdb.d/181_nature_prestation.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

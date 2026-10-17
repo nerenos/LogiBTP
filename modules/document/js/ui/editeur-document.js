@@ -4,7 +4,7 @@ import {
   editerLibelle, lirePreferences, ecrirePreferences,
 } from '@logibtp/socle/ui';
 import { Dz } from '@logibtp/socle';
-import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde } from '../src/index.js';
+import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
@@ -162,9 +162,14 @@ export class EditeurDocument {
     return !String(champ).startsWith('avt:') && !CHAMPS_LIBRES_AVANCEMENT.includes(champ);
   }
 
-  /** Lignes ajoutables : dans un document d'avancement, du texte ou des lignes de pied seulement. */
+  /** Règle LIGNES_AUTORISEES (R11) : TEXTE_PIED = seuls du texte et des lignes de pied s'ajoutent (documents d'avancement). */
+  get lignesLimitees() {
+    return regle(this.definition, 'LIGNES_AUTORISEES', this.estAvancement ? 'TEXTE_PIED' : 'TOUTES') === 'TEXTE_PIED';
+  }
+
+  /** Lignes ajoutables : selon la règle, toutes, ou du texte et des lignes de pied seulement. */
   ajoutAutorise(lignes) {
-    return !this.estAvancement || lignes.every((l) => l.lig_tyl_id === TL.TEXTE || estPied(l));
+    return !this.lignesLimitees || lignes.every((l) => l.lig_tyl_id === TL.TEXTE || estPied(l));
   }
 
   /** Aucune ligne reprise du parent parmi les lignes (suppression, déplacement d'un document d'avancement). */
@@ -668,7 +673,7 @@ export class EditeurDocument {
 
   /** Dépôt glissé depuis une autre fenêtre : type de ligne déduit du type MIME (article : élément, ouvrage). */
   depotExterneAutorise(cibleId, position, types) {
-    if (this.magasin.lectureSeule || this.estAvancement) return false;
+    if (this.magasin.lectureSeule || this.lignesLimitees) return false;
     const type = types.map((t) => TYPES_DEPOT[t]).find(Boolean);
     const cible = this.saisie.lignes.find((l) => l.lig_id === cibleId);
     if (!type || !cible) return false;
@@ -1231,7 +1236,7 @@ export class EditeurDocument {
       if (aEnfants && !accepteEnfants({ lig_tyl_id: type })) { this.surMessage?.('Ce type n\'accepte pas de lignes enfants'); return false; }
       if (estPied({ lig_tyl_id: type }) !== estPied(l) && (l.lig_parent_id !== null || aEnfants)) { this.surMessage?.('Les lignes de pied sont au niveau racine'); return false; }
       if (type === TL.SECTION && l.lig_parent_id !== null) { this.surMessage?.('Une section est au niveau racine'); return false; }
-      if (!this.ajoutAutorise([{ lig_tyl_id: type }])) { this.surMessage?.('Document d\'avancement : texte ou ligne de pied seulement'); return false; }
+      if (!this.ajoutAutorise([{ lig_tyl_id: type }])) { this.surMessage?.('Ce document n\'accepte que du texte et des lignes de pied'); return false; }
       m.modifier((d) => {
         const x = d.lignes.find((y) => y.lig_id === id);
         x.lig_tyl_id = type;
@@ -1299,8 +1304,8 @@ export class EditeurDocument {
           if (memeType || pos !== 'enfant') type = ref.lig_tyl_id === TL.TVA ? TL.PIED_TTC : ref.lig_tyl_id;
           if (!memeType && pos !== 'enfant' && (type === TL.SOUS_TOTAL || type === TL.TEXTE)) type = TL.ELEMENT;
         }
-        // Document d'avancement : une ligne de pied dans le pied, du texte ailleurs (jamais dans un ouvrage).
-        if (this.estAvancement && !estPied({ lig_tyl_id: type })) {
+        // Lignes limitées (règle) : une ligne de pied dans le pied, du texte ailleurs (jamais dans un ouvrage).
+        if (this.lignesLimitees && !estPied({ lig_tyl_id: type })) {
           type = TL.TEXTE;
           if (pos === 'enfant' && ref && !estTranche(ref)) pos = 'apres';
         }

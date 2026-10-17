@@ -4,6 +4,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Metres;
 using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Api.Btp;
@@ -75,8 +76,20 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// Validation : la ventilation calculée des frais annexes est figée en clés de ligne (montant par unité), pour que
     /// les prix des lignes inchangées restent les mêmes dans un nouvel indice ; les clés orphelines disparaissent.
     /// </summary>
+    /// <summary>Total HT attendu après la conversion des ouvrages sans composante (contrôlé après le calcul de la validation).</summary>
+    private static readonly AsyncLocal<decimal?> totalAttendu = new();
+
     public override void PreparerValidation(ResultatDocument<DocumentBtp, DocumentLigneBtp> r)
     {
+        if (totalAttendu.Value is decimal attendu)
+        {
+            totalAttendu.Value = null;
+            if (attendu != r.Document.EntTotalHt)
+            {
+                throw ExceptionMetier.Invalide("OUVRAGE_PRESTATION_ECART",
+                    $"Ouvrages sans composante passés en prestation : le total HT changerait ({attendu:0.00} → {r.Document.EntTotalHt:0.00}) ; ajoutez des composantes ou transformez-les en éléments");
+            }
+        }
         if (r is ResultatCalcul b) b.Ventilations = FigerVentilation(b.VentilationsLignes, b.Lignes, b.Document.EntId);
     }
 
@@ -122,7 +135,19 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
-        return Task.CompletedTask;
+        return ControlerFraisAnnexes(db, document, type, erreurs, ct);
+    }
+
+    /// <summary>Frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES, P11 ; controlesValidation).</summary>
+    private static async Task ControlerFraisAnnexes(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        var regle = await db.Database.SqlQuery<string>($"SELECT coalesce(f_regle_document('FRAIS_ANNEXES', {type.TydId})::text, 'false') AS \"Value\"").FirstAsync(ct);
+        if (regle == "true") return;
+        foreach (var l in document.Lignes.Where(l => l.LigTypePrix == "F" || l.LigCoefProrata != 1))
+        {
+            erreurs.Add(new MessageCalcul(l.LigId, "FRAIS_ANNEXES_INTERDITS", "Frais annexes et prorata réservés aux ventes"));
+        }
     }
 
     /// <summary>
@@ -183,6 +208,18 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         if (type.TydFamille == "S" && saisie.Document.EntTiersId is null)
         {
             saisie.Document.EntTiersId = (await db.Database.SqlQuery<long?>($"SELECT per_id AS \"Value\" FROM personne WHERE per_societe_base LIMIT 1").ToListAsync(ct)).FirstOrDefault();
+        }
+        // Ouvrage sans composante : devient un élément de nature Prestation (P20, P24) ; le total validé ne doit pas changer.
+        var ouvrages = saisie.Lignes.Where(l => l.LigTylId == TL.Ouvrage && !saisie.Lignes.Any(c => c.LigParentId == l.LigId)).ToList();
+        if (ouvrages.Count > 0)
+        {
+            var prestation = (await db.Database.SqlQuery<int?>($"SELECT nat_id AS \"Value\" FROM nature_element WHERE nat_code = 'PRE'").ToListAsync(ct)).FirstOrDefault();
+            foreach (var l in ouvrages)
+            {
+                l.LigTylId = TL.Element;
+                l.LigNatId = prestation ?? l.LigNatId;
+            }
+            totalAttendu.Value = saisie.Document.EntTotalHt;
         }
         // Coordonnées figées du client et du payeur : prises dans l'annuaire si l'entête n'en a pas encore.
         await ContactsDocument.Completer(db, saisie.Document, type.TydFamille, ct);

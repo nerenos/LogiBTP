@@ -1,5 +1,5 @@
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT } from '../src/index.js';
+import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
 const lireEtiquettes = (v) => {
@@ -282,7 +282,9 @@ export class PanneauxDocument {
     }
     // Type de prix d'une tranche : appliqué à toute sa descendance (hérité). Frais annexes : titres seulement.
     if (estTranche(l)) {
-      const types = Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || l.lig_tyl_id === TL.TITRE);
+      // Frais annexes (F) : sur un titre, si la règle FRAIS_ANNEXES le permet (ventes).
+      const fraisPermis = regle(this.editeur.definition, 'FRAIS_ANNEXES', true);
+      const types = Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || (l.lig_tyl_id === TL.TITRE && fraisPermis) || l.lig_type_prix === 'F');
       champs.push(f.sel('lig_type_prix', 'Type de prix (toute la tranche)', types));
     }
     if (estChiffree(l)) {

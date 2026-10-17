@@ -276,6 +276,10 @@ export class EditeurDevisBtp extends EditeurDocument {
       valeur: (r) => (estChiffree(r.calcule) ? `${r.item.lig_pv_affiche_fixe ? '🔒 ' : ''}${formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2)}` : ''),
       titreCellule: (r) => (estChiffree(r.calcule) && r.item.lig_pv_affiche_fixe ? '🔒 PV affiché fixe (avec frais annexes) : les frais annexes s\'ajustent' : ''),
     });
+    // Frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES, P11).
+    if (this.definition.regles && this.definition.regles.FRAIS_ANNEXES === false) {
+      return colonnes.filter((c) => !['prorata', 'coef_fa', 'fa_recus'].includes(c.cle));
+    }
     return colonnes;
   }
 

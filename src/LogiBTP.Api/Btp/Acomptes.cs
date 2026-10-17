@@ -102,25 +102,43 @@ public static class Acomptes
         var c = await documents.Charger(cree.Document.EntId, ct);
         c.Document.EntMarcheId = marche;
         c.Document.EntChantierId = m.Chantier;
-        // TVA : celle des lignes du marché (mode CA), exonérée pour une avance de trésorerie.
-        var tva = mode == "CA"
-            ? (await db.Database.SqlQuery<int?>($"""
-                SELECT l.lig_tva_id AS "Value" FROM marche_document x JOIN document_ligne l ON l.lig_ent_id = x.mdo_ent_id
-                WHERE x.mdo_mar_id = {marche} AND l.lig_tva_id IS NOT NULL GROUP BY l.lig_tva_id ORDER BY sum(abs(coalesce(l.lig_montant_ht, 0))) DESC LIMIT 1
-                """).ToListAsync(ct)).FirstOrDefault()
-            : await db.TauxTva.Where(t => t.TtvCategorie == "E" && t.TtvActif).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
-        tva ??= await db.TauxTva.Where(t => t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
-        var nature = await db.Database.SqlQuery<int?>($"SELECT nat_id AS \"Value\" FROM nature_element WHERE nat_code = 'OUV'").ToListAsync(ct);
-        var ordre = c.Lignes.Where(l => l.LigParentId is null).Select(l => l.LigOrdre).DefaultIfEmpty(0).Max();
-        foreach (var l in c.Lignes.Where(l => l.LigParentId is null)) l.LigOrdre++;
-        c.Lignes.Add(new DocumentLigneBtp
+        // Mode CA : une ligne par taux de TVA du marché, au prorata du HT des lignes vendues de ses commandes (la dernière
+        // prend l'arrondi) ; trésorerie : une ligne exonérée. Nature Prestation (P10).
+        var taux = mode == "CA"
+            ? await db.Database.SqlQuery<TauxAcompteSql>($"""
+                SELECT l.lig_tva_id AS tva, sum(coalesce(l.lig_montant_ht, 0)) AS montant
+                FROM marche_document x JOIN document_ligne l ON l.lig_ent_id = x.mdo_ent_id
+                LEFT JOIN document_ligne p ON p.lig_id = l.lig_parent_id
+                WHERE x.mdo_mar_id = {marche} AND l.lig_tva_id IS NOT NULL AND l.lig_tyl_id IN (2, 3) AND coalesce(l.lig_type_prix, 'V') = 'V'
+                  AND (p.lig_id IS NULL OR p.lig_tyl_id <> 2)
+                GROUP BY l.lig_tva_id HAVING sum(coalesce(l.lig_montant_ht, 0)) <> 0 ORDER BY 2 DESC
+                """).ToListAsync(ct)
+            : [];
+        if (taux.Count == 0)
         {
-            LigId = -1, LigEntId = c.Document.EntId, LigOrdre = 1, LigTylId = TL.Element, LigLibelleHtml = libelle, LigQte = 1, LigPv = montant,
-            LigPvFixe = true, LigTvaId = tva, LigNatId = nature.FirstOrDefault(), LigTypePrix = "V",
-        });
+            var exo = mode == "CA" ? null : await db.TauxTva.Where(t => t.TtvCategorie == "E" && t.TtvActif).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+            exo ??= await db.TauxTva.Where(t => t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+            taux = [new TauxAcompteSql(exo, 1)];
+        }
+        var totalBase = taux.Sum(t => t.Montant);
+        var nature = await db.Database.SqlQuery<int?>($"SELECT nat_id AS \"Value\" FROM nature_element WHERE nat_code = 'PRE'").ToListAsync(ct);
+        var ordre = c.Lignes.Where(l => l.LigParentId is null).Select(l => l.LigOrdre).DefaultIfEmpty(0).Max();
+        foreach (var l in c.Lignes.Where(l => l.LigParentId is null)) l.LigOrdre += taux.Count;
+        var reste = montant;
+        for (var i = 0; i < taux.Count; i++)
+        {
+            var part = i == taux.Count - 1 ? reste : ArrondiCalcul.Arrondir(montant * taux[i].Montant / totalBase, 2);
+            reste -= part;
+            c.Lignes.Add(new DocumentLigneBtp
+            {
+                LigId = -1 - i, LigEntId = c.Document.EntId, LigOrdre = 1 + i, LigTylId = TL.Element, LigLibelleHtml = libelle, LigQte = 1, LigPv = part,
+                LigPvFixe = true, LigTvaId = taux[i].Tva, LigNatId = nature.FirstOrDefault(), LigTypePrix = "V",
+            });
+        }
+        ordre += taux.Count;
         if (!c.Lignes.Any(l => l.LigParentId is null && l.LigTylId == TL.Tva))
         {
-            c.Lignes.Add(new DocumentLigneBtp { LigId = -2, LigEntId = c.Document.EntId, LigOrdre = ordre + 2, LigTylId = TL.Tva, LigLibelleHtml = "TVA", LigTypePrix = "V" });
+            c.Lignes.Add(new DocumentLigneBtp { LigId = -100, LigEntId = c.Document.EntId, LigOrdre = ordre + 1, LigTylId = TL.Tva, LigLibelleHtml = "TVA", LigTypePrix = "V" });
         }
         var r = await documents.Enregistrer(c.Document.EntId, c, u, ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -253,5 +271,6 @@ public static class Acomptes
 
     private sealed record MarcheAcompteSql(string Libelle, string Code, long? Tiers, decimal? Montant, int? Chantier, int Rang);
     private sealed record AcompteSql(string Mode, long? Demande, long? Piece);
+    private sealed record TauxAcompteSql(int? Tva, decimal Montant);
     private sealed record AcompteEmisSql(int Id, short Rang, string Mode, decimal Montant, string Deduction, decimal Deduit);
 }

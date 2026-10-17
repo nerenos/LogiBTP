@@ -584,3 +584,17 @@ Développement lancé le 17/10/2026 (un commit par lot).
 - Vérifié : FF2026-00003 validée (état comptable A, échéance au 31/10 depuis la date du fournisseur), changement de tiers
   refusé sur FF2026-00002.
 
+### Lot 5 – règles de saisie
+
+- R11 : lignes ajoutables par la règle LIGNES_AUTORISEES (`EditeurDocument.lignesLimitees` : texte et pied seulement).
+- P11 : frais annexes et coefficient de prorata réservés aux ventes (règle FRAIS_ANNEXES) : colonnes Prorata, Coef. FA,
+  FA reçus et section des frais masquées, type de prix F non proposé ; refus à la validation
+  `FRAIS_ANNEXES_INTERDITS` (`SpecialisationBtp.ControlerValidationAsync` ↔ `controlesValidation(lignes, regles)`).
+  Contrôle à la validation plutôt que dans les moteurs : un document d'achat garde un calcul identique.
+- P10 : acompte en mode chiffre d'affaires réparti par taux de TVA du marché (au prorata du HT des lignes vendues des
+  commandes, arrondi sur la dernière), nature Prestation (`db/181`, code PRE).
+- P20 / P24 : à la validation, un ouvrage sans composante devient un élément de nature Prestation ; si le total HT
+  changeait, refus `OUVRAGE_PRESTATION_ECART`.
+- Vérifié : acompte de 10 000 € en mode CA sur le marché de démo (5 630,32 à 10 %, 4 369,68 à 20 %, essai retiré) ;
+  commande fournisseur avec un coefficient de prorata refusée (FRAIS_ANNEXES_INTERDITS).
+

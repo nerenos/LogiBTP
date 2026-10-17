@@ -368,6 +368,7 @@ export class PanneauxBtp extends PanneauxDocument {
    */
   sectionFrais(zone, l) {
     const ed = this.editeur;
+    if (ed.definition.regles && ed.definition.regles.FRAIS_ANNEXES === false) return;
     const r = ed.resultat;
     const pm = ed.saisie.document.ent_precision_montant ?? 2;
     const lecture = !!ed.magasin.lectureSeule;
