@@ -22,6 +22,13 @@ export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
 /** Colonnes de l'avancement (situations, factures d'avancement). */
 export const COLONNES_AVANCEMENT = ['avt_pct_prec', 'avt_pct', 'avt_qte', 'avt_montant', 'avt_precedent'];
+// Colonnes de ventilation (clés des documents transformés) dans un document d'avancement : [clé, colonne d'avancement, titre].
+export const ALIAS_AVANCEMENT = [
+  ['qte_parent', 'avt_qte_marche', 'Qté parent'], ['montant_parent', 'avt_montant_marche', 'Montant parent'],
+  ['pct_prec', 'avt_pct_prec', '% préc.'], ['qte_prec', 'avt_qte_prec', 'Qté préc.'], ['montant_prec', 'avt_precedent', 'Montant préc.'],
+  ['pct_periode', 'avt_pct_periode', '% période'],
+  ['pct_cumul', 'avt_pct', '% cumul'], ['qte_cumul', 'avt_qte', 'Qté cumul'], ['montant_cumul', 'avt_montant', 'Montant cumul'],
+];
 
 /** Libellés des bases de calcul d'une ligne de pied (lig_pied_base). */
 export const LIBELLES_BASE_PIED = { CUMUL: 'Cumul à ce point', TOTAL_HT: 'Total HT du corps', HT_NET: 'Dernier total HT net', TOTAL_TTC: 'Total TTC du corps', LIGNE: 'Sous-total de pied' };
@@ -88,7 +95,11 @@ export class EditeurDocument {
     this.regles = this.creerRegles();
     this.pressePapiers = this.creerPressePapiers();
     this.coupees = new Set();
-    this.libellesUneLigne = lirePreferences().libelles === 'ligne';
+    // Document issu d'une transformation : libellés sur une ligne par défaut (préférence propre à ces documents) et
+    // ouvrages repliés à l'ouverture (composantes masquées), pour privilégier la ventilation.
+    this.transforme = EditeurDocument.estTransforme(saisie);
+    const preferences = lirePreferences();
+    this.libellesUneLigne = (this.transforme ? preferences.libellesTransformes ?? 'ligne' : preferences.libelles) === 'ligne';
     conteneur.classList.toggle('libelles-une-ligne', this.libellesUneLigne);
     this.magasin = new Magasin(saisie, {
       recalculer: (s) => this.calculer(this.entree(s)),
@@ -101,7 +112,13 @@ export class EditeurDocument {
       actions: this.actions(),
     });
     this.magasin.abonner(() => this.grille.rendre());
+    if (this.transforme) for (const id of this.lignesRepliables({ ouvrages: true })) this.grille.replies.add(id);
     this.grille.rendre();
+  }
+
+  /** Document issu d'une transformation (lignes liées à un parent) ou document d'avancement. */
+  static estTransforme(saisie) {
+    return Boolean(saisie.document?.ent_avt_presentation) || (saisie.lignes ?? []).some((l) => l.lig_origine_id);
   }
 
   get saisie() { return this.magasin.saisie; }
@@ -156,14 +173,14 @@ export class EditeurDocument {
     // Document issu d'une transformation : colonnes du reste à solder ajoutées après la quantité si la vue n'en a
     // aucune (vues créées avant elles).
     const colonnesVue = [...this.vue.colonnes];
-    const ajouter = (cles) => {
-      if (colonnesVue.some((c) => cles.includes(c.cle))) return;
+    const ajouter = (cles, equivalentes = []) => {
+      if (colonnesVue.some((c) => cles.includes(c.cle) || equivalentes.includes(c.cle))) return;
       const i = colonnesVue.findIndex((c) => c.cle === 'qte');
       colonnesVue.splice(i < 0 ? colonnesVue.length : i + 1, 0, ...cles.map((cle) => ({ cle })));
     };
     if (this.restes?.parLigne.size) ajouter(COLONNES_RESTE);
     // Document d'avancement : colonnes de l'avancement après la quantité si la vue n'en a aucune.
-    if (this.saisie.document.ent_avt_presentation) ajouter(COLONNES_AVANCEMENT);
+    if (this.saisie.document.ent_avt_presentation) ajouter(COLONNES_AVANCEMENT, ALIAS_AVANCEMENT.map(([cle]) => cle));
     // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
     const res = colonnesVue.filter((c) => parCle.has(c.cle))
       .map((c, i) => ({ ...parCle.get(c.cle), largeur: c.largeur ?? null, arbre: i === 0 }));
@@ -763,7 +780,7 @@ export class EditeurDocument {
           titre: () => (this.libellesUneLigne ? 'Afficher les libellés en entier' : 'Afficher les libellés sur une seule ligne'),
           clic: () => {
             this.libellesUneLigne = !this.libellesUneLigne;
-            ecrirePreferences({ libelles: this.libellesUneLigne ? 'ligne' : 'complet' });
+            ecrirePreferences({ [this.transforme ? 'libellesTransformes' : 'libelles']: this.libellesUneLigne ? 'ligne' : 'complet' });
             this.grille.conteneur.classList.toggle('libelles-une-ligne', this.libellesUneLigne);
           },
         },
@@ -786,6 +803,7 @@ export class EditeurDocument {
       },
       ...this.colonnesReste(saisissable),
       ...this.colonnesAvancement(saisissable),
+      ...this.colonnesVentilationAvancement(saisissable),
       {
         cle: 'unite', titre: 'U', classe: 'col-unite', editeur: 'liste', editable: chiffree,
         champ: () => 'lig_unt_code', lire: (l) => l.lig_unt_code ?? '', valeur: (r) => r.calcule.lig_unt_code ?? '',
@@ -989,6 +1007,11 @@ export class EditeurDocument {
         titreCellule: (r) => (avt(r.item) ? `Montant du marché : ${nombre(r.item.lig_avt_montant_marche)}` : ''),
       },
       {
+        cle: 'avt_qte_marche', titre: 'Qté marché', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => (avt(r.item) && !estPied(r.item) ? nombre(r.item.lig_avt_qte_marche, r.calcule.lig_precision_qte ?? 2) : ''),
+        titreCellule: () => 'Quantité de la ligne du marché (commande parente)',
+      },
+      {
         cle: 'avt_montant_marche', titre: 'Montant marché', classe: 'col-nombre', editable: () => false,
         valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_montant_marche, this.saisie.document.ent_precision_montant ?? 2) : ''),
         titreCellule: () => 'Montant HT de la ligne du marché (commande parente)',
@@ -1004,6 +1027,16 @@ export class EditeurDocument {
         titreCellule: () => 'Montant cumulé du dernier document d\'avancement validé',
       },
     ];
+  }
+
+  /**
+   * Document d'avancement : les colonnes de ventilation des documents transformés (parent, précédent, période, cumul)
+   * y désignent les valeurs d'avancement (marché, précédent, période, cumul saisissable), pour partager les vues.
+   */
+  colonnesVentilationAvancement(saisissable) {
+    if (!this.saisie.document.ent_avt_presentation || this.restes?.parLigne.size) return [];
+    const parCle = new Map(this.colonnesAvancement(saisissable).map((c) => [c.cle, c]));
+    return ALIAS_AVANCEMENT.filter(([, source]) => parCle.has(source)).map(([cle, source, titre]) => ({ ...parCle.get(source), cle, titre }));
   }
 
   /** Ligne calculée correspondant à une ligne saisie. */
