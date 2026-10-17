@@ -1,7 +1,7 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texteCoordonnee, formaterTelephone, siretValide } from '@logibtp/annuaire';
-import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuaire, choixRequis, demanderChoix, choisirPersonne, pastilles } from '@logibtp/annuaire/ui';
+import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuaire, choixRequis, demanderChoix, choisirPersonne, pastilles, fusionnerTiers } from '@logibtp/annuaire/ui';
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
 import { FicheLogiBTP } from './fiches.js';
 
@@ -138,6 +138,36 @@ export class FichePersonne extends FicheAnnuaire {
   #casquettes(v = this.valeurs()) { return this.referentiels.casquettes.filter((c) => (v.casquettes ?? []).includes(c.code)); }
   get morale() { return this.#niveau()?.morale !== false; }
 
+  /** Statut provisoire (résumé de l'annuaire, hors définition de la fiche). */
+  async ouvrir() {
+    this.provisoire = this.id !== null && (await this.annuaire.personne(this.id).catch(() => null))?.provisoire === true;
+    return super.ouvrir();
+  }
+
+  /** Libellés des colonnes de la table personne (et « +code » des champs supplémentaires) : choix d'une fusion. */
+  libellesFusion() {
+    const l = {};
+    // La définition servie par l'API ne donne pas toujours la colonne : per_ + code (le niveau : per_niv_code).
+    for (const c of this.definition.champs ?? []) if (!c.gere) l[c.colonne ?? (c.code === 'niveau' ? 'per_niv_code' : `per_${c.code}`)] = c.libelle;
+    for (const c of this.definition.supplementaires ?? []) l[`+${c.code}`] = c.libelle;
+    return l;
+  }
+
+  async validerProvisoire() {
+    await this.annuaire.validerProvisoire(this.id);
+    this.provisoire = false;
+    this.message('Création du tiers validée', 'succes');
+    this.rendre();
+  }
+
+  async fusionnerProvisoire(e) {
+    const r = await fusionnerTiers({ annuaire: this.annuaire, id: Number(this.id), libelles: this.libellesFusion() });
+    if (!r) return;
+    const n = Object.values(r.reports ?? {}).reduce((s, x) => s + x, 0);
+    this.message(`Tiers fusionné${n ? ` (${n} élément(s) reporté(s))` : ''}`, 'succes');
+    this.ouvrirFiche({ type: 'personne', id: r.cible_id }, e);
+  }
+
   valeursCreation() {
     const niveau = this.parametre('niveau') ?? 'SOCIETE';
     const casquette = this.parametre('casquette');
@@ -158,6 +188,7 @@ export class FichePersonne extends FicheAnnuaire {
     const coords = v.coordonnees ?? [];
     const parts = [];
     if (v.societe_base) parts.push(info('Annuaire', '🏢 Société de cette base'));
+    if (this.provisoire) parts.push(info('Annuaire', '⏳ Tiers provisoire : création à valider ou fiche à fusionner', true));
     const tel = principale(coords, 'TELEPHONE');
     const mail = principale(coords, 'EMAIL');
     const adresse = principale(coords, 'ADRESSE');
@@ -200,6 +231,8 @@ export class FichePersonne extends FicheAnnuaire {
   actionsSupplementaires() {
     return [
       { libelle: '🇫🇷 Annuaire des entreprises', titre: 'Rechercher l\'entreprise (nom, SIREN, SIRET) et reprendre ses informations', action: () => this.importerEntreprise(), visible: this.estEnSaisie() && this.morale },
+      { libelle: '✔ Valider le tiers', titre: 'Valider la création de ce tiers provisoire (fiche définitive)', action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
+      { libelle: '⇄ Fusionner…', titre: 'Fusionner ce tiers provisoire avec une fiche existante (valeurs choisies, documents et contacts reportés)', action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: '＋ Établissement', titre: 'Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne', action: () => this.ouvrirFiche({ type: 'personne', id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
       ...super.actionsSupplementaires(),
     ];

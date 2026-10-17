@@ -90,3 +90,13 @@
 .rattachement.retire { opacity: 0.6; }
 .rattachement.retire .rattachement-nom { text-decoration: line-through; }
 .rattachement .badge.alerte { background: var(--alerte-fond); color: var(--alerte); }
+
+/* Tiers provisoires : pastille, saisie avec contrôle des doublons, choix des valeurs d'une fusion. */
+.annuaire-provisoire { display: inline-block; padding: 0 .4em; border-radius: .6em; font-size: .8em; background: var(--alerte-fond); color: var(--alerte); border: 1px solid currentColor; }
+.annuaire-provisoire-saisie { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: end; }
+.annuaire-provisoire-saisie label { display: flex; flex-direction: column; gap: .2rem; }
+.annuaire-doublons:not(:empty) { margin-top: .75rem; }
+.annuaire-fusion th { text-align: left; font-weight: 600; padding-right: 1rem; }
+.annuaire-fusion td label { display: flex; gap: .4rem; align-items: baseline; }
+.bandeau-provisoire { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .5rem .75rem; margin-bottom: .75rem; border-radius: 6px;
+  background: var(--alerte-fond); color: var(--texte); border: 1px solid var(--alerte); }

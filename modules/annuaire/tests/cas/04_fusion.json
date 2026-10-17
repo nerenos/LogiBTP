@@ -1,0 +1,205 @@
+{
+  "nom": "Fusion d'un tiers provisoire",
+  "description": "planFusion (fusion.js) ↔ PlanFusion.Calculer : cible prioritaire, source pour les vides, choix par colonne ou par clé de champ supplémentaire (+clé), relations réunies, colonnes techniques jamais fusionnées. Mots comparés pour un doublon de nom : motsDoublon ↔ PlanFusion.MotsDoublon (formes juridiques et articles ignorés).",
+  "cas": [
+    {
+      "nom": "Cible prioritaire, la source complète les vides",
+      "source": {
+        "per_raison_sociale": "ACME prov",
+        "per_siret": "12345678900011",
+        "per_tva_intra": null,
+        "per_actif": true,
+        "per_cli_remise": "5.00",
+        "per_casquettes": [
+          "CLIENT",
+          "PROSPECT"
+        ]
+      },
+      "cible": {
+        "per_raison_sociale": "ACME SA",
+        "per_siret": null,
+        "per_tva_intra": "FR12345678901",
+        "per_actif": true,
+        "per_cli_remise": "5",
+        "per_casquettes": [
+          "FOURNISSEUR",
+          "CLIENT"
+        ]
+      },
+      "choix": {},
+      "attendu": {
+        "valeurs": {
+          "per_siret": "12345678900011"
+        },
+        "casquettes": [
+          "FOURNISSEUR",
+          "CLIENT",
+          "PROSPECT"
+        ],
+        "proprietes": {},
+        "conflits": [
+          "per_raison_sociale"
+        ]
+      }
+    },
+    {
+      "nom": "Choix de la source, y compris une valeur vide",
+      "source": {
+        "per_raison_sociale": "ACME prov",
+        "per_siret": "12345678900011",
+        "per_tva_intra": null,
+        "per_actif": true,
+        "per_cli_remise": "5.00",
+        "per_casquettes": [
+          "CLIENT",
+          "PROSPECT"
+        ]
+      },
+      "cible": {
+        "per_raison_sociale": "ACME SA",
+        "per_siret": null,
+        "per_tva_intra": "FR12345678901",
+        "per_actif": true,
+        "per_cli_remise": "5",
+        "per_casquettes": [
+          "FOURNISSEUR",
+          "CLIENT"
+        ]
+      },
+      "choix": {
+        "per_raison_sociale": "source",
+        "per_tva_intra": "source"
+      },
+      "attendu": {
+        "valeurs": {
+          "per_raison_sociale": "ACME prov",
+          "per_siret": "12345678900011",
+          "per_tva_intra": null
+        },
+        "casquettes": [
+          "FOURNISSEUR",
+          "CLIENT",
+          "PROSPECT"
+        ],
+        "proprietes": {},
+        "conflits": [
+          "per_raison_sociale"
+        ]
+      }
+    },
+    {
+      "nom": "Colonnes techniques ignorées, champs supplémentaires par clé",
+      "source": {
+        "per_id": 5,
+        "per_code": "T000005",
+        "per_provisoire": true,
+        "per_parent_id": 2,
+        "per_proprietes": {
+          "a": "1",
+          "b": "x"
+        }
+      },
+      "cible": {
+        "per_id": 2,
+        "per_code": "T000002",
+        "per_provisoire": false,
+        "per_parent_id": null,
+        "per_proprietes": {
+          "b": "y",
+          "c": "z"
+        }
+      },
+      "choix": {
+        "+b": "source"
+      },
+      "attendu": {
+        "valeurs": {},
+        "casquettes": [],
+        "proprietes": {
+          "a": "1",
+          "b": "x",
+          "c": "z"
+        },
+        "conflits": [
+          "+b"
+        ]
+      }
+    },
+    {
+      "nom": "Booléen jamais vide : la cible garde le sien sauf choix",
+      "source": {
+        "per_siege": true,
+        "per_capital": "1000.50"
+      },
+      "cible": {
+        "per_siege": false,
+        "per_capital": "1000.5"
+      },
+      "choix": {},
+      "attendu": {
+        "valeurs": {},
+        "casquettes": [],
+        "proprietes": {},
+        "conflits": [
+          "per_siege"
+        ]
+      }
+    },
+    {
+      "nom": "Booléen choisi dans la source",
+      "source": {
+        "per_siege": true
+      },
+      "cible": {
+        "per_siege": false
+      },
+      "choix": {
+        "per_siege": "source"
+      },
+      "attendu": {
+        "valeurs": {
+          "per_siege": true
+        },
+        "casquettes": [],
+        "proprietes": {},
+        "conflits": [
+          "per_siege"
+        ]
+      }
+    }
+  ],
+  "mots_doublon": [
+    {
+      "nom": "SARL Dupont & Fils",
+      "attendu": [
+        "dupont",
+        "fils"
+      ]
+    },
+    {
+      "nom": "Société Générale de Bâtiment – S.A.",
+      "attendu": [
+        "générale",
+        "bâtiment"
+      ]
+    },
+    {
+      "nom": "L'Atelier d'Émile",
+      "attendu": [
+        "atelier",
+        "émile"
+      ]
+    },
+    {
+      "nom": "  ",
+      "attendu": []
+    },
+    {
+      "nom": "BTP 2000 SAS",
+      "attendu": [
+        "btp",
+        "2000"
+      ]
+    }
+  ]
+}

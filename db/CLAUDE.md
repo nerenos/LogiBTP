@@ -39,6 +39,7 @@
 - `180_regles_corrections.sql` : propriété « chantier » du devis retirée ; rejouable.
 - `181_nature_prestation.sql` : nature PRE « Prestations » (acomptes, ouvrages sans composante) ; rejouable.
 - `182_alertes_documents.sql` : colonne `alerte` de `v_liste_documents` (rejeté, validité dépassée) ajoutée aux vues des documents, DATE_PIECE des achats ; rejouable.
+- `183_tiers_provisoires.sql` : `v_liste_personnes.provisoire` (module Annuaire `071`) ; vue de liste « Tiers provisoires à valider » (`vli_id` 19, générée dans 121) ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules
@@ -49,7 +50,7 @@
 - Noms de colonnes snake_case préfixés (`ent_`, `lig_`, `prj_`, `aff_`, `cha_`, `mar_`, `itv_`, `fin_`) ; mêmes noms dans `client/src/calcul/colonnes-btp.js` et les entités C#.
 - `FONCTIONS_INTERVENANT` (`structure/donnees.js`) doit refléter les `INSERT` de 162 (test `client/test/structure.test.js`).
 - Scripts majoritairement **non idempotents** (`CREATE TABLE`, `ADD COLUMN` sans `IF NOT EXISTS`) : n'appliquer un script qu'une fois par base.
-- `docker-compose.yml` monte tous les scripts des modules et du cœur (jusqu'à 182, + `900` qui rejoue les mêmes `.sql` pour `logibtp_demo`) ; ils ne tournent qu'à la création du volume (`docker compose down -v` pour repartir de zéro). Sur les bases existantes, un nouveau script s'applique à la main.
+- `docker-compose.yml` monte tous les scripts des modules et du cœur (jusqu'à 183, + `900` qui rejoue les mêmes `.sql` pour `logibtp_demo`) ; ils ne tournent qu'à la création du volume (`docker compose down -v` pour repartir de zéro). Sur les bases existantes, un nouveau script s'applique à la main.
 - Nouveau script du cœur : numéro après le dernier (≥ 164), en-tête de commentaire (rôle, source si généré), à appliquer aux deux bases ; s'il doit faire partie d'une base neuve, l'ajouter aux volumes de `docker-compose.yml`.
 - Vues de liste : une nouvelle colonne de liste se déclare dans `client/src/app/vues-liste.js` (source `SOURCES_LISTE`) et dans la vue SQL ; `v_liste_documents` est redéfinie par 160 puis 182 (`CREATE OR REPLACE`).
 - 161 / 163 référencent les tiers et individus de démonstration (141) et le devis de démo ; jamais contourner les triggers du coffre GED (`modules/ged/db/050`).

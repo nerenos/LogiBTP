@@ -83,7 +83,7 @@ export const SOURCES_LISTE = {
       ['id', 'bigint'], ['type_element', 'text'], ['code', 'text'], ['raison_sociale', 'text'], ['nom_commercial', 'text'], ['niveau', 'text'],
       ['casquettes', 'ARRAY'], ['parent', 'text'], ['chemin', 'text'], ['siren', 'text'], ['siret', 'text'], ['tva_intra', 'text'], ['pays', 'text'],
       ['adresse', 'text'], ['code_postal', 'text'], ['ville', 'text'], ['telephone', 'text'], ['email', 'text'], ['contact', 'text'],
-      ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'],
+      ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['provisoire', 'boolean'],
     ],
   },
   individus: {
@@ -449,17 +449,18 @@ export function sourcesFournisseur(donnees = {}) {
 const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.libelle, picto: c.icone }));
 const OPTIONS_NIVEAUX = NIVEAUX.map((n) => ({ valeur: n.code, libelle: n.libelle, picto: n.icone }));
 const OPTIONS_ROLES = ROLES.map((r) => ({ valeur: r.code, libelle: r.libelle, picto: r.icone }));
-const vuePersonnes = (vli_id, vli_nom, casquettes = null) => ({
+const vuePersonnes = (vli_id, vli_nom, casquettes = null, filtres = []) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
   definition: {
     theme: 'tiers',
     source: { mode: 'vue', vue: 'personnes', colonne_id: 'id', colonne_type: 'type_element' },
-    filtres: casquettes ? [{ colonne: 'casquettes', op: 'dans', valeurs: casquettes }] : [],
+    filtres: [...(casquettes ? [{ colonne: 'casquettes', op: 'dans', valeurs: casquettes }] : []), ...filtres],
     colonnes: [
       col('niveau', '', { format: 'picto', ...fixe(36), options: OPTIONS_NIVEAUX }),
       col('code', 'Code', { ...fixe(84) }),
       col('raison_sociale', 'Raison sociale', { ...prop(2.6, 180), style: { gras: true },
         regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }] }),
+      col('provisoire', 'Provisoire', { format: 'coche', ...fixe(70), recherche: false }),
       col('casquettes', 'Relations', { format: 'combo', ...prop(1.6, 120), options: OPTIONS_CASQUETTES }),
       col('parent', 'Niveau supérieur', { ...prop(1.4, 110) }),
       col('ville', 'Ville', { ...prop(1, 90) }),
@@ -486,6 +487,7 @@ VUES_LISTE.push(
   vuePersonnes(22, 'Fournisseurs et loueurs', ['FOURNISSEUR', 'LOUEUR']),
   vuePersonnes(23, 'Sous-traitants, cotraitants, intérim', ['SOUS_TRAITANT', 'COTRAITANT', 'INTERIM']),
   vuePersonnes(24, 'Prescripteurs et maîtres d\'ouvrage', ['ARCHITECTE', 'MOE', 'BE', 'BC', 'MOA']),
+  vuePersonnes(19, 'Tiers provisoires à valider', null, [{ colonne: 'provisoire', op: 'vrai' }]),
 );
 const vueIndividus = (vli_id, vli_nom, filtres = []) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,

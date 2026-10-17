@@ -39,6 +39,12 @@ public static class Extensions
         g.MapGet("/individus/{id:long}", (long id, ServiceAnnuaire s, CancellationToken ct) => s.Individu(id, ct));
         g.MapPost("/individus/{id:long}/particulier", (long id, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.CreerParticulier(id, Utilisateur.Depuis(http), ct));
         g.MapGet("/societe", async (ServiceAnnuaire s, CancellationToken ct) => await s.SocieteBase(ct) is { } p ? Results.Ok(p) : Results.Ok());
+        // Tiers provisoires : doublons, création, validation, aperçu et fusion (validation et fusion : PeutValiderTiers).
+        g.MapGet("/doublons", (string? raison_sociale, string? siret, long? exclure, ServiceAnnuaire s, CancellationToken ct) => s.Doublons(raison_sociale, siret, exclure, ct));
+        g.MapPost("/personnes/provisoire", (SaisieProvisoire d, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.CreerProvisoire(d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/personnes/{id:long}/validation", (long id, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.ValiderProvisoire(id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/personnes/{id:long}/fusion", (long id, long cible, ServiceAnnuaire s, CancellationToken ct) => s.Apercu(id, cible, ct));
+        g.MapPost("/personnes/{id:long}/fusion", (long id, DemandeFusion d, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.Fusionner(id, d, Utilisateur.Depuis(http), ct));
         g.MapGet("/siret/{siret}", async (string siret, ServiceAnnuaire s, CancellationToken ct) => await s.ParSiret(siret, ct) is { } p ? Results.Ok(p) : Results.Ok());
         g.MapGet("/rattachements", (string type, long id, string? recherche, int? page, int? taille, ServiceAnnuaire s, CancellationToken ct) =>
             s.PageRattachements(type, id, recherche, page ?? 1, taille ?? ServiceAnnuaire.TaillePageRattachements, ct));

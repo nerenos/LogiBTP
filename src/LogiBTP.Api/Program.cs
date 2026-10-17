@@ -43,7 +43,7 @@ builder.Services.AddArchivageGed(builder.Configuration.GetSection("Ged:Archivage
 builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 // Module Annuaire : personnes, individus, rattachements, liens, coordonnées partagées (modules/annuaire/db/070) ;
 // fiches personne et individu par le module Fiche (champs gérés délégués à ServiceAnnuaire).
-builder.Services.AddModuleAnnuaire(Base);
+builder.Services.AddModuleAnnuaire<SpecialisationAnnuaireBtp>(Base);
 // Module Règlements (facultatif) : règlements, cautions, pointage des échéances des pièces (modules/reglement/db/080, db/175).
 builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).

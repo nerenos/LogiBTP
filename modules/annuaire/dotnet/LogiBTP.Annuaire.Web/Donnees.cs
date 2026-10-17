@@ -58,6 +58,12 @@ public class Personne
     public bool PerSocieteBase { get; set; }
     public bool PerActif { get; set; } = true;
     public string PerDevise { get; set; } = "EUR";
+    /// <summary>Tiers provisoire (db/071) : en attente de validation ou de fusion.</summary>
+    public bool PerProvisoire { get; set; }
+    public string? PerProvisoirePar { get; set; }
+    public DateTimeOffset? PerProvisoireLe { get; set; }
+    public string? PerValidePar { get; set; }
+    public DateTimeOffset? PerValideLe { get; set; }
 }
 
 public class Individu
@@ -209,7 +215,7 @@ public sealed class ReferentielDto
 public sealed record ReferentielsDto(List<ReferentielDto> Niveaux, List<ReferentielDto> Casquettes, List<ReferentielDto> TypesLien, List<ReferentielDto> Roles);
 
 public sealed record ResumePersonne(long Id, string? Code, string RaisonSociale, string? NomCommercial, string Niveau, string NiveauLibelle, string? Icone,
-    string? Ville, string? Siret, List<string> Casquettes, bool Actif, long? ParentId, string? Chemin);
+    string? Ville, string? Siret, List<string> Casquettes, bool Actif, long? ParentId, string? Chemin, bool Provisoire = false);
 
 public sealed record ResumeIndividu(long Id, string? Civilite, string Nom, string? Prenom, string NomComplet, string? Personnes, string? Email, string? Telephone, bool Actif);
 

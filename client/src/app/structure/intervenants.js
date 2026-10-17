@@ -1,4 +1,5 @@
 import { echapper } from '@logibtp/socle/ui';
+import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { intervenantPropre } from './structure.js';
 
 // Intervenants (petit annuaire) d'un projet, d'une affaire, d'un chantier, d'un marché ou d'un document : fonction,
@@ -85,7 +86,8 @@ export class TableIntervenants {
     return `<tr data-i="${i}">
       <td><select data-champ="fonction" ${fixe ? 'disabled' : ''}>${this.fonctionsProposees(x.fonction).map((y) => `<option value="${y.code}" ${y.code === x.fonction ? 'selected' : ''}>${echapper(y.libelle)}</option>`).join('')}</select></td>
       <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
-        ${x.per_id ? `<a href="/fiche/personne/${Number(x.per_id)}" title="Ouvrir la fiche du tiers">↗</a>` : ''}</td>
+        ${x.per_id ? `<a href="/fiche/personne/${Number(x.per_id)}" title="Ouvrir la fiche du tiers">↗</a>` : ''}
+        ${fixe && this.tiersFige && x.per_id ? '' : '<button type="button" data-nouveau-tiers title="Nouveau tiers (provisoire), après contrôle des doublons">＋</button>'}</td>
       <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
       <td class="coordonnees"></td>
       <td><input type="checkbox" data-champ="principal" ${x.principal ? 'checked' : ''}></td>
@@ -154,6 +156,17 @@ export class TableIntervenants {
       x.ind_id = el.value === '' ? null : Number(el.value);
       x.contact = el.value === '' ? null : el.selectedOptions[0].textContent.replace(/ \(.*\)$/, '');
       this.#coordonnees(x, Number(el.closest('tr').dataset.i));
+      this.#changer();
+    }));
+    // Tiers absent de l'annuaire : créé provisoire (doublons proposés d'abord), validé ou fusionné plus tard.
+    this.el.querySelectorAll('[data-nouveau-tiers]').forEach((b) => b.addEventListener('click', async () => {
+      const x = ligne(b);
+      const p = await creerTiersProvisoire({ annuaire: this.annuaire, raison_sociale: b.closest('td').querySelector('[data-tiers]').value.trim(), casquettes: [x.fonction].filter(Boolean) })
+        .catch(() => null);
+      if (!p) return;
+      Object.assign(x, { per_id: p.id, tiers: p.raison_sociale, ind_id: null, contact: null });
+      this.contacts.delete(p.id);
+      this.#dessiner();
       this.#changer();
     }));
     this.el.querySelectorAll('[data-tiers]').forEach((input) => {

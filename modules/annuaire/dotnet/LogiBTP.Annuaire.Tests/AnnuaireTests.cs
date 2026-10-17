@@ -76,6 +76,53 @@ public class PlanCoordonneesTests
     }
 }
 
+public class PlanFusionTests
+{
+    private static JsonObject Jeu() => CasPartages.Lire(CasPartages.Chemin("modules", "annuaire", "tests", "cas", "04_fusion.json"));
+
+    public static TheoryData<string> Cas()
+    {
+        var data = new TheoryData<string>();
+        foreach (var c in Jeu()["cas"]!.AsArray()) data.Add(c!["nom"]!.GetValue<string>());
+        return data;
+    }
+
+    private static object? Valeur(JsonNode? n) => n is JsonValue v
+        ? v.GetValueKind() switch { JsonValueKind.True => true, JsonValueKind.False => false, JsonValueKind.Number => v.GetValue<decimal>(), _ => v.GetValue<string>() }
+        : null;
+
+    private static Dictionary<string, object?> Ligne(JsonNode? n, params string[] sauf) =>
+        (n?.AsObject() ?? []).Where(kv => !sauf.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => Valeur(kv.Value));
+
+    private static JsonNode? Noeud(object? v) => v switch { null => null, bool b => JsonValue.Create(b), decimal d => JsonValue.Create(d), _ => JsonValue.Create(v.ToString()) };
+
+    [Theory]
+    [MemberData(nameof(Cas))]
+    public void Plan_identique_au_js(string nom)
+    {
+        var c = Jeu()["cas"]!.AsArray().First(x => x!["nom"]!.GetValue<string>() == nom)!;
+        List<string> Casquettes(string cote) => c[cote]?["per_casquettes"]?.AsArray().Select(x => x!.GetValue<string>()).ToList() ?? [];
+        var r = PlanFusion.Calculer(Ligne(c["source"]), Ligne(c["cible"]), Casquettes("source"), Casquettes("cible"),
+            Ligne(c["source"]?["per_proprietes"]), Ligne(c["cible"]?["per_proprietes"]),
+            c["choix"]!.AsObject().ToDictionary(kv => kv.Key, kv => kv.Value!.GetValue<string>()));
+        var obtenu = new JsonObject
+        {
+            ["valeurs"] = new JsonObject(r.Valeurs.Select(kv => KeyValuePair.Create(kv.Key, Noeud(kv.Value)))),
+            ["casquettes"] = new JsonArray([.. r.Casquettes.Select(x => (JsonNode)JsonValue.Create(x))]),
+            ["proprietes"] = new JsonObject(r.Proprietes.Select(kv => KeyValuePair.Create(kv.Key, Noeud(kv.Value)))),
+            ["conflits"] = new JsonArray([.. r.Conflits.Select(x => (JsonNode)JsonValue.Create(x))]),
+        };
+        Assert.True(JsonNode.DeepEquals(c["attendu"], obtenu), $"{nom} : obtenu {obtenu.ToJsonString()}");
+    }
+
+    [Fact]
+    public void Mots_doublon_identiques_au_js()
+    {
+        foreach (var c in Jeu()["mots_doublon"]!.AsArray())
+            Assert.Equal(c!["attendu"]!.AsArray().Select(x => x!.GetValue<string>()), PlanFusion.MotsDoublon(c["nom"]!.GetValue<string>()));
+    }
+}
+
 public class GrapheAnnuaireTests
 {
     private static JsonObject Jeu() => CasPartages.Lire(CasPartages.Chemin("modules", "annuaire", "tests", "cas", "03_graphe.json"));

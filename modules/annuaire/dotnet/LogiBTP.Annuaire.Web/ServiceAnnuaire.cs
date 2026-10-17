@@ -19,6 +19,19 @@ public class SpecialisationAnnuaire
 {
     public virtual bool PeutParametrer(Utilisateur u) => u.EstAdmin;
 
+    /// <summary>Droit de valider la création d'un tiers provisoire ou de le fusionner dans une autre fiche.</summary>
+    public virtual bool PeutValiderTiers(Utilisateur u) => u.EstAdmin;
+
+    /// <summary>Niveau d'un tiers provisoire saisi sans niveau.</summary>
+    public virtual string NiveauProvisoire => "SOCIETE";
+
+    /// <summary>
+    /// Fusion d'un tiers provisoire : références de l'application (documents, structure…) reportées de la source sur la
+    /// cible, dans la transaction de la fusion ; renvoie le nombre d'éléments reportés par nature. Par défaut : aucune.
+    /// </summary>
+    public virtual Task<IReadOnlyDictionary<string, int>> ReporterFusionAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, long source, long cible, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyDictionary<string, int>>(new Dictionary<string, int>());
+
     public virtual string NiveauParticulier => "PARTICULIER";
 
     public virtual IReadOnlyList<string> CasquettesParticulier => ["CLIENT"];
@@ -149,14 +162,14 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     private const string SelectPersonnes = """
         SELECT per_id, per_code, per_raison_sociale, per_nom_commercial, per_niv_code, niv_libelle, niv_icone, ville, per_siret,
-               per_casquettes::text AS casquettes, per_actif, per_parent_id, chemin
+               per_casquettes::text AS casquettes, per_actif, per_parent_id, chemin, per_provisoire
         FROM v_annuaire_personnes
         """;
 
     private static ResumePersonne VersResume(Dictionary<string, object?> l) => new(
         (long)l["per_id"]!, l["per_code"] as string, (string)l["per_raison_sociale"]!, l["per_nom_commercial"] as string, (string)l["per_niv_code"]!,
         (string)l["niv_libelle"]!, l["niv_icone"] as string, l["ville"] as string, l["per_siret"] as string, ListeJson(l["casquettes"]),
-        (bool)l["per_actif"]!, l["per_parent_id"] as long?, l["chemin"] as string);
+        (bool)l["per_actif"]!, l["per_parent_id"] as long?, l["chemin"] as string, l["per_provisoire"] is true);
 
     private static ResumeIndividu VersResumeIndividu(Dictionary<string, object?> l) => new(
         (long)l["ind_id"]!, l["ind_civilite"] as string, (string)l["ind_nom"]!, l["ind_prenom"] as string, (string)l["libelle"]!, l["personnes"] as string,

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   sirenValide, siretValide, cleTva, tvaValide, ibanValide, bicValide, erreursIdentifiants, planifierCoordonnees,
-  FournisseurAnnuaireMemoire, coordonneesParDefaut, construireGraphe, fusionnerGraphes, enColonneAnnuaire,
+  FournisseurAnnuaireMemoire, coordonneesParDefaut, construireGraphe, fusionnerGraphes, enColonneAnnuaire, planFusion, motsDoublon,
 } from '../src/index.js';
 import { disposerGraphe } from '@logibtp/graphe';
 
@@ -33,6 +33,15 @@ describe('plan des coordonnées (jeu partagé 02_coordonnees.json)', () => {
       expect(r.choix_requis).toEqual(c.attendu.choix_requis);
     });
   }
+});
+
+describe("fusion d'un tiers provisoire (jeu partagé 04_fusion.json)", () => {
+  for (const c of lire('04_fusion.json').cas) {
+    it(c.nom, () => expect(planFusion(c.source, c.cible, c.choix)).toEqual(c.attendu));
+  }
+  it('mots comparés pour un doublon de nom', () => {
+    for (const c of lire('04_fusion.json').mots_doublon) expect(motsDoublon(c.nom), c.nom).toEqual(c.attendu);
+  });
 });
 
 /** Annuaire de test : une société, un établissement, un individu salarié de la société et client particulier. */
@@ -230,5 +239,42 @@ describe('graphe relationnel (jeu partagé 03_graphe.json)', () => {
     const g = await annuaire().graphe('individu', 1, { profondeur: 1 });
     expect(g.noeuds.map((n) => n.cle)).toEqual(['P1', 'I1']);
     expect(g.aretes.map((x) => x.cle)).toEqual(['R1']);
+  });
+});
+
+describe('tiers provisoires en mémoire', () => {
+  it('doublons : SIRET bloquant, nom proche à confirmer, puis création provisoire', async () => {
+    const a = annuaire();
+    expect((await a.doublons({ raison_sociale: 'SARL Ent' })).noms.map((p) => p.id)).toEqual([2, 1]);
+    await expect(a.creerProvisoire({ raison_sociale: 'Nouveau', siret: '404 833 048 00022' })).rejects.toMatchObject({ code: 'DOUBLON_SIRET' });
+    await expect(a.creerProvisoire({ raison_sociale: 'ENT' })).rejects.toMatchObject({ code: 'DOUBLON_NOM' });
+    await expect(a.creerProvisoire({ raison_sociale: 'X', siret: '123' })).rejects.toMatchObject({ code: 'VALIDATION' });
+    const p = await a.creerProvisoire({ raison_sociale: 'ENT', casquettes: ['CLIENT'], confirme: true });
+    expect(p).toMatchObject({ raison_sociale: 'ENT', niveau: 'SOCIETE', provisoire: true, casquettes: ['CLIENT'] });
+    expect((await a.validerProvisoire(p.id)).provisoire).toBe(false);
+    await expect(a.validerProvisoire(p.id)).rejects.toMatchObject({ code: 'NON_PROVISOIRE' });
+  });
+
+  it('fusion : valeurs choisies, contacts et coordonnées reportés, références de l’hôte, provisoire supprimé', async () => {
+    const a = annuaire();
+    const p = await a.creerProvisoire({ raison_sociale: 'Ent provisoire', casquettes: ['CLIENT'], confirme: true });
+    a.usages.push({ id: 9, coo_id: 3, per_id: p.id, usage: 'SIEGE', principal: true, ordre: 0 }, { id: 10, coo_id: 1, per_id: p.id, usage: 'SIEGE', principal: true, ordre: 1 });
+    a.rattachements.push({ id: 7, per_id: p.id, ind_id: 1, fonction: 'Acheteur' });
+    a.usages.push({ id: 11, coo_id: 2, rat_id: 7, usage: 'BUREAU', principal: true, ordre: 0 });
+    a.personnes.find((x) => x.id === p.id).commentaire = 'Saisi sur chantier';
+    a.reporterFusion = (s, c) => ({ documents: s !== c ? 2 : 0 });
+    const apercu = await a.apercuFusion(p.id, 1);
+    expect(apercu.conflits).toEqual(['per_raison_sociale']);
+    const r = await a.fusionner(p.id, { cible_id: 1, choix: { per_raison_sociale: 'cible' } });
+    expect(r).toEqual({ cible_id: 1, reports: { coordonnees: 1, documents: 2 } });
+    const ent = a.personnes.find((x) => x.id === 1);
+    expect(ent).toMatchObject({ raison_sociale: 'ENT SAS', commentaire: 'Saisi sur chantier', casquettes: ['FOURNISSEUR', 'CLIENT'] });
+    expect(a.personnes.some((x) => x.id === p.id)).toBe(false);
+    // Coordonnée 3 reportée sans être principale (la société a déjà son adresse principale) ; la 1 n'est pas doublée.
+    expect(a.usages.filter((u) => u.per_id === 1).map((u) => [u.coo_id, !!u.principal])).toEqual([[1, true], [2, true], [3, false]]);
+    // Individu déjà contact : un seul rattachement, qui reçoit les coordonnées de l'autre (la 2).
+    expect(a.rattachements.filter((x) => x.ind_id === 1).map((x) => x.id)).toEqual([1]);
+    expect(a.usages.filter((u) => u.rat_id === 1).map((u) => u.coo_id)).toEqual([4, 2]);
+    await expect(a.fusionner(1, { cible_id: 2 })).rejects.toMatchObject({ code: 'NON_PROVISOIRE' });
   });
 });
