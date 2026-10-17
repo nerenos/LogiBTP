@@ -401,6 +401,31 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         });
     }
 
+    /// <summary>Saisie d'avancement d'une ligne : mode (P, Q, M, A) et valeur cumulée.</summary>
+    public sealed record SaisieAvancement(string Mode, decimal? Valeur);
+
+    /// <summary>
+    /// Saisies de la dernière situation validée de référence, non annulée, par ligne du marché (lig_avt_source_lig_id) :
+    /// point de départ d'une nouvelle situation (aide à la saisie).
+    /// </summary>
+    protected internal async Task<Dictionary<long, SaisieAvancement>> DernieresSituations(IReadOnlyCollection<long> sources, CancellationToken ct)
+    {
+        if (sources.Count == 0) return [];
+        var lignes = await (from l in db.Lignes.AsNoTracking()
+                            join d in db.Documents.AsNoTracking() on l.LigEntId equals d.EntId
+                            join t in db.TypesDocument.AsNoTracking() on d.EntTydId equals t.TydId
+                            join s in db.StatutsDocument.AsNoTracking() on d.EntStdId equals s.StdId
+                            where l.LigAvtSourceLigId != null && sources.Contains(l.LigAvtSourceLigId.Value) && l.LigAvtMode != null
+                                && d.EntVerrouille && d.EntIsReference && s.StdCode != "ANNULE" && t.TydAvancement == "S"
+                            select new { Source = l.LigAvtSourceLigId!.Value, d.EntId, l.LigAvtMode, l.LigAvtValeur })
+            .ToListAsync(ct);
+        return lignes.GroupBy(x => x.Source).ToDictionary(g => g.Key, g =>
+        {
+            var x = g.OrderByDescending(y => y.EntId).First();
+            return new SaisieAvancement(x.LigAvtMode!, x.LigAvtValeur);
+        });
+    }
+
     /// <summary>Précédents écrits sur les lignes d'avancement (0 sans document précédent).</summary>
     protected internal async Task AppliquerPrecedents(IEnumerable<TLigne> lignes, long? exclure, CancellationToken ct)
     {

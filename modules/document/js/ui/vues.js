@@ -66,7 +66,9 @@ export function fusionnerDisposition(definition, disposition, cles = []) {
   const ordre = [...disposition.colonnes.map((c) => c.cle).filter((k) => parCle.has(k)), ...base.map((c) => c.cle).filter((k) => !reglees.has(k))];
   const colonnes = ordre.map((cle) => {
     const largeur = reglees.has(cle) ? reglees.get(cle).largeur : parCle.get(cle).largeur;
-    return largeur ? { cle, largeur } : { cle };
+    // Titre renommé dans la vue : gardé (la disposition de la grille ne porte que l'ordre et les largeurs).
+    const titre = parCle.get(cle)?.titre;
+    return { cle, ...(largeur ? { largeur } : {}), ...(titre ? { titre } : {}) };
   });
   return { debogage: false, systeme: [], ...definition, colonnes };
 }
@@ -174,6 +176,8 @@ export class GestionVuesDocument {
       debogage: Boolean(base?.debogage),
       systeme: new Set(base?.systeme ?? []),
       largeurs: new Map((base?.colonnes ?? []).filter((c) => c.largeur).map((c) => [c.cle, c.largeur])),
+      // Titres renommés dans la vue (vide : titre d'origine de la colonne).
+      renommes: new Map((base?.colonnes ?? []).filter((c) => c.titre).map((c) => [c.cle, c.titre])),
     };
     const titres = new Map(catalogue.map((c) => [c.cle, c.titre]));
     const champsSysteme = ed.champsSysteme();
@@ -186,6 +190,7 @@ export class GestionVuesDocument {
     dlg.className = 'dialogue-vue';
     const listeColonnes = () => etat.ordre.map((k, i) => `<li data-cle="${k}">
         <input type="checkbox" data-visible ${etat.visibles.has(k) ? 'checked' : ''} id="vc-${k}"><span><label for="vc-${k}">${echapper(titres.get(k) ?? k)}</label></span>
+        <input data-titre size="14" maxlength="40" value="${echapper(etat.renommes.get(k) ?? '')}" placeholder="${echapper(titres.get(k) ?? k)}" title="Titre de la colonne dans cette vue (vide : titre d'origine)">
         <button type="button" data-haut ${i === 0 ? 'disabled' : ''} title="Monter">↑</button><button type="button" data-bas ${i === etat.ordre.length - 1 ? 'disabled' : ''} title="Descendre">↓</button></li>`).join('');
     const listeSysteme = () => champsSysteme.map((k) => `<li class="systeme"><input type="checkbox" data-sys="${echapper(k)}" ${etat.systeme.has(k) ? 'checked' : ''}><span>${echapper(k === '_controles' ? 'Contrôles (codes des erreurs)' : k)}</span></li>`).join('');
     dlg.innerHTML = `<form method="dialog">
@@ -233,6 +238,11 @@ export class GestionVuesDocument {
     });
     liste.addEventListener('change', (e) => {
       const k = e.target.closest('li')?.dataset.cle;
+      if (k && e.target.matches('[data-titre]')) {
+        const t = e.target.value.trim();
+        if (t) etat.renommes.set(k, t); else etat.renommes.delete(k);
+        return;
+      }
       if (!k || !e.target.matches('[data-visible]')) return;
       if (e.target.checked) etat.visibles.add(k); else etat.visibles.delete(k);
     });
@@ -246,7 +256,9 @@ export class GestionVuesDocument {
     });
 
     const definition = () => ({
-      colonnes: etat.ordre.filter((k) => etat.visibles.has(k)).map((cle) => (etat.largeurs.has(cle) ? { cle, largeur: etat.largeurs.get(cle) } : { cle })),
+      colonnes: etat.ordre.filter((k) => etat.visibles.has(k)).map((cle) => ({
+        cle, ...(etat.largeurs.has(cle) ? { largeur: etat.largeurs.get(cle) } : {}), ...(etat.renommes.has(cle) ? { titre: etat.renommes.get(cle) } : {}),
+      })),
       debogage: etat.debogage,
       systeme: etat.debogage ? champsSysteme.filter((k) => etat.systeme.has(k)) : [],
     });

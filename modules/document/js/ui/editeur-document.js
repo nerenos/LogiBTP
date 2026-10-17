@@ -256,7 +256,7 @@ export class EditeurDocument {
     if (this.saisie.document.ent_avt_presentation) ajouter(COLONNES_AVANCEMENT, ALIAS_AVANCEMENT.map(([cle]) => cle));
     // Largeur réglée (px) portée par la vue ; la première colonne porte l'arborescence (repli des lignes).
     const res = colonnesVue.filter((c) => parCle.has(c.cle))
-      .map((c, i) => ({ ...parCle.get(c.cle), largeur: c.largeur ?? null, arbre: i === 0 }));
+      .map((c, i) => ({ ...parCle.get(c.cle), ...(c.titre ? { titre: c.titre } : {}), largeur: c.largeur ?? null, arbre: i === 0 }));
     if (!res.length) return catalogue;
     if (this.vue.debogage) {
       const choisis = this.vue.systeme ?? [];

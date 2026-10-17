@@ -99,6 +99,9 @@ public static class Structure
             var entId = cree.Document.EntId;
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_avt_depassement = (SELECT mar_depassement_autorise FROM marche WHERE mar_id = {id}) WHERE ent_id = {entId} AND ent_avt_presentation IS NOT NULL", ct);
             cree.Document.EntAvtDepassement = await db.Database.SqlQuery<bool>($"SELECT ent_avt_depassement AS \"Value\" FROM document WHERE ent_id = {entId}").FirstAsync(ct);
+            // Situation, facture d'avancement : numéro suivant dès la création (Q29).
+            await SpecialisationBtp.NumeroterAvancement(db, entId, ct);
+            cree.Document.EntRangAvancement = await db.Database.SqlQuery<int?>($"SELECT ent_rang_avancement AS \"Value\" FROM document WHERE ent_id = {entId}").FirstAsync(ct);
             // Facture : retenue de garantie et postes TTC du marché posés dans le pied global (Q5, 11.4), visibles dès la saisie.
             var type = await db.TypesDocument.AsNoTracking().FirstAsync(t => t.TydId == tyd, ct);
             var complet = await documents.Charger(entId, ct);

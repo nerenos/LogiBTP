@@ -125,16 +125,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
         // Un avoir d'annulation reprend la pièce annulée (son numéro de situation) : ni numéro ni déduction.
         if (doc.EntAvtPresentation is null || doc.EntMarcheId is null || doc.EntNatureAvoir == "ANNULATION") return;
-        await db.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE document d SET ent_rang_avancement = 1 + coalesce((
-                SELECT max(x.ent_rang_avancement) FROM document x
-                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
-                JOIN type_document td ON td.tyd_id = d.ent_tyd_id
-                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
-                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S' AND x.ent_is_reference
-                           ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
-            WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL
-            """, ct);
+        await NumeroterAvancement(db, entId, ct);
         if (doc.EntAvtPresentation != "P") return;
         await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM document_deduction WHERE ded_ent_id = {entId}", ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -146,6 +137,25 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             JOIN statut_document s ON s.std_id = x.ent_std_id
             WHERE d.ent_id = {entId} AND s.std_code <> 'ANNULE' AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
               AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement)
+            """, ct);
+    }
+
+    /// <summary>
+    /// Numéro de situation (Q29) d'un document d'avancement du marché qui n'en a pas : le suivant des documents validés
+    /// de même nature (situations de référence, ou factures d'avancement et reprises) ; à la création depuis le marché et
+    /// à la validation (un numéro saisi est gardé).
+    /// </summary>
+    public static async Task NumeroterAvancement(DbContext db, long entId, CancellationToken ct)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE document d SET ent_rang_avancement = 1 + coalesce((
+                SELECT max(x.ent_rang_avancement) FROM document x
+                JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+                JOIN type_document td ON td.tyd_id = d.ent_tyd_id
+                WHERE x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+                  AND CASE WHEN td.tyd_avancement = 'S' THEN tx.tyd_avancement = 'S' AND x.ent_is_reference
+                           ELSE x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R' END), 0)
+            WHERE d.ent_id = {entId} AND d.ent_rang_avancement IS NULL AND d.ent_avt_presentation IS NOT NULL AND d.ent_marche_id IS NOT NULL
             """, ct);
     }
 

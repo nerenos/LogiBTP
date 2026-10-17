@@ -56,7 +56,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     private sealed record Preparation(TComplet Source, TypeDocument TypeSource, TransformationAutorisee Regle, List<string> Etapes,
         Dictionary<long, decimal> Retenues, Dictionary<long, decimal?> Avancements, HashSet<long> Garder, HashSet<long> EnVendu,
         List<UniteOption> Unites, Dictionary<long, bool> Choix, TypeDocument TypeCible,
-        Dictionary<long, DocumentService<TDoc, TLigne, TComplet>.Precedent>? Precedents);
+        Dictionary<long, DocumentService<TDoc, TLigne, TComplet>.Precedent>? Precedents,
+        Dictionary<long, DocumentService<TDoc, TLigne, TComplet>.SaisieAvancement>? Situations = null);
 
     /// <summary>Une transformation, dans la transaction de l'appelant ; renvoie l'identifiant du document créé.</summary>
     private async Task<long> TransformerDans(long sourceId, DemandeTransformation dem, Utilisateur u, CancellationToken ct, bool intermediaire = false)
@@ -118,10 +119,16 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             }
             else
             {
-                // Saisie initiale = précédent (période nulle) : en montant (la référence), en % pour une ligne sans prix.
+                // Saisie initiale = précédent (période nulle) : en montant (la référence), en % pour une ligne sans prix ;
+                // nouvelle situation : la saisie de la dernière situation validée (mode et valeur cumulée).
                 var sansPrix = (src.LigMontantHt ?? 0) == 0;
                 l.LigAvtMode = sansPrix ? "P" : "M";
                 l.LigAvtValeur = sansPrix ? precedent?.Pct ?? 0 : precedent?.Montant ?? 0;
+                if (p.Situations?.GetValueOrDefault(cle) is { } sit)
+                {
+                    l.LigAvtMode = sit.Mode;
+                    l.LigAvtValeur = sit.Valeur;
+                }
                 l.LigAvtMontantMarche = src.LigMontantHt;
                 l.LigAvtQteMarche = src.LigQteVendue;
             }
@@ -135,6 +142,11 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             var cle = src.LigAvtSourceLigId ?? src.LigId;
             l.LigAvtMode = src.LigAvtMode ?? "A";
             l.LigAvtValeur = src.LigAvtValeur;
+            if (src.LigAvtMode is null && p.Situations?.GetValueOrDefault(cle) is { } sit)
+            {
+                l.LigAvtMode = sit.Mode;
+                l.LigAvtValeur = sit.Valeur;
+            }
             l.LigAvtMontantMarche = src.LigAvtMontantMarche ?? src.LigMontantHt;
             l.LigAvtSourceLigId = cle;
             DocumentService<TDoc, TLigne, TComplet>.EcrirePrecedent(l, p.Precedents?.GetValueOrDefault(cle));
@@ -266,10 +278,12 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         foreach (var l in source.Lignes.Where(l => garder.Contains(l.LigId) && l.LigPiedBaseId is long)) garder.Add(l.LigPiedBaseId!.Value);
 
         // Avancement : précédents des lignes du marché (lignes de la commande, ou suivies par la situation source).
-        var precedents = typeCible.TydAvancement is null ? null : await documents.Precedents(
-            retenues.Keys.Concat(source.Lignes.Where(EstPosteEnMontant).Select(l => l.LigId))
-                .Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList(), null, ct);
-        return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix, typeCible, precedents);
+        var cles = retenues.Keys.Concat(source.Lignes.Where(EstPosteEnMontant).Select(l => l.LigId))
+            .Select(id => parId[id].LigAvtSourceLigId ?? id).Distinct().ToList();
+        var precedents = typeCible.TydAvancement is null ? null : await documents.Precedents(cles, null, ct);
+        // Nouvelle situation : la saisie part de la dernière situation validée (aide à la saisie).
+        var situations = typeCible.TydAvancement == "S" ? await documents.DernieresSituations(cles, ct) : null;
+        return new Preparation(source, typeSource, regle, etapes, retenues, avancements, garder, enVendu, unites, choix, typeCible, precedents, situations);
     }
 
     /// <summary>
