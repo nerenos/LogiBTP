@@ -152,7 +152,12 @@ public sealed class SeuilsSolde
 /// Reste à solder d'une ligne d'un document issu d'une transformation : quantité du parent, quantités des autres
 /// documents à la même étape (dont brouillons), quantité déjà soldée par d'autres lignes.
 /// </summary>
-public sealed record ResteLigne(long LigId, long SourceLigId, string Etape, decimal QteParent, decimal Autres, decimal AutresBrouillons, decimal Solde);
+/// <summary>
+/// Reste d'une ligne transformée : quantité et montant HT du parent, quantité et montant HT des autres documents à la
+/// même étape (brouillons compris, part des brouillons à part), quantité soldée ailleurs.
+/// </summary>
+public sealed record ResteLigne(long LigId, long SourceLigId, string Etape, decimal QteParent, decimal Autres, decimal AutresBrouillons, decimal Solde,
+    decimal MontantParent, decimal AutresMontant);
 
 /// <summary>Restes à solder d'un document et seuils de sa famille (colonnes Qté parent, Reste, Soldé de la grille).</summary>
 public sealed record RestesDocument(decimal SeuilPct, decimal SeuilQte, List<ResteLigne> Lignes);

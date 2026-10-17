@@ -209,13 +209,34 @@ const sqlVuesDocument = `-- ====================================================
 -- =============================================================================
 
 INSERT INTO vue_document (vdo_id, vdo_nom, vdo_tyd_id, vdo_mod_code, vdo_proprietaire, vdo_par_defaut, vdo_definition, vdo_modifie_par) VALUES
-${VUES_DOCUMENT.map((v) => ` (${v.id}, ${q(v.nom)}, ${n(v.tyd_id)}, ${q(v.mod_code)}, ${q(v.proprietaire)}, ${b(v.par_defaut)}, ${j(v.definition)}, 'systeme')`).join(',\n')}
+${VUES_DOCUMENT.filter((v) => !v.tyd_code).map((v) => ` (${v.id}, ${q(v.nom)}, ${n(v.tyd_id)}, ${q(v.mod_code)}, ${q(v.proprietaire)}, ${b(v.par_defaut)}, ${j(v.definition)}, 'systeme')`).join(',\n')}
 ON CONFLICT (vdo_id) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('vue_document', 'vdo_id'), (SELECT max(vdo_id) FROM vue_document));
 `;
 fs.writeFileSync(path.join(racine, 'db', '150_documents_vues.sql'), sqlVuesDocument);
 console.log('db/150_documents_vues.sql généré');
+
+// Vues par défaut des types de documents issus d'une transformation (désignés par leur code) : après la création de
+// tous les types (160 à 174) ; un type absent de la base est ignoré.
+const sqlVuesTypes = `-- =============================================================================
+-- Cœur LogiBTP – vues de colonnes par défaut des documents issus d'une transformation (une par type, sans modèle) :
+-- ventilation (parent, précédent, ce document, cumul, %, reste) ou avancement ; rejouable.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/vues-document.js : ne pas modifier.
+-- =============================================================================
+
+INSERT INTO vue_document (vdo_id, vdo_nom, vdo_tyd_id, vdo_mod_code, vdo_proprietaire, vdo_par_defaut, vdo_definition, vdo_modifie_par)
+SELECT v.id, v.nom, t.tyd_id, NULL, NULL, TRUE, v.definition::jsonb, 'systeme'
+FROM (VALUES
+${VUES_DOCUMENT.filter((v) => v.tyd_code).map((v) => ` (${v.id}, ${q(v.nom)}, ${q(v.tyd_code)}, ${q(JSON.stringify(v.definition))})`).join(',\n')}
+) AS v(id, nom, code, definition)
+JOIN type_document t ON t.tyd_code = v.code
+ON CONFLICT DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('vue_document', 'vdo_id'), (SELECT max(vdo_id) FROM vue_document));
+`;
+fs.writeFileSync(path.join(racine, 'db', '176_documents_vues_types.sql'), sqlVuesTypes);
+console.log('db/176_documents_vues_types.sql généré');
 
 // ------------------------------------------------------------------ structure des affaires de démonstration
 const S = await import('../src/app/structure/donnees.js');

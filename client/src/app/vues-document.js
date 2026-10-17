@@ -1,9 +1,20 @@
 // Vues de colonnes de la grille des lignes fournies par le cœur : une vue par défaut par modèle de saisie (tous types
-// de documents) et une vue de débogage. Les colonnes du reste à solder (qte_parent, reste, solde) n'apparaissent que
+// de documents), une vue par défaut par type de document issu d'une transformation et une vue de débogage. Les colonnes du reste à solder (qte_parent, reste, solde) n'apparaissent que
 // dans un document issu d'une transformation. Les mêmes définitions alimentent la démo hors ligne et le script
 // db/150_documents_vues.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
 const cols = (...cles) => cles.map((cle) => ({ cle }));
+
+// Documents issus d'une transformation : vue par défaut de leur type (sans modèle choisi) qui privilégie la
+// ventilation (parent, précédent, ce document, cumul, %, reste) ; pas de coefficients ; ventes : PV net seul.
+const ENTETE = ['num', 'type', 'code', 'libelle', 'nature', 'unite'];
+const VENTILATION = ['qte_parent', 'montant_parent', 'qte_prec', 'montant_prec', 'qte', 'montant', 'qte_cumul', 'montant_cumul', 'pct_cumul', 'reste', 'solde'];
+const AVANCEMENT = ['avt_montant_marche', 'avt_pct_prec', 'avt_qte_prec', 'avt_precedent', 'avt_pct', 'avt_qte', 'avt_montant', 'qte', 'montant'];
+const VUES_TRANSFORMES = [
+  { nom: 'Ventilation (ventes)', types: ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_FACTURE', 'V_AVOIR'], colonnes: [...ENTETE, 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
+  { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT'], colonnes: [...ENTETE, 'pvnet', ...AVANCEMENT, 'tva', 'commentaire'] },
+  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
+];
 
 export const VUES_DOCUMENT = [
   {
@@ -27,6 +38,11 @@ export const VUES_DOCUMENT = [
         'lig_pied_mode', 'lig_pied_base', 'lig_pied_base_id', 'lig_base_calcul', 'lig_qte_totale', 'lig_montant_pr', 'lig_etiquette'],
     },
   },
+  // Une vue par défaut par type (tyd_code : identifiant résolu dans la base par le script généré).
+  ...VUES_TRANSFORMES.flatMap((g, i) => g.types.map((code, j) => ({
+    id: 10 + i * 10 + j, nom: g.nom, tyd_id: null, tyd_code: code, mod_code: null, globale: true, proprietaire: null, par_defaut: true,
+    definition: { colonnes: cols(...g.colonnes), debogage: false, systeme: [] },
+  }))),
 ];
 
 /** Modèles de saisie (démo hors ligne ; table modele_document en ligne). */

@@ -21,7 +21,9 @@ export class FournisseurVuesMemoire {
   async vues(type) {
     const tydId = type?.tyd_id ?? null;
     const u = this.utilisateur();
-    return this.liste.filter((v) => (v.globale || v.proprietaire === u) && (v.tyd_id === null || v.tyd_id === tydId)).map((v) => structuredClone(v));
+    // Vue d'un type désigné par son code (tyd_code, données de démonstration) : rattachée à l'identifiant du type.
+    return this.liste.map((v) => (v.tyd_code && v.tyd_code === type?.tyd_code ? { ...v, tyd_id: tydId } : v))
+      .filter((v) => (v.globale || v.proprietaire === u) && ((v.tyd_id ?? null) === null ? !v.tyd_code : v.tyd_id === tydId)).map((v) => structuredClone(v));
   }
 
   async enregistrer(d) {

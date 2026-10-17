@@ -845,18 +845,58 @@ export class EditeurDocument {
   }
 
   /**
-   * Colonnes du reste à solder (document issu d'une transformation, restes posés par definirRestes) : quantité du
-   * parent, reste (parent − autres documents − ce document − soldé), case Soldé (solde la ligne du parent à la
-   * validation ; « seuil » : soldée automatiquement, le reste étant sous le seuil des paramètres).
+   * Colonnes du reste à solder (document issu d'une transformation, restes posés par definirRestes) : quantité et
+   * montant HT du parent, quantité et montant des documents précédents (autres documents à la même étape, brouillons
+   * compris), cumul (précédent + ce document) et % du parent, reste (parent − autres documents − ce document −
+   * soldé), case Soldé (solde la ligne du parent à la validation ; « seuil » : soldée automatiquement, le reste étant
+   * sous le seuil des paramètres).
    */
   colonnesReste(saisissable) {
     if (!this.restes?.parLigne.size) return [];
     const precision = (r) => r.calcule.lig_precision_qte ?? 2;
+    const pm = () => this.saisie.document.ent_precision_montant ?? 2;
+    const avec = (r, f) => { const s = this.soldeLigne(r); return s ? f(s.info, r) : ''; };
+    const qteCumul = (i, r) => Dz(i.autres).plus(Dz(r.calcule.lig_qte_vendue));
+    const montantCumul = (i, r) => Dz(i.autres_montant).plus(Dz(r.calcule.lig_montant_ht));
     return [
       {
         cle: 'qte_parent', titre: 'Qté parent', classe: 'col-nombre', editable: () => false,
-        valeur: (r) => { const s = this.soldeLigne(r); return s ? formatNombre(s.info.qte_parent, precision(r)) : ''; },
+        valeur: (r) => avec(r, (i) => formatNombre(i.qte_parent, precision(r))),
         titreCellule: (r) => (this.soldeLigne(r) ? 'Quantité de la ligne du document parent' : ''),
+      },
+      {
+        cle: 'montant_parent', titre: 'Montant parent', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => avec(r, (i) => formatNombre(i.montant_parent, pm())),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT de la ligne du document parent' : ''),
+      },
+      {
+        cle: 'qte_prec', titre: 'Qté préc.', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => avec(r, (i) => formatNombre(i.autres, precision(r))),
+        titreCellule: (r) => avec(r, (i) => `Quantité des documents précédents à la même étape${Dz(i.autres_brouillons).isZero() ? '' : ` (dont brouillons ${formatNombre(i.autres_brouillons, precision(r))})`}`),
+      },
+      {
+        cle: 'montant_prec', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => avec(r, (i) => formatNombre(i.autres_montant, pm())),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT des documents précédents à la même étape' : ''),
+      },
+      {
+        cle: 'qte_cumul', titre: 'Qté cumul', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => avec(r, (i) => formatNombre(qteCumul(i, r).toString(), precision(r))),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Quantité cumulée : documents précédents + ce document' : ''),
+      },
+      {
+        cle: 'montant_cumul', titre: 'Montant cumul', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => avec(r, (i) => formatNombre(montantCumul(i, r).toString(), pm())),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Montant HT cumulé : documents précédents + ce document' : ''),
+      },
+      {
+        cle: 'pct_cumul', titre: '% cumul', classe: 'col-coef', editable: () => false,
+        // % de la quantité du parent ; une ligne sans quantité (forfait) : % du montant.
+        valeur: (r) => avec(r, (i) => {
+          const [n, d] = Dz(i.qte_parent).isZero() ? [montantCumul(i, r), Dz(i.montant_parent)] : [qteCumul(i, r), Dz(i.qte_parent)];
+          return d.isZero() ? '' : formatNombre(n.div(d).times(100).toDecimalPlaces(2).toString(), 2);
+        }),
+        titreCellule: (r) => (this.soldeLigne(r) ? 'Part cumulée du parent (quantité, ou montant sans quantité)' : ''),
       },
       {
         cle: 'reste', titre: 'Reste', classe: 'col-nombre col-reste', editable: () => false,
@@ -930,6 +970,16 @@ export class EditeurDocument {
         champ: () => 'avt:M', lire: (l) => formatLibre(l.lig_avt_mode === 'M' ? l.lig_avt_valeur : this.calculee(l)?.lig_avt_montant_cumul),
         valeur: (r) => (avt(r.item) ? saisi(r, 'M', nombre(r.calcule.lig_avt_montant_cumul, this.saisie.document.ent_precision_montant ?? 2)) : ''),
         titreCellule: (r) => (avt(r.item) ? `Montant du marché : ${nombre(r.item.lig_avt_montant_marche)}` : ''),
+      },
+      {
+        cle: 'avt_montant_marche', titre: 'Montant marché', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_montant_marche, this.saisie.document.ent_precision_montant ?? 2) : ''),
+        titreCellule: () => 'Montant HT de la ligne du marché (commande parente)',
+      },
+      {
+        cle: 'avt_qte_prec', titre: 'Qté préc.', classe: 'col-nombre', editable: () => false,
+        valeur: (r) => (avt(r.item) ? nombre(r.item.lig_avt_qte_precedent, r.calcule.lig_precision_qte ?? 2) : ''),
+        titreCellule: () => 'Quantité cumulée du dernier document d\'avancement validé',
       },
       {
         cle: 'avt_precedent', titre: 'Montant préc.', classe: 'col-nombre', editable: () => false,

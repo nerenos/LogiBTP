@@ -639,13 +639,13 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         if (directs.Count == 0) return new RestesDocument(pct, qte, []);
         var parentsIds = directs.Select(x => x.LilSourceLigId).Distinct().ToList();
         var parents = await db.Lignes.AsNoTracking().Where(l => parentsIds.Contains(l.LigId))
-            .ToDictionaryAsync(l => l.LigId, l => l.LigQteVendue ?? 0, ct);
+            .ToDictionaryAsync(l => l.LigId, l => (Qte: l.LigQteVendue ?? 0, Montant: l.LigMontantHt ?? 0), ct);
         // Liens des parents avec l'état (brouillon ou validé) du document cible ; ceux du document en cours à part.
         var liens = await (from x in db.LignesLien.AsNoTracking()
                            join l in db.Lignes.AsNoTracking() on x.LilCibleLigId equals l.LigId
                            join d in db.Documents.AsNoTracking() on l.LigEntId equals d.EntId
                            where parentsIds.Contains(x.LilSourceLigId) && l.LigEntId != entId
-                           select new { x.LilSourceLigId, x.LilEtape, x.LilQte, d.EntVerrouille }).ToListAsync(ct);
+                           select new { x.LilSourceLigId, x.LilEtape, x.LilQte, x.LilMontantHt, d.EntVerrouille }).ToListAsync(ct);
         var soldes = await db.LignesSolde.AsNoTracking()
             .Where(x => parentsIds.Contains(x.LsoLigId) && (x.LsoCibleLigId == null || !ids.Contains(x.LsoCibleLigId.Value))).ToListAsync(ct);
         var res = new List<ResteLigne>();
@@ -653,12 +653,13 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         {
             // Étape principale : la première écrite à la transformation (une facture qui vaut réception en a deux).
             var lien = directs.Where(x => x.LilCibleLigId == l.LigId).OrderBy(x => x.LilId).FirstOrDefault();
-            if (lien is null || !parents.TryGetValue(lien.LilSourceLigId, out var qteParent)) continue;
+            if (lien is null || !parents.TryGetValue(lien.LilSourceLigId, out var parent)) continue;
             var signe = EstNegative(lien.LilEtape) ? -1 : 1;
             var autres = liens.Where(x => x.LilSourceLigId == lien.LilSourceLigId && x.LilEtape == lien.LilEtape).ToList();
-            res.Add(new ResteLigne(l.LigId, lien.LilSourceLigId, lien.LilEtape, qteParent,
+            res.Add(new ResteLigne(l.LigId, lien.LilSourceLigId, lien.LilEtape, parent.Qte,
                 signe * autres.Sum(x => x.LilQte), signe * autres.Where(x => !x.EntVerrouille).Sum(x => x.LilQte),
-                soldes.Where(x => x.LsoLigId == lien.LilSourceLigId && x.LsoEtape == lien.LilEtape).Sum(x => x.LsoQte)));
+                soldes.Where(x => x.LsoLigId == lien.LilSourceLigId && x.LsoEtape == lien.LilEtape).Sum(x => x.LsoQte),
+                parent.Montant, signe * autres.Sum(x => x.LilMontantHt ?? 0)));
         }
         return new RestesDocument(pct, qte, res);
     }
