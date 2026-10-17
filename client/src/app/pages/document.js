@@ -48,6 +48,7 @@ const GABARIT = `
       <button data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
       <button data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
       <button data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
+      <button data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
@@ -163,6 +164,16 @@ export class PageDocument extends PageBase {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
       envoyer: () => this.etapeCycle((id) => api.envoyer(id), 'Document envoyé'),
       'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), 'Document validé par le tiers'),
+      devalider: async () => {
+        const motif = globalThis.prompt?.('Dévalider : une nouvelle version (indice suivant) remplace celle-ci, sans retour en arrière.\nMotif (tracé dans l\'historique) :');
+        if (!motif?.trim()) return;
+        try {
+          const nouveau = await api.devalider(this.editeur.saisie.document.ent_id, motif.trim());
+          this.app.publier('enregistre', { ids: [this.editeur.saisie.document.ent_id, nouveau.document.ent_id] });
+          this.app.message(`Nouvelle version (indice ${nouveau.document.ent_indice}) en brouillon`, 'succes');
+          await this.app.naviguer(`/document/${nouveau.document.ent_id}`);
+        } catch (e) { this.app.erreur(e); }
+      },
       rejeter: () => {
         const motif = globalThis.prompt?.('Motif du rejet (plateforme de facturation, client, fournisseur) :');
         if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
@@ -469,6 +480,8 @@ export class PageDocument extends PageBase {
     this.$('[data-action="envoyer"]').hidden = !enLigne || !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
     this.$('[data-action="valider-tiers"]').hidden = !enLigne || !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
     this.$('[data-action="rejeter"]').hidden = this.$('[data-action="valider-tiers"]').hidden;
+    const droits = ed.definition.droits ?? [];
+    this.$('[data-action="devalider"]').hidden = !enLigne || !doc.ent_verrouille || !enCours || !(droits.includes('DEVALIDER') || droits.includes('FORCER'));
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.

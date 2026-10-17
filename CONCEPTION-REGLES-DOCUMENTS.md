@@ -556,3 +556,17 @@ Développement lancé le 17/10/2026 (un commit par lot).
   la démo). Données de démonstration : documents validés envoyés, sources transformées validées par le tiers.
 - Page document : bouton « Approuver » ou « Valider » selon la règle, « Envoyer », « Validé par le tiers », « Rejeté… ».
 
+### Lot 3 – dévalidation par indice, droits, forçage, résultat figé
+
+- `DocumentService.Devalider` (`POST /documents/{id}/devalider`, motif) : l'indice suivant (même numéro) devient la
+  référence en brouillon, avec tout le contenu et les mêmes parents ; l'ancienne version passe à REMPLACE ; liens des
+  lignes (aval et parents), liens de documents, soldes et échéances (pointages compris) reportés (`ReporterVersion`),
+  données du cœur par `SpecialisationDocument.ReporterVersionAsync` (marché, déductions, acomptes) ; droit DEVALIDER,
+  ou FORCER pour une pièce comptable ou un document dont un document aval est validé ; historique DEVALIDATION ou
+  FORCAGE avec motif (`his_motif`). Une pièce déjà transférée reste transférée.
+- Échéancier réécrit en place à la validation (une échéance pointée garde son identifiant).
+- Règle INDICE : création d'indice refusée (`INDICE_INTERDIT`) sur les pièces comptables.
+- Résultat figé (P5) : un document validé affiche ses valeurs enregistrées (`EditeurDocument.figerResultat`).
+- Page document : bouton « Dévalider… » (droit DEVALIDER ou FORCER), ouverture de la nouvelle version.
+- Vérifié : FA2026-00003 dévalidée (indice B, échéance pointable conservée), revalidée (ENVOYE).
+

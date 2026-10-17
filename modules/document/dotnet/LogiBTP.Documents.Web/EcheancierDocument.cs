@@ -114,12 +114,28 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
             .SumAsync(l => l.LigMontantHt ?? 0, ct));
         var condition = doc.EntCpaCode is null ? null : await db.ConditionsPaiement.AsNoTracking().FirstOrDefaultAsync(c => c.CpaCode == doc.EntCpaCode, ct);
         var calcul = Echeances.Calculer(doc.EntDate, doc.EntNetAPayer, condition is null ? [] : Lignes(condition), retenue, doc.EntModeReglement, doc.EntPrecisionMontant);
-        await db.Echeances.Where(x => x.EchEntId == entId).ExecuteDeleteAsync(ct);
-        db.Echeances.AddRange(calcul.Select(e => new DocumentEcheance
+        // Mise à jour en place par rang : une échéance déjà pointée (nouvelle version d'une pièce dévalidée) garde son
+        // identifiant ; les échéances en trop sont retirées (refus si elles sont pointées).
+        var existantes = await db.Echeances.Where(x => x.EchEntId == entId).ToListAsync(ct);
+        foreach (var e in calcul)
         {
-            EchEntId = entId, EchRang = (short)e.Rang, EchDate = e.Date, EchMontant = e.Montant, EchMode = e.Mode, EchNature = e.Nature,
-        }));
-        await db.SaveChangesAsync(ct);
+            var x = existantes.FirstOrDefault(y => y.EchRang == e.Rang);
+            if (x is null) db.Echeances.Add(x = new DocumentEcheance { EchEntId = entId, EchRang = (short)e.Rang });
+            x.EchDate = e.Date;
+            x.EchMontant = e.Montant;
+            x.EchMode = e.Mode;
+            x.EchNature = e.Nature;
+            x.EchManuel = false;
+        }
+        db.Echeances.RemoveRange(existantes.Where(y => y.EchRang > calcul.Count));
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            throw ExceptionMetier.Conflit("ECHEANCES_POINTEES", "Échéance déjà pointée par un règlement : retirez d'abord le pointage");
+        }
     }
 
     /// <summary>

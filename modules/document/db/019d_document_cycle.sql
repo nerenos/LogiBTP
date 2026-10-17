@@ -21,6 +21,9 @@ ALTER TABLE document_historique ADD CONSTRAINT document_historique_his_action_ch
     CHECK (his_action IN ('CREATION','MODIFICATION','VALIDATION','ANNULATION','APPROBATION','ENVOI','VALIDATION_TIERS',
                           'DEVALIDATION','FORCAGE','REJET'));
 
+-- Motif d'une action historisée (dévalidation, forçage, rejet).
+ALTER TABLE document_historique ADD COLUMN IF NOT EXISTS his_motif VARCHAR(300);
+
 -- Droits du cycle de vie : consulter, approuver (validation interne), dévalider, forcer (mode root).
 ALTER TABLE droit_document DROP CONSTRAINT IF EXISTS droit_document_drt_action_check;
 ALTER TABLE droit_document ADD CONSTRAINT droit_document_drt_action_check

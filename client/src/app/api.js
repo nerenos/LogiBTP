@@ -41,6 +41,7 @@ export const api = {
   envoyer: (id) => appel('POST', `/documents/${id}/envoyer`),
   validerTiers: (id) => appel('POST', `/documents/${id}/valider-tiers`),
   rejeter: (id, motif) => appel('POST', `/documents/${id}/rejeter`, { motif }),
+  devalider: (id, motif) => appel('POST', `/documents/${id}/devalider`, { motif }),
   copier: (id) => appel('POST', `/documents/${id}/copie`),
   supprimerDocument: (id) => appel('DELETE', `/documents/${id}`),
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),

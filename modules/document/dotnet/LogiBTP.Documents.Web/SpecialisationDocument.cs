@@ -60,6 +60,13 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     public virtual Task CompleterValidationAsync(DocumentDbContext<TDoc, TLigne> db, TComplet saisie, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;
 
+    /// <summary>
+    /// Dévalidation : données de la spécialisation reportées de l'ancienne version sur la nouvelle (marché, déductions,
+    /// acomptes…) ; lignes : ancienne → nouvelle.
+    /// </summary>
+    public virtual Task ReporterVersionAsync(DocumentDbContext<TDoc, TLigne> db, long ancien, long nouveau, IReadOnlyDictionary<long, long> lignes, CancellationToken ct) =>
+        Task.CompletedTask;
+
     /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;

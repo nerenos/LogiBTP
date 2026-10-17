@@ -129,7 +129,7 @@ export class EditeurDocument {
     conteneur.classList.toggle('libelles-une-ligne', this.libellesUneLigne);
     conteneur.classList.toggle('document-transforme', this.transforme);
     this.magasin = new Magasin(saisie, {
-      recalculer: (s) => this.calculer(this.entree(s)),
+      recalculer: (s) => this.figerResultat(this.calculer(this.entree(s)), s),
       identifiants: (s, r) => this.identifiants(s, r),
     });
     this.grille = new GrilleArbre(conteneur, {
@@ -180,6 +180,22 @@ export class EditeurDocument {
     if (!this.estAvancement) return colonnes;
     return colonnes.map((c) => (typeof c.editable !== 'function' ? c
       : { ...c, editable: (l) => c.editable(l) && !this.champVerrouille(l, c.champ?.(l) ?? null) }));
+  }
+
+  /**
+   * Document figé (validé) : on affiche ce qui a été validé, sans recalcul (P5) — valeurs enregistrées de l'entête et des
+   * lignes reportées sur le résultat du moteur (seules les données d'affichage dérivées viennent du calcul).
+   */
+  figerResultat(r, s) {
+    const statut = this.definition.statuts?.find((x) => x.std_id === s.document?.ent_std_id);
+    if (!(s.document?.ent_verrouille || statut?.std_modifiable === false) || !r?.lignes) return r;
+    const parId = new Map(s.lignes.map((l) => [l.lig_id, l]));
+    const garder = (cible, source) => {
+      for (const [k, v] of Object.entries(source)) if (v !== null && v !== undefined && k in cible && typeof v !== 'object') cible[k] = v;
+    };
+    for (const l of r.lignes) { const e = parId.get(l.lig_id); if (e) garder(l, e); }
+    if (r.document) garder(r.document, s.document);
+    return r;
   }
 
   /** Document issu d'une transformation (lignes liées à un parent) ou document d'avancement. */

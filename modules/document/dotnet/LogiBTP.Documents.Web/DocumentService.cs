@@ -82,10 +82,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         return $"{type.TydPrefixeNumero}{date.Year}-{n[0]:00000}";
     }
 
-    private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct)
+    private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct, string? motif = null)
     {
         db.Historiques.Add(new DocumentHistorique
         {
+            HisMotif = motif,
             HisEntId = avant.Document.EntId,
             HisVersion = avant.Document.EntVersion,
             HisAction = action,
@@ -336,7 +337,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             r.Document.EntNatureAvoir = "AVANCEMENT";
         }
         // Pièce comptable (factures, avoirs) : à transférer à la comptabilité, sans écriture si le total est nul (13.9).
-        if (type.TydNumerotationContinue) r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
+        // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).
+        if (type.TydNumerotationContinue && r.Document.EntEtatCompta != "T") r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
         if (type.TydNumerotationContinue && r.Document.EntNumero is null)
         {
             r.Document.EntNumero = await AttribuerNumero(type, r.Document.EntDate, ct);
@@ -402,6 +404,89 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await RecalculerStatuts([id], ct);
         await tx.CommitAsync(ct);
         return new ReponseEnregistrement<TComplet> { Document = await persistance.Charger(id, ct) };
+    }
+
+    /// <summary>
+    /// Dévalidation (P2, P18, P22, P23) : l'indice suivant devient la référence, en brouillon, avec tout le contenu ;
+    /// l'ancienne version passe au statut REMPLACE (sans retour possible). Les liens (documents aval et parents), soldes,
+    /// échéances (et leurs pointages) et données de la spécialisation sont reportés sur la nouvelle version. Droit
+    /// DEVALIDER, ou FORCER pour une pièce comptable ou un document dont un document aval est validé ; motif obligatoire,
+    /// historisé (DEVALIDATION ou FORCAGE).
+    /// </summary>
+    public async Task<TComplet> Devalider(long id, string motif, Utilisateur u, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(motif)) throw ExceptionMetier.Invalide("DEVALIDATION", "Motif de la dévalidation obligatoire");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var avant = await persistance.Charger(id, ct);
+        var type = await Type(avant.Document.EntTydId, ct);
+        var statut = await db.StatutsDocument.AsNoTracking().FirstAsync(s => s.StdId == avant.Document.EntStdId, ct);
+        if (!avant.Document.EntVerrouille || statut.StdCode is "ANNULE" or "REMPLACE")
+        {
+            throw ExceptionMetier.Invalide("DEVALIDATION", "Seul un document validé, ni annulé ni remplacé, se dévalide");
+        }
+        var avalValide = (await db.Database.SqlQuery<long>($"""
+            SELECT DISTINCT dc.ent_id AS "Value" FROM document_ligne_lien x
+            JOIN document_ligne s ON s.lig_id = x.lil_source_lig_id JOIN document_ligne c ON c.lig_id = x.lil_cible_lig_id
+            JOIN document dc ON dc.ent_id = c.lig_ent_id JOIN statut_document sc ON sc.std_id = dc.ent_std_id
+            WHERE s.lig_ent_id = {id} AND dc.ent_id <> {id} AND dc.ent_verrouille AND sc.std_code NOT IN ('ANNULE', 'REMPLACE')
+            """).ToListAsync(ct)).Count > 0;
+        var forcer = avalValide || await Regles.Booleen("PIECE_COMPTABLE", type, ct);
+        await VerifierDroit(u, type.TydId, forcer ? "FORCER" : "DEVALIDER", ct);
+
+        var indices = await db.Documents.Where(d => d.EntGroupeId == avant.Document.EntGroupeId).Select(d => d.EntIndice).ToListAsync(ct);
+        var suivant = Numerotation.FormaterRang(indices.Select(i => Numerotation.LireDepart(i) ?? 0).Max() + 1, "A");
+        await db.Documents.Where(d => d.EntGroupeId == avant.Document.EntGroupeId).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntIsReference, false), ct);
+        // Nouvelle version : mêmes parents (lig_origine_id de l'ancienne), correspondance ancienne ligne → ligne temporaire.
+        var origines = avant.Lignes.ToDictionary(l => l.LigId, l => l.LigOrigineId);
+        var versTemporaire = new Dictionary<long, long>();
+        var copie = await Dupliquer(avant, d =>
+        {
+            d.EntIndice = suivant;
+            d.EntIsReference = true;
+            d.EntGroupeId = avant.Document.EntGroupeId;
+            d.EntNumero = avant.Document.EntNumero;
+            d.EntRangAvancement = avant.Document.EntRangAvancement;
+            d.EntApprouveLe = null;
+            d.EntEnvoyeLe = null;
+            d.EntValideTiersLe = null;
+            d.EntRejeteLe = null;
+            d.EntRejetMotif = null;
+        }, u, ct, contenu =>
+        {
+            foreach (var l in contenu.Lignes.Where(l => l.LigOrigineId is long))
+            {
+                versTemporaire[l.LigOrigineId!.Value] = l.LigId;
+                l.LigOrigineId = origines.GetValueOrDefault(l.LigOrigineId!.Value);
+            }
+            return contenu;
+        });
+        var nouveau = copie.Document.Document.EntId;
+        var lignes = versTemporaire.Where(kv => copie.CorrespondanceLignes.ContainsKey(kv.Value))
+            .ToDictionary(kv => kv.Key, kv => copie.CorrespondanceLignes[kv.Value]);
+        await ReporterVersion(id, nouveau, lignes, ct);
+        await specialisation.ReporterVersionAsync(db, id, nouveau, lignes, ct);
+
+        var remplace = (await Statut(type.TydId, "REMPLACE", ct)).StdId;
+        await db.Documents.Where(d => d.EntId == id).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntStdId, remplace), ct);
+        await Historiser(avant, forcer ? "FORCAGE" : "DEVALIDATION", u, ct, motif.Trim()[..Math.Min(300, motif.Trim().Length)]);
+        await RecalculerStatuts([nouveau, .. await Origines(nouveau, ct)], ct);
+        await tx.CommitAsync(ct);
+        return await persistance.Charger(nouveau, ct);
+    }
+
+    /// <summary>Report des données du module de l'ancienne version sur la nouvelle (liens, soldes, échéances).</summary>
+    private async Task ReporterVersion(long ancien, long nouveau, Dictionary<long, long> lignes, CancellationToken ct)
+    {
+        foreach (var (a, b) in lignes)
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_ligne_lien SET lil_source_lig_id = {b} WHERE lil_source_lig_id = {a}", ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_ligne_lien SET lil_cible_lig_id = {b} WHERE lil_cible_lig_id = {a}", ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_ligne_solde SET lso_lig_id = {b} WHERE lso_lig_id = {a}", ct);
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_ligne_solde SET lso_cible_lig_id = {b} WHERE lso_cible_lig_id = {a}", ct);
+        }
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_lien SET lie_source_ent_id = {nouveau} WHERE lie_source_ent_id = {ancien} AND lie_type <> 'COPIE'", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_lien SET lie_cible_ent_id = {nouveau} WHERE lie_cible_ent_id = {ancien} AND lie_type <> 'COPIE'", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_echeance SET ech_ent_id = {nouveau} WHERE ech_ent_id = {ancien}", ct);
     }
 
     /// <summary>Envoi d'un document approuvé (validation de l'entreprise) ; sans validation du tiers : validé aussitôt.</summary>
@@ -641,6 +726,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Situation de travaux (non comptable, Q29) : une situation validée se révise par un nouvel indice, qui devient la
         // référence, tant qu'aucune facture non annulée n'en est issue.
         var revision = source.Document.EntVerrouille && typeSource.TydAvancement == "S";
+        if (!revision && !await Regles.Booleen("INDICE", typeSource, ct))
+        {
+            throw ExceptionMetier.Invalide("INDICE_INTERDIT", "Pas d'indice pour ce type de document (règle Indices)");
+        }
         if (source.Document.EntVerrouille && !revision)
         {
             throw ExceptionMetier.Conflit("DOCUMENT_VALIDE", "Document validé et bloqué : créez une copie plutôt qu'un indice");

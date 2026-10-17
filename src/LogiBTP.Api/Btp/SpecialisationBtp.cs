@@ -188,6 +188,21 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
     }
 
+    /// <summary>
+    /// Dévalidation : la nouvelle version remplace l'ancienne dans le marché (commande), les déductions des factures
+    /// d'avancement, les acomptes (demande, pièce, déductions).
+    /// </summary>
+    public override async Task ReporterVersionAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long ancien, long nouveau, IReadOnlyDictionary<long, long> lignes, CancellationToken ct)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_document SET mdo_ent_id = {nouveau} WHERE mdo_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche SET mar_ent_id = {nouveau} WHERE mar_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_deduction SET ded_ent_id = {nouveau} WHERE ded_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_deduction SET ded_deduit_ent_id = {nouveau} WHERE ded_deduit_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE acompte_deduction SET acd_ent_id = {nouveau} WHERE acd_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_acompte SET mac_demande_ent_id = {nouveau} WHERE mac_demande_ent_id = {ancien}", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_acompte SET mac_piece_ent_id = {nouveau} WHERE mac_piece_ent_id = {ancien}", ct);
+    }
+
     /// <summary>Délai de paiement (mêmes codes que les conditions de paiement) et mode de règlement du tiers (annuaire).</summary>
     public override async Task<ReglementTiers?> ReglementTiersAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentBtp document, CancellationToken ct)
     {

@@ -129,6 +129,8 @@ public class DocumentHistorique
     public DateTimeOffset HisDate { get; set; }
     public string HisUtilisateur { get; set; } = "";
     public JsonDocument HisInstantane { get; set; } = JsonDocument.Parse("{}");
+    /// <summary>Motif d'une dévalidation, d'un forçage ou d'un rejet.</summary>
+    public string? HisMotif { get; set; }
 }
 
 public class CalculCasTest
