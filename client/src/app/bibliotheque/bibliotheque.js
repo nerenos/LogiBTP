@@ -25,24 +25,29 @@ export const estCompose = (type) => type === 'OUVRAGE' || type === 'ENSEMBLE';
 
 /**
  * Prix d'un ouvrage par unité : la racine (quantité 1, coefficients de l'élément en mode déboursé) est calculée par le
- * moteur de devis ; PA = montant PA de la racine, PR et PV unitaires, PV net = PV × remise. Même calcul côté serveur
- * (SpecialisationFicheBtp, MoteurDevisBtp).
+ * moteur de devis ; PA = montant PA de la racine, PR et PV unitaires, PV net = PV × remise. PV fixe de l'ouvrage : imposé à
+ * la racine (ventilé sur la composition selon son mode, gardé tel quel en bordereau B), coefficient de bénéfice déduit
+ * (PV / PR). Même calcul côté serveur (ElementsBibliotheque.CalculerOuvrage, MoteurDevisBtp).
  */
-export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef_remise = 1 } = {}) {
+export function calculerOuvrage(composition, { coef_fg = 1, coef_benef = 1, coef_remise = 1, pv_fixe = false, pv = null } = {}) {
   const lignes = composition?.lignes ?? [];
   if (!racineComposition(lignes)) return racineEnsemble(lignes) ? calculerEnsemble(composition) : { pa: null, pr: null, pv: null, pv_net: null, resultat: null };
+  const fixe = (pv_fixe === true || pv_fixe === 'true') && D(pv) !== null;
+  const prixFixe = fixe ? { lig_pv_fixe: true, lig_pv: Number(pv) } : { lig_pv_fixe: false };
   const entree = {
     document: documentComposition(composition.mode),
-    lignes: lignes.map((l) => (l === racineComposition(lignes) ? { ...l, lig_qte: 1, lig_coef_fg: Number(coef_fg), lig_coef_benef: Number(coef_benef) } : l)),
+    lignes: lignes.map((l) => (l === racineComposition(lignes) ? { ...l, lig_qte: 1, lig_coef_fg: Number(coef_fg), lig_coef_benef: Number(coef_benef), ...prixFixe } : l)),
     taux_tva: DEFINITION_DEMO.taux_tva, entites: {}, options: {},
     metres: composition.metres ?? [], variables: composition.variables ?? [],
   };
   const resultat = calculerDocument(entree);
   const r = racineComposition(resultat.lignes);
-  const pv = D(r.lig_pv);
+  const prix = D(r.lig_pv);
+  const pr = arr6(D(r.lig_pr) ?? D(0));
   return {
-    pa: S(arr6(D(r.lig_montant_pa) ?? D(0))), pr: S(arr6(D(r.lig_pr) ?? D(0))), pv: S(arr6(pv ?? D(0))),
-    pv_net: S(arr6((pv ?? D(0)).times(D(coef_remise) ?? D(1)))), resultat,
+    pa: S(arr6(D(r.lig_montant_pa) ?? D(0))), pr: S(pr), pv: S(arr6(prix ?? D(0))),
+    pv_net: S(arr6((prix ?? D(0)).times(D(coef_remise) ?? D(1)))), resultat,
+    ...(fixe && !pr.isZero() ? { coef_benef: S(arr6(D(prix ?? 0).div(pr))) } : {}),
   };
 }
 

@@ -57,12 +57,21 @@ public static class ElementsBibliotheque
     /// <summary>Recalcul d'un ouvrage enregistré (coefficients d'une période modifiés) : prix de sa composition.</summary>
     public static void RecalculerOuvrage(Element e)
     {
-        var (pa, pr, pv, pvNet) = CalculerOuvrage(e.EleComposition?.RootElement.GetRawText(), e.EleCoefFg, e.EleCoefBenef, e.EleCoefRemise);
+        var fixe = e.ElePvFixe && e.EleType == "OUVRAGE";
+        var (pa, pr, pv, pvNet) = CalculerOuvrage(e.EleComposition?.RootElement.GetRawText(), e.EleCoefFg, e.EleCoefBenef, e.EleCoefRemise, fixe ? e.ElePv : null);
         e.ElePa = pa; e.ElePr = pr; e.ElePv = pv; e.ElePvNet = pvNet;
+        if (fixe && CoefDeduit(pv, pr) is { } coef) e.EleCoefBenef = coef;
     }
 
-    /// <summary>Prix d'un ouvrage par unité : racine à quantité 1, coefficients de l'élément (mode déboursé).</summary>
-    public static (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet) CalculerOuvrage(string? compositionJson, decimal coefFg, decimal coefBenef, decimal coefRemise)
+    /// <summary>Coefficient de bénéfice d'un ouvrage à PV fixe : PV / PR (comme un article à PV fixe).</summary>
+    public static decimal? CoefDeduit(decimal? pv, decimal? pr) => pv is { } v && pr is { } r && r != 0 ? ArrondiCalcul.Arr6(v / r) : null;
+
+    /// <summary>
+    /// Prix d'un ouvrage par unité : racine à quantité 1, coefficients de l'élément (mode de la composition). PV fixe
+    /// (pvFixe non nul) : imposé à la racine, ventilé sur la composition selon son mode (gardé tel quel en bordereau B).
+    /// Réplique de calculerOuvrage (bibliotheque.js).
+    /// </summary>
+    public static (decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet) CalculerOuvrage(string? compositionJson, decimal coefFg, decimal coefBenef, decimal coefRemise, decimal? pvFixe = null)
     {
         if (string.IsNullOrWhiteSpace(compositionJson)) return (null, null, null, null);
         var c = JsonSerializer.Deserialize<CompositionOuvrage>(compositionJson, JsonCalcul.Options) ?? new CompositionOuvrage();
@@ -71,6 +80,8 @@ public static class ElementsBibliotheque
         racine.LigQte = 1;
         racine.LigCoefFg = coefFg;
         racine.LigCoefBenef = coefBenef;
+        racine.LigPvFixe = pvFixe is not null;
+        if (pvFixe is { } fixe) racine.LigPv = fixe;
         var r = MoteurDevisBtp.Calculer(new EntreeCalcul
         {
             Document = new DocumentBtp { EntModeCalculOuvrage = c.Mode, EntPrecisionMontant = 2, EntNumFormat = FormatNumerotation },
@@ -140,8 +151,10 @@ public static class ElementsBibliotheque
 
         if (EstCompose(Texte(v.GetValueOrDefault("type"))))
         {
-            var (pa, pr, pv, pvNet) = CalculerOuvrage(Texte(v.GetValueOrDefault("composition")), coefFg, coefBenef, coefRemise);
+            var fixe = pvFixe && Texte(v.GetValueOrDefault("type")) == "OUVRAGE" ? Decimal(v.GetValueOrDefault("pv")) : null;
+            var (pa, pr, pv, pvNet) = CalculerOuvrage(Texte(v.GetValueOrDefault("composition")), coefFg, coefBenef, coefRemise, fixe);
             aEcrire["pa"] = S(pa); aEcrire["pr"] = S(pr); aEcrire["pv"] = S(pv); aEcrire["pv_net"] = S(pvNet);
+            if (fixe is not null && CoefDeduit(pv, pr) is { } coef) aEcrire["coef_benef"] = S(coef);
             return;
         }
         var tarifs = eleId is { } e2 ? await services.GetRequiredService<ServiceBibliotheque>().TarifsCalcul(e2, ct) : [];

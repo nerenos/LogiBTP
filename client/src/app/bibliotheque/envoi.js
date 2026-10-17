@@ -73,8 +73,8 @@ export function compositionDepuisContenu(contenu, mode = 'V', qtesVendues = new 
 /**
  * Valeurs de la fiche « element » écrites depuis une ligne : libellé, nature, remise ; coefficients imposés seulement
  * pour une ligne à PV fixe (sinon : ceux par défaut à la création, inchangés à la mise à jour) ; article : unité, PA
- * fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage et ensemble : composition (le prix d'un
- * ouvrage de la bibliothèque est toujours celui de sa composition).
+ * fixe (ramené à l'unité de stock par le ratio du lien) et PV fixe ; ouvrage : composition et PV fixe de la ligne (sinon
+ * prix de la composition) ; ensemble : composition (prix = totaux de sa tranche).
  */
 export function valeursDepuisLigne(l, type, { composition = null, creation = false } = {}) {
   const ratio = Number(l.lig_proprietes?.element?.ratio ?? 1) || 1;
@@ -93,7 +93,8 @@ export function valeursDepuisLigne(l, type, { composition = null, creation = fal
     if (creation) Object.assign(v, { unite_stock: l.lig_unt_code || 'u', scenario_pa: 'FIXE', gestion: 'NON_GERE', unites: [] });
   } else {
     v.composition = composition;
-    v.pv_fixe = false;
+    v.pv_fixe = type === 'OUVRAGE' && Boolean(l.lig_pv_fixe);
+    if (v.pv_fixe) v.pv = String(l.lig_pv);
     if (type === 'ENSEMBLE') Object.assign(v, { coef_fg: '1', coef_benef: '1' });
     if (creation) Object.assign(v, { unite_stock: type === 'OUVRAGE' ? l.lig_unt_code || 'u' : 'u', scenario_pa: 'FIXE', gestion: 'NON_GERE', unites: [] });
   }

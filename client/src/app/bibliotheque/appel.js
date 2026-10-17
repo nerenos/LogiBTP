@@ -67,6 +67,8 @@ export function contenuOuvrage(e, bibDocument, { quantite = 1 } = {}) {
     ...techniquesLigne(e),
     lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_nat_id: e.nat_id ?? null, lig_libelle_html: e.libelle_html, lig_unt_code: e.unite_stock,
     lig_qte: quantite, lig_coef_fg: nombre(e.coef_fg ?? 1), lig_coef_benef: nombre(e.coef_benef ?? 1), lig_coef_remise: nombre(e.coef_remise ?? 1),
+    // PV fixe de l'ouvrage de la bibliothèque : imposé à la ligne (sinon, prix de la composition).
+    lig_pv_fixe: e.pv_fixe === true || e.pv_fixe === 'true', ...(e.pv_fixe === true || e.pv_fixe === 'true' ? { lig_pv: nombre(e.pv) } : {}),
     lig_proprietes: { ...(racine.lig_proprietes ?? {}), element: lien(e, { unite: e.unite_stock }) },
   });
   return { racines: [racine.lig_id], lignes, metres: structuredClone(c.metres ?? []), variables: structuredClone(c.variables ?? []) };

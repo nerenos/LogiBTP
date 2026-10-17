@@ -35,7 +35,7 @@
 ## Règles répliquées JS / C# et jeux de cas
 - Prix et unités : `calcul.js` ↔ `CalculElement.cs`, jeu `tests/cas/01_calcul.json` (date fixe 2026-10-11).
 - Coefficients effectifs (imposé > période de la nature > période globale > défaut) : `coefficientsEffectifs` ↔ `CoefficientsElement.cs`, jeu `tests/cas/02_coefficients.json`.
-- Prix des composés (cœur) : `calculerOuvrage` / `calculerEnsemble` (`client/src/app/bibliotheque/bibliotheque.js`) ↔ `ElementsBibliotheque.CalculerOuvrage` (ensemble = totaux de la tranche titre racine) ; jeu cœur `tests/cas/15_ensemble_tranche_parametree.json`.
+- Prix des composés (cœur) : `calculerOuvrage` / `calculerEnsemble` (`client/src/app/bibliotheque/bibliotheque.js`) ↔ `ElementsBibliotheque.CalculerOuvrage` (ensemble = totaux de la tranche titre racine ; ouvrage à PV fixe : PV imposé à la racine de la composition, ventilé par le moteur selon le mode, coefficient de bénéfice déduit PV / PR, repris en PV fixe à l'insertion dans un document et envoyé depuis une ligne à PV fixe ; pas de PV fixe pour un ensemble) ; jeu cœur `tests/cas/15_ensemble_tranche_parametree.json`.
 
 ## Conventions et pièges
 - Historique des prix : uniquement par les triggers ; renseigner `ele_maj_par` et `ele_commentaire_prix` dans la même écriture, ne jamais insérer dans `historique_prix_element` à la main.

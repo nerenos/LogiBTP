@@ -33,6 +33,7 @@ export class OngletPrix {
   }
 
   get ouvrage() { return this.ctx.valeur('type') === 'OUVRAGE'; }
+  get ensemble() { return this.ctx.valeur('type') === 'ENSEMBLE'; }
 
   /** Coefficients effectifs : imposés par l'élément, sinon nature ou global en vigueur, sinon défaut. */
   effectifs() {
@@ -65,8 +66,8 @@ export class OngletPrix {
       </fieldset>
       <fieldset class="fiche-groupe"><legend>Coefficients et vente</legend>
         <div class="bib-grille">${coefChamp('coef_fg', 'Coef. frais généraux')}${coefChamp('coef_benef', 'Coef. bénéfice')}
-          <label class="bib-ligne"><input type="checkbox" data-v="pv_fixe" ${valeur('pv_fixe') === true || valeur('pv_fixe') === 'true' ? 'checked' : ''} ${ro}> PV fixe</label>
-          ${champ('pv', 'PV (si fixe)')}
+          ${this.ensemble ? '' : `<label class="bib-ligne" title="${this.ouvrage ? 'PV imposé à l’ouvrage : ventilé sur la composition à l’insertion (gardé tel quel en mode bordereau)' : ''}"><input type="checkbox" data-v="pv_fixe" ${valeur('pv_fixe') === true || valeur('pv_fixe') === 'true' ? 'checked' : ''} ${ro}> PV fixe</label>
+          ${champ('pv', 'PV (si fixe)')}`}
           <label title="Remise sur le PV (coefficient de remise = 1 − remise)">Remise sur PV (%)<input data-remise inputmode="decimal" value="${echapper(remise)}" ${ro}></label></div>
       </fieldset>
       <fieldset class="fiche-groupe plein"><legend>Résultat (par unité de stock : ${echapper(valeur('unite_stock') ?? '?')})</legend><div class="bib-resultat"></div></fieldset>
@@ -103,7 +104,7 @@ export class OngletPrix {
     if (this.ouvrage) {
       zone.innerHTML = `<table class="bib-table"><tr><th>PA</th><th>PR</th><th>PV</th><th>PV net</th></tr>
         <tr><td>${prix(l.pa)}</td><td>${prix(l.pr)}</td><td>${prix(l.pv)}</td><td><b>${prix(l.pv_net)}</b></td></tr></table>
-        <p class="aide">Prix issus du calcul de la composition, mis à jour à l'enregistrement.</p>`;
+        <p class="aide">Prix issus du calcul de la composition${l.pv_fixe === true || l.pv_fixe === 'true' ? ' (PV fixe imposé, coefficient de bénéfice déduit)' : ''}, mis à jour à l'enregistrement.</p>`;
       return;
     }
     const c = this.effectifs();

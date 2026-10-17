@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { valeursArticle, contenuOuvrage, prixArticle } from '../src/app/bibliotheque/appel.js';
-import { creerFournisseurBibliotheque } from '../src/app/bibliotheque/bibliotheque.js';
+import { creerFournisseurBibliotheque, calculerOuvrage } from '../src/app/bibliotheque/bibliotheque.js';
+import { valeursDepuisLigne } from '../src/app/bibliotheque/envoi.js';
 
 // Appel de la bibliothèque dans les documents : valeurs d'une ligne d'article, contenu d'un ouvrage, codes d'appel.
 describe('appel de la bibliothèque', () => {
@@ -36,5 +37,20 @@ describe('appel de la bibliothèque', () => {
     expect(c.lignes.filter((l) => l.lig_parent_id === racine.lig_id)).toHaveLength(3);
     expect(c.metres).toHaveLength(1);
     expect(c.metres[0].mtr_script).toContain('Renvoyer');
+    expect(racine.lig_pv_fixe).toBe(false);
+  });
+
+  it("ouvrage à PV fixe : prix imposé, coefficient de bénéfice déduit, repris à l'appel et à l'envoi", async () => {
+    const e = await biblio.appelCode('DAL15');
+    const libre = calculerOuvrage(e.composition, e);
+    const fixe = calculerOuvrage(e.composition, { ...e, pv_fixe: true, pv: '99.5', coef_remise: '0.9' });
+    expect([fixe.pa, fixe.pr, fixe.pv, fixe.pv_net]).toEqual([libre.pa, libre.pr, '99.5', '89.55']);
+    expect(Number(fixe.coef_benef)).toBeCloseTo(99.5 / Number(libre.pr), 5);
+    expect(libre.coef_benef).toBeUndefined();
+    const racine = contenuOuvrage({ ...e, pv_fixe: true, pv: '99.5' }, 'GEN').lignes.find((l) => l.lig_parent_id === null);
+    expect(racine).toMatchObject({ lig_pv_fixe: true, lig_pv: 99.5 });
+    expect(valeursDepuisLigne({ lig_tyl_id: 2, lig_libelle_html: 'Dalle', lig_pv_fixe: true, lig_pv: 99.5, lig_coef_fg: 1.1, lig_coef_benef: 1.2 }, 'OUVRAGE'))
+      .toMatchObject({ pv_fixe: true, pv: '99.5', coef_fg_impose: true });
+    expect(valeursDepuisLigne({ lig_tyl_id: 1, lig_libelle_html: 'Lot', lig_pv_fixe: true, lig_pv: 10 }, 'ENSEMBLE').pv_fixe).toBe(false);
   });
 });
