@@ -102,6 +102,13 @@ public static class Extensions
             await s.Supprimer(id, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        // Cycle de vie : envoi d'un document approuvé, validation du tiers, rejet (motif).
+        api.MapPost("/documents/{id:long}/envoyer", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Envoyer(id, Utilisateur.Depuis(http), ct));
+        api.MapPost("/documents/{id:long}/valider-tiers", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.ValiderTiers(id, Utilisateur.Depuis(http), ct));
+        api.MapPost("/documents/{id:long}/rejeter", (long id, DemandeRejet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.Rejeter(id, d.Motif, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/valider", (long id, DemandeVersion v, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Valider(id, v, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/indices", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

@@ -191,6 +191,9 @@ public sealed class DefinitionType
     public Dictionary<string, System.Text.Json.Nodes.JsonNode?> Regles { get; set; } = [];
 }
 
+/// <summary>Rejet d'un document envoyé : motif.</summary>
+public sealed record DemandeRejet(string Motif);
+
 /// <summary>Condition et mode de règlement d'un tiers.</summary>
 public sealed record ReglementTiers(string? Condition, string? Mode);
 

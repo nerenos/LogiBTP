@@ -26,6 +26,12 @@ public class SpecialisationReglement
     public virtual Task<List<TiersReglement>> TiersAsync(ReglementDbContext db, CancellationToken ct) =>
         Task.FromResult(new List<TiersReglement>());
 
+    /// <summary>
+    /// Après un changement de pointages (règlement ou caution enregistré ou supprimé) : échéances touchées, pour que
+    /// l'application mette à jour l'état de paiement de leurs pièces (statuts PAYE_PARTIEL, PAYE).
+    /// </summary>
+    public virtual Task ApresPointageAsync(ReglementDbContext db, IReadOnlyCollection<long> echeances, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Seuil d'écart sous lequel une échéance est réglée (centimes) ; 0 par défaut.</summary>
     public virtual decimal Seuil => 0;
 }

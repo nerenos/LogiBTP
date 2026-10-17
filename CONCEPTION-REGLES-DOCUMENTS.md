@@ -535,3 +535,24 @@ Développement lancé le 17/10/2026 (un commit par lot).
 - `/parametres/documents`, section « Règles des documents » : défaut et valeurs par niveau (combo Global / famille /
   type), ajout, retrait, enregistrement (administrateur).
 
+### Lot 2 – cycle de vie et statuts automatiques
+
+- `modules/document/db/019d` : étapes datées (`ent_approuve_le`, `ent_envoye_le`, `ent_valide_tiers_le`), état de paiement
+  (`ent_etat_paiement` P / T), rejet (`ent_rejete_le`, `ent_rejet_motif`), actions d'historique (APPROBATION, ENVOI,
+  VALIDATION_TIERS, DEVALIDATION, FORCAGE, REJET), droits CONSULTER, APPROUVER, DEVALIDER, FORCER ; `f_regle_document`
+  (règle à trois niveaux en SQL) ; `f_document_statut` : statut le plus avancé parmi PAYE, PAYE_PARTIEL, FACTURE,
+  FACTURATION, SOLDE, VALIDE, ENVOYE, APPROUVE (ANNULE, REMPLACE explicites) — facturation et livraison (SOLDE, documents
+  à étape RECEPTION) d'après les liens signés des lignes de prix vendues vers les documents validés non annulés, plus
+  les soldes (règle STATUTS_AUTO).
+- `db/179` : statuts APPROUVE, ENVOYE, REMPLACE (tous les types), FACTURATION (devis, commandes, BL), PAYE_PARTIEL et
+  PAYE (pièces à régler) ; terminaux FACTURE, PAYE, ANNULE, REMPLACE ; ACCEPTE retiré ; droits du cycle (ADMIN).
+- Validation : approbation (règle APPROBATION) ou envoi ; sans validation du tiers attendue (règle VALIDATION_TIERS),
+  validé aussitôt ; statut du document et de ses documents d'origine recalculé (validation, annulation par avoir).
+  Routes `POST /documents/{id}/envoyer`, `/valider-tiers`, `/rejeter` ; une source envoyée transformée est validée par
+  le tiers d'office.
+- Module Règlements : `SpecialisationReglement.ApresPointageAsync` (échéances touchées) ; cœur : état de paiement hors
+  retenue de garantie, statut recalculé.
+- Correction : un document d'avancement n'écrit plus de soldes sur les lignes de la commande (soldes erronés retirés de
+  la démo). Données de démonstration : documents validés envoyés, sources transformées validées par le tiers.
+- Page document : bouton « Approuver » ou « Valider » selon la règle, « Envoyer », « Validé par le tiers », « Rejeté… ».
+

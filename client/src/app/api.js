@@ -37,6 +37,10 @@ export const api = {
   creer: (creation) => appel('POST', '/documents', creation),
   enregistrer: (id, doc) => appel('PUT', `/documents/${id}`, doc),
   valider: (id, version) => appel('POST', `/documents/${id}/valider`, { ent_version: version }),
+  // Cycle de vie : envoi d'un document approuvé, validation du tiers, rejet (motif).
+  envoyer: (id) => appel('POST', `/documents/${id}/envoyer`),
+  validerTiers: (id) => appel('POST', `/documents/${id}/valider-tiers`),
+  rejeter: (id, motif) => appel('POST', `/documents/${id}/rejeter`, { motif }),
   copier: (id) => appel('POST', `/documents/${id}/copie`),
   supprimerDocument: (id) => appel('DELETE', `/documents/${id}`),
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),

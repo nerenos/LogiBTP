@@ -343,6 +343,15 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         }
         r.Document.EntStdId = (await Statut(type.TydId, "VALIDE", ct)).StdId;
         r.Document.EntVerrouille = true;
+        // Cycle de vie (P17) : approbation interne si la règle l'active, sinon envoi (validation de l'entreprise) ; sans
+        // validation du tiers attendue, le document est aussitôt validé. Statut calculé après l'enregistrement.
+        var maintenant = DateTimeOffset.UtcNow;
+        if (await Regles.Booleen("APPROBATION", type, ct)) r.Document.EntApprouveLe = maintenant;
+        else
+        {
+            r.Document.EntEnvoyeLe = maintenant;
+            if (!await Regles.Booleen("VALIDATION_TIERS", type, ct)) r.Document.EntValideTiersLe = maintenant;
+        }
         // Fin de validité : à partir du jour de la validation.
         r.Document.EntDateValidite = r.Document.EntValiditeJours is short jours ? DateOnly.FromDateTime(DateTime.Today).AddDays(jours) : null;
         // Pièce comptable : condition et mode de règlement figés (document, tiers ou défaut), échéancier après l'écriture.
@@ -352,10 +361,76 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         if (type.TydNumerotationContinue) await Echeancier.Ecrire(id, ct);
         await EcrireSoldes(id, type, u, ct);
         await specialisation.ApresValidationAsync(db, id, type, ct);
+        // Statut du document et de ses documents d'origine (facturation, solde : P4).
+        await RecalculerStatuts([id, .. await Origines(id, ct)], ct);
         // Relu après les soldes et le point d'accroche (lignes soldées, numéro de situation…).
         reponse.Document = await persistance.Charger(id, ct);
         return reponse;
     }
+
+    // ------------------------------------------------------------------ cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17 à P25)
+
+    /// <summary>Statuts recalculés (f_document_statut : étapes datées, facturation, solde, paiement).</summary>
+    public async Task RecalculerStatuts(IEnumerable<long> ids, CancellationToken ct)
+    {
+        foreach (var id in ids.Distinct())
+        {
+            await db.Database.SqlQuery<string>($"SELECT coalesce(f_document_statut({id}), '') AS \"Value\"").ToListAsync(ct);
+        }
+    }
+
+    /// <summary>Documents d'origine d'un document : sources de ses lignes (à toute étape) et de ses liens de transformation.</summary>
+    public async Task<List<long>> Origines(long id, CancellationToken ct) =>
+        await db.Database.SqlQuery<long>($"""
+            SELECT DISTINCT s.lig_ent_id AS "Value" FROM document_ligne_lien x
+            JOIN document_ligne c ON c.lig_id = x.lil_cible_lig_id JOIN document_ligne s ON s.lig_id = x.lil_source_lig_id
+            WHERE c.lig_ent_id = {id} AND s.lig_ent_id <> {id}
+            UNION SELECT lie_source_ent_id FROM document_lien WHERE lie_cible_ent_id = {id} AND lie_type = 'TRANSFORMATION'
+            """).ToListAsync(ct);
+
+    /// <summary>Étape datée du cycle de vie (envoi après approbation, validation du tiers), historisée, puis statut recalculé.</summary>
+    private async Task<ReponseEnregistrement<TComplet>> Etape(long id, Utilisateur u, string action, Func<TDoc, TypeDocument, Task> appliquer, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var avant = await persistance.Charger(id, ct);
+        await VerifierDroit(u, avant.Document.EntTydId, "VALIDER", ct);
+        var type = await Type(avant.Document.EntTydId, ct);
+        var doc = await db.Documents.FirstAsync(d => d.EntId == id, ct);
+        await appliquer(doc, type);
+        await Historiser(avant, action, u, ct);
+        await db.SaveChangesAsync(ct);
+        await RecalculerStatuts([id], ct);
+        await tx.CommitAsync(ct);
+        return new ReponseEnregistrement<TComplet> { Document = await persistance.Charger(id, ct) };
+    }
+
+    /// <summary>Envoi d'un document approuvé (validation de l'entreprise) ; sans validation du tiers : validé aussitôt.</summary>
+    public Task<ReponseEnregistrement<TComplet>> Envoyer(long id, Utilisateur u, CancellationToken ct) => Etape(id, u, "ENVOI", async (d, type) =>
+    {
+        if (!d.EntVerrouille || d.EntApprouveLe is null || d.EntEnvoyeLe is not null) throw ExceptionMetier.Invalide("CYCLE", "Seul un document approuvé, pas encore envoyé, s'envoie");
+        d.EntEnvoyeLe = DateTimeOffset.UtcNow;
+        if (!await Regles.Booleen("VALIDATION_TIERS", type, ct)) d.EntValideTiersLe = d.EntEnvoyeLe;
+    }, ct);
+
+    /// <summary>Validation du tiers (devis accepté, situation visée, facture acceptée…) d'un document envoyé.</summary>
+    public Task<ReponseEnregistrement<TComplet>> ValiderTiers(long id, Utilisateur u, CancellationToken ct) => Etape(id, u, "VALIDATION_TIERS", (d, _) =>
+    {
+        if (d.EntEnvoyeLe is null || d.EntValideTiersLe is not null) throw ExceptionMetier.Invalide("CYCLE", "Seul un document envoyé, pas encore validé par le tiers, se valide");
+        d.EntValideTiersLe = DateTimeOffset.UtcNow;
+        d.EntRejeteLe = null;
+        d.EntRejetMotif = null;
+        return Task.CompletedTask;
+    }, ct);
+
+    /// <summary>Rejet d'un document envoyé (plateforme, tiers) : noté avec son motif ; il reste ENVOYE jusqu'à l'avoir.</summary>
+    public Task<ReponseEnregistrement<TComplet>> Rejeter(long id, string motif, Utilisateur u, CancellationToken ct) => Etape(id, u, "REJET", (d, _) =>
+    {
+        if (d.EntEnvoyeLe is null || d.EntValideTiersLe is not null) throw ExceptionMetier.Invalide("CYCLE", "Seul un document envoyé, pas encore validé par le tiers, se rejette");
+        if (string.IsNullOrWhiteSpace(motif)) throw ExceptionMetier.Invalide("CYCLE", "Motif du rejet obligatoire");
+        d.EntRejeteLe = DateTimeOffset.UtcNow;
+        d.EntRejetMotif = motif.Trim()[..Math.Min(300, motif.Trim().Length)];
+        return Task.CompletedTask;
+    }, ct);
 
     // ------------------------------------------------------------------ liens de transformation et soldes
 
@@ -483,6 +558,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// </summary>
     private async Task<bool> EcrireSoldes(long id, TypeDocument type, Utilisateur u, CancellationToken ct)
     {
+        // Document d'avancement : état cumulé ou période d'un marché, il ne solde pas les lignes de la commande.
+        if (type.TydAvancement is not null) return false;
         var lignes = await db.Lignes.Where(l => l.LigEntId == id && l.LigOrigineId != null).ToListAsync(ct);
         if (lignes.Count == 0) return false;
         var ids = lignes.Select(l => l.LigId).ToList();

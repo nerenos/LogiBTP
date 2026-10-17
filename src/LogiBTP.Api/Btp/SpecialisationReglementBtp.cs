@@ -48,6 +48,32 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
         return JsonSerializer.Deserialize<List<EcheanceSource>>(json, JsonCalcul.Options) ?? [];
     }
 
+    /// <summary>
+    /// État de paiement des pièces des échéances touchées (P19) : T quand toutes les échéances hors retenue de garantie
+    /// sont réglées, P quand l'une est pointée, sinon aucun ; statut recalculé (PAYE, PAYE_PARTIEL).
+    /// </summary>
+    public override async Task ApresPointageAsync(ReglementDbContext db, IReadOnlyCollection<long> echeances, CancellationToken ct)
+    {
+        if (echeances.Count == 0) return;
+        var ids = echeances.Distinct().ToArray();
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            WITH pieces AS (SELECT DISTINCT ech_ent_id AS ent_id FROM document_echeance WHERE ech_id = ANY({ids})),
+            etat AS (
+                SELECT e.ech_ent_id AS ent_id,
+                       bool_and(abs(e.ech_montant - coalesce(p.pointe, 0)) <= 0) AS regle,
+                       bool_or(coalesce(p.pointe, 0) <> 0) AS entame
+                FROM document_echeance e
+                LEFT JOIN (SELECT poi_echeance_id, sum(poi_montant) AS pointe FROM pointage GROUP BY 1) p ON p.poi_echeance_id = e.ech_id
+                WHERE e.ech_ent_id IN (SELECT ent_id FROM pieces) AND e.ech_nature = 'NORMALE'
+                GROUP BY 1)
+            UPDATE document d SET ent_etat_paiement = CASE WHEN etat.regle THEN 'T' WHEN etat.entame THEN 'P' END
+            FROM etat WHERE d.ent_id = etat.ent_id
+            """, ct);
+        await db.Database.SqlQuery<string>($"""
+            SELECT coalesce(f_document_statut(ech_ent_id), '') AS "Value" FROM (SELECT DISTINCT ech_ent_id FROM document_echeance WHERE ech_id = ANY({ids})) x
+            """).ToListAsync(ct);
+    }
+
     public override async Task<List<TiersReglement>> TiersAsync(ReglementDbContext db, CancellationToken ct)
     {
         var json = await db.Database.SqlQueryRaw<string>(SqlTiers).FirstAsync(ct);

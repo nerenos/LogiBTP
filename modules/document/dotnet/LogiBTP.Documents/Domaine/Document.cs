@@ -57,6 +57,15 @@ public class Document
     public string? EntCpaCode { get; set; }
     /// <summary>Mode de règlement ; vide : celui du tiers.</summary>
     public string? EntModeReglement { get; set; }
+    /// <summary>Cycle de vie (019d) : approbation interne, envoi (validation de l'entreprise), validation du tiers.</summary>
+    public DateTimeOffset? EntApprouveLe { get; set; }
+    public DateTimeOffset? EntEnvoyeLe { get; set; }
+    public DateTimeOffset? EntValideTiersLe { get; set; }
+    /// <summary>État de paiement posé par l'application (module Règlements) : P partiel, T total.</summary>
+    public string? EntEtatPaiement { get; set; }
+    /// <summary>Rejet de la pièce (plateforme, tiers) : date et motif ; le document reste ENVOYE jusqu'à l'avoir.</summary>
+    public DateTimeOffset? EntRejeteLe { get; set; }
+    public string? EntRejetMotif { get; set; }
     /// <summary>Version d'enregistrement, verrouillage optimiste.</summary>
     public int EntVersion { get; set; } = 1;
     public DateTimeOffset EntCreeLe { get; set; }

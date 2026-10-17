@@ -45,6 +45,9 @@ const GABARIT = `
       <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
       <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
       <button data-action="valider" title="Valider et bloquer le document">Valider</button>
+      <button data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
+      <button data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
+      <button data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
@@ -158,6 +161,12 @@ export class PageDocument extends PageBase {
     });
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
+      envoyer: () => this.etapeCycle((id) => api.envoyer(id), 'Document envoyé'),
+      'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), 'Document validé par le tiers'),
+      rejeter: () => {
+        const motif = globalThis.prompt?.('Motif du rejet (plateforme de facturation, client, fournisseur) :');
+        if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
+      },
       sources: () => this.ajouterSources(),
       'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
@@ -454,6 +463,12 @@ export class PageDocument extends PageBase {
     this.$('[data-action="enregistrer"]').disabled = !enLigne || !modifiable;
     this.$('[data-action="enregistrer"]').textContent = this.importEnCours ? 'Créer le devis' : 'Enregistrer';
     this.$('[data-action="valider"]').disabled = !enLigne || !modifiable || Boolean(this.importEnCours);
+    // Cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17) : approbation interne si la règle l'active, envoi, validation du tiers.
+    this.$('[data-action="valider"]').textContent = ed.definition.regles?.APPROBATION ? 'Approuver' : 'Valider';
+    const enCours = statut?.std_code !== 'ANNULE' && statut?.std_code !== 'REMPLACE';
+    this.$('[data-action="envoyer"]').hidden = !enLigne || !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
+    this.$('[data-action="valider-tiers"]').hidden = !enLigne || !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
+    this.$('[data-action="rejeter"]').hidden = this.$('[data-action="valider-tiers"]').hidden;
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
@@ -627,6 +642,16 @@ export class PageDocument extends PageBase {
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
+  }
+
+  /** Étape du cycle de vie (envoi, validation du tiers, rejet) puis rechargement du document. */
+  async etapeCycle(appel, message) {
+    try {
+      const rep = await appel(this.editeur.saisie.document.ent_id);
+      await this.chargerDocument(rep.document.document.ent_id);
+      this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
+      this.app.message(message, 'succes');
+    } catch (e) { this.app.erreur(e); }
   }
 
   /**

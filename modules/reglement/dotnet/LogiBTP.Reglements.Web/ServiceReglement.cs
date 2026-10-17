@@ -82,6 +82,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         if (s.Sens is not ("E" or "D")) throw ExceptionMetier.Invalide("REGLEMENT", "Sens E (encaissement) ou D (décaissement)");
         if (s.Montant == 0 || string.IsNullOrWhiteSpace(s.Mode)) throw ExceptionMetier.Invalide("REGLEMENT", "Montant non nul et mode de règlement obligatoires");
         await ControlerPointages(s.TiersId, s.Sens, s.Montant, s.Pointages, id, null, null, ct);
+        var touchees = await EcheancesPointees(id, null, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var r = id is long x ? await db.Reglements.FirstOrDefaultAsync(r => r.RegId == x, ct) ?? throw ExceptionMetier.Introuvable($"Règlement {x}")
             : db.Reglements.Add(new Reglement { RegCreeLe = DateTimeOffset.UtcNow, RegCreePar = u.Code }).Entity;
@@ -96,14 +97,23 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         await db.Pointages.Where(p => p.PoiRegId == r.RegId).ExecuteDeleteAsync(ct);
         db.Pointages.AddRange(s.Pointages.Where(p => p.Montant != 0).Select(p => new Pointage { PoiRegId = r.RegId, PoiEcheanceId = p.EcheanceId, PoiMontant = p.Montant }));
         await db.SaveChangesAsync(ct);
+        await specialisation.ApresPointageAsync(db, [.. touchees, .. s.Pointages.Select(p => p.EcheanceId)], ct);
         await tx.CommitAsync(ct);
         return (await Reglements(r.RegTiersId, null, ct)).First(x => x.Id == r.RegId);
     }
 
     public async Task SupprimerReglement(long id, CancellationToken ct)
     {
+        var touchees = await EcheancesPointees(id, null, ct);
         if (await db.Reglements.Where(r => r.RegId == id).ExecuteDeleteAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Règlement {id}");
+        await specialisation.ApresPointageAsync(db, touchees, ct);
     }
+
+    /// <summary>Échéances pointées par un règlement ou une caution (avant modification).</summary>
+    private async Task<List<long>> EcheancesPointees(long? regId, long? cauId, CancellationToken ct) =>
+        regId is null && cauId is null ? []
+        : await db.Pointages.AsNoTracking().Where(p => (regId != null && p.PoiRegId == regId) || (cauId != null && p.PoiCauId == cauId))
+            .Select(p => p.PoiEcheanceId).Distinct().ToListAsync(ct);
 
     // ------------------------------------------------------------------ cautions
 
@@ -127,6 +137,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
     {
         if (s.Montant <= 0 || string.IsNullOrWhiteSpace(s.Organisme)) throw ExceptionMetier.Invalide("CAUTION", "Organisme et montant positif obligatoires");
         await ControlerPointages(s.TiersId, null, s.Montant, s.Pointages, null, id, "RETENUE", ct);
+        var touchees = await EcheancesPointees(null, id, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var c = id is long x ? await db.Cautions.FirstOrDefaultAsync(c => c.CauId == x, ct) ?? throw ExceptionMetier.Introuvable($"Caution {x}")
             : db.Cautions.Add(new Caution()).Entity;
@@ -143,13 +154,16 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         await db.Pointages.Where(p => p.PoiCauId == c.CauId).ExecuteDeleteAsync(ct);
         db.Pointages.AddRange(s.Pointages.Where(p => p.Montant != 0).Select(p => new Pointage { PoiCauId = c.CauId, PoiEcheanceId = p.EcheanceId, PoiMontant = p.Montant }));
         await db.SaveChangesAsync(ct);
+        await specialisation.ApresPointageAsync(db, [.. touchees, .. s.Pointages.Select(p => p.EcheanceId)], ct);
         await tx.CommitAsync(ct);
         return (await Cautions(c.CauTiersId, null, null, ct)).First(x => x.Id == c.CauId);
     }
 
     public async Task SupprimerCaution(long id, CancellationToken ct)
     {
+        var touchees = await EcheancesPointees(null, id, ct);
         if (await db.Cautions.Where(c => c.CauId == id).ExecuteDeleteAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Caution {id}");
+        await specialisation.ApresPointageAsync(db, touchees, ct);
     }
 
     /// <summary>

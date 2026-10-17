@@ -344,13 +344,10 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         }
         await db.SaveChangesAsync(ct);
 
-        // Devis transformé en commande (ou en document qui vaut commande) : statut Accepté, s'il existe pour son type.
-        if (p.Etapes.Contains("COMMANDE"))
-        {
-            var accepte = await db.StatutsDocument.AsNoTracking()
-                .Where(s => s.StdTydId == p.TypeSource.TydId && s.StdCode == "ACCEPTE").Select(s => (int?)s.StdId).FirstOrDefaultAsync(ct);
-            if (accepte is int std) await db.Documents.Where(d => d.EntId == sourceId).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntStdId, std), ct);
-        }
+        // Source envoyée transformée : validée par le tiers d'office (P17), statut recalculé ensuite.
+        await db.Documents.Where(d => d.EntId == sourceId && d.EntEnvoyeLe != null && d.EntValideTiersLe == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.EntValideTiersLe, DateTimeOffset.UtcNow), ct);
+        await documents.RecalculerStatuts([sourceId], ct);
     }
 
     // ------------------------------------------------------------------ plusieurs sources
@@ -460,6 +457,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             var annule = await db.StatutsDocument.AsNoTracking().Where(s => s.StdTydId == tyd && s.StdCode == "ANNULE").Select(s => (int?)s.StdId).FirstOrDefaultAsync(ct)
                 ?? throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", "Statut Annulé absent du type");
             await db.Documents.Where(d => d.EntId == id).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntStdId, annule), ct);
+            // Documents d'origine de la pièce annulée : facturation recalculée.
+            await documents.RecalculerStatuts(await documents.Origines(id, ct), ct);
         }
         return avoirId;
     }

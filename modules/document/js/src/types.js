@@ -36,7 +36,8 @@ export const COLONNES_DOCUMENT = new Set([
   'ent_groupe_id', 'ent_indice', 'ent_is_reference', 'ent_verrouille', 'ent_copie_de_id', 'ent_intermediaire', 'ent_version',
   'ent_cree_le', 'ent_cree_par', 'ent_modifie_le', 'ent_modifie_par', 'ent_modele', 'ent_etiquettes',
   'ent_avt_presentation', 'ent_avt_depassement', 'ent_nature_avoir', 'ent_etat_compta', 'ent_rang_avancement',
-  'ent_cpa_code', 'ent_mode_reglement',
+  'ent_cpa_code', 'ent_mode_reglement', 'ent_approuve_le', 'ent_envoye_le', 'ent_valide_tiers_le', 'ent_etat_paiement',
+  'ent_rejete_le', 'ent_rejet_motif',
 ]);
 
 export const COLONNES_LIGNE = new Set([
