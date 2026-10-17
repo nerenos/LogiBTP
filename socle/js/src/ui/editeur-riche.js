@@ -24,7 +24,7 @@ const BOUTONS = [
 ];
 
 /** Ouvre l'éditeur ; résout avec le HTML saisi (null si vidé), ou undefined si l'utilisateur annule. */
-export function editerLibelle({ html, titre, variables = [] }) {
+export function editerLibelle({ html, titre, variables = [], lecture = false }) {
   return new Promise((resoudre) => {
     const fond = document.createElement('div');
     fond.className = 'modale-fond';
@@ -42,14 +42,17 @@ export function editerLibelle({ html, titre, variables = [] }) {
             ${variables.map((v) => `<option value="${echapper(v.valeur)}">${echapper(v.libelle)}</option>`).join('')}
           </select>
         </div>
-        <div class="zone-saisie" contenteditable="true" spellcheck="true"></div>
+        <div class="zone-saisie" contenteditable="${lecture ? 'false' : 'true'}" spellcheck="true"></div>
         <footer>
-          <span class="aide">Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler</span>
+          ${lecture ? '<span class="aide">Consultation seule : libellé non modifiable · Échap : fermer</span><button type="button" class="principal" data-action="annuler">Fermer</button>'
+    : `<span class="aide">Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler</span>
           <button type="button" data-action="annuler">Annuler</button>
-          <button type="button" class="principal" data-action="valider">Valider</button>
+          <button type="button" class="principal" data-action="valider">Valider</button>`}
         </footer>
       </div>`;
     document.body.appendChild(fond);
+    // Consultation seule : sans barre d'outils, fermeture sans valeur (rien n'est modifié).
+    if (lecture) fond.querySelector('.barre-outils').remove();
     const zone = fond.querySelector('.zone-saisie');
     zone.innerHTML = htmlSur(html ?? '');
     document.execCommand('styleWithCSS', false, true); // couleurs en <span style>, pas en <font>
@@ -87,6 +90,13 @@ export function editerLibelle({ html, titre, variables = [] }) {
     };
 
     // Les boutons ne prennent pas le focus : la sélection du texte est conservée.
+    if (lecture) {
+      fond.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); fermer(undefined); } });
+      fond.querySelector('[data-action="annuler"]').addEventListener('click', () => fermer(undefined));
+      fond.addEventListener('mousedown', (e) => { if (e.target === fond) fermer(undefined); });
+      fond.querySelector('[data-action="annuler"]').focus();
+      return;
+    }
     fond.querySelectorAll('.barre-outils button').forEach((b) => b.addEventListener('mousedown', (e) => e.preventDefault()));
     fond.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => { document.execCommand(b.dataset.cmd); zone.focus(); }));
     fond.querySelectorAll('[data-couleur]').forEach((b) => b.addEventListener('click', () => { document.execCommand('foreColor', false, b.dataset.couleur); zone.focus(); }));

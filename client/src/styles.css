@@ -272,3 +272,6 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .contact-document { min-width: 220px; line-height: 1.45; }
 .contact-document .contact-titre { margin-bottom: 2px; }
 
+/* Documents issus d'une transformation : cellules modifiables légèrement teintées (privilégier la ventilation). */
+.document-transforme td.editable:not(.cellule) { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--accent) 8%, transparent); }
+

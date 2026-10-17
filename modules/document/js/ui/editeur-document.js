@@ -22,6 +22,30 @@ export const COLONNES_RESTE = ['qte_parent', 'reste', 'solde'];
 
 /** Colonnes de l'avancement (situations, factures d'avancement). */
 export const COLONNES_AVANCEMENT = ['avt_pct_prec', 'avt_pct', 'avt_qte', 'avt_montant', 'avt_precedent'];
+/**
+ * Structure de pied pour l'affichage : un sous-total saisi entre deux groupes de postes HT (remise, sous-total,
+ * compte prorata) rejoint un seul groupe « Postes de pied HT », au même niveau que les postes ; montant du groupe =
+ * somme des deux groupes. Le calcul n'est pas touché.
+ */
+function regrouperSousTotauxHt(pied) {
+  const res = [];
+  for (let i = 0; i < pied.length; i++) {
+    const e = pied[i];
+    const avant = res.at(-1);
+    const apres = pied[i + 1];
+    const groupeHt = (x) => x?.genre === 'groupe' && x.cle === 'HT';
+    if (e.genre === 'ligne' && groupeHt(avant) && groupeHt(apres)) {
+      res[res.length - 1] = {
+        ...avant, lignes: [...(avant.lignes ?? []), e.lig_id, ...(apres.lignes ?? [])], montant: Dz(avant.montant).plus(Dz(apres.montant)).toString(),
+      };
+      i++;
+      continue;
+    }
+    res.push(e);
+  }
+  return res;
+}
+
 // Champs libres d'une ligne reprise du parent dans un document d'avancement (avec la saisie de l'avancement, avt:…).
 const CHAMPS_LIBRES_AVANCEMENT = ['lig_commentaire', 'lig_etiquette', 'lig_is_non_editee', 'lig_solde'];
 // Colonnes de ventilation (clés des documents transformés) dans un document d'avancement : [clé, colonne d'avancement, titre].
@@ -103,6 +127,7 @@ export class EditeurDocument {
     const preferences = lirePreferences();
     this.libellesUneLigne = (this.transforme ? preferences.libellesTransformes ?? 'ligne' : preferences.libelles) === 'ligne';
     conteneur.classList.toggle('libelles-une-ligne', this.libellesUneLigne);
+    conteneur.classList.toggle('document-transforme', this.transforme);
     this.magasin = new Magasin(saisie, {
       recalculer: (s) => this.calculer(this.entree(s)),
       identifiants: (s, r) => this.identifiants(s, r),
@@ -696,6 +721,7 @@ export class EditeurDocument {
    * (ligne calculée ou ligne de ventilation TVA saisie, puis leurs lignes), lignes consolidées du pied global.
    */
   structurePied(pied, { parId, replies, decalage, tvaDetaillee, global = false }) {
+    pied = regrouperSousTotauxHt(pied);
     const p = [];
     const pm = this.saisie.document.ent_precision_montant ?? 2;
     const virtuelle = (cle, type, libelle, montant, o = {}) => this.ligneVirtuelle(cle, type, libelle, montant, { ...o, decalage });
@@ -813,6 +839,12 @@ export class EditeurDocument {
             titre: [this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_numerotation, LIBELLES_TYPE[CODES_TL[l.lig_tyl_id]]].filter(Boolean).join(' · '),
             variables: this.variablesLibelle(),
           }),
+          // Libellé non modifiable (document validé, ligne reprise du parent) : mise en forme en consultation.
+          consulter: (l) => (l._virtuelle ? null : editerLibelle({
+            html: this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_libelle_affiche ?? l.lig_libelle_html,
+            titre: [this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_numerotation, LIBELLES_TYPE[CODES_TL[l.lig_tyl_id]], 'lecture seule'].filter(Boolean).join(' · '),
+            lecture: true,
+          })),
         },
         enteteBouton: {
           texte: () => (this.libellesUneLigne ? '⇕' : '⇔'),

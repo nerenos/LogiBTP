@@ -389,6 +389,12 @@ export class GrilleArbre {
   editer(colonne = this.colonne, texteInitial = null, { riche = false } = {}) {
     const r = this.ligneCourante();
     if (!r) return;
+    // Cellule non modifiable à mise en forme (libellé repris d'un document parent…) : ouverte en consultation.
+    const demandee = this.o.colonnes[colonne];
+    if (texteInitial === null && demandee?.riche?.consulter && !demandee.editable?.(r.item)) {
+      demandee.riche.consulter(r.item);
+      return;
+    }
     const editables = this.colonnesEditables(r.item);
     if (editables.length === 0) return;
     this.colonne = editables.includes(colonne) ? colonne : editables.find((i) => i >= colonne) ?? editables[0];
