@@ -40,7 +40,7 @@ public static class SuppressionFiches
 
     private static readonly Dictionary<string, (string Sql, string Message)> Protections = new()
     {
-        ["personne"] = ("SELECT count(*)::int AS \"Value\" FROM personne WHERE per_id = @id AND per_societe_base IS NOT NULL",
+        ["personne"] = ("SELECT count(*)::int AS \"Value\" FROM personne WHERE per_id = @id AND per_societe_base",
             "Fiche de notre société : suppression impossible"),
         ["individu"] = ("SELECT count(*)::int AS \"Value\" FROM individu WHERE ind_id = @id AND ind_utilisateur IS NOT NULL",
             "Individu titulaire d'un compte utilisateur : suppression impossible"),
