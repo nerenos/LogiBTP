@@ -253,13 +253,15 @@ const PRESENTATIONS_AVANCEMENT = [
 /**
  * Rapport d'une pièce : mêmes blocs liés, options propres (titre, accord, mentions, montant en lettres, pied).
  */
-function piece({ code, libelle, types, titre = '', accord = false, lettres = false, paiement = false, particulier = false, presentations = PRESENTATIONS_STANDARD, pied = 'PIED_VENTES_ACHATS', libelleAdresse = 'Adresse des travaux', ordre = 0 }) {
+function piece({ code, libelle, types, titre = '', accord = false, lettres = false, paiement = false, particulier = false, presentations = PRESENTATIONS_STANDARD, pied = 'PIED_VENTES_ACHATS', libelleAdresse = 'Adresse des travaux', ordre = 0, marche = false }) {
   return {
     code, libelle, genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types, ordre,
     contenu: {
       format_version: 1, code, libelle, cible: 'DOCUMENT', source: 'document',
       page: { format: 'A4', orientation: 'portrait', flexible: ['A4', 'A3'], marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
       presentations,
+      // Sous-rapports des pièces de marché : sources annexes lues par le serveur dans le même appel (§ 15.2).
+      ...(marche ? { sources_annexes: ['marche_documents', 'avancements_precedents'] } : {}),
       bandes: [
         { type: 'FOND_PAGE', nom: 'filigrane', contenu: bloc('FILIGRANE_STATUT') },
         { type: 'ENTETE_PAGE', pages: 'SUIVANTES', contenu: bloc('RAPPEL_PAGES_SUIVANTES') },
@@ -269,6 +271,10 @@ function piece({ code, libelle, types, titre = '', accord = false, lettres = fal
           contenu: { type: 'pile', espacement: 4, enfants: [bloc('ENTETE_SOCIETE'), bloc('COORDONNEES_DOCUMENT', { titre, libelle_adresse: libelleAdresse }), champ('{{textes.intro}}', { html: true })] },
         },
         { type: 'CORPS', nom: 'lignes', contenu: bloc('LIGNES_DOCUMENT') },
+        ...(marche ? [
+          { type: 'CORPS', nom: 'marche', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_DOCUMENTS_MARCHE', donnees: 'sources.marche_documents' } },
+          { type: 'CORPS', nom: 'precedents', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_AVANCEMENTS_PRECEDENTS', donnees: 'sources.avancements_precedents' } },
+        ] : []),
         { type: 'RESUME', nom: 'totaux', options: { bas_de_page: true, garder_ensemble: true }, contenu: { type: 'pile', enfants: [
           bloc('TOTAUX_DOCUMENT', { accord, lettres }),
           ...(paiement ? [bloc('MENTIONS_PAIEMENT')] : []),
@@ -283,8 +289,8 @@ const RAPPORTS = [
   piece({ code: 'DEVIS', libelle: 'Devis', types: ['V_DEVIS'], accord: true, particulier: true, ordre: 10 }),
   piece({ code: 'COMMANDE_CLIENT', libelle: 'Commande client (accusé de réception)', types: ['V_COMMANDE'], titre: 'Accusé de réception de commande', ordre: 20 }),
   piece({ code: 'FACTURE', libelle: 'Facture, avoir, acompte', types: ['V_FACTURE', 'V_AVOIR', 'V_FACTURE_ACOMPTE', 'V_RECU_ACOMPTE', 'V_DEMANDE_ACOMPTE'], lettres: true, paiement: true, ordre: 30 }),
-  piece({ code: 'SITUATION', libelle: 'Situation de travaux', types: ['V_SITUATION', 'V_REPRISE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, ordre: 40 }),
-  piece({ code: 'FACTURE_AVANCEMENT', libelle: "Facture d'avancement", types: ['V_FACTURE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, lettres: true, paiement: true, ordre: 50 }),
+  piece({ code: 'SITUATION', libelle: 'Situation de travaux', types: ['V_SITUATION', 'V_REPRISE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, ordre: 40, marche: true }),
+  piece({ code: 'FACTURE_AVANCEMENT', libelle: "Facture d'avancement", types: ['V_FACTURE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, lettres: true, paiement: true, ordre: 50, marche: true }),
   piece({
     code: 'BON_LIVRAISON', libelle: 'Bon de livraison, bon de retour', types: ['V_RECEPTION', 'V_RETOUR'], accord: true, libelleAdresse: 'Livraison',
     presentations: [PRESENTATIONS_STANDARD[2], PRESENTATIONS_STANDARD[0]], ordre: 60,
@@ -298,7 +304,36 @@ const RAPPORTS = [
   }),
 ];
 
-export const MODELES_EDITION = [...BLOCS, ...RAPPORTS];
+// Sous-rapports (Q6) : rapports réutilisables inclus par d'autres, sur une source annexe ; type SOUS_RAPPORT (jamais
+// proposés seuls à l'impression d'une pièce).
+const sousRapport = (code, libelle, titre, colonnes) => ({
+  code, libelle, genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['SOUS_RAPPORT'], ordre: 100,
+  contenu: {
+    format_version: 1, code, libelle, cible: 'DOCUMENT', source: 'document',
+    bandes: [{ type: 'CORPS', contenu: { type: 'pile', marges: { haut: 3 }, enfants: [
+      champ(titre, { style: 'sous_titre' }),
+      { type: 'tableau', collection: 'elements', remplir: false, report: false, colonnes },
+    ] } }],
+  },
+});
+const SOUS_RAPPORTS = [
+  sousRapport('SR_DOCUMENTS_MARCHE', 'Sous-rapport : commande et avenants du marché', 'Commande et avenants du marché', [
+    { cle: 'piece', titre: 'Pièce', largeur: '30mm', valeur: '=Si(element.role = "BASE"; "Commande"; "Avenant " & element.rang)' },
+    { cle: 'numero', titre: 'N°', largeur: '30mm', valeur: '{{element.numero}}' },
+    { cle: 'date', titre: 'Date', largeur: '22mm', valeur: '{{Date(element.date)}}' },
+    { cle: 'objet', titre: 'Objet', largeur: '*', valeur: '{{element.objet}}' },
+    { cle: 'mt', titre: 'Montant HT', largeur: '28mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant' },
+  ]),
+  sousRapport('SR_AVANCEMENTS_PRECEDENTS', 'Sous-rapport : situations et factures précédentes du marché', 'Situations et factures précédentes', [
+    { cle: 'piece', titre: 'Pièce', largeur: '*', valeur: '{{element.type}}' },
+    { cle: 'rang', titre: 'N° sit.', largeur: '16mm', valeur: '{{element.rang}}', alignement: 'centre' },
+    { cle: 'numero', titre: 'N°', largeur: '30mm', valeur: '{{element.numero}}' },
+    { cle: 'date', titre: 'Date', largeur: '22mm', valeur: '{{Date(element.date)}}' },
+    { cle: 'mt', titre: 'Montant HT', largeur: '28mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant' },
+  ]),
+];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

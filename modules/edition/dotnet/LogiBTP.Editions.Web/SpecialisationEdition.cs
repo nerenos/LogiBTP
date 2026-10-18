@@ -66,6 +66,13 @@ public class SpecialisationEdition
     public virtual Task<long?> DeposerAsync(IServiceProvider services, TacheEdition tache, PdfEdition pdf, PreparationEdition preparation,
         Utilisateur u, CancellationToken ct) => Task.FromResult<long?>(null);
 
+    /// <summary>
+    /// Image importée avec un modèle (Q17) absente de l'application : créée sous son code (GED pour le cœur) ;
+    /// renvoie vrai si elle a été créée.
+    /// </summary>
+    public virtual Task<bool> CreerRessourceAsync(IServiceProvider services, string code, RessourceEdition ressource, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult(false);
+
     /// <summary>Dernière édition rangée (envoi d'un double, § 3.9), ou null.</summary>
     public virtual Task<EditionRangee?> DerniereEditionAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct) =>
         Task.FromResult<EditionRangee?>(null);

@@ -65,3 +65,23 @@ describe('pagination complète', () => {
     expect((await PDFDocument.load(pdf)).getPageCount()).toBe(3);
   });
 });
+
+describe('blocs liés et sous-rapports', () => {
+  it('bloc lié : paramètres lus par bloc.<nom>, valeur par défaut', () => {
+    const blocs = { PIED: { parametres: [{ nom: 'titre', defaut: 'Défaut' }], contenu: { type: 'champ', valeur: '{{bloc.titre}} – {{societe}}' } } };
+    const m = { bandes: [{ contenu: { type: 'pile', enfants: [{ type: 'bloc', bloc: 'PIED', parametres: { titre: 'Facture' } }, { type: 'bloc', bloc: 'PIED' }, { type: 'bloc', bloc: 'ABSENT' }] } }] };
+    const r = editer(m, { societe: 'BTP' }, { polices: p, blocs });
+    expect(textes(r.pages[0])).toEqual(['Facture – BTP', 'Défaut – BTP']);
+    expect(r.alertes.map((a) => a.code)).toContain('BLOC_INTROUVABLE');
+  });
+  it('sous-rapport sur une source annexe, au plus trois niveaux', () => {
+    const rapports = {
+      SR: { bandes: [{ contenu: { type: 'tableau', collection: 'elements', colonnes: [{ cle: 'n', titre: 'N°', valeur: '{{element.numero}}' }] } }] },
+      BOUCLE: { bandes: [{ contenu: { type: 'sous_rapport', rapport: 'BOUCLE' } }] },
+    };
+    const m = { bandes: [{ contenu: { type: 'sous_rapport', rapport: 'SR', donnees: 'sources.documents' } }, { contenu: { type: 'sous_rapport', rapport: 'BOUCLE' } }] };
+    const r = editer(m, { sources: { documents: [{ numero: 'CC1' }, { numero: 'CC2' }] } }, { polices: p, rapports });
+    expect(textes(r.pages[0])).toEqual(expect.arrayContaining(['N°', 'CC1', 'CC2']));
+    expect(r.alertes.map((a) => a.code)).toContain('SOUS_RAPPORT_NIVEAU');
+  });
+});

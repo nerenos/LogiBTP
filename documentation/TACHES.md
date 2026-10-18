@@ -62,7 +62,7 @@
 ### Édition (impression)
 
 - [ ] **Module Édition** ([conception](conception/CONCEPTION-EDITION.md), analyse décidée § 14 et 15) : lot 0 réalisé
-  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16) ; lots 1 à 4 réalisés (§ 16). Lots
+  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16) ; lots 1 à 5 réalisés (§ 16). Lots
   suivants en cours.
   Reprend les impressions en attente ci-dessus (textes, coordonnées, tranches F, frais annexes, déductions).
 - [ ] Facturation électronique (Factur-X / plateforme agréée) : module à cadrer à part (§ 3.5 de l'analyse).

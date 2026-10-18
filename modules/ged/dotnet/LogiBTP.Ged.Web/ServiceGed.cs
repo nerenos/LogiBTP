@@ -817,6 +817,23 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         return Results.Stream(stockage.Ouvrir(c.CgeChemin), v.VgeTypeMime ?? "application/octet-stream", enableRangeProcessing: true);
     }
 
+    /// <summary>
+    /// Contenu courant d'un document lu par l'application (images des éditions…) : accès contrôlé comme une consultation,
+    /// sans consultation enregistrée ; null si le contenu manque sur le disque.
+    /// </summary>
+    public virtual async Task<(byte[] Octets, string NomFichier, string? TypeMime)?> LireContenu(long documentId, Utilisateur u, CancellationToken ct)
+    {
+        await Charger(documentId, u, ct);
+        var v = await db.Versions.AsNoTracking().Where(x => x.VgeDocument == documentId).OrderByDescending(x => x.VgeNumero).FirstOrDefaultAsync(ct);
+        if (v is null) return null;
+        var c = await db.Contenus.AsNoTracking().FirstOrDefaultAsync(x => x.CgeEmpreinte == v.VgeEmpreinte, ct);
+        if (c is null || !stockage.Existe(c.CgeChemin)) return null;
+        await using var flux = stockage.Ouvrir(c.CgeChemin);
+        using var memoire = new MemoryStream();
+        await flux.CopyToAsync(memoire, ct);
+        return (memoire.ToArray(), v.VgeNomFichier, v.VgeTypeMime);
+    }
+
     // ------------------------------------------------------------------ coffre-fort
 
     /// <summary>Entrée chaînée au journal (verrou exclusif sur le journal pour une chaîne sans fourche), document verrouillé.</summary>

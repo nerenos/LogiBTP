@@ -694,3 +694,15 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
 - Reporté : PDF/A-3 et Factur-X (module Facturation électronique, § 3.5) ; déclencheur à l'envoi (la validation
   couvre l'envoi aujourd'hui).
 
+### Lot 5 – blocs, sous-rapports, import / export, images (18/10/2026) : réalisé
+
+- Blocs liés : paramètres lus par `bloc.<nom>` (défaut du bloc, valeur posée par le rapport), cycles refusés à
+  l'enregistrement, rapports impactés listés, copie = bloc détaché (lots 1 et 3) ; défaut corrigé : la résolution de
+  `bloc.<nom>` manquait.
+- Sous-rapports (Q6) sur une source annexe lue par le serveur dans le même appel (`sources_annexes`,
+  `SourceAnnexeAsync` : documents du marché, situations et factures précédentes) ; fournis : « Commande et avenants
+  du marché » et « Situations et factures précédentes », inclus dans la situation et la facture d'avancement.
+- Images (§ 3.13) : GED, catégorie « Image des éditions » (`ressource_edition`), code en mot-clé ; PNG / JPEG contrôlés
+  par le moteur. Export / import (Q17) : paquet `logibtp-edition` (modèle, inclus, charte, images) ; conflits lier,
+  remplacer ou renommer (références réécrites) ; image de la base gardée, sinon créée en GED.
+

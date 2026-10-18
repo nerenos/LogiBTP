@@ -31,9 +31,12 @@ export class PageParametresEditions extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🖨 Éditions</h1>
       <h2>Mentions de la société</h2><div class="mentions"></div>
       <h2>Modèle par défaut des documents</h2><div class="defauts"></div>
-      <h2>Modèles et blocs</h2><div class="modeles"></div></div>`;
+      <h2>Modèles et blocs</h2><div class="import"></div><div class="modeles"></div>
+      <p class="aide">Images des modèles (logo, logos de qualification…) : déposez-les dans la GED, catégorie
+      « Image des éditions », avec leur code (LOGO…) en mot-clé ; PNG ou JPEG, 300 dpi à la taille imprimée.</p></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('.mentions').innerHTML = '<p class="aide">Disponible avec le serveur.</p>'; return; }
     await Promise.all([this.ouvrirMentions(), this.ouvrirDefauts(), this.ouvrirModeles()]);
+    this.ouvrirImport();
   }
 
   async ouvrirMentions() {
@@ -78,6 +81,29 @@ export class PageParametresEditions extends PageBase {
     }
   }
 
+  /** Import d'un paquet de modèles (Q17) : codes existants liés, remplacés ou renommés ; compte rendu. */
+  ouvrirImport() {
+    const zone = this.conteneur.querySelector('.import');
+    if (!this.app.estAdmin()) { zone.replaceChildren(); return; }
+    zone.innerHTML = `<p>Importer un paquet <input type="file" accept=".json,application/json" data-fichier>
+      — codes déjà présents : <span data-conflits></span> <button data-importer>Importer</button></p><div data-compte-rendu></div>`;
+    const conflits = creerCombo({ options: [
+      { valeur: 'LIER', libelle: 'garder les modèles de la base (lier)' }, { valeur: 'REMPLACER', libelle: 'remplacer' },
+      { valeur: 'RENOMMER', libelle: 'importer sous un autre code' }], valeur: 'LIER', vide: false });
+    zone.querySelector('[data-conflits]').append(conflits);
+    zone.querySelector('[data-importer]').addEventListener('click', async () => {
+      const f = zone.querySelector('[data-fichier]').files?.[0];
+      if (!f) { this.app.message('Choisissez un fichier .logibtp-edition.json', 'avertissement'); return; }
+      try {
+        const r = await api.editions.importer(JSON.parse(await f.text()), conflits.valeurCombo);
+        const libelles = { CREE: 'créé', REMPLACE: 'remplacé', LIE: 'existant gardé', RENOMME: 'importé sous', EXISTANTE: 'image de la base gardée', CREEE: 'image créée en GED', IGNOREE: 'image ignorée' };
+        zone.querySelector('[data-compte-rendu]').innerHTML = `<ul>${[...r.modeles, ...r.ressources].map((x) => `<li><code>${echapper(x.code)}</code> : ${libelles[x.action] ?? x.action}${x.nouveau_code ? ` <code>${echapper(x.nouveau_code)}</code>` : ''}</li>`).join('')}</ul>`;
+        this.app.message('Import terminé', 'succes');
+        await this.ouvrirModeles();
+      } catch (e) { this.app.erreur(e); }
+    });
+  }
+
   async ouvrirModeles() {
     const zone = this.conteneur.querySelector('.modeles');
     const modeles = await api.editions.modeles({});
@@ -88,6 +114,7 @@ export class PageParametresEditions extends PageBase {
       <td>${m.fourni ? (m.modifie_local ? 'fourni, modifié' : 'fourni') : 'société'}</td>
       <td><button data-action="copier" ${admin ? '' : 'disabled'} title="Copie indépendante (un bloc copié est détaché des rapports qui le lient)">Copier…</button>
         ${m.genre === 'BLOC' ? '<button data-action="impacts" title="Rapports et blocs qui lient ce bloc">Utilisé par…</button>' : ''}
+        <button data-action="exporter" title="Paquet du modèle : blocs et sous-rapports inclus, charte, images">Exporter</button>
         <button data-action="supprimer" ${admin && !m.fourni ? '' : 'disabled'}>Supprimer</button></td></tr>`).join('')}</tbody></table>`;
     zone.onclick = async (e) => {
       const b = e.target.closest('button[data-action]');
@@ -97,6 +124,13 @@ export class PageParametresEditions extends PageBase {
         if (b.dataset.action === 'impacts') {
           const l = await api.editions.impacts(code);
           this.app.message(l.length ? `Utilisé par : ${l.map((x) => x.libelle).join(', ')}` : 'Bloc utilisé par aucun modèle', 'info');
+        } else if (b.dataset.action === 'exporter') {
+          const paquet = await api.editions.exporter(code);
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([JSON.stringify(paquet, null, 2)], { type: 'application/json' }));
+          a.download = `${code}.logibtp-edition.json`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 60000);
         } else if (b.dataset.action === 'copier') {
           const nouveau = globalThis.prompt?.('Code du nouveau modèle (lettres, chiffres, _) :', `${code}_SOCIETE`);
           if (!nouveau?.trim()) return;

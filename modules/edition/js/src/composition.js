@@ -55,6 +55,7 @@ function resoudre(ctx, chemin) {
     case 'parametres': return lire(ctx.parametres);
     case 'page': return lire(ctx.page);
     case 'donnees': return lire(ctx.donnees);
+    case 'bloc': return lire(ctx.bloc);
     default: break;
   }
   if (ctx.element && typeof ctx.element === 'object' && tete in ctx.element) return lireChemin(ctx.element, chemin);

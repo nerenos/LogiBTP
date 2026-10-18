@@ -340,6 +340,137 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
         return (s.Length == 0 ? "edition" : s.Length > 80 ? s[..80] : s) + ".pdf";
     }
 
+    // ------------------------------------------------------------------ export et import (Q17)
+
+    /// <summary>
+    /// Paquet d'un modèle : le modèle, les blocs et sous-rapports qu'il inclut (fermeture), sa charte et ses images
+    /// (base64) ; format « logibtp-edition » versionné, à importer dans une autre base.
+    /// </summary>
+    public async Task<JsonObject> Exporter(IServiceProvider services, string code, Utilisateur u, CancellationToken ct)
+    {
+        var m = await Lire(code, ct);
+        if (!specialisation.PeutUtiliser(m, u)) throw ExceptionMetier.AccesRefuse("EDITION");
+        var inclus = new JsonArray();
+        var vus = new HashSet<string> { code };
+        var ressources = new HashSet<string>();
+        var aVoir = new Queue<ModeleEdition>([m]);
+        while (aVoir.TryDequeue(out var x))
+        {
+            var deps = Dependances.Lire(JsonNode.Parse(x.MedContenu));
+            ressources.UnionWith(deps.Ressources);
+            foreach (var c in deps.Blocs.Concat(deps.Rapports).Where(vus.Add))
+            {
+                var dep = await db.Modeles.AsNoTracking().FirstOrDefaultAsync(y => y.MedCode == c, ct);
+                if (dep is null) continue;
+                inclus.Add(VersJson(dep));
+                aVoir.Enqueue(dep);
+            }
+        }
+        var codeCharte = m.MedCharte ?? JsonNode.Parse(m.MedContenu)?["charte"]?.GetValue<string>();
+        var charte = codeCharte is null ? null : await db.Chartes.AsNoTracking().FirstOrDefaultAsync(c => c.CheCode == codeCharte, ct);
+        var images = ressources.Count > 0 ? await specialisation.RessourcesAsync(services, ressources, new JsonObject(), u, ct) : [];
+        var r = new JsonObject();
+        foreach (var (k, v) in images) r[k] = new JsonObject { ["type"] = v.Type, ["base64"] = v.Base64, ["largeur"] = v.Largeur, ["hauteur"] = v.Hauteur, ["dpi"] = v.Dpi };
+        return new JsonObject
+        {
+            ["format"] = "logibtp-edition", ["version"] = 1, ["exporte_le"] = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            ["modele"] = VersJson(m), ["inclus"] = inclus,
+            ["charte"] = charte is null ? null : new JsonObject { ["code"] = charte.CheCode, ["libelle"] = charte.CheLibelle, ["contenu"] = JsonNode.Parse(charte.CheContenu) },
+            ["ressources"] = r,
+        };
+    }
+
+    /// <summary>
+    /// Import d'un paquet (administrateur) : inclus d'abord (les blocs avant ceux qui les lient), puis le modèle ; code
+    /// existant : LIER (l'existant est gardé), REMPLACER, ou RENOMMER (nouveau code, références réécrites) ; charte
+    /// créée si absente ; images : celle de l'application par défaut, sinon créée depuis le paquet (Q17).
+    /// </summary>
+    public async Task<JsonObject> Importer(IServiceProvider services, DemandeImport d, Utilisateur u, CancellationToken ct)
+    {
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        var p = d.Paquet;
+        if (p["format"]?.GetValue<string>() != "logibtp-edition") throw ExceptionMetier.Invalide("IMPORT_FORMAT", "Paquet de modèles d'édition attendu (format logibtp-edition)");
+        if ((p["version"]?.GetValue<int>() ?? 0) > 1) throw ExceptionMetier.Invalide("IMPORT_VERSION", "Paquet d'une version plus récente de l'application");
+        var conflits = d.Conflits is "REMPLACER" or "RENOMMER" ? d.Conflits : "LIER";
+        var compteRendu = new JsonArray();
+
+        // Charte : créée si elle n'existe pas (celle de la base est gardée sinon).
+        if (p["charte"] is JsonObject ch && ch["code"]?.GetValue<string>() is { } codeCharte && !await db.Chartes.AnyAsync(c => c.CheCode == codeCharte, ct))
+            await EnregistrerCharte(codeCharte, new SaisieCharte(ch["libelle"]?.GetValue<string>() ?? codeCharte, ch["contenu"]!.DeepClone()), u, ct);
+
+        // Ordre : un modèle après ceux qu'il inclut.
+        var tous = (p["inclus"] as JsonArray ?? []).OfType<JsonObject>().Append(p["modele"]!.AsObject()).ToList();
+        var parCode = tous.ToDictionary(x => x["code"]!.GetValue<string>());
+        var ordre = new List<string>();
+        void Placer(string c, HashSet<string> pile)
+        {
+            if (ordre.Contains(c) || !parCode.ContainsKey(c) || !pile.Add(c)) return;
+            var deps = Dependances.Lire(parCode[c]["contenu"]);
+            foreach (var x in deps.Blocs.Concat(deps.Rapports)) Placer(x, pile);
+            ordre.Add(c);
+        }
+        foreach (var c in parCode.Keys) Placer(c, []);
+
+        var renommes = new Dictionary<string, string>();
+        foreach (var c in ordre)
+        {
+            var x = parCode[c];
+            var contenu = Renommer(x["contenu"]!.DeepClone(), renommes);
+            var existe = await db.Modeles.AnyAsync(m => m.MedCode == c, ct);
+            var cible = c;
+            string action;
+            if (!existe) action = "CREE";
+            else if (conflits == "LIER") { compteRendu.Add(new JsonObject { ["code"] = c, ["action"] = "LIE" }); continue; }
+            else if (conflits == "REMPLACER") action = "REMPLACE";
+            else
+            {
+                var n = 1;
+                cible = $"{c}_IMPORT";
+                while (await db.Modeles.AnyAsync(m => m.MedCode == cible, ct)) cible = $"{c}_IMPORT{++n}";
+                renommes[c] = cible;
+                action = "RENOMME";
+            }
+            await Enregistrer(cible, new SaisieModele(x["libelle"]!.GetValue<string>(), x["genre"]?.GetValue<string>() ?? "RAPPORT", x["cible"]?.GetValue<string>(),
+                x["source"]?.GetValue<string>(), (x["types"] as JsonArray)?.Select(t => t!.GetValue<string>()).ToList(), contenu,
+                x["niveau_acces"]?.GetValue<string>(), (x["acces_profils"] as JsonArray)?.Select(t => t!.GetValue<string>()).ToList(),
+                x["charte"]?.GetValue<string>(), x["actif"]?.GetValue<bool>() ?? true, x["ordre"]?.GetValue<int>() ?? 0), u, ct);
+            compteRendu.Add(new JsonObject { ["code"] = c, ["action"] = action, ["nouveau_code"] = cible == c ? null : cible });
+        }
+
+        // Images : celle de l'application si elle existe, sinon créée depuis le paquet.
+        var images = new JsonArray();
+        if (p["ressources"] is JsonObject res && res.Count > 0)
+        {
+            var existantes = await specialisation.RessourcesAsync(services, res.Select(r => r.Key).ToList(), new JsonObject(), u, ct);
+            foreach (var (code, r) in res)
+            {
+                if (existantes.ContainsKey(code)) { images.Add(new JsonObject { ["code"] = code, ["action"] = "EXISTANTE" }); continue; }
+                var ressource = new RessourceEdition(r!["type"]!.GetValue<string>(), r["base64"]!.GetValue<string>(), r["largeur"]?.GetValue<int>() ?? 0, r["hauteur"]?.GetValue<int>() ?? 0);
+                var creee = await specialisation.CreerRessourceAsync(services, code, ressource, u, ct);
+                images.Add(new JsonObject { ["code"] = code, ["action"] = creee ? "CREEE" : "IGNOREE" });
+            }
+        }
+        return new JsonObject { ["modeles"] = compteRendu, ["ressources"] = images };
+    }
+
+    /// <summary>Références renommées (blocs liés, sous-rapports) dans un contenu importé.</summary>
+    private static JsonNode Renommer(JsonNode contenu, Dictionary<string, string> renommes)
+    {
+        if (renommes.Count == 0) return contenu;
+        void Visiter(JsonNode? n)
+        {
+            if (n is JsonObject o)
+            {
+                foreach (var cle in new[] { "bloc", "rapport" })
+                    if (o[cle] is JsonValue v && v.TryGetValue<string>(out var s) && renommes.TryGetValue(s, out var nouveau)) o[cle] = nouveau;
+                foreach (var (_, x) in o.ToList()) Visiter(x);
+            }
+            else if (n is JsonArray a) foreach (var x in a) Visiter(x);
+        }
+        Visiter(contenu);
+        return contenu;
+    }
+
     // ------------------------------------------------------------------ production en GED (Q15)
 
     /// <summary>Production demandée (tâche de la file traitée en fond) ; même règle d'accès que l'aperçu.</summary>
@@ -423,6 +554,9 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
         return JsonNode.Parse(await pool.ExecuterAsync(m => m.VerifierModele(json), ct))!;
     }
 }
+
+/// <summary>Import d'un paquet de modèles : conflits de codes LIER (garder l'existant), REMPLACER, RENOMMER.</summary>
+public sealed record DemandeImport(JsonObject Paquet, string Conflits = "LIER");
 
 /// <summary>Demande de production en GED (bouton « Ranger en GED », lot).</summary>
 public sealed record DemandeProduction(DemandeEdition Edition, string Motif = "DEMANDE", bool Coffre = false);

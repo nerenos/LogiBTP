@@ -84,6 +84,85 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         return d is null ? null : await DerniereEditionGed(services, d.TydCode, (d.EntGroupeId ?? entId).ToString(), ct);
     }
 
+    /// <summary>
+    /// Images des modèles (§ 3.13) : document GED de catégorie « ressource_edition » portant le code en mot-clé (le plus
+    /// récent), PNG ou JPEG contrôlé par le moteur ; une image refusée (SVG…) est ignorée (alerte du moteur).
+    /// </summary>
+    public override async Task<Dictionary<string, RessourceEdition>> RessourcesAsync(IServiceProvider services, IReadOnlyCollection<string> codes,
+        JsonObject donnees, Utilisateur u, CancellationToken ct)
+    {
+        var res = new Dictionary<string, RessourceEdition>();
+        var gedDb = services.GetRequiredService<GedDbContext>();
+        var candidats = await gedDb.Documents.AsNoTracking().Where(x => x.DgeCategorie == "ressource_edition" && !x.DgeSupprime)
+            .OrderByDescending(x => x.DgeCreeLe).ThenByDescending(x => x.DgeId).ToListAsync(ct);
+        var ged = services.GetRequiredService<ServiceGed>();
+        var pool = services.GetRequiredService<PoolMoteursEdition>();
+        foreach (var code in codes)
+        {
+            var doc = candidats.FirstOrDefault(x => x.DgeMotsCles.Any(m => string.Equals(m, code, StringComparison.OrdinalIgnoreCase))
+                || string.Equals(x.DgeTitre, code, StringComparison.OrdinalIgnoreCase));
+            if (doc is null) continue;
+            var contenu = await ged.LireContenu(doc.DgeId, u, ct);
+            if (contenu is null) continue;
+            var octets = contenu.Value.Octets;
+            var info = JsonNode.Parse(await pool.ExecuterAsync(m => m.LireImage(octets), ct))!;
+            if (info["erreur"] is not null) continue;
+            res[code] = new RessourceEdition(info["type"]!.GetValue<string>(), Convert.ToBase64String(octets), info["largeur"]!.GetValue<int>(),
+                info["hauteur"]!.GetValue<int>(), info["dpi"]?.GetValue<int?>(), info["orientation"]?.GetValue<int?>());
+        }
+        return res;
+    }
+
+    /// <summary>Image importée avec un modèle : déposée en GED (catégorie ressource_edition, code en mot-clé, sans élément).</summary>
+    public override async Task<bool> CreerRessourceAsync(IServiceProvider services, string code, RessourceEdition ressource, Utilisateur u, CancellationToken ct)
+    {
+        if (ressource.Type is not ("png" or "jpeg")) return false;
+        var octets = Convert.FromBase64String(ressource.Base64);
+        await using var flux = new MemoryStream(octets);
+        var fichier = new FormFile(flux, 0, octets.Length, "fichier", $"{code.ToLowerInvariant()}.{(ressource.Type == "png" ? "png" : "jpg")}")
+        {
+            Headers = new HeaderDictionary(), ContentType = ressource.Type == "png" ? "image/png" : "image/jpeg",
+        };
+        await services.GetRequiredService<ServiceGed>().DeposerFichier(fichier, new MetaDepot
+        {
+            Titre = code, Categorie = "ressource_edition", MotsCles = [code], Resume = "Image des éditions importée avec un modèle", Auteur = u.Code,
+        }, u, ct);
+        return true;
+    }
+
+    /// <summary>
+    /// Sources annexes des sous-rapports (§ 15.2), lues dans le même appel : marche_documents (commande de base et
+    /// avenants du marché du document), avancements_precedents (situations et factures d'avancement validées du
+    /// marché avant ce document).
+    /// </summary>
+    public override async Task<JsonNode?> SourceAnnexeAsync(IServiceProvider services, string nom, JsonObject donnees, Utilisateur u, CancellationToken ct)
+    {
+        if (donnees["document"]?["id"] is not JsonValue v || !v.TryGetValue<long>(out var id)) return null;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var sql = nom switch
+        {
+            "marche_documents" => """
+                SELECT coalesce(json_agg(json_build_object('rang', md.mdo_rang, 'role', md.mdo_role, 'numero', d.ent_numero, 'date', d.ent_date,
+                         'objet', d.ent_objet, 'montant_ht', d.ent_total_ht) ORDER BY md.mdo_rang), '[]')::text AS "Value"
+                FROM document cur JOIN marche_document md ON md.mdo_mar_id = cur.ent_marche_id JOIN document d ON d.ent_id = md.mdo_ent_id
+                WHERE cur.ent_id = @id
+                """,
+            "avancements_precedents" => """
+                SELECT coalesce(json_agg(json_build_object('numero', d.ent_numero, 'type', t.tyd_libelle, 'date', d.ent_date,
+                         'rang', d.ent_rang_avancement, 'montant_ht', d.ent_total_ht, 'montant_ttc', d.ent_total_ttc)
+                         ORDER BY d.ent_date, d.ent_id), '[]')::text AS "Value"
+                FROM document cur JOIN document d ON d.ent_marche_id = cur.ent_marche_id AND d.ent_id <> cur.ent_id
+                JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+                WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND d.ent_verrouille AND s.std_code NOT IN ('ANNULE', 'REMPLACE')
+                  AND d.ent_is_reference AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
+                """,
+            _ => null,
+        };
+        if (sql is null) return null;
+        var json = await db.Database.SqlQueryRaw<string>(sql, new NpgsqlParameter("id", id)).FirstAsync(ct);
+        return JsonNode.Parse(json);
+    }
+
     /// <summary>Dernière édition rangée d'un élément de la GED (catégorie edition, non supprimée) et sa version courante.</summary>
     private static async Task<EditionRangee?> DerniereEditionGed(IServiceProvider services, string type, string element, CancellationToken ct)
     {

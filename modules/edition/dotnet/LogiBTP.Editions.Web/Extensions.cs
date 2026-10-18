@@ -58,6 +58,13 @@ public static class Extensions
         });
         g.MapPost("/modeles/{code}/copie", (string code, DemandeCopie c, HttpContext http, ServiceEdition s, CancellationToken ct) =>
             s.Copier(code, c.Code, c.Libelle, Utilisateur.Depuis(http), ct));
+        g.MapGet("/modeles/{code}/export", async (string code, HttpContext http, ServiceEdition s, CancellationToken ct) =>
+        {
+            var paquet = await s.Exporter(http.RequestServices, code, Utilisateur.Depuis(http), ct);
+            return Results.File(System.Text.Encoding.UTF8.GetBytes(paquet.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true })),
+                "application/json", $"{code}.logibtp-edition.json");
+        });
+        g.MapPost("/import", (DemandeImport d, HttpContext http, ServiceEdition s, CancellationToken ct) => s.Importer(http.RequestServices, d, Utilisateur.Depuis(http), ct));
         g.MapGet("/modeles/{code}/impacts", (string code, ServiceEdition s, CancellationToken ct) => s.Impacts(code, ct));
         g.MapGet("/modeles/{code}/versions", (string code, ServiceEdition s, CancellationToken ct) => s.Versions(code, ct));
         g.MapPost("/verifier", (JsonNode contenu, ServiceEdition s, CancellationToken ct) => s.Verifier(contenu, ct));
