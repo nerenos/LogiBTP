@@ -231,7 +231,11 @@ public partial class ConstructeurRequete
     /// <summary>Colonnes renvoyées : données de la vue, puis _id, _type, _h (empreinte md5 de la ligne source).</summary>
     protected string Selection(bool avecCurseur)
     {
-        var parties = ColonnesLues().Select(c => $"{Col(c)} AS {Identifiant(c)}").ToList();
+        var lues = ColonnesLues();
+        // Colonnes des segments lues même si la vue ne les affiche pas : le client compte les segments sur les lignes
+        // chargées quand des filtres de colonnes sont actifs.
+        var segments = Definition.Segments.Select(s => s.Colonne).Where(c => Connue(c) && !lues.Contains(c)).Distinct(StringComparer.Ordinal);
+        var parties = lues.Concat(segments).Select(c => $"{Col(c)} AS {Identifiant(c)}").ToList();
         parties.Add($"{Id} AS \"_id\"");
         parties.Add(Source.ColonneType is { } t ? $"{Col(t)}::text AS \"_type\"" : $"{P(Source.TypeElement)}::text AS \"_type\"");
         parties.Add("md5(row_to_json(s)::text) AS \"_h\"");

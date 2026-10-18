@@ -2,6 +2,7 @@ import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel } from '@logibtp
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
+import { comptesSegment } from '../src/requete.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
 import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
@@ -173,6 +174,7 @@ export class ListeDonnees {
       this.triLocal = null;
       this.#rendreEntete();
       this.rendreCorps();
+      this.#rendreSegments();
     });
     const recherche = r.querySelector('.liste-recherche');
     recherche.addEventListener('input', () => {
@@ -489,6 +491,7 @@ export class ListeDonnees {
       this.suite = r.suite;
       this.fin = !r.suite;
       this.#ajouterAuCorps(r.lignes);
+      if (this.#filtresColonnesActifs()) this.#rendreSegments();
     } finally {
       if (gen === this.generation) {
         this.enCours = false;
@@ -669,6 +672,38 @@ export class ListeDonnees {
     const gen = this.generation;
     const comptes = await Promise.all(segs.map((s) => this.fournisseur.segments(this.demande(), s.colonne).catch(() => [])));
     if (gen !== this.generation) return;
+    this.comptesBase = comptes;
+    this.#rendreSegments();
+  }
+
+  /**
+   * Comptes affichés d'un segment. Sans filtre de colonne : ceux de la base (recherche, filtres de la vue, autres
+   * segments). Avec un filtre de colonne (appliqué aux lignes chargées) : comptés sur les lignes chargées qui le
+   * respectent ; dans un segment déjà filtré, les valeurs non retenues (lignes non chargées) gardent le compte de la
+   * base, marqué « hors filtres de colonnes ».
+   */
+  #comptesSegment(s, base) {
+    if (!this.#filtresColonnesActifs()) return { comptes: base, partiel: false };
+    const lignes = this.lignesAffichees();
+    if (lignes.length && !(s.colonne in lignes[0]) && !(s.colonne in (this.lignes[0] ?? {}))) return { comptes: base, partiel: false };
+    const locaux = comptesSegment(lignes, s.colonne);
+    const actives = this.segments.get(s.colonne);
+    const comptes = locaux.map((c) => ({ ...c }));
+    if (actives?.size) {
+      for (const c of base) if (!actives.has(c.valeur) && !comptes.some((x) => x.valeur === c.valeur)) comptes.push({ ...c, horsFiltre: true });
+    }
+    return { comptes, partiel: !this.fin };
+  }
+
+  #filtresColonnesActifs() { return [...this.filtres.values()].some(filtreActif); }
+
+  /** Rendu des segments à partir des derniers comptes de la base (rappelé quand les filtres de colonnes changent). */
+  #rendreSegments() {
+    const zone = this.racine.querySelector('.liste-segments');
+    const segs = this.definition.segments;
+    if (!segs.length || !this.vue || !this.comptesBase) return;
+    const calcules = segs.map((s, i) => this.#comptesSegment(s, this.comptesBase[i] ?? []));
+    const comptes = calcules.map((c) => c.comptes);
     const reduits = this.#segmentsReduits();
     zone.innerHTML = segs.map((s, i) => {
       const col = this.modele.parCode.get(s.colonne);
@@ -682,8 +717,10 @@ export class ListeDonnees {
         <span class="segment-valeurs"${reduit ? ' hidden' : ''}><button type="button" data-tout class="${actives.size ? '' : 'actif'}">Tous</button>
         ${comptes[i].map((c) => {
           const libelle = c.valeur === null ? '(vide)' : col ? this.modele.texte(c.valeur, col) || c.valeur : c.valeur;
+          const bulle = c.horsFiltre ? `${libelle} — nombre de la base, hors filtres de colonnes (lignes non chargées)`
+            : calcules[i].partiel ? `${libelle} — compté sur les lignes chargées (filtres de colonnes)` : libelle;
           return `<button type="button" data-valeur="${c.valeur === null ? '' : echapper(c.valeur)}" data-vide="${c.valeur === null}"
-            class="${actives.has(c.valeur) ? 'actif' : ''}" title="${echapper(libelle)}">${this.#imageSegment(col, c.valeur)}${echapper(libelle)} <small>${c.nombre}</small></button>`;
+            class="${actives.has(c.valeur) ? 'actif' : ''}${c.horsFiltre ? ' hors-filtre' : ''}" title="${echapper(bulle)}">${this.#imageSegment(col, c.valeur)}${echapper(libelle)} <small>${c.nombre}${calcules[i].partiel && !c.horsFiltre ? '+' : ''}</small></button>`;
         }).join('')}
         ${[...actives].filter((v) => !comptes[i].some((c) => c.valeur === v)).map((v) =>
           `<button type="button" class="actif" data-valeur="${echapper(v ?? '')}" data-vide="${v === null}">${echapper(v ?? '(vide)')} <small>0</small></button>`).join('')}
@@ -821,6 +858,7 @@ export class ListeDonnees {
         if (f) this.filtres.set(colonne.code, f); else this.filtres.delete(colonne.code);
         this.#rendreEntete();
         this.rendreCorps();
+        this.#rendreSegments();
       },
       trier: (sens, base) => this.trier(colonne.code, sens, base),
     });

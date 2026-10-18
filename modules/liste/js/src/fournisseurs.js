@@ -194,6 +194,7 @@ export class FournisseurMemoire {
     const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne),
       ...def.filtres.map((f) => f.colonne)]
       .filter((c) => connues.has(c) && !codes.includes(c));
+    const segmentsVue = new Set(def.segments.map((x) => x.colonne));
     const colonneId = def.source.colonne_id ?? s.colonne_id;
     const colonneType = def.source.colonne_type ?? s.colonne_type;
     const typeConstant = def.source.type_element ?? s.type_element;
@@ -203,7 +204,11 @@ export class FournisseurMemoire {
       l._id = src[colonneId];
       l._type = colonneType ? src[colonneType] : typeConstant;
       l._h = empreinte(l);
-      for (const c of internes) Object.defineProperty(l, c, { value: src[c] ?? null, enumerable: false });
+      // Colonnes des segments renvoyées (comptes sur les lignes chargées), les autres colonnes internes cachées.
+      for (const c of internes) {
+        if (segmentsVue.has(c)) l[c] = src[c] ?? null;
+        else Object.defineProperty(l, c, { value: src[c] ?? null, enumerable: false });
+      }
       return l;
     });
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);

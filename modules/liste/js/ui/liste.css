@@ -60,6 +60,7 @@ body.deplacement-colonne, body.deplacement-colonne * { cursor: grabbing !importa
 .segment-chevron { width: 0.8em; display: inline-block; }
 .segment .segment-filtre { color: var(--accent); margin: 0; }
 .segment-valeurs button { display: inline-flex; align-items: center; gap: 0.25rem; }
+.segment-valeurs button.hors-filtre { opacity: 0.55; font-style: italic; }
 .segment-picto { line-height: 1; }
 .segment-image { height: 1.1em; width: auto; vertical-align: middle; }
 .dock-bas .liste-segments { gap: 0.3rem; }

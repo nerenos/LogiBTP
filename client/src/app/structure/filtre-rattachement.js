@@ -105,6 +105,7 @@ export class FiltreRattachement {
       this.surChange({});
       this.rendre();
       this.liste.recharger();
+      this.liste.rafraichirSegments?.().catch(() => {});
     });
   }
 
