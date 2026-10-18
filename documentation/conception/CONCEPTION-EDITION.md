@@ -152,7 +152,7 @@ pdf-lib permet d'écrire un PDF/A-3 (polices intégrées, profil couleur de sort
 associée) : la production Factur-X peut se faire dans le même moteur, à valider contre un vérificateur PDF/A (veraPDF)
 au lot de la production serveur. Le module **Facturation électronique / PDP** (XML, envoi, statuts) reste distinct.
 **À trancher tôt** : l'édition des factures ne doit pas être la seule sortie légale, et les données de la source
-« document » doivent déjà porter tout ce que demande le XML.
+« document » doivent déjà porter tout ce que demande le XML. On va faire un module spécifique pour la facture éléctronique, mais les particuliers ne sont pas impacter par la facturation éléctronique donc il faut des impressions PDF.
 
 ### 3.6 ⚠ Blocs liés : versions, paramètres, impact
 
@@ -196,7 +196,7 @@ Une facture validée réimprimée doit être identique (obligation légale de co
 à la validation (ou au premier envoi), le PDF est produit par le back-office et déposé dans le coffre-fort de la GED
 avec le modèle utilisé et l'empreinte des données ; une réimpression ressort ce PDF (« duplicata » en filigrane si
 besoin). Les données sont déjà figées (coordonnées, textes) : il reste le modèle, la charte et les images (logo changé
-entre-temps).
+entre-temps). On réimprime normalement en passant par l'impression, pour l'envoie d'un doublons du document on utilisera le document stocker en GED qui n'aura pas été modifié.
 
 ### 3.10 ⚠ Données « par l'API seulement » : contrat, volume et identité
 
@@ -225,7 +225,7 @@ forme dans le résultat** (morceaux stylés : nom en 11 gras, retrait suspendu a
 **Proposition** : réutiliser l'**analyseur d'expressions du script de métré** (lexeur, typage, fonctions déclarées par
 l'hôte, accents normalisés) en mode expression, avec un catalogue de fonctions d'édition ; le résultat d'un champ est
 une liste de **segments stylés** (texte + style de charte) et non une chaîne HTML libre. Aucune réplique C# nécessaire
-puisque le serveur exécute le même JS.
+puisque le serveur exécute le même JS. OK
 
 ### 3.12 ⚠ Droits : le module n'existe pas
 
@@ -233,7 +233,7 @@ Le niveau d'accès d'une édition « lié au module de droits » ne peut aujourd
 `EstAdmin` (entêtes `X-Profil`, sans authentification). **Proposition** : niveau d'accès de l'édition = les quatre
 confidentialités de la GED (le PDF déposé en hérite, ce qui règle « l'affichage dans la GED »), plus une liste de
 profils autorisés ; un point d'accroche `AccesEdition` que le futur module de droits remplacera. Le contrôle se fait
-**côté serveur** (la source refuse les données), l'interface ne fait que masquer.
+**côté serveur** (la source refuse les données), l'interface ne fait que masquer. OK
 
 ### 3.13 ✔ Images de la GED par condition : PNG et JPEG seulement
 
@@ -241,7 +241,7 @@ Choisir une image « par nom de fichier » est fragile (fichier renommé, doublo
 GED `ressource_edition` avec un **code de ressource** (`LOGO`, `LOGO_QUALIBAT`, `PIED_IMAGE`, `SIGNATURE`) et des
 attributs (agence, période de validité) ; le modèle demande « la ressource `LOGO` de l'agence du document », la
 condition porte sur ces attributs. Le nom de fichier reste un dernier recours. Images fournies par la source (data URI
-ou contenu lu par le serveur), cache par version.
+ou contenu lu par le serveur), cache par version. Ok pour le code
 
 **Décision (18/10/2026) : PNG et JPEG imposés**, les deux formats que pdf-lib intègre tels quels ; contrôlés au dépôt
 dans la catégorie `ressource_edition` par le même script JS (refus expliqué) :
@@ -323,7 +323,7 @@ rapport { code, libelle, source, cible (DOCUMENT | FICHE | LISTE | …), types (
 Les bandes d'entête et de pied de page sont répétées sur chaque page par nature ; le « bloc répété sur chaque page »
 de la demande est une bande ENTETE_PAGE / PIED_PAGE (ou un composant marqué `chaque_page` dans une bande DETAIL ?).
 
-**Décision** :
+**Décision** : cela peut-etre un bloc comme le libelle des colonnes ou un titre ou sous titre de page. Ok
 
 ### Q2. Modes de bande
 
@@ -333,7 +333,7 @@ regroupement = un seul élément par valeur). Pour les lignes de document, la ru
 (section, titre) : un mode REPETE **arborescent** parcourt l'arbre et applique le gabarit du type de ligne, les
 sous-totaux venant du moteur.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q3. Composants flexibles
 
@@ -342,7 +342,7 @@ RANGÉE horizontale (colonnes en %, fixe en mm ou « reste »), alignements, anc
 haute colonne ; option « même hauteur » pour encadrer les colonnes à égalité. Zones **absolues** (mm depuis le bord de
 la page) pour la fenêtre d'enveloppe et les étiquettes.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q4. Tableaux de lignes
 
@@ -353,7 +353,7 @@ niveau) ; ligne de total de page, de report (« À reporter » / « Report ») e
 la page par des rangées vides ou un cadre étiré (les deux ?) ; garder ensemble un ouvrage et ses composantes, un titre
 avec sa première ligne.
 
-**Décision** :
+**Décision** : Au mieux le cadre étiré. Ok. Attention par défaut les composantes ne sont pas imprimé sauf si indiquer sur le rapport.
 
 ## 6. Blocs et réutilisation
 
@@ -364,7 +364,7 @@ librement). Un bloc lié accepte ses **paramètres** et une **visibilité** (con
 on le détache (copie). Contrôles : cycles refusés, suppression d'un bloc utilisé refusée, liste des rapports impactés
 affichée avant l'enregistrement d'un bloc lié.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q6. Sous-rapports
 
@@ -372,7 +372,7 @@ affichée avant l'enregistrement d'un bloc lié.
 la source de l'hôte** (TVA par taux, échéances, déductions, intervenants) ou une **autre source** avec un identifiant
 calculé (fiche du chantier depuis le document). Pas de sous-rapport de sous-rapport au-delà de trois niveaux ?
 
-**Décision** :
+**Décision** : Ok pour 3 niveaux. On pourra avoir des sous rapport avec une **collection de la source de l'hôte** mais aussi depuis une autres sources exemple liste des marché et avenant ou situations précédentes ou factures précédente.
 
 ### Q7. Présentations des lignes
 
@@ -381,7 +381,7 @@ calculé (fiche du chantier depuis le document). Pas de sous-rapport de sous-rap
 à l'aperçu (comme le modèle). Une présentation peut-elle être imposée par une condition (document d'avancement →
 présentation Avancement) ?
 
-**Décision** :
+**Décision** : Oui, les factures d'avancement sont par défaut avec une présentation Avancement
 
 ## 7. Champs, formules et mise en forme
 
@@ -393,7 +393,7 @@ références aux données (`{{entete.ent_numero}}`, `{{ligne.lig_libelle_html}}`
 bloc. Texte brut sans formule = littéral. Erreur de formule = champ vide + alerte dans l'aperçu, jamais d'édition
 bloquée ?
 
-**Décision** :
+**Décision** : Ok pas de bloquage mais avertissement à l'utilisateur et log
 
 ### Q9. Mise en forme dans la formule
 
@@ -402,7 +402,7 @@ bloquée ?
 retrait suspendu (le texte suivant aligné après le libellé). Pas de HTML saisi dans les formules ; les libellés HTML
 des données (déjà nettoyés) sont rendus tels quels.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q10. Débordements
 
@@ -410,7 +410,7 @@ des données (déjà nettoyés) sont rendus tels quels.
 ligne), multiligne extensible (la bande grandit, sécable entre deux pages si la bande l'est), **réduction de la
 police** jusqu'à un minimum, retour à la ligne automatique ou sur les seuls sauts de ligne.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q11. Charte graphique
 
@@ -419,17 +419,17 @@ marque) : couleurs nommées, styles de texte (police, taille, graisse, couleur, 
 défaut. Un modèle référence `couleur:primaire` ou une valeur en dur ; changer la charte change toutes les éditions non
 figées.
 
-**Décision** :
+**Décision** : Ok Un modèle référence
 
 ## 8. Choix du modèle, aperçu, impression
 
 ### Q12. Modèle d'une réimpression
 
-**Proposition** : document non validé → modèle choisi (dernier utilisé pour imprimer, sinon celui par défaut du type) ;
+_Remplacée par l'annotation du § 3.9, voir § 15.1._ **Proposition initiale** : document non validé → modèle choisi (dernier utilisé pour imprimer, sinon celui par défaut du type) ;
 document validé → le PDF figé de la GED (§ 3.9), ou nouvelle production à la demande (« réimprimer avec le modèle
 actuel », droit dédié).
 
-**Décision** :
+**Décision** : Ok
 
 ### Q13. « Dernier modèle utilisé pour imprimer »
 
@@ -440,7 +440,7 @@ back-office (production pour la GED, envoi) et doit suivre l'utilisateur d'un po
 impression), car c'est une donnée de la pièce (le back-office et les réimpressions s'en servent) ; par type de
 document et par utilisateur dans le navigateur pour le choix proposé à un nouveau document.
 
-**Décision** :
+**Décision** : Ok
 
 ### Q14. Aperçu
 
@@ -448,7 +448,7 @@ document et par utilisateur dans le navigateur pour le choix proposé à un nouv
 choisi, choix du modèle et de la présentation, paramètres du rapport, boutons Imprimer (PDF serveur), Télécharger,
 Envoyer (module Mail), Ranger en GED ; alertes (formules en erreur, ressource introuvable, débordement).
 
-**Décision** :
+**Décision** : Ok
 
 ## 9. Production par le back-office et GED
 
@@ -459,7 +459,7 @@ produit), service de fond qui exécute le moteur dans Jint (instances en parall�
 `id_element` = groupe des indices du document), catégorie `edition`, confidentialité = niveau d'accès du rapport,
 coffre-fort pour les pièces comptables validées. Déclencheurs : validation, envoi, demande explicite, lot.
 
-**Décision** :
+**Décision** : Ok
 
 ## 10. Stockage, copie, import, export
 
@@ -470,7 +470,7 @@ version, verrou, niveau d'accès, cree / modifie), `modele_edition_lien` (dépen
 `modele_edition_defaut` (type de document ou de fiche / liste → modèle par défaut), `charte_edition`,
 `edition_tache` ; ressources dans la GED. Historique des versions des modèles (comme les prix : par trigger).
 
-**Décision** :
+**Décision** : Ok
 
 ### Q17. Import et export
 
@@ -479,7 +479,7 @@ ses ressources (images en base64), avec la version du format et du dictionnaire 
 proposées (remplacer, renommer, lier à l'existant), vérification contre le dictionnaire de la base cible. Modèles
 fournis par le cœur (devis, facture, situation, BL, commande fournisseur, fiche, liste) livrés de la même façon.
 
-**Décision** :
+**Décision** : Ok Attention pour les images l'import utilisera par défaut celle de la GED en Base et si elle n'existe pas on créer l'image avec la ressource en Base64.
 
 ## 11. Accès
 
@@ -489,7 +489,7 @@ fournis par le cœur (devis, facture, situation, BL, commande fournisseur, fiche
 et production refusés en 403, PDF déposé avec la même confidentialité. Droits sur les modèles eux-mêmes (créer,
 modifier un bloc lié, importer) : profil ADMIN en attendant le module de droits.
 
-**Décision** :
+**Décision** : Ok
 
 ## 11 bis. Questions ouvertes par le moteur sans DOM
 
@@ -501,7 +501,7 @@ Les libellés acceptent `TABLE, THEAD, TBODY, TR, TH, TD` (`htmlSur`) ; le moteu
 de tableau imbriqué), insécable s'il tient sur une page, coupé entre deux rangées sinon. Les libellés existants qui
 utilisent des fusions sont rendus sans fusion (alerte dans l'aperçu).
 
-**Décision** :
+**Décision** : Ok
 
 ### Q20. QR codes
 
@@ -528,20 +528,90 @@ c'est lui qu'il ne faudra pas casser.
 | 7 | Concepteur (création, modification) | format stable |
 | — | Facturation électronique (Factur-X / PDP) : module à part, à cadrer en parallèle | § 3.5 |
 
-## 14. Récapitulatif des décisions à prendre
+## 14. Récapitulatif des décisions
 
-| # | Question | Bloquant pour |
+Toutes les questions Q1 à Q20 et les points du § 15 sont décidés (annotations du 18/10/2026).
+
+| # | Décision | Lot |
 |---|---|---|
-| § 3.1 | ✔ Moteur indépendant du DOM, Jint côté serveur, PDF par pdf-lib (18/10/2026) | tout |
-| § 3.2 | ✔ Pagination propre au module | lot 0 |
-| § 3.3 | ✔ Inter par défaut (application et éditions), polices livrées seules, polices de l'entreprise importées | lot 0 |
-| § 3.4 | ✔ Imprimer = ouvrir le PDF (serveur ou navigateur hors ligne) | lot 0 |
-| § 3.13 | ✔ Images PNG et JPEG, SVG refusé | lot 5 |
-| § 3.14 | ✔ Code 39 par police, QR calculé en JS et dessiné en vectoriel | lot 5 |
-| § 3.5 | Facturation électronique : module séparé, cadrage tôt | modèles de facture |
-| Q1–Q4 | Structure, bandes, composants flexibles, tableaux | lot 0–1 |
-| Q5–Q7 | Blocs liés, sous-rapports, présentations | lot 5 |
-| Q8–Q11 | Formules, mise en forme, débordements, charte | lot 1 |
-| Q12–Q14 | Réimpression, dernier modèle (base ou navigateur), aperçu | lot 3–4 |
-| Q15–Q18 | Production, tables, import / export, accès | lot 4–5 |
-| Q19 | Tableaux dans les libellés | lot 1 |
+| § 3.1 – 3.4 | Moteur indépendant du DOM, Jint côté serveur, PDF par pdf-lib ; pagination propre ; Inter ; imprimer = ouvrir le PDF | 0 |
+| § 3.5 | Module Facturation électronique à part ; le PDF reste nécessaire (particuliers, non concernés par la réforme) | — |
+| § 3.9 | Réimpression = nouvelle production ; envoi d'un double = PDF de la GED, jamais modifié | 4 |
+| § 3.13 – 3.14 | Images PNG et JPEG par code de ressource ; Code 39 par police ; QR en JS | 5 |
+| Q1 | Tout bloc peut être répété sur chaque page (libellés des colonnes, titre ou sous-titre de page) | 1 |
+| Q2 – Q3 | Bandes unique / répétée / groupe (arbre pour les lignes) ; piles, rangées, zones absolues | 1 – 2 |
+| Q4 | Remplissage de page par cadre étiré ; **composantes non imprimées par défaut**, sauf si la présentation le demande | 2 – 3 |
+| Q5 | Bloc lié : paramètres et visibilité seulement, sinon détaché en copie | 5 |
+| Q6 | Sous-rapports sur trois niveaux, sur une collection de l'hôte **ou une autre source** (marché et avenants, situations et factures précédentes) | 5 |
+| Q7 | Présentation choisie à l'aperçu ; facture d'avancement : présentation Avancement par défaut | 3 |
+| Q8 | Formule en erreur : champ vide, avertissement à l'utilisateur et journal, jamais bloquant | 1 |
+| Q9 – Q11 | Segments stylés ; débordements ; charte référencée par les modèles | 1 |
+| Q12 – Q14 | Modèle choisi ; dernier modèle imprimé sur le document ; page d'aperçu | 3 – 4 |
+| Q15 – Q16 | File de production dans Jint, dépôt en GED ; tables `modele_edition…` | 4 |
+| Q17 | Import : image de la GED de la base par code, sinon créée depuis la ressource en base64 du fichier | 5 |
+| Q18 | Accès : confidentialité GED + profils, `AccesEdition`, contrôle serveur | 3 |
+| Q19 – Q20 | Tableaux simples dans les libellés ; QR en JS | 1, 5 |
+
+## 15. Point avant développement (18/10/2026)
+
+### 15.1 Réimpression d'une pièce validée (Q12 / § 3.9)
+
+L'annotation du § 3.9 remplace la proposition de Q12 : une réimpression **produit à nouveau** l'édition (modèle,
+charte et logo du jour, données figées) ; l'envoi d'un double reprend le PDF rangé en GED à la validation. Reste à
+décider si une réimpression d'une pièce validée porte une mention (« Copie », « Duplicata ») pour la distinguer de
+l'original envoyé.
+
+**Décision (18/10/2026)** : pas de mention sur une réimpression. Une pièce **dévalidée puis revalidée** est produite à
+nouveau et déposée comme **nouvelle version** du même document GED (`version_ged` ; le coffre-fort accepte l'ajout
+d'une version et en interdit la suppression : l'original reste consultable).
+
+### 15.2 Sous-rapports d'autres sources et « un appel par édition » (Q6 / § 3.10)
+
+Les sous-rapports sur d'autres sources (marchés et avenants, situations, factures précédentes) ne doivent pas
+multiplier les appels. **Proposition** (sans question) : le serveur lit le modèle, en déduit les sources nécessaires
+(source principale + sources des sous-rapports avec leur identifiant calculé) et renvoie tout en un appel ; chaque
+source applique ses propres droits. **Validé (18/10/2026).**
+
+### 15.3 Lignes non imprimées (Q4)
+
+Règle de masquage proposée, appliquée par la source « document » du cœur (pas par le modèle) : jamais les tranches de
+frais annexes (F) ni les lignes `lig_is_non_editee` ; composantes d'ouvrage seulement si la présentation le demande
+(`composantes: true`) ; les totaux restent ceux du moteur de calcul (une ligne masquée reste comptée). À confirmer :
+une ligne « Ne pas imprimer » qui porte un montant reste-t-elle dans les totaux imprimés (oui aujourd'hui) ?
+
+**Décision (18/10/2026)** : oui, une ligne « Ne pas imprimer » reste comptée dans les totaux imprimés.
+
+### 15.4 Données manquantes pour les mentions obligatoires (avant les modèles fournis, lot 3)
+
+Présentes : forme juridique, capital, RCS, NAF, SIRET, TVA de notre société (annuaire), mentions de TVA par taux
+(autoliquidation sous-traitance, intracommunautaire), conditions de paiement. Absentes :
+- **assurance décennale de notre société** (assureur, coordonnées, n° de police, couverture géographique), obligatoire
+  sur les devis et factures du BTP (aujourd'hui seulement pour les sous-traitants : `per_st_decennale_*`) ;
+- **pénalités de retard, indemnité forfaitaire de recouvrement (40 €) et escompte** (factures entre professionnels) ;
+- pour les **particuliers** : médiateur de la consommation, droit de rétractation (contrat hors établissement), zone
+  « Bon pour accord » datée et signée du devis.
+
+**Proposition** : paramètres de la société (onglet de la fiche de notre société ou `/parametres/documents`), ajoutés
+au lot 3 avec la source « document ».
+
+**Décision (18/10/2026)** : paramètres de la société, au lot 3.
+
+### 15.5 Risques techniques du lot 0
+
+- pdf-lib et fontkit dans Jint : promesses, `Uint8Array`, `TextEncoder`, compression ; paquet JS unique (esbuild,
+  format IIFE) et compléments de l'environnement à écrire ; temps sur 5 000 lignes (repli ClearScript V8).
+- Dépendances à ajouter : npm `pdf-lib`, `@pdf-lib/fontkit`, `qrcode-generator` ; NuGet `Jint` ; fichiers TTF
+  statiques d'Inter (distribution officielle, OFL) et de Libre Barcode 39 (OFL) à télécharger et livrer avec le
+  module.
+
+**Décision (18/10/2026)** : un **rapport des dépendances par module** est généré
+(`npm run rapport-dependances` → [DEPENDANCES.md](../DEPENDANCES.md) : paquets npm et NuGet de chaque module avec
+version et licence, polices et ressources livrées) et régénéré à chaque ajout de dépendance.
+
+### 15.6 Modèles fournis du lot 3
+
+**Proposition** : devis (présentations Détaillée, Sans composantes, Bordereau sans prix), commande client, facture,
+situation et facture d'avancement (présentation Avancement), avoir, bon de livraison, commande fournisseur ; pieds
+« Ventes / achats » (mentions obligatoires) et « Interne » liés à tous.
+
+**Décision (18/10/2026)** : validé.

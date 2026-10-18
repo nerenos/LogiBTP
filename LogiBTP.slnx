@@ -24,6 +24,9 @@
     <Project Path="modules/fiche/dotnet/LogiBTP.Fiches.Web/LogiBTP.Fiches.Web.csproj" />
     <Project Path="modules/fiche/dotnet/LogiBTP.Fiches.Tests/LogiBTP.Fiches.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/edition/">
+    <Project Path="modules/edition/dotnet/LogiBTP.Editions/LogiBTP.Editions.csproj" />
+  </Folder>
   <Folder Name="/modules/ged/">
     <Project Path="modules/ged/dotnet/LogiBTP.Ged/LogiBTP.Ged.csproj" />
     <Project Path="modules/ged/dotnet/LogiBTP.Ged.Web/LogiBTP.Ged.Web.csproj" />

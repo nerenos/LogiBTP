@@ -17,12 +17,14 @@
     "modules/reglement/js",
     "modules/navigation/js",
     "modules/import/js",
+    "modules/edition/js",
     "client"
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "dev": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
-    "exporter-resultats": "npm run exporter-resultats --workspaces --if-present"
+    "exporter-resultats": "npm run exporter-resultats --workspaces --if-present",
+    "rapport-dependances": "node scripts/rapport-dependances.mjs"
   }
 }
