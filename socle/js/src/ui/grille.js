@@ -12,8 +12,9 @@ const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur
  * même saisie en cascade, mêmes raccourcis, même glisser-déposer.
  *
  * Deux modes, comme un tableur : mode ligne (sélection) et mode édition (saisie dans une cellule).
- * F2 ou Entrée passe en édition, Échap revient en mode ligne. En édition, Entrée valide et passe à la
- * cellule utile suivante ; après la dernière, une nouvelle ligne est créée au même niveau.
+ * F2 ou Entrée passe en édition, Échap revient en mode ligne. En édition, Entrée valide et passe à la ligne du
+ * dessous, en édition dans la même colonne si elle y est modifiable (jamais de création de ligne : Ctrl+Entrée) ;
+ * Tab passe à la cellule utile suivante, et après la dernière crée une nouvelle ligne au même niveau.
  *
  * options :
  *  cle                     nom de la colonne identifiant
@@ -188,6 +189,7 @@ export class GrilleArbre {
           td.appendChild(s);
         } else if (v instanceof Node) td.appendChild(v);
         else td.appendChild(document.createTextNode(v ?? ''));
+        if (id === this.courant && i === this.colonne && !this.edition) this.#boutonRiche(td, c, r, i);
         tr.appendChild(td);
       });
       frag.appendChild(tr);
@@ -409,6 +411,22 @@ export class GrilleArbre {
     this.rendre();
   }
 
+  /** Cellule courante à mise en forme : bouton à gauche qui ouvre l'éditeur de mise en forme (consultation si non modifiable). */
+  #boutonRiche(td, c, r, i) {
+    if (!c.riche || c.riche.disponible?.(r.item) === false) return;
+    const editable = c.editable?.(r.item);
+    if (!editable && !c.riche.consulter) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'bouton-riche';
+    b.textContent = '¶';
+    b.title = editable ? 'Mise en forme (double-clic)' : 'Mise en forme (consultation)';
+    b.addEventListener('mousedown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+    b.addEventListener('click', (ev) => { ev.stopPropagation(); this.editer(i, null, { riche: true }); });
+    td.classList.add('avec-bouton-riche');
+    td.prepend(b);
+  }
+
   async #editerRiche(c, r) {
     this.edition = null;
     this.rendre();
@@ -416,8 +434,8 @@ export class GrilleArbre {
     const valeur = await c.riche.ouvrir(r.item);
     if (valeur !== undefined) this.o.actions.modifierRiche(id, c.champ(r.item), valeur);
     this.focus();
-    // Validé : la saisie en cascade continue sur la cellule suivante.
-    if (valeur !== undefined && this.courant === id) this.#celluleSuivante();
+    // Validé : la saisie continue sur la ligne du dessous, comme après Entrée.
+    if (valeur !== undefined && this.courant === id) this.#celluleDessous();
   }
 
   #monterEditeur() {
@@ -450,15 +468,16 @@ export class GrilleArbre {
     if (options) {
       this.liste = new ListeDeroulante(champ, options, { strict: true, courante: texteInitial === null ? courante : null });
       if (texteInitial !== null) this.liste.filtrer(texteInitial);
-      this.liste.surChoix = () => this.#valider(champ, 'suivante');
+      this.liste.surChoix = () => this.#valider(champ, this.toucheChoix === 'Tab' ? 'suivante' : 'dessous');
     }
     if (c.editeur === 'liste') {
       // Saisie libre avec liste de choix filtrée sur le texte déjà tapé.
       this.liste = new ListeDeroulante(champ, c.suggestions(r.item));
       if (texteInitial !== null) this.liste.filtrer(texteInitial);
-      this.liste.surChoix = () => this.#valider(champ, 'suivante');
+      this.liste.surChoix = () => this.#valider(champ, this.toucheChoix === 'Tab' ? 'suivante' : 'dessous');
     }
     if (c.editeur === 'formule') this.liste = new AssistantFormule(champ, c.suggestions(r.item));
+    this.toucheChoix = null;
     champ.addEventListener('keydown', (e) => this.#clavierEdition(e, champ));
     champ.addEventListener('blur', () => { if (this.edition?.champ === champ) this.#valider(champ, null); });
     this.edition.champ = champ;
@@ -494,7 +513,8 @@ export class GrilleArbre {
         return;
       }
     }
-    if (suite === 'suivante') this.#celluleSuivante();
+    if (suite === 'dessous') this.#celluleDessous();
+    else if (suite === 'suivante') this.#celluleSuivante();
     else if (suite === 'precedente') this.#cellulePrecedente();
     else this.rendre();
     if (suite && !this.edition) this.focus();
@@ -518,6 +538,19 @@ export class GrilleArbre {
     }
   }
 
+  /** Ligne affichée du dessous : en édition dans la même colonne si elle y est modifiable, sinon simplement sélectionnée. */
+  #celluleDessous() {
+    const lignes = this.lignesAffichees;
+    const i = lignes.findIndex((r) => r.item[this.o.cle] === this.courant);
+    const suivante = i < 0 ? null : lignes[i + 1];
+    if (!suivante) { this.rendre(); return; }
+    const colonne = this.colonne;
+    this.selectionner(suivante.item[this.o.cle]);
+    this.colonne = colonne;
+    if (this.colonnesEditables(suivante.item).includes(colonne)) this.editer(colonne);
+    else this.rendre();
+  }
+
   #cellulePrecedente() {
     const r = this.ligneCourante();
     const precedente = this.colonnesEditables(r.item).reverse().find((i) => i < this.colonne);
@@ -526,8 +559,10 @@ export class GrilleArbre {
   }
 
   #clavierEdition(e, champ) {
+    // Choix dans la liste : Tab passe à la cellule suivante, Entrée (ou un clic) à la ligne du dessous.
+    this.toucheChoix = e.key;
     if (this.liste?.clavier(e)) { e.preventDefault(); e.stopPropagation(); return; }
-    if (e.key === 'Enter' && !e.ctrlKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); this.#valider(champ, 'suivante'); }
+    if (e.key === 'Enter' && !e.ctrlKey && !e.altKey) { e.preventDefault(); e.stopPropagation(); this.#valider(champ, 'dessous'); }
     else if (e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); this.#valider(champ, e.shiftKey ? 'precedente' : 'suivante'); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.#fermerListe(); this.edition = null; this.rendre(); this.focus(); }
     else if (e.key === 'F4') { e.preventDefault(); e.stopPropagation(); this.#valider(champ, null); this.o.actions.ouvrirMetre?.(this.courant); }
@@ -613,6 +648,7 @@ export class GrilleArbre {
     const f = this.#fonction(actionDe(e));
     if (f) { e.preventDefault(); f(); return; }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const executer = (f) => { e.preventDefault(); f(); };
     switch (e.key) {
       case 'ArrowDown': return executer(() => this.#deplacerSelection(1, false));
       case 'ArrowUp': return executer(() => this.#deplacerSelection(-1, false));

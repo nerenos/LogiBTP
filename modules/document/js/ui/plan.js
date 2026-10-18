@@ -102,13 +102,13 @@ export class PlanDocument {
 
   /**
    * Barre des boutons sur une seule ligne : sans la place (plan étroit), les libellés sont masqués et seules les
-   * icônes restent (le libellé reste en bulle).
+   * icônes restent (le libellé reste en bulle). La barre garde la largeur de ses boutons : on la compare au panneau.
    */
   #ajusterBarre() {
     const barre = this.conteneur.querySelector('.plan-barre');
     if (!barre) return;
     barre.classList.remove('compacte');
-    if (barre.scrollWidth > barre.clientWidth + 1) barre.classList.add('compacte');
+    if (barre.scrollWidth > barre.parentElement.clientWidth + 1) barre.classList.add('compacte');
   }
 
   #glisser(conteneur) {

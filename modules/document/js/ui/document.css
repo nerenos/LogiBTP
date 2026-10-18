@@ -181,7 +181,8 @@ dialog.dialogue-vue::backdrop { background: rgba(0, 0, 0, 0.35); }
 /* Plan du document : tranches (titres) et pied ; aller à la tranche ou filtrer l'affichage sur elle. */
 .plan-document { display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; padding: 0 !important; }
 /* Barre du plan sur une ligne ; « compacte » (pas la place) : icônes seules, libellés en bulle. */
-.plan-barre { display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap; overflow: hidden; padding: 0.1rem 0 0.2rem; }
+/* Barre jamais réduite sous la taille de ses boutons (ni en hauteur dans la colonne du panneau, ni en largeur). */
+.plan-barre { display: flex; flex: none; min-width: max-content; gap: 0.5rem; align-items: center; flex-wrap: nowrap; padding: 0.1rem 0 0.2rem; }
 .plan-modes, .plan-plis { display: flex; gap: 0.3rem; flex: none; }
 .plan-barre button { white-space: nowrap; flex: none; }
 .plan-barre.compacte .lib-bouton { display: none; }

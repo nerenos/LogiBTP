@@ -124,7 +124,16 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     // ------------------------------------------------------------------ lecture, création
 
-    public Task<TComplet> Charger(long id, CancellationToken ct) => persistance.Charger(id, ct);
+    /// <summary>
+    /// Document complet ; avancement non verrouillé : précédents relus (un document d'avancement a pu être validé ou
+    /// annulé depuis l'enregistrement), un document verrouillé gardant ceux de sa validation.
+    /// </summary>
+    public async Task<TComplet> Charger(long id, CancellationToken ct)
+    {
+        var d = await persistance.Charger(id, ct);
+        if (d.Document.EntAvtPresentation is not null && !d.Document.EntVerrouille) await AppliquerPrecedents(d.Lignes, id, ct);
+        return d;
+    }
 
     public async Task<List<TDoc>> Lister(string? type, CancellationToken ct)
     {
@@ -319,6 +328,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await VerifierModifiable(avant.Document, ct);
 
         var saisie = JsonCalcul.Cloner(avant);
+        // Avancement : précédents relus, comme à l'enregistrement (validation d'un autre document entre-temps).
+        if (saisie.Document.EntAvtPresentation is not null) await AppliquerPrecedents(saisie.Lignes, id, ct);
         await specialisation.CompleterValidationAsync(db, saisie, type, ct);
         var entree = await Entree(saisie, ct);
         var handler = handlers.Pour(type);

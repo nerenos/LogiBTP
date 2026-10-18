@@ -37,6 +37,10 @@
 
 ### Documents
 
+- [ ] Évolutions d'octobre 2026 ([conception](conception/CONCEPTION-DOCUMENTS-EVOLUTIONS.md)) : lot A corrections
+  fait le 18/10/2026 (Entrée, Préc., plan, bouton de mise en forme) ; lot B numérotation (facture d'avancement précédente numérotée,
+  changement de numéro), lot C postes de pied (groupes toujours présents, type POSTE_PIED en bibliothèque), lot D
+  recharger les prix de la bibliothèque, lot E textes d'introduction et de conclusion, lot F adresse des travaux.
 - [ ] Écran de récupération d'une version précédente d'un document (instantanés `his_instantane`, y compris les clés
   de ventilation des frais annexes).
 - [ ] Impression et export : ignorer les lignes non éditées (tranches F) ; export et impression du rapport de

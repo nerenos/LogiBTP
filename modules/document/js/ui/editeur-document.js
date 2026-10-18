@@ -864,6 +864,7 @@ export class EditeurDocument {
         }),
         riche: {
           auto: (l) => estHtml(l.lig_libelle_html),
+          disponible: (l) => !l._virtuelle,
           ouvrir: (l) => editerLibelle({
             html: l.lig_libelle_html,
             titre: [this.resultat.lignes.find((x) => x.lig_id === l.lig_id)?.lig_numerotation, LIBELLES_TYPE[CODES_TL[l.lig_tyl_id]]].filter(Boolean).join(' · '),

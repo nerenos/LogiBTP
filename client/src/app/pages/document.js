@@ -817,7 +817,8 @@ export class PageDocument extends PageBase {
       notes: [
         ['Entrée, F2, double-clic', 'Saisir dans la cellule'],
         ['Échap', 'Revenir au mode ligne'],
-        ['Entrée / Tab en saisie', 'Cellule suivante (Maj+Tab : précédente)'],
+        ['Entrée en saisie', 'Ligne du dessous, même colonne'],
+        ['Tab en saisie', 'Cellule suivante (Maj+Tab : précédente)'],
         ['↑ ↓ ← →', 'Changer de ligne ou de colonne'],
         ['Ctrl+clic, Maj+clic', 'Sélection multiple'],
         ['Glisser ⋮⋮', 'Déplacer les lignes sélectionnées'],
