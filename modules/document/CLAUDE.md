@@ -1,10 +1,53 @@
 # Module Document – contexte
 
 ## Rôle
-- Règles globales, par famille et par type (recensement, incohérences, catalogue proposé) : [CONCEPTION-REGLES-DOCUMENTS.md](../../CONCEPTION-REGLES-DOCUMENTS.md).
+- Règles globales, par famille et par type (recensement, incohérences, catalogue proposé) : [CONCEPTION-REGLES-DOCUMENTS.md](../../documentation/conception/CONCEPTION-REGLES-DOCUMENTS.md).
 - Document commercial générique (sans métier BTP) : entête, arbre de lignes, pied en tranches, TVA par catégorie, numérotation, statuts, indices, copies, transformations, verrou, historique, traçabilité, affichage de la saisie.
-- Cycle : création en BROUILLON → validation (statut VALIDE, verrouillé) ; indices A, B… d'un même groupe (un seul de référence) ; copie = nouveau document, indice A, lien COPIE.
+- Cycle : BROUILLON → (APPROUVE facultatif) → ENVOYE (validé par l'entreprise, numéroté, verrouillé) → VALIDE (validé par le tiers) ; indices A, B… d'un même groupe (un seul de référence) ; copie = nouveau document, indice A, lien COPIE.
 - Fournit des classes mères (méthode patron) que le cœur spécialise ; moteur de calcul répliqué JS / C#.
+
+## Règles métier (décisions)
+Historique complet et alternatives écartées : [CONCEPTION-REGLES-DOCUMENTS.md](../../documentation/conception/CONCEPTION-REGLES-DOCUMENTS.md) (P1 à P25, Q1 à Q7), [CONCEPTION-ACHATS-MARCHES.md](../../documentation/conception/CONCEPTION-ACHATS-MARCHES.md) (Q1 à Q32, § 13), [CONCEPTION-MARCHES-REGLEMENTS.md](../../documentation/conception/CONCEPTION-MARCHES-REGLEMENTS.md) (Q1 à Q22, § 11). Ce qui suit est ce que le code doit faire.
+
+### Cycle de vie, statuts, droits
+- Validation entreprise (ENVOYE) : c'est là que se font le verrouillage, la numérotation, l'échéancier, les soldes et l'inscription au marché (ou APPROUVE si l'approbation est activée par la règle du type). Validation du tiers (VALIDE) : bouton « validé par le client / fournisseur », **pas de statut REJETE** : un rejet est tracé dans l'historique avec son motif et la pièce reste ENVOYE. Une facture peut aussi être rejetée (plateforme ou tiers).
+- Un document corrigé après envoi ou validation passe par un nouvel indice ; l'indice précédent devient REMPLACE (terminal, consultation seule, hors facturé et échéances).
+- Un seul statut porté ; le statut affiché est le plus avancé. Statuts automatiques (`f_document_statut`) recalculés après validation d'une pièce aval, solde, avoir ou annulation : FACTURATION prime sur SOLDE ; un devis garde VALIDE sauf facturation directe (FACTURATION / FACTURE) ; commandes et BL prennent les statuts automatiques ; PAYE_PARTIEL / PAYE viennent du module Règlements.
+- Document validé : affichage du **résultat enregistré**, sans recalcul (libellés, montants, totaux, TVA) ; le moteur ne sert qu'à comparer en débogage.
+- Dévalidation (droit DEVALIDER, motif obligatoire, historique DEVALIDATION) : possible sur toute pièce, comptable comprise ; crée toujours l'indice suivant, qui devient la référence (retour arrière impossible) ; le numéro est conservé ; retrait des soldes, de l'inscription au marché, des déductions et des échéances. Une pièce transférée en comptabilité (état T) reste T : les corrections sont passées par le comptable.
+- Droits : APPROUVER, DEVALIDER, FORCER (ADMIN par défaut ; FORCER exige un motif et laisse une trace FORCAGE ; une pièce transférée reste intouchable même forcée).
+- Pièces comptables (`tyd_comptable`) : factures, avoirs, factures d'avancement et d'acompte, inventaire. Échéancier et règlements : ventes et achats seulement. Numérotation continue : ventes seulement ; pour les achats, compteur interne et référence externe = numéro du fournisseur. Achats : date du document (chronologie interne) et `ent_date_externe` (date de la pièce fournisseur = date comptable ; l'échéancier part de cette date ; contrôle : pas dans le futur).
+- Document de stock (famille S) : tiers = notre société, seuils de solde propres (`seuils_solde.stock`) ; pas de compte de stock sur la nature (la bibliothèque la définira).
+- Contrôles de gestion (proposition retenue par défaut) : référence externe en double (même type, même tiers) = avertissement non bloquant ; paramètres de base (durée de validité, remise maximale, encours client, écart de prix d'achat, marge nette minimale ; `-1` = pas de seuil), éditables dans les règles du catalogue.
+- Frais annexes et prorata : réservés aux ventes (colonnes et actions masquées, type F refusé, prorata forcé à 1 dans les achats et le stock).
+
+### Contenu des lignes
+- Ouvrage sans composante : à la validation, il devient un élément de nature Prestation (`PRE`, compte 706000, même si une autre nature était saisie), PV fixe conservé ; signalé avant validation. Aucune ligne de prix sans nature.
+- Acompte par taux de TVA : une ligne PV fixe par taux, répartie au prorata du HT des commandes, la dernière ligne prend l'arrondi ; en trésorerie, une seule ligne exonérée.
+- Tiers figé à la transformation (`TIERS_FIGE`) ; payeur, contacts et coordonnées restent modifiables.
+- Teinte : toutes les colonnes modifiables des lignes sont teintées (quantité, %, montant) ; le libellé ne l'est jamais.
+
+### Transformation et achats
+- Reste à solder = quantité du parent − transformé ; les brouillons comptent dans le reste. La quantité peut être modifiée dans la cible. Solde par case à cocher ou seuil automatique par famille (achats, ventes, stock).
+- Avoir sur facture d'achat : seulement pour une erreur de quantité. Côté achats, pas de correction de quantité ni d'avenant : on crée de nouvelles commandes ; une remise ou une correction passe par un avenant côté marché.
+- Facture fournisseur : prix modifiables avec avertissement, marqueur de couleur sur la ligne et prix de référence en info-bulle.
+- Facture à partir de plusieurs documents (BL, commandes) : une section par document, des tranches par commande pour regrouper les BL, un pied de section par source ; pas de chantier en entête (ventilé ligne par ligne, `lig_cha_id`) ; bloc de déduction des factures précédentes sous les totaux.
+- Composantes d'ouvrage dans un BL ou une facture : quantités unitaires × quantité du parent (jamais de quantité absolue).
+- Options et variantes : l'utilisateur choisit ce qu'il garde (Choix par unité) ; lignes pour mémoire et tranches F reprises.
+- Devis facturé directement : une commande intermédiaire est créée (sans marché ni chantier).
+- Annulation en cascade : l'avoir d'annulation reprend la pièce ; un avoir d'avancement s'annule par un avoir d'avoir (écriture d'extourne) ; seule la dernière situation est remise en cours ; un règlement ou un avoir se déduit d'une facture suivante. Annuler une pièce sans les suivantes n'est possible que pour la dernière de la chaîne.
+- Reprise de facturation d'un autre logiciel : document non comptable qui porte le cumul précédent à déduire.
+
+### Marchés, avancement, acomptes
+- Commande client : marché obligatoire (sauf devis facturé directement) ; le chantier proposé est pré-rempli (document, affaire, projet) et complété par l'utilisateur ; avenants pour les modifications de marché ; commandes acceptées à la création du marché.
+- Situation (S, cumul) et facture d'avancement (F, période = cumul − précédent) ; saisie en %, quantité ou montant cumulés ; la situation porte la saisie. Un document peut couvrir plusieurs commandes (une section par commande).
+- Dépassement du montant du marché : refusé, sauf option du marché.
+- Pied en montant d'une facture d'avancement : plafond = 100 % du montant du marché ; une colonne % aide au calcul ; un poste en % suit la période, un poste en montant suit l'avancement global.
+- Numéro de situation par marché, modifiable (reprise) ; révision d'une situation possible seulement quand sa facture a été annulée par avoir ; une situation révisée devient la référence.
+- Facture d'avancement à 0 : valide, sans numéro de situation si aucune situation n'est créée. Pour une période, proposer les marchés à facturer est **à faire** (voir TACHES).
+- Retour arrière d'une situation : avoir automatique à total nul, pièce marquée « à transférer » (compta).
+- Pied de la commande : postes HT (compte prorata, remise) saisis sur la commande et repris par les factures ; pied global : postes après TVA seulement (retenue de garantie, paiement direct, acompte en trésorerie, autres postes TTC).
+- Acomptes (option de la société `parametre_document.acomptes`) : **trésorerie** = demande puis reçu, sans TVA, toute la TVA sur les factures d'avancement ; **chiffre d'affaires** = demande puis facture d'acompte comptable (TVA au taux du marché), déduite par un poste de pied de section posé par le système au prorata de l'avancement de la commande (HT, avec la TVA de la section), consolidé ensuite au pied global. Les modes de déduction (première, dernière, linéaire) restent à arbitrer (Q12).
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (JS : `Dec`, `arrondir`, `remplacerVariables`… ; ui : `Magasin`, `GrilleArbre`, `CFG_LIGNES`, `editerLibelle`, préférences), `LogiBTP.Socle` / `LogiBTP.Socle.Web` (`Utilisateur`, `ExceptionMetier`), EF Core Npgsql, HtmlSanitizer. Jamais du cœur.
