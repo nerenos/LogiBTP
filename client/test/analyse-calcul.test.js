@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculerDocument } from '../src/calcul/index.js';
 import { DEFINITION_DEMO, DOCUMENT_DEMO } from '../src/app/demo.js';
-import { feuillesAnalyse, agreger, forcerMontant, paEcart, elementsAnalyse, modificationsElement, repartirQuantite } from '../src/app/analyse-calcul.js';
+import { feuillesAnalyse, agreger, forcerMontant, paEcart, elementsAnalyse, modificationsElement, repartirQuantite, rechargementPrix } from '../src/app/analyse-calcul.js';
 
 // Onglet Analyse : un montant saisi est atteint au centime après recalcul par le moteur (coefficients des feuilles,
 // absorption de l'arrondi par les plus fortes lignes, ligne d'écart en dernier recours).
@@ -139,5 +139,41 @@ describe("Analyse : quantité totale d'un groupe d'éléments reventilée", () =
     for (const l of saisie.lignes) if (res.qtes.has(l.lig_id)) l.lig_qte = res.qtes.get(l.lig_id);
     const apres = elementsAnalyse(feuillesAnalyse(calculer(saisie), saisie)).find((g) => g.libelle === 'Béton C25/30');
     expect(Math.abs(apres.qt - 20)).toBeLessThan((0.0001 * 120) / 2); // au plus un demi-pas (précision × quantité de l'ouvrage)
+  });
+});
+
+describe('Analyse : prix rechargés depuis la bibliothèque', () => {
+  const feuille = (id, l = {}) => ({ ligne: { lig_id: id, lig_libelle_brut: `Ligne ${id}`, lig_pv: 10, ...l }, saisie: { lig_id: id, lig_code: 'A1', lig_unt_code: 'u', lig_pa: 5, ...l } });
+  const article = (o = {}) => ({ id: 7, type: 'ARTICLE', pa: 6, pv: 12, pv_fixe: false, ...o });
+  const prixUnite = (e) => ({ pa: e.pa, pv: e.pv });
+
+  it('recharge le PA et garde les coefficients', () => {
+    const [r] = rechargementPrix([feuille(1, { lig_art_id: 7 })], new Map([[1, { element: article() }]]), prixUnite);
+    expect(r.champs).toEqual({ lig_pa: 6 });
+    expect(r.alerte).toBeNull();
+  });
+
+  it('PV fixe en bibliothèque : PV rechargé en PV fixe', () => {
+    const [r] = rechargementPrix([feuille(1, { lig_art_id: 7 })], new Map([[1, { element: article({ pv_fixe: true }) }]]), prixUnite);
+    expect(r.champs).toEqual({ lig_pa: 6, lig_pv: 12, lig_pv_fixe: true });
+  });
+
+  it('ligne à PV fixe : PV conservé, alerte si la bibliothèque impose aussi un PV', () => {
+    const f = feuille(1, { lig_art_id: 7, lig_pv_fixe: true });
+    expect(rechargementPrix([f], new Map([[1, { element: article() }]]), prixUnite)[0]).toMatchObject({ champs: { lig_pa: 6 }, alerte: null });
+    expect(rechargementPrix([f], new Map([[1, { element: article({ pv_fixe: true }) }]]), prixUnite)[0]).toMatchObject({ champs: { lig_pa: 6 } });
+    expect(rechargementPrix([f], new Map([[1, { element: article({ pv_fixe: true }) }]]), prixUnite)[0].alerte).toMatch(/conservé/);
+  });
+
+  it('rapprochement par le code : lien proposé, ligne déjà à jour ignorée sinon', () => {
+    const [r] = rechargementPrix([feuille(1)], new Map([[1, { element: article({ pa: 5 }), rapprochement: true }]]), prixUnite);
+    expect(r).toMatchObject({ rapprochement: true, champs: { lig_pa: 5, lig_art_id: 7 } });
+    expect(rechargementPrix([feuille(2, { lig_art_id: 7 })], new Map([[2, { element: article({ pa: 5 }) }]]), prixUnite)).toEqual([]);
+  });
+
+  it('unité sans correspondance ou élément introuvable : alerte, rien à écrire', () => {
+    const erreur = () => { throw new Error('Unité m2 sans correspondance'); };
+    expect(rechargementPrix([feuille(1, { lig_art_id: 7 })], new Map([[1, { element: article() }]]), erreur)[0]).toMatchObject({ champs: null, alerte: 'Unité m2 sans correspondance' });
+    expect(rechargementPrix([feuille(1, { lig_art_id: 9 })], new Map(), prixUnite)[0]).toMatchObject({ champs: null });
   });
 });

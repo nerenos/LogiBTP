@@ -254,3 +254,52 @@ export function repartirQuantite(groupe, cible, resultat) {
   const metres = lignes.filter((f) => (f.saisie?.lig_qte_source ?? 'S') === 'M').length;
   return { qtes: new Map([...qtes].map(([id, q]) => [id, Number(q)])), metres, ecart: Number(T.minus(atteint())) };
 }
+
+// ---------------------------------------------------------------- prix rechargés depuis la bibliothèque
+
+const egal = (a, b) => (a === null || a === undefined || a === '' ? b === null || b === undefined || b === '' : b !== null && b !== undefined && b !== '' && D(a).eq(D(b)));
+
+/**
+ * Prix du jour de la bibliothèque sur des lignes d'éléments (feuilles filtrées de l'analyse). `trouves` : Map(lig_id →
+ * { element, rapprochement }) — élément lié (lig_art_id) ou, pour une ligne sans lien, élément de même code proposé
+ * au rapprochement ; `prixUnite(element, unite)` : { pa, pv } dans l'unité de la ligne (lève une erreur sinon).
+ * Règles (CONCEPTION-DOCUMENTS-EVOLUTIONS.md, lot D) : PA rechargé, coefficients conservés ; PV fixe en bibliothèque :
+ * PV rechargé en PV fixe (le bénéfice suit) ; ligne à PV fixe : son PV est conservé (le bénéfice suit), avec une alerte
+ * si la bibliothèque impose aussi un PV. Renvoie les lignes à présenter : { id, code, libelle, unite, element,
+ * rapprochement, champs (null : rien à écrire), avant, apres, alerte }.
+ */
+export function rechargementPrix(feuilles, trouves, prixUnite) {
+  const res = [];
+  for (const f of feuilles) {
+    const l = f.saisie ?? f.ligne;
+    const base = { id: l.lig_id, code: l.lig_code ?? '', libelle: f.ligne.lig_libelle_brut ?? '', unite: l.lig_unt_code ?? '' };
+    const t = trouves.get(l.lig_id);
+    if (!t?.element) {
+      res.push({ ...base, champs: null, sansCorrespondance: !l.lig_art_id, alerte: l.lig_art_id ? 'Élément lié introuvable dans la bibliothèque' : l.lig_code ? 'Aucun élément de ce code dans la bibliothèque' : 'Sans lien ni code : non rechargée' });
+      continue;
+    }
+    const e = t.element;
+    if (e.type !== 'ARTICLE') {
+      res.push({ ...base, element: e, rapprochement: t.rapprochement, champs: null, alerte: `Élément de type ${e.type} : non rechargé` });
+      continue;
+    }
+    let p;
+    try { p = prixUnite(e, l.lig_unt_code); } catch (x) {
+      res.push({ ...base, element: e, rapprochement: t.rapprochement, champs: null, alerte: x.message ?? String(x) });
+      continue;
+    }
+    const pvFixeBib = e.pv_fixe === true || e.pv_fixe === 'true';
+    const pvFixeLigne = Boolean(l.lig_pv_fixe || l.lig_pv_affiche_fixe);
+    const champs = { lig_pa: p.pa };
+    let alerte = null;
+    if (pvFixeBib && !pvFixeLigne) Object.assign(champs, { lig_pv: p.pv, lig_pv_fixe: true });
+    if (pvFixeBib && pvFixeLigne) alerte = 'PV fixe en bibliothèque : le PV imposé de la ligne est conservé';
+    if (t.rapprochement) champs.lig_art_id = e.id;
+    const avant = { pa: l.lig_pa ?? null, pv: f.ligne.lig_pv ?? null };
+    const apres = { pa: p.pa, pv: champs.lig_pv ?? null };
+    const change = t.rapprochement || !egal(avant.pa, apres.pa) || (champs.lig_pv !== undefined && (!egal(avant.pv, apres.pv) || !l.lig_pv_fixe));
+    if (!change && !alerte) continue;
+    res.push({ ...base, element: e, rapprochement: Boolean(t.rapprochement), champs: change ? champs : null, avant, apres, alerte });
+  }
+  return res;
+}

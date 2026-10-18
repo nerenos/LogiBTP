@@ -4,7 +4,9 @@ import { ouvrirMenuFiltre, fermerMenuFiltre } from '@logibtp/liste/ui';
 import { TL, estPied, estTranche } from '../calcul/index.js';
 import {
   feuillesAnalyse, agreger, forcerMontant, paEcart, MONTANTS_FORCABLES, elementsAnalyse, modificationsElement, VALEURS_ELEMENT, repartirQuantite,
+  rechargementPrix,
 } from './analyse-calcul.js';
+import { prixUnite, lien } from './bibliotheque/appel.js';
 import { RapportFraisAnnexes } from './frais-annexes-ui.js';
 
 // Onglet Analyse : ventilation par nature de la portée choisie dans l'arbre des tranches (document entier, section,
@@ -63,7 +65,9 @@ const COLONNES_ELEMENTS = Object.keys(TRIS_ELEMENTS);
 const colonneFiltre = (cle) => ({ code: cle, titre: TRIS_ELEMENTS[cle].titre, format: TRIS_ELEMENTS[cle].texte ? 'texte' : 'nombre', calcul: true });
 
 export class AnalyseCoefficients {
-  constructor(conteneur, { editeur, natures = [], message = () => {} }) {
+  /** appel : AppelBibliotheque de la page (prix rechargés depuis la bibliothèque) ; absent, le bouton n'est pas proposé. */
+  constructor(conteneur, { editeur, natures = [], message = () => {}, appel = null }) {
+    this.appel = appel;
     this.conteneur = conteneur;
     this.editeur = editeur;
     this.natures = new Map(natures.map((n) => [n.id, n]));
@@ -298,6 +302,8 @@ export class AnalyseCoefficients {
             <button type="button" data-resultat="-1" title="Résultat précédent (Maj+Entrée)">▲</button>
             <button type="button" data-resultat="1" title="Résultat suivant (Entrée)">▼</button>
           </span>
+          ${this.appel && !this.editeur.magasin?.lectureSeule ? `<button type="button" data-recharger-prix
+            title="Prix du jour de la bibliothèque sur les éléments affichés (portée, nature et filtres) : PA rechargé, coefficients conservés ; aperçu avant écriture">⟳ Prix de la bibliothèque</button>` : ''}
           <span class="aide">Regroupés par code et libellé (hors tranches et ouvrages) ; valeur saisie écrite sur toutes les lignes du groupe dans la portée
             et la nature filtrées. Fond coloré : les lignes diffèrent (minimum – maximum).</span>
         </header>
@@ -323,6 +329,79 @@ export class AnalyseCoefficients {
       defaut: 60,
     });
     this.rendreElements();
+  }
+
+  /**
+   * Prix du jour de la bibliothèque sur les lignes des éléments affichés (portée, nature, filtres de colonnes) : élément
+   * lié, sinon de même code (rapprochement proposé, à cocher) ; aperçu des changements, puis écriture en une étape.
+   */
+  async rechargerPrix() {
+    const ed = this.editeur;
+    if (ed.magasin?.lectureSeule) return;
+    const feuilles = [...(this.elements?.values() ?? [])].flatMap((g) => g.feuilles);
+    if (!feuilles.length) { this.message('Aucun élément affiché', 'avertissement'); return; }
+    const fournisseur = this.appel.fournisseur;
+    const bib = await this.appel.bibDocument();
+    const parId = new Map();
+    const parCode = new Map();
+    const lire = async (cache, cle, f) => { if (!cache.has(cle)) cache.set(cle, await f().catch(() => null)); return cache.get(cle); };
+    const trouves = new Map();
+    for (const f of feuilles) {
+      const l = f.saisie ?? f.ligne;
+      if (l.lig_art_id) trouves.set(l.lig_id, { element: await lire(parId, l.lig_art_id, () => fournisseur.element(l.lig_art_id)) });
+      else if (String(l.lig_code ?? '').trim()) {
+        const code = String(l.lig_code).trim();
+        trouves.set(l.lig_id, { element: await lire(parCode, code, () => fournisseur.appelCode(code, bib)), rapprochement: true });
+      }
+    }
+    const tout = rechargementPrix(feuilles, trouves, prixUnite);
+    // Lignes sans lien dont le code n'existe pas dans la bibliothèque : comptées, pas listées.
+    const lignes = tout.filter((x) => !x.sansCorrespondance);
+    const sans = tout.length - lignes.length;
+    if (!lignes.length) { this.message(`Prix déjà à jour avec la bibliothèque${sans ? ` (${sans} ligne(s) sans élément correspondant)` : ''}`, 'succes'); return; }
+    const retenues = await this.apercuPrix(lignes, sans);
+    if (!retenues?.length) return;
+    const parLigne = new Map(retenues.map((x) => [x.id, x]));
+    ed.magasin.modifier((d) => {
+      for (const x of d.lignes) {
+        const r = parLigne.get(x.lig_id);
+        if (!r) continue;
+        const p = prixUnite(r.element, x.lig_unt_code);
+        Object.assign(x, r.champs, { lig_proprietes: { ...(x.lig_proprietes ?? {}), element: lien(r.element, { unite: p.unite, ratio: p.ratio }) } });
+      }
+    }, 'Prix de la bibliothèque');
+    this.message(`${retenues.length} ligne(s) mise(s) à jour depuis la bibliothèque`, 'succes');
+  }
+
+  /** Aperçu des prix rechargés : lignes cochées (les rapprochements par le code sont à cocher) ; résout avec les retenues. */
+  apercuPrix(lignes, sans = 0) {
+    const nombre = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
+    const variation = (a, b) => (b === null || b === undefined ? '' : `${nombre(a)} → <b>${nombre(b)}</b>`);
+    return new Promise((resoudre) => {
+      const fond = document.createElement('div');
+      fond.className = 'fiche-dialogue-fond';
+      const ecrites = lignes.filter((x) => x.champs).length;
+      fond.innerHTML = `<section class="fiche-dialogue apercu-prix" role="dialog" aria-label="Prix de la bibliothèque">
+        <header><h2>⟳ Prix de la bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
+        <p class="aide">Prix du jour, convertis dans l'unité de chaque ligne ; coefficients conservés. PV fixe en bibliothèque : PV repris en PV fixe.
+          Ligne à PV fixe : son PV est conservé (le bénéfice suit). Lignes sans lien : rapprochement par le code, à cocher.</p>
+        <div class="apercu-prix-table"><table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV</th><th>Remarque</th></tr></thead><tbody>
+        ${lignes.map((x, i) => `<tr class="${x.champs ? '' : 'sans-ecriture'}">
+          <td>${x.champs ? `<input type="checkbox" data-i="${i}" ${x.rapprochement ? '' : 'checked'}>` : ''}</td>
+          <td>${echapper(x.code)}</td><td>${echapper(x.libelle)}</td><td>${echapper(x.unite)}</td>
+          <td class="nombre">${x.champs ? variation(x.avant.pa, x.apres.pa) : ''}</td><td class="nombre">${x.champs ? variation(x.avant.pv, x.apres.pv) : ''}</td>
+          <td>${x.rapprochement && x.element ? `Rapprocher de <b>${echapper(`${x.element.bib_code}:${x.element.code}`)}</b> – ${echapper(x.element.libelle ?? '')}` : ''}
+            ${x.alerte ? `<span class="alerte">⚠ ${echapper(x.alerte)}</span>` : ''}</td></tr>`).join('')}
+        </tbody></table></div>
+        <footer><span class="aide">${ecrites} ligne(s) modifiable(s), ${lignes.length - ecrites} signalée(s)${sans ? `, ${sans} sans élément correspondant (ni lien ni code connu)` : ''}</span>
+          <button type="button" data-fermer>Annuler</button><button type="button" class="principal" data-appliquer ${ecrites ? '' : 'disabled'}>Appliquer</button></footer></section>`;
+      document.body.append(fond);
+      const fermer = (r) => { fond.remove(); resoudre(r ?? null); };
+      fond.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => fermer()));
+      fond.querySelector('[data-appliquer]').addEventListener('click', () => fermer([...fond.querySelectorAll('input[data-i]:checked')].map((c) => lignes[Number(c.dataset.i)])));
+      fond.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(); } });
+      fond.querySelector('[data-appliquer]').focus();
+    });
   }
 
   /** Vue « Frais annexes » : rapport de ventilation (frais-annexes-ui.js). */
@@ -602,6 +681,7 @@ export class AnalyseCoefficients {
     const resultat = e.target.closest('[data-resultat]');
     if (resultat) { this.resultatSuivant(Number(resultat.dataset.resultat)); return; }
     if (e.target.closest('[data-liberer-ordre]')) { this.ordreFige = null; this.rendreElements(); return; }
+    if (e.target.closest('[data-recharger-prix]')) { this.rechargerPrix().catch((x) => this.message(x.message ?? String(x), 'erreur')); return; }
     // Tri, filtre, portée ou nature : l'ordre figé après une saisie est abandonné.
     if (e.target.closest('th[data-tri], [data-effacer-filtres], [data-portee-id], [data-nature-filtre]')) this.ordreFige = null;
     const filtre = e.target.closest('[data-filtre-colonne]');

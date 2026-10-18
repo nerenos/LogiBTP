@@ -74,6 +74,14 @@
 .element-recherche-barre input { flex: 1; }
 .element-resultats tr.actif td { background: var(--accent-clair); }
 
+/* Analyse › Éléments : aperçu des prix rechargés depuis la bibliothèque. */
+.apercu-prix { width: min(64rem, 100%); }
+.apercu-prix-table { max-height: 55vh; overflow: auto; margin: 0.4rem 0; }
+.apercu-prix tr.sans-ecriture td { color: var(--discret); }
+.apercu-prix .alerte { color: var(--avertissement, #b45309); margin-left: 0.3rem; }
+.apercu-prix footer { display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; }
+.apercu-prix footer .aide { margin-right: auto; }
+
 /* Onglet Graphe d'une fiche de l'annuaire : hauteur de travail. */
 .graphe-hote { height: calc(100vh - 16rem); min-height: 28rem; }
 .page-graphe-corps.graphe-hote { height: auto; flex: 1; min-height: 0; }

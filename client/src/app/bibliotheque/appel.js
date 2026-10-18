@@ -48,7 +48,15 @@ export function techniquesLigne(e) {
 }
 
 /** Lien d'une ligne vers l'élément de la bibliothèque. */
-const lien = (e, extra = {}) => ({ id: e.id, bib: e.bib_code, code: e.code, type: e.type, ...extra });
+export const lien = (e, extra = {}) => ({ id: e.id, bib: e.bib_code, code: e.code, type: e.type, ...extra });
+
+/** PA et PV d'un article dans l'unité d'une ligne (unité de vente à défaut) ; lève une erreur sans correspondance d'unité. */
+export function prixUnite(e, unite) {
+  const u = unite || e.unite_vente || e.unite_stock;
+  const r = ratio(u, { unite_stock: e.unite_stock, unites: e.unites ?? [], donnees: e.donnees ?? {} });
+  const parUnite = (v) => (v === null || v === undefined || v === '' ? null : nombre(D(v).times(r)));
+  return { pa: parUnite(e.pa), pv: parUnite(e.pv), unite: u, ratio: S(r) };
+}
 
 /** Valeurs d'une ligne pour un article. */
 export function valeursArticle(e, bibDocument, proprietes = {}) {

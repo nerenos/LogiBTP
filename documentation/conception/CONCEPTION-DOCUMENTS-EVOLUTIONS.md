@@ -56,7 +56,12 @@ retenue de démonstration RG5 en % du cumul (TTC net) : la base TOTAL_TTC est le
 - Nouveau type d'élément de bibliothèque **POSTE_PIED** : libellé, mode (% / montant / coefficient), base, sens,
   valeur, compte, retenue, TVA ; insertion dans le pied depuis la bibliothèque.
 
-## Lot D – recharger les prix de la bibliothèque (Analyse › Éléments)
+## Lot D – recharger les prix de la bibliothèque (Analyse › Éléments) (réalisé le 18/10/2026)
+
+Réalisation : `rechargementPrix` (`analyse-calcul.js`, tests) et bouton « ⟳ Prix de la bibliothèque » de la partie
+Éléments ; articles seulement (un ouvrage de la bibliothèque n'est pas rechargé : alerte) ; prix convertis dans
+l'unité de la ligne (sans correspondance d'unité : alerte) ; lignes sans lien dont le code est inconnu : comptées.
+Le tableau des prix fixes ci-dessous est appliqué tel quel.
 
 - Bouton sur les éléments filtrés (filtres de l'analyse : nature, tranche…) ; seules les lignes du devis concernées
   par le filtre sont mises à jour.

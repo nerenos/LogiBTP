@@ -378,7 +378,7 @@ export class PageDocument extends PageBase {
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
     // Éléments glissés depuis la fenêtre de la bibliothèque.
     this.editeur.surDepotExterne = (donnees, cibleId, position) => this.appel.deposer(donnees, cibleId, position);
-    this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t) => this.app.message(t) });
+    this.analyse = new AnalyseCoefficients(this.$('#vue-analyse'), { editeur: this.editeur, natures: this.natures, message: (t, n) => this.app.message(t, n), appel: this.appel });
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;

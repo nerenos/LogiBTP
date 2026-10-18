@@ -493,6 +493,8 @@ export class GrilleArbre {
     const { id, colonne } = this.edition;
     const c = this.o.colonnes[colonne];
     const r = this.ligneCourante();
+    // Ligne disparue pendant la saisie (annulation, recalcul) : la saisie est abandonnée.
+    if (!r || r.item[this.o.cle] !== id) { this.#fermerListe(); this.edition = null; return; }
     const avant = String(c.lire(r.item) ?? '');
     // Combo : la valeur est l'option reconnue ; un texte qui n'en désigne aucune reste en saisie (invalide).
     const valeur = c.editeur === 'select' ? this.liste?.resoudre() : champ.value;
