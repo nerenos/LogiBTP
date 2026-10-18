@@ -38,7 +38,7 @@ export class PageEdition extends PageBase {
     const q = this.requete;
     this.demande = {
       source: q.source ?? 'document', id: String(q.id ?? ''), modele: q.modele || null, presentation: q.presentation || null,
-      format: q.format || null, orientation: null, parametres: {},
+      format: q.format || null, orientation: null, parametres: q.recherche ? { recherche: q.recherche } : {},
     };
     this.conteneur.innerHTML = GABARIT;
     this.conteneur.classList.add('page-edition-apercu');
@@ -102,9 +102,17 @@ export class PageEdition extends PageBase {
     zoom.addEventListener('change', () => { ecrirePreferences({ apercuZoom: Number(zoom.valeurCombo) }); this.appliquerZoom(); });
     placer('zoom', zoom);
 
-    // Paramètres du modèle (cases à cocher pour les booléens).
+    // Paramètres du modèle : cases à cocher (booléens), nombres (étiquette de départ, exemplaires…).
     const zp = this.$('[data-zone="parametres"]');
     zp.replaceChildren();
+    for (const par of (contenu.parametres ?? []).filter((x) => x.type === 'nombre')) {
+      const l = document.createElement('label');
+      l.innerHTML = `${echapper(par.libelle ?? par.nom)} <input type="number" min="1" step="1" style="width:4.5em">`;
+      const c = l.querySelector('input');
+      c.value = String(this.demande.parametres[par.nom] ?? par.defaut ?? 1);
+      c.addEventListener('change', () => { this.demande.parametres[par.nom] = Number(c.value) || 1; this.rendre(); });
+      zp.append(l);
+    }
     for (const par of (contenu.parametres ?? []).filter((x) => x.type === 'booleen')) {
       const l = document.createElement('label');
       l.className = 'coche';
@@ -118,7 +126,10 @@ export class PageEdition extends PageBase {
 
   majUrl() {
     const d = this.demande;
-    const q = new URLSearchParams({ source: d.source, id: d.id, ...(d.modele ? { modele: d.modele } : {}), ...(d.presentation ? { presentation: d.presentation } : {}), ...(d.format ? { format: d.format } : {}) });
+    const q = new URLSearchParams({
+      source: d.source, id: d.id, ...(d.modele ? { modele: d.modele } : {}), ...(d.presentation ? { presentation: d.presentation } : {}),
+      ...(d.format ? { format: d.format } : {}), ...(d.parametres.recherche ? { recherche: d.parametres.recherche } : {}),
+    });
     this.app.routeur.remplacerUrl(`/edition?${q}`);
   }
 

@@ -333,7 +333,69 @@ const SOUS_RAPPORTS = [
   ]),
 ];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS];
+// Fiches et listes (lot 6) : modèles génériques sur les sources « fiche » et « liste » du serveur.
+const AUTRES = [
+  {
+    code: 'FICHE', libelle: 'Fiche (toutes les sections)', genre: 'RAPPORT', cible: 'FICHE', source: 'fiche', types: [], ordre: 10,
+    contenu: {
+      format_version: 1, code: 'FICHE', libelle: 'Fiche', cible: 'FICHE', source: 'fiche',
+      page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
+      bandes: [
+        { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+        { type: 'TITRE', contenu: { type: 'pile', espacement: 1, marges: { bas: 3 }, cadre: { bas: 'normal' }, enfants: [
+          champ('{{fiche.libelle}}', { style: 'petit' }), champ('{{fiche.titre}}', { style: 'titre' }), champ('{{fiche.sous_titre}}', { style: 'sous_titre' }),
+        ] } },
+        {
+          type: 'CORPS', mode: 'REPETE', collection: 'sections', options: { garder_avec_suivant: false },
+          contenu: { type: 'pile', espacement: 1, marges: { haut: 3 }, enfants: [
+            champ('{{element.titre}}', { style: 'section', fond: 'fond_section', marges: 1 }),
+            { type: 'repete', collection: 'element.groupes', espacement: 2, contenu: { type: 'pile', enfants: [
+              champ('{{element.titre}}', { style: 'gras', cadre: { bas: 'fin' } }),
+              { type: 'repete', collection: 'element.champs', contenu: { type: 'rangee', espacement: 3, secable: false, enfants: [
+                champ('{{element.libelle}}', { style: 'discret', largeur: '35%' }), champ('{{element.valeur}}', { largeur: '*' }),
+              ] } },
+            ] } },
+          ] },
+        },
+      ],
+    },
+  },
+  {
+    code: 'LISTE', libelle: 'Liste (colonnes de la vue)', genre: 'RAPPORT', cible: 'LISTE', source: 'liste', types: [], ordre: 10,
+    contenu: {
+      format_version: 1, code: 'LISTE', libelle: 'Liste', cible: 'LISTE', source: 'liste',
+      page: { format: 'A4', orientation: 'paysage', flexible: ['A4', 'A3'], marges: { haut: 10, bas: 10, gauche: 10, droite: 10 } },
+      bandes: [
+        { type: 'ENTETE_PAGE', pages: 'SUIVANTES', contenu: champ('{{liste.nom}}', { style: 'gras', cadre: { bas: 'fin' } }) },
+        { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+        { type: 'TITRE', contenu: { type: 'pile', marges: { bas: 2 }, enfants: [
+          { type: 'rangee', enfants: [champ('{{liste.nom}}', { style: 'titre', largeur: '*' }), champ('{{liste.nombre}} ligne(s)', { alignement: 'droite', style: 'discret', largeur: '50mm' })] },
+          champ('=Si(liste.recherche; "Recherche : " & liste.recherche; Nul)', { style: 'discret' }),
+          champ('=Si(liste.tronquee; "Liste limitée aux 5 000 premières lignes : affinez la recherche ou la vue."; Nul)', { style: { base: 'petit', couleur: 'alerte' } }),
+        ] } },
+        { type: 'CORPS', contenu: { type: 'tableau', collection: 'lignes', colonnes_source: 'colonnes', report: false, vide: 'Aucune ligne' } },
+      ],
+    },
+  },
+  {
+    code: 'ETIQUETTES_3X8', libelle: 'Étiquettes 70 × 37 mm (3 × 8 par planche A4)', genre: 'RAPPORT', cible: 'LISTE', source: 'liste', types: [], ordre: 20,
+    contenu: {
+      format_version: 1, code: 'ETIQUETTES_3X8', libelle: 'Étiquettes 3 × 8', cible: 'LISTE', source: 'liste', mode: 'ETIQUETTES', collection: 'lignes',
+      page: { format: 'A4', orientation: 'portrait', marges: { haut: 0, bas: 0, gauche: 0, droite: 0 } },
+      planche: { colonnes: 3, rangees: 8, largeur: 70, hauteur: 37, marge_haut: 0.5, marge_gauche: 0, marge_interieure: 4 },
+      parametres: [
+        { nom: 'premiere_etiquette', libelle: 'Première étiquette (planche entamée)', type: 'nombre', defaut: 1 },
+        { nom: 'copies', libelle: 'Exemplaires', type: 'nombre', defaut: 1 },
+      ],
+      bandes: [{ contenu: { type: 'pile', enfants: [
+        champ('{{element._titre}}', { style: 'gras', multiligne: 'une', reduction_min: 7 }),
+        champ('=Joindre(Ligne(); element._suite)', { multiligne: 'sauts', lignes_max: 3, ellipse: true }),
+      ] } }],
+    },
+  },
+];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

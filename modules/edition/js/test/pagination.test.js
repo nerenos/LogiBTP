@@ -85,3 +85,12 @@ describe('blocs liés et sous-rapports', () => {
     expect(r.alertes.map((a) => a.code)).toContain('SOUS_RAPPORT_NIVEAU');
   });
 });
+
+describe('listes et étiquettes', () => {
+  it('colonnes dynamiques d’un tableau (liste générique)', () => {
+    const m = { bandes: [{ contenu: { type: 'tableau', collection: 'lignes', colonnes_source: 'colonnes' } }] };
+    const d = { colonnes: [{ cle: 'nom', titre: 'Nom' }, { cle: 'ville', titre: 'Ville', largeur: '40mm' }], lignes: [{ nom: 'Durand', ville: 'Lyon' }] };
+    const r = editer(m, d, { polices: p });
+    expect(textes(r.pages[0])).toEqual(['Nom', 'Ville', 'Durand', 'Lyon']);
+  });
+});

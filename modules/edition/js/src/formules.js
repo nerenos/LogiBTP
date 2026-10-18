@@ -259,7 +259,8 @@ export const FONCTIONS = {
   estvide: { min: 1, max: 1, appliquer: ([v]) => estVide(v) },
   premiernonvide: { min: 1, max: 20, appliquer: (a) => a.find((v) => !estVide(v)) ?? null },
   concat: { min: 1, max: 50, appliquer: (a) => (a.some(estRiche) ? { riche: a.flatMap((v) => enSegments(v)) } : a.map(enTexte).join('')) },
-  joindre: { min: 2, max: 50, appliquer: ([sep, ...a]) => a.map(enTexte).filter((x) => x).join(enTexte(sep).replace(/\\n/g, '\n')) },
+  // Joindre(séparateur; valeurs…) : les listes sont mises à plat (lignes d'une adresse…), les vides retirés.
+  joindre: { min: 2, max: 50, appliquer: ([sep, ...a]) => a.flatMap((v) => (Array.isArray(v) ? v : [v])).map(enTexte).filter((x) => x).join(enTexte(sep).replace(/\\n/g, '\n')) },
   majuscule: { min: 1, max: 1, appliquer: ([v]) => enTexte(v).toUpperCase() },
   minuscule: { min: 1, max: 1, appliquer: ([v]) => enTexte(v).toLowerCase() },
   gauche: { min: 2, max: 2, appliquer: ([v, n]) => [...enTexte(v)].slice(0, Number(versDec(n))).join('') },

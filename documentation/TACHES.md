@@ -61,10 +61,10 @@
 
 ### Édition (impression)
 
-- [ ] **Module Édition** ([conception](conception/CONCEPTION-EDITION.md), analyse décidée § 14 et 15) : lot 0 réalisé
-  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16) ; lots 1 à 5 réalisés (§ 16). Lots
-  suivants en cours.
-  Reprend les impressions en attente ci-dessus (textes, coordonnées, tranches F, frais annexes, déductions).
+- [ ] **Module Édition** ([conception](conception/CONCEPTION-EDITION.md)) : lots 0 à 6 réalisés le 18/10/2026 (moteur sans
+  DOM navigateur + Jint, pagination, modèles et blocs en base, source document, aperçu, impression, production en GED
+  et coffre-fort, sous-rapports, import / export, images, fiches, listes, étiquettes ; détail au § 16). Restent : lot 7
+  concepteur, production à l'envoi, éditions des vues et procédures spécifiques, chartes éditables à l'écran.
 - [ ] Facturation électronique (Factur-X / plateforme agréée) : module à cadrer à part (§ 3.5 de l'analyse).
 
 ### Chaîne des achats et marchés

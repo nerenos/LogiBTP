@@ -306,4 +306,5 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .edition-page svg { display: block; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); background: #fff; }
 .edition-numero { position: absolute; right: -3.2rem; top: 0; color: #fff; font-size: 0.8rem; }
 .edition-productions { padding: 0.3rem 0.8rem; border-bottom: 1px solid var(--bord); background: var(--surface); font-size: 0.9em; }
+.page-fiche-edition, .page-liste-edition { display: flex; justify-content: flex-end; padding: 0.2rem 0.6rem 0; }
 iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }

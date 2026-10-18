@@ -5,7 +5,11 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Editions;
 using LogiBTP.Editions.Web;
+using LogiBTP.Fiches;
+using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
+using LogiBTP.Listes;
+using LogiBTP.Listes.Web;
 using Microsoft.AspNetCore.Http;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
@@ -21,10 +25,13 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public sealed class SpecialisationEditionBtp : SpecialisationEdition
 {
-    public override IReadOnlyList<SourceEdition> Sources { get; } = [new("document", "Documents", "DOCUMENT")];
+    public override IReadOnlyList<SourceEdition> Sources { get; } =
+        [new("document", "Documents", "DOCUMENT"), new("fiche", "Fiches", "FICHE"), new("liste", "Listes", "LISTE")];
 
     public override async Task<ElementEdite?> ElementAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct)
     {
+        if (source == "fiche") return await SourcesFicheListeEdition.ElementFiche(services, id, u, ct);
+        if (source == "liste") return await SourcesFicheListeEdition.ElementListe(services, id, u, ct);
         if (source != "document" || !long.TryParse(id, out var entId)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
         var d = await (from e in db.Documents.AsNoTracking() join t in db.TypesDocument.AsNoTracking() on e.EntTydId equals t.TydId
@@ -35,8 +42,20 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         return new ElementEdite(d.TydCode, libelle, dernier?.Modele, dernier?.Presentation);
     }
 
-    public override async Task<JsonObject?> DonneesAsync(IServiceProvider services, DemandeEdition demande, Utilisateur u, CancellationToken ct) =>
-        demande.Source == "document" && long.TryParse(demande.Id, out var id) ? await SourceDocumentEdition.Lire(services, id, ct) : null;
+    public override async Task<JsonObject?> DonneesAsync(IServiceProvider services, DemandeEdition demande, Utilisateur u, CancellationToken ct)
+    {
+        var donnees = demande.Source switch
+        {
+            "document" when long.TryParse(demande.Id, out var id) => await SourceDocumentEdition.Lire(services, id, ct),
+            "fiche" => await SourcesFicheListeEdition.DonneesFiche(services, demande.Id, u, ct),
+            "liste" => await SourcesFicheListeEdition.DonneesListe(services, demande.Id,
+                demande.Parametres?.GetValueOrDefault("recherche") is { ValueKind: JsonValueKind.String } r ? r.GetString() : null, u, ct),
+            _ => null,
+        };
+        // Fiches et listes : société (entête, pied) comme pour les documents.
+        if (donnees is not null && demande.Source != "document") donnees["societe"] = await SourceDocumentEdition.Societe(services, ct);
+        return donnees;
+    }
 
     public override JsonArray Dictionnaire(string source) => source == "document" ? SourceDocumentEdition.Dictionnaire() : [];
 
@@ -223,6 +242,26 @@ public static class SourceDocumentEdition
                    FROM type_document WHERE tyd_id = @tyd)
         )::text AS "Value"
         """;
+
+    /// <summary>Société de la base (identité, coordonnées, mentions) pour les sources fiche et liste.</summary>
+    public static async Task<JsonObject> Societe(IServiceProvider services, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var json = await db.Database.SqlQueryRaw<string>("""
+            SELECT coalesce((SELECT json_build_object('per_id', per_id, 'raison_sociale', per_raison_sociale, 'siret', per_siret, 'tva', per_tva_intra)::text
+            FROM personne WHERE per_societe_base), '{{}}') AS "Value"
+            """).FirstAsync(ct);
+        var societe = JsonNode.Parse(json)!.AsObject();
+        if (societe["per_id"] is JsonValue p && await ContactsDocument.Instantane(db, p.GetValue<long>(), null, ct) is { } inst)
+        {
+            var co = JsonNode.Parse(inst.RootElement.GetRawText());
+            societe["adresse"] = co?["adresse"] is JsonObject a ? new JsonArray(new[] { "ligne1", "ligne2", "ligne3" }.Select(k => a[k]?.GetValue<string>()).Where(x => !string.IsNullOrWhiteSpace(x))
+                .Append(string.Join(' ', new[] { a["code_postal"]?.GetValue<string>(), a["ville"]?.GetValue<string>() }.Where(x => !string.IsNullOrWhiteSpace(x)))).Where(x => x!.Length > 0).Select(x => (JsonNode?)x).ToArray()) : new JsonArray();
+            societe["telephone"] = co?["telephone"]?.DeepClone();
+            societe["courriel"] = co?["email"]?.DeepClone();
+        }
+        return societe;
+    }
 
     public static async Task<(string? Modele, string? Presentation)?> DernierModele(LogiBtpContext db, long entId, CancellationToken ct)
     {
@@ -510,6 +549,206 @@ public static class SourceDocumentEdition
             ("textes.intro", "Texte d'introduction (HTML)", "html"), ("textes.fin", "Texte de conclusion (HTML)", "html"),
         ];
         return new JsonArray(champs.Select(c => (JsonNode?)new JsonObject { ["chemin"] = c.Item1, ["libelle"] = c.Item2, ["type"] = c.Item3 }).ToArray());
+    }
+}
+
+/// <summary>
+/// Sources d'édition « fiche » (identifiant « type/id ») et « liste » (identifiant de la vue) : données lues par les
+/// services des modules Fiche et Liste avec leurs droits (champs confidentiels jamais lus, colonnes de la vue
+/// seulement), valeurs mises en forme pour l'impression (listes de choix, booléens, dates).
+/// </summary>
+public static class SourcesFicheListeEdition
+{
+    public const int LignesMax = 5000;
+
+    public static async Task<ElementEdite?> ElementFiche(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
+    {
+        var (type, cle) = Decouper(id);
+        if (type is null) return null;
+        var fiches = services.GetRequiredService<ServiceFiche>();
+        var def = await fiches.Definition(type, u, ct);
+        var fiche = await fiches.Charger(type, cle!, false, u, ct);
+        return new ElementEdite(type, $"{def.Libelle} {Titre(def.Titre, fiche, def) ?? cle}".Trim());
+    }
+
+    public static async Task<ElementEdite?> ElementListe(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
+    {
+        if (!long.TryParse(id, out var vue)) return null;
+        var v = await services.GetRequiredService<ServiceListe>().Vue(vue, u, ct);
+        return new ElementEdite(v.VliTheme, v.VliNom);
+    }
+
+    private static (string? Type, string? Id) Decouper(string id)
+    {
+        var i = id.IndexOf('/');
+        return i <= 0 || i == id.Length - 1 ? (null, null) : (id[..i], id[(i + 1)..]);
+    }
+
+    /// <summary>Titre d'une fiche : modèle « [civilite] [prenom] [nom] » de la définition, valeurs mises en forme.</summary>
+    private static string? Titre(string? modele, FicheDto fiche, DefinitionFicheDto def)
+    {
+        if (string.IsNullOrWhiteSpace(modele)) return null;
+        var s = System.Text.RegularExpressions.Regex.Replace(modele, @"\[([a-z0-9_]+)\]", m =>
+        {
+            var champ = def.Champs.FirstOrDefault(c => c.Code == m.Groups[1].Value);
+            return champ is null ? "" : Texte(champ, fiche.Valeurs.GetValueOrDefault(champ.Code)) ?? "";
+        });
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
+        return s.Length == 0 ? null : s;
+    }
+
+    /// <summary>Valeur lisible d'un champ de fiche (null : vide ou non imprimable : json, mot de passe).</summary>
+    private static string? Texte(ChampFiche c, object? v)
+    {
+        if (v is null) return null;
+        if (v is JsonElement e)
+        {
+            if (e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return null;
+            if (e.ValueKind == JsonValueKind.True) return "Oui";
+            if (e.ValueKind == JsonValueKind.False) return "Non";
+            if (e.ValueKind == JsonValueKind.Array)
+                return string.Join(", ", e.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.String ? Option(c, x.GetString()) : null).Where(x => !string.IsNullOrEmpty(x)));
+            if (e.ValueKind is JsonValueKind.Object) return null;
+            v = e.ValueKind == JsonValueKind.String ? e.GetString() : e.GetRawText();
+        }
+        if (c.Type is "json" or "motdepasse" || c.Gere) return null;
+        if (v is bool b) return b ? "Oui" : "Non";
+        var s = Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture);
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (c.Type == "date" && s.Length >= 10 && s[4] == '-') return $"{s[8..10]}/{s[5..7]}/{s[..4]}";
+        if (c.Type == "booleen") return s is "true" or "True" ? "Oui" : "Non";
+        if (c.Type == "nombre") return s.Replace('.', ',');
+        if (c.Type == "html") return s;
+        return Option(c, s);
+    }
+
+    private static string? Option(ChampFiche c, string? v) => c.Options?.FirstOrDefault(o => o.Valeur == v)?.Libelle ?? v;
+
+    /// <summary>Fiche : { fiche, sections: [{ titre, groupes: [{ titre, champs: [{ code, libelle, valeur, html }] }] }], valeurs }.</summary>
+    public static async Task<JsonObject?> DonneesFiche(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
+    {
+        var (type, cle) = Decouper(id);
+        if (type is null) return null;
+        var fiches = services.GetRequiredService<ServiceFiche>();
+        var def = await fiches.Definition(type, u, ct);
+        var fiche = await fiches.Charger(type, cle!, false, u, ct);
+        var champs = def.Champs.Where(c => c.Actif).ToDictionary(c => c.Code);
+        foreach (var c in def.Supplementaires.Where(c => c.Actif)) champs.TryAdd("+" + c.Code, c);
+        object? Valeur(string code) => code.StartsWith('+') ? fiche.Proprietes.GetValueOrDefault(code[1..]) : fiche.Valeurs.GetValueOrDefault(code);
+        JsonObject? Champ(string code)
+        {
+            if (!champs.TryGetValue(code, out var c) || fiche.Masques.Contains(code)) return null;
+            var t = Texte(c, Valeur(code));
+            return t is null ? null : new JsonObject { ["code"] = code, ["libelle"] = c.Libelle, ["valeur"] = t, ["html"] = c.Type == "html" };
+        }
+        var sections = new JsonArray();
+        var places = new HashSet<string>();
+        foreach (var s in def.Sections)
+        {
+            var groupes = new JsonArray();
+            var liste = s.Groupes ?? (s.Champs is null ? [] : [new GroupeChamps { Champs = s.Champs }]);
+            foreach (var g in liste)
+            {
+                var cs = new JsonArray(g.Champs.Select(Champ).Where(x => x is not null).Select(x => (JsonNode?)x).ToArray());
+                places.UnionWith(g.Champs);
+                if (cs.Count > 0) groupes.Add(new JsonObject { ["titre"] = g.Titre, ["champs"] = cs });
+            }
+            if (groupes.Count > 0) sections.Add(new JsonObject { ["titre"] = s.Titre, ["groupes"] = groupes });
+        }
+        // Champs supplémentaires sans place dans les sections : groupe « Compléments ».
+        var autres = new JsonArray(champs.Keys.Where(k => k.StartsWith('+') && !places.Contains(k)).Select(Champ).Where(x => x is not null).Select(x => (JsonNode?)x).ToArray());
+        if (autres.Count > 0) sections.Add(new JsonObject { ["titre"] = "Compléments", ["groupes"] = new JsonArray(new JsonObject { ["titre"] = null, ["champs"] = autres }) });
+        var valeurs = new JsonObject();
+        foreach (var (code, c) in champs) if (!fiche.Masques.Contains(code) && Texte(c, Valeur(code)) is { } t) valeurs[code.TrimStart('+')] = t;
+        return new JsonObject
+        {
+            ["fiche"] = new JsonObject { ["type"] = type, ["id"] = cle, ["libelle"] = def.Libelle, ["titre"] = Titre(def.Titre, fiche, def) ?? cle, ["sous_titre"] = Titre(def.SousTitre, fiche, def) },
+            ["sections"] = sections, ["valeurs"] = valeurs,
+        };
+    }
+
+    /// <summary>
+    /// Liste : { liste: { nom, theme, recherche, tronquee }, colonnes: [{ cle, titre, largeur, alignement, format }], lignes }
+    /// (au plus 5 000 lignes, lues par lots ; valeurs des colonnes à choix remplacées par leur libellé ; `_texte` :
+    /// valeurs affichables dans l'ordre des colonnes, pour les étiquettes).
+    /// </summary>
+    public static async Task<JsonObject?> DonneesListe(IServiceProvider services, string id, string? recherche, Utilisateur u, CancellationToken ct)
+    {
+        if (!long.TryParse(id, out var vueId)) return null;
+        var listes = services.GetRequiredService<ServiceListe>();
+        var vue = await listes.Vue(vueId, u, ct);
+        var colonnes = new JsonArray();
+        var options = new Dictionary<string, Dictionary<string, string>>();
+        var formats = new Dictionary<string, string?>();
+        if (vue.Definition.TryGetProperty("colonnes", out var cols))
+            foreach (var c in cols.EnumerateArray())
+            {
+                var code = c.GetProperty("code").GetString()!;
+                var format = c.TryGetProperty("format", out var f) ? f.GetString() : null;
+                if (format == "picto" && !(c.TryGetProperty("titre", out var tt) && tt.GetString() is { Length: > 0 })) continue; // pictogramme sans titre : non imprimé
+                formats[code] = format;
+                if (c.TryGetProperty("options", out var o) && o.ValueKind == JsonValueKind.Array)
+                    options[code] = o.EnumerateArray().Where(x => x.TryGetProperty("valeur", out _))
+                        .ToDictionary(x => x.GetProperty("valeur").ToString(), x => x.TryGetProperty("libelle", out var l) ? l.GetString() ?? "" : x.GetProperty("valeur").ToString());
+                var largeur = "*";
+                if (c.TryGetProperty("largeur", out var l2) && l2.ValueKind == JsonValueKind.Object)
+                {
+                    var mode = l2.TryGetProperty("mode", out var m) ? m.GetString() : null;
+                    var val = l2.TryGetProperty("valeur", out var lv) && lv.ValueKind == JsonValueKind.Number ? lv.GetDouble() : 1;
+                    largeur = mode == "fixe" ? $"{Math.Round(val * 0.26, 1).ToString(System.Globalization.CultureInfo.InvariantCulture)}mm" : $"{val.ToString(System.Globalization.CultureInfo.InvariantCulture)}*";
+                }
+                colonnes.Add(new JsonObject
+                {
+                    ["cle"] = code, ["titre"] = c.TryGetProperty("titre", out var t) ? t.GetString() : code, ["largeur"] = largeur,
+                    ["alignement"] = c.TryGetProperty("alignement", out var a) ? a.GetString() : format == "nombre" ? "droite" : null,
+                    ["format"] = format switch { "date" => "date", "nombre" => "nombre:2", _ => null },
+                });
+            }
+        var lignes = new JsonArray();
+        List<string?>? apres = null;
+        var tronquee = false;
+        while (true)
+        {
+            var lot = await listes.Lot(new DemandeListe { VueId = vueId, Recherche = recherche, Taille = 1000, Apres = apres }, u, ct);
+            foreach (var l in lot.Lignes)
+            {
+                if (lignes.Count >= LignesMax) { tronquee = true; break; }
+                var o = new JsonObject();
+                var textes = new JsonArray();
+                foreach (var col in colonnes)
+                {
+                    var code = col!["cle"]!.GetValue<string>();
+                    var v = l.GetValueOrDefault(code);
+                    var s = v switch
+                    {
+                        null => null,
+                        bool b => b ? "Oui" : "Non",
+                        DateTime d => d.ToString("yyyy-MM-dd"),
+                        DateOnly d => d.ToString("yyyy-MM-dd"),
+                        DateTimeOffset d => d.ToString("yyyy-MM-dd"),
+                        string[] arr => string.Join(", ", arr.Select(x => options.GetValueOrDefault(code)?.GetValueOrDefault(x) ?? x)),
+                        IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+                        _ => v.ToString(),
+                    };
+                    if (s is not null && options.TryGetValue(code, out var opt) && opt.TryGetValue(s, out var lib)) s = lib;
+                    if (s is not null && formats.GetValueOrDefault(code) == "coche") s = s is "true" or "True" or "Oui" ? "Oui" : "";
+                    o[code] = s;
+                    // Étiquettes : valeurs affichables, sans le code de l'élément (identifiant technique).
+                    if (!string.IsNullOrWhiteSpace(s) && code != "code") textes.Add(formats.GetValueOrDefault(code) == "date" && s.Length >= 10 ? $"{s[8..10]}/{s[5..7]}/{s[..4]}" : s);
+                }
+                o["_texte"] = textes;
+                o["_titre"] = textes.Count > 0 ? textes[0]!.DeepClone() : null;
+                o["_suite"] = new JsonArray(textes.Skip(1).Select(x => x!.DeepClone()).ToArray());
+                lignes.Add(o);
+            }
+            if (tronquee || lot.Suite is null) break;
+            apres = lot.Suite;
+        }
+        return new JsonObject
+        {
+            ["liste"] = new JsonObject { ["nom"] = vue.VliNom, ["theme"] = vue.VliTheme, ["recherche"] = recherche, ["tronquee"] = tronquee, ["nombre"] = lignes.Count },
+            ["colonnes"] = colonnes, ["lignes"] = lignes,
+        };
     }
 }
 

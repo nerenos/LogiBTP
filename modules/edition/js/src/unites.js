@@ -50,9 +50,18 @@ export function lireLongueur(v) {
  */
 export function repartirLargeurs(longueurs, largeur, espacement = 0) {
   const utile = Math.max(0, largeur - espacement * Math.max(0, longueurs.length - 1));
-  const fixes = longueurs.map((l) => (l.mode === 'mm' ? l.valeur : l.mode === 'pct' ? (utile * l.valeur) / 100 : 0));
-  const pris = fixes.reduce((a, b) => a + b, 0);
+  let fixes = longueurs.map((l) => (l.mode === 'mm' ? l.valeur : l.mode === 'pct' ? (utile * l.valeur) / 100 : 0));
+  let pris = fixes.reduce((a, b) => a + b, 0);
   const poids = longueurs.reduce((a, l) => a + (l.mode === 'reste' ? l.valeur : 0), 0);
+  // Colonnes fixes trop larges (liste à beaucoup de colonnes) : réduites à proportion pour laisser au moins 15 mm à
+  // chaque colonne « reste » (sans réduction si tout tient).
+  const nbReste = longueurs.filter((l) => l.mode === 'reste').length;
+  const besoin = Math.min(utile * 0.6, nbReste * 15);
+  if (pris > 0 && pris > utile - besoin) {
+    const f = Math.max(0, utile - besoin) / pris;
+    fixes = fixes.map((x) => x * f);
+    pris = fixes.reduce((a, b) => a + b, 0);
+  }
   const reste = Math.max(0, utile - pris);
   return longueurs.map((l, i) => (l.mode === 'reste' ? (poids ? (reste * l.valeur) / poids : 0) : fixes[i]));
 }

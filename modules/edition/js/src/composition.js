@@ -548,8 +548,21 @@ const PAD_H = 1;
 const PAD_V = 0.7;
 
 /** Colonnes visibles et leurs positions. */
+/**
+ * Colonnes d'un tableau : déclarées, puis dynamiques (`colonnes_source` : expression donnant [{ cle, titre, largeur,
+ * alignement, format, multiligne }] ; valeur = `ligne.<cle>` ; une ligne par cellule par défaut, police réduite jusqu'à
+ * 7 pt puis ellipse), pour une liste dont les colonnes viennent des données.
+ */
+function definitionsColonnes(c, ctx) {
+  const dynamiques = c.colonnes_source ? evaluerExpression(ctx, c.colonnes_source, 'colonnes du tableau') : null;
+  return [...(c.colonnes ?? []), ...(Array.isArray(dynamiques) ? dynamiques : []).filter((k) => k?.cle).map((k) => ({
+    cle: k.cle, titre: k.titre ?? k.cle, largeur: k.largeur ?? '*', alignement: k.alignement ?? undefined, format: k.format ?? undefined,
+    valeur: `=ligne.${k.cle}`, multiligne: k.multiligne ?? 'une', reduction_min: k.reduction_min ?? 7,
+  }))];
+}
+
 function colonnesTableau(c, ctx, largeur) {
-  const toutes = (c.colonnes ?? []).map((k, rang) => ({ ...k, rang }));
+  const toutes = definitionsColonnes(c, ctx).map((k, rang) => ({ ...k, rang }));
   const cols = toutes.filter((k) => condition(ctx, k.condition, `colonne ${k.cle}`));
   const larg = repartirLargeurs(cols.map((k) => lireLongueur(k.largeur)), largeur, 0);
   let x = 0;
@@ -559,7 +572,7 @@ function colonnesTableau(c, ctx, largeur) {
 function composerTableau(c, ctx, largeur) {
   const cols = colonnesTableau(c, ctx, largeur);
   const index = new Map(cols.map((k) => [k.cle, k]));
-  const rangs = new Map((c.colonnes ?? []).map((k, rang) => [k.cle, rang]));
+  const rangs = new Map(definitionsColonnes(c, ctx).map((k, rang) => [k.cle, rang]));
   // Plage de colonnes d'une cellule fusionnée : colonnes visibles entre `de` et `a` (une colonne masquée par la
   // présentation ne fait pas disparaître la cellule).
   const plage = (de, a) => {

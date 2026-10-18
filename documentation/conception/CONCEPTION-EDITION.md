@@ -706,3 +706,19 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
   par le moteur. Export / import (Q17) : paquet `logibtp-edition` (modèle, inclus, charte, images) ; conflits lier,
   remplacer ou renommer (références réécrites) ; image de la base gardée, sinon créée en GED.
 
+### Lot 6 – fiches, listes, étiquettes (18/10/2026) : réalisé
+
+- Sources « fiche » (sections, groupes et champs mis en forme, champs confidentiels jamais lus) et « liste » (vue
+  enregistrée, recherche en cours, 5 000 lignes au plus, colonnes et libellés de la vue) ; société jointe.
+- Modèles fournis : fiche (toutes les sections), liste (paysage, A4 ou A3, colonnes dynamiques sur une ligne),
+  étiquettes 70 × 37 mm (3 × 8, étiquette de départ d'une planche entamée, exemplaires) ; boutons « 🖨 Imprimer »
+  des fiches et des listes ; répartition des largeurs : colonnes fixes réduites quand elles ne laissent plus de place.
+
+### Reste à faire après les lots 0 à 6
+
+- Lot 7 : concepteur (création et modification des modèles à l'écran) ; le format JSON est stable et contrôlé.
+- Facturation électronique (Factur-X / PDP, PDF/A-3) : module à part (§ 3.5).
+- Déclencheur de production à l'envoi d'une pièce ; édition des vues et procédures spécifiques (analyses,
+  synthèses) ; chartes éditables à l'écran (route prête : `PUT /api/editions/chartes/{code}`).
+- Jint : ≈ 23 s pour 5 000 lignes ; ClearScript V8 si les volumes l'exigent.
+
