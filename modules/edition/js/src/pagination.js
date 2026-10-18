@@ -8,6 +8,7 @@
 // - fragments « chaque page » répétés en haut des pages suivantes.
 import { Dec } from '@logibtp/socle';
 import { r2 } from './unites.js';
+import { traitFinTableau } from './composition.js';
 
 const EPS = 0.01;
 
@@ -168,14 +169,22 @@ export function paginer(fragments, page, zones, alertes = []) {
     repetes.push(...u.filter((f) => f.chaquePage));
 
     if (premier.basDePage) {
-      // Bloc de bas de page : posé au bas de la zone, après étirement des tableaux.
+      // Bloc de bas de page : posé au bas de la zone, après étirement des tableaux ; un tableau du bloc garde son
+      // entête et son trait de fin.
       if (p.segment) fermerSegment(false);
-      const h = u.reduce((a, f) => a + f.boite.hauteur, 0);
+      const boites = [];
+      u.forEach((f, i) => {
+        const t = f.tableau;
+        if (t && u[i - 1]?.tableau !== t && t.entete) boites.push(t.entete);
+        boites.push(f.boite);
+        if (t && u[i + 1]?.tableau !== t && t.traitFin) boites.push(traitFinTableau(t));
+      });
+      const h = boites.reduce((a, b) => a + b.hauteur, 0);
       if (p.y + h > limite() + EPS && !p.vide) { appliquerEtirement(limite()); nouvellePage(); }
       const y = Math.max(p.y, limite() - h);
       appliquerEtirement(y);
       p.y = y;
-      for (const f of u) placerBoite(f.boite);
+      for (const b of boites) placerBoite(b);
       if (u[u.length - 1].sautApres) nouvellePage();
       return;
     }

@@ -151,8 +151,9 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
 
     /// <summary>
     /// Sources annexes des sous-rapports (§ 15.2), lues dans le même appel : marche_documents (commande de base et
-    /// avenants du marché du document), avancements_precedents (situations et factures d'avancement validées du
-    /// marché avant ce document).
+    /// avenants du marché du document, avec le facturé cumulé de chacun, ce document compris, et le pourcentage facturé),
+    /// avancements_precedents (situations et factures d'avancement validées du marché avant ce document : HT, TTC et,
+    /// pour les factures, reste à payer d'après le pointage du module Règlements s'il est installé).
     /// </summary>
     public override async Task<JsonNode?> SourceAnnexeAsync(IServiceProvider services, string nom, JsonObject donnees, Utilisateur u, CancellationToken ct)
     {
@@ -161,14 +162,27 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var sql = nom switch
         {
             "marche_documents" => """
-                SELECT coalesce(json_agg(json_build_object('rang', md.mdo_rang, 'role', md.mdo_role, 'numero', d.ent_numero, 'date', d.ent_date,
-                         'objet', d.ent_objet, 'montant_ht', d.ent_total_ht) ORDER BY md.mdo_rang), '[]')::text AS "Value"
-                FROM document cur JOIN marche_document md ON md.mdo_mar_id = cur.ent_marche_id JOIN document d ON d.ent_id = md.mdo_ent_id
-                WHERE cur.ent_id = @id
+                WITH cmd AS (
+                    SELECT md.mdo_rang, md.mdo_role, d.ent_id, d.ent_numero, d.ent_date, d.ent_objet, d.ent_total_ht
+                    FROM document cur JOIN marche_document md ON md.mdo_mar_id = cur.ent_marche_id JOIN document d ON d.ent_id = md.mdo_ent_id
+                    WHERE cur.ent_id = @id),
+                facture AS (
+                    SELECT c.lig_ent_id AS cmd_id, sum(l.lig_montant_ht) AS mt
+                    FROM document_ligne l JOIN document_ligne c ON c.lig_id = l.lig_avt_source_lig_id
+                    JOIN document f ON f.ent_id = l.lig_ent_id JOIN statut_document s ON s.std_id = f.ent_std_id
+                    WHERE c.lig_ent_id IN (SELECT ent_id FROM cmd) AND f.ent_avt_presentation = 'P' AND s.std_code <> 'ANNULE'
+                      AND (f.ent_verrouille OR f.ent_id = @id)
+                    GROUP BY c.lig_ent_id)
+                SELECT coalesce(json_agg(json_build_object('rang', c.mdo_rang, 'role', c.mdo_role, 'numero', c.ent_numero, 'date', c.ent_date,
+                         'objet', c.ent_objet, 'montant_ht', c.ent_total_ht, 'facture_ht', coalesce(f.mt, 0),
+                         'pct_facture', CASE WHEN c.ent_total_ht <> 0 THEN round(coalesce(f.mt, 0) * 100 / c.ent_total_ht, 2) END) ORDER BY c.mdo_rang), '[]')::text AS "Value"
+                FROM cmd c LEFT JOIN facture f ON f.cmd_id = c.ent_id
                 """,
-            "avancements_precedents" => """
+            "avancements_precedents" => $"""
                 SELECT coalesce(json_agg(json_build_object('numero', d.ent_numero, 'type', t.tyd_libelle, 'date', d.ent_date,
-                         'rang', d.ent_rang_avancement, 'montant_ht', d.ent_total_ht, 'montant_ttc', d.ent_total_ttc)
+                         'rang', d.ent_rang_avancement, 'facture', d.ent_avt_presentation = 'P', 'montant_ht', d.ent_total_ht,
+                         'montant_tva', d.ent_total_tva, 'montant_ttc', d.ent_total_ttc, 'net', d.ent_net_a_payer,
+                         'reste', CASE WHEN d.ent_avt_presentation = 'P' THEN {(await ReglementsInstalles(db, ct) ? ResteAPayer : "NULL::numeric")} END)
                          ORDER BY d.ent_date, d.ent_id), '[]')::text AS "Value"
                 FROM document cur JOIN document d ON d.ent_marche_id = cur.ent_marche_id AND d.ent_id <> cur.ent_id
                 JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
@@ -181,6 +195,14 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var json = await db.Database.SqlQueryRaw<string>(sql, new NpgsqlParameter("id", id)).FirstAsync(ct);
         return JsonNode.Parse(json);
     }
+
+    /// <summary>Reste à payer d'une pièce d (alias) : net à payer moins les pointages de ses échéances (module Règlements).</summary>
+    private const string ResteAPayer =
+        "d.ent_net_a_payer - coalesce((SELECT sum(p.poi_montant) FROM document_echeance e JOIN pointage p ON p.poi_echeance_id = e.ech_id WHERE e.ech_ent_id = d.ent_id), 0)";
+
+    /// <summary>Module Règlements installé dans la base courante (table pointage) : il est facultatif.</summary>
+    private static async Task<bool> ReglementsInstalles(LogiBtpContext db, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<bool>("SELECT to_regclass('pointage') IS NOT NULL AS \"Value\"").FirstAsync(ct);
 
     /// <summary>Dernière édition rangée d'un élément de la GED (catégorie edition, non supprimée) et sa version courante.</summary>
     private static async Task<EditionRangee?> DerniereEditionGed(IServiceProvider services, string type, string element, CancellationToken ct)
@@ -339,7 +361,11 @@ public static class SourceDocumentEdition
                 ["type"] = type.DeepClone(), ["statut"] = c["statut"]?.DeepClone(), ["verrouille"] = d.EntVerrouille, ["indice"] = d.EntIndice,
                 ["devise"] = d.EntDevise, ["nature_avoir"] = d.EntNatureAvoir, ["mode_reglement"] = d.EntModeReglement,
                 ["condition"] = c["condition"]?.DeepClone(),
-                ["avancement"] = d.EntAvtPresentation is null ? null : new JsonObject { ["presentation"] = d.EntAvtPresentation, ["rang"] = d.EntRangAvancement },
+                ["avancement"] = d.EntAvtPresentation is null ? null : new JsonObject
+                {
+                    ["presentation"] = d.EntAvtPresentation, ["rang"] = d.EntRangAvancement,
+                    ["pied"] = await PiedAvancement(db, d, c["marche"]?["montant_ht"]?.GetValue<decimal?>(), ct),
+                },
                 ["entete"] = document,
             },
             ["client"] = Coordonnees(client),
@@ -359,6 +385,56 @@ public static class SourceDocumentEdition
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
         return resultat;
+    }
+
+    /// <summary>
+    /// Pièces d'avancement déjà facturées avant le document (comme le bloc de déduction de l'entête) : figées à la
+    /// validation (document_deduction), sinon factures et avoirs d'avancement validés non annulés du marché et reprises
+    /// d'avancement, de numéro de situation inférieur.
+    /// </summary>
+    private const string SqlPiedAvancement = """
+        WITH cur AS (SELECT * FROM document WHERE ent_id = @id),
+        prec AS (
+            SELECT k.ded_deduit_ent_id AS ent_id FROM document_deduction k WHERE k.ded_ent_id = @id
+            UNION
+            SELECT x.ent_id FROM cur d JOIN document x ON x.ent_marche_id = d.ent_marche_id AND x.ent_id <> d.ent_id
+            JOIN type_document tx ON tx.tyd_id = x.ent_tyd_id JOIN statut_document s ON s.std_id = x.ent_std_id
+            WHERE NOT EXISTS (SELECT 1 FROM document_deduction WHERE ded_ent_id = @id) AND x.ent_verrouille AND s.std_code <> 'ANNULE'
+              AND (x.ent_avt_presentation = 'P' OR tx.tyd_avancement = 'R')
+              AND (x.ent_rang_avancement IS NULL OR d.ent_rang_avancement IS NULL OR x.ent_rang_avancement < d.ent_rang_avancement))
+        SELECT json_build_object('ht', coalesce(sum(x.ent_total_ht), 0), 'tva', coalesce(sum(x.ent_total_tva), 0),
+                 'ttc', coalesce(sum(x.ent_total_ttc), 0), 'net', coalesce(sum(x.ent_net_a_payer), 0), 'nombre', count(*))::text AS "Value"
+        FROM prec p JOIN document x ON x.ent_id = p.ent_id
+        """;
+
+    /// <summary>
+    /// Pied d'avancement (factures et situations) : pour le total HT, la TVA, le total TTC et le net à payer, cumul
+    /// précédent (pièces déjà facturées), période et cumul. Facture d'avancement (présentation P) : période = la pièce,
+    /// cumul = précédent + période ; situation (C) : cumul = la pièce, période = cumul − précédent (reste à facturer).
+    /// Pourcentage facturé : cumul HT / montant HT du marché.
+    /// </summary>
+    private static async Task<JsonObject?> PiedAvancement(LogiBtpContext db, DocumentBtp d, decimal? montantMarche, CancellationToken ct)
+    {
+        if (d.EntAvtPresentation is not ("P" or "C") || d.EntMarcheId is null) return null;
+        var json = await db.Database.SqlQueryRaw<string>(SqlPiedAvancement, new NpgsqlParameter("id", d.EntId)).FirstAsync(ct);
+        var prec = JsonNode.Parse(json)!.AsObject();
+        decimal P(string k) => prec[k]?.GetValue<decimal>() ?? 0;
+        var facture = d.EntAvtPresentation == "P";
+        var lignes = new JsonArray();
+        decimal cumulHt = 0;
+        foreach (var (cle, libelle, piece) in new[] { ("ht", "Total HT", d.EntTotalHt), ("tva", "TVA", d.EntTotalTva), ("ttc", "Total TTC", d.EntTotalTtc), ("net", "Net à payer", d.EntNetAPayer) })
+        {
+            var precedent = P(cle);
+            var periode = facture ? piece : piece - precedent;
+            var cumul = facture ? precedent + piece : piece;
+            if (cle == "ht") cumulHt = cumul;
+            lignes.Add(new JsonObject { ["cle"] = cle, ["libelle"] = libelle, ["precedent"] = precedent, ["periode"] = periode, ["cumul"] = cumul });
+        }
+        return new JsonObject
+        {
+            ["lignes"] = lignes, ["nombre_precedents"] = prec["nombre"]?.DeepClone(), ["marche_ht"] = montantMarche,
+            ["pct_facture"] = montantMarche is decimal m && m != 0 ? Math.Round(cumulHt * 100 / m, 2, MidpointRounding.AwayFromZero) : null,
+        };
     }
 
     /// <summary>Montant avec séparateur de milliers (espace insécable fine) et décimales utiles (sans globalisation).</summary>

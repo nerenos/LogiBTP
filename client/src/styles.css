@@ -307,4 +307,15 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .edition-numero { position: absolute; right: -3.2rem; top: 0; color: #fff; font-size: 0.8rem; }
 .edition-productions { padding: 0.3rem 0.8rem; border-bottom: 1px solid var(--bord); background: var(--surface); font-size: 0.9em; }
 .page-fiche-edition, .page-liste-edition { display: flex; justify-content: flex-end; padding: 0.2rem 0.6rem 0; }
+.page-edition-apercu .edition-corps { flex: 1; display: flex; gap: 0.5rem; min-height: 0; }
+.page-edition-apercu .edition-corps > .edition-pages { flex: 1 1 auto; min-width: 0; }
+.edition-editeur { flex: 0 0 min(46rem, 45%); display: flex; flex-direction: column; gap: 0.4rem; overflow: auto; padding: 0.5rem; border: 1px solid var(--bordure, #ccd); border-radius: 6px; background: var(--fond, #fff); }
+.edition-editeur-barre { display: flex; gap: 0.5rem; align-items: center; }
+.edition-editeur-texte { flex: 1 1 auto; min-height: 20rem; font: 12px/1.45 ui-monospace, Consolas, monospace; tab-size: 2; white-space: pre; resize: vertical; }
+.edition-editeur-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.edition-editeur-message { font-size: 0.85rem; max-height: 10rem; overflow: auto; }
+.edition-editeur-message.erreur { color: var(--erreur, #b00020); }
+.edition-editeur-message.succes { color: var(--succes, #1b7f3b); }
+.edition-editeur-message.avertissement { color: var(--avertissement, #a15c00); }
+.edition-editeur-message ul { margin: 0.2rem 0 0 1rem; padding: 0; }
 iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }

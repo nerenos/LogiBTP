@@ -714,6 +714,22 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
   étiquettes 70 × 37 mm (3 × 8, étiquette de départ d'une planche entamée, exemplaires) ; boutons « 🖨 Imprimer »
   des fiches et des listes ; répartition des largeurs : colonnes fixes réduites quand elles ne laissent plus de place.
 
+### Retours sur les pièces de marché (18/10/2026) : réalisé
+
+- Pied d'avancement des situations et factures d'avancement (bloc « TOTAUX_AVANCEMENT ») : total HT, TVA, total TTC
+  et net à payer en cumul, cumul précédent (pièces déjà facturées, comme le bloc de déduction de l'entête) et période ;
+  montant du marché et pourcentage facturé (situation : réalisé).
+- Sous-rapports en tableaux avec titres de colonnes et ligne de total (`total` du tableau) ; variante « Facturation
+  du marché » (travaux facturés et pourcentage facturé par commande et avenant), choisie par le paramètre « Facturé du
+  marché » (cochée par défaut sur la facture d'avancement) ; situations et factures précédentes : HT, TTC, reste à
+  payer (net − pointages du module Règlements, s'il est installé).
+- Lignes des documents allégées : valeurs nulles non imprimées (`zero_vide`), pourcentages sous leur forme la plus
+  simple (deux décimales au plus : 30 %, 85,26 %) ; taux du pied non répété quand le libellé le porte déjà.
+- Administrateur : éditeur du modèle dans l'aperçu (`editer=1`, ✎ Modèle) : JSON du rapport, de ses blocs et
+  sous-rapports, appliqué sur les données et paramètres de l'aperçu, vérifié et enregistré (en attendant le lot 7).
+- Moteur corrigé : une ligne qu'aucun gabarit ne vise est imprimée en rangée simple (elle disparaissait) ; un tableau
+  inclus dans une pile ou un bloc de bas de page garde son entête et son trait de fin.
+
 ### Reste à faire après les lots 0 à 6
 
 - Lot 7 : concepteur (création et modification des modèles à l'écran) ; le format JSON est stable et contrôlé.

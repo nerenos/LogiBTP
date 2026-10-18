@@ -1,10 +1,11 @@
+import { Dec } from '@logibtp/socle';
 // Composition : composants du modèle + données → boîtes mesurées (millimètres), prêtes à paginer.
 // Une boîte : { hauteur, largeur, dessiner(sortie, x, y, hauteurImposee?), decouper?(h) → [haut, bas] | null }.
 // Le dessin produit des éléments en coordonnées de page (mm, origine en haut à gauche) :
 //   texte { x, y (ligne de base), texte, style, largeur, rotation? } ; rect { x, y, l, h, fond, trait } ;
 //   ligne { x1, y1, x2, y2, trait } ; image { x, y, l, h, ressource } ; qr { x, y, module, rangees }.
 import { evaluerFormule, evaluerCondition, enSegments, enTexte, estDec, estRiche, estRetrait, estVide, lireChemin,
-  formaterNombre, formaterDate, ErreurFormule, versDec } from './formules.js';
+  formaterNombre, formaterSimple, formaterDate, ErreurFormule, versDec } from './formules.js';
 import { mettreEnLignes, styleTexte } from './texte.js';
 import { lireHtml, estHtml } from './html.js';
 import { resoudreStyle, resoudreCouleur, resoudreTrait } from './charte.js';
@@ -243,7 +244,8 @@ function valeurChamp(c, ctx) {
       if (nom === 'montant') v = estVide(v) ? '' : formaterNombre(versDec(v), arg === undefined ? 2 : Number(arg));
       else if (nom === 'nombre') v = formaterNombre(versDec(v), arg === undefined ? 2 : Number(arg));
       else if (nom === 'monnaie') v = `${formaterNombre(versDec(v), 2)} ${arg ?? '€'}`;
-      else if (nom === 'pourcent') v = `${formaterNombre(versDec(v), arg === undefined ? 2 : Number(arg))} %`;
+      else if (nom === 'pourcent') v = `${formaterSimple(versDec(v), arg === undefined ? 2 : Number(arg))} %`;
+      else if (nom === 'simple') v = formaterSimple(versDec(v), arg === undefined ? 2 : Number(arg));
       else if (nom === 'date') v = formaterDate(v, arg ?? 'court');
       else if (nom === 'zero_vide' && estDec(v) && v.isZero()) v = '';
     } catch (e) {
@@ -389,13 +391,32 @@ function composerPile(c, ctx, largeur) {
   for (const e of c.enfants ?? []) {
     const b = composer(e, ctx, interieur);
     if (!b) continue;
-    if (b.flux) { enfants.push(...b.flux.map((f) => f.boite)); continue; }
+    if (b.flux) { enfants.push(...boitesDuFlux(b)); continue; }
     enfants.push(b);
   }
   if (!enfants.length && (c.masquer_si_vide ?? true)) return null;
   const p = pileDeBoites(enfants, interieur, c.espacement ?? 0);
   if (c.secable === false) delete p.decouper;
   return envelopper(p, c, ctx, largeur);
+}
+
+/**
+ * Boîtes d'un flux posé dans une pile : un tableau garde son entête (avant ses lignes) et son trait de fin, que la
+ * pagination n'ajoute qu'aux tableaux posés directement dans une bande.
+ */
+function boitesDuFlux(b) {
+  const boites = b.flux.map((f) => f.boite);
+  const t = b.tableau;
+  if (!t || !boites.length) return boites;
+  return [...(t.entete ? [t.entete] : []), ...boites, ...(t.traitFin ? [traitFinTableau(t)] : [])];
+}
+
+/** Trait de fin d'un tableau (boîte sans hauteur). */
+export function traitFinTableau(t) {
+  return {
+    hauteur: 0, largeur: t.largeur,
+    dessiner(els, x, y) { els.push({ t: 'ligne', x1: r2(x), y1: r2(y), x2: r2(x + t.largeur), y2: r2(y), trait: t.traitFin }); },
+  };
 }
 
 /** Rangée : colonnes en %, mm ou reste ; hauteur = colonne la plus haute ; option meme_hauteur (cadres égaux). */
@@ -605,11 +626,11 @@ function composerTableau(c, ctx, largeur) {
     return { x, l, b: b ?? vide(l, 0), retrait, de: k0.i, a: k1.i, fond: resoudreCouleur(ctx.charte, def.fond) };
   };
 
-  // Rangée d'une ligne de données : premier gabarit dont la condition est vraie.
+  // Rangée d'une ligne de données : premier gabarit dont la condition est vraie, sinon la rangée simple des colonnes.
   const rangee = (el, i) => {
     const ctxL = enfant(ctx, { element: el, index: i });
-    const g = (c.gabarits ?? [{}]).find((x) => condition(ctxL, x.condition, 'gabarit')) ?? null;
-    if (!g || g.masquer) return null;
+    const g = (c.gabarits ?? []).find((x) => condition(ctxL, x.condition, 'gabarit')) ?? {};
+    if (g.masquer) return null;
     // Ligne « saut de page » : nouvelle page dans le tableau (entête répétée, report).
     if (g.saut_page) return { boite: { saut: true, hauteur: 0, largeur, dessiner() {} }, cumuls: {} };
     let defs;
@@ -681,15 +702,16 @@ function composerTableau(c, ctx, largeur) {
     });
   })();
 
-  // Ligne de report (« À reporter » en bas de page, « Report » en haut de la suivante).
+  // Ligne de cumuls : report (« À reporter » en bas de page, « Report » en haut de la suivante) et total final.
   const colsReport = cols.filter((k) => k.cumul);
-  const report = c.report === false || !colsReport.length ? null : (libelle, cumuls) => {
+  const ligneCumuls = !colsReport.length ? null : (libelle, cumuls) => {
     const premier = colsReport[0].i;
     const cells = [];
     if (premier > 0) cells.push(cellule({ valeur: libelle, alignement: 'droite', html: false, format: '' }, ctx, cols[0].cle, cols[premier - 1].cle, c.report?.style ?? 'sous_total'));
     for (const k of colsReport) cells.push(cellule({ valeur: '=Parametre("__cumul")', format: k.format ?? 'montant', alignement: 'droite' }, enfant(ctx, { parametres: { ...ctx.parametres, __cumul: cumuls[k.cle] ?? null } }), k.cle, k.cle, c.report?.style ?? 'sous_total'));
     return boiteRangee(cells.filter(Boolean), { fond: resoudreCouleur(ctx.charte, c.report?.fond ?? 'fond_total'), haut: traitEntete, bas: traitEntete, colonnes: traitCol, cadre: traitCadre });
   };
+  const report = c.report === false ? null : ligneCumuls;
 
   const donnees = evaluerExpression(ctx, c.collection, 'tableau');
   const liste = Array.isArray(donnees) ? donnees : [];
@@ -704,6 +726,13 @@ function composerTableau(c, ctx, largeur) {
   if (!fragments.length && c.vide) {
     const b = composerChamp({ type: 'champ', valeur: c.vide, style: 'discret', alignement: 'centre' }, ctx, largeur);
     if (b) fragments.push({ boite: b, cumuls: {} });
+  }
+  // Ligne de total (`total: true` ou { libelle }) : sommes des colonnes cumulées de toutes les lignes, gardée avec la
+  // dernière ligne.
+  if (c.total && ligneCumuls && fragments.length) {
+    const totaux = {};
+    for (const f of fragments) for (const [k, v] of Object.entries(f.cumuls ?? {})) totaux[k] = (totaux[k] ?? new Dec(0)).plus(v);
+    fragments.push({ boite: ligneCumuls(c.total.libelle ?? 'Total', totaux), cumuls: {}, lieAuPrecedent: true });
   }
   return { flux: fragments.map((f) => ({ ...f, tableau: meta })), tableau: meta };
 }

@@ -111,3 +111,23 @@ describe('polices intégrées aux PDF', () => {
     expect(brut).not.toMatch(/\/FontFile2[^]*?stream\r?\ntrue/);
   });
 });
+
+describe('total des tableaux', () => {
+  it('ligne de total des colonnes cumulées, sans report', () => {
+    const m = { bandes: [{ contenu: { type: 'tableau', collection: 'l', report: false, total: { libelle: 'Total marché' },
+      colonnes: [{ cle: 'a', titre: 'Pièce', valeur: '{{ligne.n}}' }, { cle: 'm', titre: 'Montant', valeur: '{{ligne.m}}', format: 'montant', cumul: '=ligne.m' }] } }] };
+    const r = editer(m, { l: [{ n: 'Commande', m: '1000' }, { n: 'Avenant 1', m: '250.5' }] }, { polices: p });
+    expect(textes(r.pages[0]).map((s) => s.replace(/\s/g, ' '))).toEqual(['Pièce', 'Montant', 'Commande', '1 000,00', 'Avenant 1', '250,50', 'Total marché', '1 250,50']);
+  });
+});
+
+describe('tableaux inclus', () => {
+  const tab = { type: 'tableau', collection: 'l', report: false, gabarits: [{ condition: 'ligne.n = "B"', style: 'gras' }],
+    colonnes: [{ cle: 'n', titre: 'Nom', valeur: '{{ligne.n}}' }, { cle: 'v', titre: 'Valeur', valeur: '{{ligne.v}}' }] };
+  const d = { l: [{ n: 'A', v: '1' }, { n: 'B', v: '2' }] };
+  it.each([[{}, tab], [{ bas_de_page: true }, tab], [{}, { type: 'pile', enfants: [tab] }], [{ bas_de_page: true }, { type: 'pile', enfants: [tab] }]])(
+    'entête et lignes hors gabarit conservées (%j)', (options, contenu) => {
+      const r = editer({ bandes: [{ type: 'RESUME', options, contenu }] }, d, { polices: p });
+      expect(textes(r.pages[0])).toEqual(['Nom', 'Valeur', 'A', '1', 'B', '2']);
+    });
+});

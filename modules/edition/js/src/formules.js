@@ -159,6 +159,17 @@ export function formaterNombre(v, decimales = 2, milliers = true) {
   return (negatif ? '-' : '') + groupes + (dec ? ',' + dec : '');
 }
 
+/**
+ * Nombre sous sa forme la plus simple : au plus `max` décimales (arrondi commercial), zéros inutiles retirés,
+ * séparateur de milliers : 30,00 → « 30 », 85,26 → « 85,26 », 85,5 → « 85,5 », 12,3456 → « 12,35 ».
+ */
+export function formaterSimple(v, max = 2) {
+  const d = D(v);
+  if (d === null) return '';
+  const s = formaterNombre(d, max);
+  return s.includes(',') ? s.replace(/0+$/, '').replace(/,$/, '') : s;
+}
+
 /** Date ISO (AAAA-MM-JJ…) → « JJ/MM/AAAA » ou format « long » (18 octobre 2026). */
 export function formaterDate(v, format = 'court') {
   if (!v) return '';
@@ -271,7 +282,9 @@ export const FONCTIONS = {
   nombre: { min: 1, max: 3, appliquer: ([v, dec, milliers]) => formaterNombre(versDec(v), dec === undefined ? 2 : Number(versDec(dec)), milliers === undefined ? true : versBool(milliers)) },
   montant: { min: 1, max: 2, appliquer: ([v, dec]) => (versDec(v) === null ? '' : formaterNombre(versDec(v), dec === undefined ? 2 : Number(versDec(dec)))) },
   monnaie: { min: 1, max: 2, appliquer: ([v, sym]) => (versDec(v) === null ? '' : `${formaterNombre(versDec(v), 2)} ${sym === undefined ? '€' : enTexte(sym)}`) },
-  pourcent: { min: 1, max: 2, appliquer: ([v, dec]) => (versDec(v) === null ? '' : `${formaterNombre(versDec(v), dec === undefined ? 2 : Number(versDec(dec)))} %`) },
+  // Pourcentage sous sa forme la plus simple (au plus deux décimales par défaut) : 30 %, 85,26 %.
+  pourcent: { min: 1, max: 2, appliquer: ([v, dec]) => (versDec(v) === null ? '' : `${formaterSimple(versDec(v), dec === undefined ? 2 : Number(versDec(dec)))} %`) },
+  simple: { min: 1, max: 2, appliquer: ([v, dec]) => (versDec(v) === null ? '' : formaterSimple(versDec(v), dec === undefined ? 2 : Number(versDec(dec)))) },
   date: { min: 1, max: 2, appliquer: ([v, f]) => formaterDate(v, f === undefined ? 'court' : normaliser(enTexte(f))) },
   arrondi: { min: 1, max: 2, appliquer: ([v, n]) => versDec(v)?.toDecimalPlaces(n === undefined ? 0 : Number(versDec(n)), Dec.ROUND_HALF_UP) ?? null },
   abs: { min: 1, max: 1, appliquer: ([v]) => versDec(v)?.abs() ?? null },

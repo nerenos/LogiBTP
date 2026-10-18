@@ -3,6 +3,7 @@ import { creerCombo, lirePreferences, ecrirePreferences, echapper } from '@logib
 import { editer, pageSvg, base64VersOctets } from '@logibtp/edition';
 import { api } from '../api.js';
 import { policesEdition } from '../editions/polices.js';
+import { EditeurModeleApercu } from '../editions/editeur-modele.js';
 
 const GABARIT = `
   <div class="edition-barre">
@@ -18,11 +19,15 @@ const GABARIT = `
       <button data-action="ranger" title="Produire le PDF par le serveur et le ranger dans la GED de l'élément (tâche de fond)">🗄 Ranger en GED</button>
       <button data-action="double" title="Double : le PDF déjà rangé dans la GED (pièce validée : celui envoyé, jamais modifié)">📄 Double</button>
       <button data-action="actualiser" title="Relire le document et les modèles">⟳</button>
+      <button data-action="editer" data-admin hidden title="Administrateur : modifier le modèle (JSON) et le tester sur cet aperçu">✎ Modèle</button>
     </span>
   </div>
   <div class="edition-alertes" data-zone="alertes" hidden></div>
   <div class="edition-productions" data-zone="productions" hidden></div>
-  <div class="edition-pages" data-zone="pages"><p class="aide">Préparation de l'aperçu…</p></div>`;
+  <div class="edition-corps">
+    <div class="edition-pages" data-zone="pages"><p class="aide">Préparation de l'aperçu…</p></div>
+    <div class="edition-editeur" data-zone="editeur" hidden></div>
+  </div>`;
 
 const ZOOMS = [50, 75, 100, 125, 150].map((z) => ({ valeur: String(z), libelle: `${z} %` }));
 
@@ -30,6 +35,7 @@ const ZOOMS = [50, 75, 100, 125, 150].map((z) => ({ valeur: String(z), libelle: 
  * Aperçu d'une édition : /edition?source=document&id=12&modele=DEVIS&presentation=DETAILLEE&format=A4.
  * Le serveur fournit en un appel le modèle, les données, la charte, les blocs et les ressources ; le moteur du
  * navigateur (même code que le serveur) produit les pages, dessinées en SVG. Imprimer et PDF : PDF du serveur.
+ * Administrateur : `editer=1` (ou ✎ Modèle) ouvre l'éditeur du modèle sur les données et paramètres de l'aperçu.
  */
 export class PageEdition extends PageBase {
   icone = '🖨';
@@ -47,14 +53,29 @@ export class PageEdition extends PageBase {
       if (!b) return;
       const action = {
         imprimer: () => this.pdf(true), pdf: () => this.pdf(false), actualiser: () => this.charger(),
-        ranger: () => this.ranger(), double: () => this.double(),
+        ranger: () => this.ranger(), double: () => this.double(), editer: () => this.basculerEditeur(),
       }[b.dataset.action];
       Promise.resolve(action?.()).catch((x) => this.app.erreur(x));
     });
+    this.$('[data-action="editer"]').hidden = !this.app.estAdmin();
+    this.editionDemandee = this.app.estAdmin() && (q.editer === '1' || q.editer === 'true');
     await this.charger();
   }
 
   $(s) { return this.conteneur.querySelector(s); }
+
+  /** Éditeur du modèle (administrateur) : panneau à droite des pages, mémorisé dans l'adresse (`editer=1`). */
+  basculerEditeur(ouvrir = this.$('[data-zone="editeur"]').hidden) {
+    const zone = this.$('[data-zone="editeur"]');
+    zone.hidden = !ouvrir;
+    this.conteneur.classList.toggle('avec-editeur', ouvrir);
+    this.editionDemandee = ouvrir;
+    if (ouvrir) {
+      this.editeur ??= new EditeurModeleApercu(zone, this);
+      this.editeur.construire();
+    }
+    this.majUrl();
+  }
 
   /** Préparation par le serveur (modèle, données, charte, blocs, ressources), puis rendu. */
   async charger() {
@@ -70,6 +91,7 @@ export class PageEdition extends PageBase {
     this.$('[data-titre]').textContent = this.prep.element;
     this.construireBarre();
     await this.rendre();
+    if (this.editionDemandee) this.basculerEditeur(true);
     await this.majProductions();
     this.app.majPage();
   }
@@ -129,6 +151,7 @@ export class PageEdition extends PageBase {
     const q = new URLSearchParams({
       source: d.source, id: d.id, ...(d.modele ? { modele: d.modele } : {}), ...(d.presentation ? { presentation: d.presentation } : {}),
       ...(d.format ? { format: d.format } : {}), ...(d.parametres.recherche ? { recherche: d.parametres.recherche } : {}),
+      ...(this.editionDemandee ? { editer: '1' } : {}),
     });
     this.app.routeur.remplacerUrl(`/edition?${q}`);
   }

@@ -40,3 +40,10 @@ describe('charte et libellés', () => {
     expect(lireHtml('<table><tr><td>a</td></tr></table>')[0].fusions).toBeUndefined();
   });
 });
+
+describe('nombres sous leur forme la plus simple', () => {
+  it.each([['30', '30'], ['30.00', '30'], ['85.26', '85,26'], ['85.5', '85,5'], ['12.3456', '12,35'], ['1234.5', '1 234,5'], ['0', '0']])('%s → %s', (v, attendu) => {
+    expect(evaluerFormule(`=Simple(${v.replace('.', ',')})`, {}).replace(/\s/g, ' ')).toBe(attendu);
+  });
+  it('pourcentage simplifié', () => expect(evaluerFormule('=Pourcent(20)', {})).toBe('20 %'));
+});

@@ -89,13 +89,13 @@ const BLOCS = [
         { cle: 'lib', titre: 'Désignation', largeur: '*', valeur: '{{ligne.libelle_html}}', html: true },
         { cle: 'qte', titre: 'Qté', largeur: '15mm', valeur: '{{ligne.qte}}', alignement: 'droite', format: 'nombre:2', style: 'montant', zero_vide: true, condition: 'NON Parametre("avancement")' },
         { cle: 'u', titre: 'U', largeur: '8mm', valeur: '{{ligne.unite}}', alignement: 'centre', condition: 'NON Parametre("avancement")' },
-        { cle: 'pu', titre: 'PU HT', largeur: '19mm', valeur: '{{ligne.pu}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("prix") ET NON Parametre("avancement")' },
-        { cle: 'mt', titre: 'Montant HT', largeur: '23mm', valeur: '{{ligne.montant}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("prix") ET NON Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.montant; Nul)' },
-        { cle: 'amarche', titre: 'Marché HT', largeur: '22mm', valeur: '{{ligne.avt_montant_marche}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("avancement")' },
-        { cle: 'apct', titre: '% cumulé', largeur: '15mm', valeur: '{{ligne.avt_pct}}', alignement: 'droite', format: 'nombre:2', style: 'montant', condition: 'Parametre("avancement")' },
-        { cle: 'acumul', titre: 'Cumul HT', largeur: '22mm', valeur: '{{ligne.avt_montant_cumul}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.avt_montant_cumul; Nul)' },
-        { cle: 'aprec', titre: 'Précédent HT', largeur: '22mm', valeur: '{{ligne.avt_montant_precedent}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.avt_montant_precedent; Nul)' },
-        { cle: 'aperiode', titre: 'Période HT', largeur: '22mm', valeur: '{{ligne.montant}}', alignement: 'droite', format: 'montant', style: 'montant', condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.montant; Nul)' },
+        { cle: 'pu', titre: 'PU HT', largeur: '19mm', valeur: '{{ligne.pu}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("prix") ET NON Parametre("avancement")' },
+        { cle: 'mt', titre: 'Montant HT', largeur: '23mm', valeur: '{{ligne.montant}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("prix") ET NON Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.montant; Nul)' },
+        { cle: 'amarche', titre: 'Marché HT', largeur: '22mm', valeur: '{{ligne.avt_montant_marche}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("avancement")' },
+        { cle: 'apct', titre: '% cumulé', largeur: '15mm', valeur: '{{ligne.avt_pct}}', alignement: 'droite', format: 'simple:2', style: 'montant', zero_vide: true, condition: 'Parametre("avancement")' },
+        { cle: 'acumul', titre: 'Cumul HT', largeur: '22mm', valeur: '{{ligne.avt_montant_cumul}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.avt_montant_cumul; Nul)' },
+        { cle: 'aprec', titre: 'Précédent HT', largeur: '22mm', valeur: '{{ligne.avt_montant_precedent}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.avt_montant_precedent; Nul)' },
+        { cle: 'aperiode', titre: 'Période HT', largeur: '22mm', valeur: '{{ligne.montant}}', alignement: 'droite', format: 'montant', style: 'montant', zero_vide: true, condition: 'Parametre("avancement")', cumul: '=Si(ligne.compte_total; ligne.montant; Nul)' },
       ],
       gabarits: [
         { condition: 'ligne.composante ET NON Parametre("composantes")', masquer: true },
@@ -103,18 +103,18 @@ const BLOCS = [
         { condition: 'ligne.type = "IMAGE"', masquer: true },
         {
           condition: 'ligne.type = "SECTION"', fond: 'fond_section', style: 'section', garder_avec_suivant: true, bordures: { haut: 'fin', bas: 'fin' },
-          cellules: [{ de: 'num', a: 'lib', valeur: '{{ligne.libelle_html}}', html: true }, { de: 'qte', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant' }],
+          cellules: [{ de: 'num', a: 'lib', valeur: '{{ligne.libelle_html}}', html: true }, { de: 'qte', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant', zero_vide: true }],
         },
         {
           condition: 'ligne.type = "TITRE"', fond: 'fond_titre', style: 'titre_ligne', garder_avec_suivant: true,
           cellules: [{ colonne: 'num', valeur: '{{ligne.numero}}' }, { de: 'lib', a: 'pu', valeur: '{{ligne.libelle_html}}', html: true, retrait: '=ligne.niveau * 2' },
-            { de: 'mt', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant' }],
+            { de: 'mt', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant', zero_vide: true }],
         },
         { condition: 'ligne.type = "TEXTE"', cellules: [{ de: 'lib', a: 'aperiode', valeur: '{{ligne.libelle_html}}', html: true, style: 'discret', retrait: '=ligne.niveau * 2' }] },
         {
           condition: 'ligne.type = "SOUS_TOTAL" OU ligne.type = "PIED"', style: 'sous_total',
           cellules: [{ de: 'num', a: 'pu', valeur: '{{ligne.libelle_html}}', html: true, alignement: 'droite' },
-            { de: 'mt', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant' }],
+            { de: 'mt', a: 'aperiode', valeur: '=Si(Parametre("prix"); ligne.montant; Nul)', alignement: 'droite', format: 'montant', zero_vide: true }],
         },
         { condition: 'ligne.composante', style: 'composante', lie_au_precedent: true, surcharges: { lib: { retrait: '=ligne.niveau * 2' } } },
         {
@@ -153,7 +153,7 @@ const BLOCS = [
                 {
                   type: 'repete', collection: 'pied', contenu: {
                     type: 'rangee', fond: '=Si(element.cle = "NET"; "fond_total"; Nul)', enfants: [
-                      champ('=Si(element.genre = "total"; Gras(element.libelle); element.libelle & Si(element.taux; " " & Si(element.genre = "tva"; ""; Nombre(element.taux; 2) & " %") ; "") & Si(element.base; " sur " & Montant(element.base); ""))', { largeur: '*', style: '=Si(element.genre = "total"; "gras"; "petit")' }),
+                      champ('=Si(element.genre = "total"; Gras(element.libelle); element.libelle & Si(element.taux ET element.genre <> "tva" ET NON Contient(element.libelle; Simple(element.taux)); " " & Pourcent(element.taux); "") & Si(element.base; " sur " & Montant(element.base); ""))', { largeur: '*', style: '=Si(element.genre = "total"; "gras"; "petit")' }),
                       champ('{{element.montant}}', { largeur: '28mm', format: 'montant', alignement: 'droite', style: 'montant' }),
                     ],
                   },
@@ -174,6 +174,24 @@ const BLOCS = [
               ],
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    code: 'TOTAUX_AVANCEMENT', libelle: "Pied d'avancement (cumul, précédent, période ; facturé du marché)",
+    contenu: {
+      type: 'pile', condition: 'document.avancement.pied', marges: { haut: 3 }, espacement: 1, enfants: [
+        champ('="Avancement du marché" & Si(document.avancement.pied.marche_ht; " : " & Monnaie(document.avancement.pied.marche_ht) & " HT"; "") & Si(document.avancement.pied.pct_facture; Si(document.avancement.presentation = "P"; " – facturé "; " – réalisé ") & Pourcent(document.avancement.pied.pct_facture) & " (cumul HT)"; "")', { style: 'sous_titre' }),
+        {
+          type: 'tableau', collection: 'document.avancement.pied.lignes', remplir: false, report: false,
+          colonnes: [
+            { cle: 'lib', titre: '', largeur: '*', valeur: '{{ligne.libelle}}' },
+            { cle: 'cumul', titre: 'Cumul', largeur: '30mm', valeur: '{{ligne.cumul}}', format: 'montant', alignement: 'droite', style: 'montant' },
+            { cle: 'prec', titre: 'Cumul précédent', largeur: '30mm', valeur: '{{ligne.precedent}}', format: 'montant', alignement: 'droite', style: 'montant' },
+            { cle: 'periode', titre: 'Période', largeur: '30mm', valeur: '{{ligne.periode}}', format: 'montant', alignement: 'droite', style: 'montant' },
+          ],
+          gabarits: [{ condition: 'ligne.cle = "net" OU ligne.cle = "ttc"', style: 'gras', fond: '=Si(ligne.cle = "net"; "fond_total"; Nul)' }],
         },
       ],
     },
@@ -253,7 +271,7 @@ const PRESENTATIONS_AVANCEMENT = [
 /**
  * Rapport d'une pièce : mêmes blocs liés, options propres (titre, accord, mentions, montant en lettres, pied).
  */
-function piece({ code, libelle, types, titre = '', accord = false, lettres = false, paiement = false, particulier = false, presentations = PRESENTATIONS_STANDARD, pied = 'PIED_VENTES_ACHATS', libelleAdresse = 'Adresse des travaux', ordre = 0, marche = false }) {
+function piece({ code, libelle, types, titre = '', accord = false, lettres = false, paiement = false, particulier = false, presentations = PRESENTATIONS_STANDARD, pied = 'PIED_VENTES_ACHATS', libelleAdresse = 'Adresse des travaux', ordre = 0, marche = false, facturationMarche = false }) {
   return {
     code, libelle, genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types, ordre,
     contenu: {
@@ -261,7 +279,10 @@ function piece({ code, libelle, types, titre = '', accord = false, lettres = fal
       page: { format: 'A4', orientation: 'portrait', flexible: ['A4', 'A3'], marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
       presentations,
       // Sous-rapports des pièces de marché : sources annexes lues par le serveur dans le même appel (§ 15.2).
-      ...(marche ? { sources_annexes: ['marche_documents', 'avancements_precedents'] } : {}),
+      ...(marche ? {
+        sources_annexes: ['marche_documents', 'avancements_precedents'],
+        parametres: [{ nom: 'facturation_marche', libelle: 'Facturé du marché', type: 'booleen', defaut: facturationMarche }],
+      } : {}),
       bandes: [
         { type: 'FOND_PAGE', nom: 'filigrane', contenu: bloc('FILIGRANE_STATUT') },
         { type: 'ENTETE_PAGE', pages: 'SUIVANTES', contenu: bloc('RAPPEL_PAGES_SUIVANTES') },
@@ -272,10 +293,12 @@ function piece({ code, libelle, types, titre = '', accord = false, lettres = fal
         },
         { type: 'CORPS', nom: 'lignes', contenu: bloc('LIGNES_DOCUMENT') },
         ...(marche ? [
-          { type: 'CORPS', nom: 'marche', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_DOCUMENTS_MARCHE', donnees: 'sources.marche_documents' } },
+          { type: 'CORPS', nom: 'marche', condition: 'NON Parametre("facturation_marche")', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_DOCUMENTS_MARCHE', donnees: 'sources.marche_documents' } },
+          { type: 'CORPS', nom: 'facturation_marche', condition: 'Parametre("facturation_marche")', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_FACTURATION_MARCHE', donnees: 'sources.marche_documents' } },
           { type: 'CORPS', nom: 'precedents', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_AVANCEMENTS_PRECEDENTS', donnees: 'sources.avancements_precedents' } },
         ] : []),
         { type: 'RESUME', nom: 'totaux', options: { bas_de_page: true, garder_ensemble: true }, contenu: { type: 'pile', enfants: [
+          ...(marche ? [bloc('TOTAUX_AVANCEMENT')] : []),
           bloc('TOTAUX_DOCUMENT', { accord, lettres }),
           ...(paiement ? [bloc('MENTIONS_PAIEMENT')] : []),
           ...(particulier ? [bloc('MENTIONS_PARTICULIER')] : []),
@@ -290,7 +313,7 @@ const RAPPORTS = [
   piece({ code: 'COMMANDE_CLIENT', libelle: 'Commande client (accusé de réception)', types: ['V_COMMANDE'], titre: 'Accusé de réception de commande', ordre: 20 }),
   piece({ code: 'FACTURE', libelle: 'Facture, avoir, acompte', types: ['V_FACTURE', 'V_AVOIR', 'V_FACTURE_ACOMPTE', 'V_RECU_ACOMPTE', 'V_DEMANDE_ACOMPTE'], lettres: true, paiement: true, ordre: 30 }),
   piece({ code: 'SITUATION', libelle: 'Situation de travaux', types: ['V_SITUATION', 'V_REPRISE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, ordre: 40, marche: true }),
-  piece({ code: 'FACTURE_AVANCEMENT', libelle: "Facture d'avancement", types: ['V_FACTURE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, lettres: true, paiement: true, ordre: 50, marche: true }),
+  piece({ code: 'FACTURE_AVANCEMENT', libelle: "Facture d'avancement", types: ['V_FACTURE_AVT'], presentations: PRESENTATIONS_AVANCEMENT, lettres: true, paiement: true, ordre: 50, marche: true, facturationMarche: true }),
   piece({
     code: 'BON_LIVRAISON', libelle: 'Bon de livraison, bon de retour', types: ['V_RECEPTION', 'V_RETOUR'], accord: true, libelleAdresse: 'Livraison',
     presentations: [PRESENTATIONS_STANDARD[2], PRESENTATIONS_STANDARD[0]], ordre: 60,
@@ -306,13 +329,13 @@ const RAPPORTS = [
 
 // Sous-rapports (Q6) : rapports réutilisables inclus par d'autres, sur une source annexe ; type SOUS_RAPPORT (jamais
 // proposés seuls à l'impression d'une pièce).
-const sousRapport = (code, libelle, titre, colonnes) => ({
+const sousRapport = (code, libelle, titre, colonnes, total = 'Total') => ({
   code, libelle, genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['SOUS_RAPPORT'], ordre: 100,
   contenu: {
     format_version: 1, code, libelle, cible: 'DOCUMENT', source: 'document',
     bandes: [{ type: 'CORPS', contenu: { type: 'pile', marges: { haut: 3 }, enfants: [
       champ(titre, { style: 'sous_titre' }),
-      { type: 'tableau', collection: 'elements', remplir: false, report: false, colonnes },
+      { type: 'tableau', collection: 'elements', remplir: false, report: false, total: { libelle: total }, colonnes },
     ] } }],
   },
 });
@@ -322,15 +345,26 @@ const SOUS_RAPPORTS = [
     { cle: 'numero', titre: 'N°', largeur: '30mm', valeur: '{{element.numero}}' },
     { cle: 'date', titre: 'Date', largeur: '22mm', valeur: '{{Date(element.date)}}' },
     { cle: 'objet', titre: 'Objet', largeur: '*', valeur: '{{element.objet}}' },
-    { cle: 'mt', titre: 'Montant HT', largeur: '28mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant' },
-  ]),
+    { cle: 'mt', titre: 'Montant HT', largeur: '28mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.montant_ht' },
+  ], 'Total du marché'),
+  // Variante : facturé cumulé de chaque pièce (factures d'avancement validées et ce document) et pourcentage facturé.
+  sousRapport('SR_FACTURATION_MARCHE', 'Sous-rapport : facturé du marché par pièce (cumul, pourcentage)', 'Facturation du marché', [
+    { cle: 'piece', titre: 'Pièce', largeur: '26mm', valeur: '=Si(element.role = "BASE"; "Commande"; "Avenant " & element.rang)' },
+    { cle: 'numero', titre: 'N°', largeur: '28mm', valeur: '{{element.numero}}' },
+    { cle: 'objet', titre: 'Objet', largeur: '*', valeur: '{{element.objet}}' },
+    { cle: 'mt', titre: 'Montant HT', largeur: '27mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.montant_ht' },
+    { cle: 'facture', titre: 'Travaux facturés HT', largeur: '27mm', valeur: '{{element.facture_ht}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.facture_ht' },
+    { cle: 'pct', titre: '% facturé', largeur: '18mm', valeur: '{{element.pct_facture}}', format: 'pourcent', alignement: 'droite', style: 'montant' },
+  ], 'Total du marché'),
   sousRapport('SR_AVANCEMENTS_PRECEDENTS', 'Sous-rapport : situations et factures précédentes du marché', 'Situations et factures précédentes', [
     { cle: 'piece', titre: 'Pièce', largeur: '*', valeur: '{{element.type}}' },
     { cle: 'rang', titre: 'N° sit.', largeur: '16mm', valeur: '{{element.rang}}', alignement: 'centre' },
     { cle: 'numero', titre: 'N°', largeur: '30mm', valeur: '{{element.numero}}' },
-    { cle: 'date', titre: 'Date', largeur: '22mm', valeur: '{{Date(element.date)}}' },
-    { cle: 'mt', titre: 'Montant HT', largeur: '28mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant' },
-  ]),
+    { cle: 'date', titre: 'Date', largeur: '20mm', valeur: '{{Date(element.date)}}' },
+    { cle: 'ht', titre: 'Montant HT', largeur: '25mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=Si(element.facture; element.montant_ht; Nul)' },
+    { cle: 'ttc', titre: 'Montant TTC', largeur: '25mm', valeur: '{{element.montant_ttc}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=Si(element.facture; element.montant_ttc; Nul)' },
+    { cle: 'reste', titre: 'Reste à payer', largeur: '25mm', valeur: '{{element.reste}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.reste' },
+  ], 'Total facturé'),
 ];
 
 // Fiches et listes (lot 6) : modèles génériques sur les sources « fiche » et « liste » du serveur.
