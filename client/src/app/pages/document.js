@@ -1,7 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire } from '@logibtp/socle/ui';
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
@@ -80,7 +80,7 @@ const GABARIT = `
         <div id="grille"></div>
         <footer class="pied-lignes">
           <div id="totaux" class="totaux-compacts"></div>
-          <span class="aide" title="Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Ctrl+→ / Ctrl+← (ou Tab / Maj+Tab) : niveau · Ctrl+↑↓ (ou Alt+↑↓) : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
+          <span class="aide aide-raccourcis" data-aide-raccourcis role="button" tabindex="0" title="Cliquer : liste de tous les raccourcis · Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Ctrl+→ / Ctrl+← (ou Tab / Maj+Tab) : niveau · Ctrl+↑↓ (ou Alt+↑↓) : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
         </footer>
       </div>
       <div class="separateur" data-sep="droite" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -186,6 +186,10 @@ export class PageDocument extends PageBase {
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
     };
+    // Raccourcis ⓘ : bulle au survol, aide-mémoire complet (fenêtre déplaçable) au clic.
+    const aide = this.conteneur.querySelector('[data-aide-raccourcis]');
+    aide.addEventListener('click', () => this.aideRaccourcis());
+    aide.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.aideRaccourcis(); } });
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
       if (plan) { this.disposition.afficher(plan.dataset.basculerDock); return; }
@@ -652,12 +656,12 @@ export class PageDocument extends PageBase {
     if (orphelines.length && !confirm(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
       + `${orphelines.map((m) => `• ${m.message}`).join('\n')}\n\nValider ?`)) return;
     if (this.modifiee) await this.enregistrer();
+    // Contrôles de gestion (lot 6 des règles) : avertissements non bloquants, l'utilisateur choisit.
+    if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', 'Valider'))) return;
     const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
-    // Contrôles de gestion (lot 6 des règles) : avertissements non bloquants, l'utilisateur choisit.
-    if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', 'Valider'))) return;
   }
 
   /** Étape du cycle de vie (envoi, validation du tiers, rejet) puis rechargement du document. */
@@ -805,7 +809,26 @@ export class PageDocument extends PageBase {
     await this.app.naviguer(`/document/${cree.ent_id}`);
   }
 
+  /** Aide-mémoire des raccourcis des lignes (touches effectives, personnalisées comprises) et de la page. */
+  aideRaccourcis() {
+    basculerAideMemoire({
+      titre: 'Raccourcis des lignes',
+      groupes: ['grille', 'document', 'application'],
+      notes: [
+        ['Entrée, F2, double-clic', 'Saisir dans la cellule'],
+        ['Échap', 'Revenir au mode ligne'],
+        ['Entrée / Tab en saisie', 'Cellule suivante (Maj+Tab : précédente)'],
+        ['↑ ↓ ← →', 'Changer de ligne ou de colonne'],
+        ['Ctrl+clic, Maj+clic', 'Sélection multiple'],
+        ['Glisser ⋮⋮', 'Déplacer les lignes sélectionnées'],
+        ['Glisser l’entête','Déplacer la colonne (bordure droite : largeur)'],
+        ['Clic droit', 'Menu de la ligne'],
+      ],
+    });
+  }
+
   fermer() {
+    fermerAideMemoire();
     this.liberer();
     document.removeEventListener('keydown', this.clavier);
     document.body.classList.remove('avec-document', 'lecture-seule');

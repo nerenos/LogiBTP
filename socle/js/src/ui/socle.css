@@ -198,3 +198,19 @@ input.combo[readonly] { background-image: none; padding-right: 0.3em; }
 .menu-contextuel button:disabled { opacity: 0.45; }
 .menu-contextuel kbd { font: inherit; font-size: 0.85em; color: var(--discret); white-space: nowrap; }
 .menu-contextuel hr { border: none; border-top: 1px solid var(--bord); margin: 0.25rem 0; }
+
+/* Aide-mémoire des raccourcis : fenêtre flottante déplaçable par sa barre de titre. */
+.aide-memoire { position: fixed; z-index: 90; width: 24rem; max-width: calc(100vw - 1rem); max-height: 70vh; display: flex; flex-direction: column;
+  background: var(--surface); color: var(--texte); border: 1px solid var(--bord); border-radius: 6px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); font-size: 0.85rem; }
+.aide-memoire header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.7rem;
+  border-bottom: 1px solid var(--bord); cursor: move; user-select: none; touch-action: none; }
+.aide-memoire header button { border: none; background: none; color: var(--discret); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.3rem; }
+.aide-memoire header button:hover { color: var(--texte); }
+.aide-memoire .corps { overflow: auto; padding: 0.3rem 0.7rem 0.6rem; }
+.aide-memoire h4 { margin: 0.6rem 0 0.2rem; font-size: 0.85em; color: var(--discret); }
+.aide-memoire table { border-collapse: collapse; width: 100%; }
+.aide-memoire td { padding: 0.12rem 0.3rem 0.12rem 0; vertical-align: top; }
+.aide-memoire td:first-child { white-space: nowrap; width: 1%; padding-right: 0.8rem; }
+.aide-memoire kbd { display: inline-block; padding: 0 0.3rem; border: 1px solid var(--bord); border-radius: 3px; font: inherit; font-size: 0.9em; background: var(--fond, transparent); }
+.aide-memoire .aucun { color: var(--discret); }
+.aide-memoire footer { padding: 0.35rem 0.7rem; border-top: 1px solid var(--bord); text-align: right; }

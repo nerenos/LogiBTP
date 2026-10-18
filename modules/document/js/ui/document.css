@@ -343,3 +343,5 @@ body.redimensionnement-vertical { user-select: none; cursor: row-resize; }
 .recherche-elements.sans-resultat input { border-color: var(--erreur); background: var(--erreur-fond); }
 .recherche-elements button { padding: 0 0.4rem; }
 .grille td.col-commentaire { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; color: var(--discret); }
+.pied-lignes .aide-raccourcis { cursor: pointer; text-decoration: underline dotted; }
+.pied-lignes .aide-raccourcis:hover { color: var(--texte); }

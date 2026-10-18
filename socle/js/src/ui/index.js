@@ -11,5 +11,6 @@ export {
   conflitsRaccourci, personnaliserRaccourci, reinitialiserRaccourcis, definirAideRaccourcis, ouvrirAideRaccourcis,
 } from './raccourcis.js';
 export { ouvrirMenuContextuel, fermerMenuContextuel } from './menu-contextuel.js';
+export { basculerAideMemoire, fermerAideMemoire } from './aide-memoire.js';
 export { editerLibelle } from './editeur-riche.js';
 export { THEMES, appliquerTheme } from './theme.js';

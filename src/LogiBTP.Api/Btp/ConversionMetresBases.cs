@@ -6,7 +6,7 @@ using Npgsql;
 namespace LogiBTP.Api.Btp;
 
 /// <summary>
-/// Migration des métrés saisis en lignes vers les scripts (modules/metre/CONCEPTION-SCRIPT.md), au démarrage de l'API,
+/// Migration des métrés saisis en lignes vers les scripts (documentation/conception/CONCEPTION-SCRIPT.md), au démarrage de l'API,
 /// pour la base principale et chaque société configurée. Une base qui a encore la table metre_ligne est convertie en
 /// une transaction : métrés des documents (ConversionMetre), compositions d'ouvrage et d'ensemble de la bibliothèque
 /// (ele_composition), puis suppression de metre_ligne. Sans cette table, rien n'est fait (base neuve ou déjà convertie).
