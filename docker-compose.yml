@@ -39,6 +39,7 @@ services:
       - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro
       - ./modules/bibliotheque/db/061_bibliotheque_technique.sql:/docker-entrypoint-initdb.d/061_bibliotheque_technique.sql:ro
       - ./modules/bibliotheque/db/062_bibliotheque_coefficients.sql:/docker-entrypoint-initdb.d/062_bibliotheque_coefficients.sql:ro
+      - ./modules/bibliotheque/db/063_bibliotheque_poste_pied.sql:/docker-entrypoint-initdb.d/063_bibliotheque_poste_pied.sql:ro
       - ./modules/annuaire/db/070_annuaire_schema.sql:/docker-entrypoint-initdb.d/070_annuaire_schema.sql:ro
       - ./modules/annuaire/db/071_annuaire_provisoire.sql:/docker-entrypoint-initdb.d/071_annuaire_provisoire.sql:ro
       - ./modules/reglement/db/080_reglement_schema.sql:/docker-entrypoint-initdb.d/080_reglement_schema.sql:ro

@@ -14,6 +14,8 @@ import { sectionVariablesTranche, lierVariablesTranche } from '../variables-tran
 
 const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
 const prix = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
+/** Valeurs par défaut d'un poste de pied : unité (obligatoire en base), poste HT en pourcentage déduit du cumul. */
+const DEFAUTS_POSTE = { unite_stock: 'u', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_sens: 'DEDUCTION', pied_retenue: false, gestion: 'NON_GERE' };
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_qte_source: 'S', lig_coef_perte: 1, ...o });
 
 export class FicheElement extends FicheLogiBTP {
@@ -40,19 +42,23 @@ export class FicheElement extends FicheLogiBTP {
   valeursCreation() {
     const { bibliotheques, parametres } = this.referentiels;
     const demande = new URLSearchParams(globalThis.location?.search ?? '').get('type');
-    const type = ['OUVRAGE', 'ENSEMBLE'].includes(demande) ? demande : 'ARTICLE';
+    const type = ['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED'].includes(demande) ? demande : 'ARTICLE';
     return {
       ...super.valeursCreation(), type, bib_id: (bibliotheques.find((x) => x.defaut) ?? bibliotheques[0])?.id ?? null,
       // Coefficients non imposés : ceux de la nature ou globaux (calculés à l'enregistrement).
       scenario_pa: parametres.scenario_defaut, coef_fg: String(parametres.coef_fg_defaut), coef_benef: String(parametres.coef_benef_defaut), unites: [],
       coef_fg_impose: false, coef_benef_impose: false,
+      ...(type === 'POSTE_PIED' ? DEFAUTS_POSTE : {}),
     };
   }
+
+  /** Poste de pied (POSTE_PIED) : ni prix, ni unités, ni composition ; ses valeurs vont dans le pied des documents. */
+  get poste() { return this.valeur('type') === 'POSTE_PIED'; }
 
   sousTitre(v) {
     const bib = this.referentiels.bibliotheques.find((b) => b.id === Number(v.bib_id));
     const fam = this.referentiels.familles.find((f) => f.id === Number(v.fam_id));
-    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
+    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble', POSTE_PIED: 'Poste de pied' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
   }
 
   /** Nature isolant : le groupe Isolation (R, λ, U) n'apparaît que pour elle. */
@@ -62,13 +68,20 @@ export class FicheElement extends FicheLogiBTP {
 
   sections() {
     const isolant = this.estIsolant();
-    return super.sections().map((s) => (s.groupes ? { ...s, groupes: s.groupes.filter((g) => g.code !== 'isolation' || isolant) } : s))
+    const poste = this.poste;
+    // Poste de pied : son groupe à la place des données techniques, de l'isolation et de la gestion.
+    const garder = (g) => (poste ? !['techniques', 'isolation'].includes(g.code) : g.code !== 'poste' && (g.code !== 'isolation' || isolant));
+    return super.sections().map((s) => (s.groupes ? { ...s, groupes: s.groupes.filter(garder) } : s))
       .map((s) => (s.groupes ? { ...s, champs: s.groupes.flatMap((g) => g.champs) } : s));
   }
 
   /** Encart : image de l'élément et prix par unité de stock. */
   rendreInformations(v) {
     if (this.id === null) return '';
+    if (v.type === 'POSTE_PIED') {
+      const mode = { P: ' %', C: ' (coefficient)', M: ' €' }[v.pied_mode] ?? '';
+      return `<span class="info"><small>Poste ${echapper(v.pied_niveau ?? '')}</small><b>${v.pied_sens === 'AJOUT' ? '+' : '−'} ${echapper(String(v.pied_valeur ?? '—').replace('.', ','))}${mode}</b></span>`;
+    }
     return `${this.urlImage ? `<img class="element-vignette" src="${echapper(this.urlImage)}" alt="">` : ''}
       <span class="info"><small>PA</small>${prix(v.pa)}</span><span class="info"><small>PR</small>${prix(v.pr)}</span>
       <span class="info"><small>PV net / ${echapper(v.unite_stock ?? '')}</small><b>${prix(v.pv_net)}</b></span>`;
@@ -76,6 +89,17 @@ export class FicheElement extends FicheLogiBTP {
 
   /** Bibliothèque, famille (selon la bibliothèque) et nature : listes déroulantes des référentiels. */
   rendreChamp(champ, valeur) {
+    // Type choisi à la création : un poste de pied reçoit ses valeurs par défaut ; groupes et onglets suivent le type.
+    if (champ.code === 'type') {
+      const el = super.rendreChamp(champ, valeur);
+      el.addEventListener('change', () => {
+        if (this.poste) {
+          for (const [c, v] of Object.entries(DEFAUTS_POSTE)) if ([null, undefined, ''].includes(this.valeur(c))) this.definirValeur(c, v);
+        }
+        this.rendre();
+      });
+      return el;
+    }
     // Isolation : l'épaisseur est celle des données techniques ; R calculé proposé (épaisseur en m / λ).
     if (champ.code === 'isolant_epaisseur') return super.rendreChamp({ ...champ, lecture_seule: true }, this.valeur('epaisseur'));
     if (champ.code === 'isolant_r') {
@@ -133,6 +157,7 @@ export class FicheElement extends FicheLogiBTP {
   ongletsSpecifiques() {
     // Ouvrage et ensemble : onglet Composition (éditeur de devis) ; article : tarifs fournisseurs.
     const ouvrage = ['OUVRAGE', 'ENSEMBLE'].includes(this.valeur('type'));
+    if (this.poste) return [];
     return [
       { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
@@ -189,7 +214,7 @@ export class FicheElement extends FicheLogiBTP {
     let editeur = null;
     // Composantes appelées dans la bibliothèque de l'ouvrage (colonne Code, F3, bouton).
     const bibOuvrage = () => this.referentiels.bibliotheques.find((b) => b.id === Number(this.valeur('bib_id')))?.code ?? null;
-    const appel = new AppelBibliotheque({ fournisseur: this.bibliotheque, editeur: () => editeur, bibliotheque: bibOuvrage, message: this.message });
+    const appel = new AppelBibliotheque({ fournisseur: this.bibliotheque, editeur: () => editeur, bibliotheque: bibOuvrage, message: this.message, postes: false });
     editeur = new EditeurDevisBtp(corps.querySelector('.element-composition-grille'), {
       definition,
       saisie: { document: documentComposition(composition.mode), lignes: composition.lignes, metres: composition.metres ?? [], variables: composition.variables ?? [] },

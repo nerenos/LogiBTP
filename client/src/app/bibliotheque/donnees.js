@@ -61,6 +61,11 @@ const acier = (id, code, diametre, poids) => article({
   poids, epaisseur: diametre, scenario_pa: 'FOURNISSEUR_PRINCIPAL', coef_fg: '1.08', coef_benef: '1.25',
 });
 
+// Poste de pied : ni prix ni unités (unité de stock « u » exigée par la base), déduction par défaut.
+const poste = (o) => article({
+  type: 'POSTE_PIED', bib_id: 1, unite_stock: 'u', coef_fg: '1', coef_benef: '1', pied_base: null, pied_sens: 'DEDUCTION', pied_retenue: false, cpt_code: null, tva_code: null, ...o,
+});
+
 // Ligne d'ouvrage (format des lignes de document) et ses composantes.
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_qte_source: 'S', lig_coef_perte: 1, ...o });
 
@@ -146,6 +151,11 @@ export const ELEMENTS = [
       ],
     },
   }),
+  // Postes de pied (POSTE_PIED) : insérés dans le pied des documents (code, F3 ou glisser), sans prix.
+  poste({ id: 11, code: 'RG5', libelle_html: '<p>Retenue de garantie 5 %</p>', pied_niveau: 'TTC', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5', pied_retenue: true, cpt_code: '411700' }),
+  poste({ id: 12, code: 'PRORATA', libelle_html: '<p>Compte prorata 1,5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'TOTAL_HT', pied_valeur: '1.5' }),
+  poste({ id: 13, code: 'REMISE5', libelle_html: '<p>Remise commerciale 5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5' }),
+  poste({ id: 14, code: 'FRAISDOS', libelle_html: '<p>Frais de dossier</p>', pied_niveau: 'HT', pied_mode: 'M', pied_sens: 'AJOUT', pied_valeur: '150', tva_code: 'T20' }),
 ];
 
 export const TARIFS = [

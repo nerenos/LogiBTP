@@ -101,6 +101,16 @@ public class Element
     public decimal? EleIsolantR { get; set; }
     public decimal? EleIsolantLambda { get; set; }
     public decimal? EleIsolantU { get; set; }
+    // Poste de pied (type POSTE_PIED) : niveau HT / TTC, mode P / M / C, base, sens DEDUCTION / AJOUT, valeur, retenue,
+    // compte comptable et code du taux de TVA (063).
+    public string? ElePiedNiveau { get; set; }
+    public string? ElePiedMode { get; set; }
+    public string? ElePiedBase { get; set; }
+    public string? ElePiedSens { get; set; }
+    public decimal? ElePiedValeur { get; set; }
+    public bool ElePiedRetenue { get; set; }
+    public string? EleCptCode { get; set; }
+    public string? EleTvaCode { get; set; }
     public bool EleActif { get; set; } = true;
     public string? EleCommentairePrix { get; set; }
     public string? EleMajPar { get; set; }
@@ -225,7 +235,11 @@ public sealed record HistoriqueDto(long Id, DateTimeOffset Date, string? Auteur,
 /// <summary>Élément complet pour son appel dans un document (déploiement d'un article ou d'un ouvrage).</summary>
 public sealed record ElementDetailDto(long Id, int BibId, string BibCode, string Code, string Type, string LibelleHtml, string? Libelle, int? FamId, int? NatId,
     string UniteStock, string? UniteAchat, string? UniteVente, JsonElement Unites, Dictionary<string, decimal?> Donnees,
-    decimal? Pa, decimal CoefFg, decimal? Pr, decimal CoefBenef, decimal? Pv, bool PvFixe, decimal CoefRemise, decimal? PvNet, JsonElement? Composition, bool Actif);
+    decimal? Pa, decimal CoefFg, decimal? Pr, decimal CoefBenef, decimal? Pv, bool PvFixe, decimal CoefRemise, decimal? PvNet, JsonElement? Composition, bool Actif,
+    PosteElementDto? Poste = null);
+
+/// <summary>Poste de pied d'un élément POSTE_PIED (inséré dans le pied des documents).</summary>
+public sealed record PosteElementDto(string? Niveau, string? Mode, string? Base, string? Sens, decimal? Valeur, bool Retenue, string? Compte, string? Tva);
 
 public sealed record ElementRechercheDto(long Id, string BibCode, string Code, string Type, string? Libelle, string LibelleHtml, string UniteStock,
     decimal? Pa, decimal? Pr, decimal? Pv, decimal? PvNet, decimal CoefFg, decimal CoefBenef);

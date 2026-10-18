@@ -1,7 +1,7 @@
 import {
   CFG_LIGNES as C, ordreAffichage, parId, placer, indenter, desindenter, decaler, supprimer, racinesSelection,
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
-  editerLibelle, lirePreferences, ecrirePreferences,
+  editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
 } from '@logibtp/socle/ui';
 import { Dz } from '@logibtp/socle';
 import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
@@ -170,6 +170,36 @@ export class EditeurDocument {
   /** Lignes ajoutables : selon la règle, toutes, ou du texte et des lignes de pied seulement. */
   ajoutAutorise(lignes) {
     return !this.lignesLimitees || lignes.every((l) => l.lig_tyl_id === TL.TEXTE || estPied(l));
+  }
+
+  /**
+   * Poste de pied ajouté depuis un groupe vide du pied (document ou section) : un poste HT se place avant la ventilation
+   * TVA, les postes TTC et les sous-totaux de pied de sa portée (sinon à la fin), un poste TTC à la fin de la racine,
+   * précédé d'une ligne de ventilation TVA s'il n'y en a pas (sans elle, le moteur calculerait le poste avant la TVA).
+   * Retourne l'identifiant de la nouvelle ligne.
+   */
+  insererPoste({ cle, section }, valeurs = {}) {
+    const type = cle === 'HT' ? TL.PIED_HT : TL.PIED_TTC;
+    const id = this.magasin.prochainId();
+    const taux = this.definition.taux_tva;
+    this.magasin.modifier((d) => {
+      if (type === TL.PIED_TTC && !enfants(C, d.lignes, section).some((l) => l.lig_tyl_id === TL.TVA)) {
+        d.lignes.push({ ...this.nouvelleLigne(id - 1, TL.TVA, d.document.ent_id), lig_libelle_html: 'TVA' });
+        placer(C, d.lignes, [d.lignes.at(-1)], section, section === null ? 'racine' : 'enfant');
+      }
+      d.lignes.push({ ...this.nouvelleLigne(id, type, d.document.ent_id), ...valeurs, lig_id: id, lig_tyl_id: type });
+      const x = d.lignes.at(-1);
+      const freres = enfants(C, d.lignes, section).filter((l) => l !== x);
+      const suivant = type === TL.PIED_HT
+        ? freres.find((l, i) => l.lig_tyl_id === TL.TVA || l.lig_tyl_id === TL.PIED_TTC
+          || (l.lig_tyl_id === TL.SOUS_TOTAL && freres.slice(0, i).some((f) => estPied(f))))
+        : null;
+      if (suivant) placer(C, d.lignes, [x], suivant.lig_id, 'avant');
+      else if (section !== null) placer(C, d.lignes, [x], section, 'enfant');
+      else placer(C, d.lignes, [x], null, 'racine');
+      this.regles.appliquerContexte(d, id, taux);
+    }, 'Poste de pied');
+    return id;
   }
 
   /** Aucune ligne reprise du parent parmi les lignes (suppression, déplacement d'un document d'avancement). */
@@ -709,6 +739,7 @@ export class EditeurDocument {
     const dansPied = new Set([...ids(pied), ...sections.flatMap((s) => ids(s.pied))]);
     const parId = new Map(lignes.map((r) => [r.item.lig_id, r]));
     const res = lignes.filter((r) => !dansPied.has(r.item.lig_id) && !estPied(r.calcule));
+    this.groupesVides = new Map();
     // Pied de chaque section (document à plusieurs sections) : tranche repliable à la fin de la section.
     sections.forEach((s, k) => {
       const section = parId.get(s.lig_id);
@@ -719,7 +750,7 @@ export class EditeurDocument {
       const tranche = this.ligneVirtuelle(`PS${k}`, 'tranche', 'Pied de la section', s.pied.at(-1)?.montant ?? null,
         { aEnfants: true, profondeur: section.profondeur + 1, id: ID_PIED - (k + 1) });
       const contenu = replies.has(tranche.item.lig_id) ? []
-        : this.structurePied(s.pied, { parId, replies, decalage: (k + 1) * 1e9, tvaDetaillee: false })
+        : this.structurePied(s.pied, { parId, replies, decalage: (k + 1) * 1e9, tvaDetaillee: false, section: s.lig_id })
           .map((r) => ({ ...r, profondeur: r.profondeur + section.profondeur + 2 }));
       res.splice(fin, 0, tranche, ...contenu);
     });
@@ -750,14 +781,29 @@ export class EditeurDocument {
    * Lignes d'une structure de pied (résultat.pied ou pied d'une section) : totaux calculés, sous-totaux saisis, groupes
    * (ligne calculée ou ligne de ventilation TVA saisie, puis leurs lignes), lignes consolidées du pied global.
    */
-  structurePied(pied, { parId, replies, decalage, tvaDetaillee, global = false }) {
+  structurePied(pied, { parId, replies, decalage, tvaDetaillee, global = false, section = null }) {
     pied = regrouperSousTotauxHt(pied);
     const p = [];
     const pm = this.saisie.document.ent_precision_montant ?? 2;
     const virtuelle = (cle, type, libelle, montant, o = {}) => this.ligneVirtuelle(cle, type, libelle, montant, { ...o, decalage });
+    // Groupes de postes toujours présents : vides, ce sont des lignes d'accueil pour ajouter un poste (jamais imprimées).
+    // Postes HT : pied du document ou d'une section (pas le pied global, R PIED_GLOBAL) ; postes TTC : racine seulement.
+    const ajoutable = !this.fige && !this.magasin?.lectureSeule;
+    const manque = (cle) => ajoutable && !pied.some((e) => e.genre === 'groupe' && e.cle === cle);
+    const vide = (cle) => {
+      const r = virtuelle(cle === 'HT' ? 'E90' : 'E91', 'vide', LIBELLES_PIED[cle], null, {
+        html: `${echapper(LIBELLES_PIED[cle])} <small class="pied-vide">aucun — ${echapper(libelleRaccourci('insererApres') || 'Ctrl+Entrée')} pour en ajouter</small>`,
+      });
+      this.groupesVides?.set(r.item.lig_id, { cle, section });
+      p.push(r);
+    };
+    let ttc = !(manque('TTC') && section === null);
     pied.forEach((e, i) => {
       if (e.genre === 'total') {
+        if (e.cle === 'NET' && !ttc) { vide('TTC'); ttc = true; }
         if (!e.masque) p.push(virtuelle(`T${i}`, 'total', LIBELLES_PIED[e.cle] ?? e.cle, e.montant));
+        if (e.cle === 'TOTAL_HT' && !global && manque('HT')) vide('HT');
+        if (e.cle === 'TOTAL_TTC' && !ttc) { vide('TTC'); ttc = true; }
         return;
       }
       if (e.genre === 'ligne') {
@@ -844,7 +890,7 @@ export class EditeurDocument {
         cle: 'type', titre: 'Type', classe: 'col-type', editeur: 'select', editable: saisissable,
         champ: () => 'lig_tyl_id', lire: (l) => l.lig_tyl_id,
         options: () => this.definition.types_ligne.map((t) => ({ valeur: t.tyl_id, libelle: t.tyl_libelle })),
-        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', tva: 'Taux', tranche: 'Pied', consolide: 'Consolidé' }[r.virtuelle.type] : this.libelleType(r)),
+        valeur: (r) => (r.virtuelle ? { total: 'Total', groupe: 'Groupe', vide: 'Groupe', tva: 'Taux', tranche: 'Pied', consolide: 'Consolidé' }[r.virtuelle.type] : this.libelleType(r)),
       },
       {
         // Code d'appel d'une référence (article…) : résolu par l'hôte ; sinon texte libre. Section sans code : numéro
@@ -1297,6 +1343,8 @@ export class EditeurDocument {
       colonnesModifiees: (disposition) => this.modifierDisposition(disposition),
 
       inserer: (position, refId, { memeType = false } = {}) => {
+        const groupeVide = this.groupesVides?.get(refId);
+        if (groupeVide) return this.insererPoste(groupeVide);
         const ref = this.saisie.lignes.find((x) => x.lig_id === refId);
         let pos = position;
         let type = TL.ELEMENT;

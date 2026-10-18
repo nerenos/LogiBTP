@@ -147,6 +147,8 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .grille tr.pied-total td { font-weight: 600; border-top: 1px solid var(--bord); background: var(--titre-fond); }
 .grille tr.pied-groupe td { font-weight: 600; color: var(--discret); }
 .grille tr.pied-tva td { color: var(--discret); font-size: 0.92em; }
+/* Groupe de postes de pied vide : ligne d'accueil pour ajouter un poste (jamais imprimée). */
+.grille .pied-vide { color: var(--discret); font-style: italic; font-weight: normal; }
 .grille .base-pied { color: var(--discret); font-size: 0.9em; cursor: help; border-bottom: 1px dotted var(--discret); }
 .grille td.col-systeme { font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; color: var(--alerte); white-space: nowrap; max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .grille th.col-systeme { color: var(--alerte); font-family: ui-monospace, Consolas, monospace; font-size: 0.82em; }

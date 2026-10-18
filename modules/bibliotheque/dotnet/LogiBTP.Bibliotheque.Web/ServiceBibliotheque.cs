@@ -373,7 +373,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     public virtual async Task<PrixElementDto> Recalculer(long eleId, string commentaire, Utilisateur u, CancellationToken ct)
     {
         var e = await db.Elements.FirstOrDefaultAsync(x => x.EleId == eleId, ct) ?? throw ExceptionMetier.Introuvable($"Élément {eleId}");
-        if (e.EleType is "OUVRAGE" or "ENSEMBLE") return new PrixElementDto(e.ElePa, e.ElePr, e.ElePv, e.EleCoefBenef, e.ElePvNet, []);
+        if (e.EleType is "OUVRAGE" or "ENSEMBLE" or "POSTE_PIED") return new PrixElementDto(e.ElePa, e.ElePr, e.ElePv, e.EleCoefBenef, e.ElePvNet, []);
         var r = CalculElement.Calculer(Entree(e, await TarifsCalcul(eleId, ct)));
         e.ElePa = r.Pa; e.ElePr = r.Pr; e.ElePv = r.Pv; e.EleCoefBenef = r.CoefBenef ?? e.EleCoefBenef; e.ElePvNet = r.PvNet;
         e.EleMajPar = u.Code;
@@ -426,7 +426,8 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     private static ElementDetailDto VersDetail(Element e, string bibCode) => new(e.EleId, e.EleBibId, bibCode, e.EleCode, e.EleType, e.EleLibelleHtml, e.EleLibelle,
         e.EleFamId, e.EleNatId, e.EleUntStock, e.EleUntAchat, e.EleUntVente, e.EleUnites.RootElement.Clone(), Donnees(e.EleProprietes.RootElement, Techniques(e)),
-        e.ElePa, e.EleCoefFg, e.ElePr, e.EleCoefBenef, e.ElePv, e.ElePvFixe, e.EleCoefRemise, e.ElePvNet, e.EleComposition?.RootElement.Clone(), e.EleActif);
+        e.ElePa, e.EleCoefFg, e.ElePr, e.EleCoefBenef, e.ElePv, e.ElePvFixe, e.EleCoefRemise, e.ElePvNet, e.EleComposition?.RootElement.Clone(), e.EleActif,
+        e.EleType == "POSTE_PIED" ? new PosteElementDto(e.ElePiedNiveau, e.ElePiedMode, e.ElePiedBase, e.ElePiedSens, e.ElePiedValeur, e.ElePiedRetenue, e.EleCptCode, e.EleTvaCode) : null);
 
     public virtual async Task<ElementDetailDto> Element(long id, CancellationToken ct)
     {

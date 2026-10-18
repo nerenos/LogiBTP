@@ -149,6 +149,14 @@ public static class ElementsBibliotheque
         aEcrire["coef_benef"] = S(coefBenef);
         var coefRemise = Decimal(v.GetValueOrDefault("coef_remise")) ?? 1;
 
+        // Poste de pied : ni prix ni coefficients de vente ; niveau (HT / TTC), mode et valeur obligatoires.
+        if (Texte(v.GetValueOrDefault("type")) == "POSTE_PIED")
+        {
+            if (string.IsNullOrEmpty(Texte(v.GetValueOrDefault("pied_niveau"))) || string.IsNullOrEmpty(Texte(v.GetValueOrDefault("pied_mode"))) || Decimal(v.GetValueOrDefault("pied_valeur")) is null)
+                throw ExceptionMetier.Invalide("POSTE_PIED", "Poste de pied : niveau, mode et valeur obligatoires");
+            aEcrire["pa"] = null; aEcrire["pr"] = null; aEcrire["pv"] = null; aEcrire["pv_net"] = null;
+            return;
+        }
         if (EstCompose(Texte(v.GetValueOrDefault("type"))))
         {
             var fixe = pvFixe && Texte(v.GetValueOrDefault("type")) == "OUVRAGE" ? Decimal(v.GetValueOrDefault("pv")) : null;

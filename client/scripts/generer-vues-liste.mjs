@@ -75,7 +75,7 @@ const { calculerOuvrage } = await import('../src/app/bibliotheque/bibliotheque.j
 const j = (v) => (v === null || v === undefined ? 'NULL' : `${q(JSON.stringify(v))}::jsonb`);
 const n = (v) => (v === null || v === undefined || v === '' ? 'NULL' : String(v));
 const b = (v) => (v ? 'TRUE' : 'FALSE');
-const lignesElements = ELEMENTS.map((e0) => {
+const lignesElements = ELEMENTS.filter((e) => e.type !== 'POSTE_PIED').map((e0) => {
   // Coefficients effectifs (imposés, nature, global) à la génération, comme l'API.
   const c = coefficientsEffectifs(e0, PERIODES_COEFFICIENTS, new Date().toISOString().slice(0, 10), PARAMETRES_BIBLIOTHEQUE);
   const e = { ...e0, coef_fg: c.coef_fg, coef_benef: e0.pv_fixe ? e0.coef_benef : c.coef_benef };
@@ -116,6 +116,13 @@ INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, e
   ele_poids, ele_surface, ele_surface_peinture, ele_volume, ele_hauteur, ele_largeur, ele_epaisseur, ele_longueur, ele_isolant_r, ele_isolant_lambda, ele_isolant_u,
   ele_coef_fg_impose, ele_coef_benef_impose) VALUES
 ${lignesElements};
+
+-- Postes de pied (POSTE_PIED, modules/bibliotheque/db/063) : sans prix.
+INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_gestion, ele_unt_stock, ele_coef_fg, ele_coef_benef, ele_actif,
+  ele_maj_par, ele_commentaire_prix, ele_pied_niveau, ele_pied_mode, ele_pied_base, ele_pied_sens, ele_pied_valeur, ele_pied_retenue, ele_cpt_code, ele_tva_code) VALUES
+${ELEMENTS.filter((e) => e.type === 'POSTE_PIED').map((e) => ` (${[e.id, e.bib_id, q(e.code), q(e.type), q(e.libelle_html), q(texteBrut(e.libelle_html)), q(e.gestion), q(e.unite_stock),
+    n(e.coef_fg), n(e.coef_benef), b(e.actif), q('demo'), q('Données de démonstration'), q(e.pied_niveau), q(e.pied_mode), q(e.pied_base), q(e.pied_sens),
+    n(e.pied_valeur), b(e.pied_retenue), q(e.cpt_code), q(e.tva_code)].join(', ')})`).join(',\n')};
 
 INSERT INTO tarif_fournisseur (tfo_id, tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par) VALUES
 ${TARIFS.map((t) => ` (${t.id}, ${t.ele_id}, ${q(t.fournisseur)}, ${q(t.reference)}, ${q(t.libelle)}, ${q(t.unite)}, ${t.prix}, ${q(t.debut)}, ${q(t.fin)}, ${b(t.principal)}, ${q(t.lien)}, 'demo')`).join(',\n')};

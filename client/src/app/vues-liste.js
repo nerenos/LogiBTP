@@ -396,7 +396,7 @@ VUES_LISTE.push({
 // Bibliothèque : articles, ouvrages, tous les éléments (segments bibliothèque, famille, regroupement, gestion).
 const OPTIONS_TYPE_ELEMENT = [
   { valeur: 'ARTICLE', libelle: 'Article', picto: '🧱' }, { valeur: 'OUVRAGE', libelle: 'Ouvrage', picto: '🏗️' },
-  { valeur: 'ENSEMBLE', libelle: 'Ensemble', picto: '🧩' },
+  { valeur: 'ENSEMBLE', libelle: 'Ensemble', picto: '🧩' }, { valeur: 'POSTE_PIED', libelle: 'Poste de pied', picto: '🧾' },
 ];
 const OPTIONS_GESTION = [
   { valeur: 'STOCK', libelle: 'Stock', picto: '📦' }, { valeur: 'ACHAT', libelle: 'Achat', picto: '🛒' },

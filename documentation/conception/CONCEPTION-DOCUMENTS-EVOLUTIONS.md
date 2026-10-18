@@ -44,7 +44,11 @@ document (administrateur ; FORCER en numérotation continue) ; unicité vérifi�
   prochain libre vaut aussi pour la numérotation automatique.
 - Les indices partagent le numéro : tous sont renommés ; l'historique garde l'ancien numéro (motif compris).
 
-## Lot C – postes de pied HT et TTC
+## Lot C – postes de pied HT et TTC (réalisé le 18/10/2026)
+
+Réalisation : groupes vides affichés par l'éditeur (pas par les moteurs : calcul et parité inchangés) ; un poste TTC
+dans une portée sans ventilation TVA ajoute d'abord la ligne TVA (sans elle, le moteur le calcule avant la TVA) ;
+retenue de démonstration RG5 en % du cumul (TTC net) : la base TOTAL_TTC est le TTC du corps avant les postes HT.
 
 - Les groupes « Postes HT » et « Postes TTC » sont toujours présents dans le pied du document, même vides (lignes
   virtuelles d'accueil), pour pouvoir y ajouter un poste ; un groupe vide n'est pas imprimé.

@@ -8,7 +8,9 @@ import { TL } from '../../calcul/index.js';
 //   - F3 : recherche dans la bibliothèque (code ou libellé, articles et ouvrages) ;
 //   - article : la ligne reçoit le code d'appel, le libellé, l'unité de vente, le PA converti dans cette unité, les
 //     coefficients, la remise, la nature et le lien vers l'élément (lig_art_id, lig_proprietes.element) ;
-//   - ouvrage : la ligne est remplacée par l'ouvrage avec ses composantes, ses métrés et ses variables.
+//   - ouvrage : la ligne est remplacée par l'ouvrage avec ses composantes, ses métrés et ses variables ;
+//   - poste de pied (POSTE_PIED) : une ligne de pied HT ou TTC est ajoutée dans le pied (celui de la section de la ligne
+//     pour un poste HT d'un document à sections), ou la ligne de pied du même niveau où le code est saisi la reçoit.
 // Les prix sont copiés dans le document (ils ne suivent plus la bibliothèque) ; « Actualiser depuis la bibliothèque »
 // les reprend pour les lignes choisies.
 
@@ -57,6 +59,19 @@ export function valeursArticle(e, bibDocument, proprietes = {}) {
   };
 }
 
+/** Valeurs d'une ligne de pied pour un poste de la bibliothèque ; taux : taux de TVA du document (code du poste → taux). */
+export function valeursPoste(e, bibDocument, taux = []) {
+  const p = e.poste ?? {};
+  const mode = p.mode ?? 'M';
+  return {
+    lig_code: codeAppel(e, bibDocument), lig_art_id: e.id, lig_libelle_html: e.libelle_html,
+    lig_pied_mode: mode, lig_pied_base: mode === 'M' || !p.base || p.base === 'CUMUL' ? null : p.base,
+    lig_pied_sens: p.sens === 'AJOUT' ? 1 : -1, lig_pied_valeur: nombre(p.valeur), lig_pied_retenue: p.retenue === true,
+    lig_cpt_code: p.compte || null, ...(p.tva ? { lig_tva_id: taux.find((t) => t.ttv_code === p.tva)?.ttv_id ?? null } : {}),
+    lig_proprietes: { element: lien(e) },
+  };
+}
+
 /** Contenu à insérer pour un ouvrage (format du presse-papiers) : la racine reçoit l'appel, les composantes suivent. */
 export function contenuOuvrage(e, bibDocument, { quantite = 1 } = {}) {
   const c = e.composition ?? { lignes: [] };
@@ -99,7 +114,8 @@ export class AppelBibliotheque {
    * fournisseur : FournisseurBibliotheque… ; editeur() : éditeur courant ; bibliotheque() : code de la bibliothèque du
    * document (null : bibliothèque par défaut) ; message(texte, niveau).
    */
-  constructor({ fournisseur, editeur, bibliotheque = () => null, message = () => {} }) {
+  constructor({ fournisseur, editeur, bibliotheque = () => null, message = () => {}, postes = true }) {
+    this.postes = postes;
     this.fournisseur = fournisseur;
     this.editeur = editeur;
     this.bibliotheque = bibliotheque;
@@ -142,6 +158,10 @@ export class AppelBibliotheque {
     const l = ed.saisie.lignes.find((x) => x.lig_id === ligId) ?? null;
     const aEnfants = l && ed.saisie.lignes.some((x) => x.lig_parent_id === ligId);
     const surPlace = Boolean(l) && !aEnfants && (ligneVide(l) || (surLigne && l.lig_tyl_id === TL.ELEMENT));
+    if (e.type === 'POSTE_PIED') {
+      this.deployerPoste(ligId, e, bib, { surLigne });
+      return;
+    }
     if (e.type === 'ENSEMBLE') {
       // Ensemble : sa tranche et ses lignes, après la ligne (ou à sa place si elle est vide).
       const contenu = contenuEnsemble(e, bib);
@@ -167,6 +187,45 @@ export class AppelBibliotheque {
     this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''}`.slice(0, 120));
   }
 
+  /**
+   * Poste de pied : la ligne de pied du même niveau où le code est saisi le reçoit ; sinon une ligne de pied est ajoutée
+   * dans le pied de la portée (section racine de la ligne pour un poste HT d'un document à sections, sinon la racine).
+   */
+  deployerPoste(ligId, e, bib, { surLigne = false } = {}) {
+    const ed = this.editeur();
+    if (!this.postes || !ed.insererPoste) { this.message(`${e.code} : poste de pied, à insérer dans le pied d'un document`, 'avertissement'); return; }
+    const taux = ed.definition.taux_tva ?? [];
+    const valeurs = valeursPoste(e, bib, taux);
+    const cle = e.poste?.niveau === 'TTC' ? 'TTC' : 'HT';
+    const type = cle === 'HT' ? TL.PIED_HT : TL.PIED_TTC;
+    const lignes = ed.saisie.lignes;
+    const l = lignes.find((x) => x.lig_id === ligId) ?? null;
+    if (l && surLigne && l.lig_tyl_id === type) {
+      ed.magasin.modifier((d) => {
+        const x = d.lignes.find((y) => y.lig_id === ligId);
+        Object.assign(x, valeurs, { lig_proprietes: { ...(x.lig_proprietes ?? {}), ...valeurs.lig_proprietes } });
+        ed.regles.appliquerContexte(d, ligId, taux);
+      }, `Poste ${e.code}`);
+    } else {
+      let section = null;
+      const vide = ed.groupesVides?.get(ligId);
+      if (vide) section = vide.cle === cle ? vide.section : null;
+      else if (cle === 'HT') {
+        const parId = new Map(lignes.map((x) => [x.lig_id, x]));
+        let x = l;
+        while (x && x.lig_parent_id !== null) x = parId.get(x.lig_parent_id);
+        if (x?.lig_tyl_id === TL.SECTION) section = x.lig_id;
+        else if (lignes.some((y) => y.lig_parent_id === null && y.lig_tyl_id === TL.SECTION)) {
+          this.message('Poste HT d\'un document à sections : placez-vous dans la section qui le porte', 'avertissement');
+          return;
+        }
+      }
+      const id = ed.insererPoste({ cle, section }, valeurs);
+      ed.grille?.selectionner(id);
+    }
+    this.message(`${codeAppel(e, bib)} – ${e.libelle ?? ''} (poste de pied ${cle})`.slice(0, 120));
+  }
+
   /** Contenu à insérer pour un élément (format du presse-papiers) : article, ouvrage ou ensemble. */
   contenuElement(e, bib) {
     const ed = this.editeur();
@@ -190,7 +249,11 @@ export class AppelBibliotheque {
       }
       const ed = this.editeur();
       const bib = await this.bibDocument();
-      const elements = await Promise.all(liste.map((d) => this.fournisseur.element(d.id)));
+      const tous = await Promise.all(liste.map((d) => this.fournisseur.element(d.id)));
+      // Postes de pied : ajoutés dans le pied (portée de la ligne de dépôt), à part du contenu inséré.
+      for (const e of tous.filter((x) => x.type === 'POSTE_PIED')) this.deployerPoste(refId, e, bib);
+      const elements = tous.filter((x) => x.type !== 'POSTE_PIED');
+      if (!elements.length) return;
       // Contenus renumérotés à la suite (identifiants temporaires distincts), puis réunis.
       const total = { racines: [], lignes: [], metres: [], variables: [] };
       let suivant = -1;
@@ -245,7 +308,7 @@ export class AppelBibliotheque {
       fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Bibliothèque">
         <header><h2>📚 Bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
         <div class="element-recherche-barre"><input type="search" placeholder="Code ou libellé…" value="${echapper(texte)}">
-          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option></select></div>
+          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option><option value="POSTE_PIED">Postes de pied</option></select></div>
         <div class="element-resultats"></div>
         <p class="aide">Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer</p></section>`;
       document.body.append(fond);
@@ -259,7 +322,7 @@ export class AppelBibliotheque {
         resultats = await this.fournisseur.rechercher({ recherche: entree.value, type: fond.querySelector('[data-type]').value || null });
         actif = 0;
         zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
-          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
+          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩', POSTE_PIED: '🧾' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
             <td>${echapper(e.unite_stock)}</td><td class="nombre">${prix(e.pa)}</td><td class="nombre">${prix(e.pv_net)}</td></tr>`).join('')}</tbody></table>`
           : '<p class="aide">Aucun élément.</p>';
         surligner();

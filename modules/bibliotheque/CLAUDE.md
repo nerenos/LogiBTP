@@ -1,7 +1,7 @@
 # Module Bibliothèque – contexte
 
 ## Rôle
-- Éléments `ARTICLE`, `OUVRAGE`, `ENSEMBLE` : plusieurs bibliothèques (code d'appel `CODE` dans la sienne, `BIB:CODE` ailleurs), familles hiérarchiques, natures (axe analytique, comptes, regroupement, types), gestion (STOCK, ACHAT, SOUS_TRAITANCE, NON_GERE).
+- Éléments `ARTICLE`, `OUVRAGE`, `ENSEMBLE`, `POSTE_PIED` (poste de pied réutilisable, sans prix : `ele_pied_niveau` HT/TTC, `ele_pied_mode` P/M/C, `ele_pied_base`, `ele_pied_sens` DEDUCTION/AJOUT, `ele_pied_valeur`, `ele_pied_retenue`, `ele_cpt_code`, `ele_tva_code` ; `063`, rejouable ; détail : `poste` de `ElementDetailDto`) : plusieurs bibliothèques (code d'appel `CODE` dans la sienne, `BIB:CODE` ailleurs), familles hiérarchiques, natures (axe analytique, comptes, regroupement, types), gestion (STOCK, ACHAT, SOUS_TRAITANCE, NON_GERE).
 - Prix par unité de stock (6 décimales) : scénario de PA → PR = PA × coef FG → PV = PR × coef bénéfice (ou PV fixe, coefficient déduit) → PV net = PV × coef remise. Multi-unité par formules sur les données techniques, tarifs fournisseurs, historique des prix, coefficients par période.
 
 ## Dépendances
@@ -9,7 +9,7 @@
 - Utilisé par le cœur : `ElementsBibliotheque.cs` (prix des composés par `MoteurDevisBtp`, `AvantEcriture` de la fiche `element`), `SpecialisationBibliothequeBtp`, `Program.cs` ; client `app/bibliotheque/` (`bibliotheque.js`, `appel.js`, `envoi.js`, `donnees.js`), `fiches/fiche-element.js` (`FicheElement`), `pages/parametres-bibliotheque.js`, `pages/liste.js` (glisser vers un document). Image et notices : GED (`ele_image_ged`, `type_element: 'element'`).
 
 ## Structure
-- `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période.
+- `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période ; `063` : postes de pied.
 - `js/src/calcul.js` : `calculerElement`, `prixAchat`, `ratio`, `convertir`, `codeAppel`, `analyserCodeAppel`, `coefficientsEffectifs`, `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`.
 - `js/src/fournisseurs.js` : `FournisseurBibliothequeApi`, `FournisseurBibliothequeMemoire`, `ErreurBibliotheque`, `entreeDepuisLigne`, `SCENARIOS_TOUS`, `DONNEES_TECHNIQUES` (interface commune documentée en tête).
 - `js/ui/referentiels.js` : `GestionReferentiels` ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.

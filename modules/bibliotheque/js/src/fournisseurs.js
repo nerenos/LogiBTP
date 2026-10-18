@@ -346,6 +346,10 @@ export class FournisseurBibliothequeMemoire {
       unites: entree.unites, donnees: entree.donnees, pa: e.pa, coef_fg: e.coef_fg, pr: e.pr, coef_benef: e.coef_benef, pv: e.pv,
       pv_fixe: e.pv_fixe === true || e.pv_fixe === 'true', coef_remise: e.coef_remise, pv_net: e.pv_net,
       composition: typeof e.composition === 'string' ? JSON.parse(e.composition) : e.composition ?? null, actif: e.actif !== false,
+      poste: e.type === 'POSTE_PIED' ? {
+        niveau: e.pied_niveau ?? null, mode: e.pied_mode ?? null, base: e.pied_base ?? null, sens: e.pied_sens ?? null, valeur: e.pied_valeur ?? null,
+        retenue: e.pied_retenue === true || e.pied_retenue === 'true', compte: e.cpt_code ?? null, tva: e.tva_code ?? null,
+      } : null,
     });
   }
 
