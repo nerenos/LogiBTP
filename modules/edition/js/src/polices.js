@@ -25,6 +25,9 @@ function preparer(octets) {
     if (g === undefined) {
       g = police.glyphForCodePoint(cp);
       if (!g || g.id === 0) g = police.glyphForCodePoint(63); // « ? » pour un caractère absent de la police
+      // Point de code du glyphe (table ToUnicode du PDF : copier-coller, indexation) : fontkit peut l'avoir créé
+      // sans (glyphe obtenu par une substitution), et Jint ne retrouve pas toujours le même que V8.
+      if (g.id !== 0 && cp !== 63 && !(g.codePoints ?? []).includes(cp)) g.codePoints = [...(g.codePoints ?? []), cp];
       glyphes.set(cp, g);
     }
     return g;

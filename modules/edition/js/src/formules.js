@@ -4,12 +4,12 @@
 // ({ riche: [{ texte, style }] }, produit par Gras, Taille, Style…) ou valeur spéciale (Retrait).
 // Analyseur sans eval ; noms de fonctions sans accents ni casse ; arguments séparés par « ; » (virgule décimale).
 import { Dec, D, formatNombre } from '@logibtp/socle';
+import { montantEnLettres, entierEnLettres } from './lettres.js';
 
 export class ErreurFormule extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 
-const sansAccent = (s) => String(s).normalize?.('NFD').replace(/[̀-ͯ]/g, '') ?? String(s);
 const TABLE_ACCENTS = { à: 'a', â: 'a', ä: 'a', é: 'e', è: 'e', ê: 'e', ë: 'e', î: 'i', ï: 'i', ô: 'o', ö: 'o', ù: 'u', û: 'u', ü: 'u', ç: 'c' };
 // Normalisation par table explicite (Jint : pas de garantie sur normalize).
 const normaliser = (s) => [...String(s).toLowerCase()].map((c) => TABLE_ACCENTS[c] ?? c).join('');
@@ -171,6 +171,14 @@ export function formaterDate(v, format = 'court') {
   return `${j}/${mo}/${a}`;
 }
 
+/** Date ISO + n jours (calendrier UTC, sans heure). */
+function ajouterJours(v, n) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? ''));
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + n));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** Texte affiché d'une valeur (décimal : format des libellés, booléen : Oui / Non). */
 export function enTexte(v) {
   if (v === null || v === undefined) return '';
@@ -285,6 +293,15 @@ export const FONCTIONS = {
   style: { min: 2, max: 2, appliquer: ([n, v], ctx) => riche(v, ctx.style ? ctx.style(enTexte(n)) : {}) },
   retrait: { min: 2, max: 2, appliquer: ([libelle, texte]) => ({ retrait: true, libelle, texte }) },
   ligne: { min: 0, max: 0, appliquer: () => '\n' },
+  enlettres: { min: 1, max: 3, appliquer: ([v, u, s]) => (versDec(v) === null ? '' : montantEnLettres(versDec(v), u === undefined ? 'euro' : enTexte(u), s === undefined ? 'centime' : enTexte(s))) },
+  entierenlettres: { min: 1, max: 1, appliquer: ([v]) => (versDec(v) === null ? '' : entierEnLettres(Number(versDec(v).abs().floor().toFixed(0)))) },
+  arrondisup: { min: 1, max: 2, appliquer: ([v, n]) => versDec(v)?.toDecimalPlaces(n === undefined ? 0 : Number(versDec(n)), Dec.ROUND_CEIL) ?? null },
+  arrondiinf: { min: 1, max: 2, appliquer: ([v, n]) => versDec(v)?.toDecimalPlaces(n === undefined ? 0 : Number(versDec(n)), Dec.ROUND_FLOOR) ?? null },
+  contient: { min: 2, max: 2, appliquer: ([v, x]) => normaliser(enTexte(v)).includes(normaliser(enTexte(x))) },
+  commencepar: { min: 2, max: 2, appliquer: ([v, x]) => normaliser(enTexte(v)).startsWith(normaliser(enTexte(x))) },
+  dans: { min: 2, max: 50, appliquer: ([v, ...l]) => l.some((x) => comparer(v, x) === 0) },
+  choix: { min: 2, max: 50, appliquer: ([i, ...l]) => { const n = Number(versDec(i)); return Number.isInteger(n) && n >= 1 && n <= l.length ? l[n - 1] : null; } },
+  ajouterjours: { min: 2, max: 2, appliquer: ([d, n]) => ajouterJours(d, Number(versDec(n) ?? 0)) },
   // Codes : valeur spéciale lue par les composants code-barres et QR.
   codebarre39: { min: 1, max: 1, appliquer: ([v], ctx) => ctx.code39 ? ctx.code39(enTexte(v)) : enTexte(v) },
 };
@@ -399,4 +416,4 @@ export function evaluerCondition(source, ctx) {
   return versBool(evaluerFormule(s.startsWith('=') || s.includes('{{') ? s : '=' + s, ctx));
 }
 
-export { versDec, versBool, estVide, normaliser, sansAccent };
+export { versDec, versBool, estVide, normaliser };

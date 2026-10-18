@@ -641,3 +641,15 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
 - Écart à l'analyse : le langage des formules n'est pas celui du métré (un module ne dépend pas d'un autre module) ;
   il en reprend les principes (typage, `Si`, fonctions de l'hôte, noms sans accents) dans `formules.js`.
 
+### Lot 1 – format du modèle, charte, formules (18/10/2026) : réalisé
+
+- Format du modèle documenté (`modele.js`, `modules/edition/CLAUDE.md`) et contrôlé (`verifierModele` : formules,
+  types de bandes et de composants ; `dependances`, `chercherCycle`) ; charte contrôlée (`verifierCharte` :
+  couleurs, héritages, polices livrées).
+- Formules complétées : montant et nombre en lettres (`EnLettres`, règles traditionnelles), `ArrondiSup`,
+  `ArrondiInf`, `Contient`, `CommencePar`, `Dans`, `Choix`, `AjouterJours` ; collections et ruptures écrites comme
+  un simple chemin.
+- Libellés HTML : cellules fusionnées signalées (alerte `HTML_FUSION`, rendu sans fusion, Q19).
+- Jeu `03_formules_groupes` (texte riche, retrait suspendu, ellipse, réduction, HTML, adresse sans lignes vides,
+  bandes GROUPE, A5 paysage) ; table ToUnicode des PDF fiabilisée (points de code renseignés par la table du module).
+

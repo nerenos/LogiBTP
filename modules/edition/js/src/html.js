@@ -33,7 +33,7 @@ function lexer(html) {
     if (m[0][1] === '/') { res.push({ type: 'fermante', nom }); continue; }
     const attrs = m[2] ?? '';
     const style = /style\s*=\s*("([^"]*)"|'([^']*)')/i.exec(attrs);
-    res.push({ type: 'ouvrante', nom, style: style ? decoderEntites(style[2] ?? style[3]) : '', auto: /\/\s*$/.test(attrs) || nom === 'BR' });
+    res.push({ type: 'ouvrante', nom, style: style ? decoderEntites(style[2] ?? style[3]) : '', auto: /\/\s*$/.test(attrs) || nom === 'BR', fusion: /\b(colspan|rowspan)\s*=\s*["']?\s*([2-9]|\d{2,})/i.test(attrs) });
   }
   return res;
 }
@@ -121,6 +121,7 @@ export function lireHtml(html) {
       if (tableau) {
         if (n === 'TR') { rangee = { entete: false, cellules: [] }; tableau.rangees.push(rangee); continue; }
         if (n === 'TD' || n === 'TH') {
+          if (j.fusion) tableau.fusions = true;
           if (!rangee) { rangee = { entete: false, cellules: [] }; tableau.rangees.push(rangee); }
           cellule = { paragraphes: [], entete: n === 'TH' };
           if (n === 'TH') rangee.entete = true;

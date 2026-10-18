@@ -317,6 +317,7 @@ function decaler(boite, dx, largeur) {
 }
 
 function composerTableauHtml(t, style, largeur, ctx) {
+  if (t.fusions) alerter(ctx, 'HTML_FUSION', 'Tableau d’un libellé : cellules fusionnées rendues sans fusion');
   const nbCol = Math.max(...t.rangees.map((r) => r.cellules.length));
   const larg = largeur / nbCol;
   const trait = resoudreTrait(ctx.charte, 'fin');

@@ -22,6 +22,7 @@ for (const cas of lireCasEdition()) {
   const sha = createHash('sha256').update(pdf).digest('hex');
   const brut = await produirePdf(r, p, { ...(cas.env.pdf ?? {}), compresser: false });
   const shaBrut = createHash('sha256').update(brut).digest('hex');
+  writeFileSync(sortie + `${cas.nom}.js.pdf`, brut);
   writeFileSync(sortie + `${cas.nom}.json`, JSON.stringify({ nom: cas.nom, donnees: cas.generer ? cas.donnees : undefined, resultat: r, pdf_sha256: sha, pdf_brut_sha256: shaBrut, pdf_octets: pdf.length }));
   writeFileSync(essais + `${cas.nom}.pdf`, pdf);
   ecrireApercu(r, essais + `${cas.nom}.html`);

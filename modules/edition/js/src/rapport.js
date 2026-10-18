@@ -128,7 +128,7 @@ export function fragmentsBande(b, ctx, largeur) {
     const liste = evaluerExpression(ctx, b.collection, `bande ${b.nom ?? ''}`);
     const groupes = [];
     for (const [i, el] of (Array.isArray(liste) ? liste : []).entries()) {
-      const v = enTexte(evaluer(enfant(ctx, { element: el, index: i }), b.rupture, 'rupture'));
+      const v = enTexte(evaluerExpression(enfant(ctx, { element: el, index: i }), b.rupture, 'rupture'));
       let g = groupes[groupes.length - 1];
       if (!g || g.valeur !== v) { g = { valeur: v, elements: [] }; groupes.push(g); }
       g.elements.push(el);

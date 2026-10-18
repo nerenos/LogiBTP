@@ -45,7 +45,10 @@ public class MoteurEditionTests(MoteurPartage partage, ITestOutputHelper sortie)
         var envBrut = JsonNode.Parse(env)!.AsObject();
         envBrut["pdf"] = new JsonObject { ["titre"] = envBrut["pdf"]?["titre"]?.GetValue<string>(), ["date"] = envBrut["pdf"]?["date"]?.GetValue<string>(), ["compresser"] = false };
         var brut = partage.Moteur.Pdf(modele, donnees.ToJsonString(), envBrut.ToJsonString());
-        Assert.Equal(js["pdf_brut_sha256"]!.GetValue<string>(), Convert.ToHexStringLower(SHA256.HashData(brut.Octets)));
+        var shaBrut = Convert.ToHexStringLower(SHA256.HashData(brut.Octets));
+        if (shaBrut != js["pdf_brut_sha256"]!.GetValue<string>())
+            File.WriteAllBytes(CasPartages.Chemin("modules", "edition", "tests", "resultats-js", $"{nom}.jint.pdf"), brut.Octets);
+        Assert.Equal(js["pdf_brut_sha256"]!.GetValue<string>(), shaBrut);
 
         var pdf = partage.Moteur.Pdf(modele, donnees.ToJsonString(), env);
         sortie.WriteLine($"{nom} : {pdf.Pages} pages, PDF {pdf.Octets.Length} octets (brut {brut.Octets.Length}) en {pdf.Duree.TotalMilliseconds:0} ms (Jint) {pdf.ChronosJson}");

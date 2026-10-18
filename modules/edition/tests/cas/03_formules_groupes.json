@@ -1,0 +1,33 @@
+{
+  "nom": "03_formules_groupes",
+  "description": "Lot 1 : texte riche dans les formules, retrait suspendu, ellipse et réduction, libellé HTML (listes, tableau avec fusion signalée, alignement), adresse sans lignes vides, montant en lettres, bandes GROUPE avec totaux de groupe et saut par groupe, format A5 paysage.",
+  "donnees": "donnees/formules.json",
+  "env": { "aujourdhui": "2026-10-18", "pdf": { "titre": "Formules", "date": "2026-10-18T00:00:00Z" } },
+  "modele": {
+    "format_version": 1,
+    "code": "ESSAI_FORMULES",
+    "page": { "format": "A5", "orientation": "paysage", "marges": { "haut": 8, "bas": 8, "gauche": 10, "droite": 10 } },
+    "bandes": [
+      { "type": "PIED_PAGE", "contenu": { "type": "champ", "valeur": "{{societe.raison_sociale}} – page {{Page()}} sur {{NbPages()}}", "style": "discret", "alignement": "centre" } },
+      { "type": "TITRE", "contenu": { "type": "rangee", "espacement": 5, "enfants": [
+        { "type": "pile", "largeur": "45%", "cadre": "fin", "marges": 2, "enfants": [
+          { "type": "champ", "valeur": "=Gras(client.nom) & \" (\" & Italique(client.contact) & \")\"", "style": { "base": "normal", "taille": 10 } },
+          { "type": "repete", "collection": "client.adresse", "contenu": { "type": "champ", "valeur": "{{element}}" } },
+          { "type": "champ", "valeur": "{{client.courriel}}" } ] },
+        { "type": "pile", "largeur": "*", "enfants": [
+          { "type": "champ", "valeur": "=Retrait(Gras(\"Désignation : \"); \"Fourniture et pose de menuiseries extérieures en PVC blanc, double vitrage, y compris dépose des anciennes menuiseries et évacuation\")" },
+          { "type": "champ", "valeur": "Libellé beaucoup trop long pour tenir sur une seule ligne de cette colonne étroite", "multiligne": "une", "style": "gras" },
+          { "type": "champ", "valeur": "Texte réduit pour tenir sur une ligne sans ellipse si possible", "multiligne": "une", "reduction_min": 6 },
+          { "type": "champ", "valeur": "=\"Arrêté à la somme de \" & EnLettres(total) & \".\"", "style": "petit" } ] } ] } },
+      { "type": "CORPS", "contenu": { "type": "champ", "valeur": "{{libelle_html}}", "html": true, "cadre": "fin", "marges": 2 } },
+      { "type": "CORPS", "nom": "interventions", "mode": "GROUPE", "collection": "interventions", "rupture": "element.chantier",
+        "options": { "saut_par_groupe": false },
+        "entete": { "type": "champ", "valeur": "{{groupe.valeur}}", "style": "sous_titre", "fond": "fond_titre", "marges": 1 },
+        "contenu": { "type": "rangee", "enfants": [
+          { "type": "champ", "valeur": "{{Date(element.date)}}", "largeur": "25mm" },
+          { "type": "champ", "valeur": "{{element.salarie}}", "largeur": "*" },
+          { "type": "champ", "valeur": "{{element.heures}}", "format": "nombre:2", "alignement": "droite", "largeur": "20mm", "style": "montant" } ] },
+        "pied": { "type": "champ", "valeur": "=\"Total du chantier : \" & Nombre(Somme(groupe.elements; \"heures\")) & \" h (\" & Compte(groupe.elements) & \" interventions)\"", "style": "sous_total", "alignement": "droite", "cadre": { "haut": "fin" } } }
+    ]
+  }
+}

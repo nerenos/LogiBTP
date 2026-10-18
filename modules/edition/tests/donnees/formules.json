@@ -1,0 +1,13 @@
+{
+  "societe": { "raison_sociale": "BTP Démonstration" },
+  "client": { "nom": "SCI Les Tilleuls", "contact": "M. Bernard", "adresse": ["8 allée des Tilleuls", "", "69500 Bron"], "courriel": null },
+  "total": "127106.12",
+  "libelle_html": "<p>Fourniture et pose de <b>menuiseries PVC</b> :</p><ul><li>double vitrage 4/16/4 argon</li><li>oscillo-battant</li></ul><table><tr><th>Repère</th><th>Dimensions</th></tr><tr><td>F1</td><td colspan=\"2\">120 × 135</td></tr></table><p style=\"text-align:right\"><i>Pose en rénovation</i></p>",
+  "interventions": [
+    { "chantier": "CH-001 Maison Durand", "date": "2026-10-01", "salarie": "Paul Martin", "heures": "7.5" },
+    { "chantier": "CH-001 Maison Durand", "date": "2026-10-02", "salarie": "Léa Petit", "heures": "8" },
+    { "chantier": "CH-002 École Jules Ferry", "date": "2026-10-02", "salarie": "Paul Martin", "heures": "6" },
+    { "chantier": "CH-002 École Jules Ferry", "date": "2026-10-03", "salarie": "Paul Martin", "heures": "7" },
+    { "chantier": "CH-003 Résidence du Parc", "date": "2026-10-03", "salarie": "Léa Petit", "heures": "4.25" }
+  ]
+}

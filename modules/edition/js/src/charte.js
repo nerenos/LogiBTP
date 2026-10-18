@@ -98,3 +98,25 @@ export function resoudreTrait(charte, t) {
   }
   return { epaisseur: Number(t.epaisseur ?? 0.15), couleur: resoudreCouleur(charte, t.couleur ?? 'trait') ?? '#000000', pointille: !!t.pointille };
 }
+
+/** Contrôle d'une charte : [{ chemin, code, message }] (couleurs, héritages, polices disponibles). */
+export function verifierCharte(charte, familles = ['Inter', 'Libre Barcode 39']) {
+  const c = completerCharte(charte);
+  const erreurs = [];
+  for (const [nom, v] of Object.entries(c.couleurs)) {
+    if (!resoudreCouleur(c, v)) erreurs.push({ chemin: `couleurs.${nom}`, code: 'COULEUR', message: `Couleur invalide : ${v}` });
+  }
+  for (const [nom, s] of Object.entries(c.styles)) {
+    const visites = new Set([nom]);
+    let base = s.base;
+    while (base) {
+      if (visites.has(base)) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_CYCLE', message: `Héritage circulaire : ${[...visites, base].join(' → ')}` }); break; }
+      if (!c.styles[base]) { erreurs.push({ chemin: `styles.${nom}`, code: 'STYLE_BASE', message: `Style de base inconnu : ${base}` }); break; }
+      visites.add(base);
+      base = c.styles[base].base;
+    }
+    if (s.police && !familles.includes(s.police)) erreurs.push({ chemin: `styles.${nom}.police`, code: 'POLICE', message: `Police non livrée : ${s.police}` });
+    if (s.couleur && !resoudreCouleur(c, s.couleur)) erreurs.push({ chemin: `styles.${nom}.couleur`, code: 'COULEUR', message: `Couleur inconnue : ${s.couleur}` });
+  }
+  return erreurs;
+}
