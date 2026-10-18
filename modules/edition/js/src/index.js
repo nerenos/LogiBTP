@@ -15,3 +15,4 @@ export { lireImage } from './images.js';
 export { FORMATS, dimensionsPage, PT_MM, MM_PT } from './unites.js';
 export { FACES_EDITION, chargerPolices } from './faces.js';
 export { base64VersOctets, octetsVersBase64 } from './base64.js';
+export { CATALOGUE_FONCTIONS, CATEGORIES_FONCTIONS, OPERATEURS, CONTEXTES, FORMATS_CHAMP } from './catalogue.js';

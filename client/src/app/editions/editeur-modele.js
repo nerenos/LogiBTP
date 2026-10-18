@@ -11,6 +11,7 @@ import { tags as t } from '@lezer/highlight';
 import { creerCombo, echapper } from '@logibtp/socle/ui';
 import { verifierModele } from '@logibtp/edition';
 import { api } from '../api.js';
+import { DictionnaireModele } from './dictionnaire-modele.js';
 
 // ------------------------------------------------------------------ langage : JSON des modèles d'édition
 
@@ -198,10 +199,12 @@ export class EditeurModeleApercu {
         <strong>✎ Modèle</strong>
         <span class="edition-editeur-ouvrir" title="Ouvrir un bloc ou un sous-rapport du modèle dans un onglet (ou Ctrl+clic sur son code)" data-combo="ouvrir"></span>
         <span class="edition-editeur-espace"></span>
+        <button type="button" class="bouton-icone${this.dictionnaireVisible ? ' actif' : ''}" data-action="dictionnaire" title="Dictionnaire — données de la source, paramètres, fonctions, formats, charte : un clic insère l'entrée au curseur" aria-label="Dictionnaire">📖</button>
         <button type="button" class="bouton-icone" data-action="masquer" title="Masquer l'éditeur — les modifications appliquées restent dans l'aperçu" aria-label="Masquer l'éditeur">✕</button>
       </div>
       <div class="edition-editeur-onglets" role="tablist" data-zone="onglets"></div>
       <div class="edition-editeur-code" data-zone="code"></div>
+      <div class="edition-dictionnaire" data-zone="dictionnaire" ${this.dictionnaireVisible ? '' : 'hidden'}></div>
       <div class="edition-editeur-actions">
         <button data-action="appliquer" class="principal" title="Remplacer le contenu en mémoire et refaire l'aperçu (Ctrl+Entrée) ; rien n'est enregistré">▶ Appliquer</button>
         <button data-action="verifier" title="Contrôle du modèle par le moteur du serveur (formules, format)">✔ Vérifier</button>
@@ -216,6 +219,9 @@ export class EditeurModeleApercu {
     ouvrir.addEventListener('change', () => { if (ouvrir.valeurCombo) this.ouvrirOnglet(ouvrir.valeurCombo); ouvrir.definirValeur(''); });
     this.conteneur.querySelector('[data-combo="ouvrir"]').replaceChildren(ouvrir);
     this.conteneur.querySelector('[data-action="masquer"]').addEventListener('click', () => this.page.basculerEditeur(false));
+    this.conteneur.querySelector('[data-action="dictionnaire"]').addEventListener('click', () => this.basculerDictionnaire());
+    this.dictionnaire = new DictionnaireModele(this.conteneur.querySelector('[data-zone="dictionnaire"]'), this);
+    if (this.dictionnaireVisible) this.dictionnaire.charger().catch((x) => this.message(echapper(x.message), 'erreur'));
     this.conteneur.querySelector('.edition-editeur-actions').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
       if (!b) return;
@@ -261,6 +267,21 @@ export class EditeurModeleApercu {
         EditorView.updateListener.of((u) => { if (u.docChanged) this.rendreOnglets(); }),
       ],
     });
+  }
+
+  /** Affiche ou masque le dictionnaire sous l'éditeur (chargé à la première ouverture). */
+  basculerDictionnaire(visible = !this.dictionnaireVisible) {
+    this.dictionnaireVisible = visible;
+    this.conteneur.querySelector('[data-zone="dictionnaire"]').hidden = !visible;
+    this.conteneur.querySelector('[data-action="dictionnaire"]').classList.toggle('actif', visible);
+    if (visible) this.dictionnaire.charger().catch((x) => this.message(echapper(x.message), 'erreur'));
+  }
+
+  /** Insère un texte à la place de la sélection de l'éditeur ; `recul` : curseur ramené de n caractères (entre parenthèses). */
+  inserer(texte, recul = 0) {
+    const { from, to } = this.vue.state.selection.main;
+    this.vue.dispatch({ changes: { from, to, insert: texte }, selection: { anchor: from + texte.length - recul }, scrollIntoView: true });
+    this.vue.focus();
   }
 
   /** Mémorise l'onglet courant et affiche un autre (ouvert s'il ne l'est pas). */

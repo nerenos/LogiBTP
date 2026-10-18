@@ -47,3 +47,18 @@ describe('nombres sous leur forme la plus simple', () => {
   });
   it('pourcentage simplifié', () => expect(evaluerFormule('=Pourcent(20)', {})).toBe('20 %'));
 });
+
+describe('catalogue des fonctions', () => {
+  it('chaque fonction du moteur est documentée, et seulement elles', async () => {
+    const { CATALOGUE_FONCTIONS, CATEGORIES_FONCTIONS } = await import('../src/catalogue.js');
+    const { FONCTIONS } = await import('../src/formules.js');
+    const documentees = CATALOGUE_FONCTIONS.map((f) => f.nom.toLowerCase());
+    expect([...documentees].sort()).toEqual(Object.keys(FONCTIONS).sort());
+    for (const f of CATALOGUE_FONCTIONS) expect(CATEGORIES_FONCTIONS).toContain(f.categorie);
+  });
+  it('les exemples sont des formules valides', async () => {
+    const { CATALOGUE_FONCTIONS } = await import('../src/catalogue.js');
+    const { verifierFormule } = await import('../src/formules.js');
+    for (const f of CATALOGUE_FONCTIONS) expect(() => verifierFormule(f.exemple), f.nom).not.toThrow();
+  });
+});

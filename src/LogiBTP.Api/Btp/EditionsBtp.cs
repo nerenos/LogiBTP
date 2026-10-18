@@ -57,7 +57,13 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         return donnees;
     }
 
-    public override JsonArray Dictionnaire(string source) => source == "document" ? SourceDocumentEdition.Dictionnaire() : [];
+    public override JsonArray Dictionnaire(string source) => source switch
+    {
+        "document" => SourceDocumentEdition.Dictionnaire(),
+        "fiche" => SourcesFicheListeEdition.DictionnaireFiche(),
+        "liste" => SourcesFicheListeEdition.DictionnaireListe(),
+        _ => [],
+    };
 
     /// <summary>
     /// Dépôt en GED d'un PDF produit par le serveur : document lié au type et au groupe d'indices de la pièce
@@ -593,39 +599,115 @@ public static class SourceDocumentEdition
         return res;
     }
 
-    /// <summary>Dictionnaire des champs de la source (concepteur, contrôle des modèles).</summary>
+    /// <summary>
+    /// Dictionnaire des données de la source « document » (éditeur du modèle, guide des éditions) : groupe, chemin,
+    /// libellé, type. Champs d'une collection : chemin « collection[].champ », lus par « ligne.champ » (ou « element.champ »)
+    /// dans un tableau, une bande ou un composant répété sur la collection.
+    /// </summary>
     public static JsonArray Dictionnaire()
     {
-        (string, string, string)[] champs =
-        [
-            ("societe.raison_sociale", "Raison sociale de la société", "texte"), ("societe.forme_juridique", "Forme juridique", "texte"),
-            ("societe.capital", "Capital", "texte"), ("societe.rcs", "RCS", "texte"), ("societe.siret", "SIRET", "texte"), ("societe.tva", "TVA intracommunautaire", "texte"),
-            ("societe.naf", "Code NAF", "texte"), ("societe.adresse", "Adresse (lignes)", "liste"), ("societe.telephone", "Téléphone", "texte"), ("societe.courriel", "Courriel", "texte"),
-            ("societe.mentions.decennale.assureur", "Assureur décennale", "texte"), ("societe.mentions.decennale.police", "Police décennale", "texte"),
-            ("societe.mentions.decennale.couverture", "Couverture géographique", "texte"), ("societe.mentions.penalites", "Pénalités de retard", "texte"),
-            ("societe.mentions.indemnite", "Indemnité forfaitaire de recouvrement", "texte"), ("societe.mentions.escompte", "Escompte", "texte"),
-            ("societe.mentions.mediateur.nom", "Médiateur de la consommation", "texte"), ("societe.mentions.retractation", "Droit de rétractation", "texte"),
-            ("societe.mentions.accord", "Mention du bon pour accord", "texte"),
-            ("document.numero", "Numéro", "texte"), ("document.date", "Date", "date"), ("document.objet", "Objet", "texte"), ("document.type.code", "Code du type", "texte"),
-            ("document.type.libelle", "Type", "texte"), ("document.type.famille", "Famille (V, A, S)", "texte"), ("document.statut.code", "Code du statut", "texte"),
-            ("document.statut.libelle", "Statut", "texte"), ("document.verrouille", "Validé (verrouillé)", "booleen"), ("document.indice", "Indice", "texte"),
+        var d = new List<(string Groupe, string Chemin, string Libelle, string Type)>();
+        void G(string groupe, params (string Chemin, string Libelle, string Type)[] champs) => d.AddRange(champs.Select(c => (groupe, c.Chemin, c.Libelle, c.Type)));
+        G("Société",
+            ("societe.raison_sociale", "Raison sociale", "texte"), ("societe.forme_juridique", "Forme juridique (libellé)", "texte"),
+            ("societe.capital", "Capital (« 250 000 € »)", "texte"), ("societe.rcs", "RCS", "texte"), ("societe.siret", "SIRET", "texte"),
+            ("societe.tva", "TVA intracommunautaire", "texte"), ("societe.naf", "Code NAF", "texte"), ("societe.adresse", "Adresse (lignes)", "liste"),
+            ("societe.telephone", "Téléphone", "texte"), ("societe.courriel", "Courriel", "texte"));
+        G("Mentions de la société (Paramètres › Éditions)",
+            ("societe.mentions.decennale.assureur", "Assureur décennale", "texte"), ("societe.mentions.decennale.adresse", "Adresse de l'assureur", "texte"),
+            ("societe.mentions.decennale.police", "N° de police décennale", "texte"), ("societe.mentions.decennale.couverture", "Couverture géographique", "texte"),
+            ("societe.mentions.penalites", "Pénalités de retard", "texte"), ("societe.mentions.indemnite", "Indemnité forfaitaire de recouvrement", "texte"),
+            ("societe.mentions.escompte", "Escompte", "texte"), ("societe.mentions.tva_debits", "Option TVA sur les débits", "booleen"),
+            ("societe.mentions.mediateur.nom", "Médiateur de la consommation", "texte"), ("societe.mentions.mediateur.site", "Site du médiateur", "texte"),
+            ("societe.mentions.retractation", "Droit de rétractation", "texte"), ("societe.mentions.accord", "Mention du bon pour accord", "texte"),
+            ("societe.mentions.libre", "Mention libre", "texte"));
+        G("Document",
+            ("document.id", "Identifiant", "nombre"), ("document.numero", "Numéro", "texte"), ("document.date", "Date", "date"), ("document.objet", "Objet", "texte"),
+            ("document.type.code", "Code du type (V_DEVIS…)", "texte"), ("document.type.libelle", "Type", "texte"), ("document.type.famille", "Famille (V ventes, A achats, S stock)", "texte"),
+            ("document.type.avancement", "Avancement du type (S situation, F facture, R reprise)", "texte"),
+            ("document.statut.code", "Code du statut (BROUILLON, VALIDE, ANNULE…)", "texte"), ("document.statut.libelle", "Statut", "texte"),
+            ("document.verrouille", "Validé (verrouillé)", "booleen"), ("document.indice", "Indice", "texte"), ("document.devise", "Devise", "texte"),
+            ("document.notre_reference", "Notre référence", "texte"), ("document.reference_externe", "Référence externe", "texte"), ("document.date_externe", "Date externe", "date"),
             ("document.validite_jours", "Validité (jours)", "nombre"), ("document.date_validite", "Fin de validité", "date"),
-            ("document.notre_reference", "Notre référence", "texte"), ("document.reference_externe", "Référence externe", "texte"),
-            ("document.condition.libelle", "Condition de paiement", "texte"), ("document.mode_reglement", "Mode de règlement", "texte"),
-            ("document.avancement.rang", "Numéro de situation", "nombre"), ("document.nature_avoir", "Nature de l'avoir", "texte"),
-            ("client.nom", "Client (nom)", "texte"), ("client.contact", "Contact du client", "texte"), ("client.adresse", "Adresse du client (lignes)", "liste"),
-            ("client.courriel", "Courriel du client", "texte"), ("client.siret", "SIRET du client", "texte"), ("client.tva", "TVA du client", "texte"),
-            ("payeur.nom", "Payeur", "texte"), ("adresse_travaux.libelle", "Adresse des travaux (libellé)", "texte"), ("adresse_travaux.adresse", "Adresse des travaux (lignes)", "liste"),
-            ("redacteur.nom", "Rédacteur", "texte"), ("rattachement.chantier.code", "Chantier (code)", "texte"), ("rattachement.chantier.libelle", "Chantier", "texte"),
-            ("rattachement.marche.code", "Marché (code)", "texte"), ("rattachement.affaire.libelle", "Affaire", "texte"), ("rattachement.projet.libelle", "Projet", "texte"),
-            ("lignes", "Lignes imprimées : type, niveau, numero, code, libelle_html, qte, unite, pu, montant, composante, option, compte_total, avt_*", "collection"),
-            ("pied", "Pied : genre (total, poste, tva, sous_total), libelle, base, taux, montant", "collection"),
-            ("tva", "TVA par taux : code, taux, base, montant, mention", "collection"), ("totaux.ht", "Total HT", "montant"), ("totaux.tva", "Total TVA", "montant"),
-            ("totaux.ttc", "Total TTC", "montant"), ("totaux.net", "Net à payer", "montant"), ("echeances", "Échéances : rang, date, montant, nature", "collection"),
-            ("textes.intro", "Texte d'introduction (HTML)", "html"), ("textes.fin", "Texte de conclusion (HTML)", "html"),
-        ];
-        return new JsonArray(champs.Select(c => (JsonNode?)new JsonObject { ["chemin"] = c.Item1, ["libelle"] = c.Item2, ["type"] = c.Item3 }).ToArray());
+            ("document.condition.code", "Code de la condition de paiement", "texte"), ("document.condition.libelle", "Condition de paiement", "texte"),
+            ("document.mode_reglement", "Mode de règlement", "texte"), ("document.nature_avoir", "Nature de l'avoir (ANNULATION, AVANCEMENT…)", "texte"),
+            ("document.entete", "Entête complet (colonnes ent_* du document : document.entete.ent_…)", "objet"));
+        G("Avancement (situations, factures d'avancement)",
+            ("document.avancement", "Présent si le document est une pièce d'avancement (sinon vide)", "objet"),
+            ("document.avancement.presentation", "Présentation (C cumul : situation, P période : facture)", "texte"),
+            ("document.avancement.rang", "Numéro de situation", "nombre"),
+            ("document.avancement.pied.marche_ht", "Montant HT du marché", "montant"), ("document.avancement.pied.pct_facture", "Pourcentage facturé (situation : réalisé) du marché", "nombre"),
+            ("document.avancement.pied.nombre_precedents", "Nombre de pièces déjà facturées", "nombre"),
+            ("document.avancement.pied.lignes", "Pied d'avancement : une ligne par total (HT, TVA, TTC, net)", "collection"),
+            ("document.avancement.pied.lignes[].cle", "ht, tva, ttc ou net", "texte"), ("document.avancement.pied.lignes[].libelle", "Libellé du total", "texte"),
+            ("document.avancement.pied.lignes[].precedent", "Cumul précédent", "montant"), ("document.avancement.pied.lignes[].periode", "Période", "montant"),
+            ("document.avancement.pied.lignes[].cumul", "Cumul", "montant"));
+        G("Client et payeur (coordonnées figées du document)",
+            ("client.nom", "Client (raison sociale ou nom)", "texte"), ("client.code", "Code du client", "texte"), ("client.contact", "Contact", "texte"),
+            ("client.adresse", "Adresse (lignes)", "liste"), ("client.courriel", "Courriel", "texte"), ("client.telephone", "Téléphone", "texte"),
+            ("client.siret", "SIRET", "texte"), ("client.tva", "TVA intracommunautaire", "texte"),
+            ("payeur.nom", "Payeur (vide s'il est le client)", "texte"), ("payeur.contact", "Contact du payeur", "texte"), ("payeur.adresse", "Adresse du payeur (lignes)", "liste"));
+        G("Adresse des travaux ou de livraison",
+            ("adresse_travaux.origine", "Origine (CHANTIER, DEPOT, COMPTOIR, LIBRE)", "texte"), ("adresse_travaux.libelle", "Libellé", "texte"),
+            ("adresse_travaux.adresse", "Adresse (lignes)", "liste"), ("adresse_travaux.contact", "Contact sur place", "texte"),
+            ("adresse_travaux.telephone", "Téléphone", "texte"), ("adresse_travaux.instructions", "Instructions", "texte"), ("adresse_travaux.mention", "Mention", "texte"));
+        G("Rédacteur et rattachement",
+            ("redacteur.nom", "Rédacteur (prénom nom)", "texte"), ("redacteur.civilite", "Civilité du rédacteur", "texte"),
+            ("rattachement.projet.code", "Projet (code)", "texte"), ("rattachement.projet.libelle", "Projet", "texte"),
+            ("rattachement.affaire.code", "Affaire (code)", "texte"), ("rattachement.affaire.libelle", "Affaire", "texte"),
+            ("rattachement.chantier.code", "Chantier (code)", "texte"), ("rattachement.chantier.libelle", "Chantier", "texte"),
+            ("rattachement.marche.code", "Marché (code)", "texte"), ("rattachement.marche.libelle", "Marché", "texte"), ("rattachement.marche.montant_ht", "Montant HT du marché", "montant"));
+        G("Intervenants",
+            ("intervenants", "Annuaire du document (première ligne : client ou fournisseur)", "collection"),
+            ("intervenants[].fonction", "Fonction (CLIENT, PAYEUR, ARCHITECTE…)", "texte"), ("intervenants[].per_id", "Tiers (identifiant)", "nombre"),
+            ("intervenants[].ind_id", "Contact (identifiant)", "nombre"), ("intervenants[].principal", "Principal", "booleen"),
+            ("intervenants[].paiement_direct", "Paiement direct", "booleen"), ("intervenants[].commentaire", "Commentaire", "texte"));
+        G("Lignes du document",
+            ("lignes", "Lignes imprimées, dans l'ordre (sans les lignes « ne pas imprimer » ni les frais annexes)", "collection"),
+            ("lignes[].type", "SECTION, TITRE, OUVRAGE, ELEMENT, TEXTE, SOUS_TOTAL, SAUT_PAGE, IMAGE, PIED (pied de section)", "texte"),
+            ("lignes[].niveau", "Profondeur (0 = racine)", "nombre"), ("lignes[].numero", "Numérotation (1.2.3)", "texte"), ("lignes[].code", "Code", "texte"),
+            ("lignes[].libelle_html", "Libellé affiché (HTML : html: true)", "html"), ("lignes[].libelle", "Libellé en texte brut", "texte"),
+            ("lignes[].qte", "Quantité", "nombre"), ("lignes[].unite", "Unité", "texte"), ("lignes[].pu", "Prix unitaire HT remisé", "montant"),
+            ("lignes[].pu_brut", "Prix unitaire HT avant remise", "montant"), ("lignes[].remise_pct", "Remise de la ligne (%)", "nombre"),
+            ("lignes[].montant", "Montant HT (pièce d'avancement : période)", "montant"), ("lignes[].taux_tva", "Taux de TVA", "nombre"),
+            ("lignes[].type_prix", "V vendu, O option, M pour mémoire, F frais annexes", "texte"), ("lignes[].option", "Option", "booleen"),
+            ("lignes[].pour_memoire", "Pour mémoire", "booleen"), ("lignes[].variante", "Variante", "booleen"), ("lignes[].composante", "Composante d'un ouvrage", "booleen"),
+            ("lignes[].tranche", "Tranche (section, titre)", "booleen"), ("lignes[].compte_total", "Comptée dans le total (pour les cumuls)", "booleen"),
+            ("lignes[].avt_pct", "Avancement cumulé (%)", "nombre"), ("lignes[].avt_qte_cumul", "Quantité cumulée", "nombre"),
+            ("lignes[].avt_montant_cumul", "Montant HT cumulé", "montant"), ("lignes[].avt_montant_precedent", "Montant HT précédent", "montant"),
+            ("lignes[].avt_pct_precedent", "Avancement précédent (%)", "nombre"), ("lignes[].avt_qte_marche", "Quantité du marché", "nombre"),
+            ("lignes[].avt_montant_marche", "Montant HT du marché", "montant"));
+        G("Pied et totaux",
+            ("pied", "Pied imprimable, dans l'ordre", "collection"), ("pied[].genre", "total, sous_total, poste, tva", "texte"),
+            ("pied[].cle", "TOTAL_HT, HT_NET, TOTAL_TTC, NET, TVA…", "texte"), ("pied[].libelle", "Libellé", "texte"), ("pied[].mode", "Poste : P %, M montant, C coefficient", "texte"),
+            ("pied[].taux", "Taux (poste en %, TVA)", "nombre"), ("pied[].base", "Base du calcul", "montant"), ("pied[].montant", "Montant", "montant"),
+            ("pied[].mention", "Mention de TVA (autoliquidation…)", "texte"),
+            ("tva", "TVA par taux", "collection"), ("tva[].code", "Code TVA", "texte"), ("tva[].taux", "Taux", "nombre"), ("tva[].base", "Base HT", "montant"),
+            ("tva[].montant", "Montant de TVA", "montant"), ("tva[].mention", "Mention", "texte"),
+            ("totaux.ht", "Total HT net", "montant"), ("totaux.tva", "Total TVA", "montant"), ("totaux.ttc", "Total TTC", "montant"), ("totaux.net", "Net à payer", "montant"),
+            ("echeances", "Échéancier", "collection"), ("echeances[].rang", "Rang", "nombre"), ("echeances[].date", "Date (vide : à réception)", "date"),
+            ("echeances[].montant", "Montant", "montant"), ("echeances[].mode", "Mode de règlement", "texte"), ("echeances[].nature", "Nature (RETENUE : retenue de garantie)", "texte"));
+        G("Textes de l'édition",
+            ("textes.intro", "Introduction (HTML, avant les lignes)", "html"), ("textes.fin", "Conclusion (HTML, après le pied)", "html"));
+        G("Source annexe marche_documents (sources_annexes)",
+            ("sources.marche_documents", "Commande de base et avenants du marché", "collection"), ("sources.marche_documents[].role", "BASE ou AVENANT", "texte"),
+            ("sources.marche_documents[].rang", "Rang (0 base, 1, 2… avenants)", "nombre"), ("sources.marche_documents[].numero", "Numéro", "texte"),
+            ("sources.marche_documents[].date", "Date", "date"), ("sources.marche_documents[].objet", "Objet", "texte"),
+            ("sources.marche_documents[].montant_ht", "Montant HT net", "montant"), ("sources.marche_documents[].facture_ht", "Travaux facturés HT (ce document compris)", "montant"),
+            ("sources.marche_documents[].pct_facture", "Pourcentage facturé", "nombre"));
+        G("Source annexe avancements_precedents (sources_annexes)",
+            ("sources.avancements_precedents", "Situations et factures d'avancement validées du marché avant ce document", "collection"),
+            ("sources.avancements_precedents[].type", "Type", "texte"), ("sources.avancements_precedents[].numero", "Numéro", "texte"),
+            ("sources.avancements_precedents[].date", "Date", "date"), ("sources.avancements_precedents[].rang", "Numéro de situation", "nombre"),
+            ("sources.avancements_precedents[].facture", "Facture (vrai) ou situation", "booleen"), ("sources.avancements_precedents[].montant_ht", "Montant HT", "montant"),
+            ("sources.avancements_precedents[].montant_tva", "TVA", "montant"), ("sources.avancements_precedents[].montant_ttc", "Montant TTC", "montant"),
+            ("sources.avancements_precedents[].net", "Net à payer", "montant"), ("sources.avancements_precedents[].reste", "Reste à payer (module Règlements)", "montant"));
+        return VersJson(d);
     }
+
+    /// <summary>Entrées du dictionnaire au format JSON : { groupe, chemin, libelle, type }.</summary>
+    public static JsonArray VersJson(IEnumerable<(string Groupe, string Chemin, string Libelle, string Type)> d) =>
+        new(d.Select(c => (JsonNode?)new JsonObject { ["groupe"] = c.Groupe, ["chemin"] = c.Chemin, ["libelle"] = c.Libelle, ["type"] = c.Type }).ToArray());
 }
 
 /// <summary>
@@ -636,6 +718,44 @@ public static class SourceDocumentEdition
 public static class SourcesFicheListeEdition
 {
     public const int LignesMax = 5000;
+
+    /// <summary>Dictionnaire de la source « fiche » (données de toute fiche, quel que soit son type).</summary>
+    public static JsonArray DictionnaireFiche()
+    {
+        (string, string, string, string)[] d =
+        [
+            ("Fiche", "fiche.type", "Type de fiche (projet, chantier, personne…)", "texte"), ("Fiche", "fiche.id", "Identifiant", "texte"),
+            ("Fiche", "fiche.libelle", "Libellé du type de fiche", "texte"), ("Fiche", "fiche.titre", "Titre de la fiche", "texte"),
+            ("Fiche", "fiche.sous_titre", "Sous-titre", "texte"),
+            ("Valeurs", "valeurs", "Valeurs mises en forme par code de champ (valeurs.<code> ; champs supplémentaires sans le +)", "objet"),
+            ("Sections", "sections", "Onglets de la fiche (champs lisibles, confidentiels exclus)", "collection"),
+            ("Sections", "sections[].titre", "Titre de l'onglet", "texte"), ("Sections", "sections[].groupes", "Groupes de l'onglet", "collection"),
+            ("Sections", "sections[].groupes[].titre", "Titre du groupe", "texte"), ("Sections", "sections[].groupes[].champs", "Champs du groupe", "collection"),
+            ("Sections", "sections[].groupes[].champs[].code", "Code du champ", "texte"), ("Sections", "sections[].groupes[].champs[].libelle", "Libellé du champ", "texte"),
+            ("Sections", "sections[].groupes[].champs[].valeur", "Valeur mise en forme", "texte"), ("Sections", "sections[].groupes[].champs[].html", "Valeur HTML", "booleen"),
+            ("Société", "societe.raison_sociale", "Raison sociale", "texte"), ("Société", "societe.siret", "SIRET", "texte"), ("Société", "societe.tva", "TVA", "texte"),
+            ("Société", "societe.adresse", "Adresse (lignes)", "liste"), ("Société", "societe.telephone", "Téléphone", "texte"), ("Société", "societe.courriel", "Courriel", "texte"),
+        ];
+        return SourceDocumentEdition.VersJson(d);
+    }
+
+    /// <summary>Dictionnaire de la source « liste » (vue enregistrée, recherche en cours).</summary>
+    public static JsonArray DictionnaireListe()
+    {
+        (string, string, string, string)[] d =
+        [
+            ("Liste", "liste.nom", "Nom de la vue", "texte"), ("Liste", "liste.theme", "Thème", "texte"), ("Liste", "liste.recherche", "Recherche en cours", "texte"),
+            ("Liste", "liste.nombre", "Nombre de lignes imprimées", "nombre"), ("Liste", "liste.tronquee", "Vrai si limitée à 5 000 lignes", "booleen"),
+            ("Colonnes", "colonnes", "Colonnes de la vue (pour colonnes_source d'un tableau)", "collection"), ("Colonnes", "colonnes[].cle", "Code de la colonne", "texte"),
+            ("Colonnes", "colonnes[].titre", "Titre", "texte"), ("Colonnes", "colonnes[].largeur", "Largeur", "texte"),
+            ("Colonnes", "colonnes[].alignement", "Alignement", "texte"), ("Colonnes", "colonnes[].format", "Format d'impression", "texte"),
+            ("Lignes", "lignes", "Lignes de la vue (valeurs mises en forme, par code de colonne : ligne.<code>)", "collection"),
+            ("Lignes", "lignes[]._texte", "Valeurs de la ligne dans l'ordre des colonnes", "liste"), ("Lignes", "lignes[]._titre", "Première valeur (étiquettes)", "texte"),
+            ("Lignes", "lignes[]._suite", "Valeurs suivantes (étiquettes)", "liste"),
+            ("Société", "societe.raison_sociale", "Raison sociale", "texte"), ("Société", "societe.adresse", "Adresse (lignes)", "liste"),
+        ];
+        return SourceDocumentEdition.VersJson(d);
+    }
 
     public static async Task<ElementEdite?> ElementFiche(IServiceProvider services, string id, Utilisateur u, CancellationToken ct)
     {

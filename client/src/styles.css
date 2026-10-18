@@ -327,6 +327,20 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .edition-onglet b { color: var(--accent); }
 .edition-onglet button { min-width: 0; padding: 0 0.25rem; border: none; background: none; line-height: 1; }
 .edition-editeur-code { flex: 1 1 auto; min-height: 12rem; overflow: hidden; border: 1px solid var(--bord); border-top: none; }
+.edition-dictionnaire { flex: 0 0 40%; min-height: 8rem; display: flex; flex-direction: column; border: 1px solid var(--bord); border-top: none; overflow: hidden; }
+.dictionnaire-barre { display: flex; gap: 0.5rem; align-items: center; padding: 0.3rem; border-bottom: 1px solid var(--bord); }
+.dictionnaire-barre input { flex: 1; }
+.dictionnaire-corps { overflow: auto; padding: 0.2rem 0.3rem; font-size: 0.82rem; }
+.dictionnaire-corps summary { cursor: pointer; font-weight: 600; padding: 0.15rem 0; }
+.dictionnaire-corps summary small { color: var(--discret); font-weight: 400; }
+.dictionnaire-entree { display: grid; grid-template-columns: minmax(9rem, 40%) 1fr auto; gap: 0.5rem; width: 100%; text-align: left; border: none; border-radius: 3px;
+  background: none; padding: 0.1rem 0.3rem; align-items: baseline; }
+.dictionnaire-entree:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.dictionnaire-entree code { color: var(--code-fonction); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dictionnaire-entree span { color: var(--texte); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dictionnaire-entree em { color: var(--code-chaine); font-style: normal; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pastille-couleur { display: inline-block; width: 0.8em; height: 0.8em; border: 1px solid var(--bord); border-radius: 2px; margin-right: 0.3em; vertical-align: -0.1em; }
+.edition-editeur-barre .bouton-icone.actif { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
 button[data-action="editer"].actif { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
 .edition-editeur-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .edition-editeur-message { font-size: 0.85rem; max-height: 10rem; overflow: auto; }
