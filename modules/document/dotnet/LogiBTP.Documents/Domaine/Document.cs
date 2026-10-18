@@ -61,6 +61,11 @@ public class Document
     public DateTimeOffset? EntApprouveLe { get; set; }
     /// <summary>Date de la pièce externe (achats : date de la facture du fournisseur, date comptable).</summary>
     public DateOnly? EntDateExterne { get; set; }
+    /// <summary>Textes d'introduction et de conclusion (HTML à variables) et leur texte affiché, figé à la validation.</summary>
+    public string? EntTexteIntroHtml { get; set; }
+    public string? EntTexteIntro { get; set; }
+    public string? EntTexteFinHtml { get; set; }
+    public string? EntTexteFin { get; set; }
     public DateTimeOffset? EntEnvoyeLe { get; set; }
     public DateTimeOffset? EntValideTiersLe { get; set; }
     /// <summary>État de paiement posé par l'application (module Règlements) : P partiel, T total.</summary>

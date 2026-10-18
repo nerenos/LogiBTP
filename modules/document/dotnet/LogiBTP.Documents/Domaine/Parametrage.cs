@@ -21,6 +21,9 @@ public class TypeDocument
     public string? TydHandler { get; set; }
     /// <summary>Durée de validité proposée à la création (offres) ; null : sans validité.</summary>
     public short? TydValiditeJours { get; set; }
+    /// <summary>Modèles des textes d'introduction et de conclusion, recopiés dans un nouveau document.</summary>
+    public string? TydTexteIntroHtml { get; set; }
+    public string? TydTexteFinHtml { get; set; }
     /// <summary>Avancement : S situation (cumul), F facture d'avancement (période), R reprise d'avancement ; null sinon.</summary>
     public string? TydAvancement { get; set; }
     /// <summary>Type de l'avoir que devient une facture d'avancement à période négative.</summary>

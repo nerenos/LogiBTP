@@ -1,4 +1,4 @@
-import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
 import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
@@ -113,11 +113,13 @@ export class PanneauxDocument {
       </div>
       ${this.sectionEtiquettes(d)}
       ${this.sectionReglement()}
+      ${this.sectionTextes()}
       ${this.sectionsEntete()}`;
 
     const m = editeur.magasin;
     this.lierEtiquettes(zone);
     this.lierReglement(zone);
+    this.lierTextes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, 'Entête'));
     const majFormat = () => {
       const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
@@ -132,6 +134,52 @@ export class PanneauxDocument {
       m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, 'Propriété');
     }));
     this.lierEntete(zone);
+  }
+
+  // ------------------------------------------------------------------ textes de l'édition
+
+  /**
+   * Textes d'introduction (avant les lignes) et de conclusion (après le pied et les récapitulatifs) : HTML à variables,
+   * repris du modèle du type à la création ; aperçu du texte calculé (figé à la validation).
+   */
+  sectionTextes() {
+    const ed = this.editeur;
+    const d = ed.saisie.document;
+    const calcule = ed.resultat?.document ?? {};
+    const bloc = (cle, titre, aide) => {
+      const html = d[`ent_texte_${cle}_html`];
+      const apercu = calcule[`ent_texte_${cle}`] ?? html;
+      return `<div class="texte-document" data-texte="${cle}">
+        <div class="texte-document-titre"><strong>${titre}</strong> <span class="aide">${aide}</span>
+          <button type="button" data-texte-editer="${cle}">${ed.fige ? 'Consulter' : '✎ Modifier'}</button>
+          ${!ed.fige && ed.definition.type?.[`tyd_texte_${cle}_html`] ? `<button type="button" data-texte-modele="${cle}" title="Remplacer par le modèle du type de document">↺ Modèle</button>` : ''}</div>
+        <div class="texte-document-apercu">${apercu ? htmlSur(apercu) : '<span class="aide">Aucun texte</span>'}</div></div>`;
+    };
+    return `<fieldset class="textes-document"><legend>Textes de l'édition</legend>
+      ${bloc('intro', 'Introduction', 'avant les lignes')}
+      ${bloc('fin', 'Conclusion', 'après le pied et les récapitulatifs')}</fieldset>`;
+  }
+
+  lierTextes(zone) {
+    const ed = this.editeur;
+    const titres = { intro: 'Texte d\'introduction', fin: 'Texte de conclusion' };
+    zone.querySelectorAll('[data-texte-editer]').forEach((b) => b.addEventListener('click', async () => {
+      const cle = b.dataset.texteEditer;
+      const champ = `ent_texte_${cle}_html`;
+      if (ed.fige) {
+        await editerLibelle({ html: ed.resultat?.document?.[`ent_texte_${cle}`] ?? ed.saisie.document[champ] ?? '', titre: `${titres[cle]} · lecture seule`, lecture: true });
+        return;
+      }
+      const v = await editerLibelle({ html: ed.saisie.document[champ] ?? '', titre: titres[cle], variables: ed.variablesTexte() });
+      // Le panneau ne se redessine pas tant qu'il a le focus (saisie) : le bouton le rend avant la modification.
+      b.blur();
+      if (v !== undefined) ed.magasin.modifier((d) => { d.document[champ] = v || null; }, titres[cle]);
+    }));
+    zone.querySelectorAll('[data-texte-modele]').forEach((b) => b.addEventListener('click', () => {
+      const cle = b.dataset.texteModele;
+      b.blur();
+      ed.magasin.modifier((d) => { d.document[`ent_texte_${cle}_html`] = ed.definition.type[`tyd_texte_${cle}_html`]; }, 'Texte du modèle');
+    }));
   }
 
   // ------------------------------------------------------------------ règlement et échéancier

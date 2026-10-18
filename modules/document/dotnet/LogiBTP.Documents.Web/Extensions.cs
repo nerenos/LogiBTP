@@ -49,6 +49,9 @@ public static class Extensions
         // Paramétrage : le client construit l'écran à partir de la définition du type.
         api.MapGet("/types-document", async (DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
             await db.TypesDocument.AsNoTracking().Where(t => t.TydActif).OrderBy(t => t.TydFamille).ThenBy(t => t.TydId).ToListAsync(ct));
+        api.MapGet("/types-document/{code}/textes", (string code, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.TextesType(code, ct));
+        api.MapPut("/types-document/{code}/textes", (string code, TextesType t, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.EnregistrerTextesType(code, t, Utilisateur.Depuis(http), ct));
         api.MapGet("/types-document/{code}/definition", (string code, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Definition(code, Utilisateur.Depuis(http), ct));
         api.MapGet("/unites", async (DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>

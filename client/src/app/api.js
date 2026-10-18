@@ -31,6 +31,8 @@ export const api = {
     }
   },
   typesDocument: () => appel('GET', '/types-document'),
+  textesType: (code) => appel('GET', `/types-document/${encodeURIComponent(code)}/textes`),
+  enregistrerTextesType: (code, t) => appel('PUT', `/types-document/${encodeURIComponent(code)}/textes`, t),
   definition: (code) => appel('GET', `/types-document/${encodeURIComponent(code)}/definition`),
   documents: () => appel('GET', '/documents'),
   document: (id) => appel('GET', `/documents/${id}`),

@@ -1,0 +1,17 @@
+{
+  "nom": "Textes d'introduction et de conclusion du document",
+  "description": "Les textes du document (HTML) reçoivent les mêmes références que les libellés, au niveau du document (sans ligne) : données de l'entête, totaux calculés. Une référence inconnue est signalée (VARIABLE_TEXTE, avertissement) ; un texte vide donne null.",
+  "entree": {
+    "document": { "ent_id": 1, "ent_precision_montant": 2, "ent_objet": "Rénovation cuisine",
+      "ent_texte_intro_html": "<p>Objet : <b>{{ent_objet}}</b></p>",
+      "ent_texte_fin_html": "<p>Total HT : {{ent_total_ht}} €, {{inconnue}}</p>" },
+    "taux_tva": [ { "ttv_id": 1, "ttv_code": "T20", "ttv_libelle": "TVA 20 %", "ttv_taux": 20, "ttv_categorie": "N" } ],
+    "lignes": [
+      { "lig_id": 1, "lig_parent_id": null, "lig_ordre": 1, "lig_tyl_id": 3, "lig_libelle_html": "Meuble", "lig_qte": 2, "lig_pv": 1250.5, "lig_tva_id": 1 }
+    ]
+  },
+  "attendu": {
+    "document": { "ent_total_ht": 2501, "ent_texte_intro": "<p>Objet : <b>Rénovation cuisine</b></p>",
+      "ent_texte_fin": "<p>Total HT : 2501 €, {{inconnue}}</p>" }
+  }
+}

@@ -1108,6 +1108,23 @@ public class MoteurDocument<TDoc, TLigne>
             l.LigLibelleAffiche = texteAffiche;
             l.LigLibelleBrut = Libelles.TexteBrut(texteAffiche);
         }
+        // Textes d'introduction et de conclusion : mêmes références que les libellés, au niveau du document (sans ligne).
+        Doc.EntTexteIntro = TexteDocument(Doc.EntTexteIntroHtml);
+        Doc.EntTexteFin = TexteDocument(Doc.EntTexteFinHtml);
+    }
+
+    private string? TexteDocument(string? html)
+    {
+        if (string.IsNullOrEmpty(html)) return null;
+        object? Resoudre(string texte)
+        {
+            var r = References.Analyser(texte);
+            if (r is ReferenceVariable v) return LireVariableLibelle(v.Portee, v.Nom, null);
+            return LireDonnee((ReferenceDonnee)r, null, PhaseCalcul.Libelle);
+        }
+        var (texteAffiche, inconnues) = Libelles.Remplacer(html, Resoudre);
+        foreach (var (_, message) in inconnues) Avertir(null, "VARIABLE_TEXTE", $"Texte du document : {message}");
+        return texteAffiche;
     }
 
     // ------------------------------------------------------------------ résultat

@@ -1,6 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
-import { ParametrageAffichageDocument, FournisseurAffichageMemoire } from '@logibtp/document/ui';
-import { echapper, lireNombre, formatLibre, creerCombo } from '@logibtp/socle/ui';
+import { ParametrageAffichageDocument, FournisseurAffichageMemoire, variablesTexteDocument } from '@logibtp/document/ui';
+import { echapper, lireNombre, formatLibre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
 import { FAMILLES_REGLE } from '@logibtp/document';
 import { api } from '../api.js';
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX } from '../vues-document.js';
@@ -38,6 +38,7 @@ export class PageParametresDocuments extends PageBase {
       <h2>Solde des lignes</h2><div class="seuils-solde"></div>
       <h2>Conditions de paiement</h2><div class="conditions-paiement"></div>
       <h2>Acomptes</h2><div class="mode-acomptes"></div>
+      <h2>Textes de l'édition</h2><div class="textes-types"></div>
       <h2>Règles des documents</h2><div class="regles-documents"></div></div>`;
     // Hors ligne : les listes de la définition de démonstration sont modifiées en place (visibles dans le devis de démo).
     const fournisseur = app.enLigne
@@ -51,6 +52,7 @@ export class PageParametresDocuments extends PageBase {
     await this.ouvrirSeuils(this.conteneur.querySelector('.seuils-solde'));
     await this.ouvrirConditions(this.conteneur.querySelector('.conditions-paiement'));
     await this.ouvrirAcomptes(this.conteneur.querySelector('.mode-acomptes'));
+    await this.ouvrirTextes(this.conteneur.querySelector('.textes-types'));
     await this.ouvrirRegles(this.conteneur.querySelector('.regles-documents'));
   }
 
@@ -132,6 +134,45 @@ export class PageParametresDocuments extends PageBase {
    * Mode d'acompte de la société (CONCEPTION-MARCHES-REGLEMENTS.md, 11.1) : avance de trésorerie (reçu sans TVA) ou
    * chiffre d'affaires (facture d'acompte avec TVA) ; il ne change plus une fois un acompte créé.
    */
+  /**
+   * Modèles des textes d'introduction et de conclusion par type de document : recopiés dans les documents créés ensuite
+   * (puis modifiables dans chaque document) ; variables comme les libellés des lignes.
+   */
+  async ouvrirTextes(zone) {
+    const app = this.app;
+    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Textes disponibles en ligne seulement.</p>'; return; }
+    const types = (await api.typesDocument()).filter((t) => t.tyd_actif !== false);
+    zone.innerHTML = `<p class="aide">Introduction : avant le bloc des lignes ; conclusion : après le pied et les récapitulatifs (marché, factures).
+      Le modèle est recopié dans chaque nouveau document du type, puis modifiable ; les variables sont figées à la validation.</p>
+      <p>Type de document <span data-type></span></p><div class="textes-modele"></div>`;
+    const combo = creerCombo({ options: types.map((t) => ({ valeur: t.tyd_code, libelle: t.tyd_libelle })), valeur: types[0]?.tyd_code ?? null, vide: false });
+    zone.querySelector('[data-type]').replaceWith(combo);
+    const corps = zone.querySelector('.textes-modele');
+    let textes = { intro_html: null, fin_html: null };
+    const rendre = () => {
+      const bloc = (cle, titre) => `<div class="texte-document"><div class="texte-document-titre"><strong>${titre}</strong>
+          ${app.estAdmin() ? `<button type="button" data-modifier="${cle}">✎ Modifier</button>` : ''}</div>
+        <div class="texte-document-apercu">${textes[`${cle}_html`] ? htmlSur(textes[`${cle}_html`]) : '<span class="aide">Aucun texte</span>'}</div></div>`;
+      corps.innerHTML = `${bloc('intro', 'Introduction')}${bloc('fin', 'Conclusion')}
+        ${app.estAdmin() ? '<p><button type="button" class="principal" data-enregistrer>Enregistrer les textes</button></p>' : ''}`;
+      corps.querySelectorAll('[data-modifier]').forEach((b) => b.addEventListener('click', async () => {
+        const cle = `${b.dataset.modifier}_html`;
+        const v = await editerLibelle({ html: textes[cle] ?? '', titre: `${combo.value} · ${b.dataset.modifier === 'intro' ? 'introduction' : 'conclusion'}`, variables: variablesTexteDocument() });
+        if (v !== undefined) { textes = { ...textes, [cle]: v || null }; rendre(); }
+      }));
+      corps.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+        try {
+          textes = await api.enregistrerTextesType(combo.valeurCombo, textes);
+          app.message('Textes enregistrés', 'succes');
+          rendre();
+        } catch (e) { app.message(e.message, 'erreur'); }
+      });
+    };
+    const charger = async () => { textes = await api.textesType(combo.valeurCombo); rendre(); };
+    combo.addEventListener('change', () => charger().catch((e) => app.message(e.message, 'erreur')));
+    await charger();
+  }
+
   async ouvrirAcomptes(zone) {
     const app = this.app;
     if (!app.enLigne) { zone.innerHTML = '<p class="aide">Mode d\'acompte disponible en ligne seulement.</p>'; return; }

@@ -220,6 +220,24 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         return d;
     }
 
+    /// <summary>Modèles des textes d'introduction et de conclusion d'un type de document.</summary>
+    public async Task<TextesType> TextesType(string code, CancellationToken ct)
+    {
+        var t = await db.TypesDocument.AsNoTracking().FirstOrDefaultAsync(x => x.TydCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Type de document {code}");
+        return new TextesType(t.TydTexteIntroHtml, t.TydTexteFinHtml);
+    }
+
+    /// <summary>Modèles des textes d'un type (administrateur) : recopiés dans les documents créés ensuite.</summary>
+    public async Task<TextesType> EnregistrerTextesType(string code, TextesType textes, Utilisateur u, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        var t = await db.TypesDocument.FirstOrDefaultAsync(x => x.TydCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Type de document {code}");
+        t.TydTexteIntroHtml = string.IsNullOrWhiteSpace(textes.IntroHtml) ? null : html.Nettoyer(textes.IntroHtml);
+        t.TydTexteFinHtml = string.IsNullOrWhiteSpace(textes.FinHtml) ? null : html.Nettoyer(textes.FinHtml);
+        await db.SaveChangesAsync(ct);
+        return new TextesType(t.TydTexteIntroHtml, t.TydTexteFinHtml);
+    }
+
     public async Task<List<TDoc>> Lister(string? type, CancellationToken ct)
     {
         var q = db.Documents.AsNoTracking();
@@ -244,6 +262,9 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             EntNotreReference = c.EntNotreReference,
             EntReferenceExterne = c.EntReferenceExterne,
             EntValiditeJours = c.EntValiditeJours ?? type.TydValiditeJours,
+            // Textes d'introduction et de conclusion : modèles du type, modifiables ensuite dans le document.
+            EntTexteIntroHtml = type.TydTexteIntroHtml,
+            EntTexteFinHtml = type.TydTexteFinHtml,
             EntStdId = (await Statut(type.TydId, "BROUILLON", ct)).StdId,
             EntTiersId = c.EntTiersId,
             EntAdresseFacturation = c.EntAdresseFacturation,
@@ -306,6 +327,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             throw ExceptionMetier.Invalide("TIERS_FIGE", "Document issu d'une transformation : le tiers ne change plus");
         }
         e.EntValiditeJours = d.Document.EntValiditeJours;
+        e.EntTexteIntroHtml = string.IsNullOrWhiteSpace(d.Document.EntTexteIntroHtml) ? null : html.Nettoyer(d.Document.EntTexteIntroHtml);
+        e.EntTexteFinHtml = string.IsNullOrWhiteSpace(d.Document.EntTexteFinHtml) ? null : html.Nettoyer(d.Document.EntTexteFinHtml);
         e.EntTiersId = d.Document.EntTiersId;
         e.EntAdresseFacturation = d.Document.EntAdresseFacturation;
         e.EntAdresseLivraison = d.Document.EntAdresseLivraison;

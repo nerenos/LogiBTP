@@ -17,6 +17,9 @@ const comparerCodes = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const SANS_ACCENT = { 'À': 'a', 'Á': 'a', 'Â': 'a', 'Ã': 'a', 'Ä': 'a', 'Å': 'a', 'Æ': 'ae', 'Ç': 'c', 'È': 'e', 'É': 'e', 'Ê': 'e', 'Ë': 'e', 'Ì': 'i', 'Í': 'i', 'Î': 'i', 'Ï': 'i', 'Ñ': 'n', 'Ò': 'o', 'Ó': 'o', 'Ô': 'o', 'Õ': 'o', 'Ö': 'o', 'Ø': 'o', 'Ù': 'u', 'Ú': 'u', 'Û': 'u', 'Ü': 'u', 'Ý': 'y', 'ß': 'ss', 'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', 'æ': 'ae', 'ç': 'c', 'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e', 'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i', 'ñ': 'n', 'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ø': 'o', 'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u', 'ý': 'y', 'ÿ': 'y', 'Ā': 'a', 'ā': 'a', 'Ć': 'c', 'ć': 'c', 'Č': 'c', 'č': 'c', 'Ď': 'd', 'ď': 'd', 'Đ': 'd', 'đ': 'd', 'Ē': 'e', 'ē': 'e', 'Ė': 'e', 'ė': 'e', 'Ę': 'e', 'ę': 'e', 'Ě': 'e', 'ě': 'e', 'Ī': 'i', 'ī': 'i', 'Į': 'i', 'į': 'i', 'Ł': 'l', 'ł': 'l', 'Ń': 'n', 'ń': 'n', 'Ň': 'n', 'ň': 'n', 'Ō': 'o', 'ō': 'o', 'Œ': 'oe', 'œ': 'oe', 'Ř': 'r', 'ř': 'r', 'Ś': 's', 'ś': 's', 'Ş': 's', 'ş': 's', 'Š': 's', 'š': 's', 'Ū': 'u', 'ū': 'u', 'Ů': 'u', 'ů': 'u', 'Ű': 'u', 'ű': 'u', 'Ÿ': 'y', 'Ź': 'z', 'ź': 'z', 'Ż': 'z', 'ż': 'z', 'Ž': 'z', 'ž': 'z' };
 
 /** Libellé comparé pour regrouper les lignes des pieds de section : sans accents ni casse, espaces réduits. */
+/** Textes du document (HTML à variables → texte affiché, figé à la validation comme les libellés). */
+export const TEXTES_DOCUMENT = [['ent_texte_intro_html', 'ent_texte_intro'], ['ent_texte_fin_html', 'ent_texte_fin']];
+
 export const normaliserLibelle = (texte) => String(texte ?? '').replace(/[^\x00-\x7f]/g, (c) => SANS_ACCENT[c] ?? c)
   .toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -930,19 +933,31 @@ export class MoteurDocument {
     return l.lig_libelle_html;
   }
 
+  /** Résolution des références d'un libellé (ligne null : texte du document). */
+  resolveurLibelle(l) {
+    return (texte) => {
+      const ref = analyserReference(texte);
+      if (ref.genre === 'variable') return { valeur: this.lireVariableLibelle(ref.portee, ref.nom, l), type: null };
+      const { valeur, colonne } = this.lireDonnee(ref, l, 'libelle');
+      return { valeur, type: this.colonnesDates.has(colonne) ? 'date' : this.colonnesDecimales.has(colonne) ? 'decimale' : null };
+    };
+  }
+
   passeLibelles() {
     if (this.options.libelles_figes) return;
     for (const l of this.ordre) {
-      const resoudre = (texte) => {
-        const ref = analyserReference(texte);
-        if (ref.genre === 'variable') return { valeur: this.lireVariableLibelle(ref.portee, ref.nom, l), type: null };
-        const { valeur, colonne } = this.lireDonnee(ref, l, 'libelle');
-        return { valeur, type: this.colonnesDates.has(colonne) ? 'date' : this.colonnesDecimales.has(colonne) ? 'decimale' : null };
-      };
-      const { texte, inconnues } = remplacerVariables(this.sourceLibelle(l), resoudre);
+      const { texte, inconnues } = remplacerVariables(this.sourceLibelle(l), this.resolveurLibelle(l));
       for (const i of inconnues) this.avertir(l.lig_id, 'VARIABLE_LIBELLE', `Libellé : ${i.message}`);
       l.lig_libelle_affiche = texte;
       l.lig_libelle_brut = texteBrut(texte);
+    }
+    // Textes d'introduction et de conclusion : mêmes références que les libellés, au niveau du document (sans ligne).
+    for (const [source, cible] of TEXTES_DOCUMENT) {
+      const html = this.doc[source];
+      if (!html) { this.doc[cible] = null; continue; }
+      const { texte, inconnues } = remplacerVariables(html, this.resolveurLibelle(null));
+      for (const i of inconnues) this.avertir(null, 'VARIABLE_TEXTE', `Texte du document : ${i.message}`);
+      this.doc[cible] = texte;
     }
   }
 

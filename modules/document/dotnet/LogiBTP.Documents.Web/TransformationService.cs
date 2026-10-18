@@ -83,6 +83,9 @@ public class TransformationService<TDoc, TLigne, TComplet>(
         d.EntIntermediaire = intermediaire;
         // Avancement : situation et reprise en cumul, facture d'avancement en période.
         d.EntAvtPresentation = typeCible.TydAvancement switch { "F" => "P", "S" or "R" => "C", _ => null };
+        // Textes d'introduction et de conclusion : ceux de la source, sinon les modèles du type cible.
+        if (string.IsNullOrWhiteSpace(d.EntTexteIntroHtml)) d.EntTexteIntroHtml = typeCible.TydTexteIntroHtml;
+        if (string.IsNullOrWhiteSpace(d.EntTexteFinHtml)) d.EntTexteFinHtml = typeCible.TydTexteFinHtml;
     }
 
     /// <summary>

@@ -78,7 +78,12 @@ Le tableau des prix fixes ci-dessous est appliqué tel quel.
   | PV fixe | PV calculé | PA rechargé, PV conservé, coefficient de bénéfice recalculé |
   | PV fixe | PV fixe | PA rechargé, PV de la ligne conservé, alerte (prix fixe en bibliothèque) |
 
-## Lot E – textes d'introduction et de conclusion
+## Lot E – textes d'introduction et de conclusion (réalisé le 18/10/2026)
+
+Réalisation : colonnes `ent_texte_intro_html` / `ent_texte_intro`, `ent_texte_fin_html` / `ent_texte_fin` et modèles
+`tyd_texte_*_html` (module Document, `019g`) ; texte affiché calculé par les deux moteurs (mêmes références que les
+libellés, au niveau du document) et figé avec les libellés ; à la transformation, texte de la source, sinon modèle du
+type cible. Saisie dans l'entête (section « Textes de l'édition »), modèles dans `/parametres/documents`.
 
 - Deux textes multilignes avec mise en forme et variables (comme les libellés des lignes) : avant le bloc des lignes,
   et après le pied et les tableaux récapitulatifs (marché, factures ou situations) ; placement détaillé avec le

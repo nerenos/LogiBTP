@@ -194,6 +194,9 @@ public sealed class DefinitionType
 /// <summary>Rejet d'un document envoyé : motif.</summary>
 public sealed record DemandeRejet(string Motif);
 
+/// <summary>Modèles des textes d'introduction et de conclusion d'un type de document (HTML à variables).</summary>
+public sealed record TextesType(string? IntroHtml, string? FinHtml);
+
 /// <summary>Changement du numéro d'un document : numéro au format du type, motif (obligatoire en numérotation continue).</summary>
 public sealed record DemandeNumero(string Numero, string? Motif);
 

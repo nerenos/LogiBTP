@@ -9,6 +9,15 @@ import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
 /** Libellés des totaux calculés et des groupes du pied (structure résultat.pied du moteur). */
+/** Variables des textes d'introduction et de conclusion : données de l'entête et totaux (éditeur et paramétrage). */
+export function variablesTexteDocument() {
+  return [
+    ['ent_numero', 'Numéro du document'], ['ent_date', 'Date'], ['ent_objet', 'Objet'], ['ent_notre_reference', 'Notre référence'],
+    ['ent_reference_externe', 'Référence externe'], ['ent_validite_jours', 'Validité (jours)'], ['ent_date_validite', 'Fin de validité'],
+    ['ent_total_ht', 'Total HT'], ['ent_total_tva', 'Total TVA'], ['ent_total_ttc', 'Total TTC'], ['ent_net_a_payer', 'Net à payer'],
+  ].map(([v, l]) => ({ valeur: `{{${v}}}`, libelle: `${l} – {{${v}}}` }));
+}
+
 export const LIBELLES_PIED = {
   TOTAL_HT: 'Total HT', HT_NET: 'Total HT net', TOTAL_TTC: 'Total TTC', SOUS_TOTAL: 'Sous-total', NET: 'Net à payer',
   HT: 'Postes de pied HT', TTC: 'Postes de pied TTC', TVA: 'TVA',
@@ -1230,6 +1239,9 @@ export class EditeurDocument {
       ['lig_numerotation', 'Numéro de ligne'], ['document.ent_numero', 'Numéro du document'], ['document.ent_objet', 'Objet du document'],
     ].map(([v, l]) => ({ valeur: `{{${v}}}`, libelle: `${l} – {{${v}}}` }));
   }
+
+  /** Variables proposées dans les textes d'introduction et de conclusion (niveau du document). */
+  variablesTexte() { return variablesTexteDocument(); }
 
   /** Unités du référentiel, complétées par les unités saisies librement dans le document. */
   suggestionsUnites() {
