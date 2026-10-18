@@ -36,7 +36,7 @@ graph TD
 | graphe | socle | — (JS seul) | — | annuaire, cœur |
 | navigation | socle | — (JS seul) | — | cœur (client) |
 | import | — | — (JS seul) | — | cœur (client) |
-| edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur) | 090 (à venir) | cœur (à venir) |
+| edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur), `LogiBTP.Editions.Web` | 090 | cœur (aperçu, paramétrage, source « document ») |
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 
 Branchement serveur : `src/LogiBTP.Api/Program.cs` (`AddModule…` / `MapModule…` de chaque module, sociétés par
@@ -57,6 +57,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
 | reglement | `pages/reglements.js` (`/reglements?sens=E|D&tiers=`), colonnes réglé / reste de l'onglet Gestion (`fiche-structure.js`) | `SpecialisationReglementBtp` (échéances `document_echeance`) | 175 (clé étrangère des pointages) |
+| edition | `editions/modeles.js` (modèles fournis → `db/191`), `editions/polices.js`, `pages/edition.js` (`/edition`), `pages/parametres-editions.js`, bouton 🖨 Aperçu de la page document | `SpecialisationEditionBtp`, `SourceDocumentEdition`, `MapEditionsBtp` (mentions) | 190, 191 |
 | import | `import/*` (`formats.js`, `devis-importe.js`, `devis-a-verifier.js`, `depot-import.js`, `rapport-import.js`), `pages/import-optim.js` | — (origine enregistrée par le module Document) | — |
 
 ## Liens transverses (fonctionnels)

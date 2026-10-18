@@ -89,6 +89,13 @@ export function condition(ctx, source, lieu = '') {
   }
 }
 
+/** Valeur d'option écrite en formule (« =Si(…) », « {{…}} ») évaluée, sinon telle quelle (fond, style, trait). */
+export function dynamique(ctx, v, lieu = '') {
+  if (typeof v !== 'string' || !(v.startsWith('=') || v.includes('{{'))) return v;
+  const r = evaluer(ctx, v, lieu);
+  return r === null || r === undefined || r === '' ? null : enTexte(r);
+}
+
 export function alerter(ctx, code, message, source = null) {
   const cle = `${code}|${message}`;
   if (!ctx.alertes.some((a) => `${a.code}|${a.message}` === cle)) ctx.alertes.push({ code, message, ...(source ? { formule: String(source) } : {}) });
@@ -143,8 +150,8 @@ function boiteTexte(r, largeur, opts = {}) {
 /** Marges internes, cadre et fond autour d'une boîte ; hauteur minimale ou fixe. */
 function envelopper(boite, c, ctx, largeurExterne) {
   const m = marges(c.marges);
-  const cadre = lireCadre(c.cadre, ctx);
-  const fond = resoudreCouleur(ctx.charte, c.fond);
+  const cadre = lireCadre(dynamique(ctx, c.cadre, 'cadre'), ctx);
+  const fond = resoudreCouleur(ctx.charte, dynamique(ctx, c.fond, 'fond'));
   const hMin = c.hauteur_min ?? 0;
   const hFixe = c.hauteur ?? null;
   if (!m.haut && !m.bas && !m.gauche && !m.droite && !cadre && !fond && !hMin && hFixe === null) return boite;
@@ -239,7 +246,8 @@ function valeurChamp(c, ctx) {
       else if (nom === 'date') v = formaterDate(v, arg ?? 'court');
       else if (nom === 'zero_vide' && estDec(v) && v.isZero()) v = '';
     } catch (e) {
-      alerter(ctx, e.code ?? 'FORMAT', `${c.nom ?? 'champ'} : ${e.message}`, c.valeur);
+      // Texte non numérique (« PM », « Forfait ») sous un format de nombre : affiché tel quel.
+      if (!(e.code === 'TYPE' && typeof v === 'string')) alerter(ctx, e.code ?? 'FORMAT', `${c.nom ?? 'champ'} : ${e.message}`, c.valeur);
     }
   }
   if (c.zero_vide && estDec(v) && v.isZero()) v = '';
@@ -263,7 +271,7 @@ function composerChamp(c, ctx, largeur) {
   if (estVide(v) && masquer) return null;
   const m = marges(c.marges);
   const interieur = largeur - m.gauche - m.droite;
-  const style = resoudreStyle(ctx.charte, c.style ?? 'normal');
+  const style = resoudreStyle(ctx.charte, Array.isArray(c.style) ? c.style.map((s) => dynamique(ctx, s, 'style')) : dynamique(ctx, c.style ?? 'normal', 'style') ?? 'normal');
   let boite;
   if (typeof v === 'string' && (c.html || (c.html !== false && estHtml(v)))) {
     boite = composerHtml(v, style, interieur, ctx, c);
@@ -540,7 +548,8 @@ const PAD_V = 0.7;
 
 /** Colonnes visibles et leurs positions. */
 function colonnesTableau(c, ctx, largeur) {
-  const cols = (c.colonnes ?? []).filter((k) => condition(ctx, k.condition, `colonne ${k.cle}`));
+  const toutes = (c.colonnes ?? []).map((k, rang) => ({ ...k, rang }));
+  const cols = toutes.filter((k) => condition(ctx, k.condition, `colonne ${k.cle}`));
   const larg = repartirLargeurs(cols.map((k) => lireLongueur(k.largeur)), largeur, 0);
   let x = 0;
   return cols.map((k, i) => { const r = { ...k, x, l: larg[i], i }; x += larg[i]; return r; });
@@ -549,6 +558,15 @@ function colonnesTableau(c, ctx, largeur) {
 function composerTableau(c, ctx, largeur) {
   const cols = colonnesTableau(c, ctx, largeur);
   const index = new Map(cols.map((k) => [k.cle, k]));
+  const rangs = new Map((c.colonnes ?? []).map((k, rang) => [k.cle, rang]));
+  // Plage de colonnes d'une cellule fusionnée : colonnes visibles entre `de` et `a` (une colonne masquée par la
+  // présentation ne fait pas disparaître la cellule).
+  const plage = (de, a) => {
+    const r0 = rangs.get(de); const r1 = rangs.get(a ?? de);
+    if (r0 === undefined || r1 === undefined) return null;
+    const vis = cols.filter((k) => k.rang >= Math.min(r0, r1) && k.rang <= Math.max(r0, r1));
+    return vis.length ? [vis[0], vis[vis.length - 1]] : null;
+  };
   const bord = c.bordures ?? {};
   const traitCol = resoudreTrait(ctx.charte, bord.colonnes ?? 'fin');
   const traitCadre = resoudreTrait(ctx.charte, bord.cadre ?? 'fin');
@@ -557,8 +575,9 @@ function composerTableau(c, ctx, largeur) {
 
   // Cellule : texte mis en ligne dans la largeur des colonnes couvertes.
   const cellule = (def, ctxL, de, a, styleRangee) => {
-    const k0 = index.get(de); const k1 = index.get(a ?? de);
-    if (!k0 || !k1) return null;
+    const p = plage(de, a);
+    if (!p) return null;
+    const [k0, k1] = p;
     const x = k0.x; const l = k1.x + k1.l - k0.x;
     const retrait = def.retrait !== undefined ? Number(enTexte(evaluer(ctxL, typeof def.retrait === 'number' ? String(def.retrait) : def.retrait, 'retrait')) || 0) : 0;
     const style = [styleRangee, k0.style, def.style].filter(Boolean);
@@ -577,6 +596,8 @@ function composerTableau(c, ctx, largeur) {
     const ctxL = enfant(ctx, { element: el, index: i });
     const g = (c.gabarits ?? [{}]).find((x) => condition(ctxL, x.condition, 'gabarit')) ?? null;
     if (!g || g.masquer) return null;
+    // Ligne « saut de page » : nouvelle page dans le tableau (entête répétée, report).
+    if (g.saut_page) return { boite: { saut: true, hauteur: 0, largeur, dessiner() {} }, cumuls: {} };
     let defs;
     if (g.cellules) defs = g.cellules.map((d) => ({ ...d, de: d.colonne ?? d.de, a: d.colonne ?? d.a ?? d.de }));
     else defs = cols.map((k) => ({ valeur: k.valeur, de: k.cle, a: k.cle, ...(g.surcharges?.[k.cle] ?? {}) }));
@@ -590,7 +611,7 @@ function composerTableau(c, ctx, largeur) {
     }
     return {
       boite: boiteRangee(cells, {
-        fond: resoudreCouleur(ctx.charte, g.fond), haut: resoudreTrait(ctx.charte, g.bordures?.haut ?? null),
+        fond: resoudreCouleur(ctx.charte, dynamique(ctxL, g.fond, 'fond')), haut: resoudreTrait(ctx.charte, g.bordures?.haut ?? null),
         bas: resoudreTrait(ctx.charte, g.bordures?.bas ?? null) ?? traitLignes,
         colonnes: g.bordures?.colonnes === false ? null : traitCol, cadre: traitCadre, hauteurMin: g.hauteur_min,
       }),

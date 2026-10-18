@@ -207,6 +207,16 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         };
     }
 
+    /// <summary>
+    /// Résultat du calcul d'un document (structure du pied, pieds de section, TVA, libellés affichés) sans
+    /// enregistrement : éditions. Libellés figés d'un document validé conservés.
+    /// </summary>
+    public async Task<ResultatDocument<TDoc, TLigne>> Resultat(TComplet d, CancellationToken ct)
+    {
+        var type = await Type(d.Document.EntTydId, ct);
+        return handlers.Pour(type).Calculer(await Entree(d, ct));
+    }
+
     // ------------------------------------------------------------------ lecture, création
 
     /// <summary>

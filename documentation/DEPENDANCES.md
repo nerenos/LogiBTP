@@ -57,6 +57,7 @@
 | npm | vitest | 3.2.7 | MIT | développement (modules/edition/js) |
 | NuGet | Jint | 4.17.0 | BSD-2-Clause | LogiBTP.Editions |
 | NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Editions.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Editions.Web |
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Editions.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Editions.Tests |
 | police | modules/edition/js/polices/inter/Inter-Bold.ttf | — | OFL-1.1 | OFL.txt |

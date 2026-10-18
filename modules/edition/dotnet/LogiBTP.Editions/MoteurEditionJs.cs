@@ -9,7 +9,8 @@ namespace LogiBTP.Editions;
 public sealed record FaceEdition(string Famille, int Graisse, bool Italique, byte[] Octets);
 
 /// <summary>PDF produit : octets, nombre de pages, alertes (JSON), durée.</summary>
-public sealed record PdfEdition(byte[] Octets, int Pages, string AlertesJson, TimeSpan Duree, string ChronosJson = "{}");
+/// <summary>Présentation : présentation des lignes retenue par le moteur (demandée ou par défaut du modèle).</summary>
+public sealed record PdfEdition(byte[] Octets, int Pages, string AlertesJson, TimeSpan Duree, string ChronosJson = "{}", string? Presentation = null);
 
 /// <summary>
 /// Moteur d'édition JS (même script que le navigateur) exécuté dans Jint. Une instance n'est pas réentrante : le
@@ -86,7 +87,8 @@ public sealed class MoteurEditionJs
         var octets = r.AsUint8Array();
         var alertes = _api.Get("derniereAlertes").AsString();
         var pages = (int)_api.Get("dernieresPages").AsNumber();
-        return new PdfEdition(octets, pages, alertes, sw.Elapsed, _api.Get("derniersChronos").AsString());
+        var presentation = _api.Get("dernierePresentation").AsString();
+        return new PdfEdition(octets, pages, alertes, sw.Elapsed, _api.Get("derniersChronos").AsString(), presentation.Length == 0 ? null : presentation);
     }
 
     /// <summary>Lot d'impression : plusieurs éditions ([{ modele, donnees, env }]) dans un PDF, annexes à la fin.</summary>
@@ -98,6 +100,7 @@ public sealed class MoteurEditionJs
     }
 
     public string VerifierModele(string modeleJson) => Appeler("verifierModele", modeleJson).AsString();
+    public string VerifierCharte(string charteJson) => Appeler("verifierCharte", charteJson).AsString();
     public string Dependances(string modeleJson) => Appeler("dependances", modeleJson).AsString();
     public string LireImage(byte[] octets) => Appeler("lireImage", _engine.Intrinsics.Uint8Array.Construct(octets)).AsString();
 }
@@ -136,6 +139,9 @@ public sealed class PoolMoteursEdition(int taille = 2) : IDisposable
             _places.Release();
         }
     }
+
+    /// <summary>Crée un moteur à l'avance (démarrage de l'application) : la première édition n'attend pas Jint.</summary>
+    public Task PrechaufferAsync(CancellationToken ct = default) => ExecuterAsync(_ => 0, ct);
 
     public void Dispose() => _places.Dispose();
 }

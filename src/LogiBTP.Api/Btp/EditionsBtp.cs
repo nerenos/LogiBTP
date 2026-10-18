@@ -1,0 +1,401 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using LogiBTP.Documents;
+using LogiBTP.Documents.Web;
+using LogiBTP.Domaine;
+using LogiBTP.Editions.Web;
+using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
+
+namespace LogiBTP.Api.Btp;
+
+/// <summary>
+/// Spécialisation du module Édition par le cœur : sources « document » (pièces commerciales), « fiche » et « liste »
+/// (lot 6) ; données agrégées côté serveur en un appel (§ 3.10) ; dernier modèle imprimé gardé sur le document (Q13).
+/// </summary>
+public sealed class SpecialisationEditionBtp : SpecialisationEdition
+{
+    public override IReadOnlyList<SourceEdition> Sources { get; } = [new("document", "Documents", "DOCUMENT")];
+
+    public override async Task<ElementEdite?> ElementAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct)
+    {
+        if (source != "document" || !long.TryParse(id, out var entId)) return null;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var d = await (from e in db.Documents.AsNoTracking() join t in db.TypesDocument.AsNoTracking() on e.EntTydId equals t.TydId
+                       where e.EntId == entId select new { t.TydCode, t.TydLibelle, e.EntNumero, e.EntIndice }).FirstOrDefaultAsync(ct);
+        if (d is null) return null;
+        var dernier = await SourceDocumentEdition.DernierModele(db, entId, ct);
+        var libelle = $"{d.TydLibelle} {d.EntNumero ?? "brouillon"}" + (d.EntIndice is not null and not "A" ? $" indice {d.EntIndice}" : "");
+        return new ElementEdite(d.TydCode, libelle, dernier?.Modele, dernier?.Presentation);
+    }
+
+    public override async Task<JsonObject?> DonneesAsync(IServiceProvider services, DemandeEdition demande, Utilisateur u, CancellationToken ct) =>
+        demande.Source == "document" && long.TryParse(demande.Id, out var id) ? await SourceDocumentEdition.Lire(services, id, ct) : null;
+
+    public override JsonArray Dictionnaire(string source) => source == "document" ? SourceDocumentEdition.Dictionnaire() : [];
+
+    public override async Task ApresImpressionAsync(IServiceProvider services, DemandeEdition demande, string modele, string? presentation, Utilisateur u, CancellationToken ct)
+    {
+        if (demande.Source != "document" || !long.TryParse(demande.Id, out var id)) return;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var json = new JsonObject { ["modele"] = modele, ["presentation"] = presentation }.ToJsonString();
+        await db.Database.ExecuteSqlRawAsync("UPDATE document SET ent_modele_edition = @m::jsonb WHERE ent_id = @id",
+            [new NpgsqlParameter("m", json), new NpgsqlParameter("id", id)], ct);
+    }
+}
+
+/// <summary>
+/// Source d'édition « document » : pièce calculée par le moteur du serveur (structure du pied, TVA, libellés affichés
+/// ou figés), lignes imprimées (sans les lignes « ne pas imprimer » ni les tranches de frais annexes, Q4 / § 15.3 :
+/// une ligne non imprimée reste comptée dans les totaux), coordonnées figées du document, société et mentions.
+/// </summary>
+public static class SourceDocumentEdition
+{
+    private static readonly Dictionary<string, string> LibellesPied = new()
+    {
+        ["TOTAL_HT"] = "Total HT", ["HT_NET"] = "Total HT net", ["TOTAL_TTC"] = "Total TTC", ["SOUS_TOTAL"] = "Sous-total", ["NET"] = "Net à payer",
+    };
+
+    // Catégories juridiques INSEE les plus courantes (libellé imprimé de la forme juridique).
+    private static readonly Dictionary<string, string> FormesJuridiques = new()
+    {
+        ["1000"] = "Entrepreneur individuel", ["5499"] = "SARL", ["5498"] = "EURL", ["5710"] = "SAS", ["5720"] = "SASU",
+        ["5599"] = "SA", ["5505"] = "SA à directoire", ["5308"] = "SNC", ["6540"] = "SCI", ["9220"] = "Association",
+    };
+
+    private const string Complements = """
+        SELECT json_build_object(
+          'societe', (SELECT json_build_object('per_id', per_id, 'raison_sociale', per_raison_sociale, 'forme_juridique', per_forme_juridique,
+                        'capital', per_capital, 'rcs', per_rcs, 'naf', per_naf, 'siret', per_siret, 'tva', per_tva_intra)
+                      FROM personne WHERE per_societe_base),
+          'redacteur', (SELECT json_build_object('nom', concat_ws(' ', ind_prenom, ind_nom), 'civilite', ind_civilite) FROM individu WHERE ind_id = @red),
+          'projet', (SELECT json_build_object('code', prj_code, 'libelle', prj_libelle) FROM projet WHERE prj_id = @prj),
+          'affaire', (SELECT json_build_object('code', aff_code, 'libelle', aff_libelle) FROM affaire WHERE aff_id = @aff),
+          'chantier', (SELECT json_build_object('code', cha_code, 'libelle', cha_libelle) FROM chantier WHERE cha_id = @cha),
+          'marche', (SELECT json_build_object('code', mar_code, 'libelle', mar_libelle, 'montant_ht', mar_montant_ht) FROM marche WHERE mar_id = @mar),
+          'condition', (SELECT json_build_object('code', cpa_code, 'libelle', cpa_libelle) FROM condition_paiement WHERE cpa_code = @cpa),
+          'echeances', (SELECT coalesce(json_agg(json_build_object('rang', ech_rang, 'date', ech_date, 'montant', ech_montant, 'mode', ech_mode,
+                          'nature', ech_nature) ORDER BY ech_rang), '[]') FROM document_echeance WHERE ech_ent_id = @ent),
+          'mentions', (SELECT pae_valeur FROM parametre_edition WHERE pae_cle = 'mentions'),
+          'statut', (SELECT json_build_object('code', std_code, 'libelle', std_libelle) FROM statut_document WHERE std_id = @std),
+          'type', (SELECT json_build_object('code', tyd_code, 'libelle', tyd_libelle, 'famille', tyd_famille, 'avancement', tyd_avancement)
+                   FROM type_document WHERE tyd_id = @tyd)
+        )::text AS "Value"
+        """;
+
+    public static async Task<(string? Modele, string? Presentation)?> DernierModele(LogiBtpContext db, long entId, CancellationToken ct)
+    {
+        var json = await db.Database.SqlQueryRaw<string>("SELECT coalesce(ent_modele_edition::text, '') AS \"Value\" FROM document WHERE ent_id = @id",
+            new NpgsqlParameter("id", entId)).FirstOrDefaultAsync(ct);
+        if (string.IsNullOrEmpty(json)) return null;
+        var o = JsonNode.Parse(json);
+        return (o?["modele"]?.GetValue<string>(), o?["presentation"]?.GetValue<string>());
+    }
+
+    public static async Task<JsonObject?> Lire(IServiceProvider services, long id, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var service = services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
+        if (!await db.Documents.AnyAsync(d => d.EntId == id, ct)) return null;
+        var complet = await service.Charger(id, ct);
+        var r = await service.Resultat(complet, ct);
+        var d = r.Document;
+
+        var p = new Func<string, object?, NpgsqlParameter>((n, v) => new NpgsqlParameter(n, v ?? DBNull.Value));
+        var json = await db.Database.SqlQueryRaw<string>(Complements,
+            new NpgsqlParameter("red", NpgsqlDbType.Bigint) { Value = (object?)d.EntRedacteurId ?? DBNull.Value },
+            new NpgsqlParameter("prj", NpgsqlDbType.Integer) { Value = (object?)d.EntProjetId ?? DBNull.Value },
+            new NpgsqlParameter("aff", NpgsqlDbType.Integer) { Value = (object?)d.EntAffaireId ?? DBNull.Value },
+            new NpgsqlParameter("cha", NpgsqlDbType.Integer) { Value = (object?)d.EntChantierId ?? DBNull.Value },
+            new NpgsqlParameter("mar", NpgsqlDbType.Integer) { Value = (object?)d.EntMarcheId ?? DBNull.Value },
+            new NpgsqlParameter("cpa", NpgsqlDbType.Varchar) { Value = (object?)d.EntCpaCode ?? DBNull.Value },
+            new NpgsqlParameter("ent", NpgsqlDbType.Bigint) { Value = id },
+            new NpgsqlParameter("std", NpgsqlDbType.Integer) { Value = d.EntStdId },
+            new NpgsqlParameter("tyd", NpgsqlDbType.Integer) { Value = d.EntTydId }).FirstAsync(ct);
+        var c = JsonNode.Parse(json)!.AsObject();
+        var type = c["type"]?.AsObject() ?? new JsonObject();
+        var famille = type["famille"]?.GetValue<string>() ?? "V";
+
+        // Société : identité, coordonnées (instantané de l'annuaire), mentions.
+        var societe = c["societe"]?.DeepClone() as JsonObject ?? new JsonObject();
+        if (societe["per_id"] is JsonValue perSociete)
+        {
+            var instantane = await ContactsDocument.Instantane(db, perSociete.GetValue<long>(), null, ct);
+            if (instantane is not null)
+            {
+                var co = Coordonnees(JsonNode.Parse(instantane.RootElement.GetRawText()));
+                societe["adresse"] = co?["adresse"]?.DeepClone();
+                societe["telephone"] = co?["telephone"]?.DeepClone();
+                societe["courriel"] = co?["courriel"]?.DeepClone();
+            }
+        }
+        var forme = societe["forme_juridique"]?.GetValue<string>();
+        if (forme is not null) societe["forme_juridique"] = FormesJuridiques.GetValueOrDefault(forme, forme);
+        societe["capital"] = societe["capital"] is JsonValue cap && cap.TryGetValue<decimal>(out var capital)
+            ? $"{Milliers(capital)} €" : null;
+        societe["mentions"] = c["mentions"]?.DeepClone() ?? new JsonObject();
+
+        // Coordonnées figées du document, sinon l'annuaire (comme l'entête, lot F).
+        var client = d.EntContactClient is not null ? JsonNode.Parse(d.EntContactClient.RootElement.GetRawText()) : null;
+        if (client is null && ContactsDocument.Source(d, "CLIENT", famille) is var (perId, indId))
+        {
+            var inst = await ContactsDocument.Instantane(db, perId, indId, ct);
+            client = inst is null ? null : JsonNode.Parse(inst.RootElement.GetRawText());
+        }
+        var payeur = d.EntContactPayeur is not null ? JsonNode.Parse(d.EntContactPayeur.RootElement.GetRawText()) : null;
+        var adresseTravaux = d.EntAdresseLivraison is not null ? JsonNode.Parse(d.EntAdresseLivraison.RootElement.GetRawText())?.AsObject() : null;
+        if (adresseTravaux is not null) adresseTravaux["adresse"] = Lignes(adresseTravaux["adresse"]);
+
+        var document = Objet(d);
+        var lignes = r.Lignes.ToDictionary(l => l.LigId);
+        var resultat = new JsonObject
+        {
+            ["societe"] = societe,
+            ["document"] = new JsonObject
+            {
+                ["id"] = d.EntId, ["numero"] = d.EntNumero, ["date"] = d.EntDate.ToString("yyyy-MM-dd"), ["objet"] = d.EntObjet,
+                ["notre_reference"] = d.EntNotreReference, ["reference_externe"] = d.EntReferenceExterne, ["date_externe"] = document["ent_date_externe"]?.DeepClone(),
+                ["validite_jours"] = d.EntValiditeJours, ["date_validite"] = d.EntDateValidite?.ToString("yyyy-MM-dd"),
+                ["type"] = type.DeepClone(), ["statut"] = c["statut"]?.DeepClone(), ["verrouille"] = d.EntVerrouille, ["indice"] = d.EntIndice,
+                ["devise"] = d.EntDevise, ["nature_avoir"] = d.EntNatureAvoir, ["mode_reglement"] = d.EntModeReglement,
+                ["condition"] = c["condition"]?.DeepClone(),
+                ["avancement"] = d.EntAvtPresentation is null ? null : new JsonObject { ["presentation"] = d.EntAvtPresentation, ["rang"] = d.EntRangAvancement },
+                ["entete"] = document,
+            },
+            ["client"] = Coordonnees(client),
+            ["payeur"] = Coordonnees(payeur),
+            ["adresse_travaux"] = adresseTravaux,
+            ["redacteur"] = c["redacteur"]?.DeepClone(),
+            ["rattachement"] = new JsonObject { ["projet"] = c["projet"]?.DeepClone(), ["affaire"] = c["affaire"]?.DeepClone(), ["chantier"] = c["chantier"]?.DeepClone(), ["marche"] = c["marche"]?.DeepClone() },
+            ["intervenants"] = d.EntIntervenants is null ? new JsonArray() : JsonNode.Parse(d.EntIntervenants.RootElement.GetRawText()),
+            ["lignes"] = LignesImprimees(r, lignes),
+            ["pied"] = Pied(r.Pied, r, lignes),
+            ["tva"] = new JsonArray(r.Tva.Select(t => (JsonNode?)new JsonObject
+            {
+                ["code"] = t.TvaCode, ["taux"] = t.TvaTaux, ["base"] = t.TvaBaseHt, ["montant"] = t.TvaMontantNet, ["mention"] = t.TvaMention, ["categorie"] = t.TvaCategorie,
+            }).ToArray()),
+            ["totaux"] = new JsonObject { ["ht"] = d.EntTotalHt, ["tva"] = d.EntTotalTva, ["ttc"] = d.EntTotalTtc, ["net"] = d.EntNetAPayer },
+            ["echeances"] = c["echeances"]?.DeepClone() ?? new JsonArray(),
+            ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
+        };
+        return resultat;
+    }
+
+    /// <summary>Montant avec séparateur de milliers (espace insécable fine) et décimales utiles (sans globalisation).</summary>
+    private static string Milliers(decimal v)
+    {
+        var s = ArrondiCalcul.FormatNombre(v);
+        var signe = s.StartsWith('-') ? "-" : "";
+        var parties = s.TrimStart('-').Split(',', '.');
+        var ent = parties[0];
+        var groupes = new List<string>();
+        for (var i = ent.Length; i > 0; i -= 3) groupes.Insert(0, ent[Math.Max(0, i - 3)..i]);
+        return signe + string.Join(' ', groupes) + (parties.Length > 1 ? "," + parties[1] : "");
+    }
+
+    /// <summary>Entête sérialisé avec les noms du DDL (ent_*), pour les champs non repris ailleurs.</summary>
+    private static JsonObject Objet(DocumentBtp d)
+    {
+        var o = JsonSerializer.SerializeToNode(d, JsonCalcul.Options)!.AsObject();
+        foreach (var cle in new[] { "ent_intervenants", "ent_contact_client", "ent_contact_payeur", "ent_num_format" }) o.Remove(cle);
+        return o;
+    }
+
+    /// <summary>Coordonnées d'un instantané (ContactsDocument) au format des éditions : nom, contact, lignes d'adresse.</summary>
+    private static JsonObject? Coordonnees(JsonNode? i)
+    {
+        if (i is not JsonObject o) return null;
+        return new JsonObject
+        {
+            ["nom"] = o["raison_sociale"]?.DeepClone(), ["code"] = o["code"]?.DeepClone(), ["contact"] = o["contact"]?["nom"]?.DeepClone(),
+            ["adresse"] = Lignes(o["adresse"]), ["courriel"] = (o["email"] ?? o["courriel"])?.DeepClone(), ["telephone"] = o["telephone"]?.DeepClone(),
+            ["siret"] = o["siret"]?.DeepClone(), ["tva"] = (o["tva_intra"] ?? o["tva"])?.DeepClone(),
+        };
+    }
+
+    /// <summary>Adresse en lignes imprimables (vides retirées ; code postal et ville sur une ligne ; pays hors France).</summary>
+    private static JsonArray Lignes(JsonNode? a)
+    {
+        var res = new JsonArray();
+        if (a is JsonArray dejaLignes) { foreach (var x in dejaLignes) if (x is not null) res.Add(x.DeepClone()); return res; }
+        if (a is JsonValue v && v.TryGetValue<string>(out var texte)) { foreach (var l in texte.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) res.Add(l); return res; }
+        if (a is not JsonObject o) return res;
+        string? S(string k) => o[k] is JsonValue x && x.TryGetValue<string>(out var s) && !string.IsNullOrWhiteSpace(s) ? s.Trim() : null;
+        foreach (var k in new[] { "ligne1", "ligne2", "ligne3" }) if (S(k) is { } l) res.Add(l);
+        var ville = string.Join(' ', new[] { S("code_postal"), S("ville") }.Where(x => x is not null));
+        if (ville.Length > 0) res.Add(ville);
+        if (S("pays") is { } pays && pays is not "FR" and not "France") res.Add(pays);
+        return res;
+    }
+
+    private static string TypeLigne(short tyl) => tyl switch
+    {
+        TL.Titre => "TITRE", TL.Ouvrage => "OUVRAGE", TL.Element => "ELEMENT", TL.Texte => "TEXTE", TL.SousTotal => "SOUS_TOTAL",
+        TL.Image => "IMAGE", TL.SautPage => "SAUT_PAGE", TL.PiedHt => "PIED_HT", TL.PiedTtc => "PIED_TTC", TL.Tva => "TVA", TL.Section => "SECTION", _ => tyl.ToString(),
+    };
+
+    /// <summary>
+    /// Lignes imprimées dans l'ordre d'affichage (arbre parcouru en profondeur) avec niveau, type, numéro et indicateurs
+    /// (composante, option, pour mémoire, comptée dans le total) ; pied d'une section (lot 4) inséré à la fin de la section.
+    /// </summary>
+    private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId)
+    {
+        var enfants = r.Lignes.GroupBy(l => l.LigParentId ?? 0).ToDictionary(g => g.Key, g => g.OrderBy(l => l.LigOrdre).ToList());
+        var piedsSections = r.PiedsSections.ToDictionary(p => p.LigId, p => p.Pied);
+        var res = new JsonArray();
+        void Visiter(long parent, int niveau, string typePrixHerite, bool composante)
+        {
+            foreach (var l in enfants.GetValueOrDefault(parent) ?? [])
+            {
+                if (TL.EstPied(l)) continue;
+                var typePrix = l.LigTypePrix is { Length: > 0 } tp && tp != "V" ? tp : typePrixHerite;
+                if (typePrix == "F") continue; // tranche de frais annexes : jamais imprimée, ni sa descendance
+                var type = TypeLigne(l.LigTylId);
+                if (!l.LigIsNonEditee)
+                {
+                    var o = new JsonObject
+                    {
+                        ["lig_id"] = l.LigId, ["type"] = type, ["niveau"] = niveau, ["numero"] = l.LigNumerotation, ["code"] = l.LigCode,
+                        ["libelle_html"] = l.LigLibelleAffiche ?? l.LigLibelleHtml, ["libelle"] = l.LigLibelleBrut,
+                        ["qte"] = l.LigQte, ["unite"] = l.LigUntCode, ["pu"] = l.LigPvRemise ?? l.LigPv, ["pu_brut"] = l.LigPv,
+                        ["remise_pct"] = l.LigCoefRemise is decimal cr && cr != 1 ? (1 - cr) * 100 : null,
+                        ["montant"] = l.LigMontantHt, ["taux_tva"] = l.LigTauxTva, ["type_prix"] = typePrix,
+                        ["option"] = typePrix == "O", ["pour_memoire"] = typePrix == "M", ["variante"] = l.LigVarianteDeId is not null,
+                        ["composante"] = composante, ["tranche"] = TL.EstTranche(l),
+                        ["compte_total"] = !composante && TL.EstChiffree(l) && typePrix == "V",
+                        ["avt_pct"] = l.LigAvtPct, ["avt_qte_cumul"] = l.LigAvtQteCumul, ["avt_montant_cumul"] = l.LigAvtMontantCumul,
+                        ["avt_montant_precedent"] = l.LigAvtMontantPrecedent, ["avt_pct_precedent"] = l.LigAvtPctPrecedent,
+                        ["avt_qte_marche"] = l.LigAvtQteMarche, ["avt_montant_marche"] = l.LigAvtMontantMarche,
+                    };
+                    res.Add(o);
+                }
+                Visiter(l.LigId, niveau + 1, typePrix, composante || l.LigTylId == TL.Ouvrage);
+                if (piedsSections.TryGetValue(l.LigId, out var pied))
+                    foreach (var e in Pied(pied, r, parId))
+                    {
+                        var o = e!.AsObject();
+                        o["type"] = "PIED";
+                        o["niveau"] = niveau + 1;
+                        o["libelle_html"] = Html(o["libelle"]?.GetValue<string>());
+                        res.Add(o.DeepClone());
+                    }
+            }
+        }
+        Visiter(0, 0, "V", false);
+        return res;
+    }
+
+    private static string Html(string? texte) => System.Net.WebUtility.HtmlEncode(texte ?? "");
+
+    /// <summary>
+    /// Pied imprimable : totaux calculés non masqués, postes HT / TTC (libellé, base, taux, montant), TVA par taux,
+    /// sous-totaux de pied saisis, lignes consolidées du pied global.
+    /// </summary>
+    private static JsonArray Pied(List<EntreePied> pied, ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> lignes)
+    {
+        var res = new JsonArray();
+        foreach (var e in pied)
+        {
+            switch (e.Genre)
+            {
+                case "total":
+                    if (!e.Masque) res.Add(new JsonObject { ["genre"] = "total", ["cle"] = e.Cle, ["libelle"] = LibellesPied.GetValueOrDefault(e.Cle, e.Cle), ["montant"] = e.Montant });
+                    break;
+                case "ligne":
+                    if (e.LigId is long id && lignes.TryGetValue(id, out var st) && !st.LigIsNonEditee)
+                        res.Add(new JsonObject { ["genre"] = "sous_total", ["cle"] = e.Cle, ["libelle"] = st.LigLibelleBrut ?? "Sous-total", ["montant"] = st.LigMontantHt });
+                    break;
+                case "consolide":
+                    res.Add(new JsonObject
+                    {
+                        ["genre"] = "poste", ["cle"] = e.Cle, ["libelle"] = e.Libelle, ["mode"] = e.Mode, ["taux"] = e.Mode == "M" ? null : e.Taux,
+                        ["base"] = e.Mode == "M" ? null : e.Base, ["montant"] = e.Montant,
+                    });
+                    break;
+                case "groupe" when e.Cle == "TVA":
+                    foreach (var t in r.Tva)
+                        res.Add(new JsonObject
+                        {
+                            ["genre"] = "tva", ["cle"] = "TVA", ["libelle"] = $"TVA {ArrondiCalcul.FormatNombre(t.TvaTaux).Replace('.', ',')} %", ["code"] = t.TvaCode,
+                            ["taux"] = t.TvaTaux, ["base"] = t.TvaBaseHt, ["montant"] = t.TvaMontantNet, ["mention"] = t.TvaMention,
+                        });
+                    break;
+                case "groupe":
+                    foreach (var lid in e.Lignes ?? [])
+                    {
+                        if (!lignes.TryGetValue(lid, out var l) || l.LigIsNonEditee) continue;
+                        res.Add(new JsonObject
+                        {
+                            ["genre"] = "poste", ["cle"] = e.Cle, ["libelle"] = l.LigLibelleBrut, ["mode"] = l.LigPiedMode,
+                            ["taux"] = l.LigPiedMode is "P" or "C" ? l.LigPiedValeur : null, ["base"] = l.LigPiedMode is "P" or "C" ? l.LigBaseCalcul : null,
+                            ["montant"] = l.LigMontantHt, ["sens"] = l.LigPiedSens,
+                        });
+                    }
+                    break;
+            }
+        }
+        return res;
+    }
+
+    /// <summary>Dictionnaire des champs de la source (concepteur, contrôle des modèles).</summary>
+    public static JsonArray Dictionnaire()
+    {
+        (string, string, string)[] champs =
+        [
+            ("societe.raison_sociale", "Raison sociale de la société", "texte"), ("societe.forme_juridique", "Forme juridique", "texte"),
+            ("societe.capital", "Capital", "texte"), ("societe.rcs", "RCS", "texte"), ("societe.siret", "SIRET", "texte"), ("societe.tva", "TVA intracommunautaire", "texte"),
+            ("societe.naf", "Code NAF", "texte"), ("societe.adresse", "Adresse (lignes)", "liste"), ("societe.telephone", "Téléphone", "texte"), ("societe.courriel", "Courriel", "texte"),
+            ("societe.mentions.decennale.assureur", "Assureur décennale", "texte"), ("societe.mentions.decennale.police", "Police décennale", "texte"),
+            ("societe.mentions.decennale.couverture", "Couverture géographique", "texte"), ("societe.mentions.penalites", "Pénalités de retard", "texte"),
+            ("societe.mentions.indemnite", "Indemnité forfaitaire de recouvrement", "texte"), ("societe.mentions.escompte", "Escompte", "texte"),
+            ("societe.mentions.mediateur.nom", "Médiateur de la consommation", "texte"), ("societe.mentions.retractation", "Droit de rétractation", "texte"),
+            ("societe.mentions.accord", "Mention du bon pour accord", "texte"),
+            ("document.numero", "Numéro", "texte"), ("document.date", "Date", "date"), ("document.objet", "Objet", "texte"), ("document.type.code", "Code du type", "texte"),
+            ("document.type.libelle", "Type", "texte"), ("document.type.famille", "Famille (V, A, S)", "texte"), ("document.statut.code", "Code du statut", "texte"),
+            ("document.statut.libelle", "Statut", "texte"), ("document.verrouille", "Validé (verrouillé)", "booleen"), ("document.indice", "Indice", "texte"),
+            ("document.validite_jours", "Validité (jours)", "nombre"), ("document.date_validite", "Fin de validité", "date"),
+            ("document.notre_reference", "Notre référence", "texte"), ("document.reference_externe", "Référence externe", "texte"),
+            ("document.condition.libelle", "Condition de paiement", "texte"), ("document.mode_reglement", "Mode de règlement", "texte"),
+            ("document.avancement.rang", "Numéro de situation", "nombre"), ("document.nature_avoir", "Nature de l'avoir", "texte"),
+            ("client.nom", "Client (nom)", "texte"), ("client.contact", "Contact du client", "texte"), ("client.adresse", "Adresse du client (lignes)", "liste"),
+            ("client.courriel", "Courriel du client", "texte"), ("client.siret", "SIRET du client", "texte"), ("client.tva", "TVA du client", "texte"),
+            ("payeur.nom", "Payeur", "texte"), ("adresse_travaux.libelle", "Adresse des travaux (libellé)", "texte"), ("adresse_travaux.adresse", "Adresse des travaux (lignes)", "liste"),
+            ("redacteur.nom", "Rédacteur", "texte"), ("rattachement.chantier.code", "Chantier (code)", "texte"), ("rattachement.chantier.libelle", "Chantier", "texte"),
+            ("rattachement.marche.code", "Marché (code)", "texte"), ("rattachement.affaire.libelle", "Affaire", "texte"), ("rattachement.projet.libelle", "Projet", "texte"),
+            ("lignes", "Lignes imprimées : type, niveau, numero, code, libelle_html, qte, unite, pu, montant, composante, option, compte_total, avt_*", "collection"),
+            ("pied", "Pied : genre (total, poste, tva, sous_total), libelle, base, taux, montant", "collection"),
+            ("tva", "TVA par taux : code, taux, base, montant, mention", "collection"), ("totaux.ht", "Total HT", "montant"), ("totaux.tva", "Total TVA", "montant"),
+            ("totaux.ttc", "Total TTC", "montant"), ("totaux.net", "Net à payer", "montant"), ("echeances", "Échéances : rang, date, montant, nature", "collection"),
+            ("textes.intro", "Texte d'introduction (HTML)", "html"), ("textes.fin", "Texte de conclusion (HTML)", "html"),
+        ];
+        return new JsonArray(champs.Select(c => (JsonNode?)new JsonObject { ["chemin"] = c.Item1, ["libelle"] = c.Item2, ["type"] = c.Item3 }).ToArray());
+    }
+}
+
+/// <summary>Paramètres des éditions du cœur : mentions de la société (§ 15.4).</summary>
+public static class ParametresEditionBtp
+{
+    public static IEndpointRouteBuilder MapEditionsBtp(this IEndpointRouteBuilder api)
+    {
+        var g = api.MapGroup("/editions-btp");
+        g.MapGet("/mentions", async (LogiBtpContext db, CancellationToken ct) =>
+        {
+            var json = await db.Database.SqlQueryRaw<string>("SELECT coalesce((SELECT pae_valeur::text FROM parametre_edition WHERE pae_cle = 'mentions'), '{{}}') AS \"Value\"").FirstAsync(ct);
+            return Results.Content(json, "application/json");
+        });
+        g.MapPut("/mentions", async (JsonObject mentions, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO parametre_edition (pae_cle, pae_valeur, pae_modifie_le, pae_modifie_par) VALUES ('mentions', @v::jsonb, now(), @u)
+                ON CONFLICT (pae_cle) DO UPDATE SET pae_valeur = excluded.pae_valeur, pae_modifie_le = now(), pae_modifie_par = excluded.pae_modifie_par
+                """, [new NpgsqlParameter("v", mentions.ToJsonString()), new NpgsqlParameter("u", u.Code)], ct);
+            return Results.Content(mentions.ToJsonString(), "application/json");
+        });
+        return api;
+    }
+}

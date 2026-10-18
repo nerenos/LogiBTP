@@ -19,6 +19,18 @@ async function appel(methode, url, corps, { keepalive = false } = {}) {
   return data;
 }
 
+/** PDF d'une édition produit par le serveur (Blob) ; en-têtes : nombre de pages, alertes. */
+async function pdfEdition(demande, imprimer) {
+  const r = await fetch('/api/editions/pdf', { method: 'POST', headers: ENTETES, body: JSON.stringify({ edition: demande, imprimer }) });
+  if (!r.ok) {
+    const data = await r.json().catch(() => null);
+    throw new ErreurApi(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details);
+  }
+  let alertes = [];
+  try { alertes = JSON.parse(decodeURIComponent(r.headers.get('X-Edition-Alertes') ?? '%5B%5D')); } catch { /* sans alertes */ }
+  return { blob: await r.blob(), pages: Number(r.headers.get('X-Edition-Pages') ?? 0), alertes };
+}
+
 export const api = {
   async disponible() {
     try {
@@ -29,6 +41,28 @@ export const api = {
     } catch {
       return false;
     }
+  },
+  // Éditions (module Édition) : aperçu (préparation pour le moteur du navigateur), PDF du serveur, modèles, chartes,
+  // défauts par type ; mentions de la société (cœur).
+  editions: {
+    apercu: (demande) => appel('POST', '/editions/apercu', demande),
+    pdf: pdfEdition,
+    sources: () => appel('GET', '/editions/sources'),
+    dictionnaire: (source) => appel('GET', `/editions/sources/${encodeURIComponent(source)}/dictionnaire`),
+    modeles: (filtre = {}) => appel('GET', `/editions/modeles?${new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null))}`),
+    modele: (code) => appel('GET', `/editions/modeles/${encodeURIComponent(code)}`),
+    enregistrerModele: (code, m) => appel('PUT', `/editions/modeles/${encodeURIComponent(code)}`, m),
+    supprimerModele: (code) => appel('DELETE', `/editions/modeles/${encodeURIComponent(code)}`),
+    copierModele: (code, nouveau, libelle) => appel('POST', `/editions/modeles/${encodeURIComponent(code)}/copie`, { code: nouveau, libelle }),
+    impacts: (code) => appel('GET', `/editions/modeles/${encodeURIComponent(code)}/impacts`),
+    versions: (code) => appel('GET', `/editions/modeles/${encodeURIComponent(code)}/versions`),
+    verifier: (contenu) => appel('POST', '/editions/verifier', contenu),
+    chartes: () => appel('GET', '/editions/chartes'),
+    enregistrerCharte: (code, c) => appel('PUT', `/editions/chartes/${encodeURIComponent(code)}`, c),
+    defauts: () => appel('GET', '/editions/defauts'),
+    enregistrerDefaut: (d) => appel('PUT', '/editions/defauts', d),
+    mentions: () => appel('GET', '/editions-btp/mentions'),
+    enregistrerMentions: (m) => appel('PUT', '/editions-btp/mentions', m),
   },
   typesDocument: () => appel('GET', '/types-document'),
   textesType: (code) => appel('GET', `/types-document/${encodeURIComponent(code)}/textes`),

@@ -296,3 +296,53 @@ WHERE ent_objet = 'Extension maison individuelle' AND ent_intervenants IS NULL;
 `;
 fs.writeFileSync(path.join(racine, 'db', '163_intervenants_demo.sql'), sqlIntervenants);
 console.log('db/163_intervenants_demo.sql généré');
+
+// ------------------------------------------------------------------ éditions : charte, modèles fournis, défauts
+// Rejouable : un modèle fourni est réécrit tant qu'il n'a pas été modifié localement ; chartes et défauts existants
+// gardés (choix de la société).
+const ED = await import('../src/app/editions/modeles.js');
+const { dependances, normaliserModele, verifierModele } = await import('@logibtp/edition');
+const jsonb = (v) => `${q(JSON.stringify(v))}::jsonb`;
+const tableau = (l) => (l.length ? `ARRAY[${l.map(q).join(', ')}]::text[]` : `'{}'::text[]`);
+for (const m of ED.MODELES_EDITION) {
+  const erreurs = verifierModele(m.contenu);
+  if (erreurs.length) throw new Error(`Modèle ${m.code} invalide : ${JSON.stringify(erreurs)}`);
+}
+const liensEdition = ED.MODELES_EDITION.flatMap((m) => {
+  const d = dependances(m.genre === 'BLOC' ? { contenu: m.contenu.contenu } : normaliserModele(m.contenu));
+  return [...d.blocs.map((c) => [m.code, 'BLOC', c]), ...d.rapports.map((c) => [m.code, 'RAPPORT', c]), ...d.ressources.map((c) => [m.code, 'RESSOURCE', c])];
+});
+const sqlEditions = `-- =============================================================================
+-- Cœur LogiBTP – éditions : charte graphique, modèles fournis (blocs et rapports) et modèles par défaut des types.
+-- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/editions/modeles.js : ne pas modifier.
+-- Rejouable : un modèle fourni modifié localement (med_modifie_local) n'est pas réécrit ; chartes et défauts existants
+-- conservés.
+-- =============================================================================
+
+INSERT INTO charte_edition (che_code, che_libelle, che_contenu, che_defaut, che_modifie_par) VALUES
+${ED.CHARTES_EDITION.map((c) => ` (${q(c.code)}, ${q(c.libelle)}, ${jsonb(c.contenu)}, ${c.defaut ? 'TRUE' : 'FALSE'}, 'logibtp')`).join(',\n')}
+ON CONFLICT (che_code) DO NOTHING;
+
+INSERT INTO modele_edition (med_code, med_libelle, med_genre, med_cible, med_source, med_types, med_contenu, med_niveau_acces, med_ordre, med_fourni, med_cree_par, med_modifie_par) VALUES
+${ED.MODELES_EDITION.map((m) => ` (${[q(m.code), q(m.libelle), q(m.genre), q(m.cible ?? null), q(m.source ?? null), tableau(m.types ?? []), jsonb(m.contenu), q(m.niveau_acces ?? 'INTERNE'), m.ordre ?? 0, 'TRUE', q('logibtp'), q('logibtp')].join(', ')})`).join(',\n')}
+ON CONFLICT (med_code) DO UPDATE SET med_libelle = excluded.med_libelle, med_genre = excluded.med_genre, med_cible = excluded.med_cible,
+  med_source = excluded.med_source, med_types = excluded.med_types, med_contenu = excluded.med_contenu, med_ordre = excluded.med_ordre,
+  med_modifie_le = now(), med_modifie_par = 'logibtp'
+WHERE modele_edition.med_fourni AND NOT modele_edition.med_modifie_local;
+
+DELETE FROM modele_edition_lien WHERE mel_med_id IN (SELECT med_id FROM modele_edition WHERE med_fourni AND NOT med_modifie_local);
+INSERT INTO modele_edition_lien (mel_med_id, mel_genre, mel_code)
+SELECT m.med_id, v.genre, v.code FROM (VALUES
+${liensEdition.map(([m, g, c]) => ` (${q(m)}, ${q(g)}, ${q(c)})`).join(',\n')}
+) AS v(modele, genre, code) JOIN modele_edition m ON m.med_code = v.modele
+WHERE m.med_fourni AND NOT m.med_modifie_local
+ON CONFLICT DO NOTHING;
+
+INSERT INTO modele_edition_defaut (mdd_cible, mdd_type, mdd_med_id)
+SELECT v.cible, v.type, m.med_id FROM (VALUES
+${ED.DEFAUTS_EDITION.map((d) => ` (${q(d.cible)}, ${q(d.type)}, ${q(d.modele)})`).join(',\n')}
+) AS v(cible, type, modele) JOIN modele_edition m ON m.med_code = v.modele
+ON CONFLICT (mdd_cible, mdd_type) DO NOTHING;
+`;
+fs.writeFileSync(path.join(racine, 'db', '191_editions_modeles.sql'), sqlEditions);
+console.log('db/191_editions_modeles.sql généré');

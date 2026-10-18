@@ -51,10 +51,19 @@ export function editer(modele, donnees, env) {
     parametres, aujourdhui: env.aujourdhui ?? null, format: format ?? 'A4',
   });
   ctx.composerSousRapport = (c, ctxHote, largeur) => composerSousRapport(c, ctxHote, largeur, env);
+  // Présentation des lignes (Q7) : demandée, sinon la première dont la condition `defaut_si` est vraie, sinon la
+  // première ; ses paramètres s'appliquent avant ceux de la demande.
+  const presentations = m.presentations ?? [];
+  const presentation = presentations.find((x) => x.code === env.presentation)
+    ?? presentations.find((x) => x.defaut_si && condition(ctx, x.defaut_si, `présentation ${x.code}`)) ?? presentations[0] ?? null;
+  if (presentation) {
+    Object.assign(ctx.parametres, presentation.parametres ?? {}, env.parametres ?? {}, { presentation: presentation.code });
+    ctx.formule.parametres = ctx.parametres;
+  }
 
   if (m.mode === 'ETIQUETTES') {
     const r = paginerEtiquettes(m, ctx, page, env);
-    return { pages: r.pages, alertes: [...ctx.alertes, ...r.alertes], page: dims };
+    return { pages: r.pages, alertes: [...ctx.alertes, ...r.alertes], page: dims, presentation: presentation?.code ?? null };
   }
 
   // Corps : fragments.
@@ -111,7 +120,7 @@ export function editer(modele, donnees, env) {
     const dx = marges.droite - marges.gauche;
     for (const p of r.pages) if (p.numero % 2 === 0) p.elements = p.elements.map((e) => decalerElement(e, dx));
   }
-  return { pages: r.pages, alertes: ctx.alertes, page: dims };
+  return { pages: r.pages, alertes: ctx.alertes, page: dims, presentation: presentation?.code ?? null };
 }
 
 function decalerElement(e, dx) {

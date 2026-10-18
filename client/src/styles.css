@@ -289,3 +289,20 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 /* Documents issus d'une transformation : cellules modifiables légèrement teintées (privilégier la ventilation). */
 .document-transforme td.editable:not(.cellule) { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--accent) 8%, transparent); }
 
+
+/* Aperçu des éditions (page /edition) : pages SVG du moteur d'édition sur fond gris. */
+.page-edition-apercu { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.edition-barre { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--bord); background: var(--surface); }
+.edition-barre .page-titre { font-size: 1.05rem; margin: 0 0.5rem 0 0; }
+.edition-barre label { display: inline-flex; align-items: center; gap: 0.35rem; }
+.edition-barre input.combo { width: 13rem; }
+.edition-barre [data-combo="zoom"] input.combo, .edition-barre [data-combo="format"] input.combo { width: 5.5rem; }
+.edition-parametres { display: inline-flex; gap: 0.8rem; }
+.edition-actions { margin-left: auto; display: inline-flex; gap: 0.4rem; }
+.edition-alertes { padding: 0.4rem 0.8rem; background: color-mix(in srgb, var(--alerte) 12%, var(--fond)); border-bottom: 1px solid var(--bord); max-height: 8rem; overflow: auto; }
+.edition-alertes ul { margin: 0.2rem 0 0; padding-left: 1.2rem; }
+.edition-pages { flex: 1; overflow: auto; background: #7d838c; padding: 1rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.edition-page { position: relative; }
+.edition-page svg { display: block; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); background: #fff; }
+.edition-numero { position: absolute; right: -3.2rem; top: 0; color: #fff; font-size: 0.8rem; }
+iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }

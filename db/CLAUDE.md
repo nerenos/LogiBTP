@@ -42,6 +42,8 @@
 - `183_tiers_provisoires.sql` : `v_liste_personnes.provisoire` (module Annuaire `071`) ; vue de liste « Tiers provisoires à valider » (`vli_id` 19, générée dans 121) ; rejouable.
 - `184_adresse_travaux.sql` : contact sur place du chantier (`cha_contact_ind_id`) ; rejouable.
 - `185_liste_numero_situation.sql` : `v_liste_documents.numero_situation` (`ent_rang_avancement`) et `facture` (situation : factures d'avancement issues ; facture d'avancement : situation d'origine), colonnes ajoutées aux vues des situations et des factures ; rejouable.
+- `190_editions.sql` : `ent_modele_edition` (dernier modèle imprimé), `parametre_edition` (mentions de la société) ; rejouable.
+- `191_editions_modeles.sql` : **généré** (`client/src/app/editions/modeles.js`) : charte, modèles fournis (réécrits tant qu'ils ne sont pas modifiés localement), liens, défauts ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

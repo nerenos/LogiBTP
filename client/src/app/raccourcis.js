@@ -27,6 +27,7 @@ declarerRaccourcis('document', {
     valider: { libelle: 'Valider le document', defaut: [] },
     transformer: { libelle: 'Transformer le document', defaut: [] },
     bibliotheque: { libelle: 'Ouvrir la bibliothèque', defaut: [] },
+    apercu: { libelle: 'Aperçu et impression', defaut: 'Ctrl+P' },
   },
 });
 

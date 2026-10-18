@@ -103,6 +103,7 @@ export function menus(app) {
         { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu'), desactive: !app.estAdmin() },
         { separateur: true, libelle: 'Documents' },
         { libelle: 'Étiquettes et couleurs des lignes…', icone: '🏷', url: '/parametres/documents' },
+        { libelle: 'Éditions : modèles et mentions…', icone: '🖨', url: '/parametres/editions' },
         { libelle: 'GED : rétention et classification…', icone: '⏳', url: '/parametres/ged' },
         { separateur: true, libelle: 'Annuaire et bibliothèque' },
         { libelle: 'Annuaire : niveaux, relations, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },

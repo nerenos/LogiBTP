@@ -17,6 +17,9 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
+- [ ] Éditions : `modules/edition/db/090`, `db/190`, `db/191` appliqués aux deux bases (18/10/2026) ; arrêter et relancer
+  l'API (nouveau module, routes `/api/editions`, polices copiées dans la sortie).
+
 - [ ] Documents, lots A à F : `modules/document/db/019f`, `019g`, `modules/bibliotheque/db/063` et `db/184` appliqués aux
   deux bases, fiches `element` et `chantier` et vues d'éléments mises à jour, postes de démonstration RG5, PRORATA,
   REMISE5, FRAISDOS insérés (18/10/2026) ; redémarrer l'API (précédents relus, AVANCEMENT_NON_NUMEROTE, changement de
@@ -58,7 +61,8 @@
 ### Édition (impression)
 
 - [ ] **Module Édition** ([conception](conception/CONCEPTION-EDITION.md), analyse décidée § 14 et 15) : lot 0 réalisé
-  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16). Lots suivants en cours.
+  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16) ; lots 1 à 3 réalisés (§ 16). Lots
+  suivants en cours.
   Reprend les impressions en attente ci-dessus (textes, coordonnées, tranches F, frais annexes, déductions).
 - [ ] Facturation électronique (Factur-X / plateforme agréée) : module à cadrer à part (§ 3.5 de l'analyse).
 

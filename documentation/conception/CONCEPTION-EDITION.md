@@ -664,3 +664,18 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
   chaque pièce garde sa numérotation.
 - Jeu `04_pagination` (parité Node ↔ Jint).
 
+### Lot 3 – source « document », modèles fournis, aperçu (18/10/2026) : réalisé
+
+- Tables du module (`modules/edition/db/090`) et service `LogiBTP.Editions.Web` : modèles (contrôlés par le moteur,
+  dépendances, cycles refusés, impacts, copie, versions), chartes, défauts par type, préparation de l'aperçu en un
+  appel, PDF du serveur ; accès aux modèles par les niveaux de la GED (Q18).
+- Cœur : source « document » (`SourceDocumentEdition` : pièce calculée par le serveur, lignes imprimées, pied, TVA,
+  échéances, coordonnées, société et mentions, § 15.3, 15.4), dernier modèle imprimé (`ent_modele_edition`, Q13),
+  mentions éditables (`/parametres/editions`).
+- Modèles fournis (§ 15.6) : blocs liés (entête société, coordonnées du document, lignes avec présentations,
+  totaux, mentions de paiement, mentions particuliers, pieds ventes / achats et interne, filigrane, rappel) et
+  rapports devis, commande client, facture / avoir / acompte, situation, facture d'avancement (présentation
+  Avancement si le document a un avancement), bon de livraison, commande fournisseur, pièce interne.
+- Aperçu `/edition` (moteur du navigateur, ≈ 50 ms pour le devis réel), impression par le PDF du serveur
+  (≈ 2 s, moteur préchauffé au démarrage), bouton « 🖨 Aperçu » (Ctrl+P) de la page document.
+

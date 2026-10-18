@@ -55,6 +55,7 @@ const GABARIT = `
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
+      <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
@@ -187,6 +188,13 @@ export class PageDocument extends PageBase {
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
       bibliotheque: () => app.naviguer('/liste/bibliotheque?vue=14', { nouvelleFenetre: true }),
       rechercher: () => { this.disposition.onglet('lignes'); this.recherche?.ouvrir(); },
+      // Aperçu : l'édition lit le document enregistré (les modifications en cours n'y sont pas).
+      apercu: () => {
+        const id = this.editeur?.saisie.document.ent_id;
+        if (!id || id < 0) { app.message('Enregistrez le document avant de l’éditer', 'avertissement'); return; }
+        if (this.modifiee) app.message('Modifications non enregistrées : l’aperçu montre la dernière version enregistrée', 'avertissement');
+        app.naviguer(`/edition?source=document&id=${id}`, { nouvelleFenetre: true });
+      },
     };
     // Raccourcis ⓘ : bulle au survol, aide-mémoire complet (fenêtre déplaçable) au clic.
     const aide = this.conteneur.querySelector('[data-aide-raccourcis]');

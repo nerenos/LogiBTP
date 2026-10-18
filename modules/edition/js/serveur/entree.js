@@ -1,7 +1,7 @@
 // Point d'entrée du moteur d'édition exécuté côté serveur dans Jint (LogiBTP.Editions.MoteurEditionJs).
 // Paquet unique construit par `npm run construire --workspace modules/edition/js` (esbuild, format IIFE) ; échanges
 // en JSON (chaînes) et en octets (Uint8Array) ; aucune entrée-sortie ici : tout vient du serveur.
-import { editer, assembler, produirePdf, Polices, verifierModele, dependances, lireImage, base64VersOctets, normaliserModele } from '../src/index.js';
+import { editer, assembler, produirePdf, Polices, verifierModele, verifierCharte, dependances, lireImage, base64VersOctets, normaliserModele } from '../src/index.js';
 
 // Jint n'a pas de minuterie : pdf-lib ne s'en sert que pour céder la main entre deux étapes.
 if (typeof globalThis.setTimeout !== 'function') {
@@ -47,6 +47,7 @@ globalThis.LogiBTPEdition = {
     const chronos = { mise_en_page: Date.now() - t0 };
     this.derniereAlertes = JSON.stringify(resultat.alertes);
     this.dernieresPages = resultat.pages.length;
+    this.dernierePresentation = resultat.presentation ?? '';
     // Compression par l'hôte (.NET) si elle est fournie : pako est lent dans Jint.
     const deflate = typeof globalThis.__deflate === 'function' && env.pdf?.compresser !== false ? globalThis.__deflate : undefined;
     const annexes = (env.annexes ?? []).map((a) => base64VersOctets(a));
@@ -72,8 +73,10 @@ globalThis.LogiBTPEdition = {
   },
   derniereAlertes: '[]',
   derniersChronos: '{}',
+  dernierePresentation: '',
   dernieresPages: 0,
   verifierModele: (json) => JSON.stringify(verifierModele(JSON.parse(json))),
+  verifierCharte: (json) => JSON.stringify(verifierCharte(JSON.parse(json))),
   dependances: (json) => JSON.stringify(dependances(normaliserModele(JSON.parse(json)))),
   lireImage: (octets) => JSON.stringify(lireImage(octets)),
 };
