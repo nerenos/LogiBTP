@@ -99,6 +99,7 @@ export class FicheStructure extends FicheLogiBTP {
     if (!champ.reference) return super.rendreChamp(champ, valeur);
     const lecture = !this.estEnSaisie() || champ.lecture_seule;
     if (champ.reference === 'tiers') return this.#champTiers(champ, valeur, lecture);
+    if (champ.reference === 'individu') return this.#champIndividu(champ, valeur, lecture);
     if (champ.reference === 'commande') {
       const span = document.createElement('span');
       span.className = 'fiche-valeur';
@@ -150,6 +151,44 @@ export class FicheStructure extends FicheLogiBTP {
       minuterie = setTimeout(async () => {
         resultats = await annuaire.rechercherPersonnes({ recherche: input.value, limite: 20 }).catch(() => []);
         liste.innerHTML = resultats.map((p) => `<option value="${echapper(`${p.code} – ${p.raison_sociale}`)}"></option>`).join('');
+      }, 250);
+    });
+    return span;
+  }
+
+  /** Individu de l'annuaire (contact sur place…) : recherche par nom, l'ID est enregistré. */
+  #champIndividu(champ, valeur, lecture) {
+    const annuaire = this.services.annuaire;
+    const span = document.createElement('span');
+    span.className = 'champ-tiers';
+    this.individusNoms ??= new Map();
+    const nom = this.individusNoms.get(Number(valeur));
+    if (valeur && nom === undefined) {
+      this.individusNoms.set(Number(valeur), null);
+      annuaire.individu(Number(valeur)).then((i) => {
+        this.individusNoms.set(Number(valeur), i.nom_complet ?? [i.prenom ?? i.valeurs?.prenom, i.nom ?? i.valeurs?.nom].filter(Boolean).join(' '));
+        this.rendre();
+      }).catch(() => {});
+    }
+    if (lecture) {
+      span.innerHTML = valeur ? `<a href="/fiche/individu/${Number(valeur)}">${echapper(nom || `Individu ${valeur}`)}</a>` : '—';
+      return span;
+    }
+    const id = `individu-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
+    span.innerHTML = `<input type="search" class="fiche-saisie-champ" list="${id}" value="${echapper(nom ?? (valeur ? `Individu ${valeur}` : ''))}" placeholder="Rechercher un individu (nom)"><datalist id="${id}"></datalist>`;
+    const input = span.querySelector('input');
+    const liste = span.querySelector('datalist');
+    const libelle = (i) => `${i.nom_complet}${i.personnes ? ` (${i.personnes})` : ''}`;
+    let resultats = [];
+    let minuterie = null;
+    input.addEventListener('input', () => {
+      clearTimeout(minuterie);
+      const choisi = resultats.find((i) => libelle(i) === input.value);
+      if (choisi) { this.individusNoms.set(choisi.id, choisi.nom_complet); this.definirValeur(champ.code, choisi.id); return; }
+      if (input.value === '') { this.definirValeur(champ.code, null); return; }
+      minuterie = setTimeout(async () => {
+        resultats = await annuaire.rechercherIndividus({ recherche: input.value, limite: 20 }).catch(() => []);
+        liste.innerHTML = resultats.map((i) => `<option value="${echapper(libelle(i))}"></option>`).join('');
       }, 250);
     });
     return span;

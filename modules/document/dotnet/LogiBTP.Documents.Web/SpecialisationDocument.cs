@@ -40,6 +40,9 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// <summary>Copie des champs d'entête saisis propres à la spécialisation (mode de calcul…).</summary>
     public virtual void CopierEnteteSaisie(TDoc cible, TDoc saisie) { }
 
+    /// <summary>Copie des champs d'entête saisis, avec le type du document (règles par famille) ; par défaut la copie simple.</summary>
+    public virtual void CopierEnteteSaisie(TDoc cible, TDoc saisie, TypeDocument type) => CopierEnteteSaisie(cible, saisie);
+
     /// <summary>Contrôles de saisie de la spécialisation exigés à la validation (un brouillon incomplet s'enregistre).</summary>
     public virtual void ControlerValidation(EntreeDocument<TDoc, TLigne> entree, List<MessageCalcul> erreurs) { }
 

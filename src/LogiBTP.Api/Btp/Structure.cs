@@ -111,6 +111,9 @@ public static class Structure
             }
             return cree;
         });
+        // Adresse des travaux ou de livraison : chantier, dépôts de notre société, comptoirs du fournisseur (lot F).
+        g.MapGet("/adresses-livraison", async (int? chantier, long? fournisseur, LogiBtpContext db, CancellationToken ct) =>
+            await AdressesDocument.Proposees(db, chantier, fournisseur, ct));
         // Coordonnées figées d'un document : instantané d'une personne et de son contact (bouton ⟳ de l'entête).
         g.MapGet("/contact", async (long per_id, long? ind_id, LogiBtpContext db, CancellationToken ct) =>
             await ContactsDocument.Instantane(db, per_id, ind_id, ct) is { } c ? Results.Ok(c) : Results.NotFound());

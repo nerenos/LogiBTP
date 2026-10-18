@@ -6,6 +6,9 @@ import { TableIntervenants } from './structure/intervenants.js';
 import { intervenantPropre, changerNiveau } from './structure/structure.js';
 import { champRattachement } from './structure/selection.js';
 import { libelleCompte } from './comptes.js';
+import {
+  ORIGINES_ADRESSE, memeAdresse, adresseIdentiqueAuClient, payeurIdentiqueAuClient, lignesAdresse, saisirAdresse, choisirAdresse,
+} from './structure/adresses.js';
 import { api } from './api.js';
 import {
   bilanTranche, partsLigne, dansPortee, cleLigne, ecrireCle, figerVentilation, repartirReste, remplacerCles,
@@ -57,12 +60,12 @@ export class PanneauxBtp extends PanneauxDocument {
 
   /**
    * Personne et contact d'un rôle d'après l'annuaire du document (ContactsDocument.Source côté serveur) : le tiers du
-   * document pour CLIENT ; l'intervenant PAYEUR, sinon le client, pour PAYEUR.
+   * document pour CLIENT ; l'intervenant PAYEUR seulement pour PAYEUR (sans lui, le payeur est le client : bloc vide).
    */
   sourceContact(role) {
     const liste = this.intervenantsDocument();
     const tiers = liste.find((x) => x.fonction === this.fonctionTiers() && x.per_id);
-    const x = role === 'PAYEUR' ? liste.find((y) => y.fonction === 'PAYEUR' && y.per_id) ?? tiers : tiers;
+    const x = role === 'PAYEUR' ? liste.find((y) => y.fonction === 'PAYEUR' && y.per_id) : tiers;
     return x ? { per_id: Number(x.per_id), ind_id: x.ind_id ? Number(x.ind_id) : null } : null;
   }
 
@@ -70,9 +73,16 @@ export class PanneauxBtp extends PanneauxDocument {
   async rechargerContact(role, { silencieux = false } = {}) {
     const source = this.sourceContact(role);
     if (!source) { if (!silencieux) this.editeur.surMessage?.(`${role === 'PAYEUR' ? 'Payeur' : 'Tiers'} à choisir dans l'annuaire du document`); return; }
-    const c = await api.contactDocument(source.per_id, source.ind_id);
+    let c = await api.contactDocument(source.per_id, source.ind_id);
+    // Payeur identique au client : le bloc reste vide (lot F).
+    const identique = role === 'PAYEUR' && payeurIdentiqueAuClient(c, this.editeur.saisie.document.ent_contact_client);
+    if (identique) c = null;
+    if ((this.editeur.saisie.document[PanneauxBtp.colonneContact(role)] ?? null) === null && c === null) {
+      if (!silencieux) this.editeur.surMessage?.('Payeur identique au client');
+      return;
+    }
     this.editeur.magasin.modifier((b) => { b.document[PanneauxBtp.colonneContact(role)] = c; }, 'Coordonnées du document');
-    if (!silencieux) this.editeur.surMessage?.('Coordonnées rechargées depuis l\'annuaire');
+    if (!silencieux) this.editeur.surMessage?.(identique ? 'Payeur identique au client' : 'Coordonnées rechargées depuis l\'annuaire');
   }
 
   /**
@@ -94,7 +104,7 @@ export class PanneauxBtp extends PanneauxDocument {
       [c.email ? `✉ ${echapper(c.email)}` : '', c.telephone ? `☎ ${echapper(c.telephone)}` : ''].filter(Boolean).join(' · '),
       [c.siret ? `SIRET ${echapper(c.siret)}` : '', c.tva_intra ? `TVA ${echapper(c.tva_intra)}` : ''].filter(Boolean).join(' · '),
       c.releve_le ? `<small class="aide">relevé le ${echapper(c.releve_le)}</small>` : '',
-    ].filter((x) => x && x.trim()) : ['<span class="aide">Non renseignées</span>'];
+    ].filter((x) => x && x.trim()) : [`<span class="aide">${role === 'PAYEUR' ? 'Identique au client' : 'Non renseignées'}</span>`];
     bloc.className = 'contact-document';
     bloc.innerHTML = `<div class="contact-titre"><b>${titre}</b>${lecture ? '' : ' <button type="button" class="bouton-icone" data-recharger title="Recharger depuis l\'annuaire">⟳</button>'}</div>
       <div>${lignes.join('<br>')}</div>`;
@@ -106,6 +116,83 @@ export class PanneauxBtp extends PanneauxDocument {
     if (!c && !lecture && source && !this.contactsRemplis.has(cle)) {
       this.contactsRemplis.add(cle);
       this.rechargerContact(role, { silencieux: true }).catch(() => {});
+    }
+  }
+
+  // ------------------------------------------------------------------ adresse des travaux / de livraison (lot F)
+
+  /** Adresse d'un chantier (cache par chantier) ; null si introuvable. */
+  async adresseChantier(chaId) {
+    this.adressesChantier ??= new Map();
+    if (!this.adressesChantier.has(chaId)) this.adressesChantier.set(chaId, api.adressesLivraison({ chantier: chaId }).then((r) => r.chantier ?? null).catch(() => null));
+    return this.adressesChantier.get(chaId);
+  }
+
+  /** Écrit l'adresse (null : vide) ; ventes : vide si identique au client. */
+  definirAdresse(x, libelle = 'Adresse des travaux') {
+    const vente = this.editeur.definition.type?.tyd_famille !== 'A';
+    const valeur = vente && adresseIdentiqueAuClient(x, this.editeur.saisie.document.ent_contact_client) ? null : x;
+    if (x && !valeur) this.editeur.surMessage?.('Adresse identique au client : le bloc reste vide');
+    this.editeur.magasin.modifier((b) => { b.document.ent_adresse_livraison = valeur; }, libelle);
+  }
+
+  /**
+   * Bloc de l'adresse des travaux (ventes) ou de livraison (achats) : reprise du document parent (entête copié), sinon du
+   * chantier (vide à l'affectation du chantier) ; achats : chantier, dépôt de l'entreprise, retrait au comptoir du
+   * fournisseur ou saisie libre ; avertissement si elle diffère de l'adresse du chantier. Obligatoire pour valider une
+   * commande fournisseur.
+   */
+  rendreAdresse(bloc) {
+    const ed = this.editeur;
+    const d = ed.saisie.document;
+    const achat = ed.definition.type?.tyd_famille === 'A';
+    const x = d.ent_adresse_livraison ?? null;
+    const lecture = !!ed.magasin.lectureSeule || ed.fige;
+    const chaId = d.ent_chantier_id ? Number(d.ent_chantier_id) : null;
+    const chantier = chaId ? this.adressesChantierLues?.get(chaId) : undefined;
+    const obligatoire = ed.definition.type?.tyd_code === 'A_COMMANDE';
+    const vide = achat ? `<span class="${obligatoire ? 'erreur' : 'aide'}">${obligatoire ? 'À choisir (obligatoire pour valider)' : 'Non renseignée'}</span>` : '<span class="aide">Identique au client</span>';
+    const ecart = x && chantier && !memeAdresse(x.adresse, chantier.adresse) ? '<span class="alerte">⚠ Adresse différente de celle du chantier</span>' : '';
+    const bouton = (action, texte, titre) => `<button type="button" class="bouton-icone" data-adresse-action="${action}" title="${titre}">${texte}</button>`;
+    bloc.className = 'contact-document adresse-document';
+    bloc.innerHTML = `<div class="contact-titre"><b>${achat ? 'Livraison' : 'Adresse des travaux'}</b>${x?.origine && !x.mention ? ` <small>${ORIGINES_ADRESSE[x.origine] ?? ''}</small>` : ''}
+        ${lecture ? '' : `${chaId ? bouton('chantier', '⟳', 'Reprendre l\'adresse du chantier') : ''}${achat ? `${bouton('depot', '🏭', 'Dépôt de l\'entreprise')}${bouton('comptoir', '🛒', 'Retrait au comptoir du fournisseur')}` : ''}
+          ${bouton('saisir', '✎', 'Saisie libre ou modification (contact sur place, téléphone, instructions)')}${x ? bouton('vider', '✕', 'Vider') : ''}`}</div>
+      <div>${x ? lignesAdresse(x).join('<br>') : vide}</div>${ecart}`;
+    const actions = {
+      chantier: async () => { const c = await this.adresseChantier(chaId); if (c) this.definirAdresse(c); else ed.surMessage?.('Chantier sans adresse'); },
+      depot: async () => {
+        const r = await api.adressesLivraison();
+        const c = await choisirAdresse(r.depots ?? [], { titre: 'Dépôt de l\'entreprise' });
+        if (c) this.definirAdresse(c, 'Adresse de livraison');
+      },
+      comptoir: async () => {
+        if (!d.ent_tiers_id) { ed.surMessage?.('Fournisseur à choisir dans l\'annuaire du document'); return; }
+        const r = await api.adressesLivraison({ fournisseur: d.ent_tiers_id });
+        const c = await choisirAdresse(r.comptoirs ?? [], { titre: 'Retrait au comptoir' });
+        if (c) this.definirAdresse(c, 'Adresse de livraison');
+      },
+      saisir: async () => {
+        const c = await saisirAdresse(x, { titre: achat ? 'Adresse de livraison' : 'Adresse des travaux' });
+        if (c !== undefined) this.definirAdresse(c);
+      },
+      vider: () => this.definirAdresse(null),
+    };
+    bloc.querySelectorAll('[data-adresse-action]').forEach((b) => b.addEventListener('click', () => {
+      b.blur();
+      actions[b.dataset.adresseAction]().catch((e) => ed.surMessage?.(e.message));
+    }));
+    if (!chaId) return;
+    // Adresse du chantier : avertissement d'écart ; bloc vide à l'affectation du chantier : reprise d'office (une fois).
+    this.adressesChantierLues ??= new Map();
+    if (chantier === undefined) {
+      this.adresseChantier(chaId).then((c) => { this.adressesChantierLues.set(chaId, c); if (bloc.isConnected) this.rendreAdresse(bloc); });
+      return;
+    }
+    this.adressesRemplies ??= new Set();
+    if (!x && chantier && !lecture && !this.adressesRemplies.has(chaId)) {
+      this.adressesRemplies.add(chaId);
+      if (achat || !adresseIdentiqueAuClient(chantier, d.ent_contact_client)) this.definirAdresse(chantier);
     }
   }
 
@@ -225,7 +312,7 @@ export class PanneauxBtp extends PanneauxDocument {
       ${this.annuaire ? '<fieldset class="annuaire-document"><legend>Annuaire du document</legend><div data-intervenants></div></fieldset>' : ''}
       ${this.annuaire ? `<fieldset class="contacts-document"><legend>Coordonnées du document</legend>
         <p class="aide">Enregistrées dans le document pour les éditions et conservées à la transformation ; ⟳ les recharge depuis l'annuaire.</p>
-        <div class="contacts-blocs"><div data-contact="CLIENT"></div>${this.editeur.definition.type?.tyd_famille === 'A' ? '' : '<div data-contact="PAYEUR"></div>'}</div></fieldset>` : ''}
+        <div class="contacts-blocs"><div data-contact="CLIENT"></div>${this.editeur.definition.type?.tyd_famille === 'A' ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}`;
   }
 
@@ -233,6 +320,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const m = this.editeur.magasin;
     this.lierRedacteur(zone).catch(() => {});
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
+    zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));
     const conteneur = zone.querySelector('[data-intervenants]');
     if (conteneur) {
       const d = this.editeur.saisie.document;

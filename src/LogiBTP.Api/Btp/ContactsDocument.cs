@@ -47,7 +47,7 @@ public static class ContactsDocument
 
     /// <summary>
     /// Personne et contact d'un rôle d'après l'annuaire du document : CLIENT = le tiers du document (fonction CLIENT ou
-    /// FOURNISSEUR), PAYEUR = l'intervenant PAYEUR, sinon le client.
+    /// FOURNISSEUR), PAYEUR = l'intervenant PAYEUR seulement (sans lui, le payeur est le client : bloc vide, lot F).
     /// </summary>
     public static (long PerId, long? IndId)? Source(DocumentBtp d, string role, string famille)
     {
@@ -66,7 +66,7 @@ public static class ContactsDocument
             return null;
         }
         var client = Intervenant(fonctionTiers) ?? (d.EntTiersId is long t ? (t, null) : null);
-        return role == "PAYEUR" ? Intervenant("PAYEUR") ?? client : client;
+        return role == "PAYEUR" ? Intervenant("PAYEUR") : client;
     }
 
     /// <summary>Coordonnées manquantes complétées (validation) : client, et payeur pour une vente.</summary>

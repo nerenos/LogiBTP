@@ -135,6 +135,11 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
+        // Commande fournisseur : adresse de livraison obligatoire (chantier rattaché : reprise à la validation).
+        if (type.TydCode == "A_COMMANDE" && document.Document.EntAdresseLivraison is null && document.Document.EntChantierId is null)
+        {
+            erreurs.Add(new MessageCalcul(null, "ADRESSE_LIVRAISON", "Commande fournisseur : adresse de livraison à choisir (chantier, dépôt, retrait au comptoir ou saisie libre)"));
+        }
         return ControlerAvancementNumerote(db, document, type, erreurs, ct);
     }
 
@@ -373,6 +378,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Coordonnées figées du client et du payeur : prises dans l'annuaire si l'entête n'en a pas encore.
         await ContactsDocument.Completer(db, saisie.Document, type.TydFamille, ct);
+        // Adresse des travaux ou de livraison : celle du chantier si elle manque ; ventes : vidée si identique au client.
+        await AdressesDocument.Completer(db, saisie.Document, type.TydFamille, ct);
         // Facture d'avancement d'un marché : déductions des acomptes émis (Q12, 11.2).
         if (type.TydAvancement == "F" && saisie.Document.EntMarcheId is not null && saisie.Document.EntNatureAvoir is null)
         {
@@ -422,6 +429,15 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntContactPayeur = saisie.EntContactPayeur ?? cible.EntContactPayeur;
         cible.EntFaLignes = saisie.EntFaLignes ?? "V";
         cible.EntFaMode = saisie.EntFaMode ?? "C";
+    }
+
+    /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>
+    public override void CopierEnteteSaisie(DocumentBtp cible, DocumentBtp saisie, TypeDocument type)
+    {
+        CopierEnteteSaisie(cible, saisie);
+        // Payeur vidé dans la saisie (identique au client, ou retiré) : la copie « ?? » ne l'efface pas.
+        if (saisie.EntContactPayeur is null && type.TydFamille == "V") cible.EntContactPayeur = null;
+        AdressesDocument.ViderIdentiques(cible, type.TydFamille);
     }
 
     // ------------------------------------------------------------------ chargement

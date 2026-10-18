@@ -416,7 +416,7 @@ export const TYPES_FICHE = {
         code: 'informations', titre: 'Chantier',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
-          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville'] },
+          { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'contact_ind_id'] },
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
@@ -434,6 +434,7 @@ export const TYPES_FICHE = {
         c('adresse', 'Adresse', 'cha_adresse', 'texte', { longueur: 200, largeur: 'plein' }),
         c('code_postal', 'Code postal', 'cha_code_postal', 'texte', { longueur: 10 }),
         c('ville', 'Ville', 'cha_ville', 'texte', { longueur: 100 }),
+        c('contact_ind_id', 'Contact sur place', 'cha_contact_ind_id', 'nombre', { reference: 'individu', aide: 'Le client ou un salarié : repris dans l\'adresse des travaux et de livraison des documents' }),
         c('statut', 'Statut', 'cha_statut', 'liste', { obligatoire: true, defaut: 'OUVERT', options: options(['OUVERT', 'Ouvert'], ['TERMINE', 'Terminé'], ['CLOS', 'Clos']) }),
         c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date', { obligatoire: true }),
         c('date_fin_prevue', 'Fin prévue', 'cha_date_fin_prevue', 'date'),

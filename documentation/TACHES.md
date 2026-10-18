@@ -17,9 +17,10 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
-- [ ] Documents, lots A à E : `modules/document/db/019f`, `019g` et `modules/bibliotheque/db/063` appliqués aux deux bases, fiche
-  `element` et vues d'éléments mises à jour, postes de démonstration RG5, PRORATA, REMISE5, FRAISDOS insérés (18/10/2026) ;
-  redémarrer l'API (précédents relus, AVANCEMENT_NON_NUMEROTE, changement de numéro, détail `poste` des éléments).
+- [ ] Documents, lots A à F : `modules/document/db/019f`, `019g`, `modules/bibliotheque/db/063` et `db/184` appliqués aux
+  deux bases, fiches `element` et `chantier` et vues d'éléments mises à jour, postes de démonstration RG5, PRORATA,
+  REMISE5, FRAISDOS insérés (18/10/2026) ; redémarrer l'API (précédents relus, AVANCEMENT_NON_NUMEROTE, changement de
+  numéro, détail `poste` des éléments, textes des documents, adresse des travaux).
 - [ ] Tiers provisoires : `modules/annuaire/db/071` et `db/183` appliqués aux deux bases (18/10/2026), vue « Tiers
   provisoires à valider » (19) ajoutée ; les vues de tiers existantes (20 à 24) n'ont pas la colonne Provisoire
   (à ajouter par le concepteur de vue). Redémarrer l'API (routes et `SpecialisationAnnuaireBtp`).
@@ -43,8 +44,9 @@
 - [ ] Évolutions d'octobre 2026 ([conception](conception/CONCEPTION-DOCUMENTS-EVOLUTIONS.md)) : faits le 18/10/2026 :
   lot A corrections (Entrée, Préc., plan, bouton de mise en forme), lot B numérotation (facture d'avancement précédente
   numérotée, changement de numéro), lot C postes de pied (groupes toujours présents, type POSTE_PIED en bibliothèque),
-  lot D prix rechargés depuis la bibliothèque, lot E textes d'introduction et de conclusion ; reste le lot F (adresse
-  des travaux).
+  lot D prix rechargés depuis la bibliothèque, lot E textes d'introduction et de conclusion, lot F adresse des
+  travaux / de livraison. Reste : impression (placement des textes et des blocs de coordonnées), à faire avec le module
+  d'impression.
 - [ ] Écran de récupération d'une version précédente d'un document (instantanés `his_instantane`, y compris les clés
   de ventilation des frais annexes).
 - [ ] Impression et export : ignorer les lignes non éditées (tranches F) ; export et impression du rapport de

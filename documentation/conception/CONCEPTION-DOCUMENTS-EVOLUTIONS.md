@@ -92,7 +92,13 @@ type cible. Saisie dans l'entête (section « Textes de l'édition »), modèles
 - Variables figées à la validation ; une dévalidation force leur recalcul.
 - Repris par défaut à la transformation.
 
-## Lot F – adresse des travaux / de livraison
+## Lot F – adresse des travaux / de livraison (réalisé le 18/10/2026)
+
+Réalisation : `AdressesDocument.cs` (serveur) et `structure/adresses.js` (client, tests) ; contact sur place du chantier
+`cha_contact_ind_id` (`db/184`, fiche chantier) ; dépôts = notre société et ses niveaux inférieurs dans l'annuaire ;
+comparaison au client pour les ventes seulement (un comptoir a l'adresse du fournisseur) ; à la validation, l'adresse
+vide d'un document rattaché à un chantier reprend celle du chantier ; contrôle `ADRESSE_LIVRAISON` (commande
+fournisseur sans adresse ni chantier).
 
 - Trois blocs de coordonnées figées : client, payeur, adresse des travaux (ventes) ou de livraison (achats), dans
   `ent_adresse_livraison` (colonne existante du module, même forme que `ent_contact_client`).

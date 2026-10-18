@@ -340,7 +340,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntRangAvancement = d.Document.EntRangAvancement;
         e.EntCpaCode = string.IsNullOrEmpty(d.Document.EntCpaCode) ? null : d.Document.EntCpaCode;
         e.EntModeReglement = string.IsNullOrEmpty(d.Document.EntModeReglement) ? null : d.Document.EntModeReglement;
-        specialisation.CopierEnteteSaisie(e, d.Document);
+        specialisation.CopierEnteteSaisie(e, d.Document, type);
         foreach (var l in d.Lignes)
         {
             l.LigEntId = id;

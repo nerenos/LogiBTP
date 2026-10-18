@@ -60,6 +60,7 @@ export const api = {
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
   // Coordonnées figées d'un document : instantané d'une personne et de son contact dans l'annuaire.
+  adressesLivraison: ({ chantier = null, fournisseur = null } = {}) => appel('GET', `/structure/adresses-livraison?${new URLSearchParams({ ...(chantier ? { chantier } : {}), ...(fournisseur ? { fournisseur } : {}) })}`),
   contactDocument: (perId, indId) => appel('GET', `/structure/contact?per_id=${perId}${indId ? `&ind_id=${indId}` : ''}`),
   postesMarche: (marche) => appel('GET', `/structure/marches/${marche}/postes`),
   // Acomptes : mode de la société, acomptes d'un marché, demande, émission de la facture ou du reçu.
