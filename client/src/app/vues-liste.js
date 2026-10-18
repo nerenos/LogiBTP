@@ -13,7 +13,7 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'],
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
     ],
   },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
@@ -276,10 +276,19 @@ VUES_LISTE.push({
 
 // Thèmes filtrants : même source que Documents, restreinte aux types du thème (devis, factures).
 const documents = VUES_LISTE.find((v) => v.vli_id === 1);
-const vueDocuments = (vli_id, vli_nom, theme) => ({
-  ...structuredClone(documents), vli_id, vli_nom,
-  definition: { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'statut', titre: 'Statut' }] },
-});
+// Situations et factures : n° de situation du marché et pièce d'avancement liée (db/185), après le numéro.
+const COLONNES_AVANCEMENT = [
+  col('numero_situation', 'N° sit.', { ...fixe(64), alignement: 'centre', ...nombre(0), recherche: false }),
+  col('facture', 'Facture / situation', { ...fixe(130) }),
+];
+const vueDocuments = (vli_id, vli_nom, theme) => {
+  const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'statut', titre: 'Statut' }] };
+  if (['situations', 'factures'].includes(theme)) {
+    const i = definition.colonnes.findIndex((c) => c.code === 'numero');
+    definition.colonnes.splice(i + 1, 0, ...structuredClone(COLONNES_AVANCEMENT));
+  }
+  return { ...structuredClone(documents), vli_id, vli_nom, definition };
+};
 VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis'), vueDocuments(6, 'Factures et avoirs', 'factures'));
 // Achats (menu Achats du bandeau) : mêmes colonnes, documents filtrés par les types du thème.
 VUES_LISTE.push(vueDocuments(9, 'Demandes de prix', 'achats_ddp'), vueDocuments(10, 'Commandes fournisseurs', 'achats_commandes'),

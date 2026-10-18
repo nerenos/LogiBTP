@@ -21,6 +21,8 @@
   deux bases, fiches `element` et `chantier` et vues d'éléments mises à jour, postes de démonstration RG5, PRORATA,
   REMISE5, FRAISDOS insérés (18/10/2026) ; redémarrer l'API (précédents relus, AVANCEMENT_NON_NUMEROTE, changement de
   numéro, détail `poste` des éléments, textes des documents, adresse des travaux).
+- [ ] Listes des documents : `db/185` appliqué aux deux bases (18/10/2026) ; redémarrer l'API (colonnes des sources en
+  cache : N° sit. et Facture / situation restent vides sinon).
 - [ ] Tiers provisoires : `modules/annuaire/db/071` et `db/183` appliqués aux deux bases (18/10/2026), vue « Tiers
   provisoires à valider » (19) ajoutée ; les vues de tiers existantes (20 à 24) n'ont pas la colonne Provisoire
   (à ajouter par le concepteur de vue). Redémarrer l'API (routes et `SpecialisationAnnuaireBtp`).

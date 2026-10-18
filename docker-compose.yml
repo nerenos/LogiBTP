@@ -80,6 +80,7 @@ services:
       - ./db/182_alertes_documents.sql:/docker-entrypoint-initdb.d/182_alertes_documents.sql:ro
       - ./db/183_tiers_provisoires.sql:/docker-entrypoint-initdb.d/183_tiers_provisoires.sql:ro
       - ./db/184_adresse_travaux.sql:/docker-entrypoint-initdb.d/184_adresse_travaux.sql:ro
+      - ./db/185_liste_numero_situation.sql:/docker-entrypoint-initdb.d/185_liste_numero_situation.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:
