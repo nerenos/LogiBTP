@@ -3,10 +3,21 @@
 // (sous-ensembles, encodage par la même table caractère → glyphe que la mesure) et les images ; les flux de contenu
 // des pages sont écrits ici en texte (beaucoup plus rapide dans Jint que les opérateurs de pdf-lib) avec des nombres
 // formatés à trois décimales : mêmes entrées = mêmes octets, dans le navigateur comme dans Jint.
-import { PDFDocument, PDFName } from 'pdf-lib';
+import { PDFDocument, PDFName, CustomFontSubsetEmbedder } from 'pdf-lib';
+import { normaliserTrueType, prefixeSousEnsemble } from './truetype.js';
 import { fontkitEdition, cleFace } from './polices.js';
 import { rectanglesQr } from './codes.js';
 import { mmVersPt } from './unites.js';
+
+// Sous-ensembles de police écrits par fontkit (signature « true », sommes de contrôle nulles) : normalisés avant
+// d'être intégrés, pour que tout lecteur les accepte (truetype.js). Installé une fois.
+if (!CustomFontSubsetEmbedder.prototype.serializeFontLogiBTP) {
+  const origine = CustomFontSubsetEmbedder.prototype.serializeFont;
+  CustomFontSubsetEmbedder.prototype.serializeFontLogiBTP = true;
+  CustomFontSubsetEmbedder.prototype.serializeFont = function serializeFont() {
+    return origine.call(this).then((octets) => normaliserTrueType(octets));
+  };
+}
 
 /** Nombre PDF : trois décimales au plus, sans zéro inutile ni « -0 ». */
 function nb(v) {
@@ -58,7 +69,10 @@ export async function produirePdf(resultat, polices, opts = {}) {
     const cle = cleFace(f.famille, f.graisse, f.italique) + (style.tnum ? '|tnum' : '');
     let p = policesPdf.get(cle);
     if (!p) {
-      p = await doc.embedFont(f.octets, { subset: true, features: style.tnum ? { tnum: true } : {} });
+      // Nom PDF du sous-ensemble : préfixe normalisé (six majuscules) + nom PostScript de la face.
+      const ps = (f.police.postscriptName ?? `${f.famille}-${f.graisse}`).replace(/[^A-Za-z0-9-]/g, '');
+      const nom = `${prefixeSousEnsemble(`${ps}${style.tnum ? '-tnum' : ''}`)}+${ps}${style.tnum ? '-Tnum' : ''}`;
+      p = await doc.embedFont(f.octets, { subset: true, customName: nom, features: style.tnum ? { tnum: true } : {} });
       policesPdf.set(cle, p);
     }
     return p;

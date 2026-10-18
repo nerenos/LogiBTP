@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import { polices } from './aide.js';
 import { editer, assembler, produirePdf, mettreEnLignes } from '../src/index.js';
 
@@ -92,5 +92,22 @@ describe('listes et étiquettes', () => {
     const d = { colonnes: [{ cle: 'nom', titre: 'Nom' }, { cle: 'ville', titre: 'Ville', largeur: '40mm' }], lignes: [{ nom: 'Durand', ville: 'Lyon' }] };
     const r = editer(m, d, { polices: p });
     expect(textes(r.pages[0])).toEqual(['Nom', 'Ville', 'Durand', 'Lyon']);
+  });
+});
+
+describe('polices intégrées aux PDF', () => {
+  it('sous-ensembles conformes : signature 0x00010000, sommes de contrôle, nom à préfixe', async () => {
+    const r = editer({ bandes: [{ contenu: { type: 'champ', valeur: '=Gras("Total") & " 1 234,56"' } }] }, {}, { polices: p });
+    const pdf = await produirePdf(r, p, { compresser: false });
+    const doc = await PDFDocument.load(pdf);
+    const polices = [];
+    doc.context.enumerateIndirectObjects().forEach(([, o]) => {
+      const d = o.dict;
+      if (d?.get?.(PDFName.of('Type'))?.toString() === '/FontDescriptor') polices.push(d.get(PDFName.of('FontName')).toString());
+    });
+    expect(polices.length).toBeGreaterThan(0);
+    for (const n of polices) expect(n).toMatch(/^\/[A-Z]{6}\+Inter/);
+    const brut = new TextDecoder('latin1').decode(pdf);
+    expect(brut).not.toMatch(/\/FontFile2[^]*?stream\r?\ntrue/);
   });
 });
