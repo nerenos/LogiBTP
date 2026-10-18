@@ -17,6 +17,8 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
+- [ ] Documents, lots A et B : `modules/document/db/019f` appliqué aux deux bases (18/10/2026) ; redémarrer l'API
+  (précédents relus, règle AVANCEMENT_NON_NUMEROTE, route du changement de numéro).
 - [ ] Tiers provisoires : `modules/annuaire/db/071` et `db/183` appliqués aux deux bases (18/10/2026), vue « Tiers
   provisoires à valider » (19) ajoutée ; les vues de tiers existantes (20 à 24) n'ont pas la colonne Provisoire
   (à ajouter par le concepteur de vue). Redémarrer l'API (routes et `SpecialisationAnnuaireBtp`).
@@ -38,8 +40,8 @@
 ### Documents
 
 - [ ] Évolutions d'octobre 2026 ([conception](conception/CONCEPTION-DOCUMENTS-EVOLUTIONS.md)) : lot A corrections
-  fait le 18/10/2026 (Entrée, Préc., plan, bouton de mise en forme) ; lot B numérotation (facture d'avancement précédente numérotée,
-  changement de numéro), lot C postes de pied (groupes toujours présents, type POSTE_PIED en bibliothèque), lot D
+  fait le 18/10/2026 (Entrée, Préc., plan, bouton de mise en forme) ; lot B numérotation fait le 18/10/2026 (facture
+  d'avancement précédente numérotée, changement de numéro) ; lot C postes de pied (groupes toujours présents, type POSTE_PIED en bibliothèque), lot D
   recharger les prix de la bibliothèque, lot E textes d'introduction et de conclusion, lot F adresse des travaux.
 - [ ] Écran de récupération d'une version précédente d'un document (instantanés `his_instantane`, y compris les clés
   de ventilation des frais annexes).

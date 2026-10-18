@@ -19,7 +19,11 @@ ligne (`executer` supprimé par erreur avec les raccourcis personnalisables) ; r
 4. **Bouton de mise en forme du libellé** : à la sélection d'une cellule de libellé, un bouton à gauche de la cellule
    ouvre la mise en forme (la même que le double-clic ou F2 ; en consultation sur un libellé non modifiable).
 
-## Lot B – numérotation
+## Lot B – numérotation (réalisé le 18/10/2026)
+
+Réalisation : `AVANCEMENT_NON_NUMEROTE` (`SpecialisationBtp.ControlerValidationAsync` : « antérieure » = créée avant,
+identifiant plus petit) ; `DocumentService.ChangerNumero`, `PUT /documents/{id}/numero`, bouton « N°… » de la page
+document (administrateur ; FORCER en numérotation continue) ; unicité vérifiée sur tous les types.
 
 ### Règle : facture d'avancement précédente numérotée
 

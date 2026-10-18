@@ -194,6 +194,17 @@ public sealed class DefinitionType
 /// <summary>Rejet d'un document envoyé : motif.</summary>
 public sealed record DemandeRejet(string Motif);
 
+/// <summary>Changement du numéro d'un document : numéro au format du type, motif (obligatoire en numérotation continue).</summary>
+public sealed record DemandeNumero(string Numero, string? Motif);
+
+/// <summary>Réponse au changement de numéro : document relu, numéro retenu, avertissement si le numéro demandé était pris.</summary>
+public sealed class ReponseNumero<TComplet>
+{
+    public TComplet Document { get; set; } = default!;
+    public string Numero { get; set; } = "";
+    public string? Avertissement { get; set; }
+}
+
 /// <summary>Condition et mode de règlement d'un tiers.</summary>
 public sealed record ReglementTiers(string? Condition, string? Mode);
 

@@ -107,6 +107,8 @@ public static class Extensions
             s.Envoyer(id, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/valider-tiers", (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.ValiderTiers(id, Utilisateur.Depuis(http), ct));
+        api.MapPut("/documents/{id:long}/numero", (long id, DemandeNumero d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+            s.ChangerNumero(id, d, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/devalider", (long id, DemandeRejet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
             s.Devalider(id, d.Motif, Utilisateur.Depuis(http), ct));
         api.MapPost("/documents/{id:long}/rejeter", (long id, DemandeRejet d, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

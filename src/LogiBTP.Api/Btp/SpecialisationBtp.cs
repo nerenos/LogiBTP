@@ -135,7 +135,34 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
-        return ControlerMarchePublic(db, document, type, erreurs, ct);
+        return ControlerAvancementNumerote(db, document, type, erreurs, ct);
+    }
+
+    /// <summary>
+    /// Facture d'avancement d'un marché : refusée tant qu'une facture d'avancement créée avant elle dans le même marché
+    /// n'a pas son numéro comptable, quel que soit son statut (chronologie sans trou) ; les factures à 0 sont ignorées.
+    /// Pas de forçage : l'utilisateur numérote d'abord l'autre facture (changement de numéro).
+    /// </summary>
+    private static async Task ControlerAvancementNumerote(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        var d = document.Document;
+        if (type.TydAvancement == "F" && d.EntMarcheId is int marche)
+        {
+            var groupe = d.EntGroupeId ?? -d.EntId;
+            var sansNumero = await (from x in db.Documents.AsNoTracking()
+                                    join t in db.TypesDocument.AsNoTracking() on x.EntTydId equals t.TydId
+                                    where x.EntMarcheId == marche && t.TydAvancement == "F" && x.EntId < d.EntId && x.EntNumero == null
+                                        && x.EntTotalHt != 0 && (x.EntGroupeId == null || x.EntGroupeId != groupe)
+                                    orderby x.EntId
+                                    select new { x.EntId, x.EntDate, x.EntObjet }).ToListAsync(ct);
+            foreach (var x in sansNumero)
+            {
+                erreurs.Add(new MessageCalcul(null, "AVANCEMENT_NON_NUMEROTE",
+                    $"La facture d'avancement du {x.EntDate:dd/MM/yyyy}{(string.IsNullOrEmpty(x.EntObjet) ? "" : $" « {x.EntObjet} »")} (document {x.EntId}), créée avant celle-ci dans le marché, n'a pas de numéro : numérotez-la d'abord"));
+            }
+        }
+        await ControlerMarchePublic(db, document, type, erreurs, ct);
     }
 
     /// <summary>Commande d'un marché public : référence externe (engagement) exigée si la règle REFERENCE_MARCHE_PUBLIC l'active (R12).</summary>

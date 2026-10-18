@@ -49,6 +49,7 @@ const GABARIT = `
       <button data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
       <button data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
       <button data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
+      <button data-action="numero" title="Changer le numéro du document (brouillon ; un document validé se dévalide d'abord) : tous les indices sont renommés, le compteur repart du premier numéro libre" hidden>N°…</button>
       <button data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
@@ -175,6 +176,7 @@ export class PageDocument extends PageBase {
           await this.app.naviguer(`/document/${nouveau.document.ent_id}`);
         } catch (e) { this.app.erreur(e); }
       },
+      numero: () => this.changerNumero(),
       rejeter: () => {
         const motif = globalThis.prompt?.('Motif du rejet (plateforme de facturation, client, fournisseur) :');
         if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
@@ -487,6 +489,9 @@ export class PageDocument extends PageBase {
     this.$('[data-action="rejeter"]').hidden = this.$('[data-action="valider-tiers"]').hidden;
     const droits = ed.definition.droits ?? [];
     this.$('[data-action="devalider"]').hidden = !enLigne || !doc.ent_verrouille || !enCours || !(droits.includes('DEVALIDER') || droits.includes('FORCER'));
+    // Changement de numéro : droit de déverrouillage (administrateur), et FORCER en numérotation continue (contrôlés par le serveur).
+    this.$('[data-action="numero"]').hidden = !enLigne || !modifiable || !this.app.estAdmin() || Boolean(this.importEnCours)
+      || (ed.definition.type?.tyd_numerotation_continue && !droits.includes('FORCER'));
     this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
@@ -665,6 +670,30 @@ export class PageDocument extends PageBase {
   }
 
   /** Étape du cycle de vie (envoi, validation du tiers, rejet) puis rechargement du document. */
+  /**
+   * Nouveau numéro au format du type ; numérotation continue : motif obligatoire. Un numéro déjà pris est remplacé par
+   * le prochain libre (avertissement du serveur).
+   */
+  async changerNumero() {
+    if (this.modifiee) { this.app.message('Enregistrez le document avant de changer son numéro', 'avertissement'); return; }
+    const doc = this.editeur.saisie.document;
+    const type = this.editeur.definition.type ?? {};
+    const exemple = `${type.tyd_prefixe_numero ?? ''}${String(doc.ent_date ?? '').slice(0, 4) || new Date().getFullYear()}-00001`;
+    const numero = globalThis.prompt?.(`Nouveau numéro (format ${exemple}) :`, doc.ent_numero ?? exemple);
+    if (!numero?.trim() || numero.trim() === doc.ent_numero) return;
+    let motif = null;
+    if (type.tyd_numerotation_continue) {
+      motif = globalThis.prompt?.('Numérotation continue : motif du changement (tracé dans l\'historique) :');
+      if (!motif?.trim()) return;
+    }
+    try {
+      const rep = await api.changerNumero(doc.ent_id, numero.trim(), motif?.trim() ?? null);
+      await this.chargerDocument(doc.ent_id);
+      this.app.publier('enregistre', { ids: [doc.ent_id] });
+      this.app.message(rep.avertissement ?? `Numéro ${rep.numero} attribué`, rep.avertissement ? 'avertissement' : 'succes');
+    } catch (e) { this.app.erreur(e); }
+  }
+
   async etapeCycle(appel, message) {
     try {
       const rep = await appel(this.editeur.saisie.document.ent_id);

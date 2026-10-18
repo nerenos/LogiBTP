@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -69,17 +70,101 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await db.StatutsDocument.AsNoTracking().FirstOrDefaultAsync(s => s.StdTydId == tydId && s.StdCode == code, ct)
         ?? throw ExceptionMetier.Introuvable($"Statut {code}");
 
-    /// <summary>Numéro légal sans trou : incrément du compteur dans la transaction (pas de SEQUENCE).</summary>
+    /// <summary>Numéro d'un document : préfixe du type, exercice, rang sur 5 chiffres (DV2026-00012).</summary>
+    public static string FormaterNumero(TypeDocument type, int exercice, int rang) => $"{type.TydPrefixeNumero}{exercice}-{rang:00000}";
+
+    /// <summary>Exercice et rang d'un numéro au format du type, null s'il ne le suit pas.</summary>
+    public static (int Exercice, int Rang)? LireNumero(TypeDocument type, string? numero)
+    {
+        if (numero is null) return null;
+        var m = Regex.Match(numero.Trim(), $@"^{Regex.Escape(type.TydPrefixeNumero ?? "")}(\d{{4}})-(\d{{1,9}})$");
+        if (!m.Success) return null;
+        var rang = int.Parse(m.Groups[2].Value);
+        return rang > 0 ? (int.Parse(m.Groups[1].Value), rang) : null;
+    }
+
+    /// <summary>Numéro déjà porté par un document (tous types), hors des documents exclus (les indices renommés).</summary>
+    private Task<bool> NumeroPris(string numero, IReadOnlyCollection<long> exclus, CancellationToken ct) =>
+        db.Documents.AnyAsync(d => d.EntNumero == numero && !exclus.Contains(d.EntId), ct);
+
+    /// <summary>
+    /// Numéro légal : rang suivant du compteur (incrément dans la transaction, pas de SEQUENCE) ; un rang déjà pris
+    /// (numéro changé à la main) est sauté. Le compteur a pu être replacé sur un trou (<see cref="RecalerCompteur"/>).
+    /// </summary>
     protected internal async Task<string> AttribuerNumero(TypeDocument type, DateOnly date, CancellationToken ct)
     {
-        var n = await db.Database.SqlQuery<int>($"""
-            INSERT INTO compteur_numero (cnu_tyd_id, cnu_exercice, cnu_dernier_numero)
-            VALUES ({type.TydId}, {date.Year}, 1)
-            ON CONFLICT (cnu_tyd_id, cnu_exercice)
-            DO UPDATE SET cnu_dernier_numero = compteur_numero.cnu_dernier_numero + 1
-            RETURNING cnu_dernier_numero AS "Value"
-            """).ToListAsync(ct);
-        return $"{type.TydPrefixeNumero}{date.Year}-{n[0]:00000}";
+        while (true)
+        {
+            var n = await db.Database.SqlQuery<int>($"""
+                INSERT INTO compteur_numero (cnu_tyd_id, cnu_exercice, cnu_dernier_numero)
+                VALUES ({type.TydId}, {date.Year}, 1)
+                ON CONFLICT (cnu_tyd_id, cnu_exercice)
+                DO UPDATE SET cnu_dernier_numero = compteur_numero.cnu_dernier_numero + 1
+                RETURNING cnu_dernier_numero AS "Value"
+                """).ToListAsync(ct);
+            var numero = FormaterNumero(type, date.Year, n[0]);
+            if (!await NumeroPris(numero, [], ct)) return numero;
+        }
+    }
+
+    /// <summary>Compteur d'un exercice replacé avant le premier rang libre (les trous sont comblés : il peut redescendre).</summary>
+    private async Task RecalerCompteur(TypeDocument type, int exercice, CancellationToken ct)
+    {
+        var debut = $"{type.TydPrefixeNumero}{exercice}-";
+        var pris = (await db.Documents.Where(d => d.EntNumero != null && d.EntNumero.StartsWith(debut)).Select(d => d.EntNumero).ToListAsync(ct))
+            .Select(n => LireNumero(type, n)).Where(x => x is not null && x.Value.Exercice == exercice).Select(x => x!.Value.Rang).ToHashSet();
+        var libre = 1;
+        while (pris.Contains(libre)) libre++;
+        await db.Database.ExecuteSqlAsync($"""
+            INSERT INTO compteur_numero (cnu_tyd_id, cnu_exercice, cnu_dernier_numero) VALUES ({type.TydId}, {exercice}, {libre - 1})
+            ON CONFLICT (cnu_tyd_id, cnu_exercice) DO UPDATE SET cnu_dernier_numero = {libre - 1}
+            """, ct);
+    }
+
+    /// <summary>
+    /// Changement du numéro d'un document modifiable (brouillon ; un document validé se dévalide d'abord) : droit de
+    /// déverrouillage, et FORCER avec motif pour une numérotation continue ; refusé si une version est transférée en
+    /// comptabilité. Le numéro suit le format du type ; s'il est pris, le prochain rang libre est retenu (avertissement).
+    /// Tous les indices sont renommés (historique NUMERO : ancien numéro et motif) ; les compteurs des exercices
+    /// concernés sont replacés sur le premier rang libre.
+    /// </summary>
+    public async Task<ReponseNumero<TComplet>> ChangerNumero(long id, DemandeNumero demande, Utilisateur u, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var avant = await persistance.Charger(id, ct);
+        var doc = avant.Document;
+        var type = await Type(doc.EntTydId, ct);
+        if (!specialisation.PeutDeverrouiller(u)) throw ExceptionMetier.AccesRefuse("DEVERROUILLER");
+        var motif = demande.Motif?.Trim();
+        if (type.TydNumerotationContinue)
+        {
+            await VerifierDroit(u, type.TydId, "FORCER", ct);
+            if (string.IsNullOrEmpty(motif)) throw ExceptionMetier.Invalide("NUMERO_MOTIF", "Numérotation continue : motif du changement de numéro obligatoire");
+        }
+        await VerifierModifiable(doc, ct);
+        var groupe = await db.Documents.Where(d => doc.EntGroupeId == null ? d.EntId == id : d.EntGroupeId == doc.EntGroupeId).ToListAsync(ct);
+        if (groupe.Any(d => d.EntEtatCompta == "T"))
+        {
+            throw ExceptionMetier.Conflit("NUMERO_TRANSFERE", "Pièce transférée en comptabilité : son numéro ne peut plus changer");
+        }
+        var lu = LireNumero(type, demande.Numero)
+            ?? throw ExceptionMetier.Invalide("NUMERO_FORMAT", $"Numéro attendu au format {FormaterNumero(type, doc.EntDate.Year, 1)} (préfixe, exercice, rang)");
+        var (exercice, rang) = lu;
+        var ids = groupe.Select(d => d.EntId).ToList();
+        while (await NumeroPris(FormaterNumero(type, exercice, rang), ids, ct)) rang++;
+        var numero = FormaterNumero(type, exercice, rang);
+        var avertissement = rang == lu.Rang ? null : $"Le numéro {FormaterNumero(type, exercice, lu.Rang)} est déjà pris : {numero} retenu";
+        var ancien = doc.EntNumero;
+        if (numero == ancien) return new ReponseNumero<TComplet> { Document = avant, Numero = numero, Avertissement = avertissement };
+
+        var trace = $"{ancien ?? "sans numéro"} → {numero}{(string.IsNullOrEmpty(motif) ? "" : $" : {motif}")}";
+        trace = trace[..Math.Min(300, trace.Length)];
+        foreach (var d in groupe) await Historiser(d.EntId == id ? avant : await persistance.Charger(d.EntId, ct), "NUMERO", u, ct, trace);
+        await db.Documents.Where(d => ids.Contains(d.EntId)).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntNumero, numero), ct);
+        if (LireNumero(type, ancien) is { } a && a.Exercice != exercice) await RecalerCompteur(type, a.Exercice, ct);
+        await RecalerCompteur(type, exercice, ct);
+        await tx.CommitAsync(ct);
+        return new ReponseNumero<TComplet> { Document = await persistance.Charger(id, ct), Numero = numero, Avertissement = avertissement };
     }
 
     private async Task Historiser(TComplet avant, string action, Utilisateur u, CancellationToken ct, string? motif = null)
