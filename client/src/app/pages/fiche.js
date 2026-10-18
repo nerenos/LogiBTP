@@ -20,15 +20,18 @@ export class PageFiche extends PageBase {
     if (!Classe) throw new Error(`Type de fiche inconnu : ${type}`);
     this.icone = ICONES[type] ?? '🗂';
     this.titre = nouveau ? `Nouvelle fiche ${type}` : `Fiche ${type} ${this.params.id}`;
-    this.conteneur.innerHTML = `<div class="page-fiche">${nouveau || !app.enLigne ? '' : '<div class="page-fiche-edition"><button type="button" data-action="imprimer-fiche" title="Aperçu et impression de la fiche (modèle d’édition)">🖨 Imprimer</button></div>'}<div class="page-fiche-corps"></div></div>`;
-    this.conteneur.querySelector('[data-action="imprimer-fiche"]')?.addEventListener('click', () =>
-      app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.params.id}`)}`, { nouvelleFenetre: true }));
+    this.conteneur.innerHTML = '<div class="page-fiche"><div class="page-fiche-corps"></div></div>';
     const s = await app.services();
     this.fiche = new Classe({
       conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
       id: nouveau ? null : this.params.id, mode: nouveau ? 'creation' : 'consultation',
       message: (t, n) => app.message(t, n),
       peutParametrer: app.estAdmin(),
+      // Impression de la fiche (module Édition) avec les autres boutons de la fiche.
+      actions: [{
+        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la fiche (modèle d’édition)', visible: app.enLigne,
+        action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
+      }],
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.

@@ -134,7 +134,8 @@ public static class Structure
         g.MapPut("/marches/{id:int}/postes", (int id, List<PosteMarche> postes, LogiBtpContext db, CancellationToken ct) => PostesMarche.Enregistrer(db, id, postes, ct));
         // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,
         // situé (dernière situation de référence), facturé (factures et avoirs d'avancement non annulés) et reste ;
-        // situations (références), pièces d'avancement (annulées comprises, marquées), autres documents, totaux.
+        // situations (références), pièces d'avancement (annulées comprises, marquées), factures des sous-traitants en paiement
+        // direct (facture du marché liée), totaux.
         g.MapGet("/marches/{id:int}/gestion", async (int id, LogiBtpContext db, CancellationToken ct) =>
             Results.Content(await db.Database.SqlQueryRaw<string>(SqlGestionMarche, new NpgsqlParameter("id", id)).FirstAsync(ct), "application/json"));
         // Commandes du marché validées pas encore reprises dans un document (avenant à charger dans un brouillon, Q18).
@@ -231,7 +232,7 @@ public static class Structure
     /// </summary>
     private const string SqlGestionMarche = """
         WITH cmd AS (
-            SELECT x.mdo_ent_id AS ent_id, x.mdo_role, x.mdo_rang, c.ent_numero, c.ent_date, c.ent_objet, c.ent_total_ht
+            SELECT x.mdo_ent_id AS ent_id, x.mdo_role, x.mdo_rang, c.ent_numero, c.ent_date, c.ent_objet, c.ent_total_ht, c.ent_total_ttc
             FROM marche_document x JOIN document c ON c.ent_id = x.mdo_ent_id
             WHERE x.mdo_mar_id = @id AND c.ent_verrouille),
         lignes AS (SELECT l.lig_ent_id AS cmd_id, l.lig_id FROM document_ligne l WHERE l.lig_ent_id IN (SELECT ent_id FROM cmd)),
@@ -256,13 +257,27 @@ public static class Structure
             SELECT li.cmd_id, sum(l.lig_avt_montant_cumul) AS mt
             FROM document_ligne l JOIN lignes li ON li.lig_id = l.lig_avt_source_lig_id
             WHERE l.lig_ent_id = (SELECT ent_id FROM sit)
-            GROUP BY li.cmd_id)
+            GROUP BY li.cmd_id),
+        -- Sous-traitants en paiement direct : tiers des postes PAIEMENT_DIRECT du marché, intervenants du marché ou de
+        -- son chantier marqués « paiement direct ».
+        st AS (
+            SELECT mpo_per_id AS per_id FROM marche_poste WHERE mpo_mar_id = @id AND mpo_type = 'PAIEMENT_DIRECT' AND mpo_per_id IS NOT NULL
+            UNION
+            SELECT i.itv_per_id FROM intervenant i
+            WHERE i.itv_paiement_direct AND i.itv_per_id IS NOT NULL
+              AND (i.itv_mar_id = @id OR i.itv_cha_id = (SELECT mar_cha_id FROM marche WHERE mar_id = @id))),
+        -- Lignes de paiement direct des factures du marché (postes du marché, par sous-traitant).
+        pd AS (
+            SELECT d.ent_id, d.ent_numero, d.ent_date, d.std_code, p.mpo_per_id AS per_id, l.lig_montant_ht AS mt
+            FROM doc d JOIN document_ligne l ON l.lig_ent_id = d.ent_id
+            JOIN marche_poste p ON p.mpo_id::text = l.lig_proprietes->>'poste_marche' AND p.mpo_type = 'PAIEMENT_DIRECT'
+            WHERE d.ent_avt_presentation = 'P' AND d.std_code <> 'ANNULE' AND coalesce(l.lig_montant_ht, 0) <> 0)
         SELECT json_build_object(
           'montant_ht', (SELECT mar_montant_ht FROM marche WHERE mar_id = @id),
           'facture_ht', (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_marche_id = @id),
           'derniere_situation', (SELECT ent_id FROM sit),
           'commandes', (SELECT coalesce(json_agg(json_build_object('ent_id', c.ent_id, 'role', c.mdo_role, 'rang', c.mdo_rang,
-                'numero', c.ent_numero, 'date', c.ent_date, 'objet', c.ent_objet, 'prevu_ht', c.ent_total_ht, 'travaux_ht', w.mt,
+                'numero', c.ent_numero, 'date', c.ent_date, 'objet', c.ent_objet, 'prevu_ht', c.ent_total_ht, 'prevu_ttc', c.ent_total_ttc, 'travaux_ht', w.mt,
                 'situe_ht', s.mt, 'facture_ht', coalesce(f.mt, 0)) ORDER BY c.mdo_rang), '[]')
               FROM cmd c LEFT JOIN travaux w ON w.cmd_id = c.ent_id LEFT JOIN facture f ON f.cmd_id = c.ent_id LEFT JOIN situe s ON s.cmd_id = c.ent_id),
           'situations', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'numero', d.ent_numero, 'indice', d.ent_indice,
@@ -277,9 +292,17 @@ public static class Structure
                 'annule', d.std_code = 'ANNULE', 'nature', d.ent_nature_avoir, 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
                 'net_a_payer', d.ent_net_a_payer) ORDER BY d.ent_rang_avancement NULLS LAST, d.ent_id), '[]')
               FROM doc d WHERE d.ent_avt_presentation = 'P'),
-          'autres', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'numero', d.ent_numero,
-                'date', d.ent_date, 'statut', d.std_libelle, 'total_ht', d.ent_total_ht) ORDER BY d.ent_id), '[]')
-              FROM doc d WHERE d.ent_avt_presentation IS NULL AND d.ent_id NOT IN (SELECT ent_id FROM cmd))
+          -- Factures et avoirs des sous-traitants en paiement direct ; facture liée : facture du marché portant le
+          -- paiement direct du sous-traitant (montant égal au TTC de la pièce d'abord, puis la première à sa date ou après).
+          'sous_traitants', (SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'type', d.tyd_libelle, 'numero', d.ent_numero,
+                'reference', d.ent_reference_externe, 'tiers', per.per_raison_sociale, 'date', d.ent_date, 'statut', d.std_libelle,
+                'valide', d.ent_verrouille, 'annule', d.std_code = 'ANNULE', 'total_ht', d.ent_total_ht, 'total_ttc', d.ent_total_ttc,
+                'liee', (SELECT json_build_object('ent_id', x.ent_id, 'numero', x.ent_numero) FROM pd x
+                         WHERE x.per_id = d.ent_tiers_id
+                         ORDER BY abs(x.mt) = abs(d.ent_total_ttc) DESC, x.ent_date >= d.ent_date DESC, x.ent_date, x.ent_id LIMIT 1))
+                ORDER BY d.ent_date, d.ent_id), '[]')
+              FROM doc d LEFT JOIN personne per ON per.per_id = d.ent_tiers_id
+              WHERE d.tyd_code IN ('A_FACTURE', 'A_AVOIR', 'A_FACTURE_AVT') AND d.ent_tiers_id IN (SELECT per_id FROM st))
         ) AS "Value"
         """;
 

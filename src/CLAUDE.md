@@ -38,6 +38,7 @@
 - `GET /api/comptes-comptables` ([{ code, libelle, actif }]).
 - `GET /api/structure/referentiels` (affaires, projets, chantiers, marchés, commandes `V_COMMANDE`, fonctions).
 - `PUT /api/structure/documents/{id}/rattachement` (même validé ; marché → chantier → affaire et projet complétés).
+- `GET /api/structure/marches/{id}/gestion` : commandes (HT net, TTC net, travaux, situé, facturé), situations, pièces d'avancement, `sous_traitants` (factures et avoirs fournisseurs des sous-traitants en paiement direct : postes PAIEMENT_DIRECT du marché, intervenants du marché ou du chantier ; `liee` = facture du marché portant leur paiement direct, montant égal au TTC d'abord).
 - `GET|PUT /api/structure/marches/{id}/postes` (postes de pied du marché) ; acomptes : `GET|PUT /api/structure/acomptes/mode`, `GET|POST /api/structure/marches/{id}/acomptes`, `POST /api/structure/acomptes/{id}/emettre`.
 - `GET /api/structure/intervenants/{type}/{id}` ; `POST /api/structure/documents` (documents du périmètre + liens `document_lien`, groupe d'indices `groupe_id`, `reference`) ; `GET /api/structure/documents/{id}/descendants` (le document et ses enfants par `document_lien`, à toute profondeur : arborescence de la GED).
 - Le reste (`/documents`, `/fiches`, `/listes`, `/ged`, `/bibliotheque`, `/annuaire`…) vient des `MapModule…()` des modules.

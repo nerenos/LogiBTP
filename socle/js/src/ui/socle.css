@@ -86,6 +86,8 @@ button {
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: 0.45; cursor: default; }
 button.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Bouton en icône seule : le libellé est dans la bulle (title) et aria-label. */
+button.bouton-icone { min-width: 2.1em; padding-left: 0.35em; padding-right: 0.35em; text-align: center; }
 input, select { background: var(--surface); border: 1px solid var(--bord); border-radius: 3px; padding: 0.15rem 0.3rem; }
 code { font-size: 0.92em; background: var(--titre-fond); padding: 0 0.25em; border-radius: 3px; }
 

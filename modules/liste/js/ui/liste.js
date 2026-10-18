@@ -22,14 +22,15 @@ const DUREE_MARQUE = 4000;
  * formats (FormatsCellule ou dérivée), cleVue (clé localStorage des préférences d'affichage),
  * peutGererThemes (création et modification des thèmes, profil ADMIN), creation(vue) → { libelle, action } ou null
  * (bouton de création d'un élément, fourni par l'application selon la vue), actionsElements(vue) → { consulter(ligne, e),
- * copier(ligne), supprimer(lignes), autres: [{ code, libelle, titre, max (1 par défaut), actif(lignes), action(lignes, e) }] } ou null (boutons sur la sélection : thème d'un seul type de fiche ou de documents), filtresVue(vue) → { colonne: [valeurs] | null }
+ * copier(ligne), supprimer(lignes), autres: [{ code, libelle, icone, titre, max (1 par défaut), actif(lignes), action(lignes, e) }] } ou null (boutons sur la sélection : thème d'un seul type de fiche ou de documents),
+ * actionsVue(vue) → [{ libelle, icone, titre, action(e) }] (boutons sur la vue entière : imprimer…), filtresVue(vue) → { colonne: [valeurs] | null }
  * (filtres externes propres à la vue, posés avant son premier chargement ; null retire le filtre de la colonne).
  *
  * Thèmes : les vues sont regroupées par thème (Devis, Factures, Salariés, Ressources…). Un thème déclare les
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue } = {}) {
     this.racine = racine;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
     // plusieurs lignes sélectionnées : tableau des valeurs, type de la ligne de plus haut rang.
@@ -49,6 +50,7 @@ export class ListeDonnees {
     this.peutGererThemes = peutGererThemes;
     this.creation = creation;
     this.fabriqueActions = actionsElements ?? null;
+    this.fabriqueActionsVue = actionsVue ?? null;
     this.actionsElements = null;
     this.themes = [];
     this.theme = null;             // code du thème affiché, null = toutes les vues
@@ -104,18 +106,19 @@ export class ListeDonnees {
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage, enregistrer comme nouvelle vue)">✎</button>
         <span class="liste-elements">
           <button type="button" data-action="creer" class="principal" hidden></button>
-          <button type="button" data-element="consulter" title="Consulter l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" hidden>👁 Consulter</button>
-          <button type="button" data-element="copier" title="Créer un nouvel élément à partir de l'élément sélectionné" hidden>⧉ Copier</button>
-          <button type="button" data-element="supprimer" title="Supprimer les éléments sélectionnés" hidden>🗑 Supprimer</button>
+          <button type="button" data-element="consulter" class="bouton-icone" title="Consulter — l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" aria-label="Consulter" hidden>👁</button>
+          <button type="button" data-element="copier" class="bouton-icone" title="Copier — créer un nouvel élément à partir de l'élément sélectionné" aria-label="Copier" hidden>⧉</button>
+          <button type="button" data-element="supprimer" class="bouton-icone" title="Supprimer — les éléments sélectionnés" aria-label="Supprimer" hidden>🗑</button>
           <span class="liste-elements-autres"></span>
         </span>
         <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
         <span class="liste-filtres-vue" hidden></span>
         <span class="liste-compteur"></span>
-        <button type="button" data-action="effacer" title="Effacer les filtres et le tri des colonnes" hidden>⨯ Filtres</button>
+        <button type="button" data-action="effacer" class="bouton-icone" title="Effacer les filtres et le tri des colonnes" aria-label="Effacer les filtres" hidden>⨯</button>
         <button type="button" data-action="lignes" aria-pressed="false"></button>
         <button type="button" data-action="tout" aria-pressed="false">⇊</button>
         <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
+        <span class="liste-actions-hote"></span>
         <button type="button" data-action="saisie" aria-pressed="false" hidden
           title="Saisie dans la liste : clic sur une cellule modifiable, Entrée ligne suivante, Tab colonne suivante, Échap annule">✎ Saisie</button>
       </div>
@@ -340,12 +343,19 @@ export class ListeDonnees {
     this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
     // Actions supplémentaires de l'application (transformer…) : un bouton chacune.
     const autres = this.racine.querySelector('.liste-elements-autres');
-    autres.innerHTML = (this.actionsElements?.autres ?? []).map((x, i) => `<button type="button" data-autre="${i}" title="${echapper(x.titre ?? '')}">${echapper(x.libelle)}</button>`).join('');
+    autres.innerHTML = (this.actionsElements?.autres ?? []).map((x, i) => `<button type="button" data-autre="${i}"${x.icone ? ' class="bouton-icone"' : ''} title="${echapper(x.icone ? [x.libelle, x.titre].filter(Boolean).join(' — ') : x.titre ?? '')}" aria-label="${echapper(x.libelle)}">${echapper(x.icone ?? x.libelle)}</button>`).join('');
     autres.querySelectorAll('[data-autre]').forEach((b) => b.addEventListener('click', (e) => {
       const x = this.actionsElements?.autres?.[Number(b.dataset.autre)];
       if (x) Promise.resolve(x.action(this.lignesSelectionnees(), e)).catch((err) => this.#erreur(err));
     }));
     this.#majActionsElements();
+    // Actions de l'application sur la vue entière (imprimer…), indépendantes de la sélection.
+    const hote = this.racine.querySelector('.liste-actions-hote');
+    const actionsVue = this.vue ? this.fabriqueActionsVue?.(this.vue) ?? [] : [];
+    hote.innerHTML = actionsVue.map((x, i) => `<button type="button" data-vue-action="${i}"${x.icone ? ' class="bouton-icone"' : ''} title="${echapper([x.libelle, x.titre].filter(Boolean).join(' — '))}" aria-label="${echapper(x.libelle)}">${echapper(x.icone ?? x.libelle)}</button>`).join('');
+    hote.querySelectorAll('[data-vue-action]').forEach((b) => b.addEventListener('click', (e) => {
+      Promise.resolve(actionsVue[Number(b.dataset.vueAction)].action(e)).catch((err) => this.#erreur(err));
+    }));
     // Rappel des filtres fixes de la vue (appliqués par la base).
     const fv = this.racine.querySelector('.liste-filtres-vue');
     const libelles = this.definition.filtres.map((f) => libelleFiltreVue(f, this.modele.parCode.get(f.colonne)?.titre?.replace(/\s*\n\s*/g, ' ') ?? f.colonne));

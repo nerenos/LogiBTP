@@ -37,8 +37,11 @@ export function definirConfidentielSession(actif) {
  * Options : conteneur, fournisseur, type, id, mode, message, ged (vue simplifiée de la GED), peutParametrer,
  * surEnregistre(fiche, { cree }), surFerme().
  */
+/** Bulle d'un bouton : libellé (bouton en icône seule) puis explication. */
+const bulle = (b) => (b.icone ? [b.libelle, b.titre].filter(Boolean).join(' — ') : (b.titre ?? ''));
+
 export class FicheBase {
-  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, surEnregistre, surFerme, surSupprime }) {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime }) {
     this.conteneur = conteneur;
     this.fournisseur = fournisseur;
     this.type = type;
@@ -47,6 +50,7 @@ export class FicheBase {
     this.message = message ?? (() => {});
     this.ged = ged;
     this.peutParametrer = peutParametrer;
+    this.actionsHote = actions;
     this.surEnregistre = surEnregistre;
     this.surFerme = surFerme;
     this.surSupprime = surSupprime;
@@ -239,20 +243,22 @@ export class FicheBase {
     const saisie = enSaisie(this.mode);
     const masques = this.fiche.masques.length > 0;
     const boutons = [
-      { libelle: '✎ Modifier', titre: 'Passer en modification (verrouille la fiche)', action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
+      { icone: '✎', libelle: 'Modifier', titre: 'Passer en modification (verrouille la fiche)', action: () => this.modifier(), visible: !saisie && d.modifier && this.id !== null, principal: true },
       { libelle: 'Enregistrer', titre: 'Enregistrer (Ctrl+S)', action: () => this.enregistrer(), visible: saisie, principal: true },
       { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
-      { libelle: '⧉ Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
-      { libelle: '🗑 Supprimer', titre: 'Supprimer cette fiche (refusé si elle est utilisée ailleurs)', action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
-      { libelle: '👁 Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
+      { icone: '⧉', libelle: 'Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
+      { icone: '🗑', libelle: 'Supprimer', titre: 'Supprimer cette fiche (refusé si elle est utilisée ailleurs)', action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
+      { icone: '👁', libelle: 'Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
       ...this.actionsSupplementaires(),
-      { libelle: '⚙', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
-      { libelle: '✕', titre: 'Fermer (Échap)', action: () => this.fermer(), visible: true },
+      // Actions de l'application hôte (imprimer…), hors saisie et sur une fiche enregistrée.
+      ...this.actionsHote.map((a) => ({ ...a, visible: !saisie && this.id !== null && a.visible !== false })),
+      { icone: '⚙', libelle: 'Paramétrer', titre: 'Paramétrer la fiche : champs obligatoires et champs supplémentaires', action: () => this.parametrer(), visible: this.peutParametrer },
+      { icone: '✕', libelle: 'Fermer', titre: 'Fermer (Échap)', action: () => this.fermer(), visible: true },
     ].filter((b) => b.visible !== false);
     const zone = this.conteneur.querySelector('.fiche-actions');
     zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)">
       <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Visible (session)</label>` : ''}
-      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}" title="${echapper(b.titre ?? '')}">${echapper(b.libelle)}</button>`).join('')}`;
+      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}">${echapper(b.icone ?? b.libelle)}</button>`).join('')}`;
     zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
     zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
       definirConfidentielSession(e.target.checked);

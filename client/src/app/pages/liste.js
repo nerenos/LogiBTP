@@ -63,7 +63,7 @@ function actionsDepuisVue(vue, app, services, themes = []) {
       supprimer: app.estAdmin() ? (l) => api.supprimerDocument(l._id) : null,
       // Transformation d'un document validé (même fenêtre de choix que la page document) ; le document créé s'ouvre.
       autres: [{
-        code: 'transformer', libelle: '⇢ Transformer', titre: 'Transformer le document validé (commande, livraison, situation, facture…)',
+        code: 'transformer', icone: '⇢', libelle: 'Transformer', titre: 'Transformer le document validé (commande, livraison, situation, facture…)',
         actif: ([l]) => (l.verrouille ?? (l.statut ? l.statut !== 'Brouillon' : true)) !== false,
         action: async ([l], e) => {
           const cree = await transformerDocument({ entId: l._id, typeCode: l._type, numero: l.numero, objet: l.objet, message: (t, n) => app.message(t, n) });
@@ -95,7 +95,7 @@ export class PageListe extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div>${app.enLigne ? '<div class="page-liste-edition"><button type="button" data-action="imprimer-liste" title="Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes">🖨 Imprimer</button></div>' : ''}<div class="page-liste-zone"></div>
+    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div>
       <div class="liste-demo" hidden>
         <button type="button" data-action="simuler" title="Démo hors ligne : modifie, supprime et crée des matériels comme le ferait un autre poste">Simuler une modification d'un autre utilisateur</button>
         <span class="aide">Le contrôle des lignes chargées s'exécute toutes les 30 s, au retour sur la fenêtre et avec ⟳. Double-clic : ouvrir · Ctrl+double-clic : nouvelle fenêtre.</span>
@@ -105,12 +105,6 @@ export class PageListe extends PageBase {
     const codes = Object.fromEntries(NIVEAUX.filter((n) => this.requete[n.type]).map((n) => [n.type, this.requete[n.type]]));
     const refs = await s.structure?.referentiels().catch(() => null) ?? null;
     let premier = true;
-    this.conteneur.querySelector('[data-action="imprimer-liste"]')?.addEventListener('click', () => {
-      const vue = this.liste?.vue?.vli_id;
-      if (!vue) { app.message('Choisissez d’abord une vue enregistrée', 'avertissement'); return; }
-      const recherche = this.liste?.recherche ? `&recherche=${encodeURIComponent(this.liste.recherche)}` : '';
-      app.naviguer(`/edition?source=liste&id=${vue}${recherche}`, { nouvelleFenetre: true });
-    });
     this.liste = new ListeDonnees(this.conteneur.querySelector('.page-liste-zone'), {
       fournisseur: s.liste,
       ouvrir: (l) => app.ouvrirElement(l, { nouvelleFenetre: l.nouvelleFenetre }),
@@ -120,6 +114,14 @@ export class PageListe extends PageBase {
       peutGererThemes: app.peutGererThemes(),
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
       actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
+      // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition).
+      actionsVue: (vue) => (app.enLigne && vue?.vli_id ? [{
+        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes',
+        action: () => {
+          const recherche = this.liste?.recherche ? `&recherche=${encodeURIComponent(this.liste.recherche)}` : '';
+          app.naviguer(`/edition?source=liste&id=${vue.vli_id}${recherche}`, { nouvelleFenetre: true });
+        },
+      }] : []),
       surVue: ({ theme, vue }) => { this.filtre?.rendre(); this.#vueChoisie(theme, vue); },
       filtresVue: (vue) => {
         if (!this.filtre) return {};

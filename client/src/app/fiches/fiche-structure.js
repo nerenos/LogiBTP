@@ -1,5 +1,5 @@
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre, formatLibre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { D, Dz } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
@@ -324,9 +324,11 @@ export class FicheMarche extends FicheStructure {
   }
 
   /**
-   * Gestion du marché : récapitulatif par commande (marché, TS : prévu, travaux, situé, facturé, reste), situations de
-   * référence, factures et avoirs d'avancement (annulés masqués, réaffichables), autres documents ; création par les
-   * boutons de la fiche, ouverture des documents, facturation et révision d'une situation, annulation par avoir.
+   * Gestion du marché : regroupements repliables (état gardé dans le navigateur), chacun avec ses boutons de création :
+   * récapitulatif par commande (marché, TS : HT net, TTC net, travaux, situé, facturé, reste ; totaux), situations de
+   * référence (avancement sur le total du marché et des avenants), factures et avoirs d'avancement (HT net, TTC net,
+   * net à payer, annulés masqués et réaffichables ; totaux), factures des sous-traitants en paiement direct (facture du
+   * marché liée ; totaux), acomptes, postes de pied.
    */
   async rendreGestion(corps) {
     if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour gérer le marché.</p>'; return; }
@@ -335,12 +337,21 @@ export class FicheMarche extends FicheStructure {
     let g;
     try { g = await this.services.structure.gestion(Number(this.id)); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
-    const pct = (n, d) => (Dz(d).isZero() || n === null || n === undefined ? '' : `${formatNombre(D(n).div(D(d)).times(100).toDecimalPlaces(1).toString(), 1)} %`);
+    // Pourcentage sous sa forme la plus simple (deux décimales au plus : 30 %, 85,26 %).
+    const pct = (n, d) => {
+      if (Dz(d).isZero() || n === null || n === undefined) return '';
+      const s = formatNombre(D(n).div(D(d)).times(100).toDecimalPlaces(2).toString(), 2);
+      return `${s.includes(',') ? s.replace(/0+$/, '').replace(/,$/, '') : s} %`;
+    };
     const lien = (x) => `<a href="/document/${Number(x.ent_id)}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
-    const total = (cle) => g.commandes.reduce((s, c) => s.plus(Dz(c[cle])), D(0));
+    const somme = (liste, cle) => liste.reduce((s, x) => s.plus(Dz(x[cle])), D(0)).toString();
+    const total = (cle) => somme(g.commandes, cle);
     const prevu = total('prevu_ht');
     const factures = g.factures.filter((x) => this.voirAnnulees || !x.annule);
+    const facturesComptees = factures.filter((x) => !x.annule);
     const nbAnnulees = g.factures.filter((x) => x.annule).length;
+    const sousTraitants = (g.sous_traitants ?? []).filter((x) => this.voirAnnulees || !x.annule);
+    const stComptees = sousTraitants.filter((x) => !x.annule);
     // Module Règlements (facultatif, 11.5) : réglé et reste à payer des pièces validées ; sans lui, pas de colonnes.
     const etats = new Map();
     if (this.services.structure.etatPieces && factures.some((x) => x.valide)) {
@@ -348,46 +359,73 @@ export class FicheMarche extends FicheStructure {
       for (const e of liste ?? []) etats.set(Number(e.piece_id), e);
     }
     const reglements = etats.size > 0;
-    const regle = (x) => (reglements ? `<td class="nombre">${etats.has(Number(x.ent_id)) ? f(etats.get(Number(x.ent_id)).pointe) : ''}</td>
-      <td class="nombre">${etats.has(Number(x.ent_id)) ? f(etats.get(Number(x.ent_id)).reste) : ''}</td>` : '');
+    const etat = (x, cle) => (etats.has(Number(x.ent_id)) ? etats.get(Number(x.ent_id))[cle] : null);
+    const regle = (x) => (reglements ? `<td class="nombre">${f(etat(x, 'pointe'))}</td><td class="nombre">${f(etat(x, 'reste'))}</td>` : '');
+    const totalRegle = (cle) => facturesComptees.reduce((s, x) => s.plus(Dz(etat(x, cle))), D(0)).toString();
+
+    // Regroupement repliable : titre, boutons de création (sans replier), contenu.
+    const reduits = new Set(lirePreferences().gestionMarcheReduits ?? []);
+    const groupe = (code, titre, boutons, contenu) => `<details class="groupe-gestion" data-groupe="${code}" ${reduits.has(code) ? '' : 'open'}>
+      <summary><h3>${titre}</h3><span class="groupe-gestion-boutons">${boutons.map((x) => `<button type="button" data-creer="${x.type}" title="${echapper(x.titre)}">${x.libelle}</button>`).join('')}</span></summary>
+      ${contenu}</details>`;
+    const creation = this.creationPossible();
+    const B = (type) => (creation ? [CREATIONS_MARCHE[type]] : []);
+
     corps.innerHTML = `<div class="gestion-marche">
-      <h3>Récapitulatif</h3>
-      <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">Prévu HT</th><th class="nombre">Travaux HT</th>
-        <th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
+      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', B('V_RECEPTION'), `
+      <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">HT net</th><th class="nombre">TTC net</th>
+        <th class="nombre">Travaux HT</th><th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
       <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? 'Marché' : `TS ${c.rang}`}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
-        <td class="nombre">${f(c.prevu_ht)}</td><td class="nombre">${f(c.travaux_ht)}</td><td class="nombre">${f(c.situe_ht)}</td>
+        <td class="nombre">${f(c.prevu_ht)}</td><td class="nombre">${f(c.prevu_ttc)}</td><td class="nombre">${f(c.travaux_ht)}</td><td class="nombre">${f(c.situe_ht)}</td>
         <td class="nombre">${pct(c.situe_ht, c.travaux_ht)}</td><td class="nombre">${f(c.facture_ht)}</td>
         <td class="nombre">${f(Dz(c.travaux_ht).minus(Dz(c.facture_ht)).toString())}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(prevu.toString())}</th><th class="nombre">${f(total('travaux_ht').toString())}</th>
-        <th class="nombre">${f(total('situe_ht').toString())}</th><th class="nombre">${pct(total('situe_ht').toString(), total('travaux_ht').toString())}</th>
+      <tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(prevu)}</th><th class="nombre">${f(total('prevu_ttc'))}</th><th class="nombre">${f(total('travaux_ht'))}</th>
+        <th class="nombre">${f(total('situe_ht'))}</th><th class="nombre">${pct(total('situe_ht'), total('travaux_ht'))}</th>
         <th class="nombre">${f(g.facture_ht)}</th><th class="nombre">${f(Dz(g.montant_ht).minus(Dz(g.facture_ht)).toString())}</th></tr></tfoot></table>
       <p class="aide">Situé : dernière situation de référence ; facturé par commande : factures et avoirs d'avancement non annulés (travaux) ;
-        facturé du marché : toutes ses factures et avoirs validés. Reste du marché = montant du marché − facturé.</p>
+        facturé du marché : toutes ses factures et avoirs validés. Reste du marché = montant du marché − facturé.</p>`)}
 
-      <h3>Situations</h3>
-      ${g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
-        <th class="nombre">Cumul HT</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
+      ${groupe('situations', 'Situations', B('V_SITUATION'), g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
+        <th class="nombre">Cumul HT</th><th class="nombre" title="Cumul de la situation sur le total HT net du marché et de ses avenants">Avancement du marché</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
         <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>(${x.indices} indices)</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
-        <td>${echapper(x.statut ?? '')}${x.facturee ? ' · facturée' : ''}</td><td class="nombre">${f(x.total_ht)}</td>
+        <td>${echapper(x.statut ?? '')}${x.facturee ? ' · facturée' : ''}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${pct(x.total_ht, prevu)}</td>
         <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">Facturer</button> <button type="button" data-reviser="${x.ent_id}">Réviser</button>` : ''}</td></tr>`).join('')}
-        </tbody></table>` : '<p class="aide">Aucune situation : bouton « 📈 Nouvelle situation ».</p>'}
+        </tbody></table>` : '<p class="aide">Aucune situation.</p>')}
 
-      <h3>Factures et avoirs d'avancement</h3>
+      ${groupe('factures', "Factures et avoirs d'avancement", [...B('V_FACTURE_AVT'), ...B('V_REPRISE_AVT')], `
       ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> Afficher les pièces annulées (${nbAnnulees})</label>` : ''}
       ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Pièce</th><th>Type</th><th>Date</th><th>Statut</th>
-        <th class="nombre">Période HT</th><th class="nombre">TTC</th><th class="nombre">Net à payer</th>${reglements ? '<th class="nombre">Réglé</th><th class="nombre">Reste à payer</th>' : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
+        <th class="nombre">HT net</th><th class="nombre">TTC net</th><th class="nombre">Net à payer</th>${reglements ? '<th class="nombre">Réglé</th><th class="nombre">Reste à payer</th>' : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
         <td>${x.rang ?? ''}</td><td>${lien(x)}</td><td>${echapper(x.type)}${x.nature === 'ANNULATION' ? ' (annulation)' : x.nature === 'AVANCEMENT' ? " (d'avancement)" : ''}</td>
         <td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${f(x.total_ttc)}</td>
         <td class="nombre">${f(x.net_a_payer)}</td>${regle(x)}<td>${x.valide && !x.annule ? `<button type="button" data-annuler="${x.ent_id}">Annuler par avoir…</button>` : ''}</td></tr>`).join('')}
-        </tbody></table>` : '<p class="aide">Aucune facture d\'avancement : bouton « 📊 Nouvelle facture d\'avancement ».</p>'}
+        </tbody><tfoot><tr><th colspan="5">Total${nbAnnulees && this.voirAnnulees ? ' (hors pièces annulées)' : ''}</th><th class="nombre">${f(somme(facturesComptees, 'total_ht'))}</th>
+        <th class="nombre">${f(somme(facturesComptees, 'total_ttc'))}</th><th class="nombre">${f(somme(facturesComptees, 'net_a_payer'))}</th>
+        ${reglements ? `<th class="nombre">${f(totalRegle('pointe'))}</th><th class="nombre">${f(totalRegle('reste'))}</th>` : ''}<th></th></tr></tfoot></table>`
+        : '<p class="aide">Aucune facture d\'avancement.</p>'}`)}
 
-      ${g.autres.length ? `<h3>Autres documents</h3><table class="tableau-gestion"><thead><tr><th>Document</th><th>Type</th><th>Date</th><th>Statut</th>
-        <th class="nombre">Total HT</th></tr></thead><tbody>${g.autres.map((x) => `<tr><td>${lien(x)}</td><td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td>
-        <td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${groupe('sous_traitants', 'Factures sous-traitants avec paiement direct', creation ? [CREATIONS_MARCHE.A_FACTURE] : [], sousTraitants.length ? `<table class="tableau-gestion"><thead><tr><th>Pièce</th><th>Réf. sous-traitant</th>
+        <th>Sous-traitant</th><th>Type</th><th>Date</th><th>Statut</th><th class="nombre">HT net</th><th class="nombre">TTC net</th><th>Facture liée</th></tr></thead>
+        <tbody>${sousTraitants.map((x) => `<tr class="${x.annule ? 'annulee' : ''}"><td>${lien(x)}</td><td>${echapper(x.reference ?? '')}</td><td>${echapper(x.tiers ?? '')}</td>
+        <td>${echapper(x.type)}</td><td>${echapper(x.date ?? '')}</td><td>${echapper(x.statut ?? '')}</td><td class="nombre">${f(x.total_ht)}</td>
+        <td class="nombre">${f(x.total_ttc)}</td><td>${x.liee ? lien(x.liee) : ''}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><th colspan="6">Total</th><th class="nombre">${f(somme(stComptees, 'total_ht'))}</th><th class="nombre">${f(somme(stComptees, 'total_ttc'))}</th><th></th></tr></tfoot></table>
+        <p class="aide">Sous-traitants : postes « Paiement direct » du marché et intervenants marqués paiement direct (marché, chantier). Facture liée : facture
+          du marché dont le paiement direct du sous-traitant est égal au TTC de la pièce, sinon la première à sa date ou après.</p>`
+        : '<p class="aide">Aucune facture de sous-traitant en paiement direct (postes « Paiement direct » du marché, intervenants marqués paiement direct).</p>')}
 
-      <h3>Acomptes</h3><div data-acomptes></div>
-      <h3>Postes de pied</h3><div data-postes></div>
+      ${groupe('acomptes', 'Acomptes', [], '<div data-acomptes></div>')}
+      ${groupe('postes', 'Postes de pied', [], '<div data-postes></div>')}
     </div>`;
+    corps.querySelectorAll('details.groupe-gestion').forEach((d) => d.addEventListener('toggle', () => {
+      const r = new Set(lirePreferences().gestionMarcheReduits ?? []);
+      if (d.open) r.delete(d.dataset.groupe); else r.add(d.dataset.groupe);
+      ecrirePreferences({ gestionMarcheReduits: [...r] });
+    }));
+    corps.querySelectorAll('[data-creer]').forEach((b) => b.addEventListener('click', (e) => {
+      e.preventDefault(); // bouton dans le titre : ne replie pas le regroupement
+      this.creerDocumentMarche(b.dataset.creer, e).catch((x) => this.message(x.message, 'erreur'));
+    }));
     this.rendreAcomptes(corps.querySelector('[data-acomptes]'), corps);
     this.rendrePostes(corps.querySelector('[data-postes]'));
     const recharger = () => this.rendreGestion(corps);
@@ -548,21 +586,23 @@ export class FicheMarche extends FicheStructure {
     rendre();
   }
 
-  /** Documents créés depuis le marché (toutes ses commandes validées, une section et un pied par commande). */
-  actionsSupplementaires() {
-    const commandes = (this.refs.marche_documents ?? []).some((x) => x.mar_id === Number(this.id));
-    const nouveau = (type, libelle) => async (e) => {
-      const r = await this.services.structure.documentMarche(Number(this.id), type);
-      this.message(`${libelle} ${r.document.ent_numero ?? ''} créé`, 'succes');
-      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
-    };
-    const visible = this.id !== null && commandes && !this.estEnSaisie() && Boolean(this.services.structure.documentMarche);
-    return [
-      { libelle: '🚚 Nouveau BL', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)', action: nouveau('V_RECEPTION', 'Bon de livraison'), visible },
-      { libelle: '📈 Nouvelle situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)', action: nouveau('V_SITUATION', 'Situation'), visible },
-      { libelle: "📊 Nouvelle facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période", action: nouveau('V_FACTURE_AVT', "Facture d'avancement"), visible },
-      { libelle: '↺ Reprise', titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)", action: nouveau('V_REPRISE_AVT', "Reprise d'avancement"), visible },
-    ];
+  /** Création de documents du marché possible : fiche enregistrée, hors saisie, au moins une commande validée. */
+  creationPossible() {
+    const commandes = (this.refs.marche_documents ?? []).some((c) => c.mar_id === Number(this.id));
+    return this.id !== null && commandes && !this.estEnSaisie() && Boolean(this.services.structure.documentMarche);
+  }
+
+  /**
+   * Document créé depuis un regroupement de l'onglet Gestion : BL, situation, facture d'avancement, reprise (toutes les
+   * commandes validées, une section et un pied par commande) ; facture de sous-traitant : nouvelle facture fournisseur
+   * rattachée au marché.
+   */
+  async creerDocumentMarche(type, e) {
+    const c = CREATIONS_MARCHE[type];
+    if (type === 'A_FACTURE') { this.ouvrirUrl(`/document/nouveau?type=A_FACTURE&marche=${Number(this.id)}`, e); return; }
+    const r = await this.services.structure.documentMarche(Number(this.id), type);
+    this.message(`${c.nom} ${r.document.ent_numero ?? ''} créé`, 'succes');
+    this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
   }
 
   /** Commandes du marché (db/170 : marche_document) : la commande de base puis les avenants, avec leur montant. */
@@ -578,6 +618,15 @@ export class FicheMarche extends FicheStructure {
       + (avenants.length ? `<div class="fiche-info"><span>Avenants</span> <b>${avenants.map((x) => `n° ${x.rang} : ${ligne(x)}`).join(' · ')}</b></div>` : '');
   }
 }
+
+/** Boutons de création des regroupements de l'onglet Gestion du marché. */
+const CREATIONS_MARCHE = {
+  V_RECEPTION: { type: 'V_RECEPTION', libelle: '🚚 Nouveau BL', nom: 'Bon de livraison', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)' },
+  V_SITUATION: { type: 'V_SITUATION', libelle: '📈 Nouvelle situation', nom: 'Situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)' },
+  V_FACTURE_AVT: { type: 'V_FACTURE_AVT', libelle: "📊 Nouvelle facture d'avancement", nom: "Facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période" },
+  V_REPRISE_AVT: { type: 'V_REPRISE_AVT', libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },
+  A_FACTURE: { type: 'A_FACTURE', libelle: '＋ Facture sous-traitant', nom: 'Facture fournisseur', titre: 'Facture fournisseur rattachée au marché (choisir le sous-traitant dans l’annuaire du document)' },
+};
 
 /** Code d'un marché du chantier : M-2026-002-1, M-2026-002-2… (d'après le code du chantier CH-2026-002). */
 export function codeMarche(chantier, marches) {

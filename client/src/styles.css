@@ -258,7 +258,13 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .bloc-avancement th { font-weight: 600; }
 .bloc-avancement td.nombre { text-align: right; }
 /* Onglet Gestion de la fiche marché. */
-.gestion-marche h3 { margin: 14px 0 6px; }
+.gestion-marche h3 { margin: 0; display: inline; font-size: 1.05em; }
+.groupe-gestion { margin: 10px 0; }
+.groupe-gestion > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--bord); margin-bottom: 6px; }
+.groupe-gestion > summary::before { content: '▸'; color: var(--discret); }
+.groupe-gestion[open] > summary::before { content: '▾'; }
+.groupe-gestion > summary::-webkit-details-marker { display: none; }
+.groupe-gestion-boutons { display: inline-flex; gap: 6px; }
 .tableau-gestion { border-collapse: collapse; }
 .tableau-gestion th, .tableau-gestion td { padding: 3px 8px; border-bottom: 1px solid var(--bord); text-align: left; }
 .tableau-gestion .nombre { text-align: right; white-space: nowrap; }
@@ -306,7 +312,6 @@ dialog.dialogue-structure label.large input.combo { width: 100%; }
 .edition-page svg { display: block; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); background: #fff; }
 .edition-numero { position: absolute; right: -3.2rem; top: 0; color: #fff; font-size: 0.8rem; }
 .edition-productions { padding: 0.3rem 0.8rem; border-bottom: 1px solid var(--bord); background: var(--surface); font-size: 0.9em; }
-.page-fiche-edition, .page-liste-edition { display: flex; justify-content: flex-end; padding: 0.2rem 0.6rem 0; }
 .page-edition-apercu .edition-corps { flex: 1; display: flex; gap: 0.5rem; min-height: 0; }
 .page-edition-apercu .edition-corps > .edition-pages { flex: 1 1 auto; min-width: 0; }
 .edition-editeur { flex: 0 0 min(46rem, 45%); display: flex; flex-direction: column; gap: 0.4rem; overflow: auto; padding: 0.5rem; border: 1px solid var(--bordure, #ccd); border-radius: 6px; background: var(--fond, #fff); }

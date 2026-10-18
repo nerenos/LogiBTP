@@ -252,9 +252,10 @@ export class PageDocument extends PageBase {
     const { id } = this.params;
     if (!app.enLigne) throw new Error('Hors ligne : les documents s\'ouvrent depuis la base, l\'API est indisponible');
     this.types = await api.typesDocument();
-    // Création depuis les listes : /document/nouveau?type=<code>.
+    // Création depuis les listes : /document/nouveau?type=<code> ; depuis un marché : &marche=<id> (rattachement).
     if (id === 'nouveau') {
       await this.nouveau(this.requete.type ?? 'V_DEVIS');
+      if (this.requete.marche) await this.rattacher({ ...this.editeur.saisie.document, ent_marche_id: Number(this.requete.marche) });
     } else if (id === 'import') {
       await ouvrirImport(this, this.requete.jeton);
     } else await this.chargerDocument(Number(id));
