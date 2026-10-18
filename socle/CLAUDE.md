@@ -55,6 +55,7 @@
 - `D('')`, `D(null)` → null ; `Dz` → 0 ; `coef` → 1.
 - Le socle ne connaît aucun module : pas d'import de `modules/` ni du cœur ; toute spécialisation passe par options / rappels (`actions` de la grille, `recalculer` du Magasin, `resoudre` des formules).
 - Préférences d'affichage uniquement via `lirePreferences` / `ecrirePreferences` (navigateur, jamais en base) ; écrire = fusion, pas remplacement.
+- Police : Inter (`@fontsource-variable/inter`, importée par `client/src/main.js`, famille `"Inter Variable"` en tête de `body` dans `socle.css`), aussi police par défaut des éditions ; montants et quantités en `font-variant-numeric: tabular-nums`.
 - Combos : hors grille, `creerCombo({ options, valeur, vide })` (`src/ui/combo.js` : champ texte + `ListeDeroulante` strict, `valeurCombo`, `resoudre()`, `definirValeur()`, événement `change`, classe `combo`) ; dans la grille, `editeur: 'select'`. Ne pas créer de `<select>` simple.
 - Raccourcis de la grille dans `raccourcis.json` (éviter AltGr, Alt+Maj, Alt+←, Ctrl+N/T/W) ; tout nouveau raccourci passe par `declarerRaccourcis` + `actionDe(e, groupe)` (personnalisable), jamais par un test de touche en dur.
 - Chiffrement : la chaîne de l'installation (`.env`, hors dépôt ; `.env.exemple` versionné) ne doit jamais changer une fois des valeurs chiffrées (illisibles sinon) ; module d'installation à venir.

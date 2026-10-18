@@ -1,3 +1,5 @@
+// Police de l'application et des éditions : Inter (OFL), livrée avec le client.
+import '@fontsource-variable/inter';
 import '@logibtp/socle/ui/socle.css';
 import '@logibtp/document/ui/document.css';
 import '@logibtp/metre/ui/metre.css';

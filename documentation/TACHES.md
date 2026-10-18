@@ -55,6 +55,14 @@
   ventilation des frais annexes (au moment des modules Export / Impression).
 - [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
 
+### Édition (impression)
+
+- [ ] **Module Édition** : analyse en cours ([conception](conception/CONCEPTION-EDITION.md), 18/10/2026) ; moteur
+  indépendant du DOM retenu (métriques des polices, PDF par pdf-lib, Jint côté serveur), images PNG et JPEG,
+  Code 39 par police, QR calculé en JS, police Inter ; restent Q1 à Q19. Lot 0 = preuve de faisabilité sur un devis réel (navigateur et Jint).
+  Reprend les impressions en attente ci-dessus (textes, coordonnées, tranches F, frais annexes, déductions).
+- [ ] Facturation électronique (Factur-X / plateforme agréée) : module à cadrer à part (§ 3.5 de l'analyse).
+
 ### Chaîne des achats et marchés
 
 Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
