@@ -349,6 +349,15 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     public virtual async Task<DocumentDetailDto> Deposer(HttpRequest requete, Utilisateur u, CancellationToken ct)
     {
         var (fichier, meta) = await LireFormulaire(requete, ct);
+        return await DeposerFichier(fichier, meta, u, ct);
+    }
+
+    /// <summary>
+    /// Dépôt d'un fichier déjà lu (formulaire, ou production de l'application : éditions PDF du serveur) ; mêmes
+    /// contrôles, classification, indexation et mise au coffre que le dépôt par formulaire.
+    /// </summary>
+    public virtual async Task<DocumentDetailDto> DeposerFichier(IFormFile? fichier, MetaDepot meta, Utilisateur u, CancellationToken ct)
+    {
         if (fichier is null) throw ExceptionMetier.Invalide("FICHIER", "Fichier attendu");
         if (string.IsNullOrWhiteSpace(meta.Titre)) throw ExceptionMetier.Invalide("TITRE", "Titre obligatoire");
         // Répertoire de dépôt : le document est lié à l'élément du répertoire (même si ce n'est pas celui affiché).

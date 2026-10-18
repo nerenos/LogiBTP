@@ -50,7 +50,7 @@ builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
 builder.Services.AddModuleEntreprisesFr();
 // Module Édition : modèles et chartes (modules/edition/db/090), aperçu (moteur JS du navigateur) et PDF (même moteur dans Jint).
-builder.Services.AddModuleEdition<SpecialisationEditionBtp>(Base, builder.Configuration.GetValue("Edition:Moteurs", 2));
+builder.Services.AddModuleEdition<SpecialisationEditionBtp>(Base, builder.Configuration.GetValue("Edition:Moteurs", 2), builder.Configuration.GetSection("Edition:Production"));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();

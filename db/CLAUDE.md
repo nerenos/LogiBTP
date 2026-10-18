@@ -44,6 +44,7 @@
 - `185_liste_numero_situation.sql` : `v_liste_documents.numero_situation` (`ent_rang_avancement`) et `facture` (situation : factures d'avancement issues ; facture d'avancement : situation d'origine), colonnes ajoutées aux vues des situations et des factures ; rejouable.
 - `190_editions.sql` : `ent_modele_edition` (dernier modèle imprimé), `parametre_edition` (mentions de la société) ; rejouable.
 - `191_editions_modeles.sql` : **généré** (`client/src/app/editions/modeles.js`) : charte, modèles fournis (réécrits tant qu'ils ne sont pas modifiés localement), liens, défauts ; rejouable.
+- `192_editions_production.sql` : catégories GED `edition` et `ressource_edition` ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

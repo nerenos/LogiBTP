@@ -679,3 +679,18 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
 - Aperçu `/edition` (moteur du navigateur, ≈ 50 ms pour le devis réel), impression par le PDF du serveur
   (≈ 2 s, moteur préchauffé au démarrage), bouton « 🖨 Aperçu » (Ctrl+P) de la page document.
 
+### Lot 4 – production par le serveur, GED, coffre-fort (18/10/2026) : réalisé
+
+- File `edition_tache` (`modules/edition/db/091`) traitée en fond pour chaque société (`ProductionEdition`), prise
+  exclusive des tâches (plusieurs serveurs possibles), trois essais, erreur gardée ; déclencheurs : validation
+  d'une pièce de vente ou d'achat (ligne insérée dans la transaction de la validation), demande (« 🗄 Ranger en GED »
+  de l'aperçu). Mesuré : devis réel produit et rangé en ≈ 7 s (moteur préchauffé, PDF ≈ 2 s).
+- Dépôt (cœur) : GED de la pièce (type, groupe d'indices), catégorie `edition`, confidentialité du modèle, coffre-fort
+  pour les ventes à numérotation continue (factures, avoirs, acomptes). Double (§ 3.9) : bouton « 📄 Double » =
+  dernier PDF rangé, jamais régénéré ; une réimpression produit à nouveau (15.1).
+- Écart à § 15.1 : un document du coffre-fort n'accepte aucune nouvelle version (règle du module GED) ; une pièce
+  dévalidée puis revalidée reçoit donc un nouveau document GED relié au précédent par une dérivation VERSION
+  (historique conservé, original intact).
+- Reporté : PDF/A-3 et Factur-X (module Facturation électronique, § 3.5) ; déclencheur à l'envoi (la validation
+  couvre l'envoi aujourd'hui).
+

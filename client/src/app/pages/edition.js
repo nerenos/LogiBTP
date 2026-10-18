@@ -15,10 +15,13 @@ const GABARIT = `
     <span class="edition-actions">
       <button data-action="imprimer" class="principal" title="Imprimer : PDF produit par le serveur, imprimé à 100 % (le modèle et la présentation sont retenus pour ce document)">🖨 Imprimer</button>
       <button data-action="pdf" title="Télécharger le PDF (sans le retenir comme dernier modèle imprimé)">⤓ PDF</button>
+      <button data-action="ranger" title="Produire le PDF par le serveur et le ranger dans la GED de l'élément (tâche de fond)">🗄 Ranger en GED</button>
+      <button data-action="double" title="Double : le PDF déjà rangé dans la GED (pièce validée : celui envoyé, jamais modifié)">📄 Double</button>
       <button data-action="actualiser" title="Relire le document et les modèles">⟳</button>
     </span>
   </div>
   <div class="edition-alertes" data-zone="alertes" hidden></div>
+  <div class="edition-productions" data-zone="productions" hidden></div>
   <div class="edition-pages" data-zone="pages"><p class="aide">Préparation de l'aperçu…</p></div>`;
 
 const ZOOMS = [50, 75, 100, 125, 150].map((z) => ({ valeur: String(z), libelle: `${z} %` }));
@@ -42,7 +45,10 @@ export class PageEdition extends PageBase {
     this.conteneur.querySelector('.edition-barre').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
       if (!b) return;
-      const action = { imprimer: () => this.pdf(true), pdf: () => this.pdf(false), actualiser: () => this.charger() }[b.dataset.action];
+      const action = {
+        imprimer: () => this.pdf(true), pdf: () => this.pdf(false), actualiser: () => this.charger(),
+        ranger: () => this.ranger(), double: () => this.double(),
+      }[b.dataset.action];
       Promise.resolve(action?.()).catch((x) => this.app.erreur(x));
     });
     await this.charger();
@@ -64,6 +70,7 @@ export class PageEdition extends PageBase {
     this.$('[data-titre]').textContent = this.prep.element;
     this.construireBarre();
     await this.rendre();
+    await this.majProductions();
     this.app.majPage();
   }
 
@@ -153,6 +160,34 @@ export class PageEdition extends PageBase {
       s.style.width = `calc(${s.getAttribute('width')} * ${z})`;
       s.style.height = `calc(${s.getAttribute('height')} * ${z})`;
     }
+  }
+
+  /** Productions en GED de l'élément (file du serveur) : dernière production et son état. */
+  async majProductions() {
+    const zone = this.$('[data-zone="productions"]');
+    const liste = await api.editions.productions(this.demande.source, this.demande.id).catch(() => []);
+    zone.hidden = liste.length === 0;
+    if (!liste.length) return;
+    const t = liste[0];
+    const etats = { A_FAIRE: '⏳ en attente', EN_COURS: '⏳ en cours', FAIT: '✔ rangé en GED', ECHEC: '⛔ échec' };
+    const motifs = { VALIDATION: 'à la validation', ENVOI: 'à l’envoi', DEMANDE: 'à la demande', LOT: 'en lot' };
+    zone.innerHTML = `Dernière production ${echapper(motifs[t.motif] ?? t.motif)} : <strong>${etats[t.etat] ?? t.etat}</strong>`
+      + `${t.pages ? ` (${t.pages} page(s), modèle ${echapper(t.modele ?? '')})` : ''}${t.erreur ? ` — ${echapper(t.erreur)}` : ''}`;
+    if (t.etat === 'A_FAIRE' || t.etat === 'EN_COURS') setTimeout(() => this.majProductions(), 3000);
+  }
+
+  /** Production par le serveur et rangement en GED (modèle et présentation choisis). */
+  async ranger() {
+    await api.editions.produire({ ...this.demande, presentation: this.demande.presentation ?? this.resultat?.presentation ?? null });
+    this.app.message('Production demandée : le PDF sera rangé dans la GED', 'succes');
+    await this.majProductions();
+  }
+
+  /** Double : dernier PDF rangé dans la GED (jamais régénéré). */
+  async double() {
+    const r = await api.editions.rangee(this.demande.source, this.demande.id).catch(() => null);
+    if (!r) { this.app.message('Aucune édition rangée dans la GED pour cet élément', 'avertissement'); return; }
+    window.open(`/api/ged/versions/${r.version_id}/contenu`, '_blank');
   }
 
   /**

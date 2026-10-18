@@ -312,6 +312,14 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// </summary>
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
+        // Édition de la pièce validée produite par le serveur et rangée en GED (module Édition, Q15) ; pièce de vente à
+        // numérotation continue (facture, avoir…) : au coffre-fort. Ligne de la file insérée dans la transaction.
+        if (type.TydFamille is "V" or "A")
+        {
+            var coffre = type.TydFamille == "V" && type.TydNumerotationContinue;
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO edition_tache (ett_source, ett_id_element, ett_motif, ett_coffre, ett_demande_par) VALUES ('document', {entId.ToString()}, 'VALIDATION', {coffre}, 'validation')", ct);
+        }
         if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
         // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
         if (type.TydAvancement == "F" || type.TydCode == "V_AVOIR") await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);

@@ -65,6 +65,26 @@ public class ModeleEditionDefaut
     public long MddMedId { get; set; }
 }
 
+/// <summary>Production d'une édition par le serveur (file modules/edition/db/091).</summary>
+public class TacheEdition
+{
+    public long EttId { get; set; }
+    public string EttSource { get; set; } = "";
+    public string EttIdElement { get; set; } = "";
+    public string? EttModele { get; set; }
+    public string? EttPresentation { get; set; }
+    public string EttMotif { get; set; } = "DEMANDE";
+    public bool EttCoffre { get; set; }
+    public string EttEtat { get; set; } = "A_FAIRE";
+    public short EttEssais { get; set; }
+    public string? EttErreur { get; set; }
+    public long? EttGedId { get; set; }
+    public int? EttPages { get; set; }
+    public string EttDemandePar { get; set; } = "";
+    public DateTimeOffset EttCreeLe { get; set; }
+    public DateTimeOffset? EttTraiteLe { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/edition/db) ; snake_case par la convention de l'application.</summary>
 public class EditionDbContext(DbContextOptions<EditionDbContext> options) : DbContext(options)
 {
@@ -73,6 +93,7 @@ public class EditionDbContext(DbContextOptions<EditionDbContext> options) : DbCo
     public DbSet<ModeleEditionVersion> Versions => Set<ModeleEditionVersion>();
     public DbSet<ModeleEditionLien> Liens => Set<ModeleEditionLien>();
     public DbSet<ModeleEditionDefaut> Defauts => Set<ModeleEditionDefaut>();
+    public DbSet<TacheEdition> Taches => Set<TacheEdition>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -86,5 +107,6 @@ public class EditionDbContext(DbContextOptions<EditionDbContext> options) : DbCo
         b.Entity<ModeleEditionVersion>(e => { e.ToTable("modele_edition_version").HasKey(x => x.MevId); e.Property(x => x.MevContenu).HasColumnType("jsonb"); });
         b.Entity<ModeleEditionLien>().ToTable("modele_edition_lien").HasKey(x => new { x.MelMedId, x.MelGenre, x.MelCode });
         b.Entity<ModeleEditionDefaut>().ToTable("modele_edition_defaut").HasKey(x => new { x.MddCible, x.MddType });
+        b.Entity<TacheEdition>().ToTable("edition_tache").HasKey(x => x.EttId);
     }
 }

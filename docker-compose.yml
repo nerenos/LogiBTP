@@ -45,6 +45,7 @@ services:
       - ./modules/annuaire/db/071_annuaire_provisoire.sql:/docker-entrypoint-initdb.d/071_annuaire_provisoire.sql:ro
       - ./modules/reglement/db/080_reglement_schema.sql:/docker-entrypoint-initdb.d/080_reglement_schema.sql:ro
       - ./modules/edition/db/090_edition_schema.sql:/docker-entrypoint-initdb.d/090_edition_schema.sql:ro
+      - ./modules/edition/db/091_edition_taches.sql:/docker-entrypoint-initdb.d/091_edition_taches.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro
@@ -84,6 +85,7 @@ services:
       - ./db/185_liste_numero_situation.sql:/docker-entrypoint-initdb.d/185_liste_numero_situation.sql:ro
       - ./db/190_editions.sql:/docker-entrypoint-initdb.d/190_editions.sql:ro
       - ./db/191_editions_modeles.sql:/docker-entrypoint-initdb.d/191_editions_modeles.sql:ro
+      - ./db/192_editions_production.sql:/docker-entrypoint-initdb.d/192_editions_production.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

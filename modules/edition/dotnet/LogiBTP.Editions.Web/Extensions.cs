@@ -26,9 +26,12 @@ public sealed class PrechauffageEdition(PoolMoteursEdition pool) : Microsoft.Ext
 /// <summary>Branchement du module Édition dans une application ASP.NET Core.</summary>
 public static class Extensions
 {
-    public static IServiceCollection AddModuleEdition<TSpecialisation>(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> options, int moteurs = 2)
+    public static IServiceCollection AddModuleEdition<TSpecialisation>(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> options, int moteurs = 2,
+        Microsoft.Extensions.Configuration.IConfiguration? production = null)
         where TSpecialisation : SpecialisationEdition
     {
+        if (production is not null) services.Configure<OptionsProductionEdition>(production);
+        services.AddHostedService<ProductionEdition>();
         services.AddDbContext<EditionDbContext>(options);
         services.AddSingleton<SpecialisationEdition, TSpecialisation>();
         services.AddSingleton(new PoolMoteursEdition(moteurs));
@@ -74,6 +77,12 @@ public static class Extensions
             http.Response.Headers["X-Edition-Alertes"] = Uri.EscapeDataString(pdf.AlertesJson);
             return Results.File(pdf.Octets, "application/pdf", nom);
         });
+        // Production en GED (file traitée en fond), état des productions, dernière édition rangée (double).
+        g.MapPost("/productions", (DemandeProduction d, HttpContext http, ServiceEdition s, CancellationToken ct) =>
+            s.Planifier(http.RequestServices, d, Utilisateur.Depuis(http), ct));
+        g.MapGet("/productions", (string source, string id, ServiceEdition s, CancellationToken ct) => s.Taches(source, id, ct));
+        g.MapGet("/rangee", async (string source, string id, HttpContext http, ServiceEdition s, CancellationToken ct) =>
+            await s.DerniereEdition(http.RequestServices, source, id, Utilisateur.Depuis(http), ct) is { } r ? Results.Ok(r) : Results.NoContent());
         return api;
     }
 }

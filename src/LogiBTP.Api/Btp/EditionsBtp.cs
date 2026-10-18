@@ -3,7 +3,10 @@ using System.Text.Json.Nodes;
 using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Editions;
 using LogiBTP.Editions.Web;
+using LogiBTP.Ged.Web;
+using Microsoft.AspNetCore.Http;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +39,62 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         demande.Source == "document" && long.TryParse(demande.Id, out var id) ? await SourceDocumentEdition.Lire(services, id, ct) : null;
 
     public override JsonArray Dictionnaire(string source) => source == "document" ? SourceDocumentEdition.Dictionnaire() : [];
+
+    /// <summary>
+    /// Dépôt en GED d'un PDF produit par le serveur : document lié au type et au groupe d'indices de la pièce
+    /// (comme l'onglet Pièces), catégorie « edition », confidentialité du modèle (Q18) ; l'édition précédente du même
+    /// élément est reliée par une dérivation VERSION (§ 15.1 : une pièce dévalidée puis revalidée garde l'historique
+    /// de ses éditions, le coffre-fort refusant toute nouvelle version) ; coffre-fort pour une pièce comptable.
+    /// </summary>
+    public override async Task<long?> DeposerAsync(IServiceProvider services, TacheEdition tache, PdfEdition pdf, PreparationEdition preparation,
+        Utilisateur u, CancellationToken ct)
+    {
+        if (tache.EttSource != "document" || !long.TryParse(tache.EttIdElement, out var id)) return null;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var d = await (from e in db.Documents.AsNoTracking() join t in db.TypesDocument.AsNoTracking() on e.EntTydId equals t.TydId
+                       where e.EntId == id select new { t.TydCode, e.EntGroupeId, e.EntDate, e.EntNumero }).FirstAsync(ct);
+        var element = (d.EntGroupeId ?? id).ToString();
+        var precedente = await DerniereEditionGed(services, d.TydCode, element, ct);
+        var ged = services.GetRequiredService<ServiceGed>();
+        await using var flux = new MemoryStream(pdf.Octets);
+        var fichier = new FormFile(flux, 0, pdf.Octets.Length, "fichier", ServiceEdition.NomFichier(preparation.Element))
+        {
+            Headers = new HeaderDictionary(), ContentType = "application/pdf",
+        };
+        var modele = preparation.Modele["code"]?.GetValue<string>() ?? "";
+        var depot = await ged.DeposerFichier(fichier, new MetaDepot
+        {
+            Titre = preparation.Element, Categorie = "edition", TypeElement = d.TydCode, IdElement = element, Auteur = u.Code,
+            DateDocument = d.EntDate.ToString("yyyy-MM-dd"), Confidentialite = preparation.Modele["niveau_acces"]?.GetValue<string>() ?? "INTERNE",
+            Resume = $"Édition « {preparation.Modele["libelle"]?.GetValue<string>()} » ({tache.EttMotif.ToLowerInvariant()}), {pdf.Pages} page(s)",
+            MotsCles = ["edition", modele.ToLowerInvariant()],
+        }, u, ct);
+        if (precedente is not null)
+            await ged.AjouterDerivation(precedente.DocumentId, new DemandeDerivation { CibleId = depot.Id, Type = "VERSION", Commentaire = "Nouvelle édition de la pièce" }, u, ct);
+        if (tache.EttCoffre) await ged.MettreAuCoffre(depot.Id, new DemandeCoffre { Motif = $"Pièce {d.EntNumero} validée" }, u, ct);
+        return depot.Id;
+    }
+
+    public override async Task<EditionRangee?> DerniereEditionAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct)
+    {
+        if (source != "document" || !long.TryParse(id, out var entId)) return null;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var d = await (from e in db.Documents.AsNoTracking() join t in db.TypesDocument.AsNoTracking() on e.EntTydId equals t.TydId
+                       where e.EntId == entId select new { t.TydCode, e.EntGroupeId }).FirstOrDefaultAsync(ct);
+        return d is null ? null : await DerniereEditionGed(services, d.TydCode, (d.EntGroupeId ?? entId).ToString(), ct);
+    }
+
+    /// <summary>Dernière édition rangée d'un élément de la GED (catégorie edition, non supprimée) et sa version courante.</summary>
+    private static async Task<EditionRangee?> DerniereEditionGed(IServiceProvider services, string type, string element, CancellationToken ct)
+    {
+        var ged = services.GetRequiredService<GedDbContext>();
+        var doc = await ged.Documents.AsNoTracking()
+            .Where(x => x.DgeCategorie == "edition" && x.DgeTypeElement == type && x.DgeIdElement == element && !x.DgeSupprime)
+            .OrderByDescending(x => x.DgeCreeLe).ThenByDescending(x => x.DgeId).FirstOrDefaultAsync(ct);
+        if (doc is null) return null;
+        var version = await ged.Versions.AsNoTracking().Where(v => v.VgeDocument == doc.DgeId).OrderByDescending(v => v.VgeNumero).FirstAsync(ct);
+        return new EditionRangee(doc.DgeId, version.VgeId, doc.DgeCreeLe, doc.DgeTitre);
+    }
 
     public override async Task ApresImpressionAsync(IServiceProvider services, DemandeEdition demande, string modele, string? presentation, Utilisateur u, CancellationToken ct)
     {

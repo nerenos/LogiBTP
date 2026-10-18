@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using LogiBTP.Editions;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -339,6 +340,82 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
         return (s.Length == 0 ? "edition" : s.Length > 80 ? s[..80] : s) + ".pdf";
     }
 
+    // ------------------------------------------------------------------ production en GED (Q15)
+
+    /// <summary>Production demandée (tâche de la file traitée en fond) ; même règle d'accès que l'aperçu.</summary>
+    public async Task<EtatTache> Planifier(IServiceProvider services, DemandeProduction d, Utilisateur u, CancellationToken ct)
+    {
+        _ = await specialisation.ElementAsync(services, d.Edition.Source, d.Edition.Id, u, ct) ?? throw ExceptionMetier.Introuvable("Élément à éditer");
+        var t = new TacheEdition
+        {
+            EttSource = d.Edition.Source, EttIdElement = d.Edition.Id, EttModele = d.Edition.Modele, EttPresentation = d.Edition.Presentation,
+            EttMotif = d.Motif is "VALIDATION" or "ENVOI" or "LOT" ? d.Motif : "DEMANDE", EttCoffre = d.Coffre, EttDemandePar = u.Code,
+            EttCreeLe = DateTimeOffset.UtcNow,
+        };
+        db.Taches.Add(t);
+        await db.SaveChangesAsync(ct);
+        return Etat(t);
+    }
+
+    private static EtatTache Etat(TacheEdition t) => new(t.EttId, t.EttMotif, t.EttEtat, t.EttModele, t.EttGedId, t.EttPages, t.EttErreur, t.EttCreeLe, t.EttTraiteLe);
+
+    public async Task<List<EtatTache>> Taches(string source, string id, CancellationToken ct) =>
+        (await db.Taches.AsNoTracking().Where(t => t.EttSource == source && t.EttIdElement == id).OrderByDescending(t => t.EttId).Take(20).ToListAsync(ct))
+        .Select(Etat).ToList();
+
+    /// <summary>
+    /// Traite les tâches en attente de la base courante (au plus `max`) : préparation, PDF dans Jint, dépôt par
+    /// l'application ; trois essais au plus, l'erreur est gardée sur la tâche. Renvoie le nombre de tâches traitées.
+    /// </summary>
+    public async Task<int> TraiterEnAttente(IServiceProvider services, int max, CancellationToken ct)
+    {
+        var traitees = 0;
+        while (traitees < max)
+        {
+            // Prise exclusive d'une tâche (plusieurs serveurs sur la même base) : verrou sans attente, état EN_COURS.
+            var ids = await db.Database.SqlQueryRaw<long>("""
+                UPDATE edition_tache SET ett_etat = 'EN_COURS', ett_essais = ett_essais + 1
+                WHERE ett_id = (SELECT ett_id FROM edition_tache
+                                WHERE ett_etat = 'A_FAIRE' OR (ett_etat = 'ECHEC' AND ett_essais < 3 AND ett_traite_le < now() - interval '1 minute')
+                                ORDER BY ett_id LIMIT 1 FOR UPDATE SKIP LOCKED)
+                RETURNING ett_id AS "Value"
+                """).ToListAsync(ct);
+            if (ids.Count == 0) break;
+            traitees++;
+            var t = await db.Taches.FirstAsync(x => x.EttId == ids[0], ct);
+            try
+            {
+                // Utilisateur de la production : le demandeur, avec les droits d'une tâche système (comme l'archivage de la GED).
+                var u = new Utilisateur(string.IsNullOrEmpty(t.EttDemandePar) ? "systeme" : t.EttDemandePar, "ADMIN");
+                var d = new DemandeEdition(t.EttSource, t.EttIdElement, t.EttModele, t.EttPresentation);
+                var p = await Preparer(services, d, u, ct);
+                var env = Env(p, d, u);
+                var modele = p.Modele["contenu"]!.ToJsonString();
+                var donnees = p.Donnees.ToJsonString();
+                var pdf = await pool.ExecuterAsync(m => m.Pdf(modele, donnees, env), ct);
+                t.EttModele = p.Modele["code"]!.GetValue<string>();
+                t.EttPresentation = pdf.Presentation ?? p.Presentation;
+                t.EttPages = pdf.Pages;
+                t.EttGedId = await specialisation.DeposerAsync(services, t, pdf, p, u, ct);
+                t.EttEtat = "FAIT";
+                t.EttErreur = null;
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                db.ChangeTracker.Clear();
+                db.Taches.Attach(t);
+                t.EttEtat = "ECHEC";
+                t.EttErreur = e.Message;
+            }
+            t.EttTraiteLe = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+        }
+        return traitees;
+    }
+
+    public Task<EditionRangee?> DerniereEdition(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct) =>
+        specialisation.DerniereEditionAsync(services, source, id, u, ct);
+
     /// <summary>Contrôle d'un modèle sans l'enregistrer (concepteur, import) : [{ chemin, code, message }].</summary>
     public async Task<JsonNode> Verifier(JsonNode contenu, CancellationToken ct)
     {
@@ -346,6 +423,12 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
         return JsonNode.Parse(await pool.ExecuterAsync(m => m.VerifierModele(json), ct))!;
     }
 }
+
+/// <summary>Demande de production en GED (bouton « Ranger en GED », lot).</summary>
+public sealed record DemandeProduction(DemandeEdition Edition, string Motif = "DEMANDE", bool Coffre = false);
+
+/// <summary>État d'une production.</summary>
+public sealed record EtatTache(long Id, string Motif, string Etat, string? Modele, long? GedId, int? Pages, string? Erreur, DateTimeOffset CreeLe, DateTimeOffset? TraiteLe);
 
 /// <summary>Dépendances d'un modèle lues dans son JSON : blocs liés, sous-rapports, ressources images, sources annexes.</summary>
 public sealed record Dependances(List<string> Blocs, List<string> Rapports, List<string> Ressources, List<string> SourcesAnnexes)

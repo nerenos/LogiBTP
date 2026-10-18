@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using LogiBTP.Editions;
 using LogiBTP.Socle.Web;
 
 namespace LogiBTP.Editions.Web;
@@ -16,6 +17,9 @@ public sealed record DemandeEdition(string Source, string Id, string? Modele = n
 
 /// <summary>Image fournie au moteur : type (png, jpeg), octets en base64, dimensions en pixels, orientation EXIF.</summary>
 public sealed record RessourceEdition(string Type, string Base64, int Largeur, int Hauteur, int? Dpi = null, int? Orientation = null);
+
+/// <summary>Édition rangée en GED : document, version du contenu, date, titre.</summary>
+public sealed record EditionRangee(long DocumentId, long VersionId, DateTimeOffset Le, string Titre);
 
 /// <summary>Élément édité : type (choix du modèle par défaut), libellé (titre du PDF), niveau d'accès de la donnée.</summary>
 public sealed record ElementEdite(string? Type, string Libelle, string? DernierModele = null, string? DernierePresentation = null);
@@ -54,6 +58,17 @@ public class SpecialisationEdition
     /// <summary>Après une impression (PDF produit pour imprimer) : dernier modèle et présentation de l'élément (Q13).</summary>
     public virtual Task ApresImpressionAsync(IServiceProvider services, DemandeEdition demande, string modele, string? presentation,
         Utilisateur u, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
+    /// Dépôt d'un PDF produit par le serveur (tâche de la file) : en GED pour le cœur, au coffre-fort si la tâche le
+    /// demande ; renvoie l'identifiant du document déposé (null : pas de dépôt). Sans spécialisation : aucun dépôt.
+    /// </summary>
+    public virtual Task<long?> DeposerAsync(IServiceProvider services, TacheEdition tache, PdfEdition pdf, PreparationEdition preparation,
+        Utilisateur u, CancellationToken ct) => Task.FromResult<long?>(null);
+
+    /// <summary>Dernière édition rangée (envoi d'un double, § 3.9), ou null.</summary>
+    public virtual Task<EditionRangee?> DerniereEditionAsync(IServiceProvider services, string source, string id, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult<EditionRangee?>(null);
 
     /// <summary>Accès à un modèle (Q18) ; à remplacer par le module des droits.</summary>
     public virtual bool PeutUtiliser(ModeleEdition m, Utilisateur u) => AccesEdition.Autorise(m.MedNiveauAcces, m.MedAccesProfils, u);
