@@ -653,3 +653,14 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
 - Jeu `03_formules_groupes` (texte riche, retrait suspendu, ellipse, réduction, HTML, adresse sans lignes vides,
   bandes GROUPE, A5 paysage) ; table ToUnicode des PDF fiabilisée (points de code renseignés par la table du module).
 
+### Lot 2 – pagination complète (18/10/2026) : réalisé
+
+- Entête de groupe répétée en haut des pages suivantes tant que le groupe continue (`entete_chaque_page`,
+  `groupe.suite` pour « (suite) ») ; répétitions limitées à leur portée.
+- Veuves et orphelines : au moins deux lignes de chaque côté d'un texte coupé (texte d'au moins quatre lignes).
+- Recto-verso : bandes `PAIRES` / `IMPAIRES`, marges en miroir (`page.miroir`), page blanche pour un nombre de pages
+  pair (`page.nombre_pair`).
+- Annexes PDF ajoutées à la fin (`annexes`), lot d'impression (`assembler`, `pdfLot` / `MoteurEditionJs.PdfLot`) :
+  chaque pièce garde sa numérotation.
+- Jeu `04_pagination` (parité Node ↔ Jint).
+

@@ -66,6 +66,16 @@ public class MoteurEditionTests(MoteurPartage partage, ITestOutputHelper sortie)
         Assert.Equal("[]", partage.Moteur.VerifierModele("""{"bandes":[{"contenu":{"type":"champ","valeur":"={{a}} + 1"}}]}"""));
     }
 
+    [Fact]
+    public void Lot_d_impression()
+    {
+        const string modele = """{"bandes":[{"contenu":{"type":"champ","valeur":"Pièce {{n}}"}}]}""";
+        var lot = $"[{{\"modele\":{modele},\"donnees\":{{\"n\":1}}}},{{\"modele\":{modele},\"donnees\":{{\"n\":2}}}}]";
+        var pdf = partage.Moteur.PdfLot(lot, "{}");
+        Assert.Equal(2, pdf.Pages);
+        Assert.StartsWith("%PDF-", System.Text.Encoding.ASCII.GetString(pdf.Octets, 0, 5));
+    }
+
     // Comparaison stricte : mêmes clés, mêmes valeurs (nombres comparés en décimal).
     private static void Comparer(JsonNode? a, JsonNode? b, string chemin, List<string> fautes)
     {

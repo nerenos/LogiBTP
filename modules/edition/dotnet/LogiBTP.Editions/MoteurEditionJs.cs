@@ -89,6 +89,14 @@ public sealed class MoteurEditionJs
         return new PdfEdition(octets, pages, alertes, sw.Elapsed, _api.Get("derniersChronos").AsString());
     }
 
+    /// <summary>Lot d'impression : plusieurs éditions ([{ modele, donnees, env }]) dans un PDF, annexes à la fin.</summary>
+    public PdfEdition PdfLot(string lotJson, string envJson)
+    {
+        var sw = Stopwatch.StartNew();
+        var octets = Appeler("pdfLot", lotJson, envJson).UnwrapIfPromise().AsUint8Array();
+        return new PdfEdition(octets, (int)_api.Get("dernieresPages").AsNumber(), _api.Get("derniereAlertes").AsString(), sw.Elapsed);
+    }
+
     public string VerifierModele(string modeleJson) => Appeler("verifierModele", modeleJson).AsString();
     public string Dependances(string modeleJson) => Appeler("dependances", modeleJson).AsString();
     public string LireImage(byte[] octets) => Appeler("lireImage", _engine.Intrinsics.Uint8Array.Construct(octets)).AsString();

@@ -12,13 +12,15 @@ import { paginerEtiquettes } from './etiquettes.js';
 
 const TYPES_PAGE = new Set(['ENTETE_PAGE', 'PIED_PAGE', 'FOND_PAGE']);
 
-/** Une bande s'applique-t-elle à cette page ? (TOUTES, PREMIERE, SUIVANTES, DERNIERE, SAUF_DERNIERE) */
+/** Une bande s'applique-t-elle à cette page ? (TOUTES, PREMIERE, SUIVANTES, DERNIERE, SAUF_DERNIERE, PAIRES, IMPAIRES) */
 function pourPage(bande, numero, derniere) {
   switch (bande.pages ?? 'TOUTES') {
     case 'PREMIERE': return numero === 1;
     case 'SUIVANTES': return numero > 1;
     case 'DERNIERE': return derniere;
     case 'SAUF_DERNIERE': return !derniere;
+    case 'PAIRES': return numero % 2 === 0;
+    case 'IMPAIRES': return numero % 2 === 1;
     default: return true;
   }
 }
@@ -103,7 +105,33 @@ export function editer(modele, donnees, env) {
     for (const b of pieds) { b.dessiner(p.elements, marges.gauche, yp); yp += b.hauteur; }
     if (fond.length) p.elements.unshift(...fond);
   }
+  // Recto-verso : nombre de pages pair (page blanche ajoutée), marges en miroir sur les pages paires.
+  if (pageModele.nombre_pair && r.pages.length % 2 === 1) r.pages.push({ numero: r.pages.length + 1, largeur: dims.largeur, hauteur: dims.hauteur, elements: [], blanche: true });
+  if (pageModele.miroir && marges.droite !== marges.gauche) {
+    const dx = marges.droite - marges.gauche;
+    for (const p of r.pages) if (p.numero % 2 === 0) p.elements = p.elements.map((e) => decalerElement(e, dx));
+  }
   return { pages: r.pages, alertes: ctx.alertes, page: dims };
+}
+
+function decalerElement(e, dx) {
+  const r = (v) => Math.round((v + dx) * 100) / 100;
+  if (e.t === 'ligne') return { ...e, x1: r(e.x1), x2: r(e.x2) };
+  return { ...e, x: r(e.x) };
+}
+
+/**
+ * Plusieurs éditions en un seul document (lot d'impression) : pages mises bout à bout, numérotation propre à chaque
+ * pièce (déjà portée par ses bandes de page), numéros d'ordre globaux en `rang`.
+ */
+export function assembler(resultats) {
+  const pages = [];
+  const alertes = [];
+  for (const r of resultats) {
+    for (const p of r.pages) pages.push({ ...p, rang: pages.length + 1 });
+    alertes.push(...(r.alertes ?? []));
+  }
+  return { pages, alertes, page: resultats[0]?.page ?? null };
 }
 
 /** Fragments d'une bande du corps selon son mode. */
@@ -136,11 +164,19 @@ export function fragmentsBande(b, ctx, largeur) {
     groupes.forEach((g, ig) => {
       const ctxG = enfant(ctx, { groupe: { ...g, rang: ig + 1, premier: g.elements[0] }, element: g.elements[0] });
       const frs = [];
-      if (b.entete) frs.push(...ajouter(composer(b.entete, ctxG, largeur)).map((f) => ({ ...f, garderAvecSuivant: true })));
+      const portee = o.entete_chaque_page ? { groupe: ig } : null;
+      if (b.entete) {
+        // Entête de groupe : répétée en haut des pages suivantes tant que le groupe continue (`groupe.suite` vrai).
+        const suite = o.entete_chaque_page ? ajouter(composer(b.entete, enfant(ctxG, { groupe: { ...ctxG.groupe, suite: true } }), largeur)) : [];
+        frs.push(...ajouter(composer(b.entete, ctxG, largeur)).map((f, i) => ({
+          ...f, garderAvecSuivant: true, ...(portee ? { chaquePage: true, portee, boiteRepetee: suite[i]?.boite } : {}),
+        })));
+      }
       if (!b.regrouper) {
         g.elements.forEach((el, i) => frs.push(...ajouter(composer(b.contenu, enfant(ctxG, { element: el, index: i }), largeur))));
       } else if (b.contenu) frs.push(...ajouter(composer(b.contenu, ctxG, largeur)));
       if (b.pied) frs.push(...ajouter(composer(b.pied, ctxG, largeur)).map((f, i) => (i === 0 ? { ...f, lieAuPrecedent: true } : f)));
+      if (portee) frs.forEach((f) => { f.portee = portee; });
       res.push(...appliquerOptions(frs, { ...o, saut_apres: o.saut_par_groupe && ig < groupes.length - 1 ? true : o.saut_apres }));
     });
   } else alerter(ctx, 'MODE_INCONNU', `Mode de bande inconnu : ${mode}`);

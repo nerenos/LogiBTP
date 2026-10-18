@@ -12,7 +12,8 @@ import { r2 } from './unites.js';
 const EPS = 0.01;
 
 /**
- * @param fragments [{ boite, sautAvant, sautApres, garderAvecSuivant, lieAuPrecedent, basDePage, chaquePage, tableau, cumuls }]
+ * @param fragments [{ boite, sautAvant, sautApres, garderAvecSuivant, lieAuPrecedent, basDePage, chaquePage, portee,
+ *                     boiteRepetee, tableau, cumuls }]
  * @param page { largeur, hauteur, marges: { haut, bas, gauche, droite } }
  * @param zones (numero, derniere) → { entete, pied } : hauteurs des bandes de page (mm)
  * @returns { pages: [{ numero, largeur, hauteur, elements, zone: { haut, bas } }], alertes }
@@ -36,8 +37,8 @@ export function paginer(fragments, page, zones, alertes = []) {
     const zone = limites(numero, false);
     p = { numero, elements: [], y: zone.haut, zone, vide: true, segment: null, etirer: null, ferme: false };
     pages.push(p);
-    // Fragments répétés sur chaque page (titre de page, libellés des colonnes…).
-    for (const f of repetes) placerBoite(f.boite);
+    // Fragments répétés sur chaque page (titre de page, libellés des colonnes, entête de groupe « suite »…).
+    for (const f of repetes) placerBoite(f.boiteRepetee ?? f.boite);
     p.vide = true;
   };
 
@@ -158,11 +159,13 @@ export function paginer(fragments, page, zones, alertes = []) {
   unites.forEach((u, iu) => {
     derniereUnite = iu === unites.length - 1 || unites.slice(iu + 1).every((x) => x[0].basDePage);
     const premier = u[0];
+    // Répétitions limitées à une portée (entête d'un groupe) : retirées quand la portée change.
+    for (let i = repetes.length - 1; i >= 0; i--) if (repetes[i].portee && repetes[i].portee !== premier.portee) repetes.splice(i, 1);
     // Tableau terminé : segment fermé avant tout changement de page (pas de « À reporter » après la dernière ligne).
     if (p.segment && p.segment.t !== premier.tableau) fermerSegment(false);
     if (premier.boite?.saut) { if (!p.vide) nouvellePage(); return; }
     if (premier.sautAvant && !p.vide) nouvellePage();
-    if (premier.chaquePage) repetes.push(...u);
+    repetes.push(...u.filter((f) => f.chaquePage));
 
     if (premier.basDePage) {
       // Bloc de bas de page : posé au bas de la zone, après étirement des tableaux.

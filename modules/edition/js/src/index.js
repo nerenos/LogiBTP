@@ -1,6 +1,6 @@
 // Module Édition (sans métier) : modèles, formules, mise en ligne et pagination sans DOM, rendus SVG (aperçu) et PDF.
 // Même code dans le navigateur et côté serveur (Jint, paquet `serveur/entree.js`).
-export { editer, fragmentsBande } from './rapport.js';
+export { editer, fragmentsBande, assembler } from './rapport.js';
 export { produirePdf } from './rendu-pdf.js';
 export { pageSvg, policesCss, familleCss } from './rendu-svg.js';
 export { Polices, fontkitEdition, cleFace } from './polices.js';

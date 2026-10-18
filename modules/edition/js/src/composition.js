@@ -125,7 +125,11 @@ function boiteTexte(r, largeur, opts = {}) {
     decouper(h) {
       let n = 0;
       while (n < lignes.length && lignes[n].haut + lignes[n].hauteur <= h + 0.001) n++;
-      if (n === 0 || n === lignes.length) return null;
+      // Veuves et orphelines : au moins deux lignes de chaque côté d'une coupure (texte d'au moins quatre lignes).
+      const min = lignes.length >= 4 ? (opts.lignesMin ?? 2) : 1;
+      if (n < min) return null;
+      if (lignes.length - n < min) n = lignes.length - min;
+      if (n <= 0 || n >= lignes.length) return null;
       const dy = lignes[n].haut;
       const bas = lignes.slice(n).map((l) => ({ ...l, y: l.y - dy, haut: l.haut - dy }));
       const hautR = { lignes: lignes.slice(0, n), hauteur: dy };

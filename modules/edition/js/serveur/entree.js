@@ -1,7 +1,7 @@
 // Point d'entrée du moteur d'édition exécuté côté serveur dans Jint (LogiBTP.Editions.MoteurEditionJs).
 // Paquet unique construit par `npm run construire --workspace modules/edition/js` (esbuild, format IIFE) ; échanges
 // en JSON (chaînes) et en octets (Uint8Array) ; aucune entrée-sortie ici : tout vient du serveur.
-import { editer, produirePdf, Polices, verifierModele, dependances, lireImage, base64VersOctets, normaliserModele } from '../src/index.js';
+import { editer, assembler, produirePdf, Polices, verifierModele, dependances, lireImage, base64VersOctets, normaliserModele } from '../src/index.js';
 
 // Jint n'a pas de minuterie : pdf-lib ne s'en sert que pour céder la main entre deux étapes.
 if (typeof globalThis.setTimeout !== 'function') {
@@ -49,9 +49,26 @@ globalThis.LogiBTPEdition = {
     this.dernieresPages = resultat.pages.length;
     // Compression par l'hôte (.NET) si elle est fournie : pako est lent dans Jint.
     const deflate = typeof globalThis.__deflate === 'function' && env.pdf?.compresser !== false ? globalThis.__deflate : undefined;
-    const pdf = await produirePdf(resultat, polices, { ...(env.pdf ?? {}), ressources, chronos, deflate });
+    const annexes = (env.annexes ?? []).map((a) => base64VersOctets(a));
+    const pdf = await produirePdf(resultat, polices, { ...(env.pdf ?? {}), ressources, chronos, deflate, annexes });
     this.derniersChronos = JSON.stringify(chronos);
     return pdf;
+  },
+  /**
+   * Lot d'impression : plusieurs éditions dans un PDF. lotJson : [{ modele, donnees, env }] ; envJson : options du PDF
+   * (pdf { titre, date, compresser }), ressources communes, annexes (base64) ajoutées à la fin.
+   */
+  async pdfLot(lotJson, envJson) {
+    if (!polices) throw new Error('Moteur d’édition non initialisé (polices)');
+    const env = JSON.parse(envJson || '{}');
+    const ressources = ressourcesDe(env.ressources);
+    const resultats = JSON.parse(lotJson).map((x) => editer(x.modele, x.donnees ?? {}, { ...(x.env ?? {}), ressources: { ...ressources, ...ressourcesDe(x.env?.ressources) }, polices }));
+    const r = assembler(resultats);
+    this.derniereAlertes = JSON.stringify(r.alertes);
+    this.dernieresPages = r.pages.length;
+    const deflate = typeof globalThis.__deflate === 'function' && env.pdf?.compresser !== false ? globalThis.__deflate : undefined;
+    const annexes = (env.annexes ?? []).map((a) => base64VersOctets(a));
+    return produirePdf(r, polices, { ...(env.pdf ?? {}), ressources, deflate, annexes });
   },
   derniereAlertes: '[]',
   derniersChronos: '{}',

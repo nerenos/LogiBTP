@@ -32,7 +32,7 @@ const tiret = (t) => (t.pointille ? `[${nb(mmVersPt(t.epaisseur * 4))} ${nb(mmVe
  * @param resultat { pages } (editer)
  * @param polices instance de Polices (octets des faces)
  * @param opts { ressources: { code: { type: 'png'|'jpeg', octets } }, titre, auteur, sujet, date (ISO),
- *               compresser (défaut vrai), deflate (compression zlib fournie par l'hôte, à la place de pako : Jint),
+ *               annexes ([Uint8Array] : PDF ajoutés à la fin), compresser (défaut vrai), deflate (compression zlib fournie par l'hôte, à la place de pako : Jint),
  *               chronos (objet rempli des durées) }
  * @returns Promise<Uint8Array>
  */
@@ -129,6 +129,11 @@ export async function produirePdf(resultat, polices, opts = {}) {
     else if (opts.deflate) flux = doc.context.stream(opts.deflate(octetsTexte(contenu)), { Filter: 'FlateDecode' });
     else flux = doc.context.flateStream(contenu);
     pg.node.set(PDFName.of('Contents'), doc.context.register(flux));
+  }
+  // Annexes PDF (conditions générales, plans de la GED) ajoutées à la fin.
+  for (const annexe of opts.annexes ?? []) {
+    const source = await PDFDocument.load(annexe, { ignoreEncryption: true, updateMetadata: false });
+    for (const pg of await doc.copyPages(source, source.getPageIndices())) doc.addPage(pg);
   }
   if (chronos) { chronos.dessin = Date.now() - t0; t0 = Date.now(); }
   const octets = await doc.save({ useObjectStreams: false });

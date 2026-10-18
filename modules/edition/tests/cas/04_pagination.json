@@ -1,0 +1,32 @@
+{
+  "nom": "04_pagination",
+  "description": "Lot 2 : bandes GROUPE avec entête répétée « (suite) » sur les pages suivantes, texte long découpé avec veuves et orphelines, saut de page explicite, bande répétée sur chaque page, pied propre à la dernière page, pages paires / impaires, marges en miroir et nombre de pages pair.",
+  "generer": { "lignes": 260, "groupes": 4 },
+  "env": { "aujourdhui": "2026-10-18", "pdf": { "titre": "Pagination", "date": "2026-10-18T00:00:00Z" } },
+  "modele": {
+    "format_version": 1,
+    "code": "ESSAI_PAGINATION",
+    "page": { "format": "A4", "miroir": true, "nombre_pair": true, "marges": { "haut": 12, "bas": 12, "gauche": 20, "droite": 10 } },
+    "bandes": [
+      { "type": "ENTETE_PAGE", "pages": "IMPAIRES", "contenu": { "type": "champ", "valeur": "Recto – {{numero}}", "alignement": "droite", "style": "discret" } },
+      { "type": "ENTETE_PAGE", "pages": "PAIRES", "contenu": { "type": "champ", "valeur": "Verso – {{numero}}", "style": "discret" } },
+      { "type": "PIED_PAGE", "pages": "SAUF_DERNIERE", "contenu": { "type": "champ", "valeur": "Page {{Page()}} / {{NbPages()}} – suite page suivante", "style": "discret", "alignement": "centre" } },
+      { "type": "PIED_PAGE", "pages": "DERNIERE", "contenu": { "type": "pile", "cadre": { "haut": "normal" }, "enfants": [
+        { "type": "champ", "valeur": "Page {{Page()}} / {{NbPages()}} – dernière page", "style": "discret", "alignement": "centre" },
+        { "type": "champ", "valeur": "Conditions générales jointes. Tout litige relève du tribunal de commerce du siège de l’entreprise.", "style": "mentions", "alignement": "centre" } ] } },
+      { "type": "TITRE", "contenu": { "type": "champ", "valeur": "Essai de pagination {{numero}}", "style": "titre" } },
+      { "type": "CORPS", "options": { "chaque_page": true }, "contenu": { "type": "champ", "valeur": "Quantitatif détaillé par lot", "style": "sous_titre", "cadre": { "bas": "fin" } } },
+      { "type": "CORPS", "contenu": { "type": "champ", "multiligne": "auto", "alignement": "justifie",
+        "valeur": "=Joindre(\" \"; \"Le présent document récapitule les quantités par lot.\"; \"Chaque lot est imprimé à la suite ; son entête est répétée en haut des pages suivantes tant que le lot continue.\"; \"Les textes longs sont coupés entre deux pages en gardant au moins deux lignes de chaque côté de la coupure.\"; \"Les pages paires et impaires ont des entêtes différentes et des marges en miroir pour la reliure.\")" } },
+      { "type": "CORPS", "mode": "GROUPE", "collection": "lignes", "rupture": "element.groupe", "options": { "entete_chaque_page": true },
+        "entete": { "type": "champ", "valeur": "=groupe.valeur & Si(groupe.suite; \" (suite)\"; \"\")", "style": "section", "fond": "fond_section", "marges": 1 },
+        "contenu": { "type": "rangee", "cadre": { "bas": "fin" }, "enfants": [
+          { "type": "champ", "valeur": "{{element.code}}", "largeur": "18mm", "style": "petit" },
+          { "type": "champ", "valeur": "{{element.libelle}}", "largeur": "*" },
+          { "type": "champ", "valeur": "{{element.montant}}", "format": "montant", "alignement": "droite", "largeur": "25mm", "style": "montant" } ] },
+        "pied": { "type": "champ", "valeur": "=\"Total \" & groupe.valeur & \" : \" & Montant(Somme(groupe.elements; \"montant\"))", "style": "sous_total", "alignement": "droite" } },
+      { "type": "CORPS", "contenu": { "type": "saut_page" } },
+      { "type": "CORPS", "contenu": { "type": "champ", "valeur": "Annexe : page commencée par un saut de page explicite.", "style": "gras" } }
+    ]
+  }
+}
