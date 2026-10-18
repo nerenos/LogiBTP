@@ -19,13 +19,14 @@ const GABARIT = `
       <button data-action="ranger" title="Produire le PDF par le serveur et le ranger dans la GED de l'élément (tâche de fond)">🗄 Ranger en GED</button>
       <button data-action="double" title="Double : le PDF déjà rangé dans la GED (pièce validée : celui envoyé, jamais modifié)">📄 Double</button>
       <button data-action="actualiser" title="Relire le document et les modèles">⟳</button>
-      <button data-action="editer" data-admin hidden title="Administrateur : modifier le modèle (JSON) et le tester sur cet aperçu">✎ Modèle</button>
+      <button data-action="editer" data-admin hidden title="Administrateur : afficher ou masquer l'éditeur du modèle (JSON) pour le tester sur cet aperçu">✎ Modèle</button>
     </span>
   </div>
   <div class="edition-alertes" data-zone="alertes" hidden></div>
   <div class="edition-productions" data-zone="productions" hidden></div>
   <div class="edition-corps">
     <div class="edition-pages" data-zone="pages"><p class="aide">Préparation de l'aperçu…</p></div>
+    <div class="edition-separateur" data-zone="separateur" hidden title="Glisser pour élargir ou réduire l'éditeur (double-clic : largeur par défaut)"></div>
     <div class="edition-editeur" data-zone="editeur" hidden></div>
   </div>`;
 
@@ -35,7 +36,8 @@ const ZOOMS = [50, 75, 100, 125, 150].map((z) => ({ valeur: String(z), libelle: 
  * Aperçu d'une édition : /edition?source=document&id=12&modele=DEVIS&presentation=DETAILLEE&format=A4.
  * Le serveur fournit en un appel le modèle, les données, la charte, les blocs et les ressources ; le moteur du
  * navigateur (même code que le serveur) produit les pages, dessinées en SVG. Imprimer et PDF : PDF du serveur.
- * Administrateur : `editer=1` (ou ✎ Modèle) ouvre l'éditeur du modèle sur les données et paramètres de l'aperçu.
+ * Administrateur : ✎ Modèle ouvre l'éditeur du modèle (fermé à l'ouverture de l'aperçu) sur les données et paramètres de
+ * l'aperçu, à droite des pages ; séparateur déplaçable, largeur gardée dans le navigateur.
  */
 export class PageEdition extends PageBase {
   icone = '🖨';
@@ -58,23 +60,53 @@ export class PageEdition extends PageBase {
       Promise.resolve(action?.()).catch((x) => this.app.erreur(x));
     });
     this.$('[data-action="editer"]').hidden = !this.app.estAdmin();
-    this.editionDemandee = this.app.estAdmin() && (q.editer === '1' || q.editer === 'true');
+    this.editionDemandee = false;
+    this.separateur();
     await this.charger();
   }
 
   $(s) { return this.conteneur.querySelector(s); }
 
-  /** Éditeur du modèle (administrateur) : panneau à droite des pages, mémorisé dans l'adresse (`editer=1`). */
+  /**
+   * Éditeur du modèle (administrateur) : panneau à droite des pages, masqué à l'ouverture ; masqué puis rouvert, il
+   * garde ses onglets et sa saisie (reconstruit seulement après une nouvelle préparation : autre modèle, ⟳).
+   */
   basculerEditeur(ouvrir = this.$('[data-zone="editeur"]').hidden) {
     const zone = this.$('[data-zone="editeur"]');
     zone.hidden = !ouvrir;
+    this.$('[data-zone="separateur"]').hidden = !ouvrir;
     this.conteneur.classList.toggle('avec-editeur', ouvrir);
+    this.$('[data-action="editer"]').classList.toggle('actif', ouvrir);
     this.editionDemandee = ouvrir;
-    if (ouvrir) {
-      this.editeur ??= new EditeurModeleApercu(zone, this);
-      this.editeur.construire();
-    }
-    this.majUrl();
+    if (!ouvrir) return;
+    zone.style.flexBasis = lirePreferences().apercuEditeurLargeur ? `${lirePreferences().apercuEditeurLargeur}px` : '';
+    this.editeur ??= new EditeurModeleApercu(zone, this);
+    if (this.prepEditee !== this.prep) { this.editeur.construire(); this.prepEditee = this.prep; }
+  }
+
+  /** Séparateur entre les pages et l'éditeur : glisser pour régler la largeur de l'éditeur (préférence du navigateur). */
+  separateur() {
+    const sep = this.$('[data-zone="separateur"]');
+    const zone = this.$('[data-zone="editeur"]');
+    sep.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      sep.setPointerCapture(e.pointerId);
+      const corps = this.$('.edition-corps').getBoundingClientRect();
+      const bouger = (ev) => {
+        const largeur = Math.round(Math.min(Math.max(corps.right - ev.clientX, 280), corps.width - 200));
+        zone.style.flexBasis = `${largeur}px`;
+      };
+      const finir = () => {
+        sep.removeEventListener('pointermove', bouger);
+        sep.removeEventListener('pointerup', finir);
+        sep.removeEventListener('pointercancel', finir);
+        ecrirePreferences({ apercuEditeurLargeur: Math.round(zone.getBoundingClientRect().width) });
+      };
+      sep.addEventListener('pointermove', bouger);
+      sep.addEventListener('pointerup', finir);
+      sep.addEventListener('pointercancel', finir);
+    });
+    sep.addEventListener('dblclick', () => { zone.style.flexBasis = ''; ecrirePreferences({ apercuEditeurLargeur: null }); });
   }
 
   /** Préparation par le serveur (modèle, données, charte, blocs, ressources), puis rendu. */
@@ -151,7 +183,6 @@ export class PageEdition extends PageBase {
     const q = new URLSearchParams({
       source: d.source, id: d.id, ...(d.modele ? { modele: d.modele } : {}), ...(d.presentation ? { presentation: d.presentation } : {}),
       ...(d.format ? { format: d.format } : {}), ...(d.parametres.recherche ? { recherche: d.parametres.recherche } : {}),
-      ...(this.editionDemandee ? { editer: '1' } : {}),
     });
     this.app.routeur.remplacerUrl(`/edition?${q}`);
   }

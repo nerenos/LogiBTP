@@ -160,7 +160,13 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
+| npm | @codemirror/commands | 6.11.1 | MIT | exécution (client) |
+| npm | @codemirror/language | 6.13.1 | MIT | exécution (client) |
+| npm | @codemirror/lint | 6.9.7 | MIT | exécution (client) |
+| npm | @codemirror/state | 6.7.6 | MIT | exécution (client) |
+| npm | @codemirror/view | 6.43.14 | MIT | exécution (client) |
 | npm | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | exécution (client) |
+| npm | @lezer/highlight | 1.2.5 | MIT | exécution (client) |
 | npm | vite | 7.3.7 | MIT | développement (client) |
 | npm | vitest | 3.2.7 | MIT | développement (client) |
 

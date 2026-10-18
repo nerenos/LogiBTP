@@ -725,8 +725,9 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
   payer (net − pointages du module Règlements, s'il est installé).
 - Lignes des documents allégées : valeurs nulles non imprimées (`zero_vide`), pourcentages sous leur forme la plus
   simple (deux décimales au plus : 30 %, 85,26 %) ; taux du pied non répété quand le libellé le porte déjà.
-- Administrateur : éditeur du modèle dans l'aperçu (`editer=1`, ✎ Modèle) : JSON du rapport, de ses blocs et
-  sous-rapports, appliqué sur les données et paramètres de l'aperçu, vérifié et enregistré (en attendant le lot 7).
+- Administrateur : éditeur du modèle dans l'aperçu (✎ Modèle, masqué à l'ouverture, séparateur déplaçable) : JSON
+  coloré (CodeMirror) du rapport, de ses blocs et sous-rapports, un onglet par élément (Ctrl+clic sur un code pour
+  l'ouvrir), appliqué sur les données et paramètres de l'aperçu, vérifié et enregistré (en attendant le lot 7).
 - Moteur corrigé : une ligne qu'aucun gabarit ne vise est imprimée en rangée simple (elle disparaissait) ; un tableau
   inclus dans une pile ou un bloc de bas de page garde son entête et son trait de fin.
 
