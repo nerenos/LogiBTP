@@ -1,0 +1,23 @@
+{
+  "nom": "02_volume",
+  "description": "Volume : 5 000 lignes générées (libellés de longueurs variées), entête répétée, report, remplissage, totaux en bas de la dernière page.",
+  "generer": { "lignes": 5000 },
+  "env": { "aujourdhui": "2026-10-18", "pdf": { "titre": "Volume", "date": "2026-10-18T00:00:00Z" } },
+  "modele": {
+    "format_version": 1,
+    "code": "ESSAI_VOLUME",
+    "page": { "format": "A4", "marges": { "haut": 12, "bas": 12, "gauche": 12, "droite": 12 } },
+    "bandes": [
+      { "type": "ENTETE_PAGE", "contenu": { "type": "rangee", "enfants": [ { "type": "champ", "valeur": "Volume {{numero}}", "style": "sous_titre", "largeur": "*" }, { "type": "champ", "valeur": "Page {{Page()}} / {{NbPages()}}", "alignement": "droite", "largeur": "40mm" } ] } },
+      { "type": "PIED_PAGE", "contenu": { "type": "champ", "valeur": "Société de démonstration – SIRET 900 000 000 00015", "style": "mentions", "alignement": "centre" } },
+      { "type": "CORPS", "contenu": { "type": "tableau", "collection": "lignes", "remplir": true,
+        "colonnes": [
+          { "cle": "code", "titre": "Code", "largeur": "16mm", "valeur": "{{ligne.code}}" },
+          { "cle": "lib", "titre": "Désignation", "largeur": "*", "valeur": "{{ligne.libelle}}" },
+          { "cle": "qte", "titre": "Qté", "largeur": "16mm", "valeur": "{{ligne.qte}}", "alignement": "droite", "format": "nombre:2" },
+          { "cle": "pu", "titre": "PU HT", "largeur": "20mm", "valeur": "{{ligne.pu}}", "alignement": "droite", "format": "montant" },
+          { "cle": "mt", "titre": "Montant HT", "largeur": "24mm", "valeur": "{{ligne.montant}}", "alignement": "droite", "format": "montant", "style": "montant", "cumul": "=ligne.montant" } ] } },
+      { "type": "CORPS", "options": { "bas_de_page": true }, "contenu": { "type": "champ", "valeur": "=\"Total HT : \" & Montant(Somme(lignes; \"montant\"))", "style": "total", "alignement": "droite", "cadre": "normal", "marges": 2 } }
+    ]
+  }
+}

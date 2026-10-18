@@ -56,15 +56,18 @@
 | npm | qrcode-generator | 2.0.4 | MIT | exécution (modules/edition/js) |
 | npm | vitest | 3.2.7 | MIT | développement (modules/edition/js) |
 | NuGet | Jint | 4.17.0 | BSD-2-Clause | LogiBTP.Editions |
-| police | modules/edition/polices/inter/Inter-Bold.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-BoldItalic.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-Italic.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-Medium.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-MediumItalic.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-Regular.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-SemiBold.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/inter/Inter-SemiBoldItalic.ttf | — | OFL-1.1 | OFL.txt |
-| police | modules/edition/polices/libre-barcode-39/LibreBarcode39-Regular.ttf | — | OFL-1.1 | OFL.txt |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Editions.Tests |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Editions.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Editions.Tests |
+| police | modules/edition/js/polices/inter/Inter-Bold.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-BoldItalic.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-Italic.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-Medium.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-MediumItalic.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-Regular.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-SemiBold.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/inter/Inter-SemiBoldItalic.ttf | — | OFL-1.1 | OFL.txt |
+| police | modules/edition/js/polices/libre-barcode-39/LibreBarcode39-Regular.ttf | — | OFL-1.1 | OFL.txt |
 
 ## modules/entreprises-fr
 

@@ -57,11 +57,8 @@
 
 ### Édition (impression)
 
-- [ ] **Module Édition** : analyse décidée ([conception](conception/CONCEPTION-EDITION.md), § 14 et 15,
-  18/10/2026) : moteur indépendant du DOM (métriques des polices, PDF par pdf-lib, Jint côté serveur), images PNG et
-  JPEG, Code 39 par police, QR calculé en JS, police Inter. Dépendances du lot 0 installées (pdf-lib, fontkit,
-  qrcode-generator, Jint, polices dans `modules/edition/polices`). Prochain : lot 0, preuve de faisabilité sur un devis
-  réel (navigateur et Jint).
+- [ ] **Module Édition** ([conception](conception/CONCEPTION-EDITION.md), analyse décidée § 14 et 15) : lot 0 réalisé
+  le 18/10/2026 (moteur sans DOM, parité Node ↔ Jint à l'octet, mesures au § 16). Lots suivants en cours.
   Reprend les impressions en attente ci-dessus (textes, coordonnées, tranches F, frais annexes, déductions).
 - [ ] Facturation électronique (Factur-X / plateforme agréée) : module à cadrer à part (§ 3.5 de l'analyse).
 

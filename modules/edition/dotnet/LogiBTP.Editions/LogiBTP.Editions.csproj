@@ -13,4 +13,11 @@
     <PackageReference Include="Jint" Version="4.17.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Paquet JS du moteur (généré par la commande construire du paquet JS du module). -->
+    <EmbeddedResource Include="moteur\moteur-edition.js" LogicalName="moteur-edition.js" />
+    <!-- Polices de l'édition (mêmes fichiers que le navigateur). -->
+    <Content Include="..\..\js\polices\**\*.ttf;..\..\js\polices\**\OFL.txt" LinkBase="polices" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

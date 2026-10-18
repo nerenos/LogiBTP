@@ -615,3 +615,29 @@ situation et facture d'avancement (présentation Avancement), avoir, bon de livr
 « Ventes / achats » (mentions obligatoires) et « Interne » liés à tous.
 
 **Décision (18/10/2026)** : validé.
+
+## 16. Réalisation
+
+### Lot 0 – preuve de faisabilité (18/10/2026) : réalisé
+
+- Moteur JS sans DOM (`modules/edition/js/src`, détail dans `modules/edition/CLAUDE.md`) : polices (fontkit, chasses
+  sans crénage, chiffres tabulaires), mise en ligne, libellés HTML, formules, charte, composition, pagination
+  (entête de tableau répétée, report, bas de page, remplissage par cadre étiré, unités gardées ensemble, découpe des
+  textes longs), rendus SVG (aperçu) et PDF (pdf-lib : structure, polices en sous-ensemble, images ; flux de contenu
+  écrits par le module).
+- Serveur : `LogiBTP.Editions` exécute le même paquet dans Jint (`MoteurEditionJs`, `PoolMoteursEdition`) ; la
+  compression des flux est faite par .NET (zlib), pako étant lent dans Jint.
+- Jeux de cas `modules/edition/tests/cas` : devis réel de la démonstration (351 lignes) et volume (5 000 lignes).
+  Arbre de pages **identique** entre Node et Jint, PDF non compressé **identique à l'octet**.
+- Mesures (poste de développement) :
+
+| Cas | Navigateur / Node | Jint (serveur) |
+|---|---|---|
+| Devis réel, 4 pages | mise en page 60 ms, PDF 190 ms | 1,7 s (mise en page 0,5 s, dessin 0,2 s, polices et enregistrement 1 s) |
+| 5 000 lignes, 203 pages | mise en page 0,6 s, PDF 0,8 s | 23 s (mise en page 14 s, dessin 8 s) |
+
+  Conclusion : Jint suffit pour les pièces courantes et la production de fond ; ClearScript V8 reste le repli pour
+  les gros volumes (même paquet JS, autre hôte).
+- Écart à l'analyse : le langage des formules n'est pas celui du métré (un module ne dépend pas d'un autre module) ;
+  il en reprend les principes (typage, `Si`, fonctions de l'hôte, noms sans accents) dans `formules.js`.
+

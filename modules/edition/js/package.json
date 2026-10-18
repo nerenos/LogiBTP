@@ -5,10 +5,13 @@
   "type": "module",
   "description": "Module Édition LogiBTP : modèles d'édition, formules, mise en ligne et pagination sans DOM, rendu HTML et PDF",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./polices/*": "./polices/*"
   },
   "scripts": {
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "construire": "node scripts/construire.mjs",
+    "exporter-resultats": "node scripts/exporter-resultats.mjs"
   },
   "dependencies": {
     "@logibtp/socle": "0.2.0",
@@ -19,5 +22,10 @@
   "devDependencies": {
     "esbuild": "0.28.2",
     "vitest": "^3.2.4"
-  }
+  },
+  "files": [
+    "src",
+    "polices",
+    "serveur"
+  ]
 }

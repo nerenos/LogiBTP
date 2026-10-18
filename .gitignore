@@ -7,3 +7,6 @@ client/dist/
 **/tests/resultats-js/
 stockage-ged/
 .env
+
+# Sorties des essais du module Édition
+modules/edition/js/.essais/
