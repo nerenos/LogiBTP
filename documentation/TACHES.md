@@ -17,6 +17,8 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
+- [ ] Modules et services : `db/193` appliqué aux deux bases (20/10/2026) ; redémarrer l'API (routes `/api/modules`, `/api/services`, filtre d'activation des Règlements).
+
 - [ ] Éditions : `modules/edition/db/090`, `091`, `db/190`, `191`, `192` appliqués aux deux bases (18/10/2026) ; arrêter et
   relancer l'API (nouveau module, routes `/api/editions`, polices copiées dans la sortie, production en fond). Deux
   éditions d'essai du devis DV2026-00001 rangées en GED de `logibtp` (catégorie edition, hors coffre) : supprimables.

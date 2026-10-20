@@ -86,6 +86,7 @@ services:
       - ./db/190_editions.sql:/docker-entrypoint-initdb.d/190_editions.sql:ro
       - ./db/191_editions_modeles.sql:/docker-entrypoint-initdb.d/191_editions_modeles.sql:ro
       - ./db/192_editions_production.sql:/docker-entrypoint-initdb.d/192_editions_production.sql:ro
+      - ./db/193_modules_services.sql:/docker-entrypoint-initdb.d/193_modules_services.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

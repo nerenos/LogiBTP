@@ -55,6 +55,7 @@ export class Application {
     this.enLigne = await api.disponible();
     document.body.classList.toggle('hors-ligne', !this.enLigne);
     this.societe = await societeCourante(this.enLigne);
+    await this.chargerModules();
     this.rendreInfos();
 
     this.fenetres = new GestionFenetres({
@@ -117,6 +118,21 @@ export class Application {
     })();
     return this.servicesPrets;
   }
+
+  /**
+   * Modules activés pour la société (db/193 : module_societe) : menus et écrans des modules désactivés masqués ;
+   * hors ligne, tous les modules sont actifs. Rappelée après un changement d'activation.
+   */
+  async chargerModules() {
+    this.modules = new Map();
+    if (this.enLigne) {
+      try { for (const m of await api.modules()) this.modules.set(m.code, m.actif); } catch { /* table absente : tout est actif */ }
+    }
+    if (this.bandeau) { this.bandeau.menus = menus(this); this.bandeau.rendre(); }
+  }
+
+  /** Module actif pour la société (inconnu : actif). */
+  moduleActif(code) { return this.modules?.get(code) ?? true; }
 
   profil() { return this.enLigne ? ENTETES['X-Profil'] : this.preferences.get('profilDemo'); }
   utilisateur() { return ENTETES['X-Utilisateur'] ?? 'demo'; }

@@ -15,7 +15,7 @@ export class PageAccueil extends PageBase {
     const salut = heure < 18 ? 'Bonjour' : 'Bonsoir';
     const session = new URLSearchParams(location.search).get('session') === 'fermee';
     this.accueil = new AccueilBase(this.conteneur, {
-      catalogueRaccourcis: catalogueRaccourcis(),
+      catalogueRaccourcis: catalogueRaccourcis(this.app),
       catalogueWidgets: catalogueWidgets(app),
       preferences: new Preferences('logibtp.accueil', { raccourcis: RACCOURCIS_DEFAUT, widgets: WIDGETS_DEFAUT }),
       session: {

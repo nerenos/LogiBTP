@@ -51,6 +51,9 @@ builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
 builder.Services.AddModuleEntreprisesFr();
 // Module Édition : modèles et chartes (modules/edition/db/090), aperçu (moteur JS du navigateur) et PDF (même moteur dans Jint).
 builder.Services.AddModuleEdition<SpecialisationEditionBtp>(Base, builder.Configuration.GetValue("Edition:Moteurs", 2), builder.Configuration.GetSection("Edition:Production"));
+// Modules activés par société (db/193, module_societe) : routes des modules facultatifs refusées s'ils sont désactivés.
+builder.Services.AddScoped<ModulesSociete>();
+builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSociete>());
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -73,9 +76,11 @@ api.MapModuleGed();
 api.MapModuleBibliotheque();
 api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
-api.MapModuleReglement();
+// Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
+api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
 api.MapStructure();
 api.MapComptes();
+api.MapModulesServices();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 

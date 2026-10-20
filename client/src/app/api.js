@@ -105,6 +105,14 @@ export const api = {
   // Acomptes : mode de la société, acomptes d'un marché, demande, émission de la facture ou du reçu.
   modeAcomptes: () => appel('GET', '/structure/acomptes/mode'),
   // Module Règlements (facultatif) : tiers, échéances avec leur reste, état des pièces, règlements, cautions.
+  // Modules activés par société (db/193) et référentiel des services (membres : individus de notre société).
+  modules: () => appel('GET', '/modules'),
+  activerModule: (code, actif) => appel('PUT', `/modules/${encodeURIComponent(code)}`, { actif }),
+  services: () => appel('GET', '/services'),
+  enregistrerServices: (liste) => appel('PUT', '/services', liste),
+  membresService: (id) => appel('GET', `/services/${id}/membres`),
+  enregistrerMembresService: (id, membres) => appel('PUT', `/services/${id}/membres`, membres),
+  servicesIndividu: (id) => appel('GET', `/services/individu/${id}`),
   tiersReglements: () => appel('GET', '/reglements/tiers'),
   echeancesReglement: ({ tiers, sens, piece, ouvertes } = {}) => appel('GET', `/reglements/echeances?${new URLSearchParams(Object.entries({ tiers, sens, piece, ouvertes }).filter(([, v]) => v !== undefined && v !== null)).toString()}`),
   etatPieces: (pieces) => appel('POST', '/reglements/etat', { pieces }),

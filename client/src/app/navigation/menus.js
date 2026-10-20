@@ -51,7 +51,7 @@ export const MENUS_METIER = [
       { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations'), creation: D('V_SITUATION', 'Nouvelle situation de travaux') },
       { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures'), creation: D('V_FACTURE', 'Nouvelle facture') },
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
-      { code: 'reglements-clients', libelle: 'Règlements clients', icone: '💳', url: '/reglements?sens=E', info: 'Échéances, règlements, pointage et cautions (module Règlements)' },
+      { code: 'reglements-clients', libelle: 'Règlements clients', icone: '💳', url: '/reglements?sens=E', info: 'Échéances, règlements, pointage et cautions (module Règlements)', module: 'reglement' },
       { separateur: true },
       { code: 'import-optim', libelle: 'Importer un devis OptimBTP', icone: '📥', url: '/import/optimbtp', info: 'Fichier .optim : lignes, prix et coefficients repris, champs non repris listés' },
     ],
@@ -62,7 +62,7 @@ export const MENUS_METIER = [
       { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes'), creation: D('A_COMMANDE', 'Nouvelle commande fournisseur') },
       { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons'), creation: D('A_RECEPTION', 'Nouveau bon de livraison fournisseur') },
       { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures'), creation: D('A_FACTURE', 'Nouvelle facture fournisseur') },
-      { code: 'reglements-fournisseurs', libelle: 'Règlements fournisseurs', icone: '💳', url: '/reglements?sens=D', info: 'Échéances à payer, règlements émis et pointage (module Règlements)' },
+      { code: 'reglements-fournisseurs', libelle: 'Règlements fournisseurs', icone: '💳', url: '/reglements?sens=D', info: 'Échéances à payer, règlements émis et pointage (module Règlements)', module: 'reglement' },
     ],
   },
   {
@@ -84,10 +84,24 @@ export const MENUS_METIER = [
   },
 ];
 
-/** Menus complets : métier, puis Paramètres et Fenêtres (dynamiques). */
+/** Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`). */
+const visible = (app, x) => !x.module || app.moduleActif?.(x.module) !== false;
+
+/** Éléments visibles, sans séparateur en tête, en fin ni en double. */
+export function elementsVisibles(app, elements) {
+  const res = [];
+  for (const e of elements.filter((x) => visible(app, x))) {
+    if (e.separateur && (!res.length || res.at(-1).separateur)) continue;
+    res.push(e);
+  }
+  while (res.at(-1)?.separateur) res.pop();
+  return res;
+}
+
+/** Menus complets : métier (filtrés par les modules actifs), puis Paramètres et Fenêtres (dynamiques). */
 export function menus(app) {
   return [
-    ...MENUS_METIER,
+    ...MENUS_METIER.filter((m) => visible(app, m)).map((m) => ({ ...m, elements: () => elementsVisibles(app, m.elements) })),
     {
       code: 'parametres', libelle: '&Paramètres', elements: () => [
         { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres' },
@@ -108,6 +122,9 @@ export function menus(app) {
         { separateur: true, libelle: 'Annuaire et bibliothèque' },
         { libelle: 'Annuaire : niveaux, relations, liens, rôles…', icone: '🏢', url: '/parametres/annuaire' },
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
+        { separateur: true, libelle: 'Organisation' },
+        { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
+        { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
@@ -136,9 +153,9 @@ export function menus(app) {
 }
 
 /** Raccourcis proposés à l'accueil : éléments de menu métier ayant une URL. */
-export function catalogueRaccourcis() {
+export function catalogueRaccourcis(app = null) {
   return [
-    ...MENUS_METIER.flatMap((m) => m.elements.filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
+    ...MENUS_METIER.filter((m) => !app || visible(app, m)).flatMap((m) => m.elements.filter((e) => e.url && e.code && (!app || visible(app, e))).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
     { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres', groupe: 'Paramètres' },
   ];
 }
