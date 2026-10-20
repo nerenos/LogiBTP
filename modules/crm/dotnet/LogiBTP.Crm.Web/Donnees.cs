@@ -85,6 +85,29 @@ public class CrmConsultation
     public DateTimeOffset CcoLe { get; set; }
 }
 
+/// <summary>Paramètre du module (clé → valeur JSON).</summary>
+public class CrmParametre
+{
+    public string CpaCle { get; set; } = "";
+    public System.Text.Json.JsonDocument CpaValeur { get; set; } = System.Text.Json.JsonDocument.Parse("{}");
+    public DateTimeOffset CpaMajLe { get; set; }
+    public string? CpaMajPar { get; set; }
+}
+
+/// <summary>Rappel d'une note : DATE ou AVANT l'échéance, pour un individu (nul : pour son auteur).</summary>
+public class CrmRappel
+{
+    public long RapId { get; set; }
+    public long RapNotId { get; set; }
+    public string RapType { get; set; } = "DATE";
+    public DateTimeOffset? RapQuand { get; set; }
+    public int? RapDelaiJours { get; set; }
+    public long? RapIndId { get; set; }
+    public string RapCreePar { get; set; } = "";
+    public DateTimeOffset RapCreeLe { get; set; }
+    public DateTimeOffset? RapTraiteLe { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/crm/db) ; snake_case par la convention de l'application.</summary>
 public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(options)
 {
@@ -95,6 +118,8 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
     public DbSet<CrmNoteHistorique> Historique => Set<CrmNoteHistorique>();
     public DbSet<CrmDroit> Droits => Set<CrmDroit>();
     public DbSet<CrmConsultation> Consultations => Set<CrmConsultation>();
+    public DbSet<CrmParametre> Parametres => Set<CrmParametre>();
+    public DbSet<CrmRappel> Rappels => Set<CrmRappel>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -106,6 +131,8 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
         b.Entity<CrmNoteHistorique>().ToTable("crm_note_historique").HasKey(x => x.NhiId);
         b.Entity<CrmDroit>().ToTable("crm_droit").HasKey(x => new { x.CdrProfil, x.CdrAction });
         b.Entity<CrmConsultation>().ToTable("crm_consultation").HasKey(x => x.CcoId);
+        b.Entity<CrmParametre>().ToTable("crm_parametre").HasKey(x => x.CpaCle);
+        b.Entity<CrmRappel>().ToTable("crm_rappel").HasKey(x => x.RapId);
     }
 }
 

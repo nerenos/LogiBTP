@@ -15,11 +15,31 @@ export class PageParametresCrm extends PageBase {
   async ouvrir() {
     const app = this.app;
     this.titre = 'Paramétrage du suivi (CRM)';
-    this.conteneur.innerHTML = '<div class="page-parametres"><h1 class="page-titre">☑ Paramétrage du suivi (CRM)</h1><h2>Types de notes</h2><div data-types></div></div>';
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">☑ Paramétrage du suivi (CRM)</h1><h2>Types de notes</h2><div data-types></div>
+      <h2>Couleurs des rappels</h2><div data-seuils></div></div>`;
     if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">Disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
     this.types = await api.crm.typesNotes();
     this.rendreTypes();
+    this.rendreSeuils(await api.crm.parametres());
+  }
+
+  /** Seuils globaux des couleurs des rappels « avant l'échéance » (C19, C26). */
+  rendreSeuils(p) {
+    const admin = this.app.estAdmin();
+    const zone = this.conteneur.querySelector('[data-seuils]');
+    zone.innerHTML = `<p class="aide">Un rappel avant l'échéance passe à l'orange puis au rouge selon le temps qui reste jusqu'à l'échéance de la note ;
+      un rappel à date est vert avant sa date, rouge ensuite. Le délai d'un rappel (par défaut le seuil orange) fixe quand il paraît dans « Mes rappels ».</p>
+      <div class="formulaire"><label>Orange à <input data-orange size="4" inputmode="decimal" value="${echapper(String(p.seuils.orange))}" ${admin ? '' : 'disabled'}> jours ou moins</label>
+      <label>Rouge à <input data-rouge size="4" inputmode="decimal" value="${echapper(String(p.seuils.rouge))}" ${admin ? '' : 'disabled'}> jours ou moins (et au-delà de l'échéance)</label>
+      ${admin ? '<button type="button" class="principal" data-enregistrer-seuils>Enregistrer les seuils</button>' : ''}</div>`;
+    zone.querySelector('[data-enregistrer-seuils]')?.addEventListener('click', async () => {
+      try {
+        const lire = (s) => Number(String(zone.querySelector(s).value).replace(',', '.'));
+        this.rendreSeuils(await api.crm.enregistrerParametres({ seuils: { orange: lire('[data-orange]'), rouge: lire('[data-rouge]') } }));
+        this.app.message('Seuils des rappels enregistrés', 'succes');
+      } catch (e) { this.app.erreur(e); }
+    });
   }
 
   rendreTypes() {

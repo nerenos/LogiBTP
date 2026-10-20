@@ -1,12 +1,12 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, htmlSur } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
-import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET } from '@logibtp/crm';
+import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET, TYPES_RAPPEL, controlerRappel, MESSAGES_RAPPEL } from '@logibtp/crm';
 import { api } from '../api.js';
 import { choisirRattachement } from '../structure/selection.js';
 import {
   contexteCrm, individusCrm, nouvelleSaisie, saisieDeNote, versChampDate, depuisChampDate, zoneRiche, lienElement, pastilleEtat,
-  formatDateHeure, iconeNature, libelleEtat,
+  formatDateHeure, iconeNature, libelleEtat, pastilleRappel, libelleRappel,
 } from '../crm/crm.js';
 
 const QUOI = { CREATION: 'Création', ETAT: 'État', RESPONSABLE: 'Responsable', SERVICE: 'Service', ECHEANCE: 'Échéance' };
@@ -104,6 +104,7 @@ export class PageNoteCrm extends PageBase {
         <aside class="crm-note-cote">
           <h2>Rattachée à</h2><div data-liens></div>
           <h2>Destinataires</h2><div data-destinataires></div>
+          ${d && !masquee ? '<h2>Rappels</h2><div data-rappels></div>' : ''}
           ${d ? '<h2>Pièces jointes</h2><div data-pieces class="crm-pieces"></div>' : '<p class="aide">Pièces jointes : après le premier enregistrement.</p>'}
           ${d ? `<h2>Historique</h2><ul class="crm-historique">${d.historique.map((h) => `<li><span class="aide">${echapper(formatDateHeure(h.le))} · ${echapper(h.par ?? '')}</span>
             ${echapper(QUOI[h.quoi] ?? h.quoi)} ${h.quoi === 'ETAT' || h.quoi === 'CREATION' ? `${h.avant ? `${echapper(libelleEtat(h.avant))} → ` : ''}${echapper(libelleEtat(h.apres ?? ''))}`
@@ -141,7 +142,7 @@ export class PageNoteCrm extends PageBase {
     }
     this.rendreLiens(lecture);
     this.rendreDestinataires(lecture);
-    if (this.detail && !masquee) this.rendrePieces(lecture);
+    if (this.detail && !masquee) { this.rendrePieces(lecture); this.rendreRappels(); }
     $('[data-enregistrer]')?.addEventListener('click', () => this.enregistrer());
     $('[data-prendre]')?.addEventListener('click', () => this.action(() => api.crm.prendre(this.detail.note.id), 'Note prise en charge'));
     $('[data-rendre]')?.addEventListener('click', () => this.action(() => api.crm.rendre(this.detail.note.id), 'Note rendue au service'));
@@ -231,6 +232,38 @@ export class PageNoteCrm extends PageBase {
       this.rendreDestinataires(lecture);
       this.controler();
     });
+  }
+
+  /** Rappels de la note : couleur (seuils globaux), destinataire, Fait / ✕ ; ajout à date ou avant l'échéance. */
+  rendreRappels() {
+    const zone = this.conteneur.querySelector('[data-rappels]');
+    if (!zone) return;
+    const rappels = this.detail.rappels ?? [];
+    zone.innerHTML = `${rappels.length ? `<ul class="crm-liens">${rappels.map((r) => `<li class="${r.actif ? '' : 'discret'}">${pastilleRappel(r)} ${echapper(libelleRappel(r))}
+      <span class="aide">${echapper(r.individu ?? r.cree_par)}${r.traite_le ? ' · fait' : ''}</span>
+      ${r.actif ? `<button type="button" data-traiter="${r.id}" title="Rappel traité : il ne paraît plus">Fait</button>` : ''}<button type="button" data-supprimer-rappel="${r.id}" title="Supprimer le rappel">✕</button></li>`).join('')}</ul>` : '<p class="aide">Aucun rappel.</p>'}
+      <div class="crm-ajout-rappel"><span data-type-rappel></span> <input type="datetime-local" data-quand> <input data-delai size="3" inputmode="numeric" placeholder="jours" hidden>
+        <span data-pour></span> <button type="button" data-ajouter-rappel title="Ajouter le rappel">＋</button></div>`;
+    const type = creerCombo({ options: TYPES_RAPPEL, valeur: this.saisie.echeance ? 'AVANT' : 'DATE', vide: false });
+    const quand = zone.querySelector('[data-quand]');
+    const delai = zone.querySelector('[data-delai]');
+    const afficher = () => { quand.hidden = type.valeurCombo !== 'DATE'; delai.hidden = type.valeurCombo !== 'AVANT'; };
+    type.addEventListener('change', afficher);
+    zone.querySelector('[data-type-rappel]').replaceWith(type);
+    afficher();
+    const pour = creerCombo({ options: this.individus, valeur: this.ctx.individu_id ?? '', titre: 'Pour qui (vide : pour moi)' });
+    zone.querySelector('[data-pour]').replaceWith(pour);
+    const appliquer = async (f) => {
+      try { this.detail.rappels = await f(); this.app.publier('crm', { rappels: true }); this.rendreRappels(); } catch (e) { this.app.erreur(e); }
+    };
+    zone.querySelector('[data-ajouter-rappel]').addEventListener('click', () => {
+      const r = { type: type.valeurCombo, quand: depuisChampDate(quand.value), delai_jours: delai.value === '' ? null : Number(delai.value), ind_id: pour.valeurCombo === '' ? null : Number(pour.valeurCombo) };
+      const erreurs = controlerRappel(r, { etat: this.detail.note.etat, echeance: this.detail.note.echeance });
+      if (erreurs.length) { this.app.message(erreurs.map((e) => MESSAGES_RAPPEL[e] ?? e).join(' ; '), 'avertissement'); return; }
+      appliquer(() => api.crm.ajouterRappel(this.detail.note.id, r));
+    });
+    zone.querySelectorAll('[data-traiter]').forEach((b) => b.addEventListener('click', () => appliquer(() => api.crm.traiterRappel(Number(b.dataset.traiter)))));
+    zone.querySelectorAll('[data-supprimer-rappel]').forEach((b) => b.addEventListener('click', () => appliquer(() => api.crm.supprimerRappel(Number(b.dataset.supprimerRappel)))));
   }
 
   async rendrePieces(lecture) {

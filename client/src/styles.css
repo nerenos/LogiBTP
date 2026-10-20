@@ -389,3 +389,8 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-pieces { min-height: 6rem; }
 .crm-note-cote, .crm-note-principal { min-width: 0; }
 .vue-suivi { overflow: auto; }
+.crm-pastille { display: inline-block; width: .75em; height: .75em; border-radius: 50%; background: var(--bord); vertical-align: middle; }
+.crm-pastille-rouge { background: #d92d20; }
+.crm-pastille-orange { background: #f79009; }
+.crm-pastille-vert { background: #12b76a; }
+.crm-ajout-rappel { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .4rem; }

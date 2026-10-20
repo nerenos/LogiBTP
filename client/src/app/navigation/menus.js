@@ -68,11 +68,12 @@ export const MENUS_METIER = [
   {
     code: 'suivi', libelle: '&Suivi', module: 'crm', elements: [
       { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
+      { code: 'crm-rappels', libelle: 'Mes rappels', icone: '⏰', url: '/crm/rappels', info: 'Rouge : échu ou imminent · orange : bientôt · vert : à venir' },
       { code: 'crm-a-prendre', libelle: 'À prendre dans mes services', icone: '🙋', url: '/crm?vue=a_prendre' },
       { code: 'crm-recues', libelle: 'Notes reçues', icone: '📥', url: '/crm?vue=recues' },
       { code: 'crm-toutes', libelle: 'Toutes les notes', icone: '🗒', url: '/crm?vue=toutes', creation: { url: '/crm/note/nouveau', titre: 'Nouvelle note' } },
       { separateur: true },
-      { code: 'parametrage-crm', libelle: 'Types de notes…', icone: '⚙', url: '/parametres/crm' },
+      { code: 'parametrage-crm', libelle: 'Types de notes, seuils des rappels…', icone: '⚙', url: '/parametres/crm' },
     ],
   },
   {
@@ -134,7 +135,7 @@ export function menus(app) {
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true, libelle: 'Organisation' },
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
-        { libelle: 'Suivi (CRM) : types de notes…', icone: '☑', url: '/parametres/crm', module: 'crm' },
+        { libelle: 'Suivi (CRM) : types de notes, rappels…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },

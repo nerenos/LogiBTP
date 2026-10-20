@@ -46,6 +46,13 @@ public static class Extensions
             await s.Lue(id, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        g.MapGet("/parametres", (ServiceCrm s, CancellationToken ct) => s.Parametres(ct));
+        g.MapPut("/parametres", (ParametresCrm p, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerParametres(p, Utilisateur.Depuis(http), ct));
+        g.MapGet("/rappels", (bool? tous, HttpContext http, ServiceCrm s, CancellationToken ct) => s.MesRappels(tous ?? false, Utilisateur.Depuis(http), ct));
+        g.MapPost("/notes/{id:long}/rappels", (long id, RappelSaisi r, HttpContext http, ServiceCrm s, CancellationToken ct) => s.AjouterRappel(id, r, Utilisateur.Depuis(http), ct));
+        g.MapPut("/rappels/{id:long}", (long id, RappelSaisi r, HttpContext http, ServiceCrm s, CancellationToken ct) => s.ModifierRappel(id, r, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/rappels/{id:long}", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.SupprimerRappel(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/rappels/{id:long}/traiter", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.TraiterRappel(id, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

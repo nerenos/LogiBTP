@@ -45,14 +45,14 @@ public sealed record DroitsNote(bool Modifier, bool Supprimer, bool Prendre, boo
 
 /// <summary>Note détaillée : liens décrits, destinataires, historique, réponses, consultations (auteur), droits.</summary>
 public sealed record NoteDetail(NoteListe Note, List<ElementDecrit> Liens, string? Principal, List<DestinataireDto> Destinataires,
-    List<HistoriqueDto> Historique, List<NoteListe> Reponses, List<ConsultationDto> Consultations, DroitsNote Droits);
+    List<HistoriqueDto> Historique, List<NoteListe> Reponses, List<ConsultationDto> Consultations, DroitsNote Droits, List<RappelDto> Rappels);
 
 /// <summary>
 /// Services du module CRM : contexte de l'utilisateur, types de notes, notes (listes par vue, détail, création,
 /// modification, suppression, prise en charge par un membre du service, rendu au service, lecture), masquage des notes
 /// privées et RGPD, levée du masquage journalisée (C14, C21, C24, C28).
 /// </summary>
-public class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage)
+public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage)
 {
     private sealed record Courant(Utilisateur U, long? Ind, HashSet<int> Services, bool Superviser, bool Rgpd);
 
@@ -239,7 +239,7 @@ public class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, Netto
         return new NoteDetail(liste, masque is null ? decrits : [], liens.FirstOrDefault(l => l.NliPrincipal)?.NliTypeElement,
             masque is null ? destinataires.Select(d => new DestinataireDto(d.NdeIndId, noms.GetValueOrDefault(d.NdeIndId, $"#{d.NdeIndId}"), d.NdeLuLe)).ToList() : [],
             historique.Select(h => new HistoriqueDto(h.NhiQuoi, Lisible(h.NhiQuoi, h.NhiAvant), Lisible(h.NhiQuoi, h.NhiApres), h.NhiPar, h.NhiLe)).ToList(),
-            masque is null ? await EnListe(reponses, c, true, ct) : [], consultations, droits);
+            masque is null ? await EnListe(reponses, c, true, ct) : [], consultations, droits, masque is null ? await RappelsNote(id, ct) : []);
     }
 
     /// <summary>Quelqu'un d'autre que l'auteur a lu ou modifié la note, ou y a répondu.</summary>

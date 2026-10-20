@@ -52,6 +52,18 @@ export function echeanceNote(note) {
 /** Pastille d'état d'une note. */
 export const pastilleEtat = (note) => `<span class="crm-etat crm-etat-${String(note.etat).toLowerCase()}">${echapper(libelleEtat(note.etat))}</span>`;
 
+const COULEURS_RAPPEL = { ROUGE: 'Échu ou imminent', ORANGE: 'Bientôt', VERT: 'À venir' };
+
+/** Pastille de couleur d'un rappel (rouge, orange, vert). */
+export const pastilleRappel = (r) => (r.couleur ? `<span class="crm-pastille crm-pastille-${r.couleur.toLowerCase()}" title="${COULEURS_RAPPEL[r.couleur] ?? ''}"></span>` : '<span class="crm-pastille"></span>');
+
+/** Description d'un rappel : à date, ou n jours avant l'échéance. */
+export function libelleRappel(r, seuils = null) {
+  if (r.type === 'DATE') return `Le ${formatDateHeure(r.quand)}`;
+  const j = r.delai_jours ?? seuils?.orange;
+  return `${j === null || j === undefined ? 'Avant' : `${j} j avant`} l'échéance${r.reference ? ` (${formatDateHeure(r.reference)})` : ''}`;
+}
+
 /** Lien HTML vers l'élément principal d'une note. */
 export function lienElement(e) {
   if (!e) return '';

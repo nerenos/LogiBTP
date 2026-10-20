@@ -20,6 +20,7 @@ import { PageParametresServices } from './parametres-services.js';
 import { PageCrm } from './crm.js';
 import { PageNoteCrm } from './crm-note.js';
 import { PageSuiviCrm } from './crm-suivi.js';
+import { PageRappelsCrm } from './crm-rappels.js';
 import { PageParametresCrm } from './parametres-crm.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -46,6 +47,7 @@ export const ROUTES = [
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: 'Note' },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: 'Suivi' },
+  { nom: 'crm-rappels', chemin: '/crm/rappels', page: PageRappelsCrm, titre: 'Mes rappels' },
   { nom: 'crm', chemin: '/crm', page: PageCrm, titre: 'Suivi' },
   { nom: 'edition', chemin: '/edition', page: PageEdition, titre: 'Aperçu' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },

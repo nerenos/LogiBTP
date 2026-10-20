@@ -1,0 +1,33 @@
+{
+  "description": "Rappels des notes du CRM (rappels.js ↔ ReglesRappel.cs) : contrôle (codes dans l'ordre) et état à un instant (seuils orange / rouge en jours).",
+  "controles": [
+    { "nom": "rappel à date complet", "rappel": { "type": "DATE", "quand": "2026-11-02T08:00:00Z" }, "note": { "etat": "A_FAIRE" }, "attendu": [] },
+    { "nom": "type inconnu", "rappel": { "type": "HEBDO" }, "note": { "etat": "A_FAIRE" }, "attendu": ["RAPPEL_TYPE"] },
+    { "nom": "à date sans date", "rappel": { "type": "DATE" }, "note": { "etat": "EN_COURS" }, "attendu": ["RAPPEL_DATE"] },
+    { "nom": "avant sans échéance ni délai valable", "rappel": { "type": "AVANT", "delai_jours": -2 }, "note": { "etat": "A_FAIRE" }, "attendu": ["RAPPEL_DELAI", "RAPPEL_ECHEANCE"] },
+    { "nom": "avant, délai par défaut", "rappel": { "type": "AVANT" }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-10T09:00:00Z" }, "attendu": [] },
+    { "nom": "note pour mémo", "rappel": { "type": "DATE", "quand": "2026-11-02T08:00:00Z" }, "note": { "etat": "MEMO" }, "attendu": ["RAPPEL_CLOS"] }
+  ],
+  "etats": [
+    { "nom": "à date, avant la date", "rappel": { "type": "DATE", "quand": "2026-11-02T08:00:00Z" }, "note": { "etat": "A_FAIRE" }, "maintenant": "2026-11-01T08:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "VERT", "reference": "2026-11-02T08:00:00.000Z" } },
+    { "nom": "à date, date passée", "rappel": { "type": "DATE", "quand": "2026-11-02T08:00:00Z" }, "note": { "etat": "EN_COURS" }, "maintenant": "2026-11-02T08:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "ROUGE", "reference": "2026-11-02T08:00:00.000Z" } },
+    { "nom": "avant, loin de l'échéance (délai par défaut = seuil orange)", "rappel": { "type": "AVANT" }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-20T09:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "attendu": { "actif": true, "visible": false, "couleur": "VERT", "reference": "2026-11-20T09:00:00.000Z" } },
+    { "nom": "avant, à 7 jours exactement : orange et visible", "rappel": { "type": "AVANT" }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-08T09:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "ORANGE", "reference": "2026-11-08T09:00:00.000Z" } },
+    { "nom": "avant, délai de 14 jours : visible mais vert", "rappel": { "type": "AVANT", "delai_jours": 14 }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-12T09:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "VERT", "reference": "2026-11-12T09:00:00.000Z" } },
+    { "nom": "avant, à moins d'un jour : rouge", "rappel": { "type": "AVANT", "delai_jours": 3 }, "note": { "etat": "EN_COURS", "echeance": "2026-11-01T20:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "ROUGE", "reference": "2026-11-01T20:00:00.000Z" } },
+    { "nom": "avant, échéance dépassée : rouge", "rappel": { "type": "AVANT", "delai_jours": 0 }, "note": { "etat": "A_FAIRE", "echeance": "2026-10-30T09:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "attendu": { "actif": true, "visible": true, "couleur": "ROUGE", "reference": "2026-10-30T09:00:00.000Z" } },
+    { "nom": "seuils paramétrés : orange à 10 jours", "rappel": { "type": "AVANT" }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-10T09:00:00Z" }, "maintenant": "2026-11-01T09:00:00Z",
+      "seuils": { "orange": 10, "rouge": 2 }, "attendu": { "actif": true, "visible": true, "couleur": "ORANGE", "reference": "2026-11-10T09:00:00.000Z" } },
+    { "nom": "note terminée : inactif", "rappel": { "type": "DATE", "quand": "2026-11-02T08:00:00Z" }, "note": { "etat": "TERMINE" }, "maintenant": "2026-11-03T08:00:00Z",
+      "attendu": { "actif": false, "visible": false, "couleur": null, "reference": null } },
+    { "nom": "rappel traité : inactif", "rappel": { "type": "AVANT", "traite_le": "2026-11-01T10:00:00Z" }, "note": { "etat": "A_FAIRE", "echeance": "2026-11-02T09:00:00Z" }, "maintenant": "2026-11-01T11:00:00Z",
+      "attendu": { "actif": false, "visible": false, "couleur": null, "reference": null } }
+  ]
+}

@@ -1,15 +1,31 @@
 // Widgets de l'accueil (cœur) : données lues par les fournisseurs des modules (listes : comptes par segment et
 // premiers lots, appliqués par la base en ligne ; GED). Mêmes widgets en ligne et dans la démo hors ligne.
 
+import { api } from '../api.js';
+
 const demande = (vue_id, extra = {}) => ({ vue_id, definition: null, recherche: '', segments: {}, tri: [], ...extra });
 // Valeurs de segment comparées en texte (la base renvoie « true », « PANNE »…).
 const compte = (segments, valeur) => segments.find((s) => String(s.valeur) === String(valeur))?.nombre ?? 0;
 const ETATS_MATERIEL = { DISPO: ['Disponible', '#2e9e5b'], CHANTIER: ['En chantier', '#1d5fbf'], PANNE: ['En panne', '#c0392b'], REBUT: ['Rebut', '#667085'] };
 const date = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
+const NIVEAUX_RAPPEL = { ROUGE: 'erreur', ORANGE: 'alerte', VERT: 'info' };
 
 export function catalogueWidgets(app) {
   const services = () => app.services();
+  // Widgets d'un module désactivé (propriété module) retirés du catalogue.
   return [
+    {
+      code: 'crm-rappels', type: 'alertes', titre: 'Mes rappels', icone: '⏰', taille: 'moyen', url: '/crm/rappels', module: 'crm', enLigne: true,
+      description: 'Rappels du suivi (CRM) arrivés dans leur délai : rouge échu ou imminent, orange bientôt, vert à venir',
+      charger: async () => {
+        const rappels = await api.crm.rappels();
+        return rappels.slice(0, 8).map((r) => ({
+          niveau: NIVEAUX_RAPPEL[r.couleur] ?? 'info', texte: r.note?.objet ?? `Note ${r.note_id}`,
+          detail: `${r.type === 'DATE' ? 'Rappel le' : 'Échéance le'} ${r.reference ? new Date(r.reference).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}${r.note?.element ? ` · ${r.note.element.libelle}` : ''}`,
+          url: `/crm/note/${r.note_id}`,
+        }));
+      },
+    },
     {
       code: 'chiffres', type: 'indicateurs', titre: 'Chiffres clés', icone: '📊', taille: 'large',
       description: 'Salariés actifs, matériels en panne, devis en cours, documents archivés',
@@ -99,7 +115,7 @@ export function catalogueWidgets(app) {
         };
       },
     },
-  ];
+  ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false) && (!w.enLigne || app.enLigne));
 }
 
-export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];
+export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'crm-rappels' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];

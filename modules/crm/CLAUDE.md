@@ -11,7 +11,9 @@
 
 ## Structure
 - `js/src/notes.js` : `NATURES_NOTE`, `ETATS_NOTE`, `ETATS_CLOS`, `LONGUEUR_OBJET`, `controlerNote`, `MESSAGES_NOTE` ↔ `dotnet/LogiBTP.Crm/ReglesNote.cs` (`Controler`, `Messages`) ; jeu `tests/cas/01_note.json`.
-- `dotnet/LogiBTP.Crm.Web` : `Donnees.cs` (entités `CrmTypeNote`, `CrmNote`, `CrmNoteLien`, `CrmNoteDestinataire`, `CrmNoteHistorique`, `CrmDroit`, `CrmConsultation`, `CrmDbContext`, `NettoyageHtmlCrm`), `SpecialisationCrm.cs` (`TypesElements`, `DecrireAsync`, `IndividuAsync`, `IndividusAsync`, `ServicesIndividuAsync`, `ServicesAsync`), `ServiceCrm.cs` (contexte, types de notes, listes par vue, détail, écriture, suppression, prise en charge, rendu, lecture, masquage), `Extensions.cs` (`AddModuleCrm<T>`, `MapModuleCrm` : renvoie le groupe `/crm`, sur lequel le cœur pose `ExigeModule("crm", …)`).
+- `js/src/rappels.js` : `TYPES_RAPPEL`, `SEUILS_DEFAUT`, `controlerRappel`, `MESSAGES_RAPPEL`, `etatRappel`, `comparerRappels` ↔ `dotnet/LogiBTP.Crm/ReglesRappel.cs` (`Controler`, `Etat`, `SeuilsRappel`, `EtatRappel`) ; jeu `tests/cas/02_rappels.json`.
+- `dotnet/LogiBTP.Crm.Web` : `ServiceCrm.Rappels.cs` (paramètres, mes rappels, rappels d'une note, ajout, modification, traitement, suppression) ; `Donnees.cs` (entités `CrmTypeNote`, `CrmNote`, `CrmNoteLien`, `CrmNoteDestinataire`, `CrmNoteHistorique`, `CrmDroit`, `CrmConsultation`, `CrmParametre`, `CrmRappel`, `CrmDbContext`, `NettoyageHtmlCrm`), `SpecialisationCrm.cs` (`TypesElements`, `DecrireAsync`, `IndividuAsync`, `IndividusAsync`, `ServicesIndividuAsync`, `ServicesAsync`), `ServiceCrm.cs` (contexte, types de notes, listes par vue, détail, écriture, suppression, prise en charge, rendu, lecture, masquage), `Extensions.cs` (`AddModuleCrm<T>`, `MapModuleCrm` : renvoie le groupe `/crm`, sur lequel le cœur pose `ExigeModule("crm", …)`).
+- `db/096_crm_rappels.sql` (rejouable) : `crm_parametre` (clé `seuils_rappel` { orange, rouge }), `crm_rappel` (DATE / AVANT, individu, traité).
 - `db/095_crm_schema.sql` (rejouable) : `crm_type_note`, `crm_note` (trigger d'historique `tr_crm_note_historique`), `crm_note_lien`, `crm_note_destinataire`, `crm_note_historique`, `crm_droit` (SUPERVISER, RGPD par profil ; ADMIN), `crm_consultation`.
 
 ## Règles
@@ -19,12 +21,14 @@
 - Responsable nul avec un service : note « à prendre », visible de tous les membres du service ; « Prendre » = devenir responsable (état EN_COURS si À faire) ; « Rendre au service » ; tout changement tracé (historique : CREATION, ETAT, RESPONSABLE, SERVICE, ECHEANCE).
 - Lecture : tout le monde voit les notes ; note privée masquée sauf auteur, responsable, destinataires ; note RGPD masquée sauf l'auteur. Levée du masquage (`?reveler=true`) : droit SUPERVISER (privée) ou RGPD, consultation journalisée (`crm_consultation`), visible de l'auteur et de l'administrateur. La recherche ignore le contenu des notes protégées.
 - Modification : administrateur, auteur, responsable, destinataire, membre du service d'une note à prendre ; contrôle des modifications concurrentes par `maj_le` (409 `NOTE_MODIFIEE`). Suppression : l'auteur tant que personne d'autre n'a lu, modifié ni répondu (sinon 409 `NOTE_UTILISEE` : l'annuler), l'administrateur toujours.
+- Rappels : DATE (date et heure) vert avant, rouge ensuite ; AVANT (délai en jours avant l'échéance de la note, nul = seuil orange) : couleur par les seuils globaux (rouge ≤ seuil rouge, échéance dépassée comprise ; orange ≤ seuil orange ; sinon vert), visible dans « Mes rappels » et le widget dès l'échéance moins le délai ; note close ou rappel traité : inactif. Contrôles : `RAPPEL_TYPE`, `RAPPEL_DATE`, `RAPPEL_DELAI`, `RAPPEL_ECHEANCE` (AVANT sans échéance), `RAPPEL_CLOS`. Pour un autre individu : il faut pouvoir modifier la note ; « Mes rappels » = pour mon individu, ou créés par moi sans individu. Seuils : administrateur (`SEUILS_RAPPEL` : rouge ≥ 0, orange ≥ rouge). Pas de tâche de fond ni de notification poussée (second temps).
 - Conservation : jusqu'à l'archivage (module Archivage à venir, `not_archivee_le`) ou la suppression du tiers.
 
 ## Routes HTTP (préfixe `/api/crm`)
 - `GET /contexte` (utilisateur, individu, services, droits, types d'éléments, services, types de notes), `POST /elements` ([{ type, id }] → libellé, page, icône).
 - `GET|PUT /types-notes` (PUT : administrateur ; un type retiré utilisé est désactivé).
 - `GET /notes?vue=mes|a_prendre|recues|creees|toutes&type_element=&id_element=&nature=&etat=ouvertes|<code>&srv=&recherche=&page=&taille=` (notes racines, non archivées, triées par échéance puis création).
+- `GET|PUT /parametres` (seuils ; PUT administrateur), `GET /rappels?tous=` (mes rappels actifs ; visibles seulement par défaut), `POST /notes/{id}/rappels`, `PUT|DELETE /rappels/{id}`, `POST /rappels/{id}/traiter` ; le détail d'une note porte ses rappels.
 - `GET /notes/{id}?reveler=`, `POST /notes`, `PUT /notes/{id}`, `DELETE /notes/{id}`, `POST /notes/{id}/prendre|rendre|lue`.
 
 ## Tests
