@@ -1,0 +1,16 @@
+{
+  "description": "Contrôle d'une demande du CRM (demandes.js ↔ ReglesDemande.cs) : codes d'erreur dans l'ordre de controlerDemande.",
+  "demandes": [
+    { "nom": "veille minimale", "demande": { "objet": "Extension d'un entrepôt", "etat": "VEILLE" }, "attendu": [] },
+    { "nom": "objet vide, état inconnu", "demande": { "objet": " ", "etat": "GAGNEE" }, "attendu": ["DEMANDE_OBJET", "DEMANDE_ETAT"] },
+    { "nom": "sans suite sans motif", "demande": { "objet": "Rénovation", "etat": "SANS_SUITE" }, "attendu": ["DEMANDE_MOTIF"] },
+    { "nom": "sans suite, motif connu", "demande": { "objet": "Rénovation", "etat": "SANS_SUITE", "motif": "NON_RETENUE" }, "attendu": [] },
+    { "nom": "motif sur une demande ouverte", "demande": { "objet": "Rénovation", "etat": "EN_COURS", "motif": "PERDUE" }, "attendu": ["DEMANDE_MOTIF"] },
+    { "nom": "motif inconnu", "demande": { "objet": "Rénovation", "etat": "SANS_SUITE", "motif": "OUBLIEE" }, "attendu": ["DEMANDE_MOTIF"] },
+    { "nom": "transformée sans projet", "demande": { "objet": "Logements", "etat": "TRANSFORMEE" }, "attendu": ["DEMANDE_CIBLE"] },
+    { "nom": "transformée en projet", "demande": { "objet": "Logements", "etat": "TRANSFORMEE", "cible_type": "projet", "cible_id": "12" }, "attendu": [] },
+    { "nom": "projet sur une demande à étudier", "demande": { "objet": "Logements", "etat": "A_ETUDIER", "cible_type": "projet", "cible_id": "12" }, "attendu": ["DEMANDE_CIBLE"] },
+    { "nom": "montant négatif", "demande": { "objet": "Logements", "etat": "EN_COURS", "montant_estime": "-10" }, "attendu": ["DEMANDE_MONTANT"] },
+    { "nom": "montant estimé", "demande": { "objet": "Logements", "etat": "EN_COURS", "montant_estime": "250000.00" }, "attendu": [] }
+  ]
+}

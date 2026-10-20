@@ -53,6 +53,20 @@ public static class Extensions
         g.MapPut("/rappels/{id:long}", (long id, RappelSaisi r, HttpContext http, ServiceCrm s, CancellationToken ct) => s.ModifierRappel(id, r, Utilisateur.Depuis(http), ct));
         g.MapDelete("/rappels/{id:long}", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.SupprimerRappel(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/rappels/{id:long}/traiter", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.TraiterRappel(id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/rechercher", (string type, string? texte, ServiceCrm s, CancellationToken ct) => s.Rechercher(type, texte ?? "", ct));
+        g.MapGet("/demandes", (string? vue, string? etat, string? recherche, long? tiers, int? page, int? taille, HttpContext http, ServiceCrm s, CancellationToken ct) =>
+            s.Demandes(vue, etat, recherche, tiers, page ?? 1, taille ?? 50, Utilisateur.Depuis(http), ct));
+        g.MapGet("/demandes/{id:long}", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.Demande(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/demandes", (DemandeSaisie d, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerDemande(null, d, Utilisateur.Depuis(http), ct));
+        g.MapPut("/demandes/{id:long}", (long id, DemandeSaisie d, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerDemande(id, d, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/demandes/{id:long}", async (long id, HttpContext http, ServiceCrm s, CancellationToken ct) =>
+        {
+            await s.SupprimerDemande(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapPost("/demandes/{id:long}/prendre", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.PrendreDemande(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/demandes/{id:long}/rendre", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.RendreDemande(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/demandes/{id:long}/projet", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.CreerProjet(id, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

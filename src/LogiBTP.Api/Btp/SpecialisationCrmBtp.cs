@@ -60,6 +60,39 @@ public class SpecialisationCrmBtp : SpecialisationCrm
         return res;
     }
 
+    /// <summary>Projet de la structure (code PRJ-AAAA-NNN, statut En cours) repris de la demande.</summary>
+    public override async Task<ElementCrm?> CreerProjetAsync(CrmDbContext db, CrmDemande d, string? responsable, CancellationToken ct)
+    {
+        var commentaire = d.DemDescriptionHtml is null ? null : System.Text.RegularExpressions.Regex.Replace(d.DemDescriptionHtml, "<[^>]+>", " ").Trim();
+        var id = await db.Database.SqlQueryRaw<int>("""
+            INSERT INTO projet (prj_code, prj_libelle, prj_tiers_id, prj_statut, prj_montant_estime, prj_responsable, prj_commentaire, prj_proprietes)
+            SELECT 'PRJ-' || extract(year FROM now())::int || '-' || lpad((coalesce(max(substring(prj_code FROM '^PRJ-[0-9][0-9][0-9][0-9]-([0-9]+)$')::int), 0) + 1)::text, 3, '0'),
+                   left(@libelle, 150), @tiers, 'EN_COURS', @montant, left(@responsable, 100), @commentaire, jsonb_build_object('crm_demande', @demande::text)
+            FROM projet WHERE prj_code LIKE 'PRJ-' || extract(year FROM now())::int || '-%'
+            RETURNING prj_id AS "Value"
+            """,
+            new NpgsqlParameter("libelle", d.DemObjet), new NpgsqlParameter("tiers", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)d.DemTiersId ?? DBNull.Value },
+            new NpgsqlParameter("montant", NpgsqlTypes.NpgsqlDbType.Numeric) { Value = (object?)d.DemMontantEstime ?? DBNull.Value },
+            new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Varchar) { Value = (object?)responsable ?? DBNull.Value },
+            new NpgsqlParameter("commentaire", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)commentaire ?? DBNull.Value },
+            new NpgsqlParameter("demande", d.DemNumero)).ToListAsync(ct); // pas d'accolades dans le SQL : EF les lit comme des paramètres
+        return new ElementCrm("projet", id[0].ToString());
+    }
+
+    /// <summary>Documents par numéro ou objet (groupe d'indices, indice de référence).</summary>
+    public override async Task<List<ElementDecrit>> RechercherAsync(CrmDbContext db, string type, string texte, CancellationToken ct)
+    {
+        if (type != "document") return [];
+        var lignes = await db.Database.SqlQueryRaw<LibelleSql>("""
+            SELECT coalesce(d.ent_groupe_id, d.ent_id)::text AS id, concat_ws(' ', t.tyd_libelle, coalesce(d.ent_numero, '(brouillon)'), '–', d.ent_objet) AS libelle,
+                   '/document/' || d.ent_id AS url
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE d.ent_is_reference AND (d.ent_numero ILIKE @m OR d.ent_objet ILIKE @m)
+            ORDER BY d.ent_id DESC LIMIT 15
+            """, new NpgsqlParameter("m", $"%{texte.Trim()}%")).ToListAsync(ct);
+        return lignes.Select(l => new ElementDecrit("document", l.Id, l.Libelle ?? l.Id, l.Url, "📄")).ToList();
+    }
+
     public override Task<long?> IndividuAsync(CrmDbContext db, string utilisateur, CancellationToken ct) =>
         db.Database.SqlQueryRaw<long?>("SELECT ind_id AS \"Value\" FROM individu WHERE ind_utilisateur = @u", new NpgsqlParameter("u", utilisateur)).FirstOrDefaultAsync(ct);
 

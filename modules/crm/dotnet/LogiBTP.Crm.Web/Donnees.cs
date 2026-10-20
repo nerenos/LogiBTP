@@ -108,6 +108,42 @@ public class CrmRappel
     public DateTimeOffset? RapTraiteLe { get; set; }
 }
 
+/// <summary>Demande : pré-dossier de veille, jusqu'au projet créé ou sans suite.</summary>
+public class CrmDemande
+{
+    public long DemId { get; set; }
+    public string DemNumero { get; set; } = "";
+    public string DemObjet { get; set; } = "";
+    public string? DemDescriptionHtml { get; set; }
+    public string DemEtat { get; set; } = "VEILLE";
+    public string? DemMotif { get; set; }
+    public long? DemTiersId { get; set; }
+    public long? DemIndId { get; set; }
+    public int? DemSrvId { get; set; }
+    public long? DemResponsableId { get; set; }
+    public DateOnly? DemEcheance { get; set; }
+    public decimal? DemMontantEstime { get; set; }
+    public string? DemOrigine { get; set; }
+    public string? DemCibleType { get; set; }
+    public string? DemCibleId { get; set; }
+    public string DemCreePar { get; set; } = "";
+    public DateTimeOffset DemCreeLe { get; set; }
+    public string? DemMajPar { get; set; }
+    public DateTimeOffset DemMajLe { get; set; }
+}
+
+/// <summary>Historique d'une demande (tenu par trigger).</summary>
+public class CrmDemandeHistorique
+{
+    public long DhiId { get; set; }
+    public long DhiDemId { get; set; }
+    public string DhiQuoi { get; set; } = "";
+    public string? DhiAvant { get; set; }
+    public string? DhiApres { get; set; }
+    public string? DhiPar { get; set; }
+    public DateTimeOffset DhiLe { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/crm/db) ; snake_case par la convention de l'application.</summary>
 public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(options)
 {
@@ -120,6 +156,8 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
     public DbSet<CrmConsultation> Consultations => Set<CrmConsultation>();
     public DbSet<CrmParametre> Parametres => Set<CrmParametre>();
     public DbSet<CrmRappel> Rappels => Set<CrmRappel>();
+    public DbSet<CrmDemande> Demandes => Set<CrmDemande>();
+    public DbSet<CrmDemandeHistorique> HistoriqueDemandes => Set<CrmDemandeHistorique>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -133,6 +171,8 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
         b.Entity<CrmConsultation>().ToTable("crm_consultation").HasKey(x => x.CcoId);
         b.Entity<CrmParametre>().ToTable("crm_parametre").HasKey(x => x.CpaCle);
         b.Entity<CrmRappel>().ToTable("crm_rappel").HasKey(x => x.RapId);
+        b.Entity<CrmDemande>().ToTable("crm_demande", t => t.HasTrigger("tr_crm_demande_historique")).HasKey(x => x.DemId);
+        b.Entity<CrmDemandeHistorique>().ToTable("crm_demande_historique").HasKey(x => x.DhiId);
     }
 }
 

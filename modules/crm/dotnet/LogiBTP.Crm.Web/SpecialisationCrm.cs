@@ -35,6 +35,15 @@ public class SpecialisationCrm
     /// <summary>Services d'un individu (le principal en tête).</summary>
     public virtual Task<List<ServiceEntreprise>> ServicesIndividuAsync(CrmDbContext db, long individu, CancellationToken ct) => Task.FromResult(new List<ServiceEntreprise>());
 
+    /// <summary>
+    /// Projet créé depuis une demande (objet, tiers, montant, responsable, description) : l'élément créé, ou null si
+    /// l'application ne sait pas créer de projet.
+    /// </summary>
+    public virtual Task<ElementCrm?> CreerProjetAsync(CrmDbContext db, CrmDemande demande, string? responsable, CancellationToken ct) => Task.FromResult<ElementCrm?>(null);
+
+    /// <summary>Recherche d'éléments d'un type (documents par numéro ou objet…) pour les rattacher à une note.</summary>
+    public virtual Task<List<ElementDecrit>> RechercherAsync(CrmDbContext db, string type, string texte, CancellationToken ct) => Task.FromResult(new List<ElementDecrit>());
+
     /// <summary>Services de l'application (actifs).</summary>
     public virtual Task<List<ServiceEntreprise>> ServicesAsync(CrmDbContext db, CancellationToken ct) => Task.FromResult(new List<ServiceEntreprise>());
 }

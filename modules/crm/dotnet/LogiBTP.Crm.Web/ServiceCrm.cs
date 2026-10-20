@@ -69,12 +69,42 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         var c = await CourantAsync(u, ct);
         var nom = c.Ind is long i ? (await specialisation.IndividusAsync(db, [i], ct)).GetValueOrDefault(i) : null;
         var services = c.Ind is long j ? await specialisation.ServicesIndividuAsync(db, j, ct) : [];
-        return new ContexteCrm(u.Code, c.Ind, nom, services, c.Superviser, c.Rgpd, u.EstAdmin, specialisation.TypesElements,
+        return new ContexteCrm(u.Code, c.Ind, nom, services, c.Superviser, c.Rgpd, u.EstAdmin, [.. specialisation.TypesElements, .. TypesPropres],
             await specialisation.ServicesAsync(db, ct), await TypesNotes(ct));
     }
 
     /// <summary>Éléments de l'application décrits (libellé, page, icône).</summary>
-    public Task<List<ElementDecrit>> Decrire(List<ElementCrm> elements, CancellationToken ct) => specialisation.DecrireAsync(db, elements.Take(200).ToList(), ct);
+    public Task<List<ElementDecrit>> Decrire(List<ElementCrm> elements, CancellationToken ct) => DecrireAsync(elements.Take(200).ToList(), ct);
+
+    /// <summary>
+    /// Éléments décrits : ceux du module (notes, demandes) par lui-même, les autres par la spécialisation ; un élément
+    /// par couple (type, id) demandé.
+    /// </summary>
+    private async Task<List<ElementDecrit>> DecrireAsync(IReadOnlyCollection<ElementCrm> elements, CancellationToken ct)
+    {
+        var uniques = elements.Distinct().ToList();
+        var res = await specialisation.DecrireAsync(db, uniques.Where(e => !e.Type.StartsWith("crm_")).ToList(), ct);
+        long Id(ElementCrm e) => long.TryParse(e.Id, out var x) ? x : -1;
+        var demandes = uniques.Where(e => e.Type == "crm_demande").Select(Id).ToList();
+        if (demandes.Count > 0)
+        {
+            var d = await db.Demandes.AsNoTracking().Where(x => demandes.Contains(x.DemId)).ToDictionaryAsync(x => x.DemId, ct);
+            res.AddRange(uniques.Where(e => e.Type == "crm_demande").Select(e => d.TryGetValue(Id(e), out var x)
+                ? new ElementDecrit(e.Type, e.Id, $"{x.DemNumero} – {x.DemObjet}", $"/crm/demande/{x.DemId}", "📨")
+                : new ElementDecrit(e.Type, e.Id, $"Demande {e.Id} (introuvable)", null, "📨")));
+        }
+        var notes = uniques.Where(e => e.Type == "crm_note").Select(Id).ToList();
+        if (notes.Count > 0)
+        {
+            var n = await db.Notes.AsNoTracking().Where(x => notes.Contains(x.NotId)).ToDictionaryAsync(x => x.NotId, ct);
+            res.AddRange(uniques.Where(e => e.Type == "crm_note").Select(e => n.TryGetValue(Id(e), out var x)
+                ? new ElementDecrit(e.Type, e.Id, x.NotPrive || x.NotRgpd ? "Note protégée" : x.NotObjet, $"/crm/note/{x.NotId}", "📝")
+                : new ElementDecrit(e.Type, e.Id, $"Note {e.Id} (introuvable)", null, "📝")));
+        }
+        var autres = uniques.Where(e => e.Type.StartsWith("crm_") && e.Type is not ("crm_demande" or "crm_note"));
+        res.AddRange(autres.Select(e => new ElementDecrit(e.Type, e.Id, $"{e.Type} {e.Id}", null, null)));
+        return res;
+    }
 
     // ------------------------------------------------------------------ types de notes
 
@@ -173,7 +203,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         var noms = await specialisation.IndividusAsync(db, notes.Where(n => n.NotResponsableId != null).Select(n => n.NotResponsableId!.Value).ToList(), ct);
         var liens = await db.Liens.AsNoTracking().Where(l => ids.Contains(l.NliNotId)).ToListAsync(ct);
         var principaux = liens.GroupBy(l => l.NliNotId).ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.NliPrincipal).First());
-        var decrits = (await specialisation.DecrireAsync(db, principaux.Values.Select(l => new ElementCrm(l.NliTypeElement, l.NliIdElement)).Distinct().ToList(), ct))
+        var decrits = (await DecrireAsync(principaux.Values.Select(l => new ElementCrm(l.NliTypeElement, l.NliIdElement)).Distinct().ToList(), ct))
             .ToDictionary(e => (e.Type, e.Id));
         var reponses = await db.Notes.AsNoTracking().Where(n => n.NotParentId != null && ids.Contains(n.NotParentId.Value))
             .GroupBy(n => n.NotParentId!.Value).Select(g => new { g.Key, Nb = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Nb, ct);
@@ -218,7 +248,8 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         if (masque is null && liste.Masquee is not null) liste = liste with { Masquee = null, Objet = n.NotObjet, MessageHtml = n.NotMessageHtml };
 
         var liens = await db.Liens.AsNoTracking().Where(l => l.NliNotId == id).OrderByDescending(l => l.NliPrincipal).ToListAsync(ct);
-        var decrits = await specialisation.DecrireAsync(db, liens.Select(l => new ElementCrm(l.NliTypeElement, l.NliIdElement)).ToList(), ct);
+        var parElement = (await DecrireAsync(liens.Select(l => new ElementCrm(l.NliTypeElement, l.NliIdElement)).ToList(), ct)).ToDictionary(e => (e.Type, e.Id));
+        var decrits = liens.Select(l => parElement[(l.NliTypeElement, l.NliIdElement)]).ToList();
         var historique = await db.Historique.AsNoTracking().Where(h => h.NhiNotId == id).OrderBy(h => h.NhiLe).ThenBy(h => h.NhiId).ToListAsync(ct);
         var individus = destinataires.Select(d => d.NdeIndId)
             .Concat(historique.Where(h => h.NhiQuoi == "RESPONSABLE").SelectMany(h => new[] { h.NhiAvant, h.NhiApres }).Where(x => long.TryParse(x, out _)).Select(long.Parse))

@@ -182,13 +182,13 @@ export class PageNoteCrm extends PageBase {
     zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { this.liens.splice(Number(b.dataset.retirer), 1); maj(); }));
     zone.querySelectorAll('[data-principal]').forEach((b) => b.addEventListener('click', () => { const [x] = this.liens.splice(Number(b.dataset.principal), 1); this.liens.unshift(x); maj(); }));
     if (lecture) return;
-    const types = this.ctx.types_elements.filter((t) => t.code !== 'document');
+    const types = this.ctx.types_elements;
     const type = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: `${t.icone ?? ''} ${t.libelle}` })), valeur: 'personne', vide: false });
     zone.querySelector('[data-type]').replaceWith(type);
-    const ajouter = (t, id, libelle) => {
+    const ajouter = (t, id, libelle, url = null) => {
       if (this.liens.some((l) => l.type === t && String(l.id) === String(id))) return;
       const def = this.ctx.types_elements.find((x) => x.code === t);
-      this.liens.push({ type: t, id: String(id), libelle, icone: def?.icone, url: `/fiche/${t}/${id}` });
+      this.liens.push({ type: t, id: String(id), libelle, icone: def?.icone, url: url ?? `/fiche/${t}/${id}` });
       maj();
     };
     const chercher = async () => {
@@ -203,9 +203,10 @@ export class PageNoteCrm extends PageBase {
         return;
       }
       const trouves = t === 'personne' ? (await annuaire.rechercherPersonnes({ recherche: texte, limite: 15 })).map((p) => ({ id: p.id, libelle: p.nom_commercial || p.raison_sociale, detail: p.ville ?? '' }))
-        : (await annuaire.rechercherIndividus({ recherche: texte, limite: 15 })).map((p) => ({ id: p.id, libelle: p.nom_complet, detail: p.personnes ?? '' }));
+        : t === 'individu' ? (await annuaire.rechercherIndividus({ recherche: texte, limite: 15 })).map((p) => ({ id: p.id, libelle: p.nom_complet, detail: p.personnes ?? '' }))
+          : (await api.crm.rechercher(t, texte)).map((e) => ({ id: e.id, libelle: e.libelle, detail: '', url: e.url }));
       res.innerHTML = trouves.length ? `<ul class="crm-resultats">${trouves.map((x, i) => `<li><button type="button" data-choix="${i}">${echapper(x.libelle)}</button> <span class="aide">${echapper(x.detail)}</span></li>`).join('')}</ul>` : '<p class="aide">Aucun résultat.</p>';
-      res.querySelectorAll('[data-choix]').forEach((b) => b.addEventListener('click', () => { const x = trouves[Number(b.dataset.choix)]; ajouter(t, x.id, x.libelle); }));
+      res.querySelectorAll('[data-choix]').forEach((b) => b.addEventListener('click', () => { const x = trouves[Number(b.dataset.choix)]; ajouter(t, x.id, x.libelle, x.url); }));
     };
     zone.querySelector('[data-ajouter]').addEventListener('click', () => chercher().catch((e) => this.app.erreur(e)));
     zone.querySelector('[data-recherche]').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); chercher().catch((x) => this.app.erreur(x)); } });

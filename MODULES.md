@@ -119,7 +119,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | bibliotheque | `calcul.js` | `CalculElement.cs`, `CoefficientsElement.cs` | `01_calcul`, `02_coefficients` |
 | annuaire | `identifiants.js`, `coordonnees.js`, `graphe.js` | `Identifiants.cs`, `PlanCoordonnees.cs`, `GrapheAnnuaire.cs` | `01`–`03` |
 | entreprises-fr | `correspondance.js` | `Correspondance.cs` | `01_correspondance` |
-| crm | `notes.js`, `rappels.js` | `ReglesNote.cs`, `ReglesRappel.cs` | `01_note`, `02_rappels` |
+| crm | `notes.js`, `rappels.js`, `demandes.js` | `ReglesNote.cs`, `ReglesRappel.cs`, `ReglesDemande.cs` | `01_note`, `02_rappels`, `03_demandes` |
 
 Les tests de chaque côté lisent les mêmes fichiers (`@logibtp/socle/testing` ↔ `LogiBTP.Socle.Testing.CasPartages`).
 

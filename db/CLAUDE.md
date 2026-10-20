@@ -46,7 +46,7 @@
 - `191_editions_modeles.sql` : **généré** (`client/src/app/editions/modeles.js`) : charte, modèles fournis (réécrits tant qu'ils ne sont pas modifiés localement), liens, défauts ; rejouable.
 - `192_editions_production.sql` : catégories GED `edition` et `ressource_edition` ; rejouable.
 - `193_modules_services.sql` : `module_societe` (activation des modules facultatifs par drapeau : `reglement`, `crm`), `service` (deux niveaux, trigger `f_service_niveaux`, natures PRODUCTION / ETUDE / LOGISTIQUE / ADMINISTRATIF ; Vente et Achat), `service_membre` (individus de notre société, un seul principal : `ux_sme_principal`), membres de démonstration repris de `demo_salarie.sal_service` ; rejouable.
-- `194_crm.sql` : élément GED `crm_note` (reprend `f_ged_element_existe` de 164), catégorie GED `crm` ; rejouable.
+- `194_crm.sql` : éléments GED `crm_*` (reprend `f_ged_element_existe` de 164 en déléguant au module : `f_crm_element_existe` de `modules/crm/db/097`), catégorie GED `crm` ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

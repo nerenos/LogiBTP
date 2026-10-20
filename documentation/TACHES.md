@@ -17,7 +17,7 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
-- [ ] Module CRM : `modules/crm/db/095`, `096` et `db/194` appliqués aux deux bases (21/10/2026) ; redémarrer l'API. L'utilisateur de démonstration `demo` n'est relié à aucun individu (`ind_utilisateur`) : « Mes tâches » et « À prendre » restent vides pour lui (renseigner l'identifiant de connexion d'un individu de notre société).
+- [ ] Module CRM : `modules/crm/db/095` à `097` et `db/194` appliqués aux deux bases (21/10/2026) ; redémarrer l'API. L'utilisateur de démonstration `demo` n'est relié à aucun individu (`ind_utilisateur`) : « Mes tâches » et « À prendre » restent vides pour lui (renseigner l'identifiant de connexion d'un individu de notre société).
 - [ ] Modules et services : `db/193` appliqué aux deux bases (20/10/2026) ; redémarrer l'API (routes `/api/modules`, `/api/services`, filtre d'activation des Règlements).
 
 - [ ] Éditions : `modules/edition/db/090`, `091`, `db/190`, `191`, `192` appliqués aux deux bases (18/10/2026) ; arrêter et
@@ -148,7 +148,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
   composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des
   tables.
-- [ ] **Développement du module CRM** : lot 0 (activation des modules, services et membres) et lot 1 (notes, liens, destinataires, prise en charge par un service, notes privées et RGPD, onglet Suivi, menu Suivi, courriel glissé) et lot 2 (rappels à date ou avant l'échéance, seuils globaux, Mes rappels, widget de l'accueil) réalisés le 21/10/2026 ; lots 3 (demandes), 4 (validations des plans, bordereau), 5 (fil d'actualité) en cours.
+- [ ] **Développement du module CRM** : lot 0 (activation des modules, services et membres) et lot 1 (notes, liens, destinataires, prise en charge par un service, notes privées et RGPD, onglet Suivi, menu Suivi, courriel glissé), lot 2 (rappels à date ou avant l'échéance, seuils globaux, Mes rappels, widget de l'accueil) et lot 3 (demandes de veille, transformation en projet, sans suite) réalisés le 21/10/2026 ; lots 4 (validations des plans, bordereau), 5 (fil d'actualité) en cours.
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
   référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
   application mobile hors ligne.

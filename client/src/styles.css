@@ -394,3 +394,9 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-pastille-orange { background: #f79009; }
 .crm-pastille-vert { background: #12b76a; }
 .crm-ajout-rappel { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .4rem; }
+.crm-tiers { display: flex; gap: .3rem; align-items: center; min-height: 1.8rem; }
+.crm-dem-veille { font-style: italic; }
+.crm-dem-a_etudier { background: var(--alerte-fond); }
+.crm-dem-en_cours { background: var(--accent-clair); }
+.crm-dem-transformee { background: #d1fadf; color: #05603a; }
+.crm-dem-sans_suite { color: var(--discret); }

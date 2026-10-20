@@ -1,6 +1,6 @@
 -- =============================================================================
--- Cœur – module CRM (modules/crm/db/095) : pièces jointes des notes dans la GED (élément « crm_note » accepté par
--- f_ged_element_existe, qui reprend 164), catégorie GED « crm ». Rejouable.
+-- Cœur – module CRM (modules/crm/db/095, 097) : pièces jointes des éléments du CRM dans la GED (types crm_* acceptés par
+-- f_ged_element_existe, qui reprend 164, en déléguant au module : f_crm_element_existe), catégorie GED « crm ». Rejouable.
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION f_ged_element_existe(p_type TEXT, p_id TEXT) RETURNS BOOLEAN LANGUAGE plpgsql STABLE AS $$
@@ -26,8 +26,7 @@ BEGIN
         WHEN 'affaire'  THEN EXISTS (SELECT 1 FROM affaire WHERE aff_id = n)
         WHEN 'chantier' THEN EXISTS (SELECT 1 FROM chantier WHERE cha_id = n)
         WHEN 'marche'   THEN EXISTS (SELECT 1 FROM marche WHERE mar_id = n)
-        WHEN 'crm_note' THEN EXISTS (SELECT 1 FROM crm_note WHERE not_id = n)
-        ELSE NULL
+        ELSE CASE WHEN p_type LIKE 'crm\_%' THEN f_crm_element_existe(p_type, n) END
     END;
 END $$;
 
