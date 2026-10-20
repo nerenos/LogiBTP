@@ -132,6 +132,19 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   et texte de fin…).
 - [ ] Rattachement automatique du client à l'annuaire.
 
+### Nouveaux modules : CRM, Exécution, Planning, Pointage MO
+
+- [ ] Analyses préalables rédigées le 20/10/2026 ([socle commun](conception/ANALYSE-MODULES-TRANSVERSE.md),
+  [CRM](conception/ANALYSE-MODULE-CRM.md), [Exécution](conception/ANALYSE-MODULE-EXECUTION.md),
+  [Planning](conception/ANALYSE-MODULE-PLANNING.md), [Pointage MO](conception/ANALYSE-MODULE-POINTAGE.md)) : questions
+  C1–C15, E1–E15, P1–P18, M1–M15 à trancher (propositions faites). Décisions structurantes à valider : ordres
+  d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
+  composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des
+  tables.
+- [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
+  référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
+  application mobile hors ligne.
+
 ### Installation
 
 - [ ] **Module d'installation** : générer et conserver la chaîne de chiffrement de l'installation (aujourd'hui
