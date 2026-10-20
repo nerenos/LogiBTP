@@ -213,6 +213,7 @@ public partial class ServiceCrm
         var dejaLiees = await db.Liens.Where(l => notes.Contains(l.NliNotId) && l.NliTypeElement == projet.Type && l.NliIdElement == projet.Id).Select(l => l.NliNotId).ToListAsync(ct);
         db.Liens.AddRange(notes.Except(dejaLiees).Select(n => new CrmNoteLien { NliNotId = n, NliTypeElement = projet.Type, NliIdElement = projet.Id }));
         await db.SaveChangesAsync(ct);
+        await PublierAsync("DEMANDE_TRANSFORMEE", projet.Type, projet.Id, $"Projet créé depuis la demande {d.DemNumero} : {d.DemObjet}", $"/crm/demande/{d.DemId}", u.Code, ct);
         await tx.CommitAsync(ct);
         return await Demande(id, u, ct);
     }

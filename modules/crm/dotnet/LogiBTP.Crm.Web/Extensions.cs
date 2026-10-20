@@ -87,6 +87,8 @@ public static class Extensions
         g.MapGet("/diffusions", (string? type_element, string? id_element, ServiceCrm s, CancellationToken ct) => s.Diffusions(type_element, id_element, ct));
         g.MapGet("/diffusions/{id:long}", (long id, ServiceCrm s, CancellationToken ct) => s.Diffusion(id, ct));
         g.MapPost("/diffusions", (DiffusionSaisie d, HttpContext http, ServiceCrm s, CancellationToken ct) => s.CreerDiffusion(d, Utilisateur.Depuis(http), ct));
+        g.MapGet("/fil", (string? type_element, string? id_element, DateTimeOffset? avant, int? taille, string? genres, HttpContext http, ServiceCrm s, CancellationToken ct) =>
+            s.Fil(type_element, id_element, avant, taille ?? 30, genres, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

@@ -27,6 +27,7 @@ import { PagePlansCrm } from './crm-plans.js';
 import { PagePlanCrm } from './crm-plan.js';
 import { PageDiffusionsCrm } from './crm-diffusions.js';
 import { PageDiffusionCrm } from './crm-diffusion.js';
+import { PageFilCrm } from './crm-fil.js';
 import { PageParametresCrm } from './parametres-crm.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -60,6 +61,7 @@ export const ROUTES = [
   { nom: 'crm-plan', chemin: '/crm/plan/:id', page: PagePlanCrm, titre: 'Plan' },
   { nom: 'crm-diffusions', chemin: '/crm/diffusions', page: PageDiffusionsCrm, titre: 'Bordereaux de diffusion' },
   { nom: 'crm-diffusion', chemin: '/crm/diffusion/:id', page: PageDiffusionCrm, titre: 'Bordereau de diffusion' },
+  { nom: 'crm-fil', chemin: '/crm/fil', page: PageFilCrm, titre: 'Fil d\'actualité' },
   { nom: 'crm', chemin: '/crm', page: PageCrm, titre: 'Suivi' },
   { nom: 'edition', chemin: '/edition', page: PageEdition, titre: 'Aperçu' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },

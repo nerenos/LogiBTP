@@ -5,6 +5,11 @@
 > Modules liés : [Exécution](ANALYSE-MODULE-EXECUTION.md) · [Planning](ANALYSE-MODULE-PLANNING.md) ·
 > [Pointage MO](ANALYSE-MODULE-POINTAGE.md).
 
+> **Réalisation** : premier temps (lots 0 à 5) réalisé le 21/10/2026 ; contexte technique dans
+> [modules/crm/CLAUDE.md](../../modules/crm/CLAUDE.md). Écarts : bordereau imprimé par le navigateur (modèle Édition à venir),
+> journal des consultations propre au module (`crm_consultation`, pas `journal_confidentiel` du module Fiche, pour ne pas
+> dépendre de lui), droits SUPERVISER et RGPD dans `crm_droit`, scripts du module numérotés 095 à 099.
+
 ## 1. Objet
 
 Suivre la **relation** avec les tiers et la **circulation de l'information** autour d'une affaire, du premier contact

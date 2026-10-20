@@ -160,6 +160,7 @@ export const api = {
     diffusions: (filtre = {}) => appel('GET', `/crm/diffusions?${new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null && v !== ''))}`),
     diffusion: (id) => appel('GET', `/crm/diffusions/${id}`),
     creerDiffusion: (d) => appel('POST', '/crm/diffusions', d),
+    fil: (filtre = {}) => appel('GET', `/crm/fil?${new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null && v !== ''))}`),
   },
   tiersReglements: () => appel('GET', '/reglements/tiers'),
   echeancesReglement: ({ tiers, sens, piece, ouvertes } = {}) => appel('GET', `/reglements/echeances?${new URLSearchParams(Object.entries({ tiers, sens, piece, ouvertes }).filter(([, v]) => v !== undefined && v !== null)).toString()}`),

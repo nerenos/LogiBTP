@@ -412,3 +412,15 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
   .crm-bordereau { color: #000; background: #fff; }
   .crm-bordereau a { color: inherit; text-decoration: none; }
 }
+.crm-publier { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .5rem 0; }
+.crm-publier textarea { flex: 1 1 24rem; }
+.crm-photos { cursor: pointer; padding: .2rem .5rem; border: 1px solid var(--bord); border-radius: .3rem; }
+.crm-fil { display: flex; flex-direction: column; gap: .6rem; max-width: 60rem; }
+.crm-fil-element { border: 1px solid var(--bord); border-radius: .5rem; padding: .5rem .75rem; background: var(--surface); }
+.crm-fil-entete { display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
+.crm-fil-quand { margin-left: auto; }
+.crm-fil-evenement { border-style: dashed; }
+.crm-fil-texte { margin-top: .3rem; }
+.crm-fil-photos { display: flex; gap: .4rem; margin-top: .4rem; align-items: center; }
+.crm-fil-photos img { width: 9rem; height: 6.5rem; object-fit: cover; border-radius: .3rem; border: 1px solid var(--bord); }
+.crm-fil-reste { display: inline-flex; width: 4rem; height: 6.5rem; align-items: center; justify-content: center; border: 1px dashed var(--bord); border-radius: .3rem; font-size: 1.2em; }

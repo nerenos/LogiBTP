@@ -239,6 +239,20 @@ public class CrmDiffusionDestinataire
     public long? DfdNotId { get; set; }
 }
 
+/// <summary>Événement publié dans le fil d'actualité (bordereau, visa, indice, demande transformée…).</summary>
+public class CrmEvenement
+{
+    public long EveId { get; set; }
+    public string EveType { get; set; } = "";
+    public string EveTypeElement { get; set; } = "";
+    public string EveIdElement { get; set; } = "";
+    public string EveLibelle { get; set; } = "";
+    public string? EveUrl { get; set; }
+    public string EveModule { get; set; } = "crm";
+    public DateTimeOffset EveQuand { get; set; }
+    public string? EvePar { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/crm/db) ; snake_case par la convention de l'application.</summary>
 public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(options)
 {
@@ -260,6 +274,7 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
     public DbSet<CrmDiffusion> Diffusions => Set<CrmDiffusion>();
     public DbSet<CrmDiffusionPiece> PiecesDiffusion => Set<CrmDiffusionPiece>();
     public DbSet<CrmDiffusionDestinataire> DestinatairesDiffusion => Set<CrmDiffusionDestinataire>();
+    public DbSet<CrmEvenement> Evenements => Set<CrmEvenement>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -282,6 +297,7 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
         b.Entity<CrmDiffusion>().ToTable("crm_diffusion").HasKey(x => x.DifId);
         b.Entity<CrmDiffusionPiece>().ToTable("crm_diffusion_piece").HasKey(x => x.DfpId);
         b.Entity<CrmDiffusionDestinataire>().ToTable("crm_diffusion_destinataire").HasKey(x => x.DfdId);
+        b.Entity<CrmEvenement>().ToTable("crm_evenement").HasKey(x => x.EveId);
     }
 }
 

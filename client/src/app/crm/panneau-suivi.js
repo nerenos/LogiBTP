@@ -32,6 +32,7 @@ export class PanneauSuivi {
         <input class="crm-saisie-rapide" placeholder="Note rapide : Entrée = pour mémo · Ctrl+Entrée = tâche pour moi (demain)" maxlength="200">
         <button type="button" data-complete title="Note complète (nature, responsable, destinataires, pièces) dans une autre fenêtre">＋ Note…</button>
         ${this.fenetre ? '<button type="button" data-fenetre title="Ouvrir ce suivi dans une fenêtre à côté">⧉</button>' : ''}
+        <a href="/crm/fil?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Fil d'actualité de l'élément (notes publiées, documents, photos, événements)">📰 Fil</a>
         ${STRUCTURE.includes(this.element.type) ? `<a href="/crm/plans?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Plans, indices et visas">📐 Plans</a>
           <a href="/crm/diffusions?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Bordereaux de diffusion">📤 Bordereaux</a>` : ''}
         <label class="fiche-option" title="Masquer les notes terminées, pour mémo et annulées"><input type="checkbox" data-ouvertes> Ouvertes seulement</label>

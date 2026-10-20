@@ -212,6 +212,9 @@ public partial class ServiceCrm
         if (await db.Indices.AnyAsync(i => i.PinPlaId == plan && i.PinIndice == indice, ct)) throw ExceptionMetier.Conflit("INDICE_EXISTANT", $"L'indice {indice} existe déjà");
         db.Indices.Add(new CrmPlanIndice { PinPlaId = plan, PinIndice = indice, PinDate = s.Date, PinMotif = s.Motif, PinDgeId = s.DgeId, PinCreePar = u.Code, PinCreeLe = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(ct);
+        var pl = await db.Plans.AsNoTracking().FirstAsync(p => p.PlaId == plan, ct);
+        await PublierAsync("INDICE", pl.PlaTypeElement, pl.PlaIdElement, $"Plan {pl.PlaRepere} – {pl.PlaNom} : indice {indice}{(string.IsNullOrWhiteSpace(s.Motif) ? "" : $" ({s.Motif})")}",
+            $"/crm/plan/{plan}", u.Code, ct);
         return await Plan(plan, ct);
     }
 
@@ -259,8 +262,15 @@ public partial class ServiceCrm
         v.VisMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         if (v.VisDfdId is long dfd) await MajTacheRetour(dfd, u, ct);
-        var plan = await db.Indices.Where(i => i.PinId == v.VisPinId).Select(i => i.PinPlaId).FirstAsync(ct);
-        return await Plan(plan, ct);
+        var ind = await db.Indices.AsNoTracking().FirstAsync(i => i.PinId == v.VisPinId, ct);
+        if (s.Statut is not null)
+        {
+            var pl = await db.Plans.AsNoTracking().FirstAsync(p => p.PlaId == ind.PinPlaId, ct);
+            var statut = await db.StatutsVisa.AsNoTracking().Where(x => x.StvCode == s.Statut).Select(x => x.StvLibelle).FirstAsync(ct);
+            var tiers = (await DecrireAsync([new ElementCrm("personne", v.VisTiersId.ToString())], ct)).FirstOrDefault()?.Libelle ?? $"tiers {v.VisTiersId}";
+            await PublierAsync("VISA", pl.PlaTypeElement, pl.PlaIdElement, $"Visa « {statut} » de {tiers} : plan {pl.PlaRepere} indice {ind.PinIndice}", $"/crm/plan/{pl.PlaId}", u.Code, ct);
+        }
+        return await Plan(ind.PinPlaId, ct);
     }
 
     public async Task<PlanDetail> SupprimerVisa(long id, Utilisateur u, CancellationToken ct)
@@ -398,6 +408,8 @@ public partial class ServiceCrm
             }
             await db.SaveChangesAsync(ct);
         }
+        await PublierAsync("DIFFUSION", s.TypeElement, s.IdElement, $"Bordereau {dif.DifNumero} : {dif.DifObjet} ({s.Pieces.Count} pièce(s), {s.Destinataires.Count} destinataire(s))",
+            $"/crm/diffusion/{dif.DifId}", u.Code, ct);
         await tx.CommitAsync(ct);
         return await Diffusion(dif.DifId, ct);
     }

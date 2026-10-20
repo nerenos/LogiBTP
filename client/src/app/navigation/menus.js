@@ -79,6 +79,8 @@ export const MENUS_METIER = [
       { code: 'crm-plans', libelle: 'Plans et visas', icone: '📐', url: '/crm/plans', info: 'Indices, visas des tiers, indice en vigueur', creation: { url: '/crm/plan/nouveau', titre: 'Nouveau plan' } },
       { code: 'crm-diffusions', libelle: 'Bordereaux de diffusion', icone: '📤', url: '/crm/diffusions' },
       { separateur: true },
+      { code: 'crm-fil', libelle: 'Fil d\'actualité', icone: '📰', url: '/crm/fil', info: 'Notes publiées et événements ; le fil d\'un chantier se trouve dans son suivi' },
+      { separateur: true },
       { code: 'parametrage-crm', libelle: 'Types de notes, rappels, statuts de visa…', icone: '⚙', url: '/parametres/crm' },
     ],
   },

@@ -9,6 +9,9 @@ public sealed record ElementDecrit(string Type, string Id, string Libelle, strin
 /// <summary>Service de l'application : identifiant, code, libellé ; principal pour l'individu interrogé.</summary>
 public sealed record ServiceEntreprise(int Id, string Code, string Libelle, bool Principal = false);
 
+/// <summary>Document de l'application pour le fil : élément, identifiant, titre, image, date, auteur, page, contenu (image).</summary>
+public sealed record DocumentFil(ElementCrm Element, long Id, string Titre, bool Image, DateTimeOffset Quand, string? Par, string? Url, string? Contenu);
+
 /// <summary>Type d'élément rattachable à une note (proposé à la saisie).</summary>
 public sealed record TypeElementCrm(string Code, string Libelle, string? Icone);
 
@@ -43,6 +46,16 @@ public class SpecialisationCrm
 
     /// <summary>Recherche d'éléments d'un type (documents par numéro ou objet…) pour les rattacher à une note.</summary>
     public virtual Task<List<ElementDecrit>> RechercherAsync(CrmDbContext db, string type, string texte, CancellationToken ct) => Task.FromResult(new List<ElementDecrit>());
+
+    /// <summary>
+    /// Périmètre du fil d'un élément : lui-même et ce qu'il agrège (une affaire montre ses chantiers…). Par défaut,
+    /// l'élément seul.
+    /// </summary>
+    public virtual Task<List<ElementCrm>> PerimetreAsync(CrmDbContext db, ElementCrm element, CancellationToken ct) => Task.FromResult(new List<ElementCrm> { element });
+
+    /// <summary>Documents (et photos) rattachés à des éléments, du plus récent au plus ancien, avant une date.</summary>
+    public virtual Task<List<DocumentFil>> DocumentsAsync(CrmDbContext db, IReadOnlyCollection<ElementCrm> elements, DateTimeOffset? avant, int taille, CancellationToken ct) =>
+        Task.FromResult(new List<DocumentFil>());
 
     /// <summary>Services de l'application (actifs).</summary>
     public virtual Task<List<ServiceEntreprise>> ServicesAsync(CrmDbContext db, CancellationToken ct) => Task.FromResult(new List<ServiceEntreprise>());

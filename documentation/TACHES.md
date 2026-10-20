@@ -17,7 +17,7 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
-- [ ] Module CRM : `modules/crm/db/095` à `098` et `db/194` appliqués aux deux bases (21/10/2026) ; redémarrer l'API. L'utilisateur de démonstration `demo` n'est relié à aucun individu (`ind_utilisateur`) : « Mes tâches » et « À prendre » restent vides pour lui (renseigner l'identifiant de connexion d'un individu de notre société).
+- [ ] Module CRM : `modules/crm/db/095` à `099` et `db/194` appliqués aux deux bases (21/10/2026) ; redémarrer l'API. L'utilisateur de démonstration `demo` n'est relié à aucun individu (`ind_utilisateur`) : « Mes tâches » et « À prendre » restent vides pour lui (renseigner l'identifiant de connexion d'un individu de notre société).
 - [ ] Modules et services : `db/193` appliqué aux deux bases (20/10/2026) ; redémarrer l'API (routes `/api/modules`, `/api/services`, filtre d'activation des Règlements).
 
 - [ ] Éditions : `modules/edition/db/090`, `091`, `db/190`, `191`, `192` appliqués aux deux bases (18/10/2026) ; arrêter et
@@ -148,7 +148,16 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
   composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des
   tables.
-- [ ] **Développement du module CRM** : lot 0 (activation des modules, services et membres) et lot 1 (notes, liens, destinataires, prise en charge par un service, notes privées et RGPD, onglet Suivi, menu Suivi, courriel glissé), lot 2 (rappels à date ou avant l'échéance, seuils globaux, Mes rappels, widget de l'accueil) lot 3 (demandes de veille, transformation en projet, sans suite) et lot 4 (plans, indices, visas, bordereaux de diffusion avec tâches de retour) réalisés le 21/10/2026 ; lot 5 (fil d'actualité) en cours. Bordereau imprimé par le navigateur : un modèle du module Édition reste à faire (avec l'envoi par le module Mail).
+- [x] **Développement du module CRM, premier temps** (21/10/2026, lots 0 à 5) : activation des modules et services ; notes
+  (prise en charge par un service, privées et RGPD, onglet Suivi, courriel glissé) ; rappels (seuils, Mes rappels,
+  widget) ; demandes de veille et transformation en projet ; plans, indices, visas, bordereaux et tâches de retour ;
+  fil d'actualité. [analyse](conception/ANALYSE-MODULE-CRM.md), [module](../modules/crm/CLAUDE.md)
+- [ ] CRM, second temps : pipeline commercial, export iCalendar, miniatures des photos (GED), relances des devis et
+  factures (C22, C27 : règle globale et par tiers, liste validée avant l'envoi), notifications poussées et récurrence
+  des rappels (planificateur, centre de notifications), module Archivage (C29 : `not_archivee_le`), bordereau par un
+  modèle du module Édition et envoi par le module Mail, événements publiés par le cœur (document validé…) dans le fil.
+- [ ] CRM, troisième temps : portail tiers, réserves (OPR), comptes rendus de réunion, DOE, assistance IA, journal
+  d'appels.
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
   référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
   application mobile hors ligne.

@@ -79,6 +79,62 @@ public class SpecialisationCrmBtp : SpecialisationCrm
         return new ElementCrm("projet", id[0].ToString());
     }
 
+    /// <summary>
+    /// Périmètre du fil : un projet, une affaire, un chantier ou un marché agrège ce qui lui est rattaché (chantiers,
+    /// marchés, documents par groupe d'indices) ; les autres éléments restent seuls.
+    /// </summary>
+    public override async Task<List<ElementCrm>> PerimetreAsync(CrmDbContext db, ElementCrm element, CancellationToken ct)
+    {
+        var res = new List<ElementCrm> { element };
+        if (element.Type is not ("projet" or "affaire" or "chantier" or "marche") || !int.TryParse(element.Id, out var id)) return res;
+        var lignes = await db.Database.SqlQueryRaw<PerimetreSql>("""
+            WITH chantiers AS (
+                SELECT cha_id FROM chantier WHERE (@type = 'affaire' AND cha_aff_id = @id) OR (@type = 'projet' AND cha_prj_id = @id) OR (@type = 'chantier' AND cha_id = @id)),
+            marches AS (
+                SELECT mar_id FROM marche WHERE mar_cha_id IN (SELECT cha_id FROM chantiers) OR (@type = 'marche' AND mar_id = @id))
+            SELECT 'chantier' AS type, cha_id::text AS id FROM chantiers WHERE @type <> 'chantier'
+            UNION SELECT 'marche', mar_id::text FROM marches WHERE @type <> 'marche'
+            UNION SELECT DISTINCT 'document', coalesce(ent_groupe_id, ent_id)::text FROM document
+              WHERE (@type = 'projet' AND ent_projet_id = @id) OR (@type = 'affaire' AND ent_affaire_id = @id)
+                 OR ent_chantier_id IN (SELECT cha_id FROM chantiers) OR ent_marche_id IN (SELECT mar_id FROM marches)
+            """, new NpgsqlParameter("type", element.Type), new NpgsqlParameter("id", id)).ToListAsync(ct);
+        res.AddRange(lignes.Select(l => new ElementCrm(l.Type, l.Id)));
+        return res;
+    }
+
+    /// <summary>
+    /// Documents de la GED des éléments (internes, ni supprimés ni archivés) : un document de l'application est rangé sous
+    /// le code de son type et son groupe d'indices ; image = type MIME image/*, affichée par le contenu de sa version.
+    /// </summary>
+    public override async Task<List<DocumentFil>> DocumentsAsync(CrmDbContext db, IReadOnlyCollection<ElementCrm> elements, DateTimeOffset? avant, int taille, CancellationToken ct)
+    {
+        if (elements.Count == 0) return [];
+        var cibles = elements.Where(e => e.Type != "document").Select(e => (Ged: (e.Type, e.Id), Element: e)).ToList();
+        var groupes = elements.Where(e => e.Type == "document").Select(e => long.TryParse(e.Id, out var g) ? g : -1).Where(g => g > 0).ToArray();
+        if (groupes.Length > 0)
+        {
+            var types = await db.Database.SqlQueryRaw<PerimetreSql>("""
+                SELECT DISTINCT t.tyd_code AS type, coalesce(d.ent_groupe_id, d.ent_id)::text AS id
+                FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE coalesce(d.ent_groupe_id, d.ent_id) = ANY(@g)
+                """, new NpgsqlParameter("g", groupes)).ToListAsync(ct);
+            cibles.AddRange(types.Select(t => (Ged: (t.Type, t.Id), Element: new ElementCrm("document", t.Id))));
+        }
+        var parGed = cibles.GroupBy(c => c.Ged).ToDictionary(g => g.Key, g => g.First().Element);
+        var lignes = await db.Database.SqlQueryRaw<DocumentSql>("""
+            SELECT d.dge_id AS id, d.dge_titre AS titre, d.dge_type_element AS type_element, d.dge_id_element AS id_element,
+                   coalesce(v.vge_type_mime, '') LIKE 'image/%' AS image, d.dge_cree_le AS quand, d.dge_cree_par AS par, v.vge_id AS version
+            FROM document_ged d
+            JOIN unnest(@types, @ids) AS c(t, i) ON c.t = d.dge_type_element AND c.i = d.dge_id_element
+            LEFT JOIN version_ged v ON v.vge_document = d.dge_id AND v.vge_numero = d.dge_version_courante
+            WHERE NOT d.dge_supprime AND NOT d.dge_archive AND coalesce(d.dge_confidentialite, 'INTERNE') = 'INTERNE' AND d.dge_cree_le < @avant
+            ORDER BY d.dge_cree_le DESC LIMIT @taille
+            """,
+            new NpgsqlParameter("types", parGed.Keys.Select(k => k.Item1).ToArray()), new NpgsqlParameter("ids", parGed.Keys.Select(k => k.Item2).ToArray()),
+            new NpgsqlParameter("avant", avant ?? DateTimeOffset.MaxValue), new NpgsqlParameter("taille", taille)).ToListAsync(ct);
+        return lignes.Select(l => new DocumentFil(parGed.GetValueOrDefault((l.TypeElement, l.IdElement)) ?? new ElementCrm(l.TypeElement, l.IdElement), l.Id, l.Titre, l.Image,
+            l.Quand, l.Par, $"/ged/{l.Id}", l.Image && l.Version is long v ? $"/api/ged/versions/{v}/contenu" : null)).ToList();
+    }
+
     /// <summary>Documents par numéro ou objet (groupe d'indices, indice de référence).</summary>
     public override async Task<List<ElementDecrit>> RechercherAsync(CrmDbContext db, string type, string texte, CancellationToken ct)
     {
@@ -121,5 +177,7 @@ public class SpecialisationCrmBtp : SpecialisationCrm
             """).ToListAsync(ct);
 
     private sealed record LibelleSql(string Id, string? Libelle, string? Url);
+    private sealed record PerimetreSql(string Type, string Id);
+    private sealed record DocumentSql(long Id, string Titre, string TypeElement, string IdElement, bool Image, DateTimeOffset Quand, string? Par, long? Version);
     private sealed record IndividuSql(long Id, string Nom);
 }
