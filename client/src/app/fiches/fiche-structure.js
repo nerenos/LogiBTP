@@ -218,7 +218,7 @@ export class FicheStructure extends FicheLogiBTP {
           naviguer: (url, e) => this.ouvrirUrl(url, e),
         });
       },
-    }];
+    }, ...this.ongletsSuivi()];
   }
 }
 

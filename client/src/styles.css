@@ -349,3 +349,43 @@ button[data-action="editer"].actif { border-color: var(--accent); box-shadow: in
 .edition-editeur-message.avertissement { color: var(--avertissement, #a15c00); }
 .edition-editeur-message ul { margin: 0.2rem 0 0 1rem; padding: 0; }
 iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; visibility: hidden; }
+
+/* ---------------------------------------------------------------- Suivi (module CRM) */
+.crm-vues { margin: .5rem 0; }
+.crm-vues button.actif { font-weight: 600; border-bottom: 2px solid var(--accent); }
+.crm-filtres { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0; }
+.crm-filtres .principal { margin-left: auto; }
+.crm-table td { vertical-align: top; }
+.crm-retard { color: var(--erreur); font-weight: 600; }
+.crm-non-lue { font-weight: 600; }
+.crm-etat { display: inline-block; padding: 0 .4rem; border-radius: .6rem; font-size: .8em; border: 1px solid var(--bord); white-space: nowrap; }
+.crm-etat-a_faire { background: var(--alerte-fond); }
+.crm-etat-en_cours { background: var(--accent-clair); }
+.crm-etat-termine, .crm-etat-annulee { color: var(--discret); }
+.crm-etat-memo { font-style: italic; }
+.crm-suivi { display: flex; flex-direction: column; gap: .5rem; padding: .5rem; min-height: 12rem; }
+.crm-suivi-barre { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.crm-saisie-rapide { flex: 1 1 22rem; }
+.crm-depot { border: 2px dashed var(--accent); padding: 1rem; text-align: center; border-radius: .4rem; }
+.crm-notes { list-style: none; margin: 0; padding: 0; }
+.crm-note { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; padding: .35rem .25rem; border-bottom: 1px solid var(--bord); }
+.crm-note-objet { flex: 1 1 16rem; }
+.crm-note-qui { color: var(--discret); }
+.crm-note-grille { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 900px) { .crm-note-grille { grid-template-columns: 1fr; } }
+.crm-formulaire { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .5rem 1rem; }
+.crm-formulaire label { display: flex; flex-direction: column; gap: .15rem; }
+.crm-objet { display: flex; flex-direction: column; margin: .75rem 0 .5rem; }
+.crm-objet input { font-size: 1.05em; }
+.crm-riche { border: 1px solid var(--bord); border-radius: .3rem; background: var(--surface); }
+.crm-riche-outils { display: flex; gap: .2rem; padding: .2rem; border-bottom: 1px solid var(--bord); }
+.crm-riche-texte { min-height: 8rem; padding: .5rem; outline: none; }
+.crm-options { display: flex; flex-wrap: wrap; gap: 1rem; margin: .5rem 0; }
+.crm-liens, .crm-historique, .crm-reponses, .crm-resultats { list-style: none; margin: 0; padding: 0; }
+.crm-liens li, .crm-resultats li { padding: .15rem 0; }
+.crm-historique li { font-size: .9em; padding: .1rem 0; }
+.crm-reponses li { border-left: 3px solid var(--bord); padding: .25rem .5rem; margin: .4rem 0; }
+.crm-ajout-lien { margin-top: .4rem; }
+.crm-pieces { min-height: 6rem; }
+.crm-note-cote, .crm-note-principal { min-width: 0; }
+.vue-suivi { overflow: auto; }

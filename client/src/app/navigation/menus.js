@@ -66,6 +66,16 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'suivi', libelle: '&Suivi', module: 'crm', elements: [
+      { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
+      { code: 'crm-a-prendre', libelle: 'À prendre dans mes services', icone: '🙋', url: '/crm?vue=a_prendre' },
+      { code: 'crm-recues', libelle: 'Notes reçues', icone: '📥', url: '/crm?vue=recues' },
+      { code: 'crm-toutes', libelle: 'Toutes les notes', icone: '🗒', url: '/crm?vue=toutes', creation: { url: '/crm/note/nouveau', titre: 'Nouvelle note' } },
+      { separateur: true },
+      { code: 'parametrage-crm', libelle: 'Types de notes…', icone: '⚙', url: '/parametres/crm' },
+    ],
+  },
+  {
     code: 'bibliotheque', libelle: '&Bibliothèque', elements: [
       { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12', creation: F('element', 'Nouvel article') },
       { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13', creation: F('element', 'Nouvel ouvrage', '?type=OUVRAGE') },
@@ -103,7 +113,7 @@ export function menus(app) {
   return [
     ...MENUS_METIER.filter((m) => visible(app, m)).map((m) => ({ ...m, elements: () => elementsVisibles(app, m.elements) })),
     {
-      code: 'parametres', libelle: '&Paramètres', elements: () => [
+      code: 'parametres', libelle: '&Paramètres', elements: () => elementsVisibles(app, [
         { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres' },
         { separateur: true, libelle: 'Affichage' },
         ...THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
@@ -124,11 +134,12 @@ export function menus(app) {
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true, libelle: 'Organisation' },
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
+        { libelle: 'Suivi (CRM) : types de notes…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
-      ],
+      ]),
     },
     {
       code: 'fenetres', libelle: 'Fe&nêtres', elements: () => {

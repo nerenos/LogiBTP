@@ -305,6 +305,7 @@ export class FichePersonne extends FicheAnnuaire {
       },
       this.ongletGraphe('personne'),
       ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
+      ...this.ongletsSuivi(),
     ];
   }
 
@@ -466,6 +467,7 @@ export class FicheIndividu extends FicheAnnuaire {
       this.ongletCoordonnees('individu'),
       this.ongletRattachements('individu', 'rattachements', 'Rattachements'),
       this.ongletGraphe('individu'),
+      ...this.ongletsSuivi(),
     ];
   }
 }

@@ -53,6 +53,11 @@
     <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Web/LogiBTP.Reglements.Web.csproj" />
     <Project Path="modules/reglement/dotnet/LogiBTP.Reglements.Tests/LogiBTP.Reglements.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/crm/">
+    <Project Path="modules/crm/dotnet/LogiBTP.Crm/LogiBTP.Crm.csproj" />
+    <Project Path="modules/crm/dotnet/LogiBTP.Crm.Web/LogiBTP.Crm.Web.csproj" />
+    <Project Path="modules/crm/dotnet/LogiBTP.Crm.Tests/LogiBTP.Crm.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

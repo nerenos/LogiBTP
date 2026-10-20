@@ -15,6 +15,7 @@
     "modules/annuaire/js",
     "modules/entreprises-fr/js",
     "modules/reglement/js",
+    "modules/crm/js",
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",

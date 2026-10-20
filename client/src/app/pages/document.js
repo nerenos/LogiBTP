@@ -27,6 +27,7 @@ const MARCHE_TYPES = ['V_RECEPTION', 'V_SITUATION', 'V_FACTURE_AVT'];
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
+import { PanneauSuivi } from '../crm/panneau-suivi.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
 // /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
@@ -40,6 +41,7 @@ const GABARIT = `
       <button role="tab" data-onglet-vue="analyse" title="Alt+3 : coefficients par nature ou par tranche">Analyse</button>
       <button role="tab" data-onglet-vue="pieces" title="Alt+4 : documents de la GED liés au document, pièces jointes à envoyer">Pièces</button>
       <button role="tab" data-onglet-vue="tracabilite" title="Alt+5 : origine (import), documents liés, historique des versions">Traçabilité</button>
+      <button role="tab" data-onglet-vue="suivi" title="Alt+6 : notes, tâches et courriels du document (module CRM)" hidden>Suivi</button>
     </nav>
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
@@ -72,6 +74,7 @@ const GABARIT = `
     <section id="vue-analyse" class="vue vue-analyse" role="tabpanel"></section>
     <section id="vue-pieces" class="vue vue-pieces" role="tabpanel"></section>
     <section id="vue-tracabilite" class="vue vue-tracabilite" role="tabpanel"></section>
+    <section id="vue-suivi" class="vue vue-suivi" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
       <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
@@ -159,6 +162,7 @@ export class PageDocument extends PageBase {
         if (o === 'analyse') this.analyse?.rendre();
         if (o === 'pieces') this.afficherPieces();
         if (o === 'tracabilite') this.afficherTracabilite();
+        if (o === 'suivi') this.afficherSuivi();
       },
       // Plan fermé : le filtre d'affichage qu'il a posé est retiré.
       surDock: (id, visible) => { if (id === 'plan' && !visible && this.editeur?.filtre !== null) this.editeur?.filtrer(null); },
@@ -511,6 +515,9 @@ export class PageDocument extends PageBase {
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
     if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
+    // Onglet Suivi (module CRM actif, document enregistré) : notes du groupe d'indices.
+    this.$('[data-onglet-vue="suivi"]').hidden = !enLigne || !this.app.moduleActif('crm') || !doc.ent_id;
+    if (this.disposition?.p.onglet === 'suivi') this.afficherSuivi();
     this.app.majPage();
   }
 
@@ -635,6 +642,20 @@ export class PageDocument extends PageBase {
       // Réutilisation du fichier source conservé : nouvelle vérification dans une autre fenêtre.
       reimporter: (o) => this.app.naviguer(`${formatImport(o.dor_format).page}?ged=${o.dor_fichier_id}`, { nouvelleFenetre: true }),
     }).catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
+  }
+
+  /** Onglet Suivi (module CRM) : notes, tâches et courriels du document, tous indices confondus (groupe d'indices). */
+  afficherSuivi() {
+    const zone = this.$('#vue-suivi');
+    const d = this.editeur?.saisie.document;
+    if (!d?.ent_id) { zone.innerHTML = '<p class="aide">Suivi disponible pour les documents enregistrés.</p>'; return; }
+    const id = String(d.ent_groupe_id ?? d.ent_id);
+    if (this.suivi && this.suiviId === id) return;
+    this.suivi?.fermer();
+    this.suiviId = id;
+    zone.replaceChildren();
+    this.suivi = new PanneauSuivi(zone, { app: this.app, type: 'document', id, libelle: d.ent_numero ?? '' });
+    this.suivi.ouvrir().catch((x) => { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; });
   }
 
   afficherPieces() {
@@ -868,6 +889,7 @@ export class PageDocument extends PageBase {
 
   fermer() {
     fermerAideMemoire();
+    this.suivi?.fermer();
     this.liberer();
     document.removeEventListener('keydown', this.clavier);
     document.body.classList.remove('avec-document', 'lecture-seule');

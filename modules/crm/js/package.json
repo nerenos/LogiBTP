@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/crm",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module CRM LogiBTP : demandes, actions, messages et tâches, rappels, suivi des validations, diffusion, fil d'actualité",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

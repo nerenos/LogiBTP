@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { CLASSES_FICHE } from '../fiches/classes.js';
+import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 
 const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
@@ -11,6 +12,9 @@ const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '
  * Échap) revient à la page précédente de la fenêtre (la liste), sinon à la liste du type. Quitter la page passe
  * par la fermeture de la fiche : confirmation des modifications et libération du verrou.
  */
+/** Fiches qui portent un onglet Suivi (module CRM). */
+const TYPES_SUIVI = new Set(['personne', 'individu', 'projet', 'affaire', 'chantier', 'marche']);
+
 export class PageFiche extends PageBase {
   async ouvrir() {
     const app = this.app;
@@ -45,6 +49,12 @@ export class PageFiche extends PageBase {
         ouvrirUrl: (url) => app.naviguer(url, { nouvelleFenetre: true }),
         modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
       }),
+      // Onglet Suivi (module CRM actif, en ligne) : notes, tâches et courriels des tiers, contacts et de la structure.
+      suivi: app.enLigne && app.moduleActif('crm') && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
+        const p = new PanneauSuivi(corps, { app, type: t, id });
+        p.ouvrir().catch((e) => app.erreur(e));
+        return p;
+      } : null,
       surEnregistre: (f, { cree }) => {
         app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
         if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);

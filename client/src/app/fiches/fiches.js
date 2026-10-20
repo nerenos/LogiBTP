@@ -17,6 +17,25 @@ const info = (libelle, valeur, alerte = false) => `<span class="info ${alerte ? 
 
 /** Fiche du cœur : actions de démonstration hors ligne (verrou d'un autre utilisateur). */
 export class FicheLogiBTP extends FicheBase {
+  constructor(options) {
+    super(options);
+    // Onglet Suivi (module CRM actif) : fabrique fournie par la page (PanneauSuivi).
+    this.suivi = options.suivi ?? null;
+  }
+
+  /** Onglet Suivi : notes, tâches et courriels de la fiche (module CRM), une fois la fiche enregistrée. */
+  ongletsSuivi() {
+    if (!this.suivi) return [];
+    return [{
+      code: 'suivi', titre: 'Suivi',
+      rendre: (corps) => {
+        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour suivre ses notes et ses tâches.</p>'; return; }
+        this.panneauSuivi?.fermer();
+        this.panneauSuivi = this.suivi(corps, { type: this.type, id: this.id });
+      },
+    }];
+  }
+
   actionsSupplementaires() {
     if (typeof this.fournisseur.simulerVerrouAutre !== 'function' || this.id === null) return [];
     return [{

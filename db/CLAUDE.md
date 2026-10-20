@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)
@@ -46,6 +46,7 @@
 - `191_editions_modeles.sql` : **généré** (`client/src/app/editions/modeles.js`) : charte, modèles fournis (réécrits tant qu'ils ne sont pas modifiés localement), liens, défauts ; rejouable.
 - `192_editions_production.sql` : catégories GED `edition` et `ressource_edition` ; rejouable.
 - `193_modules_services.sql` : `module_societe` (activation des modules facultatifs par drapeau : `reglement`, `crm`), `service` (deux niveaux, trigger `f_service_niveaux`, natures PRODUCTION / ETUDE / LOGISTIQUE / ADMINISTRATIF ; Vente et Achat), `service_membre` (individus de notre société, un seul principal : `ux_sme_principal`), membres de démonstration repris de `demo_salarie.sal_service` ; rejouable.
+- `194_crm.sql` : élément GED `crm_note` (reprend `f_ged_element_existe` de 164), catégorie GED `crm` ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

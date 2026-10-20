@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using LogiBTP.Annuaire.Web;
 using LogiBTP.Api.Btp;
 using LogiBTP.Bibliotheque.Web;
+using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
@@ -47,6 +48,8 @@ builder.Services.AddModuleBibliotheque<SpecialisationBibliothequeBtp>(Base);
 builder.Services.AddModuleAnnuaire<SpecialisationAnnuaireBtp>(Base);
 // Module Règlements (facultatif) : règlements, cautions, pointage des échéances des pièces (modules/reglement/db/080, db/175).
 builder.Services.AddModuleReglement<SpecialisationReglementBtp>(Base);
+// Module CRM (facultatif) : notes, rappels, demandes, suivi des validations, diffusion, fil (modules/crm/db/095…).
+builder.Services.AddModuleCrm<SpecialisationCrmBtp>(Base);
 // Module Entreprises françaises : recherche dans l'annuaire des entreprises de l'État (API publique, sans clé).
 builder.Services.AddModuleEntreprisesFr();
 // Module Édition : modèles et chartes (modules/edition/db/090), aperçu (moteur JS du navigateur) et PDF (même moteur dans Jint).
@@ -78,6 +81,7 @@ api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
+api.MapModuleCrm().ExigeModule("crm", "CRM");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

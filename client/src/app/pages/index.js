@@ -17,6 +17,10 @@ import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
 import { PageParametresServices } from './parametres-services.js';
+import { PageCrm } from './crm.js';
+import { PageNoteCrm } from './crm-note.js';
+import { PageSuiviCrm } from './crm-suivi.js';
+import { PageParametresCrm } from './parametres-crm.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -34,11 +38,15 @@ export const ROUTES = [
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
+  { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: 'Paramétrage du suivi (CRM)' },
   { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
+  { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: 'Note' },
+  { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: 'Suivi' },
+  { nom: 'crm', chemin: '/crm', page: PageCrm, titre: 'Suivi' },
   { nom: 'edition', chemin: '/edition', page: PageEdition, titre: 'Aperçu' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },
 ];

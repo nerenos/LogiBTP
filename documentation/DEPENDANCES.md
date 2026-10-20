@@ -35,6 +35,17 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Bibliotheque.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Bibliotheque.Tests |
 
+## modules/crm
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/crm/js) |
+| NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Crm.Web |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Crm.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Crm.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Crm.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Crm.Tests |
+
 ## modules/document
 
 | Type | Dépendance | Version | Licence | Usage |

@@ -1,0 +1,16 @@
+{
+  "description": "Contrôle d'une note du CRM (notes.js ↔ ReglesNote.cs) : codes d'erreur dans l'ordre de controlerNote.",
+  "notes": [
+    { "nom": "action minimale", "note": { "nature": "ACTION", "etat": "A_FAIRE", "objet": "Appeler le client" }, "attendu": [] },
+    { "nom": "nature et état inconnus, objet vide", "note": { "nature": "RDV", "etat": "OUVERT", "objet": "  " }, "attendu": ["NOTE_NATURE", "NOTE_ETAT", "NOTE_OBJET"] },
+    { "nom": "objet trop long", "note": { "nature": "ACTION", "etat": "MEMO", "objet": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }, "attendu": ["NOTE_OBJET"] },
+    { "nom": "tâche sans responsable ni échéance", "note": { "nature": "TACHE", "etat": "A_FAIRE", "objet": "Relancer" }, "attendu": ["NOTE_RESPONSABLE", "NOTE_ECHEANCE"] },
+    { "nom": "tâche à prendre par un service", "note": { "nature": "TACHE", "etat": "A_FAIRE", "objet": "Chiffrer", "srv_id": 2, "echeance": "2026-11-02T09:00:00Z" }, "attendu": [] },
+    { "nom": "tâche avec responsable", "note": { "nature": "TACHE", "etat": "EN_COURS", "objet": "Chiffrer", "responsable_id": 4, "echeance": "2026-11-02T09:00:00Z" }, "attendu": [] },
+    { "nom": "message sans destinataire", "note": { "nature": "MESSAGE", "etat": "A_FAIRE", "objet": "Info", "destinataires": [] }, "attendu": ["NOTE_DESTINATAIRE"] },
+    { "nom": "réponse dans un fil sans destinataire", "note": { "nature": "MESSAGE", "etat": "MEMO", "objet": "Re: Info", "parent_id": 12 }, "attendu": [] },
+    { "nom": "message avec destinataires", "note": { "nature": "MESSAGE", "etat": "A_FAIRE", "objet": "Info", "destinataires": [3, 4] }, "attendu": [] },
+    { "nom": "privée et RGPD dans le fil", "note": { "nature": "ACTION", "etat": "MEMO", "objet": "Arrêt", "prive": true, "rgpd": true, "dans_fil": true }, "attendu": ["NOTE_PRIVEE_FIL", "NOTE_RGPD_FIL"] },
+    { "nom": "dans le fil", "note": { "nature": "ACTION", "etat": "MEMO", "objet": "Visite de chantier", "dans_fil": true }, "attendu": [] }
+  ]
+}
