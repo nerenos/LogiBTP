@@ -23,6 +23,10 @@ import { PageSuiviCrm } from './crm-suivi.js';
 import { PageRappelsCrm } from './crm-rappels.js';
 import { PageDemandesCrm } from './crm-demandes.js';
 import { PageDemandeCrm } from './crm-demande.js';
+import { PagePlansCrm } from './crm-plans.js';
+import { PagePlanCrm } from './crm-plan.js';
+import { PageDiffusionsCrm } from './crm-diffusions.js';
+import { PageDiffusionCrm } from './crm-diffusion.js';
 import { PageParametresCrm } from './parametres-crm.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
@@ -52,6 +56,10 @@ export const ROUTES = [
   { nom: 'crm-rappels', chemin: '/crm/rappels', page: PageRappelsCrm, titre: 'Mes rappels' },
   { nom: 'crm-demandes', chemin: '/crm/demandes', page: PageDemandesCrm, titre: 'Demandes' },
   { nom: 'crm-demande', chemin: '/crm/demande/:id', page: PageDemandeCrm, titre: 'Demande' },
+  { nom: 'crm-plans', chemin: '/crm/plans', page: PagePlansCrm, titre: 'Plans et visas' },
+  { nom: 'crm-plan', chemin: '/crm/plan/:id', page: PagePlanCrm, titre: 'Plan' },
+  { nom: 'crm-diffusions', chemin: '/crm/diffusions', page: PageDiffusionsCrm, titre: 'Bordereaux de diffusion' },
+  { nom: 'crm-diffusion', chemin: '/crm/diffusion/:id', page: PageDiffusionCrm, titre: 'Bordereau de diffusion' },
   { nom: 'crm', chemin: '/crm', page: PageCrm, titre: 'Suivi' },
   { nom: 'edition', chemin: '/edition', page: PageEdition, titre: 'Aperçu' },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },

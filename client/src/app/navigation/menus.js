@@ -76,7 +76,10 @@ export const MENUS_METIER = [
       { code: 'crm-demandes', libelle: 'Demandes (veille commerciale)', icone: '📨', url: '/crm/demandes', info: 'Avant-projets et consultations suivis avant la création du projet', creation: { url: '/crm/demande/nouveau', titre: 'Nouvelle demande' } },
       { code: 'crm-mes-demandes', libelle: 'Mes demandes', icone: '📬', url: '/crm/demandes?vue=mes' },
       { separateur: true },
-      { code: 'parametrage-crm', libelle: 'Types de notes, seuils des rappels…', icone: '⚙', url: '/parametres/crm' },
+      { code: 'crm-plans', libelle: 'Plans et visas', icone: '📐', url: '/crm/plans', info: 'Indices, visas des tiers, indice en vigueur', creation: { url: '/crm/plan/nouveau', titre: 'Nouveau plan' } },
+      { code: 'crm-diffusions', libelle: 'Bordereaux de diffusion', icone: '📤', url: '/crm/diffusions' },
+      { separateur: true },
+      { code: 'parametrage-crm', libelle: 'Types de notes, rappels, statuts de visa…', icone: '⚙', url: '/parametres/crm' },
     ],
   },
   {

@@ -4,6 +4,9 @@ import {
   contexteCrm, nouvelleSaisie, iconeNature, pastilleEtat, echeanceNote, formatDateHeure, estCourriel, noteDepuisCourriel, estClose,
 } from './crm.js';
 
+/** Éléments de la structure des affaires : plans et bordereaux proposés depuis leur suivi. */
+const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
+
 /**
  * Suivi d'un élément (module CRM) : notes rattachées (tâches par échéance, puis les autres ; ouvertes seulement sur demande), saisie rapide sur une
  * ligne (Entrée : note pour mémo ; Ctrl+Entrée : tâche à moi, échéance demain 9 h), courriel glissé (.eml, .msg) → note
@@ -29,6 +32,8 @@ export class PanneauSuivi {
         <input class="crm-saisie-rapide" placeholder="Note rapide : Entrée = pour mémo · Ctrl+Entrée = tâche pour moi (demain)" maxlength="200">
         <button type="button" data-complete title="Note complète (nature, responsable, destinataires, pièces) dans une autre fenêtre">＋ Note…</button>
         ${this.fenetre ? '<button type="button" data-fenetre title="Ouvrir ce suivi dans une fenêtre à côté">⧉</button>' : ''}
+        ${STRUCTURE.includes(this.element.type) ? `<a href="/crm/plans?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Plans, indices et visas">📐 Plans</a>
+          <a href="/crm/diffusions?type=${this.element.type}&id=${encodeURIComponent(this.element.id)}" title="Bordereaux de diffusion">📤 Bordereaux</a>` : ''}
         <label class="fiche-option" title="Masquer les notes terminées, pour mémo et annulées"><input type="checkbox" data-ouvertes> Ouvertes seulement</label>
       </div>
       <div class="crm-depot" hidden>Déposez le courriel (.eml, .msg) : une note est créée avec le fichier en pièce jointe</div>

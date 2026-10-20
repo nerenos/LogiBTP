@@ -144,6 +144,101 @@ public class CrmDemandeHistorique
     public DateTimeOffset DhiLe { get; set; }
 }
 
+/// <summary>Statut de visa : effet ACCEPTE, REFUSE ou NEUTRE.</summary>
+public class CrmStatutVisa
+{
+    public string StvCode { get; set; } = "";
+    public string StvLibelle { get; set; } = "";
+    public string StvEffet { get; set; } = "NEUTRE";
+    public int StvOrdre { get; set; }
+    public bool StvActif { get; set; } = true;
+}
+
+/// <summary>Plan ou pièce technique soumise au visa des tiers.</summary>
+public class CrmPlan
+{
+    public long PlaId { get; set; }
+    public string PlaRepere { get; set; } = "";
+    public string? PlaRepereCctp { get; set; }
+    public string PlaNom { get; set; } = "";
+    public string? PlaLot { get; set; }
+    public string? PlaFinition { get; set; }
+    public string? PlaMessageHtml { get; set; }
+    public string? PlaTypeElement { get; set; }
+    public string? PlaIdElement { get; set; }
+    public string PlaCreePar { get; set; } = "";
+    public DateTimeOffset PlaCreeLe { get; set; }
+    public string? PlaMajPar { get; set; }
+    public DateTimeOffset PlaMajLe { get; set; }
+}
+
+/// <summary>Indice d'un plan (A, B…), date de diffusion, motif, fichier GED.</summary>
+public class CrmPlanIndice
+{
+    public long PinId { get; set; }
+    public long PinPlaId { get; set; }
+    public string PinIndice { get; set; } = "A";
+    public DateOnly? PinDate { get; set; }
+    public string? PinMotif { get; set; }
+    public long? PinDgeId { get; set; }
+    public string PinCreePar { get; set; } = "";
+    public DateTimeOffset PinCreeLe { get; set; }
+}
+
+/// <summary>Visa d'un tiers sur un indice (attendu, puis reçu).</summary>
+public class CrmVisa
+{
+    public long VisId { get; set; }
+    public long VisPinId { get; set; }
+    public long VisTiersId { get; set; }
+    public long? VisIndId { get; set; }
+    public DateOnly? VisAttenduLe { get; set; }
+    public string? VisStvCode { get; set; }
+    public DateOnly? VisRecuLe { get; set; }
+    public string? VisObservation { get; set; }
+    public long? VisDgeRetourId { get; set; }
+    public long? VisDfdId { get; set; }
+    public string? VisMajPar { get; set; }
+    public DateTimeOffset VisMajLe { get; set; }
+}
+
+/// <summary>Bordereau de diffusion.</summary>
+public class CrmDiffusion
+{
+    public long DifId { get; set; }
+    public string DifNumero { get; set; } = "";
+    public DateOnly DifDate { get; set; }
+    public string DifObjet { get; set; } = "";
+    public string? DifTypeElement { get; set; }
+    public string? DifIdElement { get; set; }
+    public int DifDelaiVisaJours { get; set; } = 15;
+    public string DifCreePar { get; set; } = "";
+    public DateTimeOffset DifCreeLe { get; set; }
+}
+
+/// <summary>Pièce d'un bordereau : indice de plan ou document de la GED.</summary>
+public class CrmDiffusionPiece
+{
+    public long DfpId { get; set; }
+    public long DfpDifId { get; set; }
+    public long? DfpPinId { get; set; }
+    public long? DfpDgeId { get; set; }
+    public string DfpLibelle { get; set; } = "";
+}
+
+/// <summary>Destinataire d'un bordereau : tiers, contact, mode, exemplaires, visa attendu, tâche de retour.</summary>
+public class CrmDiffusionDestinataire
+{
+    public long DfdId { get; set; }
+    public long DfdDifId { get; set; }
+    public long DfdTiersId { get; set; }
+    public long? DfdIndId { get; set; }
+    public string DfdMode { get; set; } = "COURRIEL";
+    public int DfdExemplaires { get; set; } = 1;
+    public bool DfdAttendVisa { get; set; }
+    public long? DfdNotId { get; set; }
+}
+
 /// <summary>Contexte EF Core du module (modules/crm/db) ; snake_case par la convention de l'application.</summary>
 public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(options)
 {
@@ -158,6 +253,13 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
     public DbSet<CrmRappel> Rappels => Set<CrmRappel>();
     public DbSet<CrmDemande> Demandes => Set<CrmDemande>();
     public DbSet<CrmDemandeHistorique> HistoriqueDemandes => Set<CrmDemandeHistorique>();
+    public DbSet<CrmStatutVisa> StatutsVisa => Set<CrmStatutVisa>();
+    public DbSet<CrmPlan> Plans => Set<CrmPlan>();
+    public DbSet<CrmPlanIndice> Indices => Set<CrmPlanIndice>();
+    public DbSet<CrmVisa> Visas => Set<CrmVisa>();
+    public DbSet<CrmDiffusion> Diffusions => Set<CrmDiffusion>();
+    public DbSet<CrmDiffusionPiece> PiecesDiffusion => Set<CrmDiffusionPiece>();
+    public DbSet<CrmDiffusionDestinataire> DestinatairesDiffusion => Set<CrmDiffusionDestinataire>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -173,6 +275,13 @@ public class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(op
         b.Entity<CrmRappel>().ToTable("crm_rappel").HasKey(x => x.RapId);
         b.Entity<CrmDemande>().ToTable("crm_demande", t => t.HasTrigger("tr_crm_demande_historique")).HasKey(x => x.DemId);
         b.Entity<CrmDemandeHistorique>().ToTable("crm_demande_historique").HasKey(x => x.DhiId);
+        b.Entity<CrmStatutVisa>().ToTable("crm_statut_visa").HasKey(x => x.StvCode);
+        b.Entity<CrmPlan>().ToTable("crm_plan").HasKey(x => x.PlaId);
+        b.Entity<CrmPlanIndice>().ToTable("crm_plan_indice").HasKey(x => x.PinId);
+        b.Entity<CrmVisa>().ToTable("crm_visa").HasKey(x => x.VisId);
+        b.Entity<CrmDiffusion>().ToTable("crm_diffusion").HasKey(x => x.DifId);
+        b.Entity<CrmDiffusionPiece>().ToTable("crm_diffusion_piece").HasKey(x => x.DfpId);
+        b.Entity<CrmDiffusionDestinataire>().ToTable("crm_diffusion_destinataire").HasKey(x => x.DfdId);
     }
 }
 

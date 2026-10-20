@@ -67,6 +67,26 @@ public static class Extensions
         g.MapPost("/demandes/{id:long}/prendre", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.PrendreDemande(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/demandes/{id:long}/rendre", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.RendreDemande(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/demandes/{id:long}/projet", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.CreerProjet(id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/statuts-visa", (ServiceCrm s, CancellationToken ct) => s.StatutsVisa(ct));
+        g.MapPut("/statuts-visa", (List<StatutVisaDto> l, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerStatutsVisa(l, Utilisateur.Depuis(http), ct));
+        g.MapGet("/plans", (string? type_element, string? id_element, string? recherche, ServiceCrm s, CancellationToken ct) => s.Plans(type_element, id_element, recherche, ct));
+        g.MapGet("/plans/{id:long}", (long id, ServiceCrm s, CancellationToken ct) => s.Plan(id, ct));
+        g.MapPost("/plans", (PlanSaisi p, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerPlan(null, p, Utilisateur.Depuis(http), ct));
+        g.MapPut("/plans/{id:long}", (long id, PlanSaisi p, HttpContext http, ServiceCrm s, CancellationToken ct) => s.EnregistrerPlan(id, p, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/plans/{id:long}", async (long id, HttpContext http, ServiceCrm s, CancellationToken ct) =>
+        {
+            await s.SupprimerPlan(id, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapPost("/plans/{id:long}/indices", (long id, IndiceSaisi i, HttpContext http, ServiceCrm s, CancellationToken ct) => s.AjouterIndice(id, i, Utilisateur.Depuis(http), ct));
+        g.MapPut("/indices/{id:long}", (long id, IndiceSaisi i, ServiceCrm s, CancellationToken ct) => s.ModifierIndice(id, i, ct));
+        g.MapDelete("/indices/{id:long}", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.SupprimerIndice(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/indices/{id:long}/visas", (long id, VisaAttendu v, HttpContext http, ServiceCrm s, CancellationToken ct) => s.AjouterVisa(id, v, Utilisateur.Depuis(http), ct));
+        g.MapPut("/visas/{id:long}", (long id, VisaSaisi v, HttpContext http, ServiceCrm s, CancellationToken ct) => s.SaisirVisa(id, v, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/visas/{id:long}", (long id, HttpContext http, ServiceCrm s, CancellationToken ct) => s.SupprimerVisa(id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/diffusions", (string? type_element, string? id_element, ServiceCrm s, CancellationToken ct) => s.Diffusions(type_element, id_element, ct));
+        g.MapGet("/diffusions/{id:long}", (long id, ServiceCrm s, CancellationToken ct) => s.Diffusion(id, ct));
+        g.MapPost("/diffusions", (DiffusionSaisie d, HttpContext http, ServiceCrm s, CancellationToken ct) => s.CreerDiffusion(d, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

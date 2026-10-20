@@ -23,7 +23,7 @@ public sealed record DemandeDetail(DemandeDto Demande, List<HistoriqueDto> Histo
 public partial class ServiceCrm
 {
     /// <summary>Types d'élément propres au module, rattachables à une note.</summary>
-    public static readonly TypeElementCrm[] TypesPropres = [new("crm_demande", "Demande", "📨")];
+    public static readonly TypeElementCrm[] TypesPropres = [new("crm_demande", "Demande", "📨"), new("crm_plan", "Plan", "📐")];
 
     public async Task<PageDemandes> Demandes(string? vue, string? etat, string? recherche, long? tiers, int page, int taille, Utilisateur u, CancellationToken ct)
     {
@@ -237,6 +237,12 @@ public partial class ServiceCrm
     /// <summary>Recherche d'éléments à rattacher (demandes du module, sinon la spécialisation : documents…).</summary>
     public async Task<List<ElementDecrit>> Rechercher(string type, string texte, CancellationToken ct)
     {
+        if (type == "crm_plan")
+        {
+            var m = $"%{(texte ?? "").Trim()}%";
+            var p = await db.Plans.AsNoTracking().Where(x => EF.Functions.ILike(x.PlaRepere, m) || EF.Functions.ILike(x.PlaNom, m)).OrderBy(x => x.PlaRepere).Take(15).ToListAsync(ct);
+            return p.Select(x => new ElementDecrit("crm_plan", x.PlaId.ToString(), $"{x.PlaRepere} – {x.PlaNom}", $"/crm/plan/{x.PlaId}", "📐")).ToList();
+        }
         if (type != "crm_demande") return await specialisation.RechercherAsync(db, type, texte ?? "", ct);
         var motif = $"%{(texte ?? "").Trim()}%";
         var d = await db.Demandes.AsNoTracking().Where(x => EF.Functions.ILike(x.DemObjet, motif) || EF.Functions.ILike(x.DemNumero, motif))

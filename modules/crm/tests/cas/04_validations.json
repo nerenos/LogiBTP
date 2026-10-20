@@ -1,0 +1,46 @@
+{
+  "description": "État d'un plan (validations.js ↔ ReglesValidation.cs) : statut du dernier indice, indice en vigueur, visas manquants et en retard, bloquant ; indice suivant.",
+  "statuts": [
+    { "code": "BPE", "effet": "ACCEPTE" },
+    { "code": "VAO", "effet": "ACCEPTE" },
+    { "code": "REF", "effet": "REFUSE" },
+    { "code": "SO", "effet": "NEUTRE" }
+  ],
+  "aujourdhui": "2026-11-10",
+  "plans": [
+    { "nom": "sans indice", "plan": { "indices": [] },
+      "attendu": { "statut": "SANS_INDICE", "indice": null, "en_vigueur": null, "manquants": 0, "retards": 0, "bloquant": true } },
+    { "nom": "indice non diffusé", "plan": { "indices": [{ "indice": "A", "date": null, "visas": [] }] },
+      "attendu": { "statut": "A_DIFFUSER", "indice": "A", "en_vigueur": null, "manquants": 0, "retards": 0, "bloquant": true } },
+    { "nom": "diffusé sans visa attendu", "plan": { "indices": [{ "indice": "A", "date": "2026-11-01", "visas": [] }] },
+      "attendu": { "statut": "SANS_VISA", "indice": "A", "en_vigueur": null, "manquants": 0, "retards": 0, "bloquant": true } },
+    { "nom": "visas en attente, un en retard", "plan": { "indices": [{ "indice": "A", "date": "2026-11-01", "visas": [
+        { "statut": "BPE", "attendu_le": "2026-11-08" }, { "statut": null, "attendu_le": "2026-11-08" }, { "statut": null, "attendu_le": "2026-11-15" }] }] },
+      "attendu": { "statut": "EN_ATTENTE", "indice": "A", "en_vigueur": null, "manquants": 2, "retards": 1, "bloquant": true } },
+    { "nom": "refus prioritaire sur l'attente", "plan": { "indices": [{ "indice": "A", "date": "2026-11-01", "visas": [
+        { "statut": "REF", "attendu_le": "2026-11-08" }, { "statut": null, "attendu_le": "2026-11-20" }] }] },
+      "attendu": { "statut": "REFUSE", "indice": "A", "en_vigueur": null, "manquants": 1, "retards": 0, "bloquant": true } },
+    { "nom": "bon pour exécution (avec observations)", "plan": { "indices": [{ "indice": "A", "date": "2026-11-01", "visas": [
+        { "statut": "BPE", "attendu_le": "2026-11-08" }, { "statut": "VAO", "attendu_le": "2026-11-08" }, { "statut": "SO", "attendu_le": "2026-11-08" }] }] },
+      "attendu": { "statut": "VALIDE", "indice": "A", "en_vigueur": "A", "manquants": 0, "retards": 0, "bloquant": false } },
+    { "nom": "seulement des visas neutres", "plan": { "indices": [{ "indice": "A", "date": "2026-11-01", "visas": [{ "statut": "SO", "attendu_le": "2026-11-08" }] }] },
+      "attendu": { "statut": "SANS_VISA", "indice": "A", "en_vigueur": null, "manquants": 0, "retards": 0, "bloquant": true } },
+    { "nom": "indice B en attente, A en vigueur", "plan": { "indices": [
+        { "indice": "A", "date": "2026-10-01", "visas": [{ "statut": "BPE", "attendu_le": "2026-10-08" }] },
+        { "indice": "B", "date": "2026-11-05", "visas": [{ "statut": null, "attendu_le": "2026-11-12" }] }] },
+      "attendu": { "statut": "EN_ATTENTE", "indice": "B", "en_vigueur": "A", "manquants": 1, "retards": 0, "bloquant": true } },
+    { "nom": "B refusé après A refusé : rien en vigueur", "plan": { "indices": [
+        { "indice": "A", "date": "2026-10-01", "visas": [{ "statut": "REF", "attendu_le": "2026-10-08" }] },
+        { "indice": "B", "date": "2026-10-20", "visas": [{ "statut": "REF", "attendu_le": "2026-10-27" }] }] },
+      "attendu": { "statut": "REFUSE", "indice": "B", "en_vigueur": null, "manquants": 0, "retards": 0, "bloquant": true } }
+  ],
+  "indices_suivants": [
+    { "indice": null, "attendu": "A" },
+    { "indice": "A", "attendu": "B" },
+    { "indice": "c", "attendu": "D" },
+    { "indice": "Z", "attendu": "AA" },
+    { "indice": "AZ", "attendu": "BA" },
+    { "indice": "ZZ", "attendu": "AAA" },
+    { "indice": "1", "attendu": "A" }
+  ]
+}

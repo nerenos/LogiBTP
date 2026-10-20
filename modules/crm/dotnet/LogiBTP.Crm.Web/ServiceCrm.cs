@@ -101,7 +101,23 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
                 ? new ElementDecrit(e.Type, e.Id, x.NotPrive || x.NotRgpd ? "Note protégée" : x.NotObjet, $"/crm/note/{x.NotId}", "📝")
                 : new ElementDecrit(e.Type, e.Id, $"Note {e.Id} (introuvable)", null, "📝")));
         }
-        var autres = uniques.Where(e => e.Type.StartsWith("crm_") && e.Type is not ("crm_demande" or "crm_note"));
+        var plans = uniques.Where(e => e.Type == "crm_plan").Select(Id).ToList();
+        if (plans.Count > 0)
+        {
+            var p = await db.Plans.AsNoTracking().Where(x => plans.Contains(x.PlaId)).ToDictionaryAsync(x => x.PlaId, ct);
+            res.AddRange(uniques.Where(e => e.Type == "crm_plan").Select(e => p.TryGetValue(Id(e), out var x)
+                ? new ElementDecrit(e.Type, e.Id, $"{x.PlaRepere} – {x.PlaNom}", $"/crm/plan/{x.PlaId}", "📐")
+                : new ElementDecrit(e.Type, e.Id, $"Plan {e.Id} (introuvable)", null, "📐")));
+        }
+        var diffusions = uniques.Where(e => e.Type == "crm_diffusion").Select(Id).ToList();
+        if (diffusions.Count > 0)
+        {
+            var f = await db.Diffusions.AsNoTracking().Where(x => diffusions.Contains(x.DifId)).ToDictionaryAsync(x => x.DifId, ct);
+            res.AddRange(uniques.Where(e => e.Type == "crm_diffusion").Select(e => f.TryGetValue(Id(e), out var x)
+                ? new ElementDecrit(e.Type, e.Id, $"{x.DifNumero} – {x.DifObjet}", $"/crm/diffusion/{x.DifId}", "📤")
+                : new ElementDecrit(e.Type, e.Id, $"Bordereau {e.Id} (introuvable)", null, "📤")));
+        }
+        var autres = uniques.Where(e => e.Type.StartsWith("crm_") && e.Type is not ("crm_demande" or "crm_note" or "crm_plan" or "crm_diffusion"));
         res.AddRange(autres.Select(e => new ElementDecrit(e.Type, e.Id, $"{e.Type} {e.Id}", null, null)));
         return res;
     }

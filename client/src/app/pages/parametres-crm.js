@@ -16,12 +16,41 @@ export class PageParametresCrm extends PageBase {
     const app = this.app;
     this.titre = 'Paramétrage du suivi (CRM)';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">☑ Paramétrage du suivi (CRM)</h1><h2>Types de notes</h2><div data-types></div>
-      <h2>Couleurs des rappels</h2><div data-seuils></div></div>`;
+      <h2>Couleurs des rappels</h2><div data-seuils></div>
+      <h2>Statuts de visa</h2><div data-statuts></div></div>`;
     if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">Disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
     this.types = await api.crm.typesNotes();
     this.rendreTypes();
     this.rendreSeuils(await api.crm.parametres());
+    this.statuts = await api.crm.statutsVisa();
+    this.rendreStatuts();
+  }
+
+  /** Statuts de visa (effet : ACCEPTE bon pour exécution, REFUSE bloquant, NEUTRE pour information). */
+  rendreStatuts() {
+    const admin = this.app.estAdmin();
+    const zone = this.conteneur.querySelector('[data-statuts]');
+    const EFFETS = [{ valeur: 'ACCEPTE', libelle: 'Accepté (bon pour exécution)' }, { valeur: 'REFUSE', libelle: 'Refusé (bloquant)' }, { valeur: 'NEUTRE', libelle: 'Neutre (pour information)' }];
+    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Effet</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
+      ${this.statuts.map((s, i) => `<tr data-i="${i}"${s.actif ? '' : ' class="discret"'}><td><input data-c="code" value="${echapper(s.code)}" size="6" maxlength="10" ${admin ? '' : 'disabled'}></td>
+        <td><input data-c="libelle" value="${echapper(s.libelle)}" size="28" maxlength="80" ${admin ? '' : 'disabled'}></td><td><span data-effet></span></td>
+        <td><input data-c="ordre" value="${s.ordre}" size="4" ${admin ? '' : 'disabled'}></td><td><input type="checkbox" data-c="actif" ${s.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
+        <td>${admin ? '<button type="button" data-retirer>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+      ${admin ? '<div class="boutons"><button type="button" data-ajouter>＋ Statut</button> <button type="button" class="principal" data-enregistrer>Enregistrer les statuts</button></div>' : ''}`;
+    zone.querySelectorAll('tr[data-i]').forEach((tr) => {
+      const s = this.statuts[Number(tr.dataset.i)];
+      const effet = creerCombo({ options: EFFETS, valeur: s.effet, vide: false });
+      effet.readOnly = !admin;
+      effet.addEventListener('change', () => { s.effet = effet.valeurCombo; this.modifie = true; });
+      tr.querySelector('[data-effet]').replaceWith(effet);
+      tr.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.type === 'checkbox' ? c.checked : c.dataset.c === 'ordre' ? Number(c.value) || 0 : c.value; this.modifie = true; }));
+      tr.querySelector('[data-retirer]')?.addEventListener('click', () => { this.statuts.splice(Number(tr.dataset.i), 1); this.modifie = true; this.rendreStatuts(); });
+    });
+    zone.querySelector('[data-ajouter]')?.addEventListener('click', () => { this.statuts.push({ code: '', libelle: '', effet: 'NEUTRE', ordre: (this.statuts.length + 1) * 10, actif: true }); this.rendreStatuts(); });
+    zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+      try { this.statuts = await api.crm.enregistrerStatutsVisa(this.statuts); this.modifie = false; this.app.message('Statuts de visa enregistrés', 'succes'); this.rendreStatuts(); } catch (e) { this.app.erreur(e); }
+    });
   }
 
   /** Seuils globaux des couleurs des rappels « avant l'échéance » (C19, C26). */
