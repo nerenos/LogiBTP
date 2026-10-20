@@ -97,7 +97,7 @@ Aujourd'hui des tables **de démonstration** (`demo_salarie`, `demo_equipe`, `de
 
 | Ressource | Source | Compléments |
 |---|---|---|
-| Salarié | Individu de notre société | Matricule, service, qualification, profil de paie, calendrier, coût horaire, dates d'entrée / sortie, habilitations |
+| Salarié | Individu de notre société | Matricule, un ou plusieurs services dont un principal (CRM C18), qualification, profil de paie, calendrier, coût horaire, dates d'entrée / sortie, habilitations |
 | Intérimaire | Individu rattaché à une agence (tiers fournisseur) | Période de mission, coût horaire facturé |
 | Équipe | Planning | Compositions datées, chef, sommeil |
 | Matériel | Fiche matériel | Identifié (véhicule, engin) ou par nombre (échafaudage), service, dépôt, compteur |
@@ -145,6 +145,8 @@ relayés au client par le même `app.publier` (les listes et pages se rafraîchi
 | Mail | CRM, Édition, GED (`dge_a_envoyer`) | Déjà inscrit dans TACHES.md |
 | Stock | Exécution (réservation, colisage, emplacements) | Types S_* présents, `tyd_mouvemente_stock` non utilisé |
 | Congés / absences | Planning, Pointage | À cadrer ; en attendant, tâches d'absence |
+| Sous-traitance | Exécution (ordre de sous-traitance), CRM (liens) | Analyse à faire (CRM C20) : marchés de sous-traitance (demandes, commandes), documents obligatoires (attestations, agréments), paiement direct |
+| Archivage | CRM (conservation des notes liée au tiers, C25 / C29), tous les modules à terme | Module complet à analyser ; aujourd'hui l'Annuaire n'a que `per_actif` |
 | Authentification | Pointage, CRM, Planning | § 2 |
 
 ## 9. Ordre de réalisation proposé

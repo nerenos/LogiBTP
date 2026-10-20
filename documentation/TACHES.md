@@ -125,6 +125,9 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 ### Sous-traitance
 
 - [ ] Montants et agréments du paiement direct (gestion de la sous-traitance).
+- [ ] **Module Sous-traitance : analyse à faire** (décision C20 du CRM, 20/10/2026) : gestion des marchés de
+  sous-traitance (demandes, commandes, suivi par l'ordre de sous-traitance de l'Exécution) et des documents
+  obligatoires (attestations, agréments).
 
 ### Import
 
@@ -136,14 +139,21 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 - [ ] Analyses préalables rédigées le 20/10/2026 ([socle commun](conception/ANALYSE-MODULES-TRANSVERSE.md),
   [CRM](conception/ANALYSE-MODULE-CRM.md), [Exécution](conception/ANALYSE-MODULE-EXECUTION.md),
-  [Planning](conception/ANALYSE-MODULE-PLANNING.md), [Pointage MO](conception/ANALYSE-MODULE-POINTAGE.md)) : questions
-  C1–C15, E1–E15, P1–P18, M1–M15 à trancher (propositions faites). Décisions structurantes à valider : ordres
+  [Planning](conception/ANALYSE-MODULE-PLANNING.md), [Pointage MO](conception/ANALYSE-MODULE-POINTAGE.md)) : CRM
+  C1–C30 décidées (C6 à approfondir, C7 reporté) ; E1–E15, P1–P18, M1–M15 à trancher
+  (propositions faites). Décisions structurantes à valider : ordres
   d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
   composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des
   tables.
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
   référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
   application mobile hors ligne.
+
+### Archivage
+
+- [ ] **Module Archivage : analyse à faire** (décision C29 du CRM, 20/10/2026) : archivage complet des éléments (tiers
+  d'abord : l'Annuaire n'a que `per_actif`), consultation des archives, effets sur les modules (notes du CRM archivées
+  avec leur tiers, point d'accroche « élément archivé »), suppression définitive.
 
 ### Installation
 

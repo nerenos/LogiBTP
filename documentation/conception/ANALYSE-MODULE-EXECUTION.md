@@ -86,7 +86,7 @@ le métré, la GED, l'impression et les transformations. Il demande en contrepar
 | Livraison (LI) | Livraison interne | Plusieurs ordres, colisages, commandes et BL d'achat | — (fin) | Poids et dimensions repris ou saisis |
 | Pose (PO) | Poseurs | Tout ordre amont | — (fin) | Intervention sur chantier |
 | Intervention (SAV) | Techniciens | Contrat, demande client | Facture | Tablette, signature client, bordereau signé envoyé |
-| Sous-traitance (OST) | Un tiers | Tout ordre | Commande sous-traitant | Rattachée à un appel d'offres ou une commande |
+| Sous-traitance (OST) | Un tiers | Tout ordre | Demande de prix, commande sous-traitant | Anticipe et suit une ou plusieurs demandes ou commandes de sous-traitance (module Sous-traitance à créer, décision C8 du CRM) |
 | Demande d'approvisionnement (DA) | Tout service | Tout ordre | DDP, commande, réservation, sous-traitance, livraison | Matériel, location, intérim, achat |
 | Demande d'achat (DAC) | Service achat | DA, tout ordre | DDP, commande, réservation, sous-traitance | « Liste de courses » du service achat |
 | Réservation de stock (RS) | Magasin | DA, DAC | Sortie de stock | Type `S_RESERVATION` existant ; module Stock à venir |
