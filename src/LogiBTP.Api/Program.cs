@@ -99,6 +99,7 @@ api.MapModuleCrm().ExigeModule("crm", "CRM");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();
+api.MapRessources();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 

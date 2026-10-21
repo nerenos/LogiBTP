@@ -58,7 +58,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `creerFournisseurEntreprises` (`annuaire/annuaire.js`), fiche personne | `AddModuleEntreprisesFr` | — |
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
-| authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`demo_salarie` → individu, `ind_utilisateur`) | — |
+| authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur`) | — |
 | crm | `crm/*` (`PanneauSuivi` : onglet Suivi des documents et des fiches), `pages/crm.js`, `crm-note.js`, `crm-suivi.js`, `parametres-crm.js`, menu Suivi | `SpecialisationCrmBtp` | 194 (élément GED `crm_note`, catégorie `crm`) |
 | reglement | `pages/reglements.js` (`/reglements?sens=E|D&tiers=`), colonnes réglé / reste de l'onglet Gestion (`fiche-structure.js`) | `SpecialisationReglementBtp` (échéances `document_echeance`) | 175 (clé étrangère des pointages) |
 | edition | `editions/modeles.js` (modèles fournis → `db/191`), `editions/polices.js`, `pages/edition.js` (`/edition`), `pages/parametres-editions.js`, bouton 🖨 Aperçu de la page document | `SpecialisationEditionBtp`, `SourceDocumentEdition`, `MapEditionsBtp` (mentions) | 190, 191 |
@@ -67,6 +67,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 ## Liens transverses (fonctionnels)
 
 - **Authentification ↔ tout** : l'intergiciel de session (`UseAuthentificationSession`, après `UseSocietes`) pose l'utilisateur de la requête (`Utilisateur.Poser` → `Utilisateur.Depuis` du socle) ; toutes les routes `/api` exigent une session sauf `/api/sante`, `/api/societe` et les routes publiques de `/api/auth` ; un compte de personne se lie à l'individu d'un salarié ou d'un intérimaire actif, son pseudo est recopié dans `ind_utilisateur` (lu par le CRM).
+- **Référentiel des ressources** (cœur, `db/195`) : salariés, intérimaires et leurs missions, matériels (identifiés ou par nombre), équipes à compositions datées, habilitations des salariés et des matériels, motifs typés, natures de main-d'œuvre → service ; fourni aux modules Planning, Pointage et Exécution par leurs spécialisations (aucun module ne lit ces tables).
 - **Activation des modules** (`db/193`, `module_societe`) : `IModulesActifs` / `ExigeModule` du socle, `ModulesSociete` du cœur, `app.moduleActif` côté client (menus, onglets) ; modules facultatifs : Règlements, CRM.
 - **CRM ↔ tout** (facultatif) : notes rattachées par (`type_element`, `id_element`) aux tiers, contacts, structure et documents (groupe d'indices), décrits par `SpecialisationCrmBtp` ; responsables, destinataires = individus de notre société, services de `db/193` ; pièces jointes et courriels en GED (élément `crm_note`).
 
@@ -101,7 +102,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
   saisie dans les listes salariés / matériels refusée si la fiche est verrouillée (`FICHE_EN_MODIFICATION`).
 - **Fiche ↔ Annuaire / Structure / Bibliothèque** : champs gérés (`gere: true`) délégués à `ServiceAnnuaire`
   (coordonnées, rattachements, liens), à `Intervenants.cs` (intervenants), à `ElementsBibliotheque.AvantEcriture` (prix).
-- **Annuaire ↔ salariés** : `demo_salarie.sal_ind_id`, synchronisation `SalariesAnnuaire.Synchroniser` ↔ `synchroniserSalarie`.
+- **Annuaire ↔ salariés** : `salarie.sal_ind_id`, synchronisation `SalariesAnnuaire.Synchroniser` ↔ `synchroniserSalarie`.
 - **Annuaire ↔ Entreprises françaises** : la fiche personne importe une entreprise (`rechercherEntreprise`), doublon par
   `parSiret` ; le module Entreprises ne connaît pas l'Annuaire.
 - **Bibliothèque ↔ Annuaire** : tarifs fournisseurs (`tarif_fournisseur.tfo_tiers_id` → `personne`).
@@ -124,6 +125,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `correspondance.js` | `Correspondance.cs` | `01_correspondance` |
 | crm | `notes.js`, `rappels.js`, `demandes.js`, `validations.js` | `ReglesNote.cs`, `ReglesRappel.cs`, `ReglesDemande.cs`, `ReglesValidation.cs` | `01_note` à `04_validations` |
 | authentification | `regles.js` | `ReglesCompte.cs` | `01_pseudo` à `04_compte` |
+| cœur : ressources | `client/src/app/ressources/regles.js` | `LogiBTP.Domaine/Ressources/ReglesRessources.cs` | `tests/ressources` (`01_habilitations`, `02_missions`) |
 
 Les tests de chaque côté lisent les mêmes fichiers (`@logibtp/socle/testing` ↔ `LogiBTP.Socle.Testing.CasPartages`).
 

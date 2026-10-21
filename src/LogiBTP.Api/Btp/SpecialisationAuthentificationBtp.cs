@@ -14,15 +14,15 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
 {
     private const string SqlPersonnes = """
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
-               s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_matricule AS matricule
+               s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_matricule AS matricule, s.sal_id AS sal_id
         FROM individu i
-        LEFT JOIN LATERAL (SELECT sal_statut, sal_actif, sal_matricule FROM demo_salarie WHERE sal_ind_id = i.ind_id
+        LEFT JOIN LATERAL (SELECT sal_id, sal_statut, sal_actif, sal_matricule FROM salarie WHERE sal_ind_id = i.ind_id
                            ORDER BY sal_actif DESC, sal_id DESC LIMIT 1) s ON TRUE
         """;
 
-    private sealed record LignePersonne(string Id, string Libelle, bool IndividuActif, string? Statut, bool? SalarieActif, string? Matricule);
+    private sealed record LignePersonne(string Id, string Libelle, bool IndividuActif, string? Statut, bool? SalarieActif, string? Matricule, int? SalId);
 
-    private static PersonneCompte Decrire(LignePersonne l)
+    private static PersonneCompte Decrire(LignePersonne l, DateOnly? finMission = null)
     {
         var interim = l.Statut == "INTERIM";
         string? motif = !l.IndividuActif ? "individu inactif"
@@ -30,14 +30,17 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
             : l.SalarieActif != true ? (interim ? "intérimaire inactif" : "salarié inactif (sorti)") : null;
         var statut = l.Statut switch { "INTERIM" => "Intérimaire", "CDD" => "Salarié (CDD)", "CDI" => "Salarié (CDI)", _ => null };
         return new PersonneCompte("individu", l.Id, l.Libelle, motif is null, interim, interim ? ["ADMIN"] : [],
-            statut is null ? null : l.Matricule is null ? statut : $"{statut} · {l.Matricule}", null, motif);
+            statut is null ? null : l.Matricule is null ? statut : $"{statut} · {l.Matricule}", finMission, motif);
     }
 
     public override async Task<PersonneCompte?> PersonneAsync(AuthDbContext db, string type, string id, CancellationToken ct)
     {
         if (type != "individu" || !long.TryParse(id, out var ind)) return null;
         var l = await db.Database.SqlQueryRaw<LignePersonne>(SqlPersonnes + " WHERE i.ind_id = @id", new NpgsqlParameter("id", ind)).FirstOrDefaultAsync(ct);
-        return l is null ? null : Decrire(l);
+        if (l is null) return null;
+        // Intérimaire : fin de la mission en cours proposée comme fin de validité du compte (référentiel des ressources).
+        var fin = l is { Statut: "INTERIM", SalId: int sal } ? await Ressources.FinMissionEnCoursAsync(db, sal, ct) : null;
+        return Decrire(l, fin);
     }
 
     public override async Task<List<PersonneCompte>> RechercherPersonnesAsync(AuthDbContext db, string texte, CancellationToken ct)
@@ -47,7 +50,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
                AND (concat_ws(' ', i.ind_prenom, i.ind_nom) ILIKE @t OR concat_ws(' ', i.ind_nom, i.ind_prenom) ILIKE @t OR s.sal_matricule ILIKE @t)
              ORDER BY lower(i.ind_nom), lower(i.ind_prenom) LIMIT 30
             """, new NpgsqlParameter("t", $"%{texte.Trim()}%")).ToListAsync(ct);
-        return lignes.Select(Decrire).ToList();
+        return lignes.Select(l => Decrire(l)).ToList();
     }
 
     /// <summary>Pseudo libre : aucun autre individu ne le porte comme identifiant de connexion.</summary>

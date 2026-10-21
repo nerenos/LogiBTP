@@ -170,9 +170,11 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   d'office à la sortie du salarié).
 - [ ] Authentification, module complet des droits (lots 2 à 4) : groupes et profils multiples, droits par module et par
   action, comptes de service et appareils (bornes du Pointage), fournisseur d'identité, double facteur.
-- [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
-  référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
-  application mobile hors ligne.
+- [x] **Référentiel des ressources** (22/10/2026, `db/195`) : tables `salarie`, `materiel`, `equipe` (fin des `demo_*`),
+  missions d'intérim, matériels par nombre, habilitations (types, validité, à surveiller), équipes datées, motifs typés,
+  natures MO → service.
+- [ ] Prérequis communs restants : calendriers et jours fériés, centre de notifications, temps réel, application mobile
+  hors ligne.
 
 ### Archivage
 

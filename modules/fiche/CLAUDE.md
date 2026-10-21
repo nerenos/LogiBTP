@@ -21,7 +21,7 @@
 - `droit_fiche` (`drf_profil`, `drf_type`, `drf_action` ∈ VOIR, MODIFIER, DEBLOQUER, CONFIDENTIEL, SUPPRIMER).
 - `parametre_champ_fiche` (`pcf_obligatoire` : rendre obligatoire un champ facultatif ; `pcf_confidentiel` : rendre confidentiel un champ du logiciel, hors champs gérés) ; `champ_supplementaire` (`chs_type_donnee` texte/nombre/booleen/date/liste/motdepasse, `chs_format`, `chs_options`, `chs_requete` (liste par SELECT), `chs_section` (onglet de la définition, sinon Informations complémentaires), `chs_groupe` (cadre titré), `chs_ordre`…).
 - `verrou_fiche` (`vef_type`, `vef_id`, `vef_utilisateur`, `vef_jeton` UUID par onglet, `vef_depuis`, `vef_renouvele`) ; `journal_confidentiel` (`jcf_champs` TEXT[]).
-- Types du cœur (`TYPES_FICHE` dans `client/src/app/fiches/definitions.js`) : salarie (`demo_salarie`), materiel (`demo_materiel`), element, personne, individu, projet, affaire, chantier, marche ; `DROITS_FICHE`, `PARAMETRAGE_FICHE`, `ficheDeLigne({ type, id })` (ligne de liste → fiche).
+- Types du cœur (`TYPES_FICHE` dans `client/src/app/fiches/definitions.js`) : salarie (`salarie`), materiel (`materiel`), element, personne, individu, projet, affaire, chantier, marche ; `DROITS_FICHE`, `PARAMETRAGE_FICHE`, `ficheDeLigne({ type, id })` (ligne de liste → fiche).
 - Champ : `code`, `colonne` (programme) ou supplémentaire, `type` (texte, zone, html, json, nombre, booleen, date, liste, motdepasse), `format` (email, telephone, code_postal, 999.99, regex:…), `longueur`, `obligatoire`, `confidentiel` (+ `confidentiel_parametre`), `lecture_seule`, `saisie: 'creation'`, `non_copie`, `options`, `requete`, `section`, `groupe`, `reference`, `defaut`, `gere`.
 
 ## Points de spécialisation

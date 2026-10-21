@@ -70,10 +70,10 @@ INSERT INTO service (srv_code, srv_libelle, srv_nature, srv_ordre) VALUES
  ('CHANTIER', 'Chantier (travaux)', 'PRODUCTION', 70)
 ON CONFLICT (srv_code) DO NOTHING;
 
--- Salariés de démonstration : service principal repris de leur service (texte libre de demo_salarie), une fois.
+-- Salariés de démonstration : service principal repris de leur service (texte libre de salarie), une fois.
 INSERT INTO service_membre (sme_srv_id, sme_ind_id, sme_principal)
 SELECT s.srv_id, d.sal_ind_id, TRUE
-FROM demo_salarie d
+FROM salarie d
 JOIN service s ON s.srv_code = CASE d.sal_service WHEN 'Atelier' THEN 'ATELIER' WHEN 'Bureau' THEN 'ADMIN'
                                                   WHEN 'Direction' THEN 'DIRECTION' WHEN 'Chantier' THEN 'CHANTIER' END
 WHERE d.sal_ind_id IS NOT NULL

@@ -37,7 +37,7 @@
 - `individu` (`ind_roles` JSONB, `ind_utilisateur` unique) ; `rattachement` (unique `rat_ind_id, rat_per_id` ; `rat_principal`, `rat_titulaire`, dates, `rat_actif`) ; `lien_personne` (unique `lpe_per_id, lpe_cible_id, lpe_tli_code`).
 - `coordonnee` (`coo_nature` ADRESSE / TELEPHONE / EMAIL / WEB, `coo_reseau`) + `usage_coordonnee` (exactement un de `uco_per_id`, `uco_ind_id`, `uco_rat_id` ; `uco_usage`, `uco_principal`, `uco_ordre`) ; `coordonnee_historique` alimentée par le trigger `tg_coordonnee_historique`.
 - Fonctions / vues : `f_annuaire_normaliser` (recherche sans accents ni casse), `f_texte_coordonnee`, `v_personne_chemin` (Groupe › Société › …), `v_annuaire_usages`, `v_annuaire_personnes`, `v_annuaire_individus` (ensemblistes, `DISTINCT ON`).
-- Cœur : `db/140_annuaire.sql` (`ALTER TABLE personne`, `demo_salarie.sal_ind_id`, `tarif_fournisseur.tfo_tiers_id`, vues `v_liste_personnes` / `v_liste_individus`), `db/141` (démo générée), `db/142_annuaire_salaries.sql`.
+- Cœur : `db/140_annuaire.sql` (`ALTER TABLE personne`, `salarie.sal_ind_id`, `tarif_fournisseur.tfo_tiers_id`, vues `v_liste_personnes` / `v_liste_individus`), `db/141` (démo générée), `db/142_annuaire_salaries.sql`.
 
 ## Points de spécialisation
 - `SpecialisationAnnuaire` (C#, singleton) : `PeutParametrer(Utilisateur)` (admin), `NiveauParticulier` (`PARTICULIER`), `CasquettesParticulier` (`CLIENT`), `PeutValiderTiers` (admin), `NiveauProvisoire` (`SOCIETE`), `ReporterFusionAsync(cnx, tx, source, cible)` (références de l'hôte, dans la transaction de la fusion ; cœur : `SpecialisationAnnuaireBtp`). Mémoire : `reporterFusion(source, cible)` posé par l'hôte.
@@ -73,7 +73,7 @@
 - Recherche : mots normalisés (`ServiceAnnuaire.Mots`, `f_annuaire_normaliser`), limite 30 par défaut.
 - Doublon d'établissement : `parSiret` avant création (fiche personne, reprise depuis l'annuaire des entreprises).
 - Tiers provisoire : seul un provisoire se fusionne (dans n'importe quelle autre fiche) ; doublon de nom = tous les `motsDoublon` contenus (sans accents) dans la raison sociale ou le nom commercial, 10 au plus ; un nouveau tiers saisi depuis les intervenants (bouton ＋) est toujours provisoire.
-- Salariés : chaque salarié est lié à un individu (`demo_salarie.sal_ind_id`) rattaché à notre société ; synchronisation dans le cœur (`SalariesAnnuaire.cs`, `synchroniserSalarie`).
+- Salariés : chaque salarié est lié à un individu (`salarie.sal_ind_id`) rattaché à notre société ; synchronisation dans le cœur (`SalariesAnnuaire.cs`, `synchroniserSalarie`).
 - Démo : modifier `client/src/app/annuaire/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/141`).
 
 ## Tests

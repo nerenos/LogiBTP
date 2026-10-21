@@ -19,9 +19,9 @@ BEGIN
         RETURN EXISTS (SELECT 1 FROM document WHERE ent_tyd_id = tyd AND coalesce(ent_groupe_id, ent_id) = n);
     END IF;
     RETURN CASE p_type
-        WHEN 'salarie'  THEN EXISTS (SELECT 1 FROM demo_salarie WHERE sal_id = n)
-        WHEN 'interim'  THEN EXISTS (SELECT 1 FROM demo_salarie WHERE sal_id = n)
-        WHEN 'materiel' THEN EXISTS (SELECT 1 FROM demo_materiel WHERE mat_id = n)
+        WHEN 'salarie'  THEN EXISTS (SELECT 1 FROM salarie WHERE sal_id = n)
+        WHEN 'interim'  THEN EXISTS (SELECT 1 FROM salarie WHERE sal_id = n)
+        WHEN 'materiel' THEN EXISTS (SELECT 1 FROM materiel WHERE mat_id = n)
         WHEN 'element'  THEN EXISTS (SELECT 1 FROM element WHERE ele_id = n)
         WHEN 'personne' THEN EXISTS (SELECT 1 FROM personne WHERE per_id = n)
         WHEN 'individu' THEN EXISTS (SELECT 1 FROM individu WHERE ind_id = n)

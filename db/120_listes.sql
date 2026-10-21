@@ -28,7 +28,7 @@ JOIN type_document t ON t.tyd_id = d.ent_tyd_id
 JOIN statut_document s ON s.std_id = d.ent_std_id;
 
 -- Démonstration : salariés et matériels (tables du cœur en attendant les modules RH et Matériel).
-CREATE TABLE demo_salarie (
+CREATE TABLE salarie (
     sal_id          SERIAL        PRIMARY KEY,
     sal_matricule   VARCHAR(10)   NOT NULL UNIQUE,
     sal_nom         VARCHAR(60)   NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE demo_salarie (
     sal_commentaire TEXT
 );
 
-CREATE TABLE demo_materiel (
+CREATE TABLE materiel (
     mat_id              SERIAL        PRIMARY KEY,
     mat_code            VARCHAR(10)   NOT NULL,
     mat_designation     VARCHAR(100)  NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE demo_materiel (
 
 -- 5 000 salariés et 3 000 matériels, valeurs pseudo-aléatoires reproductibles (setseed).
 SELECT setseed(0.42);
-INSERT INTO demo_salarie (sal_matricule, sal_nom, sal_prenom, sal_service, sal_poste, sal_statut, sal_date_entree, sal_salaire, sal_actif, sal_commentaire)
+INSERT INTO salarie (sal_matricule, sal_nom, sal_prenom, sal_service, sal_poste, sal_statut, sal_date_entree, sal_salaire, sal_actif, sal_commentaire)
 SELECT 'S' || lpad(i::text, 5, '0'),
        (ARRAY['Martin','Bernard','Dubois','Lefèvre','Moreau','Laurent','Garçon','Roux','Fournier','Girard','Bonnet','Dupré',
               'Lambert','Fontaine','Rousseau','Vincent','Müller','Faure','André','Mercier','Blanc','Guérin','Boyer','Chevalier'])[1 + floor(random() * 24)::int],
@@ -82,7 +82,7 @@ SELECT 'S' || lpad(i::text, 5, '0'),
 FROM generate_series(1, 5000) AS i
 CROSS JOIN LATERAL (SELECT (ARRAY['Chantier','Bureau','Atelier','Direction'])[1 + floor(random() * 4)::int] AS service, i AS j) x;
 
-INSERT INTO demo_materiel (mat_code, mat_designation, mat_famille, mat_etat, mat_chantier, mat_valeur_achat, mat_date_achat,
+INSERT INTO materiel (mat_code, mat_designation, mat_famille, mat_etat, mat_chantier, mat_valeur_achat, mat_date_achat,
                            mat_heures, mat_heures_revision, mat_controle_ok, mat_observations)
 SELECT 'M' || lpad(i::text, 5, '0'),
        x.designation || ' n° ' || (100 + i % 900),
@@ -115,17 +115,17 @@ CREATE VIEW v_liste_salaries AS
 SELECT sal_id AS id, CASE WHEN sal_statut = 'INTERIM' THEN 'interim' ELSE 'salarie' END AS type_element, sal_matricule AS matricule, sal_nom AS nom, sal_prenom AS prenom, sal_service AS service, sal_poste AS poste,
        sal_statut AS statut, sal_date_entree AS date_entree, sal_salaire AS salaire_brut, sal_heures_mois AS heures_mois,
        sal_actif AS actif, sal_commentaire AS commentaire
-FROM demo_salarie;
+FROM salarie;
 
 CREATE VIEW v_liste_materiels AS
 SELECT mat_id AS id, mat_code AS code, mat_designation AS designation, mat_famille AS famille, mat_etat AS etat,
        mat_chantier AS chantier, mat_valeur_achat AS valeur_achat, mat_date_achat AS date_achat,
        mat_heures AS heures_utilisation, mat_heures_revision AS heures_revision, mat_controle_ok AS controle_ok,
        mat_observations AS observations
-FROM demo_materiel;
+FROM materiel;
 
 -- Équipes et sous-traitants (démonstration du thème Ressources, à plusieurs types d'élément).
-CREATE TABLE demo_equipe (
+CREATE TABLE equipe (
     equ_id        SERIAL        PRIMARY KEY,
     equ_code      VARCHAR(10)   NOT NULL,
     equ_libelle   VARCHAR(100)  NOT NULL,
@@ -136,11 +136,11 @@ CREATE TABLE demo_equipe (
     equ_active    BOOLEAN       NOT NULL DEFAULT TRUE
 );
 
-INSERT INTO demo_equipe (equ_code, equ_libelle, equ_categorie, equ_chef, equ_effectif, equ_chantier, equ_active)
+INSERT INTO equipe (equ_code, equ_libelle, equ_categorie, equ_chef, equ_effectif, equ_chantier, equ_active)
 SELECT 'E' || lpad(i::text, 3, '0'),
        'Équipe ' || (ARRAY['gros œuvre','second œuvre','VRD','finitions'])[1 + (i - 1) % 4] || ' ' || (1 + (i - 1) / 4),
        (ARRAY['Gros œuvre','Second œuvre','VRD','Finitions'])[1 + (i - 1) % 4],
-       (SELECT sal_prenom || ' ' || sal_nom FROM demo_salarie WHERE sal_id = i * 37),
+       (SELECT sal_prenom || ' ' || sal_nom FROM salarie WHERE sal_id = i * 37),
        3 + floor(random() * 6)::int,
        CASE WHEN random() > 0.3 THEN (ARRAY['Maison Martin – Lyon','Résidence Les Érables','École Jean-Moulin','Pont de la Saône'])[1 + floor(random() * 4)::int] END,
        random() > 0.3
@@ -173,7 +173,7 @@ CREATE VIEW v_liste_ressources AS
 SELECT 'EQU-' || equ_id AS id, 'equipe' AS type_element, equ_code AS code, equ_libelle AS libelle, equ_categorie AS categorie,
        'Chef : ' || equ_chef AS statut, equ_active AS disponible, (equ_effectif * 42)::numeric AS cout_horaire,
        equ_chantier AS chantier, 'Effectif ' || equ_effectif AS observations
-FROM demo_equipe
+FROM equipe
 UNION ALL
 SELECT 'SAL-' || id, type_element, matricule, prenom || ' ' || nom, service, poste, actif,
        round(salaire_brut * 1.45 / 151.67, 2), NULL, commentaire
@@ -187,5 +187,5 @@ SELECT 'SST-' || sst_id, 'sous_traitant', sst_code, sst_raison, sst_metier,
 FROM demo_sous_traitant;
 
 -- Index d'aide aux tris par défaut des vues de démonstration.
-CREATE INDEX ix_sal_nom ON demo_salarie (sal_nom, sal_id);
-CREATE INDEX ix_mat_code ON demo_materiel (mat_code, mat_id);
+CREATE INDEX ix_sal_nom ON salarie (sal_nom, sal_id);
+CREATE INDEX ix_mat_code ON materiel (mat_code, mat_id);

@@ -1,0 +1,17 @@
+{
+  "description": "Missions d'intérim (controlerMissions, missionEnCours ↔ ReglesRessources) : dates obligatoires, période, agence, taux positif, chevauchement signalé sur les deux missions ; mission couvrant une date.",
+  "controles": [
+    { "nom": "correctes et contiguës", "missions": [{ "debut": "2026-01-05", "fin": "2026-03-27", "agence_id": 10, "taux_horaire": 32.5 }, { "debut": "2026-03-28", "fin": "2026-06-30", "agence_id": 10, "taux_horaire": 33 }], "attendu": [] },
+    { "nom": "même jour de fin et de début : chevauchement", "missions": [{ "debut": "2026-01-05", "fin": "2026-03-27", "agence_id": 10 }, { "debut": "2026-03-27", "fin": "2026-06-30", "agence_id": 10 }], "attendu": [{ "index": 0, "codes": ["MIS_CHEVAUCHEMENT"] }, { "index": 1, "codes": ["MIS_CHEVAUCHEMENT"] }] },
+    { "nom": "période inversée sans agence", "missions": [{ "debut": "2026-05-01", "fin": "2026-04-01", "agence_id": null }], "attendu": [{ "index": 0, "codes": ["MIS_AGENCE", "MIS_PERIODE"] }] },
+    { "nom": "dates manquantes et taux négatif", "missions": [{ "debut": null, "fin": "2026-04-01", "agence_id": 10, "taux_horaire": -1 }], "attendu": [{ "index": 0, "codes": ["MIS_DATES", "MIS_TAUX"] }] },
+    { "nom": "taux nul accepté", "missions": [{ "debut": "2026-04-01", "fin": "2026-04-30", "agence_id": 10, "taux_horaire": 0 }], "attendu": [] },
+    { "nom": "trois missions, une englobante", "missions": [{ "debut": "2026-01-01", "fin": "2026-12-31", "agence_id": 10 }, { "debut": "2026-02-01", "fin": "2026-02-28", "agence_id": 11 }, { "debut": "2027-01-01", "fin": "2027-01-31", "agence_id": 10 }], "attendu": [{ "index": 0, "codes": ["MIS_CHEVAUCHEMENT"] }, { "index": 1, "codes": ["MIS_CHEVAUCHEMENT"] }] }
+  ],
+  "en_cours": [
+    { "nom": "dans la mission", "missions": [{ "id": 1, "debut": "2026-01-05", "fin": "2026-03-27" }, { "id": 2, "debut": "2026-03-28", "fin": "2026-12-31" }], "date": "2026-10-21", "attendu": 2 },
+    { "nom": "premier et dernier jour inclus", "missions": [{ "id": 1, "debut": "2026-10-21", "fin": "2026-10-21" }], "date": "2026-10-21", "attendu": 1 },
+    { "nom": "entre deux missions", "missions": [{ "id": 1, "debut": "2026-01-05", "fin": "2026-03-27" }, { "id": 2, "debut": "2026-11-01", "fin": "2026-12-31" }], "date": "2026-10-21", "attendu": null },
+    { "nom": "deux missions couvrantes : la dernière commencée", "missions": [{ "id": 1, "debut": "2026-01-01", "fin": "2026-12-31" }, { "id": 2, "debut": "2026-10-01", "fin": "2026-10-31" }], "date": "2026-10-21", "attendu": 2 }
+  ]
+}

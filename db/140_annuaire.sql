@@ -26,7 +26,7 @@ ALTER TABLE personne
     ADD COLUMN per_bc_missions             VARCHAR(100);
 
 -- Salariés (module salariés du cœur) : individu de l'annuaire (identité, coordonnées, rattachement à l'agence).
-ALTER TABLE demo_salarie ADD COLUMN sal_ind_id BIGINT UNIQUE REFERENCES individu(ind_id) ON DELETE SET NULL;
+ALTER TABLE salarie ADD COLUMN sal_ind_id BIGINT UNIQUE REFERENCES individu(ind_id) ON DELETE SET NULL;
 
 -- Tarifs fournisseurs de la bibliothèque : fournisseur de l'annuaire.
 ALTER TABLE tarif_fournisseur ADD CONSTRAINT fk_tfo_tiers FOREIGN KEY (tfo_tiers_id) REFERENCES personne(per_id) ON DELETE SET NULL;

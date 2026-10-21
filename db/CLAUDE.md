@@ -9,11 +9,11 @@
 - `110_reference.sql` : types de documents (familles V/A/S), statuts, taux de TVA, transformations autorisées, droits ADMIN, propriétés, unités, `tyd_validite_jours`.
 - `115_bibliotheque.sql` : `ent_bib_id`, unités complémentaires, vue `v_liste_elements`, catégorie GED `notice_technique`.
 - `116_bibliotheque_demo.sql` : **généré** (`client/src/app/bibliotheque/donnees.js`).
-- `120_listes.sql` : vue `v_liste_documents`, tables de démo `demo_salarie`, `demo_materiel`, `demo_equipe`, `demo_sous_traitant`, vues `v_liste_salaries|materiels|ressources`, données volumineuses.
+- `120_listes.sql` : vue `v_liste_documents`, tables du référentiel des ressources `salarie`, `materiel`, `equipe` (anciennement `demo_*`, renommées par 195 sur les bases existantes) et de démo `demo_sous_traitant`, vues `v_liste_salaries|materiels|ressources`, données volumineuses.
 - `121_listes_parametrage.sql` : **généré** (`client/src/app/vues-liste.js`) : `source_liste`, `theme_liste`, `vue_liste`.
 - `130_fiches.sql` : colonnes des fiches salarié / matériel, JSONB des champs supplémentaires.
 - `131_fiches_parametrage.sql` : **généré** (`client/src/app/fiches/definitions.js`) : `type_fiche`, `droit_fiche`, `parametre_champ_fiche`, `champ_supplementaire`.
-- `140_annuaire.sql` : champs des casquettes de `personne`, vues `v_liste_personnes|individus`, catégories GED des tiers, `demo_salarie.sal_ind_id`, `tarif_fournisseur.tfo_tiers_id` → `personne`.
+- `140_annuaire.sql` : champs des casquettes de `personne`, vues `v_liste_personnes|individus`, catégories GED des tiers, `salarie.sal_ind_id`, `tarif_fournisseur.tfo_tiers_id` → `personne`.
 - `141_annuaire_demo.sql` : **généré** (`client/src/app/annuaire/donnees.js`).
 - `142_annuaire_salaries.sql` : un individu par salarié (individu et rattachement = 1000 + `sal_id`, coordonnées = 100000 + 2 × `sal_id` (+1)) ; réplique de `annuaireDesSalaries`.
 - `150_documents_vues.sql` : **généré** (`client/src/app/vues-document.js`) : vues de colonnes (`ON CONFLICT (vdo_id) DO NOTHING`).
@@ -45,15 +45,16 @@
 - `190_editions.sql` : `ent_modele_edition` (dernier modèle imprimé), `parametre_edition` (mentions de la société) ; rejouable.
 - `191_editions_modeles.sql` : **généré** (`client/src/app/editions/modeles.js`) : charte, modèles fournis (réécrits tant qu'ils ne sont pas modifiés localement), liens, défauts ; rejouable.
 - `192_editions_production.sql` : catégories GED `edition` et `ressource_edition` ; rejouable.
-- `193_modules_services.sql` : `module_societe` (activation des modules facultatifs par drapeau : `reglement`, `crm`), `service` (deux niveaux, trigger `f_service_niveaux`, natures PRODUCTION / ETUDE / LOGISTIQUE / ADMINISTRATIF ; Vente et Achat), `service_membre` (individus de notre société, un seul principal : `ux_sme_principal`), membres de démonstration repris de `demo_salarie.sal_service` ; rejouable.
+- `193_modules_services.sql` : `module_societe` (activation des modules facultatifs par drapeau : `reglement`, `crm`), `service` (deux niveaux, trigger `f_service_niveaux`, natures PRODUCTION / ETUDE / LOGISTIQUE / ADMINISTRATIF ; Vente et Achat), `service_membre` (individus de notre société, un seul principal : `ux_sme_principal`), membres de démonstration repris de `salarie.sal_service` ; rejouable.
 - `194_crm.sql` : éléments GED `crm_*` (reprend `f_ged_element_existe` de 164 en déléguant au module : `f_crm_element_existe` de `modules/crm/db/097`), catégorie GED `crm` ; rejouable.
+- `195_ressources.sql` : référentiel des ressources (rejouable) : renommage `demo_salarie|demo_materiel|demo_equipe` → `salarie|materiel|equipe` (bases existantes, `type_fiche` mis à jour, `f_ged_element_existe` recréée avec le type `equipe`) ; salarié : `sal_qualification`, `sal_cout_horaire` (coût horaire chargé saisi), `sal_date_sortie` ; `mission_interim` (agence, période, taux horaire facturé) ; matériel : `mat_mode` IDENTIFIE / NOMBRE, `mat_quantite`, `mat_unite`, `mat_srv_id`, `mat_depot_id`, `mat_habilitations` (codes exigés du conducteur) ; `type_habilitation` (catégorie, élément concerné, durée en mois) et `habilitation` (salarié ou matériel, fin de validité calculée si vide) ; `equipe.equ_srv_id`, `equ_chef_sal_id`, `equipe_composition` (datée) ; `motif` (BLOCAGE, NON_CONFORMITE, ECART_PLANNING, AUTRE ; service à prévenir) ; `nature_element.nat_srv_id` (natures de main-d'œuvre → service) et natures MO_ATELIER, MO_POSE, MO_ETUDES ; données de démonstration une fois.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules
 - Document / Métré : 100, 110, 150, 160 (types et transformations), 162 (`ent_intervenants`, `ent_redacteur_id`). Liste : 120, 121 (+ vues de 115, 140, 160). Fiche : 130, 131. GED : catégories dans 115, 140 (`parametre_ged`). Bibliothèque : 115, 116. Annuaire : 140, 141, 142, 162.
 
 ## Conventions et pièges
-- Fichiers **générés** (116, 121, 131, 141, 150, 161, 163, 176) : ne jamais les modifier ; changer la source JS puis `npm run generer-vues-liste --workspace client`.
+- Fichiers **générés** (116, 121, 131, 141, 150, 161, 163, 176) : ne jamais les modifier ; changer la source JS puis `npm run generer-vues-liste --workspace client`. 131 est rejouable (types de fiches mis à jour, droits et paramétrage ajoutés s'ils manquent) : le rejouer sur les bases existantes après un changement de `fiches/definitions.js`.
 - Noms de colonnes snake_case préfixés (`ent_`, `lig_`, `prj_`, `aff_`, `cha_`, `mar_`, `itv_`, `fin_`) ; mêmes noms dans `client/src/calcul/colonnes-btp.js` et les entités C#.
 - `FONCTIONS_INTERVENANT` (`structure/donnees.js`) doit refléter les `INSERT` de 162 (test `client/test/structure.test.js`).
 - Scripts majoritairement **non idempotents** (`CREATE TABLE`, `ADD COLUMN` sans `IF NOT EXISTS`) : n'appliquer un script qu'une fois par base.

@@ -4,6 +4,7 @@ import { ArborescenceBtp } from '../ged/arborescence.js';
 import { CLASSES_FICHE } from '../fiches/classes.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
+import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees } from '../ressources/ressources-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 
 const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
@@ -58,6 +59,12 @@ export class PageFiche extends PageBase {
       } : null,
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.
       compte: app.enLigne && app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
+      // Référentiel des ressources (en ligne) : habilitations, missions d'intérim, habilitations exigées d'un matériel.
+      ressources: app.enLigne ? {
+        habilitations: (corps, p) => rendreHabilitations(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        missions: (corps, p) => rendreMissions(corps, { app, annuaire: s.annuaire, ...p }).catch((e) => app.erreur(e)),
+        exigees: (corps, p) => rendreHabilitationsExigees(corps, { app, ...p }).catch((e) => app.erreur(e)),
+      } : null,
       surEnregistre: (f, { cree }) => {
         app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
         if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);

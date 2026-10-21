@@ -17,6 +17,9 @@ export const MENUS_METIER = [
       { separateur: true },
       { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries'), creation: F('salarie', 'Nouveau salarié') },
       { code: 'materiels', libelle: 'Matériels', icone: '🚜', url: L('materiels'), creation: F('materiel', 'Nouveau matériel') },
+      { separateur: true },
+      { code: 'habilitations', libelle: 'Habilitations à surveiller', icone: '🪪', url: '/ressources/habilitations', info: 'Expirées ou à renouveler : CACES, visites médicales, VGP…' },
+      { code: 'parametrage-ressources', libelle: "Types d'habilitations, motifs, natures MO…", icone: '⚙', url: '/parametres/ressources' },
     ],
   },
   {
@@ -145,6 +148,7 @@ export function menus(app) {
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
         { libelle: 'Suivi (CRM) : types de notes, rappels…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
+        { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },

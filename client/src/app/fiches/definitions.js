@@ -8,7 +8,7 @@ const options = (...v) => v.map((x) => (Array.isArray(x) ? { valeur: x[0], libel
 
 export const TYPES_FICHE = {
   salarie: {
-    libelle: 'Salarié', table: 'demo_salarie', cle: 'sal_id', colonne_proprietes: 'sal_proprietes',
+    libelle: 'Salarié', table: 'salarie', cle: 'sal_id', colonne_proprietes: 'sal_proprietes',
     definition: {
       libelle: 'Salarié',
       titre: '[prenom] [nom]',
@@ -19,9 +19,9 @@ export const TYPES_FICHE = {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
             { titre: 'Identité', champs: ['matricule', 'nom', 'prenom', 'ind_id'] },
-            { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'type_mo', 'statut', 'date_entree', 'actif'] },
+            { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'actif'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
-            { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois'] },
+            { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
             { titre: 'Note professionnelle', champs: ['commentaire'], largeur: 'plein' },
           ],
         },
@@ -68,11 +68,15 @@ export const TYPES_FICHE = {
         c('salaire_brut', 'Salaire brut mensuel', 'sal_salaire', 'nombre', { obligatoire: true, confidentiel: true, format: '99999.99' }),
         c('heures_mois', 'Heures mensuelles', 'sal_heures_mois', 'nombre', { obligatoire: true, format: '999.99', defaut: 151.67 }),
         c('commentaire', 'Note professionnelle', 'sal_commentaire', 'zone'),
+        // Référentiel des ressources (db/195).
+        c('qualification', 'Qualification', 'sal_qualification', 'texte', { longueur: 60, aide: 'Ex. N3P2 (convention collective), compagnon professionnel' }),
+        c('date_sortie', 'Date de sortie', 'sal_date_sortie', 'date', { non_copie: true, aide: "Le compte de connexion est désactivé quand le salarié n'est plus actif" }),
+        c('cout_horaire', 'Coût horaire chargé', 'sal_cout_horaire', 'nombre', { confidentiel: true, format: '9999.99', aide: 'Vide : estimé depuis le salaire (× 1,45 / heures mensuelles)' }),
       ],
     },
   },
   materiel: {
-    libelle: 'Matériel', table: 'demo_materiel', cle: 'mat_id', colonne_proprietes: 'mat_proprietes',
+    libelle: 'Matériel', table: 'materiel', cle: 'mat_id', colonne_proprietes: 'mat_proprietes',
     definition: {
       libelle: 'Matériel',
       titre: '[designation]',
@@ -83,6 +87,7 @@ export const TYPES_FICHE = {
           groupes: [
             { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'numero_serie'] },
             { titre: 'Exploitation', champs: ['etat', 'chantier', 'heures_utilisation', 'heures_revision', 'controle_ok'] },
+            { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id'] },
             { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
             { titre: 'Observations', champs: ['observations'], largeur: 'plein' },
           ],
@@ -105,6 +110,11 @@ export const TYPES_FICHE = {
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { obligatoire: true, format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date', { obligatoire: true }),
         c('observations', 'Observations', 'mat_observations', 'zone'),
+        // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
+        c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
+        c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
+        c('unite', 'Unité', 'mat_unite', 'texte', { longueur: 10 }),
+        c('srv_id', 'Service', 'mat_srv_id', 'liste', { requete: 'SELECT srv_id, srv_libelle FROM service WHERE srv_actif ORDER BY srv_ordre, srv_code', aide: 'Service qui planifie ce matériel' }),
       ],
     },
   },

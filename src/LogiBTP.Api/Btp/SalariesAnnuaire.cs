@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LogiBTP.Api.Btp;
 
 /// <summary>
-/// Lien entre les salariés du cœur (demo_salarie.sal_ind_id) et l'annuaire. Fiche individu : résumé du salarié lié
+/// Lien entre les salariés du cœur (salarie.sal_ind_id) et l'annuaire. Fiche individu : résumé du salarié lié
 /// (champ géré « salarie »). Salarié enregistré : l'individu reprend l'identité (nom, prénom, naissance, actif), le
 /// rôle salarié ou intérimaire et son rattachement à l'agence (fonction = poste, service, date d'entrée). Réplique de
 /// synchroniserSalarie (client/src/app/annuaire/salaries.js).
@@ -32,7 +32,7 @@ public static class SalariesAnnuaire
     /// <summary>Résumé du salarié lié à un individu, ou null.</summary>
     public static Task<object?> Salarie(IServiceProvider sp, long indId, CancellationToken ct) => Executer<object?>(sp, async cnx =>
     {
-        await using var cmd = Commande(cnx, "SELECT sal_id, sal_matricule, sal_poste, sal_agence, sal_statut, sal_actif FROM demo_salarie WHERE sal_ind_id = @i", ("i", indId));
+        await using var cmd = Commande(cnx, "SELECT sal_id, sal_matricule, sal_poste, sal_agence, sal_statut, sal_actif FROM salarie WHERE sal_ind_id = @i", ("i", indId));
         await using var rd = await cmd.ExecuteReaderAsync(ct);
         if (!await rd.ReadAsync(ct)) return null;
         return new

@@ -49,20 +49,27 @@ const supplementaires = Object.entries(PARAMETRAGE_FICHE).flatMap(([type, p]) =>
 const sqlFiches = `-- =============================================================================
 -- Cœur LogiBTP – types de fiches (salarié, matériel), droits par profil et paramétrage de démonstration.
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/fiches/definitions.js : ne pas modifier.
+-- Rejouable : les types de fiches sont mis à jour (définition du programme) ; droits et paramétrage de démonstration
+-- ajoutés s'ils manquent (le paramétrage local est conservé).
 -- =============================================================================
 
 INSERT INTO type_fiche (tyf_code, tyf_libelle, tyf_table, tyf_cle, tyf_colonne_proprietes, tyf_definition) VALUES
-${types};
+${types}
+ON CONFLICT (tyf_code) DO UPDATE SET tyf_libelle = EXCLUDED.tyf_libelle, tyf_table = EXCLUDED.tyf_table, tyf_cle = EXCLUDED.tyf_cle,
+  tyf_colonne_proprietes = EXCLUDED.tyf_colonne_proprietes, tyf_definition = EXCLUDED.tyf_definition;
 
 INSERT INTO droit_fiche (drf_profil, drf_type, drf_action) VALUES
-${droits};
+${droits}
+ON CONFLICT DO NOTHING;
 
 INSERT INTO parametre_champ_fiche (pcf_type, pcf_champ, pcf_obligatoire) VALUES
-${obligatoires};
+${obligatoires}
+ON CONFLICT DO NOTHING;
 
 INSERT INTO champ_supplementaire (chs_type, chs_code, chs_libelle, chs_type_donnee, chs_format, chs_longueur, chs_obligatoire,
                                   chs_confidentiel, chs_options, chs_aide, chs_ordre, chs_actif, chs_requete, chs_section, chs_groupe) VALUES
-${supplementaires};
+${supplementaires}
+ON CONFLICT DO NOTHING;
 `;
 fs.writeFileSync(path.join(racine, 'db', '131_fiches_parametrage.sql'), sqlFiches);
 console.log('db/131_fiches_parametrage.sql généré');

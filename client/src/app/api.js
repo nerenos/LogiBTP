@@ -53,6 +53,23 @@ export const api = {
     personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
     personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
+  // Référentiel des ressources (db/195) : habilitations, missions d'intérim, motifs, natures MO, équipes.
+  ressources: {
+    typesHabilitation: () => appel('GET', '/ressources/types-habilitation'),
+    enregistrerTypesHabilitation: (l) => appel('PUT', '/ressources/types-habilitation', l),
+    habilitations: (element, id) => appel('GET', `/ressources/habilitations/${element}/${id}`),
+    enregistrerHabilitations: (element, id, l) => appel('PUT', `/ressources/habilitations/${element}/${id}`, l),
+    aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
+    exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),
+    enregistrerExigeesMateriel: (id, codes) => appel('PUT', `/ressources/materiels/${id}/exigees`, codes),
+    missions: (salarie) => appel('GET', `/ressources/missions/${salarie}`),
+    enregistrerMissions: (salarie, l) => appel('PUT', `/ressources/missions/${salarie}`, l),
+    motifs: (domaine = '') => appel('GET', `/ressources/motifs${domaine ? `?domaine=${encodeURIComponent(domaine)}` : ''}`),
+    enregistrerMotifs: (l) => appel('PUT', '/ressources/motifs', l),
+    naturesMo: () => appel('GET', '/ressources/natures-mo'),
+    enregistrerNaturesMo: (l) => appel('PUT', '/ressources/natures-mo', l),
+    equipes: (date = '') => appel('GET', `/ressources/equipes${date ? `?date=${date}` : ''}`),
+  },
   async disponible() {
     try {
       const ctl = new AbortController();
