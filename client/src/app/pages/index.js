@@ -29,11 +29,15 @@ import { PageDiffusionsCrm } from './crm-diffusions.js';
 import { PageDiffusionCrm } from './crm-diffusion.js';
 import { PageFilCrm } from './crm-fil.js';
 import { PageParametresCrm } from './parametres-crm.js';
+import { PageConnexion } from './connexion.js';
+import { PageCompte } from './compte.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
 export const ROUTES = [
   { nom: 'accueil', chemin: '/', page: PageAccueil, titre: 'Accueil' },
+  { nom: 'connexion', chemin: '/connexion', page: PageConnexion, titre: 'Connexion' },
+  { nom: 'compte', chemin: '/compte', page: PageCompte, titre: 'Mon compte' },
   { nom: 'liste', chemin: '/liste/:theme?', page: PageListe, titre: 'Listes' },
   { nom: 'fiche', chemin: '/fiche/:type/:id', page: PageFiche, titre: 'Fiche' },
   { nom: 'document', chemin: '/document/:id', page: PageDocument, titre: 'Document' },

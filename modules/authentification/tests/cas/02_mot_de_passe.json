@@ -1,0 +1,20 @@
+{
+  "description": "Nouveau mot de passe (controlerMotDePasse ↔ ReglesCompte.ControlerMotDePasse) : longueur minimale en caractères (points de code), 128 au plus, refus des courants sans casse, pseudo absent.",
+  "politique": { "longueur_min": 12, "courants": ["azertyuiop123", "MotDePasse123"] },
+  "cas": [
+    { "nom": "correct", "mdp": "cheval-batterie-agrafe", "pseudo": "jp.martin", "attendu": [] },
+    { "nom": "vide", "mdp": "", "pseudo": "jp.martin", "attendu": ["MDP_VIDE"] },
+    { "nom": "nul", "mdp": null, "pseudo": null, "attendu": ["MDP_VIDE"] },
+    { "nom": "court", "mdp": "abc123", "pseudo": null, "attendu": ["MDP_COURT"] },
+    { "nom": "onze caractères", "mdp": "abcdefghijk", "pseudo": null, "attendu": ["MDP_COURT"] },
+    { "nom": "douze caractères", "mdp": "abcdefghijkl", "pseudo": null, "attendu": [] },
+    { "nom": "accents comptés comme un caractère", "mdp": "éééééééééééé", "pseudo": null, "attendu": [] },
+    { "nom": "émoji compté comme un caractère", "mdp": "🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑", "pseudo": null, "attendu": ["MDP_COURT"] },
+    { "nom": "courant sans casse", "mdp": "AZERTYUIOP123", "pseudo": null, "attendu": ["MDP_COURANT"] },
+    { "nom": "courant de la liste en casse mixte", "mdp": "motdepasse123", "pseudo": null, "attendu": ["MDP_COURANT"] },
+    { "nom": "contient le pseudo", "mdp": "monJP.Martin2026!", "pseudo": "jp.martin", "attendu": ["MDP_PSEUDO"] },
+    { "nom": "pseudo trop court ignoré", "mdp": "abababababab", "pseudo": "ab", "attendu": [] },
+    { "nom": "court et contient le pseudo", "mdp": "lucas1", "pseudo": "lucas", "attendu": ["MDP_COURT", "MDP_PSEUDO"] },
+    { "nom": "trop long", "mdp": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "pseudo": null, "attendu": ["MDP_LONG"] }
+  ]
+}

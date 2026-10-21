@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/authentification",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Authentification LogiBTP : règles des comptes (pseudo, mot de passe, état), partagées avec le serveur",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

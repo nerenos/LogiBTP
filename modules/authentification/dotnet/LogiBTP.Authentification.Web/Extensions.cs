@@ -1,0 +1,138 @@
+using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+
+namespace LogiBTP.Authentification.Web;
+
+/// <summary>Branchement du module Authentification dans une application ASP.NET Core.</summary>
+public static class Extensions
+{
+    private const string CleSession = "LogiBTP.Session";
+
+    /// <summary>Routes du module accessibles sans session (sous le préfixe /api).</summary>
+    private static readonly string[] Publiques = ["/api/auth/connexion", "/api/auth/session", "/api/auth/politique", "/api/auth/test"];
+
+    public static IServiceCollection AddModuleAuthentification<TSpecialisation>(this IServiceCollection services,
+        Action<IServiceProvider, DbContextOptionsBuilder> options, IConfiguration configuration)
+        where TSpecialisation : SpecialisationAuthentification
+    {
+        services.Configure<OptionsAuthentification>(configuration);
+        services.AddDbContext<AuthDbContext>(options);
+        services.AddSingleton<SpecialisationAuthentification, TSpecialisation>();
+        services.AddScoped<ServiceAuthentification>();
+        return services;
+    }
+
+    /// <summary>Session de la requête (null : aucune).</summary>
+    public static SessionLue? Session(this HttpContext http) => http.Items[CleSession] as SessionLue;
+
+    /// <summary>
+    /// Intergiciel de session, après UseSocietes : le cookie désigne une session de la base de la société ; l'utilisateur
+    /// est posé sur la requête (Utilisateur.Depuis). Sans session : 401 SESSION_REQUISE, sauf routes publiques et mode
+    /// EnTetes (développement). Mot de passe provisoire : 403 MDP_A_CHANGER hors des routes de la session.
+    /// </summary>
+    public static IApplicationBuilder UseAuthentificationSession(this IApplicationBuilder app)
+    {
+        var o = app.ApplicationServices.GetRequiredService<IOptions<OptionsAuthentification>>().Value;
+        var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
+        if ((o.EnTetes || o.ComptesTest) && !env.IsDevelopment())
+        {
+            throw new InvalidOperationException("Authentification : Mode EnTetes et ComptesTest réservés à l'environnement de développement");
+        }
+        var publiques = Publiques.Concat(o.RoutesPubliques).ToArray();
+        return app.Use(async (http, next) =>
+        {
+            if (!http.Request.Path.StartsWithSegments("/api") || HttpMethods.IsOptions(http.Request.Method))
+            {
+                await next(http);
+                return;
+            }
+            var chemin = http.Request.Path;
+            var publique = publiques.Any(p => chemin.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase));
+            var jeton = http.Request.Cookies[o.NomCookie];
+            var service = http.RequestServices.GetRequiredService<ServiceAuthentification>();
+            var session = string.IsNullOrEmpty(jeton) ? null : await service.LireSessionAsync(jeton, http.RequestAborted);
+            if (session is not null)
+            {
+                http.Items[CleSession] = session;
+                Utilisateur.Poser(http, new Utilisateur(session.Code, session.Profil));
+                if (session.MdpAChanger && !publique && !chemin.StartsWithSegments("/api/auth/mot-de-passe") && !chemin.StartsWithSegments("/api/auth/deconnexion"))
+                {
+                    await Refuser(http, StatusCodes.Status403Forbidden, "MDP_A_CHANGER", "Mot de passe provisoire : changez-le pour continuer");
+                    return;
+                }
+                await next(http);
+                return;
+            }
+            if (!string.IsNullOrEmpty(jeton)) http.Response.Cookies.Delete(o.NomCookie);
+            if (publique || o.EnTetes)
+            {
+                await next(http);
+                return;
+            }
+            await Refuser(http, StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+        });
+    }
+
+    private static Task Refuser(HttpContext http, int statut, string code, string titre)
+    {
+        http.Response.StatusCode = statut;
+        return http.Response.WriteAsJsonAsync(new { status = statut, code, title = titre }, JsonCalcul.Options);
+    }
+
+    private static void PoserCookie(HttpContext http, OptionsAuthentification o, string jeton, SessionLue s) =>
+        http.Response.Cookies.Append(o.NomCookie, jeton, new CookieOptions
+        {
+            HttpOnly = true, SameSite = SameSiteMode.Strict, Secure = http.Request.IsHttps, Path = "/", IsEssential = true,
+            Expires = s.Persistante ? s.ExpireLe : null,
+        });
+
+    /// <summary>Routes HTTP du module, sous /auth.</summary>
+    public static RouteGroupBuilder MapModuleAuthentification(this RouteGroupBuilder api)
+    {
+        var g = api.MapGroup("/auth");
+        static bool Dev(HttpContext http) => http.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+
+        g.MapGet("/session", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+            s.Decrire(http.Session(), await s.ParametresAsync(ct), Dev(http)));
+        g.MapGet("/politique", async (ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var p = await s.ParametresAsync(ct);
+            return new { longueur_min = p.MotDePasse.LongueurMin, courants = p.MotDePasse.Courants, pseudos_reserves = p.PseudosReserves, rester_connecte = p.Session.ResterConnecte };
+        });
+        g.MapPost("/connexion", async (ConnexionSaisie c, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var (jeton, session) = await s.ConnecterAsync(c, ServiceAuthentification.Origine.Depuis(http), ct);
+            PoserCookie(http, s.Options, jeton, session);
+            return s.Decrire(session, await s.ParametresAsync(ct), Dev(http));
+        });
+        g.MapGet("/test/comptes", (HttpContext http, ServiceAuthentification s, CancellationToken ct) => s.ComptesTestAsync(Dev(http), ct));
+        g.MapPost("/test/connexion", async (ConnexionSaisie c, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var (jeton, session) = await s.ConnecterTestAsync(c.Identifiant, Dev(http), ServiceAuthentification.Origine.Depuis(http), ct);
+            PoserCookie(http, s.Options, jeton, session);
+            return s.Decrire(session, await s.ParametresAsync(ct), Dev(http));
+        });
+        g.MapPost("/deconnexion", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            if (http.Session() is { } session) await s.DeconnecterAsync(session, ServiceAuthentification.Origine.Depuis(http), ct);
+            http.Response.Cookies.Delete(s.Options.NomCookie);
+            return Results.NoContent();
+        });
+        g.MapPost("/mot-de-passe", async (ChangementMotDePasse c, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            await s.ChangerMotDePasseAsync(session, c, ServiceAuthentification.Origine.Depuis(http), ct);
+            return s.Decrire(session with { MdpAChanger = false }, await s.ParametresAsync(ct), Dev(http));
+        });
+        return g;
+    }
+}

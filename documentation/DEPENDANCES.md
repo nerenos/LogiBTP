@@ -25,6 +25,16 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Annuaire.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Annuaire.Tests |
 
+## modules/authentification
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/authentification/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Authentification.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Authentification.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Authentification.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Authentification.Tests |
+
 ## modules/bibliotheque
 
 | Type | Dépendance | Version | Licence | Usage |

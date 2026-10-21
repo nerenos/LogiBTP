@@ -1,0 +1,16 @@
+{
+  "description": "État d'un compte à un instant (etatCompte ↔ ReglesCompte.Etat) : service, désactivé, expiré (lendemain de la fin de validité, jour UTC), sans mot de passe, verrouillé, provisoire, actif ; connexion possible pour ACTIF et A_CHANGER.",
+  "maintenant": "2026-10-21T08:00:00Z",
+  "cas": [
+    { "nom": "actif", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true }, "attendu": { "etat": "ACTIF", "connexion": true } },
+    { "nom": "service", "compte": { "type": "SERVICE", "actif": true, "a_mot_de_passe": false }, "attendu": { "etat": "SERVICE", "connexion": false } },
+    { "nom": "désactivé prime sur expiré", "compte": { "type": "PERSONNE", "actif": false, "a_mot_de_passe": true, "valide_jusqu_au": "2026-01-01" }, "attendu": { "etat": "INACTIF", "connexion": false } },
+    { "nom": "fin de validité aujourd'hui : encore valide", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "valide_jusqu_au": "2026-10-21" }, "attendu": { "etat": "ACTIF", "connexion": true } },
+    { "nom": "fin de validité hier : expiré", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "valide_jusqu_au": "2026-10-20" }, "attendu": { "etat": "EXPIRE", "connexion": false } },
+    { "nom": "sans mot de passe", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": false }, "attendu": { "etat": "SANS_MOT_DE_PASSE", "connexion": false } },
+    { "nom": "verrouillé jusqu'à plus tard", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "verrouille_jusqu_au": "2026-10-21T08:10:00Z" }, "attendu": { "etat": "VERROUILLE", "connexion": false } },
+    { "nom": "verrouillage passé", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "verrouille_jusqu_au": "2026-10-21T07:59:00Z" }, "attendu": { "etat": "ACTIF", "connexion": true } },
+    { "nom": "provisoire", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "mdp_provisoire": true }, "attendu": { "etat": "A_CHANGER", "connexion": true } },
+    { "nom": "verrouillé prime sur provisoire", "compte": { "type": "PERSONNE", "actif": true, "a_mot_de_passe": true, "mdp_provisoire": true, "verrouille_jusqu_au": "2026-10-21T09:00:00Z" }, "attendu": { "etat": "VERROUILLE", "connexion": false } }
+  ]
+}

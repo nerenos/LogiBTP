@@ -1,0 +1,19 @@
+{
+  "description": "Pseudo d'un compte de personne (controlerPseudo ↔ ReglesCompte.ControlerPseudo) : minuscules sans accents, chiffres, . - _ ; réservés refusés sans casse.",
+  "reserves": ["demo", "admin", "systeme"],
+  "cas": [
+    { "nom": "simple", "code": "jp.martin", "attendu": [] },
+    { "nom": "majuscules et espaces normalisés", "code": "  JP.Martin ", "attendu": [] },
+    { "nom": "vide", "code": "   ", "attendu": ["PSEUDO_VIDE"] },
+    { "nom": "nul", "code": null, "attendu": ["PSEUDO_VIDE"] },
+    { "nom": "trop court", "code": "ab", "attendu": ["PSEUDO_LONGUEUR"] },
+    { "nom": "trop long", "code": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijk", "attendu": ["PSEUDO_LONGUEUR"] },
+    { "nom": "accent", "code": "hélène", "attendu": ["PSEUDO_FORMAT"] },
+    { "nom": "commence par un point", "code": ".martin", "attendu": ["PSEUDO_FORMAT"] },
+    { "nom": "espace intérieur", "code": "jp martin", "attendu": ["PSEUDO_FORMAT"] },
+    { "nom": "réservé sans casse", "code": "Admin", "attendu": ["PSEUDO_RESERVE"] },
+    { "nom": "réservé en majuscules", "code": "DEMO", "attendu": ["PSEUDO_RESERVE"] },
+    { "nom": "chiffres et tirets", "code": "chef-42_b", "attendu": [] },
+    { "nom": "court et mal formé", "code": "é", "attendu": ["PSEUDO_FORMAT", "PSEUDO_LONGUEUR"] }
+  ]
+}

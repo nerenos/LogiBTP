@@ -1,0 +1,33 @@
+# Module Authentification – contexte
+
+## Rôle
+- Connexion et session des utilisateurs ([analyse](../../documentation/conception/ANALYSE-MODULE-AUTHENTIFICATION.md), décisions A1 à A14) : comptes (pseudo unique, profil unique, validité), session par cookie, verrouillage, mot de passe provisoire, journal des connexions, comptes de service nommés.
+- Ne connaît pas l'application : la personne liée à un compte est un couple (`type_element`, `id_element`) décrit par la spécialisation (le cœur : individu d'un salarié ou d'un intérimaire actif).
+- Pas de droits fins ici (module complet à venir, lots 2 à 4) : le profil du compte (`ADMIN`, `SAISIE`…) alimente les droits existants (`droit_document`, `droit_fiche`, `crm_droit`).
+
+## Dépendances
+- JS `@logibtp/authentification` : aucune dépendance (règles seules). .NET : `LogiBTP.Authentification` (règles, empreintes, jetons), `LogiBTP.Authentification.Web` → `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
+- Utilisé par : cœur (`SpecialisationAuthentificationBtp`, `Program.cs` : intergiciel, routes, commande `comptes`) ; client (`pages/connexion.js`, `pages/compte.js`, session de `Application`).
+
+## Structure
+- `js/src/regles.js` ↔ `dotnet/LogiBTP.Authentification/ReglesCompte.cs` : `controlerPseudo` (3 à 50 caractères `[a-z0-9][a-z0-9._-]*` après mise en minuscules, réservés refusés), `controlerMotDePasse` (longueur minimale en points de code, 128 au plus, courants refusés sans casse, pseudo absent), `etatCompte` (SERVICE, INACTIF, EXPIRE le lendemain de la fin de validité — jour UTC —, SANS_MOT_DE_PASSE, VERROUILLE, A_CHANGER, ACTIF ; connexion pour ACTIF et A_CHANGER), `controlerCompte` (personne autorisée, profil connu et permis, fin de validité obligatoire et pas passée), messages ; `suggererPseudo` (JS seul) ; jeux `tests/cas/01_pseudo` à `04_compte`.
+- `dotnet/LogiBTP.Authentification/HachageMotDePasse.cs` : PBKDF2-SHA256 (`pbkdf2-sha256$itérations$sel$empreinte`, 210 000 itérations, `AReprendre` pour relever le réglage à la connexion), vérification en temps constant, mot de passe provisoire lisible, jeton de session (32 octets, base64 URL) et son empreinte SHA-256 (seule conservée).
+- `dotnet/LogiBTP.Authentification.Web` : `Donnees.cs` (`Compte`, `SessionUtilisateur`, `JournalConnexion`, `ParametreAuthentification`, `AuthDbContext`), `ServiceAuthentification.cs` (paramètres, connexion, connexion de test, session lue avec cache de 30 s par base, déconnexion, changement de mot de passe, journal ; `OptionsAuthentification` : section `Authentification`), `SpecialisationAuthentification.cs` (`Profils`, `ProfilParDefaut`, `PersonneAsync`, `RechercherPersonnesAsync`, `ApresEcritureAsync` ; `PersonneCompte`), `Extensions.cs` (`AddModuleAuthentification<T>(base, section)`, `UseAuthentificationSession`, `MapModuleAuthentification`, `HttpContext.Session()`), `CommandeComptes.cs` (commande serveur de secours).
+- `db/005_authentification.sql` (rejouable) : `parametre_authentification` (session, verrouillage, mot_de_passe, pseudos_reserves), `compte` (unique sans casse, une personne liée = un compte, SERVICE sans empreinte ni personne), `session_utilisateur` (empreinte du jeton, expiration, persistante, test), `journal_connexion` ; comptes de service `archivage_ged`, `editions_fond`.
+
+## Règles
+- Connexion : identifiant mis en minuscules ; identifiant inconnu, mot de passe faux ou compte verrouillé → même refus 401 `CONNEXION_REFUSEE` (empreinte factice calculée pour un identifiant inconnu) ; N échecs consécutifs (5) → verrouillé 15 minutes (`VERROUILLAGE` au journal) ; compte désactivé 403 `COMPTE_INACTIF`, expiré 403 `COMPTE_EXPIRE`, personne liée non autorisée 403 `COMPTE_INACTIF` (motif de la spécialisation) ; service ou sans mot de passe : refus générique.
+- Session : cookie `logibtp_session` HttpOnly, SameSite=Strict, Secure en HTTPS, propre au sous-domaine (une base par société) ; sans « Rester connecté » : expiration glissante (10 h d'inactivité, dernière activité notée au plus une fois par minute) ; avec : cookie persistant, 7 jours au plus ; relue à chaque appel (cache 30 s) : compte désactivé, expiré ou personne devenue non autorisée → session fermée. Déconnexion : session fermée, cookie retiré.
+- Mot de passe provisoire (création, réinitialisation) : toute route hors `/api/auth/*` répond 403 `MDP_A_CHANGER` jusqu'au changement ; changement : ancien vérifié, politique appliquée, différent de l'ancien (`MDP_IDENTIQUE`), autres sessions du compte fermées.
+- Routes publiques : `/api/auth/connexion|session|politique|test/*` + celles de l'application (`OptionsAuthentification.RoutesPubliques` : `/api/sante`, `/api/societe`). Développement seulement (refusé au démarrage ailleurs) : `Mode=EnTetes` (sans session, en-têtes `X-Utilisateur` / `X-Profil`) et `ComptesTest` (connexion à un compte choisi sans mot de passe, session marquée `ses_test`, jamais soumise au mot de passe provisoire).
+- Comptes de service (SERVICE) : traces des tâches de fond sous leur propre code, jamais de connexion interactive.
+
+## Routes HTTP (préfixe `/api/auth`)
+- `GET /session` (public : connecté, code, libellé, profil, mot de passe à changer, personne liée, expiration, mode, comptes de test, « Rester connecté » permis), `GET /politique` (public : longueur minimale, mots de passe courants, pseudos réservés), `POST /connexion` { identifiant, mot_de_passe, rester_connecte }, `POST /deconnexion`, `POST /mot-de-passe` { actuel, nouveau }.
+- Développement : `GET /test/comptes`, `POST /test/connexion` { identifiant }.
+
+## Commande serveur
+- `dotnet run --no-build --project src\LogiBTP.Api --launch-profile http -- comptes creer-admin <pseudo> [--libelle "…"] [--societe <code>]` (administrateur sans personne liée, mot de passe provisoire affiché une fois), `reinitialiser <pseudo>` (provisoire, déverrouillé, sessions fermées), `deverrouiller <pseudo>`, `liste`.
+
+## Tests
+- `npm test --workspace modules/authentification/js` ; `dotnet test modules/authentification/dotnet/LogiBTP.Authentification.Tests` (mêmes jeux, empreintes).

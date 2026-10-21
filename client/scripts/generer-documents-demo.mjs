@@ -4,6 +4,8 @@
 // M-2026-003-1). L'API doit tourner (port 5080) ; la structure et l'annuaire de démonstration doivent être en base.
 // Usage : node client/scripts/generer-documents-demo.mjs <host> <id du devis de démo>
 //   base principale : localhost 2 ; base de démonstration : demo.localhost 1
+// Session : LOGIBTP_COMPTE (pseudo d'un compte administrateur) et LOGIBTP_MDP ; sans mot de passe, connexion de test
+// (développement, Authentification:ComptesTest) ; sans compte, en-têtes X-Utilisateur (mode EnTetes de développement).
 import http from 'node:http';
 
 const [hote, idDemo] = [process.argv[2] ?? 'localhost', Number(process.argv[3] ?? 2)];
@@ -17,6 +19,8 @@ function appel(methode, chemin, corps) {
       let t = '';
       r.on('data', (c) => { t += c; });
       r.on('end', () => {
+        const cookie = (r.headers['set-cookie'] ?? []).find((c) => c.startsWith('logibtp_session='));
+        if (cookie) ENTETES.Cookie = cookie.split(';')[0];
         const j = t ? JSON.parse(t) : null;
         if (r.statusCode >= 400) ko(new Error(`${methode} ${chemin} → ${r.statusCode} ${j?.code ?? ''} ${j?.title ?? t.slice(0, 200)} ${JSON.stringify(j?.details ?? '').slice(0, 300)}`));
         else ok(j);
@@ -26,6 +30,12 @@ function appel(methode, chemin, corps) {
     if (donnees) req.write(donnees);
     req.end();
   });
+}
+
+if (process.env.LOGIBTP_COMPTE) {
+  await (process.env.LOGIBTP_MDP
+    ? appel('POST', '/auth/connexion', { identifiant: process.env.LOGIBTP_COMPTE, mot_de_passe: process.env.LOGIBTP_MDP })
+    : appel('POST', '/auth/test/connexion', { identifiant: process.env.LOGIBTP_COMPTE }));
 }
 
 const types = await appel('GET', '/types-document');

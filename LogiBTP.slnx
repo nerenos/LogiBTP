@@ -58,6 +58,11 @@
     <Project Path="modules/crm/dotnet/LogiBTP.Crm.Web/LogiBTP.Crm.Web.csproj" />
     <Project Path="modules/crm/dotnet/LogiBTP.Crm.Tests/LogiBTP.Crm.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/authentification/">
+    <Project Path="modules/authentification/dotnet/LogiBTP.Authentification/LogiBTP.Authentification.csproj" />
+    <Project Path="modules/authentification/dotnet/LogiBTP.Authentification.Web/LogiBTP.Authentification.Web.csproj" />
+    <Project Path="modules/authentification/dotnet/LogiBTP.Authentification.Tests/LogiBTP.Authentification.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

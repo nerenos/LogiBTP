@@ -1,0 +1,16 @@
+{
+  "description": "Compte saisi par un administrateur (controlerCompte ↔ ReglesCompte.ControlerCompte) : personne autorisée, profil connu et permis, fin de validité obligatoire (intérimaire) et pas passée.",
+  "profils": ["ADMIN", "SAISIE"],
+  "aujourdhui": "2026-10-21",
+  "cas": [
+    { "nom": "salarié saisie", "saisie": { "profil": "SAISIE" }, "personne": { "autorisee": true, "fin_obligatoire": false, "profils_interdits": [] }, "attendu": [] },
+    { "nom": "salarié administrateur", "saisie": { "profil": "ADMIN" }, "personne": { "autorisee": true, "fin_obligatoire": false, "profils_interdits": [] }, "attendu": [] },
+    { "nom": "intérimaire sans fin", "saisie": { "profil": "SAISIE" }, "personne": { "autorisee": true, "fin_obligatoire": true, "profils_interdits": ["ADMIN"] }, "attendu": ["VALIDITE_OBLIGATOIRE"] },
+    { "nom": "intérimaire administrateur", "saisie": { "profil": "ADMIN", "valide_jusqu_au": "2026-12-31" }, "personne": { "autorisee": true, "fin_obligatoire": true, "profils_interdits": ["ADMIN"] }, "attendu": ["PROFIL_INTERDIT"] },
+    { "nom": "intérimaire fin passée", "saisie": { "profil": "SAISIE", "valide_jusqu_au": "2026-10-20" }, "personne": { "autorisee": true, "fin_obligatoire": true, "profils_interdits": ["ADMIN"] }, "attendu": ["VALIDITE_PASSEE"] },
+    { "nom": "fin aujourd'hui acceptée", "saisie": { "profil": "SAISIE", "valide_jusqu_au": "2026-10-21" }, "personne": { "autorisee": true, "fin_obligatoire": true, "profils_interdits": [] }, "attendu": [] },
+    { "nom": "personne non autorisée", "saisie": { "profil": "SAISIE" }, "personne": { "autorisee": false, "fin_obligatoire": false, "profils_interdits": [] }, "attendu": ["PERSONNE_NON_AUTORISEE"] },
+    { "nom": "profil inconnu", "saisie": { "profil": "CHEF" }, "personne": { "autorisee": true, "fin_obligatoire": false, "profils_interdits": [] }, "attendu": ["PROFIL_INCONNU"] },
+    { "nom": "sans personne (administrateur de l'installation)", "saisie": { "profil": "ADMIN" }, "personne": null, "attendu": [] }
+  ]
+}

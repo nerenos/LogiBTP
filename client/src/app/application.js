@@ -4,7 +4,7 @@ import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
 import { echapper, appliquerTheme, actionDe, definirAideRaccourcis } from '@logibtp/socle/ui';
 import './raccourcis.js';
-import { api, ErreurApi, ENTETES } from './api.js';
+import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
 import { creerFournisseurFiche } from './fiches/fiches.js';
 import { ficheDeLigne } from './fiches/definitions.js';
@@ -55,7 +55,14 @@ export class Application {
     this.enLigne = await api.disponible();
     document.body.classList.toggle('hors-ligne', !this.enLigne);
     this.societe = await societeCourante(this.enLigne);
-    await this.chargerModules();
+    // Session (module Authentification) : sans session, seule la page de connexion s'ouvre ; mot de passe provisoire :
+    // page Mon compte jusqu'au changement. Hors ligne (démo) : pas de connexion, profil choisi dans les paramètres.
+    this.session = this.enLigne ? await api.auth.session().catch(() => null) : null;
+    this.#surveillerSession();
+    const ici = `${location.pathname}${location.search}`;
+    if (this.enLigne && !this.session?.connecte && location.pathname !== '/connexion') history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
+    else if (this.session?.mdp_a_changer && location.pathname !== '/compte') history.replaceState(null, '', '/compte?changer=1');
+    if (!this.enLigne || this.session?.connecte) await this.chargerModules();
     this.rendreInfos();
 
     this.fenetres = new GestionFenetres({
@@ -65,6 +72,8 @@ export class Application {
       surFermetureSession: () => this.libererPage(),
       surDonnees: (sujet, contenu) => this.#notifier(sujet, contenu, false),
     });
+    // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
+    this.abonner('session', (e) => this.#sessionChangee(e));
     await this.fenetres.demarrer();
 
     this.routeur = new Routeur({ routes: ROUTES, conteneur: document.querySelector('#pages'), app: this, surPage: () => this.majPage() });
@@ -134,8 +143,8 @@ export class Application {
   /** Module actif pour la société (inconnu : actif). */
   moduleActif(code) { return this.modules?.get(code) ?? true; }
 
-  profil() { return this.enLigne ? ENTETES['X-Profil'] : this.preferences.get('profilDemo'); }
-  utilisateur() { return ENTETES['X-Utilisateur'] ?? 'demo'; }
+  profil() { return this.enLigne ? (this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
+  utilisateur() { return this.enLigne ? (this.session?.code ?? '') : 'demo'; }
   estAdmin() { return this.profil() === 'ADMIN'; }
   peutGererThemes() { return !this.enLigne || this.estAdmin(); }
 
@@ -154,6 +163,66 @@ export class Application {
     if ('profil' in s.annuaire) s.annuaire.profil = profil;
     this.rendreInfos();
     this.message(`Profil de démonstration : ${profil}`);
+  }
+
+  // ---------------------------------------------------------------- session (module Authentification)
+
+  /**
+   * Réponses 401 SESSION_REQUISE et 403 MDP_A_CHANGER de l'API (tous les fournisseurs passent par fetch) : page de
+   * connexion, ou page Mon compte pour changer le mot de passe provisoire.
+   */
+  #surveillerSession() {
+    if (!this.enLigne || window.fetch.surveille) return;
+    const origine = window.fetch.bind(window);
+    const surveille = async (entree, init) => {
+      const r = await origine(entree, init);
+      if (r.status === 401 || r.status === 403) {
+        const url = typeof entree === 'string' ? entree : entree?.url ?? '';
+        if (url.includes('/api/') && !url.includes('/api/auth/')) {
+          const code = await r.clone().json().then((d) => d?.code).catch(() => null);
+          if (code === 'SESSION_REQUISE') this.#sessionPerdue();
+          else if (code === 'MDP_A_CHANGER' && location.pathname !== '/compte') this.naviguer('/compte?changer=1');
+        }
+      }
+      return r;
+    };
+    surveille.surveille = true;
+    window.fetch = surveille;
+  }
+
+  /** Session expirée ou fermée : connexion dans cette fenêtre, ou dans une autre si la page a des modifications en cours. */
+  #sessionPerdue() {
+    if (this.sessionPerdueSignalee || location.pathname === '/connexion') return;
+    this.sessionPerdueSignalee = true;
+    this.session = null;
+    const retour = `${location.pathname}${location.search}`;
+    if (this.routeur?.page?.modifiee) {
+      this.message('Session expirée : reconnectez-vous dans la fenêtre ouverte, puis enregistrez de nouveau', 'avertissement');
+      this.naviguer(`/connexion?fenetre=1`, { nouvelleFenetre: true });
+      setTimeout(() => { this.sessionPerdueSignalee = false; }, 5000);
+      return;
+    }
+    this.fermetureForcee = true;
+    location.assign(`/connexion?retour=${encodeURIComponent(retour)}`);
+  }
+
+  async #sessionChangee({ connecte }) {
+    this.session = await api.auth.session().catch(() => null);
+    this.sessionPerdueSignalee = false;
+    if (connecte && location.pathname === '/connexion' && !this.routeur?.page?.fenetreSeule) location.assign(new URLSearchParams(location.search).get('retour') || '/');
+    else if (!connecte && !this.routeur?.page?.modifiee && location.pathname !== '/connexion') { this.fermetureForcee = true; location.assign('/connexion'); }
+    else { await this.chargerModules(); this.rendreInfos(); }
+  }
+
+  /** Déconnexion : contrôle des modifications de toutes les fenêtres, puis fermeture de la session du serveur. */
+  async deconnecter() {
+    const modifiees = (await this.fenetres.etatFermeture()).filter((x) => x.modifiee);
+    if (modifiees.length && !(await confirmerFermetureSession(modifiees))) return;
+    await this.libererPage();
+    try { await api.auth.deconnexion(); } catch (e) { this.erreur(e); return; }
+    this.publier('session', { connecte: false });
+    this.fermetureForcee = true;
+    location.assign('/connexion');
   }
 
   // ---------------------------------------------------------------- navigation
@@ -251,7 +320,9 @@ export class Application {
     const s = this.societe;
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
       <span title="${this.enLigne ? 'API connectée' : 'Démo hors ligne : données de démonstration, calcul local'}">${this.enLigne ? '● API' : '○ Démo'}</span>
-      <a href="/parametres" title="Profil de l'utilisateur (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`);
+      ${!this.enLigne ? `<a href="/parametres" title="Profil de démonstration (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+        : this.session?.connecte ? `<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+        : '<a href="/connexion">👤 Se connecter</a>'}`);
   }
 
   message(texte, niveau = 'info') { this.bandeau?.message(texte, niveau); }

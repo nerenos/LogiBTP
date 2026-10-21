@@ -17,16 +17,22 @@ public class ExceptionMetier(int statut, string code, string message, object? de
 }
 
 /// <summary>
-/// Utilisateur courant. En attendant l'authentification, lu dans les en-têtes X-Utilisateur, X-Profil et X-Groupe.
+/// Utilisateur courant : posé sur la requête par l'authentification (session, <see cref="Poser"/>) ; sans
+/// authentification branchée (tests) ou en mode de développement par en-têtes, lu dans X-Utilisateur, X-Profil et X-Groupe.
 /// </summary>
 public sealed record Utilisateur(string Code, string Profil, string? Groupe = null)
 {
+    private const string Cle = "LogiBTP.Utilisateur";
+
     public bool EstAdmin => Profil == "ADMIN";
 
-    public static Utilisateur Depuis(HttpContext http) => new(
+    public static Utilisateur Depuis(HttpContext http) => http.Items[Cle] as Utilisateur ?? new(
         http.Request.Headers["X-Utilisateur"].FirstOrDefault() ?? "demo",
         http.Request.Headers["X-Profil"].FirstOrDefault() ?? "ADMIN",
         http.Request.Headers["X-Groupe"].FirstOrDefault());
+
+    /// <summary>Utilisateur de la requête établi par l'authentification (prime sur les en-têtes).</summary>
+    public static void Poser(HttpContext http, Utilisateur u) => http.Items[Cle] = u;
 }
 
 public static class ExtensionsWeb

@@ -517,7 +517,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
             try
             {
                 // Utilisateur de la production : le demandeur, avec les droits d'une tâche système (comme l'archivage de la GED).
-                var u = new Utilisateur(string.IsNullOrEmpty(t.EttDemandePar) ? "systeme" : t.EttDemandePar, "ADMIN");
+                var u = new Utilisateur(string.IsNullOrEmpty(t.EttDemandePar) ? "editions_fond" : t.EttDemandePar, "ADMIN");
                 var d = new DemandeEdition(t.EttSource, t.EttIdElement, t.EttModele, t.EttPresentation);
                 var p = await Preparer(services, d, u, ct);
                 var env = Env(p, d, u);

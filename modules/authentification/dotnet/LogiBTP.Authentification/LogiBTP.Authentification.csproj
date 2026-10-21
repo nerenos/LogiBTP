@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Authentification</RootNamespace>
+    <Description>Module Authentification LogiBTP : règles des comptes (répliquées avec le paquet JS @logibtp/authentification), empreintes des mots de passe et jetons de session.</Description>
+  </PropertyGroup>
+
+</Project>

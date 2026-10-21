@@ -1,6 +1,7 @@
-// Accès à l'API C#. En attendant l'authentification, l'utilisateur et le profil passent par des en-têtes.
+// Accès à l'API C#. L'utilisateur est celui de la session (cookie HttpOnly posé par /api/auth/connexion, envoyé par le
+// navigateur à chaque appel) ; sans session, l'API répond 401 SESSION_REQUISE et l'application ouvre /connexion.
 
-export const ENTETES = { 'Content-Type': 'application/json', 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' };
+export const ENTETES = { 'Content-Type': 'application/json' };
 
 export class ErreurApi extends Error {
   constructor(statut, code, message, details) {
@@ -32,6 +33,16 @@ async function pdfEdition(demande, imprimer) {
 }
 
 export const api = {
+  // Module Authentification : session, connexion (et connexion de test sans mot de passe en développement), mot de passe.
+  auth: {
+    session: () => appel('GET', '/auth/session'),
+    politique: () => appel('GET', '/auth/politique'),
+    connexion: (identifiant, motDePasse, resterConnecte) => appel('POST', '/auth/connexion', { identifiant, mot_de_passe: motDePasse, rester_connecte: resterConnecte }),
+    comptesTest: () => appel('GET', '/auth/test/comptes'),
+    connexionTest: (identifiant) => appel('POST', '/auth/test/connexion', { identifiant }),
+    deconnexion: () => appel('POST', '/auth/deconnexion'),
+    changerMotDePasse: (actuel, nouveau) => appel('POST', '/auth/mot-de-passe', { actuel, nouveau }),
+  },
   async disponible() {
     try {
       const ctl = new AbortController();

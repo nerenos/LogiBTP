@@ -161,9 +161,13 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   reste, échéances).
 - [ ] CRM, troisième temps : portail tiers, réserves (OPR), comptes rendus de réunion, DOE, assistance IA, journal
   d'appels.
-- [ ] Authentification, première étape ([analyse](conception/ANALYSE-MODULE-AUTHENTIFICATION.md), 21/10/2026) : session
-  liée à un salarié ou un intérimaire (comptes créés un par un, aucun par défaut, identifiant = pseudo) ; questions A1 à A14
-  décidées ; puis module complet des droits (lots 2 à 4).
+- [x] **Authentification, lot 0** (22/10/2026) : module `modules/authentification` (comptes, session par cookie,
+  verrouillage, mot de passe provisoire, journal, comptes de service, règles répliquées), toutes les routes `/api` sous
+  session, pages Connexion et Mon compte, connexion de test en développement, commande serveur `comptes`.
+  [module](../modules/authentification/CLAUDE.md)
+- [ ] Authentification, lot 1 : gestion des comptes (onglet Compte de la fiche salarié, liste des comptes,
+  réinitialisation, déverrouillage, validité des intérimaires, désactivation à la sortie) ; puis module complet des
+  droits (lots 2 à 4).
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
   référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
   application mobile hors ligne.
