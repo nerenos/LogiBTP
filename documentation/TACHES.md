@@ -143,7 +143,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [ ] Analyses préalables rédigées le 20/10/2026 ([socle commun](conception/ANALYSE-MODULES-TRANSVERSE.md),
   [CRM](conception/ANALYSE-MODULE-CRM.md), [Exécution](conception/ANALYSE-MODULE-EXECUTION.md),
   [Planning](conception/ANALYSE-MODULE-PLANNING.md), [Pointage MO](conception/ANALYSE-MODULE-POINTAGE.md)) : CRM
-  C1–C30 décidées (C6 à approfondir, C7 reporté) ; Exécution E1–E24 décidées ; Planning P1–P23 décidés ; M1–M15 à trancher
+  C1–C30 décidées (C6 à approfondir, C7 reporté) ; Exécution E1–E24 décidées ; Planning P1–P23 décidés ; Pointage M1–M22 décidés (analyses des quatre modules tranchées)
   (propositions faites). Décisions structurantes à valider : ordres
   d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
   composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des

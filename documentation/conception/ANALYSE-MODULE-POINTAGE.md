@@ -85,29 +85,45 @@ graph LR
 | Document, Bibliothèque | Commande et réception fournisseur depuis le mobile | Passerelle masquée |
 | Congés (à créer) | Absences pré-remplies, contrôle de cohérence | Absences saisies en rubriques |
 
-## 4. Points en suspens (questions et propositions)
+## 4. Questions, propositions et décisions
 
-| N° | Question | Proposition |
-|---|---|---|
-| M1 | « Profils de paie avec rubriques et règles de calcul » : LogiBTP calcule-t-il la paie ? | **Non** : il calcule les **variables de paie** (quantités par rubrique et par salarié pour la période) et les **exporte** vers le logiciel de paie (formats Silae, Sage, Cegid, ADP… par modèle d'export paramétrable, CSV au départ). Le calcul des salaires, cotisations et bulletins reste hors périmètre (réglementation trop mouvante). |
-| M2 | Règles de calcul : langage ou liste fermée ? | Liste de **règles typées paramétrables** (seuil journalier → rubrique ; ventilation hebdomadaire par tranches ; zone selon distance ; plafond ; arrondi au pas), évaluées par un moteur unique répliqué JS ↔ C# (jeu `modules/pointage/tests/cas`). Pour les cas particuliers, une formule dans le langage d'expressions du socle (`Expression`, déjà répliqué). |
-| M3 | Heures supplémentaires : semaine civile, modulation, annualisation ? | Semaine civile par défaut (au-delà de 35 h : tranches paramétrables, ex. 8 premières heures, puis au-delà) ; la ventilation n'est calculée qu'une fois la semaine complète. Modulation / annualisation : compteur reporté, en lot ultérieur. |
-| M4 | Zone de déplacement : distance depuis où, calculée comment ? | Depuis le point de rattachement du salarié (siège ou agence, `sal_ind_id` → rattachement à l'agence de notre société) jusqu'au chantier, à vol d'oiseau (pratique usuelle des barèmes BTP en zones concentriques) ; coordonnées du chantier géocodées depuis son adresse (API adresse nationale, relayée par le serveur comme le module Entreprises françaises). Zone de la journée = la plus élevée des chantiers pointés. Barème par profil de paie. |
-| M5 | Panier « plus de 6 h » : heures de travail seules ou trajet compris ? | Heures de travail effectif seules par défaut, paramétrable ; panier non dû si le salarié est en grand déplacement (rubrique exclusive). |
-| M6 | Saisie par équipe « tant que les pointages sont identiques » : comment le savoir ? | La saisie d'équipe crée un pointage par membre avec un identifiant de groupe ; tant que tous les pointages du groupe ont les mêmes valeurs, ils s'éditent ensemble ; dès qu'un membre diverge, il sort du groupe (affiché à part) et l'équipe reste éditable pour les autres. |
-| M7 | Hors ligne : quelles données sur l'appareil, quels conflits ? | Application installable (PWA), données de l'utilisateur seulement (ses pointages des N dernières semaines, chantiers et tâches de la période, rubriques de son profil) dans IndexedDB ; file d'envoi rejouée au retour du réseau. Conflit : un pointage validé côté serveur ne peut plus être modifié (refus, la saisie locale est conservée en brouillon avec un message) ; sinon la dernière modification l'emporte, chaque version étant journalisée. |
-| M8 | PIN de la borne : sécurité ? | PIN haché (jamais en clair), tentatives limitées ; la borne est un **appareil enregistré** (jeton d'appareil délivré par un administrateur), pas une session utilisateur ; déconnexion automatique après chaque saisie. |
-| M9 | Photos des salariés (RGPD) ? | Facultatives, avec consentement ; stockées dans la GED (catégorie confidentielle `photo_salarie`), servies en miniature à la borne seulement. |
-| M10 | Intérimaires : compte et données ? | L'intérimaire est un individu rattaché à l'agence d'intérim (tiers fournisseur) ; ses heures servent au **contrôle des factures de l'agence** et au coût du chantier, pas à la paie. Profil de paie « intérim » sans export. |
-| M11 | Copie RH : copie entière ou écarts seulement ? | Deux couches dans la même table (`poi_couche` : SAISIE / VALIDE) ; la couche VALIDE est créée à la première modification ou validation ; les écarts sont affichés ligne à ligne. La saisie reste figée dès la validation. |
-| M12 | Double validation : obligatoire ? | Paramètre par service : validation simple (RH) ou double (chef puis RH). Dévalidation : le chef dévalide tant que le RH n'a pas validé ; le RH dévalide tout ; la dévalidation après export de paie est signalée (export correctif). |
-| M13 | Pointage sur une tâche administrative (formation, réunion) sans chantier ? | La règle « toujours un chantier » impose des **chantiers internes** (frais généraux, atelier, formation, dépôt) créés par société ; à valider. |
-| M14 | Type de MO : liste ? | Paramétrable : production, préparation, trajet, non-conformité (avec motif), attente, nettoyage… ; chaque type a une rubrique de paie et un sens analytique (productif / improductif). |
-| M15 | Géolocalisation du pointage ? | Pas par défaut (la CNIL encadre strictement la géolocalisation des salariés) ; éventuellement une position **au moment de la saisie** seulement, facultative et déclarée. Le raccourci GPS (ouvrir la navigation vers le chantier) ne pose pas ce problème. |
+### 4.1 Questions de la première analyse (relues le 21/10/2026)
+
+| N° | Question | Proposition | Décision |
+|---|---|---|---|
+| M1 | « Profils de paie avec rubriques et règles de calcul » : LogiBTP calcule-t-il la paie ? | **Non** : il calcule les **variables de paie** (quantités par rubrique et par salarié pour la période) et les **exporte** vers le logiciel de paie (formats Silae, Sage, Cegid, ADP… par modèle d'export paramétrable, CSV au départ). Le calcul des salaires, cotisations et bulletins reste hors périmètre (réglementation trop mouvante). | ✔ Retenue. |
+| M2 | Règles de calcul : langage ou liste fermée ? | Liste de **règles typées paramétrables** (seuil journalier → rubrique ; ventilation hebdomadaire par tranches ; zone selon distance ; plafond ; arrondi au pas), évaluées par un moteur unique répliqué JS ↔ C# (jeu `modules/pointage/tests/cas`). Pour les cas particuliers, une formule dans le langage d'expressions du socle (`Expression`, déjà répliqué). | ✔ Retenue. |
+| M3 | Heures supplémentaires : semaine civile, modulation, annualisation ? | Semaine civile par défaut (au-delà de 35 h : tranches paramétrables, ex. 8 premières heures, puis au-delà) ; la ventilation n'est calculée qu'une fois la semaine complète. Modulation / annualisation : compteur reporté, en lot ultérieur. | ✔ Retenue. |
+| M4 | Zone de déplacement : distance depuis où, calculée comment ? | Depuis le point de rattachement du salarié (siège ou agence, `sal_ind_id` → rattachement à l'agence de notre société) jusqu'au chantier, à vol d'oiseau (pratique usuelle des barèmes BTP en zones concentriques) ; coordonnées du chantier géocodées depuis son adresse (API adresse nationale, relayée par le serveur comme le module Entreprises françaises). Zone de la journée = la plus élevée des chantiers pointés. Barème par profil de paie. | ✔ Précisé : la **zone est définie par agence sur le chantier** ; si aucune zone n'est définie pour l'agence du salarié, la zone calculée est **proposée à l'utilisateur pour validation**. Voir M16. |
+| M5 | Panier « plus de 6 h » : heures de travail seules ou trajet compris ? | Heures de travail effectif seules par défaut, paramétrable ; panier non dû si le salarié est en grand déplacement (rubrique exclusive). | ✔ Retenue. |
+| M6 | Saisie par équipe « tant que les pointages sont identiques » : comment le savoir ? | La saisie d'équipe crée un pointage par membre avec un identifiant de groupe ; tant que tous les pointages du groupe ont les mêmes valeurs, ils s'éditent ensemble ; dès qu'un membre diverge, il sort du groupe (affiché à part) et l'équipe reste éditable pour les autres. | ✔ Retenue, complétée : l'écran **signale que l'équipe n'est plus celle d'origine**, et l'on voit **tous les pointages de la même tâche**, même ceux des salariés sortis du groupe. |
+| M7 | Hors ligne : quelles données sur l'appareil, quels conflits ? | Application installable (PWA), données de l'utilisateur seulement (ses pointages des N dernières semaines, chantiers et tâches de la période, rubriques de son profil) dans IndexedDB ; file d'envoi rejouée au retour du réseau. Conflit : un pointage validé côté serveur ne peut plus être modifié (refus, la saisie locale est conservée en brouillon avec un message) ; sinon la dernière modification l'emporte, chaque version étant journalisée. | ✔ Précisé : l'appareil ne garde que les pointages de **la semaine en cours** ; un brouillon refusé (pointage validé entre-temps) peut être **envoyé au service RH** pour modification. Voir M17. |
+| M8 | PIN de la borne : sécurité ? | PIN haché (jamais en clair), tentatives limitées ; la borne est un **appareil enregistré** (jeton d'appareil délivré par un administrateur), pas une session utilisateur ; déconnexion automatique après chaque saisie. | ✔ Précisé : borne = **compte de service** (sans lien à un salarié) avec **appareil enregistré**, détaillés dans le futur module des droits ; la page de la borne reste accessible depuis la liste des utilisateurs ; le PIN évite qu'un salarié consulte les pointages d'un autre (la borne est dans un lieu sûr, à l'accès très limité). |
+| M9 | Photos des salariés (RGPD) ? | Facultatives, avec consentement ; stockées dans la GED (catégorie confidentielle `photo_salarie`), servies en miniature à la borne seulement. | ✔ Retenue : les photos rendent l'interface plus humaine ; une **image ou un logo** peut aussi servir. |
+| M10 | Intérimaires : compte et données ? | L'intérimaire est un individu rattaché à l'agence d'intérim (tiers fournisseur) ; ses heures servent au **contrôle des factures de l'agence** et au coût du chantier, pas à la paie. Profil de paie « intérim » sans export. | ✔ Précisé : par défaut, contrôle des **factures d'intérim seulement** ; une **option globale** rend les pointages des intérimaires imputables aux chantiers avec un coût. Voir M18. |
+| M11 | Copie RH : copie entière ou écarts seulement ? | Deux couches dans la même table (`poi_couche` : SAISIE / VALIDE) ; la couche VALIDE est créée à la première modification ou validation ; les écarts sont affichés ligne à ligne. La saisie reste figée dès la validation. | ✔ Précisé : la couche validée est créée **dès la première modification** du RH, pour garder ses corrections avant la validation. |
+| M12 | Double validation : obligatoire ? | Paramètre par service : validation simple (RH) ou double (chef puis RH). Dévalidation : le chef dévalide tant que le RH n'a pas validé ; le RH dévalide tout ; la dévalidation après export de paie est signalée (export correctif). | ✔ Précisé : en double validation, le **RH peut valider sans la validation du chef** ; une dévalidation après export est **tracée (qui, quand, quoi, pourquoi : motif obligatoire)**. |
+| M13 | Pointage sur une tâche administrative (formation, réunion) sans chantier ? | La règle « toujours un chantier » impose des **chantiers internes** (frais généraux, atelier, formation, dépôt) créés par société ; à valider. | ✔ **Chantiers internes** (frais généraux, atelier, formation, dépôt). |
+| M14 | Type de MO : liste ? | Paramétrable : production, préparation, trajet, non-conformité (avec motif), attente, nettoyage… ; chaque type a une rubrique de paie et un sens analytique (productif / improductif). | ✘ Autrement : les types de MO sont **liés aux natures** (analytique), avec des **sous-types** pour détailler. Voir M19. |
+| M15 | Géolocalisation du pointage ? | Pas par défaut (la CNIL encadre strictement la géolocalisation des salariés) ; éventuellement une position **au moment de la saisie** seulement, facultative et déclarée. Le raccourci GPS (ouvrir la navigation vers le chantier) ne pose pas ce problème. | ✘ **Aucune géolocalisation** des pointages ; le raccourci GPS n'enregistre pas la position et reste au choix du salarié. |
+
+### 4.2 Points de la relecture du 21/10/2026
+
+| N° | Question | Proposition | Décision |
+|---|---|---|---|
+| M16 | Zones par agence sur le chantier (M4) : qui valide la zone proposée, et quand ? | Table des zones du chantier par agence (`chantier_zone` : chantier, agence, zone, validée par, le) ; à la première saisie d'un pointage d'un salarié d'une agence sans zone, la zone calculée (géocodage, vol d'oiseau, barème du profil) est proposée au conducteur ou au RH dans la synthèse ; une fois validée, elle sert à tous les pointages du chantier pour cette agence. Fiche chantier : onglet ou groupe « Zones de déplacement » pour la saisir d'avance. | ✔ Retenue. |
+| M17 | Brouillon envoyé au RH (M7) : par quel moyen ? | Le pointage refusé est enregistré comme **demande de correction** (pointage en couche SAISIE marqué « à corriger », motif « validé avant l'envoi ») ; il paraît en tête de la synthèse du RH, qui l'applique ou le rejette ; si le CRM est actif, une tâche part au service RH. | ✔ Retenue. |
+| M18 | Coût des intérimaires imputés (M10) : quel taux ? | Taux horaire facturé par l'agence, saisi sur la mission de l'intérimaire (ou repris du dernier tarif de l'agence), modifiable ; le coût réel est corrigé par le contrôle des factures (écart signalé). | ✔ Retenue : taux horaire facturé par l'agence, saisi sur la mission, corrigé par le contrôle des factures. |
+| M19 | Types de MO liés aux natures (M14) : comment ? | Le type de MO = une **nature** du regroupement Main-d'œuvre de la bibliothèque (MO atelier, MO pose…), qui porte l'analytique et le lien au service ; les **sous-types** paramétrables (production, préparation, trajet, non-conformité avec motif, attente, nettoyage…) portent la rubrique de paie et le sens productif / improductif ; la borne propose le type puis le sous-type (quatre touches). | ✔ Retenue. |
+| M20 | Valorisation des heures (possibilité 2) : quels modes ? | Taux moyen par salarié ou par type de MO, par période (mois, trimestre) ; revalorisation des pointages d'une période après la paie, au coût horaire moyen réel du salarié importé du logiciel de paie (fichier CSV salarié × période × coût) ; la valeur appliquée et sa source sont gardées sur chaque pointage valorisé. | ✔ Retenue. |
+| M21 | Relevé hebdomadaire (possibilité 7) : signature et envoi ? | Le relevé est celui **validé par le RH** (vraies valeurs, rubriques calculées) ; la signature du salarié est facultative (paramètre) ; l'envoi par courriel (option) attend le module Mail ; le relevé produit est rangé dans la GED du salarié. | ✔ Retenue. |
+| M22 | Calendrier des possibilités retenues sans période ? | Premier temps : coût réel du chantier (M20) et types de MO par nature ; second temps : pointage des matériels, contrôle des factures d'intérim, intempéries (avec le Planning), badge en plus de la photo + PIN, compteurs (option), relevé hebdomadaire, avancement sur mobile, rapport journalier, tableau de bord productivité. | ✔ Retenue. |
+
+Toutes les questions du Pointage sont tranchées (M1 à M22).
 
 ## 5. Faisabilité
 
-**Faisable**, avec deux sujets nouveaux pour le projet : l'**authentification réelle** et l'**application mobile hors
+**Faisable**, avec deux sujets nouveaux pour le projet : l'**authentification réelle** (dans un module des droits, à créer) et l'**application mobile hors
 ligne**.
 
 | Besoin | Existant | À faire |
@@ -128,40 +144,38 @@ lignes par an : index par salarié et date, partitionnement annuel à prévoir).
 
 ## 6. Simplification d'utilisation
 
+Toutes retenues le 21/10/2026.
+
 - **Journée pré-remplie** : depuis le planning (tâches du jour) ou, sans planning, en reprenant la journée précédente ;
   le salarié n'a qu'à confirmer (« Comme prévu ») ou corriger.
-- **Borne en trois touches** : photo du salarié → chantier / ordre du jour (proposés) → heures (boutons ± au pas,
-  valeurs fréquentes 4 h / 7 h / 8 h) ; panier coché d'office si la règle le prévoit.
+- **Borne en quatre touches** (décision du 21/10/2026) : photo du salarié → chantier / ordre du jour (proposés, ou
+  recherchés par le **QR code de l'ordre**) → type de MO → heures (boutons ± au pas, valeurs fréquentes 4 h / 7 h / 8 h) ;
+  panier coché d'office si la règle le prévoit.
 - **Saisie d'équipe par le chef** : une ligne pour toute l'équipe, exceptions à la main (absent, parti plus tôt).
 - **Contrôles visibles avant l'envoi** : total de la journée, journée incomplète, chevauchement, dépassement de
   l'amplitude légale (10 h / jour, 48 h / semaine), chantier clos ; aucun blocage sauf incohérence franche.
 - **Synthèse par exceptions** : le RH ne voit d'abord que les salariés avec écarts (heures ≠ planning, pas de pointage,
-  non-conformité, heures supplémentaires) ; « Tout valider » pour le reste de la semaine.
+  non-conformité, heures supplémentaires) ; « Tout valider » pour le reste de la semaine ; option « Tout voir », notamment pour contrôler les règles de calcul.
 - **Non-conformité en un geste** : « Signaler un problème » sur la ligne → motif → photo facultative ; la note CRM part
   au bon service.
 - **Libellés et pas** paramétrés une fois pour la société (ordre nom / prénom, 15 minutes).
 
 ## 7. Possibilités non encore explorées
 
-1. **Pointage des matériels** : heures d'engin, kilomètres des véhicules, consommation de carburant, sur la même saisie
-   que le conducteur d'engin → coût matériel du chantier et maintenance (heures avant révision, `mat_heures_revision`
-   existe déjà en démonstration).
-2. **Coût réel du chantier** : heures valorisées au coût horaire chargé (par salarié ou par qualification) comparées au
-   déboursé MO du budget, par nature, tranche ou ordre ; alimente la rentabilité continue de l'Exécution.
-3. **Contrôle des factures d'intérim** : relevé d'heures par agence et par semaine rapproché de la facture d'achat.
-4. **Intempéries** : heures d'arrêt pour intempérie (déclaration à la caisse des congés intempéries du BTP), liées à
-   une journée marquée dans le planning.
-5. **Carte BTP et badge** : identification à la borne par QR code ou badge NFC plutôt que par photo + PIN.
-6. **Compteurs** : heures supplémentaires cumulées, contingent annuel, repos compensateur, récupération ; consultables
-   par le salarié.
-7. **Relevé hebdomadaire signé** par le salarié (signature sur l'écran), conservé au coffre-fort : preuve en cas de
-   litige sur les heures.
-8. **Avancement sur mobile** : le chef d'équipe saisit le pourcentage réalisé de la tâche en même temps que les heures
-   (planning, situations).
-9. **Rapport journalier de chantier** (météo, effectif, livraisons, incidents, photos) produit à partir des pointages
-   et du fil d'actualité, imprimable.
-10. **Tableau de bord productivité** : heures productives / improductives par type de MO, coût de la non-qualité par
-    motif.
+Toutes retenues le 21/10/2026 ; temps décidés en M22.
+
+| N° | Possibilité | Précision | Quand |
+|---|---|---|---|
+| 1 | **Pointage des matériels** : heures d'engin, kilomètres, carburant, saisis avec le conducteur → coût matériel et maintenance. | | Second temps |
+| 2 | **Coût réel du chantier** : heures valorisées comparées au déboursé MO du budget, par nature, tranche ou ordre ; rentabilité continue de l'Exécution. | Plusieurs modes de valorisation : taux moyen par salarié ou par type de MO sur des périodes, revalorisation après la paie (M20). | Premier temps |
+| 3 | **Contrôle des factures d'intérim** : relevé d'heures par agence et par semaine rapproché de la facture d'achat. | | Second temps |
+| 4 | **Intempéries** : heures d'arrêt pour intempérie, liées à une journée marquée dans le planning. | | Second temps |
+| 5 | **Carte BTP et badge** (QR code, NFC) à la borne. | En plus de la photo + PIN (les deux méthodes restent). | Second temps |
+| 6 | **Compteurs** : heures supplémentaires cumulées, contingent, repos compensateur, récupération ; consultables par le salarié. | En option. | Second temps |
+| 7 | **Relevé hebdomadaire signé**. | Relevé validé par le RH ; signature facultative ; envoi par courriel en option (module Mail) (M21). | Second temps |
+| 8 | **Avancement sur mobile** saisi avec les heures. | | Second temps |
+| 9 | **Rapport journalier de chantier** (météo, effectif, livraisons, incidents, photos), imprimable. | | Second temps |
+| 10 | **Tableau de bord productivité** : heures productives / improductives, coût de la non-qualité par motif. | | Second temps |
 
 ## 8. Esquisse du modèle de données (`modules/pointage/db`)
 
@@ -183,9 +197,9 @@ lignes par an : index par salarié et date, partitionnement annuel à prévoir).
 | Lot | Contenu | Prérequis |
 |---|---|---|
 | 0 | Activation ; authentification et droits ; référentiel salariés réel (service, profil, rattachement) | Transverse lots 0–2 |
-| 1 | Paramètres, types de MO, saisie bureau (grille hebdomadaire) au chantier, contrôles | Lot 0 |
-| 2 | Synthèse : couche validée, simple / double validation, blocage, dévalidation | Lot 1 |
-| 3 | Profils de paie, rubriques, règles (jeu de cas), géocodage et zones, export CSV | Lot 2 |
-| 4 | Borne (appareil enregistré, PIN, photos), saisie par équipe | Lot 1 |
-| 5 | Application personnelle hors ligne (PWA), navigation GPS, pré-remplissage depuis le planning | Lot 1 ; transverse § 6 ; Planning lot 2 pour le pré-remplissage |
+| 1 | Paramètres, types de MO (natures et sous-types), saisie bureau (grille hebdomadaire) au chantier ou sur un chantier interne, contrôles | Lot 0 |
+| 2 | Synthèse : couche validée dès la première modification, simple / double validation (le RH peut valider sans le chef), blocage, dévalidation tracée avec motif, demandes de correction, « Tout voir » | Lot 1 |
+| 3 | Profils de paie, rubriques, règles (jeu de cas), zones par agence sur le chantier (proposition validée), export CSV, valorisation des heures | Lot 2 |
+| 4 | Borne (compte de service, appareil enregistré, PIN, photos ou images, QR code des ordres), saisie par équipe (équipe modifiée signalée) | Lot 1 ; module des droits |
+| 5 | Application personnelle hors ligne (PWA, semaine en cours), navigation GPS (sans enregistrement de position), pré-remplissage depuis le planning | Lot 1 ; transverse § 6 ; Planning lot 2 pour le pré-remplissage |
 | 6 | Passerelles : ordres (Exécution), non-conformités (CRM), commandes / réceptions simplifiées ; pointage des matériels | Modules concernés |
