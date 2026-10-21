@@ -60,6 +60,21 @@ export class FicheSalarie extends FicheLogiBTP {
     super(options);
     this.services = options.services;
     this.ouvrirFiche = options.ouvrirFiche ?? (() => {});
+    // Onglet Compte (module Authentification, administrateur en ligne) : fabrique fournie par la page.
+    this.compte = options.compte ?? null;
+  }
+
+  /** Onglet Compte : compte de connexion de l'individu du salarié (création, profil, validité, réinitialisation). */
+  ongletsSpecifiques() {
+    if (!this.compte || this.id === null) return super.ongletsSpecifiques();
+    return [...super.ongletsSpecifiques(), {
+      code: 'compte', titre: 'Compte',
+      rendre: (corps) => {
+        const ind = this.valeur('ind_id');
+        if (!ind) { corps.innerHTML = "<p class=\"aide\">Liez d'abord le salarié à un individu de l'annuaire (onglet principal) : le compte de connexion se rattache à l'individu.</p>"; return; }
+        this.compte(corps, { type: 'individu', id: ind, prenom: this.valeur('prenom'), nom: this.valeur('nom') });
+      },
+    }];
   }
 
   /** Création depuis un individu (?individu=ID) : sa fiche est lue pour préremplir le salarié. */

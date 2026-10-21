@@ -50,6 +50,14 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
         return lignes.Select(Decrire).ToList();
     }
 
+    /// <summary>Pseudo libre : aucun autre individu ne le porte comme identifiant de connexion.</summary>
+    public override async Task<bool> PseudoLibreAsync(AuthDbContext db, string code, string? type, string? id, CancellationToken ct)
+    {
+        var ind = type == "individu" ? id : null;
+        return !await db.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\" FROM individu WHERE lower(ind_utilisateur) = @code AND ind_id::text IS DISTINCT FROM @ind",
+            new NpgsqlParameter("code", code), new NpgsqlParameter("ind", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ind ?? DBNull.Value }).AnyAsync(ct);
+    }
+
     /// <summary>Le pseudo du compte devient l'identifiant de connexion de l'individu (ancien identifiant retiré).</summary>
     public override async Task ApresEcritureAsync(AuthDbContext db, Compte compte, string? ancienCode, CancellationToken ct)
     {

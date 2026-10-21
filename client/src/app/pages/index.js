@@ -31,6 +31,7 @@ import { PageFilCrm } from './crm-fil.js';
 import { PageParametresCrm } from './parametres-crm.js';
 import { PageConnexion } from './connexion.js';
 import { PageCompte } from './compte.js';
+import { PageParametresComptes } from './parametres-comptes.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -49,6 +50,7 @@ export const ROUTES = [
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },
+  { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
   { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: 'Paramétrage du suivi (CRM)' },
   { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },

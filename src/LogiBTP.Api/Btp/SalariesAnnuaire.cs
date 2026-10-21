@@ -63,6 +63,17 @@ public static class SalariesAnnuaire
         {
             await cmd.ExecuteNonQueryAsync(ct);
         }
+        // Salarié sorti : son compte est désactivé d'office et ses sessions fermées (module Authentification, lot 1).
+        if (!actif)
+        {
+            await using var compte = Commande(cnx, """
+                WITH c AS (UPDATE compte SET cpt_actif = FALSE, cpt_maj_le = now(), cpt_maj_par = 'sortie_salarie'
+                           WHERE cpt_type_element = 'individu' AND cpt_id_element = CAST(@i AS text) AND cpt_actif RETURNING cpt_id, cpt_code),
+                     s AS (UPDATE session_utilisateur SET ses_fermee_le = now() WHERE ses_cpt_id IN (SELECT cpt_id FROM c) AND ses_fermee_le IS NULL)
+                INSERT INTO journal_connexion (jco_code, jco_evenement, jco_detail, jco_par) SELECT cpt_code, 'COMPTE', 'désactivé : salarié sorti', 'sortie_salarie' FROM c
+                """, ("i", ind));
+            if (await compte.ExecuteNonQueryAsync(ct) > 0) LogiBTP.Authentification.Web.ServiceAuthentification.OublierSessions();
+        }
         // Agence : « LogiBTP Démo » (Lyon) ou « LogiBTP Démo – Agence de … » (même règle que db/142).
         var agence = Texte(v.GetValueOrDefault("agence"));
         var libelle = agence is null or "Lyon" ? "LogiBTP Démo" : $"LogiBTP Démo – Agence de {agence}";

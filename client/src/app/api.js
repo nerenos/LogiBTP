@@ -42,6 +42,16 @@ export const api = {
     connexionTest: (identifiant) => appel('POST', '/auth/test/connexion', { identifiant }),
     deconnexion: () => appel('POST', '/auth/deconnexion'),
     changerMotDePasse: (actuel, nouveau) => appel('POST', '/auth/mot-de-passe', { actuel, nouveau }),
+    // Gestion des comptes (administrateur).
+    profils: () => appel('GET', '/auth/profils'),
+    comptes: ({ recherche = '', etat = '' } = {}) => appel('GET', `/auth/comptes?${new URLSearchParams({ recherche, etat })}`),
+    compte: (id) => appel('GET', `/auth/comptes/${id}`),
+    creerCompte: (c) => appel('POST', '/auth/comptes', c),
+    modifierCompte: (id, c) => appel('PUT', `/auth/comptes/${id}`, c),
+    reinitialiserCompte: (id) => appel('POST', `/auth/comptes/${id}/reinitialiser`),
+    deverrouillerCompte: (id) => appel('POST', `/auth/comptes/${id}/deverrouiller`),
+    personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
+    personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
   async disponible() {
     try {

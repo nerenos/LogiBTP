@@ -165,9 +165,11 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   verrouillage, mot de passe provisoire, journal, comptes de service, règles répliquées), toutes les routes `/api` sous
   session, pages Connexion et Mon compte, connexion de test en développement, commande serveur `comptes`.
   [module](../modules/authentification/CLAUDE.md)
-- [ ] Authentification, lot 1 : gestion des comptes (onglet Compte de la fiche salarié, liste des comptes,
-  réinitialisation, déverrouillage, validité des intérimaires, désactivation à la sortie) ; puis module complet des
-  droits (lots 2 à 4).
+- [x] **Authentification, lot 1** (22/10/2026) : gestion des comptes (onglet Compte de la fiche salarié, page
+  `/parametres/comptes` avec états, journal, réinitialisation, déverrouillage, validité des intérimaires, désactivation
+  d'office à la sortie du salarié).
+- [ ] Authentification, module complet des droits (lots 2 à 4) : groupes et profils multiples, droits par module et par
+  action, comptes de service et appareils (bornes du Pointage), fournisseur d'identité, double facteur.
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),
   référentiels services / ressources / calendriers (tables `demo_*` à remplacer), centre de notifications, temps réel,
   application mobile hors ligne.

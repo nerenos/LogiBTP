@@ -10,6 +10,14 @@
 .carte.connexion label:not(.ligne) { display: flex; flex-direction: column; gap: 0.2rem; }
 .carte.connexion input:not([type="checkbox"]) { padding: 0.4rem 0.5rem; font-size: 1rem; }
 .connexion-erreur { color: var(--erreur); margin: 0; }
+.pastille-compte { display: inline-block; padding: 0 0.45rem; border-radius: 0.7rem; font-size: 0.8rem; border: 1px solid currentColor; }
+.pastille-compte.ok { color: var(--succes, #2e7d32); }
+.pastille-compte.attention { color: var(--avertissement, #b26a00); }
+.pastille-compte.erreur { color: var(--erreur); }
+.pastille-compte.neutre { color: var(--texte-discret, #777); }
+.mdp-provisoire { font-size: 1.2rem; padding: 0.2rem 0.5rem; user-select: all; }
+.liste-simple { list-style: none; padding: 0; margin: 0.3rem 0; }
+.liste-simple li { padding: 0.15rem 0; }
 .carte.avertissement { border-color: var(--avertissement, #d08a00); }
 
 /* Liste */

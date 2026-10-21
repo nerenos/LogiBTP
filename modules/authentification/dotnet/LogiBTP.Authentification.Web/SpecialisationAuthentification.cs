@@ -31,6 +31,9 @@ public abstract class SpecialisationAuthentification
     /// <summary>Personnes pouvant recevoir un compte, pour la recherche de l'écran des comptes.</summary>
     public virtual Task<List<PersonneCompte>> RechercherPersonnesAsync(AuthDbContext db, string texte, CancellationToken ct) => Task.FromResult(new List<PersonneCompte>());
 
+    /// <summary>Pseudo libre dans l'application (identifiant de connexion déjà porté par une autre personne…).</summary>
+    public virtual Task<bool> PseudoLibreAsync(AuthDbContext db, string code, string? type, string? id, CancellationToken ct) => Task.FromResult(true);
+
     /// <summary>Après l'écriture d'un compte (création, changement de pseudo, désactivation), dans la même transaction.</summary>
     public virtual Task ApresEcritureAsync(AuthDbContext db, Compte compte, string? ancienCode, CancellationToken ct) => Task.CompletedTask;
 }

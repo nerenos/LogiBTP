@@ -8,7 +8,7 @@
 > [CRM](ANALYSE-MODULE-CRM.md) (« mes tâches », notes privées), [Planning](ANALYSE-MODULE-PLANNING.md) (vues
 > personnelles, vue en consultation), [Exécution](ANALYSE-MODULE-EXECUTION.md) (« ma file »).
 
-> **Réalisation** : lot 0 réalisé le 22/10/2026 ; contexte technique dans
+> **Réalisation** : lots 0 et 1 réalisés le 22/10/2026 ; contexte technique dans
 > [modules/authentification/CLAUDE.md](../../modules/authentification/CLAUDE.md). Écarts : routes sous `/api/auth/*`
 > (`connexion`, `deconnexion`, `session`, `mot-de-passe`, `politique`) ; empreintes PBKDF2-SHA256 propres au module
 > (sans le paquet d'ASP.NET Identity, même principe) ; administrateur de l'installation = compte de personne sans

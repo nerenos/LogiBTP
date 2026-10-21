@@ -28,6 +28,7 @@ public static class Extensions
         services.AddDbContext<AuthDbContext>(options);
         services.AddSingleton<SpecialisationAuthentification, TSpecialisation>();
         services.AddScoped<ServiceAuthentification>();
+        services.AddScoped<ServiceComptes>();
         return services;
     }
 
@@ -133,6 +134,18 @@ public static class Extensions
             await s.ChangerMotDePasseAsync(session, c, ServiceAuthentification.Origine.Depuis(http), ct);
             return s.Decrire(session with { MdpAChanger = false }, await s.ParametresAsync(ct), Dev(http));
         });
+
+        // Gestion des comptes (administrateur).
+        static ServiceAuthentification.Origine O(HttpContext http) => ServiceAuthentification.Origine.Depuis(http);
+        g.MapGet("/profils", (SpecialisationAuthentification s) => new { profils = s.Profils, defaut = s.ProfilParDefaut });
+        g.MapGet("/comptes", (string? recherche, string? etat, HttpContext http, ServiceComptes s, CancellationToken ct) => s.ListeAsync(recherche, etat, Utilisateur.Depuis(http), ct));
+        g.MapGet("/comptes/{id:long}", (long id, HttpContext http, ServiceComptes s, CancellationToken ct) => s.DetailAsync(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/comptes", (CompteSaisi c, HttpContext http, ServiceComptes s, CancellationToken ct) => s.CreerAsync(c, Utilisateur.Depuis(http), O(http), ct));
+        g.MapPut("/comptes/{id:long}", (long id, CompteSaisi c, HttpContext http, ServiceComptes s, CancellationToken ct) => s.ModifierAsync(id, c, Utilisateur.Depuis(http), O(http), ct));
+        g.MapPost("/comptes/{id:long}/reinitialiser", (long id, HttpContext http, ServiceComptes s, CancellationToken ct) => s.ReinitialiserAsync(id, Utilisateur.Depuis(http), O(http), ct));
+        g.MapPost("/comptes/{id:long}/deverrouiller", (long id, HttpContext http, ServiceComptes s, CancellationToken ct) => s.DeverrouillerAsync(id, Utilisateur.Depuis(http), O(http), ct));
+        g.MapGet("/personne", (string type, string id, HttpContext http, ServiceComptes s, CancellationToken ct) => s.PersonneAsync(type, id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/personnes", (string? recherche, HttpContext http, ServiceComptes s, CancellationToken ct) => s.PersonnesAsync(recherche, Utilisateur.Depuis(http), ct));
         return g;
     }
 }
