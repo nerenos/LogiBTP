@@ -68,6 +68,9 @@
     <Project Path="modules/calendrier/dotnet/LogiBTP.Calendrier.Web/LogiBTP.Calendrier.Web.csproj" />
     <Project Path="modules/calendrier/dotnet/LogiBTP.Calendrier.Tests/LogiBTP.Calendrier.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/notification/">
+    <Project Path="modules/notification/dotnet/LogiBTP.Notifications.Web/LogiBTP.Notifications.Web.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

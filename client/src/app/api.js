@@ -53,6 +53,16 @@ export const api = {
     personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
     personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
+  // Module Notifications : boîte de l'utilisateur de la session, compteur du bandeau, préférences.
+  notifications: {
+    boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),
+    compteur: () => appel('GET', '/notifications/compteur'),
+    lues: (m) => appel('POST', '/notifications/lues', m),
+    traitees: (m) => appel('POST', '/notifications/traitees', m),
+    preferences: () => appel('GET', '/notifications/preferences'),
+    enregistrerPreferences: (l) => appel('PUT', '/notifications/preferences', l),
+    executer: () => appel('POST', '/notifications/executer'),
+  },
   // Module Calendrier : calendriers, journées, jours fermés (société ou portée « service:<id> »), calendriers des services.
   calendriers: {
     liste: () => appel('GET', '/calendriers'),

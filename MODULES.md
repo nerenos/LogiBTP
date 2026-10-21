@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -39,6 +39,7 @@ graph TD
 | edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur), `LogiBTP.Editions.Web` | 090 | cœur (aperçu, paramétrage, source « document ») |
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 | crm (facultatif) | socle | `LogiBTP.Crm(.Web)` → Socle(.Web), HtmlSanitizer | 095 | cœur (éléments, individus, services ; écrans Suivi) |
+| notification | — (.NET seul) | `LogiBTP.Notifications.Web` → Socle.Web | 008 | cœur (sources du planificateur, cloche, boîte) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
 
@@ -59,6 +60,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `creerFournisseurEntreprises` (`annuaire/annuaire.js`), fiche personne | `AddModuleEntreprisesFr` | — |
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
+| notification | cloche du bandeau (`Application.majNotifications`), `pages/notifications.js` (`/notifications`, `/parametres/notifications`) | `NotificationsBtp.cs` : `SourceRappelsCrm`, `SourceHabilitations` | — |
 | calendrier | `pages/parametres-calendriers.js` (`@logibtp/calendrier` : contrôles, aperçu des fériés) | `SpecialisationCalendrierBtp` (utilisations), `CalendriersBtp` (calendrier effectif d'un salarié ou d'un matériel, fermetures de son service) | 196 (`srv_cal_id`, `sal_cal_id`, `mat_cal_id`) |
 | authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur`) | — |
 | crm | `crm/*` (`PanneauSuivi` : onglet Suivi des documents et des fiches), `pages/crm.js`, `crm-note.js`, `crm-suivi.js`, `parametres-crm.js`, menu Suivi | `SpecialisationCrmBtp` | 194 (élément GED `crm_note`, catégorie `crm`) |
@@ -69,6 +71,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 ## Liens transverses (fonctionnels)
 
 - **Authentification ↔ tout** : l'intergiciel de session (`UseAuthentificationSession`, après `UseSocietes`) pose l'utilisateur de la requête (`Utilisateur.Poser` → `Utilisateur.Depuis` du socle) ; toutes les routes `/api` exigent une session sauf `/api/sante`, `/api/societe` et les routes publiques de `/api/auth` ; un compte de personne se lie à l'individu d'un salarié ou d'un intérimaire actif, son pseudo est recopié dans `ind_utilisateur` (lu par le CRM).
+- **Notifications ↔ modules** : chaque module publie par le cœur (source `ISourceNotifications` du planificateur ou `ServiceNotification.PublierAsync`) ; une boîte par compte ; les notifications d'un module désactivé sont masquées.
 - **Référentiel des ressources** (cœur, `db/195`) : salariés, intérimaires et leurs missions, matériels (identifiés ou par nombre), équipes à compositions datées, habilitations des salariés et des matériels, motifs typés, natures de main-d'œuvre → service ; fourni aux modules Planning, Pointage et Exécution par leurs spécialisations (aucun module ne lit ces tables).
 - **Activation des modules** (`db/193`, `module_societe`) : `IModulesActifs` / `ExigeModule` du socle, `ModulesSociete` du cœur, `app.moduleActif` côté client (menus, onglets) ; modules facultatifs : Règlements, CRM.
 - **CRM ↔ tout** (facultatif) : notes rattachées par (`type_element`, `id_element`) aux tiers, contacts, structure et documents (groupe d'indices), décrits par `SpecialisationCrmBtp` ; responsables, destinataires = individus de notre société, services de `db/193` ; pièces jointes et courriels en GED (élément `crm_note`).

@@ -35,6 +35,7 @@ import { PageParametresComptes } from './parametres-comptes.js';
 import { PageParametresRessources } from './parametres-ressources.js';
 import { PageHabilitations } from './habilitations.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
+import { PageNotifications, PageParametresNotifications } from './notifications.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -54,6 +55,8 @@ export const ROUTES = [
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },
   { nom: 'parametres-ressources', chemin: '/parametres/ressources', page: PageParametresRessources, titre: 'Référentiel des ressources' },
+  { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: 'Notifications' },
+  { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: 'Préférences de notification' },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations à surveiller' },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },

@@ -14,6 +14,7 @@ services:
       # modules (005 Authentification, 010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque, 070 Annuaire) puis cœur BTP (100 et suivants).
       - ./modules/authentification/db/005_authentification.sql:/docker-entrypoint-initdb.d/005_authentification.sql:ro
       - ./modules/calendrier/db/006_calendrier.sql:/docker-entrypoint-initdb.d/006_calendrier.sql:ro
+      - ./modules/notification/db/008_notification.sql:/docker-entrypoint-initdb.d/008_notification.sql:ro
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
       - ./modules/document/db/012_document_verrou.sql:/docker-entrypoint-initdb.d/012_document_verrou.sql:ro

@@ -12,6 +12,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
 using LogiBTP.Listes.Web;
+using LogiBTP.Notifications.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -66,6 +67,11 @@ builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSo
 builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Base, builder.Configuration.GetSection("Authentification"));
 // Module Calendrier : calendriers de travail, cycles, jours fériés et fermetures (modules/calendrier/db/006, db/196).
 builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
+// Module Notifications : boîte par utilisateur, préférences, planificateur de fond par base (modules/notification/db/008) ;
+// sources du cœur : rappels du CRM, habilitations à renouveler.
+builder.Services.AddModuleNotifications(Base, builder.Configuration.GetSection("Notifications"));
+builder.Services.AddSourceNotifications<SourceRappelsCrm>();
+builder.Services.AddSourceNotifications<SourceHabilitations>();
 builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe"]));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
@@ -104,6 +110,7 @@ api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();
 api.MapModuleCalendrier();
+api.MapModuleNotifications();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();

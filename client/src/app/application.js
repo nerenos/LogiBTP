@@ -64,6 +64,7 @@ export class Application {
     else if (this.session?.mdp_a_changer && location.pathname !== '/compte') history.replaceState(null, '', '/compte?changer=1');
     if (!this.enLigne || this.session?.connecte) await this.chargerModules();
     this.rendreInfos();
+    if (this.session?.connecte && !this.session.mdp_a_changer) this.#surveillerNotifications();
 
     this.fenetres = new GestionFenetres({
       etat: () => this.etatFenetre(),
@@ -188,6 +189,27 @@ export class Application {
     };
     surveille.surveille = true;
     window.fetch = surveille;
+  }
+
+  /**
+   * Compteur de notifications du bandeau (module Notifications) : relu chaque minute et quand la fenêtre redevient
+   * visible ; une page qui marque des notifications le met à jour (`majNotifications`, diffusé aux autres fenêtres).
+   */
+  #surveillerNotifications() {
+    const lire = () => api.notifications.compteur().then((c) => this.majNotifications(c, false)).catch(() => {});
+    lire();
+    clearInterval(this.minuterieNotifications);
+    this.minuterieNotifications = setInterval(lire, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) lire(); });
+    this.abonner('compteur-notifications', (c) => { this.notifications = c; this.rendreInfos(); });
+  }
+
+  /** Nouveau compteur de notifications : bandeau de cette fenêtre et des autres. */
+  majNotifications(c, diffuser = true) {
+    const change = JSON.stringify(c) !== JSON.stringify(this.notifications);
+    this.notifications = c;
+    if (change) this.rendreInfos();
+    if (diffuser) this.publier('compteur-notifications', c);
   }
 
   /** Session expirée ou fermée : connexion dans cette fenêtre, ou dans une autre si la page a des modifications en cours. */
@@ -321,8 +343,16 @@ export class Application {
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
       <span title="${this.enLigne ? 'API connectée' : 'Démo hors ligne : données de démonstration, calcul local'}">${this.enLigne ? '● API' : '○ Démo'}</span>
       ${!this.enLigne ? `<a href="/parametres" title="Profil de démonstration (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : this.session?.connecte ? `<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+        : this.session?.connecte ? `${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : '<a href="/connexion">👤 Se connecter</a>'}`);
+  }
+
+  /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */
+  #cloche() {
+    const c = this.notifications;
+    if (!c) return '<a href="/notifications" title="Notifications">🔔</a>';
+    const titre = `${c.non_lues} non lue(s), ${c.a_traiter} à traiter${c.urgentes ? `, ${c.urgentes} urgente(s)` : ''}`;
+    return `<a href="/notifications" class="cloche${c.urgentes ? ' urgente' : ''}" title="${titre}">🔔${c.non_lues ? `<span class="compteur">${c.non_lues}</span>` : ''}</a>`;
   }
 
   message(texte, niveau = 'info') { this.bandeau?.message(texte, niveau); }

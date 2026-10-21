@@ -17,6 +17,16 @@
 .pastille-compte.neutre { color: var(--texte-discret, #777); }
 .mdp-provisoire { font-size: 1.2rem; padding: 0.2rem 0.5rem; user-select: all; }
 .grille-calendrier input { font-variant-numeric: tabular-nums; }
+/* Notifications : cloche du bandeau et boîte. */
+.cloche { position: relative; text-decoration: none; }
+.cloche .compteur { position: absolute; top: -0.45rem; right: -0.6rem; min-width: 1rem; padding: 0 0.25rem; border-radius: 0.6rem; font-size: 0.7rem; line-height: 1rem;
+  text-align: center; background: var(--accent, #2b6cb0); color: #fff; }
+.cloche.urgente .compteur { background: var(--erreur); }
+.liste-notifications { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.liste-notifications li { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.4rem 0.6rem; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.liste-notifications li.non-lue { border-left: 3px solid var(--accent, #2b6cb0); }
+.liste-notifications li.traitee { opacity: 0.6; }
+.liste-notifications li > div:nth-child(2) { flex: 1; }
 .liste-simple { list-style: none; padding: 0; margin: 0.3rem 0; }
 .liste-simple li { padding: 0.15rem 0; }
 .carte.avertissement { border-color: var(--avertissement, #d08a00); }

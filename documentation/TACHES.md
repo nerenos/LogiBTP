@@ -156,9 +156,6 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   factures (C22, C27 : règle globale et par tiers, liste validée avant l'envoi), notifications poussées et récurrence
   des rappels (planificateur, centre de notifications), module Archivage (C29 : `not_archivee_le`), bordereau par un
   modèle du module Édition et envoi par le module Mail, événements publiés par le cœur (document validé…) dans le fil.
-- [ ] Désactivation d'un module = tout masqué, listes comprises (Exécution E24, règle commune) : à appliquer au CRM
-  (notes et événements hors des listes et des onglets quand il est désactivé) et aux Règlements (colonnes réglé /
-  reste, échéances).
 - [ ] CRM, troisième temps : portail tiers, réserves (OPR), comptes rendus de réunion, DOE, assistance IA, journal
   d'appels.
 - [x] **Authentification, lot 0** (22/10/2026) : module `modules/authentification` (comptes, session par cookie,
@@ -175,7 +172,12 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   natures MO → service.
 - [x] **Calendriers et jours fériés** (22/10/2026, module `modules/calendrier`, `db/196`) : plages, cycles de N semaines,
   plages datées, fériés par règles (catalogue français), fermetures par service, temps de travail répliqué.
-- [ ] Prérequis communs restants : centre de notifications, temps réel, application mobile hors ligne.
+- [x] **Centre de notifications** (22/10/2026, module `modules/notification`) : boîte par compte, cloche, préférences,
+  planificateur par base ; sources : rappels du CRM, habilitations à renouveler.
+- [x] Désactivation d'un module = tout masqué (E24) : menus, onglets, routes refusées ; les colonnes réglé / reste du
+  marché disparaissent (API refusée) ; notifications d'un module désactivé masquées et non produites (CRM).
+- [ ] Prérequis communs restants : temps réel (avec le Planning lot 3), application mobile hors ligne (avec le Pointage
+  lot 5).
 
 ### Archivage
 

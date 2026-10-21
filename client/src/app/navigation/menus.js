@@ -153,6 +153,7 @@ export function menus(app) {
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
+        { code: 'notifications', libelle: 'Notifications : préférences…', icone: '🔔', url: '/parametres/notifications', desactive: !app.enLigne },
         { code: 'apropos', libelle: 'À propos de LogiBTP', icone: 'ℹ️', url: '/parametres#apropos', fenetre: false },
       ]),
     },
