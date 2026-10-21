@@ -179,6 +179,15 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [ ] Prérequis communs restants : temps réel (avec le Planning lot 3), application mobile hors ligne (avec le Pointage
   lot 5).
 
+### Exécution
+
+- [x] **Exécution, lot 1** (22/10/2026) : famille E, types OE / PO / DAP, S_DEMANDE renommé « Demande de stock »,
+  transformations depuis les commandes du marché, état d'exécution et motif (tâche CRM au service du motif), service,
+  responsable, dates prévues, liste des ordres, budget planifié et de référence de l'OE, répartition dans le détail.
+- [ ] Exécution, lots suivants : parcours et synthèse (lot 2), BE / BM / OF avec opérations, numérotation par parent,
+  renvoi au parent (lot 3), colisage, livraison (lot 4), SAV, sous-traitance, demande d'achat (lot 5), réunions,
+  rentabilité continue (lot 6). Droit « voir les prix » des ordres : à faire (les vues des ordres suivants masquent les prix).
+
 ### Archivage
 
 - [ ] **Module Archivage : analyse à faire** (décision C29 du CRM, 20/10/2026) : archivage complet des éléments (tiers

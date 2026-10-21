@@ -31,6 +31,7 @@ services:
       - ./modules/document/db/019e_document_pieces.sql:/docker-entrypoint-initdb.d/019e_document_pieces.sql:ro
       - ./modules/document/db/019f_document_numero.sql:/docker-entrypoint-initdb.d/019f_document_numero.sql:ro
       - ./modules/document/db/019g_document_textes.sql:/docker-entrypoint-initdb.d/019g_document_textes.sql:ro
+      - ./modules/document/db/019h_document_famille_execution.sql:/docker-entrypoint-initdb.d/019h_document_famille_execution.sql:ro
       - ./modules/metre/db/020_metre_schema.sql:/docker-entrypoint-initdb.d/020_metre_schema.sql:ro
       - ./modules/metre/db/021_metre_script.sql:/docker-entrypoint-initdb.d/021_metre_script.sql:ro
       - ./modules/liste/db/030_liste_schema.sql:/docker-entrypoint-initdb.d/030_liste_schema.sql:ro
@@ -98,6 +99,7 @@ services:
       - ./db/194_crm.sql:/docker-entrypoint-initdb.d/194_crm.sql:ro
       - ./db/195_ressources.sql:/docker-entrypoint-initdb.d/195_ressources.sql:ro
       - ./db/196_calendriers.sql:/docker-entrypoint-initdb.d/196_calendriers.sql:ro
+      - ./db/197_execution.sql:/docker-entrypoint-initdb.d/197_execution.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

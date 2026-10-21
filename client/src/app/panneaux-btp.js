@@ -1,4 +1,5 @@
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
+import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
@@ -36,8 +37,10 @@ export async function individusSociete(annuaire) {
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null } = {}) {
     super(editeur);
+    // Module Exécution (ordres, famille E) : { app, individus() } posé par la page ; panneau de l'entête, répartition du détail.
+    this.execution = execution;
     this.bibliotheques = bibliotheques;
     // Structure des affaires : référentiels (projets, affaires, chantiers, marchés) et rattachement (page : document
     // modifiable → saisie ; validé → classement direct par l'API).
@@ -313,11 +316,20 @@ export class PanneauxBtp extends PanneauxDocument {
       ${this.annuaire ? `<fieldset class="contacts-document"><legend>Coordonnées du document</legend>
         <p class="aide">Enregistrées dans le document pour les éditions et conservées à la transformation ; ⟳ les recharge depuis l'annuaire.</p>
         <div class="contacts-blocs"><div data-contact="CLIENT"></div>${this.editeur.definition.type?.tyd_famille === 'A' ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
-      ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}`;
+      ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
+      ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}`;
   }
+
+  /** Ordre du module Exécution (famille E) avec le module actif. */
+  estOrdre() { return Boolean(this.execution) && this.editeur.definition.type?.tyd_famille === 'E'; }
 
   lierEntete(zone) {
     const m = this.editeur.magasin;
+    const exe = zone.querySelector('[data-execution]');
+    if (exe) {
+      rendreExecution(exe, { app: this.execution.app, entId: this.editeur.saisie.document.ent_id, typeCode: this.editeur.definition.type.tyd_code, individus: this.execution.individus })
+        .catch((e) => this.execution.app.erreur(e));
+    }
     this.lierRedacteur(zone).catch(() => {});
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));
@@ -444,9 +456,25 @@ export class PanneauxBtp extends PanneauxDocument {
       zone.querySelector('[data-action-ligne="variables"]')?.addEventListener('click', () => this.editeur.creerMetre(ligId));
     }
     this.sectionFrais(zone, l);
+    this.sectionRepartition(zone, l);
     if (!estTranche(l)) return;
     zone.insertAdjacentHTML('beforeend', sectionVariablesTranche(this.editeur, ligId, { modifiable: !this.editeur.magasin.lectureSeule }));
     lierVariablesTranche(zone, this.editeur);
+  }
+
+  /**
+   * Ordre suivant (famille E hors ordre d'exécution) : bloc « Exécution » de la ligne (ordre parent, déjà réparti, reste ;
+   * E17), lu une fois par version enregistrée du document.
+   */
+  sectionRepartition(zone, l) {
+    const d = this.editeur.saisie.document;
+    if (!this.estOrdre() || this.editeur.definition.type.tyd_code === 'E_OE' || !d.ent_id) return;
+    const cle = `${d.ent_id}:${d.ent_version}`;
+    if (this.repartition?.cle !== cle) this.repartition = { cle, promesse: api.execution.repartition(d.ent_id).catch(() => []) };
+    this.repartition.promesse.then((liste) => {
+      const info = liste.find((x) => x.lig_id === l.lig_id);
+      if (info && zone.isConnected && !zone.querySelector('.execution-repartition')) zone.insertAdjacentHTML('beforeend', sectionRepartition(info));
+    });
   }
 
   /**

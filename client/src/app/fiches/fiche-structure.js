@@ -372,7 +372,7 @@ export class FicheMarche extends FicheStructure {
     const B = (type) => (creation ? [CREATIONS_MARCHE[type]] : []);
 
     corps.innerHTML = `<div class="gestion-marche">
-      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', B('V_RECEPTION'), `
+      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', [...B('V_RECEPTION'), ...(this.moduleActif('execution') ? B('E_OE') : [])], `
       <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">HT net</th><th class="nombre">TTC net</th>
         <th class="nombre">Travaux HT</th><th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
       <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? 'Marché' : `TS ${c.rang}`}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
@@ -622,6 +622,7 @@ export class FicheMarche extends FicheStructure {
 /** Boutons de création des regroupements de l'onglet Gestion du marché. */
 const CREATIONS_MARCHE = {
   V_RECEPTION: { type: 'V_RECEPTION', libelle: '🚚 Nouveau BL', nom: 'Bon de livraison', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)' },
+  E_OE: { type: 'E_OE', libelle: "▶ Ordre d'exécution", nom: "Ordre d'exécution", titre: "Lancer l'exécution : ordre d'exécution repris des commandes du marché (une section par commande ; module Exécution)" },
   V_SITUATION: { type: 'V_SITUATION', libelle: '📈 Nouvelle situation', nom: 'Situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)' },
   V_FACTURE_AVT: { type: 'V_FACTURE_AVT', libelle: "📊 Nouvelle facture d'avancement", nom: "Facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période" },
   V_REPRISE_AVT: { type: 'V_REPRISE_AVT', libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },

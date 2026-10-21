@@ -21,6 +21,8 @@ export class FicheLogiBTP extends FicheBase {
     super(options);
     // Onglet Suivi (module CRM actif) : fabrique fournie par la page (PanneauSuivi).
     this.suivi = options.suivi ?? null;
+    // Modules actifs de la société (boutons propres à un module facultatif).
+    this.moduleActif = options.moduleActif ?? (() => true);
   }
 
   /** Onglet Suivi : notes, tâches et courriels de la fiche (module CRM), une fois la fiche enregistrée. */

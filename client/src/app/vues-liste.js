@@ -16,6 +16,21 @@ export const SOURCES_LISTE = {
       ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
     ],
   },
+  // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
+  ordres: {
+    libelle: 'Ordres (exécution)', vue: 'v_liste_ordres', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['type_document', 'text'], ['famille', 'text'], ['numero', 'text'], ['indice', 'text'],
+      ['date_document', 'date'], ['objet', 'text'], ['chantier', 'text'], ['statut', 'text'], ['tiers', 'bigint'],
+      ['total_ht', 'numeric'], ['total_ttc', 'numeric'], ['net_a_payer', 'numeric'], ['reference', 'boolean'],
+      ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
+      ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
+      ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
+      ['etat_execution', 'text'], ['motif', 'text'], ['service', 'text'], ['service_id', 'integer'], ['responsable', 'text'],
+      ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],
+    ],
+  },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
   projets: {
     libelle: 'Projets (chiffrage)', vue: 'v_liste_projets', colonne_id: 'id', colonne_type: 'type_element',
@@ -142,6 +157,10 @@ export const THEMES_LISTE = [
     thl_types: [{ code: 'A_RECEPTION', libelle: 'Bon de livraison fournisseur' }, { code: 'A_RETOUR', libelle: 'Bon de retour fournisseur' }],
   },
   { thl_code: 'projets', thl_libelle: 'Projets', thl_icone: '🎯', thl_ordre: 11, thl_types: [{ code: 'projet', libelle: 'Projet' }] },
+  {
+    thl_code: 'ordres', thl_libelle: 'Ordres (exécution)', thl_icone: '🛠', thl_ordre: 38,
+    thl_types: [{ code: 'E_OE', libelle: "Ordre d'exécution" }, { code: 'E_PO', libelle: 'Ordre de pose' }, { code: 'E_DAP', libelle: "Demande d'approvisionnement" }],
+  },
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
   { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
   { thl_code: 'marches', thl_libelle: 'Marchés', thl_icone: '📜', thl_ordre: 14, thl_types: [{ code: 'marche', libelle: 'Marché' }] },
@@ -526,4 +545,50 @@ const vueIndividus = (vli_id, vli_nom, filtres = []) => ({
 VUES_LISTE.push(
   vueIndividus(25, 'Tous les contacts'),
   vueIndividus(26, 'Notre société (rôles internes)', [{ colonne: 'roles', op: 'nonvide' }]),
+);
+
+// Ordres du module Exécution (identifiants 1000 et suivants : jamais en conflit avec les vues créées par les utilisateurs).
+const ETATS_EXECUTION_LISTE = [
+  { valeur: 'A_FAIRE', libelle: 'À faire', picto: '⚪' }, { valeur: 'EN_ATTENTE', libelle: 'En attente', picto: '⏸' },
+  { valeur: 'EN_COURS', libelle: 'En cours', picto: '🔵' }, { valeur: 'BLOQUE', libelle: 'Bloqué', picto: '⛔' }, { valeur: 'TERMINE', libelle: 'Terminé', picto: '✅' },
+];
+const vueOrdres = (vli_id, vli_nom, filtres = []) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'ordres',
+    source: { mode: 'vue', vue: 'ordres', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres,
+    colonnes: [
+      col('type_document', 'Type', { ...prop(1.2, 90, 170) }),
+      col('numero', 'N°', { ...fixe(110), style: { gras: true } }),
+      col('date_document', 'Date', { format: 'date', ...fixe(92), recherche: false }),
+      col('objet', 'Objet', { ...prop(3, 160) }),
+      col('chantier', 'Chantier', { ...prop(2, 120) }),
+      col('service', 'Service', { ...prop(1.2, 90) }),
+      col('responsable', 'Responsable', { ...prop(1.4, 100) }),
+      col('etat_execution', 'Exécution', { format: 'picto', ...fixe(80), options: ETATS_EXECUTION_LISTE }),
+      col('motif', 'Motif', { ...prop(1.5, 100), style: { couleur: '#b42318' } }),
+      col('statut', 'Statut', { ...fixe(100) }),
+      col('debut_prevu', 'Début prévu', { format: 'date', ...fixe(92), recherche: false }),
+      col('fin_prevue', 'Fin prévue', { format: 'date', ...fixe(92), recherche: false,
+        regles: [{ condition: '[en_retard]', style: { couleur: '#b42318', gras: true } }] }),
+      col('heures_budget', 'Heures', { ...nombre(1), ...fixe(80), recherche: false }),
+      col('client', 'Client', { ...prop(1.5, 100), masquee: true }),
+      col('marche', 'Marché', { ...fixe(90), masquee: true }),
+      col('affaire', 'Affaire', { ...fixe(90), masquee: true }),
+      col('total_ht', 'Total HT', { ...nombre(), ...fixe(100), recherche: false, masquee: true }),
+      col('en_retard', 'En retard', { format: 'coche', ...fixe(60), masquee: true }),
+    ],
+    segments: [{ colonne: 'etat_execution', titre: 'Exécution' }, { colonne: 'service', titre: 'Service' }],
+    tri: [{ colonne: 'date_document', sens: 'desc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(
+  vueOrdres(1000, 'Tous les ordres'),
+  vueOrdres(1001, "Ordres d'exécution", [{ colonne: 'type_element', op: 'egal', valeur: 'E_OE' }]),
+  vueOrdres(1002, 'Ordres de pose', [{ colonne: 'type_element', op: 'egal', valeur: 'E_PO' }]),
+  vueOrdres(1003, "Demandes d'approvisionnement", [{ colonne: 'type_element', op: 'egal', valeur: 'E_DAP' }]),
+  vueOrdres(1004, 'Ordres bloqués ou en retard', [{ colonne: 'etat_execution', op: 'egal', valeur: 'BLOQUE' }]),
 );

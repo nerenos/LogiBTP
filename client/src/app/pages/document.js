@@ -10,7 +10,7 @@ import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
 import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
-import { PanneauxBtp } from '../panneaux-btp.js';
+import { PanneauxBtp, individusSociete } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { messagesFrais } from '../frais-annexes.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
@@ -386,6 +386,8 @@ export class PageDocument extends PageBase {
       // Bibliothèque depuis le détail de la ligne (lignes sélectionnées, ou la ligne du détail).
       actualiserPrix: (ids) => this.appel?.actualiser(ids), versBibliotheque: (ids) => this.envoi?.ouvrir(ids),
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
+      // Ordres (famille E, module Exécution actif) : panneau Exécution de l'entête, répartition du détail.
+      execution: this.app.enLigne && this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
@@ -517,6 +519,9 @@ export class PageDocument extends PageBase {
     if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
     // Onglet Suivi (module CRM actif, document enregistré) : notes du groupe d'indices.
     this.$('[data-onglet-vue="suivi"]').hidden = !enLigne || !this.app.moduleActif('crm') || !doc.ent_id;
+    // Ordres (module Exécution) : coefficients par nature et marge dans l'ordre d'exécution seulement (E3, E17).
+    const typeDoc = this.editeur.definition.type;
+    this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === 'E' && typeDoc.tyd_code !== 'E_OE';
     if (this.disposition?.p.onglet === 'suivi') this.afficherSuivi();
     this.app.majPage();
   }

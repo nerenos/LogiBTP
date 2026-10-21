@@ -29,4 +29,14 @@ public class DocumentBtp : Document
     public JsonDocument? EntContactClient { get; set; }
     /// <summary>Coordonnées figées du payeur (ventes).</summary>
     public JsonDocument? EntContactPayeur { get; set; }
+
+    // Exécution (module Exécution, db/197) : état propre de l'ordre, motif de blocage, service porteur, responsable,
+    // dates prévues ; modifiés par la route de l'exécution, jamais par l'enregistrement du document.
+    public string? EntExeEtat { get; set; }
+    public int? EntExeMotifId { get; set; }
+    public string? EntExeCommentaire { get; set; }
+    public int? EntSrvId { get; set; }
+    public long? EntResponsableId { get; set; }
+    public DateOnly? EntDebutPrevu { get; set; }
+    public DateOnly? EntFinPrevue { get; set; }
 }

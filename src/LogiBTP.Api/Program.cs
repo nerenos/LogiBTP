@@ -105,6 +105,7 @@ api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
 api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
 api.MapModuleCrm().ExigeModule("crm", "CRM");
+api.MapExecution().ExigeModule("execution", "Exécution");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

@@ -4,6 +4,10 @@
 > [ANALYSE-MODULES-TRANSVERSE.md](ANALYSE-MODULES-TRANSVERSE.md). Modules liés : [CRM](ANALYSE-MODULE-CRM.md) ·
 > [Planning](ANALYSE-MODULE-PLANNING.md) · [Pointage MO](ANALYSE-MODULE-POINTAGE.md).
 
+> **Réalisation** : lot 1 réalisé le 22/10/2026 (`db/197`, `Btp/ExecutionBtp.cs`, `client/src/app/execution/`). Écarts : codes
+> de types `E_OE`, `E_PO`, `E_DAP` ; statuts « Transmis » (envoyé) et « Pris en charge » (validé par le tiers) ; heures budget
+> calculées par une vue (`v_heures_lignes`) au lieu d'une colonne `lig_heures_budget` ; état « à faire » ajouté.
+
 ## 1. Objet
 
 Suivre la **réalisation** d'un chantier, une fois la commande client validée dans un marché : qui fait quoi, dans quel

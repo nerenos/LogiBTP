@@ -57,6 +57,7 @@ export class PageFiche extends PageBase {
         p.ouvrir().catch((e) => app.erreur(e));
         return p;
       } : null,
+      moduleActif: (code) => app.moduleActif(code),
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.
       compte: app.enLigne && app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
       // Référentiel des ressources (en ligne) : habilitations, missions d'intérim, habilitations exigées d'un matériel.

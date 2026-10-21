@@ -20,16 +20,21 @@ const vues = VUES_LISTE.map((v) =>
 const sql = `-- =============================================================================
 -- Cœur LogiBTP – sources de listes, thèmes et vues par défaut.
 -- FICHIER GÉNÉRÉ par client/scripts/generer-vues-liste.mjs depuis client/src/app/vues-liste.js : ne pas modifier.
+-- Rejouable : sources et thèmes mis à jour ; vues par défaut ajoutées si elles manquent (les vues modifiées sont gardées).
 -- =============================================================================
 
 INSERT INTO source_liste (sli_code, sli_libelle, sli_vue, sli_colonne_id, sli_colonne_type, sli_type_element, sli_modifiable) VALUES
-${sources};
+${sources}
+ON CONFLICT (sli_code) DO UPDATE SET sli_libelle = EXCLUDED.sli_libelle, sli_vue = EXCLUDED.sli_vue, sli_colonne_id = EXCLUDED.sli_colonne_id,
+  sli_colonne_type = EXCLUDED.sli_colonne_type, sli_type_element = EXCLUDED.sli_type_element, sli_modifiable = EXCLUDED.sli_modifiable;
 
 INSERT INTO theme_liste (thl_code, thl_libelle, thl_icone, thl_ordre, thl_types) VALUES
-${themes};
+${themes}
+ON CONFLICT (thl_code) DO UPDATE SET thl_libelle = EXCLUDED.thl_libelle, thl_icone = EXCLUDED.thl_icone, thl_ordre = EXCLUDED.thl_ordre, thl_types = EXCLUDED.thl_types;
 
 INSERT INTO vue_liste (vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, vli_groupe, vli_definition) VALUES
-${vues};
+${vues}
+ON CONFLICT (vli_id) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('vue_liste', 'vli_id'), (SELECT max(vli_id) FROM vue_liste));
 `;

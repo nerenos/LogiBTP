@@ -49,4 +49,7 @@ public class DocumentLigneBtp : DocumentLigne
     public decimal? LigLargeur { get; set; }
     public decimal? LigEpaisseur { get; set; }
     public decimal? LigLongueur { get; set; }
+
+    /// <summary>Heures réalisées saisies sur une ligne d'ordre (sans le module Pointage, db/197).</summary>
+    public decimal? LigHeuresRealisees { get; set; }
 }

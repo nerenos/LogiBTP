@@ -53,6 +53,13 @@ export const api = {
     personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
     personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
+  // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
+  execution: {
+    document: (id) => appel('GET', `/execution/documents/${id}`),
+    enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
+    repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
+    heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
+  },
   // Module Notifications : boîte de l'utilisateur de la session, compteur du bandeau, préférences.
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),

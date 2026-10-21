@@ -131,6 +131,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override Task ControlerValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
+        if (type.TydFamille == "E") return ControlerOrdreAsync(db, document, erreurs, ct);
         if (type.TydCode == "V_COMMANDE" && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
@@ -312,6 +313,13 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// </summary>
     public override async Task ApresValidationAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, long entId, TypeDocument type, CancellationToken ct)
     {
+        // Ordre (module Exécution) : « à faire » dès sa transmission ; ordre d'exécution : budget planifié figé (E16).
+        if (type.TydFamille == "E")
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_exe_etat = 'A_FAIRE' WHERE ent_id = {entId} AND ent_exe_etat IS NULL", ct);
+            if (type.TydCode == "E_OE") await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
+            return;
+        }
         // Édition de la pièce validée produite par le serveur et rangée en GED (module Édition, Q15) ; pièce de vente à
         // numérotation continue (facture, avoir…) : au coffre-fort. Ligne de la file insérée dans la transaction.
         if (type.TydFamille is "V" or "A")
@@ -368,7 +376,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         if (await PostesMarche.Portee(db, type, saisie.Document, ct) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
         // Stock : le tiers est notre société (P6).
-        if (type.TydFamille == "S" && saisie.Document.EntTiersId is null)
+        if (type.TydFamille is "S" or "E" && saisie.Document.EntTiersId is null)
         {
             saisie.Document.EntTiersId = (await db.Database.SqlQuery<long?>($"SELECT per_id AS \"Value\" FROM personne WHERE per_societe_base LIMIT 1").ToListAsync(ct)).FirstOrDefault();
         }
@@ -669,6 +677,28 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     /// Une commande client d'un marché ne se transforme pas seule en BL, situation ou facture d'avancement : ces
     /// documents se créent depuis le marché, avec toutes ses commandes (CONCEPTION-ACHATS-MARCHES.md, Q19).
     /// </summary>
+    /// <summary>
+    /// Ordre (famille E, module Exécution) : un seul chantier par ordre (E4), obligatoire ; les documents repris (sources
+    /// des transformations) sont du même chantier.
+    /// </summary>
+    private static async Task ControlerOrdreAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, List<MessageCalcul> erreurs, CancellationToken ct)
+    {
+        var d = document.Document;
+        if (d.EntChantierId is null)
+        {
+            erreurs.Add(new MessageCalcul(null, "EXE_CHANTIER", "Chantier obligatoire : un ordre porte sur un seul chantier"));
+            return;
+        }
+        var autres = await db.Database.SqlQuery<string>($"""
+            SELECT coalesce(s.ent_numero, s.ent_id::text) AS "Value" FROM document_lien l JOIN document s ON s.ent_id = l.lie_source_ent_id
+            WHERE l.lie_cible_ent_id = {d.EntId} AND l.lie_type = 'TRANSFORMATION' AND s.ent_chantier_id IS DISTINCT FROM {d.EntChantierId}
+            """).ToListAsync(ct);
+        if (autres.Count > 0)
+        {
+            erreurs.Add(new MessageCalcul(null, "EXE_CHANTIER_UNIQUE", $"Documents repris d'un autre chantier : {string.Join(", ", autres)} (un ordre ne couvre qu'un chantier)"));
+        }
+    }
+
     public override void ControlerTransformation(DocumentCompletBtp source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs)
     {
         if (!depuisPlusieurs && typeSource.TydCode == "V_COMMANDE" && source.Document.EntMarcheId is not null

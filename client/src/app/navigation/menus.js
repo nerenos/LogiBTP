@@ -69,6 +69,15 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'execution', libelle: '&Exécution', module: 'execution', elements: [
+      { code: 'ordres-oe', libelle: "Ordres d'exécution", icone: '🛠', url: '/liste/ordres?vue=1001', info: "Lancés depuis la fiche du marché (▶ Ordre d'exécution)" },
+      { code: 'ordres-po', libelle: 'Ordres de pose', icone: '🔧', url: '/liste/ordres?vue=1002' },
+      { code: 'ordres-dap', libelle: "Demandes d'approvisionnement", icone: '🛒', url: '/liste/ordres?vue=1003', creation: D('E_DAP', "Nouvelle demande d'approvisionnement") },
+      { code: 'ordres', libelle: 'Tous les ordres', icone: '📋', url: '/liste/ordres?vue=1000' },
+      { code: 'ordres-bloques', libelle: 'Ordres bloqués', icone: '⛔', url: '/liste/ordres?vue=1004' },
+    ],
+  },
+  {
     code: 'suivi', libelle: '&Suivi', module: 'crm', elements: [
       { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
       { code: 'crm-rappels', libelle: 'Mes rappels', icone: '⏰', url: '/crm/rappels', info: 'Rouge : échu ou imminent · orange : bientôt · vert : à venir' },
