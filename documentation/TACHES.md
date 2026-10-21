@@ -143,7 +143,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [ ] Analyses préalables rédigées le 20/10/2026 ([socle commun](conception/ANALYSE-MODULES-TRANSVERSE.md),
   [CRM](conception/ANALYSE-MODULE-CRM.md), [Exécution](conception/ANALYSE-MODULE-EXECUTION.md),
   [Planning](conception/ANALYSE-MODULE-PLANNING.md), [Pointage MO](conception/ANALYSE-MODULE-POINTAGE.md)) : CRM
-  C1–C30 décidées (C6 à approfondir, C7 reporté) ; E1–E15, P1–P18, M1–M15 à trancher
+  C1–C30 décidées (C6 à approfondir, C7 reporté) ; Exécution E1–E24 décidées ; P1–P18, M1–M15 à trancher
   (propositions faites). Décisions structurantes à valider : ordres
   d'exécution = documents d'une famille E ; Pointage = variables de paie exportées (pas de calcul de paie) ;
   composant de planning propre ; activation des modules par drapeau (`module_societe`) au lieu de la présence des
@@ -156,6 +156,9 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   factures (C22, C27 : règle globale et par tiers, liste validée avant l'envoi), notifications poussées et récurrence
   des rappels (planificateur, centre de notifications), module Archivage (C29 : `not_archivee_le`), bordereau par un
   modèle du module Édition et envoi par le module Mail, événements publiés par le cœur (document validé…) dans le fil.
+- [ ] Désactivation d'un module = tout masqué, listes comprises (Exécution E24, règle commune) : à appliquer au CRM
+  (notes et événements hors des listes et des onglets quand il est désactivé) et aux Règlements (colonnes réglé /
+  reste, échéances).
 - [ ] CRM, troisième temps : portail tiers, réserves (OPR), comptes rendus de réunion, DOE, assistance IA, journal
   d'appels.
 - [ ] Prérequis communs : activation des modules, authentification réelle (en-têtes `X-Utilisateur` aujourd'hui),

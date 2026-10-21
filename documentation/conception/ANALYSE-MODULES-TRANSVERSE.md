@@ -72,9 +72,9 @@ désactiver un module installé, ni de régler l'activation par société.
   modules concernés sont actifs (un lien Exécution → Planning exige les deux).
 - Client : `app.modules.actif(code)` lu au démarrage ; menus du bandeau (`navigation/menus.js`), widgets, onglets de
   fiches, colonnes de listes et raccourcis filtrés ; page `/parametres/modules` (administrateur).
-- **Désactiver** = masquer et refuser les écritures ; les données restent, consultables en lecture seule là où elles
-  apparaissent ailleurs (ordres dans les listes de documents, heures réelles dans les analyses) ; réactiver restitue
-  tout. Pas de suppression de données par la désactivation.
+- **Désactiver** = masquer tout (menus, onglets, données dans les listes) et refuser les écritures ; un module se
+  désactive plutôt à l'initialisation du dossier, les données restantes étant des essais (Exécution, E15 / E24) ;
+  réactiver restitue tout. Pas de suppression de données par la désactivation.
 - **Dépendances déclarées** : chaque module déclare ses prérequis (le Pointage exige l'authentification et le
   référentiel des ressources) ; la page de paramétrage refuse une activation incomplète et explique pourquoi.
 
