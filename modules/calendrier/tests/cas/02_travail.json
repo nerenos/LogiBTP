@@ -1,0 +1,80 @@
+{
+  "description": "Plages et temps de travail (semaineDuCycle, plagesDuJour, journee, ajouterMinutesTravail, minutesTravail, prochainTravail, controlerCalendrier ↔ ReglesCalendrier). Minutes depuis minuit ; instants AAAA-MM-JJTHH:MM.",
+  "calendriers": {
+    "standard": {
+      "cycle_semaines": 1,
+      "plages": [
+        { "jour": 1, "debut": 480, "fin": 720 }, { "jour": 1, "debut": 780, "fin": 1020 },
+        { "jour": 2, "debut": 480, "fin": 720 }, { "jour": 2, "debut": 780, "fin": 1020 },
+        { "jour": 3, "debut": 480, "fin": 720 }, { "jour": 3, "debut": 780, "fin": 1020 },
+        { "jour": 4, "debut": 480, "fin": 720 }, { "jour": 4, "debut": 780, "fin": 1020 },
+        { "jour": 5, "debut": 480, "fin": 720 }, { "jour": 5, "debut": 780, "fin": 960 },
+        { "jour": 1, "debut": 420, "fin": 720, "du": "2026-07-01", "au": "2026-08-31" }, { "jour": 1, "debut": 750, "fin": 930, "du": "2026-07-01", "au": "2026-08-31" }
+      ]
+    },
+    "alterne": {
+      "cycle_semaines": 2, "reference": "2026-10-07",
+      "plages": [
+        { "semaine": 1, "jour": 1, "debut": 420, "fin": 1020 }, { "semaine": 1, "jour": 2, "debut": 420, "fin": 1020 },
+        { "semaine": 2, "jour": 3, "debut": 600, "fin": 1200 }
+      ]
+    },
+    "vide": { "cycle_semaines": 1, "plages": [] }
+  },
+  "fermes": [{ "date": "2026-11-11", "libelles": ["Armistice"] }],
+  "semaines": [
+    { "nom": "sans cycle", "calendrier": "standard", "date": "2026-10-21", "attendu": 1 },
+    { "nom": "semaine de référence (référence un mercredi)", "calendrier": "alterne", "date": "2026-10-05", "attendu": 1 },
+    { "nom": "semaine suivante", "calendrier": "alterne", "date": "2026-10-14", "attendu": 2 },
+    { "nom": "deux semaines après", "calendrier": "alterne", "date": "2026-10-21", "attendu": 1 },
+    { "nom": "avant la référence", "calendrier": "alterne", "date": "2026-09-30", "attendu": 2 },
+    { "nom": "dimanche de la semaine 2", "calendrier": "alterne", "date": "2026-10-18", "attendu": 2 }
+  ],
+  "journees": [
+    { "nom": "mercredi", "calendrier": "standard", "date": "2026-10-21", "attendu": { "date": "2026-10-21", "fermee": null, "plages": [{ "debut": 480, "fin": 720 }, { "debut": 780, "fin": 1020 }], "minutes": 480 } },
+    { "nom": "vendredi", "calendrier": "standard", "date": "2026-10-23", "attendu": { "date": "2026-10-23", "fermee": null, "plages": [{ "debut": 480, "fin": 720 }, { "debut": 780, "fin": 960 }], "minutes": 420 } },
+    { "nom": "samedi", "calendrier": "standard", "date": "2026-10-24", "attendu": { "date": "2026-10-24", "fermee": null, "plages": [], "minutes": 0 } },
+    { "nom": "jour fermé", "calendrier": "standard", "date": "2026-11-11", "attendu": { "date": "2026-11-11", "fermee": ["Armistice"], "plages": [], "minutes": 0 } },
+    { "nom": "lundi d'été : plages datées", "calendrier": "standard", "date": "2026-07-06", "attendu": { "date": "2026-07-06", "fermee": null, "plages": [{ "debut": 420, "fin": 720 }, { "debut": 750, "fin": 930 }], "minutes": 480 } },
+    { "nom": "lundi de septembre : plages permanentes", "calendrier": "standard", "date": "2026-09-07", "attendu": { "date": "2026-09-07", "fermee": null, "plages": [{ "debut": 480, "fin": 720 }, { "debut": 780, "fin": 1020 }], "minutes": 480 } },
+    { "nom": "mardi d'été : pas de plage datée ce jour", "calendrier": "standard", "date": "2026-07-07", "attendu": { "date": "2026-07-07", "fermee": null, "plages": [{ "debut": 480, "fin": 720 }, { "debut": 780, "fin": 1020 }], "minutes": 480 } },
+    { "nom": "cycle : mercredi de semaine 2", "calendrier": "alterne", "date": "2026-10-14", "attendu": { "date": "2026-10-14", "fermee": null, "plages": [{ "debut": 600, "fin": 1200 }], "minutes": 600 } },
+    { "nom": "cycle : mercredi de semaine 1", "calendrier": "alterne", "date": "2026-10-21", "attendu": { "date": "2026-10-21", "fermee": null, "plages": [], "minutes": 0 } }
+  ],
+  "ajouts": [
+    { "nom": "une journée", "calendrier": "standard", "debut": "2026-10-21T08:00", "minutes": 480, "attendu": "2026-10-21T17:00" },
+    { "nom": "fin en fin de matinée", "calendrier": "standard", "debut": "2026-10-21T08:00", "minutes": 240, "attendu": "2026-10-21T12:00" },
+    { "nom": "sur deux jours", "calendrier": "standard", "debut": "2026-10-21T10:00", "minutes": 480, "attendu": "2026-10-22T10:00" },
+    { "nom": "début pendant la pause", "calendrier": "standard", "debut": "2026-10-21T12:30", "minutes": 60, "attendu": "2026-10-21T14:00" },
+    { "nom": "par-dessus le week-end", "calendrier": "standard", "debut": "2026-10-23T15:00", "minutes": 120, "attendu": "2026-10-26T09:00" },
+    { "nom": "par-dessus un jour fermé", "calendrier": "standard", "debut": "2026-11-10T16:00", "minutes": 120, "attendu": "2026-11-12T09:00" },
+    { "nom": "zéro minute", "calendrier": "standard", "debut": "2026-10-24T10:00", "minutes": 0, "attendu": "2026-10-24T10:00" },
+    { "nom": "début le samedi", "calendrier": "standard", "debut": "2026-10-24T10:00", "minutes": 30, "attendu": "2026-10-26T08:30" },
+    { "nom": "cycle alterné", "calendrier": "alterne", "debut": "2026-10-13T16:00", "minutes": 120, "attendu": "2026-10-14T12:00" },
+    { "nom": "calendrier vide", "calendrier": "vide", "debut": "2026-10-21T08:00", "minutes": 60, "erreur": "CALENDRIER_VIDE" }
+  ],
+  "durees": [
+    { "nom": "une journée", "calendrier": "standard", "debut": "2026-10-21T08:00", "fin": "2026-10-21T17:00", "attendu": 480 },
+    { "nom": "week-end compris", "calendrier": "standard", "debut": "2026-10-23T15:00", "fin": "2026-10-26T09:00", "attendu": 120 },
+    { "nom": "jour fermé compris", "calendrier": "standard", "debut": "2026-11-10T08:00", "fin": "2026-11-13T00:00", "attendu": 960 },
+    { "nom": "fin avant le début", "calendrier": "standard", "debut": "2026-10-21T10:00", "fin": "2026-10-21T09:00", "attendu": 0 },
+    { "nom": "pendant la pause", "calendrier": "standard", "debut": "2026-10-21T12:10", "fin": "2026-10-21T12:50", "attendu": 0 }
+  ],
+  "prochains": [
+    { "nom": "dans une plage", "calendrier": "standard", "instant": "2026-10-21T09:15", "attendu": "2026-10-21T09:15" },
+    { "nom": "pendant la pause", "calendrier": "standard", "instant": "2026-10-21T12:15", "attendu": "2026-10-21T13:00" },
+    { "nom": "vendredi soir", "calendrier": "standard", "instant": "2026-10-23T18:00", "attendu": "2026-10-26T08:00" },
+    { "nom": "fin exacte d'une plage", "calendrier": "standard", "instant": "2026-10-21T12:00", "attendu": "2026-10-21T13:00" },
+    { "nom": "calendrier vide", "calendrier": "vide", "instant": "2026-10-21T08:00", "erreur": "CALENDRIER_VIDE" }
+  ],
+  "controles": [
+    { "nom": "standard correct", "calendrier": "standard", "attendu": [] },
+    { "nom": "cycle sans référence, semaine hors cycle", "valeur": { "cycle_semaines": 2, "plages": [{ "semaine": 3, "jour": 1, "debut": 480, "fin": 720 }] }, "attendu": ["CAL_REFERENCE", "PLG_SEMAINE"] },
+    { "nom": "cycle de 9 semaines", "valeur": { "cycle_semaines": 9, "reference": "2026-01-05", "plages": [] }, "attendu": ["CAL_CYCLE"] },
+    { "nom": "plage inversée, jour 8", "valeur": { "cycle_semaines": 1, "plages": [{ "jour": 8, "debut": 720, "fin": 480 }] }, "attendu": ["PLG_HEURES", "PLG_JOUR"] },
+    { "nom": "chevauchement le même jour", "valeur": { "cycle_semaines": 1, "plages": [{ "jour": 1, "debut": 480, "fin": 720 }, { "jour": 1, "debut": 700, "fin": 900 }] }, "attendu": ["PLG_CHEVAUCHEMENT"] },
+    { "nom": "plages contiguës acceptées", "valeur": { "cycle_semaines": 1, "plages": [{ "jour": 1, "debut": 480, "fin": 720 }, { "jour": 1, "debut": 720, "fin": 900 }] }, "attendu": [] },
+    { "nom": "période inversée ; plage datée qui recouvre la permanente acceptée", "valeur": { "cycle_semaines": 1, "plages": [{ "jour": 1, "debut": 480, "fin": 720 }, { "jour": 1, "debut": 420, "fin": 720, "du": "2026-08-31", "au": "2026-07-01" }] }, "attendu": ["PLG_PERIODE"] },
+    { "nom": "jusqu'à minuit", "valeur": { "cycle_semaines": 1, "plages": [{ "jour": 5, "debut": 1200, "fin": 1440 }] }, "attendu": [] }
+  ]
+}

@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)
@@ -48,6 +48,7 @@
 - `193_modules_services.sql` : `module_societe` (activation des modules facultatifs par drapeau : `reglement`, `crm`), `service` (deux niveaux, trigger `f_service_niveaux`, natures PRODUCTION / ETUDE / LOGISTIQUE / ADMINISTRATIF ; Vente et Achat), `service_membre` (individus de notre société, un seul principal : `ux_sme_principal`), membres de démonstration repris de `salarie.sal_service` ; rejouable.
 - `194_crm.sql` : éléments GED `crm_*` (reprend `f_ged_element_existe` de 164 en déléguant au module : `f_crm_element_existe` de `modules/crm/db/097`), catégorie GED `crm` ; rejouable.
 - `195_ressources.sql` : référentiel des ressources (rejouable) : renommage `demo_salarie|demo_materiel|demo_equipe` → `salarie|materiel|equipe` (bases existantes, `type_fiche` mis à jour, `f_ged_element_existe` recréée avec le type `equipe`) ; salarié : `sal_qualification`, `sal_cout_horaire` (coût horaire chargé saisi), `sal_date_sortie` ; `mission_interim` (agence, période, taux horaire facturé) ; matériel : `mat_mode` IDENTIFIE / NOMBRE, `mat_quantite`, `mat_unite`, `mat_srv_id`, `mat_depot_id`, `mat_habilitations` (codes exigés du conducteur) ; `type_habilitation` (catégorie, élément concerné, durée en mois) et `habilitation` (salarié ou matériel, fin de validité calculée si vide) ; `equipe.equ_srv_id`, `equ_chef_sal_id`, `equipe_composition` (datée) ; `motif` (BLOCAGE, NON_CONFORMITE, ECART_PLANNING, AUTRE ; service à prévenir) ; `nature_element.nat_srv_id` (natures de main-d'œuvre → service) et natures MO_ATELIER, MO_POSE, MO_ETUDES ; données de démonstration une fois.
+- `196_calendriers.sql` : `srv_cal_id`, `sal_cal_id`, `mat_cal_id` (module Calendrier `006`), calendriers de démonstration des services (bureaux 35 h, production 39 h), fermeture estivale de l'atelier (portée `service:<id>`) ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

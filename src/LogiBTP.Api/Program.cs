@@ -3,6 +3,7 @@ using LogiBTP.Annuaire.Web;
 using LogiBTP.Authentification.Web;
 using LogiBTP.Api.Btp;
 using LogiBTP.Bibliotheque.Web;
+using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Editions.Web;
@@ -63,6 +64,8 @@ builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSo
 // Module Authentification : comptes liés aux salariés et intérimaires, session par cookie (modules/authentification/db/005) ;
 // toutes les routes /api exigent une session, sauf la santé, la société et les routes publiques du module.
 builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Base, builder.Configuration.GetSection("Authentification"));
+// Module Calendrier : calendriers de travail, cycles, jours fériés et fermetures (modules/calendrier/db/006, db/196).
+builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
 builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe"]));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
@@ -100,6 +103,8 @@ api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();
+api.MapModuleCalendrier();
+api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 

@@ -16,6 +16,7 @@
 .pastille-compte.erreur { color: var(--erreur); }
 .pastille-compte.neutre { color: var(--texte-discret, #777); }
 .mdp-provisoire { font-size: 1.2rem; padding: 0.2rem 0.5rem; user-select: all; }
+.grille-calendrier input { font-variant-numeric: tabular-nums; }
 .liste-simple { list-style: none; padding: 0; margin: 0.3rem 0; }
 .liste-simple li { padding: 0.15rem 0; }
 .carte.avertissement { border-color: var(--avertissement, #d08a00); }

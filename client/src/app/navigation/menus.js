@@ -148,6 +148,7 @@ export function menus(app) {
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
         { libelle: 'Suivi (CRM) : types de notes, rappels…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
+        { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },
         { separateur: true },

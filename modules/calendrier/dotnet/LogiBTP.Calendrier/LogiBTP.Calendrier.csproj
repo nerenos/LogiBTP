@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Calendrier</RootNamespace>
+    <Description>Module Calendrier LogiBTP : jours fermés par règles, plages et cycles de semaines, temps de travail (répliqués avec le paquet JS @logibtp/calendrier).</Description>
+  </PropertyGroup>
+
+</Project>

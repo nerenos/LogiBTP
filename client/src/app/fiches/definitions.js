@@ -22,6 +22,7 @@ export const TYPES_FICHE = {
             { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'actif'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
+            { titre: 'Horaires', champs: ['cal_id'] },
             { titre: 'Note professionnelle', champs: ['commentaire'], largeur: 'plein' },
           ],
         },
@@ -71,6 +72,7 @@ export const TYPES_FICHE = {
         // Référentiel des ressources (db/195).
         c('qualification', 'Qualification', 'sal_qualification', 'texte', { longueur: 60, aide: 'Ex. N3P2 (convention collective), compagnon professionnel' }),
         c('date_sortie', 'Date de sortie', 'sal_date_sortie', 'date', { non_copie: true, aide: "Le compte de connexion est désactivé quand le salarié n'est plus actif" }),
+        c('cal_id', 'Calendrier de travail', 'sal_cal_id', 'liste', { requete: 'SELECT cal_id, cal_libelle FROM calendrier WHERE cal_actif ORDER BY cal_defaut DESC, cal_code', aide: 'Vide : calendrier du service principal, sinon le calendrier par défaut' }),
         c('cout_horaire', 'Coût horaire chargé', 'sal_cout_horaire', 'nombre', { confidentiel: true, format: '9999.99', aide: 'Vide : estimé depuis le salaire (× 1,45 / heures mensuelles)' }),
       ],
     },
@@ -87,7 +89,7 @@ export const TYPES_FICHE = {
           groupes: [
             { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'numero_serie'] },
             { titre: 'Exploitation', champs: ['etat', 'chantier', 'heures_utilisation', 'heures_revision', 'controle_ok'] },
-            { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id'] },
+            { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id', 'cal_id'] },
             { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
             { titre: 'Observations', champs: ['observations'], largeur: 'plein' },
           ],
@@ -114,6 +116,7 @@ export const TYPES_FICHE = {
         c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
         c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
         c('unite', 'Unité', 'mat_unite', 'texte', { longueur: 10 }),
+        c('cal_id', 'Calendrier', 'mat_cal_id', 'liste', { requete: 'SELECT cal_id, cal_libelle FROM calendrier WHERE cal_actif ORDER BY cal_defaut DESC, cal_code', aide: 'Vide : calendrier du service' }),
         c('srv_id', 'Service', 'mat_srv_id', 'liste', { requete: 'SELECT srv_id, srv_libelle FROM service WHERE srv_actif ORDER BY srv_ordre, srv_code', aide: 'Service qui planifie ce matériel' }),
       ],
     },

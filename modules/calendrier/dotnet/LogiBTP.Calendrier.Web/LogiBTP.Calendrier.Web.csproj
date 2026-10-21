@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Calendrier.Web</RootNamespace>
+    <Description>Module Calendrier LogiBTP : calendriers, plages et jours fermés (EF Core), journées d'un calendrier, routes HTTP ; utilisations décrites par la spécialisation de l'application.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.Calendrier\LogiBTP.Calendrier.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

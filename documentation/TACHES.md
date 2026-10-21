@@ -173,8 +173,9 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [x] **Référentiel des ressources** (22/10/2026, `db/195`) : tables `salarie`, `materiel`, `equipe` (fin des `demo_*`),
   missions d'intérim, matériels par nombre, habilitations (types, validité, à surveiller), équipes datées, motifs typés,
   natures MO → service.
-- [ ] Prérequis communs restants : calendriers et jours fériés, centre de notifications, temps réel, application mobile
-  hors ligne.
+- [x] **Calendriers et jours fériés** (22/10/2026, module `modules/calendrier`, `db/196`) : plages, cycles de N semaines,
+  plages datées, fériés par règles (catalogue français), fermetures par service, temps de travail répliqué.
+- [ ] Prérequis communs restants : centre de notifications, temps réel, application mobile hors ligne.
 
 ### Archivage
 

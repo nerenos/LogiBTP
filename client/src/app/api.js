@@ -53,6 +53,19 @@ export const api = {
     personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
     personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
+  // Module Calendrier : calendriers, journées, jours fermés (société ou portée « service:<id> »), calendriers des services.
+  calendriers: {
+    liste: () => appel('GET', '/calendriers'),
+    creer: (c) => appel('POST', '/calendriers', c),
+    modifier: (id, c) => appel('PUT', `/calendriers/${id}`, c),
+    supprimer: (id) => appel('DELETE', `/calendriers/${id}`),
+    journees: (id, du, au, portee = '') => appel('GET', `/calendriers/${id ?? 0}/journees?${new URLSearchParams({ du, au, ...(portee ? { portee } : {}) })}`),
+    joursFermes: (portee = null) => appel('GET', `/calendriers/jours-fermes${portee ? `?portee=${encodeURIComponent(portee)}` : ''}`),
+    enregistrerJoursFermes: (s) => appel('PUT', '/calendriers/jours-fermes', s),
+    services: () => appel('GET', '/ressources/calendriers-services'),
+    enregistrerServices: (l) => appel('PUT', '/ressources/calendriers-services', l),
+    journeesRessource: (type, id, du, au) => appel('GET', `/ressources/${type}/${id}/journees?${new URLSearchParams({ du, au })}`),
+  },
   // Référentiel des ressources (db/195) : habilitations, missions d'intérim, motifs, natures MO, équipes.
   ressources: {
     typesHabilitation: () => appel('GET', '/ressources/types-habilitation'),

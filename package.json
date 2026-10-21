@@ -17,6 +17,7 @@
     "modules/reglement/js",
     "modules/crm/js",
     "modules/authentification/js",
+    "modules/calendrier/js",
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",

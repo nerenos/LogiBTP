@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -39,6 +39,7 @@ graph TD
 | edition | socle, pdf-lib, @pdf-lib/fontkit, qrcode-generator ; polices Inter et Libre Barcode 39 (`js/polices`) | `LogiBTP.Editions` (Jint : même moteur JS que le navigateur), `LogiBTP.Editions.Web` | 090 | cœur (aperçu, paramétrage, source « document ») |
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 | crm (facultatif) | socle | `LogiBTP.Crm(.Web)` → Socle(.Web), HtmlSanitizer | 095 | cœur (éléments, individus, services ; écrans Suivi) |
+| calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
 
 Branchement serveur : `src/LogiBTP.Api/Program.cs` (`AddModule…` / `MapModule…` de chaque module, sociétés par
@@ -58,6 +59,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `creerFournisseurEntreprises` (`annuaire/annuaire.js`), fiche personne | `AddModuleEntreprisesFr` | — |
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
+| calendrier | `pages/parametres-calendriers.js` (`@logibtp/calendrier` : contrôles, aperçu des fériés) | `SpecialisationCalendrierBtp` (utilisations), `CalendriersBtp` (calendrier effectif d'un salarié ou d'un matériel, fermetures de son service) | 196 (`srv_cal_id`, `sal_cal_id`, `mat_cal_id`) |
 | authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur`) | — |
 | crm | `crm/*` (`PanneauSuivi` : onglet Suivi des documents et des fiches), `pages/crm.js`, `crm-note.js`, `crm-suivi.js`, `parametres-crm.js`, menu Suivi | `SpecialisationCrmBtp` | 194 (élément GED `crm_note`, catégorie `crm`) |
 | reglement | `pages/reglements.js` (`/reglements?sens=E|D&tiers=`), colonnes réglé / reste de l'onglet Gestion (`fiche-structure.js`) | `SpecialisationReglementBtp` (échéances `document_echeance`) | 175 (clé étrangère des pointages) |
@@ -125,6 +127,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | entreprises-fr | `correspondance.js` | `Correspondance.cs` | `01_correspondance` |
 | crm | `notes.js`, `rappels.js`, `demandes.js`, `validations.js` | `ReglesNote.cs`, `ReglesRappel.cs`, `ReglesDemande.cs`, `ReglesValidation.cs` | `01_note` à `04_validations` |
 | authentification | `regles.js` | `ReglesCompte.cs` | `01_pseudo` à `04_compte` |
+| calendrier | `calendrier.js` | `ReglesCalendrier.cs` | `01_feries`, `02_travail` |
 | cœur : ressources | `client/src/app/ressources/regles.js` | `LogiBTP.Domaine/Ressources/ReglesRessources.cs` | `tests/ressources` (`01_habilitations`, `02_missions`) |
 
 Les tests de chaque côté lisent les mêmes fichiers (`@logibtp/socle/testing` ↔ `LogiBTP.Socle.Testing.CasPartages`).

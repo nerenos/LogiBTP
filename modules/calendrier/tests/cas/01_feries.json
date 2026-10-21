@@ -1,0 +1,72 @@
+{
+  "description": "Jours fermés (paques, datesRegle, joursFermes ↔ ReglesCalendrier) : Pâques grégorienne, règles DATE, ANNUEL, NIEME, DERNIER, PAQUES, PERIODE ; réunion des règles sur une période (libellés dans l'ordre des règles) ; contrôle des règles.",
+  "paques": [
+    { "annee": 2000, "attendu": "2000-04-23" },
+    { "annee": 2024, "attendu": "2024-03-31" },
+    { "annee": 2025, "attendu": "2025-04-20" },
+    { "annee": 2026, "attendu": "2026-04-05" },
+    { "annee": 2027, "attendu": "2027-03-28" },
+    { "annee": 2038, "attendu": "2038-04-25" },
+    { "annee": 2285, "attendu": "2285-03-22" }
+  ],
+  "regles": [
+    { "nom": "date unique de l'année", "regle": { "regle": "DATE", "date": "2026-05-15" }, "annee": 2026, "attendu": ["2026-05-15"] },
+    { "nom": "date unique d'une autre année", "regle": { "regle": "DATE", "date": "2027-05-15" }, "annee": 2026, "attendu": [] },
+    { "nom": "1er mai", "regle": { "regle": "ANNUEL", "mois": 5, "jour": 1 }, "annee": 2026, "attendu": ["2026-05-01"] },
+    { "nom": "29 février d'une année non bissextile", "regle": { "regle": "ANNUEL", "mois": 2, "jour": 29 }, "annee": 2026, "attendu": [] },
+    { "nom": "29 février d'une année bissextile", "regle": { "regle": "ANNUEL", "mois": 2, "jour": 29 }, "annee": 2028, "attendu": ["2028-02-29"] },
+    { "nom": "1er jeudi de septembre", "regle": { "regle": "NIEME", "mois": 9, "jour": 4, "rang": 1 }, "annee": 2026, "attendu": ["2026-09-03"] },
+    { "nom": "2e lundi de septembre", "regle": { "regle": "NIEME", "mois": 9, "jour": 1, "rang": 2 }, "annee": 2026, "attendu": ["2026-09-14"] },
+    { "nom": "5e vendredi d'octobre", "regle": { "regle": "NIEME", "mois": 10, "jour": 5, "rang": 5 }, "annee": 2026, "attendu": ["2026-10-30"] },
+    { "nom": "5e lundi d'octobre inexistant", "regle": { "regle": "NIEME", "mois": 10, "jour": 1, "rang": 5 }, "annee": 2026, "attendu": [] },
+    { "nom": "dernier lundi de mai", "regle": { "regle": "DERNIER", "mois": 5, "jour": 1 }, "annee": 2026, "attendu": ["2026-05-25"] },
+    { "nom": "dernier dimanche de mars", "regle": { "regle": "DERNIER", "mois": 3, "jour": 7 }, "annee": 2026, "attendu": ["2026-03-29"] },
+    { "nom": "dernier mardi de mars (le 31)", "regle": { "regle": "DERNIER", "mois": 3, "jour": 2 }, "annee": 2026, "attendu": ["2026-03-31"] },
+    { "nom": "lundi de Pâques", "regle": { "regle": "PAQUES", "decalage": 1 }, "annee": 2026, "attendu": ["2026-04-06"] },
+    { "nom": "Vendredi saint", "regle": { "regle": "PAQUES", "decalage": -2 }, "annee": 2026, "attendu": ["2026-04-03"] },
+    { "nom": "Ascension", "regle": { "regle": "PAQUES", "decalage": 39 }, "annee": 2026, "attendu": ["2026-05-14"] },
+    { "nom": "lundi de Pentecôte", "regle": { "regle": "PAQUES", "decalage": 50 }, "annee": 2026, "attendu": ["2026-05-25"] },
+    { "nom": "période limitée à l'année", "regle": { "regle": "PERIODE", "du": "2026-12-28", "au": "2027-01-02" }, "annee": 2026, "attendu": ["2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31"] },
+    { "nom": "règle inconnue", "regle": { "regle": "XXX" }, "annee": 2026, "attendu": [] }
+  ],
+  "fermes": [
+    {
+      "nom": "fériés et fermeture de fin d'année, libellés réunis, règle inactive ignorée",
+      "regles": [
+        { "regle": "ANNUEL", "mois": 1, "jour": 1, "libelle": "Jour de l'an" },
+        { "regle": "ANNUEL", "mois": 12, "jour": 25, "libelle": "Noël" },
+        { "regle": "ANNUEL", "mois": 12, "jour": 26, "libelle": "Saint-Étienne (Alsace-Moselle)", "actif": false },
+        { "regle": "PERIODE", "du": "2026-12-24", "au": "2027-01-02", "libelle": "Fermeture de fin d'année" },
+        { "regle": "ANNUEL", "mois": 1, "jour": 1, "libelle": "Jour de l'an" }
+      ],
+      "du": "2026-12-23", "au": "2027-01-01",
+      "attendu": [
+        { "date": "2026-12-24", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-25", "libelles": ["Noël", "Fermeture de fin d'année"] },
+        { "date": "2026-12-26", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-27", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-28", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-29", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-30", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2026-12-31", "libelles": ["Fermeture de fin d'année"] },
+        { "date": "2027-01-01", "libelles": ["Jour de l'an", "Fermeture de fin d'année"] }
+      ]
+    },
+    {
+      "nom": "Pâques sur deux années",
+      "regles": [{ "regle": "PAQUES", "decalage": 1, "libelle": "Lundi de Pâques" }],
+      "du": "2025-01-01", "au": "2026-12-31",
+      "attendu": [{ "date": "2025-04-21", "libelles": ["Lundi de Pâques"] }, { "date": "2026-04-06", "libelles": ["Lundi de Pâques"] }]
+    }
+  ],
+  "controles": [
+    { "nom": "annuel correct", "regle": { "regle": "ANNUEL", "mois": 7, "jour": 14 }, "attendu": [] },
+    { "nom": "31 avril", "regle": { "regle": "ANNUEL", "mois": 4, "jour": 31 }, "attendu": ["FER_JOUR"] },
+    { "nom": "29 février accepté", "regle": { "regle": "ANNUEL", "mois": 2, "jour": 29 }, "attendu": [] },
+    { "nom": "mois 13", "regle": { "regle": "ANNUEL", "mois": 13, "jour": 1 }, "attendu": ["FER_MOIS"] },
+    { "nom": "rang 6 et jour 8", "regle": { "regle": "NIEME", "mois": 9, "jour": 8, "rang": 6 }, "attendu": ["FER_JOUR", "FER_RANG"] },
+    { "nom": "date manquante", "regle": { "regle": "DATE" }, "attendu": ["FER_DATE"] },
+    { "nom": "période inversée", "regle": { "regle": "PERIODE", "du": "2026-08-21", "au": "2026-08-03" }, "attendu": ["FER_PERIODE"] },
+    { "nom": "règle inconnue", "regle": { "regle": "LUNE" }, "attendu": ["FER_REGLE"] }
+  ]
+}

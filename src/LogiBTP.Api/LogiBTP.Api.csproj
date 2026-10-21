@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\modules\reglement\dotnet\LogiBTP.Reglements.Web\LogiBTP.Reglements.Web.csproj" />
     <ProjectReference Include="..\..\modules\crm\dotnet\LogiBTP.Crm.Web\LogiBTP.Crm.Web.csproj" />
     <ProjectReference Include="..\..\modules\authentification\dotnet\LogiBTP.Authentification.Web\LogiBTP.Authentification.Web.csproj" />
+    <ProjectReference Include="..\..\modules\calendrier\dotnet\LogiBTP.Calendrier.Web\LogiBTP.Calendrier.Web.csproj" />
     <ProjectReference Include="..\..\modules\entreprises-fr\dotnet\LogiBTP.EntreprisesFr.Web\LogiBTP.EntreprisesFr.Web.csproj" />
     <ProjectReference Include="..\..\modules\edition\dotnet\LogiBTP.Editions.Web\LogiBTP.Editions.Web.csproj" />
   </ItemGroup>

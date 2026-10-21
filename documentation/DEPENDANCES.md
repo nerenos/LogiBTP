@@ -45,6 +45,16 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Bibliotheque.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Bibliotheque.Tests |
 
+## modules/calendrier
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/calendrier/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Calendrier.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Calendrier.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Calendrier.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Calendrier.Tests |
+
 ## modules/crm
 
 | Type | Dépendance | Version | Licence | Usage |

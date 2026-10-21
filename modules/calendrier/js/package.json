@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/calendrier",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Calendrier LogiBTP : calendriers de travail, cycles de semaines, jours fériés par règles et fermetures, temps de travail",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

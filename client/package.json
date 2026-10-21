@@ -23,6 +23,7 @@
     "@logibtp/annuaire": "0.2.0",
     "@logibtp/authentification": "0.2.0",
     "@logibtp/bibliotheque": "0.2.0",
+    "@logibtp/calendrier": "0.2.0",
     "@logibtp/crm": "0.2.0",
     "@logibtp/document": "0.2.0",
     "@logibtp/edition": "0.2.0",
