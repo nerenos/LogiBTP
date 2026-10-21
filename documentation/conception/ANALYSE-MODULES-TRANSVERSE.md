@@ -55,6 +55,11 @@ fournisseur d'identité de l'entreprise, jetons pour le mobile et les bornes, r�
 action dans la ligne de `droit_document` / `droit_fiche`. À rapprocher du **module d'installation** déjà prévu
 (TACHES.md).
 
+**Première étape** (analyse détaillée : [ANALYSE-MODULE-AUTHENTIFICATION.md](ANALYSE-MODULE-AUTHENTIFICATION.md)) : une
+session utilisateur pour la saisie, liée à un **salarié** ou à un **intérimaire** (compte rattaché à son individu,
+cookie de session, profils existants) ; le module complet des droits suit (groupes, comptes de service, bornes,
+fournisseur d'identité).
+
 ## 3. Activation et désactivation des modules
 
 **Constat** : un module facultatif (Règlements) est aujourd'hui détecté par **l'existence de ses tables**
