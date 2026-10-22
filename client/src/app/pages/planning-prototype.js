@@ -49,7 +49,7 @@ export class PagePlanningPrototype extends PageBase {
         <label><input type="checkbox" data-adaptee checked> Hauteur adaptée</label>
         <button type="button" data-aujourdhui>Aujourd'hui</button>
         <span class="aide" data-mesures></span> <span class="aide" data-action></span></div>
-      <div class="zone-planning" data-planning></div></div>`;
+      <div class="zone-planning"><div data-planning></div></div></div>`;
     const debut = debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'SEMAINE') - 14 * 1440;
     const jours = 91;
     const t0 = performance.now();

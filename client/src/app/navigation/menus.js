@@ -134,7 +134,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'documents-ged', libelle: '&Documents', elements: [
+    code: 'documents-ged', libelle: '&GED', elements: [
       { code: 'ged', libelle: 'GED : tous les documents', icone: '📎', url: '/ged' },
       { code: 'coffre', libelle: 'Coffre-fort', icone: '🔒', url: '/ged?coffre=1', info: 'Documents administratifs scellés' },
       { code: 'ged-liste', libelle: 'Recherche de documents (liste)', icone: '🔎', url: L('ged') },

@@ -97,7 +97,7 @@ export class PagePlanning extends PageBase {
         <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
         <span class="aide" data-etat></span></div>
-      <div class="planning-corps"><div class="zone-planning" data-planning></div>
+      <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
         <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button><button type="button" data-onglet="alertes">Alertes <span data-nb-alertes></span></button></div>
           <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div><div data-panneau="alertes" hidden></div></aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
