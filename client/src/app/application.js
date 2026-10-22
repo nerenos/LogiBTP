@@ -276,6 +276,7 @@ export class Application {
       return this.enLigne ? `/document/${id}` : null;
     }
     if (type === 'document_ged') return `/ged/${id}`;
+    if (type === 'pointage') return `/pointage/saisie?pointage=${id}`;
     const f = ficheDeLigne({ id, type });
     return f ? `/fiche/${f.type}/${f.id}` : null;
   }

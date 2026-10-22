@@ -1,0 +1,94 @@
+{
+  "description": "Contrôles d'une semaine de pointages d'un salarié (controlerSemaine ↔ ReglesPointage.ControlerSemaine) : erreurs (chantier, type, durée, pas, plage, motif, chevauchement) et avertissements (chantier clos, amplitude du jour, de la semaine). Durées en minutes, heures en minutes depuis minuit.",
+  "cas": [
+    {
+      "nom": "semaine correcte",
+      "pointages": [
+        { "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 240, "debut": 480, "fin": 720 },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 2, "type_mo": "11", "minutes": 210, "debut": 780, "fin": 990 },
+        { "cle": "c", "date": "2026-10-20", "cha_id": 1, "type_mo": "11", "minutes": 450 }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "chantier et type manquants",
+      "pointages": [{ "cle": "a", "date": "2026-10-19", "minutes": 60 }],
+      "attendu": [{ "code": "POI_CHANTIER", "niveau": "ERREUR", "cle": "a" }, { "code": "POI_TYPE", "niveau": "ERREUR", "cle": "a" }]
+    },
+    {
+      "nom": "durées invalides et pas",
+      "parametres": { "pas_minutes": 15 },
+      "pointages": [
+        { "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 0 },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 1500 },
+        { "cle": "c", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 50 }
+      ],
+      "attendu": [
+        { "code": "POI_MINUTES", "niveau": "ERREUR", "cle": "a" },
+        { "code": "POI_MINUTES", "niveau": "ERREUR", "cle": "b" },
+        { "code": "POI_PAS", "niveau": "ERREUR", "cle": "c" }
+      ]
+    },
+    {
+      "nom": "pas de 10 minutes, sans contrôle de pas à 0",
+      "parametres": { "pas_minutes": 0 },
+      "pointages": [{ "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 53 }],
+      "attendu": []
+    },
+    {
+      "nom": "plage incohérente",
+      "pointages": [
+        { "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 240, "debut": 480, "fin": 700 },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 60, "debut": 780 },
+        { "cle": "c", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 60, "debut": 900, "fin": 840 }
+      ],
+      "attendu": [
+        { "code": "POI_PLAGE", "niveau": "ERREUR", "cle": "a" },
+        { "code": "POI_PLAGE", "niveau": "ERREUR", "cle": "b" },
+        { "code": "POI_PLAGE", "niveau": "ERREUR", "cle": "c" }
+      ]
+    },
+    {
+      "nom": "chevauchement le même jour seulement",
+      "pointages": [
+        { "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 240, "debut": 480, "fin": 720 },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 2, "type_mo": "11", "minutes": 120, "debut": 660, "fin": 780 },
+        { "cle": "c", "date": "2026-10-20", "cha_id": 2, "type_mo": "11", "minutes": 120, "debut": 660, "fin": 780 },
+        { "cle": "d", "date": "2026-10-19", "cha_id": 2, "type_mo": "11", "minutes": 60, "debut": 720, "fin": 780 }
+      ],
+      "attendu": [
+        { "code": "POI_CHEVAUCHEMENT", "niveau": "ERREUR", "cle": "b" },
+        { "code": "POI_CHEVAUCHEMENT", "niveau": "ERREUR", "cle": "d" }
+      ]
+    },
+    {
+      "nom": "non-conformité sans motif, chantier clos",
+      "pointages": [
+        { "cle": "a", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 60, "non_conformite": true, "motif": " " },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 3, "type_mo": "11", "minutes": 60, "chantier_clos": true },
+        { "cle": "c", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 60, "non_conformite": true, "motif": "Plan erroné" }
+      ],
+      "attendu": [
+        { "code": "POI_MOTIF", "niveau": "ERREUR", "cle": "a" },
+        { "code": "POI_CHANTIER_CLOS", "niveau": "AVERTISSEMENT", "cle": "b" }
+      ]
+    },
+    {
+      "nom": "amplitudes du jour et de la semaine",
+      "parametres": { "amplitude_jour": 600, "amplitude_semaine": 2880 },
+      "pointages": [
+        { "cle": "a", "date": "2026-10-20", "cha_id": 1, "type_mo": "11", "minutes": 660 },
+        { "cle": "b", "date": "2026-10-19", "cha_id": 1, "type_mo": "11", "minutes": 600 },
+        { "cle": "c", "date": "2026-10-21", "cha_id": 1, "type_mo": "11", "minutes": 600 },
+        { "cle": "d", "date": "2026-10-22", "cha_id": 1, "type_mo": "11", "minutes": 600 },
+        { "cle": "e", "date": "2026-10-23", "cha_id": 1, "type_mo": "11", "minutes": 480 },
+        { "cle": "f", "date": "2026-10-23", "cha_id": 1, "type_mo": "11", "minutes": 0 }
+      ],
+      "attendu": [
+        { "code": "POI_MINUTES", "niveau": "ERREUR", "cle": "f" },
+        { "code": "POI_JOUR", "niveau": "AVERTISSEMENT", "date": "2026-10-20" },
+        { "code": "POI_SEMAINE", "niveau": "AVERTISSEMENT" }
+      ]
+    }
+  ]
+}

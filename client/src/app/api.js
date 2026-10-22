@@ -68,6 +68,19 @@ export const api = {
     imposerEtat: (type, id, srv, e) => appel('PUT', `/execution/elements/${type}/${encodeURIComponent(id)}/services/${srv}/etat`, e),
   },
   // Module Notifications : boîte de l'utilisateur de la session, compteur du bandeau, préférences.
+  // Module Pointage : paramètres, sous-types, salariés d'un service et leurs totaux, semaine d'un salarié.
+  pointage: {
+    parametres: () => appel('GET', '/pointage/parametres'),
+    enregistrerParametres: (p) => appel('PUT', '/pointage/parametres', p),
+    sousTypes: () => appel('GET', '/pointage/sous-types'),
+    enregistrerSousTypes: (l) => appel('PUT', '/pointage/sous-types', l),
+    referentiels: () => appel('GET', '/pointage/referentiels'),
+    chantiers: (recherche = '') => appel('GET', `/pointage/chantiers${recherche ? `?recherche=${encodeURIComponent(recherche)}` : ''}`),
+    salaries: (f = {}) => appel('GET', `/pointage/salaries?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    position: (id) => appel('GET', `/pointage/pointages/${id}/position`),
+    semaine: (salarie, lundi) => appel('GET', `/pointage/semaine/${salarie}/${lundi}`),
+    enregistrerSemaine: (salarie, lundi, s) => appel('PUT', `/pointage/semaine/${salarie}/${lundi}`, s),
+  },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),
     compteur: () => appel('GET', '/notifications/compteur'),

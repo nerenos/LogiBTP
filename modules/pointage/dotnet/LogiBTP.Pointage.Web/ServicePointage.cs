@@ -1,0 +1,320 @@
+using LogiBTP.Socle.Web;
+using Microsoft.EntityFrameworkCore;
+
+namespace LogiBTP.Pointage.Web;
+
+public class ParametreEntite
+{
+    public short PpaId { get; set; } = 1;
+    public string PpaOrdreNom { get; set; } = "NP";
+    public short PpaPasMinutes { get; set; } = 15;
+    public short PpaAmplitudeJour { get; set; } = 600;
+    public short PpaAmplitudeSemaine { get; set; } = 2880;
+    public string PpaValidation { get; set; } = "SIMPLE";
+    public string PpaBlocage { get; set; } = "SEMAINE";
+    public bool PpaInterimImputes { get; set; }
+    public string? PpaMajPar { get; set; }
+    public DateTimeOffset PpaMajLe { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public class SousTypeEntite
+{
+    public string PstCode { get; set; } = "";
+    public string PstLibelle { get; set; } = "";
+    public bool PstProductif { get; set; } = true;
+    public bool PstNonConformite { get; set; }
+    public int PstOrdre { get; set; }
+    public bool PstActif { get; set; } = true;
+}
+
+public class PointageEntite
+{
+    public long PoiId { get; set; }
+    public string PoiCouche { get; set; } = Couches.Saisie;
+    public long? PoiOrigineId { get; set; }
+    public int PoiSalId { get; set; }
+    public DateOnly PoiDate { get; set; }
+    public int PoiChaId { get; set; }
+    public long? PoiEntId { get; set; }
+    public long? PoiLigId { get; set; }
+    public int PoiTypeMo { get; set; }
+    public string? PoiSousType { get; set; }
+    public short? PoiDebut { get; set; }
+    public short? PoiFin { get; set; }
+    public short PoiMinutes { get; set; }
+    public string? PoiMotif { get; set; }
+    public string? PoiCommentaire { get; set; }
+    public Guid? PoiGroupe { get; set; }
+    public long? PoiTacId { get; set; }
+    public string PoiSaisiPar { get; set; } = "";
+    public DateTimeOffset PoiSaisiLe { get; set; } = DateTimeOffset.UtcNow;
+    public string? PoiAppareil { get; set; }
+    public int PoiVersion { get; set; } = 1;
+}
+
+public static class Couches
+{
+    public const string Saisie = "SAISIE";
+    public const string Valide = "VALIDE";
+}
+
+public class PointageDbContext(DbContextOptions<PointageDbContext> options) : DbContext(options)
+{
+    public DbSet<ParametreEntite> Parametres => Set<ParametreEntite>();
+    public DbSet<SousTypeEntite> SousTypes => Set<SousTypeEntite>();
+    public DbSet<PointageEntite> Pointages => Set<PointageEntite>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        b.Entity<ParametreEntite>().ToTable("poi_parametre").HasKey(x => x.PpaId);
+        b.Entity<SousTypeEntite>().ToTable("poi_sous_type").HasKey(x => x.PstCode);
+        b.Entity<PointageEntite>().ToTable("poi_pointage").HasKey(x => x.PoiId);
+    }
+}
+
+public sealed record ParametresDto(string OrdreNom, int PasMinutes, int AmplitudeJour, int AmplitudeSemaine, string Validation, string Blocage, bool InterimImputes);
+public sealed record SousTypeDto(string Code, string Libelle, bool Productif, bool NonConformite, int Ordre, bool Actif);
+
+/// <summary>Salarié (ou intérimaire) pointable, fourni par l'application.</summary>
+public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire);
+/// <summary>Chantier (ou chantier interne) pointable.</summary>
+public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne);
+/// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>
+public sealed record TypeMoPointage(int Id, string Code, string Libelle, int? SrvId);
+/// <summary>Ordre d'exécution d'un chantier sur lequel pointer (module Exécution actif).</summary>
+public sealed record OrdrePointage(long Id, int ChaId, string? Numero, string? Objet, string? Type);
+public sealed record ServicePointageDto(int Id, string Code, string Libelle, int? ParentId);
+public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCollection<int>? Ids = null, int Taille = 200);
+
+/// <summary>Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau).</summary>
+public sealed record PointageSaisi(long? Id, DateOnly Date, int? ChaId, long? EntId, int? TypeMo, string? SousType, int Minutes,
+    int? Debut, int? Fin, string? Motif, string? Commentaire);
+public sealed record SemaineSaisie(List<PointageSaisi> Pointages);
+
+/// <summary>
+/// Spécialisation par l'application (méthode patron) : salariés, chantiers (internes compris), types de main-d'œuvre,
+/// ordres, services et droit de saisie pour un salarié.
+/// </summary>
+public abstract class SpecialisationPointage
+{
+    public abstract Task<List<SalariePointage>> SalariesAsync(PointageDbContext db, FiltreSalaries f, CancellationToken ct);
+    public abstract Task<List<ChantierPointage>> ChantiersAsync(PointageDbContext db, string? recherche, IReadOnlyCollection<int>? ids, CancellationToken ct);
+    public abstract Task<List<TypeMoPointage>> TypesMoAsync(PointageDbContext db, CancellationToken ct);
+    public abstract Task<List<ServicePointageDto>> ServicesAsync(PointageDbContext db, CancellationToken ct);
+    public virtual Task<List<OrdrePointage>> OrdresAsync(PointageDbContext db, IReadOnlyCollection<int> chantiers, CancellationToken ct) => Task.FromResult(new List<OrdrePointage>());
+    /// <summary>Vrai si l'utilisateur peut saisir ou consulter les pointages du salarié.</summary>
+    public abstract Task<bool> PeutSaisirAsync(PointageDbContext db, Utilisateur u, int salarie, CancellationToken ct);
+}
+
+/// <summary>
+/// Paramètres, sous-types, saisie au bureau (semaine d'un salarié : contrôles <see cref="ReglesPointage"/>, couche
+/// SAISIE) et totaux des salariés d'un service.
+/// </summary>
+public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage specialisation)
+{
+    private static void Admin(Utilisateur u)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+    }
+
+    public async Task<ParametresDto> ParametresAsync(CancellationToken ct)
+    {
+        var p = await db.Parametres.AsNoTracking().FirstOrDefaultAsync(ct) ?? new ParametreEntite();
+        return new(p.PpaOrdreNom, p.PpaPasMinutes, p.PpaAmplitudeJour, p.PpaAmplitudeSemaine, p.PpaValidation, p.PpaBlocage, p.PpaInterimImputes);
+    }
+
+    public async Task<ParametresDto> EnregistrerParametresAsync(ParametresDto s, Utilisateur u, CancellationToken ct)
+    {
+        Admin(u);
+        if (s.OrdreNom is not ("NP" or "PN") || s.Validation is not ("SIMPLE" or "DOUBLE") || s.Blocage is not ("JOUR" or "SEMAINE")
+            || s.PasMinutes is < 0 or > 60 || s.AmplitudeJour is < 0 or > 1440 || s.AmplitudeSemaine is < 0 or > 10080)
+            throw ExceptionMetier.Invalide("POI_PARAMETRES", "Paramètres du pointage invalides");
+        var p = await db.Parametres.FirstOrDefaultAsync(ct);
+        if (p is null) db.Parametres.Add(p = new ParametreEntite());
+        p.PpaOrdreNom = s.OrdreNom;
+        p.PpaPasMinutes = (short)s.PasMinutes;
+        p.PpaAmplitudeJour = (short)s.AmplitudeJour;
+        p.PpaAmplitudeSemaine = (short)s.AmplitudeSemaine;
+        p.PpaValidation = s.Validation;
+        p.PpaBlocage = s.Blocage;
+        p.PpaInterimImputes = s.InterimImputes;
+        p.PpaMajPar = u.Code;
+        p.PpaMajLe = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return await ParametresAsync(ct);
+    }
+
+    public async Task<List<SousTypeDto>> SousTypesAsync(CancellationToken ct) =>
+        (await db.SousTypes.AsNoTracking().OrderBy(s => s.PstOrdre).ThenBy(s => s.PstCode).ToListAsync(ct))
+        .Select(s => new SousTypeDto(s.PstCode, s.PstLibelle, s.PstProductif, s.PstNonConformite, s.PstOrdre, s.PstActif)).ToList();
+
+    /// <summary>Remplace la liste ; un sous-type retiré et utilisé passe inactif, sinon il est supprimé.</summary>
+    public async Task<List<SousTypeDto>> EnregistrerSousTypesAsync(List<SousTypeDto> l, Utilisateur u, CancellationToken ct)
+    {
+        Admin(u);
+        if (l.Any(s => string.IsNullOrWhiteSpace(s.Code) || string.IsNullOrWhiteSpace(s.Libelle)))
+            throw ExceptionMetier.Invalide("POI_SOUS_TYPE", "Code et libellé obligatoires");
+        var codes = l.Select(s => s.Code.Trim().ToUpperInvariant()).ToList();
+        if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("POI_SOUS_TYPE", "Codes en double");
+        var existants = await db.SousTypes.ToListAsync(ct);
+        foreach (var s in l)
+        {
+            var code = s.Code.Trim().ToUpperInvariant();
+            var e = existants.FirstOrDefault(x => x.PstCode == code);
+            if (e is null) db.SousTypes.Add(e = new SousTypeEntite { PstCode = code });
+            e.PstLibelle = s.Libelle.Trim();
+            e.PstProductif = s.Productif;
+            e.PstNonConformite = s.NonConformite;
+            e.PstOrdre = s.Ordre;
+            e.PstActif = s.Actif;
+        }
+        foreach (var e in existants.Where(x => !codes.Contains(x.PstCode)))
+        {
+            if (await db.Pointages.AnyAsync(p => p.PoiSousType == e.PstCode, ct)) e.PstActif = false;
+            else db.SousTypes.Remove(e);
+        }
+        await db.SaveChangesAsync(ct);
+        return await SousTypesAsync(ct);
+    }
+
+    /// <summary>Référentiels de la saisie : paramètres, types de MO, sous-types actifs, services.</summary>
+    public async Task<object> ReferentielsAsync(CancellationToken ct) => new
+    {
+        parametres = await ParametresAsync(ct),
+        types_mo = await specialisation.TypesMoAsync(db, ct),
+        sous_types = (await SousTypesAsync(ct)).Where(s => s.Actif).ToList(),
+        services = await specialisation.ServicesAsync(db, ct),
+    };
+
+    public Task<List<ChantierPointage>> ChantiersAsync(string? recherche, CancellationToken ct) => specialisation.ChantiersAsync(db, recherche, null, ct);
+
+    /// <summary>
+    /// Salariés d'un service (ou d'une recherche) avec leurs minutes saisies par jour de la semaine (couche validée si
+    /// elle existe, sinon saisie).
+    /// </summary>
+    public async Task<object> SalariesAsync(int? service, string? recherche, DateOnly lundi, CancellationToken ct)
+    {
+        var salaries = await specialisation.SalariesAsync(db, new FiltreSalaries(service, recherche), ct);
+        var ids = salaries.Select(s => s.Id).ToList();
+        var dimanche = lundi.AddDays(6);
+        var pointages = await db.Pointages.AsNoTracking()
+            .Where(p => ids.Contains(p.PoiSalId) && p.PoiDate >= lundi && p.PoiDate <= dimanche)
+            .Select(p => new { p.PoiId, p.PoiSalId, p.PoiDate, p.PoiCouche, p.PoiOrigineId, p.PoiMinutes }).ToListAsync(ct);
+        var remplaces = pointages.Where(p => p.PoiCouche == Couches.Valide && p.PoiOrigineId is not null).Select(p => p.PoiOrigineId!.Value).ToHashSet();
+        var retenus = pointages.Where(p => p.PoiCouche == Couches.Valide || !remplaces.Contains(p.PoiId)).ToList();
+        return salaries.Select(s => new
+        {
+            salarie = s,
+            jours = Enumerable.Range(0, 7).Select(i => retenus.Where(p => p.PoiSalId == s.Id && p.PoiDate == lundi.AddDays(i)).Sum(p => p.PoiMinutes)).ToList(),
+        }).ToList();
+    }
+
+    private async Task<SalariePointage> SalarieAsync(int salarie, Utilisateur u, CancellationToken ct)
+    {
+        var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).FirstOrDefault()
+            ?? throw ExceptionMetier.Introuvable($"Salarié {salarie}");
+        if (!u.EstAdmin && !await specialisation.PeutSaisirAsync(db, u, salarie, ct)) throw ExceptionMetier.AccesRefuse("POINTER");
+        return s;
+    }
+
+    private static PointageControle Controle(PointageEntite p, IReadOnlyDictionary<int, ChantierPointage> chantiers, IReadOnlyDictionary<string, SousTypeEntite> st) =>
+        new(p.PoiId.ToString(), p.PoiDate.ToString("yyyy-MM-dd"), p.PoiChaId, p.PoiTypeMo.ToString(), p.PoiMinutes, p.PoiDebut, p.PoiFin,
+            p.PoiSousType is not null && st.TryGetValue(p.PoiSousType, out var s) && s.PstNonConformite, p.PoiMotif,
+            chantiers.TryGetValue(p.PoiChaId, out var c) && c.Clos);
+
+    /// <summary>Salarié et lundi de la semaine d'un pointage (ouverture depuis la liste).</summary>
+    public async Task<object> PositionAsync(long id, CancellationToken ct)
+    {
+        var p = await db.Pointages.AsNoTracking().FirstOrDefaultAsync(x => x.PoiId == id, ct) ?? throw ExceptionMetier.Introuvable($"Pointage {id}");
+        return new { salarie = p.PoiSalId, lundi = ReglesPointage.LundiDe(p.PoiDate) };
+    }
+
+    /// <summary>Semaine d'un salarié : pointages saisis, chantiers et ordres concernés, chantiers récents, contrôles.</summary>
+    public async Task<object> SemaineAsync(int salarie, DateOnly lundi, Utilisateur u, CancellationToken ct)
+    {
+        lundi = ReglesPointage.LundiDe(lundi);
+        var s = await SalarieAsync(salarie, u, ct);
+        var dimanche = lundi.AddDays(6);
+        var pointages = await db.Pointages.AsNoTracking()
+            .Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate >= lundi && p.PoiDate <= dimanche)
+            .OrderBy(p => p.PoiDate).ThenBy(p => p.PoiDebut).ThenBy(p => p.PoiId).ToListAsync(ct);
+        var recents = await db.Pointages.AsNoTracking()
+            .Where(p => p.PoiSalId == salarie && p.PoiDate >= lundi.AddDays(-28) && p.PoiDate < lundi)
+            .GroupBy(p => p.PoiChaId).OrderByDescending(g => g.Max(p => p.PoiDate)).Select(g => g.Key).Take(8).ToListAsync(ct);
+        var idsChantiers = pointages.Select(p => p.PoiChaId).Concat(recents).Distinct().ToList();
+        var chantiers = (await specialisation.ChantiersAsync(db, null, idsChantiers, ct)).ToDictionary(c => c.Id);
+        var st = await db.SousTypes.AsNoTracking().ToDictionaryAsync(x => x.PstCode, ct);
+        var p0 = await ParametresAsync(ct);
+        var controles = ReglesPointage.ControlerSemaine(new ParametresControle(p0.PasMinutes, p0.AmplitudeJour, p0.AmplitudeSemaine),
+            pointages.Select(p => Controle(p, chantiers, st)).ToList());
+        var valides = await db.Pointages.AsNoTracking()
+            .AnyAsync(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Valide && p.PoiDate >= lundi && p.PoiDate <= dimanche, ct);
+        return new
+        {
+            salarie = s, lundi, pointages = pointages.Select(p => new
+            {
+                id = p.PoiId, date = p.PoiDate, cha_id = p.PoiChaId, ent_id = p.PoiEntId, type_mo = p.PoiTypeMo, sous_type = p.PoiSousType,
+                minutes = p.PoiMinutes, debut = p.PoiDebut, fin = p.PoiFin, motif = p.PoiMotif, commentaire = p.PoiCommentaire,
+                saisi_par = p.PoiSaisiPar, saisi_le = p.PoiSaisiLe,
+            }),
+            chantiers = chantiers.Values, recents,
+            ordres = await specialisation.OrdresAsync(db, idsChantiers, ct),
+            controles, avec_validation = valides,
+        };
+    }
+
+    /// <summary>
+    /// Enregistre la semaine saisie d'un salarié (couche SAISIE) : pointages absents supprimés, modifiés, ajoutés ;
+    /// erreurs des contrôles refusées (422 avec la liste), avertissements renvoyés.
+    /// </summary>
+    public async Task<object> EnregistrerSemaineAsync(int salarie, DateOnly lundi, SemaineSaisie s, Utilisateur u, CancellationToken ct)
+    {
+        lundi = ReglesPointage.LundiDe(lundi);
+        await SalarieAsync(salarie, u, ct);
+        var dimanche = lundi.AddDays(6);
+        if (s.Pointages.Any(p => p.Date < lundi || p.Date > dimanche)) throw ExceptionMetier.Invalide("POI_SEMAINE_HORS", "Pointage hors de la semaine");
+        var chantiers = (await specialisation.ChantiersAsync(db, null, s.Pointages.Where(p => p.ChaId is not null).Select(p => p.ChaId!.Value).Distinct().ToList(), ct))
+            .ToDictionary(c => c.Id);
+        if (s.Pointages.Any(p => p.ChaId is int c && !chantiers.ContainsKey(c))) throw ExceptionMetier.Invalide("POI_CHANTIER", "Chantier inconnu");
+        var st = await db.SousTypes.AsNoTracking().ToDictionaryAsync(x => x.PstCode, ct);
+        if (s.Pointages.Any(p => p.SousType is not null && !st.ContainsKey(p.SousType))) throw ExceptionMetier.Invalide("POI_SOUS_TYPE", "Sous-type inconnu");
+        var p0 = await ParametresAsync(ct);
+        var controles = ReglesPointage.ControlerSemaine(new ParametresControle(p0.PasMinutes, p0.AmplitudeJour, p0.AmplitudeSemaine),
+            s.Pointages.Select((p, i) => new PointageControle(i.ToString(), p.Date.ToString("yyyy-MM-dd"), p.ChaId, p.TypeMo?.ToString(), p.Minutes, p.Debut, p.Fin,
+                p.SousType is not null && st[p.SousType].PstNonConformite, p.Motif, p.ChaId is int c && chantiers[c].Clos)).ToList());
+        if (ReglesPointage.Bloquant(controles))
+            throw ExceptionMetier.Invalide(controles.First(c => c.Niveau == ReglesPointage.Erreur).Code,
+                string.Join(" · ", controles.Where(c => c.Niveau == ReglesPointage.Erreur).Select(c => ReglesPointage.Messages[c.Code]).Distinct()), controles);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var existants = await db.Pointages.Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate >= lundi && p.PoiDate <= dimanche).ToListAsync(ct);
+        var gardes = s.Pointages.Where(p => p.Id is not null).Select(p => p.Id!.Value).ToHashSet();
+        if (gardes.Any(id => existants.All(e => e.PoiId != id))) throw ExceptionMetier.Conflit("POI_MODIFIE", "Pointage introuvable dans la semaine : relire la semaine");
+        db.Pointages.RemoveRange(existants.Where(e => !gardes.Contains(e.PoiId)));
+        foreach (var p in s.Pointages)
+        {
+            var e = p.Id is long id ? existants.First(x => x.PoiId == id) : null;
+            var nouveau = e is null;
+            e ??= new PointageEntite { PoiSalId = salarie, PoiCouche = Couches.Saisie };
+            var change = nouveau || e.PoiDate != p.Date || e.PoiChaId != p.ChaId || e.PoiEntId != p.EntId || e.PoiTypeMo != p.TypeMo || e.PoiSousType != p.SousType
+                || e.PoiMinutes != p.Minutes || e.PoiDebut != p.Debut || e.PoiFin != p.Fin || e.PoiMotif != p.Motif || e.PoiCommentaire != p.Commentaire;
+            if (!change) continue;
+            e.PoiDate = p.Date;
+            e.PoiChaId = p.ChaId!.Value;
+            e.PoiEntId = p.EntId;
+            e.PoiTypeMo = p.TypeMo!.Value;
+            e.PoiSousType = p.SousType;
+            e.PoiMinutes = (short)p.Minutes;
+            e.PoiDebut = (short?)p.Debut;
+            e.PoiFin = (short?)p.Fin;
+            e.PoiMotif = string.IsNullOrWhiteSpace(p.Motif) ? null : p.Motif.Trim();
+            e.PoiCommentaire = string.IsNullOrWhiteSpace(p.Commentaire) ? null : p.Commentaire;
+            e.PoiSaisiPar = u.Code;
+            e.PoiSaisiLe = DateTimeOffset.UtcNow;
+            if (nouveau) db.Pointages.Add(e);
+            else e.PoiVersion++;
+        }
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await SemaineAsync(salarie, lundi, u, ct);
+    }
+}

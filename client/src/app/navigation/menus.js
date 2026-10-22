@@ -83,6 +83,16 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'pointage', libelle: '&Pointage', module: 'pointage', elements: [
+      { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
+      { code: 'pointages', libelle: 'Liste des pointages', icone: '📋', url: '/liste/pointages?vue=1010' },
+      { code: 'pointages-nc', libelle: 'Non-conformités', icone: '⚠', url: '/liste/pointages?vue=1011' },
+      { code: 'pointages-improductifs', libelle: 'Temps improductif', icone: '⏸', url: '/liste/pointages?vue=1012' },
+      { separateur: true },
+      { code: 'parametrage-pointage', libelle: 'Paramètres du pointage…', icone: '⚙', url: '/parametres/pointage' },
+    ],
+  },
+  {
     code: 'suivi', libelle: '&Suivi', module: 'crm', elements: [
       { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
       { code: 'crm-rappels', libelle: 'Mes rappels', icone: '⏰', url: '/crm/rappels', info: 'Rouge : échu ou imminent · orange : bientôt · vert : à venir' },
@@ -162,6 +172,7 @@ export function menus(app) {
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
         { libelle: 'Suivi (CRM) : types de notes, rappels…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
+        { libelle: 'Pointage : pas, validation, sous-types…', icone: '⏱', url: '/parametres/pointage', module: 'pointage' },
         { libelle: 'Exécution : modèles de parcours…', icone: '🧭', url: '/parametres/execution', module: 'execution' },
         { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },

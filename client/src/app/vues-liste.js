@@ -31,6 +31,17 @@ export const SOURCES_LISTE = {
       ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],
     ],
   },
+  // Pointages du module Pointage (db/199 : v_liste_pointages, couches saisie et validée).
+  pointages: {
+    libelle: "Pointages (main-d'œuvre)", vue: 'v_liste_pointages', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['date_pointage', 'date'], ['salarie', 'text'], ['matricule', 'text'], ['salarie_id', 'integer'],
+      ['interimaire', 'boolean'], ['service', 'text'], ['service_id', 'integer'], ['chantier', 'text'], ['chantier_libelle', 'text'],
+      ['chantier_id', 'integer'], ['interne', 'boolean'], ['ordre', 'text'], ['type_mo', 'text'], ['sous_type', 'text'], ['productif', 'boolean'],
+      ['heures', 'numeric'], ['couche', 'text'], ['motif', 'text'], ['commentaire', 'text'], ['saisi_par', 'text'],
+      ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'],
+    ],
+  },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
   projets: {
     libelle: 'Projets (chiffrage)', vue: 'v_liste_projets', colonne_id: 'id', colonne_type: 'type_element',
@@ -161,6 +172,7 @@ export const THEMES_LISTE = [
     thl_code: 'ordres', thl_libelle: 'Ordres (exécution)', thl_icone: '🛠', thl_ordre: 38,
     thl_types: [{ code: 'E_OE', libelle: "Ordre d'exécution" }, { code: 'E_PO', libelle: 'Ordre de pose' }, { code: 'E_DAP', libelle: "Demande d'approvisionnement" }],
   },
+  { thl_code: 'pointages', thl_libelle: 'Pointages', thl_icone: '⏱', thl_ordre: 39, thl_types: [{ code: 'pointage', libelle: 'Pointage' }] },
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
   { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
   { thl_code: 'marches', thl_libelle: 'Marchés', thl_icone: '📜', thl_ordre: 14, thl_types: [{ code: 'marche', libelle: 'Marché' }] },
@@ -587,9 +599,46 @@ const vueOrdres = (vli_id, vli_nom, filtres = []) => ({
 });
 VUES_LISTE.push(
   vueOrdres(1000, 'Tous les ordres'),
-  vueOrdres(1001, "Ordres d'exécution", [{ colonne: 'type_element', op: 'egal', valeur: 'E_OE' }]),
-  vueOrdres(1002, 'Ordres de pose', [{ colonne: 'type_element', op: 'egal', valeur: 'E_PO' }]),
-  vueOrdres(1003, "Demandes d'approvisionnement", [{ colonne: 'type_element', op: 'egal', valeur: 'E_DAP' }]),
-  vueOrdres(1004, 'Ordres bloqués', [{ colonne: 'etat_execution', op: 'egal', valeur: 'BLOQUE' }]),
+  vueOrdres(1001, "Ordres d'exécution", [{ colonne: 'type_element', op: '=', valeur: 'E_OE' }]),
+  vueOrdres(1002, 'Ordres de pose', [{ colonne: 'type_element', op: '=', valeur: 'E_PO' }]),
+  vueOrdres(1003, "Demandes d'approvisionnement", [{ colonne: 'type_element', op: '=', valeur: 'E_DAP' }]),
+  vueOrdres(1004, 'Ordres bloqués', [{ colonne: 'etat_execution', op: '=', valeur: 'BLOQUE' }]),
   vueOrdres(1005, 'Ordres en retard', [{ colonne: 'en_retard', op: 'vrai' }]),
+);
+
+// Pointages (module Pointage, identifiants 1010 et suivants).
+const vuePointages = (vli_id, vli_nom, filtres = []) => ({
+  vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
+  definition: {
+    theme: 'pointages',
+    source: { mode: 'vue', vue: 'pointages', colonne_id: 'id', colonne_type: 'type_element' },
+    filtres,
+    colonnes: [
+      col('date_pointage', 'Date', { format: 'date', ...fixe(92), recherche: false }),
+      col('salarie', 'Salarié', { ...prop(2, 130), style: { gras: true } }),
+      col('matricule', 'Matricule', { ...fixe(80), masquee: true }),
+      col('service', 'Service', { ...prop(1.2, 90) }),
+      col('chantier', 'Chantier', { ...fixe(110) }),
+      col('chantier_libelle', 'Libellé du chantier', { ...prop(2, 120) }),
+      col('ordre', 'Ordre', { ...fixe(110) }),
+      col('type_mo', 'Type de MO', { ...prop(1.3, 100) }),
+      col('sous_type', 'Sous-type', { ...prop(1, 90) }),
+      col('heures', 'Heures', { ...nombre(2), ...fixe(70), recherche: false }),
+      col('motif', 'Motif', { ...prop(1.5, 100), style: { couleur: '#b42318' } }),
+      col('commentaire', 'Commentaire', { ...prop(2, 100), masquee: true }),
+      col('couche', 'Couche', { ...fixe(70), masquee: true }),
+      col('saisi_par', 'Saisi par', { ...fixe(90), masquee: true }),
+      col('interimaire', 'Intérim', { format: 'coche', ...fixe(60), masquee: true }),
+      col('productif', 'Productif', { format: 'coche', ...fixe(60), masquee: true }),
+    ],
+    segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'type_mo', titre: 'Type de MO' }, { colonne: 'sous_type', titre: 'Sous-type' }],
+    tri: [{ colonne: 'date_pointage', sens: 'desc' }, { colonne: 'salarie', sens: 'asc' }],
+    lignes: 'multi',
+    taille_lot: 100,
+  },
+});
+VUES_LISTE.push(
+  vuePointages(1010, 'Pointages saisis', [{ colonne: 'couche', op: '=', valeur: 'SAISIE' }]),
+  vuePointages(1011, 'Non-conformités', [{ colonne: 'motif', op: 'nonvide' }]),
+  vuePointages(1012, 'Temps improductif', [{ colonne: 'productif', op: 'faux' }]),
 );

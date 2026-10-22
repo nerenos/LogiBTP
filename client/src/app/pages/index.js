@@ -37,6 +37,7 @@ import { PageHabilitations } from './habilitations.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
 import { PageNotifications, PageParametresNotifications } from './notifications.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution } from './execution.js';
+import { PageSaisiePointage, PageParametresPointage } from './pointage.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -59,6 +60,8 @@ export const ROUTES = [
   { nom: 'execution-synthese', chemin: '/execution/synthese', page: PageSyntheseExecution, titre: "Synthèse de l'exécution" },
   { nom: 'execution-chantier', chemin: '/execution/chantier/:id', page: PageExecutionChantier, titre: 'Exécution du chantier' },
   { nom: 'parametres-execution', chemin: '/parametres/execution', page: PageParametresExecution, titre: 'Modèles de parcours' },
+  { nom: 'pointage-saisie', chemin: '/pointage/saisie', page: PageSaisiePointage, titre: 'Saisie des pointages' },
+  { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: 'Paramètres du pointage' },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: 'Notifications' },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: 'Préférences de notification' },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },

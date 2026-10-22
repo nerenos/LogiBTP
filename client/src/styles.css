@@ -451,3 +451,27 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-fil-photos { display: flex; gap: .4rem; margin-top: .4rem; align-items: center; }
 .crm-fil-photos img { width: 9rem; height: 6.5rem; object-fit: cover; border-radius: .3rem; border: 1px solid var(--bord); }
 .crm-fil-reste { display: inline-flex; width: 4rem; height: 6.5rem; align-items: center; justify-content: center; border: 1px dashed var(--bord); border-radius: .3rem; font-size: 1.2em; }
+
+/* Exécution (lot 2) : synthèse et vue d'un chantier. */
+.page-execution { max-width: none; }
+.synthese-execution td.centre { text-align: center; cursor: context-menu; }
+.pastille-etat.manuel { text-decoration: underline dotted; }
+.pastille-etat.ecart { outline: 1px dashed #b42318; border-radius: 3px; }
+.page-execution tr.en-retard td { color: #b42318; }
+
+/* Pointage (lot 1) : saisie hebdomadaire au bureau. */
+.page-pointage { max-width: none; }
+.pointage-corps { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+.pointage-salaries { flex: 0 1 28rem; max-height: 75vh; overflow: auto; }
+.pointage-salaries tr.cliquable { cursor: pointer; }
+.pointage-salaries tr.selection td { background: rgba(56, 132, 255, 0.18); }
+.pointage-grille { flex: 1 1 48rem; min-width: 0; overflow-x: auto; }
+.grille-pointage td, .grille-pointage th { padding: 2px 4px; white-space: nowrap; }
+.grille-pointage input.duree { width: 4.2rem; text-align: right; }
+.grille-pointage input.invalide, .grille-pointage td.erreur input { outline: 2px solid #b42318; }
+.grille-pointage td.avertissement input { outline: 2px solid #d97706; }
+.grille-pointage .combo { width: 11rem; }
+td.nombre, th.nombre { text-align: right; }
+ul.controles { margin: 0; padding-left: 1.2rem; }
+ul.controles li.erreur { color: #b42318; }
+ul.controles li.avertissement { color: #b45309; }

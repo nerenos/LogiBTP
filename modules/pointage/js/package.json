@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/pointage",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Pointage LogiBTP : contrôles des pointages de main-d’œuvre, durées, semaines",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

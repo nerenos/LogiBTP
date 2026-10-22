@@ -76,6 +76,11 @@
     <Project Path="modules/execution/dotnet/LogiBTP.Execution.Web/LogiBTP.Execution.Web.csproj" />
     <Project Path="modules/execution/dotnet/LogiBTP.Execution.Tests/LogiBTP.Execution.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/pointage/">
+    <Project Path="modules/pointage/dotnet/LogiBTP.Pointage/LogiBTP.Pointage.csproj" />
+    <Project Path="modules/pointage/dotnet/LogiBTP.Pointage.Web/LogiBTP.Pointage.Web.csproj" />
+    <Project Path="modules/pointage/dotnet/LogiBTP.Pointage.Tests/LogiBTP.Pointage.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />

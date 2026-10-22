@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Pointage</RootNamespace>
+    <Description>Module Pointage LogiBTP : contrôles des pointages de main-d'œuvre (répliqués avec le paquet JS @logibtp/pointage).</Description>
+  </PropertyGroup>
+
+</Project>

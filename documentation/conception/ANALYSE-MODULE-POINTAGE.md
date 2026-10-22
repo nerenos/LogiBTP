@@ -4,6 +4,11 @@
 > modules : [ANALYSE-MODULES-TRANSVERSE.md](ANALYSE-MODULES-TRANSVERSE.md). Modules liés : [CRM](ANALYSE-MODULE-CRM.md) ·
 > [Exécution](ANALYSE-MODULE-EXECUTION.md) · [Planning](ANALYSE-MODULE-PLANNING.md).
 
+> **Réalisation** : lot 1 réalisé le 22/10/2026 (`modules/pointage`, `db/199`, `client/src/app/pages/pointage.js`). Écarts :
+> durées en minutes (`poi_minutes`) au lieu d'heures ; type de MO = identifiant de nature (`poi_type_mo`), sous-type
+> `poi_sous_type` ; amplitudes paramétrables (`ppa_amplitude_jour`, `ppa_amplitude_semaine`) ; droits de saisie provisoires
+> (salarié, responsable du service, administrateur) en attendant le module des droits.
+
 ## 1. Objet
 
 Saisir les **heures de main-d'œuvre** des salariés et intérimaires, toujours rattachées à un **chantier** (et

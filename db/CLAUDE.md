@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086 Pointage). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)
@@ -51,6 +51,7 @@
 - `196_calendriers.sql` : `srv_cal_id`, `sal_cal_id`, `mat_cal_id` (module Calendrier `006`), calendriers de démonstration des services (bureaux 35 h, production 39 h), fermeture estivale de l'atelier (portée `service:<id>`) ; rejouable.
 - `197_execution.sql` : module Exécution, lot 1 (rejouable) : `module_societe` « execution », `f_module_actif`, types E_OE / E_PO / E_DAP (famille E, sens 4, statuts « Transmis », « Pris en charge »…, droits), `S_DEMANDE` renommé « Demande de stock », transformations V_COMMANDE → E_OE (EXECUTION), E_OE → E_PO (POSE) / E_DAP (APPRO), E_PO → E_DAP, E_DAP → A_DEVIS / A_COMMANDE / S_DEMANDE / S_RESERVATION ; `ent_exe_etat` (A_FAIRE, EN_ATTENTE, EN_COURS, BLOQUE, TERMINE), `ent_exe_motif_id` → `motif`, `ent_exe_commentaire`, `ent_srv_id`, `ent_responsable_id`, `ent_debut_prevu`, `ent_fin_prevue`, `lig_heures_realisees` ; `ordre_execution_historique`, `ordre_budget` (instantané à chaque validation de l'OE, le premier du groupe = référence) ; vues `v_heures_lignes` (éléments de nature MO en heures, quantité totale, hors options), `v_heures_budget_chantier` (commandes validées par service), `v_liste_documents` (reprise de 185 : ordres masqués si le module est désactivé), `v_liste_ordres`.
 - `198_execution_parcours.sql` : module Exécution, lot 2 (module `085`) : services BM, LOGISTIQUE, FAB_BOIS / FAB_METAL (sous ATELIER), POSE (sous CHANTIER) avec leur calendrier, modèles de parcours MENUISERIE, POSE, GROS_OEUVRE, DEPANNAGE (services par code) ; rejouable.
+- `199_pointage.sql` : module Pointage, lot 1 (module `086`) : `module_societe` « pointage », clés étrangères de `poi_pointage` (salarié, chantier, ordre, nature), `chantier.cha_interne` et chantiers internes INT-FG, INT-ATELIER, INT-FORMATION, INT-DEPOT, vue `v_liste_pointages` (masquée si le module est désactivé) ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

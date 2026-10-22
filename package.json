@@ -19,6 +19,7 @@
     "modules/authentification/js",
     "modules/calendrier/js",
     "modules/execution/js",
+    "modules/pointage/js",
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",

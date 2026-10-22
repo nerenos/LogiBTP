@@ -191,6 +191,13 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   renvoi au parent (lot 3), colisage, livraison (lot 4), SAV, sous-traitance, demande d'achat (lot 5), réunions,
   rentabilité continue (lot 6). Droit « voir les prix » des ordres : à faire (les vues des ordres suivants masquent les prix).
 
+### Pointage
+
+- [x] **Pointage, lot 1** (22/10/2026) : module `modules/pointage` (paramètres, sous-types, pointages en minutes, contrôles
+  répliqués), chantiers internes, saisie hebdomadaire au bureau, liste des pointages (saisis, non-conformités, improductif).
+- [ ] Pointage, lots suivants : synthèse et validation (lot 2), profils de paie, rubriques, règles, zones, export, valorisation
+  (lot 3), borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
+
 ### Archivage
 
 - [ ] **Module Archivage : analyse à faire** (décision C29 du CRM, 20/10/2026) : archivage complet des éléments (tiers
