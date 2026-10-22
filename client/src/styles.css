@@ -58,8 +58,8 @@
 .page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 64rem; }
 /* Vues de paramétrage : un tableau prend la largeur de son contenu, calé à gauche, au lieu d'étirer ses colonnes sur
    toute la largeur (lisibilité) ; un tableau qui doit occuper la largeur porte la classe pleine-largeur. */
-.page-parametres table:not(.pleine-largeur), .themes-table, .concepteur-table { width: auto; max-width: 100%; }
-.page-parametres table:not(.pleine-largeur) td input:not([type="checkbox"]):not([type="radio"]):not([type="color"]) { width: auto; min-width: 4rem; }
+.page-parametres table:not(.pleine-largeur):not(.tableau-compact), .themes-table, .concepteur-table { width: auto; max-width: 100%; }
+.page-parametres table:not(.pleine-largeur):not(.tableau-compact) td input:not([type="checkbox"]):not([type="radio"]):not([type="color"]) { width: auto; min-width: 4rem; }
 .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 0.6rem 1rem; }
 .carte h2 { font-size: 1rem; margin: 0 0 0.4rem; }
 .carte .ligne { display: flex; align-items: center; gap: 0.4rem; }
@@ -512,17 +512,42 @@ ul.controles li.avertissement { color: #b45309; }
 .badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: rgba(217, 119, 6, .15); color: #b45309; white-space: nowrap; }
 .correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
 /* Synthèse : page pleine hauteur, salariés dans un panneau à gauche (réductible, largeur au glisser), détail à droite. */
-.page-parametres.page-synthese { overflow: hidden; }
+.page-parametres.page-synthese { overflow: hidden; gap: .35rem; }
+.page-synthese > .page-titre { margin-bottom: 0; }
+.page-synthese > p.ligne { margin: 0; }
+.synthese-actions { margin-left: auto; display: inline-flex; gap: .25rem; align-items: center; }
+.bouton-compteur { position: relative; }
+.pastille-compteur { position: absolute; top: -.45rem; right: -.45rem; min-width: 1rem; height: 1rem; padding: 0 .25rem; box-sizing: border-box; border-radius: .5rem;
+  background: var(--accent); color: #fff; font-size: .68rem; line-height: 1rem; text-align: center; font-weight: 600; pointer-events: none; }
+.pastille-compteur:empty { display: none; }
+.titre-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .6rem 0 .3rem; }
+.titre-actions h3 { margin: 0; }
+.titre-actions-boutons { margin-left: auto; display: inline-flex; gap: .3rem; flex-wrap: wrap; }
+/* Grille en tableau : lignes de titre des groupes (chantier, ordre), lignes du groupe en retrait, cases en lecture sans cadre. */
+.tableau-compact tr.groupe-pointage td { background: color-mix(in srgb, var(--accent-clair) 55%, transparent); font-weight: 600; }
+.tableau-compact tr.groupe-pointage small { margin-left: .4rem; }
+.tableau-compact tr.dans-groupe td:first-child { padding-left: 1.1rem; }
+.tableau-compact tr.dans-groupe [data-c="cha"] .combo, .tableau-compact tr.dans-groupe [data-c="ordre"] .combo { opacity: .55; }
+.tableau-compact input[readonly], .tableau-compact input:disabled { border-color: transparent; background: transparent; }
+.tableau-compact tfoot th { border-top: 1px solid var(--bord); }
+.tableau-compact td.cellule-double { min-width: 8.5rem; }
+.grille-pointage.tableau-compact input.duree { width: 3.2rem; box-sizing: border-box; padding: 1px 4px; }
+.grille-pointage.tableau-compact td.cellule-double .combo { width: 8.5rem; }
+.grille-pointage.tableau-compact td, .grille-pointage.tableau-compact th { padding: 2px 4px; }
+.tableau-compact .motif-pointage input { width: 100%; box-sizing: border-box; }
+.tableau-compact .motif-pointage:has(input:disabled:placeholder-shown) { display: none; }
+.tableau-compact td.cellule-double > div + div { margin-top: 1px; }
+.tableau-compact td.cellule-double > div:last-child { font-size: .9em; }
 .synthese-corps { flex: 1; min-height: 0; display: flex; gap: 0; }
 .synthese-panneau { flex: none; min-width: 280px; max-width: 75%; display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--bord); border-radius: .4rem; background: var(--surface); }
 .synthese-panneau-barre { display: flex; align-items: center; gap: .6rem; padding: .35rem .5rem; border-bottom: 1px solid var(--bord); flex-wrap: wrap; }
-.synthese-panneau-barre .combo { width: 13rem; }
-.synthese-panneau-barre [data-replier] { margin-left: auto; }
+.synthese-panneau-barre .combo { width: 7.5rem; }
+.synthese-panneau-barre label { white-space: nowrap; }
 .synthese-panneau > [data-corrections]:not(:empty) { padding: 0 .5rem; max-height: 30%; overflow: auto; border-bottom: 1px solid var(--bord); }
 .synthese-liste { flex: 1; min-height: 0; overflow: auto; padding: 0 .3rem .3rem; }
 .synthese-separateur { flex: none; width: 6px; cursor: col-resize; margin: 0 .3rem; border-radius: 3px; }
 .synthese-separateur:hover { background: var(--accent-clair); }
-.synthese-deplier { display: none; align-self: flex-start; margin-right: .6rem; }
+.synthese-deplier { display: none; align-self: flex-start; margin-right: .5rem; }
 .synthese-detail { flex: 1; min-width: 0; overflow: auto; padding-left: .3rem; }
 .synthese-corps.panneau-reduit .synthese-panneau, .synthese-corps.panneau-reduit .synthese-separateur { display: none; }
 .synthese-corps.panneau-reduit .synthese-deplier { display: inline-block; }
@@ -538,7 +563,7 @@ ul.controles li.avertissement { color: #b45309; }
 .tableau-compact td.nombre { white-space: nowrap; }
 .tableau-compact tr.cliquable:hover td { background: color-mix(in srgb, var(--accent-clair) 50%, transparent); }
 .tableau-compact tr.selection td { background: rgba(56, 132, 255, 0.18); }
-.variables-paie input.duree { width: 3.6rem; text-align: right; }
+.variables-paie input.duree { width: 3.4rem; box-sizing: border-box; padding: 1px 4px; text-align: right; }
 
 /* Planning : page pleine hauteur (barre d'outils, vue du planning, panneau). */
 .page-planning { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .4rem; padding: .4rem .6rem; }

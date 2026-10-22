@@ -64,7 +64,8 @@ const CHAMPS_LIGNE = ['cha', 'ordre', 'type', 'st', 'motif', 'j0', 'j1', 'j2', '
  * passe au champ suivant (chantier → ses ordres, lus au besoin → type de MO, proposé par le service de l'ordre →
  * sous-type → jours) ; une nouvelle ligne reprend chantier, ordre, type et sous-type de la ligne courante.
  * Options : ref (référentiels), chantiers (proposés), donnees { salarie, pointages, chantiers, ordres, recents },
- * lundi, lecture, verrouilles (index des jours), change().
+ * lundi, lecture, verrouilles (index des jours), change() ; tableau (présentation `.tableau-compact`) ; regrouper
+ * (lignes triées par chantier et ordre ; un groupe de plusieurs lignes a sa ligne de titre avec ses sous-totaux).
  */
 class GrillePointage {
   #o;
@@ -75,6 +76,12 @@ class GrillePointage {
     this.#o = options;
     this.jours = joursSemaine(options.lundi);
     this.lignes = lignesDepuis(options.donnees.pointages, this.jours);
+    if (options.regrouper) {
+      // Tri stable par chantier puis ordre, dans l'ordre de première apparition.
+      const rang = new Map();
+      this.lignes.forEach((l) => { const k = `${l.cha_id}|${l.ent_id ?? ''}`; if (!rang.has(k)) rang.set(k, rang.size); });
+      this.lignes = this.lignes.map((l, i) => ({ l, i })).sort((a, b) => rang.get(`${a.l.cha_id}|${a.l.ent_id ?? ''}`) - rang.get(`${b.l.cha_id}|${b.l.ent_id ?? ''}`) || a.i - b.i).map((x) => x.l);
+    }
     this.#rendre();
   }
 
@@ -113,9 +120,14 @@ class GrillePointage {
     const lecture = Boolean(this.#o.lecture);
     const verrou = new Set(this.#o.verrouilles ?? []);
     const d = this.#o.donnees;
-    zone.innerHTML = `<table class="grille-pointage"><thead><tr><th>Chantier</th><th>Ordre</th><th>Type de MO</th><th>Sous-type</th><th>Motif</th>
-        ${jours.map((x, i) => `<th class="nombre"${verrou.has(i) ? ' title="Jour validé"' : ''}>${verrou.has(i) ? '🔒 ' : ''}${JOURS[i]} ${jourCourt(x)}</th>`).join('')}<th class="nombre">Total</th><th></th></tr></thead><tbody></tbody>
-        <tfoot><tr><th colspan="5">Total</th>${jours.map((_, i) => `<th class="nombre" data-total="${i}"></th>`).join('')}<th class="nombre" data-total="s"></th><th></th></tr></tfoot></table>
+    // Tableau : chantier et ordre, type et sous-type sur deux lignes dans une même colonne (largeur réduite).
+    const tableau = Boolean(this.#o.tableau);
+    const nbDescr = tableau ? 2 : 5;
+    zone.innerHTML = `<table class="grille-pointage${tableau ? ' tableau-compact' : ''}"><thead><tr>${tableau
+      ? '<th>Chantier<br><small>ordre</small></th><th>Type de MO<br><small>sous-type (motif)</small></th>'
+      : '<th>Chantier</th><th>Ordre</th><th>Type de MO</th><th>Sous-type</th><th>Motif</th>'}
+        ${jours.map((x, i) => `<th class="nombre" data-jh="${i}"${verrou.has(i) ? ' title="Jour validé"' : ''}>${verrou.has(i) ? '🔒 ' : ''}${JOURS[i]}${tableau ? `<br><small>${jourCourt(x)}</small>` : ` ${jourCourt(x)}`}</th>`).join('')}<th class="nombre">Total</th><th></th></tr></thead><tbody></tbody>
+        <tfoot><tr><th colspan="${nbDescr}">Total</th>${jours.map((_, i) => `<th class="nombre" data-total="${i}"></th>`).join('')}<th class="nombre" data-total="s"></th><th></th></tr></tfoot></table>
       ${lecture ? '' : `<p><button type="button" data-ajouter>＋ Ligne</button> <span class="aide">Durées au pas de ${this.#o.ref.parametres.pas_minutes} min : « 7:30 », « 7h30 » ou « 7,5 ».
         Entrée : case suivante · ↑ ↓ : ligne · Ctrl+Entrée : nouvelle ligne · Alt+Entrée : recopier jusqu'au vendredi · Ctrl+D : dupliquer (raccourcis personnalisables).</span></p>`}
       <div data-controles></div>`;
@@ -124,8 +136,16 @@ class GrillePointage {
       const tot = jours.map((_, i) => this.lignes.reduce((a, l) => a + l.cases[i].reduce((b, p) => b + (p.minutes || 0), 0), 0));
       tot.forEach((t, i) => { zone.querySelector(`[data-total="${i}"]`).textContent = ecrireDuree(t); });
       zone.querySelector('[data-total="s"]').textContent = ecrireDuree(tot.reduce((a, b) => a + b, 0));
-      corps.querySelectorAll('tr').forEach((tr, i) => {
-        tr.querySelector('[data-total-ligne]').textContent = ecrireDuree(this.lignes[i].cases.flat().reduce((a, p) => a + (p.minutes || 0), 0));
+      corps.querySelectorAll('tr[data-i]').forEach((tr) => {
+        tr.querySelector('[data-total-ligne]').textContent = ecrireDuree(this.lignes[Number(tr.dataset.i)].cases.flat().reduce((a, p) => a + (p.minutes || 0), 0));
+      });
+      // Sous-totaux des groupes (chantier et ordre) : par jour et sur la semaine.
+      corps.querySelectorAll('tr[data-groupe]').forEach((tr) => {
+        const [de, a] = tr.dataset.groupe.split('-').map(Number);
+        const membres = this.lignes.slice(de, a + 1);
+        const parJour = jours.map((_, j) => membres.reduce((s, l) => s + l.cases[j].reduce((b, p) => b + (p.minutes || 0), 0), 0));
+        tr.querySelectorAll('[data-sous-total]').forEach((td) => { td.textContent = ecrireDuree(parJour[Number(td.dataset.sousTotal)]) || ''; });
+        tr.querySelector('[data-sous-total-semaine]').textContent = ecrireDuree(parJour.reduce((s, m) => s + m, 0));
       });
       const c = this.#controles(o);
       corps.querySelectorAll('td.erreur, td.avertissement').forEach((td) => td.classList.remove('erreur', 'avertissement'));
@@ -185,10 +205,24 @@ class GrillePointage {
       // Le champ actif est quitté avant d'être remplacé (sa liste de choix se ferme), sans effet sur les lignes.
       const actif = document.activeElement;
       if (actif && corps.contains(actif)) { this.enRendu = true; actif.blur(); this.enRendu = false; }
+      // Groupes : suites de lignes du même chantier et du même ordre ; titre seulement pour plusieurs lignes.
+      const cleGroupe = (l) => `${l.cha_id}|${l.ent_id ?? ''}`;
+      const finGroupe = (i) => { let j = i; while (j + 1 < this.lignes.length && cleGroupe(this.lignes[j + 1]) === cleGroupe(this.lignes[i])) j++; return j; };
+      const libelleGroupe = (l) => [o.chantiers.find((c) => String(c.valeur) === String(l.cha_id))?.libelle ?? 'Sans chantier',
+        (d.ordres ?? []).find((x) => x.id === l.ent_id)?.numero].filter(Boolean).join(' · ');
       corps.innerHTML = this.lignes.map((l, i) => {
         const fige = figee(l);
-        return `<tr data-i="${i}"><td data-c="cha"></td><td data-c="ordre"></td><td data-c="type"></td><td data-c="st"></td>
-        <td><input data-motif size="10" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>
+        const debutGroupe = this.#o.regrouper && (i === 0 || cleGroupe(this.lignes[i - 1]) !== cleGroupe(l));
+        const fin = debutGroupe ? finGroupe(i) : i;
+        const dansGroupe = this.#o.regrouper && (fin > i || (i > 0 && cleGroupe(this.lignes[i - 1]) === cleGroupe(l)));
+        const titre = debutGroupe && fin > i
+          ? `<tr class="groupe-pointage" data-groupe="${i}-${fin}"><td colspan="${nbDescr}">▾ ${echapper(libelleGroupe(l))} <small>${fin - i + 1} lignes</small></td>
+            ${jours.map((_, j) => `<td class="nombre" data-sous-total="${j}"></td>`).join('')}<td class="nombre" data-sous-total-semaine></td><td></td></tr>` : '';
+        return `${titre}<tr data-i="${i}"${dansGroupe ? ' class="dans-groupe"' : ''}>${tableau
+          ? `<td class="cellule-double"><div data-c="cha"></div><div data-c="ordre"></div></td><td class="cellule-double"><div data-c="type"></div><div data-c="st"></div>
+            <div class="motif-pointage"><input data-motif placeholder="Motif de la non-conformité" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></div></td>`
+          : '<td data-c="cha"></td><td data-c="ordre"></td><td data-c="type"></td><td data-c="st"></td>'}
+        ${tableau ? '' : `<td><input data-motif size="10" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>`}
         ${l.cases.map((c, j) => `<td data-j="${j}"><input class="duree" size="5" value="${ecrireDuree(c.reduce((a, p) => a + (p.minutes || 0), 0))}" ${lecture || verrou.has(j) || c.length > 1 ? 'readonly' : ''} ${c.length > 1 ? 'title="Plusieurs pointages ce jour"' : c[0]?.debut != null ? `title="${ecrireDuree(c[0].debut)} – ${ecrireDuree(c[0].fin)}"` : ''}></td>`).join('')}
         <td class="nombre" data-total-ligne></td><td>${fige ? '' : '<button type="button" data-retirer title="Retirer la ligne (Ctrl+Suppr)" tabindex="-1">✕</button>'}</td></tr>`;
       }).join('');
@@ -203,6 +237,15 @@ class GrillePointage {
           type: creerCombo({ options: o.types, valeur: l.type_mo ?? '', vide: false, titre: 'Type de main-d\'œuvre' }),
           st: creerCombo({ options: o.sousTypes, valeur: l.sous_type ?? '', vide: true, titre: 'Sous-type' }),
         };
+        // Tableau en lecture : libellés au lieu des combos (chantier et ordre portés par la ligne du groupe).
+        if (lecture && this.#o.tableau) {
+          const groupe = tr.classList.contains('dans-groupe');
+          for (const [k, c] of Object.entries(combos)) tr.querySelector(`[data-c="${k}"]`).textContent = groupe && (k === 'cha' || k === 'ordre') ? '' : c.value;
+          tr.querySelectorAll('input.duree').forEach((inp) => { inp.closest('td').textContent = inp.value; });
+          const motif = tr.querySelector('[data-motif]');
+          motif.parentElement.textContent = motif.value;
+          return;
+        }
         for (const [k, c] of Object.entries(combos)) { c.readOnly = fige || (k === 'ordre' && !ordres.length); tr.querySelector(`[data-c="${k}"]`).append(c); }
         if (fige) return;
         // Cascade : un choix passe au champ suivant (au clavier, Entrée s'en charge).
@@ -251,6 +294,12 @@ class GrillePointage {
         tr.querySelector('[data-retirer]')?.addEventListener('click', () => { this.lignes.splice(this.lignes.indexOf(l), 1); signaler(); rendreLignes(); });
       });
       majTotaux();
+      // Tableau en lecture : samedi et dimanche masqués s'ils n'ont aucun pointage.
+      if (lecture && this.#o.tableau) {
+        for (const j of [5, 6].filter((x) => !this.lignes.some((l) => l.cases[x].some((p) => p.minutes)))) {
+          zone.querySelectorAll(`[data-jh="${j}"], td[data-j="${j}"], [data-total="${j}"], [data-sous-total="${j}"]`).forEach((e) => { e.hidden = true; });
+        }
+      }
     };
     if (!lecture) {
       // Mode tableau : la touche est lue avant les combos (capture) pour que leur choix au clavier ne déplace pas deux fois.
@@ -265,7 +314,7 @@ class GrillePointage {
         if (this.enCascade) { e.preventDefault(); return; }
         const i = Number(tr.dataset.i);
         const td = el.closest('td');
-        const c = td?.dataset.j !== undefined ? `j${td.dataset.j}` : el.matches('[data-motif]') ? 'motif' : td?.dataset.c;
+        const c = td?.dataset.j !== undefined ? `j${td.dataset.j}` : el.matches('[data-motif]') ? 'motif' : el.closest('[data-c]')?.dataset.c;
         if (!c) return;
         const l = this.lignes[i];
         const jour = c.startsWith('j') ? Number(c.slice(1)) : null;
@@ -459,17 +508,18 @@ export class PageSynthesePointage extends PageBase {
     this.titre = 'Synthèse des pointages';
     const prefs = lirePreferences();
     const reduite = prefs.syntheseReduite ?? window.matchMedia('(max-width: 900px)').matches;
+    // Actions de validation : icônes (libellé dans la bulle) avec le nombre de salariés concernés en pastille.
+    const action = (cle, icone, titre) => `<button type="button" class="bouton-icone bouton-compteur" data-${cle} title="${titre}" aria-label="${titre}">${icone}<span class="pastille-compteur" data-compteur="${cle}"></span></button>`;
     this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-synthese"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}
-      <p class="ligne"><span data-periode></span>
-        <button type="button" data-valider>✔ Valider la sélection</button> <button type="button" data-tout-valider></button>
-        <button type="button" data-devalider>↶ Dévalider la sélection…</button></p>
       <div class="synthese-corps${reduite ? ' panneau-reduit' : ''}">
         <aside class="synthese-panneau" style="width: ${Number(prefs.syntheseLargeur) || 560}px">
           <div class="synthese-panneau-barre"><b>Salariés</b> <label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>
-            <span data-interim></span><button type="button" class="discret" data-replier title="Réduire le panneau des salariés">«</button></div>
+            <label title="Masquer les salariés sans pointage dans la semaine"><input type="checkbox" data-pointes> Pointés</label><span data-interim></span>
+            <span class="synthese-actions">${action('valider', '☑', 'Valider la sélection')}${action('tout-valider', '✅', 'Tout valider sans exception')}${action('devalider', '↩', 'Dévalider la sélection… (motif demandé)')}
+            <button type="button" class="bouton-icone" data-replier title="Réduire le panneau des salariés" aria-label="Réduire le panneau des salariés">«</button></span></div>
           <div data-corrections></div><div data-liste class="synthese-liste"></div></aside>
         <div class="synthese-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
-        <button type="button" class="synthese-deplier" data-deplier title="Afficher le panneau des salariés">☰ Salariés</button>
+        <button type="button" class="bouton-icone synthese-deplier" data-deplier title="Afficher le panneau des salariés" aria-label="Afficher le panneau des salariés">👥</button>
         <div data-detail class="synthese-detail"></div></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.#panneau();
@@ -483,8 +533,12 @@ export class PageSynthesePointage extends PageBase {
     const c = this.conteneur;
     c.querySelector('[data-tout]').checked = this.tout;
     c.querySelector('[data-tout]').addEventListener('change', (e) => { this.tout = e.target.checked; this.#url(); this.#rendreListe(); });
+    this.pointes = Boolean(lirePreferences().synthesePointes);
+    c.querySelector('[data-pointes]').checked = this.pointes;
+    c.querySelector('[data-pointes]').addEventListener('change', (e) => { this.pointes = e.target.checked; ecrirePreferences({ synthesePointes: this.pointes }); this.#rendreListe(); });
+    // Blocage à la journée : période de validation sur la ligne de la semaine.
     if (this.ref.parametres.blocage === 'JOUR') {
-      c.querySelector('[data-periode]').innerHTML = 'Période : <input type="date" data-du> au <input type="date" data-au>';
+      c.querySelector('.page-synthese > p.ligne').insertAdjacentHTML('beforeend', ' · <span class="aide">Période validée :</span> <input type="date" data-du> au <input type="date" data-au>');
     }
     barreSemaine(c, this, {
       changerSemaine: async (lundi) => {
@@ -524,10 +578,20 @@ export class PageSynthesePointage extends PageBase {
       window.addEventListener('pointerup', finir);
     });
     this.interim = lirePreferences().syntheseInterim || 'TOUS';
-    const filtre = creerCombo({ options: [{ valeur: 'TOUS', libelle: 'Salariés et intérimaires' }, { valeur: 'SALARIES', libelle: 'Sans les intérimaires' }, { valeur: 'INTERIM', libelle: 'Intérimaires seuls' }],
+    const filtre = creerCombo({ options: [{ valeur: 'TOUS', libelle: 'Tous' }, { valeur: 'SALARIES', libelle: 'Sans intérim' }, { valeur: 'INTERIM', libelle: 'Intérim seul' }],
       valeur: this.interim, vide: false, titre: 'Intérimaires' });
     filtre.addEventListener('change', () => { this.interim = filtre.valeurCombo; ecrirePreferences({ syntheseInterim: this.interim }); this.#rendreListe(); });
     c.querySelector('[data-interim]').append(filtre);
+  }
+
+  /** Pastilles des actions : salariés sélectionnés (valider, dévalider), sans exception (tout valider) ; boutons désactivés à zéro. */
+  #compteurs() {
+    const n = { valider: this.selection.size, devalider: this.selection.size, 'tout-valider': this.#sansException().length };
+    for (const [cle, v] of Object.entries(n)) {
+      const b = this.conteneur.querySelector(`[data-${cle}]`);
+      b.disabled = !v;
+      b.querySelector('[data-compteur]').textContent = v ? String(v) : '';
+    }
   }
 
   /** Jours affichés : lundi à vendredi, samedi et dimanche s'ils ont des pointages (un salarié au moins). */
@@ -591,12 +655,11 @@ export class PageSynthesePointage extends PageBase {
   #rendreListe() {
     const zone = this.conteneur.querySelector('[data-liste]');
     const d = this.donnees;
-    const interim = (l) => (this.interim === 'INTERIM' ? l.salarie.interimaire : this.interim === 'SALARIES' ? !l.salarie.interimaire : true);
+    const interim = (l) => (this.interim === 'INTERIM' ? l.salarie.interimaire : this.interim === 'SALARIES' ? !l.salarie.interimaire : true)
+      && (!this.pointes || l.jours.some((m) => m > 0));
     const lignes = d.lignes.filter((l) => interim(l) && (this.tout || l.exceptions.length || String(l.salarie.id) === String(this.salarie)));
     const sans = this.#sansException();
-    const bouton = this.conteneur.querySelector('[data-tout-valider]');
-    bouton.textContent = `✔ Tout valider sans exception (${sans.length})`;
-    bouton.disabled = !sans.length;
+    this.#compteurs();
     const masques = d.lignes.filter(interim).length - lignes.length;
     const jours = joursSemaine(this.lundi);
     const visibles = this.#joursVisibles();
@@ -618,7 +681,7 @@ export class PageSynthesePointage extends PageBase {
     });
     zone.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = Number(tr.dataset.id);
-      tr.querySelector('[data-choix]').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.checked) this.selection.add(id); else this.selection.delete(id); });
+      tr.querySelector('[data-choix]').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.checked) this.selection.add(id); else this.selection.delete(id); this.#compteurs(); });
       tr.addEventListener('click', () => this.#ouvrir(id));
     });
   }
@@ -647,17 +710,17 @@ export class PageSynthesePointage extends PageBase {
       ${d.corrections.filter((c) => c.etat === 'EN_ATTENTE').map((c) => `<div class="correction-attente"><b>Demande de correction</b> de ${echapper(c.par)} le ${horodatage(c.le)}${c.motif ? ` : ${echapper(c.motif)}` : ''}
         ${d.rh ? `<button type="button" data-appliquer="${c.id}">Appliquer</button> <button type="button" data-rejeter="${c.id}">Rejeter…</button>` : ''}
         <div data-correction="${c.id}"></div></div>`).join('')}
-      <h3>${d.corrigee ? 'Couche validée (corrigée)' : 'Pointages retenus (saisie)'}${modifiable ? '' : ' <small class="aide">— semaine validée : dévalider pour corriger</small>'}</h3>
+      <div class="titre-actions"><h3>${d.corrigee ? 'Couche validée (corrigée)' : 'Pointages retenus (saisie)'}${modifiable ? '' : ' <small class="aide">— semaine validée : dévalider pour corriger</small>'}</h3>
+        <span class="titre-actions-boutons">${modifiable ? `<button type="button" data-enregistrer title="Enregistrer les corrections de la semaine (couche validée)">💾 Enregistrer</button>${d.corrigee ? ' <button type="button" data-retablir title="Abandonner la couche validée et revenir aux pointages saisis">⟲ Revenir à la saisie</button>' : ''}` : ''}
+        <button type="button" data-valider-un title="Valider la semaine de ce salarié">☑ Valider</button> <button type="button" data-devalider-un title="Dévalider la semaine de ce salarié (motif demandé)">↩ Dévalider…</button></span></div>
       <div data-grille-valide></div>
-      <p>${modifiable ? `<button type="button" data-enregistrer>Enregistrer les corrections</button>${d.corrigee ? ' <button type="button" data-retablir>Revenir à la saisie</button>' : ''}` : ''}
-        <button type="button" data-valider-un>✔ Valider la semaine</button> <button type="button" data-devalider-un>↶ Dévalider…</button></p>
       ${d.corrigee ? '<details><summary>Saisie d\'origine</summary><div data-grille-saisie></div></details>' : ''}
       <div data-paie></div>
       ${d.validations.length ? `<h3>Validations</h3><ul>${d.validations.map((v) => `<li>${v.niveau === 'RH' ? 'RH' : 'Chef'} du ${jourCourt(v.du)} au ${jourCourt(v.au)} par ${echapper(v.par)} le ${horodatage(v.le)}${v.annule_le ? ` — <s>annulée</s> par ${echapper(v.annule_par)} le ${horodatage(v.annule_le)} : ${echapper(v.annule_motif ?? '')}` : ''}</li>`).join('')}</ul>` : ''}
       ${d.journal.length ? `<details><summary>Journal (${d.journal.length})</summary><ul>${d.journal.map((j) => `<li>${horodatage(j.le)} ${echapper(j.action)} par ${echapper(j.par)}</li>`).join('')}</ul></details>` : ''}`;
     const donnees = (pointages) => ({ salarie: d.salarie, pointages, chantiers: d.chantiers, ordres: d.ordres, recents: [] });
-    this.grille = new GrillePointage(zone.querySelector('[data-grille-valide]'), { ref: this.ref, chantiers: this.chantiers, donnees: donnees(base), lundi: this.lundi, lecture: !modifiable });
-    if (d.corrigee) new GrillePointage(zone.querySelector('[data-grille-saisie]'), { ref: this.ref, chantiers: this.chantiers, donnees: donnees(d.saisie), lundi: this.lundi, lecture: true });
+    this.grille = new GrillePointage(zone.querySelector('[data-grille-valide]'), { ref: this.ref, chantiers: this.chantiers, donnees: donnees(base), lundi: this.lundi, lecture: !modifiable, tableau: true, regrouper: true });
+    if (d.corrigee) new GrillePointage(zone.querySelector('[data-grille-saisie]'), { ref: this.ref, chantiers: this.chantiers, donnees: donnees(d.saisie), lundi: this.lundi, lecture: true, tableau: true, regrouper: true });
     for (const c of d.corrections.filter((x) => x.etat === 'EN_ATTENTE')) {
       new GrillePointage(zone.querySelector(`[data-correction="${c.id}"]`), { ref: this.ref, chantiers: this.chantiers, donnees: donnees(c.pointages), lundi: this.lundi, lecture: true });
     }
