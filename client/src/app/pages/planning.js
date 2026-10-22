@@ -526,7 +526,10 @@ export class PagePlanning extends PageBase {
       <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>
       <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
-      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}<div data-liens></div>`;
+      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}<p class="aide" data-realise></p><div data-liens></div>`;
+    if (t.id && this.app.moduleActif('pointage')) {
+      api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
+    }
     this.#rendreLiens(zone.querySelector('[data-liens]'), t);
     const affs = t.affectations.map((a) => ({ ...a }));
     const habs = [...(t.habilitations ?? [])];

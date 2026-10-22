@@ -149,6 +149,36 @@ public class SpecialisationPointageBtp : SpecialisationPointage
               AND t.tac_debut < (@d::date + 1) AND t.tac_fin > @d::date
             """, new NpgsqlParameter("s", salarie.ToString()), new NpgsqlParameter("d", date)).ToListAsync(ct);
 
+    private sealed record MotifService(int? SrvId, string Libelle);
+
+    /// <summary>
+    /// Non-conformité signalée à la borne : tâche du CRM au service du motif (sinon au service du salarié), rattachée au
+    /// chantier et à l'ordre ; sans effet si le CRM est inactif ; une erreur n'annule pas le pointage.
+    /// </summary>
+    public override async Task ApresNonConformiteAsync(PointageDbContext db, IServiceProvider services, Utilisateur auteur, SalariePointage salarie, int chantier, long? ordre,
+        string motif, CancellationToken ct)
+    {
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        var m = await db.Database.SqlQueryRaw<MotifService>("SELECT mot_srv_id AS srv_id, mot_libelle AS libelle FROM motif WHERE mot_domaine = 'NON_CONFORMITE' AND mot_libelle = @l LIMIT 1",
+            new NpgsqlParameter("l", motif)).FirstOrDefaultAsync(ct);
+        if ((m?.SrvId ?? salarie.SrvId) is not int service) return;
+        var liens = new List<LienSaisi> { new("chantier", chantier.ToString(), true) };
+        if (ordre is long o)
+        {
+            var groupe = await db.Database.SqlQueryRaw<long>("SELECT ent_groupe_id AS \"Value\" FROM document WHERE ent_id = @o", new NpgsqlParameter("o", o)).FirstOrDefaultAsync(ct);
+            if (groupe != 0) liens.Add(new LienSaisi("document", groupe.ToString()));
+        }
+        try
+        {
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+                $"Non-conformité signalée par {salarie.Prenom} {salarie.Nom} : {motif}", null, null, DateTimeOffset.UtcNow.AddDays(1), null, false, false, false, liens, null), auteur, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            services.GetRequiredService<ILoggerFactory>().CreateLogger("Pointage").LogWarning(e, "Tâche du CRM non créée pour la non-conformité de {Salarie}", salarie.Id);
+        }
+    }
+
     /// <summary>Tâche du CRM au premier service administratif (RH), rattachée au salarié ; sans effet si le CRM est inactif.</summary>
     public override async Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct)
     {

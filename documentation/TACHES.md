@@ -229,9 +229,12 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [x] **Planning, lot 5** (22/10/2026) : dépendances (règle répliquée, propagation fixe en cascade, alertes), tâches
   liées, tâches répétitives, jalons saisis et calculés. Reste : flèches des dépendances dessinées dans la vue, aperçu de
   la propagation avant application, jalons du CRM (rappels, visas attendus).
-- [ ] Planning, lot 6 (liaisons) : planning théorique depuis le parcours de l'Exécution, tâches depuis les ordres et
-  propositions de dates (P15), tournées de livraison, pré-remplissage du Pointage et heures réelles, jalons du CRM, vues
-  personnelles et règles de couleur (écran) ; second temps : impression (module Édition), scénarios, mode atelier.
+- [x] **Liaisons croisées** (22/10/2026, cœur : `LiaisonsBtp.cs`, `db/202`) : planning théorique depuis le parcours de
+  l'Exécution, ordre → tâche du planning et proposition de dates (P15), heures réalisées par les pointages (exécution,
+  planning), chantiers du jour de la borne depuis le planning, non-conformité de la borne → tâche du CRM, jalons du CRM.
+- [ ] Planning, lot 6, reste : tournées de livraison, vues personnelles et règles de couleur (écran), pré-remplissage de
+  la saisie au bureau depuis le planning (fait pour la borne) ; second temps : impression (module Édition), scénarios,
+  mode atelier.
 
 ### Archivage
 

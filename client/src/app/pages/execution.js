@@ -162,7 +162,8 @@ export class PageExecutionChantier extends PageBase {
       ${el ? `<p class="aide">${echapper(el.client ?? '')}${el.responsable ? ` · conducteur : ${echapper(el.responsable)}` : ''}${el.fin_prevue ? ` · fin prévue : ${date(el.fin_prevue)}` : ''}</p>` : ''}
       <h2>États des services</h2><div data-etats></div>
       <h2>Parcours</h2><p class="ligne">Modèle : <span data-modele></span> <button type="button" data-appliquer>Appliquer le modèle</button>
-        <button type="button" data-enregistrer disabled>Enregistrer le parcours</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>Retirer le parcours</button></p>
+        <button type="button" data-enregistrer disabled>Enregistrer le parcours</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>Retirer le parcours</button>
+        ${this.app.moduleActif('planning') && etapes.length ? '<button type="button" data-theorique title="Une tâche par étape, heures budget du service, enchaînées par des dépendances">📅 Planning théorique</button>' : ''}</p>
       <div data-etapes></div>
       <h2>Ordres</h2><div data-ordres></div>
       <p><a href="/execution/synthese">← Synthèse</a> · <a href="/liste/ordres?vue=1000&chantier=${encodeURIComponent(el?.code ?? '')}">Liste des ordres du chantier</a></p>`;
@@ -202,6 +203,15 @@ export class PageExecutionChantier extends PageBase {
       enregistrer({ pam_id: d.modele ?? null, etapes });
     });
     corps.querySelector('[data-retirer-parcours]').addEventListener('click', () => { if (confirm('Retirer le parcours de ce chantier ?')) enregistrer({ etapes: [] }); });
+    corps.querySelector('[data-theorique]')?.addEventListener('click', async () => {
+      const debut = prompt('Début du planning théorique (AAAA-MM-JJ) :', new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+      if (!debut) return;
+      try {
+        const r = await api.liaisons.planningTheorique(this.params.id, `${debut}T08:00`);
+        this.app.message(`${r.taches.length} tâche(s) créée(s) au planning`, 'succes');
+        this.app.naviguer(`/planning?vue=CHANTIERS_GANTT&du=${debut}`);
+      } catch (e) { this.app.erreur(e); }
+    });
     // Ordres par service
     const groupes = new Map();
     for (const o of d.ordres) {

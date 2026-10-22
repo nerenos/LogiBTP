@@ -63,7 +63,7 @@ public sealed class JetonsBorne
 /// identification → jeton de saisie de deux minutes, pointage individuel ou par équipe (même groupe), ordres reconnus par
 /// leur numéro (QR code), groupes d'équipe modifiables ensemble tant que les pointages sont identiques (M6).
 /// </summary>
-public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, JetonsBorne jetons)
+public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, JetonsBorne jetons, IServiceProvider services)
 {
     private const int Essais = 5;
 
@@ -257,6 +257,11 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         var auteur = Auteur(a);
         foreach (var m in membres) await AjouterAsync(m, p.Date, new PointageSaisi(null, p.Date, p.ChaId, p.EntId, p.TypeMo, p.SousType, p.Minutes, null, null, p.Motif, p.Commentaire), groupe, a, auteur, ct);
         jetons.Retirer(p.Jeton);
+        if (!string.IsNullOrWhiteSpace(p.Motif))
+        {
+            var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).First();
+            await specialisation.ApresNonConformiteAsync(db, services, auteur, s, p.ChaId, p.EntId, p.Motif.Trim(), ct);
+        }
         return await JourneeAsync(a, salarie, jetons.Creer(a.PapId, salarie), ct);
     }
 

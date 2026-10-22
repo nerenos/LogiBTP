@@ -116,8 +116,14 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
             WHERE f_module_actif('execution') AND t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id IS NOT NULL
               AND d.ent_fin_prevue BETWEEN @du AND @au
+            UNION ALL
+            SELECT 'crm:' || n.not_id, n.not_echeance::timestamp, 'ALERTE', n.not_objet, l.nli_id_element
+            FROM crm_note n JOIN crm_note_lien l ON l.nli_not_id = n.not_id AND l.nli_type_element = 'chantier'
+            WHERE f_module_actif('crm') AND n.not_nature = 'TACHE' AND n.not_etat IN ('A_FAIRE', 'EN_COURS') AND NOT n.not_prive AND NOT n.not_rgpd
+              AND n.not_echeance::date BETWEEN @du AND @au
             """, new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct))
-        .Select(j => new JalonPlanning(j.Cle, Temps.Ecrire(Temps.VersMinutes(j.Quand) + 1020), j.Type, j.Libelle, "chantier", j.Id, null, "APPLICATION")).ToList();
+        .Select(j => new JalonPlanning(j.Cle, Temps.Ecrire(Temps.VersMinutes(j.Quand) + (j.Type == "ALERTE" ? 0 : 1020)), j.Type, j.Libelle, "chantier", j.Id, null,
+            j.Type == "ALERTE" ? "CRM" : "APPLICATION")).ToList();
 
     private sealed record TypeHabilitation(string Code, string Libelle);
 

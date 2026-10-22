@@ -208,6 +208,9 @@ public abstract class SpecialisationPointage
     public virtual Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) => Task.FromResult<OrdrePointage?>(null);
     /// <summary>Chantiers proposés pour la journée d'un salarié (tâches du planning, par exemple).</summary>
     public virtual Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) => Task.FromResult(new List<int>());
+    /// <summary>Après un pointage de non-conformité à la borne (note au service concerné, par exemple).</summary>
+    public virtual Task ApresNonConformiteAsync(PointageDbContext db, IServiceProvider services, Utilisateur auteur, SalariePointage salarie, int chantier, long? ordre,
+        string motif, CancellationToken ct) => Task.CompletedTask;
     /// <summary>Après une demande de correction (tâche au service RH, par exemple).</summary>
     public virtual Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct) =>
         Task.CompletedTask;

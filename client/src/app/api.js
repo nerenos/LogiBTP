@@ -141,6 +141,14 @@ export const api = {
     supprimerJalon: (id) => appel('DELETE', `/planning/jalons/${id}`),
     creneau: (f) => appel('GET', `/planning/creneau?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
   },
+  // Liaisons croisées (cœur) : planning théorique depuis le parcours, ordre ↔ planning, réalisé d'une tâche.
+  liaisons: {
+    planningTheorique: (chantier, debut) => appel('POST', `/liaisons/chantiers/${chantier}/planning-theorique`, { debut }),
+    planifierOrdre: (id) => appel('POST', `/liaisons/ordres/${id}/planifier`),
+    proposition: (id) => appel('GET', `/liaisons/ordres/${id}/proposition`),
+    accepterProposition: (id) => appel('POST', `/liaisons/ordres/${id}/proposition/accepter`),
+    realise: (tache) => appel('GET', `/liaisons/taches/${tache}/realise`),
+  },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),
     compteur: () => appel('GET', '/notifications/compteur'),

@@ -374,7 +374,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
 
     public async Task<object> CreerAsync(TacheSaisie s, Utilisateur u, CancellationToken ct) => await TacheAsync(await CreerIdAsync(s, u, ct), ct);
 
-    internal async Task<long> CreerIdAsync(TacheSaisie s, Utilisateur u, CancellationToken ct)
+    public async Task<long> CreerIdAsync(TacheSaisie s, Utilisateur u, CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var t = new TacheEntite();

@@ -47,7 +47,8 @@ public static class ExecutionBtp
                              FROM ordre_execution_historique h LEFT JOIN motif m ON m.mot_id = h.oeh_motif_id WHERE h.oeh_ent_id = d.ent_id),
               'heures', (SELECT coalesce(json_agg(json_build_object('srv_id', x.srv_id, 'service', sv.srv_libelle, 'heures', x.heures) ORDER BY sv.srv_ordre), '[]')
                            FROM (SELECT srv_id, sum(heures) AS heures FROM v_heures_lignes WHERE ent_id = d.ent_id GROUP BY srv_id) x LEFT JOIN service sv ON sv.srv_id = x.srv_id),
-              'heures_realisees', (SELECT sum(lig_heures_realisees) FROM document_ligne WHERE lig_ent_id = d.ent_id)
+              'heures_realisees', CASE WHEN f_module_actif('pointage') THEN (SELECT sum(heures) FROM v_heures_realisees_ordre WHERE ent_id = d.ent_id)
+                                       ELSE (SELECT sum(lig_heures_realisees) FROM document_ligne WHERE lig_ent_id = d.ent_id) END
             )::text AS "Value"
             FROM document d WHERE d.ent_id = @id
             """, new NpgsqlParameter("id", id)).FirstAsync(ct);

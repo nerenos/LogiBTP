@@ -122,6 +122,8 @@ api.MapModuleExecution().ExigeModule("execution", "Exécution");
 api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
 api.MapModulePlanning().ExigeModule("planning", "Planning");
 api.MapDiffusion();
+// Liaisons croisées entre modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur.
+api.MapLiaisons();
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

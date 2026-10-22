@@ -112,6 +112,7 @@ services:
       - ./db/199_pointage.sql:/docker-entrypoint-initdb.d/199_pointage.sql:ro
       - ./db/200_pointage_paie.sql:/docker-entrypoint-initdb.d/200_pointage_paie.sql:ro
       - ./db/201_planning.sql:/docker-entrypoint-initdb.d/201_planning.sql:ro
+      - ./db/202_liaisons.sql:/docker-entrypoint-initdb.d/202_liaisons.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

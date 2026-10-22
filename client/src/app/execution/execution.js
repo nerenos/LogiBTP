@@ -57,6 +57,7 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
     <p class="connexion-erreur" data-erreur hidden></p>
     <p><button type="button" class="principal" data-enregistrer>Enregistrer l'exécution</button></p>
     ${x.heures?.length ? `<p class="aide">Heures de main-d'œuvre : ${x.heures.map((h) => `${echapper(h.service ?? 'sans service')} ${nombre(h.heures)} h`).join(' · ')}${x.heures_realisees ? ` · réalisé ${nombre(x.heures_realisees)} h` : ''}</p>` : ''}
+    <div data-planning-ordre></div>
     ${budget ? `<h4>Budget</h4><table><thead><tr><th></th><th class="nombre">Déboursé (PR)</th><th class="nombre">Vente HT</th><th class="nombre">Heures</th></tr></thead><tbody>
       ${ligneBudget('Vendu (commandes)', budget.vendu)}${reference ? ligneBudget(`Référence (${date(reference.le)})`, reference) : ''}${ligneBudget('Planifié (cet ordre)', budget.planifie)}</tbody></table>
       ${reference && budget.planifie?.pr !== null ? `<p class="aide">Dérive du planifié sur la référence : ${nombre(Number(budget.planifie.pr ?? 0) - Number(reference.pr ?? 0))} € de déboursé.</p>` : '<p class="aide">Le budget de référence est figé à la première validation de l\'ordre.</p>'}` : ''}
@@ -74,6 +75,7 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
   combo('[data-service]', refs.services, s.srv_id, true, 'srv_id');
   combo('[data-responsable]', refs.individus, s.responsable_id, true, 'responsable_id');
   bloc.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.value || null; }));
+  if (app.moduleActif('planning')) rendrePlanningOrdre(bloc.querySelector('[data-planning-ordre]'), { app, entId, recharger: () => rendreExecution(bloc, { app, entId, typeCode, individus, surChange }) });
   bloc.querySelector('[data-enregistrer]').addEventListener('click', async () => {
     const erreur = bloc.querySelector('[data-erreur]');
     if (s.etat === 'BLOQUE' && !s.motif_id) { erreur.textContent = 'Motif obligatoire pour bloquer un ordre'; erreur.hidden = false; return; }
@@ -84,6 +86,25 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
       surChange();
       await rendreExecution(bloc, { app, entId, typeCode, individus, surChange });
     } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
+  });
+}
+
+/**
+ * Liaison Exécution ↔ Planning (P15) : l'ordre se planifie (tâche théorique de ses heures, service et dates) ; les dates
+ * de ses tâches lui sont proposées, l'utilisateur les accepte ou non.
+ */
+async function rendrePlanningOrdre(zone, { app, entId, recharger }) {
+  const p = await api.liaisons.proposition(entId).catch(() => null);
+  if (!p) return;
+  zone.innerHTML = `<h4>Planning</h4>${p.taches ? `<p class="aide">${p.taches} tâche(s) au planning : du ${date(p.debut)} au ${date(p.fin)}.</p>
+      ${p.ecart ? `<p class="avertissement">Le planning propose d'autres dates que celles de l'ordre (${date(p.debut_ordre) || '—'} → ${date(p.fin_ordre) || '—'}). <button type="button" data-accepter>Accepter les dates du planning</button></p>` : ''}`
+    : '<p class="aide">Ordre non planifié.</p>'}
+    <p><button type="button" data-planifier>📅 Planifier l'ordre</button> <a href="/planning?vue=CHANTIERS_GANTT">Ouvrir le planning</a></p>`;
+  zone.querySelector('[data-planifier]').addEventListener('click', async () => {
+    try { await api.liaisons.planifierOrdre(entId); app.message('Tâche créée au planning', 'succes'); await rendrePlanningOrdre(zone, { app, entId, recharger }); } catch (e) { app.erreur(e); }
+  });
+  zone.querySelector('[data-accepter]')?.addEventListener('click', async () => {
+    try { await api.liaisons.accepterProposition(entId); app.message('Dates du planning reprises par l\'ordre', 'succes'); await recharger(); } catch (e) { app.erreur(e); }
   });
 }
 
