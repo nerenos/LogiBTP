@@ -16,6 +16,7 @@ public static class Extensions
         services.AddDbContext<PointageDbContext>(options);
         services.AddSingleton<SpecialisationPointage, TSpecialisation>();
         services.AddScoped<ServicePointage>();
+        services.AddScoped<ServiceSynthese>();
         return services;
     }
 
@@ -36,6 +37,22 @@ public static class Extensions
             s.SemaineAsync(salarie, lundi, Utilisateur.Depuis(http), ct));
         g.MapPut("/semaine/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, SemaineSaisie saisie, HttpContext http, ServicePointage s, CancellationToken ct) =>
             s.EnregistrerSemaineAsync(salarie, lundi, saisie, Utilisateur.Depuis(http), ct));
+        // Synthèse et validation (lot 2).
+        g.MapGet("/synthese", (int? service, string? recherche, DateOnly? lundi, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.SyntheseAsync(service, recherche, lundi ?? DateOnly.FromDateTime(DateTime.Today), Utilisateur.Depuis(http), ct));
+        g.MapGet("/synthese/semaine/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.DetailAsync(salarie, lundi, Utilisateur.Depuis(http), ct));
+        g.MapPut("/synthese/semaine/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, SemaineSaisie saisie, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.EnregistrerAsync(salarie, lundi, saisie, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/synthese/semaine/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.RetablirAsync(salarie, lundi, Utilisateur.Depuis(http), ct));
+        g.MapPost("/synthese/valider", (ActionSynthese a, HttpContext http, ServiceSynthese s, CancellationToken ct) => s.ValiderAsync(a, Utilisateur.Depuis(http), ct));
+        g.MapPost("/synthese/devalider", (ActionSynthese a, HttpContext http, ServiceSynthese s, CancellationToken ct) => s.DevaliderAsync(a, Utilisateur.Depuis(http), ct));
+        g.MapPost("/corrections", (CorrectionSaisie c, HttpContext http, ServiceSynthese s, CancellationToken ct) => s.DemanderCorrectionAsync(c, Utilisateur.Depuis(http), ct));
+        g.MapPost("/corrections/{id:long}/appliquer", (long id, ReponseCorrection r, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.AppliquerCorrectionAsync(id, r, Utilisateur.Depuis(http), ct));
+        g.MapPost("/corrections/{id:long}/rejeter", (long id, ReponseCorrection r, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
+            s.RejeterCorrectionAsync(id, r, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

@@ -1,0 +1,37 @@
+{
+  "description": "Validation des pointages (etatValidation, controlerAction, exceptionsSemaine ↔ ReglesValidation) : état d'un jour d'après les validations non annulées qui le couvrent ; actions de valider et dévalider selon le rôle (CHEF, RH) et le mode (SIMPLE, DOUBLE) ; exceptions de la synthèse.",
+  "etats": [
+    { "nom": "aucune validation", "mode": "SIMPLE", "date": "2026-10-20", "validations": [], "attendu": "NON_VALIDE" },
+    { "nom": "RH sur la semaine", "mode": "SIMPLE", "date": "2026-10-20", "validations": [{ "niveau": "RH", "du": "2026-10-19", "au": "2026-10-25" }], "attendu": "VALIDE" },
+    { "nom": "chef en simple : ignoré", "mode": "SIMPLE", "date": "2026-10-20", "validations": [{ "niveau": "CHEF", "du": "2026-10-19", "au": "2026-10-25" }], "attendu": "NON_VALIDE" },
+    { "nom": "chef en double", "mode": "DOUBLE", "date": "2026-10-20", "validations": [{ "niveau": "CHEF", "du": "2026-10-19", "au": "2026-10-25" }], "attendu": "VALIDE_CHEF" },
+    { "nom": "RH sans chef en double", "mode": "DOUBLE", "date": "2026-10-20", "validations": [{ "niveau": "RH", "du": "2026-10-20", "au": "2026-10-20" }], "attendu": "VALIDE" },
+    { "nom": "validation annulée", "mode": "DOUBLE", "date": "2026-10-20", "validations": [{ "niveau": "RH", "du": "2026-10-19", "au": "2026-10-25", "annule": true }, { "niveau": "CHEF", "du": "2026-10-19", "au": "2026-10-25" }], "attendu": "VALIDE_CHEF" },
+    { "nom": "hors de la période", "mode": "SIMPLE", "date": "2026-10-26", "validations": [{ "niveau": "RH", "du": "2026-10-19", "au": "2026-10-25" }], "attendu": "NON_VALIDE" },
+    { "nom": "validation à la journée", "mode": "SIMPLE", "date": "2026-10-21", "validations": [{ "niveau": "RH", "du": "2026-10-19", "au": "2026-10-20" }], "attendu": "NON_VALIDE" }
+  ],
+  "actions": [
+    { "nom": "RH valide", "action": "VALIDER", "role": "RH", "mode": "SIMPLE", "etats": ["NON_VALIDE", "NON_VALIDE"], "attendu": [] },
+    { "nom": "RH valide après le chef", "action": "VALIDER", "role": "RH", "mode": "DOUBLE", "etats": ["VALIDE_CHEF", "NON_VALIDE"], "attendu": [] },
+    { "nom": "RH déjà validé", "action": "VALIDER", "role": "RH", "mode": "DOUBLE", "etats": ["VALIDE", "VALIDE"], "attendu": ["VAL_DEJA"] },
+    { "nom": "chef en simple", "action": "VALIDER", "role": "CHEF", "mode": "SIMPLE", "etats": ["NON_VALIDE"], "attendu": ["VAL_CHEF_SIMPLE"] },
+    { "nom": "chef déjà validé", "action": "VALIDER", "role": "CHEF", "mode": "DOUBLE", "etats": ["VALIDE_CHEF"], "attendu": ["VAL_DEJA"] },
+    { "nom": "chef après le RH", "action": "VALIDER", "role": "CHEF", "mode": "DOUBLE", "etats": ["NON_VALIDE", "VALIDE"], "attendu": ["VAL_RH_FAIT"] },
+    { "nom": "dévalider sans motif", "action": "DEVALIDER", "role": "RH", "mode": "SIMPLE", "etats": ["VALIDE"], "motif": " ", "attendu": ["DEV_MOTIF"] },
+    { "nom": "dévalider rien", "action": "DEVALIDER", "role": "RH", "mode": "SIMPLE", "etats": ["NON_VALIDE"], "motif": "Erreur", "attendu": ["DEV_RIEN"] },
+    { "nom": "chef dévalide après le RH", "action": "DEVALIDER", "role": "CHEF", "mode": "DOUBLE", "etats": ["VALIDE"], "motif": "Erreur", "attendu": ["DEV_RH_FAIT"] },
+    { "nom": "chef dévalide la sienne", "action": "DEVALIDER", "role": "CHEF", "mode": "DOUBLE", "etats": ["VALIDE_CHEF", "NON_VALIDE"], "motif": "Oubli", "attendu": [] },
+    { "nom": "RH dévalide", "action": "DEVALIDER", "role": "RH", "mode": "DOUBLE", "etats": ["VALIDE", "VALIDE_CHEF"], "motif": "Correction", "attendu": [] }
+  ],
+  "exceptions": [
+    { "nom": "semaine normale", "jours_travailles": ["2026-10-19", "2026-10-20"], "pointages": [{ "date": "2026-10-19", "minutes": 420 }, { "date": "2026-10-20", "minutes": 420 }], "attendu": [] },
+    { "nom": "jour sans pointage", "jours_travailles": ["2026-10-19", "2026-10-20"], "pointages": [{ "date": "2026-10-19", "minutes": 420 }], "attendu": ["EXC_SANS_POINTAGE"] },
+    { "nom": "heures supplémentaires et non-conformité", "seuil_semaine": 2100, "jours_travailles": ["2026-10-19"],
+      "pointages": [{ "date": "2026-10-19", "minutes": 600 }, { "date": "2026-10-20", "minutes": 600 }, { "date": "2026-10-21", "minutes": 600 }, { "date": "2026-10-22", "minutes": 360, "non_conformite": true }],
+      "attendu": ["EXC_NON_CONFORMITE", "EXC_HEURES_SUP"] },
+    { "nom": "seuil atteint sans dépassement", "seuil_semaine": 2100, "jours_travailles": [], "pointages": [{ "date": "2026-10-19", "minutes": 2100 }], "attendu": [] },
+    { "nom": "tout", "jours_travailles": ["2026-10-23"], "pointages": [{ "date": "2026-10-19", "minutes": 60, "non_conformite": true }], "seuil_semaine": 30,
+      "avertissements": 2, "corrections": 1, "modifie": true,
+      "attendu": ["EXC_CORRECTION", "EXC_SANS_POINTAGE", "EXC_NON_CONFORMITE", "EXC_HEURES_SUP", "EXC_CONTROLE", "EXC_MODIFIE"] }
+  ]
+}

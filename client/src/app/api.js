@@ -80,6 +80,16 @@ export const api = {
     position: (id) => appel('GET', `/pointage/pointages/${id}/position`),
     semaine: (salarie, lundi) => appel('GET', `/pointage/semaine/${salarie}/${lundi}`),
     enregistrerSemaine: (salarie, lundi, s) => appel('PUT', `/pointage/semaine/${salarie}/${lundi}`, s),
+    // Lot 2 : synthèse, couche validée, validation, demandes de correction.
+    synthese: (f = {}) => appel('GET', `/pointage/synthese?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    detailSynthese: (salarie, lundi) => appel('GET', `/pointage/synthese/semaine/${salarie}/${lundi}`),
+    enregistrerSynthese: (salarie, lundi, s) => appel('PUT', `/pointage/synthese/semaine/${salarie}/${lundi}`, s),
+    retablirSynthese: (salarie, lundi) => appel('DELETE', `/pointage/synthese/semaine/${salarie}/${lundi}`),
+    valider: (a) => appel('POST', '/pointage/synthese/valider', a),
+    devalider: (a) => appel('POST', '/pointage/synthese/devalider', a),
+    demanderCorrection: (c) => appel('POST', '/pointage/corrections', c),
+    appliquerCorrection: (id, r) => appel('POST', `/pointage/corrections/${id}/appliquer`, r),
+    rejeterCorrection: (id, r) => appel('POST', `/pointage/corrections/${id}/rejeter`, r),
   },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),

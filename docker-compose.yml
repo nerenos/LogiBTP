@@ -57,6 +57,7 @@ services:
       - ./modules/crm/db/099_crm_fil.sql:/docker-entrypoint-initdb.d/099_crm_fil.sql:ro
       - ./modules/execution/db/085_execution.sql:/docker-entrypoint-initdb.d/085_execution.sql:ro
       - ./modules/pointage/db/086_pointage.sql:/docker-entrypoint-initdb.d/086_pointage.sql:ro
+      - ./modules/pointage/db/087_pointage_validation.sql:/docker-entrypoint-initdb.d/087_pointage_validation.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro

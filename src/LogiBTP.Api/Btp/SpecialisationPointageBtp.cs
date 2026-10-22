@@ -1,3 +1,4 @@
+using LogiBTP.Crm.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,9 @@ namespace LogiBTP.Api.Btp;
 /// Spécialisation du module Pointage par le cœur : salariés et intérimaires actifs (service principal par
 /// `service_membre`), chantiers ouverts et internes (`cha_interne`, db/199), types de main-d'œuvre = natures du
 /// regroupement MO, services, ordres de la famille E (module Exécution actif) ; droit de saisie : le salarié lui-même,
-/// le responsable de son service (ou du service parent).
+/// le responsable de son service (ou du service parent). Synthèse (lot 2) : RH = membre d'un service de nature
+/// ADMINISTRATIF ; chef = responsable du service principal du salarié ou de son parent ; demande de correction : tâche
+/// du CRM au service administratif (module CRM actif).
 /// </summary>
 public class SpecialisationPointageBtp : SpecialisationPointage
 {
@@ -78,4 +81,40 @@ public class SpecialisationPointageBtp : SpecialisationPointage
               LEFT JOIN service sp ON sp.srv_id = sv.srv_parent_id
               WHERE s.sal_id = @s AND (s.sal_ind_id = i.ind_id OR sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id)) AS "Value"
             """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", salarie)).FirstAsync(ct);
+
+    public override async Task<bool> EstRhAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<bool>("""
+            SELECT EXISTS (SELECT 1 FROM individu i JOIN service_membre sm ON sm.sme_ind_id = i.ind_id JOIN service s ON s.srv_id = sm.sme_srv_id
+                           WHERE i.ind_utilisateur = @u AND s.srv_nature = 'ADMINISTRATIF' AND s.srv_actif) AS "Value"
+            """, new NpgsqlParameter("u", u.Code)).FirstAsync(ct);
+
+    public override async Task<HashSet<int>> ChefDeAsync(PointageDbContext db, Utilisateur u, IReadOnlyCollection<int> salaries, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<int>("""
+            SELECT s.sal_id AS "Value" FROM salarie s
+            JOIN individu i ON i.ind_utilisateur = @u
+            JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
+            JOIN service sv ON sv.srv_id = sm.sme_srv_id
+            LEFT JOIN service sp ON sp.srv_id = sv.srv_parent_id
+            WHERE s.sal_id = ANY(@ids) AND (sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id)
+            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("ids", salaries.ToArray())).ToListAsync(ct)).ToHashSet();
+
+    /// <summary>Tâche du CRM au premier service administratif (RH), rattachée au salarié ; sans effet si le CRM est inactif.</summary>
+    public override async Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct)
+    {
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        var srv = await db.Database.SqlQueryRaw<int?>(
+            "SELECT srv_id AS \"Value\" FROM service WHERE srv_nature = 'ADMINISTRATIF' AND srv_actif ORDER BY srv_parent_id NULLS FIRST, srv_ordre LIMIT 1").FirstOrDefaultAsync(ct);
+        if (srv is not int service) return;
+        try
+        {
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+                $"Pointages de {salarie.Nom} {salarie.Prenom} : correction demandée (semaine du {c.PcoLundi:dd/MM/yyyy})",
+                c.PcoMotif is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoMotif)}</p>",
+                null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            services.GetRequiredService<ILoggerFactory>().CreateLogger("Pointage").LogWarning(e, "Tâche du CRM non créée pour la correction {Correction}", c.PcoId);
+        }
+    }
 }

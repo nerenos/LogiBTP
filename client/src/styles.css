@@ -475,3 +475,9 @@ td.nombre, th.nombre { text-align: right; }
 ul.controles { margin: 0; padding-left: 1.2rem; }
 ul.controles li.erreur { color: #b42318; }
 ul.controles li.avertissement { color: #b45309; }
+
+/* Pointage (lot 2) : synthèse et validation. */
+.synthese-pointage td.etat-valide { color: #15803d; }
+.synthese-pointage td.etat-valide_chef { color: #1d4ed8; }
+.badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: rgba(217, 119, 6, .15); color: #b45309; white-space: nowrap; }
+.correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }

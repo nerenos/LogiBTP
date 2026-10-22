@@ -8,6 +8,10 @@
 > durées en minutes (`poi_minutes`) au lieu d'heures ; type de MO = identifiant de nature (`poi_type_mo`), sous-type
 > `poi_sous_type` ; amplitudes paramétrables (`ppa_amplitude_jour`, `ppa_amplitude_semaine`) ; droits de saisie provisoires
 > (salarié, responsable du service, administrateur) en attendant le module des droits.
+> Lot 2 réalisé le 22/10/2026 (`modules/pointage/db/087`, `ServiceSynthese.cs`, `validation.js` ↔ `ReglesValidation.cs`) :
+> la couche validée couvre la semaine entière d'un salarié (`poi_semaine`) ; RH = membre d'un service administratif, chef
+> = responsable du service ; demande de correction = semaine complète envoyée (`poi_correction`) au lieu d'un pointage
+> marqué « à corriger ».
 
 ## 1. Objet
 

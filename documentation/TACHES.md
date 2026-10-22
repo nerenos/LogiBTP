@@ -195,7 +195,11 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 - [x] **Pointage, lot 1** (22/10/2026) : module `modules/pointage` (paramètres, sous-types, pointages en minutes, contrôles
   répliqués), chantiers internes, saisie hebdomadaire au bureau, liste des pointages (saisis, non-conformités, improductif).
-- [ ] Pointage, lots suivants : synthèse et validation (lot 2), profils de paie, rubriques, règles, zones, export, valorisation
+- [x] **Pointage, lot 2** (22/10/2026) : synthèse par exceptions, couche validée par semaine, validation simple ou double,
+  blocage, dévalidation tracée avec motif, demandes de correction (tâche CRM au service administratif). Jours travaillés
+  de la synthèse : du lundi au vendredi (à brancher sur le calendrier du salarié : `JoursTravaillesAsync`) ; écart avec le
+  planning : avec le module Planning.
+- [ ] Pointage, lots suivants : profils de paie, rubriques, règles, zones, export, valorisation
   (lot 3), borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
 
 ### Archivage
