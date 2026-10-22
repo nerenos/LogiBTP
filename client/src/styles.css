@@ -580,7 +580,44 @@ details.avertissement > summary { cursor: pointer; }
 /* Planning (lot 2) : vue et panneau ancré à droite. */
 .planning-corps { flex: 1; min-height: 0; display: flex; gap: .4rem; }
 .planning-corps > .zone-planning { flex: 1; min-width: 0; }
-.panneau-planning { width: 24rem; flex: none; overflow: auto; border-left: 1px solid var(--bord, #cbd5e1); padding: 0 .4rem; }
+.panneau-planning { width: var(--largeur-panneau, 24rem); flex: none; overflow: auto; border-left: 1px solid var(--bord, #cbd5e1); padding: 0 .4rem; }
+/* États du panneau : agrandi, réduit (onglets en icônes, en colonne), masqué ; séparateur à glisser ; fenêtre séparée. */
+.panneau-planning.panneau-large { width: max(50vw, var(--largeur-panneau, 24rem)); }
+.panneau-planning.panneau-reduit { width: 2.4rem; padding: 0 .15rem; overflow: hidden; }
+.panneau-planning.panneau-reduit [data-panneau], .panneau-planning.panneau-reduit [data-actions-tache], .panneau-planning.panneau-reduit .onglet-libelle,
+.panneau-planning.panneau-reduit [data-nb-alertes], .panneau-planning.panneau-reduit [data-nb-jalons],
+.panneau-planning.panneau-reduit .commandes-panneau button:not([data-panneau-reduire]) { display: none; }
+.panneau-planning.panneau-reduit .onglets { flex-direction: column; align-items: stretch; }
+.panneau-planning.panneau-reduit .onglets > button[data-onglet] { padding: .2rem 0; text-align: center; }
+.panneau-planning.panneau-reduit .commandes-panneau { order: -1; margin: 0 0 .3rem; }
+.panneau-planning:not(.panneau-reduit) .onglet-icone { display: none; }
+.panneau-planning .onglets { flex-wrap: wrap; }
+.panneau-planning .commandes-panneau { margin-left: auto; display: inline-flex; gap: 0; }
+.panneau-planning .commandes-panneau .bouton-icone { padding: 0 .3rem; min-width: 0; border-color: transparent; background: none; }
+.panneau-planning .onglets { gap: .15rem; }
+.panneau-planning .onglets > button[data-onglet] { padding: .15rem .4rem; }
+.liste-aplanifier td small { color: var(--discret); }
+.separateur-panneau-planning { flex: none; width: 5px; margin: 0 -3px 0 -2px; cursor: ew-resize; z-index: 3; }
+.separateur-panneau-planning:hover { background: var(--accent-clair); }
+.page-planning.panneau-seul .barre-planning, .page-planning.panneau-seul .zone-planning { display: none; }
+.page-planning.panneau-seul .panneau-planning { flex: 1; width: auto; border-left: none; }
+/* Liste « À planifier » : barre (recherche, tri, présentation), tuiles. */
+.barre-aplanifier { gap: .3rem; margin: .3rem 0; }
+.barre-aplanifier input[type="search"] { flex: 1; min-width: 8rem; }
+.panneau-planning .tableau-compact input[type="date"] { width: 8.2rem; }
+.tuiles-aplanifier { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .4rem; }
+.tuile-aplanifier { border: 1px solid var(--bord); border-radius: 6px; padding: .35rem .45rem; background: var(--surface); display: flex; flex-direction: column; gap: .15rem; }
+.tuile-aplanifier.glissable { cursor: grab; }
+.tuile-aplanifier.glissable:hover { border-color: var(--accent); }
+.tuile-aplanifier.soldee { opacity: .6; }
+.tuile-aplanifier .ta-entete { display: flex; justify-content: space-between; gap: .3rem; white-space: nowrap; }
+.tuile-aplanifier .ta-entete b { overflow: hidden; text-overflow: ellipsis; }
+.tuile-aplanifier .ta-reste { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tuile-aplanifier .ta-libelle { font-size: .85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tuile-aplanifier .ta-service { font-size: .85em; color: var(--discret); border-left: 3px solid var(--ta-couleur); padding-left: .3rem; }
+.tuile-aplanifier .ta-jauge { height: 5px; border-radius: 3px; background: var(--titre-fond); overflow: hidden; }
+.tuile-aplanifier .ta-jauge i { display: block; height: 100%; background: var(--accent); }
+.tuile-aplanifier input[type="date"] { width: 100%; box-sizing: border-box; }
 .panneau-planning .onglets button.actif { font-weight: 600; text-decoration: underline; }
 .panneau-planning tr.glissable { cursor: grab; }
 /* Entête du panneau (onglets, boutons de la tâche) figée au défilement. */
@@ -658,3 +695,16 @@ body.mode-borne #bandeau { display: none; }
 .etiquette-choix { display: inline-flex; align-items: center; gap: .2rem; padding: 0 .1rem 0 .45rem; border: 1px solid var(--bord); border-radius: .7rem; background: var(--surface); font-size: .9em; }
 .etiquette-choix button { border: none; background: none; padding: 0 .2rem; cursor: pointer; color: var(--discret); }
 .choix-multiple .combo, .tableau-compact .choix-multiple .combo { width: 12rem; }
+
+/* Planning : bulle d'une tâche (VuePlanningBtp.bulleBarre). */
+.bulle-tache { border-left: 4px solid var(--bt-couleur); padding-left: .5rem; }
+.bulle-tache .bt-entete { display: flex; align-items: center; gap: .3rem; font-size: 11px; color: var(--discret); text-transform: uppercase; letter-spacing: .03em; }
+.bulle-tache .bt-theorique { margin-left: auto; padding: 0 .3rem; border: 1px dashed var(--discret); border-radius: 3px; text-transform: none; }
+.bulle-tache .bt-chantier { margin-top: .2rem; }
+.bulle-tache .bt-libelle { font-size: 13px; font-weight: 600; margin: .1rem 0 .35rem; }
+.bulle-tache dl { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; margin: 0; }
+.bulle-tache dt { color: var(--discret); }
+.bulle-tache dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bulle-tache .bt-avancement { display: inline-block; width: 6rem; height: 6px; border-radius: 3px; background: var(--titre-fond); vertical-align: middle; overflow: hidden; }
+.bulle-tache .bt-avancement i { display: block; height: 100%; background: var(--bt-couleur); }
+.bulle-tache .bt-memo { margin-top: .35rem; padding-top: .3rem; border-top: 1px solid var(--bord); white-space: pre-wrap; color: var(--discret); }

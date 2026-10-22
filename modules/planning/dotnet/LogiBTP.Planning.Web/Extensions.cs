@@ -35,6 +35,11 @@ public static class Extensions
         g.MapGet("/ressources", (string? services, string? types, string? recherche, ServicePlanning s, CancellationToken ct) => s.RessourcesAsync(services, types, recherche, ct));
         g.MapGet("/elements", (string? recherche, ServicePlanning s, CancellationToken ct) => s.ElementsAsync(recherche, ct));
         g.MapGet("/a-planifier", (string? services, string? recherche, ServicePlanning s, CancellationToken ct) => s.APlanifierAsync(services, recherche, ct));
+        g.MapPut("/a-planifier/prevision", async (PrevisionSaisie p, HttpContext http, ServicePlanning s, CancellationToken ct) =>
+        {
+            await s.EnregistrerPrevisionAsync(p, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         g.MapPost("/calcul", (TacheSaisie t, ServicePlanning s, CancellationToken ct) => s.ApercuAsync(t, ct));
         g.MapGet("/taches/{id:long}", (long id, ServicePlanning s, CancellationToken ct) => s.TacheAsync(id, ct));
         g.MapPost("/taches", (TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.CreerAsync(t, Utilisateur.Depuis(http), ct));

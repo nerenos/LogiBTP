@@ -120,6 +120,7 @@ export const api = {
     donnees: (f) => appel('GET', `/planning/donnees?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     ressources: (f = {}) => appel('GET', `/planning/ressources?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     elements: (recherche = '') => appel('GET', `/planning/elements${recherche ? `?recherche=${encodeURIComponent(recherche)}` : ''}`),
+    enregistrerPrevision: (p) => appel('PUT', '/planning/a-planifier/prevision', p),
     aPlanifier: (f = {}) => appel('GET', `/planning/a-planifier?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     calculer: (t) => appel('POST', '/planning/calcul', t),
     tache: (id) => appel('GET', `/planning/taches/${id}`),

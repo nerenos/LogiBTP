@@ -42,7 +42,10 @@ export class VuePlanning {
     this.corps = conteneur.querySelector('.vp-corps');
     this.plan = conteneur.querySelector('.vp-plan');
     this.corps.addEventListener('scroll', () => this.#programmer(), { passive: true });
-    this.corps.addEventListener('pointerdown', (e) => this.#appui(e));
+    this.corps.addEventListener('pointerdown', (e) => { this.#cacherBulle(); this.#appui(e); });
+    this.corps.addEventListener('pointermove', (e) => this.#survol(e), { passive: true });
+    this.corps.addEventListener('pointerleave', () => this.#cacherBulle());
+    this.corps.addEventListener('wheel', () => this.#cacherBulle(), { passive: true });
     this.corps.addEventListener('dblclick', (e) => { const t = this.#tacheDe(e.target); if (t) this.#o.actions.ouvrir?.(t); });
     this.corps.addEventListener('contextmenu', (e) => { const t = this.#tacheDe(e.target); if (t && this.#o.actions.menu) { e.preventDefault(); this.#o.actions.menu(e, t); } });
     this.corps.addEventListener('dragover', (e) => { if (this.#o.actions.deposer && !this.#o.lecture) e.preventDefault(); });
@@ -62,7 +65,9 @@ export class VuePlanning {
   contenuBarre(t) { return echapper(t.libelle ?? ''); }
   /** Classes supplémentaires d'une barre. */
   classeBarre(t) { return t.classe ?? ''; }
-  /** Infobulle d'une barre. */
+  /** Bulle d'une barre (HTML), affichée dès le survol ; null = infobulle du navigateur (`titreBarre`). */
+  bulleBarre() { return null; }
+  /** Infobulle d'une barre (sans bulle). */
   titreBarre(t) { return `${t.libelle ?? ''}\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}`; }
   /** HTML de l'en-tête d'une ligne. */
   enteteLigne(l) { return echapper(l.libelle ?? ''); }
@@ -102,6 +107,8 @@ export class VuePlanning {
       if (t.fin - t.debut > this.#dureeMax) this.#dureeMax = t.fin - t.debut;
     }
     for (const l of this.#parLigne.values()) l.sort((a, b) => a.debut - b.debut);
+    // Sélection conservée au rechargement (même clé de barre).
+    if (this.selection) this.selection = this.tachesDe(this.selection.ligne).find((t) => String(t.cle) === String(this.selection.cle)) ?? null;
     this.#disposer();
   }
 
@@ -133,14 +140,28 @@ export class VuePlanning {
   }
 
   /** Change la période, l'échelle, la largeur des colonnes, la hauteur des voies… puis redessine. */
+  /** Réglages (zoom, échelle, lignes de texte, masque…) : la vue reste centrée sur la barre sélectionnée, sinon sur son centre. */
   regler(options) {
+    const sel = this.selection && this.#parLigne.get(this.selection.ligne)?.includes(this.selection) ? this.selection : null;
     const centre = this.#instantCentre();
     Object.assign(this.#o, options);
     if ('lignesTexte' in options && !('hauteurVoie' in options)) this.#o.hauteurVoie = VuePlanning.hauteurVoie(this.#o.lignesTexte);
     this.conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     this.#appliquerDimensions();
     this.#disposer();
-    if (centre != null && !('debut' in options)) this.allerA(centre);
+    if ('debut' in options) return;
+    if (sel) this.montrer(sel);
+    else if (centre != null) this.allerA(centre);
+  }
+
+  /** Fait défiler pour montrer une barre : centrée (son début si elle est plus large que la vue), sa ligne au milieu. */
+  montrer(t) {
+    const a = this.x(t.debut);
+    const b = this.x(t.fin);
+    this.corps.scrollLeft = Math.max(0, b - a > this.corps.clientWidth - 40 ? a - 20 : (a + b - this.corps.clientWidth) / 2);
+    const i = this.#lignes.findIndex((l) => l.cle === t.ligne);
+    if (i >= 0) this.corps.scrollTop = Math.max(0, this.#positions[i] + this.#hauteurs[i] / 2 - this.corps.clientHeight / 2);
+    this.#programmer();
   }
 
   /** Zoom horizontal (facteur sur la largeur des colonnes), centré. */
@@ -277,6 +298,7 @@ export class VuePlanning {
     const t1 = this.instantDe(c.scrollLeft + c.clientWidth + marge);
     const lignes = [];
     const barres = [];
+    const avecBulle = this.bulleBarre !== VuePlanning.prototype.bulleBarre;
     for (let i = i0; i <= i1; i++) {
       const l = this.#lignes[i];
       const y = this.#positions[i];
@@ -294,12 +316,39 @@ export class VuePlanning {
         const largeur = Math.max(3, this.x(Math.min(t.fin, this.#o.fin)) - gauche);
         barres.push(`<div class="vp-barre ${this.classeBarre(t)}${t === this.selection ? ' selection' : ''}" data-cle="${echapper(String(t.cle))}" data-ligne="${i}"
           style="left:${gauche}px;width:${largeur}px;top:${y + 3 + v * this.#o.hauteurVoie}px;height:${this.#o.hauteurVoie - 2}px;${t.couleur ? `--vp-couleur:${t.couleur};` : ''}"
-          title="${echapper(this.titreBarre(t))}">${this.contenuBarre(t)}</div>`);
+          ${avecBulle ? '' : `title="${echapper(this.titreBarre(t))}"`}>${this.contenuBarre(t)}</div>`);
       }
     }
     this.conteneur.querySelector('.vp-lignes-plan').innerHTML = lignes.join('');
     this.plan.querySelector('.vp-barres').innerHTML = barres.join('');
   }
+
+  /** Bulle au survol d'une barre (immédiate, suit le pointeur ; jamais pendant un glisser). */
+  #survol(e) {
+    if (this.#glisser || e.buttons) { this.#cacherBulle(); return; }
+    const t = this.#tacheDe(e.target);
+    const html = t ? this.bulleBarre(t) : null;
+    if (!html) { this.#cacherBulle(); return; }
+    if (!this.bulle) {
+      this.bulle = document.createElement('div');
+      this.bulle.className = 'vp-bulle';
+      document.body.append(this.bulle);
+    }
+    if (this.bulle.tache !== t) { this.bulle.innerHTML = html; this.bulle.tache = t; }
+    this.bulle.hidden = false;
+    const r = this.bulle.getBoundingClientRect();
+    const x = e.clientX + 14 + r.width > window.innerWidth ? e.clientX - 14 - r.width : e.clientX + 14;
+    const y = e.clientY + 16 + r.height > window.innerHeight ? e.clientY - 10 - r.height : e.clientY + 16;
+    this.bulle.style.left = `${Math.max(4, x)}px`;
+    this.bulle.style.top = `${Math.max(4, y)}px`;
+  }
+
+  #cacherBulle() {
+    if (this.bulle) { this.bulle.hidden = true; this.bulle.tache = null; }
+  }
+
+  /** Retire la bulle du document (fermeture de la page). */
+  detruire() { this.bulle?.remove(); this.bulle = null; }
 
   #tacheDe(el) {
     const b = el.closest?.('.vp-barre');

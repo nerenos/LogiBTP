@@ -64,6 +64,7 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
     public DbSet<NotificationEntite> Notifications => Set<NotificationEntite>();
     public DbSet<DependanceEntite> Dependances => Set<DependanceEntite>();
     public DbSet<JalonEntite> Jalons => Set<JalonEntite>();
+    public DbSet<PrevisionEntite> Previsions => Set<PrevisionEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -78,6 +79,7 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
         b.Entity<NotificationEntite>().ToTable("pla_notification").HasKey(x => x.PnoCle);
         b.Entity<DependanceEntite>().ToTable("pla_dependance").HasKey(x => x.DepId);
         b.Entity<JalonEntite>().ToTable("pla_jalon").HasKey(x => x.JalId);
+        b.Entity<PrevisionEntite>().ToTable("pla_prevision").HasKey(x => new { x.PprTypeElement, x.PprIdElement, x.PprSrvId });
         b.Entity<JalonEntite>().Property(x => x.JalQuand).HasColumnType("timestamp(0)");
     }
 }
@@ -89,6 +91,19 @@ public sealed record RessourcePlanning(string Type, string Id, string Libelle, i
 }
 public sealed record ServicePlanningDto(int Id, string Code, string Libelle, int? ParentId);
 public sealed record ElementPlanning(string Type, string Id, string Code, string Libelle, string? Url);
+/// <summary>Date prévisionnelle d'un élément à planifier pour un service (tri de la liste « À planifier »).</summary>
+public class PrevisionEntite
+{
+    public string PprTypeElement { get; set; } = "chantier";
+    public string PprIdElement { get; set; } = "";
+    public int PprSrvId { get; set; }
+    public DateOnly PprDate { get; set; }
+    public string PprMajPar { get; set; } = "";
+    public DateTimeOffset PprMajLe { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record PrevisionSaisie(string Type, string Id, int SrvId, string? Date);
+
 public sealed record BudgetPlanning(string Type, string Id, int SrvId, int Minutes);
 public sealed record EquipePlanning(int Id, string Code, string Libelle, int? SrvId);
 public sealed record FiltreRessources(IReadOnlyCollection<int>? Services, IReadOnlyCollection<string>? Types, string? Recherche, IReadOnlyCollection<string>? Cles = null);
@@ -199,7 +214,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         object Barre(TacheEntite t, string cle, string ligne, bool theorique) => new
         {
             cle, tache = t.TacId, ligne, debut = Ecrire(t.TacDebut), fin = Ecrire(t.TacFin), libelle = t.TacLibelle, heures = t.TacHeures, etat = t.TacEtat, couleur = t.TacCouleur,
-            srv_id = t.TacSrvId, calcul = t.TacCalcul, version = t.TacVersion, theorique, type_element = t.TacTypeElement,
+            srv_id = t.TacSrvId, calcul = t.TacCalcul, version = t.TacVersion, theorique, type_element = t.TacTypeElement, avancement = t.TacAvancement, memo = t.TacMemo,
             element = t.TacIdElement is not null && elements.TryGetValue(t.TacIdElement, out var e) ? new { e.Code, e.Libelle } : null,
             ressources = affectations.Where(a => a.AffTacId == t.TacId).Select(a => libRes.GetValueOrDefault($"{a.AffResType}:{a.AffResId}") ?? $"{a.AffResType} {a.AffResId}").ToList(),
         };
@@ -497,12 +512,32 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             .GroupBy(t => new { t.TacIdElement, t.TacSrvId }).Select(g => new { g.Key.TacIdElement, g.Key.TacSrvId, Minutes = g.Sum(t => t.TacHeures) }).ToListAsync(ct);
         var elements = (await specialisation.ElementsAsync(db, "chantier", ids, null, ct)).ToDictionary(e => e.Id);
         var libSrv = (await specialisation.ServicesAsync(db, ct)).ToDictionary(s => s.Id, s => s.Libelle);
+        var previsions = (await db.Previsions.AsNoTracking().Where(x => ids.Contains(x.PprIdElement)).ToListAsync(ct))
+            .ToDictionary(x => (x.PprTypeElement, x.PprIdElement, x.PprSrvId), x => x.PprDate);
         return budgets.Where(b => elements.ContainsKey(b.Id)).Select(b =>
         {
             var p = planifie.FirstOrDefault(x => x.TacIdElement == b.Id && x.TacSrvId == b.SrvId)?.Minutes ?? 0;
             var e = elements[b.Id];
-            return new { type = b.Type, id = b.Id, code = e.Code, libelle = e.Libelle, srv_id = b.SrvId, service = libSrv.GetValueOrDefault(b.SrvId), budget = b.Minutes, planifie = p, reste = b.Minutes - p };
+            var prevue = previsions.TryGetValue((b.Type, b.Id, b.SrvId), out var dp) ? dp.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
+            return new { type = b.Type, id = b.Id, code = e.Code, libelle = e.Libelle, srv_id = b.SrvId, service = libSrv.GetValueOrDefault(b.SrvId), budget = b.Minutes, planifie = p, reste = b.Minutes - p, date_prevue = prevue };
         }).OrderByDescending(x => x.reste).ToList();
+    }
+
+    /// <summary>Date prévisionnelle d'un élément à planifier (null : retirée).</summary>
+    public async Task EnregistrerPrevisionAsync(PrevisionSaisie s, Utilisateur u, CancellationToken ct)
+    {
+        var x = await db.Previsions.FirstOrDefaultAsync(p => p.PprTypeElement == s.Type && p.PprIdElement == s.Id && p.PprSrvId == s.SrvId, ct);
+        if (string.IsNullOrWhiteSpace(s.Date)) { if (x is not null) db.Previsions.Remove(x); }
+        else
+        {
+            if (!DateOnly.TryParseExact(s.Date[..Math.Min(10, s.Date.Length)], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+                throw ExceptionMetier.Invalide("PLA_DATE", "Date prévisionnelle invalide");
+            if (x is null) { x = new PrevisionEntite { PprTypeElement = s.Type, PprIdElement = s.Id, PprSrvId = s.SrvId }; db.Previsions.Add(x); }
+            x.PprDate = d;
+            x.PprMajPar = u.Code;
+            x.PprMajLe = DateTimeOffset.UtcNow;
+        }
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<object> ReferentielsAsync(CancellationToken ct) => new

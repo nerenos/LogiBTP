@@ -63,6 +63,13 @@
 /* Barres sur plusieurs lignes de texte (option lignesTexte : --vp-lignes). */
 .vue-planning.multiligne .vp-barre { white-space: normal; line-height: 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--vp-lignes); overflow-wrap: anywhere; }
 
+/* Bulle d'une barre (survol) : au-dessus de tout, sans capter le pointeur. */
+.vp-bulle {
+  position: fixed; z-index: 1000; pointer-events: none; max-width: 22rem; padding: .45rem .6rem; border-radius: 6px; font-size: 12px;
+  background: var(--surface, #fff); color: var(--texte, #1f2937); border: 1px solid var(--bord, #cbd5e1); box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+.vp-bulle[hidden] { display: none; }
+
 /* Décorations des lignes (sous les barres) : capacité d'un service, jalons. */
 .vp-deco { position: absolute; box-sizing: border-box; font-size: 10px; overflow: hidden; white-space: nowrap; padding: 0 3px; pointer-events: auto; opacity: .85; }
 .vp-deco.charge-ok { background: rgba(22, 163, 74, .22); }

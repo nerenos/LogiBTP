@@ -15,6 +15,14 @@ const ETATS = { OPTION: 'Option', PREVUE: 'Prévue', CONFIRMEE: 'Confirmée', EN
 const COULEURS_ETAT = { OPTION: '#98a2b3', PREVUE: '#2563eb', CONFIRMEE: '#16a34a', EN_COURS: '#d97706', TERMINEE: '#475467' };
 const pastilleEtat = (etat) => `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>`;
 const LIGNES_TEXTE = [1, 2, 3, 4, 5, 6, 8, 10];
+const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+const TRIS_APLANIFIER = { nom: 'Nom', service: 'Service', reste: 'Reste', date: 'Date prévisionnelle' };
+/** Onglets du panneau du planning (icône en panneau réduit). */
+const ONGLETS_PANNEAU = {
+  aplanifier: { libelle: 'À planifier', icone: '📋' }, tache: { libelle: 'Tâche', icone: '✎' },
+  alertes: { libelle: 'Alertes', icone: '⚠', compteur: true }, jalons: { libelle: 'Jalons', icone: '◆', compteur: true },
+};
+const ETATS_PANNEAU = ['normal', 'reduit', 'large', 'masque'];
 const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
 const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
@@ -81,6 +89,22 @@ class VuePlanningBtp extends VuePlanning {
     });
   }
 
+  /** Bulle structurée : état, chantier, libellé, période, heures, service, ressources, avancement, mémo. */
+  bulleBarre(t) {
+    const quand = (m) => { const d = new Date(m * 60000); return `${JOURS_COURTS[d.getUTCDay()]} ${depuisMinutes(m).slice(8, 10)}/${depuisMinutes(m).slice(5, 7)} ${depuisMinutes(m).slice(11, 16)}`; };
+    const ligne = (libelle, valeur) => (valeur ? `<dt>${libelle}</dt><dd>${valeur}</dd>` : '');
+    const service = this.services?.get(t.srv_id);
+    const av = Number(t.avancement) || 0;
+    return `<div class="bulle-tache" style="--bt-couleur:${t.couleur ?? '#3b82f6'}">
+      <div class="bt-entete">${pastilleEtat(t.etat)}<span>${echapper(ETATS[t.etat] ?? t.etat)}</span>${t.theorique ? '<span class="bt-theorique">théorique</span>' : ''}</div>
+      ${t.element ? `<div class="bt-chantier"><b>${echapper(t.element.code)}</b> ${echapper(t.element.libelle ?? '')}</div>` : ''}
+      <div class="bt-libelle">${echapper(t.libelle)}</div>
+      <dl>${ligne('Début', quand(t.debut))}${ligne('Fin', quand(t.fin))}${ligne('Heures', `${ecrireDuree(t.heures) || '0:00'} h`)}${ligne('Service', service ? echapper(service) : '')}
+        ${ligne('Ressources', t.ressources?.length ? t.ressources.map((x) => echapper(x)).join('<br>') : '<span class="aide">aucune (charge du service)</span>')}
+        ${ligne('Avancement', `<span class="bt-avancement"><i style="width:${Math.max(0, Math.min(100, av))}%"></i></span> ${av} %`)}</dl>
+      ${t.memo ? `<div class="bt-memo">${echapper(t.memo)}</div>` : ''}</div>`;
+  }
+
   titreBarre(t) {
     return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle} (${ETATS[t.etat] ?? t.etat})\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
   }
@@ -89,7 +113,7 @@ class VuePlanningBtp extends VuePlanning {
 export class PagePlanning extends PageBase {
   icone = '📅';
 
-  urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: this.consultation ? '1' : '' }).filter(([, v]) => v))}`; }
+  urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: this.consultation ? '1' : '', panneau: this.panneauSeul ? '1' : '' }).filter(([, v]) => v))}`; }
 
   async ouvrir() {
     this.titre = 'Planning';
@@ -103,14 +127,18 @@ export class PagePlanning extends PageBase {
         <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
         <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
+        <button type="button" data-afficher-panneau hidden title="Afficher le panneau (à planifier, tâche, alertes, jalons)">▤ Panneau</button>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
-        <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button><button type="button" data-onglet="alertes">Alertes <span data-nb-alertes></span></button></div>
+        <div class="separateur-panneau-planning" data-separateur-panneau title="Glisser pour élargir le panneau"></div>
+        <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne">${Object.entries(ONGLETS_PANNEAU).map(([cle, o]) => `<button type="button" data-onglet="${cle}" class="${cle === 'aplanifier' ? 'actif' : ''}" title="${o.libelle}"><span class="onglet-icone">${o.icone}</span><span class="onglet-libelle">${o.libelle}</span>${o.compteur ? ` <span data-nb-${cle}></span>` : ''}</button>`).join('')}
+              <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="Réduire le panneau">»</button><button type="button" class="bouton-icone" data-panneau-agrandir title="Agrandir le panneau">⤢</button><button type="button" class="bouton-icone" data-panneau-fenetre title="Ouvrir le panneau dans une autre fenêtre">⧉</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="Remettre le panneau dans la fenêtre du planning">⇤</button><button type="button" class="bouton-icone" data-panneau-masquer title="Masquer le panneau">✕</button></span></div>
             <div data-actions-tache hidden></div></div>
-          <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div><div data-panneau="alertes" hidden></div></aside></div></div>`;
+          ${Object.keys(ONGLETS_PANNEAU).map((cle) => `<div data-panneau="${cle}"${cle === 'aplanifier' ? '' : ' hidden'}></div>`).join('')}</aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
     this.consultation = this.requete.consultation === '1';
+    this.panneauSeul = this.requete.panneau === '1';
     this.historique = [];
     this.refaire = [];
     this.attente = 0;
@@ -135,7 +163,7 @@ export class PagePlanning extends PageBase {
     c.querySelector('[data-aujourdhui]').addEventListener('click', () => { this.du = null; this.#definition(); this.#charger(); });
     c.querySelector('[data-actualiser]').addEventListener('click', () => this.#charger());
     c.querySelector('[data-recherche]').addEventListener('change', (e) => { this.recherche = e.target.value; this.#charger(); });
-    c.querySelector('[data-nouvelle]').addEventListener('click', () => this.#editer(null));
+    c.querySelector('[data-nouvelle]').addEventListener('click', () => this.#afficherTache(null));
     c.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => this.#onglet(b.dataset.onglet)));
     this.#preparerSynchro();
     this.#preparerHistorique();
@@ -149,14 +177,16 @@ export class PagePlanning extends PageBase {
       debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, masque: this.#masque(), actions: {
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
-        selection: (t) => { if (t) { this.#editer(t.tache); this.#onglet('tache'); } },
-        ouvrir: (t) => { this.#editer(t.tache); this.#onglet('tache'); },
+        selection: (t) => { if (t) this.#afficherTache(t.tache); },
+        ouvrir: (t) => this.#afficherTache(t.tache),
         deposer: (e, p) => this.#deposer(e, p),
       },
     });
     const masquer = c.querySelector('[data-masquer]');
     masquer.checked = lirePreferences().planningMasquer !== false;
     masquer.addEventListener('change', () => { ecrirePreferences({ planningMasquer: masquer.checked }); this.planning.regler({ masque: this.#masque() }); });
+    this.planning.services = new Map(this.ref.services.map((s) => [s.id, s.libelle]));
+    if (!this.consultation) this.#preparerPanneau();
     this.du = this.requete.du ?? null;
     this.#definition();
     await this.#charger();
@@ -173,7 +203,99 @@ export class PagePlanning extends PageBase {
     return { heures: p.heure_debut != null ? [p.heure_debut, p.heure_fin] : null, jours: [p.masquer_vendredi && 5, p.masquer_samedi && 6, p.masquer_dimanche && 0].filter((j) => typeof j === 'number') };
   }
 
+  /**
+   * Panneau à droite : réduit (onglets en icônes), normal, agrandi, masqué (préférence `planningPanneau`, largeur au
+   * glisser `planningPanneauLargeur`) ou ouvert dans une autre fenêtre (`/planning?panneau=1` : panneau seul ; la
+   * sélection d'une barre y est envoyée, « Aller » revient au planning, la fermeture rattache le panneau).
+   */
+  #preparerPanneau() {
+    const c = this.conteneur;
+    const prefs = lirePreferences();
+    const aside = c.querySelector('.panneau-planning');
+    if (prefs.planningPanneauLargeur) aside.style.setProperty('--largeur-panneau', `${prefs.planningPanneauLargeur}px`);
+    this.etatPanneau = ETATS_PANNEAU.includes(prefs.planningPanneau) ? prefs.planningPanneau : 'normal';
+    c.querySelector('[data-panneau-reduire]').addEventListener('click', () => this.#etatPanneau(this.etatPanneau === 'reduit' ? 'normal' : 'reduit'));
+    c.querySelector('[data-panneau-agrandir]').addEventListener('click', () => this.#etatPanneau(this.etatPanneau === 'large' ? 'normal' : 'large'));
+    c.querySelector('[data-panneau-masquer]').addEventListener('click', () => this.#etatPanneau('masque'));
+    c.querySelector('[data-afficher-panneau]').addEventListener('click', () => this.#etatPanneau('normal'));
+    c.querySelector('[data-panneau-fenetre]').addEventListener('click', () => {
+      this.app.naviguer(`/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, panneau: '1' }).filter(([, v]) => v))}`, { nouvelleFenetre: true });
+      this.panneauEnFenetre = true;
+      this.#appliquerPanneau();
+    });
+    c.querySelector('[data-separateur-panneau]').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const depart = e.clientX;
+      const largeur = aside.getBoundingClientRect().width;
+      const bouger = (m) => { aside.style.setProperty('--largeur-panneau', `${Math.max(260, Math.min(window.innerWidth - 360, largeur - (m.clientX - depart)))}px`); };
+      const finir = () => {
+        window.removeEventListener('pointermove', bouger);
+        window.removeEventListener('pointerup', finir);
+        if (this.etatPanneau !== 'normal') this.#etatPanneau('normal');
+        ecrirePreferences({ planningPanneauLargeur: Math.round(aside.getBoundingClientRect().width) });
+      };
+      window.addEventListener('pointermove', bouger);
+      window.addEventListener('pointerup', finir);
+    });
+    // Panneau réduit : un clic sur un onglet le rouvre.
+    c.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => { if (this.etatPanneau === 'reduit') this.#etatPanneau('normal'); }));
+    if (this.panneauSeul) {
+      c.querySelector('.page-planning').classList.add('panneau-seul');
+      c.querySelector('[data-panneau-rattacher]').hidden = false;
+      c.querySelector('[data-panneau-rattacher]').addEventListener('click', () => window.close());
+      this.titre = 'Planning — panneau';
+      this.desabonnements = [this.app.abonner('planning-selection', ({ tache }) => { this.#editer(tache); this.#onglet('tache'); })];
+      this.app.publier('planning-panneau', { ouvert: true });
+      this.quitterFenetre = () => this.app.publier('planning-panneau', { ouvert: false });
+      window.addEventListener('pagehide', this.quitterFenetre);
+    } else {
+      this.desabonnements = [
+        this.app.abonner('planning-panneau', ({ ouvert }) => { this.panneauEnFenetre = ouvert; this.#appliquerPanneau(); }),
+        this.app.abonner('planning-aller', ({ tache }) => {
+          const b = this.barres?.find((x) => x.tache === tache);
+          if (b) { this.planning.selection = b; this.planning.montrer(b); }
+        }),
+      ];
+    }
+    this.#appliquerPanneau();
+  }
+
+  #etatPanneau(etat) {
+    this.etatPanneau = etat;
+    ecrirePreferences({ planningPanneau: etat });
+    this.#appliquerPanneau();
+  }
+
+  #appliquerPanneau() {
+    const c = this.conteneur;
+    const aside = c.querySelector('.panneau-planning');
+    const etat = this.panneauSeul ? 'normal' : this.panneauEnFenetre ? 'masque' : this.etatPanneau;
+    for (const e of ETATS_PANNEAU) aside.classList.toggle(`panneau-${e}`, e === etat);
+    aside.hidden = etat === 'masque';
+    c.querySelector('[data-separateur-panneau]').hidden = etat === 'masque' || etat === 'reduit' || this.panneauSeul;
+    const afficher = c.querySelector('[data-afficher-panneau]');
+    afficher.hidden = this.panneauSeul || etat !== 'masque';
+    afficher.textContent = this.panneauEnFenetre ? '⧉ Panneau dans une autre fenêtre' : '▤ Panneau';
+    afficher.disabled = Boolean(this.panneauEnFenetre);
+    c.querySelector('[data-panneau-reduire]').textContent = etat === 'reduit' ? '«' : '»';
+    c.querySelector('[data-panneau-reduire]').title = etat === 'reduit' ? 'Déplier le panneau' : 'Réduire le panneau';
+    c.querySelector('[data-panneau-agrandir]').title = etat === 'large' ? 'Taille normale' : 'Agrandir le panneau';
+    for (const cle of ['reduire', 'agrandir', 'fenetre', 'masquer']) c.querySelector(`[data-panneau-${cle}]`).hidden = this.panneauSeul;
+    this.planning?.actualiser();
+  }
+
+  /** Détail d'une tâche (null : nouvelle) : dans le panneau, ou dans la fenêtre du panneau s'il y est ouvert. */
+  #afficherTache(id) {
+    if (this.panneauEnFenetre) { this.app.publier('planning-selection', { tache: id }); return; }
+    if (this.etatPanneau === 'masque' || this.etatPanneau === 'reduit') this.#etatPanneau('normal');
+    this.#editer(id);
+    this.#onglet('tache');
+  }
+
   fermer() {
+    for (const f of this.desabonnements ?? []) f();
+    if (this.quitterFenetre) { this.quitterFenetre(); window.removeEventListener('pagehide', this.quitterFenetre); }
+    this.planning?.detruire();
     this.desabonner?.();
     clearInterval(this.intervalle);
     clearTimeout(this.minuterie);
@@ -336,8 +458,6 @@ export class PagePlanning extends PageBase {
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === nom));
     this.conteneur.querySelectorAll('[data-panneau]').forEach((p) => { p.hidden = p.dataset.panneau !== nom; });
     this.conteneur.querySelector('[data-actions-tache]').hidden = nom !== 'tache';
-    const jalons = this.conteneur.querySelector('[data-jalons]');
-    if (jalons) jalons.hidden = nom !== 'aplanifier';
   }
 
   async #apres(promesse, message) {
@@ -401,19 +521,100 @@ export class PagePlanning extends PageBase {
     if (r) this.#memoriserCreation(r, 'planification');
   }
 
+  /**
+   * Liste « À planifier » (budget − planifié par chantier et service) : recherche, tri (nom, service, reste, date
+   * prévisionnelle — modifiable, enregistrée par élément et service), présentation en liste ou en tuiles (préférences
+   * `planningAPlanifierTri`, `planningAPlanifierSens`, `planningAPlanifierTuiles`) ; lignes et tuiles glissées sur le planning.
+   */
   async #aPlanifier() {
     const zone = this.conteneur.querySelector('[data-panneau="aplanifier"]');
-    let l;
-    try { l = await api.planning.aPlanifier({ services: (this.definition.services ?? []).join(',') }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    zone.innerHTML = l.length ? `<p class="aide">Glisser une ligne sur une ressource (ou un service) : début au point de dépôt.</p>
-      <table class="pleine-largeur"><thead><tr><th>Chantier</th><th>Service</th><th class="nombre">Budget</th><th class="nombre">Planifié</th><th class="nombre">Reste</th></tr></thead><tbody>
-      ${l.map((x, i) => `<tr draggable="${x.reste > 0}" data-i="${i}" class="${x.reste > 0 ? 'glissable' : 'aide'}" title="${echapper(x.libelle)}"><td>${echapper(x.code)}</td><td>${echapper(x.service ?? '')}</td>
-        <td class="nombre">${ecrireDuree(x.budget)}</td><td class="nombre">${ecrireDuree(x.planifie)}</td><td class="nombre ${x.reste < 0 ? 'erreur' : ''}">${ecrireDuree(Math.abs(x.reste))}${x.reste < 0 ? ' dépassé' : ''}</td></tr>`).join('')}</tbody></table>`
-      : '<p class="aide">Aucune heure à planifier (commandes validées des chantiers ouverts).</p>';
-    zone.querySelectorAll('tr[draggable="true"]').forEach((tr) => tr.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData(TYPE_GLISSER, JSON.stringify(l[Number(tr.dataset.i)]));
-      e.dataTransfer.effectAllowed = 'copy';
-    }));
+    if (!zone.querySelector('[data-liste-aplanifier]')) {
+      const prefs = lirePreferences();
+      this.triAPlanifier = prefs.planningAPlanifierTri ?? 'reste';
+      this.sensAPlanifier = prefs.planningAPlanifierSens ?? (this.triAPlanifier === 'reste' ? -1 : 1);
+      this.tuilesAPlanifier = Boolean(prefs.planningAPlanifierTuiles);
+      zone.innerHTML = `<div class="barre-aplanifier ligne"><input type="search" data-filtre-aplanifier placeholder="Rechercher (chantier, service)…">
+          <span data-tri-aplanifier></span><button type="button" class="bouton-icone" data-sens-aplanifier></button>
+          <button type="button" class="bouton-icone" data-presentation-aplanifier></button></div>
+        <p class="aide">Glisser sur une ressource (ou un service) : début au point de dépôt.</p><div data-liste-aplanifier></div>`;
+      const tri = creerCombo({ options: options(TRIS_APLANIFIER), valeur: this.triAPlanifier, vide: false, titre: 'Trier par' });
+      tri.size = 10;
+      zone.querySelector('[data-tri-aplanifier]').append(tri);
+      tri.addEventListener('change', () => {
+        this.triAPlanifier = tri.valeurCombo;
+        this.sensAPlanifier = this.triAPlanifier === 'reste' ? -1 : 1;
+        ecrirePreferences({ planningAPlanifierTri: this.triAPlanifier, planningAPlanifierSens: this.sensAPlanifier });
+        this.#rendreAPlanifier();
+      });
+      zone.querySelector('[data-sens-aplanifier]').addEventListener('click', () => {
+        this.sensAPlanifier = -this.sensAPlanifier;
+        ecrirePreferences({ planningAPlanifierSens: this.sensAPlanifier });
+        this.#rendreAPlanifier();
+      });
+      zone.querySelector('[data-presentation-aplanifier]').addEventListener('click', () => {
+        this.tuilesAPlanifier = !this.tuilesAPlanifier;
+        ecrirePreferences({ planningAPlanifierTuiles: this.tuilesAPlanifier });
+        this.#rendreAPlanifier();
+      });
+      zone.querySelector('[data-filtre-aplanifier]').addEventListener('input', () => this.#rendreAPlanifier());
+    }
+    try { this.listeAPlanifier = await api.planning.aPlanifier({ services: (this.definition.services ?? []).join(',') }); } catch (e) {
+      zone.querySelector('[data-liste-aplanifier]').innerHTML = `<p class="erreur">${echapper(e.message)}</p>`;
+      return;
+    }
+    this.#rendreAPlanifier();
+  }
+
+  #rendreAPlanifier() {
+    const zone = this.conteneur.querySelector('[data-panneau="aplanifier"]');
+    const liste = zone.querySelector('[data-liste-aplanifier]');
+    const sens = zone.querySelector('[data-sens-aplanifier]');
+    sens.textContent = this.sensAPlanifier > 0 ? '↑' : '↓';
+    sens.title = this.sensAPlanifier > 0 ? 'Ordre croissant' : 'Ordre décroissant';
+    const pres = zone.querySelector('[data-presentation-aplanifier]');
+    pres.textContent = this.tuilesAPlanifier ? '☰' : '▦';
+    pres.title = this.tuilesAPlanifier ? 'Présenter en liste' : 'Présenter en tuiles';
+    if (!this.listeAPlanifier?.length) { liste.innerHTML = '<p class="aide">Aucune heure à planifier (commandes validées des chantiers ouverts).</p>'; return; }
+    const texte = zone.querySelector('[data-filtre-aplanifier]').value.trim().toLowerCase();
+    const l = this.listeAPlanifier.filter((x) => !texte || `${x.code} ${x.libelle} ${x.service ?? ''}`.toLowerCase().includes(texte));
+    const cles = { nom: (x) => `${x.code} ${x.libelle}`, service: (x) => x.service ?? '', reste: (x) => x.reste, date: (x) => x.date_prevue ?? '' };
+    const cle = cles[this.triAPlanifier] ?? cles.reste;
+    l.sort((a, b) => {
+      const va = cle(a);
+      const vb = cle(b);
+      if (this.triAPlanifier === 'date' && Boolean(va) !== Boolean(vb)) return va ? -1 : 1; // sans date : toujours à la fin
+      return (typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'fr', { numeric: true })) * this.sensAPlanifier;
+    });
+    if (!l.length) { liste.innerHTML = '<p class="aide">Aucun élément ne correspond à la recherche.</p>'; return; }
+    const reste = (x) => `<span class="${x.reste < 0 ? 'erreur' : ''}">${ecrireDuree(Math.abs(x.reste)) || '0:00'}${x.reste < 0 ? ' dépassé' : ''}</span>`;
+    const date = (x) => `<input type="date" data-date-prevue value="${x.date_prevue ?? ''}" title="Date prévisionnelle (tri de la liste)">`;
+    const index = (x) => this.listeAPlanifier.indexOf(x);
+    const jauge = (x) => (x.budget ? Math.min(100, Math.round((x.planifie * 100) / x.budget)) : 0);
+    liste.innerHTML = this.tuilesAPlanifier
+      ? `<div class="tuiles-aplanifier">${l.map((x) => `<div class="tuile-aplanifier ${x.reste > 0 ? 'glissable' : 'soldee'}" draggable="${x.reste > 0}" data-i="${index(x)}" title="${echapper(`${x.code} ${x.libelle}`)}">
+          <div class="ta-entete"><b>${echapper(x.code)}</b><span class="ta-reste">${reste(x)}</span></div><div class="ta-libelle">${echapper(x.libelle)}</div>
+          <div class="ta-service" style="--ta-couleur:${this.couleurs.get(x.srv_id) ?? '#94a3b8'}">${echapper(x.service ?? '')}</div>
+          <div class="ta-jauge" title="Planifié ${ecrireDuree(x.planifie) || '0:00'} h sur ${ecrireDuree(x.budget) || '0:00'} h"><i style="width:${jauge(x)}%"></i></div>
+          <div>${date(x)}</div></div>`).join('')}</div>`
+      : `<table class="tableau-compact pleine-largeur liste-aplanifier"><thead><tr><th>Chantier</th><th>Service</th><th class="nombre">Reste</th><th>Prévue le</th></tr></thead><tbody>
+        ${l.map((x) => `<tr draggable="${x.reste > 0}" data-i="${index(x)}" class="${x.reste > 0 ? 'glissable' : 'aide'}" title="${echapper(`${x.libelle}
+Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifie) || '0:00'} h`)}">
+          <td><b>${echapper(x.code)}</b><br><small>${echapper(x.libelle)}</small></td><td>${echapper(x.service ?? '')}</td><td class="nombre">${reste(x)}</td><td>${date(x)}</td></tr>`).join('')}</tbody></table>`;
+    liste.querySelectorAll('[data-i]').forEach((el) => {
+      const x = this.listeAPlanifier[Number(el.dataset.i)];
+      el.addEventListener('dragstart', (e) => {
+        if (e.target.closest?.('input')) { e.preventDefault(); return; }
+        e.dataTransfer.setData(TYPE_GLISSER, JSON.stringify(x));
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      el.querySelector('[data-date-prevue]').addEventListener('change', async (e) => {
+        try {
+          await api.planning.enregistrerPrevision({ type: x.type, id: x.id, srv_id: x.srv_id, date: e.target.value || null });
+          x.date_prevue = e.target.value || null;
+          if (this.triAPlanifier === 'date') this.#rendreAPlanifier();
+        } catch (err) { this.app.erreur(err); e.target.value = x.date_prevue ?? ''; }
+      });
+    });
   }
 
   /** Alertes calculées (lot 4) regroupées par type, avec actions : aller à la tâche, appliquer l'équipe, vue, traitée. */
@@ -438,7 +639,8 @@ export class PagePlanning extends PageBase {
       li.querySelector('[data-traitee]').addEventListener('click', () => marquer([li.dataset.cle], 'TRAITEE'));
       li.querySelector('[data-aller]')?.addEventListener('click', (e) => {
         const b = this.barres.find((x) => String(x.tache) === e.target.dataset.aller);
-        if (b) { this.planning.selection = b; this.planning.allerA(b.debut); this.planning.actualiser(); }
+        if (this.panneauSeul) this.app.publier('planning-aller', { tache: Number(e.target.dataset.aller) });
+        else if (b) { this.planning.selection = b; this.planning.montrer(b); }
         this.#editer(Number(e.target.dataset.aller));
       });
       li.querySelector('[data-equipe]')?.addEventListener('click', async (e) => {
@@ -455,16 +657,11 @@ export class PagePlanning extends PageBase {
 
   /** Jalons de la période (saisis ou calculés) sous la liste « À planifier », saisie d'un jalon sur un chantier. */
   async #rendreJalons() {
-    let zone = this.conteneur.querySelector('[data-jalons]');
-    if (!zone) {
-      zone = document.createElement('div');
-      zone.dataset.jalons = '';
-      this.conteneur.querySelector('[data-panneau="aplanifier"]').after(zone);
-    }
-    zone.hidden = this.conteneur.querySelector('[data-panneau="aplanifier"]').hidden;
+    const zone = this.conteneur.querySelector('[data-panneau="jalons"]');
     const jalons = this.planning.jalons ?? [];
+    this.conteneur.querySelector('[data-nb-jalons]').textContent = jalons.length ? `(${jalons.length})` : '';
     const elements = await api.planning.elements().catch(() => []);
-    zone.innerHTML = `<h4>Jalons</h4><ul class="alertes-planning">${jalons.map((j) => `<li>◆ ${j.quand.replace('T', ' ')} — ${echapper(TYPES_JALON[j.type] ?? j.type)} : ${echapper(j.libelle)}
+    zone.innerHTML = `<ul class="alertes-planning">${jalons.map((j) => `<li>◆ ${j.quand.replace('T', ' ')} — ${echapper(TYPES_JALON[j.type] ?? j.type)} : ${echapper(j.libelle)}
         ${j.cle.startsWith('jalon:') ? `<button type="button" data-suppr-jalon="${j.cle.slice(6)}" title="Supprimer">✕</button>` : ''}</li>`).join('') || '<li class="aide">Aucun jalon sur la période</li>'}</ul>
       <p class="ligne"><input type="datetime-local" data-jalon-quand> <span data-jalon-type></span></p>
       <p class="ligne"><input data-jalon-libelle placeholder="Libellé du jalon" size="18"> <span data-jalon-chantier></span> <button type="button" data-ajouter-jalon>＋ Jalon</button></p>`;
