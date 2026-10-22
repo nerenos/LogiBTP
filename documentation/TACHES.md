@@ -199,8 +199,12 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   blocage, dévalidation tracée avec motif, demandes de correction (tâche CRM au service administratif). Jours travaillés
   de la synthèse : du lundi au vendredi (à brancher sur le calendrier du salarié : `JoursTravaillesAsync`) ; écart avec le
   planning : avec le module Planning.
-- [ ] Pointage, lots suivants : profils de paie, rubriques, règles, zones, export, valorisation
-  (lot 3), borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
+- [x] **Pointage, lot 3** (22/10/2026) : profils de paie, rubriques, règles typées répliquées, saisies des rubriques,
+  zones par chantier et agence, export CSV tracé, valorisation des heures, coût réel par chantier. Reste : zone calculée
+  par géocodage (API adresse, vol d'oiseau, barème du profil) proposée au lieu d'une saisie ; règle FORMULE (langage
+  d'expressions du socle) ; modèles d'export par logiciel de paie (Silae, Sage…) ; agence = texte `sal_agence` (à relier au
+  rattachement de l'individu) ; fichier d'export à ranger dans la GED.
+- [ ] Pointage, lots suivants : borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
 
 ### Archivage
 

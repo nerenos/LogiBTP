@@ -90,6 +90,17 @@ export const api = {
     demanderCorrection: (c) => appel('POST', '/pointage/corrections', c),
     appliquerCorrection: (id, r) => appel('POST', `/pointage/corrections/${id}/appliquer`, r),
     rejeterCorrection: (id, r) => appel('POST', `/pointage/corrections/${id}/rejeter`, r),
+    // Lot 3 : profils de paie, variables, saisies des rubriques, zones, export, valorisation.
+    profils: () => appel('GET', '/pointage/profils'),
+    enregistrerProfils: (l) => appel('PUT', '/pointage/profils', l),
+    variables: (salarie, lundi) => appel('GET', `/pointage/variables/${salarie}/${lundi}`),
+    enregistrerVariables: (salarie, lundi, v) => appel('PUT', `/pointage/variables/${salarie}/${lundi}`, v),
+    zones: (chantier) => appel('GET', `/pointage/zones/${chantier}`),
+    enregistrerZones: (chantier, l) => appel('PUT', `/pointage/zones/${chantier}`, l),
+    apercuExport: (f) => appel('GET', `/pointage/export?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    exporter: (d) => appel('POST', '/pointage/export', d),
+    exports: () => appel('GET', '/pointage/exports'),
+    valoriser: (d) => appel('POST', '/pointage/valoriser', d),
   },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),

@@ -21,6 +21,7 @@ export const MESSAGES_VALIDATION = {
   EXC_NON_CONFORMITE: 'Non-conformité signalée',
   EXC_HEURES_SUP: 'Heures supplémentaires',
   EXC_CONTROLE: 'Contrôle à vérifier (amplitude, chantier clos…)',
+  EXC_ZONE: 'Zone de déplacement à valider (chantier sans zone pour l\'agence)',
   EXC_MODIFIE: 'Corrigé par rapport à la saisie',
 };
 
@@ -58,15 +59,16 @@ export function controlerAction({ action, role, mode = 'SIMPLE', etats = [], mot
 /**
  * Exceptions d'une semaine d'un salarié (synthèse par exceptions) : demande de correction, jour travaillé sans
  * pointage, non-conformité, heures au-delà du seuil hebdomadaire, avertissement des contrôles, couche validée
- * différente de la saisie. `pointages` [{ date, minutes, non_conformite }] retenus (validés sinon saisis).
+ * différente de la saisie, zone de déplacement manquante (chantier sans zone pour l'agence du salarié). `pointages` [{ date, minutes, non_conformite }] retenus (validés sinon saisis).
  */
-export function exceptionsSemaine({ jours_travailles = [], pointages = [], seuil_semaine = 2100, avertissements = 0, corrections = 0, modifie = false }) {
+export function exceptionsSemaine({ jours_travailles = [], pointages = [], seuil_semaine = 2100, avertissements = 0, corrections = 0, modifie = false, zones_manquantes = 0 }) {
   const r = [];
   if (corrections > 0) r.push('EXC_CORRECTION');
   if (jours_travailles.some((d) => !pointages.some((p) => p.date === d && p.minutes > 0))) r.push('EXC_SANS_POINTAGE');
   if (pointages.some((p) => p.non_conformite)) r.push('EXC_NON_CONFORMITE');
   if (seuil_semaine > 0 && pointages.reduce((s, p) => s + (p.minutes > 0 ? p.minutes : 0), 0) > seuil_semaine) r.push('EXC_HEURES_SUP');
   if (avertissements > 0) r.push('EXC_CONTROLE');
+  if (zones_manquantes > 0) r.push('EXC_ZONE');
   if (modifie) r.push('EXC_MODIFIE');
   return r;
 }

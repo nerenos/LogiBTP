@@ -39,7 +39,7 @@ export const SOURCES_LISTE = {
       ['interimaire', 'boolean'], ['service', 'text'], ['service_id', 'integer'], ['chantier', 'text'], ['chantier_libelle', 'text'],
       ['chantier_id', 'integer'], ['interne', 'boolean'], ['ordre', 'text'], ['type_mo', 'text'], ['sous_type', 'text'], ['productif', 'boolean'],
       ['heures', 'numeric'], ['couche', 'text'], ['motif', 'text'], ['commentaire', 'text'], ['saisi_par', 'text'],
-      ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'],
+      ['saisi_le', 'timestamp with time zone'], ['semaine', 'date'], ['taux', 'numeric'], ['cout', 'numeric'], ['valorisation', 'text'],
     ],
   },
   // Structure des affaires (db/160_structure.sql) : projets, affaires, chantiers, marchés.
@@ -630,6 +630,8 @@ const vuePointages = (vli_id, vli_nom, filtres = []) => ({
       col('saisi_par', 'Saisi par', { ...fixe(90), masquee: true }),
       col('interimaire', 'Intérim', { format: 'coche', ...fixe(60), masquee: true }),
       col('productif', 'Productif', { format: 'coche', ...fixe(60), masquee: true }),
+      col('cout', 'Coût', { ...nombre(2), ...fixe(90), recherche: false, masquee: true }),
+      col('valorisation', 'Valorisation', { ...fixe(90), masquee: true }),
     ],
     segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'type_mo', titre: 'Type de MO' }, { colonne: 'sous_type', titre: 'Sous-type' }],
     tri: [{ colonne: 'date_pointage', sens: 'desc' }, { colonne: 'salarie', sens: 'asc' }],

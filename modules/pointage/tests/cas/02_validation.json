@@ -31,7 +31,7 @@
       "attendu": ["EXC_NON_CONFORMITE", "EXC_HEURES_SUP"] },
     { "nom": "seuil atteint sans dépassement", "seuil_semaine": 2100, "jours_travailles": [], "pointages": [{ "date": "2026-10-19", "minutes": 2100 }], "attendu": [] },
     { "nom": "tout", "jours_travailles": ["2026-10-23"], "pointages": [{ "date": "2026-10-19", "minutes": 60, "non_conformite": true }], "seuil_semaine": 30,
-      "avertissements": 2, "corrections": 1, "modifie": true,
-      "attendu": ["EXC_CORRECTION", "EXC_SANS_POINTAGE", "EXC_NON_CONFORMITE", "EXC_HEURES_SUP", "EXC_CONTROLE", "EXC_MODIFIE"] }
+      "avertissements": 2, "corrections": 1, "modifie": true, "zones_manquantes": 1,
+      "attendu": ["EXC_CORRECTION", "EXC_SANS_POINTAGE", "EXC_NON_CONFORMITE", "EXC_HEURES_SUP", "EXC_CONTROLE", "EXC_ZONE", "EXC_MODIFIE"] }
   ]
 }

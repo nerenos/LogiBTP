@@ -2,7 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
-  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque,
+  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE,
 } from '@logibtp/pointage';
 import { api } from '../api.js';
 
@@ -379,6 +379,7 @@ export class PageSynthesePointage extends PageBase {
       const faits = r.resultats.length - refus.length;
       this.app.message(`${faits} salarié(s) ${action === 'valider' ? 'validé(s)' : 'dévalidé(s)'} (niveau ${r.role})${refus.length ? ` · ${refus.length} refus : ${[...new Set(refus.flatMap((x) => x.codes))].map((x) => MESSAGES_VALIDATION[x] ?? x).join(', ')}` : ''}`,
         refus.length ? 'avertissement' : 'succes');
+      if (r.resultats.some((x) => x.apres_export)) this.app.message('Dévalidation après un export de paie : un export correctif sera à faire (tracé au journal).', 'avertissement');
       this.selection.clear();
       await this.#charger();
     } catch (e) { this.app.erreur(e); }
@@ -467,6 +468,7 @@ export class PageSynthesePointage extends PageBase {
       <p>${modifiable ? `<button type="button" data-enregistrer>Enregistrer les corrections</button>${d.corrigee ? ' <button type="button" data-retablir>Revenir à la saisie</button>' : ''}` : ''}
         <button type="button" data-valider-un>✔ Valider la semaine</button> <button type="button" data-devalider-un>↶ Dévalider…</button></p>
       ${d.corrigee ? '<details><summary>Saisie d\'origine</summary><div data-grille-saisie></div></details>' : ''}
+      <div data-paie></div>
       ${d.validations.length ? `<h3>Validations</h3><ul>${d.validations.map((v) => `<li>${v.niveau === 'RH' ? 'RH' : 'Chef'} du ${jourCourt(v.du)} au ${jourCourt(v.au)} par ${echapper(v.par)} le ${horodatage(v.le)}${v.annule_le ? ` — <s>annulée</s> par ${echapper(v.annule_par)} le ${horodatage(v.annule_le)} : ${echapper(v.annule_motif ?? '')}` : ''}</li>`).join('')}</ul>` : ''}
       ${d.journal.length ? `<details><summary>Journal (${d.journal.length})</summary><ul>${d.journal.map((j) => `<li>${horodatage(j.le)} ${echapper(j.action)} par ${echapper(j.par)}</li>`).join('')}</ul></details>` : ''}`;
     const donnees = (pointages) => ({ salarie: d.salarie, pointages, chantiers: d.chantiers, ordres: d.ordres, recents: [] });
@@ -488,6 +490,126 @@ export class PageSynthesePointage extends PageBase {
       const reponse = prompt('Réponse au demandeur :');
       if (reponse !== null) apres(api.pointage.rejeterCorrection(b.dataset.rejeter, { reponse }), 'Correction rejetée');
     }));
+    this.#rendrePaie(zone.querySelector('[data-paie]'), modifiable);
+  }
+
+  /**
+   * Variables de paie de la semaine (profil du salarié) : une ligne par rubrique, valeur par jour, semaine (heures
+   * supplémentaires) et total ; rubriques saisies (S) ou modifiables (SC) en cases éditables ; zones des chantiers.
+   */
+  async #rendrePaie(zone, modifiable) {
+    let v;
+    try { v = await api.pointage.variables(this.salarie, this.lundi); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    if (!v.profil) { zone.innerHTML = '<p class="aide">Aucun profil de paie : variables non calculées.</p>'; return; }
+    const jours = joursSemaine(this.lundi);
+    const saisies = new Map(v.saisies.map((s) => [`${s.date}|${s.rubrique}`, s.valeur]));
+    const valeurJour = (code, i) => v.variables?.jours[i]?.valeurs[code];
+    const affiche = (r, x) => (x == null || x === 0 ? '' : r.unite === 'H' ? ecrireDuree(x) : String(x));
+    const total = (r) => (r.unite === 'ZONE'
+      ? Object.entries(v.variables?.totaux ?? {}).filter(([k]) => k.startsWith(`${r.code}_`)).map(([k, n]) => `Z${k.slice(r.code.length + 1)} × ${n}`).join(', ')
+      : affiche(r, v.variables?.totaux[r.code]));
+    zone.innerHTML = `<h3>Variables de paie <small class="aide">${echapper(v.profil.libelle)}${v.profil.export ? '' : ' (non exportées)'}</small></h3>
+      <table class="grille-pointage variables-paie"><thead><tr><th>Rubrique</th>${jours.map((x, i) => `<th class="nombre">${JOURS[i]}</th>`).join('')}<th class="nombre">Semaine</th><th class="nombre">Total</th></tr></thead><tbody>
+      ${v.rubriques.map((r) => `<tr><td title="${echapper(SAISIES_RUBRIQUE[r.saisie])}${r.code_paie ? ` · paie ${echapper(r.code_paie)}` : ''}">${echapper(r.libelle)} <small class="aide">${echapper(r.code)}</small></td>
+        ${jours.map((x, i) => (r.saisie !== 'C' && modifiable
+          ? `<td><input class="duree" data-rub="${echapper(r.code)}" data-jour="${x}" data-unite="${r.unite}" size="4" value="${saisies.has(`${x}|${r.code}`) ? affiche(r, saisies.get(`${x}|${r.code}`)) || '0' : ''}" placeholder="${affiche(r, valeurJour(r.code, i))}"></td>`
+          : `<td class="nombre">${affiche(r, valeurJour(r.code, i))}</td>`)).join('')}
+        <td class="nombre">${affiche(r, v.variables?.semaine[r.code])}</td><td class="nombre"><b>${total(r)}</b></td></tr>`).join('')}</tbody></table>
+      ${modifiable && v.rubriques.some((r) => r.saisie !== 'C') ? '<p><button type="button" data-rubriques>Enregistrer les rubriques saisies</button> <span class="aide">Case vide : valeur calculée ; 0 : annule le calcul (rubrique modifiable).</span></p>' : ''}
+      ${v.zones.length ? `<h4>Zones de déplacement${v.agence ? ` (agence ${echapper(v.agence)})` : ''}</h4><table><tbody>${v.zones.map((z) => `<tr><td>${echapper(z.code)} ${echapper(z.libelle)}</td>
+        <td>${z.zone == null ? '<span class="badge-exception">à valider</span>' : `zone ${z.zone}`}</td>
+        <td>${this.donnees.rh && v.agence ? `<input type="number" min="0" max="9" size="2" data-zone="${z.cha_id}" value="${z.zone ?? ''}"> <button type="button" data-zone-ok="${z.cha_id}">Valider la zone</button>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}`;
+    zone.querySelector('[data-rubriques]')?.addEventListener('click', async () => {
+      const valeurs = [];
+      for (const inp of zone.querySelectorAll('input[data-rub]')) {
+        if (inp.value.trim() === '') continue;
+        const n = inp.dataset.unite === 'H' ? lireDuree(inp.value) : Number(inp.value);
+        if (n === null || Number.isNaN(n)) { inp.classList.add('invalide'); return; }
+        valeurs.push({ date: inp.dataset.jour, rubrique: inp.dataset.rub, valeur: n });
+      }
+      try { await api.pointage.enregistrerVariables(this.salarie, this.lundi, { valeurs }); this.app.message('Rubriques enregistrées', 'succes'); this.#rendrePaie(zone, modifiable); } catch (e) { this.app.erreur(e); }
+    });
+    zone.querySelectorAll('[data-zone-ok]').forEach((b) => b.addEventListener('click', async () => {
+      const n = zone.querySelector(`[data-zone="${b.dataset.zoneOk}"]`).value;
+      try {
+        await api.pointage.enregistrerZones(b.dataset.zoneOk, [{ agence: v.agence, zone: n === '' ? null : Number(n) }]);
+        this.app.message('Zone validée', 'succes');
+        await this.#charger();
+      } catch (e) { this.app.erreur(e); }
+    }));
+  }
+}
+
+/**
+ * Export des variables de paie (semaines entières, jours validés par le RH, profils exportés : aperçu, fichier CSV
+ * tracé, historique) et valorisation des heures (taux des fiches ou coûts réels importés après la paie).
+ */
+export class PageExportPointage extends PageBase {
+  icone = '📤';
+
+  async ouvrir() {
+    this.titre = 'Export de paie et valorisation';
+    const lundi = lundiDe(decaler(aujourdhui(), -28));
+    const dimanche = decaler(lundiDe(aujourdhui()), -1);
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><h1 class="page-titre">📤 Export de paie et valorisation</h1>
+      <p class="ligne">Du <input type="date" data-du value="${lundi}"> au <input type="date" data-au value="${dimanche}"> · <span data-service></span>
+        <button type="button" data-apercu>Aperçu</button> <button type="button" data-exporter>📤 Exporter (CSV)</button></p>
+      <p class="aide">Semaines entières (du lundi au dimanche). Seuls les salariés dont tous les jours sont validés par le service RH sont exportés ; un salarié dévalidé après un export est signalé.</p>
+      <div data-resultat></div>
+      <h2>Valorisation des heures</h2>
+      <p class="ligne"><label><input type="radio" name="mode" value="SALARIE" checked> Coût horaire des fiches (intérim : taux de la mission)</label>
+        <label><input type="radio" name="mode" value="IMPORT"> Coûts réels importés après la paie</label></p>
+      <p data-import hidden><textarea data-taux rows="4" cols="50" placeholder="matricule;coût horaire (une ligne par salarié)"></textarea></p>
+      <p><button type="button" data-valoriser>Valoriser les pointages de la période</button> <span data-valorisation class="aide"></span></p>
+      <h2>Exports précédents</h2><div data-historique></div></div>`;
+    const c = this.conteneur;
+    if (!this.app.enLigne) { c.querySelector('[data-resultat]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const ref = await api.pointage.referentiels();
+    const srv = creerCombo({ options: ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), valeur: '', vide: true, titre: 'Service (vide : tous)' });
+    c.querySelector('[data-service]').append(srv);
+    const demande = () => ({ du: c.querySelector('[data-du]').value, au: c.querySelector('[data-au]').value, service: srv.valeurCombo ? Number(srv.valeurCombo) : null });
+    const afficher = (r) => {
+      c.querySelector('[data-resultat]').innerHTML = `<p>${r.salaries} salarié(s) exporté(s), ${r.lignes.length} ligne(s)${r.id ? ` · export n° ${r.id} enregistré` : ''}.</p>
+        ${r.non_valides.length ? `<p class="avertissement">${r.non_valides.length} salarié(s) avec des jours non validés (non exportés) : ${r.non_valides.slice(0, 20).map((x) => `${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)} (${x.jours.map(jourCourt).join(', ')})`).join(' ; ')}${r.non_valides.length > 20 ? '…' : ''}</p>` : ''}
+        ${r.lignes.length ? `<table><thead><tr><th>Matricule</th><th>Salarié</th><th>Rubrique</th><th>Code paie</th><th>Libellé</th><th class="nombre">Quantité</th></tr></thead><tbody>
+          ${r.lignes.slice(0, 300).map((l) => `<tr><td>${echapper(l.matricule)}</td><td>${echapper(l.nom)} ${echapper(l.prenom)}</td><td>${echapper(l.rubrique)}</td><td>${echapper(l.code_paie ?? '')}</td><td>${echapper(l.libelle)}</td><td class="nombre">${l.quantite}</td></tr>`).join('')}</tbody></table>
+          ${r.lignes.length > 300 ? '<p class="aide">Aperçu limité à 300 lignes (le fichier contient tout).</p>' : ''}` : ''}`;
+    };
+    const telecharger = (csv, nom) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = nom;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    const historique = async () => {
+      const l = await api.pointage.exports().catch(() => []);
+      c.querySelector('[data-historique]').innerHTML = l.length ? `<table><thead><tr><th>N°</th><th>Période</th><th>Salariés</th><th>Lignes</th><th>Par</th><th>Le</th><th></th></tr></thead><tbody>
+        ${l.map((e) => `<tr><td>${e.id}</td><td>${jourCourt(e.du)} – ${jourCourt(e.au)}</td><td class="nombre">${e.salaries}</td><td class="nombre">${e.lignes}</td><td>${echapper(e.par)}</td><td>${horodatage(e.le)}</td>
+          <td><a href="/api/pointage/exports/${e.id}/fichier" download>Télécharger</a></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun export.</p>';
+    };
+    c.querySelector('[data-apercu]').addEventListener('click', async () => { try { afficher(await api.pointage.apercuExport(demande())); } catch (e) { this.app.erreur(e); } });
+    c.querySelector('[data-exporter]').addEventListener('click', async () => {
+      if (!confirm('Enregistrer l\'export et télécharger le fichier ?')) return;
+      try {
+        const r = await api.pointage.exporter(demande());
+        afficher(r);
+        telecharger(r.csv, `variables-paie-${r.du}-${r.au}.csv`);
+        await historique();
+      } catch (e) { this.app.erreur(e); }
+    });
+    c.querySelectorAll('[name="mode"]').forEach((r) => r.addEventListener('change', () => { c.querySelector('[data-import]').hidden = c.querySelector('[name="mode"]:checked').value !== 'IMPORT'; }));
+    c.querySelector('[data-valoriser]').addEventListener('click', async () => {
+      const mode = c.querySelector('[name="mode"]:checked').value;
+      const taux = mode === 'IMPORT' ? c.querySelector('[data-taux]').value.split(/\r?\n/).map((l) => l.split(/[;\t]/)).filter((x) => x.length >= 2 && x[0].trim())
+        .map(([m, t]) => ({ matricule: m.trim(), taux: Number(t.trim().replace(',', '.')) })) : null;
+      if (taux?.some((t) => Number.isNaN(t.taux))) { this.app.message('Taux illisible dans l\'import', 'erreur'); return; }
+      try {
+        const r = await api.pointage.valoriser({ ...demande(), mode, taux });
+        c.querySelector('[data-valorisation]').textContent = `${r.pointages} pointage(s) valorisé(s) pour ${r.salaries} salarié(s) · ${r.sans_taux} sans taux · coût ${Number(r.cout).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}`;
+      } catch (e) { this.app.erreur(e); }
+    });
+    await historique();
   }
 }
 
@@ -524,7 +646,8 @@ export class PageParametresPointage extends PageBase {
           <td><input type="checkbox" data-productif ${x.productif ? 'checked' : ''} ${ro}></td><td><input type="checkbox" data-nc ${x.non_conformite ? 'checked' : ''} ${ro}></td>
           <td><input type="number" data-ordre size="4" value="${x.ordre}" ${ro}></td><td><input type="checkbox" data-actif ${x.actif ? 'checked' : ''} ${ro}></td>
           <td>${admin ? '<button type="button" data-retirer>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
-        ${admin ? '<p><button type="button" data-ajouter>＋ Sous-type</button> <button type="button" data-enregistrer>Enregistrer</button></p>' : ''}`;
+        ${admin ? '<p><button type="button" data-ajouter>＋ Sous-type</button> <button type="button" data-enregistrer>Enregistrer</button></p>' : ''}
+        <h2>Profils de paie</h2><div data-profils></div>`;
       corps.querySelectorAll('tr[data-i]').forEach((tr) => {
         const x = st[Number(tr.dataset.i)];
         tr.querySelector('[data-code]').addEventListener('change', (e) => { x.code = e.target.value.trim().toUpperCase(); });
@@ -549,6 +672,94 @@ export class PageParametresPointage extends PageBase {
           st = (await api.pointage.enregistrerSousTypes(st)).map((x) => ({ ...x, existant: true }));
           rendre();
           this.app.message('Paramètres enregistrés', 'succes');
+        } catch (e) { this.app.erreur(e); }
+      });
+    };
+    rendre();
+    this.#profils(admin);
+  }
+
+  /**
+   * Profils de paie : rubriques (code, libellé, unité, saisie, code de paie) et règles typées (paramètres en JSON :
+   * voir TYPES_REGLE de paie.js) ; contrôle `controlerProfil` avant l'envoi.
+   */
+  async #profils(admin) {
+    const zone = this.conteneur.querySelector('[data-profils]');
+    let profils = await api.pointage.profils();
+    let courant = profils[0] ?? null;
+    const ro = admin ? '' : 'disabled';
+    const options = (o) => Object.entries(o).map(([valeur, libelle]) => ({ valeur, libelle, detail: valeur }));
+    /** Combos des colonnes à liste fermée (unité, saisie, type de règle). */
+    const combos = (tr, objet, colonnes) => {
+      for (const [cle, liste] of colonnes) {
+        const c = creerCombo({ options: options(liste), valeur: objet[cle], vide: false });
+        c.readOnly = !admin;
+        c.addEventListener('change', () => { objet[cle] = c.valeurCombo; });
+        tr.querySelector(`[data-c="${cle}"]`).append(c);
+      }
+    };
+    const rendre = () => {
+      zone.innerHTML = `<p class="ligne">${profils.map((x, i) => `<button type="button" data-p="${i}" class="${x === courant ? 'actif' : ''}">${echapper(x.libelle || x.code || '(nouveau)')}${x.actif ? '' : ' (inactif)'}</button>`).join(' ')}
+        ${admin ? '<button type="button" data-nouveau>＋ Profil</button>' : ''}</p>
+        ${courant ? `<p class="ligne"><label>Code <input data-code size="10" value="${echapper(courant.code)}" ${admin && !courant.id ? '' : 'readonly'}></label>
+          <label>Libellé <input data-libelle size="36" value="${echapper(courant.libelle)}" ${ro}></label>
+          <label><input type="checkbox" data-export ${courant.export ? 'checked' : ''} ${ro}> Exporté vers la paie</label>
+          <label><input type="checkbox" data-actif ${courant.actif ? 'checked' : ''} ${ro}> Actif</label></p>
+          <h3>Rubriques</h3><table><thead><tr><th>Code</th><th>Libellé</th><th>Unité</th><th>Saisie</th><th>Code paie</th><th>Ordre</th><th></th></tr></thead><tbody>
+          ${courant.rubriques.map((r, i) => `<tr data-r="${i}"><td><input data-f="code" size="8" value="${echapper(r.code)}" ${ro}></td><td><input data-f="libelle" size="28" value="${echapper(r.libelle)}" ${ro}></td>
+            <td data-c="unite"></td><td data-c="saisie"></td>
+            <td><input data-f="code_paie" size="8" value="${echapper(r.code_paie ?? '')}" ${ro}></td><td><input data-f="ordre" type="number" size="3" value="${r.ordre}" ${ro}></td>
+            <td>${admin ? '<button type="button" data-retirer-r>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+          ${admin ? '<p><button type="button" data-ajouter-r>＋ Rubrique</button></p>' : ''}
+          <h3>Règles (dans l'ordre)</h3><table><thead><tr><th>Type</th><th>Rubrique</th><th>Paramètres (JSON)</th><th>Ordre</th><th>Active</th><th></th></tr></thead><tbody>
+          ${courant.regles.map((r, i) => `<tr data-g="${i}"><td data-c="type"></td><td><input data-f="rubrique" size="8" value="${echapper(r.rubrique ?? '')}" ${ro}></td>
+            <td><input data-f="parametres" size="60" value="${echapper(JSON.stringify(r.parametres ?? {}))}" ${ro}></td><td><input data-f="ordre" type="number" size="3" value="${r.ordre}" ${ro}></td>
+            <td><input type="checkbox" data-f="actif" ${r.actif ? 'checked' : ''} ${ro}></td><td>${admin ? '<button type="button" data-retirer-g>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+          ${admin ? '<p><button type="button" data-ajouter-g>＋ Règle</button> <button type="button" data-enregistrer-p>Enregistrer les profils</button></p>' : ''}
+          <p class="aide">Paramètres : CUMUL_HEURES { sous_types, exclure } · SEUIL_JOUR { base, seuil (minutes), valeur, exclu_si } · TRANCHES_SEMAINE { base, seuil, deduire, tranches [{ rubrique, jusqu_a }] } · ZONE { exclu_si } · PLAFOND { max, max_semaine }.</p>` : ''}`;
+      zone.querySelectorAll('[data-p]').forEach((b) => b.addEventListener('click', () => { courant = profils[Number(b.dataset.p)]; rendre(); }));
+      zone.querySelector('[data-nouveau]')?.addEventListener('click', () => {
+        profils.push(courant = { id: null, code: '', libelle: '', export: true, ordre: (profils.length + 1) * 10, actif: true, rubriques: [], regles: [] }); rendre();
+      });
+      zone.querySelectorAll('tr[data-r]').forEach((tr) => combos(tr, courant.rubriques[Number(tr.dataset.r)], [['unite', UNITES_RUBRIQUE], ['saisie', SAISIES_RUBRIQUE]]));
+      zone.querySelectorAll('tr[data-g]').forEach((tr) => combos(tr, courant.regles[Number(tr.dataset.g)], [['type', TYPES_REGLE]]));
+      if (!courant || !admin) return;
+      zone.querySelector('[data-code]').addEventListener('change', (e) => { courant.code = e.target.value.trim().toUpperCase(); });
+      zone.querySelector('[data-libelle]').addEventListener('change', (e) => { courant.libelle = e.target.value; });
+      zone.querySelector('[data-export]').addEventListener('change', (e) => { courant.export = e.target.checked; });
+      zone.querySelector('[data-actif]').addEventListener('change', (e) => { courant.actif = e.target.checked; });
+      const lier = (tr, objet) => tr.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
+        const f = el.dataset.f;
+        if (f === 'actif') objet[f] = el.checked;
+        else if (f === 'ordre') objet[f] = Number(el.value) || 0;
+        else if (f === 'parametres') {
+          try { objet[f] = JSON.parse(el.value || '{}'); el.classList.remove('invalide'); } catch { el.classList.add('invalide'); }
+        } else if (f === 'code' || f === 'rubrique') objet[f] = el.value.trim().toUpperCase() || null;
+        else objet[f] = el.value;
+      }));
+      zone.querySelectorAll('tr[data-r]').forEach((tr) => {
+        const r = courant.rubriques[Number(tr.dataset.r)];
+        lier(tr, r);
+        tr.querySelector('[data-retirer-r]').addEventListener('click', () => { courant.rubriques.splice(courant.rubriques.indexOf(r), 1); rendre(); });
+      });
+      zone.querySelectorAll('tr[data-g]').forEach((tr) => {
+        const g = courant.regles[Number(tr.dataset.g)];
+        lier(tr, g);
+        tr.querySelector('[data-retirer-g]').addEventListener('click', () => { courant.regles.splice(courant.regles.indexOf(g), 1); rendre(); });
+      });
+      zone.querySelector('[data-ajouter-r]').addEventListener('click', () => { courant.rubriques.push({ code: '', libelle: '', unite: 'H', saisie: 'C', code_paie: null, ordre: (courant.rubriques.length + 1) * 10 }); rendre(); });
+      zone.querySelector('[data-ajouter-g]').addEventListener('click', () => { courant.regles.push({ type: 'CUMUL_HEURES', rubrique: null, parametres: {}, ordre: (courant.regles.length + 1) * 10, actif: true }); rendre(); });
+      zone.querySelector('[data-enregistrer-p]').addEventListener('click', async () => {
+        if (zone.querySelector('.invalide')) { this.app.message('Paramètres JSON illisibles', 'erreur'); return; }
+        for (const x of profils) {
+          const e = controlerProfil(x);
+          if (e.length) { this.app.message(`Profil ${x.code} : ${e.map((c) => MESSAGES_PAIE[c]).join(', ')}`, 'erreur'); return; }
+        }
+        try {
+          profils = await api.pointage.enregistrerProfils(profils);
+          courant = profils.find((x) => x.code === courant.code) ?? profils[0] ?? null;
+          rendre();
+          this.app.message('Profils enregistrés', 'succes');
         } catch (e) { this.app.erreur(e); }
       });
     };

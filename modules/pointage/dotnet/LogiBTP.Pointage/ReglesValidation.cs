@@ -29,6 +29,7 @@ public static class ReglesValidation
         ["EXC_NON_CONFORMITE"] = "Non-conformité signalée",
         ["EXC_HEURES_SUP"] = "Heures supplémentaires",
         ["EXC_CONTROLE"] = "Contrôle à vérifier (amplitude, chantier clos…)",
+        ["EXC_ZONE"] = "Zone de déplacement à valider (chantier sans zone pour l'agence)",
         ["EXC_MODIFIE"] = "Corrigé par rapport à la saisie",
     };
 
@@ -64,7 +65,7 @@ public static class ReglesValidation
     }
 
     public static List<string> Exceptions(IReadOnlyCollection<string> joursTravailles, IReadOnlyCollection<PointageSynthese> pointages, int seuilSemaine,
-        int avertissements = 0, int corrections = 0, bool modifie = false)
+        int avertissements = 0, int corrections = 0, bool modifie = false, int zonesManquantes = 0)
     {
         var r = new List<string>();
         if (corrections > 0) r.Add("EXC_CORRECTION");
@@ -72,6 +73,7 @@ public static class ReglesValidation
         if (pointages.Any(p => p.NonConformite)) r.Add("EXC_NON_CONFORMITE");
         if (seuilSemaine > 0 && pointages.Sum(p => p.Minutes > 0 ? p.Minutes : 0) > seuilSemaine) r.Add("EXC_HEURES_SUP");
         if (avertissements > 0) r.Add("EXC_CONTROLE");
+        if (zonesManquantes > 0) r.Add("EXC_ZONE");
         if (modifie) r.Add("EXC_MODIFIE");
         return r;
     }

@@ -136,7 +136,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | authentification | `regles.js` | `ReglesCompte.cs` | `01_pseudo` à `04_compte` |
 | calendrier | `calendrier.js` | `ReglesCalendrier.cs` | `01_feries`, `02_travail` |
 | execution | `etats.js` | `ReglesEtats.cs` | `01_etats` |
-| pointage | `controles.js`, `validation.js` | `ReglesPointage.cs`, `ReglesValidation.cs` | `01_controles`, `02_validation` |
+| pointage | `controles.js`, `validation.js`, `paie.js` | `ReglesPointage.cs`, `ReglesValidation.cs`, `ReglesPaie.cs` | `01_controles`, `02_validation`, `03_paie` |
 | cœur : ressources | `client/src/app/ressources/regles.js` | `LogiBTP.Domaine/Ressources/ReglesRessources.cs` | `tests/ressources` (`01_habilitations`, `02_missions`) |
 
 Les tests de chaque côté lisent les mêmes fichiers (`@logibtp/socle/testing` ↔ `LogiBTP.Socle.Testing.CasPartages`).

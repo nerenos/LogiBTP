@@ -12,6 +12,9 @@
 > la couche validée couvre la semaine entière d'un salarié (`poi_semaine`) ; RH = membre d'un service administratif, chef
 > = responsable du service ; demande de correction = semaine complète envoyée (`poi_correction`) au lieu d'un pointage
 > marqué « à corriger ».
+> Lot 3 réalisé le 22/10/2026 (`modules/pointage/db/088`, `db/200`, `paie.js` ↔ `ReglesPaie.cs`, `ServicePaie.cs`) : règles
+> CUMUL_HEURES, SEUIL_JOUR, TRANCHES_SEMAINE, ZONE, PLAFOND (FORMULE reportée) ; zones saisies ou validées par le RH sans
+> géocodage (reporté) ; export CSV unique ; valorisation par taux du salarié, de la mission d'intérim ou import.
 
 ## 1. Objet
 

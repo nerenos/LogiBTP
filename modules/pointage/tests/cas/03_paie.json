@@ -1,0 +1,121 @@
+{
+  "description": "Variables de paie d'une semaine (calculerVariables ↔ ReglesPaie.Calculer) et contrôle d'un profil (controlerProfil ↔ ReglesPaie.ControlerProfil). Heures en minutes. Profil « ouvrier » : HN (heures hors trajet), TRAJET, panier à 6 h hors grand déplacement (GD saisi), heures supplémentaires au-delà de 35 h (8 premières à 25 %, puis 50 %, retirées de HN), zone du jour hors grand déplacement, plafond de 2 trajets… ",
+  "profils": {
+    "ouvrier": {
+      "rubriques": [
+        { "code": "HN", "unite": "H", "saisie": "C" },
+        { "code": "TRAJET", "unite": "H", "saisie": "C" },
+        { "code": "HS25", "unite": "H", "saisie": "C" },
+        { "code": "HS50", "unite": "H", "saisie": "C" },
+        { "code": "PANIER", "unite": "NB", "saisie": "SC" },
+        { "code": "GD", "unite": "NB", "saisie": "S" },
+        { "code": "ZONE", "unite": "ZONE", "saisie": "C" },
+        { "code": "INTEMP", "unite": "H", "saisie": "S" }
+      ],
+      "regles": [
+        { "type": "CUMUL_HEURES", "rubrique": "HN", "parametres": { "exclure": ["TRAJET"] } },
+        { "type": "CUMUL_HEURES", "rubrique": "TRAJET", "parametres": { "sous_types": ["TRAJET"] } },
+        { "type": "PLAFOND", "rubrique": "TRAJET", "parametres": { "max": 120 } },
+        { "type": "SEUIL_JOUR", "rubrique": "PANIER", "parametres": { "base": "HN", "seuil": 360, "valeur": 1, "exclu_si": ["GD"] } },
+        { "type": "TRANCHES_SEMAINE", "parametres": { "base": "HN", "seuil": 2100, "deduire": true, "tranches": [{ "rubrique": "HS25", "jusqu_a": 480 }, { "rubrique": "HS50" }] } },
+        { "type": "ZONE", "rubrique": "ZONE", "parametres": { "exclu_si": ["GD"] } }
+      ]
+    }
+  },
+  "calculs": [
+    {
+      "nom": "semaine de 35 h, paniers et zones",
+      "profil": "ouvrier",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 420, "sous_type": "PRODUCTION", "zone": 2 }] },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 300, "sous_type": "PRODUCTION", "zone": 2 }, { "minutes": 120, "sous_type": "PREPARATION", "zone": 3 }] },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 300, "sous_type": "PRODUCTION", "zone": 1 }, { "minutes": 60, "sous_type": "TRAJET" }] },
+        { "date": "2026-10-22", "pointages": [{ "minutes": 420, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-23", "pointages": [{ "minutes": 420, "sous_type": "PRODUCTION", "zone": 2 }] }
+      ],
+      "attendu": {
+        "jours": [
+          { "date": "2026-10-19", "valeurs": { "HN": 420, "PANIER": 1, "ZONE": 2 } },
+          { "date": "2026-10-20", "valeurs": { "HN": 420, "PANIER": 1, "ZONE": 3 } },
+          { "date": "2026-10-21", "valeurs": { "HN": 300, "TRAJET": 60, "ZONE": 1 } },
+          { "date": "2026-10-22", "valeurs": { "HN": 420, "PANIER": 1 } },
+          { "date": "2026-10-23", "valeurs": { "HN": 420, "PANIER": 1, "ZONE": 2 } }
+        ],
+        "semaine": {},
+        "totaux": { "HN": 1980, "TRAJET": 60, "PANIER": 4, "ZONE_2": 2, "ZONE_3": 1, "ZONE_1": 1 }
+      }
+    },
+    {
+      "nom": "heures supplémentaires en deux tranches, déduites",
+      "profil": "ouvrier",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 600, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 600, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 600, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-22", "pointages": [{ "minutes": 600, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-23", "pointages": [{ "minutes": 300, "sous_type": "PRODUCTION" }] }
+      ],
+      "attendu": {
+        "jours": [
+          { "date": "2026-10-19", "valeurs": { "HN": 600, "PANIER": 1 } },
+          { "date": "2026-10-20", "valeurs": { "HN": 600, "PANIER": 1 } },
+          { "date": "2026-10-21", "valeurs": { "HN": 600, "PANIER": 1 } },
+          { "date": "2026-10-22", "valeurs": { "HN": 600, "PANIER": 1 } },
+          { "date": "2026-10-23", "valeurs": { "HN": 300 } }
+        ],
+        "semaine": { "HS25": 480, "HS50": 120, "HN": -600 },
+        "totaux": { "HN": 2100, "PANIER": 4, "HS25": 480, "HS50": 120 }
+      }
+    },
+    {
+      "nom": "semaine incomplète : pas d'heures supplémentaires",
+      "profil": "ouvrier",
+      "semaine_complete": false,
+      "jours": [{ "date": "2026-10-19", "pointages": [{ "minutes": 2400, "sous_type": "PRODUCTION" }] }],
+      "attendu": { "jours": [{ "date": "2026-10-19", "valeurs": { "HN": 2400, "PANIER": 1 } }], "semaine": {}, "totaux": { "HN": 2400, "PANIER": 1 } }
+    },
+    {
+      "nom": "grand déplacement saisi : ni panier ni zone ; panier imposé à 0 ; plafond du trajet ; intempéries saisies",
+      "profil": "ouvrier",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 480, "sous_type": "PRODUCTION", "zone": 4 }], "saisies": { "GD": 1 } },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 420, "sous_type": "PRODUCTION", "zone": 1 }], "saisies": { "PANIER": 0, "ZONE": 5 } },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 240, "sous_type": "PRODUCTION" }, { "minutes": 180, "sous_type": "TRAJET" }], "saisies": { "INTEMP": 180 } }
+      ],
+      "attendu": {
+        "jours": [
+          { "date": "2026-10-19", "valeurs": { "GD": 1, "HN": 480 } },
+          { "date": "2026-10-20", "valeurs": { "HN": 420, "ZONE": 1 } },
+          { "date": "2026-10-21", "valeurs": { "INTEMP": 180, "HN": 240, "TRAJET": 120 } }
+        ],
+        "semaine": {},
+        "totaux": { "GD": 1, "HN": 1140, "ZONE_1": 1, "INTEMP": 180, "TRAJET": 120 }
+      }
+    },
+    {
+      "nom": "plafond hebdomadaire",
+      "profil": null,
+      "rubriques": [{ "code": "HN", "unite": "H" }],
+      "regles": [
+        { "type": "CUMUL_HEURES", "rubrique": "HN" },
+        { "type": "PLAFOND", "rubrique": "HN", "parametres": { "max": 480, "max_semaine": 900 } }
+      ],
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 540, "sous_type": "PRODUCTION" }] },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 450 }] }
+      ],
+      "attendu": {
+        "jours": [{ "date": "2026-10-19", "valeurs": { "HN": 480 } }, { "date": "2026-10-20", "valeurs": { "HN": 450 } }],
+        "semaine": { "HN": -30 },
+        "totaux": { "HN": 900 }
+      }
+    }
+  ],
+  "controles": [
+    { "nom": "profil correct", "profil": "ouvrier", "attendu": [] },
+    { "nom": "rubrique en double", "rubriques": [{ "code": "HN" }, { "code": "HN" }], "regles": [], "attendu": ["PRF_RUBRIQUE"] },
+    { "nom": "règle vers une rubrique absente", "rubriques": [{ "code": "HN" }], "regles": [{ "type": "SEUIL_JOUR", "rubrique": "PANIER", "parametres": { "base": "HN", "seuil": 360 } }], "attendu": ["PRF_REGLE"] },
+    { "nom": "type inconnu", "rubriques": [{ "code": "HN" }], "regles": [{ "type": "FORMULE", "rubrique": "HN" }], "attendu": ["PRF_REGLE"] },
+    { "nom": "tranche vers une rubrique absente", "rubriques": [{ "code": "HN" }], "regles": [{ "type": "TRANCHES_SEMAINE", "parametres": { "base": "HN", "seuil": 2100, "tranches": [{ "rubrique": "HS" }] } }], "attendu": ["PRF_REGLE"] }
+  ]
+}

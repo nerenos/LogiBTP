@@ -19,7 +19,7 @@ public class SpecialisationPointageBtp : SpecialisationPointage
     public override Task<List<SalariePointage>> SalariesAsync(PointageDbContext db, FiltreSalaries f, CancellationToken ct) =>
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,
-                   (s.sal_statut = 'INTERIM') AS interimaire
+                   (s.sal_statut = 'INTERIM') AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
             LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
@@ -97,6 +97,23 @@ public class SpecialisationPointageBtp : SpecialisationPointage
             LEFT JOIN service sp ON sp.srv_id = sv.srv_parent_id
             WHERE s.sal_id = ANY(@ids) AND (sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id)
             """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("ids", salaries.ToArray())).ToListAsync(ct)).ToHashSet();
+
+    /// <summary>
+    /// Taux de valorisation : coût horaire chargé de la fiche (SALARIE) ; à défaut, salaire mensuel / heures du mois
+    /// × 1,42 (charges patronales indicatives, SALAIRE) ; intérimaire : taux de la mission couvrant la période (INTERIM).
+    /// </summary>
+    public override async Task<Dictionary<int, (decimal Taux, string Source)>> TauxAsync(PointageDbContext db, IReadOnlyCollection<int> salaries, DateOnly du, DateOnly au, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<TauxSalarie>("""
+            SELECT s.sal_id AS id,
+                   CASE WHEN s.sal_statut = 'INTERIM' THEN (SELECT m.mis_taux_horaire FROM mission_interim m WHERE m.mis_sal_id = s.sal_id AND m.mis_debut <= @au AND m.mis_fin >= @du
+                                                            ORDER BY m.mis_debut DESC LIMIT 1)
+                        ELSE coalesce(s.sal_cout_horaire, round(s.sal_salaire / nullif(s.sal_heures_mois, 0) * 1.42, 4)) END AS taux,
+                   CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' WHEN s.sal_cout_horaire IS NOT NULL THEN 'SALARIE' ELSE 'SALAIRE' END AS source
+            FROM salarie s WHERE s.sal_id = ANY(@ids)
+            """, new NpgsqlParameter("ids", salaries.ToArray()), new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct))
+        .Where(t => t.Taux is not null).ToDictionary(t => t.Id, t => (t.Taux!.Value, t.Source));
+
+    private sealed record TauxSalarie(int Id, decimal? Taux, string Source);
 
     /// <summary>Tâche du CRM au premier service administratif (RH), rattachée au salarié ; sans effet si le CRM est inactif.</summary>
     public override async Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct)

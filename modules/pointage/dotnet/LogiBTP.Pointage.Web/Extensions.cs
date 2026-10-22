@@ -17,6 +17,7 @@ public static class Extensions
         services.AddSingleton<SpecialisationPointage, TSpecialisation>();
         services.AddScoped<ServicePointage>();
         services.AddScoped<ServiceSynthese>();
+        services.AddScoped<ServicePaie>();
         return services;
     }
 
@@ -53,6 +54,22 @@ public static class Extensions
             s.AppliquerCorrectionAsync(id, r, Utilisateur.Depuis(http), ct));
         g.MapPost("/corrections/{id:long}/rejeter", (long id, ReponseCorrection r, HttpContext http, ServiceSynthese s, CancellationToken ct) =>
             s.RejeterCorrectionAsync(id, r, Utilisateur.Depuis(http), ct));
+        // Paie (lot 3) : profils, variables, saisies des rubriques, zones, export, valorisation.
+        g.MapGet("/profils", (ServicePaie s, CancellationToken ct) => s.ProfilsAsync(ct));
+        g.MapPut("/profils", (List<ProfilDto> l, HttpContext http, ServicePaie s, CancellationToken ct) => s.EnregistrerProfilsAsync(l, Utilisateur.Depuis(http), ct));
+        g.MapGet("/variables/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, HttpContext http, ServicePaie s, CancellationToken ct) =>
+            s.VariablesAsync(salarie, lundi, Utilisateur.Depuis(http), ct));
+        g.MapPut("/variables/{salarie:int}/{lundi}", (int salarie, DateOnly lundi, ValeursSaisies v, HttpContext http, ServicePaie s, CancellationToken ct) =>
+            s.EnregistrerValeursAsync(salarie, lundi, v, Utilisateur.Depuis(http), ct));
+        g.MapGet("/zones/{chantier:int}", (int chantier, ServicePaie s, CancellationToken ct) => s.ZonesAsync(chantier, ct));
+        g.MapPut("/zones/{chantier:int}", (int chantier, List<ZoneSaisie> l, HttpContext http, ServicePaie s, CancellationToken ct) =>
+            s.EnregistrerZonesAsync(chantier, l, Utilisateur.Depuis(http), ct));
+        g.MapGet("/export", (DateOnly du, DateOnly au, int? service, HttpContext http, ServicePaie s, CancellationToken ct) =>
+            s.ExportAsync(new DemandeExport(du, au, service), false, Utilisateur.Depuis(http), ct));
+        g.MapPost("/export", (DemandeExport d, HttpContext http, ServicePaie s, CancellationToken ct) => s.ExportAsync(d, true, Utilisateur.Depuis(http), ct));
+        g.MapGet("/exports", (HttpContext http, ServicePaie s, CancellationToken ct) => s.ExportsAsync(Utilisateur.Depuis(http), ct));
+        g.MapGet("/exports/{id:long}/fichier", (long id, HttpContext http, ServicePaie s, CancellationToken ct) => s.FichierExportAsync(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/valoriser", (DemandeValorisation d, HttpContext http, ServicePaie s, CancellationToken ct) => s.ValoriserAsync(d, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

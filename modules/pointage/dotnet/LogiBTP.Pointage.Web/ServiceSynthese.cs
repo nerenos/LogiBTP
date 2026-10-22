@@ -17,7 +17,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
-    private sealed record Roles(bool Rh, HashSet<int> Chef);
+    internal sealed record Roles(bool Rh, HashSet<int> Chef);
 
     private async Task<Roles> RolesAsync(Utilisateur u, IReadOnlyCollection<int> salaries, CancellationToken ct) =>
         new(u.EstAdmin || await specialisation.EstRhAsync(db, u, ct), await specialisation.ChefDeAsync(db, u, salaries, ct));
@@ -55,7 +55,11 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         var corrections = await db.Corrections.AsNoTracking().Where(c => c.PcoLundi == lundi && c.PcoEtat == "EN_ATTENTE" && ids.Contains(c.PcoSalId)).ToListAsync(ct);
         var travailles = await specialisation.JoursTravaillesAsync(db, ids, lundi, ct);
         var nc = (await db.SousTypes.AsNoTracking().Where(s => s.PstNonConformite).Select(s => s.PstCode).ToListAsync(ct)).ToHashSet();
-        var chantiers = (await specialisation.ChantiersAsync(db, null, retenus.Select(p => p.PoiChaId).Distinct().ToList(), ct)).ToDictionary(c => c.Id);
+        var chantiersIds = retenus.Select(p => p.PoiChaId).Distinct().ToList();
+        var chantiers = (await specialisation.ChantiersAsync(db, null, chantiersIds, ct)).ToDictionary(c => c.Id);
+        var profilsZone = (await db.Regles.AsNoTracking().Where(r => r.PrgActif && r.PrgType == "ZONE").Select(r => r.PrgPpfId).ToListAsync(ct)).ToHashSet();
+        var zones = (await db.Zones.AsNoTracking().Where(z => chantiersIds.Contains(z.PzcChaId)).Select(z => new { z.PzcChaId, z.PzcAgence }).ToListAsync(ct))
+            .Select(z => (z.PzcChaId, z.PzcAgence)).ToHashSet();
         var lignes = new List<object>();
         foreach (var s in salaries)
         {
@@ -65,7 +69,9 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
             var exceptions = ReglesValidation.Exceptions(travailles.GetValueOrDefault(s.Id, []).Select(d => d.ToString("yyyy-MM-dd")).ToList(),
                 l.Select(p => new PointageSynthese(p.PoiDate.ToString("yyyy-MM-dd"), p.PoiMinutes, p.PoiSousType is not null && nc.Contains(p.PoiSousType))).ToList(),
                 p0.SeuilSemaine, controles.Count, corrections.Count(c => c.PcoSalId == s.Id),
-                corrigee && Empreinte(l) != Empreinte(saisiesCorrigees.Where(p => p.PoiSalId == s.Id)));
+                corrigee && Empreinte(l) != Empreinte(saisiesCorrigees.Where(p => p.PoiSalId == s.Id)),
+                s.PpfId is int ppf && profilsZone.Contains(ppf) && s.Agence is not null
+                    ? l.Select(p => p.PoiChaId).Distinct().Count(c => chantiers.TryGetValue(c, out var ch) && !ch.Interne && !zones.Contains((c, s.Agence))) : 0);
             lignes.Add(new
             {
                 salarie = s, jours = Enumerable.Range(0, 7).Select(i => l.Where(p => p.PoiDate == lundi.AddDays(i)).Sum(p => p.PoiMinutes)).ToList(),
@@ -79,7 +85,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         };
     }
 
-    private async Task<(SalariePointage Salarie, Roles Roles)> AccesAsync(int salarie, Utilisateur u, CancellationToken ct)
+    internal async Task<(SalariePointage Salarie, Roles Roles)> AccesAsync(int salarie, Utilisateur u, CancellationToken ct)
     {
         var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).FirstOrDefault() ?? throw ExceptionMetier.Introuvable($"Salarié {salarie}");
         var r = await RolesAsync(u, [salarie], ct);
@@ -125,7 +131,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         };
     }
 
-    private void Journaliser(int salarie, DateOnly lundi, string action, object detail, Utilisateur u) =>
+    internal void Journaliser(int salarie, DateOnly lundi, string action, object detail, Utilisateur u) =>
         db.Journal.Add(new JournalEntite { PjoSalId = salarie, PjoLundi = lundi, PjoAction = action, PjoDetail = JsonSerializer.Serialize(detail, Json), PjoPar = u.Code });
 
     /// <summary>Remplace la couche validée de la semaine (semaine marquée corrigée) ; contrôles bloquants refusés.</summary>
@@ -155,7 +161,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         sem.PsmCorrigeLe = DateTimeOffset.UtcNow;
     }
 
-    private async Task ControlerModifiableAsync(int salarie, DateOnly lundi, Roles roles, CancellationToken ct)
+    internal async Task ControlerModifiableAsync(int salarie, DateOnly lundi, Roles roles, CancellationToken ct)
     {
         var etats = (await pointage.EtatsAsync([salarie], lundi, (await pointage.ParametresAsync(ct)).Validation, ct))[salarie];
         if (etats.Contains(ReglesValidation.Valide)) throw ExceptionMetier.Conflit("POI_VALIDE", "Semaine validée par le service RH : la dévalider d'abord");
@@ -222,7 +228,9 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         foreach (var s in a.Salaries.Distinct())
         {
             var codes = ReglesValidation.ControlerAction(action, role, p0.Validation, jours.Select(i => etats[s][i]).ToList(), a.Motif);
-            resultats.Add(new { salarie = s, codes });
+            var apresExport = action == "DEVALIDER" && codes.Count == 0
+                && await db.Exports.AnyAsync(e => e.PexDu <= au && e.PexAu >= du && e.PexSalaries.Contains(s), ct);
+            resultats.Add(new { salarie = s, codes, apres_export = apresExport });
             if (codes.Count > 0) continue;
             if (action == "VALIDER")
             {
@@ -238,7 +246,7 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
                     v.PvlAnnuleMotif = a.Motif!.Trim();
                 }
             }
-            Journaliser(s, lundi, action, new { niveau = role, du, au, motif = a.Motif }, u);
+            Journaliser(s, lundi, action, new { niveau = role, du, au, motif = a.Motif, apres_export = apresExport }, u);
         }
         await db.SaveChangesAsync(ct);
         return new { role, resultats };

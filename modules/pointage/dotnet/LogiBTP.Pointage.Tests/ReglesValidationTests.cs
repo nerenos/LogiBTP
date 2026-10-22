@@ -31,7 +31,8 @@ public class ReglesValidationTests
         {
             var obtenu = ReglesValidation.Exceptions(Textes(c!["jours_travailles"]),
                 c["pointages"]!.AsArray().Select(p => new PointageSynthese(p!["date"]!.GetValue<string>(), p["minutes"]!.GetValue<int>(), p["non_conformite"]?.GetValue<bool>() ?? false)).ToList(),
-                c["seuil_semaine"]?.GetValue<int>() ?? 2100, c["avertissements"]?.GetValue<int>() ?? 0, c["corrections"]?.GetValue<int>() ?? 0, c["modifie"]?.GetValue<bool>() ?? false);
+                c["seuil_semaine"]?.GetValue<int>() ?? 2100, c["avertissements"]?.GetValue<int>() ?? 0, c["corrections"]?.GetValue<int>() ?? 0, c["modifie"]?.GetValue<bool>() ?? false,
+                c["zones_manquantes"]?.GetValue<int>() ?? 0);
             Assert.True(Textes(c["attendu"]).SequenceEqual(obtenu), $"{c["nom"]} : {string.Join(",", obtenu)}");
         }
     }

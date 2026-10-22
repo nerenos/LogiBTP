@@ -51,6 +51,10 @@ public class PointageEntite
     public DateTimeOffset PoiSaisiLe { get; set; } = DateTimeOffset.UtcNow;
     public string? PoiAppareil { get; set; }
     public int PoiVersion { get; set; } = 1;
+    public decimal? PoiTaux { get; set; }
+    public decimal? PoiCout { get; set; }
+    public string? PoiValorisation { get; set; }
+    public DateTimeOffset? PoiValoriseLe { get; set; }
 }
 
 public class SemaineEntite
@@ -116,6 +120,12 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
     public DbSet<ValidationEntite> Validations => Set<ValidationEntite>();
     public DbSet<CorrectionEntite> Corrections => Set<CorrectionEntite>();
     public DbSet<JournalEntite> Journal => Set<JournalEntite>();
+    public DbSet<ProfilEntite> Profils => Set<ProfilEntite>();
+    public DbSet<RubriqueEntite> Rubriques => Set<RubriqueEntite>();
+    public DbSet<RegleEntite> Regles => Set<RegleEntite>();
+    public DbSet<ValeurEntite> Valeurs => Set<ValeurEntite>();
+    public DbSet<ZoneEntite> Zones => Set<ZoneEntite>();
+    public DbSet<ExportEntite> Exports => Set<ExportEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -128,6 +138,13 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
         b.Entity<CorrectionEntite>().Property(x => x.PcoPointages).HasColumnType("jsonb");
         b.Entity<JournalEntite>().ToTable("poi_journal").HasKey(x => x.PjoId);
         b.Entity<JournalEntite>().Property(x => x.PjoDetail).HasColumnType("jsonb");
+        b.Entity<ProfilEntite>().ToTable("poi_profil_paie").HasKey(x => x.PpfId);
+        b.Entity<RubriqueEntite>().ToTable("poi_rubrique").HasKey(x => x.RubId);
+        b.Entity<RegleEntite>().ToTable("poi_regle").HasKey(x => x.PrgId);
+        b.Entity<RegleEntite>().Property(x => x.PrgParametres).HasColumnType("jsonb");
+        b.Entity<ValeurEntite>().ToTable("poi_valeur").HasKey(x => new { x.PvaSalId, x.PvaDate, x.PvaRubrique });
+        b.Entity<ZoneEntite>().ToTable("poi_zone_chantier").HasKey(x => new { x.PzcChaId, x.PzcAgence });
+        b.Entity<ExportEntite>().ToTable("poi_export").HasKey(x => x.PexId);
     }
 }
 
@@ -136,7 +153,8 @@ public sealed record ParametresDto(string OrdreNom, int PasMinutes, int Amplitud
 public sealed record SousTypeDto(string Code, string Libelle, bool Productif, bool NonConformite, int Ordre, bool Actif);
 
 /// <summary>Salarié (ou intérimaire) pointable, fourni par l'application.</summary>
-public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire);
+public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire,
+    int? PpfId = null, string? Agence = null);
 /// <summary>Chantier (ou chantier interne) pointable.</summary>
 public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne);
 /// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>
@@ -171,6 +189,11 @@ public abstract class SpecialisationPointage
     /// <summary>Jours travaillés d'une semaine par salarié (par défaut : du lundi au vendredi).</summary>
     public virtual Task<Dictionary<int, List<DateOnly>>> JoursTravaillesAsync(PointageDbContext db, IReadOnlyCollection<int> salaries, DateOnly lundi, CancellationToken ct) =>
         Task.FromResult(salaries.ToDictionary(s => s, _ => Enumerable.Range(0, 5).Select(i => lundi.AddDays(i)).ToList()));
+    /// <summary>
+    /// Taux horaires des salariés pour la valorisation (lot 3) : taux et source (SALARIE, INTERIM…) ; un salarié absent
+    /// n'est pas valorisé.
+    /// </summary>
+    public abstract Task<Dictionary<int, (decimal Taux, string Source)>> TauxAsync(PointageDbContext db, IReadOnlyCollection<int> salaries, DateOnly du, DateOnly au, CancellationToken ct);
     /// <summary>Après une demande de correction (tâche au service RH, par exemple).</summary>
     public virtual Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct) =>
         Task.CompletedTask;
