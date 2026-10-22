@@ -158,7 +158,7 @@ public sealed record SousTypeDto(string Code, string Libelle, bool Productif, bo
 
 /// <summary>Salarié (ou intérimaire) pointable, fourni par l'application.</summary>
 public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire,
-    int? PpfId = null, string? Agence = null);
+    int? PpfId = null, string? Agence = null, string? Code = null, string? MatriculePaie = null);
 /// <summary>Chantier (ou chantier interne) pointable.</summary>
 public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne);
 /// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>

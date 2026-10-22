@@ -19,13 +19,14 @@ public class SpecialisationPointageBtp : SpecialisationPointage
     public override Task<List<SalariePointage>> SalariesAsync(PointageDbContext db, FiltreSalaries f, CancellationToken ct) =>
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,
-                   (s.sal_statut = 'INTERIM') AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence
+                   (s.sal_statut = 'INTERIM') AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence,
+                   s.sal_code AS code, s.sal_matricule_paie AS matricule_paie
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
             LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
             WHERE (@ids IS NULL AND s.sal_actif AND (s.sal_date_sortie IS NULL OR s.sal_date_sortie >= current_date - 31)
                    AND (@srv IS NULL OR sv.srv_id = @srv OR sv.srv_parent_id = @srv)
-                   AND (@r IS NULL OR s.sal_nom ILIKE @r OR s.sal_prenom ILIKE @r OR s.sal_matricule ILIKE @r)
+                   AND (@r IS NULL OR s.sal_nom ILIKE @r OR s.sal_prenom ILIKE @r OR s.sal_matricule ILIKE @r OR s.sal_code ILIKE @r OR s.sal_matricule_paie ILIKE @r)
                    OR s.sal_id = ANY(@ids))
             ORDER BY s.sal_nom, s.sal_prenom
             LIMIT @n

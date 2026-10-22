@@ -439,8 +439,11 @@ export class PageSaisiePointage extends PageBase {
 
 /**
  * Synthèse MO (lot 2) : salariés d'un service avec heures retenues, état de chaque jour et exceptions (par défaut seuls
- * les salariés à examiner, « Tout voir »), validation de la sélection ou de tout ce qui est sans exception,
- * dévalidation avec motif, demandes de correction, détail d'une semaine (saisie et couche validée modifiable).
+ * les salariés à examiner, « Tout voir » ; filtre des intérimaires), validation de la sélection ou de tout ce qui est
+ * sans exception, dévalidation avec motif, demandes de correction, détail d'une semaine (saisie et couche validée
+ * modifiable). Les salariés sont dans un panneau à gauche, réductible et redimensionnable (préférences
+ * `syntheseReduite`, `syntheseLargeur`, `syntheseInterim`) : tableau compact (titres et cases sur deux lignes, en-têtes
+ * figés au défilement) ; samedi et dimanche affichés seulement s'ils ont des pointages (liste et variables de paie).
  */
 export class PageSynthesePointage extends PageBase {
   icone = '✅';
@@ -454,12 +457,22 @@ export class PageSynthesePointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Synthèse des pointages';
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}
-      <p class="ligne"><label><input type="checkbox" data-tout> Tout voir</label> · <span data-periode></span>
+    const prefs = lirePreferences();
+    const reduite = prefs.syntheseReduite ?? window.matchMedia('(max-width: 900px)').matches;
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-synthese"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}
+      <p class="ligne"><span data-periode></span>
         <button type="button" data-valider>✔ Valider la sélection</button> <button type="button" data-tout-valider></button>
         <button type="button" data-devalider>↶ Dévalider la sélection…</button></p>
-      <div data-corrections></div><div data-liste></div><div data-detail></div></div>`;
+      <div class="synthese-corps${reduite ? ' panneau-reduit' : ''}">
+        <aside class="synthese-panneau" style="width: ${Number(prefs.syntheseLargeur) || 560}px">
+          <div class="synthese-panneau-barre"><b>Salariés</b> <label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>
+            <span data-interim></span><button type="button" class="discret" data-replier title="Réduire le panneau des salariés">«</button></div>
+          <div data-corrections></div><div data-liste class="synthese-liste"></div></aside>
+        <div class="synthese-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
+        <button type="button" class="synthese-deplier" data-deplier title="Afficher le panneau des salariés">☰ Salariés</button>
+        <div data-detail class="synthese-detail"></div></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    this.#panneau();
     this.ref = await api.pointage.referentiels();
     this.chantiers = await api.pointage.chantiers();
     this.lundi = lundiDe(this.requete.lundi ?? decaler(aujourdhui(), -7));
@@ -488,6 +501,40 @@ export class PageSynthesePointage extends PageBase {
   }
 
   #url() { this.app.routeur.remplacerUrl(this.urlCourante()); }
+
+  /** Panneau des salariés : réduire / déplier, largeur au glisser du séparateur, filtre des intérimaires. */
+  #panneau() {
+    const c = this.conteneur;
+    const corps = c.querySelector('.synthese-corps');
+    const panneau = c.querySelector('.synthese-panneau');
+    const reduire = (r) => { corps.classList.toggle('panneau-reduit', r); ecrirePreferences({ syntheseReduite: r }); };
+    c.querySelector('[data-replier]').addEventListener('click', () => reduire(true));
+    c.querySelector('[data-deplier]').addEventListener('click', () => reduire(false));
+    c.querySelector('[data-separateur]').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const depart = e.clientX;
+      const largeur = panneau.getBoundingClientRect().width;
+      const bouger = (m) => { panneau.style.width = `${Math.max(280, Math.min(window.innerWidth - 320, largeur + m.clientX - depart))}px`; };
+      const finir = () => {
+        window.removeEventListener('pointermove', bouger);
+        window.removeEventListener('pointerup', finir);
+        ecrirePreferences({ syntheseLargeur: Math.round(panneau.getBoundingClientRect().width) });
+      };
+      window.addEventListener('pointermove', bouger);
+      window.addEventListener('pointerup', finir);
+    });
+    this.interim = lirePreferences().syntheseInterim || 'TOUS';
+    const filtre = creerCombo({ options: [{ valeur: 'TOUS', libelle: 'Salariés et intérimaires' }, { valeur: 'SALARIES', libelle: 'Sans les intérimaires' }, { valeur: 'INTERIM', libelle: 'Intérimaires seuls' }],
+      valeur: this.interim, vide: false, titre: 'Intérimaires' });
+    filtre.addEventListener('change', () => { this.interim = filtre.valeurCombo; ecrirePreferences({ syntheseInterim: this.interim }); this.#rendreListe(); });
+    c.querySelector('[data-interim]').append(filtre);
+  }
+
+  /** Jours affichés : lundi à vendredi, samedi et dimanche s'ils ont des pointages (un salarié au moins). */
+  #joursVisibles() {
+    const lignes = this.donnees?.lignes ?? [];
+    return [0, 1, 2, 3, 4, 5, 6].filter((i) => i < 5 || lignes.some((l) => l.jours[i] > 0));
+  }
 
   #periode() {
     const du = this.conteneur.querySelector('[data-du]')?.value || null;
@@ -544,21 +591,25 @@ export class PageSynthesePointage extends PageBase {
   #rendreListe() {
     const zone = this.conteneur.querySelector('[data-liste]');
     const d = this.donnees;
-    const lignes = d.lignes.filter((l) => this.tout || l.exceptions.length || String(l.salarie.id) === String(this.salarie));
+    const interim = (l) => (this.interim === 'INTERIM' ? l.salarie.interimaire : this.interim === 'SALARIES' ? !l.salarie.interimaire : true);
+    const lignes = d.lignes.filter((l) => interim(l) && (this.tout || l.exceptions.length || String(l.salarie.id) === String(this.salarie)));
     const sans = this.#sansException();
     const bouton = this.conteneur.querySelector('[data-tout-valider]');
     bouton.textContent = `✔ Tout valider sans exception (${sans.length})`;
     bouton.disabled = !sans.length;
-    const masques = d.lignes.length - lignes.length;
+    const masques = d.lignes.filter(interim).length - lignes.length;
+    const jours = joursSemaine(this.lundi);
+    const visibles = this.#joursVisibles();
     zone.innerHTML = `${d.lignes.length ? '' : '<p class="aide">Aucun salarié (choisissez un service ; un chef de service ne voit que ses salariés).</p>'}
-      ${lignes.length ? `<table class="pleine-largeur synthese-pointage"><thead><tr><th><input type="checkbox" data-tous title="Tout sélectionner"></th><th>Salarié</th>
-        ${joursSemaine(this.lundi).map((x, i) => `<th class="nombre">${JOURS[i]} ${jourCourt(x)}</th>`).join('')}<th class="nombre">Total</th><th>À examiner</th></tr></thead><tbody>
+      ${lignes.length ? `<table class="tableau-compact synthese-pointage"><thead><tr><th><input type="checkbox" data-tous title="Tout sélectionner"></th><th>Salarié<br><small>matricule</small></th>
+        ${visibles.map((i) => `<th class="nombre">${JOURS[i]}<br><small>${jourCourt(jours[i])}</small></th>`).join('')}<th class="nombre">Total<br><small>semaine</small></th><th class="synthese-exceptions">À examiner</th></tr></thead><tbody>
         ${lignes.map((l) => `<tr data-id="${l.salarie.id}" class="cliquable${String(l.salarie.id) === String(this.salarie) ? ' selection' : ''}">
           <td><input type="checkbox" data-choix ${this.selection.has(l.salarie.id) ? 'checked' : ''} ${d.rh || l.chef ? '' : 'disabled'}></td>
-          <td>${echapper(nomSalarie(l.salarie, this.ref.parametres.ordre_nom))}${l.corrigee ? ' <span title="Corrigé dans la synthèse">✎</span>' : ''}${l.salarie.interimaire ? ' <small class="aide">intérim</small>' : ''}</td>
-          ${l.jours.map((m, i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${ecrireDuree(m)} ${iconeEtat(l.etats[i])}</td>`).join('')}
+          <td class="synthese-nom">${echapper(nomSalarie(l.salarie, this.ref.parametres.ordre_nom))}${l.corrigee ? ' <span title="Corrigé dans la synthèse">✎</span>' : ''}
+            <br><small class="aide">${echapper(l.salarie.matricule)}${l.salarie.code ? ` · ${echapper(l.salarie.code)}` : ''}${l.salarie.interimaire ? ' · intérim' : ''}</small></td>
+          ${visibles.map((i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${ecrireDuree(l.jours[i]) || '·'}<br><small>${iconeEtat(l.etats[i])}</small></td>`).join('')}
           <td class="nombre"><b>${ecrireDuree(l.jours.reduce((a, b) => a + b, 0))}</b></td>
-          <td>${l.exceptions.map((x) => `<span class="badge-exception" title="${echapper(MESSAGES_VALIDATION[x])}">${echapper(MESSAGES_VALIDATION[x])}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table>` : ''}
+          <td class="synthese-exceptions">${l.exceptions.map((x) => `<span class="badge-exception" title="${echapper(MESSAGES_VALIDATION[x])}">${echapper(MESSAGES_VALIDATION[x])}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table>` : ''}
       ${masques ? `<p class="aide">${masques} salarié(s) sans exception masqué(s) (« Tout voir »).</p>` : ''}
       <p class="aide">${Object.values(ETATS_VALIDATION).map((e) => `${e.icone} ${e.libelle}`).join(' · ')} · validation ${this.ref.parametres.validation === 'DOUBLE' ? 'double (chef puis RH)' : 'simple (RH)'} · vous validez au niveau ${d.rh ? 'RH' : 'chef de service'}.</p>`;
     zone.querySelector('[data-tous]')?.addEventListener('change', (e) => {
@@ -635,6 +686,7 @@ export class PageSynthesePointage extends PageBase {
     try { v = await api.pointage.variables(this.salarie, this.lundi); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     if (!v.profil) { zone.innerHTML = '<p class="aide">Aucun profil de paie : variables non calculées.</p>'; return; }
     const jours = joursSemaine(this.lundi);
+    const visibles = this.#joursVisibles();
     const saisies = new Map(v.saisies.map((s) => [`${s.date}|${s.rubrique}`, s.valeur]));
     const valeurJour = (code, i) => v.variables?.jours[i]?.valeurs[code];
     const affiche = (r, x) => (x == null || x === 0 ? '' : r.unite === 'H' ? ecrireDuree(x) : String(x));
@@ -642,14 +694,14 @@ export class PageSynthesePointage extends PageBase {
       ? Object.entries(v.variables?.totaux ?? {}).filter(([k]) => k.startsWith(`${r.code}_`)).map(([k, n]) => `Z${k.slice(r.code.length + 1)} × ${n}`).join(', ')
       : affiche(r, v.variables?.totaux[r.code]));
     zone.innerHTML = `<h3>Variables de paie <small class="aide">${echapper(v.profil.libelle)}${v.profil.export ? '' : ' (non exportées)'}</small></h3>
-      <table class="grille-pointage variables-paie"><thead><tr><th>Rubrique</th>${jours.map((x, i) => `<th class="nombre">${JOURS[i]}</th>`).join('')}<th class="nombre">Semaine</th><th class="nombre">Total</th></tr></thead><tbody>
+      <table class="tableau-compact variables-paie"><thead><tr><th>Rubrique</th>${visibles.map((i) => `<th class="nombre">${JOURS[i]}<br><small>${jourCourt(jours[i])}</small></th>`).join('')}<th class="nombre">Semaine</th><th class="nombre">Total</th></tr></thead><tbody>
       ${v.rubriques.map((r) => `<tr><td title="${echapper(SAISIES_RUBRIQUE[r.saisie])}${r.code_paie ? ` · paie ${echapper(r.code_paie)}` : ''}">${echapper(r.libelle)} <small class="aide">${echapper(r.code)}</small></td>
-        ${jours.map((x, i) => (r.saisie !== 'C' && modifiable
+        ${visibles.map((i) => [jours[i], i]).map(([x, i]) => (r.saisie !== 'C' && modifiable
           ? `<td><input class="duree" data-rub="${echapper(r.code)}" data-jour="${x}" data-unite="${r.unite}" size="4" value="${saisies.has(`${x}|${r.code}`) ? affiche(r, saisies.get(`${x}|${r.code}`)) || '0' : ''}" placeholder="${affiche(r, valeurJour(r.code, i))}"></td>`
           : `<td class="nombre">${affiche(r, valeurJour(r.code, i))}</td>`)).join('')}
         <td class="nombre">${affiche(r, v.variables?.semaine[r.code])}</td><td class="nombre"><b>${total(r)}</b></td></tr>`).join('')}</tbody></table>
       ${modifiable && v.rubriques.some((r) => r.saisie !== 'C') ? '<p><button type="button" data-rubriques>Enregistrer les rubriques saisies</button> <span class="aide">Case vide : valeur calculée ; 0 : annule le calcul (rubrique modifiable).</span></p>' : ''}
-      ${v.zones.length ? `<h4>Zones de déplacement${v.agence ? ` (agence ${echapper(v.agence)})` : ''}</h4><table><tbody>${v.zones.map((z) => `<tr><td>${echapper(z.code)} ${echapper(z.libelle)}</td>
+      ${v.zones.length ? `<h4>Zones de déplacement${v.agence ? ` (agence ${echapper(v.agence)})` : ''}</h4><table class="tableau-compact"><tbody>${v.zones.map((z) => `<tr><td>${echapper(z.code)} ${echapper(z.libelle)}</td>
         <td>${z.zone == null ? '<span class="badge-exception">à valider</span>' : `zone ${z.zone}`}</td>
         <td>${this.donnees.rh && v.agence ? `<input type="number" min="0" max="9" size="2" data-zone="${z.cha_id}" value="${z.zone ?? ''}"> <button type="button" data-zone-ok="${z.cha_id}">Valider la zone</button>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}`;
     zone.querySelector('[data-rubriques]')?.addEventListener('click', async () => {

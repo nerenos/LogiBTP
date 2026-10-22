@@ -81,7 +81,7 @@ export const SOURCES_LISTE = {
     colonnes: [
       ['id', 'integer'], ['type_element', 'text'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
       ['statut', 'text'], ['date_entree', 'date'], ['salaire_brut', 'numeric'], ['heures_mois', 'numeric'], ['actif', 'boolean'],
-      ['commentaire', 'text'],
+      ['commentaire', 'text'], ['code', 'text'], ['matricule_paie', 'text'],
     ],
   },
   materiels: {
@@ -238,6 +238,8 @@ export const VUES_LISTE = [
       source: { mode: 'vue', vue: 'salaries', colonne_id: 'id', colonne_type: 'type_element' },
       colonnes: [
         col('matricule', 'Matricule', { ...fixe(90) }),
+        col('code', 'Code', { modifiable: true, ...fixe(80), bulle: 'Code court du salarié (recherche, homonymes)' }),
+        col('matricule_paie', 'Matricule\nde paie', { modifiable: true, ...fixe(96) }),
         col('nom', 'Nom', { modifiable: true, ...prop(1.5, 110), style: { gras: true },
           regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }],
         }),

@@ -55,6 +55,7 @@
 - `200_pointage_paie.sql` : module Pointage, lot 3 (module `088`) : `salarie.sal_ppf_id` (profil de paie : INTERIM, ETAM pour les services administratifs et d'études, OUVRIER sinon), clés étrangères des zones et des saisies, `v_cout_mo_chantier` (pointages retenus valorisés par chantier, nature, ordre), `v_liste_pointages` (+ taux, coût, valorisation) ; rejouable.
 - `201_planning.sql` : module Planning, lot 2 (module `089`) : `module_societe` « planning », clé étrangère `pla_tache.tac_srv_id` → `service` ; rejouable.
 - `202_liaisons.sql` : liaisons croisées : `v_pointages_retenus` (couche validée des semaines corrigées, sinon saisie ; service du type de MO), `v_heures_realisees_ordre`, `v_heures_realisees_chantier` ; rejouable.
+- `203_salaries_codes.sql` : `sal_code` (code court : recherche, homonymes) et `sal_matricule_paie` (exporté à la place du matricule s'il est renseigné), colonnes `code` et `matricule_paie` en fin de `v_liste_salaries`, valeurs de démonstration là où rien n'est saisi, colonnes ajoutées aux vues de liste 2 et 4 déjà en base ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

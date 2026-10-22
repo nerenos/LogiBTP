@@ -17,6 +17,7 @@
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
+- [ ] Salariés : `db/203` et les fichiers générés `121`, `131` appliqués aux deux bases (22/10/2026) ; redémarrer l'API (code et matricule de paie dans la recherche du pointage et l'export de paie).
 - [ ] Suivi (CRM) et Pointage : `modules/crm/db/098` rejoué sur les deux bases (22/10/2026, `pin_rge_id` : répertoire GED des indices) ; redémarrer l'API (format des noms de plans, indice vide, route `/api/pointage/chantiers/{id}/ordres`). Plan de démonstration R07 « Coupe façade nord » (chantier CH-2026-002 de `logibtp_demo`) créé par les essais : conservable.
 - [ ] Module CRM : `modules/crm/db/095` à `099` et `db/194` appliqués aux deux bases (21/10/2026) ; redémarrer l'API. L'utilisateur de démonstration `demo` n'est relié à aucun individu (`ind_utilisateur`) : « Mes tâches » et « À prendre » restent vides pour lui (renseigner l'identifiant de connexion d'un individu de notre société).
 - [ ] Modules et services : `db/193` appliqué aux deux bases (20/10/2026) ; redémarrer l'API (routes `/api/modules`, `/api/services`, filtre d'activation des Règlements).

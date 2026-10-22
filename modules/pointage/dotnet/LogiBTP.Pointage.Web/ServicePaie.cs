@@ -337,7 +337,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         var csv = new StringBuilder("matricule;nom;prenom;rubrique;code_paie;libelle;quantite;du;au\r\n");
         foreach (var l in lignes)
         {
-            csv.Append($"{l.S.Matricule};{l.S.Nom};{l.S.Prenom};{l.Rubrique};{l.CodePaie};{l.Libelle};{Nombre(l.Quantite)};{du:dd/MM/yyyy};{au:dd/MM/yyyy}\r\n");
+            csv.Append($"{l.S.MatriculePaie ?? l.S.Matricule};{l.S.Nom};{l.S.Prenom};{l.Rubrique};{l.CodePaie};{l.Libelle};{Nombre(l.Quantite)};{du:dd/MM/yyyy};{au:dd/MM/yyyy}\r\n");
         }
         long? id = null;
         if (enregistrer)
@@ -350,7 +350,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         return new
         {
             id, du, au, csv = csv.ToString(), non_valides = nonValides, salaries = exportes.Count,
-            lignes = lignes.Select(l => new { matricule = l.S.Matricule, nom = l.S.Nom, prenom = l.S.Prenom, rubrique = l.Rubrique, code_paie = l.CodePaie, libelle = l.Libelle, quantite = l.Quantite }),
+            lignes = lignes.Select(l => new { matricule = l.S.MatriculePaie ?? l.S.Matricule, nom = l.S.Nom, prenom = l.S.Prenom, rubrique = l.Rubrique, code_paie = l.CodePaie, libelle = l.Libelle, quantite = l.Quantite }),
         };
     }
 
@@ -386,7 +386,9 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         if (d.Mode == "IMPORT")
         {
             var parMatricule = (d.Taux ?? []).GroupBy(t => t.Matricule.Trim()).ToDictionary(g => g.Key, g => g.Last().Taux);
-            taux = salaries.Where(s => parMatricule.ContainsKey(s.Matricule)).ToDictionary(s => s.Id, s => (parMatricule[s.Matricule], "IMPORT"));
+            // Matricule de paie (celui du fichier de paie) s'il est renseigné, sinon matricule.
+            string? Cle(SalariePointage s) => s.MatriculePaie is string m && parMatricule.ContainsKey(m) ? m : parMatricule.ContainsKey(s.Matricule) ? s.Matricule : null;
+            taux = salaries.Where(s => Cle(s) is not null).ToDictionary(s => s.Id, s => (parMatricule[Cle(s)!], "IMPORT"));
         }
         else
         {

@@ -61,6 +61,9 @@ function completerSalaries(salaries) {
     s.contact_telephone = s.id % 3 === 0 ? null : `06 ${String((s.id * 17) % 100).padStart(2, '0')} 45 67 ${String((s.id * 7) % 100).padStart(2, '0')}`;
     s.note_perso = null;
     s.email = `${sansAccent(s.prenom)}.${sansAccent(s.nom)}${s.id}@exemple.fr`;
+    // Code et matricule de paie : même règle que db/203 (initiale du prénom, trois lettres du nom, numéro).
+    s.code = `${sansAccent(s.prenom).slice(0, 1)}${sansAccent(s.nom).slice(0, 3)}`.toUpperCase() + s.id;
+    s.matricule_paie = `P${String(s.id).padStart(6, '0')}`;
     const [a, m] = s.date_naissance.split('-');
     s.num_secu = `${s.id % 2 ? 1 : 2} ${a.slice(2)} ${m} 69 ${String(100 + (s.id % 900)).padStart(3, '0')} ${String(s.id % 1000).padStart(3, '0')} ${String(10 + (s.id % 89)).padStart(2, '0')}`;
   }

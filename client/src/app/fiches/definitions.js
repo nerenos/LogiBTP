@@ -18,7 +18,7 @@ export const TYPES_FICHE = {
         {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
-            { titre: 'Identité', champs: ['matricule', 'nom', 'prenom', 'ind_id'] },
+            { titre: 'Identité', champs: ['matricule', 'code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
             { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'actif'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
@@ -38,6 +38,8 @@ export const TYPES_FICHE = {
       ],
       champs: [
         c('matricule', 'Matricule', 'sal_matricule', 'texte', { obligatoire: true, longueur: 10, saisie: 'creation', non_copie: true, aide: 'Identifiant unique, saisi à la création' }),
+        c('code', 'Code', 'sal_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code court du salarié : recherche rapide, homonymes' }),
+        c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le matricule' }),
         c('nom', 'Nom', 'sal_nom', 'texte', { obligatoire: true, longueur: 60 }),
         c('ind_id', 'Individu (annuaire)', 'sal_ind_id', 'nombre', { reference: 'individu', non_copie: true, aide: "Fiche de l'individu dans l'annuaire : identité et coordonnées partagées avec les autres modules" }),
         c('prenom', 'Prénom', 'sal_prenom', 'texte', { obligatoire: true, longueur: 60 }),
