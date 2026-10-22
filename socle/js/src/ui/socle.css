@@ -197,6 +197,16 @@ input.combo {
   background-repeat: no-repeat;
 }
 input.combo[readonly] { background-image: none; padding-right: 0.3em; }
+/* Pastille de couleur de l'option retenue (option `couleur`) : troisième image de fond, à gauche du libellé. */
+input.combo.avec-pastille {
+  padding-left: 1.5em;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%),
+    radial-gradient(circle, var(--combo-pastille) 0 4.5px, transparent 5px);
+  background-position: calc(100% - 0.75em) 50%, calc(100% - 0.45em) 50%, 0.35em 50%;
+  background-size: 0.3em 0.3em, 0.3em 0.3em, 11px 11px;
+}
+input.combo.avec-pastille[readonly] { background-image: radial-gradient(circle, var(--combo-pastille) 0 4.5px, transparent 5px); background-position: 0.35em 50%; background-size: 11px 11px; }
+.liste-deroulante .pastille-option { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4em; vertical-align: middle; }
 
 /* Menu contextuel (aide-mémoire des raccourcis) */
 .menu-contextuel { position: fixed; z-index: 100; min-width: 14rem; max-width: 26rem; padding: 0.25rem 0; background: var(--surface); color: var(--texte);

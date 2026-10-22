@@ -12,7 +12,8 @@ import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
  * Données : lignes [{ cle, libelle, ... }], taches [{ cle, ligne, debut, fin (minutes), libelle, couleur, ... }].
  * Options : debut, fin (minutes), echelle (HEURE, DEMI_JOUR, JOUR, SEMAINE), largeurColonne (px), hauteurVoie (px),
  * hauteurAdaptee (vrai : une voie par barre superposée), pas (minutes, 15), lecture, largeurEntete (px), aujourdhui (minuit du
- * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun),
+ * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun), lignesTexte (lignes de texte des barres, 1 par défaut :
+ * fixe la hauteur des voies, sauf hauteurVoie donnée),
  * actions { deplacer({ tache, debut, fin, ligne, copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant }) }.
  */
@@ -30,7 +31,7 @@ export class VuePlanning {
 
   constructor(conteneur, options = {}) {
     this.conteneur = conteneur;
-    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: 22, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), actions: {}, ...options };
+    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: VuePlanning.hauteurVoie(options.lignesTexte ?? 1), lignesTexte: 1, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), actions: {}, ...options };
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     conteneur.innerHTML = `<div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
@@ -68,6 +69,9 @@ export class VuePlanning {
   decorationsLigne() { return []; }
 
   // --- Données et réglages ---
+
+  /** Hauteur d'une voie (px) pour n lignes de texte par barre. */
+  static hauteurVoie(n) { return n <= 1 ? 22 : 15 * n + 8; }
 
   get options() { return this.#o; }
   get minutesParPixel() { return ECHELLES[this.#o.echelle].minutes / this.#o.largeurColonne; }
@@ -119,6 +123,7 @@ export class VuePlanning {
   regler(options) {
     const centre = this.#instantCentre();
     Object.assign(this.#o, options);
+    if ('lignesTexte' in options && !('hauteurVoie' in options)) this.#o.hauteurVoie = VuePlanning.hauteurVoie(this.#o.lignesTexte);
     this.conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     this.#appliquerDimensions();
     this.#disposer();
@@ -139,6 +144,8 @@ export class VuePlanning {
     const s = this.conteneur.style;
     s.setProperty('--vp-entete', `${this.#o.largeurEntete}px`);
     s.setProperty('--vp-voie', `${this.#o.hauteurVoie}px`);
+    s.setProperty('--vp-lignes', String(this.#o.lignesTexte));
+    this.conteneur.classList.toggle('multiligne', this.#o.lignesTexte > 1);
     this.plan.style.width = `${Math.max(0, this.x(this.#o.fin))}px`;
     this.conteneur.querySelector('.vp-entete-plan').style.width = this.plan.style.width;
     this.#dessinerEntete();

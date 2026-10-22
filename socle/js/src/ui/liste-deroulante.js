@@ -102,7 +102,7 @@ export class ListeDeroulante {
     const titres = this.filtrees.map((o, i) => (o.groupe && o.groupe !== this.filtrees[i - 1]?.groupe ? `<p class="groupe">${echapper(o.groupe)}</p>` : ''));
     this.popup.innerHTML = this.filtrees.map((o, i) => `${titres[i]}
       <div role="option" data-index="${i}" class="${i === this.actif ? 'active' : ''}" aria-selected="${i === this.actif}">
-        ${this.strict ? '' : `<strong>${echapper(o.valeur)}</strong>`}<span>${echapper(o.libelle)}</span>${o.detail ? `<em>${echapper(o.detail)}</em>` : ''}
+        ${this.strict ? '' : `<strong>${echapper(o.valeur)}</strong>`}<span>${o.couleur ? `<i class="pastille-option" style="background:${echapper(o.couleur)}"></i>` : ''}${echapper(o.libelle)}</span>${o.detail ? `<em>${echapper(o.detail)}</em>` : ''}
       </div>`).join('');
     this.positionner();
     this.popup.querySelector('.active')?.scrollIntoView({ block: 'nearest' });

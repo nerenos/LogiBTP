@@ -6,7 +6,8 @@ import { ListeDeroulante } from './liste-deroulante.js';
  * ou son code. La valeur retenue est celle de l'option (`champ.valeurCombo`) ; un texte qui ne désigne aucune
  * option est refusé et le libellé de la valeur précédente revient.
  *
- * options : [{ valeur, libelle, detail?, groupe? }] (groupe : titre affiché avant ses options) ; valeur : valeur initiale ;
+ * options : [{ valeur, libelle, detail?, groupe?, couleur? }] (groupe : titre affiché avant ses options ; couleur : pastille
+ * affichée devant le libellé, dans la liste et dans le champ) ; valeur : valeur initiale ;
  * vide : option vide (« — ») proposée.
  * Événement `change` sur le champ quand la valeur retenue change. `resoudre()` : valeur désignée par le texte saisi
  * (undefined si aucune), sans la retenir. `definirValeur(v)` : change la valeur sans événement.
@@ -23,9 +24,16 @@ export function creerCombo({ options = [], valeur = '', vide = true, titre = '' 
   const libelle = (v) => (v === '' || v === null || v === undefined ? '' : liste.find((o) => egal(o.valeur, v))?.libelle ?? String(v));
   let courante = valeur ?? '';
   let deroulante = null;
+  /** Pastille de l'option retenue (fond du champ). */
+  const pastille = () => {
+    const c = liste.find((o) => egal(o.valeur, courante))?.couleur;
+    champ.classList.toggle('avec-pastille', Boolean(c));
+    if (c) champ.style.setProperty('--combo-pastille', c); else champ.style.removeProperty('--combo-pastille');
+  };
   champ.value = libelle(courante);
+  pastille();
   Object.defineProperty(champ, 'valeurCombo', { get: () => courante });
-  champ.definirValeur = (v) => { courante = v ?? ''; champ.value = libelle(courante); };
+  champ.definirValeur = (v) => { courante = v ?? ''; champ.value = libelle(courante); pastille(); };
   champ.resoudre = () => (deroulante ? deroulante.resoudre() : courante);
 
   /** Retient la valeur désignée par le texte ; texte non reconnu : libellé de la valeur précédente. */
@@ -35,6 +43,7 @@ export function creerCombo({ options = [], valeur = '', vide = true, titre = '' 
     champ.value = libelle(v);
     if (!egal(v, courante)) {
       courante = v;
+      pastille();
       champ.dispatchEvent(new Event('change', { bubbles: true }));
     }
   };

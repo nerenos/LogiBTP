@@ -583,6 +583,11 @@ details.avertissement > summary { cursor: pointer; }
 .panneau-planning { width: 24rem; flex: none; overflow: auto; border-left: 1px solid var(--bord, #cbd5e1); padding: 0 .4rem; }
 .panneau-planning .onglets button.actif { font-weight: 600; text-decoration: underline; }
 .panneau-planning tr.glissable { cursor: grab; }
+/* Entête du panneau (onglets, boutons de la tâche) figée au défilement. */
+.panneau-planning > .entete-panneau { position: sticky; top: 0; z-index: 2; background: var(--fond, #fff); padding-bottom: .2rem; border-bottom: 1px solid var(--bord, #cbd5e1); }
+.panneau-planning [data-actions-tache] p { margin: .3rem 0 .1rem; }
+/* Pastille de l'état de la tâche (barres). */
+.pastille-etat-tache { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; box-shadow: 0 0 0 1px rgba(255, 255, 255, .85); }
 /* Détail de la tâche : groupes repliables (Tâche, Mobile, Ressource, Détail, Dépendance). */
 .groupe-tache { border-top: 1px solid var(--bord, #cbd5e1); padding: .2rem 0; }
 .groupe-tache > summary { cursor: pointer; padding: .2rem 0; }

@@ -11,6 +11,10 @@ import { ecouter } from '../diffusion.js';
 // sélectionnée (saisie, affectations, aperçu du calcul). Calcul par le serveur (ReglesPlanning.cs ↔ calcul.js).
 
 const ETATS = { OPTION: 'Option', PREVUE: 'Prévue', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', TERMINEE: 'Terminée' };
+/** Couleur de la pastille de chaque état (combo du détail, barres). */
+const COULEURS_ETAT = { OPTION: '#98a2b3', PREVUE: '#2563eb', CONFIRMEE: '#16a34a', EN_COURS: '#d97706', TERMINEE: '#475467' };
+const pastilleEtat = (etat) => `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>`;
+const LIGNES_TEXTE = [1, 2, 3, 4, 5, 6, 8, 10];
 const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
 const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
@@ -52,7 +56,7 @@ class VuePlanningBtp extends VuePlanning {
   contenuBarre(t) {
     const code = t.element ? `<b>${echapper(t.element.code)}</b> ` : '';
     const res = this.regroupement !== 'RESSOURCE' && t.ressources?.length ? ` <small>· ${echapper(t.ressources.join(', '))}</small>` : '';
-    return `${code}${echapper(t.libelle)}${res}`;
+    return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
   classeBarre(t) { return `${t.theorique ? 'theorique' : ''} etat-${String(t.etat).toLowerCase()}`; }
@@ -93,14 +97,15 @@ export class PagePlanning extends PageBase {
         <b>📅</b> <span data-vue></span>
         <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
         <span data-periode class="aide"></span> <span data-echelle></span>
-        <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button>
+        <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button> <span data-lignes-texte></span>
         <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
         <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
         <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
-        <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button><button type="button" data-onglet="alertes">Alertes <span data-nb-alertes></span></button></div>
+        <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button><button type="button" data-onglet="alertes">Alertes <span data-nb-alertes></span></button></div>
+            <div data-actions-tache hidden></div></div>
           <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div><div data-panneau="alertes" hidden></div></aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
@@ -118,6 +123,12 @@ export class PagePlanning extends PageBase {
     c.querySelector('[data-echelle]').append(this.comboEchelle);
     this.comboEchelle.addEventListener('change', () => this.planning.regler({ echelle: this.comboEchelle.valeurCombo, largeurColonne: LARGEURS[this.comboEchelle.valeurCombo] }));
     c.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => this.planning.zoomer(Number(b.dataset.zoom))));
+    // Zoom vertical : lignes de texte par barre (hauteur des lignes), préférence du navigateur.
+    const lignesTexte = Number(lirePreferences().planningLignesTexte) || 1;
+    const comboLignes = creerCombo({ options: LIGNES_TEXTE.map((n) => ({ valeur: String(n), libelle: `${n} ligne${n > 1 ? 's' : ''}` })), valeur: String(lignesTexte), vide: false, titre: 'Lignes de texte par barre (hauteur des lignes)' });
+    comboLignes.size = 7;
+    c.querySelector('[data-lignes-texte]').append(comboLignes);
+    comboLignes.addEventListener('change', () => { ecrirePreferences({ planningLignesTexte: Number(comboLignes.valeurCombo) }); this.planning.regler({ lignesTexte: Number(comboLignes.valeurCombo) }); });
     c.querySelector('[data-prec]').addEventListener('click', () => this.#decaler(-1));
     c.querySelector('[data-suiv]').addEventListener('click', () => this.#decaler(1));
     c.querySelector('[data-aujourdhui]').addEventListener('click', () => { this.du = null; this.#definition(); this.#charger(); });
@@ -134,7 +145,7 @@ export class PagePlanning extends PageBase {
       plein.addEventListener('click', () => c.querySelector('.page-planning').requestFullscreen?.());
     }
     this.planning = new VuePlanningBtp(c.querySelector('[data-planning]'), {
-      debut: 0, fin: 1440, lecture: this.consultation, actions: {
+      debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, actions: {
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
         selection: (t) => { if (t) { this.#editer(t.tache); this.#onglet('tache'); } },
@@ -262,6 +273,7 @@ export class PagePlanning extends PageBase {
     const ref = { id };
     this.#memoriser({ libelle: 'suppression', annuler: async () => { ref.id = (await api.planning.creer(saisieDe(avant))).id; }, retablir: () => supprimerTache(ref.id) });
     this.conteneur.querySelector('[data-panneau="tache"]').innerHTML = '';
+    this.conteneur.querySelector('[data-actions-tache]').innerHTML = '';
   }
 
   #definition() {
@@ -309,6 +321,7 @@ export class PagePlanning extends PageBase {
   #onglet(nom) {
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === nom));
     this.conteneur.querySelectorAll('[data-panneau]').forEach((p) => { p.hidden = p.dataset.panneau !== nom; });
+    this.conteneur.querySelector('[data-actions-tache]').hidden = nom !== 'tache';
     const jalons = this.conteneur.querySelector('[data-jalons]');
     if (jalons) jalons.hidden = nom !== 'aplanifier';
   }
@@ -516,25 +529,27 @@ export class PagePlanning extends PageBase {
     if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
     const mobile = t.mobile ?? {};
     const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${GROUPES_TACHE[cle]}</b></summary>${corps}</details>`;
-    zone.innerHTML = `<h3>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</h3>
-      <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
-        ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
-      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
+    // Boutons dans l'entête du panneau (avec les onglets), toujours visibles au défilement du détail.
+    const barre = this.conteneur.querySelector('[data-actions-tache]');
+    barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
+        ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>`;
+    zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
         <p class="ligne">Chantier <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
         <p class="ligne">Calcul <span data-mode></span></p>
         <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
         <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
-        <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>`)}
+        <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>
+        <p class="ligne">État <span data-etat-tache></span></p>
+        <p class="ligne"><label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
+        <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
+        <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>`)}
       ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${cle === 'adresse' || cle === 'contact' ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
       ${groupe('ressource', `<ul data-affectations></ul>
         <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
         <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
         <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
         <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
-      ${groupe('detail', `<p class="ligne">État <span data-etat-tache></span> <label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
-        <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
-        <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>
-        <p class="aide" data-realise></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
+      ${groupe('detail', `<p><b>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</b></p><p class="aide" data-realise></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
       ${groupe('dependance', '<div data-liens></div>')}`;
     zone.querySelectorAll('details[data-groupe]').forEach((d) => d.addEventListener('toggle', () => {
       ecrirePreferences({ planningGroupesReplies: [...zone.querySelectorAll('details[data-groupe]:not([open])')].map((x) => x.dataset.groupe) });
@@ -549,7 +564,7 @@ export class PagePlanning extends PageBase {
     const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
     const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
     const mode = combo('mode', options(MODES), String(t.calcul), false);
-    const etat = combo('etat-tache', options(ETATS), t.etat, false);
+    const etat = combo('etat-tache', options(ETATS).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat, false);
     const equipe = combo('equipe', this.ref.equipes.map((e) => ({ valeur: e.id, libelle: e.libelle, detail: e.code })), '');
     let ressource = combo('ressource', [], '');
     const rendreAffs = () => {
@@ -613,14 +628,14 @@ export class PagePlanning extends PageBase {
         parent_id: t.parent_id ?? null, mobile: Object.fromEntries([...zone.querySelectorAll('[data-mobile]')].map((x) => [x.dataset.mobile, x.value])),
       };
     };
-    zone.querySelector('[data-apercu]').addEventListener('click', async () => {
+    barre.querySelector('[data-apercu]').addEventListener('click', async () => {
       try {
         const r = await api.planning.calculer(saisie());
-        zone.querySelector('[data-resultat]').textContent = r.erreurs.length ? r.erreurs.join(', ')
+        barre.querySelector('[data-resultat]').textContent = r.erreurs.length ? r.erreurs.join(', ')
           : `Fin ${r.fin?.replace('T', ' ')} · ${ecrireDuree(r.heures)} h${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([k, m]) => `${affs.find((a) => `${a.type}:${a.id}` === k)?.libelle ?? k} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
       } catch (e) { this.app.erreur(e); }
     });
-    zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+    barre.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       let r;
       if (t.id) r = await this.#modifierMemorise(t.id, 'modification', () => api.planning.modifier(t.id, saisie()));
       else {
@@ -629,7 +644,7 @@ export class PagePlanning extends PageBase {
       }
       if (r) this.#editer(r.id);
     });
-    zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
+    barre.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
       if (confirm('Supprimer cette tâche ?')) await this.#supprimer(t.id);
     });
   }
