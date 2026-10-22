@@ -10,7 +10,9 @@
 > `ReglesPlanning.cs`, page `/planning`) : le module ne lit pas le Calendrier (règle des modules) ; le cœur lui fournit
 > les plages travaillées de chaque ressource. Lot 3 réalisé le 22/10/2026 : diffusion par événements serveur
 > (text/event-stream, `Diffuseur` du socle) au lieu de SignalR, même usage (groupe par base, sujet « planning ») ;
-> annuler / rétablir côté navigateur rejoué par l'API ; vue en consultation.
+> annuler / rétablir côté navigateur rejoué par l'API ; vue en consultation. Lot 4 réalisé le 22/10/2026 (`charge.js` ↔
+> `ReglesCharge.cs`, `ServiceCharge.cs`, `089b`) : notifications calculées à la demande (aucune stockée), seul leur état
+> l'est ; seuil de sous-occupation global.
 
 ## 1. Objet
 

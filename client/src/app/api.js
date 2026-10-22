@@ -118,6 +118,12 @@ export const api = {
     supprimer: (id, version) => appel('DELETE', `/planning/taches/${id}?version=${version}`),
     deplacer: (id, d) => appel('POST', `/planning/taches/${id}/deplacer`, d),
     scinder: (id, d) => appel('POST', `/planning/taches/${id}/scinder`, d),
+    // Lot 4 : charge, alertes, composition d'équipe, premier créneau libre.
+    charge: (f) => appel('GET', `/planning/charge?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    notifications: (f) => appel('GET', `/planning/notifications?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    marquerNotifications: (e) => appel('PUT', '/planning/notifications', e),
+    appliquerEquipe: (id, equipe, version) => appel('POST', `/planning/taches/${id}/equipes/${equipe}/appliquer?version=${version}`),
+    creneau: (f) => appel('GET', `/planning/creneau?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
   },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),

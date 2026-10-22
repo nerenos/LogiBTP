@@ -63,6 +63,8 @@ export class VuePlanning {
   enteteLigne(l) { return echapper(l.libelle ?? ''); }
   /** Classes supplémentaires d'une ligne. */
   classeLigne(l) { return l.classe ?? ''; }
+  /** Décorations d'une ligne dessinées sous les barres : [{ debut, fin, classe, titre, texte }] (capacité, jalons…). */
+  decorationsLigne() { return []; }
 
   // --- Données et réglages ---
 
@@ -229,6 +231,12 @@ export class VuePlanning {
       const y = this.#positions[i];
       lignes.push(`<div class="vp-ligne ${this.classeLigne(l)}" data-i="${i}" style="top:${y}px;height:${this.#hauteurs[i]}px">${this.enteteLigne(l)}</div>`);
       barres.push(`<div class="vp-separation" style="top:${y + this.#hauteurs[i] - 1}px"></div>`);
+      for (const d of this.decorationsLigne(l)) {
+        if (d.fin <= t0 || d.debut >= t1) continue;
+        const gauche = this.x(Math.max(d.debut, this.#o.debut));
+        barres.push(`<div class="vp-deco ${d.classe ?? ''}" style="left:${gauche}px;width:${Math.max(2, this.x(Math.min(d.fin, this.#o.fin)) - gauche)}px;top:${y + 1}px;height:${this.#hauteurs[i] - 3}px"
+          title="${echapper(d.titre ?? '')}">${echapper(d.texte ?? '')}</div>`);
+      }
       for (const t of visibles(this.#parLigne.get(l.cle) ?? [], t0, t1, this.#dureeMax)) {
         const v = this.#o.hauteurAdaptee ? this.#voies.get(t) ?? 0 : 0;
         const gauche = this.x(Math.max(t.debut, this.#o.debut));

@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage, 089 Planning). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage, 089–089b Planning). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)

@@ -23,6 +23,7 @@ const saisieDe = (t) => ({
   calcul: t.calcul, debut: t.debut, fin: t.fin, heures: t.heures, nb_ressources: t.nb_ressources, srv_id: t.srv_id, type_element: t.type_element,
   id_element: t.id_element, origine_type: t.origine_type, origine_id: t.origine_id, libelle: t.libelle, memo: t.memo, avancement: t.avancement,
   couleur: t.couleur, etat: t.etat, affectations: t.affectations.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id, quantite: a.quantite })),
+  habilitations: t.habilitations ?? [],
 });
 
 /** Remet une tâche dans un état lu auparavant (version courante relue). */
@@ -49,6 +50,20 @@ class VuePlanningBtp extends VuePlanning {
 
   classeBarre(t) { return `${t.theorique ? 'theorique' : ''} etat-${String(t.etat).toLowerCase()}`; }
 
+  /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité. */
+  decorationsLigne(l) {
+    if (!l.cle.startsWith('srv:') || !this.charge) return [];
+    const h = (m) => ecrireDuree(m) || '0:00';
+    return (this.charge.get(Number(l.cle.slice(4))) ?? []).map((c) => {
+      const r = c.capacite ? c.planifie / c.capacite : (c.planifie ? 2 : 0);
+      return {
+        debut: versMinutes(c.date), fin: versMinutes(c.date) + 1440, classe: r > 1 ? 'charge-plein' : r >= 0.7 ? 'charge-moyen' : 'charge-ok',
+        titre: `${c.date} : planifié ${h(c.planifie)} h · capacité ${h(c.capacite)} h · disponible ${c.disponible < 0 ? '−' : ''}${h(Math.abs(c.disponible))} h`,
+        texte: `${Math.round(c.planifie / 60)}/${Math.round(c.capacite / 60)} h`,
+      };
+    });
+  }
+
   titreBarre(t) {
     return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle} (${ETATS[t.etat] ?? t.etat})\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
   }
@@ -72,8 +87,8 @@ export class PagePlanning extends PageBase {
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning" data-planning></div>
-        <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button></div>
-          <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div></aside></div></div>`;
+        <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button><button type="button" data-onglet="alertes">Alertes <span data-nb-alertes></span></button></div>
+          <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div><div data-panneau="alertes" hidden></div></aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
     this.consultation = this.requete.consultation === '1';
@@ -264,7 +279,14 @@ export class PagePlanning extends PageBase {
     try { d = await api.planning.donnees({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), recherche: this.recherche }); } catch (e) { this.app.erreur(e); return; }
     this.lignes = d.lignes.map((l) => ({ ...l, ligneFixe: this.definition.regroupement !== 'RESSOURCE' ? false : l.ligne_fixe }));
     this.barres = d.barres.map((b) => ({ ...b, debut: versMinutes(b.debut), fin: versMinutes(b.fin), couleur: b.couleur || this.couleurs.get(b.srv_id) }));
+    const charge = await api.planning.charge({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin) }).catch(() => null);
+    this.planning.charge = new Map();
+    for (const c of charge?.services ?? []) {
+      if (!this.planning.charge.has(c.srv_id)) this.planning.charge.set(c.srv_id, []);
+      this.planning.charge.get(c.srv_id).push(c);
+    }
     this.planning.definirDonnees(this.lignes, this.barres);
+    if (!this.consultation) this.#alertes();
     this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
     if (!this.centre) { this.centre = true; this.planning.allerA(versMinutes(new Date().toISOString().slice(0, 16))); }
   }
@@ -350,6 +372,43 @@ export class PagePlanning extends PageBase {
     }));
   }
 
+  /** Alertes calculées (lot 4) regroupées par type, avec actions : aller à la tâche, appliquer l'équipe, vue, traitée. */
+  async #alertes() {
+    const zone = this.conteneur.querySelector('[data-panneau="alertes"]');
+    const p = this.periode;
+    let l;
+    try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin) }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const importantes = l.filter((n) => n.niveau !== 'INFO' && n.etat !== 'VUE').length;
+    this.conteneur.querySelector('[data-nb-alertes]').textContent = importantes ? `(${importantes})` : '';
+    const TYPES = { SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };
+    zone.innerHTML = l.length ? Object.entries(TYPES).filter(([t]) => l.some((n) => n.type === t)).map(([t, titre]) => {
+      const n = l.filter((x) => x.type === t);
+      return `<details ${t === 'SOUSOCCUPATION' ? '' : 'open'}><summary><b>${titre}</b> (${n.length}) <button type="button" data-tout-traiter="${t}" title="Marquer toutes traitées">✔ tout</button></summary><ul class="alertes-planning">
+        ${n.map((x) => `<li class="${x.etat === 'VUE' ? 'vue' : ''}" data-cle="${echapper(x.cle)}">${echapper(x.message)}<br>
+          ${x.tache ? `<button type="button" data-aller="${x.tache}">Aller</button>` : ''}${x.action === 'APPLIQUER_EQUIPE' ? ` <button type="button" data-equipe="${x.tache}:${x.equipe}">Appliquer la composition</button>` : ''}
+          ${x.etat === 'VUE' ? '' : ' <button type="button" data-vue>Vue</button>'} <button type="button" data-traitee>Traitée</button></li>`).join('')}</ul></details>`;
+    }).join('') : '<p class="aide">Aucune alerte sur la période.</p>';
+    const marquer = async (cles, etat) => { try { await api.planning.marquerNotifications({ cles, etat }); await this.#alertes(); } catch (e) { this.app.erreur(e); } };
+    zone.querySelectorAll('li[data-cle]').forEach((li) => {
+      li.querySelector('[data-vue]')?.addEventListener('click', () => marquer([li.dataset.cle], 'VUE'));
+      li.querySelector('[data-traitee]').addEventListener('click', () => marquer([li.dataset.cle], 'TRAITEE'));
+      li.querySelector('[data-aller]')?.addEventListener('click', (e) => {
+        const b = this.barres.find((x) => String(x.tache) === e.target.dataset.aller);
+        if (b) { this.planning.selection = b; this.planning.allerA(b.debut); this.planning.actualiser(); }
+        this.#editer(Number(e.target.dataset.aller));
+      });
+      li.querySelector('[data-equipe]')?.addEventListener('click', async (e) => {
+        const [tache, equipe] = e.target.dataset.equipe.split(':').map(Number);
+        const cur = await api.planning.tache(tache);
+        await this.#modifierMemorise(tache, 'composition d\'équipe', () => api.planning.appliquerEquipe(tache, equipe, cur.version));
+      });
+    });
+    zone.querySelectorAll('[data-tout-traiter]').forEach((b) => b.addEventListener('click', (e) => {
+      e.preventDefault();
+      marquer(l.filter((x) => x.type === b.dataset.toutTraiter).map((x) => x.cle), 'TRAITEE');
+    }));
+  }
+
   /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
   async #editer(id) {
     const zone = this.conteneur.querySelector('[data-panneau="tache"]');
@@ -376,10 +435,13 @@ export class PagePlanning extends PageBase {
       <h4>Affectations</h4><ul data-affectations></ul>
       <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
       <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
+      <h4>Habilitations exigées</h4><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
+      <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>
       <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
       ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`;
     const affs = t.affectations.map((a) => ({ ...a }));
+    const habs = [...(t.habilitations ?? [])];
     const combo = (cle, opts, valeur, vide = true) => { const c = creerCombo({ options: opts, valeur: valeur ?? '', vide }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
     const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
     const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
@@ -393,6 +455,30 @@ export class PagePlanning extends PageBase {
       zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { affs.splice(Number(b.dataset.retirer), 1); rendreAffs(); }));
     };
     rendreAffs();
+    const comboHab = combo('habilitation', this.ref.habilitations.map((h) => ({ valeur: h.code, libelle: h.libelle, detail: h.code })), '');
+    const rendreHabs = () => {
+      zone.querySelector('[data-habilitations]').innerHTML = habs.length ? habs.map((h, i) => `<span class="badge-exception">${echapper(this.ref.habilitations.find((x) => x.code === h)?.libelle ?? h)} <button type="button" data-retirer-hab="${i}">✕</button></span>`).join(' ') : '<span class="aide">Aucune</span>';
+      zone.querySelectorAll('[data-retirer-hab]').forEach((b) => b.addEventListener('click', () => { habs.splice(Number(b.dataset.retirerHab), 1); rendreHabs(); }));
+    };
+    rendreHabs();
+    zone.querySelector('[data-ajouter-hab]').addEventListener('click', () => { if (comboHab.valeurCombo && !habs.includes(comboHab.valeurCombo)) { habs.push(comboHab.valeurCombo); rendreHabs(); } });
+    zone.querySelector('[data-creneau]').addEventListener('click', async () => {
+      const premiere = affs.find((a) => a.type !== 'EQUIPE' && a.capacite !== false);
+      const heures = lireDuree(zone.querySelector('[data-heures]').value) || 60;
+      try {
+        const r = await api.planning.creneau({
+          ressource: premiere ? `${premiere.type}:${premiere.id}` : null, service: premiere ? null : service.valeurCombo, heures,
+          apres: zone.querySelector('[data-debut]').value || depuisMinutes(versMinutes(new Date().toISOString().slice(0, 16))), habilitations: habs.join(','),
+        });
+        const prop = zone.querySelector('[data-proposition]');
+        if (!r) { prop.textContent = 'Aucun créneau sur l\'horizon (ressource habilitée et libre).'; return; }
+        prop.innerHTML = `${echapper(r.libelle)} : ${r.debut.replace('T', ' ')} → ${r.fin.replace('T', ' ')} <button type="button" data-prendre>Prendre</button>`;
+        prop.querySelector('[data-prendre]').addEventListener('click', () => {
+          zone.querySelector('[data-debut]').value = r.debut;
+          if (!premiere) { const [type, idr] = r.ressource.split(':'); affs.push({ type, id: idr, libelle: r.libelle }); rendreAffs(); }
+        });
+      } catch (e) { this.app.erreur(e); }
+    });
     zone.querySelector('[data-cherche-res]').addEventListener('change', async (e) => {
       const l = await api.planning.ressources({ recherche: e.target.value, services: '' }).catch(() => []);
       const nouveau = creerCombo({ options: l.slice(0, 200).map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: r.libelle, detail: r.service ?? r.type })), valeur: '', vide: true });
@@ -420,7 +506,7 @@ export class PagePlanning extends PageBase {
         nb_ressources: Number(v('[data-nb]').value) || 1, srv_id: service.valeurCombo ? Number(service.valeurCombo) : null, type_element: 'chantier',
         id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
         avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
-        affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version,
+        affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version, habilitations: habs,
       };
     };
     zone.querySelector('[data-apercu]').addEventListener('click', async () => {

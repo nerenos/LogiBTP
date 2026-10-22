@@ -18,6 +18,7 @@ public static class Extensions
         services.AddDbContext<PlanningDbContext>(options);
         services.AddSingleton<SpecialisationPlanning, TSpecialisation>();
         services.AddScoped<ServicePlanning>();
+        services.AddScoped<ServiceCharge>();
         return services;
     }
 
@@ -44,6 +45,19 @@ public static class Extensions
         });
         g.MapPost("/taches/{id:long}/deplacer", (long id, DeplacementSaisi d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.DeplacerAsync(id, d, Utilisateur.Depuis(http), ct));
         g.MapPost("/taches/{id:long}/scinder", (long id, ScissionSaisie d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.ScinderAsync(id, d, Utilisateur.Depuis(http), ct));
+        // Charge et contrôles (lot 4).
+        g.MapGet("/charge", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.ChargeAsync(vue, du, au, ct));
+        g.MapGet("/notifications", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.NotificationsAsync(vue, du, au, ct));
+        g.MapPut("/notifications", async (EtatNotification e, HttpContext http, ServiceCharge s, CancellationToken ct) =>
+        {
+            await s.MarquerAsync(e, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapPost("/taches/{id:long}/equipes/{equipe:int}/appliquer", (long id, int equipe, int version, HttpContext http, ServiceCharge s, CancellationToken ct) =>
+            s.AppliquerEquipeAsync(id, equipe, version, Utilisateur.Depuis(http), ct));
+        g.MapGet("/creneau", (string? ressource, int? service, int heures, string apres, string? habilitations, ServiceCharge s, CancellationToken ct) =>
+            s.CreneauAsync(ressource, service, heures, apres, habilitations, ct));
+        g.MapGet("/parametres", (ServiceCharge s, CancellationToken ct) => s.ParametresAsync(ct));
         return g;
     }
 }

@@ -497,3 +497,8 @@ ul.controles li.avertissement { color: #b45309; }
 .vp-barre.theorique { background: repeating-linear-gradient(45deg, var(--vp-couleur), var(--vp-couleur) 6px, rgba(255, 255, 255, .25) 6px, rgba(255, 255, 255, .25) 10px); }
 .vp-barre.etat-option { opacity: .6; border-style: dashed; }
 .vp-barre.etat-terminee { filter: grayscale(.6); }
+
+/* Planning (lot 4) : alertes. */
+.alertes-planning { padding-left: 1rem; margin: .3rem 0; }
+.alertes-planning li { margin-bottom: .4rem; }
+.alertes-planning li.vue { opacity: .6; }

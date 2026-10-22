@@ -55,3 +55,9 @@
 .vp-barre.origine { opacity: .35; }
 .vp-barre.fantome { opacity: .85; z-index: 3; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
 .vue-planning.lecture .vp-barre { cursor: default; }
+
+/* Décorations des lignes (sous les barres) : capacité d'un service, jalons. */
+.vp-deco { position: absolute; box-sizing: border-box; font-size: 10px; overflow: hidden; white-space: nowrap; padding: 0 3px; pointer-events: auto; opacity: .85; }
+.vp-deco.charge-ok { background: rgba(22, 163, 74, .22); }
+.vp-deco.charge-moyen { background: rgba(217, 119, 6, .3); }
+.vp-deco.charge-plein { background: rgba(220, 38, 38, .35); }

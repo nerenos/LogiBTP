@@ -56,23 +56,59 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
     private static List<(long, long)> Plages(IEnumerable<Journee> journees) =>
         journees.SelectMany(j => j.Plages.Select(p => (Temps.VersMinutes(j.Date) + p.Debut, Temps.VersMinutes(j.Date) + p.Fin))).ToList();
 
+    private sealed record CalendrierRessource(string Cle, int? CalId, int? SrvId);
+
+    /// <summary>
+    /// Plages des ressources : calendrier effectif (salarié : le sien, sinon celui de son service ; matériel : idem ;
+    /// sous-traitant : défaut) et fermetures du service ; une seule lecture des journées par couple (calendrier, service).
+    /// </summary>
     public override async Task<Dictionary<string, List<(long Debut, long Fin)>>> PlagesAsync(PlanningDbContext db, IReadOnlyCollection<RessourcePlanning> ressources, DateOnly du, DateOnly au, CancellationToken ct)
     {
-        var logi = Services.GetRequiredService<LogiBtpContext>();
         var calendriers = Services.GetRequiredService<ServiceCalendrier>();
+        var cles = ressources.Select(r => r.Cle).ToArray();
+        var lignes = await db.Database.SqlQueryRaw<CalendrierRessource>("""
+            SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END || ':' || s.sal_id AS cle, coalesce(s.sal_cal_id, v.srv_cal_id) AS cal_id, v.srv_id
+            FROM salarie s
+            LEFT JOIN LATERAL (SELECT sv.srv_id, sv.srv_cal_id FROM service_membre m JOIN service sv ON sv.srv_id = m.sme_srv_id
+                               WHERE m.sme_ind_id = s.sal_ind_id ORDER BY m.sme_principal DESC, sv.srv_ordre LIMIT 1) v ON TRUE
+            WHERE (CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END || ':' || s.sal_id) = ANY(@cles)
+            UNION ALL
+            SELECT 'MATERIEL:' || m.mat_id, coalesce(m.mat_cal_id, sv.srv_cal_id), m.mat_srv_id
+            FROM materiel m LEFT JOIN service sv ON sv.srv_id = m.mat_srv_id WHERE ('MATERIEL:' || m.mat_id) = ANY(@cles)
+            """, new NpgsqlParameter("cles", cles)).ToListAsync(ct);
+        var parCle = lignes.ToDictionary(l => l.Cle);
+        var cache = new Dictionary<(int?, int?), List<(long, long)>>();
         var r = new Dictionary<string, List<(long, long)>>();
         foreach (var x in ressources)
         {
-            var journees = x.Type switch
+            var (cal, srv) = parCle.TryGetValue(x.Cle, out var l) ? (l.CalId, l.SrvId) : ((int?)null, (int?)null);
+            if (!cache.TryGetValue((cal, srv), out var p))
             {
-                "SALARIE" or "INTERIM" => await CalendriersBtp.JourneesAsync(logi, calendriers, "salarie", int.Parse(x.Id), du, au, ct),
-                "MATERIEL" => await CalendriersBtp.JourneesAsync(logi, calendriers, "materiel", int.Parse(x.Id), du, au, ct),
-                _ => await calendriers.JourneesAsync(null, du, au, [], ct),
-            };
-            r[x.Cle] = Plages(journees);
+                p = Plages(await calendriers.JourneesAsync(cal, du, au, srv is int s ? [new Portee("service", s.ToString())] : [], ct));
+                cache[(cal, srv)] = p;
+            }
+            r[x.Cle] = p;
         }
         return r;
     }
+
+    private sealed record HabilitationValide(string Cle, string Code);
+
+    public override async Task<Dictionary<string, HashSet<string>>> HabilitationsAsync(PlanningDbContext db, IReadOnlyCollection<string> ressources, DateOnly date, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<HabilitationValide>("""
+            SELECT CASE WHEN h.hab_type_element = 'materiel' THEN 'MATERIEL:' || h.hab_id_element
+                        WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM:' || s.sal_id ELSE 'SALARIE:' || s.sal_id END AS cle, h.hab_tha_code AS code
+            FROM habilitation h
+            LEFT JOIN salarie s ON h.hab_type_element = 'salarie' AND s.sal_id = h.hab_id_element
+            WHERE (h.hab_obtenue_le IS NULL OR h.hab_obtenue_le <= @d) AND (h.hab_valide_jusqu_au IS NULL OR h.hab_valide_jusqu_au >= @d)
+            """, new NpgsqlParameter("d", date)).ToListAsync(ct))
+        .Where(h => ressources.Contains(h.Cle)).GroupBy(h => h.Cle).ToDictionary(g => g.Key, g => g.Select(h => h.Code).ToHashSet());
+
+    private sealed record TypeHabilitation(string Code, string Libelle);
+
+    public override async Task<List<(string Code, string Libelle)>> TypesHabilitationAsync(PlanningDbContext db, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<TypeHabilitation>("SELECT tha_code AS code, tha_libelle AS libelle FROM type_habilitation WHERE tha_actif ORDER BY tha_libelle").ToListAsync(ct))
+        .Select(t => (t.Code, t.Libelle)).ToList();
 
     public override async Task<List<(long Debut, long Fin)>> PlagesServiceAsync(PlanningDbContext db, int? service, DateOnly du, DateOnly au, CancellationToken ct)
     {

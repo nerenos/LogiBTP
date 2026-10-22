@@ -59,6 +59,8 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
     public DbSet<TacheEntite> Taches => Set<TacheEntite>();
     public DbSet<AffectationEntite> Affectations => Set<AffectationEntite>();
     public DbSet<VueEntite> Vues => Set<VueEntite>();
+    public DbSet<ParametrePlanningEntite> Parametres => Set<ParametrePlanningEntite>();
+    public DbSet<NotificationEntite> Notifications => Set<NotificationEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -69,6 +71,8 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
         b.Entity<AffectationEntite>().ToTable("pla_affectation").HasKey(x => x.AffId);
         b.Entity<VueEntite>().ToTable("pla_vue").HasKey(x => x.PvuId);
         b.Entity<VueEntite>().Property(x => x.PvuDefinition).HasColumnType("jsonb");
+        b.Entity<ParametrePlanningEntite>().ToTable("pla_parametre").HasKey(x => x.PplId);
+        b.Entity<NotificationEntite>().ToTable("pla_notification").HasKey(x => x.PnoCle);
     }
 }
 
@@ -88,7 +92,7 @@ public sealed record DefinitionVue(string Regroupement = "RESSOURCE", string Ech
 public sealed record AffectationSaisie(string Type, string Id, int? EquipeId = null, decimal? Quantite = null);
 public sealed record TacheSaisie(int Calcul, string Debut, string? Fin, int? Heures, int NbRessources, int? SrvId, string TypeElement, string? IdElement,
     string Libelle, List<AffectationSaisie>? Affectations, string? OrigineType = null, string? OrigineId = null, string? Memo = null, int Avancement = 0,
-    string? Couleur = null, string Etat = "PREVUE", int? Version = null);
+    string? Couleur = null, string Etat = "PREVUE", int? Version = null, List<string>? Habilitations = null);
 public sealed record DeplacementSaisi(string Debut, string Fin, string Mode, string? De, string? Vers, bool Copie, int Version);
 public sealed record ScissionSaisie(string Instant, int Version);
 
@@ -107,6 +111,10 @@ public abstract class SpecialisationPlanning
     public abstract Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct);
     public abstract Task<List<BudgetPlanning>> BudgetsAsync(PlanningDbContext db, IReadOnlyCollection<int>? services, string? recherche, CancellationToken ct);
     public abstract Task<List<ServicePlanningDto>> ServicesAsync(PlanningDbContext db, CancellationToken ct);
+    /// <summary>Codes des habilitations valables à une date, par ressource (lot 4, P19).</summary>
+    public abstract Task<Dictionary<string, HashSet<string>>> HabilitationsAsync(PlanningDbContext db, IReadOnlyCollection<string> ressources, DateOnly date, CancellationToken ct);
+    /// <summary>Types d'habilitations exigibles par une tâche (code, libellé).</summary>
+    public abstract Task<List<(string Code, string Libelle)>> TypesHabilitationAsync(PlanningDbContext db, CancellationToken ct);
 }
 
 /// <summary>
@@ -144,13 +152,13 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         return new { code };
     }
 
-    private async Task<DefinitionVue> DefinitionAsync(string? code, CancellationToken ct)
+    internal async Task<DefinitionVue> DefinitionAsync(string? code, CancellationToken ct)
     {
         var v = code is null ? null : await db.Vues.AsNoTracking().FirstOrDefaultAsync(x => x.PvuCode == code, ct);
         return v is null ? new DefinitionVue() : JsonSerializer.Deserialize<DefinitionVue>(v.PvuDefinition, Json) ?? new DefinitionVue();
     }
 
-    private async Task<List<int>?> ServicesDeAsync(IEnumerable<string>? codes, CancellationToken ct)
+    internal async Task<List<int>?> ServicesDeAsync(IEnumerable<string>? codes, CancellationToken ct)
     {
         var l = codes?.ToList();
         if (l is null || l.Count == 0) return null;
@@ -314,6 +322,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         t.TacAvancement = (short)Math.Clamp(s.Avancement, 0, 100);
         t.TacCouleur = s.Couleur;
         t.TacEtat = s.Etat;
+        t.TacHabilitations = [.. (s.Habilitations ?? []).Select(h => h.Trim()).Where(h => h.Length > 0).Distinct()];
         t.TacMajPar = u.Code;
         t.TacMajLe = DateTimeOffset.UtcNow;
         if (t.TacId == 0)
@@ -342,6 +351,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             id = t.TacId, calcul = t.TacCalcul, debut = Ecrire(t.TacDebut), fin = Ecrire(t.TacFin), heures = t.TacHeures, nb_ressources = t.TacNbRessources, srv_id = t.TacSrvId,
             type_element = t.TacTypeElement, id_element = t.TacIdElement, element, origine_type = t.TacOrigineType, origine_id = t.TacOrigineId, libelle = t.TacLibelle,
             memo = t.TacMemo, avancement = t.TacAvancement, couleur = t.TacCouleur, etat = t.TacEtat, version = t.TacVersion, maj_par = t.TacMajPar, maj_le = t.TacMajLe,
+            habilitations = t.TacHabilitations,
             affectations = affs.Select(a => new
             {
                 type = a.AffResType, id = a.AffResId, equipe_id = a.AffEquipeId, heures = a.AffHeures, quantite = a.AffQuantite,
@@ -392,8 +402,12 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         var affs = await db.Affectations.AsNoTracking().Where(a => a.AffTacId == t.TacId).ToListAsync(ct);
         return new TacheSaisie(t.TacCalcul, Ecrire(t.TacDebut), Ecrire(t.TacFin), t.TacHeures, t.TacNbRessources, t.TacSrvId, t.TacTypeElement, t.TacIdElement, t.TacLibelle,
             affs.Select(a => new AffectationSaisie(a.AffResType, a.AffResId, a.AffEquipeId, a.AffQuantite)).ToList(), t.TacOrigineType, t.TacOrigineId, t.TacMemo, t.TacAvancement,
-            t.TacCouleur, t.TacEtat, t.TacVersion);
+            t.TacCouleur, t.TacEtat, t.TacVersion, [.. t.TacHabilitations]);
     }
+
+    /// <summary>Saisie d'une tâche enregistrée (recalculs du lot 4).</summary>
+    internal async Task<TacheSaisie> SaisieAsync(long id, CancellationToken ct) =>
+        await SaisieDeAsync(await db.Taches.AsNoTracking().FirstOrDefaultAsync(x => x.TacId == id, ct) ?? throw ExceptionMetier.Introuvable($"Tâche {id}"), ct);
 
     /// <summary>
     /// Glisser : déplacement (heures gardées : fin recalculée en mode 1, durée gardée sinon, heures recalculées en mode
@@ -471,6 +485,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     {
         services = await specialisation.ServicesAsync(db, ct),
         equipes = await specialisation.EquipesAsync(db, ct),
+        habilitations = (await specialisation.TypesHabilitationAsync(db, ct)).Select(h => new { code = h.Code, libelle = h.Libelle }),
     };
 
     public async Task<List<RessourcePlanning>> RessourcesAsync(string? services, string? types, string? recherche, CancellationToken ct) =>

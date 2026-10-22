@@ -218,6 +218,10 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   annuler / rétablir, vue en consultation. Écart : événements serveur (text/event-stream) au lieu de SignalR (aucune
   dépendance nouvelle) ; diffusion en mémoire du processus : plusieurs instances de l'API demanderont un relais
   (LISTEN / NOTIFY de PostgreSQL).
+- [x] **Planning, lot 4** (22/10/2026) : capacité / planifié / disponible par service (règle répliquée), alertes
+  calculées avec état, recalcul à la composition d'équipe, habilitations exigées, premier créneau libre. Reste : seuil de
+  sous-occupation par service (global pour l'instant), notifications « délai non respecté » et « messages des services »
+  (avec l'Exécution), proposition de mise à jour des tâches au changement de composition depuis la fiche de l'équipe.
 
 ### Archivage
 

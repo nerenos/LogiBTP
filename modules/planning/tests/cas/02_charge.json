@@ -1,0 +1,63 @@
+{
+  "description": "Charge (calculerCharge ↔ ReglesCharge.Calculer) : capacité, planifié et disponible par service et par jour ; sur-occupation par ressource ; unités des matériels gérés par nombre. Minutes ; lundi 19 et mardi 20 octobre 2026 de 8 h à 12 h et de 13 h à 17 h (480 min par jour).",
+  "plages": {
+    "standard": [["2026-10-19T08:00", "2026-10-19T12:00"], ["2026-10-19T13:00", "2026-10-19T17:00"], ["2026-10-20T08:00", "2026-10-20T12:00"], ["2026-10-20T13:00", "2026-10-20T17:00"]]
+  },
+  "cas": [
+    {
+      "nom": "capacité, tâche fonctionnelle et absence",
+      "jours": ["2026-10-19", "2026-10-20"],
+      "ressources": [
+        { "cle": "S:1", "srv_id": 7, "plages": "standard" },
+        { "cle": "S:2", "srv_id": 7, "plages": "standard" },
+        { "cle": "S:3", "srv_id": 6, "plages": "standard" }
+      ],
+      "absences": [{ "ressource": "S:2", "debut": "2026-10-20T08:00", "fin": "2026-10-20T17:00" }],
+      "taches": [{ "cle": "T1", "srv_id": 7, "debut": "2026-10-19T08:00", "fin": "2026-10-19T14:00", "heures": 600, "affectations": [{ "ressource": "S:1" }, { "ressource": "S:2" }] }],
+      "attendu": {
+        "services": [
+          { "srv_id": 6, "date": "2026-10-19", "capacite": 480, "planifie": 0, "disponible": 480 },
+          { "srv_id": 6, "date": "2026-10-20", "capacite": 480, "planifie": 0, "disponible": 480 },
+          { "srv_id": 7, "date": "2026-10-19", "capacite": 960, "planifie": 600, "disponible": 360 },
+          { "srv_id": 7, "date": "2026-10-20", "capacite": 480, "planifie": 0, "disponible": 480 }
+        ],
+        "surcharges": [],
+        "materiels": []
+      }
+    },
+    {
+      "nom": "tâche théorique ventilée sur le calendrier du service, sur-occupation d'une ressource",
+      "jours": ["2026-10-19", "2026-10-20"],
+      "ressources": [{ "cle": "S:1", "srv_id": 7, "plages": "standard" }],
+      "taches": [
+        { "cle": "T1", "srv_id": 7, "debut": "2026-10-19T08:00", "fin": "2026-10-19T12:00", "heures": 240, "affectations": [{ "ressource": "S:1" }] },
+        { "cle": "T2", "srv_id": 7, "debut": "2026-10-19T10:00", "fin": "2026-10-19T17:00", "heures": 360, "affectations": [{ "ressource": "S:1" }] },
+        { "cle": "T3", "srv_id": 6, "debut": "2026-10-19T00:00", "fin": "2026-10-21T00:00", "heures": 300, "affectations": [], "plages_service": "standard" }
+      ],
+      "attendu": {
+        "services": [
+          { "srv_id": 6, "date": "2026-10-19", "capacite": 0, "planifie": 150, "disponible": -150 },
+          { "srv_id": 6, "date": "2026-10-20", "capacite": 0, "planifie": 150, "disponible": -150 },
+          { "srv_id": 7, "date": "2026-10-19", "capacite": 480, "planifie": 600, "disponible": -120 },
+          { "srv_id": 7, "date": "2026-10-20", "capacite": 480, "planifie": 0, "disponible": 480 }
+        ],
+        "surcharges": [{ "ressource": "S:1", "date": "2026-10-19", "capacite": 480, "planifie": 600, "taches": ["T1", "T2"] }],
+        "materiels": []
+      }
+    },
+    {
+      "nom": "matériel par nombre au-delà du stock, matériel sans capacité de travail",
+      "jours": ["2026-10-19", "2026-10-20"],
+      "ressources": [{ "cle": "M:1", "srv_id": 7, "capacite": false, "quantite": 10, "plages": "standard" }, { "cle": "M:2", "srv_id": 7, "capacite": false, "plages": "standard" }],
+      "taches": [
+        { "cle": "T1", "srv_id": 7, "debut": "2026-10-19T08:00", "fin": "2026-10-20T12:00", "heures": 0, "affectations": [{ "ressource": "M:1", "quantite": 6 }, { "ressource": "M:2" }], "plages_service": "standard" },
+        { "cle": "T2", "srv_id": 7, "debut": "2026-10-20T08:00", "fin": "2026-10-20T12:00", "heures": 0, "affectations": [{ "ressource": "M:1", "quantite": 5 }], "plages_service": "standard" }
+      ],
+      "attendu": {
+        "services": [],
+        "surcharges": [],
+        "materiels": [{ "ressource": "M:1", "date": "2026-10-19", "utilise": 6, "stock": 10 }, { "ressource": "M:1", "date": "2026-10-20", "utilise": 11, "stock": 10 }]
+      }
+    }
+  ]
+}
