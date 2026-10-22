@@ -115,6 +115,40 @@ public class SpecialisationPointageBtp : SpecialisationPointage
 
     private sealed record TauxSalarie(int Id, decimal? Taux, string Source);
 
+    public override Task<List<MotifPointage>> MotifsAsync(PointageDbContext db, string domaine, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<MotifPointage>("SELECT mot_code AS code, mot_libelle AS libelle FROM motif WHERE mot_domaine = @d AND mot_actif ORDER BY mot_ordre, mot_libelle",
+            new NpgsqlParameter("d", domaine)).ToListAsync(ct);
+
+    public override Task<List<EquipePointage>> EquipesAsync(PointageDbContext db, int? service, DateOnly date, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<EquipePointage>("""
+            SELECT e.equ_id AS id, e.equ_libelle AS libelle,
+                   coalesce(array_agg(c.eqc_sal_id ORDER BY c.eqc_chef DESC, c.eqc_sal_id) FILTER (WHERE c.eqc_sal_id IS NOT NULL), ARRAY[]::int[]) AS membres
+            FROM equipe e
+            LEFT JOIN service sv ON sv.srv_id = e.equ_srv_id
+            LEFT JOIN equipe_composition c ON c.eqc_equ_id = e.equ_id AND c.eqc_du <= @d AND (c.eqc_au IS NULL OR c.eqc_au >= @d)
+            WHERE e.equ_active AND (@s IS NULL OR e.equ_srv_id = @s OR sv.srv_parent_id = @s)
+            GROUP BY e.equ_id, e.equ_libelle
+            ORDER BY e.equ_libelle
+            """, new NpgsqlParameter("d", date), new NpgsqlParameter("s", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)service ?? DBNull.Value }).ToListAsync(ct);
+
+    public override Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<OrdrePointage>("""
+            SELECT d.ent_id AS id, d.ent_chantier_id AS cha_id, d.ent_numero AS numero, d.ent_objet AS objet, t.tyd_libelle AS type
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            WHERE f_module_actif('execution') AND t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id IS NOT NULL AND upper(d.ent_numero) = upper(@n)
+            LIMIT 1
+            """, new NpgsqlParameter("n", numero)).FirstOrDefaultAsync(ct)!;
+
+    /// <summary>Chantiers des tâches du planning du jour où le salarié est affecté (module Planning actif) : journée pré-remplie.</summary>
+    public override async Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<int>("""
+            SELECT DISTINCT t.tac_id_element::int AS "Value"
+            FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
+            WHERE f_module_actif('planning') AND t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$'
+              AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text
+              AND t.tac_debut < (@d::date + 1) AND t.tac_fin > @d::date
+            """, new NpgsqlParameter("s", salarie.ToString()), new NpgsqlParameter("d", date)).ToListAsync(ct);
+
     /// <summary>Tâche du CRM au premier service administratif (RH), rattachée au salarié ; sans effet si le CRM est inactif.</summary>
     public override async Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct)
     {

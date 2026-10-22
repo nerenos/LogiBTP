@@ -15,6 +15,9 @@
 > Lot 3 réalisé le 22/10/2026 (`modules/pointage/db/088`, `db/200`, `paie.js` ↔ `ReglesPaie.cs`, `ServicePaie.cs`) : règles
 > CUMUL_HEURES, SEUIL_JOUR, TRANCHES_SEMAINE, ZONE, PLAFOND (FORMULE reportée) ; zones saisies ou validées par le RH sans
 > géocodage (reporté) ; export CSV unique ; valorisation par taux du salarié, de la mission d'intérim ou import.
+> Lot 4 réalisé le 22/10/2026 (`088b`, `ServiceBorne.cs`, `/borne`) : borne = appareil enregistré par jeton (pas de
+> compte de service tant que le module des droits n'existe pas), initiales à la place des photos, chantiers du jour
+> proposés depuis le planning.
 
 ## 1. Objet
 

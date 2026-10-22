@@ -126,6 +126,8 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
     public DbSet<ValeurEntite> Valeurs => Set<ValeurEntite>();
     public DbSet<ZoneEntite> Zones => Set<ZoneEntite>();
     public DbSet<ExportEntite> Exports => Set<ExportEntite>();
+    public DbSet<AppareilEntite> Appareils => Set<AppareilEntite>();
+    public DbSet<PinEntite> Pins => Set<PinEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -145,6 +147,8 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
         b.Entity<ValeurEntite>().ToTable("poi_valeur").HasKey(x => new { x.PvaSalId, x.PvaDate, x.PvaRubrique });
         b.Entity<ZoneEntite>().ToTable("poi_zone_chantier").HasKey(x => new { x.PzcChaId, x.PzcAgence });
         b.Entity<ExportEntite>().ToTable("poi_export").HasKey(x => x.PexId);
+        b.Entity<AppareilEntite>().ToTable("poi_appareil").HasKey(x => x.PapId);
+        b.Entity<PinEntite>().ToTable("poi_pin").HasKey(x => x.PpnSalId);
     }
 }
 
@@ -162,6 +166,8 @@ public sealed record TypeMoPointage(int Id, string Code, string Libelle, int? Sr
 /// <summary>Ordre d'exécution d'un chantier sur lequel pointer (module Exécution actif).</summary>
 public sealed record OrdrePointage(long Id, int ChaId, string? Numero, string? Objet, string? Type);
 public sealed record ServicePointageDto(int Id, string Code, string Libelle, int? ParentId);
+public sealed record MotifPointage(string Code, string Libelle);
+public sealed record EquipePointage(int Id, string Libelle, int[] Membres);
 public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCollection<int>? Ids = null, int Taille = 200);
 
 /// <summary>Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau).</summary>
@@ -194,6 +200,14 @@ public abstract class SpecialisationPointage
     /// n'est pas valorisé.
     /// </summary>
     public abstract Task<Dictionary<int, (decimal Taux, string Source)>> TauxAsync(PointageDbContext db, IReadOnlyCollection<int> salaries, DateOnly du, DateOnly au, CancellationToken ct);
+    /// <summary>Motifs d'un domaine (non-conformités de la borne) : code, libellé.</summary>
+    public abstract Task<List<MotifPointage>> MotifsAsync(PointageDbContext db, string domaine, CancellationToken ct);
+    /// <summary>Équipes d'un service (toutes si null) et leurs membres (salariés) à une date : saisie d'équipe.</summary>
+    public abstract Task<List<EquipePointage>> EquipesAsync(PointageDbContext db, int? service, DateOnly date, CancellationToken ct);
+    /// <summary>Ordre désigné par son numéro (QR code de l'ordre).</summary>
+    public virtual Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) => Task.FromResult<OrdrePointage?>(null);
+    /// <summary>Chantiers proposés pour la journée d'un salarié (tâches du planning, par exemple).</summary>
+    public virtual Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) => Task.FromResult(new List<int>());
     /// <summary>Après une demande de correction (tâche au service RH, par exemple).</summary>
     public virtual Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct) =>
         Task.CompletedTask;
@@ -366,7 +380,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
             {
                 id = p.PoiId, date = p.PoiDate, cha_id = p.PoiChaId, ent_id = p.PoiEntId, type_mo = p.PoiTypeMo, sous_type = p.PoiSousType,
                 minutes = p.PoiMinutes, debut = p.PoiDebut, fin = p.PoiFin, motif = p.PoiMotif, commentaire = p.PoiCommentaire,
-                saisi_par = p.PoiSaisiPar, saisi_le = p.PoiSaisiLe,
+                saisi_par = p.PoiSaisiPar, saisi_le = p.PoiSaisiLe, groupe = p.PoiGroupe, appareil = p.PoiAppareil,
             }),
             chantiers = chantiers.Values, recents,
             ordres = await specialisation.OrdresAsync(db, idsChantiers, ct),
@@ -380,10 +394,11 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
     /// Enregistre la semaine saisie d'un salarié (couche SAISIE) : pointages absents supprimés, modifiés, ajoutés ;
     /// erreurs des contrôles refusées (422 avec la liste), avertissements renvoyés.
     /// </summary>
-    public async Task<object> EnregistrerSemaineAsync(int salarie, DateOnly lundi, SemaineSaisie s, Utilisateur u, CancellationToken ct)
+    public async Task<object> EnregistrerSemaineAsync(int salarie, DateOnly lundi, SemaineSaisie s, Utilisateur u, CancellationToken ct, bool controleAcces = true)
     {
         lundi = ReglesPointage.LundiDe(lundi);
-        await SalarieAsync(salarie, u, ct);
+        if (controleAcces) await SalarieAsync(salarie, u, ct);
+        else if (!(await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).Any()) throw ExceptionMetier.Introuvable($"Salarié {salarie}");
         var dimanche = lundi.AddDays(6);
         if (s.Pointages.Any(p => p.Date < lundi || p.Date > dimanche)) throw ExceptionMetier.Invalide("POI_SEMAINE_HORS", "Pointage hors de la semaine");
         var chantiers = (await specialisation.ChantiersAsync(db, null, s.Pointages.Where(p => p.ChaId is not null).Select(p => p.ChaId!.Value).Distinct().ToList(), ct))
@@ -437,6 +452,6 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
         }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-        return await SemaineAsync(salarie, lundi, u, ct);
+        return controleAcces ? await SemaineAsync(salarie, lundi, u, ct) : new { };
     }
 }

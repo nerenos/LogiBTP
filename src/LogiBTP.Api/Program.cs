@@ -84,7 +84,7 @@ builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
 builder.Services.AddModuleNotifications(Base, builder.Configuration.GetSection("Notifications"));
 builder.Services.AddSourceNotifications<SourceRappelsCrm>();
 builder.Services.AddSourceNotifications<SourceHabilitations>();
-builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe"]));
+builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne"]));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();

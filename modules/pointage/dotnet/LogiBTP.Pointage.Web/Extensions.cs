@@ -18,6 +18,8 @@ public static class Extensions
         services.AddScoped<ServicePointage>();
         services.AddScoped<ServiceSynthese>();
         services.AddScoped<ServicePaie>();
+        services.AddSingleton<JetonsBorne>();
+        services.AddScoped<ServiceBorne>();
         return services;
     }
 
@@ -70,6 +72,27 @@ public static class Extensions
         g.MapGet("/exports", (HttpContext http, ServicePaie s, CancellationToken ct) => s.ExportsAsync(Utilisateur.Depuis(http), ct));
         g.MapGet("/exports/{id:long}/fichier", (long id, HttpContext http, ServicePaie s, CancellationToken ct) => s.FichierExportAsync(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/valoriser", (DemandeValorisation d, HttpContext http, ServicePaie s, CancellationToken ct) => s.ValoriserAsync(d, Utilisateur.Depuis(http), ct));
+        // Bornes d'atelier (lot 4) : administration (session) puis routes de la borne (publiques : jeton d'appareil).
+        g.MapGet("/appareils", (HttpContext http, ServiceBorne s, CancellationToken ct) => s.AppareilsAsync(Utilisateur.Depuis(http), ct));
+        g.MapPost("/appareils", (AppareilSaisi a, HttpContext http, ServiceBorne s, CancellationToken ct) => s.CreerAppareilAsync(a, Utilisateur.Depuis(http), ct));
+        g.MapPut("/appareils/{id:int}", async (int id, AppareilSaisi a, HttpContext http, ServiceBorne s, CancellationToken ct) =>
+        {
+            await s.ModifierAppareilAsync(id, a, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapGet("/pins", (int? service, HttpContext http, ServiceBorne s, CancellationToken ct) => s.PinsAsync(service, Utilisateur.Depuis(http), ct));
+        g.MapPut("/pins/{salarie:int}", async (int salarie, PinSaisi p, HttpContext http, ServiceBorne s, CancellationToken ct) =>
+        {
+            await s.EnregistrerPinAsync(salarie, p, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        g.MapGet("/groupes/{groupe:guid}", (Guid groupe, HttpContext http, ServiceBorne s, CancellationToken ct) => s.GroupeAsync(groupe, Utilisateur.Depuis(http), ct));
+        g.MapPut("/groupes/{groupe:guid}", (Guid groupe, GroupeSaisi gs, HttpContext http, ServiceBorne s, CancellationToken ct) => s.ModifierGroupeAsync(groupe, gs, Utilisateur.Depuis(http), ct));
+        var b = g.MapGroup("/borne");
+        b.MapGet("", (HttpContext http, ServiceBorne s, CancellationToken ct) => s.OuvrirAsync(http, ct));
+        b.MapPost("/identifier", (Identification i, HttpContext http, ServiceBorne s, CancellationToken ct) => s.IdentifierAsync(http, i, ct));
+        b.MapGet("/ordre", (string numero, HttpContext http, ServiceBorne s, CancellationToken ct) => s.OrdreAsync(http, numero, ct));
+        b.MapPost("/pointages", (PointageBorne p, HttpContext http, ServiceBorne s, CancellationToken ct) => s.PointerAsync(http, p, ct));
         return g;
     }
 }

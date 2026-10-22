@@ -277,6 +277,7 @@ export class PageSaisiePointage extends PageBase {
       ${verrouilles.length ? '<p class="avertissement">🔒 Jours validés : non modifiables ici ; une correction s\'envoie au service RH.</p>' : ''}
       ${s.corrigee ? '<p class="avertissement">Cette semaine a été corrigée dans la synthèse : les corrections du service RH priment.</p>' : ''}
       <div data-grille></div>
+      ${[...new Set(s.pointages.filter((x) => x.groupe).map((x) => x.groupe))].map((g) => `<p class="aide">👥 Saisie d'équipe : <a href="/pointage/groupe?id=${g}">voir et modifier le groupe</a></p>`).join('')}
       <p><button type="button" data-enregistrer>Enregistrer la semaine</button> ${verrouilles.length ? '<button type="button" data-correction>✉ Demander une correction…</button>' : ''}</p>
       ${s.corrections.length ? `<h3>Demandes de correction</h3><ul>${s.corrections.map((c) => `<li>${horodatage(c.le)} — ${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}${c.motif ? ` : ${echapper(c.motif)}` : ''}${c.reponse ? ` <span class="aide">(réponse : ${echapper(c.reponse)})</span>` : ''}</li>`).join('')}</ul>` : ''}`;
     this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles });

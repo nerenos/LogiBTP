@@ -101,6 +101,14 @@ export const api = {
     exporter: (d) => appel('POST', '/pointage/export', d),
     exports: () => appel('GET', '/pointage/exports'),
     valoriser: (d) => appel('POST', '/pointage/valoriser', d),
+    // Lot 4 : bornes, PIN, saisies d'équipe.
+    appareils: () => appel('GET', '/pointage/appareils'),
+    creerAppareil: (a) => appel('POST', '/pointage/appareils', a),
+    modifierAppareil: (id, a) => appel('PUT', `/pointage/appareils/${id}`, a),
+    pins: (service) => appel('GET', `/pointage/pins?service=${service}`),
+    poserPin: (salarie, p) => appel('PUT', `/pointage/pins/${salarie}`, p),
+    groupe: (id) => appel('GET', `/pointage/groupes/${id}`),
+    modifierGroupe: (id, g) => appel('PUT', `/pointage/groupes/${id}`, g),
   },
   // Module Planning : vues, données d'une période, ressources, chantiers, à planifier, tâches (calcul par le serveur).
   planning: {

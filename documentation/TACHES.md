@@ -204,7 +204,11 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   par géocodage (API adresse, vol d'oiseau, barème du profil) proposée au lieu d'une saisie ; règle FORMULE (langage
   d'expressions du socle) ; modèles d'export par logiciel de paie (Silae, Sage…) ; agence = texte `sal_agence` (à relier au
   rattachement de l'individu) ; fichier d'export à ranger dans la GED.
-- [ ] Pointage, lots suivants : borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
+- [x] **Pointage, lot 4** (22/10/2026) : borne d'atelier (appareil enregistré, PIN, quatre touches, ordre par numéro,
+  non-conformité, saisie d'équipe), groupes d'équipe. Écarts : initiales au lieu des photos (GED `photo_salarie` à
+  brancher) ; QR code des ordres lu comme une saisie (impression du QR sur l'ordre : modèle d'édition à compléter) ;
+  borne = jeton d'appareil en attendant le module des droits ; note du CRM à la non-conformité : lot 6.
+- [ ] Pointage, lots suivants : application personnelle hors ligne (lot 5 : PWA, semaine en cours), passerelles (lot 6).
 
 ### Planning
 

@@ -502,3 +502,26 @@ ul.controles li.avertissement { color: #b45309; }
 .alertes-planning { padding-left: 1rem; margin: .3rem 0; }
 .alertes-planning li { margin-bottom: .4rem; }
 .alertes-planning li.vue { opacity: .6; }
+
+/* Borne d'atelier (Pointage lot 4) : plein écran tactile, gros boutons, bandeau masqué. */
+body.mode-borne #bandeau { display: none; }
+.borne { flex: 1; overflow: auto; padding: 1rem 1.4rem; font-size: 1.25rem; }
+.borne h1, .borne h2 { margin: .3rem 0 .8rem; }
+.borne-entete { display: flex; justify-content: space-between; align-items: baseline; }
+.borne-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .7rem; margin: .6rem 0; }
+.borne-carte { min-height: 5.5rem; font-size: 1.1rem; border-radius: .6rem; border: 1px solid var(--bord, #cbd5e1); background: var(--fond-carte, rgba(148, 163, 184, .12)); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; padding: .5rem; }
+.borne-carte small { font-size: .8rem; opacity: .8; }
+.borne-carte.choisi, .borne-carte.propose { outline: 3px solid #2563eb; }
+.borne-avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.borne-bouton { font-size: 1.15rem; padding: .7rem 1.2rem; border-radius: .5rem; }
+.borne-bouton.principal { background: #16a34a; color: #fff; border: none; }
+.borne-bouton.alerte { background: #d97706; color: #fff; border: none; }
+.borne-champ { font-size: 1.2rem; padding: .5rem; width: 22rem; max-width: 100%; }
+.borne-clavier { display: grid; grid-template-columns: repeat(3, 5rem); gap: .6rem; }
+.borne-touche { font-size: 1.8rem; height: 4.2rem; border-radius: .6rem; }
+.borne-pin { font-size: 2.4rem; letter-spacing: .4rem; }
+.borne-duree { font-size: 2.6rem; display: flex; align-items: center; gap: 1rem; }
+.borne-duree .borne-touche { width: 5rem; }
+.borne-erreur { color: #b42318; font-weight: 600; }
+.borne-succes { color: #15803d; font-weight: 600; font-size: 1.4rem; }
+.borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: rgba(37, 99, 235, .1); }

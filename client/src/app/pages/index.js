@@ -38,6 +38,7 @@ import { PageParametresCalendriers } from './parametres-calendriers.js';
 import { PageNotifications, PageParametresNotifications } from './notifications.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution } from './execution.js';
 import { PagePlanningPrototype } from './planning-prototype.js';
+import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning } from './planning.js';
 import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParametresPointage } from './pointage.js';
 
@@ -62,6 +63,9 @@ export const ROUTES = [
   { nom: 'execution-synthese', chemin: '/execution/synthese', page: PageSyntheseExecution, titre: "Synthèse de l'exécution" },
   { nom: 'execution-chantier', chemin: '/execution/chantier/:id', page: PageExecutionChantier, titre: 'Exécution du chantier' },
   { nom: 'parametres-execution', chemin: '/parametres/execution', page: PageParametresExecution, titre: 'Modèles de parcours' },
+  { nom: 'borne', chemin: '/borne', page: PageBorne, titre: 'Borne de pointage' },
+  { nom: 'parametres-bornes', chemin: '/parametres/bornes', page: PageParametresBornes, titre: 'Bornes de pointage' },
+  { nom: 'pointage-groupe', chemin: '/pointage/groupe', page: PageGroupePointage, titre: 'Saisie d\'équipe' },
   { nom: 'planning', chemin: '/planning', page: PagePlanning, titre: 'Planning' },
   { nom: 'planning-prototype', chemin: '/planning/prototype', page: PagePlanningPrototype, titre: 'Planning — prototype' },
   { nom: 'pointage-saisie', chemin: '/pointage/saisie', page: PageSaisiePointage, titre: 'Saisie des pointages' },

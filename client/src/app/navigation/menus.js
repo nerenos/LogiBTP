@@ -101,6 +101,7 @@ export const MENUS_METIER = [
       { code: 'pointages-improductifs', libelle: 'Temps improductif', icone: '⏸', url: '/liste/pointages?vue=1012' },
       { separateur: true },
       { code: 'parametrage-pointage', libelle: 'Paramètres du pointage…', icone: '⚙', url: '/parametres/pointage' },
+      { code: 'bornes', libelle: 'Bornes et PIN…', icone: '🏭', url: '/parametres/bornes', info: 'Enregistrer une borne d\'atelier, poser les PIN des salariés' },
     ],
   },
   {

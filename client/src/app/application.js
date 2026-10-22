@@ -60,7 +60,8 @@ export class Application {
     this.session = this.enLigne ? await api.auth.session().catch(() => null) : null;
     this.#surveillerSession();
     const ici = `${location.pathname}${location.search}`;
-    if (this.enLigne && !this.session?.connecte && location.pathname !== '/connexion') history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
+    const publique = location.pathname === '/borne';
+    if (this.enLigne && !this.session?.connecte && location.pathname !== '/connexion' && !publique) history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
     else if (this.session?.mdp_a_changer && location.pathname !== '/compte') history.replaceState(null, '', '/compte?changer=1');
     if (!this.enLigne || this.session?.connecte) await this.chargerModules();
     this.rendreInfos();
