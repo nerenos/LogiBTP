@@ -83,6 +83,15 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'planning', libelle: 'P&lanning', module: 'planning', elements: [
+      { code: 'planning-atelier', libelle: 'Atelier par jour', icone: '🏭', url: '/planning?vue=ATELIER_JOUR' },
+      { code: 'planning-pose', libelle: 'Pose par semaine', icone: '🔧', url: '/planning?vue=POSE_SEMAINE' },
+      { code: 'planning-chantiers', libelle: 'Chantiers (Gantt)', icone: '📊', url: '/planning?vue=CHANTIERS_GANTT' },
+      { code: 'planning-charge', libelle: 'Charge par service', icone: '📈', url: '/planning?vue=CHARGE_SERVICE' },
+      { code: 'planning-livraisons', libelle: 'Livraisons', icone: '🚚', url: '/planning?vue=LIVRAISONS' },
+    ],
+  },
+  {
     code: 'pointage', libelle: '&Pointage', module: 'pointage', elements: [
       { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
       { code: 'pointage-synthese', libelle: 'Synthèse et validation', icone: '✅', url: '/pointage/synthese', info: 'Salariés à examiner, corrections, validation simple ou double, demandes de correction' },

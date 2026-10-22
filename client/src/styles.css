@@ -487,3 +487,13 @@ ul.controles li.avertissement { color: #b45309; }
 .barre-planning { flex-wrap: wrap; gap: .4rem; align-items: center; }
 .zone-planning { flex: 1; min-height: 0; display: flex; }
 .zone-planning > .vue-planning { flex: 1; }
+
+/* Planning (lot 2) : vue et panneau ancré à droite. */
+.planning-corps { flex: 1; min-height: 0; display: flex; gap: .4rem; }
+.planning-corps > .zone-planning { flex: 1; min-width: 0; }
+.panneau-planning { width: 24rem; flex: none; overflow: auto; border-left: 1px solid var(--bord, #cbd5e1); padding: 0 .4rem; }
+.panneau-planning .onglets button.actif { font-weight: 600; text-decoration: underline; }
+.panneau-planning tr.glissable { cursor: grab; }
+.vp-barre.theorique { background: repeating-linear-gradient(45deg, var(--vp-couleur), var(--vp-couleur) 6px, rgba(255, 255, 255, .25) 6px, rgba(255, 255, 255, .25) 10px); }
+.vp-barre.etat-option { opacity: .6; border-style: dashed; }
+.vp-barre.etat-terminee { filter: grayscale(.6); }

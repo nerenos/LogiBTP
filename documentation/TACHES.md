@@ -210,6 +210,10 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 - [x] **Planning, lot 1** (22/10/2026) : composant `VuePlanning` (module `modules/planning`, sans métier), prototype sur
   500 ressources et 20 000 tâches (données 12 ms, dessin 2 ms).
+- [x] **Planning, lot 2** (22/10/2026) : tâches et affectations, calcul répliqué (modes 1 à 3) sur les calendriers des
+  ressources, vues fournies, page `/planning`, à planifier. Écarts : une tâche déposée depuis « À planifier » prend au
+  plus 35 h (le reste reste à planifier) ; matériels et locations sans capacité (quantités et location : lot 4) ; vues
+  personnelles enregistrables par l'API (`PUT /planning/vues`), sans écran pour l'instant.
 
 ### Archivage
 

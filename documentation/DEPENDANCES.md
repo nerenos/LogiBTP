@@ -198,6 +198,10 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 3.2.7 | MIT | développement (modules/planning/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Planning.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Planning.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Planning.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Planning.Tests |
 
 ## modules/pointage
 

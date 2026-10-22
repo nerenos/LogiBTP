@@ -102,6 +102,23 @@ export const api = {
     exports: () => appel('GET', '/pointage/exports'),
     valoriser: (d) => appel('POST', '/pointage/valoriser', d),
   },
+  // Module Planning : vues, données d'une période, ressources, chantiers, à planifier, tâches (calcul par le serveur).
+  planning: {
+    vues: () => appel('GET', '/planning/vues'),
+    enregistrerVue: (v) => appel('PUT', '/planning/vues', v),
+    referentiels: () => appel('GET', '/planning/referentiels'),
+    donnees: (f) => appel('GET', `/planning/donnees?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    ressources: (f = {}) => appel('GET', `/planning/ressources?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    elements: (recherche = '') => appel('GET', `/planning/elements${recherche ? `?recherche=${encodeURIComponent(recherche)}` : ''}`),
+    aPlanifier: (f = {}) => appel('GET', `/planning/a-planifier?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    calculer: (t) => appel('POST', '/planning/calcul', t),
+    tache: (id) => appel('GET', `/planning/taches/${id}`),
+    creer: (t) => appel('POST', '/planning/taches', t),
+    modifier: (id, t) => appel('PUT', `/planning/taches/${id}`, t),
+    supprimer: (id, version) => appel('DELETE', `/planning/taches/${id}?version=${version}`),
+    deplacer: (id, d) => appel('POST', `/planning/taches/${id}/deplacer`, d),
+    scinder: (id, d) => appel('POST', `/planning/taches/${id}/scinder`, d),
+  },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),
     compteur: () => appel('GET', '/notifications/compteur'),

@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage, 089 Planning). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)
@@ -53,6 +53,7 @@
 - `198_execution_parcours.sql` : module Exécution, lot 2 (module `085`) : services BM, LOGISTIQUE, FAB_BOIS / FAB_METAL (sous ATELIER), POSE (sous CHANTIER) avec leur calendrier, modèles de parcours MENUISERIE, POSE, GROS_OEUVRE, DEPANNAGE (services par code) ; rejouable.
 - `199_pointage.sql` : module Pointage, lot 1 (module `086`) : `module_societe` « pointage », clés étrangères de `poi_pointage` (salarié, chantier, ordre, nature), `chantier.cha_interne` et chantiers internes INT-FG, INT-ATELIER, INT-FORMATION, INT-DEPOT, vue `v_liste_pointages` (masquée si le module est désactivé) ; rejouable.
 - `200_pointage_paie.sql` : module Pointage, lot 3 (module `088`) : `salarie.sal_ppf_id` (profil de paie : INTERIM, ETAM pour les services administratifs et d'études, OUVRIER sinon), clés étrangères des zones et des saisies, `v_cout_mo_chantier` (pointages retenus valorisés par chantier, nature, ordre), `v_liste_pointages` (+ taux, coût, valorisation) ; rejouable.
+- `201_planning.sql` : module Planning, lot 2 (module `089`) : `module_societe` « planning », clé étrangère `pla_tache.tac_srv_id` → `service` ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

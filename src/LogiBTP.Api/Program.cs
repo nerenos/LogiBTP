@@ -10,6 +10,7 @@ using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Execution.Web;
 using LogiBTP.Pointage.Web;
+using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -71,6 +72,9 @@ builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Ba
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Pointage (facultatif) : saisie des heures de main-d'œuvre par chantier (modules/pointage/db/086, db/199).
 builder.Services.AddModulePointage<SpecialisationPointageBtp>(Base);
+// Module Planning (facultatif) : tâches, affectations, calcul par les calendriers (modules/planning/db/089, db/201).
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddModulePlanning<SpecialisationPlanningBtp>(Base);
 // Module Calendrier : calendriers de travail, cycles, jours fériés et fermetures (modules/calendrier/db/006, db/196).
 builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
 // Module Notifications : boîte par utilisateur, préférences, planificateur de fond par base (modules/notification/db/008) ;
@@ -114,6 +118,7 @@ api.MapModuleCrm().ExigeModule("crm", "CRM");
 api.MapExecution().ExigeModule("execution", "Exécution");
 api.MapModuleExecution().ExigeModule("execution", "Exécution");
 api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
+api.MapModulePlanning().ExigeModule("planning", "Planning");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

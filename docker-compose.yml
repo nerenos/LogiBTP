@@ -59,6 +59,7 @@ services:
       - ./modules/pointage/db/086_pointage.sql:/docker-entrypoint-initdb.d/086_pointage.sql:ro
       - ./modules/pointage/db/087_pointage_validation.sql:/docker-entrypoint-initdb.d/087_pointage_validation.sql:ro
       - ./modules/pointage/db/088_pointage_paie.sql:/docker-entrypoint-initdb.d/088_pointage_paie.sql:ro
+      - ./modules/planning/db/089_planning.sql:/docker-entrypoint-initdb.d/089_planning.sql:ro
       - ./db/100_btp.sql:/docker-entrypoint-initdb.d/100_btp.sql:ro
       - ./db/110_reference.sql:/docker-entrypoint-initdb.d/110_reference.sql:ro
       - ./db/115_bibliotheque.sql:/docker-entrypoint-initdb.d/115_bibliotheque.sql:ro
@@ -107,6 +108,7 @@ services:
       - ./db/198_execution_parcours.sql:/docker-entrypoint-initdb.d/198_execution_parcours.sql:ro
       - ./db/199_pointage.sql:/docker-entrypoint-initdb.d/199_pointage.sql:ro
       - ./db/200_pointage_paie.sql:/docker-entrypoint-initdb.d/200_pointage_paie.sql:ro
+      - ./db/201_planning.sql:/docker-entrypoint-initdb.d/201_planning.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

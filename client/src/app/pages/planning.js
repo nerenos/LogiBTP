@@ -1,0 +1,273 @@
+import { PageBase } from '@logibtp/navigation';
+import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante } from '@logibtp/planning';
+import { VuePlanning } from '@logibtp/planning/ui';
+import { ecrireDuree, lireDuree } from '@logibtp/pointage';
+import { api } from '../api.js';
+
+// Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
+// tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
+// sélectionnée (saisie, affectations, aperçu du calcul). Calcul par le serveur (ReglesPlanning.cs ↔ calcul.js).
+
+const ETATS = { OPTION: 'Option', PREVUE: 'Prévue', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', TERMINEE: 'Terminée' };
+const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
+const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
+const TYPE_GLISSER = 'application/x-logibtp-planning';
+const COULEURS_SERVICE = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be185d', '#4d7c0f', '#dc2626'];
+const versLocal = (s) => (s ? s.slice(0, 16) : '');
+const options = (o) => Object.entries(o).map(([valeur, libelle]) => ({ valeur, libelle }));
+
+/** Vue du planning du cœur : barres libellées par chantier, couleur par service, tâches théoriques hachurées. */
+class VuePlanningBtp extends VuePlanning {
+  regroupement = 'RESSOURCE';
+
+  contenuBarre(t) {
+    const code = t.element ? `<b>${echapper(t.element.code)}</b> ` : '';
+    const res = this.regroupement !== 'RESSOURCE' && t.ressources?.length ? ` <small>· ${echapper(t.ressources.join(', '))}</small>` : '';
+    return `${code}${echapper(t.libelle)}${res}`;
+  }
+
+  classeBarre(t) { return `${t.theorique ? 'theorique' : ''} etat-${String(t.etat).toLowerCase()}`; }
+
+  titreBarre(t) {
+    return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle} (${ETATS[t.etat] ?? t.etat})\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
+  }
+}
+
+export class PagePlanning extends PageBase {
+  icone = '📅';
+
+  urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du }).filter(([, v]) => v))}`; }
+
+  async ouvrir() {
+    this.titre = 'Planning';
+    this.conteneur.innerHTML = `<div class="page-planning"><div class="barre-planning ligne">
+        <b>📅</b> <span data-vue></span>
+        <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
+        <span data-periode class="aide"></span> <span data-echelle></span>
+        <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button>
+        <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
+        <button type="button" data-nouvelle>＋ Tâche</button> <span class="aide" data-etat></span></div>
+      <div class="planning-corps"><div class="zone-planning" data-planning></div>
+        <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button></div>
+          <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div></aside></div></div>`;
+    if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const c = this.conteneur;
+    [this.vues, this.ref] = await Promise.all([api.planning.vues(), api.planning.referentiels()]);
+    this.vue = this.requete.vue ?? this.vues[0]?.code;
+    this.couleurs = new Map(this.ref.services.map((s, i) => [s.id, COULEURS_SERVICE[i % COULEURS_SERVICE.length]]));
+    const comboVue = creerCombo({ options: this.vues.map((v) => ({ valeur: v.code, libelle: v.libelle })), valeur: this.vue, vide: false, titre: 'Vue' });
+    c.querySelector('[data-vue]').append(comboVue);
+    comboVue.addEventListener('change', () => { this.vue = comboVue.valeurCombo; this.du = null; this.#definition(); this.#charger(); });
+    this.comboEchelle = creerCombo({ options: Object.entries(ECHELLES).map(([valeur, e]) => ({ valeur, libelle: e.libelle })), valeur: 'JOUR', vide: false, titre: 'Échelle' });
+    c.querySelector('[data-echelle]').append(this.comboEchelle);
+    this.comboEchelle.addEventListener('change', () => this.planning.regler({ echelle: this.comboEchelle.valeurCombo, largeurColonne: LARGEURS[this.comboEchelle.valeurCombo] }));
+    c.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => this.planning.zoomer(Number(b.dataset.zoom))));
+    c.querySelector('[data-prec]').addEventListener('click', () => this.#decaler(-1));
+    c.querySelector('[data-suiv]').addEventListener('click', () => this.#decaler(1));
+    c.querySelector('[data-aujourdhui]').addEventListener('click', () => { this.du = null; this.#definition(); this.#charger(); });
+    c.querySelector('[data-actualiser]').addEventListener('click', () => this.#charger());
+    c.querySelector('[data-recherche]').addEventListener('change', (e) => { this.recherche = e.target.value; this.#charger(); });
+    c.querySelector('[data-nouvelle]').addEventListener('click', () => this.#editer(null));
+    c.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => this.#onglet(b.dataset.onglet)));
+    this.planning = new VuePlanningBtp(c.querySelector('[data-planning]'), {
+      debut: 0, fin: 1440, actions: {
+        deplacer: (p) => this.#deplacer(p),
+        scinder: (p) => this.#scinder(p),
+        selection: (t) => { if (t) this.#editer(t.tache); },
+        ouvrir: (t) => { this.#editer(t.tache); this.#onglet('tache'); },
+        deposer: (e, p) => this.#deposer(e, p),
+      },
+    });
+    this.du = this.requete.du ?? null;
+    this.#definition();
+    await this.#charger();
+    await this.#aPlanifier();
+  }
+
+  #definition() {
+    const d = this.vues.find((v) => v.code === this.vue)?.definition ?? { regroupement: 'RESSOURCE', echelle: 'JOUR', avant: 7, apres: 21 };
+    this.definition = d;
+    const jours = d.avant + d.apres + 1;
+    const p = this.du ? { debut: versMinutes(this.du), fin: versMinutes(this.du) + jours * 1440 } : periodeFlottante(new Date().toISOString().slice(0, 10), d.avant, d.apres);
+    this.periode = p;
+    this.comboEchelle.definirValeur(d.echelle);
+    this.planning.regroupement = d.regroupement;
+    this.planning.regler({ debut: p.debut, fin: p.fin, echelle: d.echelle, largeurColonne: LARGEURS[d.echelle], hauteurAdaptee: d.hauteur_adaptee !== false });
+  }
+
+  #decaler(sens) {
+    const jours = this.definition.avant + this.definition.apres + 1;
+    this.du = depuisMinutes(this.periode.debut + sens * Math.max(7, Math.round(jours / 2)) * 1440).slice(0, 10);
+    this.#definition();
+    this.#charger();
+  }
+
+  async #charger() {
+    this.app.routeur.remplacerUrl(this.urlCourante());
+    const p = this.periode;
+    this.conteneur.querySelector('[data-periode]').textContent = `${depuisMinutes(p.debut).slice(0, 10)} → ${depuisMinutes(p.fin - 1).slice(0, 10)}`;
+    let d;
+    try { d = await api.planning.donnees({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), recherche: this.recherche }); } catch (e) { this.app.erreur(e); return; }
+    this.lignes = d.lignes.map((l) => ({ ...l, ligneFixe: this.definition.regroupement !== 'RESSOURCE' ? false : l.ligne_fixe }));
+    this.barres = d.barres.map((b) => ({ ...b, debut: versMinutes(b.debut), fin: versMinutes(b.fin), couleur: b.couleur || this.couleurs.get(b.srv_id) }));
+    this.planning.definirDonnees(this.lignes, this.barres);
+    this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
+    if (!this.centre) { this.centre = true; this.planning.allerA(versMinutes(new Date().toISOString().slice(0, 16))); }
+  }
+
+  #onglet(nom) {
+    this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === nom));
+    this.conteneur.querySelectorAll('[data-panneau]').forEach((p) => { p.hidden = p.dataset.panneau !== nom; });
+  }
+
+  async #apres(promesse, message) {
+    try {
+      const r = await promesse;
+      if (message) this.app.message(message, 'succes');
+      await this.#charger();
+      await this.#aPlanifier();
+      return r;
+    } catch (e) {
+      this.app.erreur(e);
+      await this.#charger();
+      return null;
+    }
+  }
+
+  /** Glisser une barre : déplacement, redimensionnement (bord), changement de ressource, copie (Ctrl). */
+  async #deplacer({ tache: b, debut, fin, ligne, copie }) {
+    if (this.definition.regroupement !== 'RESSOURCE' && ligne !== b.ligne) { this.app.message('Changer de ligne n\'est possible que dans une vue par ressources', 'avertissement'); return false; }
+    if (this.definition.regroupement === 'RESSOURCE' && ligne !== b.ligne && (b.theorique || ligne.startsWith('srv:'))) {
+      this.app.message('Affecter une tâche théorique : depuis le détail de la tâche', 'avertissement');
+      return false;
+    }
+    const mode = debut - b.debut === fin - b.fin ? 'deplacer' : debut !== b.debut ? 'debut' : 'fin';
+    await this.#apres(api.planning.deplacer(b.tache, { debut: depuisMinutes(debut), fin: depuisMinutes(fin), mode, de: b.ligne, vers: ligne, copie, version: b.version }));
+    return false;
+  }
+
+  async #scinder({ tache: b, instant }) {
+    if (instant <= b.debut || instant >= b.fin) return;
+    await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), 'Tâche scindée');
+  }
+
+  /** Dépôt d'un élément à planifier : tâche en mode 1 (au plus une semaine de 35 h, modifiable), sur la ressource ou le service. */
+  async #deposer(e, { ligne, instant }) {
+    const brut = e.dataTransfer.getData(TYPE_GLISSER);
+    if (!brut || !ligne) return;
+    const x = JSON.parse(brut);
+    const ressource = ligne.cle.includes(':') && !ligne.cle.startsWith('srv:') && !ligne.cle.startsWith('chantier:') ? ligne.cle.split(':') : null;
+    const srv = ligne.srv_id ?? x.srv_id;
+    await this.#apres(api.planning.creer({
+      calcul: 1, debut: depuisMinutes(instant), heures: Math.max(15, Math.min(x.reste, 2100)), nb_ressources: 1, srv_id: srv, type_element: 'chantier', id_element: x.id,
+      libelle: `${x.service ?? 'Travaux'}`, affectations: ressource ? [{ type: ressource[0], id: ressource[1] }] : [],
+    }), 'Tâche planifiée');
+  }
+
+  async #aPlanifier() {
+    const zone = this.conteneur.querySelector('[data-panneau="aplanifier"]');
+    let l;
+    try { l = await api.planning.aPlanifier({ services: (this.definition.services ?? []).join(',') }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    zone.innerHTML = l.length ? `<p class="aide">Glisser une ligne sur une ressource (ou un service) : début au point de dépôt.</p>
+      <table class="pleine-largeur"><thead><tr><th>Chantier</th><th>Service</th><th class="nombre">Budget</th><th class="nombre">Planifié</th><th class="nombre">Reste</th></tr></thead><tbody>
+      ${l.map((x, i) => `<tr draggable="${x.reste > 0}" data-i="${i}" class="${x.reste > 0 ? 'glissable' : 'aide'}" title="${echapper(x.libelle)}"><td>${echapper(x.code)}</td><td>${echapper(x.service ?? '')}</td>
+        <td class="nombre">${ecrireDuree(x.budget)}</td><td class="nombre">${ecrireDuree(x.planifie)}</td><td class="nombre ${x.reste < 0 ? 'erreur' : ''}">${ecrireDuree(Math.abs(x.reste))}${x.reste < 0 ? ' dépassé' : ''}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="aide">Aucune heure à planifier (commandes validées des chantiers ouverts).</p>';
+    zone.querySelectorAll('tr[draggable="true"]').forEach((tr) => tr.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData(TYPE_GLISSER, JSON.stringify(l[Number(tr.dataset.i)]));
+      e.dataTransfer.effectAllowed = 'copy';
+    }));
+  }
+
+  /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
+  async #editer(id) {
+    const zone = this.conteneur.querySelector('[data-panneau="tache"]');
+    let t;
+    if (id) {
+      try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
+    } else {
+      const debut = depuisMinutes(debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'JOUR') + 1440 + 480);
+      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: 'PREVUE', affectations: [] };
+      this.#onglet('tache');
+    }
+    const elements = await api.planning.elements().catch(() => []);
+    if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
+    zone.innerHTML = `<h3>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</h3>
+      <p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
+      <p class="ligne">Chantier <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
+      <p class="ligne">Calcul <span data-mode></span></p>
+      <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
+      <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
+      <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>
+      <p class="ligne">État <span data-etat-tache></span> <label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
+      <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
+      <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>
+      <h4>Affectations</h4><ul data-affectations></ul>
+      <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
+      <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
+      <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
+        ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
+      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`;
+    const affs = t.affectations.map((a) => ({ ...a }));
+    const combo = (cle, opts, valeur, vide = true) => { const c = creerCombo({ options: opts, valeur: valeur ?? '', vide }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
+    const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
+    const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
+    const mode = combo('mode', options(MODES), String(t.calcul), false);
+    const etat = combo('etat-tache', options(ETATS), t.etat, false);
+    const equipe = combo('equipe', this.ref.equipes.map((e) => ({ valeur: e.id, libelle: e.libelle, detail: e.code })), '');
+    let ressource = combo('ressource', [], '');
+    const rendreAffs = () => {
+      zone.querySelector('[data-affectations]').innerHTML = affs.length ? affs.map((a, i) => `<li>${echapper(a.libelle ?? `${a.type} ${a.id}`)}${a.heures ? ` <span class="aide">${ecrireDuree(a.heures)} h</span>` : ''}${a.equipe_id ? ' <small class="aide">équipe</small>' : ''}
+        <button type="button" data-retirer="${i}" title="Retirer">✕</button></li>`).join('') : '<li class="aide">Aucune : tâche théorique (charge du service)</li>';
+      zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { affs.splice(Number(b.dataset.retirer), 1); rendreAffs(); }));
+    };
+    rendreAffs();
+    zone.querySelector('[data-cherche-res]').addEventListener('change', async (e) => {
+      const l = await api.planning.ressources({ recherche: e.target.value, services: '' }).catch(() => []);
+      const nouveau = creerCombo({ options: l.slice(0, 200).map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: r.libelle, detail: r.service ?? r.type })), valeur: '', vide: true });
+      ressource.replaceWith(nouveau);
+      ressource = nouveau;
+      ressource.libelles = new Map(l.map((r) => [`${r.type}:${r.id}`, r.libelle]));
+    });
+    zone.querySelector('[data-ajouter-res]').addEventListener('click', () => {
+      const v = ressource.valeurCombo;
+      if (!v || affs.some((a) => `${a.type}:${a.id}` === v)) return;
+      const [type, idr] = v.split(':');
+      affs.push({ type, id: idr, libelle: ressource.libelles?.get(v) });
+      rendreAffs();
+    });
+    zone.querySelector('[data-ajouter-equipe]').addEventListener('click', () => {
+      if (!equipe.valeurCombo) return;
+      affs.push({ type: 'EQUIPE', id: String(equipe.valeurCombo), libelle: `Équipe ${this.ref.equipes.find((e) => String(e.id) === String(equipe.valeurCombo))?.libelle ?? ''} (membres à la date)` });
+      rendreAffs();
+    });
+    const saisie = () => {
+      const v = (s) => zone.querySelector(s);
+      const m = Number(mode.valeurCombo);
+      return {
+        calcul: m, debut: v('[data-debut]').value, fin: m === 1 ? null : v('[data-fin]').value || null, heures: m === 2 ? null : lireDuree(v('[data-heures]').value),
+        nb_ressources: Number(v('[data-nb]').value) || 1, srv_id: service.valeurCombo ? Number(service.valeurCombo) : null, type_element: 'chantier',
+        id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
+        avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
+        affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version,
+      };
+    };
+    zone.querySelector('[data-apercu]').addEventListener('click', async () => {
+      try {
+        const r = await api.planning.calculer(saisie());
+        zone.querySelector('[data-resultat]').textContent = r.erreurs.length ? r.erreurs.join(', ')
+          : `Fin ${r.fin?.replace('T', ' ')} · ${ecrireDuree(r.heures)} h${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([k, m]) => `${affs.find((a) => `${a.type}:${a.id}` === k)?.libelle ?? k} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
+      } catch (e) { this.app.erreur(e); }
+    });
+    zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      const r = await this.#apres(t.id ? api.planning.modifier(t.id, saisie()) : api.planning.creer(saisie()), 'Tâche enregistrée');
+      if (r) this.#editer(r.id);
+    });
+    zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
+      if (!confirm('Supprimer cette tâche ?')) return;
+      await this.#apres(api.planning.supprimer(t.id, t.version), 'Tâche supprimée');
+      zone.innerHTML = '';
+    });
+  }
+}

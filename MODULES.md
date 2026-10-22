@@ -42,7 +42,7 @@ graph TD
 | notification | — (.NET seul) | `LogiBTP.Notifications.Web` → Socle.Web | 008 | cœur (sources du planificateur, cloche, boîte) |
 | execution (facultatif) | — (règles seules) | `LogiBTP.Execution(.Web)` → Socle.Web | 085 | cœur (services, chantiers, ordres de la famille E ; synthèse, parcours) |
 | pointage (facultatif) | — (règles seules) | `LogiBTP.Pointage(.Web)` → Socle.Web | 086 | cœur (salariés, chantiers et chantiers internes, natures MO, ordres ; saisie hebdomadaire) |
-| planning | socle | — (lot 1 : JS seul) | — | cœur (prototype du composant) |
+| planning (facultatif) | socle | `LogiBTP.Planning(.Web)` → Socle.Web | 089 | cœur (ressources, plages des calendriers, équipes, chantiers, budgets ; page `/planning`) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
 
@@ -64,6 +64,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | graphe | `structure/graphe-structure.js` (`VueGrapheStructure`) | — | — |
 | navigation | `application.js`, `navigation/menus.js`, `navigation/widgets.js`, `pages/*` (`PageBase`) | — | — |
 | notification | cloche du bandeau (`Application.majNotifications`), `pages/notifications.js` (`/notifications`, `/parametres/notifications`) | `NotificationsBtp.cs` : `SourceRappelsCrm`, `SourceHabilitations` | — |
+| planning | `pages/planning.js` (`VuePlanningBtp`, panneau à planifier et tâche), `pages/planning-prototype.js` | `SpecialisationPlanningBtp` (calendriers par `CalendriersBtp`, contexte HTTP) | 201 (activation, service des tâches) |
 | execution | `pages/execution.js` (`/execution/synthese`, `/execution/chantier/:id`, `/parametres/execution`), `execution/execution.js` (panneau des ordres, lot 1) | `SpecialisationExecutionBtp`, `ExecutionBtp.cs` (ordres, lot 1) | 197, 198 |
 | pointage | `pages/pointage.js` (`/pointage/saisie`, `/parametres/pointage`), liste `pointages` (vues 1010 à 1012) | `SpecialisationPointageBtp` | 199 (clés étrangères, `cha_interne` et chantiers internes, `v_liste_pointages`) |
 | calendrier | `pages/parametres-calendriers.js` (`@logibtp/calendrier` : contrôles, aperçu des fériés) | `SpecialisationCalendrierBtp` (utilisations), `CalendriersBtp` (calendrier effectif d'un salarié ou d'un matériel, fermetures de son service) | 196 (`srv_cal_id`, `sal_cal_id`, `mat_cal_id`) |
@@ -137,6 +138,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | authentification | `regles.js` | `ReglesCompte.cs` | `01_pseudo` à `04_compte` |
 | calendrier | `calendrier.js` | `ReglesCalendrier.cs` | `01_feries`, `02_travail` |
 | execution | `etats.js` | `ReglesEtats.cs` | `01_etats` |
+| planning | `calcul.js` | `ReglesPlanning.cs` | `01_calcul` |
 | pointage | `controles.js`, `validation.js`, `paie.js` | `ReglesPointage.cs`, `ReglesValidation.cs`, `ReglesPaie.cs` | `01_controles`, `02_validation`, `03_paie` |
 | cœur : ressources | `client/src/app/ressources/regles.js` | `LogiBTP.Domaine/Ressources/ReglesRessources.cs` | `tests/ressources` (`01_habilitations`, `02_missions`) |
 

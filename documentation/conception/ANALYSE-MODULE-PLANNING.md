@@ -6,7 +6,9 @@
 
 > **Réalisation** : lot 1 réalisé le 22/10/2026 (`modules/planning/js`, prototype `/planning/prototype`) : rendu DOM
 > positionné et virtualisé ; sur 500 ressources, 3 mois et 20 000 tâches, chargement des données en 12 ms et dessin
-> d'une vue en 2 ms.
+> d'une vue en 2 ms. Lot 2 réalisé le 22/10/2026 (`modules/planning/db/089`, `ServicePlanning.cs`, `calcul.js` ↔
+> `ReglesPlanning.cs`, page `/planning`) : le module ne lit pas le Calendrier (règle des modules) ; le cœur lui fournit
+> les plages travaillées de chaque ressource.
 
 ## 1. Objet
 

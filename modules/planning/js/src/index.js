@@ -2,3 +2,4 @@
 // serveur dans les lots suivants.
 export { ECHELLES, versMinutes, depuisMinutes, dateDe, debutUnite, semaineIso, colonnes, groupes, arrondirAuPas, periodeFlottante } from './temps.js';
 export { empiler, cumuler, ligneA, visibles } from './disposition.js';
+export { calculerTache, retirerAbsences, MESSAGES_CALCUL } from './calcul.js';

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Planning</RootNamespace>
+    <Description>Module Planning LogiBTP : calcul des tâches (modes, calendriers des ressources), répliqué avec le paquet JS @logibtp/planning.</Description>
+  </PropertyGroup>
+
+</Project>
