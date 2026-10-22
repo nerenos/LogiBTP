@@ -9,7 +9,11 @@ import { api } from '../api.js';
 // → enregistré, retour à l'accueil ; « Signaler un problème » = non-conformité avec motif ; saisie d'équipe par le chef.
 
 const CLE_JETON = 'logibtp.borne.jeton';
-const lireJeton = () => { try { return localStorage.getItem(CLE_JETON); } catch { return null; } };
+// Fenêtre d'essai d'un administrateur (/borne?test=) : jeton d'essai propre à la fenêtre (sessionStorage), sans
+// remplacer le jeton d'une vraie borne gardé dans le navigateur.
+const CLE_TEST = 'logibtp.borne.test';
+const lireTest = () => { try { return sessionStorage.getItem(CLE_TEST); } catch { return null; } };
+const lireJeton = () => { try { return lireTest() ?? localStorage.getItem(CLE_JETON); } catch { return null; } };
 
 class ErreurBorne extends Error {
   constructor(statut, code, message) { super(message); this.statut = statut; this.code = code; }
@@ -39,13 +43,18 @@ export class PageBorne extends PageBase {
       try { localStorage.setItem(CLE_JETON, this.requete.jeton); } catch { /* navigateur sans stockage */ }
       this.app.routeur.remplacerUrl('/borne');
     }
+    if (this.requete.test) {
+      try { sessionStorage.setItem(CLE_TEST, this.requete.test); } catch { /* sans stockage */ }
+      this.app.routeur.remplacerUrl('/borne');
+    }
     if (!lireJeton()) { this.#enregistrement(); return; }
     try { this.donnees = await appel('GET', ''); } catch (e) {
       if (e.statut === 401) { this.#enregistrement(e.message); return; }
       this.zone.innerHTML = `<p class="borne-erreur">${echapper(e.message)}</p>`;
       return;
     }
-    this.titre = this.donnees.appareil.libelle;
+    this.test = Boolean(this.donnees.appareil.test);
+    this.titre = `${this.test ? '🧪 ' : ''}${this.donnees.appareil.libelle}`;
     this.#accueil();
   }
 
@@ -69,6 +78,7 @@ export class PageBorne extends PageBase {
     this.etat = null;
     const d = this.donnees;
     this.zone.innerHTML = `<div class="borne-entete"><h1>🏭 ${echapper(d.appareil.libelle)}</h1><span>${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span></div>
+      ${this.test ? `<p class="borne-test">🧪 Mode essai (administrateur) : PIN facultatif, pointages contrôlés mais non enregistrés${d.appareil.actif ? '' : ' · borne désactivée'}.</p>` : ''}
       ${message ? `<p class="borne-succes">${echapper(message)}</p>` : ''}
       <p><input type="search" data-cherche placeholder="Chercher mon nom…" class="borne-champ"> ${d.equipes.length ? '<button type="button" class="borne-bouton" data-equipe>👥 Saisie d\'équipe (chef)</button>' : ''}</p>
       <div class="borne-grille" data-salaries></div>`;
@@ -109,7 +119,8 @@ export class PageBorne extends PageBase {
     this.zone.innerHTML = `<h2>${echapper(s.prenom)} ${echapper(s.nom)} : code PIN</h2>${erreur ? `<p class="borne-erreur">${echapper(erreur)}</p>` : ''}
       <p class="borne-pin" data-affichage>····</p>
       <div class="borne-clavier">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✔'].map((k) => `<button type="button" class="borne-touche" data-k="${k}">${k}</button>`).join('')}</div>
-      <p><button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+      <p>${this.test ? '<button type="button" class="borne-bouton" data-passer title="Mode essai : identification sans PIN">Passer (essai)</button> ' : ''}<button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+    this.zone.querySelector('[data-passer]')?.addEventListener('click', () => envoyer(null));
     const aff = this.zone.querySelector('[data-affichage]');
     this.zone.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.k;
@@ -231,7 +242,7 @@ export class PageBorne extends PageBase {
             jeton: this.etat.journee.jeton, date: this.etat.journee.date, cha_id: s.cha_id, ent_id: s.ent_id, type_mo: s.type_mo, sous_type: s.sous_type, minutes, motif: s.motif ?? null,
             membres: this.etat.membres,
           });
-          this.#accueil(`✔ ${ecrireDuree(minutes)} h enregistrées${this.etat.membres ? ` pour ${this.etat.membres.length} personnes` : ''}.`);
+          this.#accueil(`✔ ${ecrireDuree(minutes)} h ${this.test ? 'contrôlées (essai : non enregistrées)' : 'enregistrées'}${this.etat.membres ? ` pour ${this.etat.membres.length} personnes` : ''}.`);
           this.#minuterie(8000);
         } catch (e) { alert(e.message); if (e.code === 'BORNE_JETON') this.#accueil(); }
       });
@@ -261,11 +272,18 @@ export class PageParametresBornes extends PageBase {
     const service = (id) => this.ref.services.find((s) => s.id === id)?.libelle ?? 'Tous';
     zone.innerHTML = `<table><thead><tr><th>Borne</th><th>Service</th><th>PIN exigé</th><th>Active</th><th>Vue le</th><th></th></tr></thead><tbody>
       ${l.map((a) => `<tr><td>${echapper(a.libelle)}</td><td>${echapper(service(a.service))}</td><td>${a.pin_exige ? 'oui' : 'non'}</td><td>${a.actif ? 'oui' : 'non'}</td>
-        <td>${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : ''}</td><td><button type="button" data-basculer="${a.id}">${a.actif ? 'Désactiver' : 'Réactiver'}</button></td></tr>`).join('')}</tbody></table>
+        <td>${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : ''}</td><td><button type="button" data-basculer="${a.id}">${a.actif ? 'Désactiver' : 'Réactiver'}</button>
+          ${this.app.estAdmin() ? `<button type="button" data-tester="${a.id}" title="Ouvrir la borne dans une fenêtre séparée pour tester son paramétrage (PIN facultatif, pointages non enregistrés)">▶ Tester</button>` : ''}</td></tr>`).join('')}</tbody></table>
       <p class="ligne"><input data-libelle placeholder="Libellé (Atelier bois…)"> <label><input type="checkbox" data-pin checked> PIN exigé</label>
         <span data-service></span> <button type="button" data-creer>＋ Enregistrer une borne</button></p><div data-jeton></div>`;
     const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.libelle })), valeur: '', vide: true, titre: 'Service de la borne' });
     zone.querySelector('[data-service]').append(srv);
+    zone.querySelectorAll('[data-tester]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const { jeton } = await api.pointage.testerAppareil(Number(b.dataset.tester));
+        this.app.naviguer(`/borne?test=${encodeURIComponent(jeton)}`, { nouvelleFenetre: true });
+      } catch (e) { this.app.erreur(e); }
+    }));
     zone.querySelectorAll('[data-basculer]').forEach((b) => b.addEventListener('click', async () => {
       const a = l.find((x) => String(x.id) === b.dataset.basculer);
       try { await api.pointage.modifierAppareil(a.id, { libelle: a.libelle, service: a.service, pin_exige: a.pin_exige, actif: !a.actif }); await this.#bornes(); } catch (e) { this.app.erreur(e); }

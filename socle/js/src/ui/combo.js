@@ -6,7 +6,8 @@ import { ListeDeroulante } from './liste-deroulante.js';
  * ou son code. La valeur retenue est celle de l'option (`champ.valeurCombo`) ; un texte qui ne désigne aucune
  * option est refusé et le libellé de la valeur précédente revient.
  *
- * options : [{ valeur, libelle, detail? }] ; valeur : valeur initiale ; vide : option vide (« — ») proposée.
+ * options : [{ valeur, libelle, detail?, groupe? }] (groupe : titre affiché avant ses options) ; valeur : valeur initiale ;
+ * vide : option vide (« — ») proposée.
  * Événement `change` sur le champ quand la valeur retenue change. `resoudre()` : valeur désignée par le texte saisi
  * (undefined si aucune), sans la retenir. `definirValeur(v)` : change la valeur sans événement.
  */

@@ -55,6 +55,19 @@ public sealed class JetonsBorne
         jetons.TryGetValue(jeton, out var v) && v.Appareil == appareil && v.Fin >= DateTimeOffset.UtcNow ? v.Salarie : null;
 
     public void Retirer(string jeton) => jetons.TryRemove(jeton, out _);
+
+    private readonly ConcurrentDictionary<string, (int Appareil, DateTimeOffset Fin)> tests = new();
+
+    /// <summary>Jeton d'essai d'une borne (administrateur, huit heures) : remplace le jeton de l'appareil dans une fenêtre de test.</summary>
+    public string CreerTest(int appareil)
+    {
+        foreach (var k in tests.Where(x => x.Value.Fin < DateTimeOffset.UtcNow).Select(x => x.Key).ToList()) tests.TryRemove(k, out _);
+        var j = "test-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+        tests[j] = (appareil, DateTimeOffset.UtcNow.AddHours(8));
+        return j;
+    }
+
+    public int? AppareilTest(string jeton) => tests.TryGetValue(jeton, out var v) && v.Fin >= DateTimeOffset.UtcNow ? v.Appareil : null;
 }
 
 /// <summary>
@@ -111,6 +124,17 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         return new { id = a.PapId, jeton };
     }
 
+    /// <summary>
+    /// Essai d'une borne par un administrateur (fenêtre séparée) : jeton d'essai sans toucher au jeton de l'appareil ;
+    /// la borne d'essai demande le PIN sans l'exiger et contrôle les pointages sans les enregistrer.
+    /// </summary>
+    public async Task<object> TesterAppareilAsync(int id, Utilisateur u, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("BORNES");
+        if (!await db.Appareils.AnyAsync(x => x.PapId == id, ct)) throw ExceptionMetier.Introuvable($"Borne {id}");
+        return new { jeton = jetons.CreerTest(id) };
+    }
+
     public async Task ModifierAppareilAsync(int id, AppareilSaisi s, Utilisateur u, CancellationToken ct)
     {
         if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("BORNES");
@@ -162,6 +186,12 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     {
         var jeton = http.Request.Headers["X-Borne-Jeton"].ToString();
         if (string.IsNullOrEmpty(jeton)) throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_INCONNUE", "Borne non enregistrée");
+        if (jetons.AppareilTest(jeton) is int essai)
+        {
+            http.Items[CleTest] = true;
+            return await db.Appareils.FirstOrDefaultAsync(x => x.PapId == essai, ct)
+                ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_INCONNUE", "Borne supprimée");
+        }
         var h = Sha256(jeton);
         var a = await db.Appareils.FirstOrDefaultAsync(x => x.PapJetonHache == h && x.PapActif, ct)
             ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_INCONNUE", "Borne non enregistrée ou désactivée");
@@ -172,6 +202,9 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         }
         return a;
     }
+
+    private const string CleTest = "borne-test";
+    private static bool EnTest(HttpContext http) => http.Items.ContainsKey(CleTest);
 
     private static Utilisateur Auteur(AppareilEntite a) => new($"borne:{a.PapId}", "BORNE", null);
 
@@ -184,7 +217,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         var pins = await db.Pins.AsNoTracking().Where(p => ids.Contains(p.PpnSalId)).Select(p => p.PpnSalId).ToListAsync(ct);
         return new
         {
-            appareil = new { a.PapId, libelle = a.PapLibelle, pin_exige = a.PapPinExige },
+            appareil = new { a.PapId, libelle = a.PapLibelle, pin_exige = a.PapPinExige, actif = a.PapActif, test = EnTest(http) },
             referentiels = await pointage.ReferentielsAsync(ct),
             motifs = await specialisation.MotifsAsync(db, "NON_CONFORMITE", ct),
             equipes = await specialisation.EquipesAsync(db, a.PapService, DateOnly.FromDateTime(DateTime.Today), ct),
@@ -197,7 +230,12 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     {
         var a = await AppareilAsync(http, ct);
         var pin = await db.Pins.FirstOrDefaultAsync(p => p.PpnSalId == i.Salarie, ct);
-        if (pin is not null || a.PapPinExige)
+        // Essai : PIN passé (vide) accepté ; un PIN saisi est vérifié sans compter les essais.
+        if (EnTest(http))
+        {
+            if (!string.IsNullOrEmpty(i.Pin) && (pin is null || !VerifierPin(i.Pin, pin.PpnHache))) throw ExceptionMetier.Invalide("BORNE_PIN", "PIN incorrect");
+        }
+        else if (pin is not null || a.PapPinExige)
         {
             if (pin is null) throw ExceptionMetier.Invalide("BORNE_SANS_PIN", "Aucun PIN : le demander au service RH");
             if (pin.PpnBloqueJusqu > DateTimeOffset.UtcNow) throw ExceptionMetier.Conflit("BORNE_BLOQUE", "Trop d'essais : réessayer dans quelques minutes");
@@ -255,6 +293,18 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         var membres = (p.Membres is { Count: > 0 } ? p.Membres : [salarie]).Distinct().ToList();
         var groupe = membres.Count > 1 ? Guid.NewGuid() : (Guid?)null;
         var auteur = Auteur(a);
+        if (EnTest(http))
+        {
+            // Essai : mêmes contrôles et blocages, puis annulation (rien n'est enregistré, pas de tâche de non-conformité).
+            await using (var tx = await db.Database.BeginTransactionAsync(ct))
+            {
+                foreach (var m in membres) await AjouterAsync(m, p.Date, new PointageSaisi(null, p.Date, p.ChaId, p.EntId, p.TypeMo, p.SousType, p.Minutes, null, null, p.Motif, p.Commentaire), groupe, a, auteur, ct);
+                await tx.RollbackAsync(ct);
+            }
+            db.ChangeTracker.Clear();
+            jetons.Retirer(p.Jeton);
+            return await JourneeAsync(a, salarie, jetons.Creer(a.PapId, salarie), ct);
+        }
         foreach (var m in membres) await AjouterAsync(m, p.Date, new PointageSaisi(null, p.Date, p.ChaId, p.EntId, p.TypeMo, p.SousType, p.Minutes, null, null, p.Motif, p.Commentaire), groupe, a, auteur, ct);
         jetons.Retirer(p.Jeton);
         if (!string.IsNullOrWhiteSpace(p.Motif))

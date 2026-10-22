@@ -82,7 +82,7 @@ export class PageFiche extends PageBase {
       surSupprime: (id) => app.publier('enregistre', { type, ids: [id], cree: true }),
       surFerme: () => {
         this.ferme = true;
-        if (!this.enQuittant) app.routeur.retour(LISTE_PAR_TYPE[type] ?? '/');
+        if (!this.enQuittant) app.fermerPage(LISTE_PAR_TYPE[type] ?? '/');
       },
     });
     // Rechargement ou retour : onglet de la fiche retrouvé (ignoré s'il n'existe plus).

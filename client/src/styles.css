@@ -554,5 +554,6 @@ body.mode-borne #bandeau { display: none; }
 .borne-duree .borne-touche { width: 5rem; }
 .borne-erreur { color: #b42318; font-weight: 600; }
 .borne-succes { color: #15803d; font-weight: 600; font-size: 1.4rem; }
+.borne-test { background: #fef3c7; color: #92400e; border: 1px dashed #d97706; border-radius: .4rem; padding: .4rem .8rem; }
 .borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: rgba(37, 99, 235, .1); }
 .page-parametres table.crm-table, .crm-principal table.crm-table { width: 100%; }

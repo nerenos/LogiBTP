@@ -106,6 +106,7 @@ export const api = {
     appareils: () => appel('GET', '/pointage/appareils'),
     creerAppareil: (a) => appel('POST', '/pointage/appareils', a),
     modifierAppareil: (id, a) => appel('PUT', `/pointage/appareils/${id}`, a),
+    testerAppareil: (id) => appel('POST', `/pointage/appareils/${id}/test`),
     pins: (service) => appel('GET', `/pointage/pins?service=${service}`),
     poserPin: (salarie, p) => appel('PUT', `/pointage/pins/${salarie}`, p),
     groupe: (id) => appel('GET', `/pointage/groupes/${id}`),

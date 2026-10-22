@@ -142,6 +142,19 @@ export const MENUS_METIER = [
   },
 ];
 
+/**
+ * Menu du bandeau de chaque thème de liste (premier élément de menu qui ouvre `/liste/<thème>`) : { groupe, ordre },
+ * pour regrouper la combo des thèmes des listes comme le bandeau.
+ */
+export function groupesThemes() {
+  const groupes = new Map();
+  MENUS_METIER.forEach((m, i) => (m.elements ?? []).forEach((e, j) => {
+    const theme = /^\/liste\/([^?/]+)/.exec(e.url ?? '')?.[1];
+    if (theme && !groupes.has(theme)) groupes.set(theme, { groupe: m.libelle.replace('&', ''), ordre: i * 100 + j });
+  }));
+  return groupes;
+}
+
 /** Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`). */
 const visible = (app, x) => !x.module || app.moduleActif?.(x.module) !== false;
 

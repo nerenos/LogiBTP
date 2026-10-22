@@ -395,6 +395,15 @@ export class Application {
     this.panneauFenetres.surFerme = () => { this.panneauFenetres = null; this.fenetres.surListe = precedent; };
   }
 
+  /**
+   * Fermeture d'une page (fiche, document) : dans une fenêtre séparée ouverte par l'application, la fenêtre se ferme ;
+   * sinon retour à la page précédente (ou `defaut`).
+   */
+  async fermerPage(defaut = '/') {
+    if (window.opener) { await this.fermerFenetre(); return; }
+    this.routeur.retour(defaut);
+  }
+
   /** Fermeture de cette fenêtre (avertissement si des modifications sont en cours). */
   async fermerFenetre() {
     const page = this.routeur.page;

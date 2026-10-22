@@ -58,6 +58,7 @@ const GABARIT = `
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
       <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
+      <button data-action="fermer-page" title="Fermer le document (fenêtre séparée : la fenêtre se ferme)">✕ Fermer</button>
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
@@ -199,6 +200,7 @@ export class PageDocument extends PageBase {
         if (this.modifiee) app.message('Modifications non enregistrées : l’aperçu montre la dernière version enregistrée', 'avertissement');
         app.naviguer(`/edition?source=document&id=${id}`, { nouvelleFenetre: true });
       },
+      'fermer-page': () => app.fermerPage('/liste/documents'),
     };
     // Raccourcis ⓘ : bulle au survol, aide-mémoire complet (fenêtre déplaçable) au clic.
     const aide = this.conteneur.querySelector('[data-aide-raccourcis]');

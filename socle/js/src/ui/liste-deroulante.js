@@ -79,10 +79,13 @@ export class ListeDeroulante {
       if (code.includes(t) || normaliser(o.libelle).includes(t)) return 2;
       return -1;
     };
+    // Options regroupées (propriété `groupe`) : les groupes gardent leur ordre, le rang trie à l'intérieur.
+    const groupes = new Map();
+    for (const o of this.options) if (!groupes.has(o.groupe ?? '')) groupes.set(o.groupe ?? '', groupes.size);
     this.filtrees = this.options
-      .map((o, i) => ({ o, r: rang(o), i }))
+      .map((o, i) => ({ o, r: rang(o), i, g: groupes.get(o.groupe ?? '') }))
       .filter((x) => x.r >= 0)
-      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .sort((a, b) => a.g - b.g || a.r - b.r || a.i - b.i)
       .map((x) => x.o);
     // Proposition active seulement si le code commence par la saisie : une saisie libre
     // qui ne correspond qu'à un libellé n'est pas remplacée par Entrée.
@@ -95,7 +98,9 @@ export class ListeDeroulante {
   rendre() {
     if (this.filtrees.length === 0) { this.popup.hidden = true; return; }
     this.popup.hidden = false;
-    this.popup.innerHTML = this.filtrees.map((o, i) => `
+    // Titre de groupe avant la première option de chaque groupe (options regroupées : propriété `groupe`).
+    const titres = this.filtrees.map((o, i) => (o.groupe && o.groupe !== this.filtrees[i - 1]?.groupe ? `<p class="groupe">${echapper(o.groupe)}</p>` : ''));
+    this.popup.innerHTML = this.filtrees.map((o, i) => `${titres[i]}
       <div role="option" data-index="${i}" class="${i === this.actif ? 'active' : ''}" aria-selected="${i === this.actif}">
         ${this.strict ? '' : `<strong>${echapper(o.valeur)}</strong>`}<span>${echapper(o.libelle)}</span>${o.detail ? `<em>${echapper(o.detail)}</em>` : ''}
       </div>`).join('');

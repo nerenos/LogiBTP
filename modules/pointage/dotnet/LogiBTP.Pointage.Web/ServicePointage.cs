@@ -419,7 +419,8 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
         if (ReglesPointage.Bloquant(controles))
             throw ExceptionMetier.Invalide(controles.First(c => c.Niveau == ReglesPointage.Erreur).Code,
                 string.Join(" · ", controles.Where(c => c.Niveau == ReglesPointage.Erreur).Select(c => ReglesPointage.Messages[c.Code]).Distinct()), controles);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Transaction propre, sauf dans celle de l'appelant (essai de la borne : annulée après les contrôles).
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var existants = await db.Pointages.Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate >= lundi && p.PoiDate <= dimanche).ToListAsync(ct);
         var etats = (await EtatsAsync([salarie], lundi, p0.Validation, ct))[salarie];
         string Empreinte(DateOnly d, IEnumerable<(long? Id, int Cha, long? Ent, int Type, string? St, int Min, string? Motif)> l) =>
@@ -457,7 +458,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
             else e.PoiVersion++;
         }
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return controleAcces ? await SemaineAsync(salarie, lundi, u, ct) : new { };
     }
 }

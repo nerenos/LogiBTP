@@ -31,8 +31,10 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue, groupeTheme } = {}) {
     this.racine = racine;
+    // Regroupement des thèmes dans leur combo (l'application : menus du bandeau) : groupeTheme(theme) → { groupe, ordre } | null.
+    this.groupeTheme = groupeTheme ?? null;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
     // plusieurs lignes sélectionnées : tableau des valeurs, type de la ligne de plus haut rang.
     this.glisser = glisser ?? null;
@@ -102,7 +104,7 @@ export class ListeDonnees {
     r.classList.add('liste');
     r.innerHTML = `
       <div class="liste-barre">
-        <select class="liste-themes" title="Thème : regroupement des vues"></select>
+        <span class="liste-themes"></span>
         <select class="liste-vues" title="Vue"></select>
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage, enregistrer comme nouvelle vue)">✎</button>
         <span class="liste-elements">
@@ -160,7 +162,6 @@ export class ListeDonnees {
     this.table = r.querySelector('.liste-table');
     this.corps = this.table.tBodies[0];
     this.basSuite = r.querySelector('.liste-suite');
-    r.querySelector('.liste-themes').addEventListener('change', (e) => this.choisirTheme(e.target.value || null).catch((x) => this.#erreur(x)));
     r.querySelector('.liste-vues').addEventListener('change', (e) => this.ouvrirVue(Number(e.target.value)).catch((x) => this.#erreur(x)));
     r.querySelector('[data-action="concevoir"]').addEventListener('click', () => this.concevoir(false));
     r.querySelectorAll('[data-element]').forEach((b) => b.addEventListener('click', (e) => this.#actionElement(b.dataset.element, e).catch((x) => this.#erreur(x))));
@@ -248,27 +249,37 @@ export class ListeDonnees {
   async demarrer(vueId = null) {
     await this.chargerThemes();
     if (this.theme === null && this.prefs.theme && this.themes.some((t) => t.thl_code === this.prefs.theme)) this.theme = this.prefs.theme;
-    this.racine.querySelector('.liste-themes').value = this.theme ?? '';
+    this.#afficherTheme();
     await this.chargerVues();
     await this.#ouvrirDansTheme(vueId);
   }
 
   async chargerThemes() {
     this.themes = await this.fournisseur.themes?.() ?? [];
-    const sel = this.racine.querySelector('.liste-themes');
-    sel.innerHTML = `<option value="">Toutes les vues</option>${this.themes.map((t) =>
-      `<option value="${echapper(t.thl_code)}" title="${echapper((t.thl_types ?? []).map((x) => x.libelle || x.code).join(', ') || 'Tous les types d\'élément')}">${echapper(`${t.thl_icone ?? ''} ${t.thl_libelle}`.trim())}</option>`).join('')}`;
     if (this.theme && !this.themes.some((t) => t.thl_code === this.theme)) this.theme = null;
-    sel.value = this.theme ?? '';
-    sel.hidden = !this.themes.length && !this.peutGererThemes;
+    // Combo des thèmes (« * » = toutes les vues), regroupés comme les menus de l'application quand elle le demande.
+    const options = this.themes.map((t, i) => {
+      const g = this.groupeTheme?.(t) ?? null;
+      return { valeur: t.thl_code, libelle: `${t.thl_icone ?? ''} ${t.thl_libelle}`.trim(), detail: (t.thl_types ?? []).map((x) => x.libelle || x.code).join(', '),
+        groupe: this.groupeTheme ? g?.groupe ?? 'Autres' : undefined, ordre: g?.ordre ?? 1e6 + i };
+    }).sort((a, b) => a.ordre - b.ordre);
+    const combo = creerCombo({ options: [{ valeur: '*', libelle: 'Toutes les vues' }, ...options], valeur: this.theme ?? '*', vide: false, titre: 'Thème : regroupement des vues' });
+    combo.classList.add('liste-themes');
+    combo.addEventListener('change', () => this.choisirTheme(combo.valeurCombo === '*' ? null : combo.valeurCombo).catch((x) => this.#erreur(x)));
+    combo.hidden = !this.themes.length && !this.peutGererThemes;
+    this.racine.querySelector('.liste-themes').replaceWith(combo);
+    this.comboThemes = combo;
   }
+
+  /** Thème courant affiché dans sa combo (sans événement). */
+  #afficherTheme() { this.comboThemes?.definirValeur(this.theme ?? '*'); }
 
   /** Change de thème : vues du thème, puis la dernière ouverte dans ce thème. */
   async choisirTheme(code) {
     this.theme = code;
     this.prefs.theme = code;
     this.#ecrirePreferences();
-    this.racine.querySelector('.liste-themes').value = code ?? '';
+    this.#afficherTheme();
     await this.chargerVues();
     await this.#ouvrirDansTheme(null);
   }
@@ -395,7 +406,7 @@ export class ListeDonnees {
         if (this.theme !== null && theme !== this.theme) {
           this.theme = theme;
           this.prefs.theme = theme;
-          this.racine.querySelector('.liste-themes').value = theme ?? '';
+          this.#afficherTheme();
         }
         await this.chargerVues();
         try { localStorage.setItem(this.cleVue, String(enregistree.vli_id)); } catch { /* préférence non conservée */ }

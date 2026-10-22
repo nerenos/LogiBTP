@@ -4,6 +4,7 @@ import { PanneauArbres } from '@logibtp/bibliotheque/ui';
 import { simulerModificationsAutres } from '../listes.js';
 import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
+import { groupesThemes } from '../navigation/menus.js';
 import { api } from '../api.js';
 import { transformerDocument } from '../documents/transformation.js';
 
@@ -112,6 +113,8 @@ export class PageListe extends PageBase {
       // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
       peutRequete: app.enLigne && app.estAdmin(),
       peutGererThemes: app.peutGererThemes(),
+      // Combo des thèmes regroupée comme les menus du bandeau.
+      groupeTheme: (t) => groupesThemes().get(t.thl_code) ?? null,
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
       actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
       // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition).

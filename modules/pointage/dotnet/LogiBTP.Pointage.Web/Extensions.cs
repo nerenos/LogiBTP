@@ -81,6 +81,7 @@ public static class Extensions
             await s.ModifierAppareilAsync(id, a, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        g.MapPost("/appareils/{id:int}/test", (int id, HttpContext http, ServiceBorne s, CancellationToken ct) => s.TesterAppareilAsync(id, Utilisateur.Depuis(http), ct));
         g.MapGet("/pins", (int? service, HttpContext http, ServiceBorne s, CancellationToken ct) => s.PinsAsync(service, Utilisateur.Depuis(http), ct));
         g.MapPut("/pins/{salarie:int}", async (int salarie, PinSaisi p, HttpContext http, ServiceBorne s, CancellationToken ct) =>
         {
