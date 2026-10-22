@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { versMinutes, depuisMinutes, debutUnite, semaineIso, colonnes, groupes, lignesEntete, aujourdhui, arrondirAuPas, periodeFlottante, empiler, cumuler, ligneA, visibles } from '../src/index.js';
+import { versMinutes, depuisMinutes, debutUnite, semaineIso, colonnes, groupes, lignesEntete, aujourdhui, arrondirAuPas, periodeFlottante, plagesVisibles, creerAxe, empiler, cumuler, ligneA, visibles } from '../src/index.js';
 
 const m = versMinutes;
 
@@ -57,5 +57,32 @@ describe('disposition', () => {
     expect([ligneA(p, -5), ligneA(p, 0), ligneA(p, 19), ligneA(p, 20), ligneA(p, 69), ligneA(p, 500)]).toEqual([0, 0, 0, 1, 2, 2]);
     const barres = [{ debut: 0, fin: 100 }, { debut: 50, fin: 60 }, { debut: 200, fin: 210 }, { debut: 300, fin: 400 }];
     expect(visibles(barres, 80, 250, 100)).toEqual([barres[0], barres[2]]);
+  });
+});
+
+describe('axe à périodes masquées', () => {
+  const s = (p) => p.map((x) => `${depuisMinutes(x.debut).slice(5)}→${depuisMinutes(x.fin).slice(5)}`);
+  it('plages visibles : heures de travail, jours masqués, plages contiguës fusionnées', () => {
+    // 2026-10-23 vendredi, 24 samedi, 25 dimanche, 26 lundi.
+    expect(s(plagesVisibles(m('2026-10-23'), m('2026-10-27'), { heures: [420, 1080], jours: [6, 0] })))
+      .toEqual(['10-23T07:00→10-23T18:00', '10-26T07:00→10-26T18:00']);
+    expect(s(plagesVisibles(m('2026-10-22'), m('2026-10-27'), { heures: null, jours: [5, 6, 0] }))).toEqual(['10-22T00:00→10-23T00:00', '10-26T00:00→10-27T00:00']);
+    expect(s(plagesVisibles(m('2026-10-22'), m('2026-10-24'), null))).toEqual(['10-22T00:00→10-24T00:00']);
+    expect(s(plagesVisibles(m('2026-10-24'), m('2026-10-26'), { jours: [6, 0] }))).toEqual(['10-24T00:00→10-26T00:00']); // tout masqué : linéaire
+  });
+  it('positions et instants', () => {
+    const a = creerAxe(m('2026-10-23'), m('2026-10-27'), 1, { heures: [420, 1080], jours: [6, 0] });
+    expect(a.largeur).toBe(2 * 660);
+    expect(a.x(m('2026-10-23T07:00'))).toBe(0);
+    expect(a.x(m('2026-10-23T03:00'))).toBe(0); // masqué avant la première plage
+    expect(a.x(m('2026-10-23T12:00'))).toBe(300);
+    expect(a.x(m('2026-10-23T20:00'))).toBe(660); // masqué : début de la plage suivante
+    expect(a.x(m('2026-10-25T10:00'))).toBe(660);
+    expect(a.x(m('2026-10-26T08:00'))).toBe(720);
+    expect(a.coupures).toEqual([660]);
+    expect(depuisMinutes(a.instant(720))).toBe('2026-10-26T08:00');
+    expect(depuisMinutes(a.instant(300))).toBe('2026-10-23T12:00');
+    const l = creerAxe(m('2026-10-23'), m('2026-10-24'), 2, null);
+    expect([l.x(m('2026-10-22T23:00')), l.x(m('2026-10-23T02:00')), l.instant(60) - m('2026-10-23')]).toEqual([-30, 60, 120]);
   });
 });

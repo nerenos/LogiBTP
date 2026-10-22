@@ -98,6 +98,7 @@ export class PagePlanning extends PageBase {
         <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
         <span data-periode class="aide"></span> <span data-echelle></span>
         <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button> <span data-lignes-texte></span>
+        <label title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><input type="checkbox" data-masquer> Masquer le temps non travaillé</label>
         <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
         <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
         <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
@@ -113,7 +114,7 @@ export class PagePlanning extends PageBase {
     this.historique = [];
     this.refaire = [];
     this.attente = 0;
-    [this.vues, this.ref] = await Promise.all([api.planning.vues(), api.planning.referentiels()]);
+    [this.vues, this.ref, this.parametres] = await Promise.all([api.planning.vues(), api.planning.referentiels(), api.planning.parametres().catch(() => null)]);
     this.vue = this.requete.vue ?? this.vues[0]?.code;
     this.couleurs = new Map(this.ref.services.map((s, i) => [s.id, COULEURS_SERVICE[i % COULEURS_SERVICE.length]]));
     const comboVue = creerCombo({ options: this.vues.map((v) => ({ valeur: v.code, libelle: v.libelle })), valeur: this.vue, vide: false, titre: 'Vue' });
@@ -145,7 +146,7 @@ export class PagePlanning extends PageBase {
       plein.addEventListener('click', () => c.querySelector('.page-planning').requestFullscreen?.());
     }
     this.planning = new VuePlanningBtp(c.querySelector('[data-planning]'), {
-      debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, actions: {
+      debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, masque: this.#masque(), actions: {
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
         selection: (t) => { if (t) { this.#editer(t.tache); this.#onglet('tache'); } },
@@ -153,10 +154,23 @@ export class PagePlanning extends PageBase {
         deposer: (e, p) => this.#deposer(e, p),
       },
     });
+    const masquer = c.querySelector('[data-masquer]');
+    masquer.checked = lirePreferences().planningMasquer !== false;
+    masquer.addEventListener('change', () => { ecrirePreferences({ planningMasquer: masquer.checked }); this.planning.regler({ masque: this.#masque() }); });
     this.du = this.requete.du ?? null;
     this.#definition();
     await this.#charger();
     await this.#aPlanifier();
+  }
+
+  /**
+   * Temps non travaillé masqué (préférence `planningMasquer`, cochée par défaut) : heures hors de celles de l'entreprise
+   * (échelle de l'heure) et jours masqués des paramètres globaux.
+   */
+  #masque() {
+    const p = this.parametres;
+    if (!p || lirePreferences().planningMasquer === false) return null;
+    return { heures: p.heure_debut != null ? [p.heure_debut, p.heure_fin] : null, jours: [p.masquer_vendredi && 5, p.masquer_samedi && 6, p.masquer_dimanche && 0].filter((j) => typeof j === 'number') };
   }
 
   fermer() {
@@ -646,6 +660,60 @@ export class PagePlanning extends PageBase {
     });
     barre.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
       if (confirm('Supprimer cette tâche ?')) await this.#supprimer(t.id);
+    });
+  }
+}
+
+/** Heures entières proposées pour les heures travaillées (minutes depuis minuit). */
+const HEURES_TRAVAIL = Array.from({ length: 25 }, (_, h) => ({ valeur: String(h * 60), libelle: `${String(h).padStart(2, '0')}:00` }));
+
+/**
+ * Paramètres du planning (globaux, administrateur) : affichage — heures travaillées par l'entreprise (masquées en
+ * dehors à l'échelle de l'heure), vendredi, samedi et dimanche masqués —, seuil de sous-occupation, horizon du créneau.
+ */
+export class PageParametresPlanning extends PageBase {
+  icone = '📅';
+
+  async ouvrir() {
+    this.titre = 'Paramètres du planning';
+    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">📅 Paramètres du planning</h1></div><div data-corps></div></div>`;
+    const corps = this.conteneur.querySelector('[data-corps]');
+    if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const admin = this.app.estAdmin();
+    const ro = admin ? '' : 'disabled';
+    const p = await api.planning.parametres();
+    const jour = (cle, libelle, aide) => `<label title="${aide}"><input type="checkbox" data-${cle} ${p[`masquer_${cle}`] ? 'checked' : ''} ${ro}> ${libelle}</label>`;
+    corps.innerHTML = `<div class="titre-actions"><h2>Affichage</h2>${admin ? '<span class="titre-actions-boutons"><button type="button" data-enregistrer title="Enregistrer les paramètres">💾 Enregistrer</button></span>' : ''}</div>
+      <p class="aide">Masqués dans les vues quand l'option « Masquer le temps non travaillé » de la barre du planning est cochée.</p>
+      <table class="tableau-compact largeur-contenu"><tbody>
+      <tr><td>Début des heures travaillées<br><small class="aide">avant : masqué à l'échelle de l'heure</small></td><td data-debut></td></tr>
+      <tr><td>Fin des heures travaillées<br><small class="aide">après : masqué à l'échelle de l'heure</small></td><td data-fin></td></tr>
+      <tr><td>Jours masqués<br><small class="aide">à toutes les échelles sauf la semaine</small></td><td>${jour('vendredi', 'Vendredi', 'Un service qui ne travaille qu\'un vendredi sur deux l\'a en absence dans son calendrier')} ${jour('samedi', 'Samedi', '')} ${jour('dimanche', 'Dimanche', '')}</td></tr>
+      </tbody></table>
+      <h2>Charge et créneaux</h2>
+      <table class="tableau-compact largeur-contenu"><tbody>
+      <tr><td>Sous-occupation signalée au-delà de (% de la capacité disponible)</td><td><input type="number" data-sous min="0" max="100" size="4" value="${p.sous_occupation}" ${ro}></td></tr>
+      <tr><td>Horizon du premier créneau libre (jours)</td><td><input type="number" data-horizon min="1" max="365" size="4" value="${p.horizon_creneau}" ${ro}></td></tr>
+      </tbody></table>`;
+    const combo = (cle, valeur) => {
+      const c = creerCombo({ options: HEURES_TRAVAIL, valeur: String(valeur), vide: false });
+      c.size = 6;
+      c.readOnly = !admin;
+      corps.querySelector(`[data-${cle}]`).append(c);
+      return c;
+    };
+    const debut = combo('debut', p.heure_debut);
+    const fin = combo('fin', p.heure_fin);
+    corps.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+      const v = (sel) => corps.querySelector(sel);
+      try {
+        await api.planning.enregistrerParametres({
+          sous_occupation: Number(v('[data-sous]').value), horizon_creneau: Number(v('[data-horizon]').value),
+          heure_debut: Number(debut.valeurCombo), heure_fin: Number(fin.valeurCombo),
+          masquer_vendredi: v('[data-vendredi]').checked, masquer_samedi: v('[data-samedi]').checked, masquer_dimanche: v('[data-dimanche]').checked,
+        });
+        this.app.message('Paramètres enregistrés', 'succes');
+      } catch (e) { this.app.erreur(e); }
     });
   }
 }

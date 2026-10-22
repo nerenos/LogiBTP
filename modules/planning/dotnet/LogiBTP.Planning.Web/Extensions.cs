@@ -75,6 +75,7 @@ public static class Extensions
         g.MapGet("/creneau", (string? ressource, int? service, int heures, string apres, string? habilitations, ServiceCharge s, CancellationToken ct) =>
             s.CreneauAsync(ressource, service, heures, apres, habilitations, ct));
         g.MapGet("/parametres", (ServiceCharge s, CancellationToken ct) => s.ParametresAsync(ct));
+        g.MapPut("/parametres", (ParametresPlanning p, HttpContext http, ServiceCharge s, CancellationToken ct) => s.EnregistrerParametresAsync(p, Utilisateur.Depuis(http), ct));
         // Liens (lot 5) : dépendances, répétitions, jalons.
         g.MapGet("/taches/{id:long}/dependances", (long id, ServiceLiens s, CancellationToken ct) => s.DependancesAsync(id, ct));
         g.MapPut("/taches/{id:long}/dependances", (long id, List<DependanceSaisie> l, HttpContext http, ServiceLiens s, CancellationToken ct) =>

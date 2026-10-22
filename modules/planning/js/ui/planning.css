@@ -45,6 +45,8 @@
   background-image: linear-gradient(to right, rgba(148, 163, 184, .25) 1px, transparent 1px);
 }
 .vp-weekend { position: absolute; top: 0; bottom: 0; background: rgba(148, 163, 184, .12); }
+/* Période masquée (heures non travaillées, jours masqués) : trait de coupure. */
+.vp-coupure { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid rgba(100, 116, 139, .7); margin-left: -1px; }
 .vp-separation { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid rgba(148, 163, 184, .25); }
 .vp-barre {
   position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: 3px; overflow: hidden;

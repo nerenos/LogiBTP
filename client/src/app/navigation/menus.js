@@ -99,6 +99,8 @@ export const MENUS_METIER = [
       { code: 'planning-chantiers', libelle: 'Chantiers (Gantt)', icone: '📊', url: '/planning?vue=CHANTIERS_GANTT' },
       { code: 'planning-charge', libelle: 'Charge par service', icone: '📈', url: '/planning?vue=CHARGE_SERVICE' },
       { code: 'planning-livraisons', libelle: 'Livraisons', icone: '🚚', url: '/planning?vue=LIVRAISONS' },
+      { separateur: true },
+      { code: 'parametrage-planning', libelle: 'Paramètres du planning…', icone: '⚙', url: '/parametres/planning' },
     ],
   },
   {
@@ -199,6 +201,7 @@ export function menus(app) {
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
         { libelle: 'Pointage : pas, validation, sous-types…', icone: '⏱', url: '/parametres/pointage', module: 'pointage' },
         { libelle: 'Exécution : modèles de parcours…', icone: '🧭', url: '/parametres/execution', module: 'execution' },
+        { libelle: 'Planning : heures travaillées, jours masqués…', icone: '📅', url: '/parametres/planning', module: 'planning' },
         { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },

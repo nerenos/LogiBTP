@@ -142,6 +142,8 @@ export const api = {
     creerJalon: (j) => appel('POST', '/planning/jalons', j),
     supprimerJalon: (id) => appel('DELETE', `/planning/jalons/${id}`),
     creneau: (f) => appel('GET', `/planning/creneau?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    parametres: () => appel('GET', '/planning/parametres'),
+    enregistrerParametres: (p) => appel('PUT', '/planning/parametres', p),
   },
   // Liaisons croisées (cœur) : planning théorique depuis le parcours, ordre ↔ planning, réalisé d'une tâche.
   liaisons: {

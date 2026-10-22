@@ -1,6 +1,7 @@
 import { echapper } from '@logibtp/socle/ui';
 import { ECHELLES, colonnes, lignesEntete, aujourdhui, arrondirAuPas, depuisMinutes } from '../src/temps.js';
 import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
+import { creerAxe } from '../src/axe.js';
 
 /**
  * Vue du planning (module Planning, sans métier) : axe du temps en colonnes, lignes (ressources, chantiers…) en
@@ -13,7 +14,8 @@ import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
  * Options : debut, fin (minutes), echelle (HEURE, DEMI_JOUR, JOUR, SEMAINE), largeurColonne (px), hauteurVoie (px),
  * hauteurAdaptee (vrai : une voie par barre superposée), pas (minutes, 15), lecture, largeurEntete (px), aujourdhui (minuit du
  * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun), lignesTexte (lignes de texte des barres, 1 par défaut :
- * fixe la hauteur des voies, sauf hauteurVoie donnée),
+ * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
+ * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
  * actions { deplacer({ tache, debut, fin, ligne, copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant }) }.
  */
@@ -27,6 +29,7 @@ export class VuePlanning {
   #dureeMax = 0;
   #image = 0;
   #glisser = null;
+  #axe = null;
   selection = null;
 
   constructor(conteneur, options = {}) {
@@ -75,7 +78,17 @@ export class VuePlanning {
 
   get options() { return this.#o; }
   get minutesParPixel() { return ECHELLES[this.#o.echelle].minutes / this.#o.largeurColonne; }
-  x(m) { return (m - this.#o.debut) / this.minutesParPixel; }
+  /** Position (px) d'un instant ; un instant masqué est placé au début de la période visible suivante. */
+  x(m) { return this.#axe.x(m); }
+  /** Instant (minutes) d'une position (px). */
+  instantDe(px) { return this.#axe.instant(px); }
+
+  /** Masque appliqué à l'échelle courante. */
+  #masqueEffectif() {
+    const { masque, echelle } = this.#o;
+    if (!masque || echelle === 'SEMAINE') return null;
+    return { heures: echelle === 'HEURE' ? masque.heures ?? null : null, jours: masque.jours ?? [] };
+  }
 
   /** Remplace les lignes et les tâches (tâches d'une ligne inconnue ignorées). */
   definirDonnees(lignes, taches) {
@@ -137,7 +150,7 @@ export class VuePlanning {
   allerA(m) { this.corps.scrollLeft = Math.max(0, this.x(m) - this.corps.clientWidth / 2); }
 
   #instantCentre() {
-    return this.corps.clientWidth ? this.#o.debut + (this.corps.scrollLeft + this.corps.clientWidth / 2) * this.minutesParPixel : null;
+    return this.corps.clientWidth && this.#axe ? this.instantDe(this.corps.scrollLeft + this.corps.clientWidth / 2) : null;
   }
 
   #appliquerDimensions() {
@@ -146,7 +159,8 @@ export class VuePlanning {
     s.setProperty('--vp-voie', `${this.#o.hauteurVoie}px`);
     s.setProperty('--vp-lignes', String(this.#o.lignesTexte));
     this.conteneur.classList.toggle('multiligne', this.#o.lignesTexte > 1);
-    this.plan.style.width = `${Math.max(0, this.x(this.#o.fin))}px`;
+    this.#axe = creerAxe(this.#o.debut, this.#o.fin, this.minutesParPixel, this.#masqueEffectif());
+    this.plan.style.width = `${Math.max(0, this.#axe.largeur)}px`;
     this.conteneur.querySelector('.vp-entete-plan').style.width = this.plan.style.width;
     this.#dessinerEntete();
     this.#dessinerFond();
@@ -194,7 +208,8 @@ export class VuePlanning {
     this.conteneur.style.setProperty('--vp-hauteur-entete', `${lignes.length * 20 + 2}px`);
     this.conteneur.querySelector('.vp-entete-plan').innerHTML = lignes.map((l, i) => `<div class="vp-entete-ligne niveau-${l.niveau.toLowerCase()}${i < lignes.length - 1 ? ' large' : ''}" style="top:${i * 20}px">${l.cellules.map((x) => {
       const w = larg(x.debut, x.fin);
-      return `<div class="${x.weekend ? 'weekend' : ''}" style="left:${Math.max(0, this.x(x.debut))}px;width:${w}px" title="${echapper(x.libelle)}"><span>${w >= 26 ? echapper(x.libelle) : ''}</span></div>`;
+      if (w <= 0) return ''; // cellule masquée
+      return `<div class="${x.weekend ? 'weekend' : ''}" style="left:${this.x(Math.max(x.debut, debut))}px;width:${w}px" title="${echapper(x.libelle)}"><span>${w >= 26 ? echapper(x.libelle) : ''}</span></div>`;
     }).join('')}</div>`).join('') + this.#aujourdhui();
   }
 
@@ -217,7 +232,7 @@ export class VuePlanning {
     if (j == null) return '';
     const a = this.#o.echelle === 'SEMAINE' ? colonnes(j, j + 1, 'SEMAINE')[0].debut : j;
     const b = a + (this.#o.echelle === 'SEMAINE' ? 10080 : 1440);
-    if (b <= this.#o.debut || a >= this.#o.fin) return '';
+    if (b <= this.#o.debut || a >= this.#o.fin || this.x(b) <= this.x(a)) return '';
     return `<div class="vp-aujourdhui" style="left:${this.x(a)}px;width:${this.x(b) - this.x(a)}px" title="Aujourd'hui"></div>`;
   }
 
@@ -228,7 +243,8 @@ export class VuePlanning {
     fond.style.backgroundSize = `${largeurColonne}px 100%`;
     fond.style.backgroundPositionX = `${this.x(colonnes(debut, debut + 1, echelle)[0]?.debut ?? debut)}px`;
     fond.innerHTML = (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
-      .map((x) => `<div class="vp-weekend" style="left:${this.x(x.debut)}px;width:${1440 / this.minutesParPixel}px"></div>`).join('')) + this.#aujourdhui();
+      .map((x) => [this.x(x.debut), this.x(x.fin)]).filter(([a, b]) => b > a).map(([a, b]) => `<div class="vp-weekend" style="left:${a}px;width:${b - a}px"></div>`).join(''))
+      + this.#axe.coupures.map((x) => `<div class="vp-coupure" style="left:${x}px" title="Période masquée"></div>`).join('') + this.#aujourdhui();
   }
 
   /** Dessine tout de suite (sans attendre l'image suivante). */
@@ -257,8 +273,8 @@ export class VuePlanning {
     const marge = 200;
     const i0 = Math.max(0, ligneA(this.#positions, c.scrollTop - marge));
     const i1 = ligneA(this.#positions, c.scrollTop + c.clientHeight + marge);
-    const t0 = this.#o.debut + (c.scrollLeft - marge) * this.minutesParPixel;
-    const t1 = this.#o.debut + (c.scrollLeft + c.clientWidth + marge) * this.minutesParPixel;
+    const t0 = this.instantDe(c.scrollLeft - marge);
+    const t1 = this.instantDe(c.scrollLeft + c.clientWidth + marge);
     const lignes = [];
     const barres = [];
     for (let i = i0; i <= i1; i++) {
@@ -297,7 +313,7 @@ export class VuePlanning {
     const r = this.plan.getBoundingClientRect();
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
-    return { ligne: ligneA(this.#positions, y), instant: this.#o.debut + x * this.minutesParPixel, x, y };
+    return { ligne: ligneA(this.#positions, y), instant: this.instantDe(x), x, y };
   }
 
   #selectionner(t) {

@@ -9,7 +9,15 @@ public class ParametrePlanningEntite
     public short PplId { get; set; } = 1;
     public short PplSousOccupation { get; set; } = 40;
     public short PplHorizonCreneau { get; set; } = 60;
+    public short PplHeureDebut { get; set; } = 420;
+    public short PplHeureFin { get; set; } = 1080;
+    public bool PplMasquerVendredi { get; set; }
+    public bool PplMasquerSamedi { get; set; } = true;
+    public bool PplMasquerDimanche { get; set; } = true;
 }
+
+/// <summary>Paramètres globaux du planning (seuils, affichage : heures travaillées, jours masqués).</summary>
+public sealed record ParametresPlanning(short SousOccupation, short HorizonCreneau, short HeureDebut, short HeureFin, bool MasquerVendredi, bool MasquerSamedi, bool MasquerDimanche);
 
 public class NotificationEntite
 {
@@ -211,6 +219,29 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
         return meilleur;
     }
 
-    public async Task<object> ParametresAsync(CancellationToken ct) =>
-        await db.Parametres.AsNoTracking().FirstOrDefaultAsync(ct) is { } p ? new { sous_occupation = p.PplSousOccupation, horizon_creneau = p.PplHorizonCreneau } : new { sous_occupation = (short)40, horizon_creneau = (short)60 };
+    public async Task<ParametresPlanning> ParametresAsync(CancellationToken ct) =>
+        Lire(await db.Parametres.AsNoTracking().FirstOrDefaultAsync(ct) ?? new ParametrePlanningEntite());
+
+    private static ParametresPlanning Lire(ParametrePlanningEntite p) =>
+        new(p.PplSousOccupation, p.PplHorizonCreneau, p.PplHeureDebut, p.PplHeureFin, p.PplMasquerVendredi, p.PplMasquerSamedi, p.PplMasquerDimanche);
+
+    /// <summary>Enregistre les paramètres globaux (administrateur ; heures entières, début avant la fin).</summary>
+    public async Task<ParametresPlanning> EnregistrerParametresAsync(ParametresPlanning s, Utilisateur u, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (s.HeureDebut < 0 || s.HeureFin > 1440 || s.HeureDebut >= s.HeureFin || s.HeureDebut % 60 != 0 || s.HeureFin % 60 != 0)
+            throw ExceptionMetier.Invalide("PLA_HEURES_TRAVAIL", "Heures travaillées : heures entières, le début avant la fin");
+        if (s.SousOccupation is < 0 or > 100 || s.HorizonCreneau is < 1 or > 365) throw ExceptionMetier.Invalide("PLA_PARAMETRE", "Seuil (0 à 100 %) ou horizon (1 à 365 jours) invalide");
+        var p = await db.Parametres.FirstOrDefaultAsync(ct);
+        if (p is null) { p = new ParametrePlanningEntite(); db.Parametres.Add(p); }
+        p.PplSousOccupation = s.SousOccupation;
+        p.PplHorizonCreneau = s.HorizonCreneau;
+        p.PplHeureDebut = s.HeureDebut;
+        p.PplHeureFin = s.HeureFin;
+        p.PplMasquerVendredi = s.MasquerVendredi;
+        p.PplMasquerSamedi = s.MasquerSamedi;
+        p.PplMasquerDimanche = s.MasquerDimanche;
+        await db.SaveChangesAsync(ct);
+        return Lire(p);
+    }
 }
