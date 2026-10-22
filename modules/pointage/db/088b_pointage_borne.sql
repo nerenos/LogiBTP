@@ -25,3 +25,17 @@ CREATE TABLE IF NOT EXISTS poi_pin (
     ppn_maj_par      VARCHAR(50)  NOT NULL,
     ppn_maj_le       TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
+
+-- Paramétrage d'une borne (rejouable) : salariés proposés filtrés par services (service principal ou service parent)
+-- et par fonctions (poste du salarié, fourni par l'application), types de main-d'œuvre proposés ; vide = tous.
+-- L'ancien service unique (pap_service) est repris dans pap_services puis retiré.
+ALTER TABLE poi_appareil ADD COLUMN IF NOT EXISTS pap_services  INT[];
+ALTER TABLE poi_appareil ADD COLUMN IF NOT EXISTS pap_fonctions TEXT[];
+ALTER TABLE poi_appareil ADD COLUMN IF NOT EXISTS pap_types_mo  INT[];
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'poi_appareil' AND column_name = 'pap_service') THEN
+        UPDATE poi_appareil SET pap_services = ARRAY[pap_service] WHERE pap_service IS NOT NULL AND pap_services IS NULL;
+        ALTER TABLE poi_appareil DROP COLUMN pap_service;
+    END IF;
+END $$;

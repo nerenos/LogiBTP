@@ -12,7 +12,10 @@ public class AppareilEntite
     public int PapId { get; set; }
     public string PapLibelle { get; set; } = "";
     public string PapJetonHache { get; set; } = "";
-    public int? PapService { get; set; }
+    /// <summary>Services, fonctions (postes) et types de main-d'œuvre proposés par la borne ; nul ou vide : tous.</summary>
+    public int[]? PapServices { get; set; }
+    public string[]? PapFonctions { get; set; }
+    public int[]? PapTypesMo { get; set; }
     public bool PapPinExige { get; set; } = true;
     public bool PapActif { get; set; } = true;
     public string PapCreePar { get; set; } = "";
@@ -30,7 +33,9 @@ public class PinEntite
     public DateTimeOffset PpnMajLe { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public sealed record AppareilSaisi(string Libelle, int? Service, bool PinExige = true, bool Actif = true);
+/// <summary>Borne saisie ; services, fonctions et types de MO nuls à la modification : inchangés (vides : tous).</summary>
+public sealed record AppareilSaisi(string Libelle, int? Service = null, bool PinExige = true, bool Actif = true,
+    List<int>? Services = null, List<string>? Fonctions = null, List<int>? TypesMo = null);
 public sealed record PinSaisi(string? Pin);
 public sealed record Identification(int Salarie, string? Pin);
 /// <summary>Pointage saisi à la borne (jeton de saisie de l'identification).</summary>
@@ -108,7 +113,11 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     {
         await Rh(u, ct);
         return await db.Appareils.AsNoTracking().OrderBy(a => a.PapLibelle)
-            .Select(a => new { id = a.PapId, libelle = a.PapLibelle, service = a.PapService, pin_exige = a.PapPinExige, actif = a.PapActif, cree_par = a.PapCreePar, cree_le = a.PapCreeLe, vu_le = a.PapVuLe })
+            .Select(a => new
+            {
+                id = a.PapId, libelle = a.PapLibelle, services = a.PapServices ?? Array.Empty<int>(), fonctions = a.PapFonctions ?? Array.Empty<string>(),
+                types_mo = a.PapTypesMo ?? Array.Empty<int>(), pin_exige = a.PapPinExige, actif = a.PapActif, cree_par = a.PapCreePar, cree_le = a.PapCreeLe, vu_le = a.PapVuLe,
+            })
             .ToListAsync(ct);
     }
 
@@ -118,7 +127,8 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("BORNES");
         if (string.IsNullOrWhiteSpace(s.Libelle)) throw ExceptionMetier.Invalide("BORNE_LIBELLE", "Libellé obligatoire");
         var jeton = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        var a = new AppareilEntite { PapLibelle = s.Libelle.Trim(), PapService = s.Service, PapPinExige = s.PinExige, PapJetonHache = Sha256(jeton), PapCreePar = u.Code };
+        var a = new AppareilEntite { PapLibelle = s.Libelle.Trim(), PapPinExige = s.PinExige, PapJetonHache = Sha256(jeton), PapCreePar = u.Code };
+        Parametrer(a, s);
         db.Appareils.Add(a);
         await db.SaveChangesAsync(ct);
         return new { id = a.PapId, jeton };
@@ -139,12 +149,30 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     {
         if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("BORNES");
         var a = await db.Appareils.FirstOrDefaultAsync(x => x.PapId == id, ct) ?? throw ExceptionMetier.Introuvable($"Borne {id}");
+        if (string.IsNullOrWhiteSpace(s.Libelle)) throw ExceptionMetier.Invalide("BORNE_LIBELLE", "Libellé obligatoire");
         a.PapLibelle = s.Libelle.Trim();
-        a.PapService = s.Service;
         a.PapPinExige = s.PinExige;
         a.PapActif = s.Actif;
+        Parametrer(a, s);
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Filtres de la borne : listes nulles = inchangées, vides = tous (service unique ancien : repris).</summary>
+    private static void Parametrer(AppareilEntite a, AppareilSaisi s)
+    {
+        var services = s.Services ?? (s.Service is int srv ? [srv] : null);
+        if (services is not null) a.PapServices = services.Count > 0 ? [.. services.Distinct()] : null;
+        if (s.Fonctions is not null)
+        {
+            var f = s.Fonctions.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().ToArray();
+            a.PapFonctions = f.Length > 0 ? f : null;
+        }
+        if (s.TypesMo is not null) a.PapTypesMo = s.TypesMo.Count > 0 ? [.. s.TypesMo.Distinct()] : null;
+    }
+
+    /// <summary>Salariés proposés par la borne : ses services (et sous-services) et ses fonctions.</summary>
+    private Task<List<SalariePointage>> SalariesBorneAsync(AppareilEntite a, CancellationToken ct) =>
+        specialisation.SalariesAsync(db, new FiltreSalaries(null, null, Taille: 1000, Services: a.PapServices, Fonctions: a.PapFonctions), ct);
 
     public async Task<object> PinsAsync(int? service, Utilisateur u, CancellationToken ct)
     {
@@ -212,15 +240,27 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     public async Task<object> OuvrirAsync(HttpContext http, CancellationToken ct)
     {
         var a = await AppareilAsync(http, ct);
-        var salaries = await specialisation.SalariesAsync(db, new FiltreSalaries(a.PapService, null), ct);
+        var salaries = await SalariesBorneAsync(a, ct);
         var ids = salaries.Select(s => s.Id).ToList();
         var pins = await db.Pins.AsNoTracking().Where(p => ids.Contains(p.PpnSalId)).Select(p => p.PpnSalId).ToListAsync(ct);
+        // Types de main-d'œuvre de la borne (vide : tous) ; équipes des services de la borne (sans service : toutes).
+        var types = (await specialisation.TypesMoAsync(db, ct)).Where(t => a.PapTypesMo is not { Length: > 0 } || a.PapTypesMo.Contains(t.Id)).ToList();
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
+        var equipes = new List<EquipePointage>();
+        if (a.PapServices is { Length: > 0 })
+            foreach (var srv in a.PapServices) equipes.AddRange(await specialisation.EquipesAsync(db, srv, aujourdhui, ct));
+        else equipes = await specialisation.EquipesAsync(db, null, aujourdhui, ct);
+        equipes = equipes.DistinctBy(e => e.Id).ToList();
         return new
         {
             appareil = new { a.PapId, libelle = a.PapLibelle, pin_exige = a.PapPinExige, actif = a.PapActif, test = EnTest(http) },
-            referentiels = await pointage.ReferentielsAsync(ct),
+            referentiels = new
+            {
+                parametres = await pointage.ParametresAsync(ct), types_mo = types,
+                sous_types = (await pointage.SousTypesAsync(ct)).Where(x => x.Actif).ToList(), services = await specialisation.ServicesAsync(db, ct),
+            },
             motifs = await specialisation.MotifsAsync(db, "NON_CONFORMITE", ct),
-            equipes = await specialisation.EquipesAsync(db, a.PapService, DateOnly.FromDateTime(DateTime.Today), ct),
+            equipes,
             salaries = salaries.Select(s => new { s.Id, s.Nom, s.Prenom, s.Matricule, pin = pins.Contains(s.Id) }),
         };
     }
@@ -229,6 +269,8 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     public async Task<object> IdentifierAsync(HttpContext http, Identification i, CancellationToken ct)
     {
         var a = await AppareilAsync(http, ct);
+        if (!(await SalariesBorneAsync(a, ct)).Any(s => s.Id == i.Salarie))
+            throw ExceptionMetier.Invalide("BORNE_SALARIE", "Ce salarié ne pointe pas sur cette borne");
         var pin = await db.Pins.FirstOrDefaultAsync(p => p.PpnSalId == i.Salarie, ct);
         // Essai : PIN passé (vide) accepté ; un PIN saisi est vérifié sans compter les essais.
         if (EnTest(http))
@@ -290,6 +332,8 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     {
         var a = await AppareilAsync(http, ct);
         var salarie = jetons.Salarie(p.Jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_JETON", "Identification expirée : recommencer");
+        if (a.PapTypesMo is { Length: > 0 } && !a.PapTypesMo.Contains(p.TypeMo))
+            throw ExceptionMetier.Invalide("BORNE_TYPE_MO", "Type de main-d'œuvre non proposé par cette borne");
         var membres = (p.Membres is { Count: > 0 } ? p.Membres : [salarie]).Distinct().ToList();
         var groupe = membres.Count > 1 ? Guid.NewGuid() : (Guid?)null;
         var auteur = Auteur(a);

@@ -158,7 +158,7 @@ public sealed record SousTypeDto(string Code, string Libelle, bool Productif, bo
 
 /// <summary>Salarié (ou intérimaire) pointable, fourni par l'application.</summary>
 public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire,
-    int? PpfId = null, string? Agence = null, string? Code = null, string? MatriculePaie = null);
+    int? PpfId = null, string? Agence = null, string? Code = null, string? MatriculePaie = null, string? Fonction = null);
 /// <summary>Chantier (ou chantier interne) pointable.</summary>
 public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne);
 /// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>
@@ -169,7 +169,12 @@ public sealed record OrdrePointage(long Id, int ChaId, string? Numero, string? O
 public sealed record ServicePointageDto(int Id, string Code, string Libelle, int? ParentId);
 public sealed record MotifPointage(string Code, string Libelle);
 public sealed record EquipePointage(int Id, string Libelle, int[] Membres);
-public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCollection<int>? Ids = null, int Taille = 200);
+/// <summary>
+/// Filtre des salariés : service (et ses sous-services), recherche, identifiants ; bornes : plusieurs services et
+/// fonctions (poste du salarié) — vide ou nul : tous.
+/// </summary>
+public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCollection<int>? Ids = null, int Taille = 200,
+    IReadOnlyCollection<int>? Services = null, IReadOnlyCollection<string>? Fonctions = null);
 
 /// <summary>Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau).</summary>
 public sealed record PointageSaisi(long? Id, DateOnly Date, int? ChaId, long? EntId, int? TypeMo, string? SousType, int Minutes,
@@ -205,6 +210,8 @@ public abstract class SpecialisationPointage
     public abstract Task<List<MotifPointage>> MotifsAsync(PointageDbContext db, string domaine, CancellationToken ct);
     /// <summary>Équipes d'un service (toutes si null) et leurs membres (salariés) à une date : saisie d'équipe.</summary>
     public abstract Task<List<EquipePointage>> EquipesAsync(PointageDbContext db, int? service, DateOnly date, CancellationToken ct);
+    /// <summary>Fonctions des salariés actifs (filtre des bornes ; défaut : aucune).</summary>
+    public virtual Task<List<string>> FonctionsAsync(PointageDbContext db, CancellationToken ct) => Task.FromResult(new List<string>());
     /// <summary>Ordre désigné par son numéro (QR code de l'ordre).</summary>
     public virtual Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) => Task.FromResult<OrdrePointage?>(null);
     /// <summary>Chantiers proposés pour la journée d'un salarié (tâches du planning, par exemple).</summary>
@@ -296,6 +303,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
         types_mo = await specialisation.TypesMoAsync(db, ct),
         sous_types = (await SousTypesAsync(ct)).Where(s => s.Actif).ToList(),
         services = await specialisation.ServicesAsync(db, ct),
+        fonctions = await specialisation.FonctionsAsync(db, ct),
     };
 
     /// <summary>Ordres en cours d'un chantier (saisie en cascade : chantier choisi → ses ordres).</summary>

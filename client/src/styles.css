@@ -640,3 +640,11 @@ body.mode-borne #bandeau { display: none; }
 .tableau-compact input[size="60"] { min-width: 28rem; }
 /* Durées : la colonne du jour fixe la largeur (pas l'attribut size). */
 .tableau-compact input.duree { min-width: 0; }
+
+/* Bornes : paramétrage sous la ligne ; choix multiple en étiquettes + combo d'ajout. */
+.tableau-compact tr.parametrage-borne > td { background: color-mix(in srgb, var(--accent-clair) 35%, transparent); padding: .5rem .7rem; }
+.parametrage-borne-champs { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: .5rem 1rem; align-items: start; }
+.choix-multiple { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; margin-top: .2rem; }
+.etiquette-choix { display: inline-flex; align-items: center; gap: .2rem; padding: 0 .1rem 0 .45rem; border: 1px solid var(--bord); border-radius: .7rem; background: var(--surface); font-size: .9em; }
+.etiquette-choix button { border: none; background: none; padding: 0 .2rem; cursor: pointer; color: var(--discret); }
+.choix-multiple .combo, .tableau-compact .choix-multiple .combo { width: 12rem; }

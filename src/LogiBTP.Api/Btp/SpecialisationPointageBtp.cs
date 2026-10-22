@@ -20,12 +20,14 @@ public class SpecialisationPointageBtp : SpecialisationPointage
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,
                    (s.sal_statut = 'INTERIM') AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence,
-                   s.sal_code AS code, s.sal_matricule_paie AS matricule_paie
+                   s.sal_code AS code, s.sal_matricule_paie AS matricule_paie, s.sal_poste AS fonction
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
             LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
             WHERE (@ids IS NULL AND s.sal_actif AND (s.sal_date_sortie IS NULL OR s.sal_date_sortie >= current_date - 31)
                    AND (@srv IS NULL OR sv.srv_id = @srv OR sv.srv_parent_id = @srv)
+                   AND (@srvs IS NULL OR sv.srv_id = ANY(@srvs) OR sv.srv_parent_id = ANY(@srvs))
+                   AND (@fct IS NULL OR s.sal_poste = ANY(@fct))
                    AND (@r IS NULL OR s.sal_nom ILIKE @r OR s.sal_prenom ILIKE @r OR s.sal_matricule ILIKE @r OR s.sal_code ILIKE @r OR s.sal_matricule_paie ILIKE @r)
                    OR s.sal_id = ANY(@ids))
             ORDER BY s.sal_nom, s.sal_prenom
@@ -33,6 +35,8 @@ public class SpecialisationPointageBtp : SpecialisationPointage
             """,
             new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)f.Ids?.ToArray() ?? DBNull.Value },
             new NpgsqlParameter("srv", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)f.Service ?? DBNull.Value },
+            new NpgsqlParameter("srvs", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = f.Services is { Count: > 0 } ? f.Services.ToArray() : DBNull.Value },
+            new NpgsqlParameter("fct", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = f.Fonctions is { Count: > 0 } ? f.Fonctions.ToArray() : DBNull.Value },
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(f.Recherche) ? DBNull.Value : $"%{f.Recherche.Trim()}%" },
             new NpgsqlParameter("n", f.Ids?.Count ?? f.Taille)).ToListAsync(ct);
 
@@ -115,6 +119,11 @@ public class SpecialisationPointageBtp : SpecialisationPointage
         .Where(t => t.Taux is not null).ToDictionary(t => t.Id, t => (t.Taux!.Value, t.Source));
 
     private sealed record TauxSalarie(int Id, decimal? Taux, string Source);
+
+    /// <summary>Fonctions = postes des salariés actifs (filtre des bornes).</summary>
+    public override Task<List<string>> FonctionsAsync(PointageDbContext db, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<string>(
+            "SELECT DISTINCT sal_poste AS \"Value\" FROM salarie WHERE sal_actif AND coalesce(sal_poste, '') <> '' ORDER BY 1").ToListAsync(ct);
 
     public override Task<List<MotifPointage>> MotifsAsync(PointageDbContext db, string domaine, CancellationToken ct) =>
         db.Database.SqlQueryRaw<MotifPointage>("SELECT mot_code AS code, mot_libelle AS libelle FROM motif WHERE mot_domaine = @d AND mot_actif ORDER BY mot_ordre, mot_libelle",

@@ -29,6 +29,31 @@ async function appel(methode, url, corps) {
   return d;
 }
 
+/**
+ * Choix multiple : étiquettes des valeurs retenues (✕ pour retirer) et combo d'ajout des options restantes (jamais de
+ * <select multiple>). `valeurs` : valeurs retenues, dans l'ordre d'ajout ; aucune : « tous ».
+ */
+function choixMultiple({ options, valeurs = [], titre = 'Ajouter' }) {
+  const racine = document.createElement('div');
+  racine.className = 'choix-multiple';
+  let retenues = [...valeurs];
+  const egal = (a, b) => String(a) === String(b);
+  const rendre = () => {
+    const restantes = options.filter((o) => !retenues.some((v) => egal(v, o.valeur)));
+    racine.innerHTML = `${retenues.length ? retenues.map((v, i) => `<span class="etiquette-choix">${echapper(options.find((o) => egal(o.valeur, v))?.libelle ?? String(v))}<button type="button" data-retirer="${i}" title="Retirer" aria-label="Retirer">✕</button></span>`).join('')
+      : '<span class="aide">tous</span>'}<span data-ajout></span>`;
+    racine.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { retenues.splice(Number(b.dataset.retirer), 1); rendre(); }));
+    if (!restantes.length) return;
+    const combo = creerCombo({ options: restantes, valeur: '', vide: true, titre });
+    combo.placeholder = `＋ ${titre.toLowerCase()}…`;
+    combo.addEventListener('change', () => { if (combo.valeurCombo !== '' && !retenues.some((v) => egal(v, combo.valeurCombo))) { retenues.push(combo.valeurCombo); rendre(); racine.querySelector('[data-ajout] input')?.focus(); } });
+    racine.querySelector('[data-ajout]').append(combo);
+  };
+  Object.defineProperty(racine, 'valeurs', { get: () => [...retenues] });
+  rendre();
+  return racine;
+}
+
 const initiales = (s) => `${s.prenom?.[0] ?? ''}${s.nom?.[0] ?? ''}`.toUpperCase();
 
 export class PageBorne extends PageBase {
@@ -266,34 +291,80 @@ export class PageParametresBornes extends PageBase {
     await this.#pins();
   }
 
-  async #bornes() {
+  /**
+   * Bornes : une ligne par borne (salariés proposés — services et fonctions —, types de main-d'œuvre, état) ; ✎ ouvre
+   * son paramétrage sous la ligne (libellé, PIN exigé, services, fonctions = postes des salariés, types de MO ; vide :
+   * tous), ⏸ / ⏵ la désactive ou la réactive, ▶ l'essaie dans une fenêtre séparée. Création : libellé et PIN exigé,
+   * puis le paramétrage s'ouvre.
+   */
+  async #bornes(ouverte = null) {
     const zone = this.conteneur.querySelector('[data-bornes]');
     let l;
     try { l = await api.pointage.appareils(); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    const service = (id) => this.ref.services.find((s) => s.id === id)?.libelle ?? 'Tous';
-    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Borne<br><small>service</small></th><th>PIN exigé</th><th>État<br><small>vue le</small></th><th></th></tr></thead><tbody>
-      ${l.map((a) => `<tr${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${echapper(service(a.service))}</small></td><td>${a.pin_exige ? 'oui' : 'non'}</td>
-        <td>${a.actif ? 'active' : 'désactivée'}<br><small class="aide">${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : 'jamais vue'}</small></td>
-        <td><button type="button" class="bouton-icone" data-basculer="${a.id}" title="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}" aria-label="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}">${a.actif ? '⏸' : '⏵'}</button>
-          ${this.app.estAdmin() ? `<button type="button" class="bouton-icone" data-tester="${a.id}" title="Tester : ouvrir la borne dans une fenêtre séparée (PIN facultatif, pointages non enregistrés)" aria-label="Tester la borne">▶</button>` : ''}</td></tr>`).join('')}</tbody></table>
-      <p class="ligne"><input data-libelle placeholder="Libellé (Atelier bois…)"> <label><input type="checkbox" data-pin checked> PIN exigé</label>
-        <span data-service></span> <button type="button" class="bouton-icone" data-creer title="Enregistrer une nouvelle borne (jeton affiché une seule fois)" aria-label="Enregistrer une borne">＋</button></p><div data-jeton></div>`;
-    const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.libelle })), valeur: '', vide: true, titre: 'Service de la borne' });
-    zone.querySelector('[data-service]').append(srv);
-    zone.querySelectorAll('[data-tester]').forEach((b) => b.addEventListener('click', async () => {
+    const admin = this.app.estAdmin();
+    const ref = this.ref;
+    const libelles = (ids, liste, champ = 'libelle') => ids.map((id) => liste.find((x) => x.id === id)?.[champ] ?? `#${id}`);
+    const resume = (valeurs) => (valeurs.length ? echapper(valeurs.join(', ')) : '<span class="aide">tous</span>');
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu bornes"><thead><tr><th>Borne<br><small>état · vue le</small></th><th>PIN<br><small>exigé</small></th>
+        <th>Services<br><small>fonctions</small></th><th>Types de main-d'œuvre</th><th></th></tr></thead><tbody>
+      ${l.map((a) => `<tr data-borne="${a.id}"${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${a.actif ? 'active' : 'désactivée'} · ${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : 'jamais vue'}</small></td>
+        <td>${a.pin_exige ? 'oui' : 'non'}</td>
+        <td>${resume(libelles(a.services, ref.services))}<br><small class="aide">${a.fonctions.length ? echapper(a.fonctions.join(', ')) : 'toutes fonctions'}</small></td>
+        <td>${resume(libelles(a.types_mo, ref.types_mo))}</td>
+        <td class="cellule-boutons">${admin ? `<button type="button" class="bouton-icone" data-parametrer="${a.id}" title="Paramétrer la borne : salariés proposés (services, fonctions), types de main-d'œuvre" aria-label="Paramétrer la borne">✎</button>` : ''}
+          <button type="button" class="bouton-icone" data-basculer="${a.id}" title="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}" aria-label="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}">${a.actif ? '⏸' : '⏵'}</button>
+          ${admin ? `<button type="button" class="bouton-icone" data-tester="${a.id}" title="Tester : ouvrir la borne dans une fenêtre séparée (PIN facultatif, pointages non enregistrés)" aria-label="Tester la borne">▶</button>` : ''}</td></tr>`).join('')}</tbody></table>
+      ${admin ? `<p class="ligne"><input data-libelle placeholder="Libellé (Atelier bois…)"> <label><input type="checkbox" data-pin checked> PIN exigé</label>
+        <button type="button" class="bouton-icone" data-creer title="Enregistrer une nouvelle borne (jeton affiché une seule fois), puis la paramétrer" aria-label="Enregistrer une borne">＋</button></p>` : ''}<div data-jeton></div>`;
+    const parametrer = (a) => {
+      zone.querySelector('tr.parametrage-borne')?.remove();
+      const tr = zone.querySelector(`tr[data-borne="${a.id}"]`);
+      const ligne = document.createElement('tr');
+      ligne.className = 'parametrage-borne';
+      ligne.innerHTML = `<td colspan="5"><div class="formulaire parametrage-borne-champs">
+          <label>Libellé <input data-p-libelle value="${echapper(a.libelle)}" maxlength="80"></label>
+          <label class="fiche-option"><input type="checkbox" data-p-pin ${a.pin_exige ? 'checked' : ''}> PIN exigé</label>
+          <div><b>Services</b> <small class="aide">service principal du salarié ou son service parent ; aucun : tous</small><div data-p-services></div></div>
+          <div><b>Fonctions</b> <small class="aide">poste du salarié ; aucune : toutes</small><div data-p-fonctions></div></div>
+          <div><b>Types de main-d'œuvre</b> <small class="aide">proposés à la borne ; aucun : tous</small><div data-p-types></div></div>
+        </div><p class="ligne"><button type="button" class="principal" data-p-enregistrer title="Enregistrer le paramétrage de la borne">💾 Enregistrer</button>
+          <button type="button" data-p-annuler>Annuler</button></p></td>`;
+      tr.after(ligne);
+      const services = choixMultiple({ options: ref.services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `↳ ${x.libelle}` : x.libelle, detail: x.code })), valeurs: a.services, titre: 'Ajouter un service' });
+      const fonctions = choixMultiple({ options: (ref.fonctions ?? []).map((x) => ({ valeur: x, libelle: x })), valeurs: a.fonctions, titre: 'Ajouter une fonction' });
+      const types = choixMultiple({ options: ref.types_mo.map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code })), valeurs: a.types_mo, titre: 'Ajouter un type de main-d\'œuvre' });
+      ligne.querySelector('[data-p-services]').append(services);
+      ligne.querySelector('[data-p-fonctions]').append(fonctions);
+      ligne.querySelector('[data-p-types]').append(types);
+      ligne.querySelector('[data-p-annuler]').addEventListener('click', () => ligne.remove());
+      ligne.querySelector('[data-p-enregistrer]').addEventListener('click', async () => {
+        try {
+          await api.pointage.modifierAppareil(a.id, {
+            libelle: ligne.querySelector('[data-p-libelle]').value, pin_exige: ligne.querySelector('[data-p-pin]').checked, actif: a.actif,
+            services: services.valeurs.map(Number), fonctions: fonctions.valeurs.map(String), types_mo: types.valeurs.map(Number),
+          });
+          this.app.message('Borne paramétrée', 'succes');
+          await this.#bornes();
+        } catch (e) { this.app.erreur(e); }
+      });
+    };
+    zone.querySelectorAll('[data-parametrer]').forEach((bt) => bt.addEventListener('click', () => parametrer(l.find((x) => String(x.id) === bt.dataset.parametrer))));
+    if (ouverte !== null) { const a = l.find((x) => x.id === ouverte); if (a) parametrer(a); }
+    zone.querySelectorAll('[data-tester]').forEach((bt) => bt.addEventListener('click', async () => {
       try {
-        const { jeton } = await api.pointage.testerAppareil(Number(b.dataset.tester));
+        const { jeton } = await api.pointage.testerAppareil(Number(bt.dataset.tester));
         this.app.naviguer(`/borne?test=${encodeURIComponent(jeton)}`, { nouvelleFenetre: true });
       } catch (e) { this.app.erreur(e); }
     }));
-    zone.querySelectorAll('[data-basculer]').forEach((b) => b.addEventListener('click', async () => {
-      const a = l.find((x) => String(x.id) === b.dataset.basculer);
-      try { await api.pointage.modifierAppareil(a.id, { libelle: a.libelle, service: a.service, pin_exige: a.pin_exige, actif: !a.actif }); await this.#bornes(); } catch (e) { this.app.erreur(e); }
+    zone.querySelectorAll('[data-basculer]').forEach((bt) => bt.addEventListener('click', async () => {
+      const a = l.find((x) => String(x.id) === bt.dataset.basculer);
+      // Seul l'état change : services, fonctions et types de MO non envoyés (inchangés).
+      try { await api.pointage.modifierAppareil(a.id, { libelle: a.libelle, pin_exige: a.pin_exige, actif: !a.actif }); await this.#bornes(); } catch (e) { this.app.erreur(e); }
     }));
-    zone.querySelector('[data-creer]').addEventListener('click', async () => {
+    zone.querySelector('[data-creer]')?.addEventListener('click', async () => {
       try {
-        const r = await api.pointage.creerAppareil({ libelle: zone.querySelector('[data-libelle]').value, service: srv.valeurCombo ? Number(srv.valeurCombo) : null, pin_exige: zone.querySelector('[data-pin]').checked });
-        await this.#bornes();
+        const r = await api.pointage.creerAppareil({ libelle: zone.querySelector('[data-libelle]').value, pin_exige: zone.querySelector('[data-pin]').checked });
+        await this.#bornes(r.id);
         const lien = `${location.origin}/borne?jeton=${encodeURIComponent(r.jeton)}`;
         this.conteneur.querySelector('[data-jeton]').innerHTML = `<p class="avertissement">Jeton de la borne (affiché une seule fois) : <code>${echapper(r.jeton)}</code><br>
           Ouvrir sur la borne : <code>${echapper(lien)}</code> (le jeton est ensuite gardé par le navigateur de la borne).</p>`;
