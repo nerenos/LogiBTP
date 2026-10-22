@@ -74,13 +74,29 @@ export function colonnes(debut, fin, echelle) {
   return r;
 }
 
-/** Groupes d'en-tête (jours, semaines ou mois) couvrant la période : { debut, fin, libelle }. */
-export function groupes(debut, fin, echelle) {
-  const unite = ECHELLES[echelle].groupe;
+/** Unités (JOUR, SEMAINE, MOIS) couvrant la période : { debut, fin, libelle }. */
+function unites(debut, fin, unite, libelle = libelleGroupe) {
   const r = [];
-  for (let m = debutUnite(debut, unite); m < fin; m = suivante(m, unite)) r.push({ debut: m, fin: suivante(m, unite), libelle: libelleGroupe(m, unite) });
+  for (let m = debutUnite(debut, unite); m < fin; m = suivante(m, unite)) r.push({ debut: m, fin: suivante(m, unite), libelle: libelle(m, unite) });
   return r;
 }
+
+/** Groupes d'en-tête (jours, semaines ou mois) couvrant la période : { debut, fin, libelle }. */
+export const groupes = (debut, fin, echelle) => unites(debut, fin, ECHELLES[echelle].groupe);
+
+/**
+ * Lignes de l'en-tête : mois et année, puis jours (semaines à l'échelle SEMAINE), puis découpage de la journée (heures,
+ * demi-journées ; absent à l'échelle du jour) : [{ niveau, cellules: [{ debut, fin, libelle, weekend }] }].
+ */
+export function lignesEntete(debut, fin, echelle) {
+  const r = [{ niveau: 'MOIS', cellules: unites(debut, fin, 'MOIS', (m) => { const l = libelleGroupe(m, 'MOIS'); return l[0].toUpperCase() + l.slice(1); }) }];
+  if (echelle === 'JOUR' || echelle === 'SEMAINE') return [...r, { niveau: echelle, cellules: colonnes(debut, fin, echelle) }];
+  const jours = unites(debut, fin, 'JOUR', (m) => libelleColonne(m, 'JOUR')).map((x) => ({ ...x, weekend: [0, 6].includes(new Date(x.debut * 60000).getUTCDay()) }));
+  return [...r, { niveau: 'JOUR', cellules: jours }, { niveau: echelle, cellules: colonnes(debut, fin, echelle) }];
+}
+
+/** Minuit du jour local (minutes depuis 1970, même convention que `versMinutes`). */
+export const aujourdhui = (d = new Date()) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 60000;
 
 /** Arrondi au pas (minutes) le plus proche. */
 export const arrondirAuPas = (m, pas) => (pas > 0 ? Math.round(m / pas) * pas : Math.round(m));

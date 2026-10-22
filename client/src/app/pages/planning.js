@@ -1,6 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
-import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante } from '@logibtp/planning';
+import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -21,6 +21,8 @@ const UNITES_DEP = { CAL: 'jours calendaires', OUV: 'jours ouvrés' };
 const MODES_DEP = { FIXE: 'Fixe (propagée)', ALERTE: 'Alerte' };
 const FREQUENCES = { JOUR: 'Chaque jour', SEMAINE: 'Chaque semaine', MOIS: 'Chaque mois' };
 const TYPES_JALON = { LIVRAISON: 'Livraison', FIN_CHANTIER: 'Fin de chantier', FIN_ORDRE: 'Fin d\'ordre', ALERTE: 'Alerte', INTERVENTION: 'Intervention', AUTRE: 'Autre' };
+const CHAMPS_MOBILE = { adresse: 'Adresse', contact: 'Contact', commentaire: 'Commentaire', liens: 'Liens' };
+const GROUPES_TACHE = { tache: 'Tâche', mobile: 'Mobile', ressource: 'Ressource', detail: 'Détail', dependance: 'Dépendance' };
 const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
 
 /** Saisie d'une tâche lue (pour la recréer ou la rétablir). */
@@ -28,7 +30,7 @@ const saisieDe = (t) => ({
   calcul: t.calcul, debut: t.debut, fin: t.fin, heures: t.heures, nb_ressources: t.nb_ressources, srv_id: t.srv_id, type_element: t.type_element,
   id_element: t.id_element, origine_type: t.origine_type, origine_id: t.origine_id, libelle: t.libelle, memo: t.memo, avancement: t.avancement,
   couleur: t.couleur, etat: t.etat, affectations: t.affectations.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id, quantite: a.quantite })),
-  habilitations: t.habilitations ?? [], parent_id: t.parent_id ?? null,
+  habilitations: t.habilitations ?? [], parent_id: t.parent_id ?? null, mobile: t.mobile ?? {},
 });
 
 /** Remet une tâche dans un état lu auparavant (version courante relue). */
@@ -135,7 +137,7 @@ export class PagePlanning extends PageBase {
       debut: 0, fin: 1440, lecture: this.consultation, actions: {
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
-        selection: (t) => { if (t) this.#editer(t.tache); },
+        selection: (t) => { if (t) { this.#editer(t.tache); this.#onglet('tache'); } },
         ouvrir: (t) => { this.#editer(t.tache); this.#onglet('tache'); },
         deposer: (e, p) => this.#deposer(e, p),
       },
@@ -300,7 +302,8 @@ export class PagePlanning extends PageBase {
     this.planning.definirDonnees(this.lignes, this.barres);
     if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }
     this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
-    if (!this.centre) { this.centre = true; this.planning.allerA(versMinutes(new Date().toISOString().slice(0, 16))); }
+    // Centrage sur maintenant après la mise en page (largeur de la vue connue).
+    if (!this.centre) { this.centre = true; const d = new Date(); requestAnimationFrame(() => this.planning.allerA(aujourdhui(d) + d.getHours() * 60 + d.getMinutes())); }
   }
 
   #onglet(nom) {
@@ -452,13 +455,12 @@ export class PagePlanning extends PageBase {
 
   /** Liens d'une tâche (lot 5) : tâche principale et tâche liée, dépendances entrantes (saisies) et sortantes, répétition. */
   async #rendreLiens(zone, t) {
-    if (!t.id) { zone.innerHTML = ''; return; }
+    if (!t.id) { zone.innerHTML = '<p class="aide">Dépendances et répétition : après l\'enregistrement de la tâche.</p>'; return; }
     const deps = await api.planning.dependances(t.id).catch(() => ({ predecesseurs: [], successeurs: [] }));
     const entrantes = deps.predecesseurs.map((d) => ({ de: d.de, libelle: d.libelle, type: d.type, decalage: d.decalage, unite: d.unite, mode: d.mode }));
     const taches = [...new Map(this.barres.filter((b) => b.tache !== t.id).map((b) => [b.tache, b])).values()];
     const rendre = () => {
-      zone.innerHTML = `<h4>Liens</h4>
-        <p>${t.parent_id ? `Tâche principale : <a href="#" data-aller-parent>${echapper(t.parent ?? `n° ${t.parent_id}`)}</a>` : '<span class="aide">Pas de tâche principale</span>'} <button type="button" data-liee>＋ Tâche liée</button></p>
+      zone.innerHTML = `<p>${t.parent_id ? `Tâche principale : <a href="#" data-aller-parent>${echapper(t.parent ?? `n° ${t.parent_id}`)}</a>` : '<span class="aide">Pas de tâche principale</span>'} <button type="button" data-liee>＋ Tâche liée</button></p>
         <p><b>Dépend de</b></p><ul class="alertes-planning">${entrantes.map((d, i) => `<li>${echapper(d.libelle ?? `n° ${d.de}`)} — ${TYPES_DEP[d.type]}, ${d.decalage} ${UNITES_DEP[d.unite]}, ${MODES_DEP[d.mode]} <button type="button" data-retirer-dep="${i}">✕</button></li>`).join('') || '<li class="aide">Aucune</li>'}</ul>
         <p class="ligne"><span data-dep-tache></span> <span data-dep-type></span> <input type="number" data-dep-decalage value="0" size="3"> <span data-dep-unite></span> <span data-dep-mode></span> <button type="button" data-ajouter-dep>＋</button></p>
         <p><button type="button" data-enregistrer-deps>Enregistrer les dépendances</button></p>
@@ -496,6 +498,9 @@ export class PagePlanning extends PageBase {
     rendre();
   }
 
+  /** Groupes repliés du détail de la tâche (préférence du navigateur). */
+  #repliees() { return lirePreferences().planningGroupesReplies ?? []; }
+
   /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
   async #editer(id) {
     const zone = this.conteneur.querySelector('[data-panneau="tache"]');
@@ -509,24 +514,31 @@ export class PagePlanning extends PageBase {
     }
     const elements = await api.planning.elements().catch(() => []);
     if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
+    const mobile = t.mobile ?? {};
+    const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${GROUPES_TACHE[cle]}</b></summary>${corps}</details>`;
     zone.innerHTML = `<h3>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</h3>
-      <p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
-      <p class="ligne">Chantier <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
-      <p class="ligne">Calcul <span data-mode></span></p>
-      <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
-      <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
-      <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>
-      <p class="ligne">État <span data-etat-tache></span> <label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
-      <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
-      <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>
-      <h4>Affectations</h4><ul data-affectations></ul>
-      <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
-      <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
-      <h4>Habilitations exigées</h4><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
-      <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>
       <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
-      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}<p class="aide" data-realise></p><div data-liens></div>`;
+      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
+        <p class="ligne">Chantier <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
+        <p class="ligne">Calcul <span data-mode></span></p>
+        <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
+        <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
+        <p class="ligne"><label>Heures <input data-heures size="7" value="${ecrireDuree(t.heures)}"></label> <label>Ressources (charge) <input type="number" data-nb min="1" size="3" value="${t.nb_ressources}"></label></p>`)}
+      ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${cle === 'adresse' || cle === 'contact' ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
+      ${groupe('ressource', `<ul data-affectations></ul>
+        <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
+        <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
+        <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
+        <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
+      ${groupe('detail', `<p class="ligne">État <span data-etat-tache></span> <label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
+        <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
+        <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>
+        <p class="aide" data-realise></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
+      ${groupe('dependance', '<div data-liens></div>')}`;
+    zone.querySelectorAll('details[data-groupe]').forEach((d) => d.addEventListener('toggle', () => {
+      ecrirePreferences({ planningGroupesReplies: [...zone.querySelectorAll('details[data-groupe]:not([open])')].map((x) => x.dataset.groupe) });
+    }));
     if (t.id && this.app.moduleActif('pointage')) {
       api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
     }
@@ -598,7 +610,7 @@ export class PagePlanning extends PageBase {
         id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
         avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
         affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version, habilitations: habs,
-        parent_id: t.parent_id ?? null,
+        parent_id: t.parent_id ?? null, mobile: Object.fromEntries([...zone.querySelectorAll('[data-mobile]')].map((x) => [x.dataset.mobile, x.value])),
       };
     };
     zone.querySelector('[data-apercu]').addEventListener('click', async () => {

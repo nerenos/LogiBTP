@@ -1,5 +1,5 @@
 import { echapper } from '@logibtp/socle/ui';
-import { ECHELLES, colonnes, groupes, arrondirAuPas, depuisMinutes } from '../src/temps.js';
+import { ECHELLES, colonnes, lignesEntete, aujourdhui, arrondirAuPas, depuisMinutes } from '../src/temps.js';
 import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
 
 /**
@@ -11,7 +11,8 @@ import { empiler, cumuler, ligneA, visibles } from '../src/disposition.js';
  *
  * Données : lignes [{ cle, libelle, ... }], taches [{ cle, ligne, debut, fin (minutes), libelle, couleur, ... }].
  * Options : debut, fin (minutes), echelle (HEURE, DEMI_JOUR, JOUR, SEMAINE), largeurColonne (px), hauteurVoie (px),
- * hauteurAdaptee (vrai : une voie par barre superposée), pas (minutes, 15), lecture, largeurEntete (px),
+ * hauteurAdaptee (vrai : une voie par barre superposée), pas (minutes, 15), lecture, largeurEntete (px), aujourdhui (minuit du
+ * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun),
  * actions { deplacer({ tache, debut, fin, ligne, copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant }) }.
  */
@@ -29,7 +30,7 @@ export class VuePlanning {
 
   constructor(conteneur, options = {}) {
     this.conteneur = conteneur;
-    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: 22, hauteurAdaptee: true, pas: 15, largeurEntete: 220, actions: {}, ...options };
+    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: 22, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), actions: {}, ...options };
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     conteneur.innerHTML = `<div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
@@ -178,13 +179,39 @@ export class VuePlanning {
     this.conteneur.querySelector('.vp-lignes-plan').style.height = h;
   }
 
+  /** En-tête sur deux ou trois lignes : mois et année, jours (ou semaines), découpage de la journée (heures, demi-journées). */
   #dessinerEntete() {
     const { debut, fin, echelle } = this.#o;
-    const g = groupes(debut, fin, echelle);
-    const c = colonnes(debut, fin, echelle);
+    const lignes = lignesEntete(debut, fin, echelle);
     const larg = (a, b) => Math.max(0, this.x(Math.min(b, fin)) - this.x(Math.max(a, debut)));
-    this.conteneur.querySelector('.vp-entete-plan').innerHTML = `<div class="vp-groupes">${g.map((x) => `<div style="left:${Math.max(0, this.x(x.debut))}px;width:${larg(x.debut, x.fin)}px">${echapper(x.libelle)}</div>`).join('')}</div>
-      <div class="vp-colonnes">${c.map((x) => `<div class="${x.weekend ? 'weekend' : ''}" style="left:${this.x(x.debut)}px;width:${this.#o.largeurColonne}px">${this.#o.largeurColonne >= 26 ? echapper(x.libelle) : ''}</div>`).join('')}</div>`;
+    this.conteneur.style.setProperty('--vp-hauteur-entete', `${lignes.length * 20 + 2}px`);
+    this.conteneur.querySelector('.vp-entete-plan').innerHTML = lignes.map((l, i) => `<div class="vp-entete-ligne niveau-${l.niveau.toLowerCase()}${i < lignes.length - 1 ? ' large' : ''}" style="top:${i * 20}px">${l.cellules.map((x) => {
+      const w = larg(x.debut, x.fin);
+      return `<div class="${x.weekend ? 'weekend' : ''}" style="left:${Math.max(0, this.x(x.debut))}px;width:${w}px" title="${echapper(x.libelle)}"><span>${w >= 26 ? echapper(x.libelle) : ''}</span></div>`;
+    }).join('')}</div>`).join('') + this.#aujourdhui();
+  }
+
+  /** Libellés des lignes regroupées (mois, jours découpés) décalés pour rester visibles au bord gauche. */
+  #libellesVisibles() {
+    const g = this.corps.scrollLeft;
+    for (const d of this.conteneur.querySelectorAll('.vp-entete-ligne.large > div')) {
+      const left = d.offsetLeft;
+      if (left + d.offsetWidth < g) continue;
+      const span = d.firstElementChild;
+      if (!span) continue;
+      const decalage = Math.max(0, Math.min(g - left, d.offsetWidth - span.offsetWidth - 8));
+      span.style.marginLeft = decalage ? `${decalage}px` : '';
+    }
+  }
+
+  /** Repère du jour (bordures rouges) : le jour, ou sa semaine à l'échelle SEMAINE. */
+  #aujourdhui() {
+    const j = this.#o.aujourdhui;
+    if (j == null) return '';
+    const a = this.#o.echelle === 'SEMAINE' ? colonnes(j, j + 1, 'SEMAINE')[0].debut : j;
+    const b = a + (this.#o.echelle === 'SEMAINE' ? 10080 : 1440);
+    if (b <= this.#o.debut || a >= this.#o.fin) return '';
+    return `<div class="vp-aujourdhui" style="left:${this.x(a)}px;width:${this.x(b) - this.x(a)}px" title="Aujourd'hui"></div>`;
   }
 
   /** Fond : week-ends et séparations des colonnes par un dégradé répété (aucun élément par colonne). */
@@ -193,8 +220,8 @@ export class VuePlanning {
     const fond = this.conteneur.querySelector('.vp-fond');
     fond.style.backgroundSize = `${largeurColonne}px 100%`;
     fond.style.backgroundPositionX = `${this.x(colonnes(debut, debut + 1, echelle)[0]?.debut ?? debut)}px`;
-    fond.innerHTML = echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
-      .map((x) => `<div class="vp-weekend" style="left:${this.x(x.debut)}px;width:${1440 / this.minutesParPixel}px"></div>`).join('');
+    fond.innerHTML = (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
+      .map((x) => `<div class="vp-weekend" style="left:${this.x(x.debut)}px;width:${1440 / this.minutesParPixel}px"></div>`).join('')) + this.#aujourdhui();
   }
 
   /** Dessine tout de suite (sans attendre l'image suivante). */
@@ -217,6 +244,7 @@ export class VuePlanning {
   #dessiner() {
     const c = this.corps;
     this.conteneur.querySelector('.vp-entete-plan').style.transform = `translateX(${-c.scrollLeft}px)`;
+    this.#libellesVisibles();
     this.conteneur.querySelector('.vp-lignes-plan').style.transform = `translateY(${-c.scrollTop}px)`;
     if (!this.#lignes.length) { this.plan.querySelector('.vp-barres').innerHTML = ''; this.conteneur.querySelector('.vp-lignes-plan').innerHTML = ''; return; }
     const marge = 200;

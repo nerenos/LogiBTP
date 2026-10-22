@@ -18,16 +18,19 @@
 .vp-coin { border-right: 1px solid var(--bord, #cbd5e1); border-bottom: 1px solid var(--bord, #cbd5e1); }
 .vp-entete { overflow: hidden; position: relative; border-bottom: 1px solid var(--bord, #cbd5e1); }
 .vp-entete-plan { position: relative; height: 100%; }
-.vp-groupes, .vp-colonnes { position: absolute; left: 0; right: 0; height: 50%; }
-.vp-groupes { top: 0; }
-.vp-colonnes { top: 50%; }
-.vp-groupes > div, .vp-colonnes > div {
+/* Lignes de l'en-tête (20 px chacune) : mois et année, jours ou semaines, découpage de la journée. */
+.vp-entete-ligne { position: absolute; left: 0; right: 0; height: 20px; }
+.vp-entete-ligne + .vp-entete-ligne { border-top: 1px solid var(--bord, #cbd5e1); }
+.vp-entete-ligne > div {
   position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  border-left: 1px solid var(--bord, #cbd5e1); padding: 2px 4px; box-sizing: border-box;
+  border-left: 1px solid var(--bord, #cbd5e1); padding: 2px 0; box-sizing: border-box; text-align: center; line-height: 15px;
 }
-.vp-groupes > div { font-weight: 600; }
-.vp-colonnes > div { text-align: center; padding: 2px 0; }
-.vp-colonnes > div.weekend { opacity: .6; }
+.vp-entete-ligne.large > div { text-align: left; padding: 2px 4px; }
+.vp-entete-ligne.niveau-mois > div { font-weight: 600; }
+.vp-entete-ligne > div.weekend { opacity: .6; }
+/* Jour courant : bordures rouges de sa colonne, dans l'en-tête et le corps. */
+.vp-aujourdhui { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; pointer-events: none; }
+.vp-entete .vp-aujourdhui { background: rgba(220, 38, 38, .08); z-index: 1; }
 .vp-lignes { overflow: hidden; position: relative; border-right: 1px solid var(--bord, #cbd5e1); }
 .vp-lignes-plan { position: relative; }
 .vp-ligne {

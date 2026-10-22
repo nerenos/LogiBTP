@@ -98,7 +98,8 @@ public sealed record DefinitionVue(string Regroupement = "RESSOURCE", string Ech
 public sealed record AffectationSaisie(string Type, string Id, int? EquipeId = null, decimal? Quantite = null);
 public sealed record TacheSaisie(int Calcul, string Debut, string? Fin, int? Heures, int NbRessources, int? SrvId, string TypeElement, string? IdElement,
     string Libelle, List<AffectationSaisie>? Affectations, string? OrigineType = null, string? OrigineId = null, string? Memo = null, int Avancement = 0,
-    string? Couleur = null, string Etat = "PREVUE", int? Version = null, List<string>? Habilitations = null, long? ParentId = null, Guid? Serie = null);
+    string? Couleur = null, string Etat = "PREVUE", int? Version = null, List<string>? Habilitations = null, long? ParentId = null, Guid? Serie = null,
+    Dictionary<string, string?>? Mobile = null);
 public sealed record DeplacementSaisi(string Debut, string Fin, string Mode, string? De, string? Vers, bool Copie, int Version);
 public sealed record ScissionSaisie(string Instant, int Version);
 
@@ -334,6 +335,8 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         if (s.ParentId == t.TacId && t.TacId != 0) throw ExceptionMetier.Invalide("PLA_PARENT", "Une tâche ne peut pas être sa propre tâche principale");
         t.TacParentId = s.ParentId;
         if (s.Serie is not null) t.TacSerie = s.Serie;
+        // Partie mobile (adresse, contact, commentaire, liens) : absente de la saisie = inchangée.
+        if (s.Mobile is not null) t.TacMobile = JsonSerializer.Serialize(s.Mobile.Where(x => !string.IsNullOrWhiteSpace(x.Value)).ToDictionary(x => x.Key, x => x.Value!.Trim()));
         t.TacMajPar = u.Code;
         t.TacMajLe = DateTimeOffset.UtcNow;
         if (t.TacId == 0)
@@ -362,7 +365,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             id = t.TacId, calcul = t.TacCalcul, debut = Ecrire(t.TacDebut), fin = Ecrire(t.TacFin), heures = t.TacHeures, nb_ressources = t.TacNbRessources, srv_id = t.TacSrvId,
             type_element = t.TacTypeElement, id_element = t.TacIdElement, element, origine_type = t.TacOrigineType, origine_id = t.TacOrigineId, libelle = t.TacLibelle,
             memo = t.TacMemo, avancement = t.TacAvancement, couleur = t.TacCouleur, etat = t.TacEtat, version = t.TacVersion, maj_par = t.TacMajPar, maj_le = t.TacMajLe,
-            habilitations = t.TacHabilitations, parent_id = t.TacParentId, serie = t.TacSerie,
+            habilitations = t.TacHabilitations, parent_id = t.TacParentId, serie = t.TacSerie, mobile = Mobile(t),
             parent = t.TacParentId is long p ? await db.Taches.AsNoTracking().Where(x => x.TacId == p).Select(x => x.TacLibelle).FirstOrDefaultAsync(ct) : null,
             affectations = affs.Select(a => new
             {
@@ -411,12 +414,19 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         Publier("supprimee", [id], u);
     }
 
+    /// <summary>Partie mobile de la tâche (textes : adresse, contact, commentaire, liens).</summary>
+    private static Dictionary<string, string?> Mobile(TacheEntite t)
+    {
+        try { return JsonSerializer.Deserialize<Dictionary<string, string?>>(t.TacMobile) ?? []; }
+        catch (JsonException) { return []; }
+    }
+
     private async Task<TacheSaisie> SaisieDeAsync(TacheEntite t, CancellationToken ct)
     {
         var affs = await db.Affectations.AsNoTracking().Where(a => a.AffTacId == t.TacId).ToListAsync(ct);
         return new TacheSaisie(t.TacCalcul, Ecrire(t.TacDebut), Ecrire(t.TacFin), t.TacHeures, t.TacNbRessources, t.TacSrvId, t.TacTypeElement, t.TacIdElement, t.TacLibelle,
             affs.Select(a => new AffectationSaisie(a.AffResType, a.AffResId, a.AffEquipeId, a.AffQuantite)).ToList(), t.TacOrigineType, t.TacOrigineId, t.TacMemo, t.TacAvancement,
-            t.TacCouleur, t.TacEtat, t.TacVersion, [.. t.TacHabilitations], t.TacParentId, t.TacSerie);
+            t.TacCouleur, t.TacEtat, t.TacVersion, [.. t.TacHabilitations], t.TacParentId, t.TacSerie, Mobile(t));
     }
 
     /// <summary>Saisie d'une tâche enregistrée (recalculs du lot 4).</summary>

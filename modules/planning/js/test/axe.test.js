@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { versMinutes, depuisMinutes, debutUnite, semaineIso, colonnes, groupes, arrondirAuPas, periodeFlottante, empiler, cumuler, ligneA, visibles } from '../src/index.js';
+import { versMinutes, depuisMinutes, debutUnite, semaineIso, colonnes, groupes, lignesEntete, aujourdhui, arrondirAuPas, periodeFlottante, empiler, cumuler, ligneA, visibles } from '../src/index.js';
 
 const m = versMinutes;
 
@@ -26,6 +26,15 @@ describe('axe du temps', () => {
     expect(colonnes(m('2026-10-22T06:00'), m('2026-10-22T09:00'), 'HEURE').map((x) => x.libelle)).toEqual(['6h', '7h', '8h']);
     expect(groupes(m('2026-10-30'), m('2026-11-02'), 'SEMAINE').map((x) => x.libelle)).toEqual(['octobre 2026', 'novembre 2026']);
     expect(groupes(m('2026-10-22'), m('2026-10-23'), 'HEURE').map((x) => x.libelle)).toEqual(['jeu 22/10/2026']);
+  });
+  it("lignes de l'en-tête : mois et année, jours, découpage de la journée", () => {
+    const l = (du, au, e) => lignesEntete(m(du), m(au), e).map((x) => [x.niveau, x.cellules.map((c) => c.libelle)]);
+    expect(l('2026-10-31', '2026-11-02', 'JOUR')).toEqual([['MOIS', ['Octobre 2026', 'Novembre 2026']], ['JOUR', ['sam 31', 'dim 1']]]);
+    expect(l('2026-10-22', '2026-10-23', 'DEMI_JOUR')).toEqual([['MOIS', ['Octobre 2026']], ['JOUR', ['jeu 22']], ['DEMI_JOUR', ['matin', 'après-midi']]]);
+    expect(l('2026-10-22T06:00', '2026-10-22T08:00', 'HEURE')).toEqual([['MOIS', ['Octobre 2026']], ['JOUR', ['jeu 22']], ['HEURE', ['6h', '7h']]]);
+    expect(l('2026-10-21', '2026-10-27', 'SEMAINE')).toEqual([['MOIS', ['Octobre 2026']], ['SEMAINE', ['S43', 'S44']]]);
+    expect(lignesEntete(m('2026-10-24'), m('2026-10-25'), 'HEURE')[1].cellules[0].weekend).toBe(true);
+    expect(depuisMinutes(aujourdhui(new Date(2026, 9, 22, 23, 30)))).toBe('2026-10-22T00:00');
   });
   it('pas et période flottante', () => {
     expect(arrondirAuPas(52, 15)).toBe(45);
