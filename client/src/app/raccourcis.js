@@ -32,5 +32,16 @@ declarerRaccourcis('document', {
   },
 });
 
+declarerRaccourcis('planning', {
+  libelle: 'Planning',
+  actions: {
+    annuler: { libelle: 'Annuler la dernière opération', defaut: 'Ctrl+Z' },
+    retablir: { libelle: 'Rétablir', defaut: 'Ctrl+Y' },
+    supprimer: { libelle: 'Supprimer la tâche sélectionnée', defaut: 'Delete' },
+    dupliquer: { libelle: 'Dupliquer la tâche sélectionnée', defaut: 'Ctrl+D' },
+    actualiser: { libelle: 'Actualiser le planning', defaut: [] },
+  },
+});
+
 /** Onglet de la page document désigné par une action. */
 export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi' };

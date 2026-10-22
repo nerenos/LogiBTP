@@ -28,6 +28,7 @@
 - `js/src/ui/theme.js` : `THEMES` (auto / clair / sombre), `appliquerTheme` (`<html data-theme>`) ; `socle.css` (importé par `client/src/main.js`).
 - `js/testing/index.js` : `lireCas`, `egal`, `verifier`, `verifierErreurs` (Node, pour les suites de jeux partagés).
 - `dotnet/LogiBTP.Socle/` : `ArrondiCalcul.cs`, `Expression.cs`, `References.cs`, `Libelles.cs`, `ErreurCalcul.cs`, `JsonCalcul.cs`, `AccesColonnes.cs`, `Chiffrement.cs` (`Chiffrement` : AES-256-GCM, clé PBKDF2 de la chaîne de l'installation, valeurs `chiffre:v1:…`, `ErreurChiffrement`).
+- `dotnet/LogiBTP.Socle.Web/Diffusion.cs` : `Diffuseur` (singleton, `AddDiffusion`) : `Publier(societe, sujet, donnees)` aux abonnés de la même base ; `MapDiffusion` : `GET /diffusion?sujets=a,b` (flux text/event-stream, `data: { sujet, donnees, le }`, maintien toutes les 25 s ; mémoire du processus : une seule instance de l'API).
 - `dotnet/LogiBTP.Socle.Web/` : `Societes.cs`, `Web.cs`, `Configuration.cs` (`AjouterFichierEnv(dossier)` : `.env` du dossier de l'application ou d'un parent, variables système prioritaires ; `AddChiffrement(configuration)` : `LOGIBTP_CLE_CHIFFREMENT`). `dotnet/LogiBTP.Socle.Testing/CasPartages.cs`. `dotnet/LogiBTP.Socle.Tests/` : `SocleTests.cs`, `SocietesTests.cs`.
 - `tests/expressions.json` : jeu partagé de l'analyseur (variables + cas `resultat` ou `erreur`).
 

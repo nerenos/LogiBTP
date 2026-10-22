@@ -114,8 +114,12 @@ public abstract class SpecialisationPlanning
 /// optimiste par version), déplacement et redimensionnement (recalcul selon le mode), scission, suppression, calcul
 /// côté serveur (<see cref="ReglesPlanning"/>), tâches à planifier (budget − planifié par élément et service).
 /// </summary>
-public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning specialisation)
+public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning specialisation, Diffuseur diffuseur, SocieteCourante societe)
 {
+    /// <summary>Événement « planning » diffusé aux navigateurs de la société (lot 3, temps réel).</summary>
+    private void Publier(string action, IEnumerable<long> taches, Utilisateur u) =>
+        diffuseur.Publier(societe, "planning", new { action, taches = taches.ToList(), par = u.Code });
+
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
     private const int HorizonJours = 120;
 
@@ -353,6 +357,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         await AppliquerAsync(t, s, u, ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        Publier("creee", [t.TacId], u);
         return await TacheAsync(t.TacId, ct);
     }
 
@@ -371,13 +376,15 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         await AppliquerAsync(t, s, u, ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        Publier("modifiee", [id], u);
         return await TacheAsync(id, ct);
     }
 
-    public async Task SupprimerAsync(long id, int version, CancellationToken ct)
+    public async Task SupprimerAsync(long id, int version, Utilisateur u, CancellationToken ct)
     {
         await VerrouAsync(id, version, ct);
         await db.Taches.Where(x => x.TacId == id).ExecuteDeleteAsync(ct);
+        Publier("supprimee", [id], u);
     }
 
     private async Task<TacheSaisie> SaisieDeAsync(TacheEntite t, CancellationToken ct)
@@ -421,6 +428,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         if (d.Mode != "deplacer") cible.TacCalcul = modeOrigine;
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        Publier(d.Copie ? "creee" : "modifiee", [cible.TacId], u);
         return await TacheAsync(cible.TacId, ct);
     }
 
@@ -437,6 +445,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         await AppliquerAsync(suite, s with { Calcul = 2, Debut = Temps.Ecrire(instant), Heures = null }, u, ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        Publier("scindee", [t.TacId, suite.TacId], u);
         return new { premiere = await TacheAsync(t.TacId, ct), seconde = await TacheAsync(suite.TacId, ct) };
     }
 

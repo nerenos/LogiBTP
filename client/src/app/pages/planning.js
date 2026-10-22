@@ -1,9 +1,10 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
+import { ecouter } from '../diffusion.js';
 
 // Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
 // tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
@@ -15,6 +16,25 @@ const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
 const COULEURS_SERVICE = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be185d', '#4d7c0f', '#dc2626'];
 const versLocal = (s) => (s ? s.slice(0, 16) : '');
+const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
+
+/** Saisie d'une tâche lue (pour la recréer ou la rétablir). */
+const saisieDe = (t) => ({
+  calcul: t.calcul, debut: t.debut, fin: t.fin, heures: t.heures, nb_ressources: t.nb_ressources, srv_id: t.srv_id, type_element: t.type_element,
+  id_element: t.id_element, origine_type: t.origine_type, origine_id: t.origine_id, libelle: t.libelle, memo: t.memo, avancement: t.avancement,
+  couleur: t.couleur, etat: t.etat, affectations: t.affectations.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id, quantite: a.quantite })),
+});
+
+/** Remet une tâche dans un état lu auparavant (version courante relue). */
+async function restaurer(id, etat) {
+  const cur = await api.planning.tache(id);
+  return api.planning.modifier(id, { ...saisieDe(etat), version: cur.version });
+}
+
+async function supprimerTache(id) {
+  const cur = await api.planning.tache(id);
+  await api.planning.supprimer(id, cur.version);
+}
 const options = (o) => Object.entries(o).map(([valeur, libelle]) => ({ valeur, libelle }));
 
 /** Vue du planning du cœur : barres libellées par chantier, couleur par service, tâches théoriques hachurées. */
@@ -37,7 +57,7 @@ class VuePlanningBtp extends VuePlanning {
 export class PagePlanning extends PageBase {
   icone = '📅';
 
-  urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du }).filter(([, v]) => v))}`; }
+  urlCourante() { return `/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: this.consultation ? '1' : '' }).filter(([, v]) => v))}`; }
 
   async ouvrir() {
     this.titre = 'Planning';
@@ -47,12 +67,19 @@ export class PagePlanning extends PageBase {
         <span data-periode class="aide"></span> <span data-echelle></span>
         <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button>
         <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
-        <button type="button" data-nouvelle>＋ Tâche</button> <span class="aide" data-etat></span></div>
+        <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
+        <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
+        <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
+        <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning" data-planning></div>
         <aside class="panneau-planning"><div class="onglets ligne"><button type="button" data-onglet="aplanifier" class="actif">À planifier</button><button type="button" data-onglet="tache">Tâche</button></div>
           <div data-panneau="aplanifier"></div><div data-panneau="tache" hidden></div></aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
+    this.consultation = this.requete.consultation === '1';
+    this.historique = [];
+    this.refaire = [];
+    this.attente = 0;
     [this.vues, this.ref] = await Promise.all([api.planning.vues(), api.planning.referentiels()]);
     this.vue = this.requete.vue ?? this.vues[0]?.code;
     this.couleurs = new Map(this.ref.services.map((s, i) => [s.id, COULEURS_SERVICE[i % COULEURS_SERVICE.length]]));
@@ -70,8 +97,16 @@ export class PagePlanning extends PageBase {
     c.querySelector('[data-recherche]').addEventListener('change', (e) => { this.recherche = e.target.value; this.#charger(); });
     c.querySelector('[data-nouvelle]').addEventListener('click', () => this.#editer(null));
     c.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => this.#onglet(b.dataset.onglet)));
+    this.#preparerSynchro();
+    this.#preparerHistorique();
+    if (this.consultation) {
+      c.querySelectorAll('[data-nouvelle], [data-annuler], [data-retablir], [data-synchro], [data-lien-consultation], .panneau-planning').forEach((x) => { x.hidden = true; });
+      const plein = c.querySelector('[data-plein-ecran]');
+      plein.hidden = false;
+      plein.addEventListener('click', () => c.querySelector('.page-planning').requestFullscreen?.());
+    }
     this.planning = new VuePlanningBtp(c.querySelector('[data-planning]'), {
-      debut: 0, fin: 1440, actions: {
+      debut: 0, fin: 1440, lecture: this.consultation, actions: {
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
         selection: (t) => { if (t) this.#editer(t.tache); },
@@ -83,6 +118,122 @@ export class PagePlanning extends PageBase {
     this.#definition();
     await this.#charger();
     await this.#aPlanifier();
+  }
+
+  fermer() {
+    this.desabonner?.();
+    clearInterval(this.intervalle);
+    clearTimeout(this.minuterie);
+    document.removeEventListener('keydown', this.clavier);
+  }
+
+  /** Synchronisation (P10) : temps réel, intervalle, pause ou manuelle (préférence du navigateur) ; consultation : temps réel. */
+  #preparerSynchro() {
+    const c = this.conteneur;
+    this.synchro = this.consultation ? 'TEMPS_REEL' : String(lirePreferences().planningSynchro ?? 'TEMPS_REEL');
+    const combo = creerCombo({ options: Object.entries(SYNCHRO).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.synchro, vide: false, titre: 'Synchronisation' });
+    c.querySelector('[data-synchro]').append(combo);
+    const appliquer = () => {
+      clearInterval(this.intervalle);
+      const n = Number(this.synchro);
+      if (n) this.intervalle = setInterval(() => { if (this.attente) this.#charger(); }, n * 1000);
+      if (this.synchro === 'TEMPS_REEL' && this.attente) this.#charger();
+    };
+    combo.addEventListener('change', () => { this.synchro = combo.valeurCombo; ecrirePreferences({ planningSynchro: this.synchro }); appliquer(); });
+    c.querySelector('[data-attente]').addEventListener('click', () => this.#charger());
+    c.querySelector('[data-lien-consultation]').addEventListener('click', (e) => {
+      e.preventDefault();
+      this.app.naviguer(`/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: '1' }).filter(([, v]) => v))}`, { nouvelleFenetre: true });
+    });
+    this.desabonner = ecouter('planning', () => {
+      this.attente++;
+      if (this.synchro === 'TEMPS_REEL') { clearTimeout(this.minuterie); this.minuterie = setTimeout(() => this.#charger(), 400); } else this.#majAttente();
+    });
+    appliquer();
+  }
+
+  #majAttente() {
+    const b = this.conteneur.querySelector('[data-attente]');
+    b.hidden = !this.attente || this.consultation;
+    b.textContent = `⟳ ${this.attente} modification${this.attente > 1 ? 's' : ''}`;
+  }
+
+  /** Annuler / rétablir (lot 3) : opérations de la session, rejouées par l'API (versions relues). */
+  #preparerHistorique() {
+    const c = this.conteneur;
+    c.querySelector('[data-annuler]').addEventListener('click', () => this.#annuler());
+    c.querySelector('[data-retablir]').addEventListener('click', () => this.#retablir());
+    this.clavier = (e) => {
+      if (this.consultation || !this.conteneur.isConnected || e.target.closest?.('input, textarea, [contenteditable]')) return;
+      const action = actionDe(e, 'planning');
+      if (!action) return;
+      e.preventDefault();
+      const b = this.planning?.selection;
+      if (action === 'annuler') this.#annuler();
+      else if (action === 'retablir') this.#retablir();
+      else if (action === 'actualiser') this.#charger();
+      else if (action === 'supprimer' && b && confirm('Supprimer la tâche sélectionnée ?')) this.#supprimer(b.tache);
+      else if (action === 'dupliquer' && b) this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true });
+    };
+    document.addEventListener('keydown', this.clavier);
+  }
+
+  #memoriser(entree) {
+    this.historique.push(entree);
+    if (this.historique.length > 50) this.historique.shift();
+    this.refaire = [];
+    this.#majHistorique();
+  }
+
+  #majHistorique() {
+    const c = this.conteneur;
+    const a = this.historique.at(-1);
+    const r = this.refaire.at(-1);
+    c.querySelector('[data-annuler]').disabled = !a;
+    c.querySelector('[data-annuler]').title = a ? `Annuler : ${a.libelle} (Ctrl+Z)` : 'Annuler (Ctrl+Z)';
+    c.querySelector('[data-retablir]').disabled = !r;
+    c.querySelector('[data-retablir]').title = r ? `Rétablir : ${r.libelle} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)';
+  }
+
+  async #annuler() {
+    const e = this.historique.pop();
+    if (!e) return;
+    await this.#apres(e.annuler(), `Annulé : ${e.libelle}`);
+    this.refaire.push(e);
+    this.#majHistorique();
+  }
+
+  async #retablir() {
+    const e = this.refaire.pop();
+    if (!e) return;
+    await this.#apres(e.retablir(), `Rétabli : ${e.libelle}`);
+    this.historique.push(e);
+    this.#majHistorique();
+  }
+
+  /** Modification d'une tâche existante, mémorisée (état avant, état après). */
+  async #modifierMemorise(id, libelle, operation) {
+    const avant = await api.planning.tache(id).catch(() => null);
+    const apres = await this.#apres(operation());
+    if (!avant || !apres) return apres;
+    const ref = { id: apres.id ?? id };
+    if (apres.id && apres.id !== id) this.#memoriserCreation(apres, libelle);
+    else this.#memoriser({ libelle, annuler: () => restaurer(ref.id, avant), retablir: () => restaurer(ref.id, apres) });
+    return apres;
+  }
+
+  #memoriserCreation(t, libelle) {
+    const ref = { id: t.id };
+    this.#memoriser({ libelle, annuler: () => supprimerTache(ref.id), retablir: async () => { ref.id = (await api.planning.creer(saisieDe(t))).id; } });
+  }
+
+  async #supprimer(id) {
+    const avant = await api.planning.tache(id).catch(() => null);
+    const ok = await this.#apres(supprimerTache(id).then(() => true), 'Tâche supprimée');
+    if (!ok || !avant) return;
+    const ref = { id };
+    this.#memoriser({ libelle: 'suppression', annuler: async () => { ref.id = (await api.planning.creer(saisieDe(avant))).id; }, retablir: () => supprimerTache(ref.id) });
+    this.conteneur.querySelector('[data-panneau="tache"]').innerHTML = '';
   }
 
   #definition() {
@@ -104,6 +255,8 @@ export class PagePlanning extends PageBase {
   }
 
   async #charger() {
+    this.attente = 0;
+    this.#majAttente();
     this.app.routeur.remplacerUrl(this.urlCourante());
     const p = this.periode;
     this.conteneur.querySelector('[data-periode]').textContent = `${depuisMinutes(p.debut).slice(0, 10)} → ${depuisMinutes(p.fin - 1).slice(0, 10)}`;
@@ -143,13 +296,29 @@ export class PagePlanning extends PageBase {
       return false;
     }
     const mode = debut - b.debut === fin - b.fin ? 'deplacer' : debut !== b.debut ? 'debut' : 'fin';
-    await this.#apres(api.planning.deplacer(b.tache, { debut: depuisMinutes(debut), fin: depuisMinutes(fin), mode, de: b.ligne, vers: ligne, copie, version: b.version }));
+    const operation = () => api.planning.deplacer(b.tache, { debut: depuisMinutes(debut), fin: depuisMinutes(fin), mode, de: b.ligne, vers: ligne, copie, version: b.version });
+    if (copie) {
+      const r = await this.#apres(operation(), 'Tâche copiée');
+      if (r) this.#memoriserCreation(r, 'copie');
+    } else await this.#modifierMemorise(b.tache, mode === 'deplacer' ? 'déplacement' : 'redimensionnement', operation);
     return false;
   }
 
   async #scinder({ tache: b, instant }) {
     if (instant <= b.debut || instant >= b.fin) return;
-    await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), 'Tâche scindée');
+    const avant = await api.planning.tache(b.tache).catch(() => null);
+    const r = await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), 'Tâche scindée');
+    if (!r || !avant) return;
+    const premiere = { id: r.premiere.id };
+    const seconde = { id: r.seconde.id };
+    this.#memoriser({
+      libelle: 'scission',
+      annuler: async () => { await supprimerTache(seconde.id); await restaurer(premiere.id, avant); },
+      retablir: async () => {
+        const cur = await api.planning.tache(premiere.id);
+        seconde.id = (await api.planning.scinder(premiere.id, { instant: depuisMinutes(instant), version: cur.version })).seconde.id;
+      },
+    });
   }
 
   /** Dépôt d'un élément à planifier : tâche en mode 1 (au plus une semaine de 35 h, modifiable), sur la ressource ou le service. */
@@ -159,10 +328,11 @@ export class PagePlanning extends PageBase {
     const x = JSON.parse(brut);
     const ressource = ligne.cle.includes(':') && !ligne.cle.startsWith('srv:') && !ligne.cle.startsWith('chantier:') ? ligne.cle.split(':') : null;
     const srv = ligne.srv_id ?? x.srv_id;
-    await this.#apres(api.planning.creer({
+    const r = await this.#apres(api.planning.creer({
       calcul: 1, debut: depuisMinutes(instant), heures: Math.max(15, Math.min(x.reste, 2100)), nb_ressources: 1, srv_id: srv, type_element: 'chantier', id_element: x.id,
       libelle: `${x.service ?? 'Travaux'}`, affectations: ressource ? [{ type: ressource[0], id: ressource[1] }] : [],
     }), 'Tâche planifiée');
+    if (r) this.#memoriserCreation(r, 'planification');
   }
 
   async #aPlanifier() {
@@ -261,13 +431,16 @@ export class PagePlanning extends PageBase {
       } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
-      const r = await this.#apres(t.id ? api.planning.modifier(t.id, saisie()) : api.planning.creer(saisie()), 'Tâche enregistrée');
+      let r;
+      if (t.id) r = await this.#modifierMemorise(t.id, 'modification', () => api.planning.modifier(t.id, saisie()));
+      else {
+        r = await this.#apres(api.planning.creer(saisie()), 'Tâche enregistrée');
+        if (r) this.#memoriserCreation(r, 'nouvelle tâche');
+      }
       if (r) this.#editer(r.id);
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm('Supprimer cette tâche ?')) return;
-      await this.#apres(api.planning.supprimer(t.id, t.version), 'Tâche supprimée');
-      zone.innerHTML = '';
+      if (confirm('Supprimer cette tâche ?')) await this.#supprimer(t.id);
     });
   }
 }

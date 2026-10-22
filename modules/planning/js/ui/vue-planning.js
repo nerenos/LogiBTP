@@ -31,6 +31,7 @@ export class VuePlanning {
     this.conteneur = conteneur;
     this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: 22, hauteurAdaptee: true, pas: 15, largeurEntete: 220, actions: {}, ...options };
     conteneur.classList.add('vue-planning');
+    conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     conteneur.innerHTML = `<div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
       <div class="vp-lignes"><div class="vp-lignes-plan"></div></div><div class="vp-corps"><div class="vp-plan"><div class="vp-fond"></div><div class="vp-barres"></div></div></div>`;
     this.corps = conteneur.querySelector('.vp-corps');
@@ -115,6 +116,7 @@ export class VuePlanning {
   regler(options) {
     const centre = this.#instantCentre();
     Object.assign(this.#o, options);
+    this.conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     this.#appliquerDimensions();
     this.#disposer();
     if (centre != null && !('debut' in options)) this.allerA(centre);

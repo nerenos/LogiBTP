@@ -214,6 +214,10 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   ressources, vues fournies, page `/planning`, à planifier. Écarts : une tâche déposée depuis « À planifier » prend au
   plus 35 h (le reste reste à planifier) ; matériels et locations sans capacité (quantités et location : lot 4) ; vues
   personnelles enregistrables par l'API (`PUT /planning/vues`), sans écran pour l'instant.
+- [x] **Planning, lot 3** (22/10/2026) : temps réel (diffusion du socle, événements serveur), synchronisation au choix,
+  annuler / rétablir, vue en consultation. Écart : événements serveur (text/event-stream) au lieu de SignalR (aucune
+  dépendance nouvelle) ; diffusion en mémoire du processus : plusieurs instances de l'API demanderont un relais
+  (LISTEN / NOTIFY de PostgreSQL).
 
 ### Archivage
 

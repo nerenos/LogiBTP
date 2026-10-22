@@ -37,7 +37,11 @@ public static class Extensions
         g.MapGet("/taches/{id:long}", (long id, ServicePlanning s, CancellationToken ct) => s.TacheAsync(id, ct));
         g.MapPost("/taches", (TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.CreerAsync(t, Utilisateur.Depuis(http), ct));
         g.MapPut("/taches/{id:long}", (long id, TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.ModifierAsync(id, t, Utilisateur.Depuis(http), ct));
-        g.MapDelete("/taches/{id:long}", async (long id, int version, ServicePlanning s, CancellationToken ct) => { await s.SupprimerAsync(id, version, ct); return Results.NoContent(); });
+        g.MapDelete("/taches/{id:long}", async (long id, int version, HttpContext http, ServicePlanning s, CancellationToken ct) =>
+        {
+            await s.SupprimerAsync(id, version, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         g.MapPost("/taches/{id:long}/deplacer", (long id, DeplacementSaisi d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.DeplacerAsync(id, d, Utilisateur.Depuis(http), ct));
         g.MapPost("/taches/{id:long}/scinder", (long id, ScissionSaisie d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.ScinderAsync(id, d, Utilisateur.Depuis(http), ct));
         return g;

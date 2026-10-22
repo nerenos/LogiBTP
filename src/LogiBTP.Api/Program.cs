@@ -74,6 +74,8 @@ builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 builder.Services.AddModulePointage<SpecialisationPointageBtp>(Base);
 // Module Planning (facultatif) : tâches, affectations, calcul par les calendriers (modules/planning/db/089, db/201).
 builder.Services.AddHttpContextAccessor();
+// Diffusion en temps réel (socle) : planning, puis CRM, synthèse de l'exécution…
+builder.Services.AddDiffusion();
 builder.Services.AddModulePlanning<SpecialisationPlanningBtp>(Base);
 // Module Calendrier : calendriers de travail, cycles, jours fériés et fermetures (modules/calendrier/db/006, db/196).
 builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
@@ -119,6 +121,7 @@ api.MapExecution().ExigeModule("execution", "Exécution");
 api.MapModuleExecution().ExigeModule("execution", "Exécution");
 api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
 api.MapModulePlanning().ExigeModule("planning", "Planning");
+api.MapDiffusion();
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();
