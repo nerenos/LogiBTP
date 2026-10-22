@@ -258,7 +258,8 @@ export class PageParametresBornes extends PageBase {
 
   async ouvrir() {
     this.titre = 'Bornes de pointage';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🏭 Bornes de pointage</h1><div data-bornes></div><h2>PIN des salariés</h2><div data-pins></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">🏭 Bornes de pointage</h1></div><div data-bornes></div>
+      <div class="titre-actions"><h2>PIN des salariés</h2></div><div data-pins></div></div>`;
     if (!this.app.enLigne) return;
     this.ref = await api.pointage.referentiels();
     await this.#bornes();
@@ -270,12 +271,13 @@ export class PageParametresBornes extends PageBase {
     let l;
     try { l = await api.pointage.appareils(); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const service = (id) => this.ref.services.find((s) => s.id === id)?.libelle ?? 'Tous';
-    zone.innerHTML = `<table><thead><tr><th>Borne</th><th>Service</th><th>PIN exigé</th><th>Active</th><th>Vue le</th><th></th></tr></thead><tbody>
-      ${l.map((a) => `<tr><td>${echapper(a.libelle)}</td><td>${echapper(service(a.service))}</td><td>${a.pin_exige ? 'oui' : 'non'}</td><td>${a.actif ? 'oui' : 'non'}</td>
-        <td>${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : ''}</td><td><button type="button" data-basculer="${a.id}">${a.actif ? 'Désactiver' : 'Réactiver'}</button>
-          ${this.app.estAdmin() ? `<button type="button" data-tester="${a.id}" title="Ouvrir la borne dans une fenêtre séparée pour tester son paramétrage (PIN facultatif, pointages non enregistrés)">▶ Tester</button>` : ''}</td></tr>`).join('')}</tbody></table>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Borne<br><small>service</small></th><th>PIN exigé</th><th>État<br><small>vue le</small></th><th></th></tr></thead><tbody>
+      ${l.map((a) => `<tr${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${echapper(service(a.service))}</small></td><td>${a.pin_exige ? 'oui' : 'non'}</td>
+        <td>${a.actif ? 'active' : 'désactivée'}<br><small class="aide">${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : 'jamais vue'}</small></td>
+        <td><button type="button" class="bouton-icone" data-basculer="${a.id}" title="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}" aria-label="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}">${a.actif ? '⏸' : '⏵'}</button>
+          ${this.app.estAdmin() ? `<button type="button" class="bouton-icone" data-tester="${a.id}" title="Tester : ouvrir la borne dans une fenêtre séparée (PIN facultatif, pointages non enregistrés)" aria-label="Tester la borne">▶</button>` : ''}</td></tr>`).join('')}</tbody></table>
       <p class="ligne"><input data-libelle placeholder="Libellé (Atelier bois…)"> <label><input type="checkbox" data-pin checked> PIN exigé</label>
-        <span data-service></span> <button type="button" data-creer>＋ Enregistrer une borne</button></p><div data-jeton></div>`;
+        <span data-service></span> <button type="button" class="bouton-icone" data-creer title="Enregistrer une nouvelle borne (jeton affiché une seule fois)" aria-label="Enregistrer une borne">＋</button></p><div data-jeton></div>`;
     const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.libelle })), valeur: '', vide: true, titre: 'Service de la borne' });
     zone.querySelector('[data-service]').append(srv);
     zone.querySelectorAll('[data-tester]').forEach((b) => b.addEventListener('click', async () => {
@@ -307,8 +309,8 @@ export class PageParametresBornes extends PageBase {
     const charger = async () => {
       if (!srv.valeurCombo) { zone.querySelector('[data-liste]').innerHTML = '<p class="aide">Choisissez un service.</p>'; return; }
       const l = await api.pointage.pins(srv.valeurCombo).catch((e) => { this.app.erreur(e); return []; });
-      zone.querySelector('[data-liste]').innerHTML = `<table><tbody>${l.slice(0, 300).map((x) => `<tr><td>${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}</td><td>${x.pin ? `PIN posé${x.bloque ? ' (bloqué)' : ''}` : '<span class="aide">sans PIN</span>'}</td>
-        <td><input data-pin="${x.salarie.id}" size="8" inputmode="numeric" placeholder="4 à 8 chiffres"> <button type="button" data-poser="${x.salarie.id}">Poser</button> ${x.pin ? `<button type="button" data-retirer="${x.salarie.id}">Retirer</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
+      zone.querySelector('[data-liste]').innerHTML = `<div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule</small></th><th>PIN</th><th>Nouveau PIN</th></tr></thead><tbody>${l.slice(0, 300).map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule)}</small></td><td>${x.pin ? `posé${x.bloque ? ' <span class="badge-exception">bloqué</span>' : ''}` : '<span class="aide">sans PIN</span>'}</td>
+        <td><input data-pin="${x.salarie.id}" size="8" inputmode="numeric" placeholder="4 à 8 chiffres"> <button type="button" class="bouton-icone" data-poser="${x.salarie.id}" title="Poser ce PIN (débloque le salarié)" aria-label="Poser le PIN">✔</button>${x.pin ? ` <button type="button" class="bouton-icone" data-retirer="${x.salarie.id}" title="Retirer le PIN" aria-label="Retirer le PIN">✕</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
       zone.querySelectorAll('[data-poser]').forEach((b) => b.addEventListener('click', async () => {
         try { await api.pointage.poserPin(b.dataset.poser, { pin: zone.querySelector(`[data-pin="${b.dataset.poser}"]`).value }); this.app.message('PIN enregistré', 'succes'); await charger(); } catch (e) { this.app.erreur(e); }
       }));
@@ -327,7 +329,7 @@ export class PageGroupePointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Saisie d\'équipe';
-    this.conteneur.innerHTML = '<div class="page-parametres"><h1 class="page-titre">👥 Saisie d\'équipe</h1><div data-groupe></div></div>';
+    this.conteneur.innerHTML = '<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">👥 Saisie d\'équipe</h1></div><div data-groupe></div></div>';
     if (!this.app.enLigne) return;
     this.ref = await api.pointage.referentiels();
     await this.#charger();
@@ -339,9 +341,9 @@ export class PageGroupePointage extends PageBase {
     try { g = await api.pointage.groupe(this.requete.id); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const ref = g.pointages.find((p) => p.identique);
     zone.innerHTML = `${g.origine ? '<p class="aide">Équipe d\'origine : tous les pointages sont identiques.</p>' : '<p class="avertissement">L\'équipe n\'est plus celle d\'origine : des pointages ont été modifiés à part.</p>'}
-      <table><thead><tr><th>Salarié</th><th>Date</th><th class="nombre">Heures</th><th>Groupe</th></tr></thead><tbody>
-      ${g.pointages.map((p) => `<tr><td>${echapper(p.salarie ? `${p.salarie.nom} ${p.salarie.prenom}` : '')}</td><td>${p.date}</td><td class="nombre">${ecrireDuree(p.minutes)}</td><td>${p.identique ? '✔' : '<span class="badge-exception">à part</span>'}</td></tr>`).join('')}</tbody></table>
-      <p class="ligne">Nouvelle durée pour les pointages du groupe : <input data-duree size="6" value="${ecrireDuree(ref?.minutes ?? 0)}"> <button type="button" data-appliquer>Appliquer au groupe</button></p>`;
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Salarié</th><th>Date</th><th class="nombre">Heures</th><th>Groupe</th></tr></thead><tbody>
+      ${g.pointages.map((p) => `<tr><td>${echapper(p.salarie ? `${p.salarie.nom} ${p.salarie.prenom}` : '')}</td><td>${new Date(`${p.date}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' })}</td><td class="nombre">${ecrireDuree(p.minutes)}</td><td>${p.identique ? '✔' : '<span class="badge-exception">à part</span>'}</td></tr>`).join('')}</tbody></table>
+      <p class="ligne">Nouvelle durée pour les pointages du groupe : <input data-duree size="6" value="${ecrireDuree(ref?.minutes ?? 0)}"> <button type="button" data-appliquer title="Appliquer la durée à tous les pointages identiques du groupe">✔ Appliquer au groupe</button></p>`;
     zone.querySelector('[data-appliquer]').addEventListener('click', async () => {
       const minutes = lireDuree(zone.querySelector('[data-duree]').value);
       if (!minutes || !ref) return;

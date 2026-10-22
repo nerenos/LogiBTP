@@ -358,6 +358,70 @@ class GrillePointage {
   }
 }
 
+/**
+ * Présentation de référence du module (synthèse) : corps à panneau latéral. Panneau à gauche (barre : titre, filtres,
+ * actions à droite et « pour réduire ; liste ; légende fixée en bas), séparateur à glisser (largeur), bouton 👥 quand il
+ * est réduit, détail à droite. Préférences `<cle>Reduite` et `<cle>Largeur` (navigateur).
+ */
+function gabaritPanneau(cle, { titre, objet, filtres = '', actions = '' }) {
+  const prefs = lirePreferences();
+  const reduit = prefs[`${cle}Reduite`] ?? window.matchMedia('(max-width: 900px)').matches;
+  return `<div class="corps-panneau${reduit ? ' panneau-reduit' : ''}" data-panneau="${cle}">
+      <aside class="panneau-lateral" style="width: ${Number(prefs[`${cle}Largeur`]) || 560}px">
+        <div class="panneau-lateral-barre"><b>${titre}</b> ${filtres}
+          <span class="panneau-actions">${actions}<button type="button" class="bouton-icone" data-replier title="Réduire le panneau des ${objet}" aria-label="Réduire le panneau des ${objet}">«</button></span></div>
+        <div data-corrections></div><div data-liste class="panneau-lateral-liste"></div><div class="panneau-legende" data-legende></div></aside>
+      <div class="panneau-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
+      <button type="button" class="bouton-icone panneau-deplier" data-deplier title="Afficher le panneau des ${objet}" aria-label="Afficher le panneau des ${objet}">👥</button>
+      <div data-detail class="panneau-detail"></div></div>`;
+}
+
+/** Comportement du panneau latéral : réduire / déplier, largeur au glisser du séparateur (préférences du navigateur). */
+function brancherPanneau(conteneur) {
+  const corps = conteneur.querySelector('[data-panneau]');
+  const cle = corps.dataset.panneau;
+  const panneau = corps.querySelector('.panneau-lateral');
+  const reduire = (r) => { corps.classList.toggle('panneau-reduit', r); ecrirePreferences({ [`${cle}Reduite`]: r }); };
+  corps.querySelector('[data-replier]').addEventListener('click', () => reduire(true));
+  corps.querySelector('[data-deplier]').addEventListener('click', () => reduire(false));
+  corps.querySelector('[data-separateur]').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const depart = e.clientX;
+    const largeur = panneau.getBoundingClientRect().width;
+    const bouger = (m) => { panneau.style.width = `${Math.max(280, Math.min(window.innerWidth - 320, largeur + m.clientX - depart))}px`; };
+    const finir = () => {
+      window.removeEventListener('pointermove', bouger);
+      window.removeEventListener('pointerup', finir);
+      ecrirePreferences({ [`${cle}Largeur`]: Math.round(panneau.getBoundingClientRect().width) });
+    };
+    window.addEventListener('pointermove', bouger);
+    window.addEventListener('pointerup', finir);
+  });
+}
+
+/** Filtres communs des salariés : « Pointés » (masque les salariés sans pointage) et intérimaires (préférences `<cle>…`). */
+const FILTRES_SALARIES = `<label title="Masquer les salariés sans pointage dans la semaine"><input type="checkbox" data-pointes> Pointés</label><span data-interim></span>`;
+
+function brancherFiltresSalaries(conteneur, page, cle, rendre) {
+  const prefs = lirePreferences();
+  page.pointes = Boolean(prefs[`${cle}Pointes`]);
+  const pointes = conteneur.querySelector('[data-pointes]');
+  pointes.checked = page.pointes;
+  pointes.addEventListener('change', () => { page.pointes = pointes.checked; ecrirePreferences({ [`${cle}Pointes`]: page.pointes }); rendre(); });
+  page.interim = prefs[`${cle}Interim`] || 'TOUS';
+  const filtre = creerCombo({ options: [{ valeur: 'TOUS', libelle: 'Tous' }, { valeur: 'SALARIES', libelle: 'Sans intérim' }, { valeur: 'INTERIM', libelle: 'Intérim seul' }],
+    valeur: page.interim, vide: false, titre: 'Intérimaires' });
+  filtre.addEventListener('change', () => { page.interim = filtre.valeurCombo; ecrirePreferences({ [`${cle}Interim`]: page.interim }); rendre(); });
+  conteneur.querySelector('[data-interim]').append(filtre);
+}
+
+/** Salarié retenu par les filtres communs (intérimaires, pointés). */
+const filtreSalarie = (page, salarie, jours) => (page.interim === 'INTERIM' ? salarie.interimaire : page.interim === 'SALARIES' ? !salarie.interimaire : true)
+  && (!page.pointes || jours.some((m) => m > 0));
+
+/** Jours affichés d'une liste de salariés : lundi à vendredi, samedi et dimanche s'ils ont des pointages. */
+const joursAffiches = (lignes) => [0, 1, 2, 3, 4, 5, 6].filter((i) => i < 5 || lignes.some((l) => l.jours[i] > 0));
+
 /** Barre de semaine commune (◀ date ▶, service, recherche) : appelle `changer` avec le nouveau lundi. */
 function barreSemaine(conteneur, page, { changerSemaine, changerFiltre }) {
   const services = page.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle, detail: s.code }));
@@ -390,16 +454,12 @@ export class PageSaisiePointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Saisie des pointages';
-    const reduit = lirePreferences().pointageSalariesReduit ?? window.matchMedia('(max-width: 1100px)').matches;
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><h1 class="page-titre">⏱ Saisie des pointages</h1>${BARRE}
-      <div class="pointage-corps${reduit ? ' salaries-reduits' : ''}"><div class="pointage-panneau"><button type="button" class="discret" data-replier
-        title="Réduire ou afficher la liste des salariés">☰ Salariés</button><div data-salaries class="pointage-salaries"></div></div><div data-detail class="pointage-grille"></div></div></div>`;
-    this.conteneur.querySelector('[data-replier]').addEventListener('click', () => {
-      const corps = this.conteneur.querySelector('.pointage-corps');
-      corps.classList.toggle('salaries-reduits');
-      ecrirePreferences({ pointageSalariesReduit: corps.classList.contains('salaries-reduits') });
-    });
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-salaries]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-avec-panneau"><div class="entete-page"><h1 class="page-titre">⏱ Saisie des pointages</h1>${BARRE}</div>
+      ${gabaritPanneau('saisie', { titre: 'Salariés', objet: 'salariés', filtres: FILTRES_SALARIES })}</div>`;
+    brancherPanneau(this.conteneur);
+    brancherFiltresSalaries(this.conteneur, this, 'saisie', () => this.#rendreSalaries());
+    this.conteneur.querySelector('[data-legende]').innerHTML = '<span class="aide">Heures saisies de la semaine · clic : grille du salarié · 🔒 jour validé (correction par demande au service RH)</span>';
+    if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     if (this.requete.pointage) {
       const pos = await api.pointage.position(this.requete.pointage).catch(() => null);
       if (pos) Object.assign(this.requete, { salarie: String(pos.salarie), lundi: pos.lundi });
@@ -426,16 +486,27 @@ export class PageSaisiePointage extends PageBase {
   async #chargerSalaries() {
     const jours = joursSemaine(this.lundi);
     this.conteneur.querySelector('[data-semaine]').textContent = `du ${jourCourt(jours[0])} au ${jourCourt(jours[6])}`;
-    const zone = this.conteneur.querySelector('[data-salaries]');
-    if (!this.service && !this.recherche) { zone.innerHTML = '<p class="aide">Choisissez un service ou cherchez un salarié.</p>'; return; }
-    let l;
-    try { l = await api.pointage.salaries({ service: this.service, recherche: this.recherche, lundi: this.lundi }); } catch (e) { this.app.erreur(e); return; }
+    const zone = this.conteneur.querySelector('[data-liste]');
+    if (!this.service && !this.recherche) { this.salaries = null; zone.innerHTML = '<p class="aide">Choisissez un service ou cherchez un salarié.</p>'; return; }
+    try { this.salaries = await api.pointage.salaries({ service: this.service, recherche: this.recherche, lundi: this.lundi }); } catch (e) { this.app.erreur(e); return; }
+    this.#rendreSalaries();
+  }
+
+  /** Salariés du panneau : tableau compact (nom et matricule, jour et date sur deux lignes), filtres communs. */
+  #rendreSalaries() {
+    const zone = this.conteneur.querySelector('[data-liste]');
+    if (!this.salaries) return;
+    const jours = joursSemaine(this.lundi);
     const ordre = this.ref.parametres.ordre_nom;
-    zone.innerHTML = l.length ? `<table class="pleine-largeur"><thead><tr><th>Salarié</th>${JOURS.map((j) => `<th>${j}</th>`).join('')}<th>Total</th></tr></thead><tbody>
+    const l = this.salaries.filter((x) => filtreSalarie(this, x.salarie, x.jours));
+    const visibles = joursAffiches(this.salaries);
+    const masques = this.salaries.length - l.length;
+    zone.innerHTML = `${l.length ? `<table class="tableau-compact synthese-pointage"><thead><tr><th>Salarié<br><small>matricule</small></th>
+      ${visibles.map((i) => `<th class="nombre">${JOURS[i]}<br><small>${jourCourt(jours[i])}</small></th>`).join('')}<th class="nombre">Total<br><small>semaine</small></th></tr></thead><tbody>
       ${l.map((x) => `<tr data-id="${x.salarie.id}" class="cliquable${String(x.salarie.id) === String(this.salarie) ? ' selection' : ''}">
-        <td title="${echapper(x.salarie.matricule)}${x.salarie.service ? ` · ${echapper(x.salarie.service)}` : ''}">${echapper(nomSalarie(x.salarie, ordre))}${x.salarie.interimaire ? ' <small class="aide">intérim</small>' : ''}</td>
-        ${x.jours.map((m) => `<td class="nombre">${ecrireDuree(m)}</td>`).join('')}<td class="nombre"><b>${ecrireDuree(x.jours.reduce((a, b) => a + b, 0))}</b></td></tr>`).join('')}</tbody></table>`
-      : '<p class="aide">Aucun salarié.</p>';
+        <td class="synthese-nom">${echapper(nomSalarie(x.salarie, ordre))}<br><small class="aide">${echapper(x.salarie.matricule)}${x.salarie.code ? ` · ${echapper(x.salarie.code)}` : ''}${x.salarie.interimaire ? ' · intérim' : ''}</small></td>
+        ${visibles.map((i) => `<td class="nombre">${ecrireDuree(x.jours[i]) || '·'}</td>`).join('')}<td class="nombre"><b>${ecrireDuree(x.jours.reduce((a, b) => a + b, 0))}</b></td></tr>`).join('')}</tbody></table>`
+      : '<p class="aide">Aucun salarié.</p>'}${masques ? `<p class="aide">${masques} salarié(s) masqué(s) par les filtres.</p>` : ''}`;
     zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', async () => {
       if (this.modifiee && !confirm('Abandonner les modifications de la semaine ?')) return;
       this.salarie = tr.dataset.id; this.#url();
@@ -454,14 +525,17 @@ export class PageSaisiePointage extends PageBase {
     const s = this.semaine;
     const zone = this.conteneur.querySelector('[data-detail]');
     const verrouilles = s.etats.map((e, i) => (estBloque(e) ? i : -1)).filter((i) => i >= 0);
-    zone.innerHTML = `<h2>${echapper(nomSalarie(s.salarie, this.ref.parametres.ordre_nom))} <small class="aide">${echapper(s.salarie.matricule)}${s.salarie.service ? ` · ${echapper(s.salarie.service)}` : ''}</small></h2>
+    zone.innerHTML = `<h2>${echapper(nomSalarie(s.salarie, this.ref.parametres.ordre_nom))} <small class="aide">${echapper(s.salarie.matricule)}${s.salarie.service ? ` · ${echapper(s.salarie.service)}` : ''}</small>
+        <span class="pastilles-etats">${(s.etats ?? []).map(pastilleEtat).join('')}</span></h2>
       ${verrouilles.length ? '<p class="avertissement">🔒 Jours validés : non modifiables ici ; une correction s\'envoie au service RH.</p>' : ''}
       ${s.corrigee ? '<p class="avertissement">Cette semaine a été corrigée dans la synthèse : les corrections du service RH priment.</p>' : ''}
+      <div class="titre-actions"><h3>Pointages de la semaine</h3>
+        <span class="titre-actions-boutons"><button type="button" data-enregistrer title="Enregistrer la semaine">💾 Enregistrer</button>${verrouilles.length ? ' <button type="button" data-correction title="Envoyer la semaine au service RH comme demande de correction">✉ Demander une correction…</button>' : ''}</span></div>
       <div data-grille></div>
       ${[...new Set(s.pointages.filter((x) => x.groupe).map((x) => x.groupe))].map((g) => `<p class="aide">👥 Saisie d'équipe : <a href="/pointage/groupe?id=${g}">voir et modifier le groupe</a></p>`).join('')}
-      <p><button type="button" data-enregistrer>Enregistrer la semaine</button> ${verrouilles.length ? '<button type="button" data-correction>✉ Demander une correction…</button>' : ''}</p>
-      ${s.corrections.length ? `<h3>Demandes de correction</h3><ul>${s.corrections.map((c) => `<li>${horodatage(c.le)} — ${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}${c.motif ? ` : ${echapper(c.motif)}` : ''}${c.reponse ? ` <span class="aide">(réponse : ${echapper(c.reponse)})</span>` : ''}</li>`).join('')}</ul>` : ''}`;
-    this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles });
+      ${s.corrections.length ? `<h3>Demandes de correction</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>État</th><th>Motif</th><th>Réponse</th></tr></thead><tbody>
+        ${s.corrections.map((c) => `<tr><td>${horodatage(c.le)}</td><td>${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}</td><td>${echapper(c.motif ?? '')}</td><td>${echapper(c.reponse ?? '')}</td></tr>`).join('')}</tbody></table>` : ''}`;
+    this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles, tableau: true, regrouper: true });
     this.grille.commencer?.();
     const correction = async () => {
       const motif = prompt('Motif de la demande de correction (envoyée au service RH) :');
@@ -507,23 +581,17 @@ export class PageSynthesePointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Synthèse des pointages';
-    const prefs = lirePreferences();
-    const reduite = prefs.syntheseReduite ?? window.matchMedia('(max-width: 900px)').matches;
     // Actions de validation : icônes (libellé dans la bulle) avec le nombre de salariés concernés en pastille.
     const action = (cle, icone, titre) => `<button type="button" class="bouton-icone bouton-compteur" data-${cle} title="${titre}" aria-label="${titre}">${icone}<span class="pastille-compteur" data-compteur="${cle}"></span></button>`;
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-synthese"><div class="entete-page"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}</div>
-      <div class="synthese-corps${reduite ? ' panneau-reduit' : ''}">
-        <aside class="synthese-panneau" style="width: ${Number(prefs.syntheseLargeur) || 560}px">
-          <div class="synthese-panneau-barre"><b>Salariés</b> <label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>
-            <label title="Masquer les salariés sans pointage dans la semaine"><input type="checkbox" data-pointes> Pointés</label><span data-interim></span>
-            <span class="synthese-actions">${action('valider', '☑', 'Valider la sélection')}${action('tout-valider', '✅', 'Tout valider sans exception')}${action('devalider', '↩', 'Dévalider la sélection… (motif demandé)')}
-            <button type="button" class="bouton-icone" data-replier title="Réduire le panneau des salariés" aria-label="Réduire le panneau des salariés">«</button></span></div>
-          <div data-corrections></div><div data-liste class="synthese-liste"></div><div class="synthese-legende" data-legende></div></aside>
-        <div class="synthese-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
-        <button type="button" class="bouton-icone synthese-deplier" data-deplier title="Afficher le panneau des salariés" aria-label="Afficher le panneau des salariés">👥</button>
-        <div data-detail class="synthese-detail"></div></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-avec-panneau"><div class="entete-page"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}</div>
+      ${gabaritPanneau('synthese', {
+    titre: 'Salariés', objet: 'salariés',
+    filtres: `<label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>${FILTRES_SALARIES}`,
+    actions: `${action('valider', '☑', 'Valider la sélection')}${action('tout-valider', '✅', 'Tout valider sans exception')}${action('devalider', '↩', 'Dévalider la sélection… (motif demandé)')}`,
+  })}</div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
-    this.#panneau();
+    brancherPanneau(this.conteneur);
+    brancherFiltresSalaries(this.conteneur, this, 'synthese', () => this.#rendreListe());
     this.ref = await api.pointage.referentiels();
     this.chantiers = await api.pointage.chantiers();
     this.lundi = lundiDe(this.requete.lundi ?? decaler(aujourdhui(), -7));
@@ -534,9 +602,6 @@ export class PageSynthesePointage extends PageBase {
     const c = this.conteneur;
     c.querySelector('[data-tout]').checked = this.tout;
     c.querySelector('[data-tout]').addEventListener('change', (e) => { this.tout = e.target.checked; this.#url(); this.#rendreListe(); });
-    this.pointes = Boolean(lirePreferences().synthesePointes);
-    c.querySelector('[data-pointes]').checked = this.pointes;
-    c.querySelector('[data-pointes]').addEventListener('change', (e) => { this.pointes = e.target.checked; ecrirePreferences({ synthesePointes: this.pointes }); this.#rendreListe(); });
     // Blocage à la journée : période de validation sur la ligne de la semaine.
     if (this.ref.parametres.blocage === 'JOUR') {
       c.querySelector('.entete-page > p.ligne').insertAdjacentHTML('beforeend', ' · <span class="aide">Période validée :</span> <input type="date" data-du> au <input type="date" data-au>');
@@ -557,34 +622,6 @@ export class PageSynthesePointage extends PageBase {
 
   #url() { this.app.routeur.remplacerUrl(this.urlCourante()); }
 
-  /** Panneau des salariés : réduire / déplier, largeur au glisser du séparateur, filtre des intérimaires. */
-  #panneau() {
-    const c = this.conteneur;
-    const corps = c.querySelector('.synthese-corps');
-    const panneau = c.querySelector('.synthese-panneau');
-    const reduire = (r) => { corps.classList.toggle('panneau-reduit', r); ecrirePreferences({ syntheseReduite: r }); };
-    c.querySelector('[data-replier]').addEventListener('click', () => reduire(true));
-    c.querySelector('[data-deplier]').addEventListener('click', () => reduire(false));
-    c.querySelector('[data-separateur]').addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      const depart = e.clientX;
-      const largeur = panneau.getBoundingClientRect().width;
-      const bouger = (m) => { panneau.style.width = `${Math.max(280, Math.min(window.innerWidth - 320, largeur + m.clientX - depart))}px`; };
-      const finir = () => {
-        window.removeEventListener('pointermove', bouger);
-        window.removeEventListener('pointerup', finir);
-        ecrirePreferences({ syntheseLargeur: Math.round(panneau.getBoundingClientRect().width) });
-      };
-      window.addEventListener('pointermove', bouger);
-      window.addEventListener('pointerup', finir);
-    });
-    this.interim = lirePreferences().syntheseInterim || 'TOUS';
-    const filtre = creerCombo({ options: [{ valeur: 'TOUS', libelle: 'Tous' }, { valeur: 'SALARIES', libelle: 'Sans intérim' }, { valeur: 'INTERIM', libelle: 'Intérim seul' }],
-      valeur: this.interim, vide: false, titre: 'Intérimaires' });
-    filtre.addEventListener('change', () => { this.interim = filtre.valeurCombo; ecrirePreferences({ syntheseInterim: this.interim }); this.#rendreListe(); });
-    c.querySelector('[data-interim]').append(filtre);
-  }
-
   /** Pastilles des actions : salariés sélectionnés (valider, dévalider), sans exception (tout valider) ; boutons désactivés à zéro. */
   #compteurs() {
     const n = { valider: this.selection.size, devalider: this.selection.size, 'tout-valider': this.#sansException().length };
@@ -596,10 +633,7 @@ export class PageSynthesePointage extends PageBase {
   }
 
   /** Jours affichés : lundi à vendredi, samedi et dimanche s'ils ont des pointages (un salarié au moins). */
-  #joursVisibles() {
-    const lignes = this.donnees?.lignes ?? [];
-    return [0, 1, 2, 3, 4, 5, 6].filter((i) => i < 5 || lignes.some((l) => l.jours[i] > 0));
-  }
+  #joursVisibles() { return joursAffiches(this.donnees?.lignes ?? []); }
 
   #periode() {
     const du = this.conteneur.querySelector('[data-du]')?.value || null;
@@ -656,8 +690,7 @@ export class PageSynthesePointage extends PageBase {
   #rendreListe() {
     const zone = this.conteneur.querySelector('[data-liste]');
     const d = this.donnees;
-    const interim = (l) => (this.interim === 'INTERIM' ? l.salarie.interimaire : this.interim === 'SALARIES' ? !l.salarie.interimaire : true)
-      && (!this.pointes || l.jours.some((m) => m > 0));
+    const interim = (l) => filtreSalarie(this, l.salarie, l.jours);
     const lignes = d.lignes.filter((l) => interim(l) && (this.tout || l.exceptions.length || String(l.salarie.id) === String(this.salarie)));
     const sans = this.#sansException();
     this.#compteurs();
@@ -805,17 +838,17 @@ export class PageExportPointage extends PageBase {
     this.titre = 'Export de paie et valorisation';
     const lundi = lundiDe(decaler(aujourdhui(), -28));
     const dimanche = decaler(lundiDe(aujourdhui()), -1);
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><h1 class="page-titre">📤 Export de paie et valorisation</h1>
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">📤 Export de paie et valorisation</h1>
       <p class="ligne">Du <input type="date" data-du value="${lundi}"> au <input type="date" data-au value="${dimanche}"> · <span data-service></span>
-        <button type="button" data-apercu>Aperçu</button> <button type="button" data-exporter>📤 Exporter (CSV)</button></p>
+        <button type="button" class="bouton-icone" data-apercu title="Aperçu de l'export (rien n'est enregistré)" aria-label="Aperçu de l'export">👁</button>
+        <button type="button" class="bouton-icone" data-exporter title="Exporter : enregistrer l'export et télécharger le fichier CSV" aria-label="Exporter (CSV)">📤</button></p></div>
       <p class="aide">Semaines entières (du lundi au dimanche). Seuls les salariés dont tous les jours sont validés par le service RH sont exportés ; un salarié dévalidé après un export est signalé.</p>
       <div data-resultat></div>
-      <h2>Valorisation des heures</h2>
+      <div class="titre-actions"><h2>Valorisation des heures</h2><span class="titre-actions-boutons"><button type="button" data-valoriser title="Valoriser les pointages de la période choisie en haut">💶 Valoriser</button></span></div>
       <p class="ligne"><label><input type="radio" name="mode" value="SALARIE" checked> Coût horaire des fiches (intérim : taux de la mission)</label>
-        <label><input type="radio" name="mode" value="IMPORT"> Coûts réels importés après la paie</label></p>
-      <p data-import hidden><textarea data-taux rows="4" cols="50" placeholder="matricule;coût horaire (une ligne par salarié)"></textarea></p>
-      <p><button type="button" data-valoriser>Valoriser les pointages de la période</button> <span data-valorisation class="aide"></span></p>
-      <h2>Exports précédents</h2><div data-historique></div></div>`;
+        <label><input type="radio" name="mode" value="IMPORT"> Coûts réels importés après la paie</label> <span data-valorisation class="aide"></span></p>
+      <p data-import hidden><textarea data-taux rows="4" cols="50" placeholder="matricule (ou matricule de paie);coût horaire (une ligne par salarié)"></textarea></p>
+      <h2>Exports précédents</h2><div data-historique class="tableau-defilant"></div></div>`;
     const c = this.conteneur;
     if (!this.app.enLigne) { c.querySelector('[data-resultat]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const ref = await api.pointage.referentiels();
@@ -824,9 +857,11 @@ export class PageExportPointage extends PageBase {
     const demande = () => ({ du: c.querySelector('[data-du]').value, au: c.querySelector('[data-au]').value, service: srv.valeurCombo ? Number(srv.valeurCombo) : null });
     const afficher = (r) => {
       c.querySelector('[data-resultat]').innerHTML = `<p>${r.salaries} salarié(s) exporté(s), ${r.lignes.length} ligne(s)${r.id ? ` · export n° ${r.id} enregistré` : ''}.</p>
-        ${r.non_valides.length ? `<p class="avertissement">${r.non_valides.length} salarié(s) avec des jours non validés (non exportés) : ${r.non_valides.slice(0, 20).map((x) => `${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)} (${x.jours.map(jourCourt).join(', ')})`).join(' ; ')}${r.non_valides.length > 20 ? '…' : ''}</p>` : ''}
-        ${r.lignes.length ? `<table><thead><tr><th>Matricule</th><th>Salarié</th><th>Rubrique</th><th>Code paie</th><th>Libellé</th><th class="nombre">Quantité</th></tr></thead><tbody>
-          ${r.lignes.slice(0, 300).map((l) => `<tr><td>${echapper(l.matricule)}</td><td>${echapper(l.nom)} ${echapper(l.prenom)}</td><td>${echapper(l.rubrique)}</td><td>${echapper(l.code_paie ?? '')}</td><td>${echapper(l.libelle)}</td><td class="nombre">${l.quantite}</td></tr>`).join('')}</tbody></table>
+        ${r.non_valides.length ? `<details class="avertissement"><summary>⚠ ${r.non_valides.length} salarié(s) avec des jours non validés (non exportés)</summary>
+          <div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule</small></th><th>Jours non validés</th></tr></thead><tbody>
+          ${r.non_valides.map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule ?? '')}</small></td><td>${x.jours.map(jourCourt).join(', ')}</td></tr>`).join('')}</tbody></table></div></details>` : ''}
+        ${r.lignes.length ? `<div class="tableau-defilant"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule de paie</small></th><th>Rubrique<br><small>code paie</small></th><th>Libellé</th><th class="nombre">Quantité</th></tr></thead><tbody>
+          ${r.lignes.slice(0, 300).map((l) => `<tr><td class="synthese-nom">${echapper(l.nom)} ${echapper(l.prenom)}<br><small class="aide">${echapper(l.matricule)}</small></td><td>${echapper(l.rubrique)}<br><small class="aide">${echapper(l.code_paie ?? '')}</small></td><td>${echapper(l.libelle)}</td><td class="nombre">${l.quantite}</td></tr>`).join('')}</tbody></table></div>
           ${r.lignes.length > 300 ? '<p class="aide">Aperçu limité à 300 lignes (le fichier contient tout).</p>' : ''}` : ''}`;
     };
     const telecharger = (csv, nom) => {
@@ -838,9 +873,9 @@ export class PageExportPointage extends PageBase {
     };
     const historique = async () => {
       const l = await api.pointage.exports().catch(() => []);
-      c.querySelector('[data-historique]').innerHTML = l.length ? `<table><thead><tr><th>N°</th><th>Période</th><th>Salariés</th><th>Lignes</th><th>Par</th><th>Le</th><th></th></tr></thead><tbody>
-        ${l.map((e) => `<tr><td>${e.id}</td><td>${jourCourt(e.du)} – ${jourCourt(e.au)}</td><td class="nombre">${e.salaries}</td><td class="nombre">${e.lignes}</td><td>${echapper(e.par)}</td><td>${horodatage(e.le)}</td>
-          <td><a href="/api/pointage/exports/${e.id}/fichier" download>Télécharger</a></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun export.</p>';
+      c.querySelector('[data-historique]').innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>N°</th><th>Période</th><th class="nombre">Salariés<br><small>lignes</small></th><th>Par<br><small>le</small></th><th></th></tr></thead><tbody>
+        ${l.map((e) => `<tr><td>${e.id}</td><td>${jourCourt(e.du)} – ${jourCourt(e.au)}</td><td class="nombre">${e.salaries}<br><small>${e.lignes}</small></td><td>${echapper(e.par)}<br><small>${horodatage(e.le)}</small></td>
+          <td><a class="bouton-lien" href="/api/pointage/exports/${e.id}/fichier" download title="Télécharger le fichier CSV de l'export n° ${e.id}" aria-label="Télécharger">📥</a></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun export.</p>';
     };
     c.querySelector('[data-apercu]').addEventListener('click', async () => { try { afficher(await api.pointage.apercuExport(demande())); } catch (e) { this.app.erreur(e); } });
     c.querySelector('[data-exporter]').addEventListener('click', async () => {
@@ -873,7 +908,7 @@ export class PageParametresPointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Paramètres du pointage';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">⏱ Paramètres du pointage</h1><div data-corps></div></div>`;
+    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">⏱ Paramètres du pointage</h1></div><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
     if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const admin = this.app.estAdmin();
@@ -881,7 +916,8 @@ export class PageParametresPointage extends PageBase {
     let p = await api.pointage.parametres();
     let st = (await api.pointage.sousTypes()).map((x) => ({ ...x, existant: true }));
     const rendre = () => {
-      corps.innerHTML = `<h2>Société</h2><table><tbody>
+      corps.innerHTML = `<div class="titre-actions"><h2>Société et sous-types</h2>${admin ? '<span class="titre-actions-boutons"><button type="button" data-enregistrer title="Enregistrer les paramètres et les sous-types">💾 Enregistrer</button></span>' : ''}</div>
+        <table class="tableau-compact largeur-contenu"><tbody>
         <tr><td>Libellé des salariés</td><td><label><input type="radio" name="ordre" value="NP" ${p.ordre_nom === 'NP' ? 'checked' : ''} ${ro}> Nom Prénom</label>
           <label><input type="radio" name="ordre" value="PN" ${p.ordre_nom === 'PN' ? 'checked' : ''} ${ro}> Prénom Nom</label></td></tr>
         <tr><td>Pas de saisie (minutes, 0 = libre)</td><td><input type="number" data-pas min="0" max="60" value="${p.pas_minutes}" ${ro}></td></tr>
@@ -895,12 +931,12 @@ export class PageParametresPointage extends PageBase {
         <tr><td>Intérimaires</td><td><label><input type="checkbox" data-interim ${p.interim_imputes ? 'checked' : ''} ${ro}> Heures imputées aux chantiers avec un coût</label></td></tr>
         </tbody></table>
         <h2>Sous-types de main-d'œuvre</h2><p class="aide">Le type de main-d'œuvre est une nature du regroupement Main-d'œuvre (bibliothèque) ; le sous-type précise l'activité.</p>
-        <table><thead><tr><th>Code</th><th>Libellé</th><th>Productif</th><th>Non-conformité (motif)</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Productif</th><th>Non-conformité<br><small>motif exigé</small></th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
         ${st.map((x, i) => `<tr data-i="${i}"><td><input data-code size="14" value="${echapper(x.code)}" ${admin && !x.existant ? '' : 'readonly'}></td><td><input data-libelle size="28" value="${echapper(x.libelle)}" ${ro}></td>
           <td><input type="checkbox" data-productif ${x.productif ? 'checked' : ''} ${ro}></td><td><input type="checkbox" data-nc ${x.non_conformite ? 'checked' : ''} ${ro}></td>
           <td><input type="number" data-ordre size="4" value="${x.ordre}" ${ro}></td><td><input type="checkbox" data-actif ${x.actif ? 'checked' : ''} ${ro}></td>
-          <td>${admin ? '<button type="button" data-retirer>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
-        ${admin ? '<p><button type="button" data-ajouter>＋ Sous-type</button> <button type="button" data-enregistrer>Enregistrer</button></p>' : ''}
+          <td>${admin ? '<button type="button" class="bouton-icone" data-retirer title="Retirer le sous-type" aria-label="Retirer le sous-type">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+        ${admin ? '<p><button type="button" class="bouton-icone" data-ajouter title="Ajouter un sous-type" aria-label="Ajouter un sous-type">＋</button></p>' : ''}
         <h2>Profils de paie</h2><div data-profils></div>`;
       corps.querySelectorAll('tr[data-i]').forEach((tr) => {
         const x = st[Number(tr.dataset.i)];
@@ -953,23 +989,23 @@ export class PageParametresPointage extends PageBase {
       }
     };
     const rendre = () => {
-      zone.innerHTML = `<p class="ligne">${profils.map((x, i) => `<button type="button" data-p="${i}" class="${x === courant ? 'actif' : ''}">${echapper(x.libelle || x.code || '(nouveau)')}${x.actif ? '' : ' (inactif)'}</button>`).join(' ')}
-        ${admin ? '<button type="button" data-nouveau>＋ Profil</button>' : ''}</p>
+      zone.innerHTML = `<div class="titre-actions"><nav class="onglets crm-vues">${profils.map((x, i) => `<button type="button" data-p="${i}" class="${x === courant ? 'actif' : ''}">${echapper(x.libelle || x.code || '(nouveau)')}${x.actif ? '' : ' (inactif)'}</button>`).join('')}</nav>
+        <span class="titre-actions-boutons">${admin ? '<button type="button" class="bouton-icone" data-nouveau title="Nouveau profil de paie" aria-label="Nouveau profil de paie">＋</button>' : ''}${admin && courant ? ' <button type="button" data-enregistrer-p title="Enregistrer les profils de paie">💾 Enregistrer</button>' : ''}</span></div>
         ${courant ? `<p class="ligne"><label>Code <input data-code size="10" value="${echapper(courant.code)}" ${admin && !courant.id ? '' : 'readonly'}></label>
           <label>Libellé <input data-libelle size="36" value="${echapper(courant.libelle)}" ${ro}></label>
           <label><input type="checkbox" data-export ${courant.export ? 'checked' : ''} ${ro}> Exporté vers la paie</label>
           <label><input type="checkbox" data-actif ${courant.actif ? 'checked' : ''} ${ro}> Actif</label></p>
-          <h3>Rubriques</h3><table><thead><tr><th>Code</th><th>Libellé</th><th>Unité</th><th>Saisie</th><th>Code paie</th><th>Ordre</th><th></th></tr></thead><tbody>
+          <h3>Rubriques</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Unité</th><th>Saisie</th><th>Code paie</th><th>Ordre</th><th></th></tr></thead><tbody>
           ${courant.rubriques.map((r, i) => `<tr data-r="${i}"><td><input data-f="code" size="8" value="${echapper(r.code)}" ${ro}></td><td><input data-f="libelle" size="28" value="${echapper(r.libelle)}" ${ro}></td>
             <td data-c="unite"></td><td data-c="saisie"></td>
             <td><input data-f="code_paie" size="8" value="${echapper(r.code_paie ?? '')}" ${ro}></td><td><input data-f="ordre" type="number" size="3" value="${r.ordre}" ${ro}></td>
-            <td>${admin ? '<button type="button" data-retirer-r>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
-          ${admin ? '<p><button type="button" data-ajouter-r>＋ Rubrique</button></p>' : ''}
-          <h3>Règles (dans l'ordre)</h3><table><thead><tr><th>Type</th><th>Rubrique</th><th>Paramètres (JSON)</th><th>Ordre</th><th>Active</th><th></th></tr></thead><tbody>
+            <td>${admin ? '<button type="button" class="bouton-icone" data-retirer-r title="Retirer la rubrique" aria-label="Retirer la rubrique">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+          ${admin ? '<p><button type="button" class="bouton-icone" data-ajouter-r title="Ajouter une rubrique" aria-label="Ajouter une rubrique">＋</button></p>' : ''}
+          <h3>Règles (dans l'ordre)</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Type</th><th>Rubrique</th><th>Paramètres (JSON)</th><th>Ordre</th><th>Active</th><th></th></tr></thead><tbody>
           ${courant.regles.map((r, i) => `<tr data-g="${i}"><td data-c="type"></td><td><input data-f="rubrique" size="8" value="${echapper(r.rubrique ?? '')}" ${ro}></td>
             <td><input data-f="parametres" size="60" value="${echapper(JSON.stringify(r.parametres ?? {}))}" ${ro}></td><td><input data-f="ordre" type="number" size="3" value="${r.ordre}" ${ro}></td>
-            <td><input type="checkbox" data-f="actif" ${r.actif ? 'checked' : ''} ${ro}></td><td>${admin ? '<button type="button" data-retirer-g>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
-          ${admin ? '<p><button type="button" data-ajouter-g>＋ Règle</button> <button type="button" data-enregistrer-p>Enregistrer les profils</button></p>' : ''}
+            <td><input type="checkbox" data-f="actif" ${r.actif ? 'checked' : ''} ${ro}></td><td>${admin ? '<button type="button" class="bouton-icone" data-retirer-g title="Retirer la règle" aria-label="Retirer la règle">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
+          ${admin ? '<p><button type="button" class="bouton-icone" data-ajouter-g title="Ajouter une règle" aria-label="Ajouter une règle">＋</button></p>' : ''}
           <p class="aide">Paramètres : CUMUL_HEURES { sous_types, exclure } · SEUIL_JOUR { base, seuil (minutes), valeur, exclu_si } · TRANCHES_SEMAINE { base, seuil, deduire, tranches [{ rubrique, jusqu_a }] } · ZONE { exclu_si } · PLAFOND { max, max_semaine }.</p>` : ''}`;
       zone.querySelectorAll('[data-p]').forEach((b) => b.addEventListener('click', () => { courant = profils[Number(b.dataset.p)]; rendre(); }));
       zone.querySelector('[data-nouveau]')?.addEventListener('click', () => {
