@@ -61,3 +61,6 @@
 .vp-deco.charge-ok { background: rgba(22, 163, 74, .22); }
 .vp-deco.charge-moyen { background: rgba(217, 119, 6, .3); }
 .vp-deco.charge-plein { background: rgba(220, 38, 38, .35); }
+
+/* Jalons (losange centré sur l'instant). */
+.vp-deco.jalon { color: #b45309; font-size: 14px; text-align: center; padding: 0; opacity: 1; background: none; overflow: visible; }

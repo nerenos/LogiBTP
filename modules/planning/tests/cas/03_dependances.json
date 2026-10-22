@@ -1,0 +1,54 @@
+{
+  "description": "Dépendances et tâches liées (debutMinimum, controlerDependances, propagerDependances ↔ ReglesDependances) : FD / DD, jours calendaires ou ouvrés, FIXE propagé en cascade (durée gardée), ALERTE signalée, cycles refusés, tâche liée hors de sa principale. Instants « AAAA-MM-JJTHH:MM ».",
+  "jours_ouvres": ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-26", "2026-10-27"],
+  "minimums": [
+    { "nom": "fin → début, 2 jours calendaires", "dep": { "type": "FD", "decalage": 2, "unite": "CAL" }, "de": { "debut": "2026-10-19T08:00", "fin": "2026-10-22T17:00" }, "attendu": "2026-10-24T17:00" },
+    { "nom": "début → début sans décalage", "dep": { "type": "DD", "decalage": 0, "unite": "CAL" }, "de": { "debut": "2026-10-19T08:00", "fin": "2026-10-22T17:00" }, "attendu": "2026-10-19T08:00" },
+    { "nom": "fin → début, 2 jours ouvrés (week-end sauté)", "dep": { "type": "FD", "decalage": 2, "unite": "OUV" }, "de": { "debut": "2026-10-19T08:00", "fin": "2026-10-22T17:00" }, "attendu": "2026-10-26T00:00" },
+    { "nom": "jours ouvrés, décalage nul", "dep": { "type": "FD", "decalage": 0, "unite": "OUV" }, "de": { "debut": "2026-10-19T08:00", "fin": "2026-10-22T17:00" }, "attendu": "2026-10-22T17:00" },
+    { "nom": "jours ouvrés insuffisants", "dep": { "type": "FD", "decalage": 9, "unite": "OUV" }, "de": { "debut": "2026-10-19T08:00", "fin": "2026-10-22T17:00" }, "attendu": null }
+  ],
+  "controles": [
+    { "nom": "correctes", "deps": [{ "de": 1, "vers": 2, "type": "FD" }, { "de": 2, "vers": 3, "type": "DD", "unite": "OUV", "mode": "ALERTE" }], "attendu": [] },
+    { "nom": "vers elle-même", "deps": [{ "de": 1, "vers": 1, "type": "FD" }], "attendu": ["DEP_SOI"] },
+    { "nom": "type inconnu", "deps": [{ "de": 1, "vers": 2, "type": "FF" }], "attendu": ["DEP_TYPE"] },
+    { "nom": "doublon", "deps": [{ "de": 1, "vers": 2, "type": "FD" }, { "de": 1, "vers": 2, "type": "DD" }], "attendu": ["DEP_DOUBLON"] },
+    { "nom": "cycle", "deps": [{ "de": 1, "vers": 2, "type": "FD" }, { "de": 2, "vers": 3, "type": "FD" }, { "de": 3, "vers": 1, "type": "DD" }], "attendu": ["DEP_CYCLE"] }
+  ],
+  "propagations": [
+    {
+      "nom": "cascade fixe, alerte violée, tâche liée hors période",
+      "taches": [
+        { "cle": "A", "debut": "2026-10-19T08:00", "fin": "2026-10-21T17:00" },
+        { "cle": "B", "debut": "2026-10-20T08:00", "fin": "2026-10-20T12:00" },
+        { "cle": "C", "debut": "2026-10-19T08:00", "fin": "2026-10-19T10:00" },
+        { "cle": "D", "debut": "2026-10-20T08:00", "fin": "2026-10-20T17:00" },
+        { "cle": "E", "debut": "2026-10-21T08:00", "fin": "2026-10-22T12:00", "parent": "A" }
+      ],
+      "deps": [
+        { "de": "A", "vers": "B", "type": "FD", "decalage": 0, "unite": "CAL", "mode": "FIXE" },
+        { "de": "B", "vers": "C", "type": "FD", "decalage": 1, "unite": "OUV", "mode": "FIXE" },
+        { "de": "A", "vers": "D", "type": "FD", "decalage": 0, "unite": "CAL", "mode": "ALERTE" }
+      ],
+      "attendu": {
+        "taches": [
+          { "cle": "B", "debut": "2026-10-21T17:00", "fin": "2026-10-21T21:00" },
+          { "cle": "C", "debut": "2026-10-22T00:00", "fin": "2026-10-22T02:00" }
+        ],
+        "alertes": [
+          { "code": "DEP_VIOLEE", "de": "A", "vers": "D", "minimum": "2026-10-21T17:00" },
+          { "code": "LIEE_HORS", "tache": "E" }
+        ]
+      }
+    },
+    {
+      "nom": "fixe : la suivante est ramenée au plus tôt permis (plus tard ou plus tôt)",
+      "taches": [
+        { "cle": "A", "debut": "2026-10-19T08:00", "fin": "2026-10-19T12:00" },
+        { "cle": "B", "debut": "2026-10-23T08:00", "fin": "2026-10-23T10:00" }
+      ],
+      "deps": [{ "de": "A", "vers": "B", "type": "DD", "decalage": 1, "unite": "CAL", "mode": "FIXE" }],
+      "attendu": { "taches": [{ "cle": "B", "debut": "2026-10-20T08:00", "fin": "2026-10-20T10:00" }], "alertes": [] }
+    }
+  ]
+}

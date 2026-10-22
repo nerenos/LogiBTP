@@ -4,3 +4,4 @@ export { ECHELLES, versMinutes, depuisMinutes, dateDe, debutUnite, semaineIso, c
 export { empiler, cumuler, ligneA, visibles } from './disposition.js';
 export { calculerTache, retirerAbsences, MESSAGES_CALCUL } from './calcul.js';
 export { calculerCharge } from './charge.js';
+export { debutMinimum, controlerDependances, ordreTopologique, propagerDependances, MESSAGES_DEPENDANCES } from './dependances.js';

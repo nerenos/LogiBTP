@@ -19,6 +19,7 @@ public static class Extensions
         services.AddSingleton<SpecialisationPlanning, TSpecialisation>();
         services.AddScoped<ServicePlanning>();
         services.AddScoped<ServiceCharge>();
+        services.AddScoped<ServiceLiens>();
         return services;
     }
 
@@ -37,14 +38,30 @@ public static class Extensions
         g.MapPost("/calcul", (TacheSaisie t, ServicePlanning s, CancellationToken ct) => s.ApercuAsync(t, ct));
         g.MapGet("/taches/{id:long}", (long id, ServicePlanning s, CancellationToken ct) => s.TacheAsync(id, ct));
         g.MapPost("/taches", (TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.CreerAsync(t, Utilisateur.Depuis(http), ct));
-        g.MapPut("/taches/{id:long}", (long id, TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.ModifierAsync(id, t, Utilisateur.Depuis(http), ct));
+        g.MapPut("/taches/{id:long}", async (long id, TacheSaisie t, HttpContext http, ServicePlanning s, ServiceLiens l, CancellationToken ct) =>
+        {
+            await s.ModifierAsync(id, t, Utilisateur.Depuis(http), ct);
+            await l.PropagerAsync(id, Utilisateur.Depuis(http), ct);
+            return await s.TacheAsync(id, ct);
+        });
         g.MapDelete("/taches/{id:long}", async (long id, int version, HttpContext http, ServicePlanning s, CancellationToken ct) =>
         {
             await s.SupprimerAsync(id, version, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
-        g.MapPost("/taches/{id:long}/deplacer", (long id, DeplacementSaisi d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.DeplacerAsync(id, d, Utilisateur.Depuis(http), ct));
-        g.MapPost("/taches/{id:long}/scinder", (long id, ScissionSaisie d, HttpContext http, ServicePlanning s, CancellationToken ct) => s.ScinderAsync(id, d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/taches/{id:long}/deplacer", async (long id, DeplacementSaisi d, HttpContext http, ServicePlanning s, ServiceLiens l, CancellationToken ct) =>
+        {
+            var r = await s.DeplacerAsync(id, d, Utilisateur.Depuis(http), ct);
+            if (d.Copie) return r;
+            await l.PropagerAsync(id, Utilisateur.Depuis(http), ct);
+            return await s.TacheAsync(id, ct);
+        });
+        g.MapPost("/taches/{id:long}/scinder", async (long id, ScissionSaisie d, HttpContext http, ServicePlanning s, ServiceLiens l, CancellationToken ct) =>
+        {
+            var r = await s.ScinderAsync(id, d, Utilisateur.Depuis(http), ct);
+            await l.PropagerAsync(id, Utilisateur.Depuis(http), ct);
+            return r;
+        });
         // Charge et contrôles (lot 4).
         g.MapGet("/charge", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.ChargeAsync(vue, du, au, ct));
         g.MapGet("/notifications", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.NotificationsAsync(vue, du, au, ct));
@@ -58,6 +75,19 @@ public static class Extensions
         g.MapGet("/creneau", (string? ressource, int? service, int heures, string apres, string? habilitations, ServiceCharge s, CancellationToken ct) =>
             s.CreneauAsync(ressource, service, heures, apres, habilitations, ct));
         g.MapGet("/parametres", (ServiceCharge s, CancellationToken ct) => s.ParametresAsync(ct));
+        // Liens (lot 5) : dépendances, répétitions, jalons.
+        g.MapGet("/taches/{id:long}/dependances", (long id, ServiceLiens s, CancellationToken ct) => s.DependancesAsync(id, ct));
+        g.MapPut("/taches/{id:long}/dependances", (long id, List<DependanceSaisie> l, HttpContext http, ServiceLiens s, CancellationToken ct) =>
+            s.EnregistrerDependancesAsync(id, l, Utilisateur.Depuis(http), ct));
+        g.MapPost("/taches/{id:long}/repeter", (long id, RepetitionSaisie r, HttpContext http, ServiceLiens s, CancellationToken ct) => s.RepeterAsync(id, r, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/series/{serie:guid}", (Guid serie, string? depuis, ServiceLiens s, CancellationToken ct) => s.SupprimerSerieAsync(serie, depuis, ct));
+        g.MapGet("/jalons", (string du, string au, ServiceLiens s, CancellationToken ct) => s.JalonsAsync(du, au, ct));
+        g.MapPost("/jalons", (JalonSaisi j, HttpContext http, ServiceLiens s, CancellationToken ct) => s.CreerJalonAsync(j, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/jalons/{id:long}", async (long id, ServiceLiens s, CancellationToken ct) =>
+        {
+            await s.SupprimerJalonAsync(id, ct);
+            return Results.NoContent();
+        });
         return g;
     }
 }

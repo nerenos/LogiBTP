@@ -123,6 +123,14 @@ export const api = {
     notifications: (f) => appel('GET', `/planning/notifications?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     marquerNotifications: (e) => appel('PUT', '/planning/notifications', e),
     appliquerEquipe: (id, equipe, version) => appel('POST', `/planning/taches/${id}/equipes/${equipe}/appliquer?version=${version}`),
+    // Lot 5 : dépendances, répétitions, jalons.
+    dependances: (id) => appel('GET', `/planning/taches/${id}/dependances`),
+    enregistrerDependances: (id, l) => appel('PUT', `/planning/taches/${id}/dependances`, l),
+    repeter: (id, r) => appel('POST', `/planning/taches/${id}/repeter`, r),
+    supprimerSerie: (serie, depuis) => appel('DELETE', `/planning/series/${serie}${depuis ? `?depuis=${encodeURIComponent(depuis)}` : ''}`),
+    jalons: (du, au) => appel('GET', `/planning/jalons?du=${encodeURIComponent(du)}&au=${encodeURIComponent(au)}`),
+    creerJalon: (j) => appel('POST', '/planning/jalons', j),
+    supprimerJalon: (id) => appel('DELETE', `/planning/jalons/${id}`),
     creneau: (f) => appel('GET', `/planning/creneau?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
   },
   notifications: {

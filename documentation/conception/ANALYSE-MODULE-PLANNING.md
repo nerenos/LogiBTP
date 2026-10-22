@@ -12,7 +12,9 @@
 > (text/event-stream, `Diffuseur` du socle) au lieu de SignalR, même usage (groupe par base, sujet « planning ») ;
 > annuler / rétablir côté navigateur rejoué par l'API ; vue en consultation. Lot 4 réalisé le 22/10/2026 (`charge.js` ↔
 > `ReglesCharge.cs`, `ServiceCharge.cs`, `089b`) : notifications calculées à la demande (aucune stockée), seul leur état
-> l'est ; seuil de sous-occupation global.
+> l'est ; seuil de sous-occupation global. Lot 5 réalisé le 22/10/2026 (`dependances.js` ↔ `ReglesDependances.cs`,
+> `ServiceLiens.cs`, `089c`) : propagation fixe en cascade appliquée côté serveur après chaque écriture (sans aperçu) ;
+> les dépendances ne sont pas encore dessinées dans la vue.
 
 ## 1. Objet
 

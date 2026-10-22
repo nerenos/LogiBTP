@@ -31,7 +31,7 @@ public sealed record NotificationPlanning(string Cle, string Type, string Niveau
 /// stock de matériel dépassé, habilitation manquante, composition d'équipe modifiée), recalcul d'une tâche à la
 /// composition actuelle de l'équipe, premier créneau libre d'une ressource ou d'un service.
 /// </summary>
-public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning specialisation, ServicePlanning planning)
+public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning specialisation, ServicePlanning planning, ServiceLiens liens)
 {
     private sealed record Donnees(List<RessourcePlanning> Ressources, List<TacheEntite> Taches, List<AffectationEntite> Affectations, Charge Charge, List<string> Jours);
 
@@ -127,6 +127,22 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
                 r.Add(new($"EQUIPE:{t.TacId}:{g.Key.Value}:{string.Join(",", membres.Order())}", "EQUIPE", "ATTENTION",
                     $"« {t.TacLibelle} » : la composition de l'équipe a changé ({membres.Except(copie).Count()} entrée(s), {copie.Except(membres).Count()} sortie(s))",
                     t.TacId, null, null, "APPLIQUER_EQUIPE", g.Key.Value));
+            }
+        }
+        // Dépendances en alerte violées, tâches liées hors de leur principale (lot 5).
+        foreach (var a in await liens.AlertesAsync(d.Taches, ct))
+        {
+            if (a.Code == "DEP_VIOLEE")
+            {
+                var de = long.Parse(a.De!, CultureInfo.InvariantCulture);
+                var vers = long.Parse(a.Vers!, CultureInfo.InvariantCulture);
+                r.Add(new($"DEPENDANCE:{a.De}:{a.Vers}", "DEPENDANCE", "ATTENTION",
+                    $"« {libTache.GetValueOrDefault(vers)} » démarre avant le {Temps.Ecrire(a.Minimum!.Value).Replace('T', ' ')} (dépendance de « {libTache.GetValueOrDefault(de)} »)", vers));
+            }
+            else
+            {
+                var t = long.Parse(a.Tache!, CultureInfo.InvariantCulture);
+                r.Add(new($"LIEE:{a.Tache}", "LIEE", "ATTENTION", $"« {libTache.GetValueOrDefault(t)} » sort de la période de sa tâche principale", t));
             }
         }
         var etats = await db.Notifications.AsNoTracking().Where(n => r.Select(x => x.Cle).Contains(n.PnoCle)).ToDictionaryAsync(n => n.PnoCle, n => n.PnoEtat, ct);

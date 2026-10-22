@@ -222,6 +222,12 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   calculées avec état, recalcul à la composition d'équipe, habilitations exigées, premier créneau libre. Reste : seuil de
   sous-occupation par service (global pour l'instant), notifications « délai non respecté » et « messages des services »
   (avec l'Exécution), proposition de mise à jour des tâches au changement de composition depuis la fiche de l'équipe.
+- [x] **Planning, lot 5** (22/10/2026) : dépendances (règle répliquée, propagation fixe en cascade, alertes), tâches
+  liées, tâches répétitives, jalons saisis et calculés. Reste : flèches des dépendances dessinées dans la vue, aperçu de
+  la propagation avant application, jalons du CRM (rappels, visas attendus).
+- [ ] Planning, lot 6 (liaisons) : planning théorique depuis le parcours de l'Exécution, tâches depuis les ordres et
+  propositions de dates (P15), tournées de livraison, pré-remplissage du Pointage et heures réelles, jalons du CRM, vues
+  personnelles et règles de couleur (écran) ; second temps : impression (module Édition), scénarios, mode atelier.
 
 ### Archivage
 

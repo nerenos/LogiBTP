@@ -16,6 +16,11 @@ const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
 const COULEURS_SERVICE = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be185d', '#4d7c0f', '#dc2626'];
 const versLocal = (s) => (s ? s.slice(0, 16) : '');
+const TYPES_DEP = { FD: 'Fin → début', DD: 'Début → début' };
+const UNITES_DEP = { CAL: 'jours calendaires', OUV: 'jours ouvrés' };
+const MODES_DEP = { FIXE: 'Fixe (propagée)', ALERTE: 'Alerte' };
+const FREQUENCES = { JOUR: 'Chaque jour', SEMAINE: 'Chaque semaine', MOIS: 'Chaque mois' };
+const TYPES_JALON = { LIVRAISON: 'Livraison', FIN_CHANTIER: 'Fin de chantier', FIN_ORDRE: 'Fin d\'ordre', ALERTE: 'Alerte', INTERVENTION: 'Intervention', AUTRE: 'Autre' };
 const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
 
 /** Saisie d'une tâche lue (pour la recréer ou la rétablir). */
@@ -23,7 +28,7 @@ const saisieDe = (t) => ({
   calcul: t.calcul, debut: t.debut, fin: t.fin, heures: t.heures, nb_ressources: t.nb_ressources, srv_id: t.srv_id, type_element: t.type_element,
   id_element: t.id_element, origine_type: t.origine_type, origine_id: t.origine_id, libelle: t.libelle, memo: t.memo, avancement: t.avancement,
   couleur: t.couleur, etat: t.etat, affectations: t.affectations.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id, quantite: a.quantite })),
-  habilitations: t.habilitations ?? [],
+  habilitations: t.habilitations ?? [], parent_id: t.parent_id ?? null,
 });
 
 /** Remet une tâche dans un état lu auparavant (version courante relue). */
@@ -50,8 +55,14 @@ class VuePlanningBtp extends VuePlanning {
 
   classeBarre(t) { return `${t.theorique ? 'theorique' : ''} etat-${String(t.etat).toLowerCase()}`; }
 
-  /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité. */
+  /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité ; jalons des chantiers (lot 5). */
   decorationsLigne(l) {
+    if (l.cle.startsWith('chantier:')) {
+      return (this.jalons ?? []).filter((j) => `chantier:${j.id_element}` === l.cle).map((j) => ({
+        debut: versMinutes(j.quand) - 30 * this.minutesParPixel / 3, fin: versMinutes(j.quand) + 30 * this.minutesParPixel / 3, classe: `jalon jalon-${j.type.toLowerCase()}`,
+        titre: `${TYPES_JALON[j.type] ?? j.type} : ${j.libelle} (${j.quand.replace('T', ' ')})`, texte: '◆',
+      }));
+    }
     if (!l.cle.startsWith('srv:') || !this.charge) return [];
     const h = (m) => ecrireDuree(m) || '0:00';
     return (this.charge.get(Number(l.cle.slice(4))) ?? []).map((c) => {
@@ -285,8 +296,9 @@ export class PagePlanning extends PageBase {
       if (!this.planning.charge.has(c.srv_id)) this.planning.charge.set(c.srv_id, []);
       this.planning.charge.get(c.srv_id).push(c);
     }
+    this.planning.jalons = await api.planning.jalons(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []);
     this.planning.definirDonnees(this.lignes, this.barres);
-    if (!this.consultation) this.#alertes();
+    if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }
     this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
     if (!this.centre) { this.centre = true; this.planning.allerA(versMinutes(new Date().toISOString().slice(0, 16))); }
   }
@@ -294,6 +306,8 @@ export class PagePlanning extends PageBase {
   #onglet(nom) {
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === nom));
     this.conteneur.querySelectorAll('[data-panneau]').forEach((p) => { p.hidden = p.dataset.panneau !== nom; });
+    const jalons = this.conteneur.querySelector('[data-jalons]');
+    if (jalons) jalons.hidden = nom !== 'aplanifier';
   }
 
   async #apres(promesse, message) {
@@ -380,7 +394,7 @@ export class PagePlanning extends PageBase {
     try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin) }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const importantes = l.filter((n) => n.niveau !== 'INFO' && n.etat !== 'VUE').length;
     this.conteneur.querySelector('[data-nb-alertes]').textContent = importantes ? `(${importantes})` : '';
-    const TYPES = { SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };
+    const TYPES = { DEPENDANCE: '🔗 Dépendances', LIEE: '📎 Tâches liées', SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };
     zone.innerHTML = l.length ? Object.entries(TYPES).filter(([t]) => l.some((n) => n.type === t)).map(([t, titre]) => {
       const n = l.filter((x) => x.type === t);
       return `<details ${t === 'SOUSOCCUPATION' ? '' : 'open'}><summary><b>${titre}</b> (${n.length}) <button type="button" data-tout-traiter="${t}" title="Marquer toutes traitées">✔ tout</button></summary><ul class="alertes-planning">
@@ -407,6 +421,79 @@ export class PagePlanning extends PageBase {
       e.preventDefault();
       marquer(l.filter((x) => x.type === b.dataset.toutTraiter).map((x) => x.cle), 'TRAITEE');
     }));
+  }
+
+  /** Jalons de la période (saisis ou calculés) sous la liste « À planifier », saisie d'un jalon sur un chantier. */
+  async #rendreJalons() {
+    let zone = this.conteneur.querySelector('[data-jalons]');
+    if (!zone) {
+      zone = document.createElement('div');
+      zone.dataset.jalons = '';
+      this.conteneur.querySelector('[data-panneau="aplanifier"]').after(zone);
+    }
+    zone.hidden = this.conteneur.querySelector('[data-panneau="aplanifier"]').hidden;
+    const jalons = this.planning.jalons ?? [];
+    const elements = await api.planning.elements().catch(() => []);
+    zone.innerHTML = `<h4>Jalons</h4><ul class="alertes-planning">${jalons.map((j) => `<li>◆ ${j.quand.replace('T', ' ')} — ${echapper(TYPES_JALON[j.type] ?? j.type)} : ${echapper(j.libelle)}
+        ${j.cle.startsWith('jalon:') ? `<button type="button" data-suppr-jalon="${j.cle.slice(6)}" title="Supprimer">✕</button>` : ''}</li>`).join('') || '<li class="aide">Aucun jalon sur la période</li>'}</ul>
+      <p class="ligne"><input type="datetime-local" data-jalon-quand> <span data-jalon-type></span></p>
+      <p class="ligne"><input data-jalon-libelle placeholder="Libellé du jalon" size="18"> <span data-jalon-chantier></span> <button type="button" data-ajouter-jalon>＋ Jalon</button></p>`;
+    const type = creerCombo({ options: Object.entries(TYPES_JALON).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'LIVRAISON', vide: false });
+    zone.querySelector('[data-jalon-type]').append(type);
+    const chantier = creerCombo({ options: elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), valeur: '', vide: true, titre: 'Chantier' });
+    zone.querySelector('[data-jalon-chantier]').append(chantier);
+    zone.querySelectorAll('[data-suppr-jalon]').forEach((b) => b.addEventListener('click', () => this.#apres(api.planning.supprimerJalon(b.dataset.supprJalon), 'Jalon supprimé')));
+    zone.querySelector('[data-ajouter-jalon]').addEventListener('click', () => {
+      const quand = zone.querySelector('[data-jalon-quand]').value;
+      if (!quand) return;
+      this.#apres(api.planning.creerJalon({ quand, type: type.valeurCombo, libelle: zone.querySelector('[data-jalon-libelle]').value, type_element: chantier.valeurCombo ? 'chantier' : null, id_element: chantier.valeurCombo ? String(chantier.valeurCombo) : null }), 'Jalon ajouté');
+    });
+  }
+
+  /** Liens d'une tâche (lot 5) : tâche principale et tâche liée, dépendances entrantes (saisies) et sortantes, répétition. */
+  async #rendreLiens(zone, t) {
+    if (!t.id) { zone.innerHTML = ''; return; }
+    const deps = await api.planning.dependances(t.id).catch(() => ({ predecesseurs: [], successeurs: [] }));
+    const entrantes = deps.predecesseurs.map((d) => ({ de: d.de, libelle: d.libelle, type: d.type, decalage: d.decalage, unite: d.unite, mode: d.mode }));
+    const taches = [...new Map(this.barres.filter((b) => b.tache !== t.id).map((b) => [b.tache, b])).values()];
+    const rendre = () => {
+      zone.innerHTML = `<h4>Liens</h4>
+        <p>${t.parent_id ? `Tâche principale : <a href="#" data-aller-parent>${echapper(t.parent ?? `n° ${t.parent_id}`)}</a>` : '<span class="aide">Pas de tâche principale</span>'} <button type="button" data-liee>＋ Tâche liée</button></p>
+        <p><b>Dépend de</b></p><ul class="alertes-planning">${entrantes.map((d, i) => `<li>${echapper(d.libelle ?? `n° ${d.de}`)} — ${TYPES_DEP[d.type]}, ${d.decalage} ${UNITES_DEP[d.unite]}, ${MODES_DEP[d.mode]} <button type="button" data-retirer-dep="${i}">✕</button></li>`).join('') || '<li class="aide">Aucune</li>'}</ul>
+        <p class="ligne"><span data-dep-tache></span> <span data-dep-type></span> <input type="number" data-dep-decalage value="0" size="3"> <span data-dep-unite></span> <span data-dep-mode></span> <button type="button" data-ajouter-dep>＋</button></p>
+        <p><button type="button" data-enregistrer-deps>Enregistrer les dépendances</button></p>
+        ${deps.successeurs.length ? `<p><b>Tâches suivantes</b> : ${deps.successeurs.map((d) => echapper(d.libelle ?? `n° ${d.vers}`)).join(', ')}</p>` : ''}
+        <h4>Répétition</h4><p class="ligne"><span data-frequence></span> <input type="number" data-nombre min="1" max="52" value="4" size="3"> fois <button type="button" data-repeter>Répéter</button>
+          ${t.serie ? '<button type="button" data-suppr-serie title="Supprimer les tâches de la série qui commencent après celle-ci">Supprimer la suite de la série</button>' : ''}</p>`;
+      const combo = (cle, opts, valeur, titre) => { const c = creerCombo({ options: opts, valeur, vide: false, titre }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
+      const opt = (o) => Object.entries(o).map(([valeur, libelle]) => ({ valeur, libelle }));
+      const tache = combo('dep-tache', taches.map((b) => ({ valeur: b.tache, libelle: b.libelle, detail: b.element?.code ?? '' })), taches[0]?.tache ?? '', 'Tâche précédente');
+      const type = combo('dep-type', opt(TYPES_DEP), 'FD');
+      const unite = combo('dep-unite', opt(UNITES_DEP), 'CAL');
+      const mode = combo('dep-mode', opt(MODES_DEP), 'FIXE');
+      const frequence = combo('frequence', opt(FREQUENCES), 'SEMAINE');
+      zone.querySelector('[data-aller-parent]')?.addEventListener('click', (e) => { e.preventDefault(); this.#editer(t.parent_id); });
+      zone.querySelectorAll('[data-retirer-dep]').forEach((b) => b.addEventListener('click', () => { entrantes.splice(Number(b.dataset.retirerDep), 1); rendre(); }));
+      zone.querySelector('[data-ajouter-dep]').addEventListener('click', () => {
+        if (!tache.valeurCombo) return;
+        entrantes.push({ de: Number(tache.valeurCombo), libelle: taches.find((b) => String(b.tache) === String(tache.valeurCombo))?.libelle, type: type.valeurCombo,
+          decalage: Number(zone.querySelector('[data-dep-decalage]').value) || 0, unite: unite.valeurCombo, mode: mode.valeurCombo });
+        rendre();
+      });
+      zone.querySelector('[data-enregistrer-deps]').addEventListener('click', async () => {
+        const r = await this.#modifierMemorise(t.id, 'dépendances', () => api.planning.enregistrerDependances(t.id, entrantes.map(({ libelle, ...d }) => d)).then(() => api.planning.tache(t.id)));
+        if (r) this.#editer(t.id);
+      });
+      zone.querySelector('[data-liee]').addEventListener('click', async () => {
+        const r = await this.#apres(api.planning.creer({ ...saisieDe(t), libelle: `${t.libelle} (liée)`, parent_id: t.id, calcul: 2, fin: t.debut.slice(0, 11) + '12:00' > t.debut ? t.debut.slice(0, 11) + '12:00' : t.fin, heures: null, affectations: [] }), 'Tâche liée créée');
+        if (r) { this.#memoriserCreation(r, 'tâche liée'); this.#editer(r.id); }
+      });
+      zone.querySelector('[data-repeter]').addEventListener('click', () => this.#apres(api.planning.repeter(t.id, { frequence: frequence.valeurCombo, nombre: Number(zone.querySelector('[data-nombre]').value) || 1 }), 'Tâches répétées'));
+      zone.querySelector('[data-suppr-serie]')?.addEventListener('click', () => {
+        if (confirm('Supprimer les tâches suivantes de la série ?')) this.#apres(api.planning.supprimerSerie(t.serie, depuisMinutes(versMinutes(t.debut) + 1)), 'Suite de la série supprimée');
+      });
+    };
+    rendre();
   }
 
   /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
@@ -439,7 +526,8 @@ export class PagePlanning extends PageBase {
       <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>
       <p><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>
-      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`;
+      ${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}<div data-liens></div>`;
+    this.#rendreLiens(zone.querySelector('[data-liens]'), t);
     const affs = t.affectations.map((a) => ({ ...a }));
     const habs = [...(t.habilitations ?? [])];
     const combo = (cle, opts, valeur, vide = true) => { const c = creerCombo({ options: opts, valeur: valeur ?? '', vide }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
@@ -507,6 +595,7 @@ export class PagePlanning extends PageBase {
         id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
         avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
         affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version, habilitations: habs,
+        parent_id: t.parent_id ?? null,
       };
     };
     zone.querySelector('[data-apercu]').addEventListener('click', async () => {
