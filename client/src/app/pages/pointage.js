@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
   ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE,
@@ -53,9 +53,16 @@ function pointagesDepuis(lignes, jours) {
   return r;
 }
 
+/** Champs d'une ligne de la grille, dans l'ordre de la saisie au clavier. */
+const CHAMPS_LIGNE = ['cha', 'ordre', 'type', 'st', 'motif', 'j0', 'j1', 'j2', 'j3', 'j4', 'j5', 'j6'];
+
 /**
  * Grille hebdomadaire d'un salarié (saisie ou couche validée) : combos chantier, ordre, type et sous-type, motif d'une
  * non-conformité, durées par jour, totaux, contrôles en direct. Jours verrouillés (validés) en lecture seule.
+ * Mode tableau : Entrée passe à la case suivante (fin de ligne : ligne suivante ; fin du tableau : nouvelle ligne),
+ * ↑ ↓ changent de ligne sur un jour, raccourcis du groupe `pointage` (raccourcis.js). Saisie en cascade : un choix
+ * passe au champ suivant (chantier → ses ordres, lus au besoin → type de MO, proposé par le service de l'ordre →
+ * sous-type → jours) ; une nouvelle ligne reprend chantier, ordre, type et sous-type de la ligne courante.
  * Options : ref (référentiels), chantiers (proposés), donnees { salarie, pointages, chantiers, ordres, recents },
  * lundi, lecture, verrouilles (index des jours), change().
  */
@@ -109,7 +116,8 @@ class GrillePointage {
     zone.innerHTML = `<table class="grille-pointage"><thead><tr><th>Chantier</th><th>Ordre</th><th>Type de MO</th><th>Sous-type</th><th>Motif</th>
         ${jours.map((x, i) => `<th class="nombre"${verrou.has(i) ? ' title="Jour validé"' : ''}>${verrou.has(i) ? '🔒 ' : ''}${JOURS[i]} ${jourCourt(x)}</th>`).join('')}<th class="nombre">Total</th><th></th></tr></thead><tbody></tbody>
         <tfoot><tr><th colspan="5">Total</th>${jours.map((_, i) => `<th class="nombre" data-total="${i}"></th>`).join('')}<th class="nombre" data-total="s"></th><th></th></tr></tfoot></table>
-      ${lecture ? '' : `<p><button type="button" data-ajouter>＋ Ligne</button> <span class="aide">Durées au pas de ${this.#o.ref.parametres.pas_minutes} min : « 7:30 », « 7h30 » ou « 7,5 ».</span></p>`}
+      ${lecture ? '' : `<p><button type="button" data-ajouter>＋ Ligne</button> <span class="aide">Durées au pas de ${this.#o.ref.parametres.pas_minutes} min : « 7:30 », « 7h30 » ou « 7,5 ».
+        Entrée : case suivante · ↑ ↓ : ligne · Ctrl+Entrée : nouvelle ligne · Alt+Entrée : recopier jusqu'au vendredi · Ctrl+D : dupliquer (raccourcis personnalisables).</span></p>`}
       <div data-controles></div>`;
     const corps = zone.querySelector('tbody');
     const majTotaux = () => {
@@ -127,60 +135,176 @@ class GrillePointage {
       }
       zone.querySelector('[data-controles]').innerHTML = c.length ? `<ul class="controles">${c.map((x) => `<li class="${x.niveau === 'ERREUR' ? 'erreur' : 'avertissement'}">${x.niveau === 'ERREUR' ? '⛔' : '⚠'} ${echapper(MESSAGES_POINTAGE[x.code] ?? x.code)}${x.date ? ` (${jourCourt(x.date)})` : ''}${x.cle ? ` — ${JOURS[Number(x.cle.split(':')[1])]}, ligne ${Number(x.cle.split(':')[0]) + 1}` : ''}</li>`).join('')}</ul>` : '';
     };
-    const changer = () => { this.modifiee = true; majTotaux(); this.#o.change?.(); };
+    const signaler = () => { this.modifiee = true; this.#o.change?.(); };
+    const changer = () => { signaler(); majTotaux(); };
+    const figee = (l) => lecture || l.cases.some((c, j) => verrou.has(j) && c.length);
+    const ordresDe = (cha) => (d.ordres ?? []).filter((x) => x.cha_id === cha);
+    const typeDuService = (srv) => this.#o.ref.types_mo.find((t) => t.srv_id === srv)?.id ?? null;
+    /** Champ saisissable d'une ligne (null si absent, en lecture, sans option ou désactivé). */
+    const champ = (i, c) => {
+      const tr = corps.querySelector(`tr[data-i="${i}"]`);
+      const el = tr?.querySelector(c.startsWith('j') ? `td[data-j="${c.slice(1)}"] input` : c === 'motif' ? '[data-motif]' : `[data-c="${c}"] input`);
+      if (!el || el.disabled || el.readOnly) return null;
+      if (c === 'ordre' && !ordresDe(this.lignes[i].cha_id).length) return null;
+      return el;
+    };
+    const focaliser = (el) => { if (!el) return false; el.focus(); if (el.select && !el.classList.contains('combo')) el.select(); return true; };
+    const premierChamp = (i, depuis = 0) => CHAMPS_LIGNE.slice(depuis).map((c) => champ(i, c)).find(Boolean) ?? null;
+    /** Champ suivant (ou précédent) de la saisie ; au-delà de la dernière ligne : nouvelle ligne en cascade. */
+    const suivant = (i, c, sens = 1) => {
+      const k = CHAMPS_LIGNE.indexOf(c);
+      if (sens > 0) {
+        if (focaliser(premierChamp(i, k + 1))) return;
+        if (i + 1 < this.lignes.length) { focaliser(premierChamp(i + 1)); return; }
+        nouvelleLigne(i);
+        return;
+      }
+      for (let x = k - 1; x >= 0; x--) if (focaliser(champ(i, CHAMPS_LIGNE[x]))) return;
+      for (let y = i - 1; y >= 0; y--) for (let x = CHAMPS_LIGNE.length - 1; x >= 0; x--) if (focaliser(champ(y, CHAMPS_LIGNE[x]))) return;
+    };
+    /** Nouvelle ligne après la ligne i : chantier, ordre, type et sous-type repris (saisie en cascade), focus au chantier. */
+    const nouvelleLigne = (i = this.lignes.length - 1, avecDurees = false) => {
+      const prec = this.lignes[i];
+      const typeService = typeDuService(d.salarie.srv_id);
+      const l = { cha_id: prec?.cha_id ?? d.recents?.[0] ?? null, ent_id: prec?.ent_id ?? null, type_mo: prec?.type_mo ?? typeService ?? null,
+        sous_type: prec?.sous_type ?? 'PRODUCTION', motif: avecDurees ? prec?.motif ?? null : null,
+        cases: jours.map((_, j) => (avecDurees && !verrou.has(j) ? (prec?.cases[j] ?? []).filter((p) => p.minutes).slice(0, 1).map((p) => ({ minutes: p.minutes })) : [])) };
+      this.lignes.splice(i + 1, 0, l);
+      signaler();
+      rendreLignes();
+      focaliser(avecDurees ? premierChamp(i + 1, CHAMPS_LIGNE.indexOf('j0')) : premierChamp(i + 1));
+    };
+    /** Ordres d'un chantier lus au besoin (cascade : chantier choisi hors des ordres connus). */
+    const chargerOrdres = async (cha) => {
+      if (!cha || (d.ordres ?? []).some((x) => x.cha_id === cha) || this.ordresLus?.has(cha)) return false;
+      (this.ordresLus ??= new Set()).add(cha);
+      try { d.ordres = [...(d.ordres ?? []), ...(await api.pointage.ordresChantier(cha))]; } catch { return false; }
+      return ordresDe(cha).length > 0;
+    };
     const rendreLignes = () => {
+      // Le champ actif est quitté avant d'être remplacé (sa liste de choix se ferme), sans effet sur les lignes.
+      const actif = document.activeElement;
+      if (actif && corps.contains(actif)) { this.enRendu = true; actif.blur(); this.enRendu = false; }
       corps.innerHTML = this.lignes.map((l, i) => {
-        const fige = lecture || l.cases.some((c, j) => verrou.has(j) && c.length);
+        const fige = figee(l);
         return `<tr data-i="${i}"><td data-c="cha"></td><td data-c="ordre"></td><td data-c="type"></td><td data-c="st"></td>
-        <td><input data-motif size="14" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>
+        <td><input data-motif size="10" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>
         ${l.cases.map((c, j) => `<td data-j="${j}"><input class="duree" size="5" value="${ecrireDuree(c.reduce((a, p) => a + (p.minutes || 0), 0))}" ${lecture || verrou.has(j) || c.length > 1 ? 'readonly' : ''} ${c.length > 1 ? 'title="Plusieurs pointages ce jour"' : c[0]?.debut != null ? `title="${ecrireDuree(c[0].debut)} – ${ecrireDuree(c[0].fin)}"` : ''}></td>`).join('')}
-        <td class="nombre" data-total-ligne></td><td>${fige ? '' : '<button type="button" data-retirer title="Retirer la ligne">✕</button>'}</td></tr>`;
+        <td class="nombre" data-total-ligne></td><td>${fige ? '' : '<button type="button" data-retirer title="Retirer la ligne (Ctrl+Suppr)" tabindex="-1">✕</button>'}</td></tr>`;
       }).join('');
       corps.querySelectorAll('tr[data-i]').forEach((tr) => {
-        const l = this.lignes[Number(tr.dataset.i)];
-        const fige = lecture || l.cases.some((c, j) => verrou.has(j) && c.length);
-        const ordres = (d.ordres ?? []).filter((x) => x.cha_id === l.cha_id).map((x) => ({ valeur: x.id, libelle: x.numero ?? `#${x.id}`, detail: x.objet ?? x.type }));
+        const i = Number(tr.dataset.i);
+        const l = this.lignes[i];
+        const fige = figee(l);
+        const ordres = ordresDe(l.cha_id).map((x) => ({ valeur: x.id, libelle: x.numero ?? `#${x.id}`, detail: x.objet ?? x.type }));
         const combos = {
           cha: creerCombo({ options: o.chantiers, valeur: l.cha_id ?? '', vide: false, titre: 'Chantier' }),
-          ordre: creerCombo({ options: ordres, valeur: l.ent_id ?? '', vide: true, titre: 'Ordre (facultatif)' }),
+          ordre: creerCombo({ options: ordres, valeur: l.ent_id ?? '', vide: true, titre: ordres.length ? 'Ordre (facultatif)' : 'Aucun ordre en cours sur ce chantier' }),
           type: creerCombo({ options: o.types, valeur: l.type_mo ?? '', vide: false, titre: 'Type de main-d\'œuvre' }),
           st: creerCombo({ options: o.sousTypes, valeur: l.sous_type ?? '', vide: true, titre: 'Sous-type' }),
         };
-        for (const [k, c] of Object.entries(combos)) { c.readOnly = fige; tr.querySelector(`[data-c="${k}"]`).append(c); }
+        for (const [k, c] of Object.entries(combos)) { c.readOnly = fige || (k === 'ordre' && !ordres.length); tr.querySelector(`[data-c="${k}"]`).append(c); }
         if (fige) return;
-        combos.cha.addEventListener('change', () => { l.cha_id = combos.cha.valeurCombo ? Number(combos.cha.valeurCombo) : null; l.ent_id = null; this.modifiee = true; this.#o.change?.(); rendreLignes(); });
-        combos.ordre.addEventListener('change', () => { l.ent_id = combos.ordre.valeurCombo ? Number(combos.ordre.valeurCombo) : null; changer(); });
-        combos.type.addEventListener('change', () => { l.type_mo = combos.type.valeurCombo ? Number(combos.type.valeurCombo) : null; changer(); });
+        // Cascade : un choix passe au champ suivant (au clavier, Entrée s'en charge).
+        const apres = (c) => { if (!this.parClavier) suivant(i, c); };
+        // Chantier : ses ordres (lus au besoin), lignes refaites, puis champ suivant (même au clavier : enCascade).
+        combos.cha.addEventListener('change', async () => {
+          if (this.enRendu) return;
+          this.enCascade = true;
+          l.cha_id = combos.cha.valeurCombo ? Number(combos.cha.valeurCombo) : null;
+          l.ent_id = null;
+          signaler();
+          try { await chargerOrdres(l.cha_id); } finally { this.enCascade = false; }
+          rendreLignes();
+          suivant(i, 'cha');
+        });
+        combos.ordre.addEventListener('change', () => {
+          if (this.enRendu) return;
+          l.ent_id = combos.ordre.valeurCombo ? Number(combos.ordre.valeurCombo) : null;
+          const t = typeDuService((d.ordres ?? []).find((x) => x.id === l.ent_id)?.srv_id);
+          if (t) { l.type_mo = t; combos.type.definirValeur(t); }
+          changer();
+          apres('ordre');
+        });
+        combos.type.addEventListener('change', () => { if (this.enRendu) return; l.type_mo = combos.type.valeurCombo ? Number(combos.type.valeurCombo) : null; changer(); apres('type'); });
         combos.st.addEventListener('change', () => {
+          if (this.enRendu) return;
           l.sous_type = combos.st.valeurCombo || null;
           tr.querySelector('[data-motif]').disabled = !o.nc.has(l.sous_type);
           changer();
+          apres('st');
         });
-        tr.querySelector('[data-motif]').addEventListener('change', (e) => { l.motif = e.target.value.trim() || null; changer(); });
+        tr.querySelector('[data-motif]').addEventListener('change', (e) => { if (this.enRendu) return; l.motif = e.target.value.trim() || null; changer(); });
         tr.querySelectorAll('td[data-j] input:not([readonly])').forEach((inp) => inp.addEventListener('change', () => {
+          if (this.enRendu) return;
           const j = Number(inp.closest('td').dataset.j);
           const m = lireDuree(inp.value);
           if (m === null) { inp.classList.add('invalide'); return; }
           inp.classList.remove('invalide');
           const c = l.cases[j];
+          if (m === c.reduce((a, x) => a + (x.minutes || 0), 0)) { inp.value = ecrireDuree(m); return; }
           if (c.length === 0 && m) c.push({ minutes: m });
           else if (c.length === 1) c[0].minutes = m;
           inp.value = ecrireDuree(m);
           changer();
         }));
-        tr.querySelector('[data-retirer]')?.addEventListener('click', () => { this.lignes.splice(this.lignes.indexOf(l), 1); this.modifiee = true; this.#o.change?.(); rendreLignes(); });
+        tr.querySelector('[data-retirer]')?.addEventListener('click', () => { this.lignes.splice(this.lignes.indexOf(l), 1); signaler(); rendreLignes(); });
       });
       majTotaux();
     };
-    zone.querySelector('[data-ajouter]')?.addEventListener('click', () => {
-      const prec = this.lignes.at(-1);
-      const typeService = this.#o.ref.types_mo.find((t) => t.srv_id === d.salarie.srv_id)?.id;
-      this.lignes.push({ cha_id: prec?.cha_id ?? d.recents?.[0] ?? null, ent_id: null, type_mo: prec?.type_mo ?? typeService ?? null, sous_type: 'PRODUCTION', motif: null, cases: jours.map(() => []) });
-      this.modifiee = true;
-      this.#o.change?.();
-      rendreLignes();
-    });
+    if (!lecture) {
+      // Mode tableau : la touche est lue avant les combos (capture) pour que leur choix au clavier ne déplace pas deux fois.
+      // Tab (déplacement natif) compte aussi : la cascade ne déplace pas le focus avant lui.
+      corps.addEventListener('keydown', (e) => { this.parClavier = Boolean(actionDe(e, 'pointage')) || e.key === 'Tab'; }, true);
+      corps.addEventListener('keydown', (e) => {
+        const action = actionDe(e, 'pointage');
+        this.parClavier = false;
+        const el = e.target;
+        const tr = el.closest?.('tr[data-i]');
+        if (!action || !tr || e.defaultPrevented) return;
+        if (this.enCascade) { e.preventDefault(); return; }
+        const i = Number(tr.dataset.i);
+        const td = el.closest('td');
+        const c = td?.dataset.j !== undefined ? `j${td.dataset.j}` : el.matches('[data-motif]') ? 'motif' : td?.dataset.c;
+        if (!c) return;
+        const l = this.lignes[i];
+        const jour = c.startsWith('j') ? Number(c.slice(1)) : null;
+        if (jour !== null && (action === 'caseSuivante' || action === 'casePrecedente' || action === 'recopierSemaine')) el.dispatchEvent(new Event('change'));
+        if (action === 'caseSuivante') suivant(i, c, 1);
+        else if (action === 'casePrecedente') suivant(i, c, -1);
+        else if ((action === 'ligneDessus' || action === 'ligneDessous') && jour !== null) {
+          el.dispatchEvent(new Event('change'));
+          const autre = i + (action === 'ligneDessus' ? -1 : 1);
+          if (!focaliser(champ(autre, c)) && action === 'ligneDessous' && autre >= this.lignes.length) nouvelleLigne(i);
+        } else if (action === 'nouvelleLigne') nouvelleLigne(i);
+        else if (action === 'dupliquer') nouvelleLigne(i, true);
+        else if (action === 'recopierSemaine' && jour !== null && jour < 4) {
+          const m = l.cases[jour].reduce((a, p) => a + (p.minutes || 0), 0);
+          for (let j = jour + 1; j <= 4; j++) {
+            const cj = l.cases[j];
+            if (verrou.has(j) || cj.length > 1) continue;
+            if (cj.length === 0 && m) cj.push({ minutes: m }); else if (cj.length === 1) cj[0].minutes = m;
+          }
+          changer();
+          rendreLignes();
+          focaliser(champ(i, 'j4'));
+        } else if (action === 'supprimerLigne' && !figee(l)) {
+          this.lignes.splice(i, 1);
+          signaler();
+          rendreLignes();
+          focaliser(premierChamp(Math.min(i, this.lignes.length - 1), CHAMPS_LIGNE.indexOf(c)) ?? premierChamp(Math.min(i, this.lignes.length - 1)));
+        } else return;
+        e.preventDefault();
+      });
+    }
+    zone.querySelector('[data-ajouter]')?.addEventListener('click', () => nouvelleLigne());
     rendreLignes();
+    /** Focus de départ : premier jour saisissable de la première ligne, sinon une nouvelle ligne (cascade). */
+    this.commencer = () => {
+      if (lecture) return;
+      if (!this.lignes.length) { nouvelleLigne(-1); this.modifiee = false; this.#o.change?.(); return; }
+      focaliser(premierChamp(0, CHAMPS_LIGNE.indexOf('j0')) ?? premierChamp(0));
+    };
   }
 }
 
@@ -216,8 +340,15 @@ export class PageSaisiePointage extends PageBase {
 
   async ouvrir() {
     this.titre = 'Saisie des pointages';
+    const reduit = lirePreferences().pointageSalariesReduit ?? window.matchMedia('(max-width: 1100px)').matches;
     this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><h1 class="page-titre">⏱ Saisie des pointages</h1>${BARRE}
-      <div class="pointage-corps"><div data-salaries class="pointage-salaries"></div><div data-detail class="pointage-grille"></div></div></div>`;
+      <div class="pointage-corps${reduit ? ' salaries-reduits' : ''}"><div class="pointage-panneau"><button type="button" class="discret" data-replier
+        title="Réduire ou afficher la liste des salariés">☰ Salariés</button><div data-salaries class="pointage-salaries"></div></div><div data-detail class="pointage-grille"></div></div></div>`;
+    this.conteneur.querySelector('[data-replier]').addEventListener('click', () => {
+      const corps = this.conteneur.querySelector('.pointage-corps');
+      corps.classList.toggle('salaries-reduits');
+      ecrirePreferences({ pointageSalariesReduit: corps.classList.contains('salaries-reduits') });
+    });
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-salaries]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     if (this.requete.pointage) {
       const pos = await api.pointage.position(this.requete.pointage).catch(() => null);
@@ -281,6 +412,7 @@ export class PageSaisiePointage extends PageBase {
       <p><button type="button" data-enregistrer>Enregistrer la semaine</button> ${verrouilles.length ? '<button type="button" data-correction>✉ Demander une correction…</button>' : ''}</p>
       ${s.corrections.length ? `<h3>Demandes de correction</h3><ul>${s.corrections.map((c) => `<li>${horodatage(c.le)} — ${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}${c.motif ? ` : ${echapper(c.motif)}` : ''}${c.reponse ? ` <span class="aide">(réponse : ${echapper(c.reponse)})</span>` : ''}</li>`).join('')}</ul>` : ''}`;
     this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles });
+    this.grille.commencer?.();
     const correction = async () => {
       const motif = prompt('Motif de la demande de correction (envoyée au service RH) :');
       if (motif === null) return;

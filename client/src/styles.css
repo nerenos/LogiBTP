@@ -486,7 +486,14 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 /* Pointage (lot 1) : saisie hebdomadaire au bureau. */
 .page-pointage { max-width: none; }
 .pointage-corps { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
-.pointage-salaries { flex: 0 1 28rem; max-height: 75vh; overflow: auto; }
+.pointage-panneau { flex: 0 1 22rem; min-width: 0; }
+.pointage-salaries { max-height: 75vh; overflow: auto; }
+.pointage-corps.salaries-reduits .pointage-panneau { flex: none; }
+.pointage-corps.salaries-reduits .pointage-salaries { display: none; }
+.grille-pointage { width: 100%; }
+.grille-pointage td:has(.combo) { min-width: 8rem; }
+.grille-pointage .combo { width: 100%; box-sizing: border-box; }
+.grille-pointage input:focus { outline: 2px solid var(--accent); }
 .pointage-salaries tr.cliquable { cursor: pointer; }
 .pointage-salaries tr.selection td { background: rgba(56, 132, 255, 0.18); }
 .pointage-grille { flex: 1 1 48rem; min-width: 0; overflow-x: auto; }
@@ -494,7 +501,6 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .grille-pointage input.duree { width: 4.2rem; text-align: right; }
 .grille-pointage input.invalide, .grille-pointage td.erreur input { outline: 2px solid #b42318; }
 .grille-pointage td.avertissement input { outline: 2px solid #d97706; }
-.grille-pointage .combo { width: 11rem; }
 td.nombre, th.nombre { text-align: right; }
 ul.controles { margin: 0; padding-left: 1.2rem; }
 ul.controles li.erreur { color: #b42318; }

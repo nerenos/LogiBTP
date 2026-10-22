@@ -43,5 +43,19 @@ declarerRaccourcis('planning', {
   },
 });
 
+declarerRaccourcis('pointage', {
+  libelle: 'Saisie des pointages (tableau)',
+  actions: {
+    caseSuivante: { libelle: 'Case suivante (fin de ligne : ligne suivante, fin du tableau : nouvelle ligne)', defaut: 'Enter' },
+    casePrecedente: { libelle: 'Case précédente', defaut: 'Shift+Enter' },
+    ligneDessus: { libelle: 'Même jour, ligne du dessus', defaut: 'ArrowUp' },
+    ligneDessous: { libelle: 'Même jour, ligne du dessous', defaut: 'ArrowDown' },
+    nouvelleLigne: { libelle: 'Nouvelle ligne reprenant chantier, ordre et type', defaut: 'Ctrl+Enter' },
+    dupliquer: { libelle: 'Dupliquer la ligne avec ses durées', defaut: 'Ctrl+D' },
+    recopierSemaine: { libelle: 'Recopier la durée sur les jours suivants jusqu\'au vendredi', defaut: 'Alt+Enter' },
+    supprimerLigne: { libelle: 'Retirer la ligne', defaut: 'Ctrl+Delete' },
+  },
+});
+
 /** Onglet de la page document désigné par une action. */
 export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi' };

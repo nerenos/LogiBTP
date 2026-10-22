@@ -76,6 +76,7 @@ export const api = {
     enregistrerSousTypes: (l) => appel('PUT', '/pointage/sous-types', l),
     referentiels: () => appel('GET', '/pointage/referentiels'),
     chantiers: (recherche = '') => appel('GET', `/pointage/chantiers${recherche ? `?recherche=${encodeURIComponent(recherche)}` : ''}`),
+    ordresChantier: (chantier) => appel('GET', `/pointage/chantiers/${chantier}/ordres`),
     salaries: (f = {}) => appel('GET', `/pointage/salaries?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     position: (id) => appel('GET', `/pointage/pointages/${id}/position`),
     semaine: (salarie, lundi) => appel('GET', `/pointage/semaine/${salarie}/${lundi}`),

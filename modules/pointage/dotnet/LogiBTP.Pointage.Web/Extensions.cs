@@ -33,6 +33,7 @@ public static class Extensions
         g.MapPut("/sous-types", (List<SousTypeDto> l, HttpContext http, ServicePointage s, CancellationToken ct) => s.EnregistrerSousTypesAsync(l, Utilisateur.Depuis(http), ct));
         g.MapGet("/referentiels", (ServicePointage s, CancellationToken ct) => s.ReferentielsAsync(ct));
         g.MapGet("/chantiers", (string? recherche, ServicePointage s, CancellationToken ct) => s.ChantiersAsync(recherche, ct));
+        g.MapGet("/chantiers/{id:int}/ordres", (int id, ServicePointage s, CancellationToken ct) => s.OrdresChantierAsync(id, ct));
         g.MapGet("/salaries", (int? service, string? recherche, DateOnly? lundi, ServicePointage s, CancellationToken ct) =>
             s.SalariesAsync(service, recherche, ReglesPointage.LundiDe(lundi ?? DateOnly.FromDateTime(DateTime.Today)), ct));
         g.MapGet("/pointages/{id:long}/position", (long id, ServicePointage s, CancellationToken ct) => s.PositionAsync(id, ct));

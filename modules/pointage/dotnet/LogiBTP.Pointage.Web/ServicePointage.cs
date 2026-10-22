@@ -164,7 +164,8 @@ public sealed record ChantierPointage(int Id, string Code, string Libelle, bool 
 /// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>
 public sealed record TypeMoPointage(int Id, string Code, string Libelle, int? SrvId);
 /// <summary>Ordre d'exécution d'un chantier sur lequel pointer (module Exécution actif).</summary>
-public sealed record OrdrePointage(long Id, int ChaId, string? Numero, string? Objet, string? Type);
+/// <summary>Ordre proposé à la saisie : chantier, numéro, objet, type, service (type de MO proposé par la cascade).</summary>
+public sealed record OrdrePointage(long Id, int ChaId, string? Numero, string? Objet, string? Type, int? SrvId);
 public sealed record ServicePointageDto(int Id, string Code, string Libelle, int? ParentId);
 public sealed record MotifPointage(string Code, string Libelle);
 public sealed record EquipePointage(int Id, string Libelle, int[] Membres);
@@ -297,6 +298,8 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
         services = await specialisation.ServicesAsync(db, ct),
     };
 
+    /// <summary>Ordres en cours d'un chantier (saisie en cascade : chantier choisi → ses ordres).</summary>
+    public Task<List<OrdrePointage>> OrdresChantierAsync(int chantier, CancellationToken ct) => specialisation.OrdresAsync(db, [chantier], ct);
     public Task<List<ChantierPointage>> ChantiersAsync(string? recherche, CancellationToken ct) => specialisation.ChantiersAsync(db, recherche, null, ct);
 
     /// <summary>
