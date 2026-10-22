@@ -133,7 +133,9 @@ export const api = {
     charge: (f) => appel('GET', `/planning/charge?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     notifications: (f) => appel('GET', `/planning/notifications?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     marquerNotifications: (e) => appel('PUT', '/planning/notifications', e),
-    appliquerEquipe: (id, equipe, version) => appel('POST', `/planning/taches/${id}/equipes/${equipe}/appliquer?version=${version}`),
+    appliquerEquipe: (id, equipe, version, date) => appel('POST', `/planning/taches/${id}/equipes/${equipe}/appliquer?version=${version}${date ? `&date=${date}` : ''}`),
+    membresEquipe: (equipe, date) => appel('GET', `/planning/equipes/${equipe}/membres?date=${encodeURIComponent(date)}`),
+    disponibilites: (f) => appel('GET', `/planning/disponibilites?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     // Lot 5 : dépendances, répétitions, jalons.
     dependances: (id) => appel('GET', `/planning/taches/${id}/dependances`),
     enregistrerDependances: (id, l) => appel('PUT', `/planning/taches/${id}/dependances`, l),

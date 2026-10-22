@@ -17,7 +17,7 @@ import { creerAxe } from '../src/axe.js';
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
  * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
  * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
- * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant }) }.
+ * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant, tache }) }.
  */
 export class VuePlanning {
   #o;
@@ -48,12 +48,22 @@ export class VuePlanning {
     this.corps.addEventListener('wheel', () => this.#cacherBulle(), { passive: true });
     this.corps.addEventListener('dblclick', (e) => { const t = this.#tacheDe(e.target); if (t) this.#o.actions.ouvrir?.(t); });
     this.corps.addEventListener('contextmenu', (e) => { const t = this.#tacheDe(e.target); if (t && this.#o.actions.menu) { e.preventDefault(); this.#o.actions.menu(e, t); } });
-    this.corps.addEventListener('dragover', (e) => { if (this.#o.actions.deposer && !this.#o.lecture) e.preventDefault(); });
+    // Dépôt HTML5 : la barre survolée est mise en évidence (dépôt sur une tâche) ; l'action reçoit la ligne, l'instant et la tâche.
+    const cible = (el) => {
+      const b = el?.closest?.('.vp-barre') ?? null;
+      if (this.cible === b) return;
+      this.cible?.classList.remove('cible');
+      this.cible = b;
+      b?.classList.add('cible');
+    };
+    this.corps.addEventListener('dragover', (e) => { if (this.#o.actions.deposer && !this.#o.lecture) { e.preventDefault(); cible(e.target); } });
+    this.corps.addEventListener('dragleave', (e) => { if (!this.corps.contains(e.relatedTarget)) cible(null); });
     this.corps.addEventListener('drop', (e) => {
+      cible(null);
       if (!this.#o.actions.deposer || this.#o.lecture) return;
       e.preventDefault();
       const p = this.#point(e);
-      this.#o.actions.deposer(e, { ligne: this.#lignes[p.ligne], instant: arrondirAuPas(p.instant, this.#o.pas) });
+      this.#o.actions.deposer(e, { ligne: this.#lignes[p.ligne], instant: arrondirAuPas(p.instant, this.#o.pas), tache: this.#tacheDe(e.target) });
     });
     new ResizeObserver(() => this.#programmer()).observe(this.corps);
     this.#appliquerDimensions();

@@ -124,17 +124,20 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
                 }
             }
         }
-        // Équipes (P7) : la tâche garde la copie de la composition ; une composition différente à la date est signalée.
-        foreach (var g in d.Affectations.Where(a => a.AffEquipeId is not null).GroupBy(a => (a.AffTacId, a.AffEquipeId!.Value)))
+        // Équipes (P7) : la tâche garde la copie de la composition appliquée (des membres peuvent en être retirés) ; un
+        // changement de composition pendant la tâche est signalé, à appliquer par l'utilisateur.
+        var libEquipes = (await specialisation.EquipesAsync(db, ct)).ToDictionary(e => e.Id, e => e.Libelle);
+        foreach (var t in d.Taches)
         {
-            var t = d.Taches.First(x => x.TacId == g.Key.AffTacId);
-            var membres = (await specialisation.MembresAsync(db, g.Key.Value, DateOnly.FromDateTime(t.TacDebut), ct)).Select(m => $"{m.Type}:{m.Id}").ToHashSet();
-            var copie = g.Select(a => $"{a.AffResType}:{a.AffResId}").ToHashSet();
-            if (!membres.SetEquals(copie))
+            var copies = RessourcesTache.LireEquipes(t);
+            foreach (var g in d.Affectations.Where(a => a.AffTacId == t.TacId && a.AffEquipeId is int e && !copies.ContainsKey(e)).GroupBy(a => a.AffEquipeId!.Value))
+                copies[g.Key] = new(DateOnly.FromDateTime(t.TacDebut).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), g.Select(a => $"{a.AffResType}:{a.AffResId}").ToList());
+            foreach (var (e, c) in copies)
             {
-                r.Add(new($"EQUIPE:{t.TacId}:{g.Key.Value}:{string.Join(",", membres.Order())}", "EQUIPE", "ATTENTION",
-                    $"« {t.TacLibelle} » : la composition de l'équipe a changé ({membres.Except(copie).Count()} entrée(s), {copie.Except(membres).Count()} sortie(s))",
-                    t.TacId, null, null, "APPLIQUER_EQUIPE", g.Key.Value));
+                if (await RessourcesTache.ChangementAsync(db, specialisation, t, e, c, ct) is not { } ch) continue;
+                r.Add(new($"EQUIPE:{t.TacId}:{e}:{ch.Date:yyyy-MM-dd}:{string.Join(",", ch.Membres.Order())}", "EQUIPE", "ATTENTION",
+                    $"« {t.TacLibelle} » : la composition de {libEquipes.GetValueOrDefault(e) ?? "l'équipe"} change le {Jour(ch.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))} ({ch.Entrees.Count} entrée(s), {ch.Sorties.Count} sortie(s))",
+                    t.TacId, null, ch.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), "APPLIQUER_EQUIPE", e));
             }
         }
         // Dépendances en alerte violées, tâches liées hors de leur principale (lot 5).
@@ -165,13 +168,26 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Remplace les membres d'une équipe dans une tâche par sa composition au début de la tâche, puis recalcule.</summary>
-    public async Task<object> AppliquerEquipeAsync(long id, int equipe, int version, Utilisateur u, CancellationToken ct)
+    /// <summary>
+    /// Nouvelle composition d'une équipe dans une tâche (validée par l'utilisateur) : celle du changement détecté pendant
+    /// la tâche (ou de la date donnée) ; membres restants de l'ancienne copie retirés, nouveaux ajoutés sans doublon ; recalcul.
+    /// </summary>
+    public async Task<object> AppliquerEquipeAsync(long id, int equipe, int version, string? date, Utilisateur u, CancellationToken ct)
     {
+        var t = await db.Taches.AsNoTracking().FirstOrDefaultAsync(x => x.TacId == id, ct) ?? throw ExceptionMetier.Introuvable($"Tâche {id}");
         var s = await planning.SaisieAsync(id, ct);
-        var autres = (s.Affectations ?? []).Where(a => a.EquipeId != equipe).ToList();
-        autres.Add(new AffectationSaisie("EQUIPE", equipe.ToString(CultureInfo.InvariantCulture)));
-        return await planning.ModifierAsync(id, s with { Affectations = autres, Fin = s.Calcul == 1 ? null : s.Fin, Heures = s.Calcul == 2 ? null : s.Heures, Version = version }, u, ct);
+        DateOnly jour;
+        List<string> membres;
+        if (date is not null) jour = DateOnly.ParseExact(date[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        else
+        {
+            var copie = s.Equipes?.GetValueOrDefault(equipe.ToString(CultureInfo.InvariantCulture))
+                ?? new(DateOnly.FromDateTime(t.TacDebut).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), (s.Affectations ?? []).Where(a => a.EquipeId == equipe).Select(a => $"{a.Type}:{a.Id}").ToList());
+            jour = (await RessourcesTache.ChangementAsync(db, specialisation, t, equipe, copie, ct))?.Date ?? DateOnly.FromDateTime(t.TacDebut);
+        }
+        membres = (await specialisation.MembresAsync(db, equipe, jour, ct)).Select(m => $"{m.Type}:{m.Id}").ToList();
+        var (affs, equipes) = RessourcesTache.Appliquer(s, equipe, jour, membres);
+        return await planning.ModifierAsync(id, s with { Affectations = affs, Equipes = equipes, Fin = s.Calcul == 1 ? null : s.Fin, Heures = s.Calcul == 2 ? null : s.Heures, Version = version }, u, ct);
     }
 
     /// <summary>

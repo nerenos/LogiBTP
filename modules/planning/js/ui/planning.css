@@ -57,6 +57,7 @@
 .vp-barre::before { left: 0; }
 .vp-barre::after { right: 0; }
 .vp-barre.selection { outline: 2px solid #f59e0b; outline-offset: 1px; z-index: 2; }
+.vp-barre.cible { outline: 3px solid #16a34a; outline-offset: 1px; z-index: 2; filter: brightness(1.15); }
 /* Glisser : la tâche reste en place, la surcouche montre sa future position (contour pointillé) et l'instant visé. */
 .vp-surcouche { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .vp-barre.vp-projection { opacity: .6; outline: 2px dashed var(--texte, #111827); outline-offset: 1px; box-shadow: 0 3px 10px rgba(0, 0, 0, .35); cursor: grabbing; }

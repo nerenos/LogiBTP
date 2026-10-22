@@ -155,6 +155,15 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY c.eqc_chef DESC, s.sal_nom
             """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("d", date)).ToListAsync(ct)).Select(m => (m.Type, m.Id)).ToList();
 
+    /// <summary>Changements de composition d'une équipe : entrées (début) et lendemains de sorties (fin) sur la période.</summary>
+    public override async Task<List<DateOnly>> ChangementsEquipeAsync(PlanningDbContext db, int equipe, DateOnly du, DateOnly au, CancellationToken ct) =>
+        (await db.Database.SqlQueryRaw<DateOnly>("""
+            SELECT DISTINCT d AS "Value" FROM (
+                SELECT eqc_du AS d FROM equipe_composition WHERE eqc_equ_id = @e
+                UNION SELECT eqc_au + 1 FROM equipe_composition WHERE eqc_equ_id = @e AND eqc_au IS NOT NULL) x
+            WHERE d > @du AND d <= @au
+            """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct)).Order().ToList();
+
     public override Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct) =>
         db.Database.SqlQueryRaw<ElementPlanning>("""
             SELECT 'chantier' AS type, c.cha_id::text AS id, c.cha_code AS code, c.cha_libelle AS libelle, '/fiche/chantier/' || c.cha_id AS url

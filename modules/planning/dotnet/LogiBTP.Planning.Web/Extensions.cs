@@ -75,8 +75,17 @@ public static class Extensions
             await s.MarquerAsync(e, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
-        g.MapPost("/taches/{id:long}/equipes/{equipe:int}/appliquer", (long id, int equipe, int version, HttpContext http, ServiceCharge s, CancellationToken ct) =>
-            s.AppliquerEquipeAsync(id, equipe, version, Utilisateur.Depuis(http), ct));
+        g.MapPost("/taches/{id:long}/equipes/{equipe:int}/appliquer", (long id, int equipe, int version, string? date, HttpContext http, ServiceCharge s, CancellationToken ct) =>
+            s.AppliquerEquipeAsync(id, equipe, version, date, Utilisateur.Depuis(http), ct));
+        // Ressources des tâches : membres d'une équipe à une date, disponibilités sur une période (information).
+        g.MapGet("/equipes/{equipe:int}/membres", (int equipe, string date, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
+            RessourcesTache.MembresAsync(db, sp, equipe, DateOnly.ParseExact(date[..10], "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), ct));
+        g.MapGet("/disponibilites", async (string du, string au, long? exclure, string? services, string? types, string? recherche, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
+        {
+            var srv = services?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToList();
+            return await RessourcesTache.DisponibilitesAsync(db, sp, LogiBTP.Planning.Temps.VersMinutes(du), LogiBTP.Planning.Temps.VersMinutes(au), exclure,
+                new FiltreRessources(srv is { Count: > 0 } ? srv : null, types?.Split(',', StringSplitOptions.RemoveEmptyEntries), recherche), ct);
+        });
         g.MapGet("/creneau", (string? ressource, int? service, int heures, string apres, string? habilitations, ServiceCharge s, CancellationToken ct) =>
             s.CreneauAsync(ressource, service, heures, apres, habilitations, ct));
         g.MapGet("/parametres", (ServiceCharge s, CancellationToken ct) => s.ParametresAsync(ct));

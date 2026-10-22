@@ -5,6 +5,7 @@ import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { ecouter } from '../diffusion.js';
+import { RessourcesTache, rendreOngletRessources, TYPE_GLISSER_RESSOURCE } from '../planning/ressources-tache.js';
 
 // Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
 // tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
@@ -19,7 +20,7 @@ const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const TRIS_APLANIFIER = { nom: 'Nom', service: 'Service', reste: 'Reste', date: 'Date prévisionnelle' };
 /** Onglets du panneau du planning (icône en panneau réduit). */
 const ONGLETS_PANNEAU = {
-  aplanifier: { libelle: 'À planifier', icone: '📋' }, tache: { libelle: 'Tâche', icone: '✎' },
+  aplanifier: { libelle: 'À planifier', icone: '📋' }, ressources: { libelle: 'Ressources', icone: '👷' }, tache: { libelle: 'Tâche', icone: '✎' },
   alertes: { libelle: 'Alertes', icone: '⚠', compteur: true }, jalons: { libelle: 'Jalons', icone: '◆', compteur: true },
 };
 const ETATS_PANNEAU = ['normal', 'reduit', 'large', 'masque'];
@@ -43,6 +44,7 @@ const saisieDe = (t) => ({
   id_element: t.id_element, origine_type: t.origine_type, origine_id: t.origine_id, libelle: t.libelle, memo: t.memo, avancement: t.avancement,
   couleur: t.couleur, etat: t.etat, affectations: t.affectations.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id, quantite: a.quantite })),
   habilitations: t.habilitations ?? [], parent_id: t.parent_id ?? null, mobile: t.mobile ?? {},
+  equipes: Object.fromEntries((t.equipes ?? []).map((e) => [e.id, { date: e.date, membres: e.membres.map((m) => m.cle) }])),
 });
 
 /** Remet une tâche dans un état lu auparavant (version courante relue). */
@@ -191,6 +193,7 @@ export class PagePlanning extends PageBase {
     this.#definition();
     await this.#charger();
     await this.#aPlanifier();
+    if (!this.consultation) rendreOngletRessources(c.querySelector('[data-panneau="ressources"]'), await this.#toutesRessources(), this.ref.services);
   }
 
   /**
@@ -458,6 +461,8 @@ export class PagePlanning extends PageBase {
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === nom));
     this.conteneur.querySelectorAll('[data-panneau]').forEach((p) => { p.hidden = p.dataset.panneau !== nom; });
     this.conteneur.querySelector('[data-actions-tache]').hidden = nom !== 'tache';
+    if (this.ongletCourant !== nom) this.conteneur.querySelector('.panneau-planning').scrollTop = 0;
+    this.ongletCourant = nom;
   }
 
   async #apres(promesse, message) {
@@ -508,7 +513,13 @@ export class PagePlanning extends PageBase {
   }
 
   /** Dépôt d'un élément à planifier : tâche en mode 1 (au plus une semaine de 35 h, modifiable), sur la ressource ou le service. */
-  async #deposer(e, { ligne, instant }) {
+  async #deposer(e, { ligne, instant, tache }) {
+    const glissee = e.dataTransfer.getData(TYPE_GLISSER_RESSOURCE);
+    if (glissee) {
+      if (!tache) { this.app.message('Déposer la ressource sur une tâche', 'avertissement'); return; }
+      await this.#ajouterRessource(tache.tache, JSON.parse(glissee));
+      return;
+    }
     const brut = e.dataTransfer.getData(TYPE_GLISSER);
     if (!brut || !ligne) return;
     const x = JSON.parse(brut);
@@ -526,6 +537,34 @@ export class PagePlanning extends PageBase {
    * prévisionnelle — modifiable, enregistrée par élément et service), présentation en liste ou en tuiles (préférences
    * `planningAPlanifierTri`, `planningAPlanifierSens`, `planningAPlanifierTuiles`) ; lignes et tuiles glissées sur le planning.
    */
+  /** Toutes les ressources (combos et onglet Ressources), lues une fois. */
+  #toutesRessources() {
+    this.ressourcesPromesse ??= api.planning.ressources({}).catch(() => []);
+    return this.ressourcesPromesse;
+  }
+
+  /** Ressource glissée sur une tâche : ajoutée (sans doublon), tâche recalculée par le serveur, mémorisée. */
+  async #ajouterRessource(id, res) {
+    let t;
+    try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
+    if (t.affectations.some((a) => a.type === res.type && String(a.id) === String(res.id))) { this.app.message(`${res.libelle} est déjà affecté à « ${t.libelle} »`, 'avertissement'); return; }
+    const s = saisieDe(t);
+    s.affectations.push({ type: res.type, id: String(res.id), equipe_id: null, quantite: null });
+    const r = await this.#modifierMemorise(id, 'ajout de ressource', () => api.planning.modifier(id, { ...s, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
+    if (r) {
+      this.app.message(`${res.libelle} ajouté à « ${t.libelle} »`, 'succes');
+      if (!this.conteneur.querySelector('[data-panneau="tache"]').hidden) this.#editer(id);
+    }
+  }
+
+  /** Nouvelle composition d'une équipe dans la tâche, après confirmation (membres restants retirés, nouveaux sans doublon). */
+  async #appliquerEquipe(t, equipe, date) {
+    if (!confirm('Mettre la tâche à jour avec la nouvelle composition de l\'équipe ?\nLes membres restants de l\'ancienne composition sont retirés, ceux de la nouvelle ajoutés (sans doublon) ; la tâche est recalculée.\nLes modifications non enregistrées du détail sont abandonnées.')) return;
+    const cur = await api.planning.tache(t.id);
+    const r = await this.#modifierMemorise(t.id, 'composition d\'équipe', () => api.planning.appliquerEquipe(t.id, equipe, cur.version, date));
+    if (r) this.#editer(t.id);
+  }
+
   async #aPlanifier() {
     const zone = this.conteneur.querySelector('[data-panneau="aplanifier"]');
     if (!zone.querySelector('[data-liste-aplanifier]')) {
@@ -755,9 +794,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
         <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>`)}
       ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${cle === 'adresse' || cle === 'contact' ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
-      ${groupe('ressource', `<ul data-affectations></ul>
-        <p class="ligne"><input type="search" data-cherche-res placeholder="Chercher une ressource…" size="18"> <span data-ressource></span> <button type="button" data-ajouter-res>＋</button></p>
-        <p class="ligne">Équipe <span data-equipe></span> <button type="button" data-ajouter-equipe>＋</button></p>
+      ${groupe('ressource', `<div data-ressources-tache></div>
         <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
         <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
       ${groupe('detail', `<p><b>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</b></p><p class="aide" data-realise></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
@@ -769,21 +806,23 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
     }
     this.#rendreLiens(zone.querySelector('[data-liens]'), t);
-    const affs = t.affectations.map((a) => ({ ...a }));
     const habs = [...(t.habilitations ?? [])];
     const combo = (cle, opts, valeur, vide = true) => { const c = creerCombo({ options: opts, valeur: valeur ?? '', vide }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
     const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
     const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
     const mode = combo('mode', options(MODES), String(t.calcul), false);
     const etat = combo('etat-tache', options(ETATS).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat, false);
-    const equipe = combo('equipe', this.ref.equipes.map((e) => ({ valeur: e.id, libelle: e.libelle, detail: e.code })), '');
-    let ressource = combo('ressource', [], '');
-    const rendreAffs = () => {
-      zone.querySelector('[data-affectations]').innerHTML = affs.length ? affs.map((a, i) => `<li>${echapper(a.libelle ?? `${a.type} ${a.id}`)}${a.heures ? ` <span class="aide">${ecrireDuree(a.heures)} h</span>` : ''}${a.equipe_id ? ' <small class="aide">équipe</small>' : ''}
-        <button type="button" data-retirer="${i}" title="Retirer">✕</button></li>`).join('') : '<li class="aide">Aucune : tâche théorique (charge du service)</li>';
-      zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { affs.splice(Number(b.dataset.retirer), 1); rendreAffs(); }));
+    // Période de la tâche pour les disponibilités : début et fin saisis, sinon fin calculée (aperçu), sinon un jour.
+    const periode = async () => {
+      const du = zone.querySelector('[data-debut]').value;
+      let au = Number(mode.valeurCombo) !== 1 && zone.querySelector('[data-fin]').value;
+      if (!au) au = (await api.planning.calculer(saisie()).catch(() => null))?.fin ?? t.fin ?? depuisMinutes(versMinutes(du) + 1440);
+      return { du, au };
     };
-    rendreAffs();
+    const ressources = new RessourcesTache(zone.querySelector('[data-ressources-tache]'), {
+      tache: t, ressources: await this.#toutesRessources(), equipes: this.ref.equipes, debut: () => zone.querySelector('[data-debut]').value, periode,
+      appliquerEquipe: (equipe, date) => this.#appliquerEquipe(t, equipe, date), message: (m) => this.app.message(m, 'avertissement'),
+    });
     const comboHab = combo('habilitation', this.ref.habilitations.map((h) => ({ valeur: h.code, libelle: h.libelle, detail: h.code })), '');
     const rendreHabs = () => {
       zone.querySelector('[data-habilitations]').innerHTML = habs.length ? habs.map((h, i) => `<span class="badge-exception">${echapper(this.ref.habilitations.find((x) => x.code === h)?.libelle ?? h)} <button type="button" data-retirer-hab="${i}">✕</button></span>`).join(' ') : '<span class="aide">Aucune</span>';
@@ -792,7 +831,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     rendreHabs();
     zone.querySelector('[data-ajouter-hab]').addEventListener('click', () => { if (comboHab.valeurCombo && !habs.includes(comboHab.valeurCombo)) { habs.push(comboHab.valeurCombo); rendreHabs(); } });
     zone.querySelector('[data-creneau]').addEventListener('click', async () => {
-      const premiere = affs.find((a) => a.type !== 'EQUIPE' && a.capacite !== false);
+      const premiere = ressources.premiere();
       const heures = lireDuree(zone.querySelector('[data-heures]').value) || 60;
       try {
         const r = await api.planning.creneau({
@@ -804,28 +843,9 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         prop.innerHTML = `${echapper(r.libelle)} : ${r.debut.replace('T', ' ')} → ${r.fin.replace('T', ' ')} <button type="button" data-prendre>Prendre</button>`;
         prop.querySelector('[data-prendre]').addEventListener('click', () => {
           zone.querySelector('[data-debut]').value = r.debut;
-          if (!premiere) { const [type, idr] = r.ressource.split(':'); affs.push({ type, id: idr, libelle: r.libelle }); rendreAffs(); }
+          if (!premiere) ressources.ajouter(r.ressource, r.libelle);
         });
       } catch (e) { this.app.erreur(e); }
-    });
-    zone.querySelector('[data-cherche-res]').addEventListener('change', async (e) => {
-      const l = await api.planning.ressources({ recherche: e.target.value, services: '' }).catch(() => []);
-      const nouveau = creerCombo({ options: l.slice(0, 200).map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: r.libelle, detail: r.service ?? r.type })), valeur: '', vide: true });
-      ressource.replaceWith(nouveau);
-      ressource = nouveau;
-      ressource.libelles = new Map(l.map((r) => [`${r.type}:${r.id}`, r.libelle]));
-    });
-    zone.querySelector('[data-ajouter-res]').addEventListener('click', () => {
-      const v = ressource.valeurCombo;
-      if (!v || affs.some((a) => `${a.type}:${a.id}` === v)) return;
-      const [type, idr] = v.split(':');
-      affs.push({ type, id: idr, libelle: ressource.libelles?.get(v) });
-      rendreAffs();
-    });
-    zone.querySelector('[data-ajouter-equipe]').addEventListener('click', () => {
-      if (!equipe.valeurCombo) return;
-      affs.push({ type: 'EQUIPE', id: String(equipe.valeurCombo), libelle: `Équipe ${this.ref.equipes.find((e) => String(e.id) === String(equipe.valeurCombo))?.libelle ?? ''} (membres à la date)` });
-      rendreAffs();
     });
     const saisie = () => {
       const v = (s) => zone.querySelector(s);
@@ -835,7 +855,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         nb_ressources: Number(v('[data-nb]').value) || 1, srv_id: service.valeurCombo ? Number(service.valeurCombo) : null, type_element: 'chantier',
         id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
         avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
-        affectations: affs.map((a) => ({ type: a.type, id: a.id, equipe_id: a.equipe_id ?? null, quantite: a.quantite ?? null })), version: t.version, habilitations: habs,
+        ...ressources.saisie(), version: t.version, habilitations: habs,
         parent_id: t.parent_id ?? null, mobile: Object.fromEntries([...zone.querySelectorAll('[data-mobile]')].map((x) => [x.dataset.mobile, x.value])),
       };
     };
@@ -843,7 +863,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       try {
         const r = await api.planning.calculer(saisie());
         barre.querySelector('[data-resultat]').textContent = r.erreurs.length ? r.erreurs.join(', ')
-          : `Fin ${r.fin?.replace('T', ' ')} · ${ecrireDuree(r.heures)} h${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([k, m]) => `${affs.find((a) => `${a.type}:${a.id}` === k)?.libelle ?? k} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
+          : `Fin ${r.fin?.replace('T', ' ')} · ${ecrireDuree(r.heures)} h${Object.keys(r.par_ressource).length ? ` · ${Object.entries(r.par_ressource).map(([k, m]) => `${ressources.affs.find((a) => `${a.type}:${a.id}` === k)?.libelle ?? k} ${ecrireDuree(m)}`).join(', ')}` : ''}`;
       } catch (e) { this.app.erreur(e); }
     });
     barre.querySelector('[data-enregistrer]').addEventListener('click', async () => {

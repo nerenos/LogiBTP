@@ -25,6 +25,8 @@ public class TacheEntite
     public string? TacCouleur { get; set; }
     public string TacEtat { get; set; } = "PREVUE";
     public string TacMobile { get; set; } = "{}";
+    /// <summary>Copies des compositions d'équipes appliquées (JSON : équipe → { date, membres }).</summary>
+    public string TacEquipes { get; set; } = "{}";
     public string[] TacHabilitations { get; set; } = [];
     public Guid? TacSerie { get; set; }
     public int TacVersion { get; set; } = 1;
@@ -72,6 +74,7 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
         b.Entity<TacheEntite>().Property(x => x.TacDebut).HasColumnType("timestamp(0)");
         b.Entity<TacheEntite>().Property(x => x.TacFin).HasColumnType("timestamp(0)");
         b.Entity<TacheEntite>().Property(x => x.TacMobile).HasColumnType("jsonb");
+        b.Entity<TacheEntite>().Property(x => x.TacEquipes).HasColumnType("jsonb");
         b.Entity<AffectationEntite>().ToTable("pla_affectation").HasKey(x => x.AffId);
         b.Entity<VueEntite>().ToTable("pla_vue").HasKey(x => x.PvuId);
         b.Entity<VueEntite>().Property(x => x.PvuDefinition).HasColumnType("jsonb");
@@ -114,7 +117,7 @@ public sealed record AffectationSaisie(string Type, string Id, int? EquipeId = n
 public sealed record TacheSaisie(int Calcul, string Debut, string? Fin, int? Heures, int NbRessources, int? SrvId, string TypeElement, string? IdElement,
     string Libelle, List<AffectationSaisie>? Affectations, string? OrigineType = null, string? OrigineId = null, string? Memo = null, int Avancement = 0,
     string? Couleur = null, string Etat = "PREVUE", int? Version = null, List<string>? Habilitations = null, long? ParentId = null, Guid? Serie = null,
-    Dictionary<string, string?>? Mobile = null);
+    Dictionary<string, string?>? Mobile = null, Dictionary<string, CompositionEquipe>? Equipes = null);
 public sealed record DeplacementSaisi(string Debut, string Fin, string Mode, string? De, string? Vers, bool Copie, int Version);
 public sealed record ScissionSaisie(string Instant, int Version);
 
@@ -130,6 +133,8 @@ public abstract class SpecialisationPlanning
     public abstract Task<List<(long Debut, long Fin)>> PlagesServiceAsync(PlanningDbContext db, int? service, DateOnly du, DateOnly au, CancellationToken ct);
     public abstract Task<List<EquipePlanning>> EquipesAsync(PlanningDbContext db, CancellationToken ct);
     public abstract Task<List<(string Type, string Id)>> MembresAsync(PlanningDbContext db, int equipe, DateOnly date, CancellationToken ct);
+    /// <summary>Dates de changement de la composition d'une équipe sur [du, au] (entrées, lendemains de sorties) ; aucune par défaut.</summary>
+    public virtual Task<List<DateOnly>> ChangementsEquipeAsync(PlanningDbContext db, int equipe, DateOnly du, DateOnly au, CancellationToken ct) => Task.FromResult(new List<DateOnly>());
     public abstract Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct);
     public abstract Task<List<BudgetPlanning>> BudgetsAsync(PlanningDbContext db, IReadOnlyCollection<int>? services, string? recherche, CancellationToken ct);
     public abstract Task<List<ServicePlanningDto>> ServicesAsync(PlanningDbContext db, CancellationToken ct);
@@ -352,6 +357,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         if (s.Serie is not null) t.TacSerie = s.Serie;
         // Partie mobile (adresse, contact, commentaire, liens) : absente de la saisie = inchangée.
         if (s.Mobile is not null) t.TacMobile = JsonSerializer.Serialize(s.Mobile.Where(x => !string.IsNullOrWhiteSpace(x.Value)).ToDictionary(x => x.Key, x => x.Value!.Trim()));
+        t.TacEquipes = RessourcesTache.EcrireEquipes(await RessourcesTache.CopiesAsync(db, specialisation, t, s, affs.Select(a => a.Saisie).ToList(), Temps.DateDe(debut), ct));
         t.TacMajPar = u.Code;
         t.TacMajLe = DateTimeOffset.UtcNow;
         if (t.TacId == 0)
@@ -382,12 +388,35 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             memo = t.TacMemo, avancement = t.TacAvancement, couleur = t.TacCouleur, etat = t.TacEtat, version = t.TacVersion, maj_par = t.TacMajPar, maj_le = t.TacMajLe,
             habilitations = t.TacHabilitations, parent_id = t.TacParentId, serie = t.TacSerie, mobile = Mobile(t),
             parent = t.TacParentId is long p ? await db.Taches.AsNoTracking().Where(x => x.TacId == p).Select(x => x.TacLibelle).FirstOrDefaultAsync(ct) : null,
+            equipes = await EquipesTacheAsync(t, ct),
             affectations = affs.Select(a => new
             {
                 type = a.AffResType, id = a.AffResId, equipe_id = a.AffEquipeId, heures = a.AffHeures, quantite = a.AffQuantite,
                 libelle = res.GetValueOrDefault($"{a.AffResType}:{a.AffResId}")?.Libelle, capacite = res.GetValueOrDefault($"{a.AffResType}:{a.AffResId}")?.Capacite,
             }),
         };
+    }
+
+    /// <summary>Équipes suivies d'une tâche : copie de la composition (date, membres) et changement pendant la tâche.</summary>
+    private async Task<List<object>> EquipesTacheAsync(TacheEntite t, CancellationToken ct)
+    {
+        var copies = RessourcesTache.LireEquipes(t);
+        if (copies.Count == 0) return [];
+        var libEquipes = (await specialisation.EquipesAsync(db, ct)).ToDictionary(e => e.Id, e => e.Libelle);
+        var r = new List<object>();
+        foreach (var (e, c) in copies)
+        {
+            var ch = await RessourcesTache.ChangementAsync(db, specialisation, t, e, c, ct);
+            var cles = c.Membres.Concat(ch?.Membres ?? []).Distinct().ToList();
+            var lib = (await specialisation.RessourcesAsync(db, new FiltreRessources(null, null, null, cles), ct)).ToDictionary(x => x.Cle, x => x.Libelle);
+            object Membre(string m) => new { cle = m, libelle = lib.GetValueOrDefault(m) ?? m };
+            r.Add(new
+            {
+                id = e, libelle = libEquipes.GetValueOrDefault(e) ?? $"Équipe {e}", date = c.Date, membres = c.Membres.Select(Membre),
+                changement = ch is null ? null : new { date = ch.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), entrees = ch.Entrees.Select(Membre), sorties = ch.Sorties.Select(Membre) },
+            });
+        }
+        return r;
     }
 
     public async Task<object> CreerAsync(TacheSaisie s, Utilisateur u, CancellationToken ct) => await TacheAsync(await CreerIdAsync(s, u, ct), ct);
@@ -441,7 +470,8 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         var affs = await db.Affectations.AsNoTracking().Where(a => a.AffTacId == t.TacId).ToListAsync(ct);
         return new TacheSaisie(t.TacCalcul, Ecrire(t.TacDebut), Ecrire(t.TacFin), t.TacHeures, t.TacNbRessources, t.TacSrvId, t.TacTypeElement, t.TacIdElement, t.TacLibelle,
             affs.Select(a => new AffectationSaisie(a.AffResType, a.AffResId, a.AffEquipeId, a.AffQuantite)).ToList(), t.TacOrigineType, t.TacOrigineId, t.TacMemo, t.TacAvancement,
-            t.TacCouleur, t.TacEtat, t.TacVersion, [.. t.TacHabilitations], t.TacParentId, t.TacSerie, Mobile(t));
+            t.TacCouleur, t.TacEtat, t.TacVersion, [.. t.TacHabilitations], t.TacParentId, t.TacSerie, Mobile(t),
+            RessourcesTache.LireEquipes(t).ToDictionary(x => x.Key.ToString(CultureInfo.InvariantCulture), x => x.Value));
     }
 
     /// <summary>Saisie d'une tâche enregistrée (recalculs du lot 4).</summary>
