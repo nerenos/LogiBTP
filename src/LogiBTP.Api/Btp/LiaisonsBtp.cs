@@ -46,7 +46,8 @@ public static class LiaisonsBtp
             foreach (var e in etapes)
             {
                 var heures = budgets.FirstOrDefault(b => b.SrvId == e.SrvId)?.Minutes is int m && m > 0 ? m : 420;
-                var tache = await planning.CreerIdAsync(new TacheSaisie(1, debut, null, heures, 1, e.SrvId, "chantier", id.ToString(), e.Libelle ?? e.Code, [],
+                // Assez de ressources théoriques pour que l'étape tienne en deux semaines (10 jours de 7 h).
+                var tache = await planning.CreerIdAsync(new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 4200d)), e.SrvId, "chantier", id.ToString(), e.Libelle ?? e.Code, [],
                     "parcours", e.Code), u, ct);
                 parCode[e.Code] = tache;
                 var amonts = e.Amonts.Where(parCode.ContainsKey).Select(a => new DependanceSaisie(parCode[a], "FD", 0, "OUV", "FIXE")).ToList();
