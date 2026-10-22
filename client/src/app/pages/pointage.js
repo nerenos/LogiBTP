@@ -510,7 +510,7 @@ export class PageSynthesePointage extends PageBase {
     const reduite = prefs.syntheseReduite ?? window.matchMedia('(max-width: 900px)').matches;
     // Actions de validation : icônes (libellé dans la bulle) avec le nombre de salariés concernés en pastille.
     const action = (cle, icone, titre) => `<button type="button" class="bouton-icone bouton-compteur" data-${cle} title="${titre}" aria-label="${titre}">${icone}<span class="pastille-compteur" data-compteur="${cle}"></span></button>`;
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-synthese"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage page-synthese"><div class="entete-page"><h1 class="page-titre">✅ Synthèse des pointages</h1>${BARRE}</div>
       <div class="synthese-corps${reduite ? ' panneau-reduit' : ''}">
         <aside class="synthese-panneau" style="width: ${Number(prefs.syntheseLargeur) || 560}px">
           <div class="synthese-panneau-barre"><b>Salariés</b> <label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>
@@ -538,7 +538,7 @@ export class PageSynthesePointage extends PageBase {
     c.querySelector('[data-pointes]').addEventListener('change', (e) => { this.pointes = e.target.checked; ecrirePreferences({ synthesePointes: this.pointes }); this.#rendreListe(); });
     // Blocage à la journée : période de validation sur la ligne de la semaine.
     if (this.ref.parametres.blocage === 'JOUR') {
-      c.querySelector('.page-synthese > p.ligne').insertAdjacentHTML('beforeend', ' · <span class="aide">Période validée :</span> <input type="date" data-du> au <input type="date" data-au>');
+      c.querySelector('.entete-page > p.ligne').insertAdjacentHTML('beforeend', ' · <span class="aide">Période validée :</span> <input type="date" data-du> au <input type="date" data-au>');
     }
     barreSemaine(c, this, {
       changerSemaine: async (lundi) => {
@@ -706,13 +706,16 @@ export class PageSynthesePointage extends PageBase {
     const valideRh = d.etats.includes('VALIDE');
     const modifiable = !valideRh && (d.rh || !d.etats.includes('VALIDE_CHEF'));
     const base = d.valide ?? d.saisie.map((p) => ({ ...p, origine_id: p.id, id: null }));
+    // Un seul bouton : semaine validée à mon niveau (RH : validation RH ; chef : la sienne ou celle du RH) → dévalider, sinon valider.
+    const validee = d.etats.some((e) => e === 'VALIDE' || (!d.rh && e === 'VALIDE_CHEF'));
     zone.innerHTML = `<h2>${echapper(nomSalarie(d.salarie, this.ref.parametres.ordre_nom))} <small class="aide">${echapper(d.salarie.matricule)} · ${d.etats.map(iconeEtat).join(' ')}</small></h2>
       ${d.corrections.filter((c) => c.etat === 'EN_ATTENTE').map((c) => `<div class="correction-attente"><b>Demande de correction</b> de ${echapper(c.par)} le ${horodatage(c.le)}${c.motif ? ` : ${echapper(c.motif)}` : ''}
         ${d.rh ? `<button type="button" data-appliquer="${c.id}">Appliquer</button> <button type="button" data-rejeter="${c.id}">Rejeter…</button>` : ''}
         <div data-correction="${c.id}"></div></div>`).join('')}
       <div class="titre-actions"><h3>${d.corrigee ? 'Couche validée (corrigée)' : 'Pointages retenus (saisie)'}${modifiable ? '' : ' <small class="aide">— semaine validée : dévalider pour corriger</small>'}</h3>
         <span class="titre-actions-boutons">${modifiable ? `<button type="button" data-enregistrer title="Enregistrer les corrections de la semaine (couche validée)">💾 Enregistrer</button>${d.corrigee ? ' <button type="button" data-retablir title="Abandonner la couche validée et revenir aux pointages saisis">⟲ Revenir à la saisie</button>' : ''}` : ''}
-        <button type="button" data-valider-un title="Valider la semaine de ce salarié">☑ Valider</button> <button type="button" data-devalider-un title="Dévalider la semaine de ce salarié (motif demandé)">↩ Dévalider…</button></span></div>
+        ${validee ? '<button type="button" data-devalider-un title="Dévalider la semaine de ce salarié (motif demandé)">↩ Dévalider…</button>'
+          : '<button type="button" data-valider-un title="Valider la semaine de ce salarié">☑ Valider</button>'}</span></div>
       <div data-grille-valide></div>
       ${d.corrigee ? '<details><summary>Saisie d\'origine</summary><div data-grille-saisie></div></details>' : ''}
       <div data-paie></div>
@@ -730,8 +733,8 @@ export class PageSynthesePointage extends PageBase {
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', () => apres(api.pointage.enregistrerSynthese(this.salarie, this.lundi, { pointages: this.grille.pointages() }), 'Corrections enregistrées'));
     zone.querySelector('[data-retablir]')?.addEventListener('click', () => confirm('Abandonner la couche validée et revenir aux pointages saisis ?')
       && apres(api.pointage.retablirSynthese(this.salarie, this.lundi), 'Retour à la saisie'));
-    zone.querySelector('[data-valider-un]').addEventListener('click', () => this.#agir('valider', [Number(this.salarie)]));
-    zone.querySelector('[data-devalider-un]').addEventListener('click', () => this.#agir('devalider', [Number(this.salarie)]));
+    zone.querySelector('[data-valider-un]')?.addEventListener('click', () => this.#agir('valider', [Number(this.salarie)]));
+    zone.querySelector('[data-devalider-un]')?.addEventListener('click', () => this.#agir('devalider', [Number(this.salarie)]));
     zone.querySelectorAll('[data-appliquer]').forEach((b) => b.addEventListener('click', () => apres(api.pointage.appliquerCorrection(b.dataset.appliquer, {}), 'Correction appliquée')));
     zone.querySelectorAll('[data-rejeter]').forEach((b) => b.addEventListener('click', () => {
       const reponse = prompt('Réponse au demandeur :');

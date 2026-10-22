@@ -513,8 +513,9 @@ ul.controles li.avertissement { color: #b45309; }
 .correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
 /* Synthèse : page pleine hauteur, salariés dans un panneau à gauche (réductible, largeur au glisser), détail à droite. */
 .page-parametres.page-synthese { overflow: hidden; gap: .35rem; }
-.page-synthese > .page-titre { margin-bottom: 0; }
-.page-synthese > p.ligne { margin: 0; }
+/* Ligne de titre d'une page : titre et commandes (semaine, filtres) sur la même ligne. */
+.entete-page { display: flex; align-items: center; gap: .4rem 1.2rem; flex-wrap: wrap; }
+.entete-page > .page-titre, .entete-page > p { margin: 0; }
 .synthese-actions { margin-left: auto; display: inline-flex; gap: .25rem; align-items: center; }
 .bouton-compteur { position: relative; }
 .pastille-compteur { position: absolute; top: -.45rem; right: -.45rem; min-width: 1rem; height: 1rem; padding: 0 .25rem; box-sizing: border-box; border-radius: .5rem;
