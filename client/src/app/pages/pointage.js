@@ -65,7 +65,8 @@ const CHAMPS_LIGNE = ['cha', 'ordre', 'type', 'st', 'motif', 'j0', 'j1', 'j2', '
  * passe au champ suivant (chantier → ses ordres, lus au besoin → type de MO, proposé par le service de l'ordre →
  * sous-type → jours) ; une nouvelle ligne reprend chantier, ordre, type et sous-type de la ligne courante.
  * Options : ref (référentiels), chantiers (proposés), donnees { salarie, pointages, chantiers, ordres, recents },
- * lundi, lecture, verrouilles (index des jours), change() ; tableau (présentation `.tableau-compact`) ; regrouper
+ * lundi, lecture, verrouilles (index des jours), change() ; heuresDefaut() → Promise des minutes par défaut de chaque
+ * jour (bouton « Compléter la ligne ») ; tableau (présentation `.tableau-compact`) ; regrouper
  * (lignes triées par chantier et ordre ; un groupe de plusieurs lignes a sa ligne de titre avec ses sous-totaux).
  */
 class GrillePointage {
@@ -129,7 +130,7 @@ class GrillePointage {
       : '<th>Chantier</th><th>Ordre</th><th>Type de MO</th><th>Sous-type</th><th>Motif</th>'}
         ${jours.map((x, i) => `<th class="nombre" data-jh="${i}"${verrou.has(i) ? ' title="Jour validé"' : ''}>${verrou.has(i) ? '🔒 ' : ''}${JOURS[i]}${tableau ? `<br><small>${jourCourt(x)}</small>` : ` ${jourCourt(x)}`}</th>`).join('')}<th class="nombre">Total</th><th></th></tr></thead><tbody></tbody>
         <tfoot><tr><th colspan="${nbDescr}">Total</th>${jours.map((_, i) => `<th class="nombre" data-total="${i}"></th>`).join('')}<th class="nombre" data-total="s"></th><th></th></tr></tfoot></table>
-      ${lecture ? '' : `<p><button type="button" data-ajouter>＋ Ligne</button> <span class="aide">Durées au pas de ${this.#o.ref.parametres.pas_minutes} min : « 7:30 », « 7h30 » ou « 7,5 ».
+      ${lecture ? '' : `<p><button type="button" data-ajouter>＋ Ligne</button>${this.#o.heuresDefaut ? ` <button type="button" data-completer title="Compléter la ligne en cours (Ctrl+Maj+Entrée) : sur chaque jour travaillé non validé et vide, les heures par défaut du salarié (calendrier) moins les heures déjà saisies ce jour sur les autres lignes">⇥ Compléter la ligne</button>` : ''} <span class="aide">Durées au pas de ${this.#o.ref.parametres.pas_minutes} min : « 7:30 », « 7h30 » ou « 7,5 ».
         Entrée : case suivante · ↑ ↓ : ligne · Ctrl+Entrée : nouvelle ligne · Alt+Entrée : recopier jusqu'au vendredi · Ctrl+D : dupliquer (raccourcis personnalisables).</span></p>`}
       <div data-controles></div>`;
     const corps = zone.querySelector('tbody');
@@ -311,6 +312,7 @@ class GrillePointage {
         this.parClavier = false;
         const el = e.target;
         const tr = el.closest?.('tr[data-i]');
+        if (action === 'completerLigne' && tr) { e.preventDefault(); completer(Number(tr.dataset.i)); return; }
         if (!action || !tr || e.defaultPrevented) return;
         if (this.enCascade) { e.preventDefault(); return; }
         const i = Number(tr.dataset.i);
@@ -348,6 +350,36 @@ class GrillePointage {
       });
     }
     zone.querySelector('[data-ajouter]')?.addEventListener('click', () => nouvelleLigne());
+    /**
+     * Compléter la ligne i (la ligne en cours, sinon la dernière ; une nouvelle s'il n'y en a pas) : chaque jour travaillé
+     * (heures par défaut du salarié), non validé, dont la case est vide reçoit le reste du jour = heures par défaut − heures
+     * déjà saisies ce jour sur les autres lignes (rien si le reste est nul ou négatif).
+     */
+    const completer = async (i = this.ligneCourante ?? this.lignes.length - 1) => {
+      if (!this.#o.heuresDefaut) return;
+      if (!this.lignes.length) { nouvelleLigne(-1); i = 0; }
+      const l = this.lignes[Math.min(Math.max(i, 0), this.lignes.length - 1)];
+      if (figee(l)) return;
+      let defaut;
+      try { defaut = await this.#o.heuresDefaut(); } catch { return; }
+      let premier = null;
+      jours.forEach((date, j) => {
+        const c = l.cases[j];
+        if (verrou.has(j) || c.length > 1 || c.some((p) => p.minutes)) return;
+        const autres = this.lignes.filter((x) => x !== l).reduce((a, x) => a + x.cases[j].reduce((b, p) => b + (p.minutes || 0), 0), 0);
+        const reste = (defaut[date] ?? 0) - autres;
+        if (reste <= 0) return;
+        if (c.length === 1) c[0].minutes = reste; else c.push({ minutes: reste });
+        premier ??= j;
+      });
+      if (premier === null) { this.#o.message?.('Rien à compléter : jours non travaillés, validés, déjà saisis ou complets', 'info'); return; }
+      changer();
+      rendreLignes();
+      focaliser(champ(this.lignes.indexOf(l), `j${premier}`));
+    };
+    zone.querySelector('[data-completer]')?.addEventListener('click', () => completer());
+    // Ligne en cours : la dernière ligne où le focus est passé (bouton « Compléter la ligne »).
+    corps.addEventListener('focusin', (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) this.ligneCourante = Number(tr.dataset.i); });
     rendreLignes();
     /** Focus de départ : premier jour saisissable de la première ligne, sinon une nouvelle ligne (cascade). */
     this.commencer = () => {
@@ -535,7 +567,17 @@ export class PageSaisiePointage extends PageBase {
       ${[...new Set(s.pointages.filter((x) => x.groupe).map((x) => x.groupe))].map((g) => `<p class="aide">👥 Saisie d'équipe : <a href="/pointage/groupe?id=${g}">voir et modifier le groupe</a></p>`).join('')}
       ${s.corrections.length ? `<h3>Demandes de correction</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>État</th><th>Motif</th><th>Réponse</th></tr></thead><tbody>
         ${s.corrections.map((c) => `<tr><td>${horodatage(c.le)}</td><td>${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}</td><td>${echapper(c.motif ?? '')}</td><td>${echapper(c.reponse ?? '')}</td></tr>`).join('')}</tbody></table>` : ''}`;
-    this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles, tableau: true, regrouper: true });
+    // Heures par défaut du salarié : journées de son calendrier de travail (fériés et fermetures compris), lues une fois par semaine.
+    const heuresDefaut = () => {
+      const jours = joursSemaine(this.lundi);
+      this.journees ??= api.calendriers.journeesRessource('salarie', s.salarie.id, jours[0], jours[6])
+        .then((l) => Object.fromEntries(l.map((x) => [String(x.date).slice(0, 10), x.fermee?.length ? 0 : x.minutes])))
+        .catch((e) => { this.journees = null; throw e; });
+      return this.journees;
+    };
+    this.journees = null;
+    this.grille = new GrillePointage(zone.querySelector('[data-grille]'), { ref: this.ref, chantiers: this.chantiers, donnees: s, lundi: this.lundi, verrouilles, tableau: true, regrouper: true,
+      heuresDefaut, message: (t, n) => this.app.message(t, n) });
     this.grille.commencer?.();
     const correction = async () => {
       const motif = prompt('Motif de la demande de correction (envoyée au service RH) :');

@@ -54,6 +54,7 @@ declarerRaccourcis('pointage', {
     dupliquer: { libelle: 'Dupliquer la ligne avec ses durées', defaut: 'Ctrl+D' },
     recopierSemaine: { libelle: 'Recopier la durée sur les jours suivants jusqu\'au vendredi', defaut: 'Alt+Enter' },
     supprimerLigne: { libelle: 'Retirer la ligne', defaut: 'Ctrl+Delete' },
+    completerLigne: { libelle: 'Compléter la ligne : heures par défaut du salarié moins les heures déjà saisies du jour', defaut: 'Ctrl+Shift+Enter' },
   },
 });
 
