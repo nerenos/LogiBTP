@@ -538,13 +538,9 @@ ul.controles li.avertissement { color: #b45309; }
 .tableau-defilant > .tableau-compact { width: 100%; }
 .tableau-defilant.largeur-contenu { display: inline-block; max-width: 100%; }
 a.bouton-lien { text-decoration: none; padding: 0 .35rem; }
-.tableau-compact input[type="number"] { width: 5rem; }
 details.avertissement > summary { cursor: pointer; }
 .tableau-compact td.cellule-double { min-width: 8.5rem; }
-.grille-pointage.tableau-compact input.duree { width: 3.2rem; box-sizing: border-box; padding: 1px 4px; }
-.grille-pointage.tableau-compact td.cellule-double .combo { width: 8.5rem; }
 .grille-pointage.tableau-compact td, .grille-pointage.tableau-compact th { padding: 2px 4px; }
-.tableau-compact .motif-pointage input { width: 100%; box-sizing: border-box; }
 .tableau-compact .motif-pointage:has(input:disabled:placeholder-shown) { display: none; }
 .tableau-compact td.cellule-double > div + div { margin-top: 1px; }
 .tableau-compact td.cellule-double > div:last-child { font-size: .9em; }
@@ -573,7 +569,7 @@ details.avertissement > summary { cursor: pointer; }
 .tableau-compact td.nombre { white-space: nowrap; }
 .tableau-compact tr.cliquable:hover td { background: color-mix(in srgb, var(--accent-clair) 50%, transparent); }
 .tableau-compact tr.selection td { background: rgba(56, 132, 255, 0.18); }
-.variables-paie input.duree { width: 3.4rem; box-sizing: border-box; padding: 1px 4px; text-align: right; }
+.variables-paie input.duree { text-align: right; }
 
 /* Planning : page pleine hauteur (barre d'outils, vue du planning, panneau). */
 .page-planning { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .4rem; padding: .4rem .6rem; }
@@ -620,3 +616,27 @@ body.mode-borne #bandeau { display: none; }
 .borne-test { background: #fef3c7; color: #92400e; border: 1px dashed #d97706; border-radius: .4rem; padding: .4rem .8rem; }
 .borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: rgba(37, 99, 235, .1); }
 .page-parametres table.crm-table, .crm-principal table.crm-table { width: 100%; }
+
+/* Zones saisissables des tableaux compacts : le champ remplit sa cellule (largeur de la colonne, hauteur de ligne
+   régulière) ; largeur minimale selon l'attribut size du champ (ou celle de la colonne) ; boutons dans leur colonne. */
+.tableau-compact td > input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.tableau-compact td > div > input:not([type="checkbox"]):not([type="radio"]),
+.tableau-compact td .combo, .tableau-compact td > textarea {
+  width: 100%; box-sizing: border-box; margin: 0; padding: 1px 4px; min-height: 1.65em; border-radius: 3px;
+}
+.tableau-compact td:has(> input[type="checkbox"]), .tableau-compact th:has(> input[type="checkbox"]) { text-align: center; }
+.tableau-compact td.cellule-boutons { white-space: nowrap; width: 1%; }
+.tableau-compact td[data-j], .variables-paie td:has(> input.duree) { min-width: 3.4rem; }
+.tableau-compact input.duree { text-align: right; }
+.tableau-compact input[size="2"] { min-width: 3rem; }
+.tableau-compact input[size="3"], .tableau-compact input[size="4"] { min-width: 4rem; }
+.tableau-compact input[size="5"], .tableau-compact input[size="6"] { min-width: 4.5rem; }
+.tableau-compact input[size="8"] { min-width: 6rem; }
+.tableau-compact input[size="10"] { min-width: 7rem; }
+.tableau-compact input[size="14"] { min-width: 9rem; }
+.tableau-compact input[size="28"] { min-width: 15rem; }
+.tableau-compact input[size="36"] { min-width: 18rem; }
+.tableau-compact input[size="48"] { min-width: 24rem; }
+.tableau-compact input[size="60"] { min-width: 28rem; }
+/* Durées : la colonne du jour fixe la largeur (pas l'attribut size). */
+.tableau-compact input.duree { min-width: 0; }

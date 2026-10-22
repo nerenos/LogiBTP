@@ -803,9 +803,10 @@ export class PageSynthesePointage extends PageBase {
           : `<td class="nombre">${affiche(r, valeurJour(r.code, i))}</td>`)).join('')}
         <td class="nombre">${affiche(r, v.variables?.semaine[r.code])}</td><td class="nombre"><b>${total(r)}</b></td></tr>`).join('')}</tbody></table>
       ${modifiable && v.rubriques.some((r) => r.saisie !== 'C') ? '<p><button type="button" data-rubriques>Enregistrer les rubriques saisies</button> <span class="aide">Case vide : valeur calculée ; 0 : annule le calcul (rubrique modifiable).</span></p>' : ''}
-      ${v.zones.length ? `<h4>Zones de déplacement${v.agence ? ` (agence ${echapper(v.agence)})` : ''}</h4><table class="tableau-compact"><tbody>${v.zones.map((z) => `<tr><td>${echapper(z.code)} ${echapper(z.libelle)}</td>
-        <td>${z.zone == null ? '<span class="badge-exception">à valider</span>' : `zone ${z.zone}`}</td>
-        <td>${this.donnees.rh && v.agence ? `<input type="number" min="0" max="9" size="2" data-zone="${z.cha_id}" value="${z.zone ?? ''}"> <button type="button" data-zone-ok="${z.cha_id}">Valider la zone</button>` : ''}</td></tr>`).join('')}</tbody></table>` : ''}`;
+      ${v.zones.length ? `<h4>Zones de déplacement${v.agence ? ` (agence ${echapper(v.agence)})` : ''}</h4><table class="tableau-compact largeur-contenu"><thead><tr><th>Chantier</th><th>Zone</th>${this.donnees.rh && v.agence ? '<th>Nouvelle zone</th><th></th>' : ''}</tr></thead><tbody>
+        ${v.zones.map((z) => `<tr><td>${echapper(z.code)} ${echapper(z.libelle)}</td><td>${z.zone == null ? '<span class="badge-exception">à valider</span>' : `zone ${z.zone}`}</td>
+        ${this.donnees.rh && v.agence ? `<td><input type="number" min="0" max="9" size="2" data-zone="${z.cha_id}" value="${z.zone ?? ''}"></td>
+          <td><button type="button" class="bouton-icone" data-zone-ok="${z.cha_id}" title="Valider la zone de ce chantier pour l'agence" aria-label="Valider la zone">✔</button></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}`;
     zone.querySelector('[data-rubriques]')?.addEventListener('click', async () => {
       const valeurs = [];
       for (const inp of zone.querySelectorAll('input[data-rub]')) {
