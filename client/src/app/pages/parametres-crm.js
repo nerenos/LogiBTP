@@ -1,5 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { FORMAT_PLAN_DEFAUT, analyserFormatPlan, extraireNomPlan } from '@logibtp/crm';
 import { api } from '../api.js';
 import { contexteCrm } from '../crm/crm.js';
 
@@ -17,12 +18,15 @@ export class PageParametresCrm extends PageBase {
     this.titre = 'Paramétrage du suivi (CRM)';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">☑ Paramétrage du suivi (CRM)</h1><h2>Types de notes</h2><div data-types></div>
       <h2>Couleurs des rappels</h2><div data-seuils></div>
+      <h2>Noms des fichiers de plans</h2><div data-format-plan></div>
       <h2>Statuts de visa</h2><div data-statuts></div></div>`;
     if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">Disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
     this.types = await api.crm.typesNotes();
     this.rendreTypes();
-    this.rendreSeuils(await api.crm.parametres());
+    const parametres = await api.crm.parametres();
+    this.rendreSeuils(parametres);
+    this.rendreFormatPlan(parametres);
     this.statuts = await api.crm.statutsVisa();
     this.rendreStatuts();
   }
@@ -67,6 +71,34 @@ export class PageParametresCrm extends PageBase {
         const lire = (s) => Number(String(zone.querySelector(s).value).replace(',', '.'));
         this.rendreSeuils(await api.crm.enregistrerParametres({ seuils: { orange: lire('[data-orange]'), rouge: lire('[data-rouge]') } }));
         this.app.message('Seuils des rappels enregistrés', 'succes');
+      } catch (e) { this.app.erreur(e); }
+    });
+  }
+
+  /** Format global des noms de fichiers de plans : repère, nom, lot et indice lus à la création d'un plan ou d'un indice. */
+  rendreFormatPlan(p) {
+    const admin = this.app.estAdmin();
+    const zone = this.conteneur.querySelector('[data-format-plan]');
+    zone.innerHTML = `<p class="aide">Champs entre accolades séparés par un texte fixe : {repere}, {nom}, {lot}, {indice} (une ou deux lettres, facultatif en fin : vide = premier indice), {*} (ignoré).
+      Les fichiers déposés à la création d'un plan préremplissent le repère, le nom et l'indice.</p>
+      <div class="formulaire"><label>Format <input data-format size="40" maxlength="120" value="${echapper(p.format_plan ?? FORMAT_PLAN_DEFAUT)}" ${admin ? '' : 'disabled'}></label>
+        <label>Essai <input data-essai size="40" value="R01_Plan de masse_B.pdf"></label><span data-apercu class="aide"></span>
+        ${admin ? '<button type="button" class="principal" data-enregistrer-format>Enregistrer le format</button>' : ''}</div>`;
+    const $ = (s) => zone.querySelector(s);
+    const apercu = () => {
+      const a = analyserFormatPlan($('[data-format]').value);
+      if (a.erreur) { $('[data-apercu]').innerHTML = `<span class="erreur">${echapper(a.erreur)}</span>`; return; }
+      const r = extraireNomPlan($('[data-essai]').value, $('[data-format]').value);
+      $('[data-apercu]').textContent = r ? `Repère « ${r.repere} » · nom « ${r.nom} »${r.lot ? ` · lot « ${r.lot} »` : ''} · indice ${r.indice ? `« ${r.indice} »` : 'vide (premier)'}` : 'Ne suit pas le format : le nom du fichier devient le nom du plan';
+    };
+    $('[data-format]').addEventListener('input', apercu);
+    $('[data-essai]').addEventListener('input', apercu);
+    apercu();
+    $('[data-enregistrer-format]')?.addEventListener('click', async () => {
+      try {
+        const actuels = await api.crm.parametres();
+        this.rendreFormatPlan(await api.crm.enregistrerParametres({ seuils: actuels.seuils, format_plan: $('[data-format]').value }));
+        this.app.message('Format des noms de plans enregistré', 'succes');
       } catch (e) { this.app.erreur(e); }
     });
   }

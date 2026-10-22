@@ -62,7 +62,7 @@ export class PagePlansCrm extends PageBase {
       <th>Indice</th><th>En vigueur</th><th>Statut</th><th class="nombre">Visas attendus</th></tr></thead><tbody>
       ${plans.map((p) => `<tr><td><input type="checkbox" data-choix="${p.id}" ${p.nb_indices ? '' : 'disabled title="Créez d\'abord un indice"'}></td>
         <td><a href="/crm/plan/${p.id}"><b>${echapper(p.repere)}</b></a></td><td>${echapper(p.nom)}</td><td>${echapper(p.lot ?? '')}</td><td>${echapper(p.repere_cctp ?? '')}</td>
-        ${this.element ? '' : `<td>${lienElement(p.element)}</td>`}<td>${echapper(p.etat.indice ?? '')}</td><td>${echapper(p.etat.en_vigueur ?? '—')}</td><td>${pastillePlan(p.etat)}</td>
+        ${this.element ? '' : `<td>${lienElement(p.element)}</td>`}<td>${echapper(p.etat.indice === '' ? '(vide)' : p.etat.indice ?? '')}</td><td>${echapper(p.etat.en_vigueur === '' ? '(vide)' : p.etat.en_vigueur ?? '—')}</td><td>${pastillePlan(p.etat)}</td>
         <td class="nombre${p.etat.retards ? ' crm-retard' : ''}">${p.etat.manquants || ''}${p.etat.retards ? ` (${p.etat.retards} en retard)` : ''}</td></tr>`).join('')}</tbody></table>`;
   }
 }

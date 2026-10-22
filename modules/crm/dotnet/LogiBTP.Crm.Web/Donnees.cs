@@ -181,6 +181,7 @@ public class CrmPlanIndice
     public DateOnly? PinDate { get; set; }
     public string? PinMotif { get; set; }
     public long? PinDgeId { get; set; }
+    public long? PinRgeId { get; set; }
     public string PinCreePar { get; set; } = "";
     public DateTimeOffset PinCreeLe { get; set; }
 }

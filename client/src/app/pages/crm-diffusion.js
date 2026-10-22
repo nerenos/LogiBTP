@@ -48,7 +48,7 @@ export class PageDiffusionCrm extends PageBase {
     const plans = await Promise.all(String(r.plans ?? '').split(',').filter(Boolean).map((id) => api.crm.plan(Number(id))));
     this.pieces = plans.filter((p) => p.indices.length).map((p) => {
       const i = p.indices[p.indices.length - 1];
-      return { pin_id: i.id, libelle: `${p.plan.repere} – ${p.plan.nom} – indice ${i.indice}`, choisi: true };
+      return { pin_id: i.id, libelle: `${p.plan.repere} – ${p.plan.nom} – ${i.indice ? `indice ${i.indice}` : 'premier indice'}`, choisi: true };
     });
     this.destinataires = [];
     if (this.element && STRUCTURE.includes(this.element.type)) {

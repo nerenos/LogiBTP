@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS crm_plan_indice (
     pin_cree_le   TIMESTAMPTZ   NOT NULL DEFAULT now(),
     UNIQUE (pin_pla_id, pin_indice)
 );
+-- Répertoire de la GED de l'indice (ses fichiers, sous l'élément crm_plan) ; indice vide ('') = le premier, avant A.
+ALTER TABLE crm_plan_indice ADD COLUMN IF NOT EXISTS pin_rge_id BIGINT;
 
 -- Bordereau de diffusion : pièces envoyées à une liste de destinataires, à une date.
 CREATE TABLE IF NOT EXISTS crm_diffusion (

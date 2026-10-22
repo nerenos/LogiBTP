@@ -16,7 +16,7 @@ public sealed record VisaDto(long Id, long IndiceId, long TiersId, ElementDecrit
     string? StatutLibelle, string? Effet, DateOnly? RecuLe, string? Observation, long? DgeRetourId, long? DiffusionId, string? DiffusionNumero);
 
 /// <summary>Indice lu avec ses visas.</summary>
-public sealed record IndiceDto(long Id, string Indice, DateOnly? Date, string? Motif, long? DgeId, string CreePar, DateTimeOffset CreeLe, List<VisaDto> Visas);
+public sealed record IndiceDto(long Id, string Indice, DateOnly? Date, string? Motif, long? DgeId, long? RgeId, string CreePar, DateTimeOffset CreeLe, List<VisaDto> Visas);
 
 /// <summary>Plan lu : saisie, élément, état calculé (ReglesValidation), nombre d'indices.</summary>
 public sealed record PlanDto(long Id, string Repere, string? RepereCctp, string Nom, string? Lot, string? Finition, string? MessageHtml, string? TypeElement,
@@ -25,8 +25,11 @@ public sealed record PlanDto(long Id, string Repere, string? RepereCctp, string 
 /// <summary>Plan détaillé : indices et visas.</summary>
 public sealed record PlanDetail(PlanDto Plan, List<IndiceDto> Indices);
 
-/// <summary>Indice saisi (indice vide : suivant du dernier).</summary>
-public sealed record IndiceSaisi(string? Indice, DateOnly? Date, string? Motif, long? DgeId);
+/// <summary>
+/// Indice saisi (indice vide : suivant du dernier, ou indice vide — le premier — si le plan n'en a pas) ; répertoire de
+/// la GED de l'indice (ses fichiers), créé par l'écran.
+/// </summary>
+public sealed record IndiceSaisi(string? Indice, DateOnly? Date, string? Motif, long? DgeId, long? RgeId = null);
 
 /// <summary>Visa attendu d'un tiers.</summary>
 public sealed record VisaAttendu(long TiersId, long? IndId, DateOnly? AttenduLe);
@@ -141,7 +144,7 @@ public partial class ServiceCrm
         var indices = await db.Indices.AsNoTracking().Where(i => i.PinPlaId == id).OrderBy(i => i.PinCreeLe).ThenBy(i => i.PinId).ToListAsync(ct);
         var idsIndices = indices.Select(i => i.PinId).ToList();
         var visas = await db.Visas.AsNoTracking().Where(v => idsIndices.Contains(v.VisPinId)).OrderBy(v => v.VisId).ToListAsync(ct);
-        var liste = indices.Select(i => new IndiceDto(i.PinId, i.PinIndice, i.PinDate, i.PinMotif, i.PinDgeId, i.PinCreePar, i.PinCreeLe, [])).ToList();
+        var liste = indices.Select(i => new IndiceDto(i.PinId, i.PinIndice, i.PinDate, i.PinMotif, i.PinDgeId, i.PinRgeId, i.PinCreePar, i.PinCreeLe, [])).ToList();
         return new PlanDetail((await EnPlans([p], ct))[0], await AvecVisas(liste, visas, ct));
     }
 
@@ -207,13 +210,13 @@ public partial class ServiceCrm
     {
         if (!await db.Plans.AnyAsync(p => p.PlaId == plan, ct)) throw ExceptionMetier.Introuvable($"Plan {plan}");
         var dernier = await db.Indices.Where(i => i.PinPlaId == plan).OrderByDescending(i => i.PinCreeLe).ThenByDescending(i => i.PinId).Select(i => i.PinIndice).FirstOrDefaultAsync(ct);
-        var indice = string.IsNullOrWhiteSpace(s.Indice) ? (dernier is null ? "A" : ReglesValidation.IndiceSuivant(dernier)) : s.Indice.Trim().ToUpperInvariant();
+        var indice = string.IsNullOrWhiteSpace(s.Indice) ? (dernier is null ? "" : ReglesValidation.IndiceSuivant(dernier)) : s.Indice.Trim().ToUpperInvariant();
         if (indice.Length > 5) throw ExceptionMetier.Invalide("INDICE", "Indice de 5 caractères au plus");
         if (await db.Indices.AnyAsync(i => i.PinPlaId == plan && i.PinIndice == indice, ct)) throw ExceptionMetier.Conflit("INDICE_EXISTANT", $"L'indice {indice} existe déjà");
-        db.Indices.Add(new CrmPlanIndice { PinPlaId = plan, PinIndice = indice, PinDate = s.Date, PinMotif = s.Motif, PinDgeId = s.DgeId, PinCreePar = u.Code, PinCreeLe = DateTimeOffset.UtcNow });
+        db.Indices.Add(new CrmPlanIndice { PinPlaId = plan, PinIndice = indice, PinDate = s.Date, PinMotif = s.Motif, PinDgeId = s.DgeId, PinRgeId = s.RgeId, PinCreePar = u.Code, PinCreeLe = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(ct);
         var pl = await db.Plans.AsNoTracking().FirstAsync(p => p.PlaId == plan, ct);
-        await PublierAsync("INDICE", pl.PlaTypeElement, pl.PlaIdElement, $"Plan {pl.PlaRepere} – {pl.PlaNom} : indice {indice}{(string.IsNullOrWhiteSpace(s.Motif) ? "" : $" ({s.Motif})")}",
+        await PublierAsync("INDICE", pl.PlaTypeElement, pl.PlaIdElement, $"Plan {pl.PlaRepere} – {pl.PlaNom} : {(indice == "" ? "premier indice" : $"indice {indice}")}{(string.IsNullOrWhiteSpace(s.Motif) ? "" : $" ({s.Motif})")}",
             $"/crm/plan/{plan}", u.Code, ct);
         return await Plan(plan, ct);
     }
@@ -224,6 +227,7 @@ public partial class ServiceCrm
         i.PinDate = s.Date;
         i.PinMotif = s.Motif;
         i.PinDgeId = s.DgeId;
+        i.PinRgeId = s.RgeId ?? i.PinRgeId;
         await db.SaveChangesAsync(ct);
         return await Plan(i.PinPlaId, ct);
     }

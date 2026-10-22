@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Crm.Web;
 
-/// <summary>Paramètres du module : seuils des couleurs des rappels (jours avant l'échéance).</summary>
-public sealed record ParametresCrm(SeuilsRappel Seuils);
+/// <summary>
+/// Paramètres du module : seuils des couleurs des rappels (jours avant l'échéance), format des noms de fichiers de plans
+/// (`{repere}_{nom}_{indice}` : lu par l'écran, `extraireNomPlan` de plans.js ; nul à l'enregistrement : inchangé).
+/// </summary>
+public sealed record ParametresCrm(SeuilsRappel Seuils, string? FormatPlan = null);
 
 /// <summary>Rappel saisi : type DATE ou AVANT, date, délai en jours, individu (nul : pour moi).</summary>
 public sealed record RappelSaisi(string Type, DateTimeOffset? Quand, int? DelaiJours, long? IndId);
@@ -19,11 +22,25 @@ public sealed record RappelDto(long Id, long NoteId, string Type, DateTimeOffset
 public partial class ServiceCrm
 {
     private const string CleSeuils = "seuils_rappel";
+    private const string CleFormatPlan = "format_plan";
+    public const string FormatPlanDefaut = "{repere}_{nom}_{indice}";
+    private static readonly string[] ChampsFormatPlan = ["repere", "nom", "lot", "indice", "*"];
 
     public async Task<ParametresCrm> Parametres(CancellationToken ct)
     {
-        var p = await db.Parametres.AsNoTracking().FirstOrDefaultAsync(x => x.CpaCle == CleSeuils, ct);
-        return new ParametresCrm(p?.CpaValeur.Deserialize<SeuilsRappel>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new SeuilsRappel());
+        var p = await db.Parametres.AsNoTracking().Where(x => x.CpaCle == CleSeuils || x.CpaCle == CleFormatPlan).ToListAsync(ct);
+        var seuils = p.FirstOrDefault(x => x.CpaCle == CleSeuils)?.CpaValeur.Deserialize<SeuilsRappel>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new SeuilsRappel();
+        var format = p.FirstOrDefault(x => x.CpaCle == CleFormatPlan)?.CpaValeur.RootElement.TryGetProperty("format", out var f) == true ? f.GetString() : null;
+        return new ParametresCrm(seuils, string.IsNullOrWhiteSpace(format) ? FormatPlanDefaut : format);
+    }
+
+    /// <summary>Format des noms de plans : champs connus seulement, au moins un champ, deux champs séparés par un texte (comme analyserFormatPlan).</summary>
+    private static void ControlerFormatPlan(string format)
+    {
+        var champs = System.Text.RegularExpressions.Regex.Matches(format, @"\{([^{}]*)\}");
+        if (format.Length > 120 || champs.Any(m => !ChampsFormatPlan.Contains(m.Groups[1].Value.Trim().ToLowerInvariant()))
+            || !champs.Any(m => m.Groups[1].Value.Trim() != "*") || format.Contains("}{"))
+            throw ExceptionMetier.Invalide("FORMAT_PLAN", "Format des noms de plans : champs {repere}, {nom}, {lot}, {indice}, {*}, séparés par un texte fixe");
     }
 
     /// <summary>Seuils globaux (administrateur) : rouge ≥ 0, orange ≥ rouge.</summary>
@@ -37,6 +54,16 @@ public partial class ServiceCrm
         e.CpaValeur = valeur;
         e.CpaMajLe = DateTimeOffset.UtcNow;
         e.CpaMajPar = u.Code;
+        if (p.FormatPlan is string format)
+        {
+            format = format.Trim();
+            ControlerFormatPlan(format);
+            var fp = await db.Parametres.FirstOrDefaultAsync(x => x.CpaCle == CleFormatPlan, ct);
+            if (fp is null) db.Parametres.Add(fp = new CrmParametre { CpaCle = CleFormatPlan });
+            fp.CpaValeur = JsonSerializer.SerializeToDocument(new { format });
+            fp.CpaMajLe = DateTimeOffset.UtcNow;
+            fp.CpaMajPar = u.Code;
+        }
         await db.SaveChangesAsync(ct);
         return await Parametres(ct);
     }
