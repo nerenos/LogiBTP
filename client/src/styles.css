@@ -379,6 +379,30 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 
 /* ---------------------------------------------------------------- Suivi (module CRM) */
 .crm-vues { margin: .5rem 0; }
+/* Pages du Suivi : toute la largeur (pas la largeur limitée des paramètres) ; le fil est centré. */
+.page-parametres:is(.page-crm, .page-crm-note, .page-crm-suivi, .page-crm-rappels) { max-width: none; }
+.page-parametres.page-crm-fil { max-width: none; width: 100%; }
+.page-crm-fil > *, .crm-fil-hote { width: 100%; max-width: 52rem; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+.crm-fil-hote .crm-fil { max-width: none; }
+/* Tâches : panneau de gauche (vues, filtres) réductible. */
+.page-crm-taches { flex: 1; min-height: 0; display: flex; }
+.crm-panneau { flex: none; width: 15rem; border-right: 1px solid var(--bord); padding: .6rem .8rem; overflow: auto; display: flex; flex-direction: column; gap: .8rem; background: var(--surface); }
+.crm-panneau-entete { display: flex; align-items: center; justify-content: space-between; }
+.crm-vues-liste { display: flex; flex-direction: column; gap: .15rem; }
+.crm-vues-liste button { text-align: left; border: none; background: none; padding: .35rem .5rem; border-radius: .3rem; cursor: pointer; }
+.crm-vues-liste button:hover { background: var(--accent-clair); }
+.crm-vues-liste button.actif { background: var(--accent-clair); font-weight: 600; border-left: 3px solid var(--accent); }
+.crm-filtres-colonne { display: flex; flex-direction: column; gap: .5rem; }
+.crm-filtres-colonne label { display: flex; flex-direction: column; gap: .15rem; font-size: .9em; }
+.crm-filtres-colonne .combo, .crm-filtres-colonne input { width: 100%; box-sizing: border-box; }
+.crm-principal { flex: 1; min-width: 0; overflow: auto; padding: .6rem 1.2rem 2rem; }
+.crm-principal .page-titre { margin: 0; }
+.crm-principal .crm-table { width: 100%; }
+.page-crm-taches.panneau-reduit .crm-panneau { display: none; }
+@media (max-width: 900px) {
+  .page-crm-taches:not(.panneau-reduit) .crm-panneau { position: absolute; z-index: 20; top: 0; bottom: 0; left: 0; box-shadow: 2px 0 8px rgba(0,0,0,.15); }
+  .page-crm-taches { position: relative; }
+}
 .crm-vues button.actif { font-weight: 600; border-bottom: 2px solid var(--accent); }
 .crm-filtres { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0; }
 .crm-filtres .principal { margin-left: auto; }
@@ -525,3 +549,4 @@ body.mode-borne #bandeau { display: none; }
 .borne-erreur { color: #b42318; font-weight: 600; }
 .borne-succes { color: #15803d; font-weight: 600; font-size: 1.4rem; }
 .borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: rgba(37, 99, 235, .1); }
+.page-parametres table.crm-table, .crm-principal table.crm-table { width: 100%; }

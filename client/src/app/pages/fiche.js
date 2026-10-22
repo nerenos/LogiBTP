@@ -3,6 +3,7 @@ import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { CLASSES_FICHE } from '../fiches/classes.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
+import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
 import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees } from '../ressources/ressources-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
@@ -56,6 +57,12 @@ export class PageFiche extends PageBase {
         const p = new PanneauSuivi(corps, { app, type: t, id });
         p.ouvrir().catch((e) => app.erreur(e));
         return p;
+      } : null,
+      // Onglet Fil des fiches affaire et chantier (module CRM actif, en ligne) : fil d'actualité de l'élément.
+      fil: app.enLigne && app.moduleActif('crm') ? (corps, { type: t, id, libelle }) => {
+        const fil = new FilCrm(corps, { app, element: { type: t, id: String(id) }, libelle });
+        fil.ouvrir().catch((e) => app.erreur(e));
+        return fil;
       } : null,
       moduleActif: (code) => app.moduleActif(code),
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.

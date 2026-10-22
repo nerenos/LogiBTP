@@ -35,6 +35,14 @@ export class ListeDeroulante {
       this.filtrer(champ.value);
     });
     this.surChoix = null;
+    // Clic dans le champ, même en saisie : liste fermée → toute la liste (valeur courante en évidence) ; liste ouverte
+    // et clic sur la flèche (bord droit) → fermée. Évite de quitter le champ pour rouvrir la liste après un choix.
+    this.surClic = (e) => {
+      const fleche = e.clientX > champ.getBoundingClientRect().right - 24;
+      if (this.ouverte) { if (fleche) this.fermer(); return; }
+      this.filtrer('', { courante: this.strict ? this.valeurChoisie ?? null : champ.value });
+    };
+    champ.addEventListener('click', this.surClic);
     // Valeur d'origine sélectionnée : toute la liste est proposée, la valeur courante en évidence.
     this.filtrer('', { courante: strict ? courante : champ.value });
   }
@@ -126,6 +134,10 @@ export class ListeDeroulante {
 
   /** Gestion du clavier ; renvoie vrai si l'événement a été consommé par la liste. */
   clavier(e) {
+    if (e.key === 'F4' || (e.key === 'ArrowDown' && e.altKey)) {
+      if (this.ouverte) this.fermer(); else this.filtrer('', { courante: this.strict ? this.valeurChoisie ?? null : this.champ.value });
+      return true;
+    }
     if (e.key === 'ArrowDown') { this.deplacer(1); return true; }
     if (e.key === 'ArrowUp') { this.deplacer(-1); return true; }
     if ((e.key === 'Enter' || e.key === 'Tab') && this.ouverte && this.actif >= 0) { this.choisir(this.actif); return false; }
@@ -138,6 +150,7 @@ export class ListeDeroulante {
   }
 
   detruire() {
+    this.champ.removeEventListener('click', this.surClic);
     this.popup.remove();
   }
 }

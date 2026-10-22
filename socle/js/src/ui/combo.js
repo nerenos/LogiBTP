@@ -48,6 +48,7 @@ export function creerCombo({ options = [], valeur = '', vide = true, titre = '' 
   champ.addEventListener('click', ouvrir);
   champ.addEventListener('keydown', (e) => {
     if (!deroulante && (e.key === 'ArrowDown' || e.key === 'F4')) { e.preventDefault(); ouvrir(); return; }
+    if (deroulante && !deroulante.ouverte && e.key === 'ArrowDown') { e.preventDefault(); deroulante.filtrer('', { courante }); return; }
     if (deroulante?.clavier(e)) { e.preventDefault(); return; }
     // Entrée ou Tab : la valeur est retenue avant que l'hôte ne traite la touche (passage à la cellule suivante…).
     if (e.key === 'Enter' || e.key === 'Tab') retenir();

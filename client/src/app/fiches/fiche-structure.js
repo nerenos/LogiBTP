@@ -218,7 +218,21 @@ export class FicheStructure extends FicheLogiBTP {
           naviguer: (url, e) => this.ouvrirUrl(url, e),
         });
       },
-    }, ...this.ongletsSuivi()];
+    }, ...this.ongletsSuivi(), ...this.ongletsFil()];
+  }
+
+  /** Onglet Fil (affaires et chantiers, module CRM) : fil d'actualité de l'élément, chantiers compris pour une affaire. */
+  ongletsFil() {
+    if (!this.fil || !['affaire', 'chantier'].includes(this.type)) return [];
+    return [{
+      code: 'fil', titre: 'Fil',
+      rendre: (corps) => {
+        if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour voir son fil d\'actualité.</p>'; return; }
+        this.filCrm?.fermer();
+        const v = this.fiche?.valeurs ?? {};
+        this.filCrm = this.fil(corps, { type: this.type, id: this.id, libelle: [v.code, v.libelle].filter(Boolean).join(' ') });
+      },
+    }];
   }
 }
 

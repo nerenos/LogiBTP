@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { NATURES_NOTE, ETATS_NOTE } from '@logibtp/crm';
 import { api } from '../api.js';
 import { contexteCrm, iconeNature, pastilleEtat, echeanceNote, lienElement, estClose } from '../crm/crm.js';
@@ -27,14 +27,27 @@ export class PageCrm extends PageBase {
     this.titre = VUES_CRM.find((v) => v.code === this.filtre.vue).libelle;
     if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
-    this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">☑ Suivi</h1>
-      <nav class="onglets crm-vues">${VUES_CRM.map((v) => `<button type="button" data-vue="${v.code}" title="${echapper(v.aide)}">${echapper(v.libelle)}</button>`).join('')}</nav>
-      <div class="crm-filtres"><input type="search" data-recherche placeholder="Rechercher (objet, message)" value="${echapper(this.filtre.recherche)}">
-        <span data-etat></span><span data-nature></span><span data-srv></span>
-        <button type="button" class="principal" data-nouvelle title="Nouvelle note (Ctrl : autre fenêtre)">＋ Nouvelle note</button></div>
-      ${this.ctx.individu_id ? '' : '<p class="aide">Votre identifiant de connexion n\'est relié à aucun individu de l\'annuaire (fiche individu, « Identifiant de connexion ») : « Mes tâches » et « À prendre » restent vides.</p>'}
-      <div data-corps></div></div>`;
+    // Panneau de gauche (vues et filtres) réductible : état gardé dans le navigateur, réduit d'office sur un petit écran.
+    const prefReduit = lirePreferences().crmPanneauReduit;
+    const reduit = prefReduit ?? window.matchMedia('(max-width: 900px)').matches;
+    this.conteneur.innerHTML = `<div class="page-crm-taches${reduit ? ' panneau-reduit' : ''}">
+      <aside class="crm-panneau">
+        <div class="crm-panneau-entete"><strong>☑ Suivi</strong><button type="button" class="discret" data-replier title="Réduire le panneau">«</button></div>
+        <nav class="crm-vues-liste">${VUES_CRM.map((v) => `<button type="button" data-vue="${v.code}" title="${echapper(v.aide)}">${echapper(v.libelle)}</button>`).join('')}</nav>
+        <div class="crm-filtres-colonne"><label>Recherche<input type="search" data-recherche placeholder="Objet, message" value="${echapper(this.filtre.recherche)}"></label>
+          <label>État<span data-etat></span></label><label>Nature<span data-nature></span></label><label>Service<span data-srv></span></label></div>
+      </aside>
+      <div class="crm-principal">
+        <div class="crm-filtres"><button type="button" class="crm-deplier" data-deplier title="Afficher les vues et les filtres">☰</button>
+          <h1 class="page-titre" data-titre></h1>
+          <button type="button" class="principal" data-nouvelle title="Nouvelle note (Ctrl : autre fenêtre)">＋ Nouvelle note</button></div>
+        ${this.ctx.individu_id ? '' : '<p class="aide">Votre identifiant de connexion n\'est relié à aucun individu de l\'annuaire (fiche individu, « Identifiant de connexion ») : « Mes tâches » et « À prendre » restent vides.</p>'}
+        <div data-corps></div></div></div>`;
     const $ = (s) => this.conteneur.querySelector(s);
+    const racine = $('.page-crm-taches');
+    const basculer = (r) => { racine.classList.toggle('panneau-reduit', r); ecrirePreferences({ crmPanneauReduit: r }); };
+    $('[data-replier]').addEventListener('click', () => basculer(true));
+    $('[data-deplier]').addEventListener('click', () => basculer(!racine.classList.contains('panneau-reduit')));
     this.conteneur.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => { this.filtre.vue = b.dataset.vue; this.filtre.page = 1; this.titre = VUES_CRM.find((v) => v.code === b.dataset.vue).libelle; this.charger(); }));
     const combo = (sel, options, cle, vide = true) => {
       const c = creerCombo({ options, valeur: this.filtre[cle], vide });
@@ -66,6 +79,8 @@ export class PageCrm extends PageBase {
     const corps = this.conteneur.querySelector('[data-corps]');
     if (!corps) return;
     this.conteneur.querySelectorAll('[data-vue]').forEach((b) => b.classList.toggle('actif', b.dataset.vue === this.filtre.vue));
+    const titre = this.conteneur.querySelector('[data-titre]');
+    if (titre) titre.textContent = VUES_CRM.find((v) => v.code === this.filtre.vue).libelle;
     this.app.routeur?.remplacerUrl(this.urlCourante());
     let page;
     try {

@@ -460,7 +460,7 @@ export class GrilleArbre {
       if (c.editeur === 'liste' || c.editeur === 'formule') champ.autocomplete = 'off';
       if (c.editeur === 'formule') champ.spellcheck = false;
     }
-    champ.className = 'editeur';
+    champ.className = options ? 'editeur combo' : 'editeur';
     td.replaceChildren(champ);
     champ.focus();
     if (texteInitial === null && champ.select) champ.select();
