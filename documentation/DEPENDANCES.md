@@ -110,6 +110,16 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.EntreprisesFr.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.EntreprisesFr.Tests |
 
+## modules/execution
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/execution/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Execution.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Execution.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Execution.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Execution.Tests |
+
 ## modules/fiche
 
 | Type | Dépendance | Version | Licence | Usage |
@@ -176,6 +186,12 @@
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
 | npm | vitest | 3.2.7 | MIT | développement (modules/navigation/js) |
+
+## modules/notification
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Notifications.Web |
 
 ## modules/reglement
 

@@ -184,7 +184,10 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 - [x] **Exécution, lot 1** (22/10/2026) : famille E, types OE / PO / DAP, S_DEMANDE renommé « Demande de stock »,
   transformations depuis les commandes du marché, état d'exécution et motif (tâche CRM au service du motif), service,
   responsable, dates prévues, liste des ordres, budget planifié et de référence de l'OE, répartition dans le détail.
-- [ ] Exécution, lots suivants : parcours et synthèse (lot 2), BE / BM / OF avec opérations, numérotation par parent,
+- [x] **Exécution, lot 2** (22/10/2026) : module `modules/execution` (parcours, règle des états répliquée, états imposés),
+  modèles fournis (menuiserie, pose, gros œuvre, dépannage), synthèse par chantier, vue détaillée, liste « Ordres en retard ».
+  Rapport imprimable de la synthèse : à faire (modèle d'édition).
+- [ ] Exécution, lots suivants : BE / BM / OF avec opérations, numérotation par parent,
   renvoi au parent (lot 3), colisage, livraison (lot 4), SAV, sous-traitance, demande d'achat (lot 5), réunions,
   rentabilité continue (lot 6). Droit « voir les prix » des ordres : à faire (les vues des ordres suivants masquent les prix).
 

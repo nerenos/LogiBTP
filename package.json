@@ -18,6 +18,7 @@
     "modules/crm/js",
     "modules/authentification/js",
     "modules/calendrier/js",
+    "modules/execution/js",
     "modules/navigation/js",
     "modules/import/js",
     "modules/edition/js",

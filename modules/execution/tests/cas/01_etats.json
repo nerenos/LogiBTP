@@ -1,0 +1,159 @@
+{
+  "description": "États d'exécution (etatOrdre, etatsServices, controlerParcours ↔ ReglesEtats) : état d'un ordre d'après son statut et son état propre ; état de chaque service d'un chantier d'après le parcours (étapes, amonts), les ordres et les états manuels. Services : 1 conduite (OE), 5 BE, 8 méthodes, 6 fabrication bois, 10 fabrication métal, 9 logistique, 7 pose.",
+  "ordres": [
+    { "nom": "brouillon", "ordre": { "statut": "BROUILLON" }, "attendu": "A_FAIRE" },
+    { "nom": "transmis sans état propre", "ordre": { "statut": "ENVOYE" }, "attendu": "EN_COURS" },
+    { "nom": "pris en charge, en attente", "ordre": { "statut": "VALIDE", "etat": "EN_ATTENTE" }, "attendu": "EN_ATTENTE" },
+    { "nom": "transmis à faire", "ordre": { "statut": "ENVOYE", "etat": "A_FAIRE" }, "attendu": "EN_COURS" },
+    { "nom": "bloqué prime", "ordre": { "statut": "SOLDE", "etat": "BLOQUE" }, "attendu": "BLOQUE" },
+    { "nom": "soldé", "ordre": { "statut": "SOLDE", "etat": "EN_COURS" }, "attendu": "TERMINE" },
+    { "nom": "terminé par son état", "ordre": { "statut": "VALIDE", "etat": "TERMINE" }, "attendu": "TERMINE" },
+    { "nom": "brouillon bloqué", "ordre": { "statut": "BROUILLON", "etat": "BLOQUE" }, "attendu": "BLOQUE" },
+    { "nom": "annulé ignoré", "ordre": { "statut": "ANNULE", "etat": "BLOQUE" }, "attendu": null },
+    { "nom": "remplacé ignoré", "ordre": { "statut": "REMPLACE" }, "attendu": null }
+  ],
+  "parcours": {
+    "menuiserie": [
+      { "code": "OE", "srv_id": 1, "amonts": [] },
+      { "code": "BE", "srv_id": 5, "amonts": ["OE"] },
+      { "code": "BM", "srv_id": 8, "amonts": ["BE"] },
+      { "code": "OF_BOIS", "srv_id": 6, "amonts": ["BM"] },
+      { "code": "OF_METAL", "srv_id": 10, "amonts": ["BM"] },
+      { "code": "CO", "srv_id": 9, "amonts": ["OF_BOIS", "OF_METAL"] },
+      { "code": "PO", "srv_id": 7, "amonts": ["CO"] }
+    ]
+  },
+  "services": [
+    {
+      "nom": "chantier lancé : OE en cours, le BE attend, le reste à venir",
+      "parcours": "menuiserie",
+      "ordres": [{ "srv_id": 1, "statut": "VALIDE" }],
+      "manuels": [],
+      "attendu": [
+        { "srv_id": 1, "etat": "EN_COURS", "automatique": "EN_COURS", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "OE soldé : le BE est en attente (il doit agir)",
+      "parcours": "menuiserie",
+      "ordres": [{ "srv_id": 1, "statut": "SOLDE" }],
+      "manuels": [],
+      "attendu": [
+        { "srv_id": 1, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "jonction : colisage à venir tant qu'une fabrication n'est pas terminée",
+      "parcours": "menuiserie",
+      "ordres": [
+        { "srv_id": 1, "statut": "SOLDE" }, { "srv_id": 5, "statut": "VALIDE", "etat": "TERMINE" }, { "srv_id": 8, "statut": "SOLDE" },
+        { "srv_id": 6, "statut": "SOLDE" }, { "srv_id": 10, "statut": "VALIDE", "etat": "EN_COURS" }
+      ],
+      "manuels": [],
+      "attendu": [
+        { "srv_id": 1, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "EN_COURS", "automatique": "EN_COURS", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "bloqué prime sur en cours ; ordres annulés ignorés ; terminé + à faire = en cours",
+      "parcours": "menuiserie",
+      "ordres": [
+        { "srv_id": 1, "statut": "SOLDE" },
+        { "srv_id": 5, "statut": "VALIDE", "etat": "EN_COURS" }, { "srv_id": 5, "statut": "VALIDE", "etat": "BLOQUE" },
+        { "srv_id": 8, "statut": "ANNULE" },
+        { "srv_id": 6, "statut": "SOLDE" }, { "srv_id": 6, "statut": "BROUILLON" }
+      ],
+      "manuels": [],
+      "attendu": [
+        { "srv_id": 1, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "BLOQUE", "automatique": "BLOQUE", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "EN_COURS", "automatique": "EN_COURS", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "état manuel : prime, écart signalé ; l'aval suit l'état retenu",
+      "parcours": "menuiserie",
+      "ordres": [{ "srv_id": 1, "statut": "SOLDE" }],
+      "manuels": [{ "srv_id": 5, "etat": "TERMINE" }, { "srv_id": 8, "etat": "TERMINE" }],
+      "attendu": [
+        { "srv_id": 1, "etat": "TERMINE", "automatique": "TERMINE", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "TERMINE", "automatique": "EN_ATTENTE", "manuel": "TERMINE", "ecart": true },
+        { "srv_id": 6, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "TERMINE", "automatique": "EN_ATTENTE", "manuel": "TERMINE", "ecart": true },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "état manuel égal à l'automatique : pas d'écart",
+      "parcours": "menuiserie",
+      "ordres": [{ "srv_id": 1, "statut": "VALIDE" }],
+      "manuels": [{ "srv_id": 1, "etat": "EN_COURS" }],
+      "attendu": [
+        { "srv_id": 1, "etat": "EN_COURS", "automatique": "EN_COURS", "manuel": "EN_COURS", "ecart": false },
+        { "srv_id": 5, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "sans parcours : ordres seuls ; service manuel hors parcours ; brouillons seuls = en attente",
+      "parcours": null,
+      "ordres": [{ "srv_id": 7, "statut": "BROUILLON" }, { "srv_id": 9, "statut": "VALIDE", "etat": "EN_ATTENTE" }],
+      "manuels": [{ "srv_id": 3, "etat": "SANS_OBJET" }],
+      "attendu": [
+        { "srv_id": 3, "etat": "SANS_OBJET", "automatique": "SANS_OBJET", "manuel": "SANS_OBJET", "ecart": false },
+        { "srv_id": 7, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false }
+      ]
+    },
+    {
+      "nom": "service du parcours sans amont et sans ordre : en attente",
+      "parcours": "menuiserie",
+      "ordres": [],
+      "manuels": [],
+      "attendu": [
+        { "srv_id": 1, "etat": "EN_ATTENTE", "automatique": "EN_ATTENTE", "manuel": null, "ecart": false },
+        { "srv_id": 5, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 6, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 7, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 8, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 9, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false },
+        { "srv_id": 10, "etat": "A_VENIR", "automatique": "A_VENIR", "manuel": null, "ecart": false }
+      ]
+    }
+  ],
+  "controles": [
+    { "nom": "menuiserie correct", "etapes": "menuiserie", "attendu": [] },
+    { "nom": "code vide, doublon", "etapes": [{ "code": "A", "srv_id": 1 }, { "code": "A", "srv_id": 2 }, { "code": "", "srv_id": 3 }], "attendu": ["PAR_CODE", "PAR_DOUBLON"] },
+    { "nom": "service manquant, amont inconnu", "etapes": [{ "code": "A", "srv_id": null, "amonts": ["Z"] }], "attendu": ["PAR_AMONT", "PAR_SERVICE"] },
+    { "nom": "boucle", "etapes": [{ "code": "A", "srv_id": 1, "amonts": ["C"] }, { "code": "B", "srv_id": 2, "amonts": ["A"] }, { "code": "C", "srv_id": 3, "amonts": ["B"] }], "attendu": ["PAR_BOUCLE"] },
+    { "nom": "même service sur deux étapes accepté", "etapes": [{ "code": "OF1", "srv_id": 6 }, { "code": "OF2", "srv_id": 6, "amonts": ["OF1"] }], "attendu": [] }
+  ]
+}

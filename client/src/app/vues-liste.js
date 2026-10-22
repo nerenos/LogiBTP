@@ -590,5 +590,6 @@ VUES_LISTE.push(
   vueOrdres(1001, "Ordres d'exécution", [{ colonne: 'type_element', op: 'egal', valeur: 'E_OE' }]),
   vueOrdres(1002, 'Ordres de pose', [{ colonne: 'type_element', op: 'egal', valeur: 'E_PO' }]),
   vueOrdres(1003, "Demandes d'approvisionnement", [{ colonne: 'type_element', op: 'egal', valeur: 'E_DAP' }]),
-  vueOrdres(1004, 'Ordres bloqués ou en retard', [{ colonne: 'etat_execution', op: 'egal', valeur: 'BLOQUE' }]),
+  vueOrdres(1004, 'Ordres bloqués', [{ colonne: 'etat_execution', op: 'egal', valeur: 'BLOQUE' }]),
+  vueOrdres(1005, 'Ordres en retard', [{ colonne: 'en_retard', op: 'vrai' }]),
 );

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Execution</RootNamespace>
+    <Description>Module Exécution LogiBTP : états des ordres et des services d'après le parcours (répliqués avec le paquet JS @logibtp/execution).</Description>
+  </PropertyGroup>
+
+</Project>

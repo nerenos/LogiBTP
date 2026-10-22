@@ -8,6 +8,7 @@ using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
+using LogiBTP.Execution.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -65,6 +66,8 @@ builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSo
 // Module Authentification : comptes liés aux salariés et intérimaires, session par cookie (modules/authentification/db/005) ;
 // toutes les routes /api exigent une session, sauf la santé, la société et les routes publiques du module.
 builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Base, builder.Configuration.GetSection("Authentification"));
+// Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
+builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Calendrier : calendriers de travail, cycles, jours fériés et fermetures (modules/calendrier/db/006, db/196).
 builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
 // Module Notifications : boîte par utilisateur, préférences, planificateur de fond par base (modules/notification/db/008) ;
@@ -106,6 +109,7 @@ api.MapModuleEntreprisesFr();
 api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
 api.MapModuleCrm().ExigeModule("crm", "CRM");
 api.MapExecution().ExigeModule("execution", "Exécution");
+api.MapModuleExecution().ExigeModule("execution", "Exécution");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

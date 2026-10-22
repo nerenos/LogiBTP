@@ -59,6 +59,13 @@ export const api = {
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),
     heuresChantier: (id) => appel('GET', `/execution/chantiers/${id}/heures`),
+    // Lot 2 (module Exécution) : modèles de parcours, synthèse, détail d'un élément, parcours, états imposés.
+    modeles: () => appel('GET', '/execution/parcours-modeles'),
+    enregistrerModeles: (l) => appel('PUT', '/execution/parcours-modeles', l),
+    synthese: (f = {}) => appel('GET', `/execution/synthese?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    detail: (type, id) => appel('GET', `/execution/elements/${type}/${encodeURIComponent(id)}`),
+    enregistrerParcours: (type, id, p) => appel('PUT', `/execution/elements/${type}/${encodeURIComponent(id)}/parcours`, p),
+    imposerEtat: (type, id, srv, e) => appel('PUT', `/execution/elements/${type}/${encodeURIComponent(id)}/services/${srv}/etat`, e),
   },
   // Module Notifications : boîte de l'utilisateur de la session, compteur du bandeau, préférences.
   notifications: {

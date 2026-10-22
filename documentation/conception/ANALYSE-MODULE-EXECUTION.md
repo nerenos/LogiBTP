@@ -7,6 +7,9 @@
 > **Réalisation** : lot 1 réalisé le 22/10/2026 (`db/197`, `Btp/ExecutionBtp.cs`, `client/src/app/execution/`). Écarts : codes
 > de types `E_OE`, `E_PO`, `E_DAP` ; statuts « Transmis » (envoyé) et « Pris en charge » (validé par le tiers) ; heures budget
 > calculées par une vue (`v_heures_lignes`) au lieu d'une colonne `lig_heures_budget` ; état « à faire » ajouté.
+> Lot 2 réalisé le 22/10/2026 (`modules/execution`, `db/198`, `pages/execution.js`) : parcours copié du modèle sur le
+> chantier (modifiable), états par service calculés (`etats.js` ↔ `ReglesEtats.cs`), états imposés avec écart signalé ;
+> le rapport imprimable de la synthèse reste à faire.
 
 ## 1. Objet
 

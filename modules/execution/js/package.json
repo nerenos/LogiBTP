@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/execution",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Exécution LogiBTP : parcours des services, états des ordres et des services, synthèse par chantier",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
