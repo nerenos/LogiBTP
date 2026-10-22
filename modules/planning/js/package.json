@@ -1,0 +1,21 @@
+{
+  "name": "@logibtp/planning",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Planning LogiBTP : axe du temps, disposition des barres, vue du planning (virtualisée, glisser, zoom) spécialisée par l'application",
+  "exports": {
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/planning.css": "./ui/planning.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

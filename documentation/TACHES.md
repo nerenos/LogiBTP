@@ -206,6 +206,11 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
   rattachement de l'individu) ; fichier d'export à ranger dans la GED.
 - [ ] Pointage, lots suivants : borne (lot 4), application personnelle hors ligne (lot 5), passerelles (lot 6).
 
+### Planning
+
+- [x] **Planning, lot 1** (22/10/2026) : composant `VuePlanning` (module `modules/planning`, sans métier), prototype sur
+  500 ressources et 20 000 tâches (données 12 ms, dessin 2 ms).
+
 ### Archivage
 
 - [ ] **Module Archivage : analyse à faire** (décision C29 du CRM, 20/10/2026) : archivage complet des éléments (tiers

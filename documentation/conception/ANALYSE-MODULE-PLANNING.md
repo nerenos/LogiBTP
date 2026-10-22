@@ -4,6 +4,10 @@
 > modules : [ANALYSE-MODULES-TRANSVERSE.md](ANALYSE-MODULES-TRANSVERSE.md). Modules liés : [CRM](ANALYSE-MODULE-CRM.md) ·
 > [Exécution](ANALYSE-MODULE-EXECUTION.md) · [Pointage MO](ANALYSE-MODULE-POINTAGE.md).
 
+> **Réalisation** : lot 1 réalisé le 22/10/2026 (`modules/planning/js`, prototype `/planning/prototype`) : rendu DOM
+> positionné et virtualisé ; sur 500 ressources, 3 mois et 20 000 tâches, chargement des données en 12 ms et dessin
+> d'une vue en 2 ms.
+
 ## 1. Objet
 
 Planifier **à plusieurs, vite et visuellement** les tâches des chantiers et des services sur des ressources (équipes,

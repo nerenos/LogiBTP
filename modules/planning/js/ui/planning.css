@@ -1,0 +1,57 @@
+/* Vue du planning (module Planning) : coin, en-tête du temps, en-têtes des lignes, corps défilant ; barres positionnées. */
+.vue-planning {
+  --vp-entete: 220px;
+  --vp-voie: 22px;
+  --vp-hauteur-entete: 44px;
+  --vp-couleur: #3b82f6;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--vp-entete) 1fr;
+  grid-template-rows: var(--vp-hauteur-entete) 1fr;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--bord, #cbd5e1);
+  overflow: hidden;
+  font-size: 12px;
+  user-select: none;
+}
+.vp-coin { border-right: 1px solid var(--bord, #cbd5e1); border-bottom: 1px solid var(--bord, #cbd5e1); }
+.vp-entete { overflow: hidden; position: relative; border-bottom: 1px solid var(--bord, #cbd5e1); }
+.vp-entete-plan { position: relative; height: 100%; }
+.vp-groupes, .vp-colonnes { position: absolute; left: 0; right: 0; height: 50%; }
+.vp-groupes { top: 0; }
+.vp-colonnes { top: 50%; }
+.vp-groupes > div, .vp-colonnes > div {
+  position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  border-left: 1px solid var(--bord, #cbd5e1); padding: 2px 4px; box-sizing: border-box;
+}
+.vp-groupes > div { font-weight: 600; }
+.vp-colonnes > div { text-align: center; padding: 2px 0; }
+.vp-colonnes > div.weekend { opacity: .6; }
+.vp-lignes { overflow: hidden; position: relative; border-right: 1px solid var(--bord, #cbd5e1); }
+.vp-lignes-plan { position: relative; }
+.vp-ligne {
+  position: absolute; left: 0; right: 0; box-sizing: border-box; padding: 3px 6px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--bord, #e2e8f0);
+}
+.vp-ligne.groupe { font-weight: 600; background: rgba(148, 163, 184, .15); }
+.vp-corps { overflow: auto; position: relative; }
+.vp-plan { position: relative; }
+.vp-fond {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(to right, rgba(148, 163, 184, .25) 1px, transparent 1px);
+}
+.vp-weekend { position: absolute; top: 0; bottom: 0; background: rgba(148, 163, 184, .12); }
+.vp-separation { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid rgba(148, 163, 184, .25); }
+.vp-barre {
+  position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: 3px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; cursor: grab; color: #fff; line-height: calc(var(--vp-voie) - 4px);
+  background: var(--vp-couleur); border: 1px solid rgba(0, 0, 0, .15);
+}
+.vp-barre::before, .vp-barre::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5px; cursor: ew-resize; }
+.vp-barre::before { left: 0; }
+.vp-barre::after { right: 0; }
+.vp-barre.selection { outline: 2px solid #f59e0b; outline-offset: 1px; z-index: 2; }
+.vp-barre.origine { opacity: .35; }
+.vp-barre.fantome { opacity: .85; z-index: 3; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+.vue-planning.lecture .vp-barre { cursor: default; }

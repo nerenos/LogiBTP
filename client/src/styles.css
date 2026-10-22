@@ -481,3 +481,9 @@ ul.controles li.avertissement { color: #b45309; }
 .synthese-pointage td.etat-valide_chef { color: #1d4ed8; }
 .badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: rgba(217, 119, 6, .15); color: #b45309; white-space: nowrap; }
 .correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
+
+/* Planning : page pleine hauteur (barre d'outils, vue du planning, panneau). */
+.page-planning { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .4rem; padding: .4rem .6rem; }
+.barre-planning { flex-wrap: wrap; gap: .4rem; align-items: center; }
+.zone-planning { flex: 1; min-height: 0; display: flex; }
+.zone-planning > .vue-planning { flex: 1; }

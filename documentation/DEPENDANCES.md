@@ -193,6 +193,12 @@
 |---|---|---|---|---|
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Notifications.Web |
 
+## modules/planning
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/planning/js) |
+
 ## modules/pointage
 
 | Type | Dépendance | Version | Licence | Usage |
