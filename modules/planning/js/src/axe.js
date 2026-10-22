@@ -24,7 +24,7 @@ export function plagesVisibles(debut, fin, masque) {
 
 /**
  * Axe de [debut, fin[ à `minutesParPixel` : `x(m)` (un instant masqué est placé au début de la plage visible suivante ;
- * hors période, prolongement linéaire), `instant(px)`, `largeur` (pixels), `plages` ({ debut, fin, x }) et `coupures`
+ * hors période, prolongement linéaire), `instant(px, fin)`, `largeur` (pixels), `plages` ({ debut, fin, x }) et `coupures`
  * (positions des périodes masquées).
  */
 export function creerAxe(debut, fin, minutesParPixel, masque) {
@@ -53,8 +53,9 @@ export function creerAxe(debut, fin, minutesParPixel, masque) {
       if (m >= p.fin && i < plages.length - 1) return plages[i + 1].x;
       return p.x + (m - p.debut) / minutesParPixel;
     },
-    instant(px) {
-      const p = plages[Math.max(0, indice(px, (q) => q.x))];
+    /** Instant d'une position ; `fin` : à la jonction de deux plages, la fin de la précédente (fin d'une barre). */
+    instant(px, fin = false) {
+      const p = plages[Math.max(0, indice(fin ? px - 1e-9 : px, (q) => q.x))];
       return p.debut + (px - p.x) * minutesParPixel;
     },
   };

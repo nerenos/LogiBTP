@@ -81,6 +81,7 @@ describe('axe à périodes masquées', () => {
     expect(a.x(m('2026-10-26T08:00'))).toBe(720);
     expect(a.coupures).toEqual([660]);
     expect(depuisMinutes(a.instant(720))).toBe('2026-10-26T08:00');
+    expect([depuisMinutes(a.instant(660)), depuisMinutes(a.instant(660, true))]).toEqual(['2026-10-26T07:00', '2026-10-23T18:00']);
     expect(depuisMinutes(a.instant(300))).toBe('2026-10-23T12:00');
     const l = creerAxe(m('2026-10-23'), m('2026-10-24'), 2, null);
     expect([l.x(m('2026-10-22T23:00')), l.x(m('2026-10-23T02:00')), l.instant(60) - m('2026-10-23')]).toEqual([-30, 60, 120]);

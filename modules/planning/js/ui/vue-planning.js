@@ -16,7 +16,7 @@ import { creerAxe } from '../src/axe.js';
  * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun), lignesTexte (lignes de texte des barres, 1 par défaut :
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
  * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
- * actions { deplacer({ tache, debut, fin, ligne, copie }) → booléen | promesse, scinder({ tache, instant }),
+ * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant }) }.
  */
 export class VuePlanning {
@@ -38,7 +38,7 @@ export class VuePlanning {
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     conteneur.innerHTML = `<div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
-      <div class="vp-lignes"><div class="vp-lignes-plan"></div></div><div class="vp-corps"><div class="vp-plan"><div class="vp-fond"></div><div class="vp-barres"></div></div></div>`;
+      <div class="vp-lignes"><div class="vp-lignes-plan"></div></div><div class="vp-corps"><div class="vp-plan"><div class="vp-fond"></div><div class="vp-barres"></div><div class="vp-surcouche"></div></div></div>`;
     this.corps = conteneur.querySelector('.vp-corps');
     this.plan = conteneur.querySelector('.vp-plan');
     this.corps.addEventListener('scroll', () => this.#programmer(), { passive: true });
@@ -86,7 +86,7 @@ export class VuePlanning {
   /** Position (px) d'un instant ; un instant masqué est placé au début de la période visible suivante. */
   x(m) { return this.#axe.x(m); }
   /** Instant (minutes) d'une position (px). */
-  instantDe(px) { return this.#axe.instant(px); }
+  instantDe(px, fin = false) { return this.#axe.instant(px, fin); }
 
   /** Masque appliqué à l'échelle courante. */
   #masqueEffectif() {
@@ -386,19 +386,29 @@ export class VuePlanning {
     const r = b.getBoundingClientRect();
     const bord = 6;
     const mode = e.clientX - r.left < bord ? 'debut' : r.right - e.clientX < bord ? 'fin' : 'deplacer';
-    const fantome = b.cloneNode(true);
-    fantome.classList.add('fantome');
-    this.plan.querySelector('.vp-barres').append(fantome);
-    b.classList.add('origine');
-    this.#glisser = { t, mode, depart: p, fantome, ligne: p.ligne, debut: t.debut, fin: t.fin, bouge: false };
+    // La tâche reste en place ; la surcouche (créée au premier mouvement) montre où elle ira.
+    this.#glisser = { t, mode, depart: p, ligne: p.ligne, debut: t.debut, fin: t.fin, bouge: false, hauteur: b.offsetHeight, voie: b.offsetTop - this.#positions[p.ligne], couleur: t.couleur, contenu: b.innerHTML, classe: this.classeBarre(t) };
     try { this.corps.setPointerCapture(e.pointerId); } catch { /* pointeur simulé */ }
     const bouger = (ev) => this.#bouger(ev);
-    const lacher = (ev) => {
+    const finir = () => {
       this.corps.removeEventListener('pointermove', bouger);
       this.corps.removeEventListener('pointerup', lacher);
       this.corps.removeEventListener('pointercancel', lacher);
-      this.#lacher(ev);
+      document.removeEventListener('keydown', echap, true);
     };
+    const lacher = (ev) => { finir(); this.#lacher(ev); };
+    // Échap (geste fixe) : abandon du glisser, la tâche ne bouge pas.
+    const echap = (ev) => {
+      if (ev.key !== 'Escape') return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      finir();
+      const g = this.#glisser;
+      this.#glisser = null;
+      g?.surcouche?.remove();
+      g?.etiquette?.remove();
+    };
+    document.addEventListener('keydown', echap, true);
     this.corps.addEventListener('pointermove', bouger);
     this.corps.addEventListener('pointerup', lacher);
     this.corps.addEventListener('pointercancel', lacher);
@@ -409,34 +419,61 @@ export class VuePlanning {
     if (!g) return;
     const p = this.#point(e);
     if (!g.bouge && Math.abs(p.x - g.depart.x) < 3 && Math.abs(p.y - g.depart.y) < 3) return;
+    if (!g.bouge) this.#creerSurcouche(g);
     g.bouge = true;
-    const delta = arrondirAuPas(p.instant - g.depart.instant, this.#o.pas);
+    // Position au pixel près (l'axe peut masquer des périodes), arrondie au pas ; aucun calcul de fin : en
+    // déplacement, la longueur affichée est gardée ; le calcul est fait au lâcher.
+    const dx = p.x - g.depart.x;
+    const instant = (m, fin = false) => arrondirAuPas(this.instantDe(this.x(m) + dx, fin), this.#o.pas);
     const { t, mode } = g;
+    let gauche;
+    let largeur;
     if (mode === 'deplacer') {
-      g.debut = t.debut + delta;
-      g.fin = t.fin + delta;
+      g.debut = instant(t.debut);
+      g.fin = t.fin + (g.debut - t.debut);
       g.ligne = this.#lignes[p.ligne]?.ligneFixe ? g.depart.ligne : Math.max(0, p.ligne);
-    } else if (mode === 'debut') {
-      g.debut = Math.min(t.fin - this.#o.pas, t.debut + delta);
+      gauche = this.x(g.debut);
+      largeur = this.x(t.fin) - this.x(t.debut);
     } else {
-      g.fin = Math.max(t.debut + this.#o.pas, t.fin + delta);
+      if (mode === 'debut') g.debut = Math.min(t.fin - this.#o.pas, instant(t.debut));
+      else g.fin = Math.max(t.debut + this.#o.pas, instant(t.fin, true));
+      gauche = this.x(g.debut);
+      largeur = this.x(g.fin) - gauche;
     }
-    const s = g.fantome.style;
-    s.left = `${this.x(g.debut)}px`;
-    s.width = `${Math.max(3, this.x(g.fin) - this.x(g.debut))}px`;
-    s.top = `${this.#positions[g.ligne] + 3}px`;
-    g.fantome.title = `${depuisMinutes(g.debut).replace('T', ' ')} → ${depuisMinutes(g.fin).replace('T', ' ')}`;
+    g.copie = e.ctrlKey && mode === 'deplacer';
+    // Même voie sur la ligne d'origine, première voie ailleurs.
+    const top = this.#positions[g.ligne] + (g.ligne === g.depart.ligne ? g.voie : 3);
+    Object.assign(g.surcouche.style, { left: `${gauche}px`, width: `${Math.max(3, largeur)}px`, top: `${top}px` });
+    const date = (m) => { const d = depuisMinutes(m); return `${d.slice(8, 10)}/${d.slice(5, 7)} ${d.slice(11, 16)}`; };
+    g.etiquette.textContent = mode === 'deplacer' ? `${g.copie ? '＋ copie · ' : ''}début ${date(g.debut)}` : mode === 'debut' ? `début ${date(g.debut)}` : `fin ${date(g.fin)}`;
+    // Étiquette au-dessus de la surcouche, ou dessous en haut du planning.
+    const dessous = top - this.corps.scrollTop < 24;
+    g.etiquette.classList.toggle('dessous', dessous);
+    Object.assign(g.etiquette.style, { left: `${Math.max(gauche, this.corps.scrollLeft + 2)}px`, top: `${dessous ? top + g.hauteur + 4 : top}px` });
+  }
+
+  /** Surcouche du glisser : contour de la future position et étiquette de l'instant, hors des barres redessinées. */
+  #creerSurcouche(g) {
+    const couche = this.plan.querySelector('.vp-surcouche');
+    g.surcouche = document.createElement('div');
+    g.surcouche.className = `vp-barre vp-projection ${g.classe}`;
+    g.surcouche.style.height = `${g.hauteur}px`;
+    if (g.couleur) g.surcouche.style.setProperty('--vp-couleur', g.couleur);
+    g.surcouche.innerHTML = g.contenu;
+    g.etiquette = document.createElement('div');
+    g.etiquette.className = 'vp-projection-etiquette';
+    couche.append(g.surcouche, g.etiquette);
   }
 
   async #lacher(e) {
     const g = this.#glisser;
     this.#glisser = null;
     if (!g) return;
-    g.fantome.remove();
-    this.plan.querySelector('.vp-barre.origine')?.classList.remove('origine');
+    g.surcouche?.remove();
+    g.etiquette?.remove();
     if (!g.bouge) return;
     const ligne = this.#lignes[g.ligne]?.cle ?? g.t.ligne;
-    const proposition = { tache: g.t, debut: g.debut, fin: g.fin, ligne, copie: e.ctrlKey && g.mode === 'deplacer' };
+    const proposition = { tache: g.t, debut: g.debut, fin: g.fin, ligne, mode: g.mode, copie: e.ctrlKey && g.mode === 'deplacer' };
     let accepte = true;
     if (this.#o.actions.deplacer) accepte = await this.#o.actions.deplacer(proposition);
     if (accepte && !proposition.copie) this.majTache(g.t, { debut: g.debut, fin: g.fin, ligne });

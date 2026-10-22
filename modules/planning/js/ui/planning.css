@@ -57,8 +57,14 @@
 .vp-barre::before { left: 0; }
 .vp-barre::after { right: 0; }
 .vp-barre.selection { outline: 2px solid #f59e0b; outline-offset: 1px; z-index: 2; }
-.vp-barre.origine { opacity: .35; }
-.vp-barre.fantome { opacity: .85; z-index: 3; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+/* Glisser : la tâche reste en place, la surcouche montre sa future position (contour pointillé) et l'instant visé. */
+.vp-surcouche { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.vp-barre.vp-projection { opacity: .6; outline: 2px dashed var(--texte, #111827); outline-offset: 1px; box-shadow: 0 3px 10px rgba(0, 0, 0, .35); cursor: grabbing; }
+.vp-projection-etiquette {
+  position: absolute; transform: translateY(calc(-100% - 4px)); padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+  font-size: 11px; background: #111827; color: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.vp-projection-etiquette.dessous { transform: none; }
 .vue-planning.lecture .vp-barre { cursor: default; }
 /* Barres sur plusieurs lignes de texte (option lignesTexte : --vp-lignes). */
 .vue-planning.multiligne .vp-barre { white-space: normal; line-height: 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--vp-lignes); overflow-wrap: anywhere; }

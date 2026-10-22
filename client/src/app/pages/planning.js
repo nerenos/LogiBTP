@@ -475,13 +475,13 @@ export class PagePlanning extends PageBase {
   }
 
   /** Glisser une barre : déplacement, redimensionnement (bord), changement de ressource, copie (Ctrl). */
-  async #deplacer({ tache: b, debut, fin, ligne, copie }) {
+  async #deplacer({ tache: b, debut, fin, ligne, copie, mode: modeGlisser }) {
     if (this.definition.regroupement !== 'RESSOURCE' && ligne !== b.ligne) { this.app.message('Changer de ligne n\'est possible que dans une vue par ressources', 'avertissement'); return false; }
     if (this.definition.regroupement === 'RESSOURCE' && ligne !== b.ligne && (b.theorique || ligne.startsWith('srv:'))) {
       this.app.message('Affecter une tâche théorique : depuis le détail de la tâche', 'avertissement');
       return false;
     }
-    const mode = debut - b.debut === fin - b.fin ? 'deplacer' : debut !== b.debut ? 'debut' : 'fin';
+    const mode = modeGlisser ?? (debut - b.debut === fin - b.fin ? 'deplacer' : debut !== b.debut ? 'debut' : 'fin');
     const operation = () => api.planning.deplacer(b.tache, { debut: depuisMinutes(debut), fin: depuisMinutes(fin), mode, de: b.ligne, vers: ligne, copie, version: b.version });
     if (copie) {
       const r = await this.#apres(operation(), 'Tâche copiée');
