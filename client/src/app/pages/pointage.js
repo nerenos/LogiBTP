@@ -18,7 +18,8 @@ const jourCourt = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('fr-FR', 
 const horodatage = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const nomSalarie = (s, ordre) => (ordre === 'PN' ? `${s.prenom} ${s.nom}` : `${s.nom} ${s.prenom}`);
 const cleLigne = (p) => [p.cha_id, p.ent_id ?? '', p.type_mo, p.sous_type ?? '', p.motif ?? ''].join('|');
-const iconeEtat = (e) => ETATS_VALIDATION[e]?.icone ?? '';
+/** État de validation d'un jour : pastille ronde de taille fixe, couleur par état (CSS `.pastille-etat`), libellé en bulle. */
+const pastilleEtat = (e) => (ETATS_VALIDATION[e] ? `<span class="pastille-etat etat-${e.toLowerCase()}" title="${ETATS_VALIDATION[e].libelle}"></span>` : '');
 
 /**
  * Lignes de la grille depuis les pointages : regroupement par chantier, ordre, type, sous-type et motif ; une case =
@@ -517,7 +518,7 @@ export class PageSynthesePointage extends PageBase {
             <label title="Masquer les salariés sans pointage dans la semaine"><input type="checkbox" data-pointes> Pointés</label><span data-interim></span>
             <span class="synthese-actions">${action('valider', '☑', 'Valider la sélection')}${action('tout-valider', '✅', 'Tout valider sans exception')}${action('devalider', '↩', 'Dévalider la sélection… (motif demandé)')}
             <button type="button" class="bouton-icone" data-replier title="Réduire le panneau des salariés" aria-label="Réduire le panneau des salariés">«</button></span></div>
-          <div data-corrections></div><div data-liste class="synthese-liste"></div></aside>
+          <div data-corrections></div><div data-liste class="synthese-liste"></div><div class="synthese-legende" data-legende></div></aside>
         <div class="synthese-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
         <button type="button" class="bouton-icone synthese-deplier" data-deplier title="Afficher le panneau des salariés" aria-label="Afficher le panneau des salariés">👥</button>
         <div data-detail class="synthese-detail"></div></div></div>`;
@@ -670,11 +671,13 @@ export class PageSynthesePointage extends PageBase {
           <td><input type="checkbox" data-choix ${this.selection.has(l.salarie.id) ? 'checked' : ''} ${d.rh || l.chef ? '' : 'disabled'}></td>
           <td class="synthese-nom">${echapper(nomSalarie(l.salarie, this.ref.parametres.ordre_nom))}${l.corrigee ? ' <span title="Corrigé dans la synthèse">✎</span>' : ''}
             <br><small class="aide">${echapper(l.salarie.matricule)}${l.salarie.code ? ` · ${echapper(l.salarie.code)}` : ''}${l.salarie.interimaire ? ' · intérim' : ''}</small></td>
-          ${visibles.map((i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${ecrireDuree(l.jours[i]) || '·'}<br><small>${iconeEtat(l.etats[i])}</small></td>`).join('')}
+          ${visibles.map((i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${ecrireDuree(l.jours[i]) || '·'}<br>${pastilleEtat(l.etats[i])}</td>`).join('')}
           <td class="nombre"><b>${ecrireDuree(l.jours.reduce((a, b) => a + b, 0))}</b></td>
           <td class="synthese-exceptions">${l.exceptions.map((x) => `<span class="badge-exception" title="${echapper(MESSAGES_VALIDATION[x])}">${echapper(MESSAGES_VALIDATION[x])}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table>` : ''}
-      ${masques ? `<p class="aide">${masques} salarié(s) sans exception masqué(s) (« Tout voir »).</p>` : ''}
-      <p class="aide">${Object.values(ETATS_VALIDATION).map((e) => `${e.icone} ${e.libelle}`).join(' · ')} · validation ${this.ref.parametres.validation === 'DOUBLE' ? 'double (chef puis RH)' : 'simple (RH)'} · vous validez au niveau ${d.rh ? 'RH' : 'chef de service'}.</p>`;
+      ${masques ? `<p class="aide">${masques} salarié(s) sans exception masqué(s) (« Tout voir »).</p>` : ''}`;
+    // Légende, fixée en bas du panneau : couleur de chaque état, mode de validation et niveau de l'utilisateur.
+    this.conteneur.querySelector('[data-legende]').innerHTML = `${Object.keys(ETATS_VALIDATION).map((e) => `<span>${pastilleEtat(e)} ${echapper(ETATS_VALIDATION[e].libelle)}</span>`).join('')}
+      <span class="aide">Validation ${this.ref.parametres.validation === 'DOUBLE' ? 'double (chef puis RH)' : 'simple (RH)'} · vous validez au niveau ${d.rh ? 'RH' : 'chef de service'}</span>`;
     zone.querySelector('[data-tous]')?.addEventListener('change', (e) => {
       for (const l of lignes) if (d.rh || l.chef) { if (e.target.checked) this.selection.add(l.salarie.id); else this.selection.delete(l.salarie.id); }
       this.#rendreListe();
@@ -708,7 +711,7 @@ export class PageSynthesePointage extends PageBase {
     const base = d.valide ?? d.saisie.map((p) => ({ ...p, origine_id: p.id, id: null }));
     // Un seul bouton : semaine validée à mon niveau (RH : validation RH ; chef : la sienne ou celle du RH) → dévalider, sinon valider.
     const validee = d.etats.some((e) => e === 'VALIDE' || (!d.rh && e === 'VALIDE_CHEF'));
-    zone.innerHTML = `<h2>${echapper(nomSalarie(d.salarie, this.ref.parametres.ordre_nom))} <small class="aide">${echapper(d.salarie.matricule)} · ${d.etats.map(iconeEtat).join(' ')}</small></h2>
+    zone.innerHTML = `<h2>${echapper(nomSalarie(d.salarie, this.ref.parametres.ordre_nom))} <small class="aide">${echapper(d.salarie.matricule)} · <span class="pastilles-etats">${d.etats.map(pastilleEtat).join('')}</span></small></h2>
       ${d.corrections.filter((c) => c.etat === 'EN_ATTENTE').map((c) => `<div class="correction-attente"><b>Demande de correction</b> de ${echapper(c.par)} le ${horodatage(c.le)}${c.motif ? ` : ${echapper(c.motif)}` : ''}
         ${d.rh ? `<button type="button" data-appliquer="${c.id}">Appliquer</button> <button type="button" data-rejeter="${c.id}">Rejeter…</button>` : ''}
         <div data-correction="${c.id}"></div></div>`).join('')}

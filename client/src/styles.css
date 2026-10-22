@@ -509,6 +509,15 @@ ul.controles li.avertissement { color: #b45309; }
 /* Pointage (lot 2) : synthèse et validation. */
 .synthese-pointage td.etat-valide { color: #15803d; }
 .synthese-pointage td.etat-valide_chef { color: #1d4ed8; }
+/* États de validation : pastilles rondes de même taille, couleur par état (aussi dans la légende). */
+.pastille-etat { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 50%; box-sizing: border-box; vertical-align: middle; border: 2px solid #98a2b3; }
+.pastille-etat.etat-non_valide { background: transparent; }
+.pastille-etat.etat-valide_chef { background: #1d4ed8; border-color: #1d4ed8; }
+.pastille-etat.etat-valide { background: #15803d; border-color: #15803d; }
+.synthese-pointage td .pastille-etat { display: block; margin: 2px 0 0 auto; }
+.pastilles-etats { display: inline-flex; gap: 3px; vertical-align: middle; }
+.synthese-legende { flex: none; display: flex; flex-wrap: wrap; gap: .3rem 1rem; align-items: center; padding: .35rem .6rem; border-top: 1px solid var(--bord); font-size: .85em; }
+.synthese-legende .aide { margin-left: auto; }
 .badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: rgba(217, 119, 6, .15); color: #b45309; white-space: nowrap; }
 .correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
 /* Synthèse : page pleine hauteur, salariés dans un panneau à gauche (réductible, largeur au glisser), détail à droite. */
