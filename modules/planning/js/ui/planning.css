@@ -15,6 +15,10 @@
   font-size: 12px;
   user-select: none;
 }
+.vp-poignee-entete {
+  position: absolute; z-index: 5; top: 0; bottom: 0; left: calc(var(--vp-entete) - 3px); width: 6px; cursor: col-resize; touch-action: none;
+}
+.vp-poignee-entete:hover, .vp-poignee-entete.active { background: rgba(59, 130, 246, .45); }
 .vp-coin { border-right: 1px solid var(--bord, #cbd5e1); border-bottom: 1px solid var(--bord, #cbd5e1); }
 .vp-entete { overflow: hidden; position: relative; border-bottom: 1px solid var(--bord, #cbd5e1); }
 .vp-entete-plan { position: relative; height: 100%; }

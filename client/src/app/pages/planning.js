@@ -178,7 +178,8 @@ export class PagePlanning extends PageBase {
       plein.addEventListener('click', () => c.querySelector('.page-planning').requestFullscreen?.());
     }
     this.planning = new VuePlanningBtp(c.querySelector('[data-planning]'), {
-      debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, masque: this.#masque(), actions: {
+      debut: 0, fin: 1440, lecture: this.consultation, lignesTexte, masque: this.#masque(), largeurEntete: Number(lirePreferences().planningLargeurTitres) || 220, actions: {
+        largeurEntete: (px) => ecrirePreferences({ planningLargeurTitres: px }),
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
         selection: (t) => { if (t) this.#afficherTache(t.tache); },

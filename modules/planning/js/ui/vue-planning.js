@@ -17,7 +17,7 @@ import { creerAxe } from '../src/axe.js';
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
  * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
  * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
- * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant, tache }) }.
+ * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant, tache }), largeurEntete(px) }.
  */
 export class VuePlanning {
   #o;
@@ -37,7 +37,7 @@ export class VuePlanning {
     this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: VuePlanning.hauteurVoie(options.lignesTexte ?? 1), lignesTexte: 1, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), actions: {}, ...options };
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
-    conteneur.innerHTML = `<div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
+    conteneur.innerHTML = `<div class="vp-poignee-entete" title="Glisser pour régler la largeur des titres des lignes (double-clic : ajuster au contenu)"></div><div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
       <div class="vp-lignes"><div class="vp-lignes-plan"></div></div><div class="vp-corps"><div class="vp-plan"><div class="vp-fond"></div><div class="vp-barres"></div><div class="vp-surcouche"></div></div></div>`;
     this.corps = conteneur.querySelector('.vp-corps');
     this.plan = conteneur.querySelector('.vp-plan');
@@ -66,6 +66,7 @@ export class VuePlanning {
       this.#o.actions.deposer(e, { ligne: this.#lignes[p.ligne], instant: arrondirAuPas(p.instant, this.#o.pas), tache: this.#tacheDe(e.target) });
     });
     new ResizeObserver(() => this.#programmer()).observe(this.corps);
+    this.#preparerPoignee(conteneur.querySelector('.vp-poignee-entete'));
     this.#appliquerDimensions();
   }
 
@@ -174,6 +175,45 @@ export class VuePlanning {
     const i = this.#lignes.findIndex((l) => l.cle === t.ligne);
     if (i >= 0) this.corps.scrollTop = Math.max(0, this.#positions[i] + this.#hauteurs[i] / 2 - this.corps.clientHeight / 2);
     this.#programmer();
+  }
+
+  /** Largeur de la colonne des titres des lignes (px, de 80 à 800) ; `actions.largeurEntete(px)` à la fin d'un réglage. */
+  reglerLargeurEntete(px, fin = true) {
+    this.#o.largeurEntete = Math.round(Math.max(80, Math.min(800, px)));
+    this.conteneur.style.setProperty('--vp-entete', `${this.#o.largeurEntete}px`);
+    if (fin) this.#o.actions.largeurEntete?.(this.#o.largeurEntete);
+  }
+
+  /** Poignée au bord droit des titres : glisser pour régler, double-clic pour ajuster au texte des lignes affichées. */
+  #preparerPoignee(p) {
+    p.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const depart = e.clientX;
+      const largeur = this.#o.largeurEntete;
+      p.classList.add('active');
+      const bouger = (m) => this.reglerLargeurEntete(largeur + m.clientX - depart, false);
+      const finir = () => {
+        window.removeEventListener('pointermove', bouger);
+        window.removeEventListener('pointerup', finir);
+        p.classList.remove('active');
+        this.reglerLargeurEntete(this.#o.largeurEntete);
+      };
+      window.addEventListener('pointermove', bouger);
+      window.addEventListener('pointerup', finir);
+    });
+    p.addEventListener('dblclick', () => {
+      const lignes = [...this.conteneur.querySelectorAll('.vp-ligne')];
+      if (!lignes.length) return;
+      // Largeur du texte de chaque titre affiché, mesurée sans retour à la ligne ni coupure.
+      const mesure = document.createElement('div');
+      mesure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;padding:3px 6px;';
+      mesure.className = 'vp-ligne';
+      this.conteneur.querySelector('.vp-lignes-plan').append(mesure);
+      let max = 0;
+      for (const l of lignes) { mesure.innerHTML = l.innerHTML; max = Math.max(max, mesure.scrollWidth); }
+      mesure.remove();
+      this.reglerLargeurEntete(max + 12);
+    });
   }
 
   /** Zoom horizontal (facteur sur la largeur des colonnes), centré. */
