@@ -187,20 +187,32 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         return v is null ? new DefinitionVue() : JsonSerializer.Deserialize<DefinitionVue>(v.PvuDefinition, Json) ?? new DefinitionVue();
     }
 
+    /// <summary>Services désignés par leurs codes, avec leurs sous-services (null : tous).</summary>
     internal async Task<List<int>?> ServicesDeAsync(IEnumerable<string>? codes, CancellationToken ct)
     {
         var l = codes?.ToList();
         if (l is null || l.Count == 0) return null;
-        return (await specialisation.ServicesAsync(db, ct)).Where(s => l.Contains(s.Code)).Select(s => s.Id).ToList();
+        var tous = await specialisation.ServicesAsync(db, ct);
+        var ids = tous.Where(s => l.Contains(s.Code)).Select(s => s.Id).ToHashSet();
+        ids.UnionWith(tous.Where(s => s.ParentId is int p && ids.Contains(p)).Select(s => s.Id));
+        return [.. ids];
+    }
+
+    /// <summary>Définition d'une vue, ses services remplacés par le filtre de l'utilisateur (codes séparés par des virgules) s'il est donné.</summary>
+    internal async Task<DefinitionVue> DefinitionAsync(string? code, string? services, CancellationToken ct)
+    {
+        var d = await DefinitionAsync(code, ct);
+        var l = services?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        return l is { Count: > 0 } ? d with { Services = l } : d;
     }
 
     /// <summary>
     /// Données d'une période pour une vue : lignes (ressources groupées par service, chantiers ou services) et barres
     /// (une par affectation en vue ressources, tâches théoriques sur la ligne de leur service ; une par tâche sinon).
     /// </summary>
-    public async Task<object> DonneesAsync(string? vue, string du, string au, string? recherche, CancellationToken ct)
+    public async Task<object> DonneesAsync(string? vue, string du, string au, string? recherche, CancellationToken ct, string? filtreServices = null)
     {
-        var d = await DefinitionAsync(vue, ct);
+        var d = await DefinitionAsync(vue, filtreServices, ct);
         var debut = Lire(du);
         var fin = Lire(au);
         var services = await specialisation.ServicesAsync(db, ct);

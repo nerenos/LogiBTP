@@ -125,11 +125,17 @@ export class PagePlanning extends PageBase {
         <b>📅</b> <span data-vue></span>
         <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
         <span data-periode class="aide"></span> <span data-echelle></span>
-        <button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button> <span data-lignes-texte></span>
-        <label title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><input type="checkbox" data-masquer> Masquer le temps non travaillé</label>
+        <span class="menu-deroulant" data-menu="services"><button type="button" data-ouvrir-menu="services" title="Filtrer la vue par services (mémorisé pour votre compte)">🏢 <span data-libelle-services>Services</span> ▾</button>
+          <div class="menu-deroulant-contenu" data-contenu-menu="services" hidden></div></span>
         <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
         <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
-        <span data-synchro></span> <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
+        <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
+        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="Options d'affichage : zoom, hauteur des lignes, temps non travaillé, synchronisation" aria-label="Options d'affichage">☰</button>
+          <div class="menu-deroulant-contenu menu-options-planning" data-contenu-menu="options" hidden>
+            <div class="mo-ligne"><span>Zoom</span><span><button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button></span></div>
+            <div class="mo-ligne"><span>Hauteur des lignes</span><span data-lignes-texte></span></div>
+            <label class="mo-ligne" title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><span>Masquer le temps non travaillé</span><input type="checkbox" data-masquer></label>
+            <div class="mo-ligne" data-ligne-synchro><span>Rafraîchissement</span><span data-synchro></span></div></div></span>
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
         <button type="button" data-afficher-panneau hidden title="Afficher le panneau (à planifier, tâche, alertes, jalons)">▤ Panneau</button>
         <span class="aide" data-etat></span></div>
@@ -162,6 +168,7 @@ export class PagePlanning extends PageBase {
     comboLignes.size = 7;
     c.querySelector('[data-lignes-texte]').append(comboLignes);
     comboLignes.addEventListener('change', () => { ecrirePreferences({ planningLignesTexte: Number(comboLignes.valeurCombo) }); this.planning.regler({ lignesTexte: Number(comboLignes.valeurCombo) }); });
+    this.#preparerMenus();
     c.querySelector('[data-prec]').addEventListener('click', () => this.#decaler(-1));
     c.querySelector('[data-suiv]').addEventListener('click', () => this.#decaler(1));
     c.querySelector('[data-aujourdhui]').addEventListener('click', () => { this.du = null; this.#definition(); this.#charger(); });
@@ -172,7 +179,7 @@ export class PagePlanning extends PageBase {
     this.#preparerSynchro();
     this.#preparerHistorique();
     if (this.consultation) {
-      c.querySelectorAll('[data-nouvelle], [data-annuler], [data-retablir], [data-synchro], [data-lien-consultation], .panneau-planning').forEach((x) => { x.hidden = true; });
+      c.querySelectorAll('[data-nouvelle], [data-annuler], [data-retablir], [data-ligne-synchro], [data-lien-consultation], .panneau-planning').forEach((x) => { x.hidden = true; });
       const plein = c.querySelector('[data-plein-ecran]');
       plein.hidden = false;
       plein.addEventListener('click', () => c.querySelector('.page-planning').requestFullscreen?.());
@@ -197,6 +204,86 @@ export class PagePlanning extends PageBase {
     await this.#charger();
     await this.#aPlanifier();
     if (!this.consultation) rendreOngletRessources(c.querySelector('[data-panneau="ressources"]'), await this.#toutesRessources(), this.ref.services, this.ref.equipes);
+  }
+
+  /** Menus déroulants de la barre (options d'affichage, services) : un seul ouvert, fermés par un clic ailleurs ou Échap. */
+  #preparerMenus() {
+    const c = this.conteneur;
+    const fermer = () => c.querySelectorAll('[data-contenu-menu]').forEach((m) => { m.hidden = true; });
+    c.querySelectorAll('[data-ouvrir-menu]').forEach((b) => b.addEventListener('click', () => {
+      const m = c.querySelector(`[data-contenu-menu="${b.dataset.ouvrirMenu}"]`);
+      const ouvrir = m.hidden;
+      fermer();
+      m.hidden = !ouvrir;
+    }));
+    this.fermerMenus = (e) => {
+      if (e.type === 'keydown' && e.key !== 'Escape') return;
+      // Les listes des combos s'ouvrent hors du menu : un choix n'y ferme pas le menu.
+      if (e.type === 'pointerdown' && e.target.closest?.('.menu-deroulant, .liste-deroulante')) return;
+      fermer();
+    };
+    document.addEventListener('pointerdown', this.fermerMenus, true);
+    document.addEventListener('keydown', this.fermerMenus);
+  }
+
+  /** Filtre des services de la vue mémorisé par compte et par vue (préférence `planningServices` : compte → vue → codes). */
+  #servicesMemorises() {
+    const l = lirePreferences().planningServices?.[this.app.utilisateur()]?.[this.vue];
+    return Array.isArray(l) && l.length ? l : null;
+  }
+
+  #memoriserServices() {
+    const tous = lirePreferences().planningServices ?? {};
+    const compte = { ...(tous[this.app.utilisateur()] ?? {}) };
+    if (this.filtreServices) compte[this.vue] = this.filtreServices; else delete compte[this.vue];
+    ecrirePreferences({ planningServices: { ...tous, [this.app.utilisateur()]: compte } });
+  }
+
+  /**
+   * Choix des services : arbre services › sous-services à cocher ; un service coché vaut ses sous-services (son code
+   * seul est envoyé, le serveur ajoute les sous-services) ; rien de coché = services de la vue.
+   */
+  #rendreFiltreServices() {
+    const c = this.conteneur;
+    const zone = c.querySelector('[data-contenu-menu="services"]');
+    const services = this.ref.services;
+    const parId = new Map(services.map((x) => [x.id, x]));
+    const enfants = (id) => services.filter((x) => x.parent_id === id);
+    const coches = new Set(this.filtreServices ?? []);
+    const effectif = (x) => coches.has(x.code) || (x.parent_id && coches.has(parId.get(x.parent_id)?.code));
+    const libelle = () => {
+      const l = this.filtreServices;
+      const defaut = this.definition.services?.length ? `Vue : ${this.definition.services.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ')}` : 'Tous les services';
+      c.querySelector('[data-libelle-services]').textContent = !l ? (this.definition.services?.length ? 'Services de la vue' : 'Tous les services')
+        : l.length === 1 ? services.find((x) => x.code === l[0])?.libelle ?? l[0] : `${l.length} services`;
+      c.querySelector('[data-ouvrir-menu="services"]').title = `Filtrer la vue par services (mémorisé pour votre compte) — ${l ? l.map((code) => services.find((x) => x.code === code)?.libelle ?? code).join(', ') : defaut}`;
+      c.querySelector('[data-ouvrir-menu="services"]').classList.toggle('filtre-actif', Boolean(l));
+    };
+    const rendre = () => {
+      const ligne = (x, sous) => `<label class="mo-ligne${sous ? ' sous-service' : ''}"><span><input type="checkbox" data-service="${echapper(x.code)}" ${effectif(x) ? 'checked' : ''}
+        ${sous && coches.has(parId.get(x.parent_id)?.code) ? 'disabled title="Compris dans le service parent"' : ''}> ${echapper(x.libelle)}</span></label>`;
+      zone.innerHTML = `<div class="mo-titre">Services de la vue <button type="button" data-tous-services title="Revenir aux services de la vue">Tous</button></div>
+        ${services.filter((x) => !x.parent_id || !parId.has(x.parent_id)).map((x) => ligne(x, false) + enfants(x.id).map((e) => ligne(e, true)).join('')).join('')}`;
+      zone.querySelectorAll('[data-service]').forEach((cb) => cb.addEventListener('change', () => {
+        const x = services.find((s) => s.code === cb.dataset.service);
+        if (cb.checked) {
+          coches.add(x.code);
+          for (const e of enfants(x.id)) coches.delete(e.code); // compris dans le parent
+        } else coches.delete(x.code);
+        appliquer();
+      }));
+      zone.querySelector('[data-tous-services]').addEventListener('click', () => { coches.clear(); appliquer(); });
+    };
+    const appliquer = () => {
+      this.filtreServices = coches.size ? [...coches] : null;
+      this.#memoriserServices();
+      libelle();
+      rendre();
+      this.#charger();
+      this.#aPlanifier();
+    };
+    libelle();
+    rendre();
   }
 
   /**
@@ -299,6 +386,8 @@ export class PagePlanning extends PageBase {
   }
 
   fermer() {
+    document.removeEventListener('pointerdown', this.fermerMenus, true);
+    document.removeEventListener('keydown', this.fermerMenus);
     for (const f of this.desabonnements ?? []) f();
     if (this.quitterFenetre) { this.quitterFenetre(); window.removeEventListener('pagehide', this.quitterFenetre); }
     this.planning?.detruire();
@@ -421,6 +510,8 @@ export class PagePlanning extends PageBase {
   #definition() {
     const d = this.vues.find((v) => v.code === this.vue)?.definition ?? { regroupement: 'RESSOURCE', echelle: 'JOUR', avant: 7, apres: 21 };
     this.definition = d;
+    this.filtreServices = this.#servicesMemorises();
+    this.#rendreFiltreServices();
     const jours = d.avant + d.apres + 1;
     const p = this.du ? { debut: versMinutes(this.du), fin: versMinutes(this.du) + jours * 1440 } : periodeFlottante(new Date().toISOString().slice(0, 10), d.avant, d.apres);
     this.periode = p;
@@ -443,10 +534,10 @@ export class PagePlanning extends PageBase {
     const p = this.periode;
     this.conteneur.querySelector('[data-periode]').textContent = `${depuisMinutes(p.debut).slice(0, 10)} → ${depuisMinutes(p.fin - 1).slice(0, 10)}`;
     let d;
-    try { d = await api.planning.donnees({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), recherche: this.recherche }); } catch (e) { this.app.erreur(e); return; }
+    try { d = await api.planning.donnees({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), recherche: this.recherche, services: this.filtreServices?.join(',') }); } catch (e) { this.app.erreur(e); return; }
     this.lignes = d.lignes.map((l) => ({ ...l, ligneFixe: this.definition.regroupement !== 'RESSOURCE' ? false : l.ligne_fixe }));
     this.barres = d.barres.map((b) => ({ ...b, debut: versMinutes(b.debut), fin: versMinutes(b.fin), couleur: b.couleur || this.couleurs.get(b.srv_id) }));
-    const charge = await api.planning.charge({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin) }).catch(() => null);
+    const charge = await api.planning.charge({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), services: this.filtreServices?.join(',') }).catch(() => null);
     this.planning.charge = new Map();
     for (const c of charge?.services ?? []) {
       if (!this.planning.charge.has(c.srv_id)) this.planning.charge.set(c.srv_id, []);
@@ -601,7 +692,7 @@ export class PagePlanning extends PageBase {
       });
       zone.querySelector('[data-filtre-aplanifier]').addEventListener('input', () => this.#rendreAPlanifier());
     }
-    try { this.listeAPlanifier = await api.planning.aPlanifier({ services: (this.definition.services ?? []).join(',') }); } catch (e) {
+    try { this.listeAPlanifier = await api.planning.aPlanifier({ services: (this.filtreServices ?? this.definition.services ?? []).join(',') }); } catch (e) {
       zone.querySelector('[data-liste-aplanifier]').innerHTML = `<p class="erreur">${echapper(e.message)}</p>`;
       return;
     }
@@ -676,7 +767,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const zone = this.conteneur.querySelector('[data-panneau="alertes"]');
     const p = this.periode;
     let l;
-    try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin) }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), services: this.filtreServices?.join(',') }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const importantes = l.filter((n) => n.niveau !== 'INFO' && n.etat !== 'VUE').length;
     this.#badge('alertes', importantes, `${importantes} alerte${importantes > 1 ? 's' : ''} à examiner`);
     const TYPES = { DEPENDANCE: '🔗 Dépendances', LIEE: '📎 Tâches liées', SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };

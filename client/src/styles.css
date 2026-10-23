@@ -765,3 +765,19 @@ dialog.dialogue-ressources { max-width: min(900px, calc(100vw - 32px)); }
 .dialogue-ressources .espace { flex: 1; }
 .dialogue-ressources p.ligne { display: flex; align-items: center; gap: .4rem; }
 .pastille-dispo { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+
+/* Planning : menus déroulants de la barre (options d'affichage ☰, filtre des services). */
+.menu-deroulant { position: relative; display: inline-block; }
+.menu-deroulant-contenu {
+  position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; min-width: 16rem; max-height: 65vh; overflow: auto; padding: .4rem .5rem;
+  background: var(--surface); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .3);
+}
+.menu-deroulant-contenu[hidden] { display: none; }
+.menu-options-planning { left: auto; right: 0; min-width: 19rem; }
+.menu-deroulant-contenu .mo-ligne { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .25rem .2rem; border-radius: 4px; }
+.menu-deroulant-contenu label.mo-ligne { cursor: pointer; }
+.menu-deroulant-contenu .mo-ligne:hover { background: var(--titre-fond); }
+.menu-deroulant-contenu .mo-ligne.sous-service { padding-left: 1.4rem; }
+.menu-deroulant-contenu .mo-titre { display: flex; align-items: center; justify-content: space-between; font-weight: 600; padding: .1rem .2rem .3rem; border-bottom: 1px solid var(--bord); margin-bottom: .2rem; }
+.menu-options-planning input.combo { width: 9rem; }
+button.filtre-actif { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-clair); }

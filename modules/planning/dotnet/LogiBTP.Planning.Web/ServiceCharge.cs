@@ -45,9 +45,9 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
 
     private static DateTime Lire(string s) => Temps.DateHeureDe(Temps.VersMinutes(s));
 
-    private async Task<Donnees> DonneesAsync(string? vue, string du, string au, CancellationToken ct)
+    private async Task<Donnees> DonneesAsync(string? vue, string du, string au, CancellationToken ct, string? filtre = null)
     {
-        var d = await planning.DefinitionAsync(vue, ct);
+        var d = await planning.DefinitionAsync(vue, filtre, ct);
         var debut = Lire(du);
         var fin = Lire(au);
         var services = await planning.ServicesDeAsync(d.Services, ct);
@@ -75,9 +75,9 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
     }
 
     /// <summary>Capacité, planifié et disponible par service et par jour, unités des matériels.</summary>
-    public async Task<object> ChargeAsync(string? vue, string du, string au, CancellationToken ct)
+    public async Task<object> ChargeAsync(string? vue, string du, string au, CancellationToken ct, string? filtreServices = null)
     {
-        var d = await DonneesAsync(vue, du, au, ct);
+        var d = await DonneesAsync(vue, du, au, ct, filtreServices);
         return new { services = d.Charge.Services, materiels = d.Charge.Materiels };
     }
 
@@ -85,9 +85,9 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
     private static string Jour(string d) => $"{d[8..10]}/{d[5..7]}";
 
     /// <summary>Notifications de la période (calculées), avec leur état (vue) ; les traitées sont retirées.</summary>
-    public async Task<List<NotificationPlanning>> NotificationsAsync(string? vue, string du, string au, CancellationToken ct)
+    public async Task<List<NotificationPlanning>> NotificationsAsync(string? vue, string du, string au, CancellationToken ct, string? filtreServices = null)
     {
-        var d = await DonneesAsync(vue, du, au, ct);
+        var d = await DonneesAsync(vue, du, au, ct, filtreServices);
         var p = await db.Parametres.AsNoTracking().FirstOrDefaultAsync(ct) ?? new ParametrePlanningEntite();
         var lib = d.Ressources.GroupBy(r => r.Cle).ToDictionary(g => g.Key, g => g.First().Libelle);
         var libTache = d.Taches.ToDictionary(t => t.TacId, t => t.TacLibelle);

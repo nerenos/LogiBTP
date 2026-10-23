@@ -31,7 +31,7 @@ public static class Extensions
         g.MapPut("/vues", (VueSaisie v, HttpContext http, ServicePlanning s, CancellationToken ct) =>
             s.EnregistrerVueAsync(v.Code, v.Libelle, v.Definition, v.Globale, Utilisateur.Depuis(http), ct));
         g.MapGet("/referentiels", (ServicePlanning s, CancellationToken ct) => s.ReferentielsAsync(ct));
-        g.MapGet("/donnees", (string? vue, string du, string au, string? recherche, ServicePlanning s, CancellationToken ct) => s.DonneesAsync(vue, du, au, recherche, ct));
+        g.MapGet("/donnees", (string? vue, string du, string au, string? recherche, string? services, ServicePlanning s, CancellationToken ct) => s.DonneesAsync(vue, du, au, recherche, ct, services));
         g.MapGet("/ressources", (string? services, string? types, string? recherche, ServicePlanning s, CancellationToken ct) => s.RessourcesAsync(services, types, recherche, ct));
         g.MapGet("/elements", (string? recherche, ServicePlanning s, CancellationToken ct) => s.ElementsAsync(recherche, ct));
         g.MapGet("/a-planifier", (string? services, string? recherche, ServicePlanning s, CancellationToken ct) => s.APlanifierAsync(services, recherche, ct));
@@ -68,8 +68,8 @@ public static class Extensions
             return r;
         });
         // Charge et contrôles (lot 4).
-        g.MapGet("/charge", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.ChargeAsync(vue, du, au, ct));
-        g.MapGet("/notifications", (string? vue, string du, string au, ServiceCharge s, CancellationToken ct) => s.NotificationsAsync(vue, du, au, ct));
+        g.MapGet("/charge", (string? vue, string du, string au, string? services, ServiceCharge s, CancellationToken ct) => s.ChargeAsync(vue, du, au, ct, services));
+        g.MapGet("/notifications", (string? vue, string du, string au, string? services, ServiceCharge s, CancellationToken ct) => s.NotificationsAsync(vue, du, au, ct, services));
         g.MapPut("/notifications", async (EtatNotification e, HttpContext http, ServiceCharge s, CancellationToken ct) =>
         {
             await s.MarquerAsync(e, Utilisateur.Depuis(http), ct);
