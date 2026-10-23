@@ -174,6 +174,25 @@ export const api = {
     enregistrerPreferences: (l) => appel('PUT', '/notifications/preferences', l),
     executer: () => appel('POST', '/notifications/executer'),
   },
+  // Module OAuth : connexions sortantes (client et jetons jamais relus), autorisation par la page du fournisseur.
+  oauth: {
+    fournisseurs: () => appel('GET', '/oauth/fournisseurs'),
+    connexions: () => appel('GET', '/oauth/connexions'),
+    alertes: () => appel('GET', '/oauth/alertes'),
+    connexion: (id) => appel('GET', `/oauth/connexions/${id}`),
+    creer: (c) => appel('POST', '/oauth/connexions', c),
+    modifier: (id, c) => appel('PUT', `/oauth/connexions/${id}`, c),
+    supprimer: (id) => appel('DELETE', `/oauth/connexions/${id}`),
+    client: (id, c) => appel('POST', `/oauth/connexions/${id}/client`, c),
+    autoriser: (id, autreCompte = false) => appel('POST', `/oauth/connexions/${id}/autoriser`, { autre_compte: autreCompte }),
+    tester: (id) => appel('POST', `/oauth/connexions/${id}/tester`),
+    revoquer: (id) => appel('POST', `/oauth/connexions/${id}/revoquer`),
+    compte: (id) => appel('GET', `/oauth/connexions/${id}/compte`),
+    journal: (id) => appel('GET', `/oauth/connexions/${id}/journal`),
+    parametres: () => appel('GET', '/oauth/parametres'),
+    enregistrerParametres: (p) => appel('PUT', '/oauth/parametres', p),
+    passer: () => appel('POST', '/oauth/passer'),
+  },
   // Module Calendrier : calendriers, journées, jours fermés (société ou portée « service:<id> »), calendriers des services.
   calendriers: {
     liste: () => appel('GET', '/calendriers'),

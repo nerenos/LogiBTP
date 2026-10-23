@@ -13,12 +13,27 @@ public sealed class Chiffrement
 {
     public const string Prefixe = "chiffre:v1:";
     private static readonly byte[] Sel = Encoding.UTF8.GetBytes("LogiBTP.Chiffrement.v1");
+    private static readonly byte[] SelEmpreinte = Encoding.UTF8.GetBytes("LogiBTP.Empreinte.v1");
     private readonly byte[]? cle;
+    private readonly byte[]? cleEmpreinte;
 
     public Chiffrement(string? chaine)
     {
-        if (!string.IsNullOrWhiteSpace(chaine))
-            cle = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(chaine), Sel, 100_000, HashAlgorithmName.SHA256, 32);
+        if (string.IsNullOrWhiteSpace(chaine)) return;
+        cle = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(chaine), Sel, 100_000, HashAlgorithmName.SHA256, 32);
+        cleEmpreinte = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(chaine), SelEmpreinte, 100_000, HashAlgorithmName.SHA256, 32);
+    }
+
+    /// <summary>
+    /// Empreinte stable d'une valeur chiffrée par ailleurs (HMAC-SHA256 par une clé dérivée de la chaîne de l'installation,
+    /// hexadécimal minuscule) : comparer ou retrouver une adresse sans la déchiffrer. La valeur est normalisée (espaces
+    /// retirés, minuscules) ; null ou vide : null.
+    /// </summary>
+    public string? Empreinte(string? valeur)
+    {
+        if (string.IsNullOrWhiteSpace(valeur)) return null;
+        var c = cleEmpreinte ?? throw new ErreurChiffrement("Chiffrement non configuré : définir la chaîne de l'installation (LOGIBTP_CLE_CHIFFREMENT dans .env)");
+        return Convert.ToHexStringLower(HMACSHA256.HashData(c, Encoding.UTF8.GetBytes(valeur.Trim().ToLowerInvariant())));
     }
 
     public bool EstConfigure => cle is not null;

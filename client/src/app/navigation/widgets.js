@@ -27,6 +27,15 @@ export function catalogueWidgets(app) {
       },
     },
     {
+      code: 'oauth-alertes', type: 'alertes', titre: 'Connexions à reconnecter', icone: '🔐', taille: 'moyen', url: '/parametres/connexions', enLigne: true,
+      description: 'Connexions externes (Gmail…) à reconnecter ou dont l’autorisation expire bientôt (personnes autorisées)',
+      charger: async () => (await api.oauth.alertes()).map((c) => ({
+        niveau: c.pastille === 'ROUGE' ? 'erreur' : 'alerte', texte: c.nom,
+        detail: c.etat === 'OK' ? `Autorisation jusqu'au ${date(c.rafraichissement_expire_le ?? c.secret_expire_le)}` : c.etat === 'A_CONNECTER' ? 'À connecter' : 'À reconnecter',
+        url: `/parametres/connexions?id=${c.id}`,
+      })),
+    },
+    {
       code: 'chiffres', type: 'indicateurs', titre: 'Chiffres clés', icone: '📊', taille: 'large',
       description: 'Salariés actifs, matériels en panne, devis en cours, documents archivés',
       charger: async () => {
@@ -118,4 +127,4 @@ export function catalogueWidgets(app) {
   ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false) && (!w.enLigne || app.enLigne));
 }
 
-export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'crm-rappels' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];
+export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'crm-rappels' }, { code: 'oauth-alertes' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];

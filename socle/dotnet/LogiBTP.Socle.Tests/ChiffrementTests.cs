@@ -30,6 +30,18 @@ public class ChiffrementTests
     }
 
     [Fact]
+    public void Empreinte_stable_normalisee_et_propre_a_la_cle()
+    {
+        var c = new Chiffrement("une");
+        var e = c.Empreinte(" Commercial@Exemple.fr ");
+        Assert.Equal(64, e!.Length);
+        Assert.Equal(e, c.Empreinte("commercial@exemple.fr"));
+        Assert.NotEqual(e, new Chiffrement("autre").Empreinte("commercial@exemple.fr"));
+        Assert.Null(c.Empreinte(" "));
+        Assert.Throws<ErreurChiffrement>(() => new Chiffrement(null).Empreinte("x"));
+    }
+
+    [Fact]
     public void Lecture_env()
     {
         var v = ExtensionsConfiguration.LireEnv(["# commentaire", "", "A=1", " B = \"deux = 2\" ", "sans_egal"]);

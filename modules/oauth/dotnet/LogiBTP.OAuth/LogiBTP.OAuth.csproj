@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.OAuth</RootNamespace>
+    <Description>Module OAuth LogiBTP : règles des connexions sortantes OAuth 2.0 (PKCE, state, demande d'autorisation, réponses de jeton, échéances et rappels).</Description>
+  </PropertyGroup>
+
+</Project>

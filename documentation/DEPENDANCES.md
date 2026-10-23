@@ -193,6 +193,16 @@
 |---|---|---|---|---|
 | NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Notifications.Web |
 
+## modules/oauth
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.OAuth.Tests |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.OAuth.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.OAuth.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.OAuth.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.OAuth.Tests |
+
 ## modules/planning
 
 | Type | Dépendance | Version | Licence | Usage |

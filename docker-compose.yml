@@ -11,7 +11,8 @@ services:
     volumes:
       - logibtp-data:/var/lib/postgresql/data
       # Scripts exécutés dans l'ordre alphabétique à la première initialisation du volume :
-      # modules (005 Authentification, 010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque, 070 Annuaire) puis cœur BTP (100 et suivants).
+      # modules (004 OAuth, 005 Authentification, 010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque, 070 Annuaire) puis cœur BTP (100 et suivants).
+      - ./modules/oauth/db/004_oauth.sql:/docker-entrypoint-initdb.d/004_oauth.sql:ro
       - ./modules/authentification/db/005_authentification.sql:/docker-entrypoint-initdb.d/005_authentification.sql:ro
       - ./modules/calendrier/db/006_calendrier.sql:/docker-entrypoint-initdb.d/006_calendrier.sql:ro
       - ./modules/notification/db/008_notification.sql:/docker-entrypoint-initdb.d/008_notification.sql:ro

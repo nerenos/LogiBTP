@@ -43,8 +43,8 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 [ANALYSE-MODULE-OAUTH.md](documentation/conception/ANALYSE-MODULE-OAUTH.md).
 
 - [ ] Remplir les boîtes de test `LOGIBTP_TEST_MAIL_*` du `.env` (modèle `.env.exemple` : Gmail, Exchange OVH).
-- [ ] Lot 0 : module OAuth séparé (contrat `IFournisseurJeton` du socle, Google / Gmail grand public par code + PKCE,
-  adresse de retour commune, jetons chiffrés, rappels avant échéance aux personnes autorisées à reconnecter).
+- [ ] Essai réel du module OAuth avec la boîte Gmail de test : déclarer l'application Google (adresse de retour
+  `http://localhost:5173/api/oauth/retour`), puis 🔗 Se connecter dans `/parametres/connexions`.
 - [ ] Lot 1 : comptes système (adresse et connexion chiffrées, alias `mail_alias`, mot de passe pour Exchange OVH ou
   OAuth 2.0 pour Gmail, fonctions masquées sans compte) et envoi (file d'attente, limitations comptées en
   destinataires, journal `mail_journal`, avertissements d'envoi massif, pièces « à envoyer » `dge_a_envoyer`,
