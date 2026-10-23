@@ -133,16 +133,22 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/conception/ANALYSE-MODULE-SOUS-TRAITANCE.md).
 
-- [ ] Trancher les questions ST1 à ST20 (types, marché à deux sens, pièces exigées, factures, paiement direct) ; faire
-  relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
-  l'expert-comptable.
+- [ ] Trancher les questions ST21 à ST32 de la relecture (avoir `T_AVOIR`, Factur-X et facturation électronique,
+  réception et retenues, décompte final, révision, pénalités et refacturations, bon à payer, acomptes, délais,
+  engagé, activation, jeux de cas) ; ST1 à ST20 tranchées le 23/10/2026.
+- [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
+  l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
+  module Comptabilité (ST14, ST15).
+- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : plateforme agréée,
+  Factur-X / UBL, commun aux achats et à la sous-traitance (ST22).
 - [ ] Montants et agréments du paiement direct (gestion de la sous-traitance, lot 4 ; Q9 des marchés à décider).
 
 ### Module Exécution
 
-- [ ] Trancher les questions E25 à E40 de la troisième lecture ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
-  § 13 : états des ordres par type, tableau de l'entête, planning théorique par états, types d'ordres manquants
-  `E_BE`… `E_DAC`, activation par type).
+- [ ] Trancher les questions E41 à E50 de la relecture ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
+  § 13.6 : états modifiés, transformations, blocage, liste, alertes, droits, édition, démonstration) ; E25 à E40
+  tranchées le 23/10/2026 (lots 2b à 2d).
+- [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
 
 ### Import
 

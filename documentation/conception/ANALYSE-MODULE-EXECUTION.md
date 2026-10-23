@@ -11,7 +11,8 @@
 > chantier (modifiable), états par service calculés (`etats.js` ↔ `ReglesEtats.cs`), états imposés avec écart signalé ;
 > le rapport imprimable de la synthèse reste à faire.
 > Troisième lecture (23/10/2026, § 13) : états des ordres par type, tableau de l'entête, planning théorique par états,
-> types d'ordres manquants et activation par type : questions E25 à E40 à trancher.
+> types d'ordres manquants et activation par type : questions E25 à E40 tranchées le 23/10/2026 ; points de la
+> relecture E41 à E50 à trancher (§ 13.6).
 
 ## 1. Objet
 
@@ -283,7 +284,8 @@ Cœur (`db/2xx`) : types de la famille E (dont DAP ; `S_DEMANDE` renommé « Dem
 
 ## 13. Troisième lecture (23/10/2026) : états des ordres, tableau de l'entête, planning théorique
 
-> Note « Module Exécution » du 23/10/2026. Questions E25 à E40 à trancher (§ 13.6).
+> Note « Module Exécution » du 23/10/2026. Questions E25 à E40 tranchées le 23/10/2026 ; E41 à E50 (relecture) à
+> trancher (§ 13.6).
 
 ### 13.1 Note d'origine (résumé)
 
@@ -346,8 +348,9 @@ personnalisables** forment une seconde couche, les **étapes de l'ordre** :
   imposée et recale les suivantes en enchaînement) ; en retard : en rouge.
 - **Validation** : posée au passage de l'état (bouton « Valider l'étape » ou action du cycle), date et auteur, annulable
   par le même avec motif (historique `ordre_execution_historique`).
-- **Contrôle N+1** : case active seulement pour l'état qui l'exige ; N+1 = responsable du service porteur de l'ordre (ou
-  un membre désigné) ; tant qu'il n'est pas coché, l'état suivant ne se valide pas (ou seulement avec alerte, E31).
+- **Contrôle N+1** : case active seulement pour l'état qui l'exige ; N+1 = responsable du service porteur de l'ordre
+  ou un administrateur (E30 ; délégation à un autre membre : module de droits à venir) ; tant qu'il n'est pas coché,
+  l'état suivant ne se valide pas (ou seulement avec alerte, E31).
 - **Ressource principale** : celle de l'ordre par défaut (en clair, grisée), surchargée par état (salarié, équipe,
   matériel, sous-traitant, service) ; reprise comme affectation de la tâche du planning.
 - Le tableau reste modifiable sur un ordre validé (comme l'exécution de l'ordre : route `/api/execution/documents/{id}`).
@@ -368,22 +371,40 @@ personnalisables** forment une seconde couche, les **étapes de l'ordre** :
 
 | N° | Question | Proposition | Décision |
 |---|---|---|---|
-| E25 | « Paramétrage basé sur le module Document » : une seule page de paramétrage ? | Les types d'ordres se paramètrent dans `/parametres/documents` (type, numérotation, statuts, règles, vues) avec une section **Exécution** (états du type, activation, service par défaut) ; `/parametres/execution` garde le catalogue des états et les modèles de parcours | |
-| E26 | États personnalisés = statuts du document, ou couche à part ? | Couche à part, les **étapes de l'ordre** (§ 13.3), le statut documentaire restant le cycle commun ; un état peut déclencher un statut (Transmis, Pris en charge) | |
-| E27 | « Parcours défini par les modèles » : le modèle de parcours du chantier ou le modèle de saisie du document (`ent_modele`) ? | Le **modèle de parcours** : chaque étape (type d'ordre) y reçoit ses états ; un ordre créé hors parcours prend les états du type | |
-| E28 | États masqués (sans date obligatoire) : comment se valident-ils ? | Dans la liste complète des étapes (bouton « Toutes les étapes ») ou d'office quand l'état à date obligatoire suivant est validé | |
-| E29 | Ordre de validation des états : imposé ou libre ? | Imposé par défaut (un état ne se valide qu'après le précédent), états parallèles possibles par des amonts comme dans le parcours | |
-| E30 | Qui est le N+1 ? | Le responsable du service porteur de l'ordre, sinon celui du service parent, sinon un administrateur ; délégation possible à un membre désigné | |
-| E31 | Contrôle N+1 non activé : blocage ou alerte ? | Paramétrable par état (bloquant ou alerte) ; tâche du CRM au N+1 quand l'état à contrôler est validé | |
-| E32 | Ressource principale : `ent_responsable_id` ou nouvelle colonne ? | Nouvelle colonne `ent_ressource` (type + identifiant : salarié, équipe, matériel, sous-traitant, service) ; le responsable reste la personne qui suit l'ordre | |
-| E33 | Nature des états (tâche, jalon, attente) : globale à la base, surchargeable ? | Globale à la base (catalogue), durée surchargeable dans le modèle et sur l'ordre ; la nature ne change pas | |
-| E34 | Attente : décalage de dépendance ou tâche sans ressource ? | Décalage de dépendance (aucune charge, recalé par le calendrier), dessiné comme une barre hachurée | |
-| E35 | Jalon : `pla_jalon` ou tâche de durée nulle ? | Tâche de durée nulle (garde les dépendances et le recalage) affichée en losange ; `pla_jalon` reste pour les jalons libres | |
-| E36 | Sans le module Planning ? | Dates prévisionnelles calculées par la même règle d'enchaînement (durées, calendrier du service) côté Exécution, sans tâches | |
-| E37 | Date prévisionnelle saisie à la main dans le tableau : imposée ? | Oui (marquée), elle recale les suivantes ; « ⟳ Recalculer » rend la main au calcul | |
-| E38 | Types d'ordres à créer maintenant | `E_BE`, `E_BM`, `E_OF`, `E_CO`, `E_LI`, `E_SAV`, `E_OST`, `E_DAC` (cités par les parcours ou le § 3.3), avec statuts, droits, transformations du § 3.3 et vues de colonnes ; leurs particularités (opérations d'OF, colisage, SAV sur tablette) restent aux lots 3 à 5 | |
-| E39 | Activation par type d'ordre : effet ? | `tyd_actif` présenté dans la section Exécution : un type inactif disparaît des menus, des cibles de transformation et des listes, ses étapes de parcours sont ignorées (sans objet) ; refus si des ordres de ce type sont en cours | |
-| E40 | Ordres existants (avant les étapes) | Reçoivent les états de leur type à la mise à niveau, sans date ; `ent_exe_etat` reste saisi à la main tant qu'aucun état n'est validé | |
+| E25 | « Paramétrage basé sur le module Document » : une seule page de paramétrage ? | Les types d'ordres se paramètrent dans `/parametres/documents` (type, numérotation, statuts, règles, vues) avec une section **Exécution** (états du type, activation, service par défaut) ; `/parametres/execution` garde le catalogue des états et les modèles de parcours | Ok |
+| E26 | États personnalisés = statuts du document, ou couche à part ? | Couche à part, les **étapes de l'ordre** (§ 13.3), le statut documentaire restant le cycle commun ; un état peut déclencher un statut (Transmis, Pris en charge) | Ok |
+| E27 | « Parcours défini par les modèles » : le modèle de parcours du chantier ou le modèle de saisie du document (`ent_modele`) ? | Le **modèle de parcours** : chaque étape (type d'ordre) y reçoit ses états ; un ordre créé hors parcours prend les états du type | Ok |
+| E28 | États masqués (sans date obligatoire) : comment se valident-ils ? | Dans la liste complète des étapes (bouton « Toutes les étapes ») ou d'office quand l'état à date obligatoire suivant est validé | Ok |
+| E29 | Ordre de validation des états : imposé ou libre ? | Imposé par défaut (un état ne se valide qu'après le précédent), états parallèles possibles par des amonts comme dans le parcours | Ok |
+| E30 | Qui est le N+1 ? | Le responsable du service porteur de l'ordre, sinon celui du service parent, sinon un administrateur ; délégation possible à un membre désigné | Le responsable du service ou un admin et délégation possible (a voir dans le module de droit) |
+| E31 | Contrôle N+1 non activé : blocage ou alerte ? | Paramétrable par état (bloquant ou alerte) ; tâche du CRM au N+1 quand l'état à contrôler est validé | Ok |
+| E32 | Ressource principale : `ent_responsable_id` ou nouvelle colonne ? | Nouvelle colonne `ent_ressource` (type + identifiant : salarié, équipe, matériel, sous-traitant, service) ; le responsable reste la personne qui suit l'ordre | Ok |
+| E33 | Nature des états (tâche, jalon, attente) : globale à la base, surchargeable ? | Globale à la base (catalogue), durée surchargeable dans le modèle et sur l'ordre ; la nature ne change pas | Ok |
+| E34 | Attente : décalage de dépendance ou tâche sans ressource ? | Décalage de dépendance (aucune charge, recalé par le calendrier), dessiné comme une barre hachurée | Ok |
+| E35 | Jalon : `pla_jalon` ou tâche de durée nulle ? | Tâche de durée nulle (garde les dépendances et le recalage) affichée en losange ; `pla_jalon` reste pour les jalons libres | Ok |
+| E36 | Sans le module Planning ? | Dates prévisionnelles calculées par la même règle d'enchaînement (durées, calendrier du service) côté Exécution, sans tâches | Ok |
+| E37 | Date prévisionnelle saisie à la main dans le tableau : imposée ? | Oui (marquée), elle recale les suivantes ; « ⟳ Recalculer » rend la main au calcul | Ok |
+| E38 | Types d'ordres à créer maintenant | `E_BE`, `E_BM`, `E_OF`, `E_CO`, `E_LI`, `E_SAV`, `E_OST`, `E_DAC` (cités par les parcours ou le § 3.3), avec statuts, droits, transformations du § 3.3 et vues de colonnes ; leurs particularités (opérations d'OF, colisage, SAV sur tablette) restent aux lots 3 à 5 | Ok |
+| E39 | Activation par type d'ordre : effet ? | `tyd_actif` présenté dans la section Exécution : un type inactif disparaît des menus, des cibles de transformation et des listes, ses étapes de parcours sont ignorées (sans objet) ; refus si des ordres de ce type sont en cours | Ok sauf si tous les ordre sont terminé pour désactivé. |
+| E40 | Ordres existants (avant les étapes) | Reçoivent les états de leur type à la mise à niveau, sans date ; `ent_exe_etat` reste saisi à la main tant qu'aucun état n'est validé | Ok |
+
+Précision E39 : un type d'ordre ne se désactive que lorsque **tous ses ordres sont terminés** (terminés, soldés ou
+annulés) ; sinon la désactivation est refusée avec la liste des ordres en cours.
+
+Relecture (23/10/2026) : points manquants.
+
+| N° | Question | Proposition | Décision |
+|---|---|---|---|
+| E41 | États d'un type ou d'un modèle modifiés alors que des ordres existent | Les ordres gardent leur copie ; action « Appliquer aux ordres en cours » qui ne touche que les états non validés (ajout, retrait, ordre, durée) | |
+| E42 | Ordre issu d'une transformation ou d'une répartition (`.1`, `.2`) : quels états ? | Ceux de **son** type (ou de son étape de parcours), jamais ceux de la source ; les dates validées de la source restent sur la source | |
+| E43 | Blocage (`ent_exe_etat` BLOQUE, motif) et étapes | Le blocage suspend l'étape en cours sans la valider ; les tâches du planning sont signalées bloquées ; au déblocage, les dates prévisionnelles non imposées sont recalculées depuis la date du déblocage | |
+| E44 | Synthèse et liste des ordres | Colonnes « étape en cours », « prochaine date obligatoire », « en retard » dans `v_liste_ordres` et la vue détaillée du chantier ; la règle des états par service (`etatsServices`) reste inchangée | |
+| E45 | Alertes | Source du module Notifications : étape en retard (date prévisionnelle dépassée sans validation), contrôle N+1 en attente depuis plus de N jours | |
+| E46 | Qui valide une étape ? | Les membres du service porteur, la ressource principale de l'étape (si c'est une personne), le responsable de l'ordre, un administrateur ; droits fins au module de droits | |
+| E47 | Impression de l'ordre | Le tableau des états entre dans le dictionnaire de l'édition (collection `etapes`) et dans les modèles d'ordres fournis | |
+| E48 | Ressource changée dans le planning (réaffectation de la tâche) | Remonte sur l'état comme les dates (liaison dans les deux sens), sauf pour la ressource de l'ordre elle-même | |
+| E49 | Données de démonstration | Catalogue d'états et états par type fournis (OE : lancement ; BE : étude, visa (attente), plans bons pour exécution ; BM : gamme ; OF : débit, fabrication, séchage (attente), contrôle ; CO, LI : préparation, chargement ; PO : préparation, pose, réception (jalon) ; SAV : intervention, signature) ; `generer-modules-demo.mjs` crée des ordres à étapes datées | |
+| E50 | Validation d'une étape depuis l'atelier (borne, tablette) | Second temps, avec la borne du Pointage ou l'application mobile (fin d'opération = étape validée) | |
 
 ### 13.7 Modèle de données proposé
 
@@ -403,6 +424,6 @@ Cœur : `ordre_etape` (`ore_ent_id`, `ore_etc_code`, `ore_ordre`, `ore_date_obli
 
 | Lot | Contenu |
 |---|---|
-| 2b | Types d'ordres manquants (E38) et activation par type (E39) ; section Exécution de `/parametres/documents` (E25) |
-| 2c | Catalogue des états, états par type, états des étapes des modèles ; étapes de l'ordre copiées à la création ; tableau de l'entête (prévisionnelle, validation, contrôle N+1, ressource) ; règles répliquées (jeu `02_etapes`) |
-| 2d | Planning théorique par états (tâches, jalons, attentes en décalage), liaison des dates dans les deux sens ; tâche du CRM au N+1 |
+| 2b | Types d'ordres manquants (E38) et activation par type (E39 : désactivation quand tous les ordres sont terminés) ; section Exécution de `/parametres/documents` (E25) |
+| 2c | Catalogue des états, états par type, états des étapes des modèles ; étapes de l'ordre copiées à la création ; tableau de l'entête (prévisionnelle, validation, contrôle N+1, ressource) ; règles répliquées (jeu `02_etapes`) ; colonnes de la liste des ordres (E44), édition (E47), démonstration (E49) |
+| 2d | Planning théorique par états (tâches, jalons, attentes en décalage), liaison des dates et des ressources dans les deux sens ; tâche du CRM au N+1 ; alertes (E45) |
