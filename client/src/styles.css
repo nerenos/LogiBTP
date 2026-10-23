@@ -23,9 +23,10 @@
   text-align: center; background: var(--accent, #2b6cb0); color: #fff; }
 .cloche.urgente .compteur { background: var(--erreur); }
 .liste-notifications { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-.liste-notifications li { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.4rem 0.6rem; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+.liste-notifications li { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.4rem 0.6rem; cursor: default; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
 .liste-notifications li.non-lue { border-left: 3px solid var(--accent, #2b6cb0); }
 .liste-notifications li.traitee { opacity: 0.6; }
+.liste-notifications li.selection { background: var(--selection); }
 .liste-notifications li > div:nth-child(2) { flex: 1; }
 .liste-simple { list-style: none; padding: 0; margin: 0.3rem 0; }
 .liste-simple li { padding: 0.15rem 0; }
@@ -584,13 +585,29 @@ details.avertissement > summary { cursor: pointer; }
 /* États du panneau : agrandi, réduit (onglets en icônes, en colonne), masqué ; séparateur à glisser ; fenêtre séparée. */
 .panneau-planning.panneau-large { width: max(50vw, var(--largeur-panneau, 24rem)); }
 .panneau-planning.panneau-reduit { width: 2.4rem; padding: 0 .15rem; overflow: hidden; }
-.panneau-planning.panneau-reduit [data-panneau], .panneau-planning.panneau-reduit [data-actions-tache], .panneau-planning.panneau-reduit .onglet-libelle,
-.panneau-planning.panneau-reduit [data-nb-alertes], .panneau-planning.panneau-reduit [data-nb-jalons],
+.panneau-planning.panneau-reduit [data-panneau], .panneau-planning.panneau-reduit [data-actions-tache],
 .panneau-planning.panneau-reduit .commandes-panneau button:not([data-panneau-reduire]) { display: none; }
 .panneau-planning.panneau-reduit .onglets { flex-direction: column; align-items: stretch; }
 .panneau-planning.panneau-reduit .onglets > button[data-onglet] { padding: .2rem 0; text-align: center; }
 .panneau-planning.panneau-reduit .commandes-panneau { order: -1; margin: 0 0 .3rem; }
-.panneau-planning:not(.panneau-reduit) .onglet-icone { display: none; }
+/* Onglets en icônes (libellé et compteur détaillé dans la bulle), compteurs en badges. */
+.panneau-planning .onglets > button.onglet-icone { position: relative; font-size: 1.05rem; line-height: 1.2; padding: .2rem .45rem; border-radius: 6px; }
+.panneau-planning .onglets > button.onglet-icone.actif { background: var(--accent-clair); outline: 1px solid var(--accent); text-decoration: none; }
+.badge-onglet { position: absolute; top: -4px; right: -5px; min-width: 15px; height: 15px; padding: 0 3px; box-sizing: border-box; border-radius: 8px;
+  background: #dc2626; color: #fff; font-size: 10px; font-weight: 600; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums; }
+.badge-onglet[hidden] { display: none; }
+[data-onglet="aplanifier"] .badge-onglet, [data-onglet="jalons"] .badge-onglet { background: var(--accent); }
+/* Panneau : chaque onglet défile seul ; listes à barre de filtres et entêtes figées. */
+.panneau-planning:not(.panneau-reduit) { display: flex; flex-direction: column; overflow: hidden; }
+.panneau-planning[hidden] { display: none; }
+.panneau-planning > [data-panneau] { flex: 1; min-height: 0; overflow: auto; }
+.panneau-planning > [data-panneau][hidden] { display: none; }
+.panneau-planning > .onglet-liste { display: flex; flex-direction: column; overflow: hidden; }
+.onglet-liste > .onglet-liste-haut { flex: none; }
+.onglet-liste > .onglet-liste-corps { flex: 1; min-height: 0; overflow: auto; }
+.onglet-liste-corps thead th { position: sticky; top: 0; z-index: 1; background: var(--titre-fond); }
+.tuile-equipe { border-left: 3px solid var(--accent); }
+.ligne-equipe-onglet td:first-child { font-weight: 600; }
 .panneau-planning .onglets { flex-wrap: wrap; }
 .panneau-planning .commandes-panneau { margin-left: auto; display: inline-flex; gap: 0; }
 .panneau-planning .commandes-panneau .bouton-icone { padding: 0 .3rem; min-width: 0; border-color: transparent; background: none; }
@@ -602,7 +619,10 @@ details.avertissement > summary { cursor: pointer; }
 .page-planning.panneau-seul .barre-planning, .page-planning.panneau-seul .zone-planning { display: none; }
 .page-planning.panneau-seul .panneau-planning { flex: 1; width: auto; border-left: none; }
 /* Liste « À planifier » : barre (recherche, tri, présentation), tuiles. */
-.barre-aplanifier { display: flex; align-items: center; gap: .3rem; margin: .3rem 0; }
+.barre-aplanifier { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: .3rem 0; }
+.tuiles-aplanifier.tuiles-ressources { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); }
+.tuiles-ressources .tuile-aplanifier.glissable { padding: .25rem .4rem; gap: 0; }
+.tuiles-ressources .ta-entete b { font-weight: 600; }
 .barre-aplanifier input[type="search"] { flex: 1; min-width: 8rem; }
 .panneau-planning .tableau-compact input[type="date"] { width: 8.2rem; }
 .tuiles-aplanifier { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .4rem; }
@@ -638,6 +658,13 @@ details.avertissement > summary { cursor: pointer; }
 .alertes-planning { padding-left: 1rem; margin: .3rem 0; }
 .alertes-planning li { margin-bottom: .4rem; }
 .alertes-planning li.vue { opacity: .6; }
+/* Lignes à actions au survol ou à la sélection (comme une liste de courriels) : alertes du planning, notifications. */
+.ligne-actions-survol { display: flex; align-items: flex-start; gap: .4rem; padding: .2rem .3rem; border-radius: 4px; outline: none; }
+.ligne-actions-survol:hover, .ligne-actions-survol:focus-within, .ligne-actions-survol.selection { background: var(--titre-fond); }
+.ligne-actions-survol > .las-texte, .ligne-actions-survol > .las-corps { flex: 1; min-width: 0; }
+.ligne-actions-survol > .las-actions { display: inline-flex; gap: .1rem; flex: none; visibility: hidden; }
+.ligne-actions-survol:hover > .las-actions, .ligne-actions-survol:focus-within > .las-actions, .ligne-actions-survol.selection > .las-actions { visibility: visible; }
+.ligne-actions-survol .las-actions .bouton-icone { padding: 0 .3rem; }
 
 /* Borne d'atelier (Pointage lot 4) : plein écran tactile, gros boutons, bandeau masqué. */
 body.mode-borne #bandeau { display: none; }

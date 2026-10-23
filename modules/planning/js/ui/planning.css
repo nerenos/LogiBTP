@@ -67,6 +67,10 @@
 }
 .vp-projection-etiquette.dessous { transform: none; }
 .vue-planning.lecture .vp-barre { cursor: default; }
+/* Avancement : barre de progression sur toute la largeur, en bas de la barre. */
+.vp-progression { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(0, 0, 0, .28); pointer-events: none; }
+.vp-progression i { display: block; height: 100%; background: rgba(255, 255, 255, .92); }
+.vp-progression.complete i { background: #4ade80; }
 /* Barres sur plusieurs lignes de texte (option lignesTexte : --vp-lignes). */
 .vue-planning.multiligne .vp-barre { white-space: normal; line-height: 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--vp-lignes); overflow-wrap: anywhere; }
 
@@ -84,4 +88,4 @@
 .vp-deco.charge-plein { background: rgba(220, 38, 38, .35); }
 
 /* Jalons (losange centré sur l'instant). */
-.vp-deco.jalon { color: #b45309; font-size: 14px; text-align: center; padding: 0; opacity: 1; background: none; overflow: visible; }
+.vp-deco.jalon { color: #b45309; font-size: 21px; line-height: 1; text-align: center; padding: 0; opacity: 1; background: none; overflow: visible; }

@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { versMinutes, depuisMinutes } from '@logibtp/planning';
 import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -10,6 +10,7 @@ import { api } from '../api.js';
 
 export const TYPE_GLISSER_RESSOURCE = 'application/x-logibtp-planning-ressource';
 export const TYPES_RESSOURCE = { SALARIE: 'Salarié', INTERIM: 'Intérimaire', MATERIEL: 'Matériel', SOUS_TRAITANT: 'Sous-traitant' };
+const TYPES_ELEMENT = { EQUIPE: 'Équipe', ...TYPES_RESSOURCE };
 const ETATS_DISPO = {
   LIBRE: { libelle: 'Libre', couleur: '#16a34a' }, PARTIEL: { libelle: 'Partiellement occupée', couleur: '#d97706' },
   OCCUPE: { libelle: 'Occupée', couleur: '#dc2626' }, ABSENT: { libelle: 'Absente', couleur: '#9333ea' },
@@ -246,35 +247,55 @@ export async function choisirRessources({ du, au, exclure, selection }) {
 }
 
 /**
- * Onglet « Ressources » du panneau : recherche, service, type ; chaque ligne se glisse sur une tâche du planning
- * (ajout de la ressource et recalcul de la tâche).
+ * Onglet « Ressources » du panneau : ressources et équipes (recherche, service, type), en liste ou en tuiles
+ * (préférence `planningRessourcesTuiles`), barre et entêtes figées ; chaque ligne ou tuile se glisse sur une tâche du
+ * planning (ressource ajoutée, ou équipe à sa composition au début de la tâche, puis recalcul de la tâche).
  */
-export function rendreOngletRessources(zone, ressources, services) {
-  zone.innerHTML = `<div class="barre-aplanifier ligne"><input type="search" data-filtre placeholder="Rechercher une ressource…"><span data-service></span><span data-type></span></div>
-    <p class="aide">Glisser une ressource sur une tâche : elle y est ajoutée et la tâche est recalculée.</p><div data-liste></div>`;
+export function rendreOngletRessources(zone, ressources, services, equipes = []) {
+  const libService = new Map(services.map((s) => [s.id, s.libelle]));
+  const elements = [
+    ...equipes.map((e) => ({ type: 'EQUIPE', id: String(e.id), libelle: e.libelle, code: e.code, srv_id: e.srv_id, service: libService.get(e.srv_id) ?? null })),
+    ...ressources,
+  ];
+  let tuiles = Boolean(lirePreferences().planningRessourcesTuiles);
+  zone.classList.add('onglet-liste');
+  zone.innerHTML = `<div class="onglet-liste-haut"><div class="barre-aplanifier"><input type="search" data-filtre placeholder="Rechercher une ressource ou une équipe…"><span data-service></span><span data-type></span>
+      <button type="button" class="bouton-icone" data-presentation></button></div>
+    <p class="aide">Glisser sur une tâche : la ressource (ou l'équipe, à sa composition au début de la tâche) y est ajoutée et la tâche recalculée.</p></div>
+    <div class="onglet-liste-corps" data-liste></div>`;
   const service = creerCombo({ options: services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), valeur: '', vide: true, titre: 'Service' });
   service.placeholder = 'Service';
-  service.size = 10;
+  service.size = 9;
   zone.querySelector('[data-service]').append(service);
-  const type = creerCombo({ options: Object.entries(TYPES_RESSOURCE).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: '', vide: true, titre: 'Type' });
+  const type = creerCombo({ options: Object.entries(TYPES_ELEMENT).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: '', vide: true, titre: 'Type' });
   type.placeholder = 'Type';
-  type.size = 9;
+  type.size = 8;
   zone.querySelector('[data-type]').append(type);
+  const icone = (x) => (x.type === 'EQUIPE' ? '👥' : x.type === 'MATERIEL' ? '🚜' : x.type === 'SOUS_TRAITANT' ? '🏢' : '👷');
   const rendre = () => {
+    const pres = zone.querySelector('[data-presentation]');
+    pres.textContent = tuiles ? '☰' : '▦';
+    pres.title = tuiles ? 'Présenter en liste' : 'Présenter en tuiles';
     const t = zone.querySelector('[data-filtre]').value.trim().toLowerCase();
-    const l = ressources.filter((r) => (!t || `${r.libelle} ${r.service ?? ''}`.toLowerCase().includes(t))
-      && (!service.valeurCombo || String(r.srv_id) === String(service.valeurCombo)) && (!type.valeurCombo || r.type === type.valeurCombo));
+    const l = elements.filter((x) => (!t || `${x.libelle} ${x.code ?? ''} ${x.service ?? ''}`.toLowerCase().includes(t))
+      && (!service.valeurCombo || String(x.srv_id) === String(service.valeurCombo)) && (!type.valeurCombo || x.type === type.valeurCombo));
+    const vus = l.slice(0, 500);
     const liste = zone.querySelector('[data-liste]');
-    liste.innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>Ressource</th><th>Type</th><th>Service</th></tr></thead><tbody>
-      ${l.slice(0, 500).map((r) => `<tr draggable="true" class="glissable" data-cle="${echapper(cleDe(r))}"><td>${echapper(r.libelle)}</td><td>${echapper(TYPES_RESSOURCE[r.type] ?? r.type)}</td><td>${echapper(r.service ?? '')}</td></tr>`).join('')}</tbody></table>
-      ${l.length > 500 ? `<p class="aide">${l.length - 500} ressources de plus : préciser la recherche.</p>` : ''}` : '<p class="aide">Aucune ressource ne correspond.</p>';
-    liste.querySelectorAll('tr[data-cle]').forEach((tr) => tr.addEventListener('dragstart', (e) => {
-      const r = ressources.find((x) => cleDe(x) === tr.dataset.cle);
-      e.dataTransfer.setData(TYPE_GLISSER_RESSOURCE, JSON.stringify({ type: r.type, id: r.id, libelle: r.libelle }));
+    const suite = l.length > 500 ? `<p class="aide">${l.length - 500} de plus : préciser la recherche.</p>` : '';
+    liste.innerHTML = !l.length ? '<p class="aide">Aucune ressource ne correspond.</p>' : tuiles
+      ? `<div class="tuiles-aplanifier tuiles-ressources">${vus.map((x, i) => `<div class="tuile-aplanifier glissable${x.type === 'EQUIPE' ? ' tuile-equipe' : ''}" draggable="true" data-i="${i}" title="${echapper(x.libelle)}">
+          <div class="ta-entete"><b>${icone(x)} ${echapper(x.libelle)}</b></div><div class="ta-libelle">${echapper(TYPES_ELEMENT[x.type] ?? x.type)}${x.code && x.type === 'EQUIPE' ? ` · ${echapper(x.code)}` : ''}</div>
+          <div class="ta-service">${echapper(x.service ?? '')}</div></div>`).join('')}</div>${suite}`
+      : `<table class="tableau-compact pleine-largeur"><thead><tr><th>Ressource</th><th>Type</th><th>Service</th></tr></thead><tbody>
+        ${vus.map((x, i) => `<tr draggable="true" class="glissable${x.type === 'EQUIPE' ? ' ligne-equipe-onglet' : ''}" data-i="${i}"><td>${icone(x)} ${echapper(x.libelle)}</td><td>${echapper(TYPES_ELEMENT[x.type] ?? x.type)}</td><td>${echapper(x.service ?? '')}</td></tr>`).join('')}</tbody></table>${suite}`;
+    liste.querySelectorAll('[data-i]').forEach((el) => el.addEventListener('dragstart', (e) => {
+      const x = vus[Number(el.dataset.i)];
+      e.dataTransfer.setData(TYPE_GLISSER_RESSOURCE, JSON.stringify({ type: x.type, id: x.id, libelle: x.libelle }));
       e.dataTransfer.effectAllowed = 'copy';
     }));
   };
   zone.querySelector('[data-filtre]').addEventListener('input', rendre);
+  zone.querySelector('[data-presentation]').addEventListener('click', () => { tuiles = !tuiles; ecrirePreferences({ planningRessourcesTuiles: tuiles }); rendre(); });
   service.addEventListener('change', rendre);
   type.addEventListener('change', rendre);
   rendre();

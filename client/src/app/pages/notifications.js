@@ -50,18 +50,26 @@ export class PageNotifications extends PageBase {
   async #charger() {
     const zone = this.conteneur.querySelector('[data-liste]');
     const l = await api.notifications.boite({ etat: this.etat, module: this.module }).catch((e) => { this.app.erreur(e); return []; });
-    zone.innerHTML = l.length ? `<ul class="liste-notifications">${l.map((n) => `<li data-id="${n.id}" class="${n.lue_le ? 'lue' : 'non-lue'}${n.traitee_le ? ' traitee' : ''}">
+    // Actions de la ligne affichées au survol ou à la sélection (clic sur la ligne), comme une liste de courriels.
+    zone.innerHTML = l.length ? `<ul class="liste-notifications">${l.map((n) => `<li data-id="${n.id}" tabindex="0" class="ligne-actions-survol ${n.lue_le ? 'lue' : 'non-lue'}${n.traitee_le ? ' traitee' : ''}">
         <span class="niveau" title="${echapper(n.niveau)}">${NIVEAUX[n.niveau] ?? '•'}</span>
-        <div><b>${n.url ? `<a href="${echapper(n.url)}" data-ouvrir>${echapper(n.titre)}</a>` : echapper(n.titre)}</b>
+        <div class="las-corps"><b>${n.url ? `<a href="${echapper(n.url)}" data-ouvrir>${echapper(n.titre)}</a>` : echapper(n.titre)}</b>
           ${n.texte ? `<br><span class="aide">${echapper(n.texte)}</span>` : ''}<br><small class="aide">${echapper(MODULES[n.module] ?? n.module)} · ${date(n.cree_le)}</small></div>
-        <div class="actions">${n.lue_le ? '' : '<button type="button" data-lue title="Marquer lue">✓ Lue</button>'}
-          ${n.traitee_le ? '<small class="aide">traitée</small>' : '<button type="button" data-traitee title="Retirer de la boîte">✔ Traitée</button>'}</div></li>`).join('')}</ul>`
+        ${n.traitee_le ? '<small class="aide">traitée</small>' : ''}
+        <span class="las-actions">${n.lue_le ? '' : '<button type="button" class="bouton-icone" data-lue title="Marquer lue" aria-label="Marquer lue">👁</button>'}
+          ${n.traitee_le ? '' : '<button type="button" class="bouton-icone" data-traitee title="Traitée : retirer de la boîte" aria-label="Traitée : retirer de la boîte">✔</button>'}</span></li>`).join('')}</ul>`
       : '<p class="aide">Aucune notification.</p>';
     zone.querySelectorAll('li[data-id]').forEach((li) => {
       const id = Number(li.dataset.id);
       li.querySelector('[data-lue]')?.addEventListener('click', () => this.#marquer({ ids: [id] }, false));
       li.querySelector('[data-traitee]')?.addEventListener('click', () => this.#marquer({ ids: [id] }, true));
       li.querySelector('[data-ouvrir]')?.addEventListener('click', () => { api.notifications.lues({ ids: [id] }).then((c) => this.app.majNotifications(c)).catch(() => {}); });
+      li.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) return;
+        const choisie = !li.classList.contains('selection');
+        zone.querySelectorAll('li.selection').forEach((x) => x.classList.remove('selection'));
+        li.classList.toggle('selection', choisie);
+      });
     });
   }
 }

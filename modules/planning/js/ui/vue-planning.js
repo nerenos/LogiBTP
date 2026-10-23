@@ -73,6 +73,8 @@ export class VuePlanning {
 
   /** HTML du contenu d'une barre (échappé). */
   contenuBarre(t) { return echapper(t.libelle ?? ''); }
+  /** Avancement d'une barre en % (barre de progression en bas de la barre ; null = aucune). */
+  avancementBarre(t) { return t.avancement == null ? null : Math.max(0, Math.min(100, Number(t.avancement) || 0)); }
   /** Classes supplémentaires d'une barre. */
   classeBarre(t) { return t.classe ?? ''; }
   /** Bulle d'une barre (HTML), affichée dès le survol ; null = infobulle du navigateur (`titreBarre`). */
@@ -326,11 +328,16 @@ export class VuePlanning {
         const largeur = Math.max(3, this.x(Math.min(t.fin, this.#o.fin)) - gauche);
         barres.push(`<div class="vp-barre ${this.classeBarre(t)}${t === this.selection ? ' selection' : ''}" data-cle="${echapper(String(t.cle))}" data-ligne="${i}"
           style="left:${gauche}px;width:${largeur}px;top:${y + 3 + v * this.#o.hauteurVoie}px;height:${this.#o.hauteurVoie - 2}px;${t.couleur ? `--vp-couleur:${t.couleur};` : ''}"
-          ${avecBulle ? '' : `title="${echapper(this.titreBarre(t))}"`}>${this.contenuBarre(t)}</div>`);
+          ${avecBulle ? '' : `title="${echapper(this.titreBarre(t))}"`}>${this.contenuBarre(t)}${this.#progression(t)}</div>`);
       }
     }
     this.conteneur.querySelector('.vp-lignes-plan').innerHTML = lignes.join('');
     this.plan.querySelector('.vp-barres').innerHTML = barres.join('');
+  }
+
+  #progression(t) {
+    const av = this.avancementBarre(t);
+    return av == null ? '' : `<span class="vp-progression${av >= 100 ? ' complete' : ''}"><i style="width:${av}%"></i></span>`;
   }
 
   /** Bulle au survol d'une barre (immédiate, suit le pointeur ; jamais pendant un glisser). */
