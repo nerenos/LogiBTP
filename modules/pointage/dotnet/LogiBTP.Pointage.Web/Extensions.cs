@@ -18,6 +18,7 @@ public static class Extensions
         services.AddScoped<ServicePointage>();
         services.AddScoped<ServiceSynthese>();
         services.AddScoped<ServicePaie>();
+        services.AddScoped<ServiceConges>();
         services.AddSingleton<JetonsBorne>();
         services.AddScoped<ServiceBorne>();
         return services;
@@ -73,6 +74,15 @@ public static class Extensions
         g.MapGet("/exports", (HttpContext http, ServicePaie s, CancellationToken ct) => s.ExportsAsync(Utilisateur.Depuis(http), ct));
         g.MapGet("/exports/{id:long}/fichier", (long id, HttpContext http, ServicePaie s, CancellationToken ct) => s.FichierExportAsync(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/valoriser", (DemandeValorisation d, HttpContext http, ServicePaie s, CancellationToken ct) => s.ValoriserAsync(d, Utilisateur.Depuis(http), ct));
+        // Congés et absences : demandes, validation RH avec la nature, natures.
+        g.MapGet("/natures-absence", (ServiceConges s, CancellationToken ct) => s.NaturesAsync(ct));
+        g.MapPut("/natures-absence", (List<NatureAbsenceDto> l, HttpContext http, ServiceConges s, CancellationToken ct) => s.EnregistrerNaturesAsync(l, Utilisateur.Depuis(http), ct));
+        g.MapGet("/conges", (DateOnly? du, DateOnly? au, int? salarie, int? service, string? etat, string? recherche, HttpContext http, ServiceConges s, CancellationToken ct) =>
+            s.CongesAsync(du, au, salarie, service, etat, recherche, Utilisateur.Depuis(http), ct));
+        g.MapPost("/conges", (CongeSaisi c, HttpContext http, ServiceConges s, CancellationToken ct) => s.DemanderAsync(c, Utilisateur.Depuis(http), ct));
+        g.MapPut("/conges/{id:long}", (long id, CongeSaisi c, HttpContext http, ServiceConges s, CancellationToken ct) => s.ModifierAsync(id, c, Utilisateur.Depuis(http), ct));
+        g.MapPost("/conges/{id:long}/{action:regex(^(valider|refuser|annuler)$)}", (long id, string action, TraitementConge t, HttpContext http, ServiceConges s, CancellationToken ct) =>
+            s.TraiterAsync(id, action.ToUpperInvariant(), t, Utilisateur.Depuis(http), ct));
         // Bornes d'atelier (lot 4) : administration (session) puis routes de la borne (publiques : jeton d'appareil).
         g.MapGet("/appareils", (HttpContext http, ServiceBorne s, CancellationToken ct) => s.AppareilsAsync(Utilisateur.Depuis(http), ct));
         g.MapPost("/appareils", (AppareilSaisi a, HttpContext http, ServiceBorne s, CancellationToken ct) => s.CreerAppareilAsync(a, Utilisateur.Depuis(http), ct));

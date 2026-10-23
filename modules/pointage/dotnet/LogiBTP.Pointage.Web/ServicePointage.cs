@@ -128,6 +128,8 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
     public DbSet<ExportEntite> Exports => Set<ExportEntite>();
     public DbSet<AppareilEntite> Appareils => Set<AppareilEntite>();
     public DbSet<PinEntite> Pins => Set<PinEntite>();
+    public DbSet<NatureAbsenceEntite> NaturesAbsence => Set<NatureAbsenceEntite>();
+    public DbSet<CongeEntite> Conges => Set<CongeEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -149,6 +151,8 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
         b.Entity<ExportEntite>().ToTable("poi_export").HasKey(x => x.PexId);
         b.Entity<AppareilEntite>().ToTable("poi_appareil").HasKey(x => x.PapId);
         b.Entity<PinEntite>().ToTable("poi_pin").HasKey(x => x.PpnSalId);
+        b.Entity<NatureAbsenceEntite>().ToTable("poi_nature_absence").HasKey(x => x.PnaCode);
+        b.Entity<CongeEntite>().ToTable("poi_conge").HasKey(x => x.PcoId);
     }
 }
 
@@ -222,6 +226,14 @@ public abstract class SpecialisationPointage
     /// <summary>Après une demande de correction (tâche au service RH, par exemple).</summary>
     public virtual Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct) =>
         Task.CompletedTask;
+    /// <summary>Salarié de l'utilisateur connecté (ses propres demandes de congés), s'il en a un.</summary>
+    public virtual Task<int?> SalarieDeAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) => Task.FromResult<int?>(null);
+    /// <summary>
+    /// Après une demande, une modification ou un traitement de congé (DEMANDER, MODIFIER, VALIDER, REFUSER, ANNULER) :
+    /// absence dans le planning, tâche au service RH… ; le congé est suivi par le contexte (<c>PcoTacId</c>).
+    /// </summary>
+    public virtual Task ApresCongeAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CongeEntite c, string action,
+        CancellationToken ct) => Task.CompletedTask;
 }
 
 /// <summary>

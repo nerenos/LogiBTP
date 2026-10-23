@@ -60,6 +60,7 @@ services:
       - ./modules/pointage/db/087_pointage_validation.sql:/docker-entrypoint-initdb.d/087_pointage_validation.sql:ro
       - ./modules/pointage/db/088_pointage_paie.sql:/docker-entrypoint-initdb.d/088_pointage_paie.sql:ro
       - ./modules/pointage/db/088b_pointage_borne.sql:/docker-entrypoint-initdb.d/088b_pointage_borne.sql:ro
+      - ./modules/pointage/db/088c_pointage_conges.sql:/docker-entrypoint-initdb.d/088c_pointage_conges.sql:ro
       - ./modules/planning/db/089_planning.sql:/docker-entrypoint-initdb.d/089_planning.sql:ro
       - ./modules/planning/db/089b_planning_charge.sql:/docker-entrypoint-initdb.d/089b_planning_charge.sql:ro
       - ./modules/planning/db/089c_planning_liens.sql:/docker-entrypoint-initdb.d/089c_planning_liens.sql:ro

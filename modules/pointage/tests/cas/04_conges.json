@@ -1,0 +1,59 @@
+{
+  "description": "Congés (modules/pointage/js/src/conges.js ↔ ReglesConges.cs) : contrôle d'une demande (dates, demi-journées, chevauchement à la demi-journée avec les congés demandés ou validés du salarié), jours décomptés (jours travaillés, 0,5 aux bornes en demi-journée), traitements permis. Codes triés (ordinal).",
+  "controles": [
+    { "nom": "correct", "conge": { "id": null, "du": "2026-11-02", "au": "2026-11-06" }, "autres": [], "attendu": [] },
+    { "nom": "fin avant le début", "conge": { "id": null, "du": "2026-11-06", "au": "2026-11-02" }, "autres": [], "attendu": ["CNG_DATES"] },
+    { "nom": "dates manquantes", "conge": { "id": null, "du": null, "au": "2026-11-02" }, "autres": [], "attendu": ["CNG_DATES"] },
+    { "nom": "une journée commencée l'après-midi et finie à midi", "conge": { "id": null, "du": "2026-11-02", "au": "2026-11-02", "debut_midi": true, "fin_midi": true }, "autres": [], "attendu": ["CNG_DEMI"] },
+    {
+      "nom": "chevauche un congé validé",
+      "conge": { "id": null, "du": "2026-11-05", "au": "2026-11-10" },
+      "autres": [{ "id": 1, "du": "2026-11-02", "au": "2026-11-06", "etat": "VALIDE" }],
+      "attendu": ["CNG_CHEVAUCHEMENT"]
+    },
+    {
+      "nom": "matin et après-midi du même jour : pas de chevauchement",
+      "conge": { "id": null, "du": "2026-11-06", "au": "2026-11-09", "debut_midi": true },
+      "autres": [{ "id": 1, "du": "2026-11-02", "au": "2026-11-06", "fin_midi": true, "etat": "DEMANDE" }],
+      "attendu": []
+    },
+    {
+      "nom": "congé refusé ou annulé ignoré, le congé lui-même ignoré",
+      "conge": { "id": 7, "du": "2026-11-02", "au": "2026-11-06" },
+      "autres": [{ "id": 1, "du": "2026-11-02", "au": "2026-11-06", "etat": "REFUSE" }, { "id": 2, "du": "2026-11-03", "au": "2026-11-03", "etat": "ANNULE" },
+                 { "id": 7, "du": "2026-11-02", "au": "2026-11-04", "etat": "DEMANDE" }],
+      "attendu": []
+    }
+  ],
+  "jours": [
+    {
+      "nom": "semaine avec un week-end : jours travaillés seulement",
+      "conge": { "du": "2026-11-05", "au": "2026-11-10" },
+      "travailles": ["2026-11-05", "2026-11-06", "2026-11-09", "2026-11-10"],
+      "attendu": [{ "date": "2026-11-05", "part": 1 }, { "date": "2026-11-06", "part": 1 }, { "date": "2026-11-09", "part": 1 }, { "date": "2026-11-10", "part": 1 }],
+      "total": 4
+    },
+    {
+      "nom": "commence l'après-midi, finit à midi",
+      "conge": { "du": "2026-11-05", "au": "2026-11-06", "debut_midi": true, "fin_midi": true },
+      "travailles": ["2026-11-05", "2026-11-06"],
+      "attendu": [{ "date": "2026-11-05", "part": 0.5 }, { "date": "2026-11-06", "part": 0.5 }],
+      "total": 1
+    },
+    {
+      "nom": "demi-journée unique (matin)",
+      "conge": { "du": "2026-11-05", "au": "2026-11-05", "fin_midi": true },
+      "travailles": ["2026-11-05"],
+      "attendu": [{ "date": "2026-11-05", "part": 0.5 }],
+      "total": 0.5
+    }
+  ],
+  "traitements": [
+    { "nom": "valider une demande avec sa nature", "action": "VALIDER", "conge": { "etat": "DEMANDE" }, "nature": "CP", "attendu": [] },
+    { "nom": "valider sans nature", "action": "VALIDER", "conge": { "etat": "DEMANDE" }, "nature": null, "attendu": ["CNG_NATURE"] },
+    { "nom": "valider un congé déjà validé, sans nature", "action": "VALIDER", "conge": { "etat": "VALIDE" }, "nature": null, "attendu": ["CNG_ETAT", "CNG_NATURE"] },
+    { "nom": "refuser un congé annulé", "action": "REFUSER", "conge": { "etat": "ANNULE" }, "nature": null, "attendu": ["CNG_ETAT"] },
+    { "nom": "annuler un congé validé", "action": "ANNULER", "conge": { "etat": "VALIDE" }, "nature": null, "attendu": [] },
+    { "nom": "annuler un congé refusé", "action": "ANNULER", "conge": { "etat": "REFUSE" }, "nature": null, "attendu": ["CNG_ETAT"] }
+  ]
+}
