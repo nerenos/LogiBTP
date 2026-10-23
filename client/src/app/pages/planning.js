@@ -23,7 +23,7 @@ const ONGLETS_PANNEAU = {
   aplanifier: { libelle: 'À planifier', icone: '📋', compteur: true }, ressources: { libelle: 'Ressources et équipes', icone: '👷' }, tache: { libelle: 'Tâche', icone: '✎' },
   alertes: { libelle: 'Alertes', icone: '⚠', compteur: true }, jalons: { libelle: 'Jalons', icone: '◆', compteur: true },
 };
-const ETATS_PANNEAU = ['normal', 'reduit', 'large', 'masque'];
+const ETATS_PANNEAU = ['normal', 'reduit', 'masque'];
 /** Bouton icône d'une ligne à actions au survol (libellé en bulle). */
 const action = (attr, valeur, icone, titre) => `<button type="button" class="bouton-icone" ${attr}="${echapper(String(valeur))}" title="${titre}" aria-label="${titre}">${icone}</button>`;
 const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
@@ -142,6 +142,12 @@ export class PagePlanning extends PageBase {
   async ouvrir() {
     this.titre = 'Planning';
     this.conteneur.innerHTML = `<div class="page-planning"><div class="barre-planning ligne">
+        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="Options d'affichage : zoom, hauteur des lignes, temps non travaillé, synchronisation" aria-label="Options d'affichage">☰</button>
+          <div class="menu-deroulant-contenu menu-options-planning" data-contenu-menu="options" hidden>
+            <div class="mo-ligne"><span>Zoom</span><span><button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button></span></div>
+            <div class="mo-ligne"><span>Hauteur des lignes</span><span data-lignes-texte></span></div>
+            <label class="mo-ligne" title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><span>Masquer le temps non travaillé</span><input type="checkbox" data-masquer></label>
+            <div class="mo-ligne" data-ligne-synchro><span>Rafraîchissement</span><span data-synchro></span></div></div></span>
         <b>📅</b> <span data-vue></span>
         <button type="button" data-prec title="Période précédente">◀</button><button type="button" data-aujourdhui>Aujourd'hui</button><button type="button" data-suiv title="Période suivante">▶</button>
         <span data-periode class="aide"></span> <span data-echelle></span>
@@ -150,19 +156,13 @@ export class PagePlanning extends PageBase {
         <input type="search" data-recherche placeholder="Ressource…" size="14"> <button type="button" data-actualiser title="Actualiser">⟳</button>
         <button type="button" data-nouvelle>＋ Tâche</button> <button type="button" data-annuler title="Annuler (Ctrl+Z)" disabled>↶</button><button type="button" data-retablir title="Rétablir (Ctrl+Y)" disabled>↷</button>
         <button type="button" data-attente class="badge-exception" hidden title="Modifications des autres utilisateurs : actualiser"></button>
-        <span class="menu-deroulant" data-menu="options"><button type="button" class="bouton-icone" data-ouvrir-menu="options" title="Options d'affichage : zoom, hauteur des lignes, temps non travaillé, synchronisation" aria-label="Options d'affichage">☰</button>
-          <div class="menu-deroulant-contenu menu-options-planning" data-contenu-menu="options" hidden>
-            <div class="mo-ligne"><span>Zoom</span><span><button type="button" data-zoom="0.8" title="Zoom arrière">－</button><button type="button" data-zoom="1.25" title="Zoom avant">＋</button></span></div>
-            <div class="mo-ligne"><span>Hauteur des lignes</span><span data-lignes-texte></span></div>
-            <label class="mo-ligne" title="Masquer les heures et les jours non travaillés par l'entreprise (Paramètres du planning)"><span>Masquer le temps non travaillé</span><input type="checkbox" data-masquer></label>
-            <div class="mo-ligne" data-ligne-synchro><span>Rafraîchissement</span><span data-synchro></span></div></div></span>
         <a data-lien-consultation title="Ouvrir la vue en consultation (lecture seule, actualisée en temps réel)">👁 Consultation</a> <button type="button" data-plein-ecran hidden>⛶ Plein écran</button>
         <button type="button" data-afficher-panneau hidden title="Afficher le panneau (à planifier, tâche, alertes, jalons)">▤ Panneau</button>
         <span class="aide" data-etat></span></div>
       <div class="planning-corps"><div class="zone-planning"><div data-planning></div></div>
         <div class="separateur-panneau-planning" data-separateur-panneau title="Glisser pour élargir le panneau"></div>
         <aside class="panneau-planning"><div class="entete-panneau"><div class="onglets ligne">${Object.entries(ONGLETS_PANNEAU).map(([cle, o]) => `<button type="button" data-onglet="${cle}" class="onglet-icone${cle === 'aplanifier' ? ' actif' : ''}" title="${o.libelle}" aria-label="${o.libelle}">${o.icone}${o.compteur ? `<span class="badge-onglet" data-nb-${cle} hidden></span>` : ''}</button>`).join('')}
-              <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="Réduire le panneau">»</button><button type="button" class="bouton-icone" data-panneau-agrandir title="Agrandir le panneau">⤢</button><button type="button" class="bouton-icone" data-panneau-fenetre title="Ouvrir le panneau dans une autre fenêtre">⧉</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="Remettre le panneau dans la fenêtre du planning">⇤</button><button type="button" class="bouton-icone" data-panneau-masquer title="Masquer le panneau">✕</button></span></div>
+              <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="Réduire le panneau">»</button><button type="button" class="bouton-icone" data-panneau-fenetre title="Ouvrir le panneau dans une autre fenêtre">⧉</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="Remettre le panneau dans la fenêtre du planning">⇤</button></span></div>
             <div data-actions-tache hidden></div></div>
           ${Object.keys(ONGLETS_PANNEAU).map((cle) => `<div data-panneau="${cle}"${cle === 'aplanifier' ? '' : ' hidden'}></div>`).join('')}</aside></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
@@ -328,10 +328,8 @@ export class PagePlanning extends PageBase {
     const prefs = lirePreferences();
     const aside = c.querySelector('.panneau-planning');
     if (prefs.planningPanneauLargeur) aside.style.setProperty('--largeur-panneau', `${prefs.planningPanneauLargeur}px`);
-    this.etatPanneau = ETATS_PANNEAU.includes(prefs.planningPanneau) ? prefs.planningPanneau : 'normal';
+    this.etatPanneau = prefs.planningPanneau === 'reduit' ? 'reduit' : 'normal';
     c.querySelector('[data-panneau-reduire]').addEventListener('click', () => this.#etatPanneau(this.etatPanneau === 'reduit' ? 'normal' : 'reduit'));
-    c.querySelector('[data-panneau-agrandir]').addEventListener('click', () => this.#etatPanneau(this.etatPanneau === 'large' ? 'normal' : 'large'));
-    c.querySelector('[data-panneau-masquer]').addEventListener('click', () => this.#etatPanneau('masque'));
     c.querySelector('[data-afficher-panneau]').addEventListener('click', () => this.#etatPanneau('normal'));
     c.querySelector('[data-panneau-fenetre]').addEventListener('click', () => {
       this.app.naviguer(`/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, panneau: '1' }).filter(([, v]) => v))}`, { nouvelleFenetre: true });
@@ -394,15 +392,14 @@ export class PagePlanning extends PageBase {
     afficher.disabled = Boolean(this.panneauEnFenetre);
     c.querySelector('[data-panneau-reduire]').textContent = etat === 'reduit' ? '«' : '»';
     c.querySelector('[data-panneau-reduire]').title = etat === 'reduit' ? 'Déplier le panneau' : 'Réduire le panneau';
-    c.querySelector('[data-panneau-agrandir]').title = etat === 'large' ? 'Taille normale' : 'Agrandir le panneau';
-    for (const cle of ['reduire', 'agrandir', 'fenetre', 'masquer']) c.querySelector(`[data-panneau-${cle}]`).hidden = this.panneauSeul;
+    for (const cle of ['reduire', 'fenetre']) c.querySelector(`[data-panneau-${cle}]`).hidden = this.panneauSeul;
     this.planning?.actualiser();
   }
 
   /** Détail d'une tâche (null : nouvelle, éventuellement pré-remplie) : dans le panneau, ou dans la fenêtre du panneau s'il y est ouvert. */
   #afficherTache(id, preremplie) {
     if (this.panneauEnFenetre) { this.app.publier('planning-selection', { tache: id }); return; }
-    if (this.etatPanneau === 'masque' || this.etatPanneau === 'reduit') this.#etatPanneau('normal');
+    if (this.etatPanneau === 'reduit') this.#etatPanneau('normal');
     this.#editer(id, preremplie);
     this.#onglet('tache');
   }

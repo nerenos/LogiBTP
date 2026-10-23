@@ -583,7 +583,6 @@ details.avertissement > summary { cursor: pointer; }
 .planning-corps > .zone-planning { flex: 1; min-width: 0; }
 .panneau-planning { width: var(--largeur-panneau, 24rem); flex: none; overflow: auto; border-left: 1px solid var(--bord, #cbd5e1); padding: 0 .4rem; }
 /* États du panneau : agrandi, réduit (onglets en icônes, en colonne), masqué ; séparateur à glisser ; fenêtre séparée. */
-.panneau-planning.panneau-large { width: max(50vw, var(--largeur-panneau, 24rem)); }
 .panneau-planning.panneau-reduit { width: 2.4rem; padding: 0 .15rem; overflow: hidden; }
 .panneau-planning.panneau-reduit [data-panneau], .panneau-planning.panneau-reduit [data-actions-tache],
 .panneau-planning.panneau-reduit .commandes-panneau button:not([data-panneau-reduire]) { display: none; }
@@ -776,7 +775,7 @@ dialog.dialogue-ressources { max-width: min(900px, calc(100vw - 32px)); }
   background: var(--surface); color: var(--texte); border: 1px solid var(--bord); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .3);
 }
 .menu-deroulant-contenu[hidden] { display: none; }
-.menu-options-planning { left: auto; right: 0; min-width: 19rem; }
+.menu-options-planning { min-width: 19rem; }
 .menu-deroulant-contenu .mo-ligne { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .25rem .2rem; border-radius: 4px; }
 .menu-deroulant-contenu label.mo-ligne { cursor: pointer; }
 .menu-deroulant-contenu .mo-ligne:hover { background: var(--titre-fond); }
