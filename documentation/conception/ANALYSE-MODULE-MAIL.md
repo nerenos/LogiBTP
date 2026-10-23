@@ -1,7 +1,7 @@
 # Analyse du module Mail
 
-Statut : **analyse à valider** (23/10/2026). Les décisions proposées sont marquées ◐ dans le tableau des questions
-(§ 9) ; elles passeront à ✔ ou ✘ après relecture.
+Statut : **analyse validée** (23/10/2026). Décisions dans le tableau des questions
+(§ 9).
 
 ## 1. But
 
@@ -71,8 +71,11 @@ Relevés dans les analyses, la conception et le code ; le module doit y répondr
   (`SpecialisationMail`, méthode patron) : description des éléments, candidats de rapprochement (numéros de documents,
   tiers par adresse), stockage des contenus (GED), conséquences d'un envoi ou d'un rapprochement (statut, note,
   alerte). Le module ne dépend ni de la GED, ni du CRM, ni des Notifications : les liens passent par le cœur.
-- **La messagerie reste la source** : LogiBTP ne supprime ni ne déplace jamais un courriel sur le serveur, sauf règle
-  explicite du compte (déplacement vers un dossier « traité » après rattachement, § 9 ML8).
+- **Module toujours présent, comptes facultatifs** : aucun compte n'est obligatoire au lancement ; sans compte d'envoi
+  pour un usage, les fonctions qui en dépendent (double authentification, mot de passe oublié, notifications par
+  courriel, envois) sont masquées ou refusées avec un message, et les administrateurs sont avertis (ML1).
+- **La messagerie reste la source** : LogiBTP ne supprime jamais un courriel sur le serveur ; il ne le marque lu ou ne
+  le déplace que si les options du compte le demandent (ML7, ML8).
 - **Rien n'est perdu** : un envoi en échec reste dans la file (erreur visible, nouvel essai) ; un courriel reçu non
   reconnu reste à rapprocher ; les rapprochements automatiques sont annulables.
 - **Aucune décision métier automatique** : un courriel reconnu comme acceptation de devis ou ARC rattache et alerte ;
@@ -204,8 +207,11 @@ conservation des courriels non rapprochés et du journal, seuils d'avertissement
    - document : `ent_envoye_le` posé (statut ENVOYE si le type le prévoit) ;
    - CRM actif : note « courriel envoyé » dans le Suivi de l'élément (contenu = le courriel de la GED) ;
    - copie dans le dossier « Envoyés » du compte si IMAP est configuré (`APPEND`, ML5).
-5. Échec définitif (adresse refusée, authentification, taille) : état `ERREUR`, notification à l'auteur ; avis de
-   non-remise reçu plus tard : rapproché de l'envoi par ses en-têtes, destinataire marqué, notification à l'auteur.
+5. Échec définitif (adresse refusée, authentification, taille) : état `ERREUR`, notification à l'auteur. Avis de
+   non-remise reçu plus tard : rapproché de l'envoi par ses en-têtes, destinataire marqué en erreur dans le message,
+   **alerte à traiter** (cause lisible : adresse inconnue, boîte pleine, refus) à l'auteur d'un envoi manuel, aux
+   administrateurs ou au service de l'usage pour un envoi automatique ; l'alerte **propose** de marquer l'adresse en
+   erreur dans la coordonnée de l'annuaire, sans le faire d'office (ML18).
 
 ### 6.2 Envois automatiques (sans fenêtre)
 
@@ -233,13 +239,14 @@ des hébergeurs sont à vérifier à la mise en place, ils changent) :
 
 | Limite | Rôle | Exemple de défaut |
 |---|---|---|
-| messages par minute | débit (au-delà, l'hébergeur ralentit ou refuse) | 30 (Microsoft 365) |
+| messages par minute | débit (au-delà, l'hébergeur ralentit ou refuse) | 20 |
 | destinataires par message | au-delà, découpage en plusieurs messages identiques (CCI) ou refus | 100 |
-| destinataires par heure et par jour | quota de l'hébergeur | 10 000 / jour (Microsoft 365), 2 000 / jour (Google Workspace) |
+| destinataires par heure et par jour | quota de l'hébergeur | Gmail grand public : 500 / jour ; Exchange OVH : selon l'offre (à relever) |
 | messages par heure vers un même domaine | éviter le blocage par le serveur du destinataire | 60 |
 | nouveaux destinataires par jour | adresses jamais écrites par ce compte : premier signal de spam | 200 |
 
-Les compteurs se lisent dans le journal (`mail_journal`, fenêtres glissantes). Une limite atteinte **n'échoue pas** :
+Les compteurs se lisent dans le journal (`mail_journal`, fenêtres glissantes) et comptent les **destinataires de
+chaque courriel** (A, CC et CCI), pas seulement les messages (ML22). Une limite atteinte **n'échoue pas** :
 le message attend la fenêtre suivante (`mme_prochain_essai`), son auteur est prévenu (« en attente d'envoi »).
 
 **Avertissements** (seuils dans `mail_parametre`) :
@@ -266,12 +273,13 @@ origine, résultat), compteurs de chaque compte face à ses limites, lots en cou
 
 ### 7.1 Relève
 
-- Tâche de fond `ReleveMail` par base et par compte de réception (intervalle par défaut 2 min, ML6) : connexion IMAP
+- Tâche de fond `ReleveMail` par base et par compte de réception (intervalle du compte, **1 h par défaut** : la
+  réception sert de veille ; bouton **« Relever maintenant »** par adresse, ML6) : connexion IMAP
   (MailKit), pour chaque dossier relevé : contrôle de `UIDVALIDITY`, lecture des UID supérieurs au dernier relevé,
   téléchargement du message complet (taille maximale paramétrée ; au-delà, en-têtes seuls et alerte).
 - Rien n'est modifié sur le serveur par défaut (ni lu, ni déplacé) : la boîte reste utilisable par les personnes qui la
   lisent dans leur messagerie. Le suivi de ce qui a été relevé est fait par les UID (`mail_dossier`), pas par le
-  drapeau « lu ».
+  drapeau « lu ». **Option choisie à la configuration du compte** : marquer comme lus les courriels relevés (ML7).
 - Chaque message : `mail_message` (`R`), .eml remis au cœur qui le dépose dans la GED sous l'élément boîte
   (`type_element = 'mail_compte'`, catégorie `mail`, confidentialité INTERNE, accès aux services du compte), puis
   reconnaissance.
@@ -289,13 +297,15 @@ sans la quitter :
 - **Drapeau « à suivre »** (`\Flagged`) sur un dossier relevé : option du compte ; le drapeau est visible en IMAP chez
   la plupart des hébergeurs, mais il sert aussi aux personnes pour leur propre suivi (bruit).
 - Les **catégories Outlook** (couleurs) ne sont pas exposées par Exchange en IMAP : non retenues.
-- Après rattachement dans l'application, option du compte : déplacer le courriel vers un dossier `TRAITES`
-  (`LogiBTP/Traités`) ou retirer le drapeau, pour que la messagerie reflète l'état (ML8).
+- Après rattachement dans l'application, option choisie à la configuration du compte : rien (défaut), déplacer le
+  courriel vers un dossier `TRAITES` (`LogiBTP/Traités`) ou retirer le drapeau, pour que la messagerie reflète l'état ;
+  jamais de suppression (ML8).
 
 ### 7.3 Reconnaissance automatique
 
 Fonction pure, sans accès à la base, répliquée entre `modules/mail/js/src/reconnaissance.js` et
-`ReconnaissanceMail.cs` (jeu `modules/mail/tests/cas/01_reconnaissance.json`) ; les **candidats** (éléments dont le
+`ReconnaissanceMail.cs` (jeu `modules/mail/tests/cas/01_reconnaissance.json`) ; la version JS sert seulement à essayer
+les règles dans l'écran de paramétrage, la reconnaissance réelle se fait sur le serveur à la relève ; les **candidats** (éléments dont le
 numéro, la référence externe ou l'adresse correspondent) sont fournis par la spécialisation du cœur.
 
 Indices, du plus sûr au moins sûr :
@@ -317,7 +327,8 @@ Indices, du plus sûr au moins sûr :
 - entre les seuils ou plusieurs candidats : **proposé** (`PROPOSE`) : la liste « À rapprocher » montre le ou les
   candidats, validation en un clic ;
 - en dessous : `A_RAPPROCHER` sans proposition ;
-- courriel automatique (`mme_auto`) : jamais d'alerte ; avis de non-remise rapproché de l'envoi d'origine.
+- courriel automatique (`mme_auto`) : jamais d'alerte de rapprochement ; un **avis de non-remise** est rapproché de
+  l'envoi d'origine et crée une **alerte à traiter** pour l'auteur ou les administrateurs (§ 6.1, ML18).
 
 ### 7.4 Conséquences d'un rattachement (spécialisation du cœur, `ApresRapprochementAsync`)
 
@@ -356,67 +367,77 @@ ignorer (avec motif), transférer à un service. Raccourcis déclarés dans un g
   messagerie) ;
 - complément envisageable : complément Outlook « Envoyer vers LogiBTP » (glisser sans quitter Outlook).
 
-## 9. Questions et décisions proposées
+## 9. Questions et décisions
 
-| # | Question | Proposition | Décision |
-|---|---|---|---|
-| ML1 | Module facultatif ? | Oui (`module_societe`, code `mail`) ; sans lui, tout fonctionne comme aujourd'hui (pièces « à envoyer », courriels glissés, statut ENVOYE à la main). | ◐ À valider |
-| ML2 | Bibliothèque SMTP / IMAP côté serveur | **MailKit / MimeKit** (MIT, référence en .NET : SMTP, IMAP, IDLE, OAuth2, DSN, MIME) ; `System.Net.Mail` n'a ni IMAP ni OAuth2. À ajouter à `DEPENDANCES.md`. | ◐ À valider |
-| ML3 | Que chiffrer ? | Le bloc de connexion (hôtes, ports, sécurité, identifiant, mot de passe) **et l'identité du compte (adresse, nom affiché)** en valeurs `chiffre:v1:` du `Chiffrement` du socle ; jetons OAuth chiffrés par le module OAuth. En clair : code, usages, état, limites ; l'application montre l'**alias** (`mail_alias`), les comparaisons d'adresses passent par une empreinte HMAC. Jamais renvoyé au navigateur : l'écran affiche « configuré » et réécrit le bloc entier (comme `POST /{id}/secret` des fiches), l'adresse s'affiche à la demande pour un administrateur (journalisé). La perte de la clé de l'installation rend les comptes à ressaisir : module d'installation (rotation). Limite : les courriels archivés (.eml de la GED) contiennent les adresses en clair, comme tout courriel. | ✔ Demandé (alias et chiffrement de l'adresse) ; détail ◐ |
-| ML4 | Authentification aux serveurs | Au choix par compte : **mot de passe** (comptes non encore migrés ; SSL/TLS ou STARTTLS obligatoires) ou **OAuth 2.0** par le module séparé [OAuth](ANALYSE-MODULE-OAUTH.md) (Microsoft 365 en client credentials au lot 1 ; Google, flux délégué au lot 2 du module OAuth) ; bascule « Passer en OAuth 2.0 » sans recréer le compte. Rappels avant la fin de validité du secret ou du jeton aux personnes autorisées à reconnecter : tenus par le module OAuth. | ✔ Demandé ; hébergeurs des premiers clients à connaître |
-| ML5 | Copie des envois dans « Envoyés » du compte | Oui si IMAP est configuré sur le compte (option), pour que la messagerie montre ce que l'application a envoyé. | ◐ À valider |
-| ML6 | Fréquence de relève | Interrogation toutes les 2 min (paramètre) au lot 2 ; IDLE (temps réel) plus tard si le besoin apparaît. | ◐ À valider |
-| ML7 | Marquer les courriels relevés sur le serveur ? | Non : suivi par UID ; le drapeau « lu » appartient aux personnes. | ◐ À valider |
-| ML8 | Que faire sur le serveur après un rattachement ? | Option du compte : rien (défaut), déplacer vers `TRAITES` ou retirer le drapeau à suivre. Jamais de suppression. | ◐ À valider |
-| ML9 | Conserver tous les courriels reçus dans la GED ? | Oui dès la relève (aperçu, plein texte, pièces et dédoublonnage existants) sous l'élément boîte, confidentialité INTERNE et accès des services du compte ; non rapprochés et ignorés purgés après N jours (paramètre, 90 par défaut) par la rétention de la GED ; rapprochés : conservation de l'élément. | ◐ À valider |
-| ML10 | Marqueur ajouté aux envois pour reconnaître les réponses | Pas de jeton visible : `Message-ID` maîtrisé + numéro du document dans l'objet par le modèle (« Devis DV2026-00012 – … ») suffisent ; adresse « plus » (`commercial+DV2026-00012@`) non retenue (support inégal des hébergeurs). | ◐ À valider |
-| ML11 | Changement de statut automatique (devis accepté, commande confirmée) ? | Jamais : proposé dans l'alerte, appliqué par une personne. | ◐ À valider |
-| ML12 | Où va l'alerte « à traiter » ? | Tâche du CRM à prendre par le service si le CRM est actif, sinon notification aux membres du service ; service = règle, sinon service du document, sinon rédacteur / acheteur. | ◐ À valider |
-| ML13 | Marquage « à traiter » depuis la messagerie | Dossier convenu (recommandé, universel) ; drapeau à suivre en option par compte ; catégories Outlook non exposées en IMAP. | ◐ À valider |
-| ML14 | Envoi depuis `noreply@` | Autorisé seulement pour les envois automatiques ; `Reply-To` obligatoire vers une adresse relevée pour tout envoi qui attend une réponse (document, relance, visa). | ◐ À valider |
-| ML15 | Taille des pièces jointes | Limite par compte (20 Mo par défaut, total encodé) ; au-delà, refus avec message ; lien de téléchargement sécurisé : plus tard. | ◐ À valider |
-| ML16 | Affichage des courriels reçus | HTML nettoyé (HtmlSanitizer, déjà utilisé par le CRM), images distantes bloquées par défaut (bouton « afficher »), pièces exécutables jamais ouvertes. | ◐ À valider |
-| ML17 | Droits | Paramétrage des comptes : administrateur. Envoyer depuis un élément : droit de consulter l'élément (règles d'accès du type). Boîte d'un compte et « À rapprocher » : membres des services du compte et administrateurs. | ◐ À valider |
-| ML18 | Avis de non-remise et réponses automatiques | Analyse des DSN (MimeKit) : envoi d'origine retrouvé, destinataire marqué, auteur notifié ; réponses d'absence : rattachées au fil, sans alerte. | ◐ À valider |
-| ML19 | Règles de reconnaissance : où ? | Algorithme et score répliqués JS ↔ C# (jeu partagé, essai des règles à l'écran sans serveur) ; règles paramétrables en base ; candidats et motifs de numérotation fournis par le cœur. | ◐ À valider |
-| ML20 | Environnement de développement | Serveur de messagerie de test dans le `docker-compose` (Mailpit pour l'envoi, GreenMail pour SMTP + IMAP) ; fournisseur mémoire `FournisseurMailMemoire` pour les tests et la démo hors ligne (même règles que le service). | ◐ À valider |
-| ML21 | Comptes des utilisateurs | Second temps (§ 8) ; le modèle de données les prévoit dès le lot 1. | ✔ Demandé |
-| ML22 | Journal des envois | Table `mail_journal` (une ligne par tentative, résultat SMTP, origine, alias) : compteurs des limites, avertissements, preuve d'envoi ; conservation 13 mois (paramètre). | ✔ Demandé ; durée ◐ |
-| ML23 | File d'attente | Tout envoi passe par la file, priorités HAUTE / NORMALE / BASSE, réserve de 20 % du quota pour les deux premières, lots lissés ; l'utilisateur est prévenu que son courriel est en attente (position, départ estimé), pastille sur l'élément, notification au départ et en cas d'erreur, annulation possible. | ✔ Demandé ; réserve ◐ |
-| ML24 | Limitations d'envoi | Par compte : messages par minute, destinataires par message, par heure et par jour, messages par domaine destinataire, nouveaux destinataires par jour ; défauts par hébergeur, modifiables ; une limite atteinte met en attente, n'échoue jamais. | ✔ Demandé ; valeurs ◐ |
-| ML25 | Avertissements d'envoi massif | Confirmation avant un envoi groupé de plus de 50 destinataires (durée et fin estimées) ; alerte à 80 % du quota journalier ; suspension des envois groupés du compte sur signaux de spam (non-remises > 5 % sur une heure, refus 4xx / 5.7.x) ; alerte sur un volume inhabituel par utilisateur. | ✔ Demandé ; seuils ◐ |
+Décisions du 23/10/2026.
 
-## 10. Découpage en lots (proposition)
+| # | Question | Décision |
+|---|---|---|
+| ML1 | Module facultatif ? | ✔ **Toujours présent** (pas dans `module_societe`), mais aucun compte n'est obligatoire au lancement. Sans compte d'envoi pour un usage, les fonctions qui en dépendent (double authentification, mot de passe oublié, notifications par courriel, boutons « Envoyer ») sont masquées ou refusées avec un message (`MAIL_NON_CONFIGURE`), et les administrateurs voient un avertissement « aucun compte d'envoi configuré » (accueil et paramétrage). Les pièces « à envoyer », les courriels glissés et le statut ENVOYE posé à la main restent possibles. |
+| ML2 | Bibliothèque SMTP / IMAP côté serveur | ✔ **MailKit / MimeKit** (MIT : SMTP, IMAP, IDLE, OAuth2, DSN, MIME), à ajouter à `DEPENDANCES.md`. |
+| ML3 | Que chiffrer ? | ✔ Bloc de connexion (hôtes, ports, sécurité, identifiant, mot de passe) et identité du compte (adresse, nom affiché) en valeurs `chiffre:v1:` ; jetons par le module OAuth. En clair : code, usages, état, limites ; l'application montre l'alias (`mail_alias`) ; comparaisons par empreinte HMAC ; jamais renvoyé au navigateur ; adresse affichée à la demande pour un administrateur (journalisé). Le chiffrement de l'adresse rend plus difficile la récupération de la configuration par un tiers ; les courriels archivés dans la GED sont de simples informations, sans lien direct avec elle. |
+| ML4 | Authentification et hébergeurs | ✔ Au choix par compte : **mot de passe** ou **OAuth 2.0** (module OAuth). Premiers hébergeurs : **Gmail grand public** (`@gmail.com`) en OAuth 2.0 (flux par code + PKCE, § 11), **Exchange hébergé OVH** par **mot de passe**. Bascule « Passer en OAuth 2.0 » sans recréer le compte ; rappels avant échéance tenus par le module OAuth. |
+| ML5 | Copie des envois dans « Envoyés » | ✔ Oui si IMAP est configuré sur le compte (option). |
+| ML6 | Fréquence de relève | ✔ Paramètre par compte, **1 h par défaut** (la réception sert de veille), et bouton **« Relever maintenant »** par adresse (paramétrage et boîte de l'application). IDLE : non prévu. |
+| ML7 | Marquer les courriels relevés sur le serveur ? | ✔ **Option choisie à la configuration du compte** : ne rien marquer (défaut, suivi par UID) ou marquer comme lus. |
+| ML8 | Que faire sur le serveur après un rattachement ? | ✔ **Option choisie à la configuration du compte** : rien (défaut), déplacer vers `TRAITES` ou retirer le drapeau à suivre. **Jamais de suppression.** |
+| ML9 | Conserver tous les courriels reçus dans la GED ? | ✔ Oui dès la relève, sous l'élément boîte (INTERNE, accès des services du compte) ; non rapprochés et ignorés purgés après 90 jours (paramètre) ; rapprochés : conservation de l'élément. |
+| ML10 | Marqueur pour reconnaître les réponses | ✔ `Message-ID` maîtrisé + numéro du document dans l'objet par le modèle ; pas d'adresse « plus ». |
+| ML11 | Changement de statut automatique ? | ✔ Jamais : proposé dans l'alerte, appliqué par une personne. |
+| ML12 | Où va l'alerte « à traiter » ? | ✔ Tâche du CRM au service si le CRM est actif, sinon notification aux membres du service ; service = règle, sinon document, sinon rédacteur / acheteur. |
+| ML13 | Marquage « à traiter » depuis la messagerie | ✔ Dossier convenu (recommandé) ; drapeau à suivre en option par compte. |
+| ML14 | Envoi depuis `noreply@` | ✔ Envois automatiques seulement ; `Reply-To` vers une adresse relevée pour tout envoi qui attend une réponse. |
+| ML15 | Taille des pièces jointes | ✔ Limite par compte (20 Mo par défaut), refus au-delà. Les pièces lourdes passeront par un futur **module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) qui enverra un lien (TODO). |
+| ML16 | Affichage des courriels reçus | ✔ HTML nettoyé (HtmlSanitizer), images distantes bloquées par défaut, pièces exécutables jamais ouvertes. |
+| ML17 | Droits | ✔ Pour commencer : paramétrage administrateur ; envoyer = droit de consulter l'élément ; boîte et « À rapprocher » = services du compte et administrateurs. À reprendre par le futur **module de droits** (TODO). |
+| ML18 | Avis de non-remise et réponses automatiques | ✔ Avis de non-remise : **alerte à traiter** (envoi d'origine retrouvé, destinataire en erreur, cause lisible : adresse inconnue, boîte pleine, refus) à l'**auteur** d'un envoi manuel, aux **administrateurs** (ou au service de l'usage) pour un envoi automatique ; l'alerte **propose** de marquer l'adresse en erreur dans la coordonnée de l'annuaire (jamais d'office). Réponses d'absence : rattachées au fil, sans alerte. |
+| ML19 | Règles de reconnaissance | ✔ Répliquées JS ↔ C# (jeu partagé) ; la version JS ne sert qu'à **essayer les règles** dans l'écran de paramétrage : envoi, relève et reconnaissance réelle passent toujours par le serveur. Règles en base, candidats fournis par le cœur. |
+| ML20 | Environnement de développement et tests | ✔ **Pas de serveur de messagerie Docker** : essais avec de vraies boîtes de test (une Gmail, une Exchange OVH) dont les paramètres sont dans `.env` (modèle `.env.exemple` : `LOGIBTP_TEST_MAIL_*`, jamais versionnés) ; tests d'intégration ignorés si ces variables sont vides. Tests automatiques (`npm test`, `dotnet test`) avec le fournisseur mémoire `FournisseurMailMemoire`. |
+| ML21 | Comptes des utilisateurs | ✔ Second temps (§ 8) ; prévus par le modèle de données dès le lot 1. |
+| ML22 | Journal des envois | ✔ `mail_journal`, une ligne par tentative, 13 mois ; le **nombre de destinataires de chaque courriel** est la source des compteurs des limites. |
+| ML23 | File d'attente | ✔ Priorités HAUTE / NORMALE / BASSE, réserve de 20 % du quota, lots lissés, utilisateur prévenu d'un envoi en attente, annulation possible. |
+| ML24 | Limitations d'envoi | ✔ Par compte, défauts par hébergeur, modifiables ; une limite atteinte met en attente, n'échoue jamais. |
+| ML25 | Avertissements d'envoi massif | ✔ Confirmation au-delà de 50 destinataires, alerte à 80 % du quota, suspension des envois groupés sur signaux de spam, alerte sur un volume inhabituel. |
+
+## 10. Découpage en lots
 
 | Lot | Contenu | Débloque |
 |---|---|---|
-| 0 | **Module OAuth**, lot 1 ([analyse](ANALYSE-MODULE-OAUTH.md)) : contrat `IFournisseurJeton` du socle, connexions Microsoft 365 en client credentials, jetons chiffrés, renouvellement, rappels d'échéance, `/parametres/connexions` | comptes Microsoft 365 du lot 1 |
-| 1 | Module `modules/mail` (JS règles + `LogiBTP.Mail(.Web)` + `007`), comptes système (identité et connexion chiffrées, alias, mot de passe ou OAuth 2.0), test de connexion, usages, modèles, **envoi** : fenêtre de rédaction depuis la page document et l'aperçu de l'édition, pièces « à envoyer », **file d'attente à priorités, limitations, journal des envois, avertissements d'envoi massif, information « en attente d'envoi »**, archivage .eml en GED, statut ENVOYE, version ENVOI, note du CRM, copie dans « Envoyés » ; boîte de l'application : envoyés, en attente, erreurs, suivi des envois | TODO « envoi des pièces à envoyer », Édition, cycle ENVOYE |
+| 0 | **Module OAuth**, lot 1 ([analyse](ANALYSE-MODULE-OAUTH.md)) : contrat `IFournisseurJeton` du socle, connexions **Google** par code + PKCE (Gmail grand public), jetons chiffrés, renouvellement, rappels d'échéance, `/parametres/connexions` | comptes Gmail du lot 1 |
+| 1 | Module `modules/mail` (JS règles + `LogiBTP.Mail(.Web)` + `007`), comptes système (identité et connexion chiffrées, alias, mot de passe pour Exchange OVH ou OAuth 2.0 pour Gmail), test de connexion, usages, modèles, fonctions masquées sans compte (ML1), **envoi** : fenêtre de rédaction depuis la page document et l'aperçu de l'édition, pièces « à envoyer », file d'attente à priorités, limitations, journal des envois, avertissements d'envoi massif, information « en attente d'envoi », archivage .eml en GED, statut ENVOYE, version ENVOI, note du CRM, copie dans « Envoyés » ; boîte de l'application : envoyés, en attente, erreurs, suivi des envois | TODO « envoi des pièces à envoyer », Édition, cycle ENVOYE |
 | 2 | **Envois automatiques** : canal courriel des notifications, mot de passe oublié (Authentification A7), confirmation du SAV (Exécution E22), relevé hebdomadaire (Pointage M21), bordereaux de diffusion et retours de visas (CRM C7) | modules en attente |
-| 3 | **Réception** : relève IMAP, dossiers et marquage « à traiter », GED de la boîte, liste « À rapprocher » avec rattachement manuel, avis de non-remise, purge des non rapprochés | centralisation des courriels reçus |
-| 4 | **Reconnaissance automatique** : fil, numéros, références, expéditeur, texte des pièces ; natures et règles paramétrables, seuils, alertes au service, propositions de statut | ARC, réponses aux devis, factures fournisseurs |
+| 3 | **Réception** : relève IMAP (1 h, « Relever maintenant »), options du compte (lus, déplacement), dossiers et marquage « à traiter », GED de la boîte, liste « À rapprocher » avec rattachement manuel, avis de non-remise et leurs alertes, purge des non rapprochés | centralisation des courriels reçus |
+| 4 | **Reconnaissance automatique** : fil, numéros, références, expéditeur, texte des pièces ; natures et règles paramétrables (essai à l'écran), seuils, alertes au service, propositions de statut | ARC, réponses aux devis, factures fournisseurs |
 | 5 | Relances par courriel (CRM C27, avec le module Règlements) | relances |
-| Second temps | Comptes des utilisateurs, OAuth délégué, IDLE, complément Outlook | |
+| Second temps | Comptes des utilisateurs, OAuth délégué des utilisateurs, complément Outlook ; Microsoft 365 (client credentials) quand un client en aura besoin | |
 
 Chaque lot : règles répliquées avec leur jeu de cas, `npm test`, `dotnet test LogiBTP.slnx`, `CLAUDE.md` du module,
 `MODULES.md` (lignes du tableau des modules, de la spécialisation et des liens transverses), `DEPENDANCES.md`.
 
 ## 11. Risques et points d'attention
 
-- **Délivrabilité** : SPF, DKIM et DMARC du domaine relèvent de l'hébergeur du client ; l'écran du compte affiche un
-  avertissement si l'expéditeur n'est pas du domaine du serveur d'envoi. Envoyer par le serveur du client (pas par un
-  relais LogiBTP) évite d'avoir à gérer la réputation d'envoi.
-- **Retrait de l'authentification par mot de passe** chez Microsoft (et Google) : module OAuth livré avant le lot 1
-  pour ne pas livrer un module inutilisable chez les clients Microsoft 365 ; le mot de passe reste pour les autres
-  (ML4). Un secret client expiré coupe tous les envois du compte : d'où les rappels d'échéance du module OAuth et la
-  file qui garde les messages (`SUSPENDU`) jusqu'à la reconnexion.
+- **Gmail grand public en OAuth 2.0** : l'accès IMAP / SMTP complet (`https://mail.google.com/`) est une portée
+  « restreinte » de Google ; une application « externe » qui la demande doit être **vérifiée par Google** (avec
+  évaluation de sécurité) ; tant qu'elle ne l'est pas, elle reste en **mode test** et ses jetons de rafraîchissement
+  expirent au bout de **7 jours** (reconnexion hebdomadaire, rappels du module OAuth). Solution de secours : mot de
+  passe d'application Google (double authentification du compte Google obligatoire), géré comme un mot de passe.
+  Décision sur la vérification à prendre avant la mise en production.
+- **Exchange OVH par mot de passe** : SSL/TLS ou STARTTLS obligatoires ; passage en OAuth 2.0 si OVH le propose un jour
+  (bascule sans recréer le compte).
+- **Délivrabilité** : SPF, DKIM et DMARC du domaine relèvent de l'hébergeur de la messagerie de la société ; l'écran
+  du compte avertit si l'expéditeur n'est pas du domaine du serveur d'envoi. Les envois partent **du serveur LogiBTP**
+  vers le serveur SMTP de cet hébergeur (pas de relais propre à LogiBTP, donc pas de réputation d'envoi à gérer) ; le
+  navigateur n'a jamais ni le mot de passe ni le jeton (à la reconnexion, il ne transporte qu'un code d'autorisation
+  échangé par le serveur).
+- **Jeton ou secret expiré** : coupe les envois du compte ; rappels d'échéance du module OAuth, messages gardés en
+  file (`SUSPENDU`) jusqu'à la reconnexion.
 - **Blocage ou classement en indésirables** : limitations, lissage et suspension automatique des envois groupés
   (§ 6.3) ; les quotas des hébergeurs évoluent : valeurs par défaut à revoir à chaque mise en place.
 - **Clé de chiffrement** : sans module d'installation, la perte de `LOGIBTP_CLE_CHIFFREMENT` rend tous les comptes
   illisibles (comme les mots de passe des fiches) ; procédure de ressaisie à documenter.
-- **Volume** : boîtes partagées très chargées : relève incrémentale par UID, limite de taille, dossiers choisis ;
-  première relève limitée aux N derniers jours (paramètre) pour ne pas importer des années d'historique.
-- **RGPD** : courriels reçus non rapprochés purgés (ML9) ; contenu des boîtes visible des seuls services autorisés ;
-  courriels privés reçus par erreur sur une boîte système : action « ignorer » qui purge le courriel de la GED.
+- **Volume** : relève incrémentale par UID, limite de taille, dossiers choisis ; première relève limitée aux N derniers
+  jours (paramètre).
+- **RGPD** : courriels non rapprochés purgés (ML9) ; boîtes visibles des seuls services autorisés ; courriel privé
+  reçu par erreur : « ignorer » le purge de la GED.
 - **Boucles** : jamais de réponse automatique à un courriel `Auto-Submitted` ou à une réponse d'absence ; un envoi de
-  l'application relevé dans sa propre boîte (copie à soi) est reconnu par son `Message-ID` et ignoré.
+  l'application relevé dans sa propre boîte est reconnu par son `Message-ID` et ignoré.

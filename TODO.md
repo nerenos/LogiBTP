@@ -39,15 +39,28 @@
 
 ### Module Mail
 
-- [ ] Relire et valider les analyses [ANALYSE-MODULE-MAIL.md](documentation/conception/ANALYSE-MODULE-MAIL.md)
-  (questions ML1 à ML25 ; hébergeurs des premiers clients) et
-  [ANALYSE-MODULE-OAUTH.md](documentation/conception/ANALYSE-MODULE-OAUTH.md) (OA1 à OA8).
-- [ ] Lot 0 : module OAuth séparé (contrat `IFournisseurJeton` du socle, Microsoft 365 en client credentials, jetons
-  chiffrés, rappels avant échéance aux personnes autorisées à reconnecter).
-- [ ] Lot 1 : comptes système (adresse et connexion chiffrées, alias `mail_alias`, mot de passe ou OAuth 2.0) et
-  envoi (file d'attente, limitations, journal `mail_journal`, avertissements d'envoi massif, pièces « à envoyer »
-  `dge_a_envoyer`, destinataires depuis `v_intervenants`, archivage GED, statut ENVOYE) ; lots suivants : envois
-  automatiques des autres modules, réception IMAP et liste « À rapprocher », reconnaissance automatique et alertes.
+Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/conception/ANALYSE-MODULE-MAIL.md),
+[ANALYSE-MODULE-OAUTH.md](documentation/conception/ANALYSE-MODULE-OAUTH.md).
+
+- [ ] Remplir les boîtes de test `LOGIBTP_TEST_MAIL_*` du `.env` (modèle `.env.exemple` : Gmail, Exchange OVH).
+- [ ] Lot 0 : module OAuth séparé (contrat `IFournisseurJeton` du socle, Google / Gmail grand public par code + PKCE,
+  adresse de retour commune, jetons chiffrés, rappels avant échéance aux personnes autorisées à reconnecter).
+- [ ] Lot 1 : comptes système (adresse et connexion chiffrées, alias `mail_alias`, mot de passe pour Exchange OVH ou
+  OAuth 2.0 pour Gmail, fonctions masquées sans compte) et envoi (file d'attente, limitations comptées en
+  destinataires, journal `mail_journal`, avertissements d'envoi massif, pièces « à envoyer » `dge_a_envoyer`,
+  destinataires depuis `v_intervenants`, archivage GED, statut ENVOYE) ; lots suivants : envois automatiques des
+  autres modules, réception IMAP (1 h, « Relever maintenant ») et liste « À rapprocher », reconnaissance automatique
+  et alertes.
+- [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
+  `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
+  d'application.
+
+### Droits et partage
+
+- [ ] **Module de droits** : droits fins par profil, service et élément ; à reprendre par le Mail (comptes, boîtes,
+  « À rapprocher ») et l'OAuth (reconnexion des connexions).
+- [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
+  pièces jointes trop lourdes pour un courriel.
 
 ### Chaîne des achats et marchés
 
