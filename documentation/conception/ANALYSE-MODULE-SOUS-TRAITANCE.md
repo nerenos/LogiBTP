@@ -6,8 +6,9 @@
 > [Marchés et règlements](CONCEPTION-MARCHES-REGLEMENTS.md) (Q9 : paiement direct, sans décision) ·
 > [Achats et marchés](CONCEPTION-ACHATS-MARCHES.md) · [Mail](ANALYSE-MODULE-MAIL.md) · [Édition](CONCEPTION-EDITION.md).
 >
-> **État** : questions ST1 à ST20 tranchées le 23/10/2026 (§ 8.1), reportées dans les paragraphes ; questions ST21 à
-> ST32 de la relecture à trancher (§ 8.2).
+> **État** : toutes les questions sont tranchées (ST1 à ST20 : § 8.1 ; relecture ST21 à ST32 : § 8.2, 23/10/2026),
+> décisions reportées dans les paragraphes. Le format et la plateforme de la facture électronique relèvent d'un module
+> à part (ST22).
 
 ## 1. Note d'origine (résumé)
 
@@ -144,7 +145,7 @@ Deux portées, une même mécanique :
 | Mode | Usage | Saisie | Contrôles |
 |---|---|---|---|
 | **À l'avancement** | Le sous-traitant n'a pas de logiciel : on établit sa situation | Comme une situation fournisseur : avancement par ligne de la commande (%, quantité, montant cumulés), précédent repris, postes de pied du marché (retenue, prorata, pénalités) | Moteurs existants (jeux 10 à 12) ; édition « situation de sous-traitance » à faire signer ou facturer par le sous-traitant (ST7) |
-| **Facture reçue** | Le sous-traitant envoie sa facture | Entête de la facture : numéro et date du sous-traitant, montant HT de la période (ou cumulé), TVA ou autoliquidation, TTC ; PDF rangé dans la GED (glissé ou reçu par courriel) ; ventilation sur les lignes facultative (au prorata du reste par défaut) | Montant ≤ reste du marché (avertissement, `mar_depassement_autorise`), cumul ≤ montant agréé en paiement direct, écart avec l'avancement constaté signalé |
+| **Facture reçue** | Le sous-traitant envoie sa facture | Entête de la facture : numéro et date du sous-traitant, montant HT de la période (ou cumulé), TVA ou autoliquidation, TTC, **saisis librement** (ST22 : aussi pour une plateforme qui ne fait qu'afficher la facture, sans export) ; PDF rangé dans la GED (glissé ou reçu par courriel) ; ventilation sur les lignes facultative (au prorata du reste par défaut) ; import structuré (Factur-X, UBL) et connexion à la plateforme : futur module Facturation électronique | Montant ≤ reste du marché (avertissement, `mar_depassement_autorise`), cumul ≤ montant agréé en paiement direct, écart avec l'avancement constaté signalé |
 
 Dans les deux cas : un numéro de situation par marché (`ent_rang_avancement`), la facture devient « bon à payer » à
 la validation (pièces conformes), le module Règlements suit le paiement (par nous) ou le paiement direct (par le maître
@@ -244,18 +245,18 @@ acceptation, transmission, paiement), comparatif des offres ; le cœur fournit t
 
 | N° | Question | Proposition | Décision |
 |---|---|---|---|
-| ST21 | ST11 (avoir = `A_AVOIR`) reste-t-elle juste avec la famille T (ST1) ? | Non : un `A_AVOIR` sortirait de la liste et du marché de sous-traitance ; type **`T_AVOIR`** (avoir d'avancement de la facture de sous-traitance, `tyd_avoir_tyd_id`) | |
-| ST22 | Facturation électronique : depuis le 1er septembre 2026, toute entreprise doit **recevoir** ses factures par une plateforme agréée (Factur-X, UBL, CII) ; les sous-traitants y viennent à leur tour | La facture reçue s'importe d'abord depuis le **Factur-X** (XML embarqué dans le PDF : numéro, date, montants, TVA, mention d'autoliquidation) avant toute lecture du PDF ; branchement à une plateforme : sujet commun aux achats (module Facturation électronique à analyser) ; l'autofacturation (ST7) passe aussi par la plateforme | |
-| ST23 | Réception des travaux du sous-traitant, réserves, libération de la retenue de garantie et mainlevée de la caution | Date de réception sur le marché (`mar_date_reception`, déjà présente), réserves en notes du CRM (levée datée), échéance de libération à réception + 1 an sauf réserves (module Règlements, comme Q21 des ventes) | |
-| ST24 | Fin du marché : décompte final du sous-traitant | Dernière facture marquée « définitive » (solde), marché soldé : plus d'avancement ni d'avenant sans le rouvrir (droit, motif) | |
-| ST25 | Révision de prix (indices BT) | Poste de pied « révision » saisi sur la facture ; calcul par indices plus tard, commun avec les ventes (Q22) | |
-| ST26 | Pénalités, compte prorata, refacturations au sous-traitant (benne, nettoyage, consommations) | Postes de pied du marché déduits de chaque situation (pénalités, prorata, refacturations en montant ou en %) ; une refacturation importante se fait par une facture de vente au sous-traitant | |
-| ST27 | Qui valide une facture de sous-traitance (bon à payer) ? | Deux temps du cycle existant : **approbation** par le conducteur (avancement constaté, ST10), **validation** (bon à payer) par la comptabilité ou un administrateur ; droits fins au module de droits | |
-| ST28 | Avance et acomptes au sous-traitant (avance des marchés publics, acompte à la commande) | Acomptes du marché (`marche_acompte`) repris tels quels, déduits des situations | |
-| ST29 | Délais contractuels et ordres de service | Dates de début et de fin contractuelles sur le marché (jalons du planning, comme les fins de chantier) ; ordre de service = édition du marché rangée en GED | |
-| ST30 | Budget et rentabilité | Commande de sous-traitance validée = **engagé** ; factures = **réalisé** ; comparés au budget planifié de l'OE (Exécution E16) dans la rentabilité continue (possibilité 1 de l'Exécution) | |
-| ST31 | Activation du module | `module_societe` « sous_traitance » ; désactivé : famille T, menus, onglets et marchés de sous-traitance masqués (règle E24) | |
-| ST32 | Règles répliquées JS ↔ C# | Jeux du module : `01_conformite` (états des pièces, marché conforme), `02_ventilation` (facture reçue ventilée au prorata du reste, ST8), `03_plafonds` (reste du marché, montant agréé, cumul du paiement direct) | |
+| ST21 | ST11 (avoir = `A_AVOIR`) reste-t-elle juste avec la famille T (ST1) ? | Non : un `A_AVOIR` sortirait de la liste et du marché de sous-traitance ; type **`T_AVOIR`** (avoir d'avancement de la facture de sous-traitance, `tyd_avoir_tyd_id`) | Ok |
+| ST22 | Facturation électronique : depuis le 1er septembre 2026, toute entreprise doit **recevoir** ses factures par une plateforme agréée (Factur-X, UBL, CII) ; les sous-traitants y viennent à leur tour | La facture reçue s'importe d'abord depuis le **Factur-X** (XML embarqué dans le PDF : numéro, date, montants, TVA, mention d'autoliquidation) avant toute lecture du PDF ; branchement à une plateforme : sujet commun aux achats (module Facturation électronique à analyser) ; l'autofacturation (ST7) passe aussi par la plateforme | On garde une saisie libre pour les entreprises qui auront une PA qui ne fait qu'afficher la facture sans export. On attend on va créer un module spécifique pour la Facturation électronique avec la gestion des format et connexion au PA. |
+| ST23 | Réception des travaux du sous-traitant, réserves, libération de la retenue de garantie et mainlevée de la caution | Date de réception sur le marché (`mar_date_reception`, déjà présente), réserves en notes du CRM (levée datée), échéance de libération à réception + 1 an sauf réserves (module Règlements, comme Q21 des ventes) | Ok |
+| ST24 | Fin du marché : décompte final du sous-traitant | Dernière facture marquée « définitive » (solde), marché soldé : plus d'avancement ni d'avenant sans le rouvrir (droit, motif) | Ok |
+| ST25 | Révision de prix (indices BT) | Poste de pied « révision » saisi sur la facture ; calcul par indices plus tard, commun avec les ventes (Q22) | Ok |
+| ST26 | Pénalités, compte prorata, refacturations au sous-traitant (benne, nettoyage, consommations) | Postes de pied du marché déduits de chaque situation (pénalités, prorata, refacturations en montant ou en %) ; une refacturation importante se fait par une facture de vente au sous-traitant | Ok |
+| ST27 | Qui valide une facture de sous-traitance (bon à payer) ? | Deux temps du cycle existant : **approbation** par le conducteur (avancement constaté, ST10), **validation** (bon à payer) par la comptabilité ou un administrateur ; droits fins au module de droits | Ok |
+| ST28 | Avance et acomptes au sous-traitant (avance des marchés publics, acompte à la commande) | Acomptes du marché (`marche_acompte`) repris tels quels, déduits des situations | Ok |
+| ST29 | Délais contractuels et ordres de service | Dates de début et de fin contractuelles sur le marché (jalons du planning, comme les fins de chantier) ; ordre de service = édition du marché rangée en GED | Ok |
+| ST30 | Budget et rentabilité | Commande de sous-traitance validée = **engagé** ; factures = **réalisé** ; comparés au budget planifié de l'OE (Exécution E16) dans la rentabilité continue (possibilité 1 de l'Exécution) | Ok |
+| ST31 | Activation du module | `module_societe` « sous_traitance » ; désactivé : famille T, menus, onglets et marchés de sous-traitance masqués (règle E24) | Ok |
+| ST32 | Règles répliquées JS ↔ C# | Jeux du module : `01_conformite` (états des pièces, marché conforme), `02_ventilation` (facture reçue ventilée au prorata du reste, ST8), `03_plafonds` (reste du marché, montant agréé, cumul du paiement direct) | Ok |
 
 ## 9. Faisabilité
 
@@ -294,6 +295,6 @@ nombreux champs : à saisir dans le marché ou dans l'édition).
 | 0 | Famille T dans le module Document (fonction « famille d'achat »), activation du module, lot de consultation (aussi pour les demandes de prix d'achat) | — |
 | 1 | Types `T_*`, marché à deux sens (fiche, liste, avenants, axes de facturation, public / privé), commande dans un marché, appel d'offres, transformations depuis l'OST et la commande client, sous-traitants de démo repris dans l'annuaire | Lot 0 |
 | 2 | Pièces exigées (paramétrage, validité GED, liste à fournir, conformité répliquée, contrôles, rappels, demandes par courriel) | Lot 1 ; Notifications, Mail |
-| 3 | Factures : à l'avancement, facture reçue (Factur-X, ventilation), avoir `T_AVOIR`, approbation et bon à payer, postes du marché, édition de la situation | Lot 1 ; ST21 à ST27 |
+| 3 | Factures : à l'avancement, facture reçue (saisie libre, ventilation), avoir `T_AVOIR`, approbation et bon à payer, postes du marché, édition de la situation | Lot 1 ; ST21 à ST27 |
 | 4 | Paiement direct (marchés publics : lien, déduction, suivi des 15 jours, paiements du maître d'ouvrage) ; marchés privés : délégation, cautions ; réception et libération des retenues | Lot 3 ; Règlements ; Q9 ; point Comptabilité |
 | 5 | Éditions du marché (DC4, acte spécial, contrat, ordre de service), comparatif des offres, assistant « Sous-traiter », engagé dans la rentabilité | Lots 1–2 ; Édition ; Exécution |

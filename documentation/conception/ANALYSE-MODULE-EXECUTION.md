@@ -11,8 +11,8 @@
 > chantier (modifiable), états par service calculés (`etats.js` ↔ `ReglesEtats.cs`), états imposés avec écart signalé ;
 > le rapport imprimable de la synthèse reste à faire.
 > Troisième lecture (23/10/2026, § 13) : états des ordres par type, tableau de l'entête, planning théorique par états,
-> types d'ordres manquants et activation par type : questions E25 à E40 tranchées le 23/10/2026 ; points de la
-> relecture E41 à E50 à trancher (§ 13.6).
+> types d'ordres manquants et activation par type : questions E25 à E50 tranchées le 23/10/2026 ; E51 à E53
+> (validation depuis l'atelier, E50) à trancher (§ 13.6).
 
 ## 1. Objet
 
@@ -284,8 +284,8 @@ Cœur (`db/2xx`) : types de la famille E (dont DAP ; `S_DEMANDE` renommé « Dem
 
 ## 13. Troisième lecture (23/10/2026) : états des ordres, tableau de l'entête, planning théorique
 
-> Note « Module Exécution » du 23/10/2026. Questions E25 à E40 tranchées le 23/10/2026 ; E41 à E50 (relecture) à
-> trancher (§ 13.6).
+> Note « Module Exécution » du 23/10/2026. Questions E25 à E50 tranchées le 23/10/2026 ; E51 à E53 à trancher
+> (§ 13.6).
 
 ### 13.1 Note d'origine (résumé)
 
@@ -395,16 +395,26 @@ Relecture (23/10/2026) : points manquants.
 
 | N° | Question | Proposition | Décision |
 |---|---|---|---|
-| E41 | États d'un type ou d'un modèle modifiés alors que des ordres existent | Les ordres gardent leur copie ; action « Appliquer aux ordres en cours » qui ne touche que les états non validés (ajout, retrait, ordre, durée) | |
-| E42 | Ordre issu d'une transformation ou d'une répartition (`.1`, `.2`) : quels états ? | Ceux de **son** type (ou de son étape de parcours), jamais ceux de la source ; les dates validées de la source restent sur la source | |
-| E43 | Blocage (`ent_exe_etat` BLOQUE, motif) et étapes | Le blocage suspend l'étape en cours sans la valider ; les tâches du planning sont signalées bloquées ; au déblocage, les dates prévisionnelles non imposées sont recalculées depuis la date du déblocage | |
-| E44 | Synthèse et liste des ordres | Colonnes « étape en cours », « prochaine date obligatoire », « en retard » dans `v_liste_ordres` et la vue détaillée du chantier ; la règle des états par service (`etatsServices`) reste inchangée | |
-| E45 | Alertes | Source du module Notifications : étape en retard (date prévisionnelle dépassée sans validation), contrôle N+1 en attente depuis plus de N jours | |
-| E46 | Qui valide une étape ? | Les membres du service porteur, la ressource principale de l'étape (si c'est une personne), le responsable de l'ordre, un administrateur ; droits fins au module de droits | |
-| E47 | Impression de l'ordre | Le tableau des états entre dans le dictionnaire de l'édition (collection `etapes`) et dans les modèles d'ordres fournis | |
-| E48 | Ressource changée dans le planning (réaffectation de la tâche) | Remonte sur l'état comme les dates (liaison dans les deux sens), sauf pour la ressource de l'ordre elle-même | |
-| E49 | Données de démonstration | Catalogue d'états et états par type fournis (OE : lancement ; BE : étude, visa (attente), plans bons pour exécution ; BM : gamme ; OF : débit, fabrication, séchage (attente), contrôle ; CO, LI : préparation, chargement ; PO : préparation, pose, réception (jalon) ; SAV : intervention, signature) ; `generer-modules-demo.mjs` crée des ordres à étapes datées | |
-| E50 | Validation d'une étape depuis l'atelier (borne, tablette) | Second temps, avec la borne du Pointage ou l'application mobile (fin d'opération = étape validée) | |
+| E41 | États d'un type ou d'un modèle modifiés alors que des ordres existent | Les ordres gardent leur copie ; action « Appliquer aux ordres en cours » qui ne touche que les états non validés (ajout, retrait, ordre, durée) | Ok |
+| E42 | Ordre issu d'une transformation ou d'une répartition (`.1`, `.2`) : quels états ? | Ceux de **son** type (ou de son étape de parcours), jamais ceux de la source ; les dates validées de la source restent sur la source | Ok |
+| E43 | Blocage (`ent_exe_etat` BLOQUE, motif) et étapes | Le blocage suspend l'étape en cours sans la valider ; les tâches du planning sont signalées bloquées ; au déblocage, les dates prévisionnelles non imposées sont recalculées depuis la date du déblocage | Ok |
+| E44 | Synthèse et liste des ordres | Colonnes « étape en cours », « prochaine date obligatoire », « en retard » dans `v_liste_ordres` et la vue détaillée du chantier ; la règle des états par service (`etatsServices`) reste inchangée | Ok |
+| E45 | Alertes | Source du module Notifications : étape en retard (date prévisionnelle dépassée sans validation), contrôle N+1 en attente depuis plus de N jours | Ok |
+| E46 | Qui valide une étape ? | Les membres du service porteur, la ressource principale de l'étape (si c'est une personne), le responsable de l'ordre, un administrateur ; droits fins au module de droits | Ok |
+| E47 | Impression de l'ordre | Le tableau des états entre dans le dictionnaire de l'édition (collection `etapes`) et dans les modèles d'ordres fournis | Ok |
+| E48 | Ressource changée dans le planning (réaffectation de la tâche) | Remonte sur l'état comme les dates (liaison dans les deux sens), sauf pour la ressource de l'ordre elle-même | Ok |
+| E49 | Données de démonstration | Catalogue d'états et états par type fournis (OE : lancement ; BE : étude, visa (attente), plans bons pour exécution ; BM : gamme ; OF : débit, fabrication, séchage (attente), contrôle ; CO, LI : préparation, chargement ; PO : préparation, pose, réception (jalon) ; SAV : intervention, signature) ; `generer-modules-demo.mjs` crée des ordres à étapes datées | Ok |
+| E50 | Validation d'une étape depuis l'atelier (borne, tablette) | Second temps, avec la borne du Pointage ou l'application mobile (fin d'opération = étape validée) | Ok a faire dans ce lot |
+
+Décision E50 : la validation d'une étape depuis l'atelier se fait **dans ce lot** (2e). Le module Exécution ne dépend
+pas du module Pointage (règle d'architecture) : c'est le **cœur** qui ajoute l'écran des étapes à la borne, comme il
+y branche déjà les chantiers du jour du planning (`LiaisonsBtp`). Points à trancher :
+
+| N° | Question | Proposition | Décision |
+|---|---|---|---|
+| E51 | Quelles étapes la borne propose-t-elle au salarié identifié ? | Étapes non validées des ordres dont il est la ressource principale (lui ou son équipe), ou des ordres de son service sur les chantiers du jour ; ordre lu par son numéro (code-barres) comme pour le pointage ; validation = même règle que E46, un contrôle N+1 ne se coche pas depuis la borne | |
+| E52 | Validation et pointage ensemble ? | À la fin d'un pointage sur un ordre, « Étape terminée ? » propose l'étape en cours de l'ordre (une seule action) ; validation possible aussi sans pointage | |
+| E53 | Sans le module Pointage (pas de borne) ? | Page tablette de l'Exécution `/execution/atelier` (session ordinaire) : mêmes étapes, même validation ; la borne et la page partagent le composant du cœur | |
 
 ### 13.7 Modèle de données proposé
 
@@ -427,3 +437,4 @@ Cœur : `ordre_etape` (`ore_ent_id`, `ore_etc_code`, `ore_ordre`, `ore_date_obli
 | 2b | Types d'ordres manquants (E38) et activation par type (E39 : désactivation quand tous les ordres sont terminés) ; section Exécution de `/parametres/documents` (E25) |
 | 2c | Catalogue des états, états par type, états des étapes des modèles ; étapes de l'ordre copiées à la création ; tableau de l'entête (prévisionnelle, validation, contrôle N+1, ressource) ; règles répliquées (jeu `02_etapes`) ; colonnes de la liste des ordres (E44), édition (E47), démonstration (E49) |
 | 2d | Planning théorique par états (tâches, jalons, attentes en décalage), liaison des dates et des ressources dans les deux sens ; tâche du CRM au N+1 ; alertes (E45) |
+| 2e | Validation des étapes depuis l'atelier : écran de la borne (cœur, E51, E52) et page tablette sans le Pointage (E53) |

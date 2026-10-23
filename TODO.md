@@ -133,21 +133,22 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/conception/ANALYSE-MODULE-SOUS-TRAITANCE.md).
 
-- [ ] Trancher les questions ST21 à ST32 de la relecture (avoir `T_AVOIR`, Factur-X et facturation électronique,
-  réception et retenues, décompte final, révision, pénalités et refacturations, bon à payer, acomptes, délais,
-  engagé, activation, jeux de cas) ; ST1 à ST20 tranchées le 23/10/2026.
+- [ ] Analyse achevée le 23/10/2026 (ST1 à ST32 tranchées) : lots 0 à 5 à réaliser (lot 0 : famille T dans le
+  module Document, activation, lot de consultation commun aux achats).
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).
-- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : plateforme agréée,
-  Factur-X / UBL, commun aux achats et à la sous-traitance (ST22).
-- [ ] Montants et agréments du paiement direct (gestion de la sous-traitance, lot 4 ; Q9 des marchés à décider).
+- [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : formats (Factur-X,
+  UBL, CII), connexion à la plateforme agréée, commun aux ventes, aux achats et à la sous-traitance ; en attendant,
+  saisie libre des factures reçues (ST22).
+- [ ] Montants et agréments du paiement direct (lot 4) ; reporter dans Q9 de `CONCEPTION-MARCHES-REGLEMENTS.md`
+  (toujours sans décision) ce que ST5, ST14 et ST15 ont tranché.
 
 ### Module Exécution
 
-- [ ] Trancher les questions E41 à E50 de la relecture ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
-  § 13.6 : états modifiés, transformations, blocage, liste, alertes, droits, édition, démonstration) ; E25 à E40
-  tranchées le 23/10/2026 (lots 2b à 2d).
+- [ ] Trancher E51 à E53 ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md) § 13.6 : étapes
+  proposées par la borne, validation avec le pointage, page tablette sans le Pointage) ; E25 à E50 tranchées le
+  23/10/2026 (lots 2b à 2e).
 - [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
 
 ### Import
