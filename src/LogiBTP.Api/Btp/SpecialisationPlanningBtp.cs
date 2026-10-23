@@ -2,6 +2,7 @@ using LogiBTP.Calendrier;
 using LogiBTP.Calendrier.Web;
 using LogiBTP.Planning;
 using LogiBTP.Planning.Web;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -154,6 +155,44 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             WHERE c.eqc_equ_id = @e AND c.eqc_du <= @d AND (c.eqc_au IS NULL OR c.eqc_au >= @d)
             ORDER BY c.eqc_chef DESC, s.sal_nom
             """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("d", date)).ToListAsync(ct)).Select(m => (m.Type, m.Id)).ToList();
+
+    /// <summary>
+    /// Service principal d'une ressource : salarié ou intérimaire (service principal de son individu, l'ancien reste
+    /// un rattachement), matériel (son service). Administrateur, ou responsable de l'ancien ou du nouveau service.
+    /// </summary>
+    public override async Task ChangerServiceAsync(PlanningDbContext db, string type, string id, int service, Utilisateur u, CancellationToken ct)
+    {
+        if (!int.TryParse(id, out var rid)) throw ExceptionMetier.Invalide("PLA_RESSOURCE", "Ressource inconnue");
+        var actuel = type switch
+        {
+            "SALARIE" or "INTERIM" => await db.Database.SqlQueryRaw<int?>("""
+                SELECT (SELECT m.sme_srv_id FROM service_membre m WHERE m.sme_ind_id = s.sal_ind_id AND m.sme_principal) AS "Value" FROM salarie s WHERE s.sal_id = @id
+                """, new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct),
+            "MATERIEL" => await db.Database.SqlQueryRaw<int?>("SELECT mat_srv_id AS \"Value\" FROM materiel WHERE mat_id = @id", new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct),
+            _ => throw ExceptionMetier.Invalide("PLA_SERVICE_RESSOURCE", "Le service de cette ressource ne se change pas depuis le planning"),
+        };
+        var services = actuel is int a ? new[] { service, a } : new[] { service };
+        var responsable = await db.Database.SqlQueryRaw<bool>("""
+            SELECT EXISTS (SELECT 1 FROM service s JOIN individu i ON i.ind_id = s.srv_responsable_id WHERE i.ind_utilisateur = @u AND s.srv_id = ANY(@s)) AS "Value"
+            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", services)).FirstAsync(ct);
+        if (!u.EstAdmin && !responsable) throw ExceptionMetier.AccesRefuse("PLA_SERVICE_RESSOURCE");
+        if (type == "MATERIEL")
+        {
+            await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_srv_id = @s WHERE mat_id = @id", [new NpgsqlParameter("s", service), new NpgsqlParameter("id", rid)], ct);
+            return;
+        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var ind = await db.Database.SqlQueryRaw<long?>("SELECT sal_ind_id AS \"Value\" FROM salarie WHERE sal_id = @id", new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct)
+            ?? throw ExceptionMetier.Invalide("PLA_RESSOURCE", "Salarié sans individu de l'annuaire");
+        await db.Database.ExecuteSqlRawAsync("UPDATE service_membre SET sme_principal = FALSE WHERE sme_ind_id = @i", [new NpgsqlParameter("i", ind)], ct);
+        if (await db.Database.ExecuteSqlRawAsync("UPDATE service_membre SET sme_principal = TRUE WHERE sme_ind_id = @i AND sme_srv_id = @s",
+                [new NpgsqlParameter("i", ind), new NpgsqlParameter("s", service)], ct) == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync("INSERT INTO service_membre (sme_srv_id, sme_ind_id, sme_principal) VALUES (@s, @i, TRUE)",
+                [new NpgsqlParameter("s", service), new NpgsqlParameter("i", ind)], ct);
+        }
+        await tx.CommitAsync(ct);
+    }
 
     /// <summary>Changements de composition d'une équipe : entrées (début) et lendemains de sorties (fin) sur la période.</summary>
     public override async Task<List<DateOnly>> ChangementsEquipeAsync(PlanningDbContext db, int equipe, DateOnly du, DateOnly au, CancellationToken ct) =>

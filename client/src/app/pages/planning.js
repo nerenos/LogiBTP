@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
@@ -39,6 +39,26 @@ const TYPES_JALON = { LIVRAISON: 'Livraison', FIN_CHANTIER: 'Fin de chantier', F
 const CHAMPS_MOBILE = { adresse: 'Adresse', contact: 'Contact', commentaire: 'Commentaire', liens: 'Liens' };
 const GROUPES_TACHE = { tache: 'Tâche', mobile: 'Mobile', ressource: 'Ressource', detail: 'Détail', dependance: 'Dépendance' };
 const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
+
+/** Petite fenêtre de choix d'un service (services › sous-services) ; résout l'identifiant ou null. */
+function choisirService(services, actuel, objet) {
+  return new Promise((resoudre) => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'dialogue-structure';
+    dlg.innerHTML = `<h3>Service principal — ${echapper(objet)}</h3><p class="aide">Actuel : ${echapper(actuel?.libelle ?? 'aucun')}</p>
+      <p data-combo></p><p class="ligne"><button type="button" data-valider>Valider</button> <button type="button" data-abandon>Annuler</button></p>`;
+    document.body.append(dlg);
+    const combo = creerCombo({ options: services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `↳ ${x.libelle}` : x.libelle, detail: x.code })), valeur: actuel?.id ?? '', vide: false, titre: 'Service' });
+    dlg.querySelector('[data-combo]').append(combo);
+    let fini = false;
+    const finir = (v) => { if (fini) return; fini = true; if (dlg.open) dlg.close(); dlg.remove(); resoudre(v); };
+    dlg.addEventListener('close', () => finir(null));
+    dlg.querySelector('[data-abandon]').addEventListener('click', () => finir(null));
+    dlg.querySelector('[data-valider]').addEventListener('click', () => finir(combo.valeurCombo === '' ? null : Number(combo.valeurCombo)));
+    dlg.showModal();
+    combo.focus();
+  });
+}
 
 /** Saisie d'une tâche lue (pour la recréer ou la rétablir). */
 const saisieDe = (t) => ({
@@ -192,6 +212,8 @@ export class PagePlanning extends PageBase {
         selection: (t) => { if (t) this.#afficherTache(t.tache); },
         ouvrir: (t) => this.#afficherTache(t.tache),
         deposer: (e, p) => this.#deposer(e, p),
+        menu: (e, t, p) => this.#menu(e, t, p),
+        menuLigne: (e, l) => this.#menuLigne(e, l),
       },
     });
     const masquer = c.querySelector('[data-masquer]');
@@ -377,11 +399,11 @@ export class PagePlanning extends PageBase {
     this.planning?.actualiser();
   }
 
-  /** Détail d'une tâche (null : nouvelle) : dans le panneau, ou dans la fenêtre du panneau s'il y est ouvert. */
-  #afficherTache(id) {
+  /** Détail d'une tâche (null : nouvelle, éventuellement pré-remplie) : dans le panneau, ou dans la fenêtre du panneau s'il y est ouvert. */
+  #afficherTache(id, preremplie) {
     if (this.panneauEnFenetre) { this.app.publier('planning-selection', { tache: id }); return; }
     if (this.etatPanneau === 'masque' || this.etatPanneau === 'reduit') this.#etatPanneau('normal');
-    this.#editer(id);
+    this.#editer(id, preremplie);
     this.#onglet('tache');
   }
 
@@ -629,6 +651,73 @@ export class PagePlanning extends PageBase {
    * prévisionnelle — modifiable, enregistrée par élément et service), présentation en liste ou en tuiles (préférences
    * `planningAPlanifierTri`, `planningAPlanifierSens`, `planningAPlanifierTuiles`) ; lignes et tuiles glissées sur le planning.
    */
+  /** Ressource désignée par une ligne de la vue par ressources (« TYPE:id »), sinon null. */
+  #ressourceDe(l) {
+    if (!l || this.definition.regroupement !== 'RESSOURCE' || !l.cle.includes(':') || l.cle.startsWith('srv:') || l.cle.startsWith('chantier:')) return null;
+    const i = l.cle.indexOf(':');
+    return { type: l.cle.slice(0, i), id: l.cle.slice(i + 1), libelle: l.libelle };
+  }
+
+  /** Clic droit sur une tâche (détail, état, dupliquer, scinder, supprimer) ou sur une zone vide (nouvelle tâche). */
+  #menu(e, b, { ligne, instant }) {
+    const ressource = this.#ressourceDe(ligne);
+    const nouvelle = { libelle: '＋ Nouvelle tâche ici', titre: 'Début à cet instant, sur cette ressource', action: () => this.#afficherTache(null, {
+      debut: depuisMinutes(instant), srv_id: ligne?.srv_id ?? null, affectations: ressource ? [{ ...ressource }] : [],
+    }) };
+    if (this.consultation) return;
+    if (!b) { ouvrirMenuContextuel(e, [nouvelle, ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne)] : [])]); return; }
+    const scinder = instant > b.debut && instant < b.fin;
+    ouvrirMenuContextuel(e, [
+      { libelle: '✎ Détail de la tâche', action: () => this.#afficherTache(b.tache) },
+      { separateur: true },
+      ...Object.entries(ETATS).map(([etat, libelle]) => ({ libelle: `${b.etat === etat ? '● ' : '○ '}${libelle}`, actif: b.etat !== etat, titre: 'Changer l\'état de la tâche', action: () => this.#changerEtat(b.tache, etat) })),
+      { separateur: true },
+      { libelle: '⧉ Dupliquer', raccourci: libelleRaccourci('dupliquer', 'planning'), action: () => this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true }) },
+      { libelle: '✂ Scinder ici', raccourci: 'Alt+clic', actif: scinder, action: () => this.#scinder({ tache: b, instant }) },
+      nouvelle,
+      { separateur: true },
+      { libelle: '🗑 Supprimer', raccourci: libelleRaccourci('supprimer', 'planning'), action: () => { if (confirm('Supprimer cette tâche ?')) this.#supprimer(b.tache); } },
+    ]);
+  }
+
+  /** Clic droit sur le titre d'une ligne : ressource (service principal, fiche, nouvelle tâche). */
+  #menuLigne(e, l) {
+    const ressource = this.#ressourceDe(l);
+    if (!ressource || this.consultation) return;
+    ouvrirMenuContextuel(e, [
+      { libelle: '＋ Nouvelle tâche pour cette ressource', action: () => this.#afficherTache(null, { srv_id: l.srv_id ?? null, affectations: [{ ...ressource }] }) },
+      { separateur: true },
+      ...this.#elementsRessource(ressource, l),
+    ]);
+  }
+
+  #elementsRessource(ressource, l) {
+    const fiche = { SALARIE: 'salarie', INTERIM: 'salarie', MATERIEL: 'materiel' }[ressource.type];
+    return [
+      { libelle: '🏢 Changer le service principal…', actif: Boolean(fiche), titre: 'Service principal de la ressource (lignes du planning, charge des services)', action: () => this.#changerService(ressource, l) },
+      { libelle: '📋 Ouvrir la fiche', actif: Boolean(fiche), action: () => this.app.naviguer(`/fiche/${fiche}/${ressource.id}`, { nouvelleFenetre: true }) },
+    ];
+  }
+
+  /** Changement du service principal d'une ressource (administrateur ou responsable de l'ancien ou du nouveau service). */
+  async #changerService(ressource, l) {
+    const actuel = this.ref.services.find((x) => x.id === l.srv_id);
+    const choix = await choisirService(this.ref.services, actuel, ressource.libelle);
+    if (choix == null || choix === actuel?.id) return;
+    try {
+      await api.planning.changerServiceRessource(ressource.type, ressource.id, choix);
+      this.app.message(`${ressource.libelle} : service principal « ${this.ref.services.find((x) => x.id === choix)?.libelle} »`, 'succes');
+      this.ressourcesPromesse = null;
+      await this.#charger();
+    } catch (err) { this.app.erreur(err); }
+  }
+
+  async #changerEtat(id, etat) {
+    const t = await api.planning.tache(id).catch((e) => { this.app.erreur(e); return null; });
+    if (!t) return;
+    await this.#modifierMemorise(id, 'changement d\'état', () => api.planning.modifier(id, { ...saisieDe(t), etat, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
+  }
+
   /** Toutes les ressources (combos et onglet Ressources), lues une fois. */
   #toutesRessources() {
     this.ressourcesPromesse ??= api.planning.ressources({}).catch(() => []);
@@ -872,14 +961,14 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
   #repliees() { return lirePreferences().planningGroupesReplies ?? []; }
 
   /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
-  async #editer(id) {
+  async #editer(id, preremplie = {}) {
     const zone = this.conteneur.querySelector('[data-panneau="tache"]');
     let t;
     if (id) {
       try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
     } else {
       const debut = depuisMinutes(debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'JOUR') + 1440 + 480);
-      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: 'PREVUE', affectations: [] };
+      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: 'PREVUE', affectations: [], ...preremplie };
       this.#onglet('tache');
     }
     const elements = await api.planning.elements().catch(() => []);

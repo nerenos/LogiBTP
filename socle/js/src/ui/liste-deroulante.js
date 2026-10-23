@@ -24,7 +24,8 @@ export class ListeDeroulante {
     this.popup = document.createElement('div');
     this.popup.className = 'liste-deroulante';
     this.popup.setAttribute('role', 'listbox');
-    document.body.appendChild(this.popup);
+    // Dans une fenêtre modale (couche supérieure), la liste y est rattachée pour s'afficher au-dessus d'elle.
+    (champ.closest?.('dialog[open]') ?? document.body).appendChild(this.popup);
     this.popup.addEventListener('mousedown', (e) => {
       e.preventDefault(); // garde le focus dans le champ
       const li = e.target.closest('[data-index]');
@@ -175,7 +176,8 @@ export class AssistantFormule {
     this.popup.className = 'liste-deroulante';
     this.popup.setAttribute('role', 'listbox');
     this.popup.hidden = true;
-    document.body.appendChild(this.popup);
+    // Dans une fenêtre modale (couche supérieure), la liste y est rattachée pour s'afficher au-dessus d'elle.
+    (champ.closest?.('dialog[open]') ?? document.body).appendChild(this.popup);
     this.popup.addEventListener('mousedown', (e) => {
       e.preventDefault();
       const li = e.target.closest('[data-index]');

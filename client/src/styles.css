@@ -659,10 +659,14 @@ details.avertissement > summary { cursor: pointer; }
 .alertes-planning li { margin-bottom: .4rem; }
 .alertes-planning li.vue { opacity: .6; }
 /* Lignes à actions au survol ou à la sélection (comme une liste de courriels) : alertes du planning, notifications. */
-.ligne-actions-survol { display: flex; align-items: flex-start; gap: .4rem; padding: .2rem .3rem; border-radius: 4px; outline: none; }
+.ligne-actions-survol { position: relative; display: flex; align-items: flex-start; gap: .4rem; padding: .2rem .3rem; border-radius: 4px; outline: none; }
 .ligne-actions-survol:hover, .ligne-actions-survol:focus-within, .ligne-actions-survol.selection { background: var(--titre-fond); }
 .ligne-actions-survol > .las-texte, .ligne-actions-survol > .las-corps { flex: 1; min-width: 0; }
-.ligne-actions-survol > .las-actions { display: inline-flex; gap: .1rem; flex: none; visibility: hidden; }
+/* Le libellé garde toute la largeur : les boutons s'affichent par-dessus, en haut à droite de la ligne. */
+.ligne-actions-survol > .las-actions, .liste-ressources-tache .lr-actions {
+  position: absolute; z-index: 2; top: 2px; right: 4px; display: inline-flex; gap: .1rem; visibility: hidden; padding: 1px 2px;
+  background: var(--surface); border: 1px solid var(--bord); border-radius: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
 .ligne-actions-survol:hover > .las-actions, .ligne-actions-survol:focus-within > .las-actions, .ligne-actions-survol.selection > .las-actions { visibility: visible; }
 .ligne-actions-survol .las-actions .bouton-icone { padding: 0 .3rem; }
 
@@ -738,11 +742,10 @@ body.mode-borne #bandeau { display: none; }
 
 /* Planning : ressources d'une tâche (équipes et membres, actions au survol de la ligne, comme une liste de courriels). */
 .liste-ressources-tache { list-style: none; padding: 0; margin: .2rem 0 .4rem; }
-.liste-ressources-tache > li { display: flex; align-items: center; gap: .4rem; min-height: 1.7rem; padding: 0 .3rem; border-radius: 4px; }
+.liste-ressources-tache > li { position: relative; display: flex; align-items: center; gap: .4rem; min-height: 1.7rem; padding: 0 .3rem; border-radius: 4px; }
 .liste-ressources-tache > li:hover { background: var(--titre-fond); }
 .liste-ressources-tache .lr-libelle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .liste-ressources-tache .lr-info { color: var(--discret); font-size: .85em; font-variant-numeric: tabular-nums; }
-.liste-ressources-tache .lr-actions { visibility: hidden; display: inline-flex; gap: .1rem; }
 .liste-ressources-tache > li:hover .lr-actions, .liste-ressources-tache > li:focus-within .lr-actions { visibility: visible; }
 .liste-ressources-tache .lr-actions .bouton-icone { padding: 0 .3rem; }
 .liste-ressources-tache .ligne-equipe { margin-top: .2rem; }

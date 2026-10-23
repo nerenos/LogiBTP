@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LogiBTP.Planning.Web;
 
+public sealed record ServiceRessourceSaisi(int SrvId);
 public sealed record VueSaisie(string Code, string Libelle, DefinitionVue Definition, bool Globale);
 
 /// <summary>Branchement du module Planning (facultatif : activé par société).</summary>
@@ -77,6 +78,11 @@ public static class Extensions
         });
         g.MapPost("/taches/{id:long}/equipes/{equipe:int}/appliquer", (long id, int equipe, int version, string? date, HttpContext http, ServiceCharge s, CancellationToken ct) =>
             s.AppliquerEquipeAsync(id, equipe, version, date, Utilisateur.Depuis(http), ct));
+        g.MapPut("/ressources/{type}/{id}/service", async (string type, string id, ServiceRessourceSaisi s, HttpContext http, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
+        {
+            await sp.ChangerServiceAsync(db, type, id, s.SrvId, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
         // Ressources des tâches : membres d'une équipe à une date, disponibilités sur une période (information).
         g.MapGet("/equipes/{equipe:int}/membres", (int equipe, string date, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
             RessourcesTache.MembresAsync(db, sp, equipe, DateOnly.ParseExact(date[..10], "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), ct));

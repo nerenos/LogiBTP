@@ -134,6 +134,7 @@ export const api = {
     notifications: (f) => appel('GET', `/planning/notifications?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     marquerNotifications: (e) => appel('PUT', '/planning/notifications', e),
     appliquerEquipe: (id, equipe, version, date) => appel('POST', `/planning/taches/${id}/equipes/${equipe}/appliquer?version=${version}${date ? `&date=${date}` : ''}`),
+    changerServiceRessource: (type, id, srv) => appel('PUT', `/planning/ressources/${type}/${encodeURIComponent(id)}/service`, { srv_id: srv }),
     membresEquipe: (equipe, date) => appel('GET', `/planning/equipes/${equipe}/membres?date=${encodeURIComponent(date)}`),
     disponibilites: (f) => appel('GET', `/planning/disponibilites?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     // Lot 5 : dépendances, répétitions, jalons.

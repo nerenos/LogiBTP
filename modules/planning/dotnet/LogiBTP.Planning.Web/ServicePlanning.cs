@@ -133,6 +133,9 @@ public abstract class SpecialisationPlanning
     public abstract Task<List<(long Debut, long Fin)>> PlagesServiceAsync(PlanningDbContext db, int? service, DateOnly du, DateOnly au, CancellationToken ct);
     public abstract Task<List<EquipePlanning>> EquipesAsync(PlanningDbContext db, CancellationToken ct);
     public abstract Task<List<(string Type, string Id)>> MembresAsync(PlanningDbContext db, int equipe, DateOnly date, CancellationToken ct);
+    /// <summary>Change le service principal d'une ressource (menu du planning) ; non pris en charge par défaut.</summary>
+    public virtual Task ChangerServiceAsync(PlanningDbContext db, string type, string id, int service, Utilisateur u, CancellationToken ct) =>
+        throw ExceptionMetier.Invalide("PLA_SERVICE_RESSOURCE", "Le service de cette ressource ne se change pas depuis le planning");
     /// <summary>Dates de changement de la composition d'une équipe sur [du, au] (entrées, lendemains de sorties) ; aucune par défaut.</summary>
     public virtual Task<List<DateOnly>> ChangementsEquipeAsync(PlanningDbContext db, int equipe, DateOnly du, DateOnly au, CancellationToken ct) => Task.FromResult(new List<DateOnly>());
     public abstract Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct);

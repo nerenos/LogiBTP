@@ -17,7 +17,7 @@ import { creerAxe } from '../src/axe.js';
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
  * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
  * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
- * selection(tache), ouvrir(tache), menu(e, tache), deposer(e, { ligne, instant, tache }), largeurEntete(px) }.
+ * selection(tache), ouvrir(tache), menu(e, tache | null, { ligne, instant }), menuLigne(e, ligne), deposer(e, { ligne, instant, tache }), largeurEntete(px) }.
  */
 export class VuePlanning {
   #o;
@@ -47,7 +47,22 @@ export class VuePlanning {
     this.corps.addEventListener('pointerleave', () => this.#cacherBulle());
     this.corps.addEventListener('wheel', () => this.#cacherBulle(), { passive: true });
     this.corps.addEventListener('dblclick', (e) => { const t = this.#tacheDe(e.target); if (t) this.#o.actions.ouvrir?.(t); });
-    this.corps.addEventListener('contextmenu', (e) => { const t = this.#tacheDe(e.target); if (t && this.#o.actions.menu) { e.preventDefault(); this.#o.actions.menu(e, t); } });
+    // Clic droit : sur une barre (la tâche), une zone vide (ligne et instant) ou le titre d'une ligne (menuLigne).
+    this.corps.addEventListener('contextmenu', (e) => {
+      if (!this.#o.actions.menu) return;
+      e.preventDefault();
+      const t = this.#tacheDe(e.target);
+      if (t) this.#selectionner(t);
+      const p = this.#point(e);
+      this.#o.actions.menu(e, t, { ligne: this.#lignes[p.ligne], instant: arrondirAuPas(p.instant, this.#o.pas) });
+    });
+    conteneur.querySelector('.vp-lignes').addEventListener('contextmenu', (e) => {
+      const el = e.target.closest('.vp-ligne');
+      const l = el ? this.#lignes[Number(el.dataset.i)] : null;
+      if (!l || !this.#o.actions.menuLigne) return;
+      e.preventDefault();
+      this.#o.actions.menuLigne(e, l);
+    });
     // Dépôt HTML5 : la barre survolée est mise en évidence (dépôt sur une tâche) ; l'action reçoit la ligne, l'instant et la tâche.
     const cible = (el) => {
       const b = el?.closest?.('.vp-barre') ?? null;
