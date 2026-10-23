@@ -2,7 +2,7 @@
 
 - Contexte : liens entre modules dans [MODULES.md](MODULES.md) ; contexte condensé de chaque partie dans son `CLAUDE.md` (`socle/`, `modules/<nom>/`, `client/`, `src/`, `db/`), chargé quand on travaille dans le dossier.
 - Dépendances externes par module (npm, NuGet, polices) : [DEPENDANCES.md](documentation/DEPENDANCES.md), généré par `npm run rapport-dependances` à relancer après tout ajout ou mise à jour.
-- Tâches à faire et décisions reportées : [TACHES.md](documentation/TACHES.md) (à mettre à jour quand une tâche est faite ou reportée).
+- Tâches à faire et décisions reportées : [TODO.md](TODO.md) (à mettre à jour quand une tâche est faite ou reportée ; une tâche faite passe dans `documentation/TACHES.md`, réservé aux humains).
 
 - Répondre et documenter en français ; code, commentaires et noms en français (sauf API techniques).
 - Architecture : `socle/` (sans métier) → `modules/<nom>/` (classes mères, méthode patron) → cœur (`src/`, `client/`, `db/`) qui spécialise. Un module ne dépend jamais du cœur ; le module Métré ne dépend pas du module Document.
