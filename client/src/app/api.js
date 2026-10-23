@@ -58,6 +58,15 @@ export const api = {
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
   execution: {
     types: () => appel('GET', '/execution/types'),
+    ressources: () => appel('GET', '/execution/ressources'),
+    etats: () => appel('GET', '/execution/etats'),
+    enregistrerEtats: (l) => appel('PUT', '/execution/etats', l),
+    etatsType: (t) => appel('GET', `/execution/etats-types/${t}`),
+    enregistrerEtatsType: (t, l) => appel('PUT', `/execution/etats-types/${t}`, l),
+    appliquerType: (t) => appel('POST', `/execution/etats-types/${t}/appliquer`),
+    etapes: (id) => appel('GET', `/execution/ordres/${id}/etapes`),
+    actionEtape: (id, code, a) => appel('PUT', `/execution/ordres/${id}/etapes/${encodeURIComponent(code)}`, a),
+    recalculerEtapes: (id) => appel('POST', `/execution/ordres/${id}/etapes/recalculer`),
     enregistrerType: (code, s) => appel('PUT', `/execution/types/${code}`, s),
     document: (id) => appel('GET', `/execution/documents/${id}`),
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),

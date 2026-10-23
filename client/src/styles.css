@@ -844,3 +844,10 @@ button.filtre-actif { outline: 2px solid var(--accent); outline-offset: -2px; ba
 .page-mail button.etiquette { border: 1px solid var(--bord); border-radius: .7rem; background: var(--surface); padding: 0 .5rem; font-size: .9em; cursor: pointer; }
 .mail-corps { border: 1px solid var(--bord); border-radius: 4px; padding: .6rem .8rem; margin: .6rem 0; max-width: 60rem; background: var(--surface); }
 button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d5fbf); text-decoration: underline; cursor: pointer; }
+
+/* Exécution, lot 2c : tableau des étapes de l'entête d'un ordre (une colonne par état à date obligatoire). */
+.etapes-ordre { overflow-x: auto; margin-bottom: 0.5rem; }
+.etapes-tableau th.en-cours { box-shadow: inset 0 -3px 0 var(--accent, #2563eb); }
+.etapes-tableau td { white-space: nowrap; }
+.etapes-tableau td.erreur input[type="date"] { color: #b42318; font-weight: 600; }
+.etape-pastille { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }

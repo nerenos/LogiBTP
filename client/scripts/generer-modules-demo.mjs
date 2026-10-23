@@ -136,6 +136,17 @@ const modele = (code) => modeles.find((m) => m.code === code)?.id;
 for (const [cha, code] of [[chantiers.a, 'MENUISERIE'], [chantiers.b, 'GROS_OEUVRE'], [chantiers.c, 'POSE']]) {
   await etape(`Parcours ${code} du chantier ${cha}`, () => appel('PUT', `/execution/elements/chantier/${cha}/parcours`, { pam_id: modele(code) }).then(() => 'ok'));
 }
+// Étapes des ordres (lot 2c) : lancement des ordres d'exécution validé (contrôlé pour le marché 1), une date imposée.
+for (const [marche, { oe, po }] of Object.entries(ordres)) {
+  if (!oe) continue;
+  await etape(`Étapes de l'ordre d'exécution du marché ${marche}`, async () => {
+    await appel('GET', `/execution/ordres/${oe}/etapes`);
+    await appel('PUT', `/execution/ordres/${oe}/etapes/LANCEMENT`, { action: 'VALIDER', date: jour(0, 0) });
+    if (marche === '1') await appel('PUT', `/execution/ordres/${oe}/etapes/LANCEMENT`, { action: 'CONTROLER', commentaire: 'Budget vérifié' });
+    if (po) await appel('PUT', `/execution/ordres/${po}/etapes/POSE`, { action: 'PREVOIR', date: jour(1, 3) });
+    return 'ok';
+  });
+}
 await etape('État imposé : bureau d\'études en cours sur le chantier A', () =>
   appel('PUT', `/execution/elements/chantier/${chantiers.a}/services/${srv('BE')}/etat`, { etat: 'EN_COURS', motif: 'Plans en cours de reprise' }).then(() => 'ok'));
 

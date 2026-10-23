@@ -1,0 +1,79 @@
+{
+  "description": "Étapes d'un ordre (etapes.js ↔ ReglesEtapes.cs) : dates prévisionnelles par enchaînement (jours ouvrés, calendaires, heures sur un calendrier de minutes par jour, jalons, dates validées et imposées, amonts parallèles), validation (étapes masquées validées d'office, prédécesseurs à date obligatoire, contrôle du N+1 bloquant ou non), annulation, état d'exécution déduit et étape en cours, contrôle des états d'un type. Semaine type : 420 minutes du lundi au vendredi ; 2026-11-02 est un lundi, 2026-11-11 est férié.",
+  "dates": [
+    {
+      "nom": "enchaînement : ouvrés, attente calendaire, jalon, heures avec férié, attente ouvrée sur un week-end",
+      "debut": "2026-11-02",
+      "calendrier": { "jours": { "2026-11-11": 0 } },
+      "etapes": [
+        { "code": "ETUDE", "nature": "TACHE", "duree": 3, "unite": "OUV" },
+        { "code": "VISA", "nature": "ATTENTE", "duree": 5, "unite": "CAL" },
+        { "code": "COMMANDE", "nature": "JALON", "duree": 0, "unite": "OUV" },
+        { "code": "FAB", "nature": "TACHE", "duree": 14, "unite": "H" },
+        { "code": "SECHAGE", "nature": "ATTENTE", "duree": 2, "unite": "OUV" },
+        { "code": "LIVRAISON", "nature": "TACHE", "duree": 1, "unite": "OUV" }
+      ],
+      "attendu": [
+        { "code": "ETUDE", "debut": "2026-11-02", "prevu": "2026-11-04" },
+        { "code": "VISA", "debut": "2026-11-05", "prevu": "2026-11-09" },
+        { "code": "COMMANDE", "debut": "2026-11-10", "prevu": "2026-11-10" },
+        { "code": "FAB", "debut": "2026-11-10", "prevu": "2026-11-12" },
+        { "code": "SECHAGE", "debut": "2026-11-13", "prevu": "2026-11-16" },
+        { "code": "LIVRAISON", "debut": "2026-11-17", "prevu": "2026-11-17" }
+      ]
+    },
+    {
+      "nom": "validée, en parallèle, jonction, imposée, puis calendaire",
+      "debut": "2026-11-02",
+      "calendrier": null,
+      "etapes": [
+        { "code": "A", "nature": "TACHE", "duree": 2, "unite": "OUV", "valide_le": "2026-11-05" },
+        { "code": "B", "nature": "TACHE", "duree": 1, "unite": "OUV", "amonts": [] },
+        { "code": "C", "nature": "JALON", "duree": 0, "unite": "OUV", "amonts": ["A", "B"] },
+        { "code": "D", "nature": "TACHE", "duree": 3, "unite": "OUV", "prevu_impose": "2026-11-20" },
+        { "code": "E", "nature": "TACHE", "duree": 1, "unite": "CAL" }
+      ],
+      "attendu": [
+        { "code": "A", "debut": "2026-11-02", "prevu": "2026-11-05" },
+        { "code": "B", "debut": "2026-11-02", "prevu": "2026-11-02" },
+        { "code": "C", "debut": "2026-11-06", "prevu": "2026-11-06" },
+        { "code": "D", "debut": "2026-11-06", "prevu": "2026-11-20" },
+        { "code": "E", "debut": "2026-11-21", "prevu": "2026-11-21" }
+      ]
+    }
+  ],
+  "liste": [
+    { "code": "ETUDE", "nature": "TACHE", "date_obligatoire": true, "controle": true, "controle_bloquant": true },
+    { "code": "VISA", "nature": "ATTENTE", "date_obligatoire": false },
+    { "code": "FAB", "nature": "TACHE", "date_obligatoire": true },
+    { "code": "CTRL", "nature": "TACHE", "date_obligatoire": true, "controle": true, "controle_bloquant": false },
+    { "code": "LIV", "nature": "TACHE", "date_obligatoire": true }
+  ],
+  "validations": [
+    { "nom": "prédécesseur à date obligatoire non validé", "valides": [], "controles": [], "code": "FAB", "attendu": { "codes": [], "erreurs": ["ETP_ORDRE"], "avertissements": [] } },
+    { "nom": "étape masquée validée d'office, mais contrôle bloquant attendu", "valides": ["ETUDE"], "controles": [], "code": "FAB", "attendu": { "codes": [], "erreurs": ["ETP_CONTROLE"], "avertissements": [] } },
+    { "nom": "étape masquée validée d'office", "valides": ["ETUDE"], "controles": ["ETUDE"], "code": "FAB", "attendu": { "codes": ["VISA", "FAB"], "erreurs": [], "avertissements": [] } },
+    { "nom": "contrôle non bloquant attendu : avertissement", "valides": ["ETUDE", "VISA", "FAB", "CTRL"], "controles": ["ETUDE"], "code": "LIV", "attendu": { "codes": ["LIV"], "erreurs": [], "avertissements": ["ETP_CONTROLE_ATTENTE"] } },
+    { "nom": "première étape", "valides": [], "controles": [], "code": "ETUDE", "attendu": { "codes": ["ETUDE"], "erreurs": [], "avertissements": [] } },
+    { "nom": "déjà validée", "valides": ["ETUDE"], "controles": [], "code": "ETUDE", "attendu": { "codes": [], "erreurs": ["ETP_DEJA_VALIDEE"], "avertissements": [] } }
+  ],
+  "annulations": [
+    { "nom": "suivante validée", "valides": ["ETUDE", "VISA", "FAB", "CTRL", "LIV"], "code": "CTRL", "attendu": ["ETP_SUIVANT_VALIDE"] },
+    { "nom": "dernière", "valides": ["ETUDE", "VISA", "FAB", "CTRL", "LIV"], "code": "LIV", "attendu": [] },
+    { "nom": "non validée", "valides": ["ETUDE"], "code": "FAB", "attendu": ["ETP_NON_VALIDEE"] }
+  ],
+  "etats": [
+    { "nom": "rien de validé", "valides": [], "actuel": null, "attendu": "A_FAIRE", "en_cours": "ETUDE" },
+    { "nom": "en attente du visa", "valides": ["ETUDE"], "actuel": "A_FAIRE", "attendu": "EN_ATTENTE", "en_cours": "VISA" },
+    { "nom": "en cours", "valides": ["ETUDE", "VISA"], "actuel": "EN_ATTENTE", "attendu": "EN_COURS", "en_cours": "FAB" },
+    { "nom": "bloqué reste bloqué", "valides": ["ETUDE", "VISA"], "actuel": "BLOQUE", "attendu": "BLOQUE", "en_cours": "FAB" },
+    { "nom": "tout validé", "valides": ["ETUDE", "VISA", "FAB", "CTRL", "LIV"], "actuel": "EN_COURS", "attendu": "TERMINE", "en_cours": null }
+  ],
+  "etat_sans_etape": { "actuel": "EN_COURS", "attendu": "EN_COURS" },
+  "controles": [
+    { "nom": "doublon et amont inconnu", "etapes": [{ "code": "A" }, { "code": "A" }, { "code": "B", "amonts": ["Z"] }], "attendu": ["ETP_AMONT", "ETP_DOUBLON"] },
+    { "nom": "boucle", "etapes": [{ "code": "A", "amonts": ["B"] }, { "code": "B", "amonts": ["A"] }], "attendu": ["ETP_BOUCLE"] },
+    { "nom": "nature et durée", "etapes": [{ "code": "A", "nature": "X", "duree": -1, "unite": "OUV" }], "attendu": ["ETP_DUREE", "ETP_NATURE"] },
+    { "nom": "correct", "etapes": [{ "code": "A", "nature": "TACHE", "duree": 2, "unite": "H" }, { "code": "B", "nature": "JALON", "amonts": ["A"] }], "attendu": [] }
+  ]
+}

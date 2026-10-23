@@ -16,6 +16,7 @@ public static class Extensions
         services.AddDbContext<ExecutionDbContext>(options);
         services.AddSingleton<SpecialisationExecution, TSpecialisation>();
         services.AddScoped<ServiceExecution>();
+        services.AddScoped<ServiceEtapes>();
         return services;
     }
 
@@ -32,6 +33,17 @@ public static class Extensions
             s.EnregistrerParcoursAsync(type, id, p, Utilisateur.Depuis(http), ct));
         g.MapPut("/elements/{type}/{id}/services/{srv:int}/etat", (string type, string id, int srv, EtatManuelSaisi e, HttpContext http, ServiceExecution s, CancellationToken ct) =>
             s.EnregistrerEtatManuelAsync(type, id, srv, e, Utilisateur.Depuis(http), ct));
+        // Étapes des ordres (§ 13) : catalogue des états, états d'un type, étapes d'un ordre.
+        g.MapGet("/etats", (ServiceEtapes s, CancellationToken ct) => s.CatalogueAsync(ct));
+        g.MapPut("/etats", (List<EtatCatalogueDto> l, HttpContext http, ServiceEtapes s, CancellationToken ct) => s.EnregistrerCatalogueAsync(l, Utilisateur.Depuis(http), ct));
+        g.MapGet("/etats-types/{type}", (string type, ServiceEtapes s, CancellationToken ct) => s.EtatsTypeAsync(type, ct));
+        g.MapPut("/etats-types/{type}", (string type, List<EtatTypeDto> l, HttpContext http, ServiceEtapes s, CancellationToken ct) =>
+            s.EnregistrerEtatsTypeAsync(type, l, Utilisateur.Depuis(http), ct));
+        g.MapPost("/etats-types/{type}/appliquer", (string type, HttpContext http, ServiceEtapes s, CancellationToken ct) => s.AppliquerTypeAsync(type, Utilisateur.Depuis(http), ct));
+        g.MapGet("/ordres/{id:long}/etapes", (long id, HttpContext http, ServiceEtapes s, CancellationToken ct) => s.LireAsync(id, Utilisateur.Depuis(http), ct));
+        g.MapPost("/ordres/{id:long}/etapes/recalculer", (long id, HttpContext http, ServiceEtapes s, CancellationToken ct) => s.RecalculerToutAsync(id, Utilisateur.Depuis(http), ct));
+        g.MapPut("/ordres/{id:long}/etapes/{code}", (long id, string code, ActionEtape a, HttpContext http, ServiceEtapes s, CancellationToken ct) =>
+            s.ActionAsync(id, code, a, Utilisateur.Depuis(http), ct));
         return g;
     }
 }

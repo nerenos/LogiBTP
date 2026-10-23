@@ -60,6 +60,7 @@ services:
       - ./modules/crm/db/098_crm_validations.sql:/docker-entrypoint-initdb.d/098_crm_validations.sql:ro
       - ./modules/crm/db/099_crm_fil.sql:/docker-entrypoint-initdb.d/099_crm_fil.sql:ro
       - ./modules/execution/db/085_execution.sql:/docker-entrypoint-initdb.d/085_execution.sql:ro
+      - ./modules/execution/db/085b_execution_etapes.sql:/docker-entrypoint-initdb.d/085b_execution_etapes.sql:ro
       - ./modules/pointage/db/086_pointage.sql:/docker-entrypoint-initdb.d/086_pointage.sql:ro
       - ./modules/pointage/db/087_pointage_validation.sql:/docker-entrypoint-initdb.d/087_pointage_validation.sql:ro
       - ./modules/pointage/db/088_pointage_paie.sql:/docker-entrypoint-initdb.d/088_pointage_paie.sql:ro
@@ -125,6 +126,7 @@ services:
       - ./db/206_mail.sql:/docker-entrypoint-initdb.d/206_mail.sql:ro
       - ./db/207_mail_reception.sql:/docker-entrypoint-initdb.d/207_mail_reception.sql:ro
       - ./db/208_execution_types.sql:/docker-entrypoint-initdb.d/208_execution_types.sql:ro
+      - ./db/209_execution_etapes.sql:/docker-entrypoint-initdb.d/209_execution_etapes.sql:ro
       # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.

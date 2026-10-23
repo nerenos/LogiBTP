@@ -29,6 +29,7 @@ export const SOURCES_LISTE = {
       ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
       ['etat_execution', 'text'], ['motif', 'text'], ['service', 'text'], ['service_id', 'integer'], ['responsable', 'text'],
       ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],
+      ['etape_en_cours', 'text'], ['prochaine_date', 'date'], ['ressource', 'text'],
     ],
   },
   // Pointages du module Pointage (db/199 : v_liste_pointages, couches saisie et validée).
@@ -583,6 +584,10 @@ const vueOrdres = (vli_id, vli_nom, filtres = []) => ({
       col('responsable', 'Responsable', { ...prop(1.4, 100) }),
       col('etat_execution', 'Exécution', { format: 'picto', ...fixe(80), options: ETATS_EXECUTION_LISTE }),
       col('motif', 'Motif', { ...prop(1.5, 100), style: { couleur: '#b42318' } }),
+      col('etape_en_cours', 'Étape', { ...prop(1.4, 100) }),
+      col('prochaine_date', 'Prochaine date', { format: 'date', ...fixe(92), recherche: false,
+        regles: [{ condition: '[en_retard]', style: { couleur: '#b42318', gras: true } }] }),
+      col('ressource', 'Ressource', { ...prop(1.4, 100), masquee: true }),
       col('statut', 'Statut', { ...fixe(100) }),
       col('debut_prevu', 'Début prévu', { format: 'date', ...fixe(92), recherche: false }),
       col('fin_prevue', 'Fin prévue', { format: 'date', ...fixe(92), recherche: false,

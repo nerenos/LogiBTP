@@ -668,6 +668,12 @@ ni les tranches de frais annexes ; pieds de section en lignes `PIED`.
 | `echeances[]` | `rang`, `date` (vide : à réception), `montant`, `mode`, `nature` (RETENUE) | collection |
 | `textes.intro`, `textes.fin` | Textes de l'édition (HTML) | html |
 
+#### Étapes d'un ordre (module Exécution, documents de la famille E)
+
+| Chemin | Libellé | Type |
+|---|---|---|
+| `etapes[]` | `code`, `libelle`, `nature` (TACHE, JALON, ATTENTE), `date_obligatoire`, `prevu_le`, `valide_le`, `valide_par`, `controle`, `controle_le`, `controle_par`, `ressource` (étape, sinon ordre), `commentaire` | collection |
+
 #### Sources annexes (avec `sources_annexes`)
 
 | Chemin | Champs |

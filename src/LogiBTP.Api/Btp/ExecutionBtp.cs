@@ -8,7 +8,8 @@ using NpgsqlTypes;
 namespace LogiBTP.Api.Btp;
 
 /// <summary>Exécution d'un ordre saisie (état, motif, commentaire, service, responsable, dates prévues).</summary>
-public sealed record ExecutionSaisie(string? Etat, int? MotifId, string? Commentaire, int? SrvId, long? ResponsableId, DateOnly? DebutPrevu, DateOnly? FinPrevue);
+public sealed record ExecutionSaisie(string? Etat, int? MotifId, string? Commentaire, int? SrvId, long? ResponsableId, DateOnly? DebutPrevu, DateOnly? FinPrevue,
+    JsonElement? Ressource = null);
 
 /// <summary>
 /// Module Exécution, lot 1 (db/197 ; ANALYSE-MODULE-EXECUTION.md) : ordres = documents de la famille E. État d'exécution
@@ -41,7 +42,7 @@ public static class ExecutionBtp
         var json = await db.Database.SqlQueryRaw<string>("""
             SELECT json_build_object(
               'etat', coalesce(d.ent_exe_etat, 'A_FAIRE'), 'motif_id', d.ent_exe_motif_id, 'commentaire', d.ent_exe_commentaire, 'srv_id', d.ent_srv_id,
-              'responsable_id', d.ent_responsable_id, 'debut_prevu', d.ent_debut_prevu, 'fin_prevue', d.ent_fin_prevue,
+              'responsable_id', d.ent_responsable_id, 'debut_prevu', d.ent_debut_prevu, 'fin_prevue', d.ent_fin_prevue, 'ressource', d.ent_ressource,
               'historique', (SELECT coalesce(json_agg(json_build_object('etat', h.oeh_etat, 'motif', m.mot_libelle, 'commentaire', h.oeh_commentaire, 'detail', h.oeh_detail,
                                 'par', h.oeh_par, 'le', h.oeh_le) ORDER BY h.oeh_le DESC), '[]')
                              FROM ordre_execution_historique h LEFT JOIN motif m ON m.mot_id = h.oeh_motif_id WHERE h.oeh_ent_id = d.ent_id),
@@ -104,11 +105,12 @@ public static class ExecutionBtp
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlRawAsync("""
             UPDATE document SET ent_exe_etat = @e, ent_exe_motif_id = @m, ent_exe_commentaire = @c, ent_srv_id = @s, ent_responsable_id = @r,
-              ent_debut_prevu = @d, ent_fin_prevue = @f WHERE ent_id = @id
+              ent_debut_prevu = @d, ent_fin_prevue = @f, ent_ressource = @res::jsonb WHERE ent_id = @id
             """,
             [
                 new NpgsqlParameter("e", etat), P("m", motif, NpgsqlDbType.Integer), P("c", s.Commentaire, NpgsqlDbType.Text), P("s", s.SrvId, NpgsqlDbType.Integer),
                 P("r", s.ResponsableId, NpgsqlDbType.Bigint), P("d", s.DebutPrevu, NpgsqlDbType.Date), P("f", s.FinPrevue, NpgsqlDbType.Date), new NpgsqlParameter("id", id),
+                P("res", s.Ressource is { ValueKind: JsonValueKind.Object } r ? r.GetRawText() : null, NpgsqlDbType.Text),
             ], ct);
         await db.Database.ExecuteSqlRawAsync("""
             INSERT INTO ordre_execution_historique (oeh_ent_id, oeh_etat, oeh_motif_id, oeh_commentaire, oeh_detail, oeh_par)
@@ -233,10 +235,26 @@ public static class ExecutionBtp
         return await TypesAsync(db, ct);
     }
 
+    /// <summary>Ressource principale proposée (E32) : salarié, équipe, matériel, sous-traitant, service.</summary>
+    public sealed record RessourceOrdre(string Type, long Id, string Libelle, string? Detail);
+
+    /// <summary>Ressources principales possibles d'un ordre ou d'une étape (actives).</summary>
+    public static Task<List<RessourceOrdre>> RessourcesAsync(LogiBtpContext db, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<RessourceOrdre>("""
+            SELECT 'SALARIE' AS type, s.sal_id::bigint AS id, concat_ws(' ', s.sal_prenom, s.sal_nom) AS libelle, coalesce(s.sal_code, s.sal_service) AS detail
+              FROM salarie s WHERE s.sal_actif
+            UNION ALL SELECT 'EQUIPE', e.equ_id, e.equ_libelle, e.equ_code FROM equipe e WHERE e.equ_active
+            UNION ALL SELECT 'MATERIEL', m.mat_id, m.mat_designation, m.mat_code FROM materiel m
+            UNION ALL SELECT 'SOUS_TRAITANT', t.sst_id, t.sst_raison, t.sst_metier FROM demo_sous_traitant t
+            UNION ALL SELECT 'SERVICE', v.srv_id, v.srv_libelle, v.srv_code FROM service v WHERE v.srv_actif
+            ORDER BY 1, 3
+            """).ToListAsync(ct);
+
     public static RouteGroupBuilder MapExecution(this RouteGroupBuilder api)
     {
         var g = api.MapGroup("/execution");
         g.MapGet("/types", (LogiBtpContext db, CancellationToken ct) => TypesAsync(db, ct));
+        g.MapGet("/ressources", (LogiBtpContext db, CancellationToken ct) => RessourcesAsync(db, ct));
         g.MapPut("/types/{code}", (string code, TypeOrdreSaisi s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
             EnregistrerTypeAsync(db, code, s, Utilisateur.Depuis(http), ct));
         g.MapGet("/documents/{id:long}", (long id, LogiBtpContext db, CancellationToken ct) => LireAsync(db, id, ct));

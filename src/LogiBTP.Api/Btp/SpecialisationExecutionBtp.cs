@@ -1,16 +1,26 @@
+using LogiBTP.Calendrier.Web;
+using LogiBTP.Documents.Web;
+using LogiBTP.Domaine;
+using LogiBTP.Execution;
 using LogiBTP.Execution.Web;
+using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace LogiBTP.Api.Btp;
 
 /// <summary>
 /// Spécialisation du module Exécution par le cœur : services de l'entreprise (db/193), chantiers suivis (ayant des ordres
 /// de la famille E ou un parcours) avec client, conducteur, fin prévue et dernier message du suivi (module CRM actif),
-/// ordres d'un chantier (indice de référence : type, service, statut, état d'exécution, motif, fin prévue, retard).
+/// ordres d'un chantier (indice de référence : type, service, statut, état d'exécution, motif, fin prévue, retard) ;
+/// étapes des ordres (§ 13) : ordre (document de la famille E), calendrier de son service, droits (E30, E46), suites
+/// (état d'exécution, dates de l'ordre, statut documentaire déclenché, historique).
 /// </summary>
-public class SpecialisationExecutionBtp : SpecialisationExecution
+public class SpecialisationExecutionBtp(IHttpContextAccessor http) : SpecialisationExecution
 {
+    private IServiceProvider Services => http.HttpContext?.RequestServices ?? throw new InvalidOperationException("Exécution : contexte HTTP absent");
+
     public override Task<List<ServiceExe>> ServicesAsync(ExecutionDbContext db, CancellationToken ct) =>
         db.Database.SqlQueryRaw<ServiceExe>("""
             SELECT s.srv_id AS id, s.srv_code AS code, s.srv_libelle AS libelle, s.srv_parent_id AS parent_id, s.srv_ordre AS ordre, s.srv_actif AS actif
@@ -52,4 +62,110 @@ public class SpecialisationExecutionBtp : SpecialisationExecution
             WHERE t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id::text = ANY(@ids)
             ORDER BY d.ent_fin_prevue NULLS LAST, d.ent_id
             """, new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct);
+
+    private sealed record LigneOrdre(long Id, string TypeOrdre, string? IdElement, int? SrvId, DateOnly? Debut, string? Etat, bool Clos);
+
+    public override async Task<OrdreEtapes?> OrdreAsync(ExecutionDbContext db, long id, CancellationToken ct)
+    {
+        var l = await db.Database.SqlQueryRaw<LigneOrdre>("""
+            SELECT d.ent_id AS id, t.tyd_code AS type_ordre, d.ent_chantier_id::text AS id_element, d.ent_srv_id AS srv_id, d.ent_debut_prevu AS debut,
+                   d.ent_exe_etat AS etat, s.std_code IN ('ANNULE', 'REMPLACE') AS clos
+            FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE d.ent_id = @id AND t.tyd_famille = 'E'
+            """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
+        return l is null ? null : new OrdreEtapes(l.Id, l.TypeOrdre, l.IdElement, l.SrvId, l.Debut, l.Etat, l.Clos);
+    }
+
+    public override Task<List<long>> OrdresEnCoursAsync(ExecutionDbContext db, string typeOrdre, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<long>("""
+            SELECT d.ent_id AS "Value" FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+            WHERE t.tyd_code = @t AND d.ent_is_reference AND s.std_code NOT IN ('SOLDE', 'ANNULE', 'REMPLACE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+            """, new NpgsqlParameter("t", typeOrdre)).ToListAsync(ct);
+
+    /// <summary>Calendrier du service de l'ordre (journées et fermetures du module Calendrier ; sans service : défaut).</summary>
+    public override async Task<CalendrierEtapes?> CalendrierAsync(ExecutionDbContext db, int? srvId, DateOnly du, DateOnly au, CancellationToken ct)
+    {
+        var cal = srvId is int s
+            ? await db.Database.SqlQueryRaw<int?>("SELECT srv_cal_id AS \"Value\" FROM service WHERE srv_id = @s", new NpgsqlParameter("s", s)).FirstOrDefaultAsync(ct)
+            : null;
+        var journees = await Services.GetRequiredService<ServiceCalendrier>().JourneesAsync(cal, du, au,
+            srvId is int x ? [new Portee("service", x.ToString())] : [], ct);
+        return new CalendrierEtapes(null, journees.ToDictionary(j => j.Date, j => j.Minutes));
+    }
+
+    private static Task<long?> IndividuAsync(ExecutionDbContext db, Utilisateur u, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<long?>("SELECT ind_id AS \"Value\" FROM individu WHERE ind_utilisateur = @u ORDER BY ind_id LIMIT 1",
+            new NpgsqlParameter("u", u.Code)).FirstOrDefaultAsync(ct);
+
+    /// <summary>
+    /// Validation d'une étape (E46) : administrateur, responsable de l'ordre, membre du service porteur ou de son parent,
+    /// ressource principale de l'étape (salarié de l'utilisateur).
+    /// </summary>
+    public override async Task<bool> PeutValiderAsync(ExecutionDbContext db, OrdreEtapes o, EtapeOrdreEntite? e, Utilisateur u, CancellationToken ct)
+    {
+        if (u.EstAdmin) return true;
+        if (await IndividuAsync(db, u, ct) is not long ind) return false;
+        long? salarie = null;
+        if (e?.OreRessource is string r)
+        {
+            var x = System.Text.Json.JsonDocument.Parse(r).RootElement;
+            if (x.TryGetProperty("type", out var t) && t.GetString() == "SALARIE" && x.TryGetProperty("id", out var i) && i.TryGetInt64(out var v)) salarie = v;
+        }
+        return await db.Database.SqlQueryRaw<bool>("""
+            SELECT (d.ent_responsable_id = @i
+                    OR EXISTS (SELECT 1 FROM service_membre m JOIN service s ON s.srv_id = d.ent_srv_id
+                                WHERE m.sme_ind_id = @i AND m.sme_srv_id IN (s.srv_id, s.srv_parent_id))
+                    OR EXISTS (SELECT 1 FROM salarie sa WHERE sa.sal_id = @sal AND sa.sal_ind_id = @i)) IS TRUE AS "Value"
+            FROM document d WHERE d.ent_id = @id
+            """, new NpgsqlParameter("i", ind), new NpgsqlParameter("sal", NpgsqlDbType.Bigint) { Value = (object?)salarie ?? DBNull.Value },
+            new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Contrôle du N+1 (E30) : administrateur ou responsable du service porteur de l'ordre (ou de son parent).</summary>
+    public override async Task<bool> PeutControlerAsync(ExecutionDbContext db, OrdreEtapes o, Utilisateur u, CancellationToken ct)
+    {
+        if (u.EstAdmin) return true;
+        if (await IndividuAsync(db, u, ct) is not long ind || o.SrvId is not int srv) return false;
+        return await db.Database.SqlQueryRaw<bool>("""
+            SELECT EXISTS (SELECT 1 FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id
+                           WHERE s.srv_id = @s AND (s.srv_responsable_id = @i OR p.srv_responsable_id = @i)) AS "Value"
+            """, new NpgsqlParameter("s", srv), new NpgsqlParameter("i", ind)).FirstAsync(ct);
+    }
+
+    /// <summary>
+    /// Suites des étapes : état d'exécution déduit, dates prévues de l'ordre (première et dernière étape), historique ;
+    /// statut documentaire « Transmis » ou « Pris en charge » appliqué par le cycle du document s'il le permet (sinon
+    /// avertissement).
+    /// </summary>
+    public override async Task<List<string>> ApresEtapesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes s, Utilisateur u, CancellationToken ct)
+    {
+        var avertissements = new List<string>();
+        await db.Database.ExecuteSqlRawAsync("""
+            UPDATE document SET ent_exe_etat = coalesce(@e, ent_exe_etat), ent_debut_prevu = coalesce(@d, ent_debut_prevu), ent_fin_prevue = coalesce(@f, ent_fin_prevue)
+            WHERE ent_id = @id
+            """,
+            [
+                new NpgsqlParameter("e", NpgsqlDbType.Varchar) { Value = (object?)s.Etat ?? DBNull.Value }, new NpgsqlParameter("d", NpgsqlDbType.Date) { Value = (object?)s.Debut ?? DBNull.Value },
+                new NpgsqlParameter("f", NpgsqlDbType.Date) { Value = (object?)s.Fin ?? DBNull.Value }, new NpgsqlParameter("id", o.Id),
+            ], ct);
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO ordre_execution_historique (oeh_ent_id, oeh_etat, oeh_motif_id, oeh_detail, oeh_par)
+            SELECT ent_id, ent_exe_etat, ent_exe_motif_id, left(@det, 300), @u FROM document WHERE ent_id = @id
+            """, [new NpgsqlParameter("det", s.Detail), new NpgsqlParameter("u", u.Code), new NpgsqlParameter("id", o.Id)], ct);
+        if (s.Statuts.Count == 0) return avertissements;
+        var documents = Services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
+        foreach (var statut in new[] { "ENVOYE", "VALIDE" }.Where(s.Statuts.Contains))
+        {
+            try
+            {
+                if (statut == "ENVOYE") await documents.Envoyer(o.Id, u, ct);
+                else await documents.ValiderTiers(o.Id, u, ct);
+            }
+            catch (ExceptionMetier e)
+            {
+                avertissements.Add($"Statut « {(statut == "ENVOYE" ? "Transmis" : "Pris en charge")} » non appliqué : {e.Message}");
+            }
+        }
+        return avertissements;
+    }
 }

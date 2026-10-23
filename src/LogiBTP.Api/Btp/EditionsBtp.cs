@@ -390,6 +390,17 @@ public static class SourceDocumentEdition
             ["echeances"] = c["echeances"]?.DeepClone() ?? new JsonArray(),
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
+        // Ordre (module Exécution, E47) : étapes dans l'ordre (dates prévisionnelles, validation, contrôle, ressource).
+        if (famille == "E")
+        {
+            resultat["etapes"] = JsonNode.Parse(await db.Database.SqlQueryRaw<string>("""
+                SELECT coalesce(json_agg(json_build_object('code', e.ore_code, 'libelle', e.ore_libelle, 'nature', e.ore_nature,
+                         'date_obligatoire', e.ore_date_obligatoire, 'prevu_le', e.ore_prevu_le, 'valide_le', e.ore_valide_le, 'valide_par', e.ore_valide_par,
+                         'controle', e.ore_controle, 'controle_le', e.ore_controle_le, 'controle_par', e.ore_controle_par,
+                         'ressource', coalesce(e.ore_ressource, d.ent_ressource) ->> 'libelle', 'commentaire', e.ore_commentaire) ORDER BY e.ore_ordre), '[]')::text AS "Value"
+                FROM exe_ordre_etape e JOIN document d ON d.ent_id = e.ore_ordre_id WHERE e.ore_ordre_id = @id
+                """, new NpgsqlParameter("id", d.EntId)).FirstAsync(ct));
+        }
         return resultat;
     }
 
@@ -687,6 +698,12 @@ public static class SourceDocumentEdition
             ("totaux.ht", "Total HT net", "montant"), ("totaux.tva", "Total TVA", "montant"), ("totaux.ttc", "Total TTC", "montant"), ("totaux.net", "Net à payer", "montant"),
             ("echeances", "Échéancier", "collection"), ("echeances[].rang", "Rang", "nombre"), ("echeances[].date", "Date (vide : à réception)", "date"),
             ("echeances[].montant", "Montant", "montant"), ("echeances[].mode", "Mode de règlement", "texte"), ("echeances[].nature", "Nature (RETENUE : retenue de garantie)", "texte"));
+        G("Étapes d'un ordre (module Exécution)",
+            ("etapes", "Étapes de l'ordre (dans l'ordre)", "collection"), ("etapes[].libelle", "État", "texte"), ("etapes[].code", "Code de l'état", "texte"),
+            ("etapes[].nature", "Nature (TACHE, JALON, ATTENTE)", "texte"), ("etapes[].date_obligatoire", "Date obligatoire (colonne du tableau)", "booleen"),
+            ("etapes[].prevu_le", "Date prévisionnelle", "date"), ("etapes[].valide_le", "Date de validation", "date"), ("etapes[].valide_par", "Validée par", "texte"),
+            ("etapes[].controle", "Contrôle du N+1 attendu", "booleen"), ("etapes[].controle_le", "Date du contrôle", "date"), ("etapes[].controle_par", "Contrôlée par", "texte"),
+            ("etapes[].ressource", "Ressource principale (étape, sinon ordre)", "texte"), ("etapes[].commentaire", "Commentaire", "texte"));
         G("Textes de l'édition",
             ("textes.intro", "Introduction (HTML, avant les lignes)", "html"), ("textes.fin", "Conclusion (HTML, après le pied)", "html"));
         G("Source annexe marche_documents (sources_annexes)",

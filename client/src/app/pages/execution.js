@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { ETATS_SERVICE, controlerParcours, MESSAGES_EXECUTION } from '@logibtp/execution';
 import { api } from '../api.js';
+import { rendreCatalogueEtats, rendreEtatsTypes } from '../execution/parametres-etats.js';
 
 // Module Exécution, lot 2 : synthèse des chantiers (un état par service), vue détaillée d'un chantier (parcours, états,
 // ordres par service) et modèles de parcours. États calculés par le serveur (ReglesEtats.cs ↔ etats.js).
@@ -38,13 +39,22 @@ async function demanderEtat(app, type, id, srv, etat) {
  * Éditeur des étapes d'un parcours (modèle ou chantier) : code, libellé, service, type d'ordre, étapes amont (codes
  * séparés par des virgules) ; contrôles de la règle partagée affichés sous le tableau.
  */
+/** États d'une étape de parcours en texte : « ETUDE:5, VISA » (durée facultative, virgule décimale acceptée). */
+export const texteEtats = (etats) => (etats ?? []).map((x) => (x.duree === null || x.duree === undefined ? x.code : `${x.code}:${String(x.duree).replace('.', ',')}`)).join(', ');
+export const lireEtats = (texte) => String(texte ?? '').split(/[,;\s]+(?=[A-Za-z_])/).map((x) => x.trim()).filter(Boolean).map((x) => {
+  const [code, duree] = x.split(':');
+  return { code: code.trim().toUpperCase(), duree: duree === undefined || duree.trim() === '' ? null : Number(duree.trim().replace(',', '.')) };
+});
+
 function editerEtapes(zone, etapes, services, { lecture = false, change = () => {} } = {}) {
   const rendre = () => {
     const erreurs = controlerParcours(etapes.map((e) => ({ code: e.code, srv_id: e.srv_id, amonts: e.amonts })));
-    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Service</th><th>Type d'ordre</th><th>Amont (codes)</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Service</th><th>Type d'ordre</th><th>Amont (codes)</th>
+      <th title="États retenus pour les ordres de cette étape, avec leur durée (ETUDE:5, VISA) ; vide : ceux du type d'ordre">États de l'ordre</th><th></th></tr></thead><tbody>
       ${etapes.map((e, i) => `<tr data-i="${i}"><td><input data-code size="9" value="${echapper(e.code ?? '')}" ${lecture ? 'readonly' : ''}></td>
         <td><input data-libelle size="24" value="${echapper(e.libelle ?? '')}" ${lecture ? 'readonly' : ''}></td><td data-service></td><td data-type></td>
         <td><input data-amonts size="16" value="${echapper((e.amonts ?? []).join(', '))}" ${lecture ? 'readonly' : ''}></td>
+        <td><input data-etats size="22" placeholder="ceux du type" value="${echapper(texteEtats(e.etats))}" ${lecture ? 'readonly' : ''}></td>
         <td>${lecture ? '' : `<button type="button" data-monter title="Monter" ${i ? '' : 'disabled'}>↑</button><button type="button" data-retirer title="Retirer">✕</button>`}</td></tr>`).join('')}</tbody></table>
       ${lecture ? '' : '<p><button type="button" data-ajouter>＋ Étape</button></p>'}
       ${erreurs.length ? `<p class="erreur">${erreurs.map((c) => echapper(MESSAGES_EXECUTION[c] ?? c)).join(' · ')}</p>` : ''}`;
@@ -62,6 +72,7 @@ function editerEtapes(zone, etapes, services, { lecture = false, change = () => 
       tr.querySelector('[data-amonts]').addEventListener('change', (x) => {
         e.amonts = x.target.value.split(/[,;\s]+/).map((a) => a.trim().toUpperCase()).filter(Boolean); change(); rendre();
       });
+      tr.querySelector('[data-etats]').addEventListener('change', (x) => { e.etats = lireEtats(x.target.value); change(); rendre(); });
       tr.querySelector('[data-monter]')?.addEventListener('click', () => { const i = etapes.indexOf(e); etapes.splice(i - 1, 0, ...etapes.splice(i, 1)); change(); rendre(); });
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { etapes.splice(etapes.indexOf(e), 1); change(); rendre(); });
     });
@@ -239,11 +250,17 @@ export class PageParametresExecution extends PageBase {
   async ouvrir() {
     this.titre = 'Modèles de parcours';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧭 Modèles de parcours (exécution)</h1>
-      <p class="aide">Un parcours enchaîne les services d'un chantier (études, fabrication, livraison, pose…) ; une étape démarre quand ses étapes amont sont terminées.</p><div data-corps></div></div>`;
+      <p class="aide">Un parcours enchaîne les services d'un chantier (études, fabrication, livraison, pose…) ; une étape démarre quand ses étapes amont sont terminées.</p><div data-corps></div>
+      <h2>Catalogue des états</h2><div data-catalogue></div>
+      <h2>États des types d'ordres</h2><div data-types></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
     if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const admin = this.app.estAdmin();
     const [modeles, services] = await Promise.all([api.execution.modeles(), api.services()]);
+    const zCatalogue = this.conteneur.querySelector('[data-catalogue]');
+    const zTypes = this.conteneur.querySelector('[data-types]');
+    await rendreCatalogueEtats(zCatalogue, { app: this.app, services, apres: () => rendreEtatsTypes(zTypes, { app: this.app }) });
+    await rendreEtatsTypes(zTypes, { app: this.app });
     let courant = modeles[0] ?? null;
     let modifie = false;
     this.#modifie = () => modifie;

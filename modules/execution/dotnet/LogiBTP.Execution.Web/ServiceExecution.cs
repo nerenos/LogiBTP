@@ -25,6 +25,8 @@ public class EtapeModeleEntite
     public string? PaeTypeOrdre { get; set; }
     public string[] PaeAmonts { get; set; } = [];
     public int PaeOrdre { get; set; }
+    /// <summary>États retenus par l'étape (JSON : [{ code, duree }]) ; vide : ceux du type d'ordre.</summary>
+    public string PaeEtats { get; set; } = "[]";
 }
 
 public class ParcoursEntite
@@ -47,6 +49,7 @@ public class EtapeElementEntite
     public string? PeeTypeOrdre { get; set; }
     public string[] PeeAmonts { get; set; } = [];
     public int PeeOrdre { get; set; }
+    public string PeeEtats { get; set; } = "[]";
 }
 
 public class EtatManuelEntite
@@ -67,19 +70,30 @@ public class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : 
     public DbSet<ParcoursEntite> Parcours => Set<ParcoursEntite>();
     public DbSet<EtapeElementEntite> EtapesElements => Set<EtapeElementEntite>();
     public DbSet<EtatManuelEntite> EtatsManuels => Set<EtatManuelEntite>();
+    public DbSet<EtatCatalogueEntite> EtatsCatalogue => Set<EtatCatalogueEntite>();
+    public DbSet<EtatTypeEntite> EtatsTypes => Set<EtatTypeEntite>();
+    public DbSet<EtapeOrdreEntite> EtapesOrdres => Set<EtapeOrdreEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<ModeleEntite>().ToTable("exe_parcours_modele").HasKey(x => x.PamId);
         b.Entity<EtapeModeleEntite>().ToTable("exe_parcours_etape").HasKey(x => x.PaeId);
+        b.Entity<EtapeModeleEntite>().Property(x => x.PaeEtats).HasColumnType("jsonb");
+        b.Entity<EtatCatalogueEntite>().ToTable("exe_etat_catalogue").HasKey(x => x.EtcCode);
+        b.Entity<EtatTypeEntite>().ToTable("exe_etat_type").HasKey(x => new { x.EttTypeOrdre, x.EttEtcCode });
+        b.Entity<EtapeOrdreEntite>().ToTable("exe_ordre_etape").HasKey(x => x.OreId);
+        b.Entity<EtapeOrdreEntite>().Property(x => x.OreRessource).HasColumnType("jsonb");
         b.Entity<ParcoursEntite>().ToTable("exe_parcours").HasKey(x => x.ParId);
         b.Entity<EtapeElementEntite>().ToTable("exe_parcours_element_etape").HasKey(x => x.PeeId);
+        b.Entity<EtapeElementEntite>().Property(x => x.PeeEtats).HasColumnType("jsonb");
         b.Entity<EtatManuelEntite>().ToTable("exe_etat_manuel").HasKey(x => new { x.EtmTypeElement, x.EtmIdElement, x.EtmSrvId });
     }
 }
 
 /// <summary>Étape d'un parcours (modèle ou élément) échangée avec le client.</summary>
-public sealed record EtapeDto(string Code, string? Libelle, int? SrvId, string? TypeOrdre, List<string>? Amonts, int Ordre);
+public sealed record EtapeDto(string Code, string? Libelle, int? SrvId, string? TypeOrdre, List<string>? Amonts, int Ordre, List<EtatEtapeDto>? Etats = null);
+/// <summary>État retenu par une étape de parcours, durée surchargée (E27, E33).</summary>
+public sealed record EtatEtapeDto(string Code, decimal? Duree = null);
 public sealed record ModeleDto(int? Id, string Code, string Libelle, string? Description, int Ordre, bool Actif, List<EtapeDto> Etapes);
 public sealed record ParcoursSaisi(int? PamId, List<EtapeDto>? Etapes);
 public sealed record EtatManuelSaisi(string? Etat, string? Motif);
@@ -109,6 +123,26 @@ public abstract class SpecialisationExecution
     public abstract Task<List<OrdreExe>> OrdresAsync(ExecutionDbContext db, IReadOnlyCollection<string> ids, CancellationToken ct);
     /// <summary>Types d'ordres désactivés : leurs étapes de parcours sont ignorées (services sans objet, E39).</summary>
     public virtual Task<HashSet<string>> TypesInactifsAsync(ExecutionDbContext db, CancellationToken ct) => Task.FromResult(new HashSet<string>());
+
+    // Étapes des ordres (§ 13) : l'application décrit l'ordre, fournit le calendrier, les droits et applique les suites.
+
+    /// <summary>Ordre (null : inconnu) : type, élément, service, début prévu, état d'exécution, clos (annulé, remplacé).</summary>
+    public virtual Task<OrdreEtapes?> OrdreAsync(ExecutionDbContext db, long id, CancellationToken ct) => Task.FromResult<OrdreEtapes?>(null);
+    /// <summary>Ordres non terminés d'un type (« Appliquer aux ordres en cours », E41).</summary>
+    public virtual Task<List<long>> OrdresEnCoursAsync(ExecutionDbContext db, string typeOrdre, CancellationToken ct) => Task.FromResult(new List<long>());
+    /// <summary>Calendrier des dates prévisionnelles (null : 7 h du lundi au vendredi).</summary>
+    public virtual Task<CalendrierEtapes?> CalendrierAsync(ExecutionDbContext db, int? srvId, DateOnly du, DateOnly au, CancellationToken ct) =>
+        Task.FromResult<CalendrierEtapes?>(null);
+    /// <summary>Droit de valider une étape, d'en prévoir la date ou la ressource (E46) ; défaut : administrateur.</summary>
+    public virtual Task<bool> PeutValiderAsync(ExecutionDbContext db, OrdreEtapes o, EtapeOrdreEntite? e, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
+    /// <summary>Droit de cocher le contrôle du N+1 (E30) ; défaut : administrateur.</summary>
+    public virtual Task<bool> PeutControlerAsync(ExecutionDbContext db, OrdreEtapes o, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
+    /// <summary>
+    /// Suites d'une modification des étapes : état d'exécution déduit (null : inchangé), statuts documentaires atteints,
+    /// dates de l'ordre (première et dernière étape), historique ; rend des avertissements.
+    /// </summary>
+    public virtual Task<List<string>> ApresEtapesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes suites, Utilisateur u, CancellationToken ct) =>
+        Task.FromResult(new List<string>());
 }
 
 /// <summary>
@@ -133,7 +167,8 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         var modeles = await db.Modeles.AsNoTracking().OrderBy(m => m.PamOrdre).ThenBy(m => m.PamCode).ToListAsync(ct);
         var etapes = await db.EtapesModeles.AsNoTracking().OrderBy(e => e.PaeOrdre).ToListAsync(ct);
         return modeles.Select(m => new ModeleDto(m.PamId, m.PamCode, m.PamLibelle, m.PamDescription, m.PamOrdre, m.PamActif,
-            etapes.Where(e => e.PaePamId == m.PamId).Select(e => new EtapeDto(e.PaeCode, e.PaeLibelle, e.PaeSrvId, e.PaeTypeOrdre, [.. e.PaeAmonts], e.PaeOrdre)).ToList())).ToList();
+            etapes.Where(e => e.PaePamId == m.PamId).Select(e => new EtapeDto(e.PaeCode, e.PaeLibelle, e.PaeSrvId, e.PaeTypeOrdre, [.. e.PaeAmonts], e.PaeOrdre,
+                EtatsEtape.Lire(e.PaeEtats))).ToList())).ToList();
     }
 
     /// <summary>Modèles de parcours (administrateur) : liste complète ; un modèle retiré est supprimé (les parcours copiés restent).</summary>
@@ -165,6 +200,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
             {
                 PaePamId = x.PamId, PaeCode = e.Code.Trim().ToUpperInvariant(), PaeLibelle = e.Libelle, PaeSrvId = e.SrvId, PaeTypeOrdre = e.TypeOrdre,
                 PaeAmonts = (e.Amonts ?? []).Select(a => a.Trim().ToUpperInvariant()).ToArray(), PaeOrdre = e.Ordre == 0 ? i + 1 : e.Ordre,
+                PaeEtats = EtatsEtape.Ecrire(e.Etats),
             }));
             await db.SaveChangesAsync(ct);
         }
@@ -178,7 +214,8 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         return (p, p is null ? [] : await db.EtapesElements.AsNoTracking().Where(e => e.PeeParId == p.ParId).OrderBy(e => e.PeeOrdre).ToListAsync(ct));
     }
 
-    private static List<EtapeDto> Dto(IEnumerable<EtapeElementEntite> l) => l.Select(e => new EtapeDto(e.PeeCode, e.PeeLibelle, e.PeeSrvId, e.PeeTypeOrdre, [.. e.PeeAmonts], e.PeeOrdre)).ToList();
+    private static List<EtapeDto> Dto(IEnumerable<EtapeElementEntite> l) => l.Select(e => new EtapeDto(e.PeeCode, e.PeeLibelle, e.PeeSrvId, e.PeeTypeOrdre, [.. e.PeeAmonts], e.PeeOrdre,
+        EtatsEtape.Lire(e.PeeEtats))).ToList();
 
     /// <summary>Parcours d'un élément : depuis un modèle (copie de ses étapes) ou étapes saisies ; sans étape : parcours retiré.</summary>
     public async Task<object> EnregistrerParcoursAsync(string type, string id, ParcoursSaisi s, Utilisateur u, CancellationToken ct)
@@ -208,7 +245,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         db.EtapesElements.AddRange(etapes.Select((e, i) => new EtapeElementEntite
         {
             PeeParId = p.ParId, PeeCode = e.Code.Trim().ToUpperInvariant(), PeeLibelle = e.Libelle, PeeSrvId = e.SrvId, PeeTypeOrdre = e.TypeOrdre,
-            PeeAmonts = (e.Amonts ?? []).Select(a => a.Trim().ToUpperInvariant()).ToArray(), PeeOrdre = i + 1,
+            PeeAmonts = (e.Amonts ?? []).Select(a => a.Trim().ToUpperInvariant()).ToArray(), PeeOrdre = i + 1, PeeEtats = EtatsEtape.Ecrire(e.Etats),
         }));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -254,7 +291,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
             .Select(e => new EtapeElementEntite
             {
                 PeeId = e.PeeId, PeeParId = e.PeeParId, PeeCode = e.PeeCode, PeeLibelle = e.PeeLibelle, PeeSrvId = e.PeeSrvId,
-                PeeTypeOrdre = e.PeeTypeOrdre, PeeAmonts = Amonts(e.PeeAmonts, 0), PeeOrdre = e.PeeOrdre,
+                PeeTypeOrdre = e.PeeTypeOrdre, PeeAmonts = Amonts(e.PeeAmonts, 0), PeeOrdre = e.PeeOrdre, PeeEtats = e.PeeEtats,
             }).ToList();
     }
 

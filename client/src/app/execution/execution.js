@@ -1,5 +1,6 @@
 import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
 import { api } from '../api.js';
+import { rendreEtapes, optionsRessources, ressourceDe } from './etapes.js';
 
 // Module Exécution (lot 1) : panneau « Exécution » de l'entête d'un ordre (famille E) et bloc de répartition du détail
 // d'une ligne. L'exécution (état, motif, service, responsable, dates prévues) s'enregistre à part du document : elle
@@ -32,10 +33,11 @@ export function pastilleExecution(etat) {
 let referentiels = null;
 /** Motifs de blocage, services, individus de notre société (chargés une fois par fenêtre). */
 async function chargerReferentiels(individus) {
-  referentiels ??= Promise.all([api.ressources.motifs('BLOCAGE'), api.services(), individus()]).then(([motifs, services, inds]) => ({
+  referentiels ??= Promise.all([api.ressources.motifs('BLOCAGE'), api.services(), individus(), api.execution.ressources().catch(() => [])]).then(([motifs, services, inds, ressources]) => ({
     motifs: motifs.filter((m) => m.actif).map((m) => ({ valeur: m.id, libelle: m.libelle, detail: m.service ?? '' })),
     services: services.filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.code })),
     individus: inds,
+    ressources,
   }));
   return referentiels;
 }
@@ -48,14 +50,19 @@ async function chargerReferentiels(individus) {
 export async function rendreExecution(bloc, { app, entId, typeCode, individus, surChange = () => {} }) {
   if (!entId) { bloc.innerHTML = '<p class="aide">Enregistrez l\'ordre pour suivre son exécution.</p>'; return; }
   const [x, refs] = await Promise.all([api.execution.document(entId), chargerReferentiels(individus)]);
-  const s = { etat: x.etat, motif_id: x.motif_id, commentaire: x.commentaire, srv_id: x.srv_id, responsable_id: x.responsable_id, debut_prevu: x.debut_prevu, fin_prevue: x.fin_prevue };
+  const s = {
+    etat: x.etat, motif_id: x.motif_id, commentaire: x.commentaire, srv_id: x.srv_id, responsable_id: x.responsable_id, debut_prevu: x.debut_prevu, fin_prevue: x.fin_prevue,
+    ressource: x.ressource ?? null,
+  };
   const budget = x.budget;
   const ligneBudget = (titre, t) => `<tr><td>${titre}</td><td class="nombre">${nombre(t?.pr)}</td><td class="nombre">${nombre(t?.ht)}</td><td class="nombre">${nombre(t?.heures)}</td></tr>`;
   const reference = budget?.versions?.find((v) => v.reference);
   bloc.innerHTML = `<div class="execution-ordre">
+    <div data-etapes></div>
     <p class="ligne"><label>État <span data-etat></span></label> <span data-motif-zone ${s.etat === 'BLOQUE' ? '' : 'hidden'}><label>Motif <span data-motif></span></label></span></p>
     <p><label>Commentaire<br><textarea data-c="commentaire" rows="2" cols="50">${echapper(s.commentaire ?? '')}</textarea></label></p>
-    <p class="ligne"><label>Service <span data-service></span></label> <label>Responsable <span data-responsable></span></label></p>
+    <p class="ligne"><label>Service <span data-service></span></label> <label>Responsable <span data-responsable></span></label>
+      <label>Ressource principale <span data-ressource></span></label></p>
     <p class="ligne"><label>Début prévu <input type="date" data-c="debut_prevu" value="${echapper(s.debut_prevu ?? '')}"></label>
       <label>Fin prévue <input type="date" data-c="fin_prevue" value="${echapper(s.fin_prevue ?? '')}"></label></p>
     <p class="connexion-erreur" data-erreur hidden></p>
@@ -78,6 +85,14 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
   combo('[data-motif]', refs.motifs, s.motif_id, true, 'motif_id');
   combo('[data-service]', refs.services, s.srv_id, true, 'srv_id');
   combo('[data-responsable]', refs.individus, s.responsable_id, true, 'responsable_id');
+  const cRessource = creerCombo({ options: optionsRessources(refs.ressources), valeur: s.ressource ? `${s.ressource.type}:${s.ressource.id}` : '', vide: true });
+  cRessource.addEventListener('change', () => { s.ressource = ressourceDe(cRessource.valeurCombo, refs.ressources); });
+  bloc.querySelector('[data-ressource]').append(cRessource);
+  // Étapes de l'ordre (lot 2c) : une action peut changer l'état d'exécution et les dates prévues : panneau relu.
+  rendreEtapes(bloc.querySelector('[data-etapes]'), {
+    app, entId, ressources: refs.ressources, ressourceOrdre: s.ressource,
+    surChange: () => { app.publier('enregistre', { type: typeCode, ids: [entId] }); surChange(); rendreExecution(bloc, { app, entId, typeCode, individus, surChange }); },
+  });
   bloc.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.value || null; }));
   if (app.moduleActif('planning')) rendrePlanningOrdre(bloc.querySelector('[data-planning-ordre]'), { app, entId, recharger: () => rendreExecution(bloc, { app, entId, typeCode, individus, surChange }) });
   bloc.querySelector('[data-enregistrer]').addEventListener('click', async () => {
