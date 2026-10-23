@@ -36,6 +36,7 @@
     "@logibtp/graphe": "0.2.0",
     "@logibtp/import": "0.2.0",
     "@logibtp/liste": "0.2.0",
+    "@logibtp/mail": "0.2.0",
     "@logibtp/metre": "0.2.0",
     "@logibtp/navigation": "0.2.0",
     "@logibtp/reglement": "0.2.0",

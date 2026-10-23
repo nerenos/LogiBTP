@@ -117,6 +117,7 @@ public class MessageEntite
     public string MmeCreePar { get; set; } = "";
     public DateTimeOffset MmeCreeLe { get; set; }
     public DateTimeOffset? MmeEnvoyeLe { get; set; }
+    public string? MmeNature { get; set; }
 }
 
 public class DestinataireEntite
@@ -188,6 +189,31 @@ public class DossierEntite
     public string? MdoErreur { get; set; }
 }
 
+public class RegleEntite
+{
+    public long MrgId { get; set; }
+    public string MrgCode { get; set; } = "";
+    public string MrgLibelle { get; set; } = "";
+    public string MrgNature { get; set; } = "AUTRE";
+    public List<string> MrgMots { get; set; } = [];
+    public List<string> MrgDans { get; set; } = [];
+    public string? MrgExpediteur { get; set; }
+    public string? MrgService { get; set; }
+    public long? MrgMcoId { get; set; }
+    public string MrgAction { get; set; } = "ALERTER";
+    public int MrgOrdre { get; set; } = 100;
+    public bool MrgActif { get; set; } = true;
+}
+
+public class PropositionEntite
+{
+    public long MprMmeId { get; set; }
+    public string MprTypeElement { get; set; } = "";
+    public string MprIdElement { get; set; } = "";
+    public int MprScore { get; set; }
+    public List<string> MprIndices { get; set; } = [];
+}
+
 public class ParametreEntite
 {
     public string MpaCle { get; set; } = "";
@@ -208,6 +234,8 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
     public DbSet<JournalEntite> Journal => Set<JournalEntite>();
     public DbSet<ParametreEntite> Parametres => Set<ParametreEntite>();
     public DbSet<DossierEntite> Dossiers => Set<DossierEntite>();
+    public DbSet<RegleEntite> Regles => Set<RegleEntite>();
+    public DbSet<PropositionEntite> Propositions => Set<PropositionEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -232,6 +260,8 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
         b.Entity<JournalEntite>().ToTable("mail_journal").HasKey(x => x.MjoId);
         b.Entity<ParametreEntite>().ToTable("mail_parametre").HasKey(x => x.MpaCle);
         b.Entity<DossierEntite>().ToTable("mail_dossier").HasKey(x => new { x.MdoMcoId, x.MdoNom });
+        b.Entity<RegleEntite>().ToTable("mail_regle").HasKey(x => x.MrgId);
+        b.Entity<PropositionEntite>().ToTable("mail_proposition").HasKey(x => new { x.MprMmeId, x.MprTypeElement, x.MprIdElement });
         b.Entity<ParametreEntite>().Property(x => x.MpaValeur).HasColumnType("jsonb");
     }
 }

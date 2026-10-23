@@ -143,12 +143,113 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
         m.MmeEtat = "A_RAPPROCHER";
         await db.SaveChangesAsync(ct);
         // Dossier « à traiter » ou drapeau « à suivre » (option du compte) : toujours à rapprocher par une personne.
-        if (r.Role != "A_TRAITER" && !(o.DrapeauASuivre && r.Drapeau)) await ApresReceptionAsync(m, lu, ct);
+        if (r.Role != "A_TRAITER" && !(o.DrapeauASuivre && r.Drapeau)) await ReconnaitreAsync(m, lu, depot, ct);
         return true;
     }
 
-    /// <summary>Point d'extension de la reconnaissance automatique (lot 4) : courriel reçu d'un dossier de réception.</summary>
-    private Task ApresReceptionAsync(MessageEntite m, CourrielLu lu, CancellationToken ct) => Task.CompletedTask;
+    /// <summary>
+    /// Reconnaissance automatique (lot 4) d'un courriel d'un dossier de réception : fil (réponse à un envoi ou à un
+    /// courriel déjà rapproché), candidats et tiers fournis par l'application, règles et seuils ; rattachement
+    /// automatique (et alerte au service), propositions gardées, ou courriel ignoré par une règle.
+    /// </summary>
+    private async Task ReconnaitreAsync(MessageEntite m, CourrielLu lu, DepotRecu depot, CancellationToken ct)
+    {
+        var ids = new[] { lu.InReplyTo }.Concat(lu.References).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToList();
+        var fil = ids.Count == 0 ? []
+            : await (from l in db.Liens.AsNoTracking() join x in db.Messages.AsNoTracking() on l.MliMmeId equals x.MmeId
+                     where ids.Contains(x.MmeMessageId) && x.MmeId != m.MmeId && l.MliRetireLe == null
+                     select new { l.MliTypeElement, l.MliIdElement }).Distinct().ToListAsync(ct);
+        var pieces = lu.Pieces.Select(p => p.Nom).ToList();
+        var c = await specialisation.CandidatsAsync(new AnalyseCourriel(m.MmeId, lu.Objet, lu.Texte, pieces, depot.TextePieces, lu.De?.Adresse), ct);
+        var regles = await ReglesAsync(m.MmeMcoId, ct);
+        var r = ReconnaissanceMail.Reconnaitre(new EntreeReconnaissance(lu.Objet, lu.Texte, pieces, depot.TextePieces, lu.De?.Adresse ?? "",
+            fil.Select(f => new ElementCible(f.MliTypeElement, f.MliIdElement)).ToList(), c.Candidats, c.ExpediteurTiers, c.Tiers, lu.Automatique),
+            regles, await comptes.ParametreAsync("seuil_haut", 80, ct), await comptes.ParametreAsync("seuil_bas", 40, ct));
+        m.MmeNature = r.Nature;
+        db.Propositions.AddRange(r.Propositions.Select(p => new PropositionEntite
+        {
+            MprMmeId = m.MmeId, MprTypeElement = p.Type, MprIdElement = p.Id, MprScore = p.Score, MprIndices = p.Indices.ToList(),
+        }));
+        if (r.Decision == "PROPOSE") m.MmeEtat = "PROPOSE";
+        await db.SaveChangesAsync(ct);
+        if (r.Decision == "IGNORE")
+        {
+            m.MmeEtat = "IGNORE";
+            m.MmeErreur = $"Ignoré par la règle {r.Regle}";
+            await db.SaveChangesAsync(ct);
+            if (m.MmeDgeId is long dge) await specialisation.PurgerAsync([dge], ct);
+            return;
+        }
+        if (r.Decision != "RATTACHE") return;
+        foreach (var p in r.Retenus)
+        {
+            if (await specialisation.DecrireElementAsync(p.Type, p.Id, ct) is not { } element) continue;
+            var parFil = r.Propositions.First(x => x.Type == p.Type && x.Id == p.Id).Indices.Contains("FIL");
+            await RattacherAsync(m, element, parFil ? "FIL" : "REGLE", p.Score, r.Regle, Fond, ct);
+            if (!r.Alerte) continue;
+            try
+            {
+                var pj = await db.Pieces.AsNoTracking().Where(x => x.MpiMmeId == m.MmeId).Select(x => x.MpiReference).ToListAsync(ct);
+                await specialisation.AlerterAsync(new MessageRattache(m.MmeId, m.MmeMcoId, m.MmeDgeId, m.MmeObjet, m.MmeDe, m.MmeDate, m.MmeCorpsHtml ?? "", pj,
+                    parFil ? "FIL" : "REGLE", Fond), element, r.Nature, r.Service, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                journal.LogWarning(e, "Mail : alerte du courriel {Id} non publiée", m.MmeId);
+            }
+        }
+    }
+
+    /// <summary>Règles actives du compte (et de tous les comptes).</summary>
+    private async Task<List<RegleReconnaissance>> ReglesAsync(long compte, CancellationToken ct) =>
+        (await db.Regles.AsNoTracking().Where(x => x.MrgActif && (x.MrgMcoId == null || x.MrgMcoId == compte)).ToListAsync(ct))
+        .Select(x => new RegleReconnaissance(x.MrgCode, x.MrgNature, x.MrgMots, x.MrgDans, x.MrgExpediteur, x.MrgService, x.MrgAction, x.MrgOrdre)).ToList();
+
+    /// <summary>Propositions de la reconnaissance d'un courriel (décrites par l'application).</summary>
+    public async Task<List<PropositionDto>> PropositionsAsync(long id, CancellationToken ct)
+    {
+        var res = new List<PropositionDto>();
+        foreach (var p in await db.Propositions.AsNoTracking().Where(x => x.MprMmeId == id).OrderByDescending(x => x.MprScore).ToListAsync(ct))
+        {
+            var e = await specialisation.DecrireElementAsync(p.MprTypeElement, p.MprIdElement, ct);
+            res.Add(new PropositionDto(p.MprTypeElement, p.MprIdElement, e?.Libelle, e?.Url, p.MprScore, p.MprIndices));
+        }
+        return res;
+    }
+
+    // --- Règles (administrateur) ---
+
+    public async Task<List<RegleDto>> ReglesListeAsync(CancellationToken ct) =>
+        await db.Regles.AsNoTracking().OrderBy(x => x.MrgOrdre).ThenBy(x => x.MrgCode)
+            .Select(x => new RegleDto(x.MrgId, x.MrgCode, x.MrgLibelle, x.MrgNature, x.MrgMots, x.MrgDans, x.MrgExpediteur, x.MrgService, x.MrgMcoId, x.MrgAction,
+                x.MrgOrdre, x.MrgActif)).ToListAsync(ct);
+
+    /// <summary>Règles réécrites en entier (codes uniques, nature, action et zones connues ; mots ou expéditeur obligatoires).</summary>
+    public async Task<List<RegleDto>> EnregistrerReglesAsync(Utilisateur u, List<RegleDto> l, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        foreach (var x in l)
+        {
+            if (string.IsNullOrWhiteSpace(x.Code) || x.Code.Length > 30 || string.IsNullOrWhiteSpace(x.Libelle)) throw ExceptionMetier.Invalide("MAIL_REGLE", "Code et libellé obligatoires");
+            if (!ReconnaissanceMail.Actions.Contains(x.Action)) throw ExceptionMetier.Invalide("MAIL_REGLE", $"{x.Code} : action inconnue");
+            if (!ReconnaissanceMail.Natures.Contains(x.Nature)) throw ExceptionMetier.Invalide("MAIL_REGLE", $"{x.Code} : nature inconnue");
+            if (x.Dans.Any(z => !ReconnaissanceMail.Zones.Contains(z))) throw ExceptionMetier.Invalide("MAIL_REGLE", $"{x.Code} : zone inconnue");
+            if (x.Mots.All(string.IsNullOrWhiteSpace) && string.IsNullOrWhiteSpace(x.Expediteur)) throw ExceptionMetier.Invalide("MAIL_REGLE", $"{x.Code} : mots ou expéditeur obligatoires");
+        }
+        if (l.GroupBy(x => x.Code.Trim().ToUpperInvariant()).Any(g => g.Count() > 1)) throw ExceptionMetier.Invalide("MAIL_REGLE", "Codes en double");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.Regles.ExecuteDeleteAsync(ct);
+        db.Regles.AddRange(l.Select(x => new RegleEntite
+        {
+            MrgCode = x.Code.Trim().ToUpperInvariant(), MrgLibelle = x.Libelle.Trim(), MrgNature = x.Nature,
+            MrgMots = x.Mots.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList(), MrgDans = x.Dans,
+            MrgExpediteur = string.IsNullOrWhiteSpace(x.Expediteur) ? null : x.Expediteur.Trim(), MrgService = string.IsNullOrWhiteSpace(x.Service) ? null : x.Service.Trim(),
+            MrgMcoId = x.Compte, MrgAction = x.Action, MrgOrdre = x.Ordre, MrgActif = x.Actif,
+        }));
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await ReglesListeAsync(ct);
+    }
 
     /// <summary>
     /// Avis de non-remise : envoi d'origine retrouvé par son Message-ID, destinataires marqués non remis, alerte à traiter
@@ -219,7 +320,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
         var pieces = (await db.Pieces.AsNoTracking().Where(p => ids.Contains(p.MpiMmeId)).Select(p => p.MpiMmeId).ToListAsync(ct)).ToLookup(x => x);
         return l.Select(m => new MessageDto(m.MmeId, "R", m.MmeEtat, m.MmePriorite, m.MmeDe, m.MmeObjet, m.MmeExpediteur is null ? [] : [m.MmeExpediteur], 1,
             pieces[m.MmeId].Count(), m.MmeTypeElement, m.MmeIdElement, null, m.MmeDate ?? m.MmeCreeLe, m.MmeCreePar, null, null, m.MmeAttente, m.MmeErreur, 0,
-            m.MmeDgeId)).ToList();
+            m.MmeDgeId, m.MmeNature)).ToList();
     }
 
     /// <summary>Liens d'un courriel (actifs), décrits par l'application.</summary>

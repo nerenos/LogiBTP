@@ -94,6 +94,8 @@ public static class Extensions
         g.MapGet("/recus", (string? vue, long? compte, int? page, int? taille, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
             r.RecusAsync(Utilisateur.Depuis(http), vue, compte, page ?? 1, taille ?? 50, ct));
         g.MapGet("/rattachement/types", (ServiceReceptionMail r) => r.TypesRattachement);
+        g.MapGet("/regles", (ServiceReceptionMail r, CancellationToken ct) => r.ReglesListeAsync(ct));
+        g.MapPut("/regles", (List<RegleDto> l, HttpContext http, ServiceReceptionMail r, CancellationToken ct) => r.EnregistrerReglesAsync(Utilisateur.Depuis(http), l, ct));
         g.MapPost("/messages/{id:long}/rattacher", (long id, DemandeRattachement d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
             r.RattacherAsync(Utilisateur.Depuis(http), id, d, ct));
         g.MapPost("/messages/{id:long}/detacher", (long id, DemandeRattachement d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>

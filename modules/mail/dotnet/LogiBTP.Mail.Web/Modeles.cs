@@ -70,14 +70,25 @@ public sealed record EstimationDto(bool Immediat, DateTimeOffset Depart, DateTim
 
 public sealed record MessageDto(long Id, string Sens, string Etat, string Priorite, string? Expediteur, string Objet, List<string> A, int NbDestinataires,
     int NbPieces, string? TypeElement, string? IdElement, long? Lot, DateTimeOffset CreeLe, string CreePar, DateTimeOffset? EnvoyeLe,
-    DateTimeOffset? ProchainEssai, string? Attente, string? Erreur, int Tentatives, long? DgeId);
+    DateTimeOffset? ProchainEssai, string? Attente, string? Erreur, int Tentatives, long? DgeId, string? Nature = null);
 
 public sealed record DestinataireDto(string Role, string Adresse, string? Nom, string? NonRemis);
 public sealed record PieceDto(string Reference, string Nom, string? Type, long Taille);
 public sealed record LigneJournalDto(long Id, long? Message, long? Lot, long Compte, string? Alias, string Utilisateur, string? Origine, int Destinataires,
     int Nouveaux, List<string> Domaines, string Resultat, string? Code, string? Reponse, int? DureeMs, DateTimeOffset Le);
 public sealed record DetailMessageDto(MessageDto Message, string? CorpsHtml, List<DestinataireDto> Destinataires, List<PieceDto> Pieces, List<LigneJournalDto> Journal,
-    List<LienDto> Liens, string? De, bool Auto, long Compte);
+    List<LienDto> Liens, string? De, bool Auto, long Compte, List<PropositionDto> Propositions);
+
+public sealed record PropositionDto(string Type, string Id, string? Libelle, string? Url, int Score, List<string> Indices);
+
+public sealed record RegleDto(long Id, string Code, string Libelle, string Nature, List<string> Mots, List<string> Dans, string? Expediteur, string? Service,
+    long? Compte, string Action, int Ordre, bool Actif);
+
+/// <summary>Courriel reçu à reconnaître, remis à l'application pour trouver les candidats (documents cités, tiers de l'expéditeur).</summary>
+public sealed record AnalyseCourriel(long Id, string Objet, string Texte, IReadOnlyList<string> Pieces, string TextePieces, string? De);
+
+/// <summary>Candidats trouvés par l'application : éléments cités, tiers de l'expéditeur (identifiants), tiers proposés.</summary>
+public sealed record CandidatsReconnaissance(List<Candidat> Candidats, List<long> ExpediteurTiers, List<ElementCible> Tiers);
 
 public sealed record CompteurCompte(long Compte, string Alias, string Etat, Limites Limites, int DestinatairesHeure, int DestinatairesJour, int TauxQuota,
     int EnFile, int Suspendus, int ErreursJour, DateTimeOffset? ProchainDepart);
@@ -95,7 +106,7 @@ public sealed record CourrielRecu(long Id, long Compte, string Objet, AdresseLue
     IReadOnlyList<string> A, IReadOnlyList<string> Cc);
 
 /// <summary>Courriel rangé : document de la GED et pièces jointes (références « ged:&lt;id&gt; »).</summary>
-public sealed record DepotRecu(long? DgeId, List<PieceInfo> Pieces);
+public sealed record DepotRecu(long? DgeId, List<PieceInfo> Pieces, string TextePieces = "");
 
 /// <summary>Élément de l'application désigné pour un rattachement (type, identifiant, libellé, page).</summary>
 public sealed record ElementTrouve(string Type, string Id, string Libelle, string? Url);

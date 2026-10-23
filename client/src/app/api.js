@@ -216,6 +216,8 @@ export const api = {
     detacher: (id, type, idElement) => appel('POST', `/mail/messages/${id}/detacher`, { type, id: idElement }),
     ignorer: (id, motif) => appel('POST', `/mail/messages/${id}/ignorer`, { motif }),
     marquerAdresse: (id, adresse) => appel('POST', `/mail/messages/${id}/marquer-adresse`, { adresse }),
+    regles: () => appel('GET', '/mail/regles'),
+    enregistrerRegles: (l) => appel('PUT', '/mail/regles', l),
   },
   // Module OAuth : connexions sortantes (client et jetons jamais relus), autorisation par la page du fournisseur.
   oauth: {

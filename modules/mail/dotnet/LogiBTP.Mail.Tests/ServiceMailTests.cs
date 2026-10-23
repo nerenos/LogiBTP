@@ -169,6 +169,17 @@ public sealed class ServiceMailTests : IAsyncLifetime
         return Eml(m);
     }
 
+    /// <summary>Réponse du client dans le fil d'un envoi (In-Reply-To = Message-ID de l'envoi).</summary>
+    private static byte[] Reponse(string messageIdOrigine)
+    {
+        var m = new MimeMessage { Subject = "RE: Devis DV-1", MessageId = "rep-2@client.fr", InReplyTo = messageIdOrigine };
+        m.References.Add(messageIdOrigine);
+        m.From.Add(new MailboxAddress("", "autre@client.fr"));
+        m.To.Add(new MailboxAddress("", "commercial@exemple.fr"));
+        m.Body = new TextPart("plain") { Text = "Merci, je regarde." };
+        return Eml(m);
+    }
+
     /// <summary>Avis de non-remise (RFC 3464) d'un envoi de l'application.</summary>
     private static byte[] AvisNonRemise(string messageIdOrigine, string adresse)
     {
@@ -205,13 +216,20 @@ public sealed class ServiceMailTests : IAsyncLifetime
 
         _transport.Boite.Add(CourrielClient());
         _transport.Boite.Add(AvisNonRemise(idEnvoi, "inconnu@durand.fr"));
-        Assert.True(2 == await reception.ReleverMaintenantAsync(Admin, c.Id, default), string.Join(" | ", traces.Lignes));
+        _transport.Boite.Add(Reponse(idEnvoi));
+        Assert.True(3 == await reception.ReleverMaintenantAsync(Admin, c.Id, default), string.Join(" | ", traces.Lignes));
         Assert.Equal(0, await reception.ReleverMaintenantAsync(Admin, c.Id, default));
 
         // Avis de non-remise : destinataire de l'envoi marqué, alerte à l'auteur, avis rattaché à l'élément de l'envoi.
         var detailEnvoi = await envoi.MessageAsync(Admin, r.Messages[0], default);
         Assert.Contains("5.1.1", detailEnvoi.Destinataires.Single(d => d.Role == "A").NonRemis);
         Assert.Contains(_specialisation.Signaux, s => s.Genre == "NON_REMIS");
+
+        // Réponse dans le fil de l'envoi : rattachée automatiquement à l'élément de l'envoi (lien FIL, score 100).
+        var reponse = Assert.Single(await reception.RecusAsync(Admin, "rapproches", c.Id, 1, 50, default));
+        var lienFil = Assert.Single((await envoi.MessageAsync(Admin, reponse.Id, default)).Liens);
+        Assert.Equal(("document", "12", "FIL", 100), (lienFil.Type, lienFil.Id, lienFil.Origine, lienFil.Score));
+        Assert.Contains((reponse.Id, "document:12"), _specialisation.Rattaches);
 
         // Courriel ordinaire : à rapprocher, HTML nettoyé (ni image distante ni script), pièce rangée.
         var recus = await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default);

@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/mail",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Mail LogiBTP : reconnaissance des courriels reçus (nature, candidats, décision), répliquée avec ReconnaissanceMail.cs",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

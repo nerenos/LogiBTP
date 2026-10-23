@@ -25,6 +25,8 @@
   par lien, bordereaux de diffusion du CRM).
 - [x] **Module Mail, lot 3** (23/10/2026) : réception IMAP, courriels reçus en GED, avis de non-remise, liste « À
   rapprocher », rattachement manuel, ignorer, purge.
+- [x] **Module Mail, lot 4** (23/10/2026) : reconnaissance automatique répliquée JS ↔ C#, règles et seuils, rattachement
+  automatique et alerte au service, propositions à valider.
 
 ### Chaîne des achats et marchés
 

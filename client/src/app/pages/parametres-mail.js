@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
+import { reconnaitre, NATURES, ACTIONS, ZONES } from '@logibtp/mail';
 
 const HEBERGEURS = [
   { valeur: 'GMAIL', libelle: 'Gmail (grand public)' }, { valeur: 'OVH', libelle: 'Exchange hébergé OVH' }, { valeur: 'AUTRE', libelle: 'Autre hébergeur' },
@@ -22,6 +23,9 @@ const PARAMETRES = [
   ['seuil_envoi_groupe', 'Confirmation au-delà de (destinataires)'], ['seuil_quota_pct', 'Avertissement à (% du quota journalier)'],
   ['seuil_non_remise_pct', 'Suspension au-delà de (% de non-remises sur une heure)'], ['seuil_utilisateur_heure', 'Envois inhabituels : courriels par heure et par utilisateur'],
   ['reserve_prioritaire_pct', 'Réserve des envois prioritaires (% du quota)'], ['taille_max_mo', 'Pièces jointes par courriel (Mo)'], ['journal_mois', 'Conservation du journal (mois)'],
+  ['conservation_non_rapproches_jours', 'Courriels reçus non rapprochés : conservés (jours)'], ['premiere_releve_jours', 'Première relève : courriels des derniers (jours)'],
+  ['taille_reception_mo', 'Courriel reçu au-delà (Mo) : en-têtes seuls'], ['seuil_haut', 'Reconnaissance : rattachement automatique dès (score %)'],
+  ['seuil_bas', 'Reconnaissance : proposition dès (score %)'],
 ];
 const APRES_RATTACHEMENT = [
   { valeur: 'RIEN', libelle: 'ne rien faire sur le serveur' }, { valeur: 'DEPLACER', libelle: 'déplacer vers le dossier' },
@@ -54,6 +58,7 @@ export class PageParametresMail extends PageBase {
       <h2>Comptes</h2><div data-comptes></div><div data-compte></div>
       <h2>Expéditeur par usage</h2><div data-usages></div>
       <h2>Modèles de courriels</h2><div data-modeles></div>
+      <h2>Reconnaissance des courriels reçus</h2><div data-regles></div>
       <h2>Limitations et avertissements</h2><div data-parametres></div></div>`;
     this.conteneur.querySelector('[data-boite]').addEventListener('click', () => app.naviguer('/mail?vue=envois'));
     if (!app.enLigne || !app.estAdmin()) {
@@ -67,6 +72,64 @@ export class PageParametresMail extends PageBase {
     this.rendreUsages();
     this.rendreModeles();
     this.rendreParametres();
+    this.regles = await api.mail.regles();
+    this.rendreRegles();
+  }
+
+  /**
+   * Règles de reconnaissance (nature, mots, zones, expéditeur, service, action, ordre) et essai sur un texte saisi par la
+   * même règle que le serveur (`reconnaitre` de @logibtp/mail : nature et décision, sans candidats).
+   */
+  rendreRegles() {
+    const zone = this.conteneur.querySelector('[data-regles]');
+    const l = this.regles.map((r) => ({ ...r }));
+    const rendre = () => {
+      zone.innerHTML = `<p class="aide">Un courriel reçu est rattaché tout seul s'il répond à un envoi de l'application, ou si un seul document cité
+        dépasse le seuil de rattachement ; la première règle qui s'applique donne sa nature et le service prévenu (ALERTER), ou l'ignore.</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Ordre</th><th>Code</th><th>Libellé</th><th>Nature</th><th>Mots (séparés par ;)</th><th>Zones</th>
+          <th>Expéditeur (suffixe)</th><th>Service</th><th>Action</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+        ${l.map((r, i) => `<tr data-i="${i}"><td><input data-r="ordre" value="${r.ordre}" size="3"></td><td><input data-r="code" value="${echapper(r.code)}" size="8"></td>
+          <td><input data-r="libelle" value="${echapper(r.libelle)}" size="20"></td><td><span data-nature></span></td>
+          <td><input data-r="mots" value="${echapper(r.mots.join('; '))}" size="32"></td><td><input data-r="dans" value="${echapper(r.dans.join(', '))}" size="12" placeholder="toutes"></td>
+          <td><input data-r="expediteur" value="${echapper(r.expediteur ?? '')}" size="16"></td><td><input data-r="service" value="${echapper(r.service ?? '')}" size="8"></td>
+          <td><span data-action></span></td><td><input type="checkbox" data-r="actif" ${r.actif ? 'checked' : ''}></td>
+          <td class="cellule-boutons"><button type="button" data-retirer>✕</button></td></tr>`).join('')}</tbody></table>
+        <div class="boutons"><button type="button" data-ajouter>＋ Règle</button> <button type="button" class="principal" data-enregistrer-regles>Enregistrer les règles</button></div>
+        <h3>Essai</h3><p class="ligne"><input data-essai="de" size="24" placeholder="expéditeur"> <input data-essai="objet" size="40" placeholder="objet">
+          <input data-essai="texte" size="40" placeholder="texte"> <button type="button" data-essayer>Essayer</button> <span data-resultat-essai></span></p>`;
+      zone.querySelectorAll('tr[data-i]').forEach((tr) => {
+        const r = l[Number(tr.dataset.i)];
+        const nature = creerCombo({ options: NATURES.map((n) => ({ valeur: n, libelle: n })), valeur: r.nature });
+        nature.addEventListener('change', () => { r.nature = nature.valeurCombo; });
+        tr.querySelector('[data-nature]').replaceWith(nature);
+        const action = creerCombo({ options: ACTIONS.map((a) => ({ valeur: a, libelle: a })), valeur: r.action });
+        action.addEventListener('change', () => { r.action = action.valeurCombo; });
+        tr.querySelector('[data-action]').replaceWith(action);
+        tr.querySelectorAll('[data-r]').forEach((x) => x.addEventListener('change', () => {
+          const k = x.dataset.r;
+          if (k === 'actif') r.actif = x.checked;
+          else if (k === 'ordre') r.ordre = Number(x.value) || 0;
+          else if (k === 'mots') r.mots = x.value.split(';').map((m) => m.trim()).filter(Boolean);
+          else if (k === 'dans') r.dans = x.value.split(',').map((m) => m.trim().toLowerCase()).filter((m) => ZONES.includes(m));
+          else r[k] = x.value.trim() || null;
+        }));
+        tr.querySelector('[data-retirer]').addEventListener('click', () => { l.splice(l.indexOf(r), 1); rendre(); });
+      });
+      zone.querySelector('[data-ajouter]').addEventListener('click', () => {
+        l.push({ id: 0, code: '', libelle: '', nature: 'AUTRE', mots: [], dans: [], expediteur: null, service: null, compte: null, action: 'ALERTER', ordre: (l.length + 1) * 10, actif: true });
+        rendre();
+      });
+      zone.querySelector('[data-enregistrer-regles]').addEventListener('click', async () => {
+        try { this.regles = await api.mail.enregistrerRegles(l); this.app.message('Règles enregistrées', 'succes'); this.rendreRegles(); } catch (e) { this.app.erreur(e); }
+      });
+      zone.querySelector('[data-essayer]').addEventListener('click', () => {
+        const e = (k) => zone.querySelector(`[data-essai="${k}"]`).value;
+        const r = reconnaitre({ objet: e('objet'), texte: e('texte'), pieces: [], texte_pieces: '', de: e('de'), fil: [], candidats: [], expediteur_tiers: [], tiers: [], automatique: false },
+          l.filter((x) => x.actif), { haut: this.parametres.seuil_haut ?? 80, bas: this.parametres.seuil_bas ?? 40 });
+        zone.querySelector('[data-resultat-essai]').textContent = r.regle ? `Règle ${r.regle} : ${r.nature}${r.service ? `, service ${r.service}` : ''}${r.decision === 'IGNORE' ? ', ignoré' : ''}` : 'Aucune règle';
+      });
+    };
+    rendre();
   }
 
   async recharger() {

@@ -5,6 +5,7 @@ using LogiBTP.Crm.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Ged.Web;
+using LogiBTP.Mail;
 using LogiBTP.Mail.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.Socle.Web;
@@ -32,6 +33,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         new("mail", "ERREUR", "Courriels non envoyés"), new("mail", "PARTI", "Courriels partis après une attente"), new("mail", "LOT", "Envois groupés terminés"),
         new("mail", "BLOCAGE", "Messagerie : envois suspendus par l'hébergeur"), new("mail", "QUOTA", "Messagerie : quota journalier"),
         new("mail", "COMPTE", "Messagerie : compte en erreur"), new("mail", "VOLUME", "Messagerie : envois inhabituels"),
+        new("mail", "NON_REMIS", "Courriels non remis (avis de non-remise)"), new("mail", "ALERTE", "Courriels reçus à traiter"),
     ];
 
     private sealed record DocumentMail(long EntId, string? EntNumero, DateOnly EntDate, string? EntObjet, DateOnly? EntDateValidite, decimal EntTotalHt,
@@ -304,7 +306,118 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             }, ct);
             pieces.Add(new PieceInfo($"ged:{enfant}", p.Nom, p.Type, p.Octets.Length));
         }
-        return new DepotRecu(depot, pieces);
+        return new DepotRecu(depot, pieces, await TextePiecesAsync(ged, pieces, ct));
+    }
+
+    /// <summary>Texte des pièces jointes extrait par la GED (PDF, bureautique…) pour la reconnaissance ; une pièce illisible est ignorée.</summary>
+    private async Task<string> TextePiecesAsync(ServiceGed ged, List<PieceInfo> pieces, CancellationToken ct)
+    {
+        var ids = pieces.Select(p => long.Parse(p.Reference[4..])).ToList();
+        foreach (var id in ids) await Tenter($"texte de la pièce {id}", () => ged.Indexer(id, Fond, ct));
+        var textes = await db.Database.SqlQueryRaw<string>("SELECT coalesce(dge_texte_contenu, '') AS \"Value\" FROM document_ged WHERE dge_id = ANY(@ids)",
+            new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct);
+        var t = string.Join('\n', textes);
+        return t.Length > 50_000 ? t[..50_000] : t;
+    }
+
+    /// <summary>Domaines de messageries publiques : un expéditeur n'y désigne pas un tiers par son domaine.</summary>
+    private static readonly HashSet<string> DomainesPublics = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "gmail.com", "googlemail.com", "hotmail.com", "hotmail.fr", "outlook.com", "outlook.fr", "live.fr", "live.com", "yahoo.fr", "yahoo.com", "orange.fr",
+        "wanadoo.fr", "free.fr", "sfr.fr", "neuf.fr", "laposte.net", "bbox.fr", "icloud.com", "me.com", "aol.com", "gmx.fr", "proton.me", "protonmail.com",
+    };
+
+    private sealed record DocumentCite(long EntId, string? EntNumero, string? EntReferenceExterne, long? EntTiersId);
+
+    /// <summary>
+    /// Candidats de la reconnaissance : documents dont le numéro ou la référence externe (4 caractères au moins) figure
+    /// dans l'objet, le texte, le nom ou le texte des pièces (20 au plus) ; tiers de l'expéditeur par son adresse
+    /// (coordonnée EMAIL du tiers, d'un rattachement ou d'un individu rattaché), sinon par le domaine (hors messageries
+    /// publiques, 5 au plus).
+    /// </summary>
+    public override async Task<CandidatsReconnaissance> CandidatsAsync(AnalyseCourriel a, CancellationToken ct)
+    {
+        var texte = string.Join('\n', new[] { a.Objet, a.Texte, a.TextePieces }.Concat(a.Pieces)).ToLowerInvariant();
+        if (texte.Length > 60_000) texte = texte[..60_000];
+        var documents = await db.Database.SqlQueryRaw<DocumentCite>("""
+            SELECT e.ent_id, e.ent_numero, e.ent_reference_externe, e.ent_tiers_id FROM document e
+            WHERE (length(e.ent_numero) >= 4 AND position(lower(e.ent_numero) IN @t) > 0)
+               OR (length(e.ent_reference_externe) >= 4 AND position(lower(e.ent_reference_externe) IN @t) > 0)
+            ORDER BY e.ent_id DESC LIMIT 20
+            """, new NpgsqlParameter("t", texte)).ToListAsync(ct);
+        var candidats = documents.Select(d => new Candidat("document", d.EntId.ToString(), d.EntNumero,
+            d.EntReferenceExterne is { Length: >= 4 } r ? [r] : [], d.EntTiersId)).ToList();
+        if (string.IsNullOrWhiteSpace(a.De)) return new CandidatsReconnaissance(candidats, [], []);
+        var tiers = await db.Database.SqlQueryRaw<long>("""
+            SELECT DISTINCT coalesce(u.uco_per_id, r.rat_per_id, r2.rat_per_id) AS "Value"
+            FROM coordonnee c JOIN usage_coordonnee u ON u.uco_coo_id = c.coo_id
+            LEFT JOIN rattachement r ON r.rat_id = u.uco_rat_id LEFT JOIN rattachement r2 ON r2.rat_ind_id = u.uco_ind_id
+            WHERE c.coo_nature = 'EMAIL' AND lower(trim(c.coo_valeur)) = lower(trim(@a)) AND coalesce(u.uco_per_id, r.rat_per_id, r2.rat_per_id) IS NOT NULL
+            """, new NpgsqlParameter("a", a.De)).ToListAsync(ct);
+        var domaine = Adresses.Domaine(a.De);
+        if (tiers.Count == 0 && domaine.Length > 0 && !DomainesPublics.Contains(domaine))
+        {
+            tiers = await db.Database.SqlQueryRaw<long>("""
+                SELECT DISTINCT coalesce(u.uco_per_id, r.rat_per_id) AS "Value"
+                FROM coordonnee c JOIN usage_coordonnee u ON u.uco_coo_id = c.coo_id LEFT JOIN rattachement r ON r.rat_id = u.uco_rat_id
+                WHERE c.coo_nature = 'EMAIL' AND lower(trim(c.coo_valeur)) LIKE '%@' || @d AND coalesce(u.uco_per_id, r.rat_per_id) IS NOT NULL
+                LIMIT 5
+                """, new NpgsqlParameter("d", domaine)).ToListAsync(ct);
+        }
+        return new CandidatsReconnaissance(candidats, tiers, tiers.Select(t => new ElementCible("personne", t.ToString())).ToList());
+    }
+
+    private sealed record ContexteAlerte(long? SrvId, long? RedacteurId, string? Redacteur, string TydFamille);
+
+    /// <summary>
+    /// Alerte d'un courriel rattaché automatiquement : tâche du CRM à prendre par le service (code de la règle, sinon
+    /// service de l'ordre, sinon Vente / Achat selon la famille du document) avec le rédacteur pour responsable ; sans
+    /// CRM : notification aux membres du service, sinon au rédacteur, sinon aux administrateurs.
+    /// </summary>
+    public override async Task AlerterAsync(MessageRattache m, ElementTrouve element, string? nature, string? service, CancellationToken ct)
+    {
+        ContexteAlerte? doc = null;
+        if (element.Type == "document" && long.TryParse(element.Id, out var entId))
+        {
+            doc = await db.Database.SqlQueryRaw<ContexteAlerte>("""
+                SELECT e.ent_srv_id::bigint AS srv_id, e.ent_redacteur_id AS redacteur_id, i.ind_utilisateur AS redacteur, t.tyd_famille
+                FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id LEFT JOIN individu i ON i.ind_id = e.ent_redacteur_id WHERE e.ent_id = @id
+                """, new NpgsqlParameter("id", entId)).FirstOrDefaultAsync(ct);
+        }
+        var code = service ?? (doc is null ? null : doc.TydFamille == "A" ? "ACHAT" : doc.TydFamille == "V" ? "VENTE" : null);
+        var srvId = code is null ? doc?.SrvId
+            : await db.Database.SqlQueryRaw<long?>("SELECT srv_id::bigint AS \"Value\" FROM service WHERE srv_code = @c AND srv_actif", new NpgsqlParameter("c", code)).FirstOrDefaultAsync(ct)
+              ?? doc?.SrvId;
+        var (titre, conseil) = nature switch
+        {
+            "ARC" => ("ARC reçu", "Contrôler les prix, quantités et délais de l'accusé de réception."),
+            "REPONSE_DEVIS" => ("Réponse au devis", "Lire la réponse ; si le devis est accepté, enregistrer la validation du tiers sur le document."),
+            "FACTURE_FOURNISSEUR" => ("Facture fournisseur reçue", "Saisir et rapprocher la facture de la commande ou du bon de livraison."),
+            "BL" => ("Avis de livraison reçu", "Préparer la réception de la livraison."),
+            "RELANCE" => ("Relance reçue", "Traiter la relance."),
+            _ => ("Courriel reçu", "Lire le courriel rattaché."),
+        };
+        var objet = $"{titre} : {element.Libelle}";
+        var html = $"<p>{WebUtility.HtmlEncode(conseil)}</p><p>De : {WebUtility.HtmlEncode(m.De ?? "?")} — objet : {WebUtility.HtmlEncode(m.Objet)}</p>";
+        if (await modules.EstActifAsync("crm", ct) && (srvId is not null || doc?.RedacteurId is not null))
+        {
+            var (typeGed, idGed, _) = await ElementGedAsync(element.Type, element.Id, ct);
+            var lien = element.Type == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(element.Type, element.Id, true);
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, srvId is long s ? (int)s : null,
+                objet.Length > 200 ? objet[..200] : objet, html, srvId is null ? doc?.RedacteurId : null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [lien], null),
+                Fond, ct);
+            return;
+        }
+        var destinataires = srvId is long sid
+            ? await db.Database.SqlQueryRaw<string>("""
+                SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service_membre m JOIN individu i ON i.ind_id = m.sme_ind_id
+                WHERE m.sme_srv_id = @s AND i.ind_utilisateur IS NOT NULL
+                """, new NpgsqlParameter("s", sid)).ToListAsync(ct)
+            : [];
+        if (destinataires.Count == 0 && doc?.Redacteur is { } red) destinataires = [red];
+        if (destinataires.Count == 0) destinataires = [.. await AdministrateursAsync(ct)];
+        await SignalerAsync(new SignalMail("ALERTE", objet, conseil, "ATTENTION", $"/mail/message/{m.Id}", $"mail:alerte:{m.Id}:{element.Type}:{element.Id}",
+            element.Type, element.Id), destinataires, ct);
     }
 
     private static async Task<long> DeposerAsync(ServiceGed ged, byte[] octets, string nom, string type, MetaDepot meta, CancellationToken ct)

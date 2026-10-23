@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.Mail\LogiBTP.Mail.csproj" />
     <ProjectReference Include="..\LogiBTP.Mail.Web\LogiBTP.Mail.Web.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Testing\LogiBTP.Socle.Testing.csproj" />
   </ItemGroup>
 
 </Project>

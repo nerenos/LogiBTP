@@ -17,6 +17,7 @@ services:
       - ./modules/calendrier/db/006_calendrier.sql:/docker-entrypoint-initdb.d/006_calendrier.sql:ro
       - ./modules/mail/db/007_mail.sql:/docker-entrypoint-initdb.d/007_mail.sql:ro
       - ./modules/mail/db/007b_mail_reception.sql:/docker-entrypoint-initdb.d/007b_mail_reception.sql:ro
+      - ./modules/mail/db/007c_mail_reconnaissance.sql:/docker-entrypoint-initdb.d/007c_mail_reconnaissance.sql:ro
       - ./modules/notification/db/008_notification.sql:/docker-entrypoint-initdb.d/008_notification.sql:ro
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro

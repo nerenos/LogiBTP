@@ -49,8 +49,8 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
 - [ ] Envois à brancher quand les fonctions existeront : confirmation du SAV avec le bon signé (Exécution E22), relevé
   hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
-- [ ] Lot 4 : reconnaissance automatique (fil, numéros, références, expéditeur, texte des pièces), natures et règles,
-  alertes aux services ; création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu.
+- [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
+- [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements).
 - [ ] Annuaire : afficher et effacer la marque « non remise » des coordonnées EMAIL (`coo_non_remis_le`).
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe

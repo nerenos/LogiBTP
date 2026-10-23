@@ -1,0 +1,139 @@
+{
+  "description": "Reconnaissance d'un courriel reçu (reconnaitre ↔ ReconnaissanceMail.Reconnaitre) : nature par les règles (ordre, mots cherchés sans casse ni accents en mots entiers dans l'objet, le texte ou le nom des pièces, expéditeur par suffixe), score des candidats (numéro dans l'objet 70, dans le texte ou le nom d'une pièce 60, dans le texte des pièces 50 ; référence externe 40 ; expéditeur = tiers du candidat 20 ; plafond 100 ; fil 100 ; tiers connu de l'expéditeur 50), décision (IGNORE par règle, RATTACHE par le fil ou un seul candidat au-dessus du seuil haut, PROPOSE au-dessus du seuil bas, sinon A_RAPPROCHER), alerte (rattaché, non automatique, action ALERTER).",
+  "regles": [
+    { "code": "ARC", "nature": "ARC", "mots": ["accusé de réception", "ARC", "confirmation de commande"], "dans": [], "action": "ALERTER", "service": "ACHAT", "ordre": 10 },
+    { "code": "DEVIS", "nature": "REPONSE_DEVIS", "mots": ["bon pour accord", "devis signé", "acceptation"], "dans": ["objet", "texte"], "action": "ALERTER", "ordre": 20 },
+    { "code": "FACTURE", "nature": "FACTURE_FOURNISSEUR", "mots": ["facture"], "dans": ["objet", "pieces"], "action": "ALERTER", "service": "ADMIN", "ordre": 30 },
+    { "code": "PUB", "nature": "AUTRE", "mots": [], "dans": [], "expediteur": "@newsletter.exemple", "action": "IGNORER", "ordre": 5 },
+    { "code": "INFO", "nature": "AUTRE", "mots": ["pour information"], "dans": ["objet"], "action": "RATTACHER", "ordre": 40 }
+  ],
+  "seuils": { "haut": 80, "bas": 40 },
+  "normalisation": [
+    { "texte": "  Accusé  de RÉCEPTION – Œuvre ", "attendu": "accuse de reception – oeuvre" },
+    { "texte": "Facture n°CF2026-00045", "attendu": "facture n°cf2026-00045" }
+  ],
+  "mots": [
+    { "texte": "Votre ARC pour la commande", "mot": "arc", "attendu": true },
+    { "texte": "Marchand de parcs", "mot": "arc", "attendu": false },
+    { "texte": "réf. CF2026-00045.", "mot": "CF2026-00045", "attendu": true },
+    { "texte": "réf. CF2026-000451", "mot": "CF2026-00045", "attendu": false }
+  ],
+  "cas": [
+    {
+      "nom": "ARC avec le numéro de la commande dans l'objet, expéditeur tiers de la commande",
+      "entree": {
+        "objet": "Accusé de réception de commande CF2026-00045", "texte": "Bonjour, nous confirmons…", "pieces": ["ARC.pdf"], "texte_pieces": "",
+        "de": "commandes@fournisseur.fr", "fil": [], "expediteur_tiers": [8], "tiers": [{ "type": "personne", "id": "8" }],
+        "candidats": [{ "type": "document", "id": "45", "numero": "CF2026-00045", "references": [], "tiers_id": 8 }], "automatique": false
+      },
+      "attendu": {
+        "nature": "ARC", "regle": "ARC", "service": "ACHAT", "decision": "RATTACHE", "alerte": true,
+        "retenus": [{ "type": "document", "id": "45", "score": 90 }],
+        "propositions": [{ "type": "document", "id": "45", "score": 90, "indices": ["NUMERO_OBJET", "EXPEDITEUR"] }, { "type": "personne", "id": "8", "score": 50, "indices": ["TIERS"] }]
+      }
+    },
+    {
+      "nom": "Réponse dans le fil d'un envoi : rattachée et alertée même sans numéro",
+      "entree": {
+        "objet": "RE: Devis client", "texte": "Bon pour accord, merci.", "pieces": [], "texte_pieces": "", "de": "claire@durand.fr",
+        "fil": [{ "type": "document", "id": "12" }], "expediteur_tiers": [], "tiers": [], "candidats": [], "automatique": false
+      },
+      "attendu": {
+        "nature": "REPONSE_DEVIS", "regle": "DEVIS", "service": null, "decision": "RATTACHE", "alerte": true,
+        "retenus": [{ "type": "document", "id": "12", "score": 100 }],
+        "propositions": [{ "type": "document", "id": "12", "score": 100, "indices": ["FIL"] }]
+      }
+    },
+    {
+      "nom": "Réponse d'absence dans le fil : rattachée sans alerte",
+      "entree": {
+        "objet": "Réponse automatique : absent", "texte": "Je suis absent.", "pieces": [], "texte_pieces": "", "de": "claire@durand.fr",
+        "fil": [{ "type": "document", "id": "12" }], "expediteur_tiers": [], "tiers": [], "candidats": [], "automatique": true
+      },
+      "attendu": {
+        "nature": null, "regle": null, "service": null, "decision": "RATTACHE", "alerte": false,
+        "retenus": [{ "type": "document", "id": "12", "score": 100 }],
+        "propositions": [{ "type": "document", "id": "12", "score": 100, "indices": ["FIL"] }]
+      }
+    },
+    {
+      "nom": "Numéro dans le texte seulement, sans expéditeur connu : proposé",
+      "entree": {
+        "objet": "Votre demande", "texte": "Concernant le devis DV2026-00012 je reviens vers vous.", "pieces": [], "texte_pieces": "", "de": "x@inconnu.fr",
+        "fil": [], "expediteur_tiers": [], "tiers": [], "candidats": [{ "type": "document", "id": "12", "numero": "DV2026-00012", "references": [], "tiers_id": 18 }],
+        "automatique": false
+      },
+      "attendu": {
+        "nature": null, "regle": null, "service": null, "decision": "PROPOSE", "alerte": false, "retenus": [],
+        "propositions": [{ "type": "document", "id": "12", "score": 60, "indices": ["NUMERO_TEXTE"] }]
+      }
+    },
+    {
+      "nom": "Deux documents cités au-dessus du seuil haut : proposés, pas rattachés",
+      "entree": {
+        "objet": "Facture des commandes CF2026-00045 et CF2026-00046", "texte": "", "pieces": [], "texte_pieces": "", "de": "compta@fournisseur.fr",
+        "fil": [], "expediteur_tiers": [8], "tiers": [],
+        "candidats": [
+          { "type": "document", "id": "45", "numero": "CF2026-00045", "references": [], "tiers_id": 8 },
+          { "type": "document", "id": "46", "numero": "CF2026-00046", "references": [], "tiers_id": 8 }
+        ], "automatique": false
+      },
+      "attendu": {
+        "nature": "FACTURE_FOURNISSEUR", "regle": "FACTURE", "service": "ADMIN", "decision": "PROPOSE", "alerte": false, "retenus": [],
+        "propositions": [{ "type": "document", "id": "45", "score": 90, "indices": ["NUMERO_OBJET", "EXPEDITEUR"] }, { "type": "document", "id": "46", "score": 90, "indices": ["NUMERO_OBJET", "EXPEDITEUR"] }]
+      }
+    },
+    {
+      "nom": "Numéro lu dans le texte de la pièce et référence externe dans le texte",
+      "entree": {
+        "objet": "Documents", "texte": "Votre référence MARCHE-PUB-77", "pieces": ["scan.pdf"], "texte_pieces": "Commande n° CF2026-00045 du 01/10/2026", "de": "x@fournisseur.fr",
+        "fil": [], "expediteur_tiers": [], "tiers": [], "candidats": [{ "type": "document", "id": "45", "numero": "CF2026-00045", "references": ["MARCHE-PUB-77"], "tiers_id": 8 }],
+        "automatique": false
+      },
+      "attendu": {
+        "nature": null, "regle": null, "service": null, "decision": "RATTACHE", "alerte": true,
+        "retenus": [{ "type": "document", "id": "45", "score": 90 }],
+        "propositions": [{ "type": "document", "id": "45", "score": 90, "indices": ["NUMERO_PIECE_TEXTE", "REFERENCE"] }]
+      }
+    },
+    {
+      "nom": "Expéditeur seul connu : tiers proposé",
+      "entree": {
+        "objet": "Question", "texte": "Pouvez-vous me rappeler ?", "pieces": [], "texte_pieces": "", "de": "claire@durand.fr", "fil": [], "expediteur_tiers": [18],
+        "tiers": [{ "type": "personne", "id": "18" }], "candidats": [], "automatique": false
+      },
+      "attendu": {
+        "nature": null, "regle": null, "service": null, "decision": "PROPOSE", "alerte": false, "retenus": [],
+        "propositions": [{ "type": "personne", "id": "18", "score": 50, "indices": ["TIERS"] }]
+      }
+    },
+    {
+      "nom": "Règle IGNORER par l'expéditeur (lettre d'information)",
+      "entree": {
+        "objet": "Nos promotions", "texte": "…", "pieces": [], "texte_pieces": "", "de": "infos@newsletter.exemple", "fil": [], "expediteur_tiers": [], "tiers": [],
+        "candidats": [], "automatique": false
+      },
+      "attendu": { "nature": "AUTRE", "regle": "PUB", "service": null, "decision": "IGNORE", "alerte": false, "retenus": [], "propositions": [] }
+    },
+    {
+      "nom": "Règle RATTACHER : rattaché sans alerte ; mot cherché dans l'objet seulement",
+      "entree": {
+        "objet": "Pour information : planning CF2026-00045", "texte": "", "pieces": [], "texte_pieces": "", "de": "x@fournisseur.fr", "fil": [], "expediteur_tiers": [8],
+        "tiers": [], "candidats": [{ "type": "document", "id": "45", "numero": "CF2026-00045", "references": [], "tiers_id": 8 }], "automatique": false
+      },
+      "attendu": {
+        "nature": "AUTRE", "regle": "INFO", "service": null, "decision": "RATTACHE", "alerte": false,
+        "retenus": [{ "type": "document", "id": "45", "score": 90 }],
+        "propositions": [{ "type": "document", "id": "45", "score": 90, "indices": ["NUMERO_OBJET", "EXPEDITEUR"] }]
+      }
+    },
+    {
+      "nom": "Rien de reconnu : à rapprocher ; « facture » dans le texte n'est pas cherché (règle : objet et pièces)",
+      "entree": {
+        "objet": "Bonjour", "texte": "Je vous envoie la facture bientôt.", "pieces": [], "texte_pieces": "", "de": "x@inconnu.fr", "fil": [], "expediteur_tiers": [],
+        "tiers": [], "candidats": [], "automatique": false
+      },
+      "attendu": { "nature": null, "regle": null, "service": null, "decision": "A_RAPPROCHER", "alerte": false, "retenus": [], "propositions": [] }
+    }
+  ]
+}

@@ -59,6 +59,12 @@ public abstract class SpecialisationMail
     /// <summary>Courriels ignorés ou purgés : leurs documents de la GED sont retirés (masqués).</summary>
     public virtual Task PurgerAsync(IReadOnlyList<long> documents, CancellationToken ct) => Task.CompletedTask;
 
+    /// <summary>Candidats de la reconnaissance (lot 4) : éléments dont le numéro ou une référence figure dans le courriel, tiers de l'expéditeur.</summary>
+    public virtual Task<CandidatsReconnaissance> CandidatsAsync(AnalyseCourriel a, CancellationToken ct) => Task.FromResult(new CandidatsReconnaissance([], [], []));
+
+    /// <summary>Alerte à traiter après un rattachement automatique : service de la règle (code) ou celui que l'application déduit de l'élément.</summary>
+    public virtual Task AlerterAsync(MessageRattache m, ElementTrouve element, string? nature, string? service, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Adresse signalée non remise dans l'annuaire (proposé par l'alerte d'un avis de non-remise) ; renvoie les coordonnées marquées.</summary>
     public virtual Task<int> MarquerAdresseAsync(string adresse, string motif, Utilisateur u, CancellationToken ct) => Task.FromResult(0);
 }

@@ -40,7 +40,7 @@ graph TD
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 | crm (facultatif) | socle | `LogiBTP.Crm(.Web)` → Socle(.Web), HtmlSanitizer | 095 | cœur (éléments, individus, services ; écrans Suivi) |
 | notification | — (.NET seul) | `LogiBTP.Notifications.Web` → Socle.Web | 008 | cœur (sources du planificateur, cloche, boîte) |
-| mail | — (.NET seul) | `LogiBTP.Mail(.Web)` → Socle(.Web), MailKit, HtmlSanitizer | 007 | cœur (comptes, envoi depuis les éléments, GED, suivi ; `/mail`, `/parametres/mail`) |
+| mail | — (règles seules) | `LogiBTP.Mail(.Web)` → Socle(.Web), MailKit, HtmlSanitizer | 007–007c | cœur (comptes, envoi depuis les éléments, GED, suivi ; `/mail`, `/parametres/mail`) |
 | oauth | — (.NET seul) | `LogiBTP.OAuth(.Web)` → Socle(.Web) | 004 | cœur (connexions sortantes, `IFournisseurJeton` du socle pour le Mail ; `/parametres/connexions`) |
 | execution (facultatif) | — (règles seules) | `LogiBTP.Execution(.Web)` → Socle.Web | 085 | cœur (services, chantiers, ordres de la famille E ; synthèse, parcours) |
 | pointage (facultatif) | — (règles seules) | `LogiBTP.Pointage(.Web)` → Socle.Web | 086 | cœur (salariés, chantiers et chantiers internes, natures MO, ordres ; saisie hebdomadaire) |
@@ -145,6 +145,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | crm | `notes.js`, `rappels.js`, `demandes.js`, `validations.js` | `ReglesNote.cs`, `ReglesRappel.cs`, `ReglesDemande.cs`, `ReglesValidation.cs` | `01_note` à `04_validations` |
 | authentification | `regles.js` | `ReglesCompte.cs` | `01_pseudo` à `04_compte` |
 | calendrier | `calendrier.js` | `ReglesCalendrier.cs` | `01_feries`, `02_travail` |
+| mail | `reconnaissance.js` | `ReconnaissanceMail.cs` | `01_reconnaissance` |
 | execution | `etats.js` | `ReglesEtats.cs` | `01_etats` |
 | planning | `calcul.js`, `charge.js`, `dependances.js` | `ReglesPlanning.cs`, `ReglesCharge.cs`, `ReglesDependances.cs` | `01_calcul`, `02_charge`, `03_dependances` |
 | pointage | `controles.js`, `validation.js`, `paie.js` | `ReglesPointage.cs`, `ReglesValidation.cs`, `ReglesPaie.cs` | `01_controles`, `02_validation`, `03_paie` |

@@ -169,6 +169,7 @@
 
 | Type | Dépendance | Version | Licence | Usage |
 |---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/mail/js) |
 | NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Mail.Tests |
 | NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Mail.Web |
 | NuGet | MailKit | 4.18.2 | MIT | LogiBTP.Mail.Web |

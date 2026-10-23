@@ -18,6 +18,7 @@
     "modules/crm/js",
     "modules/authentification/js",
     "modules/calendrier/js",
+    "modules/mail/js",
     "modules/execution/js",
     "modules/pointage/js",
     "modules/planning/js",

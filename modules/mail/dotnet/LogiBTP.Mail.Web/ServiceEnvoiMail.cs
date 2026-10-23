@@ -537,7 +537,8 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
             .Select(d => new DestinataireDto(d.MdeRole, d.MdeAdresse, d.MdeNom, d.MdeNonRemis)).ToListAsync(ct);
         var pieces = await db.Pieces.AsNoTracking().Where(p => p.MpiMmeId == id).Select(p => new PieceDto(p.MpiReference, p.MpiNom, p.MpiType, p.MpiTaille)).ToListAsync(ct);
         var lignes = await db.Journal.AsNoTracking().Where(j => j.MjoMmeId == id).OrderBy(j => j.MjoLe).ToListAsync(ct);
-        return new DetailMessageDto(dto, m.MmeCorpsHtml, dest, pieces, lignes.Select(Ligne).ToList(), await reception.LiensAsync(id, ct), m.MmeDe, m.MmeAuto, m.MmeMcoId);
+        return new DetailMessageDto(dto, m.MmeCorpsHtml, dest, pieces, lignes.Select(Ligne).ToList(), await reception.LiensAsync(id, ct), m.MmeDe, m.MmeAuto, m.MmeMcoId,
+            await reception.PropositionsAsync(id, ct));
     }
 
     private async Task<MessageEntite> Lisible(Utilisateur u, long id, CancellationToken ct)

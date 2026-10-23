@@ -15,6 +15,10 @@ const VUES_RECUES = { 'a-rapprocher': 'a-rapprocher', recus: 'tous' };
 const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const taille = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
 
+export const NATURES = { ARC: 'ARC', REPONSE_DEVIS: 'Réponse au devis', FACTURE_FOURNISSEUR: 'Facture fournisseur', BL: 'Livraison', RELANCE: 'Relance', AUTRE: 'Autre' };
+const INDICES = { FIL: 'réponse à un envoi', NUMERO_OBJET: 'numéro dans l’objet', NUMERO_TEXTE: 'numéro dans le texte', NUMERO_PIECE: 'numéro dans le nom d’une pièce',
+  NUMERO_PIECE_TEXTE: 'numéro dans une pièce', REFERENCE: 'référence citée', EXPEDITEUR: 'expéditeur = tiers', TIERS: 'tiers de l’expéditeur' };
+
 export const pastilleMessage = (etat) => {
   const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
   return `<span class="pastille-compte ${c}">${echapper(l)}</span>`;
@@ -245,7 +249,7 @@ export function tableMessages(l) {
   return `<table class="tableau-compact largeur-contenu"><thead><tr><th>État</th><th>Créé le</th><th>De</th><th>À</th><th>Objet</th><th>📎</th><th>Envoyé / départ</th></tr></thead><tbody>
     ${l.map((m) => `<tr data-id="${m.id}" class="ligne-actions-survol" title="${echapper(m.erreur ?? m.attente ?? '')}"><td>${pastilleMessage(m.etat)}</td><td>${date(m.cree_le)}</td>
       <td>${echapper(m.expediteur ?? '')}</td><td>${echapper(m.a.join(', '))}${m.nb_destinataires > m.a.length ? ` <span class="aide">+${m.nb_destinataires - m.a.length}</span>` : ''}</td>
-      <td>${echapper(m.objet)}</td><td>${m.nb_pieces || ''}</td><td>${m.envoye_le ? date(m.envoye_le) : m.prochain_essai && m.etat === 'A_ENVOYER' ? `⏳ ${date(m.prochain_essai)}` : ''}</td></tr>`).join('')}
+      <td>${m.nature ? `<span class="etiquette-choix">${echapper(NATURES[m.nature] ?? m.nature)}</span> ` : ''}${echapper(m.objet)}</td><td>${m.nb_pieces || ''}</td><td>${m.envoye_le ? date(m.envoye_le) : m.prochain_essai && m.etat === 'A_ENVOYER' ? `⏳ ${date(m.prochain_essai)}` : ''}</td></tr>`).join('')}
     </tbody></table>`;
 }
 
@@ -291,6 +295,10 @@ export class PageMessageMail extends PageBase {
       ${m.sens === 'R' ? `<h2>Rattachements</h2>${d.liens.length ? `<ul>${d.liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" data-lien>${echapper(l.libelle ?? `${l.type} ${l.id}`)}</a>` : echapper(l.libelle ?? `${l.type} ${l.id}`)}
           <span class="aide">${echapper(l.origine.toLowerCase())}${l.score != null ? ` ${l.score} %` : ''}, ${echapper(l.par)}</span>
           <button type="button" data-detacher="${echapper(l.type)}|${echapper(l.id)}" title="Retirer ce rattachement">✕</button></li>`).join('')}</ul>` : '<p class="aide">Aucun.</p>'}
+        ${d.propositions.filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).length ? `<p>Propositions${m.nature ? ` (${echapper(NATURES[m.nature] ?? m.nature)})` : ''} :</p><ul>${d.propositions
+          .filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).map((p) => `<li><button type="button" data-proposition="${echapper(p.type)}|${echapper(p.id)}" title="Rattacher">✓</button>
+          ${p.url ? `<a href="${echapper(p.url)}" data-lien>${echapper(p.libelle ?? `${p.type} ${p.id}`)}</a>` : echapper(p.libelle ?? `${p.type} ${p.id}`)}
+          <span class="aide">${p.score} % : ${p.indices.map((i) => echapper(INDICES[i] ?? i)).join(', ')}</span></li>`).join('')}</ul>` : ''}
         <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="numéro ou code"> <button type="button" data-rattacher>🔗 Rattacher</button>
           ${m.etat !== 'IGNORE' ? '<button type="button" data-ignorer title="Courriel sans rapport (publicité, personnel) : retiré de la liste et de la GED">🚫 Ignorer…</button>' : ''}</p>` : ''}
       <div class="mail-corps">${d.corps_html ?? ''}</div>
@@ -312,6 +320,10 @@ export class PageMessageMail extends PageBase {
       try { await api.mail.detacher(m.id, type, id); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
     if (m.sens !== 'R') return;
+    zone.querySelectorAll('[data-proposition]').forEach((b) => b.addEventListener('click', async () => {
+      const [type, id] = b.dataset.proposition.split('|');
+      try { await api.mail.rattacher(m.id, { type, id }); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    }));
     const types = await api.mail.typesRattachement().catch(() => []);
     const type = creerCombo({ options: types.map((t) => ({ valeur: t.type, libelle: t.libelle, detail: t.aide })), valeur: types[0]?.type ?? '' });
     zone.querySelector('[data-type-rattachement]')?.replaceWith(type);
