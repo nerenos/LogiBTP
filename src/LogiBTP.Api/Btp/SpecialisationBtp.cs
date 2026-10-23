@@ -136,6 +136,11 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
+        // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2) ; sens et sous-traitant contrôlés ensuite.
+        if (type.TydCode == "T_COMMANDE" && document.Document.EntMarcheId is null)
+        {
+            erreurs.Add(new MessageCalcul(null, "MARCHE_ST_OBLIGATOIRE", "Marché de sous-traitance à créer ou à choisir avant de valider la commande"));
+        }
         // Commande fournisseur : adresse de livraison obligatoire (chantier rattaché : reprise à la validation).
         if (type.TydCode == "A_COMMANDE" && document.Document.EntAdresseLivraison is null && document.Document.EntChantierId is null)
         {
@@ -153,6 +158,14 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
         var d = document.Document;
+        if (type.TydCode == "T_COMMANDE" && d.EntMarcheId is int mst)
+        {
+            var m = await db.Database.SqlQuery<string>($"SELECT mar_sens || ':' || coalesce(mar_tiers_id::text, '') AS \"Value\" FROM marche WHERE mar_id = {mst}").FirstOrDefaultAsync(ct);
+            if (m is null || !m.StartsWith("ST:", StringComparison.Ordinal) || (d.EntTiersId is long t && m != $"ST:{t}"))
+            {
+                erreurs.Add(new MessageCalcul(null, "MARCHE_ST_SENS", "Le marché de la commande doit être un marché de sous-traitance de ce sous-traitant"));
+            }
+        }
         if (type.TydAvancement == "F" && d.EntMarcheId is int marche)
         {
             var groupe = d.EntGroupeId ?? -d.EntId;
@@ -328,7 +341,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"INSERT INTO edition_tache (ett_source, ett_id_element, ett_motif, ett_coffre, ett_demande_par) VALUES ('document', {entId.ToString()}, 'VALIDATION', {coffre}, 'validation')", ct);
         }
-        if (type.TydCode == "V_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
+        if (type.TydCode is "V_COMMANDE" or "T_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
         // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
         if (type.TydAvancement == "F" || type.TydCode == "V_AVOIR") await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);

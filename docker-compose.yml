@@ -129,6 +129,7 @@ services:
       - ./db/208_execution_types.sql:/docker-entrypoint-initdb.d/208_execution_types.sql:ro
       - ./db/209_execution_etapes.sql:/docker-entrypoint-initdb.d/209_execution_etapes.sql:ro
       - ./db/210_sous_traitance.sql:/docker-entrypoint-initdb.d/210_sous_traitance.sql:ro
+      - ./db/211_sous_traitance_marches.sql:/docker-entrypoint-initdb.d/211_sous_traitance_marches.sql:ro
       # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.

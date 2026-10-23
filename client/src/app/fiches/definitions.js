@@ -465,8 +465,9 @@ export const TYPES_FICHE = {
       sections: [{
         code: 'informations', titre: 'Marché',
         groupes: [
-          { titre: 'Identification', champs: ['code', 'libelle', 'cha_id', 'tiers_id', 'ent_id'] },
+          { titre: 'Identification', champs: ['code', 'libelle', 'sens', 'cha_id', 'tiers_id', 'ent_id'] },
           { titre: 'Conditions', champs: ['nature', 'montant_ht', 'depassement_autorise', 'retenue_pct', 'date', 'date_reception', 'statut'] },
+          { titre: 'Sous-traitance', champs: ['marche_vente_id', 'garantie', 'montant_agree', 'autoliquidation', 'debut_contractuel', 'fin_contractuelle'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
@@ -478,8 +479,15 @@ export const TYPES_FICHE = {
         c('code', 'Code', 'mar_code', 'texte', { obligatoire: true, longueur: 20, non_copie: true }),
         c('libelle', 'Libellé', 'mar_libelle', 'texte', { obligatoire: true, longueur: 150, largeur: 'plein' }),
         c('cha_id', 'Chantier', 'mar_cha_id', 'nombre', { obligatoire: true, reference: 'chantier' }),
-        c('tiers_id', 'Client', 'mar_tiers_id', 'nombre', { reference: 'tiers' }),
-        c('ent_id', 'Commande client', 'mar_ent_id', 'nombre', { reference: 'commande', aide: 'Commande dont la validation a ouvert le marché' }),
+        c('sens', 'Sens', 'mar_sens', 'liste', { obligatoire: true, defaut: 'V', options: options(['V', 'Vente (client)'], ['ST', 'Sous-traitance']), aide: 'Marché de vente au client ou marché de sous-traitance (un par axe de facturation du sous-traitant)' }),
+        c('tiers_id', 'Client ou sous-traitant', 'mar_tiers_id', 'nombre', { reference: 'tiers' }),
+        c('ent_id', 'Commande de base', 'mar_ent_id', 'nombre', { reference: 'commande', aide: 'Commande dont la validation a ouvert le marché' }),
+        c('marche_vente_id', 'Marché de vente lié', 'mar_marche_vente_id', 'nombre', { reference: 'marche', aide: 'Facultatif : marché du client sur lequel porte la sous-traitance (intervenant, paiement direct)' }),
+        c('garantie', 'Garantie de paiement', 'mar_garantie', 'liste', { options: options(['PAIEMENT_DIRECT', 'Paiement direct (public)'], ['DELEGATION', 'Délégation de paiement (privé)'], ['CAUTION', 'Caution (privé)'], ['AUCUNE', 'Aucune']) }),
+        c('montant_agree', 'Montant agréé (DC4)', 'mar_montant_agree', 'nombre', { format: '999999999999.99', aide: 'Plafond du paiement direct agréé par le maître d\'ouvrage' }),
+        c('autoliquidation', 'Autoliquidation de la TVA', 'mar_autoliquidation', 'booleen', { obligatoire: true, defaut: true, aide: 'Travaux de construction sous-traités : le sous-traitant facture HT' }),
+        c('debut_contractuel', 'Début contractuel', 'mar_debut_contractuel', 'date'),
+        c('fin_contractuelle', 'Fin contractuelle', 'mar_fin_contractuelle', 'date', { aide: 'Délai d\'exécution du sous-traitant (jalon du planning)' }),
         c('nature', 'Nature', 'mar_nature', 'liste', { obligatoire: true, defaut: 'P', options: options(['P', 'Marché privé'], ['U', 'Marché public']) }),
         c('montant_ht', 'Montant HT', 'mar_montant_ht', 'nombre', { format: '999999999999.99', lecture_seule: true, aide: 'Calculé : total des commandes validées du marché (commande de base et avenants)' }),
         c('depassement_autorise', 'Dépassement autorisé', 'mar_depassement_autorise', 'booleen', { obligatoire: true, defaut: false, aide: "L'avancement peut dépasser le montant du marché (travaux publics : quantités réelles)" }),
@@ -559,6 +567,8 @@ export const PARAMETRAGE_FICHE = {
 
 /** Type de fiche et ID à partir d'une ligne de liste (types d'élément, ID préfixés de la vue Ressources). */
 export function ficheDeLigne({ type, id }) {
+  const st = /^SST-(\d+)$/.exec(String(id));
+  if (st) return { type: 'personne', id: Number(st[1]) };
   const m = /^(SAL|MAT)-(\d+)$/.exec(String(id));
   if (m) return { type: m[1] === 'SAL' ? 'salarie' : 'materiel', id: Number(m[2]) };
   if (type === 'salarie' || type === 'interim') return { type: 'salarie', id };

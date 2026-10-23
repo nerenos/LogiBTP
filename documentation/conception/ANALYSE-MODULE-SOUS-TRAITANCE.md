@@ -10,7 +10,7 @@
 > décisions reportées dans les paragraphes. Le format et la plateforme de la facture électronique relèvent d'un module
 > à part (ST22).
 >
-> **Réalisation** : lot 0 réalisé le 24/10/2026 (module Document `019i` : famille T, `f_famille_achat`, lot de consultation ; `db/210` : activation du module ; `Consultations.cs`).
+> **Réalisation** : lot 0 réalisé le 24/10/2026 (module Document `019i` : famille T, `f_famille_achat`, lot de consultation ; `db/210` : activation du module ; `Consultations.cs`). Lot 1 réalisé le 24/10/2026 (`db/211`, `marche-sous-traitance.js`, menu et listes) ; écart : une seule fiche « marché » avec un champ Sens (pas de fiche propre au marché de sous-traitance).
 
 ## 1. Note d'origine (résumé)
 

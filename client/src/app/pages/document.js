@@ -20,6 +20,7 @@ import { completerRattachement } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
 import { confirmerAvertissements } from '../documents/avertissements.js';
+import { proposerMarcheSousTraitance } from '../structure/marche-sous-traitance.js';
 import { choisirSources } from '../documents/sources.js';
 
 /** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
@@ -704,6 +705,8 @@ export class PageDocument extends PageBase {
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
     if (ed.definition.type?.tyd_code === 'V_COMMANDE' && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
+    // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2, ST4).
+    if (ed.definition.type?.tyd_code === 'T_COMMANDE' && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
     if (orphelines.length && !confirm(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
@@ -825,6 +828,23 @@ export class PageDocument extends PageBase {
    * Commande client à valider sans marché : chantier (existant ou nouveau, pré-rempli) puis création du marché, ou
    * rattachement comme avenant d'un marché en cours. Renvoie vrai si la commande est rattachée (validation à suivre).
    */
+  async choisirMarcheSousTraitance() {
+    if (!this.servicesStructure || !this.servicesFiche) { this.app.message('Marché obligatoire : structure des affaires indisponible', 'avertissement'); return false; }
+    this.structure = await this.servicesStructure.referentiels();
+    const doc = this.editeur.saisie.document;
+    const r = await proposerMarcheSousTraitance({
+      refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
+      nomTiers: (doc.ent_intervenants ?? []).find((i) => i.per_id === doc.ent_tiers_id)?.tiers ?? '',
+      creerMarche: async (valeurs) => this.servicesFiche.creer('marche', { valeurs: { ...valeurs, intervenants: [] }, proprietes: {} }),
+    });
+    if (!r) return false;
+    this.structure = await this.servicesStructure.referentiels();
+    this.panneaux.structure = this.structure;
+    await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
+    this.app.message(r.cree ? 'Marché de sous-traitance créé et commande rattachée' : 'Commande rattachée comme avenant du marché de sous-traitance', 'succes');
+    return true;
+  }
+
   async choisirMarche() {
     if (!this.servicesStructure || !this.servicesFiche) { this.app.message('Marché obligatoire : structure des affaires indisponible', 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();

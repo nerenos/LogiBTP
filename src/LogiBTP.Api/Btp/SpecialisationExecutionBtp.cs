@@ -106,7 +106,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
                    (SELECT json_build_object('type', CASE a.aff_res_type WHEN 'INTERIM' THEN 'SALARIE' ELSE a.aff_res_type END, 'id', a.aff_res_id::bigint,
                            'libelle', coalesce((SELECT concat_ws(' ', s.sal_prenom, s.sal_nom) FROM salarie s WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND s.sal_id::text = a.aff_res_id),
                                                (SELECT m.mat_designation FROM materiel m WHERE a.aff_res_type = 'MATERIEL' AND m.mat_id::text = a.aff_res_id),
-                                               (SELECT x.sst_raison FROM demo_sous_traitant x WHERE a.aff_res_type = 'SOUS_TRAITANT' AND x.sst_id::text = a.aff_res_id)))::text
+                                               (SELECT x.per_raison_sociale FROM personne x WHERE a.aff_res_type = 'SOUS_TRAITANT' AND x.per_id::text = a.aff_res_id)))::text
                       FROM pla_affectation a WHERE a.aff_tac_id = t.tac_id AND a.aff_res_id ~ '^[0-9]+$' ORDER BY a.aff_id LIMIT 1) AS ressource
             FROM pla_tache t WHERE t.tac_id = ANY(@ids)
             """, new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct)).Select(t => new TacheEtape(t.TacId, t.Fin, t.Ressource)).ToList();

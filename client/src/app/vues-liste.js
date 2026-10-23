@@ -75,6 +75,15 @@ export const SOURCES_LISTE = {
       ['facture_ht', 'numeric'], ['reste_a_facturer', 'numeric'],
     ],
   },
+  marches_st: {
+    libelle: 'Marchés de sous-traitance', vue: 'v_liste_marches_st', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['chantier', 'text'], ['affaire', 'text'], ['sous_traitant', 'text'],
+      ['marche_vente', 'text'], ['nature', 'text'], ['garantie', 'text'], ['montant_ht', 'numeric'], ['montant_agree', 'numeric'], ['facture_ht', 'numeric'],
+      ['reste_a_facturer', 'numeric'], ['statut', 'text'], ['date_marche', 'date'], ['fin_contractuelle', 'date'], ['nb_avenants', 'bigint'],
+      ['chantier_id', 'integer'], ['tiers_id', 'bigint'],
+    ],
+  },
   salaries: {
     libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', colonne_type: 'type_element',
     // Saisie dans les listes : vue simple sur une table ; type_element est calculé (lecture seule dans la base).
@@ -178,6 +187,13 @@ export const THEMES_LISTE = [
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
   { thl_code: 'chantiers', thl_libelle: 'Chantiers', thl_icone: '🏗', thl_ordre: 13, thl_types: [{ code: 'chantier', libelle: 'Chantier' }] },
   { thl_code: 'marches', thl_libelle: 'Marchés', thl_icone: '📜', thl_ordre: 14, thl_types: [{ code: 'marche', libelle: 'Marché' }] },
+  { thl_code: 'marches_st', thl_libelle: 'Marchés de sous-traitance', thl_icone: '🤝', thl_ordre: 41, thl_types: [{ code: 'marche', libelle: 'Marché de sous-traitance' }] },
+  { thl_code: 'st_ao', thl_libelle: "Appels d'offres de sous-traitance", thl_icone: '📨', thl_ordre: 42, thl_types: [{ code: 'T_AO', libelle: "Appel d'offres de sous-traitance" }] },
+  { thl_code: 'st_commandes', thl_libelle: 'Commandes de sous-traitance', thl_icone: '📝', thl_ordre: 43, thl_types: [{ code: 'T_COMMANDE', libelle: 'Commande de sous-traitance' }] },
+  {
+    thl_code: 'st_factures', thl_libelle: 'Factures de sous-traitance', thl_icone: '🧾', thl_ordre: 44,
+    thl_types: [{ code: 'T_FACTURE_AVT', libelle: "Facture d'avancement de sous-traitance" }, { code: 'T_AVOIR', libelle: 'Avoir de sous-traitance' }],
+  },
   {
     thl_code: 'achats_factures', thl_libelle: 'Factures fournisseurs', thl_icone: '🧾', thl_ordre: 36,
     thl_types: [{ code: 'A_FACTURE', libelle: 'Facture fournisseur' }, { code: 'A_FACTURE_AVT', libelle: 'Situation fournisseur' }, { code: 'A_AVOIR', libelle: 'Avoir fournisseur' }],
@@ -331,6 +347,10 @@ VUES_LISTE.push(vueDocuments(9, 'Demandes de prix', 'achats_ddp'), vueDocuments(
 VUES_LISTE.push(vueDocuments(27, 'Commandes clients', 'commandes'), vueDocuments(28, 'Livraisons et retours', 'livraisons'),
   vueDocuments(29, 'Situations de travaux', 'situations'), vueDocuments(30, 'Livraisons et retours fournisseurs', 'achats_livraisons'));
 
+// Sous-traitance (menu Sous-traitance) : documents de la famille T.
+VUES_LISTE.push(vueDocuments(1200, "Appels d'offres de sous-traitance", 'st_ao'), vueDocuments(1201, 'Commandes de sous-traitance', 'st_commandes'),
+  vueDocuments(1202, 'Factures de sous-traitance', 'st_factures'));
+
 // Structure des affaires : projets, affaires, chantiers, marchés (fiches du même nom).
 const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colonne: 'code', sens: 'desc' }]) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
@@ -367,6 +387,13 @@ VUES_LISTE.push(
     montant('montant_ht', 'Montant\nHT'), montant('facture_ht', 'Facturé\nHT'), montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }),
     col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
   ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'chantier', titre: 'Chantier' }]),
+  vueStructure(1203, 'Marchés de sous-traitance', 'marches_st', [
+    col('code', 'Code', { ...fixe(120), style: { gras: true } }), col('libelle', 'Marché', { ...prop(3, 160) }), col('sous_traitant', 'Sous-traitant', { ...prop(2, 120) }),
+    col('chantier', 'Chantier', { ...fixe(100) }), col('marche_vente', 'Marché de vente', { ...fixe(110) }), col('nature', 'Nature', { ...fixe(70) }),
+    col('garantie', 'Garantie', { ...fixe(120) }), montant('montant_ht', 'Commandé\nHT'), montant('montant_agree', 'Agréé'), montant('facture_ht', 'Facturé\nHT'),
+    montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }), col('fin_contractuelle', 'Fin\ncontractuelle', { format: 'date', ...fixe(92), recherche: false }),
+    col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
+  ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'sous_traitant', titre: 'Sous-traitant' }]),
 );
 
 // Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.
@@ -612,14 +639,14 @@ VUES_LISTE.push(
   vueOrdres(1003, "Demandes d'approvisionnement", [{ colonne: 'type_element', op: '=', valeur: 'E_DAP' }]),
   vueOrdres(1004, 'Ordres bloqués', [{ colonne: 'etat_execution', op: '=', valeur: 'BLOQUE' }]),
   vueOrdres(1005, 'Ordres en retard', [{ colonne: 'en_retard', op: 'vrai' }]),
-  vueOrdres(1006, "Ordres du bureau d'études", [{ colonne: 'type_element', op: '=', valeur: 'E_BE' }]),
-  vueOrdres(1007, 'Ordres des méthodes', [{ colonne: 'type_element', op: '=', valeur: 'E_BM' }]),
-  vueOrdres(1008, 'Ordres de fabrication', [{ colonne: 'type_element', op: '=', valeur: 'E_OF' }]),
-  vueOrdres(1009, 'Ordres de colisage', [{ colonne: 'type_element', op: '=', valeur: 'E_CO' }]),
-  vueOrdres(1010, 'Ordres de livraison', [{ colonne: 'type_element', op: '=', valeur: 'E_LI' }]),
-  vueOrdres(1011, 'Interventions SAV', [{ colonne: 'type_element', op: '=', valeur: 'E_SAV' }]),
-  vueOrdres(1012, 'Ordres de sous-traitance', [{ colonne: 'type_element', op: '=', valeur: 'E_OST' }]),
-  vueOrdres(1013, "Demandes d'achat", [{ colonne: 'type_element', op: '=', valeur: 'E_DAC' }]),
+  vueOrdres(1100, "Ordres du bureau d'études", [{ colonne: 'type_element', op: '=', valeur: 'E_BE' }]),
+  vueOrdres(1101, 'Ordres des méthodes', [{ colonne: 'type_element', op: '=', valeur: 'E_BM' }]),
+  vueOrdres(1102, 'Ordres de fabrication', [{ colonne: 'type_element', op: '=', valeur: 'E_OF' }]),
+  vueOrdres(1103, 'Ordres de colisage', [{ colonne: 'type_element', op: '=', valeur: 'E_CO' }]),
+  vueOrdres(1104, 'Ordres de livraison', [{ colonne: 'type_element', op: '=', valeur: 'E_LI' }]),
+  vueOrdres(1105, 'Interventions SAV', [{ colonne: 'type_element', op: '=', valeur: 'E_SAV' }]),
+  vueOrdres(1106, 'Ordres de sous-traitance', [{ colonne: 'type_element', op: '=', valeur: 'E_OST' }]),
+  vueOrdres(1107, "Demandes d'achat", [{ colonne: 'type_element', op: '=', valeur: 'E_DAC' }]),
 );
 
 // Pointages (module Pointage, identifiants 1010 et suivants).

@@ -269,6 +269,7 @@ export class FicheChantier extends FicheStructure {
   /** Création depuis un projet obtenu (?projet=) : libellé, client et ville du projet. */
   valeursCreation() {
     const v = super.valeursCreation();
+    if (new URLSearchParams(globalThis.location?.search ?? '').get('sens') === 'ST') v.sens = 'ST';
     const prj = (this.refs.projets ?? []).find((p) => p.id === parametre('projet'));
     if (prj) Object.assign(v, { prj_id: prj.id, libelle: prj.libelle, tiers_id: prj.tiers_id, ville: prj.ville });
     return v;
@@ -297,11 +298,21 @@ export class FicheChantier extends FicheStructure {
 export class FicheMarche extends FicheStructure {
   sourceIntervenants() { return parametre('chantier') ? ['chantier', parametre('chantier')] : null; }
 
+  /** Marché de sous-traitance (ST2) : groupe Sous-traitance ; marché de vente : pas ce groupe. */
+  groupeVisible(g) { return g.titre !== 'Sous-traitance' || this.valeur('sens') === 'ST'; }
+
+  /** Marché de vente lié : marchés de vente du même chantier. */
+  filtreReference(champ) {
+    if (champ.code !== 'marche_vente_id') return null;
+    const cha = this.valeur('cha_id');
+    return { libelle: 'Marchés de vente du chantier', test: (x) => (x.sens ?? 'V') === 'V' && (!cha || x.cha_id === Number(cha)) };
+  }
+
   /** Code du marché : M-<année>-<n° du chantier>-<rang> ; création depuis un chantier (?chantier=) ou une commande (?commande=). */
   valeursCreation() {
     const v = super.valeursCreation();
     const cha = (this.refs.chantiers ?? []).find((c) => c.id === parametre('chantier'));
-    if (cha) Object.assign(v, { cha_id: cha.id, tiers_id: cha.tiers_id, code: codeMarche(cha, this.refs.marches ?? []) });
+    if (cha) Object.assign(v, { cha_id: cha.id, tiers_id: v.sens === 'ST' ? null : cha.tiers_id, code: codeMarche(cha, this.refs.marches ?? [], v.sens) });
     const cde = (this.refs.commandes ?? []).find((c) => c.id === parametre('commande'));
     if (cde) Object.assign(v, { ent_id: cde.id, libelle: cde.objet, tiers_id: v.tiers_id ?? cde.tiers_id });
     return v;
@@ -312,8 +323,8 @@ export class FicheMarche extends FicheStructure {
     if (code !== 'cha_id' || !id || this.mode !== MODES.CREATION) return;
     const cha = (this.refs.chantiers ?? []).find((c) => c.id === id);
     if (cha) {
-      this.definirValeur('code', codeMarche(cha, this.refs.marches ?? []));
-      if (!this.valeur('tiers_id')) this.definirValeur('tiers_id', cha.tiers_id);
+      this.definirValeur('code', codeMarche(cha, this.refs.marches ?? [], this.valeur('sens')));
+      if (!this.valeur('tiers_id') && this.valeur('sens') !== 'ST') this.definirValeur('tiers_id', cha.tiers_id);
     }
   }
 
@@ -644,8 +655,8 @@ const CREATIONS_MARCHE = {
 };
 
 /** Code d'un marché du chantier : M-2026-002-1, M-2026-002-2… (d'après le code du chantier CH-2026-002). */
-export function codeMarche(chantier, marches) {
-  const base = `M-${String(chantier.code ?? chantier.id).replace(/^CH-/, '')}-`;
+export function codeMarche(chantier, marches, sens = 'V') {
+  const base = `${sens === 'ST' ? 'MST' : 'M'}-${String(chantier.code ?? chantier.id).replace(/^CH-/, '')}-`;
   const rang = Math.max(0, ...marches.filter((m) => m.code?.startsWith(base)).map((m) => Number(m.code.slice(base.length)) || 0)) + 1;
   return `${base}${rang}`;
 }

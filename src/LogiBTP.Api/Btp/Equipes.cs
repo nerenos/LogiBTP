@@ -35,7 +35,7 @@ public static class Equipes
     private const string SqlMembres = """
         SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id, s.sal_nom || ' ' || s.sal_prenom AS libelle FROM salarie s
         UNION ALL SELECT 'MATERIEL', m.mat_id::text, m.mat_code || ' ' || m.mat_designation FROM materiel m
-        UNION ALL SELECT 'SOUS_TRAITANT', t.sst_id::text, t.sst_raison || ' (' || t.sst_metier || ')' FROM demo_sous_traitant t
+        UNION ALL SELECT 'SOUS_TRAITANT', t.per_id::text, t.per_raison_sociale || coalesce(' (' || t.per_st_corps_etat || ')', '') FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT'
         UNION ALL SELECT 'EQUIPE', e.equ_id::text, e.equ_libelle FROM equipe e
         """;
 

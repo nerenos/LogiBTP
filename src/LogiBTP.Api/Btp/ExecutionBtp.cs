@@ -245,7 +245,7 @@ public static class ExecutionBtp
               FROM salarie s WHERE s.sal_actif
             UNION ALL SELECT 'EQUIPE', e.equ_id, e.equ_libelle, e.equ_code FROM equipe e WHERE e.equ_active
             UNION ALL SELECT 'MATERIEL', m.mat_id, m.mat_designation, m.mat_code FROM materiel m
-            UNION ALL SELECT 'SOUS_TRAITANT', t.sst_id, t.sst_raison, t.sst_metier FROM demo_sous_traitant t
+            UNION ALL SELECT 'SOUS_TRAITANT', t.per_id, t.per_raison_sociale, t.per_st_corps_etat FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT' AND t.per_actif
             UNION ALL SELECT 'SERVICE', v.srv_id, v.srv_libelle, v.srv_code FROM service v WHERE v.srv_actif
             ORDER BY 1, 3
             """).ToListAsync(ct);

@@ -13,9 +13,9 @@ const VENTILATION = ['qte_parent', 'montant_parent', 'pct_prec', 'qte_prec', 'mo
 const VUES_TRANSFORMES = [
   { nom: 'Ventilation (ventes)', types: ['V_COMMANDE', 'V_RECEPTION', 'V_RETOUR', 'V_FACTURE', 'V_AVOIR'], colonnes: [...ENTETE, 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
   // Avancement : vue réglée par l'utilisateur (quantités, %, montants : parent, précédent, cumul saisissable).
-  { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT'],
+  { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT', 'T_FACTURE_AVT'],
     colonnes: ['num', 'libelle', 'unite', 'pvnet', 'qte_parent', 'qte_prec', 'qte_cumul', 'pct_prec', 'pct_cumul', 'montant_parent', 'montant_cumul', 'montant'] },
-  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
+  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR', 'T_COMMANDE', 'T_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
   // Ordres (module Exécution) : l'ordre d'exécution porte le budget planifié (prix et coefficients modifiables) ; les
   // ordres suivants montrent les quantités (parent, reste), sans prix (E2, E17).
   { nom: 'Budget planifié', types: ['E_OE'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'pa', 'fg', 'pv', 'montant', 'commentaire'] },

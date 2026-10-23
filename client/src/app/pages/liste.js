@@ -18,7 +18,7 @@ function creationDepuisVue(vue, app, themes = []) {
     return { libelle: `＋ ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
   }
   // Structure des affaires : fiches projet, affaire, chantier, marché.
-  const structure = { projets: ['projet', 'Projet'], affaires: ['affaire', 'Affaire'], chantiers: ['chantier', 'Chantier'], marches: ['marche', 'Marché'] }[source];
+  const structure = { projets: ['projet', 'Projet'], affaires: ['affaire', 'Affaire'], chantiers: ['chantier', 'Chantier'], marches: ['marche', 'Marché'], marches_st: ['marche', 'Marché'] }[source];
   if (structure) return { libelle: `＋ ${structure[1]}`, action: () => app.naviguer(`/fiche/${structure[0]}/nouveau`) };
   if (source === 'elements') {
     const type = (vue.definition.filtres ?? []).find((f) => f.colonne === 'type' && ['OUVRAGE', 'ENSEMBLE'].includes(f.valeur))?.valeur ?? null;
@@ -39,7 +39,7 @@ function creationDepuisVue(vue, app, themes = []) {
 /** Fiche de chaque source de liste (thèmes d'un seul type de fiche). */
 const FICHE_PAR_SOURCE = {
   salaries: 'salarie', materiels: 'materiel', elements: 'element', personnes: 'personne', individus: 'individu',
-  projets: 'projet', affaires: 'affaire', chantiers: 'chantier', marches: 'marche',
+  projets: 'projet', affaires: 'affaire', chantiers: 'chantier', marches: 'marche', marches_st: 'marche',
 };
 
 /**

@@ -41,8 +41,8 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
                      CASE WHEN m.mat_mode = 'NOMBRE' THEN m.mat_quantite END, sv.srv_parent_id
               FROM materiel m LEFT JOIN service sv ON sv.srv_id = m.mat_srv_id
               UNION ALL
-              SELECT 'SOUS_TRAITANT', t.sst_id::text, t.sst_raison || ' (' || t.sst_metier || ')', NULL::int, NULL, FALSE, NULL::numeric, NULL::int
-              FROM demo_sous_traitant t
+              SELECT 'SOUS_TRAITANT', t.per_id::text, t.per_raison_sociale || coalesce(' (' || t.per_st_corps_etat || ')', ''), NULL::int, NULL, FALSE, NULL::numeric, NULL::int
+              FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT' AND t.per_actif
             ) r
             WHERE (@cles IS NULL AND r.type = ANY(@types) AND (@srv IS NULL OR r.srv_id = ANY(@srv) OR r.parent = ANY(@srv))
                    AND (@q IS NULL OR r.libelle ILIKE @q)

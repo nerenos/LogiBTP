@@ -295,7 +295,7 @@ export class FicheBase {
     const groupes = section.groupes.map((g) => (g.supplementaire ? g : { ...g, champs: g.champs.map((code) => this.definition.champs.find((c) => c.code === code)).filter(Boolean) }));
     corps.innerHTML = '<div class="fiche-groupes"></div>';
     const zone = corps.firstElementChild;
-    for (const g of groupes.filter((x) => x.champs.length)) zone.append(this.#groupe(g));
+    for (const g of groupes.filter((x) => x.champs.length && this.groupeVisible(x, section))) zone.append(this.#groupe(g));
     if (!zone.children.length) zone.innerHTML = '<p class="aide">Aucun champ.</p>';
     for (const o of this.ongletsSpecifiques().filter((x) => x.dans === section.code)) {
       const bloc = document.createElement('div');
@@ -304,6 +304,9 @@ export class FicheBase {
       o.rendre(bloc, { modifiable: enSaisie(this.mode) });
     }
   }
+
+  /** Groupe affiché (point de spécialisation : groupe propre à une variante de la fiche) ; tous par défaut. */
+  groupeVisible(_groupe, _section) { return true; }
 
   /** Groupe de champs (cadre titré) ; tout masqué : une seule ligne « informations confidentielles ». */
   #groupe(g) {

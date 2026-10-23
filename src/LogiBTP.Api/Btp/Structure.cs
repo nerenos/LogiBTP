@@ -34,10 +34,11 @@ public static class Structure
           'chantiers', (SELECT coalesce(json_agg(json_build_object('id', cha_id, 'code', cha_code, 'libelle', cha_libelle, 'statut', cha_statut,
                          'aff_id', cha_aff_id, 'prj_id', cha_prj_id, 'tiers_id', cha_tiers_id, 'ville', cha_ville) ORDER BY cha_code), '[]') FROM chantier),
           'marches', (SELECT coalesce(json_agg(json_build_object('id', mar_id, 'code', mar_code, 'libelle', mar_libelle, 'statut', mar_statut,
-                         'cha_id', mar_cha_id, 'ent_id', mar_ent_id, 'tiers_id', mar_tiers_id, 'montant_ht', mar_montant_ht) ORDER BY mar_code), '[]') FROM marche),
+                         'cha_id', mar_cha_id, 'ent_id', mar_ent_id, 'tiers_id', mar_tiers_id, 'montant_ht', mar_montant_ht, 'sens', mar_sens,
+                         'nature', mar_nature, 'marche_vente_id', mar_marche_vente_id, 'garantie', mar_garantie) ORDER BY mar_code), '[]') FROM marche),
           'commandes', (SELECT coalesce(json_agg(json_build_object('id', d.ent_id, 'numero', d.ent_numero, 'objet', d.ent_objet,
                          'total_ht', d.ent_total_ht, 'tiers_id', d.ent_tiers_id) ORDER BY d.ent_id DESC), '[]')
-                        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE t.tyd_code = 'V_COMMANDE'),
+                        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE t.tyd_code IN ('V_COMMANDE', 'T_COMMANDE')),
           'marche_documents', (SELECT coalesce(json_agg(json_build_object('mar_id', x.mdo_mar_id, 'ent_id', x.mdo_ent_id, 'role', x.mdo_role,
                          'rang', x.mdo_rang, 'date', x.mdo_date, 'numero', d.ent_numero, 'objet', d.ent_objet, 'total_ht', d.ent_total_ht)
                          ORDER BY x.mdo_mar_id, x.mdo_rang), '[]')
