@@ -1,12 +1,14 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
+import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
 
 /**
  * Connexion (module Authentification) : identifiant (pseudo du compte) et mot de passe, « Rester connecté » si la
  * société le permet. Seule page accessible sans session. En développement (ComptesTest), connexion à un compte choisi
  * sans mot de passe. `?retour=` : page à rouvrir après la connexion ; `?fenetre=1` : fenêtre ouverte pendant une saisie
- * (session expirée), refermée après la connexion.
+ * (session expirée), refermée après la connexion. Mot de passe oublié (messagerie configurée) : lien envoyé par courriel ;
+ * `?jeton=` : choix du nouveau mot de passe depuis ce lien.
  */
 export class PageConnexion extends PageBase {
   icone = '🔑';
@@ -23,6 +25,7 @@ export class PageConnexion extends PageBase {
       return;
     }
     const session = app.session ?? {};
+    if (this.requete.jeton) { await this.#rendreReinitialisation(); return; }
     if (session.connecte && !this.fenetreSeule) { this.#poursuivre(session); return; }
     const societe = app.societe;
     this.conteneur.innerHTML = `<div class="page-connexion"><form class="carte connexion" data-form autocomplete="on">
@@ -34,8 +37,9 @@ export class PageConnexion extends PageBase {
           <p class="aide">À éviter sur un poste partagé.</p>` : ''}
         <p class="connexion-erreur" data-erreur hidden></p>
         <p><button type="submit" class="principal">Se connecter</button></p>
-        <p class="aide">Mot de passe oublié : un administrateur vous en donne un provisoire.</p>
+        <p class="aide" data-oubli>Mot de passe oublié : un administrateur vous en donne un provisoire.</p>
       </form><div data-test></div></div>`;
+    api.auth.politique().then((p) => { if (p.oubli_courriel) this.#proposerOubli(); }).catch(() => {});
     const form = this.conteneur.querySelector('[data-form]');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -43,6 +47,51 @@ export class PageConnexion extends PageBase {
       await this.#connecter(() => api.auth.connexion(f.get('identifiant'), f.get('mdp'), f.get('rester') === 'on'));
     });
     if (session.comptes_test) await this.#rendreComptesTest();
+  }
+
+  /** Mot de passe oublié : identifiant → lien envoyé par courriel (réponse identique que le compte existe ou non). */
+  #proposerOubli() {
+    const zone = this.conteneur.querySelector('[data-oubli]');
+    zone.innerHTML = '<button type="button" class="lien" data-ouvrir-oubli>Mot de passe oublié ?</button>';
+    zone.querySelector('[data-ouvrir-oubli]').addEventListener('click', () => {
+      const identifiant = this.conteneur.querySelector('[name="identifiant"]').value;
+      zone.innerHTML = `<span>Recevoir par courriel un lien pour choisir un nouveau mot de passe :</span>
+        <span class="ligne"><input data-identifiant-oubli value="${echapper(identifiant)}" placeholder="identifiant" autocapitalize="none" spellcheck="false">
+        <button type="button" data-envoyer-oubli>Envoyer le lien</button></span>`;
+      zone.querySelector('[data-envoyer-oubli]').addEventListener('click', async () => {
+        const id = zone.querySelector('[data-identifiant-oubli]').value.trim();
+        if (!id) return;
+        try { zone.textContent = (await api.auth.oubli(id)).message; } catch (e) { zone.textContent = e.message; }
+      });
+    });
+  }
+
+  /** Nouveau mot de passe depuis le lien reçu par courriel (`?jeton=`), contrôlé par la politique avant l'envoi. */
+  async #rendreReinitialisation() {
+    const politique = await api.auth.politique().catch(() => null);
+    this.titre = 'Nouveau mot de passe';
+    this.conteneur.innerHTML = `<div class="page-connexion"><form class="carte connexion" data-form>
+        <h1>🔑 Nouveau mot de passe</h1>
+        <label>Nouveau mot de passe<input name="nouveau" type="password" autocomplete="new-password" required autofocus></label>
+        <label>Confirmation<input name="confirmation" type="password" autocomplete="new-password" required></label>
+        ${politique ? `<p class="aide">${politique.longueur_min} caractères au moins.</p>` : ''}
+        <p class="connexion-erreur" data-erreur hidden></p>
+        <p><button type="submit" class="principal">Enregistrer</button></p></form></div>`;
+    const form = this.conteneur.querySelector('[data-form]');
+    const erreur = this.conteneur.querySelector('[data-erreur]');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(form);
+      const nouveau = String(f.get('nouveau'));
+      const codes = politique ? controlerMotDePasse(nouveau, politique) : [];
+      const message = nouveau !== f.get('confirmation') ? 'Les deux saisies diffèrent'
+        : codes.length ? codes.map((c) => MESSAGES_AUTH[c] ?? c).join(' · ') : null;
+      if (message) { erreur.textContent = message; erreur.hidden = false; return; }
+      try {
+        await api.auth.reinitialiser(this.requete.jeton, nouveau);
+        this.conteneur.innerHTML = '<div class="page-simple"><h1>✔ Mot de passe enregistré</h1><p><a href="/connexion">Se connecter</a></p></div>';
+      } catch (x) { erreur.textContent = x.message; erreur.hidden = false; }
+    });
   }
 
   /** Développement : comptes proposés à la connexion sans mot de passe (A10, A11). */

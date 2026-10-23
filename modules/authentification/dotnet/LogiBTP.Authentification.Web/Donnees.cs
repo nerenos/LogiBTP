@@ -57,6 +57,18 @@ public class JournalConnexion
     public string? JcoPar { get; set; }
 }
 
+/// <summary>Demande de réinitialisation du mot de passe par lien (jeton à usage unique, empreinte seule conservée).</summary>
+public class ReinitialisationMdp
+{
+    public long RmpId { get; set; }
+    public long RmpCptId { get; set; }
+    public string RmpEmpreinte { get; set; } = "";
+    public DateTimeOffset RmpCreeLe { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset RmpExpireLe { get; set; }
+    public DateTimeOffset? RmpUtiliseLe { get; set; }
+    public string? RmpAdresse { get; set; }
+}
+
 public class ParametreAuthentification
 {
     public string PauCle { get; set; } = "";
@@ -71,6 +83,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
     public DbSet<SessionUtilisateur> Sessions => Set<SessionUtilisateur>();
     public DbSet<JournalConnexion> Journal => Set<JournalConnexion>();
     public DbSet<ParametreAuthentification> Parametres => Set<ParametreAuthentification>();
+    public DbSet<ReinitialisationMdp> Reinitialisations => Set<ReinitialisationMdp>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -78,5 +91,6 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
         b.Entity<SessionUtilisateur>().ToTable("session_utilisateur").HasKey(x => x.SesId);
         b.Entity<JournalConnexion>().ToTable("journal_connexion").HasKey(x => x.JcoId);
         b.Entity<ParametreAuthentification>().ToTable("parametre_authentification").HasKey(x => x.PauCle);
+        b.Entity<ReinitialisationMdp>().ToTable("reinitialisation_mdp").HasKey(x => x.RmpId);
     }
 }

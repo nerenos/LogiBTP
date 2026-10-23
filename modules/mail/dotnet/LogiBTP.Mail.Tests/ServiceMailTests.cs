@@ -184,12 +184,21 @@ public sealed class ServiceMailTests : IAsyncLifetime
         _horloge.Maintenant = _horloge.Maintenant.AddMinutes(1);
         Assert.True(await envoi.TraiterFileAsync(50, default) >= 1);
 
+        // Envoi automatique (notifications…) : expéditeur de l'usage, dans un lot (priorité basse), sans confirmation.
+        Assert.True(await envoi.DisponibleAsync(default));
+        var lot = await envoi.CreerLotAsync("NOTIFICATION", "Essai", "mail_fond", 2, 2, default);
+        var auto = await envoi.EnvoyerAutomatiqueAsync(new EnvoiAutomatique("NOTIFICATION", D("n1@client.fr"), "[LogiBTP] Rappel", "<p>Texte</p>", "mail_fond", Lot: lot), default);
+        var detailAuto = await envoi.MessageAsync(Admin, auto.Messages[0], default);
+        Assert.Equal(("BASSE", lot), (detailAuto.Message.Priorite, detailAuto.Message.Lot));
+
         // Authentification refusée : compte en erreur, le courriel attend.
         _horloge.Maintenant = _horloge.Maintenant.AddMinutes(5);
         await envoi.EnvoyerAsync(Admin, new DemandeEnvoi(alias, D("z@client.fr"), null, null, "Auth", "", null, null, null, null), default);
         _transport.Erreur = new ErreurEnvoi(535, "5.7.8 Username and Password not accepted");
         await envoi.TraiterFileAsync(50, default);
         Assert.Equal("ERREUR", (await db.Comptes.AsNoTracking().FirstAsync(x => x.McoId == c.Id)).McoEtat);
-        Assert.Contains(await envoi.MessagesAsync(Admin, "attente", null, null, null, 1, 50, default), x => x.Objet == "Auth" && x.Attente!.Contains("authentification"));
+        var attente = await envoi.MessagesAsync(Admin, "attente", null, null, null, 1, 50, default);
+        Assert.Contains(attente, x => x.Objet == "Auth" && x.Etat == "A_ENVOYER");
+        Assert.Contains(attente, x => x.Attente?.Contains("authentification") == true);
     }
 }

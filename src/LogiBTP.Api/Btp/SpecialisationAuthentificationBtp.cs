@@ -1,4 +1,6 @@
+using System.Net;
 using LogiBTP.Authentification.Web;
+using LogiBTP.Mail.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -69,5 +71,31 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
             [new NpgsqlParameter("id", ind), new NpgsqlParameter("code", compte.CptCode)], ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = @code WHERE ind_id = @id",
             [new NpgsqlParameter("id", ind), new NpgsqlParameter("code", compte.CptCode)], ct);
+    }
+
+    /// <summary>Mot de passe oublié par courriel : proposé dès qu'un compte d'envoi du module Mail est actif.</summary>
+    public override Task<bool> ReinitialisationParCourrielAsync(IServiceProvider services, CancellationToken ct) =>
+        services.GetRequiredService<ServiceEnvoiMail>().DisponibleAsync(ct);
+
+    /// <summary>Lien envoyé à la coordonnée EMAIL de l'individu lié au compte (usage AUTHENTIFICATION, priorité haute).</summary>
+    public override async Task<bool> EnvoyerReinitialisationAsync(IServiceProvider services, Compte compte, string lien, DateTimeOffset expireLe, CancellationToken ct)
+    {
+        if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return false;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var adresse = await db.Database.SqlQueryRaw<string>("""
+            SELECT c.coo_valeur AS "Value" FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id
+            WHERE u.uco_ind_id = @ind AND c.coo_nature = 'EMAIL' ORDER BY u.uco_principal DESC, c.coo_id LIMIT 1
+            """, new NpgsqlParameter("ind", ind)).FirstOrDefaultAsync(ct);
+        if (adresse is null) return false;
+        var envoi = services.GetRequiredService<ServiceEnvoiMail>();
+        if (!await envoi.DisponibleAsync(ct)) return false;
+        var corps = $"""
+            <p>Bonjour,</p><p>Une demande de nouveau mot de passe a été faite pour l'identifiant <strong>{WebUtility.HtmlEncode(compte.CptCode)}</strong>.</p>
+            <p><a href="{WebUtility.HtmlEncode(lien)}">Choisir un nouveau mot de passe</a> (lien valable jusqu'à {expireLe.ToLocalTime():HH:mm}, utilisable une fois).</p>
+            <p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce courriel : votre mot de passe actuel reste valable.</p>
+            """;
+        await envoi.EnvoyerAutomatiqueAsync(new EnvoiAutomatique("AUTHENTIFICATION", [new DestinataireSaisi(adresse, compte.CptLibelle)], "LogiBTP : nouveau mot de passe",
+            corps, SpecialisationMailBtp.Fond.Code, "HAUTE"), ct);
+        return true;
     }
 }

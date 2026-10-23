@@ -45,6 +45,11 @@ public sealed record DemandeEnvoi(long AliasId, List<DestinataireSaisi> A, List<
     string CorpsHtml, List<string>? Pieces, string? TypeElement, string? IdElement, string? Usage, bool CopieMoi = false, bool ConfirmationMassive = false,
     string? InReplyTo = null, string Priorite = "NORMALE");
 
+/// <summary>Envoi produit par l'application (usage → expéditeur ; lot : envoi en nombre, priorité basse).</summary>
+public sealed record EnvoiAutomatique(string Usage, List<DestinataireSaisi> A, string Objet, string CorpsHtml, string Auteur, string Priorite = "NORMALE",
+    string? TypeElement = null, string? IdElement = null, List<string>? Pieces = null, string? TypeModele = null, List<DestinataireSaisi>? Cc = null,
+    List<DestinataireSaisi>? Cci = null, long? Lot = null);
+
 public sealed record ResultatEnvoi(List<long> Messages, string Etat, int Position, DateTimeOffset Depart, DateTimeOffset Fin, string? Cause, bool EnAttente, long? Lot);
 
 public sealed record DemandeEstimation(long AliasId, int Messages, int DestinatairesParMessage, string Priorite = "NORMALE");

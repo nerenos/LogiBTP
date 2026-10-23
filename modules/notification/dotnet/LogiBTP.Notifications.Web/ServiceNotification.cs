@@ -1,5 +1,6 @@
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -20,6 +21,17 @@ public sealed record Marquage(List<long>? Ids, bool Tout = false);
 public sealed record PreferenceNotification(string Module, string Type, bool Ecran, bool Courriel);
 
 /// <summary>
+/// Canal de diffusion supplémentaire (courriel…), fourni par l'application : reçoit les notifications nouvellement
+/// publiées dont la préférence de l'utilisateur demande ce canal. Une erreur du canal n'empêche pas la publication.
+/// </summary>
+public interface ICanalNotification
+{
+    string Code { get; }
+    Task<bool> DisponibleAsync(CancellationToken ct);
+    Task EnvoyerAsync(IReadOnlyList<NouvelleNotification> notifications, CancellationToken ct);
+}
+
+/// <summary>
 /// Source de notifications exécutée périodiquement par le planificateur, une fois par base de société (portée de
 /// services de cette base) : l'application la déclare (rappels du CRM, habilitations, incohérences du planning…).
 /// </summary>
@@ -35,35 +47,76 @@ public interface ISourceNotifications
 /// Boîte de notifications : publication (préférences appliquées, doublons ignorés par la clé), lecture, compteur du
 /// bandeau, marquage lu / traité, préférences par module et type, purge des notifications traitées anciennes.
 /// </summary>
-public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<ISourceNotifications> sources, IModulesActifs? modules = null)
+public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<ISourceNotifications> sources, IEnumerable<ICanalNotification> canaux,
+    ILogger<ServiceNotification> journal, IModulesActifs? modules = null)
 {
     public static readonly HashSet<string> Niveaux = ["INFO", "ATTENTION", "URGENT"];
 
-    /// <summary>Publie les notifications (préférence « écran » désactivée : ignorée) ; renvoie le nombre de nouvelles.</summary>
+    /// <summary>
+    /// Publie les notifications (préférence « écran » désactivée : ignorée) ; renvoie le nombre de nouvelles. Les nouvelles
+    /// dont la préférence demande le courriel (type, sinon tout le module) partent aussi par le canal courriel, même si
+    /// l'écran est refusé ; une clé déjà notifiée n'est envoyée qu'une fois.
+    /// </summary>
     public async Task<int> PublierAsync(IEnumerable<NouvelleNotification> notifications, CancellationToken ct)
     {
         var liste = notifications.Where(n => !string.IsNullOrWhiteSpace(n.Utilisateur)).ToList();
         if (liste.Count == 0) return 0;
         var utilisateurs = liste.Select(n => n.Utilisateur.ToLowerInvariant()).Distinct().ToArray();
-        var refus = (await db.Preferences.AsNoTracking().Where(p => !p.NprEcran && utilisateurs.Contains(p.NprUtilisateur.ToLower())).ToListAsync(ct))
-            .Select(p => (p.NprUtilisateur.ToLowerInvariant(), p.NprModule, p.NprType)).ToHashSet();
+        var prefs = await db.Preferences.AsNoTracking().Where(p => utilisateurs.Contains(p.NprUtilisateur.ToLower())).ToListAsync(ct);
+        PreferenceEntite? Pref(string u, NouvelleNotification n) =>
+            prefs.FirstOrDefault(p => p.NprUtilisateur.ToLowerInvariant() == u && p.NprModule == n.Module && p.NprType == n.Type)
+            ?? prefs.FirstOrDefault(p => p.NprUtilisateur.ToLowerInvariant() == u && p.NprModule == n.Module && p.NprType == "*");
         var publiees = 0;
+        var courriels = new List<NouvelleNotification>();
         foreach (var n in liste)
         {
             var u = n.Utilisateur.ToLowerInvariant();
-            if (refus.Contains((u, n.Module, n.Type)) || refus.Contains((u, n.Module, "*"))) continue;
-            publiees += await db.Database.ExecuteSqlRawAsync("""
-                INSERT INTO notification (ntf_utilisateur, ntf_module, ntf_type, ntf_niveau, ntf_titre, ntf_texte, ntf_url, ntf_type_element, ntf_id_element, ntf_cle)
-                VALUES (@u, @m, @t, @n, left(@titre, 200), @texte, left(@url, 300), @te, @ie, left(@cle, 200))
+            var p = Pref(u, n);
+            // Écran refusé : rien, sauf si le courriel est demandé (notification gardée traitée, pour ne l'envoyer qu'une fois).
+            if (p is { NprEcran: false, NprCourriel: false }) continue;
+            var nouvelle = await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO notification (ntf_utilisateur, ntf_module, ntf_type, ntf_niveau, ntf_titre, ntf_texte, ntf_url, ntf_type_element, ntf_id_element, ntf_cle,
+                                          ntf_lue_le, ntf_traitee_le)
+                VALUES (@u, @m, @t, @n, left(@titre, 200), @texte, left(@url, 300), @te, @ie, left(@cle, 200),
+                        CASE WHEN @masque THEN now() END, CASE WHEN @masque THEN now() END)
                 ON CONFLICT DO NOTHING
                 """,
                 [
                     new NpgsqlParameter("u", n.Utilisateur), new NpgsqlParameter("m", n.Module), new NpgsqlParameter("t", n.Type),
                     new NpgsqlParameter("n", Niveaux.Contains(n.Niveau) ? n.Niveau : "INFO"), new NpgsqlParameter("titre", n.Titre),
                     Texte("texte", n.Texte), Texte("url", n.Url), Texte("te", n.TypeElement), Texte("ie", n.IdElement), Texte("cle", n.Cle),
+                    new NpgsqlParameter("masque", p is { NprEcran: false }),
                 ], ct);
+            if (p is not { NprEcran: false }) publiees += nouvelle;
+            if (nouvelle > 0 && p is { NprCourriel: true }) courriels.Add(n);
         }
+        await DiffuserAsync(courriels, ct);
         return publiees;
+    }
+
+    /// <summary>Notifications remises aux canaux supplémentaires (courriel) ; une erreur est journalisée.</summary>
+    private async Task DiffuserAsync(List<NouvelleNotification> courriels, CancellationToken ct)
+    {
+        if (courriels.Count == 0) return;
+        foreach (var canal in canaux)
+        {
+            try
+            {
+                if (await canal.DisponibleAsync(ct)) await canal.EnvoyerAsync(courriels, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                journal.LogWarning(e, "Notifications : canal {Canal} en erreur", canal.Code);
+            }
+        }
+    }
+
+    /// <summary>Canaux supplémentaires disponibles (préférences : case « par courriel » proposée).</summary>
+    public async Task<Dictionary<string, bool>> CanauxAsync(CancellationToken ct)
+    {
+        var res = new Dictionary<string, bool>();
+        foreach (var c in canaux) res[c.Code] = await c.DisponibleAsync(ct);
+        return res;
     }
 
     private static NpgsqlParameter Texte(string nom, string? v) => new(nom, NpgsqlDbType.Text) { Value = (object?)v ?? DBNull.Value };

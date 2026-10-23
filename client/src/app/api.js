@@ -42,6 +42,8 @@ export const api = {
     connexionTest: (identifiant) => appel('POST', '/auth/test/connexion', { identifiant }),
     deconnexion: () => appel('POST', '/auth/deconnexion'),
     changerMotDePasse: (actuel, nouveau) => appel('POST', '/auth/mot-de-passe', { actuel, nouveau }),
+    oubli: (identifiant) => appel('POST', '/auth/oubli', { identifiant }),
+    reinitialiser: (jeton, nouveau) => appel('POST', '/auth/reinitialiser', { jeton, nouveau }),
     // Gestion des comptes (administrateur).
     profils: () => appel('GET', '/auth/profils'),
     comptes: ({ recherche = '', etat = '' } = {}) => appel('GET', `/auth/comptes?${new URLSearchParams({ recherche, etat })}`),
@@ -173,6 +175,7 @@ export const api = {
     preferences: () => appel('GET', '/notifications/preferences'),
     enregistrerPreferences: (l) => appel('PUT', '/notifications/preferences', l),
     executer: () => appel('POST', '/notifications/executer'),
+    canaux: () => appel('GET', '/notifications/canaux'),
   },
   // Module Mail : comptes (identité et connexion jamais relues), alias, usages, modèles ; envoi par file d'attente.
   mail: {
@@ -185,6 +188,7 @@ export const api = {
     enregistrerAlias: (id, alias) => appel('PUT', `/mail/comptes/${id}/alias`, { alias }),
     reprendre: (id) => appel('POST', `/mail/comptes/${id}/reprendre`),
     alias: () => appel('GET', '/mail/alias'),
+    disponible: () => appel('GET', '/mail/disponible'),
     usages: () => appel('GET', '/mail/usages'),
     enregistrerUsages: (l) => appel('PUT', '/mail/usages', l),
     modeles: () => appel('GET', '/mail/modeles'),

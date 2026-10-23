@@ -47,9 +47,10 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   `http://localhost:5173/api/oauth/retour`), puis 🔗 Se connecter dans `/parametres/connexions`.
 - [ ] Essai réel de l'envoi avec les boîtes de test (Gmail en OAuth 2.0, Exchange OVH par mot de passe) : relever les
   quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
-- [ ] Lots suivants : envois automatiques des autres modules (canal courriel des notifications, mot de passe oublié,
-  SAV, relevé du pointage, bordereaux du CRM), réception IMAP (1 h, « Relever maintenant ») et liste « À rapprocher »,
-  reconnaissance automatique et alertes.
+- [ ] Envois à brancher quand les fonctions existeront : confirmation du SAV avec le bon signé (Exécution E22), relevé
+  hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
+- [ ] Lots suivants : réception IMAP (1 h, « Relever maintenant ») et liste « À rapprocher », reconnaissance automatique
+  et alertes.
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.

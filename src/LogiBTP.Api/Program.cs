@@ -86,6 +86,7 @@ builder.Services.AddModuleCalendrier<SpecialisationCalendrierBtp>(Base);
 builder.Services.AddModuleNotifications(Base, builder.Configuration.GetSection("Notifications"));
 builder.Services.AddSourceNotifications<SourceRappelsCrm>();
 builder.Services.AddSourceNotifications<SourceHabilitations>();
+builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
 builder.Services.AddModuleOAuth<SpecialisationOAuthBtp>(Base, builder.Configuration.GetSection("OAuth"));

@@ -30,6 +30,8 @@ public sealed record ParametresAuthentification(ParametresSession Session, Param
 
 public sealed record ConnexionSaisie(string? Identifiant, string? MotDePasse, bool ResterConnecte = false);
 public sealed record ChangementMotDePasse(string? Actuel, string? Nouveau);
+public sealed record DemandeOubli(string? Identifiant);
+public sealed record Reinitialisation(string? Jeton, string? Nouveau);
 
 /// <summary>Session valide lue depuis le cookie (en cache court par base).</summary>
 public sealed record SessionLue(long SesId, long CptId, string Code, string? Libelle, string Profil, bool MdpAChanger,
@@ -258,6 +260,76 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
         await db.SaveChangesAsync(ct);
         await db.Sessions.Where(x => x.SesCptId == compte.CptId && x.SesId != s.SesId && x.SesFermeeLe == null)
             .ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, DateTimeOffset.UtcNow), ct);
+        OublierSessions();
+    }
+
+    // ---------------------------------------------------------------- mot de passe oublié
+
+    /// <summary>Durée de validité d'un lien de réinitialisation, demandes par heure et par compte.</summary>
+    public static readonly TimeSpan DureeLien = TimeSpan.FromMinutes(30);
+    public const int DemandesParHeure = 3;
+
+    /// <summary>
+    /// Demande de réinitialisation : sans effet visible pour le demandeur (aucune indication sur l'existence du compte) ;
+    /// compte de personne actif, à changer, verrouillé ou sans mot de passe, trois demandes par heure au plus : lien à
+    /// usage unique de 30 minutes envoyé par la spécialisation (courriel de la personne liée), journalisé.
+    /// </summary>
+    public async Task DemanderReinitialisationAsync(DemandeOubli d, string adresseApplication, IServiceProvider services, Origine origine, CancellationToken ct)
+    {
+        var code = ReglesCompte.Normaliser(d.Identifiant);
+        if (code.Length == 0) return;
+        var compte = await db.Comptes.FirstOrDefaultAsync(x => x.CptCode.ToLower() == code, ct);
+        var maintenant = DateTimeOffset.UtcNow;
+        if (compte is null || compte.CptType != "PERSONNE" || ReglesCompte.Etat(compte.AEvaluer(), maintenant).Etat is "INACTIF" or "EXPIRE" or "SERVICE")
+        {
+            await JournaliserAsync(code, "MDP_OUBLI", "demande sans suite (compte inconnu ou inactif)", origine, null, ct);
+            return;
+        }
+        var heure = maintenant.AddHours(-1);
+        if (await db.Reinitialisations.CountAsync(r => r.RmpCptId == compte.CptId && r.RmpCreeLe > heure, ct) >= DemandesParHeure)
+        {
+            await JournaliserAsync(compte.CptCode, "MDP_OUBLI", "demande refusée : trop de demandes dans l'heure", origine, null, ct);
+            return;
+        }
+        var (jeton, empreinte) = HachageMotDePasse.NouveauJeton();
+        var expire = maintenant + DureeLien;
+        db.Reinitialisations.Add(new ReinitialisationMdp
+        {
+            RmpCptId = compte.CptId, RmpEmpreinte = empreinte, RmpCreeLe = maintenant, RmpExpireLe = expire, RmpAdresse = Tronquer(origine.Adresse, 64),
+        });
+        await db.SaveChangesAsync(ct);
+        var envoye = await specialisation.EnvoyerReinitialisationAsync(services, compte, $"{adresseApplication.TrimEnd('/')}/connexion?jeton={jeton}", expire, ct);
+        await JournaliserAsync(compte.CptCode, "MDP_OUBLI", envoye ? "lien envoyé par courriel" : "lien non envoyé (pas d'adresse ou pas de messagerie)", origine, null, ct);
+    }
+
+    /// <summary>
+    /// Nouveau mot de passe par un lien valable (non utilisé, non expiré) : politique appliquée, compte déverrouillé, mot
+    /// de passe définitif, autres demandes du compte annulées, sessions fermées ; lien inconnu : 422 LIEN_INVALIDE.
+    /// </summary>
+    public async Task ReinitialiserAsync(Reinitialisation r, Origine origine, CancellationToken ct)
+    {
+        var maintenant = DateTimeOffset.UtcNow;
+        var empreinte = HachageMotDePasse.Empreinte(r.Jeton ?? "");
+        var d = await db.Reinitialisations.FirstOrDefaultAsync(x => x.RmpEmpreinte == empreinte, ct);
+        var compte = d is null ? null : await db.Comptes.FirstOrDefaultAsync(x => x.CptId == d.RmpCptId, ct);
+        if (d is null || compte is null || d.RmpUtiliseLe is not null || d.RmpExpireLe < maintenant
+            || ReglesCompte.Etat(compte.AEvaluer(), maintenant).Etat is "INACTIF" or "EXPIRE" or "SERVICE")
+        {
+            throw ExceptionMetier.Invalide("LIEN_INVALIDE", "Lien expiré ou déjà utilisé : refaites une demande depuis la page de connexion");
+        }
+        var erreurs = ReglesCompte.ControlerMotDePasse(r.Nouveau, (await ParametresAsync(ct)).MotDePasse, compte.CptCode);
+        if (erreurs.Count > 0) throw ErreursRegles(erreurs);
+        compte.CptHash = HachageMotDePasse.Hacher(r.Nouveau!);
+        compte.CptMdpProvisoire = false;
+        compte.CptEchecs = 0;
+        compte.CptVerrouilleJusquAu = null;
+        compte.CptMajLe = maintenant;
+        compte.CptMajPar = compte.CptCode;
+        await db.Reinitialisations.Where(x => x.RmpCptId == compte.CptId && x.RmpUtiliseLe == null)
+            .ExecuteUpdateAsync(x => x.SetProperty(y => y.RmpUtiliseLe, maintenant), ct);
+        db.Journal.Add(Entree(compte.CptCode, "MDP_REINITIALISE", "par le lien envoyé par courriel", origine, compte.CptCode));
+        await db.SaveChangesAsync(ct);
+        await db.Sessions.Where(x => x.SesCptId == compte.CptId && x.SesFermeeLe == null).ExecuteUpdateAsync(x => x.SetProperty(y => y.SesFermeeLe, maintenant), ct);
         OublierSessions();
     }
 

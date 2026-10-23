@@ -27,6 +27,10 @@ public static class Extensions
     public static IServiceCollection AddSourceNotifications<TSource>(this IServiceCollection services) where TSource : class, ISourceNotifications =>
         services.AddScoped<ISourceNotifications, TSource>();
 
+    /// <summary>Canal supplémentaire (courriel…) fourni par l'application (portée par base de société).</summary>
+    public static IServiceCollection AddCanalNotifications<TCanal>(this IServiceCollection services) where TCanal : class, ICanalNotification =>
+        services.AddScoped<ICanalNotification, TCanal>();
+
     /// <summary>Routes HTTP du module, sous /notifications (boîte de l'utilisateur de la session).</summary>
     public static RouteGroupBuilder MapModuleNotifications(this RouteGroupBuilder api)
     {
@@ -36,6 +40,7 @@ public static class Extensions
         g.MapGet("/compteur", (HttpContext http, ServiceNotification s, CancellationToken ct) => s.CompteurAsync(Utilisateur.Depuis(http), ct));
         g.MapPost("/lues", (Marquage m, HttpContext http, ServiceNotification s, CancellationToken ct) => s.MarquerAsync(Utilisateur.Depuis(http), m, false, ct));
         g.MapPost("/traitees", (Marquage m, HttpContext http, ServiceNotification s, CancellationToken ct) => s.MarquerAsync(Utilisateur.Depuis(http), m, true, ct));
+        g.MapGet("/canaux", (ServiceNotification s, CancellationToken ct) => s.CanauxAsync(ct));
         g.MapGet("/preferences", (HttpContext http, ServiceNotification s, CancellationToken ct) => s.PreferencesAsync(Utilisateur.Depuis(http), ct));
         g.MapPut("/preferences", async (List<PreferenceNotification> l, HttpContext http, ServiceNotification s, CancellationToken ct) =>
         {

@@ -18,7 +18,8 @@ public static class Extensions
     private const string CleSession = "LogiBTP.Session";
 
     /// <summary>Routes du module accessibles sans session (sous le préfixe /api).</summary>
-    private static readonly string[] Publiques = ["/api/auth/connexion", "/api/auth/session", "/api/auth/politique", "/api/auth/test"];
+    private static readonly string[] Publiques = ["/api/auth/connexion", "/api/auth/session", "/api/auth/politique", "/api/auth/test", "/api/auth/oubli",
+        "/api/auth/reinitialiser"];
 
     public static IServiceCollection AddModuleAuthentification<TSpecialisation>(this IServiceCollection services,
         Action<IServiceProvider, DbContextOptionsBuilder> options, IConfiguration configuration)
@@ -83,6 +84,22 @@ public static class Extensions
         });
     }
 
+    /// <summary>
+    /// Adresse de l'application pour un lien envoyé par courriel : en-tête Origin, sinon l'hôte de la requête, retenu
+    /// seulement s'il appartient aux domaines des sociétés (pas de lien vers un hôte imposé par la requête).
+    /// </summary>
+    public static string AdresseApplication(HttpContext http, OptionsSocietes societes)
+    {
+        var o = http.Request.Headers.Origin.FirstOrDefault();
+        if (string.IsNullOrEmpty(o)) o = $"{http.Request.Scheme}://{http.Request.Host}";
+        if (!Uri.TryCreate(o, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")
+            || !societes.Domaines.Any(d => uri.Host.Equals(d, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith("." + d, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw ExceptionMetier.Invalide("ADRESSE_INCONNUE", "Adresse de l'application non reconnue");
+        }
+        return uri.GetLeftPart(UriPartial.Authority);
+    }
+
     private static Task Refuser(HttpContext http, int statut, string code, string titre)
     {
         http.Response.StatusCode = statut;
@@ -104,10 +121,25 @@ public static class Extensions
 
         g.MapGet("/session", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
             s.Decrire(http.Session(), await s.ParametresAsync(ct), Dev(http)));
-        g.MapGet("/politique", async (ServiceAuthentification s, CancellationToken ct) =>
+        g.MapGet("/politique", async (HttpContext http, ServiceAuthentification s, SpecialisationAuthentification sp, CancellationToken ct) =>
         {
             var p = await s.ParametresAsync(ct);
-            return new { longueur_min = p.MotDePasse.LongueurMin, courants = p.MotDePasse.Courants, pseudos_reserves = p.PseudosReserves, rester_connecte = p.Session.ResterConnecte };
+            return new
+            {
+                longueur_min = p.MotDePasse.LongueurMin, courants = p.MotDePasse.Courants, pseudos_reserves = p.PseudosReserves,
+                rester_connecte = p.Session.ResterConnecte, oubli_courriel = await sp.ReinitialisationParCourrielAsync(http.RequestServices, ct),
+            };
+        });
+        // Mot de passe oublié : même réponse dans tous les cas (aucune indication sur l'existence du compte).
+        g.MapPost("/oubli", async (DemandeOubli d, HttpContext http, ServiceAuthentification s, IOptions<OptionsSocietes> societes, CancellationToken ct) =>
+        {
+            await s.DemanderReinitialisationAsync(d, AdresseApplication(http, societes.Value), http.RequestServices, ServiceAuthentification.Origine.Depuis(http), ct);
+            return Results.Ok(new { message = "Si ce compte existe et a une adresse de courriel, un lien de réinitialisation vient d'y être envoyé (valable 30 minutes)." });
+        });
+        g.MapPost("/reinitialiser", async (Reinitialisation r, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            await s.ReinitialiserAsync(r, ServiceAuthentification.Origine.Depuis(http), ct);
+            return Results.NoContent();
         });
         g.MapPost("/connexion", async (ConnexionSaisie c, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
         {

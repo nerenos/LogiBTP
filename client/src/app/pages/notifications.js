@@ -3,7 +3,7 @@ import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const NIVEAUX = { URGENT: '🔴', ATTENTION: '🟠', INFO: '🔵' };
-const MODULES = { crm: 'Suivi (CRM)', ressources: 'Ressources', planning: 'Planning', execution: 'Exécution', pointage: 'Pointage' };
+const MODULES = { crm: 'Suivi (CRM)', ressources: 'Ressources', planning: 'Planning', execution: 'Exécution', pointage: 'Pointage', mail: 'Messagerie', oauth: 'Connexions externes' };
 const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
 /**
@@ -74,7 +74,7 @@ export class PageNotifications extends PageBase {
   }
 }
 
-/** Préférences de notification : par module et type, à l'écran (courriel : avec le futur module Mail). */
+/** Préférences de notification : par module et type, à l'écran et par courriel (canal du module Mail, s'il a un compte d'envoi). */
 export class PageParametresNotifications extends PageBase {
   icone = '🔔';
 
@@ -85,15 +85,19 @@ export class PageParametresNotifications extends PageBase {
     const corps = this.conteneur.querySelector('[data-corps]');
     if (!app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     let prefs = await api.notifications.preferences();
+    const courriel = (await api.notifications.canaux().catch(() => ({}))).courriel === true;
     const rendre = () => {
-      corps.innerHTML = `<p class="aide">Ce que vous recevez dans votre boîte (🔔 du bandeau). Le courriel viendra avec le module Mail.</p>
+      corps.innerHTML = `<p class="aide">Ce que vous recevez dans votre boîte (🔔 du bandeau) et par courriel (adresse de votre fiche individu${courriel ? '' : ' ; messagerie non configurée : courriel indisponible'}).</p>
         <table><thead><tr><th>Module</th><th>Notification</th><th>À l'écran</th><th>Par courriel</th></tr></thead><tbody>
         ${prefs.map((p, i) => `<tr data-i="${i}"><td>${echapper(MODULES[p.module] ?? p.module)}</td><td>${echapper(p.libelle)}</td>
-          <td><input type="checkbox" data-ecran ${p.ecran ? 'checked' : ''}></td><td><input type="checkbox" disabled title="Module Mail à venir"></td></tr>`).join('')}</tbody></table>
+          <td><input type="checkbox" data-ecran ${p.ecran ? 'checked' : ''}></td><td><input type="checkbox" data-courriel ${p.courriel ? 'checked' : ''} ${courriel ? '' : 'disabled title="Aucun compte de messagerie configuré"'}></td></tr>`).join('')}</tbody></table>
         <p><button type="button" class="principal" data-enregistrer>Enregistrer</button></p>`;
-      corps.querySelectorAll('tr[data-i]').forEach((tr) => tr.querySelector('[data-ecran]').addEventListener('change', (e) => { prefs[Number(tr.dataset.i)].ecran = e.target.checked; }));
+      corps.querySelectorAll('tr[data-i]').forEach((tr) => {
+        tr.querySelector('[data-ecran]').addEventListener('change', (e) => { prefs[Number(tr.dataset.i)].ecran = e.target.checked; });
+        tr.querySelector('[data-courriel]').addEventListener('change', (e) => { prefs[Number(tr.dataset.i)].courriel = e.target.checked; });
+      });
       corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
-        try { prefs = await api.notifications.enregistrerPreferences(prefs.map((p) => ({ module: p.module, type: p.type, ecran: p.ecran, courriel: false }))); app.message('Préférences enregistrées', 'succes'); rendre(); } catch (e) { app.erreur(e); }
+        try { prefs = await api.notifications.enregistrerPreferences(prefs.map((p) => ({ module: p.module, type: p.type, ecran: p.ecran, courriel: Boolean(p.courriel) }))); app.message('Préférences enregistrées', 'succes'); rendre(); } catch (e) { app.erreur(e); }
       });
     };
     rendre();

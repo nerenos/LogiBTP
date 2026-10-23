@@ -88,3 +88,19 @@ INSERT INTO compte (cpt_code, cpt_type, cpt_libelle, cpt_profil, cpt_cree_par) V
  ('archivage_ged', 'SERVICE', 'Archivage automatique de la GED', 'SERVICE', 'installation'),
  ('editions_fond', 'SERVICE', 'Éditions produites en fond', 'SERVICE', 'installation')
 ON CONFLICT DO NOTHING;
+
+-- Mot de passe oublié (lien envoyé par courriel par l'application, module Mail) : demandes à usage unique, seule
+-- l'empreinte du jeton est conservée ; trois demandes par heure et par compte au plus.
+CREATE TABLE IF NOT EXISTS reinitialisation_mdp (
+    rmp_id         BIGSERIAL     PRIMARY KEY,
+    rmp_cpt_id     BIGINT        NOT NULL REFERENCES compte(cpt_id) ON DELETE CASCADE,
+    rmp_empreinte  CHAR(64)      NOT NULL UNIQUE,
+    rmp_cree_le    TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    rmp_expire_le  TIMESTAMPTZ   NOT NULL,
+    rmp_utilise_le TIMESTAMPTZ,
+    rmp_adresse    VARCHAR(64)
+);
+CREATE INDEX IF NOT EXISTS ix_rmp_compte ON reinitialisation_mdp (rmp_cpt_id, rmp_cree_le DESC);
+ALTER TABLE journal_connexion DROP CONSTRAINT IF EXISTS journal_connexion_jco_evenement_check;
+ALTER TABLE journal_connexion ADD CONSTRAINT journal_connexion_jco_evenement_check CHECK (jco_evenement IN ('CONNEXION', 'ECHEC', 'VERROUILLAGE',
+    'DECONNEXION', 'MDP_CHANGE', 'MDP_REINITIALISE', 'EXPIRE', 'REFUS', 'DEVERROUILLAGE', 'COMPTE', 'MDP_OUBLI'));

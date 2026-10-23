@@ -50,6 +50,7 @@ public static class Extensions
             s.EnregistrerAliasAsync(Utilisateur.Depuis(http), id, d.Alias, ct));
         g.MapPost("/comptes/{id:long}/reprendre", (long id, HttpContext http, ServiceEnvoiMail s, CancellationToken ct) => s.ReprendreAsync(Utilisateur.Depuis(http), id, ct));
         g.MapGet("/alias", (ServiceComptesMail s, CancellationToken ct) => s.AliasAsync(ct));
+        g.MapGet("/disponible", async (ServiceEnvoiMail s, CancellationToken ct) => Results.Ok(new { disponible = await s.DisponibleAsync(ct) }));
         g.MapGet("/usages", async (ServiceComptesMail s, CancellationToken ct) => Results.Ok(new { connus = s.UsagesConnus, usages = await s.UsagesAsync(ct) }));
         g.MapPut("/usages", (List<UsageDto> l, HttpContext http, ServiceComptesMail s, CancellationToken ct) => s.EnregistrerUsagesAsync(Utilisateur.Depuis(http), l, ct));
         g.MapGet("/modeles", (ServiceComptesMail s, CancellationToken ct) => s.ModelesAsync(ct));

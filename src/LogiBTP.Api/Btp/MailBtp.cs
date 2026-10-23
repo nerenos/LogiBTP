@@ -8,6 +8,7 @@ using LogiBTP.Ged.Web;
 using LogiBTP.Mail.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.Socle.Web;
+using DestinataireSaisi = LogiBTP.Mail.Web.DestinataireSaisi;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -39,8 +40,49 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
 
     private sealed record PieceGed(long Id, string Titre, string NomFichier, long Taille);
 
+    private sealed record DiffusionMail(long DifId, string DifNumero, DateOnly DifDate, string DifObjet, int DifDelaiVisaJours);
+    private sealed record DestinataireDiffusion(long DfdTiersId, long? DfdIndId, bool DfdAttendVisa);
+
+    /// <summary>
+    /// Bordereau de diffusion du CRM : destinataires « par courriel » du bordereau (courriel du contact, sinon du tiers),
+    /// pièces = fichiers des indices de plans et autres pièces de la GED, toutes cochées.
+    /// </summary>
+    private async Task<ElementMail?> DecrireDiffusionAsync(string id, CancellationToken ct)
+    {
+        if (!long.TryParse(id, out var difId)) return null;
+        var d = await db.Database.SqlQueryRaw<DiffusionMail>(
+            "SELECT dif_id, dif_numero, dif_date, dif_objet, dif_delai_visa_jours FROM crm_diffusion WHERE dif_id = @id", new NpgsqlParameter("id", difId)).FirstOrDefaultAsync(ct);
+        if (d is null) return null;
+        var destinataires = new List<DestinatairePropose>();
+        foreach (var x in await db.Database.SqlQueryRaw<DestinataireDiffusion>(
+            "SELECT dfd_tiers_id, dfd_ind_id, dfd_attend_visa FROM crm_diffusion_destinataire WHERE dfd_dif_id = @id AND dfd_mode = 'COURRIEL' ORDER BY dfd_id",
+            new NpgsqlParameter("id", difId)).ToListAsync(ct))
+        {
+            var inst = await ContactsDocument.Instantane(db, x.DfdTiersId, x.DfdIndId, ct);
+            if (inst?.RootElement is not { } r || Texte(r, "email") is not { } email || destinataires.Any(p => p.Adresse.Equals(email, StringComparison.OrdinalIgnoreCase))) continue;
+            var nom = r.TryGetProperty("contact", out var c) && c.ValueKind == JsonValueKind.Object ? Texte(c, "nom") : null;
+            destinataires.Add(new DestinatairePropose(email, nom ?? Texte(r, "raison_sociale"), x.DfdAttendVisa ? "visa attendu" : "diffusion", true, x.DfdTiersId, x.DfdIndId));
+        }
+        var pieces = await db.Database.SqlQueryRaw<PieceGed>("""
+            SELECT g.dge_id AS id, g.dge_titre AS titre, v.vge_nom_fichier AS nom_fichier, v.vge_taille AS taille
+            FROM crm_diffusion_piece p LEFT JOIN crm_plan_indice i ON i.pin_id = p.dfp_pin_id
+            JOIN document_ged g ON g.dge_id = coalesce(p.dfp_dge_id, i.pin_dge_id) AND NOT g.dge_supprime
+            JOIN LATERAL (SELECT * FROM version_ged v WHERE v.vge_document = g.dge_id ORDER BY v.vge_numero DESC LIMIT 1) v ON TRUE
+            WHERE p.dfp_dif_id = @id ORDER BY p.dfp_id
+            """, new NpgsqlParameter("id", difId)).ToListAsync(ct);
+        var libelle = $"Bordereau {d.DifNumero}";
+        var variables = new Dictionary<string, string?>
+        {
+            ["numero"] = d.DifNumero, ["type"] = "Bordereau de diffusion", ["objet"] = d.DifObjet, ["date"] = d.DifDate.ToString("dd/MM/yyyy"),
+            ["document"] = $"{libelle} – {d.DifObjet}", ["validite"] = d.DifDate.AddDays(d.DifDelaiVisaJours).ToString("dd/MM/yyyy"),
+        };
+        return new ElementMail("crm_diffusion", id, $"{libelle} – {d.DifObjet}", $"/crm/diffusion/{difId}", "CRM", "crm_diffusion", variables, destinataires,
+            pieces.Select(p => new PieceProposee($"ged:{p.Id}", p.NomFichier, p.Taille, true)).ToList());
+    }
+
     public override async Task<ElementMail?> DecrireAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
+        if (type == "crm_diffusion") return await modules.EstActifAsync("crm", ct) ? await DecrireDiffusionAsync(id, ct) : null;
         if (type != "document" || !long.TryParse(id, out var entId)) return null;
         var d = await db.Database.SqlQueryRaw<DocumentMail>("""
             SELECT e.ent_id, e.ent_numero, e.ent_date, e.ent_objet, e.ent_date_validite, e.ent_total_ht, e.ent_total_ttc, e.ent_net_a_payer, e.ent_groupe_id,
@@ -220,4 +262,51 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
 
     private static string? Texte(JsonElement e, string nom) =>
         e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()) ? v.GetString() : null;
+
+    /// <summary>
+    /// Adresse de l'application d'une société pour les liens des courriels envoyés en fond (`Mail:AdresseApplication`,
+    /// http://localhost:5173 par défaut) : le sous-domaine de la société précède l'hôte (demo.localhost…).
+    /// </summary>
+    public static string AdresseApplication(IConfiguration configuration, SocieteCourante societe)
+    {
+        var u = new UriBuilder(configuration["Mail:AdresseApplication"] ?? "http://localhost:5173");
+        if (societe.Code is { } code) u.Host = $"{code}.{u.Host}";
+        return u.Uri.GetLeftPart(UriPartial.Authority);
+    }
+}
+
+/// <summary>
+/// Canal courriel des notifications (préférence « par courriel ») : une notification = un courriel à l'adresse de
+/// l'individu du compte, usage NOTIFICATION, lien vers la page ; au-delà de cinq à la fois, un lot (priorité basse). Le Mail
+/// est résolu à l'usage : il publie lui-même des notifications (dépendance circulaire sinon).
+/// </summary>
+public sealed class CanalCourrielBtp(IServiceProvider services, SocieteCourante societe, IConfiguration configuration, ILogger<CanalCourrielBtp> journal)
+    : ICanalNotification
+{
+    public string Code => "courriel";
+
+    public Task<bool> DisponibleAsync(CancellationToken ct) => services.GetRequiredService<ServiceEnvoiMail>().DisponibleAsync(ct);
+
+    public async Task EnvoyerAsync(IReadOnlyList<NouvelleNotification> notifications, CancellationToken ct)
+    {
+        var envoi = services.GetRequiredService<ServiceEnvoiMail>();
+        var specialisation = services.GetRequiredService<SpecialisationMail>();
+        var adresses = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var u in notifications.Select(n => n.Utilisateur).Distinct(StringComparer.OrdinalIgnoreCase))
+            adresses[u] = await specialisation.CourrielUtilisateurAsync(u, ct);
+        var envois = notifications.Where(n => adresses[n.Utilisateur] is not null).ToList();
+        foreach (var n in notifications.Where(n => adresses[n.Utilisateur] is null).Select(n => n.Utilisateur).Distinct())
+            journal.LogInformation("Notifications : pas de courriel pour {Utilisateur} (coordonnée EMAIL de son individu)", n);
+        if (envois.Count == 0) return;
+        long? lot = envois.Count > 5 ? await envoi.CreerLotAsync("NOTIFICATION", $"{envois.Count} notifications", SpecialisationMailBtp.Fond.Code, envois.Count, envois.Count, ct) : null;
+        var racine = SpecialisationMailBtp.AdresseApplication(configuration, societe);
+        foreach (var n in envois)
+        {
+            var lien = n.Url is null ? "" : $"<p><a href=\"{WebUtility.HtmlEncode(racine + n.Url)}\">Ouvrir dans LogiBTP</a></p>";
+            var corps = $"<p><strong>{WebUtility.HtmlEncode(n.Titre)}</strong></p>{(n.Texte is null ? "" : $"<p>{WebUtility.HtmlEncode(n.Texte)}</p>")}{lien}"
+                + "<p style=\"color:#667085\">Notification de LogiBTP : préférences dans Paramètres › Notifications.</p>";
+            await envoi.EnvoyerAutomatiqueAsync(new EnvoiAutomatique("NOTIFICATION", [new DestinataireSaisi(adresses[n.Utilisateur]!)], $"[LogiBTP] {n.Titre}", corps,
+                SpecialisationMailBtp.Fond.Code, n.Niveau == "URGENT" ? "HAUTE" : "NORMALE", n.TypeElement, n.IdElement, Lot: lot), ct);
+        }
+    }
 }

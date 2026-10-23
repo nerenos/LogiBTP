@@ -129,6 +129,7 @@ export class PageDiffusionCrm extends PageBase {
     const mode = (m) => MODES_DIFFUSION.find((x) => x.valeur === m)?.libelle ?? m;
     this.conteneur.innerHTML = `<div class="page-parametres crm-bordereau">
       <div class="boutons crm-actions"><button type="button" class="principal" data-imprimer title="Imprimer le bordereau">🖨 Imprimer</button>
+        <button type="button" data-courriel title="Envoyer les pièces aux destinataires « par courriel » (module Mail), dans une autre fenêtre">📧 Envoyer par courriel</button>
         ${d.element ? `<a href="/crm/diffusions?type=${encodeURIComponent(d.type_element)}&id=${encodeURIComponent(d.id_element)}">Autres bordereaux</a>` : ''}</div>
       <h1 class="page-titre">Bordereau de diffusion ${echapper(d.numero)}</h1>
       <p><b>${echapper(d.objet)}</b><br>Date : ${new Date(d.date).toLocaleDateString('fr-FR')}${d.element ? ` · ${lienElement(d.element)}` : ''} · émis par ${echapper(d.cree_par)}</p>
@@ -139,5 +140,6 @@ export class PageDiffusionCrm extends PageBase {
           <td>${x.attend_visa ? `attendu sous ${d.delai_visa_jours} j${x.visas_attendus ? ` · ${x.visas_recus}/${x.visas_attendus} reçu(s)` : ''}${x.note_id ? ` · <a href="/crm/note/${x.note_id}" class="crm-ecran">tâche</a>` : ''}` : 'pour information'}</td></tr>`).join('')}</tbody></table>
       <p class="crm-signature">Visa de réception :</p></div>`;
     this.conteneur.querySelector('[data-imprimer]').addEventListener('click', () => window.print());
+    this.conteneur.querySelector('[data-courriel]').addEventListener('click', () => this.app.naviguer(`/mail/nouveau?type=crm_diffusion&id=${this.params.id}`, { nouvelleFenetre: true }));
   }
 }

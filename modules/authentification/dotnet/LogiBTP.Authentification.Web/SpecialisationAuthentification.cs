@@ -36,4 +36,14 @@ public abstract class SpecialisationAuthentification
 
     /// <summary>Après l'écriture d'un compte (création, changement de pseudo, désactivation), dans la même transaction.</summary>
     public virtual Task ApresEcritureAsync(AuthDbContext db, Compte compte, string? ancienCode, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>Mot de passe oublié par courriel proposé (l'application sait envoyer un courriel) ; sans : réinitialisation par un administrateur.</summary>
+    public virtual Task<bool> ReinitialisationParCourrielAsync(IServiceProvider services, CancellationToken ct) => Task.FromResult(false);
+
+    /// <summary>
+    /// Envoie le lien de réinitialisation à l'adresse de la personne liée au compte ; renvoie faux sans adresse ou sans
+    /// moyen d'envoi (la demande reste sans effet visible pour le demandeur).
+    /// </summary>
+    public virtual Task<bool> EnvoyerReinitialisationAsync(IServiceProvider services, Compte compte, string lien, DateTimeOffset expireLe, CancellationToken ct) =>
+        Task.FromResult(false);
 }

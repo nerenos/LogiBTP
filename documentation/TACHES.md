@@ -21,6 +21,8 @@
   modèles ; envoi par file d'attente (limitations, lissage, reprises, erreurs classées, suspension sur blocage),
   journal des envois, confirmation des envois groupés ; envoi d'un document (pièces « à envoyer », GED, statut
   ENVOYE, note du CRM) ; pages `/mail`, `/mail/nouveau`, `/parametres/mail`. [analyse](conception/ANALYSE-MODULE-MAIL.md)
+- [x] **Module Mail, lot 2** (23/10/2026) : envois automatiques (canal courriel des notifications, mot de passe oublié
+  par lien, bordereaux de diffusion du CRM).
 
 ### Chaîne des achats et marchés
 

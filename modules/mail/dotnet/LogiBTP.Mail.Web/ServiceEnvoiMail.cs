@@ -86,7 +86,36 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
     /// destinataires par message du compte (A et CC sur le premier, CCI répartis), confirmation exigée au-delà du seuil
     /// d'envoi groupé (409 MAIL_CONFIRMATION avec l'estimation), créneau de chaque message, lien à l'élément.
     /// </summary>
-    public async Task<ResultatEnvoi> EnvoyerAsync(Utilisateur u, DemandeEnvoi d, CancellationToken ct)
+    public Task<ResultatEnvoi> EnvoyerAsync(Utilisateur u, DemandeEnvoi d, CancellationToken ct) => MettreEnFileAsync(u, d, null, false, ct);
+
+    /// <summary>
+    /// Envoi produit par l'application (notifications, mot de passe oublié, bordereaux…) : expéditeur de l'usage (portée du
+    /// type d'élément, sinon défaut), sans confirmation, dans le lot donné (priorité basse) ; aucun compte d'envoi :
+    /// 409 MAIL_NON_CONFIGURE. Auteur : compte de service ou utilisateur à l'origine de l'envoi.
+    /// </summary>
+    public async Task<ResultatEnvoi> EnvoyerAutomatiqueAsync(EnvoiAutomatique e, CancellationToken ct)
+    {
+        var alias = await AliasDeUsageAsync(e.Usage, e.TypeModele, ct)
+            ?? (await comptes.AliasAsync(ct)).Where(a => a.Actif && a.Envoi && a.CompteActif).OrderByDescending(a => a.Principal).FirstOrDefault()?.Id
+            ?? throw NonConfigure();
+        var d = new DemandeEnvoi(alias, e.A, e.Cc, e.Cci, e.Objet, e.CorpsHtml, e.Pieces, e.TypeElement, e.IdElement, e.Usage, false, true, null,
+            e.Lot is null ? e.Priorite : ReglesEnvoi.Basse);
+        return await MettreEnFileAsync(new Utilisateur(e.Auteur, "ADMIN"), d, e.Lot, true, ct);
+    }
+
+    /// <summary>Un compte d'envoi actif existe (fonctions qui dépendent du courriel : proposées ou masquées).</summary>
+    public async Task<bool> DisponibleAsync(CancellationToken ct) => (await comptes.AliasAsync(ct)).Any(a => a.Actif && a.Envoi && a.CompteActif);
+
+    /// <summary>Lot d'un envoi automatique de plusieurs courriels (notifications, relances…) : progression et fin signalées à l'auteur.</summary>
+    public async Task<long> CreerLotAsync(string origine, string libelle, string auteur, int messages, int destinataires, CancellationToken ct)
+    {
+        var lot = new LotEntite { MloOrigine = origine, MloLibelle = libelle, MloAuteur = auteur, MloMessages = messages, MloDestinataires = destinataires, MloCreeLe = Maintenant };
+        db.Lots.Add(lot);
+        await db.SaveChangesAsync(ct);
+        return lot.MloId;
+    }
+
+    private async Task<ResultatEnvoi> MettreEnFileAsync(Utilisateur u, DemandeEnvoi d, long? lotExistant, bool automatique, CancellationToken ct)
     {
         var (alias, c) = await AliasCompteAsync(d.AliasId, ct);
         var a = Nettoyer(d.A);
@@ -115,13 +144,18 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         var aEnvoyer = envois.Select(e => Message(e.A.Concat(e.Cc).Concat(e.Cci).ToList(), connus, priorite)).ToList();
         var total = aEnvoyer.Sum(m => m.Destinataires);
         var estimation = await EstimerAsync(c, aEnvoyer, ct);
-        if (estimation.ConfirmationRequise && !d.ConfirmationMassive)
+        if (!automatique && estimation.ConfirmationRequise && !d.ConfirmationMassive)
         {
             throw ExceptionMetier.Conflit("MAIL_CONFIRMATION", estimation.Avertissement ?? $"Envoi à {total} destinataires : confirmer", estimation);
         }
         var identite = comptes.Identite(c);
-        LotEntite? lot = null;
-        if (envois.Count > 1 || estimation.ConfirmationRequise)
+        LotEntite? lot = lotExistant is long l ? await db.Lots.FirstOrDefaultAsync(x => x.MloId == l, ct) : null;
+        if (lot is not null && envois.Count > 1)
+        {
+            lot.MloMessages += envois.Count - 1;
+            await db.SaveChangesAsync(ct);
+        }
+        if (lot is null && (envois.Count > 1 || (!automatique && estimation.ConfirmationRequise)))
         {
             lot = new LotEntite
             {
@@ -158,7 +192,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
             }
         }
         await db.SaveChangesAsync(ct);
-        await VolumeUtilisateurAsync(u, ct);
+        if (!automatique) await VolumeUtilisateurAsync(u, ct);
         var depart = creneaux[0].Quand;
         return new ResultatEnvoi(ids, "A_ENVOYER", estimation.Position, depart, creneaux[^1].Quand, creneaux.FirstOrDefault(x => x.Cause is not null)?.Cause,
             depart > Maintenant.AddSeconds(30), lot?.MloId);
