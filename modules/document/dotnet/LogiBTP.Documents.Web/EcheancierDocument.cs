@@ -90,7 +90,7 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
     public async Task<string?> Defaut(string famille, CancellationToken ct)
     {
         var d = await Defauts(ct);
-        return famille == "A" ? d.Achat : d.Vente;
+        return FamillesDocument.EstAchat(famille) ? d.Achat : d.Vente;
     }
 
     /// <summary>

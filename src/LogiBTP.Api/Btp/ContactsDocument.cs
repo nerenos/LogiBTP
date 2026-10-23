@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -51,7 +52,7 @@ public static class ContactsDocument
     /// </summary>
     public static (long PerId, long? IndId)? Source(DocumentBtp d, string role, string famille)
     {
-        var fonctionTiers = famille == "A" ? "FOURNISSEUR" : "CLIENT";
+        var fonctionTiers = FamillesDocument.EstAchat(famille) ? "FOURNISSEUR" : "CLIENT";
         (long, long?)? Intervenant(string fonction)
         {
             if (d.EntIntervenants is not { } j || j.RootElement.ValueKind != JsonValueKind.Array) return null;
@@ -73,6 +74,6 @@ public static class ContactsDocument
     public static async Task Completer(DbContext db, DocumentBtp d, string famille, CancellationToken ct)
     {
         if (d.EntContactClient is null && Source(d, "CLIENT", famille) is var (perC, indC)) d.EntContactClient = await Instantane(db, perC, indC, ct);
-        if (famille != "A" && d.EntContactPayeur is null && Source(d, "PAYEUR", famille) is var (perP, indP)) d.EntContactPayeur = await Instantane(db, perP, indP, ct);
+        if (!FamillesDocument.EstAchat(famille) && d.EntContactPayeur is null && Source(d, "PAYEUR", famille) is var (perP, indP)) d.EntContactPayeur = await Instantane(db, perP, indP, ct);
     }
 }

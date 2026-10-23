@@ -29,6 +29,18 @@ public class TypeDocument
     /// <summary>Type de l'avoir que devient une facture d'avancement à période négative.</summary>
     public int? TydAvoirTydId { get; set; }
     public bool TydActif { get; set; } = true;
+    /// <summary>Type proposant le lot de consultation (demandes de prix, appels d'offres).</summary>
+    public bool TydConsultation { get; set; }
+}
+
+/// <summary>Familles de documents : V ventes, A achats, S stock, E exécution, T sous-traitance (achats de sous-traitance).</summary>
+public static class FamillesDocument
+{
+    /// <summary>Famille d'achat : achats et sous-traitance (tiers fournisseur, décaissement, comptes d'achat).</summary>
+    public static bool EstAchat(string? famille) => famille is "A" or "T";
+    /// <summary>Famille commerciale (échéancier, règlements) : ventes et familles d'achat.</summary>
+    public static bool EstCommerciale(string? famille) => famille == "V" || EstAchat(famille);
+    public static readonly string[] Toutes = ["V", "A", "S", "E", "T"];
 }
 
 public class ProprieteDefinition

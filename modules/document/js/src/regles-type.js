@@ -9,4 +9,7 @@ export function regle(definition, code, defaut = null) {
 }
 
 /** Libellés des niveaux de règle. */
-export const FAMILLES_REGLE = [['V', 'Ventes'], ['A', 'Achats'], ['S', 'Stock']];
+export const FAMILLES_REGLE = [['V', 'Ventes'], ['A', 'Achats'], ['S', 'Stock'], ['E', 'Exécution'], ['T', 'Sous-traitance']];
+
+/** Famille d'achat : achats et sous-traitance (tiers fournisseur, comptes d'achat, décaissement). */
+export const estFamilleAchat = (famille) => famille === 'A' || famille === 'T';

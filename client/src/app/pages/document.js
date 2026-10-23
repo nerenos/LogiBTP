@@ -5,6 +5,7 @@ import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoir
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
+import { estFamilleAchat } from '@logibtp/document';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
@@ -55,6 +56,7 @@ const GABARIT = `
       <button data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
+      <button data-action="consultation" title="Lot de consultation : la même demande pour un autre fournisseur (copie sans tiers) ; documents du lot" hidden>📨 Lot de consultation</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
       <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
@@ -189,6 +191,7 @@ export class PageDocument extends PageBase {
         if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
       },
       sources: () => this.ajouterSources(),
+      consultation: () => this.lotConsultation(),
       'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
@@ -355,7 +358,7 @@ export class PageDocument extends PageBase {
     this.tiersCompte = tiers;
     ed.compteTiers = null;
     if (!tiers || !this.servicesFiche) return;
-    const champ = ed.definition.type?.tyd_famille === 'A' ? 'fou_compte' : 'cli_compte';
+    const champ = estFamilleAchat(ed.definition.type?.tyd_famille) ? 'fou_compte' : 'cli_compte';
     this.servicesFiche.charger('personne', tiers).then((f) => {
       if (this.editeur !== ed || this.tiersCompte !== tiers) return;
       ed.compteTiers = f?.valeurs?.[champ] || null;
@@ -521,6 +524,7 @@ export class PageDocument extends PageBase {
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
     this.$('[data-action="annuler-avoir"]').hidden = !enLigne || !doc.ent_verrouille || statut?.std_code === 'ANNULE'
       || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
+    this.$('[data-action="consultation"]').hidden = !enLigne || !doc.ent_id || !ed.definition.type?.tyd_consultation;
     this.$('[data-action="sources"]').hidden = !enLigne || !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
@@ -839,6 +843,35 @@ export class PageDocument extends PageBase {
     await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
     this.app.message(r.cree ? 'Marché créé et commande rattachée' : 'Commande rattachée comme avenant du marché', 'succes');
     return true;
+  }
+
+  /**
+   * Lot de consultation (ST3) : documents du lot (fournisseur, total HT, statut) et « Autre fournisseur » = copie de la
+   * demande sans tiers, ouverte dans une nouvelle fenêtre ; le comparatif des offres vient de la sous-traitance (lot 5).
+   */
+  async lotConsultation() {
+    const d = this.editeur?.saisie.document;
+    if (!d?.ent_id) return;
+    const lot = await api.consultation(d.ent_id);
+    const dlg = document.createElement('dialog');
+    dlg.className = 'dialogue-structure';
+    dlg.innerHTML = `<form method="dialog"><h3>📨 Lot de consultation ${echapper(lot.code ?? '')}</h3>
+      ${lot.documents.length ? `<table class="tableau-compact"><thead><tr><th>Numéro</th><th>Fournisseur</th><th class="nombre">Total HT</th><th>Statut</th></tr></thead><tbody>
+        ${lot.documents.map((x) => `<tr><td><a href="/document/${x.id}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
+          <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Pas encore de lot : « Autre fournisseur » crée la première copie et donne à la demande le code du lot (son numéro).</p>'}
+      <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button> <button value="fermer">Fermer</button></p></form>`;
+    document.body.append(dlg);
+    dlg.addEventListener('close', () => dlg.remove());
+    dlg.querySelector('[data-copier]').addEventListener('click', async () => {
+      try {
+        const r = await api.copierConsultation(d.ent_id);
+        dlg.close();
+        this.app.message('Demande copiée pour un autre fournisseur : choisissez-le dans l\'entête', 'succes');
+        this.app.naviguer(`/document/${r.id}`, { nouvelleFenetre: true });
+      } catch (e) { this.app.erreur(e); }
+    });
+    dlg.showModal();
   }
 
   /**

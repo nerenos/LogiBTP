@@ -1,5 +1,5 @@
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
-import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle } from '../src/index.js';
+import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
 const lireEtiquettes = (v) => {
@@ -88,7 +88,8 @@ export class PanneauxDocument {
         ${this.champTiers(d)}
         <label>Notre référence <input data-champ="ent_notre_reference" maxlength="50" value="${echapper(d.ent_notre_reference ?? '')}"></label>
         <label>Référence externe <input data-champ="ent_reference_externe" maxlength="100" title="Référence du client ou du fournisseur" value="${echapper(d.ent_reference_externe ?? '')}"></label>
-        ${def.type?.tyd_famille === 'A' ? `<label title="Date de la pièce du fournisseur : date comptable et départ de l'échéancier">Date fournisseur <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
+        ${def.type?.tyd_consultation ? `<label title="Lot de consultation : code commun aux demandes envoyées à plusieurs fournisseurs">Lot de consultation <input data-champ="ent_consultation" maxlength="30" size="12" value="${echapper(d.ent_consultation ?? '')}"></label>` : ''}
+        ${estFamilleAchat(def.type?.tyd_famille) ? `<label title="Date de la pièce du fournisseur : date comptable et départ de l'échéancier">Date fournisseur <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
         <label title="Durée de validité ; la date de fin est calculée à la validation du document">Validité (jours)
           <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
         ${d.ent_date_validite ? `<label>Valable jusqu'au <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}

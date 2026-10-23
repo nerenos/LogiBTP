@@ -1,6 +1,7 @@
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
+import { estFamilleAchat } from '@logibtp/document';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
@@ -97,7 +98,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const c = d[PanneauxBtp.colonneContact(role)] ?? null;
     // Document validé : coordonnées figées (complétées par le serveur à la validation), ni rechargement ni remplissage.
     const lecture = !!this.editeur.magasin.lectureSeule || this.editeur.fige;
-    const titre = role === 'PAYEUR' ? 'Payeur' : this.editeur.definition.type?.tyd_famille === 'A' ? 'Fournisseur' : 'Client';
+    const titre = role === 'PAYEUR' ? 'Payeur' : estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? 'Fournisseur' : 'Client';
     const a = c?.adresse ?? {};
     const lignes = c ? [
       `<strong>${echapper(c.raison_sociale ?? '')}</strong>${c.code ? ` <small>${echapper(c.code)}</small>` : ''}`,
@@ -133,7 +134,7 @@ export class PanneauxBtp extends PanneauxDocument {
 
   /** Écrit l'adresse (null : vide) ; ventes : vide si identique au client. */
   definirAdresse(x, libelle = 'Adresse des travaux') {
-    const vente = this.editeur.definition.type?.tyd_famille !== 'A';
+    const vente = !estFamilleAchat(this.editeur.definition.type?.tyd_famille);
     const valeur = vente && adresseIdentiqueAuClient(x, this.editeur.saisie.document.ent_contact_client) ? null : x;
     if (x && !valeur) this.editeur.surMessage?.('Adresse identique au client : le bloc reste vide');
     this.editeur.magasin.modifier((b) => { b.document.ent_adresse_livraison = valeur; }, libelle);
@@ -148,7 +149,7 @@ export class PanneauxBtp extends PanneauxDocument {
   rendreAdresse(bloc) {
     const ed = this.editeur;
     const d = ed.saisie.document;
-    const achat = ed.definition.type?.tyd_famille === 'A';
+    const achat = estFamilleAchat(ed.definition.type?.tyd_famille);
     const x = d.ent_adresse_livraison ?? null;
     const lecture = !!ed.magasin.lectureSeule || ed.fige;
     const chaId = d.ent_chantier_id ? Number(d.ent_chantier_id) : null;
@@ -200,7 +201,7 @@ export class PanneauxBtp extends PanneauxDocument {
   }
 
   /** Fonction du tiers du document : fournisseur pour un achat, client sinon. */
-  fonctionTiers() { return this.editeur.definition.type?.tyd_famille === 'A' ? 'FOURNISSEUR' : 'CLIENT'; }
+  fonctionTiers() { return estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? 'FOURNISSEUR' : 'CLIENT'; }
 
   /** Intervenants du document, le tiers du document (ent_tiers_id) en première ligne. */
   intervenantsDocument(d = this.editeur.saisie.document) {
@@ -315,7 +316,7 @@ export class PanneauxBtp extends PanneauxDocument {
       ${this.annuaire ? '<fieldset class="annuaire-document"><legend>Annuaire du document</legend><div data-intervenants></div></fieldset>' : ''}
       ${this.annuaire ? `<fieldset class="contacts-document"><legend>Coordonnées du document</legend>
         <p class="aide">Enregistrées dans le document pour les éditions et conservées à la transformation ; ⟳ les recharge depuis l'annuaire.</p>
-        <div class="contacts-blocs"><div data-contact="CLIENT"></div>${this.editeur.definition.type?.tyd_famille === 'A' ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
+        <div class="contacts-blocs"><div data-contact="CLIENT"></div>${estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
       ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}`;
   }

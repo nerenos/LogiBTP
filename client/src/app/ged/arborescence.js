@@ -13,7 +13,7 @@ import { ArborescenceGed } from '@logibtp/ged/ui';
 const ICONES = { projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
 const PREFIXES = { projet: 'P', affaire: 'A', chantier: 'C', marche: 'M' };
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
-const FAMILLES = [['V', 'Ventes', '💶'], ['A', 'Achats', '🛒'], ['S', 'Stock', '📦']];
+const FAMILLES = [['V', 'Ventes', '💶'], ['A', 'Achats', '🛒'], ['T', 'Sous-traitance', '🤝'], ['S', 'Stock', '📦']];
 // Ordre des types dans une famille : cycle du document (suffixe du code), les autres ensuite par libellé.
 const ORDRE_TYPES = ['DEVIS', 'DEMANDE', 'COMMANDE', 'RESERVATION', 'RECEPTION', 'ENTREE', 'SORTIE', 'TRANSFERT', 'RETOUR', 'SITUATION',
   'REPRISE_AVT', 'FACTURE_AVT', 'FACTURE', 'AVOIR', 'INVENTAIRE'];

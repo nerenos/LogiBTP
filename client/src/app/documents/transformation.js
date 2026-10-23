@@ -67,7 +67,7 @@ export function choisirTransformation({ source, cibles }) {
     <div class="transformation-choix">${groupes.map((g) => `<section><h4>${echapper(g.titre)}${g.aide ? ` <small>${echapper(g.aide)}</small>` : ''}</h4>
       ${g.cibles.map((c) => `<button type="button" class="transformation-cible" data-i="${i++}">
         <span class="transformation-icone">${ICONES[c.code] ?? '📄'}</span>
-        <span><b>${echapper(c.libelle)}</b>${c.famille === 'A' ? ' <span class="pastille">Achat</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
+        <span><b>${echapper(c.libelle)}</b>${c.famille === 'A' ? ' <span class="pastille">Achat</span>' : c.famille === 'T' ? ' <span class="pastille">Sous-traitance</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
       </button>`).join('')}</section>`).join('')}</div>
     <p class="aide">Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).</p>
     <div class="boutons"><button value="annuler">Annuler</button></div></form>`;

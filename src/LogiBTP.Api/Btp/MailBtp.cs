@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using LogiBTP.Crm.Web;
+using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Ged.Web;
@@ -103,7 +104,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         {
             tiers = Texte(contact, "raison_sociale");
             var nom = contact.TryGetProperty("contact", out var ct2) && ct2.ValueKind == JsonValueKind.Object ? Texte(ct2, "nom") : null;
-            if (Texte(contact, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom ?? tiers, d.TydFamille == "A" ? "Fournisseur" : "Client", true));
+            if (Texte(contact, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom ?? tiers, FamillesDocument.EstAchat(d.TydFamille) ? "Fournisseur" : "Client", true));
         }
         foreach (var i in JsonDocument.Parse(d.Intervenants ?? "[]").RootElement.EnumerateArray())
         {
@@ -131,7 +132,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             ["net_a_payer"] = Montant(d.EntNetAPayer), ["tiers"] = tiers, ["contact"] = destinataires.FirstOrDefault()?.Nom, ["redacteur"] = d.Redacteur,
             ["document"] = libelle,
         };
-        return new ElementMail("document", id, libelle, $"/document/{d.EntId}", d.TydFamille == "A" ? "DOCUMENT_ACHAT" : "DOCUMENT_VENTE", d.TydCode, variables,
+        return new ElementMail("document", id, libelle, $"/document/{d.EntId}", FamillesDocument.EstAchat(d.TydFamille) ? "DOCUMENT_ACHAT" : "DOCUMENT_VENTE", d.TydCode, variables,
             destinataires, pieces.Select(p => new PieceProposee($"ged:{p.Id}", p.NomFichier, p.Taille, true)).ToList());
     }
 
@@ -384,7 +385,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id LEFT JOIN individu i ON i.ind_id = e.ent_redacteur_id WHERE e.ent_id = @id
                 """, new NpgsqlParameter("id", entId)).FirstOrDefaultAsync(ct);
         }
-        var code = service ?? (doc is null ? null : doc.TydFamille == "A" ? "ACHAT" : doc.TydFamille == "V" ? "VENTE" : null);
+        var code = service ?? (doc is null ? null : FamillesDocument.EstAchat(doc.TydFamille) ? "ACHAT" : doc.TydFamille == "V" ? "VENTE" : null);
         var srvId = code is null ? doc?.SrvId
             : await db.Database.SqlQueryRaw<long?>("SELECT srv_id::bigint AS \"Value\" FROM service WHERE srv_code = @c AND srv_actif", new NpgsqlParameter("c", code)).FirstOrDefaultAsync(ct)
               ?? doc?.SrvId;

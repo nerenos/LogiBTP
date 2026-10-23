@@ -331,6 +331,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         e.EntNotreReference = d.Document.EntNotreReference;
         e.EntReferenceExterne = d.Document.EntReferenceExterne;
         e.EntDateExterne = d.Document.EntDateExterne;
+        e.EntConsultation = string.IsNullOrWhiteSpace(d.Document.EntConsultation) ? null : d.Document.EntConsultation.Trim();
         // Document issu d'une transformation : son tiers ne change plus (P12) ; payeur et coordonnées restent modifiables.
         if (avant.Document.EntTiersId is long tiersFige && d.Document.EntTiersId != tiersFige && avant.Lignes.Any(l => l.LigOrigineId is not null))
         {
@@ -476,7 +477,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         // Une pièce déjà transférée (nouvelle version après dévalidation) reste transférée : le comptable corrige (P22).
         // Pièce comptable (règle PIECE_COMPTABLE, P9) : état comptable ; échéancier pour les ventes et les achats.
         var comptable = await Regles.Booleen("PIECE_COMPTABLE", type, ct);
-        var echeancier = comptable && type.TydFamille is "V" or "A";
+        var echeancier = comptable && FamillesDocument.EstCommerciale(type.TydFamille);
         if (comptable && r.Document.EntEtatCompta != "T") r.Document.EntEtatCompta = r.Document.EntTotalTtc == 0 ? "S" : "A";
         if (type.TydNumerotationContinue && r.Document.EntNumero is null)
         {
@@ -856,11 +857,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         l.LigAvtPctPrecedent = p?.Pct ?? 0;
     }
 
-    /// <summary>Seuils de solde automatique d'une famille (A achats, sinon ventes) : (% de la quantité du parent, quantité).</summary>
+    /// <summary>Seuils de solde automatique d'une famille (achats et sous-traitance, sinon ventes) : (% de la quantité du parent, quantité).</summary>
     public async Task<(decimal Pct, decimal Qte)> SeuilsSolde(string famille, CancellationToken ct)
     {
         var s = await LireSeuilsSolde(ct);
-        var f = famille == "A" ? s.Achat : s.Vente;
+        var f = FamillesDocument.EstAchat(famille) ? s.Achat : s.Vente;
         return (f.Pct, f.Qte);
     }
 

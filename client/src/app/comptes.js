@@ -1,3 +1,4 @@
+import { estFamilleAchat } from '@logibtp/document';
 import { estChiffree } from '../calcul/index.js';
 
 // Compte comptable des lignes de document. La ligne porte son compte (lig_cpt_code) ; sans compte, elle affiche un
@@ -11,7 +12,7 @@ import { estChiffree } from '../calcul/index.js';
  */
 export function compteHeriteParDefaut(ligne, { natures = [], famille = 'V', compteTiers = null } = {}) {
   const nature = natures.find((n) => n.id === Number(ligne.lig_nat_id));
-  const compteNature = famille === 'A' ? nature?.compte_achat : nature?.compte_vente;
+  const compteNature = estFamilleAchat(famille) ? nature?.compte_achat : nature?.compte_vente;
   if (compteNature) return { code: compteNature, origine: 'nature', detail: `nature ${nature.code}` };
   if (compteTiers) return { code: compteTiers, origine: 'tiers', detail: 'tiers du document' };
   return null;

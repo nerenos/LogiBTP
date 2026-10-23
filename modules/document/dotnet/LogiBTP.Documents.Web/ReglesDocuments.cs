@@ -73,7 +73,7 @@ public sealed class ReglesDocuments<TDoc, TLigne, TComplet>(DocumentDbContext<TD
         foreach (var r in saisie)
         {
             if (!catalogue.TryGetValue(r.Code, out var d)) { erreurs.Add($"Règle {r.Code} inconnue"); continue; }
-            if (r.Famille is not null && r.Famille is not ("V" or "A" or "S")) erreurs.Add($"{d.Libelle} : famille {r.Famille} inconnue");
+            if (r.Famille is not null && !FamillesDocument.Toutes.Contains(r.Famille)) erreurs.Add($"{d.Libelle} : famille {r.Famille} inconnue");
             if (r.Type is not null && !types.ContainsKey(r.Type)) erreurs.Add($"{d.Libelle} : type {r.Type} inconnu");
             if (r.Type is not null && r.Famille is not null) erreurs.Add($"{d.Libelle} : une famille ou un type, pas les deux");
             var ok = d.Genre switch

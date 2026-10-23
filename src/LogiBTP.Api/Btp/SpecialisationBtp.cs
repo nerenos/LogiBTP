@@ -274,7 +274,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
 
         // Facture fournisseur : prix unitaire différent de celui de la commande (ligne d'origine) au-delà du seuil.
-        if (Seuil(regles, "PRIX_ACHAT_ECART") is decimal ecartMax && type.TydFamille == "A")
+        if (Seuil(regles, "PRIX_ACHAT_ECART") is decimal ecartMax && FamillesDocument.EstAchat(type.TydFamille))
         {
             var origines = vendues.Where(l => l.LigOrigineId is not null).Select(l => l.LigOrigineId!.Value).ToList();
             if (origines.Count > 0)
@@ -322,7 +322,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Édition de la pièce validée produite par le serveur et rangée en GED (module Édition, Q15) ; pièce de vente à
         // numérotation continue (facture, avoir…) : au coffre-fort. Ligne de la file insérée dans la transaction.
-        if (type.TydFamille is "V" or "A")
+        if (FamillesDocument.EstCommerciale(type.TydFamille))
         {
             var coffre = type.TydFamille == "V" && type.TydNumerotationContinue;
             await db.Database.ExecuteSqlInterpolatedAsync(

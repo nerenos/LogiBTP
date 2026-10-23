@@ -139,6 +139,7 @@ api.MapLiaisons();
 // Étapes validées depuis l'atelier (page tablette, borne du Pointage) : lot 2e de l'Exécution.
 api.MapAtelier().ExigeModule("execution", "Exécution");
 api.MapStructure();
+api.MapConsultations();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();

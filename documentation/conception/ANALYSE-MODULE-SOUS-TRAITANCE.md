@@ -9,6 +9,8 @@
 > **État** : toutes les questions sont tranchées (ST1 à ST20 : § 8.1 ; relecture ST21 à ST32 : § 8.2, 23/10/2026),
 > décisions reportées dans les paragraphes. Le format et la plateforme de la facture électronique relèvent d'un module
 > à part (ST22).
+>
+> **Réalisation** : lot 0 réalisé le 24/10/2026 (module Document `019i` : famille T, `f_famille_achat`, lot de consultation ; `db/210` : activation du module ; `Consultations.cs`).
 
 ## 1. Note d'origine (résumé)
 
