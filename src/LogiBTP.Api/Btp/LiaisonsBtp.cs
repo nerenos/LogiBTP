@@ -1,3 +1,5 @@
+using System.Text.Json;
+using LogiBTP.Execution.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +12,8 @@ namespace LogiBTP.Api.Btp;
 /// tous : planning théorique d'un chantier depuis son parcours d'exécution (une tâche par étape, heures budget du
 /// service, dépendances fin → début depuis les étapes amont), tâche du planning depuis un ordre et proposition de dates à
 /// l'ordre (P15 : l'ordre garde ses dates tant que la proposition n'est pas acceptée), heures réalisées (pointages
-/// retenus) d'une tâche du planning.
+/// retenus) d'une tâche du planning ; planning théorique d'un ordre par ses étapes (§ 13.5 : tâche par état TACHE,
+/// tâche de durée nulle par jalon, décalage des dépendances par attente, enchaînement depuis les ordres amont du parcours).
 /// </summary>
 public static class LiaisonsBtp
 {
@@ -19,6 +22,26 @@ public static class LiaisonsBtp
     private sealed record Periode(DateTime? Debut, DateTime? Fin);
 
     public sealed record DemandeTheorique(string Debut);
+    private sealed record OrdreAmont(long Id, string Type);
+    private sealed record Attente(string Chantier, DateOnly Debut, DateOnly Prevu, string Libelle, string? Numero);
+
+    /// <summary>Minutes d'une étape de nature tâche : heures, jours ouvrés (7 h) ; jours calendaires : null (période).</summary>
+    private static int? Minutes(EtapeOrdreEntite e) => e.OreUnite switch
+    {
+        "H" => Math.Max(15, (int)Math.Round(e.OreDuree * 60)),
+        "OUV" => Math.Max(15, (int)Math.Round(e.OreDuree * 420)),
+        _ => null,
+    };
+
+    /// <summary>Affectation du planning depuis la ressource principale (salarié, matériel, sous-traitant ; les autres : aucune).</summary>
+    private static List<AffectationSaisie> Affectations(string? ressource)
+    {
+        if (ressource is null) return [];
+        var r = JsonDocument.Parse(ressource).RootElement;
+        var type = r.TryGetProperty("type", out var t) ? t.GetString() : null;
+        var id = r.TryGetProperty("id", out var i) ? i.ToString() : null;
+        return type is "SALARIE" or "MATERIEL" or "SOUS_TRAITANT" && id is not null ? [new AffectationSaisie(type, id)] : [];
+    }
 
     public static RouteGroupBuilder MapLiaisons(this RouteGroupBuilder api)
     {
@@ -103,6 +126,97 @@ public static class LiaisonsBtp
                 new NpgsqlParameter("o", id), new NpgsqlParameter("u", Utilisateur.Depuis(http).Code)], ct);
             return Results.NoContent();
         });
+
+        // Planning théorique d'un ordre par ses étapes (§ 13.5) : étapes sans tâche planifiées, attentes en décalage,
+        // première étape après les dernières étapes planifiées des ordres amont (parcours du chantier).
+        g.MapPost("/ordres/{id:long}/planifier-etapes", async (long id, HttpContext http, LogiBtpContext db, ModulesSociete modules, ServicePlanning planning,
+            ServiceLiens liens, ServiceEtapes etapes, CancellationToken ct) =>
+        {
+            if (!await modules.EstActifAsync("planning", ct)) throw ExceptionMetier.Conflit("MODULE_INACTIF", "Module Planning nécessaire");
+            var u = Utilisateur.Depuis(http);
+            var o = await OrdreAsync(db, id, ct);
+            if (o.ChantierId is null) throw ExceptionMetier.Invalide("EXE_CHANTIER", "Ordre sans chantier");
+            var liste = (await etapes.EtapesOrdreAsync(id, ct)).Where(e => e.OreValideLe is null).OrderBy(e => e.OreOrdre).ToList();
+            if (liste.Count == 0) throw ExceptionMetier.Invalide("ETAPES_ABSENTES", "Aucune étape à planifier");
+            var ressourceOrdre = await db.Database.SqlQueryRaw<string?>("SELECT ent_ressource::text AS \"Value\" FROM document WHERE ent_id = @o",
+                new NpgsqlParameter("o", id)).FirstOrDefaultAsync(ct);
+            var toutes = await etapes.EtapesOrdreAsync(id, ct);
+            var parCode = toutes.ToDictionary(e => e.OreCode);
+            // Prédécesseurs : amonts de l'étape, sinon la précédente (même règle que ReglesEtapes).
+            List<string> Preds(EtapeOrdreEntite e)
+            {
+                if (e.OreAmonts is { } a) return a.Where(parCode.ContainsKey).ToList();
+                var prec = toutes.Where(x => x.OreOrdre < e.OreOrdre).OrderByDescending(x => x.OreOrdre).FirstOrDefault();
+                return prec is null ? [] : [prec.OreCode];
+            }
+            // Tâches amont d'une étape à travers les attentes : (tâche, décalage cumulé en jours, unité).
+            List<(long Tache, int Decalage, string Unite)> Amont(EtapeOrdreEntite e, int profondeur = 0)
+            {
+                var res = new List<(long, int, string)>();
+                if (profondeur > 30) return res;
+                foreach (var p in Preds(e).Select(c => parCode[c]))
+                {
+                    if (p.OreNature == "ATTENTE")
+                    {
+                        var jours = (int)Math.Ceiling(p.OreUnite == "H" ? p.OreDuree / 7 : p.OreDuree);
+                        var unite = p.OreUnite == "CAL" ? "CAL" : "OUV";
+                        res.AddRange(Amont(p, profondeur + 1).Select(x => (x.Tache, x.Decalage + jours, unite)));
+                    }
+                    else if (p.OreTacId is long t) res.Add((t, 0, "OUV"));
+                    else res.AddRange(Amont(p, profondeur + 1));
+                }
+                return res;
+            }
+            // Ordres amont du parcours : dernière tâche d'étape de chaque ordre du chantier dont le type est en amont.
+            var amontsOrdre = await db.Database.SqlQueryRaw<long>("""
+                SELECT e.ore_tac_id AS "Value"
+                FROM exe_parcours p
+                JOIN exe_parcours_element_etape cur ON cur.pee_par_id = p.par_id AND cur.pee_type_ordre = @type
+                JOIN exe_parcours_element_etape am ON am.pee_par_id = p.par_id AND am.pee_code = ANY(cur.pee_amonts)
+                JOIN type_document t ON t.tyd_code = am.pee_type_ordre
+                JOIN document d ON d.ent_tyd_id = t.tyd_id AND d.ent_chantier_id = @c AND d.ent_is_reference AND d.ent_id <> @o
+                JOIN LATERAL (SELECT x.ore_tac_id FROM exe_ordre_etape x WHERE x.ore_ordre_id = d.ent_id AND x.ore_tac_id IS NOT NULL ORDER BY x.ore_ordre DESC LIMIT 1) e ON TRUE
+                WHERE p.par_type_element = 'chantier' AND p.par_id_element = @cs
+                """, new NpgsqlParameter("type", await db.Database.SqlQueryRaw<string>("SELECT t.tyd_code AS \"Value\" FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @o",
+                    new NpgsqlParameter("o", id)).FirstAsync(ct)),
+                new NpgsqlParameter("c", o.ChantierId.Value), new NpgsqlParameter("o", id), new NpgsqlParameter("cs", o.ChantierId.Value.ToString())).ToListAsync(ct);
+            var creees = new List<long>();
+            var premiere = true;
+            foreach (var e in liste.Where(e => e.OreNature != "ATTENTE" && e.OreTacId is null))
+            {
+                var jour = e.OreDebutLe ?? DateOnly.FromDateTime(DateTime.Today);
+                var debut = jour.ToString("yyyy-MM-dd") + "T08:00";
+                var libelle = $"{o.Numero ?? $"Ordre {id}"} · {e.OreLibelle}";
+                var affs = Affectations(e.OreRessource ?? ressourceOrdre);
+                TacheSaisie saisie;
+                if (e.OreNature == "JALON") saisie = new TacheSaisie(2, debut, debut, null, 1, e.OreSrvId ?? o.SrvId, "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                else if (Minutes(e) is int m)
+                    saisie = new TacheSaisie(1, debut, null, m, 1, e.OreSrvId ?? o.SrvId, "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                else
+                    saisie = new TacheSaisie(2, debut, jour.AddDays((int)Math.Max(1, Math.Ceiling(e.OreDuree))).ToString("yyyy-MM-dd") + "T00:00", null, 1, e.OreSrvId ?? o.SrvId,
+                        "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                var tache = await planning.CreerIdAsync(saisie with { Couleur = e.OreCouleur }, u, ct);
+                e.OreTacId = tache;
+                await etapes.LierTacheAsync(id, e.OreCode, tache, ct);
+                creees.Add(tache);
+                var deps = Amont(e).Select(x => new DependanceSaisie(x.Tache, "FD", x.Decalage, x.Unite, "FIXE")).ToList();
+                if (premiere && deps.Count == 0) deps.AddRange(amontsOrdre.Select(t => new DependanceSaisie(t, "FD", 0, "OUV", "FIXE")));
+                premiere = false;
+                if (deps.Count > 0) await liens.EnregistrerDependancesAsync(tache, deps.DistinctBy(x => x.De).ToList(), u, ct);
+            }
+            return new { taches = creees };
+        });
+
+        // Attentes des étapes (séchage, validation d'un tiers) d'une période : bandes hachurées sur les lignes de chantier (E34).
+        g.MapGet("/attentes", async (string du, string au, LogiBtpContext db, CancellationToken ct) =>
+            (await db.Database.SqlQueryRaw<Attente>("""
+                SELECT d.ent_chantier_id::text AS chantier, e.ore_debut_le AS debut, e.ore_prevu_le AS prevu, e.ore_libelle AS libelle, d.ent_numero AS numero
+                FROM exe_ordre_etape e JOIN document d ON d.ent_id = e.ore_ordre_id JOIN statut_document s ON s.std_id = d.ent_std_id
+                WHERE e.ore_nature = 'ATTENTE' AND e.ore_valide_le IS NULL AND e.ore_debut_le IS NOT NULL AND e.ore_prevu_le IS NOT NULL
+                  AND d.ent_chantier_id IS NOT NULL AND s.std_code NOT IN ('ANNULE', 'REMPLACE')
+                  AND e.ore_prevu_le >= @du AND e.ore_debut_le <= @au
+                """, new NpgsqlParameter("du", DateOnly.Parse(du[..10])), new NpgsqlParameter("au", DateOnly.Parse(au[..10]))).ToListAsync(ct))
+            .Select(a => new { a.Chantier, debut = a.Debut.ToString("yyyy-MM-dd") + "T00:00", fin = a.Prevu.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", a.Libelle, a.Numero }));
 
         // Heures réalisées d'une tâche du planning : pointages retenus de ses ressources sur son chantier pendant sa période.
         g.MapGet("/taches/{id:long}/realise", async (long id, LogiBtpContext db, ModulesSociete modules, CancellationToken ct) =>

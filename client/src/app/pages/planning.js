@@ -100,15 +100,19 @@ class VuePlanningBtp extends VuePlanning {
     return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
-  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}${t.geree ? ' geree' : ''}${t.origine_type === 'conge' ? ' absence-conge' : ''}`; }
+  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}${t.geree ? ' geree' : ''}${t.origine_type === 'conge' ? ' absence-conge' : ''}${t.origine_type === 'etape' && t.fin <= t.debut ? ' jalon-etape' : ''}`; }
 
   /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité ; jalons des chantiers (lot 5). */
   decorationsLigne(l) {
     if (l.cle.startsWith('chantier:')) {
-      return (this.jalons ?? []).filter((j) => `chantier:${j.id_element}` === l.cle).map((j) => ({
+      // Attentes des étapes d'ordres (séchage, validation d'un tiers : E34) en bandes hachurées sous les barres.
+      const attentes = (this.attentes ?? []).filter((a) => `chantier:${a.chantier}` === l.cle).map((a) => ({
+        debut: versMinutes(a.debut), fin: versMinutes(a.fin), classe: 'attente-etape', titre: `Attente : ${a.libelle}${a.numero ? ` (${a.numero})` : ''}`, texte: '',
+      }));
+      return attentes.concat((this.jalons ?? []).filter((j) => `chantier:${j.id_element}` === l.cle).map((j) => ({
         debut: versMinutes(j.quand) - 15 * this.minutesParPixel, fin: versMinutes(j.quand) + 15 * this.minutesParPixel, classe: `jalon jalon-${j.type.toLowerCase()}`,
         titre: `${TYPES_JALON[j.type] ?? j.type} : ${j.libelle} (${j.quand.replace('T', ' ')})`, texte: '◆',
-      }));
+      })));
     }
     if (!l.cle.startsWith('srv:') || !this.charge) return [];
     const h = (m) => ecrireDuree(m) || '0:00';
@@ -590,6 +594,7 @@ export class PagePlanning extends PageBase {
       this.planning.charge.get(c.srv_id).push(c);
     }
     this.planning.jalons = await api.planning.jalons(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []);
+    this.planning.attentes = this.app.moduleActif('execution') ? await api.liaisons.attentes(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []) : [];
     await this.#feries(p);
     this.planning.definirDonnees(this.lignes, this.barres);
     if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }

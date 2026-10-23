@@ -177,6 +177,8 @@ export const api = {
     proposition: (id) => appel('GET', `/liaisons/ordres/${id}/proposition`),
     accepterProposition: (id) => appel('POST', `/liaisons/ordres/${id}/proposition/accepter`),
     realise: (tache) => appel('GET', `/liaisons/taches/${tache}/realise`),
+    planifierEtapes: (id) => appel('POST', `/liaisons/ordres/${id}/planifier-etapes`),
+    attentes: (du, au) => appel('GET', `/liaisons/attentes?${new URLSearchParams({ du, au })}`),
   },
   notifications: {
     boite: ({ etat = 'a_traiter', module = '', page = 1 } = {}) => appel('GET', `/notifications?${new URLSearchParams({ etat, ...(module ? { module } : {}), page })}`),

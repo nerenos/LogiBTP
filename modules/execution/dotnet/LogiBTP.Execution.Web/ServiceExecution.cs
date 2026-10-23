@@ -133,6 +133,8 @@ public abstract class SpecialisationExecution
     /// <summary>Calendrier des dates prévisionnelles (null : 7 h du lundi au vendredi).</summary>
     public virtual Task<CalendrierEtapes?> CalendrierAsync(ExecutionDbContext db, int? srvId, DateOnly du, DateOnly au, CancellationToken ct) =>
         Task.FromResult<CalendrierEtapes?>(null);
+    /// <summary>Tâches du planning liées aux étapes (absentes : supprimées) ; défaut : aucune.</summary>
+    public virtual Task<List<TacheEtape>> TachesAsync(ExecutionDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct) => Task.FromResult(new List<TacheEtape>());
     /// <summary>Droit de valider une étape, d'en prévoir la date ou la ressource (E46) ; défaut : administrateur.</summary>
     public virtual Task<bool> PeutValiderAsync(ExecutionDbContext db, OrdreEtapes o, EtapeOrdreEntite? e, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
     /// <summary>Droit de cocher le contrôle du N+1 (E30) ; défaut : administrateur.</summary>

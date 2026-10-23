@@ -12,7 +12,7 @@
 > le rapport imprimable de la synthèse reste à faire.
 > Troisième lecture (23/10/2026, § 13) : états des ordres par type, tableau de l'entête, planning théorique par états,
 > types d'ordres manquants et activation par type, validation depuis l'atelier : questions E25 à E53 tranchées le
-> 23/10/2026 (§ 13.6), lots 2b à 2e. Lot 2b réalisé le 24/10/2026 (`db/208`, `/parametres/documents` : types d'ordres). Lot 2c réalisé le 24/10/2026 (`modules/execution/db/085b`, `db/209`, `etapes.js` ↔ `ReglesEtapes.cs`) ; écarts : étapes d'un ordre dans le module (`exe_ordre_etape`, l'ordre désigné par son identifiant) plutôt qu'une table `ordre_etape` du cœur ; étapes copiées à la première lecture de l'ordre (ordres existants compris, E40) ; date prévisionnelle = jour où l'état doit être atteint.
+> 23/10/2026 (§ 13.6), lots 2b à 2e. Lot 2b réalisé le 24/10/2026 (`db/208`, `/parametres/documents` : types d'ordres). Lot 2c réalisé le 24/10/2026 (`modules/execution/db/085b`, `db/209`, `etapes.js` ↔ `ReglesEtapes.cs`) ; écarts : étapes d'un ordre dans le module (`exe_ordre_etape`, l'ordre désigné par son identifiant) plutôt qu'une table `ordre_etape` du cœur ; étapes copiées à la première lecture de l'ordre (ordres existants compris, E40) ; date prévisionnelle = jour où l'état doit être atteint. Lot 2d réalisé le 24/10/2026 (`LiaisonsBtp`, `SourceEtapesExecution`) ; écarts : une date imposée sur une étape liée à une tâche accrochée par une dépendance fixe agrandit le décalage de cette dépendance (le planning ramène sinon la tâche au plus tôt) ; planning → étapes relu à la lecture des étapes (pas de point d'accroche d'écriture dans le module Planning).
 
 ## 1. Objet
 

@@ -64,11 +64,22 @@ public class EtapeOrdreEntite
     public DateTimeOffset OreMajLe { get; set; } = DateTimeOffset.UtcNow;
 }
 
-/// <summary>Ordre vu par les étapes : type, élément (chantier), service, début prévu, état d'exécution, clos.</summary>
-public sealed record OrdreEtapes(long Id, string TypeOrdre, string? IdElement, int? SrvId, DateOnly? Debut, string? Etat, bool Clos);
+/// <summary>Ordre vu par les étapes : type, élément (chantier), service, début prévu, état d'exécution, clos, ressource principale (JSON).</summary>
+public sealed record OrdreEtapes(long Id, string TypeOrdre, string? IdElement, int? SrvId, DateOnly? Debut, string? Etat, bool Clos, string? Ressource = null);
 
-/// <summary>Suites d'une modification des étapes transmises à l'application.</summary>
-public sealed record SuitesEtapes(string? Etat, List<string> Statuts, DateOnly? Debut, DateOnly? Fin, string Detail);
+/// <summary>
+/// Suites d'une modification des étapes transmises à l'application : état déduit, statuts atteints, dates de l'ordre,
+/// historique ; tâches du planning à déplacer (fin voulue) ou à terminer ; étapes validées à contrôler par le N+1.
+/// </summary>
+public sealed record SuitesEtapes(string? Etat, List<string> Statuts, DateOnly? Debut, DateOnly? Fin, string Detail)
+{
+    public List<(long TacId, DateOnly Fin)> Deplacements { get; init; } = [];
+    public List<long> Terminees { get; init; } = [];
+    public List<string> AControler { get; init; } = [];
+}
+
+/// <summary>Tâche du planning liée à une étape : dernier jour et ressource principale (première affectation, JSON).</summary>
+public sealed record TacheEtape(long TacId, DateOnly Fin, string? Ressource);
 
 public sealed record EtatCatalogueDto(string Code, string Libelle, string? Couleur, string Nature, decimal Duree, string Unite, int? SrvId, int Ordre, bool Actif);
 public sealed record EtatTypeDto(string Code, int Ordre, bool DateObligatoire, bool Controle, bool ControleBloquant, string? StatutDocument,
@@ -272,7 +283,8 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
     private async Task<List<EtapeOrdreEntite>> EtapesAsync(OrdreEtapes o, CancellationToken ct)
     {
         var etapes = await db.EtapesOrdres.Where(e => e.OreOrdreId == o.Id).OrderBy(e => e.OreOrdre).ToListAsync(ct);
-        if (etapes.Count > 0 || o.Clos) return etapes;
+        if (etapes.Count > 0) return o.Clos ? etapes : await SynchroniserPlanningAsync(o, etapes, ct);
+        if (o.Clos) return etapes;
         etapes = await DefinitionAsync(o, ct);
         if (etapes.Count == 0) return etapes;
         db.EtapesOrdres.AddRange(etapes);
@@ -280,6 +292,43 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         await RecalculerAsync(o, ct);
         return etapes;
     }
+
+    /// <summary>
+    /// Planning → étapes (§ 13.5, E48) : une tâche liée déplacée impose son dernier jour à l'étape non validée ; sa
+    /// ressource (première affectation) devient celle de l'étape, sauf si c'est celle de l'ordre ; tâche supprimée : lien
+    /// retiré. Dates recalculées s'il y a eu un changement.
+    /// </summary>
+    private async Task<List<EtapeOrdreEntite>> SynchroniserPlanningAsync(OrdreEtapes o, List<EtapeOrdreEntite> etapes, CancellationToken ct)
+    {
+        var liees = etapes.Where(e => e.OreTacId is not null).ToList();
+        if (liees.Count == 0) return etapes;
+        var taches = (await specialisation.TachesAsync(db, liees.Select(e => e.OreTacId!.Value).ToList(), ct)).ToDictionary(t => t.TacId);
+        static string? Cle(string? json)
+        {
+            if (json is null) return null;
+            var r = JsonDocument.Parse(json).RootElement;
+            return $"{(r.TryGetProperty("type", out var t) ? t.ToString() : "")}:{(r.TryGetProperty("id", out var i) ? i.ToString() : "")}";
+        }
+        var change = false;
+        foreach (var e in liees)
+        {
+            if (!taches.TryGetValue(e.OreTacId!.Value, out var t)) { e.OreTacId = null; change = true; continue; }
+            if (e.OreValideLe is not null) continue;
+            if (e.OrePrevuLe != t.Fin) { (e.OrePrevuLe, e.OrePrevuImpose) = (t.Fin, true); change = true; }
+            var cle = Cle(t.Ressource);
+            if (cle is not null && cle != Cle(e.OreRessource) && !(e.OreRessource is null && cle == Cle(o.Ressource))) { e.OreRessource = t.Ressource; change = true; }
+        }
+        if (!change) return etapes;
+        await db.SaveChangesAsync(ct);
+        return await RecalculerAsync(o, ct);
+    }
+
+    /// <summary>Lien d'une étape à sa tâche du planning (planning théorique par états, posé par l'application).</summary>
+    public async Task LierTacheAsync(long ordre, string code, long? tache, CancellationToken ct) =>
+        await db.EtapesOrdres.Where(e => e.OreOrdreId == ordre && e.OreCode == code).ExecuteUpdateAsync(x => x.SetProperty(e => e.OreTacId, tache), ct);
+
+    /// <summary>Étapes d'un ordre avec leurs dates (planning théorique par états, application).</summary>
+    public async Task<List<EtapeOrdreEntite>> EtapesOrdreAsync(long id, CancellationToken ct) => await EtapesAsync(await OrdreAsync(id, ct), ct);
 
     /// <summary>Copie des étapes d'un ordre (création ou validation par l'application) ; sans effet si elles existent.</summary>
     public async Task InitialiserAsync(long id, CancellationToken ct)
@@ -359,6 +408,9 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
         var avertissements = new List<string>();
         var statuts = new List<string>();
+        var terminees = new List<long>();
+        var aControler = new List<string>();
+        DateOnly? deplacer = null;
         string detail;
         var deduire = false;
         switch (s.Action)
@@ -375,6 +427,8 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
                     x.OreValidePar = u.Code;
                     if (x.OreCode == code && !string.IsNullOrWhiteSpace(s.Commentaire)) x.OreCommentaire = s.Commentaire.Trim();
                     if (x.OreStatutDocument is string st) statuts.Add(st);
+                    if (x.OreTacId is long tac) terminees.Add(tac);
+                    if (x.OreControle && x.OreControleLe is null) aControler.Add(x.OreLibelle);
                 }
                 detail = $"étape validée : {string.Join(", ", etapes.Where(x => r.Codes.Contains(x.OreCode)).Select(x => x.OreLibelle))}";
                 deduire = true;
@@ -406,6 +460,7 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
             case "PREVOIR":
                 if (!await specialisation.PeutValiderAsync(db, o, e, u, ct)) throw ExceptionMetier.AccesRefuse("ETAPES");
                 (e.OrePrevuLe, e.OrePrevuImpose) = s.Date is { } d ? (d, true) : (e.OrePrevuLe, false);
+                deplacer = s.Date;
                 detail = s.Date is { } dd ? $"date imposée : {e.OreLibelle} au {dd:dd/MM/yyyy}" : $"date recalculée : {e.OreLibelle}";
                 break;
             case "RESSOURCE":
@@ -425,17 +480,25 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         e.OreMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         etapes = await RecalculerAsync(o, ct);
-        avertissements.AddRange(await Suites(o, etapes, statuts, detail, deduire, u, ct));
+        // Étapes → planning : la tâche liée suit la date prévue modifiée (date imposée, recalcul, durée).
+        var cible = etapes.First(x => x.OreCode == code);
+        var deplacements = cible.OreTacId is long t && cible.OreValideLe is null && (s.Action is "PREVOIR" or "DUREE") && (deplacer ?? cible.OrePrevuLe) is DateOnly f
+            ? new List<(long, DateOnly)> { (t, f) } : [];
+        avertissements.AddRange(await Suites(o, etapes, statuts, detail, deduire, u, ct, deplacements, terminees, aControler));
         return await ReponseAsync(await OrdreAsync(id, ct), etapes, avertissements, u, ct);
     }
 
     /// <summary>Suites transmises à l'application : état déduit (après une validation ou une annulation), statuts, dates.</summary>
-    private async Task<List<string>> Suites(OrdreEtapes o, List<EtapeOrdreEntite> etapes, List<string> statuts, string detail, bool deduire, Utilisateur u, CancellationToken ct)
+    private async Task<List<string>> Suites(OrdreEtapes o, List<EtapeOrdreEntite> etapes, List<string> statuts, string detail, bool deduire, Utilisateur u, CancellationToken ct,
+        List<(long, DateOnly)>? deplacements = null, List<long>? terminees = null, List<string>? aControler = null)
     {
         var regles = etapes.Select(Regle).ToList();
         var etat = deduire ? ReglesEtapes.EtatExecution(regles, o.Etat) : null;
         var debut = etapes.Select(e => e.OreDebutLe).Where(d => d is not null).Min();
         var fin = etapes.Select(e => e.OreValideLe ?? e.OrePrevuLe).Where(d => d is not null).Max();
-        return await specialisation.ApresEtapesAsync(db, o, new SuitesEtapes(etat, statuts.Distinct().ToList(), debut, fin, detail), u, ct);
+        return await specialisation.ApresEtapesAsync(db, o, new SuitesEtapes(etat, statuts.Distinct().ToList(), debut, fin, detail)
+        {
+            Deplacements = deplacements ?? [], Terminees = terminees ?? [], AControler = aControler ?? [],
+        }, u, ct);
     }
 }

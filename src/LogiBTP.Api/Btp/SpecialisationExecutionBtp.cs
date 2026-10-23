@@ -1,4 +1,6 @@
 using LogiBTP.Calendrier.Web;
+using LogiBTP.Crm.Web;
+using LogiBTP.Planning.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Execution;
@@ -63,17 +65,17 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             ORDER BY d.ent_fin_prevue NULLS LAST, d.ent_id
             """, new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct);
 
-    private sealed record LigneOrdre(long Id, string TypeOrdre, string? IdElement, int? SrvId, DateOnly? Debut, string? Etat, bool Clos);
+    private sealed record LigneOrdre(long Id, string TypeOrdre, string? IdElement, int? SrvId, DateOnly? Debut, string? Etat, bool Clos, string? Ressource);
 
     public override async Task<OrdreEtapes?> OrdreAsync(ExecutionDbContext db, long id, CancellationToken ct)
     {
         var l = await db.Database.SqlQueryRaw<LigneOrdre>("""
             SELECT d.ent_id AS id, t.tyd_code AS type_ordre, d.ent_chantier_id::text AS id_element, d.ent_srv_id AS srv_id, d.ent_debut_prevu AS debut,
-                   d.ent_exe_etat AS etat, s.std_code IN ('ANNULE', 'REMPLACE') AS clos
+                   d.ent_exe_etat AS etat, s.std_code IN ('ANNULE', 'REMPLACE') AS clos, d.ent_ressource::text AS ressource
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             WHERE d.ent_id = @id AND t.tyd_famille = 'E'
             """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
-        return l is null ? null : new OrdreEtapes(l.Id, l.TypeOrdre, l.IdElement, l.SrvId, l.Debut, l.Etat, l.Clos);
+        return l is null ? null : new OrdreEtapes(l.Id, l.TypeOrdre, l.IdElement, l.SrvId, l.Debut, l.Etat, l.Clos, l.Ressource);
     }
 
     public override Task<List<long>> OrdresEnCoursAsync(ExecutionDbContext db, string typeOrdre, CancellationToken ct) =>
@@ -91,6 +93,23 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
         var journees = await Services.GetRequiredService<ServiceCalendrier>().JourneesAsync(cal, du, au,
             srvId is int x ? [new Portee("service", x.ToString())] : [], ct);
         return new CalendrierEtapes(null, journees.ToDictionary(j => j.Date, j => j.Minutes));
+    }
+
+    private sealed record LigneTache(long TacId, DateOnly Fin, string? Ressource);
+
+    /// <summary>Tâches du planning liées aux étapes : dernier jour, première affectation (salarié, intérimaire, matériel, sous-traitant).</summary>
+    public override async Task<List<TacheEtape>> TachesAsync(ExecutionDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+        return (await db.Database.SqlQueryRaw<LigneTache>("""
+            SELECT t.tac_id, (CASE WHEN t.tac_fin > t.tac_debut THEN t.tac_fin - interval '1 minute' ELSE t.tac_fin END)::date AS fin,
+                   (SELECT json_build_object('type', CASE a.aff_res_type WHEN 'INTERIM' THEN 'SALARIE' ELSE a.aff_res_type END, 'id', a.aff_res_id::bigint,
+                           'libelle', coalesce((SELECT concat_ws(' ', s.sal_prenom, s.sal_nom) FROM salarie s WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND s.sal_id::text = a.aff_res_id),
+                                               (SELECT m.mat_designation FROM materiel m WHERE a.aff_res_type = 'MATERIEL' AND m.mat_id::text = a.aff_res_id),
+                                               (SELECT x.sst_raison FROM demo_sous_traitant x WHERE a.aff_res_type = 'SOUS_TRAITANT' AND x.sst_id::text = a.aff_res_id)))::text
+                      FROM pla_affectation a WHERE a.aff_tac_id = t.tac_id AND a.aff_res_id ~ '^[0-9]+$' ORDER BY a.aff_id LIMIT 1) AS ressource
+            FROM pla_tache t WHERE t.tac_id = ANY(@ids)
+            """, new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct)).Select(t => new TacheEtape(t.TacId, t.Fin, t.Ressource)).ToList();
     }
 
     private static Task<long?> IndividuAsync(ExecutionDbContext db, Utilisateur u, CancellationToken ct) =>
@@ -152,6 +171,8 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             INSERT INTO ordre_execution_historique (oeh_ent_id, oeh_etat, oeh_motif_id, oeh_detail, oeh_par)
             SELECT ent_id, ent_exe_etat, ent_exe_motif_id, left(@det, 300), @u FROM document WHERE ent_id = @id
             """, [new NpgsqlParameter("det", s.Detail), new NpgsqlParameter("u", u.Code), new NpgsqlParameter("id", o.Id)], ct);
+        await PlanningAsync(db, s, u, avertissements, ct);
+        await ControlesAsync(db, o, s, u, ct);
         if (s.Statuts.Count == 0) return avertissements;
         var documents = Services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
         foreach (var statut in new[] { "ENVOYE", "VALIDE" }.Where(s.Statuts.Contains))
@@ -167,5 +188,87 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             }
         }
         return avertissements;
+    }
+
+    private sealed record LigneDeplacement(long TacId, DateTime Debut, DateTime Fin, int Version);
+
+    /// <summary>
+    /// Étapes → planning : tâches des étapes validées terminées ; tâche d'une étape dont la date prévue change déplacée
+    /// pour finir ce jour-là (durée gardée ; dépendances fixes propagées par le planning).
+    /// </summary>
+    private async Task PlanningAsync(ExecutionDbContext db, SuitesEtapes s, Utilisateur u, List<string> avertissements, CancellationToken ct)
+    {
+        if (s.Terminees.Count > 0)
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                UPDATE pla_tache SET tac_etat = 'TERMINEE', tac_avancement = 100, tac_version = tac_version + 1, tac_maj_par = @u, tac_maj_le = now()
+                WHERE tac_id = ANY(@ids) AND coalesce(tac_etat, '') <> 'TERMINEE'
+                """, [new NpgsqlParameter("ids", s.Terminees.ToArray()), new NpgsqlParameter("u", u.Code)], ct);
+        }
+        if (s.Deplacements.Count == 0) return;
+        var planning = Services.GetRequiredService<ServicePlanning>();
+        var liens = Services.GetRequiredService<ServiceLiens>();
+        foreach (var (tac, fin) in s.Deplacements)
+        {
+            try
+            {
+                // Dépendances fixes entrantes : le décalage absorbe l'écart (la tâche reste accrochée à la précédente) ;
+                // sinon la tâche est déplacée. Le planning recalcule la fin sur les plages travaillées : quelques essais
+                // pour finir le jour voulu, puis propagation aux suivantes.
+                for (var essai = 0; essai < 4; essai++)
+                {
+                    var t = await db.Database.SqlQueryRaw<LigneDeplacement>("SELECT tac_id, tac_debut AS debut, tac_fin AS fin, tac_version AS version FROM pla_tache WHERE tac_id = @t",
+                        new NpgsqlParameter("t", tac)).FirstOrDefaultAsync(ct);
+                    if (t is null) break;
+                    var dernier = DateOnly.FromDateTime(t.Fin > t.Debut ? t.Fin.AddMinutes(-1) : t.Fin);
+                    var decalage = fin.DayNumber - dernier.DayNumber;
+                    if (decalage == 0) break;
+                    var accrochee = await db.Database.ExecuteSqlRawAsync(
+                        "UPDATE pla_dependance SET dep_decalage = greatest(0, dep_decalage + @d) WHERE dep_vers = @t AND dep_mode = 'FIXE'",
+                        [new NpgsqlParameter("d", decalage), new NpgsqlParameter("t", tac)], ct);
+                    if (accrochee == 0)
+                    {
+                        await planning.DeplacerAsync(tac, new DeplacementSaisi(t.Debut.AddDays(decalage).ToString("yyyy-MM-ddTHH:mm"), t.Fin.AddDays(decalage).ToString("yyyy-MM-ddTHH:mm"),
+                            "deplacer", null, null, false, t.Version), u, ct);
+                    }
+                    await liens.PropagerAsync(tac, u, ct);
+                }
+                var r = await db.Database.SqlQueryRaw<LigneDeplacement>("SELECT tac_id, tac_debut AS debut, tac_fin AS fin, tac_version AS version FROM pla_tache WHERE tac_id = @t",
+                    new NpgsqlParameter("t", tac)).FirstOrDefaultAsync(ct);
+                if (r is not null && DateOnly.FromDateTime(r.Fin > r.Debut ? r.Fin.AddMinutes(-1) : r.Fin) != fin)
+                {
+                    avertissements.Add($"Planning : la tâche finit le {DateOnly.FromDateTime(r.Fin > r.Debut ? r.Fin.AddMinutes(-1) : r.Fin):dd/MM/yyyy} (étapes précédentes, plages travaillées)");
+                }
+            }
+            catch (ExceptionMetier e) { avertissements.Add($"Tâche du planning non déplacée : {e.Message}"); }
+        }
+    }
+
+    /// <summary>
+    /// Contrôle du N+1 attendu (E31) : tâche du CRM au responsable du service porteur de l'ordre (module CRM actif),
+    /// rattachée à l'ordre et au chantier ; un échec est journalisé sans annuler la validation.
+    /// </summary>
+    private async Task ControlesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes s, Utilisateur u, CancellationToken ct)
+    {
+        if (s.AControler.Count == 0 || o.SrvId is not int srv || !await Services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        try
+        {
+            var responsable = await db.Database.SqlQueryRaw<long?>("""
+                SELECT coalesce(s.srv_responsable_id, p.srv_responsable_id) AS "Value" FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_id = @s
+                """, new NpgsqlParameter("s", srv)).FirstOrDefaultAsync(ct);
+            var numero = await db.Database.SqlQueryRaw<string?>("SELECT coalesce(ent_numero, ent_id::text) AS \"Value\" FROM document WHERE ent_id = @id",
+                new NpgsqlParameter("id", o.Id)).FirstOrDefaultAsync(ct);
+            var groupe = await db.Database.SqlQueryRaw<long>("SELECT coalesce(ent_groupe_id, ent_id) AS \"Value\" FROM document WHERE ent_id = @id",
+                new NpgsqlParameter("id", o.Id)).FirstAsync(ct);
+            var liens = new List<LienSaisi> { new("document", groupe.ToString(), true) };
+            if (o.IdElement is string cha) liens.Add(new LienSaisi("chantier", cha));
+            await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, srv,
+                $"Ordre {numero} : contrôle à faire ({string.Join(", ", s.AControler)})", null, responsable, DateTimeOffset.UtcNow.AddDays(2), null,
+                false, false, false, liens, null), u, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Services.GetRequiredService<ILoggerFactory>().CreateLogger("Execution").LogWarning(e, "Tâche du CRM (contrôle) non créée pour l'ordre {Ordre}", o.Id);
+        }
     }
 }

@@ -94,3 +94,52 @@ public sealed class SourceHabilitations(LogiBtpContext db) : ISourceNotification
         }).ToList();
     }
 }
+
+/// <summary>
+/// Étapes des ordres (module Exécution, E45 ; toutes les heures, module actif) : étape en retard (date prévue dépassée
+/// sans validation) à la ressource principale (salarié), sinon au responsable de l'ordre, sinon au responsable du service ;
+/// contrôle du N+1 attendu depuis plus de deux jours au responsable du service porteur (ou de son parent).
+/// </summary>
+public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotifications
+{
+    public string Code => "execution-etapes";
+    public TimeSpan Periode => TimeSpan.FromHours(1);
+    public IReadOnlyList<TypeNotification> Types { get; } =
+        [new("execution", "ETAPE_RETARD", "Étapes d'ordres en retard"), new("execution", "ETAPE_CONTROLE", "Contrôles du N+1 en attente")];
+
+    private sealed record Ligne(long OreId, long EntId, string? Numero, string Libelle, DateOnly? PrevuLe, DateOnly? ValideLe, string Genre, string? Destinataire);
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        var lignes = await db.Database.SqlQueryRaw<Ligne>("""
+            WITH ordres AS (
+                SELECT d.ent_id, d.ent_numero, d.ent_srv_id, d.ent_responsable_id, d.ent_ressource
+                FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
+                WHERE t.tyd_famille = 'E' AND f_module_actif('execution') AND d.ent_is_reference AND s.std_code NOT IN ('ANNULE', 'REMPLACE', 'SOLDE')
+                  AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'),
+            responsable AS (
+                SELECT s.srv_id, (SELECT i.ind_utilisateur FROM individu i WHERE i.ind_id = coalesce(s.srv_responsable_id, p.srv_responsable_id)) AS code
+                FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id)
+            SELECT e.ore_id, o.ent_id, o.ent_numero AS numero, e.ore_libelle AS libelle, e.ore_prevu_le AS prevu_le, e.ore_valide_le AS valide_le, 'RETARD' AS genre,
+                   coalesce((SELECT i.ind_utilisateur FROM salarie sa JOIN individu i ON i.ind_id = sa.sal_ind_id
+                              WHERE coalesce(e.ore_ressource, o.ent_ressource) ->> 'type' = 'SALARIE' AND sa.sal_id::text = coalesce(e.ore_ressource, o.ent_ressource) ->> 'id'),
+                            (SELECT i.ind_utilisateur FROM individu i WHERE i.ind_id = o.ent_responsable_id),
+                            (SELECT r.code FROM responsable r WHERE r.srv_id = o.ent_srv_id)) AS destinataire
+            FROM exe_ordre_etape e JOIN ordres o ON o.ent_id = e.ore_ordre_id
+            WHERE e.ore_valide_le IS NULL AND e.ore_prevu_le < @j
+            UNION ALL
+            SELECT e.ore_id, o.ent_id, o.ent_numero, e.ore_libelle, e.ore_prevu_le, e.ore_valide_le, 'CONTROLE',
+                   (SELECT r.code FROM responsable r WHERE r.srv_id = o.ent_srv_id)
+            FROM exe_ordre_etape e JOIN ordres o ON o.ent_id = e.ore_ordre_id
+            WHERE e.ore_controle AND e.ore_valide_le IS NOT NULL AND e.ore_controle_le IS NULL AND e.ore_valide_le <= @j - 2
+            """, new Npgsql.NpgsqlParameter("j", aujourdhui)).ToListAsync(ct);
+        if (lignes.Count == 0) return [];
+        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        return lignes.SelectMany(l => (l.Destinataire is { } d ? [d] : admins).Select(dest => l.Genre == "RETARD"
+            ? new NouvelleNotification(dest, "execution", "ETAPE_RETARD", $"Ordre {l.Numero ?? l.EntId.ToString()} : « {l.Libelle} » en retard",
+                $"Prévue le {l.PrevuLe:dd/MM/yyyy}, pas encore validée", "ATTENTION", $"/document/{l.EntId}", null, null, $"exe-retard:{l.OreId}:{l.PrevuLe:yyyy-MM-dd}")
+            : new NouvelleNotification(dest, "execution", "ETAPE_CONTROLE", $"Ordre {l.Numero ?? l.EntId.ToString()} : contrôle de « {l.Libelle} » attendu",
+                $"Étape validée le {l.ValideLe:dd/MM/yyyy}", "INFO", $"/document/{l.EntId}", null, null, $"exe-controle:{l.OreId}"))).ToList();
+    }
+}

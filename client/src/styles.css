@@ -851,3 +851,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .etapes-tableau td { white-space: nowrap; }
 .etapes-tableau td.erreur input[type="date"] { color: #b42318; font-weight: 600; }
 .etape-pastille { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+/* Exécution, lot 2d : étapes au planning (jalon de durée nulle en losange, attente en bande hachurée). */
+.vp-barre.jalon-etape { min-width: 14px; width: 14px !important; transform: translateX(-7px) rotate(45deg) scale(0.75); border-radius: 2px; padding: 0; overflow: hidden; color: transparent; }
+.vp-deco.attente-etape { background: repeating-linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0 6px, transparent 6px 12px); opacity: 1; }

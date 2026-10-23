@@ -118,9 +118,18 @@ async function rendrePlanningOrdre(zone, { app, entId, recharger }) {
   zone.innerHTML = `<h4>Planning</h4>${p.taches ? `<p class="aide">${p.taches} tâche(s) au planning : du ${date(p.debut)} au ${date(p.fin)}.</p>
       ${p.ecart ? `<p class="avertissement">Le planning propose d'autres dates que celles de l'ordre (${date(p.debut_ordre) || '—'} → ${date(p.fin_ordre) || '—'}). <button type="button" data-accepter>Accepter les dates du planning</button></p>` : ''}`
     : '<p class="aide">Ordre non planifié.</p>'}
-    <p><button type="button" data-planifier>📅 Planifier l'ordre</button> <a href="/planning?vue=CHANTIERS_GANTT">Ouvrir le planning</a></p>`;
+    <p><button type="button" data-planifier>📅 Planifier l'ordre</button>
+      <button type="button" data-planifier-etapes title="Une tâche par étape (jalons de durée nulle, attentes en décalage), après les ordres amont du parcours">📅 Planifier les étapes</button>
+      <a href="/planning?vue=CHANTIERS_GANTT">Ouvrir le planning</a></p>`;
   zone.querySelector('[data-planifier]').addEventListener('click', async () => {
     try { await api.liaisons.planifierOrdre(entId); app.message('Tâche créée au planning', 'succes'); await rendrePlanningOrdre(zone, { app, entId, recharger }); } catch (e) { app.erreur(e); }
+  });
+  zone.querySelector('[data-planifier-etapes]').addEventListener('click', async () => {
+    try {
+      const r = await api.liaisons.planifierEtapes(entId);
+      app.message(r.taches.length ? `${r.taches.length} tâche(s) créée(s) au planning` : 'Toutes les étapes sont déjà au planning', 'succes');
+      await recharger();
+    } catch (e) { app.erreur(e); }
   });
   zone.querySelector('[data-accepter]')?.addEventListener('click', async () => {
     try { await api.liaisons.accepterProposition(entId); app.message('Dates du planning reprises par l\'ordre', 'succes'); await recharger(); } catch (e) { app.erreur(e); }
