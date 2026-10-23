@@ -1,7 +1,7 @@
 # Scripts SQL du cœur LogiBTP
 
 ## Rôle
-- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 004 OAuth, 005 Authentification, 006 Calendrier, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage, 089–089d Planning). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
+- Schéma et données du cœur, appliqués **après** les scripts des modules (`modules/*/db` : 004 OAuth, 005 Authentification, 006 Calendrier, 007 Mail, 008 Notifications, 010–019b Document, 020–021 Métré, 030–032 Liste, 040 Fiche, 050–051 GED, 060–062 Bibliothèque, 070 Annuaire, 080 Règlements, 090 Édition, 095 CRM, 085 Exécution, 086–088 Pointage, 089–089d Planning). Pas de migrations EF : le cœur ajoute ses colonnes métier par `ALTER TABLE` sur les tables des modules.
 - PostgreSQL 17 (`docker-compose.yml`, conteneur `logibtp-postgres`, port hôte 5433, utilisateur / mot de passe `logibtp`). Une base par société : `logibtp` (principale) et `logibtp_demo` (sous-domaine `demo`).
 
 ## Structure (ordre d'exécution)
@@ -58,6 +58,7 @@
 - `203_salaries_codes.sql` : `sal_code` (code court : recherche, homonymes) et `sal_matricule_paie` (exporté à la place du matricule s'il est renseigné), colonnes `code` et `matricule_paie` en fin de `v_liste_salaries`, valeurs de démonstration là où rien n'est saisi, colonnes ajoutées aux vues de liste 2 et 4 déjà en base ; rejouable.
 - `204_equipes.sql` : membres d'équipe de tout type (`eqc_type` SALARIE / INTERIM / MATERIEL / SOUS_TRAITANT / EQUIPE, `eqc_ressource` ; `eqc_sal_id` gardé pour les salariés et intérimaires), chef par période (salarié ou intérimaire), équipe jamais dans elle-même, code unique, `f_membres_equipe(équipe, date)` (sous-équipes développées, sans boucle, 10 niveaux), `f_sous_equipes(équipe)` ; rejouable.
 - `205_equipes_periodes.sql` : compositions datées par leur seul début (`equipe_periode` : début unique par équipe, commentaire ; fin = veille de la suivante), `equ_commentaire` (aide-mémoire), `equ_version` (modifications concurrentes ; verrou dans `verrou_fiche`, type `equipe`), reprise des débuts depuis les lignes ; rejouable.
+- `206_mail.sql` : module Mail (module `007`) : clé étrangère `mail_compte.mco_oco_id` → `oauth_connexion` (module `004`), compte de service `mail_fond` ; rejouable.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

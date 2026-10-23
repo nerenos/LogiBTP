@@ -73,6 +73,11 @@
     <Project Path="modules/oauth/dotnet/LogiBTP.OAuth.Web/LogiBTP.OAuth.Web.csproj" />
     <Project Path="modules/oauth/dotnet/LogiBTP.OAuth.Tests/LogiBTP.OAuth.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/mail/">
+    <Project Path="modules/mail/dotnet/LogiBTP.Mail/LogiBTP.Mail.csproj" />
+    <Project Path="modules/mail/dotnet/LogiBTP.Mail.Web/LogiBTP.Mail.Web.csproj" />
+    <Project Path="modules/mail/dotnet/LogiBTP.Mail.Tests/LogiBTP.Mail.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/notification/">
     <Project Path="modules/notification/dotnet/LogiBTP.Notifications.Web/LogiBTP.Notifications.Web.csproj" />
   </Folder>

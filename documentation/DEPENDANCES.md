@@ -165,6 +165,18 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Listes.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Listes.Tests |
 
+## modules/mail
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| NuGet | EFCore.NamingConventions | 10.0.1 | Apache-2.0 | LogiBTP.Mail.Tests |
+| NuGet | HtmlSanitizer | 9.2.1039 | MIT | LogiBTP.Mail.Web |
+| NuGet | MailKit | 4.18.2 | MIT | LogiBTP.Mail.Web |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Mail.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Mail.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Mail.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Mail.Tests |
+
 ## modules/metre
 
 | Type | Dépendance | Version | Licence | Usage |

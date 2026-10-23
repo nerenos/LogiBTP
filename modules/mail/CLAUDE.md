@@ -1,0 +1,31 @@
+# Module Mail – contexte
+
+## Rôle
+- Messagerie de l'application ([analyse](../../documentation/conception/ANALYSE-MODULE-MAIL.md)) : comptes système (adresses de service) en SMTP / IMAP, mot de passe ou OAuth 2.0 ; envoi depuis les éléments de l'application par une **file d'attente** soumise aux limitations du compte, journal des envois, avertissements d'envoi massif ; courriels rangés en GED et suivis par l'application (spécialisation).
+- Toujours présent (pas dans `module_societe`) ; sans compte d'envoi : 409 `MAIL_NON_CONFIGURE`, les fonctions qui en dépendent sont refusées.
+- Sans métier : ne connaît ni la GED, ni les documents, ni le CRM, ni les notifications, ni le module OAuth (contrat `IFournisseurJeton` du socle).
+
+## Dépendances
+- .NET : `LogiBTP.Mail` (règles pures), `LogiBTP.Mail.Web` → Socle(.Web), EF Core Npgsql, **MailKit 4.18.2** (SMTP, IMAP, MIME), **HtmlSanitizer** (corps, signatures, modèles). Pas de paquet JS (pages dans le client).
+- Utilisé par : cœur (`Program.cs` : `AddModuleMail<SpecialisationMailBtp>(Base, section Mail)`, `api.MapModuleMail()` ; `Btp/MailBtp.cs` ; `db/206` ; client : `pages/mail.js`, `pages/parametres-mail.js`, bouton 📧 Envoyer de la page document).
+
+## Structure
+- `db/007_mail.sql` (rejouable) : `mail_compte` (`mco_identite` et `mco_connexion` chiffrés, `mco_adresse_empreinte` HMAC unique, authentification MOT_DE_PASSE / OAUTH2 + `mco_oco_id`, hébergeur GMAIL / OVH / AUTRE, `mco_limites` JSONB, copie dans « Envoyés », services, état A_VERIFIER / OK / ERREUR / SUSPENDU ; `mco_dossiers`, `mco_options` pour la réception), `mail_alias` (table de correspondance nom → compte, un principal), `mail_usage` (usage + portée `type:<code>` → alias), `mail_modele` (objet et corps à variables `{{…}}`, défaut par usage et type), `mail_lot`, `mail_message` (sens E / R, état, priorité HAUTE / NORMALE / BASSE, élément, Message-ID, créneau `mme_prochain_essai`, cause d'attente, tentatives), `mail_destinataire` (A, CC, CCI, DE), `mail_piece` (référence `ged:<id>`), `mail_lien`, `mail_journal` (une ligne par tentative : destinataires, nouveaux, domaines, adresses si OK, code et réponse SMTP), `mail_parametre` (seuils).
+- `LogiBTP.Mail/ReglesEnvoi.cs` : `Limites` (défauts par hébergeur, `Completer`), `Calculer` (créneau d'un message selon le journal : débit par minute, quotas horaire et journalier en destinataires — réserve du quota pour les priorités haute et normale —, messages par heure et par domaine, nouveaux destinataires par jour ; une limite atteinte met en attente), `Simuler` / `Estimer` (lissage d'un lot), `TauxQuotaJour`, `ProchainEssai` (1, 5, 15, 60 min), `Classer` (Temporaire, Definitive, Authentification, Blocage), `Decouper`. `Adresses.cs` : `Valide`, `Domaine`, `Analyser`, `Remplir` (gabarits, échappés en HTML), `Variables`.
+- `LogiBTP.Mail.Web` : `Donnees.cs` (entités, `MailDbContext`), `Modeles.cs` (DTO, `ElementMail`, `CourrielEnvoye`, `SignalMail`), `SpecialisationMail.cs` (usages connus, `DecrireAsync`, `PiecesAsync`, `LirePieceAsync`, `ApresEnvoiAsync`, `CourrielUtilisateurAsync`, `AdministrateursAsync`, `SignalerAsync`), `TransportMail.cs` (`ITransportMail`, `TransportMailKit` : SSL ou STARTTLS obligatoire, XOAUTH2 ; `ConstructionMail` : MIME, Message-ID `…logibtp@<domaine>`, texte du HTML, .eml sans CCI), `NettoyageHtmlMail.cs`, `ServiceComptesMail.cs` (comptes, alias, usages, modèles, paramètres, test, `AuthAsync`, `IUtilisationsConnexion`), `ServiceEnvoiMail.cs` (préparer, estimer, envoyer, `TraiterFileAsync`, consultation, annuler, relancer, journal, compteurs, lots, reprise), `EnvoiMail.cs` (`BackgroundService` par base, 15 s), `Extensions.cs`.
+
+## Routes HTTP (préfixe `/api/mail`)
+- Paramétrage (administrateur) : `GET|POST /comptes`, `PUT|DELETE /comptes/{id}` (supprimer refusé s'il a des courriels : 409 `MAIL_COMPTE_UTILISE`), `POST /comptes/{id}/tester`, `GET /comptes/{id}/adresse` (journalisé), `PUT /comptes/{id}/alias` { alias }, `POST /comptes/{id}/reprendre` ; `GET /alias` (tous), `GET|PUT /usages` ({ connus, usages }), `GET|POST /modeles`, `DELETE /modeles/{id}`, `GET|PUT /parametres`.
+- Envoi : `GET /preparer?type=&id=&usage=` (brouillon), `POST /estimer`, `POST /envoyer` (409 `MAIL_CONFIRMATION` avec l'estimation au-delà du seuil d'envoi groupé, renvoyer avec `confirmation_massive`).
+- Consultation : `GET /messages?vue=envoyes|attente|erreurs|tous&type=&id=&lot=`, `GET /messages/{id}`, `POST /messages/{id}/annuler|relancer`, `GET /lots`, `GET /journal` et `GET /compteurs` (administrateur), `POST /traiter` (administrateur : passage immédiat de la file).
+
+## Règles
+- Identité et connexion d'un compte chiffrées, jamais renvoyées (« configuré ») ; adresse affichée à la demande d'un administrateur (journalisée) ; l'application montre l'alias. Mot de passe vide en modification : inchangé ; OAuth 2.0 : mot de passe effacé, jeton par `IFournisseurJeton` (`CONNEXION_A_RECONNECTER` : le courriel attend 15 min, compte en erreur).
+- Tout envoi passe par la file. Envoi d'un utilisateur : priorité HAUTE ; plusieurs courriels (découpage au-delà des destinataires par message : A et CC sur le premier, CCI répartis) : BASSE, lot. Créneau calculé à la mise en file et à chaque passage ; l'utilisateur voit position, départ estimé et cause.
+- Erreurs : temporaire → nouvel essai (1, 5, 15, 60 min) puis erreur ; définitive → ERREUR, auteur prévenu ; authentification → compte ERREUR, courriel en attente, administrateurs prévenus ; blocage (quota, spam) → compte SUSPENDU (envois groupés suspendus, autres en attente d'une heure), administrateurs prévenus, reprise manuelle.
+- Signaux (notifications du cœur, module `mail`) : ERREUR, PARTI (courriel parti après une attente), LOT (envoi groupé terminé), BLOCAGE, QUOTA (seuil du quota journalier franchi), COMPTE, VOLUME (courriels par heure d'un utilisateur au-delà du seuil).
+- HTML nettoyé côté serveur (liste blanche du CRM + liens http, https, mailto).
+
+## Tests
+- `dotnet test modules/mail/dotnet/LogiBTP.Mail.Tests` : règles de l'envoi, adresses, gabarits ; parcours complet avec un faux transport si `LOGIBTP_TEST_PG` désigne une base où `007` est chargé.
+- Essai réel : boîtes de test `LOGIBTP_TEST_MAIL_*` du `.env`.

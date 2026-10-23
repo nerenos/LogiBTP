@@ -15,6 +15,7 @@ services:
       - ./modules/oauth/db/004_oauth.sql:/docker-entrypoint-initdb.d/004_oauth.sql:ro
       - ./modules/authentification/db/005_authentification.sql:/docker-entrypoint-initdb.d/005_authentification.sql:ro
       - ./modules/calendrier/db/006_calendrier.sql:/docker-entrypoint-initdb.d/006_calendrier.sql:ro
+      - ./modules/mail/db/007_mail.sql:/docker-entrypoint-initdb.d/007_mail.sql:ro
       - ./modules/notification/db/008_notification.sql:/docker-entrypoint-initdb.d/008_notification.sql:ro
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
@@ -119,6 +120,7 @@ services:
       - ./db/203_salaries_codes.sql:/docker-entrypoint-initdb.d/203_salaries_codes.sql:ro
       - ./db/204_equipes.sql:/docker-entrypoint-initdb.d/204_equipes.sql:ro
       - ./db/205_equipes_periodes.sql:/docker-entrypoint-initdb.d/205_equipes_periodes.sql:ro
+      - ./db/206_mail.sql:/docker-entrypoint-initdb.d/206_mail.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

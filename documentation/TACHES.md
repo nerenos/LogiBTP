@@ -17,6 +17,10 @@
 - [x] **Module OAuth, lot 1** (23/10/2026) : connexions sortantes OAuth 2.0 (Google / Gmail grand public par code +
   PKCE), client, jetons et compte chiffrés, adresse de retour commune, renouvellement et rappels d'échéance par base,
   page `/parametres/connexions`, contrat `IFournisseurJeton` du socle. [analyse](conception/ANALYSE-MODULE-OAUTH.md)
+- [x] **Module Mail, lot 1** (23/10/2026) : comptes système chiffrés et alias, mot de passe ou OAuth 2.0, usages,
+  modèles ; envoi par file d'attente (limitations, lissage, reprises, erreurs classées, suspension sur blocage),
+  journal des envois, confirmation des envois groupés ; envoi d'un document (pièces « à envoyer », GED, statut
+  ENVOYE, note du CRM) ; pages `/mail`, `/mail/nouveau`, `/parametres/mail`. [analyse](conception/ANALYSE-MODULE-MAIL.md)
 
 ### Chaîne des achats et marchés
 

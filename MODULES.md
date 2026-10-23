@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -40,6 +40,7 @@ graph TD
 | reglement (facultatif) | socle | `LogiBTP.Reglements(.Web)` → Socle(.Web) | 080 | cœur (échéances des pièces, page Règlements) |
 | crm (facultatif) | socle | `LogiBTP.Crm(.Web)` → Socle(.Web), HtmlSanitizer | 095 | cœur (éléments, individus, services ; écrans Suivi) |
 | notification | — (.NET seul) | `LogiBTP.Notifications.Web` → Socle.Web | 008 | cœur (sources du planificateur, cloche, boîte) |
+| mail | — (.NET seul) | `LogiBTP.Mail(.Web)` → Socle(.Web), MailKit, HtmlSanitizer | 007 | cœur (comptes, envoi depuis les éléments, GED, suivi ; `/mail`, `/parametres/mail`) |
 | oauth | — (.NET seul) | `LogiBTP.OAuth(.Web)` → Socle(.Web) | 004 | cœur (connexions sortantes, `IFournisseurJeton` du socle pour le Mail ; `/parametres/connexions`) |
 | execution (facultatif) | — (règles seules) | `LogiBTP.Execution(.Web)` → Socle.Web | 085 | cœur (services, chantiers, ordres de la famille E ; synthèse, parcours) |
 | pointage (facultatif) | — (règles seules) | `LogiBTP.Pointage(.Web)` → Socle.Web | 086 | cœur (salariés, chantiers et chantiers internes, natures MO, ordres ; saisie hebdomadaire) |
@@ -70,6 +71,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | planning | `pages/planning.js` (`VuePlanningBtp`, panneau à planifier et tâche), `pages/planning-prototype.js` | `SpecialisationPlanningBtp` (calendriers par `CalendriersBtp`, contexte HTTP) | 201 (activation, service des tâches) |
 | execution | `pages/execution.js` (`/execution/synthese`, `/execution/chantier/:id`, `/parametres/execution`), `execution/execution.js` (panneau des ordres, lot 1) | `SpecialisationExecutionBtp`, `ExecutionBtp.cs` (ordres, lot 1) | 197, 198 |
 | pointage | `pages/pointage.js` (`/pointage/saisie`, `/parametres/pointage`), liste `pointages` (vues 1010 à 1012) | `SpecialisationPointageBtp` | 199 (clés étrangères, `cha_interne` et chantiers internes, `v_liste_pointages`) |
+| mail | `pages/mail.js` (`/mail`, `/mail/nouveau`, `/mail/message/:id`), `pages/parametres-mail.js`, bouton 📧 Envoyer de la page document | `SpecialisationMailBtp` (`Btp/MailBtp.cs` : document → variables, destinataires, pièces « à envoyer » ; pièces GED ; après envoi : GED, statut ENVOYE, note du CRM ; signaux → notifications `mail`) | 206 (clé étrangère OAuth, compte de service `mail_fond`) |
 | oauth | `pages/parametres-connexions.js` (`/parametres/connexions`), widget `oauth-alertes` | `SpecialisationOAuthBtp` (`Btp/OAuthBtp.cs` : services de l'utilisateur, destinataires des droits, signaux → notifications `oauth`) | — |
 | calendrier | `pages/parametres-calendriers.js` (`@logibtp/calendrier` : contrôles, aperçu des fériés) | `SpecialisationCalendrierBtp` (utilisations), `CalendriersBtp` (calendrier effectif d'un salarié ou d'un matériel, fermetures de son service) | 196 (`srv_cal_id`, `sal_cal_id`, `mat_cal_id`) |
 | authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur`) | — |
@@ -81,6 +83,7 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 ## Liens transverses (fonctionnels)
 
 - **Authentification ↔ tout** : l'intergiciel de session (`UseAuthentificationSession`, après `UseSocietes`) pose l'utilisateur de la requête (`Utilisateur.Poser` → `Utilisateur.Depuis` du socle) ; toutes les routes `/api` exigent une session sauf `/api/sante`, `/api/societe` et les routes publiques de `/api/auth` ; un compte de personne se lie à l'individu d'un salarié ou d'un intérimaire actif, son pseudo est recopié dans `ind_utilisateur` (lu par le CRM).
+- **Mail ↔ Document / GED / CRM** (cœur) : envoi depuis un document (pièces `dge_a_envoyer` jointes, courriel `.eml` rangé avec l'élément, étape ENVOI des pièces, statut ENVOYE du document approuvé, note du suivi si le CRM est actif) ; signaux du Mail publiés en notifications.
 - **OAuth ↔ consommateurs** (Mail) : contrat du socle `IFournisseurJeton` (jeton d'accès valable, `CONNEXION_A_RECONNECTER`) et `IUtilisationsConnexion` (utilisations d'une connexion) ; aucun module ne dépend de l'autre, le cœur branche les deux.
 - **Notifications ↔ modules** : chaque module publie par le cœur (source `ISourceNotifications` du planificateur ou `ServiceNotification.PublierAsync`) ; une boîte par compte ; les notifications d'un module désactivé sont masquées.
 - **Référentiel des ressources** (cœur, `db/195`) : salariés, intérimaires et leurs missions, matériels (identifiés ou par nombre), équipes à compositions datées, habilitations des salariés et des matériels, motifs typés, natures de main-d'œuvre → service ; fourni aux modules Planning, Pointage et Exécution par leurs spécialisations (aucun module ne lit ces tables).

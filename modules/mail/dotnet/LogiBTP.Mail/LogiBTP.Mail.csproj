@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Mail</RootNamespace>
+    <Description>Module Mail LogiBTP : règles de l'envoi (limitations, créneau, estimation d'un lot, classement des erreurs SMTP), adresses et gabarits.</Description>
+  </PropertyGroup>
+
+</Project>

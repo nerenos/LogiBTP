@@ -1,0 +1,280 @@
+import { PageBase } from '@logibtp/navigation';
+import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { api, ErreurApi } from '../api.js';
+import { zoneRiche } from '../crm/crm.js';
+import { pastilleCompteMail } from './parametres-mail.js';
+
+const ETATS = {
+  A_ENVOYER: ['⏳ En attente', 'attention'], EN_COURS: ['En cours', 'attention'], ENVOYE: ['Envoyé', 'ok'], ERREUR: ['Erreur', 'erreur'],
+  ANNULE: ['Annulé', 'neutre'], SUSPENDU: ['Suspendu', 'erreur'], BROUILLON: ['Brouillon', 'neutre'],
+};
+const VUES = [['envoyes', 'Envoyés'], ['attente', 'En attente'], ['erreurs', 'Erreurs'], ['tous', 'Tous'], ['envois', 'Suivi des envois']];
+const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+const taille = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
+
+export const pastilleMessage = (etat) => {
+  const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
+  return `<span class="pastille-compte ${c}">${echapper(l)}</span>`;
+};
+
+/** Message affiché après la mise en file : parti tout de suite ou en attente (position, départ estimé, cause). */
+export function messageEnvoi(r) {
+  if (!r.en_attente) return [`Courriel envoyé à la file : départ immédiat${r.messages.length > 1 ? ` (${r.messages.length} courriels)` : ''}`, 'succes'];
+  return [`Votre courriel est en attente d'envoi (position ${r.position + 1}, départ estimé vers ${date(r.depart)}${r.cause ? ` : ${r.cause}` : ''}). `
+    + 'Vous serez prévenu de son départ.', 'avertissement'];
+}
+
+/**
+ * Rédaction d'un courriel (module Mail) : depuis un élément (`/mail/nouveau?type=document&id=…&usage=`), valeurs
+ * proposées par l'application (expéditeur de l'usage, destinataires, modèle, pièces « à envoyer ») ; tout envoi passe
+ * par la file : l'utilisateur est prévenu d'une attente, un envoi groupé demande confirmation.
+ */
+export class PageRedactionMail extends PageBase {
+  icone = '✉';
+
+  get modifiee() { return Boolean(this.change); }
+
+  async ouvrir() {
+    const app = this.app;
+    const r = this.requete ?? {};
+    this.titre = 'Nouveau courriel';
+    this.conteneur.innerHTML = '<div class="page-parametres page-mail"><p class="aide">Préparation…</p></div>';
+    if (!app.enLigne) { this.conteneur.firstElementChild.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    try {
+      this.brouillon = await api.mail.preparer({ type: r.type, id: r.id, usage: r.usage });
+    } catch (e) {
+      this.conteneur.firstElementChild.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`;
+      return;
+    }
+    this.rendre();
+  }
+
+  rendre() {
+    const b = this.brouillon;
+    const el = b.element;
+    if (el) this.titre = `Courriel : ${el.libelle}`;
+    const champ = (role, libelle) => `<tr><th>${libelle}</th><td><textarea data-role="${role}" rows="1" cols="70" placeholder="Nom <adresse@domaine.fr>, …"></textarea></td></tr>`;
+    this.conteneur.innerHTML = `<div class="page-parametres page-mail">
+      <div class="entete-page"><h1 class="page-titre">✉ ${echapper(this.titre)}</h1>
+        <span><button type="button" class="principal" data-envoyer title="Mettre le courriel dans la file d'envoi">📤 Envoyer</button>
+        <button type="button" data-fermer>✕ Fermer</button></span></div>
+      ${el ? `<p class="aide">Depuis <a href="${echapper(el.url ?? '#')}" data-lien>${echapper(el.libelle)}</a> : le courriel envoyé est rangé dans la GED et le suivi de l'élément.</p>` : ''}
+      <table class="pleine-largeur"><tbody>
+        <tr><th>De</th><td><span data-expediteur></span> <span class="aide" data-estimation></span></td></tr>
+        ${champ('a', 'À')}${champ('cc', 'Cc')}${champ('cci', 'Cci')}
+        ${b.destinataires.length ? `<tr><th></th><td>Proposés : ${b.destinataires.map((d, i) => `<button type="button" class="etiquette" data-propose="${i}"
+          title="${echapper(d.adresse)}">＋ ${echapper(d.nom ?? d.adresse)}${d.role ? ` <span class="aide">(${echapper(d.role)})</span>` : ''}</button>`).join(' ')}</td></tr>` : ''}
+        <tr><th>Objet</th><td><input data-objet size="80" value="${echapper(b.objet)}"></td></tr>
+        <tr><th>Message</th><td data-corps></td></tr>
+        <tr><th>Pièces jointes</th><td>${b.pieces.length ? b.pieces.map((p, i) => `<label class="ligne"><input type="checkbox" data-piece="${i}" ${p.cochee ? 'checked' : ''}>
+          📎 ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span></label>`).join('<br>') : '<span class="aide">Aucune pièce marquée « à envoyer » (📧 dans l’onglet Pièces).</span>'}
+          <div class="aide" data-taille></div></td></tr>
+        <tr><th></th><td><label class="ligne"><input type="checkbox" data-copie> Copie à moi (Cci)</label></td></tr>
+      </tbody></table></div>`;
+    const expediteur = creerCombo({ options: b.expediteurs.map((a) => ({ valeur: a.id, libelle: a.nom })), valeur: b.alias_id });
+    this.conteneur.querySelector('[data-expediteur]').replaceWith(expediteur);
+    this.expediteur = expediteur;
+    this.corps = zoneRiche(b.corps_html, { surChange: () => { this.change = true; } });
+    this.conteneur.querySelector('[data-corps]').append(this.corps.element);
+    const a = this.conteneur.querySelector('[data-role="a"]');
+    const parDefaut = b.destinataires.filter((d) => d.par_defaut);
+    a.value = parDefaut.map((d) => (d.nom ? `${d.nom} <${d.adresse}>` : d.adresse)).join(', ');
+    this.conteneur.querySelectorAll('[data-propose]').forEach((bt) => bt.addEventListener('click', () => {
+      const d = b.destinataires[Number(bt.dataset.propose)];
+      a.value = [a.value.trim(), d.nom ? `${d.nom} <${d.adresse}>` : d.adresse].filter(Boolean).join(', ');
+      this.change = true;
+      this.estimer();
+    }));
+    this.conteneur.querySelectorAll('textarea, input').forEach((x) => x.addEventListener('change', () => { this.change = true; this.majTaille(); this.estimer(); }));
+    expediteur.addEventListener('change', () => this.estimer());
+    this.conteneur.querySelector('[data-lien]')?.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(b.element.url, { nouvelleFenetre: true }); });
+    this.conteneur.querySelector('[data-fermer]').addEventListener('click', () => this.app.fermerPage('/mail'));
+    this.conteneur.querySelector('[data-envoyer]').addEventListener('click', () => this.envoyer(false));
+    this.majTaille();
+    this.estimer();
+  }
+
+  destinataires(role) {
+    return (this.conteneur.querySelector(`[data-role="${role}"]`).value ?? '').split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).map((x) => {
+      const m = /^"?([^"<]*?)"?\s*<([^>]+)>$/.exec(x);
+      const proposee = this.brouillon.destinataires.find((d) => d.adresse.toLowerCase() === (m ? m[2] : x).toLowerCase());
+      return { adresse: m ? m[2].trim() : x, nom: m ? m[1].trim() || null : proposee?.nom ?? null, per_id: proposee?.per_id ?? null, ind_id: proposee?.ind_id ?? null };
+    });
+  }
+
+  pieces() {
+    return [...this.conteneur.querySelectorAll('[data-piece]')].filter((c) => c.checked).map((c) => this.brouillon.pieces[Number(c.dataset.piece)]);
+  }
+
+  majTaille() {
+    const total = this.pieces().reduce((t, p) => t + p.taille, 0);
+    const z = this.conteneur.querySelector('[data-taille]');
+    if (!z) return;
+    z.textContent = total ? `Total ${taille(total)} (au plus ${taille(this.brouillon.taille_max)} par courriel)` : '';
+    z.classList.toggle('erreur', total * 4 / 3 > this.brouillon.taille_max);
+  }
+
+  /** Départ estimé selon la file et les limitations du compte de l'expéditeur. */
+  async estimer() {
+    const n = ['a', 'cc', 'cci'].reduce((t, r) => t + this.destinataires(r).length, 0);
+    const z = this.conteneur.querySelector('[data-estimation]');
+    if (!z || !n) { if (z) z.textContent = ''; return; }
+    try {
+      const e = await api.mail.estimer({ alias_id: Number(this.expediteur.valeurCombo), messages: 1, destinataires_par_message: n, priorite: 'HAUTE' });
+      z.textContent = e.immediat ? `Départ immédiat · quota du jour utilisé à ${e.taux_quota} %`
+        : `⏳ Départ estimé vers ${date(e.depart)}${e.cause ? ` (${e.cause})` : ''} · ${e.position} courriel(s) en file`;
+    } catch { z.textContent = ''; }
+  }
+
+  async envoyer(confirmation) {
+    const demande = {
+      alias_id: Number(this.expediteur.valeurCombo), a: this.destinataires('a'), cc: this.destinataires('cc'), cci: this.destinataires('cci'),
+      objet: this.conteneur.querySelector('[data-objet]').value, corps_html: this.corps.valeur() ?? '', pieces: this.pieces().map((p) => p.reference),
+      type_element: this.brouillon.element?.type ?? null, id_element: this.brouillon.element?.id ?? null, usage: this.brouillon.element?.usage ?? null,
+      copie_moi: this.conteneur.querySelector('[data-copie]').checked, confirmation_massive: confirmation, priorite: 'HAUTE',
+    };
+    try {
+      const r = await api.mail.envoyer(demande);
+      this.change = false;
+      const [texte, niveau] = messageEnvoi(r);
+      this.app.message(texte, niveau);
+      this.app.publier('mail', { messages: r.messages });
+      this.app.fermerPage(r.messages.length === 1 ? `/mail/message/${r.messages[0]}` : '/mail?vue=attente');
+    } catch (e) {
+      if (e instanceof ErreurApi && e.code === 'MAIL_CONFIRMATION') {
+        if (confirm(`${e.details?.avertissement ?? e.message}\n\nConfirmer l'envoi ?`)) await this.envoyer(true);
+        return;
+      }
+      this.app.erreur(e);
+    }
+  }
+}
+
+/** Courriels de l'utilisateur (tous pour un administrateur) par état ; suivi des envois (administrateur) : compteurs, lots, journal. */
+export class PageMail extends PageBase {
+  icone = '📬';
+
+  urlCourante() { return `/mail?vue=${this.vue}${this.lot ? `&lot=${this.lot}` : ''}`; }
+
+  async ouvrir() {
+    const app = this.app;
+    const r = this.requete ?? {};
+    this.vue = r.vue ?? 'envoyes';
+    this.lot = r.lot ?? null;
+    this.titre = 'Courriels';
+    const vues = VUES.filter(([v]) => v !== 'envois' || app.estAdmin());
+    this.conteneur.innerHTML = `<div class="page-parametres">
+      <div class="entete-page"><h1 class="page-titre">📬 Courriels</h1><span><button type="button" data-nouveau>✉ Nouveau courriel</button>
+        ${app.estAdmin() ? '<button type="button" data-parametres>⚙ Messagerie</button>' : ''}</span></div>
+      <p class="ligne">${vues.map(([v, l]) => `<label class="ligne"><input type="radio" name="vue" value="${v}" ${v === this.vue ? 'checked' : ''}> ${l}</label>`).join(' ')}</p>
+      <div data-liste></div></div>`;
+    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    this.conteneur.querySelectorAll('[name="vue"]').forEach((x) => x.addEventListener('change', () => { this.vue = x.value; this.lot = null; this.charger(); }));
+    this.conteneur.querySelector('[data-nouveau]').addEventListener('click', () => app.naviguer('/mail/nouveau', { nouvelleFenetre: true }));
+    this.conteneur.querySelector('[data-parametres]')?.addEventListener('click', () => app.naviguer('/parametres/mail'));
+    this.desabonner = app.abonner('mail', () => this.charger());
+    await this.charger();
+  }
+
+  fermer() { this.desabonner?.(); }
+
+  async charger() {
+    const zone = this.conteneur.querySelector('[data-liste]');
+    try {
+      if (this.vue === 'envois') { await this.rendreSuivi(zone); return; }
+      const l = await api.mail.messages({ vue: this.vue, lot: this.lot });
+      zone.innerHTML = l.length ? tableMessages(l) : '<p class="aide">Aucun courriel.</p>';
+      brancherMessages(zone, this.app);
+    } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
+  }
+
+  async rendreSuivi(zone) {
+    const [compteurs, lots, journal] = await Promise.all([api.mail.compteurs(), api.mail.lots(), api.mail.journal()]);
+    zone.innerHTML = `<h2>Comptes</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Compte</th><th>État</th><th class="nombre">Dest. / heure</th>
+      <th class="nombre">Dest. / jour</th><th class="nombre">Quota</th><th class="nombre">En file</th><th class="nombre">Suspendus</th><th class="nombre">Échecs (24 h)</th>
+      <th>Prochain départ</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${compteurs.map((c) => `<tr data-compte="${c.compte}"><td>${echapper(c.alias)}</td><td>${pastilleCompteMail(c.etat)}</td>
+        <td class="nombre">${c.destinataires_heure} / ${c.limites.destinataires_par_heure}</td><td class="nombre">${c.destinataires_jour} / ${c.limites.destinataires_par_jour}</td>
+        <td class="nombre">${c.taux_quota} %</td><td class="nombre">${c.en_file}</td><td class="nombre">${c.suspendus}</td><td class="nombre">${c.erreurs_jour}</td>
+        <td>${date(c.prochain_depart)}</td><td class="cellule-boutons">${c.etat === 'SUSPENDU' ? '<button type="button" data-reprendre>▶ Reprendre</button>' : ''}</td></tr>`).join('')}
+      </tbody></table><div class="boutons"><button type="button" data-traiter title="Traiter la file maintenant (tâche de fond)">⟳ Traiter la file</button></div>
+      <h2>Envois groupés</h2>${lots.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Objet</th><th>Auteur</th><th class="nombre">Courriels</th>
+        <th class="nombre">Destinataires</th><th class="nombre">Envoyés</th><th class="nombre">Erreurs</th><th>Fin estimée</th></tr></thead><tbody>
+        ${lots.map((l) => `<tr data-lot="${l.id}" class="ligne-actions-survol" title="${echapper(l.avertissement ?? '')}"><td>${date(l.cree_le)}</td><td>${echapper(l.libelle ?? '')}</td>
+          <td>${echapper(l.auteur)}</td><td class="nombre">${l.messages}</td><td class="nombre">${l.destinataires}</td><td class="nombre">${l.envoyes}</td>
+          <td class="nombre">${l.erreurs}</td><td>${date(l.fin_estimee)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun.</p>'}
+      <h2>Journal des envois</h2>${journal.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Compte</th><th>Par</th><th>Origine</th>
+        <th class="nombre">Dest.</th><th class="nombre">Nouveaux</th><th>Résultat</th><th>Réponse</th></tr></thead><tbody>
+        ${journal.map((j) => `<tr${j.message ? ` data-message="${j.message}" class="ligne-actions-survol"` : ''}><td>${date(j.le)}</td><td>${echapper(j.alias ?? '')}</td>
+          <td>${echapper(j.utilisateur)}</td><td>${echapper(j.origine ?? '')}</td><td class="nombre">${j.destinataires}</td><td class="nombre">${j.nouveaux}</td>
+          <td>${pastilleMessage(j.resultat === 'OK' ? 'ENVOYE' : j.resultat === 'REPORT' ? 'A_ENVOYER' : 'ERREUR')}</td>
+          <td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Vide.</p>'}`;
+    zone.querySelectorAll('[data-reprendre]').forEach((b) => b.addEventListener('click', async () => {
+      try { await api.mail.reprendre(Number(b.closest('tr').dataset.compte)); await this.charger(); } catch (e) { this.app.erreur(e); }
+    }));
+    zone.querySelector('[data-traiter]').addEventListener('click', async () => {
+      try { const r = await api.mail.traiter(); this.app.message(`${r.envoyes} courriel(s) envoyé(s)`, 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
+    });
+    zone.querySelectorAll('tr[data-lot]').forEach((tr) => tr.addEventListener('click', () => { this.vue = 'tous'; this.lot = Number(tr.dataset.lot); this.charger(); }));
+    zone.querySelectorAll('tr[data-message]').forEach((tr) => tr.addEventListener('click', () => this.app.naviguer(`/mail/message/${tr.dataset.message}`)));
+  }
+}
+
+/** Tableau de courriels (boîte, onglet d'un élément). */
+export function tableMessages(l) {
+  return `<table class="tableau-compact largeur-contenu"><thead><tr><th>État</th><th>Créé le</th><th>De</th><th>À</th><th>Objet</th><th>📎</th><th>Envoyé / départ</th></tr></thead><tbody>
+    ${l.map((m) => `<tr data-id="${m.id}" class="ligne-actions-survol" title="${echapper(m.erreur ?? m.attente ?? '')}"><td>${pastilleMessage(m.etat)}</td><td>${date(m.cree_le)}</td>
+      <td>${echapper(m.expediteur ?? '')}</td><td>${echapper(m.a.join(', '))}${m.nb_destinataires > m.a.length ? ` <span class="aide">+${m.nb_destinataires - m.a.length}</span>` : ''}</td>
+      <td>${echapper(m.objet)}</td><td>${m.nb_pieces || ''}</td><td>${m.envoye_le ? date(m.envoye_le) : m.prochain_essai && m.etat === 'A_ENVOYER' ? `⏳ ${date(m.prochain_essai)}` : ''}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+export function brancherMessages(zone, app) {
+  zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => app.naviguer(`/mail/message/${tr.dataset.id}`, { nouvelleFenetre: true })));
+}
+
+/** Détail d'un courriel : état, attente ou erreur, destinataires, pièces, journal ; annuler (en attente) ou relancer (erreur). */
+export class PageMessageMail extends PageBase {
+  icone = '✉';
+
+  async ouvrir() {
+    this.titre = 'Courriel';
+    this.conteneur.innerHTML = '<div class="page-parametres" data-detail></div>';
+    if (!this.app.enLigne) return;
+    this.desabonner = this.app.abonner('mail', () => this.charger());
+    await this.charger();
+  }
+
+  fermer() { this.desabonner?.(); }
+
+  async charger() {
+    const zone = this.conteneur.querySelector('[data-detail]');
+    let d;
+    try { d = await api.mail.message(Number(this.params.id)); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const m = d.message;
+    this.titre = `Courriel : ${m.objet}`;
+    zone.innerHTML = `<div class="entete-page"><h1 class="page-titre">✉ ${echapper(m.objet)}</h1><span>
+        ${['A_ENVOYER', 'SUSPENDU'].includes(m.etat) ? '<button type="button" data-annuler>✕ Annuler l’envoi</button>' : ''}
+        ${m.etat === 'ERREUR' ? '<button type="button" data-relancer>↻ Nouvel essai</button>' : ''}
+        ${m.type_element === 'document' ? `<button type="button" data-element>📄 Document</button>` : ''}</span></div>
+      <table><tbody><tr><th>État</th><td>${pastilleMessage(m.etat)} ${m.attente ? `<span class="aide">${echapper(m.attente)}</span>` : ''}
+          ${m.erreur ? `<div class="erreur">${echapper(m.erreur)}</div>` : ''}</td></tr>
+        <tr><th>De</th><td>${echapper(m.expediteur ?? '')}</td></tr>
+        ${['A', 'CC', 'CCI'].map((r) => d.destinataires.some((x) => x.role === r) ? `<tr><th>${r === 'A' ? 'À' : r === 'CC' ? 'Cc' : 'Cci'}</th><td>${d.destinataires.filter((x) => x.role === r)
+          .map((x) => `${echapper(x.nom ? `${x.nom} <${x.adresse}>` : x.adresse)}${x.non_remis ? ` <span class="erreur">non remis : ${echapper(x.non_remis)}</span>` : ''}`).join(', ')}</td></tr>` : '').join('')}
+        <tr><th>Créé</th><td>${date(m.cree_le)} par ${echapper(m.cree_par)}</td></tr>
+        <tr><th>${m.envoye_le ? 'Envoyé' : 'Départ prévu'}</th><td>${date(m.envoye_le ?? m.prochain_essai)}${m.tentatives ? ` · ${m.tentatives} essai(s)` : ''}</td></tr>
+        ${d.pieces.length ? `<tr><th>Pièces</th><td>${d.pieces.map((p) => `📎 ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>`).join('<br>')}</td></tr>` : ''}
+      </tbody></table>
+      <div class="mail-corps">${d.corps_html ?? ''}</div>
+      ${d.journal.length ? `<h2>Journal</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Résultat</th><th>Réponse du serveur</th><th class="nombre">Durée</th></tr></thead><tbody>
+        ${d.journal.map((j) => `<tr><td>${date(j.le)}</td><td>${echapper(j.resultat)}</td><td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td>
+          <td class="nombre">${j.duree_ms ?? ''} ms</td></tr>`).join('')}</tbody></table>` : ''}`;
+    const action = (sel, f) => zone.querySelector(sel)?.addEventListener('click', async () => {
+      try { await f(); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    });
+    action('[data-annuler]', () => api.mail.annuler(m.id));
+    action('[data-relancer]', () => api.mail.relancer(m.id));
+    zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(`/document/${m.id_element}`, { nouvelleFenetre: true }));
+  }
+}

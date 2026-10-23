@@ -143,6 +143,7 @@ export const MENUS_METIER = [
       { code: 'ged', libelle: 'GED : tous les documents', icone: '📎', url: '/ged' },
       { code: 'coffre', libelle: 'Coffre-fort', icone: '🔒', url: '/ged?coffre=1', info: 'Documents administratifs scellés' },
       { code: 'ged-liste', libelle: 'Recherche de documents (liste)', icone: '🔎', url: L('ged') },
+      { code: 'courriels', libelle: 'Courriels envoyés et en attente', icone: '📬', url: '/mail?vue=envoyes', info: 'File d’envoi, erreurs, suivi des envois', creation: { url: '/mail/nouveau', titre: 'Nouveau courriel' } },
     ],
   },
 ];
@@ -207,6 +208,7 @@ export function menus(app) {
         { libelle: 'Planning : heures travaillées, jours masqués…', icone: '📅', url: '/parametres/planning', module: 'planning' },
         { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
+        { libelle: 'Messagerie : comptes, alias, modèles…', icone: '📧', url: '/parametres/mail', titre: 'Comptes de messagerie, expéditeur par usage, modèles, limitations des envois', desactive: !app.estAdmin() || !app.enLigne },
         { libelle: 'Connexions externes (OAuth)…', icone: '🔐', url: '/parametres/connexions', titre: 'Connexions aux services externes : Gmail…', desactive: !app.enLigne },
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },
         { separateur: true },

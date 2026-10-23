@@ -37,6 +37,8 @@ import { PageHabilitations } from './habilitations.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
 import { PageNotifications, PageParametresNotifications } from './notifications.js';
 import { PageParametresConnexions } from './parametres-connexions.js';
+import { PageParametresMail } from './parametres-mail.js';
+import { PageMail, PageMessageMail, PageRedactionMail } from './mail.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution } from './execution.js';
 import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
@@ -79,6 +81,10 @@ export const ROUTES = [
   { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: 'Paramètres du pointage' },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: 'Notifications' },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: 'Préférences de notification' },
+  { nom: 'parametres-mail', chemin: '/parametres/mail', page: PageParametresMail, titre: 'Messagerie' },
+  { nom: 'mail', chemin: '/mail', page: PageMail, titre: 'Courriels' },
+  { nom: 'mail-nouveau', chemin: '/mail/nouveau', page: PageRedactionMail, titre: 'Nouveau courriel' },
+  { nom: 'mail-message', chemin: '/mail/message/:id', page: PageMessageMail, titre: 'Courriel' },
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: 'Connexions externes' },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations à surveiller' },

@@ -58,6 +58,7 @@ const GABARIT = `
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
       <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
+      <button data-action="courriel" title="Envoyer le document par courriel (pièces marquées 📧 « à envoyer » dans l'onglet Pièces) dans une autre fenêtre">📧 Envoyer</button>
       <button data-action="fermer-page" title="Fermer le document (fenêtre séparée : la fenêtre se ferme)">✕ Fermer</button>
     </div>
     <span class="groupe" data-vues></span>
@@ -199,6 +200,12 @@ export class PageDocument extends PageBase {
         if (!id || id < 0) { app.message('Enregistrez le document avant de l’éditer', 'avertissement'); return; }
         if (this.modifiee) app.message('Modifications non enregistrées : l’aperçu montre la dernière version enregistrée', 'avertissement');
         app.naviguer(`/edition?source=document&id=${id}`, { nouvelleFenetre: true });
+      },
+      // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
+      courriel: () => {
+        const id = this.editeur?.saisie.document.ent_id;
+        if (!id || id < 0) { app.message('Enregistrez le document avant de l’envoyer', 'avertissement'); return; }
+        app.naviguer(`/mail/nouveau?type=document&id=${id}`, { nouvelleFenetre: true });
       },
       'fermer-page': () => app.fermerPage('/liste/documents'),
     };

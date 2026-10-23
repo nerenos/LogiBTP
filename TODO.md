@@ -45,12 +45,11 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 - [ ] Remplir les boîtes de test `LOGIBTP_TEST_MAIL_*` du `.env` (modèle `.env.exemple` : Gmail, Exchange OVH).
 - [ ] Essai réel du module OAuth avec la boîte Gmail de test : déclarer l'application Google (adresse de retour
   `http://localhost:5173/api/oauth/retour`), puis 🔗 Se connecter dans `/parametres/connexions`.
-- [ ] Lot 1 : comptes système (adresse et connexion chiffrées, alias `mail_alias`, mot de passe pour Exchange OVH ou
-  OAuth 2.0 pour Gmail, fonctions masquées sans compte) et envoi (file d'attente, limitations comptées en
-  destinataires, journal `mail_journal`, avertissements d'envoi massif, pièces « à envoyer » `dge_a_envoyer`,
-  destinataires depuis `v_intervenants`, archivage GED, statut ENVOYE) ; lots suivants : envois automatiques des
-  autres modules, réception IMAP (1 h, « Relever maintenant ») et liste « À rapprocher », reconnaissance automatique
-  et alertes.
+- [ ] Essai réel de l'envoi avec les boîtes de test (Gmail en OAuth 2.0, Exchange OVH par mot de passe) : relever les
+  quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
+- [ ] Lots suivants : envois automatiques des autres modules (canal courriel des notifications, mot de passe oublié,
+  SAV, relevé du pointage, bordereaux du CRM), réception IMAP (1 h, « Relever maintenant ») et liste « À rapprocher »,
+  reconnaissance automatique et alertes.
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.

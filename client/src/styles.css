@@ -837,3 +837,9 @@ button.filtre-actif { outline: 2px solid var(--accent); outline-offset: -2px; ba
 .badge-mode.modification { background: var(--alerte-fond); color: var(--alerte); font-weight: 600; }
 .periode-equipe textarea[data-commentaire-periode] { width: 100%; box-sizing: border-box; margin: .3rem 0 .1rem; resize: vertical; font-size: .9em; }
 .page-equipes textarea[data-commentaire] { width: 100%; box-sizing: border-box; resize: vertical; }
+
+/* Module Mail : rédaction, corps d'un courriel, destinataires proposés. */
+.page-mail textarea[data-role] { width: 100%; min-height: 1.8rem; resize: vertical; font: inherit; }
+.page-mail input[data-objet] { width: 100%; }
+.page-mail button.etiquette { border: 1px solid var(--bord); border-radius: .7rem; background: var(--surface); padding: 0 .5rem; font-size: .9em; cursor: pointer; }
+.mail-corps { border: 1px solid var(--bord); border-radius: 4px; padding: .6rem .8rem; margin: .6rem 0; max-width: 60rem; background: var(--surface); }

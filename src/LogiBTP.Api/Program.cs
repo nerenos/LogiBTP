@@ -17,6 +17,7 @@ using LogiBTP.Ged.Web;
 using LogiBTP.Listes.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.OAuth.Web;
+using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +90,10 @@ builder.Services.AddSourceNotifications<SourceHabilitations>();
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
 builder.Services.AddModuleOAuth<SpecialisationOAuthBtp>(Base, builder.Configuration.GetSection("OAuth"));
 ServiceNotification.TypesDirects.AddRange(SpecialisationOAuthBtp.Types);
+// Module Mail : comptes de messagerie système chiffrés (alias), envoi par file d'attente avec limitations et journal
+// (modules/mail/db/007, db/206) ; jetons OAuth 2.0 par IFournisseurJeton (module OAuth).
+builder.Services.AddModuleMail<SpecialisationMailBtp>(Base, builder.Configuration.GetSection("Mail"));
+ServiceNotification.TypesDirects.AddRange(SpecialisationMailBtp.Types);
 builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
@@ -137,6 +142,7 @@ api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();
 api.MapModuleOAuth();
+api.MapModuleMail();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
