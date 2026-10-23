@@ -270,6 +270,25 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
                 lignes.Add(new { cle = "srv:0", libelle = "Sans service", classe = "groupe", ligne_fixe = true, srv_id = (int?)null });
                 foreach (var r in sansService.OrderBy(r => r.Libelle)) lignes.Add(new { cle = r.Cle, libelle = r.Libelle, type = r.Type, srv_id = (int?)null, capacite = r.Capacite, quantite = r.Quantite });
             }
+            // Filtre de services : les ressources d'autres services qui portent des tâches des services choisis sur la
+            // période sont ajoutées dans un groupe à part, avec ces seules tâches.
+            var horsService = new HashSet<string>();
+            if (filtreSrv is not null)
+            {
+                var duService = taches.Where(t => t.TacSrvId is int s && filtreSrv.Contains(s)).Select(t => t.TacId).ToHashSet();
+                var clesAutres = affectations.Where(a => duService.Contains(a.AffTacId)).Select(a => $"{a.AffResType}:{a.AffResId}").Where(c => !connues.Contains(c)).Distinct().ToList();
+                var autres = clesAutres.Count == 0 ? [] : (await specialisation.RessourcesAsync(db, new FiltreRessources(null, null, null, clesAutres), ct))
+                    .Where(r => string.IsNullOrWhiteSpace(recherche) || r.Libelle.Contains(recherche.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                if (autres.Count > 0)
+                {
+                    lignes.Add(new { cle = "srv:autres", libelle = "Autres services (tâches des services choisis)", classe = "groupe hors-service", ligne_fixe = true, srv_id = (int?)null });
+                    foreach (var r in autres.OrderBy(r => r.Service).ThenBy(r => r.Libelle))
+                    {
+                        horsService.Add(r.Cle);
+                        lignes.Add(new { cle = r.Cle, libelle = r.Service is null ? r.Libelle : $"{r.Libelle} · {r.Service}", type = r.Type, srv_id = r.SrvId, capacite = r.Capacite, quantite = r.Quantite, classe = "hors-service" });
+                    }
+                }
+            }
             foreach (var t in taches)
             {
                 var affs = affectations.Where(a => a.AffTacId == t.TacId).ToList();
@@ -281,7 +300,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
                 foreach (var a in affs)
                 {
                     var cle = $"{a.AffResType}:{a.AffResId}";
-                    if (connues.Contains(cle)) barres.Add(Barre(t, $"{t.TacId}/{cle}", cle, false));
+                    if (connues.Contains(cle) || horsService.Contains(cle) && t.TacSrvId is int st && filtreSrv!.Contains(st)) barres.Add(Barre(t, $"{t.TacId}/{cle}", cle, false));
                 }
             }
         }

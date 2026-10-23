@@ -42,6 +42,9 @@
   white-space: nowrap; text-overflow: ellipsis; border-bottom: 1px solid var(--bord, #e2e8f0);
 }
 .vp-ligne.groupe { font-weight: 600; background: rgba(148, 163, 184, .15); }
+/* Ressources d'autres services qui portent des tâches des services filtrés. */
+.vp-ligne.hors-service { font-style: italic; color: var(--discret, #64748b); }
+.vp-ligne.groupe.hors-service { background: rgba(217, 119, 6, .12); }
 .vp-corps { overflow: auto; position: relative; }
 .vp-plan { position: relative; }
 .vp-fond {
