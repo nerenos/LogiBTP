@@ -105,6 +105,8 @@ public static class Extensions
         b.MapPost("/identifier", (Identification i, HttpContext http, ServiceBorne s, CancellationToken ct) => s.IdentifierAsync(http, i, ct));
         b.MapGet("/ordre", (string numero, HttpContext http, ServiceBorne s, CancellationToken ct) => s.OrdreAsync(http, numero, ct));
         b.MapPost("/pointages", (PointageBorne p, HttpContext http, ServiceBorne s, CancellationToken ct) => s.PointerAsync(http, p, ct));
+        b.MapPost("/journee", (JourneeBorne j, HttpContext http, ServiceBorne s, CancellationToken ct) => s.JourneeAsync(http, j, ct));
+        b.MapPut("/journee", (JourneeSaisie j, HttpContext http, ServiceBorne s, CancellationToken ct) => s.EnregistrerJourneeAsync(http, j, ct));
         return g;
     }
 }

@@ -41,23 +41,37 @@ public sealed record Identification(int Salarie, string? Pin);
 /// <summary>Pointage saisi à la borne (jeton de saisie de l'identification).</summary>
 public sealed record PointageBorne(string Jeton, DateOnly Date, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire,
     List<int>? Membres = null);
+/// <summary>Journée d'un salarié à la borne : date choisie (jours passés de la fenêtre de rattrapage).</summary>
+public sealed record JourneeBorne(string Jeton, DateOnly Date);
+/// <summary>Ligne de la journée saisie à la borne (identifiant absent : nouvelle).</summary>
+public sealed record LigneBorne(long? Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire);
+/// <summary>Journée complète saisie à la borne : remplace les pointages saisis du jour (les autres jours sont inchangés).</summary>
+public sealed record JourneeSaisie(string Jeton, DateOnly Date, List<LigneBorne> Pointages);
 public sealed record GroupeSaisi(int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif);
 
-/// <summary>Jetons de saisie de la borne (2 minutes, un par identification) : mémoire du processus.</summary>
+/// <summary>
+/// Jetons de saisie de la borne (un par identification, cinq minutes glissantes : prolongés à chaque appel) : mémoire
+/// du processus.
+/// </summary>
 public sealed class JetonsBorne
 {
+    private static readonly TimeSpan Duree = TimeSpan.FromMinutes(5);
     private readonly ConcurrentDictionary<string, (int Appareil, int Salarie, DateTimeOffset Fin)> jetons = new();
 
     public string Creer(int appareil, int salarie)
     {
         foreach (var k in jetons.Where(x => x.Value.Fin < DateTimeOffset.UtcNow).Select(x => x.Key).ToList()) jetons.TryRemove(k, out _);
         var j = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-        jetons[j] = (appareil, salarie, DateTimeOffset.UtcNow.AddMinutes(2));
+        jetons[j] = (appareil, salarie, DateTimeOffset.UtcNow.Add(Duree));
         return j;
     }
 
-    public int? Salarie(string jeton, int appareil) =>
-        jetons.TryGetValue(jeton, out var v) && v.Appareil == appareil && v.Fin >= DateTimeOffset.UtcNow ? v.Salarie : null;
+    public int? Salarie(string jeton, int appareil)
+    {
+        if (!jetons.TryGetValue(jeton, out var v) || v.Appareil != appareil || v.Fin < DateTimeOffset.UtcNow) return null;
+        jetons[jeton] = v with { Fin = DateTimeOffset.UtcNow.Add(Duree) };
+        return v.Salarie;
+    }
 
     public void Retirer(string jeton) => jetons.TryRemove(jeton, out _);
 
@@ -84,6 +98,8 @@ public sealed class JetonsBorne
 public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, JetonsBorne jetons, IServiceProvider services)
 {
     private const int Essais = 5;
+    /// <summary>Rattrapage d'un oubli : jours passés saisissables à la borne (jamais un jour futur).</summary>
+    public const int JoursRattrapage = 7;
 
     private static string Sha256(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s)));
 
@@ -295,26 +311,105 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
             pin.PpnEssais = 0;
             await db.SaveChangesAsync(ct);
         }
-        return await JourneeAsync(a, i.Salarie, jetons.Creer(a.PapId, i.Salarie), ct);
+        return await JourneeAsync(a, i.Salarie, jetons.Creer(a.PapId, i.Salarie), DateOnly.FromDateTime(DateTime.Today), ct);
     }
 
-    private async Task<object> JourneeAsync(AppareilEntite a, int salarie, string jeton, CancellationToken ct)
+    private static void ControlerDate(DateOnly date)
+    {
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
+        if (date > aujourdhui || date < aujourdhui.AddDays(-JoursRattrapage))
+            throw ExceptionMetier.Invalide("BORNE_DATE", $"Date hors de la saisie de la borne (aujourd'hui et les {JoursRattrapage} jours précédents)");
+    }
+
+    private int Identifie(AppareilEntite a, string jeton) =>
+        jetons.Salarie(jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_JETON", "Identification expirée : recommencer");
+
+    /// <summary>
+    /// Journée d'un salarié à une date : pointages saisis du jour (commentaire, motif), jour validé (consultation seule),
+    /// totaux du jour et de la semaine, chantiers proposés (planning du jour, récents, ceux du jour) et leurs ordres.
+    /// </summary>
+    private async Task<object> JourneeAsync(AppareilEntite a, int salarie, string jeton, DateOnly jour, CancellationToken ct)
     {
         var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).FirstOrDefault() ?? throw ExceptionMetier.Introuvable($"Salarié {salarie}");
-        var jour = DateOnly.FromDateTime(DateTime.Today);
-        var pointages = await db.Pointages.AsNoTracking().Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate == jour).OrderBy(p => p.PoiId).ToListAsync(ct);
+        var lundi = ReglesPointage.LundiDe(jour);
+        var semaine = await db.Pointages.AsNoTracking().Where(p => p.PoiSalId == salarie && p.PoiCouche == Couches.Saisie && p.PoiDate >= lundi && p.PoiDate <= lundi.AddDays(6))
+            .OrderBy(p => p.PoiId).ToListAsync(ct);
+        var pointages = semaine.Where(p => p.PoiDate == jour).ToList();
         var recents = await db.Pointages.AsNoTracking().Where(p => p.PoiSalId == salarie && p.PoiDate >= jour.AddDays(-21))
             .GroupBy(p => p.PoiChaId).OrderByDescending(g => g.Max(p => p.PoiDate)).Select(g => g.Key).Take(6).ToListAsync(ct);
         var proposes = await specialisation.ChantiersDuJourAsync(db, salarie, jour, ct);
         var ids = recents.Concat(proposes).Concat(pointages.Select(p => p.PoiChaId)).Distinct().ToList();
         var chantiers = await specialisation.ChantiersAsync(db, null, ids, ct);
+        var p0 = await pointage.ParametresAsync(ct);
+        var etat = (await pointage.EtatsAsync([salarie], lundi, p0.Validation, ct))[salarie][jour.DayNumber - lundi.DayNumber];
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
         return new
         {
-            jeton, salarie = s, date = jour,
-            pointages = pointages.Select(p => new { id = p.PoiId, cha_id = p.PoiChaId, ent_id = p.PoiEntId, type_mo = p.PoiTypeMo, sous_type = p.PoiSousType, minutes = p.PoiMinutes, motif = p.PoiMotif, groupe = p.PoiGroupe }),
+            jeton, salarie = s, date = jour, aujourdhui, premier_jour = aujourdhui.AddDays(-JoursRattrapage), etat, bloque = ReglesValidation.EstBloque(etat),
+            total_jour = pointages.Sum(p => p.PoiMinutes), total_semaine = semaine.Sum(p => p.PoiMinutes),
+            pointages = pointages.Select(p => new
+            {
+                id = p.PoiId, cha_id = p.PoiChaId, ent_id = p.PoiEntId, type_mo = p.PoiTypeMo, sous_type = p.PoiSousType, minutes = p.PoiMinutes, motif = p.PoiMotif,
+                commentaire = p.PoiCommentaire, groupe = p.PoiGroupe,
+            }),
             chantiers = chantiers.OrderBy(c => proposes.Contains(c.Id) ? 0 : recents.Contains(c.Id) ? 1 : 2), proposes,
             ordres = await specialisation.OrdresAsync(db, ids, ct),
         };
+    }
+
+    /// <summary>Journée du salarié identifié à une autre date (oubli de saisie : jours passés de la fenêtre de rattrapage).</summary>
+    public async Task<object> JourneeAsync(HttpContext http, JourneeBorne j, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        var salarie = Identifie(a, j.Jeton);
+        ControlerDate(j.Date);
+        return await JourneeAsync(a, salarie, j.Jeton, j.Date, ct);
+    }
+
+    /// <summary>
+    /// Enregistre la journée du salarié identifié : les pointages saisis du jour sont remplacés par la liste (ajouts,
+    /// modifications, retraits ; les autres jours de la semaine sont inchangés) ; mêmes contrôles et blocages que la
+    /// saisie au bureau (jour validé refusé) ; types de MO de la borne pour les lignes nouvelles ou modifiées ; un motif
+    /// de non-conformité nouveau avertit l'application. Essai : contrôlé puis annulé.
+    /// </summary>
+    public async Task<object> EnregistrerJourneeAsync(HttpContext http, JourneeSaisie j, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        var salarie = Identifie(a, j.Jeton);
+        ControlerDate(j.Date);
+        var lundi = ReglesPointage.LundiDe(j.Date);
+        var semaine = await db.Pointages.AsNoTracking().Where(x => x.PoiSalId == salarie && x.PoiCouche == Couches.Saisie && x.PoiDate >= lundi && x.PoiDate <= lundi.AddDays(6)).ToListAsync(ct);
+        var avant = semaine.Where(x => x.PoiDate == j.Date).ToDictionary(x => x.PoiId);
+        if (j.Pointages.Any(l => l.Id is long id && !avant.ContainsKey(id))) throw ExceptionMetier.Conflit("POI_MODIFIE", "Pointage introuvable dans la journée : recommencer");
+        bool Modifiee(LigneBorne l) => l.Id is not long id || avant[id] is var e && (e.PoiChaId != l.ChaId || e.PoiEntId != l.EntId || e.PoiTypeMo != l.TypeMo
+            || e.PoiSousType != l.SousType || e.PoiMinutes != l.Minutes);
+        if (a.PapTypesMo is { Length: > 0 } && j.Pointages.Any(l => Modifiee(l) && !a.PapTypesMo.Contains(l.TypeMo)))
+            throw ExceptionMetier.Invalide("BORNE_TYPE_MO", "Type de main-d'œuvre non proposé par cette borne");
+        // Heures de début et de fin d'une ligne inchangée conservées (saisie au bureau).
+        var saisie = semaine.Where(x => x.PoiDate != j.Date)
+            .Select(x => new PointageSaisi(x.PoiId, x.PoiDate, x.PoiChaId, x.PoiEntId, x.PoiTypeMo, x.PoiSousType, x.PoiMinutes, x.PoiDebut, x.PoiFin, x.PoiMotif, x.PoiCommentaire))
+            .Concat(j.Pointages.Select(l => new PointageSaisi(l.Id, j.Date, l.ChaId, l.EntId, l.TypeMo, l.SousType, l.Minutes,
+                Modifiee(l) ? null : avant[l.Id!.Value].PoiDebut, Modifiee(l) ? null : avant[l.Id!.Value].PoiFin, l.Motif, l.Commentaire))).ToList();
+        var auteur = Auteur(a);
+        var essai = EnTest(http);
+        await using (var tx = await db.Database.BeginTransactionAsync(ct))
+        {
+            await pointage.EnregistrerSemaineAsync(salarie, lundi, new SemaineSaisie(saisie), auteur, ct, controleAcces: false);
+            var connus = avant.Keys.ToHashSet();
+            foreach (var n in await db.Pointages.Where(x => x.PoiSalId == salarie && x.PoiCouche == Couches.Saisie && x.PoiDate == j.Date && !connus.Contains(x.PoiId)).ToListAsync(ct))
+                n.PoiAppareil = a.PapLibelle;
+            await db.SaveChangesAsync(ct);
+            if (essai) await tx.RollbackAsync(ct);
+            else await tx.CommitAsync(ct);
+        }
+        if (essai) db.ChangeTracker.Clear();
+        else
+        {
+            var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).First();
+            foreach (var l in j.Pointages.Where(l => !string.IsNullOrWhiteSpace(l.Motif) && (l.Id is not long id || avant[id].PoiMotif != l.Motif.Trim())))
+                await specialisation.ApresNonConformiteAsync(db, services, auteur, s, l.ChaId, l.EntId, l.Motif!.Trim(), ct);
+        }
+        return await JourneeAsync(a, salarie, j.Jeton, j.Date, ct);
     }
 
     /// <summary>Ordre reconnu par son numéro (QR code ou saisie) : identifiant, chantier.</summary>
@@ -331,7 +426,8 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     public async Task<object> PointerAsync(HttpContext http, PointageBorne p, CancellationToken ct)
     {
         var a = await AppareilAsync(http, ct);
-        var salarie = jetons.Salarie(p.Jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_JETON", "Identification expirée : recommencer");
+        var salarie = Identifie(a, p.Jeton);
+        ControlerDate(p.Date);
         if (a.PapTypesMo is { Length: > 0 } && !a.PapTypesMo.Contains(p.TypeMo))
             throw ExceptionMetier.Invalide("BORNE_TYPE_MO", "Type de main-d'œuvre non proposé par cette borne");
         var membres = (p.Membres is { Count: > 0 } ? p.Membres : [salarie]).Distinct().ToList();
@@ -346,17 +442,15 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
                 await tx.RollbackAsync(ct);
             }
             db.ChangeTracker.Clear();
-            jetons.Retirer(p.Jeton);
-            return await JourneeAsync(a, salarie, jetons.Creer(a.PapId, salarie), ct);
+            return await JourneeAsync(a, salarie, p.Jeton, p.Date, ct);
         }
         foreach (var m in membres) await AjouterAsync(m, p.Date, new PointageSaisi(null, p.Date, p.ChaId, p.EntId, p.TypeMo, p.SousType, p.Minutes, null, null, p.Motif, p.Commentaire), groupe, a, auteur, ct);
-        jetons.Retirer(p.Jeton);
         if (!string.IsNullOrWhiteSpace(p.Motif))
         {
             var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).First();
             await specialisation.ApresNonConformiteAsync(db, services, auteur, s, p.ChaId, p.EntId, p.Motif.Trim(), ct);
         }
-        return await JourneeAsync(a, salarie, jetons.Creer(a.PapId, salarie), ct);
+        return await JourneeAsync(a, salarie, p.Jeton, p.Date, ct);
     }
 
     /// <summary>Ajoute un pointage à la semaine saisie d'un salarié (mêmes contrôles et blocages que la saisie au bureau).</summary>
