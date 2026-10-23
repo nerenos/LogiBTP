@@ -36,7 +36,18 @@
   de ventilation des frais annexes).
 - [ ] Impression et export : ignorer les lignes non éditées (tranches F) ; export et impression du rapport de
   ventilation des frais annexes (au moment des modules Export / Impression).
-- [ ] Module Mail : envoi des pièces marquées « à envoyer » (`dge_a_envoyer`), destinataires depuis `v_intervenants`.
+
+### Module Mail
+
+- [ ] Relire et valider les analyses [ANALYSE-MODULE-MAIL.md](documentation/conception/ANALYSE-MODULE-MAIL.md)
+  (questions ML1 à ML25 ; hébergeurs des premiers clients) et
+  [ANALYSE-MODULE-OAUTH.md](documentation/conception/ANALYSE-MODULE-OAUTH.md) (OA1 à OA8).
+- [ ] Lot 0 : module OAuth séparé (contrat `IFournisseurJeton` du socle, Microsoft 365 en client credentials, jetons
+  chiffrés, rappels avant échéance aux personnes autorisées à reconnecter).
+- [ ] Lot 1 : comptes système (adresse et connexion chiffrées, alias `mail_alias`, mot de passe ou OAuth 2.0) et
+  envoi (file d'attente, limitations, journal `mail_journal`, avertissements d'envoi massif, pièces « à envoyer »
+  `dge_a_envoyer`, destinataires depuis `v_intervenants`, archivage GED, statut ENVOYE) ; lots suivants : envois
+  automatiques des autres modules, réception IMAP et liste « À rapprocher », reconnaissance automatique et alertes.
 
 ### Chaîne des achats et marchés
 
