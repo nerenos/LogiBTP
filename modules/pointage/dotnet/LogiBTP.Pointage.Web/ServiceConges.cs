@@ -123,7 +123,7 @@ public sealed class ServiceConges(PointageDbContext db, SpecialisationPointage s
 
     /// <summary>
     /// Congés d'une période : RH (toute la société), sinon les salariés dont l'utilisateur est le responsable de service
-    /// et les siens ; filtres salarié, service, état.
+    /// et les siens ; filtres salarié, service, état. Renvoie aussi ces salariés (demandes pour un équipier).
     /// </summary>
     public async Task<object> CongesAsync(DateOnly? du, DateOnly? au, int? salarie, int? service, string? etat, string? recherche, Utilisateur u, CancellationToken ct)
     {
@@ -153,7 +153,7 @@ public sealed class ServiceConges(PointageDbContext db, SpecialisationPointage s
             var travailles = await JoursTravaillesAsync(conges.Select(c => c.PcoSalId).Distinct().ToList(), conges.Min(c => c.PcoDu), conges.Max(c => c.PcoAu), ct);
             lignes.AddRange(conges.Select(c => Ligne(c, parId[c.PcoSalId], ReglesConges.Total(ReglesConges.Jours(Periode(c), travailles[c.PcoSalId])))));
         }
-        return new { rh, moi, natures = await NaturesAsync(ct), conges = lignes };
+        return new { rh, moi, natures = await NaturesAsync(ct), conges = lignes, salaries = salaries.Select(s => new { s.Id, s.Nom, s.Prenom, s.Matricule, s.Service, s.Interimaire }) };
     }
 
     private static object Ligne(CongeEntite c, SalariePointage s, decimal jours) => new

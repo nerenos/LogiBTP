@@ -87,7 +87,7 @@ public sealed record DemandeValorisation(DateOnly Du, DateOnly Au, int? Service,
 /// pointages retenus, zones du chantier pour l'agence du salarié, saisies des rubriques), zones de déplacement, export
 /// CSV des variables des jours validés par le RH (profils exportés), valorisation des heures.
 /// </summary>
-public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, ServiceSynthese synthese)
+public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, ServiceSynthese synthese, ServiceConges conges)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
@@ -298,6 +298,9 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         var (du, au) = Semaines(d.Du, d.Au);
         var salaries = await specialisation.SalariesAsync(db, new FiltreSalaries(d.Service, null, null, 100000), ct);
         var c = await ContexteAsync(salaries, du, au, false, ct);
+        // Congés de la période (jours travaillés décomptés) : validés exportés par nature, demandés signalés.
+        var absences = await conges.AbsencesAsync(salaries.Select(s => s.Id).ToList(), du, au, ct);
+        var natures = (await conges.NaturesAsync(ct)).ToDictionary(n => n.Code);
         var lignes = new List<(SalariePointage S, string Rubrique, string? CodePaie, string Libelle, decimal Quantite)>();
         var nonValides = new List<object>();
         var exportes = new List<int>();
@@ -305,7 +308,8 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         {
             if (s.PpfId is not int ppf || !c.Profils.TryGetValue(ppf, out var p) || !p.Profil.PpfExport) continue;
             var jours = c.Retenus.Where(x => x.PoiSalId == s.Id).Select(x => x.PoiDate).Concat(c.Valeurs.Where(v => v.PvaSalId == s.Id).Select(v => v.PvaDate)).Distinct().ToList();
-            if (jours.Count == 0) continue;
+            var abs = absences.Where(a => a.Salarie == s.Id && a.Etat == "VALIDE" && a.Nature is not null).ToList();
+            if (jours.Count == 0 && abs.Count == 0) continue;
             var manquants = jours.Where(j => !c.ValidesRh.Contains((s.Id, j))).OrderBy(j => j).ToList();
             if (manquants.Count > 0)
             {
@@ -333,6 +337,11 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
                     lignes.Add((s, r.RubCode, r.RubCodePaie, r.RubLibelle, ReglesPaie.QuantiteExport(r.RubUnite, v)));
                 }
             }
+            foreach (var g in abs.GroupBy(a => a.Nature!).OrderBy(g => natures.GetValueOrDefault(g.Key)?.Ordre ?? 0).ThenBy(g => g.Key, StringComparer.Ordinal))
+            {
+                var n = natures.GetValueOrDefault(g.Key);
+                lignes.Add((s, "ABS_" + g.Key, n?.CodePaie ?? g.Key, n?.Libelle ?? g.Key, g.Sum(a => a.Part)));
+            }
         }
         var csv = new StringBuilder("matricule;nom;prenom;rubrique;code_paie;libelle;quantite;du;au\r\n");
         foreach (var l in lignes)
@@ -350,6 +359,10 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         return new
         {
             id, du, au, csv = csv.ToString(), non_valides = nonValides, salaries = exportes.Count,
+            conges_en_attente = absences.Where(a => a.Etat == "DEMANDE").GroupBy(a => a.Conge).Select(g => new
+            {
+                conge = g.Key, salarie = salaries.First(s => s.Id == g.First().Salarie), du = g.Min(a => a.Date), au = g.Max(a => a.Date), jours = g.Sum(a => a.Part),
+            }),
             lignes = lignes.Select(l => new { matricule = l.S.MatriculePaie ?? l.S.Matricule, nom = l.S.Nom, prenom = l.S.Prenom, rubrique = l.Rubrique, code_paie = l.CodePaie, libelle = l.Libelle, quantite = l.Quantite }),
         };
     }

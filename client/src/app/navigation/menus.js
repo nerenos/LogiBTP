@@ -110,6 +110,7 @@ export const MENUS_METIER = [
       { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
       { code: 'pointage-synthese', libelle: 'Synthèse et validation', icone: '✅', url: '/pointage/synthese', info: 'Salariés à examiner, corrections, validation simple ou double, demandes de correction' },
       { code: 'pointage-export', libelle: 'Export de paie et valorisation', icone: '📤', url: '/pointage/export', info: 'Variables de paie des jours validés (CSV), coût des heures' },
+      { code: 'pointage-conges', libelle: 'Congés et absences', icone: '🏖', url: '/pointage/conges', info: 'Demandes de congés (pour soi ou ses équipiers), validation RH avec la nature' },
       { code: 'pointages', libelle: 'Liste des pointages', icone: '📋', url: '/liste/pointages?vue=1010' },
       { code: 'pointages-nc', libelle: 'Non-conformités', icone: '⚠', url: '/liste/pointages?vue=1011' },
       { code: 'pointages-improductifs', libelle: 'Temps improductif', icone: '⏸', url: '/liste/pointages?vue=1012' },

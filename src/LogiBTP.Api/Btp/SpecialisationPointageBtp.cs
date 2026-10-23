@@ -1,4 +1,6 @@
+using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
+using LogiBTP.Planning.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +14,110 @@ namespace LogiBTP.Api.Btp;
 /// regroupement MO, services, ordres de la famille E (module Exécution actif) ; droit de saisie : le salarié lui-même,
 /// le responsable de son service (ou du service parent). Synthèse (lot 2) : RH = membre d'un service de nature
 /// ADMINISTRATIF ; chef = responsable du service principal du salarié ou de son parent ; demande de correction : tâche
-/// du CRM au service administratif (module CRM actif).
+/// du CRM au service administratif (module CRM actif). Jours travaillés : calendrier effectif du salarié (fériés et
+/// fermetures exclus). Congés : tâche du CRM au service administratif à la demande, absence tenue dans le planning
+/// (module Planning actif ; tâche gérée d'origine « conge »).
 /// </summary>
-public class SpecialisationPointageBtp : SpecialisationPointage
+public class SpecialisationPointageBtp(IHttpContextAccessor http) : SpecialisationPointage
 {
+    private IServiceProvider Services => http.HttpContext?.RequestServices ?? throw new InvalidOperationException("Pointage : contexte HTTP absent");
+
+    private sealed record CalendrierSalarie(int Id, int? CalId, int? SrvId);
+
+    /// <summary>Jours travaillés d'une semaine : journées à minutes du calendrier effectif du salarié (fériés, fermetures du service exclus).</summary>
+    public override async Task<Dictionary<int, List<DateOnly>>> JoursTravaillesAsync(PointageDbContext db, IReadOnlyCollection<int> salaries, DateOnly lundi, CancellationToken ct)
+    {
+        var calendriers = Services.GetRequiredService<ServiceCalendrier>();
+        var lignes = await db.Database.SqlQueryRaw<CalendrierSalarie>("""
+            SELECT s.sal_id AS id, coalesce(s.sal_cal_id, v.srv_cal_id) AS cal_id, v.srv_id AS srv_id
+            FROM salarie s
+            LEFT JOIN LATERAL (SELECT sv.srv_id, sv.srv_cal_id FROM service_membre m JOIN service sv ON sv.srv_id = m.sme_srv_id
+                               WHERE m.sme_ind_id = s.sal_ind_id ORDER BY m.sme_principal DESC, sv.srv_ordre LIMIT 1) v ON TRUE
+            WHERE s.sal_id = ANY(@ids)
+            """, new NpgsqlParameter("ids", salaries.ToArray())).ToListAsync(ct);
+        var cache = new Dictionary<(int?, int?), List<DateOnly>>();
+        var r = new Dictionary<int, List<DateOnly>>();
+        foreach (var l in lignes)
+        {
+            if (!cache.TryGetValue((l.CalId, l.SrvId), out var jours))
+            {
+                jours = (await calendriers.JourneesAsync(l.CalId, lundi, lundi.AddDays(6), l.SrvId is int s ? [new Portee("service", s.ToString())] : [], ct))
+                    .Where(j => j.Minutes > 0).Select(j => j.Date).ToList();
+                cache[(l.CalId, l.SrvId)] = jours;
+            }
+            r[l.Id] = jours;
+        }
+        foreach (var s in salaries.Where(s => !r.ContainsKey(s))) r[s] = Enumerable.Range(0, 5).Select(i => lundi.AddDays(i)).ToList();
+        return r;
+    }
+
+    public override async Task<int?> SalarieDeAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<int?>("""
+            SELECT s.sal_id AS "Value" FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id WHERE i.ind_utilisateur = @u AND s.sal_actif ORDER BY s.sal_id LIMIT 1
+            """, new NpgsqlParameter("u", u.Code)).FirstOrDefaultAsync(ct);
+
+    private sealed record TacheExistante(long Id, int Version);
+
+    /// <summary>
+    /// Après un congé : à la demande, tâche du CRM au service administratif ; dans le planning, absence du salarié
+    /// (option tant que demandée, confirmée et à la couleur de la nature une fois validée, supprimée si refusée ou
+    /// annulée ; demi-journées bornées à midi ; heures calculées par le calendrier, mode 2).
+    /// </summary>
+    public override async Task ApresCongeAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CongeEntite c, string action,
+        CancellationToken ct)
+    {
+        var modules = services.GetRequiredService<ModulesSociete>();
+        var journal = services.GetRequiredService<ILoggerFactory>().CreateLogger("Pointage");
+        if (action == "DEMANDER" && await modules.EstActifAsync("crm", ct))
+        {
+            var srv = await db.Database.SqlQueryRaw<int?>(
+                "SELECT srv_id AS \"Value\" FROM service WHERE srv_nature = 'ADMINISTRATIF' AND srv_actif ORDER BY srv_parent_id NULLS FIRST, srv_ordre LIMIT 1").FirstOrDefaultAsync(ct);
+            if (srv is int service)
+            {
+                try
+                {
+                    await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+                        $"Congé demandé : {salarie.Nom} {salarie.Prenom} du {c.PcoDu:dd/MM/yyyy}{(c.PcoDebutMidi ? " après-midi" : "")} au {c.PcoAu:dd/MM/yyyy}{(c.PcoFinMidi ? " midi" : "")}",
+                        c.PcoCommentaire is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoCommentaire)}</p>",
+                        null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    journal.LogWarning(e, "Tâche du CRM non créée pour le congé {Conge}", c.PcoId);
+                }
+            }
+        }
+        if (!await modules.EstActifAsync("planning", ct)) return;
+        try
+        {
+            var planning = services.GetRequiredService<ServicePlanning>();
+            var existante = c.PcoTacId is long t
+                ? await db.Database.SqlQueryRaw<TacheExistante>("SELECT tac_id AS id, tac_version AS version FROM pla_tache WHERE tac_id = @t", new NpgsqlParameter("t", t)).FirstOrDefaultAsync(ct)
+                : null;
+            if (c.PcoEtat is "REFUSE" or "ANNULE")
+            {
+                if (existante is not null) await planning.SupprimerAsync(existante.Id, existante.Version, u, ct, true);
+                c.PcoTacId = null;
+            }
+            else
+            {
+                var nature = c.PcoNature is null ? null : await db.NaturesAbsence.AsNoTracking().FirstOrDefaultAsync(n => n.PnaCode == c.PcoNature, ct);
+                var valide = c.PcoEtat == "VALIDE";
+                var saisie = new TacheSaisie(2, c.PcoDu.ToString("yyyy-MM-dd") + (c.PcoDebutMidi ? "T12:00" : "T00:00"),
+                    c.PcoFinMidi ? c.PcoAu.ToString("yyyy-MM-dd") + "T12:00" : c.PcoAu.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", null, 1, salarie.SrvId, "absence", null,
+                    valide ? nature?.PnaLibelle ?? "Absence" : "Congé demandé", [new AffectationSaisie(salarie.Interimaire ? "INTERIM" : "SALARIE", salarie.Id.ToString())],
+                    "conge", c.PcoId.ToString(), c.PcoCommentaire, 0, valide ? nature?.PnaCouleur : null, valide ? "CONFIRMEE" : "OPTION", existante?.Version);
+                if (existante is not null) await planning.ModifierAsync(existante.Id, saisie, u, ct, true);
+                else c.PcoTacId = await planning.CreerIdAsync(saisie, u, ct, true);
+            }
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            journal.LogWarning(e, "Absence du planning non tenue pour le congé {Conge}", c.PcoId);
+        }
+    }
+
     public override Task<List<SalariePointage>> SalariesAsync(PointageDbContext db, FiltreSalaries f, CancellationToken ct) =>
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,

@@ -13,7 +13,7 @@ public sealed record ReponseCorrection(string? Reponse);
 /// exceptions (<see cref="ReglesValidation"/>) ; couche validée d'une semaine (copie modifiée par le chef ou le RH,
 /// la saisie restant intacte), validation simple ou double, dévalidation tracée avec motif, demandes de correction.
 /// </summary>
-public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, IServiceProvider services)
+public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, ServiceConges conges, IServiceProvider services)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
@@ -54,6 +54,8 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
         var etats = await pointage.EtatsAsync(ids, lundi, p0.Validation, ct);
         var corrections = await db.Corrections.AsNoTracking().Where(c => c.PcoLundi == lundi && c.PcoEtat == "EN_ATTENTE" && ids.Contains(c.PcoSalId)).ToListAsync(ct);
         var travailles = await specialisation.JoursTravaillesAsync(db, ids, lundi, ct);
+        // Congés : un jour entièrement couvert par un congé validé n'est plus attendu (pas d'exception « sans pointage »).
+        var absences = await conges.AbsencesAsync(ids, lundi, lundi.AddDays(6), ct);
         var nc = (await db.SousTypes.AsNoTracking().Where(s => s.PstNonConformite).Select(s => s.PstCode).ToListAsync(ct)).ToHashSet();
         var chantiersIds = retenus.Select(p => p.PoiChaId).Distinct().ToList();
         var chantiers = (await specialisation.ChantiersAsync(db, null, chantiersIds, ct)).ToDictionary(c => c.Id);
@@ -66,7 +68,9 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
             var l = retenus.Where(p => p.PoiSalId == s.Id).ToList();
             var controles = Controler(l, p0, chantiers, nc);
             var corrigee = corrigees.Contains(s.Id);
-            var exceptions = ReglesValidation.Exceptions(travailles.GetValueOrDefault(s.Id, []).Select(d => d.ToString("yyyy-MM-dd")).ToList(),
+            var abs = absences.Where(a => a.Salarie == s.Id).ToList();
+            var absents = abs.Where(a => a.Etat == "VALIDE").GroupBy(a => a.Date).Where(g => g.Sum(a => a.Part) >= 1).Select(g => g.Key).ToHashSet();
+            var exceptions = ReglesValidation.Exceptions(travailles.GetValueOrDefault(s.Id, []).Where(d => !absents.Contains(d)).Select(d => d.ToString("yyyy-MM-dd")).ToList(),
                 l.Select(p => new PointageSynthese(p.PoiDate.ToString("yyyy-MM-dd"), p.PoiMinutes, p.PoiSousType is not null && nc.Contains(p.PoiSousType))).ToList(),
                 p0.SeuilSemaine, controles.Count, corrections.Count(c => c.PcoSalId == s.Id),
                 corrigee && Empreinte(l) != Empreinte(saisiesCorrigees.Where(p => p.PoiSalId == s.Id)),
@@ -76,11 +80,13 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
             {
                 salarie = s, jours = Enumerable.Range(0, 7).Select(i => l.Where(p => p.PoiDate == lundi.AddDays(i)).Sum(p => p.PoiMinutes)).ToList(),
                 etats = etats[s.Id], exceptions, corrigee, chef = roles.Chef.Contains(s.Id),
+                absences = Enumerable.Range(0, 7).Select(i => abs.Where(a => a.Date == lundi.AddDays(i))
+                    .Select(a => new { conge = a.Conge, etat = a.Etat, nature = a.Nature, part = a.Part }).ToList()).ToList(),
             });
         }
         return new
         {
-            lundi, parametres = p0, rh = roles.Rh, lignes,
+            lundi, parametres = p0, rh = roles.Rh, lignes, natures = await conges.NaturesAsync(ct),
             corrections = corrections.Select(c => new { id = c.PcoId, salarie = c.PcoSalId, motif = c.PcoMotif, par = c.PcoPar, le = c.PcoLe }),
         };
     }

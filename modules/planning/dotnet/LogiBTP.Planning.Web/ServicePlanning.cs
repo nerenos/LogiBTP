@@ -159,6 +159,11 @@ public abstract class SpecialisationPlanning
     public abstract Task<List<JalonPlanning>> JalonsAsync(PlanningDbContext db, DateOnly du, DateOnly au, CancellationToken ct);
     /// <summary>Types d'habilitations exigibles par une tâche (code, libellé).</summary>
     public abstract Task<List<(string Code, string Libelle)>> TypesHabilitationAsync(PlanningDbContext db, CancellationToken ct);
+    /// <summary>
+    /// Vrai si les tâches de cette origine sont tenues par l'application (absences d'un congé, par exemple) : ni
+    /// modifiées, ni déplacées, ni copiées, ni scindées, ni supprimées depuis le planning ; aucune par défaut.
+    /// </summary>
+    public virtual bool TacheGeree(string? origineType) => false;
 }
 
 /// <summary>
@@ -249,6 +254,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             srv_id = t.TacSrvId, calcul = t.TacCalcul, version = t.TacVersion, theorique, type_element = t.TacTypeElement, avancement = t.TacAvancement, memo = t.TacMemo,
             element = t.TacIdElement is not null && elements.TryGetValue(t.TacIdElement, out var e) ? new { e.Code, e.Libelle } : null,
             ressources = affectations.Where(a => a.AffTacId == t.TacId).Select(a => libRes.GetValueOrDefault($"{a.AffResType}:{a.AffResId}") ?? $"{a.AffResType} {a.AffResId}").ToList(),
+            origine_type = t.TacOrigineType, origine_id = t.TacOrigineId, geree = specialisation.TacheGeree(t.TacOrigineType),
         };
         var lignes = new List<object>();
         var barres = new List<object>();
@@ -432,7 +438,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             id = t.TacId, calcul = t.TacCalcul, debut = Ecrire(t.TacDebut), fin = Ecrire(t.TacFin), heures = t.TacHeures, nb_ressources = t.TacNbRessources, srv_id = t.TacSrvId,
             type_element = t.TacTypeElement, id_element = t.TacIdElement, element, origine_type = t.TacOrigineType, origine_id = t.TacOrigineId, libelle = t.TacLibelle,
             memo = t.TacMemo, avancement = t.TacAvancement, couleur = t.TacCouleur, etat = t.TacEtat, version = t.TacVersion, maj_par = t.TacMajPar, maj_le = t.TacMajLe,
-            habilitations = t.TacHabilitations, parent_id = t.TacParentId, serie = t.TacSerie, mobile = Mobile(t),
+            habilitations = t.TacHabilitations, parent_id = t.TacParentId, serie = t.TacSerie, mobile = Mobile(t), geree = specialisation.TacheGeree(t.TacOrigineType),
             parent = t.TacParentId is long p ? await db.Taches.AsNoTracking().Where(x => x.TacId == p).Select(x => x.TacLibelle).FirstOrDefaultAsync(ct) : null,
             equipes = await EquipesTacheAsync(t, ct),
             affectations = affs.Select(a => new
@@ -467,8 +473,9 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
 
     public async Task<object> CreerAsync(TacheSaisie s, Utilisateur u, CancellationToken ct) => await TacheAsync(await CreerIdAsync(s, u, ct), ct);
 
-    public async Task<long> CreerIdAsync(TacheSaisie s, Utilisateur u, CancellationToken ct)
+    public async Task<long> CreerIdAsync(TacheSaisie s, Utilisateur u, CancellationToken ct, bool application = false)
     {
+        if (!application && specialisation.TacheGeree(s.OrigineType)) throw ExceptionMetier.Conflit("PLA_TACHE_GEREE", "Tâche tenue par l'application : elle se crée à son origine");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var t = new TacheEntite();
         await AppliquerAsync(t, s, u, ct);
@@ -478,18 +485,25 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         return t.TacId;
     }
 
-    private async Task<TacheEntite> VerrouAsync(long id, int version, CancellationToken ct)
+    private void Geree(TacheEntite t)
+    {
+        if (specialisation.TacheGeree(t.TacOrigineType)) throw ExceptionMetier.Conflit("PLA_TACHE_GEREE", "Tâche tenue par l'application (congé…) : elle se modifie à son origine");
+    }
+
+    private async Task<TacheEntite> VerrouAsync(long id, int version, CancellationToken ct, bool application = false)
     {
         var t = await db.Taches.FirstOrDefaultAsync(x => x.TacId == id, ct) ?? throw ExceptionMetier.Introuvable($"Tâche {id}");
+        if (!application) Geree(t);
         if (t.TacVersion != version) throw ExceptionMetier.Conflit("PLA_VERSION", "La tâche a été modifiée par ailleurs : elle est rechargée", new { version = t.TacVersion });
         t.TacVersion++;
         return t;
     }
 
-    public async Task<object> ModifierAsync(long id, TacheSaisie s, Utilisateur u, CancellationToken ct)
+    /// <param name="application">Écriture par l'application (tâche gérée : <see cref="SpecialisationPlanning.TacheGeree"/>).</param>
+    public async Task<object> ModifierAsync(long id, TacheSaisie s, Utilisateur u, CancellationToken ct, bool application = false)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var t = await VerrouAsync(id, s.Version ?? -1, ct);
+        var t = await VerrouAsync(id, s.Version ?? -1, ct, application);
         await AppliquerAsync(t, s, u, ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -497,9 +511,9 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         return await TacheAsync(id, ct);
     }
 
-    public async Task SupprimerAsync(long id, int version, Utilisateur u, CancellationToken ct)
+    public async Task SupprimerAsync(long id, int version, Utilisateur u, CancellationToken ct, bool application = false)
     {
-        await VerrouAsync(id, version, ct);
+        await VerrouAsync(id, version, ct, application);
         await db.Taches.Where(x => x.TacId == id).ExecuteDeleteAsync(ct);
         Publier("supprimee", [id], u);
     }
@@ -533,6 +547,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var t = d.Copie ? await db.Taches.FirstOrDefaultAsync(x => x.TacId == id, ct) ?? throw ExceptionMetier.Introuvable($"Tâche {id}") : await VerrouAsync(id, d.Version, ct);
+        Geree(t);
         var s = await SaisieDeAsync(t, ct);
         var modeOrigine = t.TacCalcul;
         var affs = s.Affectations!;

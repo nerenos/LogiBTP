@@ -6,6 +6,7 @@ import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { ecouter } from '../diffusion.js';
 import { RessourcesTache, rendreOngletRessources, TYPE_GLISSER_RESSOURCE } from '../planning/ressources-tache.js';
+import { ouvrirConge } from '../pointage/conges.js';
 
 // Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
 // tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
@@ -95,10 +96,11 @@ class VuePlanningBtp extends VuePlanning {
   contenuBarre(t) {
     const code = t.element ? `<b>${echapper(t.element.code)}</b> ` : '';
     const res = this.regroupement !== 'RESSOURCE' && t.ressources?.length ? ` <small>· ${echapper(t.ressources.join(', '))}</small>` : '';
+    if (t.origine_type === 'conge') return `🏖 ${echapper(t.libelle)}${res}`;
     return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
-  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}`; }
+  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}${t.geree ? ' geree' : ''}${t.origine_type === 'conge' ? ' absence-conge' : ''}`; }
 
   /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité ; jalons des chantiers (lot 5). */
   decorationsLigne(l) {
@@ -216,7 +218,7 @@ export class PagePlanning extends PageBase {
         largeurEntete: (px) => ecrirePreferences({ planningLargeurTitres: px }),
         deplacer: (p) => this.#deplacer(p),
         scinder: (p) => this.#scinder(p),
-        selection: (t) => { if (t) this.#afficherTache(t.tache); },
+        selection: (t) => { if (t?.geree) this.#ouvrirCongeTache(t); else if (t) this.#afficherTache(t.tache); },
         ouvrir: (t) => this.#afficherTache(t.tache),
         deposer: (e, p) => this.#deposer(e, p),
         menu: (e, t, p) => this.#menu(e, t, p),
@@ -469,6 +471,7 @@ export class PagePlanning extends PageBase {
       if (action === 'annuler') this.#annuler();
       else if (action === 'retablir') this.#retablir();
       else if (action === 'actualiser') this.#charger();
+      else if (b?.geree && (action === 'supprimer' || action === 'dupliquer')) this.app.message('Absence d\'un congé : elle se modifie depuis le congé', 'avertissement');
       else if (action === 'supprimer' && b && confirm('Supprimer la tâche sélectionnée ?')) this.#supprimer(b.tache);
       else if (action === 'dupliquer' && b) this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true });
     };
@@ -600,6 +603,7 @@ export class PagePlanning extends PageBase {
 
   /** Glisser une barre : déplacement, redimensionnement (bord), changement de ressource, copie (Ctrl). */
   async #deplacer({ tache: b, debut, fin, ligne, copie, mode: modeGlisser }) {
+    if (b.geree) { this.app.message('Absence d\'un congé : elle se modifie depuis le congé (clic sur la barre)', 'avertissement'); return false; }
     if (this.definition.regroupement !== 'RESSOURCE' && ligne !== b.ligne) { this.app.message('Changer de ligne n\'est possible que dans une vue par ressources', 'avertissement'); return false; }
     if (this.definition.regroupement === 'RESSOURCE' && ligne !== b.ligne && (b.theorique || ligne.startsWith('srv:'))) {
       this.app.message('Affecter une tâche théorique : depuis le détail de la tâche', 'avertissement');
@@ -615,7 +619,7 @@ export class PagePlanning extends PageBase {
   }
 
   async #scinder({ tache: b, instant }) {
-    if (instant <= b.debut || instant >= b.fin) return;
+    if (instant <= b.debut || instant >= b.fin || b.geree) return;
     const avant = await api.planning.tache(b.tache).catch(() => null);
     const r = await this.#apres(api.planning.scinder(b.tache, { instant: depuisMinutes(instant), version: b.version }), 'Tâche scindée');
     if (!r || !avant) return;
@@ -680,7 +684,12 @@ export class PagePlanning extends PageBase {
       debut: depuisMinutes(instant), srv_id: ligne?.srv_id ?? null, affectations: ressource ? [{ ...ressource }] : [],
     }) };
     if (this.consultation) return;
-    if (!b) { ouvrirMenuContextuel(e, [nouvelle, ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne)] : [])]); return; }
+    if (!b) { ouvrirMenuContextuel(e, [nouvelle, ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne, instant)] : [])]); return; }
+    if (b.geree) {
+      ouvrirMenuContextuel(e, [{ libelle: '🏖 Ouvrir le congé…', titre: 'Absence tenue par le module Pointage : demande, validation, nature', action: () => this.#ouvrirCongeTache(b) },
+        ...(ressource ? [{ separateur: true }, ...this.#elementsRessource(ressource, ligne, instant)] : [])]);
+      return;
+    }
     const scinder = instant > b.debut && instant < b.fin;
     ouvrirMenuContextuel(e, [
       { libelle: '✎ Détail de la tâche', action: () => this.#afficherTache(b.tache) },
@@ -706,12 +715,39 @@ export class PagePlanning extends PageBase {
     ]);
   }
 
-  #elementsRessource(ressource, l) {
+  #elementsRessource(ressource, l, instant = null) {
     const fiche = { SALARIE: 'salarie', INTERIM: 'salarie', MATERIEL: 'materiel' }[ressource.type];
+    const salarie = fiche === 'salarie' && this.app.moduleActif('pointage');
     return [
+      ...(salarie ? [{ libelle: '🏖 Demander un congé…', titre: 'Demande pré-remplie (date, salarié, demandeur), à valider par le service RH pour la nature',
+        action: () => this.#demanderConge(ressource, instant) }] : []),
       { libelle: '🏢 Changer le service principal…', actif: Boolean(fiche), titre: 'Service principal de la ressource (lignes du planning, charge des services)', action: () => this.#changerService(ressource, l) },
       { libelle: '📋 Ouvrir la fiche', actif: Boolean(fiche), action: () => this.app.naviguer(`/fiche/${fiche}/${ressource.id}`, { nouvelleFenetre: true }) },
     ];
+  }
+
+  /** Demande de congé pré-remplie depuis le planning : salarié de la ligne, jour cliqué (sinon aujourd'hui), demandeur = utilisateur. */
+  async #demanderConge(ressource, instant) {
+    const jour = (instant != null ? depuisMinutes(instant) : aujourdhui()).slice(0, 10);
+    const info = await api.pointage.conges({ salarie: ressource.id, du: jour, au: jour }).catch((e) => { this.app.erreur(e); return null; });
+    if (!info) return;
+    const r = await ouvrirConge(this.app, { initial: { salarie: Number(ressource.id), du: jour, au: jour }, salarieLibelle: ressource.libelle, rh: info.rh, natures: info.natures });
+    if (r) { this.app.message('Demande de congé enregistrée : absence ajoutée au planning', 'succes'); await this.#charger(); }
+  }
+
+  /** Congé d'une barre d'absence (origine « conge ») : salarié affecté, congé relu par son identifiant. */
+  async #ouvrirCongeTache(b) {
+    try {
+      const t = await api.planning.tache(b.tache);
+      const salarie = t.affectations.find((a) => a.type === 'SALARIE' || a.type === 'INTERIM');
+      if (!salarie) return;
+      const jour = t.debut.slice(0, 10);
+      const info = await api.pointage.conges({ salarie: salarie.id, du: jour, au: jour });
+      const conge = info.conges.find((c) => String(c.id) === String(t.origine_id));
+      if (!conge) { this.app.message('Congé introuvable (supprimé ou hors de vos droits)', 'avertissement'); return; }
+      const r = await ouvrirConge(this.app, { conge, rh: info.rh, natures: info.natures });
+      if (r) await this.#charger();
+    } catch (e) { this.app.erreur(e); }
   }
 
   /** Changement du service principal d'une ressource (administrateur ou responsable de l'ancien ou du nouveau service). */

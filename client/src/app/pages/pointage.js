@@ -2,9 +2,10 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
-  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE,
+  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE,
 } from '@logibtp/pointage';
 import { api } from '../api.js';
+import { ouvrirConge, pastilleConge, periodeConge, dateCourte } from '../pointage/conges.js';
 
 // Module Pointage : saisie au bureau (lot 1 : grille hebdomadaire d'un salarié, une ligne par chantier, ordre, type et
 // sous-type de main-d'œuvre, une colonne par jour), synthèse et validation (lot 2 : couche validée, simple ou double
@@ -553,6 +554,20 @@ export class PageSaisiePointage extends PageBase {
     this.#rendre();
   }
 
+  /** Congés du salarié touchant la semaine et les huit suivantes (clic : ouvrir la demande). */
+  async #rendreConges(zone) {
+    try { this.conges = await api.pointage.conges({ salarie: this.salarie, du: this.lundi, au: decaler(this.lundi, 62) }); } catch (e) { zone.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; return; }
+    const l = this.conges.conges.filter((c) => c.etat === 'DEMANDE' || c.etat === 'VALIDE');
+    zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Période</th><th class="nombre">Jours</th><th>Nature<br><small>état</small></th><th>Commentaire</th></tr></thead><tbody>
+      ${l.map((c) => `<tr class="cliquable" data-id="${c.id}"><td>${periodeConge(c)}</td><td class="nombre">${String(c.jours).replace('.', ',')}</td>
+        <td>${pastilleConge(c, this.conges.natures)} ${echapper(c.etat === 'VALIDE' ? (this.conges.natures.find((n) => n.code === c.nature)?.libelle ?? c.nature) : 'à valider')}</td><td>${echapper(c.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="aide">Aucun congé demandé ou validé sur la semaine et les huit suivantes.</p>';
+    zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', async () => {
+      const r = await ouvrirConge(this.app, { conge: l.find((c) => String(c.id) === tr.dataset.id), rh: this.conges.rh, natures: this.conges.natures });
+      if (r) this.#rendreConges(zone);
+    }));
+  }
+
   #rendre() {
     const s = this.semaine;
     const zone = this.conteneur.querySelector('[data-detail]');
@@ -564,6 +579,8 @@ export class PageSaisiePointage extends PageBase {
       <div class="titre-actions"><h3>Pointages de la semaine</h3>
         <span class="titre-actions-boutons"><button type="button" data-enregistrer title="Enregistrer la semaine">💾 Enregistrer</button>${verrouilles.length ? ' <button type="button" data-correction title="Envoyer la semaine au service RH comme demande de correction">✉ Demander une correction…</button>' : ''}</span></div>
       <div data-grille></div>
+      <div class="titre-actions"><h3>🏖 Congés</h3><span class="titre-actions-boutons"><button type="button" data-conge title="Demander un congé pour ce salarié (validé ensuite par le service RH)">＋ Demander un congé…</button></span></div>
+      <div data-conges><p class="aide">…</p></div>
       ${[...new Set(s.pointages.filter((x) => x.groupe).map((x) => x.groupe))].map((g) => `<p class="aide">👥 Saisie d'équipe : <a href="/pointage/groupe?id=${g}">voir et modifier le groupe</a></p>`).join('')}
       ${s.corrections.length ? `<h3>Demandes de correction</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>État</th><th>Motif</th><th>Réponse</th></tr></thead><tbody>
         ${s.corrections.map((c) => `<tr><td>${horodatage(c.le)}</td><td>${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}</td><td>${echapper(c.motif ?? '')}</td><td>${echapper(c.reponse ?? '')}</td></tr>`).join('')}</tbody></table>` : ''}`;
@@ -589,6 +606,12 @@ export class PageSaisiePointage extends PageBase {
       } catch (e) { this.app.erreur(e); }
     };
     zone.querySelector('[data-correction]')?.addEventListener('click', correction);
+    this.#rendreConges(zone.querySelector('[data-conges]'));
+    zone.querySelector('[data-conge]').addEventListener('click', async () => {
+      const r = await ouvrirConge(this.app, { initial: { salarie: s.salarie.id, du: this.lundi, au: this.lundi }, salarieLibelle: nomSalarie(s.salarie, this.ref.parametres.ordre_nom),
+        rh: this.conges?.rh, natures: this.conges?.natures ?? [] });
+      if (r) { this.app.message('Congé enregistré', 'succes'); this.#rendreConges(zone.querySelector('[data-conges]')); }
+    });
     zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       try {
         this.semaine = await api.pointage.enregistrerSemaine(this.salarie, this.lundi, { pointages: this.grille.pointages() });
@@ -746,13 +769,14 @@ export class PageSynthesePointage extends PageBase {
           <td><input type="checkbox" data-choix ${this.selection.has(l.salarie.id) ? 'checked' : ''} ${d.rh || l.chef ? '' : 'disabled'}></td>
           <td class="synthese-nom">${echapper(nomSalarie(l.salarie, this.ref.parametres.ordre_nom))}${l.corrigee ? ' <span title="Corrigé dans la synthèse">✎</span>' : ''}
             <br><small class="aide">${echapper(l.salarie.matricule)}${l.salarie.code ? ` · ${echapper(l.salarie.code)}` : ''}${l.salarie.interimaire ? ' · intérim' : ''}</small></td>
-          ${visibles.map((i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${ecrireDuree(l.jours[i]) || '·'}<br>${pastilleEtat(l.etats[i])}</td>`).join('')}
+          ${visibles.map((i) => `<td class="nombre etat-${l.etats[i].toLowerCase()}" title="${echapper(ETATS_VALIDATION[l.etats[i]].libelle)}">${(l.absences?.[i] ?? []).map((a) => pastilleConge(a, d.natures)).join('')}${ecrireDuree(l.jours[i]) || '·'}<br>${pastilleEtat(l.etats[i])}</td>`).join('')}
           <td class="nombre"><b>${ecrireDuree(l.jours.reduce((a, b) => a + b, 0))}</b></td>
           <td class="synthese-exceptions">${l.exceptions.map((x) => `<span class="badge-exception" title="${echapper(MESSAGES_VALIDATION[x])}">${echapper(MESSAGES_VALIDATION[x])}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table>` : ''}
       ${masques ? `<p class="aide">${masques} salarié(s) sans exception masqué(s) (« Tout voir »).</p>` : ''}`;
     // Légende, fixée en bas du panneau : couleur de chaque état, mode de validation et niveau de l'utilisateur.
     this.conteneur.querySelector('[data-legende]').innerHTML = `${Object.keys(ETATS_VALIDATION).map((e) => `<span>${pastilleEtat(e)} ${echapper(ETATS_VALIDATION[e].libelle)}</span>`).join('')}
-      <span class="aide">Validation ${this.ref.parametres.validation === 'DOUBLE' ? 'double (chef puis RH)' : 'simple (RH)'} · vous validez au niveau ${d.rh ? 'RH' : 'chef de service'}</span>`;
+      <span class="aide">Validation ${this.ref.parametres.validation === 'DOUBLE' ? 'double (chef puis RH)' : 'simple (RH)'} · vous validez au niveau ${d.rh ? 'RH' : 'chef de service'}
+        · 🏖 congé : pastille de la nature, en pointillés tant qu'il est demandé (<a href="/pointage/conges">congés</a>)</span>`;
     zone.querySelector('[data-tous]')?.addEventListener('change', (e) => {
       for (const l of lignes) if (d.rh || l.chef) { if (e.target.checked) this.selection.add(l.salarie.id); else this.selection.delete(l.salarie.id); }
       this.#rendreListe();
@@ -885,7 +909,8 @@ export class PageExportPointage extends PageBase {
       <p class="ligne">Du <input type="date" data-du value="${lundi}"> au <input type="date" data-au value="${dimanche}"> · <span data-service></span>
         <button type="button" class="bouton-icone" data-apercu title="Aperçu de l'export (rien n'est enregistré)" aria-label="Aperçu de l'export">👁</button>
         <button type="button" class="bouton-icone" data-exporter title="Exporter : enregistrer l'export et télécharger le fichier CSV" aria-label="Exporter (CSV)">📤</button></p></div>
-      <p class="aide">Semaines entières (du lundi au dimanche). Seuls les salariés dont tous les jours sont validés par le service RH sont exportés ; un salarié dévalidé après un export est signalé.</p>
+      <p class="aide">Semaines entières (du lundi au dimanche). Seuls les salariés dont tous les jours sont validés par le service RH sont exportés ; un salarié dévalidé après un export est signalé.
+        Congés validés : une ligne par nature d'absence (rubrique ABS_&lt;code&gt;, code de paie de la nature, quantité en jours travaillés décomptés).</p>
       <div data-resultat></div>
       <div class="titre-actions"><h2>Valorisation des heures</h2><span class="titre-actions-boutons"><button type="button" data-valoriser title="Valoriser les pointages de la période choisie en haut">💶 Valoriser</button></span></div>
       <p class="ligne"><label><input type="radio" name="mode" value="SALARIE" checked> Coût horaire des fiches (intérim : taux de la mission)</label>
@@ -900,6 +925,9 @@ export class PageExportPointage extends PageBase {
     const demande = () => ({ du: c.querySelector('[data-du]').value, au: c.querySelector('[data-au]').value, service: srv.valeurCombo ? Number(srv.valeurCombo) : null });
     const afficher = (r) => {
       c.querySelector('[data-resultat]').innerHTML = `<p>${r.salaries} salarié(s) exporté(s), ${r.lignes.length} ligne(s)${r.id ? ` · export n° ${r.id} enregistré` : ''}.</p>
+        ${r.conges_en_attente?.length ? `<details class="avertissement"><summary>⚠ ${r.conges_en_attente.length} congé(s) encore à valider sur la période (non exportés) — <a href="/pointage/conges?etat=DEMANDE">congés à traiter</a></summary>
+          <div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule</small></th><th>Période</th><th class="nombre">Jours</th></tr></thead><tbody>
+          ${r.conges_en_attente.map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule ?? '')}</small></td><td>${jourCourt(x.du)} – ${jourCourt(x.au)}</td><td class="nombre">${String(x.jours).replace('.', ',')}</td></tr>`).join('')}</tbody></table></div></details>` : ''}
         ${r.non_valides.length ? `<details class="avertissement"><summary>⚠ ${r.non_valides.length} salarié(s) avec des jours non validés (non exportés)</summary>
           <div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule</small></th><th>Jours non validés</th></tr></thead><tbody>
           ${r.non_valides.map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule ?? '')}</small></td><td>${x.jours.map(jourCourt).join(', ')}</td></tr>`).join('')}</tbody></table></div></details>` : ''}
@@ -980,7 +1008,8 @@ export class PageParametresPointage extends PageBase {
           <td><input type="number" data-ordre size="4" value="${x.ordre}" ${ro}></td><td><input type="checkbox" data-actif ${x.actif ? 'checked' : ''} ${ro}></td>
           <td>${admin ? '<button type="button" class="bouton-icone" data-retirer title="Retirer le sous-type" aria-label="Retirer le sous-type">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
         ${admin ? '<p><button type="button" class="bouton-icone" data-ajouter title="Ajouter un sous-type" aria-label="Ajouter un sous-type">＋</button></p>' : ''}
-        <h2>Profils de paie</h2><div data-profils></div>`;
+        <h2>Profils de paie</h2><div data-profils></div>
+        <h2>Natures d'absence (congés)</h2><div data-natures></div>`;
       corps.querySelectorAll('tr[data-i]').forEach((tr) => {
         const x = st[Number(tr.dataset.i)];
         tr.querySelector('[data-code]').addEventListener('change', (e) => { x.code = e.target.value.trim().toUpperCase(); });
@@ -1010,6 +1039,47 @@ export class PageParametresPointage extends PageBase {
     };
     rendre();
     this.#profils(admin);
+    this.#natures();
+  }
+
+  /**
+   * Natures d'absence affectées par le service RH à la validation d'un congé (CP, RTT, AR, AT…) : code, libellé, code
+   * de paie exporté, couleur (pastilles, planning), ordre, active ; modifiables par le service RH ou un administrateur
+   * (le serveur contrôle le droit) ; une nature retirée déjà utilisée devient inactive.
+   */
+  async #natures() {
+    const zone = this.conteneur.querySelector('[data-natures]');
+    let natures = (await api.pointage.naturesAbsence()).map((x) => ({ ...x, existant: true }));
+    const rendre = () => {
+      zone.innerHTML = `<div class="titre-actions"><p class="aide">Affectée par le service RH à la validation d'un congé ; le code de paie (sinon le code) est exporté avec les jours décomptés.</p>
+        <span class="titre-actions-boutons"><button type="button" data-enregistrer-n title="Enregistrer les natures d'absence">💾 Enregistrer</button></span></div>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Code paie</th><th>Couleur</th><th>Ordre</th><th>Active</th><th></th></tr></thead><tbody>
+        ${natures.map((n, i) => `<tr data-n="${i}"><td><input data-f="code" size="8" value="${echapper(n.code)}" ${n.existant ? 'readonly' : ''}></td><td><input data-f="libelle" size="30" value="${echapper(n.libelle)}"></td>
+          <td><input data-f="code_paie" size="8" value="${echapper(n.code_paie ?? '')}"></td><td><input type="color" data-f="couleur" value="${echapper(n.couleur || '#94a3b8')}"></td>
+          <td><input type="number" data-f="ordre" size="4" value="${n.ordre}"></td><td><input type="checkbox" data-f="actif" ${n.actif ? 'checked' : ''}></td>
+          <td><button type="button" class="bouton-icone" data-retirer-n title="Retirer la nature (inactive si elle est déjà utilisée)" aria-label="Retirer la nature">✕</button></td></tr>`).join('')}</tbody></table>
+        <p><button type="button" class="bouton-icone" data-ajouter-n title="Ajouter une nature d'absence" aria-label="Ajouter une nature d'absence">＋</button></p>`;
+      zone.querySelectorAll('tr[data-n]').forEach((tr) => {
+        const n = natures[Number(tr.dataset.n)];
+        tr.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
+          const f = el.dataset.f;
+          if (f === 'actif') n.actif = el.checked;
+          else if (f === 'ordre') n.ordre = Number(el.value) || 0;
+          else if (f === 'code') n.code = el.value.trim().toUpperCase();
+          else n[f] = el.value.trim() || null;
+        }));
+        tr.querySelector('[data-retirer-n]').addEventListener('click', () => { natures.splice(natures.indexOf(n), 1); rendre(); });
+      });
+      zone.querySelector('[data-ajouter-n]').addEventListener('click', () => { natures.push({ code: '', libelle: '', code_paie: null, couleur: '#94a3b8', ordre: (natures.length + 1) * 10, actif: true }); rendre(); });
+      zone.querySelector('[data-enregistrer-n]').addEventListener('click', async () => {
+        try {
+          natures = (await api.pointage.enregistrerNaturesAbsence(natures)).map((x) => ({ ...x, existant: true }));
+          rendre();
+          this.app.message('Natures d\'absence enregistrées', 'succes');
+        } catch (e) { this.app.erreur(e); }
+      });
+    };
+    rendre();
   }
 
   /**
@@ -1097,5 +1167,79 @@ export class PageParametresPointage extends PageBase {
       });
     };
     rendre();
+  }
+}
+
+/**
+ * Congés et absences (`/pointage/conges?etat=&service=&du=&au=&recherche=`) : demandes et congés des salariés visibles
+ * (service RH : tous ; responsable de service : ses équipiers ; sinon les siens), filtres état, service, période et
+ * recherche ; « ＋ Demande » pour soi ou un équipier ; une ligne ouvre la demande (service RH : nature, valider, refuser).
+ */
+export class PageCongesPointage extends PageBase {
+  icone = '🏖';
+
+  urlCourante() {
+    const p = new URLSearchParams(Object.entries({ etat: this.etat, service: this.service, du: this.du, au: this.au, recherche: this.recherche }).filter(([, v]) => v));
+    return `/pointage/conges?${p}`;
+  }
+
+  async ouvrir() {
+    this.titre = 'Congés et absences';
+    this.etat = this.requete.etat ?? '';
+    this.service = this.requete.service ?? '';
+    this.du = this.requete.du ?? decaler(aujourdhui(), -31);
+    this.au = this.requete.au ?? decaler(aujourdhui(), 120);
+    this.recherche = this.requete.recherche ?? '';
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">🏖 Congés et absences</h1>
+      <p class="ligne">Du <input type="date" data-du value="${this.du}"> au <input type="date" data-au value="${this.au}"> · <span data-etat></span> <span data-service></span>
+        <input type="search" data-recherche placeholder="Salarié, matricule…" value="${echapper(this.recherche)}">
+        <button type="button" class="bouton-icone" data-nouveau title="Nouvelle demande de congé (pour vous ou un équipier)" aria-label="Nouvelle demande de congé">＋</button></p></div>
+      <div data-resultat></div></div>`;
+    const c = this.conteneur;
+    if (!this.app.enLigne) { c.querySelector('[data-resultat]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    this.ref = await api.pointage.referentiels();
+    const etat = creerCombo({ options: [{ valeur: 'DEMANDE', libelle: 'À valider' }, { valeur: 'VALIDE', libelle: 'Validés' }, { valeur: 'REFUSE', libelle: 'Refusés' }, { valeur: 'ANNULE', libelle: 'Annulés' }],
+      valeur: this.etat, vide: true, titre: 'État (vide : tous)' });
+    c.querySelector('[data-etat]').append(etat);
+    const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle, detail: s.code })), valeur: this.service, vide: true, titre: 'Service (vide : tous)' });
+    c.querySelector('[data-service]').append(srv);
+    const changer = () => {
+      Object.assign(this, { etat: etat.valeurCombo, service: srv.valeurCombo, du: c.querySelector('[data-du]').value, au: c.querySelector('[data-au]').value, recherche: c.querySelector('[data-recherche]').value.trim() });
+      this.app.routeur.remplacerUrl(this.urlCourante());
+      this.#charger();
+    };
+    etat.addEventListener('change', changer);
+    srv.addEventListener('change', changer);
+    c.querySelectorAll('[data-du], [data-au], [data-recherche]').forEach((el) => el.addEventListener('change', changer));
+    c.querySelector('[data-nouveau]').addEventListener('click', async () => {
+      if (!this.donnees) return;
+      const ordre = this.ref.parametres.ordre_nom;
+      const salaries = this.donnees.salaries.map((x) => ({ id: x.id, libelle: nomSalarie(x, ordre), detail: [x.matricule, x.service].filter(Boolean).join(' · ') }));
+      const r = await ouvrirConge(this.app, { initial: { salarie: this.donnees.moi ?? '', du: aujourdhui(), au: aujourdhui() }, salaries, rh: this.donnees.rh, natures: this.donnees.natures });
+      if (r) { this.app.message('Congé enregistré', 'succes'); this.#charger(); }
+    });
+    await this.#charger();
+  }
+
+  async #charger() {
+    const zone = this.conteneur.querySelector('[data-resultat]');
+    try { this.donnees = await api.pointage.conges({ du: this.du, au: this.au, service: this.service, etat: this.etat, recherche: this.recherche }); } catch (e) { this.app.erreur(e); return; }
+    const d = this.donnees;
+    const ordre = this.ref.parametres.ordre_nom;
+    const nature = (code) => d.natures.find((n) => n.code === code)?.libelle ?? code ?? '';
+    const aTraiter = d.conges.filter((x) => x.etat === 'DEMANDE').length;
+    zone.innerHTML = `<p class="aide">${d.conges.length} congé(s)${aTraiter ? ` · <b>${aTraiter} à valider</b>` : ''} · ${d.rh ? 'service RH : vous validez en affectant la nature' : 'demandes validées par le service RH'}.</p>
+      ${d.conges.length ? `<div class="tableau-defilant"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule · service</small></th><th>Période</th><th class="nombre">Jours</th>
+        <th>Nature<br><small>état</small></th><th>Commentaire<br><small>réponse</small></th><th>Demandé par<br><small>le</small></th><th>Traité par<br><small>le</small></th></tr></thead><tbody>
+        ${d.conges.map((x) => `<tr class="cliquable etat-conge-${x.etat.toLowerCase()}" data-id="${x.id}"><td class="synthese-nom">${echapper(nomSalarie(x, ordre))}<br><small class="aide">${echapper([x.matricule, x.service].filter(Boolean).join(' · '))}</small></td>
+          <td>${periodeConge(x)}</td><td class="nombre">${String(x.jours).replace('.', ',')}</td>
+          <td>${pastilleConge(x, d.natures)} ${echapper(x.etat === 'VALIDE' ? nature(x.nature) : ETATS_CONGE[x.etat])}</td>
+          <td>${echapper(x.commentaire ?? '')}${x.reponse ? `<br><small class="aide">${echapper(x.reponse)}</small>` : ''}</td>
+          <td>${echapper(x.demande_par)}<br><small>${dateCourte(x.demande_le)}</small></td><td>${echapper(x.traite_par ?? '')}<br><small>${x.traite_le ? dateCourte(x.traite_le) : ''}</small></td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="aide">Aucun congé sur la période.</p>'}`;
+    zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', async () => {
+      const r = await ouvrirConge(this.app, { conge: d.conges.find((x) => String(x.id) === tr.dataset.id), rh: d.rh, natures: d.natures });
+      if (r) this.#charger();
+    }));
   }
 }

@@ -22,6 +22,9 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
 
     private static readonly string[] TypesConnus = ["SALARIE", "INTERIM", "MATERIEL", "SOUS_TRAITANT"];
 
+    /// <summary>Absences des congés du Pointage : tenues par <see cref="SpecialisationPointageBtp.ApresCongeAsync"/>.</summary>
+    public override bool TacheGeree(string? origineType) => origineType == "conge";
+
     public override Task<List<RessourcePlanning>> RessourcesAsync(PlanningDbContext db, FiltreRessources f, CancellationToken ct)
     {
         var types = f.Types is { Count: > 0 } ? f.Types.ToArray() : TypesConnus;

@@ -41,7 +41,7 @@ import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning, PageParametresPlanning } from './planning.js';
 import { PageEquipes } from './planning-equipes.js';
-import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParametresPointage } from './pointage.js';
+import { PageSaisiePointage, PageSynthesePointage, PageExportPointage, PageParametresPointage, PageCongesPointage } from './pointage.js';
 
 // Routes de l'application. Chaque URL désigne un écran précis : elle se partage, se rouvre dans une autre fenêtre
 // et sert à restaurer la session.
@@ -74,6 +74,7 @@ export const ROUTES = [
   { nom: 'pointage-saisie', chemin: '/pointage/saisie', page: PageSaisiePointage, titre: 'Saisie des pointages' },
   { nom: 'pointage-synthese', chemin: '/pointage/synthese', page: PageSynthesePointage, titre: 'Synthèse des pointages' },
   { nom: 'pointage-export', chemin: '/pointage/export', page: PageExportPointage, titre: 'Export de paie et valorisation' },
+  { nom: 'pointage-conges', chemin: '/pointage/conges', page: PageCongesPointage, titre: 'Congés et absences' },
   { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: 'Paramètres du pointage' },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: 'Notifications' },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: 'Préférences de notification' },

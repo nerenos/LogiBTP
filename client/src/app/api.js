@@ -111,6 +111,13 @@ export const api = {
     poserPin: (salarie, p) => appel('PUT', `/pointage/pins/${salarie}`, p),
     groupe: (id) => appel('GET', `/pointage/groupes/${id}`),
     modifierGroupe: (id, g) => appel('PUT', `/pointage/groupes/${id}`, g),
+    // Congés et absences : demandes, validation RH avec la nature, natures.
+    naturesAbsence: () => appel('GET', '/pointage/natures-absence'),
+    enregistrerNaturesAbsence: (l) => appel('PUT', '/pointage/natures-absence', l),
+    conges: (f = {}) => appel('GET', `/pointage/conges?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    demanderConge: (c) => appel('POST', '/pointage/conges', c),
+    modifierConge: (id, c) => appel('PUT', `/pointage/conges/${id}`, c),
+    traiterConge: (id, action, t) => appel('POST', `/pointage/conges/${id}/${action}`, t),
   },
   // Module Planning : vues, données d'une période, ressources, chantiers, à planifier, tâches (calcul par le serveur).
   planning: {
