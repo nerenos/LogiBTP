@@ -590,11 +590,26 @@ export class PagePlanning extends PageBase {
       this.planning.charge.get(c.srv_id).push(c);
     }
     this.planning.jalons = await api.planning.jalons(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []);
+    await this.#feries(p);
     this.planning.definirDonnees(this.lignes, this.barres);
     if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }
     this.conteneur.querySelector('[data-etat]').textContent = `${this.lignes.length} lignes · ${new Set(this.barres.map((b) => b.tache)).size} tâches`;
     // Centrage sur maintenant après la mise en page (largeur de la vue connue).
     if (!this.centre) { this.centre = true; const d = new Date(); requestAnimationFrame(() => this.planning.allerA(aujourdhui(d) + d.getHours() * 60 + d.getMinutes())); }
+  }
+
+  /**
+   * Jours fériés et fermés de la société sur la période (journées fermées du calendrier par défaut, module Calendrier),
+   * en bandes comme les week-ends ; relus seulement quand la période change.
+   */
+  async #feries(p) {
+    const du = depuisMinutes(p.debut).slice(0, 10);
+    const au = depuisMinutes(p.fin - 1).slice(0, 10);
+    if (this.periodeFeries === `${du}/${au}`) return;
+    const journees = await api.calendriers.journees(0, du, au).catch(() => null);
+    if (!journees) return;
+    this.periodeFeries = `${du}/${au}`;
+    this.planning.regler({ feries: journees.filter((j) => j.fermee?.length).map((j) => ({ jour: versMinutes(j.date), libelle: j.fermee.join(', ') })) });
   }
 
   #onglet(nom) {

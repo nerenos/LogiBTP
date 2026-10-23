@@ -32,6 +32,7 @@
 .vp-entete-ligne.large > div { text-align: left; padding: 2px 4px; }
 .vp-entete-ligne.niveau-mois > div { font-weight: 600; }
 .vp-entete-ligne > div.weekend { opacity: .6; }
+.vp-entete-ligne > div.ferie { opacity: 1; color: #c2410c; background: rgba(234, 88, 12, .12); font-weight: 600; }
 /* Jour courant : bordures rouges de sa colonne, dans l'en-tête et le corps. */
 .vp-aujourdhui { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; pointer-events: none; }
 .vp-entete .vp-aujourdhui { background: rgba(220, 38, 38, .08); z-index: 1; }
@@ -52,6 +53,11 @@
   background-image: linear-gradient(to right, rgba(148, 163, 184, .25) 1px, transparent 1px);
 }
 .vp-weekend { position: absolute; top: 0; bottom: 0; background: rgba(148, 163, 184, .12); }
+/* Jour férié ou fermé : bande comme un week-end, teintée et hachurée pour s'en distinguer. */
+.vp-ferie {
+  position: absolute; top: 0; bottom: 0;
+  background: repeating-linear-gradient(135deg, rgba(234, 88, 12, .10) 0 6px, rgba(234, 88, 12, .04) 6px 12px);
+}
 .vp-fond.sans-degrade { background-image: none; }
 .vp-colonne { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid rgba(148, 163, 184, .25); }
 /* Période masquée (heures non travaillées, jours masqués) : trait de coupure. */

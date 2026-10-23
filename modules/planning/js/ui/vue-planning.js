@@ -16,6 +16,7 @@ import { creerAxe } from '../src/axe.js';
  * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun), lignesTexte (lignes de texte des barres, 1 par défaut :
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
  * heures hors de la journée travaillée et jours masqués à toutes les échelles, une colonne valant ses minutes visibles ; null = axe continu),
+ * feries ([{ jour (minuit, minutes), libelle }] : jours fériés ou fermés, en bandes comme les week-ends, libellé en bulle de l'en-tête),
  * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache | null, { ligne, instant }), menuLigne(e, ligne), deposer(e, { ligne, instant, tache }), largeurEntete(px) }.
  */
@@ -34,7 +35,7 @@ export class VuePlanning {
 
   constructor(conteneur, options = {}) {
     this.conteneur = conteneur;
-    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: VuePlanning.hauteurVoie(options.lignesTexte ?? 1), lignesTexte: 1, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), actions: {}, ...options };
+    this.#o = { echelle: 'JOUR', largeurColonne: 48, hauteurVoie: VuePlanning.hauteurVoie(options.lignesTexte ?? 1), lignesTexte: 1, hauteurAdaptee: true, pas: 15, largeurEntete: 220, aujourdhui: aujourdhui(), feries: [], actions: {}, ...options };
     conteneur.classList.add('vue-planning');
     conteneur.classList.toggle('lecture', Boolean(this.#o.lecture));
     conteneur.innerHTML = `<div class="vp-poignee-entete" title="Glisser pour régler la largeur des titres des lignes (double-clic : ajuster au contenu)"></div><div class="vp-coin"></div><div class="vp-entete"><div class="vp-entete-plan"></div></div>
@@ -301,11 +302,13 @@ export class VuePlanning {
     const { debut, fin, echelle } = this.#o;
     const lignes = lignesEntete(debut, fin, echelle);
     const larg = (a, b) => Math.max(0, this.x(Math.min(b, fin)) - this.x(Math.max(a, debut)));
+    const feries = new Map(this.#o.feries.map((f) => [f.jour, f.libelle]));
     this.conteneur.style.setProperty('--vp-hauteur-entete', `${lignes.length * 20 + 2}px`);
     this.conteneur.querySelector('.vp-entete-plan').innerHTML = lignes.map((l, i) => `<div class="vp-entete-ligne niveau-${l.niveau.toLowerCase()}${i < lignes.length - 1 ? ' large' : ''}" style="top:${i * 20}px">${l.cellules.map((x) => {
       const w = larg(x.debut, x.fin);
       if (w <= 0) return ''; // cellule masquée
-      return `<div class="${x.weekend ? 'weekend' : ''}" style="left:${this.x(Math.max(x.debut, debut))}px;width:${w}px" title="${echapper(x.libelle)}"><span>${w >= 26 ? echapper(x.libelle) : ''}</span></div>`;
+      const ferie = x.fin - x.debut === 1440 ? feries.get(x.debut) : undefined;
+      return `<div class="${[x.weekend ? 'weekend' : '', ferie !== undefined ? 'ferie' : ''].join(' ').trim()}" style="left:${this.x(Math.max(x.debut, debut))}px;width:${w}px" title="${echapper(ferie ? `${x.libelle} · ${ferie}` : x.libelle)}"><span>${w >= 26 ? echapper(x.libelle) : ''}</span></div>`;
     }).join('')}</div>`).join('') + this.#aujourdhui();
   }
 
@@ -334,7 +337,7 @@ export class VuePlanning {
 
   /**
    * Fond : séparations des colonnes par un dégradé répété (aucun élément par colonne) ; temps masqué : colonnes de
-   * largeurs différentes, une séparation par colonne visible. Week-ends en bandes.
+   * largeurs différentes, une séparation par colonne visible. Week-ends et jours fériés en bandes.
    */
   #dessinerFond() {
     const { debut, fin, echelle, largeurColonne } = this.#o;
@@ -347,6 +350,8 @@ export class VuePlanning {
       .map((c) => `<div class="vp-colonne" style="left:${this.x(c.debut)}px"></div>`).join('') : '';
     fond.innerHTML = separations + (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
       .map((x) => [this.x(x.debut), this.x(x.fin)]).filter(([a, b]) => b > a).map(([a, b]) => `<div class="vp-weekend" style="left:${a}px;width:${b - a}px"></div>`).join(''))
+      + this.#o.feries.filter((f) => f.jour + 1440 > debut && f.jour < fin).map((f) => [this.x(Math.max(f.jour, debut)), this.x(Math.min(f.jour + 1440, fin)), f.libelle])
+        .filter(([a, b]) => b > a).map(([a, b, l]) => `<div class="vp-ferie" style="left:${a}px;width:${b - a}px" title="${echapper(l ?? 'Jour férié')}"></div>`).join('')
       + this.#axe.coupures.map((x) => `<div class="vp-coupure" style="left:${x}px" title="Période masquée"></div>`).join('') + this.#aujourdhui();
   }
 
