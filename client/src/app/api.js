@@ -65,6 +65,8 @@ export const api = {
     enregistrerEtatsType: (t, l) => appel('PUT', `/execution/etats-types/${t}`, l),
     appliquerType: (t) => appel('POST', `/execution/etats-types/${t}/appliquer`),
     etapes: (id) => appel('GET', `/execution/ordres/${id}/etapes`),
+    atelier: (numero) => appel('GET', `/execution/atelier${numero ? `?numero=${encodeURIComponent(numero)}` : ''}`),
+    validerAtelier: (entId, code) => appel('POST', '/execution/atelier/valider', { ent_id: entId, code }),
     actionEtape: (id, code, a) => appel('PUT', `/execution/ordres/${id}/etapes/${encodeURIComponent(code)}`, a),
     recalculerEtapes: (id) => appel('POST', `/execution/ordres/${id}/etapes/recalculer`),
     enregistrerType: (code, s) => appel('PUT', `/execution/types/${code}`, s),

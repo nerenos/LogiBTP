@@ -1,6 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, ouvrirMenuContextuel } from '@logibtp/socle/ui';
 import { ETATS_SERVICE, controlerParcours, MESSAGES_EXECUTION } from '@logibtp/execution';
+import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
 import { rendreCatalogueEtats, rendreEtatsTypes } from '../execution/parametres-etats.js';
 
@@ -296,5 +297,26 @@ export class PageParametresExecution extends PageBase {
       });
     };
     rendre();
+  }
+}
+
+/**
+ * Écran de l'atelier (lot 2e, E53) : étapes à valider des ordres proposés au salarié du compte (ressource principale,
+ * équipe, ordres de son service sur ses chantiers du jour) ou d'un ordre lu par son numéro ; composant du module
+ * Exécution (`EcranEtapesAtelier`), aussi inséré dans la borne du Pointage.
+ */
+export class PageAtelierExecution extends PageBase {
+  icone = '🧩';
+
+  async ouvrir() {
+    this.titre = 'Étapes à valider';
+    this.conteneur.innerHTML = '<div class="page-atelier" data-atelier></div>';
+    if (!this.app.enLigne) { this.conteneur.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const ecran = new EcranEtapesAtelier(this.conteneur.querySelector('[data-atelier]'), {
+      charger: () => api.execution.atelier(),
+      valider: (entId, code) => api.execution.validerAtelier(entId, code),
+      ordre: async (numero) => (await api.execution.atelier(numero)).ordres[0] ?? null,
+    }, { titre: '🧩 Étapes à valider', message: (t, n) => this.app.message(t, n) });
+    await ecran.ouvrir();
   }
 }

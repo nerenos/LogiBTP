@@ -321,6 +321,16 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
             throw ExceptionMetier.Invalide("BORNE_DATE", $"Date hors de la saisie de la borne (aujourd'hui et les {JoursRattrapage} jours précédents)");
     }
 
+    /// <summary>
+    /// Salarié identifié sur la borne (jeton d'appareil de l'en-tête et jeton de saisie) : pour les écrans que
+    /// l'application ajoute à la borne (étapes des ordres) ; essai : la borne d'essai ne doit rien enregistrer.
+    /// </summary>
+    public async Task<(int Salarie, int Appareil, bool Test)> SalarieIdentifieAsync(HttpContext http, string jeton, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        return (Identifie(a, jeton), a.PapId, EnTest(http));
+    }
+
     private int Identifie(AppareilEntite a, string jeton) =>
         jetons.Salarie(jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_JETON", "Identification expirée : recommencer");
 

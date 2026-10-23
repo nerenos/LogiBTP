@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Module Exécution LogiBTP : parcours des services, états des ordres et des services, synthèse par chantier",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./ui": "./ui/index.js",
+    "./ui/atelier.css": "./ui/atelier.css"
   },
   "scripts": {
     "test": "vitest run"

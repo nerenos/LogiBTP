@@ -1,6 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
+import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
@@ -315,8 +316,10 @@ export class PageBorne extends PageBase {
       <p><input data-ordre class="borne-champ" placeholder="N° d'ordre ou QR code (OE2026-…)"> <button type="button" class="borne-bouton" data-lire>OK</button></p>
       <div class="borne-grille">${j.chantiers.map((c) => `<button type="button" class="borne-carte ${j.proposes.includes(c.id) ? 'propose' : ''}" data-c="${c.id}">${j.proposes.includes(c.id) ? '📅 ' : ''}<b>${echapper(c.code)}</b><small>${echapper(c.libelle)}</small></button>`).join('')}</div>
       <p><button type="button" class="borne-bouton principal" data-liste title="Aller directement à la liste des pointages de la journée">📋 Pointages du jour${n ? ` (${n})` : ''} ⏭</button>
+        <button type="button" class="borne-bouton" data-etapes title="Étapes des ordres à valider (module Exécution)">🧩 Étapes</button>
         <button type="button" class="borne-bouton" data-terminer>Terminer</button></p>`;
     this.#brancherEntete();
+    this.zone.querySelector('[data-etapes]').addEventListener('click', () => this.#etapes());
     const choisir = (cha, ordre) => { this.etat.saisie = { cha_id: cha, ent_id: ordre ?? null }; this.#memoriser(); this.#typeMo(); };
     this.zone.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => choisir(Number(b.dataset.c))));
     const lire = async () => {
@@ -336,6 +339,49 @@ export class PageBorne extends PageBase {
     this.zone.querySelector('[data-liste]').addEventListener('click', () => { this.etat.saisie = null; this.#memoriser(); this.#liste(); });
     this.zone.querySelector('[data-terminer]').addEventListener('click', () => this.#terminer());
     this.#minuterie();
+  }
+
+  /**
+   * Étapes des ordres (Exécution, lot 2e, E51 à E53) : écran du module Exécution avec les ordres proposés au salarié (ou
+   * ceux d'une liste : fin de pointage) ; validation par la borne, jamais de contrôle du N+1. `apres` : écran suivant.
+   */
+  async #etapes({ ordres = null, titre = 'Étapes à valider', apres = () => this.#journee() } = {}) {
+    const j = this.etat.journee;
+    this.ecran = () => this.#etapes({ ordres, titre, apres });
+    this.zone.innerHTML = `${this.#entete(titre)}<div data-atelier></div>
+      <p><button type="button" class="borne-bouton principal" data-suite>${ordres ? 'Non, terminer' : 'Retour'}</button></p>`;
+    this.#brancherEntete();
+    const fournisseur = {
+      charger: async () => {
+        if (!ordres) return appel('GET', `/etapes?jeton=${encodeURIComponent(j.jeton)}`);
+        const res = [];
+        for (const id of ordres) res.push(...(await appel('GET', `/etapes?jeton=${encodeURIComponent(j.jeton)}&ordre=${id}`)).ordres);
+        return { ordres: res };
+      },
+      valider: (entId, code) => appel('POST', '/etapes', { jeton: j.jeton, ent_id: entId, code }),
+      ordre: async (numero) => (await appel('GET', `/etapes?jeton=${encodeURIComponent(j.jeton)}&numero=${encodeURIComponent(numero)}`)).ordres[0] ?? null,
+    };
+    const ecran = new EcranEtapesAtelier(this.zone.querySelector('[data-atelier]'), fournisseur, {
+      titre: '', message: (t, n) => (n === 'erreur' ? alert(t) : this.app?.message?.(t, n)),
+      aide: this.test ? 'Essai : les validations ne sont pas enregistrées.' : '',
+    });
+    this.zone.querySelector('[data-suite]').addEventListener('click', () => apres());
+    try { await ecran.ouvrir(); } catch (e) { this.#erreur(e); }
+    this.#minuterie();
+  }
+
+  /** Ordres pointés de la journée dont une étape reste à valider (E52 : « Étape terminée ? » à la fin d'un pointage). */
+  async #ordresAEtape() {
+    const j = this.etat.journee;
+    const ids = [...new Set(this.etat.lignes.filter((l) => l.nouveau !== false && l.ent_id).map((l) => l.ent_id))];
+    const res = [];
+    for (const id of ids) {
+      try {
+        const r = await appel('GET', `/etapes?jeton=${encodeURIComponent(j.jeton)}&ordre=${id}`);
+        if (r.ordres.some((o) => o.etapes.some((e) => !e.valide_le))) res.push(id);
+      } catch { /* module Exécution inactif ou ordre sans droit : rien à proposer */ }
+    }
+    return res;
   }
 
   #terminer() {
@@ -585,8 +631,14 @@ export class PageBorne extends PageBase {
     ecrireReprise(null);
     const total = this.#totalJour();
     const membres = this.etat.membres;
-    this.#accueil(`✔ ${dateLongue(j.date)} : ${ecrireDuree(total) || '0:00'} h ${this.test ? 'contrôlées (essai : non enregistrées)' : 'enregistrées'}${membres ? ` pour ${membres.length} personnes` : ''}.`);
-    this.#minuterie(8000);
+    const fin = () => {
+      this.#accueil(`✔ ${dateLongue(j.date)} : ${ecrireDuree(total) || '0:00'} h ${this.test ? 'contrôlées (essai : non enregistrées)' : 'enregistrées'}${membres ? ` pour ${membres.length} personnes` : ''}.`);
+      this.#minuterie(8000);
+    };
+    // Pointage sur un ordre : son étape en cours est proposée (E52), sinon retour à l'accueil.
+    const ordres = membres ? [] : await this.#ordresAEtape();
+    if (ordres.length) { await this.#etapes({ ordres, titre: 'Étape terminée ?', apres: fin }); return; }
+    fin();
   }
 }
 

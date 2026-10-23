@@ -39,7 +39,7 @@ import { PageNotifications, PageParametresNotifications } from './notifications.
 import { PageParametresConnexions } from './parametres-connexions.js';
 import { PageParametresMail } from './parametres-mail.js';
 import { PageMail, PageMessageMail, PageRedactionMail } from './mail.js';
-import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution } from './execution.js';
+import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution, PageAtelierExecution } from './execution.js';
 import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning, PageParametresPlanning } from './planning.js';
@@ -66,6 +66,7 @@ export const ROUTES = [
   { nom: 'parametres-ressources', chemin: '/parametres/ressources', page: PageParametresRessources, titre: 'Référentiel des ressources' },
   { nom: 'execution-synthese', chemin: '/execution/synthese', page: PageSyntheseExecution, titre: "Synthèse de l'exécution" },
   { nom: 'execution-chantier', chemin: '/execution/chantier/:id', page: PageExecutionChantier, titre: 'Exécution du chantier' },
+  { nom: 'execution-atelier', chemin: '/execution/atelier', page: PageAtelierExecution, titre: 'Étapes à valider' },
   { nom: 'parametres-execution', chemin: '/parametres/execution', page: PageParametresExecution, titre: 'Modèles de parcours' },
   { nom: 'borne', chemin: '/borne', page: PageBorne, titre: 'Borne de pointage' },
   { nom: 'parametres-bornes', chemin: '/parametres/bornes', page: PageParametresBornes, titre: 'Bornes de pointage' },

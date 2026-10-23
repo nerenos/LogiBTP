@@ -10,6 +10,7 @@ import '@logibtp/navigation/ui/navigation.css';
 import '@logibtp/bibliotheque/ui/bibliotheque.css';
 import '@logibtp/graphe/ui/graphe.css';
 import '@logibtp/planning/ui/planning.css';
+import '@logibtp/execution/ui/atelier.css';
 import '@logibtp/annuaire/ui/annuaire.css';
 import '@logibtp/entreprises-fr/ui/entreprises.css';
 import './styles.css';

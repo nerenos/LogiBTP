@@ -80,6 +80,7 @@ export const MENUS_METIER = [
   },
   {
     code: 'execution', libelle: '&Exécution', module: 'execution', elements: [
+      { code: 'execution-atelier', libelle: 'Étapes à valider (atelier, tablette)', icone: '🧩', url: '/execution/atelier', info: 'Étapes des ordres dont vous êtes la ressource ou de votre service sur vos chantiers du jour' },
       { code: 'execution-synthese', libelle: 'Synthèse par chantier', icone: '🧭', url: '/execution/synthese', info: 'Un état par service (parcours et ordres), clic droit pour imposer un état' },
       { separateur: true },
       { code: 'ordres-oe', libelle: "Ordres d'exécution", icone: '🛠', url: '/liste/ordres?vue=1001', type: 'E_OE', info: "Lancés depuis la fiche du marché (▶ Ordre d'exécution)" },

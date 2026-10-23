@@ -136,6 +136,8 @@ api.MapModulePlanning().ExigeModule("planning", "Planning");
 api.MapDiffusion();
 // Liaisons croisées entre modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur.
 api.MapLiaisons();
+// Étapes validées depuis l'atelier (page tablette, borne du Pointage) : lot 2e de l'Exécution.
+api.MapAtelier().ExigeModule("execution", "Exécution");
 api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();

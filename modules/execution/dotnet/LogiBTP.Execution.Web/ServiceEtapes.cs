@@ -377,6 +377,14 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         };
     }
 
+    /// <summary>Étapes d'un ordre pour l'écran de l'atelier (sans droits : l'application filtre les ordres).</summary>
+    public async Task<object?> AtelierAsync(long id, CancellationToken ct)
+    {
+        if (await specialisation.OrdreAsync(db, id, ct) is not { Clos: false } o) return null;
+        var etapes = await EtapesAsync(o, ct);
+        return new { etapes = etapes.OrderBy(e => e.OreOrdre).Select(Dto), en_cours = ReglesEtapes.EnCours(etapes.Select(Regle).ToList()) };
+    }
+
     public async Task<object> LireAsync(long id, Utilisateur u, CancellationToken ct)
     {
         var o = await OrdreAsync(id, ct);
@@ -398,7 +406,8 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
     /// Action sur une étape : VALIDER (avec les étapes masquées précédentes, E28), ANNULER (motif), CONTROLER /
     /// DECONTROLER (N+1), PREVOIR (date imposée ; vide : calculée), RESSOURCE (vide : celle de l'ordre), DUREE.
     /// </summary>
-    public async Task<object> ActionAsync(long id, string code, ActionEtape s, Utilisateur u, CancellationToken ct)
+    /// <param name="droitVerifie">Droit déjà vérifié par l'application (borne : salarié identifié, E51).</param>
+    public async Task<object> ActionAsync(long id, string code, ActionEtape s, Utilisateur u, CancellationToken ct, bool droitVerifie = false)
     {
         var o = await OrdreAsync(id, ct);
         if (o.Clos) throw ExceptionMetier.Conflit("EXE_CLOS", "Ordre annulé ou remplacé : étapes non modifiables");
@@ -417,7 +426,7 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
         {
             case "VALIDER":
             {
-                if (!await specialisation.PeutValiderAsync(db, o, e, u, ct)) throw ExceptionMetier.AccesRefuse("VALIDER_ETAPE");
+                if (!droitVerifie && !await specialisation.PeutValiderAsync(db, o, e, u, ct)) throw ExceptionMetier.AccesRefuse("VALIDER_ETAPE");
                 var r = ReglesEtapes.AValider(regles, code);
                 if (r.Erreurs.Count > 0) throw Erreur(r.Erreurs);
                 avertissements.AddRange(r.Avertissements);
