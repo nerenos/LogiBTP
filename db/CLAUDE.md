@@ -60,6 +60,7 @@
 - `205_equipes_periodes.sql` : compositions datées par leur seul début (`equipe_periode` : début unique par équipe, commentaire ; fin = veille de la suivante), `equ_commentaire` (aide-mémoire), `equ_version` (modifications concurrentes ; verrou dans `verrou_fiche`, type `equipe`), reprise des débuts depuis les lignes ; rejouable.
 - `206_mail.sql` : module Mail (module `007`) : clé étrangère `mail_compte.mco_oco_id` → `oauth_connexion` (module `004`), compte de service `mail_fond` ; rejouable.
 - `207_mail_reception.sql` : module Mail, lot 3 (module `007b`) : `coordonnee.coo_non_remis_le|motif` (adresse signalée non remise), `f_ged_element_existe` reprise de 195 avec le type `mail_compte` (courriels reçus rangés sous leur boîte) ; rejouable.
+- `208_execution_types.sql` : module Exécution, lot 2b : types E_BE, E_BM, E_OF, E_CO, E_LI, E_SAV, E_OST, E_DAC (statuts, droits, transformations du § 3.3), `type_document.tyd_srv_id` (service par défaut, trigger `tr_document_service_defaut`), `f_type_visible(famille, actif)` (module et type actifs) lue par `v_liste_documents` (reprise de 197) ; rejouable. Les vues de colonnes de ces types viennent de 176, rejoué en dernier (`999_documents_vues_types.sql` dans `docker-compose.yml`) ; sur une base existante : 208 puis 176.
 - `900_societe_demo.sh` : crée `logibtp_demo` et y rejoue tous les `*.sql` de `/docker-entrypoint-initdb.d`.
 
 ## Spécialisation des modules

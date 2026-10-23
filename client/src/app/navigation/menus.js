@@ -82,14 +82,23 @@ export const MENUS_METIER = [
     code: 'execution', libelle: '&Exécution', module: 'execution', elements: [
       { code: 'execution-synthese', libelle: 'Synthèse par chantier', icone: '🧭', url: '/execution/synthese', info: 'Un état par service (parcours et ordres), clic droit pour imposer un état' },
       { separateur: true },
-      { code: 'ordres-oe', libelle: "Ordres d'exécution", icone: '🛠', url: '/liste/ordres?vue=1001', info: "Lancés depuis la fiche du marché (▶ Ordre d'exécution)" },
-      { code: 'ordres-po', libelle: 'Ordres de pose', icone: '🔧', url: '/liste/ordres?vue=1002' },
-      { code: 'ordres-dap', libelle: "Demandes d'approvisionnement", icone: '🛒', url: '/liste/ordres?vue=1003', creation: D('E_DAP', "Nouvelle demande d'approvisionnement") },
+      { code: 'ordres-oe', libelle: "Ordres d'exécution", icone: '🛠', url: '/liste/ordres?vue=1001', type: 'E_OE', info: "Lancés depuis la fiche du marché (▶ Ordre d'exécution)" },
+      { code: 'ordres-be', libelle: "Ordres du bureau d'études", icone: '🧑‍💻', url: '/liste/ordres?vue=1006', type: 'E_BE', creation: D('E_BE', "Nouvel ordre : ordre du bureau d'études") },
+      { code: 'ordres-bm', libelle: 'Ordres des méthodes', icone: '📐', url: '/liste/ordres?vue=1007', type: 'E_BM', creation: D('E_BM', 'Nouvel ordre : ordre du bureau des méthodes') },
+      { code: 'ordres-of', libelle: 'Ordres de fabrication', icone: '🏭', url: '/liste/ordres?vue=1008', type: 'E_OF', creation: D('E_OF', 'Nouvel ordre : ordre de fabrication') },
+      { code: 'ordres-co', libelle: 'Ordres de colisage', icone: '📦', url: '/liste/ordres?vue=1009', type: 'E_CO', creation: D('E_CO', 'Nouvel ordre : ordre de colisage') },
+      { code: 'ordres-li', libelle: 'Ordres de livraison', icone: '🚚', url: '/liste/ordres?vue=1010', type: 'E_LI', creation: D('E_LI', 'Nouvel ordre : ordre de livraison') },
+      { code: 'ordres-sav', libelle: 'Interventions SAV', icone: '🧰', url: '/liste/ordres?vue=1011', type: 'E_SAV', creation: D('E_SAV', 'Nouvel ordre : intervention SAV') },
+      { code: 'ordres-ost', libelle: 'Ordres de sous-traitance', icone: '🤝', url: '/liste/ordres?vue=1012', type: 'E_OST', creation: D('E_OST', 'Nouvel ordre : ordre de sous-traitance') },
+      { code: 'ordres-dac', libelle: "Demandes d'achat", icone: '🧾', url: '/liste/ordres?vue=1013', type: 'E_DAC', creation: D('E_DAC', "Nouvel ordre : demande d'achat") },
+      { code: 'ordres-po', libelle: 'Ordres de pose', icone: '🔧', url: '/liste/ordres?vue=1002', type: 'E_PO' },
+      { code: 'ordres-dap', libelle: "Demandes d'approvisionnement", icone: '🛒', url: '/liste/ordres?vue=1003', type: 'E_DAP', creation: D('E_DAP', "Nouvelle demande d'approvisionnement") },
       { code: 'ordres', libelle: 'Tous les ordres', icone: '📋', url: '/liste/ordres?vue=1000' },
       { code: 'ordres-bloques', libelle: 'Ordres bloqués', icone: '⛔', url: '/liste/ordres?vue=1004' },
       { code: 'ordres-retard', libelle: 'Ordres en retard', icone: '⏰', url: '/liste/ordres?vue=1005' },
       { separateur: true },
       { code: 'parametrage-execution', libelle: 'Modèles de parcours…', icone: '⚙', url: '/parametres/execution' },
+      { code: 'types-ordres', libelle: "Types d'ordres (activation, service)…", icone: '⚙', url: '/parametres/documents' },
     ],
   },
   {
@@ -161,8 +170,11 @@ export function groupesThemes() {
   return groupes;
 }
 
-/** Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`). */
-const visible = (app, x) => !x.module || app.moduleActif?.(x.module) !== false;
+/**
+ * Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`) ; type de
+ * document actif (`type` : code de `type_document`, E39).
+ */
+const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false);
 
 /** Éléments visibles, sans séparateur en tête, en fin ni en double. */
 export function elementsVisibles(app, elements) {

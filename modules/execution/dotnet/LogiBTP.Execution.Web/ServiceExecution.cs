@@ -107,6 +107,8 @@ public abstract class SpecialisationExecution
     public abstract Task<List<ServiceExe>> ServicesAsync(ExecutionDbContext db, CancellationToken ct);
     public abstract Task<List<ElementExe>> ElementsAsync(ExecutionDbContext db, FiltreSynthese f, IReadOnlyCollection<string>? ids, CancellationToken ct);
     public abstract Task<List<OrdreExe>> OrdresAsync(ExecutionDbContext db, IReadOnlyCollection<string> ids, CancellationToken ct);
+    /// <summary>Types d'ordres désactivés : leurs étapes de parcours sont ignorées (services sans objet, E39).</summary>
+    public virtual Task<HashSet<string>> TypesInactifsAsync(ExecutionDbContext db, CancellationToken ct) => Task.FromResult(new HashSet<string>());
 }
 
 /// <summary>
@@ -238,6 +240,24 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
     private static List<OrdreExe> AvecService(List<OrdreExe> ordres, List<EtapeElementEntite> etapes) =>
         ordres.Select(o => o.SrvId is null && etapes.FirstOrDefault(e => e.PeeTypeOrdre == o.TypeOrdre)?.PeeSrvId is int s ? o with { SrvId = s } : o).ToList();
 
+    /// <summary>
+    /// Étapes retenues pour le calcul : sans celles d'un type d'ordre désactivé ; leurs étapes aval héritent de leurs
+    /// amonts (la chaîne du parcours reste continue).
+    /// </summary>
+    private static List<EtapeElementEntite> Actives(List<EtapeElementEntite> etapes, HashSet<string> inactifs)
+    {
+        var retirees = etapes.Where(e => e.PeeTypeOrdre is string t && inactifs.Contains(t)).ToDictionary(e => e.PeeCode, e => e.PeeAmonts);
+        if (retirees.Count == 0) return etapes;
+        string[] Amonts(IEnumerable<string> codes, int profondeur) => profondeur > 50 ? [] : codes
+            .SelectMany(c => retirees.TryGetValue(c, out var a) ? Amonts(a, profondeur + 1) : [c]).Distinct().ToArray();
+        return etapes.Where(e => !retirees.ContainsKey(e.PeeCode))
+            .Select(e => new EtapeElementEntite
+            {
+                PeeId = e.PeeId, PeeParId = e.PeeParId, PeeCode = e.PeeCode, PeeLibelle = e.PeeLibelle, PeeSrvId = e.PeeSrvId,
+                PeeTypeOrdre = e.PeeTypeOrdre, PeeAmonts = Amonts(e.PeeAmonts, 0), PeeOrdre = e.PeeOrdre,
+            }).ToList();
+    }
+
     private static List<EtatService> Etats(List<EtapeElementEntite> etapes, List<OrdreExe> ordres, List<EtatManuelEntite> manuels) =>
         ReglesEtats.EtatsServices(etapes.Select(e => new EtapeParcours(e.PeeCode, e.PeeSrvId, e.PeeAmonts)).ToList(),
             ordres.Select(o => new OrdreEvalue(o.SrvId, o.Statut, o.Etat)).ToList(),
@@ -256,6 +276,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         var ordres = await specialisation.OrdresAsync(db, ids, ct);
         var parcours = await db.Parcours.AsNoTracking().Where(p => p.ParTypeElement == type && ids.Contains(p.ParIdElement)).ToListAsync(ct);
         var parIds = parcours.Select(p => p.ParId).ToList();
+        var inactifs = await specialisation.TypesInactifsAsync(db, ct);
         var etapes = await db.EtapesElements.AsNoTracking().Where(e => parIds.Contains(e.PeeParId)).ToListAsync(ct);
         var manuels = await db.EtatsManuels.AsNoTracking().Where(m => m.EtmTypeElement == type && ids.Contains(m.EtmIdElement)).ToListAsync(ct);
         var lignes = new List<object>();
@@ -263,7 +284,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         foreach (var e in elements)
         {
             var p = parcours.FirstOrDefault(x => x.ParIdElement == e.Id);
-            var et = p is null ? [] : etapes.Where(x => x.PeeParId == p.ParId).OrderBy(x => x.PeeOrdre).ToList();
+            var et = p is null ? [] : Actives(etapes.Where(x => x.PeeParId == p.ParId).OrderBy(x => x.PeeOrdre).ToList(), inactifs);
             var os = AvecService(ordres.Where(o => o.IdElement == e.Id).ToList(), et);
             if (os.Count == 0 && p is null) continue;
             var etats = Etats(et, os, manuels.Where(m => m.EtmIdElement == e.Id).ToList());
@@ -290,7 +311,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
         var (p, etapes) = await ParcoursAsync(type, id, ct);
         var ordres = AvecService(await specialisation.OrdresAsync(db, [id], ct), etapes);
         var manuels = await db.EtatsManuels.AsNoTracking().Where(m => m.EtmTypeElement == type && m.EtmIdElement == id).ToListAsync(ct);
-        var etats = Etats(etapes, ordres, manuels);
+        var etats = Etats(Actives(etapes, await specialisation.TypesInactifsAsync(db, ct)), ordres, manuels);
         return new
         {
             element, modele = p?.ParPamId, etapes = Dto(etapes), etats,

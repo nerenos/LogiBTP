@@ -138,12 +138,16 @@ export class Application {
     this.modules = new Map();
     if (this.enLigne) {
       try { for (const m of await api.modules()) this.modules.set(m.code, m.actif); } catch { /* table absente : tout est actif */ }
+      try { this.typesActifs = new Set((await api.typesDocument()).map((t) => t.tyd_code)); } catch { this.typesActifs = null; }
     }
     if (this.bandeau) { this.bandeau.menus = menus(this); this.bandeau.rendre(); }
   }
 
   /** Module actif pour la société (inconnu : actif). */
   moduleActif(code) { return this.modules?.get(code) ?? true; }
+
+  /** Type de document actif (types non chargés, hors ligne : actif). */
+  typeActif(code) { return !this.typesActifs || this.typesActifs.has(code); }
 
   profil() { return this.enLigne ? (this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
   utilisateur() { return this.enLigne ? (this.session?.code ?? '') : 'demo'; }

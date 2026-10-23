@@ -12,7 +12,7 @@
 > le rapport imprimable de la synthèse reste à faire.
 > Troisième lecture (23/10/2026, § 13) : états des ordres par type, tableau de l'entête, planning théorique par états,
 > types d'ordres manquants et activation par type, validation depuis l'atelier : questions E25 à E53 tranchées le
-> 23/10/2026 (§ 13.6), lots 2b à 2e.
+> 23/10/2026 (§ 13.6), lots 2b à 2e. Lot 2b réalisé le 24/10/2026 (`db/208`, `/parametres/documents` : types d'ordres).
 
 ## 1. Objet
 

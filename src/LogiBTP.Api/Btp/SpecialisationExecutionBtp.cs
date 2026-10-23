@@ -36,6 +36,9 @@ public class SpecialisationExecutionBtp : SpecialisationExecution
             new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(f.Recherche) ? DBNull.Value : $"%{f.Recherche.Trim()}%" }).ToListAsync(ct);
 
+    public override async Task<HashSet<string>> TypesInactifsAsync(ExecutionDbContext db, CancellationToken ct) =>
+        [.. await db.Database.SqlQueryRaw<string>("SELECT tyd_code AS \"Value\" FROM type_document WHERE tyd_famille = 'E' AND NOT tyd_actif").ToListAsync(ct)];
+
     public override Task<List<OrdreExe>> OrdresAsync(ExecutionDbContext db, IReadOnlyCollection<string> ids, CancellationToken ct) =>
         db.Database.SqlQueryRaw<OrdreExe>("""
             SELECT d.ent_chantier_id::text AS id_element, d.ent_id, d.ent_numero AS numero, d.ent_objet AS objet, t.tyd_code AS type_ordre, t.tyd_libelle AS type_libelle,

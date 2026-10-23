@@ -57,6 +57,8 @@ export const api = {
   },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
   execution: {
+    types: () => appel('GET', '/execution/types'),
+    enregistrerType: (code, s) => appel('PUT', `/execution/types/${code}`, s),
     document: (id) => appel('GET', `/execution/documents/${id}`),
     enregistrer: (id, s) => appel('PUT', `/execution/documents/${id}`, s),
     repartition: (id) => appel('GET', `/execution/documents/${id}/repartition`),

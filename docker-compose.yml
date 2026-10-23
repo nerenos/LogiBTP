@@ -124,6 +124,9 @@ services:
       - ./db/205_equipes_periodes.sql:/docker-entrypoint-initdb.d/205_equipes_periodes.sql:ro
       - ./db/206_mail.sql:/docker-entrypoint-initdb.d/206_mail.sql:ro
       - ./db/207_mail_reception.sql:/docker-entrypoint-initdb.d/207_mail_reception.sql:ro
+      - ./db/208_execution_types.sql:/docker-entrypoint-initdb.d/208_execution_types.sql:ro
+      # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
+      - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
       - ./db/900_societe_demo.sh:/docker-entrypoint-initdb.d/900_societe_demo.sh:ro
     healthcheck:

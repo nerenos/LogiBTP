@@ -199,9 +199,46 @@ public static class ExecutionBtp
             FROM document d WHERE d.ent_id = @id
             """, [new NpgsqlParameter("id", entId), new NpgsqlParameter("par", par)], ct);
 
+    /// <summary>Type d'ordre paramétré (E25, E39) : activation, service par défaut, ordres non terminés.</summary>
+    public sealed record TypeOrdre(string Code, string Libelle, bool Actif, int? SrvId, int EnCours);
+    public sealed record TypeOrdreSaisi(bool Actif, int? SrvId);
+
+    /// <summary>Ordres d'un type non terminés : ni soldés, ni annulés, ni remplacés, ni d'état d'exécution « terminé ».</summary>
+    private const string EnCours = """
+        (SELECT count(*)::int FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id
+          WHERE d.ent_tyd_id = t.tyd_id AND d.ent_is_reference AND s.std_code NOT IN ('SOLDE', 'ANNULE', 'REMPLACE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE')
+        """;
+
+    /// <summary>Types de la famille E, actifs ou non (le paramétrage voit aussi les types désactivés).</summary>
+    public static Task<List<TypeOrdre>> TypesAsync(LogiBtpContext db, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<TypeOrdre>($"""
+            SELECT t.tyd_code AS code, t.tyd_libelle AS libelle, t.tyd_actif AS actif, t.tyd_srv_id AS srv_id, {EnCours} AS en_cours
+            FROM type_document t WHERE t.tyd_famille = 'E' ORDER BY t.tyd_id
+            """).ToListAsync(ct);
+
+    /// <summary>
+    /// Activation et service par défaut d'un type d'ordre (administrateur). Désactivation refusée tant qu'un ordre du
+    /// type n'est pas terminé (E39 : 409 <c>TYPE_ORDRE_EN_COURS</c>).
+    /// </summary>
+    public static async Task<List<TypeOrdre>> EnregistrerTypeAsync(LogiBtpContext db, string code, TypeOrdreSaisi s, Utilisateur u, CancellationToken ct)
+    {
+        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER_EXECUTION");
+        var t = (await TypesAsync(db, ct)).FirstOrDefault(x => x.Code == code) ?? throw ExceptionMetier.Introuvable($"Type d'ordre {code}");
+        if (t.Actif && !s.Actif && t.EnCours > 0)
+        {
+            throw ExceptionMetier.Conflit("TYPE_ORDRE_EN_COURS", $"{t.Libelle} : {t.EnCours} ordre(s) non terminé(s), le type ne peut pas être désactivé");
+        }
+        await db.Database.ExecuteSqlRawAsync("UPDATE type_document SET tyd_actif = @a, tyd_srv_id = @s WHERE tyd_code = @c AND tyd_famille = 'E'",
+            [new NpgsqlParameter("a", s.Actif), P("s", s.SrvId, NpgsqlDbType.Integer), new NpgsqlParameter("c", code)], ct);
+        return await TypesAsync(db, ct);
+    }
+
     public static RouteGroupBuilder MapExecution(this RouteGroupBuilder api)
     {
         var g = api.MapGroup("/execution");
+        g.MapGet("/types", (LogiBtpContext db, CancellationToken ct) => TypesAsync(db, ct));
+        g.MapPut("/types/{code}", (string code, TypeOrdreSaisi s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            EnregistrerTypeAsync(db, code, s, Utilisateur.Depuis(http), ct));
         g.MapGet("/documents/{id:long}", (long id, LogiBtpContext db, CancellationToken ct) => LireAsync(db, id, ct));
         g.MapPut("/documents/{id:long}", (long id, ExecutionSaisie s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
             EnregistrerAsync(db, http.RequestServices, id, s, Utilisateur.Depuis(http), ct));

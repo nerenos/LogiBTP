@@ -8,7 +8,8 @@ import { api } from '../api.js';
 
 const TYPES_ORDRE = [
   ['E_OE', "Ordre d'exécution"], ['E_BE', "Bureau d'études"], ['E_BM', 'Méthodes'], ['E_OF', 'Ordre de fabrication'],
-  ['E_CO', 'Colisage'], ['E_LI', 'Livraison'], ['E_PO', 'Ordre de pose'], ['E_SAV', 'Intervention SAV'], ['E_DAP', "Demande d'approvisionnement"],
+  ['E_CO', 'Colisage'], ['E_LI', 'Livraison'], ['E_PO', 'Ordre de pose'], ['E_SAV', 'Intervention SAV'], ['E_OST', 'Sous-traitance'],
+  ['E_DAP', "Demande d'approvisionnement"], ['E_DAC', "Demande d'achat"],
 ].map(([valeur, libelle]) => ({ valeur, libelle, detail: valeur }));
 const date = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 

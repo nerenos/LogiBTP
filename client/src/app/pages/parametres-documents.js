@@ -39,7 +39,8 @@ export class PageParametresDocuments extends PageBase {
       <h2>Conditions de paiement</h2><div class="conditions-paiement"></div>
       <h2>Acomptes</h2><div class="mode-acomptes"></div>
       <h2>Textes de l'édition</h2><div class="textes-types"></div>
-      <h2>Règles des documents</h2><div class="regles-documents"></div></div>`;
+      <h2>Règles des documents</h2><div class="regles-documents"></div>
+      ${app.moduleActif('execution') ? "<h2>Types d'ordres (Exécution)</h2><div class='types-ordres'></div>" : ''}</div>`;
     // Hors ligne : les listes de la définition de démonstration sont modifiées en place (visibles dans le devis de démo).
     const fournisseur = app.enLigne
       ? {
@@ -54,6 +55,41 @@ export class PageParametresDocuments extends PageBase {
     await this.ouvrirAcomptes(this.conteneur.querySelector('.mode-acomptes'));
     await this.ouvrirTextes(this.conteneur.querySelector('.textes-types'));
     await this.ouvrirRegles(this.conteneur.querySelector('.regles-documents'));
+    const ordres = this.conteneur.querySelector('.types-ordres');
+    if (ordres) await this.ouvrirTypesOrdres(ordres);
+  }
+
+  /**
+   * Types d'ordres du module Exécution (E25, E39) : activation (un type ne se désactive que lorsque tous ses ordres sont
+   * terminés) et service par défaut d'un nouvel ordre.
+   */
+  async ouvrirTypesOrdres(zone) {
+    const app = this.app;
+    if (!app.enLigne) { zone.innerHTML = "<p class='aide'>Types d'ordres disponibles en ligne seulement.</p>"; return; }
+    const [types, services] = await Promise.all([api.execution.types(), api.services()]);
+    const admin = app.estAdmin();
+    const options = services.filter((x) => x.actif).map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code }));
+    zone.innerHTML = `<p class="aide">Un type désactivé disparaît des menus, des listes et des transformations ; ses étapes de parcours sont ignorées.
+      Il ne se désactive que lorsque tous ses ordres sont terminés.</p>
+      <table class="tableau-compact"><thead><tr><th>Type</th><th>Code</th><th>Actif</th><th>Service par défaut</th><th>Non terminés</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${types.map((t, i) => `<tr data-i="${i}"><td>${echapper(t.libelle)}</td><td>${echapper(t.code)}</td>
+        <td><input type="checkbox" data-actif ${t.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td><td data-service></td>
+        <td class="nombre">${t.en_cours || ''}</td>
+        <td class="cellule-boutons">${admin ? '<button type="button" data-enregistrer title="Enregistrer">💾</button>' : ''}</td></tr>`).join('')}</tbody></table>`;
+    zone.querySelectorAll('tr[data-i]').forEach((tr) => {
+      const t = types[Number(tr.dataset.i)];
+      const combo = creerCombo({ options, valeur: t.srv_id ?? '', vide: true });
+      combo.readOnly = !admin;
+      tr.querySelector('[data-service]').append(combo);
+      tr.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+        try {
+          await api.execution.enregistrerType(t.code, { actif: tr.querySelector('[data-actif]').checked, srv_id: combo.valeurCombo === '' ? null : Number(combo.valeurCombo) });
+          app.message(`${t.libelle} : enregistré`, 'succes');
+          await app.chargerModules();
+          await this.ouvrirTypesOrdres(zone);
+        } catch (e) { app.message(e.message, 'erreur'); }
+      });
+    });
   }
 
   /**

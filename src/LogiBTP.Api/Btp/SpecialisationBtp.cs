@@ -701,6 +701,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
 
     public override void ControlerTransformation(DocumentCompletBtp source, TypeDocument typeSource, TypeDocument typeCible, bool depuisPlusieurs)
     {
+        // Type d'ordre désactivé (E39) : plus de nouvel ordre de ce type.
+        if (!typeCible.TydActif) throw LogiBTP.Socle.Web.ExceptionMetier.Invalide("TYPE_INACTIF", $"{typeCible.TydLibelle} : type de document désactivé");
         if (!depuisPlusieurs && typeSource.TydCode == "V_COMMANDE" && source.Document.EntMarcheId is not null
             && typeCible.TydCode is "V_RECEPTION" or "V_SITUATION" or "V_FACTURE_AVT" or "V_REPRISE_AVT")
         {

@@ -13,8 +13,12 @@ export const ETATS_EXECUTION = {
   TERMINE: { libelle: 'Terminé', icone: '✅' },
 };
 
-/** Types d'ordres du lot 1 (codes de type_document, db/197). */
-export const TYPES_ORDRE = { E_OE: "Ordre d'exécution", E_PO: 'Ordre de pose', E_DAP: "Demande d'approvisionnement" };
+/** Types d'ordres (codes de type_document, db/197 et db/208). */
+export const TYPES_ORDRE = {
+  E_OE: "Ordre d'exécution", E_BE: "Ordre du bureau d'études", E_BM: 'Ordre du bureau des méthodes', E_OF: 'Ordre de fabrication',
+  E_CO: 'Ordre de colisage', E_LI: 'Ordre de livraison', E_PO: 'Ordre de pose', E_SAV: 'Intervention SAV', E_OST: 'Ordre de sous-traitance',
+  E_DAP: "Demande d'approvisionnement", E_DAC: "Demande d'achat",
+};
 
 const nombre = (v, d = 2) => (v === null || v === undefined || v === '' ? '' : formatNombre(Number(v), d));
 const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });

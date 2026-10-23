@@ -19,7 +19,7 @@ const VUES_TRANSFORMES = [
   // Ordres (module Exécution) : l'ordre d'exécution porte le budget planifié (prix et coefficients modifiables) ; les
   // ordres suivants montrent les quantités (parent, reste), sans prix (E2, E17).
   { nom: 'Budget planifié', types: ['E_OE'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'pa', 'fg', 'pv', 'montant', 'commentaire'] },
-  { nom: 'Quantités', types: ['E_PO', 'E_DAP'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'solde', 'commentaire'] },
+  { nom: 'Quantités', types: ['E_PO', 'E_DAP', 'E_BE', 'E_BM', 'E_OF', 'E_CO', 'E_LI', 'E_SAV', 'E_OST', 'E_DAC'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'solde', 'commentaire'] },
 ];
 
 export const VUES_DOCUMENT = [
