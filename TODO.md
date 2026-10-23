@@ -131,7 +131,18 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 ### Sous-traitance
 
-- [ ] Montants et agréments du paiement direct (gestion de la sous-traitance).
+Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/conception/ANALYSE-MODULE-SOUS-TRAITANCE.md).
+
+- [ ] Trancher les questions ST1 à ST20 (types, marché à deux sens, pièces exigées, factures, paiement direct) ; faire
+  relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
+  l'expert-comptable.
+- [ ] Montants et agréments du paiement direct (gestion de la sous-traitance, lot 4 ; Q9 des marchés à décider).
+
+### Module Exécution
+
+- [ ] Trancher les questions E25 à E40 de la troisième lecture ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
+  § 13 : états des ordres par type, tableau de l'entête, planning théorique par états, types d'ordres manquants
+  `E_BE`… `E_DAC`, activation par type).
 
 ### Import
 
