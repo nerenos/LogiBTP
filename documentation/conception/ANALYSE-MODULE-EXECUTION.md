@@ -11,8 +11,8 @@
 > chantier (modifiable), états par service calculés (`etats.js` ↔ `ReglesEtats.cs`), états imposés avec écart signalé ;
 > le rapport imprimable de la synthèse reste à faire.
 > Troisième lecture (23/10/2026, § 13) : états des ordres par type, tableau de l'entête, planning théorique par états,
-> types d'ordres manquants et activation par type : questions E25 à E50 tranchées le 23/10/2026 ; E51 à E53
-> (validation depuis l'atelier, E50) à trancher (§ 13.6).
+> types d'ordres manquants et activation par type, validation depuis l'atelier : questions E25 à E53 tranchées le
+> 23/10/2026 (§ 13.6), lots 2b à 2e.
 
 ## 1. Objet
 
@@ -284,8 +284,7 @@ Cœur (`db/2xx`) : types de la famille E (dont DAP ; `S_DEMANDE` renommé « Dem
 
 ## 13. Troisième lecture (23/10/2026) : états des ordres, tableau de l'entête, planning théorique
 
-> Note « Module Exécution » du 23/10/2026. Questions E25 à E50 tranchées le 23/10/2026 ; E51 à E53 à trancher
-> (§ 13.6).
+> Note « Module Exécution » du 23/10/2026. Questions E25 à E53 tranchées le 23/10/2026 (§ 13.6).
 
 ### 13.1 Note d'origine (résumé)
 
@@ -408,13 +407,14 @@ Relecture (23/10/2026) : points manquants.
 
 Décision E50 : la validation d'une étape depuis l'atelier se fait **dans ce lot** (2e). Le module Exécution ne dépend
 pas du module Pointage (règle d'architecture) : c'est le **cœur** qui ajoute l'écran des étapes à la borne, comme il
-y branche déjà les chantiers du jour du planning (`LiaisonsBtp`). Points à trancher :
+y branche déjà les chantiers du jour du planning (`LiaisonsBtp`). L'écran des étapes est un composant du **module
+Exécution** (E53), que le cœur insère dans la borne :
 
 | N° | Question | Proposition | Décision |
 |---|---|---|---|
-| E51 | Quelles étapes la borne propose-t-elle au salarié identifié ? | Étapes non validées des ordres dont il est la ressource principale (lui ou son équipe), ou des ordres de son service sur les chantiers du jour ; ordre lu par son numéro (code-barres) comme pour le pointage ; validation = même règle que E46, un contrôle N+1 ne se coche pas depuis la borne | |
-| E52 | Validation et pointage ensemble ? | À la fin d'un pointage sur un ordre, « Étape terminée ? » propose l'étape en cours de l'ordre (une seule action) ; validation possible aussi sans pointage | |
-| E53 | Sans le module Pointage (pas de borne) ? | Page tablette de l'Exécution `/execution/atelier` (session ordinaire) : mêmes étapes, même validation ; la borne et la page partagent le composant du cœur | |
+| E51 | Quelles étapes la borne propose-t-elle au salarié identifié ? | Étapes non validées des ordres dont il est la ressource principale (lui ou son équipe), ou des ordres de son service sur les chantiers du jour ; ordre lu par son numéro (code-barres) comme pour le pointage ; validation = même règle que E46, un contrôle N+1 ne se coche pas depuis la borne | Ok |
+| E52 | Validation et pointage ensemble ? | À la fin d'un pointage sur un ordre, « Étape terminée ? » propose l'étape en cours de l'ordre (une seule action) ; validation possible aussi sans pointage | Ok |
+| E53 | Sans le module Pointage (pas de borne) ? | Page tablette de l'Exécution `/execution/atelier` (session ordinaire) : mêmes étapes, même validation ; la borne et la page partagent le composant du cœur | ✘ Autrement : l'écran des étapes et la page tablette `/execution/atelier` sont faits **dans le module Exécution** (composant générique, étapes fournies par sa spécialisation) ; le cœur ne fait que l'insérer dans la borne quand le Pointage est actif |
 
 ### 13.7 Modèle de données proposé
 
@@ -437,4 +437,4 @@ Cœur : `ordre_etape` (`ore_ent_id`, `ore_etc_code`, `ore_ordre`, `ore_date_obli
 | 2b | Types d'ordres manquants (E38) et activation par type (E39 : désactivation quand tous les ordres sont terminés) ; section Exécution de `/parametres/documents` (E25) |
 | 2c | Catalogue des états, états par type, états des étapes des modèles ; étapes de l'ordre copiées à la création ; tableau de l'entête (prévisionnelle, validation, contrôle N+1, ressource) ; règles répliquées (jeu `02_etapes`) ; colonnes de la liste des ordres (E44), édition (E47), démonstration (E49) |
 | 2d | Planning théorique par états (tâches, jalons, attentes en décalage), liaison des dates et des ressources dans les deux sens ; tâche du CRM au N+1 ; alertes (E45) |
-| 2e | Validation des étapes depuis l'atelier : écran de la borne (cœur, E51, E52) et page tablette sans le Pointage (E53) |
+| 2e | Validation des étapes depuis l'atelier : écran des étapes et page tablette `/execution/atelier` dans le module Exécution (E53), insérés dans la borne par le cœur (E51, E52) |

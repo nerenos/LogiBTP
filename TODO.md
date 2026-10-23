@@ -146,9 +146,8 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 
 ### Module Exécution
 
-- [ ] Trancher E51 à E53 ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md) § 13.6 : étapes
-  proposées par la borne, validation avec le pointage, page tablette sans le Pointage) ; E25 à E50 tranchées le
-  23/10/2026 (lots 2b à 2e).
+- [ ] Troisième lecture achevée le 23/10/2026 ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
+  § 13, E25 à E53 tranchées) : lots 2b à 2e à réaliser.
 - [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
 
 ### Import
