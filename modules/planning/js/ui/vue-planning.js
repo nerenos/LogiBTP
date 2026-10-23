@@ -15,7 +15,7 @@ import { creerAxe } from '../src/axe.js';
  * hauteurAdaptee (vrai : une voie par barre superposée), pas (minutes, 15), lecture, largeurEntete (px), aujourdhui (minuit du
  * jour marqué en rouge, minutes ; défaut : le jour local, null = aucun), lignesTexte (lignes de texte des barres, 1 par défaut :
  * fixe la hauteur des voies, sauf hauteurVoie donnée), masque ({ heures: [debut, fin] en minutes du jour, jours: [0 = dimanche…] } :
- * heures masquées à l'échelle HEURE, jours masqués sauf à l'échelle SEMAINE ; null = axe continu),
+ * heures hors de la journée travaillée et jours masqués à toutes les échelles, une colonne valant ses minutes visibles ; null = axe continu),
  * actions { deplacer({ tache, debut, fin, ligne, mode (deplacer, debut, fin), copie }) → booléen | promesse, scinder({ tache, instant }),
  * selection(tache), ouvrir(tache), menu(e, tache | null, { ligne, instant }), menuLigne(e, ligne), deposer(e, { ligne, instant, tache }), largeurEntete(px) }.
  */
@@ -106,21 +106,29 @@ export class VuePlanning {
 
   // --- Données et réglages ---
 
-  /** Hauteur d'une voie (px) pour n lignes de texte par barre. */
-  static hauteurVoie(n) { return n <= 1 ? 22 : 15 * n + 8; }
+  /** Hauteur d'une voie (px) pour n lignes de texte par barre : lignes de 15 px, marges pour la barre d'avancement. */
+  static hauteurVoie(n) { return 15 * Math.max(1, n) + 12; }
 
   get options() { return this.#o; }
-  get minutesParPixel() { return ECHELLES[this.#o.echelle].minutes / this.#o.largeurColonne; }
+  get minutesParPixel() { return this.#minutesColonne() / this.#o.largeurColonne; }
+
+  /** Minutes visibles d'une colonne type : celles de l'échelle, réduites aux heures travaillées et aux jours visibles du masque. */
+  #minutesColonne() {
+    const m = this.#masqueEffectif();
+    if (!m) return ECHELLES[this.#o.echelle].minutes;
+    const jour = m.heures ? m.heures[1] - m.heures[0] : 1440;
+    return { HEURE: 60, DEMI_JOUR: jour / 2, JOUR: jour, SEMAINE: (7 - m.jours.length) * jour }[this.#o.echelle] ?? ECHELLES[this.#o.echelle].minutes;
+  }
   /** Position (px) d'un instant ; un instant masqué est placé au début de la période visible suivante. */
   x(m) { return this.#axe.x(m); }
   /** Instant (minutes) d'une position (px). */
   instantDe(px, fin = false) { return this.#axe.instant(px, fin); }
 
-  /** Masque appliqué à l'échelle courante. */
+  /** Masque appliqué (toutes les échelles : heures hors de la journée travaillée, jours masqués). */
   #masqueEffectif() {
-    const { masque, echelle } = this.#o;
-    if (!masque || echelle === 'SEMAINE') return null;
-    return { heures: echelle === 'HEURE' ? masque.heures ?? null : null, jours: masque.jours ?? [] };
+    const { masque } = this.#o;
+    if (!masque || (!masque.heures && !masque.jours?.length)) return null;
+    return { heures: masque.heures ?? null, jours: masque.jours ?? [] };
   }
 
   /** Remplace les lignes et les tâches (tâches d'une ligne inconnue ignorées). */
@@ -324,13 +332,20 @@ export class VuePlanning {
     return `<div class="vp-aujourdhui" style="left:${this.x(a)}px;width:${this.x(b) - this.x(a)}px" title="Aujourd'hui"></div>`;
   }
 
-  /** Fond : week-ends et séparations des colonnes par un dégradé répété (aucun élément par colonne). */
+  /**
+   * Fond : séparations des colonnes par un dégradé répété (aucun élément par colonne) ; temps masqué : colonnes de
+   * largeurs différentes, une séparation par colonne visible. Week-ends en bandes.
+   */
   #dessinerFond() {
     const { debut, fin, echelle, largeurColonne } = this.#o;
     const fond = this.conteneur.querySelector('.vp-fond');
+    const masque = Boolean(this.#masqueEffectif());
+    fond.classList.toggle('sans-degrade', masque);
     fond.style.backgroundSize = `${largeurColonne}px 100%`;
     fond.style.backgroundPositionX = `${this.x(colonnes(debut, debut + 1, echelle)[0]?.debut ?? debut)}px`;
-    fond.innerHTML = (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
+    const separations = masque ? colonnes(debut, fin, echelle).filter((c) => this.x(c.fin) > this.x(c.debut))
+      .map((c) => `<div class="vp-colonne" style="left:${this.x(c.debut)}px"></div>`).join('') : '';
+    fond.innerHTML = separations + (echelle === 'SEMAINE' ? '' : colonnes(debut, fin, 'JOUR').filter((x) => x.weekend)
       .map((x) => [this.x(x.debut), this.x(x.fin)]).filter(([a, b]) => b > a).map(([a, b]) => `<div class="vp-weekend" style="left:${a}px;width:${b - a}px"></div>`).join(''))
       + this.#axe.coupures.map((x) => `<div class="vp-coupure" style="left:${x}px" title="Période masquée"></div>`).join('') + this.#aujourdhui();
   }

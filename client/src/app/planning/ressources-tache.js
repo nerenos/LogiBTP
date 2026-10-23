@@ -18,6 +18,16 @@ const ETATS_DISPO = {
 };
 
 const cleDe = (r) => `${r.type}:${r.id}`;
+
+/** Services choisis par un filtre : le service et ses sous-services (identifiants en texte). */
+export function servicesFiltres(id, services) {
+  if (id === '' || id == null) return null;
+  return new Set([String(id), ...services.filter((s) => String(s.parent_id) === String(id)).map((s) => String(s.id))]);
+}
+
+let referentiels = null;
+/** Services (avec leur parent) pour les filtres, lus une fois. */
+const servicesConnus = async () => (await (referentiels ??= api.planning.referentiels().catch(() => ({ services: [] })))).services ?? [];
 const jour = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '');
 const quand = (s) => `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)}`;
 
@@ -171,12 +181,16 @@ export class RessourcesTache {
  */
 export async function choisirRessources({ du, au, exclure, selection }) {
   let liste;
-  try { liste = await api.planning.disponibilites({ du, au, exclure: exclure ?? '' }); } catch (e) { alert(e.message); return null; }
+  let tous;
+  try { [liste, tous] = await Promise.all([api.planning.disponibilites({ du, au, exclure: exclure ?? '' }), servicesConnus()]); } catch (e) { alert(e.message); return null; }
   const choisies = new Set(selection);
   return new Promise((resoudre) => {
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure dialogue-ressources';
-    const services = [...new Map(liste.filter((r) => r.srv_id).map((r) => [r.srv_id, r.service])).entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+    // Services des ressources listées et leurs parents (un parent choisi comprend ses sous-services).
+    const presents = new Set(liste.filter((r) => r.srv_id).map((r) => r.srv_id));
+    for (const x of tous) if (presents.has(x.id) && x.parent_id) presents.add(x.parent_id);
+    const services = tous.filter((x) => presents.has(x.id)).map((x) => [x.id, x.parent_id ? `↳ ${x.libelle}` : x.libelle]);
     const types = [...new Set(liste.map((r) => r.type))];
     dlg.innerHTML = `<h3>Ressources — du ${quand(du)} au ${quand(au)}</h3>
       <div class="ligne filtres-ressources"><input type="search" data-texte placeholder="Rechercher…"><span data-service></span><span data-type></span>
@@ -191,10 +205,11 @@ export async function choisirRessources({ du, au, exclure, selection }) {
     type.placeholder = 'Type';
     dlg.querySelector('[data-type]').append(type);
     const corps = dlg.querySelector('tbody');
+    const filtreSrv = () => servicesFiltres(service.valeurCombo, tous);
     const visibles = () => {
       const t = dlg.querySelector('[data-texte]').value.trim().toLowerCase();
       return liste.filter((r) => (!t || `${r.libelle} ${r.service ?? ''}`.toLowerCase().includes(t))
-        && (!service.valeurCombo || String(r.srv_id) === String(service.valeurCombo)) && (!type.valeurCombo || r.type === type.valeurCombo)
+        && (!filtreSrv() || filtreSrv().has(String(r.srv_id))) && (!type.valeurCombo || r.type === type.valeurCombo)
         && (!dlg.querySelector('[data-libres]').checked || r.etat === 'LIBRE' || r.etat === 'SANS')
         && (!dlg.querySelector('[data-choisies]').checked || choisies.has(r.cle)));
     };
@@ -273,12 +288,13 @@ export function rendreOngletRessources(zone, ressources, services, equipes = [])
   zone.querySelector('[data-type]').append(type);
   const icone = (x) => (x.type === 'EQUIPE' ? '👥' : x.type === 'MATERIEL' ? '🚜' : x.type === 'SOUS_TRAITANT' ? '🏢' : '👷');
   const rendre = () => {
+    const srv = servicesFiltres(service.valeurCombo, services);
     const pres = zone.querySelector('[data-presentation]');
     pres.textContent = tuiles ? '☰' : '▦';
     pres.title = tuiles ? 'Présenter en liste' : 'Présenter en tuiles';
     const t = zone.querySelector('[data-filtre]').value.trim().toLowerCase();
     const l = elements.filter((x) => (!t || `${x.libelle} ${x.code ?? ''} ${x.service ?? ''}`.toLowerCase().includes(t))
-      && (!service.valeurCombo || String(x.srv_id) === String(service.valeurCombo)) && (!type.valeurCombo || x.type === type.valeurCombo));
+      && (!srv || srv.has(String(x.srv_id))) && (!type.valeurCombo || x.type === type.valeurCombo));
     const vus = l.slice(0, 500);
     const liste = zone.querySelector('[data-liste]');
     const suite = l.length > 500 ? `<p class="aide">${l.length - 500} de plus : préciser la recherche.</p>` : '';

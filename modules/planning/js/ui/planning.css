@@ -49,12 +49,14 @@
   background-image: linear-gradient(to right, rgba(148, 163, 184, .25) 1px, transparent 1px);
 }
 .vp-weekend { position: absolute; top: 0; bottom: 0; background: rgba(148, 163, 184, .12); }
+.vp-fond.sans-degrade { background-image: none; }
+.vp-colonne { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid rgba(148, 163, 184, .25); }
 /* Période masquée (heures non travaillées, jours masqués) : trait de coupure. */
 .vp-coupure { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid rgba(100, 116, 139, .7); margin-left: -1px; }
 .vp-separation { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid rgba(148, 163, 184, .25); }
 .vp-barre {
-  position: absolute; box-sizing: border-box; padding: 1px 5px; border-radius: 3px; overflow: hidden;
-  white-space: nowrap; text-overflow: ellipsis; cursor: grab; color: #fff; line-height: calc(var(--vp-voie) - 4px);
+  position: absolute; box-sizing: border-box; border-radius: 3px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; cursor: grab; color: #fff; line-height: 15px; padding: 2px 5px 6px;
   background: var(--vp-couleur); border: 1px solid rgba(0, 0, 0, .15);
 }
 .vp-barre::before, .vp-barre::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5px; cursor: ew-resize; }

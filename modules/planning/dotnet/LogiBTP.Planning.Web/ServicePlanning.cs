@@ -23,7 +23,8 @@ public class TacheEntite
     public string? TacMemo { get; set; }
     public short TacAvancement { get; set; }
     public string? TacCouleur { get; set; }
-    public string TacEtat { get; set; } = "PREVUE";
+    /// <summary>État de la tâche, facultatif (vide par défaut) : OPTION, PREVUE, CONFIRMEE, EN_COURS, TERMINEE.</summary>
+    public string? TacEtat { get; set; }
     public string TacMobile { get; set; } = "{}";
     /// <summary>Copies des compositions d'équipes appliquées (JSON : équipe → { date, membres }).</summary>
     public string TacEquipes { get; set; } = "{}";
@@ -93,6 +94,13 @@ public sealed record RessourcePlanning(string Type, string Id, string Libelle, i
     public string Cle => $"{Type}:{Id}";
 }
 public sealed record ServicePlanningDto(int Id, string Code, string Libelle, int? ParentId);
+/// <summary>
+/// Point de départ d'une tâche (onglet « À créer ») : type (CHANTIER, PROJET, ORDRE…), élément de la tâche
+/// (type et identifiant), origine (ordre), service, dates et heures proposées s'ils sont connus.
+/// </summary>
+public sealed record SourceTache(string Type, string Id, string Code, string Libelle, string? Detail, string TypeElement, string IdElement,
+    string? OrigineType, string? OrigineId, int? SrvId, string? Debut, string? Fin, int? Heures, string? Etat);
+
 public sealed record ElementPlanning(string Type, string Id, string Code, string Libelle, string? Url);
 /// <summary>Date prévisionnelle d'un élément à planifier pour un service (tri de la liste « À planifier »).</summary>
 public class PrevisionEntite
@@ -116,7 +124,7 @@ public sealed record DefinitionVue(string Regroupement = "RESSOURCE", string Ech
 public sealed record AffectationSaisie(string Type, string Id, int? EquipeId = null, decimal? Quantite = null);
 public sealed record TacheSaisie(int Calcul, string Debut, string? Fin, int? Heures, int NbRessources, int? SrvId, string TypeElement, string? IdElement,
     string Libelle, List<AffectationSaisie>? Affectations, string? OrigineType = null, string? OrigineId = null, string? Memo = null, int Avancement = 0,
-    string? Couleur = null, string Etat = "PREVUE", int? Version = null, List<string>? Habilitations = null, long? ParentId = null, Guid? Serie = null,
+    string? Couleur = null, string? Etat = null, int? Version = null, List<string>? Habilitations = null, long? ParentId = null, Guid? Serie = null,
     Dictionary<string, string?>? Mobile = null, Dictionary<string, CompositionEquipe>? Equipes = null);
 public sealed record DeplacementSaisi(string Debut, string Fin, string Mode, string? De, string? Vers, bool Copie, int Version);
 public sealed record ScissionSaisie(string Instant, int Version);
@@ -133,6 +141,10 @@ public abstract class SpecialisationPlanning
     public abstract Task<List<(long Debut, long Fin)>> PlagesServiceAsync(PlanningDbContext db, int? service, DateOnly du, DateOnly au, CancellationToken ct);
     public abstract Task<List<EquipePlanning>> EquipesAsync(PlanningDbContext db, CancellationToken ct);
     public abstract Task<List<(string Type, string Id)>> MembresAsync(PlanningDbContext db, int equipe, DateOnly date, CancellationToken ct);
+    /// <summary>Points de départ de tâches d'un type (projets, chantiers, ordres en cours…), même sans heures à planifier ; aucun par défaut.</summary>
+    public virtual Task<List<SourceTache>> SourcesAsync(PlanningDbContext db, string type, string? recherche, CancellationToken ct) => Task.FromResult(new List<SourceTache>());
+    /// <summary>Types de points de départ proposés (code, libellé) ; aucun par défaut.</summary>
+    public virtual IReadOnlyList<(string Code, string Libelle)> TypesSources => [];
     /// <summary>Change le service principal d'une ressource (menu du planning) ; non pris en charge par défaut.</summary>
     public virtual Task ChangerServiceAsync(PlanningDbContext db, string type, string id, int service, Utilisateur u, CancellationToken ct) =>
         throw ExceptionMetier.Invalide("PLA_SERVICE_RESSOURCE", "Le service de cette ressource ne se change pas depuis le planning");
@@ -365,7 +377,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         t.TacMemo = s.Memo;
         t.TacAvancement = (short)Math.Clamp(s.Avancement, 0, 100);
         t.TacCouleur = s.Couleur;
-        t.TacEtat = s.Etat;
+        t.TacEtat = string.IsNullOrWhiteSpace(s.Etat) ? null : s.Etat;
         t.TacHabilitations = [.. (s.Habilitations ?? []).Select(h => h.Trim()).Where(h => h.Length > 0).Distinct()];
         if (s.ParentId == t.TacId && t.TacId != 0) throw ExceptionMetier.Invalide("PLA_PARENT", "Une tâche ne peut pas être sa propre tâche principale");
         t.TacParentId = s.ParentId;
@@ -596,5 +608,5 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
         await specialisation.RessourcesAsync(db, new FiltreRessources(await ServicesDeAsync(services?.Split(',', StringSplitOptions.RemoveEmptyEntries), ct),
             types?.Split(',', StringSplitOptions.RemoveEmptyEntries), recherche), ct);
 
-    public Task<List<ElementPlanning>> ElementsAsync(string? recherche, CancellationToken ct) => specialisation.ElementsAsync(db, "chantier", null, recherche, ct);
+    public Task<List<ElementPlanning>> ElementsAsync(string? recherche, CancellationToken ct, string type = "chantier") => specialisation.ElementsAsync(db, type, null, recherche, ct);
 }

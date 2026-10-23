@@ -18,3 +18,7 @@ COMMENT ON TABLE pla_prevision IS 'Date prévisionnelle d''un élément à plani
 -- retirés de la tâche sans toucher à l'équipe ; un changement de composition pendant la tâche est proposé à l'utilisateur.
 ALTER TABLE pla_tache ADD COLUMN IF NOT EXISTS tac_equipes JSONB NOT NULL DEFAULT '{}';
 COMMENT ON COLUMN pla_tache.tac_equipes IS 'Compositions d''équipes appliquées : { "<equ_id>": { "date": "AAAA-MM-JJ", "membres": ["SALARIE:12", …] } }';
+
+-- État d'une tâche facultatif : vide par défaut (aucune pastille), sinon OPTION, PREVUE, CONFIRMEE, EN_COURS, TERMINEE.
+ALTER TABLE pla_tache ALTER COLUMN tac_etat DROP NOT NULL;
+ALTER TABLE pla_tache ALTER COLUMN tac_etat DROP DEFAULT;

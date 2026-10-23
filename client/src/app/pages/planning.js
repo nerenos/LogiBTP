@@ -14,13 +14,17 @@ import { RessourcesTache, rendreOngletRessources, TYPE_GLISSER_RESSOURCE } from 
 const ETATS = { OPTION: 'Option', PREVUE: 'Prévue', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', TERMINEE: 'Terminée' };
 /** Couleur de la pastille de chaque état (combo du détail, barres). */
 const COULEURS_ETAT = { OPTION: '#98a2b3', PREVUE: '#2563eb', CONFIRMEE: '#16a34a', EN_COURS: '#d97706', TERMINEE: '#475467' };
-const pastilleEtat = (etat) => `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>`;
+/** Pastille de l'état ; sans état (vide, par défaut) : aucune pastille. */
+const pastilleEtat = (etat) => (etat ? `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>` : '');
+/** États proposés à la saisie : « Aucun » (vide) d'abord. */
+const ETATS_SAISIE = { '': 'Aucun', ...ETATS };
 const LIGNES_TEXTE = [1, 2, 3, 4, 5, 6, 8, 10];
 const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 const TRIS_APLANIFIER = { nom: 'Nom', service: 'Service', reste: 'Reste', date: 'Date prévisionnelle' };
 /** Onglets du panneau du planning (icône en panneau réduit). */
 const ONGLETS_PANNEAU = {
-  aplanifier: { libelle: 'À planifier', icone: '📋', compteur: true }, ressources: { libelle: 'Ressources et équipes', icone: '👷' }, tache: { libelle: 'Tâche', icone: '✎' },
+  aplanifier: { libelle: 'À planifier', icone: '📋', compteur: true },
+  creer: { libelle: 'Créer une tâche depuis un projet, un chantier ou un ordre en cours', icone: '✚' }, ressources: { libelle: 'Ressources et équipes', icone: '👷' }, tache: { libelle: 'Tâche', icone: '✎' },
   alertes: { libelle: 'Alertes', icone: '⚠', compteur: true }, jalons: { libelle: 'Jalons', icone: '◆', compteur: true },
 };
 const ETATS_PANNEAU = ['normal', 'reduit', 'masque'];
@@ -29,6 +33,9 @@ const action = (attr, valeur, icone, titre) => `<button type="button" class="bou
 const MODES = { 1: 'Début + heures → fin', 2: 'Début + fin → heures', 3: 'Charge (heures ventilées)' };
 const LARGEURS = { HEURE: 40, DEMI_JOUR: 60, JOUR: 48, SEMAINE: 90 };
 const TYPE_GLISSER = 'application/x-logibtp-planning';
+const TYPE_GLISSER_SOURCE = 'application/x-logibtp-planning-source';
+/** Heures proposées à la création depuis une source : celles de la source, au plus 35 h, sinon 7 h. */
+const heuresSource = (s) => (s.heures ? Math.max(15, Math.min(s.heures, 2100)) : 420);
 const COULEURS_SERVICE = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be185d', '#4d7c0f', '#dc2626'];
 const versLocal = (s) => (s ? s.slice(0, 16) : '');
 const TYPES_DEP = { FD: 'Fin → début', DD: 'Début → début' };
@@ -91,7 +98,7 @@ class VuePlanningBtp extends VuePlanning {
     return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
-  classeBarre(t) { return `${t.theorique ? 'theorique' : ''} etat-${String(t.etat).toLowerCase()}`; }
+  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}`; }
 
   /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité ; jalons des chantiers (lot 5). */
   decorationsLigne(l) {
@@ -120,7 +127,7 @@ class VuePlanningBtp extends VuePlanning {
     const service = this.services?.get(t.srv_id);
     const av = Number(t.avancement) || 0;
     return `<div class="bulle-tache" style="--bt-couleur:${t.couleur ?? '#3b82f6'}">
-      <div class="bt-entete">${pastilleEtat(t.etat)}<span>${echapper(ETATS[t.etat] ?? t.etat)}</span>${t.theorique ? '<span class="bt-theorique">théorique</span>' : ''}</div>
+      <div class="bt-entete">${pastilleEtat(t.etat)}<span>${echapper(t.etat ? ETATS[t.etat] ?? t.etat : 'Sans état')}</span>${t.theorique ? '<span class="bt-theorique">théorique</span>' : ''}</div>
       ${t.element ? `<div class="bt-chantier"><b>${echapper(t.element.code)}</b> ${echapper(t.element.libelle ?? '')}</div>` : ''}
       <div class="bt-libelle">${echapper(t.libelle)}</div>
       <dl>${ligne('Début', quand(t.debut))}${ligne('Fin', quand(t.fin))}${ligne('Heures', `${ecrireDuree(t.heures) || '0:00'} h`)}${ligne('Service', service ? echapper(service) : '')}
@@ -130,7 +137,7 @@ class VuePlanningBtp extends VuePlanning {
   }
 
   titreBarre(t) {
-    return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle} (${ETATS[t.etat] ?? t.etat})\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
+    return `${t.element ? `${t.element.code} ${t.element.libelle}\n` : ''}${t.libelle}${t.etat ? ` (${ETATS[t.etat] ?? t.etat})` : ''}\n${depuisMinutes(t.debut).replace('T', ' ')} → ${depuisMinutes(t.fin).replace('T', ' ')}\n${ecrireDuree(t.heures)} h${t.ressources?.length ? `\n${t.ressources.join(', ')}` : ''}`;
   }
 }
 
@@ -225,6 +232,7 @@ export class PagePlanning extends PageBase {
     this.#definition();
     await this.#charger();
     await this.#aPlanifier();
+    if (!this.consultation) this.#rendreCreer();
     if (!this.consultation) rendreOngletRessources(c.querySelector('[data-panneau="ressources"]'), await this.#toutesRessources(), this.ref.services, this.ref.equipes);
   }
 
@@ -631,6 +639,16 @@ export class PagePlanning extends PageBase {
       await this.#ajouterRessource(tache.tache, JSON.parse(glissee));
       return;
     }
+    const source = e.dataTransfer.getData(TYPE_GLISSER_SOURCE);
+    if (source && ligne) {
+      const s = JSON.parse(source);
+      const res = this.#ressourceDe(ligne);
+      const r = await this.#apres(api.planning.creer({
+        ...this.#saisieSource(s), calcul: 1, debut: depuisMinutes(instant), fin: null, srv_id: s.srv_id ?? ligne.srv_id ?? null, affectations: res ? [{ type: res.type, id: res.id }] : [],
+      }), 'Tâche créée');
+      if (r) this.#memoriserCreation(r, 'création');
+      return;
+    }
     const brut = e.dataTransfer.getData(TYPE_GLISSER);
     if (!brut || !ligne) return;
     const x = JSON.parse(brut);
@@ -667,7 +685,7 @@ export class PagePlanning extends PageBase {
     ouvrirMenuContextuel(e, [
       { libelle: '✎ Détail de la tâche', action: () => this.#afficherTache(b.tache) },
       { separateur: true },
-      ...Object.entries(ETATS).map(([etat, libelle]) => ({ libelle: `${b.etat === etat ? '● ' : '○ '}${libelle}`, actif: b.etat !== etat, titre: 'Changer l\'état de la tâche', action: () => this.#changerEtat(b.tache, etat) })),
+      ...Object.entries(ETATS_SAISIE).map(([etat, libelle]) => ({ libelle: `${(b.etat ?? '') === etat ? '● ' : '○ '}${libelle}`, actif: (b.etat ?? '') !== etat, titre: 'Changer l\'état de la tâche', action: () => this.#changerEtat(b.tache, etat) })),
       { separateur: true },
       { libelle: '⧉ Dupliquer', raccourci: libelleRaccourci('dupliquer', 'planning'), action: () => this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true }) },
       { libelle: '✂ Scinder ici', raccourci: 'Alt+clic', actif: scinder, action: () => this.#scinder({ tache: b, instant }) },
@@ -713,6 +731,55 @@ export class PagePlanning extends PageBase {
     const t = await api.planning.tache(id).catch((e) => { this.app.erreur(e); return null; });
     if (!t) return;
     await this.#modifierMemorise(id, 'changement d\'état', () => api.planning.modifier(id, { ...saisieDe(t), etat, fin: t.calcul === 1 ? null : t.fin, heures: t.calcul === 2 ? null : t.heures, version: t.version }));
+  }
+
+  /** Saisie d'une tâche créée depuis une source (projet, chantier, ordre) : élément, origine, service, libellé, heures. */
+  #saisieSource(s) {
+    return {
+      calcul: 1, heures: heuresSource(s), nb_ressources: 1, srv_id: s.srv_id ?? null, type_element: s.type_element, id_element: s.id_element,
+      origine_type: s.origine_type ?? null, origine_id: s.origine_id ?? null, libelle: s.type === 'ORDRE' ? `${s.code} ${s.libelle}` : s.libelle,
+    };
+  }
+
+  /**
+   * Onglet « Créer depuis » : projets, chantiers ou ordres en cours (type choisi, préférence `planningCreerType`),
+   * même sans heures à planifier ; glisser une ligne sur le planning crée la tâche au point de dépôt, ＋ ouvre le
+   * détail d'une nouvelle tâche pré-remplie.
+   */
+  async #rendreCreer() {
+    const zone = this.conteneur.querySelector('[data-panneau="creer"]');
+    let types = [];
+    try { types = (await api.planning.sources()).types; } catch { /* serveur sans les sources */ }
+    if (!types.length) { zone.innerHTML = '<p class="aide">Aucune source de tâche disponible.</p>'; return; }
+    zone.classList.add('onglet-liste');
+    zone.innerHTML = `<div class="onglet-liste-haut"><div class="barre-aplanifier"><span data-type-source></span><input type="search" data-recherche-source placeholder="Rechercher (code, libellé, client)…"></div>
+      <p class="aide">Glisser sur le planning : la tâche est créée au point de dépôt. ＋ : nouvelle tâche pré-remplie.</p></div><div class="onglet-liste-corps" data-liste-source></div>`;
+    const prefere = lirePreferences().planningCreerType;
+    const type = creerCombo({ options: types.map((t) => ({ valeur: t.code, libelle: t.libelle })), valeur: types.some((t) => t.code === prefere) ? prefere : types[0].code, vide: false, titre: 'Point de départ' });
+    type.size = 22;
+    zone.querySelector('[data-type-source]').append(type);
+    const recherche = zone.querySelector('[data-recherche-source]');
+    const charger = async () => {
+      const liste = zone.querySelector('[data-liste-source]');
+      let l;
+      try { l = (await api.planning.sources(type.valeurCombo, recherche.value.trim())).sources; } catch (e) { liste.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+      const date = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '');
+      liste.innerHTML = l.length ? `<table class="tableau-compact pleine-largeur"><thead><tr><th>Source</th><th>Prévu</th><th class="nombre">Heures</th><th></th></tr></thead><tbody>
+        ${l.map((s, i) => `<tr draggable="true" class="glissable" data-i="${i}" title="${echapper(s.detail ?? '')}"><td><b>${echapper(s.code)}</b> <small>${echapper(s.libelle)}</small><br><small class="aide">${echapper(s.detail ?? '')}</small></td>
+          <td><small>${s.debut || s.fin ? `${date(s.debut)} → ${date(s.fin)}` : ''}</small></td><td class="nombre">${s.heures ? ecrireDuree(s.heures) : ''}</td>
+          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-nouvelle-source title="Nouvelle tâche pré-remplie" aria-label="Nouvelle tâche">＋</button></td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucun élément.</p>';
+      liste.querySelectorAll('tr[data-i]').forEach((tr) => {
+        const s = l[Number(tr.dataset.i)];
+        tr.addEventListener('dragstart', (e) => { e.dataTransfer.setData(TYPE_GLISSER_SOURCE, JSON.stringify(s)); e.dataTransfer.effectAllowed = 'copy'; });
+        tr.querySelector('[data-nouvelle-source]').addEventListener('click', () => this.#afficherTache(null, {
+          ...this.#saisieSource(s), debut: s.debut ? `${s.debut.slice(0, 10)}T08:00` : undefined, affectations: [],
+        }));
+      });
+    };
+    type.addEventListener('change', () => { ecrirePreferences({ planningCreerType: type.valeurCombo }); charger(); });
+    recherche.addEventListener('change', charger);
+    await charger();
   }
 
   /** Toutes les ressources (combos et onglet Ressources), lues une fois. */
@@ -965,10 +1032,11 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
     } else {
       const debut = depuisMinutes(debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'JOUR') + 1440 + 480);
-      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: 'PREVUE', affectations: [], ...preremplie };
+      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: null, affectations: [], ...preremplie };
       this.#onglet('tache');
     }
-    const elements = await api.planning.elements().catch(() => []);
+    const typeElement = t.type_element === 'projet' ? 'projet' : 'chantier';
+    const elements = await api.planning.elements('', typeElement).catch(() => []);
     if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
     const mobile = t.mobile ?? {};
     const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${GROUPES_TACHE[cle]}</b></summary>${corps}</details>`;
@@ -977,7 +1045,8 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>`;
     zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
-        <p class="ligne">Chantier <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
+        <p class="ligne">${typeElement === 'projet' ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
+        ${t.origine_type === 'ordre' ? `<p class="aide">Depuis l'ordre n° ${echapper(String(t.origine_id))}</p>` : ''}
         <p class="ligne">Calcul <span data-mode></span></p>
         <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
         <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>
@@ -1004,7 +1073,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
     const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
     const mode = combo('mode', options(MODES), String(t.calcul), false);
-    const etat = combo('etat-tache', options(ETATS).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat, false);
+    const etat = combo('etat-tache', options(ETATS_SAISIE).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat ?? '', false);
     // Période de la tâche pour les disponibilités : début et fin saisis, sinon fin calculée (aperçu), sinon un jour.
     const periode = async () => {
       const du = zone.querySelector('[data-debut]').value;
@@ -1045,9 +1114,10 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       const m = Number(mode.valeurCombo);
       return {
         calcul: m, debut: v('[data-debut]').value, fin: m === 1 ? null : v('[data-fin]').value || null, heures: m === 2 ? null : lireDuree(v('[data-heures]').value),
-        nb_ressources: Number(v('[data-nb]').value) || 1, srv_id: service.valeurCombo ? Number(service.valeurCombo) : null, type_element: 'chantier',
+        nb_ressources: Number(v('[data-nb]').value) || 1, srv_id: service.valeurCombo ? Number(service.valeurCombo) : null, type_element: t.type_element || 'chantier',
+        origine_type: t.origine_type ?? null, origine_id: t.origine_id ?? null,
         id_element: element.valeurCombo ? String(element.valeurCombo) : null, libelle: v('[data-libelle]').value, memo: v('[data-memo]').value || null,
-        avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo,
+        avancement: Number(v('[data-avancement]').value) || 0, couleur: v('[data-sans-couleur]').checked ? null : v('[data-couleur]').value, etat: etat.valeurCombo || null,
         ...ressources.saisie(), version: t.version, habilitations: habs,
         parent_id: t.parent_id ?? null, mobile: Object.fromEntries([...zone.querySelectorAll('[data-mobile]')].map((x) => [x.dataset.mobile, x.value])),
       };

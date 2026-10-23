@@ -202,8 +202,63 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             WHERE d > @du AND d <= @au
             """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct)).Order().ToList();
 
-    public override Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<ElementPlanning>("""
+    public override IReadOnlyList<(string Code, string Libelle)> TypesSources => [("CHANTIER", "Chantiers ouverts"), ("PROJET", "Projets en chiffrage"), ("ORDRE", "Ordres d'exécution en cours")];
+
+    /// <summary>
+    /// Points de départ de tâches : chantiers ouverts et internes (dates d'ouverture et de fin prévue), projets en chiffrage
+    /// ou remis (tâche théorique sur le projet), ordres d'exécution non terminés si l'Exécution est active (tâche sur le
+    /// chantier de l'ordre, origine = l'ordre, service, dates prévues et heures de main-d'œuvre de l'ordre). 300 au plus.
+    /// </summary>
+    public override Task<List<SourceTache>> SourcesAsync(PlanningDbContext db, string type, string? recherche, CancellationToken ct)
+    {
+        var sql = type switch
+        {
+            "CHANTIER" => """
+                SELECT 'CHANTIER' AS type, c.cha_id::text AS id, c.cha_code AS code, c.cha_libelle AS libelle,
+                       concat_ws(' · ', t.per_raison_sociale, c.cha_ville) AS detail, 'chantier' AS type_element, c.cha_id::text AS id_element,
+                       NULL::text AS origine_type, NULL::text AS origine_id, NULL::int AS srv_id,
+                       c.cha_date_ouverture::text AS debut, c.cha_date_fin_prevue::text AS fin, NULL::int AS heures, c.cha_statut AS etat
+                FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
+                WHERE (c.cha_statut = 'OUVERT' OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q OR t.per_raison_sociale ILIKE @q)
+                ORDER BY c.cha_interne, c.cha_code LIMIT 300
+                """,
+            "PROJET" => """
+                SELECT 'PROJET' AS type, p.prj_id::text AS id, p.prj_code AS code, p.prj_libelle AS libelle,
+                       concat_ws(' · ', t.per_raison_sociale, p.prj_ville) AS detail, 'projet' AS type_element, p.prj_id::text AS id_element,
+                       NULL::text AS origine_type, NULL::text AS origine_id, NULL::int AS srv_id,
+                       NULL::text AS debut, p.prj_date_remise::text AS fin, NULL::int AS heures, p.prj_statut AS etat
+                FROM projet p LEFT JOIN personne t ON t.per_id = p.prj_tiers_id
+                WHERE p.prj_statut IN ('EN_COURS', 'REMIS') AND (@q IS NULL OR p.prj_code ILIKE @q OR p.prj_libelle ILIKE @q OR t.per_raison_sociale ILIKE @q)
+                ORDER BY p.prj_code DESC LIMIT 300
+                """,
+            "ORDRE" => """
+                SELECT 'ORDRE' AS type, d.ent_id::text AS id, coalesce(d.ent_numero, 'Ordre ' || d.ent_id) AS code, coalesce(nullif(d.ent_objet, ''), y.tyd_libelle) AS libelle,
+                       concat_ws(' · ', y.tyd_libelle, c.cha_code, c.cha_libelle) AS detail, 'chantier' AS type_element, d.ent_chantier_id::text AS id_element,
+                       'ordre' AS origine_type, d.ent_id::text AS origine_id, d.ent_srv_id AS srv_id,
+                       d.ent_debut_prevu::text AS debut, d.ent_fin_prevue::text AS fin,
+                       (SELECT round(sum(h.heures) * 60)::int FROM v_heures_lignes h WHERE h.ent_id = d.ent_id) AS heures, d.ent_exe_etat AS etat
+                FROM document d JOIN type_document y ON y.tyd_id = d.ent_tyd_id JOIN chantier c ON c.cha_id = d.ent_chantier_id
+                WHERE f_module_actif('execution') AND y.tyd_famille = 'E' AND d.ent_is_reference AND coalesce(d.ent_exe_etat, 'A_FAIRE') <> 'TERMINE'
+                  AND (@q IS NULL OR d.ent_numero ILIKE @q OR d.ent_objet ILIKE @q OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
+                ORDER BY d.ent_debut_prevu NULLS LAST, d.ent_numero LIMIT 300
+                """,
+            _ => null,
+        };
+        if (sql is null) return Task.FromResult(new List<SourceTache>());
+        return db.Database.SqlQueryRaw<SourceTache>(sql,
+            new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
+    }
+
+    public override Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct) => type == "projet"
+        ? db.Database.SqlQueryRaw<ElementPlanning>("""
+            SELECT 'projet' AS type, p.prj_id::text AS id, p.prj_code AS code, p.prj_libelle AS libelle, '/fiche/projet/' || p.prj_id AS url
+            FROM projet p
+            WHERE (@ids IS NULL AND p.prj_statut IN ('EN_COURS', 'REMIS') AND (@q IS NULL OR p.prj_code ILIKE @q OR p.prj_libelle ILIKE @q)) OR p.prj_id::text = ANY(@ids)
+            ORDER BY p.prj_code LIMIT 500
+            """,
+            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct)
+        : db.Database.SqlQueryRaw<ElementPlanning>("""
             SELECT 'chantier' AS type, c.cha_id::text AS id, c.cha_code AS code, c.cha_libelle AS libelle, '/fiche/chantier/' || c.cha_id AS url
             FROM chantier c
             WHERE (@ids IS NULL AND (c.cha_statut = 'OUVERT' OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
