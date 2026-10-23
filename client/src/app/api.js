@@ -195,6 +195,10 @@ export const api = {
     naturesMo: () => appel('GET', '/ressources/natures-mo'),
     enregistrerNaturesMo: (l) => appel('PUT', '/ressources/natures-mo', l),
     equipes: (date = '') => appel('GET', `/ressources/equipes${date ? `?date=${date}` : ''}`),
+    listeEquipes: () => appel('GET', '/ressources/equipes/liste'),
+    compositionEquipe: (id) => appel('GET', `/ressources/equipes/${id}/composition`),
+    creerEquipe: (s) => appel('POST', '/ressources/equipes', s),
+    modifierEquipe: (id, s) => appel('PUT', `/ressources/equipes/${id}`, s),
   },
   async disponible() {
     try {

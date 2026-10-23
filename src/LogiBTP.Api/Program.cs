@@ -128,6 +128,7 @@ api.MapStructure();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();
+api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();
 api.MapCalendriersBtp();

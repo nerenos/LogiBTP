@@ -100,6 +100,8 @@ export const MENUS_METIER = [
       { code: 'planning-charge', libelle: 'Charge par service', icone: '📈', url: '/planning?vue=CHARGE_SERVICE' },
       { code: 'planning-livraisons', libelle: 'Livraisons', icone: '🚚', url: '/planning?vue=LIVRAISONS' },
       { separateur: true },
+      { code: 'planning-equipes', libelle: 'Équipes et compositions', icone: '👥', url: '/planning/equipes', info: 'Équipes, membres par périodes (salariés, intérimaires, matériels, sous-traitants, équipes en renfort), chef d\'équipe' },
+      { separateur: true },
       { code: 'parametrage-planning', libelle: 'Paramètres du planning…', icone: '⚙', url: '/parametres/planning' },
     ],
   },

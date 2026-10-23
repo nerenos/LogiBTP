@@ -783,3 +783,17 @@ dialog.dialogue-ressources { max-width: min(900px, calc(100vw - 32px)); }
 .menu-deroulant-contenu .mo-titre { display: flex; align-items: center; justify-content: space-between; font-weight: 600; padding: .1rem .2rem .3rem; border-bottom: 1px solid var(--bord); margin-bottom: .2rem; }
 .menu-options-planning input.combo { width: 9rem; }
 button.filtre-actif { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-clair); }
+
+/* Planning : page des équipes (liste à gauche, équipe et ses périodes à droite). */
+.page-parametres.page-equipes { max-width: none; overflow: hidden; }
+.equipes-corps { flex: 1; min-height: 0; display: flex; gap: .8rem; }
+.equipes-liste { width: 24rem; flex: none; overflow: auto; border-right: 1px solid var(--bord); padding-right: .5rem; }
+.equipes-liste tr.cliquable { cursor: pointer; }
+.equipes-detail { flex: 1; min-width: 0; overflow: auto; }
+.periodes-equipe { display: flex; flex-direction: column; gap: .5rem; max-width: 46rem; }
+.periode-equipe { border: 1px solid var(--bord); border-radius: 8px; padding: .4rem .6rem; background: var(--surface); }
+.periode-equipe.courante { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.periode-equipe .pe-entete { display: flex; align-items: center; gap: .6rem; }
+.periode-equipe .pe-entete .pe-resume { margin-left: auto; }
+.periode-equipe .pe-badge { position: static; background: var(--accent); padding: 0 .4rem; width: auto; }
+.chef-equipe { color: #d97706; font-size: .85em; }

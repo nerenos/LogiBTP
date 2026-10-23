@@ -150,10 +150,9 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
 
     public override async Task<List<(string Type, string Id)>> MembresAsync(PlanningDbContext db, int equipe, DateOnly date, CancellationToken ct) =>
         (await db.Database.SqlQueryRaw<Membre>("""
-            SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id
-            FROM equipe_composition c JOIN salarie s ON s.sal_id = c.eqc_sal_id
-            WHERE c.eqc_equ_id = @e AND c.eqc_du <= @d AND (c.eqc_au IS NULL OR c.eqc_au >= @d)
-            ORDER BY c.eqc_chef DESC, s.sal_nom
+            SELECT m.type, m.ressource AS id
+            FROM f_membres_equipe(@e, @d) m
+            ORDER BY m.chef DESC, m.niveau, m.type, m.ressource
             """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("d", date)).ToListAsync(ct)).Select(m => (m.Type, m.Id)).ToList();
 
     /// <summary>
@@ -194,12 +193,12 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
         await tx.CommitAsync(ct);
     }
 
-    /// <summary>Changements de composition d'une équipe : entrées (début) et lendemains de sorties (fin) sur la période.</summary>
+    /// <summary>Changements de composition d'une équipe et de ses sous-équipes : entrées (début) et lendemains de sorties (fin) sur la période.</summary>
     public override async Task<List<DateOnly>> ChangementsEquipeAsync(PlanningDbContext db, int equipe, DateOnly du, DateOnly au, CancellationToken ct) =>
         (await db.Database.SqlQueryRaw<DateOnly>("""
             SELECT DISTINCT d AS "Value" FROM (
-                SELECT eqc_du AS d FROM equipe_composition WHERE eqc_equ_id = @e
-                UNION SELECT eqc_au + 1 FROM equipe_composition WHERE eqc_equ_id = @e AND eqc_au IS NOT NULL) x
+                SELECT eqc_du AS d FROM equipe_composition WHERE eqc_equ_id IN (SELECT equipe FROM f_sous_equipes(@e))
+                UNION SELECT eqc_au + 1 FROM equipe_composition WHERE eqc_equ_id IN (SELECT equipe FROM f_sous_equipes(@e)) AND eqc_au IS NOT NULL) x
             WHERE d > @du AND d <= @au
             """, new NpgsqlParameter("e", equipe), new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct)).Order().ToList();
 

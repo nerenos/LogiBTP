@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ajouterMois, etatHabilitation, habilitationsManquantes, controlerHabilitation, controlerMissions, missionEnCours, MESSAGES_RESSOURCES,
 } from '../src/app/ressources/regles.js';
+import { periodesDepuisLignes, lignesDepuisPeriodes, controlerEquipe, MESSAGES_EQUIPES } from '../src/app/ressources/equipes.js';
 
 // Jeux partagés avec ReglesRessources.cs (tests/LogiBTP.Calcul.Tests/RessourcesTests.cs).
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/ressources');
@@ -26,4 +27,13 @@ describe('missions (jeu partagé)', () => {
     const codes = [...jeu('01_habilitations.json').controles.flatMap((c) => c.attendu), ...j.controles.flatMap((c) => c.attendu.flatMap((x) => x.codes))];
     for (const c of codes) expect(MESSAGES_RESSOURCES[c]).toBeTruthy();
   });
+});
+
+describe('équipes (jeu partagé)', () => {
+  const j = jeu('03_equipes.json');
+  for (const c of j.periodes) it(`périodes : ${c.nom}`, () => expect(periodesDepuisLignes(c.lignes)).toEqual(c.attendu));
+  for (const c of j.lignes) it(`lignes : ${c.nom}`, () => expect(lignesDepuisPeriodes(c.periodes)).toEqual(c.attendu));
+  for (const c of j.periodes) it(`aller-retour : ${c.nom}`, () => expect(lignesDepuisPeriodes(periodesDepuisLignes(c.lignes))).toEqual(lignesDepuisPeriodes(c.attendu)));
+  for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerEquipe(c.equipe)).toEqual(c.attendu));
+  it('chaque code a un libellé', () => { for (const c of j.controles.flatMap((x) => x.attendu)) expect(MESSAGES_EQUIPES[c.code]).toBeTruthy(); });
 });

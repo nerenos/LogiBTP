@@ -76,4 +76,45 @@ public class RessourcesTests
             Assert.True(c["attendu"]?.GetValue<int>() == m?.Id, c["nom"]!.GetValue<string>());
         }
     }
+
+    private static MembreEquipe Membre(JsonNode m) => new(m["type"]!.GetValue<string>(), m["id"]!.GetValue<string>(), m["chef"]!.GetValue<bool>());
+
+    private static PeriodeEquipe Periode(JsonNode p) => new(Jour(p["du"]), Jour(p["au"]), p["membres"]!.AsArray().Select(m => Membre(m!)).ToList());
+
+    private static LigneComposition Ligne(JsonNode l) => new(l["type"]!.GetValue<string>(), l["id"]!.GetValue<string>(), Jour(l["du"])!.Value, Jour(l["au"]), l["chef"]!.GetValue<bool>());
+
+    private static string Texte(IEnumerable<PeriodeEquipe> l) => string.Join(" ; ", l.Select(p => $"{p.Du}→{p.Au}: {string.Join(",", p.Membres)}"));
+
+    [Fact]
+    public void Equipes_identiques_au_js()
+    {
+        var j = Jeu("03_equipes.json");
+        foreach (var c in j["periodes"]!.AsArray())
+        {
+            var attendu = c!["attendu"]!.AsArray().Select(p => Periode(p!)).ToList();
+            var obtenu = ReglesEquipes.Periodes(c["lignes"]!.AsArray().Select(l => Ligne(l!)).ToList());
+            Assert.True(Texte(attendu) == Texte(obtenu), $"{c["nom"]} : {Texte(obtenu)}");
+        }
+        foreach (var c in j["lignes"]!.AsArray())
+        {
+            var attendu = c!["attendu"]!.AsArray().Select(l => Ligne(l!)).ToList();
+            Assert.Equal(attendu, ReglesEquipes.Lignes(c["periodes"]!.AsArray().Select(p => Periode(p!))));
+        }
+        foreach (var c in j["controles"]!.AsArray())
+        {
+            var e = c!["equipe"]!;
+            var attendu = c["attendu"]!.AsArray().Select(x => new ErreurEquipe(x!["code"]!.GetValue<string>(), x["periode"]?.GetValue<int>())).ToList();
+            var obtenu = ReglesEquipes.Controler(e["id"]?.GetValue<int>(), e["code"]?.GetValue<string>(), e["libelle"]?.GetValue<string>(),
+                e["periodes"]!.AsArray().Select(p => Periode(p!)).ToList());
+            Assert.Equal(attendu, obtenu);
+        }
+    }
+
+    [Fact]
+    public void Equipe_qui_contient_une_equipe_qui_la_contient()
+    {
+        var sous = new Dictionary<int, HashSet<int>> { [1] = [2], [2] = [3], [3] = [] };
+        Assert.True(ReglesEquipes.Contient(sous, 1, 3));
+        Assert.False(ReglesEquipes.Contient(sous, 3, 1));
+    }
 }

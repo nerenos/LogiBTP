@@ -132,12 +132,11 @@ public class SpecialisationPointageBtp : SpecialisationPointage
     public override Task<List<EquipePointage>> EquipesAsync(PointageDbContext db, int? service, DateOnly date, CancellationToken ct) =>
         db.Database.SqlQueryRaw<EquipePointage>("""
             SELECT e.equ_id AS id, e.equ_libelle AS libelle,
-                   coalesce(array_agg(c.eqc_sal_id ORDER BY c.eqc_chef DESC, c.eqc_sal_id) FILTER (WHERE c.eqc_sal_id IS NOT NULL), ARRAY[]::int[]) AS membres
+                   ARRAY(SELECT m.ressource::int FROM f_membres_equipe(e.equ_id, @d) m WHERE m.type IN ('SALARIE', 'INTERIM')
+                         ORDER BY m.chef DESC, m.niveau, m.ressource::int) AS membres
             FROM equipe e
             LEFT JOIN service sv ON sv.srv_id = e.equ_srv_id
-            LEFT JOIN equipe_composition c ON c.eqc_equ_id = e.equ_id AND c.eqc_du <= @d AND (c.eqc_au IS NULL OR c.eqc_au >= @d)
             WHERE e.equ_active AND (@s IS NULL OR e.equ_srv_id = @s OR sv.srv_parent_id = @s)
-            GROUP BY e.equ_id, e.equ_libelle
             ORDER BY e.equ_libelle
             """, new NpgsqlParameter("d", date), new NpgsqlParameter("s", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)service ?? DBNull.Value }).ToListAsync(ct);
 

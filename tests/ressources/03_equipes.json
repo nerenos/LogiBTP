@@ -1,0 +1,103 @@
+{
+  "description": "Compositions des équipes (client/src/app/ressources/equipes.js ↔ ReglesEquipes.cs) : lignes de composition → périodes (une par intervalle entre deux changements, intervalles sans membre omis, membres triés chef d'abord puis type et identifiant ; comparaisons ordinales, identifiants numériques comparés en nombres), périodes → lignes (périodes contiguës fusionnées par membre et rôle), contrôle d'une saisie.",
+  "periodes": [
+    {
+      "nom": "équipe fixe depuis une date",
+      "lignes": [{ "type": "SALARIE", "id": "12", "du": "2026-09-01", "au": null, "chef": true }, { "type": "MATERIEL", "id": "4", "du": "2026-09-01", "au": null, "chef": false }],
+      "attendu": [{ "du": "2026-09-01", "au": null, "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "MATERIEL", "id": "4", "chef": false }] }]
+    },
+    {
+      "nom": "changement en pleine semaine : un intérimaire du mercredi au vendredi, une sous-équipe en renfort ensuite",
+      "lignes": [
+        { "type": "SALARIE", "id": "12", "du": "2026-10-19", "au": null, "chef": true },
+        { "type": "INTERIM", "id": "30", "du": "2026-10-21", "au": "2026-10-23", "chef": false },
+        { "type": "EQUIPE", "id": "3", "du": "2026-10-26", "au": "2026-12-18", "chef": false }
+      ],
+      "attendu": [
+        { "du": "2026-10-19", "au": "2026-10-20", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }] },
+        { "du": "2026-10-21", "au": "2026-10-23", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "INTERIM", "id": "30", "chef": false }] },
+        { "du": "2026-10-24", "au": "2026-10-25", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }] },
+        { "du": "2026-10-26", "au": "2026-12-18", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "EQUIPE", "id": "3", "chef": false }] },
+        { "du": "2026-12-19", "au": null, "membres": [{ "type": "SALARIE", "id": "12", "chef": true }] }
+      ]
+    },
+    {
+      "nom": "interruption (aucun membre) puis reprise",
+      "lignes": [{ "type": "SALARIE", "id": "7", "du": "2026-01-05", "au": "2026-01-30", "chef": false }, { "type": "SALARIE", "id": "7", "du": "2026-03-02", "au": "2026-03-27", "chef": false }],
+      "attendu": [
+        { "du": "2026-01-05", "au": "2026-01-30", "membres": [{ "type": "SALARIE", "id": "7", "chef": false }] },
+        { "du": "2026-03-02", "au": "2026-03-27", "membres": [{ "type": "SALARIE", "id": "7", "chef": false }] }
+      ]
+    },
+    {
+      "nom": "le chef change : nouvelle période",
+      "lignes": [
+        { "type": "SALARIE", "id": "1", "du": "2026-05-04", "au": "2026-05-15", "chef": true }, { "type": "SALARIE", "id": "1", "du": "2026-05-16", "au": null, "chef": false },
+        { "type": "SALARIE", "id": "2", "du": "2026-05-04", "au": "2026-05-15", "chef": false }, { "type": "SALARIE", "id": "2", "du": "2026-05-16", "au": null, "chef": true }
+      ],
+      "attendu": [
+        { "du": "2026-05-04", "au": "2026-05-15", "membres": [{ "type": "SALARIE", "id": "1", "chef": true }, { "type": "SALARIE", "id": "2", "chef": false }] },
+        { "du": "2026-05-16", "au": null, "membres": [{ "type": "SALARIE", "id": "2", "chef": true }, { "type": "SALARIE", "id": "1", "chef": false }] }
+      ]
+    }
+  ],
+  "lignes": [
+    {
+      "nom": "périodes contiguës fusionnées par membre, nouvelle ligne quand le rôle change ou après une interruption",
+      "periodes": [
+        { "du": "2026-10-19", "au": "2026-10-20", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "SALARIE", "id": "13", "chef": false }] },
+        { "du": "2026-10-21", "au": "2026-10-23", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "INTERIM", "id": "30", "chef": false }] },
+        { "du": "2026-10-24", "au": null, "membres": [{ "type": "SALARIE", "id": "12", "chef": false }, { "type": "SALARIE", "id": "13", "chef": true }] }
+      ],
+      "attendu": [
+        { "type": "INTERIM", "id": "30", "du": "2026-10-21", "au": "2026-10-23", "chef": false },
+        { "type": "SALARIE", "id": "12", "du": "2026-10-19", "au": "2026-10-23", "chef": true },
+        { "type": "SALARIE", "id": "12", "du": "2026-10-24", "au": null, "chef": false },
+        { "type": "SALARIE", "id": "13", "du": "2026-10-19", "au": "2026-10-20", "chef": false },
+        { "type": "SALARIE", "id": "13", "du": "2026-10-24", "au": null, "chef": true }
+      ]
+    },
+    {
+      "nom": "périodes non contiguës : deux lignes",
+      "periodes": [
+        { "du": "2026-03-02", "au": "2026-03-27", "membres": [{ "type": "MATERIEL", "id": "4", "chef": false }] },
+        { "du": "2026-01-05", "au": "2026-01-30", "membres": [{ "type": "MATERIEL", "id": "4", "chef": false }] }
+      ],
+      "attendu": [
+        { "type": "MATERIEL", "id": "4", "du": "2026-01-05", "au": "2026-01-30", "chef": false },
+        { "type": "MATERIEL", "id": "4", "du": "2026-03-02", "au": "2026-03-27", "chef": false }
+      ]
+    }
+  ],
+  "controles": [
+    {
+      "nom": "équipe correcte avec une sous-équipe",
+      "equipe": { "id": 5, "code": "E005", "libelle": "Chantier Pont", "periodes": [
+        { "du": "2026-10-19", "au": "2026-10-23", "membres": [{ "type": "SALARIE", "id": "12", "chef": true }, { "type": "EQUIPE", "id": "3", "chef": false }] },
+        { "du": "2026-10-24", "au": null, "membres": [{ "type": "SALARIE", "id": "12", "chef": true }] }] },
+      "attendu": []
+    },
+    {
+      "nom": "code et libellé vides, période inversée, chevauchement",
+      "equipe": { "id": null, "code": " ", "libelle": "", "periodes": [
+        { "du": "2026-10-19", "au": "2026-10-30", "membres": [] },
+        { "du": "2026-10-26", "au": "2026-10-20", "membres": [] }] },
+      "attendu": [{ "code": "EQU_CODE", "periode": null }, { "code": "EQU_LIBELLE", "periode": null }, { "code": "EQU_CHEVAUCHEMENT", "periode": 1 }, { "code": "EQU_PERIODE", "periode": 1 }]
+    },
+    {
+      "nom": "période ouverte suivie d'une autre : chevauchement",
+      "equipe": { "id": 1, "code": "E1", "libelle": "A", "periodes": [{ "du": "2026-01-01", "au": null, "membres": [] }, { "du": "2026-06-01", "au": null, "membres": [] }] },
+      "attendu": [{ "code": "EQU_CHEVAUCHEMENT", "periode": 1 }]
+    },
+    {
+      "nom": "doublon, équipe dans elle-même, chef matériel, deux chefs, type inconnu",
+      "equipe": { "id": 5, "code": "E005", "libelle": "Pont", "periodes": [
+        { "du": "2026-10-19", "au": null, "membres": [
+          { "type": "SALARIE", "id": "12", "chef": true }, { "type": "SALARIE", "id": "12", "chef": false }, { "type": "EQUIPE", "id": "5", "chef": false },
+          { "type": "MATERIEL", "id": "4", "chef": true }, { "type": "VEHICULE", "id": "9", "chef": false }] }] },
+      "attendu": [
+        { "code": "EQU_CHEFS", "periode": 0 }, { "code": "EQU_CHEF_TYPE", "periode": 0 }, { "code": "EQU_DOUBLON", "periode": 0 },
+        { "code": "EQU_SOI", "periode": 0 }, { "code": "EQU_TYPE", "periode": 0 }]
+    }
+  ]
+}
