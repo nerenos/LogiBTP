@@ -54,6 +54,7 @@ public static class Extensions
         g.MapPost("/connexions/{id:long}/autoriser", async (long id, DemandeAutorisation d, HttpContext http, ServiceOAuth s, IOptions<OptionsSocietes> societes,
             SocieteCourante societe, CancellationToken ct) =>
             Results.Ok(new { url = await s.AutoriserAsync(Utilisateur.Depuis(http), id, Origine(http, societes.Value, societe), d.AutreCompte, ct) }));
+        g.MapPost("/connexions/{id:long}/connecter", (long id, HttpContext http, ServiceOAuth s, CancellationToken ct) => s.ConnecterAsync(Utilisateur.Depuis(http), id, ct));
         g.MapPost("/connexions/{id:long}/tester", (long id, HttpContext http, ServiceOAuth s, CancellationToken ct) => s.TesterAsync(Utilisateur.Depuis(http), id, ct));
         g.MapPost("/connexions/{id:long}/revoquer", (long id, HttpContext http, ServiceOAuth s, CancellationToken ct) => s.RevoquerAsync(Utilisateur.Depuis(http), id, ct));
         g.MapGet("/connexions/{id:long}/compte", async (long id, HttpContext http, ServiceOAuth s, CancellationToken ct) =>

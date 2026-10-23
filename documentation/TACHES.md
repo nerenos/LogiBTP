@@ -27,6 +27,10 @@
   rapprocher », rattachement manuel, ignorer, purge.
 - [x] **Module Mail, lot 4** (23/10/2026) : reconnaissance automatique répliquée JS ↔ C#, règles et seuils, rattachement
   automatique et alerte au service, propositions à valider.
+- [x] **Module OAuth, lot 2** (23/10/2026) : flux sans utilisateur (application Microsoft par client credentials avec
+  secret ou certificat — assertion JWT signée, fin de validité lue dans le certificat —, compte de service Google avec
+  délégation sur le domaine), fournisseurs Microsoft 365 (délégué par code + PKCE ou application) et générique
+  (adresses saisies par connexion), bouton « Se connecter » direct.
 
 ### Chaîne des achats et marchés
 

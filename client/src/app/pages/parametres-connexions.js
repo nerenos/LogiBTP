@@ -9,6 +9,25 @@ const jour = (d) => (d ? String(d).slice(0, 10) : '');
 const liste = (texte) => String(texte ?? '').split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
 
 /** Pastille d'une connexion (état et échéances) : rouge à reconnecter ou à moins de 7 jours, orange à moins de 30. */
+/** Flux d'obtention des jetons : par la page du fournisseur (délégué) ou sans utilisateur. */
+export const FLUX_OAUTH = [
+  { valeur: 'CODE_PKCE', libelle: 'Délégué : connexion à la page du fournisseur' },
+  { valeur: 'CLIENT', libelle: 'Application (client credentials, Microsoft)' },
+  { valeur: 'COMPTE_SERVICE', libelle: 'Compte de service (Google Workspace)' },
+];
+
+/** Lit un fichier choisi en base64 (certificat .pfx) ou en texte (clé JSON). */
+function lireFichier(input, base64) {
+  const f = input?.files?.[0];
+  if (!f) return Promise.resolve(null);
+  return new Promise((ok, ko) => {
+    const l = new FileReader();
+    l.onerror = () => ko(l.error);
+    l.onload = () => ok(base64 ? String(l.result).replace(/^data:[^,]*,/, '') : String(l.result));
+    if (base64) l.readAsDataURL(f); else l.readAsText(f);
+  });
+}
+
 export function pastilleConnexion(c) {
   return `<span class="pastille-compte ${CLASSES_PASTILLE[c.pastille] ?? 'neutre'}" title="${echapper(c.derniere_erreur ?? '')}">${ETATS[c.etat] ?? c.etat}</span>`;
 }
@@ -85,13 +104,13 @@ export class PageParametresConnexions extends PageBase {
         <td>${echapper(c.code)}</td><td>${echapper(c.fournisseur_libelle)}</td>
         <td>${date(c.rafraichissement_expire_le)}</td><td>${date(c.secret_expire_le)}</td>
         <td>${echapper(c.utilisations.join(', '))}</td>
-        <td class="cellule-boutons">${c.peut_reconnecter && c.client_configure ? `<button type="button" data-connecter title="Ouvrir la page du fournisseur">${c.connectee ? '🔁 Reconnecter' : '🔗 Se connecter'}</button>` : ''}
+        <td class="cellule-boutons">${c.peut_reconnecter && c.client_configure ? `<button type="button" data-connecter title="${c.flux === 'CODE_PKCE' ? 'Ouvrir la page du fournisseur' : 'Obtenir le jeton directement (sans utilisateur)'}">${c.connectee ? '🔁 Reconnecter' : '🔗 Se connecter'}</button>` : ''}
           ${c.etat === 'OK' ? '<button type="button" data-tester title="Renouveler le jeton maintenant">✓ Tester</button>' : ''}
           <button type="button" data-ouvrir title="Détail">✎</button></td></tr>`).join('')}
       </tbody></table>`;
     zone.querySelectorAll('tr[data-id]').forEach((tr) => {
       const c = this.connexions.find((x) => x.id === Number(tr.dataset.id));
-      tr.querySelector('[data-connecter]')?.addEventListener('click', () => this.connecter(c.id));
+      tr.querySelector('[data-connecter]')?.addEventListener('click', () => (c.flux === 'CODE_PKCE' ? this.connecter(c.id) : this.connecterDirect(c.id)));
       tr.querySelector('[data-tester]')?.addEventListener('click', () => this.tester(c.id));
       tr.querySelector('[data-ouvrir]').addEventListener('click', () => { this.selection = c.id; this.rendreListe(); this.rendreDetail(c); });
     });
@@ -110,6 +129,12 @@ export class PageParametresConnexions extends PageBase {
     }
   }
 
+  /** Flux sans utilisateur (application, compte de service) : jeton obtenu directement par le serveur. */
+  async connecterDirect(id) {
+    try { await api.oauth.connecter(id); this.app.message('Connexion établie', 'succes'); } catch (e) { this.app.erreur(e); }
+    await this.charger();
+  }
+
   async tester(id) {
     try { await api.oauth.tester(id); this.app.message('Connexion opérationnelle : jeton renouvelé', 'succes'); } catch (e) { this.app.erreur(e); }
     await this.charger();
@@ -125,6 +150,7 @@ export class PageParametresConnexions extends PageBase {
         <tr><th>Code</th><td><input data-c="code" value="${echapper(c?.code ?? '')}" size="16" maxlength="30" ${dis}></td></tr>
         <tr><th>Nom d'usage</th><td><input data-c="nom" value="${echapper(c?.nom ?? '')}" size="40" maxlength="100" ${dis} placeholder="ex. Gmail – Service commercial"></td></tr>
         <tr><th>Fournisseur</th><td><span data-fournisseur></span></td></tr>
+        <tr><th>Flux</th><td><span data-flux></span></td></tr>
         <tr><th>Portées</th><td><input data-c="portees" value="${echapper(c?.portees ?? f?.portees ?? '')}" size="60" ${dis}></td></tr>
         <tr><th>Application en mode test</th><td><label class="ligne"><input type="checkbox" data-c="mode_test" ${c?.mode_test ?? true ? 'checked' : ''} ${dis}>
           non vérifiée par le fournisseur (Google : autorisation de ${f?.rafraichissement_test_jours ?? 7} jours, reconnexion régulière)</label></td></tr>
@@ -139,16 +165,31 @@ export class PageParametresConnexions extends PageBase {
         <p class="aide">${c.client_configure ? 'Client configuré (jamais réaffiché). Ressaisir pour le remplacer ; secret vide = inchangé.' : 'À renseigner avant la première connexion.'}
           Adresse de retour à déclarer chez le fournisseur : <code>${echapper(this.parametres.adresse_retour ?? '')}</code></p>
         ${admin ? `<table><tbody>
+          ${c.flux === 'COMPTE_SERVICE' ? `
+          <tr><th>Clé du compte de service</th><td><input type="file" data-f="cle" accept=".json,application/json"> <span class="aide">fichier JSON de la console Google</span></td></tr>
+          <tr><th>Boîte déléguée</th><td><input data-k="sujet" size="40" placeholder="adresse de la boîte (délégation sur le domaine)"></td></tr>` : `
           <tr><th>Identifiant du client</th><td><input data-k="identifiant_client" size="50" autocomplete="off"></td></tr>
           <tr><th>Secret du client</th><td><input type="password" data-k="secret" size="30" autocomplete="new-password"></td></tr>
-          <tr><th>Locataire</th><td><input data-k="locataire" size="30" placeholder="Microsoft seulement"></td></tr>
-          <tr><th>Fin de validité du secret</th><td><input type="date" data-k="secret_expire_le" value="${jour(c.secret_expire_le)}"></td></tr>
+          ${c.flux === 'CLIENT' ? `<tr><th>ou certificat</th><td><input type="file" data-f="certificat" accept=".pfx,.p12"> <input type="password" data-k="mdp_certificat" size="16"
+            placeholder="mot de passe" autocomplete="new-password"> <span class="aide">prioritaire sur le secret ; fin de validité lue dans le certificat</span></td></tr>` : ''}
+          <tr><th>Locataire</th><td><input data-k="locataire" size="30" placeholder="Microsoft : identifiant de l'annuaire"></td></tr>
+          <tr><th>Fin de validité du secret</th><td><input type="date" data-k="secret_expire_le" value="${jour(c.secret_expire_le)}"></td></tr>`}
+          ${c.fournisseur === 'GENERIQUE' ? `
+          <tr><th>Adresse d'autorisation</th><td><input data-k="url_autorisation" size="60" placeholder="https://…"></td></tr>
+          <tr><th>Adresse de jeton</th><td><input data-k="url_jeton" size="60" placeholder="https://…"></td></tr>
+          <tr><th>Adresse de révocation</th><td><input data-k="url_revocation" size="60" placeholder="facultative"></td></tr>` : ''}
         </tbody></table><div class="boutons"><button type="button" data-client>Enregistrer le client</button></div>
         <details><summary>Aide : déclarer l'application Google</summary><ol class="aide">
           <li>console.cloud.google.com : créer un projet, activer l'API Gmail ;</li>
           <li>écran de consentement OAuth : type « externe » (Gmail grand public), portée <code>https://mail.google.com/</code>, ajouter les boîtes en utilisateurs de test ;</li>
           <li>identifiants : « ID client OAuth », type « application Web », URI de redirection autorisé = l'adresse de retour ci-dessus ;</li>
           <li>recopier l'identifiant et le secret ici, puis 🔗 Se connecter avec le compte Gmail de la boîte.</li></ol></details>
+        <details><summary>Aide : Microsoft 365 (Exchange Online)</summary><ol class="aide">
+          <li>entra.microsoft.com : « Inscriptions d'applications », nouvelle application ; locataire = ID de l'annuaire ;</li>
+          <li>délégué : URI de redirection Web = l'adresse de retour ci-dessus, autorisations IMAP.AccessAsUser.All et SMTP.Send (Office 365 Exchange Online) ;</li>
+          <li>application : autorisations d'application IMAP.AccessAsApp et SMTP.SendAsApp avec consentement de l'administrateur, puis déclarer le principal
+            de service dans Exchange (New-ServicePrincipal, Add-MailboxPermission) ; secret ou certificat (le certificat est conseillé) ;</li>
+          <li>le compte du module Mail donne l'adresse de la boîte (une même application sert plusieurs boîtes).</li></ol></details>
         <p>${c.peut_modifier ? '<button type="button" data-compte>👁 Afficher le compte connecté</button> <span data-compte-valeur></span>' : ''}</p>` : ''}
         <h3>Journal</h3><div data-journal><p class="aide">…</p></div>` : ''}`;
     const combo = creerCombo({ options: this.fournisseurs.map((x) => ({ valeur: x.code, libelle: x.libelle })), valeur: c?.fournisseur ?? f?.code ?? '' });
@@ -158,10 +199,19 @@ export class PageParametresConnexions extends PageBase {
       const p = this.fournisseurs.find((x) => x.code === combo.valeurCombo);
       if (p && !c) zone.querySelector('[data-c="portees"]').value = p.portees;
     });
+    const flux = creerCombo({ options: FLUX_OAUTH, valeur: c?.flux ?? 'CODE_PKCE' });
+    flux.readOnly = !admin;
+    zone.querySelector('[data-flux]').replaceWith(flux);
+    // Sans utilisateur : portées par défaut du serveur (Microsoft : .default d'Exchange Online).
+    flux.addEventListener('change', () => {
+      const p = this.fournisseurs.find((x) => x.code === combo.valeurCombo);
+      if (!c) zone.querySelector('[data-c="portees"]').value = flux.valeurCombo === 'CODE_PKCE' ? (p?.portees ?? '') : '';
+    });
     const val = (k) => zone.querySelector(`[data-c="${k}"]`);
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       const saisie = {
-        code: val('code').value, nom: val('nom').value, fournisseur: combo.valeurCombo, portees: val('portees').value, mode_test: val('mode_test').checked,
+        code: val('code').value, nom: val('nom').value, fournisseur: combo.valeurCombo, flux: flux.valeurCombo || 'CODE_PKCE',
+        portees: val('portees').value, mode_test: val('mode_test').checked,
         droits: liste(val('droits').value), rappels_jours: liste(val('rappels_jours').value).map(Number).filter((n) => n > 0),
       };
       try {
@@ -181,11 +231,14 @@ export class PageParametresConnexions extends PageBase {
       try { await api.oauth.supprimer(c.id); this.selection = null; zone.innerHTML = ''; await this.charger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-client]')?.addEventListener('click', async () => {
-      const k = (n) => zone.querySelector(`[data-k="${n}"]`).value.trim();
+      const k = (n) => zone.querySelector(`[data-k="${n}"]`)?.value.trim() || null;
       try {
         await api.oauth.client(c.id, {
-          identifiant_client: k('identifiant_client'), secret: k('secret') || null, locataire: k('locataire') || null,
+          identifiant_client: k('identifiant_client') ?? '', secret: k('secret'), locataire: k('locataire'),
           secret_expire_le: k('secret_expire_le') ? new Date(`${k('secret_expire_le')}T00:00:00`).toISOString() : null,
+          certificat: await lireFichier(zone.querySelector('[data-f="certificat"]'), true), mot_de_passe_certificat: k('mdp_certificat'),
+          cle_compte_service: await lireFichier(zone.querySelector('[data-f="cle"]'), false), sujet: k('sujet'),
+          url_autorisation: k('url_autorisation'), url_jeton: k('url_jeton'), url_revocation: k('url_revocation'),
         });
         this.app.message('Client enregistré', 'succes');
         await this.charger();

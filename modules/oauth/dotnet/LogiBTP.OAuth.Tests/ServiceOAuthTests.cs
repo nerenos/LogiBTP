@@ -50,6 +50,23 @@ public sealed class ServiceOAuthTests : IAsyncLifetime
         }
 
         public override Task RevoquerAsync(FournisseurEntite f, ClientFournisseur c, string jeton, CancellationToken ct) => Task.CompletedTask;
+
+        public string? PorteesDemandees { get; private set; }
+
+        public override Task<ReponseJeton> ClientCredentialsAsync(FournisseurEntite f, ClientFournisseur c, string portees, CancellationToken ct)
+        {
+            if (Refuser) throw new ErreurOAuth("invalid_client", "AADSTS7000222: The provided client secret keys are expired.");
+            PorteesDemandees = portees;
+            Assert.Equal("https://login.microsoftonline.com/annuaire-1/oauth2/v2.0/token", UrlJeton(f, c));
+            return Task.FromResult(new ReponseJeton($"acces-app{++Rafraichissements}", null, "Bearer", 3600, null, null, null));
+        }
+
+        public override Task<ReponseJeton> CompteServiceAsync(FournisseurEntite f, ClientFournisseur c, string portees, CancellationToken ct)
+        {
+            PorteesDemandees = portees;
+            Assert.Equal("boite@societe.fr", c.Sujet);
+            return Task.FromResult(new ReponseJeton("acces-sa", null, "Bearer", 3600, null, null, null));
+        }
     }
 
     private sealed class SpecialisationTest : SpecialisationOAuth
@@ -143,5 +160,54 @@ public sealed class ServiceOAuthTests : IAsyncLifetime
         await s.AutoriserAsync(Admin, c.Id, "http://localhost:5173", true, default);
         Assert.True((await s.TerminerAsync(await StateAsync(db, c.Id), "c3", null, default)).Ok);
         Assert.Equal("autre.boite@gmail.com", (await s.JetonAsync(c.Id, default)).Compte);
+    }
+
+    [Fact]
+    public async Task Application_Microsoft_par_certificat_puis_compte_de_service_Google()
+    {
+        if (Connexion is null) return;
+        await using var db = Db();
+        var s = Service(db);
+        var c = await s.CreerAsync(Admin, new SaisieConnexion(_code, "Exchange application", "MICROSOFT", null, false, Flux: "CLIENT"), default);
+        Assert.Equal("https://outlook.office365.com/.default", c.Portees);
+        using var rsa = System.Security.Cryptography.RSA.Create(2048);
+        var demande = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=essai", rsa, System.Security.Cryptography.HashAlgorithmName.SHA256,
+            System.Security.Cryptography.RSASignaturePadding.Pkcs1);
+        using var cert = demande.CreateSelfSigned(_horloge.Maintenant.AddDays(-1), _horloge.Maintenant.AddDays(20));
+        var pfx = Convert.ToBase64String(cert.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12));
+        await Assert.ThrowsAsync<ExceptionMetier>(() => s.EnregistrerClientAsync(Admin, c.Id, new SaisieClient("app-1", null, "annuaire-1", null, Convert.ToBase64String([1, 2, 3])), default));
+        await s.EnregistrerClientAsync(Admin, c.Id, new SaisieClient("app-1", null, "annuaire-1", null, pfx), default);
+        var lue = await db.Connexions.AsNoTracking().FirstAsync(x => x.OcoId == c.Id);
+        Assert.Equal(new DateTimeOffset(cert.NotAfter.ToUniversalTime(), TimeSpan.Zero), lue.OcoSecretExpireLe);
+        Assert.DoesNotContain("app-1", lue.OcoClient);
+
+        // Pas de page d'autorisation : le jeton est obtenu directement, puis redemandé à l'expiration.
+        await Assert.ThrowsAsync<ExceptionMetier>(() => s.AutoriserAsync(Admin, c.Id, "http://localhost:5173", false, default));
+        Assert.Equal("OK", (await s.ConnecterAsync(Admin, c.Id, default)).Etat);
+        Assert.Equal(("acces-app1", ""), ((await s.JetonAsync(c.Id, default)).Jeton, (await s.JetonAsync(c.Id, default)).Compte));
+        Assert.Equal("https://outlook.office365.com/.default", _client.PorteesDemandees);
+        _horloge.Maintenant = _horloge.Maintenant.AddHours(2);
+        Assert.Equal("acces-app2", (await s.JetonAsync(c.Id, default)).Jeton);
+
+        // Certificat proche de sa fin : rappel ; refus du fournisseur : à reconnecter.
+        _horloge.Maintenant = _horloge.Maintenant.AddDays(14);
+        await s.PasserAsync(default);
+        Assert.Contains(_specialisation.Signaux, x => x.Genre == "RAPPEL");
+        _client.Refuser = true;
+        _horloge.Maintenant = _horloge.Maintenant.AddHours(2);
+        Assert.Equal(IFournisseurJeton.AReconnecter, (await Assert.ThrowsAsync<ExceptionMetier>(() => s.JetonAsync(c.Id, default))).Code);
+        _client.Refuser = false;
+        Assert.Equal("OK", (await s.ConnecterAsync(Admin, c.Id, default)).Etat);
+
+        // Changement de flux refusé tant que la connexion a des jetons ; après révocation : compte de service Google.
+        await Assert.ThrowsAsync<ExceptionMetier>(() => s.ModifierAsync(Admin, c.Id, new SaisieConnexion(_code, "Gmail domaine", "GOOGLE", null, false, Flux: "COMPTE_SERVICE"), default));
+        await s.RevoquerAsync(Admin, c.Id, default);
+        await s.ModifierAsync(Admin, c.Id, new SaisieConnexion(_code, "Gmail domaine", "GOOGLE", null, false, Flux: "COMPTE_SERVICE"), default);
+        var cle = new System.Text.Json.Nodes.JsonObject { ["client_email"] = "sa@projet.iam.gserviceaccount.com", ["private_key"] = rsa.ExportPkcs8PrivateKeyPem() };
+        await Assert.ThrowsAsync<ExceptionMetier>(() => s.EnregistrerClientAsync(Admin, c.Id, new SaisieClient("", null, null, null, CleCompteService: "{}"), default));
+        await s.EnregistrerClientAsync(Admin, c.Id, new SaisieClient("", null, null, null, CleCompteService: cle.ToJsonString(), Sujet: "boite@societe.fr"), default);
+        await s.ConnecterAsync(Admin, c.Id, default);
+        Assert.Equal(("acces-sa", "boite@societe.fr"), ((await s.JetonAsync(c.Id, default)).Jeton, (await s.JetonAsync(c.Id, default)).Compte));
+        Assert.Equal("https://mail.google.com/", _client.PorteesDemandees);
     }
 }

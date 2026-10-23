@@ -230,6 +230,7 @@ export const api = {
     supprimer: (id) => appel('DELETE', `/oauth/connexions/${id}`),
     client: (id, c) => appel('POST', `/oauth/connexions/${id}/client`, c),
     autoriser: (id, autreCompte = false) => appel('POST', `/oauth/connexions/${id}/autoriser`, { autre_compte: autreCompte }),
+    connecter: (id) => appel('POST', `/oauth/connexions/${id}/connecter`),
     tester: (id) => appel('POST', `/oauth/connexions/${id}/tester`),
     revoquer: (id) => appel('POST', `/oauth/connexions/${id}/revoquer`),
     compte: (id) => appel('GET', `/oauth/connexions/${id}/compte`),

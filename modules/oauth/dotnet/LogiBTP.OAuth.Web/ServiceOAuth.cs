@@ -18,9 +18,15 @@ public sealed class OptionsOAuth
 }
 
 public sealed record SaisieConnexion(string Code, string Nom, string Fournisseur, string? Portees, bool ModeTest = true, List<string>? Droits = null,
-    List<int>? RappelsJours = null, DateTimeOffset? SecretExpireLe = null);
+    List<int>? RappelsJours = null, DateTimeOffset? SecretExpireLe = null, string Flux = "CODE_PKCE");
 
-public sealed record SaisieClient(string IdentifiantClient, string? Secret, string? Locataire, DateTimeOffset? SecretExpireLe);
+/// <summary>
+/// Client du fournisseur saisi : identifiant, secret (vide = inchangé) ou certificat PKCS#12 en base64 (fin de validité
+/// lue dans le certificat), locataire, clé JSON d'un compte de service et boîte déléguée, points de terminaison propres.
+/// </summary>
+public sealed record SaisieClient(string IdentifiantClient, string? Secret, string? Locataire, DateTimeOffset? SecretExpireLe, string? Certificat = null,
+    string? MotDePasseCertificat = null, string? CleCompteService = null, string? Sujet = null, string? UrlAutorisation = null, string? UrlJeton = null,
+    string? UrlRevocation = null);
 
 public sealed record FournisseurDto(string Code, string Libelle, string Portees, int? RafraichissementTestJours);
 
@@ -138,27 +144,77 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
         if (nom.Length is 0 or > 100) throw ExceptionMetier.Invalide("CONNEXION_NOM", "Nom d'usage obligatoire (100 caractères au plus)");
         var f = await db.Fournisseurs.AsNoTracking().FirstOrDefaultAsync(x => x.OfoCode == s.Fournisseur && x.OfoActif, ct)
             ?? throw ExceptionMetier.Invalide("CONNEXION_FOURNISSEUR", "Fournisseur inconnu");
+        if (!Flux.Contains(s.Flux)) throw ExceptionMetier.Invalide("CONNEXION_FLUX", "Flux inconnu : CODE_PKCE, CLIENT ou COMPTE_SERVICE");
+        if (c.OcoJetons is not null && c.OcoFlux != s.Flux) throw ExceptionMetier.Invalide("CONNEXION_FLUX", "Révoquer la connexion avant de changer de flux");
         var rappels = s.RappelsJours?.Where(d => d > 0).Distinct().OrderByDescending(d => d).ToList();
         c.OcoCode = code;
         c.OcoNom = nom;
         c.OcoOfoCode = f.OfoCode;
-        c.OcoPortees = string.IsNullOrWhiteSpace(s.Portees) ? f.OfoPortees : string.Join(' ', s.Portees.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        c.OcoFlux = s.Flux;
+        c.OcoPortees = !string.IsNullOrWhiteSpace(s.Portees) ? string.Join(' ', s.Portees.Split(' ', StringSplitOptions.RemoveEmptyEntries)) : PorteesParDefaut(f, s.Flux);
         c.OcoModeTest = s.ModeTest;
         c.OcoDroits = (s.Droits ?? []).Select(d => d.Trim()).Where(d => d.Length > 0).Distinct().ToList();
         c.OcoRappelsJours = rappels is { Count: > 0 } ? rappels : null;
         if (s.SecretExpireLe is not null) c.OcoSecretExpireLe = s.SecretExpireLe;
     }
 
-    /// <summary>Client du fournisseur (identifiant, secret, locataire) : réécrit en entier, chiffré ; jamais relu par le navigateur.</summary>
+    public static readonly string[] Flux = ["CODE_PKCE", "CLIENT", "COMPTE_SERVICE"];
+
+    /// <summary>Portées par défaut : celles du fournisseur ; application Microsoft (client credentials) : .default d'Exchange Online.</summary>
+    public static string PorteesParDefaut(FournisseurEntite f, string flux) => (f.OfoCode, flux) switch
+    {
+        ("MICROSOFT", "CLIENT") => "https://outlook.office365.com/.default",
+        ("GOOGLE", "COMPTE_SERVICE") => "https://mail.google.com/",
+        _ => f.OfoPortees,
+    };
+
+    /// <summary>
+    /// Client du fournisseur : réécrit en entier, chiffré, jamais relu par le navigateur (secret, certificat, clé vides :
+    /// inchangés). Certificat : fin de validité lue dans le certificat ; compte de service : clé contrôlée, compte = boîte
+    /// déléguée.
+    /// </summary>
     public async Task<ConnexionDto> EnregistrerClientAsync(Utilisateur u, long id, SaisieClient s, CancellationToken ct)
     {
         Exiger(u.EstAdmin, "PARAMETRER");
         var c = await Connexion(id, ct);
-        if (string.IsNullOrWhiteSpace(s.IdentifiantClient)) throw ExceptionMetier.Invalide("OAUTH_CLIENT", "Identifiant du client obligatoire");
         var ancien = LireClient(c);
-        var secret = string.IsNullOrEmpty(s.Secret) ? ancien?.Secret : s.Secret;
-        c.OcoClient = chiffrement.Chiffrer(JsonSerializer.Serialize(new ClientFournisseur(s.IdentifiantClient.Trim(), secret, s.Locataire?.Trim()), JsonCalcul.Options));
-        c.OcoSecretExpireLe = s.SecretExpireLe;
+        var cle = Vide(s.CleCompteService) ?? ancien?.CleCompteService;
+        if (c.OcoFlux == "COMPTE_SERVICE")
+        {
+            if (cle is null) throw ExceptionMetier.Invalide("OAUTH_CLIENT", "Clé du compte de service obligatoire");
+            try { AssertionsOAuth.LireCleCompteService(cle); }
+            catch (Exception e) when (e is ErreurOAuth or JsonException) { throw ExceptionMetier.Invalide("OAUTH_CLIENT", $"Clé du compte de service illisible : {e.Message}"); }
+        }
+        else if (string.IsNullOrWhiteSpace(s.IdentifiantClient)) throw ExceptionMetier.Invalide("OAUTH_CLIENT", "Identifiant du client obligatoire");
+        if (c.OcoOfoCode == "GENERIQUE" && (Vide(s.UrlJeton) is null || (c.OcoFlux == "CODE_PKCE" && Vide(s.UrlAutorisation) is null)))
+            throw ExceptionMetier.Invalide("OAUTH_CLIENT", "Adresses d'autorisation et de jeton obligatoires pour un autre fournisseur");
+        foreach (var url in new[] { s.UrlAutorisation, s.UrlJeton, s.UrlRevocation }.Select(Vide).OfType<string>())
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var u2) || u2.Scheme != "https") throw ExceptionMetier.Invalide("OAUTH_CLIENT", $"Adresse HTTPS attendue : {url}");
+        var certificat = Vide(s.Certificat) ?? ancien?.Certificat;
+        var mdpCertificat = Vide(s.Certificat) is null ? ancien?.MotDePasseCertificat : Vide(s.MotDePasseCertificat);
+        DateTimeOffset? finCertificat = null;
+        if (Vide(s.Certificat) is { } nouveau)
+        {
+            try
+            {
+                using var cert = AssertionsOAuth.LireCertificat(nouveau, mdpCertificat);
+                if (!cert.HasPrivateKey) throw ExceptionMetier.Invalide("OAUTH_CERTIFICAT", "Le certificat doit contenir sa clé privée (fichier .pfx)");
+                finCertificat = new DateTimeOffset(cert.NotAfter.ToUniversalTime(), TimeSpan.Zero);
+            }
+            catch (Exception e) when (e is System.Security.Cryptography.CryptographicException or FormatException)
+            {
+                throw ExceptionMetier.Invalide("OAUTH_CERTIFICAT", $"Certificat illisible : {e.Message}");
+            }
+        }
+        var client = new ClientFournisseur((s.IdentifiantClient ?? "").Trim(), Vide(s.Secret) ?? ancien?.Secret, Vide(s.Locataire), certificat, mdpCertificat, cle,
+            Vide(s.Sujet) ?? ancien?.Sujet, Vide(s.UrlAutorisation), Vide(s.UrlJeton), Vide(s.UrlRevocation));
+        c.OcoClient = chiffrement.Chiffrer(JsonSerializer.Serialize(client, JsonCalcul.Options));
+        c.OcoSecretExpireLe = finCertificat ?? s.SecretExpireLe ?? (certificat is not null ? c.OcoSecretExpireLe : null);
+        if (c.OcoFlux == "COMPTE_SERVICE" && client.Sujet is { } sujet)
+        {
+            c.OcoCompte = chiffrement.Chiffrer(sujet);
+            c.OcoCompteEmpreinte = chiffrement.Empreinte(sujet);
+        }
         c.OcoMajPar = u.Code;
         c.OcoMajLe = Maintenant;
         Journaliser(id, "CLIENT", "Client du fournisseur enregistré", u.Code);
@@ -239,6 +295,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     public async Task<string> AutoriserAsync(Utilisateur u, long id, string origine, bool autreCompte, CancellationToken ct)
     {
         var c = await Connexion(id, ct);
+        if (c.OcoFlux != "CODE_PKCE") throw ExceptionMetier.Invalide("CONNEXION_FLUX", "Connexion sans page d'autorisation : « Connecter » obtient le jeton directement");
         if (!PeutReconnecter(u, c, await ServicesAsync(u, ct))) throw ExceptionMetier.AccesRefuse("RECONNECTER");
         var cl = LireClient(c) ?? throw ExceptionMetier.Invalide("OAUTH_CLIENT_ABSENT", "Client du fournisseur à renseigner par un administrateur");
         var f = await Fournisseur(c, ct);
@@ -252,7 +309,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
         });
         Journaliser(id, "AUTORISATION", "Demande d'autorisation ouverte", u.Code);
         await db.SaveChangesAsync(ct);
-        return ReglesOAuth.UrlAutorisation(ClientOAuth.Url(f.OfoUrlAutorisation, cl), cl.IdentifiantClient, options.Value.AdresseRetour, c.OcoPortees,
+        return ReglesOAuth.UrlAutorisation(ClientOAuth.UrlAutorisation(f, cl), cl.IdentifiantClient, options.Value.AdresseRetour, c.OcoPortees,
             state, pkce.Defi, Parametres(f), chiffrement.Dechiffrer(c.OcoCompte));
     }
 
@@ -355,7 +412,36 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     }
 
     /// <summary>
-    /// Renouvelle le jeton d'accès par le jeton de rafraîchissement. Refus définitif du fournisseur : connexion à
+    /// Connexion d'un flux sans utilisateur (application Microsoft, compte de service Google) : premier jeton obtenu
+    /// directement (personne autorisée), connexion à l'état OK.
+    /// </summary>
+    public async Task<ConnexionDto> ConnecterAsync(Utilisateur u, long id, CancellationToken ct)
+    {
+        var c = await Connexion(id, ct);
+        if (!PeutReconnecter(u, c, await ServicesAsync(u, ct))) throw ExceptionMetier.AccesRefuse("RECONNECTER");
+        if (c.OcoFlux == "CODE_PKCE") throw ExceptionMetier.Invalide("CONNEXION_FLUX", "Connexion par la page du fournisseur : « Se connecter »");
+        if (LireClient(c) is null) throw ExceptionMetier.Invalide("OAUTH_CLIENT_ABSENT", "Client du fournisseur à renseigner");
+        var premiere = c.OcoConnecteLe is null;
+        c.OcoEtat = "OK";
+        try
+        {
+            await RenouvelerSousVerrouAsync(c, ct);
+        }
+        catch (ExceptionMetier)
+        {
+            if (c.OcoEtat == "OK") c.OcoEtat = "A_RECONNECTER";
+            await db.SaveChangesAsync(ct);
+            throw;
+        }
+        c.OcoConnecteLe = Maintenant;
+        c.OcoConnectePar = u.Code;
+        Journaliser(id, premiere ? "CONNEXION" : "RECONNEXION", null, u.Code);
+        await db.SaveChangesAsync(ct);
+        return await DetailAsync(u, id, ct);
+    }
+
+    /// <summary>
+    /// Renouvelle le jeton d'accès par le jeton de rafraîchissement (sans utilisateur : nouveau jeton du client ou du compte de service). Refus définitif du fournisseur : connexion à
     /// reconnecter, signal immédiat aux personnes autorisées, CONNEXION_A_RECONNECTER ; fournisseur injoignable :
     /// erreur notée, connexion inchangée.
     /// </summary>
@@ -363,7 +449,8 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     {
         var j = LireJetons(c);
         var cl = LireClient(c);
-        if (j?.Rafraichissement is null || cl is null)
+        var sansUtilisateur = c.OcoFlux != "CODE_PKCE";
+        if (cl is null || (!sansUtilisateur && j?.Rafraichissement is null))
         {
             await MarquerAReconnecterAsync(c, "Jeton de rafraîchissement ou client absent", ct);
             throw AReconnecter(c);
@@ -372,7 +459,12 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
         ReponseJeton r;
         try
         {
-            r = await client.RafraichirAsync(f, cl, j.Rafraichissement, null, ct);
+            r = c.OcoFlux switch
+            {
+                "CLIENT" => await client.ClientCredentialsAsync(f, cl, c.OcoPortees, ct),
+                "COMPTE_SERVICE" => await client.CompteServiceAsync(f, cl, c.OcoPortees, ct),
+                _ => await client.RafraichirAsync(f, cl, j!.Rafraichissement!, null, ct),
+            };
         }
         catch (ErreurOAuth e) when (e.AReconnecter)
         {
@@ -386,7 +478,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
             await db.SaveChangesAsync(ct);
             throw ExceptionMetier.Conflit("OAUTH_INDISPONIBLE", $"Fournisseur injoignable pour {c.OcoNom} : {e.Message}");
         }
-        var nouveaux = new JetonsConnexion(r.Acces, r.Rafraichissement ?? j.Rafraichissement, r.Type);
+        var nouveaux = new JetonsConnexion(r.Acces, r.Rafraichissement ?? j?.Rafraichissement, r.Type);
         EcrireJetons(c, nouveaux, r.ExpireDans);
         if (r.Rafraichissement is not null && r.RafraichissementExpireDans is > 0)
         {
@@ -543,4 +635,6 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     }
 
     private static string Tronquer(string s) => s.Length > 500 ? s[..500] : s;
+
+    private static string? Vide(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

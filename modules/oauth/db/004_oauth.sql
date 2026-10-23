@@ -22,6 +22,16 @@ VALUES ('GOOGLE', 'Google (Gmail)', 'https://accounts.google.com/o/oauth2/v2/aut
         '{"access_type": "offline", "prompt": "consent", "include_granted_scopes": "true"}', 7)
 ON CONFLICT (ofo_code) DO NOTHING;
 
+-- Microsoft 365 / Exchange Online : {locataire} = identifiant de l'annuaire (common par défaut) ; délégué par code + PKCE
+-- ou application (client credentials, portée .default d'Exchange Online). Générique : points de terminaison saisis par connexion.
+INSERT INTO oauth_fournisseur (ofo_code, ofo_libelle, ofo_url_autorisation, ofo_url_jeton, ofo_url_revocation, ofo_portees, ofo_parametres, ofo_rafraichissement_test_jours)
+VALUES ('MICROSOFT', 'Microsoft 365 (Exchange Online)', 'https://login.microsoftonline.com/{locataire}/oauth2/v2.0/authorize',
+        'https://login.microsoftonline.com/{locataire}/oauth2/v2.0/token', NULL,
+        'offline_access openid email https://outlook.office365.com/IMAP.AccessAsUser.All https://outlook.office365.com/SMTP.Send',
+        '{"prompt": "select_account"}', NULL),
+       ('GENERIQUE', 'Autre fournisseur (adresses saisies)', '', '', NULL, '', '{}', NULL)
+ON CONFLICT (ofo_code) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS oauth_connexion (
     oco_id                         BIGSERIAL     PRIMARY KEY,
     oco_code                       VARCHAR(30)   NOT NULL UNIQUE,
