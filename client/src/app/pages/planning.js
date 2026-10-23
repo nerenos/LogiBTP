@@ -414,6 +414,17 @@ export class PagePlanning extends PageBase {
     this.#onglet('tache');
   }
 
+  /** Ctrl+S (« Enregistrer la page ») : enregistre la tâche en saisie dans le panneau Tâche affiché. */
+  enregistrer() {
+    if (this.saisieTache && !this.conteneur.querySelector('[data-panneau="tache"]')?.hidden) this.saisieTache.enregistrer();
+  }
+
+  /** Échap dans la saisie d'une tâche : modifications abandonnées (tâche relue ; nouvelle tâche : saisie vidée). */
+  echap() {
+    const actif = document.activeElement;
+    if (this.saisieTache && actif?.closest?.('[data-panneau="tache"], [data-actions-tache]')) { actif.blur(); this.saisieTache.annuler(); }
+  }
+
   fermer() {
     document.removeEventListener('pointerdown', this.fermerMenus, true);
     document.removeEventListener('keydown', this.fermerMenus);
@@ -533,6 +544,11 @@ export class PagePlanning extends PageBase {
     if (!ok || !avant) return;
     const ref = { id };
     this.#memoriser({ libelle: 'suppression', annuler: async () => { ref.id = (await api.planning.creer(saisieDe(avant))).id; }, retablir: () => supprimerTache(ref.id) });
+    this.#viderTache();
+  }
+
+  #viderTache() {
+    this.saisieTache = null;
     this.conteneur.querySelector('[data-panneau="tache"]').innerHTML = '';
     this.conteneur.querySelector('[data-actions-tache]').innerHTML = '';
   }
@@ -1062,6 +1078,8 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
 
   /** Détail d'une tâche (ou nouvelle tâche) dans le panneau : saisie, affectations, aperçu, enregistrement. */
   async #editer(id, preremplie = {}) {
+    // Raccourcis inactifs tant que la saisie n'est pas prête (évite d'enregistrer une version périmée).
+    this.saisieTache = null;
     const zone = this.conteneur.querySelector('[data-panneau="tache"]');
     let t;
     if (id) {
@@ -1078,7 +1096,8 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const groupe = (cle, corps) => `<details class="groupe-tache" data-groupe="${cle}" ${this.#repliees().includes(cle) ? '' : 'open'}><summary><b>${GROUPES_TACHE[cle]}</b></summary>${corps}</details>`;
     // Boutons dans l'entête du panneau (avec les onglets), toujours visibles au défilement du détail.
     const barre = this.conteneur.querySelector('[data-actions-tache]');
-    barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer>Enregistrer</button>
+    barre.innerHTML = `<p class="ligne"><button type="button" data-apercu>Aperçu du calcul</button> <button type="button" data-enregistrer title="Enregistrer la tâche (${echapper(libelleRaccourci('enregistrer', 'application') || 'Ctrl+S')})">Enregistrer</button>
+        <button type="button" data-abandonner title="Abandonner les modifications (Échap)">Annuler</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>`;
     zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
         <p class="ligne">${typeElement === 'projet' ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
@@ -1177,6 +1196,10 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     barre.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
       if (confirm('Supprimer cette tâche ?')) await this.#supprimer(t.id);
     });
+    // Raccourcis de la saisie (Ctrl+S, Échap : `enregistrer` / `echap` de la page).
+    const annuler = () => { if (t.id) this.#editer(t.id); else this.#viderTache(); };
+    barre.querySelector('[data-abandonner]').addEventListener('click', annuler);
+    this.saisieTache = { enregistrer: () => barre.querySelector('[data-enregistrer]').click(), annuler };
   }
 }
 
