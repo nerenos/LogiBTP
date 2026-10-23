@@ -1,8 +1,9 @@
-// Compositions des équipes (cœur, référentiel des ressources) : une équipe est faite de périodes souples (du, au
-// facultatif), chacune avec ses membres — salariés, intérimaires, matériels, sous-traitants ou autres équipes (renfort
-// d'une équipe qui en encadre d'autres) — et au plus un chef (salarié ou intérimaire, contact des communications).
-// En base, une ligne par membre et par période continue (`equipe_composition`). Répliqué dans ReglesEquipes.cs
-// (jeu tests/ressources/03_equipes.json).
+// Compositions des équipes (cœur, référentiel des ressources) : une équipe est une suite de compositions datées par
+// leur seul début ; chacune vaut jusqu'au début de la suivante (ni trou ni chevauchement), la dernière sans fin. Membres :
+// salariés, intérimaires, matériels, sous-traitants ou autres équipes (renfort d'une équipe qui en encadre d'autres) ;
+// au plus un chef par composition (salarié ou intérimaire, contact des communications). En base : les compositions
+// (`equipe_periode`, commentaire) et une ligne par membre et par suite continue de compositions (`equipe_composition`).
+// Répliqué dans ReglesEquipes.cs (jeu tests/ressources/03_equipes.json).
 
 export const TYPES_MEMBRE = ['SALARIE', 'INTERIM', 'MATERIEL', 'SOUS_TRAITANT', 'EQUIPE'];
 export const TYPES_CHEF = ['SALARIE', 'INTERIM'];
@@ -10,14 +11,17 @@ export const TYPES_CHEF = ['SALARIE', 'INTERIM'];
 export const MESSAGES_EQUIPES = {
   EQU_CODE: 'Code de l\'équipe obligatoire',
   EQU_LIBELLE: 'Libellé de l\'équipe obligatoire',
-  EQU_PERIODE: 'Période : début obligatoire, fin après le début',
-  EQU_CHEVAUCHEMENT: 'Les périodes se chevauchent',
+  EQU_PERIODE: 'Date de début de la composition obligatoire',
+  EQU_DATE_DOUBLE: 'Deux compositions commencent le même jour',
   EQU_TYPE: 'Type de membre inconnu',
-  EQU_DOUBLON: 'Membre présent deux fois dans la période',
+  EQU_DOUBLON: 'Membre présent deux fois dans la composition',
   EQU_SOI: 'Une équipe ne peut pas se contenir elle-même',
   EQU_CHEF_TYPE: 'Le chef d\'équipe est un salarié ou un intérimaire',
-  EQU_CHEFS: 'Un seul chef d\'équipe par période',
+  EQU_CHEFS: 'Un seul chef d\'équipe par composition',
   EQU_CYCLE: 'Une équipe ne peut pas contenir une équipe qui la contient',
+  EQU_ORDRE: 'Une composition ne peut pas commencer avant une composition plus ancienne non chargée',
+  EQU_VERSION: 'L\'équipe a été modifiée par ailleurs',
+  EQU_VERROU: 'L\'équipe est en cours de modification par un autre utilisateur',
 };
 
 /** « AAAA-MM-JJ » + n jours. */
@@ -33,38 +37,36 @@ const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const compId = (a, b) => (/^\d+$/.test(a) && /^\d+$/.test(b) ? Number(a) - Number(b) : ordinal(a, b));
 const trierMembres = (l) => l.sort((a, b) => Number(b.chef) - Number(a.chef) || ordinal(a.type, b.type) || compId(String(a.id), String(b.id)));
 
-/**
- * Lignes de composition [{ type, id, du, au | null, chef }] → périodes [{ du, au | null, membres: [{ type, id, chef }] }] :
- * une période par intervalle entre deux changements (entrée, sortie, chef) ; les intervalles sans membre sont omis.
- */
-export function periodesDepuisLignes(lignes) {
-  const bornes = [...new Set(lignes.flatMap((l) => [l.du, ...(l.au ? [ajouterJours(l.au, 1)] : [])]))].sort();
-  const r = [];
-  for (let i = 0; i < bornes.length; i++) {
-    const du = bornes[i];
-    const au = i + 1 < bornes.length ? ajouterJours(bornes[i + 1], -1) : null;
-    const membres = lignes.filter((l) => l.du <= du && (!l.au || l.au >= du)).map((l) => ({ type: l.type, id: String(l.id), chef: Boolean(l.chef) }));
-    // Après la dernière borne, seuls les membres sans fin restent : la dernière période est alors ouverte.
-    if (membres.length) r.push({ du, au, membres: trierMembres(membres) });
-  }
-  return r;
+/** Compositions triées par début, chacune avec sa fin : la veille du début de la suivante (la dernière : null). */
+export function finsPeriodes(periodes) {
+  const t = periodes.filter((p) => p.du).sort((a, b) => ordinal(a.du, b.du));
+  return t.map((p, i) => ({ ...p, au: i + 1 < t.length ? ajouterJours(t[i + 1].du, -1) : null }));
+}
+
+/** Lignes de composition [{ type, id, du, au | null, chef }] et débuts des compositions → compositions datées (membres au début de chacune). */
+export function periodesDepuisLignes(lignes, debuts) {
+  const t = [...new Set(debuts)].sort(ordinal);
+  return t.map((du, i) => ({
+    du,
+    au: i + 1 < t.length ? ajouterJours(t[i + 1], -1) : null,
+    membres: trierMembres(lignes.filter((l) => l.du <= du && (!l.au || l.au >= du)).map((l) => ({ type: l.type, id: String(l.id), chef: Boolean(l.chef) }))),
+  }));
 }
 
 /**
- * Périodes → lignes de composition : un membre présent dans des périodes contiguës avec le même rôle (chef ou non)
- * fait une seule ligne ; tri par type, identifiant puis début.
+ * Compositions → lignes : un membre présent dans des compositions successives avec le même rôle (chef ou non) fait une
+ * seule ligne ; tri par type, identifiant puis début.
  */
 export function lignesDepuisPeriodes(periodes) {
-  const triees = [...periodes].sort((a, b) => a.du.localeCompare(b.du));
   const ouvertes = new Map();
   const r = [];
-  for (const p of triees) {
+  for (const p of finsPeriodes(periodes)) {
     for (const m of p.membres) {
       const k = `${cle(m)}|${m.chef ? 1 : 0}`;
       const l = ouvertes.get(k);
-      if (l && l.au && ajouterJours(l.au, 1) === p.du) l.au = p.au ?? null;
+      if (l && l.au && ajouterJours(l.au, 1) === p.du) l.au = p.au;
       else {
-        const n = { type: m.type, id: String(m.id), du: p.du, au: p.au ?? null, chef: Boolean(m.chef) };
+        const n = { type: m.type, id: String(m.id), du: p.du, au: p.au, chef: Boolean(m.chef) };
         ouvertes.set(k, n);
         r.push(n);
       }
@@ -81,8 +83,11 @@ export function controlerEquipe({ id = null, code, libelle, periodes }) {
   const r = [];
   if (!String(code ?? '').trim()) r.push({ code: 'EQU_CODE', periode: null });
   if (!String(libelle ?? '').trim()) r.push({ code: 'EQU_LIBELLE', periode: null });
+  const vus = new Set();
   periodes.forEach((p, i) => {
-    if (!p.du || (p.au && p.au < p.du)) r.push({ code: 'EQU_PERIODE', periode: i });
+    if (!p.du) r.push({ code: 'EQU_PERIODE', periode: i });
+    else if (vus.has(p.du)) r.push({ code: 'EQU_DATE_DOUBLE', periode: i });
+    vus.add(p.du);
     const cles = p.membres.map(cle);
     if (p.membres.some((m) => !TYPES_MEMBRE.includes(m.type))) r.push({ code: 'EQU_TYPE', periode: i });
     if (new Set(cles).size !== cles.length) r.push({ code: 'EQU_DOUBLON', periode: i });
@@ -90,13 +95,8 @@ export function controlerEquipe({ id = null, code, libelle, periodes }) {
     if (p.membres.some((m) => m.chef && !TYPES_CHEF.includes(m.type))) r.push({ code: 'EQU_CHEF_TYPE', periode: i });
     if (p.membres.filter((m) => m.chef).length > 1) r.push({ code: 'EQU_CHEFS', periode: i });
   });
-  const triees = periodes.map((p, i) => ({ ...p, i })).filter((p) => p.du).sort((a, b) => a.du.localeCompare(b.du));
-  for (let k = 1; k < triees.length; k++) {
-    const prec = triees[k - 1];
-    if (!prec.au || prec.au >= triees[k].du) r.push({ code: 'EQU_CHEVAUCHEMENT', periode: triees[k].i });
-  }
   return r.sort((a, b) => (a.periode ?? -1) - (b.periode ?? -1) || ordinal(a.code, b.code));
 }
 
-/** Période qui couvre une date (null sinon). */
+/** Composition qui couvre une date (compositions datées : `au` renseigné), null sinon. */
 export const periodeA = (periodes, date) => periodes.find((p) => p.du <= date && (!p.au || p.au >= date)) ?? null;

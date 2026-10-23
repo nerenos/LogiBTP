@@ -79,20 +79,25 @@ public class RessourcesTests
 
     private static MembreEquipe Membre(JsonNode m) => new(m["type"]!.GetValue<string>(), m["id"]!.GetValue<string>(), m["chef"]!.GetValue<bool>());
 
-    private static PeriodeEquipe Periode(JsonNode p) => new(Jour(p["du"]), Jour(p["au"]), p["membres"]!.AsArray().Select(m => Membre(m!)).ToList());
+    private static PeriodeEquipe Periode(JsonNode p) => new(Jour(p["du"]), p["membres"]!.AsArray().Select(m => Membre(m!)).ToList());
 
     private static LigneComposition Ligne(JsonNode l) => new(l["type"]!.GetValue<string>(), l["id"]!.GetValue<string>(), Jour(l["du"])!.Value, Jour(l["au"]), l["chef"]!.GetValue<bool>());
 
-    private static string Texte(IEnumerable<PeriodeEquipe> l) => string.Join(" ; ", l.Select(p => $"{p.Du}→{p.Au}: {string.Join(",", p.Membres)}"));
+    private static string Texte(IEnumerable<PeriodeDatee> l) => string.Join(" ; ", l.Select(p => $"{p.Du}→{p.Au}: {string.Join(",", p.Membres)}"));
 
     [Fact]
     public void Equipes_identiques_au_js()
     {
         var j = Jeu("03_equipes.json");
+        foreach (var c in j["fins"]!.AsArray())
+        {
+            var obtenu = ReglesEquipes.Fins(c!["periodes"]!.AsArray().Select(p => Periode(p!)));
+            Assert.Equal(c["attendu"]!.AsArray().Select(a => (Jour(a!["du"]), Jour(a["au"]))).ToList(), obtenu.Select(p => ((DateOnly?)p.Du, p.Au)).ToList());
+        }
         foreach (var c in j["periodes"]!.AsArray())
         {
-            var attendu = c!["attendu"]!.AsArray().Select(p => Periode(p!)).ToList();
-            var obtenu = ReglesEquipes.Periodes(c["lignes"]!.AsArray().Select(l => Ligne(l!)).ToList());
+            var attendu = c!["attendu"]!.AsArray().Select(p => new PeriodeDatee(Jour(p!["du"])!.Value, Jour(p["au"]), p["membres"]!.AsArray().Select(m => Membre(m!)).ToList())).ToList();
+            var obtenu = ReglesEquipes.Periodes(c["lignes"]!.AsArray().Select(l => Ligne(l!)).ToList(), c["debuts"]!.AsArray().Select(d => Jour(d)!.Value));
             Assert.True(Texte(attendu) == Texte(obtenu), $"{c["nom"]} : {Texte(obtenu)}");
         }
         foreach (var c in j["lignes"]!.AsArray())
