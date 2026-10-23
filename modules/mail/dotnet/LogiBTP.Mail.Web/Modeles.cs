@@ -9,14 +9,25 @@ public sealed record ConfigConnexion(ServeurMail? Smtp, ServeurMail? Imap);
 /// <summary>Identité d'un compte (valeur déchiffrée de mco_identite).</summary>
 public sealed record IdentiteCompte(string Adresse, string? NomAffiche);
 
+/// <summary>
+/// Options de réception d'un compte (choisies à sa configuration) : intervalle de relève, marquer comme lus, après un
+/// rattachement (RIEN, DEPLACER vers le dossier des traités, RETIRER_DRAPEAU), drapeau « à suivre » = à rapprocher.
+/// </summary>
+public sealed record OptionsCompte(int IntervalleMinutes = 60, bool MarquerLus = false, string ApresRattachement = "RIEN", string? DossierTraites = "LogiBTP/Traités",
+    bool DrapeauASuivre = false);
+
+/// <summary>Dossier relevé d'un compte : RECEPTION (reconnaissance), A_TRAITER (toujours à rapprocher).</summary>
+public sealed record DossierCompte(string Nom, string Role);
+
 /// <summary>Saisie d'un compte : adresse et serveurs facultatifs en modification (absents : inchangés ; mot de passe vide : inchangé).</summary>
 public sealed record SaisieCompte(string Code, string? Adresse, string? NomAffiche, bool Envoi, bool Reception, string Authentification, long? OcoId,
     ServeurMail? Smtp, ServeurMail? Imap, long? RepondreAId, string? SignatureHtml, string Hebergeur, Limites? Limites, bool CopieEnvoyes,
-    List<string>? Services, bool Actif, string? AliasPrincipal);
+    List<string>? Services, bool Actif, string? AliasPrincipal, OptionsCompte? Options = null, List<DossierCompte>? Dossiers = null);
 
 public sealed record CompteDto(long Id, string Code, string Alias, List<string> AutresAlias, bool Envoi, bool Reception, string Authentification,
     long? OcoId, string Hebergeur, Limites Limites, Limites LimitesSaisies, bool CopieEnvoyes, List<string> Services, bool Actif, string Etat,
-    string? DerniereErreur, DateTimeOffset? VerifieLe, long? RepondreAId, string? SignatureHtml, ServeurPublic? Smtp, ServeurPublic? Imap);
+    string? DerniereErreur, DateTimeOffset? VerifieLe, long? RepondreAId, string? SignatureHtml, ServeurPublic? Smtp, ServeurPublic? Imap,
+    OptionsCompte Options, List<DossierCompte> Dossiers, DateTimeOffset? ReleveLe, string? ReleveErreur);
 
 /// <summary>Serveur sans identifiant ni mot de passe (paramétrage) : hôte, port, sécurité, identifiant et mot de passe renseignés ou non.</summary>
 public sealed record ServeurPublic(string Hote, int Port, string Securite, bool IdentifiantConfigure, bool MotDePasseConfigure);
@@ -65,7 +76,8 @@ public sealed record DestinataireDto(string Role, string Adresse, string? Nom, s
 public sealed record PieceDto(string Reference, string Nom, string? Type, long Taille);
 public sealed record LigneJournalDto(long Id, long? Message, long? Lot, long Compte, string? Alias, string Utilisateur, string? Origine, int Destinataires,
     int Nouveaux, List<string> Domaines, string Resultat, string? Code, string? Reponse, int? DureeMs, DateTimeOffset Le);
-public sealed record DetailMessageDto(MessageDto Message, string? CorpsHtml, List<DestinataireDto> Destinataires, List<PieceDto> Pieces, List<LigneJournalDto> Journal);
+public sealed record DetailMessageDto(MessageDto Message, string? CorpsHtml, List<DestinataireDto> Destinataires, List<PieceDto> Pieces, List<LigneJournalDto> Journal,
+    List<LienDto> Liens, string? De, bool Auto, long Compte);
 
 public sealed record CompteurCompte(long Compte, string Alias, string Etat, Limites Limites, int DestinatairesHeure, int DestinatairesJour, int TauxQuota,
     int EnFile, int Suspendus, int ErreursJour, DateTimeOffset? ProchainDepart);
@@ -77,6 +89,29 @@ public sealed record LotDto(long Id, string Origine, string? Libelle, string Aut
 public sealed record CourrielEnvoye(long Id, string? TypeElement, string? IdElement, string? Usage, string Objet, string Expediteur,
     IReadOnlyList<string> A, IReadOnlyList<string> Cc, IReadOnlyList<string> Cci, string CorpsHtml, DateTimeOffset Le, byte[] Eml,
     IReadOnlyList<string> Pieces, string Auteur, string MessageId);
+
+/// <summary>Courriel reçu remis à l'application pour être rangé (GED de la boîte) : contenu, texte, pièces.</summary>
+public sealed record CourrielRecu(long Id, long Compte, string Objet, AdresseLue? De, DateTimeOffset? Date, byte[] Eml, string Texte, IReadOnlyList<PieceLue> Pieces,
+    IReadOnlyList<string> A, IReadOnlyList<string> Cc);
+
+/// <summary>Courriel rangé : document de la GED et pièces jointes (références « ged:&lt;id&gt; »).</summary>
+public sealed record DepotRecu(long? DgeId, List<PieceInfo> Pieces);
+
+/// <summary>Élément de l'application désigné pour un rattachement (type, identifiant, libellé, page).</summary>
+public sealed record ElementTrouve(string Type, string Id, string Libelle, string? Url);
+
+/// <summary>Type d'élément proposé au rattachement manuel (saisie d'un code ou d'un numéro).</summary>
+public sealed record TypeRattachement(string Type, string Libelle, string Aide);
+
+/// <summary>Courriel reçu rattaché à un élément : l'application le range avec l'élément et le suit.</summary>
+public sealed record MessageRattache(long Id, long Compte, long? DgeId, string Objet, string? De, DateTimeOffset? Date, string CorpsHtml, IReadOnlyList<string> Pieces,
+    string Origine, string Utilisateur);
+
+public sealed record LienDto(string Type, string Id, string? Libelle, string? Url, string Origine, int? Score, string Par, DateTimeOffset Le);
+
+public sealed record DemandeRattachement(string Type, string? Id, string? Code);
+public sealed record DemandeIgnorer(string? Motif);
+public sealed record DemandeAdresse(string Adresse);
 
 /// <summary>Signal à publier (notification) : erreur d'envoi, blocage, quota, volume inhabituel, départ d'un courriel en attente.</summary>
 public sealed record SignalMail(string Genre, string Titre, string? Texte, string Niveau, string? Url, string Cle, string? TypeElement = null, string? IdElement = null);

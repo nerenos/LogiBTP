@@ -23,6 +23,10 @@ const PARAMETRES = [
   ['seuil_non_remise_pct', 'Suspension au-delà de (% de non-remises sur une heure)'], ['seuil_utilisateur_heure', 'Envois inhabituels : courriels par heure et par utilisateur'],
   ['reserve_prioritaire_pct', 'Réserve des envois prioritaires (% du quota)'], ['taille_max_mo', 'Pièces jointes par courriel (Mo)'], ['journal_mois', 'Conservation du journal (mois)'],
 ];
+const APRES_RATTACHEMENT = [
+  { valeur: 'RIEN', libelle: 'ne rien faire sur le serveur' }, { valeur: 'DEPLACER', libelle: 'déplacer vers le dossier' },
+  { valeur: 'RETIRER_DRAPEAU', libelle: 'retirer le drapeau « à suivre »' },
+];
 const ETATS = { A_VERIFIER: ['À vérifier', 'neutre'], OK: ['Opérationnel', 'ok'], ERREUR: ['En erreur', 'erreur'], SUSPENDU: ['Envois groupés suspendus', 'attention'] };
 export const VARIABLES_MODELE = ['numero', 'type', 'document', 'objet', 'date', 'validite', 'montant_ht', 'montant_ttc', 'net_a_payer', 'tiers', 'contact', 'redacteur', 'utilisateur'];
 
@@ -126,6 +130,15 @@ export class PageParametresMail extends PageBase {
       <tr><th>Limitations</th><td>${LIMITES.map(([k, l]) => `<label class="ligne">${l} <input data-limite="${k}" size="5" inputmode="numeric"
         value="${c?.limites_saisies?.[k] || ''}" placeholder="${c?.limites?.[k] ?? ''}"></label>`).join(' ')}
         <p class="aide">Vide : valeur par défaut de l'hébergeur (prudente, à vérifier : les quotas des hébergeurs changent).</p></td></tr>
+      <tr><th>Réception</th><td>
+        <label class="ligne">Relève toutes les <input data-o="intervalle_minutes" size="4" inputmode="numeric" value="${c?.options?.intervalle_minutes ?? 60}"> min</label>
+        <label class="ligne"><input type="checkbox" data-o="marquer_lus" ${c?.options?.marquer_lus ? 'checked' : ''}> marquer comme lus les courriels relevés</label>
+        <label class="ligne"><input type="checkbox" data-o="drapeau_a_suivre" ${c?.options?.drapeau_a_suivre ? 'checked' : ''}> drapeau « à suivre » = à rapprocher</label><br>
+        <label class="ligne">Après un rattachement <span data-apres></span></label>
+        <label class="ligne">dossier <input data-o="dossier_traites" size="20" value="${echapper(c?.options?.dossier_traites ?? 'LogiBTP/Traités')}"></label><br>
+        <label class="ligne">Dossiers relevés <input data-dossiers size="50" value="${echapper((c?.dossiers ?? [{ nom: 'INBOX', role: 'RECEPTION' }]).map((d) => `${d.nom}=${d.role}`).join('; '))}"></label>
+        <p class="aide">« INBOX=RECEPTION; LogiBTP/À traiter=A_TRAITER » : un courriel déposé dans un dossier A_TRAITER va toujours dans « À rapprocher ». Jamais de suppression sur le serveur.
+          ${c?.releve_le ? `Dernière relève : ${date(c.releve_le)}${c.releve_erreur ? ` — <span class="erreur">${echapper(c.releve_erreur)}</span>` : ''}` : ''}</p></td></tr>
       <tr><th>Services qui voient la boîte</th><td><input data-c="services" value="${echapper((c?.services ?? []).join(', '))}" size="30" placeholder="codes des services (réception)"></td></tr>
       <tr><th>Signature</th><td data-signature></td></tr>
       <tr><th>Actif</th><td><input type="checkbox" data-c="actif" ${c?.actif ?? true ? 'checked' : ''}></td></tr>
@@ -147,6 +160,8 @@ export class PageParametresMail extends PageBase {
     }
     const repondre = creerCombo({ options: this.comptes.filter((x) => x.id !== c?.id).map((x) => ({ valeur: x.id, libelle: x.alias })), valeur: c?.repondre_a_id ?? '', vide: true });
     zone.querySelector('[data-repondre]').replaceWith(repondre);
+    const apres = creerCombo({ options: APRES_RATTACHEMENT, valeur: c?.options?.apres_rattachement ?? 'RIEN' });
+    zone.querySelector('[data-apres]').replaceWith(apres);
     const signature = zoneRiche(c?.signature_html ?? '');
     zone.querySelector('[data-signature]').append(signature.element);
     const majOauth = () => { oauth.hidden = auth.valeurCombo !== 'OAUTH2'; zone.querySelectorAll('[data-smtp="mot_de_passe"], [data-imap="mot_de_passe"]').forEach((x) => { x.hidden = auth.valeurCombo === 'OAUTH2'; }); };
@@ -184,6 +199,15 @@ export class PageParametresMail extends PageBase {
         smtp: lireServeur('smtp'), imap: lireServeur('imap'), repondre_a_id: Number(repondre.valeurCombo) || null, signature_html: signature.valeur(),
         hebergeur: hebergeur.valeurCombo, limites, copie_envoyes: val('copie').checked,
         services: val('services').value.split(',').map((x) => x.trim()).filter(Boolean), actif: val('actif').checked, alias_principal: val('alias').value.trim() || null,
+        options: {
+          intervalle_minutes: Number(zone.querySelector('[data-o="intervalle_minutes"]').value) || 60, marquer_lus: zone.querySelector('[data-o="marquer_lus"]').checked,
+          drapeau_a_suivre: zone.querySelector('[data-o="drapeau_a_suivre"]').checked, apres_rattachement: apres.valeurCombo,
+          dossier_traites: zone.querySelector('[data-o="dossier_traites"]').value.trim() || null,
+        },
+        dossiers: zone.querySelector('[data-dossiers]').value.split(';').map((x) => x.trim()).filter(Boolean).map((x) => {
+          const [nom, role] = x.split('=').map((y) => y.trim());
+          return { nom, role: (role || 'RECEPTION').toUpperCase() };
+        }),
       };
       try {
         const r = c ? await api.mail.modifierCompte(c.id, saisie) : await api.mail.creerCompte(saisie);

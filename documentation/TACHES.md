@@ -23,6 +23,8 @@
   ENVOYE, note du CRM) ; pages `/mail`, `/mail/nouveau`, `/parametres/mail`. [analyse](conception/ANALYSE-MODULE-MAIL.md)
 - [x] **Module Mail, lot 2** (23/10/2026) : envois automatiques (canal courriel des notifications, mot de passe oublié
   par lien, bordereaux de diffusion du CRM).
+- [x] **Module Mail, lot 3** (23/10/2026) : réception IMAP, courriels reçus en GED, avis de non-remise, liste « À
+  rapprocher », rattachement manuel, ignorer, purge.
 
 ### Chaîne des achats et marchés
 

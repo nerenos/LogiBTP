@@ -36,7 +36,37 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
         return new CompteDto(c.McoId, c.McoCode, siens.FirstOrDefault()?.MalNom ?? c.McoCode, siens.Skip(1).Select(a => a.MalNom).ToList(), c.McoEnvoi,
             c.McoReception, c.McoAuthentification, c.McoOcoId, c.McoHebergeur, Limites.Completer(c.McoHebergeur, saisies), saisies ?? new Limites(0, 0, 0, 0, 0, 0),
             c.McoCopieEnvoyes, c.McoServices, c.McoActif, c.McoEtat, c.McoDerniereErreur, c.McoVerifieLe, c.McoRepondreAMcoId, c.McoSignatureHtml,
-            Public(cfg.Smtp), Public(cfg.Imap));
+            Public(cfg.Smtp), Public(cfg.Imap), OptionsDe(c), DossiersDe(c), c.McoReleveLe, c.McoReleveErreur);
+    }
+
+    public static readonly string[] RolesDossier = ["RECEPTION", "A_TRAITER"];
+    public static readonly string[] ApresRattachement = ["RIEN", "DEPLACER", "RETIRER_DRAPEAU"];
+
+    /// <summary>Options de réception du compte (défauts si absentes).</summary>
+    public static OptionsCompte OptionsDe(CompteEntite c)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<OptionsCompte>(c.McoOptions, JsonCalcul.Options) ?? new OptionsCompte();
+        }
+        catch (JsonException)
+        {
+            return new OptionsCompte();
+        }
+    }
+
+    /// <summary>Dossiers relevés (défaut : la boîte de réception INBOX).</summary>
+    public static List<DossierCompte> DossiersDe(CompteEntite c)
+    {
+        try
+        {
+            var l = JsonSerializer.Deserialize<List<DossierCompte>>(c.McoDossiers, JsonCalcul.Options);
+            return l is { Count: > 0 } ? l : [new DossierCompte("INBOX", "RECEPTION")];
+        }
+        catch (JsonException)
+        {
+            return [new DossierCompte("INBOX", "RECEPTION")];
+        }
     }
 
     private static ServeurPublic? Public(ServeurMail? s) => s is null ? null
@@ -110,6 +140,19 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
         c.McoCopieEnvoyes = s.CopieEnvoyes;
         c.McoServices = (s.Services ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().ToList();
         c.McoActif = s.Actif;
+        if (s.Options is { } o)
+        {
+            if (o.IntervalleMinutes is < 5 or > 1440) throw ExceptionMetier.Invalide("MAIL_INTERVALLE", "Relève : intervalle de 5 minutes à 24 heures");
+            if (!ApresRattachement.Contains(o.ApresRattachement)) throw ExceptionMetier.Invalide("MAIL_OPTION", "Action après rattachement inconnue");
+            if (o.ApresRattachement == "DEPLACER" && string.IsNullOrWhiteSpace(o.DossierTraites)) throw ExceptionMetier.Invalide("MAIL_OPTION", "Dossier des courriels traités obligatoire");
+            c.McoOptions = JsonSerializer.Serialize(o with { DossierTraites = Vide(o.DossierTraites) }, JsonCalcul.Options);
+        }
+        if (s.Dossiers is { } dossiers)
+        {
+            var l = dossiers.Where(d => !string.IsNullOrWhiteSpace(d.Nom)).Select(d => d with { Nom = d.Nom.Trim() }).DistinctBy(d => d.Nom).ToList();
+            if (l.Any(d => !RolesDossier.Contains(d.Role))) throw ExceptionMetier.Invalide("MAIL_DOSSIER", "Rôle de dossier : RECEPTION ou A_TRAITER");
+            c.McoDossiers = JsonSerializer.Serialize(l, JsonCalcul.Options);
+        }
     }
 
     /// <summary>
@@ -312,6 +355,9 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
                where c.McoOcoId == connexion && a.MalPrincipal select $"Mail : {a.MalNom}").ToListAsync(ct);
 
     // --- Outils ---
+
+    public async Task<List<CompteEntite>> ComptesReceptionAsync(CancellationToken ct) =>
+        await db.Comptes.AsNoTracking().Where(c => c.McoReception && c.McoActif).OrderBy(c => c.McoCode).ToListAsync(ct);
 
     public async Task<CompteEntite> Compte(long id, CancellationToken ct) =>
         await db.Comptes.FirstOrDefaultAsync(c => c.McoId == id, ct) ?? throw ExceptionMetier.Introuvable("Compte de messagerie");

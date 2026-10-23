@@ -53,3 +53,44 @@ public sealed class EnvoiMail(IServiceProvider services, IOptions<OptionsMail> o
         }
     }
 }
+
+/// <summary>
+/// Tâche de fond de la réception : chaque minute, pour chaque base, relève des comptes dont l'intervalle est écoulé
+/// (<see cref="ServiceReceptionMail.ReleverDusAsync"/>) ; une fois par jour, purge des courriels non rapprochés anciens.
+/// </summary>
+public sealed class ReleveMail(IServiceProvider services, IOptions<OptionsMail> options, IOptions<OptionsSocietes> societes,
+    ILogger<ReleveMail> journal, TimeProvider horloge) : BackgroundService
+{
+    private DateTimeOffset _purge = DateTimeOffset.MinValue;
+
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        if (!options.Value.Actif) return;
+        try { await Task.Delay(TimeSpan.FromSeconds(30), horloge, ct); } catch (OperationCanceledException) { return; }
+        while (!ct.IsCancellationRequested)
+        {
+            await ExecuterAsync(ct);
+            try { await Task.Delay(TimeSpan.FromMinutes(1), horloge, ct); } catch (OperationCanceledException) { return; }
+        }
+    }
+
+    public async Task ExecuterAsync(CancellationToken ct)
+    {
+        var purger = horloge.GetUtcNow() - _purge > TimeSpan.FromDays(1);
+        foreach (var societe in societes.Value.Societes())
+        {
+            try
+            {
+                await using var portee = services.CreerPorteeSociete(societe);
+                var reception = portee.ServiceProvider.GetRequiredService<ServiceReceptionMail>();
+                await reception.ReleverDusAsync(ct);
+                if (purger) await reception.PurgerAsync(ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                journal.LogWarning(e, "Mail : relève de la base {Societe} non faite", societe.Libelle);
+            }
+        }
+        if (purger) _purge = horloge.GetUtcNow();
+    }
+}

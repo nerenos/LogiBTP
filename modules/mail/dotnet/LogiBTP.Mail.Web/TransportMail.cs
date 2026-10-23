@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
+using MailKit.Search;
 using MailKit.Security;
 using MimeKit;
 
@@ -23,12 +24,31 @@ public sealed record CourrielAConstruire(IdentiteCompte Expediteur, IdentiteComp
     IReadOnlyList<DestinataireSaisi> Cc, IReadOnlyList<DestinataireSaisi> Cci, string Objet, string CorpsHtml, IReadOnlyList<PieceContenu> Pieces,
     string MessageId, string? InReplyTo, string? References, DateTimeOffset Date);
 
+/// <summary>Dossier IMAP à relever : rôle (RECEPTION, A_TRAITER), état de synchronisation (UIDVALIDITY, dernier UID relevé).</summary>
+public sealed record DossierARelever(string Nom, string Role, uint? UidValidity, uint DernierUid);
+
+/// <summary>Courriel relevé : UID, drapeau « à suivre », contenu .eml (en-têtes seuls au-delà de la taille maximale).</summary>
+public sealed record CourrielReleve(string Dossier, string Role, uint Uid, bool Drapeau, byte[] Eml, bool Tronque);
+
+/// <summary>Résultat d'un dossier : nouvel état de synchronisation, courriels, erreur (dossier introuvable…).</summary>
+public sealed record ResultatReleve(string Dossier, uint? UidValidity, uint DernierUid, List<CourrielReleve> Courriels, string? Erreur);
+
 /// <summary>Échanges avec les serveurs (remplacé dans les tests).</summary>
 public interface ITransportMail
 {
     Task EnvoyerAsync(ServeurMail smtp, AuthMail auth, MimeMessage message, CancellationToken ct);
     Task CopierEnvoyesAsync(ServeurMail imap, AuthMail auth, MimeMessage message, CancellationToken ct);
     Task TesterAsync(ServeurMail? smtp, AuthMail? authSmtp, ServeurMail? imap, AuthMail? authImap, CancellationToken ct);
+
+    /// <summary>
+    /// Relève des dossiers : UID supérieurs au dernier relevé (UIDVALIDITY changé : depuis la date donnée), au plus
+    /// <paramref name="max"/> par dossier ; marqués lus si demandé, jamais supprimés ni déplacés.
+    /// </summary>
+    Task<List<ResultatReleve>> ReleverAsync(ServeurMail imap, AuthMail auth, IReadOnlyList<DossierARelever> dossiers, DateTimeOffset depuis, long tailleMax,
+        bool marquerLus, int max, CancellationToken ct);
+
+    /// <summary>Après un rattachement (option du compte) : DEPLACER vers un dossier (créé au besoin) ou RETIRER_DRAPEAU.</summary>
+    Task ApresRattachementAsync(ServeurMail imap, AuthMail auth, string dossier, uint uid, string action, string? cible, CancellationToken ct);
 }
 
 /// <summary>Construction MIME d'un courriel (texte et HTML, pièces jointes, Message-ID maîtrisé).</summary>
@@ -151,6 +171,97 @@ public sealed class TransportMailKit : ITransportMail
                 await client.DisconnectAsync(true, ct);
             });
         }
+    }
+
+    public async Task<List<ResultatReleve>> ReleverAsync(ServeurMail imap, AuthMail auth, IReadOnlyList<DossierARelever> dossiers, DateTimeOffset depuis,
+        long tailleMax, bool marquerLus, int max, CancellationToken ct)
+    {
+        var res = new List<ResultatReleve>();
+        using var client = new ImapClient { Timeout = (int)Delai.TotalMilliseconds };
+        await Executer(async () =>
+        {
+            await client.ConnectAsync(imap.Hote, imap.Port, Securite(imap.Securite), ct);
+            await Authentifier(client, auth, ct);
+            foreach (var d in dossiers)
+            {
+                try
+                {
+                    res.Add(await ReleverDossierAsync(client, d, depuis, tailleMax, marquerLus, max, ct));
+                }
+                catch (Exception e) when (e is FolderNotFoundException or ImapCommandException)
+                {
+                    res.Add(new ResultatReleve(d.Nom, d.UidValidity, d.DernierUid, [], e.Message));
+                }
+            }
+            await client.DisconnectAsync(true, ct);
+        });
+        return res;
+    }
+
+    private static async Task<ResultatReleve> ReleverDossierAsync(ImapClient client, DossierARelever d, DateTimeOffset depuis, long tailleMax, bool marquerLus,
+        int max, CancellationToken ct)
+    {
+        var dossier = await client.GetFolderAsync(d.Nom, ct);
+        await dossier.OpenAsync(marquerLus ? FolderAccess.ReadWrite : FolderAccess.ReadOnly, ct);
+        var dernier = dossier.UidValidity == d.UidValidity ? d.DernierUid : 0u;
+        var requete = dernier > 0 ? SearchQuery.Uids(new UniqueIdRange(new UniqueId(dernier + 1), UniqueId.MaxValue))
+            : d.Role == "A_TRAITER" ? SearchQuery.All : SearchQuery.DeliveredAfter(depuis.UtcDateTime.Date);
+        var uids = (await dossier.SearchAsync(requete, ct)).Where(u => u.Id > dernier).OrderBy(u => u.Id).Take(max).ToList();
+        var courriels = new List<CourrielReleve>();
+        if (uids.Count > 0)
+        {
+            foreach (var s in (await dossier.FetchAsync(uids, MessageSummaryItems.UniqueId | MessageSummaryItems.Size | MessageSummaryItems.Flags, ct)).OrderBy(s => s.UniqueId.Id))
+            {
+                var taille = (long)(s.Size ?? 0);
+                byte[] eml;
+                var tronque = taille > tailleMax;
+                if (tronque)
+                {
+                    eml = LectureMail.EnTetesSeuls(await dossier.GetHeadersAsync(s.UniqueId, ct), taille);
+                }
+                else
+                {
+                    using var o = new MemoryStream();
+                    (await dossier.GetMessageAsync(s.UniqueId, ct)).WriteTo(o);
+                    eml = o.ToArray();
+                }
+                courriels.Add(new CourrielReleve(d.Nom, d.Role, s.UniqueId.Id, s.Flags?.HasFlag(MessageFlags.Flagged) == true, eml, tronque));
+                if (marquerLus) await dossier.AddFlagsAsync(s.UniqueId, MessageFlags.Seen, true, ct);
+                dernier = Math.Max(dernier, s.UniqueId.Id);
+            }
+        }
+        await dossier.CloseAsync(false, ct);
+        return new ResultatReleve(d.Nom, dossier.UidValidity, dernier, courriels, null);
+    }
+
+    public async Task ApresRattachementAsync(ServeurMail imap, AuthMail auth, string dossier, uint uid, string action, string? cible, CancellationToken ct)
+    {
+        using var client = new ImapClient { Timeout = (int)Delai.TotalMilliseconds };
+        await Executer(async () =>
+        {
+            await client.ConnectAsync(imap.Hote, imap.Port, Securite(imap.Securite), ct);
+            await Authentifier(client, auth, ct);
+            var source = await client.GetFolderAsync(dossier, ct);
+            await source.OpenAsync(FolderAccess.ReadWrite, ct);
+            if (action == "RETIRER_DRAPEAU")
+            {
+                await source.RemoveFlagsAsync(new UniqueId(uid), MessageFlags.Flagged, true, ct);
+            }
+            else if (action == "DEPLACER" && !string.IsNullOrWhiteSpace(cible))
+            {
+                IMailFolder destination;
+                try
+                {
+                    destination = await client.GetFolderAsync(cible, ct);
+                }
+                catch (FolderNotFoundException)
+                {
+                    destination = await (await client.GetFolderAsync(client.PersonalNamespaces[0].Path, ct)).CreateAsync(cible, true, ct);
+                }
+                await source.MoveToAsync(new UniqueId(uid), destination, ct);
+            }
+            await client.DisconnectAsync(true, ct);
+        });
     }
 
     private static Task Authentifier(IMailService client, AuthMail auth, CancellationToken ct) => auth.JetonOAuth is { } jeton

@@ -263,6 +263,170 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     private static string? Texte(JsonElement e, string nom) =>
         e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()) ? v.GetString() : null;
 
+    // --- Réception (lot 3) ---
+
+    public override async Task<IReadOnlyList<string>> ServicesAsync(string utilisateur, CancellationToken ct) =>
+        await db.Database.SqlQueryRaw<string>("""
+            SELECT DISTINCT s.srv_code AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id
+            JOIN individu i ON i.ind_id = m.sme_ind_id WHERE lower(i.ind_utilisateur) = lower(@u)
+            """, new NpgsqlParameter("u", utilisateur)).ToListAsync(ct);
+
+    /// <summary>
+    /// Courriel reçu rangé dans la GED de sa boîte (élément `mail_compte`), confidentiel : visible des administrateurs et des
+    /// membres des services du compte (accès nominatifs) ; pièces jointes en documents enfants.
+    /// </summary>
+    public override async Task<DepotRecu> RecevoirAsync(CourrielRecu c, CancellationToken ct)
+    {
+        var ged = services.GetRequiredService<ServiceGed>();
+        var acces = (await db.Database.SqlQueryRaw<string>("""
+            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM mail_compte c JOIN service s ON s.srv_code = ANY(c.mco_services)
+            JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
+            WHERE c.mco_id = @id AND i.ind_utilisateur IS NOT NULL
+            """, new NpgsqlParameter("id", c.Compte)).ToListAsync(ct)).ToArray();
+        var mail = JsonSerializer.SerializeToElement(new
+        {
+            objet = c.Objet, de = c.De is null ? null : c.De.Nom is null ? c.De.Adresse : $"{c.De.Nom} <{c.De.Adresse}>", a = string.Join(", ", c.A),
+            cc = string.Join(", ", c.Cc), date = c.Date?.ToString("O"), message = c.Texte, sens = "R",
+        });
+        var depot = await DeposerAsync(ged, c.Eml, NomFichier(c.Objet, ".eml"), "message/rfc822", new MetaDepot
+        {
+            Titre = c.Objet.Length == 0 ? "(sans objet)" : c.Objet, Categorie = "mail", Nature = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(),
+            Auteur = Fond.Code, DateDocument = (c.Date ?? DateTimeOffset.UtcNow).ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = "CONFIDENTIEL",
+            AccesUtilisateurs = acces, MotsCles = ["courriel", "reception"],
+        }, ct);
+        var pieces = new List<PieceInfo>();
+        foreach (var p in c.Pieces)
+        {
+            var enfant = await DeposerAsync(ged, p.Octets, p.Nom, p.Type, new MetaDepot
+            {
+                Titre = p.Nom, Categorie = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(), ParentId = depot, Auteur = Fond.Code,
+                Confidentialite = "CONFIDENTIEL", AccesUtilisateurs = acces,
+            }, ct);
+            pieces.Add(new PieceInfo($"ged:{enfant}", p.Nom, p.Type, p.Octets.Length));
+        }
+        return new DepotRecu(depot, pieces);
+    }
+
+    private static async Task<long> DeposerAsync(ServiceGed ged, byte[] octets, string nom, string type, MetaDepot meta, CancellationToken ct)
+    {
+        await using var flux = new MemoryStream(octets);
+        var fichier = new FormFile(flux, 0, octets.Length, "fichier", nom) { Headers = new HeaderDictionary(), ContentType = type };
+        return (await ged.DeposerFichier(fichier, meta, Fond, ct)).Id;
+    }
+
+    private static string NomFichier(string titre, string extension)
+    {
+        var nom = string.Concat((titre.Length == 0 ? "courriel" : titre).Split(Path.GetInvalidFileNameChars()));
+        return $"{(nom.Length > 80 ? nom[..80] : nom)}{extension}";
+    }
+
+    public override IReadOnlyList<TypeRattachement> TypesRattachement { get; } =
+    [
+        new("document", "Document", "Numéro (DV2026-00012…)"), new("personne", "Tiers", "Code du tiers"), new("chantier", "Chantier", "Code du chantier"),
+        new("marche", "Marché", "Code du marché"), new("affaire", "Affaire", "Code de l'affaire"), new("projet", "Projet", "Code du projet"),
+    ];
+
+    private sealed record Trouve(long Id, string Libelle);
+
+    /// <summary>Élément désigné par son numéro (document) ou son code (tiers, structure), sans casse.</summary>
+    public override async Task<ElementTrouve?> ResoudreElementAsync(string type, string code, Utilisateur u, CancellationToken ct)
+    {
+        var sql = type switch
+        {
+            "document" => "SELECT e.ent_id AS id, t.tyd_libelle || ' ' || e.ent_numero AS libelle FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id WHERE lower(e.ent_numero) = lower(@c) ORDER BY e.ent_id DESC",
+            "personne" => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE lower(per_code) = lower(@c)",
+            "chantier" => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE lower(cha_code) = lower(@c)",
+            "marche" => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE lower(mar_code) = lower(@c)",
+            "affaire" => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE lower(aff_code) = lower(@c)",
+            "projet" => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE lower(prj_code) = lower(@c)",
+            _ => null,
+        };
+        if (sql is null) return null;
+        var t = await db.Database.SqlQueryRaw<Trouve>(sql, new NpgsqlParameter("c", code)).FirstOrDefaultAsync(ct);
+        return t is null ? null : new ElementTrouve(type, t.Id.ToString(), t.Libelle.Trim(), Page(type, t.Id));
+    }
+
+    public override async Task<ElementTrouve?> DecrireElementAsync(string type, string id, CancellationToken ct)
+    {
+        if (!long.TryParse(id, out var n)) return null;
+        var sql = type switch
+        {
+            "document" => "SELECT e.ent_id AS id, t.tyd_libelle || ' ' || coalesce(e.ent_numero, '(brouillon)') AS libelle FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id WHERE e.ent_id = @n",
+            "personne" => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE per_id = @n",
+            "chantier" => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE cha_id = @n",
+            "marche" => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE mar_id = @n",
+            "affaire" => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE aff_id = @n",
+            "projet" => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE prj_id = @n",
+            "crm_diffusion" => "SELECT dif_id AS id, 'Bordereau ' || dif_numero AS libelle FROM crm_diffusion WHERE dif_id = @n",
+            _ => null,
+        };
+        if (sql is null) return new ElementTrouve(type, id, $"{type} {id}", null);
+        var t = await db.Database.SqlQueryRaw<Trouve>(sql, new NpgsqlParameter("n", n)).FirstOrDefaultAsync(ct);
+        return t is null ? null : new ElementTrouve(type, id, t.Libelle.Trim(), Page(type, n));
+    }
+
+    private static string? Page(string type, long id) => type switch
+    {
+        "document" => $"/document/{id}",
+        "crm_diffusion" => $"/crm/diffusion/{id}",
+        "personne" or "chantier" or "marche" or "affaire" or "projet" => $"/fiche/{type}/{id}",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Courriel reçu rattaché : copie rangée dans la GED de l'élément (courriel et pièces ; contenus partagés par
+    /// empreinte), note « courriel reçu » du suivi si le CRM est actif.
+    /// </summary>
+    public override async Task RattacherAsync(MessageRattache m, ElementTrouve element, CancellationToken ct)
+    {
+        var ged = services.GetRequiredService<ServiceGed>();
+        var (typeGed, idGed, _) = await ElementGedAsync(element.Type, element.Id, ct);
+        if (m.DgeId is long dge && typeGed is not null && idGed is not null && await ged.LireContenu(dge, Fond, ct) is { } eml)
+        {
+            await Tenter("courriel reçu rangé avec l'élément", async () =>
+            {
+                var source = await ged.Document(dge, Fond, ct);
+                var copie = await DeposerAsync(ged, eml.Octets, eml.NomFichier, "message/rfc822", new MetaDepot
+                {
+                    Titre = source.Titre, Categorie = "mail", Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = m.Utilisateur,
+                    DateDocument = source.DateDocument, Mail = source.Mail, Confidentialite = "INTERNE", MotsCles = ["courriel", "reception"],
+                }, ct);
+                foreach (var p in m.Pieces.Where(p => p.StartsWith("ged:")))
+                {
+                    if (!long.TryParse(p[4..], out var pid) || await ged.LireContenu(pid, Fond, ct) is not { } contenu) continue;
+                    await DeposerAsync(ged, contenu.Octets, contenu.NomFichier, contenu.TypeMime ?? "application/octet-stream", new MetaDepot
+                    {
+                        Titre = contenu.NomFichier, Categorie = "mail", TypeElement = typeGed, IdElement = idGed, ParentId = copie, Auteur = m.Utilisateur, Confidentialite = "INTERNE",
+                    }, ct);
+                }
+            });
+        }
+        if (await modules.EstActifAsync("crm", ct))
+        {
+            await Tenter("note du suivi", async () =>
+            {
+                var lien = element.Type == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(element.Type, element.Id, true);
+                var html = $"<p>De : {WebUtility.HtmlEncode(m.De ?? "?")}</p>{m.CorpsHtml}";
+                await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("ACTION", "MEMO", null, null,
+                    $"📨 Courriel reçu : {(m.Objet.Length > 180 ? m.Objet[..180] : m.Objet)}", html, null, null, null, false, false, false, [lien], null),
+                    new Utilisateur(m.Utilisateur == "mail_fond" ? Fond.Code : m.Utilisateur, "ADMIN"), ct);
+            });
+        }
+    }
+
+    public override async Task PurgerAsync(IReadOnlyList<long> documents, CancellationToken ct)
+    {
+        var ged = services.GetRequiredService<ServiceGed>();
+        foreach (var id in documents) await Tenter($"document GED {id} retiré", () => ged.Supprimer(id, Fond, ct));
+    }
+
+    /// <summary>Adresse signalée non remise sur les coordonnées EMAIL de l'annuaire qui la portent.</summary>
+    public override Task<int> MarquerAdresseAsync(string adresse, string motif, Utilisateur u, CancellationToken ct) =>
+        db.Database.ExecuteSqlRawAsync("""
+            UPDATE coordonnee SET coo_non_remis_le = now(), coo_non_remis_motif = left(@m, 300), coo_modifie_le = now(), coo_modifie_par = @u
+            WHERE coo_nature = 'EMAIL' AND lower(trim(coo_valeur)) = lower(trim(@a))
+            """, [new NpgsqlParameter("m", motif), new NpgsqlParameter("u", u.Code), new NpgsqlParameter("a", adresse)], ct);
+
     /// <summary>
     /// Adresse de l'application d'une société pour les liens des courriels envoyés en fond (`Mail:AdresseApplication`,
     /// http://localhost:5173 par défaut) : le sous-domaine de la société précède l'hôte (demo.localhost…).

@@ -7,8 +7,11 @@ import { pastilleCompteMail } from './parametres-mail.js';
 const ETATS = {
   A_ENVOYER: ['⏳ En attente', 'attention'], EN_COURS: ['En cours', 'attention'], ENVOYE: ['Envoyé', 'ok'], ERREUR: ['Erreur', 'erreur'],
   ANNULE: ['Annulé', 'neutre'], SUSPENDU: ['Suspendu', 'erreur'], BROUILLON: ['Brouillon', 'neutre'],
+  A_RAPPROCHER: ['À rapprocher', 'attention'], PROPOSE: ['Proposé', 'attention'], RAPPROCHE: ['Rapproché', 'ok'], IGNORE: ['Ignoré', 'neutre'], RECU: ['Reçu', 'neutre'],
 };
-const VUES = [['envoyes', 'Envoyés'], ['attente', 'En attente'], ['erreurs', 'Erreurs'], ['tous', 'Tous'], ['envois', 'Suivi des envois']];
+const VUES = [['a-rapprocher', 'À rapprocher'], ['recus', 'Reçus'], ['envoyes', 'Envoyés'], ['attente', 'En attente'], ['erreurs', 'Erreurs'], ['tous', 'Envois'],
+  ['envois', 'Suivi des envois']];
+const VUES_RECUES = { 'a-rapprocher': 'a-rapprocher', recus: 'tous' };
 const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const taille = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
 
@@ -159,7 +162,8 @@ export class PageMail extends PageBase {
   async ouvrir() {
     const app = this.app;
     const r = this.requete ?? {};
-    this.vue = r.vue ?? 'envoyes';
+    this.vue = r.vue ?? 'a-rapprocher';
+    this.compte = r.compte ? Number(r.compte) : null;
     this.lot = r.lot ?? null;
     this.titre = 'Courriels';
     const vues = VUES.filter(([v]) => v !== 'envois' || app.estAdmin());
@@ -182,10 +186,26 @@ export class PageMail extends PageBase {
     const zone = this.conteneur.querySelector('[data-liste]');
     try {
       if (this.vue === 'envois') { await this.rendreSuivi(zone); return; }
+      if (VUES_RECUES[this.vue]) { await this.rendreRecus(zone); return; }
       const l = await api.mail.messages({ vue: this.vue, lot: this.lot });
       zone.innerHTML = l.length ? tableMessages(l) : '<p class="aide">Aucun courriel.</p>';
       brancherMessages(zone, this.app);
     } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
+  }
+
+  /** Courriels reçus des boîtes visibles : à rapprocher ou tous ; « Relever maintenant » par boîte. */
+  async rendreRecus(zone) {
+    const [boites, l] = await Promise.all([api.mail.boites(), api.mail.recus({ vue: VUES_RECUES[this.vue], compte: this.compte })]);
+    if (!boites.length) { zone.innerHTML = '<p class="aide">Aucune boîte de réception visible (compte de réception et services de la boîte : Paramètres › Messagerie).</p>'; return; }
+    zone.innerHTML = `<p class="ligne">${boites.map((b) => `<span class="etiquette-choix"><label class="ligne"><input type="radio" name="boite" value="${b.id}" ${this.compte === b.id ? 'checked' : ''}>
+        📥 ${echapper(b.alias)}</label><button type="button" data-relever="${b.id}" title="Relever maintenant (dernière relève : ${date(b.releve_le) || 'jamais'}${b.releve_erreur ? ` — ${echapper(b.releve_erreur)}` : ''})">⟳</button></span>`).join(' ')}
+      <label class="ligne"><input type="radio" name="boite" value="" ${this.compte ? '' : 'checked'}> toutes</label></p>
+      ${l.length ? tableMessages(l) : '<p class="aide">Aucun courriel.</p>'}`;
+    zone.querySelectorAll('[name="boite"]').forEach((x) => x.addEventListener('change', () => { this.compte = x.value ? Number(x.value) : null; this.charger(); }));
+    zone.querySelectorAll('[data-relever]').forEach((b) => b.addEventListener('click', async () => {
+      try { const r = await api.mail.relever(Number(b.dataset.relever)); this.app.message(`${r.nouveaux} nouveau(x) courriel(s)`, 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
+    }));
+    brancherMessages(zone, this.app);
   }
 
   async rendreSuivi(zone) {
@@ -259,13 +279,20 @@ export class PageMessageMail extends PageBase {
         ${m.type_element === 'document' ? `<button type="button" data-element>📄 Document</button>` : ''}</span></div>
       <table><tbody><tr><th>État</th><td>${pastilleMessage(m.etat)} ${m.attente ? `<span class="aide">${echapper(m.attente)}</span>` : ''}
           ${m.erreur ? `<div class="erreur">${echapper(m.erreur)}</div>` : ''}</td></tr>
-        <tr><th>De</th><td>${echapper(m.expediteur ?? '')}</td></tr>
+        <tr><th>De</th><td>${echapper(m.sens === 'R' ? d.de ?? '' : m.expediteur ?? '')}</td></tr>
+        ${m.sens === 'R' ? `<tr><th>Boîte</th><td>${echapper(m.a.join(', '))}${d.auto ? ' <span class="aide">(réponse automatique)</span>' : ''}</td></tr>` : ''}
         ${['A', 'CC', 'CCI'].map((r) => d.destinataires.some((x) => x.role === r) ? `<tr><th>${r === 'A' ? 'À' : r === 'CC' ? 'Cc' : 'Cci'}</th><td>${d.destinataires.filter((x) => x.role === r)
-          .map((x) => `${echapper(x.nom ? `${x.nom} <${x.adresse}>` : x.adresse)}${x.non_remis ? ` <span class="erreur">non remis : ${echapper(x.non_remis)}</span>` : ''}`).join(', ')}</td></tr>` : '').join('')}
+          .map((x) => `${echapper(x.nom ? `${x.nom} <${x.adresse}>` : x.adresse)}${x.non_remis ? ` <span class="erreur">non remis : ${echapper(x.non_remis)}</span>
+            <button type="button" data-marquer="${echapper(x.adresse)}" title="Signaler cette adresse non remise sur les coordonnées de l'annuaire">⚠ Signaler dans l'annuaire</button>` : ''}`).join(', ')}</td></tr>` : '').join('')}
         <tr><th>Créé</th><td>${date(m.cree_le)} par ${echapper(m.cree_par)}</td></tr>
         <tr><th>${m.envoye_le ? 'Envoyé' : 'Départ prévu'}</th><td>${date(m.envoye_le ?? m.prochain_essai)}${m.tentatives ? ` · ${m.tentatives} essai(s)` : ''}</td></tr>
         ${d.pieces.length ? `<tr><th>Pièces</th><td>${d.pieces.map((p) => `📎 ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>`).join('<br>')}</td></tr>` : ''}
       </tbody></table>
+      ${m.sens === 'R' ? `<h2>Rattachements</h2>${d.liens.length ? `<ul>${d.liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" data-lien>${echapper(l.libelle ?? `${l.type} ${l.id}`)}</a>` : echapper(l.libelle ?? `${l.type} ${l.id}`)}
+          <span class="aide">${echapper(l.origine.toLowerCase())}${l.score != null ? ` ${l.score} %` : ''}, ${echapper(l.par)}</span>
+          <button type="button" data-detacher="${echapper(l.type)}|${echapper(l.id)}" title="Retirer ce rattachement">✕</button></li>`).join('')}</ul>` : '<p class="aide">Aucun.</p>'}
+        <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="numéro ou code"> <button type="button" data-rattacher>🔗 Rattacher</button>
+          ${m.etat !== 'IGNORE' ? '<button type="button" data-ignorer title="Courriel sans rapport (publicité, personnel) : retiré de la liste et de la GED">🚫 Ignorer…</button>' : ''}</p>` : ''}
       <div class="mail-corps">${d.corps_html ?? ''}</div>
       ${d.journal.length ? `<h2>Journal</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Résultat</th><th>Réponse du serveur</th><th class="nombre">Durée</th></tr></thead><tbody>
         ${d.journal.map((j) => `<tr><td>${date(j.le)}</td><td>${echapper(j.resultat)}</td><td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td>
@@ -276,5 +303,31 @@ export class PageMessageMail extends PageBase {
     action('[data-annuler]', () => api.mail.annuler(m.id));
     action('[data-relancer]', () => api.mail.relancer(m.id));
     zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(`/document/${m.id_element}`, { nouvelleFenetre: true }));
+    zone.querySelectorAll('[data-lien]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: true }); }));
+    zone.querySelectorAll('[data-marquer]').forEach((b) => b.addEventListener('click', async () => {
+      try { const r = await api.mail.marquerAdresse(m.id, b.dataset.marquer); this.app.message(`${r.coordonnees} coordonnée(s) signalée(s) dans l'annuaire`, 'succes'); } catch (e) { this.app.erreur(e); }
+    }));
+    zone.querySelectorAll('[data-detacher]').forEach((b) => b.addEventListener('click', async () => {
+      const [type, id] = b.dataset.detacher.split('|');
+      try { await api.mail.detacher(m.id, type, id); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    }));
+    if (m.sens !== 'R') return;
+    const types = await api.mail.typesRattachement().catch(() => []);
+    const type = creerCombo({ options: types.map((t) => ({ valeur: t.type, libelle: t.libelle, detail: t.aide })), valeur: types[0]?.type ?? '' });
+    zone.querySelector('[data-type-rattachement]')?.replaceWith(type);
+    const code = zone.querySelector('[data-code]');
+    type.addEventListener('change', () => { code.placeholder = types.find((t) => t.type === type.valeurCombo)?.aide ?? ''; });
+    code.placeholder = types[0]?.aide ?? '';
+    const rattacher = async () => {
+      if (!code.value.trim()) return;
+      try { await api.mail.rattacher(m.id, { type: type.valeurCombo, code: code.value.trim() }); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    };
+    zone.querySelector('[data-rattacher]').addEventListener('click', rattacher);
+    code.addEventListener('keydown', (e) => { if (e.key === 'Enter') rattacher(); });
+    zone.querySelector('[data-ignorer]')?.addEventListener('click', async () => {
+      const motif = prompt('Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :', '');
+      if (motif === null) return;
+      try { await api.mail.ignorer(m.id, motif); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+    });
   }
 }

@@ -28,6 +28,8 @@ public class CompteEntite
     public string? McoDerniereErreur { get; set; }
     public DateTimeOffset? McoVerifieLe { get; set; }
     public DateTimeOffset? McoSuspenduLe { get; set; }
+    public DateTimeOffset? McoReleveLe { get; set; }
+    public string? McoReleveErreur { get; set; }
     public string McoCreePar { get; set; } = "";
     public DateTimeOffset McoCreeLe { get; set; }
     public string? McoMajPar { get; set; }
@@ -175,6 +177,17 @@ public class JournalEntite
     public DateTimeOffset MjoLe { get; set; }
 }
 
+public class DossierEntite
+{
+    public long MdoMcoId { get; set; }
+    public string MdoNom { get; set; } = "";
+    public long? MdoUidvalidity { get; set; }
+    public long MdoDernierUid { get; set; }
+    public DateTimeOffset? MdoReleveLe { get; set; }
+    public int MdoReleves { get; set; }
+    public string? MdoErreur { get; set; }
+}
+
 public class ParametreEntite
 {
     public string MpaCle { get; set; } = "";
@@ -194,6 +207,7 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
     public DbSet<LienEntite> Liens => Set<LienEntite>();
     public DbSet<JournalEntite> Journal => Set<JournalEntite>();
     public DbSet<ParametreEntite> Parametres => Set<ParametreEntite>();
+    public DbSet<DossierEntite> Dossiers => Set<DossierEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -217,6 +231,7 @@ public class MailDbContext(DbContextOptions<MailDbContext> options) : DbContext(
         b.Entity<LienEntite>().ToTable("mail_lien").HasKey(x => x.MliId);
         b.Entity<JournalEntite>().ToTable("mail_journal").HasKey(x => x.MjoId);
         b.Entity<ParametreEntite>().ToTable("mail_parametre").HasKey(x => x.MpaCle);
+        b.Entity<DossierEntite>().ToTable("mail_dossier").HasKey(x => new { x.MdoMcoId, x.MdoNom });
         b.Entity<ParametreEntite>().Property(x => x.MpaValeur).HasColumnType("jsonb");
     }
 }

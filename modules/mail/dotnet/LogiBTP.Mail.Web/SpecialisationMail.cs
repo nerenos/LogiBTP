@@ -35,6 +35,32 @@ public abstract class SpecialisationMail
     public virtual Task<IReadOnlyList<string>> AdministrateursAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
 
     public virtual Task SignalerAsync(SignalMail s, IReadOnlyList<string> destinataires, CancellationToken ct) => Task.CompletedTask;
+
+    // --- Réception (lot 3) ---
+
+    /// <summary>Codes des services de l'utilisateur (boîtes visibles : services du compte de messagerie).</summary>
+    public virtual Task<IReadOnlyList<string>> ServicesAsync(string utilisateur, CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
+
+    /// <summary>Courriel reçu rangé par l'application (GED de la boîte : élément mail_compte) ; pièces jointes en références.</summary>
+    public virtual Task<DepotRecu> RecevoirAsync(CourrielRecu c, CancellationToken ct) => Task.FromResult(new DepotRecu(null, []));
+
+    /// <summary>Types d'éléments proposés au rattachement manuel.</summary>
+    public virtual IReadOnlyList<TypeRattachement> TypesRattachement { get; } = [];
+
+    /// <summary>Élément désigné par un code ou un numéro saisi (null : introuvable).</summary>
+    public virtual Task<ElementTrouve?> ResoudreElementAsync(string type, string code, Utilisateur u, CancellationToken ct) => Task.FromResult<ElementTrouve?>(null);
+
+    /// <summary>Libellé et page d'un élément rattaché (liste des liens).</summary>
+    public virtual Task<ElementTrouve?> DecrireElementAsync(string type, string id, CancellationToken ct) => Task.FromResult<ElementTrouve?>(null);
+
+    /// <summary>Courriel reçu rattaché à un élément : rangé avec lui (GED), suivi (CRM), alerte éventuelle.</summary>
+    public virtual Task RattacherAsync(MessageRattache m, ElementTrouve element, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>Courriels ignorés ou purgés : leurs documents de la GED sont retirés (masqués).</summary>
+    public virtual Task PurgerAsync(IReadOnlyList<long> documents, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>Adresse signalée non remise dans l'annuaire (proposé par l'alerte d'un avis de non-remise) ; renvoie les coordonnées marquées.</summary>
+    public virtual Task<int> MarquerAdresseAsync(string adresse, string motif, Utilisateur u, CancellationToken ct) => Task.FromResult(0);
 }
 
 public sealed class SpecialisationMailDefaut : SpecialisationMail;

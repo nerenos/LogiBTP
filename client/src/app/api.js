@@ -207,6 +207,15 @@ export const api = {
     journal: (f = {}) => appel('GET', `/mail/journal?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
     compteurs: () => appel('GET', '/mail/compteurs'),
     traiter: () => appel('POST', '/mail/traiter'),
+    // Réception (lot 3).
+    boites: () => appel('GET', '/mail/boites'),
+    relever: (compte) => appel('POST', `/mail/comptes/${compte}/relever`),
+    recus: (f) => appel('GET', `/mail/recus?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '' && v != null))}`),
+    typesRattachement: () => appel('GET', '/mail/rattachement/types'),
+    rattacher: (id, d) => appel('POST', `/mail/messages/${id}/rattacher`, d),
+    detacher: (id, type, idElement) => appel('POST', `/mail/messages/${id}/detacher`, { type, id: idElement }),
+    ignorer: (id, motif) => appel('POST', `/mail/messages/${id}/ignorer`, { motif }),
+    marquerAdresse: (id, adresse) => appel('POST', `/mail/messages/${id}/marquer-adresse`, { adresse }),
   },
   // Module OAuth : connexions sortantes (client et jetons jamais relus), autorisation par la page du fournisseur.
   oauth: {

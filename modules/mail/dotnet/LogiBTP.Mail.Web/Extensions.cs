@@ -23,6 +23,9 @@ public static class Extensions
         services.AddScoped<ServiceComptesMail>();
         services.AddScoped<IUtilisationsConnexion>(sp => sp.GetRequiredService<ServiceComptesMail>());
         services.AddScoped<ServiceEnvoiMail>();
+        services.AddScoped<ServiceReceptionMail>();
+        services.AddSingleton<ReleveMail>();
+        services.AddHostedService(sp => sp.GetRequiredService<ReleveMail>());
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<EnvoiMail>();
         services.AddHostedService(sp => sp.GetRequiredService<EnvoiMail>());
@@ -73,6 +76,35 @@ public static class Extensions
         g.MapGet("/journal", (long? compte, DateTimeOffset? du, DateTimeOffset? au, string? resultat, int? page, HttpContext http, ServiceEnvoiMail s, CancellationToken ct) =>
             s.JournalAsync(Utilisateur.Depuis(http), compte, du, au, resultat, page ?? 1, ct));
         g.MapGet("/compteurs", (HttpContext http, ServiceEnvoiMail s, CancellationToken ct) => s.CompteursAsync(Utilisateur.Depuis(http), ct));
+        // Réception : boîtes visibles, relève immédiate, courriels reçus, rattachement, ignorer, adresse non remise.
+        g.MapGet("/boites", async (HttpContext http, ServiceReceptionMail r, ServiceComptesMail s, CancellationToken ct) =>
+        {
+            var u = Utilisateur.Depuis(http);
+            var alias = await s.AliasAsync(ct);
+            var res = new List<object>();
+            foreach (var c in await s.ComptesReceptionAsync(ct))
+            {
+                if (await r.PeutVoirAsync(u, c, ct))
+                    res.Add(new { id = c.McoId, alias = alias.FirstOrDefault(a => a.CompteId == c.McoId && a.Principal)?.Nom ?? c.McoCode, releve_le = c.McoReleveLe, releve_erreur = c.McoReleveErreur });
+            }
+            return res;
+        });
+        g.MapPost("/comptes/{id:long}/relever", async (long id, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+            Results.Ok(new { nouveaux = await r.ReleverMaintenantAsync(Utilisateur.Depuis(http), id, ct) }));
+        g.MapGet("/recus", (string? vue, long? compte, int? page, int? taille, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+            r.RecusAsync(Utilisateur.Depuis(http), vue, compte, page ?? 1, taille ?? 50, ct));
+        g.MapGet("/rattachement/types", (ServiceReceptionMail r) => r.TypesRattachement);
+        g.MapPost("/messages/{id:long}/rattacher", (long id, DemandeRattachement d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+            r.RattacherAsync(Utilisateur.Depuis(http), id, d, ct));
+        g.MapPost("/messages/{id:long}/detacher", (long id, DemandeRattachement d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+            r.DetacherAsync(Utilisateur.Depuis(http), id, d.Type, d.Id ?? "", ct));
+        g.MapPost("/messages/{id:long}/ignorer", async (long id, DemandeIgnorer d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+        {
+            await r.IgnorerAsync(Utilisateur.Depuis(http), id, d.Motif, ct);
+            return Results.NoContent();
+        });
+        g.MapPost("/messages/{id:long}/marquer-adresse", async (long id, DemandeAdresse d, HttpContext http, ServiceReceptionMail r, CancellationToken ct) =>
+            Results.Ok(new { coordonnees = await r.MarquerAdresseAsync(Utilisateur.Depuis(http), id, d.Adresse, ct) }));
         // Passage immédiat de la file de la base courante (administrateur).
         g.MapPost("/traiter", async (HttpContext http, ServiceEnvoiMail s, CancellationToken ct) =>
         {

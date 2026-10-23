@@ -23,6 +23,15 @@ public sealed class ServiceMailTests : IAsyncLifetime
     private readonly SpecialisationTest _specialisation = new();
     private readonly Chiffrement _chiffrement = new("chaine-de-test");
 
+    private sealed class Journal<T> : Microsoft.Extensions.Logging.ILogger<T>
+    {
+        public List<string> Lignes { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel l, Microsoft.Extensions.Logging.EventId e, TState s, Exception? x, Func<TState, Exception?, string> f) =>
+            Lignes.Add($"{f(s, x)} {x}");
+    }
+
     private sealed class Horloge(DateTimeOffset depart) : TimeProvider
     {
         public DateTimeOffset Maintenant { get; set; } = depart;
@@ -44,6 +53,25 @@ public sealed class ServiceMailTests : IAsyncLifetime
 
         public Task CopierEnvoyesAsync(ServeurMail imap, AuthMail auth, MimeMessage message, CancellationToken ct) => Task.CompletedTask;
         public Task TesterAsync(ServeurMail? smtp, AuthMail? a, ServeurMail? imap, AuthMail? b, CancellationToken ct) => Erreur is null ? Task.CompletedTask : throw Erreur;
+
+        /// <summary>Courriels présents dans le dossier INBOX du faux serveur (UID croissants).</summary>
+        public List<byte[]> Boite { get; } = [];
+        public List<(uint Uid, string Action)> Actions { get; } = [];
+
+        public Task<List<ResultatReleve>> ReleverAsync(ServeurMail imap, AuthMail auth, IReadOnlyList<DossierARelever> dossiers, DateTimeOffset depuis, long tailleMax,
+            bool marquerLus, int max, CancellationToken ct)
+        {
+            var d = dossiers.Single();
+            var nouveaux = Boite.Select((eml, i) => (Uid: (uint)(i + 1), Eml: eml)).Where(x => x.Uid > d.DernierUid).ToList();
+            return Task.FromResult<List<ResultatReleve>>([new ResultatReleve(d.Nom, 7, (uint)Boite.Count,
+                nouveaux.Select(x => new CourrielReleve(d.Nom, d.Role, x.Uid, false, x.Eml, false)).ToList(), null)]);
+        }
+
+        public Task ApresRattachementAsync(ServeurMail imap, AuthMail auth, string dossier, uint uid, string action, string? cible, CancellationToken ct)
+        {
+            Actions.Add((uid, action));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class SpecialisationTest : SpecialisationMail
@@ -65,6 +93,30 @@ public sealed class ServiceMailTests : IAsyncLifetime
 
         public override Task<IReadOnlyList<string>> AdministrateursAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>(["admin.test"]);
 
+        public List<(long Message, string Element)> Rattaches { get; } = [];
+        public List<long> Purges { get; } = [];
+
+        public override Task<DepotRecu> RecevoirAsync(CourrielRecu c, CancellationToken ct) =>
+            Task.FromResult(new DepotRecu(1000 + c.Id, c.Pieces.Select((p, i) => new PieceInfo($"ged:{2000 + i}", p.Nom, p.Type, p.Octets.Length)).ToList()));
+
+        public override Task<ElementTrouve?> ResoudreElementAsync(string type, string code, Utilisateur u, CancellationToken ct) =>
+            Task.FromResult(code == "DV-1" ? new ElementTrouve("document", "12", "Devis DV-1", "/document/12") : null);
+
+        public override Task<ElementTrouve?> DecrireElementAsync(string type, string id, CancellationToken ct) =>
+            Task.FromResult<ElementTrouve?>(new ElementTrouve(type, id, $"{type} {id}", null));
+
+        public override Task RattacherAsync(MessageRattache m, ElementTrouve element, CancellationToken ct)
+        {
+            Rattaches.Add((m.Id, $"{element.Type}:{element.Id}"));
+            return Task.CompletedTask;
+        }
+
+        public override Task PurgerAsync(IReadOnlyList<long> documents, CancellationToken ct)
+        {
+            Purges.AddRange(documents);
+            return Task.CompletedTask;
+        }
+
         public override Task SignalerAsync(SignalMail s, IReadOnlyList<string> destinataires, CancellationToken ct)
         {
             Signaux.Add(s);
@@ -78,7 +130,8 @@ public sealed class ServiceMailTests : IAsyncLifetime
     {
         var nettoyage = new NettoyageHtmlMail();
         var comptes = new ServiceComptesMail(db, _chiffrement, _transport, _specialisation, nettoyage, NullLogger<ServiceComptesMail>.Instance, _horloge);
-        return (comptes, new ServiceEnvoiMail(db, comptes, _transport, _specialisation, nettoyage, NullLogger<ServiceEnvoiMail>.Instance, _horloge));
+        var reception = new ServiceReceptionMail(db, comptes, _transport, _specialisation, nettoyage, NullLogger<ServiceReceptionMail>.Instance, _horloge);
+        return (comptes, new ServiceEnvoiMail(db, comptes, reception, _transport, _specialisation, nettoyage, NullLogger<ServiceEnvoiMail>.Instance, _horloge));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -96,6 +149,96 @@ public sealed class ServiceMailTests : IAsyncLifetime
     }
 
     private static List<DestinataireSaisi> D(params string[] a) => a.Select(x => new DestinataireSaisi(x)).ToList();
+
+    private static byte[] Eml(MimeMessage m)
+    {
+        using var o = new MemoryStream();
+        m.WriteTo(o);
+        return o.ToArray();
+    }
+
+    /// <summary>Courriel ordinaire reçu d'un client, avec une pièce jointe.</summary>
+    private static byte[] CourrielClient()
+    {
+        var m = new MimeMessage { Subject = "Bon pour accord", MessageId = "rep-1@client.fr" };
+        m.From.Add(new MailboxAddress("Claire Durand", "claire@durand.fr"));
+        m.To.Add(new MailboxAddress("", "commercial@exemple.fr"));
+        var b = new BodyBuilder { HtmlBody = "<p>Bon pour accord</p><img src=\"https://suivi.exemple/pixel.png\"><script>x()</script>" };
+        b.Attachments.Add("devis-signe.pdf", [1, 2, 3], ContentType.Parse("application/pdf"));
+        m.Body = b.ToMessageBody();
+        return Eml(m);
+    }
+
+    /// <summary>Avis de non-remise (RFC 3464) d'un envoi de l'application.</summary>
+    private static byte[] AvisNonRemise(string messageIdOrigine, string adresse)
+    {
+        var origine = new MimeMessage { Subject = "Devis", MessageId = messageIdOrigine };
+        origine.From.Add(new MailboxAddress("", "commercial@exemple.fr"));
+        origine.To.Add(new MailboxAddress("", adresse));
+        origine.Body = new TextPart("plain") { Text = "…" };
+        var statut = new MessageDeliveryStatus();
+        statut.StatusGroups.Add([new Header("Reporting-MTA", "dns; mx.exemple.fr")]);
+        statut.StatusGroups.Add([new Header("Final-Recipient", $"rfc822; {adresse}"), new Header("Action", "failed"), new Header("Status", "5.1.1"),
+            new Header("Diagnostic-Code", "smtp; 550 5.1.1 User unknown")]);
+        var rapport = new MultipartReport("delivery-status") { new TextPart("plain") { Text = "Courriel non remis" }, statut, new MessagePart { Message = origine } };
+        var m = new MimeMessage { Subject = "Undelivered Mail Returned to Sender", Body = rapport };
+        m.From.Add(new MailboxAddress("Mail Delivery System", "mailer-daemon@exemple.fr"));
+        m.To.Add(new MailboxAddress("", "commercial@exemple.fr"));
+        return Eml(m);
+    }
+
+    [Fact]
+    public async Task Parcours_de_reception()
+    {
+        if (Connexion is null) return;
+        await using var db = Db();
+        var (comptes, envoi) = Services(db);
+        var traces = new Journal<ServiceReceptionMail>();
+        var reception = new ServiceReceptionMail(db, comptes, _transport, _specialisation, new NettoyageHtmlMail(), traces, _horloge);
+        var c = await comptes.CreerAsync(Admin, new SaisieCompte(_code, $"{_code.ToLowerInvariant()}@exemple.fr", null, true, true, "MOT_DE_PASSE", null,
+            new ServeurMail("smtp.exemple.fr", 465, "SSL", null, "secret"), new ServeurMail("imap.exemple.fr", 993, "SSL", null, "secret"), null, null, "AUTRE", null,
+            false, null, true, $"Boîte {_code}", new OptionsCompte(ApresRattachement: "DEPLACER"), [new DossierCompte("INBOX", "RECEPTION")]), default);
+        var alias = (await comptes.AliasAsync(default)).First(a => a.CompteId == c.Id).Id;
+        var r = await envoi.EnvoyerAsync(Admin, new DemandeEnvoi(alias, D("inconnu@durand.fr"), null, null, "Devis DV-1", "<p>x</p>", null, "document", "12", null), default);
+        await envoi.TraiterFileAsync(50, default);
+        var idEnvoi = (await db.Messages.AsNoTracking().FirstAsync(m => m.MmeId == r.Messages[0])).MmeMessageId!;
+
+        _transport.Boite.Add(CourrielClient());
+        _transport.Boite.Add(AvisNonRemise(idEnvoi, "inconnu@durand.fr"));
+        Assert.True(2 == await reception.ReleverMaintenantAsync(Admin, c.Id, default), string.Join(" | ", traces.Lignes));
+        Assert.Equal(0, await reception.ReleverMaintenantAsync(Admin, c.Id, default));
+
+        // Avis de non-remise : destinataire de l'envoi marqué, alerte à l'auteur, avis rattaché à l'élément de l'envoi.
+        var detailEnvoi = await envoi.MessageAsync(Admin, r.Messages[0], default);
+        Assert.Contains("5.1.1", detailEnvoi.Destinataires.Single(d => d.Role == "A").NonRemis);
+        Assert.Contains(_specialisation.Signaux, s => s.Genre == "NON_REMIS");
+
+        // Courriel ordinaire : à rapprocher, HTML nettoyé (ni image distante ni script), pièce rangée.
+        var recus = await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default);
+        var recu = Assert.Single(recus);
+        Assert.Equal(("Bon pour accord", "Claire Durand <claire@durand.fr>", 1), (recu.Objet, recu.Expediteur, recu.NbPieces));
+        var detail = await envoi.MessageAsync(Admin, recu.Id, default);
+        Assert.DoesNotContain("pixel", detail.CorpsHtml);
+        Assert.DoesNotContain("script", detail.CorpsHtml);
+        Assert.Equal("claire@durand.fr", detail.Destinataires.Single(d => d.Role == "DE").Adresse);
+
+        // Rattachement manuel par le numéro : lien, suites de l'application, action sur le serveur (option DEPLACER).
+        await Assert.ThrowsAsync<ExceptionMetier>(() => reception.RattacherAsync(Admin, recu.Id, new DemandeRattachement("document", null, "INCONNU"), default));
+        var liens = await reception.RattacherAsync(Admin, recu.Id, new DemandeRattachement("document", null, "DV-1"), default);
+        Assert.Equal(("document", "12", "MANUEL"), (liens.Single().Type, liens.Single().Id, liens.Single().Origine));
+        Assert.Contains((recu.Id, "document:12"), _specialisation.Rattaches);
+        Assert.Contains((1u, "DEPLACER"), _transport.Actions);
+        Assert.Empty(await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default));
+        await reception.DetacherAsync(Admin, recu.Id, "document", "12", default);
+        Assert.Single(await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default));
+
+        // Ignorer : retiré de la liste, document de la GED purgé ; un utilisateur hors des services du compte ne voit rien.
+        await reception.IgnorerAsync(Admin, recu.Id, "publicité", default);
+        Assert.Contains(1000 + recu.Id, _specialisation.Purges);
+        Assert.Empty(await reception.RecusAsync(Admin, "a-rapprocher", c.Id, 1, 50, default));
+        Assert.Empty(await reception.RecusAsync(new Utilisateur("autre", "SAISIE"), "tous", c.Id, 1, 50, default));
+        await Assert.ThrowsAsync<ExceptionMetier>(() => reception.ReleverMaintenantAsync(new Utilisateur("autre", "SAISIE"), c.Id, default));
+    }
 
     [Fact]
     public async Task Parcours_d_envoi()

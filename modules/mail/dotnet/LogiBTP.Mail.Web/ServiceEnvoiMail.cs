@@ -12,8 +12,8 @@ namespace LogiBTP.Mail.Web;
 /// soumise aux limitations du compte), traitement de la file en tâche de fond (créneau, transport, journal, reprises,
 /// classement des erreurs, suspension d'un compte bloqué, signaux), consultation des messages, du journal et des compteurs.
 /// </summary>
-public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail comptes, ITransportMail transport, SpecialisationMail specialisation,
-    NettoyageHtmlMail nettoyage, ILogger<ServiceEnvoiMail> journal, TimeProvider horloge)
+public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail comptes, ServiceReceptionMail reception, ITransportMail transport,
+    SpecialisationMail specialisation, NettoyageHtmlMail nettoyage, ILogger<ServiceEnvoiMail> journal, TimeProvider horloge)
 {
     private static readonly string[] Priorites = [ReglesEnvoi.Haute, ReglesEnvoi.Normale, ReglesEnvoi.Basse];
     private static readonly string[] EtatsAttente = ["A_ENVOYER", "EN_COURS", "SUSPENDU"];
@@ -532,18 +532,19 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
     public async Task<DetailMessageDto> MessageAsync(Utilisateur u, long id, CancellationToken ct)
     {
         var m = await Lisible(u, id, ct);
-        var dto = (await DtosAsync([m], ct))[0];
+        var dto = m.MmeSens == "R" ? (await reception.RecusAsync(u, "tous", m.MmeMcoId, 1, 1, ct, id))[0] : (await DtosAsync([m], ct))[0];
         var dest = await db.Destinataires.AsNoTracking().Where(d => d.MdeMmeId == id).OrderBy(d => d.MdeId)
             .Select(d => new DestinataireDto(d.MdeRole, d.MdeAdresse, d.MdeNom, d.MdeNonRemis)).ToListAsync(ct);
         var pieces = await db.Pieces.AsNoTracking().Where(p => p.MpiMmeId == id).Select(p => new PieceDto(p.MpiReference, p.MpiNom, p.MpiType, p.MpiTaille)).ToListAsync(ct);
         var lignes = await db.Journal.AsNoTracking().Where(j => j.MjoMmeId == id).OrderBy(j => j.MjoLe).ToListAsync(ct);
-        return new DetailMessageDto(dto, m.MmeCorpsHtml, dest, pieces, lignes.Select(Ligne).ToList());
+        return new DetailMessageDto(dto, m.MmeCorpsHtml, dest, pieces, lignes.Select(Ligne).ToList(), await reception.LiensAsync(id, ct), m.MmeDe, m.MmeAuto, m.MmeMcoId);
     }
 
     private async Task<MessageEntite> Lisible(Utilisateur u, long id, CancellationToken ct)
     {
         var m = await db.Messages.FirstOrDefaultAsync(x => x.MmeId == id, ct) ?? throw ExceptionMetier.Introuvable("Courriel");
-        if (!u.EstAdmin && m.MmeCreePar != u.Code && !await db.Liens.AnyAsync(l => l.MliMmeId == id && l.MliRetireLe == null, ct))
+        if (!u.EstAdmin && m.MmeCreePar != u.Code && !await db.Liens.AnyAsync(l => l.MliMmeId == id && l.MliRetireLe == null, ct)
+            && !(m.MmeSens == "R" && await reception.PeutVoirAsync(u, await comptes.Compte(m.MmeMcoId, ct), ct)))
             throw ExceptionMetier.AccesRefuse("LIRE");
         return m;
     }
