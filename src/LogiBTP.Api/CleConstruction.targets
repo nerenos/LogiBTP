@@ -1,0 +1,30 @@
+<Project>
+  <!--
+    Clé de construction du .env (ANALYSE-MODULE-DROITS.md § 3.6, D22, D25) : injectée dans les binaires, jamais dans le
+    dépôt. Source : variable d'environnement LOGIBTP_CLE_CONSTRUCTION (construction des versions fournies), sinon le
+    fichier cle-construction.secret à la racine du dépôt (créé au hasard à la première construction locale ; ignoré par
+    git). La même clé doit servir à toutes les versions d'une même distribution pour que le .env reste lisible.
+  -->
+  <PropertyGroup>
+    <CleConstructionFichier>$(MSBuildThisFileDirectory)..\..\cle-construction.secret</CleConstructionFichier>
+  </PropertyGroup>
+
+  <Target Name="GenererCleConstruction" BeforeTargets="CoreCompile">
+    <WriteLinesToFile Condition="'$(LOGIBTP_CLE_CONSTRUCTION)' == '' And !Exists('$(CleConstructionFichier)')" File="$(CleConstructionFichier)"
+                      Lines="$([System.Guid]::NewGuid().ToString('N'))$([System.Guid]::NewGuid().ToString('N'))" Overwrite="true" />
+    <ReadLinesFromFile Condition="'$(LOGIBTP_CLE_CONSTRUCTION)' == ''" File="$(CleConstructionFichier)">
+      <Output TaskParameter="Lines" PropertyName="CleConstructionLue" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <CleConstructionSource>$(IntermediateOutputPath)CleConstruction.g.cs</CleConstructionSource>
+      <CleConstructionValeur Condition="'$(LOGIBTP_CLE_CONSTRUCTION)' != ''">$(LOGIBTP_CLE_CONSTRUCTION)</CleConstructionValeur>
+      <CleConstructionValeur Condition="'$(LOGIBTP_CLE_CONSTRUCTION)' == ''">$(CleConstructionLue)</CleConstructionValeur>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(CleConstructionSource)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// Généré par CleConstruction.targets : clé de construction du .env (jamais versionnée).;namespace LogiBTP.Api%3B;internal static class CleConstruction { internal const string Valeur = &quot;$(CleConstructionValeur)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(CleConstructionSource)" />
+      <FileWrites Include="$(CleConstructionSource)" />
+    </ItemGroup>
+  </Target>
+</Project>

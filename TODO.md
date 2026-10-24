@@ -60,15 +60,14 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 
 ### Droits et partage
 
-- [ ] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), lots 1 à 3 réalisés : profils, arbre, refus par défaut des routes, montants de validation, usurpation, listes filtrées, JWT et rafraîchissement rotatif, machines connues, double facteur, exclusion d'IP, identifiants d'API) :
+- [ ] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), lots 1 à 4 réalisés : profils, arbre, refus par défaut des routes, montants de validation, usurpation, listes filtrées, JWT et rafraîchissement rotatif, machines connues, double facteur, exclusion d'IP, identifiants d'API, sécurité web, journaux, .env chiffré, rôles PostgreSQL) :
   droits fins par profil, portée et élément, montants de validation, usurpation, RGPD, JWT avec
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
 - [ ] **Avant une exposition sur internet** ([analyse des droits, § 10](documentation/conception/ANALYSE-MODULE-DROITS.md)) :
-  aucun script dans les HTML saisis ou reçus (assainisseur répliqué JS / C#), en-têtes de sécurité et CSP (§ 10.4), contrôle de l'`Origin` des écritures (sous-domaines = même
-  site), origines CORS en paramètre, limites de débit (§ 10.5), proxys déclarés (`UseForwardedHeaders`), prérequis
-  DNS et certificat joker dans l'installeur (§ 10.6).
+  reste l'assainissement du HTML saisi ou reçu (aucun script, règle répliquée JS / C#) et les prérequis DNS et
+  certificat joker dans l'installeur (§ 10.6) ; en-têtes, CSP, contrôle de l'`Origin`, CORS, débit et proxys : faits (lot 4).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des
   pièces jointes trop lourdes pour un courriel.
 
@@ -179,9 +178,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Installation
 
-- [ ] **Module d'installation** : générer et conserver la chaîne de chiffrement de l'installation (aujourd'hui
-  `LOGIBTP_CLE_CHIFFREMENT` dans `.env`, générée à la main ; la perdre ou la changer rend illisibles les mots de passe
-  des fiches), rotation de clé (rechiffrer les valeurs `chiffre:v1:`).
+- [ ] **Module d'installation** : enchaîner `env initialiser` (fait : clé des données générée, `.env` chiffré, un `.env`
+  fourni est conservé), création des bases et des rôles (`db/installation/roles.sql`), `pg_hba.conf`, certificat joker
+  et DNS, premier administrateur ; rotation de la clé des données (rechiffrer les valeurs `chiffre:v1:`).
 
 ## Interface
 

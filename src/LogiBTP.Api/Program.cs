@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using LogiBTP.Annuaire.Web;
 using LogiBTP.Authentification.Web;
+using LogiBTP.Api;
 using LogiBTP.Api.Btp;
 using LogiBTP.Bibliotheque.Web;
 using LogiBTP.Calendrier.Web;
@@ -25,12 +26,26 @@ using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
+// Commande du fichier .env (env initialiser | chiffrer | verifier) : sans démarrer l'application.
+if (args.Length > 0 && args[0] == "env")
+{
+    Environment.ExitCode = CommandeEnv.Executer(args[1..], Directory.GetCurrentDirectory(), Console.Out);
+    return;
+}
 // Commande serveur de secours (comptes creer-admin | reinitialiser | deverrouiller | liste) : arguments retirés de la configuration.
 var commande = args.Length > 0 && args[0] == "comptes" ? args[1..] : null;
 var builder = WebApplication.CreateBuilder(commande is null ? args : []);
-// Secrets de l'installation (.env hors du dépôt) : chaîne de chiffrement des valeurs secrètes (mots de passe des fiches).
-builder.Configuration.AjouterFichierEnv(builder.Environment.ContentRootPath);
+// Secrets de l'installation (.env hors du dépôt, valeurs sensibles chiffrées par la clé de construction des binaires) :
+// chaîne de chiffrement des valeurs secrètes en base (mots de passe des fiches), réglages de sécurité.
+builder.Configuration.AjouterFichierEnv(builder.Environment.ContentRootPath, cleEnv: CleConstruction.Valeur);
 builder.Services.AddChiffrement(builder.Configuration);
+// Sécurité web (§ 10) : déploiement, proxys déclarés, origines CORS, adresses de confiance, limites de débit.
+var securite = OptionsSecurite.Lire(builder.Configuration);
+builder.Services.AddSecurite(securite);
+// Journal technique (niveau LOGIBTP_JOURNAL_NIVEAU, masqué) dans la base principale, repli sur fichier ; purge nocturne.
+builder.Logging.AddProvider(new JournalTechnique(builder.Configuration.GetConnectionString("LogiBTP"),
+    Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration["LOGIBTP_JOURNAL_NIVEAU"])));
+builder.Services.AddHostedService<PurgeJournaux>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
 builder.Services.AddSocietes(builder.Configuration);
@@ -110,8 +125,11 @@ ServiceNotification.TypesDirects.AddRange(SpecialisationOAuthBtp.Types);
 builder.Services.AddModuleMail<SpecialisationMailBtp>(Base, builder.Configuration.GetSection("Mail"));
 ServiceNotification.TypesDirects.AddRange(SpecialisationMailBtp.Types);
 ServiceNotification.TypesDirects.AddRange(SpecialisationAuthentificationBtp.Types);
-builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]));
-builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
+builder.Services.PostConfigure<OptionsAuthentification>(o =>
+{
+    o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]);
+    o.AdressesConfiance.AddRange(securite.AdressesConfiance);
+});
 
 var app = builder.Build();
 SpecialisationBtp.Http = app.Services.GetRequiredService<IHttpContextAccessor>();
@@ -124,7 +142,7 @@ if (commande is not null)
 // Métrés saisis en lignes : convertis en scripts au démarrage, dans chaque base qui a encore la table metre_ligne.
 await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
 
-app.UseCors();
+app.UseSecurite();
 app.UseErreursMetier();
 app.UseSocietes();
 app.UseAuthentificationSession();

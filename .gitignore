@@ -7,6 +7,8 @@ client/dist/
 **/tests/resultats-js/
 stockage-ged/
 .env
+# Clé de construction du .env (CleConstruction.targets), propre à chaque distribution
+cle-construction.secret
 
 # Sorties des essais du module Édition
 modules/edition/js/.essais/

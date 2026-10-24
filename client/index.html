@@ -4,28 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LogiBTP</title>
-  <script>
-    // Thème choisi (Paramètres) appliqué avant l'affichage : pas d'éclair de l'autre thème au chargement.
-    try { const t = JSON.parse(localStorage.getItem('logibtp.navigation'))?.theme; if (t === 'clair' || t === 'sombre') document.documentElement.dataset.theme = t === 'clair' ? 'light' : 'dark'; } catch { /* thème du système */ }
-  </script>
+  <script src="/demarrage-theme.js"></script>
 </head>
 <body>
   <header id="bandeau"></header>
   <div id="pages" class="pages"></div>
-  <script>
-    // Rechargement : copie de la page quittée affichée avant le chargement des modules (afficherApercu, module Navigation).
-    try {
-      const a = JSON.parse(sessionStorage.getItem('logibtp.apercu'));
-      if (a && a.url === location.pathname + location.search) {
-        const el = document.createElement('div');
-        el.className = 'page-apercu';
-        el.inert = true;
-        el.setAttribute('aria-hidden', 'true');
-        el.innerHTML = a.html;
-        document.getElementById('pages').append(el);
-      }
-    } catch { /* pas d'aperçu */ }
-  </script>
+  <script src="/demarrage-apercu.js"></script>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

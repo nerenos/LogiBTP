@@ -33,7 +33,13 @@
 > la base une fois ; sans adresse de courriel ou sans messagerie, le double facteur est sauté et journalisé (pas de
 > blocage de l'administrateur de l'installation) ; la borne garde son jeton d'appareil et reçoit le profil système
 > BORNE (D16) pour les pièces qu'elle crée ; l'exclusion d'adresse ne compte pas les échecs de PIN de la borne (elle
-> a son propre blocage).
+> a son propre blocage). Lot 4 réalisé le 24/10/2026 (socle `Securite.cs`, `Masquage`, `.env` chiffré ; cœur
+> `CommandeEnv`, `CleConstruction.targets`, `JournalTechnique`, `PurgeJournaux`, `db/222`, `db/installation/roles.sql` ;
+> client sans script en ligne, CSP en rapport) ; écarts : la CSP bloquante est posée par le proxy en production (le client
+> est servi par lui) ; les rôles PostgreSQL sont un script d'installation (les bases de développement gardent le compte
+> `logibtp`) ; les conversions lancées au démarrage de l'API (métrés) exigent le rôle de schéma, elles se font à la mise
+> à jour ; le journal technique est installé dans la base principale ; la construction de production du client est
+> celle de Vite (`npm run build` : minification).
 
 ## 1. Note d'origine (résumé)
 

@@ -150,6 +150,7 @@ services:
       - ./db/219_stock_dotations.sql:/docker-entrypoint-initdb.d/219_stock_dotations.sql:ro
       - ./db/220_stock_borne.sql:/docker-entrypoint-initdb.d/220_stock_borne.sql:ro
       - ./db/221_droits.sql:/docker-entrypoint-initdb.d/221_droits.sql:ro
+      - ./db/222_journal_technique.sql:/docker-entrypoint-initdb.d/222_journal_technique.sql:ro
       # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.
