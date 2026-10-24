@@ -39,9 +39,39 @@ export class PageCompte extends PageBase {
         <p class="connexion-erreur" data-erreur hidden></p>
         <p><button type="submit" class="principal">Enregistrer le mot de passe</button>${impose ? ' <button type="button" data-action="deconnecter">⏻ Se déconnecter</button>' : ''}</p>
       </form></div>`;
+    if (!impose) this.conteneur.querySelector('.page-parametres').insertAdjacentHTML('beforeend', '<section class="carte" data-sessions></section>');
     this.conteneur.querySelectorAll('[data-action="deconnecter"]').forEach((b) => b.addEventListener('click', () => app.deconnecter()));
+    if (!impose) this.#rendreSessions(this.conteneur.querySelector('[data-sessions]')).catch((e) => app.erreur(e));
     const form = this.conteneur.querySelector('[data-form]');
     form.addEventListener('submit', (e) => { e.preventDefault(); this.#changer(form); });
+  }
+
+  /**
+   * Mes sessions (déconnexion à distance), mes machines connues (« Rester connecté », pas de code de connexion) et le
+   * double facteur choisi (module Droits, lot 3).
+   */
+  async #rendreSessions(zone) {
+    const { sessions, machines, double_facteur: double } = await api.auth.sessions();
+    const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    zone.innerHTML = `<h2 class="titre-actions">Mes sessions <span>${sessions.length > 1 ? '<button type="button" data-fermer-autres>⏻ Fermer les autres sessions</button>' : ''}</span></h2>
+      <table class="tableau-compact"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th><th></th></tr></thead><tbody>
+      ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ` <span class="pastille" title="Machine connue : ${echapper(s.machine)}">💻</span>` : ''}${s.api ? ' <span class="pastille">API</span>' : ''}</td>
+        <td>${echapper(s.adresse ?? '')}</td><td>${date(s.cree_le)}</td><td>${date(s.vu_le)}</td><td>${date(s.expire_le)}</td>
+        <td class="cellule-boutons">${s.courante ? '<span class="aide">celle-ci</span>' : `<button type="button" class="bouton-icone" data-fermer="${s.id}" title="Fermer cette session">⏻</button>`}</td></tr>`).join('')}</tbody></table>
+      <h2>Mes machines connues</h2>
+      <p class="aide">Une machine connue permet « Rester connecté » (7 jours) et la connexion sans code. Oubliez une machine perdue ou partagée.</p>
+      ${machines.length ? `<table class="tableau-compact"><thead><tr><th>Machine</th><th>Adresse</th><th>Connue depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
+        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${date(m.cree_le)}</td><td>${date(m.vu_le)}</td>
+          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine (ses sessions sont fermées)">✕</button></td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucune machine connue.</p>'}
+      <p><label class="ligne"><input type="checkbox" data-double ${double ? 'checked' : ''}> Me demander un code par courriel à chaque connexion depuis une machine inconnue</label></p>`;
+    const recharger = () => this.#rendreSessions(zone).catch((e) => this.app.erreur(e));
+    zone.querySelector('[data-fermer-autres]')?.addEventListener('click', () => api.auth.fermerSessions().then(recharger).catch((e) => this.app.erreur(e)));
+    zone.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => api.auth.fermerSession(b.dataset.fermer).then(recharger).catch((e) => this.app.erreur(e))));
+    zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', () => {
+      if (confirm('Oublier cette machine ? Ses sessions sont fermées.')) api.auth.oublierMachine(b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e));
+    }));
+    zone.querySelector('[data-double]').addEventListener('change', (e) => api.auth.doubleFacteur(e.target.checked).catch((x) => this.app.erreur(x)));
   }
 
   async #changer(form) {

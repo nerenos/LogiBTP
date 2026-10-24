@@ -11,6 +11,8 @@ import http from 'node:http';
 const [hote, idDemo] = [process.argv[2] ?? 'localhost', Number(process.argv[3] ?? 2)];
 const ENTETES = { 'Content-Type': 'application/json', 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' };
 
+const COOKIES = new Map();
+
 function appel(methode, chemin, corps) {
   return new Promise((ok, ko) => {
     const donnees = corps === undefined ? null : JSON.stringify(corps);
@@ -19,8 +21,12 @@ function appel(methode, chemin, corps) {
       let t = '';
       r.on('data', (c) => { t += c; });
       r.on('end', () => {
-        const cookie = (r.headers['set-cookie'] ?? []).find((c) => c.startsWith('logibtp_session='));
-        if (cookie) ENTETES.Cookie = cookie.split(';')[0];
+        // Cookies de la session (jeton d'accès, jeton de rafraîchissement rotatif) : tous gardés et renvoyés.
+        for (const c of r.headers['set-cookie'] ?? []) {
+          const [nom, valeur] = c.split(';')[0].split('=');
+          if (valeur) COOKIES.set(nom, valeur); else COOKIES.delete(nom);
+        }
+        if (COOKIES.size) ENTETES.Cookie = [...COOKIES].map(([k, v]) => `${k}=${v}`).join('; ');
         const j = t ? JSON.parse(t) : null;
         if (r.statusCode >= 400) ko(new Error(`${methode} ${chemin} → ${r.statusCode} ${j?.code ?? ''} ${j?.title ?? t.slice(0, 200)} ${JSON.stringify(j?.details ?? '').slice(0, 300)}`));
         else ok(j);

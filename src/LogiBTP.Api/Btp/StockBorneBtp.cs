@@ -109,11 +109,11 @@ public static class StockBorneBtp
             if (x.Lignes is not { Count: > 0 } || x.Lignes.Any(l => l.Quantite <= 0)) throw ExceptionMetier.Invalide("STK_QUANTITE", "Au moins un article à quantité positive");
             if (!x.Dotation && x.Chantier is null) throw ExceptionMetier.Invalide("STK_BENEFICIAIRE", "Chantier ou dotation personnelle");
             if (test) return Results.Ok(new { essai = true, pieces = Array.Empty<PieceMagasin>() });
-            // Pièce créée au nom du compte du salarié ; droits de création portés par la borne (appareil enregistré, PIN).
+            // Pièce créée au nom du compte du salarié ; droits de création portés par la borne : profil BORNE (D16, appareil enregistré, PIN).
             var code = await db.Database.SqlQuery<string?>($"""
                 SELECT coalesce(i.ind_utilisateur, 'salarie:' || s.sal_id) AS "Value" FROM salarie s LEFT JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_id = {s}
                 """).FirstAsync(ct);
-            var auteur = new Utilisateur(code ?? $"borne:{appareil}", "ADMIN", null);
+            var auteur = new Utilisateur(code ?? $"borne:{appareil}", "BORNE", null);
             var cible = x.Dotation ? await MagasinBtp.ChantierDotationAsync(db, s, ct) : x.Chantier!.Value;
             var com = string.IsNullOrWhiteSpace(x.Commentaire) ? "" : $" : {x.Commentaire.Trim()}";
             var pieces = new List<PieceMagasin>();

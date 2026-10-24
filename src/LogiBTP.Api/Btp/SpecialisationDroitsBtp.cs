@@ -79,6 +79,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/auth/comptes", ModeRoute.Module, "administration/comptes"),
         new("/api/auth/personne", ModeRoute.Module, "administration/comptes"),
         new("/api/auth/personnes", ModeRoute.Module, "administration/comptes"),
+        new("/api/auth/comptes-api", ModeRoute.Module, "administration/comptes"),
+        new("/api/auth/exclusions", ModeRoute.Module, "administration/comptes"),
         new("/api/droits", ModeRoute.Session),
         new("/api/droits/catalogue", ModeRoute.Module, "administration/profils"),
         new("/api/droits/profils", ModeRoute.Module, "administration/profils"),

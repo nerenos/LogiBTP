@@ -26,7 +26,14 @@
 > demande de validation est une tâche du Suivi au service du document (pas au « valideur du niveau supérieur », qui
 > n'est pas modélisé) ; la durée d'usurpation est de 60 minutes au plus ; le déverrouillage RGPD reste celui du module
 > Fiche (révélation journalisée d'un champ) et des notes privées du CRM ; les listes masquent les champs
-> confidentiels des fiches sans le droit RGPD de la fiche.
+> confidentiels des fiches sans le droit RGPD de la fiche. Lot 3 réalisé le 24/10/2026 (module Authentification :
+> `JetonsAcces`, `ServiceAuthentification.Securite.cs`, `005b` ; pages Connexion, Mon compte, Comptes utilisateurs) ;
+> écarts : le jeton d'accès est porté par un cookie HttpOnly (l'application ne le manipule jamais) ; la révocation
+> immédiate (D26) relève une époque commune à toutes les sessions (une seule instance de l'API) : chaque session relit
+> la base une fois ; sans adresse de courriel ou sans messagerie, le double facteur est sauté et journalisé (pas de
+> blocage de l'administrateur de l'installation) ; la borne garde son jeton d'appareil et reçoit le profil système
+> BORNE (D16) pour les pièces qu'elle crée ; l'exclusion d'adresse ne compte pas les échecs de PIN de la borne (elle
+> a son propre blocage).
 
 ## 1. Note d'origine (résumé)
 

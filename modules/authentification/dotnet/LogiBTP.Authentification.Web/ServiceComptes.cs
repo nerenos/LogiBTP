@@ -6,7 +6,8 @@ namespace LogiBTP.Authentification.Web;
 /// <summary>Compte tel que l'écran des comptes le montre (jamais l'empreinte du mot de passe).</summary>
 public sealed record CompteDto(long Id, string Code, string Type, string? Libelle, string? TypeElement, string? IdElement, string Profil,
     bool Actif, DateOnly? ValideJusquAu, string Etat, bool Connexion, DateTimeOffset? VerrouilleJusquAu, DateTimeOffset? DerniereConnexion,
-    bool MdpProvisoire, int SessionsOuvertes, string CreePar, DateTimeOffset CreeLe, string? MajPar, DateTimeOffset MajLe);
+    bool MdpProvisoire, int SessionsOuvertes, string CreePar, DateTimeOffset CreeLe, string? MajPar, DateTimeOffset MajLe,
+    Guid Uuid = default, string[]? Adresses = null, bool DoubleFacteur = false);
 
 /// <summary>Création ou modification d'un compte de personne par un administrateur.</summary>
 public sealed record CompteSaisi(string? Code, string? TypeElement, string? IdElement, string? Profil, DateOnly? ValideJusquAu, bool? Actif);
@@ -39,8 +40,13 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
     {
         var e = ReglesCompte.Etat(c.AEvaluer(), DateTimeOffset.UtcNow);
         return new CompteDto(c.CptId, c.CptCode, c.CptType, c.CptLibelle, c.CptTypeElement, c.CptIdElement, c.CptProfil, c.CptActif, c.CptValideJusquAu,
-            e.Etat, e.Connexion, c.CptVerrouilleJusquAu, c.CptDerniereConnexion, c.CptMdpProvisoire, sessions, c.CptCreePar, c.CptCreeLe, c.CptMajPar, c.CptMajLe);
+            e.Etat, e.Connexion, c.CptVerrouilleJusquAu, c.CptDerniereConnexion, c.CptMdpProvisoire, sessions, c.CptCreePar, c.CptCreeLe, c.CptMajPar, c.CptMajLe,
+            c.CptUuid, c.CptAdresses, c.CptDoubleFacteur);
     }
+
+    /// <summary>Compte tel que l'écran le montre, sans contrôle de droit (appelant déjà contrôlé).</summary>
+    public async Task<CompteDto> DetailCompteAsync(long id, CancellationToken ct) =>
+        await DtoAsync(await db.Comptes.AsNoTracking().FirstAsync(x => x.CptId == id, ct), ct);
 
     public async Task<List<CompteDto>> ListeAsync(string? recherche, string? etat, Utilisateur u, CancellationToken ct)
     {
@@ -67,7 +73,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         var journal = await db.Journal.AsNoTracking().Where(j => j.JcoCode.ToLower() == c.CptCode.ToLower()).OrderByDescending(j => j.JcoLe).Take(50)
             .Select(j => new { evenement = j.JcoEvenement, detail = j.JcoDetail, le = j.JcoLe, adresse = j.JcoAdresse, navigateur = j.JcoNavigateur, par = j.JcoPar })
             .ToListAsync(ct);
-        return new { compte = await DtoAsync(c, ct), personne, journal };
+        return new { compte = await DtoAsync(c, ct), personne, journal, sessions = await auth.SessionsAsync(c.CptId, null, ct), machines = await auth.MachinesAsync(c.CptId, ct) };
     }
 
     public async Task<PersonneEtCompte> PersonneAsync(string type, string id, Utilisateur u, CancellationToken ct)
@@ -151,7 +157,11 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
     {
         Admin(u);
         var c = await db.Comptes.FirstOrDefaultAsync(x => x.CptId == id, ct) ?? throw ExceptionMetier.Introuvable($"Compte {id}");
-        if (c.CptType != "PERSONNE") throw ExceptionMetier.Conflit("COMPTE_SERVICE", "Un compte de service ne se modifie pas ici");
+        if (c.CptType == "SERVICE") throw ExceptionMetier.Conflit("COMPTE_SERVICE", "Un compte de service ne se modifie pas ici");
+        if (c.CptType == "API" && s.Profil is { } p && await specialisation.ProfilTotalAsync(services, p, ct))
+        {
+            throw ExceptionMetier.Invalide("PROFIL_INTERDIT", "Un identifiant d'API n'a jamais tous les droits");
+        }
         var ancien = c.CptCode;
         var code = s.Code is null ? c.CptCode : ReglesCompte.Normaliser(s.Code);
         var profil = s.Profil ?? c.CptProfil;
@@ -164,7 +174,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         if (code != ReglesCompte.Normaliser(c.CptCode)) await ControlerPseudoAsync(code, c.CptId, c.CptTypeElement, c.CptIdElement, await auth.ParametresAsync(ct), ct);
         var personne = c.CptTypeElement is null || c.CptIdElement is null ? null : await specialisation.PersonneAsync(db, c.CptTypeElement, c.CptIdElement, ct);
         // Réactivation ou nouveau profil : la personne doit toujours y avoir droit ; une désactivation passe toujours.
-        if (actif) await ControlerCompteAsync(profil, s.ValideJusquAu, personne, ct);
+        if (actif && c.CptType == "PERSONNE") await ControlerCompteAsync(profil, s.ValideJusquAu, personne, ct);
         var changements = new List<string>();
         if (code != c.CptCode) changements.Add($"identifiant {c.CptCode} → {code}");
         if (profil != c.CptProfil) changements.Add($"profil {c.CptProfil} → {profil}");

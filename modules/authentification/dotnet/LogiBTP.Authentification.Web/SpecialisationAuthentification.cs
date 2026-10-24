@@ -39,6 +39,16 @@ public abstract class SpecialisationAuthentification
             ? (await droits.ProfilsAsync(ct)).Any(p => p.Code == profil && p.Total)
             : profil == "ADMIN";
 
+    /// <summary>
+    /// Code du double facteur (D3) à envoyer par courriel à la personne liée au compte ; renvoie la destination masquée
+    /// (« j***@exemple.fr »), null sans adresse ou sans moyen d'envoi (la connexion se fait alors sans code, journalisé).
+    /// </summary>
+    public virtual Task<string?> EnvoyerCodeAsync(IServiceProvider services, Compte compte, string code, DateTimeOffset expireLe, CancellationToken ct) =>
+        Task.FromResult<string?>(null);
+
+    /// <summary>Adresse exclue après trop d'échecs (D19) : prévenir les administrateurs.</summary>
+    public virtual Task ApresExclusionAsync(IServiceProvider services, string prefixe, DateTimeOffset fin, int echecs, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Après le début d'une usurpation (paramètre « notifier ») : prévenir le compte usurpé.</summary>
     public virtual Task ApresUsurpationAsync(IServiceProvider services, Compte cible, string administrateur, string motif, CancellationToken ct) => Task.CompletedTask;
 

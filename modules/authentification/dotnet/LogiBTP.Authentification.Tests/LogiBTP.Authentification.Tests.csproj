@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LogiBTP.Authentification\LogiBTP.Authentification.csproj" />
+    <ProjectReference Include="..\LogiBTP.Authentification.Web\LogiBTP.Authentification.Web.csproj" />
     <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Testing\LogiBTP.Socle.Testing.csproj" />
   </ItemGroup>
 

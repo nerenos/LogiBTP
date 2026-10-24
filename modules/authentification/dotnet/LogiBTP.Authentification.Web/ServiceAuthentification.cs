@@ -19,16 +19,30 @@ public sealed class OptionsAuthentification
     public string NomCookie { get; set; } = "logibtp_session";
     /// <summary>Routes de l'application accessibles sans session (en plus de celles du module).</summary>
     public List<string> RoutesPubliques { get; set; } = [];
+    /// <summary>Adresses de confiance (réseau local, serveur TSE ; CIDR) : ni exclusion d'adresse, ni double facteur (D30).</summary>
+    public List<string> AdressesConfiance { get; set; } = [];
+    /// <summary>Nom du cookie du jeton d'accès (JWT court) et du cookie de machine connue.</summary>
+    public string NomCookieAcces { get; set; } = "logibtp_acces";
+    public string NomCookieMachine { get; set; } = "logibtp_machine";
     public bool EnTetes => string.Equals(Mode, "EnTetes", StringComparison.OrdinalIgnoreCase);
 }
 
-public sealed record ParametresSession(int InactiviteHeures = 10, int ResterConnecteJours = 7, bool ResterConnecte = true);
+public sealed record ParametresSession(int InactiviteHeures = 10, int ResterConnecteJours = 7, bool ResterConnecte = true, int DureeMaxHeures = 24);
 public sealed record ParametresVerrouillage(int Echecs = 5, int Minutes = 15);
 
 /// <summary>Réglages de la société (parametre_authentification).</summary>
 public sealed record ParametresAuthentification(ParametresSession Session, ParametresVerrouillage Verrouillage, PolitiqueMotDePasse MotDePasse, IReadOnlyList<string> PseudosReserves);
 
 public sealed record ConnexionSaisie(string? Identifiant, string? MotDePasse, bool ResterConnecte = false);
+
+/// <summary>
+/// Résultat d'une connexion : session ouverte (jeton de rafraîchissement à poser en cookie, jeton de machine connue
+/// nouvellement créée), ou étape du double facteur (code envoyé par courriel, à saisir avec le jeton d'étape).
+/// </summary>
+public sealed record ResultatConnexion(string? Jeton, SessionLue? Session, string? Machine = null, EtapeConnexion? Etape = null);
+
+/// <summary>Étape du double facteur : jeton à renvoyer avec le code, destination masquée du courriel, fin de validité.</summary>
+public sealed record EtapeConnexion(string Jeton, string Destination, DateTimeOffset ExpireLe);
 public sealed record ChangementMotDePasse(string? Actuel, string? Nouveau);
 public sealed record DemandeOubli(string? Identifiant);
 public sealed record Reinitialisation(string? Jeton, string? Nouveau);
@@ -57,8 +71,8 @@ public sealed record DescriptionSession(bool Connecte, string? Code, string? Lib
 /// identique pour un identifiant inconnu, un mot de passe faux ou un compte verrouillé), expiration glissante,
 /// « Rester connecté », mot de passe provisoire à changer, journal des connexions.
 /// </summary>
-public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuthentification specialisation, SocieteCourante societe,
-    IOptions<OptionsAuthentification> options)
+public sealed partial class ServiceAuthentification(AuthDbContext db, SpecialisationAuthentification specialisation, SocieteCourante societe,
+    IOptions<OptionsAuthentification> options, IServiceProvider services)
 {
     private static readonly ConcurrentDictionary<(string Base, string Empreinte), (DateTimeOffset Lu, SessionLue Session)> Cache = new();
     private static readonly TimeSpan DureeCache = TimeSpan.FromSeconds(30);
@@ -87,23 +101,26 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
     // ---------------------------------------------------------------- connexion
 
     /// <summary>Ouvre une session (jeton du cookie renvoyé) ; refus générique pour un identifiant inconnu, un mot de passe faux ou un compte verrouillé.</summary>
-    public async Task<(string Jeton, SessionLue Session)> ConnecterAsync(ConnexionSaisie s, Origine origine, CancellationToken ct)
+    public async Task<ResultatConnexion> ConnecterAsync(ConnexionSaisie s, Origine origine, CancellationToken ct)
     {
         var code = ReglesCompte.Normaliser(s.Identifiant);
         var mdp = s.MotDePasse ?? "";
         var parametres = await ParametresAsync(ct);
         var maintenant = DateTimeOffset.UtcNow;
-        var compte = code.Length == 0 ? null : await db.Comptes.FirstOrDefaultAsync(x => x.CptCode.ToLower() == code, ct);
+        await ControlerAdresseAsync(code, origine, ct);
+        var compte = code.Length == 0 ? null : await db.Comptes.FirstOrDefaultAsync(x => x.CptCode.ToLower() == code && x.CptType != "API", ct);
         if (compte is null)
         {
             HachageMotDePasse.Verifier(mdp, HashFactice); // même durée qu'un compte existant
             await JournaliserAsync(code.Length == 0 ? "?" : code, "ECHEC", "identifiant inconnu", origine, null, ct);
+            await CompterEchecAsync(origine, ct);
             throw Refus();
         }
         var etat = ReglesCompte.Etat(compte.AEvaluer(), maintenant);
         if (etat.Etat == "VERROUILLE")
         {
             await JournaliserAsync(compte.CptCode, "ECHEC", "compte verrouillé", origine, null, ct);
+            await CompterEchecAsync(origine, ct);
             throw Refus();
         }
         if (!HachageMotDePasse.Verifier(mdp, compte.CptHash))
@@ -116,18 +133,26 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
                 await JournaliserAsync(compte.CptCode, "VERROUILLAGE", $"{parametres.Verrouillage.Echecs} échecs : {parametres.Verrouillage.Minutes} min", origine, null, ct, enregistrer: false);
             }
             await JournaliserAsync(compte.CptCode, "ECHEC", "mot de passe incorrect", origine, null, ct);
+            await CompterEchecAsync(origine, ct);
             throw Refus();
         }
         await VerifierOuvertureAsync(compte, etat, origine, ct);
         compte.CptEchecs = 0;
         compte.CptVerrouilleJusquAu = null;
-        compte.CptDerniereConnexion = maintenant;
         if (HachageMotDePasse.AReprendre(compte.CptHash)) compte.CptHash = HachageMotDePasse.Hacher(mdp);
-        return await OuvrirAsync(compte, s.ResterConnecte && parametres.Session.ResterConnecte, parametres, origine, "", ct);
+        var rester = s.ResterConnecte && parametres.Session.ResterConnecte;
+        // Double facteur (D3, D30) : code par courriel, sauf adresse de confiance ou machine déjà connue du compte.
+        if (await DoubleFacteurRequisAsync(compte, origine, ct) && await EnvoyerCodeAsync(compte, rester, origine, ct) is { } etape)
+        {
+            await db.SaveChangesAsync(ct);
+            return new ResultatConnexion(null, null, null, etape);
+        }
+        compte.CptDerniereConnexion = maintenant;
+        return await OuvrirAsync(compte, rester, parametres, origine, "", ct);
     }
 
     /// <summary>Connexion sans mot de passe à un compte choisi : environnement de développement et ComptesTest seulement (A10, A11).</summary>
-    public async Task<(string Jeton, SessionLue Session)> ConnecterTestAsync(string? identifiant, bool developpement, Origine origine, CancellationToken ct)
+    public async Task<ResultatConnexion> ConnecterTestAsync(string? identifiant, bool developpement, Origine origine, CancellationToken ct)
     {
         if (!developpement || !Options.ComptesTest) throw ExceptionMetier.AccesRefuse("CONNEXION_TEST");
         var code = ReglesCompte.Normaliser(identifiant);
@@ -176,21 +201,32 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
         }
     }
 
-    private async Task<(string, SessionLue)> OuvrirAsync(Compte compte, bool persistante, ParametresAuthentification p, Origine origine, string detail,
-        CancellationToken ct, bool test = false)
+    /// <summary>
+    /// Ouvre une session (famille de jetons) : « Rester connecté » enregistre la machine (D4) si elle n'est pas encore
+    /// connue du compte et porte la fin absolue à 7 jours ; sinon un jour (D2). Expiration glissante dans cette limite.
+    /// </summary>
+    private async Task<ResultatConnexion> OuvrirAsync(Compte compte, bool rester, ParametresAuthentification p, Origine origine, string detail,
+        CancellationToken ct, bool test = false, bool api = false)
     {
         var maintenant = DateTimeOffset.UtcNow;
         var (jeton, empreinte) = HachageMotDePasse.NouveauJeton();
+        var machine = api || test ? null : await MachineDuCompteAsync(compte.CptId, origine, ct);
+        string? nouvelleMachine = null;
+        if (rester && machine is null && !api && !test) (machine, nouvelleMachine) = await EnregistrerMachineAsync(compte, origine, ct);
+        var persistante = rester && machine is not null;
+        var absolue = persistante ? maintenant.AddDays(p.Session.ResterConnecteJours) : maintenant.AddHours(p.Session.DureeMaxHeures);
+        var glissante = persistante ? absolue : maintenant.AddHours(p.Session.InactiviteHeures);
         var session = new SessionUtilisateur
         {
             SesJetonHache = empreinte, SesCptId = compte.CptId, SesCreeLe = maintenant, SesVuLe = maintenant, SesPersistante = persistante,
-            SesExpireLe = persistante ? maintenant.AddDays(p.Session.ResterConnecteJours) : maintenant.AddHours(p.Session.InactiviteHeures),
+            SesExpireLe = glissante < absolue ? glissante : absolue, SesAbsolueLe = absolue, SesMacId = machine?.MacId, SesApi = api,
             SesAdresse = Tronquer(origine.Adresse, 64), SesNavigateur = Tronquer(origine.Navigateur, 300), SesTest = test,
         };
         db.Sessions.Add(session);
-        db.Journal.Add(Entree(compte.CptCode, "CONNEXION", detail.Length == 0 ? (persistante ? "rester connecté" : null) : detail, origine, null));
+        db.Journal.Add(Entree(compte.CptCode, api ? "JETON_API" : "CONNEXION",
+            detail.Length == 0 ? (persistante ? "rester connecté (machine connue)" : machine is not null ? "machine connue" : null) : detail, origine, null));
         await db.SaveChangesAsync(ct);
-        return (jeton, Lue(session, compte));
+        return new ResultatConnexion(jeton, Lue(session, compte), nouvelleMachine);
     }
 
     private static SessionLue Lue(SessionUtilisateur s, Compte c) =>
@@ -204,20 +240,22 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
     /// Session valide du jeton (null : inconnue, fermée, expirée, compte devenu inutilisable — la session est alors
     /// fermée). Expiration glissante sans « Rester connecté » ; dernière activité notée au plus une fois par minute.
     /// </summary>
-    public async Task<SessionLue?> LireSessionAsync(string jeton, CancellationToken ct)
+    public Task<SessionLue?> LireSessionAsync(string jeton, CancellationToken ct) => LireSessionHacheeAsync(HachageMotDePasse.Empreinte(jeton), ct);
+
+    private async Task<SessionLue?> LireSessionHacheeAsync(string empreinte, CancellationToken ct)
     {
-        var empreinte = HachageMotDePasse.Empreinte(jeton);
         var cle = (societe.Connexion, empreinte);
         var maintenant = DateTimeOffset.UtcNow;
         if (Cache.TryGetValue(cle, out var c) && maintenant - c.Lu < DureeCache && c.Session.ExpireLe > maintenant) return c.Session;
         var session = await db.Sessions.FirstOrDefaultAsync(x => x.SesJetonHache == empreinte && x.SesFermeeLe == null, ct);
-        if (session is null || session.SesExpireLe <= maintenant)
+        if (session is null || session.SesExpireLe <= maintenant || session.SesAbsolueLe <= maintenant)
         {
             Cache.TryRemove(cle, out _);
             return null;
         }
         var compte = await db.Comptes.FirstOrDefaultAsync(x => x.CptId == session.SesCptId, ct);
-        var utilisable = compte is { CptType: "PERSONNE", CptActif: true } && !(compte.CptValideJusquAu < DateOnly.FromDateTime(maintenant.UtcDateTime));
+        var utilisable = compte is { CptActif: true } && compte.CptType == (session.SesApi ? "API" : "PERSONNE")
+            && !(compte.CptValideJusquAu < DateOnly.FromDateTime(maintenant.UtcDateTime));
         if (utilisable && compte!.CptTypeElement is not null && compte.CptIdElement is not null)
         {
             utilisable = (await specialisation.PersonneAsync(db, compte.CptTypeElement, compte.CptIdElement, ct)) is { Autorisee: true };
@@ -232,7 +270,11 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
         if (maintenant - session.SesVuLe > TimeSpan.FromMinutes(1))
         {
             session.SesVuLe = maintenant;
-            if (!session.SesPersistante) session.SesExpireLe = maintenant.AddHours((await ParametresAsync(ct)).Session.InactiviteHeures);
+            if (!session.SesPersistante)
+            {
+                var glissante = maintenant.AddHours((await ParametresAsync(ct)).Session.InactiviteHeures);
+                session.SesExpireLe = session.SesAbsolueLe is { } absolue && absolue < glissante ? absolue : glissante;
+            }
             await db.SaveChangesAsync(ct);
         }
         var lue = Lue(session, compte!);
@@ -429,13 +471,19 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
         codes.Select(c => new { code = c, message = ReglesCompte.Messages.GetValueOrDefault(c, c == "MDP_IDENTIQUE" ? "Le nouveau mot de passe doit différer de l'actuel" : c) }).ToList());
 
     /// <summary>Cache des sessions vidé (désactivation, changement de profil ou de mot de passe, déconnexion) : relu au prochain appel.</summary>
-    public static void OublierSessions() => Cache.Clear();
+    public static void OublierSessions()
+    {
+        Cache.Clear();
+        JetonsAcces.Invalider();
+    }
 
     // ---------------------------------------------------------------- journal
 
-    public sealed record Origine(string? Adresse, string? Navigateur)
+    /// <summary>Origine d'une requête : adresse, navigateur, jeton de machine connue (cookie, jamais journalisé).</summary>
+    public sealed record Origine(string? Adresse, string? Navigateur, string? Machine = null)
     {
-        public static Origine Depuis(HttpContext http) => new(http.Connection.RemoteIpAddress?.ToString(), http.Request.Headers.UserAgent.ToString());
+        public static Origine Depuis(HttpContext http) => new(http.Connection.RemoteIpAddress?.ToString(), http.Request.Headers.UserAgent.ToString(),
+            http.Request.Cookies[http.RequestServices.GetService(typeof(IOptions<OptionsAuthentification>)) is IOptions<OptionsAuthentification> o ? o.Value.NomCookieMachine : "logibtp_machine"]);
     }
 
     private static string? Tronquer(string? s, int n) => s is null ? null : s.Length <= n ? s : s[..n];

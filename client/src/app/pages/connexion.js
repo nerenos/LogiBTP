@@ -110,6 +110,8 @@ export class PageConnexion extends PageBase {
     erreur.hidden = true;
     try {
       const session = await appel();
+      // Double facteur (module Droits, D3) : code reçu par courriel, à saisir avant l'ouverture de la session.
+      if (session.double_facteur) { this.#rendreCode(session); return; }
       this.app.session = session;
       this.app.publier('session', { connecte: true });
       this.#poursuivre(session);
@@ -117,6 +119,23 @@ export class PageConnexion extends PageBase {
       erreur.textContent = e.message;
       erreur.hidden = false;
     }
+  }
+
+  /** Second temps de la connexion : code à 6 chiffres envoyé à l'adresse indiquée (masquée), 10 minutes. */
+  #rendreCode(etape) {
+    // Formulaire neuf (sans l'écouteur de la saisie du mot de passe).
+    const ancien = this.conteneur.querySelector('[data-form]');
+    const form = ancien.cloneNode(false);
+    ancien.replaceWith(form);
+    form.innerHTML = `<h1>🔐 Code de connexion</h1>
+      <p class="aide">Un code à 6 chiffres vient d'être envoyé à ${echapper(etape.destination)} (valable 10 minutes).</p>
+      <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus></label>
+      <p class="connexion-erreur" data-erreur hidden></p>
+      <p><button type="submit" class="principal">Valider</button> <a href="/connexion">Recommencer</a></p>`;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.#connecter(() => api.auth.code(etape.etape, new FormData(form).get('code')));
+    });
   }
 
   #poursuivre(session) {

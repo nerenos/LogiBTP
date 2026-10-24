@@ -58,3 +58,19 @@ CREATE TABLE IF NOT EXISTS limite_validation (
     lva_jours        SMALLINT      NOT NULL DEFAULT 30 CHECK (lva_jours BETWEEN 1 AND 366),
     PRIMARY KEY (lva_pro_id, lva_noeud)
 );
+
+-- Borne d'atelier (D16, lot 3) : identifiant d'appareil à profil propre ; les pièces saisies à la borne sont créées au
+-- nom du salarié avec les droits de ce profil (sorties et retours de stock, pointages, étapes).
+INSERT INTO profil (pro_code, pro_libelle, pro_description, pro_systeme, pro_total) VALUES
+ ('BORNE', 'Borne d''atelier', 'Droits des saisies faites à une borne (appareil enregistré, PIN du salarié)', TRUE, FALSE)
+ON CONFLICT (pro_code) DO NOTHING;
+INSERT INTO droit_profil (dpr_pro_id, dpr_noeud, dpr_actions)
+SELECT p.pro_id, n.noeud, n.actions::jsonb FROM profil p
+CROSS JOIN (VALUES
+    ('documents', '{}'),
+    ('documents/S', '{"CONSULTER":"TOUT","MODIFIER":"TOUT","VALIDER":"TOUT","CREER":"TOUT"}'),
+    ('pointage', '{"CONSULTER":"TOUT","MODIFIER":"TOUT","CREER":"TOUT"}'),
+    ('execution', '{"CONSULTER":"TOUT","MODIFIER":"TOUT"}'),
+    ('stock', '{"CONSULTER":"TOUT","CREER":"TOUT"}')) n(noeud, actions)
+WHERE p.pro_code = 'BORNE'
+ON CONFLICT DO NOTHING;

@@ -18,7 +18,11 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     public override string ProfilParDefaut => "MOBILE";
 
     /// <summary>Type de notification publié directement : usurpation du compte (préférences de notification).</summary>
-    public static readonly LogiBTP.Notifications.Web.TypeNotification[] Types = [new("authentification", "USURPATION", "Un administrateur agit pour mon compte")];
+    public static readonly LogiBTP.Notifications.Web.TypeNotification[] Types =
+    [
+        new("authentification", "USURPATION", "Un administrateur agit pour mon compte"),
+        new("authentification", "EXCLUSION_IP", "Adresse exclue après trop d'échecs de connexion"),
+    ];
 
     /// <summary>Usurpation commencée : notification au compte usurpé (administrateur, motif).</summary>
     public override async Task ApresUsurpationAsync(IServiceProvider services, Compte cible, string administrateur, string motif, CancellationToken ct) =>
@@ -89,6 +93,41 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
         services.GetRequiredService<ServiceEnvoiMail>().DisponibleAsync(ct);
 
     /// <summary>Lien envoyé à la coordonnée EMAIL de l'individu lié au compte (usage AUTHENTIFICATION, priorité haute).</summary>
+    /// <summary>Code du double facteur envoyé à la coordonnée EMAIL de l'individu du compte (module Mail, envoi automatique prioritaire).</summary>
+    public override async Task<string?> EnvoyerCodeAsync(IServiceProvider services, Compte compte, string code, DateTimeOffset expireLe, CancellationToken ct)
+    {
+        if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return null;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var adresse = await db.Database.SqlQueryRaw<string>("""
+            SELECT c.coo_valeur AS "Value" FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id
+            WHERE u.uco_ind_id = @ind AND c.coo_nature = 'EMAIL' ORDER BY u.uco_principal DESC, c.coo_id LIMIT 1
+            """, new NpgsqlParameter("ind", ind)).FirstOrDefaultAsync(ct);
+        if (adresse is null) return null;
+        var envoi = services.GetRequiredService<ServiceEnvoiMail>();
+        if (!await envoi.DisponibleAsync(ct)) return null;
+        var corps = $"""
+            <p>Bonjour,</p><p>Code de connexion pour l'identifiant <strong>{WebUtility.HtmlEncode(compte.CptCode)}</strong> :</p>
+            <p style="font-size:1.6em;letter-spacing:.2em"><strong>{code}</strong></p>
+            <p>Valable jusqu'à {expireLe.ToLocalTime():HH:mm}. Si vous n'êtes pas à l'origine de cette connexion, changez votre mot de passe et prévenez un administrateur.</p>
+            """;
+        await envoi.EnvoyerAutomatiqueAsync(new EnvoiAutomatique("AUTHENTIFICATION", [new DestinataireSaisi(adresse, compte.CptLibelle)], "LogiBTP : code de connexion",
+            corps, SpecialisationMailBtp.Fond.Code, "HAUTE"), ct);
+        var arobase = adresse.IndexOf('@');
+        return arobase > 1 ? $"{adresse[0]}***{adresse[arobase..]}" : "***";
+    }
+
+    /// <summary>Adresse exclue après trop d'échecs : notification aux comptes administrateurs.</summary>
+    public override async Task ApresExclusionAsync(IServiceProvider services, string prefixe, DateTimeOffset fin, int echecs, CancellationToken ct)
+    {
+        var admins = await services.GetRequiredService<LogiBtpContext>().Database.SqlQueryRaw<string>("""
+            SELECT cpt_code AS "Value" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'
+            """).ToListAsync(ct);
+        await services.GetRequiredService<LogiBTP.Notifications.Web.ServiceNotification>().PublierAsync(admins.Select(a =>
+            new LogiBTP.Notifications.Web.NouvelleNotification(a, "authentification", "EXCLUSION_IP", $"Adresse {prefixe} exclue ({echecs} échecs de connexion)",
+                $"Jusqu'à {fin.ToLocalTime():dd/MM HH:mm} ; levée possible dans les comptes utilisateurs", "ATTENTION", "/parametres/comptes?onglet=exclusions",
+                Cle: $"exclusion-ip:{prefixe}:{fin:yyyyMMddHHmm}")), ct);
+    }
+
     public override async Task<bool> EnvoyerReinitialisationAsync(IServiceProvider services, Compte compte, string lien, DateTimeOffset expireLe, CancellationToken ct)
     {
         if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return false;

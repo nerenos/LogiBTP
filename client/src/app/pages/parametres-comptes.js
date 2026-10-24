@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { ETATS_COMPTE } from '@logibtp/authentification';
 import { api } from '../api.js';
 import { pastilleCompte, rendreComptePersonne, dateCompte, jourCompte } from '../comptes/comptes.js';
@@ -7,6 +7,8 @@ import { pastilleCompte, rendreComptePersonne, dateCompte, jourCompte } from '..
 const EVENEMENTS = {
   CONNEXION: '🔑 Connexion', ECHEC: '✖ Échec', VERROUILLAGE: '🔒 Verrouillage', DECONNEXION: '⏻ Déconnexion', MDP_CHANGE: '🔐 Mot de passe changé',
   MDP_REINITIALISE: '🔐 Mot de passe réinitialisé', EXPIRE: '⌛ Expiré', REFUS: '⛔ Refus', DEVERROUILLAGE: '🔓 Déverrouillage', COMPTE: '👤 Compte',
+  DOUBLE_FACTEUR: '🔐 Double facteur', EXCLUSION_IP: '⛔ Adresse exclue', VOL_PRESUME: '🚨 Vol présumé', MACHINE: '💻 Machine',
+  SESSION_FERMEE: '⏻ Session fermée', JETON_API: '🔌 Jeton d’API',
   USURPATION: '🎭 Usurpation', USURPATION_FIN: '🎭 Fin d’usurpation', USURPATION_ACTION: '🎭 Action pendant l’usurpation', MDP_OUBLI: '✉ Mot de passe oublié',
 };
 
@@ -29,6 +31,20 @@ export class PageParametresComptes extends PageBase {
     else await this.#rendreListe(corps);
   }
 
+  /** Sessions ouvertes et machines connues d'un compte : fermeture à distance, machine oubliée. */
+  #rendreSessionsCompte(zone, compte, sessions, machines, recharger) {
+    const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    zone.innerHTML = `<h2 class="titre-actions">Sessions et machines <span>${sessions.length ? '<button type="button" data-fermer>⏻ Fermer toutes les sessions</button>' : ''}</span></h2>
+      ${sessions.length ? `<table class="tableau-compact"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th></tr></thead><tbody>
+        ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ' 💻' : ''}${s.api ? ' API' : ''}</td><td>${echapper(s.adresse ?? '')}</td><td>${date(s.cree_le)}</td>
+          <td>${date(s.vu_le)}</td><td>${date(s.expire_le)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune session ouverte.</p>'}
+      ${machines.length ? `<table class="tableau-compact"><thead><tr><th>Machine connue</th><th>Adresse</th><th>Depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
+        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${date(m.cree_le)}</td><td>${date(m.vu_le)}</td>
+          <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine">✕</button></td></tr>`).join('')}</tbody></table>` : ''}`;
+    zone.querySelector('[data-fermer]')?.addEventListener('click', () => api.auth.fermerSessionsCompte(compte.id).then(recharger).catch((e) => this.app.erreur(e)));
+    zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', () => api.auth.oublierMachineCompte(compte.id, b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e))));
+  }
+
   urlCourante() { return this.requete.compte ? `/parametres/comptes?compte=${this.requete.compte}` : '/parametres/comptes'; }
 
   async #rendreListe(corps) {
@@ -37,6 +53,14 @@ export class PageParametresComptes extends PageBase {
       <section class="carte"><h2>Nouveau compte</h2>
         <p><input type="search" data-personne placeholder="Salarié ou intérimaire : nom, prénom ou matricule…" size="40"></p>
         <div data-personnes></div><div data-creation></div></section>
+      <section class="carte"><h2>Identifiants d'API</h2>
+        <p class="aide">Pour un logiciel tiers : jeton obtenu par <code>POST /api/auth/jeton</code> { identifiant, secret }, puis en-tête
+          <code>Authorization: Bearer …</code> (15 minutes, renouvelé par <code>/api/auth/jeton/rafraichir</code>). Jamais de profil à tous les droits.</p>
+        <p class="ligne"><input data-api-code placeholder="identifiant" size="18"> <input data-api-libelle placeholder="Libellé" size="24">
+          <span data-api-profil></span> <input data-api-adresses placeholder="Adresses permises (CIDR, séparées par des virgules)" size="34">
+          <button type="button" data-api-creer>＋ Créer</button></p><div data-api-secret></div></section>
+      <section class="carte"><h2>Adresses exclues</h2><p class="aide">Trop d'échecs de connexion depuis une adresse : exclusion temporaire, croissante en cas de récidive ;
+        une machine connue reste acceptée.</p><div data-exclusions></div></section>
       <section class="carte"><h2>Comptes</h2>
         <p class="ligne"><input type="search" data-recherche placeholder="Identifiant ou nom…" size="24">
           ${['', 'ACTIF', 'A_CHANGER', 'VERROUILLE', 'EXPIRE', 'INACTIF', 'SERVICE'].map((e) => `<label class="ligne"><input type="radio" name="etat" value="${e}" ${e === '' ? 'checked' : ''}> ${e ? echapper(ETATS_COMPTE[e]) : 'Tous'}</label>`).join(' ')}</p>
@@ -54,6 +78,34 @@ export class PageParametresComptes extends PageBase {
     corps.querySelector('[data-recherche]').addEventListener('input', () => { clearTimeout(minuterie); minuterie = setTimeout(() => charger().catch((e) => this.app.erreur(e)), 250); });
     corps.querySelectorAll('[name="etat"]').forEach((r) => r.addEventListener('change', () => charger().catch((e) => this.app.erreur(e))));
     await charger();
+
+    // Identifiants d'API : secret affiché une fois.
+    const profils = (await api.auth.profils().catch(() => ({ profils: [] }))).profils;
+    const comboProfil = creerCombo({ options: profils.map((p) => ({ valeur: p.code, libelle: p.libelle })), vide: false, valeur: profils.find((p) => p.code === 'SAISIE')?.code ?? '', titre: 'Profil' });
+    corps.querySelector('[data-api-profil]').append(comboProfil);
+    corps.querySelector('[data-api-creer]').addEventListener('click', async () => {
+      try {
+        const r = await api.auth.creerCompteApi({
+          code: corps.querySelector('[data-api-code]').value, libelle: corps.querySelector('[data-api-libelle]').value, profil: comboProfil.valeurCombo,
+          adresses: corps.querySelector('[data-api-adresses]').value.split(',').map((a) => a.trim()).filter(Boolean),
+        });
+        corps.querySelector('[data-api-secret]').innerHTML = `<div class="carte avertissement"><p>🔌 ${echapper(r.compte.code)} : secret affiché une fois, à recopier dans le logiciel tiers :
+          <code class="mdp-provisoire">${echapper(r.mot_de_passe)}</code></p></div>`;
+        await charger();
+      } catch (e) { this.app.erreur(e); }
+    });
+    const exclusions = corps.querySelector('[data-exclusions]');
+    const chargerExclusions = async () => {
+      const l = await api.auth.exclusions();
+      const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      exclusions.innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>Adresse</th><th class="nombre">Échecs</th><th>Du</th><th>Au</th><th>Levée</th><th></th></tr></thead><tbody>
+        ${l.map((x) => `<tr><td>${echapper(x.prefixe)}</td><td class="nombre">${x.echecs}</td><td>${date(x.debut)}</td><td>${date(x.fin)}</td>
+          <td>${x.levee_le ? `${date(x.levee_le)} par ${echapper(x.levee_par ?? '')}` : ''}</td>
+          <td class="cellule-boutons">${!x.levee_le && new Date(x.fin) > new Date() ? `<button type="button" class="bouton-icone" data-lever="${x.id}" title="Lever l'exclusion">🔓</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucune adresse exclue ces 7 derniers jours.</p>';
+      exclusions.querySelectorAll('[data-lever]').forEach((b) => b.addEventListener('click', () => api.auth.leverExclusion(b.dataset.lever).then(chargerExclusions).catch((e) => this.app.erreur(e))));
+    };
+    await chargerExclusions().catch((e) => this.app.erreur(e));
 
     const zone = corps.querySelector('[data-personnes]');
     let minuteriePersonne = null;
@@ -73,18 +125,38 @@ export class PageParametresComptes extends PageBase {
   }
 
   async #rendreCompte(corps, id) {
-    const { compte, personne, journal } = await api.auth.compte(id);
+    const { compte, personne, journal, sessions, machines } = await api.auth.compte(id);
     this.titre = `Compte ${compte.code}`;
     corps.innerHTML = `<p><a href="/parametres/comptes">← Tous les comptes</a></p>
       <section class="carte"><h2>${echapper(compte.code)} ${pastilleCompte(compte)}</h2><div data-compte></div></section>
+      <section class="carte" data-sessions-compte></section>
       <section class="carte"><h2>Journal des connexions</h2>
         ${journal.length ? `<table><thead><tr><th>Quand</th><th>Événement</th><th>Détail</th><th>Par</th><th>Adresse</th></tr></thead><tbody>
           ${journal.map((j) => `<tr><td>${dateCompte(j.le)}</td><td>${echapper(EVENEMENTS[j.evenement] ?? j.evenement)}</td><td>${echapper(j.detail ?? '')}</td>
             <td>${echapper(j.par ?? '')}</td><td title="${echapper(j.navigateur ?? '')}">${echapper(j.adresse ?? '')}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun événement.</p>'}
       </section>`;
+    this.#rendreSessionsCompte(corps.querySelector('[data-sessions-compte]'), compte, sessions ?? [], machines ?? [], () => this.#rendreCompte(corps, id));
     const zone = corps.querySelector('[data-compte]');
     if (personne) await rendreComptePersonne(zone, { app: this.app, type: compte.type_element, id: compte.id_element });
-    else zone.innerHTML = `<p class="aide">${compte.type === 'SERVICE' ? 'Compte de service : tâches de fond, sans connexion.' : 'Compte sans personne liée (administrateur de l\'installation) : réinitialisation par la commande serveur.'}</p>
+    else if (compte.type === 'API') {
+      zone.innerHTML = `<p class="aide">Identifiant d'API : jetons par identifiant et secret, sans interface.</p>
+        <dl class="definitions"><dt>Libellé</dt><dd>${echapper(compte.libelle ?? '')}</dd><dt>Profil</dt><dd>${echapper(compte.profil)}</dd>
+        <dt>Dernier jeton</dt><dd>${dateCompte(compte.derniere_connexion)}</dd></dl>
+        <p class="ligne"><label>Adresses permises <input data-adresses value="${echapper((compte.adresses ?? []).join(', '))}" size="40" placeholder="toutes"></label>
+          <button type="button" data-enregistrer-adresses>💾</button></p>
+        <p><button type="button" data-secret>🔑 Nouveau secret</button> <button type="button" data-actif>${compte.actif ? '⛔ Désactiver' : '✔ Réactiver'}</button></p><div data-secret-affiche></div>`;
+      zone.querySelector('[data-enregistrer-adresses]').addEventListener('click', () => api.auth.adressesApi(compte.id,
+        zone.querySelector('[data-adresses]').value.split(',').map((a) => a.trim()).filter(Boolean)).then(() => this.app.message('Adresses enregistrées', 'succes')).catch((e) => this.app.erreur(e)));
+      zone.querySelector('[data-secret]').addEventListener('click', async () => {
+        if (!confirm('Nouveau secret : l\'ancien ne vaut plus et les jetons en cours sont fermés. Continuer ?')) return;
+        try {
+          const r = await api.auth.secretApi(compte.id);
+          zone.querySelector('[data-secret-affiche]').innerHTML = `<div class="carte avertissement"><p>Secret affiché une fois : <code class="mdp-provisoire">${echapper(r.mot_de_passe)}</code></p></div>`;
+        } catch (e) { this.app.erreur(e); }
+      });
+      zone.querySelector('[data-actif]').addEventListener('click', () => api.auth.modifierCompte(compte.id, { actif: !compte.actif, valide_jusqu_au: compte.valide_jusqu_au })
+        .then(() => this.#rendreCompte(corps, id)).catch((e) => this.app.erreur(e)));
+    } else zone.innerHTML = `<p class="aide">${compte.type === 'SERVICE' ? 'Compte de service : tâches de fond, sans connexion.' : 'Compte sans personne liée (administrateur de l\'installation) : réinitialisation par la commande serveur.'}</p>
       <dl class="definitions"><dt>Nom</dt><dd>${echapper(compte.libelle ?? '')}</dd><dt>Profil</dt><dd>${echapper(compte.profil)}</dd>
       <dt>Dernière connexion</dt><dd>${dateCompte(compte.derniere_connexion)}</dd></dl>
       ${compte.type === 'PERSONNE' ? `<div data-provisoire></div><p><button type="button" data-reinitialiser>🔐 Réinitialiser le mot de passe</button>
