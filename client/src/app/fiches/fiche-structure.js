@@ -4,6 +4,7 @@ import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
 import { D, Dz } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
+import { api } from '../api.js';
 import { TableIntervenants } from '../structure/intervenants.js';
 import { controlerIntervenants } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
@@ -345,6 +346,27 @@ export class FicheMarche extends FicheStructure {
     return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
   }
 
+  /**
+   * Sous-traitance, lot 5 (ST30) : engagé (commandes de sous-traitance validées) et réalisé (factures validées) des
+   * marchés de sous-traitance liés, paiement direct accepté, comparés au déboursé de sous-traitance prévu (lignes de
+   * nature ST des commandes du marché).
+   */
+  async rendreEngage(zone) {
+    if (!zone) return;
+    let e;
+    try { e = await api.engageSousTraitance(Number(this.id)); } catch (x) { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; return; }
+    const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+    const ecart = Dz(e.prevu).minus(Dz(e.engage));
+    zone.innerHTML = `<p class="ligne">Déboursé de sous-traitance prévu <strong>${f(e.prevu)}</strong> · Engagé <strong>${f(e.engage)}</strong>
+        · Réalisé <strong>${f(e.facture)}</strong> · ${ecart.isNegative() ? `<span class="erreur">Dépassement ${f(ecart.abs().toString())}</span>` : `Reste prévu non engagé ${f(ecart.toString())}`}</p>
+      ${e.marches.length ? `<table class="tableau-gestion"><thead><tr><th>Marché</th><th>Sous-traitant</th><th>Garantie</th><th class="nombre">Agréé</th>
+        <th class="nombre">Engagé HT</th><th class="nombre">Réalisé HT</th><th class="nombre">Reste à facturer</th><th class="nombre">Paiement direct</th></tr></thead><tbody>
+        ${e.marches.map((m) => `<tr><td><a href="/fiche/marche/${m.marche_id}">${echapper(m.code)}</a> <small class="aide">${echapper(m.libelle ?? '')}</small></td>
+          <td>${echapper(m.sous_traitant ?? '')}</td><td>${echapper(m.garantie ?? '')}</td><td class="nombre">${f(m.montant_agree)}</td><td class="nombre">${f(m.engage)}</td>
+          <td class="nombre">${f(m.facture)}</td><td class="nombre">${f(Dz(m.engage).minus(Dz(m.facture)).toString())}</td><td class="nombre">${f(m.paiement_direct)}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucun marché de sous-traitance lié à ce marché (ou sur son chantier).</p>'}`;
+  }
+
   /** Onglet Gestion (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q4) avant le graphe. */
   ongletsSpecifiques() {
     // Marché de sous-traitance (module Sous-traitance, lot 2) : pièces du sous-traitant et du marché.
@@ -459,6 +481,7 @@ export class FicheMarche extends FicheStructure {
           du marché dont le paiement direct du sous-traitant est égal au TTC de la pièce, sinon la première à sa date ou après.</p>`
         : '<p class="aide">Aucune facture de sous-traitant en paiement direct (postes « Paiement direct » du marché, intervenants marqués paiement direct).</p>')}
 
+      ${this.valeur('sens') !== 'ST' && this.moduleActif('sous_traitance') ? groupe('sous_traitance', 'Sous-traitance : engagé et réalisé', [], '<div data-engage></div>') : ''}
       ${groupe('acomptes', 'Acomptes', [], '<div data-acomptes></div>')}
       ${groupe('postes', 'Postes de pied', [], '<div data-postes></div>')}
     </div>`;
@@ -471,6 +494,7 @@ export class FicheMarche extends FicheStructure {
       e.preventDefault(); // bouton dans le titre : ne replie pas le regroupement
       this.creerDocumentMarche(b.dataset.creer, e).catch((x) => this.message(x.message, 'erreur'));
     }));
+    this.rendreEngage(corps.querySelector('[data-engage]'));
     this.rendreAcomptes(corps.querySelector('[data-acomptes]'), corps);
     this.rendrePostes(corps.querySelector('[data-postes]'));
     const recharger = () => this.rendreGestion(corps);

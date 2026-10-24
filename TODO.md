@@ -133,21 +133,23 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/conception/ANALYSE-MODULE-SOUS-TRAITANCE.md).
 
-- [ ] Analyse achevée le 23/10/2026 (ST1 à ST32 tranchées) : lots 0 à 5 à réaliser (lot 0 : famille T dans le
-  module Document, activation, lot de consultation commun aux achats).
+- [ ] DC4 : remplissage du formulaire officiel (PDF de l'administration) à étudier ; aujourd'hui édition propre qui en
+  reprend les rubriques (ST17).
+- [ ] Engagé et réalisé de la sous-traitance à reprendre dans la rentabilité continue du chantier (Exécution,
+  possibilité 1) quand elle existera ; aujourd'hui bloc « Sous-traitance » de l'onglet Gestion du marché de vente (ST30).
+- [ ] Conducteur du chantier en texte libre (`cha_conducteur`) : la tâche d'acceptation d'une demande de paiement
+  direct va au service Chantier ; la donner au conducteur quand il sera un individu de l'annuaire (ST16).
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).
 - [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : formats (Factur-X,
   UBL, CII), connexion à la plateforme agréée, commun aux ventes, aux achats et à la sous-traitance ; en attendant,
   saisie libre des factures reçues (ST22).
-- [ ] Montants et agréments du paiement direct (lot 4) ; reporter dans Q9 de `CONCEPTION-MARCHES-REGLEMENTS.md`
-  (toujours sans décision) ce que ST5, ST14 et ST15 ont tranché.
+- [ ] Reporter dans Q9 de `CONCEPTION-MARCHES-REGLEMENTS.md` (toujours sans décision) ce que ST5, ST14 et ST15 ont
+  tranché (paiement direct réalisé au lot 4 de la sous-traitance).
 
 ### Module Exécution
 
-- [ ] Troisième lecture achevée le 23/10/2026 ([analyse](documentation/conception/ANALYSE-MODULE-EXECUTION.md)
-  § 13, E25 à E53 tranchées) : lots 2b à 2e à réaliser.
 - [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
 
 ### Import

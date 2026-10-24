@@ -11,6 +11,8 @@ namespace LogiBTP.Api.Btp;
 /// un appel d'offres de sous-traitance se copie pour un autre fournisseur ; les copies partagent le code du lot
 /// (`ent_consultation`, posé d'office sur la source : son numéro). Routes : <c>/api/structure/documents/{id}/consultation</c>.
 /// </summary>
+public sealed record CopieConsultation(long Id);
+
 public static class Consultations
 {
     private sealed record DocumentLot(long Id, string? Numero, string? Indice, string? Tiers, decimal TotalHt, string Statut, string Type, bool Reference);
@@ -35,7 +37,7 @@ public static class Consultations
     /// Nouvelle demande du lot pour un autre fournisseur : copie du document (lignes et entête), sans tiers, sans
     /// intervenant fournisseur ni coordonnées figées ; la source reçoit le code du lot s'il manque (même validée).
     /// </summary>
-    public static async Task<object> CopierAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, long id, Utilisateur u,
+    public static async Task<CopieConsultation> CopierAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, long id, Utilisateur u,
         CancellationToken ct)
     {
         var consultation = await db.Database.SqlQueryRaw<bool>("""
@@ -53,7 +55,7 @@ public static class Consultations
                                        WHERE coalesce(x ->> 'fonction', '') NOT IN ('FOURNISSEUR', 'SOUS_TRAITANT'))
             FROM document s WHERE s.ent_id = @source AND d.ent_id = @id
             """, [new NpgsqlParameter("source", id), new NpgsqlParameter("id", nouveau)], ct);
-        return new { id = nouveau };
+        return new CopieConsultation(nouveau);
     }
 
     public static RouteGroupBuilder MapConsultations(this RouteGroupBuilder api)

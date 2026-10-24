@@ -402,7 +402,9 @@ d'entête ni de pied de page : il s'insère dans la page de l'hôte).
 
 Une source annexe est déclarée au niveau du rapport (`"sources_annexes": ["marche_documents"]`) et lue par le serveur
 dans le même appel que les données. Sources disponibles pour les documents : `marche_documents`,
-`avancements_precedents` (§ 9.4). Une nouvelle source se programme dans `SpecialisationEditionBtp.SourceAnnexeAsync`
+`avancements_precedents` (§ 9.4) ; pour la fiche d'un marché : `marche_sous_traitance` (marché, sous-traitant et maître
+d'ouvrage en coordonnées de l'annuaire, chantier, marché de vente lié, commandes validées ; modèles ST_DC4,
+ST_ACTE_SPECIAL, ST_CONTRAT, ST_ORDRE_SERVICE, dictionnaire de la source « fiche »). Une nouvelle source se programme dans `SpecialisationEditionBtp.SourceAnnexeAsync`
 (`src/LogiBTP.Api/Btp/EditionsBtp.cs`) et s'ajoute au dictionnaire (`SourceDocumentEdition.Dictionnaire`).
 
 ---

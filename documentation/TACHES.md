@@ -73,6 +73,24 @@
 
 ### Sous-traitance
 
+- [x] **Sous-traitance, lot 0** (24/10/2026) : famille T dans le module Document, activation du module, lot de
+  consultation commun aux demandes de prix d'achat.
+- [x] **Sous-traitance, lot 1** (24/10/2026) : types T_*, marché à deux sens, commande validée dans un marché de
+  sous-traitance, transformations, sous-traitants de démonstration repris dans l'annuaire.
+- [x] **Sous-traitance, lot 2** (24/10/2026) : pièces exigées, validité dans la GED, conformité répliquée JS ↔ C#,
+  contrôles à la validation, demandes par courriel, rappels.
+- [x] **Sous-traitance, lot 3** (24/10/2026) : factures à l'avancement ou reçues (ventilation répliquée), avoir,
+  approbation avant le bon à payer, postes du marché, édition de la proposition de situation.
+- [x] **Sous-traitance, lot 4** (24/10/2026) : paiement direct (demande, acceptation dans les 15 jours, plafond agréé,
+  déduction de notre facture, transmission, paiement), délégation de paiement, réception et libération des retenues.
+- [x] **Sous-traitance, lot 5** (24/10/2026) : éditions du marché (DC4, acte spécial, contrat, ordre de service),
+  comparatif des offres d'un lot de consultation, assistant « Sous-traiter », engagé et réalisé du marché de vente.
+
+### Exécution
+
+- [x] **Exécution, lots 2b à 2e** (24/10/2026) : types d'ordres activables, étapes des ordres par états (règles
+  répliquées), planning par étapes, validation des étapes depuis l'atelier et la borne.
+
 ### Import
 
 ### Installation

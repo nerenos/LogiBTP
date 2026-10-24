@@ -9,6 +9,7 @@ import { estFamilleAchat } from '@logibtp/document';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
+import { sousTraiter, TYPES_SOUS_TRAITABLES } from '../sous-traitance/sous-traiter.js';
 import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp, individusSociete } from '../panneaux-btp.js';
@@ -58,6 +59,7 @@ const GABARIT = `
       <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
       <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
       <button data-action="consultation" title="Lot de consultation : la même demande pour un autre fournisseur (copie sans tiers) ; documents du lot" hidden>📨 Lot de consultation</button>
+      <button data-action="sous-traiter" title="Sous-traiter les lignes sélectionnées (ou tout) : appel d'offres à un ou plusieurs sous-traitants, ou commande de sous-traitance" hidden>🤝 Sous-traiter</button>
       <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
       <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
@@ -193,6 +195,7 @@ export class PageDocument extends PageBase {
       },
       sources: () => this.ajouterSources(),
       consultation: () => this.lotConsultation(),
+      'sous-traiter': () => this.sousTraiter(),
       'annuler-avoir': () => this.annulerParAvoir(),
       annuler: () => this.editeur?.magasin.annuler(), retablir: () => this.editeur?.magasin.retablir(),
       // Bibliothèque dans une autre fenêtre (liste de tous les éléments) ; l'insertion reste par F3 ou par code.
@@ -526,6 +529,8 @@ export class PageDocument extends PageBase {
     this.$('[data-action="annuler-avoir"]').hidden = !enLigne || !doc.ent_verrouille || statut?.std_code === 'ANNULE'
       || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
     this.$('[data-action="consultation"]').hidden = !enLigne || !doc.ent_id || !ed.definition.type?.tyd_consultation;
+    this.$('[data-action="sous-traiter"]').hidden = !enLigne || !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif('sous_traitance')
+      || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
     this.$('[data-action="sources"]').hidden = !enLigne || !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
@@ -880,9 +885,15 @@ export class PageDocument extends PageBase {
         ${lot.documents.map((x) => `<tr><td><a href="/document/${x.id}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
           <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Pas encore de lot : « Autre fournisseur » crée la première copie et donne à la demande le code du lot (son numéro).</p>'}
-      <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button> <button value="fermer">Fermer</button></p></form>`;
+      <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button>
+        ${lot.documents.length > 1 ? '<button type="button" data-comparer title="Comparatif ligne à ligne des offres du lot (nouvelle fenêtre)">⚖ Comparer les offres</button>' : ''}
+        <button value="fermer">Fermer</button></p></form>`;
     document.body.append(dlg);
     dlg.addEventListener('close', () => dlg.remove());
+    dlg.querySelector('[data-comparer]')?.addEventListener('click', () => {
+      dlg.close();
+      this.app.naviguer(`/consultation/comparatif?id=${d.ent_id}`, { nouvelleFenetre: true });
+    });
     dlg.querySelector('[data-copier]').addEventListener('click', async () => {
       try {
         const r = await api.copierConsultation(d.ent_id);
@@ -892,6 +903,17 @@ export class PageDocument extends PageBase {
       } catch (e) { this.app.erreur(e); }
     });
     dlg.showModal();
+  }
+
+  /** Assistant « Sous-traiter » (Sous-traitance, lot 5) : lignes sélectionnées de la grille ou tout le reliquat. */
+  async sousTraiter() {
+    const d = this.editeur?.saisie.document;
+    if (!d?.ent_id) return;
+    const selection = (this.editeur.grille?.selection ?? []).filter((id) => Number(id) > 0);
+    const ids = await sousTraiter({ entId: d.ent_id, selection, message: (m, n) => this.app.message(m, n) });
+    if (!ids?.length) return;
+    this.app.message(`${ids.length} document(s) de sous-traitance créé(s)`, 'succes');
+    this.app.naviguer(`/document/${ids[0]}`, { nouvelleFenetre: true });
   }
 
   /**

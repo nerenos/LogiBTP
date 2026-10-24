@@ -359,6 +359,11 @@ export const api = {
   copier: (id) => appel('POST', `/documents/${id}/copie`),
   consultation: (id) => appel('GET', `/structure/documents/${id}/consultation`),
   copierConsultation: (id) => appel('POST', `/structure/documents/${id}/consultation`),
+  // Sous-traitance, lot 5 : comparatif des offres, assistant « Sous-traiter », engagé d'un marché de vente.
+  comparatifConsultation: (id) => appel('GET', `/structure/documents/${id}/consultation/comparatif`),
+  sousTraiter: (id, d) => appel('POST', `/structure/documents/${id}/sous-traiter`, d),
+  sousTraitants: () => appel('GET', '/structure/sous-traitants'),
+  engageSousTraitance: (marche) => appel('GET', `/structure/marches/${marche}/sous-traitance`),
   supprimerDocument: (id) => appel('DELETE', `/documents/${id}`),
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),
   transformer: (id, demande) => appel('POST', `/documents/${id}/transformer`, demande),

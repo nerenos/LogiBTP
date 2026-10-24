@@ -163,6 +163,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
     /// </summary>
     public override async Task<JsonNode?> SourceAnnexeAsync(IServiceProvider services, string nom, JsonObject donnees, Utilisateur u, CancellationToken ct)
     {
+        if (nom == "marche_sous_traitance") return await MarcheSousTraitanceAsync(services.GetRequiredService<LogiBtpContext>(), donnees, ct);
         if (donnees["document"]?["id"] is not JsonValue v || !v.TryGetValue<long>(out var id)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
         var sql = nom switch
@@ -200,6 +201,69 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         if (sql is null) return null;
         var json = await db.Database.SqlQueryRaw<string>(sql, new NpgsqlParameter("id", id)).FirstAsync(ct);
         return JsonNode.Parse(json);
+    }
+
+    private sealed record LigneMarcheEdition(int Id, string Code, string? Libelle, string Sens, string Nature, decimal? MontantHt, decimal? MontantAgree, string? Garantie,
+        bool Autoliquidation, decimal? RetenuePct, DateOnly? Date, DateOnly? Debut, DateOnly? Fin, long? TiersId, long? ClientId, string? Chantier, string? ChantierLibelle,
+        string? ChantierAdresse, string? VenteCode, string? VenteLibelle, decimal? VenteMontant);
+    private sealed record CommandeEdition(string? Numero, DateOnly? Date, string? Objet, string Role, int Rang, decimal MontantHt);
+
+    /// <summary>
+    /// Source annexe des éditions d'un marché de sous-traitance (fiche marché : DC4, acte spécial, contrat, ordre de
+    /// service ; ANALYSE-MODULE-SOUS-TRAITANCE.md ST17, ST29) : marché, sous-traitant et maître d'ouvrage (client du marché
+    /// de vente lié, sinon du chantier) en coordonnées de l'annuaire, chantier, marché de vente, commandes validées.
+    /// </summary>
+    private static async Task<JsonNode?> MarcheSousTraitanceAsync(LogiBtpContext db, JsonObject donnees, CancellationToken ct)
+    {
+        if (donnees["fiche"]?["type"]?.GetValue<string>() != "marche" || !int.TryParse(donnees["fiche"]?["id"]?.ToString(), out var id)) return null;
+        var m = await db.Database.SqlQueryRaw<LigneMarcheEdition>("""
+            SELECT m.mar_id AS id, m.mar_code AS code, m.mar_libelle AS libelle, m.mar_sens AS sens, m.mar_nature AS nature, m.mar_montant_ht AS montant_ht,
+                   m.mar_montant_agree AS montant_agree, m.mar_garantie AS garantie, m.mar_autoliquidation AS autoliquidation, m.mar_retenue_pct AS retenue_pct,
+                   m.mar_date AS date, m.mar_debut_contractuel AS debut, m.mar_fin_contractuelle AS fin, m.mar_tiers_id AS tiers_id,
+                   coalesce(v.mar_tiers_id, c.cha_tiers_id) AS client_id, c.cha_code AS chantier, c.cha_libelle AS chantier_libelle,
+                   nullif(concat_ws(' ', c.cha_adresse, c.cha_code_postal, c.cha_ville), '') AS chantier_adresse,
+                   v.mar_code AS vente_code, v.mar_libelle AS vente_libelle, v.mar_montant_ht AS vente_montant
+            FROM marche m LEFT JOIN chantier c ON c.cha_id = m.mar_cha_id LEFT JOIN marche v ON v.mar_id = m.mar_marche_vente_id
+            WHERE m.mar_id = @id
+            """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
+        if (m is null) return null;
+        var commandes = await db.Database.SqlQueryRaw<CommandeEdition>("""
+            SELECT d.ent_numero AS numero, d.ent_date AS date, d.ent_objet AS objet, x.mdo_role AS role, x.mdo_rang AS rang, coalesce(d.ent_total_ht, 0) AS montant_ht
+            FROM marche_document x JOIN document d ON d.ent_id = x.mdo_ent_id WHERE x.mdo_mar_id = @id AND d.ent_verrouille ORDER BY x.mdo_rang
+            """, new NpgsqlParameter("id", id)).ToListAsync(ct);
+        async Task<JsonObject?> Tiers(long? per)
+        {
+            if (per is not long p || await ContactsDocument.Instantane(db, p, null, ct) is not { } j) return null;
+            var o = JsonNode.Parse(j.RootElement.GetRawText())!.AsObject();
+            var a = o["adresse"] as JsonObject;
+            var lignes = new JsonArray();
+            foreach (var k in new[] { "ligne1", "ligne2", "ligne3" }) if (a?[k]?.GetValue<string>() is { Length: > 0 } t) lignes.Add(t);
+            if (a is not null && $"{a["code_postal"]} {a["ville"]}".Trim() is { Length: > 0 } cp) lignes.Add(cp);
+            o["adresse"] = lignes;
+            return o;
+        }
+        var garanties = new Dictionary<string, string>
+        {
+            ["PAIEMENT_DIRECT"] = "Paiement direct par le maître d'ouvrage", ["DELEGATION"] = "Délégation de paiement", ["CAUTION"] = "Caution personnelle et solidaire", ["AUCUNE"] = "Aucune",
+        };
+        return new JsonObject
+        {
+            ["marche"] = new JsonObject
+            {
+                ["code"] = m.Code, ["libelle"] = m.Libelle, ["public"] = m.Nature == "U", ["nature"] = m.Nature == "U" ? "Marché public" : "Marché privé",
+                ["montant_ht"] = m.MontantHt, ["montant_agree"] = m.MontantAgree, ["garantie"] = m.Garantie, ["garantie_libelle"] = m.Garantie is { } g && garanties.TryGetValue(g, out var gl) ? gl : null,
+                ["paiement_direct"] = m.Garantie == "PAIEMENT_DIRECT", ["autoliquidation"] = m.Autoliquidation, ["retenue_pct"] = m.RetenuePct,
+                ["date"] = m.Date?.ToString("yyyy-MM-dd"), ["debut"] = m.Debut?.ToString("yyyy-MM-dd"), ["fin"] = m.Fin?.ToString("yyyy-MM-dd"),
+            },
+            ["sous_traitant"] = await Tiers(m.TiersId),
+            ["maitre_ouvrage"] = await Tiers(m.ClientId),
+            ["chantier"] = new JsonObject { ["code"] = m.Chantier, ["libelle"] = m.ChantierLibelle, ["adresse"] = m.ChantierAdresse },
+            ["marche_vente"] = m.VenteCode is null ? null : new JsonObject { ["code"] = m.VenteCode, ["libelle"] = m.VenteLibelle, ["montant_ht"] = m.VenteMontant },
+            ["commandes"] = new JsonArray(commandes.Select(c => (JsonNode?)new JsonObject
+            {
+                ["numero"] = c.Numero, ["date"] = c.Date?.ToString("yyyy-MM-dd"), ["objet"] = c.Objet, ["role"] = c.Role, ["rang"] = c.Rang, ["montant_ht"] = c.MontantHt,
+            }).ToArray()),
+        };
     }
 
     /// <summary>Reste à payer d'une pièce d (alias) : net à payer moins les pointages de ses échéances (module Règlements).</summary>
@@ -752,6 +816,23 @@ public static class SourcesFicheListeEdition
             ("Sections", "sections[].groupes[].champs[].valeur", "Valeur mise en forme", "texte"), ("Sections", "sections[].groupes[].champs[].html", "Valeur HTML", "booleen"),
             ("Société", "societe.raison_sociale", "Raison sociale", "texte"), ("Société", "societe.siret", "SIRET", "texte"), ("Société", "societe.tva", "TVA", "texte"),
             ("Société", "societe.adresse", "Adresse (lignes)", "liste"), ("Société", "societe.telephone", "Téléphone", "texte"), ("Société", "societe.courriel", "Courriel", "texte"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.code", "Code du marché", "texte"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.libelle", "Libellé", "texte"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.nature", "Marché public ou privé", "texte"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.montant_ht", "Montant HT", "montant"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.montant_agree", "Montant agréé", "montant"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.garantie_libelle", "Garantie de paiement", "texte"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.paiement_direct", "Paiement direct", "booleen"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.autoliquidation", "Autoliquidation de la TVA", "booleen"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.retenue_pct", "Retenue de garantie (%)", "nombre"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.date", "Date du marché", "date"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.debut", "Début contractuel", "date"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche.fin", "Fin contractuelle", "date"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.sous_traitant", "Sous-traitant (raison_sociale, siret, tva_intra, adresse, email, telephone)", "objet"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.maitre_ouvrage", "Maître d'ouvrage (mêmes champs)", "objet"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.chantier", "Chantier (code, libelle, adresse)", "objet"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.marche_vente", "Marché de vente lié (code, libelle, montant_ht)", "objet"),
+            ("Marché de sous-traitance (sources_annexes : marche_sous_traitance)", "sources.marche_sous_traitance.commandes", "Commandes validées (numero, date, objet, role, rang, montant_ht)", "collection"),
         ];
         return SourceDocumentEdition.VersJson(d);
     }

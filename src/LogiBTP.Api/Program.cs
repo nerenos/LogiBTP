@@ -148,6 +148,7 @@ api.MapAtelier().ExigeModule("execution", "Exécution");
 api.MapStructure();
 api.MapConsultations();
 api.MapRetenuesMarche();
+api.MapSousTraitanceAssistant();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();

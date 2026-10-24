@@ -436,7 +436,107 @@ const AUTRES = [
   },
 ];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES];
+// Éditions d'un marché de sous-traitance (module Sous-traitance, lot 5 ; ST17, ST29) : source « fiche » du marché et
+// source annexe marche_sous_traitance (sous-traitant, maître d'ouvrage, chantier, marché de vente, commandes). Le DC4
+// est une édition propre qui reprend les rubriques du formulaire officiel (pas de remplissage du PDF de l'administration).
+const ST = 'sources.marche_sous_traitance';
+const partie = (titre, chemin) => ({ type: 'pile', espacement: 1, secable: false, enfants: [
+  champ(titre, { style: 'section', fond: 'fond_section', marges: 1 }),
+  champ(`=PremierNonVide(${chemin}.raison_sociale; "(à compléter)")`, { style: 'gras' }),
+  adresse(`${chemin}.adresse`),
+  retrait('SIRET', `${chemin}.siret`, `${chemin}.siret`),
+  retrait('TVA intracommunautaire', `${chemin}.tva_intra`, `${chemin}.tva_intra`),
+  retrait('Courriel', `${chemin}.email`, `${chemin}.email`),
+  retrait('Téléphone', `${chemin}.telephone`, `${chemin}.telephone`),
+] });
+const titulaire = (titre) => ({ type: 'pile', espacement: 1, secable: false, enfants: [
+  champ(titre, { style: 'section', fond: 'fond_section', marges: 1 }),
+  champ('{{societe.raison_sociale}}', { style: 'gras' }), adresse('societe.adresse'),
+  retrait('SIRET', 'societe.siret', 'societe.siret'), retrait('TVA intracommunautaire', 'societe.tva', 'societe.tva'),
+] });
+const rubrique = (titre, enfants) => ({ type: 'pile', espacement: 1, secable: false, enfants: [champ(titre, { style: 'section', fond: 'fond_section', marges: 1 }), ...enfants] });
+const commandesSt = { type: 'tableau', collection: `${ST}.commandes`, remplir: false, report: false, vide: 'Aucune commande validée', colonnes: [
+  { cle: 'piece', titre: 'Pièce', largeur: '28mm', valeur: '=Si(element.role = "BASE"; "Commande"; "Avenant " & element.rang)' },
+  { cle: 'numero', titre: 'N°', largeur: '30mm', valeur: '{{element.numero}}' },
+  { cle: 'objet', titre: 'Objet', largeur: '*', valeur: '{{element.objet}}' },
+  { cle: 'mt', titre: 'Montant HT', largeur: '30mm', valeur: '{{element.montant_ht}}', format: 'montant', alignement: 'droite', style: 'montant', cumul: '=element.montant_ht' },
+], total: { libelle: 'Total' } };
+const signatures = (gauche, droite) => ({ type: 'rangee', espacement: 10, marges: { haut: 8 }, secable: false, enfants: [
+  { type: 'pile', largeur: '*', enfants: [champ(gauche, { style: 'gras' }), champ('Date, nom, qualité et signature', { style: 'discret' }), { type: 'espace', hauteur: 25 }] },
+  { type: 'pile', largeur: '*', enfants: [champ(droite, { style: 'gras' }), champ('Date, nom, qualité et signature', { style: 'discret' }), { type: 'espace', hauteur: 25 }] },
+] });
+const montantMarche = `Montant(${ST}.marche.montant_ht) & " € HT" & Si(${ST}.marche.autoliquidation; " (autoliquidation de la TVA : article 283-2 nonies du CGI)"; "")`;
+
+function rapportMarche({ code, libelle, titre, ordre, enfants }) {
+  return {
+    code, libelle, genre: 'RAPPORT', cible: 'FICHE', source: 'fiche', types: ['marche'], ordre,
+    contenu: {
+      format_version: 1, code, libelle, cible: 'FICHE', source: 'fiche', sources_annexes: ['marche_sous_traitance'],
+      page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 14, droite: 14 } },
+      bandes: [
+        { type: 'PIED_PAGE', contenu: bloc('PIED_INTERNE') },
+        { type: 'TITRE', contenu: { type: 'pile', espacement: 3, enfants: [bloc('ENTETE_SOCIETE'),
+          { type: 'pile', espacement: 1, cadre: { bas: 'normal' }, marges: { bas: 2 }, enfants: [champ(titre, { style: 'titre' }),
+            champ(`=Joindre(" – "; ${ST}.marche.code; ${ST}.marche.libelle; ${ST}.marche.nature)`, { style: 'sous_titre' })] }] } },
+        { type: 'CORPS', contenu: { type: 'pile', espacement: 4, enfants } },
+      ],
+    },
+  };
+}
+
+const MARCHES_ST = [
+  rapportMarche({ code: 'ST_DC4', libelle: 'DC4 – Déclaration de sous-traitance', titre: 'Déclaration de sous-traitance (DC4)', ordre: 30, enfants: [
+    champ('Rubriques du formulaire DC4 : acceptation du sous-traitant et agrément de ses conditions de paiement par le maître d’ouvrage.', { style: 'discret' }),
+    { type: 'rangee', espacement: 6, meme_hauteur: false, enfants: [
+      { ...partie('A – Maître d’ouvrage (acheteur)', `${ST}.maitre_ouvrage`), largeur: '*' }, { ...titulaire('C – Titulaire du marché'), largeur: '*' }] },
+    rubrique('B – Objet du marché public', [
+      retrait('Marché', `Joindre(" – "; ${ST}.marche_vente.code; ${ST}.marche_vente.libelle)`, `${ST}.marche_vente`),
+      retrait('Chantier', `Joindre(" – "; ${ST}.chantier.code; ${ST}.chantier.libelle; ${ST}.chantier.adresse)`, `${ST}.chantier.code`)]),
+    partie('D – Sous-traitant', `${ST}.sous_traitant`),
+    rubrique('E – Nature et prix des prestations sous-traitées', [
+      retrait('Prestations', `PremierNonVide(${ST}.marche.libelle; "")`), commandesSt,
+      retrait('Montant maximum', montantMarche)]),
+    rubrique('F – Conditions de paiement', [
+      retrait('Paiement', `Si(${ST}.marche.paiement_direct; "Le sous-traitant est payé directement par le maître d’ouvrage."; PremierNonVide(${ST}.marche.garantie_libelle; "À préciser"))`),
+      retrait('Montant agréé au paiement direct', `Montant(${ST}.marche.montant_agree) & " €"`, `${ST}.marche.montant_agree`),
+      retrait('Retenue de garantie', `Simple(${ST}.marche.retenue_pct) & " %"`, `${ST}.marche.retenue_pct`),
+      retrait('Délai d’exécution', `Joindre(" au "; Date(${ST}.marche.debut); Date(${ST}.marche.fin))`, `${ST}.marche.debut OU ${ST}.marche.fin`)]),
+    rubrique('G – Attestations', [champ('Le sous-traitant déclare sur l’honneur ne pas entrer dans un des cas d’exclusion de la commande publique, être en règle de ses obligations sociales et fiscales, et produire les attestations d’assurance correspondant aux prestations sous-traitées.', { multiligne: 'auto' })]),
+    signatures('Le titulaire', 'Le sous-traitant'),
+    signatures('Le maître d’ouvrage (acceptation et agrément)', ''),
+  ] }),
+  rapportMarche({ code: 'ST_ACTE_SPECIAL', libelle: 'Acte spécial de sous-traitance', titre: 'Acte spécial de sous-traitance', ordre: 31, enfants: [
+    champ('Acte spécial portant acceptation du sous-traitant et agrément de ses conditions de paiement (ou acte modificatif).', { style: 'discret' }),
+    { type: 'rangee', espacement: 6, enfants: [{ ...partie('Maître d’ouvrage', `${ST}.maitre_ouvrage`), largeur: '*' }, { ...titulaire('Titulaire'), largeur: '*' }] },
+    partie('Sous-traitant', `${ST}.sous_traitant`),
+    rubrique('Prestations et montant', [retrait('Objet', `${ST}.marche.libelle`), commandesSt, retrait('Montant', montantMarche),
+      retrait('Paiement direct', `Si(${ST}.marche.paiement_direct; "Oui, dans la limite de " & Montant(${ST}.marche.montant_agree) & " €"; "Non")`)]),
+    signatures('Le titulaire', 'Le maître d’ouvrage'),
+  ] }),
+  rapportMarche({ code: 'ST_CONTRAT', libelle: 'Contrat de sous-traitance', titre: 'Contrat de sous-traitance', ordre: 32, enfants: [
+    { type: 'rangee', espacement: 6, enfants: [{ ...titulaire('Entre l’entreprise principale'), largeur: '*' }, { ...partie('Et le sous-traitant', `${ST}.sous_traitant`), largeur: '*' }] },
+    rubrique('Article 1 – Objet', [champ(`=Joindre(" – "; ${ST}.marche.libelle; "Chantier " & ${ST}.chantier.code & " " & ${ST}.chantier.libelle)`),
+      retrait('Maître d’ouvrage', `${ST}.maitre_ouvrage.raison_sociale`, `${ST}.maitre_ouvrage`)]),
+    rubrique('Article 2 – Prix', [commandesSt, retrait('Montant du contrat', montantMarche)]),
+    rubrique('Article 3 – Délais', [retrait('Début', `Date(${ST}.marche.debut; "long")`, `${ST}.marche.debut`), retrait('Fin', `Date(${ST}.marche.fin; "long")`, `${ST}.marche.fin`),
+      champ('Les dates d’intervention sont précisées par ordre de service.', { style: 'discret' })]),
+    rubrique('Article 4 – Garantie de paiement', [champ(`=Si(${ST}.marche.paiement_direct; "Paiement direct du sous-traitant par le maître d’ouvrage (loi n° 75-1334 du 31 décembre 1975), dans la limite du montant agréé."; PremierNonVide(${ST}.marche.garantie_libelle; "Garantie à préciser (loi n° 75-1334 du 31 décembre 1975, article 14)."))`)]),
+    rubrique('Article 5 – Retenue de garantie', [champ(`=Si(${ST}.marche.retenue_pct; "Retenue de " & Simple(${ST}.marche.retenue_pct) & " % de chaque situation, libérée un an après la réception sauf réserves, ou remplacée par une caution."; "Sans retenue de garantie.")`)]),
+    rubrique('Article 6 – Pièces et assurances', [champ('Le sous-traitant fournit avant le début des travaux puis tous les six mois les attestations de vigilance, d’assurance et l’ensemble des pièces exigées ; leur défaut suspend les paiements.')]),
+    signatures('L’entreprise principale', 'Le sous-traitant'),
+  ] }),
+  rapportMarche({ code: 'ST_ORDRE_SERVICE', libelle: 'Ordre de service au sous-traitant', titre: 'Ordre de service', ordre: 33, enfants: [
+    { type: 'rangee', espacement: 6, enfants: [{ ...titulaire('Émetteur'), largeur: '*' }, { ...partie('Destinataire', `${ST}.sous_traitant`), largeur: '*' }] },
+    rubrique('Ordre', [
+      retrait('Chantier', `Joindre(" – "; ${ST}.chantier.code; ${ST}.chantier.libelle; ${ST}.chantier.adresse)`, `${ST}.chantier.code`),
+      retrait('Marché', `Joindre(" – "; ${ST}.marche.code; ${ST}.marche.libelle)`),
+      champ(`=Si(${ST}.marche.debut; "Il vous est prescrit de commencer les travaux le " & Date(${ST}.marche.debut; "long") & Si(${ST}.marche.fin; ", pour une fin au plus tard le " & Date(${ST}.marche.fin; "long"); "") & "."; "Date de démarrage : ________________")`)]),
+    rubrique('Observations', [{ type: 'espace', hauteur: 30 }]),
+    signatures('Pour l’entreprise principale', 'Reçu par le sous-traitant'),
+  ] }),
+];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [
