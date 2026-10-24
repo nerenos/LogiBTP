@@ -5,7 +5,8 @@ import { api } from '../api.js';
 
 // Module Stock, lot 1 (ANALYSE-MODULE-STOCK.md S29, § 5.2) : méthode de valorisation de la société (PMP ou dernier
 // prix d'achat, globale), emplacements de chaque dépôt (zone › allée › rack › étagère › case : code complet unique dans
-// le dépôt, parent par son code) ; revalorisation complète. Droit : administrateur ou membre du service logistique.
+// le dépôt, parent par son code) ; revalorisation complète ; lot 2 : marques des articles (listes rapides des
+// inventaires, du magasin et de la borne : code, libellé, couleur ; une marque retirée encore portée est désactivée). Droit : administrateur ou membre du service logistique.
 
 const NIVEAUX = { ZONE: 'Zone', ALLEE: 'Allée', RACK: 'Rack', ETAGERE: 'Étagère', CASE: 'Case', AUTRE: 'Autre' };
 
@@ -22,6 +23,8 @@ export class PageParametresStock extends PageBase {
         <button type="button" data-revaloriser title="Recalcule le PMP et le dernier prix d'achat de tous les articles">⟳ Tout revaloriser</button></p>
       <p class="aide">Le prix est recherché à la date demandée parmi les achats (date de réception, prix de la facture dès qu'elle est validée ;
         avant elle, prix provisoire de la réception). Sans achat : PA de la bibliothèque, signalé. Le PMP se corrige dans l'onglet Stock de l'article.</p>
+      <h2>Marques des articles</h2><p class="aide">Listes rapides d'articles (EPI, outillage, inventaire tournant…) : marquez les articles dans l'onglet Stock
+        de leur fiche ou en masse depuis la liste de la bibliothèque (🏷 Marquer).</p><div data-marques></div>
       <h2>Emplacements</h2><p class="ligne"><label>Dépôt <span data-lieu></span></label></p>
       <p class="aide">Code complet unique dans le dépôt (ex. A, A-01, A-01-2) ; le parent se désigne par son code. Un dépôt est un chantier
         coché « Dépôt de stock » (affaire STOCK).</p><div data-emplacements></div></div>`;
@@ -35,12 +38,42 @@ export class PageParametresStock extends PageBase {
     this.conteneur.querySelector('[data-revaloriser]').addEventListener('click', async () => {
       try { const r = await api.stock.revaloriser(); this.app.message?.(`${r.articles} article(s) revalorisé(s)`); } catch (e) { this.app.erreur(e); }
     });
+    this.marques = await api.stock.marques();
+    this.#rendreMarques();
     const depots = lieux.filter((l) => l.depot);
     this.lieu = Number(new URLSearchParams(globalThis.location?.search ?? '').get('lieu')) || depots[0]?.id || null;
     const combo = creerCombo({ options: depots.map((l) => ({ valeur: l.id, libelle: `${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', vide: false });
     combo.addEventListener('change', () => { this.lieu = Number(combo.valeurCombo); this.#charger(); });
     this.conteneur.querySelector('[data-lieu]').append(combo);
     await this.#charger();
+  }
+
+  #rendreMarques() {
+    const l = this.marques;
+    const zone = this.conteneur.querySelector('[data-marques]');
+    zone.innerHTML = `<table class="tableau-compact"><thead><tr><th>Code</th><th>Libellé</th><th>Couleur</th><th>Active</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${l.map((m, i) => `<tr data-i="${i}"><td><input data-c="code" size="12" value="${echapper(m.code)}" ${m._existe ? 'readonly' : ''}></td>
+        <td><input data-c="libelle" size="32" value="${echapper(m.libelle)}"></td><td><input type="color" data-c="couleur" value="${echapper(m.couleur ?? '#98a2b3')}"></td>
+        <td><input type="checkbox" data-c="actif" ${m.actif ? 'checked' : ''}></td><td class="cellule-boutons"><button type="button" data-retirer title="Retirer">✕</button></td></tr>`).join('')}
+      </tbody></table><p class="ligne"><button type="button" data-ajouter>＋ Marque</button> <button type="button" class="principal" data-enregistrer>Enregistrer les marques</button></p>`;
+    l.forEach((m) => { m._existe ??= Boolean(m.code); });
+    zone.querySelectorAll('tr[data-i]').forEach((tr) => {
+      const m = l[Number(tr.dataset.i)];
+      tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => {
+        m[x.dataset.c] = x.type === 'checkbox' ? x.checked : x.dataset.c === 'code' ? x.value.trim().toUpperCase() : x.value;
+        this.#modifie = true;
+      }));
+      tr.querySelector('[data-retirer]').addEventListener('click', () => { l.splice(l.indexOf(m), 1); this.#modifie = true; this.#rendreMarques(); });
+    });
+    zone.querySelector('[data-ajouter]').addEventListener('click', () => { l.push({ code: '', libelle: '', couleur: null, ordre: l.length, actif: true, _existe: false }); this.#rendreMarques(); });
+    zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      try {
+        this.marques = await api.stock.enregistrerMarques(l.map(({ _existe, ...m }, i) => ({ ...m, ordre: i })));
+        this.#modifie = false;
+        this.#rendreMarques();
+        this.app.message?.('Marques enregistrées');
+      } catch (e) { this.app.erreur(e); }
+    });
   }
 
   async #charger() {

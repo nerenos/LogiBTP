@@ -65,6 +65,7 @@ public class ComptageEntite
     public decimal? CptPrix { get; set; }
     public string? CptCommentaire { get; set; }
     public long? CptEntId { get; set; }
+    public long? CptLinId { get; set; }
     public string? CptPar { get; set; }
     public DateTimeOffset CptLe { get; set; } = DateTimeOffset.UtcNow;
 }
@@ -78,6 +79,7 @@ public class ReevaluationEntite
     public decimal? RevAncienPmp { get; set; }
     public string? RevCommentaire { get; set; }
     public string RevPar { get; set; } = "";
+    public long? RevLinId { get; set; }
     public DateTimeOffset RevLe { get; set; } = DateTimeOffset.UtcNow;
 }
 
@@ -108,6 +110,11 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
     public DbSet<ReevaluationEntite> Reevaluations => Set<ReevaluationEntite>();
     public DbSet<ValeurEntite> Valeurs => Set<ValeurEntite>();
     public DbSet<AValoriserEntite> AValoriser => Set<AValoriserEntite>();
+    public DbSet<LotInventaireEntite> LotsInventaire => Set<LotInventaireEntite>();
+    public DbSet<BordereauEntite> Bordereaux => Set<BordereauEntite>();
+    public DbSet<LigneBordereauEntite> LignesBordereau => Set<LigneBordereauEntite>();
+    public DbSet<MarqueEntite> Marques => Set<MarqueEntite>();
+    public DbSet<ArticleMarqueEntite> ArticlesMarques => Set<ArticleMarqueEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -119,6 +126,12 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
         b.Entity<ReevaluationEntite>().ToTable("stk_reevaluation").HasKey(x => x.RevId);
         b.Entity<ValeurEntite>().ToTable("stk_valeur").HasKey(x => x.SvaEleId);
         b.Entity<AValoriserEntite>().ToTable("stk_a_valoriser").HasKey(x => x.SavEleId);
+        b.Entity<LotInventaireEntite>().ToTable("stk_lot_inventaire").HasKey(x => x.LinId);
+        b.Entity<BordereauEntite>().ToTable("stk_bordereau").HasKey(x => x.BorId);
+        b.Entity<BordereauEntite>().Property(x => x.BorCritere).HasColumnType("jsonb");
+        b.Entity<LigneBordereauEntite>().ToTable("stk_bordereau_ligne").HasKey(x => x.BliId);
+        b.Entity<MarqueEntite>().ToTable("stk_marque").HasKey(x => x.MrqCode);
+        b.Entity<ArticleMarqueEntite>().ToTable("stk_article_marque").HasKey(x => new { x.SamEleId, x.SamMrqCode });
     }
 }
 
@@ -155,6 +168,11 @@ public abstract class SpecialisationStock
     public abstract Task<List<LieuStock>> LieuxAsync(StockDbContext db, CancellationToken ct);
     public abstract Task<Dictionary<long, ArticleStock>> ArticlesAsync(StockDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct);
     public abstract Task<Dictionary<long, PieceStock>> PiecesAsync(StockDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct);
+    /// <summary>Articles gérés en stock (lignes des bordereaux, magasin).</summary>
+    public abstract Task<List<ArticleStock>> ArticlesGeresAsync(StockDbContext db, CancellationToken ct);
+    /// <summary>Familles d'articles (génération des bordereaux par famille) et articles gérés en stock de familles (sous-familles comprises).</summary>
+    public abstract Task<List<FamilleStock>> FamillesAsync(StockDbContext db, CancellationToken ct);
+    public abstract Task<List<long>> ArticlesDeFamillesAsync(StockDbContext db, IReadOnlyCollection<long> familles, CancellationToken ct);
     /// <summary>Après la revalorisation d'un article (PMP, dernier prix d'achat de l'article).</summary>
     public virtual Task ApresValorisationAsync(StockDbContext db, long ele, Valorisation v, CancellationToken ct) => Task.CompletedTask;
     /// <summary>Paramètres, emplacements et réévaluations : administrateur par défaut.</summary>
@@ -423,6 +441,7 @@ public static class Extensions
         services.AddDbContext<StockDbContext>(options);
         services.AddSingleton<SpecialisationStock, TSpecialisation>();
         services.AddScoped<ServiceStock>();
+        services.AddScoped<ServiceInventaire>();
         return services;
     }
 
@@ -446,6 +465,7 @@ public static class Extensions
             await s.DefinirEmplacementsArticleAsync(id, l, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
+        g.MapInventaires();
         g.MapPost("/revaloriser", async (HttpContext http, ServiceStock s, CancellationToken ct) => Results.Ok(new { articles = await s.RevaloriserToutAsync(Utilisateur.Depuis(http), ct) }));
         return g;
     }

@@ -863,3 +863,18 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .pieces-st tr.etat-manquante td:nth-child(3), .pieces-st tr.etat-expiree td:nth-child(3) { color: #b42318; font-weight: 600; }
 .pieces-st tr.etat-a_echeance td:nth-child(3) { color: #b45309; }
 .pieces-st .bouton-fichier { cursor: pointer; padding: 0 4px; }
+
+/* Stock : état du stock, fiche de stock de l'article, inventaires (bordereaux imprimables). */
+.page-stock .negatif td, .page-inventaire tr.avertissement td { background: var(--alerte-fond); }
+.stock-article h3 { margin: 1rem 0 .3rem; }
+.stock-article .entree { color: #05603a; }
+.page-inventaire .bordereau { margin: 1rem 0; }
+.page-inventaire .bordereau h2 { font-size: 1.05em; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.page-inventaire.sans-theoriques .theorique { display: none; }
+.page-inventaire .onglets { padding-left: 0; }
+@media print {
+  .page-inventaire .sans-impression, .page-inventaire .entete-page button, .page-inventaire .entete-page label { display: none !important; }
+  .page-inventaire .bordereau { break-after: page; color: #000; }
+  .page-inventaire .bordereau input { border: none; background: none; color: #000; }
+  .page-inventaire .bordereau td { border-bottom: 1px solid #999; height: 1.6rem; }
+}

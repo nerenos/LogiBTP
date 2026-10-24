@@ -14,7 +14,14 @@
 > l'article, bloc Stock de l'entête) ; écarts : le stock n'est pas tenu par emplacement (S3), l'emplacement d'un mouvement
 > est l'emplacement habituel de l'article dans le lieu ; les marques d'articles (S20) passent au lot 2 avec les
 > inventaires qui s'en servent ; une entrée de stock est valorisée au déboursé (PA) de la ligne, une pièce d'achat au HT
-> net ; la revalorisation est différée (articles marqués par trigger, recalculés avant toute lecture des valeurs).
+> net ; la revalorisation est différée (articles marqués par trigger, recalculés avant toute lecture des valeurs). Lot 2
+> réalisé le 24/10/2026 (`inventaire.js` ↔ `ReglesInventaire.cs`, jeu `03_inventaire.json`, `093b`, `db/217`,
+> `ServiceInventaire.cs` ; pages `/stock/inventaires`, `/stock/inventaire/:id`, marques des paramètres, de l'onglet
+> Stock et de la liste de la bibliothèque) ; écarts : les bordereaux sont des tables du module, pas des pièces
+> `S_INVENTAIRE` (la pièce comptable viendra du module Comptabilité, à partir du lot validé) ; l'impression se fait
+> par la page (bordereaux un par feuille, quantités théoriques au choix), pas par le module Édition ; un prix
+> d'inventaire vaut pour l'article dans le lot (deux prix différents refusés) ; un lot validé s'annule (ses comptages
+> et réévaluations sont retirés).
 
 ## 1. Note d'origine (résumé)
 

@@ -11,6 +11,7 @@ import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
 import { PageParametresStock } from '../stock/parametres.js';
+import { PageInventaires, PageInventaire } from '../stock/inventaires.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -68,6 +69,8 @@ export const ROUTES = [
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: 'Comparatif des offres' },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: 'État du stock' },
   { nom: 'mouvement-stock', chemin: '/stock/mouvement/:id', page: PageMouvementStock, titre: 'Mouvement de stock' },
+  { nom: 'inventaires', chemin: '/stock/inventaires', page: PageInventaires, titre: 'Inventaires' },
+  { nom: 'inventaire', chemin: '/stock/inventaire/:id', page: PageInventaire, titre: 'Inventaire' },
   { nom: 'parametres-stock', chemin: '/parametres/stock', page: PageParametresStock, titre: 'Paramètres du stock' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },

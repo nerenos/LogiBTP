@@ -55,4 +55,31 @@ public class ReglesStockTests
             Assert.True(u.Valeur == DecN(a["valeur"]) && u.Source == Txt(a["source"]) && u.Provisoire == (a["valeur_provisoire"]?.GetValue<bool>() ?? false), $"{nom} : valeur {u}");
         }
     }
+
+    [Fact]
+    public void Inventaire_identique_au_js()
+    {
+        static long? L(JsonNode? n) => n is null ? null : n.GetValue<long>();
+        foreach (var c in Jeu("03_inventaire.json")["cas"]!.AsArray())
+        {
+            var lignes = c!["lignes"]!.AsArray().Select(x => new LigneInventaire(x!["bordereau"]!.GetValue<long>(), x["ele"]!.GetValue<long>(), L(x["emp"]),
+                DecN(x["quantite"]), DecN(x["prix"]), x["appliquer_pmp"]!.GetValue<bool>(), Txt(x["commentaire"]))).ToList();
+            var r = ReglesInventaire.Controler(lignes);
+            var a = c["attendu"]!;
+            var nom = c["nom"]!.ToString();
+            var ac = a["comptages"]!.AsArray();
+            Assert.True(ac.Count == r.Comptages.Count, $"{nom} : comptages");
+            for (var i = 0; i < ac.Count; i++)
+            {
+                var x = ac[i]!;
+                var o = r.Comptages[i];
+                Assert.True(o.Ele == x["ele"]!.GetValue<long>() && o.Quantite == Dec(x["quantite"]!) && o.Prix == DecN(x["prix"]) && o.AppliquerPmp == x["appliquer_pmp"]!.GetValue<bool>()
+                    && o.Commentaire == Txt(x["commentaire"]) && o.Lignes == x["lignes"]!.GetValue<int>(), $"{nom} : {o}");
+            }
+            Assert.Equal(a["avertissements"]!.AsArray().Select(x => $"{x!["code"]}|{x["ele"]}|{x["emp"]}|{x["nombre"]}"),
+                r.Avertissements.Select(x => $"{x.Code}|{x.Ele}|{x.Emp}|{x.Nombre}"));
+            Assert.Equal(a["erreurs"]!.AsArray().Select(x => $"{x!["code"]}|{x["ele"]}"), r.Erreurs.Select(x => $"{x.Code}|{x.Ele}"));
+            foreach (var e in r.Erreurs) Assert.True(ReglesInventaire.Messages.ContainsKey(e.Code));
+        }
+    }
 }

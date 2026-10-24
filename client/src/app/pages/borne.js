@@ -3,6 +3,7 @@ import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
+import { choixMultiple } from '../choix-multiple.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
 // dans le navigateur de la borne, en-tête X-Borne-Jeton, aucune session) ; salarié (initiales) → PIN → chantier ou
@@ -53,31 +54,6 @@ async function appel(methode, url, corps) {
   const d = t ? JSON.parse(t) : null;
   if (!r.ok) throw new ErreurBorne(r.status, d?.code, d?.title ?? d?.message ?? `Erreur ${r.status}`);
   return d;
-}
-
-/**
- * Choix multiple : étiquettes des valeurs retenues (✕ pour retirer) et combo d'ajout des options restantes (jamais de
- * <select multiple>). `valeurs` : valeurs retenues, dans l'ordre d'ajout ; aucune : « tous ».
- */
-function choixMultiple({ options, valeurs = [], titre = 'Ajouter' }) {
-  const racine = document.createElement('div');
-  racine.className = 'choix-multiple';
-  let retenues = [...valeurs];
-  const egal = (a, b) => String(a) === String(b);
-  const rendre = () => {
-    const restantes = options.filter((o) => !retenues.some((v) => egal(v, o.valeur)));
-    racine.innerHTML = `${retenues.length ? retenues.map((v, i) => `<span class="etiquette-choix">${echapper(options.find((o) => egal(o.valeur, v))?.libelle ?? String(v))}<button type="button" data-retirer="${i}" title="Retirer" aria-label="Retirer">✕</button></span>`).join('')
-      : '<span class="aide">tous</span>'}<span data-ajout></span>`;
-    racine.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', () => { retenues.splice(Number(b.dataset.retirer), 1); rendre(); }));
-    if (!restantes.length) return;
-    const combo = creerCombo({ options: restantes, valeur: '', vide: true, titre });
-    combo.placeholder = `＋ ${titre.toLowerCase()}…`;
-    combo.addEventListener('change', () => { if (combo.valeurCombo !== '' && !retenues.some((v) => egal(v, combo.valeurCombo))) { retenues.push(combo.valeurCombo); rendre(); racine.querySelector('[data-ajout] input')?.focus(); } });
-    racine.querySelector('[data-ajout]').append(combo);
-  };
-  Object.defineProperty(racine, 'valeurs', { get: () => [...retenues] });
-  rendre();
-  return racine;
 }
 
 const initiales = (s) => `${s.prenom?.[0] ?? ''}${s.nom?.[0] ?? ''}`.toUpperCase();

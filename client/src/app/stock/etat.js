@@ -25,11 +25,19 @@ export class PageStock extends PageBase {
       <span data-lieu></span>
       <label>À la date <input type="datetime-local" data-date title="Vide : maintenant"></label>
       <label><input type="checkbox" data-zeros> Articles à zéro</label>
+      <span data-marque></span>
       <input type="search" data-recherche placeholder="Rechercher un article…" size="24">
       <button type="button" data-csv title="Exporter le tableau (CSV)">⭳ CSV</button></div>
       <p class="aide" data-aide></p><div data-corps></div></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
-    this.lieux = await api.stock.lieux();
+    const [lieux, marques, articles] = await Promise.all([api.stock.lieux(), api.stock.marques(), api.stock.articles()]);
+    this.lieux = lieux;
+    // Filtre par marque (lot 2) : marques des articles gérés en stock.
+    this.marquesArticle = new Map(articles.map((a) => [a.id, a.marques]));
+    const marque = creerCombo({ options: marques.filter((m) => m.actif).map((m) => ({ valeur: m.code, libelle: m.libelle, couleur: m.couleur })), valeur: '', titre: 'Toutes les marques' });
+    marque.placeholder = 'Marque…';
+    marque.addEventListener('change', () => { this.marque = marque.valeurCombo || null; this.#rendre(); });
+    this.conteneur.querySelector('[data-marque]').append(marque);
     this.lieu = Number(p.get('lieu')) || this.lieux.find((l) => l.depot)?.id || this.lieux[0]?.id || null;
     const combo = creerCombo({ options: this.lieux.map((l) => ({ valeur: l.id, libelle: `${l.depot ? '📦' : '🏗'} ${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', vide: false });
     combo.addEventListener('change', () => { this.lieu = Number(combo.valeurCombo); this.charger(); });
@@ -56,7 +64,8 @@ export class PageStock extends PageBase {
 
   #lignes() {
     const q = this.conteneur.querySelector('[data-recherche]').value.trim().toLowerCase();
-    return (this.etat?.lignes ?? []).filter((l) => !q || `${l.code} ${l.libelle} ${l.emplacements.join(' ')}`.toLowerCase().includes(q));
+    return (this.etat?.lignes ?? []).filter((l) => (!q || `${l.code} ${l.libelle} ${l.emplacements.join(' ')}`.toLowerCase().includes(q))
+      && (!this.marque || (this.marquesArticle?.get(l.ele_id) ?? []).includes(this.marque)));
   }
 
   #rendre() {

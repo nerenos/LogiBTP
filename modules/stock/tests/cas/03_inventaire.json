@@ -1,0 +1,51 @@
+{
+  "description": "Contrôle d'un lot d'inventaire (inventaire.js ↔ ReglesInventaire.cs, ANALYSE-MODULE-STOCK.md § 5.3, S6, S30) : cumul par article de toutes les lignes comptées des bordereaux du lot (ligne sans quantité ignorée), doublon d'un article au même emplacement signalé, prix d'inventaire unique par article, « Appliquer au PMP » avec un prix.",
+  "cas": [
+    { "nom": "cumul de deux bordereaux, ligne non comptée ignorée",
+      "lignes": [
+        { "bordereau": 1, "ele": 10, "emp": 1, "quantite": 4, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 10, "emp": 2, "quantite": "2.5", "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 11, "emp": 2, "quantite": null, "prix": null, "appliquer_pmp": false, "commentaire": null }
+      ],
+      "attendu": {
+        "comptages": [{ "ele": 10, "quantite": "6.5", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 2 }],
+        "avertissements": [], "erreurs": [] } },
+    { "nom": "même emplacement deux fois : avertissement et cumul",
+      "lignes": [
+        { "bordereau": 1, "ele": 10, "emp": 1, "quantite": 3, "prix": null, "appliquer_pmp": false, "commentaire": "rack haut" },
+        { "bordereau": 1, "ele": 10, "emp": 1, "quantite": 1, "prix": null, "appliquer_pmp": false, "commentaire": "rack haut" },
+        { "bordereau": 1, "ele": 12, "emp": null, "quantite": 0, "prix": null, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 2, "ele": 12, "emp": null, "quantite": 5, "prix": null, "appliquer_pmp": false, "commentaire": "palette" }
+      ],
+      "attendu": {
+        "comptages": [
+          { "ele": 10, "quantite": "4", "prix": null, "appliquer_pmp": false, "commentaire": "rack haut", "lignes": 2 },
+          { "ele": 12, "quantite": "5", "prix": null, "appliquer_pmp": false, "commentaire": "palette", "lignes": 2 }],
+        "avertissements": [{ "code": "INV_DOUBLON_EMPLACEMENT", "ele": 10, "emp": 1, "nombre": 2 }], "erreurs": [] } },
+    { "nom": "prix d'inventaire et application au PMP",
+      "lignes": [
+        { "bordereau": 1, "ele": 10, "emp": 1, "quantite": 8, "prix": "1.20", "appliquer_pmp": true, "commentaire": "stock lent" },
+        { "bordereau": 2, "ele": 10, "emp": 3, "quantite": 2, "prix": 1.2, "appliquer_pmp": false, "commentaire": "obsolète" }
+      ],
+      "attendu": {
+        "comptages": [{ "ele": 10, "quantite": "10", "prix": "1.2", "appliquer_pmp": true, "commentaire": "stock lent ; obsolète", "lignes": 2 }],
+        "avertissements": [], "erreurs": [] } },
+    { "nom": "deux prix différents et PMP sans prix : refusés",
+      "lignes": [
+        { "bordereau": 1, "ele": 10, "emp": 1, "quantite": 8, "prix": 1, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 1, "ele": 10, "emp": 2, "quantite": 2, "prix": 2, "appliquer_pmp": false, "commentaire": null },
+        { "bordereau": 1, "ele": 11, "emp": 2, "quantite": 2, "prix": null, "appliquer_pmp": true, "commentaire": null },
+        { "bordereau": 1, "ele": 12, "emp": 2, "quantite": -1, "prix": null, "appliquer_pmp": false, "commentaire": null }
+      ],
+      "attendu": {
+        "comptages": [
+          { "ele": 10, "quantite": "10", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 2 },
+          { "ele": 11, "quantite": "2", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 1 },
+          { "ele": 12, "quantite": "-1", "prix": null, "appliquer_pmp": false, "commentaire": null, "lignes": 1 }],
+        "avertissements": [],
+        "erreurs": [{ "code": "INV_QUANTITE_NEGATIVE", "ele": 12 }, { "code": "INV_PRIX_DIFFERENTS", "ele": 10 }, { "code": "INV_PMP_SANS_PRIX", "ele": 11 }] } },
+    { "nom": "lot vide",
+      "lignes": [],
+      "attendu": { "comptages": [], "avertissements": [], "erreurs": [] } }
+  ]
+}

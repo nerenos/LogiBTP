@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -25,6 +25,16 @@ describe('valorisation (jeu partagé)', () => {
       expect(r).toEqual(attendu);
       const u = valeurUnitaire(r, c.methode, c.repli);
       expect(u).toEqual({ valeur, source, provisoire: Boolean(vp) });
+    });
+  }
+});
+
+describe("contrôle d'un lot d'inventaire (jeu partagé)", () => {
+  for (const c of lire('03_inventaire.json').cas) {
+    it(c.nom, () => {
+      const r = controlerLot({ lignes: c.lignes });
+      expect(r).toEqual(c.attendu);
+      for (const x of [...r.erreurs, ...r.avertissements]) expect(MESSAGES_INVENTAIRE[x.code]).toBeTruthy();
     });
   }
 });

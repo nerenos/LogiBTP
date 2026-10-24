@@ -44,6 +44,31 @@ public sealed class SpecialisationStockBtp : SpecialisationStock
         return l.ToDictionary(x => x.Id, x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa));
     }
 
+    public override Task<List<ArticleStock>> ArticlesGeresAsync(StockDbContext db, CancellationToken ct) =>
+        db.Database.SqlQuery<ArticleSql>($"""
+            SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle AS libelle, e.ele_unt_stock AS unite,
+                   coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa
+            FROM element e LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock
+            WHERE e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND e.ele_actif ORDER BY e.ele_code
+            """).Select(x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa)).ToListAsync(ct);
+
+    private sealed record FamilleSql(long Id, string Chemin);
+
+    public override Task<List<FamilleStock>> FamillesAsync(StockDbContext db, CancellationToken ct) =>
+        db.Database.SqlQuery<FamilleSql>($"SELECT fam_id::bigint AS id, chemin FROM v_famille_element ORDER BY chemin")
+            .Select(x => new FamilleStock(x.Id, x.Chemin)).ToListAsync(ct);
+
+    public override Task<List<long>> ArticlesDeFamillesAsync(StockDbContext db, IReadOnlyCollection<long> familles, CancellationToken ct)
+    {
+        var t = familles.ToArray();
+        return db.Database.SqlQuery<long>($"""
+            WITH RECURSIVE f AS (SELECT fam_id FROM famille_element WHERE fam_id = ANY({t})
+                                 UNION SELECT x.fam_id FROM famille_element x JOIN f ON x.fam_parent_id = f.fam_id)
+            SELECT e.ele_id AS "Value" FROM element e JOIN f ON f.fam_id = e.ele_fam_id
+            WHERE e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND e.ele_actif
+            """).ToListAsync(ct);
+    }
+
     public override async Task<Dictionary<long, PieceStock>> PiecesAsync(StockDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct)
     {
         if (ids.Count == 0) return [];

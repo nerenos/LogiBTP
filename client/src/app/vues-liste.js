@@ -127,6 +127,8 @@ export const SOURCES_LISTE = {
       ['nature', 'text'], ['regroupement', 'text'], ['gestion', 'text'], ['unite_stock', 'text'], ['scenario_pa', 'text'], ['pa', 'numeric'],
       ['coef_fg', 'numeric'], ['pr', 'numeric'], ['coef_benef', 'numeric'], ['pv', 'numeric'], ['pv_net', 'numeric'], ['actif', 'boolean'],
       ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
+      // Module Stock (db/217) : marques de l'article.
+      ['marques', 'ARRAY'],
     ],
   },
   // Annuaire : relations (casquettes) et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
@@ -532,6 +534,7 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
       col('regroupement', 'Regroupement', { ...prop(1, 90) }),
       col('gestion', 'Gestion', { format: 'picto', ...fixe(64), options: OPTIONS_GESTION }),
       col('unite_stock', 'U.', { ...fixe(44), alignement: 'centre' }),
+      col('marques', 'Marques', { ...prop(1, 90), masquee: true }),
       col('pa', 'PA', { ...nombre(4), ...fixe(84), recherche: false }),
       col('pr', 'PR', { ...nombre(4), ...fixe(84), recherche: false }),
       col('pv_net', 'PV net', { ...nombre(2), ...fixe(84), recherche: false, style: { gras: true } }),

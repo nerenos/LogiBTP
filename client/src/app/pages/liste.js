@@ -6,6 +6,7 @@ import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
 import { groupesThemes } from '../navigation/menus.js';
 import { api } from '../api.js';
+import { marquerArticles } from '../stock/marquer.js';
 import { transformerDocument } from '../documents/transformation.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
@@ -78,10 +79,20 @@ function actionsDepuisVue(vue, app, services, themes = []) {
   }
   const type = FICHE_PAR_SOURCE[source];
   if (!type || (theme?.thl_types?.length ?? 0) > 1) return null;
+  // Bibliothèque, module Stock actif : marquage en masse des articles sélectionnés.
+  const marquer = type === 'element' && app.enLigne && app.moduleActif('stock') ? [{
+    code: 'marquer', icone: '🏷', libelle: 'Marquer', titre: 'Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés',
+    actif: (lignes) => lignes.length > 0,
+    action: async (lignes) => {
+      const n = await marquerArticles(lignes.map((l) => Number(l._id)));
+      if (n !== null) { app.message(`${n} article(s) marqué(s)`, 'succes'); app.publier('enregistre', { ids: lignes.map((l) => l._id) }); }
+    },
+  }] : [];
   return {
     consulter,
     copier: (l, e) => app.naviguer(`/fiche/${type}/${l._id}?copie=1`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
     supprimer: app.estAdmin() ? (l) => services.fiche.supprimer(type, l._id) : null,
+    ...(marquer.length ? { autres: marquer } : {}),
   };
 }
 
