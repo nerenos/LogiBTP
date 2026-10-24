@@ -8,6 +8,13 @@
 >
 > **État** : questions S1 à S31 tranchées le 24/10/2026 (§ 8), propositions retenues sauf S4, S22, S29 (complétées)
 > et S24 (lots et numéros de série : reportée, analyse à mener pour les certificats matière et le SAV).
+>
+> **Réalisation** : lot 1 réalisé le 24/10/2026 (`modules/stock` : `stock.js` ↔ `ReglesStock.cs`, `valorisation.js` ↔
+> `ReglesValorisation.cs`, `093` ; cœur `db/216`, `StockBtp.cs` ; pages `/stock`, `/parametres/stock`, onglet Stock de
+> l'article, bloc Stock de l'entête) ; écarts : le stock n'est pas tenu par emplacement (S3), l'emplacement d'un mouvement
+> est l'emplacement habituel de l'article dans le lieu ; les marques d'articles (S20) passent au lot 2 avec les
+> inventaires qui s'en servent ; une entrée de stock est valorisée au déboursé (PA) de la ligne, une pièce d'achat au HT
+> net ; la revalorisation est différée (articles marqués par trigger, recalculés avant toute lecture des valeurs).
 
 ## 1. Note d'origine (résumé)
 

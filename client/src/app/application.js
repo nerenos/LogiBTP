@@ -282,6 +282,7 @@ export class Application {
     }
     if (type === 'document_ged') return `/ged/${id}`;
     if (type === 'pointage') return `/pointage/saisie?pointage=${id}`;
+    if (type === 'mouvement_stock') return this.enLigne ? `/stock/mouvement/${id}` : null;
     const f = ficheDeLigne({ id, type });
     return f ? `/fiche/${f.type}/${f.id}` : null;
   }

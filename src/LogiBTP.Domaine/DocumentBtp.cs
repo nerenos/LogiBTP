@@ -37,6 +37,11 @@ public class DocumentBtp : Document
     public decimal? EntStRecuTva { get; set; }
     public decimal? EntStRecuTtc { get; set; }
 
+    // Stock (module Stock, db/216) : date-heure du mouvement (validation par défaut), lieux d'origine et de destination.
+    public DateTimeOffset? EntDateMouvement { get; set; }
+    public int? EntStkOrigineId { get; set; }
+    public int? EntStkDestinationId { get; set; }
+
     // Exécution (module Exécution, db/197) : état propre de l'ordre, motif de blocage, service porteur, responsable,
     // dates prévues ; modifiés par la route de l'exécution, jamais par l'enregistrement du document.
     public string? EntExeEtat { get; set; }

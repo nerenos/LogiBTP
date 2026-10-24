@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Stock</RootNamespace>
+    <Description>Module Stock LogiBTP : stock à une date-heure et valorisation (répliqués avec le paquet JS @logibtp/stock).</Description>
+  </PropertyGroup>
+
+</Project>

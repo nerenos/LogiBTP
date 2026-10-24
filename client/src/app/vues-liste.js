@@ -84,6 +84,23 @@ export const SOURCES_LISTE = {
       ['chantier_id', 'integer'], ['tiers_id', 'bigint'],
     ],
   },
+  // Module Stock (db/216) : journal des mouvements, dépôts et chantiers qui tiennent un stock.
+  stk_mouvements: {
+    libelle: 'Mouvements de stock', vue: 'v_liste_stk_mouvements', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'bigint'], ['type_element', 'text'], ['date_mouvement', 'timestamp with time zone'], ['lieu', 'text'], ['lieu_libelle', 'text'], ['depot', 'boolean'],
+      ['article', 'text'], ['article_libelle', 'text'], ['unite', 'text'], ['quantite', 'numeric'], ['sens', 'text'], ['prix', 'numeric'], ['provisoire', 'boolean'],
+      ['pmp', 'numeric'], ['valeur', 'numeric'], ['piece', 'text'], ['type_piece', 'text'], ['type_document', 'text'], ['tiers', 'text'], ['emplacement', 'text'],
+      ['origine', 'text'], ['element_id', 'bigint'], ['lieu_id', 'bigint'], ['document_id', 'bigint'],
+    ],
+  },
+  depots: {
+    libelle: 'Dépôts de stock', vue: 'v_liste_depots', colonne_id: 'id', colonne_type: 'type_element',
+    colonnes: [
+      ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['depot', 'boolean'], ['ville', 'text'], ['statut', 'text'],
+      ['nb_articles', 'bigint'], ['valeur', 'numeric'], ['nb_emplacements', 'bigint'],
+    ],
+  },
   salaries: {
     libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', colonne_type: 'type_element',
     // Saisie dans les listes : vue simple sur une table ; type_element est calculé (lecture seule dans la base).
@@ -193,6 +210,12 @@ export const THEMES_LISTE = [
   {
     thl_code: 'st_factures', thl_libelle: 'Factures de sous-traitance', thl_icone: '🧾', thl_ordre: 44,
     thl_types: [{ code: 'T_FACTURE_AVT', libelle: "Facture d'avancement de sous-traitance" }, { code: 'T_AVOIR', libelle: 'Avoir de sous-traitance' }],
+  },
+  { thl_code: 'stk_mouvements', thl_libelle: 'Mouvements de stock', thl_icone: '🔁', thl_ordre: 45, thl_types: [{ code: 'mouvement_stock', libelle: 'Mouvement de stock' }] },
+  { thl_code: 'depots', thl_libelle: 'Dépôts de stock', thl_icone: '🏬', thl_ordre: 46, thl_types: [{ code: 'chantier', libelle: 'Dépôt' }] },
+  {
+    thl_code: 'stock_documents', thl_libelle: 'Entrées, sorties et transferts', thl_icone: '🚚', thl_ordre: 47,
+    thl_types: [{ code: 'S_ENTREE', libelle: 'Entrée de stock' }, { code: 'S_SORTIE', libelle: 'Sortie de stock' }, { code: 'S_TRANSFERT', libelle: 'Transfert de stock' }],
   },
   {
     thl_code: 'achats_factures', thl_libelle: 'Factures fournisseurs', thl_icone: '🧾', thl_ordre: 36,
@@ -351,6 +374,9 @@ VUES_LISTE.push(vueDocuments(27, 'Commandes clients', 'commandes'), vueDocuments
 VUES_LISTE.push(vueDocuments(1200, "Appels d'offres de sous-traitance", 'st_ao'), vueDocuments(1201, 'Commandes de sous-traitance', 'st_commandes'),
   vueDocuments(1202, 'Factures de sous-traitance', 'st_factures'));
 
+// Stock (menu Stock) : entrées, sorties et transferts (vue 1300).
+VUES_LISTE.push(vueDocuments(1300, 'Entrées, sorties et transferts', 'stock_documents'));
+
 // Structure des affaires : projets, affaires, chantiers, marchés (fiches du même nom).
 const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colonne: 'code', sens: 'desc' }]) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
@@ -394,6 +420,24 @@ VUES_LISTE.push(
     montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }), col('fin_contractuelle', 'Fin\ncontractuelle', { format: 'date', ...fixe(92), recherche: false }),
     col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
   ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'sous_traitant', titre: 'Sous-traitant' }]),
+);
+
+// Stock : mouvements (1301) et dépôts (1302).
+VUES_LISTE.push(
+  vueStructure(1301, 'Mouvements de stock', 'stk_mouvements', [
+    col('date_mouvement', 'Date', { format: 'date', ...fixe(92), recherche: false }), col('lieu', 'Lieu', { ...fixe(100) }),
+    col('article', 'Article', { ...fixe(100), style: { gras: true } }), col('article_libelle', 'Libellé', { ...prop(3, 160) }),
+    col('quantite', 'Quantité', { ...nombre(3), ...fixe(90), recherche: false }), col('unite', 'U.', { ...fixe(44), alignement: 'centre' }),
+    col('sens', 'Sens', { ...fixe(64) }), montant('prix', 'Prix', { ...nombre(4) }), col('provisoire', 'Prov.', { format: 'coche', ...fixe(50), masquee: true }),
+    montant('pmp', 'PMP', { ...nombre(4), masquee: true }), montant('valeur', 'Valeur'), col('piece', 'Pièce', { ...fixe(110) }),
+    col('type_piece', 'Type de pièce', { ...prop(1.5, 110) }), col('tiers', 'Tiers', { ...prop(2, 110) }), col('emplacement', 'Emplacement', { ...fixe(90), masquee: true }),
+  ], [{ colonne: 'lieu', titre: 'Lieu' }, { colonne: 'sens', titre: 'Sens' }, { colonne: 'type_piece', titre: 'Type de pièce' }],
+  [{ colonne: 'date_mouvement', sens: 'desc' }]),
+  vueStructure(1302, 'Dépôts de stock', 'depots', [
+    col('code', 'Code', { ...fixe(110), style: { gras: true } }), col('libelle', 'Dépôt', { ...prop(3, 160) }), col('depot', 'Dépôt géré', { format: 'coche', ...fixe(80) }),
+    col('ville', 'Ville', { ...prop(1.5, 100) }), col('nb_articles', 'Articles', { ...nombre(0), ...fixe(80), recherche: false }),
+    montant('valeur', 'Valeur'), col('nb_emplacements', 'Emplacements', { ...nombre(0), ...fixe(100), recherche: false }), col('statut', 'Statut', { ...fixe(80) }),
+  ], [{ colonne: 'statut', titre: 'Statut' }]),
 );
 
 // Thème à plusieurs types d'élément : toutes les ressources dans une seule vue.

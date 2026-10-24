@@ -89,6 +89,16 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'stock', libelle: 'Stoc&k', module: 'stock', elements: [
+      { code: 'stock-etat', libelle: 'État du stock', icone: '📦', url: '/stock', info: 'Quantités et valeur d\'un dépôt à une date-heure' },
+      { code: 'stock-mouvements', libelle: 'Mouvements de stock', icone: '🔁', url: L('stk_mouvements') },
+      { code: 'stock-documents', libelle: 'Entrées, sorties et transferts', icone: '🚚', url: L('stock_documents'), creation: D('S_TRANSFERT', 'Nouveau transfert de stock') },
+      { code: 'stock-depots', libelle: 'Dépôts', icone: '🏬', url: L('depots'), info: 'Chantiers cochés « Dépôt de stock » (affaire STOCK) ou qui tiennent un stock' },
+      { separateur: true },
+      { code: 'stock-parametres', libelle: 'Valorisation et emplacements…', icone: '⚙', url: '/parametres/stock' },
+    ],
+  },
+  {
     code: 'execution', libelle: '&Exécution', module: 'execution', elements: [
       { code: 'execution-atelier', libelle: 'Étapes à valider (atelier, tablette)', icone: '🧩', url: '/execution/atelier', info: 'Étapes des ordres dont vous êtes la ressource ou de votre service sur vos chantiers du jour' },
       { code: 'execution-synthese', libelle: 'Synthèse par chantier', icone: '🧭', url: '/execution/synthese', info: 'Un état par service (parcours et ordres), clic droit pour imposer un état' },

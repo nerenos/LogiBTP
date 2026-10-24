@@ -35,6 +35,19 @@ export async function individusSociete(annuaire) {
 }
 
 /**
+ * Lieux de stock de l'entête par type de pièce (module Stock, § 4) : colonne → libellé ; une réception ou un retour
+ * fournisseur porte le dépôt en destination, une livraison ou un retour client en origine.
+ */
+export const LIEUX_STOCK = {
+  A_RECEPTION: { ent_stk_destination_id: 'Dépôt de réception' }, A_FACTURE: { ent_stk_destination_id: 'Dépôt de réception (sans réception)' },
+  A_RETOUR: { ent_stk_destination_id: 'Dépôt de départ du retour' },
+  V_RECEPTION: { ent_stk_origine_id: 'Dépôt de départ' }, V_FACTURE: { ent_stk_origine_id: 'Dépôt de départ (sans livraison)' },
+  V_RETOUR: { ent_stk_origine_id: 'Dépôt de retour' },
+  S_ENTREE: { ent_stk_destination_id: 'Destination' }, S_SORTIE: { ent_stk_origine_id: 'Origine' },
+  S_TRANSFERT: { ent_stk_origine_id: 'Origine (vide : entrée)', ent_stk_destination_id: 'Destination (vide : sortie)' },
+};
+
+/**
  * Individus de notre structure, agences comprises (conducteur de travaux des chantiers) : lus par le serveur
  * (`GET /api/structure/individus`) ; hors ligne, rattachements de notre société dans l'annuaire de démonstration.
  */
@@ -48,8 +61,10 @@ export async function individusStructure(annuaire) {
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null } = {}) {
     super(editeur);
+    // Module Stock actif : { lieux() } (dépôts et chantiers qui tiennent un stock) ; bloc Stock de l'entête des pièces qui mouvementent.
+    this.stock = stock;
     // Module Exécution (ordres, famille E) : { app, individus() } posé par la page ; panneau de l'entête, répartition du détail.
     this.execution = execution;
     this.bibliotheques = bibliotheques;
@@ -329,7 +344,44 @@ export class PanneauxBtp extends PanneauxDocument {
         <div class="contacts-blocs"><div data-contact="CLIENT"></div>${estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
       ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}
-      ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}`;
+      ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}
+      ${this.stock && LIEUX_STOCK[this.editeur.definition.type?.tyd_code] ? '<fieldset class="stock-document"><legend>Stock</legend><div data-stock></div></fieldset>' : ''}`;
+  }
+
+  /**
+   * Stock (module Stock, § 4, S9 à S12) : date-heure du mouvement (la validation par défaut, à la minute) et lieux
+   * d'origine et / ou de destination selon le type ; un lieu qui ne tient pas de stock (chantier client) consomme
+   * l'entrée, une pièce sans dépôt ne mouvemente pas.
+   */
+  rendreStock(bloc) {
+    const ed = this.editeur;
+    const m = ed.magasin;
+    const d = ed.saisie.document;
+    const lecture = Boolean(m.lectureSeule || ed.fige);
+    const champs = LIEUX_STOCK[ed.definition.type.tyd_code];
+    const local = d.ent_date_mouvement ? new Date(d.ent_date_mouvement) : null;
+    const valeurLocale = local ? new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    bloc.innerHTML = `<p class="ligne"><label>Date du mouvement <input type="datetime-local" data-stk-date value="${valeurLocale}" ${lecture ? 'disabled' : ''}></label>
+        <small class="aide">${local ? '' : 'Vide : l\'instant de la validation.'}</small></p>
+      <p class="ligne">${Object.entries(champs).map(([cle, titre]) => `<label>${echapper(titre)} <span data-stk-lieu="${cle}"></span></label>`).join(' ')}</p>
+      <p class="aide">Seuls les articles gérés en stock bougent ; un chantier qui ne tient pas de stock consomme ce qu'il reçoit.</p>`;
+    bloc.querySelector('[data-stk-date]').addEventListener('change', (e) => {
+      const v = e.target.value;
+      m.modifier((b) => { b.document.ent_date_mouvement = v ? new Date(v).toISOString() : null; }, 'Date du mouvement');
+    });
+    const lieux = this.lieuxStock ?? [];
+    const depots = new Set(lieux.filter((l) => l.depot).map((l) => l.id));
+    const tenus = new Set(lieux.map((l) => l.id));
+    const chantiers = [...(this.structure?.chantiers ?? [])].sort((a, b) => (depots.has(b.id) - depots.has(a.id)) || (tenus.has(b.id) - tenus.has(a.id)));
+    const options = chantiers.map((c) => ({ valeur: c.id, libelle: `${depots.has(c.id) ? '📦 ' : tenus.has(c.id) ? '🏗 ' : ''}${c.code} – ${c.libelle ?? ''}` }));
+    bloc.querySelectorAll('[data-stk-lieu]').forEach((span) => {
+      const cle = span.dataset.stkLieu;
+      const c = creerCombo({ options, valeur: d[cle] ?? '', titre: '📦 dépôt, 🏗 chantier qui tient un stock' });
+      c.readOnly = lecture;
+      c.addEventListener('change', () => m.modifier((b) => { b.document[cle] = c.valeurCombo === '' ? null : Number(c.valeurCombo); }, 'Lieu de stock'));
+      span.append(c);
+    });
+    if (!this.lieuxStock) this.stock.lieux().then((l) => { this.lieuxStock = l; if (bloc.isConnected) this.rendreStock(bloc); }).catch(() => { this.lieuxStock = []; });
   }
 
   /**
@@ -390,6 +442,8 @@ export class PanneauxBtp extends PanneauxDocument {
     }
     const fst = zone.querySelector('[data-facture-st]');
     if (fst) this.rendreFactureSt(fst);
+    const stk = zone.querySelector('[data-stock]');
+    if (stk) this.rendreStock(stk);
     this.lierRedacteur(zone).catch(() => {});
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));

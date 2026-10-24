@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · [stock](modules/stock/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -45,6 +45,7 @@ graph TD
 | execution (facultatif) | — (règles seules) | `LogiBTP.Execution(.Web)` → Socle.Web | 085 | cœur (services, chantiers, ordres de la famille E ; synthèse, parcours) |
 | pointage (facultatif) | — (règles seules) | `LogiBTP.Pointage(.Web)` → Socle.Web | 086 | cœur (salariés, chantiers et chantiers internes, natures MO, ordres ; saisie hebdomadaire) |
 | planning (facultatif) | socle | `LogiBTP.Planning(.Web)` → Socle.Web | 089 | cœur (ressources, plages des calendriers, équipes, chantiers, budgets ; page `/planning`) |
+| stock (facultatif) | socle | `LogiBTP.Stock(.Web)` → Socle.Web | 093 | cœur (lieux = chantiers, articles = éléments, mouvements écrits à la validation des pièces ; pages `/stock`, `/parametres/stock`) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
 

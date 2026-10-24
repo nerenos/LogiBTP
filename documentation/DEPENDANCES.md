@@ -256,6 +256,16 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.SousTraitance.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.SousTraitance.Tests |
 
+## modules/stock
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/stock/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Stock.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Stock.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Stock.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Stock.Tests |
+
 ## client
 
 | Type | Dépendance | Version | Licence | Usage |

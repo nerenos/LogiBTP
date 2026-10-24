@@ -9,6 +9,8 @@ import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
 import { PageComparatifConsultation } from './consultation.js';
+import { PageStock, PageMouvementStock } from '../stock/etat.js';
+import { PageParametresStock } from '../stock/parametres.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -64,6 +66,9 @@ export const ROUTES = [
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
   { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: 'Pièces exigées des sous-traitants' },
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: 'Comparatif des offres' },
+  { nom: 'stock', chemin: '/stock', page: PageStock, titre: 'État du stock' },
+  { nom: 'mouvement-stock', chemin: '/stock/mouvement/:id', page: PageMouvementStock, titre: 'Mouvement de stock' },
+  { nom: 'parametres-stock', chemin: '/parametres/stock', page: PageParametresStock, titre: 'Paramètres du stock' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },

@@ -1,0 +1,19 @@
+{
+  "name": "@logibtp/stock",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Stock LogiBTP : stock à une date-heure (dernier comptage + mouvements postérieurs), valorisation PMP ou dernier prix d'achat (règles partagées avec le serveur)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  }
+}

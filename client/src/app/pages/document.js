@@ -404,6 +404,8 @@ export class PageDocument extends PageBase {
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
       // Ordres (famille E, module Exécution actif) : panneau Exécution de l'entête, répartition du détail.
       execution: this.app.enLigne && this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
+      // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
+      stock: this.app.enLigne && this.app.moduleActif('stock') ? { lieux: () => api.stock.lieux() } : null,
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });

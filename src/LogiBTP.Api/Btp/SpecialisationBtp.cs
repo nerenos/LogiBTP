@@ -150,6 +150,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             erreurs.Add(new MessageCalcul(null, "ADRESSE_LIVRAISON", "Commande fournisseur : adresse de livraison à choisir (chantier, dépôt, retrait au comptoir ou saisie libre)"));
         }
+        // Stock : date du mouvement, lieux des entrées, sorties et transferts (module Stock, S9, S10).
+        MouvementsStockBtp.Controler(document.Document, type, erreurs);
         return ControlerAvancementNumerote(db, document, type, erreurs, ct);
     }
 
@@ -351,6 +353,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             if (type.TydCode == "E_OE") await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
             return;
         }
+        // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
+        await MouvementsStockBtp.EcrireAsync(db, entId, type, ct);
         // Édition de la pièce validée produite par le serveur et rangée en GED (module Édition, Q15) ; pièce de vente à
         // numérotation continue (facture, avoir…) : au coffre-fort. Ligne de la file insérée dans la transaction.
         if (FamillesDocument.EstCommerciale(type.TydFamille))
@@ -411,6 +415,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             saisie.Document.EntTiersId = (await db.Database.SqlQuery<long?>($"SELECT per_id AS \"Value\" FROM personne WHERE per_societe_base LIMIT 1").ToListAsync(ct)).FirstOrDefault();
         }
+        // Stock : date-heure du mouvement à la minute, l'instant de la validation si elle n'est pas saisie (S5, S10).
+        if (MouvementsStockBtp.Concerne(type)) saisie.Document.EntDateMouvement = MouvementsStockBtp.Minute(saisie.Document.EntDateMouvement);
         // Ouvrage sans composante : devient un élément de nature Prestation (P20, P24) ; le total validé ne doit pas changer.
         var ouvrages = saisie.Lignes.Where(l => l.LigTylId == TL.Ouvrage && !saisie.Lignes.Any(c => c.LigParentId == l.LigId)).ToList();
         if (ouvrages.Count > 0)
@@ -480,6 +486,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntStRecuHt = saisie.EntStRecuHt;
         cible.EntStRecuTva = saisie.EntStRecuTva;
         cible.EntStRecuTtc = saisie.EntStRecuTtc;
+        cible.EntDateMouvement = saisie.EntDateMouvement;
+        cible.EntStkOrigineId = saisie.EntStkOrigineId;
+        cible.EntStkDestinationId = saisie.EntStkDestinationId;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>

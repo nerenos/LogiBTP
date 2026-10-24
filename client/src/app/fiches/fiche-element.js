@@ -1,6 +1,7 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { OngletPrix, OngletUnites, OngletTarifs } from '@logibtp/bibliotheque/ui';
+import { rendreStockArticle } from '../stock/article.js';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { calculerOuvrage, documentComposition } from '../bibliotheque/bibliotheque.js';
@@ -26,6 +27,7 @@ export class FicheElement extends FicheLogiBTP {
     this.definitionDocument = options.definitionDocument;
     this.utilisateur = options.utilisateur ?? 'demo';
     this.admin = options.admin ?? false;
+    this.ouvrirUrl = options.ouvrirUrl ?? (() => {});
   }
 
   get bibliotheque() { return this.services.bibliotheque; }
@@ -165,6 +167,11 @@ export class FicheElement extends FicheLogiBTP {
       ...(ouvrage
         ? [{ code: 'composition', titre: 'Composition', champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
         : [{ code: 'tarifs', titre: 'Tarifs fournisseurs', rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
+      // Module Stock : quantités par lieu, valorisation, PMP, emplacements, mouvements (article géré en stock).
+      ...(this.id !== null && this.valeur('gestion') === 'STOCK' && this.valeur('type') === 'ARTICLE' && this.moduleActif('stock')
+        ? [{ code: 'stock', titre: 'Stock', rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
+          .catch((e) => { corps.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; }) }]
+        : []),
       // Image et notices : sous les groupes de l'onglet Article.
       { code: 'image', dans: 'article', titre: 'Image et notices', champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
     ];

@@ -433,6 +433,7 @@ export const TYPES_FICHE = {
           { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
           { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'contact_ind_id'] },
           { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur_ind_id'] },
+          { titre: 'Stock', champs: ['depot', 'stock_tenu'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
@@ -454,6 +455,8 @@ export const TYPES_FICHE = {
         c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date', { obligatoire: true }),
         c('date_fin_prevue', 'Fin prévue', 'cha_date_fin_prevue', 'date'),
         c('conducteur_ind_id', 'Conducteur de travaux', 'cha_conducteur_ind_id', 'nombre', { reference: 'individu_societe', aide: "Individu de notre société ou de l'une de ses agences (annuaire)" }),
+        c('depot', 'Dépôt de stock', 'cha_depot', 'booleen', { obligatoire: true, defaut: false, aide: 'Module Stock : dépôt géré (emplacements, inventaires, mini / maxi)' }),
+        c('stock_tenu', 'Tient un stock', 'cha_stock_tenu', 'booleen', { obligatoire: true, defaut: false, aide: 'Module Stock : ce qui arrive sur le chantier y reste en stock jusqu\'à un transfert ; sinon il est consommé' }),
         c('commentaire', 'Commentaire', 'cha_commentaire', 'zone'),
       ],
     },

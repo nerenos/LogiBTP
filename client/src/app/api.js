@@ -187,6 +187,21 @@ export const api = {
     payerPaiement: (id, p) => appel('POST', `/sous-traitance/paiements/${id}/payer`, p),
     supprimerPaiement: (id) => appel('DELETE', `/sous-traitance/paiements/${id}`),
   },
+  // Module Stock : paramètres, lieux, emplacements, état à une date-heure, fiche de stock d'un article, réévaluation du PMP.
+  stock: {
+    parametres: () => appel('GET', '/stock/parametres'),
+    enregistrerParametres: (p) => appel('PUT', '/stock/parametres', p),
+    lieux: () => appel('GET', '/stock/lieux'),
+    emplacements: (lieu) => appel('GET', `/stock/lieux/${lieu}/emplacements`),
+    enregistrerEmplacements: (lieu, l) => appel('PUT', `/stock/lieux/${lieu}/emplacements`, l),
+    etat: (lieu, { date = null, zeros = false } = {}) => appel('GET', `/stock/lieux/${lieu}/etat?${new URLSearchParams({ ...(date ? { date } : {}), zeros: String(zeros) })}`),
+    mouvement: (id) => appel('GET', `/stock/mouvements/${id}`),
+    article: (id) => appel('GET', `/stock/articles/${id}`),
+    reevaluer: (id, r) => appel('POST', `/stock/articles/${id}/pmp`, r),
+    emplacementsArticle: (id, l) => appel('PUT', `/stock/articles/${id}/emplacements`, l),
+    revaloriser: () => appel('POST', '/stock/revaloriser'),
+  },
+
   liaisons: {
     planningTheorique: (chantier, debut) => appel('POST', `/liaisons/chantiers/${chantier}/planning-theorique`, { debut }),
     planifierOrdre: (id) => appel('POST', `/liaisons/ordres/${id}/planifier`),
