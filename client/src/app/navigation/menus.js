@@ -93,6 +93,8 @@ export const MENUS_METIER = [
       { code: 'stock-etat', libelle: 'État du stock', icone: '📦', url: '/stock', info: 'Quantités et valeur d\'un dépôt à une date-heure' },
       { code: 'stock-mouvements', libelle: 'Mouvements de stock', icone: '🔁', url: L('stk_mouvements') },
       { code: 'stock-documents', libelle: 'Entrées, sorties et transferts', icone: '🚚', url: L('stock_documents'), creation: D('S_TRANSFERT', 'Nouveau transfert de stock') },
+      { code: 'stock-appro', libelle: 'Approvisionnement', icone: '🚚', url: '/stock/approvisionnement', info: 'Ruptures à venir, propositions de commande, mini / maxi' },
+      { code: 'stock-reservations', libelle: 'Réservations', icone: '📌', url: L('stock_reservations'), creation: D('S_RESERVATION', 'Nouvelle réservation de stock') },
       { code: 'stock-inventaires', libelle: 'Inventaires', icone: '📋', url: '/stock/inventaires', info: 'Lots de bordereaux comptés à une date-heure, écarts, corrections' },
       { code: 'stock-depots', libelle: 'Dépôts', icone: '🏬', url: L('depots'), info: 'Chantiers cochés « Dépôt de stock » (affaire STOCK) ou qui tiennent un stock' },
       { separateur: true },

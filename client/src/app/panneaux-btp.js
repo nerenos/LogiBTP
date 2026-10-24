@@ -45,7 +45,12 @@ export const LIEUX_STOCK = {
   V_RETOUR: { ent_stk_origine_id: 'Dépôt de retour' },
   S_ENTREE: { ent_stk_destination_id: 'Destination' }, S_SORTIE: { ent_stk_origine_id: 'Origine' },
   S_TRANSFERT: { ent_stk_origine_id: 'Origine (vide : entrée)', ent_stk_destination_id: 'Destination (vide : sortie)' },
+  // Lot 3 : sans mouvement, prévisions de la projection du disponible (date de besoin, livraison prévue).
+  S_RESERVATION: { ent_stk_origine_id: 'Dépôt réservé' }, A_COMMANDE: { ent_stk_destination_id: 'Dépôt de livraison (vide : le chantier)' },
 };
+
+/** Date prévue des pièces sans mouvement (module Stock, lot 3) : colonne et libellé ; les autres portent la date du mouvement. */
+const DATE_PREVUE_STOCK = { S_RESERVATION: ['ent_date_besoin', 'Date de besoin'], A_COMMANDE: ['ent_date_livraison', 'Livraison prévue'] };
 
 /**
  * Individus de notre structure, agences comprises (conducteur de travaux des chantiers) : lus par le serveur
@@ -361,11 +366,19 @@ export class PanneauxBtp extends PanneauxDocument {
     const champs = LIEUX_STOCK[ed.definition.type.tyd_code];
     const local = d.ent_date_mouvement ? new Date(d.ent_date_mouvement) : null;
     const valeurLocale = local ? new Date(local.getTime() - local.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-    bloc.innerHTML = `<p class="ligne"><label>Date du mouvement <input type="datetime-local" data-stk-date value="${valeurLocale}" ${lecture ? 'disabled' : ''}></label>
-        <small class="aide">${local ? '' : 'Vide : l\'instant de la validation.'}</small></p>
+    const prevue = DATE_PREVUE_STOCK[ed.definition.type.tyd_code];
+    bloc.innerHTML = `<p class="ligne">${prevue
+      ? `<label>${prevue[1]} <input type="date" data-stk-prevue value="${echapper(d[prevue[0]] ?? '')}" ${lecture ? 'disabled' : ''}></label>
+        <small class="aide">${d[prevue[0]] ? '' : 'Vide : la date de la pièce.'} Sert à la projection du disponible (ruptures à venir).</small>`
+      : `<label>Date du mouvement <input type="datetime-local" data-stk-date value="${valeurLocale}" ${lecture ? 'disabled' : ''}></label>
+        <small class="aide">${local ? '' : 'Vide : l\'instant de la validation.'}</small>`}</p>
       <p class="ligne">${Object.entries(champs).map(([cle, titre]) => `<label>${echapper(titre)} <span data-stk-lieu="${cle}"></span></label>`).join(' ')}</p>
       <p class="aide">Seuls les articles gérés en stock bougent ; un chantier qui ne tient pas de stock consomme ce qu'il reçoit.</p>`;
-    bloc.querySelector('[data-stk-date]').addEventListener('change', (e) => {
+    bloc.querySelector('[data-stk-prevue]')?.addEventListener('change', (e) => {
+      const v = e.target.value;
+      m.modifier((b) => { b.document[prevue[0]] = v || null; }, prevue[1]);
+    });
+    bloc.querySelector('[data-stk-date]')?.addEventListener('change', (e) => {
       const v = e.target.value;
       m.modifier((b) => { b.document.ent_date_mouvement = v ? new Date(v).toISOString() : null; }, 'Date du mouvement');
     });

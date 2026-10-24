@@ -41,6 +41,9 @@ public class DocumentBtp : Document
     public DateTimeOffset? EntDateMouvement { get; set; }
     public int? EntStkOrigineId { get; set; }
     public int? EntStkDestinationId { get; set; }
+    // Approvisionnement (db/218) : date de besoin d'une réservation, date de livraison prévue d'une commande fournisseur.
+    public DateOnly? EntDateBesoin { get; set; }
+    public DateOnly? EntDateLivraison { get; set; }
 
     // Exécution (module Exécution, db/197) : état propre de l'ordre, motif de blocage, service porteur, responsable,
     // dates prévues ; modifiés par la route de l'exécution, jamais par l'enregistrement du document.

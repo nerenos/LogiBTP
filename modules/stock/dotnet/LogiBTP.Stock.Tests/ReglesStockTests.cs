@@ -82,4 +82,31 @@ public class ReglesStockTests
             foreach (var e in r.Erreurs) Assert.True(ReglesInventaire.Messages.ContainsKey(e.Code));
         }
     }
+
+    [Fact]
+    public void Projection_identique_au_js()
+    {
+        var jeu = Jeu("04_projection.json");
+        foreach (var c in jeu["projections"]!.AsArray())
+        {
+            var nom = c!["nom"]!.ToString();
+            var evs = c["evenements"]!.AsArray().Select(x => new EvenementPrevu(Txt(x!["id"])!, Txt(x["type"])!, Txt(x["date"])!, Dec(x["quantite"]!))).ToList();
+            var r = ReglesProjection.Projeter(Dec(c["stock"]!), Txt(c["aujourdhui"])!, evs);
+            var a = c["attendu"]!;
+            Assert.Equal(a["points"]!.AsArray().Select(x => $"{x!["date"]}|{Dec(x["entrees"]!)}|{Dec(x["sorties"]!)}|{Dec(x["disponible"]!)}"),
+                r.Points.Select(x => $"{x.Date}|{x.Entrees}|{x.Sorties}|{x.Disponible}"));
+            Assert.True(r.PremiereRupture == Txt(a["premiere_rupture"]) && r.Minimum.Date == Txt(a["minimum"]!["date"]) && r.Minimum.Disponible == Dec(a["minimum"]!["disponible"]!), $"{nom} : {r.PremiereRupture} {r.Minimum}");
+            Assert.Equal(a["reservations"]!.AsArray().Select(x => $"{x!["id"]}|{x["date"]}|{Dec(x["demande"]!)}|{Dec(x["servi"]!)}|{Dec(x["manque"]!)}|{Txt(x["couverte_le"])}"),
+                r.Reservations.Select(x => $"{x.Id}|{x.Date}|{x.Demande}|{x.Servi}|{x.Manque}|{x.CouverteLe}"));
+            Assert.Equal(a["retards"]!.AsArray().Select(x => x!.ToString()), r.Retards);
+            foreach (var m in c["minimum_jusqua"]!.AsArray())
+                Assert.True(ReglesProjection.MinimumJusqua(r, Dec(c["stock"]!), Txt(m!["date"])!) == Dec(m["attendu"]!), $"{nom} : minimum au {m["date"]}");
+        }
+        foreach (var c in jeu["propositions"]!.AsArray())
+        {
+            var r = ReglesProjection.Proposer(DecN(c!["mini"]), DecN(c["maxi"]), Dec(c["disponible"]!), Dec(c["conditionnement"]!));
+            var a = c["attendu"];
+            Assert.True(a is null ? r is null : r is not null && r.Quantite == Dec(a["quantite"]!) && r.UnitesAchat == Dec(a["unites_achat"]!), $"{c["nom"]} : {r}");
+        }
+    }
 }

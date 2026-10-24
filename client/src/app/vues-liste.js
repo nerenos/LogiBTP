@@ -215,6 +215,7 @@ export const THEMES_LISTE = [
   },
   { thl_code: 'stk_mouvements', thl_libelle: 'Mouvements de stock', thl_icone: '🔁', thl_ordre: 45, thl_types: [{ code: 'mouvement_stock', libelle: 'Mouvement de stock' }] },
   { thl_code: 'depots', thl_libelle: 'Dépôts de stock', thl_icone: '🏬', thl_ordre: 46, thl_types: [{ code: 'chantier', libelle: 'Dépôt' }] },
+  { thl_code: 'stock_reservations', thl_libelle: 'Réservations de stock', thl_icone: '📌', thl_ordre: 48, thl_types: [{ code: 'S_RESERVATION', libelle: 'Réservation' }, { code: 'S_DEMANDE', libelle: 'Demande de stock' }] },
   {
     thl_code: 'stock_documents', thl_libelle: 'Entrées, sorties et transferts', thl_icone: '🚚', thl_ordre: 47,
     thl_types: [{ code: 'S_ENTREE', libelle: 'Entrée de stock' }, { code: 'S_SORTIE', libelle: 'Sortie de stock' }, { code: 'S_TRANSFERT', libelle: 'Transfert de stock' }],
@@ -377,7 +378,7 @@ VUES_LISTE.push(vueDocuments(1200, "Appels d'offres de sous-traitance", 'st_ao')
   vueDocuments(1202, 'Factures de sous-traitance', 'st_factures'));
 
 // Stock (menu Stock) : entrées, sorties et transferts (vue 1300).
-VUES_LISTE.push(vueDocuments(1300, 'Entrées, sorties et transferts', 'stock_documents'));
+VUES_LISTE.push(vueDocuments(1300, 'Entrées, sorties et transferts', 'stock_documents'), vueDocuments(1303, 'Réservations de stock', 'stock_reservations'));
 
 // Structure des affaires : projets, affaires, chantiers, marchés (fiches du même nom).
 const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colonne: 'code', sens: 'desc' }]) => ({

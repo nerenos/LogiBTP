@@ -115,6 +115,8 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
     public DbSet<LigneBordereauEntite> LignesBordereau => Set<LigneBordereauEntite>();
     public DbSet<MarqueEntite> Marques => Set<MarqueEntite>();
     public DbSet<ArticleMarqueEntite> ArticlesMarques => Set<ArticleMarqueEntite>();
+    public DbSet<SeuilEntite> Seuils => Set<SeuilEntite>();
+    public DbSet<LieuParametreEntite> LieuxParametres => Set<LieuParametreEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -132,6 +134,8 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
         b.Entity<LigneBordereauEntite>().ToTable("stk_bordereau_ligne").HasKey(x => x.BliId);
         b.Entity<MarqueEntite>().ToTable("stk_marque").HasKey(x => x.MrqCode);
         b.Entity<ArticleMarqueEntite>().ToTable("stk_article_marque").HasKey(x => new { x.SamEleId, x.SamMrqCode });
+        b.Entity<SeuilEntite>().ToTable("stk_seuil").HasKey(x => new { x.SseEleId, x.SseLieuId });
+        b.Entity<LieuParametreEntite>().ToTable("stk_lieu_parametre").HasKey(x => x.SlpLieuId);
     }
 }
 
@@ -173,6 +177,12 @@ public abstract class SpecialisationStock
     /// <summary>Familles d'articles (génération des bordereaux par famille) et articles gérés en stock de familles (sous-familles comprises).</summary>
     public abstract Task<List<FamilleStock>> FamillesAsync(StockDbContext db, CancellationToken ct);
     public abstract Task<List<long>> ArticlesDeFamillesAsync(StockDbContext db, IReadOnlyCollection<long> familles, CancellationToken ct);
+    /// <summary>Lot 3 : réservations (SORTIE) et commandes (ENTREE) restantes du lieu, en unité de stock.</summary>
+    public abstract Task<List<PrevisionStock>> PrevisionsAsync(StockDbContext db, long lieu, CancellationToken ct);
+    /// <summary>Fournisseur principal, unité d'achat et conditionnement des articles.</summary>
+    public abstract Task<Dictionary<long, ApproArticle>> ApprovisionnementsAsync(StockDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct);
+    /// <summary>Commandes fournisseur en brouillon, une par fournisseur, livrées au lieu.</summary>
+    public abstract Task<List<CommandeCreee>> CreerCommandesAsync(StockDbContext db, long lieu, List<LigneACommander> lignes, Utilisateur u, CancellationToken ct);
     /// <summary>Après la revalorisation d'un article (PMP, dernier prix d'achat de l'article).</summary>
     public virtual Task ApresValorisationAsync(StockDbContext db, long ele, Valorisation v, CancellationToken ct) => Task.CompletedTask;
     /// <summary>Paramètres, emplacements et réévaluations : administrateur par défaut.</summary>
@@ -442,6 +452,7 @@ public static class Extensions
         services.AddSingleton<SpecialisationStock, TSpecialisation>();
         services.AddScoped<ServiceStock>();
         services.AddScoped<ServiceInventaire>();
+        services.AddScoped<ServiceApprovisionnement>();
         return services;
     }
 
@@ -466,6 +477,7 @@ public static class Extensions
             return Results.NoContent();
         });
         g.MapInventaires();
+        g.MapApprovisionnement();
         g.MapPost("/revaloriser", async (HttpContext http, ServiceStock s, CancellationToken ct) => Results.Ok(new { articles = await s.RevaloriserToutAsync(Utilisateur.Depuis(http), ct) }));
         return g;
     }

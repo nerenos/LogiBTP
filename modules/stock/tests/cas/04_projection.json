@@ -1,0 +1,51 @@
+{
+  "description": "Projection du disponible et propositions de commande (projection.js ↔ ReglesProjection.cs, ANALYSE-MODULE-STOCK.md § 5.4, S13 à S15) : entrées attendues et réservations cumulées par jour (retard compté aujourd'hui, entrées avant sorties le même jour), réservation servie avec le disponible de son jour, manque couvert le premier jour où le disponible redevient positif ; proposition = maxi (sinon mini) − disponible le plus bas, au conditionnement supérieur.",
+  "projections": [
+    { "nom": "exemple de la note : réservation de 100 demain, 25 en stock, 200 livrées la semaine prochaine",
+      "stock": 25, "aujourdhui": "2026-10-24",
+      "evenements": [{ "id": "R1", "type": "SORTIE", "date": "2026-10-25", "quantite": 100 }, { "id": "C1", "type": "ENTREE", "date": "2026-10-31", "quantite": 200 }],
+      "attendu": {
+        "points": [{ "date": "2026-10-25", "entrees": "0", "sorties": "100", "disponible": "-75" }, { "date": "2026-10-31", "entrees": "200", "sorties": "0", "disponible": "125" }],
+        "premiere_rupture": "2026-10-25", "minimum": { "date": "2026-10-25", "disponible": "-75" },
+        "reservations": [{ "id": "R1", "date": "2026-10-25", "demande": "100", "servi": "25", "manque": "75", "couverte_le": "2026-10-31" }], "retards": [] },
+      "minimum_jusqua": [{ "date": "2026-10-30", "attendu": "-75" }, { "date": "2026-10-24", "attendu": "25" }] },
+    { "nom": "commande en retard comptée aujourd'hui, entrées avant sorties le même jour",
+      "stock": 0, "aujourdhui": "2026-10-24",
+      "evenements": [{ "id": "R1", "type": "SORTIE", "date": "2026-10-24", "quantite": 30 }, { "id": "C1", "type": "ENTREE", "date": "2026-10-20", "quantite": 50 },
+        { "id": "R2", "type": "SORTIE", "date": "2026-10-26", "quantite": 30 }],
+      "attendu": {
+        "points": [{ "date": "2026-10-24", "entrees": "50", "sorties": "30", "disponible": "20" }, { "date": "2026-10-26", "entrees": "0", "sorties": "30", "disponible": "-10" }],
+        "premiere_rupture": "2026-10-26", "minimum": { "date": "2026-10-26", "disponible": "-10" },
+        "reservations": [{ "id": "R1", "date": "2026-10-24", "demande": "30", "servi": "30", "manque": "0", "couverte_le": "2026-10-24" },
+          { "id": "R2", "date": "2026-10-26", "demande": "30", "servi": "20", "manque": "10", "couverte_le": null }], "retards": ["C1"] },
+      "minimum_jusqua": [{ "date": "2026-10-25", "attendu": "0" }] },
+    { "nom": "deux réservations en rupture couvertes par la même livraison",
+      "stock": 10, "aujourdhui": "2026-10-24",
+      "evenements": [{ "id": "R1", "type": "SORTIE", "date": "2026-10-25", "quantite": 15 }, { "id": "R2", "type": "SORTIE", "date": "2026-10-26", "quantite": 5 },
+        { "id": "C1", "type": "ENTREE", "date": "2026-10-28", "quantite": 40 }],
+      "attendu": {
+        "points": [{ "date": "2026-10-25", "entrees": "0", "sorties": "15", "disponible": "-5" }, { "date": "2026-10-26", "entrees": "0", "sorties": "5", "disponible": "-10" },
+          { "date": "2026-10-28", "entrees": "40", "sorties": "0", "disponible": "30" }],
+        "premiere_rupture": "2026-10-25", "minimum": { "date": "2026-10-26", "disponible": "-10" },
+        "reservations": [{ "id": "R1", "date": "2026-10-25", "demande": "15", "servi": "10", "manque": "5", "couverte_le": "2026-10-28" },
+          { "id": "R2", "date": "2026-10-26", "demande": "5", "servi": "0", "manque": "5", "couverte_le": "2026-10-28" }], "retards": [] },
+      "minimum_jusqua": [] },
+    { "nom": "sans événement",
+      "stock": "12.5", "aujourdhui": "2026-10-24", "evenements": [],
+      "attendu": { "points": [], "premiere_rupture": null, "minimum": { "date": "2026-10-24", "disponible": "12.5" }, "reservations": [], "retards": [] },
+      "minimum_jusqua": [{ "date": "2026-12-31", "attendu": "12.5" }] },
+    { "nom": "stock déjà négatif",
+      "stock": -3, "aujourdhui": "2026-10-24", "evenements": [],
+      "attendu": { "points": [], "premiere_rupture": "2026-10-24", "minimum": { "date": "2026-10-24", "disponible": "-3" }, "reservations": [], "retards": [] },
+      "minimum_jusqua": [] }
+  ],
+  "propositions": [
+    { "nom": "sous le mini : jusqu'au maxi, conditionnement de 12", "mini": 20, "maxi": 100, "disponible": -75, "conditionnement": 12,
+      "attendu": { "quantite": "180", "unites_achat": "15" } },
+    { "nom": "au-dessus du mini : rien", "mini": 20, "maxi": 100, "disponible": 25, "conditionnement": 1, "attendu": null },
+    { "nom": "égal au mini : rien", "mini": 20, "maxi": 100, "disponible": 20, "conditionnement": 1, "attendu": null },
+    { "nom": "sans maxi : jusqu'au mini", "mini": 10, "maxi": null, "disponible": 4, "conditionnement": 1, "attendu": { "quantite": "6", "unites_achat": "6" } },
+    { "nom": "conditionnement décimal", "mini": 10, "maxi": 50, "disponible": "2.5", "conditionnement": "0.5", "attendu": { "quantite": "47.5", "unites_achat": "95" } },
+    { "nom": "sans mini : rien", "mini": null, "maxi": 50, "disponible": -10, "conditionnement": 1, "attendu": null }
+  ]
+}

@@ -3,3 +3,4 @@
 export { minute, stockA, ecartComptage } from './stock.js';
 export { METHODES_VALORISATION, valoriser, valeurUnitaire } from './valorisation.js';
 export { MESSAGES_INVENTAIRE, controlerLot } from './inventaire.js';
+export { projeter, minimumJusqua, proposer } from './projection.js';

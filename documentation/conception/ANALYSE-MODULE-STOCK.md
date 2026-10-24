@@ -21,7 +21,13 @@
 > `S_INVENTAIRE` (la pièce comptable viendra du module Comptabilité, à partir du lot validé) ; l'impression se fait
 > par la page (bordereaux un par feuille, quantités théoriques au choix), pas par le module Édition ; un prix
 > d'inventaire vaut pour l'article dans le lot (deux prix différents refusés) ; un lot validé s'annule (ses comptages
-> et réévaluations sont retirés).
+> et réévaluations sont retirés). Lot 3 réalisé le 24/10/2026 (`projection.js` ↔ `ReglesProjection.cs`, jeu
+> `04_projection.json`, `093c`, `db/218`, `ServiceApprovisionnement.cs`, `StockApprovisionnementBtp.cs` ; pages
+> `/stock/approvisionnement`, `/stock/projection`) ; écarts : date de besoin et livraison prévue à l'entête (pas par
+> ligne) ; un transfert ne consomme une réservation que s'il en est issu (transformation réservation → transfert, S25
+> sans consommation automatique) ; reçu d'une commande = le plus grand des quantités reçues et facturées ; l'horizon
+> des propositions est le délai de l'article, sinon celui du dépôt (7 jours) ; une commande créée par les propositions
+> est en brouillon et ne compte qu'une fois validée.
 
 ## 1. Note d'origine (résumé)
 

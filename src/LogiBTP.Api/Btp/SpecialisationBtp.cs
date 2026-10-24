@@ -489,6 +489,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntDateMouvement = saisie.EntDateMouvement;
         cible.EntStkOrigineId = saisie.EntStkOrigineId;
         cible.EntStkDestinationId = saisie.EntStkDestinationId;
+        cible.EntDateBesoin = saisie.EntDateBesoin;
+        cible.EntDateLivraison = saisie.EntDateLivraison;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>

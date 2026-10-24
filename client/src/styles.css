@@ -878,3 +878,10 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
   .page-inventaire .bordereau input { border: none; background: none; color: #000; }
   .page-inventaire .bordereau td { border-bottom: 1px solid #999; height: 1.6rem; }
 }
+/* Stock, lot 3 : frise du disponible projeté. */
+.frise-stock { width: 100%; max-width: 48rem; height: auto; margin: .5rem 0; }
+.frise-stock .frise-courbe { fill: none; stroke: var(--accent); stroke-width: 2; }
+.frise-stock .frise-zero { stroke: var(--discret); stroke-dasharray: 3 3; }
+.frise-stock .frise-mini { stroke: #f79009; stroke-dasharray: 6 3; }
+.frise-stock .frise-point { fill: var(--accent); }
+.frise-stock .frise-rupture { fill: #d92d20; }

@@ -220,6 +220,14 @@ export const api = {
     enregistrerMarques: (l) => appel('PUT', '/stock/marques', l),
     marquesArticle: (id) => appel('GET', `/stock/articles/${id}/marques`),
     marquer: (m) => appel('POST', '/stock/marquer', m),
+    // Lot 3 : approvisionnement (paramètres du lieu, seuils, synthèse, projection, commandes proposées).
+    parametresLieu: (lieu) => appel('GET', `/stock/lieux/${lieu}/parametres`),
+    enregistrerParametresLieu: (lieu, p) => appel('PUT', `/stock/lieux/${lieu}/parametres`, p),
+    seuils: (lieu) => appel('GET', `/stock/lieux/${lieu}/seuils`),
+    enregistrerSeuils: (lieu, l) => appel('PUT', `/stock/lieux/${lieu}/seuils`, l),
+    approvisionnement: (lieu) => appel('GET', `/stock/lieux/${lieu}/approvisionnement`),
+    projection: (lieu, ele) => appel('GET', `/stock/lieux/${lieu}/projection/${ele}`),
+    commander: (lieu, lignes) => appel('POST', `/stock/lieux/${lieu}/commander`, { lignes }),
   },
 
   liaisons: {

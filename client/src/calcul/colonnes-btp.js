@@ -7,7 +7,9 @@ export const COLONNES_DOCUMENT_BTP = new Set(['ent_mode_calcul_ouvrage', 'ent_co
   // Facture de sous-traitance (db/213) : mode de saisie, montants de la facture reçue.
   'ent_st_saisie', 'ent_st_recu_ht', 'ent_st_recu_tva', 'ent_st_recu_ttc',
   // Stock (db/216) : date-heure du mouvement, lieux d'origine et de destination.
-  'ent_date_mouvement', 'ent_stk_origine_id', 'ent_stk_destination_id']);
+  'ent_date_mouvement', 'ent_stk_origine_id', 'ent_stk_destination_id',
+  // Approvisionnement (db/218) : date de besoin d'une réservation, livraison prévue d'une commande fournisseur.
+  'ent_date_besoin', 'ent_date_livraison']);
 
 export const COLONNES_LIGNE_BTP = new Set([
   'lig_nat_id', 'lig_ptv_id', 'lig_mtr_id', 'lig_qte_source', 'lig_qte_base', 'lig_coef_perte',

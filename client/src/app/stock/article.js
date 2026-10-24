@@ -25,7 +25,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
       · ${echapper(METHODES_VALORISATION[f.methode] ?? f.methode)} : <b>${nb(f.valeur_unitaire, 4)}</b>${f.source === 'REPLI' ? ' <span class="avertissement">(aucun achat : PA de la bibliothèque)</span>' : ''}</div>
     <p class="ligne">Marques <span data-marques></span></p>
     <table class="tableau-compact"><thead><tr><th>Lieu</th><th>Quantité</th><th>Dernier inventaire</th></tr></thead><tbody>
-      ${f.lieux.map((l) => `<tr><td>${l.depot ? '📦' : '🏗'} ${echapper(l.code)} ${echapper(l.libelle)}</td><td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${nb(l.quantite)}</td>
+      ${f.lieux.map((l) => `<tr><td>${l.depot ? '📦' : '🏗'} ${echapper(l.code)} ${echapper(l.libelle)}${l.depot ? ` <a href="/stock/projection?lieu=${l.lieu}&article=${id}" data-url title="Projection : réservations, commandes, ruptures à venir">📈</a>` : ''}</td><td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${nb(l.quantite)}</td>
         <td>${dateHeureLocale(l.dernier_comptage)}</td></tr>`).join('') || '<tr><td colspan="3" class="aide">Aucun mouvement</td></tr>'}</tbody></table>
     <h3>Corriger le stock</h3>
     <p class="ligne"><label>Lieu <span data-lieu-correction></span></label> <label>Quantité comptée <input data-cq size="8"></label>
@@ -73,6 +73,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
       await rendreStockArticle(corps, { id, message, naviguer });
     } catch (e) { message(e.message, 'erreur'); }
   });
+  corps.querySelectorAll('[data-url]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(a.getAttribute('href'), e); }));
   corps.querySelectorAll('[data-piece]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(`/document/${a.dataset.piece}`, e); }));
   corps.querySelector('[data-reevaluer]').addEventListener('click', async () => {
     const v = corps.querySelector('[data-pmp]').value.trim().replace(/\s/g, '').replace(',', '.');

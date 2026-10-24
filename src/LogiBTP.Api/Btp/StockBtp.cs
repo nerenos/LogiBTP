@@ -19,7 +19,7 @@ namespace LogiBTP.Api.Btp;
 /// documents ; après une revalorisation, PMP et dernier prix d'achat recopiés dans l'élément ; gestion du stock par un
 /// administrateur ou un membre d'un service de nature LOGISTIQUE.
 /// </summary>
-public sealed class SpecialisationStockBtp : SpecialisationStock
+public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : SpecialisationStock
 {
     private sealed record LieuSql(long Id, string Code, string Libelle, bool Depot);
     private sealed record ArticleSql(long Id, string Code, string? Libelle, string Unite, int Precision, decimal? Pa);
@@ -210,24 +210,31 @@ public static class MouvementsStockBtp
             """, ct);
 
     /// <summary>Quantité de la ligne dans l'unité de stock (conversions de l'article), arrondie à la précision de l'unité (S22).</summary>
-    private static decimal Convertir(LigneSql l)
+    private static decimal Convertir(LigneSql l) =>
+        ArrondiCalcul.Arrondir(l.Qte * Ratio(l.Unite, new UnitesArticle(l.UniteStock, l.Unites, l.Proprietes, l.Poids, l.Surface, l.SurfacePeinture, l.Volume,
+            l.Hauteur, l.Largeur, l.Epaisseur, l.Longueur)), l.Precision);
+
+    /// <summary>Unités d'un article : unité de stock, conversions par formule, données des formules.</summary>
+    public sealed record UnitesArticle(string UniteStock, string Unites, string Proprietes, decimal? Poids, decimal? Surface, decimal? SurfacePeinture,
+        decimal? Volume, decimal? Hauteur, decimal? Largeur, decimal? Epaisseur, decimal? Longueur);
+
+    /// <summary>Quantité en unité de stock pour 1 unité donnée (1 si l'unité est vide, celle du stock ou sans correspondance).</summary>
+    public static decimal Ratio(string? unite, UnitesArticle a)
     {
         var techniques = new Dictionary<string, decimal?>
         {
-            ["poids"] = l.Poids, ["surface"] = l.Surface, ["surface_peinture"] = l.SurfacePeinture, ["volume"] = l.Volume, ["hauteur"] = l.Hauteur,
-            ["largeur"] = l.Largeur, ["epaisseur"] = l.Epaisseur, ["longueur"] = l.Longueur,
+            ["poids"] = a.Poids, ["surface"] = a.Surface, ["surface_peinture"] = a.SurfacePeinture, ["volume"] = a.Volume, ["hauteur"] = a.Hauteur,
+            ["largeur"] = a.Largeur, ["epaisseur"] = a.Epaisseur, ["longueur"] = a.Longueur,
         };
-        using var unites = JsonDocument.Parse(l.Unites);
-        using var proprietes = JsonDocument.Parse(l.Proprietes);
+        using var unites = JsonDocument.Parse(a.Unites);
+        using var proprietes = JsonDocument.Parse(a.Proprietes);
         var entree = new EntreeElement
         {
-            UniteStock = l.UniteStock, Unites = ServiceBibliotheque.Unites(unites.RootElement),
+            UniteStock = a.UniteStock, Unites = ServiceBibliotheque.Unites(unites.RootElement),
             Donnees = ServiceBibliotheque.Donnees(proprietes.RootElement, techniques),
         };
-        decimal ratio;
-        try { ratio = CalculElement.Ratio(string.IsNullOrEmpty(l.Unite) ? l.UniteStock : l.Unite, entree); }
-        catch (ErreurCalcul) { ratio = 1; }
-        return ArrondiCalcul.Arrondir(l.Qte * ratio, l.Precision);
+        try { return CalculElement.Ratio(string.IsNullOrEmpty(unite) ? a.UniteStock : unite, entree); }
+        catch (ErreurCalcul) { return 1; }
     }
 
     /// <summary>Contrôle à la validation : date du mouvement à venir refusée (S10), lieux d'un transfert différents.</summary>

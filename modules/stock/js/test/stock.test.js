@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE } from '../src/index.js';
+import { stockA, ecartComptage, valoriser, valeurUnitaire, controlerLot, MESSAGES_INVENTAIRE, projeter, minimumJusqua, proposer } from '../src/index.js';
 
 // Jeux partagés avec ReglesStock.cs et ReglesValorisation.cs (LogiBTP.Stock.Tests).
 const lire = (f) => JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas', f), 'utf8'));
@@ -36,5 +36,19 @@ describe("contrôle d'un lot d'inventaire (jeu partagé)", () => {
       expect(r).toEqual(c.attendu);
       for (const x of [...r.erreurs, ...r.avertissements]) expect(MESSAGES_INVENTAIRE[x.code]).toBeTruthy();
     });
+  }
+});
+
+describe('projection et propositions (jeu partagé)', () => {
+  const jeu = lire('04_projection.json');
+  for (const c of jeu.projections) {
+    it(c.nom, () => {
+      const r = projeter({ stock: c.stock, aujourdhui: c.aujourdhui, evenements: c.evenements });
+      expect(r).toEqual(c.attendu);
+      for (const m of c.minimum_jusqua) expect(minimumJusqua(r, c.stock, m.date)).toBe(m.attendu);
+    });
+  }
+  for (const c of jeu.propositions) {
+    it(c.nom, () => expect(proposer(c)).toEqual(c.attendu));
   }
 });
