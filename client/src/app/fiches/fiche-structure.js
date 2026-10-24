@@ -1,6 +1,7 @@
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
+import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
 import { D, Dz } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { TableIntervenants } from '../structure/intervenants.js';
@@ -354,9 +355,17 @@ export class FicheMarche extends FicheStructure {
           element: { type: 'marche', id: Number(this.id), tiers: this.valeur('tiers_id') }, ged: this.services.ged, message: this.message,
           demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=marche:${this.id}`, { ctrlKey: true }),
         }).catch((e) => this.message(e.message, 'erreur')),
+      }, {
+        // Lot 4 : paiement direct ou délégation, réception et retenue de garantie.
+        code: 'paiements', titre: 'Paiements',
+        rendre: (corps) => rendrePaiements(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')),
       }]
       : [];
-    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...super.ongletsSpecifiques()];
+    // Marché de vente : réception et retenue de garantie (en ligne).
+    const retenue = this.valeur('sens') !== 'ST' && this.id !== null && this.services.structure.gestion
+      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
+      : [];
+    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...super.ongletsSpecifiques()];
   }
 
   /**

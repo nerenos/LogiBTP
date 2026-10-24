@@ -92,3 +92,4 @@
 - Base neuve : `docker compose up -d` (exécute modules puis cœur, puis `900_societe_demo.sh`).
 - Démo : API `dotnet run --no-build --project src\LogiBTP.Api --launch-profile http` (5080), `npm run dev` (5173), société demo par http://demo.localhost:5173 ; documents de démo : `node client/scripts/generer-documents-demo.mjs <host> <id du devis de démo>` (structure et annuaire de démo en base).
 - Tests sur la base : `LOGIBTP_TEST_PG=Host=localhost;Port=5433;Database=logibtp;Username=logibtp;Password=logibtp` puis `dotnet test LogiBTP.slnx`.
+- `214_sous_traitance_reception.sql` : module Sous-traitance, lot 4 : réception des travaux d'un marché (`mar_reserves`, `mar_reserves_levees_le`) et libération de la retenue de garantie (`mar_retenue_liberee_le` ; échéances RETENUE datées à la libération) ; rejouable. Module Document `019j` : lien `PAIEMENT_DIRECT` de `document_lien` ; module Sous-traitance `092b` : `stt_paiement_direct`.

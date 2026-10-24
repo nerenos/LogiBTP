@@ -91,6 +91,7 @@ builder.Services.AddSourceNotifications<SourceRappelsCrm>();
 builder.Services.AddSourceNotifications<SourceHabilitations>();
 builder.Services.AddSourceNotifications<SourceEtapesExecution>();
 builder.Services.AddSourceNotifications<SourcePiecesSousTraitance>();
+builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
@@ -146,6 +147,7 @@ api.MapLiaisons();
 api.MapAtelier().ExigeModule("execution", "Exécution");
 api.MapStructure();
 api.MapConsultations();
+api.MapRetenuesMarche();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();

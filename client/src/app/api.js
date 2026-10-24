@@ -180,6 +180,12 @@ export const api = {
     conformiteTiers: (id) => appel('GET', `/sous-traitance/tiers/${id}/conformite`),
     ajuster: (type, id, code, a) => appel('PUT', `/sous-traitance/elements/${type}/${id}/pieces/${encodeURIComponent(code)}`, a),
     validite: (dge, valideAu) => appel('PUT', `/sous-traitance/pieces/${dge}/validite`, { valide_au: valideAu }),
+    paiements: (marche) => appel('GET', `/sous-traitance/marches/${marche}/paiements`),
+    declarerPaiement: (facture, d) => appel('POST', `/sous-traitance/factures/${facture}/paiement`, d),
+    accepterPaiement: (id, a) => appel('POST', `/sous-traitance/paiements/${id}/accepter`, a),
+    transmettrePaiement: (id, t) => appel('POST', `/sous-traitance/paiements/${id}/transmettre`, t),
+    payerPaiement: (id, p) => appel('POST', `/sous-traitance/paiements/${id}/payer`, p),
+    supprimerPaiement: (id) => appel('DELETE', `/sous-traitance/paiements/${id}`),
   },
   liaisons: {
     planningTheorique: (chantier, debut) => appel('POST', `/liaisons/chantiers/${chantier}/planning-theorique`, { debut }),
@@ -366,6 +372,9 @@ export const api = {
   documentsEnAttente: (cible, tiers) => appel('GET', `/documents/en-attente?cible=${cible}${tiers ? `&tiers=${tiers}` : ''}`),
   documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
   gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
+  // Réception et retenue de garantie d'un marché (vente ou sous-traitance).
+  retenueMarche: (marche) => appel('GET', `/structure/marches/${marche}/retenue`),
+  libererRetenue: (marche, le) => appel('POST', `/structure/marches/${marche}/retenue/liberer`, { le }),
   // Coordonnées figées d'un document : instantané d'une personne et de son contact dans l'annuaire.
   adressesLivraison: ({ chantier = null, fournisseur = null } = {}) => appel('GET', `/structure/adresses-livraison?${new URLSearchParams({ ...(chantier ? { chantier } : {}), ...(fournisseur ? { fournisseur } : {}) })}`),
   contactDocument: (perId, indId) => appel('GET', `/structure/contact?per_id=${perId}${indId ? `&ind_id=${indId}` : ''}`),

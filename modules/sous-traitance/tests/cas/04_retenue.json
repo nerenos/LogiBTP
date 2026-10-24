@@ -1,0 +1,19 @@
+{
+  "description": "Libération de la retenue de garantie (retenue.js ↔ ReglesRetenue.cs) : réception + 1 an (29 février → 28 février), réserves non levées = bloquée, réserves levées après l'échéance = libération à la levée.",
+  "cas": [
+    { "nom": "sans réception", "reception": null, "reserves": false, "levees_le": null, "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": null, "date": null, "bloquee": true, "motif": "RET_RECEPTION", "liberable": false } },
+    { "nom": "un an après la réception, échue", "reception": "2025-10-01", "reserves": false, "levees_le": null, "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2026-10-01", "date": "2026-10-01", "bloquee": false, "motif": null, "liberable": true } },
+    { "nom": "pas encore échue", "reception": "2026-03-15", "reserves": false, "levees_le": null, "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2027-03-15", "date": "2027-03-15", "bloquee": false, "motif": null, "liberable": false } },
+    { "nom": "29 février", "reception": "2028-02-29", "reserves": false, "levees_le": null, "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2029-02-28", "date": "2029-02-28", "bloquee": false, "motif": null, "liberable": false } },
+    { "nom": "réserves non levées", "reception": "2025-01-10", "reserves": true, "levees_le": null, "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2026-01-10", "date": null, "bloquee": true, "motif": "RET_RESERVES", "liberable": false } },
+    { "nom": "réserves levées après l'échéance", "reception": "2025-01-10", "reserves": true, "levees_le": "2026-05-02", "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2026-01-10", "date": "2026-05-02", "bloquee": false, "motif": null, "liberable": true } },
+    { "nom": "réserves levées avant l'échéance", "reception": "2026-01-10", "reserves": true, "levees_le": "2026-04-02", "aujourdhui": "2026-10-24",
+      "attendu": { "echeance": "2027-01-10", "date": "2027-01-10", "bloquee": false, "motif": null, "liberable": false } }
+  ]
+}

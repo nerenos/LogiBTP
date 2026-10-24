@@ -42,11 +42,13 @@ public class SousTraitanceDbContext(DbContextOptions<SousTraitanceDbContext> opt
 {
     public DbSet<PieceTypeEntite> PiecesTypes => Set<PieceTypeEntite>();
     public DbSet<PieceElementEntite> PiecesElements => Set<PieceElementEntite>();
+    public DbSet<PaiementDirectEntite> PaiementsDirects => Set<PaiementDirectEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<PieceTypeEntite>().ToTable("stt_piece_type").HasKey(x => x.SptCode);
         b.Entity<PieceElementEntite>().ToTable("stt_piece_element").HasKey(x => new { x.SpeTypeElement, x.SpeIdElement, x.SpeCode });
+        b.Entity<PaiementDirectEntite>().ToTable("stt_paiement_direct").HasKey(x => x.SpdId);
     }
 }
 
@@ -55,12 +57,13 @@ public sealed record PieceTypeDto(string Code, string Libelle, string Portee, st
 public sealed record AjustementSaisi(string? Mode, string? Motif);
 public sealed record ValiditeSaisie(DateOnly? ValideAu);
 
-/// <summary>Marché de sous-traitance vu par le module : sous-traitant, public, garantie, montant HT, libellé.</summary>
-public sealed record MarcheSousTraitance(int Id, long? TiersId, bool Public, string? Garantie, decimal MontantHt, string? Libelle);
+/// <summary>Marché de sous-traitance vu par le module : sous-traitant, public, garantie, montant HT, libellé, montant agréé, autoliquidation.</summary>
+public sealed record MarcheSousTraitance(int Id, long? TiersId, bool Public, string? Garantie, decimal MontantHt, string? Libelle, decimal? MontantAgree = null,
+    bool Autoliquidation = true);
 
 /// <summary>
 /// Spécialisation par l'application (méthode patron) : marchés de sous-traitance, pièces fournies (documents de la GED
-/// du sous-traitant et du marché), validité d'une pièce.
+/// du sous-traitant et du marché), validité d'une pièce ; factures du paiement direct et lien à la facture au client.
 /// </summary>
 public abstract class SpecialisationSousTraitance
 {
@@ -69,6 +72,16 @@ public abstract class SpecialisationSousTraitance
     public abstract Task<List<PieceFournie>> PiecesAsync(SousTraitanceDbContext db, long tiers, int? marche, CancellationToken ct);
     /// <summary>Fin de validité saisie d'une pièce (document de la GED).</summary>
     public abstract Task DefinirValiditeAsync(SousTraitanceDbContext db, long piece, DateOnly? valideAu, Utilisateur u, CancellationToken ct);
+    /// <summary>Facture (ou avoir) de sous-traitance et son marché.</summary>
+    public abstract Task<FactureSousTraitance?> FactureAsync(SousTraitanceDbContext db, long id, CancellationToken ct);
+    /// <summary>Factures de sous-traitance du marché, dans l'ordre.</summary>
+    public abstract Task<List<FactureSousTraitance>> FacturesAsync(SousTraitanceDbContext db, int marche, CancellationToken ct);
+    /// <summary>Factures au client qui peuvent porter le paiement direct d'un marché (marché de vente lié, sinon chantier).</summary>
+    public abstract Task<List<FactureClient>> FacturesClientsAsync(SousTraitanceDbContext db, int marche, CancellationToken ct);
+    /// <summary>Lien entre la facture de sous-traitance et la facture au client qui porte la déduction (poste du sous-traitant).</summary>
+    public abstract Task LierAsync(SousTraitanceDbContext db, long facture, long factureClient, Utilisateur u, CancellationToken ct);
+    /// <summary>Après l'enregistrement d'une demande (suivi du délai d'acceptation : tâche, notification).</summary>
+    public virtual Task ApresDemandeAsync(SousTraitanceDbContext db, DemandePaiement d, FactureSousTraitance f, Utilisateur u, CancellationToken ct) => Task.CompletedTask;
 }
 
 /// <summary>
@@ -179,6 +192,7 @@ public static class Extensions
         services.AddDbContext<SousTraitanceDbContext>(options);
         services.AddSingleton<SpecialisationSousTraitance, TSpecialisation>();
         services.AddScoped<ServiceSousTraitance>();
+        services.AddScoped<ServicePaiementDirect>();
         return services;
     }
 
@@ -198,6 +212,17 @@ public static class Extensions
         g.MapPut("/pieces/{dge:long}/validite", async (long dge, ValiditeSaisie v, HttpContext http, ServiceSousTraitance s, CancellationToken ct) =>
         {
             await s.DefinirValiditeAsync(dge, v.ValideAu, Utilisateur.Depuis(http), ct);
+            return Results.NoContent();
+        });
+        // Paiement direct (marché public) et délégation de paiement (marché privé).
+        g.MapGet("/marches/{id:int}/paiements", (int id, ServicePaiementDirect s, CancellationToken ct) => s.SuiviAsync(id, ct));
+        g.MapPost("/factures/{id:long}/paiement", (long id, DemandeSaisie d, HttpContext http, ServicePaiementDirect s, CancellationToken ct) => s.DeclarerAsync(id, d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/paiements/{id:long}/accepter", (long id, AcceptationSaisie a, HttpContext http, ServicePaiementDirect s, CancellationToken ct) => s.AccepterAsync(id, a, Utilisateur.Depuis(http), ct));
+        g.MapPost("/paiements/{id:long}/transmettre", (long id, TransmissionSaisie t, HttpContext http, ServicePaiementDirect s, CancellationToken ct) => s.TransmettreAsync(id, t, Utilisateur.Depuis(http), ct));
+        g.MapPost("/paiements/{id:long}/payer", (long id, PaiementSaisi p, HttpContext http, ServicePaiementDirect s, CancellationToken ct) => s.PayerAsync(id, p, Utilisateur.Depuis(http), ct));
+        g.MapDelete("/paiements/{id:long}", async (long id, HttpContext http, ServicePaiementDirect s, CancellationToken ct) =>
+        {
+            await s.SupprimerAsync(id, Utilisateur.Depuis(http), ct);
             return Results.NoContent();
         });
         return g;

@@ -105,11 +105,23 @@ public static class PostesMarche
         decimal? retenue = portee == "G"
             ? (await db.Database.SqlQuery<decimal?>($"SELECT mar_retenue_pct AS \"Value\" FROM marche WHERE mar_id = {marche}").ToListAsync(ct)).FirstOrDefault()
             : null;
-        return Appliquer(d, postes, retenue);
+        // Paiements directs acceptés sur cette facture (module Sous-traitance, § 5.5) : ils fixent le poste du sous-traitant.
+        var directs = portee == "G" && d.Document.EntId > 0
+            ? (await db.Database.SqlQuery<PaiementDirectFacture>($"""
+                SELECT s.ent_tiers_id AS tiers, sum(p.spd_montant_accepte) AS montant
+                FROM stt_paiement_direct p JOIN document s ON s.ent_id = p.spd_facture_id
+                WHERE p.spd_facture_client_id = {d.Document.EntId} AND p.spd_etat IN ('ACCEPTEE', 'PARTIELLE', 'TRANSMISE', 'PAYEE') AND s.ent_tiers_id IS NOT NULL
+                GROUP BY s.ent_tiers_id
+                """).ToListAsync(ct)).ToDictionary(x => x.Tiers, x => x.Montant)
+            : null;
+        return Appliquer(d, postes, retenue, directs);
     }
 
+    private sealed record PaiementDirectFacture(long Tiers, decimal Montant);
+
     /// <summary>Synchronisation des lignes système (règle pure, testable) ; vrai si le document a changé.</summary>
-    public static bool Appliquer(DocumentCompletBtp d, IReadOnlyList<PosteMarche> postes, decimal? retenuePct)
+    /// <param name="paiementsDirects">Montants acceptés par sous-traitant : remplacent la valeur saisie du poste PAIEMENT_DIRECT.</param>
+    public static bool Appliquer(DocumentCompletBtp d, IReadOnlyList<PosteMarche> postes, decimal? retenuePct, IReadOnlyDictionary<long, decimal>? paiementsDirects = null)
     {
         var voulus = new List<(string Cle, PosteMarche Poste, bool Retenue)>();
         if (retenuePct is > 0)
@@ -138,7 +150,8 @@ public static class PostesMarche
                 change = true;
             }
             var tyl = p.Niveau == "HT" ? TL.PiedHt : TL.PiedTtc;
-            var valeur = p.Type == "PAIEMENT_DIRECT" && l.LigPiedValeur is decimal saisie && l.LigId > 0 ? saisie : p.Valeur;
+            var valeur = p.Type == "PAIEMENT_DIRECT" && p.PerId is long st && paiementsDirects?.TryGetValue(st, out var accepte) == true ? accepte
+                : p.Type == "PAIEMENT_DIRECT" && l.LigPiedValeur is decimal saisie && l.LigId > 0 ? saisie : p.Valeur;
             var avant = (l.LigTylId, l.LigLibelleHtml, l.LigPiedMode, l.LigPiedBase, l.LigPiedSens, l.LigPiedValeur, l.LigPiedRetenue);
             l.LigTylId = tyl;
             l.LigLibelleHtml = p.Libelle;

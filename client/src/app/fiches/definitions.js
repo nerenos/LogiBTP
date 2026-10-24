@@ -466,7 +466,7 @@ export const TYPES_FICHE = {
         code: 'informations', titre: 'Marché',
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'sens', 'cha_id', 'tiers_id', 'ent_id'] },
-          { titre: 'Conditions', champs: ['nature', 'montant_ht', 'depassement_autorise', 'retenue_pct', 'date', 'date_reception', 'statut'] },
+          { titre: 'Conditions', champs: ['nature', 'montant_ht', 'depassement_autorise', 'retenue_pct', 'date', 'date_reception', 'reserves', 'reserves_levees_le', 'statut'] },
           { titre: 'Sous-traitance', champs: ['marche_vente_id', 'garantie', 'montant_agree', 'autoliquidation', 'debut_contractuel', 'fin_contractuelle'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
@@ -494,6 +494,8 @@ export const TYPES_FICHE = {
         c('retenue_pct', 'Retenue de garantie (%)', 'mar_retenue_pct', 'nombre', { format: '999.99', aide: '% du TTC de chaque facture du marché (5 % au plus), poste du pied global et échéance à part' }),
         c('date', 'Date', 'mar_date', 'date', { obligatoire: true }),
         c('date_reception', 'Date de réception', 'mar_date_reception', 'date', { aide: 'Réception des travaux : la retenue de garantie est libérée un an après, sauf réserves' }),
+        c('reserves', 'Réception avec réserves', 'mar_reserves', 'booleen', { obligatoire: true, defaut: false, aide: 'Réserves non levées : la retenue de garantie reste bloquée' }),
+        c('reserves_levees_le', 'Réserves levées le', 'mar_reserves_levees_le', 'date', { aide: "Levée après l'échéance : la retenue est libérée à la levée" }),
         c('statut', 'Statut', 'mar_statut', 'liste', { obligatoire: true, defaut: 'EN_COURS', options: options(['EN_COURS', 'En cours'], ['SOLDE', 'Soldé'], ['RESILIE', 'Résilié']) }),
         c('commentaire', 'Commentaire', 'mar_commentaire', 'zone'),
       ],

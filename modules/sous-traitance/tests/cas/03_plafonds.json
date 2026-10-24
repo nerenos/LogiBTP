@@ -1,0 +1,24 @@
+{
+  "description": "Paiement direct (paiement-direct.js ↔ ReglesPaiementDirect.cs) : montant payé par le maître d'ouvrage (TTC, HT en autoliquidation), délai d'acceptation de 15 jours (alerte à J-3), acceptation d'une demande (cumul accepté plafonné par le montant agréé, montant ≤ demande, refus total ou partiel motivé, état).",
+  "montants": [
+    { "ht": "1000", "ttc": "1200", "autoliquidation": false, "attendu": "1200" },
+    { "ht": "1000", "ttc": "1000", "autoliquidation": true, "attendu": "1000" }
+  ],
+  "delais": [
+    { "recue_le": "2026-10-10", "aujourdhui": "2026-10-24", "attendu": { "echeance": "2026-10-25", "depasse": false, "alerte": true } },
+    { "recue_le": "2026-10-01", "aujourdhui": "2026-10-24", "attendu": { "echeance": "2026-10-16", "depasse": true, "alerte": true } },
+    { "recue_le": "2026-10-20", "aujourdhui": "2026-10-24", "attendu": { "echeance": "2026-11-04", "depasse": false, "alerte": false } }
+  ],
+  "acceptations": [
+    { "nom": "acceptée sous le plafond", "demande": "5000", "accepte": "5000", "cumul_precedent": "10000", "montant_agree": "50000", "motif": null,
+      "attendu": { "etat": "ACCEPTEE", "cumul": "15000", "reste_agree": "35000", "erreurs": [] } },
+    { "nom": "acceptée en partie, motivée, sans agrément", "demande": "5000", "accepte": "3000", "cumul_precedent": "0", "montant_agree": null, "motif": "Travaux non conformes",
+      "attendu": { "etat": "PARTIELLE", "cumul": "3000", "reste_agree": null, "erreurs": [] } },
+    { "nom": "refus sans motif", "demande": "5000", "accepte": "0", "cumul_precedent": "0", "montant_agree": null, "motif": null,
+      "attendu": { "etat": "REFUSEE", "cumul": "0", "reste_agree": null, "erreurs": ["PD_MOTIF"] } },
+    { "nom": "au-delà de la demande et du montant agréé", "demande": "5000", "accepte": "6000", "cumul_precedent": "47000", "montant_agree": "50000", "motif": null,
+      "attendu": { "etat": "ACCEPTEE", "cumul": "53000", "reste_agree": "0", "erreurs": ["PD_DEMANDE", "PD_PLAFOND"] } },
+    { "nom": "montant négatif", "demande": "5000", "accepte": "-10", "cumul_precedent": "0", "montant_agree": null, "motif": null,
+      "attendu": { "etat": "PARTIELLE", "cumul": "-10", "reste_agree": null, "erreurs": ["PD_NEGATIF", "PD_MOTIF"] } }
+  ]
+}

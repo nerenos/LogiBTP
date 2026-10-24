@@ -185,3 +185,49 @@ public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifi
             $"st-pieces:{jour:yyyy-MM-dd}")).ToList();
     }
 }
+
+/// <summary>
+/// Demandes de paiement direct ou de délégation à accepter (ST16) : toutes les heures, une notification par demande non
+/// traitée à trois jours de son échéance (réception + 15 jours) ou en retard, aux membres du service Chantier, sinon Achat,
+/// sinon aux administrateurs ; clé par demande et par jour.
+/// </summary>
+public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotifications
+{
+    public string Code => "sous-traitance-paiements";
+    public TimeSpan Periode => TimeSpan.FromHours(1);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("sous_traitance", "PAIEMENT", "Demandes de paiement des sous-traitants à accepter")];
+
+    private sealed record Demande(long Id, int MarcheId, string? Marche, string? Tiers, string? Facture);
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("sous_traitance", ct)) return [];
+        var demandes = await portee.GetRequiredService<LogiBTP.SousTraitance.Web.ServicePaiementDirect>().AEcheanceAsync(ct);
+        if (demandes.Count == 0) return [];
+        var infos = (await db.Database.SqlQueryRaw<Demande>("""
+            SELECT p.spd_id AS id, p.spd_marche_id AS marche_id, m.mar_code AS marche, t.per_raison_sociale AS tiers, coalesce(d.ent_reference_externe, d.ent_numero) AS facture
+            FROM stt_paiement_direct p JOIN marche m ON m.mar_id = p.spd_marche_id JOIN document d ON d.ent_id = p.spd_facture_id
+            LEFT JOIN personne t ON t.per_id = d.ent_tiers_id
+            WHERE p.spd_etat = 'RECUE'
+            """).ToListAsync(ct)).ToDictionary(x => x.Id);
+        var destinataires = await db.Database.SqlQueryRaw<string>("""
+            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
+            WHERE s.srv_code = (SELECT srv_code FROM service WHERE srv_code IN ('CHANTIER', 'ACHAT') AND EXISTS (SELECT 1 FROM service_membre x WHERE x.sme_srv_id = srv_id)
+                                ORDER BY srv_code = 'CHANTIER' DESC LIMIT 1)
+              AND i.ind_utilisateur IS NOT NULL
+            """).ToListAsync(ct);
+        if (destinataires.Count == 0)
+        {
+            destinataires = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        }
+        var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        return (from d in demandes
+                where infos.ContainsKey(d.Id)
+                let i = infos[d.Id]
+                from dest in destinataires
+                select new NouvelleNotification(dest, "sous_traitance", "PAIEMENT",
+                    d.Delai.Depasse ? $"Demande de paiement en retard : {i.Tiers}" : $"Demande de paiement à accepter avant le {d.Delai.Echeance:dd/MM/yyyy} : {i.Tiers}",
+                    $"Facture {i.Facture}, marché {i.Marche}", d.Delai.Depasse ? "ATTENTION" : "INFO", $"/fiche/marche/{i.MarcheId}", null, null,
+                    $"st-paiement:{d.Id}:{jour:yyyy-MM-dd}")).ToList();
+    }
+}
