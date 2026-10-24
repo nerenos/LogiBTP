@@ -319,7 +319,14 @@ const RAPPORTS = [
     presentations: [PRESENTATIONS_STANDARD[2], PRESENTATIONS_STANDARD[0]], ordre: 60,
   }),
   piece({
-    code: 'COMMANDE_FOURNISSEUR', libelle: 'Commande et demande de prix fournisseur', types: ['A_COMMANDE', 'A_DEVIS', 'A_RECEPTION', 'A_RETOUR'], libelleAdresse: 'Adresse de livraison', ordre: 70,
+    code: 'COMMANDE_FOURNISSEUR', libelle: 'Commande et demande de prix fournisseur', types: ['A_COMMANDE', 'A_DEVIS', 'A_RECEPTION', 'A_RETOUR', 'T_AO', 'T_COMMANDE'],
+    libelleAdresse: 'Adresse de livraison', ordre: 70,
+  }),
+  // Sous-traitance (ST7) : situation établie pour le sous-traitant, à signer par lui (« bon pour accord ») ; elle ne vaut
+  // facture que sous mandat d'autofacturation (pièce du marché).
+  piece({
+    code: 'SITUATION_SOUS_TRAITANCE', libelle: 'Proposition de situation de sous-traitance', types: ['T_FACTURE_AVT', 'T_AVOIR'], titre: 'Proposition de situation',
+    presentations: PRESENTATIONS_AVANCEMENT, accord: true, ordre: 80, marche: true,
   }),
   piece({
     code: 'PIECE_INTERNE', libelle: 'Document interne (stock, achats reçus)', types: [], pied: 'PIED_INTERNE', libelleAdresse: 'Adresse', ordre: 90,
@@ -439,6 +446,7 @@ export const DEFAUTS_EDITION = [
   ...['V_SITUATION', 'V_REPRISE_AVT'].map((t) => ['DOCUMENT', t, 'SITUATION']),
   ...['V_FACTURE_AVT'].map((t) => ['DOCUMENT', t, 'FACTURE_AVANCEMENT']),
   ...['V_RECEPTION', 'V_RETOUR'].map((t) => ['DOCUMENT', t, 'BON_LIVRAISON']),
-  ...['A_COMMANDE', 'A_DEVIS', 'A_RECEPTION', 'A_RETOUR'].map((t) => ['DOCUMENT', t, 'COMMANDE_FOURNISSEUR']),
+  ...['A_COMMANDE', 'A_DEVIS', 'A_RECEPTION', 'A_RETOUR', 'T_AO', 'T_COMMANDE'].map((t) => ['DOCUMENT', t, 'COMMANDE_FOURNISSEUR']),
+  ...['T_FACTURE_AVT', 'T_AVOIR'].map((t) => ['DOCUMENT', t, 'SITUATION_SOUS_TRAITANCE']),
   ...['A_FACTURE', 'A_FACTURE_AVT', 'A_AVOIR', 'S_DEMANDE', 'S_RESERVATION', 'S_ENTREE', 'S_SORTIE', 'S_TRANSFERT', 'S_INVENTAIRE'].map((t) => ['DOCUMENT', t, 'PIECE_INTERNE']),
 ].map(([cible, type, modele]) => ({ cible, type, modele }));

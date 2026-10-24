@@ -2,6 +2,8 @@ import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDerou
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { estFamilleAchat } from '@logibtp/document';
+import { ventilerFactureRecue, MESSAGES_VENTILATION } from '@logibtp/sous-traitance';
+import { D, S } from '@logibtp/socle';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
 import { sectionVariablesTranche, lierVariablesTranche } from './variables-tranche.js';
 import { TableIntervenants } from './structure/intervenants.js';
@@ -318,7 +320,54 @@ export class PanneauxBtp extends PanneauxDocument {
         <p class="aide">Enregistrées dans le document pour les éditions et conservées à la transformation ; ⟳ les recharge depuis l'annuaire.</p>
         <div class="contacts-blocs"><div data-contact="CLIENT"></div>${estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
-      ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}`;
+      ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}
+      ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}`;
+  }
+
+  /**
+   * Facture de sous-traitance (Sous-traitance, lot 3, § 5.4) : saisie à l'avancement (situation établie pour le
+   * sous-traitant) ou facture reçue (son numéro et sa date : référence externe et date fournisseur ; ses montants) ;
+   * « Ventiler au prorata » répartit le HT reçu sur les lignes au prorata de leur reste (ventilerFactureRecue ↔
+   * ReglesVentilation.cs) ; l'écart restant est refusé à la validation au-delà de la règle ECART_FACTURE_RECUE.
+   */
+  rendreFactureSt(bloc) {
+    const ed = this.editeur;
+    const m = ed.magasin;
+    const d = ed.saisie.document;
+    const lecture = Boolean(m.lectureSeule || ed.fige);
+    const recue = d.ent_st_saisie === 'RECUE';
+    const total = ed.resultat?.document?.ent_total_ht ?? null;
+    const ecart = recue && d.ent_st_recu_ht !== null && d.ent_st_recu_ht !== undefined && total !== null ? D(d.ent_st_recu_ht).minus(D(total)) : null;
+    bloc.innerHTML = `<p class="ligne"><label><input type="radio" name="st-saisie" value="AVANCEMENT" ${recue ? '' : 'checked'} ${lecture ? 'disabled' : ''}> À l'avancement
+        <small class="aide">(situation établie pour le sous-traitant)</small></label>
+      <label><input type="radio" name="st-saisie" value="RECUE" ${recue ? 'checked' : ''} ${lecture ? 'disabled' : ''}> Facture reçue du sous-traitant</label></p>
+      ${recue ? `<p class="aide">Numéro et date de la facture : « Référence externe » et « Date fournisseur » ci-dessus. Le PDF se range dans l'onglet Pièces.</p>
+      <p class="ligne"><label>HT de la période <input data-st="ent_st_recu_ht" size="12" value="${echapper(d.ent_st_recu_ht ?? '')}" ${lecture ? 'disabled' : ''}></label>
+        <label>TVA <input data-st="ent_st_recu_tva" size="10" value="${echapper(d.ent_st_recu_tva ?? '')}" ${lecture ? 'disabled' : ''}></label>
+        <label>TTC <input data-st="ent_st_recu_ttc" size="12" value="${echapper(d.ent_st_recu_ttc ?? '')}" ${lecture ? 'disabled' : ''}></label>
+        ${lecture ? '' : '<button type="button" data-ventiler title="Répartit le HT reçu sur les lignes au prorata de leur reste à facturer">⚖ Ventiler au prorata</button>'}</p>
+      ${ecart !== null ? `<p class="${ecart.isZero() ? 'aide' : 'avertissement'}">Ventilé sur les lignes : ${formatNombre(Number(total), 2)} € HT${ecart.isZero() ? ' (égal au reçu)' : ` — écart ${formatNombre(Number(ecart), 2)} €`}</p>` : ''}` : ''}`;
+    bloc.querySelectorAll('input[name="st-saisie"]').forEach((r) => r.addEventListener('change', () => {
+      m.modifier((b) => { b.document.ent_st_saisie = r.value; }, 'Saisie de la facture');
+      this.rendreFactureSt(bloc);
+    }));
+    bloc.querySelectorAll('[data-st]').forEach((i) => i.addEventListener('change', () => {
+      const v = i.value.trim().replace(/\s/g, '').replace(',', '.');
+      m.modifier((b) => { b.document[i.dataset.st] = v === '' ? null : S(D(v)); }, 'Facture reçue');
+    }));
+    bloc.querySelector('[data-ventiler]')?.addEventListener('click', () => {
+      const lignes = ed.saisie.lignes.filter((l) => l.lig_avt_montant_marche !== null && l.lig_avt_montant_marche !== undefined && !l._virtuelle);
+      const r = ventilerFactureRecue({
+        lignes: lignes.map((l) => ({ id: l.lig_id, marche: l.lig_avt_montant_marche, precedent: l.lig_avt_montant_precedent ?? 0 })),
+        periode: ed.saisie.document.ent_st_recu_ht, precision: ed.saisie.document.ent_precision_montant ?? 2,
+      });
+      for (const e of r.erreurs) this.editeur.surMessage?.(MESSAGES_VENTILATION[e] ?? e, e === 'VENT_DEPASSEMENT' ? 'avertissement' : 'erreur');
+      if (!r.lignes.length) return;
+      const cumuls = new Map(r.lignes.map((x) => [x.id, x.cumul]));
+      m.modifier((b) => {
+        for (const l of b.lignes) if (cumuls.has(l.lig_id)) { l.lig_avt_mode = 'M'; l.lig_avt_valeur = cumuls.get(l.lig_id); }
+      }, 'Ventilation de la facture reçue');
+    });
   }
 
   /** Ordre du module Exécution (famille E) avec le module actif. */
@@ -331,6 +380,8 @@ export class PanneauxBtp extends PanneauxDocument {
       rendreExecution(exe, { app: this.execution.app, entId: this.editeur.saisie.document.ent_id, typeCode: this.editeur.definition.type.tyd_code, individus: this.execution.individus })
         .catch((e) => this.execution.app.erreur(e));
     }
+    const fst = zone.querySelector('[data-facture-st]');
+    if (fst) this.rendreFactureSt(fst);
     this.lierRedacteur(zone).catch(() => {});
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));

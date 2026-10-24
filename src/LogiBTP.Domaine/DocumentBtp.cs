@@ -30,6 +30,13 @@ public class DocumentBtp : Document
     /// <summary>Coordonnées figées du payeur (ventes).</summary>
     public JsonDocument? EntContactPayeur { get; set; }
 
+    // Facture de sous-traitance (module Sous-traitance, db/213) : saisie à l'avancement ou facture reçue du sous-traitant,
+    // montants de sa facture saisis (contrôlés à la validation contre le total ventilé).
+    public string? EntStSaisie { get; set; }
+    public decimal? EntStRecuHt { get; set; }
+    public decimal? EntStRecuTva { get; set; }
+    public decimal? EntStRecuTtc { get; set; }
+
     // Exécution (module Exécution, db/197) : état propre de l'ordre, motif de blocage, service porteur, responsable,
     // dates prévues ; modifiés par la route de l'exécution, jamais par l'enregistrement du document.
     public string? EntExeEtat { get; set; }

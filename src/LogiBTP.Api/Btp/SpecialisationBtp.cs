@@ -46,6 +46,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         new("ENCOURS_CLIENT", "Encours client maximal", "Encours du client au-delà de ce montant : avertissement (-1 : pas de seuil ; la fiche du tiers l'emporte).", "NOMBRE", -1, null, "AVERTISSEMENT"),
         new("PRIX_ACHAT_ECART", "Écart de prix d'achat (%)", "Prix facturé différent de la commande au-delà de ce % : avertissement (-1 : pas de contrôle).", "NOMBRE", -1, null, "AVERTISSEMENT"),
         new("REFERENCE_MARCHE_PUBLIC", "Référence d'une commande de marché public", "Référence externe exigée sur une commande d'un marché public.", "BOOLEEN", false, null, "BLOQUANT"),
+        new("ECART_FACTURE_RECUE", "Écart toléré d'une facture reçue (€)", "Facture de sous-traitance reçue : écart maximal entre le HT saisi et le total ventilé sur les lignes (-1 : pas de contrôle).", "NOMBRE", 1, null, "BLOQUANT"),
     ]);
 
     // ------------------------------------------------------------------ calcul
@@ -161,6 +162,18 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
         var d = document.Document;
+        // Facture de sous-traitance reçue (ST8, ST10) : le total ventilé sur les lignes doit retrouver le HT de la facture.
+        if (type.TydCode == "T_FACTURE_AVT" && d.EntStSaisie == "RECUE")
+        {
+            var tolerance = decimal.TryParse(await Regle(db, "ECART_FACTURE_RECUE", type.TydId, ct), System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : 1m;
+            if (d.EntStRecuHt is null) erreurs.Add(new MessageCalcul(null, "ST_FACTURE_RECUE", "Facture reçue : montant HT de la facture du sous-traitant à saisir"));
+            else if (tolerance >= 0 && Math.Abs(document.Document.EntTotalHt - d.EntStRecuHt.Value) > tolerance)
+            {
+                erreurs.Add(new MessageCalcul(null, "ST_ECART_FACTURE",
+                    $"Facture reçue : {Euros(d.EntStRecuHt.Value)} HT saisis, {Euros(document.Document.EntTotalHt)} ventilés sur les lignes (« Ventiler au prorata »)"));
+            }
+        }
         // Pièces exigées du sous-traitant (module Sous-traitance, ST13) : commande et facture de sous-traitance.
         await SpecialisationSousTraitanceBtp.ControlerPiecesAsync(Http?.HttpContext?.RequestServices, type.TydCode, d.EntMarcheId, erreurs, ct);
         if (type.TydCode == "T_COMMANDE" && d.EntMarcheId is int mst)
@@ -463,6 +476,10 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntContactPayeur = saisie.EntContactPayeur ?? cible.EntContactPayeur;
         cible.EntFaLignes = saisie.EntFaLignes ?? "V";
         cible.EntFaMode = saisie.EntFaMode ?? "C";
+        cible.EntStSaisie = saisie.EntStSaisie;
+        cible.EntStRecuHt = saisie.EntStRecuHt;
+        cible.EntStRecuTva = saisie.EntStRecuTva;
+        cible.EntStRecuTtc = saisie.EntStRecuTtc;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>

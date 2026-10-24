@@ -1,0 +1,47 @@
+{
+  "description": "Ventilation d'une facture reçue de sous-traitance sur les lignes de la commande (ventilation.js ↔ ReglesVentilation.cs) : prorata du reste de chaque ligne (marché − précédent), cumul saisi converti en période, période négative au prorata du précédent, arrondi absorbé par la ligne de plus forte base (la première en cas d'égalité), dépassement signalé, rien à ventiler. Montants à 2 décimales.",
+  "cas": [
+    {
+      "nom": "période répartie au prorata du reste (ligne soldée sans part)",
+      "lignes": [{ "id": 1, "marche": "10000", "precedent": "2000" }, { "id": 2, "marche": "5000", "precedent": "0" }, { "id": 3, "marche": "3000", "precedent": "3000" }],
+      "periode": "6500",
+      "attendu": { "periode": "6500", "erreurs": [], "lignes": [{ "id": 1, "periode": "4000", "cumul": "6000" }, { "id": 2, "periode": "2500", "cumul": "2500" }, { "id": 3, "periode": "0", "cumul": "3000" }] }
+    },
+    {
+      "nom": "arrondi absorbé par la première ligne de plus forte base",
+      "lignes": [{ "id": 1, "marche": "100", "precedent": "0" }, { "id": 2, "marche": "100", "precedent": "0" }, { "id": 3, "marche": "100", "precedent": "0" }],
+      "periode": "100",
+      "attendu": { "periode": "100", "erreurs": [], "lignes": [{ "id": 1, "periode": "33.34", "cumul": "33.34" }, { "id": 2, "periode": "33.33", "cumul": "33.33" }, { "id": 3, "periode": "33.33", "cumul": "33.33" }] }
+    },
+    {
+      "nom": "cumul saisi : période = cumul − précédent",
+      "lignes": [{ "id": 1, "marche": "10000", "precedent": "4000" }, { "id": 2, "marche": "10000", "precedent": "1000" }],
+      "cumul": "9000",
+      "attendu": { "periode": "4000", "erreurs": [], "lignes": [{ "id": 1, "periode": "1600", "cumul": "5600" }, { "id": 2, "periode": "2400", "cumul": "3400" }] }
+    },
+    {
+      "nom": "période négative (avoir) au prorata du précédent",
+      "lignes": [{ "id": 1, "marche": "10000", "precedent": "3000" }, { "id": 2, "marche": "2000", "precedent": "1000" }],
+      "periode": "-800",
+      "attendu": { "periode": "-800", "erreurs": [], "lignes": [{ "id": 1, "periode": "-600", "cumul": "2400" }, { "id": 2, "periode": "-200", "cumul": "800" }] }
+    },
+    {
+      "nom": "dépassement du reste signalé",
+      "lignes": [{ "id": 1, "marche": "1000", "precedent": "900" }],
+      "periode": "200",
+      "attendu": { "periode": "200", "erreurs": ["VENT_DEPASSEMENT"], "lignes": [{ "id": 1, "periode": "200", "cumul": "1100" }] }
+    },
+    {
+      "nom": "rien ne reste à facturer",
+      "lignes": [{ "id": 1, "marche": "1000", "precedent": "1000" }],
+      "periode": "50",
+      "attendu": { "periode": "50", "erreurs": ["VENT_SANS_RESTE"], "lignes": [] }
+    },
+    {
+      "nom": "aucune ligne",
+      "lignes": [],
+      "periode": "50",
+      "attendu": { "periode": "0", "erreurs": ["VENT_SANS_LIGNE"], "lignes": [] }
+    }
+  ]
+}

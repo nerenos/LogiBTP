@@ -3,7 +3,9 @@
 
 export const COLONNES_DOCUMENT_BTP = new Set(['ent_mode_calcul_ouvrage', 'ent_coef_fa', 'ent_bib_id', 'ent_projet_id', 'ent_affaire_id', 'ent_chantier_id', 'ent_marche_id', 'ent_intervenants', 'ent_redacteur_id', 'ent_fa_lignes', 'ent_fa_mode', 'ent_contact_client', 'ent_contact_payeur',
   // Exécution (db/197) : état, motif, service, responsable, dates prévues de l'ordre.
-  'ent_exe_etat', 'ent_exe_motif_id', 'ent_exe_commentaire', 'ent_srv_id', 'ent_responsable_id', 'ent_debut_prevu', 'ent_fin_prevue']);
+  'ent_exe_etat', 'ent_exe_motif_id', 'ent_exe_commentaire', 'ent_srv_id', 'ent_responsable_id', 'ent_debut_prevu', 'ent_fin_prevue',
+  // Facture de sous-traitance (db/213) : mode de saisie, montants de la facture reçue.
+  'ent_st_saisie', 'ent_st_recu_ht', 'ent_st_recu_tva', 'ent_st_recu_ttc']);
 
 export const COLONNES_LIGNE_BTP = new Set([
   'lig_nat_id', 'lig_ptv_id', 'lig_mtr_id', 'lig_qte_source', 'lig_qte_base', 'lig_coef_perte',
