@@ -9,6 +9,7 @@ import { TableIntervenants } from '../structure/intervenants.js';
 import { controlerIntervenants } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
+import { individusStructure } from '../panneaux-btp.js';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
@@ -103,6 +104,7 @@ export class FicheStructure extends FicheLogiBTP {
     const lecture = !this.estEnSaisie() || champ.lecture_seule;
     if (champ.reference === 'tiers') return this.#champTiers(champ, valeur, lecture);
     if (champ.reference === 'individu') return this.#champIndividu(champ, valeur, lecture);
+    if (champ.reference === 'individu_societe') return this.#champIndividuSociete(champ, valeur, lecture);
     if (champ.reference === 'commande') {
       const span = document.createElement('span');
       span.className = 'fiche-valeur';
@@ -155,6 +157,30 @@ export class FicheStructure extends FicheLogiBTP {
         resultats = await annuaire.rechercherPersonnes({ recherche: input.value, limite: 20 }).catch(() => []);
         liste.innerHTML = resultats.map((p) => `<option value="${echapper(`${p.code} – ${p.raison_sociale}`)}"></option>`).join('');
       }, 250);
+    });
+    return span;
+  }
+
+  /**
+   * Individu de notre structure (conducteur de travaux) : combo des individus rattachés à notre société et à ses
+   * agences (`individusStructure`, lue une fois par fiche), l'ID est enregistré ; contrôlé par le serveur.
+   */
+  #champIndividuSociete(champ, valeur, lecture) {
+    const span = document.createElement('span');
+    span.className = 'champ-tiers';
+    if (!this.individusSociete) {
+      this.individusSociete = individusStructure(this.services.annuaire).catch(() => []);
+    }
+    this.individusSociete.then((liste) => {
+      const choisi = liste.find((x) => Number(x.valeur) === Number(valeur));
+      if (lecture) {
+        span.innerHTML = valeur ? `<a href="/fiche/individu/${Number(valeur)}">${echapper(choisi?.libelle ?? `Individu ${valeur}`)}</a>` : '—';
+        return;
+      }
+      const combo = creerCombo({ valeur: valeur ?? '', options: liste.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })), titre: champ.aide ?? '' });
+      combo.classList.add('fiche-saisie-champ');
+      combo.addEventListener('change', () => { const v = combo.resoudre(); this.definirValeur(champ.code, v === '' || v === null ? null : Number(v)); });
+      span.replaceChildren(combo);
     });
     return span;
   }

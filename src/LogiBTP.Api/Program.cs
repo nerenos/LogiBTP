@@ -149,6 +149,7 @@ api.MapStructure();
 api.MapConsultations();
 api.MapRetenuesMarche();
 api.MapSousTraitanceAssistant();
+api.MapIndividusStructure();
 api.MapComptes();
 api.MapModulesServices();
 api.MapRessources();

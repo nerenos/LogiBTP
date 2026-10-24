@@ -16,11 +16,11 @@ INSERT INTO projet (prj_id, prj_code, prj_libelle, prj_tiers_id, prj_statut, prj
  (4, 'PRJ-2026-004', 'Garage poids lourds – extension de l''atelier', 40, 'EN_COURS', NULL, NULL, 210000, 'Sophie Laurent', 'Vénissieux'),
  (5, 'PRJ-2026-005', 'Centrale solaire en toiture', 41, 'PERDU', '2026-05-12', '2026-06-20', 145000, 'Paul Moreau', 'Givors');
 
-INSERT INTO chantier (cha_id, cha_code, cha_libelle, cha_aff_id, cha_prj_id, cha_tiers_id, cha_adresse, cha_code_postal, cha_ville, cha_statut, cha_date_ouverture, cha_date_fin_prevue, cha_conducteur) VALUES
- (1, 'CH-2026-001', 'Maison Martin – Lyon', NULL, 1, 18, '12 rue des Lilas', '69003', 'Lyon', 'OUVERT', '2026-10-05', '2027-03-31', 'Marc Petit'),
- (2, 'CH-2026-002', 'Résidence Les Érables – bâtiment A', 1, 2, 14, '4 allée des Érables', '69100', 'Villeurbanne', 'OUVERT', '2026-02-16', '2027-06-30', 'Marc Petit'),
- (3, 'CH-2026-003', 'Résidence Les Érables – bâtiment B', 1, 2, 14, '6 allée des Érables', '69100', 'Villeurbanne', 'OUVERT', '2026-04-01', '2027-09-30', 'Julien Roux'),
- (4, 'CH-2026-004', 'Mairie de Belleroche – mise en accessibilité', 2, NULL, 15, 'Place de la Mairie', '69770', 'Belleroche', 'TERMINE', '2026-04-06', '2026-07-31', 'Julien Roux');
+INSERT INTO chantier (cha_id, cha_code, cha_libelle, cha_aff_id, cha_prj_id, cha_tiers_id, cha_adresse, cha_code_postal, cha_ville, cha_statut, cha_date_ouverture, cha_date_fin_prevue, cha_conducteur_ind_id) VALUES
+ (1, 'CH-2026-001', 'Maison Martin – Lyon', NULL, 1, 18, '12 rue des Lilas', '69003', 'Lyon', 'OUVERT', '2026-10-05', '2027-03-31', 6),
+ (2, 'CH-2026-002', 'Résidence Les Érables – bâtiment A', 1, 2, 14, '4 allée des Érables', '69100', 'Villeurbanne', 'OUVERT', '2026-02-16', '2027-06-30', 6),
+ (3, 'CH-2026-003', 'Résidence Les Érables – bâtiment B', 1, 2, 14, '6 allée des Érables', '69100', 'Villeurbanne', 'OUVERT', '2026-04-01', '2027-09-30', 1010),
+ (4, 'CH-2026-004', 'Mairie de Belleroche – mise en accessibilité', 2, NULL, 15, 'Place de la Mairie', '69770', 'Belleroche', 'TERMINE', '2026-04-06', '2026-07-31', 1010);
 
 INSERT INTO marche (mar_id, mar_code, mar_libelle, mar_cha_id, mar_tiers_id, mar_nature, mar_montant_ht, mar_retenue_pct, mar_date, mar_statut) VALUES
  (1, 'M-2026-002-1', 'Gros œuvre – bâtiment A', 2, 14, 'P', 485000, 5, '2026-02-10', 'EN_COURS'),

@@ -30,6 +30,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             return;
         }
         if (type == "salarie") await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
+        // Conducteur de travaux d'un chantier : individu de notre structure (rattaché à notre société ou à un niveau inférieur).
+        if (type == "chantier" && ValidationFiche.Nombre(valeurs.GetValueOrDefault("conducteur_ind_id")) is { } conducteur
+            && !await IndividusStructure.EstDeLaStructureAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), (long)conducteur, ct))
+        {
+            throw ExceptionMetier.Invalide("CONDUCTEUR_STRUCTURE", "Le conducteur de travaux doit être un individu de notre société (ou de l'une de ses agences)");
+        }
         if (type == "personne")
         {
             // Identifiants enregistrés sans espaces ; pays en majuscules (comme FichePersonne.enregistrer).

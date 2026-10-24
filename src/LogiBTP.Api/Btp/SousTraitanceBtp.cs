@@ -114,11 +114,12 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
         }
     }
 
-    private sealed record ContexteFacture(long GroupeId, int? ChantierId, string? Tiers);
+    private sealed record ContexteFacture(long GroupeId, int? ChantierId, string? Tiers, long? Conducteur);
 
     /// <summary>
-    /// Demande reçue (ST16) : tâche du CRM à prendre par le service Chantier (sinon Achat), échéance = réception + 15
-    /// jours, rattachée à la facture, au marché et au chantier ; une tâche impossible à créer est journalisée.
+    /// Demande reçue (ST16) : tâche du CRM au conducteur de travaux du chantier du marché (individu de notre structure),
+    /// sinon à prendre par le service Chantier (sinon Achat) ; échéance = réception + 15 jours, rattachée à la facture, au
+    /// marché et au chantier ; une tâche impossible à créer est journalisée.
     /// </summary>
     public override async Task ApresDemandeAsync(SousTraitanceDbContext db, DemandePaiement d, FactureSousTraitance f, Utilisateur u, CancellationToken ct)
     {
@@ -129,17 +130,20 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
             var srv = await db.Database.SqlQueryRaw<int>(
                 "SELECT srv_id AS \"Value\" FROM service WHERE srv_code IN ('CHANTIER', 'ACHAT') ORDER BY srv_code = 'CHANTIER' DESC LIMIT 1").ToListAsync(ct);
             var c = await db.Database.SqlQueryRaw<ContexteFacture>("""
-                SELECT coalesce(d.ent_groupe_id, d.ent_id) AS groupe_id, d.ent_chantier_id AS chantier_id, p.per_raison_sociale AS tiers
-                FROM document d LEFT JOIN personne p ON p.per_id = d.ent_tiers_id WHERE d.ent_id = @id
+                SELECT coalesce(d.ent_groupe_id, d.ent_id) AS groupe_id, coalesce(d.ent_chantier_id, m.mar_cha_id) AS chantier_id, p.per_raison_sociale AS tiers,
+                       c.cha_conducteur_ind_id AS conducteur
+                FROM document d LEFT JOIN personne p ON p.per_id = d.ent_tiers_id LEFT JOIN marche m ON m.mar_id = d.ent_marche_id
+                LEFT JOIN chantier c ON c.cha_id = coalesce(d.ent_chantier_id, m.mar_cha_id)
+                WHERE d.ent_id = @id
                 """, new NpgsqlParameter("id", f.Id)).FirstAsync(ct);
             var liens = new List<LienSaisi> { new("document", c.GroupeId.ToString(), true), new("marche", f.MarcheId.ToString()) };
             if (c.ChantierId is int cha) liens.Add(new LienSaisi("chantier", cha.ToString()));
             var echeance = new DateTimeOffset(d.Delai.Echeance.ToDateTime(new TimeOnly(12, 0)));
             var mode = d.Mode == "DIRECT" ? "paiement direct" : "délégation de paiement";
-            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, srv.Count > 0 ? srv[0] : null,
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, c.Conducteur is null && srv.Count > 0 ? srv[0] : null,
                 $"Demande de {mode} à accepter : {c.Tiers ?? "sous-traitant"}, facture {f.Reference ?? f.Numero}",
                 $"<p>Montant demandé : {d.MontantDemande.ToString("N2", new System.Globalization.NumberFormatInfo { NumberGroupSeparator = " ", NumberDecimalSeparator = "," })} €. À accepter ou refuser avant le {d.Delai.Echeance:dd/MM/yyyy}.</p>",
-                null, echeance, null, false, false, false, liens, null), u, ct);
+                c.Conducteur, echeance, null, false, false, false, liens, null), u, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

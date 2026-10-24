@@ -161,6 +161,12 @@ export class FournisseurStructureMemoire {
 
   nomTiers(id) { return id ? this.annuaire?.personnes?.find((x) => x.id === Number(id))?.raison_sociale ?? null : null; }
 
+  /** Nom d'un individu de l'annuaire de démonstration (conducteur de travaux). */
+  nomIndividu(id) {
+    const i = id ? this.annuaire?.individus?.find((x) => x.id === Number(id)) : null;
+    return i ? [i.prenom, i.nom].filter(Boolean).join(' ') : null;
+  }
+
   /** Lignes des listes (comme v_liste_projets, v_liste_affaires, v_liste_chantiers, v_liste_marches). */
   lignesListe(source) {
     const docs = this.lignesDocuments();
@@ -190,6 +196,7 @@ export class FournisseurStructureMemoire {
         const marches = this.marches.filter((m) => m.cha_id === c.id);
         return {
           ...c, type_element: 'chantier', affaire: code(this.affaires, c.aff_id), projet: code(this.projets, c.prj_id), client: this.nomTiers(c.tiers_id),
+          conducteur: this.nomIndividu(c.conducteur_ind_id),
           nb_marches: marches.length, montant_marches: somme(marches), facture_ht: factures((d) => d.ent_chantier_id === c.id),
         };
       });

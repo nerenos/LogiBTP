@@ -137,8 +137,6 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
   reprend les rubriques (ST17).
 - [ ] Engagé et réalisé de la sous-traitance à reprendre dans la rentabilité continue du chantier (Exécution,
   possibilité 1) quand elle existera ; aujourd'hui bloc « Sous-traitance » de l'onglet Gestion du marché de vente (ST30).
-- [ ] Conducteur du chantier en texte libre (`cha_conducteur`) : la tâche d'acceptation d'une demande de paiement
-  direct va au service Chantier ; la donner au conducteur quand il sera un individu de l'annuaire (ST16).
 - [ ] Faire relire le cadre réglementaire (§ 3 : vigilance, autoliquidation, autofacturation, paiement direct) par
   l'expert-comptable ; écritures du paiement direct, de la délégation et de l'autoliquidation à préciser avec le
   module Comptabilité (ST14, ST15).

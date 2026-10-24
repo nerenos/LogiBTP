@@ -35,6 +35,14 @@ export async function individusSociete(annuaire) {
 }
 
 /**
+ * Individus de notre structure, agences comprises (conducteur de travaux des chantiers) : lus par le serveur
+ * (`GET /api/structure/individus`) ; hors ligne, rattachements de notre société dans l'annuaire de démonstration.
+ */
+export async function individusStructure(annuaire) {
+  try { return await api.individusStructure(); } catch { return individusSociete(annuaire); }
+}
+
+/**
  * Panneaux du devis BTP : mode de calcul des ouvrages et variables du document ($$) dans l'entête,
  * quantité issue du métré, perte et blocages de prix dans le détail, déboursé et marge, coefficient de frais annexes.
  */

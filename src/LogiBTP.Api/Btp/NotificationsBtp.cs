@@ -188,8 +188,9 @@ public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifi
 
 /// <summary>
 /// Demandes de paiement direct ou de délégation à accepter (ST16) : toutes les heures, une notification par demande non
-/// traitée à trois jours de son échéance (réception + 15 jours) ou en retard, aux membres du service Chantier, sinon Achat,
-/// sinon aux administrateurs ; clé par demande et par jour.
+/// traitée à trois jours de son échéance (réception + 15 jours) ou en retard, au conducteur de travaux du chantier du
+/// marché (son compte), sinon aux membres du service Chantier, sinon Achat, sinon aux administrateurs ; clé par demande et
+/// par jour.
 /// </summary>
 public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotifications
 {
@@ -197,7 +198,7 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
     public TimeSpan Periode => TimeSpan.FromHours(1);
     public IReadOnlyList<TypeNotification> Types { get; } = [new("sous_traitance", "PAIEMENT", "Demandes de paiement des sous-traitants à accepter")];
 
-    private sealed record Demande(long Id, int MarcheId, string? Marche, string? Tiers, string? Facture);
+    private sealed record Demande(long Id, int MarcheId, string? Marche, string? Tiers, string? Facture, string? Conducteur);
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
@@ -205,9 +206,11 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
         var demandes = await portee.GetRequiredService<LogiBTP.SousTraitance.Web.ServicePaiementDirect>().AEcheanceAsync(ct);
         if (demandes.Count == 0) return [];
         var infos = (await db.Database.SqlQueryRaw<Demande>("""
-            SELECT p.spd_id AS id, p.spd_marche_id AS marche_id, m.mar_code AS marche, t.per_raison_sociale AS tiers, coalesce(d.ent_reference_externe, d.ent_numero) AS facture
+            SELECT p.spd_id AS id, p.spd_marche_id AS marche_id, m.mar_code AS marche, t.per_raison_sociale AS tiers, coalesce(d.ent_reference_externe, d.ent_numero) AS facture,
+                   i.ind_utilisateur AS conducteur
             FROM stt_paiement_direct p JOIN marche m ON m.mar_id = p.spd_marche_id JOIN document d ON d.ent_id = p.spd_facture_id
-            LEFT JOIN personne t ON t.per_id = d.ent_tiers_id
+            LEFT JOIN personne t ON t.per_id = d.ent_tiers_id LEFT JOIN chantier c ON c.cha_id = m.mar_cha_id
+            LEFT JOIN individu i ON i.ind_id = c.cha_conducteur_ind_id
             WHERE p.spd_etat = 'RECUE'
             """).ToListAsync(ct)).ToDictionary(x => x.Id);
         var destinataires = await db.Database.SqlQueryRaw<string>("""
@@ -224,7 +227,7 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
         return (from d in demandes
                 where infos.ContainsKey(d.Id)
                 let i = infos[d.Id]
-                from dest in destinataires
+                from dest in i.Conducteur is { } cond ? [cond] : destinataires
                 select new NouvelleNotification(dest, "sous_traitance", "PAIEMENT",
                     d.Delai.Depasse ? $"Demande de paiement en retard : {i.Tiers}" : $"Demande de paiement à accepter avant le {d.Delai.Echeance:dd/MM/yyyy} : {i.Tiers}",
                     $"Facture {i.Facture}, marché {i.Marche}", d.Delai.Depasse ? "ATTENTION" : "INFO", $"/fiche/marche/{i.MarcheId}", null, null,

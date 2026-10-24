@@ -432,7 +432,7 @@ export const TYPES_FICHE = {
         groupes: [
           { titre: 'Identification', champs: ['code', 'libelle', 'aff_id', 'prj_id', 'tiers_id'] },
           { titre: 'Adresse', champs: ['adresse', 'code_postal', 'ville', 'contact_ind_id'] },
-          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur'] },
+          { titre: 'Suivi', champs: ['statut', 'date_ouverture', 'date_fin_prevue', 'conducteur_ind_id'] },
           { titre: 'Commentaire', champs: ['commentaire'], largeur: 'plein' },
         ],
       }, {
@@ -453,7 +453,7 @@ export const TYPES_FICHE = {
         c('statut', 'Statut', 'cha_statut', 'liste', { obligatoire: true, defaut: 'OUVERT', options: options(['OUVERT', 'Ouvert'], ['TERMINE', 'Terminé'], ['CLOS', 'Clos']) }),
         c('date_ouverture', 'Ouverture', 'cha_date_ouverture', 'date', { obligatoire: true }),
         c('date_fin_prevue', 'Fin prévue', 'cha_date_fin_prevue', 'date'),
-        c('conducteur', 'Conducteur de travaux', 'cha_conducteur', 'texte', { longueur: 100 }),
+        c('conducteur_ind_id', 'Conducteur de travaux', 'cha_conducteur_ind_id', 'nombre', { reference: 'individu_societe', aide: "Individu de notre société ou de l'une de ses agences (annuaire)" }),
         c('commentaire', 'Commentaire', 'cha_commentaire', 'zone'),
       ],
     },

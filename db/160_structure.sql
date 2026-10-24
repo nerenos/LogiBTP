@@ -48,7 +48,7 @@ CREATE TABLE chantier (
     cha_statut          VARCHAR(10)   NOT NULL DEFAULT 'OUVERT' CHECK (cha_statut IN ('OUVERT','TERMINE','CLOS')),
     cha_date_ouverture  DATE          NOT NULL DEFAULT current_date,
     cha_date_fin_prevue DATE,
-    cha_conducteur      VARCHAR(100),
+    cha_conducteur_ind_id BIGINT      REFERENCES individu(ind_id) ON DELETE SET NULL,   -- conducteur de travaux : individu de notre structure (db/215)
     cha_commentaire     TEXT,
     cha_proprietes      JSONB         NOT NULL DEFAULT '{}'
 );
@@ -111,7 +111,8 @@ FROM affaire a LEFT JOIN personne t ON t.per_id = a.aff_tiers_id;
 CREATE VIEW v_liste_chantiers AS
 SELECT c.cha_id AS id, 'chantier'::text AS type_element, c.cha_code AS code, c.cha_libelle AS libelle,
        a.aff_code AS affaire, p.prj_code AS projet, t.per_raison_sociale AS client, c.cha_ville AS ville, c.cha_statut AS statut,
-       c.cha_date_ouverture AS date_ouverture, c.cha_date_fin_prevue AS date_fin_prevue, c.cha_conducteur AS conducteur,
+       c.cha_date_ouverture AS date_ouverture, c.cha_date_fin_prevue AS date_fin_prevue,
+       (SELECT nullif(concat_ws(' ', i.ind_prenom, i.ind_nom), '')::varchar(100) FROM individu i WHERE i.ind_id = c.cha_conducteur_ind_id) AS conducteur,
        (SELECT count(*) FROM marche m WHERE m.mar_cha_id = c.cha_id) AS nb_marches,
        (SELECT coalesce(sum(m.mar_montant_ht), 0) FROM marche m WHERE m.mar_cha_id = c.cha_id) AS montant_marches,
        (SELECT coalesce(sum(f.facture_ht), 0) FROM v_facturation_document f WHERE f.ent_chantier_id = c.cha_id) AS facture_ht

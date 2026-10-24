@@ -363,6 +363,8 @@ export const api = {
   comparatifConsultation: (id) => appel('GET', `/structure/documents/${id}/consultation/comparatif`),
   sousTraiter: (id, d) => appel('POST', `/structure/documents/${id}/sous-traiter`, d),
   sousTraitants: () => appel('GET', '/structure/sous-traitants'),
+  // Individus de notre structure (société et agences) : conducteur de travaux des chantiers.
+  individusStructure: () => appel('GET', '/structure/individus'),
   engageSousTraitance: (marche) => appel('GET', `/structure/marches/${marche}/sous-traitance`),
   supprimerDocument: (id) => appel('DELETE', `/documents/${id}`),
   creerIndice: (id) => appel('POST', `/documents/${id}/indices`),

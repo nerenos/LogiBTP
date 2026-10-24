@@ -15,7 +15,7 @@ const NOUVEAU = 'nouveau';
  * refs : référentiels de la structure ; doc : entête de la commande ; totalHt : total HT ;
  * creerChantier(valeurs) → { id } ; creerMarche(valeurs) → { id }.
  */
-export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche }) {
+export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche, individus = [] }) {
   const chantiers = ouverts(refs.chantiers ?? []);
   const client = doc.ent_tiers_id ?? null;
   const projet = (refs.projets ?? []).find((p) => p.id === doc.ent_projet_id) ?? null;
@@ -49,7 +49,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche 
         <label>Code postal <input data-cha="code_postal"></label>
         <label>Ville <input data-cha="ville" value="${echapper(projet?.ville ?? '')}"></label>
         <label class="large">Affaire <span data-affaire></span></label>
-        <label>Conducteur de travaux <input data-cha="conducteur"></label>
+        <label>Conducteur de travaux <span data-conducteur></span></label>
         <label>Fin prévue <input type="date" data-cha="date_fin_prevue"></label>
       </div>
     </fieldset>
@@ -70,6 +70,9 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche 
   document.body.append(dlg);
   const $ = (s) => dlg.querySelector(s);
   $('[data-chantier]').append(comboChantier);
+  // Conducteur de travaux : individu de notre structure (annuaire).
+  const comboConducteur = creerCombo({ options: individus.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })) });
+  $('[data-conducteur]').replaceWith(comboConducteur);
   $('[data-affaire]').append(comboAffaire);
   $('[data-nature]').append(comboNature);
   const choix = () => dlg.querySelector('[name="choix"]:checked').value;
@@ -126,7 +129,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche 
           const v = Object.fromEntries([...dlg.querySelectorAll('[data-cha]')].map((el) => [el.dataset.cha, el.value.trim() || null]));
           if (!v.code || !v.libelle) { erreur('Code et libellé du chantier obligatoires'); return; }
           const cree = await creerChantier({
-            ...v, tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
+            ...v, conducteur_ind_id: comboConducteur.resoudre() === '' ? null : Number(comboConducteur.resoudre()), tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
             prj_id: projet?.id ?? null, statut: 'OUVERT', date_ouverture: new Date().toISOString().slice(0, 10),
           });
           chaId = cree.id;
