@@ -176,9 +176,12 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Installation
 
-- [ ] **Module d'installation** : enchaîner `env initialiser` (fait : clé des données générée, `.env` chiffré, un `.env`
-  fourni est conservé), création des bases et des rôles (`db/installation/roles.sql`), `pg_hba.conf`, certificat joker
-  et DNS, premier administrateur ; rotation de la clé des données (rechiffrer les valeurs `chiffre:v1:`).
+- [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), questions I1 à I14
+  tranchées le 24/10/2026) : un conteneur pour l'API (client servi par l'API, HTTPS par Kestrel) et un pour la base, hôte Windows en
+  réseau local, certificat (autorité LogiBTP, AD CS, certificat fourni ou Let's Encrypt par DNS) ; enchaîner
+  `env initialiser` (fait : clé des données générée, `.env` chiffré, un `.env` fourni est conservé), création des bases
+  et des rôles (`db/installation/roles.sql`), `pg_hba.conf`, certificat joker et DNS, premier administrateur ; rotation
+  de la clé des données (rechiffrer les valeurs `chiffre:v1:`).
 
 ## Interface
 
