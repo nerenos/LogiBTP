@@ -73,7 +73,12 @@ public static class Extensions
 
         // Documents
         api.MapGet("/documents", (string? type, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Lister(type, ct));
-        api.MapGet("/documents/{id:long}", (long id, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) => s.Charger(id, ct));
+        api.MapGet("/documents/{id:long}", async (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
+        {
+            var c = await s.Charger(id, ct);
+            await s.VerifierDroit(Utilisateur.Depuis(http), c.Document.EntTydId, "CONSULTER", ct);
+            return c;
+        });
         api.MapPost("/documents", async (CreationDocument c, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
         {
             var d = await s.Creer(c, Utilisateur.Depuis(http), ct);

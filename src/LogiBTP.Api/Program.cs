@@ -14,6 +14,7 @@ using LogiBTP.Stock.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Droits.Web;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
 using LogiBTP.Listes.Web;
@@ -72,6 +73,9 @@ builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSo
 // Module Authentification : comptes liés aux salariés et intérimaires, session par cookie (modules/authentification/db/005) ;
 // toutes les routes /api exigent une session, sauf la santé, la société et les routes publiques du module.
 builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Base, builder.Configuration.GetSection("Authentification"));
+// Module Droits : profils et arbre des droits (modules/droits/db/009, db/221) ; chaque route /api est rattachée à un nœud
+// (SpecialisationDroitsBtp.Routes), une route non déclarée est refusée.
+builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Sous-traitance (facultatif) : pièces exigées et conformité (modules/sous-traitance/db/092, db/210-212).
@@ -123,12 +127,14 @@ app.UseCors();
 app.UseErreursMetier();
 app.UseSocietes();
 app.UseAuthentificationSession();
+app.UseDroits();
 
 var api = app.MapGroup("/api");
 api.MapGet("/sante", (SpecialisationBtp s) => Results.Ok(new { statut = "ok", version_moteur = s.VersionMoteur }));
 // Société de la requête (bandeau du client) ; jamais la chaîne de connexion.
 api.MapGet("/societe", (SocieteCourante s) => Results.Ok(new { code = s.Code, libelle = s.Libelle, principale = s.Principale }));
 api.MapModuleAuthentification();
+api.MapModuleDroits();
 api.MapModuleDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>();
 api.MapModuleListe();
 api.MapModuleFiche();
@@ -168,5 +174,8 @@ api.MapModuleMail();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
+
+// Refus par défaut : toute route /api doit être rattachée à un nœud de droits (erreur au démarrage en développement).
+app.VerifierRoutesDroits();
 
 app.Run();

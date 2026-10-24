@@ -55,6 +55,18 @@ export const api = {
     personne: (type, id) => appel('GET', `/auth/personne?${new URLSearchParams({ type, id })}`),
     personnes: (recherche) => appel('GET', `/auth/personnes?${new URLSearchParams({ recherche })}`),
   },
+  // Module Droits : droits de la session, profils et arbre des droits (administration/profils).
+  droits: {
+    moi: () => appel('GET', '/droits/moi'),
+    catalogue: () => appel('GET', '/droits/catalogue'),
+    profils: () => appel('GET', '/droits/profils'),
+    creerProfil: (p) => appel('POST', '/droits/profils', p),
+    modifierProfil: (id, p) => appel('PUT', `/droits/profils/${id}`, p),
+    supprimerProfil: (id) => appel('DELETE', `/droits/profils/${id}`),
+    lignes: (id) => appel('GET', `/droits/profils/${id}/droits`),
+    remplacer: (id, lignes) => appel('PUT', `/droits/profils/${id}/droits`, { lignes }),
+    journal: (profil = '') => appel('GET', `/droits/journal?${new URLSearchParams({ profil })}`),
+  },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.
   execution: {
     types: () => appel('GET', '/execution/types'),

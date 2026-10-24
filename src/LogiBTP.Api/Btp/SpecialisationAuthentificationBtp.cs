@@ -14,6 +14,9 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
 {
+    /// <summary>Profil d'un nouveau compte : saisie mobile (pointage de ses heures), pour limiter les droits (A5 révisée).</summary>
+    public override string ProfilParDefaut => "MOBILE";
+
     private const string SqlPersonnes = """
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
                s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_matricule AS matricule, s.sal_id AS sal_id

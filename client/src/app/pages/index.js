@@ -39,6 +39,7 @@ import { PageParametresCrm } from './parametres-crm.js';
 import { PageConnexion } from './connexion.js';
 import { PageCompte } from './compte.js';
 import { PageParametresComptes } from './parametres-comptes.js';
+import { PageParametresDroits } from './parametres-droits.js';
 import { PageParametresRessources } from './parametres-ressources.js';
 import { PageHabilitations } from './habilitations.js';
 import { PageParametresCalendriers } from './parametres-calendriers.js';
@@ -110,6 +111,7 @@ export const ROUTES = [
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations à surveiller' },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
+  { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: 'Profils et droits' },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
   { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: 'Paramétrage du suivi (CRM)' },
   { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },

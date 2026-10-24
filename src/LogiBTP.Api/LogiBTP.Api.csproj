@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\modules\reglement\dotnet\LogiBTP.Reglements.Web\LogiBTP.Reglements.Web.csproj" />
     <ProjectReference Include="..\..\modules\crm\dotnet\LogiBTP.Crm.Web\LogiBTP.Crm.Web.csproj" />
     <ProjectReference Include="..\..\modules\authentification\dotnet\LogiBTP.Authentification.Web\LogiBTP.Authentification.Web.csproj" />
+    <ProjectReference Include="..\..\modules\droits\dotnet\LogiBTP.Droits.Web\LogiBTP.Droits.Web.csproj" />
     <ProjectReference Include="..\..\modules\execution\dotnet\LogiBTP.Execution.Web\LogiBTP.Execution.Web.csproj" />
     <ProjectReference Include="..\..\modules\sous-traitance\dotnet\LogiBTP.SousTraitance.Web\LogiBTP.SousTraitance.Web.csproj" />
     <ProjectReference Include="..\..\modules\stock\dotnet\LogiBTP.Stock.Web\LogiBTP.Stock.Web.csproj" />

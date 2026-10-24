@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/droits",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Droits LogiBTP : arbre des droits par profil (actions, portées, héritage), règles partagées avec le serveur",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

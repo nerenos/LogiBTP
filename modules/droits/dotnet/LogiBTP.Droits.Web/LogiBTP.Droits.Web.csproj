@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Droits.Web</RootNamespace>
+    <Description>Module Droits LogiBTP : profils et arbre des droits (EF Core), contrat IDroits du socle, intergiciel de contrôle des routes (refus par défaut), routes HTTP de gestion.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.Droits\LogiBTP.Droits.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -17,6 +17,7 @@
     "modules/reglement/js",
     "modules/crm/js",
     "modules/authentification/js",
+    "modules/droits/js",
     "modules/calendrier/js",
     "modules/mail/js",
     "modules/execution/js",

@@ -169,7 +169,8 @@ public static class Extensions
 
         // Gestion des comptes (administrateur).
         static ServiceAuthentification.Origine O(HttpContext http) => ServiceAuthentification.Origine.Depuis(http);
-        g.MapGet("/profils", (SpecialisationAuthentification s) => new { profils = s.Profils, defaut = s.ProfilParDefaut });
+        g.MapGet("/profils", async (SpecialisationAuthentification s, HttpContext http, CancellationToken ct) =>
+            new { profils = await s.ProfilsAsync(http.RequestServices, ct), defaut = s.ProfilParDefaut });
         g.MapGet("/comptes", (string? recherche, string? etat, HttpContext http, ServiceComptes s, CancellationToken ct) => s.ListeAsync(recherche, etat, Utilisateur.Depuis(http), ct));
         g.MapGet("/comptes/{id:long}", (long id, HttpContext http, ServiceComptes s, CancellationToken ct) => s.DetailAsync(id, Utilisateur.Depuis(http), ct));
         g.MapPost("/comptes", (CompteSaisi c, HttpContext http, ServiceComptes s, CancellationToken ct) => s.CreerAsync(c, Utilisateur.Depuis(http), O(http), ct));

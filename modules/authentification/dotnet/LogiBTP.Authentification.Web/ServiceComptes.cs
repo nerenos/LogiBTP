@@ -22,7 +22,7 @@ public sealed record PersonneEtCompte(PersonneCompte Personne, CompteDto? Compte
 /// unique, politique, profil permis, validité), modification (pseudo, profil, validité, activation : pris en compte au
 /// prochain appel de l'utilisateur), réinitialisation (mot de passe provisoire affiché une fois), déverrouillage, journal.
 /// </summary>
-public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentification specialisation, ServiceAuthentification auth)
+public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentification specialisation, ServiceAuthentification auth, IServiceProvider services)
 {
     private static void Admin(Utilisateur u)
     {
@@ -101,7 +101,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
 
     private async Task ControlerCompteAsync(string profil, DateOnly? validite, PersonneCompte? personne, CancellationToken ct)
     {
-        var erreurs = ReglesCompte.ControlerCompte(profil, validite, personne?.Regle, specialisation.Profils.Select(x => x.Code).ToList(), DateOnly.FromDateTime(DateTime.UtcNow));
+        var erreurs = ReglesCompte.ControlerCompte(profil, validite, personne?.Regle, (await specialisation.ProfilsAsync(services, ct)).Select(x => x.Code).ToList(), DateOnly.FromDateTime(DateTime.UtcNow));
         if (erreurs.Count > 0)
         {
             if (erreurs.Contains("PERSONNE_NON_AUTORISEE") && personne?.Motif is { } motif)

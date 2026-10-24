@@ -889,3 +889,10 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .fiche-dotation .signatures { display: flex; gap: 4rem; margin-top: 2rem; }
 .fiche-dotation .signatures div { flex: 1; min-height: 6rem; border-top: 1px solid var(--bord); padding-top: .4rem; }
 @media print { .fiche-dotation .sans-impression { display: none !important; } .fiche-dotation { color: #000; } }
+
+/* Profils et droits (module Droits) : arbre des droits, lignes héritées grisées. */
+.droits-arbre tr.herite td { color: var(--discret); }
+.droits-arbre tr.herite input[type="checkbox"] { opacity: .55; }
+.droits-arbre .espace-icone { display: inline-block; width: 1.6rem; }
+.droits-arbre .cellule-portee .combo { width: 6.5rem; }
+.droits-arbre td.centre, .droits-arbre th.centre { text-align: center; }

@@ -1,0 +1,91 @@
+{
+  "description": "Droits effectifs, cascade, sous-arbres, réapplication et contrôles (regles.js ↔ ReglesDroits.cs)",
+  "droits": {
+    "total": false,
+    "lignes": {
+      "documents": {},
+      "documents/V_DEVIS": { "CONSULTER": "TOUT", "MODIFIER": "TOUT", "CREER": "TOUT" },
+      "documents/V_FACTURE": { "CONSULTER": "TOUT" },
+      "fiches": { "CONSULTER": "TOUT" },
+      "fiches/salarie": { "CONSULTER": "SERVICE", "MODIFIER": "SOI", "RGPD": "SOI" },
+      "pointage": { "CONSULTER": "SOI", "MODIFIER": "SOI", "CREER": "SOI" },
+      "pointage/validation": {}
+    }
+  },
+  "effectifs": [
+    { "nom": "ligne propre", "noeud": "documents/V_DEVIS", "source": "documents/V_DEVIS", "actions": { "CONSULTER": "TOUT", "MODIFIER": "TOUT", "CREER": "TOUT" } },
+    { "nom": "racine propre et vide", "noeud": "documents", "source": "documents", "actions": {} },
+    { "nom": "hérité de la racine vide", "noeud": "documents/A_COMMANDE", "source": "documents", "actions": {} },
+    { "nom": "hérité d'un ancêtre", "noeud": "fiches/materiel", "source": "fiches", "actions": { "CONSULTER": "TOUT" } },
+    { "nom": "hérité sur plusieurs niveaux", "noeud": "fiches/materiel/onglet", "source": "fiches", "actions": { "CONSULTER": "TOUT" } },
+    { "nom": "propre vide sous un parent rempli", "noeud": "pointage/validation", "source": "pointage/validation", "actions": {} },
+    { "nom": "aucune ligne", "noeud": "stock", "source": null, "actions": {} }
+  ],
+  "portees": [
+    { "nom": "accordée", "noeud": "documents/V_DEVIS", "action": "MODIFIER", "attendu": "TOUT" },
+    { "nom": "alias transformer = consulter", "noeud": "documents/V_FACTURE", "action": "TRANSFORMER", "attendu": "TOUT" },
+    { "nom": "alias en minuscules", "noeud": "documents/V_FACTURE", "action": "voir", "attendu": "TOUT" },
+    { "nom": "refusée", "noeud": "documents/V_FACTURE", "action": "VALIDER", "attendu": null },
+    { "nom": "alias approuver = valider", "noeud": "documents/V_DEVIS", "action": "APPROUVER", "attendu": null },
+    { "nom": "alias confidentiel = RGPD", "noeud": "fiches/salarie", "action": "CONFIDENTIEL", "attendu": "SOI" },
+    { "nom": "portée service", "noeud": "fiches/salarie", "action": "CONSULTER", "attendu": "SERVICE" },
+    { "nom": "portée héritée", "noeud": "pointage/saisie", "action": "CREER", "attendu": "SOI" },
+    { "nom": "nœud inconnu", "noeud": "stock/magasin", "action": "CONSULTER", "attendu": null }
+  ],
+  "autorisations": [
+    { "nom": "portée suffisante", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "SOI", "attendu": true },
+    { "nom": "portée égale", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "SERVICE", "attendu": true },
+    { "nom": "portée insuffisante", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "TOUT", "attendu": false },
+    { "nom": "refusée", "noeud": "documents/V_DEVIS", "action": "SUPPRIMER", "minimum": "SOI", "attendu": false }
+  ],
+  "sous_arbres": [
+    { "nom": "racine vide avec un enfant", "noeud": "documents", "ecriture": false, "attendu": true },
+    { "nom": "écriture par un enfant", "noeud": "documents", "ecriture": true, "attendu": true },
+    { "nom": "consultation seule en lecture", "noeud": "documents/V_FACTURE", "ecriture": false, "attendu": true },
+    { "nom": "consultation seule en écriture", "noeud": "documents/V_FACTURE", "ecriture": true, "attendu": false },
+    { "nom": "écriture sur un enfant de fiches", "noeud": "fiches", "ecriture": true, "attendu": true },
+    { "nom": "rien", "noeud": "stock", "ecriture": false, "attendu": false },
+    { "nom": "préfixe sans séparateur", "noeud": "doc", "ecriture": false, "attendu": false }
+  ],
+  "total": [
+    { "nom": "profil total : tout", "noeud": "stock/magasin", "action": "FORCER", "attendu": "TOUT" }
+  ],
+  "cascade": [
+    { "nom": "valider coche consulter et modifier", "actions": {}, "action": "VALIDER", "portee": "TOUT",
+      "attendu": { "CONSULTER": "TOUT", "MODIFIER": "TOUT", "VALIDER": "TOUT" } },
+    { "nom": "portée relevée sur les précédentes", "actions": { "CONSULTER": "SOI" }, "action": "MODIFIER", "portee": "SERVICE",
+      "attendu": { "CONSULTER": "SERVICE", "MODIFIER": "SERVICE" } },
+    { "nom": "portée plus large conservée", "actions": { "CONSULTER": "TOUT" }, "action": "MODIFIER", "portee": "SOI",
+      "attendu": { "CONSULTER": "TOUT", "MODIFIER": "SOI" } },
+    { "nom": "action supplémentaire sans cascade", "actions": {}, "action": "RGPD", "portee": "TOUT",
+      "attendu": { "RGPD": "TOUT" } }
+  ],
+  "decocher": [
+    { "nom": "une seule action", "actions": { "CONSULTER": "TOUT", "MODIFIER": "TOUT", "VALIDER": "TOUT" }, "action": "MODIFIER",
+      "attendu": { "CONSULTER": "TOUT", "VALIDER": "TOUT" } }
+  ],
+  "reappliquer": [
+    { "nom": "descendants retirés", "noeud": "fiches", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "pointage", "pointage/validation"] },
+    { "nom": "préfixe sans séparateur conservé", "noeud": "point", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "fiches/salarie", "pointage", "pointage/validation"] }
+  ],
+  "profils": [
+    { "nom": "correct", "profil": { "code": "CHEF_EQUIPE", "libelle": "Chef d'équipe" }, "attendu": [] },
+    { "nom": "minuscules", "profil": { "code": "chef", "libelle": "Chef" }, "attendu": ["PROFIL_CODE"] },
+    { "nom": "trop court", "profil": { "code": "C", "libelle": "C" }, "attendu": ["PROFIL_CODE"] },
+    { "nom": "chiffre en tête", "profil": { "code": "1ER", "libelle": "Premier" }, "attendu": ["PROFIL_CODE"] },
+    { "nom": "libellé vide", "profil": { "code": "AB", "libelle": "  " }, "attendu": ["PROFIL_LIBELLE"] },
+    { "nom": "tout faux", "profil": { "code": "", "libelle": "" }, "attendu": ["PROFIL_CODE", "PROFIL_LIBELLE"] }
+  ],
+  "controles": {
+    "catalogue": {
+      "documents": ["CONSULTER", "MODIFIER", "VALIDER", "CREER", "SUPPRIMER", "DEVERROUILLER", "FORCER"],
+      "fiches/salarie": ["CONSULTER", "MODIFIER", "CREER", "SUPPRIMER", "DEVERROUILLER", "RGPD"]
+    },
+    "cas": [
+      { "nom": "correct", "lignes": { "documents": { "VALIDER": "TOUT" }, "fiches/salarie": { "RGPD": "SOI" } }, "attendu": [] },
+      { "nom": "nœud inconnu", "lignes": { "stock": { "CONSULTER": "TOUT" } }, "attendu": [{ "noeud": "stock", "code": "NOEUD_INVALIDE" }] },
+      { "nom": "action non permise et portée inconnue", "lignes": { "fiches/salarie": { "VALIDER": "TOUT", "CONSULTER": "PARTOUT" } },
+        "attendu": [{ "noeud": "fiches/salarie", "code": "PORTEE_INCONNUE", "action": "CONSULTER" }, { "noeud": "fiches/salarie", "code": "ACTION_INCONNUE", "action": "VALIDER" }] }
+    ]
+  }
+}

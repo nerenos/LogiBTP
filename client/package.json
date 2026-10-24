@@ -22,6 +22,7 @@
     "@lezer/highlight": "^1.2.5",
     "@logibtp/annuaire": "0.2.0",
     "@logibtp/authentification": "0.2.0",
+    "@logibtp/droits": "0.2.0",
     "@logibtp/bibliotheque": "0.2.0",
     "@logibtp/calendrier": "0.2.0",
     "@logibtp/crm": "0.2.0",

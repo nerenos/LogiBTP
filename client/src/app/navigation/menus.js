@@ -12,7 +12,7 @@ const D = (code, titre) => ({ url: `/document/nouveau?type=${code}`, titre });
 /** Menus métier (statiques). */
 export const MENUS_METIER = [
   {
-    code: 'ressources', libelle: '&Ressources', elements: [
+    code: 'ressources', libelle: '&Ressources', droit: 'ressources', elements: [
       { code: 'ressources', libelle: 'Toutes les ressources', icone: '🧰', url: L('ressources'), info: 'Équipes, salariés, intérim, matériel, sous-traitants' },
       { separateur: true },
       { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries'), creation: F('salarie', 'Nouveau salarié') },
@@ -23,7 +23,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'annuaire', libelle: '&Tiers', elements: [
+    code: 'annuaire', libelle: '&Tiers', droit: 'annuaire', elements: [
       { code: 'tiers', libelle: 'Tous les tiers', icone: '🏢', url: '/liste/tiers?vue=20', info: 'Sociétés, établissements, particuliers…', creation: F('personne', 'Nouvelle personne (société…)') },
       { code: 'clients', libelle: 'Clients et prospects', icone: '💶', url: '/liste/tiers?vue=21', creation: F('personne', 'Nouveau client', '?casquette=CLIENT') },
       { code: 'fournisseurs', libelle: 'Fournisseurs et loueurs', icone: '📦', url: '/liste/tiers?vue=22', creation: F('personne', 'Nouveau fournisseur', '?casquette=FOURNISSEUR') },
@@ -39,7 +39,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'bibliotheque', libelle: '&Bibliothèque', elements: [
+    code: 'bibliotheque', libelle: '&Bibliothèque', droit: 'bibliotheque', elements: [
       { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12', creation: F('element', 'Nouvel article') },
       { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13', creation: F('element', 'Nouvel ouvrage', '?type=OUVRAGE') },
       { code: 'ensembles', libelle: 'Ensembles (structures réutilisables)', icone: '🧩', url: '/liste/bibliotheque?vue=15', creation: F('element', 'Nouvel ensemble', '?type=ENSEMBLE') },
@@ -49,7 +49,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'affaires', libelle: 'A&ffaires', elements: [
+    code: 'affaires', libelle: 'A&ffaires', droit: 'structure', elements: [
       { code: 'projets', libelle: 'Projets (chiffrage)', icone: '🎯', url: L('projets'), creation: F('projet', 'Nouveau projet') },
       { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)', creation: F('affaire', 'Nouvelle affaire') },
       { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers'), creation: F('chantier', 'Nouveau chantier') },
@@ -57,7 +57,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'ventes', libelle: '&Ventes', elements: [
+    code: 'ventes', libelle: '&Ventes', droit: 'documents/V', elements: [
       { code: 'devis', libelle: 'Devis', icone: '📝', url: L('devis'), creation: D('V_DEVIS', 'Nouveau devis') },
       { code: 'commandes', libelle: 'Commandes clients', icone: '🤝', url: L('commandes'), creation: D('V_COMMANDE', 'Nouvelle commande client') },
       { code: 'livraisons', libelle: 'Bons de livraison et de retour', icone: '🚚', url: L('livraisons'), creation: D('V_RECEPTION', 'Nouveau bon de livraison') },
@@ -70,7 +70,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'achats', libelle: '&Achats', elements: [
+    code: 'achats', libelle: '&Achats', droit: 'documents/A', elements: [
       { code: 'ddp', libelle: 'Demandes de prix (DDP)', icone: '📨', url: L('achats_ddp'), creation: D('A_DEVIS', 'Nouvelle demande de prix') },
       { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes'), creation: D('A_COMMANDE', 'Nouvelle commande fournisseur') },
       { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons'), creation: D('A_RECEPTION', 'Nouveau bon de livraison fournisseur') },
@@ -79,7 +79,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'sous-traitance', libelle: 'Sous-&traitance', module: 'sous_traitance', elements: [
+    code: 'sous-traitance', libelle: 'Sous-&traitance', module: 'sous_traitance', droit: 'sous_traitance', elements: [
       { code: 'st-ao', libelle: "Appels d'offres", icone: '📨', url: L('st_ao'), type: 'T_AO', creation: D('T_AO', "Nouvel appel d'offres de sous-traitance") },
       { code: 'st-commandes', libelle: 'Commandes de sous-traitance', icone: '📝', url: L('st_commandes'), type: 'T_COMMANDE', creation: D('T_COMMANDE', 'Nouvelle commande de sous-traitance') },
       { code: 'st-factures', libelle: 'Factures de sous-traitance', icone: '🧾', url: L('st_factures'), type: 'T_FACTURE_AVT' },
@@ -89,7 +89,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'stock', libelle: 'Stoc&k', module: 'stock', elements: [
+    code: 'stock', libelle: 'Stoc&k', module: 'stock', droit: 'stock', elements: [
       { code: 'stock-magasin', libelle: 'Magasin (comptoir)', icone: '🏪', url: '/stock/magasin', info: 'Sorties et retours : chantiers, dotations des salariés (EPI, outillage)' },
       { code: 'stock-a-valider', libelle: 'Saisies de la borne à valider', icone: '✅', url: '/stock/a-valider', info: 'Sorties et retours saisis par les salariés : accepter ou refuser' },
       { code: 'stock-dotations', libelle: 'Dotations des salariés', icone: '🦺', url: '/stock/dotations', info: 'EPI et outillage dotés par salarié sur une période' },
@@ -106,7 +106,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'execution', libelle: '&Exécution', module: 'execution', elements: [
+    code: 'execution', libelle: '&Exécution', module: 'execution', droit: 'execution', elements: [
       { code: 'execution-atelier', libelle: 'Étapes à valider (atelier, tablette)', icone: '🧩', url: '/execution/atelier', info: 'Étapes des ordres dont vous êtes la ressource ou de votre service sur vos chantiers du jour' },
       { code: 'execution-synthese', libelle: 'Synthèse par chantier', icone: '🧭', url: '/execution/synthese', info: 'Un état par service (parcours et ordres), clic droit pour imposer un état' },
       { separateur: true },
@@ -130,7 +130,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'planning', libelle: 'P&lanning', module: 'planning', elements: [
+    code: 'planning', libelle: 'P&lanning', module: 'planning', droit: 'planning', elements: [
       { code: 'planning-atelier', libelle: 'Atelier par jour', icone: '🏭', url: '/planning?vue=ATELIER_JOUR' },
       { code: 'planning-pose', libelle: 'Pose par semaine', icone: '🔧', url: '/planning?vue=POSE_SEMAINE' },
       { code: 'planning-chantiers', libelle: 'Chantiers (Gantt)', icone: '📊', url: '/planning?vue=CHANTIERS_GANTT' },
@@ -143,7 +143,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'pointage', libelle: '&Pointage', module: 'pointage', elements: [
+    code: 'pointage', libelle: '&Pointage', module: 'pointage', droit: 'pointage', elements: [
       { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
       { code: 'pointage-synthese', libelle: 'Synthèse et validation', icone: '✅', url: '/pointage/synthese', info: 'Salariés à examiner, corrections, validation simple ou double, demandes de correction' },
       { code: 'pointage-export', libelle: 'Export de paie et valorisation', icone: '📤', url: '/pointage/export', info: 'Variables de paie des jours validés (CSV), coût des heures' },
@@ -157,7 +157,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'suivi', libelle: '&Suivi', module: 'crm', elements: [
+    code: 'suivi', libelle: '&Suivi', module: 'crm', droit: 'crm', elements: [
       { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
       { code: 'crm-rappels', libelle: 'Mes rappels', icone: '⏰', url: '/crm/rappels', info: 'Rouge : échu ou imminent · orange : bientôt · vert : à venir' },
       { code: 'crm-a-prendre', libelle: 'À prendre dans mes services', icone: '🙋', url: '/crm?vue=a_prendre' },
@@ -176,7 +176,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'documents-ged', libelle: '&GED', elements: [
+    code: 'documents-ged', libelle: '&GED', droit: 'ged', elements: [
       { code: 'ged', libelle: 'GED : tous les documents', icone: '📎', url: '/ged' },
       { code: 'coffre', libelle: 'Coffre-fort', icone: '🔒', url: '/ged?coffre=1', info: 'Documents administratifs scellés' },
       { code: 'ged-liste', libelle: 'Recherche de documents (liste)', icone: '🔎', url: L('ged') },
@@ -200,9 +200,11 @@ export function groupesThemes() {
 
 /**
  * Menu ou élément visible : sans module, ou module actif pour la société (`module` : code de `module_societe`) ; type de
- * document actif (`type` : code de `type_document`, E39).
+ * document actif (`type` : code de `type_document`, E39) ; droits du profil (`droit` : nœud du module Droits, au moins
+ * une action sur le nœud ou ses descendants).
  */
-const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false);
+const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false)
+  && (!x.droit || app.acces?.(x.droit) !== false);
 
 /** Éléments visibles, sans séparateur en tête, en fin ni en double. */
 export function elementsVisibles(app, elements) {
@@ -250,7 +252,8 @@ export function menus(app) {
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Messagerie : comptes, alias, modèles…', icone: '📧', url: '/parametres/mail', titre: 'Comptes de messagerie, expéditeur par usage, modèles, limitations des envois', desactive: !app.estAdmin() || !app.enLigne },
         { libelle: 'Connexions externes (OAuth)…', icone: '🔐', url: '/parametres/connexions', titre: 'Connexions aux services externes : Gmail…', desactive: !app.enLigne },
-        { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', desactive: !app.estAdmin() || !app.enLigne },
+        { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', droit: 'administration/comptes', desactive: !app.enLigne },
+        { libelle: 'Profils et droits…', icone: '🛡', url: '/parametres/droits', titre: 'Profils, droits par module, document, fiche et fonction ; journal des modifications', droit: 'administration/profils', desactive: !app.enLigne },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
         { code: 'notifications', libelle: 'Notifications : préférences…', icone: '🔔', url: '/parametres/notifications', desactive: !app.enLigne },

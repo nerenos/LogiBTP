@@ -12,6 +12,15 @@
 > binaires fournis : protection contre les curieux, `.env` lisible sur une autre machine), D28 (`.env` fourni
 > conservé) ; D32 (CSP : option C) et D33 (limites de débit) retenues le 24/10/2026. Déploiement en
 > réseau local et sur internet : § 10.
+>
+> **Réalisation** : lot 1 réalisé le 24/10/2026 (`modules/droits` : `regles.js` ↔ `ReglesDroits.cs`, jeu `01_droits.json`,
+> `009_droits.sql` ; cœur `SpecialisationDroitsBtp`, `db/221` ; page `/parametres/droits`) ; écarts : la portée n'est
+> réglable que sur le pointage (droit de saisie SOI / SERVICE / TOUT), seule à avoir une règle « soi / mon service » ;
+> les nœuds de documents sont regroupés par famille (`documents/V/V_DEVIS`) ; les modules sans contrôle fin (GED,
+> stock, planning…) sont contrôlés au niveau du module par la table des routes (lecture / écriture) ; la création d'une
+> fiche reste contrôlée par « modifier » ; les 119 contrôles `EstAdmin` existants restent (ADMIN = profil total) ; la
+> consultation d'un document est contrôlée à son ouverture ; les listes ne sont pas encore filtrées par type de
+> document (lot 2).
 
 ## 1. Note d'origine (résumé)
 

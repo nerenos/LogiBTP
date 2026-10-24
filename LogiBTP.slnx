@@ -63,6 +63,11 @@
     <Project Path="modules/authentification/dotnet/LogiBTP.Authentification.Web/LogiBTP.Authentification.Web.csproj" />
     <Project Path="modules/authentification/dotnet/LogiBTP.Authentification.Tests/LogiBTP.Authentification.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/droits/">
+    <Project Path="modules/droits/dotnet/LogiBTP.Droits/LogiBTP.Droits.csproj" />
+    <Project Path="modules/droits/dotnet/LogiBTP.Droits.Web/LogiBTP.Droits.Web.csproj" />
+    <Project Path="modules/droits/dotnet/LogiBTP.Droits.Tests/LogiBTP.Droits.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/calendrier/">
     <Project Path="modules/calendrier/dotnet/LogiBTP.Calendrier/LogiBTP.Calendrier.csproj" />
     <Project Path="modules/calendrier/dotnet/LogiBTP.Calendrier.Web/LogiBTP.Calendrier.Web.csproj" />

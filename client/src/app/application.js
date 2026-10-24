@@ -1,4 +1,5 @@
 import { Routeur, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
+import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
@@ -139,6 +140,8 @@ export class Application {
     if (this.enLigne) {
       try { for (const m of await api.modules()) this.modules.set(m.code, m.actif); } catch { /* table absente : tout est actif */ }
       try { this.typesActifs = new Set((await api.typesDocument()).map((t) => t.tyd_code)); } catch { this.typesActifs = null; }
+      // Droits du profil (module Droits) : menus et commandes masqués ; le serveur reste seul juge.
+      try { this.droits = await api.droits.moi(); } catch { this.droits = null; }
     }
     if (this.bandeau) { this.bandeau.menus = menus(this); this.bandeau.rendre(); }
   }
@@ -148,6 +151,12 @@ export class Application {
 
   /** Type de document actif (types non chargés, hors ligne : actif). */
   typeActif(code) { return !this.typesActifs || this.typesActifs.has(code); }
+
+  /** Accès à un nœud du module Droits (au moins une action sur lui ou ses descendants) ; hors ligne ou droits inconnus : oui. */
+  acces(noeud, ecriture = false) { return !this.droits || accesSousArbre(this.droits, noeud, ecriture); }
+
+  /** Action permise sur un nœud du module Droits (au moins la portée demandée) ; hors ligne ou droits inconnus : oui. */
+  peut(noeud, action, portee = 'SOI') { return !this.droits || autorise(this.droits, noeud, action, portee); }
 
   profil() { return this.enLigne ? (this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
   utilisateur() { return this.enLigne ? (this.session?.code ?? '') : 'demo'; }

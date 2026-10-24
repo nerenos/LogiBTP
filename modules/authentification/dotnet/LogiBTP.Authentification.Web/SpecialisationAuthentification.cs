@@ -1,3 +1,5 @@
+using LogiBTP.Socle.Web;
+
 namespace LogiBTP.Authentification.Web;
 
 /// <summary>Profil proposé pour un compte (le module complet des droits viendra ensuite : A2, un profil par compte).</summary>
@@ -19,8 +21,14 @@ public sealed record PersonneCompte(string Type, string Id, string Libelle, bool
 /// </summary>
 public abstract class SpecialisationAuthentification
 {
-    /// <summary>Profils attribuables (codes déjà employés par les droits de l'application).</summary>
+    /// <summary>Profils attribuables sans module Droits (codes employés par les droits historiques de l'application).</summary>
     public virtual IReadOnlyList<ProfilCompte> Profils { get; } = [new("ADMIN", "Administrateur"), new("SAISIE", "Saisie")];
+
+    /// <summary>Profils attribuables : ceux du module Droits s'il est branché (IDroits du socle), sinon <see cref="Profils"/>.</summary>
+    public virtual async Task<IReadOnlyList<ProfilCompte>> ProfilsAsync(IServiceProvider services, CancellationToken ct) =>
+        services.GetService(typeof(IDroits)) is IDroits droits
+            ? (await droits.ProfilsAsync(ct)).Select(p => new ProfilCompte(p.Code, p.Libelle)).ToList()
+            : Profils;
 
     /// <summary>Profil d'un nouveau compte (A5).</summary>
     public virtual string ProfilParDefaut => "SAISIE";

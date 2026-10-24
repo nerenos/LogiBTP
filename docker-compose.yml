@@ -19,6 +19,7 @@ services:
       - ./modules/mail/db/007b_mail_reception.sql:/docker-entrypoint-initdb.d/007b_mail_reception.sql:ro
       - ./modules/mail/db/007c_mail_reconnaissance.sql:/docker-entrypoint-initdb.d/007c_mail_reconnaissance.sql:ro
       - ./modules/notification/db/008_notification.sql:/docker-entrypoint-initdb.d/008_notification.sql:ro
+      - ./modules/droits/db/009_droits.sql:/docker-entrypoint-initdb.d/009_droits.sql:ro
       - ./modules/document/db/010_document_schema.sql:/docker-entrypoint-initdb.d/010_document_schema.sql:ro
       - ./modules/document/db/011_document_reference.sql:/docker-entrypoint-initdb.d/011_document_reference.sql:ro
       - ./modules/document/db/012_document_verrou.sql:/docker-entrypoint-initdb.d/012_document_verrou.sql:ro
@@ -147,6 +148,7 @@ services:
       - ./db/218_stock_approvisionnement.sql:/docker-entrypoint-initdb.d/218_stock_approvisionnement.sql:ro
       - ./db/219_stock_dotations.sql:/docker-entrypoint-initdb.d/219_stock_dotations.sql:ro
       - ./db/220_stock_borne.sql:/docker-entrypoint-initdb.d/220_stock_borne.sql:ro
+      - ./db/221_droits.sql:/docker-entrypoint-initdb.d/221_droits.sql:ro
       # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.

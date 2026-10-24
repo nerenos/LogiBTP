@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Droits</RootNamespace>
+    <Description>Module Droits LogiBTP : règles de l'arbre des droits (héritage, actions, portées, alias), partagées avec regles.js.</Description>
+  </PropertyGroup>
+
+</Project>

@@ -18,3 +18,20 @@ describe('menus et modules actifs', () => {
     expect(catalogueRaccourcis(app(['reglement'])).map((e) => e.code)).not.toContain('reglements-fournisseurs');
   });
 });
+
+describe('menus et droits du profil', () => {
+  // Profil de saisie mobile : le pointage seulement (module Droits, accesSousArbre).
+  const mobile = { ...app(), acces: (n) => n === 'pointage', peutGererThemes: () => false, estAdmin: () => false, enLigne: true };
+  it('ne montre que les menus des nœuds accessibles', () => {
+    const codes = menus(mobile).map((m) => m.code);
+    expect(codes).toContain('pointage');
+    expect(codes).not.toContain('ventes');
+    expect(codes).not.toContain('stock');
+    expect(codes).toContain('parametres');
+  });
+  it('masque la gestion des profils et des comptes', () => {
+    const parametres = menus(mobile).find((m) => m.code === 'parametres').elements().map((e) => e.url);
+    expect(parametres).not.toContain('/parametres/droits');
+    expect(parametres).not.toContain('/parametres/comptes');
+  });
+});

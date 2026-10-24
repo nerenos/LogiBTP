@@ -60,7 +60,7 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 
 ### Droits et partage
 
-- [ ] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), questions tranchées) :
+- [ ] **Module de droits** ([analyse](documentation/conception/ANALYSE-MODULE-DROITS.md), lot 1 réalisé : profils, arbre, refus par défaut des routes) :
   droits fins par profil, portée et élément, montants de validation, usurpation, RGPD, JWT avec
   rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP, identifiants API, deux clés
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,

@@ -16,7 +16,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     PersistanceDocument<TDoc, TLigne, TComplet> persistance,
     RegistreHandlers<TDoc, TLigne> handlers,
     SpecialisationDocument<TDoc, TLigne, TComplet> specialisation,
-    NettoyageHtml html)
+    NettoyageHtml html,
+    IDroits? droits = null)
     where TDoc : Document, new()
     where TLigne : DocumentLigne, new()
     where TComplet : DocumentComplet<TDoc, TLigne>, new()
@@ -43,7 +44,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             TauxTva = await db.TauxTva.AsNoTracking().Where(t => t.TtvActif).OrderBy(t => t.TtvCode).ToListAsync(ct),
             Unites = await db.Unites.AsNoTracking().Where(x => x.UntActif).OrderBy(x => x.UntOrdre).ThenBy(x => x.UntCode).ToListAsync(ct),
             Transformations = await db.TransformationsAutorisees.AsNoTracking().Where(t => t.TraSourceTydId == type.TydId).ToListAsync(ct),
-            Droits = await db.DroitsDocument.AsNoTracking().Where(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId).Select(d => d.DrtAction).ToListAsync(ct),
+            Droits = await ActionsAsync(u, type, ct),
             Etiquettes = (await db.Set<EtiquetteLigne>().AsNoTracking().Where(e => e.EtlActif).OrderBy(e => e.EtlOrdre).ToListAsync(ct))
                 .Select(e => new EtiquetteDto(e.EtlCode, e.EtlLibelle, e.EtlCouleur, e.EtlOrdre, e.EtlActif)).ToList(),
             CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
@@ -54,12 +55,31 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         };
     }
 
+    /// <summary>Actions du type employées par le module (noms historiques de droit_document).</summary>
+    public static readonly string[] ActionsDocument = ["CONSULTER", "CREER", "MODIFIER", "VALIDER", "TRANSFORMER", "SUPPRIMER", "APPROUVER", "DEVALIDER", "FORCER"];
+
+    /// <summary>Nœud du type dans l'arbre des droits (module Droits) : documents/{famille}/{code}.</summary>
+    public static string NoeudDroits(TypeDocument t) => $"documents/{t.TydFamille}/{t.TydCode}";
+
+    /// <summary>
+    /// Droit d'une action sur un type : par le module Droits s'il est branché (IDroits, alias des noms historiques), sinon
+    /// par droit_document (sans module Droits, la consultation n'est pas contrôlée).
+    /// </summary>
+    protected internal async Task<bool> PeutAsync(Utilisateur u, TypeDocument type, string action, CancellationToken ct) =>
+        droits is not null ? await droits.AutoriseAsync(u, NoeudDroits(type), action, ct)
+        : action == "CONSULTER" || await db.DroitsDocument.AnyAsync(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId && d.DrtAction == action, ct);
+
+    protected async Task<List<string>> ActionsAsync(Utilisateur u, TypeDocument type, CancellationToken ct)
+    {
+        if (droits is null) return await db.DroitsDocument.AsNoTracking().Where(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId).Select(d => d.DrtAction).ToListAsync(ct);
+        var actions = new List<string>();
+        foreach (var a in ActionsDocument) if (await droits.AutoriseAsync(u, NoeudDroits(type), a, ct)) actions.Add(a);
+        return actions;
+    }
+
     protected internal async Task VerifierDroit(Utilisateur u, int tydId, string action, CancellationToken ct)
     {
-        if (!await db.DroitsDocument.AnyAsync(d => d.DrtProfil == u.Profil && d.DrtTydId == tydId && d.DrtAction == action, ct))
-        {
-            throw ExceptionMetier.AccesRefuse(action);
-        }
+        if (!await PeutAsync(u, await Type(tydId, ct), action, ct)) throw ExceptionMetier.AccesRefuse(action);
     }
 
     protected internal async Task<TypeDocument> Type(int tydId, CancellationToken ct) =>

@@ -5,7 +5,7 @@ Vue d'ensemble des modules et de leurs liens. Le détail de chaque partie est da
 [liste](modules/liste/CLAUDE.md) · [fiche](modules/fiche/CLAUDE.md) · [ged](modules/ged/CLAUDE.md) ·
 [bibliotheque](modules/bibliotheque/CLAUDE.md) · [annuaire](modules/annuaire/CLAUDE.md) ·
 [entreprises-fr](modules/entreprises-fr/CLAUDE.md) · [graphe](modules/graphe/CLAUDE.md) ·
-[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · [stock](modules/stock/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
+[navigation](modules/navigation/CLAUDE.md) · [import](modules/import/CLAUDE.md) · [edition](modules/edition/CLAUDE.md) · [reglement](modules/reglement/CLAUDE.md) · [crm](modules/crm/CLAUDE.md) · [authentification](modules/authentification/CLAUDE.md) · [droits](modules/droits/CLAUDE.md) · [calendrier](modules/calendrier/CLAUDE.md) · [notification](modules/notification/CLAUDE.md) · [oauth](modules/oauth/CLAUDE.md) · [mail](modules/mail/CLAUDE.md) · [execution](modules/execution/CLAUDE.md) · [pointage](modules/pointage/CLAUDE.md) · [planning](modules/planning/CLAUDE.md) · [stock](modules/stock/CLAUDE.md) · cœur : [client](client/CLAUDE.md),
 [src](src/CLAUDE.md), [db](db/CLAUDE.md).
 
 ## Couches et dépendances
@@ -48,6 +48,7 @@ graph TD
 | stock (facultatif) | socle | `LogiBTP.Stock(.Web)` → Socle.Web | 093 | cœur (lieux = chantiers, articles = éléments, mouvements écrits à la validation des pièces ; pages `/stock`, `/parametres/stock`) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
+| droits | — (règles seules) | `LogiBTP.Droits(.Web)` → Socle.Web | 009 | cœur (catalogue des nœuds, table des routes ; `IDroits` du socle lu par Document, Fiche, CRM, Authentification ; page `/parametres/droits`) |
 
 Liaisons croisées des modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur (`Btp/LiaisonsBtp.cs`, spécialisations, `db/202`), jamais d'un module vers un autre.
 
@@ -75,7 +76,8 @@ sous-domaine via `AddSocietes`). `LogiBTP.Calcul` (moteur BTP) → `LogiBTP.Doma
 | mail | `pages/mail.js` (`/mail`, `/mail/nouveau`, `/mail/message/:id`), `pages/parametres-mail.js`, bouton 📧 Envoyer de la page document | `SpecialisationMailBtp` (`Btp/MailBtp.cs` : document → variables, destinataires, pièces « à envoyer » ; pièces GED ; après envoi : GED, statut ENVOYE, note du CRM ; signaux → notifications `mail`) | 206 (clé étrangère OAuth, compte de service `mail_fond`) |
 | oauth | `pages/parametres-connexions.js` (`/parametres/connexions`), widget `oauth-alertes` | `SpecialisationOAuthBtp` (`Btp/OAuthBtp.cs` : services de l'utilisateur, destinataires des droits, signaux → notifications `oauth`) | — |
 | calendrier | `pages/parametres-calendriers.js` (`@logibtp/calendrier` : contrôles, aperçu des fériés) | `SpecialisationCalendrierBtp` (utilisations), `CalendriersBtp` (calendrier effectif d'un salarié ou d'un matériel, fermetures de son service) | 196 (`srv_cal_id`, `sal_cal_id`, `mat_cal_id`) |
-| authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur`) | — |
+| authentification | `pages/connexion.js`, `pages/compte.js`, session de `Application` (`session`, `deconnecter`, 401 → `/connexion`) | `SpecialisationAuthentificationBtp` (`salarie` → individu, `ind_utilisateur` ; profil par défaut MOBILE) | — |
+| droits | `app.acces` / `app.peut` (`api.droits.moi`), propriété `droit` des menus, `pages/parametres-droits.js` | `SpecialisationDroitsBtp` (catalogue : documents par famille, fiches, modules, administration ; table des routes `/api`) | 221 (reprise des droits historiques) |
 | crm | `crm/*` (`PanneauSuivi` : onglet Suivi des documents et des fiches), `pages/crm.js`, `crm-note.js`, `crm-suivi.js`, `parametres-crm.js`, menu Suivi | `SpecialisationCrmBtp` | 194 (élément GED `crm_note`, catégorie `crm`) |
 | reglement | `pages/reglements.js` (`/reglements?sens=E|D&tiers=`), colonnes réglé / reste de l'onglet Gestion (`fiche-structure.js`) | `SpecialisationReglementBtp` (échéances `document_echeance`) | 175 (clé étrangère des pointages) |
 | edition | `editions/modeles.js` (modèles fournis → `db/191`), `editions/polices.js`, `pages/edition.js` (`/edition`), `pages/parametres-editions.js`, bouton 🖨 Aperçu de la page document | `SpecialisationEditionBtp`, `SourceDocumentEdition`, `MapEditionsBtp` (mentions) | 190, 191 |

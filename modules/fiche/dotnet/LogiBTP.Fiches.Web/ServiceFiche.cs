@@ -23,7 +23,7 @@ public sealed class CacheTypesColonnes
 /// (verrou détenu, empreinte inchangée, ligne complète validée), création, paramétrage. Mots de passe (type motdepasse) :
 /// chiffrés en base par la chaîne de l'installation, déchiffrés en mémoire, jamais envoyés sans demande (RevelerSecret).
 /// </summary>
-public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache, Chiffrement chiffrement)
+public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache, Chiffrement chiffrement, IDroits? droits = null)
 {
     /// <summary>Nombre maximal de valeurs lues par la requête d'une liste.</summary>
     public const int MaxOptionsRequete = 1000;
@@ -36,10 +36,23 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<DroitsFiche> Droits(string type, Utilisateur u, CancellationToken ct)
     {
-        var actions = await db.Droits.AsNoTracking().Where(d => d.DrfType == type && d.DrfProfil == u.Profil).Select(d => d.DrfAction).ToListAsync(ct);
+        // Module Droits branché : nœud fiches/{type} (VOIR, DEBLOQUER, CONFIDENTIEL : alias) ; sinon droit_fiche.
+        var actions = droits is null
+            ? await db.Droits.AsNoTracking().Where(d => d.DrfType == type && d.DrfProfil == u.Profil).Select(d => d.DrfAction).ToListAsync(ct)
+            : await ActionsDroitsAsync(droits, type, u, ct);
         var plus = specialisation.DroitsSupplementaires(type, u);
         return new DroitsFiche(actions.Contains("VOIR") || plus.Voir, actions.Contains("MODIFIER") || plus.Modifier,
             actions.Contains("DEBLOQUER") || plus.Debloquer, actions.Contains("CONFIDENTIEL") || plus.Confidentiel, actions.Contains("SUPPRIMER") || plus.Supprimer);
+    }
+
+    private static async Task<List<string>> ActionsDroitsAsync(IDroits droits, string type, Utilisateur u, CancellationToken ct)
+    {
+        var actions = new List<string>();
+        foreach (var a in new[] { "VOIR", "MODIFIER", "DEBLOQUER", "CONFIDENTIEL", "SUPPRIMER" })
+        {
+            if (await droits.AutoriseAsync(u, $"fiches/{type}", a, ct)) actions.Add(a);
+        }
+        return actions;
     }
 
     protected async Task<DroitsFiche> Exiger(string type, Utilisateur u, Func<DroitsFiche, bool> droit, string action, CancellationToken ct)

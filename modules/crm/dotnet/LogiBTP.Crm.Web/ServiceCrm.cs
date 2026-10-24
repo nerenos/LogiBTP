@@ -52,7 +52,7 @@ public sealed record NoteDetail(NoteListe Note, List<ElementDecrit> Liens, strin
 /// modification, suppression, prise en charge par un membre du service, rendu au service, lecture), masquage des notes
 /// privées et RGPD, levée du masquage journalisée (C14, C21, C24, C28).
 /// </summary>
-public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage)
+public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage, IDroits? droitsProfil = null)
 {
     private sealed record Courant(Utilisateur U, long? Ind, HashSet<int> Services, bool Superviser, bool Rgpd);
 
@@ -60,7 +60,10 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
     {
         var ind = await specialisation.IndividuAsync(db, u.Code, ct);
         var services = ind is long i ? (await specialisation.ServicesIndividuAsync(db, i, ct)).Select(s => s.Id).ToHashSet() : [];
-        var droits = await db.Droits.AsNoTracking().Where(d => d.CdrProfil == u.Profil).Select(d => d.CdrAction).ToListAsync(ct);
+        // Module Droits branché : actions SUPERVISER et RGPD du nœud crm ; sinon crm_droit.
+        var droits = droitsProfil is null
+            ? await db.Droits.AsNoTracking().Where(d => d.CdrProfil == u.Profil).Select(d => d.CdrAction).ToListAsync(ct)
+            : [await droitsProfil.AutoriseAsync(u, "crm", "SUPERVISER", ct) ? "SUPERVISER" : "", await droitsProfil.AutoriseAsync(u, "crm", "RGPD", ct) ? "RGPD" : ""];
         return new Courant(u, ind, services, droits.Contains("SUPERVISER"), droits.Contains("RGPD"));
     }
 
