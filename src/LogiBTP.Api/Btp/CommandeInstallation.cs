@@ -20,7 +20,9 @@ namespace LogiBTP.Api.Btp;
 ///   certificat N jours (60) avant l'échéance ; certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] :
 ///   certificat fourni (PKCS#12 : mot de passe dans LOGIBTP_CERTIFICAT_MOT_DE_PASSE) ; certificat etat ;
 ///   certificat base --nom N --adresses-api A : base sur une autre machine (TLS) ; base droits : roles.sql sur toutes les bases ;
-///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données.
+///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données ;
+///   base mettre-a-jour : scripts du manifeste non appliqués, droits, conversions, sur toutes les bases ; base adopter :
+///   base existante inscrite au journal ; cle-donnees changer | rechiffrer : rotation de la clé des données.
 /// Aucun secret n'est jamais affiché.
 /// </summary>
 public static class CommandeInstallation
@@ -37,6 +39,7 @@ public static class CommandeInstallation
                 installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
                 installation certificat base --nom N --adresses-api A [--certificat F --cle K] | installation base droits
                 installation sauvegarde chiffrer|dechiffrer DOSSIER
+                installation base mettre-a-jour | base adopter (--base NOM | --toutes) --confirmer | cle-donnees changer | rechiffrer
         """;
 
     public static async Task<int> ExecuterAsync(string[] args, string dossier, TextWriter sortie)
@@ -60,6 +63,10 @@ public static class CommandeInstallation
                 ("certificat", "etat") => EtatCertificat(sortie),
                 ("certificat", "base") => CertificatBase(args, dossier, sortie),
                 ("base", "droits") => await DroitsBasesAsync(dossier, sortie),
+                ("base", "mettre-a-jour") => await MettreAJourAsync(dossier, sortie),
+                ("base", "adopter") => await AdopterAsync(args, dossier, sortie),
+                ("cle-donnees", "changer") => await ChangerCleAsync(dossier, sortie),
+                ("cle-donnees", "rechiffrer") => await RechiffrerAsync(dossier, sortie),
                 ("sauvegarde", "chiffrer" or "dechiffrer") when args.Length > 2 => ChiffrerSauvegarde(args[1] == "chiffrer", args[2], dossier, sortie),
                 _ => Erreur(sortie, Usage),
             };
@@ -279,6 +286,8 @@ public static class CommandeInstallation
             sortie.WriteLine($"Certificat valable encore {Math.Floor(reste)} jour(s) : rien à faire (renouvellement à {avant} jours)");
             return 0;
         }
+        if (infos.Origine == OrigineCertificat.LetsEncrypt)
+            throw new InvalidOperationException("Certificat Let's Encrypt : renouvelé par Certificat-LetsEncrypt.ps1 -Renouveler (tâche planifiée)");
         if (infos.Origine != OrigineCertificat.LogiBtp)
             throw new InvalidOperationException($"Certificat {infos.Origine} à renouveler auprès de son émetteur ({infos.Emetteur}), puis « installation certificat importer »");
         return CreerCertificat([], dossier, sortie);
@@ -368,9 +377,12 @@ public static class CommandeInstallation
 
     private static int ChiffrerSauvegarde(bool chiffrer, string jeu, string dossier, TextWriter sortie)
     {
-        var cle = Exiger(Configuration(dossier), ExtensionsConfiguration.CleChiffrement);
+        var config = Configuration(dossier);
+        var cle = Exiger(config, ExtensionsConfiguration.CleChiffrement);
         if (!Directory.Exists(jeu)) throw new ArgumentException($"Dossier introuvable : {jeu}");
-        var n = chiffrer ? ChiffrementSauvegarde.ChiffrerDossier(jeu, cle) : ChiffrementSauvegarde.DechiffrerDossier(jeu, cle);
+        // Déchiffrement : clé courante, puis clés précédentes (sauvegardes antérieures à une rotation).
+        var n = chiffrer ? ChiffrementSauvegarde.ChiffrerDossier(jeu, cle)
+            : ChiffrementSauvegarde.DechiffrerDossier(jeu, [cle, .. Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"])]);
         sortie.WriteLine($"{n} fichier(s) {(chiffrer ? "chiffré(s)" : "déchiffré(s)")}");
         return 0;
     }
@@ -386,6 +398,102 @@ public static class CommandeInstallation
         var reste = (int)Math.Floor((infos.Fin - DateTimeOffset.Now).TotalDays);
         sortie.WriteLine($"{infos.Origine} : {string.Join(", ", infos.Noms)} ; émis par {infos.Emetteur} ; valable jusqu'au {infos.Fin:dd/MM/yyyy} ({reste} jour(s))");
         if (infos.EmpreinteRacine is not null) sortie.WriteLine($"Empreinte SHA-256 de l'autorité : {infos.EmpreinteRacine}");
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- mise à jour et rotation (lot 4)
+
+    /// <summary>
+    /// Mise à jour de toutes les bases (§ 7.2) : scripts du manifeste absents du journal installation_script, dans l'ordre,
+    /// sous logibtp_schema, scripts rejouables, droits des rôles, conversions de données. Une base sans journal (créée
+    /// hors de l'installeur) est refusée : « installation base adopter ».
+    /// </summary>
+    private static async Task<int> MettreAJourAsync(string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var racine = RacineSql();
+        var manifeste = ManifesteScripts.Lire(racine);
+        var bd = new BaseDonnees(sortie);
+        var modifies = 0;
+        foreach (var (code, base_) in Bases(dossier, modele))
+        {
+            var schema = modele.Chaine(base_, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"));
+            if ((await BaseDonnees.ScriptsAppliquesAsync(schema)).Count == 0)
+                throw new InvalidOperationException($"La base {base_} n'a pas de journal des scripts : « installation base adopter --base {base_} --confirmer » si elle est à jour du manifeste précédent");
+            modifies += (await bd.AppliquerAsync(schema, racine, manifeste.Scripts)).Modifies.Count;
+        }
+        await DroitsBasesAsync(dossier, sortie);
+        await ConvertirAsync(dossier, sortie);
+        if (modifies > 0) sortie.WriteLine($"Attention : {modifies} script(s) modifié(s) après leur application, non rejoués (une correction doit être un nouveau script)");
+        sortie.WriteLine("Bases à jour");
+        return 0;
+    }
+
+    /// <summary>
+    /// Base créée hors de l'installeur (base de développement, installation antérieure) : les scripts du manifeste sont
+    /// inscrits au journal sans être exécutés. À n'employer que pour une base à jour de ces scripts.
+    /// </summary>
+    private static async Task<int> AdopterAsync(string[] args, string dossier, TextWriter sortie)
+    {
+        if (!args.Contains("--confirmer")) throw new ArgumentException("--confirmer obligatoire : la base doit déjà contenir tous les scripts du manifeste");
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var cible = Option(args, "--base");
+        var bases = Bases(dossier, modele).Select(b => b.Base).Where(b => args.Contains("--toutes") || b == cible).ToList();
+        if (bases.Count == 0) throw new ArgumentException("--base NOM ou --toutes");
+        var racine = RacineSql();
+        foreach (var b in bases)
+            await new BaseDonnees(sortie).AppliquerAsync(modele.Chaine(b, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA")), racine, ManifesteScripts.Lire(racine).Scripts, adopter: true);
+        return 0;
+    }
+
+    /// <summary>Empreintes calculées par la clé des données (module Mail : adresse des comptes ; module OAuth : compte connecté).</summary>
+    private static readonly EmpreinteDeclaree[] Empreintes =
+    [
+        new("mail_compte", "mco_adresse_empreinte", "mco_identite", t => System.Text.Json.Nodes.JsonNode.Parse(t)?["adresse"]?.GetValue<string>()),
+        new("oauth_connexion", "oco_compte_empreinte", "oco_compte", t => t),
+    ];
+
+    /// <summary>
+    /// Nouvelle clé des données : l'ancienne passe dans LOGIBTP_CLE_CHIFFREMENT_PRECEDENTES (elle déchiffre encore ce qui ne
+    /// l'est pas encore), la clé de l'autorité est rechiffrée, puis toutes les bases. API arrêtée pendant l'opération
+    /// (Changer-CleDonnees-LogiBTP.ps1). Les sauvegardes chiffrées antérieures se lisent par les clés précédentes.
+    /// </summary>
+    private static async Task<int> ChangerCleAsync(string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var ancienne = Exiger(config, ExtensionsConfiguration.CleChiffrement);
+        var precedentes = Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"]).ToList();
+        var nouvelle = Secrets.CleDonnees();
+        var d = Certificats();
+        if (File.Exists(d.CleRacine))
+        {
+            DossierCertificats.EcrireSecret(d.CleRacine, AutoriteCertificats.ChiffrerCle(AutoriteCertificats.DechiffrerCle(File.ReadAllText(d.CleRacine), ancienne), nouvelle));
+            sortie.WriteLine("Clé de l'autorité rechiffrée");
+        }
+        RemplacerEnv(Path.Combine(dossier, ".env"), new Dictionary<string, string>
+        {
+            [ExtensionsConfiguration.CleChiffrement] = nouvelle,
+            [ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"] = string.Join(",", new[] { ancienne }.Concat(precedentes).Distinct()),
+        });
+        sortie.WriteLine("Nouvelle clé des données enregistrée dans le .env (l'ancienne reste lisible en clé précédente)");
+        return await RechiffrerAsync(dossier, sortie);
+    }
+
+    /// <summary>Rechiffre toutes les bases par la clé courante (reprise d'une rotation interrompue).</summary>
+    private static async Task<int> RechiffrerAsync(string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var cle = Exiger(config, ExtensionsConfiguration.CleChiffrement);
+        var chiffrement = new Chiffrement(cle, Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"]));
+        foreach (var (_, base_) in Bases(dossier, modele))
+        {
+            var bilan = await RotationCle.RechiffrerBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA")), chiffrement, chiffrement, Empreintes);
+            sortie.WriteLine($"{base_} : {bilan.Valeurs} valeur(s) rechiffrée(s), {bilan.Empreintes} empreinte(s) recalculée(s)" + (bilan.Tables.Count > 0 ? $" ({string.Join(", ", bilan.Tables)})" : ""));
+        }
+        sortie.WriteLine("Sauvegarder le nouveau .env hors du serveur ; les sessions ouvertes sont fermées (jetons signés par l'ancienne clé)");
         return 0;
     }
 

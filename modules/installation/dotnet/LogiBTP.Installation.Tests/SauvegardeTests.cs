@@ -67,3 +67,22 @@ public class SauvegardeTests
         finally { Directory.Delete(d, true); }
     }
 }
+
+public class RotationCleTests
+{
+    [Fact]
+    public void Json_rechiffre_a_toute_profondeur()
+    {
+        var ancienne = new LogiBTP.Socle.Chiffrement("ancienne");
+        var nouvelle = new LogiBTP.Socle.Chiffrement("nouvelle", ["ancienne"]);
+        var json = $$"""{"a":"{{ancienne.Chiffrer("x")}}","b":[1,"clair",{"c":"{{ancienne.Chiffrer("y")}}"}],"d":null}""";
+        var (resultat, n) = RotationCle.RechiffrerJson(json, nouvelle, nouvelle);
+        Assert.Equal(2, n);
+        var o = System.Text.Json.Nodes.JsonNode.Parse(resultat)!;
+        var seule = new LogiBTP.Socle.Chiffrement("nouvelle");
+        Assert.Equal("x", seule.Dechiffrer(o["a"]!.GetValue<string>()));
+        Assert.Equal("y", seule.Dechiffrer(o["b"]![2]!["c"]!.GetValue<string>()));
+        Assert.Equal("clair", o["b"]![1]!.GetValue<string>());
+        Assert.Equal(0, RotationCle.RechiffrerJson("""{"a":"clair","b":[1,2]}""", nouvelle, nouvelle).Nombre);
+    }
+}

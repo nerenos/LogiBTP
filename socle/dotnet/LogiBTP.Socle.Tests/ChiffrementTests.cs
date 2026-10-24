@@ -49,4 +49,16 @@ public class ChiffrementTests
         Assert.Equal("deux = 2", v["B"]);
         Assert.Equal(2, v.Count);
     }
+
+    [Fact]
+    public void Rotation_les_chaines_precedentes_dechiffrent_encore()
+    {
+        var ancienne = new Chiffrement("ancienne");
+        var valeur = ancienne.Chiffrer("secret");
+        var nouvelle = new Chiffrement("nouvelle", Chiffrement.Liste(" ancienne , autre "));
+        Assert.Equal("secret", nouvelle.Dechiffrer(valeur));
+        Assert.Equal("secret", new Chiffrement("nouvelle").Dechiffrer(nouvelle.Chiffrer("secret")));
+        Assert.Throws<ErreurChiffrement>(() => new Chiffrement("nouvelle").Dechiffrer(valeur));
+        Assert.NotEqual(ancienne.Empreinte("a@b.fr"), nouvelle.Empreinte("a@b.fr"));
+    }
 }

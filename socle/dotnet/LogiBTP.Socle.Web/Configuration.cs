@@ -145,5 +145,5 @@ public static class ExtensionsConfiguration
 
     /// <summary>Chiffrement des valeurs secrètes par la chaîne unique de l'installation (LOGIBTP_CLE_CHIFFREMENT).</summary>
     public static IServiceCollection AddChiffrement(this IServiceCollection services, IConfiguration configuration) =>
-        services.AddSingleton(new Chiffrement(configuration[CleChiffrement]));
+        services.AddSingleton(new Chiffrement(configuration[CleChiffrement], Chiffrement.Liste(configuration[CleChiffrement + "_PRECEDENTES"])));
 }

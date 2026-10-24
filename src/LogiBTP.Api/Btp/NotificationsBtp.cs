@@ -317,9 +317,12 @@ public sealed class SourceCertificat(LogiBtpContext db, LogiBTP.Installation.Web
         var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
         var infos = certificat.Dossier.Infos();
         var titre = jours < 0 ? $"Certificat HTTPS expiré depuis le {fin:dd/MM/yyyy}" : $"Certificat HTTPS à renouveler : échéance le {fin:dd/MM/yyyy} ({jours} jour(s))";
-        var texte = infos?.Origine == LogiBTP.Installation.OrigineCertificat.LogiBtp
-            ? "Le renouvellement automatique a échoué : lancer « installation certificat renouveler » sur le serveur."
-            : $"Certificat émis par {infos?.Emetteur} : le renouveler auprès de son émetteur puis « installation certificat importer ».";
+        var texte = infos?.Origine switch
+        {
+            LogiBTP.Installation.OrigineCertificat.LogiBtp => "Le renouvellement automatique a échoué : lancer « installation certificat renouveler » sur le serveur.",
+            LogiBTP.Installation.OrigineCertificat.LetsEncrypt => "Le renouvellement Let's Encrypt a échoué : lancer Certificat-LetsEncrypt.ps1 -Renouveler sur le serveur (identifiants DNS, accès internet).",
+            _ => $"Certificat émis par {infos?.Emetteur} : le renouveler auprès de son émetteur puis « installation certificat importer ».",
+        };
         var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
         return admins.Select(a => new NouvelleNotification(a, "installation", "CERTIFICAT", titre, texte, jours < 7 ? "URGENT" : "ATTENTION",
             "/parametres/installation", null, null, $"certificat:{aujourdhui:yyyy-MM-dd}"));

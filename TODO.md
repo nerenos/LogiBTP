@@ -2,6 +2,9 @@
 
 - [ ] **Module de gestion des versions de la base** (après stabilisation du schéma) : numéro de version du schéma
   par base de société, scripts de migration ordonnés et rejouables, application automatique aux bases existantes.
+  Fait par le module Installation : journal `installation_script` (manifeste `db/installation/scripts.txt`, empreinte de
+  chaque script appliqué, `installation base mettre-a-jour`, `base adopter` pour les bases existantes) ; reste : scripts
+  rejouables, numéro de version lisible, retour arrière sans restauration.
   Aujourd'hui : scripts `modules/*/db` et `db/` appliqués à la création du volume Docker, puis à la main sur `logibtp`
   et `logibtp_demo` ; la plupart ne sont pas rejouables.
 - [ ] **Enregistrement des données : uniformiser et sécuriser** : un seul format d'échange et de contrôle par type
@@ -181,12 +184,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
   (la restauration de l'installeur rejoue le SQL avec `search_path = public` en attendant).
 - [ ] Séparer les données de démonstration des données de référence (116, 141, 161, 163, démo de 120, sous-traitants
   de 211…) : une base neuve d'installation reçoit aujourd'hui la démonstration (211 dépend des niveaux de 141).
-- [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), questions I1 à I14
-  tranchées le 24/10/2026 ; lots 1 à 3 réalisés) : un conteneur pour l'API (client servi par l'API, HTTPS par Kestrel) et un pour la base, hôte Windows en
-  réseau local, certificat (autorité LogiBTP, AD CS, certificat fourni ou Let's Encrypt par DNS) ; enchaîner
-  `env initialiser` (fait : clé des données générée, `.env` chiffré, un `.env` fourni est conservé), création des bases
-  et des rôles (`db/installation/roles.sql`), `pg_hba.conf`, certificat joker et DNS, premier administrateur ; rotation
-  de la clé des données (rechiffrer les valeurs `chiffre:v1:`).
+- [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), lots 1 à 4 réalisés) :
+  reste à essayer Let's Encrypt avec de vrais identifiants DNS et les rôles Api / Base sur deux machines ; vérifier le
+  coffre de la GED après une restauration (`installation verifier`) ; page d'amorçage sans contrôle DNS du poste.
 
 ## Interface
 

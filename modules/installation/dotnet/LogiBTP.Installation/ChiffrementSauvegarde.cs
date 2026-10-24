@@ -110,14 +110,32 @@ public static class ChiffrementSauvegarde
     }
 
     /// <summary>Déchiffre chaque « nom.chiffre » du dossier en « nom » et supprime le chiffré.</summary>
-    public static int DechiffrerDossier(string dossier, string cleDonnees)
+    public static int DechiffrerDossier(string dossier, string cleDonnees) => DechiffrerDossier(dossier, [cleDonnees]);
+
+    /// <summary>Même chose, par la première clé qui convient (clé courante puis clés précédentes à une rotation).</summary>
+    public static int DechiffrerDossier(string dossier, IReadOnlyList<string> cles)
     {
         var n = 0;
         foreach (var f in Directory.GetFiles(dossier, "*" + Extension))
         {
             var clair = f[..^Extension.Length];
-            using (var e = File.OpenRead(f))
-            using (var s = File.Create(clair)) Dechiffrer(e, s, cleDonnees);
+            InvalidOperationException? erreur = null;
+            foreach (var cle in cles)
+            {
+                try
+                {
+                    using (var e = File.OpenRead(f))
+                    using (var s = File.Create(clair)) Dechiffrer(e, s, cle);
+                    erreur = null;
+                    break;
+                }
+                catch (InvalidOperationException ex) { erreur = ex; }
+            }
+            if (erreur is not null)
+            {
+                File.Delete(clair);
+                throw erreur;
+            }
             File.Delete(f);
             n++;
         }

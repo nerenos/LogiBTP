@@ -30,10 +30,14 @@ param(
     [string]$Confiance,
     [int]$MemoireMo = 2048,
     [string]$Libelle,
-    [ValidateSet('LogiBTP', 'Importer', 'Aucun')] [string]$Certificat = 'LogiBTP',
+    [ValidateSet('LogiBTP', 'Importer', 'LetsEncrypt', 'Aucun')] [string]$Certificat = 'LogiBTP',
     [string]$FichierCertificat,
     [string]$FichierCle,
     [string]$Organisation,
+    [string]$FournisseurDns,
+    [string]$FichierIdentifiantsDns,
+    [string]$Courriel,
+    [switch]$AccepterConditionsLetsEncrypt,
     [string]$Administrateur,
     [string]$FichierEnv,
     [string]$BaseDistante,
@@ -97,6 +101,8 @@ $reglages['LOGIBTP_PORT_HTTP'] = "$PortHttp"
 $reglages['LOGIBTP_PORT_HTTPS'] = "$PortHttps"
 $reglages['LOGIBTP_PORT_BASE'] = "$PortBase"
 $reglages['LOGIBTP_ROLE'] = $Role
+if ($Domaine) { $reglages['LOGIBTP_DOMAINE'] = $Domaine.Trim().ToLowerInvariant() }
+if ($Role -ne 'Base') { $reglages['LOGIBTP_CERTIFICAT'] = $Certificat }
 if ($Role -eq 'Base') { $reglages['LOGIBTP_BASE_DISTANTE'] = '1' }
 Ecrire-Reglages $Dossier $reglages
 
@@ -176,6 +182,10 @@ elseif ($Certificat -eq 'Importer') {
     else { Invoquer-Installation $Dossier $importer }
     Invoquer-SurVolume $Image 'logibtp-config' 'sh' @('-c', 'rm -f /v/import-*')
 }
+elseif ($Certificat -eq 'LetsEncrypt') {
+    & (Join-Path $PSScriptRoot 'Certificat-LetsEncrypt.ps1') -Dossier $Dossier -Fournisseur $FournisseurDns -FichierIdentifiants $FichierIdentifiantsDns `
+        -Courriel $Courriel -AccepterConditions:$AccepterConditionsLetsEncrypt
+}
 else {
     $creer = @('installation', 'certificat', 'creer')
     if ($Organisation) { $creer += @('--organisation', $Organisation) }
@@ -242,7 +252,12 @@ if (-not $SansTaches) {
     $copie = if ($CopieSauvegardes) { " -Copie `"$CopieSauvegardes`"" } else { '' }
     $sauvegarde = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Dossier\outils\Sauvegarder-LogiBTP.ps1`" -Dossier `"$Dossier`"$copie"
     Register-ScheduledTask -TaskName 'LogiBTP - sauvegarde' -Action $sauvegarde -Trigger (New-ScheduledTaskTrigger -Daily -At $HeureSauvegarde) -Principal $principal -Force | Out-Null
-    $renouveler = New-ScheduledTaskAction -Execute 'docker.exe' -Argument "compose --env-file `"$Dossier\installation.env`" -f `"$Dossier\api\compose.yml`" run --rm -T logibtp-installation installation certificat renouveler"
+    $renouveler = if ($Certificat -eq 'LetsEncrypt') {
+        New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Dossier\outils\Certificat-LetsEncrypt.ps1`" -Dossier `"$Dossier`" -Renouveler"
+    }
+    else {
+        New-ScheduledTaskAction -Execute 'docker.exe' -Argument "compose --env-file `"$Dossier\installation.env`" -f `"$Dossier\api\compose.yml`" run --rm -T logibtp-installation installation certificat renouveler"
+    }
     Register-ScheduledTask -TaskName 'LogiBTP - certificat' -Action $renouveler -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At '03:00') -Principal $principal -Force | Out-Null
     Ecrire-Info "Tâches planifiées : sauvegarde chaque jour à $HeureSauvegarde, renouvellement du certificat chaque dimanche (60 jours avant l'échéance)"
 }

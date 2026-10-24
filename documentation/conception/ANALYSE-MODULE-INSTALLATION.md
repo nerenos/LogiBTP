@@ -32,7 +32,15 @@
 > distante : le serveur de la base reçoit sa configuration par un dossier exporté (`base-distante`), et sur Docker
 > Desktop l'adresse source vue par PostgreSQL est la passerelle : la restriction tient alors au pare-feu ; la
 > vérification du coffre de la GED après restauration (`installation verifier`) n'est pas faite ; rôles Api et Base non
-> essayés sur deux machines (rôle Complet essayé de bout en bout).
+> essayés sur deux machines (rôle Complet essayé de bout en bout). Lot 4 réalisé le 25/10/2026 (`installation base
+> mettre-a-jour | adopter`, `cle-donnees changer | rechiffrer`, `RotationCle`, clés précédentes de `Chiffrement` ;
+> `MettreAJour-LogiBTP.ps1`, `Certificat-LetsEncrypt.ps1`, `Changer-CleDonnees-LogiBTP.ps1`) ; écarts : le module de
+> gestion des versions de la base n'est pas fait : la mise à jour s'appuie sur le journal `installation_script` (un
+> script appliqué une fois par base, modifié après coup = signalé, jamais rejoué), les bases de développement s'y
+> rattachent par `base adopter` ; en échec, le retour arrière restaure la sauvegarde prise juste avant (les scripts ne se
+> défont pas) ; Let's Encrypt passe par le client `lego` en conteneur (aucun client ACME dans le code), non essayé
+> faute d'identifiants DNS ; la rotation garde l'ancienne clé en clé précédente (déchiffrement seulement) pour
+> qu'une rotation interrompue ne perde rien et que les sauvegardes antérieures restent lisibles.
 
 ## 1. Demande
 

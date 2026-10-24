@@ -52,6 +52,17 @@ décisions I1 à I14).
   1 Mo, HKDF de la clé des données, dernier bloc authentifié) ; page `/parametres/installation` (nœud de droits
   `administration/installation`, `GET /api/installation/etat` : `EtatInstallation` du module).
 
+- Lot 4 : mise à jour (`installation base mettre-a-jour` : scripts du manifeste absents du journal sur toutes les
+  bases, rejouables, droits, conversions ; `base adopter --base N|--toutes --confirmer` pour une base créée hors de
+  l'installeur ; `MettreAJour-LogiBTP.ps1` : image (empreinte SHA-256 d'un fichier vérifiée), sauvegarde, scripts, API ;
+  en échec : image précédente et sauvegarde restaurées), Let's Encrypt par défi DNS (`Certificat-LetsEncrypt.ps1` : image
+  `goacme/lego` épinglée, volume `logibtp-letsencrypt`, identifiants du fournisseur dans `<Dossier>\letsencrypt.env`,
+  import d'origine LETSENCRYPT, `-Renouveler` en tâche hebdomadaire ; installeur `-Certificat LetsEncrypt`), rotation de
+  la clé des données (`installation cle-donnees changer | rechiffrer`, `RotationCle` : valeurs `chiffre:v1:` des
+  colonnes texte et JSON, empreintes déclarées par le cœur — adresse des comptes de messagerie, compte OAuth —, une
+  transaction par base ; ancienne clé gardée dans `LOGIBTP_CLE_CHIFFREMENT_PRECEDENTES`, lue par `Chiffrement` du socle
+  et par le déchiffrement des sauvegardes ; clé de l'autorité rechiffrée ; `Changer-CleDonnees-LogiBTP.ps1`).
+
 ## Bibliothèque (`dotnet/LogiBTP.Installation`)
 - `ManifesteScripts` (`Lire`, `Analyser`, `Ecarts`), `BaseDonnees` (`DefinirRolesAsync`,
   `CreerBaseAsync`, `AppliquerAsync(connexion, racine, scripts, adopter)` → `BilanScripts`, `ScriptsAppliquesAsync`,
@@ -61,7 +72,8 @@ décisions I1 à I14).
   `NomsPermis`, `NomsDns`, `Couvre`, `Empreinte`, `ChiffrerCle` / `DechiffrerCle`, `ProfilApple`, `ScriptPostes`),
   `DossierCertificats` (serveur.crt, serveur.key, racine.crt, racine.key chiffrée, certificat.json ; `Ecrire`,
   `LireFourni`, `Infos`), `OrigineCertificat` (LOGIBTP, IMPORTE, LETSENCRYPT), `ChiffrementSauvegarde` (`Chiffrer`,
-  `Dechiffrer`, `ChiffrerDossier`, `DechiffrerDossier`, extension `.chiffre`). `LogiBTP.Installation.Web` :
+  `Dechiffrer`, `ChiffrerDossier`, `DechiffrerDossier` par une ou plusieurs clés, extension `.chiffre`), `RotationCle`
+  (`RechiffrerBaseAsync(connexion, lecture, ecriture, empreintes)`, `RechiffrerJson`, `EmpreinteDeclaree`). `LogiBTP.Installation.Web` :
   `AddHttpsInstallation`, `UseHttpsInstallation`, `MapAmorcage`, `MapModuleInstallation` (`EtatInstallation`).
 
 ## Commandes (image de l'API)
@@ -70,7 +82,11 @@ décisions I1 à I14).
 `base creer`, `societe ajouter CODE [--libelle]`, `societes`, `scripts verifier`, `conversions`, `etat`,
 `certificat creer [--organisation] [--jours] [--nouvelle-racine] | renouveler [--avant 60] | importer --certificat F [--cle K]
 [--origine IMPORTE|LETSENCRYPT] | etat | base --nom N --adresses-api A` (mot de passe d'un PKCS#12 :
-`LOGIBTP_CERTIFICAT_MOT_DE_PASSE`), `base droits`, `sauvegarde chiffrer|dechiffrer DOSSIER`.
+`LOGIBTP_CERTIFICAT_MOT_DE_PASSE`), `base droits`, `sauvegarde chiffrer|dechiffrer DOSSIER`, `base mettre-a-jour`,
+`base adopter (--base N | --toutes) --confirmer`, `cle-donnees changer | rechiffrer`.
+Windows (suite) : `MettreAJour-LogiBTP.ps1 (-Image I | -FichierImage tar [-Empreinte sha256])`,
+`Changer-CleDonnees-LogiBTP.ps1 [-Confirmer]`, `Certificat-LetsEncrypt.ps1 -Fournisseur ovh -FichierIdentifiants f
+-Courriel c -AccepterConditions [-Essai] | -Renouveler`.
 Windows : `Installer-LogiBTP.ps1 -Domaine D [-Confiance CIDR] [-Administrateur pseudo] [-Certificat LogiBTP|Importer|Aucun]
 [-FichierImage tar] [-FichierEnv .env]…`, `Sauvegarder-LogiBTP.ps1 [-Chiffrer] [-Copie \\nas\x]`,
 `Restaurer-LogiBTP.ps1 -Sauvegarde <jeu> [-AvecConfiguration] [-Confirmer]`.
@@ -82,4 +98,7 @@ Variables : `LOGIBTP_CONFIG` (/app/config), `LOGIBTP_CONFIG_BASE` (/app/base-con
 sociétés, connexions du modèle, CSP ; autorité : contrainte de noms, chaîne validée et nom étranger refusé par
 `X509Chain`, joker, chiffrement de la clé, profil Apple, script des postes, dossier, redirection ; chiffrement des
 sauvegardes : tailles, autre clé, altération, troncature). Scripts PowerShell : essai de bout en bout sur Docker Desktop
-(installation, rejeu, société, sauvegarde claire et chiffrée, restauration avec témoins).
+(installation, rejeu, société, sauvegarde claire et chiffrée, restauration avec témoins ; mise à jour sans script,
+avec un script, avec un script en échec et retour arrière ; rotation : valeurs et empreintes changées, doublon d'adresse
+toujours détecté, comptes relus). Non essayés : Let's Encrypt réel (identifiants DNS), rôles Api / Base sur deux
+machines.
