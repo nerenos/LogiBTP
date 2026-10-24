@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, confirmer } from '@logibtp/socle/ui';
 
 // Paramétrage de l'annuaire (classe mère) : niveaux de personne (morale ou particulier), relations (« casquettes » dans le
 // code : client, fournisseur…, avec les groupes de champs
@@ -84,7 +84,7 @@ export class GestionReferentielsAnnuaire {
         } catch (e) { this.#erreur(e); }
       });
       tr.querySelector('[data-action="supprimer"]')?.addEventListener('click', async () => {
-        if (!confirm(`Supprimer « ${l.libelle} » ?`)) return;
+        if (!await confirmer(`Supprimer « ${l.libelle} » ?`)) return;
         try {
           await this.fournisseur.supprimerReferentiel(this.onglet, l.code);
           await this.rendre();

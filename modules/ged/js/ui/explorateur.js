@@ -1,4 +1,4 @@
-import { echapper, lirePreferences, ecrirePreferences, creerCombo } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir } from '@logibtp/socle/ui';
 import { icone, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -558,7 +558,7 @@ export class ExplorateurGed {
   async nouveauDossier() {
     const n = this.noeud;
     if (this.resultats || n.groupe || n.lien) { this.message('Ouvrez un dossier pour y créer un sous-dossier', 'erreur'); return; }
-    const nom = prompt(`Nouveau dossier dans « ${n.libelle} » :`, 'Nouveau dossier');
+    const nom = await saisir(`Nouveau dossier dans « ${n.libelle} » :`, 'Nouveau dossier');
     if (!nom?.trim()) return;
     await this.fournisseur.creerRepertoire({ nom: nom.trim(), parent_id: n.repertoire?.id ?? null, ...(n.element ?? {}) });
     this.message(`Dossier « ${nom.trim()} » créé`, 'succes');
@@ -566,7 +566,7 @@ export class ExplorateurGed {
   }
 
   async renommerDossier(n) {
-    const nom = prompt('Nouveau nom du dossier :', n.libelle);
+    const nom = await saisir('Nouveau nom du dossier :', n.libelle);
     if (!nom?.trim() || nom.trim() === n.libelle) return;
     await this.fournisseur.modifierRepertoire(n.repertoire.id, { nom: nom.trim() });
     if (this.noeud.cle === n.cle) this.chemin = [...this.chemin.slice(0, -1), { ...n, libelle: nom.trim() }];
@@ -575,7 +575,7 @@ export class ExplorateurGed {
   }
 
   async supprimerDossier(n) {
-    if (!confirm(`Supprimer le dossier « ${n.libelle} » ? Il doit être vide.`)) return;
+    if (!await confirmer(`Supprimer le dossier « ${n.libelle} » ? Il doit être vide.`)) return;
     await this.fournisseur.supprimerRepertoire(n.repertoire.id);
     this.message('Dossier supprimé', 'succes');
     this.selection = null;
@@ -763,7 +763,7 @@ export class ExplorateurGed {
       await this.recharger({ arbre: false });
     });
     action('coffre', async () => {
-      const motif = prompt('Archivage au coffre-fort : le document sera verrouillé (ni modification ni suppression).\nMotif :', this.libelleCategorie(d.categorie) || 'Archivage');
+      const motif = await saisir('Archivage au coffre-fort : le document sera verrouillé (ni modification ni suppression).\nMotif :', this.libelleCategorie(d.categorie) || 'Archivage');
       if (motif === null) return;
       await this.fournisseur.mettreAuCoffre(d.id, motif);
       this.message('Document archivé au coffre-fort', 'succes');
@@ -776,7 +776,7 @@ export class ExplorateurGed {
         : `✗ Altéré : empreinte attendue ${r.empreinte_attendue}, calculée ${r.empreinte_calculee}`, r.integre && r.coffre?.ok !== false ? 'succes' : 'erreur');
     });
     action('archiver', async () => {
-      if (!confirm(`Archiver « ${d.titre} »${d.nb_pieces ? ' et ses pièces jointes' : ''} ? Le document sort des recherches actives ; il reste consultable avec le filtre 🗄 et restaurable.`)) return;
+      if (!await confirmer(`Archiver « ${d.titre} »${d.nb_pieces ? ' et ses pièces jointes' : ''} ? Le document sort des recherches actives ; il reste consultable avec le filtre 🗄 et restaurable.`)) return;
       const r = await this.fournisseur.archiver(d.id, 'Archivage manuel');
       this.message(`${r.archives} document${r.archives > 1 ? 's' : ''} archivé${r.archives > 1 ? 's' : ''}`, 'succes');
       this.selection = this.options.archives ? this.selection : null;
@@ -789,7 +789,7 @@ export class ExplorateurGed {
       await this.recharger({ arbre: false });
     });
     action('supprimer', async () => {
-      if (!confirm(`Supprimer « ${d.titre} » ? Le document est masqué, il reste récupérable${d.nb_pieces ? ' (ses pièces jointes aussi)' : ''}.`)) return;
+      if (!await confirmer(`Supprimer « ${d.titre} » ? Le document est masqué, il reste récupérable${d.nb_pieces ? ' (ses pièces jointes aussi)' : ''}.`)) return;
       await this.fournisseur.supprimer(d.id);
       this.message('Document supprimé (masqué)', 'succes');
       if (!this.options.supprimes) this.selection = null;
@@ -798,7 +798,7 @@ export class ExplorateurGed {
     });
     action('restaurer', async () => { await this.fournisseur.restaurer(d.id); this.message('Document restauré', 'succes'); await this.recharger({ arbre: false }); });
     action('purger', async () => {
-      if (!confirm(`Supprimer DÉFINITIVEMENT « ${d.titre} » et toutes ses versions ? Cette action est irréversible.`)) return;
+      if (!await confirmer(`Supprimer DÉFINITIVEMENT « ${d.titre} » et toutes ses versions ? Cette action est irréversible.`)) return;
       await this.fournisseur.purger(d.id);
       this.message('Document supprimé définitivement', 'succes');
       this.selection = null;
@@ -992,7 +992,7 @@ export class ExplorateurGed {
     if (!dues.length) { this.message('Aucun document à archiver', 'succes'); return; }
     this.resultats = { recherche: 'rétention échue', documents: dues.map((e) => e.document) };
     await this.#chargerDossier();
-    if (confirm(`${dues.length} document${dues.length > 1 ? 's sont arrivés' : ' est arrivé'} à échéance de rétention. Les archiver maintenant ?`)) {
+    if (await confirmer(`${dues.length} document${dues.length > 1 ? 's sont arrivés' : ' est arrivé'} à échéance de rétention. Les archiver maintenant ?`)) {
       const r = await this.fournisseur.appliquerRetention();
       this.message(`${r.archives} document${r.archives > 1 ? 's' : ''} archivé${r.archives > 1 ? 's' : ''}`, 'succes');
       this.resultats = null;

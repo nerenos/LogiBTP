@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 
 // Gestion des thèmes de vues (profil ADMIN) : la liste n'est pas figée. Un thème regroupe des vues et déclare
 // les types d'élément qu'il couvre : plusieurs (Ressources : équipe, salarié, intérim, matériel, sous-traitant)
@@ -16,8 +16,8 @@ export class GestionThemes {
     this.fournisseur = fournisseur;
     this.message = message ?? (() => {});
     this.surFermer = fermer;
-    this.fond = document.createElement('div');
-    this.fond.className = 'concepteur-fond';
+    this.fond = document.createElement('dialog');
+    this.fond.className = 'concepteur-fond dialogue-plein';
     this.fond.innerHTML = `
       <div class="concepteur themes" role="dialog" aria-label="Thèmes de vues">
         <header><strong>Thèmes de vues</strong><span class="aide">Les types d'élément restreignent les lignes des vues du thème (aucun = tous).</span>
@@ -25,7 +25,7 @@ export class GestionThemes {
         <div class="concepteur-corps"></div>
         <footer><span class="concepteur-message"></span><button type="button" data-action="ajouter">Nouveau thème</button></footer>
       </div>`;
-    document.body.append(this.fond);
+    ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.concepteur-corps');
     this.fond.querySelector('[data-action="fermer"]').addEventListener('click', () => this.fermer());
     this.fond.querySelector('[data-action="ajouter"]').addEventListener('click', () => this.#ajouter());
@@ -83,7 +83,7 @@ export class GestionThemes {
       });
       tr.querySelector('[data-supprimer]').addEventListener('click', async () => {
         if (t.nouveau) { this.themes.splice(Number(tr.dataset.i), 1); this.rendre(); return; }
-        if (!confirm(`Supprimer le thème « ${t.thl_libelle} » ? Ses vues restent disponibles, sans thème.`)) return;
+        if (!await confirmer(`Supprimer le thème « ${t.thl_libelle} » ? Ses vues restent disponibles, sans thème.`)) return;
         try { await this.fournisseur.supprimerTheme(t.thl_code); await this.charger(); } catch (e) { this.#erreur(e.message); }
       });
     });

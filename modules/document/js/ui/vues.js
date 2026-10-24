@@ -1,4 +1,4 @@
-import { echapper, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 
 // Vues de colonnes de la grille des lignes : choix de la vue, dialogue des colonnes (visibilité, ordre, largeurs, mode
 // débogage et colonnes système), enregistrement personnel ou global, vue par défaut d'un type et d'un modèle de document.
@@ -300,7 +300,7 @@ export class GestionVuesDocument {
     dlg.querySelector('[data-enregistrer]')?.addEventListener('click', () => enregistrer(v.id));
     dlg.querySelector('[data-nouvelle]').addEventListener('click', () => enregistrer(null));
     dlg.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer la vue « ${v.nom} »${v.globale ? ' (vue globale, pour tous les utilisateurs)' : ''}${v.par_defaut ? ', vue par défaut de son modèle' : ''} ?`)) return;
+      if (!await confirmer(`Supprimer la vue « ${v.nom} »${v.globale ? ' (vue globale, pour tous les utilisateurs)' : ''}${v.par_defaut ? ', vue par défaut de son modèle' : ''} ?`)) return;
       try {
         await this.fournisseur.supprimer(v.id);
         this.vues = this.vues.filter((x) => x.id !== v.id);

@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, confirmer, saisir } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
   ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE,
@@ -504,7 +504,7 @@ export class PageSaisiePointage extends PageBase {
     this.salarie = this.requete.salarie ?? '';
     barreSemaine(this.conteneur, this, {
       changerSemaine: async (lundi) => {
-        if (this.modifiee && !confirm('Abandonner les modifications de la semaine ?')) return false;
+        if (this.modifiee && !await confirmer('Abandonner les modifications de la semaine ?')) return false;
         this.lundi = lundi; this.#url(); await this.#chargerSalaries(); if (this.salarie) await this.#chargerSemaine();
         return true;
       },
@@ -541,7 +541,7 @@ export class PageSaisiePointage extends PageBase {
         ${visibles.map((i) => `<td class="nombre">${ecrireDuree(x.jours[i]) || '·'}</td>`).join('')}<td class="nombre"><b>${ecrireDuree(x.jours.reduce((a, b) => a + b, 0))}</b></td></tr>`).join('')}</tbody></table>`
       : '<p class="aide">Aucun salarié.</p>'}${masques ? `<p class="aide">${masques} salarié(s) masqué(s) par les filtres.</p>` : ''}`;
     zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', async () => {
-      if (this.modifiee && !confirm('Abandonner les modifications de la semaine ?')) return;
+      if (this.modifiee && !await confirmer('Abandonner les modifications de la semaine ?')) return;
       this.salarie = tr.dataset.id; this.#url();
       zone.querySelectorAll('tr.selection').forEach((x) => x.classList.remove('selection'));
       tr.classList.add('selection');
@@ -597,7 +597,7 @@ export class PageSaisiePointage extends PageBase {
       heuresDefaut, message: (t, n) => this.app.message(t, n) });
     this.grille.commencer?.();
     const correction = async () => {
-      const motif = prompt('Motif de la demande de correction (envoyée au service RH) :');
+      const motif = await saisir('Motif de la demande de correction (envoyée au service RH) :');
       if (motif === null) return;
       try {
         await api.pointage.demanderCorrection({ salarie: Number(this.salarie), lundi: this.lundi, pointages: this.grille.pointages(), motif });
@@ -619,7 +619,7 @@ export class PageSaisiePointage extends PageBase {
         this.app.message('Semaine enregistrée', 'succes');
         this.#chargerSalaries();
       } catch (e) {
-        if (e.code === 'POI_VALIDE' && confirm(`${e.message}\n\nEnvoyer la semaine au service RH comme demande de correction ?`)) await correction();
+        if (e.code === 'POI_VALIDE' && await confirmer(`${e.message}\n\nEnvoyer la semaine au service RH comme demande de correction ?`)) await correction();
         else this.app.erreur(e);
       }
     });
@@ -673,7 +673,7 @@ export class PageSynthesePointage extends PageBase {
     }
     barreSemaine(c, this, {
       changerSemaine: async (lundi) => {
-        if (this.modifiee && !confirm('Abandonner les corrections en cours ?')) return false;
+        if (this.modifiee && !await confirmer('Abandonner les corrections en cours ?')) return false;
         this.lundi = lundi; this.salarie = ''; this.#url(); await this.#charger();
         return true;
       },
@@ -714,7 +714,7 @@ export class PageSynthesePointage extends PageBase {
     if (!salaries.length) { this.app.message('Aucun salarié sélectionné', 'avertissement'); return; }
     let motif = null;
     if (action === 'devalider') {
-      motif = prompt('Motif de la dévalidation (tracé) :');
+      motif = await saisir('Motif de la dévalidation (tracé) :');
       if (motif === null) return;
     }
     try {
@@ -789,7 +789,7 @@ export class PageSynthesePointage extends PageBase {
   }
 
   async #ouvrir(id) {
-    if (this.modifiee && !confirm('Abandonner les corrections en cours ?')) return;
+    if (this.modifiee && !await confirmer('Abandonner les corrections en cours ?')) return;
     this.salarie = String(id);
     this.#url();
     this.conteneur.querySelectorAll('.synthese-pointage tr.selection').forEach((x) => x.classList.remove('selection'));
@@ -833,13 +833,13 @@ export class PageSynthesePointage extends PageBase {
       try { this.detail = await promesse; this.grille = null; this.app.message(message, 'succes'); await this.#charger(); } catch (e) { this.app.erreur(e); }
     };
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', () => apres(api.pointage.enregistrerSynthese(this.salarie, this.lundi, { pointages: this.grille.pointages() }), 'Corrections enregistrées'));
-    zone.querySelector('[data-retablir]')?.addEventListener('click', () => confirm('Abandonner la couche validée et revenir aux pointages saisis ?')
+    zone.querySelector('[data-retablir]')?.addEventListener('click', async () => await confirmer('Abandonner la couche validée et revenir aux pointages saisis ?')
       && apres(api.pointage.retablirSynthese(this.salarie, this.lundi), 'Retour à la saisie'));
     zone.querySelector('[data-valider-un]')?.addEventListener('click', () => this.#agir('valider', [Number(this.salarie)]));
     zone.querySelector('[data-devalider-un]')?.addEventListener('click', () => this.#agir('devalider', [Number(this.salarie)]));
     zone.querySelectorAll('[data-appliquer]').forEach((b) => b.addEventListener('click', () => apres(api.pointage.appliquerCorrection(b.dataset.appliquer, {}), 'Correction appliquée')));
-    zone.querySelectorAll('[data-rejeter]').forEach((b) => b.addEventListener('click', () => {
-      const reponse = prompt('Réponse au demandeur :');
+    zone.querySelectorAll('[data-rejeter]').forEach((b) => b.addEventListener('click', async () => {
+      const reponse = await saisir('Réponse au demandeur :');
       if (reponse !== null) apres(api.pointage.rejeterCorrection(b.dataset.rejeter, { reponse }), 'Correction rejetée');
     }));
     this.#rendrePaie(zone.querySelector('[data-paie]'), modifiable);
@@ -950,7 +950,7 @@ export class PageExportPointage extends PageBase {
     };
     c.querySelector('[data-apercu]').addEventListener('click', async () => { try { afficher(await api.pointage.apercuExport(demande())); } catch (e) { this.app.erreur(e); } });
     c.querySelector('[data-exporter]').addEventListener('click', async () => {
-      if (!confirm('Enregistrer l\'export et télécharger le fichier ?')) return;
+      if (!await confirmer('Enregistrer l\'export et télécharger le fichier ?')) return;
       try {
         const r = await api.pointage.exporter(demande());
         afficher(r);

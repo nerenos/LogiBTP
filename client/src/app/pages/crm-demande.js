@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { choisirPersonne, choisirIndividu, creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { ETATS_DEMANDE, MOTIFS_SANS_SUITE, controlerDemande, MESSAGES_DEMANDE } from '@logibtp/crm';
@@ -143,11 +143,11 @@ export class PageDemandeCrm extends PageBase {
     $('[data-rendre]')?.addEventListener('click', () => this.action(() => api.crm.rendreDemande(this.detail.demande.id), 'Demande rendue au service'));
     $('[data-projet]')?.addEventListener('click', async () => {
       if (this.modifie) { this.app.message('Enregistrez d\'abord la demande', 'avertissement'); return; }
-      if (!confirm('Créer le projet de chiffrage depuis cette demande ? Elle passera « Transformée en projet ».')) return;
+      if (!await confirmer('Créer le projet de chiffrage depuis cette demande ? Elle passera « Transformée en projet ».')) return;
       await this.action(() => api.crm.creerProjet(this.detail.demande.id), 'Projet créé');
     });
     $('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm('Supprimer définitivement cette demande ?')) return;
+      if (!await confirmer('Supprimer définitivement cette demande ?')) return;
       try { await api.crm.supprimerDemande(this.detail.demande.id); this.modifie = false; this.app.publier('crm', {}); this.app.routeur.retour('/crm/demandes'); } catch (e) { this.app.erreur(e); }
     });
     if (this.detail) {
@@ -202,7 +202,7 @@ export class PageDemandeCrm extends PageBase {
   }
 
   async action(f, texte) {
-    if (this.modifie && !confirm('Les modifications non enregistrées seront perdues. Continuer ?')) return;
+    if (this.modifie && !await confirmer('Les modifications non enregistrées seront perdues. Continuer ?')) return;
     try { await this.apres(await f(), texte); } catch (e) { this.app.erreur(e); }
   }
 

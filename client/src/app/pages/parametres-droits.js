@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import {
   ACTIONS, LIBELLES_ACTIONS, LIBELLES_PORTEES, PORTEES, MESSAGES_DROITS, actionsEffectives, cocher, decocher, reappliquer,
   controlerProfil, parent,
@@ -91,7 +91,7 @@ export class PageParametresDroits extends PageBase {
   }
 
   async #ouvrirProfil(corps, id) {
-    if (this.modifiee && !confirm('Abandonner les droits modifiés de ce profil ?')) return;
+    if (this.modifiee && !await confirmer('Abandonner les droits modifiés de ce profil ?')) return;
     this.requete.profil = id;
     history.replaceState(history.state, '', this.urlCourante());
     const { profil, lignes, limites } = await api.droits.lignes(id);
@@ -142,7 +142,7 @@ export class PageParametresDroits extends PageBase {
       this.#rendreProfil(zone);
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer le profil ${p.code} ?`)) return;
+      if (!await confirmer(`Supprimer le profil ${p.code} ?`)) return;
       try {
         await api.droits.supprimerProfil(p.id);
         this.#lignes = null;
@@ -226,8 +226,8 @@ export class PageParametresDroits extends PageBase {
       this.#lignes = reste;
       redessiner();
     }));
-    zone.querySelectorAll('[data-reappliquer]').forEach((b) => b.addEventListener('click', () => {
-      if (!confirm('Les éléments de ce nœud perdent leurs droits propres et héritent de lui. Continuer ?')) return;
+    zone.querySelectorAll('[data-reappliquer]').forEach((b) => b.addEventListener('click', async () => {
+      if (!await confirmer('Les éléments de ce nœud perdent leurs droits propres et héritent de lui. Continuer ?')) return;
       this.#lignes = reappliquer(this.#lignes, b.dataset.reappliquer);
       redessiner();
     }));

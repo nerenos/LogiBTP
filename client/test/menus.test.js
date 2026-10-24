@@ -35,3 +35,36 @@ describe('menus et droits du profil', () => {
     expect(parametres).not.toContain('/parametres/comptes');
   });
 });
+
+describe('répartition des menus', () => {
+  const complet = { ...app(), peutGererThemes: () => true, estAdmin: () => true, enLigne: true };
+  const elements = (a, code) => menus(a).find((m) => m.code === code).elements();
+  it('garde le titre du séparateur qui suit des éléments masqués', () => {
+    const e = [{ libelle: 'A' }, { separateur: true, libelle: 'X' }, { libelle: 'B', module: 'x' }, { separateur: true }, { libelle: 'C' }];
+    expect(elementsVisibles(app(['x']), e)).toEqual([{ libelle: 'A' }, { separateur: true }, { libelle: 'C' }]);
+  });
+  it('propose les demandes d\'achat et d\'approvisionnement dans Achats et Exécution', () => {
+    const achats = elements(complet, 'achats').map((e) => e.url);
+    const execution = elements(complet, 'execution').map((e) => e.url);
+    for (const url of ['/liste/ordres?vue=1107', '/liste/ordres?vue=1003']) {
+      expect(achats).toContain(url);
+      expect(execution).toContain(url);
+    }
+    expect(elements(app(['execution']), 'achats').map((e) => e.code)).not.toContain('achats-dac');
+    expect(elements(complet, 'sous-traitance').map((e) => e.url)).toContain('/liste/ordres?vue=1106');
+  });
+  it('range le thème et les fiches dans des sous-menus, les paramètres des modules dans leur menu', () => {
+    const p = elements(complet, 'parametres');
+    expect(p.find((e) => e.libelle === "Thème d'affichage").sousMenu().length).toBeGreaterThan(1);
+    expect(p.find((e) => e.libelle === 'Fiches').sousMenu().map((e) => e.libelle)).toContain('Fiche salarié : champs…');
+    const urls = p.map((e) => e.url);
+    for (const [menu, url] of [['pointage', '/parametres/pointage'], ['execution', '/parametres/execution'], ['planning', '/parametres/planning'], ['suivi', '/parametres/crm']]) {
+      expect(urls).not.toContain(url);
+      expect(elements(complet, menu).map((e) => e.url)).toContain(url);
+    }
+  });
+  it('codes des raccourcis uniques', () => {
+    const codes = catalogueRaccourcis().map((e) => e.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+});

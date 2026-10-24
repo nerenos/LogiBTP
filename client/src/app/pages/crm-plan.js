@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { api } from '../api.js';
@@ -90,7 +90,7 @@ export class PagePlanCrm extends PageBase {
     $('[data-message]').replaceWith(this.message.element);
     $('[data-enregistrer]').addEventListener('click', () => this.enregistrer());
     $('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm('Supprimer ce plan, ses indices et ses visas ?')) return;
+      if (!await confirmer('Supprimer ce plan, ses indices et ses visas ?')) return;
       try { await api.crm.supprimerPlan(d.plan.id); this.modifie = false; this.app.publier('crm', {}); this.app.routeur.retour('/crm/plans'); } catch (e) { this.app.erreur(e); }
     });
     $('[data-diffuser]')?.addEventListener('click', () => this.app.naviguer(`/crm/diffusion/nouveau?plans=${d.plan.id}${s.type_element ? `&type_element=${encodeURIComponent(s.type_element)}&id_element=${encodeURIComponent(s.id_element)}` : ''}`));
@@ -146,7 +146,7 @@ export class PagePlanCrm extends PageBase {
         const fichiers = [...e.target.files];
         if (fichiers.length) this.appliquer(() => this.deposerIndice(this.detail, i, fichiers), `${fichiers.length} fichier(s) ajouté(s)`);
       });
-      bloc.querySelector('[data-supprimer-indice]').addEventListener('click', () => { if (confirm(`Supprimer : ${libelleIndice(i.indice)} ?`)) this.appliquer(() => api.crm.supprimerIndice(i.id)); });
+      bloc.querySelector('[data-supprimer-indice]').addEventListener('click', async () => { if (await confirmer(`Supprimer : ${libelleIndice(i.indice)} ?`)) this.appliquer(() => api.crm.supprimerIndice(i.id)); });
       bloc.querySelector('[data-ajouter-visa]').addEventListener('click', async () => {
         const { annuaire } = await this.app.services();
         const p = await choisirPersonne({ annuaire, titre: `Visa attendu : ${libelleIndice(i.indice).toLowerCase()}` });

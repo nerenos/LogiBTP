@@ -128,9 +128,15 @@ export class PageBase {
 
   get modifiee() { return false; }
 
+  /**
+   * Question posée avant de quitter une page modifiée : promesse de true pour quitter. Par défaut confirm() du
+   * navigateur ; l'application la remplace par sa fenêtre <dialog> (`PageBase.confirmer = …`).
+   */
+  static confirmer = (message) => Promise.resolve(globalThis.confirm?.(message) ?? true);
+
   /** Avant de quitter : false pour rester (confirmation refusée). */
   async quitter() {
-    return !this.modifiee || confirm(`« ${this.titre} » : des modifications ne sont pas enregistrées. Quitter quand même ?`);
+    return !this.modifiee || PageBase.confirmer(`« ${this.titre} » : des modifications ne sont pas enregistrées. Quitter quand même ?`);
   }
 
   /** Page conservée : affichée de nouveau (rafraîchissement éventuel). */

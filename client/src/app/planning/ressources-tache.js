@@ -1,4 +1,4 @@
-import { echapper, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, alerter } from '@logibtp/socle/ui';
 import { versMinutes, depuisMinutes } from '@logibtp/planning';
 import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -182,7 +182,7 @@ export class RessourcesTache {
 export async function choisirRessources({ du, au, exclure, selection }) {
   let liste;
   let tous;
-  try { [liste, tous] = await Promise.all([api.planning.disponibilites({ du, au, exclure: exclure ?? '' }), servicesConnus()]); } catch (e) { alert(e.message); return null; }
+  try { [liste, tous] = await Promise.all([api.planning.disponibilites({ du, au, exclure: exclure ?? '' }), servicesConnus()]); } catch (e) { await alerter(e.message); return null; }
   const choisies = new Set(selection);
   return new Promise((resoudre) => {
     const dlg = document.createElement('dialog');

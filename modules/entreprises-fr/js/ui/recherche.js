@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 
 // Dialogue de recherche dans l'annuaire des entreprises françaises : nom, SIREN ou SIRET ; l'entreprise choisie est
 // rendue avec les dirigeants cochés (à créer comme contacts). Styles : classes du dialogue des fiches.
@@ -11,14 +11,14 @@ const adresse = (a) => (a ? [a.ligne1, a.ligne2, [a.code_postal, a.ville].filter
  */
 export function rechercherEntreprise({ fournisseur, recherche = '', dirigeants = true }) {
   return new Promise((resoudre) => {
-    const fond = document.createElement('div');
-    fond.className = 'fiche-dialogue-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'fiche-dialogue-fond dialogue-plein';
     fond.innerHTML = `<section class="fiche-dialogue entreprises-recherche" role="dialog" aria-label="Annuaire des entreprises">
       <header><h2>🇫🇷 Annuaire des entreprises</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
       <div class="entreprises-barre"><input type="search" placeholder="Nom, SIREN ou SIRET…" value="${echapper(recherche)}"><button type="button" data-chercher>Rechercher</button></div>
       <div class="fiche-dialogue-corps entreprises-zone"><p class="aide">Source : annuaire des entreprises de l'État (INSEE, RNE) – données publiques.</p></div>
       <footer><span class="fiche-dialogue-message"></span><button type="button" data-annuler>Annuler</button><button type="button" class="principal" data-choisir disabled>Reprendre dans la fiche</button></footer></section>`;
-    document.body.append(fond);
+    ouvrirModale(fond);
     const entree = fond.querySelector('input[type="search"]');
     const zone = fond.querySelector('.entreprises-zone');
     const message = fond.querySelector('.fiche-dialogue-message');

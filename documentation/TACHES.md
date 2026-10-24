@@ -97,6 +97,12 @@
 
 ## Interface
 
+- [x] **Bandeau et fenêtres d'interaction** (24/10/2026) : bandeau trop large à 1 024 px réglé par les libellés courts des menus (Res., Bib, SsT, Exe, Param., Fen.), puis marges réduites,
+  informations tronquées et logo réduit à son icône ; logo à gauche (plus de maison), état de l'API en vert / rouge ;
+  sous-menus (thème d'affichage, fiches), paramètres des modules dans leur menu, demandes d'achat et
+  d'approvisionnement aussi dans Achats, ordres de sous-traitance dans Sous-traitance ; fenêtres d'interaction par
+  l'élément `<dialog>` (plus de `confirm`, `alert`, `prompt`).
+
 ## Réalisé (référence)
 
 

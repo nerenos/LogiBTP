@@ -233,3 +233,20 @@ input.combo.avec-pastille[readonly] { background-image: radial-gradient(circle, 
 .aide-memoire kbd { display: inline-block; padding: 0 0.3rem; border: 1px solid var(--bord); border-radius: 3px; font: inherit; font-size: 0.9em; background: var(--fond, transparent); }
 .aide-memoire .aucun { color: var(--discret); }
 .aide-memoire footer { padding: 0.35rem 0.7rem; border-top: 1px solid var(--bord); text-align: right; }
+
+/* Fenêtres d'interaction : toutes par l'élément <dialog> (dialogue.js), même cadre, même fond assombri. */
+/* Spécificité nulle (:where) : les classes propres à chaque fenêtre l'emportent. */
+:where(dialog) { border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+:where(dialog)::backdrop { background: rgb(0 0 0 / 0.35); }
+dialog.dialogue { width: min(30rem, calc(100vw - 32px)); padding: 0.9rem 1rem 0.8rem; }
+.dialogue-titre { margin: 0 0 0.6rem; font-size: 1.05rem; }
+.dialogue-message { margin: 0 0 0.6rem; white-space: pre-line; overflow-wrap: anywhere; max-height: 60vh; overflow: auto; }
+.dialogue-saisie { display: block; margin: 0 0 0.6rem; }
+.dialogue-champ { width: 100%; box-sizing: border-box; }
+.dialogue-boutons { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.dialogue-boutons button { min-width: 5.5rem; }
+button.principal.danger { background: var(--erreur); border-color: var(--erreur); }
+/* Fenêtre plein écran (fond et cadre propres à la fenêtre : fiches, GED, listes, navigation) ouverte en modale. */
+:where(dialog.dialogue-plein) { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; color: inherit; }
+dialog.dialogue-plein:not([open]) { display: none; }
+:where(dialog.dialogue-plein)::backdrop { background: transparent; }

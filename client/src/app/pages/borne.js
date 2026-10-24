@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, alerter, confirmer } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -233,8 +233,8 @@ export class PageBorne extends PageBase {
     this.#minuterie();
   }
 
-  #erreur(e) {
-    alert(e.message);
+  async #erreur(e) {
+    await alerter(e.message);
     if (e.code === 'BORNE_JETON') this.#accueil('Identification expirée : identifiez-vous pour reprendre la saisie.');
   }
 
@@ -274,7 +274,7 @@ export class PageBorne extends PageBase {
   /** Autre journée (oubli de saisie) : relue par le serveur ; la ligne en cours de choix est gardée. */
   async #changerDate(delta) {
     const j = this.etat.journee;
-    if (this.etat.modifie && !confirm('Les modifications non enregistrées de cette journée seront perdues. Changer de jour ?')) return;
+    if (this.etat.modifie && !await confirmer('Les modifications non enregistrées de cette journée seront perdues. Changer de jour ?')) return;
     const date = delta === 0 ? j.aujourdhui : decalerJour(j.date, delta);
     try { this.etat.journee = await appel('POST', '/journee', { jeton: j.jeton, date }); } catch (e) { this.#erreur(e); return; }
     this.#chargerLignes();
@@ -309,7 +309,7 @@ export class PageBorne extends PageBase {
         if (!j.chantiers.some((c) => c.id === o.cha_id)) j.chantiers.push({ id: o.cha_id, code: o.numero, libelle: o.objet ?? '' });
         if (!j.ordres.some((x) => x.id === o.id)) j.ordres.push(o);
         choisir(o.cha_id, o.id);
-      } catch (e) { champ.value = ''; alert(e.message); }
+      } catch (e) { champ.value = ''; await alerter(e.message); }
     };
     this.zone.querySelector('[data-lire]').addEventListener('click', lire);
     this.zone.querySelector('[data-ordre]').addEventListener('keydown', (e) => { if (e.key === 'Enter') lire(); });
@@ -340,7 +340,7 @@ export class PageBorne extends PageBase {
       ordre: async (numero) => (await appel('GET', `/etapes?jeton=${encodeURIComponent(j.jeton)}&numero=${encodeURIComponent(numero)}`)).ordres[0] ?? null,
     };
     const ecran = new EcranEtapesAtelier(this.zone.querySelector('[data-atelier]'), fournisseur, {
-      titre: '', message: (t, n) => (n === 'erreur' ? alert(t) : this.app?.message?.(t, n)),
+      titre: '', message: (t, n) => (n === 'erreur' ? alerter(t) : this.app?.message?.(t, n)),
       aide: this.test ? 'Essai : les validations ne sont pas enregistrées.' : '',
     });
     this.zone.querySelector('[data-suite]').addEventListener('click', () => apres());
@@ -357,7 +357,7 @@ export class PageBorne extends PageBase {
     const j = this.etat.journee;
     let d;
     try { d = await appel('GET', `/stock?jeton=${encodeURIComponent(j.jeton)}`); } catch (e) { this.#erreur(e); return; }
-    if (!d.depot) { alert('Aucun dépôt de stock pour cette borne (paramétrage des bornes).'); return; }
+    if (!d.depot) { await alerter('Aucun dépôt de stock pour cette borne (paramétrage des bornes).'); return; }
     const s = etat ?? { mode: 'SORTIE', dotation: true, chantier: null, marque: null, recherche: '', lignes: [] };
     this.ecran = () => this.#stock(s);
     const dotes = new Map(d.dotations.map((x) => [x.ele, Number(x.quantite)]));
@@ -401,13 +401,13 @@ export class PageBorne extends PageBase {
     z.querySelectorAll('[data-rebut]').forEach((c) => c.addEventListener('change', () => { s.lignes[Number(c.dataset.rebut)].rebut = c.checked; }));
     z.querySelector('[data-retour]').addEventListener('click', () => this.#journee());
     z.querySelector('[data-enregistrer]').addEventListener('click', async () => {
-      if (!s.dotation && !s.chantier) { alert('Choisissez le chantier ou « Pour moi ».'); return; }
+      if (!s.dotation && !s.chantier) { await alerter('Choisissez le chantier ou « Pour moi ».'); return; }
       try {
         const r = await appel('POST', '/stock', { jeton: j.jeton, mode: s.mode, dotation: s.dotation, chantier: s.chantier,
           lignes: s.lignes.map((l) => ({ ele: l.ele, quantite: l.quantite, rebut: s.mode === 'RETOUR' && l.rebut })) });
-        alert(r.essai ? 'Essai : rien n\'est enregistré.' : `Enregistré (${r.pieces.map((x) => x.numero).join(', ')}) : à valider par votre chef ou le magasin.`);
+        await alerter(r.essai ? 'Essai : rien n\'est enregistré.' : `Enregistré (${r.pieces.map((x) => x.numero).join(', ')}) : à valider par votre chef ou le magasin.`);
         this.#journee();
-      } catch (e) { alert(e.message); }
+      } catch (e) { await alerter(e.message); }
     });
     this.#minuterie();
   }
@@ -426,8 +426,8 @@ export class PageBorne extends PageBase {
     return res;
   }
 
-  #terminer() {
-    if (this.etat.modifie && !confirm('Abandonner les modifications non enregistrées de la journée ?')) return;
+  async #terminer() {
+    if (this.etat.modifie && !await confirmer('Abandonner les modifications non enregistrées de la journée ?')) return;
     ecrireReprise(null);
     this.#accueil();
   }
@@ -657,7 +657,7 @@ export class PageBorne extends PageBase {
   async #enregistrer() {
     const j = this.etat.journee;
     const lignes = this.etat.lignes;
-    if (lignes.some((l) => !(l.minutes > 0))) { alert('Durée invalide sur une ligne (exemples : 7:30, 7h30, 7,5).'); return; }
+    if (lignes.some((l) => !(l.minutes > 0))) { await alerter('Durée invalide sur une ligne (exemples : 7:30, 7h30, 7,5).'); return; }
     const corps = (l) => ({ id: l.id ?? null, cha_id: l.cha_id, ent_id: l.ent_id ?? null, type_mo: l.type_mo, sous_type: l.sous_type ?? null, minutes: l.minutes, motif: l.motif ?? null, commentaire: l.commentaire ?? null });
     try {
       if (this.etat.membres) {

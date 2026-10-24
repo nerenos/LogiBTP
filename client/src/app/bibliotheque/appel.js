@@ -1,6 +1,6 @@
 import { ratio, codeAppel } from '@logibtp/bibliotheque';
 import { D, S, arr6 } from '@logibtp/socle';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 import { TL } from '../../calcul/index.js';
 
 // Appel de la bibliothèque dans un éditeur de document (devis, facture… et composition d'un ouvrage) :
@@ -311,15 +311,15 @@ export class AppelBibliotheque {
   /** Dialogue de recherche (articles et ouvrages, toutes bibliothèques) ; résout avec l'élément choisi ou null. */
   choisir(texte = '') {
     return new Promise((resoudre) => {
-      const fond = document.createElement('div');
-      fond.className = 'fiche-dialogue-fond';
+      const fond = document.createElement('dialog');
+      fond.className = 'fiche-dialogue-fond dialogue-plein';
       fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Bibliothèque">
         <header><h2>📚 Bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
         <div class="element-recherche-barre"><input type="search" placeholder="Code ou libellé…" value="${echapper(texte)}">
           <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option><option value="POSTE_PIED">Postes de pied</option></select></div>
         <div class="element-resultats"></div>
         <p class="aide">Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer</p></section>`;
-      document.body.append(fond);
+      ouvrirModale(fond);
       const entree = fond.querySelector('input');
       const zone = fond.querySelector('.element-resultats');
       let resultats = [];

@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const ETATS = { A_CONNECTER: 'À connecter', OK: 'Connectée', A_RECONNECTER: 'À reconnecter', DESACTIVEE: 'Désactivée' };
@@ -63,9 +63,9 @@ export class PageParametresConnexions extends PageBase {
     if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     if (r.oauth) app.message(r.message ?? '', r.oauth === 'ok' ? 'succes' : 'erreur');
     this.admin = app.estAdmin();
-    this.desabonner = app.abonner('oauth', (m) => {
+    this.desabonner = app.abonner('oauth', async (m) => {
       this.app.message(m.message, m.ok ? 'succes' : 'erreur');
-      if (!m.ok && /autre compte/.test(m.message) && confirm(`${m.message}.\nReconnecter avec le nouveau compte ?`)) this.connecter(m.id, true);
+      if (!m.ok && /autre compte/.test(m.message) && await confirmer(`${m.message}.\nReconnecter avec le nouveau compte ?`)) this.connecter(m.id, true);
       this.charger();
     });
     [this.fournisseurs, this.parametres] = await Promise.all([api.oauth.fournisseurs(), api.oauth.parametres()]);
@@ -223,11 +223,11 @@ export class PageParametresConnexions extends PageBase {
     });
     if (!c) return;
     zone.querySelector('[data-revoquer]')?.addEventListener('click', async () => {
-      if (!confirm(`Révoquer « ${c.nom} » ? Les modules qui s'en servent ne pourront plus l'utiliser avant une nouvelle connexion.`)) return;
+      if (!await confirmer(`Révoquer « ${c.nom} » ? Les modules qui s'en servent ne pourront plus l'utiliser avant une nouvelle connexion.`)) return;
       try { await api.oauth.revoquer(c.id); await this.charger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer « ${c.nom} » ?`)) return;
+      if (!await confirmer(`Supprimer « ${c.nom} » ?`)) return;
       try { await api.oauth.supprimer(c.id); this.selection = null; zone.innerHTML = ''; await this.charger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-client]')?.addEventListener('click', async () => {

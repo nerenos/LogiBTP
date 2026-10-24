@@ -1,7 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer } from '@logibtp/socle/ui';
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
@@ -340,7 +340,7 @@ export class PageDocument extends PageBase {
         ${this.app.estAdmin() ? '<button type="button" data-verrou="forcer" class="danger" title="Fenêtre fermée, connexion perdue… : le verrou n’expire pas tout seul">Déverrouiller</button>' : ''}`;
       zone.querySelector('[data-verrou="reessayer"]').addEventListener('click', () => this.prendreVerrou().catch((e) => this.app.erreur(e)));
       zone.querySelector('[data-verrou="forcer"]')?.addEventListener('click', async () => {
-        if (!confirm(`Déverrouiller le document ? Les modifications non enregistrées de ${verrou.utilisateur} seront perdues.`)) return;
+        if (!await confirmer(`Déverrouiller le document ? Les modifications non enregistrées de ${verrou.utilisateur} seront perdues.`)) return;
         try {
           await api.forcerDeverrouillageDocument(this.editeur.saisie.document.ent_id);
           await this.prendreVerrou();
@@ -708,7 +708,7 @@ export class PageDocument extends PageBase {
 
   async valider() {
     const ed = this.editeur;
-    if (this.modifiee && !confirm('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
+    if (this.modifiee && !await confirmer('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
     if (ed.definition.type?.tyd_code === 'V_COMMANDE' && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
@@ -716,7 +716,7 @@ export class PageDocument extends PageBase {
     if (ed.definition.type?.tyd_code === 'T_COMMANDE' && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
-    if (orphelines.length && !confirm(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
+    if (orphelines.length && !await confirmer(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
       + `${orphelines.map((m) => `• ${m.message}`).join('\n')}\n\nValider ?`)) return;
     if (this.modifiee) await this.enregistrer();
     // Contrôles de gestion (lot 6 des règles) : avertissements non bloquants, l'utilisateur choisit.
@@ -785,12 +785,12 @@ export class PageDocument extends PageBase {
     const pieces = await api.piecesAnnulation(d.ent_id);
     if (!pieces.length) { this.app.message('Rien à annuler', 'avertissement'); return; }
     const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''} (${formatNombre(x.total_ht, 2)} € HT)`).join('\n');
-    if (!confirm(`${pieces.length > 1 ? `Les ${pieces.length} pièces suivantes seront annulées` : 'La pièce suivante sera annulée'} par avoir (pièces comptables : un avoir chacune) :\n\n${liste}\n\nAnnuler ?`)) return;
+    if (!await confirmer(`${pieces.length > 1 ? `Les ${pieces.length} pièces suivantes seront annulées` : 'La pièce suivante sera annulée'} par avoir (pièces comptables : un avoir chacune) :\n\n${liste}\n\nAnnuler ?`)) return;
     const r = await api.annulerParAvoir(d.ent_id);
     this.app.publier('enregistre', { ids: [d.ent_id, ...r.avoirs] });
     await this.chargerDocument(d.ent_id);
     this.app.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours (nouvel indice)' : ''}`, 'succes');
-    if (r.situation && confirm('Ouvrir la situation remise en cours ?')) await this.app.naviguer(`/document/${r.situation}`, { nouvelleFenetre: true });
+    if (r.situation && await confirmer('Ouvrir la situation remise en cours ?')) await this.app.naviguer(`/document/${r.situation}`, { nouvelleFenetre: true });
   }
 
   /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */
@@ -932,7 +932,7 @@ export class PageDocument extends PageBase {
     if (d.ent_marche_id && MARCHE_TYPES.includes(ed.definition.type?.tyd_code)) {
       const ids = await api.commandesMarche(d.ent_id);
       if (!ids.length) { this.app.message('Toutes les commandes validées du marché sont déjà reprises', 'avertissement'); return; }
-      if (!confirm(`${ids.length} commande(s) du marché (avenants) pas encore reprise(s) : les ajouter ?`)) return;
+      if (!await confirmer(`${ids.length} commande(s) du marché (avenants) pas encore reprise(s) : les ajouter ?`)) return;
       sources = ids;
     } else {
       const attente = await api.documentsEnAttente(d.ent_tyd_id, d.ent_tiers_id ?? null);

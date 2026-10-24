@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, saisir } from '@logibtp/socle/ui';
 import { NATURES_ETAPE } from '@logibtp/execution';
 import { api } from '../api.js';
 
@@ -79,8 +79,8 @@ export async function rendreEtapes(zone, { app, entId, ressources, ressourceOrdr
   });
   zone.querySelectorAll('input[data-prevu]').forEach((i) => i.addEventListener('change', () => action(i.closest('td').dataset.code, { action: 'PREVOIR', date: i.value || null })));
   zone.querySelectorAll('[data-valider]').forEach((b) => b.addEventListener('click', () => action(b.closest('td').dataset.code, { action: 'VALIDER' })));
-  zone.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', () => {
-    const motif = prompt('Motif de l\'annulation de la validation (tracé) :');
+  zone.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', async () => {
+    const motif = await saisir('Motif de l\'annulation de la validation (tracé) :');
     if (motif) action(b.closest('td').dataset.code, { action: 'ANNULER', commentaire: motif });
   }));
   zone.querySelectorAll('[data-controle]').forEach((c) => c.addEventListener('change', () => action(c.closest('td').dataset.code, { action: c.checked ? 'CONTROLER' : 'DECONTROLER' })));

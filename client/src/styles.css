@@ -17,6 +17,10 @@
 .pastille-compte.neutre { color: var(--texte-discret, #777); }
 .mdp-provisoire { font-size: 1.2rem; padding: 0.2rem 0.5rem; user-select: all; }
 .grille-calendrier input { font-variant-numeric: tabular-nums; }
+/* État de l'API dans le bandeau : vert connectée, rouge si elle ne répond plus. */
+.etat-api.connectee { color: var(--succes); font-weight: 600; }
+.etat-api.deconnectee { color: var(--erreur); font-weight: 700; }
+
 /* Notifications : cloche du bandeau et boîte. */
 .cloche { position: relative; text-decoration: none; }
 .cloche .compteur { position: absolute; top: -0.45rem; right: -0.6rem; min-width: 1rem; padding: 0 0.25rem; border-radius: 0.6rem; font-size: 0.7rem; line-height: 1rem;

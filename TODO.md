@@ -163,8 +163,6 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
   imprimée par le navigateur (S26).
 - [ ] Inventaire : pièce comptable (`S_INVENTAIRE` ou écriture d'écart) à produire par le futur module Comptabilité à
   partir d'un lot validé ; valorisation du stock à date pour la clôture.
-- [ ] Bandeau trop large à 1 024 px depuis l'ajout du menu Stock (débordement horizontal) : regrouper ou réduire les
-  menus métier.
 
 ### Module Exécution
 

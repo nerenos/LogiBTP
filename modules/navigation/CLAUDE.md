@@ -5,24 +5,24 @@
 - Paquet `@logibtp/navigation` (`modules/navigation/js`), deux points d'entrée : `.` (logique sans interface, testable sous Node) et `./ui` (+ `./ui/navigation.css`).
 
 ## Dépendances
-- Dépend de : `@logibtp/socle` (seulement `echapper` de `@logibtp/socle/ui`, côté `ui/`). Aucun autre module, jamais le cœur.
+- Dépend de : `@logibtp/socle` (seulement `echapper`, `confirmer` et `ouvrirModale` de `@logibtp/socle/ui`, côté `ui/`). Aucun autre module, jamais le cœur.
 - Utilisé par : le client seul (`client/src/app/application.js`, `navigation/menus.js`, toutes les pages de `client/src/app/pages/`). Aucun autre module ne l'importe.
 
 ## Structure
 - `js/src/routeur.js` : `Routeur`, `PageBase`, `correspondre` / `construire` / `analyser` (chemins `/fiche/:type/:id`, `:x?` facultatif).
 - `js/src/fenetres.js` : `GestionFenetres` (BroadcastChannel `CANAL` = `logibtp-fenetres`, battement 5 s, expiration 20 s), `sessionAProposer`, `optionsFenetre`, `nouvelId`, clés `CLE_SESSION` / `CLE_PRECEDENTE` (localStorage).
 - `js/src/preferences.js` : `Preferences(cle, defauts, stockage)` (`get` / `set` / `reinitialiser`, localStorage), `deplacer(liste, depuis, vers)`.
-- `js/ui/bandeau.js` : `Bandeau` (menus déroulants, Alt + lettre `&`, Alt seul, flèches, Alt+Origine = accueil, zone message, infos, logo).
-- `js/ui/panneau-fenetres.js` : `PanneauFenetres` (liste des fenêtres : Afficher, 🔔 signaler, fermer la session), `confirmerFermetureSession(modifiees)`.
+- `js/ui/bandeau.js` : `Bandeau` (logo à gauche = accueil, menus déroulants et sous-menus, Alt + lettre `&`, Alt seul, flèches (→ ouvre un sous-menu, ← le ferme), Alt+Origine = accueil, zone message, infos ; bandeau trop étroit (`ajuster`, `ResizeObserver`) : libellés `court` des menus (`bandeau-compact`), puis marges réduites, infos tronquées et logo réduit à son icône (`bandeau-serre`) ; clavier ignoré quand le focus est dans une fenêtre `dialog`).
+- `js/ui/panneau-fenetres.js` : `PanneauFenetres` (liste des fenêtres : Afficher, 🔔 signaler, fermer la session), `confirmerFermetureSession(modifiees)` (fenêtres `<dialog>`).
 - `js/ui/accueil.js` : `AccueilBase` (bandeau « Restaurer ma session précédente », raccourcis et widgets personnalisables par glisser, tailles petit / moyen / large).
 - `js/ui/widgets.js` : `Widget` (classe mère : `actualiser()` appelle `definition.charger()` puis `rendre(donnees)`), `WidgetIndicateurs`, `WidgetAlertes`, `WidgetTableau`, `WidgetGraphique`, `TYPES_WIDGET`.
 - `js/test/navigation.test.js` : routes, routeur (liste conservée, garde, 404), fenêtres (annonce, onglet dupliqué, fermeture / restauration de session, focaliser), préférences.
 
 ## API publique et points de spécialisation
-- `PageBase` (méthode patron) : `ouvrir()`, `get modifiee`, `quitter()` (confirmation si `modifiee`, false = rester), `reprendre()`, `masquer()`, `fermer()`, `urlCourante()` ; `static conserver = true` garde la page en mémoire (au plus `maxConservees` = 3, éviction de la plus ancienne). Reçoit `{ conteneur, params, requete, app, route, affichage }` ; `etatAffichage()` (onglet actif…, JSON) est rendu dans `this.affichage` à la réouverture de la même entrée d'historique (rechargement F5 / Vite, précédent / suivant), à reprendre dans `ouvrir()`.
+- `PageBase` (méthode patron) : `ouvrir()`, `get modifiee`, `quitter()` (confirmation si `modifiee` par `PageBase.confirmer(message)` → promesse, confirm() par défaut, fenêtre `<dialog>` du socle posée par le cœur ; false = rester), `reprendre()`, `masquer()`, `fermer()`, `urlCourante()` ; `static conserver = true` garde la page en mémoire (au plus `maxConservees` = 3, éviction de la plus ancienne). Reçoit `{ conteneur, params, requete, app, route, affichage }` ; `etatAffichage()` (onglet actif…, JSON) est rendu dans `this.affichage` à la réouverture de la même entrée d'historique (rechargement F5 / Vite, précédent / suivant), à reprendre dans `ouvrir()`.
 - `Routeur({ routes: [{ nom, chemin, page, titre }], conteneur, app, surPage })` : `demarrer()`, `aller(url, { remplacer, forcer })` (garde `quitter()` sauf `forcer`), `retour(defaut)`, `memoriser()` (sur `pagehide` : état d'affichage + aperçu de la page), `remplacerUrl(url)` (URL changée sans navigation, clé des pages conservées déplacée), `url(nom, params, requete)`, `trouver(url)` ; route inconnue → route `/404`.
 - `GestionFenetres({ etat, surListe, surSignal, surFermetureSession, surDonnees })` : `demarrer`, `annoncer`, `liste`, `ouvrir(url, { position })` (window.open popup), `focaliser(id)`, `signaler(id)`, `diffuser(sujet, contenu)` (message `donnees`), `etatFermeture`, `fermerSession`, `sessionPrecedente`, `restaurer(session)` → `{ ouvertes, bloquees, urlCourante }`.
-- Bandeau : `menus: [{ code, libelle: '&Ressources', elements }]`, élément `{ libelle, icone, url, action, separateur, desactive, info, raccourci, coche, fenetre, titre, creation: { url, titre } }` (bouton ＋) ; callback `naviguer(url, { nouvelleFenetre })` ; `message(texte, niveau)`, `infos(html)`, `Bandeau.libelle()`.
+- Bandeau : `menus: [{ code, libelle: '&Ressources', court: 'Res.', elements }]`, élément `{ libelle, icone, url, action, separateur, desactive, info, raccourci, coche, fenetre, titre, creation: { url, titre }, sousMenu: [...] ou () => [...] }` (bouton ＋ ; sous-menu ouvert au survol, à droite ou à gauche s'il déborde) ; callback `naviguer(url, { nouvelleFenetre })` ; `message(texte, niveau)`, `infos(html)`, `Bandeau.libelle()`.
 - Widgets : `definition = { code, type, titre, icone, taille, url, charger }` ; formats de données documentés en tête de `widgets.js` (éléments avec `url` / `_url` cliquables, Ctrl = nouvelle fenêtre). Nouveau type : sous-classe de `Widget` passée dans `types` d'`AccueilBase`.
 
 ## Utilisation par le cœur

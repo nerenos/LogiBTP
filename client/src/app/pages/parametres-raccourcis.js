@@ -1,7 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import {
-  echapper, catalogueRaccourcis, combinaison, estModificateur, libelleTouches, conflitsRaccourci, personnaliserRaccourci, reinitialiserRaccourcis,
-} from '@logibtp/socle/ui';
+import { echapper, catalogueRaccourcis, combinaison, estModificateur, libelleTouches, conflitsRaccourci, personnaliserRaccourci, reinitialiserRaccourcis, confirmer } from '@logibtp/socle/ui';
 import '../raccourcis.js';
 
 /**
@@ -35,8 +33,8 @@ export class PageParametresRaccourcis extends PageBase {
             <button type="button" data-defaut title="Revenir au raccourci par défaut" ${a.personnalise ? '' : 'disabled'}>↺</button></td></tr>`).join('')}
         </tbody></table></section>`).join('')}
     </div>`;
-    this.conteneur.querySelector('[data-tout]').addEventListener('click', () => {
-      if (!confirm('Remettre tous les raccourcis par défaut ?')) return;
+    this.conteneur.querySelector('[data-tout]').addEventListener('click', async () => {
+      if (!await confirmer('Remettre tous les raccourcis par défaut ?')) return;
       reinitialiserRaccourcis();
       this.app.message('Raccourcis par défaut rétablis', 'succes');
       this.rendre();
@@ -62,7 +60,7 @@ export class PageParametresRaccourcis extends PageBase {
       this.arreterCapture = null;
     };
     const annuler = (e) => { e?.stopImmediatePropagation(); fin(); zone.innerHTML = avant; bouton.textContent = 'Modifier'; };
-    const clavier = (e) => {
+    const clavier = async (e) => {
       if (estModificateur(e)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -75,7 +73,7 @@ export class PageParametresRaccourcis extends PageBase {
         return;
       }
       fin();
-      if (conflits.length && !confirm(`${libelleTouches(touche)} sert aussi à « ${conflits[0].libelle} » (${conflits[0].libelleGroupe}). L'utiliser quand même ?`)) {
+      if (conflits.length && !await confirmer(`${libelleTouches(touche)} sert aussi à « ${conflits[0].libelle} » (${conflits[0].libelleGroupe}). L'utiliser quand même ?`)) {
         this.rendre();
         return;
       }

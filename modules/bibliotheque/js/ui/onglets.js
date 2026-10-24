@@ -1,4 +1,4 @@
-import { echapper, formatNombre, formatLibre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, confirmer } from '@logibtp/socle/ui';
 import { calculerElement, coefficientsEffectifs, SCENARIOS_PA } from '../src/calcul.js';
 import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 
@@ -244,7 +244,7 @@ export class OngletTarifs {
       v.prix = nombreSaisi(v.prix);
       try {
         const r = b.dataset.action === 'supprimer'
-          ? (confirm('Supprimer ce tarif ?') ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)
+          ? (await confirmer('Supprimer ce tarif ?') ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)
           : await this.ctx.fournisseur.enregistrerTarif(this.ctx.id, v);
         if (!r) return;
         this.rendre(r.tarifs);

@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, htmlSur } from '@logibtp/socle/ui';
+import { echapper, creerCombo, htmlSur, confirmer } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET, TYPES_RAPPEL, controlerRappel, MESSAGES_RAPPEL } from '@logibtp/crm';
 import { api } from '../api.js';
@@ -151,7 +151,7 @@ export class PageNoteCrm extends PageBase {
     });
     $('[data-repondre]')?.addEventListener('click', (e) => this.app.naviguer(`/crm/note/nouveau?nature=MESSAGE&parent=${this.detail.note.id}${this.liens[0] ? `&type_element=${this.liens[0].type}&id_element=${encodeURIComponent(this.liens[0].id)}` : ''}`, { nouvelleFenetre: e.ctrlKey || e.shiftKey }));
     $('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm('Supprimer définitivement cette note ?')) return;
+      if (!await confirmer('Supprimer définitivement cette note ?')) return;
       try {
         await api.crm.supprimer(this.detail.note.id);
         this.modifie = false;
@@ -297,7 +297,7 @@ export class PageNoteCrm extends PageBase {
   }
 
   async action(f, texte) {
-    if (this.modifie && !confirm('Les modifications non enregistrées seront perdues. Continuer ?')) return;
+    if (this.modifie && !await confirmer('Les modifications non enregistrées seront perdues. Continuer ?')) return;
     try {
       this.detail = await f();
       this.saisie = saisieDeNote(this.detail);

@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, STYLE_VIDE } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
 import { OPERATEURS_VUE } from '../src/requete.js';
@@ -58,8 +58,8 @@ export class ConcepteurVue {
   colonne(code = this.selection) { return this.def.colonnes.find((c) => c.code === code) ?? null; }
 
   #construire() {
-    const fond = document.createElement('div');
-    fond.className = 'concepteur-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'concepteur-fond dialogue-plein';
     fond.innerHTML = `
       <div class="concepteur" role="dialog" aria-label="Concepteur de vue">
         <header>
@@ -84,7 +84,7 @@ export class ConcepteurVue {
           <button type="button" class="principal" data-action="enregistrer">Enregistrer</button>
         </footer>
       </div>`;
-    document.body.append(fond);
+    ouvrirModale(fond);
     this.fond = fond;
     this.corps = fond.querySelector('.concepteur-corps');
     fond.querySelectorAll('[data-vue]').forEach((el) => el.addEventListener('input', () => {
@@ -99,7 +99,7 @@ export class ConcepteurVue {
     fond.querySelector('[data-action="enregistrer"]').addEventListener('click', () => this.#enregistrer(false));
     fond.querySelector('[data-action="copie"]').addEventListener('click', () => this.#enregistrer(true));
     fond.querySelector('[data-action="supprimer"]').addEventListener('click', async () => {
-      if (!confirm(`Supprimer la vue « ${this.vue.vli_nom} » ?`)) return;
+      if (!await confirmer(`Supprimer la vue « ${this.vue.vli_nom} » ?`)) return;
       try { await this.cb.supprimer(this.vue); this.fermer(); } catch (e) { this.#erreur(e.message); }
     });
     this.clavier = (e) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('.liste-menu')) this.fermer(); };

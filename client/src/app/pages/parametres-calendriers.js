@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import {
   JOURS_SEMAINE, REGLES_FERME, MESSAGES_CALENDRIER, controlerCalendrier, controlerRegle, lirePlages, ecrirePlages, duree, joursFermes, ajouterJours,
 } from '@logibtp/calendrier';
@@ -168,11 +168,11 @@ export class PageParametresCalendriers extends PageBase {
         } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
       });
       zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-        if (!confirm(`Supprimer le calendrier ${cal.code} ?`)) return;
+        if (!await confirmer(`Supprimer le calendrier ${cal.code} ?`)) return;
         try { await api.calendriers.supprimer(cal.id); this.edition = null; zone.hidden = true; await this.#rendreListe(); } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
       });
-      zone.querySelector('[data-fermer]').addEventListener('click', () => {
-        if (this.edition?.modifiee && !confirm('Abandonner les modifications du calendrier ?')) return;
+      zone.querySelector('[data-fermer]').addEventListener('click', async () => {
+        if (this.edition?.modifiee && !await confirmer('Abandonner les modifications du calendrier ?')) return;
         this.edition = null;
         zone.hidden = true;
       });

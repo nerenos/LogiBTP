@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { estMail, titreDepuisNom, dateDepuisFichier, formatTaille, icone } from '../src/fichiers.js';
 import { lireMail } from '../src/mails.js';
 import { classer } from '../src/classification.js';
@@ -34,8 +34,8 @@ export class DialogueDepot {
     this.commun = { categorie: '', date_document: '', auteur: '', confidentialite: '', mots_cles: '', resume: '', notes: '', coffre: false };
     this.mode = this.entrees.length > 1 ? 'commun' : 'fichier';
     const n = this.entrees.length;
-    this.fond = document.createElement('div');
-    this.fond.className = 'ged-dialogue-fond';
+    this.fond = document.createElement('dialog');
+    this.fond.className = 'ged-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `
       <div class="ged-dialogue" role="dialog" aria-label="Ajouter des documents">
         <header><strong>Ajouter ${n} document${n > 1 ? 's' : ''}</strong>
@@ -48,7 +48,7 @@ export class DialogueDepot {
           <button type="button" data-action="fermer">Annuler</button>
           <button type="button" class="principal" data-action="enregistrer">Enregistrer</button></footer>
       </div>`;
-    document.body.append(this.fond);
+    ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.ged-dialogue-corps');
     this.fond.querySelectorAll('[data-action="fermer"]').forEach((b) => b.addEventListener('click', () => this.fermer()));
     this.fond.querySelector('[data-action="enregistrer"]').addEventListener('click', () => this.enregistrer());

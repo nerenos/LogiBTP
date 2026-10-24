@@ -6,11 +6,20 @@
   background: var(--surface); border-bottom: 1px solid var(--bord); padding: 0 0.4rem; font-size: 12.5px; user-select: none;
 }
 .bandeau a { color: inherit; text-decoration: none; }
-.bandeau-accueil { display: flex; align-items: center; padding: 0 0.45rem; font-size: 1.15em; color: var(--accent) !important; }
 .bandeau-menus { display: flex; align-items: stretch; }
 .bandeau-menus button { border: 0; border-radius: 0; background: transparent; padding: 0 0.6rem; height: 100%; }
 .bandeau-menus button:hover, .bandeau-menus button.ouvert, .bandeau-menus button:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
 .bandeau-menus u { text-decoration: none; }
+.bandeau-menus button { white-space: nowrap; }
+.bandeau-court { display: none; }
+.bandeau.bandeau-compact .bandeau-menus button:has(.bandeau-court) .bandeau-long { display: none; }
+.bandeau.bandeau-compact .bandeau-court { display: inline; }
+.bandeau.bandeau-compact .bandeau-menus button { padding: 0 0.4rem; }
+.bandeau.bandeau-serre .bandeau-menus button { padding: 0 0.25rem; }
+.bandeau.bandeau-serre .bandeau-logo { width: 1.6rem; overflow: hidden; padding-right: 0.2rem; }
+.bandeau.bandeau-serre .bandeau-logo svg { flex: none; }
+.bandeau.bandeau-serre .bandeau-infos { min-width: 0; flex-shrink: 1; gap: 0.25rem; }
+.bandeau.bandeau-serre .bandeau-infos > :not(.cloche) { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; min-width: 1.4rem; }
 .bandeau.acces-clavier .bandeau-menus u, .bandeau-deroulant:not([hidden]) ~ * u, .bandeau:has(.bandeau-deroulant:not([hidden])) .bandeau-menus u { text-decoration: underline; }
 .bandeau-message { margin-left: auto; align-self: center; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .bandeau-message.erreur { color: var(--erreur); }
@@ -18,7 +27,7 @@
 .bandeau-message.succes { color: var(--succes); }
 .bandeau-infos { display: flex; align-items: center; gap: 0.4rem; color: var(--discret); padding: 0 0.4rem; white-space: nowrap; }
 .bandeau-societe { background: var(--accent-clair); color: var(--accent); border-radius: 3px; padding: 0 0.4rem; font-weight: 600; }
-.bandeau-logo { display: flex; align-items: center; padding: 0 0.3rem 0 0.5rem; border-left: 1px solid var(--bord); }
+.bandeau-logo { flex: none; display: flex; align-items: center; padding: 0 0.5rem 0 0.2rem; border-right: 1px solid var(--bord); }
 .bandeau-logo svg, .bandeau-logo img { height: 20px; width: auto; display: block; }
 .bandeau-logo-texte { font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
 
@@ -27,6 +36,10 @@
   background: var(--surface); border: 1px solid var(--bord); box-shadow: 2px 6px 18px rgb(0 0 0 / 0.22);
 }
 .bandeau-deroulant[hidden] { display: none; }
+.bandeau-sous-menu { z-index: 1; }
+.bandeau-element.sous-ouvert:not(.actif) { background: var(--accent-clair); }
+.bandeau-fleche { text-align: center; color: var(--discret); }
+.bandeau-element.actif .bandeau-fleche { color: inherit; }
 .bandeau-element { display: grid; grid-template-columns: 1.1rem 1.5rem 1fr auto 1.6rem 1.6rem; align-items: center; gap: 0.2rem; padding: 0.22rem 0.4rem 0.22rem 0.2rem; cursor: default; }
 .bandeau-element.actif { background: var(--accent); color: #fff; }
 .bandeau-element.actif small, .bandeau-element.actif .bandeau-raccourci { color: #e8efff; }

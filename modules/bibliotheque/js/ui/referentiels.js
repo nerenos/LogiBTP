@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, confirmer } from '@logibtp/socle/ui';
 import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul.js';
 
 // Paramétrage de la bibliothèque (classe mère) : bibliothèques (code d'appel, bibliothèque par défaut), familles éditées
@@ -74,7 +74,7 @@ export class GestionReferentiels {
       delete v._nouveau;
       try {
         if (b.dataset.action === 'supprimer') {
-          if (!confirm(`Supprimer « ${l[cle] ?? ''} » ?`)) return;
+          if (!await confirmer(`Supprimer « ${l[cle] ?? ''} » ?`)) return;
           await supprimer(l);
         } else await enregistrer(v);
         this.message(b.dataset.action === 'supprimer' ? 'Supprimé' : 'Enregistré', 'succes');
@@ -170,7 +170,7 @@ export class GestionReferentiels {
       } catch (x) { this.#erreur(x); }
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer la famille « ${choisie.chemin} » ? Les éléments rattachés n'auront plus de famille.`)) return;
+      if (!await confirmer(`Supprimer la famille « ${choisie.chemin} » ? Les éléments rattachés n'auront plus de famille.`)) return;
       try {
         await this.fournisseur.supprimerFamille(choisie.id);
         this.familleChoisie = choisie.parent_id ?? null;
@@ -246,7 +246,7 @@ export class GestionReferentiels {
       } catch (x) { this.#erreur(x); }
     });
     zone.querySelectorAll('[data-supprimer-periode]').forEach((b) => b.addEventListener('click', async () => {
-      if (!confirm('Supprimer cette période à venir ?')) return;
+      if (!await confirmer('Supprimer cette période à venir ?')) return;
       try { await this.fournisseur.supprimerPeriode(Number(b.dataset.supprimerPeriode)); await this.rendre(); } catch (x) { this.#erreur(x); }
     }));
   }

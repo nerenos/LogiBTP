@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { confirmer } from '@logibtp/socle/ui';
 
 /**
  * Avertissements de gestion avant une action (CONCEPTION-REGLES-DOCUMENTS.md, lot 6) : VALIDER (total nul, référence
@@ -13,5 +14,5 @@ export async function confirmerAvertissements(entId, action, verbe) {
     return true;
   }
   if (!liste?.length) return true;
-  return confirm(`${liste.length > 1 ? 'Points à vérifier' : 'Point à vérifier'} :\n\n${liste.map((m) => `• ${m.message}`).join('\n')}\n\n${verbe} quand même ?`);
+  return await confirmer(`${liste.length > 1 ? 'Points à vérifier' : 'Point à vérifier'} :\n\n${liste.map((m) => `• ${m.message}`).join('\n')}\n\n${verbe} quand même ?`);
 }

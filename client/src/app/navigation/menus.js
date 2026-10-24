@@ -12,7 +12,7 @@ const D = (code, titre) => ({ url: `/document/nouveau?type=${code}`, titre });
 /** Menus métier (statiques). */
 export const MENUS_METIER = [
   {
-    code: 'ressources', libelle: '&Ressources', droit: 'ressources', elements: [
+    code: 'ressources', libelle: '&Ressources', court: 'Res.', droit: 'ressources', elements: [
       { code: 'ressources', libelle: 'Toutes les ressources', icone: '🧰', url: L('ressources'), info: 'Équipes, salariés, intérim, matériel, sous-traitants' },
       { separateur: true },
       { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries'), creation: F('salarie', 'Nouveau salarié') },
@@ -39,7 +39,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'bibliotheque', libelle: '&Bibliothèque', droit: 'bibliotheque', elements: [
+    code: 'bibliotheque', libelle: '&Bibliothèque', court: 'Bib', droit: 'bibliotheque', elements: [
       { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12', creation: F('element', 'Nouvel article') },
       { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13', creation: F('element', 'Nouvel ouvrage', '?type=OUVRAGE') },
       { code: 'ensembles', libelle: 'Ensembles (structures réutilisables)', icone: '🧩', url: '/liste/bibliotheque?vue=15', creation: F('element', 'Nouvel ensemble', '?type=ENSEMBLE') },
@@ -75,15 +75,20 @@ export const MENUS_METIER = [
       { code: 'commandes-fournisseurs', libelle: 'Commandes fournisseurs', icone: '📦', url: L('achats_commandes'), creation: D('A_COMMANDE', 'Nouvelle commande fournisseur') },
       { code: 'livraisons-fournisseurs', libelle: 'Bons de livraison et de retour fournisseurs', icone: '🚛', url: L('achats_livraisons'), creation: D('A_RECEPTION', 'Nouveau bon de livraison fournisseur') },
       { code: 'factures-fournisseurs', libelle: 'Factures fournisseurs', icone: '🧾', url: L('achats_factures'), creation: D('A_FACTURE', 'Nouvelle facture fournisseur') },
+      { separateur: true, libelle: 'Demandes (Exécution)' },
+      { code: 'achats-dac', libelle: "Demandes d'achat", icone: '🧾', url: '/liste/ordres?vue=1107', module: 'execution', droit: 'execution', type: 'E_DAC', creation: D('E_DAC', "Nouvel ordre : demande d'achat") },
+      { code: 'achats-dap', libelle: "Demandes d'approvisionnement", icone: '🛒', url: '/liste/ordres?vue=1003', module: 'execution', droit: 'execution', type: 'E_DAP', creation: D('E_DAP', "Nouvelle demande d'approvisionnement") },
+      { separateur: true },
       { code: 'reglements-fournisseurs', libelle: 'Règlements fournisseurs', icone: '💳', url: '/reglements?sens=D', info: 'Échéances à payer, règlements émis et pointage (module Règlements)', module: 'reglement' },
     ],
   },
   {
-    code: 'sous-traitance', libelle: 'Sous-&traitance', module: 'sous_traitance', droit: 'sous_traitance', elements: [
+    code: 'sous-traitance', libelle: 'Sous-&traitance', court: 'SsT', module: 'sous_traitance', droit: 'sous_traitance', elements: [
       { code: 'st-ao', libelle: "Appels d'offres", icone: '📨', url: L('st_ao'), type: 'T_AO', creation: D('T_AO', "Nouvel appel d'offres de sous-traitance") },
       { code: 'st-commandes', libelle: 'Commandes de sous-traitance', icone: '📝', url: L('st_commandes'), type: 'T_COMMANDE', creation: D('T_COMMANDE', 'Nouvelle commande de sous-traitance') },
       { code: 'st-factures', libelle: 'Factures de sous-traitance', icone: '🧾', url: L('st_factures'), type: 'T_FACTURE_AVT' },
       { code: 'st-marches', libelle: 'Marchés de sous-traitance', icone: '🤝', url: L('marches_st'), info: 'Un marché par sous-traitant et axe de facturation sur un chantier', creation: F('marche', 'Nouveau marché de sous-traitance', '?sens=ST') },
+      { code: 'st-ordres', libelle: 'Ordres de sous-traitance (Exécution)', icone: '🛠', url: '/liste/ordres?vue=1106', module: 'execution', droit: 'execution', type: 'E_OST', creation: D('E_OST', 'Nouvel ordre : ordre de sous-traitance') },
       { separateur: true },
       { code: 'st-pieces', libelle: 'Pièces exigées…', icone: '⚙', url: '/parametres/sous-traitance', info: 'Kbis, URSSAF, assurances, DC4… : validité, rappels, actions bloquées' },
     ],
@@ -106,7 +111,7 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'execution', libelle: '&Exécution', module: 'execution', droit: 'execution', elements: [
+    code: 'execution', libelle: '&Exécution', court: 'Exe', module: 'execution', droit: 'execution', elements: [
       { code: 'execution-atelier', libelle: 'Étapes à valider (atelier, tablette)', icone: '🧩', url: '/execution/atelier', info: 'Étapes des ordres dont vous êtes la ressource ou de votre service sur vos chantiers du jour' },
       { code: 'execution-synthese', libelle: 'Synthèse par chantier', icone: '🧭', url: '/execution/synthese', info: 'Un état par service (parcours et ordres), clic droit pour imposer un état' },
       { separateur: true },
@@ -125,7 +130,7 @@ export const MENUS_METIER = [
       { code: 'ordres-bloques', libelle: 'Ordres bloqués', icone: '⛔', url: '/liste/ordres?vue=1004' },
       { code: 'ordres-retard', libelle: 'Ordres en retard', icone: '⏰', url: '/liste/ordres?vue=1005' },
       { separateur: true },
-      { code: 'parametrage-execution', libelle: 'Modèles de parcours…', icone: '⚙', url: '/parametres/execution' },
+      { code: 'parametrage-execution', libelle: 'Paramètres : modèles de parcours, états…', icone: '⚙', url: '/parametres/execution' },
       { code: 'types-ordres', libelle: "Types d'ordres (activation, service)…", icone: '⚙', url: '/parametres/documents' },
     ],
   },
@@ -139,7 +144,7 @@ export const MENUS_METIER = [
       { separateur: true },
       { code: 'planning-equipes', libelle: 'Équipes et compositions', icone: '👥', url: '/planning/equipes', info: 'Équipes, membres par périodes (salariés, intérimaires, matériels, sous-traitants, équipes en renfort), chef d\'équipe' },
       { separateur: true },
-      { code: 'parametrage-planning', libelle: 'Paramètres du planning…', icone: '⚙', url: '/parametres/planning' },
+      { code: 'parametrage-planning', libelle: 'Paramètres : heures travaillées, jours masqués…', icone: '⚙', url: '/parametres/planning' },
     ],
   },
   {
@@ -152,7 +157,7 @@ export const MENUS_METIER = [
       { code: 'pointages-nc', libelle: 'Non-conformités', icone: '⚠', url: '/liste/pointages?vue=1011' },
       { code: 'pointages-improductifs', libelle: 'Temps improductif', icone: '⏸', url: '/liste/pointages?vue=1012' },
       { separateur: true },
-      { code: 'parametrage-pointage', libelle: 'Paramètres du pointage…', icone: '⚙', url: '/parametres/pointage' },
+      { code: 'parametrage-pointage', libelle: 'Paramètres : pas, validation, sous-types…', icone: '⚙', url: '/parametres/pointage' },
       { code: 'bornes', libelle: 'Bornes et PIN…', icone: '🏭', url: '/parametres/bornes', info: 'Enregistrer une borne d\'atelier, poser les PIN des salariés' },
     ],
   },
@@ -172,7 +177,7 @@ export const MENUS_METIER = [
       { separateur: true },
       { code: 'crm-fil', libelle: 'Fil d\'actualité', icone: '📰', url: '/crm/fil', info: 'Notes publiées et événements ; le fil d\'un chantier se trouve dans son suivi' },
       { separateur: true },
-      { code: 'parametrage-crm', libelle: 'Types de notes, rappels, statuts de visa…', icone: '⚙', url: '/parametres/crm' },
+      { code: 'parametrage-crm', libelle: 'Paramètres : types de notes, rappels, statuts de visa…', icone: '⚙', url: '/parametres/crm' },
     ],
   },
   {
@@ -206,11 +211,13 @@ export function groupesThemes() {
 const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false)
   && (!x.droit || app.acces?.(x.droit) !== false);
 
-/** Éléments visibles, sans séparateur en tête, en fin ni en double. */
+/** Éléments visibles, sans séparateur en tête, en fin ni en double (le dernier des deux est gardé). */
 export function elementsVisibles(app, elements) {
   const res = [];
   for (const e of elements.filter((x) => visible(app, x))) {
-    if (e.separateur && (!res.length || res.at(-1).separateur)) continue;
+    if (e.separateur && !res.length) continue;
+    // Deux séparateurs de suite (éléments masqués entre eux) : le second, qui porte le titre de ce qui suit.
+    if (e.separateur && res.at(-1).separateur) res.pop();
     res.push(e);
   }
   while (res.at(-1)?.separateur) res.pop();
@@ -222,18 +229,23 @@ export function menus(app) {
   return [
     ...MENUS_METIER.filter((m) => visible(app, m)).map((m) => ({ ...m, elements: () => elementsVisibles(app, m.elements) })),
     {
-      code: 'parametres', libelle: '&Paramètres', elements: () => elementsVisibles(app, [
+      code: 'parametres', libelle: '&Paramètres', court: 'Param.', elements: () => elementsVisibles(app, [
         { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres' },
-        { separateur: true, libelle: 'Affichage' },
-        ...THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
         { separateur: true },
+        {
+          libelle: "Thème d'affichage", icone: '🎨', info: THEMES.find((t) => t.code === app.preferences.get('theme'))?.libelle,
+          sousMenu: () => THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
+        },
         { code: 'themes', libelle: 'Thèmes et vues de liste…', icone: '🗂', action: () => app.gererThemes(), desactive: !app.peutGererThemes() },
-        { separateur: true, libelle: 'Fiches' },
-        { libelle: 'Fiche salarié : champs…', icone: '👷', action: () => app.parametrerFiche('salarie'), desactive: !app.estAdmin() },
-        { libelle: 'Fiche matériel : champs…', icone: '🚜', action: () => app.parametrerFiche('materiel'), desactive: !app.estAdmin() },
-        { libelle: 'Fiche élément : données techniques…', icone: '📚', action: () => app.parametrerFiche('element'), desactive: !app.estAdmin() },
-        { libelle: 'Fiche personne : champs…', icone: '🏢', action: () => app.parametrerFiche('personne'), desactive: !app.estAdmin() },
-        { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu'), desactive: !app.estAdmin() },
+        {
+          libelle: 'Fiches', icone: '🗃', titre: 'Champs supplémentaires des fiches (administrateur)', desactive: !app.estAdmin(), sousMenu: () => [
+            { libelle: 'Fiche salarié : champs…', icone: '👷', action: () => app.parametrerFiche('salarie') },
+            { libelle: 'Fiche matériel : champs…', icone: '🚜', action: () => app.parametrerFiche('materiel') },
+            { libelle: 'Fiche élément : données techniques…', icone: '📚', action: () => app.parametrerFiche('element') },
+            { libelle: 'Fiche personne : champs…', icone: '🏢', action: () => app.parametrerFiche('personne') },
+            { libelle: 'Fiche individu : champs…', icone: '👤', action: () => app.parametrerFiche('individu') },
+          ],
+        },
         { separateur: true, libelle: 'Documents' },
         { libelle: 'Étiquettes et couleurs des lignes…', icone: '🏷', url: '/parametres/documents' },
         { libelle: 'Éditions : modèles et mentions…', icone: '🖨', url: '/parametres/editions' },
@@ -243,11 +255,7 @@ export function menus(app) {
         { libelle: 'Bibliothèques, familles, natures, scénarios…', icone: '⚙', url: '/parametres/bibliotheque' },
         { separateur: true, libelle: 'Organisation' },
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
-        { libelle: 'Suivi (CRM) : types de notes, rappels…', icone: '☑', url: '/parametres/crm', module: 'crm' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
-        { libelle: 'Pointage : pas, validation, sous-types…', icone: '⏱', url: '/parametres/pointage', module: 'pointage' },
-        { libelle: 'Exécution : modèles de parcours…', icone: '🧭', url: '/parametres/execution', module: 'execution' },
-        { libelle: 'Planning : heures travaillées, jours masqués…', icone: '📅', url: '/parametres/planning', module: 'planning' },
         { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Messagerie : comptes, alias, modèles…', icone: '📧', url: '/parametres/mail', titre: 'Comptes de messagerie, expéditeur par usage, modèles, limitations des envois', desactive: !app.estAdmin() || !app.enLigne },
@@ -261,7 +269,7 @@ export function menus(app) {
       ]),
     },
     {
-      code: 'fenetres', libelle: 'Fe&nêtres', elements: () => {
+      code: 'fenetres', libelle: 'Fe&nêtres', court: 'Fen.', elements: () => {
         const liste = app.fenetres.liste();
         return [
           ...liste.map((f) => ({

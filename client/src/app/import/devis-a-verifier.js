@@ -1,4 +1,4 @@
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { individusSociete } from '../panneaux-btp.js';
@@ -62,7 +62,7 @@ export function rendreBandeauImport(page) {
     creerDepuisImport(page).catch((x) => { ev.target.disabled = false; page.app.erreur(x); });
   });
   zone.querySelector('[data-import="abandonner"]').addEventListener('click', async () => {
-    if (!confirm('Abandonner ce devis importé ? Rien n\'a été enregistré.')) return;
+    if (!await confirmer('Abandonner ce devis importé ? Rien n\'a été enregistré.')) return;
     await retirerImport(imp.jeton).catch(() => {});
     page.importEnCours = null;
     if (window.opener) window.close();

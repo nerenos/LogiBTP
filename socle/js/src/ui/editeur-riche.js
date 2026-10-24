@@ -1,4 +1,5 @@
 import { echapper, htmlSur } from './format.js';
+import { ouvrirModale } from './dialogue.js';
 
 // Éditeur de mise en forme d'un libellé (double-clic sur un libellé).
 // Ctrl+B / Ctrl+I / Ctrl+U, barre d'outils, insertion de variables {{...}}.
@@ -26,8 +27,8 @@ const BOUTONS = [
 /** Ouvre l'éditeur ; résout avec le HTML saisi (null si vidé), ou undefined si l'utilisateur annule. */
 export function editerLibelle({ html, titre, variables = [], lecture = false }) {
   return new Promise((resoudre) => {
-    const fond = document.createElement('div');
-    fond.className = 'modale-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'modale-fond dialogue-plein';
     fond.innerHTML = `
       <div class="modale editeur-riche" role="dialog" aria-modal="true" aria-label="Mise en forme du libellé">
         <header><h2>Libellé</h2><span class="aide">${echapper(titre ?? '')}</span></header>
@@ -50,7 +51,7 @@ export function editerLibelle({ html, titre, variables = [], lecture = false }) 
           <button type="button" class="principal" data-action="valider">Valider</button>`}
         </footer>
       </div>`;
-    document.body.appendChild(fond);
+    ouvrirModale(fond);
     // Consultation seule : sans barre d'outils, fermeture sans valeur (rien n'est modifié).
     if (lecture) fond.querySelector('.barre-outils').remove();
     const zone = fond.querySelector('.zone-saisie');

@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { NATURES_ETAPE, UNITES_ETAPE, MESSAGES_ETAPES, controlerEtapes } from '@logibtp/execution';
 import { api } from '../api.js';
 import { TYPES_ORDRE } from './execution.js';
@@ -124,7 +124,7 @@ export async function rendreEtatsTypes(zone, { app }) {
       try { etats = await api.execution.enregistrerEtatsType(type, etats); app.message('États du type enregistrés', 'succes'); rendre(); } catch (e) { app.message(e.message, 'erreur'); }
     });
     zone.querySelector('[data-appliquer]')?.addEventListener('click', async () => {
-      if (!confirm('Appliquer ces états aux ordres non terminés de ce type (étapes non validées) ?')) return;
+      if (!await confirmer('Appliquer ces états aux ordres non terminés de ce type (étapes non validées) ?')) return;
       try { const r = await api.execution.appliquerType(type); app.message(`${r.ordres} ordre(s) mis à jour`, 'succes'); } catch (e) { app.message(e.message, 'erreur'); }
     });
   };

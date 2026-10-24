@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, saisir } from '@logibtp/socle/ui';
 import { ETATS_COMPTE } from '@logibtp/authentification';
 import { api } from '../api.js';
 import { pastilleCompte, rendreComptePersonne, dateCompte, jourCompte } from '../comptes/comptes.js';
@@ -148,7 +148,7 @@ export class PageParametresComptes extends PageBase {
       zone.querySelector('[data-enregistrer-adresses]').addEventListener('click', () => api.auth.adressesApi(compte.id,
         zone.querySelector('[data-adresses]').value.split(',').map((a) => a.trim()).filter(Boolean)).then(() => this.app.message('Adresses enregistrées', 'succes')).catch((e) => this.app.erreur(e)));
       zone.querySelector('[data-secret]').addEventListener('click', async () => {
-        if (!confirm('Nouveau secret : l\'ancien ne vaut plus et les jetons en cours sont fermés. Continuer ?')) return;
+        if (!await confirmer('Nouveau secret : l\'ancien ne vaut plus et les jetons en cours sont fermés. Continuer ?')) return;
         try {
           const r = await api.auth.secretApi(compte.id);
           zone.querySelector('[data-secret-affiche]').innerHTML = `<div class="carte avertissement"><p>Secret affiché une fois : <code class="mdp-provisoire">${echapper(r.mot_de_passe)}</code></p></div>`;
@@ -164,13 +164,13 @@ export class PageParametresComptes extends PageBase {
     // Usurpation (administrateur, jamais un compte administrateur) : tester les droits du compte, dépanner.
     if (compte.type === 'PERSONNE' && compte.code !== this.app.utilisateur() && compte.profil !== 'ADMIN') {
       zone.insertAdjacentHTML('beforeend', `<p><button type="button" data-usurper title="Agir pour ce compte (une heure au plus, motif obligatoire, tracé au journal et notifié)">🎭 Agir à sa place…</button></p>`);
-      zone.querySelector('[data-usurper]').addEventListener('click', () => {
-        const motif = prompt(`Agir pour ${compte.code} : motif (test des droits, dépannage…)`);
+      zone.querySelector('[data-usurper]').addEventListener('click', async () => {
+        const motif = await saisir(`Agir pour ${compte.code} : motif (test des droits, dépannage…)`);
         if (motif?.trim()) this.app.usurper(compte.code, motif.trim()).catch((e) => this.app.erreur(e));
       });
     }
     zone.querySelector('[data-reinitialiser]')?.addEventListener('click', async () => {
-      if (!confirm(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
+      if (!await confirmer(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
       try {
         const r = await api.auth.reinitialiserCompte(compte.id);
         zone.querySelector('[data-provisoire]').innerHTML = `<div class="carte avertissement"><p>🔐 Mot de passe provisoire, affiché une fois : <code class="mdp-provisoire">${echapper(r.mot_de_passe)}</code></p></div>`;

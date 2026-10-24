@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { individusSociete } from '../panneaux-btp.js';
 
@@ -98,7 +98,7 @@ export class PageParametresServices extends PageBase {
   }
 
   async ouvrirMembres(service) {
-    if (this.membresModifies && !confirm('Les membres modifiés du service précédent ne sont pas enregistrés. Continuer ?')) return;
+    if (this.membresModifies && !await confirmer('Les membres modifiés du service précédent ne sont pas enregistrés. Continuer ?')) return;
     this.service = service;
     this.membres = await api.membresService(service.id);
     this.membresModifies = false;

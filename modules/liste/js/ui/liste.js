@@ -1,4 +1,4 @@
-import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -1132,7 +1132,7 @@ export class ListeDonnees {
     if (code === 'consulter') { a.consulter(lignes[0], evenement); return; }
     if (code === 'copier') { await a.copier(lignes[0], evenement); return; }
     const libelle = lignes.length > 1 ? `${lignes.length} éléments` : `« ${lignes[0].numero ?? lignes[0].code ?? lignes[0].libelle ?? lignes[0].nom ?? lignes[0]._id} »`;
-    if (!confirm(`Supprimer ${libelle} ? Cette suppression est définitive.`)) return;
+    if (!await confirmer(`Supprimer ${libelle} ? Cette suppression est définitive.`)) return;
     const refus = [];
     let supprimes = 0;
     for (const l of lignes) {

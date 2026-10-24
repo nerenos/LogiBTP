@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 
 // Adresse des travaux (ventes) ou de livraison (achats) d'un document, figée dans ent_adresse_livraison
 // (CONCEPTION-DOCUMENTS-EVOLUTIONS.md, lot F) : { origine CHANTIER | DEPOT | COMPTOIR | LIBRE, source_id, libelle,
@@ -56,8 +56,8 @@ export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
   const v = x ?? { origine: 'LIBRE', adresse: {} };
   const a = v.adresse ?? {};
   return new Promise((resoudre) => {
-    const fond = document.createElement('div');
-    fond.className = 'fiche-dialogue-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'fiche-dialogue-fond dialogue-plein';
     const champ = (cle, libelle, valeur, large = false) => `<label class="${large ? 'large' : ''}">${libelle}<input data-cle="${cle}" value="${echapper(valeur ?? '')}"></label>`;
     fond.innerHTML = `<section class="fiche-dialogue saisie-adresse" role="dialog" aria-label="${echapper(titre)}">
       <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
@@ -69,7 +69,7 @@ export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
         <label class="large">Instructions de livraison<textarea data-cle="instructions" rows="2">${echapper(v.instructions ?? '')}</textarea></label>
       </div>
       <footer><button type="button" data-vider>Vider</button><button type="button" data-fermer>Annuler</button><button type="button" class="principal" data-valider>Valider</button></footer></section>`;
-    document.body.append(fond);
+    ouvrirModale(fond);
     const lire = (cle) => fond.querySelector(`[data-cle="${cle}"]`).value.trim() || null;
     const fermer = (r) => { fond.remove(); resoudre(r); };
     fond.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => fermer(undefined)));
@@ -92,13 +92,13 @@ export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
 /** Choix d'une adresse dans une liste (dépôts, comptoirs) ; résout avec l'adresse choisie ou null. */
 export function choisirAdresse(liste, { titre }) {
   return new Promise((resoudre) => {
-    const fond = document.createElement('div');
-    fond.className = 'fiche-dialogue-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'fiche-dialogue-fond dialogue-plein';
     fond.innerHTML = `<section class="fiche-dialogue saisie-adresse" role="dialog" aria-label="${echapper(titre)}">
       <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
       ${liste.length ? `<ul class="choix-adresses">${liste.map((x, i) => `<li><button type="button" data-i="${i}">${lignesAdresse(x).join('<br>')}</button></li>`).join('')}</ul>`
     : '<p class="aide">Aucune adresse dans l\'annuaire.</p>'}</section>`;
-    document.body.append(fond);
+    ouvrirModale(fond);
     const fermer = (r) => { fond.remove(); resoudre(r ?? null); };
     fond.querySelector('[data-fermer]').addEventListener('click', () => fermer());
     fond.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => fermer(liste[Number(b.dataset.i)])));

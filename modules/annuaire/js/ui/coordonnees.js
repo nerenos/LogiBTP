@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 import { NATURES, RESEAUX, texteCoordonnee, memesValeurs, estVide } from '../src/coordonnees.js';
 import { formaterTelephone } from '../src/identifiants.js';
 
@@ -176,13 +176,13 @@ export class EditeurCoordonnees {
 
 /** Petit dialogue (classes du dialogue des fiches) : { corps, fermer, resultat } ; resultat : true (bouton d'action) ou false. */
 export function dialogue(titre, html, action = null, { large = false } = {}) {
-  const fond = document.createElement('div');
-  fond.className = 'fiche-dialogue-fond';
+  const fond = document.createElement('dialog');
+  fond.className = 'fiche-dialogue-fond dialogue-plein';
   fond.innerHTML = `<section class="fiche-dialogue annuaire-dialogue ${large ? 'large' : ''}" role="dialog" aria-label="${echapper(titre)}">
     <header><h2>${echapper(titre)}</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
     <div class="fiche-dialogue-corps">${html}</div>
     <footer><span class="fiche-dialogue-message"></span>${action ? `<button type="button" data-annuler>Annuler</button><button type="button" class="principal" data-ok>${echapper(action)}</button>` : '<button type="button" data-annuler>Fermer</button>'}</footer></section>`;
-  document.body.append(fond);
+  ouvrirModale(fond);
   let resoudre;
   const resultat = new Promise((r) => { resoudre = r; });
   const fermer = (v = false) => { fond.remove(); resoudre(v); };

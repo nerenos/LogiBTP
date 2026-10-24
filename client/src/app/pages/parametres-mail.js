@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { reconnaitre, NATURES, ACTIONS, ZONES } from '@logibtp/mail';
@@ -252,7 +252,7 @@ export class PageParametresMail extends PageBase {
     });
     zone.querySelector('[data-fermer]').addEventListener('click', () => { zone.innerHTML = ''; });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer le compte « ${c.alias} » ?`)) return;
+      if (!await confirmer(`Supprimer le compte « ${c.alias} » ?`)) return;
       try { await api.mail.supprimerCompte(c.id); zone.innerHTML = ''; await this.recharger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-enregistrer]').addEventListener('click', async () => {
@@ -386,7 +386,7 @@ export class PageParametresMail extends PageBase {
       } catch (e) { this.app.erreur(e); }
     });
     zone.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!confirm(`Supprimer le modèle « ${m.libelle} » ?`)) return;
+      if (!await confirmer(`Supprimer le modèle « ${m.libelle} » ?`)) return;
       try { this.modeles = await api.mail.supprimerModele(m.id); this.rendreModeles(); } catch (e) { this.app.erreur(e); }
     });
   }

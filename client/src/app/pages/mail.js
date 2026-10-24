@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, saisir } from '@logibtp/socle/ui';
 import { api, ErreurApi } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { pastilleCompteMail } from './parametres-mail.js';
@@ -149,7 +149,7 @@ export class PageRedactionMail extends PageBase {
       this.app.fermerPage(r.messages.length === 1 ? `/mail/message/${r.messages[0]}` : '/mail?vue=attente');
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'MAIL_CONFIRMATION') {
-        if (confirm(`${e.details?.avertissement ?? e.message}\n\nConfirmer l'envoi ?`)) await this.envoyer(true);
+        if (await confirmer(`${e.details?.avertissement ?? e.message}\n\nConfirmer l'envoi ?`)) await this.envoyer(true);
         return;
       }
       this.app.erreur(e);
@@ -339,7 +339,7 @@ export class PageMessageMail extends PageBase {
     zone.querySelector('[data-rattacher]').addEventListener('click', rattacher);
     code.addEventListener('keydown', (e) => { if (e.key === 'Enter') rattacher(); });
     zone.querySelector('[data-ignorer]')?.addEventListener('click', async () => {
-      const motif = prompt('Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :', '');
+      const motif = await saisir('Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :', '');
       if (motif === null) return;
       try { await api.mail.ignorer(m.id, motif); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });

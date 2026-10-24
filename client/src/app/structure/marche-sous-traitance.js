@@ -1,4 +1,4 @@
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, alerter } from '@logibtp/socle/ui';
 import { codeMarche } from '../fiches/fiche-structure.js';
 
 // Validation d'une commande de sous-traitance (ANALYSE-MODULE-SOUS-TRAITANCE.md ST2, ST4, ST5, ST14) : le marché de
@@ -16,10 +16,10 @@ const GARANTIES = {
  * Ouvre le dialogue ; résout { ent_marche_id, cree } ou null (abandon). refs : référentiels de la structure ; doc :
  * entête de la commande (sous-traitant et chantier obligatoires) ; creerMarche(valeurs) → { id }.
  */
-export function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers = '', creerMarche }) {
+export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers = '', creerMarche }) {
   const chantier = (refs.chantiers ?? []).find((c) => c.id === doc.ent_chantier_id);
   if (!chantier || !doc.ent_tiers_id) {
-    alert('Commande de sous-traitance : choisissez le sous-traitant (intervenant) et le chantier (rattachement) avant de la valider.');
+    await alerter('Commande de sous-traitance : choisissez le sous-traitant (intervenant) et le chantier (rattachement) avant de la valider.');
     return Promise.resolve(null);
   }
   const marches = refs.marches ?? [];

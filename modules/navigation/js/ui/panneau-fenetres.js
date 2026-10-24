@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 
 // Liste des fenêtres ouvertes de la session : afficher (premier plan), signaler, fermer ; fermer la session.
 // fenetres : GestionFenetres ; fermerSession() : procédure de l'application (contrôle des modifications).
@@ -9,8 +9,8 @@ export class PanneauFenetres {
   constructor({ fenetres, fermerSession, fermerFenetre, message = () => {} }) {
     this.fenetres = fenetres;
     this.message = message;
-    this.fond = document.createElement('div');
-    this.fond.className = 'nav-dialogue-fond';
+    this.fond = document.createElement('dialog');
+    this.fond.className = 'nav-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `<section class="nav-dialogue" role="dialog" aria-label="Fenêtres ouvertes">
       <header><h2>🗗 Fenêtres ouvertes</h2><button type="button" data-action="fermer" title="Fermer (Échap)">✕</button></header>
       <div class="nav-dialogue-corps"><table class="nav-fenetres"><thead><tr><th></th><th>Fenêtre</th><th>Adresse</th><th>Ouverte</th><th></th></tr></thead><tbody></tbody></table>
@@ -18,7 +18,7 @@ export class PanneauFenetres {
       Les fenêtres d'une autre société (autre sous-domaine) n'apparaissent pas ici.</p></div>
       <footer><button type="button" data-action="session" class="danger">Fermer la session…</button><button type="button" data-action="fermer">Fermer</button></footer>
     </section>`;
-    document.body.append(this.fond);
+    ouvrirModale(this.fond);
     this.fond.addEventListener('click', (e) => {
       if (e.target === this.fond) { this.fermer(); return; }
       const b = e.target.closest('button');
@@ -59,10 +59,10 @@ export class PanneauFenetres {
  * Renvoie une promesse : true pour fermer quand même.
  */
 export function confirmerFermetureSession(modifiees) {
-  if (!modifiees.length) return Promise.resolve(confirm('Fermer la session ? Toutes les fenêtres seront fermées ; « Restaurer ma session précédente » les rouvrira.'));
+  if (!modifiees.length) return confirmer('Fermer la session ? Toutes les fenêtres seront fermées ; « Restaurer ma session précédente » les rouvrira.', { titre: 'Fermer la session', ok: 'Fermer la session' });
   return new Promise((resolve) => {
-    const fond = document.createElement('div');
-    fond.className = 'nav-dialogue-fond';
+    const fond = document.createElement('dialog');
+    fond.className = 'nav-dialogue-fond dialogue-plein';
     fond.innerHTML = `<section class="nav-dialogue" role="alertdialog" aria-label="Modifications en cours">
       <header><h2>⚠ Modifications non enregistrées</h2></header>
       <div class="nav-dialogue-corps"><p>Ces fenêtres ont des modifications qui seront perdues :</p>
@@ -70,13 +70,12 @@ export function confirmerFermetureSession(modifiees) {
       <p class="aide">Annulez pour enregistrer d'abord, puis fermez de nouveau la session.</p></div>
       <footer><button type="button" data-r="oui" class="danger">Fermer quand même</button><button type="button" data-r="non" class="principal">Annuler</button></footer>
     </section>`;
-    document.body.append(fond);
+    const repondre = (oui) => { fond.remove(); resolve(oui); };
+    ouvrirModale(fond, () => repondre(false));
     fond.querySelector('[data-r="non"]').focus();
     fond.addEventListener('click', (e) => {
       const r = e.target.closest('[data-r]')?.dataset.r;
-      if (!r) return;
-      fond.remove();
-      resolve(r === 'oui');
+      if (r) repondre(r === 'oui');
     });
   });
 }

@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { FORMATS_PREDEFINIS, erreurRequete } from '../src/validation.js';
 
 // Paramétrage d'un type de fiche (profil ADMIN) :
@@ -29,8 +29,8 @@ export class ParametrageFiche {
     this.surFermer = fermer;
     this.modifie = false;
     this.ouverts = new Set();
-    this.fond = document.createElement('div');
-    this.fond.className = 'fiche-dialogue-fond';
+    this.fond = document.createElement('dialog');
+    this.fond.className = 'fiche-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `
       <div class="fiche-dialogue" role="dialog" aria-label="Paramétrage de la fiche">
         <header><strong>Paramétrage des fiches ${echapper(definition.libelle)}</strong>
@@ -40,7 +40,7 @@ export class ParametrageFiche {
           <button type="button" data-action="ajouter">Ajouter un champ supplémentaire</button>
           <button type="button" class="principal" data-action="enregistrer">Enregistrer</button></footer>
       </div>`;
-    document.body.append(this.fond);
+    ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.fiche-dialogue-corps');
     this.fond.querySelector('[data-action="fermer"]').addEventListener('click', () => this.fermer());
     this.fond.querySelector('[data-action="ajouter"]').addEventListener('click', () => {

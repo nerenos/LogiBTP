@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
@@ -477,7 +477,7 @@ export class PagePlanning extends PageBase {
     const c = this.conteneur;
     c.querySelector('[data-annuler]').addEventListener('click', () => this.#annuler());
     c.querySelector('[data-retablir]').addEventListener('click', () => this.#retablir());
-    this.clavier = (e) => {
+    this.clavier = async (e) => {
       if (this.consultation || !this.conteneur.isConnected || e.target.closest?.('input, textarea, [contenteditable]')) return;
       const action = actionDe(e, 'planning');
       if (!action) return;
@@ -487,7 +487,7 @@ export class PagePlanning extends PageBase {
       else if (action === 'retablir') this.#retablir();
       else if (action === 'actualiser') this.#charger();
       else if (b?.geree && (action === 'supprimer' || action === 'dupliquer')) this.app.message('Absence d\'un congé : elle se modifie depuis le congé', 'avertissement');
-      else if (action === 'supprimer' && b && confirm('Supprimer la tâche sélectionnée ?')) this.#supprimer(b.tache);
+      else if (action === 'supprimer' && b && await confirmer('Supprimer la tâche sélectionnée ?')) this.#supprimer(b.tache);
       else if (action === 'dupliquer' && b) this.#deplacer({ tache: b, debut: b.debut, fin: b.fin, ligne: b.ligne, copie: true });
     };
     document.addEventListener('keydown', this.clavier);
@@ -736,7 +736,7 @@ export class PagePlanning extends PageBase {
       { libelle: '✂ Scinder ici', raccourci: 'Alt+clic', actif: scinder, action: () => this.#scinder({ tache: b, instant }) },
       nouvelle,
       { separateur: true },
-      { libelle: '🗑 Supprimer', raccourci: libelleRaccourci('supprimer', 'planning'), action: () => { if (confirm('Supprimer cette tâche ?')) this.#supprimer(b.tache); } },
+      { libelle: '🗑 Supprimer', raccourci: libelleRaccourci('supprimer', 'planning'), action: async () => { if (await confirmer('Supprimer cette tâche ?')) this.#supprimer(b.tache); } },
     ]);
   }
 
@@ -879,7 +879,7 @@ export class PagePlanning extends PageBase {
 
   /** Nouvelle composition d'une équipe dans la tâche, après confirmation (membres restants retirés, nouveaux sans doublon). */
   async #appliquerEquipe(t, equipe, date) {
-    if (!confirm('Mettre la tâche à jour avec la nouvelle composition de l\'équipe ?\nLes membres restants de l\'ancienne composition sont retirés, ceux de la nouvelle ajoutés (sans doublon) ; la tâche est recalculée.\nLes modifications non enregistrées du détail sont abandonnées.')) return;
+    if (!await confirmer('Mettre la tâche à jour avec la nouvelle composition de l\'équipe ?\nLes membres restants de l\'ancienne composition sont retirés, ceux de la nouvelle ajoutés (sans doublon) ; la tâche est recalculée.\nLes modifications non enregistrées du détail sont abandonnées.')) return;
     const cur = await api.planning.tache(t.id);
     const r = await this.#modifierMemorise(t.id, 'composition d\'équipe', () => api.planning.appliquerEquipe(t.id, equipe, cur.version, date));
     if (r) this.#editer(t.id);
@@ -1086,8 +1086,8 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         if (r) { this.#memoriserCreation(r, 'tâche liée'); this.#editer(r.id); }
       });
       zone.querySelector('[data-repeter]').addEventListener('click', () => this.#apres(api.planning.repeter(t.id, { frequence: frequence.valeurCombo, nombre: Number(zone.querySelector('[data-nombre]').value) || 1 }), 'Tâches répétées'));
-      zone.querySelector('[data-suppr-serie]')?.addEventListener('click', () => {
-        if (confirm('Supprimer les tâches suivantes de la série ?')) this.#apres(api.planning.supprimerSerie(t.serie, depuisMinutes(versMinutes(t.debut) + 1)), 'Suite de la série supprimée');
+      zone.querySelector('[data-suppr-serie]')?.addEventListener('click', async () => {
+        if (await confirmer('Supprimer les tâches suivantes de la série ?')) this.#apres(api.planning.supprimerSerie(t.serie, depuisMinutes(versMinutes(t.debut) + 1)), 'Suite de la série supprimée');
       });
     };
     rendre();
@@ -1214,7 +1214,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       if (r) this.#editer(r.id);
     });
     barre.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
-      if (confirm('Supprimer cette tâche ?')) await this.#supprimer(t.id);
+      if (await confirmer('Supprimer cette tâche ?')) await this.#supprimer(t.id);
     });
     // Raccourcis de la saisie (Ctrl+S, Échap : `enregistrer` / `echap` de la page).
     const annuler = () => { if (t.id) this.#editer(t.id); else this.#viderTache(); };

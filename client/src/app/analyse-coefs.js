@@ -1,4 +1,4 @@
-import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, lirePreferences, ecrirePreferences, ouvrirModale } from '@logibtp/socle/ui';
 import { correspond, filtreActif } from '@logibtp/liste';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from '@logibtp/liste/ui';
 import { TL, estPied, estTranche } from '../calcul/index.js';
@@ -378,8 +378,8 @@ export class AnalyseCoefficients {
     const nombre = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
     const variation = (a, b) => (b === null || b === undefined ? '' : `${nombre(a)} → <b>${nombre(b)}</b>`);
     return new Promise((resoudre) => {
-      const fond = document.createElement('div');
-      fond.className = 'fiche-dialogue-fond';
+      const fond = document.createElement('dialog');
+      fond.className = 'fiche-dialogue-fond dialogue-plein';
       const ecrites = lignes.filter((x) => x.champs).length;
       fond.innerHTML = `<section class="fiche-dialogue apercu-prix" role="dialog" aria-label="Prix de la bibliothèque">
         <header><h2>⟳ Prix de la bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
@@ -395,7 +395,7 @@ export class AnalyseCoefficients {
         </tbody></table></div>
         <footer><span class="aide">${ecrites} ligne(s) modifiable(s), ${lignes.length - ecrites} signalée(s)${sans ? `, ${sans} sans élément correspondant (ni lien ni code connu)` : ''}</span>
           <button type="button" data-fermer>Annuler</button><button type="button" class="principal" data-appliquer ${ecrites ? '' : 'disabled'}>Appliquer</button></footer></section>`;
-      document.body.append(fond);
+      ouvrirModale(fond);
       const fermer = (r) => { fond.remove(); resoudre(r ?? null); };
       fond.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => fermer()));
       fond.querySelector('[data-appliquer]').addEventListener('click', () => fermer([...fond.querySelectorAll('input[data-i]:checked')].map((c) => lignes[Number(c.dataset.i)])));

@@ -1,4 +1,4 @@
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -538,7 +538,7 @@ export class FicheBase {
   }
 
   async annuler() {
-    if (this.modifiee && !confirm('Abandonner les modifications ?')) return;
+    if (this.modifiee && !await confirmer('Abandonner les modifications ?')) return;
     if (this.mode === MODES.CREATION || this.mode === MODES.COPIE) { await this.fermer({ sansConfirmation: true }); return; }
     await this.#liberer();
     this.mode = MODES.CONSULTATION;
@@ -636,7 +636,7 @@ export class FicheBase {
   /** Suppression après confirmation ; la fiche se ferme (surSupprime, sinon surFerme). */
   async supprimer() {
     const titre = titreFiche(this.definition.titre, this.valeurs()) || `${this.definition.libelle} ${this.id}`;
-    if (!confirm(`Supprimer « ${titre} » ? Cette suppression est définitive.`)) return false;
+    if (!await confirmer(`Supprimer « ${titre} » ? Cette suppression est définitive.`)) return false;
     await this.fournisseur.supprimer(this.type, this.id);
     this.message(`${this.definition.libelle} supprimé`, 'succes');
     this.surSupprime?.(this.id);
@@ -645,7 +645,7 @@ export class FicheBase {
   }
 
   async fermer({ sansConfirmation = false } = {}) {
-    if (!sansConfirmation && this.modifiee && !confirm('Des modifications ne sont pas enregistrées. Fermer quand même ?')) return false;
+    if (!sansConfirmation && this.modifiee && !await confirmer('Des modifications ne sont pas enregistrées. Fermer quand même ?')) return false;
     await this.#liberer();
     this.surFerme?.();
     return true;

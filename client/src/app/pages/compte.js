@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, confirmer } from '@logibtp/socle/ui';
 import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
 import { api } from '../api.js';
 
@@ -68,8 +68,8 @@ export class PageCompte extends PageBase {
     const recharger = () => this.#rendreSessions(zone).catch((e) => this.app.erreur(e));
     zone.querySelector('[data-fermer-autres]')?.addEventListener('click', () => api.auth.fermerSessions().then(recharger).catch((e) => this.app.erreur(e)));
     zone.querySelectorAll('[data-fermer]').forEach((b) => b.addEventListener('click', () => api.auth.fermerSession(b.dataset.fermer).then(recharger).catch((e) => this.app.erreur(e))));
-    zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', () => {
-      if (confirm('Oublier cette machine ? Ses sessions sont fermées.')) api.auth.oublierMachine(b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e));
+    zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', async () => {
+      if (await confirmer('Oublier cette machine ? Ses sessions sont fermées.')) api.auth.oublierMachine(b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e));
     }));
     zone.querySelector('[data-double]').addEventListener('change', (e) => api.auth.doubleFacteur(e.target.checked).catch((x) => this.app.erreur(x)));
   }

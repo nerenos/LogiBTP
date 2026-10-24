@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, saisir } from '@logibtp/socle/ui';
 import { ETATS_PIECE, ACTIONS_BLOQUEES, PORTEES_PIECE } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
 
@@ -62,8 +62,8 @@ export async function rendrePieces(corps, { element, ged, message, demander = nu
     tr.querySelector('[data-validite]')?.addEventListener('change', async (ev) => {
       try { await api.sousTraitance.validite(p.dge_id, ev.target.value || null); await recharger(); } catch (e) { message(e.message, 'erreur'); }
     });
-    tr.querySelector('[data-dispenser]')?.addEventListener('click', () => {
-      const motif = prompt(`Dispenser « ${p.libelle} » : motif (tracé) ?`);
+    tr.querySelector('[data-dispenser]')?.addEventListener('click', async () => {
+      const motif = await saisir(`Dispenser « ${p.libelle} » : motif (tracé) ?`);
       if (motif?.trim()) ajuster(p, 'DISPENSEE', motif.trim());
     });
     tr.querySelector('[data-retablir]')?.addEventListener('click', () => ajuster(p, null));

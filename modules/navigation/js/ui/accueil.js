@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, confirmer } from '@logibtp/socle/ui';
 import { deplacer } from '../src/preferences.js';
 import { TYPES_WIDGET } from './widgets.js';
 
@@ -186,7 +186,7 @@ export class AccueilBase {
 
   actualiser() { for (const w of this.widgets) w?.actualiser(); }
 
-  #clic(e) {
+  async #clic(e) {
     const b = e.target.closest('[data-action]');
     const action = b?.dataset.action;
     if (action && b.tagName !== 'SELECT') {
@@ -214,7 +214,7 @@ export class AccueilBase {
         case 'actualiser': this.actualiser(); break;
         case 'actualiser-widget': this.widgets[i]?.actualiser(); break;
         case 'reinitialiser':
-          if (confirm("Rétablir les raccourcis et les widgets par défaut ?")) {
+          if (await confirmer("Rétablir les raccourcis et les widgets par défaut ?")) {
             this.preferences.reinitialiser('raccourcis');
             this.preferences.reinitialiser('widgets');
             this.rendreRaccourcis();

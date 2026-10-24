@@ -1,5 +1,5 @@
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texteCoordonnee, formaterTelephone, siretValide } from '@logibtp/annuaire';
 import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuaire, choixRequis, demanderChoix, choisirPersonne, pastilles, fusionnerTiers } from '@logibtp/annuaire/ui';
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
@@ -341,7 +341,7 @@ export class FichePersonne extends FicheAnnuaire {
     const e = r.entreprise;
     const doublon = e.siret ? await this.annuaire.parSiret(e.siret).catch(() => null) : null;
     if (doublon && Number(doublon.id) !== Number(this.id)) {
-      if (confirm(`Cet établissement est déjà dans l'annuaire : ${doublon.raison_sociale} (${doublon.code}). L'ouvrir plutôt que de créer un doublon ?`)) {
+      if (await confirmer(`Cet établissement est déjà dans l'annuaire : ${doublon.raison_sociale} (${doublon.code}). L'ouvrir plutôt que de créer un doublon ?`)) {
         this.ouvrirFiche({ type: 'personne', id: doublon.id });
         return;
       }

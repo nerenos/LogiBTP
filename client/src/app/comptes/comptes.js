@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ETATS_COMPTE, MESSAGES_AUTH, controlerPseudo, controlerCompte, suggererPseudo } from '@logibtp/authentification';
 import { api } from '../api.js';
 
@@ -69,7 +69,7 @@ export async function rendreComptePersonne(corps, { app, type, id, prenom = '', 
       } catch (e) { echec(e); }
     });
     corps.querySelector('[data-reinitialiser]').addEventListener('click', async () => {
-      if (!confirm(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
+      if (!await confirmer(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
       try {
         const r = await api.auth.reinitialiserCompte(compte.id);
         afficherProvisoire(corps.querySelector('[data-provisoire]'), r.compte.code, r.mot_de_passe);

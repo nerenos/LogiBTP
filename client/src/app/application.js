@@ -1,9 +1,9 @@
-import { Routeur, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
+import { Routeur, PageBase, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
 import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme, actionDe, definirAideRaccourcis } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -43,6 +43,8 @@ export class Application {
       this.preferences = new Preferences('logibtp.navigation', this.preferences.defauts);
       appliquerTheme(this.preferences.get('theme'));
     });
+    // Page modifiée quittée : question dans une fenêtre <dialog> (socle) plutôt que confirm() du navigateur.
+    PageBase.confirmer = (message) => confirmer(message, { titre: 'Modifications non enregistrées', ok: 'Quitter' });
     this.abonnes = new Map(); // sujet → Set(fonction)
     this.servicesPrets = null;
   }
@@ -77,8 +79,8 @@ export class Application {
     });
     // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
     this.abonner('session', (e) => this.#sessionChangee(e));
-    document.addEventListener('click', (e) => {
-      if (e.target.closest?.('[data-fin-usurpation]') && confirm('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
+    document.addEventListener('click', async (e) => {
+      if (e.target.closest?.('[data-fin-usurpation]') && await confirmer('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
     });
     await this.fenetres.demarrer();
 
@@ -208,10 +210,18 @@ export class Application {
     if (!this.enLigne || window.fetch.surveille) return;
     const origine = window.fetch.bind(window);
     const surveille = async (entree, init) => {
-      const r = await origine(entree, init);
+      const url = typeof entree === 'string' ? entree : entree?.url ?? '';
+      const versApi = url.includes('/api/') && !url.includes('/api/sante');
+      let r;
+      try {
+        r = await origine(entree, init);
+      } catch (e) {
+        if (versApi && e?.name !== 'AbortError') this.#verifierApi();
+        throw e;
+      }
+      if (versApi && (r.status >= 500 || this.apiPerdue)) this.#verifierApi();
       if (r.status === 401 || r.status === 403) {
-        const url = typeof entree === 'string' ? entree : entree?.url ?? '';
-        if (url.includes('/api/') && !url.includes('/api/auth/')) {
+        if (versApi && !url.includes('/api/auth/')) {
           const code = await r.clone().json().then((d) => d?.code).catch(() => null);
           if (code === 'SESSION_REQUISE') this.#sessionPerdue();
           else if (code === 'MDP_A_CHANGER' && location.pathname !== '/compte') this.naviguer('/compte?changer=1');
@@ -221,6 +231,9 @@ export class Application {
     };
     surveille.surveille = true;
     window.fetch = surveille;
+    // Réseau du poste coupé ou rétabli : l'état de l'API est contrôlé aussitôt.
+    window.addEventListener('offline', () => this.#verifierApi());
+    window.addEventListener('online', () => this.#verifierApi());
   }
 
   /**
@@ -351,7 +364,7 @@ export class Application {
       Promise.resolve(f()).catch((x) => this.erreur(x));
       return;
     }
-    const dialogue = document.querySelector('.fiche-dialogue-fond, .concepteur-fond, .liste-menu, .nav-dialogue-fond, .ged-dialogue-fond, .themes-fond, .tiroir:not([hidden])');
+    const dialogue = document.querySelector('dialog[open], .fiche-dialogue-fond, .concepteur-fond, .liste-menu, .nav-dialogue-fond, .ged-dialogue-fond, .themes-fond, .tiroir:not([hidden])');
     if (e.key === 'Escape' && page?.echap && !dialogue && !e.defaultPrevented) page.echap();
   }
 
@@ -375,10 +388,40 @@ export class Application {
   rendreInfos() {
     const s = this.societe;
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
-      <span title="${this.enLigne ? 'API connectée' : 'Démo hors ligne : données de démonstration, calcul local'}">${this.enLigne ? '● API' : '○ Démo'}</span>
+      ${this.#etatApi()}
       ${!this.enLigne ? `<a href="/parametres" title="Profil de démonstration (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : '<a href="/connexion">👤 Se connecter</a>'}`);
+  }
+
+  /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus (démo hors ligne : neutre). */
+  #etatApi() {
+    if (!this.enLigne) return '<span class="etat-api" title="Démo hors ligne : données de démonstration, calcul local">○ Démo</span>';
+    return this.apiPerdue
+      ? `<span class="etat-api deconnectee" title="L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.">● Hors ligne</span>`
+      : '<span class="etat-api connectee" title="API connectée">● API</span>';
+  }
+
+  /**
+   * Requête vers l'API en échec réseau (ou erreur du relais) : l'API est contrôlée par `/api/sante` ; injoignable,
+   * le bandeau passe en rouge et le contrôle est refait toutes les 15 secondes jusqu'au retour.
+   */
+  async #verifierApi() {
+    if (this.verificationApi) return;
+    this.verificationApi = true;
+    try {
+      const disponible = await api.disponible();
+      if (disponible === !this.apiPerdue) return;
+      this.apiPerdue = !disponible;
+      this.rendreInfos();
+      clearInterval(this.minuterieApi);
+      if (this.apiPerdue) {
+        this.message("L'API ne répond plus : les modifications ne peuvent pas être enregistrées", 'erreur');
+        this.minuterieApi = setInterval(() => this.#verifierApi(), 15000);
+      } else this.message('API de nouveau connectée', 'succes');
+    } finally {
+      this.verificationApi = false;
+    }
   }
 
   /** Pastille d'usurpation du bandeau : compte usurpé, administrateur, fin ; clic = terminer. */

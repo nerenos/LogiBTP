@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, ouvrirMenuContextuel } from '@logibtp/socle/ui';
+import { echapper, creerCombo, ouvrirMenuContextuel, confirmer, saisir } from '@logibtp/socle/ui';
 import { ETATS_SERVICE, controlerParcours, MESSAGES_EXECUTION } from '@logibtp/execution';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -32,7 +32,7 @@ function menuEtat(ev, e, imposer) {
 }
 
 async function demanderEtat(app, type, id, srv, etat) {
-  const motif = etat ? prompt('Motif (facultatif) :') ?? '' : null;
+  const motif = etat ? await saisir('Motif (facultatif) :') ?? '' : null;
   return api.execution.imposerEtat(type, id, srv, { etat, motif: motif || null });
 }
 
@@ -206,18 +206,18 @@ export class PageExecutionChantier extends PageBase {
     const enregistrer = async (saisie) => {
       try { this.#rendre(await api.execution.enregistrerParcours('chantier', this.params.id, saisie)); } catch (x) { this.app.erreur(x); }
     };
-    corps.querySelector('[data-appliquer]').addEventListener('click', () => {
+    corps.querySelector('[data-appliquer]').addEventListener('click', async () => {
       if (!modele.valeurCombo) return;
-      if (etapes.length && !confirm('Remplacer les étapes du parcours par celles du modèle ?')) return;
+      if (etapes.length && !await confirmer('Remplacer les étapes du parcours par celles du modèle ?')) return;
       enregistrer({ pam_id: Number(modele.valeurCombo) });
     });
     btnEnr.addEventListener('click', () => {
       if (controler().length) { this.app.erreur(new Error('Parcours incomplet : voir les contrôles sous le tableau.')); return; }
       enregistrer({ pam_id: d.modele ?? null, etapes });
     });
-    corps.querySelector('[data-retirer-parcours]').addEventListener('click', () => { if (confirm('Retirer le parcours de ce chantier ?')) enregistrer({ etapes: [] }); });
+    corps.querySelector('[data-retirer-parcours]').addEventListener('click', async () => { if (await confirmer('Retirer le parcours de ce chantier ?')) enregistrer({ etapes: [] }); });
     corps.querySelector('[data-theorique]')?.addEventListener('click', async () => {
-      const debut = prompt('Début du planning théorique (AAAA-MM-JJ) :', new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+      const debut = await saisir('Début du planning théorique (AAAA-MM-JJ) :', new Date(Date.now() + 86400000).toISOString().slice(0, 10));
       if (!debut) return;
       try {
         const r = await api.liaisons.planningTheorique(this.params.id, `${debut}T08:00`);

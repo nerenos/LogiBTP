@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { TYPES_RESSOURCE, choisirRessources } from '../planning/ressources-tache.js';
 import { finsPeriodes, controlerEquipe, ajouterJours, periodeA, MESSAGES_EQUIPES, TYPES_CHEF } from '../ressources/equipes.js';
@@ -83,7 +83,7 @@ export class PageEquipes extends PageBase {
 
   /** Ouvre une équipe (null : nouvelle, directement en modification) ; modification en cours : confirmation puis libération. */
   async #choisir(id) {
-    if (this.modifie && !confirm('Abandonner les modifications de l\'équipe en cours ?')) return;
+    if (this.modifie && !await confirmer('Abandonner les modifications de l\'équipe en cours ?')) return;
     await this.#liberer();
     if (id) {
       if (!(await this.#charger(id))) return;
@@ -190,7 +190,7 @@ export class PageEquipes extends PageBase {
   }
 
   async #abandonner() {
-    if (this.modifie && !confirm('Abandonner les modifications ?')) return;
+    if (this.modifie && !await confirmer('Abandonner les modifications ?')) return;
     if (!this.id) { this.modifie = false; this.#rendre(); this.conteneur.querySelector('[data-detail]').innerHTML = '<p class="aide">Choisir une équipe, ou ＋ pour en créer une.</p>'; return; }
     await this.#liberer();
     this.modifie = false;
@@ -288,8 +288,8 @@ export class PageEquipes extends PageBase {
         p.du = du;
       }));
       div.querySelector('[data-commentaire-periode]').addEventListener('change', (ev) => this.#modifier(() => { p.commentaire = ev.target.value; }));
-      div.querySelector('[data-suppr-periode]').addEventListener('click', () => {
-        if (p.membres.length && !confirm(`Supprimer la composition du ${jour(p.du)} (${p.membres.length} membre(s)) ? La précédente continue jusqu'à la suivante.`)) return;
+      div.querySelector('[data-suppr-periode]').addEventListener('click', async () => {
+        if (p.membres.length && !await confirmer(`Supprimer la composition du ${jour(p.du)} (${p.membres.length} membre(s)) ? La précédente continue jusqu'à la suivante.`)) return;
         this.#modifier(() => this.periodes.splice(this.periodes.indexOf(p), 1));
       });
       div.querySelectorAll('li[data-k]').forEach((li) => {

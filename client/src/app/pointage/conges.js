@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { controlerConge, MESSAGES_CONGES, ETATS_CONGE } from '@logibtp/pointage';
 import { api } from '../api.js';
 
@@ -114,8 +114,8 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
       const reponse = q('[data-reponse]')?.value.trim() || null;
       agir(() => api.pointage.traiterConge(c.id, 'refuser', { version: c.version, reponse }));
     });
-    q('[data-annuler]')?.addEventListener('click', () => {
-      if (!confirm('Annuler ce congé ?')) return;
+    q('[data-annuler]')?.addEventListener('click', async () => {
+      if (!await confirmer('Annuler ce congé ?')) return;
       agir(() => api.pointage.traiterConge(c.id, 'annuler', { version: c.version, reponse: q('[data-reponse]')?.value.trim() || null }));
     });
     dlg.showModal();
