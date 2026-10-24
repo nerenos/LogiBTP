@@ -194,8 +194,17 @@ Les paquets JS sont des workspaces npm (`socle/js`, `modules/*/js`, `client`), i
 Ouvrir http://localhost:5173 (base principale) ou http://demo.localhost:5173 (société « demo »). Le devis de démonstration (menu Ventes) est créé dans la base à sa première ouverture.
 Sans API joignable, le client passe en **démo hors ligne** : calcul local complet, sans enregistrement.
 
-PostgreSQL écoute sur le port 5433 (`logibtp` / `logibtp`). Les scripts SQL ne s'exécutent qu'à la création du volume :
-`docker compose down -v` pour repartir de zéro.
+PostgreSQL écoute sur le port 5433 (`logibtp` / `logibtp`). Les scripts SQL (manifeste `db/installation/scripts.txt`) ne
+s'exécutent qu'à la création du volume : `docker compose down -v` pour repartir de zéro.
+
+### Installation chez un client (Docker)
+
+Deux conteneurs indépendants : l'API (qui sert le client web) et PostgreSQL ; détail dans `modules/installation/CLAUDE.md`
+et l'[analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md).
+
+```bash
+docker build --secret id=cle_construction,src=cle-construction.secret -t logibtp/api:latest .
+```
 
 ## Tests
 

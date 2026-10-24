@@ -1,0 +1,63 @@
+# Conteneur de l'API LogiBTP (ANALYSE-MODULE-INSTALLATION.md § 3.1, 3.3) : API et client web, HTTPS par Kestrel quand
+# un certificat est installé (port 8443, publié en 443), port 8080 (publié en 80) pour la redirection et la page
+# d'amorçage du certificat. Projet indépendant de la base ; volumes et réseau externes, créés par l'installeur.
+#   docker compose -f api/compose.yml up -d
+#   docker compose -f api/compose.yml run --rm logibtp-installation installation <commande>   (installeur)
+name: logibtp-api
+
+x-image: &image ${LOGIBTP_IMAGE:-logibtp/api:latest}
+
+services:
+  logibtp-api:
+    image: *image
+    container_name: logibtp-api
+    restart: unless-stopped
+    ports:
+      - "${LOGIBTP_PORT_HTTP:-80}:8080"
+      - "${LOGIBTP_PORT_HTTPS:-443}:8443"
+    environment:
+      LOGIBTP_PORT_HTTPS_PUBLIC: ${LOGIBTP_PORT_HTTPS:-443}
+    volumes:
+      - config:/app/config:ro
+      - certificats:/app/certificats:ro
+      - ged:/app/stockage-ged
+      - journaux:/app/journaux
+      - sauvegardes:/app/sauvegardes:ro
+    networks: [logibtp]
+
+  # Commandes de l'installeur (installation, env, comptes) : même image, volumes de configuration en écriture.
+  logibtp-installation:
+    image: *image
+    profiles: [outils]
+    volumes:
+      - config:/app/config
+      - base-config:/app/base-config
+      - certificats:/app/certificats
+      - ged:/app/stockage-ged
+      - sauvegardes:/app/sauvegardes
+    networks: [logibtp]
+
+volumes:
+  config:
+    name: logibtp-config
+    external: true
+  base-config:
+    name: logibtp-base-config
+    external: true
+  certificats:
+    name: logibtp-certificats
+    external: true
+  ged:
+    name: logibtp-ged
+    external: true
+  journaux:
+    name: logibtp-journaux
+    external: true
+  sauvegardes:
+    name: logibtp-sauvegardes
+    external: true
+
+networks:
+  logibtp:
+    name: logibtp
+    external: true

@@ -25,6 +25,26 @@ public static class ExtensionsConfiguration
         return config;
     }
 
+    /// <summary>
+    /// Connexions déduites du modèle de l'installation (<see cref="ModeleConnexion"/> : LOGIBTP_BASE_HOTE…, rôle
+    /// LOGIBTP_BASE_UTILISATEUR, logibtp_app par défaut, mot de passe LOGIBTP_BASE_MOT_DE_PASSE_APP) : base principale
+    /// si ConnectionStrings:LogiBTP est vide, base de chaque société de Societes:Liste sans Connexion. À appeler après
+    /// le .env et la déclaration des sociétés ; sans LOGIBTP_BASE_HOTE, rien ne change.
+    /// </summary>
+    public static void AjouterConnexionsModele(this ConfigurationManager config)
+    {
+        if (ModeleConnexion.Lire(k => config[k]) is not { } m) return;
+        var utilisateur = string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_UTILISATEUR"]) ? "logibtp_app" : config["LOGIBTP_BASE_UTILISATEUR"]!;
+        var mdp = config["LOGIBTP_BASE_MOT_DE_PASSE_APP"];
+        var ajouts = new Dictionary<string, string?>();
+        if (string.IsNullOrWhiteSpace(config.GetConnectionString("LogiBTP"))) ajouts["ConnectionStrings:LogiBTP"] = m.Chaine(m.NomBase(null), utilisateur, mdp);
+        foreach (var s in config.GetSection("Societes:Liste").GetChildren())
+        {
+            if (string.IsNullOrWhiteSpace(s["Connexion"])) ajouts[$"Societes:Liste:{s.Key}:Connexion"] = m.Chaine(m.NomBase(s.Key), utilisateur, mdp);
+        }
+        if (ajouts.Count > 0) config.AddInMemoryCollection(ajouts);
+    }
+
     /// <summary>Premier fichier .env en remontant depuis le dossier (null : aucun).</summary>
     public static string? CheminEnv(string dossier, int niveaux = 4)
     {

@@ -48,6 +48,7 @@ graph TD
 | stock (facultatif) | socle | `LogiBTP.Stock(.Web)` → Socle.Web | 093 | cœur (lieux = chantiers, articles = éléments, mouvements écrits à la validation des pièces ; pages `/stock`, `/parametres/stock`) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |
+| installation | — (.NET seul) | `LogiBTP.Installation` → Socle, Npgsql | manifeste `db/installation/scripts.txt` | cœur (commandes `installation …` de l'API, image Docker, projets Compose `modules/installation/docker`) |
 | droits | — (règles seules) | `LogiBTP.Droits(.Web)` → Socle.Web | 009 | cœur (catalogue des nœuds, table des routes ; `IDroits` du socle lu par Document, Fiche, CRM, Authentification ; page `/parametres/droits`) |
 
 Liaisons croisées des modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur (`Btp/LiaisonsBtp.cs`, spécialisations, `db/202`), jamais d'un module vers un autre.

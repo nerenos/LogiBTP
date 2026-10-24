@@ -1,0 +1,18 @@
+# Contexte de construction de l'image de l'API (Dockerfile) : ni secrets, ni sorties, ni dépendances installées.
+.env
+cle-construction.secret
+**/.env
+**/bin/
+**/obj/
+**/node_modules/
+client/dist/
+**/tests/resultats-js/
+stockage-ged/
+**/stockage-ged/
+journaux/
+**/journaux/
+.git/
+.vs/
+.claude/
+documentation/
+modules/edition/js/.essais/

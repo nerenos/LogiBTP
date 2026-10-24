@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Installation</RootNamespace>
+    <Description>Module Installation LogiBTP : manifeste des scripts SQL, création et mise à jour des bases, configuration de PostgreSQL, secrets, sociétés, autorité de certification de l'installation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+</Project>

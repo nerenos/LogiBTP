@@ -26,10 +26,20 @@ using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
+// Dossier de la configuration de l'installation (.env, societes.json) : LOGIBTP_CONFIG (/app/config dans l'image Docker),
+// sinon le dossier courant ou celui de l'application et ses parents (développement).
+var dossierConfig = Environment.GetEnvironmentVariable("LOGIBTP_CONFIG");
 // Commande du fichier .env (env initialiser | chiffrer | verifier) : sans démarrer l'application.
 if (args.Length > 0 && args[0] == "env")
 {
-    Environment.ExitCode = CommandeEnv.Executer(args[1..], Directory.GetCurrentDirectory(), Console.Out);
+    Environment.ExitCode = CommandeEnv.Executer(args[1..], dossierConfig ?? Directory.GetCurrentDirectory(), Console.Out);
+    return;
+}
+// Commandes de l'installeur (installation preparer | base creer | societe ajouter | scripts verifier | conversions…) :
+// ANALYSE-MODULE-INSTALLATION.md § 6.
+if (args.Length > 0 && args[0] == "installation")
+{
+    Environment.ExitCode = await CommandeInstallation.ExecuterAsync(args[1..], dossierConfig ?? Directory.GetCurrentDirectory(), Console.Out);
     return;
 }
 // Commande serveur de secours (comptes creer-admin | reinitialiser | deverrouiller | liste) : arguments retirés de la configuration.
@@ -37,7 +47,11 @@ var commande = args.Length > 0 && args[0] == "comptes" ? args[1..] : null;
 var builder = WebApplication.CreateBuilder(commande is null ? args : []);
 // Secrets de l'installation (.env hors du dépôt, valeurs sensibles chiffrées par la clé de construction des binaires) :
 // chaîne de chiffrement des valeurs secrètes en base (mots de passe des fiches), réglages de sécurité.
-builder.Configuration.AjouterFichierEnv(builder.Environment.ContentRootPath, cleEnv: CleConstruction.Valeur);
+// Sociétés déclarées par l'installeur (societes.json : domaines, codes et libellés) ; connexions déduites du modèle de
+// l'installation (LOGIBTP_BASE_HOTE…) quand elles ne sont pas écrites.
+builder.Configuration.AddJsonFile(Path.Combine(dossierConfig ?? builder.Environment.ContentRootPath, CommandeInstallation.FichierSocietes), optional: true);
+builder.Configuration.AjouterFichierEnv(dossierConfig ?? builder.Environment.ContentRootPath, cleEnv: CleConstruction.Valeur);
+builder.Configuration.AjouterConnexionsModele();
 builder.Services.AddChiffrement(builder.Configuration);
 // Sécurité web (§ 10) : déploiement, proxys déclarés, origines CORS, adresses de confiance, limites de débit.
 var securite = OptionsSecurite.Lire(builder.Configuration);
@@ -139,10 +153,13 @@ if (commande is not null)
     return;
 }
 
-// Métrés saisis en lignes : convertis en scripts au démarrage, dans chaque base qui a encore la table metre_ligne.
-await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
+// Métrés saisis en lignes : convertis en scripts au démarrage en développement (compte propriétaire des bases) ; une
+// installation les convertit sous le rôle de schéma (« installation conversions », mise à jour).
+if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
 
 app.UseSecurite();
+// Client web construit (wwwroot de l'image Docker) : fichiers statiques et CSP bloquante ; en développement, Vite le sert.
+app.UseClientWeb();
 app.UseErreursMetier();
 app.UseSocietes();
 app.UseAuthentificationSession();
@@ -193,6 +210,9 @@ api.MapModuleMail();
 api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
+
+// Routes du client (toute adresse hors /api → index.html), en dernier recours.
+app.MapClientWeb();
 
 // Refus par défaut : toute route /api doit être rattachée à un nœud de droits (erreur au démarrage en développement).
 app.VerifierRoutesDroits();

@@ -8,6 +8,15 @@
 > HTTPS), Pointage et Stock (borne sur tablette : contexte sécurisé), gestion des versions de la base (mise à jour).
 >
 > **État** : questions I1 à I14 tranchées le 24/10/2026 (§ 9) : toutes les propositions retenues.
+>
+> **Réalisation** : lot 1 réalisé le 24/10/2026 (`Dockerfile`, `modules/installation` : `LogiBTP.Installation`,
+> projets Compose `docker/base` et `docker/api` ; manifeste `db/installation/scripts.txt` ; `roles.sql` sans méta-commande
+> psql ; cœur `CommandeInstallation` ; socle `ClientWeb`, `ModeleConnexion`, `AjouterConnexionsModele`) ; écarts : les
+> données de démonstration ne sont pas séparables (211 insère des tiers qui dépendent des niveaux de 141) : toute base
+> neuve les reçoit, I11 attend leur séparation (TODO) ; l'ordre du manifeste est l'ordre binaire des noms (le Compose de
+> développement suivait celui de la locale : 007b avant 007) ; `db/164_ged_elements.sql`, absent du Compose, est au
+> manifeste ; les volumes de configuration sont des volumes Docker (et non des dossiers Windows montés), pour que la
+> même procédure vaille avec Docker Desktop, WSL ou une machine virtuelle ; Npgsql sans chiffrement GSS.
 
 ## 1. Demande
 

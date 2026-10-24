@@ -1,0 +1,46 @@
+# Conteneur de la base LogiBTP (ANALYSE-MODULE-INSTALLATION.md § 3.2, 3.3) : image officielle PostgreSQL, non modifiée.
+# Projet indépendant de l'API : arrêter ou mettre à jour l'un ne touche pas l'autre. Volumes et réseau externes, créés
+# par l'installeur (Installer-LogiBTP.ps1) : « docker compose down -v » ne peut jamais effacer les données.
+# Configuration (pg_hba.conf, postgresql.conf) écrite par « installation preparer » dans le volume logibtp-base-config.
+name: logibtp-base
+
+services:
+  logibtp-base:
+    image: ${LOGIBTP_IMAGE_BASE:-postgres:17}
+    container_name: logibtp-base
+    restart: unless-stopped
+    # La clé TLS (base sur une autre machine) est recopiée dans un dossier du compte postgres : PostgreSQL exige 0600.
+    entrypoint: ["bash", "-c", "if [ -s /etc/logibtp/base.key ]; then install -d -o postgres -m 700 /var/lib/postgresql/ssl && install -o postgres -m 600 /etc/logibtp/base.key /var/lib/postgresql/ssl/base.key; fi; exec docker-entrypoint.sh \"$$@\"", "--"]
+    command: ["postgres", "-c", "config_file=/etc/logibtp/postgresql.conf"]
+    environment:
+      POSTGRES_USER: postgres
+      # Lu seulement à la création des données ; vidé par « installation base creer ».
+      POSTGRES_PASSWORD_FILE: /etc/logibtp/postgres-mdp
+      TZ: Europe/Paris
+    volumes:
+      - donnees:/var/lib/postgresql/data
+      - config:/etc/logibtp:ro
+      - sauvegardes:/sauvegardes
+    shm_size: 256mb
+    networks: [logibtp]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  donnees:
+    name: logibtp-base-donnees
+    external: true
+  config:
+    name: logibtp-base-config
+    external: true
+  sauvegardes:
+    name: logibtp-sauvegardes
+    external: true
+
+networks:
+  logibtp:
+    name: logibtp
+    external: true

@@ -111,6 +111,10 @@
     <Project Path="modules/planning/dotnet/LogiBTP.Planning.Web/LogiBTP.Planning.Web.csproj" />
     <Project Path="modules/planning/dotnet/LogiBTP.Planning.Tests/LogiBTP.Planning.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/installation/">
+    <Project Path="modules/installation/dotnet/LogiBTP.Installation/LogiBTP.Installation.csproj" />
+    <Project Path="modules/installation/dotnet/LogiBTP.Installation.Tests/LogiBTP.Installation.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LogiBTP.Domaine/LogiBTP.Domaine.csproj" />
     <Project Path="src/LogiBTP.Calcul/LogiBTP.Calcul.csproj" />
