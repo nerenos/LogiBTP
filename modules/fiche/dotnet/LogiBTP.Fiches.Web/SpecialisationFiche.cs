@@ -12,6 +12,9 @@ public class SpecialisationFiche
     /// <summary>Un verrou non renouvelé pendant cette durée est libre (poste fermé, réseau coupé…).</summary>
     public virtual TimeSpan ExpirationVerrou => TimeSpan.FromMinutes(2);
 
+    /// <summary>Champ de type html avant écriture : nettoyé par l'application (liste blanche, aucun script). Par défaut inchangé.</summary>
+    public virtual string NettoyerHtml(string html) => html;
+
     public virtual int DelaiRequeteMs => 10000;
 
     /// <summary>Droits accordés en plus de ceux du profil (ex. propriétaire de la fiche) : par défaut aucun.</summary>

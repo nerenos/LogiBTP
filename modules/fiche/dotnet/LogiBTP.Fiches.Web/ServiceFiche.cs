@@ -385,11 +385,16 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         }));
     }
 
-    /// <summary>Mots de passe du programme chiffrés juste avant l'écriture de la ligne.</summary>
+    /// <summary>
+    /// Juste avant l'écriture de la ligne : mots de passe du programme chiffrés, champs HTML nettoyés par la
+    /// spécialisation (aucun script : balises, attributs et adresses permis seulement).
+    /// </summary>
     private void ChiffrerSecrets(TypeFicheResolu t, Dictionary<string, string?> aEcrire)
     {
         foreach (var c in t.Definition.Champs.Where(c => c.EstSecret))
             if (aEcrire.TryGetValue(c.Code, out var v) && v is not null) aEcrire[c.Code] = Chiffrer(v);
+        foreach (var c in t.Definition.Champs.Where(c => c.Type == "html"))
+            if (aEcrire.TryGetValue(c.Code, out var v) && v is not null) aEcrire[c.Code] = specialisation.NettoyerHtml(v);
     }
 
     /// <summary>Valeurs saisies des champs gérés par la spécialisation (hors table).</summary>

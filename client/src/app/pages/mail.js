@@ -301,10 +301,12 @@ export class PageMessageMail extends PageBase {
           <span class="aide">${p.score} % : ${p.indices.map((i) => echapper(INDICES[i] ?? i)).join(', ')}</span></li>`).join('')}</ul>` : ''}
         <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="numéro ou code"> <button type="button" data-rattacher>🔗 Rattacher</button>
           ${m.etat !== 'IGNORE' ? '<button type="button" data-ignorer title="Courriel sans rapport (publicité, personnel) : retiré de la liste et de la GED">🚫 Ignorer…</button>' : ''}</p>` : ''}
-      <div class="mail-corps">${d.corps_html ?? ''}</div>
+      <iframe class="mail-corps" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Corps du courriel" data-corps></iframe>
       ${d.journal.length ? `<h2>Journal</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Résultat</th><th>Réponse du serveur</th><th class="nombre">Durée</th></tr></thead><tbody>
         ${d.journal.map((j) => `<tr><td>${date(j.le)}</td><td>${echapper(j.resultat)}</td><td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td>
           <td class="nombre">${j.duree_ms ?? ''} ms</td></tr>`).join('')}</tbody></table>` : ''}`;
+    // Corps du courriel isolé (module Droits, lot 5) : cadre sans script ni accès à l'application, liens dans un nouvel onglet.
+    zone.querySelector('[data-corps]').srcdoc = `<!doctype html><meta charset="utf-8"><base target="_blank"><style>body{font-family:sans-serif;margin:.6rem;color:#1f2328;background:#fff}</style>${d.corps_html ?? ''}`;
     const action = (sel, f) => zone.querySelector(sel)?.addEventListener('click', async () => {
       try { await f(); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });

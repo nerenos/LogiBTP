@@ -39,7 +39,11 @@
 > est servi par lui) ; les rôles PostgreSQL sont un script d'installation (les bases de développement gardent le compte
 > `logibtp`) ; les conversions lancées au démarrage de l'API (métrés) exigent le rôle de schéma, elles se font à la mise
 > à jour ; le journal technique est installé dans la base principale ; la construction de production du client est
-> celle de Vite (`npm run build` : minification).
+> celle de Vite (`npm run build` : minification). Lot 5 (HTML sans script) réalisé le 24/10/2026 : jeu
+> `socle/tests/html_sans_script.json` rejoué par les trois nettoyeurs du serveur (Document, CRM, Mail), champs `html`
+> des fiches (libellé des éléments de bibliothèque) nettoyés à l'écriture, corps d'un courriel affiché dans un cadre
+> `sandbox` ; écart : le jeu n'est pas rejoué par `htmlSur` côté navigateur (tests JS sans DOM) : le serveur, qui nettoie
+> à l'écriture, reste seul juge, `htmlSur` nettoie en plus à l'affichage.
 
 ## 1. Note d'origine (résumé)
 

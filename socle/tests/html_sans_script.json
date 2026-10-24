@@ -1,0 +1,17 @@
+{
+  "description": "HTML saisi ou reçu sans script (module Droits, lot 5) : après nettoyage, aucune des chaînes interdites ne reste (comparaison sans casse). Rejoué par les nettoyeurs du serveur : NettoyageHtml (Document, champs html des fiches), NettoyageHtmlCrm, NettoyageHtmlMail.",
+  "cas": [
+    { "nom": "balise script", "entree": "<p>Avant</p><script>alert('x')</script><p>Après</p>", "interdits": ["<script", "</script"], "garde": ["Avant", "Après"] },
+    { "nom": "gestionnaire d'événement", "entree": "<p onclick=\"alert(1)\" onmouseover=\"vol()\">Texte</p>", "interdits": ["onclick", "onmouseover"], "garde": ["Texte"] },
+    { "nom": "image piégée", "entree": "<img src=\"x\" onerror=\"alert(1)\"><b>gras</b>", "interdits": ["onerror"], "garde": ["gras"] },
+    { "nom": "lien javascript", "entree": "<a href=\"javascript:alert(1)\">lien</a>", "interdits": ["javascript:"], "garde": ["lien"] },
+    { "nom": "lien javascript encodé", "entree": "<a href=\"jav&#x09;ascript:alert(1)\">lien</a>", "interdits": ["ascript:"], "garde": ["lien"] },
+    { "nom": "cadre", "entree": "<iframe src=\"https://pirate.exemple\"></iframe><p>ok</p>", "interdits": ["<iframe", "pirate.exemple"], "garde": ["ok"] },
+    { "nom": "objet et embed", "entree": "<object data=\"x.swf\"></object><embed src=\"x.swf\"><p>ok</p>", "interdits": ["<object", "<embed"], "garde": ["ok"] },
+    { "nom": "formulaire", "entree": "<form action=\"https://pirate.exemple\"><input name=\"mdp\"></form><p>ok</p>", "interdits": ["<form", "<input", "pirate.exemple"], "garde": ["ok"] },
+    { "nom": "base et meta", "entree": "<base href=\"https://pirate.exemple/\"><meta http-equiv=\"refresh\" content=\"0;url=https://pirate.exemple\"><p>ok</p>", "interdits": ["<base", "<meta", "pirate.exemple"], "garde": ["ok"] },
+    { "nom": "SVG avec script", "entree": "<svg><script>alert(1)</script><circle onload=\"alert(2)\"/></svg><p>ok</p>", "interdits": ["<script", "onload", "<svg", "<circle"], "garde": ["ok"] },
+    { "nom": "style avec expression", "entree": "<span style=\"background:url(javascript:alert(1));width:expression(alert(2))\">texte</span>", "interdits": ["javascript:", "expression("], "garde": ["texte"] },
+    { "nom": "mise en forme gardée", "entree": "<p><b>Gras</b> et <i>italique</i></p><ul><li>un</li></ul>", "interdits": [], "garde": ["<b>Gras</b>", "<i>italique</i>", "<li>un</li>"] }
+  ]
+}

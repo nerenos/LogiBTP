@@ -9,6 +9,8 @@ stockage-ged/
 .env
 # Clé de construction du .env (CleConstruction.targets), propre à chaque distribution
 cle-construction.secret
+# Journal technique de repli (base indisponible)
+journaux/
 
 # Sorties des essais du module Édition
 modules/edition/js/.essais/

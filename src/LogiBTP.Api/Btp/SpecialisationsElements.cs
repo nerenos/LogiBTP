@@ -19,6 +19,11 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : SpecialisationFiche
 {
+    private static readonly LogiBTP.Documents.Web.NettoyageHtml Html = new();
+
+    /// <summary>Champs HTML des fiches (libellé d'un élément de bibliothèque…) : même liste blanche que les libellés des documents.</summary>
+    public override string NettoyerHtml(string html) => Html.Nettoyer(html) ?? "";
+
     private static bool Annuaire(string type) => type is "personne" or "individu";
 
     public override async Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
