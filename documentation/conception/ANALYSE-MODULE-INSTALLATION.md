@@ -22,7 +22,17 @@
 > `SourceCertificat`) ; écarts : le certificat est rechargé à chaud par Kestrel (relecture du fichier au plus toutes les
 > 30 s), sans redémarrage ; la page d'amorçage ne vérifie pas le DNS du poste (aucun script) : elle liste les adresses de
 > chaque société ; le mot de passe d'un PKCS#12 importé passe par une variable d'environnement, jamais par la ligne de
-> commande ; la clé de la racine est un PKCS#8 chiffré (AES-256, 600 000 itérations) par la clé des données.
+> commande ; la clé de la racine est un PKCS#8 chiffré (AES-256, 600 000 itérations) par la clé des données. Lot 3
+> réalisé le 25/10/2026 (`modules/installation/windows` : `Installer-LogiBTP.ps1`, `Sauvegarder-LogiBTP.ps1`,
+> `Restaurer-LogiBTP.ps1`, `Commun.ps1` ; `installation certificat base`, `base droits` ; `EtatInstallation`, page
+> `/parametres/installation`) ; écarts : le chiffrement des sauvegardes (prévu au lot 4) est fait dès ce lot ; la
+> sauvegarde contient la configuration (.env, autorité) : chiffrée avec `-Chiffrer`, elle se restaure par la clé du
+> `.env` en place (nouveau serveur : installer d'abord avec `-FichierEnv`) ; la restauration rejoue le SQL de
+> pg_restore avec `search_path = public` (fonctions appelées sans schéma dans des expressions indexées : TODO) ; base
+> distante : le serveur de la base reçoit sa configuration par un dossier exporté (`base-distante`), et sur Docker
+> Desktop l'adresse source vue par PostgreSQL est la passerelle : la restriction tient alors au pare-feu ; la
+> vérification du coffre de la GED après restauration (`installation verifier`) n'est pas faite ; rôles Api et Base non
+> essayés sur deux machines (rôle Complet essayé de bout en bout).
 
 ## 1. Demande
 

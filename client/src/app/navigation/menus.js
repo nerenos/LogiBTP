@@ -262,6 +262,7 @@ export function menus(app) {
         { libelle: 'Connexions externes (OAuth)…', icone: '🔐', url: '/parametres/connexions', titre: 'Connexions aux services externes : Gmail…', desactive: !app.enLigne },
         { libelle: 'Comptes utilisateurs…', icone: '👥', url: '/parametres/comptes', titre: 'Comptes de connexion des salariés et intérimaires', droit: 'administration/comptes', desactive: !app.enLigne },
         { libelle: 'Profils et droits…', icone: '🛡', url: '/parametres/droits', titre: 'Profils, droits par module, document, fiche et fonction ; journal des modifications', droit: 'administration/profils', desactive: !app.enLigne },
+        { libelle: 'Installation : certificat, bases, sauvegardes…', icone: '🖥', url: '/parametres/installation', titre: 'État du serveur : certificat HTTPS, bases des sociétés, dernière sauvegarde, espace disque', droit: 'administration/installation', desactive: !app.enLigne },
         { separateur: true },
         { code: 'raccourcis', libelle: 'Raccourcis clavier…', icone: '⌨', url: '/parametres/raccourcis' },
         { code: 'notifications', libelle: 'Notifications : préférences…', icone: '🔔', url: '/parametres/notifications', desactive: !app.enLigne },

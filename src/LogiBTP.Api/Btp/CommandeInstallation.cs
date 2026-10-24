@@ -18,7 +18,9 @@ namespace LogiBTP.Api.Btp;
 ///   certificat creer [--organisation O] [--jours N] [--nouvelle-racine] : autorité LogiBTP (créée une fois, clé chiffrée
 ///   par la clé des données) et certificat du domaine et de son joker ; certificat renouveler [--avant N] : nouveau
 ///   certificat N jours (60) avant l'échéance ; certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] :
-///   certificat fourni (PKCS#12 : mot de passe dans LOGIBTP_CERTIFICAT_MOT_DE_PASSE) ; certificat etat.
+///   certificat fourni (PKCS#12 : mot de passe dans LOGIBTP_CERTIFICAT_MOT_DE_PASSE) ; certificat etat ;
+///   certificat base --nom N --adresses-api A : base sur une autre machine (TLS) ; base droits : roles.sql sur toutes les bases ;
+///   sauvegarde chiffrer|dechiffrer DOSSIER : fichiers d'un jeu de sauvegarde chiffrés par la clé des données.
 /// Aucun secret n'est jamais affiché.
 /// </summary>
 public static class CommandeInstallation
@@ -33,6 +35,8 @@ public static class CommandeInstallation
                 installation societes | scripts verifier | conversions | etat
                 installation certificat creer [--organisation O] [--jours N] [--nouvelle-racine] | renouveler [--avant N]
                 installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
+                installation certificat base --nom N --adresses-api A [--certificat F --cle K] | installation base droits
+                installation sauvegarde chiffrer|dechiffrer DOSSIER
         """;
 
     public static async Task<int> ExecuterAsync(string[] args, string dossier, TextWriter sortie)
@@ -54,6 +58,9 @@ public static class CommandeInstallation
                 ("certificat", "renouveler") => RenouvelerCertificat(args, dossier, sortie),
                 ("certificat", "importer") => ImporterCertificat(args, dossier, sortie),
                 ("certificat", "etat") => EtatCertificat(sortie),
+                ("certificat", "base") => CertificatBase(args, dossier, sortie),
+                ("base", "droits") => await DroitsBasesAsync(dossier, sortie),
+                ("sauvegarde", "chiffrer" or "dechiffrer") when args.Length > 2 => ChiffrerSauvegarde(args[1] == "chiffrer", args[2], dossier, sortie),
                 _ => Erreur(sortie, Usage),
             };
         }
@@ -292,6 +299,79 @@ public static class CommandeInstallation
         Certificats().Ecrire(origine, domaine, chaine, cle, racine, DateTimeOffset.Now);
         sortie.WriteLine($"Certificat importé ({origine}, émis par {cert.Issuer}) valable jusqu'au {cert.NotAfter:dd/MM/yyyy}"
             + (racine is null ? "" : " ; autorité jointe proposée sur la page /certificat"));
+        return 0;
+    }
+
+    /// <summary>
+    /// Base sur une autre machine (§ 3.3) : certificat du serveur PostgreSQL (nom DNS dans le domaine de l'installation)
+    /// émis par l'autorité LogiBTP ou fourni, TLS du serveur activé, connexions de l'API en VerifyFull par la racine,
+    /// accès limité aux adresses du serveur de l'API ; pg_hba.conf et postgresql.conf régénérés.
+    /// </summary>
+    private static int CertificatBase(string[] args, string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var nom = (Option(args, "--nom") ?? throw new ArgumentException("--nom obligatoire (nom DNS du serveur de la base, ex. base." + domaine + ")")).Trim().ToLowerInvariant();
+        if (!nom.EndsWith("." + domaine, StringComparison.Ordinal)) throw new ArgumentException($"Le nom de la base doit être un sous-domaine de {domaine} (contrainte de noms de l'autorité)");
+        var adresses = Option(args, "--adresses-api") ?? config["LOGIBTP_BASE_ADRESSES_API"];
+        if (string.IsNullOrWhiteSpace(adresses)) throw new ArgumentException("--adresses-api obligatoire : adresse (ou CIDR) du serveur de l'API vue par la base");
+        var dossierBase = DossierBase();
+        Directory.CreateDirectory(dossierBase);
+        string crt, cle;
+        if (Option(args, "--certificat") is { } fourni)
+        {
+            var (chaine, clePem, _) = DossierCertificats.LireFourni(fourni, Option(args, "--cle"), Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICAT_MOT_DE_PASSE"));
+            (crt, cle) = (chaine, clePem);
+        }
+        else
+        {
+            var d = Certificats();
+            var (racine, cleRacine) = Racine(d, domaine, Exiger(config, ExtensionsConfiguration.CleChiffrement), false, null, DateTimeOffset.Now, sortie);
+            var emis = AutoriteCertificats.Emettre(racine, cleRacine, [nom], DateTimeOffset.Now);
+            (crt, cle) = (emis.CertificatPem, emis.ClePem);
+            sortie.WriteLine($"Certificat de la base {nom} valable jusqu'au {emis.Certificat.NotAfter:dd/MM/yyyy}");
+        }
+        File.WriteAllText(Path.Combine(dossierBase, "base.crt"), crt.Trim() + "\n");
+        DossierCertificats.EcrireSecret(Path.Combine(dossierBase, "base.key"), cle);
+        var env = Path.Combine(dossier, ".env");
+        RemplacerEnv(env, new Dictionary<string, string>
+        {
+            ["LOGIBTP_BASE_HOTE"] = nom,
+            ["LOGIBTP_BASE_SSL"] = "VerifyFull",
+            ["LOGIBTP_BASE_RACINE"] = Path.Combine(Certificats().Dossier, "racine.crt").Replace('\\', '/'),
+            ["LOGIBTP_BASE_SSL_SERVEUR"] = "1",
+            ["LOGIBTP_BASE_ADRESSES_API"] = adresses,
+        });
+        var reglages = Reglages(Configuration(dossier));
+        File.WriteAllText(Path.Combine(dossierBase, "pg_hba.conf"), ConfigurationPostgres.PgHba(reglages));
+        File.WriteAllText(Path.Combine(dossierBase, "postgresql.conf"), ConfigurationPostgres.PostgresqlConf(reglages));
+        sortie.WriteLine($"Base distante {nom} : TLS activé, accès depuis {adresses} ; copier le volume logibtp-base-config sur le serveur de la base");
+        return 0;
+    }
+
+    /// <summary>Rôles et droits rejoués sur toutes les bases (après une restauration ou une mise à jour) : roles.sql.</summary>
+    private static async Task<int> DroitsBasesAsync(string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var modele = Modele(config);
+        var bd = new BaseDonnees(sortie);
+        await bd.DefinirRolesAsync(modele.Chaine("postgres", "postgres", Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_ADMIN")), new Dictionary<string, string?>
+        {
+            [RoleSchema] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"),
+            ["logibtp_app"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_APP"),
+            ["logibtp_lecture"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_LECTURE"),
+        });
+        foreach (var (_, base_) in Bases(dossier, modele))
+            await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config["LOGIBTP_BASE_MOT_DE_PASSE_ADMIN"]), Path.Combine(RacineSql(), "db/installation/roles.sql"));
+        return 0;
+    }
+
+    private static int ChiffrerSauvegarde(bool chiffrer, string jeu, string dossier, TextWriter sortie)
+    {
+        var cle = Exiger(Configuration(dossier), ExtensionsConfiguration.CleChiffrement);
+        if (!Directory.Exists(jeu)) throw new ArgumentException($"Dossier introuvable : {jeu}");
+        var n = chiffrer ? ChiffrementSauvegarde.ChiffrerDossier(jeu, cle) : ChiffrementSauvegarde.DechiffrerDossier(jeu, cle);
+        sortie.WriteLine($"{n} fichier(s) {(chiffrer ? "chiffré(s)" : "déchiffré(s)")}");
         return 0;
     }
 

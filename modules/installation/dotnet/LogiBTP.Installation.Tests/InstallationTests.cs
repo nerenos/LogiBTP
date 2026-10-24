@@ -62,10 +62,11 @@ public class PostgresTests
     }
 
     [Fact]
-    public void PgHba_base_distante_en_tls_sans_superutilisateur()
+    public void PgHba_base_distante_en_tls()
     {
         var hba = ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"], Ssl = true });
-        Assert.Contains("hostssl  all   logibtp_schema,logibtp_app,logibtp_lecture  10.0.0.5/32  scram-sha-256", hba);
+        Assert.Contains("hostssl  all   postgres,logibtp_schema,logibtp_app,logibtp_lecture  10.0.0.5/32  scram-sha-256", hba);
+        Assert.DoesNotContain("host     all   all          10.0.0.5", hba);
         Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"] }));
         Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { Reseau = "pas un réseau" }));
     }

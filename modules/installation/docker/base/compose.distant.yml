@@ -1,0 +1,9 @@
+# Base sur une autre machine que l'API (ANALYSE-MODULE-INSTALLATION.md § 3.3) : port 5432 publié, TLS obligatoire
+# (« installation certificat base » : base.crt, base.key et pg_hba.conf hostssl dans le volume logibtp-base-config).
+#   docker compose -f base/compose.yml -f base/compose.distant.yml up -d
+# Pare-feu Windows : 5432 ouvert au seul serveur de l'API (Installer-LogiBTP.ps1 -Role Base). Avec Docker Desktop,
+# l'adresse source vue par PostgreSQL est celle de la passerelle Docker : la restriction tient alors au pare-feu.
+services:
+  logibtp-base:
+    ports:
+      - "${LOGIBTP_PORT_BASE:-5432}:5432"

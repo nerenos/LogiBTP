@@ -37,6 +37,21 @@ décisions I1 à I14).
   racine chiffrée par la clé des données) ; certificats fournis (PKCS#12 ou PEM, couverture du domaine et du joker
   contrôlée) ; rappel 30 jours avant l'échéance aux administrateurs (`SourceCertificat` du cœur).
 
+- Lot 3 : scripts Windows `windows/` (PowerShell 5.1 et 7, UTF-8 avec BOM ; tout passe par `docker`, aucun dossier
+  Windows monté : même procédure avec Docker Desktop, WSL ou une machine virtuelle) : `Commun.ps1` (appels de docker par
+  `$args` — jamais de fonction à paramètres : `-v`, `-d`, `-u` seraient pris pour `-Verbose`, `-Debug` —, en
+  « Continue » : seul le code de retour compte ; passage de fichiers par `docker cp` et un conteneur arrêté ; hôte A / B /
+  C ; conservation 7 / 4 / 12), `Installer-LogiBTP.ps1` (rôles Complet, Api avec `-BaseDistante`, Base avec
+  `-ConfigurationBase` ; rejouable ; droits du dossier par SID sur la seule racine ; pare-feu, tâches planifiées S4U de
+  sauvegarde et de renouvellement, autorité sur le serveur, rapport `INSTALLATION.txt` avec les commandes DNS),
+  `Sauvegarder-LogiBTP.ps1` (pg_dump de chaque base, GED et configuration en tar, `-Chiffrer`, copie, rotation,
+  `derniere-sauvegarde.json`), `Restaurer-LogiBTP.ps1` (API arrêtée, déchiffrement, bases recréées par le SQL de
+  pg_restore rejoué avec `search_path = public`, `installation base droits`, GED, `-AvecConfiguration`) ; base sur une
+  autre machine (`installation certificat base`, `hostssl` de tous les rôles depuis l'API, surcharge
+  `docker/base/compose.distant.yml`) ; chiffrement des sauvegardes (`ChiffrementSauvegarde` : AES-256-GCM par blocs de
+  1 Mo, HKDF de la clé des données, dernier bloc authentifié) ; page `/parametres/installation` (nœud de droits
+  `administration/installation`, `GET /api/installation/etat` : `EtatInstallation` du module).
+
 ## Bibliothèque (`dotnet/LogiBTP.Installation`)
 - `ManifesteScripts` (`Lire`, `Analyser`, `Ecarts`), `BaseDonnees` (`DefinirRolesAsync`,
   `CreerBaseAsync`, `AppliquerAsync(connexion, racine, scripts, adopter)` → `BilanScripts`, `ScriptsAppliquesAsync`,
@@ -45,18 +60,26 @@ décisions I1 à I14).
   `Ajouter`, `VerifierCode`, `Societes`), `Secrets`, `AutoriteCertificats` (`CreerRacine`, `Emettre`, `ContrainteNoms`,
   `NomsPermis`, `NomsDns`, `Couvre`, `Empreinte`, `ChiffrerCle` / `DechiffrerCle`, `ProfilApple`, `ScriptPostes`),
   `DossierCertificats` (serveur.crt, serveur.key, racine.crt, racine.key chiffrée, certificat.json ; `Ecrire`,
-  `LireFourni`, `Infos`), `OrigineCertificat` (LOGIBTP, IMPORTE, LETSENCRYPT).
+  `LireFourni`, `Infos`), `OrigineCertificat` (LOGIBTP, IMPORTE, LETSENCRYPT), `ChiffrementSauvegarde` (`Chiffrer`,
+  `Dechiffrer`, `ChiffrerDossier`, `DechiffrerDossier`, extension `.chiffre`). `LogiBTP.Installation.Web` :
+  `AddHttpsInstallation`, `UseHttpsInstallation`, `MapAmorcage`, `MapModuleInstallation` (`EtatInstallation`).
 
 ## Commandes (image de l'API)
 `docker compose -f docker/api/compose.yml run --rm logibtp-installation installation …` :
 `preparer --domaine D [--deploiement] [--confiance] [--reseau] [--memoire] [--libelle] [--base-hote]`,
 `base creer`, `societe ajouter CODE [--libelle]`, `societes`, `scripts verifier`, `conversions`, `etat`,
 `certificat creer [--organisation] [--jours] [--nouvelle-racine] | renouveler [--avant 60] | importer --certificat F [--cle K]
-[--origine IMPORTE|LETSENCRYPT] | etat` (mot de passe d'un PKCS#12 : `LOGIBTP_CERTIFICAT_MOT_DE_PASSE`).
+[--origine IMPORTE|LETSENCRYPT] | etat | base --nom N --adresses-api A` (mot de passe d'un PKCS#12 :
+`LOGIBTP_CERTIFICAT_MOT_DE_PASSE`), `base droits`, `sauvegarde chiffrer|dechiffrer DOSSIER`.
+Windows : `Installer-LogiBTP.ps1 -Domaine D [-Confiance CIDR] [-Administrateur pseudo] [-Certificat LogiBTP|Importer|Aucun]
+[-FichierImage tar] [-FichierEnv .env]…`, `Sauvegarder-LogiBTP.ps1 [-Chiffrer] [-Copie \\nas\x]`,
+`Restaurer-LogiBTP.ps1 -Sauvegarde <jeu> [-AvecConfiguration] [-Confirmer]`.
 Variables : `LOGIBTP_CONFIG` (/app/config), `LOGIBTP_CONFIG_BASE` (/app/base-config), `LOGIBTP_SQL` (/app/sql),
 `LOGIBTP_CERTIFICATS` (/app/certificats), `LOGIBTP_PORT_HTTPS_PUBLIC` (port public de la redirection, 443).
 
 ## Tests
 `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` (manifeste ↔ dépôt, ordre, pg_hba, postgresql.conf,
 sociétés, connexions du modèle, CSP ; autorité : contrainte de noms, chaîne validée et nom étranger refusé par
-`X509Chain`, joker, chiffrement de la clé, profil Apple, script des postes, dossier, redirection).
+`X509Chain`, joker, chiffrement de la clé, profil Apple, script des postes, dossier, redirection ; chiffrement des
+sauvegardes : tailles, autre clé, altération, troncature). Scripts PowerShell : essai de bout en bout sur Docker Desktop
+(installation, rejeu, société, sauvegarde claire et chiffrée, restauration avec témoins).

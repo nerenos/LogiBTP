@@ -65,6 +65,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("administration", "Administration", Lecture, Icone: "⚙"),
             new("administration/profils", "Profils et droits", Lecture),
             new("administration/comptes", "Comptes utilisateurs", Lecture),
+            new("administration/installation", "Installation (certificat, bases, sauvegardes)", Lecture),
         ]);
         return n;
     }
@@ -86,6 +87,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/droits/profils", ModeRoute.Module, "administration/profils"),
         new("/api/droits/journal", ModeRoute.Module, "administration/profils"),
         new("/api/modules", ModeRoute.Session),
+        new("/api/installation", ModeRoute.Module, "administration/installation"),
         new("/api/diffusion", ModeRoute.Session),
         new("/api/notifications", ModeRoute.Session),
         // Module Document : définitions et référentiels lus par la page document.

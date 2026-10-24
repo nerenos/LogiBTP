@@ -28,7 +28,8 @@ ENV ASPNETCORE_ENVIRONMENT=Production \
     LOGIBTP_CONFIG=/app/config \
     LOGIBTP_CONFIG_BASE=/app/base-config \
     LOGIBTP_CERTIFICATS=/app/certificats \
-    LOGIBTP_SQL=/app/sql
+    LOGIBTP_SQL=/app/sql \
+    LOGIBTP_SAUVEGARDES=/app/sauvegardes
 WORKDIR /app
 COPY --from=api /publication ./
 COPY --from=api /sql ./sql/

@@ -475,6 +475,7 @@ export const api = {
   // Module Règlements (facultatif) : tiers, échéances avec leur reste, état des pièces, règlements, cautions.
   // Modules activés par société (db/193) et référentiel des services (membres : individus de notre société).
   modules: () => appel('GET', '/modules'),
+  etatInstallation: () => appel('GET', '/installation/etat'),
   activerModule: (code, actif) => appel('PUT', `/modules/${encodeURIComponent(code)}`, { actif }),
   services: () => appel('GET', '/services'),
   enregistrerServices: (liste) => appel('PUT', '/services', liste),

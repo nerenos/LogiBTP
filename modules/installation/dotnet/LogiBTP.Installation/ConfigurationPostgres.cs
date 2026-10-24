@@ -46,7 +46,6 @@ public static class ConfigurationPostgres
     {
         r.Verifier();
         var roles = string.Join(',', ReglagesPostgres.Roles);
-        var appli = string.Join(',', ReglagesPostgres.Roles.Skip(1));
         var s = new StringBuilder();
         s.AppendLine("# pg_hba.conf de l'installation LogiBTP : généré par « installation preparer », ne pas modifier à la main.");
         s.AppendLine("# TYPE   BASE  UTILISATEUR  ADRESSE  MÉTHODE");
@@ -56,8 +55,9 @@ public static class ConfigurationPostgres
         s.AppendLine($"host     all   {roles}  {r.Reseau}  scram-sha-256");
         if (r.AdressesApi.Count > 0)
         {
-            s.AppendLine("# Serveur de l'API sur une autre machine : TLS seulement, rôles de l'application.");
-            foreach (var a in r.AdressesApi) s.AppendLine($"hostssl  all   {appli}  {(a.Contains('/') ? a : a + (a.Contains(':') ? "/128" : "/32"))}  scram-sha-256");
+            // L'installeur (création des bases, mises à jour) tourne sur le serveur de l'API : mêmes rôles qu'en local.
+            s.AppendLine("# Serveur de l'API sur une autre machine (API et installeur) : TLS seulement.");
+            foreach (var a in r.AdressesApi) s.AppendLine($"hostssl  all   {roles}  {(a.Contains('/') ? a : a + (a.Contains(':') ? "/128" : "/32"))}  scram-sha-256");
         }
         s.AppendLine("# Tout le reste est refusé.");
         s.AppendLine("host     all   all          0.0.0.0/0  reject");

@@ -23,6 +23,7 @@ import { PageReglements } from './reglements.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
+import { PageParametresInstallation } from './parametres-installation.js';
 import { PageParametresServices } from './parametres-services.js';
 import { PageCrm } from './crm.js';
 import { PageNoteCrm } from './crm-note.js';
@@ -111,6 +112,7 @@ export const ROUTES = [
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations à surveiller' },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
+  { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: 'Installation' },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: 'Profils et droits' },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
   { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: 'Paramétrage du suivi (CRM)' },

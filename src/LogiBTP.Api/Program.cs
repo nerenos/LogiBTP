@@ -211,6 +211,8 @@ api.MapRessources();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();
+// État de l'installation (certificat, bases, sauvegarde, disques) : page /parametres/installation.
+api.MapModuleInstallation();
 api.MapModuleOAuth();
 api.MapModuleMail();
 api.MapCalendriersBtp();
