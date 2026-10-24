@@ -3,6 +3,12 @@ using LogiBTP.Socle.Web;
 
 namespace LogiBTP.Listes.Web;
 
+/// <summary>Restriction d'une liste : types d'élément refusés (lignes écartées), colonnes masquées (RGPD).</summary>
+public sealed record RestrictionListe(IReadOnlyList<string> TypesRefuses, IReadOnlySet<string> ColonnesMasquees)
+{
+    public static readonly RestrictionListe Aucune = new([], new HashSet<string>());
+}
+
 /// <summary>
 /// Point de spécialisation du module Liste (classe mère) : droits sur les vues, requête manuelle, limites
 /// d'exécution, construction des requêtes. Les droits et groupes d'utilisateurs seront affinés plus tard :
@@ -35,6 +41,12 @@ public class SpecialisationListe
 
     /// <summary>Création, modification et suppression des thèmes de vues : profil ADMIN.</summary>
     public virtual bool PeutGererThemes(Utilisateur u) => u.EstAdmin;
+
+    /// <summary>
+    /// Restriction des lignes et des colonnes selon les droits de l'utilisateur (module Droits par l'application) : types
+    /// d'élément refusés, colonnes confidentielles masquées (RGPD). Par défaut : aucune.
+    /// </summary>
+    public virtual Task<RestrictionListe> RestrictionAsync(SourceResolue source, Utilisateur u, CancellationToken ct) => Task.FromResult(RestrictionListe.Aucune);
 
     public virtual ConstructeurRequete Constructeur(SourceResolue source, DefinitionVue definition, DemandeListe demande) =>
         new(source, definition, demande);

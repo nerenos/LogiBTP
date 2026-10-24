@@ -42,6 +42,10 @@ public class SessionUtilisateur
     public string? SesNavigateur { get; set; }
     public DateTimeOffset? SesFermeeLe { get; set; }
     public bool SesTest { get; set; }
+    /// <summary>Usurpation en cours : compte pour lequel agit l'administrateur de la session, fin, motif.</summary>
+    public long? SesUsurpeCptId { get; set; }
+    public DateTimeOffset? SesUsurpationFin { get; set; }
+    public string? SesUsurpationMotif { get; set; }
 }
 
 /// <summary>Journal des connexions : qui, quand, d'où, quoi (CONNEXION, ECHEC, VERROUILLAGE, DECONNEXION…).</summary>

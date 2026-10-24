@@ -30,6 +30,18 @@ public abstract class SpecialisationAuthentification
             ? (await droits.ProfilsAsync(ct)).Select(p => new ProfilCompte(p.Code, p.Libelle)).ToList()
             : Profils;
 
+    /// <summary>Droit d'usurper un autre compte (D14 : administrateurs seulement, pour tester les droits et dépanner).</summary>
+    public virtual Task<bool> PeutUsurperAsync(IServiceProvider services, Utilisateur u, CancellationToken ct) => Task.FromResult(u.EstAdmin);
+
+    /// <summary>Profil à tous les droits (jamais usurpé, D27) : celui du module Droits, sinon ADMIN.</summary>
+    public virtual async Task<bool> ProfilTotalAsync(IServiceProvider services, string profil, CancellationToken ct) =>
+        services.GetService(typeof(IDroits)) is IDroits droits
+            ? (await droits.ProfilsAsync(ct)).Any(p => p.Code == profil && p.Total)
+            : profil == "ADMIN";
+
+    /// <summary>Après le début d'une usurpation (paramètre « notifier ») : prévenir le compte usurpé.</summary>
+    public virtual Task ApresUsurpationAsync(IServiceProvider services, Compte cible, string administrateur, string motif, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Profil d'un nouveau compte (A5).</summary>
     public virtual string ProfilParDefaut => "SAISIE";
 

@@ -77,6 +77,9 @@ export class Application {
     });
     // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
     this.abonner('session', (e) => this.#sessionChangee(e));
+    document.addEventListener('click', (e) => {
+      if (e.target.closest?.('[data-fin-usurpation]') && confirm('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
+    });
     await this.fenetres.demarrer();
 
     this.routeur = new Routeur({ routes: ROUTES, conteneur: document.querySelector('#pages'), app: this, surPage: () => this.majPage() });
@@ -158,8 +161,23 @@ export class Application {
   /** Action permise sur un nœud du module Droits (au moins la portée demandée) ; hors ligne ou droits inconnus : oui. */
   peut(noeud, action, portee = 'SOI') { return !this.droits || autorise(this.droits, noeud, action, portee); }
 
-  profil() { return this.enLigne ? (this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
-  utilisateur() { return this.enLigne ? (this.session?.code ?? '') : 'demo'; }
+  // Usurpation (module Authentification) : l'application est celle du compte usurpé (profil, droits, menus).
+  profil() { return this.enLigne ? (this.session?.usurpation?.profil ?? this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
+  utilisateur() { return this.enLigne ? (this.session?.usurpation?.code ?? this.session?.code ?? '') : 'demo'; }
+
+  /** Usurpation d'un compte par un administrateur (motif obligatoire) : l'application est rechargée sous ce compte. */
+  async usurper(identifiant, motif) {
+    this.session = await api.auth.usurper(identifiant, motif);
+    this.publier('session', { connecte: true });
+    location.assign('/');
+  }
+
+  /** Fin de l'usurpation : retour au compte de l'administrateur. */
+  async terminerUsurpation() {
+    this.session = await api.auth.finUsurpation();
+    this.publier('session', { connecte: true });
+    location.assign('/parametres/comptes');
+  }
   estAdmin() { return this.profil() === 'ADMIN'; }
   peutGererThemes() { return !this.enLigne || this.estAdmin(); }
 
@@ -359,8 +377,16 @@ export class Application {
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
       <span title="${this.enLigne ? 'API connectée' : 'Démo hors ligne : données de démonstration, calcul local'}">${this.enLigne ? '● API' : '○ Démo'}</span>
       ${!this.enLigne ? `<a href="/parametres" title="Profil de démonstration (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : this.session?.connecte ? `${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+        : this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : '<a href="/connexion">👤 Se connecter</a>'}`);
+  }
+
+  /** Pastille d'usurpation du bandeau : compte usurpé, administrateur, fin ; clic = terminer. */
+  #usurpation() {
+    const us = this.session?.usurpation;
+    if (!us) return '';
+    const fin = new Date(us.fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${echapper(`${this.session.code} agit pour ${us.libelle ?? us.code} jusqu'à ${fin} : ${us.motif}. Cliquer pour terminer.`)}">🎭 ${echapper(us.code)} · fin ${fin} ✕</button>`;
   }
 
   /** Cloche du bandeau : notifications non lues (rouge s'il y en a d'urgentes). */

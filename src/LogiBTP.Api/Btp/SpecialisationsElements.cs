@@ -8,6 +8,7 @@ using LogiBTP.Ged.Web;
 using LogiBTP.Listes;
 using LogiBTP.Listes.Web;
 using LogiBTP.Socle.Web;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Api.Btp;
 
@@ -138,6 +139,45 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : SpecialisationListe
 {
     private static readonly Dictionary<string, string> FicheParSource = new() { ["salaries"] = "salarie", ["materiels"] = "materiel" };
+
+    /// <summary>Fiche dont les champs confidentiels sont masqués dans la liste de chaque source (RGPD).</summary>
+    private static readonly Dictionary<string, string> FicheRgpd = new()
+    {
+        ["salaries"] = "salarie", ["materiels"] = "materiel", ["personnes"] = "personne", ["individus"] = "individu", ["elements"] = "element",
+        ["projets"] = "projet", ["affaires"] = "affaire", ["chantiers"] = "chantier", ["marches"] = "marche", ["marches_st"] = "marche",
+    };
+
+    private sealed record TypeElement(string Code, string? Famille);
+
+    /// <summary>
+    /// Droits du module Droits appliqués aux listes : lignes des types de documents (documents/{famille}/{code}) et des
+    /// types de fiches (fiches/{type}) que l'utilisateur ne peut pas consulter écartées ; champs confidentiels de la fiche
+    /// de la source masqués sans le droit RGPD de la fiche (jamais lus, cherchés, triés ni filtrés).
+    /// </summary>
+    public override async Task<RestrictionListe> RestrictionAsync(SourceResolue source, Utilisateur u, CancellationToken ct)
+    {
+        var services = SpecialisationBtp.Http?.HttpContext?.RequestServices;
+        if (services?.GetService<IDroits>() is not { } droits) return RestrictionListe.Aucune;
+        var db = services.GetRequiredService<LogiBtpContext>();
+        var types = await db.Database.SqlQueryRaw<TypeElement>("""
+            SELECT tyd_code AS "Code", tyd_famille::text AS "Famille" FROM type_document
+            UNION ALL SELECT tyf_code, NULL FROM type_fiche
+            """).ToListAsync(ct);
+        var refuses = new List<string>();
+        foreach (var t in types)
+        {
+            var noeud = t.Famille is null ? $"fiches/{t.Code}" : $"documents/{t.Famille}/{t.Code}";
+            if (!await droits.AutoriseAsync(u, noeud, "CONSULTER", ct)) refuses.Add(t.Code);
+        }
+        var masquees = new HashSet<string>(StringComparer.Ordinal);
+        if (source.Code is not null && FicheRgpd.TryGetValue(source.Code, out var fiche) && !await droits.AutoriseAsync(u, $"fiches/{fiche}", "RGPD", ct))
+        {
+            var type = await services.GetRequiredService<ServiceFiche>().Type(fiche, ct);
+            var colonnes = source.Colonnes.Select(c => c.Code).ToHashSet(StringComparer.Ordinal);
+            masquees.UnionWith(type.Definition.Champs.Concat(type.Supplementaires).Where(c => c.Confidentiel).Select(c => c.Code).Where(colonnes.Contains));
+        }
+        return new RestrictionListe(refuses, masquees);
+    }
 
     public override async Task ValiderModification(SourceResolue source, string id, IReadOnlyDictionary<string, string?> valeurs, Utilisateur u, CancellationToken ct)
     {

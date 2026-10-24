@@ -55,6 +55,15 @@ public partial class ConstructeurRequete
     /// <summary>Types d'élément du thème de la vue (vide = tous), fixés par le service.</summary>
     public IReadOnlyList<string> TypesTheme { get; set; } = [];
 
+    /// <summary>Types d'élément refusés à l'utilisateur (droits de consultation), fixés par le service : lignes écartées.</summary>
+    public IReadOnlyList<string> TypesRefuses { get; set; } = [];
+
+    /// <summary>
+    /// Colonnes confidentielles masquées à l'utilisateur (RGPD), fixées par le service : jamais lues, ni cherchées, ni
+    /// triées ; un filtre ou un segment qui les cite est refusé (COLONNE_CONFIDENTIELLE).
+    /// </summary>
+    public IReadOnlySet<string> ColonnesMasquees { get; set; } = new HashSet<string>();
+
     protected SourceResolue Source { get; }
 
     /// <summary>Source interrogée (relation à mettre à jour pour la saisie dans la liste).</summary>
@@ -73,11 +82,13 @@ public partial class ConstructeurRequete
         return "@" + nom;
     }
 
-    protected bool Connue(string code) => _colonnes.ContainsKey(code);
+    protected bool Connue(string code) => _colonnes.ContainsKey(code) && !ColonnesMasquees.Contains(code);
 
-    /// <summary>Colonne de la source ; une colonne inconnue est refusée (jamais insérée dans le SQL).</summary>
+    /// <summary>Colonne de la source ; une colonne inconnue ou masquée est refusée (jamais insérée dans le SQL).</summary>
     protected string Col(string code) =>
-        Connue(code) ? "s." + Identifiant(code) : throw new ErreurListe("COLONNE_INCONNUE", $"Colonne {code} inconnue de la source");
+        Connue(code) ? "s." + Identifiant(code)
+        : _colonnes.ContainsKey(code) ? throw new ErreurListe("COLONNE_CONFIDENTIELLE", $"Colonne {code} confidentielle")
+        : throw new ErreurListe("COLONNE_INCONNUE", $"Colonne {code} inconnue de la source");
 
     /// <summary>Valeur de curseur convertie au type de la colonne (texte si le type n'est pas reconnu).</summary>
     protected (string Colonne, string Valeur) Typee(string code, string? valeur)
@@ -122,6 +133,11 @@ public partial class ConstructeurRequete
         {
             var type = Source.ColonneType is { } t ? Col(t) : P(Source.TypeElement);
             conditions.Add($"({type})::text = ANY({P(TypesTheme.ToArray())})");
+        }
+        if (TypesRefuses.Count > 0)
+        {
+            var type = Source.ColonneType is { } t ? Col(t) : P(Source.TypeElement);
+            conditions.Add($"NOT (({type})::text = ANY({P(TypesRefuses.ToArray())}))");
         }
         conditions.AddRange(Definition.Filtres.Select(ConditionFiltre));
         var colonnes = ColonnesRecherche();

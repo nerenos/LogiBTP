@@ -316,10 +316,13 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
     {
         var (source, def) = await Resoudre(d, u, ct);
         var types = await TypesTheme(def.Theme, ct);
+        var restriction = await specialisation.RestrictionAsync(source, u, ct);
         try
         {
             var c = specialisation.Constructeur(source, def, d);
             c.TypesTheme = types;
+            c.TypesRefuses = restriction.TypesRefuses;
+            c.ColonnesMasquees = restriction.ColonnesMasquees;
             return c;
         }
         catch (ErreurListe e)

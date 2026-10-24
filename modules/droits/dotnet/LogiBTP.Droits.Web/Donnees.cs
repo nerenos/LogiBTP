@@ -26,6 +26,16 @@ public class DroitProfil
     public JsonDocument DprActions { get; set; } = JsonDocument.Parse("{}");
 }
 
+/// <summary>Montants de validation d'un profil sur un nœud (HT ; −1 = sans limite, 0 = sur demande).</summary>
+public class LimiteValidationProfil
+{
+    public Guid LvaProId { get; set; }
+    public string LvaNoeud { get; set; } = "";
+    public decimal LvaPiece { get; set; } = -1;
+    public decimal LvaCumul { get; set; } = -1;
+    public short LvaJours { get; set; } = 30;
+}
+
 /// <summary>Journal des modifications des profils et de leurs droits (audit).</summary>
 public class JournalDroits
 {
@@ -44,11 +54,13 @@ public class DroitsDbContext(DbContextOptions<DroitsDbContext> options) : DbCont
     public DbSet<Profil> Profils => Set<Profil>();
     public DbSet<DroitProfil> Droits => Set<DroitProfil>();
     public DbSet<JournalDroits> Journal => Set<JournalDroits>();
+    public DbSet<LimiteValidationProfil> Limites => Set<LimiteValidationProfil>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<Profil>().ToTable("profil").HasKey(x => x.ProId);
         b.Entity<DroitProfil>().ToTable("droit_profil").HasKey(x => new { x.DprProId, x.DprNoeud });
         b.Entity<JournalDroits>().ToTable("journal_droits").HasKey(x => x.JdrId);
+        b.Entity<LimiteValidationProfil>().ToTable("limite_validation").HasKey(x => new { x.LvaProId, x.LvaNoeud });
     }
 }

@@ -7,6 +7,7 @@ import { pastilleCompte, rendreComptePersonne, dateCompte, jourCompte } from '..
 const EVENEMENTS = {
   CONNEXION: '🔑 Connexion', ECHEC: '✖ Échec', VERROUILLAGE: '🔒 Verrouillage', DECONNEXION: '⏻ Déconnexion', MDP_CHANGE: '🔐 Mot de passe changé',
   MDP_REINITIALISE: '🔐 Mot de passe réinitialisé', EXPIRE: '⌛ Expiré', REFUS: '⛔ Refus', DEVERROUILLAGE: '🔓 Déverrouillage', COMPTE: '👤 Compte',
+  USURPATION: '🎭 Usurpation', USURPATION_FIN: '🎭 Fin d’usurpation', USURPATION_ACTION: '🎭 Action pendant l’usurpation', MDP_OUBLI: '✉ Mot de passe oublié',
 };
 
 /**
@@ -88,6 +89,14 @@ export class PageParametresComptes extends PageBase {
       <dt>Dernière connexion</dt><dd>${dateCompte(compte.derniere_connexion)}</dd></dl>
       ${compte.type === 'PERSONNE' ? `<div data-provisoire></div><p><button type="button" data-reinitialiser>🔐 Réinitialiser le mot de passe</button>
         ${compte.etat === 'VERROUILLE' ? '<button type="button" data-deverrouiller>🔓 Déverrouiller</button>' : ''}</p>` : ''}`;
+    // Usurpation (administrateur, jamais un compte administrateur) : tester les droits du compte, dépanner.
+    if (compte.type === 'PERSONNE' && compte.code !== this.app.utilisateur() && compte.profil !== 'ADMIN') {
+      zone.insertAdjacentHTML('beforeend', `<p><button type="button" data-usurper title="Agir pour ce compte (une heure au plus, motif obligatoire, tracé au journal et notifié)">🎭 Agir à sa place…</button></p>`);
+      zone.querySelector('[data-usurper]').addEventListener('click', () => {
+        const motif = prompt(`Agir pour ${compte.code} : motif (test des droits, dépannage…)`);
+        if (motif?.trim()) this.app.usurper(compte.code, motif.trim()).catch((e) => this.app.erreur(e));
+      });
+    }
     zone.querySelector('[data-reinitialiser]')?.addEventListener('click', async () => {
       if (!confirm(`Réinitialiser le mot de passe de ${compte.code} ? Ses sessions seront fermées.`)) return;
       try {

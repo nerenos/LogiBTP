@@ -103,6 +103,20 @@ public class ConstructeurRequeteTests
     }
 
     [Fact]
+    public void Types_refuses_et_colonnes_masquees_par_les_droits()
+    {
+        var avecColonne = Source with { ColonneType = "ville", TypeElement = null };
+        var r = new ConstructeurRequete(avecColonne, Def(), new DemandeListe { Recherche = "dupont" })
+            { TypesRefuses = ["V_FACTURE"], ColonnesMasquees = new HashSet<string> { "nom" } }.Lot(10);
+        Assert.Contains("NOT ((s.\"ville\")::text = ANY(@p0))", r.Texte);
+        Assert.DoesNotContain("s.\"nom\"", r.Texte);
+        var def = Def();
+        def.Filtres = [new() { Colonne = "nom", Op = "=", Valeur = "x" }];
+        Assert.Equal("COLONNE_CONFIDENTIELLE", Assert.Throws<ErreurListe>(() =>
+            new ConstructeurRequete(Source, def, new DemandeListe()) { ColonnesMasquees = new HashSet<string> { "nom" } }.Lot(10)).Code);
+    }
+
+    [Fact]
     public void Saisie_colonnes_controlees_valeurs_typees()
     {
         var source = Source with

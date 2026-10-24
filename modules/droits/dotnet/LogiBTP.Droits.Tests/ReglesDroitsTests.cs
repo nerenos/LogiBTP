@@ -95,3 +95,42 @@ public class ReglesDroitsTests
         }
     }
 }
+
+/// <summary>Montants de validation : limite héritée, dépassement par pièce ou par cumul, contrôles de saisie.</summary>
+public class LimitesTests
+{
+    private static readonly Dictionary<string, Limite> Limites = new()
+    {
+        ["documents/A"] = new(5000m, 20000m, 30),
+        ["documents/A/A_COMMANDE"] = new(1000m, -1m, 30),
+        ["documents/V"] = new(-1m, -1m, 30),
+        ["documents/S"] = new(0m, -1m, 30),
+    };
+
+    [Fact]
+    public void Limite_heritee()
+    {
+        Assert.Equal(1000m, ReglesDroits.LimiteEffective(Limites, "documents/A/A_COMMANDE")!.Piece);
+        Assert.Equal(5000m, ReglesDroits.LimiteEffective(Limites, "documents/A/A_FACTURE")!.Piece);
+        Assert.Null(ReglesDroits.LimiteEffective(Limites, "documents/E/E_OE"));
+    }
+
+    [Theory]
+    [InlineData("documents/A/A_COMMANDE", 1000, 0, null)]
+    [InlineData("documents/A/A_COMMANDE", 1000.01, 0, "PIECE")]
+    [InlineData("documents/A/A_COMMANDE", 900, 1000000, null)]
+    [InlineData("documents/A/A_FACTURE", 4000, 16000, null)]
+    [InlineData("documents/A/A_FACTURE", 4000, 16000.01, "CUMUL")]
+    [InlineData("documents/V/V_FACTURE", 1000000, 1000000, null)]
+    [InlineData("documents/S/S_ENTREE", 0, 0, null)]
+    [InlineData("documents/S/S_ENTREE", 0.01, 0, "PIECE")]
+    public void Depassement(string noeud, decimal montant, decimal cumul, string? attendu) =>
+        Assert.Equal(attendu, ReglesDroits.Depassement(ReglesDroits.LimiteEffective(Limites, noeud)!, montant, cumul));
+
+    [Fact]
+    public void Controle_de_saisie()
+    {
+        Assert.Empty(ReglesDroits.ControlerLimite(new(-1m, 0m, 30)));
+        Assert.Equal(["LIMITE_MONTANT", "LIMITE_JOURS"], ReglesDroits.ControlerLimite(new(-2m, 10m, 0)));
+    }
+}

@@ -14,6 +14,9 @@ public sealed record ActionsEffectives(bool Total, string? Source, IReadOnlyDict
 
 public sealed record ErreurLigne(string Noeud, string Code, string? Action = null);
 
+/// <summary>Limites de validation en HT : par pièce, cumul sur des jours glissants (−1 = sans limite).</summary>
+public sealed record Limite(decimal Piece, decimal Cumul, int Jours);
+
 /// <summary>
 /// Règles des droits, mêmes que regles.js (jeu partagé modules/droits/tests/cas/01_droits.json) : nœud = chemin
 /// « module/élément » ; un nœud sans ligne hérite de son plus proche ancêtre qui en a une ; actions en cascade pour la
@@ -37,6 +40,8 @@ public static partial class ReglesDroits
         ["NOEUD_INVALIDE"] = "Nœud de droits invalide",
         ["ACTION_INCONNUE"] = "Action inconnue pour ce nœud",
         ["PORTEE_INCONNUE"] = "Portée inconnue (SOI, SERVICE ou TOUT)",
+        ["LIMITE_MONTANT"] = "Montant de validation : −1 (sans limite), 0 (sur demande) ou un montant positif",
+        ["LIMITE_JOURS"] = "Période du cumul : de 1 à 366 jours",
     };
 
     private static int Rang(string? p) => p is null ? -1 : Portees.ToList().IndexOf(p);
@@ -117,6 +122,28 @@ public static partial class ReglesDroits
     {
         var prefixe = noeud + "/";
         return lignes.Where(l => !l.Key.StartsWith(prefixe, StringComparison.Ordinal)).ToDictionary(l => l.Key, l => l.Value);
+    }
+
+    /// <summary>Limite du nœud ou de son plus proche ancêtre qui en a une (null : aucune).</summary>
+    public static Limite? LimiteEffective(IReadOnlyDictionary<string, Limite> limites, string noeud)
+    {
+        foreach (var n in Ancetres(noeud)) if (limites.TryGetValue(n, out var l)) return l;
+        return null;
+    }
+
+    /// <summary>Limite dépassée : PIECE (montant de la pièce), CUMUL (avec les pièces de la période), null sinon.</summary>
+    public static string? Depassement(Limite limite, decimal montant, decimal cumulAnterieur) =>
+        limite.Piece >= 0 && montant > limite.Piece ? "PIECE"
+        : limite.Cumul >= 0 && cumulAnterieur + montant > limite.Cumul ? "CUMUL"
+        : null;
+
+    /// <summary>Contrôle d'une limite saisie : montants ≥ −1, jours de 1 à 366.</summary>
+    public static List<string> ControlerLimite(Limite l)
+    {
+        var erreurs = new List<string>();
+        if (l.Piece < -1 || l.Cumul < -1) erreurs.Add("LIMITE_MONTANT");
+        if (l.Jours is < 1 or > 366) erreurs.Add("LIMITE_JOURS");
+        return erreurs;
     }
 
     [GeneratedRegex("^[A-Z][A-Z0-9_]{1,29}$")]

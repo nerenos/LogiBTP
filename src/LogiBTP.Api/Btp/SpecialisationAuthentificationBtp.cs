@@ -17,6 +17,14 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Profil d'un nouveau compte : saisie mobile (pointage de ses heures), pour limiter les droits (A5 révisée).</summary>
     public override string ProfilParDefaut => "MOBILE";
 
+    /// <summary>Type de notification publié directement : usurpation du compte (préférences de notification).</summary>
+    public static readonly LogiBTP.Notifications.Web.TypeNotification[] Types = [new("authentification", "USURPATION", "Un administrateur agit pour mon compte")];
+
+    /// <summary>Usurpation commencée : notification au compte usurpé (administrateur, motif).</summary>
+    public override async Task ApresUsurpationAsync(IServiceProvider services, Compte cible, string administrateur, string motif, CancellationToken ct) =>
+        await services.GetRequiredService<LogiBTP.Notifications.Web.ServiceNotification>().PublierAsync(
+            [new(cible.CptCode, "authentification", "USURPATION", $"{administrateur} agit pour votre compte", motif, "ATTENTION")], ct);
+
     private const string SqlPersonnes = """
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
                s.sal_statut AS statut, s.sal_actif AS salarie_actif, s.sal_matricule AS matricule, s.sal_id AS sal_id

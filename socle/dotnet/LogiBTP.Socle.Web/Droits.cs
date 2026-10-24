@@ -8,6 +8,17 @@ namespace LogiBTP.Socle.Web;
 public sealed record ProfilDroits(string Code, string Libelle, bool Total);
 
 /// <summary>
+/// Limites de validation d'un profil sur un nœud (montants HT) : par pièce, et cumul des pièces validées par le même
+/// utilisateur pour le même tiers sur <c>Jours</c> jours glissants ; −1 = sans limite, 0 = toute validation soumise à demande.
+/// </summary>
+public sealed record LimiteValidation(decimal Piece, decimal Cumul, int Jours)
+{
+    /// <summary>Limite dépassée (même règle que ReglesDroits.Depassement) : PIECE, CUMUL (avec les pièces de la période) ou null.</summary>
+    public string? Depassement(decimal montant, decimal cumulAnterieur) =>
+        Piece >= 0 && montant > Piece ? "PIECE" : Cumul >= 0 && cumulAnterieur + montant > Cumul ? "CUMUL" : null;
+}
+
+/// <summary>
 /// Contrat des droits entre modules (implémenté par le module Droits) : nœud = chemin « module/élément »
 /// (documents/V_DEVIS, fiches/salarie…), action (CONSULTER, MODIFIER, VALIDER, CREER, SUPPRIMER, DEVERROUILLER, FORCER,
 /// ou une action propre au nœud : RGPD, SUPERVISER…), portée accordée SOI, SERVICE ou TOUT. Sans implémentation
@@ -20,6 +31,9 @@ public interface IDroits
 
     /// <summary>Profils attribuables aux comptes.</summary>
     Task<IReadOnlyList<ProfilDroits>> ProfilsAsync(CancellationToken ct);
+
+    /// <summary>Limites de validation du profil sur le nœud (null : aucune).</summary>
+    Task<LimiteValidation?> LimiteAsync(Utilisateur u, string noeud, CancellationToken ct) => Task.FromResult<LimiteValidation?>(null);
 }
 
 public static class ExtensionsDroits

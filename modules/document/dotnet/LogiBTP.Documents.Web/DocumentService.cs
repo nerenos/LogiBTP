@@ -447,6 +447,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
 
     public async Task<ReponseEnregistrement<TComplet>> Valider(long id, DemandeVersion v, Utilisateur u, CancellationToken ct)
     {
+        await ControlerMontantAsync(id, u, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var avant = await persistance.Charger(id, ct);
         await VerifierDroit(u, avant.Document.EntTydId, "VALIDER", ct);
@@ -454,6 +455,36 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var reponse = await ValiderDans(id, u, ct);
         await tx.CommitAsync(ct);
         return reponse;
+    }
+
+    /// <summary>
+    /// Montants de validation (module Droits, D10 à D12) : HT de la pièce et cumul des pièces du même type validées par le
+    /// même utilisateur pour le même tiers sur la période ; dépassés sans le droit FORCER : demande de validation par la
+    /// spécialisation (hors transaction : elle reste quand la validation est refusée), puis 422 MONTANT_VALIDATION.
+    /// </summary>
+    protected async Task ControlerMontantAsync(long id, Utilisateur u, CancellationToken ct)
+    {
+        if (droits is null) return;
+        var doc = await persistance.Charger(id, ct);
+        var type = await Type(doc.Document.EntTydId, ct);
+        var noeud = NoeudDroits(type);
+        if (await droits.LimiteAsync(u, noeud, ct) is not { } limite || await droits.AutoriseAsync(u, noeud, "FORCER", ct)) return;
+        var montant = doc.Document.EntTotalHt;
+        var depuis = DateTimeOffset.UtcNow.AddDays(-limite.Jours);
+        var cumul = limite.Cumul < 0 ? 0m : await db.Database.SqlQuery<decimal>($"""
+            SELECT COALESCE(SUM(d.ent_total_ht), 0) AS "Value" FROM document d
+            WHERE d.ent_tyd_id = {type.TydId} AND d.ent_id <> {id} AND d.ent_is_reference
+              AND d.ent_tiers_id IS NOT DISTINCT FROM {doc.Document.EntTiersId}
+              AND EXISTS (SELECT 1 FROM document_historique h WHERE h.his_ent_id = d.ent_id AND h.his_action = 'VALIDATION'
+                          AND h.his_utilisateur = {u.Code} AND h.his_date >= {depuis})
+            """).FirstAsync(ct);
+        if (limite.Depassement(montant, cumul) is not { } motif) return;
+        var depassement = new DepassementValidation(motif, montant, cumul, limite);
+        await specialisation.MontantDepasseAsync(db, doc, type, u, depassement, ct);
+        throw ExceptionMetier.Invalide("MONTANT_VALIDATION", motif == "PIECE"
+            ? $"Montant de la pièce ({montant:0.00} € HT) au-delà de votre limite de validation ({limite.Piece:0.00} €) : une demande de validation est transmise"
+            : $"Cumul validé pour ce tiers sur {limite.Jours} jours ({cumul + montant:0.00} € HT) au-delà de votre limite ({limite.Cumul:0.00} €) : une demande de validation est transmise",
+            depassement);
     }
 
     /// <summary>

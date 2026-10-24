@@ -35,11 +35,22 @@ public sealed record Reinitialisation(string? Jeton, string? Nouveau);
 
 /// <summary>Session valide lue depuis le cookie (en cache court par base).</summary>
 public sealed record SessionLue(long SesId, long CptId, string Code, string? Libelle, string Profil, bool MdpAChanger,
-    string? TypeElement, string? IdElement, DateTimeOffset ExpireLe, bool Persistante, DateTimeOffset VuLe);
+    string? TypeElement, string? IdElement, DateTimeOffset ExpireLe, bool Persistante, DateTimeOffset VuLe, UsurpationLue? Usurpation = null)
+{
+    /// <summary>Utilisateur de la requête : le compte usurpé pendant une usurpation (administrateur en Usurpateur), sinon le compte.</summary>
+    public Utilisateur Utilisateur => Usurpation is { } us ? new Utilisateur(us.Code, us.Profil) { Usurpateur = Code } : new Utilisateur(Code, Profil);
+}
+
+/// <summary>Usurpation en cours dans une session : compte usurpé, fin, motif.</summary>
+public sealed record UsurpationLue(long CptId, string Code, string? Libelle, string Profil, DateTimeOffset Fin, string Motif);
+
+public sealed record DemandeUsurpation(string? Identifiant, string? Motif);
+public sealed record ParametresUsurpation(int Minutes = 60, bool Notifier = true);
 
 /// <summary>Ce que le client sait de sa session (GET /auth/session).</summary>
 public sealed record DescriptionSession(bool Connecte, string? Code, string? Libelle, string? Profil, bool MdpAChanger,
-    string? TypeElement, string? IdElement, DateTimeOffset? ExpireLe, string Mode, bool ComptesTest, bool ResterConnectePermis);
+    string? TypeElement, string? IdElement, DateTimeOffset? ExpireLe, string Mode, bool ComptesTest, bool ResterConnectePermis,
+    object? Usurpation = null);
 
 /// <summary>
 /// Comptes, connexion, sessions et journal (ANALYSE-MODULE-AUTHENTIFICATION.md) : verrouillage après N échecs (message
@@ -225,13 +236,92 @@ public sealed class ServiceAuthentification(AuthDbContext db, SpecialisationAuth
             await db.SaveChangesAsync(ct);
         }
         var lue = Lue(session, compte!);
+        if (session.SesUsurpeCptId is long usurpe)
+        {
+            var cible = await db.Comptes.AsNoTracking().FirstOrDefaultAsync(x => x.CptId == usurpe, ct);
+            if (session.SesUsurpationFin > maintenant && cible is { CptType: "PERSONNE", CptActif: true })
+            {
+                lue = lue with { Usurpation = new UsurpationLue(cible.CptId, cible.CptCode, cible.CptLibelle, cible.CptProfil, session.SesUsurpationFin.Value, session.SesUsurpationMotif ?? "") };
+            }
+            else
+            {
+                session.SesUsurpeCptId = null;
+                session.SesUsurpationFin = null;
+                session.SesUsurpationMotif = null;
+                db.Journal.Add(Entree(compte!.CptCode, "USURPATION_FIN", $"{cible?.CptCode} : durée écoulée", new Origine(null, null), null));
+                await db.SaveChangesAsync(ct);
+            }
+        }
         Cache[cle] = (maintenant, lue);
         return lue;
     }
 
+    // ---------------------------------------------------------------- usurpation
+
+    public async Task<ParametresUsurpation> ParametresUsurpationAsync(CancellationToken ct)
+    {
+        var p = await db.Parametres.AsNoTracking().FirstOrDefaultAsync(x => x.PauCle == "usurpation", ct);
+        return p?.PauValeur.RootElement.Deserialize<ParametresUsurpation>(JsonCalculOptions) ?? new ParametresUsurpation();
+    }
+
+    /// <summary>
+    /// Usurpation (D14, D27) : un administrateur agit pour un autre compte de personne (tests des droits, dépannage) ;
+    /// jamais un compte à profil total ni le sien, motif obligatoire, durée limitée (paramètre), mot de passe et gestion
+    /// des droits interdits pendant l'usurpation (intergiciel) ; début, fin et chaque écriture au journal des deux comptes.
+    /// </summary>
+    public async Task<SessionLue> UsurperAsync(SessionLue s, DemandeUsurpation d, IServiceProvider services, Origine origine, CancellationToken ct)
+    {
+        if (s.Usurpation is not null) throw ExceptionMetier.Conflit("USURPATION_EN_COURS", "Une usurpation est déjà en cours : terminez-la d'abord");
+        if (!await specialisation.PeutUsurperAsync(services, new Utilisateur(s.Code, s.Profil), ct)) throw ExceptionMetier.AccesRefuse("USURPER");
+        var motif = d.Motif?.Trim() ?? "";
+        if (motif.Length < 3) throw ExceptionMetier.Invalide("USURPATION_MOTIF", "Motif de l'usurpation obligatoire (test des droits, dépannage…)");
+        var code = ReglesCompte.Normaliser(d.Identifiant);
+        var cible = await db.Comptes.AsNoTracking().FirstOrDefaultAsync(x => x.CptCode.ToLower() == code && x.CptType == "PERSONNE", ct)
+            ?? throw ExceptionMetier.Introuvable($"Compte {code}");
+        if (cible.CptId == s.CptId) throw ExceptionMetier.Invalide("USURPATION_SOI", "Usurpation de son propre compte impossible");
+        if (ReglesCompte.Etat(cible.AEvaluer(), DateTimeOffset.UtcNow).Etat is "INACTIF" or "EXPIRE")
+        {
+            throw ExceptionMetier.Invalide("USURPATION_INACTIF", $"Le compte {cible.CptCode} est désactivé ou expiré");
+        }
+        if (await specialisation.ProfilTotalAsync(services, cible.CptProfil, ct))
+        {
+            throw ExceptionMetier.Invalide("USURPATION_ADMIN", "Un compte administrateur ne peut pas être usurpé");
+        }
+        var p = await ParametresUsurpationAsync(ct);
+        var fin = DateTimeOffset.UtcNow.AddMinutes(Math.Clamp(p.Minutes, 5, 60));
+        var session = await db.Sessions.FirstAsync(x => x.SesId == s.SesId, ct);
+        session.SesUsurpeCptId = cible.CptId;
+        session.SesUsurpationFin = fin;
+        session.SesUsurpationMotif = Tronquer(motif, 200);
+        db.Journal.Add(Entree(s.Code, "USURPATION", Tronquer($"→ {cible.CptCode} : {motif}", 200), origine, s.Code));
+        db.Journal.Add(Entree(cible.CptCode, "USURPATION", Tronquer($"par {s.Code} : {motif}", 200), origine, s.Code));
+        await db.SaveChangesAsync(ct);
+        OublierSessions();
+        if (p.Notifier) await specialisation.ApresUsurpationAsync(services, cible, s.Code, motif, ct);
+        return s with { Usurpation = new UsurpationLue(cible.CptId, cible.CptCode, cible.CptLibelle, cible.CptProfil, fin, motif) };
+    }
+
+    public async Task<SessionLue> TerminerUsurpationAsync(SessionLue s, Origine origine, CancellationToken ct)
+    {
+        if (s.Usurpation is not { } us) return s;
+        await db.Sessions.Where(x => x.SesId == s.SesId).ExecuteUpdateAsync(x => x
+            .SetProperty(y => y.SesUsurpeCptId, (long?)null).SetProperty(y => y.SesUsurpationFin, (DateTimeOffset?)null)
+            .SetProperty(y => y.SesUsurpationMotif, (string?)null), ct);
+        db.Journal.Add(Entree(s.Code, "USURPATION_FIN", us.Code, origine, s.Code));
+        db.Journal.Add(Entree(us.Code, "USURPATION_FIN", $"par {s.Code}", origine, s.Code));
+        await db.SaveChangesAsync(ct);
+        OublierSessions();
+        return s with { Usurpation = null };
+    }
+
+    /// <summary>Écriture faite pendant une usurpation : tracée au journal du compte usurpé, par l'administrateur.</summary>
+    public Task JournaliserActionUsurpeeAsync(SessionLue s, string action, Origine origine, CancellationToken ct) =>
+        JournaliserAsync(s.Usurpation!.Code, "USURPATION_ACTION", Tronquer(action, 200), origine, s.Code, ct);
+
     public DescriptionSession Decrire(SessionLue? s, ParametresAuthentification? p, bool developpement) => new(
         s is not null, s?.Code, s?.Libelle, s?.Profil, s?.MdpAChanger ?? false, s?.TypeElement, s?.IdElement, s?.ExpireLe,
-        Options.EnTetes ? "EnTetes" : "Session", developpement && Options.ComptesTest, p?.Session.ResterConnecte ?? true);
+        Options.EnTetes ? "EnTetes" : "Session", developpement && Options.ComptesTest, p?.Session.ResterConnecte ?? true,
+        s?.Usurpation is { } us ? new { code = us.Code, libelle = us.Libelle, profil = us.Profil, fin = us.Fin, motif = us.Motif } : null);
 
     public async Task DeconnecterAsync(SessionLue s, Origine origine, CancellationToken ct)
     {

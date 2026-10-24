@@ -17,6 +17,10 @@ public static class Extensions
 {
     private const string CleSession = "LogiBTP.Session";
 
+    /// <summary>Routes interdites pendant une usurpation (mot de passe, comptes, droits, nouvelle usurpation).</summary>
+    private static readonly string[] Interdites = ["/api/auth/mot-de-passe", "/api/auth/comptes", "/api/auth/personne", "/api/auth/personnes",
+        "/api/droits/profils", "/api/droits/catalogue", "/api/droits/journal"];
+
     /// <summary>Routes du module accessibles sans session (sous le préfixe /api).</summary>
     private static readonly string[] Publiques = ["/api/auth/connexion", "/api/auth/session", "/api/auth/politique", "/api/auth/test", "/api/auth/oubli",
         "/api/auth/reinitialiser"];
@@ -65,7 +69,22 @@ public static class Extensions
             if (session is not null)
             {
                 http.Items[CleSession] = session;
-                Utilisateur.Poser(http, new Utilisateur(session.Code, session.Profil));
+                Utilisateur.Poser(http, session.Utilisateur);
+                if (session.Usurpation is not null)
+                {
+                    // Usurpation : ni mot de passe, ni gestion des comptes et des droits ; chaque écriture est journalisée.
+                    if (Interdites.Any(p => chemin.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        await Refuser(http, StatusCodes.Status403Forbidden, "USURPATION_INTERDITE", "Action interdite pendant une usurpation");
+                        return;
+                    }
+                    await next(http);
+                    if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method) && !chemin.StartsWithSegments("/api/auth/usurper"))
+                    {
+                        await service.JournaliserActionUsurpeeAsync(session, $"{http.Request.Method} {chemin} → {http.Response.StatusCode}", ServiceAuthentification.Origine.Depuis(http), CancellationToken.None);
+                    }
+                    return;
+                }
                 if (session.MdpAChanger && !publique && !chemin.StartsWithSegments("/api/auth/mot-de-passe") && !chemin.StartsWithSegments("/api/auth/deconnexion"))
                 {
                     await Refuser(http, StatusCodes.Status403Forbidden, "MDP_A_CHANGER", "Mot de passe provisoire : changez-le pour continuer");
@@ -165,6 +184,18 @@ public static class Extensions
             var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
             await s.ChangerMotDePasseAsync(session, c, ServiceAuthentification.Origine.Depuis(http), ct);
             return s.Decrire(session with { MdpAChanger = false }, await s.ParametresAsync(ct), Dev(http));
+        });
+
+        // Usurpation (administrateur) : agir pour un autre compte, puis terminer.
+        g.MapPost("/usurper", async (DemandeUsurpation d, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            return s.Decrire(await s.UsurperAsync(session, d, http.RequestServices, ServiceAuthentification.Origine.Depuis(http), ct), await s.ParametresAsync(ct), Dev(http));
+        });
+        g.MapPost("/usurper/fin", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
+        {
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            return s.Decrire(await s.TerminerUsurpationAsync(session, ServiceAuthentification.Origine.Depuis(http), ct), await s.ParametresAsync(ct), Dev(http));
         });
 
         // Gestion des comptes (administrateur).

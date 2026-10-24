@@ -8,8 +8,8 @@ namespace LogiBTP.Droits.Web;
 
 public sealed record ProfilDto(Guid Id, string Code, string Libelle, string? Description, bool Systeme, bool Total, int Comptes);
 public sealed record ProfilSaisi(string? Code, string? Libelle, string? Description, Guid? CopieDe);
-public sealed record DroitsDto(ProfilDto Profil, Dictionary<string, Dictionary<string, string>> Lignes);
-public sealed record DroitsSaisis(Dictionary<string, Dictionary<string, string>>? Lignes);
+public sealed record DroitsDto(ProfilDto Profil, Dictionary<string, Dictionary<string, string>> Lignes, Dictionary<string, Limite> Limites);
+public sealed record DroitsSaisis(Dictionary<string, Dictionary<string, string>>? Lignes, Dictionary<string, Limite>? Limites = null);
 public sealed record MesDroits(string Code, string Profil, bool Total, Dictionary<string, Dictionary<string, string>> Lignes);
 public sealed record EntreeJournalDroits(DateTimeOffset Le, string Par, string Profil, string Evenement, string? Noeud, JsonElement? Avant, JsonElement? Apres);
 
@@ -20,7 +20,8 @@ public sealed record EntreeJournalDroits(DateTimeOffset Le, string Par, string P
 /// </summary>
 public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits specialisation, SocieteCourante societe, IServiceProvider services) : IDroits
 {
-    private static readonly ConcurrentDictionary<(string Base, string Profil), (DateTimeOffset Lu, DroitsProfil Droits)> Cache = new();
+    private sealed record EtatProfil(DroitsProfil Droits, IReadOnlyDictionary<string, Limite> Limites);
+    private static readonly ConcurrentDictionary<(string Base, string Profil), (DateTimeOffset Lu, EtatProfil Etat)> Cache = new();
     private static readonly TimeSpan DureeCache = TimeSpan.FromSeconds(60);
 
     /// <summary>Cache des droits vidé : relu au prochain appel (après toute écriture).</summary>
@@ -28,23 +29,31 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
 
     // ---------------------------------------------------------------- lecture des droits (IDroits)
 
-    public async Task<DroitsProfil> DroitsAsync(string profil, CancellationToken ct)
+    public async Task<DroitsProfil> DroitsAsync(string profil, CancellationToken ct) => (await EtatAsync(profil, ct)).Droits;
+
+    private async Task<EtatProfil> EtatAsync(string profil, CancellationToken ct)
     {
         var cle = (societe.Connexion, profil);
         var maintenant = DateTimeOffset.UtcNow;
-        if (Cache.TryGetValue(cle, out var c) && maintenant - c.Lu < DureeCache) return c.Droits;
+        if (Cache.TryGetValue(cle, out var c) && maintenant - c.Lu < DureeCache) return c.Etat;
         var p = await db.Profils.AsNoTracking().FirstOrDefaultAsync(x => x.ProCode == profil, ct);
-        DroitsProfil droits;
-        if (p is null) droits = DroitsProfil.Aucun;
-        else if (p.ProTotal) droits = DroitsProfil.Tous;
+        EtatProfil etat;
+        if (p is null) etat = new(DroitsProfil.Aucun, new Dictionary<string, Limite>());
+        else if (p.ProTotal) etat = new(DroitsProfil.Tous, new Dictionary<string, Limite>());
         else
         {
             var lignes = await db.Droits.AsNoTracking().Where(d => d.DprProId == p.ProId).ToListAsync(ct);
-            droits = new DroitsProfil(false, lignes.ToDictionary(l => l.DprNoeud, l => (IReadOnlyDictionary<string, string>)Actions(l.DprActions)));
+            var limites = await db.Limites.AsNoTracking().Where(l => l.LvaProId == p.ProId).ToListAsync(ct);
+            etat = new(new DroitsProfil(false, lignes.ToDictionary(l => l.DprNoeud, l => (IReadOnlyDictionary<string, string>)Actions(l.DprActions))),
+                limites.ToDictionary(l => l.LvaNoeud, l => new Limite(l.LvaPiece, l.LvaCumul, l.LvaJours)));
         }
-        Cache[cle] = (maintenant, droits);
-        return droits;
+        Cache[cle] = (maintenant, etat);
+        return etat;
     }
+
+    /// <summary>Limites de validation du nœud ou de son plus proche ancêtre (profil total : aucune).</summary>
+    public async Task<LimiteValidation?> LimiteAsync(Utilisateur u, string noeud, CancellationToken ct) =>
+        ReglesDroits.LimiteEffective((await EtatAsync(u.Profil, ct)).Limites, noeud) is { } l ? new LimiteValidation(l.Piece, l.Cumul, l.Jours) : null;
 
     public async Task<string?> PorteeAsync(Utilisateur u, string noeud, string action, CancellationToken ct) =>
         ReglesDroits.PorteeAccordee(await DroitsAsync(u.Profil, ct), noeud, action);
@@ -143,7 +152,9 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
     {
         var p = await ProfilAsync(id, ct);
         var lignes = await db.Droits.AsNoTracking().Where(d => d.DprProId == id).ToListAsync(ct);
-        return new DroitsDto(Dto(p, await specialisation.ComptesParProfilAsync(services, ct)), lignes.ToDictionary(l => l.DprNoeud, l => Actions(l.DprActions)));
+        var limites = await db.Limites.AsNoTracking().Where(l => l.LvaProId == id).ToListAsync(ct);
+        return new DroitsDto(Dto(p, await specialisation.ComptesParProfilAsync(services, ct)), lignes.ToDictionary(l => l.DprNoeud, l => Actions(l.DprActions)),
+            limites.ToDictionary(l => l.LvaNoeud, l => new Limite(l.LvaPiece, l.LvaCumul, l.LvaJours)));
     }
 
     /// <summary>
@@ -161,6 +172,26 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
         {
             throw ExceptionMetier.Invalide(erreurs[0].Code, $"{ReglesDroits.Messages[erreurs[0].Code]} : {erreurs[0].Noeud} {erreurs[0].Action}".Trim(), erreurs);
         }
+        var limites = s.Limites ?? [];
+        foreach (var (noeud, l) in limites)
+        {
+            if (!catalogue.ContainsKey(noeud)) throw ExceptionMetier.Invalide("NOEUD_INVALIDE", $"{ReglesDroits.Messages["NOEUD_INVALIDE"]} : {noeud}");
+            var e = ReglesDroits.ControlerLimite(l);
+            if (e.Count > 0) throw ExceptionMetier.Invalide(e[0], $"{ReglesDroits.Messages[e[0]]} : {noeud}");
+        }
+        var limitesAvant = await db.Limites.Where(l => l.LvaProId == id).ToListAsync(ct);
+        foreach (var noeud in limitesAvant.Select(l => l.LvaNoeud).Union(limites.Keys).Order(StringComparer.Ordinal))
+        {
+            var a = limitesAvant.FirstOrDefault(l => l.LvaNoeud == noeud) is { } x ? new Limite(x.LvaPiece, x.LvaCumul, x.LvaJours) : null;
+            var n = limites.GetValueOrDefault(noeud);
+            if (a == n) continue;
+            db.Journal.Add(new JournalDroits
+            {
+                JdrPar = u.Code, JdrProfil = p.ProCode, JdrEvenement = "LIMITE", JdrNoeud = noeud,
+                JdrAvant = a is null ? null : Json(a), JdrApres = n is null ? null : Json(n),
+            });
+        }
+        db.Limites.RemoveRange(limitesAvant);
         var anciennes = await db.Droits.Where(d => d.DprProId == id).ToListAsync(ct);
         var avant = anciennes.ToDictionary(l => l.DprNoeud, l => Actions(l.DprActions));
         foreach (var noeud in avant.Keys.Union(nouvelles.Keys).Order(StringComparer.Ordinal))
@@ -177,6 +208,7 @@ public sealed class ServiceDroits(DroitsDbContext db, SpecialisationDroits speci
         db.Droits.RemoveRange(anciennes);
         await db.SaveChangesAsync(ct);
         foreach (var (noeud, actions) in nouvelles) db.Droits.Add(new DroitProfil { DprProId = id, DprNoeud = noeud, DprActions = Json(actions) });
+        foreach (var (noeud, l) in limites) db.Limites.Add(new LimiteValidationProfil { LvaProId = id, LvaNoeud = noeud, LvaPiece = l.Piece, LvaCumul = l.Cumul, LvaJours = (short)l.Jours });
         p.ProMajPar = u.Code;
         p.ProMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);

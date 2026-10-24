@@ -14,6 +14,7 @@ services:
       # modules (004 OAuth, 005 Authentification, 010 Document, 020 Métré, 030 Liste, 040 Fiche, 050 GED, 060 Bibliothèque, 070 Annuaire) puis cœur BTP (100 et suivants).
       - ./modules/oauth/db/004_oauth.sql:/docker-entrypoint-initdb.d/004_oauth.sql:ro
       - ./modules/authentification/db/005_authentification.sql:/docker-entrypoint-initdb.d/005_authentification.sql:ro
+      - ./modules/authentification/db/005b_authentification_securite.sql:/docker-entrypoint-initdb.d/005b_authentification_securite.sql:ro
       - ./modules/calendrier/db/006_calendrier.sql:/docker-entrypoint-initdb.d/006_calendrier.sql:ro
       - ./modules/mail/db/007_mail.sql:/docker-entrypoint-initdb.d/007_mail.sql:ro
       - ./modules/mail/db/007b_mail_reception.sql:/docker-entrypoint-initdb.d/007b_mail_reception.sql:ro

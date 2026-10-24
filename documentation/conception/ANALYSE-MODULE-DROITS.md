@@ -20,7 +20,13 @@
 > stock, planning…) sont contrôlés au niveau du module par la table des routes (lecture / écriture) ; la création d'une
 > fiche reste contrôlée par « modifier » ; les 119 contrôles `EstAdmin` existants restent (ADMIN = profil total) ; la
 > consultation d'un document est contrôlée à son ouverture ; les listes ne sont pas encore filtrées par type de
-> document (lot 2).
+> document (lot 2). Lot 2 réalisé le 24/10/2026 (`limite_validation`, `DocumentService.ControlerMontantAsync`,
+> `SpecialisationBtp.MontantDepasseAsync`, usurpation `005b_authentification_securite.sql`, `RestrictionListe`) ;
+> écarts : le forçage d'un montant n'exige pas de motif (le droit FORCER suffit, la validation est historisée) ; la
+> demande de validation est une tâche du Suivi au service du document (pas au « valideur du niveau supérieur », qui
+> n'est pas modélisé) ; la durée d'usurpation est de 60 minutes au plus ; le déverrouillage RGPD reste celui du module
+> Fiche (révélation journalisée d'un champ) et des notes privées du CRM ; les listes masquent les champs
+> confidentiels des fiches sans le droit RGPD de la fiche.
 
 ## 1. Note d'origine (résumé)
 

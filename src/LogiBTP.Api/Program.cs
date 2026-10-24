@@ -109,6 +109,7 @@ ServiceNotification.TypesDirects.AddRange(SpecialisationOAuthBtp.Types);
 // (modules/mail/db/007, db/206) ; jetons OAuth 2.0 par IFournisseurJeton (module OAuth).
 builder.Services.AddModuleMail<SpecialisationMailBtp>(Base, builder.Configuration.GetSection("Mail"));
 ServiceNotification.TypesDirects.AddRange(SpecialisationMailBtp.Types);
+ServiceNotification.TypesDirects.AddRange(SpecialisationAuthentificationBtp.Types);
 builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 

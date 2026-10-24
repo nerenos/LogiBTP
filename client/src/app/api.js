@@ -42,6 +42,8 @@ export const api = {
     connexionTest: (identifiant) => appel('POST', '/auth/test/connexion', { identifiant }),
     deconnexion: () => appel('POST', '/auth/deconnexion'),
     changerMotDePasse: (actuel, nouveau) => appel('POST', '/auth/mot-de-passe', { actuel, nouveau }),
+    usurper: (identifiant, motif) => appel('POST', '/auth/usurper', { identifiant, motif }),
+    finUsurpation: () => appel('POST', '/auth/usurper/fin'),
     oubli: (identifiant) => appel('POST', '/auth/oubli', { identifiant }),
     reinitialiser: (jeton, nouveau) => appel('POST', '/auth/reinitialiser', { jeton, nouveau }),
     // Gestion des comptes (administrateur).
@@ -64,7 +66,7 @@ export const api = {
     modifierProfil: (id, p) => appel('PUT', `/droits/profils/${id}`, p),
     supprimerProfil: (id) => appel('DELETE', `/droits/profils/${id}`),
     lignes: (id) => appel('GET', `/droits/profils/${id}/droits`),
-    remplacer: (id, lignes) => appel('PUT', `/droits/profils/${id}/droits`, { lignes }),
+    remplacer: (id, lignes, limites) => appel('PUT', `/droits/profils/${id}/droits`, { lignes, limites }),
     journal: (profil = '') => appel('GET', `/droits/journal?${new URLSearchParams({ profil })}`),
   },
   // Module Exécution : exécution d'un ordre (état, motif, affectation, dates), répartition, heures budget d'un chantier.

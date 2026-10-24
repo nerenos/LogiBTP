@@ -896,3 +896,6 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .droits-arbre .espace-icone { display: inline-block; width: 1.6rem; }
 .droits-arbre .cellule-portee .combo { width: 6.5rem; }
 .droits-arbre td.centre, .droits-arbre th.centre { text-align: center; }
+
+/* Usurpation en cours (bandeau) : pastille visible, clic = terminer. */
+.bandeau-usurpation { background: var(--alerte-fond); color: var(--alerte); border: 1px solid var(--alerte); border-radius: 1rem; padding: 0 .6rem; cursor: pointer; font: inherit; }

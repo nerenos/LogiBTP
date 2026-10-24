@@ -26,6 +26,9 @@ public sealed record Utilisateur(string Code, string Profil, string? Groupe = nu
 
     public bool EstAdmin => Profil == "ADMIN";
 
+    /// <summary>Usurpation (module Authentification) : code de l'administrateur qui agit pour cet utilisateur (null sinon).</summary>
+    public string? Usurpateur { get; init; }
+
     public static Utilisateur Depuis(HttpContext http) => http.Items[Cle] as Utilisateur ?? new(
         http.Request.Headers["X-Utilisateur"].FirstOrDefault() ?? "demo",
         http.Request.Headers["X-Profil"].FirstOrDefault() ?? "ADMIN",

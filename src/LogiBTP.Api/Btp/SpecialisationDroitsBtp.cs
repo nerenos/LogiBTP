@@ -104,6 +104,11 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/comptes-comptables", ModeRoute.Module, "documents"),
         new("/api/fiches/{type}", ModeRoute.Module, "fiches/{type}"),
         new("/api/listes", ModeRoute.Module, "listes"),
+        // Lectures des listes envoyées en POST (demande dans le corps) : consultation.
+        new("/api/listes/lot", ModeRoute.Action, "listes", "CONSULTER"),
+        new("/api/listes/segments", ModeRoute.Action, "listes", "CONSULTER"),
+        new("/api/listes/controle", ModeRoute.Action, "listes", "CONSULTER"),
+        new("/api/listes/lignes", ModeRoute.Action, "listes", "CONSULTER"),
         new("/api/structure", ModeRoute.Module, "structure"),
         new("/api/annuaire", ModeRoute.Module, "annuaire"),
         new("/api/entreprises-fr", ModeRoute.Module, "annuaire"),

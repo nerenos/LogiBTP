@@ -340,6 +340,36 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     }
 
     /// <summary>
+    /// Montant de validation dépassé (module Droits, D12) : demande de validation = tâche du CRM (module actif) à prendre
+    /// par le service du document, sinon du type, sinon le premier service administratif ; rattachée au document.
+    /// Une tâche impossible à créer est journalisée sans changer le refus.
+    /// </summary>
+    public override async Task MontantDepasseAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentCompletBtp document, TypeDocument type,
+        Utilisateur u, DepassementValidation depassement, CancellationToken ct)
+    {
+        var services = Http?.HttpContext?.RequestServices;
+        if (services is null || !await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        var d = document.Document;
+        try
+        {
+            var srv = d.EntSrvId ?? await db.Database.SqlQuery<int?>($"""
+                SELECT COALESCE((SELECT tyd_srv_id FROM type_document WHERE tyd_id = {type.TydId}),
+                    (SELECT srv_id FROM service WHERE srv_nature = 'ADMINISTRATIF' AND srv_actif ORDER BY srv_parent_id NULLS FIRST, srv_id LIMIT 1)) AS "Value"
+                """).FirstOrDefaultAsync(ct);
+            var objet = $"Validation demandée : {type.TydLibelle} {d.EntNumero ?? d.EntId.ToString()} ({depassement.Montant:0.00} € HT)";
+            var message = depassement.Motif == "PIECE"
+                ? $"<p>{System.Net.WebUtility.HtmlEncode(u.Code)} ne peut valider que {depassement.Limite.Piece:0.00} € HT par pièce.</p>"
+                : $"<p>Cumul validé par {System.Net.WebUtility.HtmlEncode(u.Code)} pour ce tiers sur {depassement.Limite.Jours} jours : {depassement.Cumul + depassement.Montant:0.00} € HT pour une limite de {depassement.Limite.Cumul:0.00} €.</p>";
+            await services.GetRequiredService<LogiBTP.Crm.Web.ServiceCrm>().Enregistrer(null, new LogiBTP.Crm.Web.NoteSaisie("TACHE", "A_FAIRE", null, srv, objet, message,
+                null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LogiBTP.Crm.Web.LienSaisi("document", (d.EntGroupeId ?? d.EntId).ToString(), true)], null), u, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            services.GetRequiredService<ILoggerFactory>().CreateLogger("Droits").LogWarning(e, "Demande de validation non créée pour le document {Document}", d.EntId);
+        }
+    }
+
+    /// <summary>
     /// Validation : commande client inscrite à son marché (base ou avenant, montant recalculé, db/170) ; document
     /// d'avancement d'un marché : numéro de situation (Q29 : le suivant, sauf numéro saisi) et, pour une facture ou un
     /// avoir d'avancement, documents précédents déduits figés (13.7, document_deduction).

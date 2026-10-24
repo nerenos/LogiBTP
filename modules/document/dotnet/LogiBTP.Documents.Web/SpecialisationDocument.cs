@@ -1,4 +1,5 @@
 using LogiBTP.Socle;
+using LogiBTP.Socle.Web;
 
 namespace LogiBTP.Documents.Web;
 
@@ -78,6 +79,13 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     public virtual Task ReporterVersionAsync(DocumentDbContext<TDoc, TLigne> db, long ancien, long nouveau, IReadOnlyDictionary<long, long> lignes, CancellationToken ct) =>
         Task.CompletedTask;
 
+    /// <summary>
+    /// Validation refusée pour un montant au-delà de la limite du profil (module Droits) : demande de validation à
+    /// transmettre (tâche du CRM…), hors de la transaction de la validation.
+    /// </summary>
+    public virtual Task MontantDepasseAsync(DocumentDbContext<TDoc, TLigne> db, TComplet document, TypeDocument type, Utilisateur u,
+        DepassementValidation depassement, CancellationToken ct) => Task.CompletedTask;
+
     /// <summary>Après l'enregistrement de la validation, dans sa transaction (suivi d'un marché…).</summary>
     public virtual Task ApresValidationAsync(DocumentDbContext<TDoc, TLigne> db, long entId, TypeDocument type, CancellationToken ct) =>
         Task.CompletedTask;
@@ -131,3 +139,6 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// <summary>Ajoute à un contenu les compléments d'un autre (métrés, variables… ; identifiants temporaires distincts).</summary>
     public virtual void FusionnerComplements(TComplet cible, TComplet ajout) { }
 }
+
+/// <summary>Montant de validation dépassé : motif (PIECE, CUMUL), HT de la pièce, cumul antérieur de la période, limite.</summary>
+public sealed record DepassementValidation(string Motif, decimal Montant, decimal Cumul, LimiteValidation Limite);

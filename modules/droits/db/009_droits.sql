@@ -47,3 +47,14 @@ ON CONFLICT (pro_code) DO NOTHING;
 INSERT INTO droit_profil (dpr_pro_id, dpr_noeud, dpr_actions)
 SELECT pro_id, 'pointage', '{"CONSULTER":"SOI","MODIFIER":"SOI","CREER":"SOI","SUPPRIMER":"SOI"}'::jsonb FROM profil WHERE pro_code = 'MOBILE'
 ON CONFLICT DO NOTHING;
+
+-- Montants de validation (lot 2, D10 à D12) : HT par pièce et cumul sur des jours glissants, par profil et nœud (héritage
+-- comme les droits) ; −1 = sans limite, 0 = toute validation soumise à demande.
+CREATE TABLE IF NOT EXISTS limite_validation (
+    lva_pro_id       UUID          NOT NULL REFERENCES profil(pro_id) ON DELETE CASCADE,
+    lva_noeud        VARCHAR(200)  NOT NULL,
+    lva_piece        NUMERIC(14,2) NOT NULL DEFAULT -1 CHECK (lva_piece >= -1),
+    lva_cumul        NUMERIC(14,2) NOT NULL DEFAULT -1 CHECK (lva_cumul >= -1),
+    lva_jours        SMALLINT      NOT NULL DEFAULT 30 CHECK (lva_jours BETWEEN 1 AND 366),
+    PRIMARY KEY (lva_pro_id, lva_noeud)
+);
