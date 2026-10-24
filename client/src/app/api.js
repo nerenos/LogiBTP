@@ -173,6 +173,14 @@ export const api = {
     enregistrerParametres: (p) => appel('PUT', '/planning/parametres', p),
   },
   // Liaisons croisées (cœur) : planning théorique depuis le parcours, ordre ↔ planning, réalisé d'une tâche.
+  sousTraitance: {
+    typesPieces: () => appel('GET', '/sous-traitance/pieces-types'),
+    enregistrerTypesPieces: (l) => appel('PUT', '/sous-traitance/pieces-types', l),
+    conformiteMarche: (id) => appel('GET', `/sous-traitance/marches/${id}/conformite`),
+    conformiteTiers: (id) => appel('GET', `/sous-traitance/tiers/${id}/conformite`),
+    ajuster: (type, id, code, a) => appel('PUT', `/sous-traitance/elements/${type}/${id}/pieces/${encodeURIComponent(code)}`, a),
+    validite: (dge, valideAu) => appel('PUT', `/sous-traitance/pieces/${dge}/validite`, { valide_au: valideAu }),
+  },
   liaisons: {
     planningTheorique: (chantier, debut) => appel('POST', `/liaisons/chantiers/${chantier}/planning-theorique`, { debut }),
     planifierOrdre: (id) => appel('POST', `/liaisons/ordres/${id}/planifier`),

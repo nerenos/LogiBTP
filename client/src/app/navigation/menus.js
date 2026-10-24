@@ -84,6 +84,8 @@ export const MENUS_METIER = [
       { code: 'st-commandes', libelle: 'Commandes de sous-traitance', icone: '📝', url: L('st_commandes'), type: 'T_COMMANDE', creation: D('T_COMMANDE', 'Nouvelle commande de sous-traitance') },
       { code: 'st-factures', libelle: 'Factures de sous-traitance', icone: '🧾', url: L('st_factures'), type: 'T_FACTURE_AVT' },
       { code: 'st-marches', libelle: 'Marchés de sous-traitance', icone: '🤝', url: L('marches_st'), info: 'Un marché par sous-traitant et axe de facturation sur un chantier', creation: F('marche', 'Nouveau marché de sous-traitance', '?sens=ST') },
+      { separateur: true },
+      { code: 'st-pieces', libelle: 'Pièces exigées…', icone: '⚙', url: '/parametres/sous-traitance', info: 'Kbis, URSSAF, assurances, DC4… : validité, rappels, actions bloquées' },
     ],
   },
   {

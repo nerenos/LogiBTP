@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/sous-traitance",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Sous-traitance LogiBTP : pièces exigées des sous-traitants et des marchés, conformité (règles partagées avec le serveur)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

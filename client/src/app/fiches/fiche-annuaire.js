@@ -4,6 +4,7 @@ import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texte
 import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuaire, choixRequis, demanderChoix, choisirPersonne, pastilles, fusionnerTiers } from '@logibtp/annuaire/ui';
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
 import { FicheLogiBTP } from './fiches.js';
+import { rendrePieces } from '../sous-traitance/pieces.js';
 
 // Fiches de l'annuaire (module Fiche + module Annuaire) : personne (niveau, hiérarchie, casquettes qui déverrouillent
 // leurs groupes de champs, identifiants pour la facturation électronique, reprise depuis l'annuaire des entreprises
@@ -305,6 +306,16 @@ export class FichePersonne extends FicheAnnuaire {
       },
       this.ongletGraphe('personne'),
       ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
+      // Sous-traitant (module Sous-traitance, lot 2) : pièces annexes valables pour tous ses marchés.
+      ...((this.valeur('casquettes') ?? []).includes('SOUS_TRAITANT') && this.id !== null && this.moduleActif('sous_traitance') && this.services.ged
+        ? [{
+          code: 'pieces-st', titre: 'Pièces',
+          rendre: (corps) => rendrePieces(corps, {
+            element: { type: 'personne', id: Number(this.id), tiers: Number(this.id) }, ged: this.services.ged, message: this.message,
+            demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=personne:${this.id}`, { ctrlKey: true }),
+          }).catch((e) => this.message(e.message, 'erreur')),
+        }]
+        : []),
       ...this.ongletsSuivi(),
     ];
   }

@@ -83,9 +83,54 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             pieces.Select(p => new PieceProposee($"ged:{p.Id}", p.NomFichier, p.Taille, true)).ToList());
     }
 
+    /// <summary>
+    /// Demande de pièces à un sous-traitant (module Sous-traitance, lot 2) : élément « st_pieces », identifiant
+    /// « marche:&lt;id&gt; » ou « personne:&lt;id&gt; » ; pièces manquantes, expirées ou à renouveler en variables ; destinataire :
+    /// courriel du sous-traitant.
+    /// </summary>
+    private async Task<ElementMail?> DecrirePiecesAsync(string id, CancellationToken ct)
+    {
+        var p = id.Split(':', 2);
+        if (p.Length != 2 || !long.TryParse(p[1], out var n)) return null;
+        var st = services.GetRequiredService<LogiBTP.SousTraitance.Web.ServiceSousTraitance>();
+        long? tiers;
+        string libelle;
+        LogiBTP.SousTraitance.Conformite c;
+        if (p[0] == "marche")
+        {
+            var m = await db.Database.SqlQueryRaw<MarchePieces>("SELECT mar_tiers_id AS tiers, mar_code || ' – ' || mar_libelle AS libelle FROM marche WHERE mar_id = @m",
+                new NpgsqlParameter("m", (int)n)).FirstOrDefaultAsync(ct);
+            if (m is null) return null;
+            (tiers, libelle, c) = (m.Tiers, $"Marché {m.Libelle}", await st.ConformiteMarcheAsync((int)n, ct));
+        }
+        else
+        {
+            (tiers, libelle, c) = (n, "Pièces annexes", await st.ConformiteTiersAsync(n, ct));
+        }
+        var destinataires = new List<DestinatairePropose>();
+        string? nom = null;
+        if (tiers is long t && await ContactsDocument.Instantane(db, t, null, ct) is { } inst)
+        {
+            nom = Texte(inst.RootElement, "raison_sociale");
+            if (Texte(inst.RootElement, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom, "sous-traitant", true, t));
+        }
+        string Liste(IEnumerable<string> l) => string.Join(", ", l) is { Length: > 0 } x ? x : "aucune";
+        var variables = new Dictionary<string, string?>
+        {
+            ["tiers"] = nom, ["document"] = libelle, ["objet"] = libelle,
+            ["pieces_manquantes"] = Liste(c.Pieces.Where(x => x.Etat is "MANQUANTE" or "EXPIREE" && x.Obligatoire).Select(x => x.Libelle)),
+            ["pieces_a_renouveler"] = Liste(c.Pieces.Where(x => x.Etat == "A_ECHEANCE").Select(x => $"{x.Libelle} (jusqu'au {x.Fin:dd/MM/yyyy})")),
+        };
+        return new ElementMail("st_pieces", id, $"{libelle} : pièces à fournir", p[0] == "marche" ? $"/fiche/marche/{n}" : $"/fiche/personne/{n}", "DOCUMENT_ACHAT", "st_pieces",
+            variables, destinataires, []);
+    }
+
+    private sealed record MarchePieces(long? Tiers, string Libelle);
+
     public override async Task<ElementMail?> DecrireAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
         if (type == "crm_diffusion") return await modules.EstActifAsync("crm", ct) ? await DecrireDiffusionAsync(id, ct) : null;
+        if (type == "st_pieces") return await modules.EstActifAsync("sous_traitance", ct) ? await DecrirePiecesAsync(id, ct) : null;
         if (type != "document" || !long.TryParse(id, out var entId)) return null;
         var d = await db.Database.SqlQueryRaw<DocumentMail>("""
             SELECT e.ent_id, e.ent_numero, e.ent_date, e.ent_objet, e.ent_date_validite, e.ent_total_ht, e.ent_total_ttc, e.ent_net_a_payer, e.ent_groupe_id,

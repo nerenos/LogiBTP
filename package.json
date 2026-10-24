@@ -20,6 +20,7 @@
     "modules/calendrier/js",
     "modules/mail/js",
     "modules/execution/js",
+    "modules/sous-traitance/js",
     "modules/pointage/js",
     "modules/planning/js",
     "modules/navigation/js",

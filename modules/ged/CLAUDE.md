@@ -12,6 +12,7 @@
 
 ## Structure
 - `db/050_ged_schema.sql` : tables, triggers du coffre, paramètres, vue `v_liste_ged`, statistiques, recherche (trigrammes).
+- `db/052_ged_validite.sql` (rejouable) : `dge_valide_du`, `dge_valide_au` (validité d'une attestation, d'une assurance… ; écrite par l'application : pièces de la sous-traitance).
 - `db/051_ged_organisation.sql` (rejouable) : unicité des empreintes du coffre, répertoires, confidentialité et accès, indexation plein texte, compteur de versions, dérivations, règles de rétention et de classification, archive séparée (`f_ged_archiver`, `f_ged_restaurer_archive`), `v_liste_ged` redéfinie.
 - `js/src/coffre.js` : `sha256`, `horodatage`, `texteEntree`, `empreinteEntree`, `verifierChaine`, `EMPREINTE_ORIGINE` (64 zéros).
 - `js/src/versions.js` : `editionsAPurger`, `versionsVisibles`, `etapes`, `GENRES`, `ETAPES`.

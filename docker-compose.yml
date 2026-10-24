@@ -46,6 +46,7 @@ services:
       - ./modules/fiche/db/041_fiche_parametrage.sql:/docker-entrypoint-initdb.d/041_fiche_parametrage.sql:ro
       - ./modules/ged/db/050_ged_schema.sql:/docker-entrypoint-initdb.d/050_ged_schema.sql:ro
       - ./modules/ged/db/051_ged_organisation.sql:/docker-entrypoint-initdb.d/051_ged_organisation.sql:ro
+      - ./modules/ged/db/052_ged_validite.sql:/docker-entrypoint-initdb.d/052_ged_validite.sql:ro
       - ./modules/bibliotheque/db/060_bibliotheque_schema.sql:/docker-entrypoint-initdb.d/060_bibliotheque_schema.sql:ro
       - ./modules/bibliotheque/db/061_bibliotheque_technique.sql:/docker-entrypoint-initdb.d/061_bibliotheque_technique.sql:ro
       - ./modules/bibliotheque/db/062_bibliotheque_coefficients.sql:/docker-entrypoint-initdb.d/062_bibliotheque_coefficients.sql:ro
@@ -55,6 +56,7 @@ services:
       - ./modules/reglement/db/080_reglement_schema.sql:/docker-entrypoint-initdb.d/080_reglement_schema.sql:ro
       - ./modules/edition/db/090_edition_schema.sql:/docker-entrypoint-initdb.d/090_edition_schema.sql:ro
       - ./modules/edition/db/091_edition_taches.sql:/docker-entrypoint-initdb.d/091_edition_taches.sql:ro
+      - ./modules/sous-traitance/db/092_sous_traitance.sql:/docker-entrypoint-initdb.d/092_sous_traitance.sql:ro
       - ./modules/crm/db/095_crm_schema.sql:/docker-entrypoint-initdb.d/095_crm_schema.sql:ro
       - ./modules/crm/db/096_crm_rappels.sql:/docker-entrypoint-initdb.d/096_crm_rappels.sql:ro
       - ./modules/crm/db/097_crm_demandes.sql:/docker-entrypoint-initdb.d/097_crm_demandes.sql:ro
@@ -130,6 +132,7 @@ services:
       - ./db/209_execution_etapes.sql:/docker-entrypoint-initdb.d/209_execution_etapes.sql:ro
       - ./db/210_sous_traitance.sql:/docker-entrypoint-initdb.d/210_sous_traitance.sql:ro
       - ./db/211_sous_traitance_marches.sql:/docker-entrypoint-initdb.d/211_sous_traitance_marches.sql:ro
+      - ./db/212_sous_traitance_pieces.sql:/docker-entrypoint-initdb.d/212_sous_traitance_pieces.sql:ro
       # Vues de colonnes des types créés après 176 (rejouable) : rejouée en dernier.
       - ./db/176_documents_vues_types.sql:/docker-entrypoint-initdb.d/999_documents_vues_types.sql:ro
       # Base de la société « demo » (sous-domaine demo.localhost), créée avec les mêmes scripts.

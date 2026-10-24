@@ -86,6 +86,11 @@
     <Project Path="modules/execution/dotnet/LogiBTP.Execution.Web/LogiBTP.Execution.Web.csproj" />
     <Project Path="modules/execution/dotnet/LogiBTP.Execution.Tests/LogiBTP.Execution.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/sous-traitance/">
+    <Project Path="modules/sous-traitance/dotnet/LogiBTP.SousTraitance/LogiBTP.SousTraitance.csproj" />
+    <Project Path="modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Web/LogiBTP.SousTraitance.Web.csproj" />
+    <Project Path="modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Tests/LogiBTP.SousTraitance.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/pointage/">
     <Project Path="modules/pointage/dotnet/LogiBTP.Pointage/LogiBTP.Pointage.csproj" />
     <Project Path="modules/pointage/dotnet/LogiBTP.Pointage.Web/LogiBTP.Pointage.Web.csproj" />

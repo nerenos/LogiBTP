@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.SousTraitance</RootNamespace>
+    <Description>Module Sous-traitance LogiBTP : conformité des pièces exigées (répliquée avec le paquet JS @logibtp/sous-traitance).</Description>
+  </PropertyGroup>
+
+</Project>

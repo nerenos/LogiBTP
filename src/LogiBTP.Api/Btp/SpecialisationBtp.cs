@@ -26,6 +26,9 @@ public sealed class DocumentCompletBtp : DocumentComplet<DocumentBtp, DocumentLi
 /// </summary>
 public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>
 {
+    /// <summary>Accès aux services de la requête (modules facultatifs consultés à la validation) ; posé par Program.cs.</summary>
+    public static IHttpContextAccessor? Http { get; set; }
+
     public const string ComplementMetres = "metres";
     public const string ComplementVariables = "variables";
     public const string ComplementVentilations = "ventilations";
@@ -158,6 +161,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
         var d = document.Document;
+        // Pièces exigées du sous-traitant (module Sous-traitance, ST13) : commande et facture de sous-traitance.
+        await SpecialisationSousTraitanceBtp.ControlerPiecesAsync(Http?.HttpContext?.RequestServices, type.TydCode, d.EntMarcheId, erreurs, ct);
         if (type.TydCode == "T_COMMANDE" && d.EntMarcheId is int mst)
         {
             var m = await db.Database.SqlQuery<string>($"SELECT mar_sens || ':' || coalesce(mar_tiers_id::text, '') AS \"Value\" FROM marche WHERE mar_id = {mst}").FirstOrDefaultAsync(ct);

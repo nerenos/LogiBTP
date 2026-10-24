@@ -7,6 +7,7 @@ import { PageParametres } from './parametres.js';
 import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
+import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -60,6 +61,7 @@ export const ROUTES = [
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
+  { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: 'Pièces exigées des sous-traitants' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },

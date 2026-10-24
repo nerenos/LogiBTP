@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.SousTraitance.Web</RootNamespace>
+    <Description>Module Sous-traitance LogiBTP : pièces exigées (EF Core), ajustements par élément, conformité d'un marché ou d'un sous-traitant, routes HTTP ; marchés, sous-traitants et pièces fournis par la spécialisation de l'application.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.SousTraitance\LogiBTP.SousTraitance.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

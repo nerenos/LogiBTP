@@ -9,6 +9,7 @@ using LogiBTP.Documents.Web;
 using LogiBTP.Editions.Web;
 using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Execution.Web;
+using LogiBTP.SousTraitance.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
@@ -72,6 +73,8 @@ builder.Services.AddScoped<IModulesActifs>(sp => sp.GetRequiredService<ModulesSo
 builder.Services.AddModuleAuthentification<SpecialisationAuthentificationBtp>(Base, builder.Configuration.GetSection("Authentification"));
 // Module Exécution (facultatif) : parcours, états des services, synthèse par chantier (modules/execution/db/085, db/197-198).
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
+// Module Sous-traitance (facultatif) : pièces exigées et conformité (modules/sous-traitance/db/092, db/210-212).
+builder.Services.AddModuleSousTraitance<SpecialisationSousTraitanceBtp>(Base);
 // Module Pointage (facultatif) : saisie des heures de main-d'œuvre par chantier (modules/pointage/db/086, db/199).
 builder.Services.AddModulePointage<SpecialisationPointageBtp>(Base);
 // Module Planning (facultatif) : tâches, affectations, calcul par les calendriers (modules/planning/db/089, db/201).
@@ -87,6 +90,7 @@ builder.Services.AddModuleNotifications(Base, builder.Configuration.GetSection("
 builder.Services.AddSourceNotifications<SourceRappelsCrm>();
 builder.Services.AddSourceNotifications<SourceHabilitations>();
 builder.Services.AddSourceNotifications<SourceEtapesExecution>();
+builder.Services.AddSourceNotifications<SourcePiecesSousTraitance>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
@@ -100,6 +104,7 @@ builder.Services.PostConfigure<OptionsAuthentification>(o => o.RoutesPubliques.A
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+SpecialisationBtp.Http = app.Services.GetRequiredService<IHttpContextAccessor>();
 if (commande is not null)
 {
     Environment.ExitCode = await CommandeComptes.ExecuterAsync(commande, app.Services, Console.Out);
@@ -131,6 +136,7 @@ api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
 api.MapModuleCrm().ExigeModule("crm", "CRM");
 api.MapExecution().ExigeModule("execution", "Exécution");
 api.MapModuleExecution().ExigeModule("execution", "Exécution");
+api.MapModuleSousTraitance().ExigeModule("sous_traitance", "Sous-traitance");
 api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
 api.MapModulePlanning().ExigeModule("planning", "Planning");
 api.MapDiffusion();

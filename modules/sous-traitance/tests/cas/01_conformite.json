@@ -1,0 +1,79 @@
+{
+  "description": "Conformité des pièces de sous-traitance (conformite.js ↔ ReglesConformite.cs) : exigences applicables selon le marché (public, garantie, montant), ajoutées ou dispensées sur l'élément, pièce la plus récente de sa catégorie, états (fournie, à échéance dans le délai de rappel, expirée, manquante, absente si facultative, dispensée), marché conforme, pièces bloquantes par action. Aujourd'hui : 2026-10-24.",
+  "aujourdhui": "2026-10-24",
+  "exigences": [
+    { "code": "kbis", "libelle": "Extrait Kbis", "portee": "TIERS", "categorie": "kbis", "obligatoire": true, "duree_mois": 3, "rappel_jours": 15, "bloquant": ["PAIEMENT"], "ordre": 1 },
+    { "code": "urssaf", "libelle": "Attestation de vigilance URSSAF", "portee": "TIERS", "categorie": "attestation_urssaf", "obligatoire": true, "duree_mois": 6, "rappel_jours": 30, "bloquant": ["PAIEMENT", "COMMANDE"], "ordre": 2 },
+    { "code": "fiscale", "libelle": "Attestation de régularité fiscale", "portee": "TIERS", "categorie": "attestation_fiscale", "obligatoire": true, "duree_mois": 6, "rappel_jours": 30, "bloquant": [], "cond_public": true, "ordre": 3 },
+    { "code": "rib", "libelle": "RIB", "portee": "TIERS", "categorie": "rib", "obligatoire": false, "duree_mois": null, "rappel_jours": 0, "bloquant": [], "ordre": 4 },
+    { "code": "dc4", "libelle": "Déclaration de sous-traitance (DC4)", "portee": "MARCHE", "categorie": "dc4", "obligatoire": true, "duree_mois": null, "rappel_jours": 0, "bloquant": ["COMMANDE"], "cond_public": true, "ordre": 5 },
+    { "code": "caution", "libelle": "Caution bancaire", "portee": "MARCHE", "categorie": "caution", "obligatoire": true, "duree_mois": null, "rappel_jours": 30, "bloquant": [], "cond_garantie": "CAUTION", "ordre": 6 },
+    { "code": "agrement", "libelle": "Agrément du maître d'ouvrage", "portee": "MARCHE", "categorie": "agrement_moa", "obligatoire": true, "duree_mois": null, "rappel_jours": 0, "bloquant": ["FACTURE"], "cond_montant_min": 10000, "ordre": 7 }
+  ],
+  "cas": [
+    {
+      "nom": "marché public en paiement direct : tout fourni, URSSAF à échéance (la plus récente retenue)",
+      "contexte": { "public": true, "garantie": "PAIEMENT_DIRECT", "montant_ht": 20000 },
+      "pieces": [
+        { "categorie": "kbis", "portee": "TIERS", "dge_id": 1, "depose_le": "2026-09-01" },
+        { "categorie": "attestation_urssaf", "portee": "TIERS", "dge_id": 2, "depose_le": "2026-01-10" },
+        { "categorie": "attestation_urssaf", "portee": "TIERS", "dge_id": 3, "depose_le": "2026-05-01" },
+        { "categorie": "attestation_fiscale", "portee": "TIERS", "dge_id": 4, "depose_le": "2026-07-01", "valide_au": "2027-01-01" },
+        { "categorie": "dc4", "portee": "MARCHE", "dge_id": 5, "depose_le": "2026-10-01" },
+        { "categorie": "agrement_moa", "portee": "MARCHE", "dge_id": 6, "depose_le": "2026-10-10" }
+      ],
+      "ajustements": [],
+      "attendu": {
+        "pieces": [
+          { "code": "kbis", "etat": "FOURNIE", "fin": "2026-12-01", "obligatoire": true, "dge_id": 1 },
+          { "code": "urssaf", "etat": "A_ECHEANCE", "fin": "2026-11-01", "obligatoire": true, "dge_id": 3 },
+          { "code": "fiscale", "etat": "FOURNIE", "fin": "2027-01-01", "obligatoire": true, "dge_id": 4 },
+          { "code": "rib", "etat": "ABSENTE", "fin": null, "obligatoire": false, "dge_id": null },
+          { "code": "dc4", "etat": "FOURNIE", "fin": null, "obligatoire": true, "dge_id": 5 },
+          { "code": "agrement", "etat": "FOURNIE", "fin": null, "obligatoire": true, "dge_id": 6 }
+        ],
+        "conforme": true, "a_echeance": ["urssaf"], "bloquants": { "COMMANDE": [], "FACTURE": [], "PAIEMENT": [] }
+      }
+    },
+    {
+      "nom": "marché privé sous caution : Kbis expiré, pièces manquantes, DC4 ajouté, agrément dispensé",
+      "contexte": { "public": false, "garantie": "CAUTION", "montant_ht": 5000 },
+      "pieces": [ { "categorie": "kbis", "portee": "TIERS", "dge_id": 7, "depose_le": "2026-05-01" } ],
+      "ajustements": [ { "code": "dc4", "mode": "AJOUTEE", "motif": "Exigé par le client" }, { "code": "agrement", "mode": "DISPENSEE", "motif": "Sous le seuil" } ],
+      "attendu": {
+        "pieces": [
+          { "code": "kbis", "etat": "EXPIREE", "fin": "2026-08-01", "obligatoire": true, "dge_id": 7 },
+          { "code": "urssaf", "etat": "MANQUANTE", "fin": null, "obligatoire": true, "dge_id": null },
+          { "code": "rib", "etat": "ABSENTE", "fin": null, "obligatoire": false, "dge_id": null },
+          { "code": "dc4", "etat": "MANQUANTE", "fin": null, "obligatoire": true, "dge_id": null },
+          { "code": "caution", "etat": "MANQUANTE", "fin": null, "obligatoire": true, "dge_id": null },
+          { "code": "agrement", "etat": "DISPENSEE", "fin": null, "obligatoire": true, "dge_id": null }
+        ],
+        "conforme": false, "a_echeance": [], "bloquants": { "COMMANDE": ["urssaf", "dc4"], "FACTURE": [], "PAIEMENT": ["kbis", "urssaf"] }
+      }
+    },
+    {
+      "nom": "sous-traitant seul (pièces annexes) : Kbis valable jusqu'à aujourd'hui, à échéance",
+      "portees": ["TIERS"],
+      "contexte": {},
+      "pieces": [
+        { "categorie": "kbis", "portee": "TIERS", "dge_id": 8, "depose_le": "2026-08-01", "valide_au": "2026-10-24" },
+        { "categorie": "attestation_urssaf", "portee": "TIERS", "dge_id": 9, "depose_le": "2026-10-01" }
+      ],
+      "ajustements": [],
+      "attendu": {
+        "pieces": [
+          { "code": "kbis", "etat": "A_ECHEANCE", "fin": "2026-10-24", "obligatoire": true, "dge_id": 8 },
+          { "code": "urssaf", "etat": "FOURNIE", "fin": "2027-04-01", "obligatoire": true, "dge_id": 9 },
+          { "code": "rib", "etat": "ABSENTE", "fin": null, "obligatoire": false, "dge_id": null }
+        ],
+        "conforme": true, "a_echeance": ["kbis"], "bloquants": { "COMMANDE": [], "FACTURE": [], "PAIEMENT": [] }
+      }
+    }
+  ],
+  "mois": [
+    { "date": "2026-08-31", "mois": 6, "attendu": "2027-02-28" },
+    { "date": "2024-01-31", "mois": 1, "attendu": "2024-02-29" },
+    { "date": "2026-11-15", "mois": 3, "attendu": "2027-02-15" }
+  ]
+}

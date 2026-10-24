@@ -143,3 +143,45 @@ public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotificati
                 $"Étape validée le {l.ValideLe:dd/MM/yyyy}", "INFO", $"/document/{l.EntId}", null, null, $"exe-controle:{l.OreId}"))).ToList();
     }
 }
+
+/// <summary>
+/// Pièces des sous-traitants (module Sous-traitance, § 5.3 ; une fois par jour, module actif) : pour chaque marché de
+/// sous-traitance en cours, pièces à échéance ou en défaut (manquantes, expirées) ; une synthèse par jour aux membres du
+/// service des achats (code ACHAT), sinon aux administrateurs.
+/// </summary>
+public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifications
+{
+    public string Code => "sous-traitance-pieces";
+    public TimeSpan Periode => TimeSpan.FromHours(6);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("sous_traitance", "PIECES", "Pièces des sous-traitants à fournir ou à renouveler")];
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("sous_traitance", ct)) return [];
+        var marches = await db.Database.SqlQueryRaw<int>("SELECT mar_id AS \"Value\" FROM marche WHERE mar_sens = 'ST' AND mar_statut = 'EN_COURS'").ToListAsync(ct);
+        if (marches.Count == 0) return [];
+        var service = portee.GetRequiredService<LogiBTP.SousTraitance.Web.ServiceSousTraitance>();
+        int defaut = 0, echeance = 0, concernes = 0;
+        foreach (var m in marches)
+        {
+            var c = await service.ConformiteMarcheAsync(m, ct);
+            var d = c.Pieces.Count(p => p.Etat is "MANQUANTE" or "EXPIREE" && p.Obligatoire);
+            if (d + c.AEcheance.Count > 0) concernes++;
+            (defaut, echeance) = (defaut + d, echeance + c.AEcheance.Count);
+        }
+        if (concernes == 0) return [];
+        var destinataires = await db.Database.SqlQueryRaw<string>("""
+            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
+            WHERE s.srv_code = 'ACHAT' AND i.ind_utilisateur IS NOT NULL
+            """).ToListAsync(ct);
+        if (destinataires.Count == 0)
+        {
+            destinataires = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        }
+        var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        return destinataires.Select(dest => new NouvelleNotification(dest, "sous_traitance", "PIECES",
+            $"Sous-traitance : {defaut} pièce(s) manquante(s) ou expirée(s), {echeance} à renouveler",
+            $"{concernes} marché(s) de sous-traitance concerné(s)", defaut > 0 ? "ATTENTION" : "INFO", "/liste/marches_st?vue=1203", null, null,
+            $"st-pieces:{jour:yyyy-MM-dd}")).ToList();
+    }
+}

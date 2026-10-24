@@ -32,7 +32,8 @@ const APRES_RATTACHEMENT = [
   { valeur: 'RETIRER_DRAPEAU', libelle: 'retirer le drapeau « à suivre »' },
 ];
 const ETATS = { A_VERIFIER: ['À vérifier', 'neutre'], OK: ['Opérationnel', 'ok'], ERREUR: ['En erreur', 'erreur'], SUSPENDU: ['Envois groupés suspendus', 'attention'] };
-export const VARIABLES_MODELE = ['numero', 'type', 'document', 'objet', 'date', 'validite', 'montant_ht', 'montant_ttc', 'net_a_payer', 'tiers', 'contact', 'redacteur', 'utilisateur'];
+export const VARIABLES_MODELE = ['numero', 'type', 'document', 'objet', 'date', 'validite', 'montant_ht', 'montant_ttc', 'net_a_payer', 'tiers', 'contact', 'redacteur', 'utilisateur',
+  'pieces_manquantes', 'pieces_a_renouveler'];
 
 export const pastilleCompteMail = (etat) => {
   const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
