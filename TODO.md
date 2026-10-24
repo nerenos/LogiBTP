@@ -146,6 +146,14 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Reporter dans Q9 de `CONCEPTION-MARCHES-REGLEMENTS.md` (toujours sans décision) ce que ST5, ST14 et ST15 ont
   tranché (paiement direct réalisé au lot 4 de la sous-traitance).
 
+### Stock
+
+Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALYSE-MODULE-STOCK.md).
+
+- [ ] Lots et numéros de série à analyser (S24) : certificats matière (acier : numéro de coulée, certificat 3.1 en GED,
+  suivi jusqu'au chantier) et futur module SAV (traçabilité des articles vendus, posés et entretenus) ; colonne de
+  traçabilité réservée dans le journal des mouvements dès le lot 1.
+
 ### Module Exécution
 
 - [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
