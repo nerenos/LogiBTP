@@ -16,7 +16,13 @@
 > neuve les reçoit, I11 attend leur séparation (TODO) ; l'ordre du manifeste est l'ordre binaire des noms (le Compose de
 > développement suivait celui de la locale : 007b avant 007) ; `db/164_ged_elements.sql`, absent du Compose, est au
 > manifeste ; les volumes de configuration sont des volumes Docker (et non des dossiers Windows montés), pour que la
-> même procédure vaille avec Docker Desktop, WSL ou une machine virtuelle ; Npgsql sans chiffrement GSS.
+> même procédure vaille avec Docker Desktop, WSL ou une machine virtuelle ; Npgsql sans chiffrement GSS. Lot 2 réalisé le
+> 25/10/2026 (`LogiBTP.Installation.Web` : `AddHttpsInstallation`, `UseHttpsInstallation`, `MapAmorcage` ;
+> `AutoriteCertificats`, `DossierCertificats` ; commandes `installation certificat creer | renouveler | importer | etat` ;
+> `SourceCertificat`) ; écarts : le certificat est rechargé à chaud par Kestrel (relecture du fichier au plus toutes les
+> 30 s), sans redémarrage ; la page d'amorçage ne vérifie pas le DNS du poste (aucun script) : elle liste les adresses de
+> chaque société ; le mot de passe d'un PKCS#12 importé passe par une variable d'environnement, jamais par la ligne de
+> commande ; la clé de la racine est un PKCS#8 chiffré (AES-256, 600 000 itérations) par la clé des données.
 
 ## 1. Demande
 

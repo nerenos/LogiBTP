@@ -179,7 +179,7 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Séparer les données de démonstration des données de référence (116, 141, 161, 163, démo de 120, sous-traitants
   de 211…) : une base neuve d'installation reçoit aujourd'hui la démonstration (211 dépend des niveaux de 141).
 - [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), questions I1 à I14
-  tranchées le 24/10/2026 ; lot 1 réalisé) : un conteneur pour l'API (client servi par l'API, HTTPS par Kestrel) et un pour la base, hôte Windows en
+  tranchées le 24/10/2026 ; lots 1 et 2 réalisés) : un conteneur pour l'API (client servi par l'API, HTTPS par Kestrel) et un pour la base, hôte Windows en
   réseau local, certificat (autorité LogiBTP, AD CS, certificat fourni ou Let's Encrypt par DNS) ; enchaîner
   `env initialiser` (fait : clé des données générée, `.env` chiffré, un `.env` fourni est conservé), création des bases
   et des rôles (`db/installation/roles.sql`), `pg_hba.conf`, certificat joker et DNS, premier administrateur ; rotation

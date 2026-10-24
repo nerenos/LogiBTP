@@ -297,3 +297,31 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
         return r;
     }
 }
+
+/// <summary>
+/// Certificat de l'installation (module Installation, § 5.3 ; toutes les 6 h) : 30 jours avant son échéance, puis chaque
+/// jour, notification aux comptes ADMIN de chaque base ; le renouvellement automatique (tâche planifiée) a lieu 60 jours
+/// avant pour l'autorité LogiBTP : un rappel signale qu'il a échoué, ou qu'un certificat importé est à renouveler.
+/// </summary>
+public sealed class SourceCertificat(LogiBtpContext db, LogiBTP.Installation.Web.CertificatServeur certificat) : ISourceNotifications
+{
+    public string Code => "installation-certificat";
+    public TimeSpan Periode => TimeSpan.FromHours(6);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("installation", "CERTIFICAT", "Certificat HTTPS à renouveler")];
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (certificat.Fin is not { } fin) return [];
+        var jours = (int)Math.Floor((fin - maintenant).TotalDays);
+        if (jours > 30) return [];
+        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var infos = certificat.Dossier.Infos();
+        var titre = jours < 0 ? $"Certificat HTTPS expiré depuis le {fin:dd/MM/yyyy}" : $"Certificat HTTPS à renouveler : échéance le {fin:dd/MM/yyyy} ({jours} jour(s))";
+        var texte = infos?.Origine == LogiBTP.Installation.OrigineCertificat.LogiBtp
+            ? "Le renouvellement automatique a échoué : lancer « installation certificat renouveler » sur le serveur."
+            : $"Certificat émis par {infos?.Emetteur} : le renouveler auprès de son émetteur puis « installation certificat importer ».";
+        var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        return admins.Select(a => new NouvelleNotification(a, "installation", "CERTIFICAT", titre, texte, jours < 7 ? "URGENT" : "ATTENTION",
+            "/parametres/installation", null, null, $"certificat:{aujourdhui:yyyy-MM-dd}"));
+    }
+}

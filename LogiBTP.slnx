@@ -113,6 +113,7 @@
   </Folder>
   <Folder Name="/modules/installation/">
     <Project Path="modules/installation/dotnet/LogiBTP.Installation/LogiBTP.Installation.csproj" />
+    <Project Path="modules/installation/dotnet/LogiBTP.Installation.Web/LogiBTP.Installation.Web.csproj" />
     <Project Path="modules/installation/dotnet/LogiBTP.Installation.Tests/LogiBTP.Installation.Tests.csproj" />
   </Folder>
   <Folder Name="/src/">

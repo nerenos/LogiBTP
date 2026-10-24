@@ -27,19 +27,36 @@ décisions I1 à I14).
   `logibtp_<code>`, rôle `logibtp_app`) ; conversions de données hors du démarrage (développement excepté). Écart :
   les données de démonstration sont mêlées aux données de référence (211 dépend de 141) : toute base neuve les reçoit.
 
+- Lot 2 : HTTPS par Kestrel (`LogiBTP.Installation.Web` : `AddHttpsInstallation` — certificat du dossier
+  `LOGIBTP_CERTIFICATS` (/app/certificats), écoute 8443 en HTTPS et 8080 en HTTP ; `CertificatServeur` relu à chaud au
+  plus toutes les 30 s ; `UseHttpsInstallation` — redirection 308 vers HTTPS sur le domaine `LOGIBTP_DOMAINE` ou l'un
+  de ses sous-domaines, jamais vers un autre hôte, sauf `/certificat` et la santé depuis le conteneur ; `MapAmorcage` —
+  page publique `/certificat` sans script : empreinte, consignes AD / postes / TSE / tablettes, `logibtp-racine.cer`,
+  `Installer-Certificat-LogiBTP.ps1`, `logibtp.mobileconfig`) ; autorité LogiBTP (`AutoriteCertificats` : racine RSA 3072
+  de 10 ans à contrainte de noms sur le domaine, serveur RSA 2048 de 730 jours au plus, domaine + joker, clé de la
+  racine chiffrée par la clé des données) ; certificats fournis (PKCS#12 ou PEM, couverture du domaine et du joker
+  contrôlée) ; rappel 30 jours avant l'échéance aux administrateurs (`SourceCertificat` du cœur).
+
 ## Bibliothèque (`dotnet/LogiBTP.Installation`)
 - `ManifesteScripts` (`Lire`, `Analyser`, `Ecarts`), `BaseDonnees` (`DefinirRolesAsync`,
   `CreerBaseAsync`, `AppliquerAsync(connexion, racine, scripts, adopter)` → `BilanScripts`, `ScriptsAppliquesAsync`,
   `ExecuterFichierAsync`, `Empreinte`), `ConfigurationPostgres` (`PgHba`, `PostgresqlConf` depuis `ReglagesPostgres` :
   réseau Docker, adresses de l'API distante en `hostssl`, mémoire, fuseau), `SocietesInstallation` (`Preparer`,
-  `Ajouter`, `VerifierCode`, `Societes`), `Secrets`.
+  `Ajouter`, `VerifierCode`, `Societes`), `Secrets`, `AutoriteCertificats` (`CreerRacine`, `Emettre`, `ContrainteNoms`,
+  `NomsPermis`, `NomsDns`, `Couvre`, `Empreinte`, `ChiffrerCle` / `DechiffrerCle`, `ProfilApple`, `ScriptPostes`),
+  `DossierCertificats` (serveur.crt, serveur.key, racine.crt, racine.key chiffrée, certificat.json ; `Ecrire`,
+  `LireFourni`, `Infos`), `OrigineCertificat` (LOGIBTP, IMPORTE, LETSENCRYPT).
 
 ## Commandes (image de l'API)
 `docker compose -f docker/api/compose.yml run --rm logibtp-installation installation …` :
 `preparer --domaine D [--deploiement] [--confiance] [--reseau] [--memoire] [--libelle] [--base-hote]`,
-`base creer`, `societe ajouter CODE [--libelle]`, `societes`, `scripts verifier`, `conversions`, `etat`.
-Variables : `LOGIBTP_CONFIG` (/app/config), `LOGIBTP_CONFIG_BASE` (/app/base-config), `LOGIBTP_SQL` (/app/sql).
+`base creer`, `societe ajouter CODE [--libelle]`, `societes`, `scripts verifier`, `conversions`, `etat`,
+`certificat creer [--organisation] [--jours] [--nouvelle-racine] | renouveler [--avant 60] | importer --certificat F [--cle K]
+[--origine IMPORTE|LETSENCRYPT] | etat` (mot de passe d'un PKCS#12 : `LOGIBTP_CERTIFICAT_MOT_DE_PASSE`).
+Variables : `LOGIBTP_CONFIG` (/app/config), `LOGIBTP_CONFIG_BASE` (/app/base-config), `LOGIBTP_SQL` (/app/sql),
+`LOGIBTP_CERTIFICATS` (/app/certificats), `LOGIBTP_PORT_HTTPS_PUBLIC` (port public de la redirection, 443).
 
 ## Tests
 `dotnet test modules/installation/dotnet/LogiBTP.Installation.Tests` (manifeste ↔ dépôt, ordre, pg_hba, postgresql.conf,
-sociétés, connexions du modèle, CSP).
+sociétés, connexions du modèle, CSP ; autorité : contrainte de noms, chaîne validée et nom étranger refusé par
+`X509Chain`, joker, chiffrement de la clé, profil Apple, script des postes, dossier, redirection).

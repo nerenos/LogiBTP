@@ -27,7 +27,7 @@
     <ProjectReference Include="..\..\modules\calendrier\dotnet\LogiBTP.Calendrier.Web\LogiBTP.Calendrier.Web.csproj" />
     <ProjectReference Include="..\..\modules\entreprises-fr\dotnet\LogiBTP.EntreprisesFr.Web\LogiBTP.EntreprisesFr.Web.csproj" />
     <ProjectReference Include="..\..\modules\edition\dotnet\LogiBTP.Editions.Web\LogiBTP.Editions.Web.csproj" />
-    <ProjectReference Include="..\..\modules\installation\dotnet\LogiBTP.Installation\LogiBTP.Installation.csproj" />
+    <ProjectReference Include="..\..\modules\installation\dotnet\LogiBTP.Installation.Web\LogiBTP.Installation.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -17,6 +17,7 @@ using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Droits.Web;
 using LogiBTP.Fiches.Web;
+using LogiBTP.Installation.Web;
 using LogiBTP.Ged.Web;
 using LogiBTP.Listes.Web;
 using LogiBTP.Notifications.Web;
@@ -52,6 +53,9 @@ var builder = WebApplication.CreateBuilder(commande is null ? args : []);
 builder.Configuration.AddJsonFile(Path.Combine(dossierConfig ?? builder.Environment.ContentRootPath, CommandeInstallation.FichierSocietes), optional: true);
 builder.Configuration.AjouterFichierEnv(dossierConfig ?? builder.Environment.ContentRootPath, cleEnv: CleConstruction.Valeur);
 builder.Configuration.AjouterConnexionsModele();
+// HTTPS de l'installation : certificat du volume LOGIBTP_CERTIFICATS (Kestrel 8443, HTTP 8080 pour la redirection et
+// l'amorçage du certificat), rechargé à chaud ; sans certificat, HTTP seul (développement).
+builder.AddHttpsInstallation();
 builder.Services.AddChiffrement(builder.Configuration);
 // Sécurité web (§ 10) : déploiement, proxys déclarés, origines CORS, adresses de confiance, limites de débit.
 var securite = OptionsSecurite.Lire(builder.Configuration);
@@ -129,6 +133,7 @@ builder.Services.AddSourceNotifications<SourceEtapesExecution>();
 builder.Services.AddSourceNotifications<SourcePiecesSousTraitance>();
 builder.Services.AddSourceNotifications<SourceStockBtp>();
 builder.Services.AddSourceNotifications<SourcePaiementsDirects>();
+builder.Services.AddSourceNotifications<SourceCertificat>();
 builder.Services.AddCanalNotifications<CanalCourrielBtp>();
 // Module OAuth : connexions sortantes OAuth 2.0 (jetons chiffrés, renouvellement, rappels d'échéance ; modules/oauth/db/004) ;
 // fournisseur de jetons du socle (IFournisseurJeton) pour le module Mail ; retour des fournisseurs en route publique.
@@ -158,6 +163,7 @@ if (commande is not null)
 if (app.Environment.IsDevelopment()) await ConversionMetresBases.ConvertirAsync(app.Services, app.Logger);
 
 app.UseSecurite();
+app.UseHttpsInstallation();
 // Client web construit (wwwroot de l'image Docker) : fichiers statiques et CSP bloquante ; en développement, Vite le sert.
 app.UseClientWeb();
 app.UseErreursMetier();
@@ -211,6 +217,8 @@ api.MapCalendriersBtp();
 api.MapModuleEdition();
 api.MapEditionsBtp();
 
+// Page d'amorçage du certificat (publique, HTTP et HTTPS) : autorité, script des postes, profil iPad.
+app.MapAmorcage();
 // Routes du client (toute adresse hors /api → index.html), en dernier recours.
 app.MapClientWeb();
 

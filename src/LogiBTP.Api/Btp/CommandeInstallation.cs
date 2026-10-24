@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using LogiBTP.Installation;
 using LogiBTP.Socle;
 using LogiBTP.Socle.Web;
@@ -13,7 +14,11 @@ namespace LogiBTP.Api.Btp;
 ///   base creer : rôles, base principale, scripts du manifeste sous logibtp_schema, script des rôles ;
 ///   societe ajouter CODE [--libelle L] : base de la société et déclaration dans societes.json ;
 ///   societes : sociétés déclarées ; scripts verifier : manifeste ↔ dépôt ; conversions : conversions de données
-///   (métrés) sous le rôle de schéma ; etat : bases et scripts appliqués.
+///   (métrés) sous le rôle de schéma ; etat : bases et scripts appliqués ;
+///   certificat creer [--organisation O] [--jours N] [--nouvelle-racine] : autorité LogiBTP (créée une fois, clé chiffrée
+///   par la clé des données) et certificat du domaine et de son joker ; certificat renouveler [--avant N] : nouveau
+///   certificat N jours (60) avant l'échéance ; certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] :
+///   certificat fourni (PKCS#12 : mot de passe dans LOGIBTP_CERTIFICAT_MOT_DE_PASSE) ; certificat etat.
 /// Aucun secret n'est jamais affiché.
 /// </summary>
 public static class CommandeInstallation
@@ -26,6 +31,8 @@ public static class CommandeInstallation
                 installation base creer
                 installation societe ajouter CODE [--libelle L]
                 installation societes | scripts verifier | conversions | etat
+                installation certificat creer [--organisation O] [--jours N] [--nouvelle-racine] | renouveler [--avant N]
+                installation certificat importer --certificat F [--cle K] [--origine IMPORTE|LETSENCRYPT] | etat
         """;
 
     public static async Task<int> ExecuterAsync(string[] args, string dossier, TextWriter sortie)
@@ -43,12 +50,16 @@ public static class CommandeInstallation
                 ("scripts", "verifier") => VerifierScripts(sortie),
                 ("conversions", _) => await ConvertirAsync(dossier, sortie),
                 ("etat", _) => await EtatAsync(dossier, sortie),
+                ("certificat", "creer") => CreerCertificat(args, dossier, sortie),
+                ("certificat", "renouveler") => RenouvelerCertificat(args, dossier, sortie),
+                ("certificat", "importer") => ImporterCertificat(args, dossier, sortie),
+                ("certificat", "etat") => EtatCertificat(sortie),
                 _ => Erreur(sortie, Usage),
             };
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException or FormatException or IOException or Npgsql.NpgsqlException)
         {
-            return Erreur(sortie, Masquage.Texte(e.Message));
+            return Erreur(sortie, Masquage.Texte(e.Message) ?? e.GetType().Name);
         }
     }
 
@@ -208,6 +219,93 @@ public static class CommandeInstallation
                 sortie.WriteLine($"{code ?? "(principale)"} → {base_} : injoignable ({Masquage.Texte(e.Message)})");
             }
         }
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- certificats (§ 5)
+
+    private static DossierCertificats Certificats() =>
+        new(Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICATS") ?? Path.Combine(Directory.GetCurrentDirectory(), "certificats"));
+
+    private static int CreerCertificat(string[] args, string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var cleDonnees = Exiger(config, ExtensionsConfiguration.CleChiffrement);
+        var jours = int.TryParse(Option(args, "--jours"), out var j) ? j : AutoriteCertificats.JoursServeurMax;
+        var d = Certificats();
+        Directory.CreateDirectory(d.Dossier);
+        var maintenant = DateTimeOffset.Now;
+        var (racine, cleRacine) = Racine(d, domaine, cleDonnees, args.Contains("--nouvelle-racine"), Option(args, "--organisation"), maintenant, sortie);
+        var serveur = AutoriteCertificats.Emettre(racine, cleRacine, AutoriteCertificats.NomsInstallation(domaine), maintenant, jours);
+        d.Ecrire(OrigineCertificat.LogiBtp, domaine, serveur.CertificatPem, serveur.ClePem, racine, maintenant);
+        sortie.WriteLine($"Certificat de {domaine} et *.{domaine} valable jusqu'au {serveur.Certificat.NotAfter:dd/MM/yyyy}");
+        sortie.WriteLine($"Empreinte SHA-256 de l'autorité (à comparer sur les postes) : {AutoriteCertificats.Empreinte(racine)}");
+        return 0;
+    }
+
+    /// <summary>Autorité de l'installation : relue (clé déchiffrée par la clé des données) ou créée.</summary>
+    private static (X509Certificate2 Racine, string Cle) Racine(DossierCertificats d, string domaine, string cleDonnees, bool nouvelle,
+        string? organisation, DateTimeOffset maintenant, TextWriter sortie)
+    {
+        if (!nouvelle && d.LireRacine() is { } existante && File.Exists(d.CleRacine))
+        {
+            if (!AutoriteCertificats.NomsPermis(existante).Contains(domaine, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"L'autorité existante ne couvre pas {domaine} : --nouvelle-racine (à redéployer sur les postes)");
+            return (existante, AutoriteCertificats.DechiffrerCle(File.ReadAllText(d.CleRacine), cleDonnees));
+        }
+        var r = AutoriteCertificats.CreerRacine(domaine, [domaine], maintenant, organisation);
+        DossierCertificats.EcrireSecret(d.CleRacine, AutoriteCertificats.ChiffrerCle(r.ClePem, cleDonnees));
+        File.WriteAllText(d.Racine, r.CertificatPem + "\n");
+        sortie.WriteLine($"Autorité LogiBTP créée (valable jusqu'au {r.Certificat.NotAfter:dd/MM/yyyy}, limitée à {domaine} et ses sous-domaines) : à installer sur les postes");
+        return (r.Certificat, r.ClePem);
+    }
+
+    private static int RenouvelerCertificat(string[] args, string dossier, TextWriter sortie)
+    {
+        var d = Certificats();
+        var infos = d.Infos() ?? throw new InvalidOperationException("Aucun certificat installé : « installation certificat creer »");
+        var avant = int.TryParse(Option(args, "--avant"), out var a) ? a : 60;
+        var reste = (infos.Fin - DateTimeOffset.Now).TotalDays;
+        if (reste > avant)
+        {
+            sortie.WriteLine($"Certificat valable encore {Math.Floor(reste)} jour(s) : rien à faire (renouvellement à {avant} jours)");
+            return 0;
+        }
+        if (infos.Origine != OrigineCertificat.LogiBtp)
+            throw new InvalidOperationException($"Certificat {infos.Origine} à renouveler auprès de son émetteur ({infos.Emetteur}), puis « installation certificat importer »");
+        return CreerCertificat([], dossier, sortie);
+    }
+
+    private static int ImporterCertificat(string[] args, string dossier, TextWriter sortie)
+    {
+        var config = Configuration(dossier);
+        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var fichier = Option(args, "--certificat") ?? throw new ArgumentException("--certificat obligatoire (.pfx, .p12 ou .pem)");
+        var origine = (Option(args, "--origine") ?? OrigineCertificat.Importe).ToUpperInvariant();
+        if (origine is not (OrigineCertificat.Importe or OrigineCertificat.LetsEncrypt)) throw new ArgumentException("--origine : IMPORTE ou LETSENCRYPT");
+        var (chaine, cle, racine) = DossierCertificats.LireFourni(fichier, Option(args, "--cle"), Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICAT_MOT_DE_PASSE"));
+        using var cert = X509Certificate2.CreateFromPem(chaine, cle);
+        foreach (var (nom, essai) in new[] { (domaine, domaine), ("*." + domaine, "societe." + domaine) })
+            if (!AutoriteCertificats.Couvre(cert, essai)) throw new InvalidOperationException($"Le certificat ne couvre pas {nom} : il faut le nom {domaine} et le joker *.{domaine}");
+        if (cert.NotAfter < DateTime.Now) throw new InvalidOperationException($"Certificat expiré le {cert.NotAfter:dd/MM/yyyy}");
+        Certificats().Ecrire(origine, domaine, chaine, cle, racine, DateTimeOffset.Now);
+        sortie.WriteLine($"Certificat importé ({origine}, émis par {cert.Issuer}) valable jusqu'au {cert.NotAfter:dd/MM/yyyy}"
+            + (racine is null ? "" : " ; autorité jointe proposée sur la page /certificat"));
+        return 0;
+    }
+
+    private static int EtatCertificat(TextWriter sortie)
+    {
+        var infos = Certificats().Infos();
+        if (infos is null)
+        {
+            sortie.WriteLine("Aucun certificat : l'API écoute en HTTP seulement");
+            return 0;
+        }
+        var reste = (int)Math.Floor((infos.Fin - DateTimeOffset.Now).TotalDays);
+        sortie.WriteLine($"{infos.Origine} : {string.Join(", ", infos.Noms)} ; émis par {infos.Emetteur} ; valable jusqu'au {infos.Fin:dd/MM/yyyy} ({reste} jour(s))");
+        if (infos.EmpreinteRacine is not null) sortie.WriteLine($"Empreinte SHA-256 de l'autorité : {infos.EmpreinteRacine}");
         return 0;
     }
 
