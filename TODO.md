@@ -66,9 +66,7 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   (`.env`, données) ; profil par défaut = saisie mobile (A5 révisée) ; à reprendre par le Mail (comptes, boîtes,
   « À rapprocher ») et l'OAuth (reconnexion des connexions).
 - [ ] **Avant une exposition sur internet** ([analyse des droits, § 10](documentation/conception/ANALYSE-MODULE-DROITS.md)) :
-  fichiers de la GED affichés en ligne dans l'origine de l'application (HTML ou SVG déposé = XSS stocké : `attachment`
-  hors liste blanche, `nosniff`, `sandbox` de l'aperçu), aucun script dans les HTML saisis ou reçus (assainisseur
-  répliqué JS / C#), en-têtes de sécurité et CSP (§ 10.4), contrôle de l'`Origin` des écritures (sous-domaines = même
+  aucun script dans les HTML saisis ou reçus (assainisseur répliqué JS / C#), en-têtes de sécurité et CSP (§ 10.4), contrôle de l'`Origin` des écritures (sous-domaines = même
   site), origines CORS en paramètre, limites de débit (§ 10.5), proxys déclarés (`UseForwardedHeaders`), prérequis
   DNS et certificat joker dans l'installeur (§ 10.6).
 - [ ] **Module de partage de fichiers** (auto-hébergé ou kDrive d'Infomaniak) : lien de téléchargement à la place des

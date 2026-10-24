@@ -52,6 +52,8 @@ export async function rendreApercu(zone, { fournisseur, doc, version, tailleMax,
     zone.innerHTML = `<pre class="ged-texte">${echapper(texte)}${blob.size > TEXTE_MAX ? '\n…' : ''}</pre>`;
     return;
   }
+  // Le cadre ne reçoit qu'un PDF (type imposé) : un HTML ou un SVG déposé n'y est jamais interprété. Pas d'attribut
+  // `sandbox` : Chrome et Edge refusent alors d'afficher le PDF. Les images passent par <img>, sans script (SVG compris).
   const url = URL.createObjectURL(new Blob([blob], { type: genre === 'pdf' ? 'application/pdf' : version.type_mime || blob.type }));
   urls.set(zone, url);
   zone.innerHTML = genre === 'image'

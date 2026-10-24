@@ -810,11 +810,15 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         }
         var c = await db.Contenus.AsNoTracking().FirstOrDefaultAsync(x => x.CgeEmpreinte == v.VgeEmpreinte, ct);
         if (c is null || !stockage.Existe(c.CgeChemin)) throw ExceptionMetier.Introuvable("Contenu");
-        var disposition = new ContentDispositionHeaderValue(telecharger ? "attachment" : "inline");
+        // En ligne : PDF, images matricielles et texte brut seulement ; nosniff et sandbox (AffichageContenu).
+        var reponse = AffichageContenu.Reponse(v.VgeTypeMime, telecharger);
+        var disposition = new ContentDispositionHeaderValue(reponse.EnLigne ? "inline" : "attachment");
         disposition.SetHttpFileName(v.VgeNomFichier);
         http.Response.Headers.ContentDisposition = disposition.ToString();
         http.Response.Headers.CacheControl = "private, max-age=3600";
-        return Results.Stream(stockage.Ouvrir(c.CgeChemin), v.VgeTypeMime ?? "application/octet-stream", enableRangeProcessing: true);
+        http.Response.Headers.XContentTypeOptions = "nosniff";
+        http.Response.Headers.ContentSecurityPolicy = "sandbox";
+        return Results.Stream(stockage.Ouvrir(c.CgeChemin), reponse.TypeMime, enableRangeProcessing: true);
     }
 
     /// <summary>

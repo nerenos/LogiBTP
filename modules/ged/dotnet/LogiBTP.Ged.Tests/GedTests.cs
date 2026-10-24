@@ -143,3 +143,32 @@ public class NormalisationGedTests
         }
     }
 }
+
+public class AffichageContenuTests
+{
+    /// <summary>Seuls PDF, images matricielles et texte brut s'affichent dans le navigateur ; le reste est téléchargé.</summary>
+    [Theory]
+    [InlineData("application/pdf", true)]
+    [InlineData("image/png", true)]
+    [InlineData("IMAGE/JPEG", true)]
+    [InlineData("text/plain; charset=utf-8", true)]
+    [InlineData("text/html", false)]
+    [InlineData("image/svg+xml", false)]
+    [InlineData("application/xhtml+xml", false)]
+    [InlineData("text/xml", false)]
+    [InlineData("application/octet-stream", false)]
+    [InlineData(null, false)]
+    public void En_ligne_seulement_sans_script(string? typeMime, bool enLigne)
+    {
+        Assert.Equal(enLigne, AffichageContenu.Reponse(typeMime, telecharger: false).EnLigne);
+        Assert.False(AffichageContenu.Reponse(typeMime, telecharger: true).EnLigne);
+    }
+
+    [Fact]
+    public void Type_normalise()
+    {
+        Assert.Equal("text/plain", AffichageContenu.Reponse(" Text/Plain ; charset=utf-8", false).TypeMime);
+        Assert.Equal(AffichageContenu.Defaut, AffichageContenu.Reponse("", false).TypeMime);
+        Assert.Equal(AffichageContenu.Defaut, AffichageContenu.Reponse(null, false).TypeMime);
+    }
+}

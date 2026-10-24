@@ -290,7 +290,7 @@ d'authentification).
 
 **Manques constatés dans le code actuel** (à traiter avant une exposition sur internet) :
 
-1. ✔ **Fichiers de la GED affichés en ligne dans l'origine de l'application** (`ServiceGed` : `Content-Disposition:
+1. ✔ **Réalisé le 24/10/2026** (`AffichageContenu`, en-têtes `nosniff` et `sandbox` ; l'`iframe` de l'aperçu ne reçoit qu'un PDF de type imposé et reste sans `sandbox`, qui empêche Chrome et Edge d'afficher le PDF). **Fichiers de la GED affichés en ligne dans l'origine de l'application** (`ServiceGed` : `Content-Disposition:
    inline` avec le type MIME déposé ; aperçu `modules/ged/js/ui/apercu.js` dans une `iframe` sans `sandbox`). Un
    fichier HTML ou SVG déposé (ou reçu par courriel et rangé dans la GED) exécute son script avec la session de
    celui qui l'ouvre : **XSS stocké**. Correction : `inline` seulement pour une liste blanche (PDF, images matricielles,
@@ -422,7 +422,7 @@ qui couvre aussi le comptage par base (D21).
 
 | Priorité | Mesures | Pourquoi |
 |---|---|---|
-| Avant toute exposition sur internet | HTTPS et HSTS (§ 10.6), GED en `attachment` + `nosniff` + `sandbox`, HTML sans script, contrôle de l'`Origin`, CORS en paramètre, limiteur de débit, en-têtes transmis par le proxy, contrôle des droits par le serveur (lot 1) | Failles exploitables à distance sans compte ou avec un compte quelconque |
+| Avant toute exposition sur internet | HTTPS et HSTS (§ 10.6), HTML sans script, contrôle de l'`Origin`, CORS en paramètre, limiteur de débit, en-têtes transmis par le proxy, contrôle des droits par le serveur (lot 1) | Failles exploitables à distance sans compte ou avec un compte quelconque |
 | Lot 3 des droits | JWT et rafraîchissement rotatif, machines connues, double facteur par courriel, exclusion d'IP | Vol de mot de passe et essais automatisés |
 | Avec le module d'installation | Rôles PostgreSQL, clés, réglage de déploiement, certificats, pare-feu | Limiter les dégâts d'une faille |
 | Ensuite | TOTP, contrôle des mots de passe divulgués | Gains réels mais moindres |
