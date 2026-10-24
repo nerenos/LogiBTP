@@ -234,3 +234,66 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
                     $"st-paiement:{d.Id}:{jour:yyyy-MM-dd}")).ToList();
     }
 }
+
+/// <summary>
+/// Module Stock, lot 5 (S17, S18, S27) : toutes les heures, saisies de stock de la borne à valider (une notification par
+/// pièce aux magasiniers — membres d'un service LOGISTIQUE — et au responsable du service du salarié, sinon aux
+/// administrateurs) ; une fois par jour, EPI et outillage dotés à renouveler dans les 30 jours (synthèse par salarié au
+/// responsable de son service, sinon aux administrateurs).
+/// </summary>
+public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
+{
+    public string Code => "stock";
+    public TimeSpan Periode => TimeSpan.FromHours(1);
+    public IReadOnlyList<TypeNotification> Types { get; } =
+        [new("stock", "A_VALIDER", "Sorties et retours saisis à la borne, à valider"), new("stock", "RENOUVELER", "EPI et outillage dotés à renouveler")];
+
+    private sealed record SaisieSql(long EntId, string? Numero, string? Nom, int? Salarie);
+    private sealed record SalarieSql(int Id, string Nom, int? Service);
+
+    private Task<List<string>> ChefsAsync(int salarie, CancellationToken ct) =>
+        db.Database.SqlQuery<string>($"""
+            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM salarie s JOIN service_membre m ON m.sme_ind_id = s.sal_ind_id AND m.sme_principal
+            JOIN service v ON v.srv_id = m.sme_srv_id LEFT JOIN service p ON p.srv_id = v.srv_parent_id
+            JOIN individu i ON i.ind_id IN (v.srv_responsable_id, p.srv_responsable_id)
+            WHERE s.sal_id = {salarie} AND i.ind_utilisateur IS NOT NULL
+            """).ToListAsync(ct);
+
+    private Task<List<string>> AdministrateursAsync(CancellationToken ct) =>
+        db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("stock", ct)) return [];
+        var r = new List<NouvelleNotification>();
+        var magasiniers = await db.Database.SqlQueryRaw<string>("""
+            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
+            WHERE s.srv_nature = 'LOGISTIQUE' AND i.ind_utilisateur IS NOT NULL
+            """).ToListAsync(ct);
+        var saisies = await db.Database.SqlQueryRaw<SaisieSql>("""
+            SELECT d.ent_id, d.ent_numero AS numero, s.sal_prenom || ' ' || s.sal_nom AS nom, d.ent_stk_salarie_id AS salarie
+            FROM document d LEFT JOIN salarie s ON s.sal_id = d.ent_stk_salarie_id WHERE d.ent_stk_a_valider
+            """).ToListAsync(ct);
+        foreach (var x in saisies)
+        {
+            var dest = magasiniers.Union(x.Salarie is { } sa ? await ChefsAsync(sa, ct) : []).Distinct().ToList();
+            if (dest.Count == 0) dest = await AdministrateursAsync(ct);
+            r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "A_VALIDER", $"Stock : saisie à la borne à valider ({x.Numero})",
+                $"{x.Nom ?? "Salarié"} : sortie ou retour comptés dans le stock, à accepter ou refuser", "INFO", "/stock/a-valider", null, null, $"stock-a-valider:{x.EntId}")));
+        }
+        // Renouvellements : une fois par jour (clé datée), articles dont la date de renouvellement tombe dans les 30 jours.
+        var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        var aRenouveler = (await MagasinBtp.RenouvellementsAsync(db, null, ct)).Where(x => x.Renouveler is { } d && d <= jour.AddDays(30)).ToList();
+        foreach (var g in aRenouveler.GroupBy(x => x.Salarie))
+        {
+            var nom = (await db.Database.SqlQuery<string>($"SELECT sal_prenom || ' ' || sal_nom AS \"Value\" FROM salarie WHERE sal_id = {g.Key}").ToListAsync(ct)).FirstOrDefault() ?? "Salarié";
+            var dest = await ChefsAsync(g.Key, ct);
+            if (dest.Count == 0) dest = await AdministrateursAsync(ct);
+            var echus = g.Count(x => x.Renouveler <= jour);
+            r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "RENOUVELER", $"Dotations : {g.Count()} article(s) à renouveler pour {nom}",
+                echus > 0 ? $"{echus} déjà échu(s)" : "Dans les 30 jours", echus > 0 ? "ATTENTION" : "INFO", $"/fiche/salarie/{g.Key}", null, null,
+                $"stock-renouveler:{g.Key}:{jour:yyyy-MM-dd}")));
+        }
+        return r;
+    }
+}

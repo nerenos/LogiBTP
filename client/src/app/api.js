@@ -235,6 +235,11 @@ export const api = {
     dotations: ({ du = null, au = null, salarie = null } = {}) => appel('GET', `/stock/magasin/dotations?${new URLSearchParams(Object.fromEntries(Object.entries({ du, au, salarie }).filter(([, v]) => v !== null && v !== '')))}`),
     dotationArticle: (id) => appel('GET', `/stock/articles/${id}/dotation`),
     definirDotation: (id, d) => appel('PUT', `/stock/articles/${id}/dotation`, d),
+    // Lot 5 : dépôt d'une borne, saisies de la borne à valider.
+    depotBorne: (id) => appel('GET', `/stock/bornes/${id}/depot`),
+    definirDepotBorne: (id, lieu) => appel('PUT', `/stock/bornes/${id}/depot`, { lieu }),
+    aValider: () => appel('GET', '/stock/magasin/a-valider'),
+    traiterSaisie: (id, accepter, motif = null) => appel('POST', `/stock/magasin/a-valider/${id}`, { accepter, motif }),
   },
 
   liaisons: {

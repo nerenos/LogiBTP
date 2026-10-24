@@ -29,6 +29,7 @@
 - Dotation d'un article : `GET|PUT /articles/{id}/dotation` { type, duree_mois }. Magasin et dotations des salariés : routes du cœur `/api/stock/magasin/*` (`MagasinBtp.cs`).
 - `GET /mouvements/{id}` ; `GET /articles/{id}` ; `POST /articles/{id}/pmp` { pmp, commentaire, date } ; `PUT /articles/{id}/emplacements` [ids] ; `POST /revaloriser`.
 - Gestion (paramètres, emplacements, réévaluation) : `PeutGererAsync` (cœur : administrateur ou membre d'un service LOGISTIQUE).
+- Borne et saisies à valider (lot 5) : routes du cœur (`StockBorneBtp.cs`) : `/api/pointage/borne/stock` (publique), `/api/stock/bornes/{id}/depot`, `/api/stock/magasin/a-valider`.
 
 ## Tests
 - `npm test --workspace modules/stock/js` ; `dotnet test modules/stock/dotnet/LogiBTP.Stock.Tests` (mêmes jeux).

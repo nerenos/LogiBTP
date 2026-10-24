@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -293,9 +293,11 @@ export class PageBorne extends PageBase {
       <div class="borne-grille">${j.chantiers.map((c) => `<button type="button" class="borne-carte ${j.proposes.includes(c.id) ? 'propose' : ''}" data-c="${c.id}">${j.proposes.includes(c.id) ? '📅 ' : ''}<b>${echapper(c.code)}</b><small>${echapper(c.libelle)}</small></button>`).join('')}</div>
       <p><button type="button" class="borne-bouton principal" data-liste title="Aller directement à la liste des pointages de la journée">📋 Pointages du jour${n ? ` (${n})` : ''} ⏭</button>
         <button type="button" class="borne-bouton" data-etapes title="Étapes des ordres à valider (module Exécution)">🧩 Étapes</button>
+        <button type="button" class="borne-bouton" data-stock title="Sortie ou retour d'articles du magasin de l'atelier (module Stock)">📦 Stock</button>
         <button type="button" class="borne-bouton" data-terminer>Terminer</button></p>`;
     this.#brancherEntete();
     this.zone.querySelector('[data-etapes]').addEventListener('click', () => this.#etapes());
+    this.zone.querySelector('[data-stock]').addEventListener('click', () => this.#stock());
     const choisir = (cha, ordre) => { this.etat.saisie = { cha_id: cha, ent_id: ordre ?? null }; this.#memoriser(); this.#typeMo(); };
     this.zone.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => choisir(Number(b.dataset.c))));
     const lire = async () => {
@@ -343,6 +345,70 @@ export class PageBorne extends PageBase {
     });
     this.zone.querySelector('[data-suite]').addEventListener('click', () => apres());
     try { await ecran.ouvrir(); } catch (e) { this.#erreur(e); }
+    this.#minuterie();
+  }
+
+  /**
+   * Stock (module Stock, lot 5, S17) : sortie ou retour d'articles au dépôt de la borne, vers un chantier du jour ou en
+   * dotation personnelle (EPI, outillage) ; articles en tuiles filtrées par marque et recherche ; la saisie compte aussitôt
+   * dans le stock et attend la validation du chef de service ou du magasin. Essai : rien n'est enregistré.
+   */
+  async #stock(etat = null) {
+    const j = this.etat.journee;
+    let d;
+    try { d = await appel('GET', `/stock?jeton=${encodeURIComponent(j.jeton)}`); } catch (e) { this.#erreur(e); return; }
+    if (!d.depot) { alert('Aucun dépôt de stock pour cette borne (paramétrage des bornes).'); return; }
+    const s = etat ?? { mode: 'SORTIE', dotation: true, chantier: null, marque: null, recherche: '', lignes: [] };
+    this.ecran = () => this.#stock(s);
+    const dotes = new Map(d.dotations.map((x) => [x.ele, Number(x.quantite)]));
+    const articles = d.articles.filter((a) => (!s.marque || a.marques.includes(s.marque)) && (!s.recherche || `${a.code} ${a.libelle}`.toLowerCase().includes(s.recherche.toLowerCase()))
+      && (s.mode === 'SORTIE' || !s.dotation || dotes.has(a.id)));
+    const marques = [...new Set(d.articles.flatMap((a) => a.marques))];
+    this.zone.innerHTML = `${this.#entete(`Stock · ${d.depot.code}`)}
+      <p><button type="button" class="borne-bouton ${s.mode === 'SORTIE' ? 'principal' : ''}" data-mode="SORTIE">📤 Je prends</button>
+        <button type="button" class="borne-bouton ${s.mode === 'RETOUR' ? 'principal' : ''}" data-mode="RETOUR">📥 Je rends</button>
+        <button type="button" class="borne-bouton ${s.dotation ? 'principal' : ''}" data-dotation>🦺 Pour moi (dotation)</button>
+        ${j.chantiers.map((c) => `<button type="button" class="borne-bouton ${!s.dotation && s.chantier === c.id ? 'principal' : ''}" data-chantier="${c.id}">${echapper(c.code)}</button>`).join('')}</p>
+      <p>${marques.map((m) => `<button type="button" class="borne-bouton ${s.marque === m ? 'principal' : ''}" data-marque="${echapper(m)}">${echapper(m)}</button>`).join('')}
+        <input data-recherche class="borne-champ" placeholder="Rechercher un article" value="${echapper(s.recherche)}"></p>
+      <div class="borne-grille">${articles.slice(0, 60).map((a) => `<button type="button" class="borne-carte" data-article="${a.id}"><b>${echapper(a.code)}</b><small>${echapper(a.libelle)}</small>
+        ${dotes.has(a.id) ? `<small>doté : ${formatNombre(dotes.get(a.id), a.precision)}</small>` : ''}</button>`).join('') || '<p class="aide">Aucun article.</p>'}</div>
+      ${s.lignes.length ? `<table class="borne-liste"><tbody>${s.lignes.map((l, i) => `<tr><td><b>${echapper(l.code)}</b> ${echapper(l.libelle)}</td>
+        <td><button type="button" class="borne-touche" data-moins="${i}">−</button> <b>${formatNombre(l.quantite, 2)}</b> ${echapper(l.unite)} <button type="button" class="borne-touche" data-plus="${i}">＋</button></td>
+        ${s.mode === 'RETOUR' ? `<td><label><input type="checkbox" data-rebut="${i}" ${l.rebut ? 'checked' : ''}> hors d'usage</label></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
+      <p><button type="button" class="borne-bouton principal" data-enregistrer ${s.lignes.length ? '' : 'disabled'}>✔ Enregistrer</button>
+        <button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+    this.#brancherEntete();
+    const z = this.zone;
+    z.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { s.mode = b.dataset.mode; s.lignes = []; this.#stock(s); }));
+    z.querySelector('[data-dotation]').addEventListener('click', () => { s.dotation = true; s.chantier = null; this.#stock(s); });
+    z.querySelectorAll('[data-chantier]').forEach((b) => b.addEventListener('click', () => { s.dotation = false; s.chantier = Number(b.dataset.chantier); this.#stock(s); }));
+    z.querySelectorAll('[data-marque]').forEach((b) => b.addEventListener('click', () => { s.marque = s.marque === b.dataset.marque ? null : b.dataset.marque; this.#stock(s); }));
+    z.querySelector('[data-recherche]').addEventListener('change', (e) => { s.recherche = e.target.value; this.#stock(s); });
+    z.querySelectorAll('[data-article]').forEach((b) => b.addEventListener('click', () => {
+      const a = d.articles.find((x) => x.id === Number(b.dataset.article));
+      const l = s.lignes.find((x) => x.ele === a.id);
+      if (l) l.quantite += 1; else s.lignes.push({ ele: a.id, code: a.code, libelle: a.libelle, unite: a.unite, quantite: 1, rebut: false });
+      this.#stock(s);
+    }));
+    z.querySelectorAll('[data-plus]').forEach((b) => b.addEventListener('click', () => { s.lignes[Number(b.dataset.plus)].quantite += 1; this.#stock(s); }));
+    z.querySelectorAll('[data-moins]').forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.dataset.moins);
+      s.lignes[i].quantite -= 1;
+      if (s.lignes[i].quantite <= 0) s.lignes.splice(i, 1);
+      this.#stock(s);
+    }));
+    z.querySelectorAll('[data-rebut]').forEach((c) => c.addEventListener('change', () => { s.lignes[Number(c.dataset.rebut)].rebut = c.checked; }));
+    z.querySelector('[data-retour]').addEventListener('click', () => this.#journee());
+    z.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      if (!s.dotation && !s.chantier) { alert('Choisissez le chantier ou « Pour moi ».'); return; }
+      try {
+        const r = await appel('POST', '/stock', { jeton: j.jeton, mode: s.mode, dotation: s.dotation, chantier: s.chantier,
+          lignes: s.lignes.map((l) => ({ ele: l.ele, quantite: l.quantite, rebut: s.mode === 'RETOUR' && l.rebut })) });
+        alert(r.essai ? 'Essai : rien n\'est enregistré.' : `Enregistré (${r.pieces.map((x) => x.numero).join(', ')}) : à valider par votre chef ou le magasin.`);
+        this.#journee();
+      } catch (e) { alert(e.message); }
+    });
     this.#minuterie();
   }
 
@@ -668,6 +734,7 @@ export class PageParametresBornes extends PageBase {
           <div><b>Services</b> <small class="aide">service principal du salarié ou son service parent ; aucun : tous</small><div data-p-services></div></div>
           <div><b>Fonctions</b> <small class="aide">poste du salarié ; aucune : toutes</small><div data-p-fonctions></div></div>
           <div><b>Types de main-d'œuvre</b> <small class="aide">proposés à la borne ; aucun : tous</small><div data-p-types></div></div>
+          ${this.app.moduleActif('stock') ? '<div><b>Dépôt de stock</b> <small class="aide">sorties et retours de l\'atelier (📦 Stock) ; vide : aucun</small><div data-p-depot></div></div>' : ''}
         </div><p class="ligne"><button type="button" class="principal" data-p-enregistrer title="Enregistrer le paramétrage de la borne">💾 Enregistrer</button>
           <button type="button" data-p-annuler>Annuler</button></p></td>`;
       tr.after(ligne);
@@ -677,6 +744,14 @@ export class PageParametresBornes extends PageBase {
       ligne.querySelector('[data-p-services]').append(services);
       ligne.querySelector('[data-p-fonctions]').append(fonctions);
       ligne.querySelector('[data-p-types]').append(types);
+      // Module Stock : dépôt de la borne (liaison Pointage → Stock, lu et écrit par le cœur).
+      let depot = null;
+      if (this.app.moduleActif('stock')) {
+        Promise.all([api.stock.lieux(), api.stock.depotBorne(a.id)]).then(([lieux, d]) => {
+          depot = creerCombo({ options: lieux.filter((x) => x.depot).map((x) => ({ valeur: x.id, libelle: `${x.code} – ${x.libelle}` })), valeur: d.lieu ?? '' });
+          ligne.querySelector('[data-p-depot]')?.append(depot);
+        }).catch(() => {});
+      }
       ligne.querySelector('[data-p-annuler]').addEventListener('click', () => ligne.remove());
       ligne.querySelector('[data-p-enregistrer]').addEventListener('click', async () => {
         try {
@@ -684,6 +759,7 @@ export class PageParametresBornes extends PageBase {
             libelle: ligne.querySelector('[data-p-libelle]').value, pin_exige: ligne.querySelector('[data-p-pin]').checked, actif: a.actif,
             services: services.valeurs.map(Number), fonctions: fonctions.valeurs.map(String), types_mo: types.valeurs.map(Number),
           });
+          if (depot) await api.stock.definirDepotBorne(a.id, depot.valeurCombo === '' ? null : Number(depot.valeurCombo));
           this.app.message('Borne paramétrée', 'succes');
           await this.#bornes();
         } catch (e) { this.app.erreur(e); }

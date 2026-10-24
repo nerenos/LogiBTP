@@ -153,6 +153,12 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Lots et numéros de série à analyser (S24) : certificats matière (acier : numéro de coulée, certificat 3.1 en GED,
   suivi jusqu'au chantier) et futur module SAV (traçabilité des articles vendus, posés et entretenus) ; colonne de
   traçabilité réservée dans le journal des mouvements dès le lot 1.
+- [ ] Fiche de dotation EPI : modèle du module Édition (PDF rangé en GED, signature sur la borne) à la place de la page
+  imprimée par le navigateur (S26).
+- [ ] Inventaire : pièce comptable (`S_INVENTAIRE` ou écriture d'écart) à produire par le futur module Comptabilité à
+  partir d'un lot validé ; valorisation du stock à date pour la clôture.
+- [ ] Bandeau trop large à 1 024 px depuis l'ajout du menu Stock (débordement horizontal) : regrouper ou réduire les
+  menus métier.
 
 ### Module Exécution
 

@@ -23,6 +23,22 @@ public static class MagasinBtp
     private sealed record ArticleSql(long Id, string Code, string? LibelleHtml, string Unite, int? NatId);
     private sealed record MouvementDotationSql(int Salarie, long Ele, DateTimeOffset Date, decimal Quantite, long? EntId, string? Numero, string? TypeCode, string? Origine);
     private sealed record NetSql(int Salarie, long Ele, decimal Quantite);
+    private sealed record DerniereSql(int Salarie, long Ele, DateTimeOffset Date, int? Duree);
+
+    /// <summary>
+    /// Renouvellement (S27) : dernière sortie de chaque article encore doté (net &gt; 0) et date de renouvellement =
+    /// dernière sortie + durée de vie de l'article (mois), pour un salarié ou tous.
+    /// </summary>
+    public static async Task<List<(int Salarie, long Ele, DateTimeOffset Derniere, DateOnly? Renouveler)>> RenouvellementsAsync(LogiBtpContext db, int? salarie, CancellationToken ct)
+    {
+        var l = await db.Database.SqlQuery<DerniereSql>($"""
+            SELECT s.sal_id AS salarie, v.ele_id AS ele, (SELECT max(m.mvt_date) FROM stk_mouvement m WHERE m.mvt_lieu_id = v.lieu_id AND m.mvt_ele_id = v.ele_id AND m.mvt_quantite > 0) AS date,
+                   d.sad_duree_mois AS duree
+            FROM v_stk_stock v JOIN salarie s ON s.sal_cha_dotation_id = v.lieu_id LEFT JOIN stk_article_dotation d ON d.sad_ele_id = v.ele_id
+            WHERE v.quantite > 0 AND ({salarie}::int IS NULL OR s.sal_id = {salarie}::int)
+            """).ToListAsync(ct);
+        return l.Select(x => (x.Salarie, x.Ele, x.Date, x.Duree is { } d ? DateOnly.FromDateTime(x.Date.LocalDateTime).AddMonths(d) : (DateOnly?)null)).ToList();
+    }
 
     private static async Task Exiger(LogiBtpContext db, Utilisateur u, CancellationToken ct)
     {
@@ -56,7 +72,7 @@ public static class MagasinBtp
     }
 
     /// <summary>Crée, enregistre et valide une pièce de stock (transfert ou sortie) aux lignes en unité de stock.</summary>
-    private static async Task<PieceMagasin> PieceAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
+    public static async Task<PieceMagasin> PieceAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
         string type, int? origine, int? destination, int? chantier, List<LigneMagasin> lignes, string? objet, DateTimeOffset? date, Utilisateur u, CancellationToken ct)
     {
         var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == type).Select(t => t.TydId).FirstAsync(ct);
@@ -159,6 +175,7 @@ public static class MagasinBtp
                 SELECT s.sal_id AS salarie, v.ele_id AS ele, v.quantite FROM v_stk_stock v JOIN salarie s ON s.sal_cha_dotation_id = v.lieu_id
                 WHERE v.quantite <> 0 AND ({salarie}::int IS NULL OR s.sal_id = {salarie}::int)
                 """).ToListAsync(ct);
+            var renouv = await RenouvellementsAsync(db, salarie, ct);
             var sal = (await SalariesAsync(db, salarie, ct)).Where(x => x.Chantier is not null).ToList();
             if (salarie is null)
             {
@@ -180,8 +197,10 @@ public static class MagasinBtp
                     {
                         var l = mvts.Where(m => m.Salarie == x.Id && m.Ele == a).ToList();
                         var net = nets.FirstOrDefault(n => n.Salarie == x.Id && n.Ele == a)?.Quantite ?? 0;
+                        var rv = renouv.FirstOrDefault(r => r.Salarie == x.Id && r.Ele == a);
                         return new
                         {
+                            derniere_sortie = rv.Ele == 0 ? (DateTimeOffset?)null : rv.Derniere, renouveler_le = rv.Ele == 0 ? null : rv.Renouveler,
                             ele = a, sorti = l.Where(m => m.Quantite > 0).Sum(m => m.Quantite), rendu = -l.Where(m => m.Quantite < 0 && m.TypeCode == "S_TRANSFERT").Sum(m => m.Quantite),
                             rebut = -l.Where(m => m.Quantite < 0 && m.TypeCode != "S_TRANSFERT").Sum(m => m.Quantite), net,
                             mouvements = l.Select(m => new { date = m.Date, quantite = m.Quantite, m.EntId, m.Numero, m.TypeCode }),

@@ -91,6 +91,7 @@ export const MENUS_METIER = [
   {
     code: 'stock', libelle: 'Stoc&k', module: 'stock', elements: [
       { code: 'stock-magasin', libelle: 'Magasin (comptoir)', icone: '🏪', url: '/stock/magasin', info: 'Sorties et retours : chantiers, dotations des salariés (EPI, outillage)' },
+      { code: 'stock-a-valider', libelle: 'Saisies de la borne à valider', icone: '✅', url: '/stock/a-valider', info: 'Sorties et retours saisis par les salariés : accepter ou refuser' },
       { code: 'stock-dotations', libelle: 'Dotations des salariés', icone: '🦺', url: '/stock/dotations', info: 'EPI et outillage dotés par salarié sur une période' },
       { separateur: true },
       { code: 'stock-etat', libelle: 'État du stock', icone: '📦', url: '/stock', info: 'Quantités et valeur d\'un dépôt à une date-heure' },

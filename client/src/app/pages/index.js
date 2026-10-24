@@ -13,7 +13,7 @@ import { PageStock, PageMouvementStock } from '../stock/etat.js';
 import { PageParametresStock } from '../stock/parametres.js';
 import { PageInventaires, PageInventaire } from '../stock/inventaires.js';
 import { PageApprovisionnement, PageProjection } from '../stock/approvisionnement.js';
-import { PageMagasin, PageDotations } from '../stock/magasin.js';
+import { PageMagasin, PageDotations, PageSaisiesAValider, PageFicheDotation } from '../stock/magasin.js';
 import { PageParametresGed } from './parametres-ged.js';
 import { PageParametresRaccourcis } from './parametres-raccourcis.js';
 import { PageGraphe } from './graphe.js';
@@ -77,6 +77,8 @@ export const ROUTES = [
   { nom: 'projection-stock', chemin: '/stock/projection', page: PageProjection, titre: 'Projection du stock' },
   { nom: 'magasin', chemin: '/stock/magasin', page: PageMagasin, titre: 'Magasin' },
   { nom: 'dotations', chemin: '/stock/dotations', page: PageDotations, titre: 'Dotations des salariés' },
+  { nom: 'saisies-stock', chemin: '/stock/a-valider', page: PageSaisiesAValider, titre: 'Saisies de stock à valider' },
+  { nom: 'fiche-dotation', chemin: '/stock/dotations/fiche', page: PageFicheDotation, titre: 'Fiche de dotation' },
   { nom: 'parametres-stock', chemin: '/parametres/stock', page: PageParametresStock, titre: 'Paramètres du stock' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },

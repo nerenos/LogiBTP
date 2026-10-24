@@ -32,7 +32,14 @@
 > salarié (DOT-code, affaire DOTATIONS) est créé au statut CLOS pour rester hors des listes du pointage et du planning,
 > il tient un stock qui est le doté non rendu ; les pièces du magasin sont des transferts (et sorties pour le rebut)
 > validés d'office, sans transaction englobante (le module Document ouvre les siennes) ; le magasin ne gère pas encore
-> les demandes à valider (lot 5, borne).
+> les demandes à valider (lot 5, borne). Lot 5 réalisé le 24/10/2026 (`db/220`, `StockBorneBtp.cs`, `SourceStockBtp`,
+> écran 📦 Stock de la borne, dépôt dans le paramétrage des bornes, pages `/stock/a-valider` et
+> `/stock/dotations/fiche`) ; écarts : la fiche de dotation à signer est une page imprimée par le navigateur (pas un
+> modèle du module Édition) ; la pièce saisie à la borne est validée d'office au nom du compte du salarié (droits de
+> création portés par la borne) puis acceptée, ou refusée et annulée ; le renouvellement est calculé depuis la
+> dernière sortie de l'article encore doté (notification quotidienne à 30 jours au responsable du service).
+>
+> **Module terminé** (lots 1 à 5) ; reste à analyser : lots et numéros de série (S24, TODO).
 
 ## 1. Note d'origine (résumé)
 

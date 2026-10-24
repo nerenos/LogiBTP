@@ -173,7 +173,7 @@ export class PageDotations extends PageBase {
       if (!x) return '<td></td>';
       const net = Number(x.sorti) - Number(x.rendu) - Number(x.rebut);
       const dates = x.mouvements.map((m) => `${dateFr(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} ${m.numero ?? ''}`).join('\n');
-      return `<td class="nombre" title="${echapper(`Sorti ${formatNombre(x.sorti, 2)}, rendu ${formatNombre(x.rendu, 2)}, rebut ${formatNombre(x.rebut, 2)}\n${dates}`)}">${net ? formatNombre(net, 2) : ''}${Number(x.net) ? ' ✱' : ''}</td>`;
+      return `<td class="nombre" title="${echapper(`Sorti ${formatNombre(x.sorti, 2)}, rendu ${formatNombre(x.rendu, 2)}, rebut ${formatNombre(x.rebut, 2)}\n${dates}`)}">${net ? formatNombre(net, 2) : ''}${Number(x.net) ? ' ✱' : ''}${pastilleRenouvellement(x)}</td>`;
     };
     this.conteneur.querySelector('[data-corps]').innerHTML = salaries.length ? `<table class="tableau-compact"><thead><tr><th>Salarié</th><th>Service</th>
       ${articles.map((a) => `<th title="${echapper(a.libelle ?? '')}">${echapper(a.code ?? '')}</th>`).join('')}</tr></thead><tbody>
@@ -202,6 +202,75 @@ export class PageDotations extends PageBase {
   }
 }
 
+/** Renouvellement d'un article doté : ⏰ si échu, ⌛ dans les 30 jours (date de la dernière sortie + durée de vie). */
+export function pastilleRenouvellement(x) {
+  if (!x?.renouveler_le || !(Number(x.net) > 0)) return '';
+  const jours = (new Date(`${x.renouveler_le}T00:00`) - new Date(new Date().toDateString())) / 86400000;
+  if (jours > 30) return '';
+  return ` <span class="${jours < 0 ? 'avertissement' : ''}" title="À renouveler le ${new Date(`${x.renouveler_le}T00:00`).toLocaleDateString('fr-FR')}">${jours < 0 ? '⏰' : '⌛'}</span>`;
+}
+
+/** Saisies de la borne à valider (S17, S18) : /stock/a-valider ; accepter, ou refuser avec un motif (pièce annulée). */
+export class PageSaisiesAValider extends PageBase {
+  icone = '✅';
+
+  async ouvrir() {
+    this.titre = 'Saisies de stock à valider';
+    this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">✅ Saisies de stock à valider</h1></div>
+      <p class="aide">Sorties et retours saisis à la borne : déjà comptés dans le stock. Accepter les confirme ; refuser annule la pièce (le stock se recalcule sans elle).</p>
+      <div data-corps></div></div>`;
+    if (!this.app.enLigne) return;
+    await this.#charger();
+  }
+
+  async #charger() {
+    const l = await api.stock.aValider();
+    const z = this.conteneur.querySelector('[data-corps]');
+    z.innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>Date</th><th>Pièce</th><th>Salarié</th><th>De</th><th>Vers</th><th>Articles</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${l.map((x) => `<tr data-id="${x.ent_id}"><td>${x.date ? new Date(x.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}</td>
+        <td><a href="/document/${x.ent_id}" data-doc>${echapper(x.numero ?? '')}</a> <small>${echapper(x.type)}</small></td><td>${echapper(x.nom ?? '')}</td>
+        <td>${echapper(x.origine ?? '')}</td><td>${echapper(x.destination ?? '')}</td><td>${echapper(x.lignes)}</td>
+        <td class="cellule-boutons"><button type="button" class="bouton-icone" data-accepter title="Accepter">✔</button><button type="button" class="bouton-icone" data-refuser title="Refuser (motif)">✕</button></td></tr>`).join('')}
+      </tbody></table>` : '<p class="aide">Aucune saisie à valider.</p>';
+    z.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = Number(tr.dataset.id);
+      tr.querySelector('[data-accepter]').addEventListener('click', async () => { try { await api.stock.traiterSaisie(id, true); await this.#charger(); } catch (e) { this.app.erreur(e); } });
+      tr.querySelector('[data-refuser]').addEventListener('click', async () => {
+        const motif = globalThis.prompt('Motif du refus (la pièce sera annulée) :');
+        if (!motif) return;
+        try { await api.stock.traiterSaisie(id, false, motif); await this.#charger(); } catch (e) { this.app.erreur(e); }
+      });
+      tr.querySelector('[data-doc]').addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(e.target.getAttribute('href'), { nouvelleFenetre: true }); });
+    });
+  }
+}
+
+/** Fiche de dotation à signer (S26) : /stock/dotations/fiche?salarie=&du=&au= ; imprimée par le navigateur. */
+export class PageFicheDotation extends PageBase {
+  icone = '🖨';
+
+  async ouvrir() {
+    const p = new URLSearchParams(globalThis.location?.search ?? '');
+    const salarie = Number(p.get('salarie'));
+    const d = await api.stock.dotations({ du: p.get('du') ?? '2000-01-01', au: p.get('au') ?? null, salarie });
+    const s = d.salaries[0];
+    const art = new Map(d.articles.map((a) => [a.id, a]));
+    this.titre = `Fiche de dotation ${s ? `${s.prenom} ${s.nom}` : ''}`;
+    const lignes = (s?.articles ?? []).flatMap((x) => x.mouvements.map((m) => ({ ...m, a: art.get(x.ele) }))).sort((a, b) => new Date(a.date) - new Date(b.date));
+    this.conteneur.innerHTML = `<div class="page-parametres fiche-dotation"><div class="entete-page sans-impression"><h1 class="page-titre">🖨 Fiche de dotation</h1>
+        <button type="button" class="principal" data-imprimer>🖨 Imprimer</button></div>
+      <h2>Fiche de dotation en équipements de protection individuelle et outillage</h2>
+      <p>Salarié : <b>${s ? echapper(`${s.prenom} ${s.nom}`) : '—'}</b>${s?.code ? ` (${echapper(s.code)})` : ''}${s?.service ? ` · ${echapper(s.service)}` : ''} · période du ${dateFr(d.du)} au ${dateFr(d.au)}</p>
+      <table class="tableau-compact pleine-largeur"><thead><tr><th>Date</th><th>Article</th><th>Libellé</th><th>Remis</th><th>Rendu</th><th>Pièce</th></tr></thead><tbody>
+        ${lignes.map((m) => `<tr><td>${dateFr(m.date)}</td><td>${echapper(m.a?.code ?? '')}</td><td>${echapper(m.a?.libelle ?? '')}</td>
+          <td class="nombre">${Number(m.quantite) > 0 ? formatNombre(m.quantite, 2) : ''}</td><td class="nombre">${Number(m.quantite) < 0 ? formatNombre(-m.quantite, 2) : ''}</td>
+          <td>${echapper(m.numero ?? '')}</td></tr>`).join('') || '<tr><td colspan="6">Aucun mouvement</td></tr>'}</tbody></table>
+      <p>Je reconnais avoir reçu les équipements ci-dessus, en avoir été informé de l'usage et m'engage à les porter et à les entretenir.</p>
+      <div class="signatures"><div>Le salarié<br>Date et signature</div><div>Pour l'entreprise<br>Date et signature</div></div></div>`;
+    this.conteneur.querySelector('[data-imprimer]').addEventListener('click', () => globalThis.print());
+  }
+}
+
 /** Onglet Dotations de la fiche salarié : articles encore dotés et historique (toutes dates). */
 export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
   corps.innerHTML = '<p class="aide">Chargement…</p>';
@@ -210,9 +279,10 @@ export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
   const art = new Map(d.articles.map((a) => [a.id, a]));
   if (!s) { corps.innerHTML = `<p class="aide">Aucune dotation. <a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a></p>`; }
   else {
-    corps.innerHTML = `<p class="ligne"><a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a> · <a href="/stock/magasin?mode=retour&salarie=${salarie}" data-url>📥 Retour</a></p>
+    corps.innerHTML = `<p class="ligne"><a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a> · <a href="/stock/magasin?mode=retour&salarie=${salarie}" data-url>📥 Retour</a>
+      · <a href="/stock/dotations/fiche?salarie=${salarie}" data-url>🖨 Fiche de dotation à signer</a></p>
       <table class="tableau-compact"><thead><tr><th>Article</th><th>Libellé</th><th>Doté aujourd'hui</th><th>Sorti</th><th>Rendu</th><th>Rebut</th><th>Mouvements</th></tr></thead><tbody>
-      ${s.articles.map((x) => { const a = art.get(x.ele); return `<tr><td>${echapper(a?.code ?? '')}</td><td>${echapper(a?.libelle ?? '')}</td><td class="nombre"><b>${formatNombre(x.net, 2)}</b> ${echapper(a?.unite ?? '')}</td>
+      ${s.articles.map((x) => { const a = art.get(x.ele); return `<tr><td>${echapper(a?.code ?? '')}</td><td>${echapper(a?.libelle ?? '')}</td><td class="nombre"><b>${formatNombre(x.net, 2)}</b> ${echapper(a?.unite ?? '')}${pastilleRenouvellement(x)}</td>
         <td class="nombre">${formatNombre(x.sorti, 2)}</td><td class="nombre">${formatNombre(x.rendu, 2)}</td><td class="nombre">${formatNombre(x.rebut, 2)}</td>
         <td>${x.mouvements.map((m) => `${dateFr(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="/document/${m.ent_id}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
       </tbody></table>`;
