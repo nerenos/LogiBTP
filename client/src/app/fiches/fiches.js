@@ -67,6 +67,8 @@ export class FicheSalarie extends FicheLogiBTP {
     this.compte = options.compte ?? null;
     // Onglets du référentiel des ressources (habilitations, missions d'intérim) : fabriques fournies par la page.
     this.ressources = options.ressources ?? null;
+    // Onglet Dotations (module Stock actif, en ligne) : EPI et outillage dotés, historique.
+    this.dotations = options.dotations ?? null;
   }
 
   /** Onglet Compte : compte de connexion de l'individu du salarié (création, profil, validité, réinitialisation). */
@@ -76,6 +78,7 @@ export class FicheSalarie extends FicheLogiBTP {
     return [...super.ongletsSpecifiques(),
       ...(r ? [{ code: 'habilitations', titre: 'Habilitations', rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
       ...(r && this.valeur('statut') === 'INTERIM' ? [{ code: 'missions', titre: 'Missions', rendre: (corps) => r.missions(corps, { salarie: this.id }) }] : []),
+      ...(this.dotations ? [{ code: 'dotations', titre: 'Dotations', rendre: (corps) => this.dotations(corps, { salarie: Number(this.id) }) }] : []),
       ...(this.compte ? [this.#ongletCompte()] : [])];
   }
 

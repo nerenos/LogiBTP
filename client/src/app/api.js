@@ -228,6 +228,13 @@ export const api = {
     approvisionnement: (lieu) => appel('GET', `/stock/lieux/${lieu}/approvisionnement`),
     projection: (lieu, ele) => appel('GET', `/stock/lieux/${lieu}/projection/${ele}`),
     commander: (lieu, lignes) => appel('POST', `/stock/lieux/${lieu}/commander`, { lignes }),
+    // Lot 4 : magasin (sorties, retours) et dotations des salariés, type de dotation des articles.
+    salaries: () => appel('GET', '/stock/magasin/salaries'),
+    sortieMagasin: (s) => appel('POST', '/stock/magasin/sorties', s),
+    retourMagasin: (s) => appel('POST', '/stock/magasin/retours', s),
+    dotations: ({ du = null, au = null, salarie = null } = {}) => appel('GET', `/stock/magasin/dotations?${new URLSearchParams(Object.fromEntries(Object.entries({ du, au, salarie }).filter(([, v]) => v !== null && v !== '')))}`),
+    dotationArticle: (id) => appel('GET', `/stock/articles/${id}/dotation`),
+    definirDotation: (id, d) => appel('PUT', `/stock/articles/${id}/dotation`, d),
   },
 
   liaisons: {

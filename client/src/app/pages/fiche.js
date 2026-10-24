@@ -1,4 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
+import { rendreDotationsSalarie } from '../stock/magasin.js';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { CLASSES_FICHE } from '../fiches/classes.js';
@@ -68,6 +69,9 @@ export class PageFiche extends PageBase {
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.
       compte: app.enLigne && app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
       // Référentiel des ressources (en ligne) : habilitations, missions d'intérim, habilitations exigées d'un matériel.
+      dotations: app.enLigne && app.moduleActif('stock') ? (corps, p) => rendreDotationsSalarie(corps, {
+        ...p, naviguer: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+      }).catch((e) => app.erreur(e)) : null,
       ressources: app.enLigne ? {
         habilitations: (corps, p) => rendreHabilitations(corps, { app, ...p }).catch((e) => app.erreur(e)),
         missions: (corps, p) => rendreMissions(corps, { app, annuaire: s.annuaire, ...p }).catch((e) => app.erreur(e)),

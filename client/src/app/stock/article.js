@@ -15,7 +15,8 @@ const ORIGINES = { DOCUMENT: '', DOTATION: 'Dotation', BORNE: 'Borne' };
 /** Rend l'onglet dans corps ; options { id, message, naviguer(url, e) }. */
 export async function rendreStockArticle(corps, { id, message, naviguer }) {
   corps.innerHTML = '<p class="aide">Chargement…</p>';
-  const [f, lieux, marques, portees] = await Promise.all([api.stock.article(id), api.stock.lieux(), api.stock.marques(), api.stock.marquesArticle(id)]);
+  const [f, lieux, marques, portees, dotation] = await Promise.all([api.stock.article(id), api.stock.lieux(), api.stock.marques(), api.stock.marquesArticle(id),
+    api.stock.dotationArticle(id)]);
   const depots = lieux.filter((l) => l.depot);
   const emplacements = new Map(await Promise.all(depots.map(async (d) => [d.id, await api.stock.emplacements(d.id)])));
   const nb = (v, p = f.precision) => (v === null || v === undefined ? '' : formatNombre(v, p));
@@ -24,6 +25,8 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
     <div class="ligne"><b>Stock total : ${nb(f.quantite)} ${echapper(f.unite)}</b>
       · ${echapper(METHODES_VALORISATION[f.methode] ?? f.methode)} : <b>${nb(f.valeur_unitaire, 4)}</b>${f.source === 'REPLI' ? ' <span class="avertissement">(aucun achat : PA de la bibliothèque)</span>' : ''}</div>
     <p class="ligne">Marques <span data-marques></span></p>
+    <p class="ligne"><label>Dotation <span data-dotation></span></label> <label>Durée de vie <input data-duree size="3" value="${dotation.duree_mois ?? ''}"> mois</label>
+      <button type="button" data-enr-dotation title="EPI ou outillage consommable : sorties par salarié, retours, renouvellement">Enregistrer</button></p>
     <table class="tableau-compact"><thead><tr><th>Lieu</th><th>Quantité</th><th>Dernier inventaire</th></tr></thead><tbody>
       ${f.lieux.map((l) => `<tr><td>${l.depot ? '📦' : '🏗'} ${echapper(l.code)} ${echapper(l.libelle)}${l.depot ? ` <a href="/stock/projection?lieu=${l.lieu}&article=${id}" data-url title="Projection : réservations, commandes, ruptures à venir">📈</a>` : ''}</td><td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${nb(l.quantite)}</td>
         <td>${dateHeureLocale(l.dernier_comptage)}</td></tr>`).join('') || '<tr><td colspan="3" class="aide">Aucun mouvement</td></tr>'}</tbody></table>
@@ -49,6 +52,13 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
         <td class="nombre">${nb(m.prix, 4)}${m.provisoire ? ' ⏳' : ''}</td><td class="nombre">${nb(m.pmp, 4)}</td>
         <td>${m.ent_id ? `<a href="/document/${m.ent_id}" data-piece="${m.ent_id}">${echapper(m.piece ?? '')}</a> <small>${echapper(m.type_piece ?? '')}</small>` : echapper(ORIGINES[m.origine] ?? m.origine)}</td>
         <td>${echapper(m.tiers ?? '')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Aucun mouvement</td></tr>'}</tbody></table></div>`;
+  // Dotation (lot 4) : EPI ou outillage consommable, durée de vie (renouvellement).
+  const typeDotation = creerCombo({ options: [{ valeur: 'EPI', libelle: 'EPI' }, { valeur: 'OUTILLAGE', libelle: 'Outillage consommable' }], valeur: dotation.type ?? '' });
+  corps.querySelector('[data-dotation]').append(typeDotation);
+  corps.querySelector('[data-enr-dotation]').addEventListener('click', async () => {
+    const d = corps.querySelector('[data-duree]').value.trim();
+    try { await api.stock.definirDotation(id, { type: typeDotation.valeurCombo || null, duree_mois: d ? Number(d) : null }); message('Dotation enregistrée'); } catch (e) { message(e.message, 'erreur'); }
+  });
   // Marques : ajout ou retrait enregistré aussitôt.
   let actuelles = [...portees];
   corps.querySelector('[data-marques]').append(choixMultiple({

@@ -60,6 +60,16 @@ public class ArticleMarqueEntite
     public string SamMrqCode { get; set; } = "";
 }
 
+/// <summary>Article de dotation (lot 4, S16, S27) : EPI ou outillage consommable, durée de vie en mois.</summary>
+public class ArticleDotationEntite
+{
+    public long SadEleId { get; set; }
+    public string SadType { get; set; } = "EPI";
+    public int? SadDureeMois { get; set; }
+}
+
+public sealed record DotationArticleDto(string? Type, int? DureeMois);
+
 /// <summary>Famille d'articles (génération des bordereaux par famille).</summary>
 public sealed record FamilleStock(long Id, string Chemin);
 
@@ -502,12 +512,41 @@ public class ServiceInventaire(StockDbContext db, SpecialisationStock specialisa
         return articles.Count;
     }
 
-    /// <summary>Articles gérés en stock (choix des lignes des bordereaux), avec leurs marques.</summary>
+    /// <summary>Articles gérés en stock (bordereaux, magasin, borne), avec leurs marques et leur type de dotation.</summary>
     public async Task<object> ArticlesAsync(CancellationToken ct)
     {
         var l = await specialisation.ArticlesGeresAsync(db, ct);
         var marques = await db.ArticlesMarques.AsNoTracking().ToListAsync(ct);
-        return l.Select(a => new { a.Id, a.Code, a.Libelle, a.Unite, a.Precision, marques = marques.Where(m => m.SamEleId == a.Id).Select(m => m.SamMrqCode).ToList() });
+        var dotations = await db.ArticlesDotation.AsNoTracking().ToDictionaryAsync(d => d.SadEleId, ct);
+        return l.Select(a => new
+        {
+            a.Id, a.Code, a.Libelle, a.Unite, a.Precision, marques = marques.Where(m => m.SamEleId == a.Id).Select(m => m.SamMrqCode).ToList(),
+            dotation = dotations.GetValueOrDefault(a.Id)?.SadType, duree_mois = dotations.GetValueOrDefault(a.Id)?.SadDureeMois,
+        });
+    }
+
+    public async Task<DotationArticleDto> DotationArticleAsync(long ele, CancellationToken ct)
+    {
+        var d = await db.ArticlesDotation.AsNoTracking().FirstOrDefaultAsync(x => x.SadEleId == ele, ct);
+        return new(d?.SadType, d?.SadDureeMois);
+    }
+
+    /// <summary>Type de dotation d'un article (EPI, OUTILLAGE ; vide : pas de dotation) et durée de vie en mois.</summary>
+    public async Task<DotationArticleDto> DefinirDotationAsync(long ele, DotationArticleDto s, Utilisateur u, CancellationToken ct)
+    {
+        await ExigerGestion(u, ct);
+        if (s.Type is not (null or "" or "EPI" or "OUTILLAGE")) throw ExceptionMetier.Invalide("STK_DOTATION", "Dotation EPI ou OUTILLAGE");
+        if (s.DureeMois is <= 0) throw ExceptionMetier.Invalide("STK_DOTATION", "Durée de vie positive (mois)");
+        var d = await db.ArticlesDotation.FirstOrDefaultAsync(x => x.SadEleId == ele, ct);
+        if (string.IsNullOrEmpty(s.Type)) { if (d is not null) db.ArticlesDotation.Remove(d); }
+        else
+        {
+            d ??= db.ArticlesDotation.Add(new ArticleDotationEntite { SadEleId = ele }).Entity;
+            d.SadType = s.Type;
+            d.SadDureeMois = s.DureeMois;
+        }
+        await db.SaveChangesAsync(ct);
+        return await DotationArticleAsync(ele, ct);
     }
 
     public Task<List<FamilleStock>> FamillesAsync(CancellationToken ct) => specialisation.FamillesAsync(db, ct);
@@ -537,6 +576,8 @@ public static class ExtensionsInventaire
         g.MapPost("/articles/{id:long}/corriger", (long id, CorrectionSaisie c, HttpContext http, ServiceInventaire s, CancellationToken ct) => s.CorrigerAsync(id, c, Utilisateur.Depuis(http), ct));
         g.MapGet("/articles/{id:long}/marques", (long id, ServiceInventaire s, CancellationToken ct) => s.MarquesArticleAsync(id, ct));
         g.MapGet("/articles", (ServiceInventaire s, CancellationToken ct) => s.ArticlesAsync(ct));
+        g.MapGet("/articles/{id:long}/dotation", (long id, ServiceInventaire s, CancellationToken ct) => s.DotationArticleAsync(id, ct));
+        g.MapPut("/articles/{id:long}/dotation", (long id, DotationArticleDto d, HttpContext http, ServiceInventaire s, CancellationToken ct) => s.DefinirDotationAsync(id, d, Utilisateur.Depuis(http), ct));
         g.MapGet("/familles", (ServiceInventaire s, CancellationToken ct) => s.FamillesAsync(ct));
         g.MapGet("/marques", (ServiceInventaire s, CancellationToken ct) => s.MarquesAsync(ct));
         g.MapPut("/marques", (List<MarqueDto> l, HttpContext http, ServiceInventaire s, CancellationToken ct) => s.EnregistrerMarquesAsync(l, Utilisateur.Depuis(http), ct));

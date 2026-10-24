@@ -27,7 +27,12 @@
 > ligne) ; un transfert ne consomme une réservation que s'il en est issu (transformation réservation → transfert, S25
 > sans consommation automatique) ; reçu d'une commande = le plus grand des quantités reçues et facturées ; l'horizon
 > des propositions est le délai de l'article, sinon celui du dépôt (7 jours) ; une commande créée par les propositions
-> est en brouillon et ne compte qu'une fois validée.
+> est en brouillon et ne compte qu'une fois validée. Lot 4 réalisé le 24/10/2026 (`093d`, `db/219`, `MagasinBtp.cs`,
+> pages `/stock/magasin`, `/stock/dotations`, onglet Dotations du salarié) ; écarts : le chantier de dotation d'un
+> salarié (DOT-code, affaire DOTATIONS) est créé au statut CLOS pour rester hors des listes du pointage et du planning,
+> il tient un stock qui est le doté non rendu ; les pièces du magasin sont des transferts (et sorties pour le rebut)
+> validés d'office, sans transaction englobante (le module Document ouvre les siennes) ; le magasin ne gère pas encore
+> les demandes à valider (lot 5, borne).
 
 ## 1. Note d'origine (résumé)
 

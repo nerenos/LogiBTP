@@ -116,6 +116,7 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
     public DbSet<MarqueEntite> Marques => Set<MarqueEntite>();
     public DbSet<ArticleMarqueEntite> ArticlesMarques => Set<ArticleMarqueEntite>();
     public DbSet<SeuilEntite> Seuils => Set<SeuilEntite>();
+    public DbSet<ArticleDotationEntite> ArticlesDotation => Set<ArticleDotationEntite>();
     public DbSet<LieuParametreEntite> LieuxParametres => Set<LieuParametreEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -134,6 +135,7 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
         b.Entity<LigneBordereauEntite>().ToTable("stk_bordereau_ligne").HasKey(x => x.BliId);
         b.Entity<MarqueEntite>().ToTable("stk_marque").HasKey(x => x.MrqCode);
         b.Entity<ArticleMarqueEntite>().ToTable("stk_article_marque").HasKey(x => new { x.SamEleId, x.SamMrqCode });
+        b.Entity<ArticleDotationEntite>().ToTable("stk_article_dotation").HasKey(x => x.SadEleId);
         b.Entity<SeuilEntite>().ToTable("stk_seuil").HasKey(x => new { x.SseEleId, x.SseLieuId });
         b.Entity<LieuParametreEntite>().ToTable("stk_lieu_parametre").HasKey(x => x.SlpLieuId);
     }

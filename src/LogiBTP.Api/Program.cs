@@ -142,6 +142,7 @@ api.MapExecution().ExigeModule("execution", "Exécution");
 api.MapModuleExecution().ExigeModule("execution", "Exécution");
 api.MapModuleSousTraitance().ExigeModule("sous_traitance", "Sous-traitance");
 api.MapModuleStock().ExigeModule("stock", "Stock");
+api.MapGroup("").ExigeModule("stock", "Stock").MapMagasinStock();
 api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
 api.MapModulePlanning().ExigeModule("planning", "Planning");
 api.MapDiffusion();

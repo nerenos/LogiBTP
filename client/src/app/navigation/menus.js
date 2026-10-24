@@ -90,6 +90,9 @@ export const MENUS_METIER = [
   },
   {
     code: 'stock', libelle: 'Stoc&k', module: 'stock', elements: [
+      { code: 'stock-magasin', libelle: 'Magasin (comptoir)', icone: '🏪', url: '/stock/magasin', info: 'Sorties et retours : chantiers, dotations des salariés (EPI, outillage)' },
+      { code: 'stock-dotations', libelle: 'Dotations des salariés', icone: '🦺', url: '/stock/dotations', info: 'EPI et outillage dotés par salarié sur une période' },
+      { separateur: true },
       { code: 'stock-etat', libelle: 'État du stock', icone: '📦', url: '/stock', info: 'Quantités et valeur d\'un dépôt à une date-heure' },
       { code: 'stock-mouvements', libelle: 'Mouvements de stock', icone: '🔁', url: L('stk_mouvements') },
       { code: 'stock-documents', libelle: 'Entrées, sorties et transferts', icone: '🚚', url: L('stock_documents'), creation: D('S_TRANSFERT', 'Nouveau transfert de stock') },
