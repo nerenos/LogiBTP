@@ -23,6 +23,7 @@
     "modules/execution/js",
     "modules/sous-traitance/js",
     "modules/stock/js",
+    "modules/comptabilite/js",
     "modules/pointage/js",
     "modules/planning/js",
     "modules/navigation/js",

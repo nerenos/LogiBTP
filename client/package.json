@@ -43,6 +43,7 @@
     "@logibtp/reglement": "0.2.0",
     "@logibtp/socle": "0.2.0",
     "@logibtp/sous-traitance": "0.2.0",
+    "@logibtp/comptabilite": "0.2.0",
     "@logibtp/stock": "0.2.0"
   },
   "devDependencies": {

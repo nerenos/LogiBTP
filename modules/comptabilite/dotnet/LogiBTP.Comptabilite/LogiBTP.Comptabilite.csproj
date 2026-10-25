@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Comptabilite</RootNamespace>
+    <Description>Module Comptabilité LogiBTP (base) : règles des comptes généraux et des comptes de tiers (répliquées avec comptes.js).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
+</Project>

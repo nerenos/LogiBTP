@@ -1,0 +1,16 @@
+{
+  "name": "@logibtp/comptabilite",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Comptabilité LogiBTP (base) : plan comptable, comptes de tiers, TVA (règles partagées avec le serveur)",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

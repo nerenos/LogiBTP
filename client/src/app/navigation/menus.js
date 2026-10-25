@@ -162,6 +162,14 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'comptabilite', libelle: 'Co&mptabilité', court: 'Compta', droit: 'comptabilite', elements: [
+      { code: 'compta-plan', libelle: 'Plan comptable', icone: '📒', url: '/comptabilite/plan', info: 'Comptes généraux, collectifs, TVA : type, sens d\'usage, longueur' },
+      { code: 'compta-tiers', libelle: 'Tiers par compte', icone: '🗂', url: '/comptabilite/tiers', info: 'Comptes auxiliaires et collectifs des clients, fournisseurs et sous-traitants' },
+      { separateur: true },
+      { code: 'parametrage-comptabilite', libelle: 'Paramètres : longueur, collectifs, TVA…', icone: '⚙', url: '/parametres/comptabilite', info: 'Longueur des comptes, préfixes, collectifs, catégories et taux de TVA' },
+    ],
+  },
+  {
     code: 'suivi', libelle: '&Suivi', module: 'crm', droit: 'crm', elements: [
       { code: 'crm-mes', libelle: 'Mes tâches', icone: '☑', url: '/crm?vue=mes', info: 'Notes dont je suis responsable', creation: { url: '/crm/note/nouveau?nature=TACHE', titre: 'Nouvelle tâche' } },
       { code: 'crm-rappels', libelle: 'Mes rappels', icone: '⏰', url: '/crm/rappels', info: 'Rouge : échu ou imminent · orange : bientôt · vert : à venir' },

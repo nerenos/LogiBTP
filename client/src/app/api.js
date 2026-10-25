@@ -586,4 +586,22 @@ export const api = {
   supprimerVueDocument: (id) => appel('DELETE', `/vues-document/${id}`),
   // Plan de comptes minimal (db/166) : libellés des comptes comptables des lignes.
   comptesComptables: () => appel('GET', '/comptes-comptables'),
+  // Module Comptabilité (base) : paramètres, plan comptable, collectifs, catégories et taux de TVA, comptes des tiers.
+  comptabilite: {
+    parametres: () => appel('GET', '/comptabilite/parametres'),
+    enregistrerParametres: (p) => appel('PUT', '/comptabilite/parametres', p),
+    plan: () => appel('GET', '/comptabilite/plan'),
+    creerCompte: (c) => appel('POST', '/comptabilite/plan', c),
+    modifierCompte: (code, c) => appel('PUT', `/comptabilite/plan/${encodeURIComponent(code)}`, c),
+    supprimerCompte: (code) => appel('DELETE', `/comptabilite/plan/${encodeURIComponent(code)}`),
+    collectifs: () => appel('GET', '/comptabilite/collectifs'),
+    enregistrerCollectifs: (l) => appel('PUT', '/comptabilite/collectifs', l),
+    categoriesTva: () => appel('GET', '/comptabilite/categories-tva'),
+    enregistrerCategoriesTva: (l) => appel('PUT', '/comptabilite/categories-tva', l),
+    tauxTva: () => appel('GET', '/comptabilite/taux-tva'),
+    enregistrerTauxTva: (l) => appel('PUT', '/comptabilite/taux-tva', l),
+    tiers: () => appel('GET', '/comptabilite/tiers'),
+    enregistrerTiers: (l) => appel('PUT', '/comptabilite/tiers', l),
+    genererTiers: (typeCompte) => appel('POST', '/comptabilite/tiers/generer', { type_compte: typeCompte ?? null }),
+  },
 };

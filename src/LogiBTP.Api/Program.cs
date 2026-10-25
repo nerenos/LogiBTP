@@ -12,6 +12,7 @@ using LogiBTP.EntreprisesFr.Web;
 using LogiBTP.Execution.Web;
 using LogiBTP.SousTraitance.Web;
 using LogiBTP.Stock.Web;
+using LogiBTP.Comptabilite.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Domaine;
@@ -113,6 +114,8 @@ builder.Services.AddModuleDroits<SpecialisationDroitsBtp>(Base);
 builder.Services.AddModuleExecution<SpecialisationExecutionBtp>(Base);
 // Module Sous-traitance (facultatif) : pièces exigées et conformité (modules/sous-traitance/db/092, db/210-212).
 builder.Services.AddModuleSousTraitance<SpecialisationSousTraitanceBtp>(Base);
+// Module Comptabilité (base) : plan comptable, collectifs, comptes des tiers, TVA (modules/comptabilite/db/094, db/223).
+builder.Services.AddModuleComptabilite<SpecialisationComptabiliteBtp>(Base);
 // Module Stock (facultatif) : mouvements, stock à une date-heure, valorisation, emplacements (modules/stock/db/093, db/216).
 builder.Services.AddModuleStock<SpecialisationStockBtp>(Base);
 // Module Pointage (facultatif) : saisie des heures de main-d'œuvre par chantier (modules/pointage/db/086, db/199).
@@ -206,6 +209,7 @@ api.MapRetenuesMarche();
 api.MapSousTraitanceAssistant();
 api.MapIndividusStructure();
 api.MapComptes();
+api.MapGroup("").MapModuleComptabilite();
 api.MapModulesServices();
 api.MapRessources();
 api.MapEquipes();

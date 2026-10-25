@@ -96,6 +96,11 @@
     <Project Path="modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Web/LogiBTP.SousTraitance.Web.csproj" />
     <Project Path="modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Tests/LogiBTP.SousTraitance.Tests.csproj" />
   </Folder>
+  <Folder Name="/modules/comptabilite/">
+    <Project Path="modules/comptabilite/dotnet/LogiBTP.Comptabilite/LogiBTP.Comptabilite.csproj" />
+    <Project Path="modules/comptabilite/dotnet/LogiBTP.Comptabilite.Web/LogiBTP.Comptabilite.Web.csproj" />
+    <Project Path="modules/comptabilite/dotnet/LogiBTP.Comptabilite.Tests/LogiBTP.Comptabilite.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/stock/">
     <Project Path="modules/stock/dotnet/LogiBTP.Stock/LogiBTP.Stock.csproj" />
     <Project Path="modules/stock/dotnet/LogiBTP.Stock.Web/LogiBTP.Stock.Web.csproj" />

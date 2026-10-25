@@ -6,6 +6,9 @@
 const c = (code, libelle, colonne, type, extra = {}) => ({ code, libelle, colonne, type, ...extra });
 const options = (...v) => v.map((x) => (Array.isArray(x) ? { valeur: x[0], libelle: x[1] } : { valeur: x, libelle: x }));
 
+// Comptes collectifs du plan comptable (module Comptabilité) : surcharge du collectif d'un tiers par relation.
+const REQUETE_COLLECTIFS = "SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'COLLECTIF' ORDER BY cpt_code";
+
 export const TYPES_FICHE = {
   salarie: {
     libelle: 'Salarié', table: 'salarie', cle: 'sal_id', colonne_proprietes: 'sal_proprietes',
@@ -244,9 +247,9 @@ export const TYPES_FICHE = {
         {
           code: 'casquettes', titre: 'Par relation',
           groupes: [
-            { code: 'client', titre: 'Client', champs: ['cli_compte', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
-            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_compte', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
-            { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
+            { code: 'client', titre: 'Client', champs: ['cli_compte', 'cli_collectif', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
+            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_compte', 'fou_collectif', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
+            { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_compte', 'st_collectif', 'st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
             { code: 'interim', titre: "Agence d'intérim", champs: ['int_garantie_financiere', 'int_coefficient'] },
             { code: 'architecte', titre: 'Architecte', champs: ['arc_numero_ordre'] },
             { code: 'controle', titre: 'Bureau de contrôle', champs: ['bc_agrement', 'bc_missions'] },
@@ -296,13 +299,17 @@ export const TYPES_FICHE = {
         c('commentaire', 'Notes', 'per_commentaire', 'zone'),
         // Champs déverrouillés par les relations (groupes de l'onglet Par relation).
         c('cli_compte', 'Compte client', 'per_cli_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (411…)' }),
+        c('cli_collectif', 'Collectif client', 'per_cli_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif du type (professionnel ou particulier), module Comptabilité' }),
         c('cli_categorie', 'Catégorie tarifaire', 'per_cli_categorie', 'texte', { longueur: 40 }),
         c('cli_encours_max', 'Encours autorisé (€)', 'per_cli_encours_max', 'nombre', { format: '999999999999.99' }),
         c('cli_remise', 'Remise habituelle (%)', 'per_cli_remise', 'nombre', { format: '999.999' }),
         c('fou_compte', 'Compte fournisseur', 'per_fou_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (401…)' }),
+        c('fou_collectif', 'Collectif fournisseur', 'per_fou_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif des fournisseurs, module Comptabilité' }),
         c('fou_numero_client', 'Notre n° de client', 'per_fou_numero_client', 'texte', { longueur: 40 }),
         c('fou_franco', 'Franco de port (€ HT)', 'per_fou_franco', 'nombre', { format: '999999999999.99' }),
         c('fou_delai_livraison', 'Délai de livraison (jours)', 'per_fou_delai_livraison', 'nombre', { format: '9999' }),
+        c('st_compte', 'Compte sous-traitant', 'per_st_compte', 'texte', { longueur: 20, aide: 'Vide : compte fournisseur ; à saisir pour un compte auxiliaire propre' }),
+        c('st_collectif', 'Collectif sous-traitant', 'per_st_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif des sous-traitants, module Comptabilité' }),
         c('st_corps_etat', 'Corps d\'état', 'per_st_corps_etat', 'texte', { longueur: 100 }),
         c('st_qualifications', 'Qualifications (Qualibat…)', 'per_st_qualifications', 'texte', { longueur: 200 }),
         c('st_autoliquidation', 'Autoliquidation de la TVA', 'per_st_autoliquidation', 'booleen', { obligatoire: true, defaut: true }),

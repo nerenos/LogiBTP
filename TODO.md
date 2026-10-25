@@ -100,10 +100,20 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
 ### Comptabilité
 
-- [ ] **Module Comptabilité** (à préparer) : plan de comptes complet et vrai plan à la place de `compte_comptable`
-  (`db/166`, minimal, sans écran de gestion), journaux, exercices, comptes auxiliaires des tiers (411 / 401), comptes
-  de TVA par taux, comptes d'acompte (selon le mode de la société), schéma des écritures des factures, avoirs,
-  acomptes et règlements (encaissements du module Règlements), export vers un logiciel comptable.
+Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conception/ANALYSE-MODULE-COMPTABILITE.md)
+(base en trois lots, puis module complet). Lot 1 de la base réalisé (plan, collectifs, comptes des tiers, TVA).
+
+- [ ] Base, lot 2 : types comptables Vente / Achat / Sous-traitance (journaux, comptes par défaut et des postes de
+  pied), ventilation nature × TVA → compte (`nat_compte_vente|achat` repris puis retirés de la fiche nature, C7),
+  règle répliquée JS ↔ C# branchée par `definirRegleCompte`.
+- [ ] Base, lot 3 : écritures calculées par le serveur, aperçu et contrôles, export CSV paramétrable (modèle Sage 100
+  à confirmer, C13), lots d'export (§ 6 de l'analyse : M1 à M13).
+- [ ] Lot 1, écarts : un changement de longueur des comptes ne convertit pas le plan (comptes signalés « hors
+  longueur ») ; les comptes de tiers saisis dans la fiche personne ne passent pas par `ReglesComptes` (seulement par
+  `/comptabilite/tiers`) ; génération filtrée sur les sous-traitants : un sous-traitant aussi fournisseur sans compte
+  n'en reçoit pas (générer sans filtre).
+- [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
+  et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
 - [ ] Règle définitive du compte comptable des lignes (aujourd'hui provisoire : compte de la ligne, sinon de la nature
   selon la famille du document, sinon du tiers) : à remplacer par `definirRegleCompte` de `client/src/app/comptes.js`,
   côté serveur aussi s'il faut le compte effectif. Le compte du tiers (`per_cli_compte` / `per_fou_compte`) est un

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Comptabilite.Web</RootNamespace>
+    <Description>Module Comptabilité LogiBTP (base) : plan comptable, paramètres, collectifs, catégories de TVA (EF Core), routes HTTP ; taux de TVA et tiers fournis par la spécialisation de l'application.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LogiBTP.Comptabilite\LogiBTP.Comptabilite.csproj" />
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle.Web\LogiBTP.Socle.Web.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+namespace LogiBTP.Comptabilite.Web;
+
+/// <summary>
+/// Spécialisation par l'application (méthode patron) : taux de TVA (table de l'application, comptes ajoutés par elle),
+/// tiers et leurs comptes auxiliaires par type de compte, utilisations d'un compte ou d'une catégorie (suppression).
+/// </summary>
+public abstract class SpecialisationComptabilite
+{
+    public abstract Task<List<TauxTvaDto>> TauxAsync(ComptabiliteDbContext db, CancellationToken ct);
+    /// <summary>Catégorie, mention, actif et comptes des taux existants (le code et le taux restent ceux de l'application).</summary>
+    public abstract Task EnregistrerTauxAsync(ComptabiliteDbContext db, List<TauxTvaDto> taux, CancellationToken ct);
+    /// <summary>Tiers pour la liste par compte (une ligne par type de compte de chaque tiers).</summary>
+    public abstract Task<List<TiersComptable>> TiersAsync(ComptabiliteDbContext db, CancellationToken ct);
+    public abstract Task EnregistrerComptesTiersAsync(ComptabiliteDbContext db, List<CompteTiersSaisi> comptes, CancellationToken ct);
+    /// <summary>Usages d'un compte hors du module (lignes, natures, tiers, taux…), décrits pour le message de refus.</summary>
+    public abstract Task<List<string>> UtilisationsCompteAsync(ComptabiliteDbContext db, string code, CancellationToken ct);
+    /// <summary>Type de compte dont un type hérite son compte auxiliaire faute de compte propre (ex. sous-traitant → fournisseur).</summary>
+    public virtual string? TypeHerite(string typeCompte) => null;
+    /// <summary>Taux de TVA rattachés à une catégorie.</summary>
+    public abstract Task<int> TauxDeCategorieAsync(ComptabiliteDbContext db, string categorie, CancellationToken ct);
+}

@@ -1,0 +1,37 @@
+{
+  "description": "Comptes comptables (comptes.js ↔ ReglesComptes.cs) : compte général (chiffres, classe 1 à 9, longueur maximale, complétion par des zéros à droite en option), compte de tiers (lettres et chiffres en majuscules, longueur maximale, 17 sans paramètre), compte de tiers proposé (préfixe + code sans ses lettres de tête, zéros de tête retirés s'il est trop long), classe.",
+  "generaux": [
+    { "nom": "complété par des zéros", "code": "704", "longueur": 8, "completer": true, "attendu": { "code": "70400000", "erreur": null } },
+    { "nom": "longueur maximale sans complétion", "code": "704", "longueur": 8, "completer": false, "attendu": { "code": "704", "erreur": null } },
+    { "nom": "espaces retirés", "code": " 4456601 ", "longueur": null, "completer": true, "attendu": { "code": "4456601", "erreur": null } },
+    { "nom": "trop long", "code": "704000001", "longueur": 8, "completer": true, "attendu": { "code": null, "erreur": "CPT_LONGUEUR" } },
+    { "nom": "longueur exacte", "code": "70400000", "longueur": 8, "completer": true, "attendu": { "code": "70400000", "erreur": null } },
+    { "nom": "lettres refusées", "code": "411CLI", "longueur": 8, "completer": true, "attendu": { "code": null, "erreur": "CPT_CARACTERES" } },
+    { "nom": "classe 0 refusée", "code": "0123", "longueur": null, "completer": false, "attendu": { "code": null, "erreur": "CPT_CLASSE" } },
+    { "nom": "vide", "code": "  ", "longueur": 8, "completer": true, "attendu": { "code": null, "erreur": "CPT_VIDE" } },
+    { "nom": "absent", "code": null, "longueur": 8, "completer": true, "attendu": { "code": null, "erreur": "CPT_VIDE" } }
+  ],
+  "tiers": [
+    { "nom": "majuscules", "code": " c000123 ", "longueur": null, "attendu": { "code": "C000123", "erreur": null } },
+    { "nom": "séparateur refusé", "code": "C-0001", "longueur": null, "attendu": { "code": null, "erreur": "CPT_TIERS_CARACTERES" } },
+    { "nom": "trop long pour le paramètre", "code": "C000123", "longueur": 6, "attendu": { "code": null, "erreur": "CPT_LONGUEUR" } },
+    { "nom": "au-delà de 17 sans paramètre", "code": "C12345678901234567", "longueur": null, "attendu": { "code": null, "erreur": "CPT_LONGUEUR" } },
+    { "nom": "vide", "code": "", "longueur": 8, "attendu": { "code": null, "erreur": "CPT_VIDE" } }
+  ],
+  "propositions": [
+    { "nom": "préfixe + code sans le T", "prefixe": "C", "code_tiers": "T000123", "longueur": null, "attendu": { "code": "C000123", "erreur": null } },
+    { "nom": "préfixe en minuscules", "prefixe": "s", "code_tiers": "T000045", "longueur": null, "attendu": { "code": "S000045", "erreur": null } },
+    { "nom": "zéros de tête retirés pour tenir", "prefixe": "F", "code_tiers": "T000123", "longueur": 5, "attendu": { "code": "F0123", "erreur": null } },
+    { "nom": "impossible à tenir", "prefixe": "FOU", "code_tiers": "T123456", "longueur": 6, "attendu": { "code": null, "erreur": "CPT_LONGUEUR" } },
+    { "nom": "sans préfixe", "prefixe": "", "code_tiers": "T000007", "longueur": null, "attendu": { "code": "000007", "erreur": null } },
+    { "nom": "séparateurs du code retirés", "prefixe": "C", "code_tiers": "CLI-2026/01", "longueur": null, "attendu": { "code": "C202601", "erreur": null } },
+    { "nom": "code sans chiffres", "prefixe": "C", "code_tiers": "DUPONT", "longueur": null, "attendu": { "code": null, "erreur": "CPT_VIDE" } }
+  ],
+  "classes": [
+    { "code": "411000", "attendu": 4 },
+    { "code": "70400000", "attendu": 7 },
+    { "code": "0411", "attendu": null },
+    { "code": "C000123", "attendu": null },
+    { "code": null, "attendu": null }
+  ]
+}
