@@ -21,6 +21,23 @@ export function texteBrut(v) {
   return String(v);
 }
 
+/**
+ * Colonne d'état d'utilisation des sources (A en service, N ne plus utiliser, S en sommeil) : une source qui la porte
+ * masque les lignes en sommeil, sauf si la vue les montre (définition `sommeil: true`). Même règle que
+ * ConstructeurRequete.FiltresEffectifs côté C#.
+ */
+export const COLONNE_USAGE = 'usage';
+
+/**
+ * Filtres fixes effectifs d'une vue : les siens (colonnes connues), plus le masquage des lignes en sommeil (opérateur
+ * interne `sommeil` : usage différent de S, vide compris) si la source a l'état d'utilisation.
+ */
+export function filtresEffectifs(definition, connues) {
+  const filtres = (definition.filtres ?? []).filter((f) => connues.has(f.colonne));
+  if (connues.has(COLONNE_USAGE) && !definition.sommeil) filtres.push({ colonne: COLONNE_USAGE, op: 'sommeil' });
+  return filtres;
+}
+
 /** Opérateurs des filtres fixes d'une vue (même liste que ConstructeurRequete.OperateursVue côté C#). */
 export const OPERATEURS_VUE = [
   ['=', 'égal à'], ['<>', 'différent de'], ['>', 'supérieur à'], ['>=', 'supérieur ou égal à'], ['<', 'inférieur à'],
@@ -44,6 +61,7 @@ export function correspondFiltreVue(ligne, f) {
   const vide = v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
   const texte = normaliser(texteBrut(v) ?? '');
   switch (f.op) {
+    case 'sommeil': return v !== 'S';
     case 'vide': return vide;
     case 'nonvide': return !vide;
     case 'vrai': return v === true;

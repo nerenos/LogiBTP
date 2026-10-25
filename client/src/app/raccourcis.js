@@ -11,6 +11,8 @@ declarerRaccourcis('application', {
     fenetres: { libelle: 'Fenêtres ouvertes', defaut: 'Ctrl+Shift+F' },
     accueil: { libelle: 'Accueil', defaut: [] },
     retour: { libelle: 'Page précédente', defaut: [] },
+    precedente: { libelle: 'Fiche précédente de la liste', defaut: 'Alt+PageUp' },
+    suivante: { libelle: 'Fiche suivante de la liste', defaut: 'Alt+PageDown' },
     parametres: { libelle: 'Paramètres', defaut: [] },
     raccourcis: { libelle: 'Personnaliser les raccourcis', defaut: [] },
   },

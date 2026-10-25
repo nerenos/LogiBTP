@@ -8,6 +8,7 @@ import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
 import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees } from '../ressources/ressources-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
+import { voisins } from '../suite-liste.js';
 import { api } from '../api.js';
 
 const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
@@ -31,6 +32,8 @@ export class PageFiche extends PageBase {
     this.titre = nouveau ? `Nouvelle fiche ${type}` : `Fiche ${type} ${this.params.id}`;
     this.conteneur.innerHTML = '<div class="page-fiche"><div class="page-fiche-corps"></div></div>';
     const s = await app.services();
+    const voisinage = nouveau ? null : voisins(`/fiche/${type}/${this.params.id}`);
+    this.voisinage = voisinage;
     this.fiche = new Classe({
       conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
       id: nouveau ? null : this.params.id, mode: nouveau ? 'creation' : 'consultation',
@@ -40,7 +43,12 @@ export class PageFiche extends PageBase {
       actions: [{
         icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la fiche (modèle d’édition)', visible: app.enLigne,
         action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
-      }],
+      },
+      // Fiche ouverte depuis une liste : fiches précédente et suivante de la liste (ses lignes affichées).
+      ...(voisinage ? [
+        { icone: '◀', libelle: 'Précédente', titre: `Fiche précédente de la liste (${voisinage.rang} / ${voisinage.total})`, visible: Boolean(voisinage.precedent), action: () => this.precedent() },
+        { icone: '▶', libelle: 'Suivante', titre: `Fiche suivante de la liste (${voisinage.rang} / ${voisinage.total})`, visible: Boolean(voisinage.suivant), action: () => this.suivant() },
+      ] : [])],
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),
       // Composition des ouvrages : vues de colonnes des documents (en ligne).
@@ -132,6 +140,11 @@ export class PageFiche extends PageBase {
   }
 
   enregistrer() { if (this.fiche?.mode !== 'consultation') this.fiche.enregistrer(); }
+
+  /** Fiche précédente ou suivante de la liste d'origine, à la place de celle-ci (modifications en cours : confirmation). */
+  precedent() { if (this.voisinage?.precedent) this.app.naviguer(this.voisinage.precedent, { remplacer: true }); }
+
+  suivant() { if (this.voisinage?.suivant) this.app.naviguer(this.voisinage.suivant, { remplacer: true }); }
 
   echap() { this.fiche?.fermer(); }
 

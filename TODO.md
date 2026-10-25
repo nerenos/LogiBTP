@@ -228,6 +228,12 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   des données (`installation cle-donnees changer`) ; reste : sauvegarde lancée depuis l'application et changement de
   la clé de construction qui chiffre les valeurs `env:v1:` du `.env`.
 
+### Demandes du 25/10/2026, suites des lots réalisés
+
+- [ ] « Ne plus utiliser » (db/228) : écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
+- [ ] Précédent / suivant : aussi dans la page document ouverte depuis une liste (`suite-liste.js`).
+- [ ] Authentification : rafraîchissement simultané du même jeton par deux requêtes → 500 (`jeton_remplace_pkey` en double, `RafraichirAsync`), vu au démarrage de l'API.
+
 ## Interface
 
 - [ ] Remplacer les derniers `<select>` par `creerCombo` : vues de liste, menu de filtre, sélecteurs de thème et de vue

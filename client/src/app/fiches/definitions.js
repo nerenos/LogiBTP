@@ -12,6 +12,12 @@ const REQUETE_MODES_REGLEMENT = 'SELECT mre_code, mre_libelle FROM mode_reglemen
 const REQUETE_CONDITIONS_PAIEMENT = 'SELECT cpa_code, cpa_libelle FROM condition_paiement WHERE cpa_actif ORDER BY cpa_ordre, cpa_code';
 // Types de matériel à deux niveaux : regroupement › type (les regroupements se choisissent aussi).
 const REQUETE_TYPES_MATERIEL = "SELECT v.lva_code, CASE WHEN p.lva_code IS NULL THEN v.lva_libelle ELSE p.lva_libelle || ' › ' || v.lva_libelle END FROM liste_valeur v LEFT JOIN liste_valeur p ON p.lva_liste = v.lva_liste AND p.lva_code = v.lva_parent WHERE v.lva_liste = 'TYPE_MATERIEL' AND v.lva_actif ORDER BY coalesce(p.lva_ordre, v.lva_ordre), coalesce(p.lva_code, v.lva_code), v.lva_parent NULLS FIRST, v.lva_ordre";
+// État d'utilisation des fiches (db/228) : ne plus utiliser = plus proposé pour un nouveau choix, en sommeil = masqué
+// par défaut dans les listes (avant archivage) ; « actif » suit (en sommeil = inactif).
+const USAGE = {
+  obligatoire: true, defaut: 'A', options: options(['A', 'En service'], ['N', 'Ne plus utiliser'], ['S', 'En sommeil']),
+  aide: 'Ne plus utiliser : les documents en cours se terminent, plus de nouveau choix ; en sommeil : masquée par défaut dans les listes',
+};
 const REQUETE_COLLECTIFS = "SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'COLLECTIF' ORDER BY cpt_code";
 
 export const TYPES_FICHE = {
@@ -27,7 +33,7 @@ export const TYPES_FICHE = {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
             { titre: 'Identité', champs: ['matricule', 'code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
-            { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'actif'] },
+            { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'usage'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
             { titre: 'Horaires', champs: ['cal_id'] },
@@ -70,6 +76,7 @@ export const TYPES_FICHE = {
         c('statut', 'Contrat', 'sal_statut', 'liste', { obligatoire: true, options: options('CDI', 'CDD', ['INTERIM', 'Intérim']) }),
         c('date_entree', "Date d'entrée", 'sal_date_entree', 'date', { obligatoire: true }),
         c('actif', 'Actif', 'sal_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('usage', 'Utilisation', 'sal_usage', 'liste', USAGE),
         c('email', 'E-mail professionnel', 'sal_email', 'texte', { longueur: 100, format: 'email', non_copie: true }),
         c('telephone', 'Téléphone professionnel', 'sal_telephone', 'texte', { longueur: 20, format: 'telephone' }),
         // Données privées (RGPD) : confidentielles, affichées à la demande.
@@ -102,7 +109,7 @@ export const TYPES_FICHE = {
         {
           code: 'informations', titre: 'Informations',
           groupes: [
-            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'numero_serie'] },
+            { titre: 'Identification', champs: ['code', 'designation', 'famille', 'marque', 'numero_serie', 'usage'] },
             { titre: 'Exploitation', champs: ['etat', 'chantier', 'heures_utilisation', 'heures_revision', 'controle_ok'] },
             { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id', 'cal_id'] },
             { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
@@ -127,7 +134,8 @@ export const TYPES_FICHE = {
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { obligatoire: true, format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date', { obligatoire: true }),
         c('observations', 'Observations', 'mat_observations', 'zone'),
-        // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
+        // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
+        c('usage', 'Utilisation', 'mat_usage', 'liste', USAGE),
         c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
         c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
         c('unite', 'Unité', 'mat_unite', 'texte', { longueur: 10 }),
@@ -149,7 +157,7 @@ export const TYPES_FICHE = {
         {
           code: 'article', titre: 'Article',
           groupes: [
-            { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'actif'] },
+            { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'usage'] },
             { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion'] },
             { titre: 'Libellé', champs: ['libelle_html'], largeur: 'plein' },
             { code: 'techniques', titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur'], largeur: 'plein' },
@@ -165,6 +173,7 @@ export const TYPES_FICHE = {
         c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage'], ['ENSEMBLE', 'Ensemble'], ['POSTE_PIED', 'Poste de pied']),
           aide: 'Ensemble : structure de lignes réutilisable (lignes vendues, options, variantes) paramétrée par sa tranche ; poste de pied : retenue, compte prorata, remise… pour le pied des documents' }),
         c('actif', 'Actif', 'ele_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('usage', 'Utilisation', 'ele_usage', 'liste', USAGE),
         c('libelle_html', 'Libellé', 'ele_libelle_html', 'html', { obligatoire: true }),
         c('libelle', 'Libellé (texte brut)', 'ele_libelle', 'texte', { lecture_seule: true }),
         c('fam_id', 'Famille', 'ele_fam_id', 'nombre', { reference: 'famille' }),
@@ -240,7 +249,7 @@ export const TYPES_FICHE = {
         {
           code: 'identite', titre: 'Identité',
           groupes: [
-            { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'actif', 'societe_base'] },
+            { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'usage', 'societe_base'] },
             { code: 'casquettes', titre: 'Relations avec nous', champs: ['casquettes'], largeur: 'plein' },
             { code: 'entreprise', titre: 'Entreprise', champs: ['pays', 'siren', 'siret', 'tva_intra', 'identifiant_etranger', 'naf', 'forme_juridique', 'forme_libelle',
               'capital', 'rcs', 'date_creation', 'effectif', 'etat_administratif', 'siege', 'service_public'] },
@@ -275,6 +284,7 @@ export const TYPES_FICHE = {
         c('parent_id', 'Niveau supérieur', 'per_parent_id', 'nombre', { reference: 'personne', aide: 'Groupe d\'une société, société d\'un établissement, d\'une agence…' }),
         c('casquettes', 'Relations', 'per_casquettes', 'json', { aide: 'Client, fournisseur, sous-traitant… : une personne peut en avoir plusieurs' }),
         c('actif', 'Actif', 'per_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('usage', 'Utilisation', 'per_usage', 'liste', USAGE),
         c('societe_base', 'Société de cette base', 'per_societe_base', 'booleen', { obligatoire: true, defaut: false, non_copie: true, aide: 'Notre société (une seule par base)' }),
         c('pays', 'Pays', 'per_pays', 'texte', { obligatoire: true, defaut: 'FR', longueur: 2, format: 'regex:^[A-Za-z]{2}$', aide: 'Code ISO à 2 lettres (FR, BE, DE…)' }),
         c('siren', 'SIREN', 'per_siren', 'texte', { longueur: 11, non_copie: true }),
@@ -346,7 +356,7 @@ export const TYPES_FICHE = {
         {
           code: 'identite', titre: 'Identité',
           groupes: [
-            { titre: 'Identité', champs: ['civilite', 'prenom', 'nom', 'date_naissance', 'pays', 'actif'] },
+            { titre: 'Identité', champs: ['civilite', 'prenom', 'nom', 'date_naissance', 'pays', 'usage'] },
             { code: 'roles', titre: 'Dans notre société', champs: ['roles', 'utilisateur'], largeur: 'plein' },
             { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
           ],
@@ -361,6 +371,7 @@ export const TYPES_FICHE = {
         c('roles', 'Rôles', 'ind_roles', 'json', { aide: 'Chargé d\'affaires, chiffreur, salarié, intérimaire, utilisateur… : repris par les autres modules' }),
         c('utilisateur', 'Identifiant de connexion', 'ind_utilisateur', 'texte', { longueur: 50, non_copie: true, aide: 'Pour le futur module des droits' }),
         c('actif', 'Actif', 'ind_actif', 'booleen', { obligatoire: true, defaut: true }),
+        c('usage', 'Utilisation', 'ind_usage', 'liste', USAGE),
         c('commentaire', 'Notes', 'ind_commentaire', 'zone'),
         c('coordonnees', 'Coordonnées', null, 'json', { gere: true }),
         c('rattachements', 'Rattachements', null, 'json', { gere: true }),

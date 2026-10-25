@@ -6,7 +6,8 @@ import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
 import { groupesThemes } from '../navigation/menus.js';
 import { api } from '../api.js';
-import { marquerArticles } from '../stock/marquer.js';
+import { marquerArticles } from '../stock/marquer.js';
+import { memoriserSuite } from '../suite-liste.js';
 import { transformerDocument } from '../documents/transformation.js';
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
@@ -119,7 +120,11 @@ export class PageListe extends PageBase {
     let premier = true;
     this.liste = new ListeDonnees(this.conteneur.querySelector('.page-liste-zone'), {
       fournisseur: s.liste,
-      ouvrir: (l) => app.ouvrirElement(l, { nouvelleFenetre: l.nouvelleFenetre }),
+      // Suite des lignes affichées confiée à la fenêtre : précédent / suivant dans la fiche ouverte (suite-liste.js).
+      ouvrir: (l) => {
+        memoriserSuite(this.liste.lignesAffichees().map((x) => app.urlElement({ id: x._id, type: x._type })), app.routeur?.cle ?? location.pathname);
+        return app.ouvrirElement(l, { nouvelleFenetre: l.nouvelleFenetre });
+      },
       message: (t, n) => app.message(t, n),
       // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
       peutRequete: app.enLigne && app.estAdmin(),

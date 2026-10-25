@@ -125,6 +125,15 @@ public partial class ConstructeurRequete
 
     public static string EchapperLike(string mot) => mot.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
+    /// <summary>Colonne d'état d'utilisation des sources (A en service, N ne plus utiliser, S en sommeil).</summary>
+    public const string ColonneUsage = "usage";
+
+    /// <summary>
+    /// Lignes en sommeil masquées (usage différent de S, vide compris) quand la source porte l'état d'utilisation et
+    /// que la vue ne les montre pas (même règle que filtresEffectifs / opérateur « sommeil » de requete.js).
+    /// </summary>
+    public bool MasqueSommeil => Connue(ColonneUsage) && !Definition.Sommeil;
+
     /// <summary>Conditions de recherche et de segments (sauf le segment <paramref name="sansSegment"/>).</summary>
     protected virtual List<string> Conditions(string? sansSegment = null)
     {
@@ -140,6 +149,7 @@ public partial class ConstructeurRequete
             conditions.Add($"NOT (({type})::text = ANY({P(TypesRefuses.ToArray())}))");
         }
         conditions.AddRange(Definition.Filtres.Select(ConditionFiltre));
+        if (MasqueSommeil) conditions.Add($"{Col(ColonneUsage)}::text IS DISTINCT FROM 'S'");
         var colonnes = ColonnesRecherche();
         foreach (var mot in Mots(Demande.Recherche))
         {

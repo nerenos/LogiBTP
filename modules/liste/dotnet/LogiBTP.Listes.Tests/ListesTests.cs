@@ -82,6 +82,17 @@ public class ConstructeurRequeteTests
     }
 
     [Fact]
+    public void Fiches_en_sommeil_masquees_sauf_option_de_la_vue()
+    {
+        var avecUsage = new SourceResolue("SELECT * FROM \"v\"", [new("id", "integer"), new("nom", "text"), new("usage", "text")], "id", null, "salarie");
+        var def = Def();
+        Assert.Contains("s.\"usage\"", new ConstructeurRequete(avecUsage, def, new DemandeListe()).Lot(10).Texte);
+        Assert.DoesNotContain("usage", new ConstructeurRequete(Source, def, new DemandeListe()).Lot(10).Texte);
+        def.Sommeil = true;
+        Assert.DoesNotContain("usage", new ConstructeurRequete(avecUsage, def, new DemandeListe()).Lot(10).Texte);
+    }
+
+    [Fact]
     public void Filtre_de_vue_operateur_ou_colonne_inconnus_refuses()
     {
         var def = Def();

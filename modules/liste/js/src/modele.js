@@ -31,6 +31,8 @@ export function normaliserDefinition(def = {}) {
     })),
     segments: def.segments ?? [],
     filtres: def.filtres ?? [],
+    // Lignes en sommeil (colonne usage = S) montrées ; masquées par défaut (filtresEffectifs).
+    sommeil: def.sommeil ?? false,
     theme: def.theme ?? null,
     tri: def.tri ?? [],
     lignes: def.lignes ?? 'multi',

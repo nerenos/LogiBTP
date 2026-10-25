@@ -14,6 +14,8 @@ public sealed class DefinitionVue
     public List<TriColonne> Tri { get; set; } = [];
     /// <summary>Filtres fixes de la vue, appliqués par la base en ET (ex. salariés actifs).</summary>
     public List<FiltreVue> Filtres { get; set; } = [];
+    /// <summary>Montre les lignes en sommeil (colonne usage = S) d'une source qui porte l'état d'utilisation ; masquées sinon.</summary>
+    public bool Sommeil { get; set; }
     /// <summary>Thème de la vue : ses types d'élément restreignent les lignes (aucun type = tous).</summary>
     public string? Theme { get; set; }
     public int TailleLot { get; set; } = 100;

@@ -109,7 +109,7 @@ export const SOURCES_LISTE = {
     colonnes: [
       ['id', 'integer'], ['type_element', 'text'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
       ['statut', 'text'], ['date_entree', 'date'], ['salaire_brut', 'numeric'], ['heures_mois', 'numeric'], ['actif', 'boolean'],
-      ['commentaire', 'text'], ['code', 'text'], ['matricule_paie', 'text'], ['service_code', 'text'],
+      ['commentaire', 'text'], ['code', 'text'], ['matricule_paie', 'text'], ['service_code', 'text'], ['usage', 'text'],
     ],
   },
   materiels: {
@@ -119,7 +119,7 @@ export const SOURCES_LISTE = {
     colonnes: [
       ['id', 'integer'], ['code', 'text'], ['designation', 'text'], ['famille', 'text'], ['etat', 'text'], ['chantier', 'text'],
       ['valeur_achat', 'numeric'], ['date_achat', 'date'], ['heures_utilisation', 'integer'], ['heures_revision', 'integer'],
-      ['controle_ok', 'boolean'], ['observations', 'text'], ['famille_code', 'text'],
+      ['controle_ok', 'boolean'], ['observations', 'text'], ['famille_code', 'text'], ['usage', 'text'],
     ],
   },
   elements: {
@@ -130,7 +130,7 @@ export const SOURCES_LISTE = {
       ['coef_fg', 'numeric'], ['pr', 'numeric'], ['coef_benef', 'numeric'], ['pv', 'numeric'], ['pv_net', 'numeric'], ['actif', 'boolean'],
       ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
       // Module Stock (db/217) : marques de l'article.
-      ['marques', 'ARRAY'],
+      ['marques', 'ARRAY'], ['usage', 'text'],
     ],
   },
   // Annuaire : relations (casquettes) et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
@@ -140,7 +140,7 @@ export const SOURCES_LISTE = {
       ['id', 'bigint'], ['type_element', 'text'], ['code', 'text'], ['raison_sociale', 'text'], ['nom_commercial', 'text'], ['niveau', 'text'],
       ['casquettes', 'ARRAY'], ['parent', 'text'], ['chemin', 'text'], ['siren', 'text'], ['siret', 'text'], ['tva_intra', 'text'], ['pays', 'text'],
       ['adresse', 'text'], ['code_postal', 'text'], ['ville', 'text'], ['telephone', 'text'], ['email', 'text'], ['contact', 'text'],
-      ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['provisoire', 'boolean'],
+      ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['provisoire', 'boolean'], ['usage', 'text'],
     ],
   },
   individus: {
@@ -148,7 +148,7 @@ export const SOURCES_LISTE = {
     colonnes: [
       ['id', 'bigint'], ['type_element', 'text'], ['civilite', 'text'], ['nom', 'text'], ['prenom', 'text'], ['nom_complet', 'text'], ['personnes', 'text'],
       ['fonction', 'text'], ['roles', 'ARRAY'], ['telephone', 'text'], ['portable', 'text'], ['email', 'text'], ['ville', 'text'], ['utilisateur', 'text'],
-      ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'],
+      ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['usage', 'text'],
     ],
   },
   ged: {

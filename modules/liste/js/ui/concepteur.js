@@ -1,7 +1,7 @@
 import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 import { normaliserDefinition, FORMATS, STYLE_VIDE } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
-import { OPERATEURS_VUE } from '../src/requete.js';
+import { OPERATEURS_VUE, COLONNE_USAGE } from '../src/requete.js';
 
 const SANS_VALEUR = new Set(['vide', 'nonvide', 'vrai', 'faux']);
 
@@ -460,6 +460,7 @@ export class ConcepteurVue {
           </div>`;
         }).join('') || '<p class="aide">Aucun filtre : toutes les lignes de la source sont proposées (ex. ajouter « actif est coché » pour les salariés actifs).</p>'}
         <button type="button" data-action="ajouter-filtre" ${this.colonnesSource.length ? '' : 'disabled'}>Ajouter un filtre</button>
+        ${this.colonnesSource.some((c) => c.code === COLONNE_USAGE) ? `<label class="fiche-option" title="Fiches mises en sommeil (avant archivage) : masquées par défaut"><input type="checkbox" data-sommeil ${d.sommeil ? 'checked' : ''}> Afficher les fiches en sommeil</label>` : ''}
       </fieldset>
       <fieldset class="concepteur-calculees"><legend>Colonnes calculées</legend>
         ${d.colonnes.filter((c) => c.calcul).map((c) => `<span class="pastille-colonne">${echapper(premiereLigne(c.titre))}</span>`).join('') || '<span class="aide">Aucune</span>'}
@@ -513,6 +514,7 @@ export class ConcepteurVue {
       }));
       div.querySelector('[data-supprimer-filtre]').addEventListener('click', () => { d.filtres.splice(Number(div.dataset.filtreVue), 1); this.#rendreColonnes(); });
     });
+    this.corps.querySelector('[data-sommeil]')?.addEventListener('change', (e) => { d.sommeil = e.target.checked; });
     this.corps.querySelector('[data-action="ajouter-filtre"]').addEventListener('click', () => {
       const booleen = this.colonnesSource.find((c) => /bool/.test(c.type ?? ''));
       d.filtres.push(booleen ? { colonne: booleen.code, op: 'vrai' } : { colonne: this.colonnesSource[0]?.code ?? '', op: '=', valeur: '' });

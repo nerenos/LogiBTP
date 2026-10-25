@@ -46,6 +46,7 @@
 - `01_normalisation.json` : `normaliser` ↔ `f_sans_accent` (SQL).
 - `02_requete.json` : types du thème, filtres fixes (ET), recherche (chaque mot dans au moins une colonne, `valeur::text`), segments (null = vide ; colonne `ARRAY` : l'une des valeurs, null = tableau vide), tri puis ID croissant, vides en dernier, curseur keyset ; `requete.js` ↔ `ConstructeurRequete.cs` (`OPERATEURS_VUE` ↔ `OperateursVue`).
 - `03_formules.json` : formules évaluées sur le poste (JS seul).
+- Fiches en sommeil : une source qui a la colonne `usage` masque les lignes `usage = S` (vide gardé), sauf si la vue les montre (`definition.sommeil`, case du concepteur) : `filtresEffectifs` (opérateur interne `sommeil`) ↔ `ConstructeurRequete.MasqueSommeil` (tests de chaque côté).
 
 ## Conventions et pièges
 - Toute requête de données : sous-requête encadrée, `SET TRANSACTION READ ONLY` + `statement_timeout` ; identifiants jamais pris du client (colonnes connues de la source), valeurs en paramètres.

@@ -53,7 +53,10 @@ public static class MagasinBtp
             ORDER BY s.sal_nom, s.sal_prenom
             """).ToListAsync(ct);
 
-    /// <summary>Chantier de dotation du salarié, créé à la première sortie (DOT-code, affaire DOTATIONS, tient un stock, CLOS).</summary>
+    /// <summary>
+    /// Chantier de dotation du salarié, créé à la première sortie (DOT-code, affaire DOTATIONS, tient un stock) : ouvert
+    /// tant que le salarié n'est pas en sommeil (clos ensuite, db/228) ; écarté des chantiers proposés (f_chantier_dotation).
+    /// </summary>
     public static async Task<int> ChantierDotationAsync(LogiBtpContext db, int salarie, CancellationToken ct)
     {
         var s = (await SalariesAsync(db, salarie, ct)).FirstOrDefault() ?? throw ExceptionMetier.Introuvable("Salarié");
@@ -62,7 +65,8 @@ public static class MagasinBtp
         if (code.Length > 20) code = code[..20];
         var id = await db.Database.SqlQuery<int>($"""
             INSERT INTO chantier (cha_code, cha_libelle, cha_aff_id, cha_statut, cha_stock_tenu, cha_commentaire)
-            VALUES ({code}, {$"Dotations {s.Prenom} {s.Nom}"}, (SELECT aff_id FROM affaire WHERE aff_code = 'DOTATIONS'), 'CLOS', TRUE,
+            VALUES ({code}, {$"Dotations {s.Prenom} {s.Nom}"}, (SELECT aff_id FROM affaire WHERE aff_code = 'DOTATIONS'),
+                    (SELECT CASE WHEN sal_usage = 'S' THEN 'CLOS' ELSE 'OUVERT' END FROM salarie WHERE sal_id = {salarie}), TRUE,
                     'Chantier de dotation du salarié : son stock = EPI et outillage dotés non rendus (module Stock)')
             ON CONFLICT (cha_code) DO UPDATE SET cha_stock_tenu = TRUE
             RETURNING cha_id AS "Value"

@@ -30,6 +30,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
+        // État d'utilisation (db/228) : « actif » suit l'usage saisi (en sommeil = inactif ; le trigger fait de même en base).
+        if (aEcrire.ContainsKey("usage") && valeurs.ContainsKey("actif"))
+        {
+            var actif = Convert.ToString(valeurs.GetValueOrDefault("usage"), System.Globalization.CultureInfo.InvariantCulture) != "S";
+            aEcrire["actif"] = actif ? "true" : "false";
+            valeurs = new Dictionary<string, object?>(valeurs) { ["actif"] = actif };
+        }
         if (type == "element")
         {
             await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);

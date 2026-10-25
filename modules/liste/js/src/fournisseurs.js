@@ -1,5 +1,5 @@
 import { normaliserDefinition } from './modele.js';
-import { filtrer, trier, lot, jusqua, comptesSegment, empreinte } from './requete.js';
+import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs } from './requete.js';
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
@@ -192,7 +192,7 @@ export class FournisseurMemoire {
     const codes = def.colonnes.filter((c) => !c.calcul && connues.has(c.code)).map((c) => c.code);
     // Colonnes de segment et de tri lues même si la vue ne les affiche pas (comme le WHERE / ORDER BY du serveur).
     const internes = [...Object.keys(d.segments ?? {}), ...def.segments.map((x) => x.colonne), ...(d.tri ?? []).map((t) => t.colonne),
-      ...def.filtres.map((f) => f.colonne)]
+      ...filtresEffectifs(def, connues).map((f) => f.colonne)]
       .filter((c) => connues.has(c) && !codes.includes(c));
     const segmentsVue = new Set(def.segments.map((x) => x.colonne));
     const colonneId = def.source.colonne_id ?? s.colonne_id;
@@ -213,7 +213,7 @@ export class FournisseurMemoire {
     });
     const recherche = def.colonnes.filter((c) => !c.calcul && c.recherche && connues.has(c.code)).map((c) => c.code);
     const tri = (d.tri ?? []).filter((t) => connues.has(t.colonne));
-    const filtres = def.filtres.filter((f) => connues.has(f.colonne));
+    const filtres = filtresEffectifs(def, connues);
     const types = (this.themesStockes.find((t) => t.thl_code === def.theme)?.thl_types ?? []).map((t) => t.code);
     return { lignes, recherche, tri, filtres, types };
   }

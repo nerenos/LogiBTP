@@ -114,7 +114,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
     public override async Task<List<JalonPlanning>> JalonsAsync(PlanningDbContext db, DateOnly du, DateOnly au, CancellationToken ct) =>
         (await db.Database.SqlQueryRaw<JalonBtp>("""
             SELECT 'chantier:' || c.cha_id AS cle, c.cha_date_fin_prevue::timestamp AS quand, 'FIN_CHANTIER' AS type, 'Fin prévue ' || c.cha_code AS libelle, c.cha_id::text AS id
-            FROM chantier c WHERE c.cha_statut = 'OUVERT' AND c.cha_date_fin_prevue BETWEEN @du AND @au
+            FROM chantier c WHERE (c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) AND c.cha_date_fin_prevue BETWEEN @du AND @au
             UNION ALL
             SELECT 'ordre:' || d.ent_id, d.ent_fin_prevue::timestamp, 'FIN_ORDRE', 'Fin prévue ' || coalesce(d.ent_numero, t.tyd_libelle), d.ent_chantier_id::text
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id
@@ -222,7 +222,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
                        NULL::text AS origine_type, NULL::text AS origine_id, NULL::int AS srv_id,
                        c.cha_date_ouverture::text AS debut, c.cha_date_fin_prevue::text AS fin, NULL::int AS heures, c.cha_statut AS etat
                 FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
-                WHERE (c.cha_statut = 'OUVERT' OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q OR t.per_raison_sociale ILIKE @q)
+                WHERE ((c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q OR t.per_raison_sociale ILIKE @q)
                 ORDER BY c.cha_interne, c.cha_code LIMIT 300
                 """,
             "PROJET" => """
@@ -264,7 +264,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
         : db.Database.SqlQueryRaw<ElementPlanning>("""
             SELECT 'chantier' AS type, c.cha_id::text AS id, c.cha_code AS code, c.cha_libelle AS libelle, '/fiche/chantier/' || c.cha_id AS url
             FROM chantier c
-            WHERE (@ids IS NULL AND (c.cha_statut = 'OUVERT' OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
+            WHERE (@ids IS NULL AND ((c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) OR c.cha_interne) AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
                    OR c.cha_id::text = ANY(@ids))
             ORDER BY c.cha_interne, c.cha_code
             LIMIT 500
@@ -276,7 +276,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
         db.Database.SqlQueryRaw<BudgetPlanning>("""
             SELECT 'chantier' AS type, b.chantier_id::text AS id, b.srv_id, round(b.heures * 60)::int AS minutes
             FROM v_heures_budget_chantier b JOIN chantier c ON c.cha_id = b.chantier_id
-            WHERE b.srv_id IS NOT NULL AND c.cha_statut = 'OUVERT' AND (@srv IS NULL OR b.srv_id = ANY(@srv))
+            WHERE b.srv_id IS NOT NULL AND (c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) AND (@srv IS NULL OR b.srv_id = ANY(@srv))
               AND (@q IS NULL OR c.cha_code ILIKE @q OR c.cha_libelle ILIKE @q)
             """,
             new NpgsqlParameter("srv", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)services?.ToArray() ?? DBNull.Value },

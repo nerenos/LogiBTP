@@ -359,6 +359,8 @@ export class Application {
       fenetres: () => this.listeFenetres(),
       accueil: () => this.naviguer('/'),
       retour: () => this.retour(),
+      precedente: page?.precedent && (() => page.precedent()),
+      suivante: page?.suivant && (() => page.suivant()),
       parametres: () => this.naviguer('/parametres'),
       raccourcis: () => this.naviguer('/parametres/raccourcis'),
     };
