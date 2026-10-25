@@ -26,7 +26,7 @@ const ligne = (o) => ({
  * regroupement }]), redacteurs ([{ valeur (ind_id), libelle }] : individus de notre société) }.
  */
 export function saisieDevisImporte(devis, { definition, natures, redacteurs = [] }) {
-  const unites = (definition.unites ?? []).map((u) => ({ code: u.unt_code, libelle: u.unt_libelle }));
+  const unites = (definition.unites ?? []).map((u) => ({ code: u.unt_code, libelle: u.unt_libelle, synonymes: u.unt_synonymes ?? [] }));
   const taux = (definition.taux_tva ?? []).map((t) => ({ id: t.ttv_id, taux: t.ttv_taux, categorie: t.ttv_categorie }));
   const natureOuvrage = natures.find((n) => n.code === 'OUV') ?? natures.find((n) => n.regroupement === 'VENTE') ?? null;
   const tvaDefaut = associerTaux(devis.entete.taux_tva_defaut, taux);

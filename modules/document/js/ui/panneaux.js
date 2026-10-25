@@ -231,7 +231,7 @@ export class PanneauxDocument {
     place.replaceWith(combo(this.editeur.definition.conditions_paiement.map((x) => ({ valeur: x.code, libelle: x.libelle, detail: x.code })),
       d.ent_cpa_code, 'ent_cpa_code', place.parentElement.title));
     const mode = zone.querySelector('[data-mode-reglement]');
-    mode.replaceWith(combo(MODES_REGLEMENT.map(([valeur, libelle]) => ({ valeur, libelle })), d.ent_mode_reglement, 'ent_mode_reglement', mode.parentElement.title));
+    mode.replaceWith(combo(this.modesReglement().map(([valeur, libelle]) => ({ valeur, libelle })), d.ent_mode_reglement, 'ent_mode_reglement', mode.parentElement.title));
     this.rendreEcheancier(zone.querySelector('[data-echeancier]'));
   }
 
@@ -239,12 +239,18 @@ export class PanneauxDocument {
    * Échéancier : enregistré à la validation d'une pièce (factures, avoirs), sinon aperçu calculé sur le net à payer
    * (calculerEcheances, règle répliquée dans Echeances.cs) ; retenue de garantie (postes lig_pied_retenue) à part.
    */
+  /** Modes de règlement [code, libellé] : ceux de la définition (table mode_reglement), sinon la liste du module. */
+  modesReglement() {
+    const m = this.editeur.definition.modes_reglement;
+    return m?.length ? m.map((x) => [x.code, x.libelle]) : MODES_REGLEMENT;
+  }
+
   rendreEcheancier(div) {
     if (!div) return;
     const s = this.editeur.saisie;
     const r = this.editeur.resultat;
     const { condition, origine, mode } = this.reglementEffectif();
-    const libelleMode = (v) => MODES_REGLEMENT.find(([c]) => c === v)?.[1] ?? v ?? '';
+    const libelleMode = (v) => this.modesReglement().find(([c]) => c === v)?.[1] ?? v ?? '';
     let lignes;
     let titre;
     if (s.echeances?.length) {

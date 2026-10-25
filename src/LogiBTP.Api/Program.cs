@@ -211,6 +211,7 @@ api.MapIndividusStructure();
 api.MapComptes();
 api.MapGroup("").MapModuleComptabilite();
 api.MapModulesServices();
+api.MapListesValeurs();
 api.MapRessources();
 api.MapEquipes();
 api.MapModuleCalendrier();

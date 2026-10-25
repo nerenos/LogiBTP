@@ -7,6 +7,11 @@ const c = (code, libelle, colonne, type, extra = {}) => ({ code, libelle, colonn
 const options = (...v) => v.map((x) => (Array.isArray(x) ? { valeur: x[0], libelle: x[1] } : { valeur: x, libelle: x }));
 
 // Comptes collectifs du plan comptable (module Comptabilité) : surcharge du collectif d'un tiers par relation.
+// Référentiels paramétrables (Paramètres › Référentiels communs, Paramètres › Documents).
+const REQUETE_MODES_REGLEMENT = 'SELECT mre_code, mre_libelle FROM mode_reglement WHERE mre_actif ORDER BY mre_ordre, mre_code';
+const REQUETE_CONDITIONS_PAIEMENT = 'SELECT cpa_code, cpa_libelle FROM condition_paiement WHERE cpa_actif ORDER BY cpa_ordre, cpa_code';
+// Types de matériel à deux niveaux : regroupement › type (les regroupements se choisissent aussi).
+const REQUETE_TYPES_MATERIEL = "SELECT v.lva_code, CASE WHEN p.lva_code IS NULL THEN v.lva_libelle ELSE p.lva_libelle || ' › ' || v.lva_libelle END FROM liste_valeur v LEFT JOIN liste_valeur p ON p.lva_liste = v.lva_liste AND p.lva_code = v.lva_parent WHERE v.lva_liste = 'TYPE_MATERIEL' AND v.lva_actif ORDER BY coalesce(p.lva_ordre, v.lva_ordre), coalesce(p.lva_code, v.lva_code), v.lva_parent NULLS FIRST, v.lva_ordre";
 const REQUETE_COLLECTIFS = "SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'COLLECTIF' ORDER BY cpt_code";
 
 export const TYPES_FICHE = {
@@ -108,7 +113,7 @@ export const TYPES_FICHE = {
       champs: [
         c('code', 'Code', 'mat_code', 'texte', { obligatoire: true, longueur: 10, non_copie: true }),
         c('designation', 'Désignation', 'mat_designation', 'texte', { obligatoire: true, longueur: 100, largeur: 'plein' }),
-        c('famille', 'Famille', 'mat_famille', 'liste', { obligatoire: true, options: options('Engins', 'Levage', 'Outillage', 'Véhicules', 'Coffrage') }),
+        c('famille', 'Type', 'mat_famille', 'liste', { obligatoire: true, requete: REQUETE_TYPES_MATERIEL, aide: 'Types de matériel regroupés (Paramètres › Référentiels communs)' }),
         c('marque', 'Marque', 'mat_marque', 'texte', { longueur: 60 }),
         c('numero_serie', 'N° de série', 'mat_numero_serie', 'texte', { longueur: 40, non_copie: true }),
         c('etat', 'État', 'mat_etat', 'liste', {
@@ -292,12 +297,9 @@ export const TYPES_FICHE = {
         c('fe_code_routage', 'Code de routage', 'per_fe_code_routage', 'texte', { longueur: 100 }),
         c('fe_code_service', 'Code service (Chorus Pro)', 'per_fe_code_service', 'texte', { longueur: 100 }),
         c('fe_engagement', 'N° d\'engagement obligatoire', 'per_fe_engagement', 'booleen', { obligatoire: true, defaut: false }),
-        c('mode_reglement', 'Mode de règlement', 'per_mode_reglement', 'liste', {
-          options: options(['VIREMENT', 'Virement'], ['PRELEVEMENT', 'Prélèvement'], ['CHEQUE', 'Chèque'], ['LCR', 'LCR'], ['CB', 'Carte bancaire'], ['ESPECES', 'Espèces']),
-        }),
-        c('delai_paiement', 'Délai de paiement', 'per_delai_paiement', 'liste', {
-          options: options(['COMPTANT', 'Comptant'], ['30J', '30 jours'], ['30JFM', '30 jours fin de mois'], ['45JFM', '45 jours fin de mois'], ['60J', '60 jours']),
-        }),
+        // Modes de règlement et conditions de paiement paramétrables (module Document : mode_reglement, condition_paiement).
+        c('mode_reglement', 'Mode de règlement', 'per_mode_reglement', 'liste', { requete: REQUETE_MODES_REGLEMENT }),
+        c('delai_paiement', 'Délai de paiement', 'per_delai_paiement', 'liste', { requete: REQUETE_CONDITIONS_PAIEMENT }),
         c('devise', 'Devise', 'per_devise', 'texte', { obligatoire: true, defaut: 'EUR', longueur: 3 }),
         c('iban', 'IBAN', 'per_iban', 'texte', { longueur: 42, non_copie: true }),
         c('bic', 'BIC', 'per_bic', 'texte', { longueur: 11 }),

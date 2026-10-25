@@ -29,6 +29,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
     public DbSet<DocumentLigneSolde> LignesSolde => Set<DocumentLigneSolde>();
     public DbSet<ParametreDocument> ParametresDocument => Set<ParametreDocument>();
     public DbSet<ConditionPaiement> ConditionsPaiement => Set<ConditionPaiement>();
+    public DbSet<ModeReglement> ModesReglement => Set<ModeReglement>();
     public DbSet<DocumentEcheance> Echeances => Set<DocumentEcheance>();
     public DbSet<DocumentHistorique> Historiques => Set<DocumentHistorique>();
     public DbSet<DocumentOrigine> Origines => Set<DocumentOrigine>();
@@ -68,6 +69,7 @@ public abstract class DocumentDbContext<TDoc, TLigne>(DbContextOptions options) 
         b.Entity<DocumentLigneSolde>().ToTable("document_ligne_solde").HasKey(x => x.LsoId);
         b.Entity<ParametreDocument>(e => { e.ToTable("parametre_document").HasKey(x => x.PdoCle); e.Property(x => x.PdoValeur).HasColumnType("jsonb"); });
         // Conditions de paiement et échéancier (019b_document_echeances.sql).
+        b.Entity<ModeReglement>().ToTable("mode_reglement").HasKey(x => x.MreCode);
         b.Entity<ConditionPaiement>(e => { e.ToTable("condition_paiement").HasKey(x => x.CpaCode); e.Property(x => x.CpaLignes).HasColumnType("jsonb"); });
         b.Entity<DocumentEcheance>().ToTable("document_echeance").HasKey(x => x.EchId);
         // Règles des documents à trois niveaux (019c_document_regles.sql).

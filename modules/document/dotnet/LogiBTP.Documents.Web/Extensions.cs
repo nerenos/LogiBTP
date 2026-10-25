@@ -37,6 +37,7 @@ public static class Extensions
         services.AddScoped<VerrouDocumentService<TDoc, TLigne, TComplet>>();
         services.AddScoped<TracabiliteService<TDoc, TLigne, TComplet>>();
         services.AddScoped<AffichageDocumentService<TDoc, TLigne>>();
+        services.AddScoped<ReferentielsDocument<TDoc, TLigne>>();
         return services;
     }
 
@@ -56,6 +57,17 @@ public static class Extensions
             s.Definition(code, Utilisateur.Depuis(http), ct));
         api.MapGet("/unites", async (DocumentDbContext<TDoc, TLigne> db, CancellationToken ct) =>
             await db.Unites.AsNoTracking().Where(x => x.UntActif).OrderBy(x => x.UntOrdre).ThenBy(x => x.UntCode).ToListAsync(ct));
+        // Référentiels paramétrables (écriture : administrateur) : unités (décimales, synonymes), modes de règlement,
+        // numérotation des types (format, remise à zéro, reprise du dernier rang).
+        api.MapGet("/unites/parametrage", (ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) => s.Unites(ct));
+        api.MapPut("/unites/parametrage", (List<UniteDto> v, HttpContext http, ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) =>
+            s.EnregistrerUnites(v, Utilisateur.Depuis(http), ct));
+        api.MapGet("/modes-reglement", (ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) => s.Modes(true, ct));
+        api.MapPut("/modes-reglement", (List<ModeReglementDto> v, HttpContext http, ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) =>
+            s.EnregistrerModes(v, Utilisateur.Depuis(http), ct));
+        api.MapGet("/types-document/numerotation", (ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) => s.Numerotations(ct));
+        api.MapPut("/types-document/{code}/numerotation", (string code, NumerotationSaisie v, HttpContext http, ReferentielsDocument<TDoc, TLigne> s, CancellationToken ct) =>
+            s.EnregistrerNumerotation(code, v, Utilisateur.Depuis(http), ct));
 
         // Affichage de la saisie : étiquettes de lignes, couleurs des modes de vente, modèles, vues de colonnes.
         api.MapGet("/etiquettes-ligne", (AffichageDocumentService<TDoc, TLigne> s, CancellationToken ct) => s.Etiquettes(ct));

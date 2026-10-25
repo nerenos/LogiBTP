@@ -114,11 +114,12 @@ export const SOURCES_LISTE = {
   },
   materiels: {
     libelle: 'Matériels (démonstration)', vue: 'v_liste_materiels', colonne_id: 'id', type_element: 'materiel',
-    modifiable: true, lecture_seule: ['id'],
+    // famille : libellé du type de matériel (lecture seule) ; famille_code : son code (db/227).
+    modifiable: true, lecture_seule: ['id', 'famille'],
     colonnes: [
       ['id', 'integer'], ['code', 'text'], ['designation', 'text'], ['famille', 'text'], ['etat', 'text'], ['chantier', 'text'],
       ['valeur_achat', 'numeric'], ['date_achat', 'date'], ['heures_utilisation', 'integer'], ['heures_revision', 'integer'],
-      ['controle_ok', 'boolean'], ['observations', 'text'],
+      ['controle_ok', 'boolean'], ['observations', 'text'], ['famille_code', 'text'],
     ],
   },
   elements: {
@@ -318,7 +319,7 @@ export const VUES_LISTE = [
         col('code', 'Code', { ...fixe(84), style: { gras: true } }),
         col('designation', 'Désignation', { modifiable: true, ...prop(2.5, 160), regles: [{ condition: '[etat] = "PANNE"', style: { couleur: '#b42318' } }],
         }),
-        col('famille', 'Famille', { modifiable: true, ...prop(1.2, 100) }),
+        col('famille', 'Type', { ...prop(1.2, 100) }),
         col('etat', 'État', { modifiable: true, format: 'picto', ...fixe(56),
           options: [
             { valeur: 'DISPO', libelle: 'Disponible', picto: '🟢' }, { valeur: 'CHANTIER', libelle: 'En chantier', picto: '🔵' },

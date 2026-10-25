@@ -553,6 +553,19 @@ export const api = {
   seuilsSolde: () => appel('GET', '/parametres-documents/seuils-solde'),
   // Conditions de paiement (écriture : administrateur), conditions par défaut (ventes, achats), échéancier d'une pièce.
   conditionsPaiement: () => appel('GET', '/conditions-paiement'),
+  // Référentiels du module Document (écriture : administrateur) : modes de règlement, unités, numérotation des types.
+  modesReglement: () => appel('GET', '/modes-reglement'),
+  enregistrerModesReglement: (liste) => appel('PUT', '/modes-reglement', liste),
+  unitesParametrage: () => appel('GET', '/unites/parametrage'),
+  enregistrerUnitesParametrage: (liste) => appel('PUT', '/unites/parametrage', liste),
+  numerotations: () => appel('GET', '/types-document/numerotation'),
+  enregistrerNumerotation: (code, saisie) => appel('PUT', `/types-document/${encodeURIComponent(code)}/numerotation`, saisie),
+  // Listes de valeurs du cœur (db/227) : types de matériel, activités, priorités et évaluations des projets.
+  listesValeurs: {
+    listes: () => appel('GET', '/listes-valeurs'),
+    lire: (liste) => appel('GET', `/listes-valeurs/${encodeURIComponent(liste)}`),
+    enregistrer: (liste, valeurs) => appel('PUT', `/listes-valeurs/${encodeURIComponent(liste)}`, valeurs),
+  },
   // Règles des documents à trois niveaux : catalogue et valeurs (écriture : administrateur).
   reglesDocuments: () => appel('GET', '/regles-documents'),
   enregistrerReglesDocuments: (regles) => appel('PUT', '/regles-documents', regles),

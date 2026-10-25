@@ -186,6 +186,8 @@ public sealed class DefinitionType
     public List<ModeleDto> Modeles { get; set; } = [];
     /// <summary>Conditions de paiement actives et condition par défaut de la famille du type (ventes ou achats).</summary>
     public List<ConditionPaiementDto> ConditionsPaiement { get; set; } = [];
+    /// <summary>Modes de règlement actifs (mode_reglement).</summary>
+    public List<ModeReglementDto> ModesReglement { get; set; } = [];
     public string? ConditionDefaut { get; set; }
     /// <summary>Règles résolues pour le type (type, famille, global, défaut) : code → valeur.</summary>
     public Dictionary<string, System.Text.Json.Nodes.JsonNode?> Regles { get; set; } = [];

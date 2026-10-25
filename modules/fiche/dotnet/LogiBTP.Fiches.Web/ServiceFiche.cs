@@ -134,10 +134,13 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         }
     }
 
-    /// <summary>Options des listes alimentées par une requête (définition envoyée au client, validation de l'enregistrement).</summary>
+    /// <summary>
+    /// Options des listes alimentées par une requête (définition envoyée au client, validation de l'enregistrement) :
+    /// champs supplémentaires et champs du logiciel (une liste du programme peut aussi être lue par une requête).
+    /// </summary>
     protected async Task ResoudreOptions(TypeFicheResolu t, CancellationToken ct)
     {
-        foreach (var c in t.Supplementaires.Where(c => c.Type == "liste" && !string.IsNullOrWhiteSpace(c.Requete)))
+        foreach (var c in t.Supplementaires.Concat(t.Definition.Champs).Where(c => c.Type == "liste" && !string.IsNullOrWhiteSpace(c.Requete)))
             c.Options = await OptionsRequete(c.Requete!, ct);
     }
 
@@ -188,7 +191,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         return new DefinitionFicheDto
         {
             Type = code, Libelle = t.Definition.Libelle, Titre = t.Definition.Titre, SousTitre = t.Definition.SousTitre,
-            Sections = t.Definition.Sections, Champs = t.Definition.Champs.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Colonne = null; return copie; }).ToList(),
+            Sections = t.Definition.Sections, Champs = t.Definition.Champs.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Colonne = null; copie.Requete = null; return copie; }).ToList(),
             // La requête d'une liste reste sur le serveur (paramétrage seulement) : le client reçoit ses valeurs.
             Supplementaires = t.Supplementaires.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Requete = null; return copie; }).ToList(), Droits = droits,
         };

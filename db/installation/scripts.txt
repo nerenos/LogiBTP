@@ -35,6 +35,7 @@ modules/document/db/019g_document_textes.sql
 modules/document/db/019h_document_famille_execution.sql
 modules/document/db/019i_document_famille_sous_traitance.sql
 modules/document/db/019j_document_lien_paiement_direct.sql
+modules/document/db/019k_document_referentiels.sql
 modules/metre/db/020_metre_schema.sql
 modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql
@@ -154,6 +155,7 @@ db/223_comptabilite.sql
 db/224_comptabilite_ventilation.sql
 db/225_comptabilite_export.sql
 db/226_salaries_services.sql
+db/227_listes_valeurs.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

@@ -17,6 +17,8 @@ export class PageReglements extends PageBase {
   icone = '💳';
 
   async ouvrir() {
+    // Modes de règlement paramétrables (module Document), sinon la liste du module.
+    this.modes = await api.modesReglement().then((l) => l.map((m) => [m.code, m.libelle, m.actif])).catch(() => MODES_REGLEMENT);
     const app = this.app;
     this.sens = this.requete.sens === 'D' ? 'D' : 'E';
     this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
@@ -73,7 +75,7 @@ export class PageReglements extends PageBase {
       </div>
       <h2>Règlements</h2>
       ${reglements.length ? `<table><thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th class="nombre">Montant</th><th class="nombre">Non pointé</th><th>Pièces</th><th></th></tr></thead>
-        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(MODES_REGLEMENT.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
+        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
         <td>${echapper(r.reference ?? '')}</td><td class="nombre">${f(r.montant)}</td><td class="nombre">${f(r.non_pointe)}</td>
         <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? `échéance ${p.echeance_id}`)).join(', ')}</td>
         <td><button type="button" data-supprimer="${r.id}" title="Supprimer le règlement et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
@@ -92,7 +94,7 @@ export class PageReglements extends PageBase {
         <label>Référence <input data-c="reference" maxlength="100"></label>
         <button type="button" data-caution title="Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente">＋ Caution sur les retenues</button>
       </div>`;
-    const mode = creerCombo({ options: MODES_REGLEMENT.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: 'VIREMENT', vide: false });
+    const mode = creerCombo({ options: this.modes.filter(([, , actif]) => actif !== false).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.modes[0]?.[0] ?? 'VIREMENT', vide: false });
     corps.querySelector('[data-r="mode"]').replaceWith(mode);
     const champ = (cle) => corps.querySelector(`[data-r="${cle}"]`);
     const pointages = () => [...corps.querySelectorAll('[data-pointer]')].map((el) => ({ echeance_id: Number(el.dataset.pointer), montant: lireNombre(el.value) }))

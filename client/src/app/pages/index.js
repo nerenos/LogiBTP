@@ -26,6 +26,7 @@ import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
 import { PageParametresInstallation } from './parametres-installation.js';
 import { PageParametresServices } from './parametres-services.js';
+import { PageParametresReferentiels } from './parametres-referentiels.js';
 import { PageCrm } from './crm.js';
 import { PageNoteCrm } from './crm-note.js';
 import { PageSuiviCrm } from './crm-suivi.js';
@@ -121,6 +122,7 @@ export const ROUTES = [
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: 'Installation' },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: 'Profils et droits' },
   { nom: 'parametres-services', chemin: '/parametres/services', page: PageParametresServices, titre: 'Services et membres' },
+  { nom: 'parametres-referentiels', chemin: '/parametres/referentiels', page: PageParametresReferentiels, titre: 'Référentiels communs' },
   { nom: 'parametres-crm', chemin: '/parametres/crm', page: PageParametresCrm, titre: 'Paramétrage du suivi (CRM)' },
   { nom: 'parametres-raccourcis', chemin: '/parametres/raccourcis', page: PageParametresRaccourcis, titre: 'Raccourcis clavier' },
   { nom: 'graphe', chemin: '/annuaire/graphe', page: PageGraphe, titre: 'Graphe des relations' },

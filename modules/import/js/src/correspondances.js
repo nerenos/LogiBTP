@@ -10,11 +10,15 @@ const SYNONYMES_UNITE = {
   KG: ['KILO'], L: ['LITRE', 'LT'], PCE: ['PC', 'PCS'], SEM: ['SEMAINE'], MOIS: ['MS'],
 };
 
-/** Code d'unité de l'application pour une unité importée (unites : [{ code, libelle }]) ; null si inconnue. */
+/**
+ * Code d'unité de l'application pour une unité importée (unites : [{ code, libelle, synonymes? }] ; synonymes
+ * paramétrés de l'unité, puis ceux du module) ; null si inconnue.
+ */
 export function associerUnite(valeur, unites) {
-  const v = normaliser(String(valeur ?? '').replace('²', '2').replace('³', '3'));
+  const cle = (s) => normaliser(String(s ?? '').replace('²', '2').replace('³', '3'));
+  const v = cle(valeur);
   if (!v) return null;
-  const direct = unites.find((u) => normaliser(u.code) === v || normaliser(u.libelle) === v);
+  const direct = unites.find((u) => normaliser(u.code) === v || normaliser(u.libelle) === v || (u.synonymes ?? []).some((s) => cle(s) === v));
   if (direct) return direct.code;
   for (const [cible, synonymes] of Object.entries(SYNONYMES_UNITE)) {
     if (synonymes.map(normaliser).includes(v)) return unites.find((u) => normaliser(u.code) === cible)?.code ?? null;

@@ -266,6 +266,7 @@ export function menus(app) {
         { separateur: true, libelle: 'Organisation' },
         { libelle: 'Modules de la société…', icone: '🧩', url: '/parametres/modules', titre: 'Activer ou désactiver les modules facultatifs' },
         { libelle: 'Services et membres…', icone: '🏢', url: '/parametres/services', titre: 'Services de l’entreprise et salariés rattachés' },
+        { libelle: 'Référentiels communs…', icone: '🗃', url: '/parametres/referentiels', titre: 'Types de matériel, activités, priorités et évaluations des projets, modes de règlement, unités, numérotation des documents' },
         { libelle: 'Calendriers et jours fériés…', icone: '📅', url: '/parametres/calendriers', titre: 'Horaires de travail, cycles, jours fériés, fermetures des services' },
         { libelle: 'Référentiel des ressources…', icone: '🧰', url: '/parametres/ressources', titre: "Types d'habilitations, motifs, natures de main-d'œuvre par service" },
         { libelle: 'Messagerie : comptes, alias, modèles…', icone: '📧', url: '/parametres/mail', titre: 'Comptes de messagerie, expéditeur par usage, modèles, limitations des envois', desactive: !app.estAdmin() || !app.enLigne },

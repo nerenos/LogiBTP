@@ -50,6 +50,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             CouleursTypePrix = (await db.Set<CouleurTypePrix>().AsNoTracking().ToListAsync(ct)).Select(c => new CouleurTypePrixDto(c.CtpType, c.CtpLibelle, c.CtpCouleur)).ToList(),
             Modeles = (await db.Set<ModeleDocument>().AsNoTracking().Where(m => m.ModActif).OrderBy(m => m.ModOrdre).ToListAsync(ct)).Select(m => new ModeleDto(m.ModCode, m.ModLibelle)).ToList(),
             ConditionsPaiement = await Echeancier.Conditions(false, ct),
+            ModesReglement = await new ReferentielsDocument<TDoc, TLigne>(db).Modes(false, ct),
             ConditionDefaut = await Echeancier.Defaut(type.TydFamille, ct),
             Regles = await Regles.Resolues(type, ct),
         };
@@ -90,17 +91,25 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await db.StatutsDocument.AsNoTracking().FirstOrDefaultAsync(s => s.StdTydId == tydId && s.StdCode == code, ct)
         ?? throw ExceptionMetier.Introuvable($"Statut {code}");
 
-    /// <summary>Numéro d'un document : préfixe du type, exercice, rang sur 5 chiffres (DV2026-00012).</summary>
-    public static string FormaterNumero(TypeDocument type, int exercice, int rang) => $"{type.TydPrefixeNumero}{exercice}-{rang:00000}";
+    /// <summary>
+    /// Numéro d'un document au format du type (<see cref="NumeroDocument"/> : défaut préfixe, année, rang sur 5 chiffres,
+    /// DV2026-00012) pour l'année donnée.
+    /// </summary>
+    public static string FormaterNumero(TypeDocument type, int annee, int rang) => NumeroDocument.Formater(type.TydFormatNumero, type.TydPrefixeNumero, annee, rang);
 
-    /// <summary>Exercice et rang d'un numéro au format du type, null s'il ne le suit pas.</summary>
-    public static (int Exercice, int Rang)? LireNumero(TypeDocument type, string? numero)
+    /// <summary>Exercice du compteur : l'année, ou 0 pour un rang jamais remis à zéro (tyd_raz_numero J).</summary>
+    public static int ExerciceCompteur(TypeDocument type, int annee) => NumeroDocument.Exercice(type.TydRazNumero, annee);
+
+    /// <summary>
+    /// Exercice du compteur, rang et année d'un numéro au format du type, null s'il ne le suit pas ; sans année dans le
+    /// numéro, celle donnée par <paramref name="anneeDefaut"/>.
+    /// </summary>
+    public static (int Exercice, int Rang, int Annee)? LireNumero(TypeDocument type, string? numero, int anneeDefaut = 0)
     {
-        if (numero is null) return null;
-        var m = Regex.Match(numero.Trim(), $@"^{Regex.Escape(type.TydPrefixeNumero ?? "")}(\d{{4}})-(\d{{1,9}})$");
-        if (!m.Success) return null;
-        var rang = int.Parse(m.Groups[2].Value);
-        return rang > 0 ? (int.Parse(m.Groups[1].Value), rang) : null;
+        var lu = NumeroDocument.Lire(type.TydFormatNumero, type.TydPrefixeNumero, numero);
+        if (lu is null) return null;
+        var annee = lu.Annee ?? anneeDefaut;
+        return (ExerciceCompteur(type, annee), lu.Rang, annee);
     }
 
     /// <summary>Numéro déjà porté par un document (tous types), hors des documents exclus (les indices renommés).</summary>
@@ -115,9 +124,10 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         while (true)
         {
+            var exercice = ExerciceCompteur(type, date.Year);
             var n = await db.Database.SqlQuery<int>($"""
                 INSERT INTO compteur_numero (cnu_tyd_id, cnu_exercice, cnu_dernier_numero)
-                VALUES ({type.TydId}, {date.Year}, 1)
+                VALUES ({type.TydId}, {exercice}, 1)
                 ON CONFLICT (cnu_tyd_id, cnu_exercice)
                 DO UPDATE SET cnu_dernier_numero = compteur_numero.cnu_dernier_numero + 1
                 RETURNING cnu_dernier_numero AS "Value"
@@ -130,7 +140,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Compteur d'un exercice replacé avant le premier rang libre (les trous sont comblés : il peut redescendre).</summary>
     private async Task RecalerCompteur(TypeDocument type, int exercice, CancellationToken ct)
     {
-        var debut = $"{type.TydPrefixeNumero}{exercice}-";
+        var debut = NumeroDocument.Debut(type.TydFormatNumero, type.TydPrefixeNumero, exercice == 0 ? null : exercice);
         var pris = (await db.Documents.Where(d => d.EntNumero != null && d.EntNumero.StartsWith(debut)).Select(d => d.EntNumero).ToListAsync(ct))
             .Select(n => LireNumero(type, n)).Where(x => x is not null && x.Value.Exercice == exercice).Select(x => x!.Value.Rang).ToHashSet();
         var libre = 1;
@@ -167,13 +177,13 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         {
             throw ExceptionMetier.Conflit("NUMERO_TRANSFERE", "Pièce transférée en comptabilité : son numéro ne peut plus changer");
         }
-        var lu = LireNumero(type, demande.Numero)
-            ?? throw ExceptionMetier.Invalide("NUMERO_FORMAT", $"Numéro attendu au format {FormaterNumero(type, doc.EntDate.Year, 1)} (préfixe, exercice, rang)");
-        var (exercice, rang) = lu;
+        var lu = LireNumero(type, demande.Numero, doc.EntDate.Year)
+            ?? throw ExceptionMetier.Invalide("NUMERO_FORMAT", $"Numéro attendu au format {FormaterNumero(type, doc.EntDate.Year, 1)} (format du type)");
+        var (exercice, rang, annee) = lu;
         var ids = groupe.Select(d => d.EntId).ToList();
-        while (await NumeroPris(FormaterNumero(type, exercice, rang), ids, ct)) rang++;
-        var numero = FormaterNumero(type, exercice, rang);
-        var avertissement = rang == lu.Rang ? null : $"Le numéro {FormaterNumero(type, exercice, lu.Rang)} est déjà pris : {numero} retenu";
+        while (await NumeroPris(FormaterNumero(type, annee, rang), ids, ct)) rang++;
+        var numero = FormaterNumero(type, annee, rang);
+        var avertissement = rang == lu.Rang ? null : $"Le numéro {FormaterNumero(type, annee, lu.Rang)} est déjà pris : {numero} retenu";
         var ancien = doc.EntNumero;
         if (numero == ancien) return new ReponseNumero<TComplet> { Document = avant, Numero = numero, Avertissement = avertissement };
 
@@ -181,7 +191,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         trace = trace[..Math.Min(300, trace.Length)];
         foreach (var d in groupe) await Historiser(d.EntId == id ? avant : await persistance.Charger(d.EntId, ct), "NUMERO", u, ct, trace);
         await db.Documents.Where(d => ids.Contains(d.EntId)).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntNumero, numero), ct);
-        if (LireNumero(type, ancien) is { } a && a.Exercice != exercice) await RecalerCompteur(type, a.Exercice, ct);
+        if (LireNumero(type, ancien, doc.EntDate.Year) is { } a && a.Exercice != exercice) await RecalerCompteur(type, a.Exercice, ct);
         await RecalerCompteur(type, exercice, ct);
         await tx.CommitAsync(ct);
         return new ReponseNumero<TComplet> { Document = await persistance.Charger(id, ct), Numero = numero, Avertissement = avertissement };

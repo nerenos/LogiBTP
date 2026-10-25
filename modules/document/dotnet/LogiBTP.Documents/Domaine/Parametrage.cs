@@ -15,6 +15,10 @@ public class TypeDocument
     /// <summary>1 vente, 2 achat, 3 stock.</summary>
     public short TydSens { get; set; }
     public string? TydPrefixeNumero { get; set; }
+    /// <summary>Format du numéro légal (<see cref="NumeroDocument"/>) ; null : {P}{AAAA}-{N:5}.</summary>
+    public string? TydFormatNumero { get; set; }
+    /// <summary>Rang remis à zéro chaque exercice (A) ou jamais (J).</summary>
+    public string TydRazNumero { get; set; } = "A";
     public bool TydNumerotationContinue { get; set; }
     public bool TydMouvementeStock { get; set; }
     /// <summary>Handler spécifique (IDocumentHandler) ; null = standard.</summary>
@@ -103,6 +107,8 @@ public class Unite
     public short UntPrecisionQte { get; set; } = 2;
     public int UntOrdre { get; set; }
     public bool UntActif { get; set; } = true;
+    /// <summary>Écritures reconnues de l'unité (M² = m2, m²…) à la saisie et à l'import.</summary>
+    public string[] UntSynonymes { get; set; } = [];
 }
 
 public class TransformationAutorisee
