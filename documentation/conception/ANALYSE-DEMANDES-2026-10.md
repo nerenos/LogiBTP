@@ -1,0 +1,170 @@
+# Analyse des demandes d'évolution et des anomalies (25/10/2026)
+
+Liste reçue le 25/10/2026 : bugs et améliorations à analyser et découper avant développement. Pour chaque point :
+ce qui existe dans le code, ce qui manque, les dépendances et une taille indicative. Les points sont ensuite
+regroupés en lots ordonnés (§ 3). Aucun code n'a été modifié.
+
+Tailles : **S** moins d'une demi-journée, **M** une à deux journées, **L** trois à cinq journées, **XL** plus d'une
+semaine (à redécouper). Repères : `B` anomalie, `A` amélioration, `E` à étudier.
+
+## 1. Anomalies
+
+| Réf. | Anomalie | Constat dans le code | Correction proposée | Taille |
+|---|---|---|---|---|
+| B1 | Exécution : « écran pas encore disponible » à l'ouverture d'un ordre depuis une liste | `estTypeDocument` (`client/src/app/listes.js:47`) ne reconnaît que `^[VAS]_` : les types E_ (ordres) et T_ (sous-traitance) passent à `ficheDeLigne`, qui ne trouve rien, d'où le message de `Application.ouvrirElement` (`application.js:334`). Les listes de la sous-traitance (`st_ao`, `st_commandes`, `st_factures`) ont le même défaut. | Reconnaître toutes les familles de documents (liste des familles du module Document plutôt qu'une expression en dur), test Vitest sur `urlElement`. | S |
+| B2 | Fiche chantier : l'onglet Fil rétrécit la vue et l'impose aux autres onglets | `FilCrm` ajoute la classe `crm-fil-hote` (largeur max. 52rem, centrée : `styles.css:390`) au conteneur reçu, qui est le `.fiche-corps` commun à tous les onglets (`crm/fil.js:34`), sans jamais la retirer. | Créer un sous-conteneur `crm-fil-hote` dans le corps de l'onglet (solution propre ; retirer la classe au changement d'onglet n'est qu'un palliatif). | S |
+| B3 | Planning : la tâche n° 50 n'apparaît pas sur la ligne de S04967 (vue Atelier par jour, filtre Atelier) mais apparaît avec le filtre Fabrication bois | Le serveur développe bien les sous-services (`ServicesDeAsync`) ; en regroupement RESSOURCE, une ressource n'est rangée que sous son service **principal** (`service_membre.sme_principal`, `SpecialisationPlanningBtp.RessourcesAsync`) et les barres d'une ressource sans ligne ne s'affichent pas. Pistes : service principal de S04967 absent ou différent de son service d'affectation, ligne de service filtrée côté client, service de la tâche. | À reproduire sur la base (service principal de S04967, `tac_srv_id` de la tâche 50, définition de la vue), puis cas de test serveur. | M |
+| B4 | Planning, équipes : sur E001, 3 ressources de la vue des ressources sont masquées par les filtres alors qu'aucun filtre n'est posé | `choisirRessources` garde les « sélections masquées » et des filtres d'affichage mémorisés ; probable filtre resté dans les préférences ou ressources hors du service de l'équipe. | À reproduire avec E001, corriger le compteur ou le filtre, test du composant. | S-M |
+| B5 | Fiche salarié : le service n'est pas celui des modules Exécution et Planning | Le référentiel `service` / `service_membre` est déjà dans le cœur (`db/193`, page `/parametres/services`) ; mais la fiche salarié saisit `sal_service`, texte libre à 4 valeurs en dur (`fiches/definitions.js:54`), lu encore par `ExecutionBtp.cs:244`, `MagasinBtp.cs:50` et `db/130` (type de MO). Le planning lit le service principal de `service_membre`. Deux vérités. | Champ géré « Service principal » dans la fiche (lecture et écriture de `service_membre` par `SpecialisationFicheBtp`, comme les champs gérés), `sal_service` déduit ou supprimé, lecteurs repris, vues de liste. | M |
+| B6 | Bibliothèque, composition des ouvrages : pas de pied, la liste des natures ne marche pas, colonnes non choisissables, pas de panneau de détail | `FicheElement.#composition` (`fiche-element.js:203`) crée un `EditeurDevisBtp` nu : sans les référentiels que la page document lui fournit (natures), sans `GestionVuesDocument`, sans `PanneauxBtp` ni `Disposition` ; le mode de calcul est un `<select>` simple (contraire à la règle des combos). | Factoriser avec la page document : référentiels, vues de colonnes (vue par défaut « composition »), panneau de détail des lignes en dock ; pied de la composition à afficher ou à exclure clairement (un ouvrage n'a pas de postes de pied). | M-L |
+| B7 | Paramètres : largeur limitée | `.page-parametres { max-width: 64rem }` (`client/src/styles.css:63`). | Supprimer la limite (les tableaux restent à la largeur de leur contenu). | S |
+
+## 2. Améliorations, par module
+
+### 2.1 Ressources
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A1 | Onglet Habilitations du salarié en tableau | Déjà un `<table>` simple (`ressources-ui.js:42`). | Présentation `.tableau-compact` (en-têtes figés, champs pleine cellule, boutons dans `.cellule-boutons`) comme le Pointage. | — | S |
+| A2 | Onglet Dotations : totaux et filtre de période (1 mois, 6 mois, 1 an) | `rendreDotationsSalarie` (`stock/magasin.js:275`) lit tout depuis 2000 ; l'API `dotations` accepte `du` / `au`. | Ligne de totaux (sorti, rendu, rebut, doté), boutons de période filtrant les mouvements (le doté reste au jour), préférence de période. | — | S |
+| A3 | Affectations du matériel au salarié (direct ou par un autre matériel) et EPI immatriculés comme du matériel | Aucune affectation de matériel (`mat_chantier` texte libre) ; EPI = articles de stock dotés. | Onglet « Matériel affecté » du salarié, alimenté par A7 ; EPI immatriculé = matériel de type EPI (A5). | A5, A7 | M |
+| A4 | « Habilitations à surveiller » → entretiens et visites | Menu, page et service (`menus.js:21`, `pages/habilitations.js`, `Ressources.cs:125`). | Libellé « Habilitations, entretiens et visites à surveiller » ; contenu complété par les échéances d'entretien de A9. | A9 pour le contenu | S |
+| A5 | Matériel : type, marque, modèle, n° de série, immatriculation, dates d'entrée, de sortie, de mise en service, fin de garantie, énergie, poids et dimensions | Marque et n° de série déjà déclarés dans la fiche (`mat_marque`, `mat_numero_serie`) ; famille en liste en dur (`mat_famille`) ; date d'achat. | Colonnes `mat_*` (`ALTER TABLE` du cœur), type de matériel relié à la liste paramétrable A23 (remplace `mat_famille`), groupes de la fiche, vues de liste. | A23 | M |
+| A6 | Matériel en location : tiers, commande, fin de location | Rien. | Groupe Location : loueur (personne de l'annuaire), commande fournisseur liée (document A_COMMANDE), fin de location ; alerte de fin de location (notification). | Notifications | S-M |
+| A7 | Gestion des affectations (salarié, intérimaire, sous-traitant, autre matériel) avec historique | Le planning affecte des ressources à des tâches (`pla_affectation`), sans affectation durable. | Table `materiel_affectation` datée (début, fin, cible typée, matériel porteur), règle de non-chevauchement répliquée JS ↔ C# avec jeu, onglet Affectations du matériel et du salarié, petit outillage dans un camion (matériel porteur : le contenu suit le porteur). | A5 | L |
+| A8 | Chantier de suivi des coûts du matériel et ordre d'entretien (opérations, pièces du stock) | Modèle déjà en place pour les salariés : chantier de dotation `sal_cha_dotation_id` (`db/219`) ; ordres = famille E du module Document (`019h`, types E_OE, E_PO, E_DAP) ; sorties de stock vers un chantier (magasin). | Chantier de matériel (`mat_cha_id`, créé à la première imputation, type MATERIEL de A20), nouveau type d'ordre E_ENTRETIEN (lignes = opérations et pièces, sortie du stock à la validation par `MouvementsStockBtp`), coûts (entretien, réparation, pièces, consommables, carburant) par natures sur ce chantier. | A20, modules Exécution et Stock | L-XL |
+| A9 | Historique des compteurs avec événements et entretiens | `mat_heures`, `mat_heures_revision` (valeurs uniques). | Table `materiel_compteur` (date, valeur, unité h / km, source), événements (panne, sinistre, contrôle VGP) et entretiens liés à A8, échéances d'entretien par compteur ou par date (règle répliquée avec jeu), alimente A4. | A8 | L |
+
+### 2.2 Tarifs fournisseurs
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A10 | Ajout manuel de tarifs depuis la fiche fournisseur | Onglet Tarifs de la fiche personne en lecture seule (`fiche-annuaire.js:323`) ; tarifs saisis dans la fiche élément (`tarif_fournisseur`, module Bibliothèque). | Saisie dans l'onglet du fournisseur (élément par combo, ajout, modification, retrait). | A11 | M |
+| A11 | Prix public, unité d'achat, remises 1 et 2, PA, réf. et libellé fournisseur, délai, code-barres | `tarif_fournisseur` : réf., libellé, unité, prix, période, principal, lien. | Colonnes `tfo_prix_public`, `tfo_remise1`, `tfo_remise2`, `tfo_delai`, `tfo_code_barre` ; PA = prix public × (1 − r1) × (1 − r2) (ou saisi) dans `calcul.js` ↔ `CalculElement.cs` avec un cas dans `01_calcul.json` ; scénarios de PA à revoir. | Module Bibliothèque (règles répliquées) | M |
+| A12 | Import CSV à format fixe | Module Import : devis OptimBTP seulement. | Format fixe documenté, aperçu, contrôle (élément par code, réf. fournisseur ou code-barres), création ou mise à jour, rapport ; formats personnalisés plus tard par le module Import. Question : module « Tarifs fournisseurs » à part (souhaitable, il grossira : catalogues, remises par famille) ou extension de la Bibliothèque. | A11 | M-L |
+
+### 2.3 Annuaire
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A13 | Photo ou logo des personnes et individus, repris par le salarié et le compte | Modèle : image d'élément `ele_image_ged` (GED) ; rien sur `personne` ni `individu`. | `per_image_ged`, `ind_image_ged` (document GED), vignette dans l'entête des fiches, la fiche salarié (par `sal_ind_id`) et Mon compte. | GED | M |
+| A14 | Assujetti à la TVA, type de tiers pour la facture électronique, chargé d'affaires | Facturation électronique : format, plateforme, adresse, routage, Chorus Pro (`070`). | `per_assujetti_tva`, type de tiers FE (B2B, B2C, B2G, international : à préciser avec le futur module Facturation électronique), `per_cli_charge_ind_id` (individu de notre société). | Module Facturation électronique (TODO) | S-M |
+| A15 | Mode de règlement et délai de paiement distincts client et fournisseur | Un seul couple `per_mode_reglement`, `per_delai_paiement`, options en dur. | `per_cli_*` et `per_fou_*` (reprise de l'existant dans les deux), lus par le choix de la condition du document (`SpecialisationReglementBtp` / échéancier) selon la famille, listes reliées à A22. | A22 | M |
+| A16 | Fournisseur : TVA intracommunautaire | Catégories de TVA du module Comptabilité (INTRACOM, comportement I). | Case ou catégorie de TVA par défaut du fournisseur, proposée sur ses pièces d'achat. | Module Comptabilité | S |
+| A17 | Activités multiples avec liste hiérarchique paramétrable (TP › démolition, terrassement, VRD ; gros œuvre › génie civil, maçonnerie…) | Corps d'état du sous-traitant en texte libre (`per_st_corps_etat`). | Table `activite` à deux niveaux (comme `service`), colonne `per_activites` (tableau, colonne multivaluée `ARRAY` du module Liste pour filtrer), saisie par `choixMultiple`, page de paramétrage. | Module Liste (colonnes ARRAY : existant) | M |
+
+### 2.4 Bibliothèque
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A18a | Mots-clés de recherche (domino = sucre, connecteur rapide…) | Recherche sur code et libellé. | `ele_mots_cles` (tableau), pris par la recherche de la liste et par l'appel F3. | Module Liste (recherche répliquée JS ↔ C#) | S-M |
+| A18b | Unités globales : décimales par défaut et synonymes (M² = M2, m2, m²) | Table `unite` avec `unt_precision_qte` (module Document) ; pas d'écran dédié repéré. | `unt_synonymes`, normalisation à la saisie et à l'import (OptimBTP, CSV de A12), page de paramétrage. | Module Import | M |
+| A18c | Code-barres global | Rien. | `ele_code_barre` (unique par bibliothèque), recherche ; codes-barres fournisseur en A11. | — | S |
+| A18d | Type Texte pour les textes des lignes et les textes d'édition | Types ARTICLE, OUVRAGE, ENSEMBLE, POSTE_PIED ; textes d'édition par type de document (`/parametres/documents`). | Type TEXTE (libellé HTML seul), inséré comme ligne de texte (F3, glisser) et proposé dans l'introduction et la conclusion de l'entête. | Module Document (types de lignes) | M |
+| A18e | Délai de livraison global | Délai par fournisseur (`per_fou_delai_livraison`) et par article et dépôt (Stock, lot 3). | `ele_delai_livraison`, ordre de priorité à fixer avec le délai du tarif (A11) et du stock. | A11, Stock | S |
+| A18f | Description technique en HTML | Notices techniques en GED. | `ele_description_html` (champ `html` nettoyé par `NettoyerHtml`), variable d'édition. | — | S |
+| A18g | Lien vers les ouvrages qui utilisent l'élément | Composition en JSONB (`ele_composition`). | Vue ou index des composantes (élément → ouvrages), lien qui ouvre la liste filtrée. | — | M |
+| A18h | Lien vers les lignes de documents d'achat de l'article (état en cours, période) | Lien des lignes `lig_art_id`. | Vue de liste « Achats de l'article » (lignes, document, état, date), lien depuis la fiche avec filtres. | Module Liste | M |
+
+### 2.5 Fiches et listes
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A19a | Précédent / suivant dans les fiches ouvertes depuis une liste | Retour à la liste (`LISTE_PAR_TYPE`, `routeur.retour`) ; aucune mémoire de l'ordre des lignes. | La liste confie la suite ordonnée des identifiants (page courante ou curseur) à la fiche (`sessionStorage` par fenêtre), boutons ◀ ▶ et raccourcis déclarés ; contrôle des modifications non enregistrées avant de changer. | Modules Liste et Fiche, raccourcis | M |
+| A19b | Mise en sommeil (avant archivage), masquée par défaut dans les listes | Chaque table a son propre « actif » (`sal_actif`, `per_actif`, `ele_actif`…) ; services et équipes « en sommeil » = inactifs. | Notion commune du module Fiche : état d'usage ACTIF / NE_PLUS_UTILISER / SOMMEIL (colonne propre à chaque type, déclarée dans la définition), filtre de la définition des vues (sommeil exclu par défaut), contrôles des combos (une valeur « ne plus utiliser » n'est plus proposée en nouvelle saisie). Reprise des colonnes « actif » existantes. | Modules Fiche et Liste, toutes les fiches du cœur | L |
+| A19c | « Ne plus utiliser » pour terminer les documents en cours avant la mise en sommeil | — | Inclus dans A19b (état intermédiaire). | A19b | — |
+
+### 2.6 Documents
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A24a | Date de livraison par ligne, reprise de l'entête par défaut | `ent_date_livraison` et `ent_date_besoin` (Stock, lot 3). | `lig_date_livraison` (module Document), défaut de l'entête et suivi d'un changement de l'entête, colonne, prise en compte par la projection du stock (`projection.js` ↔ `ReglesProjection.cs`, jeu `04`). | Module Stock (règles répliquées) | M |
+| A24b | Boutons Aperçu, Envoyer, Fermer en icônes seules, tout à droite | Barre de `PageDocument` (`pages/document.js:48`). | Icônes avec libellé en bulle, groupe calé à droite. | — | S |
+| A24c | Enregistrer, Valider, Transformer réunis en un bouton à flèche (clic = enregistrer), placé avant Fermer | Boutons séparés, plus Approuver, Envoyer, Validé par le tiers, Rejeté, N°, Dévalider, Annuler par avoir. | Bouton partagé avec menu (composant du socle réutilisable), états actifs repris de la mise à jour actuelle, raccourcis inchangés. | Socle (nouveau composant) | M |
+| A24d | Demandes de prix regroupées en lot pour l'envoi et le choix du fournisseur | Lot de consultation (`ent_consultation`, bouton 📨 sur A_DEVIS) et comparatif des offres (`/consultation/comparatif`, fait pour la sous-traitance) ; envoi par courriel document par document. | Envoi groupé du lot (un courriel par fournisseur, module Mail), comparatif ouvert aux demandes de prix, choix du fournisseur retenu → transformation en commande et autres offres closes (statut). | Modules Mail et Sous-traitance (comparatif) | M-L |
+| A24e | Commande fournisseur : n° et date de l'accusé de réception (ARC), pièce jointe en GED | Rien. | `ent_arc_numero`, `ent_arc_date`, catégorie GED `arc`, bloc de l'entête ; la date d'ARC peut remplacer la livraison prévue. Reconnaissance des ARC reçus par courriel (module Mail, lot 4) en option. | GED, Mail | S-M |
+| E1 | Poste de travaux | Cité dans les champs OptimBTP non repris (TODO Import). | À étudier : mis dans TODO. | — | — |
+
+### 2.7 Cœur (structure)
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A20 | Type de chantier pour les listes (chantier, dépôt, matériel, salarié…) | Drapeaux `cha_depot`, `cha_stock_tenu`, `cha_interne`, chantiers de dotation (`sal_cha_dotation_id`). | `cha_type` (CHANTIER, DEPOT, INTERNE, DOTATION, MATERIEL) cohérent avec les drapeaux (contrainte ou dérivation), colonne et segments des listes. | Stock, Pointage | M |
+| A21 | Chantier de dotation clos seulement à la mise en sommeil du salarié | Chantier créé à la première sortie (`db/219`). | Règle de statut : jamais clos tant que le salarié n'est pas en sommeil, clos à la mise en sommeil (si plus rien n'est doté, sinon alerte). | A19b, A20 | S |
+| A25 | Projet : priorité et évaluation paramétrables, estimation (dates, montant, heures ou jours, adresse et zone de déplacement), informations client (saisie libre, personne, prospect), métreur, responsable = individu | `prj_responsable` texte, `prj_montant_estime`, dates de remise et de décision, tiers. | Colonnes `prj_*`, listes paramétrables (A22), responsable et métreur en individus (combo `individusStructure`), prospect = tiers provisoire de l'annuaire (`creerTiersProvisoire`), zone de déplacement (table du Pointage). | A22, Pointage (zones) | M-L |
+| A26 | Chantier : zone de déplacement, code analytique, dates prévues et réelles de travaux, chargé d'affaires, conducteur, chef d'équipe | `cha_date_ouverture`, `cha_date_fin_prevue`, `cha_conducteur_ind_id`, `cha_contact_ind_id` ; zones par chantier et agence dans le Pointage (`poi_zone_chantier`). | Colonnes `cha_*`, individus de notre société, affichage de la zone du Pointage dans la fiche, code analytique repris par l'export comptable (module Comptabilité, lot 3 : à ajouter aux écritures si Sage l'attend). | Comptabilité, Pointage | M |
+| A27 | Chantier et marché : lien vers les échéances et règlements ; marché : lien vers les prestations de sous-traitance | Page `/reglements?sens=&tiers=` (filtre par tiers) ; onglet Gestion du marché (réglé / reste) ; marchés de sous-traitance liés par `mar_marche_vente_id`. | Filtre par chantier et par marché de la page des règlements, liens de la fiche ; liste des marchés et commandes de sous-traitance du marché de vente. | Module Règlements | S-M |
+| A28 | Bouton retour dans l'interface | `routeur.retour`, bouton ✕ Fermer des fiches et documents. | Bouton ◀ du bandeau (historique de la fenêtre), raccourci déclaré. | Module Navigation | S |
+
+### 2.8 Pointage
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A29 | Restaurants liés aux personnes (« non trouvé » si absent), proposés d'abord près du chantier, avantage en nature selon l'agence (modifiable par le RH dans les rubriques) | Rien sur les restaurants ; rubriques de paie par profil (`paie.js` ↔ `ReglesPaie.cs`), agences des salariés, zones des chantiers. | Restaurants = tiers de l'annuaire (relation RESTAURANT, adresse géolocalisée), saisie du repas par pointage (bureau et borne), tri par distance au chantier (coordonnées : à prévoir, géocodage ou zone), restaurant « non trouvé » créé en tiers provisoire, règle d'avantage en nature par agence dans les rubriques (jeu `03_paie.json`). | Annuaire, géolocalisation à décider | L |
+| A30 | Choix du chantier ou de l'ordre : liste de tous les chantiers et ordres, champ de code servant aussi de filtre (code, libellé, ville, client…) | Borne : tuiles des chantiers proposés (planning du jour, récents) ; le champ ne lit qu'un numéro d'ordre (`borne.js:286`). | Bouton « Tous », filtre en direct des tuiles sur plusieurs champs, numéro d'ordre toujours reconnu à l'Entrée ; route publique de la borne à étendre (chantiers ouverts et ordres en cours). | — | M |
+
+### 2.9 Paramètres
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A31 | Toutes les listes de paramétrage en tableaux | `.tableau-compact` absent de `parametres-annuaire`, `-bibliotheque`, `-calendriers`, `-crm`, `-editions`, `-ged`, `-modules`, `-raccourcis`, `-ressources`, `-services`, `parametres.js`. | Reprise page par page sur la présentation du Pointage. | — | M |
+| A32 | Propositions de non-conformité, avec saisie d'une raison non prévue | Motifs typés NON_CONFORMITE (`motif`, `db/195`, `/parametres/ressources`), choix obligatoire dans la liste à la borne (`borne.js:493`). | Choix « Autre… » avec saisie libre (bureau et borne), motif conservé en texte. | — | S |
+| A22 | Listes paramétrables des modes de paiement et des conditions de règlement | `condition_paiement` (module Document, `019b`), modes en dur dans la fiche personne et `ent_mode_reglement` texte. | Table `mode_reglement`, écran commun des deux listes, combos de la fiche personne et de l'entête reliés aux tables (TODO « délai de paiement relié à `condition_paiement` » soldé). | A15 | M |
+| A23 | Types de matériel avec regroupement (EPI › chaussures, gants ; VL › fourgon, voiture…) | `mat_famille` en dur. | Table à deux niveaux, paramétrage, reprise des familles existantes. | — | S-M |
+| A33 | Chronos : format et reprise | Documents : compteur par type et exercice (`compteur_numero`), préfixe du type ; fiches de la structure : code calculé dans le navigateur (`prochainCode`) ; tiers T000123. | Paramétrage commun du format (préfixe, année, longueur, remise à zéro) et du dernier numéro (reprise d'un ancien logiciel), calcul côté serveur pour tous. | Module Document (numérotation) | M-L |
+
+### 2.10 Comptabilité, Droits
+
+| Réf. | Demande | Existant | Manque | Dépendances | Taille |
+|---|---|---|---|---|---|
+| A34 | Listes de la comptabilité en tableaux avec saisie | `pages/comptabilite.js` utilise déjà `.tableau-compact` ; saisie dans le plan et les tiers. | À préciser : écrans encore hors présentation commune. | — | S |
+| E2 | Tiers par compte dans le module Liste, avec modification | Page propre `/comptabilite/tiers`. Le module Liste est en lecture seule (règle : requêtes de données en lecture seule). | Saisie dans une liste = nouvelle capacité du module Liste (colonnes éditables, écriture par la fiche). À étudier : utile ailleurs (tarifs, paramètres). | Modules Liste et Fiche | L |
+| A35 | SSL activé sur la base | TLS seulement pour une base sur une autre machine (`hostssl`, `compose.distant.yml`, `installation certificat base`) ; réseau Docker local et base de développement sans TLS. | TLS toujours actif (certificat de l'autorité LogiBTP pour le conteneur local aussi), `SSL Mode=Require` ou `VerifyFull` par défaut, `hostssl` seulement. | Module Installation | M |
+| A36 | « Aucun chiffrement GSS (Kerberos) : mot de passe transmis sur le réseau » | Connexion : `GSS Encryption Mode=Disable` ; authentification `scram-sha-256` (`ConfigurationPostgres.cs`). | Avec SCRAM, le mot de passe ne circule jamais en clair (défi et réponse) ; le message vient de l'absence de chiffrement de la connexion. GSS est l'alternative Kerberos au TLS (domaine Active Directory requis) : inutile ici. A35 fait disparaître le risque (données en clair) ; vérifier qu'aucune règle `md5` ou `password` ne subsiste. | A35 | S |
+
+### 2.11 Ouvrages fabriqués (à étudier)
+
+E3 : stocker les ouvrages fabriqués par l'atelier et les gérer en stock, ou les acheter déjà fabriqués (lien avec les
+tarifs fournisseurs). Aujourd'hui `ele_gestion = 'STOCK'` vise les articles ; un ouvrage stocké suppose une entrée
+de fabrication (consommation des composantes, valorisation au coût de revient), ce que le module Stock ne fait pas.
+Analyse à faire après les lots Tarifs (A11) et Matériel (A8, qui crée les ordres d'atelier avec pièces du stock).
+
+## 3. Lots de développement proposés
+
+Ordre : anomalies d'abord, puis le transverse dont dépendent les autres lots, puis les modules métier.
+
+| Lot | Contenu | Pourquoi à ce rang | Taille |
+|---|---|---|---|
+| 0 – Anomalies | B1, B2, B7 ; B3 et B4 (reproduction sur la base puis correction) ; B5 (service du salarié relié à `service_membre`) ; B6 (composition des ouvrages) | Bloquants ou gênants au quotidien, sans dépendance. B5 et B6 peuvent faire un lot 0b. | L |
+| 1 – Présentation | A1, A2, A4 (libellé), A31, A34, A24b, A24c, A28, A32 | Petits points d'interface, un seul passage sur les styles et les barres. | L |
+| 2 – Référentiels paramétrables | A22 (modes et conditions), A23 (types de matériel), A17 (activités), listes Priorité et Évaluation des projets, A18b (unités et synonymes), A33 (chronos) | Prérequis des lots Annuaire, Matériel et Structure. | L-XL |
+| 3 – Fiches : sommeil et navigation | A19a, A19b/c, A21 | Transverse, touche toutes les fiches et vues ; à faire avant d'ajouter de nouveaux types de fiches. | L |
+| 4 – Annuaire | A13, A14, A15, A16, A17 (saisie) | Dépend du lot 2. | L |
+| 5a – Matériel : fiche | A5, A6, A20 (type de chantier) | Dépend du lot 2. | M-L |
+| 5b – Matériel : affectations | A7, A3 | Dépend de 5a. | L |
+| 5c – Matériel : coûts et entretiens | A8, A9, A4 (contenu) | Dépend de 5a, des modules Exécution et Stock ; à analyser en détail avant (nouveau type d'ordre). | XL |
+| 6 – Structure | A25, A26, A27 | Dépend du lot 2 (listes) et de 5a (type de chantier). | L |
+| 7 – Bibliothèque | A18a, c, d, e, f, g, h | Indépendant ; A18e après le lot 8 si le délai du tarif prime. | L |
+| 8 – Tarifs fournisseurs | A11, A10, A12 | Règles de prix répliquées ; décider d'abord module à part ou Bibliothèque. | L |
+| 9 – Documents | A24a, A24d, A24e | A24d dépend du Mail ; A24a du Stock. | L |
+| 10 – Pointage | A30, puis A29 | A29 demande une décision sur la géolocalisation. | L-XL |
+| 11 – Sécurité de la base | A35, A36 | Indépendant ; à faire avant toute installation chez un client. Peut passer plus tôt. | M |
+
+## 4. À étudier (sans développement pour l'instant)
+
+- E1 Poste de travaux (documents) : dans TODO.
+- E2 Tiers par compte dans le module Liste en saisie : capacité d'édition des listes à concevoir.
+- E3 Ouvrages fabriqués en stock ou achetés tout faits.
+- Lot 5c (entretiens du matériel) : nouveau type d'ordre et imputation des coûts, à analyser avant développement.
+- A29 Restaurants : géolocalisation (géocodage des adresses ou zones) et règle d'avantage en nature à faire valider
+  par le RH.
+- A12 : module Tarifs fournisseurs séparé ou partie de la Bibliothèque.
+- B3, B4 : à reproduire sur la base avant de chiffrer.
+
+## 5. Points ajoutés à TODO.md
+
+EcoTaxe ; secteur du chantier et des documents de vente ; demande de prix « sur ordre » (commandes successives au
+prix de la demande pendant le chantier) ; modules à définir : Analyse, Comptabilité avancée, gestion des risques,
+circuit de validation, édition automatique ; module de sauvegarde (en grande partie couvert par le module
+Installation, lots 3 et 4 : reste la sauvegarde lancée depuis l'application et le changement de la clé de
+construction qui chiffre le `.env`).

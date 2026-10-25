@@ -205,6 +205,29 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
   reste à essayer Let's Encrypt avec de vrais identifiants DNS et les rôles Api / Base sur deux machines ; vérifier le
   coffre de la GED après une restauration (`installation verifier`) ; page d'amorçage sans contrôle DNS du poste.
 
+### Demandes du 25/10/2026
+
+Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conception/ANALYSE-DEMANDES-2026-10.md)
+(anomalies B1 à B7, améliorations, lots 0 à 11). À étudier :
+
+- [ ] Poste de travaux (documents ; champ OptimBTP non repris).
+- [ ] Tiers par compte (comptabilité) dans le module Liste avec saisie : capacité d'édition des listes à concevoir.
+- [ ] Ouvrages fabriqués par l'atelier gérés en stock, ou achetés tout faits (lien avec les tarifs fournisseurs).
+- [ ] EcoTaxe.
+- [ ] Secteur du chantier et des documents de vente.
+- [ ] Demandes de prix d'achat « sur ordre » : déverrouiller plusieurs commandes pendant la durée du chantier en
+  conservant les prix de la demande.
+- [ ] Module Analyse : à définir.
+- [ ] Module Comptabilité avancée : à définir (voir aussi « Module Comptabilité complet »).
+- [ ] Module de gestion des risques : à définir.
+- [ ] Module de circuit de validation : à définir.
+- [ ] Module d'édition automatique : à définir.
+- [ ] Module de sauvegarde : option pour sauvegarder la base, sauvegarde de la GED en fichier compressé, méthode pour
+  changer la clé de chiffrement du `.env` et la clé des données. Déjà fait par le module Installation (lots 3 et 4) :
+  `Sauvegarder-LogiBTP.ps1` (pg_dump, GED et configuration en `.tar.gz`, chiffrement facultatif), rotation de la clé
+  des données (`installation cle-donnees changer`) ; reste : sauvegarde lancée depuis l'application et changement de
+  la clé de construction qui chiffre les valeurs `env:v1:` du `.env`.
+
 ## Interface
 
 - [ ] Remplacer les derniers `<select>` par `creerCombo` : vues de liste, menu de filtre, sélecteurs de thème et de vue
