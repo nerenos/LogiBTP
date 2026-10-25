@@ -1,11 +1,12 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, alerter } from '@logibtp/socle/ui';
-import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES } from '@logibtp/comptabilite';
+import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
 import { api } from '../api.js';
 
 // Module Comptabilité, base, lot 1 (ANALYSE-MODULE-COMPTABILITE.md § 4.1 à 4.3) : plan comptable (`/comptabilite/plan`),
 // tiers indexés par compte (`/comptabilite/tiers`), paramètres, collectifs, catégories et taux de TVA
-// (`/parametres/comptabilite`). Droit : nœud `comptabilite` (modifier pour écrire).
+// (`/parametres/comptabilite`) ; lot 2 : types comptables et types de documents (`/parametres/comptabilite`), ventilation
+// natures × taux de TVA (`/comptabilite/ventilation`). Droit : nœud `comptabilite` (modifier pour écrire).
 
 const CLASSES = {
   1: 'Capitaux', 2: 'Immobilisations', 3: 'Stocks', 4: 'Tiers', 5: 'Financiers', 6: 'Charges', 7: 'Produits', 8: 'Spéciaux', 9: 'Analytique',
@@ -308,14 +309,18 @@ export class PageParametresComptabilite extends PageBase {
     this.titre = 'Paramètres de la comptabilité';
     this.conteneur.innerHTML = `<div class="page-parametres page-comptabilite"><div class="entete-page"><h1 class="page-titre">📒 Paramètres de la comptabilité</h1>
       <span class="ligne"><a href="/comptabilite/plan">Plan comptable</a> · <a href="/comptabilite/tiers">Tiers par compte</a></span></div>
-      <section data-parametres></section><section data-collectifs></section><section data-categories></section><section data-taux></section></div>`;
+      <section data-parametres></section><section data-collectifs></section><section data-types></section><section data-documents></section>
+      <section data-categories></section><section data-taux></section></div>`;
     if (!this.app.enLigne) { this.conteneur.querySelector('[data-parametres]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     try {
-      [this.parametres, this.plan, this.collectifs, this.categories, this.taux] = await Promise.all([
-        api.comptabilite.parametres(), api.comptabilite.plan(), api.comptabilite.collectifs(), api.comptabilite.categoriesTva(), api.comptabilite.tauxTva()]);
+      [this.parametres, this.plan, this.collectifs, this.categories, this.taux, this.types, this.documents] = await Promise.all([
+        api.comptabilite.parametres(), api.comptabilite.plan(), api.comptabilite.collectifs(), api.comptabilite.categoriesTva(), api.comptabilite.tauxTva(),
+        api.comptabilite.typesComptables(), api.comptabilite.typesDocuments()]);
     } catch (e) { this.conteneur.querySelector('[data-parametres]').innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     this.#rendreParametres();
     this.#rendreCollectifs();
+    this.#rendreTypes();
+    this.#rendreDocuments();
     this.#rendreCategories();
     this.#rendreTaux();
   }
@@ -369,6 +374,83 @@ export class PageParametresComptabilite extends PageBase {
       try {
         this.collectifs = await api.comptabilite.enregistrerCollectifs(this.collectifs);
         this.app.message('Collectifs enregistrés', 'succes');
+      } catch (e) { this.app.message(e.message, 'erreur'); }
+    });
+  }
+
+  /** Types comptables en colonnes, une ligne par réglage (journal, comptes par défaut et des postes). */
+  #rendreTypes() {
+    const ecrire = peutModifier(this.app);
+    const ro = ecrire ? '' : 'readonly';
+    const z = this.#section('[data-types]');
+    const t = this.types;
+    const comptes = [
+      ['compte_defaut', 'Compte par défaut', 'Sans clé de ventilation (étape 5)'], ['compte_remise', 'Remise de pied'],
+      ['compte_retenue', 'Retenue de garantie'], ['compte_acompte', 'Acompte déduit'], ['compte_paiement_direct', 'Paiement direct'],
+      ['compte_prorata', 'Prorata'], ['compte_ecart_debit', 'Écart d\'arrondi (débit)'], ['compte_ecart_credit', 'Écart d\'arrondi (crédit)'],
+    ];
+    z.innerHTML = `<h2 class="titre-actions">Types comptables ${ecrire ? '<span><button type="button" class="principal" data-enregistrer>Enregistrer</button></span>' : ''}</h2>
+      <p class="aide">Un type hérite de la ventilation et des comptes de son parent (sous-traitance → achats). Comptes proposés selon le sens du type.
+      · <a href="/comptabilite/ventilation">Ventilation natures × TVA</a></p>
+      <table class="tableau-compact"><thead><tr><th></th>${t.map((x) => `<th>${echapper(x.code)}</th>`).join('')}</tr></thead><tbody>
+      <tr><th>Libellé</th>${t.map((x, i) => `<td><input data-i="${i}" data-c="libelle" size="18" value="${echapper(x.libelle)}" ${ro}></td>`).join('')}</tr>
+      <tr><th>Type parent</th>${t.map((x, i) => `<td data-i="${i}" data-combo="parent"></td>`).join('')}</tr>
+      <tr><th>Sens des comptes</th>${t.map((x, i) => `<td data-i="${i}" data-combo="sens"></td>`).join('')}</tr>
+      <tr><th>Journal</th>${t.map((x, i) => `<td><input data-i="${i}" data-c="journal" size="4" maxlength="10" value="${echapper(x.journal ?? '')}" ${ro}>
+        <input data-i="${i}" data-c="journal_libelle" size="14" value="${echapper(x.journal_libelle ?? '')}" ${ro}></td>`).join('')}</tr>
+      ${comptes.map(([c, l, aide]) => `<tr><th${aide ? ` title="${echapper(aide)}"` : ''}>${echapper(l)}</th>${t.map((x, i) => `<td data-i="${i}" data-combo="${c}">${c === 'compte_retenue'
+        ? `<label class="fiche-option" title="Retenue portée au compte du tiers (C12)"><input type="checkbox" data-i="${i}" data-c="retenue_compte_tiers" ${x.retenue_compte_tiers ? 'checked' : ''} ${ecrire ? '' : 'disabled'}> compte du tiers</label>` : ''}</td>`).join('')}</tr>`).join('')}
+      <tr><th>Actif</th>${t.map((x, i) => `<td><input type="checkbox" data-i="${i}" data-c="actif" ${x.actif ? 'checked' : ''} ${ecrire ? '' : 'disabled'}></td>`).join('')}</tr>
+      </tbody></table>`;
+    z.querySelectorAll('[data-combo]').forEach((td) => {
+      const x = t[Number(td.dataset.i)];
+      const c = td.dataset.combo;
+      const sel = `[data-i="${td.dataset.i}"][data-combo="${c}"]`;
+      const tr = td.parentElement;
+      if (c === 'parent') poserCombo(tr, sel, { options: t.filter((y) => y !== x).map((y) => ({ valeur: y.code, libelle: y.libelle })), valeur: x.parent, lecture: !ecrire }, (v) => { x.parent = v; });
+      else if (c === 'sens') poserCombo(tr, sel, { options: SENS_COMPTE.slice(0, 2), valeur: x.sens, vide: false, lecture: !ecrire }, (v) => { x.sens = v; });
+      else {
+        const options = optionsComptes(this.plan, (cp) => ['LES_DEUX', 'AUCUN', x.sens].includes(cp.sens) || cp.type === 'COLLECTIF');
+        const combo = poserCombo(tr, sel, { options, valeur: x[c], lecture: !ecrire }, (v) => { x[c] = v; });
+        td.prepend(combo);
+      }
+    });
+    z.querySelectorAll('[data-c]').forEach((e) => e.addEventListener('change', () => { t[Number(e.dataset.i)][e.dataset.c] = e.type === 'checkbox' ? e.checked : e.value; }));
+    z.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+      try {
+        this.types = await api.comptabilite.enregistrerTypesComptables(t);
+        this.app.message('Types comptables enregistrés', 'succes');
+        this.#rendreTypes();
+        this.#rendreDocuments();
+      } catch (e) { this.app.message(e.message, 'erreur'); }
+    });
+  }
+
+  /** Type comptable de chaque type de document : vide = celui de sa famille. */
+  #rendreDocuments() {
+    const ecrire = peutModifier(this.app);
+    const z = this.#section('[data-documents]');
+    const l = this.documents;
+    const familles = { V: 'Ventes', A: 'Achats', T: 'Sous-traitance', S: 'Stock', E: 'Exécution' };
+    const options = this.types.map((x) => ({ valeur: x.code, libelle: x.libelle }));
+    z.innerHTML = `<h2 class="titre-actions">Types de documents ${ecrire ? '<span><button type="button" class="principal" data-enregistrer>Enregistrer</button></span>' : ''}</h2>
+      <p class="aide">Type comptable vide : celui de la famille (ventes, achats, sous-traitance) ; seules les pièces comptables sont transférées.</p>
+      <table class="tableau-compact"><thead><tr><th>Famille</th><th>Code</th><th>Type de document</th><th>Pièce comptable</th><th>Type comptable</th></tr></thead><tbody>
+      ${l.map((d, i) => `<tr data-i="${i}"${d.piece_comptable ? '' : ' class="discret"'}><td>${echapper(familles[d.famille] ?? d.famille)}</td><td>${echapper(d.code)}</td>
+        <td>${echapper(d.libelle)}</td><td>${d.piece_comptable ? '✓' : ''}</td><td data-type></td></tr>`).join('')}</tbody></table>`;
+    const modifies = new Map();
+    z.querySelectorAll('tr[data-i]').forEach((tr) => {
+      const d = l[Number(tr.dataset.i)];
+      const combo = poserCombo(tr, '[data-type]', { options, valeur: d.type_comptable, lecture: !ecrire }, (v) => { modifies.set(d.code, { code: d.code, type_comptable: v }); });
+      const famille = d.type_comptable ? null : this.types.find((x) => x.code === d.type_effectif);
+      if (famille) combo.placeholder = `${famille.libelle} (famille)`;
+    });
+    z.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
+      if (!modifies.size) return;
+      try {
+        this.documents = await api.comptabilite.enregistrerTypesDocuments([...modifies.values()]);
+        this.app.message('Types de documents enregistrés', 'succes');
+        this.#rendreDocuments();
       } catch (e) { this.app.message(e.message, 'erreur'); }
     });
   }
@@ -450,6 +532,98 @@ export class PageParametresComptabilite extends PageBase {
         this.app.message('Taux de TVA enregistrés', 'succes');
         this.#rendreTaux();
       } catch (e) { this.app.message(e.message, 'erreur'); }
+    });
+  }
+}
+
+/**
+ * Ventilation : un onglet par type comptable, natures en lignes et taux de TVA en colonnes (« tous taux » = clé de la
+ * nature, ligne « toutes natures » = clé du taux) ; case vide : compte hérité affiché atténué (règle `compteVentilation`
+ * sur les clés en cours de saisie de tous les types), avec l'étape qui a répondu en bulle.
+ */
+export class PageVentilation extends PageBase {
+  icone = '🧮';
+  #modifies = new Set();
+
+  get modifiee() { return this.#modifies.size > 0; }
+
+  async ouvrir() {
+    this.titre = 'Ventilation comptable';
+    this.type = this.requete.type ?? 'VENTE';
+    this.tousComptes = false;
+    const ecrire = peutModifier(this.app);
+    this.conteneur.innerHTML = `<div class="page-parametres page-comptabilite"><div class="entete-page"><h1 class="page-titre">🧮 Ventilation comptable</h1>
+      <span class="ligne"><span data-onglets></span><label class="fiche-option"><input type="checkbox" data-tous> Tous les comptes</label>
+      <label class="fiche-option"><input type="checkbox" data-inactives> Natures inactives</label>
+      ${ecrire ? '<button type="button" class="principal" data-enregistrer>Enregistrer</button>' : ''}</span></div>
+      <p class="aide">Compte d'une ligne sans compte saisi : nature et taux, sinon nature (colonne « Tous taux »), sinon taux (ligne « Toutes natures »),
+      sinon compte par défaut du type comptable ; un type hérite des clés de son parent. Case vide : compte hérité, en gris.
+      · <a href="/parametres/comptabilite">Types comptables</a> · <a href="/comptabilite/plan">Plan comptable</a></p><div data-corps></div></div>`;
+    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const q = (s) => this.conteneur.querySelector(s);
+    try {
+      [this.plan, this.types, this.cles, this.natures, this.taux] = await Promise.all([api.comptabilite.plan(), api.comptabilite.typesComptables(),
+        api.comptabilite.ventilation(), api.comptabilite.natures(), api.comptabilite.tauxTva()]);
+    } catch (e) { q('[data-corps]').innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    if (!this.types.some((t) => t.code === this.type)) this.type = this.types[0]?.code;
+    q('[data-tous]').addEventListener('change', (e) => { this.tousComptes = e.target.checked; this.#rendre(); });
+    q('[data-inactives]').addEventListener('change', (e) => { this.inactives = e.target.checked; this.#rendre(); });
+    q('[data-enregistrer]')?.addEventListener('click', () => this.enregistrer());
+    this.#rendre();
+  }
+
+  urlCourante() { return `/comptabilite/ventilation?type=${encodeURIComponent(this.type ?? '')}`; }
+
+  async enregistrer() {
+    try {
+      for (const type of this.#modifies) this.cles = await api.comptabilite.enregistrerVentilation(type, this.cles.filter((c) => c.type === type && c.compte));
+      this.#modifies.clear();
+      this.app.message('Ventilation enregistrée', 'succes');
+      this.#rendre();
+      return true;
+    } catch (e) { this.app.message(e.message, 'erreur'); return false; }
+  }
+
+  #rendre() {
+    const onglets = this.conteneur.querySelector('[data-onglets]');
+    onglets.innerHTML = this.types.filter((t) => t.actif).map((t) => `<button type="button" data-type="${echapper(t.code)}" class="${t.code === this.type ? 'principal' : ''}">${echapper(t.libelle)}${this.#modifies.has(t.code) ? ' ●' : ''}</button>`).join(' ');
+    onglets.querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => { this.type = b.dataset.type; this.#rendre(); }));
+    const corps = this.conteneur.querySelector('[data-corps]');
+    const type = this.types.find((t) => t.code === this.type);
+    if (!type) { corps.innerHTML = '<p class="aide">Aucun type comptable.</p>'; return; }
+    const ecrire = peutModifier(this.app);
+    const natures = this.natures.filter((n) => n.actif || this.inactives || this.cles.some((c) => c.type === type.code && c.nature === n.code));
+    const taux = this.taux.filter((t) => t.actif);
+    const options = optionsComptes(this.plan, (c) => this.tousComptes || ['LES_DEUX', type.sens].includes(c.sens));
+    const regle = { types: this.types.filter((t) => t.actif).map((t) => ({ code: t.code, parent: t.parent, compte_defaut: t.compte_defaut })), cles: this.cles };
+    const colonnes = [...taux.map((t) => t.code), null];
+    const cellule = (n, x) => `<td data-nature="${echapper(n ?? '')}" data-taux="${echapper(x ?? '')}"></td>`;
+    corps.innerHTML = `<p class="aide">Compte par défaut de « ${echapper(type.libelle)} » : ${echapper(type.compte_defaut ?? (type.parent ? `celui de ${type.parent}` : 'aucun'))}${type.parent ? ` · hérite de ${echapper(type.parent)}` : ''}</p>
+      <table class="tableau-compact"><thead><tr><th>Nature</th>${taux.map((t) => `<th title="${echapper(t.libelle)}">${echapper(t.code)}</th>`).join('')}<th>Tous taux</th></tr></thead><tbody>
+      ${natures.map((n) => `<tr${n.actif ? '' : ' class="discret"'}><th title="${echapper(n.libelle)}">${echapper(n.code)} <small>${echapper(n.libelle)}</small></th>${colonnes.map((x) => cellule(n.code, x)).join('')}</tr>`).join('')}
+      <tr><th>Toutes natures</th>${taux.map((t) => cellule(null, t.code)).join('')}<td></td></tr></tbody></table>`;
+    corps.querySelectorAll('td[data-nature]').forEach((td) => {
+      const nature = td.dataset.nature || null;
+      const tx = td.dataset.taux || null;
+      const cle = this.cles.find((c) => c.type === type.code && (c.nature ?? null) === nature && (c.taux ?? null) === tx);
+      const combo = creerCombo({ options, valeur: cle?.compte ?? '' });
+      combo.readOnly = !ecrire;
+      combo.size = 8;
+      const herite = () => {
+        const r = compteVentilation({ compte: null, nature, taux: tx, type: type.code }, { ...regle, cles: this.cles.filter((c) => c !== cle || !cle.compte) });
+        combo.placeholder = r.compte ?? '';
+        combo.title = r.compte ? `Hérité : ${ORIGINES_VENTILATION[r.origine]}${r.type && r.type !== type.code ? ` (${r.type})` : ''}` : 'Aucun compte';
+      };
+      herite();
+      combo.addEventListener('change', () => {
+        const v = combo.valeurCombo || null;
+        const existante = this.cles.find((c) => c.type === type.code && (c.nature ?? null) === nature && (c.taux ?? null) === tx);
+        if (existante) existante.compte = v;
+        else if (v) this.cles.push({ type: type.code, nature, taux: tx, compte: v });
+        this.#modifies.add(type.code);
+        this.#rendre();
+      });
+      td.append(combo);
     });
   }
 }

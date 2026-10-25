@@ -116,6 +116,37 @@ public sealed class SpecialisationComptabiliteBtp : SpecialisationComptabilite
         .Select(u => $"{u.Nombre} {u.Quoi}")
         .ToList();
 
+    private sealed record NatureSql(string Code, string Libelle, bool Actif);
+
+    public override async Task<List<NatureVentilation>> NaturesAsync(ComptabiliteDbContext db, CancellationToken ct) =>
+        (await db.Database.SqlQuery<NatureSql>($"""
+            SELECT nat_code AS code, nat_libelle AS libelle, nat_actif AS actif FROM nature_element ORDER BY nat_actif DESC, nat_code
+            """).ToListAsync(ct))
+        .Select(n => new NatureVentilation(n.Code, n.Libelle, n.Actif)).ToList();
+
+    private sealed record TypeDocumentSql(string Code, string Libelle, string Famille, string? TypeComptable, string? TypeEffectif, bool PieceComptable);
+
+    // Pièce comptable : règle PIECE_COMPTABLE du type, sinon de la famille (module Document, db/178).
+    public override async Task<List<TypeDocumentComptable>> TypesDocumentsAsync(ComptabiliteDbContext db, CancellationToken ct) =>
+        (await db.Database.SqlQuery<TypeDocumentSql>($"""
+            SELECT t.tyd_code AS code, t.tyd_libelle AS libelle, t.tyd_famille::text AS famille, t.tyd_tco_code AS type_comptable,
+                   f_type_comptable(t.tyd_tco_code, t.tyd_famille) AS type_effectif,
+                   coalesce((SELECT r.rdo_valeur FROM regle_document r WHERE r.rdo_code = 'PIECE_COMPTABLE' AND r.rdo_tyd_id = t.tyd_id AND r.rdo_actif),
+                            (SELECT r.rdo_valeur FROM regle_document r WHERE r.rdo_code = 'PIECE_COMPTABLE' AND r.rdo_famille = t.tyd_famille AND r.rdo_actif),
+                            'false'::jsonb) = 'true'::jsonb AS piece_comptable
+            FROM type_document t WHERE t.tyd_actif ORDER BY t.tyd_famille, t.tyd_code
+            """).ToListAsync(ct))
+        .Select(t => new TypeDocumentComptable(t.Code, t.Libelle, t.Famille, t.TypeComptable, t.TypeEffectif, t.PieceComptable)).ToList();
+
+    public override async Task EnregistrerTypesDocumentsAsync(ComptabiliteDbContext db, List<TypeDocumentSaisi> types, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        foreach (var t in types)
+            if (await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE type_document SET tyd_tco_code = {t.TypeComptable} WHERE tyd_code = {t.Code}", ct) == 0)
+                throw ExceptionMetier.Introuvable($"Type de document {t.Code}");
+        await tx.CommitAsync(ct);
+    }
+
     public override Task<int> TauxDeCategorieAsync(ComptabiliteDbContext db, string categorie, CancellationToken ct) =>
         db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM taux_tva WHERE ttv_ctv_code = {categorie}").FirstAsync(ct);
 }

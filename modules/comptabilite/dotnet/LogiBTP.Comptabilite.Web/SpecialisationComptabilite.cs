@@ -16,6 +16,11 @@ public abstract class SpecialisationComptabilite
     public abstract Task<List<string>> UtilisationsCompteAsync(ComptabiliteDbContext db, string code, CancellationToken ct);
     /// <summary>Type de compte dont un type hérite son compte auxiliaire faute de compte propre (ex. sous-traitant → fournisseur).</summary>
     public virtual string? TypeHerite(string typeCompte) => null;
+    /// <summary>Natures de l'application (clés de ventilation par code).</summary>
+    public abstract Task<List<NatureVentilation>> NaturesAsync(ComptabiliteDbContext db, CancellationToken ct);
+    /// <summary>Types de documents et leur type comptable (surcharge et effectif).</summary>
+    public abstract Task<List<TypeDocumentComptable>> TypesDocumentsAsync(ComptabiliteDbContext db, CancellationToken ct);
+    public abstract Task EnregistrerTypesDocumentsAsync(ComptabiliteDbContext db, List<TypeDocumentSaisi> types, CancellationToken ct);
     /// <summary>Taux de TVA rattachés à une catégorie.</summary>
     public abstract Task<int> TauxDeCategorieAsync(ComptabiliteDbContext db, string categorie, CancellationToken ct);
 }

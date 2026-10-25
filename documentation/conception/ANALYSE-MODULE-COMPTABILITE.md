@@ -16,7 +16,12 @@
 > comptes généraux 6 (comptes déjà en place) au lieu de 8 ; le plan n'est pas converti quand la longueur change (comptes
 > « hors longueur » signalés) ; la mention d'une catégorie est recopiée dans le taux qui n'en a pas (la pièce imprime
 > la mention du taux) ; les comptes de tiers saisis dans la fiche personne ne sont pas normalisés (seulement dans la
-> page des tiers par compte).
+> page des tiers par compte). Lot 2 réalisé le 25/10/2026 (`ventilation.js` ↔ `ReglesVentilation.cs`, jeu
+> `02_ventilation.json`, `094b` ; cœur `db/224` ; page `/comptabilite/ventilation`, types comptables et types de
+> documents dans `/parametres/comptabilite` ; grille des documents) ; écarts : clés désignant natures et taux par leur
+> code ; un type hérite aussi des clés de son parent avant de prendre son propre compte par défaut (la sous-traitance
+> prend les clés « nature » des achats) ; les comptes des natures sont repris une fois puis ne sont plus saisis dans la
+> fiche nature (colonnes conservées dans la table du module Bibliothèque).
 
 ## 1. Note d'origine (résumé)
 

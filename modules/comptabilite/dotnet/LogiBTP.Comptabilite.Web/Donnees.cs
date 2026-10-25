@@ -42,12 +42,44 @@ public class CategorieTvaEntite
     public bool CtvActif { get; set; } = true;
 }
 
+public class TypeComptableEntite
+{
+    public string TcoCode { get; set; } = "";
+    public string TcoLibelle { get; set; } = "";
+    public string? TcoParent { get; set; }
+    public string TcoSens { get; set; } = "VENTE";
+    public string? TcoJournal { get; set; }
+    public string? TcoJournalLibelle { get; set; }
+    public string? TcoCptDefaut { get; set; }
+    public string? TcoCptRemise { get; set; }
+    public string? TcoCptRetenue { get; set; }
+    public bool TcoRetenueCompteTiers { get; set; }
+    public string? TcoCptAcompte { get; set; }
+    public string? TcoCptPaiementDirect { get; set; }
+    public string? TcoCptProrata { get; set; }
+    public string? TcoCptEcartDebit { get; set; }
+    public string? TcoCptEcartCredit { get; set; }
+    public int TcoOrdre { get; set; }
+    public bool TcoActif { get; set; } = true;
+}
+
+public class VentilationEntite
+{
+    public int VcoId { get; set; }
+    public string VcoTcoCode { get; set; } = "";
+    public string? VcoNature { get; set; }
+    public string? VcoTaux { get; set; }
+    public string VcoCptCode { get; set; } = "";
+}
+
 public class ComptabiliteDbContext(DbContextOptions<ComptabiliteDbContext> options) : DbContext(options)
 {
     public DbSet<CompteEntite> Comptes => Set<CompteEntite>();
     public DbSet<ParametreEntite> Parametres => Set<ParametreEntite>();
     public DbSet<CollectifEntite> Collectifs => Set<CollectifEntite>();
     public DbSet<CategorieTvaEntite> CategoriesTva => Set<CategorieTvaEntite>();
+    public DbSet<TypeComptableEntite> TypesComptables => Set<TypeComptableEntite>();
+    public DbSet<VentilationEntite> Ventilations => Set<VentilationEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -56,6 +88,8 @@ public class ComptabiliteDbContext(DbContextOptions<ComptabiliteDbContext> optio
         b.Entity<ParametreEntite>().Property(x => x.PcpValeur).HasColumnType("jsonb");
         b.Entity<CollectifEntite>().ToTable("collectif_tiers").HasKey(x => x.ColCode);
         b.Entity<CategorieTvaEntite>().ToTable("categorie_tva").HasKey(x => x.CtvCode);
+        b.Entity<TypeComptableEntite>().ToTable("type_comptable").HasKey(x => x.TcoCode);
+        b.Entity<VentilationEntite>().ToTable("ventilation_compte").HasKey(x => x.VcoId);
     }
 }
 
@@ -94,3 +128,29 @@ public sealed record TiersCompteDto(long TiersId, string TypeCompte, string? Cod
     string? Compte, bool CompteHerite, string Collectif, string? CollectifCompte, bool CollectifSurcharge, string? Siret, string? TvaIntra, bool Doublon);
 
 public sealed record ResultatGeneration(int Crees, List<string> Refus);
+
+/// <summary>
+/// Type comptable (VENTE, ACHAT, SOUS_TRAITANCE…) : parent dont il hérite la ventilation, sens des comptes proposés,
+/// journal, compte par défaut et comptes des postes particuliers (retenue de garantie : compte distinct, ou compte du
+/// tiers si RetenueCompteTiers, C12).
+/// </summary>
+public sealed record TypeComptableDto(string Code, string Libelle, string? Parent, string Sens, string? Journal, string? JournalLibelle,
+    string? CompteDefaut, string? CompteRemise, string? CompteRetenue, bool RetenueCompteTiers, string? CompteAcompte, string? ComptePaiementDirect,
+    string? CompteProrata, string? CompteEcartDebit, string? CompteEcartCredit, int Ordre, bool Actif);
+
+/// <summary>Clé de ventilation : type comptable × nature et / ou taux de TVA (codes) → compte.</summary>
+public sealed record CleVentilationDto(string Type, string? Nature, string? Taux, string Compte);
+
+/// <summary>Nature de l'application (code, libellé) pour le tableau de ventilation.</summary>
+public sealed record NatureVentilation(string Code, string Libelle, bool Actif);
+
+/// <summary>Type de document et son type comptable : surcharge (TypeComptable) et effectif (celui de sa famille sinon).</summary>
+public sealed record TypeDocumentComptable(string Code, string Libelle, string Famille, string? TypeComptable, string? TypeEffectif, bool PieceComptable);
+
+public sealed record TypeDocumentSaisi(string Code, string? TypeComptable);
+
+/// <summary>Paramétrage de la règle de ventilation pour la saisie : types, clés et type comptable de chaque type de document.</summary>
+public sealed record RegleVentilation(List<TypeVentilationDto> Types, List<CleVentilationDto> Cles, Dictionary<string, string?> TypesDocuments);
+
+public sealed record TypeVentilationDto(string Code, string? Parent, string? CompteDefaut);
+

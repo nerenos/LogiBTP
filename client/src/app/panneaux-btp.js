@@ -523,7 +523,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const c = this.editeur.compteLigne(l);
     const lib = c ? echapper(libelleCompte(c.code, this.editeur.comptes)) : '';
     const info = !c ? 'Aucun compte' : c.herite ? `<u class="compte-herite">${lib}</u> <em>(hérité : ${echapper(c.detail)})</em>` : lib;
-    return `<label class="large" title="Vide : compte hérité de la nature (vente ou achat selon le document), sinon du tiers">Compte comptable
+    return `<label class="large" title="Vide : compte de la ventilation (nature et taux de TVA, nature, taux, puis compte par défaut du type comptable du document)">Compte comptable
       <input data-champ="lig_cpt_code" data-comptes maxlength="20" autocomplete="off" value="${echapper(l.lig_cpt_code ?? '')}" placeholder="${c?.herite ? echapper(c.code) : ''}">
       <small class="compte-libelle">${info}</small></label>`;
   }

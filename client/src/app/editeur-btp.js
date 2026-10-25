@@ -336,10 +336,13 @@ export class EditeurDevisBtp extends EditeurDocument {
 
   /**
    * Compte comptable de la ligne ({ code, herite, origine, detail } ou null) : règle de comptes.js, avec les natures,
-   * la famille du document (vente / achat) et le compte du tiers posés par la page (compteTiers).
+   * les taux de TVA, le type du document et la règle de ventilation posée par la page (regleVentilation).
    */
   compteLigne(l) {
-    return compteLigne(l, { natures: this.natures ?? [], famille: this.definition.type?.tyd_famille ?? 'V', compteTiers: this.compteTiers ?? null });
+    return compteLigne(l, {
+      natures: this.natures ?? [], famille: this.definition.type?.tyd_famille ?? 'V', typeDocument: this.definition.type?.tyd_code ?? null,
+      tauxTva: this.definition.taux_tva ?? [], regle: this.regleVentilation ?? null,
+    });
   }
 
   /** Variables de libellé : données génériques + variables de calcul et de métré. */

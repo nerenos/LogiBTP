@@ -1,0 +1,47 @@
+{
+  "description": "Ventilation (ventilation.js ↔ ReglesVentilation.cs) : compte de la ligne, puis clé nature + taux, nature, taux, puis compte par défaut du type comptable ; à chaque étape le type de la pièce avant son parent (SOUS_TRAITANCE → ACHAT) ; sinon COMPTE_INTROUVABLE.",
+  "parametrage": {
+    "types": [
+      { "code": "VENTE", "parent": null, "compte_defaut": "704000" },
+      { "code": "ACHAT", "parent": null, "compte_defaut": "606000" },
+      { "code": "SOUS_TRAITANCE", "parent": "ACHAT", "compte_defaut": null },
+      { "code": "BOUCLE_A", "parent": "BOUCLE_B", "compte_defaut": null },
+      { "code": "BOUCLE_B", "parent": "BOUCLE_A", "compte_defaut": null }
+    ],
+    "cles": [
+      { "type": "VENTE", "nature": "MAT", "taux": "T20", "compte": "701100" },
+      { "type": "VENTE", "nature": "MAT", "taux": null, "compte": "701000" },
+      { "type": "VENTE", "nature": null, "taux": "AL20", "compte": "704500" },
+      { "type": "VENTE", "nature": "MO", "taux": null, "compte": "" },
+      { "type": "ACHAT", "nature": "ST", "taux": null, "compte": "604000" },
+      { "type": "ACHAT", "nature": null, "taux": "IC20", "compte": "607100" },
+      { "type": "SOUS_TRAITANCE", "nature": null, "taux": "AL20", "compte": "611100" }
+    ]
+  },
+  "cas": [
+    { "nom": "compte saisi sur la ligne", "entree": { "compte": " 708000 ", "nature": "MAT", "taux": "T20", "type": "VENTE" },
+      "attendu": { "compte": "708000", "origine": "LIGNE", "type": null, "erreur": null } },
+    { "nom": "nature et taux", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": "VENTE" },
+      "attendu": { "compte": "701100", "origine": "NATURE_TAUX", "type": "VENTE", "erreur": null } },
+    { "nom": "nature seule (autre taux)", "entree": { "compte": "", "nature": "MAT", "taux": "T10", "type": "VENTE" },
+      "attendu": { "compte": "701000", "origine": "NATURE", "type": "VENTE", "erreur": null } },
+    { "nom": "taux seul (nature sans clé)", "entree": { "compte": null, "nature": "LOC", "taux": "AL20", "type": "VENTE" },
+      "attendu": { "compte": "704500", "origine": "TAUX", "type": "VENTE", "erreur": null } },
+    { "nom": "clé vide ignorée : défaut du type", "entree": { "compte": null, "nature": "MO", "taux": "T20", "type": "VENTE" },
+      "attendu": { "compte": "704000", "origine": "TYPE", "type": "VENTE", "erreur": null } },
+    { "nom": "sans nature ni taux : défaut du type", "entree": { "compte": null, "nature": null, "taux": null, "type": "ACHAT" },
+      "attendu": { "compte": "606000", "origine": "TYPE", "type": "ACHAT", "erreur": null } },
+    { "nom": "sous-traitance : clé nature du parent", "entree": { "compte": null, "nature": "ST", "taux": "AL20", "type": "SOUS_TRAITANCE" },
+      "attendu": { "compte": "604000", "origine": "NATURE", "type": "ACHAT", "erreur": null } },
+    { "nom": "sous-traitance : clé taux du type avant celle du parent", "entree": { "compte": null, "nature": "MAT", "taux": "AL20", "type": "SOUS_TRAITANCE" },
+      "attendu": { "compte": "611100", "origine": "TAUX", "type": "SOUS_TRAITANCE", "erreur": null } },
+    { "nom": "sous-traitance : défaut du parent", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": "SOUS_TRAITANCE" },
+      "attendu": { "compte": "606000", "origine": "TYPE", "type": "ACHAT", "erreur": null } },
+    { "nom": "sans type comptable", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": null },
+      "attendu": { "compte": null, "origine": null, "type": null, "erreur": "COMPTE_INTROUVABLE" } },
+    { "nom": "type inconnu", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": "STOCK" },
+      "attendu": { "compte": null, "origine": null, "type": null, "erreur": "COMPTE_INTROUVABLE" } },
+    { "nom": "parents en boucle", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": "BOUCLE_A" },
+      "attendu": { "compte": null, "origine": null, "type": null, "erreur": "COMPTE_INTROUVABLE" } }
+  ]
+}

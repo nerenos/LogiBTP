@@ -115,6 +115,10 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         var x = await db.Comptes.FindAsync([code], ct) ?? throw ExceptionMetier.Introuvable($"Compte {code}");
         var usages = await specialisation.UtilisationsCompteAsync(db, code, ct);
         if (await db.Collectifs.AnyAsync(c => c.ColCptCode == code, ct)) usages.Insert(0, "collectif d'un type de tiers");
+        if (await db.Ventilations.AnyAsync(v => v.VcoCptCode == code, ct)) usages.Insert(0, "clés de ventilation");
+        if (await db.TypesComptables.AnyAsync(t => t.TcoCptDefaut == code || t.TcoCptRemise == code || t.TcoCptRetenue == code || t.TcoCptAcompte == code
+            || t.TcoCptPaiementDirect == code || t.TcoCptProrata == code || t.TcoCptEcartDebit == code || t.TcoCptEcartCredit == code, ct))
+            usages.Insert(0, "types comptables");
         if (usages.Count > 0) throw ExceptionMetier.Conflit("CPT_UTILISE", $"Compte {code} utilisé ({string.Join(", ", usages)}) : désactivez-le plutôt");
         db.Comptes.Remove(x);
         await db.SaveChangesAsync(ct);
@@ -202,6 +206,113 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         await ControlerComptesExistent(corriges.SelectMany(t => new[] { t.CompteCollectee, t.CompteCollecteeEncaissement, t.CompteDeductible, t.CompteAutoliquidee }), "Taux de TVA", ct);
         await specialisation.EnregistrerTauxAsync(db, corriges, ct);
         return await TauxAsync(ct);
+    }
+
+    // ---- Types comptables et ventilation ----
+
+    private static TypeComptableDto Dto(TypeComptableEntite x) => new(x.TcoCode, x.TcoLibelle, x.TcoParent, x.TcoSens, x.TcoJournal, x.TcoJournalLibelle,
+        x.TcoCptDefaut, x.TcoCptRemise, x.TcoCptRetenue, x.TcoRetenueCompteTiers, x.TcoCptAcompte, x.TcoCptPaiementDirect, x.TcoCptProrata,
+        x.TcoCptEcartDebit, x.TcoCptEcartCredit, x.TcoOrdre, x.TcoActif);
+
+    public async Task<List<TypeComptableDto>> TypesComptablesAsync(CancellationToken ct) =>
+        (await db.TypesComptables.AsNoTracking().OrderBy(x => x.TcoOrdre).ToListAsync(ct)).Select(Dto).ToList();
+
+    private static string? Vide(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>Types existants modifiés (les codes sont déclarés par l'application) ; parent connu, sans boucle.</summary>
+    public async Task<List<TypeComptableDto>> EnregistrerTypesComptablesAsync(List<TypeComptableDto> l, CancellationToken ct)
+    {
+        var existants = await db.TypesComptables.ToDictionaryAsync(x => x.TcoCode, ct);
+        foreach (var t in l)
+        {
+            if (!existants.ContainsKey(t.Code)) throw ExceptionMetier.Introuvable($"Type comptable {t.Code}");
+            if (string.IsNullOrWhiteSpace(t.Libelle)) throw ExceptionMetier.Invalide("TCO_LIBELLE", "Libellé du type comptable obligatoire");
+            if (t.Sens is not ("VENTE" or "ACHAT")) throw ExceptionMetier.Invalide("TCO_SENS", $"{t.Libelle} : sens inconnu");
+            if (Vide(t.Journal) is { Length: > 10 }) throw ExceptionMetier.Invalide("TCO_JOURNAL", $"{t.Libelle} : code journal de 10 caractères au plus");
+            if (Vide(t.Parent) is string p && !existants.ContainsKey(p)) throw ExceptionMetier.Invalide("TCO_PARENT", $"{t.Libelle} : type parent inconnu");
+        }
+        // Boucle : la chaîne d'un type s'arrête sur un type déjà vu alors que le dernier a encore un parent.
+        var parents = existants.ToDictionary(x => x.Key, x => x.Value.TcoParent);
+        foreach (var t in l) parents[t.Code] = Vide(t.Parent);
+        var types = parents.Select(p => new TypeVentilation(p.Key, p.Value, null)).ToList();
+        foreach (var t in l)
+        {
+            var chaine = ReglesVentilation.ChaineTypes(t.Code, types);
+            if (parents.GetValueOrDefault(chaine[^1]) is not null)
+                throw ExceptionMetier.Invalide("TCO_BOUCLE", $"{t.Libelle} : les types parents forment une boucle");
+        }
+        await ControlerComptesExistent(l.SelectMany(t => new[] { t.CompteDefaut, t.CompteRemise, t.CompteRetenue, t.CompteAcompte, t.ComptePaiementDirect,
+            t.CompteProrata, t.CompteEcartDebit, t.CompteEcartCredit }), "Types comptables", ct);
+        foreach (var t in l)
+        {
+            var x = existants[t.Code];
+            x.TcoLibelle = t.Libelle.Trim();
+            x.TcoParent = Vide(t.Parent);
+            x.TcoSens = t.Sens;
+            x.TcoJournal = Vide(t.Journal)?.ToUpperInvariant();
+            x.TcoJournalLibelle = Vide(t.JournalLibelle);
+            x.TcoCptDefaut = Vide(t.CompteDefaut);
+            x.TcoCptRemise = Vide(t.CompteRemise);
+            x.TcoCptRetenue = Vide(t.CompteRetenue);
+            x.TcoRetenueCompteTiers = t.RetenueCompteTiers;
+            x.TcoCptAcompte = Vide(t.CompteAcompte);
+            x.TcoCptPaiementDirect = Vide(t.ComptePaiementDirect);
+            x.TcoCptProrata = Vide(t.CompteProrata);
+            x.TcoCptEcartDebit = Vide(t.CompteEcartDebit);
+            x.TcoCptEcartCredit = Vide(t.CompteEcartCredit);
+            x.TcoActif = t.Actif;
+        }
+        await db.SaveChangesAsync(ct);
+        return await TypesComptablesAsync(ct);
+    }
+
+    public async Task<List<CleVentilationDto>> VentilationAsync(CancellationToken ct) =>
+        await db.Ventilations.AsNoTracking().OrderBy(x => x.VcoTcoCode).ThenBy(x => x.VcoNature).ThenBy(x => x.VcoTaux)
+            .Select(x => new CleVentilationDto(x.VcoTcoCode, x.VcoNature, x.VcoTaux, x.VcoCptCode)).ToListAsync(ct);
+
+    /// <summary>Clés d'un type comptable, liste complète (une clé sans compte est retirée) : nature et taux connus, sans doublon.</summary>
+    public async Task<List<CleVentilationDto>> EnregistrerVentilationAsync(string type, List<CleVentilationDto> l, CancellationToken ct)
+    {
+        if (!await db.TypesComptables.AnyAsync(x => x.TcoCode == type, ct)) throw ExceptionMetier.Introuvable($"Type comptable {type}");
+        var cles = l.Select(c => c with { Type = type, Nature = Vide(c.Nature), Taux = Vide(c.Taux), Compte = Vide(c.Compte) ?? "" })
+            .Where(c => c.Compte != "").ToList();
+        if (cles.Any(c => c.Nature is null && c.Taux is null))
+            throw ExceptionMetier.Invalide("VCO_CLE", "Une clé porte une nature, un taux de TVA ou les deux (sinon : compte par défaut du type)");
+        if (cles.GroupBy(c => (c.Nature, c.Taux)).FirstOrDefault(g => g.Count() > 1) is { } d)
+            throw ExceptionMetier.Invalide("VCO_DOUBLON", $"Même clé deux fois ({d.Key.Nature ?? "toutes natures"} × {d.Key.Taux ?? "tous taux"})");
+        var natures = (await specialisation.NaturesAsync(db, ct)).Select(n => n.Code).ToHashSet();
+        var taux = (await specialisation.TauxAsync(db, ct)).Select(t => t.Code).ToHashSet();
+        if (cles.FirstOrDefault(c => c.Nature is not null && !natures.Contains(c.Nature)) is { } n) throw ExceptionMetier.Invalide("VCO_NATURE", $"Nature inconnue : {n.Nature}");
+        if (cles.FirstOrDefault(c => c.Taux is not null && !taux.Contains(c.Taux)) is { } x) throw ExceptionMetier.Invalide("VCO_TAUX", $"Taux de TVA inconnu : {x.Taux}");
+        await ControlerComptesExistent(cles.Select(c => c.Compte), "Ventilation", ct);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.Ventilations.Where(v => v.VcoTcoCode == type).ExecuteDeleteAsync(ct);
+        db.Ventilations.AddRange(cles.Select(c => new VentilationEntite { VcoTcoCode = type, VcoNature = c.Nature, VcoTaux = c.Taux, VcoCptCode = c.Compte }));
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await VentilationAsync(ct);
+    }
+
+    public Task<List<NatureVentilation>> NaturesAsync(CancellationToken ct) => specialisation.NaturesAsync(db, ct);
+
+    public Task<List<TypeDocumentComptable>> TypesDocumentsAsync(CancellationToken ct) => specialisation.TypesDocumentsAsync(db, ct);
+
+    public async Task<List<TypeDocumentComptable>> EnregistrerTypesDocumentsAsync(List<TypeDocumentSaisi> l, CancellationToken ct)
+    {
+        var types = await db.TypesComptables.Select(x => x.TcoCode).ToListAsync(ct);
+        if (l.FirstOrDefault(t => Vide(t.TypeComptable) is string c && !types.Contains(c)) is { } inconnu)
+            throw ExceptionMetier.Invalide("TCO_INCONNU", $"{inconnu.Code} : type comptable inconnu");
+        await specialisation.EnregistrerTypesDocumentsAsync(db, l.Select(t => t with { TypeComptable = Vide(t.TypeComptable) }).ToList(), ct);
+        return await TypesDocumentsAsync(ct);
+    }
+
+    /// <summary>Paramétrage de la règle de ventilation (saisie des documents : compte hérité des lignes).</summary>
+    public async Task<RegleVentilation> RegleAsync(CancellationToken ct)
+    {
+        var types = (await db.TypesComptables.AsNoTracking().Where(x => x.TcoActif).ToListAsync(ct))
+            .Select(x => new TypeVentilationDto(x.TcoCode, x.TcoParent, x.TcoCptDefaut)).ToList();
+        var documents = (await specialisation.TypesDocumentsAsync(db, ct)).ToDictionary(t => t.Code, t => t.TypeEffectif);
+        return new(types, await VentilationAsync(ct), documents);
     }
 
     // ---- Tiers ----
@@ -306,6 +417,14 @@ public static class Extensions
         g.MapPut("/categories-tva", (List<CategorieTvaDto> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerCategoriesTvaAsync(l, ct));
         g.MapGet("/taux-tva", (ServiceComptabilite s, CancellationToken ct) => s.TauxAsync(ct));
         g.MapPut("/taux-tva", (List<TauxTvaDto> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTauxAsync(l, ct));
+        g.MapGet("/types-comptables", (ServiceComptabilite s, CancellationToken ct) => s.TypesComptablesAsync(ct));
+        g.MapPut("/types-comptables", (List<TypeComptableDto> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTypesComptablesAsync(l, ct));
+        g.MapGet("/ventilation", (ServiceComptabilite s, CancellationToken ct) => s.VentilationAsync(ct));
+        g.MapPut("/ventilation/{type}", (string type, List<CleVentilationDto> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerVentilationAsync(type, l, ct));
+        g.MapGet("/ventilation/regle", (ServiceComptabilite s, CancellationToken ct) => s.RegleAsync(ct));
+        g.MapGet("/natures", (ServiceComptabilite s, CancellationToken ct) => s.NaturesAsync(ct));
+        g.MapGet("/types-documents", (ServiceComptabilite s, CancellationToken ct) => s.TypesDocumentsAsync(ct));
+        g.MapPut("/types-documents", (List<TypeDocumentSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTypesDocumentsAsync(l, ct));
         g.MapGet("/tiers", (ServiceComptabilite s, CancellationToken ct) => s.TiersAsync(ct));
         g.MapPut("/tiers", (List<CompteTiersSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerComptesTiersAsync(l, ct));
         g.MapPost("/tiers/generer", (DemandeGeneration d, ServiceComptabilite s, CancellationToken ct) => s.GenererComptesTiersAsync(d.TypeCompte, ct));

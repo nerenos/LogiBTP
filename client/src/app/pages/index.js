@@ -8,7 +8,7 @@ import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
-import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite } from './comptabilite.js';
+import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite, PageVentilation } from './comptabilite.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
 import { PageParametresStock } from '../stock/parametres.js';
@@ -85,6 +85,7 @@ export const ROUTES = [
   { nom: 'parametres-stock', chemin: '/parametres/stock', page: PageParametresStock, titre: 'Paramètres du stock' },
   { nom: 'comptabilite-plan', chemin: '/comptabilite/plan', page: PagePlanComptable, titre: 'Plan comptable' },
   { nom: 'comptabilite-tiers', chemin: '/comptabilite/tiers', page: PageTiersComptables, titre: 'Tiers par compte' },
+  { nom: 'comptabilite-ventilation', chemin: '/comptabilite/ventilation', page: PageVentilation, titre: 'Ventilation comptable' },
   { nom: 'parametres-comptabilite', chemin: '/parametres/comptabilite', page: PageParametresComptabilite, titre: 'Paramètres de la comptabilité' },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
   { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },

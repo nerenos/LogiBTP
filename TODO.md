@@ -101,13 +101,14 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 ### Comptabilité
 
 Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conception/ANALYSE-MODULE-COMPTABILITE.md)
-(base en trois lots, puis module complet). Lot 1 de la base réalisé (plan, collectifs, comptes des tiers, TVA).
+(base en trois lots, puis module complet). Lots 1 (plan, collectifs, comptes des tiers, TVA) et 2 (types comptables,
+ventilation) de la base réalisés.
 
-- [ ] Base, lot 2 : types comptables Vente / Achat / Sous-traitance (journaux, comptes par défaut et des postes de
-  pied), ventilation nature × TVA → compte (`nat_compte_vente|achat` repris puis retirés de la fiche nature, C7),
-  règle répliquée JS ↔ C# branchée par `definirRegleCompte`.
-- [ ] Base, lot 3 : écritures calculées par le serveur, aperçu et contrôles, export CSV paramétrable (modèle Sage 100
-  à confirmer, C13), lots d'export (§ 6 de l'analyse : M1 à M13).
+- [ ] Lot 2, écarts : clés de ventilation par code de nature et de taux (un code renommé laisse une clé orpheline) ;
+  colonnes `nat_compte_vente|achat` gardées dans la table du module Bibliothèque (plus saisies en ligne, encore dans
+  la démo hors ligne) ; une nouvelle nature n'a pas de compte tant qu'aucune clé ne la vise (compte par défaut du type).
+- [ ] Base, lot 3 : écritures calculées par le serveur, aperçu et contrôles, export CSV paramétrable (modèle Sage 100,
+  C13), lots d'export (§ 6 de l'analyse : M1 à M13).
 - [ ] Lot 1, écarts : un changement de longueur des comptes ne convertit pas le plan (comptes signalés « hors
   longueur ») ; les comptes de tiers saisis dans la fiche personne ne passent pas par `ReglesComptes` (seulement par
   `/comptabilite/tiers`) ; génération filtrée sur les sous-traitants : un sous-traitant aussi fournisseur sans compte

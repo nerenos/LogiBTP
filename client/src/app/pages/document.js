@@ -5,7 +5,6 @@ import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoir
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
-import { estFamilleAchat } from '@logibtp/document';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
@@ -264,6 +263,8 @@ export class PageDocument extends PageBase {
     this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
     this.natures = await s.bibliotheque.natures?.().catch(() => []) ?? [];
     this.comptes = app.enLigne ? await api.comptesComptables().catch(() => []) : [];
+    // Règle de ventilation du module Comptabilité (compte hérité des lignes) ; hors ligne : compte de la nature.
+    this.regleVentilation = app.enLigne ? await api.comptabilite.regle().catch(() => null) : null;
     this.appel = new AppelBibliotheque({
       fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
       bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
@@ -351,25 +352,6 @@ export class PageDocument extends PageBase {
     this.rafraichir();
   }
 
-  /**
-   * Compte du tiers du document (compte client, ou fournisseur pour un achat : fiche personne) : compte hérité des
-   * lignes sans compte ni nature qui en porte un. Relu quand le tiers change.
-   */
-  suivreCompteTiers() {
-    const ed = this.editeur;
-    const tiers = ed?.saisie.document.ent_tiers_id ?? null;
-    if (!ed || tiers === this.tiersCompte) return;
-    this.tiersCompte = tiers;
-    ed.compteTiers = null;
-    if (!tiers || !this.servicesFiche) return;
-    const champ = estFamilleAchat(ed.definition.type?.tyd_famille) ? 'fou_compte' : 'cli_compte';
-    this.servicesFiche.charger('personne', tiers).then((f) => {
-      if (this.editeur !== ed || this.tiersCompte !== tiers) return;
-      ed.compteTiers = f?.valeurs?.[champ] || null;
-      if (ed.compteTiers) { ed.grille.rendre(); this.panneaux?.rendreDetail(this.$('#detail'), this.selection); }
-    }).catch(() => {});
-  }
-
   /** Libération du verrou (changement de document, page quittée, onglet fermé : requête keepalive). */
   async liberer() {
     clearInterval(this.battement);
@@ -415,8 +397,7 @@ export class PageDocument extends PageBase {
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;
-    this.tiersCompte = undefined;
-    this.suivreCompteTiers();
+    this.editeur.regleVentilation = this.regleVentilation;
     this.editeur.surFiltre = () => this.afficherFiltre();
     // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
     this.editeur.surVue = () => {
@@ -450,7 +431,7 @@ export class PageDocument extends PageBase {
         b.classList.toggle('avec-avertissements', !erreurs && avertissements > 0);
       },
     });
-    this.editeur.magasin.abonner(() => { this.suivreCompteTiers(); this.rafraichir(); });
+    this.editeur.magasin.abonner(() => this.rafraichir());
     this.marque = this.editeur.magasin.pile.at(-1);
     this.ecarts = null;
     this.rafraichir();

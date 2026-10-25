@@ -12,7 +12,7 @@
 - `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période ; `063` : postes de pied.
 - `js/src/calcul.js` : `calculerElement`, `prixAchat`, `ratio`, `convertir`, `codeAppel`, `analyserCodeAppel`, `coefficientsEffectifs`, `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`.
 - `js/src/fournisseurs.js` : `FournisseurBibliothequeApi`, `FournisseurBibliothequeMemoire`, `ErreurBibliotheque`, `entreeDepuisLigne`, `SCENARIOS_TOUS`, `DONNEES_TECHNIQUES` (interface commune documentée en tête).
-- `js/ui/referentiels.js` : `GestionReferentiels` ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.
+- `js/ui/referentiels.js` : `GestionReferentiels` (option `sansComptesNatures` : comptes des natures masqués, tenus par l'application) ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.
 - `dotnet/LogiBTP.Bibliotheque` : `CalculElement`, `CoefficientsElement` (sans dépendance web).
 - `dotnet/LogiBTP.Bibliotheque.Web` : `ServiceBibliotheque`, `SpecialisationBibliotheque`, `Donnees.cs` (entités, `BibliothequeDbContext`), `Extensions.cs`.
 

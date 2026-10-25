@@ -603,5 +603,13 @@ export const api = {
     tiers: () => appel('GET', '/comptabilite/tiers'),
     enregistrerTiers: (l) => appel('PUT', '/comptabilite/tiers', l),
     genererTiers: (typeCompte) => appel('POST', '/comptabilite/tiers/generer', { type_compte: typeCompte ?? null }),
+    typesComptables: () => appel('GET', '/comptabilite/types-comptables'),
+    enregistrerTypesComptables: (l) => appel('PUT', '/comptabilite/types-comptables', l),
+    ventilation: () => appel('GET', '/comptabilite/ventilation'),
+    enregistrerVentilation: (type, l) => appel('PUT', `/comptabilite/ventilation/${encodeURIComponent(type)}`, l),
+    regle: () => appel('GET', '/comptabilite/ventilation/regle'),
+    natures: () => appel('GET', '/comptabilite/natures'),
+    typesDocuments: () => appel('GET', '/comptabilite/types-documents'),
+    enregistrerTypesDocuments: (l) => appel('PUT', '/comptabilite/types-documents', l),
   },
 };

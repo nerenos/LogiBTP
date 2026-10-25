@@ -165,8 +165,9 @@ export const MENUS_METIER = [
     code: 'comptabilite', libelle: 'Co&mptabilité', court: 'Compta', droit: 'comptabilite', elements: [
       { code: 'compta-plan', libelle: 'Plan comptable', icone: '📒', url: '/comptabilite/plan', info: 'Comptes généraux, collectifs, TVA : type, sens d\'usage, longueur' },
       { code: 'compta-tiers', libelle: 'Tiers par compte', icone: '🗂', url: '/comptabilite/tiers', info: 'Comptes auxiliaires et collectifs des clients, fournisseurs et sous-traitants' },
+      { code: 'compta-ventilation', libelle: 'Ventilation natures × TVA', icone: '🧮', url: '/comptabilite/ventilation', info: 'Compte des lignes par type comptable, nature et taux de TVA' },
       { separateur: true },
-      { code: 'parametrage-comptabilite', libelle: 'Paramètres : longueur, collectifs, TVA…', icone: '⚙', url: '/parametres/comptabilite', info: 'Longueur des comptes, préfixes, collectifs, catégories et taux de TVA' },
+      { code: 'parametrage-comptabilite', libelle: 'Paramètres : longueur, collectifs, types comptables, TVA…', icone: '⚙', url: '/parametres/comptabilite', info: 'Longueur des comptes, préfixes, collectifs, catégories et taux de TVA' },
     ],
   },
   {
