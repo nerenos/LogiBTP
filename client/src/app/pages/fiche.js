@@ -6,7 +6,7 @@ import { CLASSES_FICHE } from '../fiches/classes.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
-import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees } from '../ressources/ressources-ui.js';
+import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees, rendreAffectations, rendreMaterielAffecte } from '../ressources/ressources-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 import { voisins } from '../suite-liste.js';
 import { api } from '../api.js';
@@ -90,6 +90,8 @@ export class PageFiche extends PageBase {
         habilitations: (corps, p) => rendreHabilitations(corps, { app, ...p }).catch((e) => app.erreur(e)),
         missions: (corps, p) => rendreMissions(corps, { app, annuaire: s.annuaire, ...p }).catch((e) => app.erreur(e)),
         exigees: (corps, p) => rendreHabilitationsExigees(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        affectations: (corps, p) => rendreAffectations(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        materielAffecte: (corps, p) => rendreMaterielAffecte(corps, { app, ...p }).catch((e) => app.erreur(e)),
       } : null,
       surEnregistre: (f, { cree }) => {
         app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });

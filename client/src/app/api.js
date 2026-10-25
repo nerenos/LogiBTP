@@ -371,6 +371,11 @@ export const api = {
     enregistrerTypesHabilitation: (l) => appel('PUT', '/ressources/types-habilitation', l),
     habilitations: (element, id) => appel('GET', `/ressources/habilitations/${element}/${id}`),
     enregistrerHabilitations: (element, id, l) => appel('PUT', `/ressources/habilitations/${element}/${id}`, l),
+    // Affectations du matériel (db/231).
+    affectations: (materiel) => appel('GET', `/ressources/materiels/${materiel}/affectations`),
+    enregistrerAffectations: (materiel, l) => appel('PUT', `/ressources/materiels/${materiel}/affectations`, l),
+    ciblesAffectation: () => appel('GET', '/ressources/affectations/cibles'),
+    materielAffecte: (type, id) => appel('GET', `/ressources/affectations/${encodeURIComponent(type)}/${encodeURIComponent(id)}`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),

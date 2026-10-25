@@ -159,6 +159,7 @@ db/227_listes_valeurs.sql
 db/228_usage_fiches.sql
 db/229_annuaire_complements.sql
 db/230_materiel_complements.sql
+db/231_materiel_affectations.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

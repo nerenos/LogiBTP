@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import {
   ETATS_HABILITATION, MESSAGES_RESSOURCES, etatHabilitation, controlerHabilitation, controlerMissions, finValidite,
 } from './regles.js';
+import { TYPES_AFFECTATION, LIBELLES_AFFECTATION, MESSAGES_AFFECTATIONS, controlerAffectations, affectationA } from './affectations.js';
 
 // Écrans du référentiel des ressources (db/195) : habilitations d'un salarié ou d'un matériel, missions d'un intérimaire,
 // habilitations exigées du conducteur d'un matériel. Enregistrés à part de la fiche (bouton propre), en ligne seulement.
@@ -158,6 +159,79 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
     });
   };
   rendre();
+}
+
+/**
+ * Affectations d'un matériel (lot 5b, db/231) : historique saisi en tableau (type, ressource, du, au, commentaire),
+ * affectation en cours signalée, contrôles du jeu partagé avant l'envoi (affectations.js ↔ ReglesAffectations.cs).
+ */
+export async function rendreAffectations(corps, { app, materiel }) {
+  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Affectations : en ligne seulement.</p>'; return; }
+  const [historique, cibles] = await Promise.all([api.ressources.affectations(materiel), api.ressources.ciblesAffectation()]);
+  const options = (type) => cibles.filter((c) => c.type === type && !(type === 'MATERIEL' && String(c.id) === String(materiel))).map((c) => ({ valeur: c.id, libelle: c.libelle }));
+  let saisie = historique.map((a) => ({ ...a }));
+  let modifiee = false;
+  const rendre = () => {
+    const encours = affectationA(saisie, aujourdhui());
+    corps.innerHTML = `<div class="ressources-affectations"><div class="titre-actions"><h3>Affectations</h3>
+        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Nouvelle affectation (la précédente se termine la veille)')}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
+      <p class="aide">Une affectation à la fois : un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : le petit outillage d'un camion suit le camion).</p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Affecté à</th><th>Ressource</th><th>Du</th><th>Au</th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
+      ${saisie.map((a, i) => `<tr data-i="${i}"><td data-type></td><td data-ressource></td>
+        <td><input type="date" data-c="du" value="${echapper(a.du ?? '')}"></td><td><input type="date" data-c="au" value="${echapper(a.au ?? '')}"></td>
+        <td><input data-c="commentaire" value="${echapper(a.commentaire ?? '')}" size="28" maxlength="200"></td>
+        <td>${i === encours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
+        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette affectation')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Jamais affecté.</td></tr>'}</tbody></table>
+      <p class="connexion-erreur" data-erreur hidden></p></div>`;
+    corps.querySelectorAll('tr[data-i]').forEach((tr) => {
+      const a = saisie[Number(tr.dataset.i)];
+      const type = creerCombo({ options: TYPES_AFFECTATION.map((t) => ({ valeur: t, libelle: LIBELLES_AFFECTATION[t] })), valeur: a.type, vide: false });
+      type.addEventListener('change', () => { a.type = type.valeurCombo; a.ressource = null; modifiee = true; rendre(); });
+      tr.querySelector('[data-type]').append(type);
+      const ressource = creerCombo({ options: options(a.type), valeur: a.ressource ?? '', vide: true });
+      ressource.addEventListener('change', () => { a.ressource = ressource.valeurCombo || null; modifiee = true; corps.querySelector('[data-enregistrer]').disabled = false; });
+      tr.querySelector('[data-ressource]').append(ressource);
+      tr.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { a[c.dataset.c] = c.value || null; modifiee = true; rendre(); }));
+      tr.querySelector('[data-retirer]').addEventListener('click', () => { saisie.splice(Number(tr.dataset.i), 1); modifiee = true; rendre(); });
+    });
+    corps.querySelector('[data-ajouter]').addEventListener('click', () => {
+      const jourCourant = aujourdhui();
+      const veille = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      for (const a of saisie) if (!a.au && a.du && a.du < jourCourant) a.au = veille;
+      saisie.push({ type: 'SALARIE', ressource: null, du: jourCourant, au: null, commentaire: null });
+      modifiee = true;
+      rendre();
+    });
+    corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
+      const erreur = corps.querySelector('[data-erreur]');
+      const fautes = controlerAffectations(materiel, saisie.map((a) => ({ type: a.type, id: a.ressource, du: a.du, au: a.au })));
+      if (fautes.length) { erreur.textContent = fautes.map((f) => `affectation ${f.affectation + 1} : ${MESSAGES_AFFECTATIONS[f.code] ?? f.code}`).join(' · '); erreur.hidden = false; return; }
+      try {
+        saisie = (await api.ressources.enregistrerAffectations(materiel, saisie)).map((a) => ({ ...a }));
+        modifiee = false;
+        app.message('Affectations enregistrées', 'succes');
+        rendre();
+      } catch (e) { erreur.textContent = MESSAGES_AFFECTATIONS[e.code] ?? e.message; erreur.hidden = false; }
+    });
+  };
+  rendre();
+}
+
+/**
+ * Matériel affecté à une ressource (salarié, intérimaire) : en cours (directement, ou porté par un matériel qui lui
+ * est affecté : petit outillage du camion), EPI immatriculés compris ; puis affectations passées.
+ */
+export async function rendreMaterielAffecte(corps, { app, type, id }) {
+  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Matériel affecté : en ligne seulement.</p>'; return; }
+  const d = await api.ressources.materielAffecte(type, id);
+  const lien = (m) => `<a href="/fiche/materiel/${m.id}">🚜 ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
+  corps.innerHTML = `<div class="ressources-materiel-affecte"><h3>Matériel affecté</h3>
+    ${d.courant.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Type</th><th>Immatriculation</th><th>Depuis</th><th>Par</th></tr></thead><tbody>
+      ${d.courant.map((m) => `<tr><td>${'&nbsp;&nbsp;'.repeat(m.niveau)}${lien(m)}</td><td>${echapper(m.type ?? '')}</td><td>${echapper(m.immatriculation ?? '')}</td>
+        <td>${jour(m.du)}</td><td>${m.via ? `porté par ${echapper(m.via)}` : 'direct'}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun matériel affecté aujourd\'hui.</p>'}
+    ${d.historique.length ? `<h3>Affectations passées</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Du</th><th>Au</th></tr></thead><tbody>
+      ${d.historique.map((m) => `<tr><td>${lien(m)}</td><td>${jour(m.du)}</td><td>${jour(m.au)}</td></tr>`).join('')}</tbody></table>` : ''}</div>`;
 }
 
 export { finValidite, jour as jourRessource };

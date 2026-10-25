@@ -79,6 +79,7 @@ export class FicheSalarie extends FicheLogiBTP {
     return [...super.ongletsSpecifiques(),
       ...(r ? [{ code: 'habilitations', titre: 'Habilitations', rendre: (corps) => r.habilitations(corps, { element: 'salarie', id: this.id }) }] : []),
       ...(r && this.valeur('statut') === 'INTERIM' ? [{ code: 'missions', titre: 'Missions', rendre: (corps) => r.missions(corps, { salarie: this.id }) }] : []),
+      ...(r?.materielAffecte ? [{ code: 'materiel-affecte', titre: 'Matériel', rendre: (corps) => r.materielAffecte(corps, { type: this.valeur('statut') === 'INTERIM' ? 'INTERIM' : 'SALARIE', id: this.id }) }] : []),
       ...(this.dotations ? [{ code: 'dotations', titre: 'Dotations', rendre: (corps) => this.dotations(corps, { salarie: Number(this.id) }) }] : []),
       ...(this.compte ? [this.#ongletCompte()] : [])];
   }
@@ -227,7 +228,7 @@ export class FicheMateriel extends FicheLogiBTP {
         r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: 'Contrôles réglementaires' });
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
-    }];
+    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : [])];
   }
 
   rendreInformations(v) {

@@ -1,0 +1,56 @@
+{
+  "description": "Affectations d'un matériel (client/src/app/ressources/affectations.js ↔ ReglesAffectations.cs) : une affectation datée (du, au facultatif = en cours) à un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; contrôle d'une saisie (type, dates, matériel lui-même, chevauchement : une seule affectation à la fois, la seconde des deux est signalée), affectation à une date. Dates ISO comparées en texte, identifiants comparés en texte.",
+  "controles": [
+    {
+      "nom": "historique valable : périodes successives, la dernière en cours",
+      "materiel": "7",
+      "affectations": [
+        { "type": "SALARIE", "id": "12", "du": "2026-01-05", "au": "2026-03-31" },
+        { "type": "MATERIEL", "id": "3", "du": "2026-04-01", "au": null }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "type inconnu, date manquante, fin avant le début",
+      "materiel": "7",
+      "affectations": [
+        { "type": "CHANTIER", "id": "5", "du": "2026-01-05", "au": null },
+        { "type": "SALARIE", "id": "12", "du": null, "au": "2026-02-01" },
+        { "type": "INTERIM", "id": "40", "du": "2026-03-10", "au": "2026-03-01" }
+      ],
+      "attendu": [{ "code": "AFF_TYPE", "affectation": 0 }, { "code": "AFF_DATE", "affectation": 1 }, { "code": "AFF_DATE", "affectation": 2 }]
+    },
+    {
+      "nom": "matériel affecté à lui-même",
+      "materiel": "7",
+      "affectations": [{ "type": "MATERIEL", "id": "7", "du": "2026-01-05", "au": null }],
+      "attendu": [{ "code": "AFF_SOI", "affectation": 0 }]
+    },
+    {
+      "nom": "chevauchement : une période en cours puis une autre, le même jour de fin et de début",
+      "materiel": "7",
+      "affectations": [
+        { "type": "SALARIE", "id": "12", "du": "2026-01-05", "au": null },
+        { "type": "SOUS_TRAITANT", "id": "88", "du": "2026-02-01", "au": "2026-02-28" },
+        { "type": "SALARIE", "id": "13", "du": "2026-02-28", "au": "2026-03-15" }
+      ],
+      "attendu": [{ "code": "AFF_CHEVAUCHEMENT", "affectation": 1 }, { "code": "AFF_CHEVAUCHEMENT", "affectation": 2 }]
+    },
+    {
+      "nom": "identifiant manquant",
+      "materiel": "7",
+      "affectations": [{ "type": "SALARIE", "id": "", "du": "2026-01-05", "au": null }],
+      "attendu": [{ "code": "AFF_CIBLE", "affectation": 0 }]
+    }
+  ],
+  "a_date": [
+    {
+      "nom": "affectation qui couvre la date, sinon aucune",
+      "affectations": [
+        { "type": "SALARIE", "id": "12", "du": "2026-01-05", "au": "2026-03-31" },
+        { "type": "MATERIEL", "id": "3", "du": "2026-04-01", "au": null }
+      ],
+      "dates": { "2026-01-04": null, "2026-01-05": 0, "2026-03-31": 0, "2026-04-01": 1, "2027-01-01": 1 }
+    }
+  ]
+}

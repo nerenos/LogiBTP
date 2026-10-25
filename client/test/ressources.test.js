@@ -6,6 +6,7 @@ import {
   ajouterMois, etatHabilitation, habilitationsManquantes, controlerHabilitation, controlerMissions, missionEnCours, MESSAGES_RESSOURCES,
 } from '../src/app/ressources/regles.js';
 import { finsPeriodes, periodesDepuisLignes, lignesDepuisPeriodes, controlerEquipe, MESSAGES_EQUIPES } from '../src/app/ressources/equipes.js';
+import { controlerAffectations, affectationA } from '../src/app/ressources/affectations.js';
 
 // Jeux partagés avec ReglesRessources.cs (tests/LogiBTP.Calcul.Tests/RessourcesTests.cs).
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/ressources');
@@ -37,4 +38,12 @@ describe('équipes (jeu partagé)', () => {
   for (const c of j.periodes) it(`aller-retour : ${c.nom}`, () => expect(lignesDepuisPeriodes(periodesDepuisLignes(c.lignes, c.debuts))).toEqual(lignesDepuisPeriodes(c.attendu)));
   for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerEquipe(c.equipe)).toEqual(c.attendu));
   it('chaque code a un libellé', () => { for (const c of j.controles.flatMap((x) => x.attendu)) expect(MESSAGES_EQUIPES[c.code]).toBeTruthy(); });
+});
+
+describe('affectations du matériel (jeu partagé)', () => {
+  const j = jeu('04_affectations.json');
+  for (const c of j.controles) it(`contrôle : ${c.nom}`, () => expect(controlerAffectations(c.materiel, c.affectations)).toEqual(c.attendu));
+  for (const c of j.a_date) {
+    for (const [date, attendu] of Object.entries(c.dates)) it(`${c.nom} : ${date}`, () => expect(affectationA(c.affectations, date)).toBe(attendu));
+  }
 });

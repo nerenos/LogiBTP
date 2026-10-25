@@ -213,6 +213,7 @@ api.MapGroup("").MapModuleComptabilite();
 api.MapModulesServices();
 api.MapListesValeurs();
 api.MapRessources();
+api.MapAffectationsMateriel();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();

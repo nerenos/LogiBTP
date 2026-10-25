@@ -122,4 +122,30 @@ public class RessourcesTests
         Assert.True(ReglesEquipes.Contient(sous, 1, 3));
         Assert.False(ReglesEquipes.Contient(sous, 3, 1));
     }
+    private static AffectationMateriel Affectation(JsonNode a) => new(a["type"]!.GetValue<string>(), a["id"]?.GetValue<string>(), Jour(a["du"]), Jour(a["au"]));
+
+    [Fact]
+    public void Affectations_identiques_au_js()
+    {
+        var j = Jeu("04_affectations.json");
+        foreach (var c in j["controles"]!.AsArray())
+        {
+            var attendu = c!["attendu"]!.AsArray().Select(x => new ErreurAffectation(x!["code"]!.GetValue<string>(), x["affectation"]!.GetValue<int>())).ToList();
+            Assert.Equal(attendu, ReglesAffectations.Controler(c["materiel"]!.GetValue<string>(), c["affectations"]!.AsArray().Select(a => Affectation(a!)).ToList()));
+        }
+        foreach (var c in j["a_date"]!.AsArray())
+        {
+            var affectations = c!["affectations"]!.AsArray().Select(a => Affectation(a!)).ToList();
+            foreach (var (date, attendu) in c["dates"]!.AsObject())
+                Assert.Equal(attendu?.GetValue<int>(), ReglesAffectations.A(affectations, Jour(JsonValue.Create(date))!.Value));
+        }
+    }
+
+    [Fact]
+    public void Materiel_porteur_en_boucle()
+    {
+        var porteurs = new Dictionary<string, string> { ["2"] = "1", ["3"] = "2" };
+        Assert.True(ReglesAffectations.Boucle(porteurs, "1", "3"));
+        Assert.False(ReglesAffectations.Boucle(porteurs, "4", "3"));
+    }
 }

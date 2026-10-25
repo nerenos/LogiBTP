@@ -1,0 +1,126 @@
+using LogiBTP.Domaine.Ressources;
+using LogiBTP.Socle.Web;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+
+namespace LogiBTP.Api.Btp;
+
+/// <summary>Affectation saisie d'un matériel : type, ressource, période, commentaire.</summary>
+public sealed record AffectationMaterielSaisie(string Type, string? Ressource, DateOnly? Du, DateOnly? Au, string? Commentaire);
+
+/// <summary>
+/// Affectations du matériel (db/231, lot 5b des demandes du 25/10/2026) : historique d'un matériel (saisi en entier,
+/// contrôlé par <see cref="ReglesAffectations"/> puis réécrit), ressources proposées, matériel affecté à une ressource
+/// aujourd'hui (directement, ou porté par un matériel qui lui est affecté, à toute profondeur) et son historique.
+/// </summary>
+public static class AffectationsMateriel
+{
+    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
+        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
+
+    /// <summary>Libellé d'une ressource affectée (type, identifiant texte).</summary>
+    private const string Libelle = """
+        CASE a.maf_type
+            WHEN 'MATERIEL' THEN (SELECT m.mat_code || ' ' || m.mat_designation FROM materiel m WHERE m.mat_id::text = a.maf_ressource)
+            WHEN 'SOUS_TRAITANT' THEN (SELECT p.per_raison_sociale FROM personne p WHERE p.per_id::text = a.maf_ressource)
+            ELSE (SELECT s.sal_prenom || ' ' || s.sal_nom || coalesce(' (' || s.sal_code || ')', '') FROM salarie s WHERE s.sal_id::text = a.maf_ressource)
+        END
+        """;
+
+    private const string SqlHistorique = $"""
+        SELECT coalesce(json_agg(json_build_object('type', a.maf_type, 'ressource', a.maf_ressource, 'libelle', {Libelle},
+               'du', a.maf_du, 'au', a.maf_au, 'commentaire', a.maf_commentaire, 'maj_par', a.maf_maj_par) ORDER BY a.maf_du), '[]') AS "Value"
+        FROM materiel_affectation a WHERE a.maf_mat_id = @m
+        """;
+
+    /// <summary>Ressources proposées : salariés et intérimaires actifs, sous-traitants actifs, matériels en service.</summary>
+    private const string SqlCibles = """
+        SELECT coalesce(json_agg(json_build_object('type', x.type, 'id', x.id, 'libelle', x.libelle) ORDER BY x.type, x.libelle), '[]') AS "Value"
+        FROM (SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id,
+                     s.sal_nom || ' ' || s.sal_prenom || coalesce(' (' || s.sal_code || ')', '') AS libelle
+              FROM salarie s WHERE s.sal_actif
+              UNION ALL
+              SELECT 'SOUS_TRAITANT', p.per_id::text, p.per_raison_sociale FROM personne p WHERE p.per_actif AND p.per_casquettes ? 'SOUS_TRAITANT'
+              UNION ALL
+              SELECT 'MATERIEL', m.mat_id::text, m.mat_code || ' ' || m.mat_designation FROM materiel m WHERE m.mat_usage = 'A') x
+        """;
+
+    /// <summary>
+    /// Matériel affecté aujourd'hui à une ressource : directement (niveau 0), puis porté par ce matériel (niveaux
+    /// suivants, porteur dans « via ») ; historique des affectations directes passées.
+    /// </summary>
+    private const string SqlRessource = """
+        WITH RECURSIVE courant AS (
+            SELECT maf_mat_id AS mat, maf_type AS type, maf_ressource AS ressource, maf_du AS du
+            FROM materiel_affectation WHERE maf_du <= current_date AND (maf_au IS NULL OR maf_au >= current_date)),
+        porte AS (
+            SELECT c.mat, NULL::int AS via, 0 AS niveau, c.du FROM courant c WHERE c.type = @t AND c.ressource = @r
+            UNION ALL
+            SELECT c.mat, p.mat, p.niveau + 1, c.du FROM courant c JOIN porte p ON c.type = 'MATERIEL' AND c.ressource = p.mat::text WHERE p.niveau < 10)
+        SELECT json_build_object(
+            'courant', coalesce((SELECT json_agg(json_build_object('id', m.mat_id, 'code', m.mat_code, 'designation', m.mat_designation,
+                    'type', coalesce((SELECT l.lva_libelle FROM liste_valeur l WHERE l.lva_liste = 'TYPE_MATERIEL' AND l.lva_code = m.mat_famille), m.mat_famille),
+                    'immatriculation', m.mat_immatriculation, 'du', p.du, 'niveau', p.niveau,
+                    'via', (SELECT v.mat_code || ' ' || v.mat_designation FROM materiel v WHERE v.mat_id = p.via)) ORDER BY p.niveau, m.mat_code)
+                FROM porte p JOIN materiel m ON m.mat_id = p.mat), '[]'),
+            'historique', coalesce((SELECT json_agg(json_build_object('id', m.mat_id, 'code', m.mat_code, 'designation', m.mat_designation,
+                    'du', a.maf_du, 'au', a.maf_au) ORDER BY a.maf_du DESC)
+                FROM materiel_affectation a JOIN materiel m ON m.mat_id = a.maf_mat_id
+                WHERE a.maf_type = @t AND a.maf_ressource = @r AND a.maf_au < current_date), '[]')) AS "Value"
+        """;
+
+    private sealed record Porteur(string Mat, string Ressource);
+
+    /// <summary>Historique complet d'un matériel, contrôlé puis réécrit (une transaction).</summary>
+    public static async Task EnregistrerAsync(LogiBtpContext db, int materiel, List<AffectationMaterielSaisie> saisie, Utilisateur u, CancellationToken ct)
+    {
+        var liste = saisie.OrderBy(a => a.Du).ToList();
+        var regles = liste.Select(a => new AffectationMateriel(a.Type, a.Ressource?.Trim(), a.Du, a.Au)).ToList();
+        var erreurs = ReglesAffectations.Controler(materiel.ToString(System.Globalization.CultureInfo.InvariantCulture), regles);
+        if (erreurs.Count > 0)
+        {
+            throw ExceptionMetier.Invalide(erreurs[0].Code, string.Join(" ; ", erreurs.Select(e => $"affectation {e.Affectation + 1} : {e.Code}").Distinct()));
+        }
+        // Porteurs actuels des autres matériels : un matériel ne peut pas porter, même indirectement, son porteur.
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
+        if (ReglesAffectations.A(regles, aujourdhui) is int i && regles[i].Type == "MATERIEL")
+        {
+            var porteurs = (await db.Database.SqlQueryRaw<Porteur>("""
+                SELECT maf_mat_id::text AS mat, maf_ressource AS ressource FROM materiel_affectation
+                WHERE maf_type = 'MATERIEL' AND maf_du <= current_date AND (maf_au IS NULL OR maf_au >= current_date) AND maf_mat_id <> @m
+                """, new NpgsqlParameter("m", materiel)).ToListAsync(ct)).ToDictionary(p => p.Mat, p => p.Ressource);
+            if (ReglesAffectations.Boucle(porteurs, materiel.ToString(System.Globalization.CultureInfo.InvariantCulture), regles[i].Id!))
+            {
+                throw ExceptionMetier.Invalide("AFF_BOUCLE", "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel");
+            }
+        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM materiel_affectation WHERE maf_mat_id = @m", [new NpgsqlParameter("m", materiel)], ct);
+        foreach (var a in liste)
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO materiel_affectation (maf_mat_id, maf_type, maf_ressource, maf_du, maf_au, maf_commentaire, maf_maj_par)
+                VALUES (@m, @t, @r, @du, @au, @c, @u)
+                """,
+                [new NpgsqlParameter("m", materiel), new NpgsqlParameter("t", a.Type), new NpgsqlParameter("r", a.Ressource!.Trim()),
+                 new NpgsqlParameter("du", a.Du!.Value), new NpgsqlParameter("au", (object?)a.Au ?? DBNull.Value),
+                 new NpgsqlParameter("c", (object?)a.Commentaire?.Trim() ?? DBNull.Value), new NpgsqlParameter("u", u.Code)], ct);
+        }
+        await tx.CommitAsync(ct);
+    }
+
+    public static IEndpointRouteBuilder MapAffectationsMateriel(this IEndpointRouteBuilder api)
+    {
+        var g = api.MapGroup("/ressources");
+        g.MapGet("/materiels/{id:int}/affectations", (int id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlHistorique, ct, new NpgsqlParameter("m", id)));
+        g.MapPut("/materiels/{id:int}/affectations", async (int id, List<AffectationMaterielSaisie> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+        {
+            await EnregistrerAsync(db, id, l, Utilisateur.Depuis(http), ct);
+            return await Json(db, SqlHistorique, ct, new NpgsqlParameter("m", id));
+        });
+        g.MapGet("/affectations/cibles", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlCibles, ct));
+        g.MapGet("/affectations/{type}/{id}", (string type, string id, LogiBtpContext db, CancellationToken ct) =>
+            Json(db, SqlRessource, ct, new NpgsqlParameter("t", type.ToUpperInvariant()), new NpgsqlParameter("r", id)));
+        return api;
+    }
+}
