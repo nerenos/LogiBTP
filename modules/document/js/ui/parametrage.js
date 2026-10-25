@@ -74,7 +74,7 @@ export class ParametrageAffichageDocument {
       <section class="panneau">
         <h2>Étiquettes de lignes</h2>
         <p class="aide">Couleur affichée en début de ligne (pastille de la poignée) ; cliquer la pastille d'une ligne pour la choisir. Chaque document peut ajouter ses étiquettes ou personnaliser celles-ci (entête du document).</p>
-        <table class="table-parametres"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Couleur</th><th>Active</th><th></th></tr></thead>
+        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Couleur</th><th>Active</th><th></th></tr></thead>
         <tbody>${this.etiquettes.map((e, i) => `<tr data-i="${i}">
           <td>${apercu(e.couleur)}</td>
           <td><input data-c="code" value="${echapper(e.code)}" size="14" ${ro}></td>
@@ -88,7 +88,7 @@ export class ParametrageAffichageDocument {
       <section class="panneau">
         <h2>Couleurs des modes de vente</h2>
         <p class="aide">Seconde couleur de la pastille (coin bas droit, coupé en diagonale) : une ligne vendue n'en a pas ; option, pour mémoire, variante et frais annexes ont chacune leur couleur.</p>
-        <table class="table-parametres"><thead><tr><th></th><th>Mode de vente</th><th>Couleur</th></tr></thead>
+        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>Mode de vente</th><th>Couleur</th></tr></thead>
         <tbody>${this.couleurs.map((c, i) => `<tr data-i="${i}"><td>${apercu(this.etiquettes[0]?.couleur, c.couleur)}</td><td>${echapper(c.libelle)}</td>
           <td><input data-couleur type="color" value="${echapper(c.couleur)}" ${ro}></td></tr>`).join('')}</tbody></table>
         ${this.admin ? '<div class="boutons"><button type="button" class="principal" data-enreg-coul>Enregistrer les couleurs</button></div>' : ''}

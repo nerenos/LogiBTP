@@ -89,7 +89,7 @@ export class ParametrageFiche {
       <h3>Champs du logiciel</h3>
       <p class="aide">* obligatoire pour le logiciel (non modifiable) ; cochez pour imposer la saisie d'un champ facultatif.
         RGPD : un champ confidentiel est masqué, affiché à la demande (droit CONFIDENTIEL) et chaque accès est journalisé.</p>
-      <table class="fiche-param"><thead><tr><th>Champ</th><th>Type</th><th>Obligatoire</th><th title="Donnée personnelle : masquée et journalisée">RGPD 🔒</th></tr></thead><tbody>
+      <table class="fiche-param tableau-compact largeur-contenu"><thead><tr><th>Champ</th><th>Type</th><th>Obligatoire</th><th title="Donnée personnelle : masquée et journalisée">RGPD 🔒</th></tr></thead><tbody>
         ${this.definition.champs.filter((c) => !c.gere).map((c) => {
           const duLogiciel = c.confidentiel && !c.confidentiel_parametre;
           return `<tr><td>${echapper(c.libelle)}</td><td>${echapper(LIBELLES_TYPES[c.type] ?? c.type)}</td>
@@ -99,7 +99,7 @@ export class ParametrageFiche {
       </tbody></table>
       <h3>Champs supplémentaires</h3>
       <p class="aide">Ordre : ↑ ↓ ; onglet et groupe (cadre titré) : où le champ s'affiche dans la fiche. ▸ : format, longueur, aide, valeurs.</p>
-      <table class="fiche-param fiche-param-supplementaires"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Type</th><th>Onglet</th><th>Groupe</th>
+      <table class="fiche-param fiche-param-supplementaires tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Type</th><th>Onglet</th><th>Groupe</th>
         <th title="Obligatoire">Oblig.</th><th title="Confidentiel (RGPD)">🔒</th><th>Actif</th><th></th></tr></thead><tbody>
         ${this.p.supplementaires.map((c, i) => `<tr data-i="${i}">
           <td class="fiche-param-ordre"><button type="button" data-monter title="Monter" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-descendre title="Descendre" ${i === n - 1 ? 'disabled' : ''}>↓</button></td>

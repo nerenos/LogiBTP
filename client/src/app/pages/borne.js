@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, formatNombre, alerter, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -490,7 +490,9 @@ export class PageBorne extends PageBase {
   /** Non-conformité : motif, puis type de travail (activité de non-conformité imposée) et heures perdues. */
   #probleme() {
     this.ecran = () => this.#probleme();
-    this.zone.innerHTML = `${this.#entete('⚠ Quel problème ?')}<div class="borne-grille">${this.donnees.motifs.map((m) => `<button type="button" class="borne-carte" data-m="${echapper(m.libelle)}">${echapper(m.libelle)}</button>`).join('')}</div>
+    // Motifs proposés (paramètres des ressources), plus « Autre… » : toute autre raison, saisie librement.
+    this.zone.innerHTML = `${this.#entete('⚠ Quel problème ?')}<div class="borne-grille">${this.donnees.motifs.map((m) => `<button type="button" class="borne-carte" data-m="${echapper(m.libelle)}">${echapper(m.libelle)}</button>`).join('')}
+        <button type="button" class="borne-carte" data-autre>✏ Autre…</button></div>
       <p><button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
     this.#brancherEntete();
     this.zone.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => {
@@ -498,6 +500,13 @@ export class PageBorne extends PageBase {
       this.#memoriser();
       this.#typeMo();
     }));
+    this.zone.querySelector('[data-autre]').addEventListener('click', async () => {
+      const motif = (await saisir('Décrivez le problème :', '', { titre: 'Autre problème', obligatoire: true }))?.trim();
+      if (!motif) return;
+      this.etat.saisie.motif = motif.slice(0, 200);
+      this.#memoriser();
+      this.#typeMo();
+    });
     this.zone.querySelector('[data-retour]').addEventListener('click', () => { this.etat.saisie.motif = null; this.#typeMo(); });
     this.#minuterie();
   }

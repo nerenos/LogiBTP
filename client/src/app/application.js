@@ -53,7 +53,7 @@ export class Application {
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
-      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP',
+      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
     });
     this.enLigne = await api.disponible();
     document.body.classList.toggle('hors-ligne', !this.enLigne);
@@ -327,6 +327,9 @@ export class Application {
     return f ? `/fiche/${f.type}/${f.id}` : null;
   }
 
+  /** Retour à la page précédente de la fenêtre (bouton ◀ du bandeau, raccourci), sinon l'accueil. */
+  retour() { this.routeur?.retour('/'); }
+
   /** Ouverture depuis une liste : préférence « nouvelle fenêtre », inversée par Ctrl / Maj. */
   ouvrirElement(element, { nouvelleFenetre = false } = {}) {
     const url = this.urlElement(element);
@@ -355,6 +358,7 @@ export class Application {
       enregistrer: page?.enregistrer && (() => page.enregistrer()),
       fenetres: () => this.listeFenetres(),
       accueil: () => this.naviguer('/'),
+      retour: () => this.retour(),
       parametres: () => this.naviguer('/parametres'),
       raccourcis: () => this.naviguer('/parametres/raccourcis'),
     };

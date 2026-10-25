@@ -16,7 +16,8 @@ const sansEsperluette = (libelle) => libelle.replace(/&(.)/, '$1');
 const liste = (e) => (typeof e === 'function' ? e() : e) ?? [];
 
 export class Bandeau {
-  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP' } = {}) {
+  /** `retour()` : retour à la page précédente (bouton ◀ après le logo), absent : pas de bouton. */
+  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null } = {}) {
     this.racine = conteneur;
     this.menus = menus;
     this.naviguer = naviguer;
@@ -26,6 +27,7 @@ export class Bandeau {
     this.racine.classList.add('bandeau');
     this.racine.innerHTML = `
       <a class="bandeau-logo" href="${echapper(accueil)}" title="${echapper(titreApplication)} : accueil (Alt+Origine)">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
+      ${retour ? '<button type="button" class="bandeau-retour" title="Revenir à la page précédente" aria-label="Revenir à la page précédente">◀</button>' : ''}
       <nav class="bandeau-menus" role="menubar" aria-label="Menu principal"></nav>
       <span class="bandeau-message" role="status"></span>
       <span class="bandeau-infos"></span>
@@ -38,6 +40,7 @@ export class Bandeau {
       e.preventDefault();
       this.naviguer(accueil, { nouvelleFenetre: e.ctrlKey || e.shiftKey });
     });
+    this.racine.querySelector('.bandeau-retour')?.addEventListener('click', () => retour());
     this.barre.addEventListener('click', (e) => {
       const b = e.target.closest('[data-menu]');
       if (b) this.ouvert === b.dataset.menu ? this.fermer() : this.ouvrir(b.dataset.menu);

@@ -39,7 +39,7 @@ export class PageParametresServices extends PageBase {
     const parents = () => this.services.filter((s) => !s.parent_code).map((s) => ({ valeur: s.code, libelle: s.libelle, detail: s.code }));
     zone.innerHTML = `<p class="aide">Deux niveaux : un service et ses sous-services. Vente et Achat sont des services administratifs (CRM).
       Un service retiré est supprimé s'il n'a ni membre ni sous-service, sinon mis en sommeil.</p>
-      <table><thead><tr><th>Code</th><th>Libellé</th><th>Sous-service de</th><th>Nature</th><th>Responsable</th><th>Ordre</th><th>Actif</th>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Sous-service de</th><th>Nature</th><th>Responsable</th><th>Ordre</th><th>Actif</th>
         <th class="nombre">Membres</th><th></th></tr></thead><tbody>
       ${this.services.map((s, i) => `<tr data-i="${i}"${s.actif ? '' : ' class="discret"'}>
         <td><input data-c="code" value="${echapper(s.code)}" size="10" maxlength="20" ${this.admin ? '' : 'disabled'}></td>
@@ -111,7 +111,7 @@ export class PageParametresServices extends PageBase {
     const presents = new Set(this.membres.map((m) => m.ind_id));
     zone.innerHTML = `<p class="aide">Salariés de notre société rattachés au service. Le service principal d'un salarié est unique :
       le désigner ici le retire de son ancien service principal.</p>
-      ${this.membres.length ? `<table><thead><tr><th>Salarié</th><th>Service principal</th><th></th></tr></thead><tbody>
+      ${this.membres.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Salarié</th><th>Service principal</th><th></th></tr></thead><tbody>
         ${this.membres.map((m, i) => `<tr data-i="${i}"${m.actif === false ? ' class="discret"' : ''}><td>${echapper(m.individu)}</td>
           <td><input type="checkbox" data-principal ${m.principal ? 'checked' : ''} ${this.admin ? '' : 'disabled'}></td>
           <td>${this.admin ? '<button type="button" data-retirer title="Retirer du service">✕</button>' : ''}</td></tr>`).join('')}</tbody></table>`

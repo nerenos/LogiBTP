@@ -56,6 +56,17 @@
 .document-barre { display: flex; align-items: end; gap: 1rem; flex-wrap: wrap; padding: 0.4rem 1rem 0; flex: none; }
 .document-barre .groupe { padding-bottom: 0.3rem; }
 .document-barre .onglets { padding: 0; order: -1; }
+.document-barre .barre-droite { margin-left: auto; }
+/* Bouton Enregistrer à menu (▾ : valider, transformer…) ; le menu s'ouvre sous le bouton, aligné à droite. */
+.bouton-menu { display: inline-flex; }
+.bouton-menu > button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.bouton-menu > .bouton-menu-fleche { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(255, 255, 255, .35); padding: 0 .4rem; }
+.menu-actions-document { left: auto; right: 0; min-width: 14rem; display: flex; flex-direction: column; gap: 1px; }
+.menu-actions-document[hidden] { display: none; }
+.menu-actions-document > button { background: none; border: none; text-align: left; justify-content: flex-start; width: 100%; color: var(--texte); }
+.menu-actions-document > button:hover:not(:disabled), .menu-actions-document > button:focus-visible { background: var(--titre-fond); }
+.menu-actions-document > button:disabled { opacity: .45; }
+.menu-actions-document > button[hidden] { display: none; }
 .document-barre .resume { margin-left: auto; color: var(--discret); font-size: 0.9em; padding-bottom: 0.4rem; }
 .document-zone { flex: 1; min-height: 0; padding: 0 1rem 0.6rem; display: flex; flex-direction: column; }
 
@@ -745,6 +756,8 @@ body.mode-borne #bandeau { display: none; }
 }
 .tableau-compact td:has(> input[type="checkbox"]), .tableau-compact th:has(> input[type="checkbox"]) { text-align: center; }
 .tableau-compact td.cellule-boutons { white-space: nowrap; width: 1%; }
+/* Boutons dans les cellules (✕, ＋…) : à la hauteur d'une ligne de saisie. */
+.tableau-compact td > button { padding: 0 .4rem; min-height: 1.65em; line-height: 1.2; }
 .tableau-compact td[data-j], .variables-paie td:has(> input.duree) { min-width: 3.4rem; }
 .tableau-compact input.duree { text-align: right; }
 .tableau-compact input[size="2"] { min-width: 3rem; }

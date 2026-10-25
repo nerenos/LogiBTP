@@ -26,6 +26,8 @@ export async function typesHabilitation({ recharger = false } = {}) {
 }
 
 const messages = (codes) => codes.map((c) => MESSAGES_RESSOURCES[c] ?? c).join(', ');
+/** Bouton icône (libellé en bulle). */
+const action = (attr, icone, titre) => `<button type="button" class="bouton-icone" ${attr} title="${titre}" aria-label="${titre}">${icone}</button>`;
 
 /**
  * Habilitations d'un salarié ou d'un matériel : tableau éditable (type, obtention, fin de validité — calculée depuis la
@@ -39,22 +41,24 @@ export async function rendreHabilitations(corps, { app, element, id, titre = 'Ha
   let saisie = lignes.map((h) => ({ ...h }));
   let modifiee = false;
   const rendre = () => {
-    corps.innerHTML = `<div class="ressources-habilitations"><h3>${echapper(titre)}</h3>
-      <table><thead><tr><th>Type</th><th>Obtenue le</th><th>Fin de validité</th><th>État</th><th>N°</th><th>Organisme</th><th>Commentaire</th><th></th></tr></thead><tbody>
+    // Présentation commune des tableaux de saisie (tableau compact, actions sur la ligne de titre, boutons en icônes).
+    corps.innerHTML = `<div class="ressources-habilitations"><div class="titre-actions"><h3>${echapper(titre)}</h3>
+        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Ajouter une habilitation')}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Type</th><th>Obtenue le</th><th>Fin de validité</th><th>État</th><th>N°</th><th>Organisme</th><th>Commentaire</th><th></th></tr></thead><tbody>
       ${saisie.map((h, i) => {
         const e = etatHabilitation(h, index[h.code]?.duree_mois ?? null, aujourdhui());
         const calc = !h.valide_jusqu_au && e.fin;
         return `<tr data-i="${i}"><td data-type></td>
           <td><input type="date" data-c="obtenue_le" value="${echapper(h.obtenue_le ?? '')}"></td>
-          <td><input type="date" data-c="valide_jusqu_au" value="${echapper(h.valide_jusqu_au ?? '')}" title="Vide : calculée depuis la durée du type">${calc ? `<br><small class="aide">calculée : ${jour(e.fin)}</small>` : ''}</td>
+          <td><input type="date" data-c="valide_jusqu_au" value="${echapper(h.valide_jusqu_au ?? '')}" title="Vide : calculée depuis la durée du type">${calc ? `<div><small>calculée : ${jour(e.fin)}</small></div>` : ''}</td>
           <td>${h.code ? pastilleHabilitation(e) : ''}</td>
           <td><input data-c="numero" value="${echapper(h.numero ?? '')}" size="10" maxlength="60"></td>
-          <td><input data-c="organisme" value="${echapper(h.organisme ?? '')}" size="16" maxlength="120"></td>
-          <td><input data-c="commentaire" value="${echapper(h.commentaire ?? '')}" size="20"></td>
-          <td><button type="button" data-retirer title="Retirer">✕</button></td></tr>`;
-      }).join('')}</tbody></table>
-      <p class="connexion-erreur" data-erreur hidden></p>
-      <p><button type="button" data-ajouter>＋ Habilitation</button> <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer les habilitations</button></p></div>`;
+          <td><input data-c="organisme" value="${echapper(h.organisme ?? '')}" size="14" maxlength="120"></td>
+          <td><input data-c="commentaire" value="${echapper(h.commentaire ?? '')}" size="28"></td>
+          <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette habilitation')}</td></tr>`;
+      }).join('') || '<tr><td colspan="8" class="aide">Aucune habilitation.</td></tr>'}</tbody></table>
+      <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const h = saisie[Number(tr.dataset.i)];
       const combo = creerCombo({ options, valeur: h.code ?? '', vide: false });
@@ -110,18 +114,19 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
   let saisie = missions.map((m) => ({ ...m }));
   let modifiee = false;
   const rendre = () => {
-    corps.innerHTML = `<div class="ressources-missions"><h3>Missions d'intérim</h3>
+    corps.innerHTML = `<div class="ressources-missions"><div class="titre-actions"><h3>Missions d'intérim</h3>
+        <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Ajouter une mission')}
+          <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
       <p class="aide">Le taux horaire facturé par l'agence sert au coût des chantiers (option du Pointage) et au contrôle des factures d'intérim ;
         la fin de la mission en cours est proposée comme fin de validité du compte de connexion.</p>
-      <table><thead><tr><th>Agence</th><th>Début</th><th>Fin</th><th>Taux horaire facturé</th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Agence</th><th>Début</th><th>Fin</th><th>Taux horaire<br><small>facturé (€)</small></th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((m, i) => `<tr data-i="${i}"><td data-agence></td>
         <td><input type="date" data-c="debut" value="${echapper(m.debut ?? '')}"></td><td><input type="date" data-c="fin" value="${echapper(m.fin ?? '')}"></td>
-        <td><input data-c="taux_horaire" value="${m.taux_horaire === null || m.taux_horaire === undefined ? '' : formatNombre(m.taux_horaire, 2)}" size="8" inputmode="decimal"> €</td>
-        <td><input data-c="commentaire" value="${echapper(m.commentaire ?? '')}" size="24"></td>
+        <td><input data-c="taux_horaire" class="nombre" value="${m.taux_horaire === null || m.taux_horaire === undefined ? '' : formatNombre(m.taux_horaire, 2)}" size="8" inputmode="decimal"></td>
+        <td><input data-c="commentaire" value="${echapper(m.commentaire ?? '')}" size="28"></td>
         <td>${m.en_cours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
-        <td><button type="button" data-retirer title="Retirer">✕</button></td></tr>`).join('')}</tbody></table>
-      <p class="connexion-erreur" data-erreur hidden></p>
-      <p><button type="button" data-ajouter>＋ Mission</button> <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer les missions</button></p></div>`;
+        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette mission')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Aucune mission.</td></tr>'}</tbody></table>
+      <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const m = saisie[Number(tr.dataset.i)];
       const combo = creerCombo({ options, valeur: m.agence_id ?? '', vide: true });

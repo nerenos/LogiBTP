@@ -36,7 +36,7 @@ export class PageParametresCrm extends PageBase {
     const admin = this.app.estAdmin();
     const zone = this.conteneur.querySelector('[data-statuts]');
     const EFFETS = [{ valeur: 'ACCEPTE', libelle: 'Accepté (bon pour exécution)' }, { valeur: 'REFUSE', libelle: 'Refusé (bloquant)' }, { valeur: 'NEUTRE', libelle: 'Neutre (pour information)' }];
-    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Effet</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Effet</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
       ${this.statuts.map((s, i) => `<tr data-i="${i}"${s.actif ? '' : ' class="discret"'}><td><input data-c="code" value="${echapper(s.code)}" size="6" maxlength="10" ${admin ? '' : 'disabled'}></td>
         <td><input data-c="libelle" value="${echapper(s.libelle)}" size="28" maxlength="80" ${admin ? '' : 'disabled'}></td><td><span data-effet></span></td>
         <td><input data-c="ordre" value="${s.ordre}" size="4" ${admin ? '' : 'disabled'}></td><td><input type="checkbox" data-c="actif" ${s.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
@@ -106,7 +106,7 @@ export class PageParametresCrm extends PageBase {
   rendreTypes() {
     const admin = this.app.estAdmin();
     const zone = this.conteneur.querySelector('[data-types]');
-    zone.innerHTML = `<table><thead><tr><th>Icône</th><th>Code</th><th>Libellé</th><th>Service</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Icône</th><th>Code</th><th>Libellé</th><th>Service</th><th>Ordre</th><th>Actif</th><th></th></tr></thead><tbody>
       ${this.types.map((t, i) => `<tr data-i="${i}"${t.actif ? '' : ' class="discret"'}>
         <td><input data-c="icone" value="${echapper(t.icone ?? '')}" size="3" maxlength="8" ${admin ? '' : 'disabled'}></td>
         <td><input data-c="code" value="${echapper(t.code)}" size="10" maxlength="20" ${admin ? '' : 'disabled'}></td>

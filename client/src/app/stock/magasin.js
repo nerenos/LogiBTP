@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 // Module Stock, lot 4 (ANALYSE-MODULE-STOCK.md § 5.5, § 5.6, S16 à S21) : magasin (comptoir de sortie et de retour
@@ -271,21 +271,46 @@ export class PageFicheDotation extends PageBase {
   }
 }
 
-/** Onglet Dotations de la fiche salarié : articles encore dotés et historique (toutes dates). */
+/** Périodes de l'onglet Dotations : mouvements depuis N mois (null : toutes dates). */
+const PERIODES_DOTATION = [{ code: '1M', libelle: '1 mois', mois: 1 }, { code: '6M', libelle: '6 mois', mois: 6 }, { code: '1A', libelle: '1 an', mois: 12 }, { code: 'TOUT', libelle: 'Tout', mois: null }];
+
+/**
+ * Onglet Dotations de la fiche salarié : articles encore dotés (au jour) ; sorti, rendu, rebut et mouvements de la
+ * période choisie (1 mois, 6 mois, 1 an, tout ; préférence `dotationsPeriode`) ; totaux par unité en pied.
+ */
 export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
+  const periode = PERIODES_DOTATION.find((p) => p.code === lirePreferences().dotationsPeriode) ?? PERIODES_DOTATION[2];
+  const debut = new Date();
+  if (periode.mois) debut.setMonth(debut.getMonth() - periode.mois);
   corps.innerHTML = '<p class="aide">Chargement…</p>';
-  const d = await api.stock.dotations({ du: '2000-01-01', salarie });
+  const d = await api.stock.dotations({ du: periode.mois ? debut.toISOString().slice(0, 10) : '2000-01-01', salarie });
   const s = d.salaries[0];
   const art = new Map(d.articles.map((a) => [a.id, a]));
-  if (!s) { corps.innerHTML = `<p class="aide">Aucune dotation. <a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a></p>`; }
+  const boutons = PERIODES_DOTATION.map((p) => `<button type="button" data-periode="${p.code}" class="${p === periode ? 'actif principal' : ''}" title="Mouvements ${p.mois ? `des ${p.libelle} passés` : 'de toutes dates'}">${p.libelle}</button>`).join('');
+  const liens = `<a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a> · <a href="/stock/magasin?mode=retour&salarie=${salarie}" data-url>📥 Retour</a>
+      · <a href="/stock/dotations/fiche?salarie=${salarie}" data-url>🖨 Fiche de dotation à signer</a>`;
+  if (!s) { corps.innerHTML = `<div class="titre-actions"><span class="titre-actions-boutons">${boutons}</span></div><p class="aide">Aucune dotation sur la période. ${liens}</p>`; }
   else {
-    corps.innerHTML = `<p class="ligne"><a href="/stock/magasin?salarie=${salarie}" data-url>🏪 Doter au magasin</a> · <a href="/stock/magasin?mode=retour&salarie=${salarie}" data-url>📥 Retour</a>
-      · <a href="/stock/dotations/fiche?salarie=${salarie}" data-url>🖨 Fiche de dotation à signer</a></p>
-      <table class="tableau-compact"><thead><tr><th>Article</th><th>Libellé</th><th>Doté aujourd'hui</th><th>Sorti</th><th>Rendu</th><th>Rebut</th><th>Mouvements</th></tr></thead><tbody>
+    // Totaux par unité (quantités de même unité seulement).
+    const totaux = new Map();
+    for (const x of s.articles) {
+      const u = art.get(x.ele)?.unite ?? '';
+      const t = totaux.get(u) ?? { net: 0, sorti: 0, rendu: 0, rebut: 0, n: 0 };
+      for (const k of ['net', 'sorti', 'rendu', 'rebut']) t[k] += Number(x[k]) || 0;
+      t.n += 1;
+      totaux.set(u, t);
+    }
+    corps.innerHTML = `<div class="titre-actions"><p class="ligne">${liens}</p><span class="titre-actions-boutons">${boutons}</span></div>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Article</th><th>Libellé</th><th>Doté<br><small>aujourd'hui</small></th><th>Sorti<br><small>${echapper(periode.libelle)}</small></th><th>Rendu<br><small>${echapper(periode.libelle)}</small></th><th>Rebut<br><small>${echapper(periode.libelle)}</small></th><th>Mouvements de la période</th></tr></thead><tbody>
       ${s.articles.map((x) => { const a = art.get(x.ele); return `<tr><td>${echapper(a?.code ?? '')}</td><td>${echapper(a?.libelle ?? '')}</td><td class="nombre"><b>${formatNombre(x.net, 2)}</b> ${echapper(a?.unite ?? '')}${pastilleRenouvellement(x)}</td>
         <td class="nombre">${formatNombre(x.sorti, 2)}</td><td class="nombre">${formatNombre(x.rendu, 2)}</td><td class="nombre">${formatNombre(x.rebut, 2)}</td>
         <td>${x.mouvements.map((m) => `${dateFr(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="/document/${m.ent_id}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
-      </tbody></table>`;
+      </tbody><tfoot>${[...totaux].map(([u, t]) => `<tr><th colspan="2">Total${u ? ` (${echapper(u)})` : ''} <small>${t.n} article${t.n > 1 ? 's' : ''}</small></th>
+        <th class="nombre">${formatNombre(t.net, 2)}</th><th class="nombre">${formatNombre(t.sorti, 2)}</th><th class="nombre">${formatNombre(t.rendu, 2)}</th><th class="nombre">${formatNombre(t.rebut, 2)}</th><th></th></tr>`).join('')}</tfoot></table>`;
   }
+  corps.querySelectorAll('[data-periode]').forEach((b) => b.addEventListener('click', () => {
+    ecrirePreferences({ dotationsPeriode: b.dataset.periode });
+    rendreDotationsSalarie(corps, { salarie, naviguer });
+  }));
   corps.querySelectorAll('[data-url]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(a.getAttribute('href'), e); }));
 }

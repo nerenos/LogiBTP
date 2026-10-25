@@ -18,6 +18,18 @@ const decaler = (date, jours) => new Date(new Date(`${date}T00:00:00Z`).getTime(
 const jourCourt = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
 const horodatage = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const nomSalarie = (s, ordre) => (ordre === 'PN' ? `${s.prenom} ${s.nom}` : `${s.nom} ${s.prenom}`);
+/**
+ * Propositions de motifs de non-conformité (motifs NON_CONFORMITE des paramètres des ressources) : liste de suggestions
+ * des champs de motif (datalist partagée, lue une fois) ; toute autre raison reste saisissable.
+ */
+const ID_MOTIFS_NC = 'motifs-non-conformite';
+let motifsNc = null;
+function propositionsMotifs() {
+  motifsNc ??= api.ressources.motifs('NON_CONFORMITE').then((l) => {
+    const liste = document.getElementById(ID_MOTIFS_NC) ?? document.body.appendChild(Object.assign(document.createElement('datalist'), { id: ID_MOTIFS_NC }));
+    liste.innerHTML = l.filter((m) => m.actif !== false).map((m) => `<option value="${echapper(m.libelle)}"></option>`).join('');
+  }).catch(() => { motifsNc = null; });
+}
 const cleLigne = (p) => [p.cha_id, p.ent_id ?? '', p.type_mo, p.sous_type ?? '', p.motif ?? ''].join('|');
 /** État de validation d'un jour : pastille ronde de taille fixe, couleur par état (CSS `.pastille-etat`), libellé en bulle. */
 const pastilleEtat = (e) => (ETATS_VALIDATION[e] ? `<span class="pastille-etat etat-${e.toLowerCase()}" title="${ETATS_VALIDATION[e].libelle}"></span>` : '');
@@ -77,6 +89,7 @@ class GrillePointage {
   constructor(zone, options) {
     this.zone = zone;
     this.#o = options;
+    if (!options.lecture) propositionsMotifs();
     this.jours = joursSemaine(options.lundi);
     this.lignes = lignesDepuis(options.donnees.pointages, this.jours);
     if (options.regrouper) {
@@ -223,9 +236,9 @@ class GrillePointage {
             ${jours.map((_, j) => `<td class="nombre" data-sous-total="${j}"></td>`).join('')}<td class="nombre" data-sous-total-semaine></td><td></td></tr>` : '';
         return `${titre}<tr data-i="${i}"${dansGroupe ? ' class="dans-groupe"' : ''}>${tableau
           ? `<td class="cellule-double"><div data-c="cha"></div><div data-c="ordre"></div></td><td class="cellule-double"><div data-c="type"></div><div data-c="st"></div>
-            <div class="motif-pointage"><input data-motif placeholder="Motif de la non-conformité" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></div></td>`
+            <div class="motif-pointage"><input data-motif list="${ID_MOTIFS_NC}" placeholder="Motif de la non-conformité (liste ou saisie libre)" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></div></td>`
           : '<td data-c="cha"></td><td data-c="ordre"></td><td data-c="type"></td><td data-c="st"></td>'}
-        ${tableau ? '' : `<td><input data-motif size="10" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>`}
+        ${tableau ? '' : `<td><input data-motif list="${ID_MOTIFS_NC}" size="10" value="${echapper(l.motif ?? '')}" ${!fige && o.nc.has(l.sous_type) ? '' : 'disabled'}></td>`}
         ${l.cases.map((c, j) => `<td data-j="${j}"><input class="duree" size="5" value="${ecrireDuree(c.reduce((a, p) => a + (p.minutes || 0), 0))}" ${lecture || verrou.has(j) || c.length > 1 ? 'readonly' : ''} ${c.length > 1 ? 'title="Plusieurs pointages ce jour"' : c[0]?.debut != null ? `title="${ecrireDuree(c[0].debut)} – ${ecrireDuree(c[0].fin)}"` : ''}></td>`).join('')}
         <td class="nombre" data-total-ligne></td><td>${fige ? '' : '<button type="button" data-retirer title="Retirer la ligne (Ctrl+Suppr)" tabindex="-1">✕</button>'}</td></tr>`;
       }).join('');

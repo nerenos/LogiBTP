@@ -10,6 +10,7 @@ declarerRaccourcis('application', {
     enregistrer: { libelle: 'Enregistrer la page', defaut: 'Ctrl+S' },
     fenetres: { libelle: 'Fenêtres ouvertes', defaut: 'Ctrl+Shift+F' },
     accueil: { libelle: 'Accueil', defaut: [] },
+    retour: { libelle: 'Page précédente', defaut: [] },
     parametres: { libelle: 'Paramètres', defaut: [] },
     raccourcis: { libelle: 'Personnaliser les raccourcis', defaut: [] },
   },

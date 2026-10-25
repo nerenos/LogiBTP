@@ -57,7 +57,7 @@ export class PageParametresCalendriers extends PageBase {
     const hebdo = (c) => Array.from({ length: c.cycle_semaines }, (_, s) => duree(c.plages.filter((p) => p.semaine === s + 1 && !p.du && !p.au).reduce((t, p) => t + p.fin - p.debut, 0))).join(' / ');
     zone.innerHTML = `<h2>Calendriers</h2>
       <p class="aide">Un calendrier s'affecte à un service, et se surcharge sur la fiche d'un salarié ou d'un matériel ; sans calendrier, le calendrier par défaut s'applique.</p>
-      <table><thead><tr><th>Code</th><th>Libellé</th><th>Cycle</th><th>Heures par semaine</th><th>Défaut</th><th>Actif</th><th class="nombre">Utilisé</th><th></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Cycle</th><th>Heures par semaine</th><th>Défaut</th><th>Actif</th><th class="nombre">Utilisé</th><th></th></tr></thead><tbody>
       ${this.calendriers.map((c, i) => `<tr><td><b>${echapper(c.code)}</b></td><td>${echapper(c.libelle)}</td><td>${c.cycle_semaines > 1 ? `${c.cycle_semaines} semaines` : 'hebdomadaire'}</td>
         <td>${hebdo(c)}</td><td>${c.defaut ? '★' : ''}</td><td>${c.actif ? '✔' : ''}</td><td class="nombre">${c.utilisations || ''}</td>
         <td><button type="button" data-i="${i}">${this.admin ? 'Modifier…' : 'Voir…'}</button></td></tr>`).join('')}</tbody></table>
@@ -95,14 +95,14 @@ export class PageParametresCalendriers extends PageBase {
           <label class="ligne"><input type="checkbox" data-c="defaut" ${cal.defaut ? 'checked' : ''} ${dis}> Par défaut</label>
           <label class="ligne"><input type="checkbox" data-c="actif" ${cal.actif ? 'checked' : ''} ${dis}> Actif</label></p>
         <p class="aide">Plages par jour, par exemple « 8:00-12:00 13:00-17:00 » ; vide : jour non travaillé.</p>
-        <table class="grille-calendrier"><thead><tr><th>Jour</th>${semaines.map((s) => `<th>${cal.cycle_semaines > 1 ? `Semaine ${s}` : 'Plages'}</th>`).join('')}</tr></thead><tbody>
+        <table class="grille-calendrier tableau-compact largeur-contenu"><thead><tr><th>Jour</th>${semaines.map((s) => `<th>${cal.cycle_semaines > 1 ? `Semaine ${s}` : 'Plages'}</th>`).join('')}</tr></thead><tbody>
         ${JOURS_SEMAINE.map((nom, j) => `<tr><th>${nom}</th>${semaines.map((s) => {
           const p = permanentes(s, j + 1);
           return `<td><input data-plage="${s}:${j + 1}" value="${echapper(ecrirePlages(p))}" size="22" ${dis}> <small class="aide">${p.length ? duree(p.reduce((t, x) => t + x.fin - x.debut, 0)) : ''}</small></td>`;
         }).join('')}</tr>`).join('')}
         <tr><th>Total</th>${semaines.map((s) => `<td><b>${duree(cal.plages.filter((p) => p.semaine === s && !p.du && !p.au).reduce((t, x) => t + x.fin - x.debut, 0))}</b></td>`).join('')}</tr></tbody></table>
         <h3>Plages datées</h3><p class="aide">Pendant leur période, elles remplacent les plages permanentes du même jour (horaires d'été…).</p>
-        <table><thead><tr><th>Du</th><th>Au</th><th>Semaine</th><th>Jour</th><th>Plages</th><th></th></tr></thead><tbody>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Du</th><th>Au</th><th>Semaine</th><th>Jour</th><th>Plages</th><th></th></tr></thead><tbody>
         ${groupesDates().map((g, i) => `<tr data-d="${i}"><td><input type="date" data-dc="du" value="${echapper(g.du ?? '')}" ${dis}></td><td><input type="date" data-dc="au" value="${echapper(g.au ?? '')}" ${dis}></td>
           <td><input data-dc="semaine" value="${g.semaine}" size="2" ${dis}></td><td data-jour></td><td><input data-dc="plages" value="${echapper(ecrirePlages(g.plages))}" size="22" ${dis}></td>
           <td>${this.admin ? '<button type="button" data-retirer-date>✕</button>' : ''}</td></tr>`).join('')}</tbody></table>
@@ -185,7 +185,7 @@ export class PageParametresCalendriers extends PageBase {
   async #apercu(zone, id, portee = '') {
     const du = aujourdhui();
     const journees = await api.calendriers.journees(id, du, ajouterJours(du, 13), portee);
-    zone.innerHTML = `<table><thead><tr><th>Date</th><th>Plages</th><th>Durée</th></tr></thead><tbody>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Plages</th><th>Durée</th></tr></thead><tbody>
       ${journees.map((j) => `<tr${j.minutes ? '' : ' class="discret"'}><td>${JOURS_SEMAINE[new Date(`${j.date}T00:00:00Z`).getUTCDay() === 0 ? 6 : new Date(`${j.date}T00:00:00Z`).getUTCDay() - 1]} ${jour(j.date)}</td>
         <td>${j.fermee ? `🚫 ${echapper(j.fermee.join(' · '))}` : echapper(ecrirePlages(j.plages))}</td><td>${j.minutes ? duree(j.minutes) : ''}</td></tr>`).join('')}</tbody></table>`;
   }
@@ -203,7 +203,7 @@ export class PageParametresCalendriers extends PageBase {
         <td>${!r.code && this.admin ? '<button type="button" data-retirer>✕</button>' : ''}</td></tr>`).join('');
       const fermes = joursFermes(regles, `${annee}-01-01`, `${annee}-12-31`);
       zone.innerHTML = `<h2>${titre}</h2><p class="aide">${aide}</p>
-        <table><thead><tr><th>Actif</th><th>Libellé</th><th>${catalogue ? 'Zone' : ''}</th><th>Règle</th><th></th></tr></thead><tbody>${lignes}</tbody></table>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Actif</th><th>Libellé</th><th>${catalogue ? 'Zone' : ''}</th><th>Règle</th><th></th></tr></thead><tbody>${lignes}</tbody></table>
         <p class="connexion-erreur" data-erreur hidden></p>
         ${this.admin ? `<p><button type="button" data-ajouter>＋ Jour fermé</button> <button type="button" data-ajouter-periode>＋ Période de fermeture</button>
           <button type="button" class="principal" data-enregistrer>Enregistrer</button></p>` : ''}
@@ -266,7 +266,7 @@ export class PageParametresCalendriers extends PageBase {
     const services = await api.calendriers.services();
     const options = this.calendriers.filter((c) => c.actif).map((c) => ({ valeur: c.id, libelle: c.libelle, detail: c.code }));
     zone.innerHTML = `<h2>Services</h2><p class="aide">Calendrier de chaque service (vide : par défaut) et ses fermetures propres.</p>
-      <table><thead><tr><th>Service</th><th>Calendrier</th><th></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Service</th><th>Calendrier</th><th></th></tr></thead><tbody>
       ${services.filter((s) => s.actif).map((s) => `<tr data-srv="${s.srv_id}"><td>${echapper(s.libelle)} <small class="aide">${echapper(s.code)}</small></td><td data-cal></td>
         <td><button type="button" data-fermetures>Fermetures…</button></td></tr>`).join('')}</tbody></table>
       ${this.admin ? '<p><button type="button" class="principal" data-enregistrer>Enregistrer les calendriers des services</button></p>' : ''}

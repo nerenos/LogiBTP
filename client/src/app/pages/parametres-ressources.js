@@ -37,7 +37,7 @@ export class PageParametresRessources extends PageBase {
       zone.innerHTML = `<h2>Types d'habilitations</h2>
         <p class="aide">Durée de validité en mois (vide : sans fin) ; la fin de validité d'une habilitation se calcule depuis son obtention si elle n'est pas saisie.
           Un type retiré est supprimé s'il est inutilisé, sinon désactivé.</p>
-        <table><thead><tr><th>Code</th><th>Libellé</th><th>Catégorie</th><th>Concerne</th><th>Durée (mois)</th><th>Ordre</th><th>Actif</th><th class="nombre">Utilisé</th><th></th></tr></thead><tbody>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Catégorie</th><th>Concerne</th><th>Durée (mois)</th><th>Ordre</th><th>Actif</th><th class="nombre">Utilisé</th><th></th></tr></thead><tbody>
         ${liste.map((t, i) => `<tr data-i="${i}"><td><input data-c="code" value="${echapper(t.code)}" size="16" ${this.admin && !t.nb ? '' : 'disabled'}></td>
           <td><input data-c="libelle" value="${echapper(t.libelle)}" size="36" ${this.admin ? '' : 'disabled'}></td><td data-categorie></td><td data-concerne></td>
           <td><input data-c="duree_mois" value="${t.duree_mois ?? ''}" size="5" inputmode="numeric" ${this.admin ? '' : 'disabled'}></td>
@@ -78,7 +78,7 @@ export class PageParametresRessources extends PageBase {
       zone.innerHTML = `<h2>Motifs</h2>
         <p class="aide">Motifs de blocage des ordres (Exécution), de non-conformité (Pointage), d'écart de planning ; le service désigné est prévenu
           (tâche du CRM si le module est actif). Un motif retiré est désactivé.</p>
-        <table><thead><tr><th>Domaine</th><th>Code</th><th>Libellé</th><th>Service à prévenir</th><th>Ordre</th><th>Actif</th></tr></thead><tbody>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Domaine</th><th>Code</th><th>Libellé</th><th>Service à prévenir</th><th>Ordre</th><th>Actif</th></tr></thead><tbody>
         ${liste.map((m, i) => `<tr data-i="${i}"${m.actif ? '' : ' class="discret"'}><td data-domaine></td><td><input data-c="code" value="${echapper(m.code)}" size="14" ${this.admin && !m.id ? '' : 'disabled'}></td>
           <td><input data-c="libelle" value="${echapper(m.libelle)}" size="36" ${this.admin ? '' : 'disabled'}></td><td data-service></td>
           <td><input data-c="ordre" value="${m.ordre ?? 0}" size="4" inputmode="numeric" ${this.admin ? '' : 'disabled'}></td>
@@ -111,7 +111,7 @@ export class PageParametresRessources extends PageBase {
     const liste = (await api.ressources.naturesMo()).map((n) => ({ ...n }));
     zone.innerHTML = `<h2>Natures de main-d'œuvre → services</h2>
       <p class="aide">Les heures des composantes de ces natures (unité heure) dans les commandes validées donnent les heures budget d'un chantier par service.</p>
-      <table><thead><tr><th>Nature</th><th>Libellé</th><th>Service</th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Nature</th><th>Libellé</th><th>Service</th></tr></thead><tbody>
       ${liste.map((n, i) => `<tr data-i="${i}"><td>${echapper(n.code)}</td><td>${echapper(n.libelle)}</td><td data-service></td></tr>`).join('')}</tbody></table>
       ${this.admin ? '<p><button type="button" class="principal" data-enregistrer>Enregistrer</button></p>' : ''}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {

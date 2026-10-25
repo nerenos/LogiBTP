@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { pastilleHabilitation, jourRessource } from '../ressources/ressources-ui.js';
 
 /**
- * Habilitations à surveiller (référentiel des ressources) : expirées ou arrivant à échéance dans les N jours, salariés
+ * Habilitations, entretiens et visites à surveiller (référentiel des ressources) : expirées ou arrivant à échéance dans les N jours, salariés
  * et matériels (la dernière de chaque type et élément) ; lien vers la fiche. `/ressources/habilitations?element=&jours=`.
  */
 export class PageHabilitations extends PageBase {
@@ -14,10 +14,10 @@ export class PageHabilitations extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    this.titre = 'Habilitations à surveiller';
+    this.titre = 'Habilitations, entretiens et visites à surveiller';
     this.element = this.requete.element ?? '';
     this.jours = Number(this.requete.jours ?? 60);
-    this.conteneur.innerHTML = `<div class="page-parametres pleine"><h1 class="page-titre">🪪 Habilitations à surveiller</h1>
+    this.conteneur.innerHTML = `<div class="page-parametres pleine"><h1 class="page-titre">🪪 Habilitations, entretiens et visites à surveiller</h1>
       <p class="ligne">${[['', 'Tout'], ['salarie', 'Salariés'], ['materiel', 'Matériels']].map(([v, l]) => `<label class="ligne"><input type="radio" name="element" value="${v}" ${v === this.element ? 'checked' : ''}> ${l}</label>`).join(' ')}
         · échéance dans <input data-jours value="${this.jours}" size="4" inputmode="numeric"> jours</p><div data-liste></div></div>`;
     if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }

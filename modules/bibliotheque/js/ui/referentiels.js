@@ -57,7 +57,7 @@ export class GestionReferentiels {
       if (c.options) return `<select data-c="${c.code}" ${ro ? 'disabled' : ''}><option value=""></option>${c.options.map((o) => `<option value="${echapper(o.valeur)}" ${String(o.valeur) === String(v ?? '') ? 'selected' : ''}>${echapper(o.libelle)}</option>`).join('')}</select>`;
       return `<input data-c="${c.code}" value="${echapper(v ?? '')}" ${c.largeur ? `style="width:${c.largeur}"` : ''} ${ro ? 'readonly' : ''}>`;
     };
-    zone.innerHTML = `<table class="bib-table"><thead><tr>${colonnes.map((c) => `<th>${echapper(c.libelle)}</th>`).join('')}<th></th></tr></thead><tbody>
+    zone.innerHTML = `<table class="bib-table tableau-compact largeur-contenu"><thead><tr>${colonnes.map((c) => `<th>${echapper(c.libelle)}</th>`).join('')}<th></th></tr></thead><tbody>
       ${[...lignes, ...(ro ? [] : [{ ...vide, _nouveau: true }])].map((l, i) => `<tr data-i="${i}" class="${l._nouveau ? 'ajout' : ''}">${colonnes.map((c) => `<td>${c.lecture ? echapper(c.lecture(l)) : champ(c, l[c.code])}</td>`).join('')}
         <td class="bib-actions">${ro ? '' : `<button type="button" data-action="enregistrer" title="Enregistrer">${l._nouveau ? '＋ Ajouter' : '✓'}</button>${l._nouveau || !supprimer ? '' : '<button type="button" data-action="supprimer" title="Supprimer">🗑</button>'}`}</td></tr>`).join('')}
       </tbody></table>`;
@@ -222,7 +222,7 @@ export class GestionReferentiels {
         ${natures.map((n) => `<option value="${n.id}" ${String(n.id) === this.portee ? 'selected' : ''}>${echapper(n.libelle)}</option>`).join('')}</select></label>
       <p class="bib-vigueur">En vigueur aujourd'hui : frais généraux <b>${coef(effectifs.coef_fg)}</b> <small>(${source(effectifs.sources.coef_fg)})</small> ·
         bénéfice <b>${coef(effectifs.coef_benef)}</b> <small>(${source(effectifs.sources.coef_benef)})</small></p>
-      <table class="bib-table"><thead><tr><th>Début</th><th>Frais généraux</th><th>Bénéfice</th><th>Commentaire</th><th>Créée</th><th>État</th><th></th></tr></thead><tbody>
+      <table class="bib-table tableau-compact largeur-contenu"><thead><tr><th>Début</th><th>Frais généraux</th><th>Bénéfice</th><th>Commentaire</th><th>Créée</th><th>État</th><th></th></tr></thead><tbody>
         ${liste.map((x) => {
           const etat = x.debut > jour ? 'à venir' : (x.id === enVigueur.coef_fg || x.id === enVigueur.coef_benef ? 'en vigueur' : 'passée');
           return `<tr class="periode-${etat.replace(' ', '-')}"><td>${date(x.debut)}</td><td class="nombre">${coef(x.coef_fg)}</td><td class="nombre">${coef(x.coef_benef)}</td>

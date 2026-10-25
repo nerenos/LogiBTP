@@ -35,10 +35,10 @@ export class PageParametresComptes extends PageBase {
   #rendreSessionsCompte(zone, compte, sessions, machines, recharger) {
     const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     zone.innerHTML = `<h2 class="titre-actions">Sessions et machines <span>${sessions.length ? '<button type="button" data-fermer>⏻ Fermer toutes les sessions</button>' : ''}</span></h2>
-      ${sessions.length ? `<table class="tableau-compact"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th></tr></thead><tbody>
+      ${sessions.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th></tr></thead><tbody>
         ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ' 💻' : ''}${s.api ? ' API' : ''}</td><td>${echapper(s.adresse ?? '')}</td><td>${date(s.cree_le)}</td>
           <td>${date(s.vu_le)}</td><td>${date(s.expire_le)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune session ouverte.</p>'}
-      ${machines.length ? `<table class="tableau-compact"><thead><tr><th>Machine connue</th><th>Adresse</th><th>Depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
+      ${machines.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Machine connue</th><th>Adresse</th><th>Depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
         ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${date(m.cree_le)}</td><td>${date(m.vu_le)}</td>
           <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine">✕</button></td></tr>`).join('')}</tbody></table>` : ''}`;
     zone.querySelector('[data-fermer]')?.addEventListener('click', () => api.auth.fermerSessionsCompte(compte.id).then(recharger).catch((e) => this.app.erreur(e)));
@@ -69,7 +69,7 @@ export class PageParametresComptes extends PageBase {
     const charger = async () => {
       const etat = corps.querySelector('[name="etat"]:checked').value;
       const comptes = await api.auth.comptes({ recherche: corps.querySelector('[data-recherche]').value, etat });
-      liste.innerHTML = comptes.length ? `<table><thead><tr><th>Identifiant</th><th>Nom</th><th>Profil</th><th>État</th><th>Fin de validité</th><th>Dernière connexion</th><th class="nombre">Sessions</th></tr></thead><tbody>
+      liste.innerHTML = comptes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Identifiant</th><th>Nom</th><th>Profil</th><th>État</th><th>Fin de validité</th><th>Dernière connexion</th><th class="nombre">Sessions</th></tr></thead><tbody>
         ${comptes.map((c) => `<tr><td><a href="/parametres/comptes?compte=${c.id}">${echapper(c.code)}</a></td><td>${echapper(c.libelle ?? '')}</td><td>${echapper(c.profil)}</td>
           <td>${pastilleCompte(c)}</td><td>${jourCompte(c.valide_jusqu_au)}</td><td>${dateCompte(c.derniere_connexion)}</td><td class="nombre">${c.sessions_ouvertes || ''}</td></tr>`).join('')}
         </tbody></table>` : '<p class="aide">Aucun compte.</p>';
@@ -98,7 +98,7 @@ export class PageParametresComptes extends PageBase {
     const chargerExclusions = async () => {
       const l = await api.auth.exclusions();
       const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-      exclusions.innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>Adresse</th><th class="nombre">Échecs</th><th>Du</th><th>Au</th><th>Levée</th><th></th></tr></thead><tbody>
+      exclusions.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Adresse</th><th class="nombre">Échecs</th><th>Du</th><th>Au</th><th>Levée</th><th></th></tr></thead><tbody>
         ${l.map((x) => `<tr><td>${echapper(x.prefixe)}</td><td class="nombre">${x.echecs}</td><td>${date(x.debut)}</td><td>${date(x.fin)}</td>
           <td>${x.levee_le ? `${date(x.levee_le)} par ${echapper(x.levee_par ?? '')}` : ''}</td>
           <td class="cellule-boutons">${!x.levee_le && new Date(x.fin) > new Date() ? `<button type="button" class="bouton-icone" data-lever="${x.id}" title="Lever l'exclusion">🔓</button>` : ''}</td></tr>`).join('')}</tbody></table>`
@@ -131,7 +131,7 @@ export class PageParametresComptes extends PageBase {
       <section class="carte"><h2>${echapper(compte.code)} ${pastilleCompte(compte)}</h2><div data-compte></div></section>
       <section class="carte" data-sessions-compte></section>
       <section class="carte"><h2>Journal des connexions</h2>
-        ${journal.length ? `<table><thead><tr><th>Quand</th><th>Événement</th><th>Détail</th><th>Par</th><th>Adresse</th></tr></thead><tbody>
+        ${journal.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Quand</th><th>Événement</th><th>Détail</th><th>Par</th><th>Adresse</th></tr></thead><tbody>
           ${journal.map((j) => `<tr><td>${dateCompte(j.le)}</td><td>${echapper(EVENEMENTS[j.evenement] ?? j.evenement)}</td><td>${echapper(j.detail ?? '')}</td>
             <td>${echapper(j.par ?? '')}</td><td title="${echapper(j.navigateur ?? '')}">${echapper(j.adresse ?? '')}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun événement.</p>'}
       </section>`;

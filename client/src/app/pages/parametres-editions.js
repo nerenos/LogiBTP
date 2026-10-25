@@ -43,7 +43,7 @@ export class PageParametresEditions extends PageBase {
     const zone = this.conteneur.querySelector('.mentions');
     const mentions = await api.editions.mentions();
     const admin = this.app.estAdmin();
-    zone.innerHTML = `<table><tbody>${CHAMPS_MENTIONS.map(([c, l, t]) => `<tr><th>${echapper(l)}</th><td>${
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><tbody>${CHAMPS_MENTIONS.map(([c, l, t]) => `<tr><th>${echapper(l)}</th><td>${
       t === 'case' ? `<input type="checkbox" data-mention="${c}">`
         : t === 'zone' ? `<textarea rows="2" cols="70" data-mention="${c}"></textarea>` : `<input type="text" size="50" data-mention="${c}">`}</td></tr>`).join('')}</tbody></table>
       <p><button class="principal" data-enregistrer ${admin ? '' : 'disabled'}>Enregistrer les mentions</button></p>`;
@@ -63,7 +63,7 @@ export class PageParametresEditions extends PageBase {
     const zone = this.conteneur.querySelector('.defauts');
     const [types, defauts, rapports] = await Promise.all([api.typesDocument(), api.editions.defauts(), api.editions.modeles({ cible: 'DOCUMENT', genre: 'RAPPORT' })]);
     const admin = this.app.estAdmin();
-    zone.innerHTML = `<table><thead><tr><th>Type de document</th><th>Modèle par défaut</th></tr></thead><tbody></tbody></table>`;
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Type de document</th><th>Modèle par défaut</th></tr></thead><tbody></tbody></table>`;
     const corps = zone.querySelector('tbody');
     for (const t of types) {
       const code = t.tyd_code ?? t.code;
@@ -108,7 +108,7 @@ export class PageParametresEditions extends PageBase {
     const zone = this.conteneur.querySelector('.modeles');
     const modeles = await api.editions.modeles({});
     const admin = this.app.estAdmin();
-    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Genre</th><th>Types</th><th>Version</th><th>Origine</th><th></th></tr></thead><tbody>${modeles.map((m) => `<tr data-code="${echapper(m.code)}">
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Genre</th><th>Types</th><th>Version</th><th>Origine</th><th></th></tr></thead><tbody>${modeles.map((m) => `<tr data-code="${echapper(m.code)}">
       <td><code>${echapper(m.code)}</code></td><td>${echapper(m.libelle)}</td><td>${m.genre === 'BLOC' ? 'Bloc' : `Rapport ${echapper((m.cible ?? '').toLowerCase())}`}</td>
       <td><small>${echapper(m.types.join(', ') || (m.genre === 'BLOC' ? '' : 'tous'))}</small></td><td>${m.version}</td>
       <td>${m.fourni ? (m.modifie_local ? 'fourni, modifié' : 'fourni') : 'société'}</td>

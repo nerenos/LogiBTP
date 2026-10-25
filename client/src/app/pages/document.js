@@ -48,27 +48,34 @@ const GABARIT = `
     <div class="groupe">
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
       <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
-      <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button>
-      <button data-action="valider" title="Valider et bloquer le document">Valider</button>
-      <button data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
-      <button data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
-      <button data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
-      <button data-action="numero" title="Changer le numéro du document (brouillon ; un document validé se dévalide d'abord) : tous les indices sont renommés, le compteur repart du premier numéro libre" hidden>N°…</button>
-      <button data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
-      <button data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
-      <button data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
-      <button data-action="consultation" title="Lot de consultation : la même demande pour un autre fournisseur (copie sans tiers) ; documents du lot" hidden>📨 Lot de consultation</button>
-      <button data-action="sous-traiter" title="Sous-traiter les lignes sélectionnées (ou tout) : appel d'offres à un ou plusieurs sous-traitants, ou commande de sous-traitance" hidden>🤝 Sous-traiter</button>
-      <button data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
-      <button data-action="apercu" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre">🖨 Aperçu</button>
-      <button data-action="courriel" title="Envoyer le document par courriel (pièces marquées 📧 « à envoyer » dans l'onglet Pièces) dans une autre fenêtre">📧 Envoyer</button>
-      <button data-action="fermer-page" title="Fermer le document (fenêtre séparée : la fenêtre se ferme)">✕ Fermer</button>
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
       <button data-basculer-dock="notifications" class="compteur-metres" title="Erreurs et avertissements des métrés (sans blocage de l'enregistrement)">⚠ 0</button>
       <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
+    <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
+    <div class="groupe barre-droite">
+      <span class="bouton-menu menu-deroulant">
+        <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="Valider, transformer et autres actions du document" aria-label="Autres actions du document" aria-haspopup="menu">▾</button>
+        <div class="menu-deroulant-contenu menu-actions-document" role="menu" data-menu-actions hidden>
+        <button role="menuitem" class="mo-ligne" data-action="valider" title="Valider et bloquer le document">Valider</button>
+        <button role="menuitem" class="mo-ligne" data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
+        <button role="menuitem" class="mo-ligne" data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
+        <button role="menuitem" class="mo-ligne" data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
+        <button role="menuitem" class="mo-ligne" data-action="numero" title="Changer le numéro du document (brouillon ; un document validé se dévalide d'abord) : tous les indices sont renommés, le compteur repart du premier numéro libre" hidden>N°…</button>
+        <button role="menuitem" class="mo-ligne" data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
+        <button role="menuitem" class="mo-ligne" data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
+        <button role="menuitem" class="mo-ligne" data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
+        <button role="menuitem" class="mo-ligne" data-action="consultation" title="Lot de consultation : la même demande pour un autre fournisseur (copie sans tiers) ; documents du lot" hidden>📨 Lot de consultation</button>
+        <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="Sous-traiter les lignes sélectionnées (ou tout) : appel d'offres à un ou plusieurs sous-traitants, ou commande de sous-traitance" hidden>🤝 Sous-traiter</button>
+        <button role="menuitem" class="mo-ligne" data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
+        </div>
+      </span>
+      <button data-action="apercu" class="bouton-icone" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre (Ctrl+P)" aria-label="Aperçu et impression">🖨</button>
+      <button data-action="courriel" class="bouton-icone" title="Envoyer le document par courriel (pièces marquées 📧 « à envoyer » dans l'onglet Pièces) dans une autre fenêtre" aria-label="Envoyer par courriel">📧</button>
+      <button data-action="fermer-page" class="bouton-icone" title="Fermer le document (fenêtre séparée : la fenêtre se ferme)" aria-label="Fermer le document">✕</button>
+    </div>
   </div>
   <div class="document-verrou" hidden></div>
   <div class="document-import" hidden></div>
@@ -222,6 +229,10 @@ export class PageDocument extends PageBase {
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
       if (plan) { this.disposition.afficher(plan.dataset.basculerDock); return; }
+      // Menu ▾ du bouton Enregistrer : ouvert ou fermé ; refermé par toute action.
+      const menu = this.$('[data-menu-actions]');
+      if (e.target.closest('[data-ouvrir-actions]')) { menu.hidden = !menu.hidden; if (!menu.hidden) menu.querySelector('button:not([hidden]):not(:disabled)')?.focus(); return; }
+      menu.hidden = true;
       const b = e.target.closest('button[data-action]');
       if (b && actions[b.dataset.action]) Promise.resolve(actions[b.dataset.action]()).catch((x) => app.erreur(x));
     });
@@ -243,6 +254,15 @@ export class PageDocument extends PageBase {
       if (actions[action]) { e.preventDefault(); Promise.resolve(actions[action]()).catch((x) => app.erreur(x)); }
     };
     document.addEventListener('keydown', this.clavier);
+    // Menu des actions du document : refermé par un clic ailleurs ou Échap.
+    this.fermerMenuActions = (e) => {
+      const menu = this.conteneur.querySelector('[data-menu-actions]');
+      if (!menu || menu.hidden || (e.type === 'keydown' ? e.key !== 'Escape' : menu.parentElement.contains(e.target))) return;
+      menu.hidden = true;
+      if (e.type === 'keydown') e.stopPropagation();
+    };
+    document.addEventListener('pointerdown', this.fermerMenuActions, true);
+    document.addEventListener('keydown', this.fermerMenuActions, true);
     document.body.classList.add('avec-document');
     // Bibliothèque : appel par code (colonne Code), F3, bibliothèque du document (entête).
     const s = await app.services();
@@ -965,6 +985,8 @@ export class PageDocument extends PageBase {
     this.suivi?.fermer();
     this.liberer();
     document.removeEventListener('keydown', this.clavier);
+    document.removeEventListener('pointerdown', this.fermerMenuActions, true);
+    document.removeEventListener('keydown', this.fermerMenuActions, true);
     document.body.classList.remove('avec-document', 'lecture-seule');
   }
 }

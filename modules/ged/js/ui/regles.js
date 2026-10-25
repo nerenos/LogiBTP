@@ -66,7 +66,7 @@ export class ParametrageReglesGed {
         <h2>⏳ Rétention</h2>
         <p class="aide">Pour chaque document, la règle la plus précise s'applique (catégorie et type d'élément, puis catégorie, puis type, puis règle générale ; à précision égale, la priorité la plus faible). Durée active : mois avant l'archivage (vide : jamais) ; conservation : mois avant la fin de conservation (vide : illimitée), comptés depuis la date du document. L'archivage est appliqué chaque nuit et par le bouton ⏳ de la GED ; un document au coffre-fort est archivé sur place.</p>
         ${this.echeances === null || this.echeances === undefined ? '' : `<p class="aide">${this.echeances ? `<strong>${this.echeances}</strong> document(s) échu(s)` : 'Aucun document échu'} selon les règles enregistrées.</p>`}
-        <div class="ged-regles-defilement"><table class="table-parametres">
+        <div class="ged-regles-defilement"><table class="table-parametres tableau-compact largeur-contenu">
           <thead><tr><th>Libellé</th><th>Catégorie</th><th>Type d'élément</th><th>Active (mois)</th><th>Conservation (mois)</th><th>Fin</th><th>Priorité</th><th>Active</th><th></th></tr></thead>
           <tbody>${this.retention.map((r, i) => ligne('retention', i, `
             <td>${champ('libelle', r.libelle, 'size="18"')}</td>
@@ -83,7 +83,7 @@ export class ParametrageReglesGed {
       <section class="panneau">
         <h2>🏷 Classification automatique</h2>
         <p class="aide">Au dépôt, une règle s'applique quand tous ses critères renseignés sont remplis (extensions, types MIME — un préfixe comme « image/ » suffit —, mots du nom, du titre ou du texte, expéditeur d'un mail, type d'élément). La catégorie vient de la première règle par priorité, la confidentialité la plus stricte l'emporte, les mots-clés se cumulent. Une catégorie ou une confidentialité saisie au dépôt reste prioritaire. Listes séparées par des virgules.</p>
-        <div class="ged-regles-defilement"><table class="table-parametres">
+        <div class="ged-regles-defilement"><table class="table-parametres tableau-compact largeur-contenu">
           <thead><tr><th>Libellé</th><th>Priorité</th><th>Extensions</th><th>Types MIME</th><th>Mots</th><th>Expéditeur</th><th>Type d'élément</th><th>→ Catégorie</th><th>→ Confidentialité</th><th>→ Mots-clés</th><th>Active</th><th></th></tr></thead>
           <tbody>${this.classification.map((r, i) => ligne('classification', i, `
             <td>${champ('libelle', r.libelle, 'size="16"')}</td>

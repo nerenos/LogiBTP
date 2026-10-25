@@ -18,7 +18,7 @@ export const MENUS_METIER = [
       { code: 'salaries', libelle: 'Salariés et intérimaires', icone: '👷', url: L('salaries'), creation: F('salarie', 'Nouveau salarié') },
       { code: 'materiels', libelle: 'Matériels', icone: '🚜', url: L('materiels'), creation: F('materiel', 'Nouveau matériel') },
       { separateur: true },
-      { code: 'habilitations', libelle: 'Habilitations à surveiller', icone: '🪪', url: '/ressources/habilitations', info: 'Expirées ou à renouveler : CACES, visites médicales, VGP…' },
+      { code: 'habilitations', libelle: 'Habilitations, entretiens et visites à surveiller', icone: '🪪', url: '/ressources/habilitations', info: 'Expirées ou à renouveler : CACES, visites médicales, VGP…' },
       { code: 'parametrage-ressources', libelle: "Types d'habilitations, motifs, natures MO…", icone: '⚙', url: '/parametres/ressources' },
     ],
   },

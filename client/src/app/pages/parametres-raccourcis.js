@@ -23,7 +23,7 @@ export class PageParametresRaccourcis extends PageBase {
         Le clic droit sur une ligne rappelle ces raccourcis. Évitez AltGr, Alt+Maj et Ctrl+N/T/W (réservés par le système ou le navigateur).</p>
       <p><button type="button" data-tout>↺ Tout remettre par défaut</button></p>
       ${groupes.map((g) => `<section class="carte"><h2>${echapper(g.libelle)}</h2>
-        <table class="table-raccourcis"><thead><tr><th>Fonction</th><th>Raccourci</th><th>Par défaut</th><th></th></tr></thead><tbody>
+        <table class="table-raccourcis tableau-compact largeur-contenu"><thead><tr><th>Fonction</th><th>Raccourci</th><th>Par défaut</th><th></th></tr></thead><tbody>
         ${g.actions.map((a) => `<tr data-groupe="${echapper(g.groupe)}" data-action="${echapper(a.action)}" class="${a.personnalise ? 'personnalise' : ''}">
           <td>${echapper(a.libelle)}</td>
           <td class="touches">${a.touches.map((t) => `<kbd>${echapper(libelleTouches(t))}</kbd>`).join(' ') || '<span class="aide">—</span>'}</td>

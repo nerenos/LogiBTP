@@ -57,7 +57,7 @@ export class GestionReferentielsAnnuaire {
       const lecture = ro || (c.creation && !l._nouveau);
       return `<input data-c="${c.code}" value="${echapper(v ?? '')}" ${c.largeur ? `style="width:${c.largeur}"` : ''} ${lecture ? 'readonly' : ''}>`;
     };
-    zone.innerHTML = `<table class="bib-table"><thead><tr>${colonnes.map((c) => `<th>${echapper(c.libelle)}</th>`).join('')}<th></th></tr></thead><tbody>
+    zone.innerHTML = `<table class="bib-table tableau-compact largeur-contenu"><thead><tr>${colonnes.map((c) => `<th>${echapper(c.libelle)}</th>`).join('')}<th></th></tr></thead><tbody>
       ${[...lignes, ...(ro ? [] : [{ _nouveau: true, ordre: (lignes.at(-1)?.ordre ?? 0) + 10 }])].map((l, i) => `<tr data-i="${i}" class="${l._nouveau ? 'ajout' : ''}">
         ${colonnes.map((c) => `<td>${champ(c, l)}</td>`).join('')}
         <td class="bib-actions">${ro ? '' : `<button type="button" data-action="enregistrer">${l._nouveau ? '＋ Ajouter' : '✓'}</button>${l._nouveau ? '' : '<button type="button" data-action="supprimer" title="Supprimer (si non utilisé)">🗑</button>'}`}</td></tr>`).join('')}

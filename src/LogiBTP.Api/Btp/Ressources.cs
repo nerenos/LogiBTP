@@ -122,7 +122,7 @@ public static class Ressources
     }
 
     /// <summary>
-    /// Habilitations à surveiller (expirées ou à renouveler, échéance dans les <paramref name="jours"/> jours), tous
+    /// Habilitations, entretiens et visites à surveiller (expirées ou à renouveler, échéance dans les <paramref name="jours"/> jours), tous
     /// éléments ; la dernière de chaque type et élément seulement (une habilitation renouvelée ne reste pas en alerte).
     /// </summary>
     public static async Task<List<object>> ASurveillerAsync(LogiBtpContext db, string? element, int jours, CancellationToken ct)

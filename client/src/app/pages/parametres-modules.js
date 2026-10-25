@@ -24,7 +24,7 @@ export class PageParametresModules extends PageBase {
     const app = this.app;
     const admin = app.estAdmin();
     const corps = this.conteneur.querySelector('[data-corps]');
-    corps.innerHTML = `<table><thead><tr><th>Module</th><th>Description</th><th>Actif</th><th>Modifié</th></tr></thead><tbody>
+    corps.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Module</th><th>Description</th><th>Actif</th><th>Modifié</th></tr></thead><tbody>
       ${modules.map((m) => `<tr><td><b>${echapper(m.libelle)}</b></td><td>${echapper(m.description ?? '')}
         ${m.dependances?.length ? `<br><small class="aide">Nécessite : ${m.dependances.map(echapper).join(', ')}</small>` : ''}</td>
         <td><input type="checkbox" data-module="${echapper(m.code)}" ${m.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>

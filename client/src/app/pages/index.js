@@ -116,7 +116,7 @@ export const ROUTES = [
   { nom: 'mail-message', chemin: '/mail/message/:id', page: PageMessageMail, titre: 'Courriel' },
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: 'Connexions externes' },
   { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
-  { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations à surveiller' },
+  { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations, entretiens et visites à surveiller' },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: 'Installation' },
   { nom: 'parametres-droits', chemin: '/parametres/droits', page: PageParametresDroits, titre: 'Profils et droits' },

@@ -71,7 +71,7 @@ export class PageParametresDocuments extends PageBase {
     const options = services.filter((x) => x.actif).map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code }));
     zone.innerHTML = `<p class="aide">Un type désactivé disparaît des menus, des listes et des transformations ; ses étapes de parcours sont ignorées.
       Il ne se désactive que lorsque tous ses ordres sont terminés.</p>
-      <table class="tableau-compact"><thead><tr><th>Type</th><th>Code</th><th>Actif</th><th>Service par défaut</th><th>Non terminés</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Type</th><th>Code</th><th>Actif</th><th>Service par défaut</th><th>Non terminés</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${types.map((t, i) => `<tr data-i="${i}"><td>${echapper(t.libelle)}</td><td>${echapper(t.code)}</td>
         <td><input type="checkbox" data-actif ${t.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td><td data-service></td>
         <td class="nombre">${t.en_cours || ''}</td>
@@ -109,7 +109,7 @@ export class PageParametresDocuments extends PageBase {
     const rendre = () => {
       zone.innerHTML = `<p class="aide">Valeur d'une règle pour un document : celle de son type, sinon de sa famille, sinon la valeur globale,
         sinon le défaut. ⛔ bloque la validation, ⚠ avertit sans bloquer. -1 : pas de seuil.</p>
-        <table><thead><tr><th>Règle</th><th>Défaut</th><th>Valeurs paramétrées</th><th></th></tr></thead><tbody>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Règle</th><th>Défaut</th><th>Valeurs paramétrées</th><th></th></tr></thead><tbody>
         ${p.catalogue.map((d) => `<tr data-code="${d.code}"><td title="${echapper(d.description)}">${EFFETS[d.effet] ?? ''} ${echapper(d.libelle)}
           <br><small class="aide">${echapper(d.description)}</small></td><td>${echapper(texteValeur(d, d.defaut))}</td>
           <td>${p.regles.map((r, i) => (r.code === d.code ? `<div class="regle-niveau" data-i="${i}"><span data-niveau></span> <span data-valeur></span>
@@ -241,7 +241,7 @@ export class PageParametresDocuments extends PageBase {
       zone.innerHTML = `<p class="aide">Échéances : « 30% 0j; 70% 30j FM » — pourcentage du net à payer, délai en jours, puis FM (fin de mois)
         ou « le 10 » (jour fixe du mois), mode de règlement facultatif (VIREMENT, LCR…). Vide : comptant. Le tiers choisit sa
         condition par son délai de paiement (même code).</p>
-        <table><thead><tr><th>Code</th><th>Libellé</th><th>Échéances</th><th>Actif</th><th></th></tr></thead>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Code</th><th>Libellé</th><th>Échéances</th><th>Actif</th><th></th></tr></thead>
         <tbody>${conditions.map((c, i) => `<tr data-i="${i}">
           <td><input data-c="code" size="10" maxlength="20" value="${echapper(c.code)}" ${ro}></td>
           <td><input data-c="libelle" size="30" maxlength="100" value="${echapper(c.libelle)}" ${ro}></td>
@@ -313,7 +313,7 @@ export class PageParametresDocuments extends PageBase {
     zone.innerHTML = `<p class="aide">À la validation d'un bon de livraison ou d'une facture issu d'une commande, une ligne est soldée
       automatiquement quand son reste est inférieur ou égal à l'un des deux seuils (0 : soldée quand tout est livré ou facturé).
       La case « Soldée » de la ligne permet aussi de la solder à la main.</p>
-      <table><thead><tr><th></th><th>% de la quantité du parent</th><th>Quantité</th></tr></thead>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th></th><th>% de la quantité du parent</th><th>Quantité</th></tr></thead>
       <tbody>${ligne('achat', 'Achats')}${ligne('vente', 'Ventes')}</tbody></table>
       ${admin ? '<div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer les seuils</button></div>' : ''}`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {

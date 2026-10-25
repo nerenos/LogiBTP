@@ -146,7 +146,7 @@ export class PageParametresConnexions extends PageBase {
     const dis = admin ? '' : 'disabled';
     const f = c ? this.fournisseurs.find((x) => x.code === c.fournisseur) : this.fournisseurs[0];
     zone.innerHTML = `<h2>${c ? `Connexion : ${echapper(c.nom)}` : 'Nouvelle connexion'}</h2>
-      <table><tbody>
+      <table class="tableau-compact largeur-contenu"><tbody>
         <tr><th>Code</th><td><input data-c="code" value="${echapper(c?.code ?? '')}" size="16" maxlength="30" ${dis}></td></tr>
         <tr><th>Nom d'usage</th><td><input data-c="nom" value="${echapper(c?.nom ?? '')}" size="40" maxlength="100" ${dis} placeholder="ex. Gmail – Service commercial"></td></tr>
         <tr><th>Fournisseur</th><td><span data-fournisseur></span></td></tr>
@@ -164,7 +164,7 @@ export class PageParametresConnexions extends PageBase {
       ${c ? `<h3>Client du fournisseur</h3>
         <p class="aide">${c.client_configure ? 'Client configuré (jamais réaffiché). Ressaisir pour le remplacer ; secret vide = inchangé.' : 'À renseigner avant la première connexion.'}
           Adresse de retour à déclarer chez le fournisseur : <code>${echapper(this.parametres.adresse_retour ?? '')}</code></p>
-        ${admin ? `<table><tbody>
+        ${admin ? `<table class="tableau-compact largeur-contenu"><tbody>
           ${c.flux === 'COMPTE_SERVICE' ? `
           <tr><th>Clé du compte de service</th><td><input type="file" data-f="cle" accept=".json,application/json"> <span class="aide">fichier JSON de la console Google</span></td></tr>
           <tr><th>Boîte déléguée</th><td><input data-k="sujet" size="40" placeholder="adresse de la boîte (délégation sur le domaine)"></td></tr>` : `

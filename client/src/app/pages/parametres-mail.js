@@ -178,7 +178,7 @@ export class PageParametresMail extends PageBase {
         <input data-${cle}="port" value="${s?.port ?? ''}" size="5" inputmode="numeric" placeholder="port"> <span data-securite-${cle}></span>
         <input data-${cle}="identifiant" size="22" autocomplete="off" placeholder="${info?.identifiant_configure ? 'identifiant inchangé' : 'identifiant (vide : l’adresse)'}">
         <input type="password" data-${cle}="mot_de_passe" size="16" autocomplete="new-password" placeholder="${info?.mot_de_passe_configure ? 'mot de passe inchangé' : 'mot de passe'}"></td></tr>`;
-    zone.innerHTML = `<h3>${c ? `Compte ${echapper(c.alias)}` : 'Nouveau compte'}</h3><table><tbody>
+    zone.innerHTML = `<h3>${c ? `Compte ${echapper(c.alias)}` : 'Nouveau compte'}</h3><table class="tableau-compact largeur-contenu"><tbody>
       <tr><th>Code</th><td><input data-c="code" value="${echapper(c?.code ?? '')}" size="16" maxlength="30"></td></tr>
       <tr><th>Alias principal</th><td><input data-c="alias" value="${echapper(c?.alias ?? '')}" size="30" maxlength="80" placeholder="ex. Service commercial"></td></tr>
       <tr><th>Adresse</th><td><input data-c="adresse" size="34" autocomplete="off" placeholder="${c ? 'inchangée (jamais réaffichée)' : 'adresse@domaine.fr'}">
@@ -359,7 +359,7 @@ export class PageParametresMail extends PageBase {
 
   rendreModele(m) {
     const zone = this.conteneur.querySelector('[data-modele]');
-    zone.innerHTML = `<table><tbody>
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu"><tbody>
       <tr><th>Code</th><td><input data-m="code" value="${echapper(m?.code ?? '')}" size="16" maxlength="30"></td></tr>
       <tr><th>Libellé</th><td><input data-m="libelle" value="${echapper(m?.libelle ?? '')}" size="40"></td></tr>
       <tr><th>Usage</th><td><span data-usage></span></td></tr>
@@ -394,7 +394,7 @@ export class PageParametresMail extends PageBase {
   rendreParametres() {
     const zone = this.conteneur.querySelector('[data-parametres]');
     zone.innerHTML = `<p class="aide">Les limitations de chaque compte se règlent dans le compte ; une limite atteinte met les courriels en attente,
-      jamais en échec. Au-delà des seuils, l'envoi demande une confirmation ou prévient les administrateurs.</p><table><tbody>
+      jamais en échec. Au-delà des seuils, l'envoi demande une confirmation ou prévient les administrateurs.</p><table class="tableau-compact largeur-contenu"><tbody>
       ${PARAMETRES.map(([k, l]) => `<tr><th>${l}</th><td><input data-p="${k}" value="${this.parametres[k] ?? ''}" size="6" inputmode="numeric"></td></tr>`).join('')}
       </tbody></table><div class="boutons"><button type="button" data-enregistrer-parametres>Enregistrer</button></div>`;
     zone.querySelector('[data-enregistrer-parametres]').addEventListener('click', async () => {
