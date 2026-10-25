@@ -8,6 +8,7 @@ import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
 import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees } from '../ressources/ressources-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
+import { api } from '../api.js';
 
 const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
 
@@ -42,6 +43,8 @@ export class PageFiche extends PageBase {
       }],
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),
+      // Composition des ouvrages : vues de colonnes des documents (en ligne).
+      vuesDocument: app.enLigne ? { vues: (t) => api.vuesDocument(t), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) } : null,
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       ouvrirFiche: ({ type: t, id }, e) => app.naviguer(`/fiche/${t}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
@@ -61,7 +64,10 @@ export class PageFiche extends PageBase {
       } : null,
       // Onglet Fil des fiches affaire et chantier (module CRM actif, en ligne) : fil d'actualité de l'élément.
       fil: app.enLigne && app.moduleActif('crm') ? (corps, { type: t, id, libelle }) => {
-        const fil = new FilCrm(corps, { app, element: { type: t, id: String(id) }, libelle });
+        // Sous-conteneur propre au fil : le corps de la fiche, commun à tous les onglets, garde sa largeur.
+        const hote = document.createElement('div');
+        corps.replaceChildren(hote);
+        const fil = new FilCrm(hote, { app, element: { type: t, id: String(id) }, libelle });
         fil.ouvrir().catch((e) => app.erreur(e));
         return fil;
       } : null,

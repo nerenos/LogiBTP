@@ -1,9 +1,11 @@
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { GestionVuesDocument } from '@logibtp/document/ui';
 import { OngletPrix, OngletUnites, OngletTarifs } from '@logibtp/bibliotheque/ui';
 import { rendreStockArticle } from '../stock/article.js';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
+import { PanneauxBtp } from '../panneaux-btp.js';
 import { calculerOuvrage, documentComposition } from '../bibliotheque/bibliotheque.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { FicheLogiBTP } from './fiches.js';
@@ -20,11 +22,15 @@ const DEFAUTS_POSTE = { unite_stock: 'u', pied_niveau: 'HT', pied_mode: 'P', pie
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_qte_source: 'S', lig_coef_perte: 1, ...o });
 
 export class FicheElement extends FicheLogiBTP {
-  /** options.services : { bibliotheque, ged } ; options.definitionDocument() : définition du document de composition. */
+  /**
+   * options.services : { bibliotheque, ged } ; options.definitionDocument() : définition du document de composition ;
+   * options.vuesDocument : fournisseur des vues de colonnes (vues(type), enregistrer, supprimer), null hors ligne.
+   */
   constructor(options) {
     super(options);
     this.services = options.services;
     this.definitionDocument = options.definitionDocument;
+    this.vuesDocument = options.vuesDocument ?? null;
     this.utilisateur = options.utilisateur ?? 'demo';
     this.admin = options.admin ?? false;
     this.ouvrirUrl = options.ouvrirUrl ?? (() => {});
@@ -199,22 +205,32 @@ export class FicheElement extends FicheLogiBTP {
     };
   }
 
-  /** Éditeur de devis sur la composition (lignes, métrés F4, variables) ; prix recalculés en direct. */
+  /**
+   * Éditeur de devis sur la composition (lignes, métrés F4, variables) ; prix recalculés en direct. Sans pied (un
+   * ouvrage n'a ni postes de pied ni TVA) ; natures et coefficients par défaut des référentiels ; vues de colonnes
+   * comme les documents (modèle COMPOSITION : vue propre mémorisée) ; panneau de détail de la ligne à droite.
+   */
   async #composition(corps, modifiable) {
     const composition = json(this.valeur('composition'), null) ?? this.#compositionInitiale();
     corps.innerHTML = `<div class="element-composition">
       <div class="element-composition-barre">
-        <label ${this.ensemble ? 'hidden' : ''}>Calcul de l'ouvrage <select data-mode ${modifiable ? '' : 'disabled'}><option value="D">Déboursé : PR des composantes × coefficients de l'élément</option><option value="V">Somme des PV des composantes</option></select></label>
+        <label ${this.ensemble ? 'hidden' : ''}>Calcul de l'ouvrage <span data-mode></span></label>
         ${modifiable ? '<button type="button" data-article title="Ou saisir un code dans la colonne Code, ou F3">＋ Élément de la bibliothèque</button>' : ''}
+        <span class="groupe" data-vues></span>
         <span class="element-composition-totaux"></span>
       </div>
       ${this.ensemble ? '<div class="element-parametres"></div>' : ''}
-      <div class="element-composition-grille"></div>
+      <div class="element-composition-corps"><div class="element-composition-grille"></div><aside class="element-composition-detail detail"></aside></div>
       <p class="aide">${this.ensemble
     ? 'Ensemble : lignes sous la tranche, vendues ou en option, variante, pour mémoire (détail de la ligne). Les paramètres de la tranche ({{$largeur}}…) sont repris par les métrés (F4) et les libellés ; le prix est celui des lignes vendues, chacune avec ses coefficients.'
     : `Quantités par unité d'ouvrage (${echapper(this.valeur('unite_stock') ?? '?')}). F4 sur une composante : métré. Les coefficients de l'élément (onglet Prix) s'appliquent à l'ouvrage.`}</p>
       <aside class="tiroir element-metre" hidden></aside></div>`;
-    corps.querySelector('[data-mode]').value = composition.mode ?? 'D';
+    const combo = creerCombo({
+      options: [{ valeur: 'D', libelle: "Déboursé : PR des composantes × coefficients de l'élément" }, { valeur: 'V', libelle: 'Somme des PV des composantes' }],
+      valeur: composition.mode ?? 'D', vide: false,
+    });
+    combo.disabled = !modifiable;
+    corps.querySelector('[data-mode]').append(combo);
     const definition = await this.definitionDocument();
     // Le métré est créé après l'éditeur, qui signale déjà sa sélection à sa construction.
     let metre = null;
@@ -222,18 +238,29 @@ export class FicheElement extends FicheLogiBTP {
     // Composantes appelées dans la bibliothèque de l'ouvrage (colonne Code, F3, bouton).
     const bibOuvrage = () => this.referentiels.bibliotheques.find((b) => b.id === Number(this.valeur('bib_id')))?.code ?? null;
     const appel = new AppelBibliotheque({ fournisseur: this.bibliotheque, editeur: () => editeur, bibliotheque: bibOuvrage, message: this.message, postes: false });
+    let panneaux = null;
+    const detail = corps.querySelector('.element-composition-detail');
     editeur = new EditeurDevisBtp(corps.querySelector('.element-composition-grille'), {
-      definition,
+      definition, pied: false,
       saisie: { document: documentComposition(composition.mode), lignes: composition.lignes, metres: composition.metres ?? [], variables: composition.variables ?? [] },
-      surSelection: (id) => metre?.suivre(id), surMessage: (t) => this.message(t), ouvrirMetre: (ligId, mtrId) => metre.ouvrir(ligId, mtrId),
+      surSelection: (id) => { metre?.suivre(id); panneaux?.rendreDetail(detail, id); },
+      surMessage: (t) => this.message(t), ouvrirMetre: (ligId, mtrId) => metre.ouvrir(ligId, mtrId),
       appelerCode: (ligId, code) => (modifiable ? appel.appeler(ligId, code) : null), rechercher: (ligId) => (modifiable ? appel.rechercher(ligId) : null),
     });
     metre = new PanneauMetre(corps.querySelector('.element-metre'), editeur, {
       fermer: (ligId) => { editeur.grille.selectionner(ligId, { colonne: 3 }); editeur.grille.focus(); }, message: (t) => this.message(t), dictionnaire: new DictionnaireBtp(editeur),
     });
+    // Natures (colonne et détail) et coefficients par défaut, comme la page document.
+    editeur.natures = this.referentiels.natures;
+    editeur.coefsDefaut = { fg: this.referentiels.parametres?.coef_fg_defaut ?? 1, benef: this.referentiels.parametres?.coef_benef_defaut ?? 1 };
+    panneaux = new PanneauxBtp(editeur, { bibliotheques: this.referentiels.bibliotheques });
+    if (this.vuesDocument) {
+      const vues = new GestionVuesDocument(corps.querySelector('[data-vues]'), { editeur, fournisseur: this.vuesDocument, admin: () => this.admin, message: (t) => this.message(t) });
+      vues.charger().catch((e) => this.message(e.message, 'erreur'));
+    }
     editeur.magasin.lectureSeule = !modifiable;
     editeur.magasin.surRefus = () => this.message('Passez la fiche en modification pour changer la composition', 'avertissement');
-    const mode = () => corps.querySelector('[data-mode]').value;
+    const mode = () => combo.valeurCombo;
     const totaux = () => {
       const c = { mode: mode(), lignes: editeur.saisie.lignes, metres: editeur.saisie.metres, variables: editeur.saisie.variables };
       let r;
@@ -252,7 +279,7 @@ export class FicheElement extends FicheLogiBTP {
     };
     editeur.magasin.abonner(() => { this.definirValeur('composition', totaux()); parametres(); });
     parametres();
-    corps.querySelector('[data-mode]').addEventListener('change', () => this.definirValeur('composition', totaux()));
+    combo.addEventListener('change', () => this.definirValeur('composition', totaux()));
     // Bouton : composante insérée après la ligne courante (sinon sous l'ouvrage).
     corps.querySelector('[data-article]')?.addEventListener('click', () => {
       const racine = editeur.saisie.lignes.find((l) => l.lig_parent_id === null);

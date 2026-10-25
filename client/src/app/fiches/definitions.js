@@ -51,7 +51,12 @@ export const TYPES_FICHE = {
           confidentiel: true, non_copie: true, longueur: 21, format: 'regex:^[12] ?[0-9]{2} ?[0-9]{2} ?[0-9]{2} ?[0-9]{3} ?[0-9]{3} ?[0-9]{2}$',
           aide: '13 chiffres + clé (espaces acceptés)',
         }),
-        c('service', 'Service', 'sal_service', 'liste', { obligatoire: true, options: options('Chantier', 'Bureau', 'Atelier', 'Direction') }),
+        // Service principal du référentiel des services (db/193) : tenu aligné sur service_membre par db/226.
+        c('service', 'Service', 'sal_service', 'liste', {
+          obligatoire: true,
+          requete: "SELECT s.srv_code, CASE WHEN p.srv_id IS NULL THEN s.srv_libelle ELSE p.srv_libelle || ' › ' || s.srv_libelle END FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id WHERE s.srv_actif ORDER BY coalesce(p.srv_ordre, s.srv_ordre), coalesce(p.srv_code, s.srv_code), s.srv_parent_id NULLS FIRST, s.srv_ordre",
+          aide: 'Service principal (planning, pointage, exécution) ; les autres appartenances se gèrent dans Paramètres › Services',
+        }),
         c('poste', 'Poste', 'sal_poste', 'texte', { obligatoire: true, longueur: 60 }),
         c('agence', 'Agence', 'sal_agence', 'liste', { options: options('Lyon', 'Saint-Étienne', 'Grenoble', 'Bourg-en-Bresse') }),
         c('type_mo', 'Type de main-d\'œuvre', 'sal_type_mo', 'liste', {

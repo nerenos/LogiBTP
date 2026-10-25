@@ -106,15 +106,21 @@ public static class RessourcesTache
         return membres.Select(m => new MembreEquipe(m.Type, m.Id, $"{m.Type}:{m.Id}", lib.GetValueOrDefault($"{m.Type}:{m.Id}") ?? $"{m.Type} {m.Id}")).ToList();
     }
 
+    /// <summary>Nombre de ressources rendues par les disponibilités (hors ressources déjà choisies).</summary>
+    public const int LimiteDisponibilites = 1000;
+
     /// <summary>
     /// Disponibilités sur [debut, fin[ (information, jamais bloquant) : minutes travaillables (plages), minutes occupées
     /// par d'autres tâches sur ces plages, tâches en cause ; état LIBRE, PARTIEL, OCCUPE, ABSENT (absence sur la
-    /// période), HORS (aucune plage : hors calendrier), SANS (ressource sans capacité).
+    /// période), HORS (aucune plage : hors calendrier), SANS (ressource sans capacité). Au plus <see cref="LimiteDisponibilites"/>
+    /// ressources, plus celles de <paramref name="inclure"/> (déjà choisies) : une ressource choisie est toujours rendue.
     /// </summary>
     public static async Task<List<DisponibiliteRessource>> DisponibilitesAsync(PlanningDbContext db, SpecialisationPlanning specialisation, long debut, long fin,
-        long? exclure, FiltreRessources filtre, CancellationToken ct)
+        long? exclure, FiltreRessources filtre, CancellationToken ct, IReadOnlyCollection<string>? inclure = null)
     {
-        var ressources = (await specialisation.RessourcesAsync(db, filtre, ct)).Take(1000).ToList();
+        var ressources = (await specialisation.RessourcesAsync(db, filtre, ct)).Take(LimiteDisponibilites).ToList();
+        var manquantes = (inclure ?? []).Except(ressources.Select(r => r.Cle)).ToList();
+        if (manquantes.Count > 0) ressources.AddRange(await specialisation.RessourcesAsync(db, new FiltreRessources(null, null, null, manquantes), ct));
         var du = Temps.DateDe(debut);
         var au = Temps.DateDe(Math.Max(debut, fin - 1));
         var plages = await specialisation.PlagesAsync(db, ressources.Where(r => r.Capacite).ToList(), du, au, ct);

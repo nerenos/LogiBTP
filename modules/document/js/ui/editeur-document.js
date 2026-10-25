@@ -117,8 +117,10 @@ export function insererColonnes(colonnes, avantCle, nouvelles) {
  * totaux calculés (un total égal au suivant n'est pas affiché).
  */
 export class EditeurDocument {
-  constructor(conteneur, { definition, saisie, surSelection, surMessage, appelerCode = null, rechercher = null, vue = null }) {
+  /** `pied` : false pour une saisie sans pied (composition d'un ouvrage) : ni tranche du pied, ni lignes de pied. */
+  constructor(conteneur, { definition, saisie, surSelection, surMessage, appelerCode = null, rechercher = null, vue = null, pied = true }) {
     this.definition = definition;
+    this.avecPied = pied;
     this.vue = vue;
     this.filtre = null;
     // Filtre d'affichage par pastille : étiquettes ('' : sans étiquette) et modes de vente (V, O, M, A).
@@ -741,6 +743,8 @@ export class EditeurDocument {
    * suivant n'est pas affiché (une seule ligne).
    */
   lignesPied(lignes, replies) {
+    this.groupesVides = new Map();
+    if (!this.avecPied) return lignes.filter((r) => !estPied(r.calcule));
     const pied = this.resultat.pied ?? [];
     if (!pied.length) return lignes;
     const sections = this.resultat.pieds_sections ?? [];

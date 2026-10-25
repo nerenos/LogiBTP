@@ -60,7 +60,7 @@
 .document-zone { flex: 1; min-height: 0; padding: 0 1rem 0.6rem; display: flex; flex-direction: column; }
 
 /* Paramètres */
-.page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 64rem; }
+.page-parametres { flex: 1; min-height: 0; overflow: auto; padding: 0.8rem 1.2rem 2rem; display: flex; flex-direction: column; gap: 0.8rem; }
 /* Vues de paramétrage : un tableau prend la largeur de son contenu, calé à gauche, au lieu d'étirer ses colonnes sur
    toute la largeur (lisibilité) ; un tableau qui doit occuper la largeur porte la classe pleine-largeur. */
 .page-parametres table:not(.pleine-largeur):not(.tableau-compact), .themes-table, .concepteur-table { width: auto; max-width: 100%; }
@@ -86,7 +86,9 @@
 .element-composition-barre label { display: flex; align-items: center; gap: 0.3rem; color: var(--discret); }
 .element-composition-totaux { margin-left: auto; }
 /* Le conteneur reçoit la grille de l'éditeur (classe .grille, défilement) : le tableau garde sa hauteur naturelle. */
-.element-composition-grille { flex: 1; min-height: 16rem; overflow: auto; }
+.element-composition-corps { flex: 1; min-height: 16rem; display: flex; gap: 0.5rem; }
+.element-composition-grille { flex: 1; min-width: 0; min-height: 16rem; overflow: auto; }
+.element-composition-detail { flex: 0 0 22rem; overflow: auto; border-left: 1px solid var(--bord); padding-left: 0.5rem; }
 .element-medias { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr)); gap: 0.8rem; align-items: start; }
 .element-images { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .element-image { display: flex; flex-direction: column; gap: 0.2rem; width: 9rem; border: 2px solid transparent; border-radius: 6px; padding: 0.2rem; cursor: pointer; }

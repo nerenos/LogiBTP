@@ -10,7 +10,8 @@ import { BIBLIOTHEQUES, REGROUPEMENTS, NATURES, FAMILLES, ELEMENTS, TARIFS, PARA
 
 /** Entête minimale du document de calcul d'une composition d'ouvrage. */
 export const documentComposition = (mode = 'V') => ({
-  ent_id: 0, ent_tyd_id: 1, ent_numero: 'OUVRAGE', ent_objet: 'Composition', ent_std_id: 1, ent_tiers_id: 1, ent_mode_calcul_ouvrage: mode,
+  // ent_modele COMPOSITION : vue de colonnes propre à la composition (mémorisée à part de celle des devis).
+  ent_id: 0, ent_tyd_id: 1, ent_numero: 'OUVRAGE', ent_objet: 'Composition', ent_std_id: 1, ent_tiers_id: 1, ent_mode_calcul_ouvrage: mode, ent_modele: 'COMPOSITION',
   ent_precision_montant: 2, ent_version: 1, ent_num_format: { separateur: '.', niveaux: [{ style: '1' }, { style: '1' }, { style: '1' }] }, ent_proprietes: {},
 });
 

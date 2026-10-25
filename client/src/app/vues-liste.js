@@ -104,11 +104,12 @@ export const SOURCES_LISTE = {
   salaries: {
     libelle: 'Salariés (démonstration)', vue: 'v_liste_salaries', colonne_id: 'id', colonne_type: 'type_element',
     // Saisie dans les listes : vue simple sur une table ; type_element est calculé (lecture seule dans la base).
-    modifiable: true, lecture_seule: ['id', 'type_element'],
+    // service : libellé du service principal (lecture seule) ; service_code : son code (db/226).
+    modifiable: true, lecture_seule: ['id', 'type_element', 'service'],
     colonnes: [
       ['id', 'integer'], ['type_element', 'text'], ['matricule', 'text'], ['nom', 'text'], ['prenom', 'text'], ['service', 'text'], ['poste', 'text'],
       ['statut', 'text'], ['date_entree', 'date'], ['salaire_brut', 'numeric'], ['heures_mois', 'numeric'], ['actif', 'boolean'],
-      ['commentaire', 'text'], ['code', 'text'], ['matricule_paie', 'text'],
+      ['commentaire', 'text'], ['code', 'text'], ['matricule_paie', 'text'], ['service_code', 'text'],
     ],
   },
   materiels: {
@@ -288,7 +289,7 @@ export const VUES_LISTE = [
           regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }],
         }),
         col('prenom', 'Prénom', { modifiable: true, ...prop(1.2, 100) }),
-        col('service', 'Service', { modifiable: true, ...prop(1.2, 100) }),
+        col('service', 'Service', { ...prop(1.2, 100) }),
         col('poste', 'Poste', { modifiable: true, ...prop(1.5, 120) }),
         col('statut', 'Contrat', { modifiable: true, format: 'combo', ...fixe(90),
           options: [{ valeur: 'CDI', libelle: 'CDI' }, { valeur: 'CDD', libelle: 'CDD' }, { valeur: 'INTERIM', libelle: 'Intérim' }],

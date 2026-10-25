@@ -153,6 +153,7 @@ db/222_journal_technique.sql
 db/223_comptabilite.sql
 db/224_comptabilite_ventilation.sql
 db/225_comptabilite_export.sql
+db/226_salaries_services.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

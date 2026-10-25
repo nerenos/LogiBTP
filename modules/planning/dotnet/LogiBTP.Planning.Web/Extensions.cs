@@ -91,11 +91,13 @@ public static class Extensions
         // Ressources des tâches : membres d'une équipe à une date, disponibilités sur une période (information).
         g.MapGet("/equipes/{equipe:int}/membres", (int equipe, string date, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
             RessourcesTache.MembresAsync(db, sp, equipe, DateOnly.ParseExact(date[..10], "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), ct));
-        g.MapGet("/disponibilites", async (string du, string au, long? exclure, string? services, string? types, string? recherche, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
+        // inclure : clés « TYPE:id » toujours rendues (ressources déjà choisies), même au-delà de la limite de la liste.
+        g.MapGet("/disponibilites", async (string du, string au, long? exclure, string? services, string? types, string? recherche, string? inclure, PlanningDbContext db, SpecialisationPlanning sp, CancellationToken ct) =>
         {
             var srv = services?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToList();
             return await RessourcesTache.DisponibilitesAsync(db, sp, LogiBTP.Planning.Temps.VersMinutes(du), LogiBTP.Planning.Temps.VersMinutes(au), exclure,
-                new FiltreRessources(srv is { Count: > 0 } ? srv : null, types?.Split(',', StringSplitOptions.RemoveEmptyEntries), recherche), ct);
+                new FiltreRessources(srv is { Count: > 0 } ? srv : null, types?.Split(',', StringSplitOptions.RemoveEmptyEntries), recherche), ct,
+                inclure?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         });
         g.MapGet("/creneau", (string? ressource, int? service, int heures, string apres, string? habilitations, ServiceCharge s, CancellationToken ct) =>
             s.CreneauAsync(ressource, service, heures, apres, habilitations, ct));

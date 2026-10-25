@@ -10,6 +10,8 @@ import { api } from '../api.js';
 
 export const TYPE_GLISSER_RESSOURCE = 'application/x-logibtp-planning-ressource';
 export const TYPES_RESSOURCE = { SALARIE: 'Salarié', INTERIM: 'Intérimaire', MATERIEL: 'Matériel', SOUS_TRAITANT: 'Sous-traitant' };
+/** Nombre de ressources rendues par `GET /planning/disponibilites` (`RessourcesTache.LimiteDisponibilites`). */
+const LIMITE_DISPONIBILITES = 1000;
 const TYPES_ELEMENT = { EQUIPE: 'Équipe', ...TYPES_RESSOURCE };
 const ETATS_DISPO = {
   LIBRE: { libelle: 'Libre', couleur: '#16a34a' }, PARTIEL: { libelle: 'Partiellement occupée', couleur: '#d97706' },
@@ -182,8 +184,10 @@ export class RessourcesTache {
 export async function choisirRessources({ du, au, exclure, selection }) {
   let liste;
   let tous;
-  try { [liste, tous] = await Promise.all([api.planning.disponibilites({ du, au, exclure: exclure ?? '' }), servicesConnus()]); } catch (e) { await alerter(e.message); return null; }
+  try { [liste, tous] = await Promise.all([api.planning.disponibilites({ du, au, exclure: exclure ?? '', inclure: [...(selection ?? [])].join(',') }), servicesConnus()]); } catch (e) { await alerter(e.message); return null; }
   const choisies = new Set(selection);
+  // Le serveur rend au plus LIMITE_DISPONIBILITES ressources, plus celles déjà choisies (toujours présentes).
+  const limitee = liste.length >= LIMITE_DISPONIBILITES;
   return new Promise((resoudre) => {
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure dialogue-ressources';
@@ -215,7 +219,7 @@ export async function choisirRessources({ du, au, exclure, selection }) {
     };
     const compter = (v) => {
       const masquees = [...choisies].filter((c) => !v.some((r) => r.cle === c)).length;
-      dlg.querySelector('[data-compte]').textContent = `${choisies.size} sélectionnée${choisies.size > 1 ? 's' : ''}${masquees ? ` (dont ${masquees} masquée${masquees > 1 ? 's' : ''} par les filtres)` : ''}`;
+      dlg.querySelector('[data-compte]').textContent = `${choisies.size} sélectionnée${choisies.size > 1 ? 's' : ''}${masquees ? ` (dont ${masquees} masquée${masquees > 1 ? 's' : ''} par les filtres)` : ''}${limitee ? ` · liste limitée aux ${LIMITE_DISPONIBILITES} premières ressources : choisir un service ou un type` : ''}`;
       const tout = dlg.querySelector('[data-tout]');
       tout.checked = v.length > 0 && v.every((r) => choisies.has(r.cle));
       tout.indeterminate = !tout.checked && v.some((r) => choisies.has(r.cle));

@@ -1,4 +1,5 @@
 import { FournisseurApi, FournisseurMemoire } from '@logibtp/liste';
+import { FAMILLES_REGLE } from '@logibtp/document';
 import { ENTETES } from './api.js';
 import { VUES_LISTE, THEMES_LISTE, sourcesFournisseur } from './vues-liste.js';
 import { documentsDemo, salariesDemo, materielsDemo, ressourcesDemo } from './donnees-demo-liste.js';
@@ -43,8 +44,9 @@ export const LIBELLES_ELEMENTS = {
   personne: 'personne', individu: 'individu', projet: 'projet', affaire: 'affaire', chantier: 'chantier', marche: 'marché',
 };
 
-/** Les types d'éléments V_*, A_* et S_* sont des documents (code du type de document). */
-export const estTypeDocument = (type) => /^[VAS]_/.test(String(type ?? ''));
+/** Les types d'éléments préfixés d'une famille de documents (V_, A_, S_, E_, T_…) sont des documents (code du type). */
+const PREFIXES_DOCUMENT = new RegExp(`^[${FAMILLES_REGLE.map(([f]) => f).join('')}]_`);
+export const estTypeDocument = (type) => PREFIXES_DOCUMENT.test(String(type ?? ''));
 
 /**
  * Simulation hors ligne d'une modification faite par un autre utilisateur : un matériel change d'état,
