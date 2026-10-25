@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, confirmer } from '@logibtp/socle/ui';
 import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
 import { api } from '../api.js';
+import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
 
 /**
  * Mon compte (module Authentification) : identité de la session, changement du mot de passe (imposé tant que le mot de
@@ -20,10 +21,17 @@ export class PageCompte extends PageBase {
       return;
     }
     this.politique = await api.auth.politique().catch(() => ({ longueur_min: 12, courants: [] }));
+    // Photo de l'individu du compte (fiche de l'annuaire), affichée dans la carte Session une fois lue.
+    if (s.type_element === 'individu' && s.id_element) {
+      app.services().then((sv) => urlPhotoIndividu(sv.fiche, sv.ged, s.id_element)).then((url) => {
+        const z = this.conteneur.querySelector('[data-photo]');
+        if (z && url) z.innerHTML = vignette(url);
+      }).catch(() => {});
+    }
     const impose = s.mdp_a_changer;
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">👤 Mon compte</h1>
       ${impose ? '<p class="carte avertissement">🔐 Mot de passe provisoire : choisissez votre mot de passe pour continuer.</p>' : ''}
-      <section class="carte"><h2>Session</h2>
+      <section class="carte"><h2>Session</h2><span data-photo></span>
         <dl class="definitions"><dt>Identifiant</dt><dd><b>${echapper(s.code)}</b></dd>
         <dt>Nom</dt><dd>${echapper(s.libelle ?? '')}</dd><dt>Profil</dt><dd>${echapper(s.profil)}</dd>
         <dt>Société</dt><dd>${echapper(app.societe?.libelle ?? '')}</dd>

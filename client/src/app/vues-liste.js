@@ -141,6 +141,8 @@ export const SOURCES_LISTE = {
       ['casquettes', 'ARRAY'], ['parent', 'text'], ['chemin', 'text'], ['siren', 'text'], ['siret', 'text'], ['tva_intra', 'text'], ['pays', 'text'],
       ['adresse', 'text'], ['code_postal', 'text'], ['ville', 'text'], ['telephone', 'text'], ['email', 'text'], ['contact', 'text'],
       ['societe_base', 'boolean'], ['actif', 'boolean'], ['modifie_le', 'timestamp with time zone'], ['provisoire', 'boolean'], ['usage', 'text'],
+      // db/229 : activités (codes de la liste ACTIVITE) et chargé d'affaires du client.
+      ['activites', 'ARRAY'], ['charge_affaires', 'text'],
     ],
   },
   individus: {
@@ -595,8 +597,10 @@ const vuePersonnes = (vli_id, vli_nom, casquettes = null, filtres = []) => ({
       col('code_postal', 'CP', { masquee: true }),
       col('pays', 'Pays', { ...fixe(48), masquee: true }),
       col('actif', 'Actif', { format: 'coche', ...fixe(52), recherche: false }),
+      col('activites', 'Activités', { ...prop(1.4, 110), masquee: true }),
+      col('charge_affaires', "Chargé d'affaires", { ...prop(1.2, 100), masquee: true }),
     ],
-    segments: [{ colonne: 'niveau', titre: 'Niveau' }, { colonne: 'casquettes', titre: 'Relation' }, { colonne: 'ville', titre: 'Ville' }],
+    segments: [{ colonne: 'niveau', titre: 'Niveau' }, { colonne: 'casquettes', titre: 'Relation' }, { colonne: 'activites', titre: 'Activité' }, { colonne: 'ville', titre: 'Ville' }],
     tri: [{ colonne: 'raison_sociale', sens: 'asc' }],
     lignes: 'multi',
     taille_lot: 100,

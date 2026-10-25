@@ -489,8 +489,14 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     public override async Task<ReglementTiers?> ReglementTiersAsync(DocumentDbContext<DocumentBtp, DocumentLigneBtp> db, DocumentBtp document, CancellationToken ct)
     {
         if (document.EntTiersId is not long tiers) return null;
+        // Règlement du tiers selon le sens de la pièce (db/229) : fournisseur pour les achats, client sinon ; à défaut le
+        // couple commun de la fiche.
+        var famille = await db.TypesDocument.Where(t => t.TydId == document.EntTydId).Select(t => t.TydFamille).FirstOrDefaultAsync(ct) ?? "V";
+        var achat = FamillesDocument.EstAchat(famille);
         var v = await db.Database.SqlQuery<string>($"""
-            SELECT coalesce(per_delai_paiement, '') || '|' || coalesce(per_mode_reglement, '') AS "Value" FROM personne WHERE per_id = {tiers}
+            SELECT coalesce(CASE WHEN {achat} THEN per_fou_delai_paiement ELSE per_cli_delai_paiement END, per_delai_paiement, '') || '|'
+                || coalesce(CASE WHEN {achat} THEN per_fou_mode_reglement ELSE per_cli_mode_reglement END, per_mode_reglement, '') AS "Value"
+            FROM personne WHERE per_id = {tiers}
             """).FirstOrDefaultAsync(ct);
         if (v is null) return null;
         var x = v.Split('|');

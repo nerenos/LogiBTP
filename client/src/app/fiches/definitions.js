@@ -18,6 +18,8 @@ const USAGE = {
   obligatoire: true, defaut: 'A', options: options(['A', 'En service'], ['N', 'Ne plus utiliser'], ['S', 'En sommeil']),
   aide: 'Ne plus utiliser : les documents en cours se terminent, plus de nouveau choix ; en sommeil : masquée par défaut dans les listes',
 };
+// Individus de notre société (rattachement actif à la société de la base ou à l'un de ses niveaux inférieurs).
+const REQUETE_INDIVIDUS_STRUCTURE = "WITH RECURSIVE s AS (SELECT per_id FROM personne WHERE per_societe_base UNION SELECT p.per_id FROM personne p JOIN s ON p.per_parent_id = s.per_id) SELECT DISTINCT ON (i.ind_nom, i.ind_prenom, i.ind_id) i.ind_id, concat_ws(' ', i.ind_prenom, i.ind_nom) FROM individu i JOIN rattachement r ON r.rat_ind_id = i.ind_id AND r.rat_actif JOIN s ON s.per_id = r.rat_per_id WHERE i.ind_actif ORDER BY i.ind_nom, i.ind_prenom, i.ind_id";
 const REQUETE_COLLECTIFS = "SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'COLLECTIF' ORDER BY cpt_code";
 
 export const TYPES_FICHE = {
@@ -134,7 +136,7 @@ export const TYPES_FICHE = {
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { obligatoire: true, format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date', { obligatoire: true }),
         c('observations', 'Observations', 'mat_observations', 'zone'),
-        // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
+        // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
         c('usage', 'Utilisation', 'mat_usage', 'liste', USAGE),
         c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
         c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
@@ -251,6 +253,7 @@ export const TYPES_FICHE = {
           groupes: [
             { titre: 'Identification', champs: ['niveau', 'raison_sociale', 'nom_commercial', 'sigle', 'code', 'parent_id', 'usage', 'societe_base'] },
             { code: 'casquettes', titre: 'Relations avec nous', champs: ['casquettes'], largeur: 'plein' },
+            { code: 'activites', titre: 'Activités', champs: ['activites'], largeur: 'plein' },
             { code: 'entreprise', titre: 'Entreprise', champs: ['pays', 'siren', 'siret', 'tva_intra', 'identifiant_etranger', 'naf', 'forme_juridique', 'forme_libelle',
               'capital', 'rcs', 'date_creation', 'effectif', 'etat_administratif', 'siege', 'service_public'] },
             { titre: 'Notes', champs: ['commentaire'], largeur: 'plein' },
@@ -259,15 +262,15 @@ export const TYPES_FICHE = {
         {
           code: 'facturation', titre: 'Facturation et règlement',
           groupes: [
-            { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_code_service', 'fe_engagement'] },
+            { code: 'facturation_electronique', titre: 'Facturation électronique', champs: ['fe_type', 'assujetti_tva', 'fe_format', 'fe_plateforme', 'fe_adresse', 'fe_code_routage', 'fe_code_service', 'fe_engagement'] },
             { titre: 'Règlement', champs: ['mode_reglement', 'delai_paiement', 'devise', 'iban', 'bic'] },
           ],
         },
         {
           code: 'casquettes', titre: 'Par relation',
           groupes: [
-            { code: 'client', titre: 'Client', champs: ['cli_compte', 'cli_collectif', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
-            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_compte', 'fou_collectif', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
+            { code: 'client', titre: 'Client', champs: ['cli_charge_ind_id', 'cli_mode_reglement', 'cli_delai_paiement', 'cli_compte', 'cli_collectif', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
+            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_mode_reglement', 'fou_delai_paiement', 'fou_tva_intracom', 'fou_compte', 'fou_collectif', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
             { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_compte', 'st_collectif', 'st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
             { code: 'interim', titre: "Agence d'intérim", champs: ['int_garantie_financiere', 'int_coefficient'] },
             { code: 'architecte', titre: 'Architecte', champs: ['arc_numero_ordre'] },
@@ -308,8 +311,19 @@ export const TYPES_FICHE = {
         c('fe_code_service', 'Code service (Chorus Pro)', 'per_fe_code_service', 'texte', { longueur: 100 }),
         c('fe_engagement', 'N° d\'engagement obligatoire', 'per_fe_engagement', 'booleen', { obligatoire: true, defaut: false }),
         // Modes de règlement et conditions de paiement paramétrables (module Document : mode_reglement, condition_paiement).
-        c('mode_reglement', 'Mode de règlement', 'per_mode_reglement', 'liste', { requete: REQUETE_MODES_REGLEMENT }),
-        c('delai_paiement', 'Délai de paiement', 'per_delai_paiement', 'liste', { requete: REQUETE_CONDITIONS_PAIEMENT }),
+        c('mode_reglement', 'Mode de règlement (par défaut)', 'per_mode_reglement', 'liste', { requete: REQUETE_MODES_REGLEMENT, aide: 'Repli quand le mode du client ou du fournisseur (onglet Par relation) est vide' }),
+        c('delai_paiement', 'Délai de paiement (par défaut)', 'per_delai_paiement', 'liste', { requete: REQUETE_CONDITIONS_PAIEMENT, aide: 'Repli quand le délai du client ou du fournisseur (onglet Par relation) est vide' }),
+        // Lot 4 des demandes du 25/10/2026 (db/229).
+        c('fe_type', 'Type de tiers (facture électronique)', 'per_fe_type', 'liste', { options: options(['B2B', 'Entreprise (B2B)'], ['B2C', 'Particulier (B2C)'], ['B2G', 'Administration (B2G)'], ['INTERNATIONAL', 'International']) }),
+        c('assujetti_tva', 'Assujetti à la TVA', 'per_assujetti_tva', 'booleen', { obligatoire: true, defaut: true }),
+        c('activites', 'Activités', 'per_activites', 'json', { aide: 'Plusieurs activités, à deux niveaux (Paramètres › Référentiels communs)' }),
+        c('image_ged', 'Logo', 'per_image_ged', 'nombre', { non_copie: true }),
+        c('cli_charge_ind_id', "Chargé d'affaires", 'per_cli_charge_ind_id', 'liste', { requete: REQUETE_INDIVIDUS_STRUCTURE, aide: 'Suivi du client : individu de notre société' }),
+        c('cli_mode_reglement', 'Mode de règlement (client)', 'per_cli_mode_reglement', 'liste', { requete: REQUETE_MODES_REGLEMENT }),
+        c('cli_delai_paiement', 'Délai de paiement (client)', 'per_cli_delai_paiement', 'liste', { requete: REQUETE_CONDITIONS_PAIEMENT }),
+        c('fou_mode_reglement', 'Mode de règlement (fournisseur)', 'per_fou_mode_reglement', 'liste', { requete: REQUETE_MODES_REGLEMENT }),
+        c('fou_delai_paiement', 'Délai de paiement (fournisseur)', 'per_fou_delai_paiement', 'liste', { requete: REQUETE_CONDITIONS_PAIEMENT }),
+        c('fou_tva_intracom', 'TVA intracommunautaire', 'per_fou_tva_intracom', 'booleen', { obligatoire: true, defaut: false, aide: "Fournisseur de l'Union européenne : TVA autoliquidée sur ses factures" }),
         c('devise', 'Devise', 'per_devise', 'texte', { obligatoire: true, defaut: 'EUR', longueur: 3 }),
         c('iban', 'IBAN', 'per_iban', 'texte', { longueur: 42, non_copie: true }),
         c('bic', 'BIC', 'per_bic', 'texte', { longueur: 11 }),

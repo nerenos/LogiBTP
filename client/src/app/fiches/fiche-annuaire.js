@@ -5,6 +5,9 @@ import { EditeurCoordonnees, EditeurRattachements, EditeurLiens, VueGrapheAnnuai
 import { rechercherEntreprise } from '@logibtp/entreprises-fr/ui';
 import { FicheLogiBTP } from './fiches.js';
 import { rendrePieces } from '../sous-traitance/pieces.js';
+import { rendrePhoto, urlImage, vignette } from '../annuaire/photo.js';
+import { choixMultiple } from '../choix-multiple.js';
+import { api } from '../api.js';
 
 // Fiches de l'annuaire (module Fiche + module Annuaire) : personne (niveau, hiérarchie, casquettes qui déverrouillent
 // leurs groupes de champs, identifiants pour la facturation électronique, reprise depuis l'annuaire des entreprises
@@ -17,6 +20,18 @@ const ordre = (codes) => (a, b) => {
   return i(a) - i(b);
 };
 
+/** Activités (liste ACTIVITE, db/227), lues une fois : options « regroupement › activité ». */
+const ActivitesCache = {
+  promesse: null,
+  lire() {
+    this.promesse ??= api.listesValeurs.lire('ACTIVITE').then((l) => {
+      const parCode = new Map(l.map((v) => [v.code, v]));
+      return l.filter((v) => v.actif).map((v) => ({ valeur: v.code, libelle: v.parent ? `${parCode.get(v.parent)?.libelle ?? v.parent} › ${v.libelle}` : v.libelle }));
+    }).catch(() => []);
+    return this.promesse;
+  },
+};
+
 /** Base des fiches de l'annuaire : référentiels, choix des coordonnées partagées à l'enregistrement, navigation. */
 class FicheAnnuaire extends FicheLogiBTP {
   constructor(options) {
@@ -24,6 +39,7 @@ class FicheAnnuaire extends FicheLogiBTP {
     this.services = options.services;
     this.ouvrirFiche = options.ouvrirFiche ?? (() => {});
     this.ouvrirUrl = options.ouvrirUrl ?? (() => {});
+    this.utilisateur = options.utilisateur ?? 'demo';
   }
 
   get annuaire() { return this.services.annuaire; }
@@ -31,6 +47,29 @@ class FicheAnnuaire extends FicheLogiBTP {
   async ouvrir() {
     this.referentiels = await this.annuaire.referentiels();
     return super.ouvrir();
+  }
+
+  /** Photo (individu) ou logo (personne) : image de la GED choisie (champ image_ged), en vignette de l'encart. */
+  apresChargement() {
+    super.apresChargement?.();
+    this.#chargerImage();
+  }
+
+  async #chargerImage() {
+    this.urlImage = await urlImage(this.services.ged, this.valeur('image_ged'));
+    this.#majInformations();
+  }
+
+  /** Onglet Photo / Logo (image de la GED de la fiche). */
+  ongletPhoto(type, titre) {
+    return {
+      code: 'photo', titre, champs: ['image_ged'],
+      rendre: (corps, { modifiable }) => rendrePhoto(corps, {
+        ged: this.services.ged, typeElement: type, id: this.id, valeur: () => this.valeur('image_ged'), titre,
+        definir: (id) => { this.definirValeur('image_ged', id); this.#chargerImage(); },
+        modifiable, utilisateur: this.utilisateur, message: this.message,
+      }).catch((e) => this.message(e.message, 'erreur')),
+    };
   }
 
   /** Paramètre de l'adresse de la page (création depuis une liste ou un menu : ?casquette=CLIENT, ?niveau=…). */
@@ -187,7 +226,7 @@ export class FichePersonne extends FicheAnnuaire {
   rendreInformations(v) {
     if (!this.referentiels) return '';
     const coords = v.coordonnees ?? [];
-    const parts = [];
+    const parts = [vignette(this.urlImage)];
     if (v.societe_base) parts.push(info('Annuaire', '🏢 Société de cette base'));
     if (this.provisoire) parts.push(info('Annuaire', '⏳ Tiers provisoire : création à valider ou fiche à fusionner', true));
     const tel = principale(coords, 'TELEPHONE');
@@ -239,8 +278,28 @@ export class FichePersonne extends FicheAnnuaire {
     ];
   }
 
+  /**
+   * Activités de la personne (plusieurs, liste ACTIVITE à deux niveaux des référentiels communs) : étiquettes et combo
+   * d'ajout « regroupement › activité » ; en consultation, étiquettes seules.
+   */
+  #champActivites(valeur, lecture) {
+    const zone = document.createElement('div');
+    zone.className = 'fiche-saisie-champ';
+    const codes = Array.isArray(valeur) ? valeur : [];
+    ActivitesCache.lire().then((options) => {
+      if (lecture) {
+        zone.innerHTML = codes.map((c) => `<span class="etiquette-choix">${echapper(options.find((o) => o.valeur === c)?.libelle ?? c)}</span>`).join(' ')
+          || '<span class="aide">Aucune activité</span>';
+        return;
+      }
+      zone.replaceChildren(choixMultiple({ options, valeurs: codes, titre: 'Ajouter une activité', aucun: 'Aucune activité', changer: (v) => this.definirValeur('activites', v) }));
+    });
+    return zone;
+  }
+
   rendreChamp(champ, valeur) {
     const lecture = !this.estEnSaisie();
+    if (champ.code === 'activites') return this.#champActivites(valeur, lecture);
     if (champ.code === 'casquettes') {
       return pastilles({ options: this.referentiels.casquettes, valeur, modifiable: !lecture, surChange: (codes) => { this.definirValeur('casquettes', codes); this.#rendreGarde(); } });
     }
@@ -305,6 +364,7 @@ export class FichePersonne extends FicheAnnuaire {
         }),
       },
       this.ongletGraphe('personne'),
+      this.ongletPhoto('personne', 'Logo'),
       ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
       // Sous-traitant (module Sous-traitance, lot 2) : pièces annexes valables pour tous ses marchés.
       ...((this.valeur('casquettes') ?? []).includes('SOUS_TRAITANT') && this.id !== null && this.moduleActif('sous_traitance') && this.services.ged
@@ -405,7 +465,7 @@ export class FicheIndividu extends FicheAnnuaire {
 
   rendreInformations(v) {
     if (!this.referentiels) return '';
-    const parts = [];
+    const parts = [vignette(this.urlImage)];
     const pro = this.rattachementsLus.filter((r) => r.actif !== false).flatMap((r) => r.coordonnees ?? []);
     const perso = v.coordonnees ?? [];
     const tel = principale(pro.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE') ?? principale(perso.filter((u) => u.usage !== 'PORTABLE'), 'TELEPHONE');
@@ -478,6 +538,7 @@ export class FicheIndividu extends FicheAnnuaire {
       this.ongletCoordonnees('individu'),
       this.ongletRattachements('individu', 'rattachements', 'Rattachements'),
       this.ongletGraphe('individu'),
+      this.ongletPhoto('individu', 'Photo'),
       ...this.ongletsSuivi(),
     ];
   }

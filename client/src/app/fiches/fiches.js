@@ -6,7 +6,8 @@ import { choisirIndividu } from '@logibtp/annuaire/ui';
 import { ENTETES } from '../api.js';
 import { TYPES_FICHE, DROITS_FICHE, PARAMETRAGE_FICHE } from './definitions.js';
 import { apresEcritureElement } from '../bibliotheque/bibliotheque.js';
-import { synchroniserSalarie, rolesSalarie } from '../annuaire/salaries.js';
+import { synchroniserSalarie, rolesSalarie } from '../annuaire/salaries.js';
+import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
 import { AGENCES_SALARIES } from '../annuaire/donnees.js';
 
 // Fiches du cœur : spécialisations de FicheBase (module Fiche) pour les salariés et les matériels.
@@ -92,6 +93,20 @@ export class FicheSalarie extends FicheLogiBTP {
       },
     };
   }
+
+  /** Photo de l'individu du salarié (annuaire), en vignette de l'encart. */
+  apresChargement() {
+    super.apresChargement?.();
+    urlPhotoIndividu(this.fournisseur, this.services?.ged, this.valeur('ind_id')).then((url) => {
+      this.urlPhoto = url;
+      const zone = this.conteneur.querySelector('.fiche-informations');
+      if (!zone || !url) return;
+      zone.innerHTML = this.rendreInformations(this.valeurs());
+      zone.hidden = false;
+    });
+  }
+
+  rendreInformations(v) { return `${vignette(this.urlPhoto)}${super.rendreInformations(v) ?? ''}`; }
 
   /** Création depuis un individu (?individu=ID) : sa fiche est lue pour préremplir le salarié. */
   async ouvrir() {
