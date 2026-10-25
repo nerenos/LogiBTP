@@ -65,6 +65,8 @@ export const SOURCES_LISTE = {
       ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['affaire', 'text'], ['projet', 'text'], ['client', 'text'],
       ['ville', 'text'], ['statut', 'text'], ['date_ouverture', 'date'], ['date_fin_prevue', 'date'], ['conducteur', 'text'],
       ['nb_marches', 'bigint'], ['montant_marches', 'numeric'], ['facture_ht', 'numeric'],
+      // db/230 : type déduit (CHANTIER, DEPOT, INTERNE, DOTATION, MATERIEL).
+      ['type_chantier', 'text'],
     ],
   },
   marches: {
@@ -120,6 +122,9 @@ export const SOURCES_LISTE = {
       ['id', 'integer'], ['code', 'text'], ['designation', 'text'], ['famille', 'text'], ['etat', 'text'], ['chantier', 'text'],
       ['valeur_achat', 'numeric'], ['date_achat', 'date'], ['heures_utilisation', 'integer'], ['heures_revision', 'integer'],
       ['controle_ok', 'boolean'], ['observations', 'text'], ['famille_code', 'text'], ['usage', 'text'],
+      // db/230 : identification, garantie, location.
+      ['marque', 'text'], ['modele', 'text'], ['numero_serie', 'text'], ['immatriculation', 'text'], ['energie', 'text'],
+      ['fin_garantie', 'date'], ['fin_location', 'date'], ['loueur', 'text'],
     ],
   },
   elements: {
@@ -385,6 +390,11 @@ VUES_LISTE.push(vueDocuments(1200, "Appels d'offres de sous-traitance", 'st_ao')
 VUES_LISTE.push(vueDocuments(1300, 'Entrées, sorties et transferts', 'stock_documents'), vueDocuments(1303, 'Réservations de stock', 'stock_reservations'));
 
 // Structure des affaires : projets, affaires, chantiers, marchés (fiches du même nom).
+/** Types de chantier déduits (db/230, f_type_chantier). */
+const TYPES_CHANTIER = [
+  { valeur: 'CHANTIER', libelle: 'Chantier' }, { valeur: 'DEPOT', libelle: 'Dépôt' }, { valeur: 'INTERNE', libelle: 'Interne' },
+  { valeur: 'DOTATION', libelle: 'Dotation (salarié)' }, { valeur: 'MATERIEL', libelle: 'Matériel' },
+];
 const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colonne: 'code', sens: 'desc' }]) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
   definition: {
@@ -413,7 +423,8 @@ VUES_LISTE.push(
     col('client', 'Client', { ...prop(2, 120) }), col('ville', 'Ville', { ...prop(1, 90) }), col('statut', 'Statut', { ...fixe(80) }),
     col('conducteur', 'Conducteur', { masquee: true }), col('projet', 'Projet', { masquee: true }),
     col('nb_marches', 'Marchés', { ...nombre(0), ...fixe(64), recherche: false }), montant('montant_marches', 'Marchés\nHT'), montant('facture_ht', 'Facturé\nHT'),
-  ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'affaire', titre: 'Affaire' }]),
+    col('type_chantier', 'Type', { format: 'combo', ...fixe(90), options: TYPES_CHANTIER }),
+  ], [{ colonne: 'type_chantier', titre: 'Type' }, { colonne: 'statut', titre: 'Statut' }, { colonne: 'affaire', titre: 'Affaire' }]),
   vueStructure(34, 'Marchés', 'marches', [
     col('code', 'Code', { ...fixe(110), style: { gras: true } }), col('libelle', 'Marché', { ...prop(3, 160) }), col('chantier', 'Chantier', { ...fixe(100) }),
     col('client', 'Client', { ...prop(2, 120) }), col('commande', 'Commande', { ...fixe(110) }), col('nature', 'Nature', { ...fixe(70) }),

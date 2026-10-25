@@ -32,9 +32,11 @@ INSERT INTO theme_liste (thl_code, thl_libelle, thl_icone, thl_ordre, thl_types)
 ${themes}
 ON CONFLICT (thl_code) DO UPDATE SET thl_libelle = EXCLUDED.thl_libelle, thl_icone = EXCLUDED.thl_icone, thl_ordre = EXCLUDED.thl_ordre, thl_types = EXCLUDED.thl_types;
 
+-- Vues par défaut : ajoutées si elles manquent, remplacées tant qu'elles n'ont jamais été modifiées (version 1).
 INSERT INTO vue_liste (vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, vli_groupe, vli_definition) VALUES
 ${vues}
-ON CONFLICT (vli_id) DO NOTHING;
+ON CONFLICT (vli_id) DO UPDATE SET vli_nom = EXCLUDED.vli_nom, vli_theme = EXCLUDED.vli_theme, vli_definition = EXCLUDED.vli_definition
+  WHERE vue_liste.vli_version = 1 AND vue_liste.vli_modifie_le IS NULL;
 
 SELECT setval(pg_get_serial_sequence('vue_liste', 'vli_id'), (SELECT max(vli_id) FROM vue_liste));
 `;

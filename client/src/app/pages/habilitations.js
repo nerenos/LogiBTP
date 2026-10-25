@@ -35,5 +35,15 @@ export class PageHabilitations extends PageBase {
       ${l.map((h) => `<tr><td><a href="/fiche/${h.type_element}/${h.id_element}">${h.type_element === 'salarie' ? '👷' : '🚜'} ${echapper(h.element ?? '')}</a></td>
         <td>${echapper(h.libelle)}</td><td>${jourRessource(h.obtenue_le)}</td><td>${jourRessource(h.fin)}</td><td>${pastilleHabilitation(h)}</td><td>${echapper(h.organisme ?? '')}</td></tr>`).join('')}
       </tbody></table>` : '<p class="aide">Aucune habilitation expirée ni à renouveler dans ce délai.</p>';
+    // Matériels : fins de location et de garantie (db/230) dans le même délai.
+    if (this.element === 'salarie') return;
+    const e = await api.ressources.echeancesMateriels(this.jours).catch(() => []);
+    if (!e.length) return;
+    const aujourdhui = new Date().toISOString().slice(0, 10);
+    zone.insertAdjacentHTML('beforeend', `<h2>Matériels : fins de location et de garantie</h2>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Échéance</th><th>Date</th><th>Loueur</th></tr></thead><tbody>
+      ${e.map((x) => `<tr><td><a href="/fiche/materiel/${x.id}">🚜 ${echapper(x.code)} ${echapper(x.designation ?? '')}</a></td>
+        <td>${x.genre === 'LOCATION' ? 'Fin de location' : 'Fin de garantie'}</td>
+        <td class="${x.date < aujourdhui ? 'erreur' : ''}">${jourRessource(x.date)}</td><td>${echapper(x.tiers ?? '')}</td></tr>`).join('')}</tbody></table>`);
   }
 }

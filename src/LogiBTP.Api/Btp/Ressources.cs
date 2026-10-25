@@ -225,6 +225,22 @@ public static class Ressources
         FROM nature_element n LEFT JOIN service s ON s.srv_id = n.nat_srv_id WHERE n.nat_rgn_code = 'MO'
         """;
 
+    /// <summary>
+    /// Échéances des matériels en service (db/230) : fins de location et de garantie passées ou dans les @j jours, la
+    /// plus proche d'abord.
+    /// </summary>
+    private const string SqlEcheancesMateriels = """
+        SELECT coalesce(json_agg(json_build_object('id', e.id, 'code', e.code, 'designation', e.designation, 'genre', e.genre, 'date', e.date,
+               'tiers', e.tiers) ORDER BY e.date, e.code), '[]') AS "Value"
+        FROM (SELECT m.mat_id AS id, m.mat_code AS code, m.mat_designation AS designation, 'LOCATION' AS genre, m.mat_fin_location AS date,
+                     (SELECT p.per_raison_sociale FROM personne p WHERE p.per_id = m.mat_loueur_id) AS tiers
+              FROM materiel m WHERE m.mat_fin_location IS NOT NULL AND m.mat_usage <> 'S' AND m.mat_date_sortie IS NULL
+              UNION ALL
+              SELECT m.mat_id, m.mat_code, m.mat_designation, 'GARANTIE', m.mat_fin_garantie, NULL
+              FROM materiel m WHERE m.mat_fin_garantie IS NOT NULL AND m.mat_usage <> 'S' AND m.mat_date_sortie IS NULL) e
+        WHERE e.date <= current_date + @j
+        """;
+
     /// <summary>Équipes et composition à une date (membres dont la période couvre la date).</summary>
     private const string SqlEquipes = """
         SELECT coalesce(json_agg(json_build_object('id', e.equ_id, 'code', e.equ_code, 'libelle', e.equ_libelle, 'srv_id', e.equ_srv_id, 'actif', e.equ_active,
@@ -266,6 +282,8 @@ public static class Ressources
             return await Json(db, SqlMotifs, ct, P("d", null, NpgsqlDbType.Varchar));
         });
         g.MapGet("/natures-mo", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlNatures, ct));
+        g.MapGet("/materiels/echeances", (int? jours, LogiBtpContext db, CancellationToken ct) =>
+            Json(db, SqlEcheancesMateriels, ct, P("j", Math.Clamp(jours ?? 60, 0, 3650), NpgsqlDbType.Integer)));
         g.MapPut("/natures-mo", async (List<NatureService> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             Admin(Utilisateur.Depuis(http));
