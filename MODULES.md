@@ -45,7 +45,7 @@ graph TD
 | execution (facultatif) | — (règles seules) | `LogiBTP.Execution(.Web)` → Socle.Web | 085 | cœur (services, chantiers, ordres de la famille E ; synthèse, parcours) |
 | pointage (facultatif) | — (règles seules) | `LogiBTP.Pointage(.Web)` → Socle.Web | 086 | cœur (salariés, chantiers et chantiers internes, natures MO, ordres ; saisie hebdomadaire) |
 | planning (facultatif) | socle | `LogiBTP.Planning(.Web)` → Socle.Web | 089 | cœur (ressources, plages des calendriers, équipes, chantiers, budgets ; page `/planning`) |
-| comptabilite (base) | — (règles seules) | `LogiBTP.Comptabilite(.Web)` → Socle.Web | 094, 094b | cœur (taux de TVA, tiers et leurs comptes ; pages `/comptabilite/plan`, `/comptabilite/tiers`, `/parametres/comptabilite`) |
+| comptabilite (base) | — (règles seules) | `LogiBTP.Comptabilite(.Web)` → Socle.Web | 094–094c | cœur (taux de TVA, tiers et leurs comptes ; pages `/comptabilite/plan`, `/comptabilite/tiers`, `/comptabilite/ventilation`, `/comptabilite/export`, `/parametres/comptabilite`) |
 | stock (facultatif) | socle | `LogiBTP.Stock(.Web)` → Socle.Web | 093 | cœur (lieux = chantiers, articles = éléments, mouvements écrits à la validation des pièces ; pages `/stock`, `/parametres/stock`) |
 | calendrier | — (règles seules) | `LogiBTP.Calendrier(.Web)` → Socle.Web | 006 | cœur (calendriers des services et ressources, `/parametres/calendriers`) |
 | authentification | — (règles seules) | `LogiBTP.Authentification(.Web)` → Socle.Web | 005 | cœur (personne liée = individu d'un salarié ou d'un intérimaire ; pages Connexion et Mon compte) |

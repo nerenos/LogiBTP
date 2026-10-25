@@ -1,7 +1,7 @@
 # Module Comptabilité (base) – contexte
 
 ## Rôle
-- Base comptable (lots 1 et 2) réutilisée par le futur module complet ([ANALYSE-MODULE-COMPTABILITE.md](../../documentation/conception/ANALYSE-MODULE-COMPTABILITE.md)) : plan comptable, paramètres (longueur des comptes, complétion par des zéros, préfixes des comptes de tiers, TVA sur les débits), collectifs par type de tiers, catégories de TVA (comportement du calcul, mention réglementaire, exigibilité), comptes des taux de TVA et comptes auxiliaires des tiers (par la spécialisation).
+- Base comptable (lots 1 à 3) réutilisée par le futur module complet ([ANALYSE-MODULE-COMPTABILITE.md](../../documentation/conception/ANALYSE-MODULE-COMPTABILITE.md)) : plan comptable, paramètres (longueur des comptes, complétion par des zéros, préfixes des comptes de tiers, TVA sur les débits), collectifs par type de tiers, catégories de TVA (comportement du calcul, mention réglementaire, exigibilité), comptes des taux de TVA et comptes auxiliaires des tiers (par la spécialisation).
 - Toujours présent (C1) ; sans métier BTP : types de tiers, taux de TVA et tiers fournis par l'application (`SpecialisationComptabilite`).
 
 ## Dépendances
@@ -13,6 +13,9 @@
 - `dotnet/LogiBTP.Comptabilite.Web` : `Donnees.cs` (entités `compte_comptable`, `parametre_comptabilite`, `collectif_tiers`, `categorie_tva`, DTO), `SpecialisationComptabilite.cs` (`TauxAsync`, `EnregistrerTauxAsync`, `TiersAsync`, `EnregistrerComptesTiersAsync`, `UtilisationsCompteAsync`, `TauxDeCategorieAsync`, `TypeHerite`, `NaturesAsync`, `TypesDocumentsAsync`, `EnregistrerTypesDocumentsAsync`), `ServiceComptabilite.cs` (service, `AddModuleComptabilite<T>`, `MapModuleComptabilite`).
 - `js/src/ventilation.js` : `compteVentilation`, `chaineTypes`, `ORIGINES_VENTILATION`, `MESSAGES_VENTILATION` ↔ `ReglesVentilation.cs` (`Compte`, `ChaineTypes`) ; jeu `tests/cas/02_ventilation.json`.
 - `db/094b_comptabilite_ventilation.sql` (rejouable) : `type_comptable` (parent, sens, journal, compte par défaut, comptes des postes : remise, retenue — ou compte du tiers —, acompte, paiement direct, prorata, écarts d'arrondi), `ventilation_compte` (type × nature et / ou taux, codes → compte).
+- `dotnet/LogiBTP.Comptabilite/ReglesEcritures.cs` (règle du serveur seul, jeu `tests/cas/03_ecritures.json`) : `PieceComptable` → `Ecriture` (lignes, codes d'erreur, libellés en cause) ; `FormatExport.cs` : modèles `Sage100` (point-virgule, virgule décimale, ANSI, JJMMAA, sens D / C et montant, libellé de 35) et `Generique`, `Texte`, `Fichier`, `Controler`.
+- `dotnet/LogiBTP.Comptabilite.Web/ServiceExport.cs` : modèle retenu (`modele_export` des paramètres : code d'un modèle fourni ou modèle complet), aperçu, lot d'export, fichier, annulation ; spécialisation : `PiecesAsync(FiltrePieces)`, `MarquerAsync`.
+- `db/094c_comptabilite_export.sql` (rejouable) : `comptabilite_export` (lot : période, types, modèle, fichier, annulation), `comptabilite_export_piece` (pièce, numéro, empreinte de l'écriture).
 - `db/094_comptabilite.sql` (rejouable) : `compte_comptable` complétée (type GENERAL / COLLECTIF / TVA / TRESORERIE, sens VENTE / ACHAT / LES_DEUX / AUCUN, libellé court, lettrable), `parametre_comptabilite`, `collectif_tiers`, `categorie_tva`.
 
 ## Règles
@@ -21,10 +24,12 @@
 - Un compte auxiliaire = un seul tiers (`CPT_TIERS_DOUBLON`, contrôle des comptes saisis seulement) ; collectifs et comptes des taux pris dans le plan (`CPT_INCONNU`).
 - Catégorie de TVA retirée : supprimée si aucun taux ne s'y rattache (`TVA_CATEGORIE_UTILISEE`) ; le comportement d'un taux suit sa catégorie.
 - Ventilation (compte d'une ligne) : compte saisi, clé nature + taux, clé nature, clé taux, compte par défaut du type ; aux étapes 2 à 5 le type de la pièce avant son parent (boucle refusée : `TCO_BOUCLE`) ; sinon `COMPTE_INTROUVABLE`. Une clé porte une nature ou un taux (`VCO_CLE`), connus de l'application (`VCO_NATURE`, `VCO_TAUX`), une seule fois (`VCO_DOUBLON`).
+- Écriture : produits ou charges = base HT du taux (`document_tva`) moins sa part des postes HT, au prorata des lignes du taux par compte (la plus forte absorbe l'arrondi ; taux sans ligne : compte par défaut) ; postes HT et TTC sur leur compte ; TVA d'une vente : à encaisser (exigibilité E) ou collectée (D) ; d'un achat : déductible, autoliquidation (A, I) : déductible et due sur la base ; tiers : une ligne par échéance, retenue sur son compte avec le compte auxiliaire ; avoir saisi en positif : signe -1 ; écart d'équilibre ≤ 0,05 sur le compte d'écart, au-delà `DESEQUILIBRE`. Une pièce en erreur n'est jamais exportée.
+- Lot d'export : pièces sans erreur, fichier au modèle retenu, pièces marquées transférées ; annulation (pièces à transférer de nouveau, sauf si exportées dans un lot suivant) ; pièces transférées dont l'empreinte de l'écriture a changé signalées dans l'aperçu (M12).
 - Génération des comptes de tiers : tiers actifs sans compte ; un type qui hérite d'un autre type du même tiers (sous-traitant → fournisseur) n'en reçoit pas ; compte déjà pris ou impossible : refusé et signalé.
 
 ## Routes HTTP (préfixe `/api/comptabilite`, nœud de droits `comptabilite`)
-- `GET|PUT /parametres` ; `GET|POST /plan`, `PUT|DELETE /plan/{code}` ; `GET|PUT /collectifs` ; `GET|PUT /categories-tva` ; `GET|PUT /taux-tva` ; `GET|PUT /tiers`, `POST /tiers/generer` { type_compte } ; `GET|PUT /types-comptables` ; `GET /ventilation`, `PUT /ventilation/{type}` (liste complète du type), `GET /ventilation/regle` (types, clés, type comptable de chaque type de document) ; `GET /natures` ; `GET|PUT /types-documents`.
+- `GET|PUT /parametres` ; `GET|POST /plan`, `PUT|DELETE /plan/{code}` ; `GET|PUT /collectifs` ; `GET|PUT /categories-tva` ; `GET|PUT /taux-tva` ; `GET|PUT /tiers`, `POST /tiers/generer` { type_compte } ; `GET|PUT /types-comptables` ; `GET /ventilation`, `PUT /ventilation/{type}` (liste complète du type), `GET /ventilation/regle` (types, clés, type comptable de chaque type de document) ; `GET /natures` ; `GET|PUT /types-documents` ; `GET /export/modeles`, `GET|PUT /export/modele`, `POST /export/apercu` { du, au, types }, `POST /export`, `GET /export` (lots), `GET /export/{id}/fichier`, `POST /export/{id}/annuler`.
 
 ## Tests
 - `npm test --workspace modules/comptabilite/js` ; `dotnet test modules/comptabilite/dotnet/LogiBTP.Comptabilite.Tests` (même jeu).

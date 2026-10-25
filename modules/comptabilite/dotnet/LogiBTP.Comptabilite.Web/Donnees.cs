@@ -90,6 +90,9 @@ public class ComptabiliteDbContext(DbContextOptions<ComptabiliteDbContext> optio
         b.Entity<CategorieTvaEntite>().ToTable("categorie_tva").HasKey(x => x.CtvCode);
         b.Entity<TypeComptableEntite>().ToTable("type_comptable").HasKey(x => x.TcoCode);
         b.Entity<VentilationEntite>().ToTable("ventilation_compte").HasKey(x => x.VcoId);
+        b.Entity<ExportEntite>().ToTable("comptabilite_export").HasKey(x => x.CexId);
+        b.Entity<ExportEntite>().Property(x => x.CexModele).HasColumnType("jsonb");
+        b.Entity<ExportPieceEntite>().ToTable("comptabilite_export_piece").HasKey(x => new { x.CepCexId, x.CepPieceId });
     }
 }
 

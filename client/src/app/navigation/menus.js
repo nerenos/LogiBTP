@@ -166,6 +166,7 @@ export const MENUS_METIER = [
       { code: 'compta-plan', libelle: 'Plan comptable', icone: '📒', url: '/comptabilite/plan', info: 'Comptes généraux, collectifs, TVA : type, sens d\'usage, longueur' },
       { code: 'compta-tiers', libelle: 'Tiers par compte', icone: '🗂', url: '/comptabilite/tiers', info: 'Comptes auxiliaires et collectifs des clients, fournisseurs et sous-traitants' },
       { code: 'compta-ventilation', libelle: 'Ventilation natures × TVA', icone: '🧮', url: '/comptabilite/ventilation', info: 'Compte des lignes par type comptable, nature et taux de TVA' },
+      { code: 'compta-export', libelle: 'Export des écritures', icone: '📤', url: '/comptabilite/export', info: 'Factures, avoirs, achats et sous-traitance vers le logiciel comptable (Sage 100)' },
       { separateur: true },
       { code: 'parametrage-comptabilite', libelle: 'Paramètres : longueur, collectifs, types comptables, TVA…', icone: '⚙', url: '/parametres/comptabilite', info: 'Longueur des comptes, préfixes, collectifs, catégories et taux de TVA' },
     ],

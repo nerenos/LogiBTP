@@ -73,6 +73,7 @@ modules/stock/db/093c_stock_approvisionnement.sql
 modules/stock/db/093d_stock_dotations.sql
 modules/comptabilite/db/094_comptabilite.sql
 modules/comptabilite/db/094b_comptabilite_ventilation.sql
+modules/comptabilite/db/094c_comptabilite_export.sql
 modules/crm/db/095_crm_schema.sql
 modules/crm/db/096_crm_rappels.sql
 modules/crm/db/097_crm_demandes.sql
@@ -151,6 +152,7 @@ db/221_droits.sql
 db/222_journal_technique.sql
 db/223_comptabilite.sql
 db/224_comptabilite_ventilation.sql
+db/225_comptabilite_export.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

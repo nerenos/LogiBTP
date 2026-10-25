@@ -101,14 +101,20 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 ### Comptabilité
 
 Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conception/ANALYSE-MODULE-COMPTABILITE.md)
-(base en trois lots, puis module complet). Lots 1 (plan, collectifs, comptes des tiers, TVA) et 2 (types comptables,
-ventilation) de la base réalisés.
+(base en trois lots, puis module complet). Base réalisée : lots 1 (plan, collectifs, comptes des tiers, TVA), 2 (types
+comptables, ventilation) et 3 (écritures, export Sage 100).
 
 - [ ] Lot 2, écarts : clés de ventilation par code de nature et de taux (un code renommé laisse une clé orpheline) ;
   colonnes `nat_compte_vente|achat` gardées dans la table du module Bibliothèque (plus saisies en ligne, encore dans
   la démo hors ligne) ; une nouvelle nature n'a pas de compte tant qu'aucune clé ne la vise (compte par défaut du type).
-- [ ] Base, lot 3 : écritures calculées par le serveur, aperçu et contrôles, export CSV paramétrable (modèle Sage 100,
-  C13), lots d'export (§ 6 de l'analyse : M1 à M13).
+- [ ] Lot 3, à valider : modèle Sage 100 (colonnes, ANSI, JJMMAA, sens et montant) à reproduire dans le format
+  d'import paramétrable de Sage puis à essayer sur un vrai fichier ; modèle personnalisé seulement par l'API
+  (`PUT /api/comptabilite/export/modele`), pas d'écran de saisie des colonnes.
+- [ ] Lot 3, écarts : montants des lignes vendues pris comme poids (la base HT de chaque taux fait foi) ; postes de pied
+  reconnus par le marqueur du marché, sinon par leur libellé (remise, prorata, acompte, paiement direct, retenue) ;
+  déduction d'acompte en mode chiffre d'affaires portée au compte d'acompte (Q13, avis de l'expert-comptable) ;
+  virement de la TVA à encaisser à l'encaissement : module complet avec les règlements ; fichier des lots gardé en base
+  (pas en GED).
 - [ ] Lot 1, écarts : un changement de longueur des comptes ne convertit pas le plan (comptes signalés « hors
   longueur ») ; les comptes de tiers saisis dans la fiche personne ne passent pas par `ReglesComptes` (seulement par
   `/comptabilite/tiers`) ; génération filtrée sur les sous-traitants : un sous-traitant aussi fournisseur sans compte

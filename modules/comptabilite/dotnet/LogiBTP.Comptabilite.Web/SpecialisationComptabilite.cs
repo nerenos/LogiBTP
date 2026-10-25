@@ -21,6 +21,10 @@ public abstract class SpecialisationComptabilite
     /// <summary>Types de documents et leur type comptable (surcharge et effectif).</summary>
     public abstract Task<List<TypeDocumentComptable>> TypesDocumentsAsync(ComptabiliteDbContext db, CancellationToken ct);
     public abstract Task EnregistrerTypesDocumentsAsync(ComptabiliteDbContext db, List<TypeDocumentSaisi> types, CancellationToken ct);
+    /// <summary>Pièces comptables à transférer (ou transférées) construites pour la règle d'écriture (lot 3).</summary>
+    public abstract Task<List<PieceExportee>> PiecesAsync(ComptabiliteDbContext db, FiltrePieces filtre, CancellationToken ct);
+    /// <summary>État comptable des pièces : transférées (T) ou de nouveau à transférer (A).</summary>
+    public abstract Task MarquerAsync(ComptabiliteDbContext db, List<long> pieces, bool transferees, CancellationToken ct);
     /// <summary>Taux de TVA rattachés à une catégorie.</summary>
     public abstract Task<int> TauxDeCategorieAsync(ComptabiliteDbContext db, string categorie, CancellationToken ct);
 }

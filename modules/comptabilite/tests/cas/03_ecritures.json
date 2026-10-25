@@ -1,0 +1,101 @@
+{
+  "description": "Écriture d'une pièce (ReglesEcritures.cs, règle du serveur seul) : produits ou charges par compte = base HT du taux moins sa part des postes HT, au prorata des lignes ; postes HT et TTC sur leur compte ; TVA collectée (encaissements ou débits), déductible, autoliquidée ; tiers par échéance, retenue sur son compte ; avoir saisi en positif (signe -1) ; écart d'arrondi jusqu'à 0,05 ; erreurs.",
+  "base": {
+    "journal": "VT", "date": "2026-10-31", "numero": "FA2026-00001", "reference": null, "libelle": "Client SA", "sens": "VENTE", "signe": 1,
+    "collectif": "411100", "compte_tiers": "C000001", "lignes": [], "postes_ht": [], "postes_ttc": [], "tva": [], "echeances": [], "total_ttc": 0,
+    "compte_retenue": "411700", "compte_defaut": "704000", "compte_ecart_debit": "658000", "compte_ecart_credit": "758000", "analytique": "CH-01"
+  },
+  "cas": [
+    {
+      "nom": "vente : deux taux, remise de pied, acompte déduit, retenue de garantie",
+      "piece": {
+        "lignes": [{ "compte": "701000", "taux": "T20", "montant": 1000 }, { "compte": "704000", "taux": "T20", "montant": 3000 }, { "compte": "704000", "taux": "T10", "montant": 2000 }],
+        "postes_ht": [{ "libelle": "Remise", "compte": "709000", "montant": -600 }],
+        "postes_ttc": [{ "libelle": "Acompte", "compte": "419100", "montant": -300 }],
+        "tva": [
+          { "taux": "T20", "taux_pct": 20, "base": 3600, "montant": 720, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": "445660", "compte_autoliquidee": null },
+          { "taux": "T10", "taux_pct": 10, "base": 1800, "montant": 180, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": "445660", "compte_autoliquidee": null }
+        ],
+        "echeances": [{ "date": "2026-11-30", "montant": 5700, "retenue": false }, { "date": null, "montant": 300, "retenue": true }],
+        "total_ttc": 6300
+      },
+      "attendu": {
+        "erreurs": [],
+        "lignes": [
+          ["701000", null, 0, 1000], ["704000", null, 0, 3000], ["704000", null, 0, 2000], ["709000", null, 600, 0],
+          ["445740", null, 0, 720], ["445740", null, 0, 180], ["419100", null, 300, 0], ["411100", "C000001", 5700, 0], ["411700", "C000001", 300, 0]
+        ]
+      }
+    },
+    {
+      "nom": "sous-traitance autoliquidée : TVA déductible et due sur la base",
+      "piece": {
+        "journal": "HA", "sens": "ACHAT", "collectif": "401200", "compte_tiers": "S000008",
+        "lignes": [{ "compte": "604000", "taux": "AL20", "montant": 1000 }],
+        "tva": [{ "taux": "AL20", "taux_pct": 20, "base": 1000, "montant": 0, "comportement": "A", "exigibilite": "E", "compte_collectee": null, "compte_encaissement": null, "compte_deductible": "445660", "compte_autoliquidee": "445200" }],
+        "total_ttc": 1000
+      },
+      "attendu": {
+        "erreurs": [],
+        "lignes": [["604000", null, 1000, 0], ["445660", null, 200, 0], ["445200", null, 0, 200], ["401200", "S000008", 0, 1000]]
+      }
+    },
+    {
+      "nom": "avoir de vente saisi en positif, TVA sur les débits",
+      "piece": {
+        "signe": -1,
+        "lignes": [{ "compte": "704000", "taux": "T20", "montant": 500 }],
+        "tva": [{ "taux": "T20", "taux_pct": 20, "base": 500, "montant": 100, "comportement": "N", "exigibilite": "D", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": "445660", "compte_autoliquidee": null }],
+        "echeances": [{ "date": "2026-11-30", "montant": 600, "retenue": false }],
+        "total_ttc": 600
+      },
+      "attendu": { "erreurs": [], "lignes": [["704000", null, 500, 0], ["445710", null, 100, 0], ["411100", "C000001", 0, 600]] }
+    },
+    {
+      "nom": "taux sans ligne : compte par défaut ; tiers sans échéance : TTC + postes TTC",
+      "piece": {
+        "lignes": [{ "compte": "704000", "taux": "T20", "montant": 100 }],
+        "tva": [
+          { "taux": "T20", "taux_pct": 20, "base": 100, "montant": 20, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": null, "compte_autoliquidee": null },
+          { "taux": "T10", "taux_pct": 10, "base": 50, "montant": 5, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": null, "compte_autoliquidee": null }
+        ],
+        "postes_ttc": [{ "libelle": "Retenue de garantie", "compte": "411700", "montant": -8.75 }],
+        "total_ttc": 175
+      },
+      "attendu": {
+        "erreurs": [],
+        "lignes": [["704000", null, 0, 100], ["704000", null, 0, 50], ["445740", null, 0, 20], ["445740", null, 0, 5], ["411700", null, 8.75, 0], ["411100", "C000001", 166.25, 0]]
+      }
+    },
+    {
+      "nom": "écart d'arrondi d'un centime",
+      "piece": {
+        "lignes": [{ "compte": "704000", "taux": "T20", "montant": 100 }],
+        "tva": [{ "taux": "T20", "taux_pct": 20, "base": 100, "montant": 20.01, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": null, "compte_autoliquidee": null }],
+        "echeances": [{ "date": "2026-11-30", "montant": 120, "retenue": false }],
+        "total_ttc": 120
+      },
+      "attendu": { "erreurs": [], "lignes": [["704000", null, 0, 100], ["445740", null, 0, 20.01], ["411100", "C000001", 120, 0], ["658000", null, 0.01, 0]] }
+    },
+    {
+      "nom": "ligne sans compte et tiers sans compte : erreurs",
+      "piece": {
+        "collectif": null, "compte_tiers": null,
+        "lignes": [{ "compte": null, "taux": "T20", "montant": 100, "erreur": "COMPTE_INTROUVABLE" }],
+        "tva": [{ "taux": "T20", "taux_pct": 20, "base": 100, "montant": 20, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": null, "compte_autoliquidee": null }],
+        "total_ttc": 120
+      },
+      "attendu": { "erreurs": ["COMPTE_INTROUVABLE", "TIERS_SANS_COMPTE"] }
+    },
+    {
+      "nom": "écart au-delà de la tolérance : déséquilibre",
+      "piece": {
+        "lignes": [{ "compte": "704000", "taux": "T20", "montant": 100 }],
+        "tva": [{ "taux": "T20", "taux_pct": 20, "base": 100, "montant": 20, "comportement": "N", "exigibilite": "E", "compte_collectee": "445710", "compte_encaissement": "445740", "compte_deductible": null, "compte_autoliquidee": null }],
+        "echeances": [{ "date": "2026-11-30", "montant": 119, "retenue": false }],
+        "total_ttc": 120
+      },
+      "attendu": { "erreurs": ["DESEQUILIBRE"] }
+    }
+  ]
+}

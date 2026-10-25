@@ -11,7 +11,7 @@ namespace LogiBTP.Api.Btp;
 /// SOUS_TRAITANT (groupe « sous_traitant » : compte propre `per_st_compte`, sinon celui du fournisseur, C4) ; usages
 /// d'un compte (lignes, natures, tiers, taux).
 /// </summary>
-public sealed class SpecialisationComptabiliteBtp : SpecialisationComptabilite
+public sealed partial class SpecialisationComptabiliteBtp : SpecialisationComptabilite
 {
     private sealed record TauxSql(int Id, string Code, string Libelle, decimal Taux, string? Categorie, string Comportement, string? Mention, bool Actif,
         string? CompteCollectee, string? CompteCollecteeEncaissement, string? CompteDeductible, string? CompteAutoliquidee);

@@ -398,6 +398,7 @@ public static class Extensions
         services.AddDbContext<ComptabiliteDbContext>(options);
         services.AddSingleton<SpecialisationComptabilite, TSpecialisation>();
         services.AddScoped<ServiceComptabilite>();
+        services.AddScoped<ServiceExport>();
         return services;
     }
 
@@ -425,6 +426,18 @@ public static class Extensions
         g.MapGet("/natures", (ServiceComptabilite s, CancellationToken ct) => s.NaturesAsync(ct));
         g.MapGet("/types-documents", (ServiceComptabilite s, CancellationToken ct) => s.TypesDocumentsAsync(ct));
         g.MapPut("/types-documents", (List<TypeDocumentSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerTypesDocumentsAsync(l, ct));
+        g.MapGet("/export/modeles", () => FormatExport.Modeles);
+        g.MapGet("/export/modele", (ServiceExport s, CancellationToken ct) => s.ModeleAsync(ct));
+        g.MapPut("/export/modele", (ModeleExport m, HttpContext http, ServiceExport s, CancellationToken ct) => s.EnregistrerModeleAsync(m, Utilisateur.Depuis(http), ct));
+        g.MapPost("/export/apercu", (DemandeExport d, ServiceExport s, CancellationToken ct) => s.ApercuAsync(d, ct));
+        g.MapPost("/export", (DemandeExport d, HttpContext http, ServiceExport s, CancellationToken ct) => s.ExporterAsync(d, Utilisateur.Depuis(http), ct));
+        g.MapGet("/export", (ServiceExport s, CancellationToken ct) => s.LotsAsync(ct));
+        g.MapGet("/export/{id:long}/fichier", async (long id, ServiceExport s, CancellationToken ct) =>
+        {
+            var (nom, contenu, type) = await s.FichierAsync(id, ct);
+            return Results.File(contenu, type, nom);
+        });
+        g.MapPost("/export/{id:long}/annuler", (long id, HttpContext http, ServiceExport s, CancellationToken ct) => s.AnnulerAsync(id, Utilisateur.Depuis(http), ct));
         g.MapGet("/tiers", (ServiceComptabilite s, CancellationToken ct) => s.TiersAsync(ct));
         g.MapPut("/tiers", (List<CompteTiersSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerComptesTiersAsync(l, ct));
         g.MapPost("/tiers/generer", (DemandeGeneration d, ServiceComptabilite s, CancellationToken ct) => s.GenererComptesTiersAsync(d.TypeCompte, ct));

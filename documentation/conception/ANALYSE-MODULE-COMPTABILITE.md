@@ -21,7 +21,12 @@
 > documents dans `/parametres/comptabilite` ; grille des documents) ; écarts : clés désignant natures et taux par leur
 > code ; un type hérite aussi des clés de son parent avant de prendre son propre compte par défaut (la sous-traitance
 > prend les clés « nature » des achats) ; les comptes des natures sont repris une fois puis ne sont plus saisis dans la
-> fiche nature (colonnes conservées dans la table du module Bibliothèque).
+> fiche nature (colonnes conservées dans la table du module Bibliothèque). Lot 3 réalisé le 25/10/2026
+> (`ReglesEcritures.cs`, `FormatExport.cs`, jeu `03_ecritures.json`, `094c` ; cœur `db/225`, `ComptabiliteExportBtp.cs` ;
+> page `/comptabilite/export`) ; écarts : la règle d'écriture n'existe que côté serveur (l'export n'est calculé que par
+> lui) ; les montants des lignes vendues pondèrent la base HT de chaque taux ; les postes de pied sont reconnus par le
+> marqueur du marché, sinon par leur libellé ; le FEC et l'écran des colonnes d'un modèle personnalisé restent au module
+> complet ; le fichier d'un lot est gardé en base.
 
 ## 1. Note d'origine (résumé)
 

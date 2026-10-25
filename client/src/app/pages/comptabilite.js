@@ -1,12 +1,13 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer, alerter } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, alerter, formatNombre } from '@logibtp/socle/ui';
 import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
 import { api } from '../api.js';
 
 // Module Comptabilité, base, lot 1 (ANALYSE-MODULE-COMPTABILITE.md § 4.1 à 4.3) : plan comptable (`/comptabilite/plan`),
 // tiers indexés par compte (`/comptabilite/tiers`), paramètres, collectifs, catégories et taux de TVA
 // (`/parametres/comptabilite`) ; lot 2 : types comptables et types de documents (`/parametres/comptabilite`), ventilation
-// natures × taux de TVA (`/comptabilite/ventilation`). Droit : nœud `comptabilite` (modifier pour écrire).
+// natures × taux de TVA (`/comptabilite/ventilation`) ; lot 3 : export des écritures (`/comptabilite/export`). Droit : nœud
+// `comptabilite` (modifier pour écrire).
 
 const CLASSES = {
   1: 'Capitaux', 2: 'Immobilisations', 3: 'Stocks', 4: 'Tiers', 5: 'Financiers', 6: 'Charges', 7: 'Produits', 8: 'Spéciaux', 9: 'Analytique',
@@ -625,5 +626,141 @@ export class PageVentilation extends PageBase {
       });
       td.append(combo);
     });
+  }
+}
+
+const montant = (v) => formatNombre(v ?? 0, 2);
+const dateFr = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
+
+/**
+ * Export des écritures (lot 3) : période (date comptable), types comptables, aperçu des pièces à transférer (écriture
+ * dépliable, erreurs : pièce exclue de l'export), pièces transférées modifiées depuis leur export, modèle du fichier
+ * (Sage 100 par défaut), lots d'export (téléchargement, annulation : pièces remises à transférer).
+ */
+export class PageExportComptable extends PageBase {
+  icone = '📤';
+
+  async ouvrir() {
+    this.titre = 'Export des écritures';
+    this.du = this.requete.du ?? '';
+    this.au = this.requete.au ?? '';
+    const ecrire = peutModifier(this.app);
+    this.conteneur.innerHTML = `<div class="page-parametres page-comptabilite"><div class="entete-page"><h1 class="page-titre">📤 Export des écritures</h1>
+      <span class="ligne">Du <input type="date" data-du value="${echapper(this.du)}"> au <input type="date" data-au value="${echapper(this.au)}">
+      <span data-types></span> <button type="button" data-apercu>👁 Aperçu</button>
+      ${ecrire ? '<button type="button" class="principal" data-exporter disabled>📤 Exporter</button>' : ''}</span></div>
+      <p class="aide">Pièces comptables validées à transférer (factures, avoirs, factures d'avancement, d'achat et de sous-traitance), à leur date comptable
+      (date de la pièce du fournisseur pour un achat). Une pièce en erreur n'est jamais exportée. Modèle du fichier : <span data-modele></span>
+      · <a href="/comptabilite/ventilation">Ventilation</a> · <a href="/parametres/comptabilite">Paramètres</a></p>
+      <div data-apercu-zone></div><h2>Lots d'export</h2><div data-lots></div></div>`;
+    if (!this.app.enLigne) { this.conteneur.querySelector('[data-apercu-zone]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
+    const q = (s) => this.conteneur.querySelector(s);
+    try {
+      [this.types, this.modeles, this.modele] = await Promise.all([api.comptabilite.typesComptables(), api.comptabilite.modelesExport(), api.comptabilite.modeleExport()]);
+    } catch (e) { q('[data-apercu-zone]').innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    this.choisis = new Set(this.types.filter((t) => t.actif).map((t) => t.code));
+    q('[data-types]').innerHTML = this.types.filter((t) => t.actif).map((t) => `<label class="fiche-option"><input type="checkbox" data-type="${echapper(t.code)}" checked> ${echapper(t.libelle)}</label>`).join(' ');
+    q('[data-types]').querySelectorAll('[data-type]').forEach((c) => c.addEventListener('change', () => {
+      if (c.checked) this.choisis.add(c.dataset.type); else this.choisis.delete(c.dataset.type);
+    }));
+    poserCombo(this.conteneur, '[data-modele]', { options: this.modeles.map((m) => ({ valeur: m.code, libelle: m.libelle })), valeur: this.modele.code, vide: false, lecture: !ecrire },
+      async (v) => {
+        try {
+          this.modele = await api.comptabilite.enregistrerModeleExport(this.modeles.find((m) => m.code === v));
+          this.app.message(`Modèle : ${this.modele.libelle}`, 'succes');
+        } catch (e) { this.app.message(e.message, 'erreur'); }
+      });
+    q('[data-du]').addEventListener('change', (e) => { this.du = e.target.value; });
+    q('[data-au]').addEventListener('change', (e) => { this.au = e.target.value; });
+    q('[data-apercu]').addEventListener('click', () => this.#apercu());
+    q('[data-exporter]')?.addEventListener('click', () => this.#exporter());
+    await this.#lots();
+  }
+
+  urlCourante() {
+    const p = new URLSearchParams();
+    if (this.du) p.set('du', this.du);
+    if (this.au) p.set('au', this.au);
+    return `/comptabilite/export${p.size ? `?${p}` : ''}`;
+  }
+
+  #demande() { return { du: this.du || null, au: this.au || null, types: [...this.choisis] }; }
+
+  #tablePieces(pieces) {
+    return `<table class="tableau-compact"><thead><tr><th></th><th>Pièce</th><th>Type</th><th>Journal</th><th>Date</th><th>Tiers</th><th class="nombre">TTC</th>
+      <th>Contrôle</th></tr></thead><tbody>${pieces.map((p, i) => `<tr data-i="${i}"><td><button type="button" data-deplier title="Écriture">▸</button></td>
+      <td><a href="/document/${Number(p.id)}">${echapper(p.numero)}</a></td><td>${echapper(p.type_document)}</td><td>${echapper(p.journal)}</td><td>${dateFr(p.date)}</td>
+      <td>${echapper(p.tiers ?? '')}</td><td class="nombre">${montant(p.total_ttc)}</td>
+      <td>${p.erreurs.length ? `<span class="erreur">⚠ ${echapper(p.erreurs.join(' · '))}</span>` : '✓'}</td></tr>
+      <tr data-ecriture="${i}" hidden><td></td><td colspan="7"><table class="tableau-compact"><thead><tr><th>Compte</th><th>Tiers</th><th>Libellé</th><th>Échéance</th>
+      <th class="nombre">Débit</th><th class="nombre">Crédit</th></tr></thead><tbody>${p.lignes.map((l) => `<tr><td>${echapper(l.compte)}</td><td>${echapper(l.auxiliaire ?? '')}</td>
+      <td>${echapper(l.libelle)}</td><td>${dateFr(l.echeance)}</td><td class="nombre">${l.debit ? montant(l.debit) : ''}</td><td class="nombre">${l.credit ? montant(l.credit) : ''}</td></tr>`).join('')}
+      </tbody></table></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  #brancherDeplier(zone) {
+    zone.querySelectorAll('[data-deplier]').forEach((b) => b.addEventListener('click', () => {
+      const tr = b.closest('tr');
+      const detail = tr.parentElement.querySelector(`tr[data-ecriture="${tr.dataset.i}"]`);
+      detail.hidden = !detail.hidden;
+      b.textContent = detail.hidden ? '▸' : '▾';
+    }));
+  }
+
+  async #apercu() {
+    const zone = this.conteneur.querySelector('[data-apercu-zone]');
+    zone.innerHTML = '<p class="aide">Calcul des écritures…</p>';
+    try {
+      const a = await api.comptabilite.apercuExport(this.#demande());
+      this.apercu = a;
+      const erreurs = a.pieces.length - a.valides;
+      zone.innerHTML = `<h2>À transférer : ${a.pieces.length} pièce(s)</h2>
+        <p>${a.valides} pièce(s) exportable(s), total des débits ${montant(a.total_debit)}${erreurs ? ` · <span class="erreur">${erreurs} en erreur (non exportées)</span>` : ''}</p>
+        ${a.pieces.length ? `<div data-a>${this.#tablePieces(a.pieces)}</div>` : '<p class="aide">Aucune pièce à transférer sur la période.</p>'}
+        ${a.modifiees.length ? `<h2>Transférées puis modifiées : ${a.modifiees.length}</h2><p class="aide">Écriture différente de celle exportée : à corriger dans le logiciel comptable.</p>
+          <div data-m>${this.#tablePieces(a.modifiees)}</div>` : ''}`;
+      this.#brancherDeplier(zone);
+      const b = this.conteneur.querySelector('[data-exporter]');
+      if (b) { b.disabled = !a.valides; b.textContent = `📤 Exporter ${a.valides} pièce(s)`; }
+    } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
+  }
+
+  async #exporter() {
+    if (!await confirmer(`Exporter les pièces sans erreur au modèle « ${this.modele.libelle} » ? Elles seront marquées transférées.`)) return;
+    try {
+      const r = await api.comptabilite.exporter(this.#demande());
+      if (r.lot) {
+        this.app.message(`${r.lot.nb_pieces} pièce(s) exportée(s)`, 'succes');
+        window.location.assign(`/api/comptabilite/export/${r.lot.id}/fichier`);
+      } else this.app.message('Aucune pièce exportable', 'avertissement');
+      if (r.exclues.length) await alerter(`${r.exclues.length} pièce(s) en erreur non exportée(s) :`, { titre: 'Export', html: `<ul>${r.exclues.map((p) => `<li>${echapper(p.numero)} : ${echapper(p.erreurs.join(' · '))}</li>`).join('')}</ul>` });
+      await this.#apercu();
+      await this.#lots();
+    } catch (e) { this.app.message(e.message, 'erreur'); }
+  }
+
+  async #lots() {
+    const zone = this.conteneur.querySelector('[data-lots]');
+    try {
+      const lots = await api.comptabilite.lotsExport();
+      const ecrire = peutModifier(this.app);
+      zone.innerHTML = lots.length ? `<table class="tableau-compact"><thead><tr><th>Lot</th><th>Le</th><th>Par</th><th>Période</th><th>Types</th><th>Modèle</th>
+        <th class="nombre">Pièces</th><th class="nombre">Lignes</th><th class="nombre">Total</th><th>Fichier</th><th class="cellule-boutons"></th></tr></thead><tbody>
+        ${lots.map((l) => `<tr data-id="${l.id}"${l.annule_le ? ' class="discret"' : ''}><td>${l.id}</td><td>${echapper(new Date(l.le).toLocaleString('fr-FR'))}</td><td>${echapper(l.par)}</td>
+          <td>${dateFr(l.du) || '…'} – ${dateFr(l.au) || '…'}</td><td>${echapper(l.types.join(', '))}</td><td>${echapper(l.modele)}</td>
+          <td class="nombre">${l.nb_pieces}</td><td class="nombre">${l.nb_lignes}</td><td class="nombre">${montant(l.total)}</td>
+          <td><a href="/api/comptabilite/export/${l.id}/fichier" download>⬇ ${echapper(l.nom_fichier)}</a></td>
+          <td class="cellule-boutons">${l.annule_le ? `annulé le ${dateFr(String(l.annule_le).slice(0, 10))}` : ecrire ? '<button type="button" data-annuler title="Annuler le lot : ses pièces redeviennent à transférer">↩</button>' : ''}</td></tr>`).join('')}
+        </tbody></table>` : '<p class="aide">Aucun lot.</p>';
+      zone.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', async () => {
+        const id = Number(b.closest('tr').dataset.id);
+        if (!await confirmer(`Annuler le lot ${id} ? À faire seulement s'il n'a pas été importé dans le logiciel comptable : ses pièces redeviennent à transférer.`)) return;
+        try {
+          await api.comptabilite.annulerExport(id);
+          this.app.message(`Lot ${id} annulé`, 'succes');
+          await this.#lots();
+        } catch (e) { this.app.message(e.message, 'erreur'); }
+      }));
+    } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
   }
 }

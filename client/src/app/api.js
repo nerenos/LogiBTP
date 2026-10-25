@@ -611,5 +611,12 @@ export const api = {
     natures: () => appel('GET', '/comptabilite/natures'),
     typesDocuments: () => appel('GET', '/comptabilite/types-documents'),
     enregistrerTypesDocuments: (l) => appel('PUT', '/comptabilite/types-documents', l),
+    modelesExport: () => appel('GET', '/comptabilite/export/modeles'),
+    modeleExport: () => appel('GET', '/comptabilite/export/modele'),
+    enregistrerModeleExport: (m) => appel('PUT', '/comptabilite/export/modele', m),
+    apercuExport: (d) => appel('POST', '/comptabilite/export/apercu', d),
+    exporter: (d) => appel('POST', '/comptabilite/export', d),
+    lotsExport: () => appel('GET', '/comptabilite/export'),
+    annulerExport: (id) => appel('POST', `/comptabilite/export/${id}/annuler`, {}),
   },
 };
