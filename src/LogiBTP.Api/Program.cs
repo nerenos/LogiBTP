@@ -214,6 +214,7 @@ api.MapModulesServices();
 api.MapListesValeurs();
 api.MapRessources();
 api.MapAffectationsMateriel();
+api.MapCoutsMateriel();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();

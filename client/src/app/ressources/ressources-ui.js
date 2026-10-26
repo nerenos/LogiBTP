@@ -234,4 +234,52 @@ export async function rendreMaterielAffecte(corps, { app, type, id }) {
       ${d.historique.map((m) => `<tr><td>${lien(m)}</td><td>${jour(m.du)}</td><td>${jour(m.au)}</td></tr>`).join('')}</tbody></table>` : ''}</div>`;
 }
 
+const LIBELLES_COUT = { MO: 'Main-d\'œuvre', STOCK: 'Pièces du stock', ACHAT: 'Achats', SOUS_TRAITANCE: 'Sous-traitance', TOTAL: 'Total' };
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+/**
+ * Coûts d'un matériel (lot 5c-1, db/232) : chantier de suivi (créé à la demande ; partagé par les matériels gérés par
+ * nombre d'un même type), coûts par mois et nature de l'année choisie (main-d'œuvre pointée, pièces sorties du stock,
+ * achats, sous-traitance), totaux de l'année et depuis l'entrée, coût par heure d'utilisation ; listes filtrées.
+ */
+export async function rendreCoutsMateriel(corps, { app, materiel }) {
+  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Coûts : en ligne seulement.</p>'; return; }
+  const montant = (v) => (Number(v) ? formatNombre(v, 2) : '');
+  const rendre = (d) => {
+    if (!d.chantier) {
+      corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>Coûts</h3></div>
+        <p class="aide">Aucun chantier de suivi : il porte les coûts du matériel (pointages de l'atelier, pièces sorties du stock, achats et factures fournisseur, sous-traitance). Il est créé à la première imputation, ou ici.</p>
+        <button type="button" class="principal" data-creer>Créer le chantier de suivi</button></div>`;
+      corps.querySelector('[data-creer]').addEventListener('click', async () => {
+        try { rendre(await api.ressources.creerChantierMateriel(materiel)); app.message('Chantier de suivi créé', 'succes'); } catch (e) { app.erreur(e); }
+      });
+      return;
+    }
+    const c = d.chantier;
+    const colonnes = [...d.natures, 'TOTAL'];
+    const ligne = (titre, t, heures, classe = '') => `<tr class="${classe}"><td>${titre}</td>
+      <td class="nombre">${Number(heures) ? formatNombre(heures, 2) : ''}</td>${colonnes.map((n) => `<td class="nombre">${montant(t[n])}</td>`).join('')}</tr>`;
+    const filtre = encodeURIComponent(c.code);
+    corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>Coûts</h3>
+        <span class="titre-actions-boutons"><span data-annee></span></span></div>
+      <p>Chantier de suivi <a href="/fiche/chantier/${c.id}">${echapper(c.code)}</a> ${echapper(c.libelle)}
+        ${c.statut === 'OUVERT' ? '' : '<span class="pastille-compte neutre">Clos</span>'}
+        ${c.partage ? `<span class="aide">— partagé par les ${c.materiels} matériels gérés par nombre de ce type</span>` : ''}
+        · <a href="/liste/documents?chantier=${filtre}">Documents</a> · <a href="/liste/pointages?chantier=${filtre}">Pointages</a></p>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Mois</th><th>Heures MO</th>${colonnes.map((n) => `<th>${LIBELLES_COUT[n] ?? n}</th>`).join('')}</tr></thead><tbody>
+      ${d.mois.map((m, i) => ligne(MOIS[i], m.montants, m.heures_mo)).join('')}</tbody><tfoot>
+      ${ligne(`Année ${d.annee}`, d.total_annee, d.heures_mo_annee, 'total')}
+      ${ligne(`Depuis l'entrée${d.date_entree ? ` (${jour(d.date_entree)})` : ''}`, d.total_depuis_entree, null, 'total')}</tfoot></table>
+      <p>${d.cout_par_heure != null ? `Coût par heure d'utilisation : <b>${formatNombre(d.cout_par_heure, 2)} €</b> (${formatNombre(d.heures, 0)} h au compteur).`
+        : c.partage ? '<span class="aide">Coût par heure : sans objet pour un chantier partagé.</span>' : '<span class="aide">Coût par heure : heures d\'utilisation non renseignées.</span>'}
+        ${Number(d.non_valorises) ? ` <span class="pastille-compte attention">${d.non_valorises} mouvement(s) non valorisé(s)</span>` : ''}</p></div>`;
+    const annee = creerCombo({ options: d.annees.map((a) => ({ valeur: a, libelle: String(a) })), valeur: d.annee, vide: false });
+    annee.addEventListener('change', async () => {
+      try { rendre(await api.ressources.coutsMateriel(materiel, annee.valeurCombo)); } catch (e) { app.erreur(e); }
+    });
+    corps.querySelector('[data-annee]').append(annee);
+  };
+  rendre(await api.ressources.coutsMateriel(materiel));
+}
+
 export { finValidite, jour as jourRessource };

@@ -228,7 +228,8 @@ export class FicheMateriel extends FicheLogiBTP {
         r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: 'Contrôles réglementaires' });
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
-    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : [])];
+    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : []),
+      ...(r.couts ? [{ code: 'couts', titre: 'Coûts', rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
   }
 
   rendreInformations(v) {

@@ -212,16 +212,16 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
 
 ### 6.3 Questions à trancher
 
-| Réf. | Question | Proposition |
-|---|---|---|
-| M1 | Un chantier par matériel, ou un chantier pour les matériels d'une même famille (petit outillage par nombre) ? | Un par matériel identifié ; un chantier par type de matériel pour les matériels gérés par nombre. |
-| M2 | Création du chantier de suivi : automatique pour tout matériel, ou à la demande ? | À la demande (bouton) et à la première imputation : pas de chantiers vides. |
-| M3 | Coût horaire de la main-d'œuvre d'atelier : celui des pointages (salarié), ou un taux d'atelier ? | Celui des pointages (`v_cout_mo_chantier`), comme pour les chantiers. |
-| M4 | Refacturer le coût du matériel aux chantiers où il travaille (coût horaire d'usage) ? | Pas dans ce lot : le coût par heure est affiché ; la refacturation interne sera une décision de la future analyse de rentabilité. |
-| M5 | Ordre d'entretien : nouveau type E_ENT, ou E_SAV existant ? | Nouveau type E_ENT (E_SAV est tourné vers le client et sa facturation). |
-| M6 | Plans d'entretien par type de matériel (hérités) et surchargés par matériel ? | Oui. |
-| M7 | Compteurs : heures et kilomètres pour le même matériel (camion-grue) ? | Oui, deux unités par matériel au plus. |
-| M8 | Carburant dans ce lot ou plus tard ? | Saisie manuelle dans ce lot, import des cartes carburant plus tard. |
+| Réf. | Question | Proposition | Décision (26/10/2026) |
+|---|---|---|---|
+| M1 | Un chantier par matériel, ou un chantier pour les matériels d'une même famille (petit outillage par nombre) ? | Un par matériel identifié ; un chantier par type de matériel pour les matériels gérés par nombre. | Ok |
+| M2 | Création du chantier de suivi : automatique pour tout matériel, ou à la demande ? | À la demande (bouton) et à la première imputation : pas de chantiers vides. | Ok |
+| M3 | Coût horaire de la main-d'œuvre d'atelier : celui des pointages (salarié), ou un taux d'atelier ? | Celui des pointages (`v_cout_mo_chantier`), comme pour les chantiers. | Ok |
+| M4 | Refacturer le coût du matériel aux chantiers où il travaille (coût horaire d'usage) ? | Pas dans ce lot : le coût par heure est affiché ; la refacturation interne sera une décision de la future analyse de rentabilité. | Ok, ajouté à TODO |
+| M5 | Ordre d'entretien : nouveau type E_ENT, ou E_SAV existant ? | Nouveau type E_ENT (E_SAV est tourné vers le client et sa facturation). | Ok |
+| M6 | Plans d'entretien par type de matériel (hérités) et surchargés par matériel ? | Oui. | Ok |
+| M7 | Compteurs : heures et kilomètres pour le même matériel (camion-grue) ? | Oui, deux unités par matériel au plus. | Ok |
+| M8 | Carburant dans ce lot ou plus tard ? | Saisie manuelle dans ce lot, import des cartes carburant plus tard. | Ok |
 
 ### 6.4 Découpage proposé
 
@@ -231,3 +231,14 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
 | 5c-2 | Relevés de compteurs et événements (tables, saisie, frise), carburant manuel | M |
 | 5c-3 | Ordre d'entretien E_ENT (type, transformations, clôture → historique et relevé) | M-L |
 | 5c-4 | Plans d'entretien, échéances (règle répliquée et jeu), page « à surveiller », notifications, création de l'ordre depuis l'échéance | L |
+
+### 6.5 Réalisé
+
+- **5c-1** (26/10/2026) : affaire de gestion MATERIEL ; chantier de suivi créé à la demande (onglet Coûts de la fiche
+  matériel, `POST /api/ressources/materiels/{id}/chantier`) par `CoutsMateriel.ChantierMaterielAsync`, point d'entrée
+  de la « première imputation » des sous-lots suivants (carburant, ordre d'entretien) : MAT-code pour un matériel
+  identifié, MAT-T-type partagé par les matériels gérés par nombre du même type (M1) ; statut ouvert tant qu'un de ses
+  matériels n'est pas en sommeil (trigger de db/232). Vue `v_cout_chantier` (par chantier, mois et nature : MO
+  pointée, pièces du stock, achats, sous-traitance) ; onglet Coûts : mois de l'année choisie, totaux de l'année et
+  depuis l'entrée, heures MO, coût par heure d'utilisation (compteur `mat_heures` en attendant les relevés de 5c-2 ;
+  sans objet pour un chantier partagé), liens vers les documents et les pointages du chantier.

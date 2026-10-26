@@ -376,6 +376,9 @@ export const api = {
     enregistrerAffectations: (materiel, l) => appel('PUT', `/ressources/materiels/${materiel}/affectations`, l),
     ciblesAffectation: () => appel('GET', '/ressources/affectations/cibles'),
     materielAffecte: (type, id) => appel('GET', `/ressources/affectations/${encodeURIComponent(type)}/${encodeURIComponent(id)}`),
+    // Coûts du matériel (lot 5c-1, db/232) : chantier de suivi créé à la demande.
+    coutsMateriel: (materiel, annee) => appel('GET', `/ressources/materiels/${materiel}/couts${annee ? `?annee=${encodeURIComponent(annee)}` : ''}`),
+    creerChantierMateriel: (materiel) => appel('POST', `/ressources/materiels/${materiel}/chantier`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),

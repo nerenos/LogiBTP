@@ -560,6 +560,8 @@ dialog.dialogue-conge .grille-champs textarea { width: 100%; box-sizing: border-
 .tableau-compact tr.dans-groupe [data-c="cha"] .combo, .tableau-compact tr.dans-groupe [data-c="ordre"] .combo { opacity: .55; }
 .tableau-compact input[readonly], .tableau-compact input:disabled { border-color: transparent; background: transparent; }
 .tableau-compact tfoot th { border-top: 1px solid var(--bord); }
+.ressources-couts td.nombre { text-align: right; font-variant-numeric: tabular-nums; }
+.ressources-couts tfoot tr.total td { border-top: 1px solid var(--bord); font-weight: 600; }
 .tableau-compact.largeur-contenu { width: auto; max-width: 100%; }
 .tableau-defilant { max-height: 55vh; overflow: auto; border: 1px solid color-mix(in srgb, var(--bord) 60%, transparent); border-radius: .3rem; }
 .tableau-defilant > .tableau-compact { width: 100%; }
