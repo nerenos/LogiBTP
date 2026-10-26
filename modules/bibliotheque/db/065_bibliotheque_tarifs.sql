@@ -22,7 +22,6 @@ BEGIN
             AND (tfo_delai IS NULL OR tfo_delai >= 0));
     END IF;
 END $$;
-CREATE INDEX IF NOT EXISTS ix_tfo_tiers ON tarif_fournisseur (tfo_tiers_id) WHERE tfo_tiers_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_tfo_code_barre ON tarif_fournisseur (tfo_code_barre) WHERE tfo_code_barre IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS tarif_import (
