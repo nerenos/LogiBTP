@@ -10,7 +10,8 @@ using Npgsql;
 
 namespace LogiBTP.Installation.Web;
 
-public sealed record EtatBase(string? Code, string Libelle, string? Base, bool Joignable, int Scripts, int EnAttente, string? Erreur);
+/// <summary>Base d'une société ; Chiffree : connexion de l'API en TLS (lot 11, A35).</summary>
+public sealed record EtatBase(string? Code, string Libelle, string? Base, bool Joignable, int Scripts, int EnAttente, string? Erreur, bool Chiffree = false);
 public sealed record EtatDisque(string Usage, long LibreMo, long TotalMo);
 public sealed record DerniereSauvegarde(DateTimeOffset Le, IReadOnlyList<string> Bases, long TailleMo, bool Chiffree, string? Erreur);
 public sealed record EtatCertificat(string Origine, IReadOnlyList<string> Noms, string Emetteur, DateTimeOffset Fin, int JoursRestants, string? EmpreinteRacine);
@@ -66,7 +67,11 @@ public static class EtatInstallation
         {
             var appliques = await BaseDonnees.ScriptsAppliquesAsync(s.Connexion, ct);
             var enAttente = attendus is null || appliques.Count == 0 ? 0 : attendus.Except(appliques.Select(a => a.Chemin)).Count();
-            return new EtatBase(s.Code, s.Libelle, s.Base, true, appliques.Count, enAttente, null);
+            await using var cnx = new NpgsqlConnection(s.Connexion);
+            await cnx.OpenAsync(ct);
+            await using var cmd = new NpgsqlCommand("SELECT coalesce((SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()), false)", cnx);
+            var chiffree = await cmd.ExecuteScalarAsync(ct) is true;
+            return new EtatBase(s.Code, s.Libelle, s.Base, true, appliques.Count, enAttente, null, chiffree);
         }
         catch (Exception e) when (e is NpgsqlException or InvalidOperationException)
         {

@@ -55,19 +55,28 @@ public class PostgresTests
     {
         var hba = ConfigurationPostgres.PgHba(new ReglagesPostgres { Reseau = "172.30.70.0/24" });
         Assert.Contains("local    all   postgres     peer", hba);
-        Assert.Contains("host     all   postgres,logibtp_schema,logibtp_app,logibtp_lecture  172.30.70.0/24  scram-sha-256", hba);
-        Assert.DoesNotContain("hostssl", hba);
-        Assert.DoesNotContain("trust", hba);
+        Assert.Contains("hostssl  all   postgres,logibtp_schema,logibtp_app,logibtp_lecture  172.30.70.0/24  scram-sha-256", hba);
         Assert.EndsWith("reject" + Environment.NewLine, hba);
+    }
+
+    [Fact]
+    public void PgHba_tls_et_scram_seulement()
+    {
+        // A35 / A36 : toute ligne réseau qui accepte est en hostssl et SCRAM-SHA-256 ; aucune méthode md5, password ni trust.
+        var hba = ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5", "192.168.1.0/24"] });
+        var lignes = hba.Split(Environment.NewLine).Where(l => l.Length > 0 && !l.StartsWith('#')).Select(l => l.Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
+        Assert.All(lignes.Where(l => l[0] != "local" && l[^1] != "reject"), l => { Assert.Equal("hostssl", l[0]); Assert.Equal("scram-sha-256", l[^1]); });
+        Assert.All(lignes, l => Assert.DoesNotContain(l[^1], new[] { "md5", "password", "trust" }));
+        Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { Ssl = false }));
     }
 
     [Fact]
     public void PgHba_base_distante_en_tls()
     {
-        var hba = ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"], Ssl = true });
+        var hba = ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"] });
         Assert.Contains("hostssl  all   postgres,logibtp_schema,logibtp_app,logibtp_lecture  10.0.0.5/32  scram-sha-256", hba);
         Assert.DoesNotContain("host     all   all          10.0.0.5", hba);
-        Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"] }));
+        Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { AdressesApi = ["10.0.0.5"], Ssl = false }));
         Assert.Throws<ArgumentException>(() => ConfigurationPostgres.PgHba(new ReglagesPostgres { Reseau = "pas un réseau" }));
     }
 
@@ -79,8 +88,9 @@ public class PostgresTests
         Assert.Contains("effective_cache_size = 3072MB", conf);
         Assert.Contains("work_mem = 32MB", conf);
         Assert.Contains("hba_file = '/etc/logibtp/pg_hba.conf'", conf);
-        Assert.Contains("ssl = off", conf);
-        Assert.Contains("ssl_key_file = '/var/lib/postgresql/ssl/base.key'", ConfigurationPostgres.PostgresqlConf(new ReglagesPostgres { Ssl = true }));
+        Assert.Contains("ssl = on", conf);
+        Assert.Contains("ssl_key_file = '/var/lib/postgresql/ssl/base.key'", conf);
+        Assert.Contains("password_encryption = scram-sha-256", conf);
     }
 
     [Theory]

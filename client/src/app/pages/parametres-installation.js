@@ -14,7 +14,7 @@ const go = (mo) => (mo >= 1024 ? `${(mo / 1024).toLocaleString('fr-FR', { maximu
 
 /**
  * État de l'installation (module Installation, ANALYSE-MODULE-INSTALLATION.md § 7.3), en lecture : version, certificat
- * HTTPS et échéance, bases des sociétés (joignables, scripts appliqués ou en attente), dernière sauvegarde, espace
+ * HTTPS et échéance, bases des sociétés (joignables, connexion chiffrée, scripts appliqués ou en attente), dernière sauvegarde, espace
  * disque. Les actions (certificat, sauvegarde, mise à jour) se font sur le serveur par l'installeur.
  */
 export class PageParametresInstallation extends PageBase {
@@ -51,9 +51,10 @@ export class PageParametresInstallation extends PageBase {
           ${c.empreinte_racine ? `<tr><th>Empreinte de l'autorité</th><td><code>${echapper(c.empreinte_racine)}</code></td></tr>` : ''}
         </tbody></table>${c.jours_restants < 30 ? alerte('Certificat à renouveler') : ''}
         <p class="aide">Postes et tablettes : page <a href="/certificat" target="_blank" rel="noopener">/certificat</a>.</p>`;
-    const bases = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Société</th><th>Base</th><th>État</th><th>Scripts</th><th>En attente</th></tr></thead><tbody>
+    const bases = `<table class="tableau-compact largeur-contenu"><thead><tr><th>Société</th><th>Base</th><th>État</th><th>Connexion</th><th>Scripts</th><th>En attente</th></tr></thead><tbody>
       ${e.bases.map((b) => `<tr><td>${echapper(b.libelle)}${b.code ? ` <small class="aide">(${echapper(b.code)})</small>` : ''}</td><td>${echapper(b.base ?? '')}</td>
         <td>${b.joignable ? '✔ joignable' : `<span class="erreur">✘ ${echapper(b.erreur ?? 'injoignable')}</span>`}</td>
+        <td>${!b.joignable ? '' : b.chiffree ? '🔒 chiffrée (TLS)' : '<span class="erreur">⚠ non chiffrée : relancer « installation preparer »</span>'}</td>
         <td>${b.scripts || ''}</td><td>${b.en_attente ? `<span class="erreur">${b.en_attente} (mise à jour à faire)</span>` : ''}</td></tr>`).join('')}
       </tbody></table>`;
     const s = e.sauvegarde;

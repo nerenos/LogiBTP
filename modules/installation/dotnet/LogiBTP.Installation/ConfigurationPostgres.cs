@@ -6,8 +6,9 @@ namespace LogiBTP.Installation;
 
 /// <summary>
 /// Réglages du serveur PostgreSQL de l'installation (conteneur de la base, ANALYSE-MODULE-INSTALLATION.md § 3.2) :
-/// réseau Docker commun avec l'API, adresses du serveur de l'API quand la base est sur une autre machine (TLS),
-/// mémoire dédiée, fuseau.
+/// réseau Docker commun avec l'API, adresses du serveur de l'API quand la base est sur une autre machine, mémoire
+/// dédiée, fuseau. TLS toujours actif (lot 11 des demandes du 25/10/2026, A35) : connexions réseau en « hostssl »
+/// seulement, authentification SCRAM-SHA-256 seulement (A36 : jamais md5, password ni trust).
 /// </summary>
 public sealed class ReglagesPostgres
 {
@@ -15,8 +16,8 @@ public sealed class ReglagesPostgres
     public string Reseau { get; init; } = "172.30.70.0/24";
     /// <summary>Base sur une autre machine : adresses (ou CIDR) du serveur de l'API, connexion en TLS seulement.</summary>
     public IReadOnlyList<string> AdressesApi { get; init; } = [];
-    /// <summary>TLS du serveur (certificat de la base émis par l'autorité de l'installation) ; obligatoire avec AdressesApi.</summary>
-    public bool Ssl { get; init; }
+    /// <summary>TLS du serveur (certificat de la base émis par l'autorité de l'installation) : obligatoire (A35).</summary>
+    public bool Ssl { get; init; } = true;
     /// <summary>Mémoire dédiée à PostgreSQL (Mo) : règle shared_buffers, effective_cache_size, work_mem.</summary>
     public int MemoireMo { get; init; } = 2048;
     public string Fuseau { get; init; } = "Europe/Paris";
@@ -32,7 +33,7 @@ public sealed class ReglagesPostgres
     {
         if (!Cidr(Reseau)) throw new ArgumentException($"Réseau Docker invalide : {Reseau}");
         foreach (var a in AdressesApi) if (!Cidr(a) && !IPAddress.TryParse(a, out _)) throw new ArgumentException($"Adresse du serveur de l'API invalide : {a}");
-        if (AdressesApi.Count > 0 && !Ssl) throw new ArgumentException("Base sur une autre machine : TLS obligatoire");
+        if (!Ssl) throw new ArgumentException("TLS de la base obligatoire : certificat de la base (« installation preparer » ou « installation certificat base »)");
         if (MemoireMo < 256) throw new ArgumentException("Mémoire de PostgreSQL : 256 Mo au moins");
     }
 
@@ -51,15 +52,15 @@ public static class ConfigurationPostgres
         s.AppendLine("# TYPE   BASE  UTILISATEUR  ADRESSE  MÉTHODE");
         s.AppendLine("# Superutilisateur par le socket du conteneur (docker exec -u postgres : sauvegardes, dépannage).");
         s.AppendLine("local    all   postgres     peer");
-        s.AppendLine("# Réseau Docker « logibtp » : API et commandes de l'installeur sur le même hôte.");
-        s.AppendLine($"host     all   {roles}  {r.Reseau}  scram-sha-256");
+        s.AppendLine("# Réseau Docker « logibtp » : API et commandes de l'installeur sur le même hôte, en TLS seulement.");
+        s.AppendLine($"hostssl  all   {roles}  {r.Reseau}  scram-sha-256");
         if (r.AdressesApi.Count > 0)
         {
             // L'installeur (création des bases, mises à jour) tourne sur le serveur de l'API : mêmes rôles qu'en local.
             s.AppendLine("# Serveur de l'API sur une autre machine (API et installeur) : TLS seulement.");
             foreach (var a in r.AdressesApi) s.AppendLine($"hostssl  all   {roles}  {(a.Contains('/') ? a : a + (a.Contains(':') ? "/128" : "/32"))}  scram-sha-256");
         }
-        s.AppendLine("# Tout le reste est refusé.");
+        s.AppendLine("# Tout le reste est refusé (connexion sans TLS comprise).");
         s.AppendLine("host     all   all          0.0.0.0/0  reject");
         s.AppendLine("host     all   all          ::/0       reject");
         return s.ToString();
@@ -86,14 +87,10 @@ public static class ConfigurationPostgres
         s.AppendLine($"log_timezone = '{r.Fuseau}'");
         s.AppendLine("datestyle = 'iso, dmy'");
         s.AppendLine("log_min_duration_statement = 5000");
-        if (r.Ssl)
-        {
-            s.AppendLine("ssl = on");
-            s.AppendLine($"ssl_cert_file = '{r.Dossier}/base.crt'");
-            s.AppendLine($"ssl_key_file = '{r.CleSsl}'");
-            s.AppendLine("ssl_min_protocol_version = 'TLSv1.2'");
-        }
-        else s.AppendLine("ssl = off");
+        s.AppendLine("ssl = on");
+        s.AppendLine($"ssl_cert_file = '{r.Dossier}/base.crt'");
+        s.AppendLine($"ssl_key_file = '{r.CleSsl}'");
+        s.AppendLine("ssl_min_protocol_version = 'TLSv1.2'");
         return s.ToString();
     }
 }

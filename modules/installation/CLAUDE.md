@@ -52,6 +52,7 @@ décisions I1 à I14).
   1 Mo, HKDF de la clé des données, dernier bloc authentifié) ; page `/parametres/installation` (nœud de droits
   `administration/installation`, `GET /api/installation/etat` : `EtatInstallation` du module).
 
+- Lot 11 des demandes du 25/10/2026 (A35, A36) : TLS de la base toujours actif — certificat de la base émis par `installation preparer` (`CertificatBaseLocal` du cœur : autorité LogiBTP, `base.<domaine>`, renouvelé à 60 jours), `pg_hba.conf` en `hostssl` + SCRAM seulement (`ReglagesPostgres.Ssl` obligatoire), API en `VerifyCA` par la racine (`VerifyFull` pour une base distante) ; `EtatBase.Chiffree` (`pg_stat_ssl`) ; installation existante : relancer la préparation puis redémarrer `logibtp-base`.
 - Lot 4 : mise à jour (`installation base mettre-a-jour` : scripts du manifeste absents du journal sur toutes les
   bases, rejouables, droits, conversions ; `base adopter --base N|--toutes --confirmer` pour une base créée hors de
   l'installeur ; `MettreAJour-LogiBTP.ps1` : image (empreinte SHA-256 d'un fichier vérifiée), sauvegarde, scripts, API ;

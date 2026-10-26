@@ -379,3 +379,21 @@ l'article dans le dépôt (Stock) > délai du tarif principal > délai global de
   - paie : règle `REPAS` (`paie.js` ↔ `ReglesPaie.cs`, trois cas dans `03_paie.json`) : valeur de l'agence du salarié
     (`valeurs` : { agence: n, "*": défaut }, absent : 1 ; 0 = rien) chaque jour de repas, `exclu_si` ; le RH la règle
     dans les profils de paie (`/parametres/pointage`), un panier peut l'exclure par `exclu_si`.
+
+## 12. Lot 11 : sécurité de la base (réalisé, 26/10/2026)
+
+- **A35 TLS toujours actif** : `installation preparer` émet le certificat de la base (autorité LogiBTP, créée au besoin ;
+  nom `LOGIBTP_BASE_HOTE` s'il est dans le domaine, sinon `base.<domaine>` ; renouvelé à 60 jours de l'échéance) avant
+  d'écrire `postgresql.conf` (`ssl = on`, TLS 1.2 au moins) ; `pg_hba.conf` : réseau Docker en `hostssl` (comme la base
+  distante), tout le reste rejeté, connexion non chiffrée comprise ; `ReglagesPostgres` refuse une configuration sans
+  TLS. L'API se connecte en `VerifyCA` par la racine de l'autorité (`LOGIBTP_BASE_SSL`, `LOGIBTP_BASE_RACINE`) : la
+  chaîne est vérifiée, pas le nom (l'hôte Docker `logibtp-base` n'est pas un nom du domaine, contrainte de noms de
+  l'autorité) ; base distante : `VerifyFull` inchangé (`installation certificat base`). Page `/parametres/installation` :
+  colonne « Connexion » (🔒 chiffrée par `pg_stat_ssl`). Essai de bout en bout : PostgreSQL 17 démarré avec la
+  configuration générée, connexion `verify-ca` en TLS 1.3, connexion sans chiffrement refusée par `pg_hba.conf`.
+  Installation existante : relancer `Installer-LogiBTP.ps1` (rejouable) ou `installation preparer --domaine D`, puis
+  redémarrer le conteneur `logibtp-base` et l'API. La base de développement (`logibtp-postgres`, localhost) reste sans
+  TLS.
+- **A36 GSS** : le message vient de l'absence de chiffrement de la connexion, pas du mot de passe (SCRAM-SHA-256 : défi
+  et réponse) ; `GSS Encryption Mode=Disable` conservé (pas de Kerberos) ; test : toute ligne réseau acceptée est
+  `hostssl` + `scram-sha-256`, aucune méthode `md5`, `password` ni `trust`.

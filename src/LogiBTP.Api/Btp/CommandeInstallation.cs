@@ -119,9 +119,11 @@ public static class CommandeInstallation
         SocietesInstallation.Ecrire(societes, SocietesInstallation.Preparer(SocietesInstallation.Lire(societes), domaine, Option(args, "--libelle")));
         sortie.WriteLine($"{FichierSocietes} : domaine {domaine}");
 
-        var config = Configuration(dossier);
         var dossierBase = DossierBase();
         Directory.CreateDirectory(dossierBase);
+        // TLS de la base toujours actif (A35) : certificat de la base émis avant d'écrire une configuration « ssl = on ».
+        CertificatBaseLocal(Configuration(dossier), env, domaine, sortie);
+        var config = Configuration(dossier);
         var reglages = Reglages(config);
         File.WriteAllText(Path.Combine(dossierBase, "pg_hba.conf"), ConfigurationPostgres.PgHba(reglages));
         File.WriteAllText(Path.Combine(dossierBase, "postgresql.conf"), ConfigurationPostgres.PostgresqlConf(reglages));
@@ -312,6 +314,39 @@ public static class CommandeInstallation
     }
 
     /// <summary>
+    /// Certificat de la base sur le même hôte que l'API (lot 11 des demandes du 25/10/2026, A35) : émis par l'autorité
+    /// LogiBTP (créée au besoin) pour le nom de la base dans le domaine (LOGIBTP_BASE_HOTE s'il en fait partie, sinon
+    /// base.&lt;domaine&gt;), renouvelé à 60 jours de son échéance ; l'API vérifie la chaîne par la racine (VerifyCA : l'hôte
+    /// Docker « logibtp-base » n'est pas un nom du domaine) sauf réglage déjà posé (VerifyFull d'une base distante).
+    /// </summary>
+    private static void CertificatBaseLocal(IConfiguration config, string env, string domaine, TextWriter sortie)
+    {
+        var dossierBase = DossierBase();
+        var crt = Path.Combine(dossierBase, "base.crt");
+        if (config["LOGIBTP_BASE_SSL_SERVEUR"] is "1" or "true" or "on" && File.Exists(crt) && File.Exists(Path.Combine(dossierBase, "base.key"))
+            && X509Certificate2.CreateFromPem(File.ReadAllText(crt)).NotAfter > DateTime.Now.AddDays(60))
+            return;
+        var hote = config["LOGIBTP_BASE_HOTE"];
+        var nom = hote is not null && hote.EndsWith("." + domaine, StringComparison.OrdinalIgnoreCase) ? hote.ToLowerInvariant() : "base." + domaine;
+        var d = Certificats();
+        var (racine, cleRacine) = Racine(d, domaine, Exiger(config, ExtensionsConfiguration.CleChiffrement), false, null, DateTimeOffset.Now, sortie);
+        var emis = AutoriteCertificats.Emettre(racine, cleRacine, [nom], DateTimeOffset.Now);
+        EcrireCertificatBase(dossierBase, emis.CertificatPem, emis.ClePem);
+        var valeurs = new Dictionary<string, string> { ["LOGIBTP_BASE_SSL_SERVEUR"] = "1" };
+        if (string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_SSL"])) valeurs["LOGIBTP_BASE_SSL"] = "VerifyCA";
+        if (string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_RACINE"])) valeurs["LOGIBTP_BASE_RACINE"] = d.Racine.Replace('\\', '/');
+        RemplacerEnv(env, valeurs);
+        sortie.WriteLine($"Certificat de la base {nom} valable jusqu'au {emis.Certificat.NotAfter:dd/MM/yyyy} : TLS de la base actif (redémarrer le conteneur logibtp-base)");
+    }
+
+    private static void EcrireCertificatBase(string dossierBase, string crt, string cle)
+    {
+        Directory.CreateDirectory(dossierBase);
+        File.WriteAllText(Path.Combine(dossierBase, "base.crt"), crt.Trim() + "\n");
+        DossierCertificats.EcrireSecret(Path.Combine(dossierBase, "base.key"), cle);
+    }
+
+    /// <summary>
     /// Base sur une autre machine (§ 3.3) : certificat du serveur PostgreSQL (nom DNS dans le domaine de l'installation)
     /// émis par l'autorité LogiBTP ou fourni, TLS du serveur activé, connexions de l'API en VerifyFull par la racine,
     /// accès limité aux adresses du serveur de l'API ; pg_hba.conf et postgresql.conf régénérés.
@@ -340,8 +375,7 @@ public static class CommandeInstallation
             (crt, cle) = (emis.CertificatPem, emis.ClePem);
             sortie.WriteLine($"Certificat de la base {nom} valable jusqu'au {emis.Certificat.NotAfter:dd/MM/yyyy}");
         }
-        File.WriteAllText(Path.Combine(dossierBase, "base.crt"), crt.Trim() + "\n");
-        DossierCertificats.EcrireSecret(Path.Combine(dossierBase, "base.key"), cle);
+        EcrireCertificatBase(dossierBase, crt, cle);
         var env = Path.Combine(dossier, ".env");
         RemplacerEnv(env, new Dictionary<string, string>
         {
