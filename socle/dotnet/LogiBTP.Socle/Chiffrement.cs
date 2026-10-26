@@ -40,7 +40,7 @@ public sealed class Chiffrement
     public string? Empreinte(string? valeur)
     {
         if (string.IsNullOrWhiteSpace(valeur)) return null;
-        var c = cleEmpreinte ?? throw new ErreurChiffrement("Chiffrement non configuré : définir la chaîne de l'installation (LOGIBTP_CLE_CHIFFREMENT dans .env)");
+        var c = cleEmpreinte ?? throw new ChiffrementException("Chiffrement non configuré : définir la chaîne de l'installation (LOGIBTP_CLE_CHIFFREMENT dans .env)");
         return Convert.ToHexStringLower(HMACSHA256.HashData(c, Encoding.UTF8.GetBytes(valeur.Trim().ToLowerInvariant())));
     }
 
@@ -48,7 +48,7 @@ public sealed class Chiffrement
 
     public static bool EstChiffre(string? valeur) => valeur?.StartsWith(Prefixe, StringComparison.Ordinal) == true;
 
-    private byte[] Cle => cle ?? throw new ErreurChiffrement("Chiffrement non configuré : définir la chaîne de l'installation (LOGIBTP_CLE_CHIFFREMENT dans .env)");
+    private byte[] Cle => cle ?? throw new ChiffrementException("Chiffrement non configuré : définir la chaîne de l'installation (LOGIBTP_CLE_CHIFFREMENT dans .env)");
 
     /// <summary>Texte chiffré (nonce aléatoire : deux chiffrements d'un même texte diffèrent) ; null ou vide : inchangé.</summary>
     public string? Chiffrer(string? texte)
@@ -74,9 +74,9 @@ public sealed class Chiffrement
         }
         catch (FormatException)
         {
-            throw new ErreurChiffrement("Valeur chiffrée illisible");
+            throw new ChiffrementException("Valeur chiffrée illisible");
         }
-        if (tampon.Length < 28) throw new ErreurChiffrement("Valeur chiffrée illisible");
+        if (tampon.Length < 28) throw new ChiffrementException("Valeur chiffrée illisible");
         var clair = new byte[tampon.Length - 28];
         foreach (var k in precedentes.Prepend(Cle))
         {
@@ -88,8 +88,8 @@ public sealed class Chiffrement
             }
             catch (AuthenticationTagMismatchException) { }
         }
-        throw new ErreurChiffrement("Déchiffrement impossible : la chaîne de l'installation a changé ou la valeur est altérée");
+        throw new ChiffrementException("Déchiffrement impossible : la chaîne de l'installation a changé ou la valeur est altérée");
     }
 }
 
-public sealed class ErreurChiffrement(string message) : Exception(message);
+public sealed class ChiffrementException(string message) : Exception(message);

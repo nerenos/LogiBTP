@@ -23,10 +23,10 @@ public class ChiffrementTests
     public void Autre_cle_ou_sans_cle_refuse()
     {
         var a = new Chiffrement("une").Chiffrer("x");
-        Assert.Throws<ErreurChiffrement>(() => new Chiffrement("autre").Dechiffrer(a));
+        Assert.Throws<ChiffrementException>(() => new Chiffrement("autre").Dechiffrer(a));
         var sans = new Chiffrement(null);
         Assert.False(sans.EstConfigure);
-        Assert.Throws<ErreurChiffrement>(() => sans.Chiffrer("x"));
+        Assert.Throws<ChiffrementException>(() => sans.Chiffrer("x"));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class ChiffrementTests
         Assert.Equal(e, c.Empreinte("commercial@exemple.fr"));
         Assert.NotEqual(e, new Chiffrement("autre").Empreinte("commercial@exemple.fr"));
         Assert.Null(c.Empreinte(" "));
-        Assert.Throws<ErreurChiffrement>(() => new Chiffrement(null).Empreinte("x"));
+        Assert.Throws<ChiffrementException>(() => new Chiffrement(null).Empreinte("x"));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class ChiffrementTests
         var nouvelle = new Chiffrement("nouvelle", Chiffrement.Liste(" ancienne , autre "));
         Assert.Equal("secret", nouvelle.Dechiffrer(valeur));
         Assert.Equal("secret", new Chiffrement("nouvelle").Dechiffrer(nouvelle.Chiffrer("secret")));
-        Assert.Throws<ErreurChiffrement>(() => new Chiffrement("nouvelle").Dechiffrer(valeur));
+        Assert.Throws<ChiffrementException>(() => new Chiffrement("nouvelle").Dechiffrer(valeur));
         Assert.NotEqual(ancienne.Empreinte("a@b.fr"), nouvelle.Empreinte("a@b.fr"));
     }
 }

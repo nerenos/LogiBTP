@@ -152,7 +152,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         {
             return chiffrement.Chiffrer(texte);
         }
-        catch (ErreurChiffrement e)
+        catch (ChiffrementException e)
         {
             throw ExceptionMetier.Invalide("CHIFFREMENT", e.Message);
         }
@@ -164,7 +164,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         {
             return chiffrement.Dechiffrer(valeur);
         }
-        catch (ErreurChiffrement e)
+        catch (ChiffrementException e)
         {
             throw ExceptionMetier.Invalide("CHIFFREMENT", e.Message);
         }
