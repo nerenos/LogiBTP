@@ -19,6 +19,7 @@ public static class Extensions
         services.AddScoped<ServiceSynthese>();
         services.AddScoped<ServicePaie>();
         services.AddScoped<ServiceConges>();
+        services.AddScoped<ServiceRepas>();
         services.AddSingleton<JetonsBorne>();
         services.AddScoped<ServiceBorne>();
         return services;
@@ -100,11 +101,19 @@ public static class Extensions
         });
         g.MapGet("/groupes/{groupe:guid}", (Guid groupe, HttpContext http, ServiceBorne s, CancellationToken ct) => s.GroupeAsync(groupe, Utilisateur.Depuis(http), ct));
         g.MapPut("/groupes/{groupe:guid}", (Guid groupe, GroupeSaisi gs, HttpContext http, ServiceBorne s, CancellationToken ct) => s.ModifierGroupeAsync(groupe, gs, Utilisateur.Depuis(http), ct));
+        // Repas au restaurant (lot 10, A29) : restaurants proposés, repas d'un salarié (droit de saisie).
+        g.MapGet("/restaurants", (int? chantier, string? recherche, ServiceRepas s, CancellationToken ct) => s.RestaurantsAsync(chantier, recherche, ct));
+        g.MapGet("/repas/{salarie:int}", (int salarie, DateOnly du, DateOnly au, HttpContext http, ServiceRepas s, CancellationToken ct) =>
+            s.RepasAsync(salarie, du, au, Utilisateur.Depuis(http), ct));
+        g.MapPut("/repas/{salarie:int}", (int salarie, RepasSaisi r, HttpContext http, ServiceRepas s, CancellationToken ct) =>
+            s.EnregistrerAsync(salarie, r, Utilisateur.Depuis(http), ct));
         var b = g.MapGroup("/borne");
         b.MapGet("", (HttpContext http, ServiceBorne s, CancellationToken ct) => s.OuvrirAsync(http, ct));
         b.MapPost("/identifier", (Identification i, HttpContext http, ServiceBorne s, CancellationToken ct) => s.IdentifierAsync(http, i, ct));
         b.MapGet("/ordre", (string numero, HttpContext http, ServiceBorne s, CancellationToken ct) => s.OrdreAsync(http, numero, ct));
         b.MapGet("/chantiers", (string jeton, HttpContext http, ServiceBorne s, CancellationToken ct) => s.TousChantiersAsync(http, jeton, ct));
+        b.MapGet("/restaurants", (string jeton, int? chantier, string? recherche, HttpContext http, ServiceBorne s, CancellationToken ct) => s.RestaurantsAsync(http, jeton, chantier, recherche, ct));
+        b.MapPost("/repas", (RepasBorne r, HttpContext http, ServiceBorne s, CancellationToken ct) => s.RepasAsync(http, r, ct));
         b.MapPost("/pointages", (PointageBorne p, HttpContext http, ServiceBorne s, CancellationToken ct) => s.PointerAsync(http, p, ct));
         b.MapPost("/journee", (JourneeBorne j, HttpContext http, ServiceBorne s, CancellationToken ct) => s.JourneeAsync(http, j, ct));
         b.MapPut("/journee", (JourneeSaisie j, HttpContext http, ServiceBorne s, CancellationToken ct) => s.EnregistrerJourneeAsync(http, j, ct));

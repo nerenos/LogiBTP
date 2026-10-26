@@ -354,7 +354,7 @@ l'article dans le dépôt (Stock) > délai du tarif principal > délai global de
   (commande), puis les autres offres en cours du lot passent au statut terminal « Non retenue » (`NON_RETENU`, module
   Document `019m`, jamais recalculé par `f_document_statut`) ; `POST …/consultation/retenir`.
 
-## 11. Lot 10 : pointage (A30 réalisé le 26/10/2026 ; A29 en attente de décision)
+## 11. Lot 10 : pointage (réalisé le 26/10/2026)
 
 - **A30 Choix du chantier ou de l'ordre à la borne** : bouton « 🔎 Tous » (route publique
   `GET /api/pointage/borne/chantiers?jeton=` : salarié identifié, tous les chantiers pointables — ouverts hors dotations,
@@ -363,5 +363,19 @@ l'article dans le dépôt (Stock) > délai du tarif principal > délai global de
   tête ; le champ filtre les tuiles en direct (code, libellé, ville, client, numéro, objet et type d'ordre ; chaque mot,
   casse et accents indifférents : `client/src/app/pointage/choix-borne.js`) ; à l'Entrée : tuile désignée exactement
   (code ou numéro), sinon la seule restante, sinon recherche du numéro d'ordre (QR code) comme avant.
-- **A29 Restaurants** : non commencé, décision attendue sur la géolocalisation (coordonnées des adresses par géocodage
-  ou proximité par zones de déplacement) et sur la règle d'avantage en nature par agence.
+- **A29 Restaurants** (décision : géocodage des adresses par l'API Adresse, tri par distance au chantier) :
+  - restaurants = tiers de l'annuaire de relation `RESTAURANT` (`db/239`), adresse principale ;
+  - géocodage paresseux (`Btp/GeocodageBtp.cs`, section `Geocodage` : `Actif`, `Adresse` — défaut
+    https://api-adresse.data.gouv.fr/search/, la Géoplateforme répond au même format —, `ScoreMin` 0,4) : adresse du
+    chantier et des restaurants géocodée au besoin (20 restaurants au plus par appel), position, score et adresse
+    géocodée gardés (`coo_latitude`…, `cha_latitude`… ; une adresse modifiée est regéocodée, un échec n'est pas retenté
+    pour la même adresse ; API injoignable : liste sans distance) ; distance à vol d'oiseau (`Geographie.DistanceKm`,
+    `LogiBTP.Domaine`, tests `GeographieTests`) ;
+  - repas : un par salarié et par jour (`poi_repas`, module Pointage `088d`), saisi au bureau (section « 🍽 Repas au
+    restaurant » de la saisie de la semaine : restaurants du plus proche au plus loin du chantier principal du jour) et à
+    la borne (bouton « 🍽 Repas » des pointages du jour) ; jour validé refusé (`POI_VALIDE`) ; « restaurant non
+    trouvé » : nom et ville → tiers provisoire de relation RESTAURANT (repris s'il existe déjà sous ce nom), à valider ou
+    fusionner par l'annuaire (la fusion reporte les repas) ;
+  - paie : règle `REPAS` (`paie.js` ↔ `ReglesPaie.cs`, trois cas dans `03_paie.json`) : valeur de l'agence du salarié
+    (`valeurs` : { agence: n, "*": défaut }, absent : 1 ; 0 = rien) chaque jour de repas, `exclu_si` ; le RH la règle
+    dans les profils de paie (`/parametres/pointage`), un panier peut l'exclure par `exclu_si`.

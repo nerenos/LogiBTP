@@ -120,6 +120,12 @@ builder.Services.AddModuleComptabilite<SpecialisationComptabiliteBtp>(Base);
 builder.Services.AddModuleStock<SpecialisationStockBtp>(Base);
 // Module Pointage (facultatif) : saisie des heures de main-d'œuvre par chantier (modules/pointage/db/086, db/199).
 builder.Services.AddModulePointage<SpecialisationPointageBtp>(Base);
+// Géocodage des adresses (restaurants proches du chantier, lot 10, A29) : API Adresse, section Geocodage.
+builder.Services.AddHttpClient<Geocodage>(c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(5);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("LogiBTP/0.1");
+});
 // Module Planning (facultatif) : tâches, affectations, calcul par les calendriers (modules/planning/db/089, db/201).
 builder.Services.AddHttpContextAccessor();
 // Diffusion en temps réel (socle) : planning, puis CRM, synthèse de l'exécution…

@@ -29,7 +29,8 @@ INSERT INTO casquette (cas_code, cas_libelle, cas_icone, cas_groupes, cas_ordre,
  ('BC', 'Bureau de contrôle', '✅', '["controle"]'::jsonb, 65, TRUE),
  ('MOA', 'Maître d''ouvrage', '🏗️', '[]'::jsonb, 70, TRUE),
  ('BANQUE', 'Banque', '🏦', '[]'::jsonb, 80, TRUE),
- ('ASSURANCE', 'Assureur', '🛡️', '[]'::jsonb, 85, TRUE);
+ ('ASSURANCE', 'Assureur', '🛡️', '[]'::jsonb, 85, TRUE),
+ ('RESTAURANT', 'Restaurant', '🍽', '[]'::jsonb, 90, TRUE);
 
 INSERT INTO type_lien (tli_code, tli_libelle, tli_libelle_inverse, tli_ordre, tli_actif) VALUES
  ('FACTURER_A', 'Facturer à', 'Payeur pour', 10, TRUE),

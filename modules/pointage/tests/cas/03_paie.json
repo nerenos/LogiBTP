@@ -109,6 +109,66 @@
         "semaine": { "HN": -30 },
         "totaux": { "HN": 900 }
       }
+    },
+    {
+      "nom": "repas au restaurant : avantage en nature de l'agence, panier écarté ces jours-là",
+      "rubriques": [{ "code": "HN", "unite": "H", "saisie": "C" }, { "code": "PANIER", "unite": "NB", "saisie": "C" }, { "code": "AVN_REPAS", "unite": "NB", "saisie": "C" }],
+      "regles": [
+        { "type": "CUMUL_HEURES", "rubrique": "HN" },
+        { "type": "REPAS", "rubrique": "AVN_REPAS", "parametres": { "valeurs": { "LYON": 1, "GRENOBLE": 0, "*": 2 } } },
+        { "type": "SEUIL_JOUR", "rubrique": "PANIER", "parametres": { "base": "HN", "seuil": 360, "exclu_si": ["AVN_REPAS"] } }
+      ],
+      "agence": "LYON",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 420 }], "repas": true },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 420 }] },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 240 }], "repas": true }
+      ],
+      "attendu": {
+        "jours": [{ "date": "2026-10-19", "valeurs": { "HN": 420, "AVN_REPAS": 1 } }, { "date": "2026-10-20", "valeurs": { "HN": 420, "PANIER": 1 } }, { "date": "2026-10-21", "valeurs": { "HN": 240, "AVN_REPAS": 1 } }],
+        "semaine": {},
+        "totaux": { "HN": 1080, "AVN_REPAS": 2, "PANIER": 1 }
+      }
+    },
+    {
+      "nom": "repas au restaurant : agence sans avantage (0), le panier reste",
+      "rubriques": [{ "code": "HN", "unite": "H", "saisie": "C" }, { "code": "PANIER", "unite": "NB", "saisie": "C" }, { "code": "AVN_REPAS", "unite": "NB", "saisie": "C" }],
+      "regles": [
+        { "type": "CUMUL_HEURES", "rubrique": "HN" },
+        { "type": "REPAS", "rubrique": "AVN_REPAS", "parametres": { "valeurs": { "LYON": 1, "GRENOBLE": 0, "*": 2 } } },
+        { "type": "SEUIL_JOUR", "rubrique": "PANIER", "parametres": { "base": "HN", "seuil": 360, "exclu_si": ["AVN_REPAS"] } }
+      ],
+      "agence": "GRENOBLE",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 420 }], "repas": true },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 420 }] },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 240 }], "repas": true }
+      ],
+      "attendu": {
+        "jours": [{ "date": "2026-10-19", "valeurs": { "HN": 420, "PANIER": 1 } }, { "date": "2026-10-20", "valeurs": { "HN": 420, "PANIER": 1 } }, { "date": "2026-10-21", "valeurs": { "HN": 240 } }],
+        "semaine": {},
+        "totaux": { "HN": 1080, "PANIER": 2 }
+      }
+    },
+    {
+      "nom": "repas au restaurant : autre agence, valeur par défaut « * »",
+      "rubriques": [{ "code": "HN", "unite": "H", "saisie": "C" }, { "code": "PANIER", "unite": "NB", "saisie": "C" }, { "code": "AVN_REPAS", "unite": "NB", "saisie": "C" }],
+      "regles": [
+        { "type": "CUMUL_HEURES", "rubrique": "HN" },
+        { "type": "REPAS", "rubrique": "AVN_REPAS", "parametres": { "valeurs": { "LYON": 1, "GRENOBLE": 0, "*": 2 } } },
+        { "type": "SEUIL_JOUR", "rubrique": "PANIER", "parametres": { "base": "HN", "seuil": 360, "exclu_si": ["AVN_REPAS"] } }
+      ],
+      "agence": "PARIS",
+      "jours": [
+        { "date": "2026-10-19", "pointages": [{ "minutes": 420 }], "repas": true },
+        { "date": "2026-10-20", "pointages": [{ "minutes": 420 }] },
+        { "date": "2026-10-21", "pointages": [{ "minutes": 240 }], "repas": true }
+      ],
+      "attendu": {
+        "jours": [{ "date": "2026-10-19", "valeurs": { "HN": 420, "AVN_REPAS": 2 } }, { "date": "2026-10-20", "valeurs": { "HN": 420, "PANIER": 1 } }, { "date": "2026-10-21", "valeurs": { "HN": 240, "AVN_REPAS": 2 } }],
+        "semaine": {},
+        "totaux": { "HN": 1080, "AVN_REPAS": 4, "PANIER": 1 }
+      }
     }
   ],
   "controles": [

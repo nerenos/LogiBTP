@@ -4,6 +4,7 @@ using System.Text;
 using LogiBTP.Socle.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LogiBTP.Pointage.Web;
 
@@ -43,6 +44,8 @@ public sealed record PointageBorne(string Jeton, DateOnly Date, int ChaId, long?
     List<int>? Membres = null);
 /// <summary>Journée d'un salarié à la borne : date choisie (jours passés de la fenêtre de rattrapage).</summary>
 public sealed record JourneeBorne(string Jeton, DateOnly Date);
+/// <summary>Repas du jour saisi à la borne (lot 10, A29) par le salarié identifié.</summary>
+public sealed record RepasBorne(string Jeton, RepasSaisi Repas);
 /// <summary>Ligne de la journée saisie à la borne (identifiant absent : nouvelle).</summary>
 public sealed record LigneBorne(long? Id, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif, string? Commentaire);
 /// <summary>Journée complète saisie à la borne : remplace les pointages saisis du jour (les autres jours sont inchangés).</summary>
@@ -364,6 +367,8 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
             }),
             chantiers = chantiers.OrderBy(c => proposes.Contains(c.Id) ? 0 : recents.Contains(c.Id) ? 1 : 2), proposes,
             ordres = await specialisation.OrdresAsync(db, ids, ct),
+            // Repas au restaurant du jour (lot 10, A29).
+            repas = (await services.GetRequiredService<ServiceRepas>().LireAsync(salarie, jour, jour, ct)).FirstOrDefault(),
         };
     }
 
@@ -432,6 +437,32 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         Identifie(a, jeton);
         var chantiers = await specialisation.TousChantiersAsync(db, ct);
         return new { chantiers, ordres = await specialisation.OrdresAsync(db, chantiers.Select(c => c.Id).ToList(), ct) };
+    }
+
+    /// <summary>Restaurants proposés à la borne (lot 10, A29) : les plus proches du chantier d'abord.</summary>
+    public async Task<List<RestaurantPointage>> RestaurantsAsync(HttpContext http, string jeton, int? chantier, string? recherche, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        Identifie(a, jeton);
+        return await specialisation.RestaurantsAsync(db, chantier, recherche, ct);
+    }
+
+    /// <summary>Repas du jour du salarié identifié (date de la fenêtre de rattrapage) ; essai : contrôlé, rien d'écrit.</summary>
+    public async Task<List<RepasDto>> RepasAsync(HttpContext http, RepasBorne r, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        var salarie = Identifie(a, r.Jeton);
+        ControlerDate(r.Repas.Date);
+        var s = (await specialisation.SalariesAsync(db, new FiltreSalaries(null, null, [salarie]), ct)).First();
+        var repas = services.GetRequiredService<ServiceRepas>();
+        if (!EnTest(http)) return await repas.EnregistrerAsync(s, r.Repas, Auteur(a), a.PapLibelle, ct);
+        // Essai : un restaurant « non trouvé » serait créé par l'application hors de cette transaction : rien n'est fait.
+        if (!string.IsNullOrWhiteSpace(r.Repas.Nouveau)) return await repas.LireAsync(s.Id, r.Repas.Date, r.Repas.Date, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var res = await repas.EnregistrerAsync(s, r.Repas, Auteur(a), a.PapLibelle, ct);
+        await tx.RollbackAsync(ct);
+        db.ChangeTracker.Clear();
+        return res;
     }
 
     /// <summary>Ordre reconnu par son numéro (QR code ou saisie) : identifiant, chantier.</summary>

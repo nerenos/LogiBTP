@@ -6,6 +6,7 @@ import {
 } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { ouvrirConge, pastilleConge, periodeConge, dateCourte } from '../pointage/conges.js';
+import { rendreRepasSemaine } from '../pointage/repas.js';
 
 // Module Pointage : saisie au bureau (lot 1 : grille hebdomadaire d'un salarié, une ligne par chantier, ordre, type et
 // sous-type de main-d'œuvre, une colonne par jour), synthèse et validation (lot 2 : couche validée, simple ou double
@@ -594,6 +595,8 @@ export class PageSaisiePointage extends PageBase {
       <div data-grille></div>
       <div class="titre-actions"><h3>🏖 Congés</h3><span class="titre-actions-boutons"><button type="button" data-conge title="Demander un congé pour ce salarié (validé ensuite par le service RH)">＋ Demander un congé…</button></span></div>
       <div data-conges><p class="aide">…</p></div>
+      <div class="titre-actions"><h3>🍽 Repas au restaurant</h3></div>
+      <div data-repas><p class="aide">…</p></div>
       ${[...new Set(s.pointages.filter((x) => x.groupe).map((x) => x.groupe))].map((g) => `<p class="aide">👥 Saisie d'équipe : <a href="/pointage/groupe?id=${g}">voir et modifier le groupe</a></p>`).join('')}
       ${s.corrections.length ? `<h3>Demandes de correction</h3><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>État</th><th>Motif</th><th>Réponse</th></tr></thead><tbody>
         ${s.corrections.map((c) => `<tr><td>${horodatage(c.le)}</td><td>${echapper({ EN_ATTENTE: 'en attente', APPLIQUEE: 'appliquée', REJETEE: 'rejetée' }[c.etat])}</td><td>${echapper(c.motif ?? '')}</td><td>${echapper(c.reponse ?? '')}</td></tr>`).join('')}</tbody></table>` : ''}`;
@@ -620,6 +623,8 @@ export class PageSaisiePointage extends PageBase {
     };
     zone.querySelector('[data-correction]')?.addEventListener('click', correction);
     this.#rendreConges(zone.querySelector('[data-conges]'));
+    rendreRepasSemaine(zone.querySelector('[data-repas]'), { api: api.pointage, salarie: s.salarie.id, jours: joursSemaine(this.lundi), pointages: s.pointages, verrouilles,
+      message: (t, n) => this.app.message(t, n) });
     zone.querySelector('[data-conge]').addEventListener('click', async () => {
       const r = await ouvrirConge(this.app, { initial: { salarie: s.salarie.id, du: this.lundi, au: this.lundi }, salarieLibelle: nomSalarie(s.salarie, this.ref.parametres.ordre_nom),
         rh: this.conges?.rh, natures: this.conges?.natures ?? [] });

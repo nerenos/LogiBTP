@@ -163,6 +163,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
         public required Dictionary<(int, string), short> Zones { get; init; }
         public required Dictionary<int, ChantierPointage> Chantiers { get; init; }
         public required HashSet<(int, DateOnly)> ValidesRh { get; init; }
+        public required HashSet<(int, DateOnly)> Repas { get; init; }
     }
 
     private async Task<Contexte> ContexteAsync(List<SalariePointage> salaries, DateOnly du, DateOnly au, bool suivre, CancellationToken ct)
@@ -193,6 +194,8 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
             Zones = (await db.Zones.AsNoTracking().Where(z => chantiersIds.Contains(z.PzcChaId)).ToListAsync(ct)).ToDictionary(z => (z.PzcChaId, z.PzcAgence), z => z.PzcZone),
             Chantiers = (await specialisation.ChantiersAsync(db, null, chantiersIds, ct)).ToDictionary(c => c.Id),
             ValidesRh = valides,
+            Repas = (await db.Repas.AsNoTracking().Where(r => ids.Contains(r.PrpSalId) && r.PrpDate >= du && r.PrpDate <= au)
+                .Select(r => new { r.PrpSalId, r.PrpDate }).ToListAsync(ct)).Select(r => (r.PrpSalId, r.PrpDate)).ToHashSet(),
         };
     }
 
@@ -204,9 +207,9 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
             c.Retenus.Where(x => x.PoiSalId == salarie && x.PoiDate == d).Select(x => new PointagePaie(x.PoiMinutes, x.PoiSousType,
                 c.Chantiers.TryGetValue(x.PoiChaId, out var ch) && ch.Interne || s.Agence is null ? null
                     : c.Zones.TryGetValue((x.PoiChaId, s.Agence), out var z) ? z : null)).ToList(),
-            c.Valeurs.Where(v => v.PvaSalId == salarie && v.PvaDate == d).ToDictionary(v => v.PvaRubrique, v => v.PvaValeur))).ToList();
+            c.Valeurs.Where(v => v.PvaSalId == salarie && v.PvaDate == d).ToDictionary(v => v.PvaRubrique, v => v.PvaValeur), c.Repas.Contains((salarie, d)))).ToList();
         var complete = Enumerable.Range(0, 7).All(i => c.ValidesRh.Contains((salarie, lundi.AddDays(i)))) || lundi.AddDays(6) < DateOnly.FromDateTime(DateTime.Today);
-        return ReglesPaie.Calculer(p.Rubriques.Select(r => new RubriquePaie(r.RubCode, r.RubUnite, r.RubSaisie)).ToList(), p.Regles, jours, complete);
+        return ReglesPaie.Calculer(p.Rubriques.Select(r => new RubriquePaie(r.RubCode, r.RubUnite, r.RubSaisie)).ToList(), p.Regles, jours, complete, s.Agence);
     }
 
     /// <summary>Variables d'une semaine d'un salarié, saisies des rubriques, zones des chantiers de la semaine.</summary>

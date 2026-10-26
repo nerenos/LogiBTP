@@ -155,6 +155,10 @@ export const api = {
     poserPin: (salarie, p) => appel('PUT', `/pointage/pins/${salarie}`, p),
     groupe: (id) => appel('GET', `/pointage/groupes/${id}`),
     modifierGroupe: (id, g) => appel('PUT', `/pointage/groupes/${id}`, g),
+    // Repas au restaurant (lot 10, A29) : restaurants proches d'un chantier, repas d'un salarié.
+    restaurants: (chantier, recherche) => appel('GET', `/pointage/restaurants?${new URLSearchParams(Object.entries({ chantier, recherche }).filter(([, v]) => v !== '' && v != null))}`),
+    repas: (salarie, du, au) => appel('GET', `/pointage/repas/${salarie}?du=${du}&au=${au}`),
+    enregistrerRepas: (salarie, r) => appel('PUT', `/pointage/repas/${salarie}`, r),
     // Congés et absences : demandes, validation RH avec la nature, natures.
     naturesAbsence: () => appel('GET', '/pointage/natures-absence'),
     enregistrerNaturesAbsence: (l) => appel('PUT', '/pointage/natures-absence', l),

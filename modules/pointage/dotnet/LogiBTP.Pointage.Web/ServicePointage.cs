@@ -130,6 +130,7 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
     public DbSet<PinEntite> Pins => Set<PinEntite>();
     public DbSet<NatureAbsenceEntite> NaturesAbsence => Set<NatureAbsenceEntite>();
     public DbSet<CongeEntite> Conges => Set<CongeEntite>();
+    public DbSet<RepasEntite> Repas => Set<RepasEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -153,6 +154,7 @@ public class PointageDbContext(DbContextOptions<PointageDbContext> options) : Db
         b.Entity<PinEntite>().ToTable("poi_pin").HasKey(x => x.PpnSalId);
         b.Entity<NatureAbsenceEntite>().ToTable("poi_nature_absence").HasKey(x => x.PnaCode);
         b.Entity<CongeEntite>().ToTable("poi_conge").HasKey(x => x.PcoId);
+        b.Entity<RepasEntite>().ToTable("poi_repas").HasKey(x => x.PrpId);
     }
 }
 
@@ -218,6 +220,15 @@ public abstract class SpecialisationPointage
     public virtual Task<List<string>> FonctionsAsync(PointageDbContext db, CancellationToken ct) => Task.FromResult(new List<string>());
     /// <summary>Ordre désigné par son numéro (QR code de l'ordre).</summary>
     public virtual Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) => Task.FromResult<OrdrePointage?>(null);
+    /// <summary>
+    /// Restaurants proposés pour un repas (lot 10, A29) : les plus proches du chantier d'abord (distance si connue),
+    /// filtrés par une recherche, ou ceux des identifiants donnés ; défaut : aucun.
+    /// </summary>
+    public virtual Task<List<RestaurantPointage>> RestaurantsAsync(PointageDbContext db, int? chantier, string? recherche, CancellationToken ct,
+        IReadOnlyCollection<long>? ids = null) => Task.FromResult(new List<RestaurantPointage>());
+    /// <summary>Restaurant « non trouvé » saisi par son nom (et sa ville) : créé par l'application (tiers provisoire).</summary>
+    public virtual Task<RestaurantPointage> CreerRestaurantAsync(PointageDbContext db, string nom, string? ville, Utilisateur auteur, CancellationToken ct) =>
+        throw ExceptionMetier.Invalide("POI_RESTAURANT", "Création de restaurant non prise en charge");
     /// <summary>Tous les chantiers pointables (ouverts et internes), sans limite de nombre : bouton « Tous » de la borne.</summary>
     public virtual Task<List<ChantierPointage>> TousChantiersAsync(PointageDbContext db, CancellationToken ct) => ChantiersAsync(db, null, null, ct);
     /// <summary>Chantiers proposés pour la journée d'un salarié (tâches du planning, par exemple).</summary>

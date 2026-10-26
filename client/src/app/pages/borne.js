@@ -5,6 +5,7 @@ import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
+import { distanceRestaurant, chantierDuJour } from '../pointage/repas.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
 // dans le navigateur de la borne, en-tête X-Borne-Jeton, aucune session) ; salarié (initiales) → PIN → chantier ou
@@ -567,6 +568,57 @@ export class PageBorne extends PageBase {
   }
 
   /**
+   * Repas au restaurant du jour (lot 10, A29) : restaurants les plus proches du chantier principal de la journée (le plus
+   * d'heures saisies, sinon le premier proposé), recherche, « non trouvé » (nom et ville : restaurant provisoire), « pas
+   * de repas » ; enregistré aussitôt (essai : rien d'écrit), retour aux pointages du jour.
+   */
+  async #repas() {
+    const j = this.etat.journee;
+    this.ecran = () => this.#repas();
+    const chantier = chantierDuJour(this.etat.lignes.map((l) => ({ ...l, date: j.date })), String(j.date).slice(0, 10)) ?? j.proposes[0] ?? null;
+    this.zone.innerHTML = `${this.#entete('Repas au restaurant')}
+      <p><input data-recherche class="borne-champ" placeholder="Rechercher un restaurant (nom, ville)" autocomplete="off">
+        <button type="button" class="borne-bouton" data-non-trouve>Restaurant non trouvé</button>
+        ${j.repas ? '<button type="button" class="borne-bouton" data-aucun>Pas de repas</button>' : ''}
+        <button type="button" class="borne-bouton" data-retour>Retour</button></p>
+      ${j.repas ? `<p>Repas noté : <b>${echapper(j.repas.restaurant)}</b></p>` : ''}
+      <div class="borne-grille" data-restaurants><p class="aide">Recherche des restaurants proches…</p></div>`;
+    this.#brancherEntete();
+    const grille = this.zone.querySelector('[data-restaurants]');
+    const enregistrer = async (r) => {
+      try {
+        const l = await appel('POST', '/repas', { jeton: j.jeton, repas: { date: j.date, cha_id: chantier, ...r } });
+        j.repas = l.find((x) => String(x.date).slice(0, 10) === String(j.date).slice(0, 10)) ?? null;
+        if (this.test) await alerter('Essai : rien n’est enregistré.');
+        this.#liste();
+      } catch (e) { await alerter(e.message); }
+    };
+    const charger = async () => {
+      const q = this.zone.querySelector('[data-recherche]')?.value.trim() ?? '';
+      let l;
+      try { l = await appel('GET', `/restaurants?${new URLSearchParams(Object.entries({ jeton: j.jeton, chantier, recherche: q }).filter(([, v]) => v !== '' && v != null))}`); }
+      catch (e) { grille.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; return; }
+      grille.innerHTML = l.slice(0, 60).map((r) => `<button type="button" class="borne-carte ${j.repas?.restaurant_id === r.id ? 'choisi' : ''}" data-r="${r.id}"><b>${echapper(r.nom)}</b>
+        <small>${echapper([r.ville, distanceRestaurant(r)].filter(Boolean).join(' · '))}</small></button>`).join('')
+        || '<p class="aide">Aucun restaurant trouvé : « Restaurant non trouvé ».</p>';
+      grille.querySelectorAll('[data-r]').forEach((b) => b.addEventListener('click', () => enregistrer({ restaurant_id: Number(b.dataset.r) })));
+    };
+    let minuterie = null;
+    this.zone.querySelector('[data-recherche]').addEventListener('input', () => { clearTimeout(minuterie); minuterie = setTimeout(charger, 300); });
+    this.zone.querySelector('[data-non-trouve]').addEventListener('click', async () => {
+      const nom = await saisir('Nom du restaurant :', this.zone.querySelector('[data-recherche]').value.trim(), { obligatoire: true });
+      if (!nom?.trim()) return;
+      const ville = await saisir('Ville du restaurant (facultatif) :', '');
+      if (ville === null) return;
+      enregistrer({ nouveau: nom.trim(), ville: ville.trim() || null });
+    });
+    this.zone.querySelector('[data-aucun]')?.addEventListener('click', () => enregistrer({ restaurant_id: null }));
+    this.zone.querySelector('[data-retour]').addEventListener('click', () => this.#liste());
+    charger();
+    this.#minuterie();
+  }
+
+  /**
    * Pointages de la journée (dernier écran) : une ligne par pointage — chantier / ordre, main-d'œuvre, activité, durée
    * (− ＋, saisie libre), 💬 commentaire pour la synthèse MO, ⚠ note de non-conformité (renseignés : mis en évidence), ✕ —
    * ; barre en haut : durées fréquentes (appliquées au champ de durée qui a le focus), Enregistrer, Ajouter, Retour.
@@ -604,6 +656,7 @@ export class PageBorne extends PageBase {
       <div class="borne-barre">${lecture ? '' : [60, 240, 420, 480].map((m) => `<button type="button" class="borne-bouton" data-rapide="${m}" title="Appliquer à la durée sélectionnée">${ecrireDuree(m)} h</button>`).join('')}
         <span class="borne-barre-espace"></span>
         ${lecture ? '' : '<button type="button" class="borne-bouton principal" data-enregistrer>✔ Enregistrer</button> <button type="button" class="borne-bouton" data-ajouter>＋ Ajouter</button>'}
+        ${lecture || equipe ? '' : `<button type="button" class="borne-bouton" data-repas title="Repas au restaurant ce jour">🍽 ${j.repas ? echapper(j.repas.restaurant) : 'Repas'}</button>`}
         ${lecture ? '' : '<button type="button" class="borne-bouton" data-retour>Retour</button>'} <button type="button" class="borne-bouton" data-terminer>Terminer</button></div>
       <div class="borne-lignes">${this.etat.lignes.map(ligne).join('') || '<p>Aucun pointage ce jour.</p>'}</div>
       ${equipe ? '<p class="aide">Saisie d\'équipe : chaque nouvelle ligne est enregistrée pour chaque membre présent ; les lignes déjà saisies se modifient depuis la saisie de chacun.</p>' : ''}`;
@@ -648,6 +701,8 @@ export class PageBorne extends PageBase {
     }));
     this.zone.querySelectorAll('[data-note]').forEach((b) => b.addEventListener('click', () => this.#note(Number(b.dataset.note), b.dataset.genre)));
     this.zone.querySelector('[data-enregistrer]')?.addEventListener('click', () => this.#enregistrer());
+    // Repas : écran à part, les pointages en cours restent dans la saisie (retour à cet écran).
+    this.zone.querySelector('[data-repas]')?.addEventListener('click', () => this.#repas());
     this.zone.querySelector('[data-ajouter]')?.addEventListener('click', () => {
       for (const l of this.etat.lignes) delete l.en_cours;
       this.#journee();

@@ -11,6 +11,8 @@
  *                     ventilées (semaine complète seulement), retirées de la base si deduire.
  * ZONE              : exclu_si → zone la plus élevée des pointages du jour.
  * PLAFOND           : max (par jour), max_semaine → excédent retiré.
+ * REPAS             : valeurs { agence: n, '*': défaut } (absent : 1), exclu_si → n chaque jour de repas pris au
+ *                     restaurant (avantage en nature selon l'agence du salarié ; 0 = rien).
  */
 export const TYPES_REGLE = {
   CUMUL_HEURES: 'Cumul des heures (par sous-type)',
@@ -18,6 +20,7 @@ export const TYPES_REGLE = {
   TRANCHES_SEMAINE: 'Heures supplémentaires par tranches',
   ZONE: 'Zone de déplacement du jour',
   PLAFOND: 'Plafond',
+  REPAS: 'Repas au restaurant (avantage en nature par agence)',
 };
 
 export const UNITES_RUBRIQUE = { H: 'Heures', NB: 'Nombre', ZONE: 'Zone' };
@@ -26,12 +29,13 @@ export const SAISIES_RUBRIQUE = { C: 'Calculée', S: 'Saisie', SC: 'Calculée, m
 const ajouter = (o, cle, v) => { o[cle] = (o[cle] ?? 0) + v; };
 
 /**
- * Calcule les variables d'une semaine : `jours` [{ date, pointages [{ minutes, sous_type, zone }], saisies { RUB: n } }],
+ * Calcule les variables d'une semaine : `jours` [{ date, pointages [{ minutes, sous_type, zone }], saisies { RUB: n }, repas }],
+ * `agence` du salarié (règle REPAS),
  * `semaine_complete` (heures supplémentaires calculées seulement si vrai). Saisies : rubriques S posées avant les
  * règles (lues par elles), SC appliquées après (elles remplacent le calcul), C ignorées. Résultat : valeurs par jour,
  * valeurs de la semaine (heures supplémentaires) et totaux (zones comptées par numéro : « ZONE_3 »).
  */
-export function calculerVariables({ rubriques = [], regles = [], jours = [], semaine_complete = true }) {
+export function calculerVariables({ rubriques = [], regles = [], jours = [], semaine_complete = true, agence = null }) {
   const saisie = new Map(rubriques.map((r) => [r.code, r.saisie ?? 'C']));
   const parJour = jours.map((j) => ({ date: j.date, valeurs: {} }));
   const semaine = {};
@@ -66,6 +70,9 @@ export function calculerVariables({ rubriques = [], regles = [], jours = [], sem
         const z = Math.max(0, ...(j.pointages ?? []).map((x) => x.zone ?? 0));
         if (z > 0 && !exclu(i, p)) parJour[i].valeurs[r.rubrique] = z;
       });
+    } else if (r.type === 'REPAS') {
+      const v = p.valeurs ? (p.valeurs[agence ?? ''] ?? p.valeurs['*'] ?? 1) : 1;
+      jours.forEach((j, i) => { if (j.repas && v > 0 && !exclu(i, p)) parJour[i].valeurs[r.rubrique] = v; });
     } else if (r.type === 'PLAFOND') {
       jours.forEach((_, i) => { if (p.max != null && valeur(i, r.rubrique) > p.max) parJour[i].valeurs[r.rubrique] = p.max; });
       if (p.max_semaine != null) {

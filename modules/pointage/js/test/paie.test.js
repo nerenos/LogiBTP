@@ -10,7 +10,7 @@ const profil = (c) => (c.profil ? jeu.profils[c.profil] : { rubriques: c.rubriqu
 
 describe('variables de paie (jeu partagé)', () => {
   for (const c of jeu.calculs) {
-    it(c.nom, () => expect(calculerVariables({ ...profil(c), jours: c.jours, semaine_complete: c.semaine_complete ?? true })).toEqual(c.attendu));
+    it(c.nom, () => expect(calculerVariables({ ...profil(c), jours: c.jours, semaine_complete: c.semaine_complete ?? true, agence: c.agence ?? null })).toEqual(c.attendu));
   }
   for (const c of jeu.controles) it(`profil : ${c.nom}`, () => expect(controlerProfil(profil(c))).toEqual(c.attendu));
   it('chaque code a un libellé', () => { for (const c of jeu.controles.flatMap((x) => x.attendu)) expect(MESSAGES_PAIE[c]).toBeTruthy(); });

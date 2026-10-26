@@ -31,7 +31,7 @@ public class ReglesPaieTests
             var nom = c!["nom"]!.GetValue<string>();
             var (rubriques, regles) = Profil(j, c);
             var jours = c["jours"]!.Deserialize<List<JourPaie>>(Json)!.Select(x => x with { Pointages = x.Pointages ?? [] }).ToList();
-            var r = ReglesPaie.Calculer(rubriques, regles, jours, c["semaine_complete"]?.GetValue<bool>() ?? true);
+            var r = ReglesPaie.Calculer(rubriques, regles, jours, c["semaine_complete"]?.GetValue<bool>() ?? true, c["agence"]?.GetValue<string>());
             var a = c["attendu"]!;
             var aj = a["jours"]!.AsArray();
             Assert.True(aj.Count == r.Jours.Count, nom);

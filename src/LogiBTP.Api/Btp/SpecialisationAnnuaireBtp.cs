@@ -38,11 +38,12 @@ public sealed class SpecialisationAnnuaireBtp : SpecialisationAnnuaire
         ("tarifs", "UPDATE tarif_fournisseur SET tfo_tiers_id = @c WHERE tfo_tiers_id = @s"),
     ];
 
-    /// <summary>Tables du module Règlements (facultatif) : reportées seulement si elles existent.</summary>
+    /// <summary>Tables des modules facultatifs (Règlements ; Pointage : restaurants des repas) : reportées seulement si elles existent.</summary>
     private static readonly (string Quoi, string Table, string Sql)[] ReportsFacultatifs =
     [
         ("reglements", "reglement", "UPDATE reglement SET reg_tiers_id = @c WHERE reg_tiers_id = @s"),
         ("cautions", "caution", "UPDATE caution SET cau_tiers_id = @c WHERE cau_tiers_id = @s"),
+        ("repas", "poi_repas", "UPDATE poi_repas SET prp_restaurant_id = @c WHERE prp_restaurant_id = @s"),
     ];
 
     public override async Task<IReadOnlyDictionary<string, int>> ReporterFusionAsync(NpgsqlConnection cnx, NpgsqlTransaction tx, long source, long cible, CancellationToken ct)

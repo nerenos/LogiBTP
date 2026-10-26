@@ -1,8 +1,10 @@
+using LogiBTP.Annuaire.Web;
 using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Domaine;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -166,6 +168,73 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             ORDER BY c.cha_interne, c.cha_code
             LIMIT 5000
             """).ToListAsync(ct);
+
+    private sealed record RestaurantSql(long Id, string Nom, bool Provisoire, long? CooId, string? Ligne1, string? Ligne2, string? Ligne3, string? CodePostal,
+        string? Ville, decimal? Latitude, decimal? Longitude, string? GeocodeAdresse);
+
+    /// <summary>
+    /// Restaurants (lot 10, A29) : tiers actifs de relation RESTAURANT, adresse principale ; les adresses pas encore
+    /// géocodées le sont (20 au plus par appel) ; les plus proches du chantier d'abord (distance à vol d'oiseau), puis
+    /// les autres par nom.
+    /// </summary>
+    public override async Task<List<RestaurantPointage>> RestaurantsAsync(PointageDbContext db, int? chantier, string? recherche, CancellationToken ct,
+        IReadOnlyCollection<long>? ids = null)
+    {
+        var l = await db.Database.SqlQueryRaw<RestaurantSql>("""
+            SELECT p.per_id AS id, coalesce(nullif(p.per_nom_commercial, ''), p.per_raison_sociale) AS nom, p.per_provisoire AS provisoire,
+                   a.coo_id, a.coo_ligne1 AS ligne1, a.coo_ligne2 AS ligne2, a.coo_ligne3 AS ligne3, a.coo_code_postal AS code_postal, a.coo_ville AS ville,
+                   a.coo_latitude AS latitude, a.coo_longitude AS longitude, a.coo_geocode_adresse AS geocode_adresse
+            FROM personne p
+            LEFT JOIN LATERAL (SELECT c.* FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id
+                               WHERE u.uco_per_id = p.per_id AND c.coo_nature = 'ADRESSE' ORDER BY u.uco_principal DESC, u.uco_ordre, c.coo_id LIMIT 1) a ON TRUE
+            WHERE p.per_casquettes ? 'RESTAURANT' AND (p.per_actif OR @ids IS NOT NULL)
+              AND (@ids IS NULL OR p.per_id = ANY(@ids))
+              AND (@r IS NULL OR f_annuaire_normaliser(concat_ws(' ', p.per_raison_sociale, p.per_nom_commercial, a.coo_ville)) LIKE '%' || f_annuaire_normaliser(@r) || '%')
+            ORDER BY 2
+            LIMIT 500
+            """,
+            new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
+            new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : recherche.Trim() }).ToListAsync(ct);
+        var geo = http.HttpContext?.RequestServices.GetService<Geocodage>();
+        (decimal Lat, decimal Lon)? centre = chantier is int c && geo is not null ? await geo.ChantierAsync(db, c, ct) : null;
+        var positions = new Dictionary<long, PositionGeo>();
+        if (centre is not null && geo is not null)
+        {
+            var aFaire = l.Where(x => x.CooId is not null).Select(x => (x, t: Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville)))
+                .Where(y => y.t is not null && y.t != y.x.GeocodeAdresse).Select(y => new Geocodage.AdresseAGeocoder(y.x.CooId!.Value, y.t!));
+            positions = await geo.CoordonneesAsync(db, aFaire, 20, ct);
+        }
+        decimal? Distance(RestaurantSql x)
+        {
+            if (centre is not { } ce) return null;
+            var p = x.CooId is long id && positions.TryGetValue(id, out var g) ? (g.Latitude, g.Longitude)
+                : x.Latitude is { } la && x.Longitude is { } lo && Geographie.TexteAdresse(x.Ligne1, x.Ligne2, x.Ligne3, x.CodePostal, x.Ville) == x.GeocodeAdresse ? (la, lo) : ((decimal, decimal)?)null;
+            return p is { } q ? Geographie.DistanceKm(ce.Lat, ce.Lon, q.Item1, q.Item2) : null;
+        }
+        return l.Select(x => new RestaurantPointage(x.Id, x.Nom, x.Ville, Distance(x), x.Provisoire))
+            .OrderBy(x => x.DistanceKm is null).ThenBy(x => x.DistanceKm).ThenBy(x => x.Nom, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Restaurant « non trouvé » (A29) : un restaurant du même nom (et de la même ville) est repris ; sinon tiers provisoire
+    /// de relation RESTAURANT (à valider ou fusionner par l'annuaire), avec une adresse réduite à la ville si elle est donnée.
+    /// </summary>
+    public override async Task<RestaurantPointage> CreerRestaurantAsync(PointageDbContext db, string nom, string? ville, Utilisateur auteur, CancellationToken ct)
+    {
+        var existant = (await RestaurantsAsync(db, null, nom, ct)).FirstOrDefault(x => string.Equals(x.Nom.Trim(), nom, StringComparison.CurrentCultureIgnoreCase)
+            && (ville is null || string.Equals(x.Ville?.Trim(), ville, StringComparison.CurrentCultureIgnoreCase)));
+        if (existant is not null) return existant;
+        var annuaire = (http.HttpContext?.RequestServices ?? throw new InvalidOperationException("Requête HTTP attendue")).GetRequiredService<ServiceAnnuaire>();
+        var p = await annuaire.CreerProvisoire(new SaisieProvisoire { RaisonSociale = nom, Casquettes = ["RESTAURANT"], Confirme = true }, auteur, ct);
+        if (ville is not null)
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                WITH c AS (INSERT INTO coordonnee (coo_nature, coo_ville, coo_pays, coo_modifie_par) VALUES ('ADRESSE', @v, 'FR', @u) RETURNING coo_id)
+                INSERT INTO usage_coordonnee (uco_coo_id, uco_per_id, uco_usage, uco_principal) SELECT coo_id, @p, 'SITE', TRUE FROM c
+                """, [new NpgsqlParameter("v", ville), new NpgsqlParameter("u", auteur.Code), new NpgsqlParameter("p", p.Id)], ct);
+        }
+        return new RestaurantPointage(p.Id, nom, ville, null, true);
+    }
 
     public override Task<List<TypeMoPointage>> TypesMoAsync(PointageDbContext db, CancellationToken ct) =>
         db.Database.SqlQueryRaw<TypeMoPointage>("""

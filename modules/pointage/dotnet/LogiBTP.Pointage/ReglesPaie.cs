@@ -3,16 +3,19 @@ namespace LogiBTP.Pointage;
 public sealed record RubriquePaie(string Code, string Unite = "H", string Saisie = "C");
 public sealed record TranchePaie(string Rubrique, int? JusquA = null);
 public sealed record ParametresRegle(List<string>? SousTypes = null, List<string>? Exclure = null, string? Base = null, int Seuil = 0, int? Valeur = null,
-    List<string>? ExcluSi = null, bool Deduire = false, List<TranchePaie>? Tranches = null, int? Max = null, int? MaxSemaine = null);
+    List<string>? ExcluSi = null, bool Deduire = false, List<TranchePaie>? Tranches = null, int? Max = null, int? MaxSemaine = null,
+    Dictionary<string, int>? Valeurs = null);
 public sealed record ReglePaie(string Type, string? Rubrique = null, ParametresRegle? Parametres = null);
 public sealed record PointagePaie(int Minutes, string? SousType = null, int? Zone = null);
-public sealed record JourPaie(string Date, List<PointagePaie> Pointages, Dictionary<string, int>? Saisies = null);
+/// <summary>Jour d'une semaine : pointages retenus, saisies, repas pris au restaurant (règle REPAS, lot 10, A29).</summary>
+public sealed record JourPaie(string Date, List<PointagePaie> Pointages, Dictionary<string, int>? Saisies = null, bool Repas = false);
 public sealed record JourValeurs(string Date, Dictionary<string, int> Valeurs);
 public sealed record VariablesSemaine(List<JourValeurs> Jours, Dictionary<string, int> Semaine, Dictionary<string, int> Totaux);
 
 /// <summary>
 /// Variables de paie d'une semaine, répliquées avec paie.js (jeu modules/pointage/tests/cas/03_paie.json) : règles
-/// typées d'un profil appliquées dans l'ordre (CUMUL_HEURES, SEUIL_JOUR, TRANCHES_SEMAINE, ZONE, PLAFOND), saisies S
+/// typées d'un profil appliquées dans l'ordre (CUMUL_HEURES, SEUIL_JOUR, TRANCHES_SEMAINE, ZONE, PLAFOND, REPAS : valeur de
+/// l'agence du salarié, sinon « * », sinon 1, chaque jour de repas au restaurant), saisies S
 /// avant les règles, SC après ; totaux (zones comptées par numéro « ZONE_3 », valeurs nulles retirées).
 /// </summary>
 public static class ReglesPaie
@@ -24,6 +27,7 @@ public static class ReglesPaie
         ["TRANCHES_SEMAINE"] = "Heures supplémentaires par tranches",
         ["ZONE"] = "Zone de déplacement du jour",
         ["PLAFOND"] = "Plafond",
+        ["REPAS"] = "Repas au restaurant (avantage en nature par agence)",
     };
 
     public static readonly IReadOnlyDictionary<string, string> Messages = new Dictionary<string, string>
@@ -34,7 +38,7 @@ public static class ReglesPaie
 
     private static void Ajouter(Dictionary<string, int> o, string cle, int v) => o[cle] = o.GetValueOrDefault(cle) + v;
 
-    public static VariablesSemaine Calculer(IReadOnlyList<RubriquePaie> rubriques, IReadOnlyList<ReglePaie> regles, IReadOnlyList<JourPaie> jours, bool semaineComplete = true)
+    public static VariablesSemaine Calculer(IReadOnlyList<RubriquePaie> rubriques, IReadOnlyList<ReglePaie> regles, IReadOnlyList<JourPaie> jours, bool semaineComplete = true, string? agence = null)
     {
         var saisie = rubriques.ToDictionary(r => r.Code, r => r.Saisie);
         var parJour = jours.Select(j => new JourValeurs(j.Date, [])).ToList();
@@ -93,6 +97,15 @@ public static class ReglesPaie
                         if (z > 0 && !Exclu(i, p)) parJour[i].Valeurs[r.Rubrique!] = z;
                     }
                     break;
+                case "REPAS":
+                {
+                    var v = p.Valeurs is { } valeurs ? (valeurs.TryGetValue(agence ?? "", out var a) ? a : valeurs.TryGetValue("*", out var d) ? d : 1) : 1;
+                    for (var i = 0; i < jours.Count; i++)
+                    {
+                        if (jours[i].Repas && v > 0 && !Exclu(i, p)) parJour[i].Valeurs[r.Rubrique!] = v;
+                    }
+                    break;
+                }
                 case "PLAFOND":
                     for (var i = 0; i < jours.Count; i++)
                     {

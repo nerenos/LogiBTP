@@ -1,0 +1,85 @@
+import { echapper, ouvrirDialogue } from '@logibtp/socle/ui';
+
+// Repas au restaurant (lot 10 des demandes du 25/10/2026, A29) : choix du restaurant d'un jour (les plus proches du
+// chantier d'abord, distance à vol d'oiseau des adresses géocodées), restaurant « non trouvé » saisi par son nom et sa
+// ville (créé en tiers provisoire de relation RESTAURANT), « pas de repas » ; section de la saisie de la semaine.
+// La règle de paie REPAS en tire l'avantage en nature selon l'agence du salarié.
+
+export const distanceRestaurant = (r) => (r.distance_km == null ? '' : `${String(r.distance_km).replace('.', ',')} km`);
+
+/**
+ * Fenêtre de choix : `charger(recherche)` → restaurants [{ id, nom, ville, distance_km, provisoire }], `actuel` (repas du
+ * jour ou null), `titre`. Renvoie { restaurant_id } | { nouveau, ville } | { aucun: true } ou null (annulé).
+ */
+export async function choisirRestaurant({ charger, actuel = null, titre = '🍽 Repas au restaurant' }) {
+  let liste = [];
+  return ouvrirDialogue({
+    titre,
+    html: `<p class="ligne"><input data-recherche placeholder="Rechercher (nom, ville)" size="28" autocomplete="off"></p>
+      <div class="tableau-defilant" style="max-height: 50vh"><table class="tableau-compact"><thead><tr><th>Restaurant</th><th>Ville</th><th class="nombre">Distance</th></tr></thead><tbody data-liste><tr><td colspan="3" class="aide">…</td></tr></tbody></table></div>
+      <details data-non-trouve><summary>Restaurant non trouvé</summary>
+        <p class="ligne"><label>Nom <input data-nom size="24"></label> <label>Ville <input data-ville size="16"></label> <button type="button" data-creer>＋ Utiliser ce restaurant</button></p>
+        <p class="aide">Il est ajouté à l'annuaire comme restaurant provisoire, à valider par le bureau.</p></details>
+      ${actuel ? `<p class="aide">Actuel : ${echapper(actuel.restaurant)}</p>` : ''}`,
+    boutons: [{ libelle: 'Annuler', valeur: null }, ...(actuel ? [{ libelle: 'Pas de repas', valeur: { aucun: true } }] : [])],
+    construire: (dlg, fermer) => {
+      const tbody = dlg.querySelector('[data-liste]');
+      const recherche = dlg.querySelector('[data-recherche]');
+      const afficher = () => {
+        tbody.innerHTML = liste.length ? liste.map((r) => `<tr class="cliquable" data-id="${r.id}"><td>${echapper(r.nom)}${r.provisoire ? ' <small class="aide">(provisoire)</small>' : ''}</td>
+          <td>${echapper(r.ville ?? '')}</td><td class="nombre">${distanceRestaurant(r)}</td></tr>`).join('')
+          : '<tr><td colspan="3" class="aide">Aucun restaurant : saisissez-le dans « Restaurant non trouvé ».</td></tr>';
+        tbody.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', () => fermer({ restaurant_id: Number(tr.dataset.id) })));
+      };
+      let minuterie = null;
+      const relire = async () => { try { liste = await charger(recherche.value.trim()); } catch { liste = []; } afficher(); };
+      recherche.addEventListener('input', () => { clearTimeout(minuterie); minuterie = setTimeout(relire, 250); });
+      dlg.querySelector('[data-creer]').addEventListener('click', () => {
+        const nom = dlg.querySelector('[data-nom]').value.trim();
+        if (!nom) { dlg.querySelector('[data-nom]').focus(); return; }
+        fermer({ nouveau: nom, ville: dlg.querySelector('[data-ville]').value.trim() || null });
+      });
+      dlg.querySelector('[data-non-trouve]').addEventListener('toggle', () => { dlg.querySelector('[data-nom]').value ||= recherche.value.trim(); });
+      relire();
+      recherche.focus();
+    },
+  });
+}
+
+/** Chantier principal d'un jour (le plus d'heures pointées), ou null. */
+export function chantierDuJour(pointages, date) {
+  const m = new Map();
+  for (const p of pointages.filter((x) => String(x.date).slice(0, 10) === date && x.cha_id)) m.set(p.cha_id, (m.get(p.cha_id) ?? 0) + (p.minutes ?? 0));
+  return [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+/**
+ * Section « Repas » de la saisie d'une semaine : une case par jour (restaurant ou —), clic = choix ; jours validés en
+ * lecture seule. Options : api (pointage), salarie, jours (dates ISO), pointages (chantier du jour), verrouilles (indices),
+ * message(texte, niveau).
+ */
+export async function rendreRepasSemaine(zone, { api, salarie, jours, pointages, verrouilles = [], message = () => {} }) {
+  let repas;
+  try { repas = await api.repas(salarie, jours[0], jours[6]); } catch (e) { zone.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; return; }
+  const duJour = (d) => repas.find((r) => String(r.date).slice(0, 10) === d) ?? null;
+  const visibles = jours.filter((d, i) => i < 5 || duJour(d) || chantierDuJour(pointages, d));
+  const nomJour = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+  zone.innerHTML = `<table class="tableau-compact largeur-contenu"><thead><tr>${visibles.map((d) => `<th>${nomJour(d)}</th>`).join('')}</tr></thead>
+    <tbody><tr>${visibles.map((d) => {
+      const r = duJour(d);
+      const bloque = verrouilles.includes(jours.indexOf(d));
+      return `<td>${bloque ? `🔒 ${echapper(r?.restaurant ?? '—')}` : `<button type="button" class="lien" data-jour="${d}" title="${r ? 'Changer ou retirer le repas' : 'Saisir un repas au restaurant'}">${r ? `🍽 ${echapper(r.restaurant)}` : '—'}</button>`}</td>`;
+    }).join('')}</tr></tbody></table>
+    <p class="aide">Restaurants proposés du plus proche au plus loin du chantier du jour (adresses géocodées).</p>`;
+  zone.querySelectorAll('[data-jour]').forEach((b) => b.addEventListener('click', async () => {
+    const date = b.dataset.jour;
+    const chantier = chantierDuJour(pointages, date);
+    const choix = await choisirRestaurant({ charger: (q) => api.restaurants(chantier, q), actuel: duJour(date), titre: `🍽 Repas du ${nomJour(date)}` });
+    if (!choix) return;
+    try {
+      await api.enregistrerRepas(salarie, { date, restaurant_id: choix.restaurant_id ?? null, nouveau: choix.nouveau ?? null, ville: choix.ville ?? null, cha_id: chantier });
+      message(choix.aucun ? 'Repas retiré' : 'Repas enregistré', 'succes');
+      rendreRepasSemaine(zone, { api, salarie, jours, pointages, verrouilles, message });
+    } catch (e) { message(e.message, 'erreur'); }
+  }));
+}

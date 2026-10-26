@@ -64,6 +64,7 @@ modules/pointage/db/087_pointage_validation.sql
 modules/pointage/db/088_pointage_paie.sql
 modules/pointage/db/088b_pointage_borne.sql
 modules/pointage/db/088c_pointage_conges.sql
+modules/pointage/db/088d_pointage_repas.sql
 modules/planning/db/089_planning.sql
 modules/planning/db/089b_planning_charge.sql
 modules/planning/db/089c_planning_liens.sql
@@ -171,6 +172,7 @@ db/235_materiel_plans.sql
 db/236_structure_complements.sql
 db/237_bibliotheque_complements.sql
 db/238_documents_arc.sql
+db/239_restaurants_geocodage.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

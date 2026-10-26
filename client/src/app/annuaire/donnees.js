@@ -35,6 +35,7 @@ export const CASQUETTES = [
   { code: 'MOA', libelle: "Maître d'ouvrage", icone: '🏗️', groupes: [], ordre: 70 },
   { code: 'BANQUE', libelle: 'Banque', icone: '🏦', groupes: [], ordre: 80 },
   { code: 'ASSURANCE', libelle: 'Assureur', icone: '🛡️', groupes: [], ordre: 85 },
+  { code: 'RESTAURANT', libelle: 'Restaurant', icone: '🍽', groupes: [], ordre: 90 },
 ].map((x) => ({ ...x, actif: true }));
 
 export const TYPES_LIEN = [
