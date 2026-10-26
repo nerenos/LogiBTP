@@ -209,7 +209,7 @@ export const THEMES_LISTE = [
   {
     thl_code: 'ordres', thl_libelle: 'Ordres (exécution)', thl_icone: '🛠', thl_ordre: 38,
     thl_types: [{ code: 'E_OE', libelle: "Ordre d'exécution" }, { code: 'E_PO', libelle: 'Ordre de pose' }, { code: 'E_DAP', libelle: "Demande d'approvisionnement" },
-      { code: 'E_BE', libelle: "Ordre du bureau d'études" }, { code: 'E_BM', libelle: 'Ordre du bureau des méthodes' }, { code: 'E_OF', libelle: 'Ordre de fabrication' }, { code: 'E_CO', libelle: 'Ordre de colisage' }, { code: 'E_LI', libelle: 'Ordre de livraison' }, { code: 'E_SAV', libelle: 'Intervention SAV' }, { code: 'E_OST', libelle: 'Ordre de sous-traitance' }, { code: 'E_DAC', libelle: "Demande d'achat" }],
+      { code: 'E_BE', libelle: "Ordre du bureau d'études" }, { code: 'E_BM', libelle: 'Ordre du bureau des méthodes' }, { code: 'E_OF', libelle: 'Ordre de fabrication' }, { code: 'E_CO', libelle: 'Ordre de colisage' }, { code: 'E_LI', libelle: 'Ordre de livraison' }, { code: 'E_SAV', libelle: 'Intervention SAV' }, { code: 'E_OST', libelle: 'Ordre de sous-traitance' }, { code: 'E_DAC', libelle: "Demande d'achat" }, { code: 'E_ENT', libelle: "Ordre d'entretien du matériel" }],
   },
   { thl_code: 'pointages', thl_libelle: 'Pointages', thl_icone: '⏱', thl_ordre: 39, thl_types: [{ code: 'pointage', libelle: 'Pointage' }] },
   { thl_code: 'affaires', thl_libelle: 'Affaires', thl_icone: '🗂', thl_ordre: 12, thl_types: [{ code: 'affaire', libelle: 'Affaire' }] },
@@ -712,6 +712,7 @@ VUES_LISTE.push(
   vueOrdres(1105, 'Interventions SAV', [{ colonne: 'type_element', op: '=', valeur: 'E_SAV' }]),
   vueOrdres(1106, 'Ordres de sous-traitance', [{ colonne: 'type_element', op: '=', valeur: 'E_OST' }]),
   vueOrdres(1107, "Demandes d'achat", [{ colonne: 'type_element', op: '=', valeur: 'E_DAC' }]),
+  vueOrdres(1108, "Ordres d'entretien du matériel", [{ colonne: 'type_element', op: '=', valeur: 'E_ENT' }]),
 );
 
 // Pointages (module Pointage, identifiants 1010 et suivants).

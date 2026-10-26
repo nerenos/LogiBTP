@@ -126,6 +126,7 @@ export const MENUS_METIER = [
       { code: 'ordres-dac', libelle: "Demandes d'achat", icone: '🧾', url: '/liste/ordres?vue=1107', type: 'E_DAC', creation: D('E_DAC', "Nouvel ordre : demande d'achat") },
       { code: 'ordres-po', libelle: 'Ordres de pose', icone: '🔧', url: '/liste/ordres?vue=1002', type: 'E_PO' },
       { code: 'ordres-dap', libelle: "Demandes d'approvisionnement", icone: '🛒', url: '/liste/ordres?vue=1003', type: 'E_DAP', creation: D('E_DAP', "Nouvelle demande d'approvisionnement") },
+      { code: 'ordres-ent', libelle: "Ordres d'entretien du matériel", icone: '🔩', url: '/liste/ordres?vue=1108', type: 'E_ENT', info: 'Créés depuis la fiche du matériel (onglet Compteurs)' },
       { code: 'ordres', libelle: 'Tous les ordres', icone: '📋', url: '/liste/ordres?vue=1000' },
       { code: 'ordres-bloques', libelle: 'Ordres bloqués', icone: '⛔', url: '/liste/ordres?vue=1004' },
       { code: 'ordres-retard', libelle: 'Ordres en retard', icone: '⏰', url: '/liste/ordres?vue=1005' },

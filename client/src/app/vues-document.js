@@ -20,6 +20,8 @@ const VUES_TRANSFORMES = [
   // ordres suivants montrent les quantités (parent, reste), sans prix (E2, E17).
   { nom: 'Budget planifié', types: ['E_OE'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'pa', 'fg', 'pv', 'montant', 'commentaire'] },
   { nom: 'Quantités', types: ['E_PO', 'E_DAP', 'E_BE', 'E_BM', 'E_OF', 'E_CO', 'E_LI', 'E_SAV', 'E_OST', 'E_DAC'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'solde', 'commentaire'] },
+  // Entretien du matériel (lot 5c-3) : opérations (heures) et pièces, prix d'achat pour information.
+  { nom: 'Entretien', types: ['E_ENT'], colonnes: [...ENTETE, 'qte', 'pa', 'commentaire'] },
 ];
 
 export const VUES_DOCUMENT = [

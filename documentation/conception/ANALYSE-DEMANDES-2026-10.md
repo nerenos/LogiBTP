@@ -251,3 +251,11 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
   durée, coût informatif, ordre lié, relevé lié) ; plein de carburant (M8, saisie manuelle) : première imputation
   (chantier de suivi créé), coût en nature CARBURANT de `v_cout_chantier` ; onglet Compteurs de la fiche matériel :
   frise SVG (courbe cumulée par unité, événements), journal, saisies en fenêtre.
+- **5c-3** (26/10/2026) : type E_ENT (module Exécution ; statuts, droits, états intervention et contrôle, service par
+  défaut Atelier) créé depuis l'onglet Compteurs de la fiche matériel (nature, objet, opérations en lignes de texte) sur
+  le chantier de suivi (première imputation), avec affaire et adresse du chantier ; colonnes du cœur `ent_mat_id`,
+  `ent_ent_nature`, `ent_mpl_id` (plan, 5c-4) ; bloc « Matériel entretenu » de l'entête (nature, relevé du compteur à
+  l'intervention : relevé de source ORDRE contrôlé par les règles des compteurs) ; transformations vers E_DAP (pièces du
+  stock), A_DEVIS et A_COMMANDE (réparation extérieure) ; clôture (état Terminé) → événement Entretien de l'historique
+  (trigger, retiré si l'ordre est rouvert) ; chantier de suivi proposé au pointage tant qu'un ordre d'entretien y est en
+  cours (M3) ; liste « Ordres d'entretien du matériel » (vue 1108, menu Exécution).

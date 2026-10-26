@@ -146,7 +146,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         db.Database.SqlQueryRaw<ChantierPointage>("""
             SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, (c.cha_statut <> 'OUVERT' AND NOT c.cha_interne) AS clos, c.cha_interne AS interne
             FROM chantier c
-            WHERE (@ids IS NULL AND ((c.cha_statut = 'OUVERT' AND NOT f_chantier_dotation(c.cha_id)) OR c.cha_interne)
+            WHERE (@ids IS NULL AND ((c.cha_statut = 'OUVERT' AND (NOT f_chantier_dotation(c.cha_id) OR f_chantier_entretien_ouvert(c.cha_id))) OR c.cha_interne)
                    AND (@r IS NULL OR c.cha_code ILIKE @r OR c.cha_libelle ILIKE @r OR c.cha_ville ILIKE @r)
                    OR c.cha_id = ANY(@ids))
             ORDER BY c.cha_interne, c.cha_code DESC

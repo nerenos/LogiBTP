@@ -1,5 +1,6 @@
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
+import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
 import { estFamilleAchat } from '@logibtp/document';
 import { ventilerFactureRecue, MESSAGES_VENTILATION } from '@logibtp/sous-traitance';
@@ -349,6 +350,7 @@ export class PanneauxBtp extends PanneauxDocument {
         <div class="contacts-blocs"><div data-contact="CLIENT"></div>${estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
       ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}
+      ${this.estOrdre() && this.editeur.definition.type?.tyd_code === 'E_ENT' ? '<fieldset class="entretien-document"><legend>Matériel entretenu</legend><div data-entretien></div></fieldset>' : ''}
       ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}
       ${this.stock && LIEUX_STOCK[this.editeur.definition.type?.tyd_code] ? '<fieldset class="stock-document"><legend>Stock</legend><div data-stock></div></fieldset>' : ''}`;
   }
@@ -453,6 +455,8 @@ export class PanneauxBtp extends PanneauxDocument {
       rendreExecution(exe, { app: this.execution.app, entId: this.editeur.saisie.document.ent_id, typeCode: this.editeur.definition.type.tyd_code, individus: this.execution.individus })
         .catch((e) => this.execution.app.erreur(e));
     }
+    const ent = zone.querySelector('[data-entretien]');
+    if (ent) rendreEntretienOrdre(ent, { app: this.execution.app, entId: this.editeur.saisie.document.ent_id }).catch((e) => this.execution.app.erreur(e));
     const fst = zone.querySelector('[data-facture-st]');
     if (fst) this.rendreFactureSt(fst);
     const stk = zone.querySelector('[data-stock]');

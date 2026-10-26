@@ -233,7 +233,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] « Ne plus utiliser » (db/228) : écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
 - [ ] Fournisseur « TVA intracommunautaire » (db/229) : proposer la catégorie de TVA autoliquidée (module Comptabilité) sur les lignes de ses pièces d'achat ; type de tiers FE à reprendre par le futur module Facturation électronique.
 - [ ] Précédent / suivant : aussi dans la page document ouverte depuis une liste (`suite-liste.js`).
-- [ ] Matériel, lot 5c (sous-lots 5c-3 et 5c-4 restants : ordre d'entretien E_ENT, plans d'entretien) ; import des cartes carburant (module Import, M8) ; le chantier de suivi d'un matériel reste écarté des chantiers proposés au pointage : la main-d'œuvre d'atelier s'y pointera par l'ordre d'entretien (5c-3).
+- [ ] Matériel, lot 5c (sous-lot 5c-4 restant : plans d'entretien et échéances) ; import des cartes carburant (module Import, M8).
 - [ ] Refacturation interne du matériel aux chantiers où il travaille (coût horaire d'usage, M4 du lot 5c) : décision de la future analyse de rentabilité ; le coût par heure est affiché dans l'onglet Coûts.
 - [ ] Authentification : rafraîchissement simultané du même jeton par deux requêtes → 500 (`jeton_remplace_pkey` en double, `RafraichirAsync`), vu au démarrage de l'API.
 

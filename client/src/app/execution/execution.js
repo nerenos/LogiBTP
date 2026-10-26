@@ -18,7 +18,7 @@ export const ETATS_EXECUTION = {
 export const TYPES_ORDRE = {
   E_OE: "Ordre d'exécution", E_BE: "Ordre du bureau d'études", E_BM: 'Ordre du bureau des méthodes', E_OF: 'Ordre de fabrication',
   E_CO: 'Ordre de colisage', E_LI: 'Ordre de livraison', E_PO: 'Ordre de pose', E_SAV: 'Intervention SAV', E_OST: 'Ordre de sous-traitance',
-  E_DAP: "Demande d'approvisionnement", E_DAC: "Demande d'achat",
+  E_DAP: "Demande d'approvisionnement", E_DAC: "Demande d'achat", E_ENT: "Ordre d'entretien du matériel",
 };
 
 const nombre = (v, d = 2) => (v === null || v === undefined || v === '' ? '' : formatNombre(Number(v), d));

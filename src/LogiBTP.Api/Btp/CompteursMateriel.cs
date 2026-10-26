@@ -20,7 +20,7 @@ public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin,
 /// </summary>
 public static class CompteursMateriel
 {
-    private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId);
+    private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId, long? EntId, string Source);
 
     private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
         Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
@@ -49,16 +49,19 @@ public static class CompteursMateriel
             .FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable("Matériel"));
 
     /// <summary>
-    /// Contrôle un relevé ajouté (ou remplaçant celui de l'événement <paramref name="sansEvenement"/>) : refusé s'il fait
-    /// apparaître une erreur qui n'existait pas dans l'historique (lui-même ou un relevé suivant devenu décroissant).
+    /// Contrôle un relevé ajouté (ou remplaçant celui de l'événement <paramref name="sansEvenement"/>, ou celui de l'ordre
+    /// <paramref name="sansOrdre"/>) : refusé s'il fait apparaître une erreur qui n'existait pas dans l'historique (lui-même
+    /// ou un relevé suivant devenu décroissant).
     /// </summary>
-    public static async Task ControlerReleveAsync(LogiBtpContext db, int materiel, ReleveSaisi r, int? sansEvenement, CancellationToken ct)
+    public static async Task ControlerReleveAsync(LogiBtpContext db, int materiel, ReleveSaisi r, int? sansEvenement, long? sansOrdre, CancellationToken ct)
     {
         var unites = await UnitesAsync(db, materiel, ct);
         var existants = (await db.Database.SqlQueryRaw<ReleveSql>("""
-            SELECT mre_id AS id, mre_date AS date, mre_unite AS unite, mre_valeur AS valeur, mre_remise AS remise, mre_mev_id AS mev_id
+            SELECT mre_id AS id, mre_date AS date, mre_unite AS unite, mre_valeur AS valeur, mre_remise AS remise, mre_mev_id AS mev_id,
+                   mre_ent_id AS ent_id, mre_source AS source
             FROM materiel_releve WHERE mre_mat_id = @m ORDER BY mre_id
-            """, new NpgsqlParameter("m", materiel)).ToListAsync(ct)).Where(x => sansEvenement is null || x.MevId != sansEvenement)
+            """, new NpgsqlParameter("m", materiel)).ToListAsync(ct))
+            .Where(x => (sansEvenement is null || x.MevId != sansEvenement) && (sansOrdre is null || x.EntId != sansOrdre || x.Source != "ORDRE"))
             .Select(x => new ReleveCompteur(x.Unite, x.Date, x.Valeur, x.Remise)).ToList();
         var avant = ReglesCompteurs.Controler(unites, existants).ToHashSet();
         var apres = ReglesCompteurs.Controler(unites, [.. existants, new ReleveCompteur(r.Unite, r.Date, r.Valeur, r.Remise)]);
@@ -69,7 +72,7 @@ public static class CompteursMateriel
         }
     }
 
-    private static Task InsererReleveAsync(LogiBtpContext db, int materiel, ReleveSaisi r, string source, int? evenement, long? ordre, string utilisateur, CancellationToken ct) =>
+    public static Task InsererReleveAsync(LogiBtpContext db, int materiel, ReleveSaisi r, string source, int? evenement, long? ordre, string utilisateur, CancellationToken ct) =>
         db.Database.ExecuteSqlRawAsync("""
             INSERT INTO materiel_releve (mre_mat_id, mre_date, mre_unite, mre_valeur, mre_remise, mre_source, mre_ent_id, mre_mev_id, mre_commentaire, mre_maj_par)
             VALUES (@m, @d, @u, @v, @r, @s, @o, @e, @c, @p)
@@ -82,7 +85,7 @@ public static class CompteursMateriel
     /// <summary>Ajoute un relevé contrôlé (source SAISIE, ORDRE, BORNE…), lié à un ordre s'il y a lieu.</summary>
     public static async Task AjouterReleveAsync(LogiBtpContext db, int materiel, ReleveSaisi r, string source, long? ordre, string utilisateur, CancellationToken ct)
     {
-        await ControlerReleveAsync(db, materiel, r, null, ct);
+        await ControlerReleveAsync(db, materiel, r, null, null, ct);
         await InsererReleveAsync(db, materiel, r, source, null, ordre, utilisateur, ct);
     }
 
@@ -92,7 +95,7 @@ public static class CompteursMateriel
         var erreurs = ReglesCompteurs.ControlerEvenement(new EvenementMateriel(e.Type, e.Date, e.Fin, e.Libelle, e.Litres, e.Cout));
         if (erreurs.Count > 0) throw ExceptionMetier.Invalide(erreurs[0], string.Join(", ", erreurs));
         var releve = e.Releve is { Valeur: not null } r ? r with { Date = r.Date ?? e.Date } : null;
-        if (releve is not null) await ControlerReleveAsync(db, materiel, releve, id, ct);
+        if (releve is not null) await ControlerReleveAsync(db, materiel, releve, id, null, ct);
         if (e.Type == "CARBURANT") await CoutsMateriel.ChantierMaterielAsync(db, materiel, ct);
         var libelle = string.IsNullOrWhiteSpace(e.Libelle) ? null : e.Libelle.Trim();
         await using var tx = await db.Database.BeginTransactionAsync(ct);

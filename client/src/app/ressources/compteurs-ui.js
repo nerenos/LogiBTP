@@ -4,6 +4,7 @@ import {
   LIBELLES_UNITE, LIBELLES_EVENEMENT, ICONES_EVENEMENT, TYPES_EVENEMENT, MESSAGES_COMPTEURS,
   unitesCompteurs, cumuls, controlerEvenement,
 } from './compteurs.js';
+import { creerOrdreEntretien, tableauOrdres } from './entretiens-ui.js';
 
 // Onglet Compteurs de la fiche matériel (lot 5c-2, db/233) : compteurs actuels, frise (courbe de chaque compteur,
 // événements et entretiens), journal des relevés et des événements ; saisie d'un relevé, d'un plein de carburant ou
@@ -119,6 +120,7 @@ async function saisirEvenement(unites, e = {}) {
 export async function rendreCompteursMateriel(corps, { app, materiel }) {
   if (!app.enLigne) { corps.innerHTML = '<p class="aide">Compteurs : en ligne seulement.</p>'; return; }
   let d = await api.ressources.compteurs(materiel);
+  let ordres = await api.ressources.ordresEntretien(materiel).catch(() => []);
   const rendre = () => {
     const unites = unitesCompteurs(d.compteurs);
     const actuels = [unites.includes('H') ? `${formatNombre(d.heures ?? 0, 0)} h` : null, unites.includes('KM') && d.kilometres != null ? `${formatNombre(d.kilometres, 0)} km` : null].filter(Boolean);
@@ -147,9 +149,12 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
         <span class="titre-actions-boutons">
           ${unites.length ? '<button type="button" class="bouton-icone" data-releve title="Nouveau relevé du compteur">📟</button>' : ''}
           <button type="button" class="bouton-icone" data-plein title="Plein de carburant (coût porté au chantier de suivi)">⛽</button>
-          <button type="button" class="bouton-icone" data-evenement title="Nouvel événement : panne, sinistre, contrôle…">＋</button></span></div>
+          <button type="button" class="bouton-icone" data-evenement title="Nouvel événement : panne, sinistre, contrôle…">＋</button>
+          <button type="button" class="bouton-icone" data-ordre title="Nouvel ordre d'entretien (atelier)">🔧</button></span></div>
       <p>${actuels.length ? `Compteurs : <b>${actuels.join(' · ')}</b>` : '<span class="aide">Aucun compteur suivi (champ Compteurs de la fiche).</span>'}</p>
       ${frise(d, unites)}
+      <h4>Ordres d'entretien</h4>${tableauOrdres(ordres)}
+      <h4>Journal</h4>
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th>Compteur</th><th>Coût HT</th><th></th><th>Origine</th><th></th></tr></thead><tbody>
       ${journal.map(ligne).join('') || '<tr><td colspan="8" class="aide">Aucun relevé ni événement.</td></tr>'}</tbody></table></div>`;
     const appliquer = async (promesse, texte) => {
@@ -168,6 +173,9 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     });
     corps.querySelector('[data-plein]').addEventListener('click', () => evenement({ type: 'CARBURANT' }));
     corps.querySelector('[data-evenement]').addEventListener('click', () => evenement({}));
+    corps.querySelector('[data-ordre]').addEventListener('click', async () => {
+      if (await creerOrdreEntretien(app, materiel)) { ordres = await api.ressources.ordresEntretien(materiel).catch(() => ordres); rendre(); }
+    });
     corps.querySelectorAll('[data-modifier]').forEach((b) => b.addEventListener('click', () => {
       const e = d.evenements.find((x) => String(x.id) === b.dataset.modifier);
       evenement({ ...e, date: String(e.date).slice(0, 10), fin: e.fin ? String(e.fin).slice(0, 10) : '' });

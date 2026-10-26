@@ -385,6 +385,11 @@ export const api = {
     supprimerReleve: (materiel, id) => appel('DELETE', `/ressources/materiels/${materiel}/releves/${id}`),
     enregistrerEvenement: (materiel, id, e) => appel(id ? 'PUT' : 'POST', `/ressources/materiels/${materiel}/evenements${id ? `/${id}` : ''}`, e),
     supprimerEvenement: (materiel, id) => appel('DELETE', `/ressources/materiels/${materiel}/evenements/${id}`),
+    // Ordres d'entretien du matériel (lot 5c-3, db/234).
+    ordresEntretien: (materiel) => appel('GET', `/ressources/materiels/${materiel}/ordres`),
+    creerOrdreEntretien: (materiel, n) => appel('POST', `/ressources/materiels/${materiel}/ordres`, n),
+    entretien: (entId) => appel('GET', `/ressources/entretiens/${entId}`),
+    enregistrerEntretien: (entId, s) => appel('PUT', `/ressources/entretiens/${entId}`, s),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),

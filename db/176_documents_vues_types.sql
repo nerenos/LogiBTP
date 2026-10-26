@@ -34,7 +34,8 @@ FROM (VALUES
  (56, 'Quantités', 'E_LI', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte_parent"},{"cle":"qte"},{"cle":"reste"},{"cle":"solde"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}'),
  (57, 'Quantités', 'E_SAV', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte_parent"},{"cle":"qte"},{"cle":"reste"},{"cle":"solde"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}'),
  (58, 'Quantités', 'E_OST', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte_parent"},{"cle":"qte"},{"cle":"reste"},{"cle":"solde"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}'),
- (59, 'Quantités', 'E_DAC', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte_parent"},{"cle":"qte"},{"cle":"reste"},{"cle":"solde"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}')
+ (59, 'Quantités', 'E_DAC', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte_parent"},{"cle":"qte"},{"cle":"reste"},{"cle":"solde"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}'),
+ (60, 'Entretien', 'E_ENT', '{"colonnes":[{"cle":"num"},{"cle":"type"},{"cle":"code"},{"cle":"libelle"},{"cle":"nature"},{"cle":"unite"},{"cle":"qte"},{"cle":"pa"},{"cle":"commentaire"}],"debogage":false,"systeme":[]}')
 ) AS v(id, nom, code, definition)
 JOIN type_document t ON t.tyd_code = v.code
 ON CONFLICT DO NOTHING;
