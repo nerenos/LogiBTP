@@ -1,5 +1,5 @@
-import { calculerElement, coefficientsEffectifs } from './calcul.js';
-import { texteBrut } from '@logibtp/socle';
+import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
+import { texteBrut, S } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
@@ -19,6 +19,8 @@ import { texteBrut } from '@logibtp/socle';
 //   rechercher({ recherche, bib, type })                  [{ id, bib_code, code, type, libelle, libelle_html, unite_stock, pa, pr, pv, pv_net, coef_fg, coef_benef }]
 //                                                         (chaque mot dans le code, le libellé, les mots-clés ou le code-barres)
 //   tarifsTiers(tiersId)                                 tarifs d'un fournisseur de l'annuaire, avec l'élément : [{ …tarif, ele_id, bib_code, code, element }]
+//   importerTarifs({ tiers_id, fournisseur, fichier, lignes, simulation })  → { crees, mises_a_jour, erreurs, lignes: [{ rang, ele_id, code, action, message }] }
+//                                                         (tarif : prix public, remises 1 et 2 en %, prix net = prix public remisé, délai, code-barres)
 
 export class ErreurBibliotheque extends Error {
   constructor(statut, code, message) {
@@ -75,6 +77,7 @@ export class FournisseurBibliothequeApi {
     return this.appel('GET', `/elements${q.size ? `?${q}` : ''}`);
   }
   tarifsTiers(tiersId) { return this.appel('GET', `/tarifs?tiers=${encodeURIComponent(tiersId)}`); }
+  importerTarifs(d) { return this.appel('POST', '/tarifs/import', { simulation: true, ...d }); }
 }
 
 export const SCENARIOS_TOUS = ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP'];
@@ -89,6 +92,14 @@ export const DONNEES_TECHNIQUES = [
 const CHAMPS_PRIX = ['scenario', 'pa', 'coef_fg', 'pr', 'coef_benef', 'pv', 'pv_fixe', 'coef_remise', 'pv_net'];
 
 /** Entrée du calcul depuis une ligne d'élément (codes de champs de la fiche et de la liste). */
+/** Contrôles d'un tarif (comme ServiceBibliotheque.ControlerTarif) : prix positifs, remises de 0 à 100 %, délai positif. */
+function controlerTarif(t) {
+  const n = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
+  if (n(t.prix) < 0 || n(t.prix_public) < 0) throw new ErreurBibliotheque(422, 'PRIX', 'Prix négatif');
+  if ([t.remise1, t.remise2].some((r) => n(r) !== null && (n(r) < 0 || n(r) > 100))) throw new ErreurBibliotheque(422, 'REMISE', 'Remise de 0 à 100 %');
+  if (n(t.delai) < 0) throw new ErreurBibliotheque(422, 'DELAI', 'Délai négatif');
+}
+
 export function entreeDepuisLigne(l, tarifs = []) {
   const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
   return {
@@ -96,7 +107,7 @@ export function entreeDepuisLigne(l, tarifs = []) {
     // Données des formules : champs supplémentaires puis données techniques de la fiche.
     donnees: { ...json(l.proprietes, {}), ...Object.fromEntries(DONNEES_TECHNIQUES.map(([c]) => [c, l[c]]).filter(([, v]) => v !== null && v !== undefined && v !== '')) },
     scenario: l.scenario_pa, pa_fixe: l.pa_fixe, dernier_pa: l.dernier_pa, pmp: l.pmp,
-    tarifs: tarifs.map((t) => ({ prix: t.prix, unite: t.unite, principal: t.principal, debut: t.debut, fin: t.fin })),
+    tarifs: tarifs.map((t) => ({ prix: t.prix, prix_public: t.prix_public ?? null, remise1: t.remise1 ?? null, remise2: t.remise2 ?? null, unite: t.unite, principal: t.principal, debut: t.debut, fin: t.fin })),
     coef_fg: l.coef_fg, coef_benef: l.coef_benef, pv: l.pv, pv_fixe: l.pv_fixe === true || l.pv_fixe === 'true', coef_remise: l.coef_remise,
   };
 }
@@ -295,9 +306,11 @@ export class FournisseurBibliothequeMemoire {
   async enregistrerTarif(eleId, t) {
     this.#element(eleId);
     if (!String(t.fournisseur ?? '').trim() || !t.unite) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Fournisseur et unité obligatoires');
-    if (Number(t.prix) < 0) throw new ErreurBibliotheque(422, 'PRIX', 'Prix négatif');
+    controlerTarif(t);
     if (t.debut && t.fin && t.fin < t.debut) throw new ErreurBibliotheque(422, 'DATES', 'Fin de validité avant le début');
     if (t.principal) for (const x of this.tarifsElements) if (String(x.ele_id) === String(eleId)) x.principal = false;
+    // Prix net : prix public remisé s'il est renseigné (comme ServiceBibliotheque.EnregistrerTarif).
+    t = { ...t, prix: S(prixNetTarif({ ...t, prix: t.prix ?? 0 })) };
     const existant = this.tarifsElements.find((x) => x.id === t.id);
     const v = { ...t, ele_id: Number(eleId), id: existant?.id ?? this.#id(this.tarifsElements), maj_le: new Date(this.horloge()).toISOString(), maj_par: this.utilisateur };
     if (existant) Object.assign(existant, v); else this.tarifsElements.push(v);
@@ -368,6 +381,64 @@ export class FournisseurBibliothequeMemoire {
       ?? this.elements.filter((x) => x.code_barre && x.code_barre === s && x.actif !== false).sort((x, y) => Number(y.bib_id === b?.id) - Number(x.bib_id === b?.id))[0];
     if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${c} introuvable dans la bibliothèque ${bib ?? '?'}`);
     return this.#detail(e);
+  }
+
+  /** Import des tarifs d'un fournisseur : mêmes règles que ServiceBibliotheque.ImporterTarifs. */
+  async importerTarifs({ tiers_id: tiersId, fournisseur, fichier = null, lignes = [], simulation = true }) {
+    if (!String(fournisseur ?? '').trim()) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Fournisseur obligatoire');
+    const defaut = this.bibs.find((b) => b.defaut)?.code ?? null;
+    const existants = this.tarifsElements.filter((t) => String(t.tiers_id) === String(tiersId));
+    const resultats = [];
+    const aEcrire = [];
+    lignes.forEach((l, i) => {
+      const rang = i + 1;
+      try {
+        const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+        let e = null;
+        if (texte(l.element)) {
+          const { bibliotheque, code } = analyserCodeAppel(l.element, defaut);
+          const b = this.bibs.find((x) => x.code === bibliotheque);
+          e = (b && this.elements.find((x) => x.bib_id === b.id && x.code === code && x.actif !== false)) ?? null;
+        }
+        const reference = texte(l.reference);
+        const codeBarre = texte(l.code_barre);
+        const parReference = reference && existants.find((t) => t.reference === reference && (!e || t.ele_id === e.id));
+        const parCodeBarre = codeBarre && existants.find((t) => t.code_barre === codeBarre && (!e || t.ele_id === e.id));
+        let eleId = e?.id ?? parReference?.ele_id ?? parCodeBarre?.ele_id ?? null;
+        if (eleId === null && codeBarre) eleId = this.elements.find((x) => x.code_barre === codeBarre && x.actif !== false)?.id ?? null;
+        if (eleId === null) throw new ErreurBibliotheque(422, 'ELEMENT', 'Élément introuvable (code, référence fournisseur ou code-barres)');
+        e ??= this.#element(eleId);
+        if (!['ARTICLE', 'OUVRAGE'].includes(e.type)) throw new ErreurBibliotheque(422, 'ELEMENT', `${e.code} : ni article ni ouvrage`);
+        const tarif = parReference || parCodeBarre || existants.find((t) => t.ele_id === e.id) || null;
+        const unite = texte(l.unite) ?? tarif?.unite ?? e.unite_achat ?? e.unite_stock;
+        try { ratio(unite, entreeDepuisLigne(e)); } catch (x) { throw new ErreurBibliotheque(422, 'UNITE', `${unite} : ${x.message}`); }
+        if ((l.prix_public ?? null) === null && (l.prix ?? null) === null) throw new ErreurBibliotheque(422, 'PRIX', 'Prix public ou prix net obligatoire');
+        controlerTarif({ ...l, prix: l.prix ?? 0 });
+        if (l.debut && l.fin && l.fin < l.debut) throw new ErreurBibliotheque(422, 'DATES', 'Fin de validité avant le début');
+        const v = {
+          ...(tarif ?? { ele_id: e.id, tiers_id: tiersId }), fournisseur: String(fournisseur).trim(), reference: reference ?? tarif?.reference ?? null,
+          code_barre: codeBarre ?? tarif?.code_barre ?? null, libelle: texte(l.libelle) ?? tarif?.libelle ?? null, unite,
+          prix_public: l.prix_public ?? null, remise1: l.remise1 ?? null, remise2: l.remise2 ?? null, prix: S(prixNetTarif({ ...l, prix: l.prix ?? 0 })),
+          delai: l.delai ?? tarif?.delai ?? null, debut: l.debut ?? tarif?.debut ?? null, fin: l.fin ?? tarif?.fin ?? null, principal: Boolean(l.principal) || Boolean(tarif?.principal),
+        };
+        aEcrire.push({ tarif, v });
+        if (!tarif) existants.push(v);
+        resultats.push({ rang, ele_id: e.id, code: e.code, action: tarif ? 'MAJ' : 'CREE', message: null });
+      } catch (x) {
+        if (!(x instanceof ErreurBibliotheque)) throw x;
+        resultats.push({ rang, ele_id: null, code: l.element ?? null, action: 'ERREUR', message: x.message });
+      }
+    });
+    const compte = (a) => resultats.filter((r) => r.action === a).length;
+    if (!simulation) {
+      for (const { tarif, v } of aEcrire) {
+        if (v.principal) for (const x of this.tarifsElements) if (x.ele_id === v.ele_id && x !== tarif) x.principal = false;
+        if (tarif) Object.assign(tarif, v, { maj_par: this.utilisateur });
+        else this.tarifsElements.push({ ...v, id: this.#id(this.tarifsElements), maj_par: this.utilisateur });
+      }
+      for (const id of new Set(aEcrire.map((x) => x.v.ele_id))) await this.#apresTarif(id, `Import des tarifs ${fournisseur}`);
+    }
+    return { crees: compte('CREE'), mises_a_jour: compte('MAJ'), erreurs: compte('ERREUR'), lignes: resultats };
   }
 
   async tarifsTiers(tiersId) {

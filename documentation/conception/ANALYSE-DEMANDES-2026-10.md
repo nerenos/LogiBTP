@@ -158,7 +158,7 @@ Ordre : anomalies d'abord, puis le transverse dont dépendent les autres lots, p
 - Lot 5c (entretiens du matériel) : nouveau type d'ordre et imputation des coûts, à analyser avant développement.
 - A29 Restaurants : géolocalisation (géocodage des adresses ou zones) et règle d'avantage en nature à faire valider
   par le RH.
-- A12 : module Tarifs fournisseurs séparé ou partie de la Bibliothèque.
+- A12 : module Tarifs fournisseurs séparé ou partie de la Bibliothèque. Décidé (lot 8) : partie de la Bibliothèque.
 - B3, B4 : à reproduire sur la base avant de chiffrer.
 
 ## 5. Points ajoutés à TODO.md
@@ -307,3 +307,27 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
 - **A18g / A18h** : onglet Utilisations de la fiche élément : ouvrages et ensembles qui le composent
   (`v_element_utilisations`, colonne « Utilisé dans » de la liste), lignes des pièces d'achat de l'article (période 1
   mois, 6 mois, 1 an ou tout, en cours seulement) avec lien vers chaque pièce.
+
+## 9. Lot 8 : tarifs fournisseurs (réalisé, 26/10/2026)
+
+Décisions : les tarifs restent dans le module Bibliothèque ; délai de réapprovisionnement d'un article = délai de
+l'article dans le dépôt (Stock) > délai du tarif principal > délai global de l'élément > délai du dépôt.
+
+- **A11 Tarif complet** (module `065`, rejouable) : `tfo_prix_public`, `tfo_remise1`, `tfo_remise2` (0 à 100 %),
+  `tfo_delai` (jours), `tfo_code_barre` ; prix net = prix public × (1 − r1) × (1 − r2) arrondi à 6 décimales, sinon le
+  prix saisi (`prixNetTarif` ↔ `CalculElement.PrixNetTarif`, deux cas dans `01_calcul.json`) ; `tfo_prix` garde le prix
+  net, lu par les scénarios fournisseur principal et meilleur prix. Onglet Tarifs de la fiche élément : prix public,
+  remises, prix net calculé en indication, délai, code-barres.
+- **A10 Saisie depuis la fiche fournisseur** : onglet Tarifs de la fiche personne modifiable
+  (`client/src/app/annuaire/tarifs-fournisseur.js`) : élément cherché par son code ou libellé, ajout, modification,
+  retrait ; chaque écriture recalcule le prix de l'élément (historique des prix).
+- **A12 Import CSV** : format fixe (`import-tarifs.js` : en-têtes `element`, `reference`, `code_barre`, `libelle`,
+  `unite`, `prix_public`, `remise1`, `remise2`, `prix`, `delai`, `debut`, `fin`, `principal` ; séparateur « ; »,
+  tabulation ou « , » ; virgule décimale ; dates JJ/MM/AAAA ou ISO ; modèle téléchargeable) ; contrôles de forme dans le
+  navigateur, puis `POST /api/bibliotheque/tarifs/import` en simulation (élément par code d'appel, sinon référence
+  fournisseur déjà connue, sinon code-barres du tarif ou de l'élément ; article ou ouvrage ; unité convertible ; tarif
+  existant du fournisseur mis à jour, sinon créé), rapport par ligne du fichier, puis import des lignes valables en une
+  transaction, journalisé dans `tarif_import`, prix des éléments recalculés (« Import des tarifs <fournisseur> »).
+- **A18e (suite)** : l'approvisionnement du Stock lit le délai de l'article (`ArticleStock.DelaiJours`, fourni par le
+  cœur : tarif principal, sinon `ele_delai_livraison`) entre celui de l'article dans le dépôt et celui du dépôt.
+- Reste : formats personnalisés par le module Import, remises par famille et catalogues (TODO).

@@ -13,6 +13,10 @@ public sealed class UniteElement
 public sealed class TarifCalcul
 {
     public decimal Prix { get; set; }
+    /// <summary>Prix public et remises en % (lot 8) : le prix net du tarif est le prix public remisé.</summary>
+    public decimal? PrixPublic { get; set; }
+    public decimal? Remise1 { get; set; }
+    public decimal? Remise2 { get; set; }
     public string Unite { get; set; } = "";
     public bool Principal { get; set; }
     public string? Debut { get; set; }
@@ -65,6 +69,10 @@ public static class CalculElement
         return r;
     }
 
+    /// <summary>Prix net d'un tarif : prix public × (1 − remise 1 %) × (1 − remise 2 %), arrondi à 6 décimales, sinon le prix saisi.</summary>
+    public static decimal PrixNetTarif(TarifCalcul t) =>
+        t.PrixPublic is { } p ? Arr6(p * (1 - (t.Remise1 ?? 0) / 100) * (1 - (t.Remise2 ?? 0) / 100)) : t.Prix;
+
     private static bool EnVigueur(TarifCalcul t, string date) =>
         (string.IsNullOrEmpty(t.Debut) || string.CompareOrdinal(t.Debut[..10], date) <= 0)
         && (string.IsNullOrEmpty(t.Fin) || string.CompareOrdinal(t.Fin[..10], date) >= 0);
@@ -74,7 +82,7 @@ public static class CalculElement
         var alertes = new List<string>();
         decimal? ParStock(TarifCalcul t)
         {
-            try { return t.Prix / Ratio(t.Unite, e); }
+            try { return PrixNetTarif(t) / Ratio(t.Unite, e); }
             catch (ErreurCalcul x) { alertes.Add(x.Code); return null; }
         }
         var tarifs = e.Tarifs.Where(t => EnVigueur(t, date)).ToList();

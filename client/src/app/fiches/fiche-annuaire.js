@@ -8,6 +8,7 @@ import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePhoto, urlImage, vignette } from '../annuaire/photo.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { api } from '../api.js';
+import { rendreTarifsFournisseur } from '../annuaire/tarifs-fournisseur.js';
 
 // Fiches de l'annuaire (module Fiche + module Annuaire) : personne (niveau, hiérarchie, casquettes qui déverrouillent
 // leurs groupes de champs, identifiants pour la facturation électronique, reprise depuis l'annuaire des entreprises
@@ -380,17 +381,12 @@ export class FichePersonne extends FicheAnnuaire {
     ];
   }
 
+  /** Onglet Tarifs (lot 8) : saisie des tarifs du fournisseur et import CSV (annuaire/tarifs-fournisseur.js). */
   async #tarifs(corps) {
-    const tarifs = await this.services.bibliotheque.tarifsTiers(this.id);
-    const date = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '…');
-    corps.innerHTML = `<div class="annuaire-tarifs">${tarifs.length ? `<table class="coord-table"><thead><tr><th>Élément</th><th>Libellé</th><th>Réf. fournisseur</th><th>Libellé fournisseur</th>
-      <th class="nombre">Prix</th><th>Validité</th><th></th></tr></thead><tbody>
-      ${tarifs.map((t) => `<tr><td><a href="/fiche/element/${t.ele_id}" data-element="${t.ele_id}"><b>${echapper(t.bib_code ?? '')}:${echapper(t.code ?? '')}</b></a></td><td>${echapper(t.element ?? '')}</td>
-        <td>${echapper(t.reference ?? '')}</td><td>${echapper(t.libelle ?? '')}</td><td class="nombre">${formatNombre(t.prix, 2)} € / ${echapper(t.unite)}</td>
-        <td>${date(t.debut)} → ${date(t.fin)}</td><td>${t.principal ? '★' : ''}${t.lien ? ` <a href="${echapper(t.lien)}" target="_blank" rel="noopener" title="Tarif en ligne">🔗</a>` : ''}</td></tr>`).join('')}</tbody></table>`
-      : '<p class="aide">Aucun tarif de la bibliothèque n\'est relié à ce fournisseur.</p>'}
-      <p class="aide">Tarifs saisis dans les fiches des éléments de la bibliothèque. Le module Tarifs fournisseurs (à venir) permettra leur import et leurs remises.</p></div>`;
-    corps.querySelectorAll('[data-element]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: 'element', id: Number(a.dataset.element) }, e); }));
+    await rendreTarifsFournisseur(corps, {
+      bibliotheque: this.services.bibliotheque, tiers: { id: Number(this.id), nom: this.valeur('raison_sociale') || this.valeur('code') || `Tiers ${this.id}` },
+      message: (t, n) => this.message(t, n), ouvrir: (type, id, e) => this.ouvrirFiche({ type, id }, e),
+    });
   }
 
   /** Reprise depuis l'annuaire des entreprises : identité, identifiants, adresse et dirigeants (contacts). */

@@ -1,5 +1,5 @@
 import { echapper, formatNombre, formatLibre, confirmer } from '@logibtp/socle/ui';
-import { calculerElement, coefficientsEffectifs, SCENARIOS_PA } from '../src/calcul.js';
+import { calculerElement, coefficientsEffectifs, prixNetTarif, SCENARIOS_PA } from '../src/calcul.js';
 import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 
 // Onglets de la fiche d'un élément (classes mères utilisées par la fiche spécialisée de l'application). Contexte :
@@ -220,18 +220,26 @@ export class OngletTarifs {
     const { unites, modifiable } = this.ctx;
     const ro = modifiable ? '' : 'disabled';
     const options = (v) => unites.map((u) => `<option value="${echapper(u.unt_code)}" ${u.unt_code === v ? 'selected' : ''}>${echapper(u.unt_code)}</option>`).join('');
+    const saisi = (v) => echapper(v === undefined || v === null ? '' : String(v).replace('.', ','));
+    // Prix net : prix public remisé (lot 8) s'il est renseigné, sinon le prix saisi.
+    const net = (t) => { try { return t.prix_public !== null && t.prix_public !== undefined && t.prix_public !== '' ? prix(String(prixNetTarif(t)), 4) : ''; } catch { return ''; } };
     const ligne = (t, i) => `<tr data-i="${i}" class="${t.id ? '' : 'ajout'}">
       <td><input type="radio" name="principal" data-c="principal" ${t.principal ? 'checked' : ''} ${ro} title="Fournisseur principal"></td>
       <td><input data-c="fournisseur" value="${echapper(t.fournisseur ?? '')}" ${ro}></td><td><input data-c="reference" value="${echapper(t.reference ?? '')}" ${ro} style="width:7rem"></td>
       <td><input data-c="libelle" value="${echapper(t.libelle ?? '')}" ${ro}></td>
-      <td><input data-c="prix" inputmode="decimal" value="${echapper(t.prix === undefined || t.prix === null ? '' : String(t.prix).replace('.', ','))}" ${ro} style="width:6rem"></td>
+      <td><input data-c="prix_public" inputmode="decimal" value="${saisi(t.prix_public)}" ${ro} style="width:6rem" title="Prix public : le prix net est le prix public remisé"></td>
+      <td><input data-c="remise1" inputmode="decimal" value="${saisi(t.remise1)}" ${ro} style="width:3.5rem"></td>
+      <td><input data-c="remise2" inputmode="decimal" value="${saisi(t.remise2)}" ${ro} style="width:3.5rem"></td>
+      <td><input data-c="prix" inputmode="decimal" value="${saisi(t.prix)}" ${ro} style="width:6rem" title="Prix net (PA) : saisi sans prix public, sinon calculé">${net(t) ? `<small class="aide" data-net> = ${net(t)}</small>` : ''}</td>
       <td><select data-c="unite" ${ro}>${options(t.unite ?? this.ctx.valeur('unite_achat') ?? this.ctx.valeur('unite_stock'))}</select></td>
+      <td><input data-c="delai" inputmode="numeric" value="${saisi(t.delai)}" ${ro} style="width:3.5rem" title="Délai de livraison du fournisseur (jours)"></td>
+      <td><input data-c="code_barre" value="${echapper(t.code_barre ?? '')}" ${ro} style="width:8rem"></td>
       <td><input type="date" data-c="debut" value="${echapper(t.debut ?? '')}" ${ro}></td><td><input type="date" data-c="fin" value="${echapper(t.fin ?? '')}" ${ro}></td>
       <td>${t.lien ? `<a href="${echapper(t.lien)}" target="_blank" rel="noopener" title="${echapper(t.lien)}">🔗</a>` : ''}<input data-c="lien" value="${echapper(t.lien ?? '')}" placeholder="https://…" ${ro} style="width:9rem"></td>
       <td class="bib-actions">${modifiable ? `<button type="button" data-action="enregistrer">${t.id ? '✓' : '＋'}</button>${t.id ? '<button type="button" data-action="supprimer">🗑</button>' : ''}` : ''}</td></tr>`;
     const lignes = modifiable ? [...tarifs, {}] : tarifs;
-    this.corps.innerHTML = `<div class="bib-tarifs"><table class="bib-table"><thead><tr><th title="Principal">★</th><th>Fournisseur</th><th>Référence</th><th>Libellé</th><th>Prix</th><th>Unité</th><th>Début</th><th>Fin</th><th>Lien</th><th></th></tr></thead>
-      <tbody>${lignes.map(ligne).join('') || '<tr><td colspan="10" class="aide">Aucun tarif.</td></tr>'}</tbody></table>
+    this.corps.innerHTML = `<div class="bib-tarifs"><table class="bib-table"><thead><tr><th title="Principal">★</th><th>Fournisseur</th><th>Référence</th><th>Libellé</th><th>Prix public</th><th>Remise 1 %</th><th>Remise 2 %</th><th>Prix net</th><th>Unité</th><th>Délai (j)</th><th>Code-barres</th><th>Début</th><th>Fin</th><th>Lien</th><th></th></tr></thead>
+      <tbody>${lignes.map(ligne).join('') || '<tr><td colspan="15" class="aide">Aucun tarif.</td></tr>'}</tbody></table>
       <p class="aide">Plusieurs tarifs possibles, d'un ou de plusieurs fournisseurs (y compris plusieurs tarifs d'un même fournisseur). Le tarif principal ★ et les tarifs en vigueur
         alimentent les scénarios « fournisseur principal » et « meilleur prix » ; l'enregistrement recalcule le prix de l'élément et l'inscrit dans l'historique.</p></div>`;
     this.corps.querySelector('tbody').addEventListener('click', async (e) => {
@@ -241,7 +249,9 @@ export class OngletTarifs {
       const t = lignes[Number(tr.dataset.i)];
       const v = { ...t };
       tr.querySelectorAll('[data-c]').forEach((el) => { v[el.dataset.c] = el.type === 'radio' ? el.checked : el.value || null; });
-      v.prix = nombreSaisi(v.prix);
+      for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombreSaisi(v[c]);
+      v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
+      if (v.prix === null && v.prix_public !== null) v.prix = '0';
       try {
         const r = b.dataset.action === 'supprimer'
           ? (await confirmer('Supprimer ce tarif ?') ? await this.ctx.fournisseur.supprimerTarif(this.ctx.id, t.id) : null)

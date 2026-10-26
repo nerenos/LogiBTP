@@ -464,6 +464,91 @@
           "DONNEE"
         ]
       }
+    },
+    {
+      "nom": "tarif au prix public remisé (fournisseur principal)",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "FOURNISSEUR_PRINCIPAL",
+        "coef_fg": "1",
+        "coef_benef": "1",
+        "coef_remise": "1",
+        "tarifs": [
+          {
+            "prix": "0",
+            "prix_public": "150",
+            "remise1": "20",
+            "remise2": "5",
+            "unite": "u",
+            "principal": true,
+            "debut": null,
+            "fin": null
+          }
+        ]
+      },
+      "attendu": {
+        "pa": "114",
+        "pr": "114",
+        "pv": "114",
+        "coef_benef": "1",
+        "pv_net": "114",
+        "prix_unites": [
+          {
+            "unite": "u",
+            "ratio": "1",
+            "pa": "114",
+            "pr": "114",
+            "pv_net": "114"
+          }
+        ],
+        "alertes": []
+      }
+    },
+    {
+      "nom": "meilleur prix : prix public remisé arrondi à 6 décimales contre prix saisi",
+      "entree": {
+        "unite_stock": "u",
+        "scenario": "MEILLEUR_MIN",
+        "coef_fg": "1",
+        "coef_benef": "1",
+        "coef_remise": "1",
+        "tarifs": [
+          {
+            "prix": "85",
+            "unite": "u",
+            "principal": false,
+            "debut": null,
+            "fin": null
+          },
+          {
+            "prix": "0",
+            "prix_public": "99.99",
+            "remise1": "12.5",
+            "remise2": "3",
+            "unite": "u",
+            "principal": true,
+            "debut": null,
+            "fin": null
+          }
+        ]
+      },
+      "attendu": {
+        "pa": "84.866513",
+        "pr": "84.866513",
+        "pv": "84.866513",
+        "coef_benef": "1",
+        "pv_net": "84.866513",
+        "prix_unites": [
+          {
+            "unite": "u",
+            "ratio": "1",
+            "pa": "84.866513",
+            "pr": "84.866513",
+            "pv_net": "84.866513"
+          }
+        ],
+        "alertes": []
+      }
     }
   ],
   "conversions": [

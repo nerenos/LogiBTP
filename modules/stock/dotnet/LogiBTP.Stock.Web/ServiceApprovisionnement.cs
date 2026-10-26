@@ -112,8 +112,12 @@ public class ServiceApprovisionnement(StockDbContext db, SpecialisationStock spe
     private static List<EvenementPrevu> Evenements(IEnumerable<PrevisionStock> p) =>
         p.Select((x, i) => new EvenementPrevu($"{x.Type[0]}{x.EntId}-{i}", x.Type, J(x.Date), x.Quantite)).ToList();
 
-    private string Horizon(Contexte c, long ele) =>
-        J(DateOnly.Parse(c.Aujourdhui, CultureInfo.InvariantCulture).AddDays(c.Seuils.GetValueOrDefault(ele)?.SseDelaiJours ?? c.Parametres.DelaiJours));
+    /// <summary>
+    /// Horizon des propositions : aujourd'hui + délai de l'article dans le dépôt (seuil), sinon délai de l'article fourni par
+    /// la spécialisation (cœur : tarif principal, sinon élément), sinon délai du dépôt.
+    /// </summary>
+    private string Horizon(Contexte c, long ele, int? delaiArticle) =>
+        J(DateOnly.Parse(c.Aujourdhui, CultureInfo.InvariantCulture).AddDays(c.Seuils.GetValueOrDefault(ele)?.SseDelaiJours ?? delaiArticle ?? c.Parametres.DelaiJours));
 
     /// <summary>Projection d'un article dans un lieu : événements datés, disponible jour par jour, réservations non honorées, proposition.</summary>
     public async Task<ProjectionArticle> ProjectionAsync(long lieu, long ele, CancellationToken ct)
@@ -124,7 +128,7 @@ public class ServiceApprovisionnement(StockDbContext db, SpecialisationStock spe
         var evs = Evenements(prev);
         var q = c.Stock.GetValueOrDefault(ele)?.Quantite ?? 0;
         var proj = ReglesProjection.Projeter(q, c.Aujourdhui, evs);
-        var horizon = Horizon(c, ele);
+        var horizon = Horizon(c, ele, a.DelaiJours);
         var minH = ReglesProjection.MinimumJusqua(proj, q, horizon);
         var seuil = c.Seuils.GetValueOrDefault(ele);
         var appro = (await specialisation.ApprovisionnementsAsync(db, [ele], ct)).GetValueOrDefault(ele);
@@ -149,7 +153,7 @@ public class ServiceApprovisionnement(StockDbContext db, SpecialisationStock spe
             var prev = c.Previsions.Where(p => p.Ele == id).ToList();
             var q = c.Stock.GetValueOrDefault(id)?.Quantite ?? 0;
             var proj = ReglesProjection.Projeter(q, c.Aujourdhui, Evenements(prev));
-            var horizon = Horizon(c, id);
+            var horizon = Horizon(c, id, a.DelaiJours);
             var minH = ReglesProjection.MinimumJusqua(proj, q, horizon);
             var seuil = c.Seuils.GetValueOrDefault(id);
             var appro = appros.GetValueOrDefault(id);

@@ -22,7 +22,7 @@ namespace LogiBTP.Api.Btp;
 public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : SpecialisationStock
 {
     private sealed record LieuSql(long Id, string Code, string Libelle, bool Depot);
-    private sealed record ArticleSql(long Id, string Code, string? Libelle, string Unite, int Precision, decimal? Pa);
+    private sealed record ArticleSql(long Id, string Code, string? Libelle, string Unite, int Precision, decimal? Pa, int? Delai = null);
     private sealed record PieceSql(long Id, string? Numero, string Type, string? Tiers);
 
     public override Task<List<LieuStock>> LieuxAsync(StockDbContext db, CancellationToken ct) =>
@@ -38,16 +38,18 @@ public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : 
         var t = ids.ToArray();
         var l = await db.Database.SqlQuery<ArticleSql>($"""
             SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle AS libelle, e.ele_unt_stock AS unite,
-                   coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa
+                   coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa,
+                   coalesce((SELECT f.tfo_delai FROM tarif_fournisseur f WHERE f.tfo_ele_id = e.ele_id AND f.tfo_principal), e.ele_delai_livraison) AS delai
             FROM element e LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock WHERE e.ele_id = ANY({t})
             """).ToListAsync(ct);
-        return l.ToDictionary(x => x.Id, x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa));
+        // Délai de l'article (lot 8) : tarif principal, sinon délai global de l'élément ; celui du dépôt prime (module).
+        return l.ToDictionary(x => x.Id, x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa, x.Delai));
     }
 
     public override Task<List<ArticleStock>> ArticlesGeresAsync(StockDbContext db, CancellationToken ct) =>
         db.Database.SqlQuery<ArticleSql>($"""
             SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle AS libelle, e.ele_unt_stock AS unite,
-                   coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa
+                   coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa, NULL::int AS delai
             FROM element e LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock
             WHERE e.ele_gestion = 'STOCK' AND e.ele_type = 'ARTICLE' AND e.ele_actif ORDER BY e.ele_code
             """).Select(x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa)).ToListAsync(ct);

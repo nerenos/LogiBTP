@@ -270,7 +270,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         var date = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var elements = await db.Elements.Where(e => !e.EleCoefFgImpose || !e.EleCoefBenefImpose).ToListAsync(ct);
         var tarifs = (await db.Tarifs.AsNoTracking().ToListAsync(ct)).GroupBy(t => t.TfoEleId)
-            .ToDictionary(g => g.Key, g => g.Select(t => new TarifCalcul { Prix = t.TfoPrix, Unite = t.TfoUntCode, Principal = t.TfoPrincipal, Debut = Date(t.TfoDebut), Fin = Date(t.TfoFin) }).ToList());
+            .ToDictionary(g => g.Key, g => g.Select(VersCalcul).ToList());
         var n = 0;
         foreach (var e in elements)
         {
@@ -298,7 +298,13 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     private static string? Date(DateOnly? d) => d?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static TarifDto VersDto(TarifFournisseur t) => new(t.TfoId, t.TfoFournisseur, t.TfoTiersId, t.TfoReference, t.TfoLibelle, t.TfoUntCode, t.TfoPrix,
-        Date(t.TfoDebut), Date(t.TfoFin), t.TfoPrincipal, t.TfoLien, t.TfoMajLe, t.TfoMajPar);
+        Date(t.TfoDebut), Date(t.TfoFin), t.TfoPrincipal, t.TfoLien, t.TfoMajLe, t.TfoMajPar, t.TfoPrixPublic, t.TfoRemise1, t.TfoRemise2, t.TfoDelai, t.TfoCodeBarre);
+
+    private static TarifCalcul VersCalcul(TarifFournisseur t) => new()
+    {
+        Prix = t.TfoPrix, PrixPublic = t.TfoPrixPublic, Remise1 = t.TfoRemise1, Remise2 = t.TfoRemise2,
+        Unite = t.TfoUntCode, Principal = t.TfoPrincipal, Debut = Date(t.TfoDebut), Fin = Date(t.TfoFin),
+    };
 
     public virtual async Task<List<TarifDto>> Tarifs(long eleId, CancellationToken ct) =>
         (await db.Tarifs.AsNoTracking().Where(t => t.TfoEleId == eleId).OrderByDescending(t => t.TfoPrincipal).ThenBy(t => t.TfoFournisseur).ThenBy(t => t.TfoId).ToListAsync(ct))
@@ -313,12 +319,13 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
                 orderby e.EleCode, t.TfoPrincipal descending, t.TfoId
                 select new { t, e.EleCode, e.EleLibelle, e.EleUntStock, b.BibCode }).ToListAsync(ct))
         .Select(x => new TarifTiersDto(x.t.TfoId, x.t.TfoEleId, x.BibCode, x.EleCode, x.EleLibelle, x.EleUntStock, x.t.TfoFournisseur, x.t.TfoReference, x.t.TfoLibelle,
-            x.t.TfoUntCode, x.t.TfoPrix, Date(x.t.TfoDebut), Date(x.t.TfoFin), x.t.TfoPrincipal, x.t.TfoLien)).ToList();
+            x.t.TfoUntCode, x.t.TfoPrix, Date(x.t.TfoDebut), Date(x.t.TfoFin), x.t.TfoPrincipal, x.t.TfoLien,
+            x.t.TfoPrixPublic, x.t.TfoRemise1, x.t.TfoRemise2, x.t.TfoDelai, x.t.TfoCodeBarre)).ToList();
 
     /// <summary>Tarifs au format du calcul (prix, unité, principal, validité).</summary>
     public virtual async Task<List<TarifCalcul>> TarifsCalcul(long eleId, CancellationToken ct) =>
         (await db.Tarifs.AsNoTracking().Where(t => t.TfoEleId == eleId).ToListAsync(ct))
-        .Select(t => new TarifCalcul { Prix = t.TfoPrix, Unite = t.TfoUntCode, Principal = t.TfoPrincipal, Debut = Date(t.TfoDebut), Fin = Date(t.TfoFin) }).ToList();
+        .Select(VersCalcul).ToList();
 
     /// <summary>Données techniques (champs supplémentaires numériques) utilisables dans les formules d'unités.</summary>
     public static Dictionary<string, decimal?> Donnees(JsonElement proprietes)
@@ -392,7 +399,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     {
         if (!specialisation.PeutModifierTarifs(u)) throw ExceptionMetier.AccesRefuse("TARIFS");
         if (!await db.Elements.AnyAsync(e => e.EleId == eleId, ct)) throw ExceptionMetier.Introuvable($"Élément {eleId}");
-        if (d.Prix < 0) throw ExceptionMetier.Invalide("PRIX", "Prix négatif");
+        ControlerTarif(d.Prix, d.PrixPublic, d.Remise1, d.Remise2, d.Delai);
         DateOnly? Lire(string? s) => string.IsNullOrWhiteSpace(s) ? null : DateOnly.ParseExact(s[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture);
         var debut = Lire(d.Debut);
         var fin = Lire(d.Fin);
@@ -402,13 +409,105 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         // Un seul tarif principal par élément.
         if (d.Principal) await db.Tarifs.Where(x => x.TfoEleId == eleId && x.TfoPrincipal && x.TfoId != d.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.TfoPrincipal, false), ct);
         t.TfoFournisseur = Obligatoire(d.Fournisseur, "Fournisseur"); t.TfoTiersId = d.TiersId; t.TfoReference = Texte(d.Reference); t.TfoLibelle = Texte(d.Libelle);
-        t.TfoUntCode = Obligatoire(d.Unite, "Unité"); t.TfoPrix = d.Prix; t.TfoDebut = debut; t.TfoFin = fin; t.TfoPrincipal = d.Principal;
+        t.TfoUntCode = Obligatoire(d.Unite, "Unité"); t.TfoDebut = debut; t.TfoFin = fin; t.TfoPrincipal = d.Principal;
+        t.TfoPrixPublic = d.PrixPublic; t.TfoRemise1 = d.Remise1; t.TfoRemise2 = d.Remise2; t.TfoDelai = d.Delai; t.TfoCodeBarre = Texte(d.CodeBarre);
+        // Prix net : prix public remisé s'il est renseigné (même règle que le calcul), sinon le prix saisi.
+        t.TfoPrix = CalculElement.PrixNetTarif(new TarifCalcul { Prix = d.Prix, PrixPublic = d.PrixPublic, Remise1 = d.Remise1, Remise2 = d.Remise2 });
         t.TfoLien = Texte(d.Lien); t.TfoMajLe = DateTimeOffset.UtcNow; t.TfoMajPar = u.Code;
         if (t.TfoId == 0) db.Tarifs.Add(t);
         await db.SaveChangesAsync(ct);
         var r = await ApresTarif(eleId, $"Tarif fournisseur {t.TfoFournisseur} : {t.TfoPrix.ToString("0.######", CultureInfo.InvariantCulture)} / {t.TfoUntCode}", u, ct);
         await tx.CommitAsync(ct);
         return r;
+    }
+
+    /// <summary>
+    /// Import des tarifs d'un fournisseur (format fixe, lot 8 : A12) : élément trouvé par son code d'appel, sinon par la
+    /// référence d'un tarif existant du fournisseur, sinon par code-barres (tarif du fournisseur, puis élément) ; unité de
+    /// la ligne, sinon celle du tarif existant, sinon l'unité d'achat ou de stock (convertible) ; prix public remisé ou
+    /// prix saisi ; tarif existant du fournisseur pour l'élément mis à jour, sinon créé. Simulation : contrôle seul ;
+    /// sinon lignes valables écrites en une transaction, prix des éléments recalculés, import journalisé.
+    /// </summary>
+    public virtual async Task<ResultatImportTarifs> ImporterTarifs(DemandeImportTarifs d, Utilisateur u, CancellationToken ct)
+    {
+        if (!specialisation.PeutModifierTarifs(u)) throw ExceptionMetier.AccesRefuse("TARIFS");
+        var fournisseur = Obligatoire(d.Fournisseur, "Fournisseur");
+        var defaut = await db.Bibliotheques.AsNoTracking().Where(b => b.BibDefaut).Select(b => b.BibCode).FirstOrDefaultAsync(ct);
+        var existants = await db.Tarifs.Where(t => t.TfoTiersId == d.TiersId).ToListAsync(ct);
+        var resultats = new List<ResultatLigneImport>();
+        var aEcrire = new List<(TarifFournisseur Tarif, bool Nouveau, int Rang)>();
+        DateOnly? Lire(string? s) => string.IsNullOrWhiteSpace(s) ? null : DateOnly.ParseExact(s.Trim()[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        for (var i = 0; i < d.Lignes.Count; i++)
+        {
+            var l = d.Lignes[i];
+            var rang = i + 1;
+            try
+            {
+                Element? e = null;
+                if (Texte(l.Element) is { } code)
+                {
+                    var (bib, c) = CalculElement.AnalyserCodeAppel(code, defaut);
+                    e = await (from x in db.Elements.AsNoTracking() join b in db.Bibliotheques.AsNoTracking() on x.EleBibId equals b.BibId
+                               where b.BibCode == bib && x.EleCode == c && x.EleActif select x).FirstOrDefaultAsync(ct);
+                }
+                var ref_ = Texte(l.Reference);
+                var codeBarre = Texte(l.CodeBarre);
+                var parReference = ref_ is null ? null : existants.FirstOrDefault(t => t.TfoReference == ref_ && (e is null || t.TfoEleId == e.EleId));
+                var parCodeBarre = codeBarre is null ? null : existants.FirstOrDefault(t => t.TfoCodeBarre == codeBarre && (e is null || t.TfoEleId == e.EleId));
+                var eleId = e?.EleId ?? parReference?.TfoEleId ?? parCodeBarre?.TfoEleId;
+                if (eleId is null && codeBarre is not null)
+                    eleId = await db.Elements.AsNoTracking().Where(x => x.EleCodeBarre == codeBarre && x.EleActif).Select(x => (long?)x.EleId).FirstOrDefaultAsync(ct);
+                if (eleId is null) throw ExceptionMetier.Invalide("ELEMENT", "Élément introuvable (code, référence fournisseur ou code-barres)");
+                e ??= await db.Elements.AsNoTracking().FirstAsync(x => x.EleId == eleId, ct);
+                if (e.EleType is not ("ARTICLE" or "OUVRAGE")) throw ExceptionMetier.Invalide("ELEMENT", $"{e.EleCode} : ni article ni ouvrage");
+                var tarif = parReference ?? parCodeBarre ?? existants.FirstOrDefault(t => t.TfoEleId == e.EleId);
+                var unite = Texte(l.Unite) ?? tarif?.TfoUntCode ?? e.EleUntAchat ?? e.EleUntStock;
+                try { CalculElement.Ratio(unite, Entree(e, [])); }
+                catch (ErreurCalcul x) { throw ExceptionMetier.Invalide("UNITE", $"{unite} : {x.Message}"); }
+                if (l.PrixPublic is null && l.Prix is null) throw ExceptionMetier.Invalide("PRIX", "Prix public ou prix net obligatoire");
+                ControlerTarif(l.Prix ?? 0, l.PrixPublic, l.Remise1, l.Remise2, l.Delai);
+                var debut = Lire(l.Debut);
+                var fin = Lire(l.Fin);
+                if (debut is { } a && fin is { } b2 && b2 < a) throw ExceptionMetier.Invalide("DATES", "Fin de validité avant le début");
+                var nouveau = tarif is null;
+                var t = tarif ?? new TarifFournisseur { TfoEleId = e.EleId, TfoTiersId = d.TiersId };
+                t.TfoFournisseur = fournisseur; t.TfoReference = ref_ ?? t.TfoReference; t.TfoCodeBarre = codeBarre ?? t.TfoCodeBarre;
+                t.TfoLibelle = Texte(l.Libelle) ?? t.TfoLibelle; t.TfoUntCode = unite; t.TfoPrixPublic = l.PrixPublic; t.TfoRemise1 = l.Remise1; t.TfoRemise2 = l.Remise2;
+                t.TfoPrix = CalculElement.PrixNetTarif(new TarifCalcul { Prix = l.Prix ?? 0, PrixPublic = l.PrixPublic, Remise1 = l.Remise1, Remise2 = l.Remise2 });
+                t.TfoDelai = l.Delai ?? t.TfoDelai; t.TfoDebut = debut ?? t.TfoDebut; t.TfoFin = fin ?? t.TfoFin; t.TfoPrincipal = l.Principal || t.TfoPrincipal;
+                t.TfoMajLe = DateTimeOffset.UtcNow; t.TfoMajPar = u.Code;
+                if (nouveau) existants.Add(t);
+                aEcrire.Add((t, nouveau, rang));
+                resultats.Add(new(rang, e.EleId, e.EleCode, nouveau ? "CREE" : "MAJ", null));
+            }
+            catch (ExceptionMetier x) { resultats.Add(new(rang, null, Texte(l.Element), "ERREUR", x.Message)); }
+            catch (FormatException) { resultats.Add(new(rang, null, Texte(l.Element), "ERREUR", "Date au format AAAA-MM-JJ")); }
+        }
+        var crees = resultats.Count(r => r.Action == "CREE");
+        var maj = resultats.Count(r => r.Action == "MAJ");
+        var erreurs = resultats.Count(r => r.Action == "ERREUR");
+        if (d.Simulation)
+        {
+            foreach (var entree in db.ChangeTracker.Entries<TarifFournisseur>().ToList()) entree.State = EntityState.Detached;
+            return new(crees, maj, erreurs, resultats);
+        }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        foreach (var (t, nouveau, _) in aEcrire.Where(x => x.Tarif.TfoPrincipal))
+            await db.Tarifs.Where(x => x.TfoEleId == t.TfoEleId && x.TfoPrincipal && x.TfoId != t.TfoId).ExecuteUpdateAsync(s => s.SetProperty(x => x.TfoPrincipal, false), ct);
+        foreach (var (t, nouveau, _) in aEcrire) if (nouveau) db.Tarifs.Add(t);
+        db.ImportsTarifs.Add(new TarifImport { TimTiersId = d.TiersId, TimFournisseur = fournisseur, TimFichier = Texte(d.Fichier), TimCrees = crees, TimMaj = maj, TimErreurs = erreurs, TimPar = u.Code, TimLe = DateTimeOffset.UtcNow });
+        await db.SaveChangesAsync(ct);
+        foreach (var eleId in aEcrire.Select(x => x.Tarif.TfoEleId).Distinct()) await Recalculer(eleId, $"Import des tarifs {fournisseur}", u, ct);
+        await tx.CommitAsync(ct);
+        return new(crees, maj, erreurs, resultats);
+    }
+
+    /// <summary>Contrôles d'un tarif : prix positifs, remises de 0 à 100 %, délai positif.</summary>
+    private static void ControlerTarif(decimal prix, decimal? prixPublic, decimal? remise1, decimal? remise2, int? delai)
+    {
+        if (prix < 0 || prixPublic < 0) throw ExceptionMetier.Invalide("PRIX", "Prix négatif");
+        if (remise1 is < 0 or > 100 || remise2 is < 0 or > 100) throw ExceptionMetier.Invalide("REMISE", "Remise de 0 à 100 %");
+        if (delai < 0) throw ExceptionMetier.Invalide("DELAI", "Délai négatif");
     }
 
     public virtual async Task<TarifsElementDto> SupprimerTarif(long eleId, long tarifId, Utilisateur u, CancellationToken ct)

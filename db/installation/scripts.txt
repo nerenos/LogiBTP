@@ -51,6 +51,7 @@ modules/bibliotheque/db/061_bibliotheque_technique.sql
 modules/bibliotheque/db/062_bibliotheque_coefficients.sql
 modules/bibliotheque/db/063_bibliotheque_poste_pied.sql
 modules/bibliotheque/db/064_bibliotheque_complements.sql
+modules/bibliotheque/db/065_bibliotheque_tarifs.sql
 modules/annuaire/db/070_annuaire_schema.sql
 modules/annuaire/db/071_annuaire_provisoire.sql
 modules/reglement/db/080_reglement_schema.sql

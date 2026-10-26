@@ -145,7 +145,8 @@ public class StockDbContext(DbContextOptions<StockDbContext> options) : DbContex
 public sealed record LieuStock(long Id, string Code, string Libelle, bool Depot);
 
 /// <summary>Article géré en stock : unité de stock, précision des quantités (S22), PA de repli (bibliothèque).</summary>
-public sealed record ArticleStock(long Id, string Code, string Libelle, string Unite, int Precision, decimal? PaRepli);
+/// <summary>Article géré : délai de réapprovisionnement de l'article hors dépôt (lot 8 : tarif principal, sinon élément), null sinon.</summary>
+public sealed record ArticleStock(long Id, string Code, string Libelle, string Unite, int Precision, decimal? PaRepli, int? DelaiJours = null);
 
 /// <summary>Pièce à l'origine d'un mouvement : numéro, type, tiers.</summary>
 public sealed record PieceStock(long Id, string Numero, string Type, string? Tiers);

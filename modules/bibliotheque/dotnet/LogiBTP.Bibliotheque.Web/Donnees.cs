@@ -135,8 +135,27 @@ public class TarifFournisseur
     public DateOnly? TfoFin { get; set; }
     public bool TfoPrincipal { get; set; }
     public string? TfoLien { get; set; }
+    // Lot 8 (065) : prix public et remises (%), délai (jours), code-barres du fournisseur.
+    public decimal? TfoPrixPublic { get; set; }
+    public decimal? TfoRemise1 { get; set; }
+    public decimal? TfoRemise2 { get; set; }
+    public int? TfoDelai { get; set; }
+    public string? TfoCodeBarre { get; set; }
     public DateTimeOffset TfoMajLe { get; set; }
     public string? TfoMajPar { get; set; }
+}
+
+public class TarifImport
+{
+    public long TimId { get; set; }
+    public long? TimTiersId { get; set; }
+    public string TimFournisseur { get; set; } = "";
+    public string? TimFichier { get; set; }
+    public int TimCrees { get; set; }
+    public int TimMaj { get; set; }
+    public int TimErreurs { get; set; }
+    public string? TimPar { get; set; }
+    public DateTimeOffset TimLe { get; set; }
 }
 
 public class HistoriquePrix
@@ -178,6 +197,7 @@ public class BibliothequeDbContext(DbContextOptions<BibliothequeDbContext> optio
     public DbSet<NatureElement> Natures => Set<NatureElement>();
     public DbSet<Element> Elements => Set<Element>();
     public DbSet<TarifFournisseur> Tarifs => Set<TarifFournisseur>();
+    public DbSet<TarifImport> ImportsTarifs => Set<TarifImport>();
     public DbSet<HistoriquePrix> Historique => Set<HistoriquePrix>();
     public DbSet<ParametreBibliotheque> Parametres => Set<ParametreBibliotheque>();
     public DbSet<CoefficientPeriode> Periodes => Set<CoefficientPeriode>();
@@ -198,6 +218,7 @@ public class BibliothequeDbContext(DbContextOptions<BibliothequeDbContext> optio
             e.Property(x => x.EleComposition).HasColumnType("jsonb");
         });
         b.Entity<TarifFournisseur>().ToTable("tarif_fournisseur").HasKey(x => x.TfoId);
+        b.Entity<TarifImport>().ToTable("tarif_import").HasKey(x => x.TimId);
         b.Entity<HistoriquePrix>(e => { e.ToTable("historique_prix_element").HasKey(x => x.HpeId); e.Property(x => x.HpeAvant).HasColumnType("jsonb"); e.Property(x => x.HpeApres).HasColumnType("jsonb"); });
         b.Entity<ParametreBibliotheque>(e => { e.ToTable("parametre_bibliotheque").HasKey(x => x.PbiCle); e.Property(x => x.PbiValeur).HasColumnType("jsonb"); });
     }
@@ -225,11 +246,25 @@ public sealed record PeriodeDto(int Id, int? NatId, string Debut, decimal? CoefF
 public sealed record PeriodeEnregistree(List<PeriodeDto> Periodes, int ElementsRecalcules);
 
 public sealed record TarifDto(long Id, string Fournisseur, long? TiersId, string? Reference, string? Libelle, string Unite, decimal Prix,
-    string? Debut, string? Fin, bool Principal, string? Lien, DateTimeOffset MajLe, string? MajPar);
+    string? Debut, string? Fin, bool Principal, string? Lien, DateTimeOffset MajLe, string? MajPar,
+    decimal? PrixPublic = null, decimal? Remise1 = null, decimal? Remise2 = null, int? Delai = null, string? CodeBarre = null);
 
 /// <summary>Tarif d'un fournisseur de l'annuaire, avec l'élément (onglet Tarifs de la fiche du fournisseur).</summary>
 public sealed record TarifTiersDto(long Id, long EleId, string BibCode, string Code, string? Element, string? UniteStock, string Fournisseur, string? Reference,
-    string? Libelle, string Unite, decimal Prix, string? Debut, string? Fin, bool Principal, string? Lien);
+    string? Libelle, string Unite, decimal Prix, string? Debut, string? Fin, bool Principal, string? Lien,
+    decimal? PrixPublic = null, decimal? Remise1 = null, decimal? Remise2 = null, int? Delai = null, string? CodeBarre = null);
+
+/// <summary>Ligne d'un import de tarifs (format fixe, lot 8 : A12).</summary>
+public sealed record LigneImportTarif(string? Element, string? Reference, string? CodeBarre, string? Libelle, string? Unite, decimal? PrixPublic,
+    decimal? Remise1, decimal? Remise2, decimal? Prix, int? Delai, string? Debut, string? Fin, bool Principal = false);
+
+/// <summary>Import de tarifs d'un fournisseur : lignes, nom du fichier, simulation (contrôle sans écriture).</summary>
+public sealed record DemandeImportTarifs(long TiersId, string Fournisseur, string? Fichier, List<LigneImportTarif> Lignes, bool Simulation = true);
+
+/// <summary>Résultat d'une ligne importée : rang (1 = première ligne de données), élément trouvé, action (CREE, MAJ, ERREUR), message.</summary>
+public sealed record ResultatLigneImport(int Rang, long? EleId, string? Code, string Action, string? Message);
+
+public sealed record ResultatImportTarifs(int Crees, int MisesAJour, int Erreurs, List<ResultatLigneImport> Lignes);
 
 public sealed record PrixElementDto(decimal? Pa, decimal? Pr, decimal? Pv, decimal CoefBenef, decimal? PvNet, List<string> Alertes);
 

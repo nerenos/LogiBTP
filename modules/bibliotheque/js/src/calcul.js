@@ -8,7 +8,9 @@ import { D, S, arr6, evaluerExpression, ErreurCalcul } from '@logibtp/socle';
 // Un prix exprimé dans une unité u vaut, par unité de stock : prix / ratio(u).
 //
 // Scénarios de prix d'achat : FIXE (PA saisi), FOURNISSEUR_PRINCIPAL (tarif principal en vigueur), DERNIER_PA,
-// MEILLEUR_MIN / MEILLEUR_MAX (tarifs en vigueur), PMP (prix moyen pondéré). Dernier PA et PMP sont alimentés par les
+// MEILLEUR_MIN / MEILLEUR_MAX (tarifs en vigueur), PMP (prix moyen pondéré). Prix d'un tarif : prix public remisé
+// (prix public × (1 − remise 1 %) × (1 − remise 2 %), arrondi à 6 décimales) s'il est renseigné, sinon le prix saisi
+// (prixNetTarif, lot 8 des demandes du 25/10/2026). Dernier PA et PMP sont alimentés par les
 // futurs modules Achats et Stock. Puis PR = PA × coef FG ; PV = PR × coef bénéfice (ou PV fixe : le coefficient est
 // déduit) ; PV net = PV × coef de remise.
 
@@ -32,13 +34,21 @@ export function ratio(unite, { unite_stock, unites = [], donnees = {} }) {
   return r;
 }
 
+/** Prix net d'un tarif (Dec) : prix public remisé s'il est renseigné (remises en %), sinon le prix saisi. */
+export function prixNetTarif(t) {
+  const publics = D(t.prix_public);
+  if (publics === null) return D(t.prix);
+  const facteur = (r) => D(1).minus((D(r) ?? D(0)).div(100));
+  return arr6(publics.times(facteur(t.remise1)).times(facteur(t.remise2)));
+}
+
 const enVigueur = (t, date) => (!t.debut || String(t.debut).slice(0, 10) <= date) && (!t.fin || String(t.fin).slice(0, 10) >= date);
 
 /** PA par unité de stock selon le scénario (Dec ou null), et les alertes rencontrées. */
 export function prixAchat(e, date) {
   const alertes = [];
   const parStock = (t) => {
-    try { return D(t.prix).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? 'UNITE'); return null; }
+    try { return prixNetTarif(t).div(ratio(t.unite, e)); } catch (x) { alertes.push(x.code ?? 'UNITE'); return null; }
   };
   const tarifs = (e.tarifs ?? []).filter((t) => enVigueur(t, date));
   let pa = null;
@@ -64,8 +74,8 @@ export function prixAchat(e, date) {
 }
 
 /**
- * Calcul complet. Entrée : { unite_stock, unites, donnees, scenario, pa_fixe, dernier_pa, pmp, tarifs: [{ prix, unite,
- * principal, debut, fin }], coef_fg, coef_benef, pv, pv_fixe, coef_remise }. Sortie (textes décimaux) : { pa, pr, pv,
+ * Calcul complet. Entrée : { unite_stock, unites, donnees, scenario, pa_fixe, dernier_pa, pmp, tarifs: [{ prix,
+ * prix_public, remise1, remise2, unite, principal, debut, fin }], coef_fg, coef_benef, pv, pv_fixe, coef_remise }. Sortie (textes décimaux) : { pa, pr, pv,
  * coef_benef, pv_net, prix_unites: [{ unite, ratio, pa, pr, pv_net }], alertes }.
  */
 export function calculerElement(e, date = new Date().toISOString().slice(0, 10)) {
