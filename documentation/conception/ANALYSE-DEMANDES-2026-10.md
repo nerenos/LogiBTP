@@ -353,3 +353,15 @@ l'article dans le dépôt (Stock) > délai du tarif principal > délai global de
   (déjà ouvert aux demandes de prix) : « ✓ Retenir » sur une offre validée = fenêtre de transformation commune
   (commande), puis les autres offres en cours du lot passent au statut terminal « Non retenue » (`NON_RETENU`, module
   Document `019m`, jamais recalculé par `f_document_statut`) ; `POST …/consultation/retenir`.
+
+## 11. Lot 10 : pointage (A30 réalisé le 26/10/2026 ; A29 en attente de décision)
+
+- **A30 Choix du chantier ou de l'ordre à la borne** : bouton « 🔎 Tous » (route publique
+  `GET /api/pointage/borne/chantiers?jeton=` : salarié identifié, tous les chantiers pointables — ouverts hors dotations,
+  internes — avec ville et client, et les ordres en cours de ces chantiers ; point d'accroche
+  `SpecialisationPointage.TousChantiersAsync`) ; les chantiers de la journée (proposés, récents, même clos) restent en
+  tête ; le champ filtre les tuiles en direct (code, libellé, ville, client, numéro, objet et type d'ordre ; chaque mot,
+  casse et accents indifférents : `client/src/app/pointage/choix-borne.js`) ; à l'Entrée : tuile désignée exactement
+  (code ou numéro), sinon la seule restante, sinon recherche du numéro d'ordre (QR code) comme avant.
+- **A29 Restaurants** : non commencé, décision attendue sur la géolocalisation (coordonnées des adresses par géocodage
+  ou proximité par zones de déplacement) et sur la règle d'avantage en nature par agence.

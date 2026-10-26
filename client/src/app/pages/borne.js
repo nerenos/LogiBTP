@@ -4,6 +4,7 @@ import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
+import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
 
 // Borne d'atelier (Pointage lot 4, M8, § 6 « quatre touches ») : appareil enregistré par un administrateur (jeton gardé
 // dans le navigateur de la borne, en-tête X-Borne-Jeton, aucune session) ; salarié (initiales) → PIN → chantier ou
@@ -282,15 +283,20 @@ export class PageBorne extends PageBase {
     if (this.etat.journee.bloque) this.#liste(); else this.ecran();
   }
 
-  /** Journée et choix du chantier (proposés : planning du jour, récents) ou de l'ordre (numéro / QR code). */
+  /**
+   * Journée et choix du chantier (proposés : planning du jour, récents ; « 🔎 Tous » : tous les chantiers et les ordres en
+   * cours, A30) ou de l'ordre ; le champ filtre les tuiles en direct (code, libellé, ville, client, numéro d'ordre) et,
+   * à l'Entrée, prend la tuile désignée exactement ou la seule restante, sinon cherche le numéro d'ordre (QR code).
+   */
   #journee() {
     const j = this.etat.journee;
     if (j.bloque) { this.#liste(); return; }
     this.ecran = () => this.#journee();
     const n = this.etat.lignes.length;
     this.zone.innerHTML = `${this.#entete('Chantier ou ordre')}
-      <p><input data-ordre class="borne-champ" placeholder="N° d'ordre ou QR code (OE2026-…)"> <button type="button" class="borne-bouton" data-lire>OK</button></p>
-      <div class="borne-grille">${j.chantiers.map((c) => `<button type="button" class="borne-carte ${j.proposes.includes(c.id) ? 'propose' : ''}" data-c="${c.id}">${j.proposes.includes(c.id) ? '📅 ' : ''}<b>${echapper(c.code)}</b><small>${echapper(c.libelle)}</small></button>`).join('')}</div>
+      <p><input data-ordre class="borne-champ" placeholder="Code, nom, ville, client, n° d'ordre ou QR code" autocomplete="off"> <button type="button" class="borne-bouton" data-lire>OK</button>
+        <button type="button" class="borne-bouton ${this.etat.tous ? 'principal' : ''}" data-tous title="Tous les chantiers ouverts et les ordres en cours">🔎 Tous</button></p>
+      <div class="borne-grille" data-tuiles></div>
       <p><button type="button" class="borne-bouton principal" data-liste title="Aller directement à la liste des pointages de la journée">📋 Pointages du jour${n ? ` (${n})` : ''} ⏭</button>
         <button type="button" class="borne-bouton" data-etapes title="Étapes des ordres à valider (module Exécution)">🧩 Étapes</button>
         <button type="button" class="borne-bouton" data-stock title="Sortie ou retour d'articles du magasin de l'atelier (module Stock)">📦 Stock</button>
@@ -299,11 +305,45 @@ export class PageBorne extends PageBase {
     this.zone.querySelector('[data-etapes]').addEventListener('click', () => this.#etapes());
     this.zone.querySelector('[data-stock]').addEventListener('click', () => this.#stock());
     const choisir = (cha, ordre) => { this.etat.saisie = { cha_id: cha, ent_id: ordre ?? null }; this.#memoriser(); this.#typeMo(); };
-    this.zone.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => choisir(Number(b.dataset.c))));
+    const champ = this.zone.querySelector('[data-ordre]');
+    const grille = this.zone.querySelector('[data-tuiles]');
+    // « Tous » : chantiers de la journée (proposés, récents, même clos) puis tous les chantiers ouverts, et leurs ordres en cours.
+    const tuiles = () => (this.etat.tous
+      ? tuilesChoix([...j.chantiers, ...this.etat.tous.chantiers.filter((c) => !j.chantiers.some((x) => x.id === c.id))], this.etat.tous.ordres)
+      : tuilesChoix(j.chantiers));
+    // Tuile choisie : chantier et ordre ajoutés à la journée s'ils viennent de la liste complète (libellés de la liste des pointages).
+    const prendre = (t) => {
+      const c = this.etat.tous?.chantiers.find((x) => x.id === t.cha_id);
+      if (c && !j.chantiers.some((x) => x.id === c.id)) j.chantiers.push(c);
+      const o = t.ent_id ? this.etat.tous?.ordres.find((x) => x.id === t.ent_id) : null;
+      if (o && !j.ordres.some((x) => x.id === o.id)) j.ordres.push(o);
+      choisir(t.cha_id, t.ent_id);
+    };
+    const afficher = () => {
+      const liste = filtrerChoix(tuiles(), champ.value);
+      grille.innerHTML = liste.slice(0, 200).map((t) => {
+        const propose = t.genre === 'chantier' && j.proposes.includes(t.cha_id);
+        return `<button type="button" class="borne-carte ${propose ? 'propose' : ''}" data-t="${t.id}">${propose ? '📅 ' : t.genre === 'ordre' ? '🧩 ' : ''}<b>${echapper(t.code)}</b>
+          <small>${echapper(t.libelle)}</small>${t.detail ? `<small>${echapper(t.detail)}</small>` : ''}</button>`;
+      }).join('') + (liste.length > 200 ? `<p class="aide">${liste.length - 200} autre(s) : précisez la saisie.</p>` : '')
+        + (!liste.length ? `<p class="aide">Aucun chantier${this.etat.tous ? ' ni ordre' : ''} ne correspond${this.etat.tous ? '' : ' : 🔎 Tous'}.</p>` : '');
+      grille.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => prendre(liste.find((t) => String(t.id) === b.dataset.t))));
+    };
+    champ.addEventListener('input', afficher);
+    this.zone.querySelector('[data-tous]').addEventListener('click', async (e) => {
+      if (this.etat.tous) { this.etat.tous = null; e.target.classList.remove('principal'); afficher(); return; }
+      try { this.etat.tous = await appel('GET', `/chantiers?jeton=${encodeURIComponent(j.jeton)}`); } catch (x) { await alerter(x.message); return; }
+      e.target.classList.add('principal');
+      afficher();
+      champ.focus();
+    });
+    afficher();
     const lire = async () => {
-      const champ = this.zone.querySelector('[data-ordre]');
       const numero = champ.value.trim();
       if (!numero) return;
+      const visibles = filtrerChoix(tuiles(), numero);
+      const t = tuileExacte(tuiles(), numero) ?? (visibles.length === 1 ? visibles[0] : null);
+      if (t) { prendre(t); return; }
       try {
         const o = await appel('GET', `/ordre?numero=${encodeURIComponent(numero)}`);
         if (!j.chantiers.some((c) => c.id === o.cha_id)) j.chantiers.push({ id: o.cha_id, code: o.numero, libelle: o.objet ?? '' });
@@ -312,8 +352,8 @@ export class PageBorne extends PageBase {
       } catch (e) { champ.value = ''; await alerter(e.message); }
     };
     this.zone.querySelector('[data-lire]').addEventListener('click', lire);
-    this.zone.querySelector('[data-ordre]').addEventListener('keydown', (e) => { if (e.key === 'Enter') lire(); });
-    this.zone.querySelector('[data-ordre]').focus();
+    champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') lire(); });
+    champ.focus();
     this.zone.querySelector('[data-liste]').addEventListener('click', () => { this.etat.saisie = null; this.#memoriser(); this.#liste(); });
     this.zone.querySelector('[data-terminer]').addEventListener('click', () => this.#terminer());
     this.#minuterie();

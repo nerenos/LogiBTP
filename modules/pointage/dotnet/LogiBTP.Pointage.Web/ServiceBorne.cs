@@ -422,6 +422,18 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
         return await JourneeAsync(a, salarie, j.Jeton, j.Date, ct);
     }
 
+    /// <summary>
+    /// Choix du chantier, bouton « Tous » (lot 10, A30) : tous les chantiers pointables (code, libellé, ville, client) et
+    /// les ordres en cours de ces chantiers, pour le salarié identifié ; le filtre se fait dans le navigateur.
+    /// </summary>
+    public async Task<object> TousChantiersAsync(HttpContext http, string jeton, CancellationToken ct)
+    {
+        var a = await AppareilAsync(http, ct);
+        Identifie(a, jeton);
+        var chantiers = await specialisation.TousChantiersAsync(db, ct);
+        return new { chantiers, ordres = await specialisation.OrdresAsync(db, chantiers.Select(c => c.Id).ToList(), ct) };
+    }
+
     /// <summary>Ordre reconnu par son numéro (QR code ou saisie) : identifiant, chantier.</summary>
     public async Task<object> OrdreAsync(HttpContext http, string numero, CancellationToken ct)
     {

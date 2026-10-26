@@ -25,7 +25,7 @@ Heures de main-d'œuvre des salariés et des intérimaires : saisie (bureau, bor
 - Paie : `GET|PUT /profils`, `GET|PUT /variables/{salarie}/{lundi}`, `GET|PUT /zones/{chantier}`, `GET|POST /export`, `GET /exports`, `GET /exports/{id}/fichier`, `POST /valoriser`.
 - Congés : `GET|PUT /natures-absence`, `GET|POST /conges`, `PUT /conges/{id}`, `POST /conges/{id}/valider|refuser|annuler`.
 - Bornes (administration) : `GET|POST /appareils`, `PUT /appareils/{id}`, `POST /appareils/{id}/test`, `GET /pins`, `PUT /pins/{salarie}`, `GET|PUT /groupes/{groupe}`.
-- Borne (publiques) : `GET /borne`, `POST /borne/identifier`, `GET /borne/ordre`, `POST /borne/pointages`, `POST|PUT /borne/journee`.
+- Borne (publiques) : `GET /borne`, `POST /borne/identifier`, `GET /borne/ordre`, `GET /borne/chantiers?jeton=` (lot 10, A30 : tous les chantiers et ordres en cours, `SpecialisationPointage.TousChantiersAsync`), `POST /borne/pointages`, `POST|PUT /borne/journee`.
 
 ## Tests
 `npm test --workspace modules/pointage/js` ; `dotnet test modules/pointage/dotnet/LogiBTP.Pointage.Tests` (mêmes jeux).

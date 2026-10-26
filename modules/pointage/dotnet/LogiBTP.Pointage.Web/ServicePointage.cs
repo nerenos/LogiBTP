@@ -163,8 +163,8 @@ public sealed record SousTypeDto(string Code, string Libelle, bool Productif, bo
 /// <summary>Salarié (ou intérimaire) pointable, fourni par l'application.</summary>
 public sealed record SalariePointage(int Id, string Matricule, string Nom, string Prenom, int? SrvId, string? Service, bool Interimaire,
     int? PpfId = null, string? Agence = null, string? Code = null, string? MatriculePaie = null, string? Fonction = null);
-/// <summary>Chantier (ou chantier interne) pointable.</summary>
-public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne);
+/// <summary>Chantier (ou chantier interne) pointable ; ville et client : filtre du choix de la borne.</summary>
+public sealed record ChantierPointage(int Id, string Code, string Libelle, bool Clos, bool Interne, string? Ville = null, string? Client = null);
 /// <summary>Type de main-d'œuvre (nature du regroupement main-d'œuvre) et son service.</summary>
 public sealed record TypeMoPointage(int Id, string Code, string Libelle, int? SrvId);
 /// <summary>Ordre d'exécution d'un chantier sur lequel pointer (module Exécution actif).</summary>
@@ -218,6 +218,8 @@ public abstract class SpecialisationPointage
     public virtual Task<List<string>> FonctionsAsync(PointageDbContext db, CancellationToken ct) => Task.FromResult(new List<string>());
     /// <summary>Ordre désigné par son numéro (QR code de l'ordre).</summary>
     public virtual Task<OrdrePointage?> OrdreParNumeroAsync(PointageDbContext db, string numero, CancellationToken ct) => Task.FromResult<OrdrePointage?>(null);
+    /// <summary>Tous les chantiers pointables (ouverts et internes), sans limite de nombre : bouton « Tous » de la borne.</summary>
+    public virtual Task<List<ChantierPointage>> TousChantiersAsync(PointageDbContext db, CancellationToken ct) => ChantiersAsync(db, null, null, ct);
     /// <summary>Chantiers proposés pour la journée d'un salarié (tâches du planning, par exemple).</summary>
     public virtual Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) => Task.FromResult(new List<int>());
     /// <summary>Après un pointage de non-conformité à la borne (note au service concerné, par exemple).</summary>

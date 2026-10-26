@@ -144,8 +144,9 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
 
     public override Task<List<ChantierPointage>> ChantiersAsync(PointageDbContext db, string? recherche, IReadOnlyCollection<int>? ids, CancellationToken ct) =>
         db.Database.SqlQueryRaw<ChantierPointage>("""
-            SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, (c.cha_statut <> 'OUVERT' AND NOT c.cha_interne) AS clos, c.cha_interne AS interne
-            FROM chantier c
+            SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, (c.cha_statut <> 'OUVERT' AND NOT c.cha_interne) AS clos, c.cha_interne AS interne,
+                   c.cha_ville AS ville, t.per_raison_sociale AS client
+            FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
             WHERE (@ids IS NULL AND ((c.cha_statut = 'OUVERT' AND (NOT f_chantier_dotation(c.cha_id) OR f_chantier_entretien_ouvert(c.cha_id))) OR c.cha_interne)
                    AND (@r IS NULL OR c.cha_code ILIKE @r OR c.cha_libelle ILIKE @r OR c.cha_ville ILIKE @r)
                    OR c.cha_id = ANY(@ids))
@@ -154,6 +155,17 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             """,
             new NpgsqlParameter("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)ids?.ToArray() ?? DBNull.Value },
             new NpgsqlParameter("r", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
+
+    /// <summary>Bouton « Tous » de la borne (A30) : chantiers ouverts (hors dotations, sauf entretien en cours) et internes, sans la limite de la recherche.</summary>
+    public override Task<List<ChantierPointage>> TousChantiersAsync(PointageDbContext db, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<ChantierPointage>("""
+            SELECT c.cha_id AS id, c.cha_code AS code, c.cha_libelle AS libelle, FALSE AS clos, c.cha_interne AS interne,
+                   c.cha_ville AS ville, t.per_raison_sociale AS client
+            FROM chantier c LEFT JOIN personne t ON t.per_id = c.cha_tiers_id
+            WHERE (c.cha_statut = 'OUVERT' AND (NOT f_chantier_dotation(c.cha_id) OR f_chantier_entretien_ouvert(c.cha_id))) OR c.cha_interne
+            ORDER BY c.cha_interne, c.cha_code
+            LIMIT 5000
+            """).ToListAsync(ct);
 
     public override Task<List<TypeMoPointage>> TypesMoAsync(PointageDbContext db, CancellationToken ct) =>
         db.Database.SqlQueryRaw<TypeMoPointage>("""
