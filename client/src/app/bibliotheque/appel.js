@@ -10,7 +10,9 @@ import { TL } from '../../calcul/index.js';
 //     coefficients, la remise, la nature et le lien vers l'élément (lig_art_id, lig_proprietes.element) ;
 //   - ouvrage : la ligne est remplacée par l'ouvrage avec ses composantes, ses métrés et ses variables ;
 //   - poste de pied (POSTE_PIED) : une ligne de pied HT ou TTC est ajoutée dans le pied (celui de la section de la ligne
-//     pour un poste HT d'un document à sections), ou la ligne de pied du même niveau où le code est saisi la reçoit.
+//     pour un poste HT d'un document à sections), ou la ligne de pied du même niveau où le code est saisi la reçoit ;
+//   - texte (TEXTE, lot 7) : une ligne de texte reçoit son libellé (la ligne vide où le code est saisi, sinon après elle) ;
+//   - un code inconnu qui est un code-barres désigne son élément (lecteur, résolu par le serveur).
 // Les prix sont copiés dans le document (ils ne suivent plus la bibliothèque) ; « Actualiser depuis la bibliothèque »
 // les reprend pour les lignes choisies.
 
@@ -115,6 +117,15 @@ export function contenuEnsemble(e, bibDocument) {
 }
 
 /** Ligne sans contenu saisi (le code vient d'y être tapé) : elle peut être remplacée. */
+/** Contenu d'un texte de la bibliothèque : une ligne de texte avec son libellé (sans prix), liée à l'élément. */
+function contenuTexte(ed, e, bib) {
+  const ligne = {
+    ...ed.nouvelleLigne(1, TL.TEXTE, ed.saisie.document.ent_id), lig_code: codeAppel(e, bib), lig_libelle_html: e.libelle_html,
+    lig_proprietes: { element: lien(e) },
+  };
+  return { racines: [1], lignes: [ligne], metres: [], variables: [] };
+}
+
 const ligneVide = (l) => !l.lig_libelle_html && (l.lig_pa === null || l.lig_pa === undefined) && !l.lig_art_id;
 
 export class AppelBibliotheque {
@@ -170,7 +181,9 @@ export class AppelBibliotheque {
       this.deployerPoste(ligId, e, bib, { surLigne });
       return;
     }
-    if (e.type === 'ENSEMBLE') {
+    if (e.type === 'TEXTE') {
+      ed.insererContenu(contenuTexte(ed, e, bib), ligId, `Texte ${e.code}`, { remplacer: Boolean(l) && !aEnfants && ligneVide(l) });
+    } else if (e.type === 'ENSEMBLE') {
       // Ensemble : sa tranche et ses lignes, après la ligne (ou à sa place si elle est vide).
       const contenu = contenuEnsemble(e, bib);
       if (!contenu) { this.message(`${e.code} : ensemble sans tranche racine`, 'avertissement'); return; }
@@ -239,6 +252,7 @@ export class AppelBibliotheque {
     const ed = this.editeur();
     if (e.type === 'OUVRAGE') return contenuOuvrage(e, bib);
     if (e.type === 'ENSEMBLE') return contenuEnsemble(e, bib);
+    if (e.type === 'TEXTE') return contenuTexte(ed, e, bib);
     const ligne = { ...ed.nouvelleLigne(1, TL.ELEMENT, ed.saisie.document.ent_id), ...valeursArticle(e, bib), lig_qte: 1 };
     return { racines: [1], lignes: [ligne], metres: [], variables: [] };
   }
@@ -308,18 +322,19 @@ export class AppelBibliotheque {
     this.message(`${elements.size} ligne(s) actualisée(s) depuis la bibliothèque`, 'succes');
   }
 
-  /** Dialogue de recherche (articles et ouvrages, toutes bibliothèques) ; résout avec l'élément choisi ou null. */
-  choisir(texte = '') {
+  /** Dialogue de recherche (tous types, toutes bibliothèques ; `type` présélectionné) ; résout avec l'élément choisi ou null. */
+  choisir(texte = '', { type = '' } = {}) {
     return new Promise((resoudre) => {
       const fond = document.createElement('dialog');
       fond.className = 'fiche-dialogue-fond dialogue-plein';
       fond.innerHTML = `<section class="fiche-dialogue element-recherche" role="dialog" aria-label="Bibliothèque">
         <header><h2>📚 Bibliothèque</h2><button type="button" data-fermer title="Fermer (Échap)">✕</button></header>
         <div class="element-recherche-barre"><input type="search" placeholder="Code ou libellé…" value="${echapper(texte)}">
-          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option><option value="POSTE_PIED">Postes de pied</option></select></div>
+          <select data-type><option value="">Tous les éléments</option><option value="ARTICLE">Articles</option><option value="OUVRAGE">Ouvrages</option><option value="ENSEMBLE">Ensembles</option><option value="POSTE_PIED">Postes de pied</option><option value="TEXTE">Textes</option></select></div>
         <div class="element-resultats"></div>
         <p class="aide">Entrée ou double-clic : insérer · ↑↓ : choisir · Échap : fermer</p></section>`;
       ouvrirModale(fond);
+      fond.querySelector('[data-type]').value = type;
       const entree = fond.querySelector('input');
       const zone = fond.querySelector('.element-resultats');
       let resultats = [];
@@ -330,7 +345,7 @@ export class AppelBibliotheque {
         resultats = await this.fournisseur.rechercher({ recherche: entree.value, type: fond.querySelector('[data-type]').value || null });
         actif = 0;
         zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
-          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩', POSTE_PIED: '🧾' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
+          ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩', POSTE_PIED: '🧾', TEXTE: '📝' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>
             <td>${echapper(e.unite_stock)}</td><td class="nombre">${prix(e.pa)}</td><td class="nombre">${prix(e.pv_net)}</td></tr>`).join('')}</tbody></table>`
           : '<p class="aide">Aucun élément.</p>';
         surligner();

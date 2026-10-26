@@ -67,12 +67,13 @@ export async function individusStructure(annuaire) {
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null, choisirTexte = null } = {}) {
     super(editeur);
     // Module Stock actif : { lieux() } (dépôts et chantiers qui tiennent un stock) ; bloc Stock de l'entête des pièces qui mouvementent.
     this.stock = stock;
     // Module Exécution (ordres, famille E) : { app, individus() } posé par la page ; panneau de l'entête, répartition du détail.
     this.execution = execution;
+    this.choisirTexteBibliotheque = choisirTexte;
     this.bibliotheques = bibliotheques;
     // Structure des affaires : référentiels (projets, affaires, chantiers, marchés) et rattachement (page : document
     // modifiable → saisie ; validé → classement direct par l'API).
@@ -444,6 +445,11 @@ export class PanneauxBtp extends PanneauxDocument {
       }, 'Ventilation de la facture reçue');
     });
   }
+
+  /** Textes de l'édition : éléments TEXTE de la bibliothèque (lot 7, A18d). */
+  peutChoisirTexte() { return Boolean(this.choisirTexteBibliotheque); }
+
+  async choisirTexte() { return (await this.choisirTexteBibliotheque?.())?.libelle_html ?? null; }
 
   /** Ordre du module Exécution (famille E) avec le module actif. */
   estOrdre() { return Boolean(this.execution) && this.editeur.definition.type?.tyd_famille === 'E'; }

@@ -559,6 +559,9 @@ export const api = {
     fil: (filtre = {}) => appel('GET', `/crm/fil?${new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== undefined && v !== null && v !== ''))}`),
   },
   tiersReglements: () => appel('GET', '/reglements/tiers'),
+  // Utilisations d'un élément de bibliothèque (lot 7) : composés, lignes d'achat.
+  composesElement: (id) => appel('GET', `/bibliotheque/elements/${id}/composes`),
+  achatsElement: (id, { du = null, au = null, encours = false } = {}) => appel('GET', `/bibliotheque/elements/${id}/achats?${new URLSearchParams({ ...(du ? { du } : {}), ...(au ? { au } : {}), encours })}`),
   // Échéances des pièces validées d'un chantier ou d'un marché, tous tiers (lot 6 : A27).
   echeancesStructure: (type, id, ouvertes = false) => appel('GET', `/structure/${type}/${id}/echeances?ouvertes=${ouvertes}`),
   echeancesReglement: ({ tiers, sens, piece, ouvertes } = {}) => appel('GET', `/reglements/echeances?${new URLSearchParams(Object.entries({ tiers, sens, piece, ouvertes }).filter(([, v]) => v !== undefined && v !== null)).toString()}`),

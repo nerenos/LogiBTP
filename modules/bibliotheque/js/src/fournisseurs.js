@@ -17,6 +17,7 @@ import { texteBrut } from '@logibtp/socle';
 //   element(id) / appel(code, bibCode)                  élément complet (unités, données techniques, prix, composition) ;
 //                                                        appel : « CODE » dans bibCode (défaut : bibliothèque par défaut), « BIB:CODE » ailleurs
 //   rechercher({ recherche, bib, type })                  [{ id, bib_code, code, type, libelle, libelle_html, unite_stock, pa, pr, pv, pv_net, coef_fg, coef_benef }]
+//                                                         (chaque mot dans le code, le libellé, les mots-clés ou le code-barres)
 //   tarifsTiers(tiersId)                                 tarifs d'un fournisseur de l'annuaire, avec l'élément : [{ …tarif, ele_id, bib_code, code, element }]
 
 export class ErreurBibliotheque extends Error {
@@ -350,6 +351,7 @@ export class FournisseurBibliothequeMemoire {
         niveau: e.pied_niveau ?? null, mode: e.pied_mode ?? null, base: e.pied_base ?? null, sens: e.pied_sens ?? null, valeur: e.pied_valeur ?? null,
         retenue: e.pied_retenue === true || e.pied_retenue === 'true', compte: e.cpt_code ?? null, tva: e.tva_code ?? null,
       } : null,
+      code_barre: e.code_barre ?? null, delai_livraison: e.delai_livraison ?? null,
     });
   }
 
@@ -361,7 +363,9 @@ export class FournisseurBibliothequeMemoire {
     const i = s.indexOf(':');
     const [bib, c] = i > 0 ? [s.slice(0, i).toUpperCase(), s.slice(i + 1).trim()] : [defaut, s];
     const b = this.bibs.find((x) => x.code === bib);
-    const e = b && this.elements.find((x) => x.bib_id === b.id && x.code === c && x.actif !== false);
+    // Code d'élément, sinon code-barres (lecteur), dans la bibliothèque du document d'abord (comme ServiceBibliotheque.Appel).
+    const e = (b && this.elements.find((x) => x.bib_id === b.id && x.code === c && x.actif !== false))
+      ?? this.elements.filter((x) => x.code_barre && x.code_barre === s && x.actif !== false).sort((x, y) => Number(y.bib_id === b?.id) - Number(x.bib_id === b?.id))[0];
     if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${c} introuvable dans la bibliothèque ${bib ?? '?'}`);
     return this.#detail(e);
   }
@@ -377,7 +381,7 @@ export class FournisseurBibliothequeMemoire {
     const mots = String(recherche).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/\s+/).filter(Boolean);
     return structuredClone(this.elements
       .filter((e) => e.actif !== false && (!bib || e.bib_id === Number(bib)) && (!type || e.type === type))
-      .filter((e) => { const t = `${e.code} ${e.libelle ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{M}/gu, ''); return mots.every((m) => t.includes(m)); })
+      .filter((e) => { const t = `${e.code} ${e.libelle ?? ''} ${e.mots_cles ?? ''} ${e.code_barre ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{M}/gu, ''); return mots.every((m) => t.includes(m)); })
       .sort((a, b) => a.code.localeCompare(b.code)).slice(0, 50)
       .map((e) => ({
         id: e.id, bib_code: this.bibs.find((b) => b.id === e.bib_id)?.code ?? '', code: e.code, type: e.type, libelle: e.libelle, libelle_html: e.libelle_html,

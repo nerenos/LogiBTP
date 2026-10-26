@@ -220,6 +220,7 @@ api.MapCompteursMateriel();
 api.MapEntretiensMateriel();
 api.MapPlansEntretien();
 api.MapReglementsStructure();
+api.MapUtilisationsElement();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();

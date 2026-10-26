@@ -289,3 +289,21 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
   et reste, le tiers ouvre sa page de pointage) ; chantier : listes des marchés, commandes et factures de
   sous-traitance (module Sous-traitance actif) ; marché de vente : commandes et factures de chaque marché de
   sous-traitance lié (bloc « Sous-traitance : engagé et réalisé »).
+
+## 8. Lot 7 : bibliothèque (réalisé, 26/10/2026)
+
+- **A18a Mots-clés** (module `064`) : `ele_mots_cles` (mots séparés par des virgules), cherchés par l'appel F3 et par la
+  recherche des listes de la bibliothèque (colonne masquée des vues, ajoutée aux vues déjà modifiées par db/237).
+- **A18c Code-barres** : `ele_code_barre`, unique par bibliothèque, cherché comme les mots-clés ; un code saisi dans la
+  colonne Code d'un document qui ne désigne aucun élément désigne celui de ce code-barres (lecteur).
+- **A18d Type Texte** : élément `TEXTE` (libellé seul, sans prix ni unités) inséré comme ligne de texte (code, F3,
+  glisser) ou ajouté aux textes de l'édition (bouton « 📚 Texte » de l'introduction et de la conclusion, point
+  d'accroche `peutChoisirTexte` / `choisirTexte` du module Document) ; vue « Textes » (1400) et menu Bibliothèque.
+- **A18e Délai de livraison global** : `ele_delai_livraison` saisi dans la fiche et affiché dans la liste. Décision
+  reportée au lot 8 : priorité entre le délai du tarif fournisseur (A11), celui de l'article dans le dépôt (Stock) et ce
+  délai global ; l'approvisionnement du Stock ne le lit pas encore.
+- **A18f Description technique** : `ele_description_html` (HTML nettoyé par la fiche), variable des éditions
+  `lignes[].description_html` (élément appelé par la ligne).
+- **A18g / A18h** : onglet Utilisations de la fiche élément : ouvrages et ensembles qui le composent
+  (`v_element_utilisations`, colonne « Utilisé dans » de la liste), lignes des pièces d'achat de l'article (période 1
+  mois, 6 mois, 1 an ou tout, en cours seulement) avec lien vers chaque pièce.

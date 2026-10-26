@@ -427,7 +427,8 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     private static ElementDetailDto VersDetail(Element e, string bibCode) => new(e.EleId, e.EleBibId, bibCode, e.EleCode, e.EleType, e.EleLibelleHtml, e.EleLibelle,
         e.EleFamId, e.EleNatId, e.EleUntStock, e.EleUntAchat, e.EleUntVente, e.EleUnites.RootElement.Clone(), Donnees(e.EleProprietes.RootElement, Techniques(e)),
         e.ElePa, e.EleCoefFg, e.ElePr, e.EleCoefBenef, e.ElePv, e.ElePvFixe, e.EleCoefRemise, e.ElePvNet, e.EleComposition?.RootElement.Clone(), e.EleActif,
-        e.EleType == "POSTE_PIED" ? new PosteElementDto(e.ElePiedNiveau, e.ElePiedMode, e.ElePiedBase, e.ElePiedSens, e.ElePiedValeur, e.ElePiedRetenue, e.EleCptCode, e.EleTvaCode) : null);
+        e.EleType == "POSTE_PIED" ? new PosteElementDto(e.ElePiedNiveau, e.ElePiedMode, e.ElePiedBase, e.ElePiedSens, e.ElePiedValeur, e.ElePiedRetenue, e.EleCptCode, e.EleTvaCode) : null,
+        e.EleCodeBarre, e.EleDelaiLivraison);
 
     public virtual async Task<ElementDetailDto> Element(long id, CancellationToken ct)
     {
@@ -438,7 +439,8 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     /// <summary>
     /// Appel par code : « CODE » dans la bibliothèque du document (ou la bibliothèque par défaut), « BIB:CODE » dans une
-    /// autre bibliothèque. Élément actif uniquement.
+    /// autre bibliothèque ; sinon le code-barres saisi (lecteur), dans la bibliothèque du document d'abord. Élément actif
+    /// uniquement.
     /// </summary>
     public virtual async Task<ElementDetailDto> Appel(string saisie, string? bibliotheque, CancellationToken ct)
     {
@@ -447,8 +449,13 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         var (bib, code) = CalculElement.AnalyserCodeAppel(Obligatoire(saisie, "Code"), defaut);
         var x = await (from e in db.Elements.AsNoTracking() join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId
                        where b.BibCode == bib && e.EleCode == code && e.EleActif
-                       select new { e, b.BibCode }).FirstOrDefaultAsync(ct)
-            ?? throw ExceptionMetier.Introuvable($"Élément {code} dans la bibliothèque {bib}");
+                       select new { e, b.BibCode }).FirstOrDefaultAsync(ct);
+        var codeBarre = saisie.Trim();
+        x ??= await (from e in db.Elements.AsNoTracking() join b in db.Bibliotheques.AsNoTracking() on e.EleBibId equals b.BibId
+                     where e.EleCodeBarre == codeBarre && e.EleActif
+                     orderby b.BibCode == bib descending, b.BibCode
+                     select new { e, b.BibCode }).FirstOrDefaultAsync(ct);
+        if (x is null) throw ExceptionMetier.Introuvable($"Élément {code} dans la bibliothèque {bib}");
         return VersDetail(x.e, x.BibCode);
     }
 
@@ -458,7 +465,10 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         (await db.Historique.AsNoTracking().Where(h => h.HpeEleId == eleId).OrderByDescending(h => h.HpeDate).ThenByDescending(h => h.HpeId).Take(500).ToListAsync(ct))
         .Select(h => new HistoriqueDto(h.HpeId, h.HpeDate, h.HpeAuteur, h.HpeCommentaire, h.HpeAvant?.RootElement.Clone(), h.HpeApres.RootElement.Clone())).ToList();
 
-    /// <summary>Recherche d'éléments (code ou libellé, sans accent ni casse) : composition des ouvrages, appel dans les documents.</summary>
+    /// <summary>
+    /// Recherche d'éléments (chaque mot dans le code, le libellé, les mots-clés ou le code-barres, sans accent ni casse) :
+    /// composition des ouvrages, appel dans les documents.
+    /// </summary>
     public virtual async Task<List<ElementRechercheDto>> Rechercher(string? recherche, int? bibId, string? type, CancellationToken ct)
     {
         var q = from e in db.Elements.AsNoTracking()
@@ -470,7 +480,8 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         foreach (var mot in (recherche ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
             var motif = "%" + mot.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
-            q = q.Where(x => EF.Functions.ILike(EF.Functions.Unaccent(x.e.EleCode + " " + (x.e.EleLibelle ?? "")), EF.Functions.Unaccent(motif)));
+            q = q.Where(x => EF.Functions.ILike(EF.Functions.Unaccent(x.e.EleCode + " " + (x.e.EleLibelle ?? "") + " " + (x.e.EleMotsCles ?? "") + " " + (x.e.EleCodeBarre ?? "")),
+                EF.Functions.Unaccent(motif)));
         }
         return (await q.OrderBy(x => x.e.EleCode).Take(50).ToListAsync(ct))
             .Select(x => new ElementRechercheDto(x.e.EleId, x.BibCode, x.e.EleCode, x.e.EleType, x.e.EleLibelle, x.e.EleLibelleHtml, x.e.EleUntStock,

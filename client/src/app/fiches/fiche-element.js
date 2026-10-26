@@ -10,6 +10,7 @@ import { calculerOuvrage, documentComposition } from '../bibliotheque/bibliotheq
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
 import { FicheLogiBTP } from './fiches.js';
 import { sectionVariablesTranche, lierVariablesTranche } from '../variables-tranche.js';
+import { api } from '../api.js';
 
 // Fiche d'un élément de bibliothèque (module Fiche + module Bibliothèque) : référentiels en listes déroulantes,
 // onglets Prix (scénarios, coefficients, remise, historique), Unités (correspondances par formule), Tarifs
@@ -19,6 +20,7 @@ const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.
 const prix = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
 /** Valeurs par défaut d'un poste de pied : unité (obligatoire en base), poste HT en pourcentage déduit du cumul. */
 const DEFAUTS_POSTE = { unite_stock: 'u', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_sens: 'DEDUCTION', pied_retenue: false, gestion: 'NON_GERE' };
+const DEFAUTS_TEXTE = { unite_stock: 'u', gestion: 'NON_GERE' };
 const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_precision_qte: 2, lig_precision_pv: 2, lig_type_prix: 'V', lig_qte_source: 'S', lig_coef_perte: 1, ...o });
 
 export class FicheElement extends FicheLogiBTP {
@@ -50,15 +52,19 @@ export class FicheElement extends FicheLogiBTP {
   valeursCreation() {
     const { bibliotheques, parametres } = this.referentiels;
     const demande = new URLSearchParams(globalThis.location?.search ?? '').get('type');
-    const type = ['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED'].includes(demande) ? demande : 'ARTICLE';
+    const type = ['OUVRAGE', 'ENSEMBLE', 'POSTE_PIED', 'TEXTE'].includes(demande) ? demande : 'ARTICLE';
     return {
       ...super.valeursCreation(), type, bib_id: (bibliotheques.find((x) => x.defaut) ?? bibliotheques[0])?.id ?? null,
       // Coefficients non imposés : ceux de la nature ou globaux (calculés à l'enregistrement).
       scenario_pa: parametres.scenario_defaut, coef_fg: String(parametres.coef_fg_defaut), coef_benef: String(parametres.coef_benef_defaut), unites: [],
       coef_fg_impose: false, coef_benef_impose: false,
       ...(type === 'POSTE_PIED' ? DEFAUTS_POSTE : {}),
+      ...(type === 'TEXTE' ? DEFAUTS_TEXTE : {}),
     };
   }
+
+  /** Texte (TEXTE) : libellé seul, inséré comme ligne de texte ou dans les textes de l'édition (ni prix ni unités). */
+  get texte() { return this.valeur('type') === 'TEXTE'; }
 
   /** Poste de pied (POSTE_PIED) : ni prix, ni unités, ni composition ; ses valeurs vont dans le pied des documents. */
   get poste() { return this.valeur('type') === 'POSTE_PIED'; }
@@ -66,7 +72,7 @@ export class FicheElement extends FicheLogiBTP {
   sousTitre(v) {
     const bib = this.referentiels.bibliotheques.find((b) => b.id === Number(v.bib_id));
     const fam = this.referentiels.familles.find((f) => f.id === Number(v.fam_id));
-    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble', POSTE_PIED: 'Poste de pied' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
+    return [bib && `${bib.code} – ${bib.libelle}`, fam?.chemin, { OUVRAGE: 'Ouvrage', ENSEMBLE: 'Ensemble', POSTE_PIED: 'Poste de pied', TEXTE: 'Texte' }[v.type] ?? 'Article'].filter(Boolean).join(' · ');
   }
 
   /** Nature isolant : le groupe Isolation (R, λ, U) n'apparaît que pour elle. */
@@ -78,14 +84,17 @@ export class FicheElement extends FicheLogiBTP {
     const isolant = this.estIsolant();
     const poste = this.poste;
     // Poste de pied : son groupe à la place des données techniques, de l'isolation et de la gestion.
-    const garder = (g) => (poste ? !['techniques', 'isolation'].includes(g.code) : g.code !== 'poste' && (g.code !== 'isolation' || isolant));
+    // Texte : identification, classement, libellé et mots-clés seulement.
+    const texte = this.texte;
+    const garder = (g) => (texte ? !['techniques', 'isolation', 'poste', 'description'].includes(g.code)
+      : poste ? !['techniques', 'isolation'].includes(g.code) : g.code !== 'poste' && (g.code !== 'isolation' || isolant));
     return super.sections().map((s) => (s.groupes ? { ...s, groupes: s.groupes.filter(garder) } : s))
       .map((s) => (s.groupes ? { ...s, champs: s.groupes.flatMap((g) => g.champs) } : s));
   }
 
   /** Encart : image de l'élément et prix par unité de stock. */
   rendreInformations(v) {
-    if (this.id === null) return '';
+    if (this.id === null || v.type === 'TEXTE') return '';
     if (v.type === 'POSTE_PIED') {
       const mode = { P: ' %', C: ' (coefficient)', M: ' €' }[v.pied_mode] ?? '';
       return `<span class="info"><small>Poste ${echapper(v.pied_niveau ?? '')}</small><b>${v.pied_sens === 'AJOUT' ? '+' : '−'} ${echapper(String(v.pied_valeur ?? '—').replace('.', ','))}${mode}</b></span>`;
@@ -101,8 +110,9 @@ export class FicheElement extends FicheLogiBTP {
     if (champ.code === 'type') {
       const el = super.rendreChamp(champ, valeur);
       el.addEventListener('change', () => {
-        if (this.poste) {
-          for (const [c, v] of Object.entries(DEFAUTS_POSTE)) if ([null, undefined, ''].includes(this.valeur(c))) this.definirValeur(c, v);
+        const defauts = this.poste ? DEFAUTS_POSTE : this.texte ? DEFAUTS_TEXTE : null;
+        if (defauts) {
+          for (const [c, v] of Object.entries(defauts)) if ([null, undefined, ''].includes(this.valeur(c))) this.definirValeur(c, v);
         }
         this.rendre();
       });
@@ -165,7 +175,7 @@ export class FicheElement extends FicheLogiBTP {
   ongletsSpecifiques() {
     // Ouvrage et ensemble : onglet Composition (éditeur de devis) ; article : tarifs fournisseurs.
     const ouvrage = ['OUVRAGE', 'ENSEMBLE'].includes(this.valeur('type'));
-    if (this.poste) return [];
+    if (this.poste || this.texte) return this.ongletUtilisations();
     return [
       { code: 'prix', titre: 'Prix', champs: ['scenario_pa', 'pa_fixe', 'dernier_pa', 'pmp', 'coef_fg', 'coef_fg_impose', 'coef_benef', 'coef_benef_impose', 'pv', 'pv_fixe', 'coef_remise', 'commentaire_prix'],
         rendre: (corps, { modifiable }) => new OngletPrix(corps, this.#contexte(modifiable)) },
@@ -180,7 +190,48 @@ export class FicheElement extends FicheLogiBTP {
         : []),
       // Image et notices : sous les groupes de l'onglet Article.
       { code: 'image', dans: 'article', titre: 'Image et notices', champs: ['image_ged'], rendre: (corps, { modifiable }) => this.#imageNotices(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) },
+      ...this.ongletUtilisations(),
     ];
+  }
+
+  // ---------------------------------------------------------------- utilisations (lot 7 : A18g, A18h)
+
+  /** Onglet Utilisations (élément enregistré) : ouvrages et ensembles qui le composent, lignes des pièces d'achat. */
+  ongletUtilisations() {
+    if (this.id === null) return [];
+    return [{ code: 'utilisations', titre: 'Utilisations', rendre: (corps) => this.#utilisations(corps).catch((e) => this.message(e.message, 'erreur')) }];
+  }
+
+  async #utilisations(corps) {
+    const id = Number(this.id);
+    const composes = await api.composesElement(id);
+    const icone = { OUVRAGE: '🏗️', ENSEMBLE: '🧩' };
+    const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
+    const filtre = { periode: '365', encours: false };
+    corps.innerHTML = `<div class="element-utilisations"><h3>Ouvrages et ensembles qui l'utilisent</h3>
+      ${composes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Quantité</th><th>U.</th></tr></thead><tbody>
+        ${composes.map((c) => `<tr><td>${icone[c.type] ?? ''}</td><td><a href="/fiche/element/${c.id}">${echapper(c.bib_code)}:${echapper(c.code)}</a></td>
+          <td>${echapper(c.libelle ?? '')}</td><td class="nombre">${c.quantite !== null && c.quantite !== undefined ? formatNombre(c.quantite, 4) : ''}</td><td>${echapper(c.unite ?? '')}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Utilisé dans aucun ouvrage ni ensemble.</p>'}
+      ${this.valeur('type') === 'ARTICLE' ? `<div class="titre-actions"><h3>Achats</h3><span class="titre-actions-boutons"><span data-periode></span>
+        <label class="fiche-option"><input type="checkbox" data-encours> En cours seulement</label></span></div><div data-achats></div>` : ''}</div>`;
+    const zone = corps.querySelector('[data-achats]');
+    if (!zone) return;
+    const charger = async () => {
+      const du = filtre.periode === 'tout' ? null : new Date(Date.now() - Number(filtre.periode) * 86400000).toISOString().slice(0, 10);
+      const l = await api.achatsElement(id, { du, encours: filtre.encours });
+      zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Pièce</th><th>Type</th><th>Fournisseur</th><th>Statut</th>
+          <th>Qté</th><th>U.</th><th>PU HT</th><th>Montant HT</th><th></th></tr></thead><tbody>
+        ${l.map((a) => `<tr><td>${jour(a.date)}</td><td><a href="/document/${a.ent_id}">${echapper(a.numero ?? 'Brouillon')}</a></td><td>${echapper(a.type)}</td>
+          <td>${echapper(a.tiers ?? '')}</td><td>${echapper(a.statut)}</td><td class="nombre">${formatNombre(a.qte ?? 0, 2)}</td><td>${echapper(a.unite ?? '')}</td>
+          <td class="nombre">${prix(a.pu)}</td><td class="nombre">${formatNombre(a.montant ?? 0, 2)}</td><td>${a.en_cours ? '<span class="pastille-compte attention">En cours</span>' : a.solde ? '<span class="pastille-compte neutre">Soldée</span>' : ''}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="aide">Aucune ligne d\'achat sur la période.</p>';
+    };
+    const periode = creerCombo({ options: [['30', '1 mois'], ['182', '6 mois'], ['365', '1 an'], ['tout', 'Tout']].map(([valeur, libelle]) => ({ valeur, libelle })), valeur: filtre.periode, vide: false });
+    periode.addEventListener('change', () => { filtre.periode = periode.valeurCombo; charger().catch((e) => this.message(e.message, 'erreur')); });
+    corps.querySelector('[data-periode]').append(periode);
+    corps.querySelector('[data-encours]').addEventListener('change', (e) => { filtre.encours = e.target.checked; charger().catch((x) => this.message(x.message, 'erreur')); });
+    await charger();
   }
 
   // ---------------------------------------------------------------- composition d'un ouvrage

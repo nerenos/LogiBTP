@@ -659,6 +659,7 @@ ni les tranches de frais annexes ; pieds de section en lignes `PIED`.
 | `avt_pct`, `avt_pct_precedent` | Avancement cumulé, précédent (%) | nombre |
 | `avt_qte_cumul`, `avt_qte_marche` | Quantité cumulée, du marché | nombre |
 | `avt_montant_cumul`, `avt_montant_precedent`, `avt_montant_marche` | Montants HT cumulé, précédent, du marché | montant |
+| `description_html` | Description technique de l'élément de bibliothèque appelé par la ligne (`html: true`) | html |
 
 #### Pied, TVA, totaux, échéances, textes
 

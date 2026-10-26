@@ -141,6 +141,8 @@ export const SOURCES_LISTE = {
       ['modifie_le', 'timestamp with time zone'], ['fam_id', 'integer'], ['nat_id', 'integer'],
       // Module Stock (db/217) : marques de l'article.
       ['marques', 'ARRAY'], ['usage', 'text'],
+      // db/237 (lot 7 des demandes du 25/10/2026).
+      ['mots_cles', 'text'], ['code_barre', 'text'], ['delai_livraison', 'integer'], ['nb_utilisations', 'bigint'],
     ],
   },
   // Annuaire : relations (casquettes) et rôles sont des colonnes multivaluées (tableaux de codes) ; segments et filtres « parmi ».
@@ -535,6 +537,7 @@ VUES_LISTE.push({
 const OPTIONS_TYPE_ELEMENT = [
   { valeur: 'ARTICLE', libelle: 'Article', picto: '🧱' }, { valeur: 'OUVRAGE', libelle: 'Ouvrage', picto: '🏗️' },
   { valeur: 'ENSEMBLE', libelle: 'Ensemble', picto: '🧩' }, { valeur: 'POSTE_PIED', libelle: 'Poste de pied', picto: '🧾' },
+  { valeur: 'TEXTE', libelle: 'Texte', picto: '📝' },
 ];
 const OPTIONS_GESTION = [
   { valeur: 'STOCK', libelle: 'Stock', picto: '📦' }, { valeur: 'ACHAT', libelle: 'Achat', picto: '🛒' },
@@ -556,6 +559,11 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
       col('gestion', 'Gestion', { format: 'picto', ...fixe(64), options: OPTIONS_GESTION }),
       col('unite_stock', 'U.', { ...fixe(44), alignement: 'centre' }),
       col('marques', 'Marques', { ...prop(1, 90), masquee: true }),
+      // Lot 7 : mots-clés et code-barres cherchés par la recherche de la liste (colonnes masquées).
+      col('mots_cles', 'Mots-clés', { ...prop(1, 120), masquee: true }),
+      col('code_barre', 'Code-barres', { ...fixe(120), masquee: true }),
+      col('delai_livraison', 'Délai (j)', { ...nombre(0), ...fixe(60), recherche: false, masquee: true }),
+      col('nb_utilisations', 'Utilisé dans', { ...nombre(0), ...fixe(70), recherche: false, masquee: true }),
       col('pa', 'PA', { ...nombre(4), ...fixe(84), recherche: false }),
       col('pr', 'PR', { ...nombre(4), ...fixe(84), recherche: false }),
       col('pv_net', 'PV net', { ...nombre(2), ...fixe(84), recherche: false, style: { gras: true } }),
@@ -572,7 +580,8 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
   },
 });
 VUES_LISTE.push(vueElements(12, 'Articles', [{ colonne: 'type', op: '=', valeur: 'ARTICLE' }]), vueElements(13, 'Ouvrages', [{ colonne: 'type', op: '=', valeur: 'OUVRAGE' }]),
-  vueElements(14, 'Tous les éléments', []), vueElements(15, 'Ensembles', [{ colonne: 'type', op: '=', valeur: 'ENSEMBLE' }]));
+  vueElements(14, 'Tous les éléments', []), vueElements(15, 'Ensembles', [{ colonne: 'type', op: '=', valeur: 'ENSEMBLE' }]),
+  vueElements(1400, 'Textes', [{ colonne: 'type', op: '=', valeur: 'TEXTE' }]));
 
 /** Sources au format du fournisseur (colonnes { code, type }). */
 export function sourcesFournisseur(donnees = {}) {

@@ -420,6 +420,11 @@ public static class SourceDocumentEdition
 
         var document = Objet(d);
         var lignes = r.Lignes.ToDictionary(l => l.LigId);
+        // Description technique des éléments de bibliothèque appelés par les lignes (lot 7, A18f).
+        var elements = r.Lignes.Where(l => l.LigArtId is not null).Select(l => l.LigArtId!.Value).Distinct().ToArray();
+        var descriptions = elements.Length == 0 ? new Dictionary<long, string>()
+            : (await db.Database.SqlQuery<DescriptionSql>($"SELECT ele_id AS id, ele_description_html AS html FROM element WHERE ele_id = ANY({elements}) AND ele_description_html IS NOT NULL")
+                .ToListAsync(ct)).ToDictionary(x => x.Id, x => x.Html);
         var resultat = new JsonObject
         {
             ["societe"] = societe,
@@ -444,7 +449,7 @@ public static class SourceDocumentEdition
             ["redacteur"] = c["redacteur"]?.DeepClone(),
             ["rattachement"] = new JsonObject { ["projet"] = c["projet"]?.DeepClone(), ["affaire"] = c["affaire"]?.DeepClone(), ["chantier"] = c["chantier"]?.DeepClone(), ["marche"] = c["marche"]?.DeepClone() },
             ["intervenants"] = d.EntIntervenants is null ? new JsonArray() : JsonNode.Parse(d.EntIntervenants.RootElement.GetRawText()),
-            ["lignes"] = LignesImprimees(r, lignes),
+            ["lignes"] = LignesImprimees(r, lignes, descriptions),
             ["pied"] = Pied(r.Pied, r, lignes),
             ["tva"] = new JsonArray(r.Tva.Select(t => (JsonNode?)new JsonObject
             {
@@ -575,7 +580,10 @@ public static class SourceDocumentEdition
     /// Lignes imprimées dans l'ordre d'affichage (arbre parcouru en profondeur) avec niveau, type, numéro et indicateurs
     /// (composante, option, pour mémoire, comptée dans le total) ; pied d'une section (lot 4) inséré à la fin de la section.
     /// </summary>
-    private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId)
+    private sealed record DescriptionSql(long Id, string Html);
+
+    private static JsonArray LignesImprimees(ResultatDocument<DocumentBtp, DocumentLigneBtp> r, Dictionary<long, DocumentLigneBtp> parId,
+        IReadOnlyDictionary<long, string>? descriptions = null)
     {
         var enfants = r.Lignes.GroupBy(l => l.LigParentId ?? 0).ToDictionary(g => g.Key, g => g.OrderBy(l => l.LigOrdre).ToList());
         var piedsSections = r.PiedsSections.ToDictionary(p => p.LigId, p => p.Pied);
@@ -603,6 +611,7 @@ public static class SourceDocumentEdition
                         ["avt_pct"] = l.LigAvtPct, ["avt_qte_cumul"] = l.LigAvtQteCumul, ["avt_montant_cumul"] = l.LigAvtMontantCumul,
                         ["avt_montant_precedent"] = l.LigAvtMontantPrecedent, ["avt_pct_precedent"] = l.LigAvtPctPrecedent,
                         ["avt_qte_marche"] = l.LigAvtQteMarche, ["avt_montant_marche"] = l.LigAvtMontantMarche,
+                        ["description_html"] = l.LigArtId is long art && descriptions?.GetValueOrDefault(art) is { } desc ? desc : null,
                     };
                     res.Add(o);
                 }
@@ -751,7 +760,8 @@ public static class SourceDocumentEdition
             ("lignes[].avt_pct", "Avancement cumulé (%)", "nombre"), ("lignes[].avt_qte_cumul", "Quantité cumulée", "nombre"),
             ("lignes[].avt_montant_cumul", "Montant HT cumulé", "montant"), ("lignes[].avt_montant_precedent", "Montant HT précédent", "montant"),
             ("lignes[].avt_pct_precedent", "Avancement précédent (%)", "nombre"), ("lignes[].avt_qte_marche", "Quantité du marché", "nombre"),
-            ("lignes[].avt_montant_marche", "Montant HT du marché", "montant"));
+            ("lignes[].avt_montant_marche", "Montant HT du marché", "montant"),
+            ("lignes[].description_html", "Description technique de l'élément de bibliothèque appelé (HTML : html: true)", "html"));
         G("Pied et totaux",
             ("pied", "Pied imprimable, dans l'ordre", "collection"), ("pied[].genre", "total, sous_total, poste, tva", "texte"),
             ("pied[].cle", "TOTAL_HT, HT_NET, TOTAL_TTC, NET, TVA…", "texte"), ("pied[].libelle", "Libellé", "texte"), ("pied[].mode", "Poste : P %, M montant, C coefficient", "texte"),

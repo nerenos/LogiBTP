@@ -9,7 +9,7 @@
 - Utilisé par le cœur : `ElementsBibliotheque.cs` (prix des composés par `MoteurDevisBtp`, `AvantEcriture` de la fiche `element`), `SpecialisationBibliothequeBtp`, `Program.cs` ; client `app/bibliotheque/` (`bibliotheque.js`, `appel.js`, `envoi.js`, `donnees.js`), `fiches/fiche-element.js` (`FicheElement`), `pages/parametres-bibliotheque.js`, `pages/liste.js` (glisser vers un document). Image et notices : GED (`ele_image_ged`, `type_element: 'element'`).
 
 ## Structure
-- `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période ; `063` : postes de pied.
+- `db/060_bibliotheque_schema.sql` : tables, triggers d'historique, paramètres, `v_famille_element` ; `061` : données techniques ; `062` : coefficients par période ; `063` : postes de pied ; `064` (rejouable) : `ele_mots_cles`, `ele_code_barre` (unique par bibliothèque), `ele_description_html`, `ele_delai_livraison`, type `TEXTE` (libellé seul, sans prix).
 - `js/src/calcul.js` : `calculerElement`, `prixAchat`, `ratio`, `convertir`, `codeAppel`, `analyserCodeAppel`, `coefficientsEffectifs`, `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`.
 - `js/src/fournisseurs.js` : `FournisseurBibliothequeApi`, `FournisseurBibliothequeMemoire`, `ErreurBibliotheque`, `entreeDepuisLigne`, `SCENARIOS_TOUS`, `DONNEES_TECHNIQUES` (interface commune documentée en tête).
 - `js/ui/referentiels.js` : `GestionReferentiels` (option `sansComptesNatures` : comptes des natures masqués, tenus par l'application) ; `onglets.js` : `OngletPrix`, `OngletUnites`, `OngletTarifs` ; `arbres.js` : `PanneauArbres` (filtres familles / natures de la liste) ; `bibliotheque.css`.
@@ -30,7 +30,7 @@
 
 ## Routes HTTP (sous `/api/bibliotheque`)
 - `GET|PUT /parametres` ; `GET|PUT /bibliotheques`, `/familles?bib`, `/regroupements`, `/natures`, `/periodes` + `DELETE …/{id|code}` ; `POST /recalcul`.
-- `GET /elements?recherche&bib&type`, `/elements/{id}`, `/appel?code&bib` ; `GET|POST /elements/{id}/tarifs`, `DELETE /elements/{id}/tarifs/{tarif}` ; `GET /tarifs?tiers` ; `GET /elements/{id}/historique`.
+- `GET /elements?recherche&bib&type` (chaque mot dans le code, le libellé, les mots-clés ou le code-barres), `/elements/{id}`, `/appel?code&bib` (code d'élément, sinon code-barres, bibliothèque du document d'abord ; mêmes règles dans `FournisseurBibliothequeMemoire`) ; `GET|POST /elements/{id}/tarifs`, `DELETE /elements/{id}/tarifs/{tarif}` ; `GET /tarifs?tiers` ; `GET /elements/{id}/historique`.
 
 ## Règles répliquées JS / C# et jeux de cas
 - Prix et unités : `calcul.js` ↔ `CalculElement.cs`, jeu `tests/cas/01_calcul.json` (date fixe 2026-10-11).

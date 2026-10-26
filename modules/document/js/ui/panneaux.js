@@ -153,13 +153,20 @@ export class PanneauxDocument {
       return `<div class="texte-document" data-texte="${cle}">
         <div class="texte-document-titre"><strong>${titre}</strong> <span class="aide">${aide}</span>
           <button type="button" data-texte-editer="${cle}">${ed.fige ? 'Consulter' : '✎ Modifier'}</button>
-          ${!ed.fige && ed.definition.type?.[`tyd_texte_${cle}_html`] ? `<button type="button" data-texte-modele="${cle}" title="Remplacer par le modèle du type de document">↺ Modèle</button>` : ''}</div>
+          ${!ed.fige && ed.definition.type?.[`tyd_texte_${cle}_html`] ? `<button type="button" data-texte-modele="${cle}" title="Remplacer par le modèle du type de document">↺ Modèle</button>` : ''}
+          ${!ed.fige && this.peutChoisirTexte() ? `<button type="button" data-texte-choisir="${cle}" title="Ajouter un texte réutilisable (à la suite du texte saisi)">📚 Texte</button>` : ''}</div>
         <div class="texte-document-apercu">${apercu ? htmlSur(apercu) : '<span class="aide">Aucun texte</span>'}</div></div>`;
     };
     return `<fieldset class="textes-document"><legend>Textes de l'édition</legend>
       ${bloc('intro', 'Introduction', 'avant les lignes')}
       ${bloc('fin', 'Conclusion', 'après le pied et les récapitulatifs')}</fieldset>`;
   }
+
+  /** Point d'accroche : textes réutilisables proposés dans les textes de l'édition (aucun par défaut). */
+  peutChoisirTexte() { return false; }
+
+  /** Point d'accroche : HTML du texte choisi (null : abandon). */
+  async choisirTexte() { return null; }
 
   lierTextes(zone) {
     const ed = this.editeur;
@@ -175,6 +182,14 @@ export class PanneauxDocument {
       // Le panneau ne se redessine pas tant qu'il a le focus (saisie) : le bouton le rend avant la modification.
       b.blur();
       if (v !== undefined) ed.magasin.modifier((d) => { d.document[champ] = v || null; }, titres[cle]);
+    }));
+    zone.querySelectorAll('[data-texte-choisir]').forEach((b) => b.addEventListener('click', async () => {
+      const cle = b.dataset.texteChoisir;
+      b.blur();
+      const html = await this.choisirTexte();
+      if (!html) return;
+      const champ = `ent_texte_${cle}_html`;
+      ed.magasin.modifier((d) => { d.document[champ] = d.document[champ] ? `${d.document[champ]}${html}` : html; }, titres[cle]);
     }));
     zone.querySelectorAll('[data-texte-modele]').forEach((b) => b.addEventListener('click', () => {
       const cle = b.dataset.texteModele;

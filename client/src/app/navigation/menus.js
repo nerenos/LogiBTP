@@ -43,6 +43,7 @@ export const MENUS_METIER = [
       { code: 'articles', libelle: 'Articles', icone: '🧱', url: '/liste/bibliotheque?vue=12', creation: F('element', 'Nouvel article') },
       { code: 'ouvrages', libelle: 'Ouvrages', icone: '🏗️', url: '/liste/bibliotheque?vue=13', creation: F('element', 'Nouvel ouvrage', '?type=OUVRAGE') },
       { code: 'ensembles', libelle: 'Ensembles (structures réutilisables)', icone: '🧩', url: '/liste/bibliotheque?vue=15', creation: F('element', 'Nouvel ensemble', '?type=ENSEMBLE') },
+      { code: 'textes', libelle: 'Textes (lignes et textes d’édition)', icone: '📝', url: '/liste/bibliotheque?vue=1400', creation: F('element', 'Nouveau texte', '?type=TEXTE') },
       { code: 'elements', libelle: 'Tous les éléments', icone: '📚', url: '/liste/bibliotheque?vue=14', creation: F('element', 'Nouvel article') },
       { separateur: true },
       { code: 'parametrage-bibliotheque', libelle: 'Bibliothèques, familles, natures…', icone: '⚙', url: '/parametres/bibliotheque' },

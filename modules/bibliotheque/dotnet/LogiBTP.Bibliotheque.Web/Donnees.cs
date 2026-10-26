@@ -111,6 +111,11 @@ public class Element
     public bool ElePiedRetenue { get; set; }
     public string? EleCptCode { get; set; }
     public string? EleTvaCode { get; set; }
+    // Compléments (064) : mots-clés de recherche, code-barres, description technique, délai de livraison (jours).
+    public string? EleMotsCles { get; set; }
+    public string? EleCodeBarre { get; set; }
+    public string? EleDescriptionHtml { get; set; }
+    public int? EleDelaiLivraison { get; set; }
     public bool EleActif { get; set; } = true;
     public string? EleCommentairePrix { get; set; }
     public string? EleMajPar { get; set; }
@@ -236,7 +241,7 @@ public sealed record HistoriqueDto(long Id, DateTimeOffset Date, string? Auteur,
 public sealed record ElementDetailDto(long Id, int BibId, string BibCode, string Code, string Type, string LibelleHtml, string? Libelle, int? FamId, int? NatId,
     string UniteStock, string? UniteAchat, string? UniteVente, JsonElement Unites, Dictionary<string, decimal?> Donnees,
     decimal? Pa, decimal CoefFg, decimal? Pr, decimal CoefBenef, decimal? Pv, bool PvFixe, decimal CoefRemise, decimal? PvNet, JsonElement? Composition, bool Actif,
-    PosteElementDto? Poste = null);
+    PosteElementDto? Poste = null, string? CodeBarre = null, int? DelaiLivraison = null);
 
 /// <summary>Poste de pied d'un élément POSTE_PIED (inséré dans le pied des documents).</summary>
 public sealed record PosteElementDto(string? Niveau, string? Mode, string? Base, string? Sens, decimal? Valeur, bool Retenue, string? Compte, string? Tva);

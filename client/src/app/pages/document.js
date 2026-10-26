@@ -403,6 +403,7 @@ export class PageDocument extends PageBase {
       bibliotheques: this.bibliotheques, structure: this.structure, rattacher: (r) => this.rattacher(r).catch((x) => this.app.erreur(x)),
       // Bibliothèque depuis le détail de la ligne (lignes sélectionnées, ou la ligne du détail).
       actualiserPrix: (ids) => this.appel?.actualiser(ids), versBibliotheque: (ids) => this.envoi?.ouvrir(ids),
+      choisirTexte: () => this.appel?.choisir('', { type: 'TEXTE' }),
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
       // Ordres (famille E, module Exécution actif) : panneau Exécution de l'entête, répartition du détail.
       execution: this.app.enLigne && this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,

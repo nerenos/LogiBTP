@@ -180,9 +180,11 @@ export const TYPES_FICHE = {
         {
           code: 'article', titre: 'Article',
           groupes: [
-            { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'usage'] },
-            { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion'] },
+            { titre: 'Identification', champs: ['bib_id', 'code', 'type', 'usage', 'code_barre'] },
+            { titre: 'Classement', champs: ['fam_id', 'nat_id', 'gestion', 'delai_livraison'] },
             { titre: 'Libellé', champs: ['libelle_html'], largeur: 'plein' },
+            { code: 'recherche', titre: 'Recherche', champs: ['mots_cles'], largeur: 'plein' },
+            { code: 'description', titre: 'Description technique', champs: ['description_html'], largeur: 'plein' },
             { code: 'techniques', titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur'], largeur: 'plein' },
             { code: 'isolation', titre: 'Isolation', champs: ['isolant_epaisseur', 'isolant_lambda', 'isolant_r', 'isolant_u'] },
             // Poste de pied (type POSTE_PIED seulement) : inséré dans le pied des documents depuis la bibliothèque.
@@ -193,8 +195,8 @@ export const TYPES_FICHE = {
       champs: [
         c('bib_id', 'Bibliothèque', 'ele_bib_id', 'nombre', { obligatoire: true, saisie: 'creation', reference: 'bibliotheque' }),
         c('code', 'Code', 'ele_code', 'texte', { obligatoire: true, longueur: 30, non_copie: true, format: 'regex:^[^:\\s][^:]*$', aide: "Unique dans la bibliothèque ; sans « : » (réservé à l'appel BIB:CODE)" }),
-        c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage'], ['ENSEMBLE', 'Ensemble'], ['POSTE_PIED', 'Poste de pied']),
-          aide: 'Ensemble : structure de lignes réutilisable (lignes vendues, options, variantes) paramétrée par sa tranche ; poste de pied : retenue, compte prorata, remise… pour le pied des documents' }),
+        c('type', 'Type', 'ele_type', 'liste', { obligatoire: true, defaut: 'ARTICLE', saisie: 'creation', options: options(['ARTICLE', 'Article'], ['OUVRAGE', 'Ouvrage'], ['ENSEMBLE', 'Ensemble'], ['POSTE_PIED', 'Poste de pied'], ['TEXTE', 'Texte']),
+          aide: 'Ensemble : structure de lignes réutilisable (lignes vendues, options, variantes) paramétrée par sa tranche ; poste de pied : retenue, compte prorata, remise… pour le pied des documents ; texte : ligne de texte ou texte de l\'édition (introduction, conclusion)' }),
         c('actif', 'Actif', 'ele_actif', 'booleen', { obligatoire: true, defaut: true }),
         c('usage', 'Utilisation', 'ele_usage', 'liste', USAGE),
         c('libelle_html', 'Libellé', 'ele_libelle_html', 'html', { obligatoire: true }),
@@ -255,6 +257,11 @@ export const TYPES_FICHE = {
         c('pied_retenue', 'Retenue de garantie', 'ele_pied_retenue', 'booleen', { defaut: false }),
         c('cpt_code', 'Compte comptable', 'ele_cpt_code', 'texte', { longueur: 20 }),
         c('tva_code', 'Code TVA', 'ele_tva_code', 'texte', { longueur: 10, aide: 'Code du taux de TVA du poste (T20…), vide : TVA du document' }),
+        // Lot 7 des demandes du 25/10/2026 (module 064).
+        c('mots_cles', 'Mots-clés', 'ele_mots_cles', 'texte', { longueur: 500, largeur: 'plein', aide: 'Mots de recherche séparés par des virgules (domino, sucre, connecteur rapide…) : appel F3 et listes' }),
+        c('code_barre', 'Code-barres', 'ele_code_barre', 'texte', { longueur: 50, non_copie: true, aide: 'EAN… unique dans la bibliothèque ; lu au lecteur dans la colonne Code d\'un document' }),
+        c('description_html', 'Description technique', 'ele_description_html', 'html', { aide: 'Reprise par les éditions (lignes[].description_html)' }),
+        c('delai_livraison', 'Délai de livraison (jours)', 'ele_delai_livraison', 'nombre', { format: '9999', aide: 'Délai global de l\'élément' }),
       ],
     },
   },
