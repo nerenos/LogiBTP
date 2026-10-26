@@ -7,6 +7,7 @@ import {
 } from '../src/app/ressources/regles.js';
 import { finsPeriodes, periodesDepuisLignes, lignesDepuisPeriodes, controlerEquipe, MESSAGES_EQUIPES } from '../src/app/ressources/equipes.js';
 import { controlerAffectations, affectationA } from '../src/app/ressources/affectations.js';
+import { controlerReleves, compteurA, cumuls, controlerEvenement, MESSAGES_COMPTEURS } from '../src/app/ressources/compteurs.js';
 
 // Jeux partagés avec ReglesRessources.cs (tests/LogiBTP.Calcul.Tests/RessourcesTests.cs).
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/ressources');
@@ -46,4 +47,18 @@ describe('affectations du matériel (jeu partagé)', () => {
   for (const c of j.a_date) {
     for (const [date, attendu] of Object.entries(c.dates)) it(`${c.nom} : ${date}`, () => expect(affectationA(c.affectations, date)).toBe(attendu));
   }
+});
+
+describe('compteurs et événements du matériel (jeu partagé)', () => {
+  const j = jeu('05_compteurs.json');
+  for (const c of j.controles) it(`relevés : ${c.nom}`, () => expect(controlerReleves(c.unites, c.releves)).toEqual(c.attendu));
+  for (const c of j.a_date) {
+    for (const [date, attendu] of Object.entries(c.dates)) it(`${c.nom} : ${date}`, () => expect(compteurA(c.releves, c.unite, date)).toBe(attendu));
+  }
+  for (const c of j.cumuls) it(`cumuls : ${c.nom}`, () => expect(cumuls(c.releves, c.unite)).toEqual(c.attendu));
+  for (const c of j.evenements) it(`événement : ${c.nom}`, () => expect(controlerEvenement(c.evenement)).toEqual(c.attendu));
+  it('messages de tous les codes', () => {
+    const codes = [...j.controles.flatMap((c) => c.attendu.map((e) => e.code)), ...j.evenements.flatMap((c) => c.attendu)];
+    for (const code of codes) expect(MESSAGES_COMPTEURS[code]).toBeTruthy();
+  });
 });

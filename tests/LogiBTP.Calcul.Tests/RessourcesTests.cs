@@ -148,4 +148,37 @@ public class RessourcesTests
         Assert.True(ReglesAffectations.Boucle(porteurs, "1", "3"));
         Assert.False(ReglesAffectations.Boucle(porteurs, "4", "3"));
     }
+
+    private static decimal? Nombre(JsonNode? n) => n?.GetValue<decimal>();
+
+    private static ReleveCompteur Releve(JsonNode r) =>
+        new(r["unite"]?.GetValue<string>(), Jour(r["date"]), Nombre(r["valeur"]), r["remise"]?.GetValue<bool>() ?? false);
+
+    [Fact]
+    public void Compteurs_identiques_au_js()
+    {
+        var j = Jeu("05_compteurs.json");
+        foreach (var c in j["controles"]!.AsArray())
+        {
+            var attendu = c!["attendu"]!.AsArray().Select(x => new ErreurReleve(x!["code"]!.GetValue<string>(), x["releve"]!.GetValue<int>())).ToList();
+            Assert.Equal(attendu, ReglesCompteurs.Controler(Codes(c["unites"]), c["releves"]!.AsArray().Select(r => Releve(r!)).ToList()));
+        }
+        foreach (var c in j["a_date"]!.AsArray())
+        {
+            var releves = c!["releves"]!.AsArray().Select(r => Releve(r!)).ToList();
+            foreach (var (date, attendu) in c["dates"]!.AsObject())
+                Assert.Equal(Nombre(attendu), ReglesCompteurs.A(releves, c["unite"]!.GetValue<string>(), Jour(JsonValue.Create(date))!.Value));
+        }
+        foreach (var c in j["cumuls"]!.AsArray())
+        {
+            var attendu = c!["attendu"]!.AsArray().Select(x => new PointCompteur(x!["releve"]!.GetValue<int>(), Jour(x["date"])!.Value, x["valeur"]!.GetValue<decimal>(), x["cumul"]!.GetValue<decimal>())).ToList();
+            Assert.Equal(attendu, ReglesCompteurs.Cumuls(c["releves"]!.AsArray().Select(r => Releve(r!)).ToList(), c["unite"]!.GetValue<string>()));
+        }
+        foreach (var c in j["evenements"]!.AsArray())
+        {
+            var e = c!["evenement"]!;
+            var evt = new EvenementMateriel(e["type"]?.GetValue<string>(), Jour(e["date"]), Jour(e["fin"]), e["libelle"]?.GetValue<string>(), Nombre(e["litres"]), Nombre(e["cout"]));
+            Assert.Equal(Codes(c["attendu"]), ReglesCompteurs.ControlerEvenement(evt));
+        }
+    }
 }

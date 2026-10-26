@@ -562,6 +562,17 @@ dialog.dialogue-conge .grille-champs textarea { width: 100%; box-sizing: border-
 .tableau-compact tfoot th { border-top: 1px solid var(--bord); }
 .ressources-couts td.nombre { text-align: right; font-variant-numeric: tabular-nums; }
 .ressources-couts tfoot tr.total td { border-top: 1px solid var(--bord); font-weight: 600; }
+.ressources-compteurs td.nombre { text-align: right; font-variant-numeric: tabular-nums; }
+.frise-materiel { width: 100%; max-width: 60rem; display: block; margin: .3rem 0 .8rem; }
+.frise-materiel .frise-ligne { stroke: var(--bord); stroke-width: 1; }
+.frise-materiel .frise-courbe { fill: none; stroke: var(--accent); stroke-width: 2; }
+.frise-materiel .frise-point { fill: var(--accent); }
+.frise-materiel .frise-axe { font-size: 10px; fill: var(--discret); }
+.frise-materiel .frise-evenement text { font-size: 13px; cursor: default; }
+.frise-materiel .frise-duree { fill: var(--erreur); opacity: .6; }
+.formulaire-compact { display: grid; gap: .45rem; }
+.formulaire-compact label { display: flex; gap: .5rem; align-items: center; }
+.formulaire-compact [hidden] { display: none; }
 .tableau-compact.largeur-contenu { width: auto; max-width: 100%; }
 .tableau-defilant { max-height: 55vh; overflow: auto; border: 1px solid color-mix(in srgb, var(--bord) 60%, transparent); border-radius: .3rem; }
 .tableau-defilant > .tableau-compact { width: 100%; }

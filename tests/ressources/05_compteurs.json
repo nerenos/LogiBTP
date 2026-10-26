@@ -1,0 +1,79 @@
+{
+  "description": "Compteurs et événements du matériel (client/src/app/ressources/compteurs.js ↔ ReglesCompteurs.cs) : relevés datés en heures (H) ou kilomètres (KM) ; un relevé ne descend pas sous le précédent de la même unité (ordre : date puis saisie) sauf remise à zéro ; compteur à une date ; série cumulée (une remise ajoute la valeur atteinte avant elle) ; contrôle d'un événement. Dates ISO.",
+  "controles": [
+    {
+      "nom": "relevés croissants dans deux unités, saisis dans le désordre",
+      "unites": ["H", "KM"],
+      "releves": [
+        { "unite": "H", "date": "2026-03-01", "valeur": 1200 },
+        { "unite": "KM", "date": "2026-01-10", "valeur": 45000 },
+        { "unite": "H", "date": "2026-01-10", "valeur": 1100 },
+        { "unite": "H", "date": "2026-03-01", "valeur": 1200 }
+      ],
+      "attendu": []
+    },
+    {
+      "nom": "unité non suivie, date et valeur manquantes, valeur négative",
+      "unites": ["H"],
+      "releves": [
+        { "unite": "KM", "date": "2026-01-10", "valeur": 100 },
+        { "unite": "H", "date": null, "valeur": 10 },
+        { "unite": "H", "date": "2026-01-11", "valeur": null },
+        { "unite": "H", "date": "2026-01-12", "valeur": -5 }
+      ],
+      "attendu": [{ "code": "REL_UNITE", "releve": 0 }, { "code": "REL_DATE", "releve": 1 }, { "code": "REL_VALEUR", "releve": 2 }, { "code": "REL_VALEUR", "releve": 3 }]
+    },
+    {
+      "nom": "compteur qui redescend : signalé sur le plus récent, accepté avec la remise à zéro",
+      "unites": ["H", "KM"],
+      "releves": [
+        { "unite": "H", "date": "2026-02-01", "valeur": 900 },
+        { "unite": "H", "date": "2026-01-01", "valeur": 1000 },
+        { "unite": "KM", "date": "2026-01-01", "valeur": 80000 },
+        { "unite": "KM", "date": "2026-02-01", "valeur": 12, "remise": true },
+        { "unite": "KM", "date": "2026-03-01", "valeur": 5 }
+      ],
+      "attendu": [{ "code": "REL_DECROISSANT", "releve": 0 }, { "code": "REL_DECROISSANT", "releve": 4 }]
+    }
+  ],
+  "a_date": [
+    {
+      "nom": "dernier relevé à la date, le dernier saisi le même jour",
+      "releves": [
+        { "unite": "H", "date": "2026-01-10", "valeur": 1100 },
+        { "unite": "H", "date": "2026-03-01", "valeur": 1200 },
+        { "unite": "H", "date": "2026-03-01", "valeur": 1210 },
+        { "unite": "KM", "date": "2026-02-01", "valeur": 50000 },
+        { "unite": "H", "date": null, "valeur": 9999 }
+      ],
+      "unite": "H",
+      "dates": { "2026-01-09": null, "2026-01-10": 1100, "2026-02-15": 1100, "2026-03-01": 1210, "2027-01-01": 1210 }
+    }
+  ],
+  "cumuls": [
+    {
+      "nom": "remise à zéro : la valeur atteinte avant elle s'ajoute",
+      "unite": "KM",
+      "releves": [
+        { "unite": "KM", "date": "2026-01-01", "valeur": 100 },
+        { "unite": "KM", "date": "2026-02-01", "valeur": 250 },
+        { "unite": "H", "date": "2026-02-15", "valeur": 3 },
+        { "unite": "KM", "date": "2026-03-01", "valeur": 10, "remise": true },
+        { "unite": "KM", "date": "2026-04-01", "valeur": 60 }
+      ],
+      "attendu": [
+        { "releve": 0, "date": "2026-01-01", "valeur": 100, "cumul": 100 },
+        { "releve": 1, "date": "2026-02-01", "valeur": 250, "cumul": 250 },
+        { "releve": 3, "date": "2026-03-01", "valeur": 10, "cumul": 260 },
+        { "releve": 4, "date": "2026-04-01", "valeur": 60, "cumul": 310 }
+      ]
+    }
+  ],
+  "evenements": [
+    { "nom": "panne complète", "evenement": { "type": "PANNE", "date": "2026-05-02", "fin": "2026-05-04", "libelle": "Flexible hydraulique", "cout": 0 }, "attendu": [] },
+    { "nom": "plein de carburant sans libellé", "evenement": { "type": "CARBURANT", "date": "2026-05-02", "litres": 85.5, "cout": 142.3 }, "attendu": [] },
+    { "nom": "plein sans litres, coût négatif", "evenement": { "type": "CARBURANT", "date": "2026-05-02", "litres": 0, "cout": -1 }, "attendu": ["EVT_COUT", "EVT_LITRES"] },
+    { "nom": "type inconnu, fin avant le début, sans libellé", "evenement": { "type": "VOL", "date": "2026-05-02", "fin": "2026-05-01", "libelle": " " }, "attendu": ["EVT_DATE", "EVT_LIBELLE", "EVT_TYPE"] },
+    { "nom": "date manquante", "evenement": { "type": "CONTROLE", "date": null, "libelle": "VGP" }, "attendu": ["EVT_DATE"] }
+  ]
+}

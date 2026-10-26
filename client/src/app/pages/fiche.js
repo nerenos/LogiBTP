@@ -7,6 +7,7 @@ import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { FilCrm } from '../crm/fil.js';
 import { rendreComptePersonne } from '../comptes/comptes.js';
 import { rendreHabilitations, rendreMissions, rendreHabilitationsExigees, rendreAffectations, rendreMaterielAffecte, rendreCoutsMateriel } from '../ressources/ressources-ui.js';
+import { rendreCompteursMateriel } from '../ressources/compteurs-ui.js';
 import { LISTE_PAR_TYPE } from '../application.js';
 import { voisins } from '../suite-liste.js';
 import { api } from '../api.js';
@@ -93,6 +94,7 @@ export class PageFiche extends PageBase {
         affectations: (corps, p) => rendreAffectations(corps, { app, ...p }).catch((e) => app.erreur(e)),
         materielAffecte: (corps, p) => rendreMaterielAffecte(corps, { app, ...p }).catch((e) => app.erreur(e)),
         couts: (corps, p) => rendreCoutsMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
+        compteurs: (corps, p) => rendreCompteursMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
       } : null,
       surEnregistre: (f, { cree }) => {
         app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });

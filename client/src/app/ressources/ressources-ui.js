@@ -234,7 +234,7 @@ export async function rendreMaterielAffecte(corps, { app, type, id }) {
       ${d.historique.map((m) => `<tr><td>${lien(m)}</td><td>${jour(m.du)}</td><td>${jour(m.au)}</td></tr>`).join('')}</tbody></table>` : ''}</div>`;
 }
 
-const LIBELLES_COUT = { MO: 'Main-d\'œuvre', STOCK: 'Pièces du stock', ACHAT: 'Achats', SOUS_TRAITANCE: 'Sous-traitance', TOTAL: 'Total' };
+const LIBELLES_COUT = { MO: 'Main-d\'œuvre', STOCK: 'Pièces du stock', ACHAT: 'Achats', SOUS_TRAITANCE: 'Sous-traitance', CARBURANT: 'Carburant', TOTAL: 'Total' };
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /**

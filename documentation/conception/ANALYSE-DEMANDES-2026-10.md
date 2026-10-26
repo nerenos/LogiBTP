@@ -242,3 +242,12 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
   pointée, pièces du stock, achats, sous-traitance) ; onglet Coûts : mois de l'année choisie, totaux de l'année et
   depuis l'entrée, heures MO, coût par heure d'utilisation (compteur `mat_heures` en attendant les relevés de 5c-2 ;
   sans objet pour un chantier partagé), liens vers les documents et les pointages du chantier.
+- **5c-2** (26/10/2026) : compteurs suivis par matériel (`mat_compteurs` : heures, kilomètres, les deux, aucun ; M7) ;
+  relevés datés `materiel_releve` (remise à zéro, source saisie / plein / ordre / borne / reprise des heures de la
+  fiche), jamais sous le précédent sauf remise à zéro, compteur à une date et série cumulée : règles répliquées
+  `compteurs.js` ↔ `ReglesCompteurs.cs` (jeu `tests/ressources/05_compteurs.json` ; le jeu des échéances
+  d'entretien de 5c-4 prend le numéro 06) ; heures et kilométrage de la fiche = derniers relevés (lecture seule) ;
+  événements `materiel_evenement` (panne, sinistre, accident, immobilisation, contrôle, entretien, plein, autre ;
+  durée, coût informatif, ordre lié, relevé lié) ; plein de carburant (M8, saisie manuelle) : première imputation
+  (chantier de suivi créé), coût en nature CARBURANT de `v_cout_chantier` ; onglet Compteurs de la fiche matériel :
+  frise SVG (courbe cumulée par unité, événements), journal, saisies en fenêtre.

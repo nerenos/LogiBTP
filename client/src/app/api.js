@@ -379,6 +379,12 @@ export const api = {
     // Coûts du matériel (lot 5c-1, db/232) : chantier de suivi créé à la demande.
     coutsMateriel: (materiel, annee) => appel('GET', `/ressources/materiels/${materiel}/couts${annee ? `?annee=${encodeURIComponent(annee)}` : ''}`),
     creerChantierMateriel: (materiel) => appel('POST', `/ressources/materiels/${materiel}/chantier`),
+    // Compteurs et événements du matériel (lot 5c-2, db/233).
+    compteurs: (materiel) => appel('GET', `/ressources/materiels/${materiel}/compteurs`),
+    ajouterReleve: (materiel, r) => appel('POST', `/ressources/materiels/${materiel}/releves`, r),
+    supprimerReleve: (materiel, id) => appel('DELETE', `/ressources/materiels/${materiel}/releves/${id}`),
+    enregistrerEvenement: (materiel, id, e) => appel(id ? 'PUT' : 'POST', `/ressources/materiels/${materiel}/evenements${id ? `/${id}` : ''}`, e),
+    supprimerEvenement: (materiel, id) => appel('DELETE', `/ressources/materiels/${materiel}/evenements/${id}`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),

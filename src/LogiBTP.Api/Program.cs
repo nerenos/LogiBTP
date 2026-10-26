@@ -215,6 +215,7 @@ api.MapListesValeurs();
 api.MapRessources();
 api.MapAffectationsMateriel();
 api.MapCoutsMateriel();
+api.MapCompteursMateriel();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();

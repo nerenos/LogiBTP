@@ -229,6 +229,7 @@ export class FicheMateriel extends FicheLogiBTP {
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
     }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : []),
+      ...(r.compteurs ? [{ code: 'compteurs', titre: 'Compteurs', rendre: (corps) => r.compteurs(corps, { materiel: this.id }) }] : []),
       ...(r.couts ? [{ code: 'couts', titre: 'Coûts', rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
   }
 

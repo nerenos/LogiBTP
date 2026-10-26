@@ -8,7 +8,7 @@ namespace LogiBTP.Api.Btp;
 /// Coûts du matériel (db/232, lot 5c-1 des demandes du 25/10/2026, décisions M1 à M3) : chantier de suivi d'un matériel
 /// (affaire MATERIEL ; MAT-code pour un matériel identifié, MAT-T-type partagé par les matériels gérés par nombre du
 /// même type), créé à la demande ou à la première imputation (<see cref="ChantierMaterielAsync"/>) ; coûts du chantier
-/// par mois et nature (<c>v_cout_chantier</c> : main-d'œuvre pointée, stock, achats, sous-traitance), cumuls de l'année
+/// par mois et nature (<c>v_cout_chantier</c> : main-d'œuvre pointée, stock, achats, sous-traitance, carburant), cumuls de l'année
 /// et depuis l'entrée, coût par heure d'utilisation.
 /// </summary>
 public static class CoutsMateriel
@@ -18,7 +18,7 @@ public static class CoutsMateriel
     private sealed record CoutSql(DateOnly Mois, string Nature, decimal Montant, decimal? Minutes, long NonValorises);
 
     /// <summary>Natures de coût de <c>v_cout_chantier</c>, dans l'ordre d'affichage.</summary>
-    public static readonly string[] Natures = ["MO", "STOCK", "ACHAT", "SOUS_TRAITANCE"];
+    public static readonly string[] Natures = ["MO", "STOCK", "ACHAT", "SOUS_TRAITANCE", "CARBURANT"];
 
     private static async Task<MaterielSql> MaterielAsync(LogiBtpContext db, int id, CancellationToken ct) =>
         await db.Database.SqlQueryRaw<MaterielSql>("""
