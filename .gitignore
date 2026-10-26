@@ -11,6 +11,7 @@ stockage-ged/
 cle-construction.secret
 # Journal technique de repli (base indisponible)
 journaux/
+logibtp-api.tar
 
 # Sorties des essais du module Édition
 modules/edition/js/.essais/
