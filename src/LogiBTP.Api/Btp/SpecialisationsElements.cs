@@ -21,6 +21,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 {
     private static readonly LogiBTP.Documents.Web.NettoyageHtml Html = new();
 
+    /// <summary>Champs des fiches de la structure qui désignent un individu de notre structure (code du champ, libellé).</summary>
+    private static readonly Dictionary<string, (string Champ, string Libelle)[]> ChampsIndividuStructure = new()
+    {
+        ["chantier"] = [("conducteur_ind_id", "Conducteur de travaux"), ("charge_ind_id", "Chargé d'affaires"), ("chef_ind_id", "Chef d'équipe")],
+        ["projet"] = [("responsable_ind_id", "Responsable"), ("metreur_ind_id", "Métreur")],
+    };
+
     /// <summary>Champs HTML des fiches (libellé d'un élément de bibliothèque…) : même liste blanche que les libellés des documents.</summary>
     public override string NettoyerHtml(string html) => Html.Nettoyer(html) ?? "";
 
@@ -43,11 +50,19 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             return;
         }
         if (type == "salarie") await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
-        // Conducteur de travaux d'un chantier : individu de notre structure (rattaché à notre société ou à un niveau inférieur).
-        if (type == "chantier" && ValidationFiche.Nombre(valeurs.GetValueOrDefault("conducteur_ind_id")) is { } conducteur
-            && !await IndividusStructure.EstDeLaStructureAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), (long)conducteur, ct))
+        // Conducteur de travaux, chargé d'affaires, chef d'équipe d'un chantier, responsable et métreur d'un projet (lot 6) :
+        // individus de notre structure (rattachés à notre société ou à un niveau inférieur).
+        if (ChampsIndividuStructure.TryGetValue(type, out var champsIndividus))
         {
-            throw ExceptionMetier.Invalide("CONDUCTEUR_STRUCTURE", "Le conducteur de travaux doit être un individu de notre société (ou de l'une de ses agences)");
+            foreach (var (champ, libelle) in champsIndividus)
+            {
+                if (ValidationFiche.Nombre(valeurs.GetValueOrDefault(champ)) is { } individu
+                    && !await IndividusStructure.EstDeLaStructureAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), (long)individu, ct))
+                {
+                    throw ExceptionMetier.Invalide(champ == "conducteur_ind_id" ? "CONDUCTEUR_STRUCTURE" : "INDIVIDU_STRUCTURE",
+                        $"{libelle} : un individu de notre société (ou de l'une de ses agences)");
+                }
+            }
         }
         if (type == "personne")
         {

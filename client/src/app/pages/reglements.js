@@ -12,6 +12,8 @@ const aujourdhui = () => { const d = new Date(); return `${d.getFullYear()}-${St
  * Règlements d'un tiers (module Règlements, CONCEPTION-MARCHES-REGLEMENTS.md, Q15 à Q18) : `/reglements?sens=E|D&tiers=`.
  * Échéances ouvertes des pièces validées (reste à payer), saisie d'un règlement avec pointage (répartition proposée :
  * plus ancienne d'abord), règlements du tiers (non pointé), cautions pointant les retenues de garantie.
+ * Périmètre d'un chantier ou d'un marché (lot 6 : A27) : `/reglements?chantier=` ou `?marche=` : échéances de ses pièces
+ * validées, tous tiers, clients puis fournisseurs, avec le pointé et le reste ; le tiers ouvre sa page de pointage.
  */
 export class PageReglements extends PageBase {
   icone = '💳';
@@ -20,6 +22,9 @@ export class PageReglements extends PageBase {
     // Modes de règlement paramétrables (module Document), sinon la liste du module.
     this.modes = await api.modesReglement().then((l) => l.map((m) => [m.code, m.libelle, m.actif])).catch(() => MODES_REGLEMENT);
     const app = this.app;
+    this.perimetre = this.requete.chantier ? { type: 'chantier', id: Number(this.requete.chantier) }
+      : this.requete.marche ? { type: 'marche', id: Number(this.requete.marche) } : null;
+    if (this.perimetre) { await this.#ouvrirPerimetre(); return; }
     this.sens = this.requete.sens === 'D' ? 'D' : 'E';
     this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
     if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Règlements disponibles en ligne seulement.</p>'; return; }
@@ -36,7 +41,45 @@ export class PageReglements extends PageBase {
     if (this.tiers) await this.rendre();
   }
 
+  /** Échéances d'un chantier ou d'un marché, tous tiers (lecture ; pointage dans la page du tiers). */
+  async #ouvrirPerimetre() {
+    const { type, id } = this.perimetre;
+    const libelle = type === 'chantier' ? 'chantier' : 'marché';
+    this.titre = `Échéances du ${libelle}`;
+    if (!this.app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Règlements disponibles en ligne seulement.</p>'; return; }
+    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">💳 ${echapper(this.titre)} <a href="/fiche/${type}/${id}" data-element></a></h1>
+      <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></div><div data-corps></div></div>`;
+    this.conteneur.querySelector('[data-toutes]').addEventListener('change', (e) => { this.toutes = e.target.checked; this.#rendrePerimetre(); });
+    const { structure } = await this.app.services();
+    const refs = await structure.referentiels().catch(() => ({}));
+    const el = (refs[type === 'chantier' ? 'chantiers' : 'marches'] ?? []).find((x) => x.id === id);
+    if (el) this.conteneur.querySelector('[data-element]').textContent = `${el.code} – ${el.libelle ?? ''}`;
+    await this.#rendrePerimetre();
+  }
+
+  async #rendrePerimetre() {
+    const corps = this.conteneur.querySelector('[data-corps]');
+    let l;
+    try { l = await api.echeancesStructure(this.perimetre.type, this.perimetre.id, false); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
+    const f = (v) => formatNombre(v ?? 0, 2);
+    const visibles = this.toutes ? l : l.filter((e) => !e.reglee);
+    const bloc = (sens, titre) => {
+      const lignes = visibles.filter((e) => e.sens === sens);
+      if (!lignes.length) return `<h2>${titre}</h2><p class="aide">Aucune échéance${this.toutes ? '' : ' ouverte'}.</p>`;
+      const total = (cle) => lignes.reduce((t, e) => t.plus(Dz(e[cle])), Dz(0)).toString();
+      return `<h2>${titre}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Tiers</th><th>Pièce</th><th>Type</th><th>Échéance</th>
+        <th class="nombre">Montant</th><th class="nombre">Pointé</th><th class="nombre">Reste</th></tr></thead><tbody>
+        ${lignes.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}><td><a href="/reglements?sens=${sens}&tiers=${Number(e.tiers_id)}" title="Pointer les règlements de ce tiers">${echapper(e.tiers ?? '')}</a></td>
+          <td><a href="/document/${Number(e.piece_id)}">${echapper(e.piece ?? `#${e.piece_id}`)}</a></td><td>${echapper(e.type)}</td>
+          <td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
+          <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><th colspan="4">Total</th><th class="nombre">${f(total('montant'))}</th><th class="nombre">${f(total('pointe'))}</th><th class="nombre">${f(total('reste'))}</th></tr></tfoot></table>`;
+    };
+    corps.innerHTML = bloc('E', 'Clients : encaissements') + bloc('D', 'Fournisseurs et sous-traitants : décaissements');
+  }
+
   urlCourante() {
+    if (this.perimetre) return `/reglements?${this.perimetre.type}=${this.perimetre.id}`;
     return `/reglements?sens=${this.sens}${this.tiers ? `&tiers=${this.tiers}` : ''}`;
   }
 

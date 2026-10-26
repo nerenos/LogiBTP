@@ -932,3 +932,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 
 /* Usurpation en cours (bandeau) : pastille visible, clic = terminer. */
 .bandeau-usurpation { background: var(--alerte-fond); color: var(--alerte); border: 1px solid var(--alerte); border-radius: 1rem; padding: 0 .6rem; cursor: pointer; font: inherit; }
+
+/* Fiches de la structure : champ tiers avec bouton (nouveau prospect) sur la même ligne (lot 6). */
+.champ-tiers:has(> button) { display: flex; gap: .3rem; align-items: center; }
+.champ-tiers:has(> button) > input { flex: 1; min-width: 0; }

@@ -270,3 +270,22 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
   entretiens et visites à surveiller », notification quotidienne (`SourceEntretiens`) ; plans de démonstration des
   types Engins, Levage, Véhicules. Sans entretien saisi, la démonstration montre beaucoup d'entretiens en retard
   (critère des mois compté depuis l'entrée des matériels).
+
+## 7. Lot 6 : structure (réalisé, 26/10/2026)
+
+- **A25 Projet** (db/236) : priorité et évaluation (listes paramétrables PRIORITE_PROJET, EVALUATION_PROJET des
+  référentiels communs), estimation (montant, début et fin des travaux, durée en heures ou en jours, adresse, zone de
+  déplacement 0 à 9), client en saisie libre avant sa création dans l'annuaire, prospect = tiers provisoire créé par le
+  bouton ＋ du champ Client (doublons proposés), responsable et métreur = individus de notre structure (contrôlés par le
+  serveur). L'ancien texte du responsable est rapproché d'un individu quand un seul correspond ; sinon il reste en lecture
+  seule (« ancienne saisie ») et en repli dans la liste. Liste des projets : priorité, évaluation, métreur, dates, durée,
+  zone, prospect.
+- **A26 Chantier** : code analytique (section analytique de l'export comptable, sinon le code du chantier), début prévu,
+  début et fin réels des travaux, chargé d'affaires et chef d'équipe (individus de notre structure, avec le conducteur
+  existant) ; zones de déplacement du Pointage (par agence) affichées dans l'en-tête de la fiche. Liste des chantiers
+  complétée.
+- **A27 Liens** : « Échéances et règlements » d'un chantier ou d'un marché (module Règlements actif ;
+  `/reglements?chantier=` ou `?marche=` : échéances des pièces validées, tous tiers, clients puis fournisseurs, pointé
+  et reste, le tiers ouvre sa page de pointage) ; chantier : listes des marchés, commandes et factures de
+  sous-traitance (module Sous-traitance actif) ; marché de vente : commandes et factures de chaque marché de
+  sous-traitance lié (bloc « Sous-traitance : engagé et réalisé »).

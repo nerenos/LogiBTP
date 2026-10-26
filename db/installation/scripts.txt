@@ -164,6 +164,7 @@ db/232_materiel_couts.sql
 db/233_materiel_compteurs.sql
 db/234_materiel_entretien.sql
 db/235_materiel_plans.sql
+db/236_structure_complements.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

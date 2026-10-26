@@ -64,7 +64,7 @@ public sealed partial class SpecialisationComptabiliteBtp
                    p.per_raison_sociale AS tiers, NOT coalesce(n.niv_morale, TRUE) AS particulier,
                    p.per_cli_compte AS compte_client, p.per_fou_compte AS compte_fournisseur, p.per_st_compte AS compte_st,
                    p.per_cli_collectif AS collectif_client, p.per_fou_collectif AS collectif_fournisseur, p.per_st_collectif AS collectif_st,
-                   c.cha_code AS chantier, d.ent_objet AS objet
+                   coalesce(nullif(c.cha_code_analytique, ''), c.cha_code) AS chantier, d.ent_objet AS objet
             FROM document d
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id
             LEFT JOIN personne p ON p.per_id = d.ent_tiers_id

@@ -10,6 +10,7 @@ import { controlerIntervenants } from '../structure/structure.js';
 import { champRattachement } from '../structure/selection.js';
 import { VueGrapheStructure } from '../structure/graphe-structure.js';
 import { individusStructure } from '../panneaux-btp.js';
+import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
 // projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
@@ -158,6 +159,23 @@ export class FicheStructure extends FicheLogiBTP {
         liste.innerHTML = resultats.map((p) => `<option value="${echapper(`${p.code} – ${p.raison_sociale}`)}"></option>`).join('');
       }, 250);
     });
+    // Prospect (lot 6, A25) : nouveau tiers provisoire de l'annuaire, doublons proposés avant la création.
+    if (this.prospectAutorise(champ)) {
+      const bouton = document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = 'bouton-icone';
+      bouton.textContent = '＋';
+      bouton.title = 'Nouveau prospect : tiers provisoire de l\'annuaire (doublons proposés)';
+      bouton.addEventListener('click', async () => {
+        const saisi = resultats.some((p) => `${p.code} – ${p.raison_sociale}` === input.value) ? '' : input.value.trim();
+        const p = await creerTiersProvisoire({ annuaire, raison_sociale: saisi, casquettes: ['CLIENT'], titre: 'Nouveau prospect (tiers provisoire)' });
+        if (!p) return;
+        this.tiersNoms.set(Number(p.id), `${p.code ?? ''} – ${p.raison_sociale ?? ''}`);
+        this.definirValeur(champ.code, Number(p.id));
+        this.rendre();
+      });
+      span.append(bouton);
+    }
     return span;
   }
 
@@ -226,11 +244,22 @@ export class FicheStructure extends FicheLogiBTP {
   /** Liens vers les éléments rattachés et raccourcis vers les listes filtrées par le code de la fiche (en tête de fiche). */
   rendreInformations(v) {
     const liens = this.liens(v).filter((l) => l.elements.length);
-    const raccourcis = this.id !== null && v.code ? RACCOURCIS[this.type] ?? [] : [];
+    const raccourcis = this.id !== null && v.code ? [...(RACCOURCIS[this.type] ?? []), ...this.raccourcisModules()] : [];
     return liens.map((l) => `<div class="fiche-info"><span>${echapper(l.titre)}</span>
       <b>${l.elements.map((x) => `<a href="/fiche/${l.type}/${x.id}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('')
       + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>Listes</span><b>${raccourcis.map(([theme, libelle]) =>
-        `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${echapper(`${libelle} filtrés sur ${v.code} (Ctrl : nouvelle fenêtre)`)}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '');
+        `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${echapper(`${libelle} filtrés sur ${v.code} (Ctrl : nouvelle fenêtre)`)}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
+      + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif('reglement')
+        ? `<div class="fiche-info"><span>Règlements</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="Échéances des pièces validées du ${this.type === 'chantier' ? 'chantier' : 'marché'}, pointé et reste, tous tiers">Échéances et règlements</a></b></div>` : '');
+  }
+
+  /** Champ tiers qui propose un nouveau prospect (tiers provisoire) : aucun par défaut. */
+  prospectAutorise(_champ) { return false; }
+
+  /** Raccourcis vers les listes des modules facultatifs actifs (thème, libellé). */
+  raccourcisModules() {
+    if (this.type !== 'chantier' || !this.moduleActif('sous_traitance')) return [];
+    return [['marches_st', 'Marchés de sous-traitance'], ['st_commandes', 'Commandes de sous-traitance'], ['st_factures', 'Factures de sous-traitance']];
   }
 
   liens() { return []; }
@@ -266,6 +295,9 @@ export class FicheStructure extends FicheLogiBTP {
 }
 
 export class FicheProjet extends FicheStructure {
+  /** Client du projet : un prospect se crée en tiers provisoire (lot 6, A25). */
+  prospectAutorise(champ) { return champ.code === 'tiers_id'; }
+
   liens() {
     return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.prj_id === Number(this.id)) }];
   }
@@ -311,6 +343,16 @@ export class FicheChantier extends FicheStructure {
     const prj = (this.refs.projets ?? []).find((p) => p.id === id);
     if (prj && !this.valeur('tiers_id')) this.definirValeur('tiers_id', prj.tiers_id);
     if (prj && !this.valeur('ville')) this.definirValeur('ville', prj.ville);
+  }
+
+  /** Zones de déplacement du Pointage (par agence, lot 6 : A26), lues une fois par fiche. */
+  rendreInformations(v) {
+    if (this.id !== null && this.zones === undefined && this.moduleActif('pointage')) {
+      this.zones = null;
+      api.pointage.zones(Number(this.id)).then((l) => { this.zones = l; this.rendre(); }).catch(() => { this.zones = []; });
+    }
+    return super.rendreInformations(v) + (this.zones?.length
+      ? `<div class="fiche-info"><span>Zones de déplacement</span><b>${this.zones.map((z) => `${echapper(z.agence)} : zone ${z.zone}`).join(' · ')}</b></div>` : '');
   }
 
   liens(v) {
@@ -386,10 +428,11 @@ export class FicheMarche extends FicheStructure {
     zone.innerHTML = `<p class="ligne">Déboursé de sous-traitance prévu <strong>${f(e.prevu)}</strong> · Engagé <strong>${f(e.engage)}</strong>
         · Réalisé <strong>${f(e.facture)}</strong> · ${ecart.isNegative() ? `<span class="erreur">Dépassement ${f(ecart.abs().toString())}</span>` : `Reste prévu non engagé ${f(ecart.toString())}`}</p>
       ${e.marches.length ? `<table class="tableau-gestion"><thead><tr><th>Marché</th><th>Sous-traitant</th><th>Garantie</th><th class="nombre">Agréé</th>
-        <th class="nombre">Engagé HT</th><th class="nombre">Réalisé HT</th><th class="nombre">Reste à facturer</th><th class="nombre">Paiement direct</th></tr></thead><tbody>
+        <th class="nombre">Engagé HT</th><th class="nombre">Réalisé HT</th><th class="nombre">Reste à facturer</th><th class="nombre">Paiement direct</th><th>Prestations</th></tr></thead><tbody>
         ${e.marches.map((m) => `<tr><td><a href="/fiche/marche/${m.marche_id}">${echapper(m.code)}</a> <small class="aide">${echapper(m.libelle ?? '')}</small></td>
           <td>${echapper(m.sous_traitant ?? '')}</td><td>${echapper(m.garantie ?? '')}</td><td class="nombre">${f(m.montant_agree)}</td><td class="nombre">${f(m.engage)}</td>
-          <td class="nombre">${f(m.facture)}</td><td class="nombre">${f(Dz(m.engage).minus(Dz(m.facture)).toString())}</td><td class="nombre">${f(m.paiement_direct)}</td></tr>`).join('')}</tbody></table>`
+          <td class="nombre">${f(m.facture)}</td><td class="nombre">${f(Dz(m.engage).minus(Dz(m.facture)).toString())}</td><td class="nombre">${f(m.paiement_direct)}</td>
+          <td><a href="/liste/st_commandes?${new URLSearchParams({ marche: m.code })}">Commandes</a> · <a href="/liste/st_factures?${new URLSearchParams({ marche: m.code })}">Factures</a></td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucun marché de sous-traitance lié à ce marché (ou sur son chantier).</p>'}`;
   }
 

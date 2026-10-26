@@ -219,6 +219,7 @@ api.MapCoutsMateriel();
 api.MapCompteursMateriel();
 api.MapEntretiensMateriel();
 api.MapPlansEntretien();
+api.MapReglementsStructure();
 api.MapEquipes();
 api.MapModuleCalendrier();
 api.MapModuleNotifications();

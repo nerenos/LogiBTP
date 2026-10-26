@@ -50,6 +50,9 @@ export const SOURCES_LISTE = {
       ['id', 'integer'], ['type_element', 'text'], ['code', 'text'], ['libelle', 'text'], ['client', 'text'], ['statut', 'text'],
       ['date_remise', 'date'], ['date_decision', 'date'], ['montant_estime', 'numeric'], ['ville', 'text'], ['responsable', 'text'],
       ['chantier', 'text'], ['nb_documents', 'bigint'],
+      // db/236 (lot 6 des demandes du 25/10/2026).
+      ['priorite', 'text'], ['evaluation', 'text'], ['metreur', 'text'], ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['duree_estimee', 'text'],
+      ['zone', 'smallint'], ['prospect', 'boolean'],
     ],
   },
   affaires: {
@@ -67,6 +70,8 @@ export const SOURCES_LISTE = {
       ['nb_marches', 'bigint'], ['montant_marches', 'numeric'], ['facture_ht', 'numeric'],
       // db/230 : type déduit (CHANTIER, DEPOT, INTERNE, DOTATION, MATERIEL).
       ['type_chantier', 'text'],
+      // db/236 (lot 6 des demandes du 25/10/2026).
+      ['code_analytique', 'text'], ['debut_prevu', 'date'], ['debut_reel', 'date'], ['fin_reelle', 'date'], ['charge_affaires', 'text'], ['chef_equipe', 'text'],
     ],
   },
   marches: {
