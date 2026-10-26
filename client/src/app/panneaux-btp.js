@@ -52,6 +52,8 @@ export const LIEUX_STOCK = {
 
 /** Date prévue des pièces sans mouvement (module Stock, lot 3) : colonne et libellé ; les autres portent la date du mouvement. */
 const DATE_PREVUE_STOCK = { S_RESERVATION: ['ent_date_besoin', 'Date de besoin'], A_COMMANDE: ['ent_date_livraison', 'Livraison prévue'] };
+/** Types qui reçoivent un accusé de réception de commande (↔ Structure.TypesArc). */
+export const TYPES_ARC = new Set(['A_COMMANDE', 'T_COMMANDE']);
 
 /**
  * Individus de notre structure, agences comprises (conducteur de travaux des chantiers) : lus par le serveur
@@ -67,8 +69,10 @@ export async function individusStructure(annuaire) {
  */
 export class PanneauxBtp extends PanneauxDocument {
   /** options.bibliotheques : bibliothèques proposées pour l'appel des éléments (bibliothèque du document). */
-  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null, choisirTexte = null } = {}) {
+  constructor(editeur, { bibliotheques = [], structure = null, rattacher = null, annuaire = null, intervenants = null, actualiserPrix = null, versBibliotheque = null, execution = null, stock = null, choisirTexte = null, arc = null } = {}) {
     super(editeur);
+    // Accusé de réception des commandes (lot 9, A24e) : { enregistrer(entId, arc), deposer(fichier) } posé par la page en ligne.
+    this.arc = arc;
     // Module Stock actif : { lieux() } (dépôts et chantiers qui tiennent un stock) ; bloc Stock de l'entête des pièces qui mouvementent.
     this.stock = stock;
     // Module Exécution (ordres, famille E) : { app, individus() } posé par la page ; panneau de l'entête, répartition du détail.
@@ -353,7 +357,8 @@ export class PanneauxBtp extends PanneauxDocument {
       ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}
       ${this.estOrdre() && this.editeur.definition.type?.tyd_code === 'E_ENT' ? '<fieldset class="entretien-document"><legend>Matériel entretenu</legend><div data-entretien></div></fieldset>' : ''}
       ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}
-      ${this.stock && LIEUX_STOCK[this.editeur.definition.type?.tyd_code] ? '<fieldset class="stock-document"><legend>Stock</legend><div data-stock></div></fieldset>' : ''}`;
+      ${this.stock && LIEUX_STOCK[this.editeur.definition.type?.tyd_code] ? '<fieldset class="stock-document"><legend>Stock</legend><div data-stock></div></fieldset>' : ''}
+      ${this.arc && TYPES_ARC.has(this.editeur.definition.type?.tyd_code) ? '<fieldset class="arc-document"><legend>Accusé de réception (ARC)</legend><div data-arc></div></fieldset>' : ''}`;
   }
 
   /**
@@ -398,6 +403,40 @@ export class PanneauxBtp extends PanneauxDocument {
       span.append(c);
     });
     if (!this.lieuxStock) this.stock.lieux().then((l) => { this.lieuxStock = l; if (bloc.isConnected) this.rendreStock(bloc); }).catch(() => { this.lieuxStock = []; });
+  }
+
+  /**
+   * Accusé de réception de la commande (lot 9, A24e) : numéro, date et livraison confirmée, enregistrés à part du document
+   * (même validé : PUT /api/structure/documents/{id}/arc) ; la livraison confirmée remplace la livraison prévue pour les
+   * lignes sans date propre. 📎 range le fichier de l'ARC dans la GED du document (catégorie « arc »).
+   */
+  rendreArc(bloc) {
+    const d = this.editeur.saisie.document;
+    if (!d.ent_id || d.ent_id < 0) { bloc.innerHTML = "<p class=\"aide\">Enregistrez la commande pour saisir l'accusé de réception.</p>"; return; }
+    bloc.innerHTML = `<p class="ligne"><label>N° <input data-arc="ent_arc_numero" size="14" maxlength="50" value="${echapper(d.ent_arc_numero ?? '')}"></label>
+        <label>Date <input type="date" data-arc="ent_arc_date" value="${echapper(d.ent_arc_date ?? '')}"></label>
+        <label>Livraison confirmée <input type="date" data-arc="ent_arc_livraison" value="${echapper(d.ent_arc_livraison ?? '')}"></label>
+        <button type="button" data-arc-enregistrer title="Enregistre l'accusé de réception (même sur une commande validée)">💾</button>
+        <label class="bouton-fichier" title="Ranger le fichier de l'accusé de réception dans les pièces du document">📎<input type="file" data-arc-fichier hidden></label></p>
+      <p class="aide">La livraison confirmée remplace la livraison prévue pour les lignes sans date propre (projection du stock).</p>`;
+    const valeur = (cle) => bloc.querySelector(`[data-arc="${cle}"]`).value.trim() || null;
+    bloc.querySelector('[data-arc-enregistrer]').addEventListener('click', async () => {
+      try {
+        const r = await this.arc.enregistrer(d.ent_id, { ent_arc_numero: valeur('ent_arc_numero'), ent_arc_date: valeur('ent_arc_date'), ent_arc_livraison: valeur('ent_arc_livraison') });
+        Object.assign(d, r);
+        this.editeur.surMessage?.('Accusé de réception enregistré', 'succes');
+        this.editeur.grille?.rendre();
+      } catch (e) { this.editeur.surMessage?.(e.message, 'erreur'); }
+    });
+    bloc.querySelector('[data-arc-fichier]').addEventListener('change', async (e) => {
+      const fichier = e.target.files?.[0];
+      e.target.value = '';
+      if (!fichier) return;
+      try {
+        await this.arc.deposer(fichier, valeur('ent_arc_numero'));
+        this.editeur.surMessage?.(`${fichier.name} rangé dans les pièces du document`, 'succes');
+      } catch (x) { this.editeur.surMessage?.(x.message, 'erreur'); }
+    });
   }
 
   /**
@@ -467,6 +506,8 @@ export class PanneauxBtp extends PanneauxDocument {
     if (fst) this.rendreFactureSt(fst);
     const stk = zone.querySelector('[data-stock]');
     if (stk) this.rendreStock(stk);
+    const arc = zone.querySelector('[data-arc]');
+    if (arc) this.rendreArc(arc);
     this.lierRedacteur(zone).catch(() => {});
     zone.querySelectorAll('[data-contact]').forEach((bloc) => this.rendreContact(bloc, bloc.dataset.contact));
     zone.querySelectorAll('[data-adresse]').forEach((bloc) => this.rendreAdresse(bloc));

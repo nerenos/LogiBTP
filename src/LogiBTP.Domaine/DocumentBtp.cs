@@ -44,6 +44,11 @@ public class DocumentBtp : Document
     // Approvisionnement (db/218) : date de besoin d'une réservation, date de livraison prévue d'une commande fournisseur.
     public DateOnly? EntDateBesoin { get; set; }
     public DateOnly? EntDateLivraison { get; set; }
+    // Accusé de réception d'une commande (db/238) : modifié par PUT /api/structure/documents/{id}/arc (même validée),
+    // jamais par l'enregistrement du document ; livraison confirmée = date par défaut des lignes à la place de EntDateLivraison.
+    public string? EntArcNumero { get; set; }
+    public DateOnly? EntArcDate { get; set; }
+    public DateOnly? EntArcLivraison { get; set; }
 
     // Exécution (module Exécution, db/197) : état propre de l'ordre, motif de blocage, service porteur, responsable,
     // dates prévues ; modifiés par la route de l'exécution, jamais par l'enregistrement du document.

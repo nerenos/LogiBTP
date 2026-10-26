@@ -217,6 +217,15 @@ export class EditeurDevisBtp extends EditeurDocument {
     d.variables = d.variables.filter((v) => !supprimees.has(v.var_lig_id) && !metres.has(v.var_mtr_id));
   }
 
+  /**
+   * Date de livraison par défaut des lignes (lot 9, A24a) : livraison confirmée par l'accusé de réception, sinon livraison
+   * prévue, sinon date de besoin (réservation) ; ↔ f_date_livraison_ligne (db/238) lue par la projection du stock.
+   */
+  dateLivraisonDefaut() {
+    const d = this.saisie.document;
+    return d.ent_arc_livraison ?? d.ent_date_livraison ?? d.ent_date_besoin ?? null;
+  }
+
   colonnes() {
     const chiffree = (l) => this.saisissable(l) && estChiffree(l);
     const colonnes = super.colonnes();

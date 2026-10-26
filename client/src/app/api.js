@@ -470,6 +470,8 @@ export const api = {
   copier: (id) => appel('POST', `/documents/${id}/copie`),
   consultation: (id) => appel('GET', `/structure/documents/${id}/consultation`),
   copierConsultation: (id) => appel('POST', `/structure/documents/${id}/consultation`),
+  envoyerConsultation: (id, renvoyer = false) => appel('POST', `/structure/documents/${id}/consultation/envoyer`, { renvoyer }),
+  retenirConsultation: (id) => appel('POST', `/structure/documents/${id}/consultation/retenir`, {}),
   // Sous-traitance, lot 5 : comparatif des offres, assistant « Sous-traiter », engagé d'un marché de vente.
   comparatifConsultation: (id) => appel('GET', `/structure/documents/${id}/consultation/comparatif`),
   sousTraiter: (id, d) => appel('POST', `/structure/documents/${id}/sous-traiter`, d),
@@ -618,6 +620,7 @@ export const api = {
   // Structure des affaires : référentiels des listes de choix, rattachement d'un document (même validé).
   structureReferentiels: () => appel('GET', '/structure/referentiels'),
   rattacherDocument: (id, r) => appel('PUT', `/structure/documents/${id}/rattachement`, r),
+  arcDocument: (id, arc) => appel('PUT', `/structure/documents/${id}/arc`, arc),
   structureIntervenants: (type, id) => appel('GET', `/structure/intervenants/${type}/${id}`),
   structureDocuments: (perimetre) => appel('POST', '/structure/documents', perimetre),
   structureDescendants: (id) => appel('GET', `/structure/documents/${id}/descendants`),

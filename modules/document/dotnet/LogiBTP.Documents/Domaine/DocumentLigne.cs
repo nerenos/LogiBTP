@@ -77,6 +77,8 @@ public class DocumentLigne
     public bool LigSolde { get; set; }
     /// <summary>Poste de pied retenu (retenue de garantie) : échéance RETENUE séparée dans l'échéancier.</summary>
     public bool LigPiedRetenue { get; set; }
+    /// <summary>Date de livraison propre à la ligne ; null = date par défaut de l'entête fournie par l'application (019l).</summary>
+    public DateOnly? LigDateLivraison { get; set; }
 
     // Avancement (situations, factures d'avancement) : saisie P / Q / M, ligne du marché, précédent, cumul calculé.
     public string? LigAvtMode { get; set; }

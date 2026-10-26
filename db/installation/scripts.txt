@@ -36,6 +36,8 @@ modules/document/db/019h_document_famille_execution.sql
 modules/document/db/019i_document_famille_sous_traitance.sql
 modules/document/db/019j_document_lien_paiement_direct.sql
 modules/document/db/019k_document_referentiels.sql
+modules/document/db/019l_document_ligne_livraison.sql
+modules/document/db/019m_document_consultation_issue.sql
 modules/metre/db/020_metre_schema.sql
 modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql
@@ -168,6 +170,7 @@ db/234_materiel_entretien.sql
 db/235_materiel_plans.sql
 db/236_structure_complements.sql
 db/237_bibliotheque_complements.sql
+db/238_documents_arc.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

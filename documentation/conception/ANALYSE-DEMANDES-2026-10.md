@@ -331,3 +331,25 @@ l'article dans le dépôt (Stock) > délai du tarif principal > délai global de
 - **A18e (suite)** : l'approvisionnement du Stock lit le délai de l'article (`ArticleStock.DelaiJours`, fourni par le
   cœur : tarif principal, sinon `ele_delai_livraison`) entre celui de l'article dans le dépôt et celui du dépôt.
 - Reste : formats personnalisés par le module Import, remises par famille et catalogues (TODO).
+
+## 10. Lot 9 : documents (réalisé, 26/10/2026)
+
+- **A24e Accusé de réception** (`db/238`) : `ent_arc_numero`, `ent_arc_date`, `ent_arc_livraison` (livraison confirmée)
+  des commandes fournisseur et de sous-traitance (`A_COMMANDE`, `T_COMMANDE`) ; bloc « Accusé de réception (ARC) » de
+  l'entête, enregistré à part du document, même validé (`PUT /api/structure/documents/{id}/arc`, jamais écrasé par
+  l'enregistrement) ; 📎 range le fichier dans la GED du document (catégorie `arc`). Reconnaissance des ARC reçus par
+  courriel : non faite (TODO).
+- **A24a Date de livraison par ligne** (module Document `019l`) : `lig_date_livraison` ; vide = date par défaut de
+  l'entête (point d'accroche `EditeurDocument.dateLivraisonDefaut`, cœur : livraison confirmée par l'ARC, sinon livraison
+  prévue, sinon date de besoin), affichée en italique : elle suit donc tout changement de l'entête sans recopie ; colonne
+  « Livraison » de la grille (à ajouter aux vues par le dialogue des colonnes ; saisie JJ/MM/AAAA, JJ/MM/AA, JJ/MM ou
+  ISO : `lireDateSaisie`). Projection du stock : date effective d'une ligne = `f_date_livraison_ligne` (ligne, ARC,
+  livraison prévue, date de la pièce) dans `SpecialisationStockBtp.PrevisionsAsync` (réservations : date de la ligne,
+  sinon date de besoin) ; les règles répliquées de la projection sont inchangées (elles reçoivent des événements datés).
+- **A24d Lot de demandes de prix** : « 📧 Envoyer le lot » (fenêtre du lot de consultation) : un courriel par offre
+  validée de fournisseur connu, préparé comme 📧 Envoyer du document (destinataires par défaut, modèle, pièces « à
+  envoyer ») et mis en file par le module Mail, compte rendu par offre (brouillon, sans fournisseur, sans adresse, déjà
+  envoyée par courriel sauf « Renvoyer », erreur) ; `POST /api/structure/documents/{id}/consultation/envoyer`. Comparatif
+  (déjà ouvert aux demandes de prix) : « ✓ Retenir » sur une offre validée = fenêtre de transformation commune
+  (commande), puis les autres offres en cours du lot passent au statut terminal « Non retenue » (`NON_RETENU`, module
+  Document `019m`, jamais recalculé par `f_document_statut`) ; `POST …/consultation/retenir`.

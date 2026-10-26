@@ -10,7 +10,8 @@ namespace LogiBTP.Api.Btp;
 /// <summary>
 /// Module Stock, lot 3 (ANALYSE-MODULE-STOCK.md § 5.4, S13, S15, S25) : événements prévus d'un lieu (reste des
 /// réservations validées au dépôt réservé, à leur date de besoin ; reste à recevoir des commandes fournisseur livrées au
-/// lieu, à leur date de livraison prévue), en unité de stock ; fournisseur principal et conditionnement des articles
+/// lieu, à leur date de livraison : celle de la ligne, sinon la livraison confirmée par l'ARC, sinon la livraison prévue —
+/// lot 9, A24a, A24e), en unité de stock ; fournisseur principal et conditionnement des articles
 /// (tarif principal de la bibliothèque) ; commandes fournisseur en brouillon par fournisseur.
 /// </summary>
 public sealed partial class SpecialisationStockBtp
@@ -32,7 +33,8 @@ public sealed partial class SpecialisationStockBtp
     {
         var l = await db.Database.SqlQuery<PrevisionSql>($"""
             SELECT d.ent_id, d.ent_numero AS numero, t.tyd_code AS code, t.tyd_libelle AS type_piece,
-                   coalesce(d.ent_date_besoin, d.ent_date) AS date_besoin, coalesce(d.ent_date_livraison, d.ent_date) AS date_livraison,
+                   coalesce(l.lig_date_livraison, d.ent_date_besoin, d.ent_date) AS date_besoin,
+                   f_date_livraison_ligne(l.lig_date_livraison, d.ent_arc_livraison, d.ent_date_livraison, d.ent_date) AS date_livraison,
                    p.per_raison_sociale AS tiers, ch.cha_code AS chantier, e.ele_id, coalesce(l.lig_qte_totale, l.lig_qte, 0) AS qte, l.lig_unt_code AS unite,
                    CASE WHEN t.tyd_code = 'S_RESERVATION' THEN coalesce(x.sortie, 0) ELSE greatest(coalesce(x.reception, 0), coalesce(x.facturation, 0)) END AS deja,
                    e.ele_unt_stock AS unite_stock, e.ele_unites::text AS unites, e.ele_proprietes::text AS proprietes, coalesce(u.unt_precision_qte, 2)::int AS precision,

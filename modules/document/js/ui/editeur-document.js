@@ -8,6 +8,24 @@ import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, e
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
+/** Date saisie dans la grille (JJ/MM/AAAA, JJ/MM/AA, JJ/MM de l'année en cours, AAAA-MM-JJ) en ISO ; null si vide, undefined si illisible. */
+export function lireDateSaisie(texte, aujourdhui = new Date()) {
+  const t = String(texte ?? '').trim();
+  if (t === '') return null;
+  let a; let m; let j;
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  const fr = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(t);
+  if (iso) [, a, m, j] = iso.map(Number);
+  else if (fr) { j = Number(fr[1]); m = Number(fr[2]); a = fr[3] ? Number(fr[3].length === 2 ? `20${fr[3]}` : fr[3]) : aujourdhui.getFullYear(); }
+  else return undefined;
+  const d = new Date(Date.UTC(a, m - 1, j));
+  if (d.getUTCFullYear() !== a || d.getUTCMonth() !== m - 1 || d.getUTCDate() !== j) return undefined;
+  return d.toISOString().slice(0, 10);
+}
+
+/** Date ISO affichée JJ/MM/AAAA. */
+const dateCourte = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
+
 /** Libellés des totaux calculés et des groupes du pied (structure résultat.pied du moteur). */
 /** Variables des textes d'introduction et de conclusion : données de l'entête et totaux (éditeur et paramétrage). */
 export function variablesTexteDocument() {
@@ -290,6 +308,9 @@ export class EditeurDocument {
 
   /** Ligne modifiable par l'utilisateur (une ligne calculée par le moteur ou un total du pied ne l'est pas). */
   saisissable(l) { return !this.magasin?.lectureSeule && !this.fige && !l._virtuelle && !this.estLigneCalculee(l); }
+
+  /** Date de livraison par défaut des lignes (ISO) : aucune ici ; l'application la lit dans l'entête (point d'accroche). */
+  dateLivraisonDefaut() { return null; }
 
   /** Document figé : validé (verrouillé) ou dans un statut non modifiable ; les lignes se consultent seulement. */
   get fige() {
@@ -1030,6 +1051,20 @@ export class EditeurDocument {
         },
       },
       {
+        // Date de livraison de la ligne (019l) : la sienne, sinon la date par défaut de l'entête fournie par l'application
+        // (dateLivraisonDefaut), en italique : elle suit alors tout changement de l'entête. Vider la cellule revient au défaut.
+        cle: 'livraison', titre: 'Livraison', classe: 'col-date', editeur: 'texte',
+        editable: (l) => saisissable(l) && this.regles.estLigneDePrix(this.saisie.lignes, l),
+        champ: () => 'lig_date_livraison', lire: (l) => dateCourte(l.lig_date_livraison),
+        valeur: (r) => {
+          if (r.virtuelle || !this.regles.estLigneDePrix(this.saisie.lignes, r.item)) return '';
+          if (r.item.lig_date_livraison) return dateCourte(r.item.lig_date_livraison);
+          const defaut = this.dateLivraisonDefaut();
+          return defaut ? { html: `<i class="date-defaut">${dateCourte(defaut)}</i>` } : '';
+        },
+        titreCellule: (r) => (r.virtuelle || r.item.lig_date_livraison || !this.dateLivraisonDefaut() ? '' : "Date de l'entête : saisir une date pour l'imposer à la ligne"),
+      },
+      {
         // Commentaire de la ligne du document parent (repris à la transformation d'avancement), en lecture seule.
         cle: 'commentaire_parent', titre: 'Commentaire parent', classe: 'col-commentaire', editable: () => false,
         valeur: (r) => (r.virtuelle ? '' : String(r.item.lig_proprietes?.commentaire_parent ?? '').split('\n')[0]),
@@ -1333,6 +1368,10 @@ export class EditeurDocument {
     if (champ === 'lig_unt_code' && valeur.trim() === '') valeur = null;
     if (champ === 'lig_unt_code' && valeur) valeur = valeur.trim().slice(0, 10);
     if (champ === 'lig_commentaire') valeur = valeur.trim() === '' ? null : valeur;
+    if (champ === 'lig_date_livraison') {
+      valeur = lireDateSaisie(texte);
+      if (valeur === undefined) { this.surMessage?.('Date de livraison : JJ/MM/AAAA'); return false; }
+    }
     this.modifierLigne(id, champ, valeur);
     return true;
   }

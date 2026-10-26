@@ -34,7 +34,7 @@ public static class SousTraitanceAssistant
         """;
 
     private sealed record LigneOffre(long EntId, long LigId, int LigOrdre, string? Code, string Libelle, decimal Qte, decimal Montant);
-    private sealed record DocumentOffre(long Id, string? Numero, string? Tiers, decimal TotalHt, string Statut, bool Valide);
+    private sealed record DocumentOffre(long Id, string? Numero, string? Tiers, decimal TotalHt, string Statut, bool Valide, string TypeCode, bool Terminal);
 
     /// <summary>Comparatif des offres du lot : une rangée par ligne rapprochée, une offre par document (quantité, PU, montant), totaux.</summary>
     public static async Task<object> ComparatifAsync(LogiBtpContext db, long id, CancellationToken ct)
@@ -42,8 +42,10 @@ public static class SousTraitanceAssistant
         var code = await db.Database.SqlQueryRaw<string?>("SELECT ent_consultation AS \"Value\" FROM document WHERE ent_id = @id", new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct)
             ?? throw ExceptionMetier.Invalide("CONSULTATION_VIDE", "Pas encore de lot de consultation pour ce document");
         var docs = await db.Database.SqlQueryRaw<DocumentOffre>("""
-            SELECT d.ent_id AS id, d.ent_numero AS numero, p.per_raison_sociale AS tiers, coalesce(d.ent_total_ht, 0) AS total_ht, s.std_libelle AS statut, d.ent_verrouille AS valide
-            FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
+            SELECT d.ent_id AS id, d.ent_numero AS numero, p.per_raison_sociale AS tiers, coalesce(d.ent_total_ht, 0) AS total_ht, s.std_libelle AS statut, d.ent_verrouille AS valide,
+                   t.tyd_code AS type_code, s.std_terminal AS terminal
+            FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id JOIN type_document t ON t.tyd_id = d.ent_tyd_id
+            LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
             WHERE d.ent_consultation = @c AND d.ent_is_reference AND s.std_code NOT IN ('REMPLACE', 'ANNULE')
             ORDER BY d.ent_id
             """, new NpgsqlParameter("c", code)).ToListAsync(ct);

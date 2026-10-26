@@ -17,6 +17,9 @@ public sealed record DocumentMarche(string Type);
 /// <summary>Rattachement d'un document à la structure des affaires (champs facultatifs).</summary>
 public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, int? EntChantierId, int? EntMarcheId);
 
+/// <summary>Accusé de réception d'une commande (lot 9, A24e) : numéro, date, livraison confirmée.</summary>
+public sealed record ArcDocument(string? EntArcNumero, DateOnly? EntArcDate, DateOnly? EntArcLivraison);
+
 /// <summary>
 /// Structure des affaires (db/160_structure.sql) : référentiels pour les listes de choix (projets, affaires, chantiers,
 /// marchés, commandes clients) et rattachement d'un document, même validé (classement, pas modification du contenu).
@@ -46,6 +49,9 @@ public static class Structure
           'fonctions', (SELECT coalesce(json_agg(json_build_object('code', fin_code, 'libelle', fin_libelle, 'portee', fin_portee, 'unique', fin_unique,
                          'paiement_direct', fin_paiement_direct, 'actif', fin_actif) ORDER BY fin_ordre, fin_code), '[]') FROM fonction_intervenant))
         """;
+
+    /// <summary>Types de documents qui reçoivent un accusé de réception (↔ TYPES_ARC de client/src/app/panneaux-btp.js).</summary>
+    public static readonly HashSet<string> TypesArc = ["A_COMMANDE", "T_COMMANDE"];
 
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
     {
@@ -81,6 +87,21 @@ public static class Structure
             // Commande validée rattachée (ou détachée) après coup : base ou avenant du marché, montants recalculés.
             await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({id})", ct);
             return Results.Ok(new { ent_projet_id = doc.EntProjetId, ent_affaire_id = doc.EntAffaireId, ent_chantier_id = doc.EntChantierId, ent_marche_id = doc.EntMarcheId });
+        });
+        // Accusé de réception d'une commande fournisseur ou de sous-traitance (db/238), saisi même validée : la livraison
+        // confirmée devient la date par défaut des lignes sans date propre (projection du stock).
+        g.MapPut("/documents/{id:long}/arc", async (long id, ArcDocument a, LogiBtpContext db, CancellationToken ct) =>
+        {
+            var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
+            var code = await db.TypesDocument.AsNoTracking().Where(t => t.TydId == doc.EntTydId).Select(t => t.TydCode).FirstAsync(ct);
+            if (!TypesArc.Contains(code)) throw ExceptionMetier.Invalide("ARC_TYPE", "L'accusé de réception ne concerne que les commandes fournisseur et de sous-traitance");
+            var numero = string.IsNullOrWhiteSpace(a.EntArcNumero) ? null : a.EntArcNumero.Trim();
+            if (numero?.Length > 50) throw ExceptionMetier.Invalide("ARC_NUMERO", "Numéro d'accusé de réception : 50 caractères au plus");
+            doc.EntArcNumero = numero;
+            doc.EntArcDate = a.EntArcDate;
+            doc.EntArcLivraison = a.EntArcLivraison;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { ent_arc_numero = doc.EntArcNumero, ent_arc_date = doc.EntArcDate, ent_arc_livraison = doc.EntArcLivraison });
         });
         // Document créé depuis un marché (BL…) : toutes les commandes validées du marché, dans l'ordre (base puis avenants),
         // une section et un bloc de pied par commande (CONCEPTION-ACHATS-MARCHES.md, Q18, Q23).

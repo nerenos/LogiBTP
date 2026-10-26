@@ -1,7 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
@@ -409,6 +409,16 @@ export class PageDocument extends PageBase {
       execution: this.app.enLigne && this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
       // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
       stock: this.app.enLigne && this.app.moduleActif('stock') ? { lieux: () => api.stock.lieux() } : null,
+      // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
+      arc: this.app.enLigne ? {
+        enregistrer: (id, arc) => api.arcDocument(id, arc),
+        deposer: async (fichier, numero) => {
+          const d = this.editeur.saisie.document;
+          await this.servicesGed.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: numero ? `ARC ${numero}` : `ARC ${d.ent_numero ?? ''}`.trim(), categorie: 'arc',
+            type_element: this.editeur.definition.type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id) } });
+          this.gedCle = null;
+        },
+      } : null,
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
@@ -891,13 +901,18 @@ export class PageDocument extends PageBase {
           <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Pas encore de lot : « Autre fournisseur » crée la première copie et donne à la demande le code du lot (son numéro).</p>'}
       <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button>
-        ${lot.documents.length > 1 ? '<button type="button" data-comparer title="Comparatif ligne à ligne des offres du lot (nouvelle fenêtre)">⚖ Comparer les offres</button>' : ''}
+        ${lot.documents.length > 1 ? '<button type="button" data-comparer title="Comparatif ligne à ligne des offres du lot, choix de l’offre retenue (nouvelle fenêtre)">⚖ Comparer les offres</button>' : ''}
+        ${lot.documents.length ? '<button type="button" data-envoyer title="Un courriel par fournisseur (offres validées), comme 📧 Envoyer depuis chaque document">📧 Envoyer le lot</button>' : ''}
         <button value="fermer">Fermer</button></p></form>`;
     document.body.append(dlg);
     dlg.addEventListener('close', () => dlg.remove());
     dlg.querySelector('[data-comparer]')?.addEventListener('click', () => {
       dlg.close();
       this.app.naviguer(`/consultation/comparatif?id=${d.ent_id}`, { nouvelleFenetre: true });
+    });
+    dlg.querySelector('[data-envoyer]')?.addEventListener('click', async () => {
+      dlg.close();
+      await this.envoyerLot(d.ent_id, lot);
     });
     dlg.querySelector('[data-copier]').addEventListener('click', async () => {
       try {
@@ -908,6 +923,30 @@ export class PageDocument extends PageBase {
       } catch (e) { this.app.erreur(e); }
     });
     dlg.showModal();
+  }
+
+  /**
+   * Envoi groupé du lot de consultation (lot 9, A24d) : un courriel par fournisseur (offres validées), puis compte rendu
+   * (envoyées, ignorées avec leur motif) ; les offres déjà envoyées ne repartent que sur demande.
+   */
+  async envoyerLot(id, lot) {
+    const choix = await ouvrirDialogue({
+      titre: `📧 Envoyer le lot ${lot.code ?? ''}`,
+      message: `Un courriel par fournisseur, avec ses pièces « à envoyer », pour les ${lot.documents.length} offre(s) du lot (les brouillons sont écartés).`,
+      boutons: [{ libelle: 'Annuler', valeur: null }, { libelle: 'Renvoyer aussi les offres déjà envoyées', valeur: 'tout' }, { libelle: 'Envoyer', principal: true, valeur: 'nouveaux' }],
+    });
+    if (!choix) return;
+    let r;
+    try { r = await api.envoyerConsultation(id, choix === 'tout'); } catch (e) { this.app.erreur(e); return; }
+    const libelles = { ENVOYE: '📧 En file d’envoi', IGNORE: '— Non envoyée', ERREUR: '⚠ Erreur' };
+    await ouvrirDialogue({
+      titre: `📧 Lot ${lot.code ?? ''} : ${r.filter((x) => x.resultat === 'ENVOYE').length} courriel(s) en file`,
+      html: `<table class="tableau-compact"><thead><tr><th>Offre</th><th>Fournisseur</th><th>Résultat</th><th>Détail</th></tr></thead><tbody>
+        ${r.map((x) => `<tr class="${x.resultat === 'ERREUR' ? 'erreur' : ''}"><td>${echapper(x.numero ?? `#${x.id}`)}</td><td>${echapper(x.tiers ?? '—')}</td>
+          <td>${libelles[x.resultat] ?? x.resultat}</td><td>${echapper(x.message ?? '')}</td></tr>`).join('')}</tbody></table>
+        <p class="aide">Suivi des envois : menu Courriels.</p>`,
+      boutons: [{ libelle: 'Fermer', principal: true, valeur: true }],
+    });
   }
 
   /** Assistant « Sous-traiter » (Sous-traitance, lot 5) : lignes sélectionnées de la grille ou tout le reliquat. */
