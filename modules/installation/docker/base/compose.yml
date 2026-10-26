@@ -23,6 +23,8 @@ services:
       - sauvegardes:/sauvegardes
     shm_size: 256mb
     networks: [logibtp]
+    ports:
+      - "${LOGIBTP_PORT_BASE:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -q"]
       interval: 10s
