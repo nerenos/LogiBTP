@@ -168,3 +168,66 @@ prix de la demande pendant le chantier) ; modules à définir : Analyse, Comptab
 circuit de validation, édition automatique ; module de sauvegarde (en grande partie couvert par le module
 Installation, lots 3 et 4 : reste la sauvegarde lancée depuis l'application et le changement de la clé de
 construction qui chiffre le `.env`).
+
+## 6. Lot 5c : coûts et entretiens du matériel (analyse, 26/10/2026)
+
+Demandes : A8 (chantier de suivi des coûts du matériel, ordre d'entretien avec le détail des opérations et des pièces
+du stock), A9 (historique des compteurs avec les événements et les entretiens), contenu de A4 (entretiens et visites à
+surveiller). Lots 5a et 5b réalisés : `materiel.mat_cha_id` existe déjà (db/230), le type de chantier MATERIEL est
+déduit, un chantier de matériel est écarté des chantiers proposés au planning et au pointage.
+
+### 6.1 Existant réutilisé
+
+| Besoin | Existant | Remarque |
+|---|---|---|
+| Porter les coûts sur un objet | Chantier : documents rattachés (`ent_chantier_id`), pointages (`poi_cha_id`, `v_cout_mo_chantier`), mouvements de stock vers un lieu (`stk_mouvement.mvt_lieu_id`) | Le modèle « chantier de dotation » du salarié (db/219) a fait ses preuves : un chantier par matériel, créé à la première imputation. |
+| Ordres | Famille E du module Document (E_OE, E_PO, E_SAV…), un chantier par ordre (`EXE_CHANTIER`), états, étapes, service, responsable, budget | Un nouveau type d'ordre hérite de tout : liste, exécution, planning, pointage par ordre. |
+| Pièces du stock | Ordre → E_DAP → S_DEMANDE / S_RESERVATION ; magasin : sorties vers un chantier ; borne : sorties pour un chantier du jour | La sortie d'une pièce vers le chantier du matériel la consomme (le chantier ne tient pas de stock) et la valorise au PMP. |
+| Achats et sous-traitance | Commandes et factures fournisseur rattachées à un chantier | Une réparation chez un garagiste, une facture de carburant : rattachées au chantier du matériel. |
+| Échéances | Habilitations du matériel (VGP, contrôle technique : `habilitation`, type « matériel »), page « à surveiller », notifications `SourceHabilitations` | Les entretiens périodiques s'y ajoutent. |
+| Compteur | `mat_heures`, `mat_heures_revision` (une valeur, une périodicité) | Remplacés par un historique de relevés. |
+
+### 6.2 Proposition
+
+1. **Chantier de suivi du matériel** : créé à la demande (bouton de la fiche ou première imputation) : code `MAT-<code>`,
+   affaire de gestion MATERIEL (comme DOTATIONS), ouvert tant que le matériel n'est pas en sommeil ; `mat_cha_id`.
+   Onglet **Coûts** de la fiche matériel : par nature et par mois (main-d'œuvre pointée, pièces et consommables sortis
+   du stock, achats et factures fournisseur, sous-traitance, carburant), cumul de l'année et depuis l'entrée, coût par
+   heure ou par kilomètre d'après les compteurs.
+2. **Ordre d'entretien** `E_ENT` (famille E) : sur le chantier du matériel ; lignes = opérations (main-d'œuvre, en
+   heures, nature MO_ATELIER) et pièces (articles de la bibliothèque, quantités) ; nature de l'entretien (préventif,
+   curatif, réglementaire) ; relevé du compteur à l'intervention. Transformations : E_ENT → E_DAP (pièces à sortir ou à
+   commander), E_ENT → A_COMMANDE (réparation extérieure). Pointage des mécaniciens sur l'ordre (déjà possible pour un
+   ordre E). Clôture de l'ordre = entretien réalisé : inscrit dans l'historique du matériel et recalcule la prochaine
+   échéance.
+3. **Historique des compteurs** (`materiel_releve` : date, valeur, unité h / km, source : saisie, ordre, borne) et
+   **événements** (`materiel_evenement` : panne, sinistre, accident, immobilisation, contrôle, entretien ; date,
+   description, ordre lié, coût éventuel). Frise de la fiche matériel : relevés, événements, entretiens.
+4. **Plans d'entretien** (`materiel_plan` : par type de matériel ou par matériel ; opération, périodicité en heures,
+   kilomètres ou mois, la première atteinte déclenche) : échéance calculée par une règle répliquée JS / C# avec un jeu
+   (`05_entretiens.json` : dernier entretien, compteur courant, moyenne d'usage) ; échéances dans « Habilitations,
+   entretiens et visites à surveiller » et dans la notification quotidienne ; bouton « Créer l'ordre d'entretien ».
+5. **Carburant** : saisie rapide d'un plein (date, compteur, litres, montant) qui crée un relevé et une ligne de coût ;
+   import des cartes carburant plus tard (module Import).
+
+### 6.3 Questions à trancher
+
+| Réf. | Question | Proposition |
+|---|---|---|
+| M1 | Un chantier par matériel, ou un chantier pour les matériels d'une même famille (petit outillage par nombre) ? | Un par matériel identifié ; un chantier par type de matériel pour les matériels gérés par nombre. |
+| M2 | Création du chantier de suivi : automatique pour tout matériel, ou à la demande ? | À la demande (bouton) et à la première imputation : pas de chantiers vides. |
+| M3 | Coût horaire de la main-d'œuvre d'atelier : celui des pointages (salarié), ou un taux d'atelier ? | Celui des pointages (`v_cout_mo_chantier`), comme pour les chantiers. |
+| M4 | Refacturer le coût du matériel aux chantiers où il travaille (coût horaire d'usage) ? | Pas dans ce lot : le coût par heure est affiché ; la refacturation interne sera une décision de la future analyse de rentabilité. |
+| M5 | Ordre d'entretien : nouveau type E_ENT, ou E_SAV existant ? | Nouveau type E_ENT (E_SAV est tourné vers le client et sa facturation). |
+| M6 | Plans d'entretien par type de matériel (hérités) et surchargés par matériel ? | Oui. |
+| M7 | Compteurs : heures et kilomètres pour le même matériel (camion-grue) ? | Oui, deux unités par matériel au plus. |
+| M8 | Carburant dans ce lot ou plus tard ? | Saisie manuelle dans ce lot, import des cartes carburant plus tard. |
+
+### 6.4 Découpage proposé
+
+| Sous-lot | Contenu | Taille |
+|---|---|---|
+| 5c-1 | Chantier de suivi (création, affaire MATERIEL, statut lié au sommeil), onglet Coûts (vue des coûts par chantier et nature : MO, stock, achats) | M |
+| 5c-2 | Relevés de compteurs et événements (tables, saisie, frise), carburant manuel | M |
+| 5c-3 | Ordre d'entretien E_ENT (type, transformations, clôture → historique et relevé) | M-L |
+| 5c-4 | Plans d'entretien, échéances (règle répliquée et jeu), page « à surveiller », notifications, création de l'ordre depuis l'échéance | L |
