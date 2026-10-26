@@ -96,6 +96,37 @@ public sealed class SourceHabilitations(LogiBtpContext db) : ISourceNotification
 }
 
 /// <summary>
+/// Entretiens du matériel (lot 5c-4, toutes les 6 h) : plans effectifs en retard ou à prévoir dans les 30 jours
+/// (<see cref="PlansEntretien.CalculerAsync"/>), synthèse quotidienne au responsable du service du matériel, sinon aux
+/// comptes ADMIN.
+/// </summary>
+public sealed class SourceEntretiens(LogiBtpContext db) : ISourceNotifications
+{
+    public string Code => "ressources-entretiens";
+    public TimeSpan Periode => TimeSpan.FromHours(6);
+    public IReadOnlyList<TypeNotification> Types { get; } = [new("ressources", "ENTRETIEN", "Entretiens du matériel en retard ou à prévoir")];
+
+    public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
+    {
+        var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
+        var alertes = (await PlansEntretien.CalculerAsync(db, null, aujourdhui, ct))
+            .Where(e => e.Echeance.Etat is "EN_RETARD" or "A_PREVOIR").ToList();
+        if (alertes.Count == 0) return [];
+        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var parDestinataire = alertes.SelectMany(a => a.Responsable is { } r ? [(Dest: r, a.Echeance.Etat)] : admins.Select(x => (Dest: x, a.Echeance.Etat)))
+            .GroupBy(x => x.Dest.ToLowerInvariant());
+        return parDestinataire.Select(g =>
+        {
+            var retard = g.Count(x => x.Etat == "EN_RETARD");
+            return new NouvelleNotification(g.First().Dest, "ressources", "ENTRETIEN",
+                $"Entretiens du matériel : {retard} en retard, {g.Count() - retard} à prévoir dans les 30 jours",
+                "Plans d'entretien (heures, kilomètres, mois)", retard > 0 ? "ATTENTION" : "INFO", "/ressources/habilitations?jours=30",
+                null, null, $"entretiens:{aujourdhui:yyyy-MM-dd}");
+        }).ToList();
+    }
+}
+
+/// <summary>
 /// Étapes des ordres (module Exécution, E45 ; toutes les heures, module actif) : étape en retard (date prévue dépassée
 /// sans validation) à la ressource principale (salarié), sinon au responsable de l'ordre, sinon au responsable du service ;
 /// contrôle du N+1 attendu depuis plus de deux jours au responsable du service porteur (ou de son parent).

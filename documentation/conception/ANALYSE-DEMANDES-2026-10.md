@@ -259,3 +259,14 @@ déduit, un chantier de matériel est écarté des chantiers proposés au planni
   stock), A_DEVIS et A_COMMANDE (réparation extérieure) ; clôture (état Terminé) → événement Entretien de l'historique
   (trigger, retiré si l'ordre est rouvert) ; chantier de suivi proposé au pointage tant qu'un ordre d'entretien y est en
   cours (M3) ; liste « Ordres d'entretien du matériel » (vue 1108, menu Exécution).
+- **5c-4** (26/10/2026) : plans d'entretien `materiel_plan` par type de matériel (un type enfant hérite de son parent)
+  et par matériel (même code = remplace, inactif = retire ; M6), périodicités heures / kilomètres / mois, nature,
+  opérations ; échéance de chaque plan effectif depuis son dernier entretien (événement Entretien ou Contrôle au code du
+  plan, posé à la clôture d'un ordre issu du plan ou choisi à la saisie), sinon la mise en service ou l'entrée, avec
+  les compteurs cumulés et l'usage moyen des 90 derniers jours : règles répliquées `entretiens.js` ↔
+  `ReglesEntretiens.cs` (jeu `tests/ressources/06_entretiens.json` ; numéro 06, le 05 étant pris par les compteurs) ;
+  plans et échéances dans l'onglet Compteurs (🔧 crée l'ordre du plan avec ses opérations, ✎ plans propres au
+  matériel), plans par type dans `/parametres/ressources`, entretiens en retard ou à prévoir dans « Habilitations,
+  entretiens et visites à surveiller », notification quotidienne (`SourceEntretiens`) ; plans de démonstration des
+  types Engins, Levage, Véhicules. Sans entretien saisi, la démonstration montre beaucoup d'entretiens en retard
+  (critère des mois compté depuis l'entrée des matériels).

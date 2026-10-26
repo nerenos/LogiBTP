@@ -390,6 +390,13 @@ export const api = {
     creerOrdreEntretien: (materiel, n) => appel('POST', `/ressources/materiels/${materiel}/ordres`, n),
     entretien: (entId) => appel('GET', `/ressources/entretiens/${entId}`),
     enregistrerEntretien: (entId, s) => appel('PUT', `/ressources/entretiens/${entId}`, s),
+    // Plans et échéances d'entretien (lot 5c-4, db/235).
+    plansTypes: () => appel('GET', '/ressources/plans-entretien/types'),
+    enregistrerPlansType: (type, l) => appel('PUT', `/ressources/plans-entretien/types/${encodeURIComponent(type)}`, l),
+    plansMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/plans`),
+    enregistrerPlansMateriel: (materiel, l) => appel('PUT', `/ressources/materiels/${materiel}/plans`, l),
+    echeancesMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/echeances`),
+    echeancesEntretiens: (jours = 60) => appel('GET', `/ressources/entretiens/echeances?jours=${encodeURIComponent(jours)}`),
     echeancesMateriels: (jours = 60) => appel('GET', `/ressources/materiels/echeances?jours=${encodeURIComponent(jours)}`),
     aSurveiller: ({ element = '', jours = 60 } = {}) => appel('GET', `/ressources/habilitations?${new URLSearchParams({ ...(element ? { element } : {}), jours })}`),
     exigeesMateriel: (id) => appel('GET', `/ressources/materiels/${id}/exigees`),

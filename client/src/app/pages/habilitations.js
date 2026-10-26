@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { pastilleHabilitation, jourRessource } from '../ressources/ressources-ui.js';
+import { tableauEcheances } from '../ressources/entretiens-ui.js';
 
 /**
  * Habilitations, entretiens et visites à surveiller (référentiel des ressources) : expirées ou arrivant à échéance dans les N jours, salariés
@@ -37,6 +38,9 @@ export class PageHabilitations extends PageBase {
       </tbody></table>` : '<p class="aide">Aucune habilitation expirée ni à renouveler dans ce délai.</p>';
     // Matériels : fins de location et de garantie (db/230) dans le même délai.
     if (this.element === 'salarie') return;
+    // Entretiens des plans (lot 5c-4) : en retard ou date estimée dans le délai.
+    const ent = await api.ressources.echeancesEntretiens(this.jours).catch(() => []);
+    zone.insertAdjacentHTML('beforeend', `<h2>Matériels : entretiens en retard ou à prévoir</h2>${tableauEcheances(ent, { materiel: true })}`);
     const e = await api.ressources.echeancesMateriels(this.jours).catch(() => []);
     if (!e.length) return;
     const aujourdhui = new Date().toISOString().slice(0, 10);

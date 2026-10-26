@@ -1,0 +1,76 @@
+{
+  "description": "Plans et échéances d'entretien du matériel (client/src/app/ressources/entretiens.js ↔ ReglesEntretiens.cs) : plans effectifs (type parent, type, matériel : même code remplacé à sa place, inactif retiré) ; compteur cumulé à une date ; usage moyen par jour (dernier point au début de la période, sinon le premier ; null sous 7 jours ; 4 décimales) ; échéance d'un plan depuis la référence (dernier entretien ou mise en service) : heures et kilomètres estimés par l'usage moyen (arrondi au jour supérieur), mois ajoutés (jour borné à la fin du mois), le premier atteint déclenche ; état EN_RETARD, A_PREVOIR (seuil en jours), OK, INCONNU.",
+  "plans": [
+    {
+      "nom": "type parent, type et matériel",
+      "listes": [
+        [{ "code": "VIDANGE", "heures": 500, "mois": 12 }, { "code": "VGP", "mois": 6 }],
+        [{ "code": "VIDANGE", "heures": 250, "mois": 12 }, { "code": "GRAISSAGE", "heures": 50 }],
+        [{ "code": "VGP", "actif": false }, { "code": "PNEUS", "km": 40000 }]
+      ],
+      "attendu": [{ "code": "VIDANGE", "heures": 250 }, { "code": "GRAISSAGE", "heures": 50 }, { "code": "PNEUS", "heures": null }]
+    }
+  ],
+  "releves": [
+    { "unite": "H", "date": "2026-01-01", "valeur": 1000 },
+    { "unite": "H", "date": "2026-03-02", "valeur": 1300 },
+    { "unite": "KM", "date": "2026-03-02", "valeur": 500 },
+    { "unite": "H", "date": "2026-04-01", "valeur": 1450 },
+    { "unite": "H", "date": "2026-05-01", "valeur": 20, "remise": true },
+    { "unite": "H", "date": "2026-05-31", "valeur": 170 }
+  ],
+  "cumuls": { "2025-12-31": null, "2026-05-15": 1470, "2026-06-30": 1620 },
+  "moyennes": [
+    { "date": "2026-05-31", "jours": 90, "attendu": 3.5556 },
+    { "date": "2026-03-05", "jours": 90, "attendu": 5 },
+    { "date": "2026-01-05", "jours": 90, "attendu": null }
+  ],
+  "echeances": [
+    {
+      "nom": "heures estimées par l'usage moyen : à prévoir avant le critère des mois",
+      "plan": { "code": "VIDANGE", "heures": 250, "mois": 12 },
+      "reference": { "date": "2026-01-10", "H": 1000 },
+      "courant": { "date": "2026-06-01", "H": 1200 },
+      "moyennes": { "H": 5 },
+      "attendu": {
+        "criteres": [
+          { "critere": "H", "echeance": 1250, "reste": 50, "date": "2026-06-11" },
+          { "critere": "MOIS", "echeance": "2027-01-10", "reste": 223, "date": "2027-01-10" }
+        ],
+        "date": "2026-06-11", "etat": "A_PREVOIR"
+      }
+    },
+    {
+      "nom": "kilomètres dépassés ; heures non relevées ignorées",
+      "plan": { "code": "PNEUS", "heures": 500, "km": 20000 },
+      "reference": { "date": "2025-09-01", "KM": 10000 },
+      "courant": { "date": "2026-06-01", "H": null, "KM": 31000 },
+      "moyennes": {},
+      "attendu": { "criteres": [{ "critere": "KM", "echeance": 30000, "reste": -1000, "date": "2026-06-01" }], "date": "2026-06-01", "etat": "EN_RETARD" }
+    },
+    {
+      "nom": "sans référence ni usage moyen : pas de date estimée",
+      "plan": { "code": "REVISION", "heures": 500 },
+      "reference": null,
+      "courant": { "date": "2026-06-01", "H": 100 },
+      "moyennes": {},
+      "attendu": { "criteres": [{ "critere": "H", "echeance": 500, "reste": 400, "date": null }], "date": null, "etat": "OK" }
+    },
+    {
+      "nom": "aucun critère calculable",
+      "plan": { "code": "VGP", "mois": 6 },
+      "reference": null,
+      "courant": { "date": "2026-06-01", "H": 100 },
+      "moyennes": {},
+      "attendu": { "criteres": [], "date": null, "etat": "INCONNU" }
+    },
+    {
+      "nom": "mois ajoutés : jour borné à la fin du mois",
+      "plan": { "code": "CONTROLE", "mois": 1 },
+      "reference": { "date": "2026-01-31" },
+      "courant": { "date": "2026-02-20" },
+      "moyennes": {},
+      "attendu": { "criteres": [{ "critere": "MOIS", "echeance": "2026-02-28", "reste": 8, "date": "2026-02-28" }], "date": "2026-02-28", "etat": "A_PREVOIR" }
+    }
+  ]
+}

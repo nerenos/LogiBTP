@@ -181,4 +181,45 @@ public class RessourcesTests
             Assert.Equal(Codes(c["attendu"]), ReglesCompteurs.ControlerEvenement(evt));
         }
     }
+
+    private static PlanEntretien Plan(JsonNode p) => new(p["code"]!.GetValue<string>(), null, Nombre(p["heures"]), Nombre(p["km"]), p["mois"]?.GetValue<int>(), p["actif"]?.GetValue<bool>() ?? true);
+
+    private static PointCompteurs? Point(JsonNode? p) => p is null ? null : new(Jour(p["date"]), Nombre(p["H"]), Nombre(p["KM"]));
+
+    [Fact]
+    public void Entretiens_identiques_au_js()
+    {
+        var j = Jeu("06_entretiens.json");
+        foreach (var c in j["plans"]!.AsArray())
+        {
+            var listes = c!["listes"]!.AsArray().Select(l => l!.AsArray().Select(p => Plan(p!)).ToList()).ToList();
+            var attendu = c["attendu"]!.AsArray().Select(x => (x!["code"]!.GetValue<string>(), Nombre(x["heures"]))).ToList();
+            Assert.Equal(attendu, ReglesEntretiens.PlansEffectifs(listes).Select(p => (p.Code, p.Heures)).ToList());
+        }
+        var releves = j["releves"]!.AsArray().Select(r => Releve(r!)).ToList();
+        foreach (var (date, attendu) in j["cumuls"]!.AsObject())
+            Assert.Equal(Nombre(attendu), ReglesEntretiens.CumulA(releves, "H", Jour(JsonValue.Create(date))!.Value));
+        foreach (var c in j["moyennes"]!.AsArray())
+            Assert.Equal(Nombre(c!["attendu"]), ReglesEntretiens.MoyenneUsage(releves, "H", Jour(c["date"])!.Value, c["jours"]!.GetValue<int>()));
+        foreach (var c in j["echeances"]!.AsArray())
+        {
+            var m = c!["moyennes"]!;
+            var e = ReglesEntretiens.Echeance(Plan(c["plan"]!), Point(c["reference"]), Point(c["courant"])!, Nombre(m["H"]), Nombre(m["KM"]));
+            var a = c["attendu"]!;
+            Assert.Equal(a["etat"]!.GetValue<string>(), e.Etat);
+            Assert.Equal(Jour(a["date"]), e.Date);
+            var criteres = a["criteres"]!.AsArray();
+            Assert.Equal(criteres.Count, e.Criteres.Count);
+            for (var i = 0; i < criteres.Count; i++)
+            {
+                var x = criteres[i]!;
+                var y = e.Criteres[i];
+                Assert.Equal(x["critere"]!.GetValue<string>(), y.Critere);
+                if (y.Echeance is DateOnly d) Assert.Equal(Jour(x["echeance"]), d);
+                else Assert.Equal(x["echeance"]!.GetValue<decimal>(), (decimal)y.Echeance);
+                Assert.Equal(x["reste"]!.GetValue<decimal>(), y.Reste);
+                Assert.Equal(Jour(x["date"]), y.Date);
+            }
+        }
+    }
 }

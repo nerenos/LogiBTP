@@ -4,7 +4,7 @@ import {
   LIBELLES_UNITE, LIBELLES_EVENEMENT, ICONES_EVENEMENT, TYPES_EVENEMENT, MESSAGES_COMPTEURS,
   unitesCompteurs, cumuls, controlerEvenement,
 } from './compteurs.js';
-import { creerOrdreEntretien, tableauOrdres } from './entretiens-ui.js';
+import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entretiens-ui.js';
 
 // Onglet Compteurs de la fiche matériel (lot 5c-2, db/233) : compteurs actuels, frise (courbe de chaque compteur,
 // événements et entretiens), journal des relevés et des événements ; saisie d'un relevé, d'un plein de carburant ou
@@ -68,7 +68,7 @@ async function saisirReleve(unites) {
 }
 
 /** Fenêtre de saisie d'un événement (plein de carburant : type imposé) avec son relevé facultatif. */
-async function saisirEvenement(unites, e = {}) {
+async function saisirEvenement(unites, e = {}, plans = []) {
   const v = (k) => echapper(e[k] ?? '');
   const r = e.releve ?? {};
   return ouvrirDialogue({
@@ -77,6 +77,7 @@ async function saisirEvenement(unites, e = {}) {
       <label>Date <input type="date" data-c="date" value="${v('date') || aujourdhui()}"></label>
       <label data-hors-plein>Fin <input type="date" data-c="fin" value="${v('fin')}"></label>
       <label data-hors-plein>Libellé <input data-c="libelle" maxlength="150" size="34" value="${v('libelle')}"></label>
+      ${plans.length ? '<label data-plan>Plan réalisé <span data-plan-combo></span></label>' : ''}
       <label data-plein>Litres <input type="number" min="0" step="0.01" data-c="litres" value="${v('litres')}"></label>
       <label>Coût HT <input type="number" min="0" step="0.01" data-c="cout" value="${v('cout')}"></label>
       ${unites.length ? `<label>Compteur <span data-unite></span> <input type="number" min="0" step="0.1" data-c="releve" value="${echapper(r.valeur ?? '')}"></label>
@@ -90,9 +91,14 @@ async function saisirEvenement(unites, e = {}) {
         const plein = dlg._type.valeurCombo === 'CARBURANT';
         dlg.querySelectorAll('[data-plein]').forEach((x) => { x.hidden = !plein; });
         dlg.querySelectorAll('[data-hors-plein]').forEach((x) => { x.hidden = plein; });
+        dlg.querySelectorAll('[data-plan]').forEach((x) => { x.hidden = !['ENTRETIEN', 'CONTROLE'].includes(dlg._type.valeurCombo); });
       };
       dlg._type.addEventListener('change', basculer);
       dlg.querySelector('[data-type]').append(dlg._type);
+      if (plans.length) {
+        dlg._plan = creerCombo({ options: plans.map((p) => ({ valeur: p.code, libelle: p.libelle ?? p.code, detail: p.code })), valeur: e.plan_code ?? '', vide: true });
+        dlg.querySelector('[data-plan-combo]').append(dlg._plan);
+      }
       if (unites.length) {
         dlg._unite = creerCombo({ options: unites.map((u) => ({ valeur: u, libelle: LIBELLES_UNITE[u] })), valeur: r.unite ?? unites[0], vide: false });
         dlg.querySelector('[data-unite]').append(dlg._unite);
@@ -109,6 +115,7 @@ async function saisirEvenement(unites, e = {}) {
           type, date: lire('date') || null, fin: type === 'CARBURANT' ? null : lire('fin') || null,
           libelle: type === 'CARBURANT' ? null : lire('libelle') || null, description: type === 'CARBURANT' ? null : lire('description') || null,
           litres: type === 'CARBURANT' ? num('litres') : null, cout: num('cout'), ent_id: e.ent_id ?? null,
+          plan_code: ['ENTRETIEN', 'CONTROLE'].includes(type) ? dlg._plan?.valeurCombo || null : null,
           releve: num('releve') === null ? null : { unite: dlg._unite.valeurCombo, valeur: num('releve'), remise: dlg.querySelector('[data-c="remise"]').checked },
         };
       },
@@ -121,6 +128,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
   if (!app.enLigne) { corps.innerHTML = '<p class="aide">Compteurs : en ligne seulement.</p>'; return; }
   let d = await api.ressources.compteurs(materiel);
   let ordres = await api.ressources.ordresEntretien(materiel).catch(() => []);
+  let plans = [];
   const rendre = () => {
     const unites = unitesCompteurs(d.compteurs);
     const actuels = [unites.includes('H') ? `${formatNombre(d.heures ?? 0, 0)} h` : null, unites.includes('KM') && d.kilometres != null ? `${formatNombre(d.kilometres, 0)} km` : null].filter(Boolean);
@@ -153,6 +161,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
           <button type="button" class="bouton-icone" data-ordre title="Nouvel ordre d'entretien (atelier)">🔧</button></span></div>
       <p>${actuels.length ? `Compteurs : <b>${actuels.join(' · ')}</b>` : '<span class="aide">Aucun compteur suivi (champ Compteurs de la fiche).</span>'}</p>
       ${frise(d, unites)}
+      <div data-plans></div>
       <h4>Ordres d'entretien</h4>${tableauOrdres(ordres)}
       <h4>Journal</h4>
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th>Compteur</th><th>Coût HT</th><th></th><th>Origine</th><th></th></tr></thead><tbody>
@@ -161,7 +170,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
       try { d = await promesse; app.message(texte, 'succes'); rendre(); } catch (e) { app.erreur(new Error(message(e))); }
     };
     const evenement = async (base) => {
-      const e = await saisirEvenement(unites, base);
+      const e = await saisirEvenement(unites, base, plans);
       if (!e) return;
       const fautes = controlerEvenement(e);
       if (fautes.length) { app.erreur(new Error(fautes.map((f) => MESSAGES_COMPTEURS[f]).join(' · '))); return; }
@@ -186,6 +195,9 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.querySelectorAll('[data-retirer-evenement]').forEach((b) => b.addEventListener('click', async () => {
       if (await confirmer('Supprimer cet événement et son relevé ?')) await appliquer(api.ressources.supprimerEvenement(materiel, b.dataset.retirerEvenement), 'Événement supprimé');
     }));
+    rendrePlansMateriel(corps.querySelector('[data-plans]'), {
+      app, materiel, surOrdre: async () => { ordres = await api.ressources.ordresEntretien(materiel).catch(() => ordres); rendre(); },
+    }).then((l) => { plans = l; }).catch((e) => app.erreur(e));
   };
   rendre();
 }

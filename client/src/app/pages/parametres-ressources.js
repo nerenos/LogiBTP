@@ -2,6 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { typesHabilitation } from '../ressources/ressources-ui.js';
+import { editeurPlans } from '../ressources/entretiens-ui.js';
 
 const CATEGORIES = [['CACES', 'CACES'], ['HAUTEUR', 'Travail en hauteur'], ['ELECTRIQUE', 'Électrique'], ['SECURITE', 'Sécurité'], ['MEDICAL', 'Médical'], ['CONTROLE', 'Contrôle (matériel)'], ['AUTRE', 'Autre']]
   .map(([valeur, libelle]) => ({ valeur, libelle }));
@@ -14,7 +15,8 @@ export const DOMAINES_MOTIF = [
 /**
  * Référentiel des ressources (db/195 ; ANALYSE-MODULES-TRANSVERSE.md § 4) : types d'habilitations (durée de validité,
  * élément concerné), motifs typés et service à prévenir, natures de main-d'œuvre rattachées à un service (heures budget
- * par service du Planning et de l'Exécution). Administrateur ; consultation pour les autres.
+ * par service du Planning et de l'Exécution), plans d'entretien par type de matériel (lot 5c-4 : un type enfant hérite des
+ * plans de son parent). Administrateur ; consultation pour les autres.
  */
 export class PageParametresRessources extends PageBase {
   icone = '🧰';
@@ -23,11 +25,11 @@ export class PageParametresRessources extends PageBase {
     const app = this.app;
     this.titre = 'Référentiel des ressources';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧰 Référentiel des ressources</h1>
-      <section class="carte" data-types></section><section class="carte" data-motifs></section><section class="carte" data-natures></section></div>`;
+      <section class="carte" data-types></section><section class="carte" data-motifs></section><section class="carte" data-natures></section><section class="carte" data-plans></section></div>`;
     if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.admin = app.estAdmin();
     this.services = (await api.services()).filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.code }));
-    await Promise.all([this.#types(), this.#motifs(), this.#natures()]);
+    await Promise.all([this.#types(), this.#motifs(), this.#natures(), this.#plans()]);
   }
 
   async #types() {
@@ -104,6 +106,32 @@ export class PageParametresRessources extends PageBase {
       });
     };
     rendre();
+  }
+
+  /** Plans d'entretien par type de matériel (db/235) : un type choisi, ses plans ; ceux du type parent en rappel. */
+  async #plans() {
+    const zone = this.conteneur.querySelector('[data-plans]');
+    const [types, plans] = await Promise.all([api.listesValeurs.lire('TYPE_MATERIEL'), api.ressources.plansTypes()]);
+    const libelle = (code) => types.find((t) => t.code === code)?.libelle ?? code;
+    const options = types.filter((t) => t.actif).map((t) => ({ valeur: t.code, libelle: t.parent ? `${libelle(t.parent)} › ${t.libelle}` : t.libelle, detail: plans[t.code]?.length ? `${plans[t.code].length} plan(s)` : '' }));
+    zone.innerHTML = `<h2>Plans d'entretien par type de matériel</h2>
+      <p class="aide">Périodicités en heures, kilomètres ou mois (la première atteinte déclenche) ; un type enfant hérite des plans de son parent, un matériel peut remplacer ou retirer un plan (onglet Compteurs de sa fiche).</p>
+      <p>Type <span data-type></span></p><p class="aide" data-parent></p><div data-editeur></div>`;
+    const combo = creerCombo({ options, valeur: '', vide: true });
+    const afficher = () => {
+      const type = combo.valeurCombo;
+      const ed = zone.querySelector('[data-editeur]');
+      if (!type) { ed.innerHTML = ''; zone.querySelector('[data-parent]').textContent = ''; return; }
+      const parent = types.find((t) => t.code === type)?.parent;
+      zone.querySelector('[data-parent]').textContent = parent && plans[parent]?.length
+        ? `Hérités de ${libelle(parent)} : ${plans[parent].map((p) => p.libelle ?? p.code).join(', ')} (un plan de même code les remplace).` : '';
+      editeurPlans(ed, {
+        app: this.app, plans: plans[type] ?? [], lecture: !this.admin,
+        enregistrer: async (l) => { plans[type] = await api.ressources.enregistrerPlansType(type, l); return plans[type]; },
+      });
+    };
+    combo.addEventListener('change', afficher);
+    zone.querySelector('[data-type]').append(combo);
   }
 
   async #natures() {

@@ -8,6 +8,7 @@ import {
 import { finsPeriodes, periodesDepuisLignes, lignesDepuisPeriodes, controlerEquipe, MESSAGES_EQUIPES } from '../src/app/ressources/equipes.js';
 import { controlerAffectations, affectationA } from '../src/app/ressources/affectations.js';
 import { controlerReleves, compteurA, cumuls, controlerEvenement, MESSAGES_COMPTEURS } from '../src/app/ressources/compteurs.js';
+import { plansEffectifs, cumulA, moyenneUsage, echeanceEntretien } from '../src/app/ressources/entretiens.js';
 
 // Jeux partagés avec ReglesRessources.cs (tests/LogiBTP.Calcul.Tests/RessourcesTests.cs).
 const dossier = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/ressources');
@@ -61,4 +62,12 @@ describe('compteurs et événements du matériel (jeu partagé)', () => {
     const codes = [...j.controles.flatMap((c) => c.attendu.map((e) => e.code)), ...j.evenements.flatMap((c) => c.attendu)];
     for (const code of codes) expect(MESSAGES_COMPTEURS[code]).toBeTruthy();
   });
+});
+
+describe("plans et échéances d'entretien (jeu partagé)", () => {
+  const j = jeu('06_entretiens.json');
+  for (const c of j.plans) it(`plans : ${c.nom}`, () => expect(plansEffectifs(c.listes).map((p) => ({ code: p.code, heures: p.heures ?? null }))).toEqual(c.attendu));
+  for (const [date, attendu] of Object.entries(j.cumuls)) it(`cumul au ${date}`, () => expect(cumulA(j.releves, 'H', date)).toBe(attendu));
+  for (const c of j.moyennes) it(`usage moyen au ${c.date}`, () => expect(moyenneUsage(j.releves, 'H', c.date, c.jours)).toBe(c.attendu));
+  for (const c of j.echeances) it(`échéance : ${c.nom}`, () => expect(echeanceEntretien({ plan: c.plan, reference: c.reference, courant: c.courant, moyennes: c.moyennes })).toEqual(c.attendu));
 });

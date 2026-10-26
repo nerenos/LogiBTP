@@ -9,7 +9,8 @@ namespace LogiBTP.Api.Btp;
 public sealed record ReleveSaisi(DateOnly? Date, string? Unite, decimal? Valeur, bool Remise, string? Commentaire);
 
 /// <summary>Événement saisi, avec son relevé de compteur facultatif (obligatoire pour un plein si le matériel a un compteur).</summary>
-public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin, string? Libelle, string? Description, decimal? Cout, decimal? Litres, long? EntId, ReleveSaisi? Releve);
+public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin, string? Libelle, string? Description, decimal? Cout, decimal? Litres, long? EntId, ReleveSaisi? Releve,
+    string? PlanCode = null);
 
 /// <summary>
 /// Compteurs et événements du matériel (db/233, lot 5c-2 des demandes du 25/10/2026) : relevés datés en heures ou
@@ -35,7 +36,7 @@ public static class CompteursMateriel
                 FROM materiel_releve r LEFT JOIN document d ON d.ent_id = r.mre_ent_id WHERE r.mre_mat_id = m.mat_id), '[]'),
             'evenements', coalesce((SELECT json_agg(json_build_object('id', e.mev_id, 'type', e.mev_type, 'date', e.mev_date, 'fin', e.mev_fin,
                     'libelle', e.mev_libelle, 'description', e.mev_description, 'cout', e.mev_cout, 'litres', e.mev_litres,
-                    'ent_id', e.mev_ent_id, 'numero', d.ent_numero, 'maj_par', e.mev_maj_par,
+                    'ent_id', e.mev_ent_id, 'numero', d.ent_numero, 'maj_par', e.mev_maj_par, 'plan_code', e.mev_plan_code,
                     'releve', (SELECT json_build_object('unite', r.mre_unite, 'valeur', r.mre_valeur, 'remise', r.mre_remise) FROM materiel_releve r WHERE r.mre_mev_id = e.mev_id LIMIT 1))
                     ORDER BY e.mev_date DESC, e.mev_id DESC)
                 FROM materiel_evenement e LEFT JOIN document d ON d.ent_id = e.mev_ent_id WHERE e.mev_mat_id = m.mat_id), '[]')) AS "Value"
@@ -104,15 +105,16 @@ public static class CompteursMateriel
             new("m", materiel), new("t", e.Type!), new("d", e.Date!.Value), new("f", (object?)e.Fin ?? DBNull.Value), new("l", (object?)libelle ?? DBNull.Value),
             new("x", (object?)e.Description?.Trim() ?? DBNull.Value), new("o", (object?)e.EntId ?? DBNull.Value), new("c", (object?)e.Cout ?? DBNull.Value),
             new("q", (object?)e.Litres ?? DBNull.Value), new("p", utilisateur), new("i", (object?)id ?? DBNull.Value),
+            new("pc", (object?)(e.Type is "ENTRETIEN" or "CONTROLE" && !string.IsNullOrWhiteSpace(e.PlanCode) ? e.PlanCode.Trim() : null) ?? DBNull.Value),
         ];
         var mev = id is null
             ? (await db.Database.SqlQueryRaw<int>("""
-                INSERT INTO materiel_evenement (mev_mat_id, mev_type, mev_date, mev_fin, mev_libelle, mev_description, mev_ent_id, mev_cout, mev_litres, mev_maj_par)
-                VALUES (@m, @t, @d, @f, @l, @x, @o, @c, @q, @p) RETURNING mev_id AS "Value"
+                INSERT INTO materiel_evenement (mev_mat_id, mev_type, mev_date, mev_fin, mev_libelle, mev_description, mev_ent_id, mev_cout, mev_litres, mev_plan_code, mev_maj_par)
+                VALUES (@m, @t, @d, @f, @l, @x, @o, @c, @q, @pc, @p) RETURNING mev_id AS "Value"
                 """, p).ToListAsync(ct))[0]
             : await db.Database.ExecuteSqlRawAsync("""
                 UPDATE materiel_evenement SET mev_type = @t, mev_date = @d, mev_fin = @f, mev_libelle = @l, mev_description = @x, mev_ent_id = @o,
-                       mev_cout = @c, mev_litres = @q, mev_maj_par = @p, mev_maj_le = now()
+                       mev_cout = @c, mev_litres = @q, mev_plan_code = @pc, mev_maj_par = @p, mev_maj_le = now()
                 WHERE mev_id = @i AND mev_mat_id = @m
                 """, p, ct) == 1 ? id.Value : throw ExceptionMetier.Introuvable("Événement");
         await db.Database.ExecuteSqlRawAsync("DELETE FROM materiel_releve WHERE mre_mev_id = @e", [new NpgsqlParameter("e", mev)], ct);
