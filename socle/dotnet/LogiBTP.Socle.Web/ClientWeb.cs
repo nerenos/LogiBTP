@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 
@@ -9,7 +10,7 @@ namespace LogiBTP.Socle.Web;
 
 /// <summary>
 /// Client web construit (Vite : wwwroot de l'API dans l'image Docker, ANALYSE-MODULE-INSTALLATION.md § 3.1) servi par
-/// l'API : fichiers à empreinte gardés un an en cache, index.html jamais, politique de sécurité du contenu bloquante
+/// l'API : fichiers à empreinte gardés un an en cache, index.html, sw.js et le manifeste jamais, politique de sécurité du contenu bloquante
 /// sur les pages (option C, ANALYSE-MODULE-DROITS.md § 10.4), toute adresse hors /api renvoyée vers index.html
 /// (routes du client). Sans dossier wwwroot (développement : Vite sert le client), rien n'est ajouté.
 /// </summary>
@@ -28,9 +29,13 @@ public static class ClientWeb
         var env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
         if (!Present(env)) return app;
         app.UseDefaultFiles();
+        // Application installable : manifeste servi avec son type (service worker sw.js : JavaScript).
+        var types = new FileExtensionContentTypeProvider();
+        types.Mappings[".webmanifest"] = "application/manifest+json";
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(env.WebRootPath),
+            ContentTypeProvider = types,
             OnPrepareResponse = c => Entetes(c.Context, c.File.Name),
         });
         return app;
@@ -59,6 +64,8 @@ public static class ClientWeb
             h.CacheControl = "no-cache";
             h.ContentSecurityPolicy = Csp;
         }
+        // Service worker et manifeste : relus à chaque contrôle du navigateur (nouvelle version du client).
+        else if (fichier is "sw.js" or "manifest.webmanifest") h.CacheControl = "no-cache";
         else if (http.Request.Path.StartsWithSegments("/assets")) h.CacheControl = "public, max-age=31536000, immutable";
     }
 }

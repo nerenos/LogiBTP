@@ -14,6 +14,7 @@ import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
 import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuaire/annuaire.js';
 import { creerFournisseurStructure } from './structure/structure.js';
 import { societeCourante } from './societe.js';
+import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 
@@ -53,13 +54,22 @@ export class Application {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
     });
+    // Application installable : le service worker garde le client et les données consultées (mode hors ligne).
+    enregistrerServiceWorker({
+      surNouvelleVersion: () => this.message('Nouvelle version de LogiBTP installée : rechargez la page (F5) une fois vos saisies enregistrées', 'avertissement'),
+    });
     this.societe = await societeCourante();
-    // L'application exige l'API : injoignable au démarrage, un écran d'attente la recontrôle jusqu'à son retour.
-    if (!(await api.disponible())) { this.#attendreApi(); return; }
     // Session (module Authentification) : sans session, seule la page de connexion s'ouvre ; mot de passe provisoire :
-    // page Mon compte jusqu'au changement.
-    this.session = await api.auth.session().catch(() => null);
+    // page Mon compte jusqu'au changement. API injoignable au démarrage : avec le service worker et une session gardée,
+    // l'application démarre hors ligne sur les données gardées ; sinon un écran d'attente la recontrôle.
+    if (await api.disponible()) this.session = await api.auth.session().catch(() => null);
+    else {
+      this.session = pwaControle() ? await api.auth.session().catch(() => null) : null;
+      if (!this.session?.connecte) { this.#attendreApi(); return; }
+      this.#passerHorsLigne();
+    }
     this.#surveillerSession();
+    if (this.session?.connecte) signalerCompte(this.utilisateur());
     const ici = `${location.pathname}${location.search}`;
     const publique = location.pathname === '/borne';
     if (!this.session?.connecte && location.pathname !== '/connexion' && !publique) history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
@@ -181,7 +191,8 @@ export class Application {
         if (versApi && e?.name !== 'AbortError') this.#verifierApi();
         throw e;
       }
-      if (versApi && (r.status >= 500 || this.apiPerdue)) this.#verifierApi();
+      // Erreur du serveur, réponse servie par le service worker depuis ses données gardées, API déjà perdue : contrôle.
+      if (versApi && (r.status >= 500 || this.apiPerdue || depuisCache(r) !== null)) this.#verifierApi();
       if (r.status === 401 || r.status === 403) {
         if (versApi && !url.includes('/api/auth/')) {
           const code = await r.clone().json().then((d) => d?.code).catch(() => null);
@@ -238,6 +249,7 @@ export class Application {
   async #sessionChangee({ connecte }) {
     this.session = await api.auth.session().catch(() => null);
     this.sessionPerdueSignalee = false;
+    if (this.session?.connecte) signalerCompte(this.utilisateur());
     if (connecte && location.pathname === '/connexion' && !this.routeur?.page?.fenetreSeule) location.assign(new URLSearchParams(location.search).get('retour') || '/');
     else if (!connecte && !this.routeur?.page?.modifiee && location.pathname !== '/connexion') { this.fermetureForcee = true; location.assign('/connexion'); }
     else { await this.chargerModules(); this.rendreInfos(); }
@@ -249,6 +261,8 @@ export class Application {
     if (modifiees.length && !(await confirmerFermetureSession(modifiees))) return;
     await this.libererPage();
     try { await api.auth.deconnexion(); } catch (e) { this.erreur(e); return; }
+    // Données consultées gardées par le service worker : effacées avec la session.
+    await purgerDonnees();
     this.publier('session', { connecte: false });
     this.fermetureForcee = true;
     location.assign('/connexion');
@@ -360,9 +374,19 @@ export class Application {
 
   /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus. */
   #etatApi() {
-    return this.apiPerdue
-      ? `<span class="etat-api deconnectee" title="L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.">● Hors ligne</span>`
-      : '<span class="etat-api connectee" title="API connectée">● API</span>';
+    if (!this.apiPerdue) return '<span class="etat-api connectee" title="API connectée">● API</span>';
+    const titre = pwaControle()
+      ? "Serveur injoignable : les données déjà consultées sur ce poste s'affichent depuis le navigateur ; rien ne peut être enregistré. Nouvel essai toutes les 15 secondes."
+      : "L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.";
+    return `<span class="etat-api deconnectee" title="${titre}">● Hors ligne</span>`;
+  }
+
+  /** Passage hors ligne (API perdue) : bandeau rouge, classe `hors-ligne` du corps, contrôle toutes les 15 secondes. */
+  #passerHorsLigne() {
+    this.apiPerdue = true;
+    document.body.classList.add('hors-ligne');
+    clearInterval(this.minuterieApi);
+    this.minuterieApi = setInterval(() => this.#verifierApi(), 15000);
   }
 
   /**
@@ -375,13 +399,17 @@ export class Application {
     try {
       const disponible = await api.disponible();
       if (disponible === !this.apiPerdue) return;
-      this.apiPerdue = !disponible;
+      if (!disponible) {
+        this.#passerHorsLigne();
+        this.message(pwaControle() ? 'Serveur injoignable : consultation des données gardées sur ce poste, enregistrements impossibles'
+          : "L'API ne répond plus : les modifications ne peuvent pas être enregistrées", 'erreur');
+      } else {
+        this.apiPerdue = false;
+        document.body.classList.remove('hors-ligne');
+        clearInterval(this.minuterieApi);
+        this.message('API de nouveau connectée', 'succes');
+      }
       this.rendreInfos();
-      clearInterval(this.minuterieApi);
-      if (this.apiPerdue) {
-        this.message("L'API ne répond plus : les modifications ne peuvent pas être enregistrées", 'erreur');
-        this.minuterieApi = setInterval(() => this.#verifierApi(), 15000);
-      } else this.message('API de nouveau connectée', 'succes');
     } finally {
       this.verificationApi = false;
     }
@@ -393,6 +421,7 @@ export class Application {
     this.rendreInfos();
     document.querySelector('#pages').innerHTML = `<div class="page-simple"><h1>● Serveur injoignable</h1>
       <p class="aide">L'API LogiBTP ne répond pas. Nouvel essai toutes les 15 secondes : la page se rechargera à son retour.</p>
+      <p class="aide">Pour travailler sans serveur, l'application doit avoir été ouverte en ligne sur ce poste, avec une session.</p>
       <p><button type="button" data-reessayer>⟳ Réessayer maintenant</button></p></div>`;
     const essayer = async () => { if (await api.disponible()) location.reload(); };
     document.querySelector('[data-reessayer]').addEventListener('click', essayer);

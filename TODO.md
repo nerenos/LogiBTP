@@ -244,8 +244,17 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ## Interface
 
+- [ ] **Mode hors ligne, lot 3 : saisie des documents hors ligne** (lots 1 et 2 faits : démo hors ligne retirée,
+  PWA et cache des lectures) : modifications en attente dans IndexedDB par base et par compte, documents créés hors
+  ligne (identifiants provisoires, numéro à l'envoi), envoi automatique au retour de l'API (reconnexion si la session a
+  expiré), appel bibliothèque (F3) sur les éléments gardés, verrou conservé avec mention « hors ligne depuis … » pour les
+  autres utilisateurs (battement arrêté).
+- [ ] **Mode hors ligne, lot 4 : fusion à trois voies** (départ de la coupure, saisie locale, version du serveur) par
+  ligne et par champ (entête, lignes, métrés, variables, ventilations), écran de comparaison et d'arbitrage, recalcul
+  par le moteur avant l'envoi ; choix : fusionner, écraser (droit), copie en brouillon, abandon. Jeu de cas partagé.
+
 - [ ] Remplacer les derniers `<select>` par `creerCombo` : vues de liste, menu de filtre, sélecteurs de thème et de vue
-  des listes, profil de démonstration (paramètres).
+  des listes.
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

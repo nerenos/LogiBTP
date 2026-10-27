@@ -1,0 +1,14 @@
+{
+  "name": "LogiBTP",
+  "short_name": "LogiBTP",
+  "description": "Gestion des entreprises du bâtiment : devis, marchés, chantiers, achats, stock, pointage",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1b1d22",
+  "theme_color": "#1d5fbf",
+  "icons": [
+    { "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

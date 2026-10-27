@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="LogiBTP">
+  <rect width="512" height="512" rx="96" fill="#1d5fbf"/>
+  <g fill="#ffffff">
+    <rect x="76" y="268" width="168" height="168" rx="18"/>
+    <rect x="268" y="268" width="168" height="168" rx="18" opacity=".75"/>
+  </g>
+  <rect x="172" y="76" width="168" height="168" rx="18" fill="#e8a33d"/>
+</svg>
