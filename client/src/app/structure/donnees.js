@@ -1,5 +1,5 @@
-// Structure des affaires de démonstration : affaires, projets, chantiers, marchés. Les mêmes données alimentent la
-// démo hors ligne et db/161_structure_demo.sql (généré par client/scripts/generer-vues-liste.mjs). Les tiers sont
+// Structure des affaires de démonstration : affaires, projets, chantiers, marchés. Ces données alimentent
+// db/161_structure_demo.sql (généré par client/scripts/generer-vues-liste.mjs). Les tiers sont
 // des personnes de l'annuaire de démonstration (SCI Les Érables 14, Commune de Belleroche 15, Mme Durand 18…).
 
 export const AFFAIRES = [

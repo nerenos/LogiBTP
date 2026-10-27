@@ -29,7 +29,6 @@ export class PageStock extends PageBase {
       <input type="search" data-recherche placeholder="Rechercher un article…" size="24">
       <button type="button" data-csv title="Exporter le tableau (CSV)">⭳ CSV</button></div>
       <p class="aide" data-aide></p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const [lieux, marques, articles] = await Promise.all([api.stock.lieux(), api.stock.marques(), api.stock.articles()]);
     this.lieux = lieux;
     // Filtre par marque (lot 2) : marques des articles gérés en stock.

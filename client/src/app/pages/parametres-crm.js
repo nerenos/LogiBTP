@@ -20,7 +20,6 @@ export class PageParametresCrm extends PageBase {
       <h2>Couleurs des rappels</h2><div data-seuils></div>
       <h2>Noms des fichiers de plans</h2><div data-format-plan></div>
       <h2>Statuts de visa</h2><div data-statuts></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">Disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
     this.types = await api.crm.typesNotes();
     this.rendreTypes();

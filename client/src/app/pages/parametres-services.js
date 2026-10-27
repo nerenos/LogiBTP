@@ -26,7 +26,6 @@ export class PageParametresServices extends PageBase {
     this.titre = 'Services et membres';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🏢 Services et membres</h1>
       <div data-services></div><h2 data-titre-membres>Membres</h2><div data-membres><p class="aide">Choisissez un service (Membres…).</p></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-services]').innerHTML = '<p class="aide">Services disponibles en ligne seulement.</p>'; return; }
     this.admin = app.estAdmin();
     this.services = await api.services();
     const { annuaire } = await app.services();

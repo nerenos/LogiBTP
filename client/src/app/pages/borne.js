@@ -796,7 +796,6 @@ export class PageParametresBornes extends PageBase {
     this.titre = 'Bornes de pointage';
     this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">🏭 Bornes de pointage</h1></div><div data-bornes></div>
       <div class="titre-actions"><h2>PIN des salariés</h2></div><div data-pins></div></div>`;
-    if (!this.app.enLigne) return;
     this.ref = await api.pointage.referentiels();
     await this.#bornes();
     await this.#pins();
@@ -922,7 +921,6 @@ export class PageGroupePointage extends PageBase {
   async ouvrir() {
     this.titre = 'Saisie d\'équipe';
     this.conteneur.innerHTML = '<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">👥 Saisie d\'équipe</h1></div><div data-groupe></div></div>';
-    if (!this.app.enLigne) return;
     this.ref = await api.pointage.referentiels();
     await this.#charger();
   }

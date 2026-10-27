@@ -1,12 +1,10 @@
 import { FicheBase } from '@logibtp/fiche/ui';
-import { FournisseurFicheApi, FournisseurFicheMemoire, MODES } from '@logibtp/fiche';
+import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
 import { formatNombre, echapper } from '@logibtp/socle/ui';
 import { principale } from '@logibtp/annuaire';
 import { choisirIndividu } from '@logibtp/annuaire/ui';
 import { ENTETES } from '../api.js';
-import { TYPES_FICHE, DROITS_FICHE, PARAMETRAGE_FICHE } from './definitions.js';
-import { apresEcritureElement } from '../bibliotheque/bibliotheque.js';
-import { synchroniserSalarie, rolesSalarie } from '../annuaire/salaries.js';
+import { rolesSalarie } from '../annuaire/salaries.js';
 import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
 import { AGENCES_SALARIES } from '../annuaire/donnees.js';
 
@@ -16,7 +14,7 @@ const jours = (iso) => (iso ? (Date.now() - Date.parse(String(iso).slice(0, 10))
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const info = (libelle, valeur, alerte = false) => `<span class="info ${alerte ? 'alerte' : ''}"><small>${libelle}</small>${valeur}</span>`;
 
-/** Fiche du cœur : actions de démonstration hors ligne (verrou d'un autre utilisateur). */
+/** Fiche du cœur : onglet Suivi (module CRM), modules actifs. */
 export class FicheLogiBTP extends FicheBase {
   constructor(options) {
     super(options);
@@ -40,18 +38,6 @@ export class FicheLogiBTP extends FicheBase {
     }];
   }
 
-  actionsSupplementaires() {
-    if (typeof this.fournisseur.simulerVerrouAutre !== 'function' || this.id === null) return [];
-    return [{
-      libelle: '👤 Autre utilisateur',
-      titre: 'Démo : un autre utilisateur ouvre cette fiche en modification',
-      action: async () => {
-        this.fournisseur.simulerVerrouAutre(this.type, this.id, 'm.dupont');
-        if (this.mode === MODES.MODIFICATION) await this.controlerVerrou();
-        else { await this.recharger(); this.rendre(); }
-      },
-    }];
-  }
 }
 
 /**
@@ -255,58 +241,5 @@ export class FicheMateriel extends FicheLogiBTP {
 
 export const CLASSES_FICHE = { salarie: FicheSalarie, materiel: FicheMateriel };
 
-/** Résumé de la fiche salarié liée à un individu (champ géré « salarie » de la fiche individu), ou null. */
-export function salarieDe(salaries, indId) {
-  const s = salaries.find((x) => Number(x.ind_id) === Number(indId));
-  return s ? { id: s.id, matricule: s.matricule, poste: s.poste, agence: s.agence, statut: s.statut, actif: s.actif !== false } : null;
-}
-
-/** Fournisseur des fiches : API, ou mémoire hors ligne sur les mêmes lignes que les listes de démonstration. */
-export function creerFournisseurFiche({ enLigne, lignes, bibliotheque = null, annuaire = null, structure = null }) {
-  if (enLigne) return new FournisseurFicheApi({ base: '/api/fiches', entetes: ENTETES });
-  return new FournisseurFicheMemoire({
-    types: {
-      salarie: {
-        definition: TYPES_FICHE.salarie.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.salaries,
-        // Colonnes de la vue de liste dérivées de la fiche (comme v_liste_salaries).
-        // Individu de l'annuaire mis à jour après écriture (identité, rôle, rattachement à l'agence).
-        derivees: (l) => {
-          if (annuaire && l.ind_id) queueMicrotask(() => synchroniserSalarie(annuaire, lignes.salaries.find((x) => x.id === l.id) ?? l));
-          return { type_element: l.statut === 'INTERIM' ? 'interim' : 'salarie' };
-        },
-      },
-      materiel: { definition: TYPES_FICHE.materiel.definition, cle: 'id', proprietes: 'proprietes', lignes: lignes.materiels },
-      // Structure des affaires : mêmes lignes que les listes de démonstration.
-      ...(structure ? Object.fromEntries([['projet', 'projets'], ['affaire', 'affaires'], ['chantier', 'chantiers'], ['marche', 'marches']]
-        .map(([type, tableau]) => [type, { definition: TYPES_FICHE[type].definition, cle: 'id', proprietes: 'proprietes', lignes: structure[tableau], geres: structure.geres(type) }])) : {}),
-      // Éléments de bibliothèque : prix, historique et colonnes de liste recalculés après écriture (rôle du serveur).
-      ...(bibliotheque ? {
-        element: {
-          definition: TYPES_FICHE.element.definition, cle: 'id', proprietes: 'proprietes', lignes: bibliotheque.elements,
-          derivees: (l) => { apresEcritureElement(bibliotheque, l); return {}; },
-        },
-      } : {}),
-      // Annuaire : coordonnées, rattachements et liens en champs gérés ; contrôles avant écriture (société de la base unique,
-      // SIRET unique, hiérarchie sans boucle) et colonnes de liste recalculées (rôle du serveur et des vues).
-      ...(annuaire ? {
-        personne: {
-          definition: TYPES_FICHE.personne.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.personnes, geres: annuaire.geres('personne'),
-          derivees: (l) => { annuaire.controlerPersonne(l.id ?? null, l); queueMicrotask(() => annuaire.deriver()); return {}; },
-        },
-        individu: {
-          definition: TYPES_FICHE.individu.definition, cle: 'id', proprietes: 'proprietes', lignes: annuaire.individus,
-          // Fiche salarié liée, en plus des champs gérés par l'annuaire.
-          geres: (() => {
-            const g = annuaire.geres('individu');
-            return { ...g, lire: async (l) => ({ ...(await g.lire(l)), salarie: salarieDe(lignes.salaries, l.id) }) };
-          })(),
-          derivees: () => { queueMicrotask(() => annuaire.deriver()); return {}; },
-        },
-      } : {}),
-    },
-    droits: DROITS_FICHE,
-    profil: ENTETES['X-Profil'] ?? 'ADMIN',
-    utilisateur: ENTETES['X-Utilisateur'] ?? 'demo',
-    parametrage: PARAMETRAGE_FICHE,
-  });
-}
+/** Fournisseur des fiches (API). */
+export const creerFournisseurFiche = () => new FournisseurFicheApi({ base: '/api/fiches', entetes: ENTETES });

@@ -10,7 +10,6 @@ export class PageDiffusionsCrm extends PageBase {
   async ouvrir() {
     const app = this.app;
     this.element = this.requete.type && this.requete.id ? { type: this.requete.type, id: String(this.requete.id) } : null;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     const e = this.element ? (await api.crm.elements([this.element]))[0] : null;
     this.titre = e ? `Bordereaux : ${e.libelle}` : 'Bordereaux de diffusion';
     this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">📤 Bordereaux de diffusion${e ? ` : ${lienElement(e)}` : ''}</h1>

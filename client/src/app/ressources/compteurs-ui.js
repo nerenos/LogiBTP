@@ -125,7 +125,6 @@ async function saisirEvenement(unites, e = {}, plans = []) {
 
 /** Onglet Compteurs de la fiche matériel. */
 export async function rendreCompteursMateriel(corps, { app, materiel }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Compteurs : en ligne seulement.</p>'; return; }
   let d = await api.ressources.compteurs(materiel);
   let ordres = await api.ressources.ordresEntretien(materiel).catch(() => []);
   let plans = [];

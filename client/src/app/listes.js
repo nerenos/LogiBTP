@@ -1,42 +1,10 @@
-import { FournisseurApi, FournisseurMemoire } from '@logibtp/liste';
+import { FournisseurApi } from '@logibtp/liste';
 import { FAMILLES_REGLE } from '@logibtp/document';
 import { ENTETES } from './api.js';
-import { VUES_LISTE, THEMES_LISTE, sourcesFournisseur } from './vues-liste.js';
-import { documentsDemo, salariesDemo, materielsDemo, ressourcesDemo } from './donnees-demo-liste.js';
 
-// Branchement du module Liste dans le cœur : fournisseur (API ou démo hors ligne) et ouverture des fiches.
+// Branchement du module Liste dans le cœur : fournisseur (API) et ouverture des fiches.
 
-let donnees = null;
-
-/** Données de démonstration hors ligne, partagées par les listes et les fiches (mêmes objets lignes). */
-export function donneesDemo() {
-  donnees ??= { salaries: salariesDemo(), materiels: materielsDemo() };
-  return donnees;
-}
-
-export function creerFournisseurListe({ enLigne, ged, elements = [], annuaire = null, structure = null }) {
-  if (enLigne) return new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
-  const { salaries, materiels } = donneesDemo();
-  const sources = sourcesFournisseur({
-    documents: documentsDemo(), salaries, materiels, ressources: ressourcesDemo(salaries, materiels), elements,
-    // Annuaire : mêmes lignes que les fiches (colonnes de liste dérivées par le fournisseur de l'annuaire).
-    personnes: annuaire?.personnes ?? [], individus: annuaire?.individus ?? [],
-  });
-  // Documents de la GED : lignes recalculées à chaque lecture (comme la vue v_liste_ged).
-  if (ged) Object.defineProperty(sources.ged, 'lignes', { get: () => ged.lignesListe() });
-  // Structure des affaires : lignes recalculées à chaque lecture (comme les vues v_liste_projets…).
-  if (structure) {
-    for (const source of ['projets', 'affaires', 'chantiers', 'marches']) {
-      Object.defineProperty(sources[source], 'lignes', { get: () => structure.lignesListe(source) });
-    }
-  }
-  return new FournisseurMemoire({
-    sources,
-    vues: VUES_LISTE,
-    themes: THEMES_LISTE,
-    cleStockage: 'logibtp.listes.demo',
-  });
-}
+export const creerFournisseurListe = () => new FournisseurApi({ base: '/api/listes', entetes: ENTETES });
 
 /** Libellé d'un type d'élément sans écran de fiche. */
 export const LIBELLES_ELEMENTS = {
@@ -47,21 +15,3 @@ export const LIBELLES_ELEMENTS = {
 /** Les types d'éléments préfixés d'une famille de documents (V_, A_, S_, E_, T_…) sont des documents (code du type). */
 const PREFIXES_DOCUMENT = new RegExp(`^[${FAMILLES_REGLE.map(([f]) => f).join('')}]_`);
 export const estTypeDocument = (type) => PREFIXES_DOCUMENT.test(String(type ?? ''));
-
-/**
- * Simulation hors ligne d'une modification faite par un autre utilisateur : un matériel change d'état,
- * un autre est supprimé, un nouveau est créé. Le contrôle périodique de la liste doit le détecter.
- */
-export function simulerModificationsAutres(fournisseur) {
-  let message = '';
-  fournisseur.modifierSource('materiels', (lignes) => {
-    const m = lignes[Math.floor(Math.random() * Math.min(lignes.length, 60))];
-    m.etat = m.etat === 'PANNE' ? 'DISPO' : 'PANNE';
-    m.observations = m.etat === 'PANNE' ? 'Panne signalée par un autre utilisateur' : '';
-    const supprime = lignes.splice(1 + Math.floor(Math.random() * 30), 1)[0];
-    const id = Math.max(...lignes.map((l) => l.id)) + 1;
-    lignes.push({ ...lignes[0], id, code: 'M00000', designation: `Nouveau matériel n° ${id}`, etat: 'DISPO', chantier: null, observations: 'Créé par un autre utilisateur' });
-    message = `${m.code} passe ${m.etat === 'PANNE' ? 'en panne' : 'disponible'}, ${supprime.code} supprimé, M00000 créé`;
-  });
-  return message;
-}

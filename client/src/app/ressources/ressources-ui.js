@@ -35,7 +35,6 @@ const action = (attr, icone, titre) => `<button type="button" class="bouton-icon
  * durée du type si vide —, numéro, organisme, commentaire), état recalculé à la saisie, enregistrement par l'API.
  */
 export async function rendreHabilitations(corps, { app, element, id, titre = 'Habilitations' }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Habilitations : en ligne seulement.</p>'; return; }
   const [{ liste: types, index }, lignes] = await Promise.all([typesHabilitation(), api.ressources.habilitations(element, id)]);
   const concerne = element === 'materiel' ? 'MATERIEL' : 'SALARIE';
   const options = types.filter((t) => t.actif && (t.concerne === concerne || t.concerne === 'LES_DEUX')).map((t) => ({ valeur: t.code, libelle: t.libelle, detail: t.code }));
@@ -90,7 +89,6 @@ export async function rendreHabilitations(corps, { app, element, id, titre = 'Ha
 
 /** Habilitations exigées du conducteur d'un matériel (types concernant un salarié), cochées puis enregistrées. */
 export async function rendreHabilitationsExigees(corps, { app, materiel }) {
-  if (!app.enLigne) return;
   const [{ liste: types }, exigees] = await Promise.all([typesHabilitation(), api.ressources.exigeesMateriel(materiel)]);
   const choix = new Set(exigees);
   corps.innerHTML = `<div class="ressources-exigees"><h3>Habilitations exigées du conducteur</h3>
@@ -108,7 +106,6 @@ export async function rendreHabilitationsExigees(corps, { app, materiel }) {
  * la mission en cours est marquée ; contrôles du jeu partagé avant l'envoi.
  */
 export async function rendreMissions(corps, { app, salarie, annuaire }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Missions : en ligne seulement.</p>'; return; }
   const [missions, agences] = await Promise.all([api.ressources.missions(salarie), annuaire.rechercherPersonnes({ recherche: '', casquette: 'INTERIM', limite: 200 }).catch(() => [])]);
   const options = agences.map((a) => ({ valeur: a.id, libelle: a.raison_sociale, detail: a.ville ?? '' }));
   for (const m of missions) if (m.agence_id && !options.some((o) => Number(o.valeur) === Number(m.agence_id))) options.push({ valeur: m.agence_id, libelle: m.agence ?? `Tiers ${m.agence_id}` });
@@ -166,7 +163,6 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
  * affectation en cours signalée, contrôles du jeu partagé avant l'envoi (affectations.js ↔ ReglesAffectations.cs).
  */
 export async function rendreAffectations(corps, { app, materiel }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Affectations : en ligne seulement.</p>'; return; }
   const [historique, cibles] = await Promise.all([api.ressources.affectations(materiel), api.ressources.ciblesAffectation()]);
   const options = (type) => cibles.filter((c) => c.type === type && !(type === 'MATERIEL' && String(c.id) === String(materiel))).map((c) => ({ valeur: c.id, libelle: c.libelle }));
   let saisie = historique.map((a) => ({ ...a }));
@@ -223,7 +219,6 @@ export async function rendreAffectations(corps, { app, materiel }) {
  * est affecté : petit outillage du camion), EPI immatriculés compris ; puis affectations passées.
  */
 export async function rendreMaterielAffecte(corps, { app, type, id }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Matériel affecté : en ligne seulement.</p>'; return; }
   const d = await api.ressources.materielAffecte(type, id);
   const lien = (m) => `<a href="/fiche/materiel/${m.id}">🚜 ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
   corps.innerHTML = `<div class="ressources-materiel-affecte"><h3>Matériel affecté</h3>
@@ -243,7 +238,6 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
  * achats, sous-traitance), totaux de l'année et depuis l'entrée, coût par heure d'utilisation ; listes filtrées.
  */
 export async function rendreCoutsMateriel(corps, { app, materiel }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Coûts : en ligne seulement.</p>'; return; }
   const montant = (v) => (Number(v) ? formatNombre(v, 2) : '');
   const rendre = (d) => {
     if (!d.chantier) {

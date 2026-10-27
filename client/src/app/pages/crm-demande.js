@@ -24,7 +24,6 @@ export class PageDemandeCrm extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     [this.ctx, this.individus] = await Promise.all([contexteCrm(app), individusCrm(app)]);
     if (this.params.id === 'nouveau') {
       this.detail = null;

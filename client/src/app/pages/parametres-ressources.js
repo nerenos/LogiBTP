@@ -26,7 +26,6 @@ export class PageParametresRessources extends PageBase {
     this.titre = 'Référentiel des ressources';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧰 Référentiel des ressources</h1>
       <section class="carte" data-types></section><section class="carte" data-motifs></section><section class="carte" data-natures></section><section class="carte" data-plans></section></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-types]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.admin = app.estAdmin();
     this.services = (await api.services()).filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.libelle, detail: s.code }));
     await Promise.all([this.#types(), this.#motifs(), this.#natures(), this.#plans()]);

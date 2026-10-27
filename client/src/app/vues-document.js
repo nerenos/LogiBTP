@@ -1,6 +1,6 @@
 // Vues de colonnes de la grille des lignes fournies par le cœur : une vue par défaut par modèle de saisie (tous types
 // de documents), une vue par défaut par type de document issu d'une transformation et une vue de débogage. Les colonnes du reste à solder (qte_parent, reste, solde) n'apparaissent que
-// dans un document issu d'une transformation. Les mêmes définitions alimentent la démo hors ligne et le script
+// dans un document issu d'une transformation. Ces définitions alimentent le script
 // db/150_documents_vues.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
 const cols = (...cles) => cles.map((cle) => ({ cle }));
@@ -53,14 +53,14 @@ export const VUES_DOCUMENT = [
   }))),
 ];
 
-/** Modèles de saisie (démo hors ligne ; table modele_document en ligne). */
+/** Modèles de saisie du devis de démonstration (tests ; table modele_document dans la base). */
 export const MODELES_DOCUMENT = [
   { code: 'COMPLET', libelle: 'Complet' },
   { code: 'CHIFFRAGE', libelle: 'Chiffrage (déboursé)' },
   { code: 'VOLEE', libelle: 'Document à la volée' },
 ];
 
-/** Étiquettes de lignes et couleurs des modes de vente (démo hors ligne ; mêmes valeurs que 013_document_affichage.sql). */
+/** Étiquettes de lignes et couleurs des modes de vente du devis de démonstration (mêmes valeurs que 013_document_affichage.sql). */
 export const ETIQUETTES_LIGNE = [
   { code: 'A_CHIFFRER', libelle: 'À chiffrer', couleur: '#ef4444', ordre: 10, actif: true },
   { code: 'A_VERIFIER', libelle: 'À vérifier', couleur: '#f59e0b', ordre: 20, actif: true },

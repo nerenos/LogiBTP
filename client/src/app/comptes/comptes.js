@@ -37,7 +37,6 @@ function afficherProvisoire(zone, code, mdp) {
  * depuis le nom, profil, fin de validité obligatoire pour un intérimaire). `surChange` : après une écriture.
  */
 export async function rendreComptePersonne(corps, { app, type, id, prenom = '', nom = '', surChange = () => {} }) {
-  if (!app.enLigne) { corps.innerHTML = '<p class="aide">Comptes de connexion : en ligne seulement.</p>'; return; }
   if (!app.estAdmin()) { corps.innerHTML = '<p class="aide">Seul un administrateur gère les comptes de connexion.</p>'; return; }
   corps.innerHTML = '<p class="aide">Chargement…</p>';
   const [{ personne, compte }, { profils, defaut }, politique] = await Promise.all([api.auth.personne(type, id), profilsComptes(), api.auth.politique()]);

@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { valeursArticle, contenuOuvrage, prixArticle } from '../src/app/bibliotheque/appel.js';
-import { creerFournisseurBibliotheque, calculerOuvrage } from '../src/app/bibliotheque/bibliotheque.js';
+import { calculerOuvrage } from '../src/app/bibliotheque/bibliotheque.js';
+import { bibliothequeDemo } from './bibliotheque-demo.js';
 import { valeursDepuisLigne } from '../src/app/bibliotheque/envoi.js';
 
 // Appel de la bibliothèque dans les documents : valeurs d'une ligne d'article, contenu d'un ouvrage, codes d'appel.
 describe('appel de la bibliothèque', () => {
-  const biblio = creerFournisseurBibliotheque({ enLigne: false });
+  const biblio = bibliothequeDemo();
 
   // Coefficients non imposés : ceux de la nature ou globaux en vigueur à la date du jour.
   it('article : unité de vente, PA converti, code sans préfixe dans la bibliothèque du document', async () => {

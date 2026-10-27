@@ -26,7 +26,6 @@ export class PageDemandesCrm extends PageBase {
     const r = this.requete;
     this.filtre = { vue: VUES.some((v) => v.code === r.vue) ? r.vue : 'toutes', etat: r.etat ?? 'ouvertes', recherche: r.recherche ?? '', page: 1 };
     this.titre = 'Demandes';
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">📨 Demandes (veille commerciale)</h1>
       <nav class="onglets crm-vues">${VUES.map((v) => `<button type="button" data-vue="${v.code}" title="${echapper(v.aide)}">${echapper(v.libelle)}</button>`).join('')}</nav>
       <div class="crm-filtres"><input type="search" data-recherche placeholder="Rechercher (numéro, objet, origine)" value="${echapper(this.filtre.recherche)}"><span data-etat></span>

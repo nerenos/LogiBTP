@@ -62,7 +62,7 @@ export class PageParametresMail extends PageBase {
       <h2>Reconnaissance des courriels reçus</h2><div data-regles></div>
       <h2>Limitations et avertissements</h2><div data-parametres></div></div>`;
     this.conteneur.querySelector('[data-boite]').addEventListener('click', () => app.naviguer('/mail?vue=envois'));
-    if (!app.enLigne || !app.estAdmin()) {
+    if (!app.estAdmin()) {
       this.conteneur.querySelector('[data-comptes]').innerHTML = '<p class="aide">Réservé à un administrateur, en ligne.</p>';
       return;
     }

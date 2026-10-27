@@ -6,11 +6,11 @@
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (JS, `echapper`), `LogiBTP.Socle` / `LogiBTP.Socle.Web` (C#, `ExceptionMetier`, `JsonCalcul`, `CasPartages`).
-- Utilisé par : cœur seulement — `client/src/app/annuaire/annuaire.js` (`creerFournisseurEntreprises({ enLigne })` → service `entreprises` de `application.js`), fiche personne (`client/src/app/fiches/fiche-annuaire.js`, `importerEntreprise()` via `rechercherEntreprise`), `src/LogiBTP.Api/Program.cs` (`AddModuleEntreprisesFr`, `MapModuleEntreprisesFr`). Ne dépend pas du module Annuaire.
+- Utilisé par : cœur seulement — `client/src/app/annuaire/annuaire.js` (`creerFournisseurEntreprises()` → service `entreprises` de `application.js`), fiche personne (`client/src/app/fiches/fiche-annuaire.js`, `importerEntreprise()` via `rechercherEntreprise`), `src/LogiBTP.Api/Program.cs` (`AddModuleEntreprisesFr`, `MapModuleEntreprisesFr`). Ne dépend pas du module Annuaire.
 
 ## Structure
 - `js/src/correspondance.js` : `versEntreprise(r, siret)`, `adresseEtablissement`, `casseNom`, `TRANCHES_EFFECTIF`, `FORMES_JURIDIQUES`.
-- `js/src/fournisseurs.js` : `FournisseurEntreprisesApi` (serveur, base `/api/entreprises-fr`), `FournisseurEntreprisesDirect` (navigateur, démo hors ligne, `per_page` 10), `ErreurEntreprises(statut, code, message)`, `reponse`, `siretCherche`, `URL_API`.
+- `js/src/fournisseurs.js` : `FournisseurEntreprisesApi` (serveur, base `/api/entreprises-fr`), `FournisseurEntreprisesDirect` (navigateur, tests, `per_page` 10), `ErreurEntreprises(statut, code, message)`, `reponse`, `siretCherche`, `URL_API`.
 - `js/ui/recherche.js` : `rechercherEntreprise({ fournisseur, recherche, dirigeants })` → dialogue, résout `{ entreprise, dirigeants }` ou `null` ; `js/ui/entreprises.css`.
 - `dotnet/LogiBTP.EntreprisesFr.Web/Correspondance.cs` : réplique C# (`VersEntreprise`, `Adresse`, `CasseNom`, `SiretCherche`, `Reponse`, records `Entreprise`, `AdresseEntreprise`, `DirigeantEntreprise`, `ReponseRecherche`).
 - `dotnet/LogiBTP.EntreprisesFr.Web/ServiceEntreprisesFr.cs` : `ServiceEntreprisesFr(HttpClient).Rechercher` + `Extensions` (client HTTP 10 s, User-Agent `LogiBTP/0.1`).
@@ -31,7 +31,7 @@
   - dirigeants : personnes physiques seulement, nom et premier prénom en casse de nom propre (`casseNom`).
 
 ## Conventions et pièges
-- En ligne : le serveur relaie l'API (pas d'appel direct depuis le navigateur) ; démo hors ligne : `FournisseurEntreprisesDirect` interroge l'API depuis le navigateur.
+- Le serveur relaie l'API (pas d'appel direct depuis le navigateur dans l'application ; `FournisseurEntreprisesDirect` sert aux tests).
 - Côté fiche (cœur) : doublon détecté par `annuaire.parSiret`, adresse ajoutée en coordonnée `ADRESSE` (usage `SIEGE` ou `PRINCIPALE`), service public → `fe_plateforme` Chorus Pro, dirigeants cochés créés comme contacts.
 - Toute évolution de la correspondance : modifier les deux, mettre à jour le jeu de cas.
 

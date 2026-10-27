@@ -1,5 +1,5 @@
-// Devis et définition de démonstration : jeu de données des tests (calcul, analyse, bibliothèque, import) et des
-// listes hors ligne. L'application ne l'ouvre plus : les documents s'ouvrent depuis la base.
+// Devis et définition de démonstration : jeu de données des tests (calcul, analyse, bibliothèque, import).
+// L'application ne l'ouvre pas : les documents s'ouvrent depuis la base.
 import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX, MODELES_DOCUMENT } from './vues-document.js';
 import { lignesLotsDemo, natureDemo, coderDemo } from './demo-lots.js';
 import { RATTACHEMENT_DEVIS_DEMO, INTERVENANTS_DEVIS_DEMO } from './structure/donnees.js';

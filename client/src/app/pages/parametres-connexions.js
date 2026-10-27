@@ -60,7 +60,6 @@ export class PageParametresConnexions extends PageBase {
         l'adresse du compte sont chiffrés en base ; l'application ne montre que le nom d'usage. Les personnes autorisées sont prévenues
         avant la fin de validité d'une autorisation et quand une connexion est à reconnecter.</p>
       <div data-liste></div><div data-detail></div><div data-parametres></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     if (r.oauth) app.message(r.message ?? '', r.oauth === 'ok' ? 'succes' : 'erreur');
     this.admin = app.estAdmin();
     this.desabonner = app.abonner('oauth', async (m) => {

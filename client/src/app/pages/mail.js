@@ -46,7 +46,6 @@ export class PageRedactionMail extends PageBase {
     const r = this.requete ?? {};
     this.titre = 'Nouveau courriel';
     this.conteneur.innerHTML = '<div class="page-parametres page-mail"><p class="aide">Préparation…</p></div>';
-    if (!app.enLigne) { this.conteneur.firstElementChild.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     try {
       this.brouillon = await api.mail.preparer({ type: r.type, id: r.id, usage: r.usage });
     } catch (e) {
@@ -176,7 +175,6 @@ export class PageMail extends PageBase {
         ${app.estAdmin() ? '<button type="button" data-parametres>⚙ Messagerie</button>' : ''}</span></div>
       <p class="ligne">${vues.map(([v, l]) => `<label class="ligne"><input type="radio" name="vue" value="${v}" ${v === this.vue ? 'checked' : ''}> ${l}</label>`).join(' ')}</p>
       <div data-liste></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.conteneur.querySelectorAll('[name="vue"]').forEach((x) => x.addEventListener('change', () => { this.vue = x.value; this.lot = null; this.charger(); }));
     this.conteneur.querySelector('[data-nouveau]').addEventListener('click', () => app.naviguer('/mail/nouveau', { nouvelleFenetre: true }));
     this.conteneur.querySelector('[data-parametres]')?.addEventListener('click', () => app.naviguer('/parametres/mail'));
@@ -264,7 +262,6 @@ export class PageMessageMail extends PageBase {
   async ouvrir() {
     this.titre = 'Courriel';
     this.conteneur.innerHTML = '<div class="page-parametres" data-detail></div>';
-    if (!this.app.enLigne) return;
     this.desabonner = this.app.abonner('mail', () => this.charger());
     await this.charger();
   }

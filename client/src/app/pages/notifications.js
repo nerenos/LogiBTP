@@ -26,7 +26,6 @@ export class PageNotifications extends PageBase {
       <p><button type="button" data-tout-lire>✓ Tout marquer lu</button> <a href="/parametres/notifications">Préférences…</a>
         ${app.estAdmin() ? ' <button type="button" data-executer title="Exécuter maintenant les contrôles du planificateur pour cette société">⟳ Contrôler maintenant</button>' : ''}</p>
       <div data-liste></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.conteneur.querySelectorAll('[name="etat"]').forEach((r) => r.addEventListener('change', () => { this.etat = r.value; this.#charger(); }));
     this.conteneur.querySelectorAll('[name="module"]').forEach((r) => r.addEventListener('change', () => { this.module = r.value; this.#charger(); }));
     this.conteneur.querySelector('[data-tout-lire]').addEventListener('click', () => this.#marquer({ tout: true }, false));
@@ -83,7 +82,6 @@ export class PageParametresNotifications extends PageBase {
     this.titre = 'Préférences de notification';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🔔 Préférences de notification</h1><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     let prefs = await api.notifications.preferences();
     const courriel = (await api.notifications.canaux().catch(() => ({}))).courriel === true;
     const rendre = () => {

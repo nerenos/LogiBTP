@@ -28,7 +28,6 @@ export class PageApprovisionnement extends PageBase {
       <p class="aide">Disponible = stock − réservations restantes + commandes à recevoir, jour par jour (réservations à leur date de besoin, commandes à
         leur livraison prévue ; une commande en retard compte aujourd'hui).</p>
       <div class="onglets">${Object.entries(ONGLETS).map(([c, t]) => `<button type="button" data-onglet="${c}">${t}</button>`).join('')}</div><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const lieux = (await api.stock.lieux()).filter((l) => l.depot);
     this.lieu = Number(p.get('lieu')) || lieux[0]?.id || null;
     const combo = creerCombo({ options: lieux.map((l) => ({ valeur: l.id, libelle: `${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', vide: false });

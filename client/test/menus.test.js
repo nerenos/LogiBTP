@@ -21,7 +21,7 @@ describe('menus et modules actifs', () => {
 
 describe('menus et droits du profil', () => {
   // Profil de saisie mobile : le pointage seulement (module Droits, accesSousArbre).
-  const mobile = { ...app(), acces: (n) => n === 'pointage', peutGererThemes: () => false, estAdmin: () => false, enLigne: true };
+  const mobile = { ...app(), acces: (n) => n === 'pointage', peutGererThemes: () => false, estAdmin: () => false };
   it('ne montre que les menus des nœuds accessibles', () => {
     const codes = menus(mobile).map((m) => m.code);
     expect(codes).toContain('pointage');
@@ -37,7 +37,7 @@ describe('menus et droits du profil', () => {
 });
 
 describe('répartition des menus', () => {
-  const complet = { ...app(), peutGererThemes: () => true, estAdmin: () => true, enLigne: true };
+  const complet = { ...app(), peutGererThemes: () => true, estAdmin: () => true };
   const elements = (a, code) => menus(a).find((m) => m.code === code).elements();
   it('garde le titre du séparateur qui suit des éléments masqués', () => {
     const e = [{ libelle: 'A' }, { separateur: true, libelle: 'X' }, { libelle: 'B', module: 'x' }, { separateur: true }, { libelle: 'C' }];

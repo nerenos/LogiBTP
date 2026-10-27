@@ -105,7 +105,6 @@ export class PageSyntheseExecution extends PageBase {
         <span data-service></span> <span data-etat></span> <button type="button" data-actualiser>⟳</button></p>
       <p class="aide">Un état par service, calculé d'après le parcours et les ordres du chantier ; clic droit sur un état pour l'imposer. ❗ : état imposé différent de l'état calculé.</p>
       <div data-liste></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const services = await api.services().catch(() => []);
     const srv = creerCombo({ options: optionsServices(services), valeur: this.filtre.service, vide: true, titre: 'Service' });
     const etat = creerCombo({ options: Object.entries(ETATS_SERVICE).filter(([c]) => c !== 'SANS_OBJET').map(([valeur, d]) => ({ valeur, libelle: `${d.icone} ${d.libelle}` })), valeur: this.filtre.etat, vide: true, titre: 'État' });
@@ -119,7 +118,7 @@ export class PageSyntheseExecution extends PageBase {
     await this.#charger();
   }
 
-  reprendre() { if (this.app.enLigne) this.#charger(); }
+  reprendre() { this.#charger(); }
 
   async #charger() {
     const zone = this.conteneur.querySelector('[data-liste]');
@@ -158,7 +157,6 @@ export class PageExecutionChantier extends PageBase {
   async ouvrir() {
     this.titre = 'Exécution du chantier';
     this.conteneur.innerHTML = '<div class="page-parametres page-execution" data-corps></div>';
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const [modeles, d] = await Promise.all([api.execution.modeles(), api.execution.detail('chantier', this.params.id)]);
     this.modeles = modeles;
     this.#rendre(d);
@@ -255,7 +253,6 @@ export class PageParametresExecution extends PageBase {
       <h2>Catalogue des états</h2><div data-catalogue></div>
       <h2>États des types d'ordres</h2><div data-types></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const admin = this.app.estAdmin();
     const [modeles, services] = await Promise.all([api.execution.modeles(), api.services()]);
     const zCatalogue = this.conteneur.querySelector('[data-catalogue]');
@@ -311,7 +308,6 @@ export class PageAtelierExecution extends PageBase {
   async ouvrir() {
     this.titre = 'Étapes à valider';
     this.conteneur.innerHTML = '<div class="page-atelier" data-atelier></div>';
-    if (!this.app.enLigne) { this.conteneur.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const ecran = new EcranEtapesAtelier(this.conteneur.querySelector('[data-atelier]'), {
       charger: () => api.execution.atelier(),
       valider: (entId, code) => api.execution.validerAtelier(entId, code),

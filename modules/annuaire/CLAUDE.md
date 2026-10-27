@@ -15,7 +15,7 @@
 - `db/070_annuaire_schema.sql` : schéma complet (tables, triggers, vues) ; `071_annuaire_provisoire.sql` (rejouable) : tiers provisoires (`per_provisoire`, `per_provisoire_par|le`, `per_valide_par|le`), journal `fusion_personne`, `v_annuaire_personnes.per_provisoire`.
 - `js/src/identifiants.js` : `compacter`, `luhn`, `sirenValide`, `siretValide`, `cleTva`, `tvaDepuisSiren`, `tvaValide`, `ibanValide`, `bicValide`, `emailValide`, `formaterIban`, `formaterTelephone`, `erreursIdentifiants`.
 - `js/src/coordonnees.js` : `NATURES`, `RESEAUX`, `CHAMPS_NATURE`, `CHOIX`, `valeursCoordonnee`, `estVide`, `memesValeurs`, `texteCoordonnee`, `erreurCoordonnee`, `planifierCoordonnees`, `coordonneesParDefaut`, `principale`.
-- `js/src/fournisseurs.js` : `FournisseurAnnuaireApi` (base `/api/annuaire`), `FournisseurAnnuaireMemoire` (démo hors ligne, tests), `ErreurAnnuaire`, `libelleIndividu`, `TAILLE_PAGE_RATTACHEMENTS` (20).
+- `js/src/fournisseurs.js` : `FournisseurAnnuaireApi` (base `/api/annuaire`), `FournisseurAnnuaireMemoire` (tests), `ErreurAnnuaire`, `libelleIndividu`, `TAILLE_PAGE_RATTACHEMENTS` (20).
 - `js/src/fusion.js` : `planFusion` (valeurs retenues : choix, sinon cible, sinon source pour un vide ; relations réunies ; champs supplémentaires par clé `+clé` ; `conflits`), `texteFusion`, `COLONNES_NON_FUSIONNEES`, `motsDoublon` (mots d'un nom sans formes juridiques ni articles), `MOTS_IGNORES_DOUBLON`.
 - `js/src/graphe.js` : `construireGraphe`, `fusionnerGraphes` (règle du résumé de contacts), `enColonneAnnuaire`, `PROFONDEUR_MAX` (5), `ORDRE_INDIVIDU` (1000).
 - `js/ui/coordonnees.js` : `EditeurCoordonnees` (usages, partage 🔗, reprise d'une fiche liée, historique), `dialogue`, `coordonneeChangee`, `choixAttendu`.

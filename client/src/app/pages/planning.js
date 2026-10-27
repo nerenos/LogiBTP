@@ -178,7 +178,6 @@ export class PagePlanning extends PageBase {
               <span class="commandes-panneau"><button type="button" class="bouton-icone" data-panneau-reduire title="Réduire le panneau">»</button><button type="button" class="bouton-icone" data-panneau-fenetre title="Ouvrir le panneau dans une autre fenêtre">⧉</button><button type="button" class="bouton-icone" data-panneau-rattacher hidden title="Remettre le panneau dans la fenêtre du planning">⇤</button></span></div>
             <div data-actions-tache hidden></div></div>
           ${Object.keys(ONGLETS_PANNEAU).map((cle) => `<div data-panneau="${cle}"${cle === 'aplanifier' ? '' : ' hidden'}></div>`).join('')}</aside></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-planning]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
     this.consultation = this.requete.consultation === '1';
     this.panneauSeul = this.requete.panneau === '1';
@@ -1237,7 +1236,6 @@ export class PageParametresPlanning extends PageBase {
     this.titre = 'Paramètres du planning';
     this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">📅 Paramètres du planning</h1></div><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const admin = this.app.estAdmin();
     const ro = admin ? '' : 'disabled';
     const p = await api.planning.parametres();

@@ -30,7 +30,6 @@ export class PageDiffusionCrm extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     if (this.params.id === 'nouveau') await this.preparer();
     else {
       this.diffusion = await api.crm.diffusion(Number(this.params.id));

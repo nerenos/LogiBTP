@@ -39,7 +39,6 @@ export class PageEquipes extends PageBase {
           <label title="Afficher aussi les équipes inactives"><input type="checkbox" data-inactives> Inactives</label>
           <button type="button" class="bouton-icone" data-nouvelle title="Nouvelle équipe" aria-label="Nouvelle équipe">＋</button></div><div data-liste></div></aside>
         <section class="equipes-detail" data-detail><p class="aide">Choisir une équipe, ou ＋ pour en créer une.</p></section></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-detail]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const c = this.conteneur;
     [this.ressources, this.ref] = await Promise.all([api.planning.ressources({}).catch(() => []), api.planning.referentiels().catch(() => ({ services: [] }))]);
     this.libelles = new Map(this.ressources.map((r) => [`${r.type}:${r.id}`, r.libelle]));

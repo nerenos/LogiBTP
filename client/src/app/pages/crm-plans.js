@@ -19,7 +19,6 @@ export class PagePlansCrm extends PageBase {
     const app = this.app;
     this.element = this.requete.type && this.requete.id ? { type: this.requete.type, id: String(this.requete.id) } : null;
     this.recherche = this.requete.recherche ?? '';
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     const e = this.element ? (await api.crm.elements([this.element]))[0] : null;
     this.libelle = e?.libelle ?? '';
     this.titre = e ? `Plans : ${e.libelle}` : 'Plans et visas';

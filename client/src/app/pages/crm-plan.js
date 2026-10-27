@@ -28,7 +28,6 @@ export class PagePlanCrm extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     [this.statuts, this.parametres] = await Promise.all([api.crm.statutsVisa(), api.crm.parametres().catch(() => ({}))]);
     this.fichiersNouveaux = [];
     if (this.params.id === 'nouveau') {

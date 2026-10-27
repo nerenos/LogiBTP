@@ -27,7 +27,6 @@ export class PageReglements extends PageBase {
     if (this.perimetre) { await this.#ouvrirPerimetre(); return; }
     this.sens = this.requete.sens === 'D' ? 'D' : 'E';
     this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Règlements disponibles en ligne seulement.</p>'; return; }
     this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><h1 class="page-titre">💳 ${echapper(this.titre)}</h1>
       <p>Tiers <span data-tiers></span> <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></p>
       <div data-corps><p class="aide">Choisissez un tiers.</p></div></div>`;
@@ -46,7 +45,6 @@ export class PageReglements extends PageBase {
     const { type, id } = this.perimetre;
     const libelle = type === 'chantier' ? 'chantier' : 'marché';
     this.titre = `Échéances du ${libelle}`;
-    if (!this.app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Règlements disponibles en ligne seulement.</p>'; return; }
     this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">💳 ${echapper(this.titre)} <a href="/fiche/${type}/${id}" data-element></a></h1>
       <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></div><div data-corps></div></div>`;
     this.conteneur.querySelector('[data-toutes]').addEventListener('change', (e) => { this.toutes = e.target.checked; this.#rendrePerimetre(); });

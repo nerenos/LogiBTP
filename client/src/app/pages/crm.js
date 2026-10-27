@@ -25,7 +25,6 @@ export class PageCrm extends PageBase {
     const r = this.requete;
     this.filtre = { vue: VUES_CRM.some((v) => v.code === r.vue) ? r.vue : 'mes', etat: r.etat ?? 'ouvertes', nature: r.nature ?? '', srv: r.srv ?? '', recherche: r.recherche ?? '', page: 1 };
     this.titre = VUES_CRM.find((v) => v.code === this.filtre.vue).libelle;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     this.ctx = await contexteCrm(app);
     // Panneau de gauche (vues et filtres) réductible : état gardé dans le navigateur, réduit d'office sur un petit écran.
     const prefReduit = lirePreferences().crmPanneauReduit;

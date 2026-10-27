@@ -15,9 +15,9 @@ export class PageCompte extends PageBase {
     const app = this.app;
     this.titre = 'Mon compte';
     const s = app.session;
-    if (!app.enLigne || !s?.connecte) {
-      this.conteneur.innerHTML = `<div class="page-simple"><h1>👤 Mon compte</h1><p class="aide">${app.enLigne ? 'Non connecté.' : 'Démonstration hors ligne : pas de compte.'}</p>
-        <p><a href="${app.enLigne ? '/connexion' : '/'}">${app.enLigne ? '🔑 Se connecter' : '⌂ Accueil'}</a></p></div>`;
+    if (!s?.connecte) {
+      this.conteneur.innerHTML = `<div class="page-simple"><h1>👤 Mon compte</h1><p class="aide">Non connecté.</p>
+        <p><a href="/connexion">🔑 Se connecter</a></p></div>`;
       return;
     }
     this.politique = await api.auth.politique().catch(() => ({ longueur_min: 12, courants: [] }));

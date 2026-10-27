@@ -10,7 +10,6 @@ export class PageSuiviCrm extends PageBase {
   async ouvrir() {
     const app = this.app;
     const { type, id } = this.requete;
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     const [e] = await api.crm.elements([{ type, id: String(id) }]).catch(() => [null]);
     this.titre = `Suivi : ${e?.libelle ?? `${type} ${id}`}`;
     this.conteneur.innerHTML = `<div class="page-parametres page-crm-suivi"><h1 class="page-titre">💬 Suivi : ${e?.url ? `<a href="${echapper(e.url)}">${echapper(e.libelle)}</a>` : echapper(e?.libelle ?? '')}</h1>

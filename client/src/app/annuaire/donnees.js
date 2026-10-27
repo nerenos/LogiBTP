@@ -6,7 +6,7 @@ import { luhn, tvaDepuisSiren } from '@logibtp/annuaire';
 // (client et fournisseur…), plusieurs contacts par personne,
 // individus rattachés, coordonnées partagées. Exemple : Antoine Abel, commercial de Matériaux Rhône-Alpes à Gerland
 // (fournisseur), est aussi client particulier ; son adresse et ses coordonnées personnelles sont partagées (même
-// identifiant) entre sa fiche individu et son compte particulier. Alimente la démo hors ligne et db/141 (généré).
+// identifiant) entre sa fiche individu et son compte particulier. Alimente db/141 (généré).
 
 export const NIVEAUX = [
   { code: 'GROUPE', libelle: 'Groupe', icone: '🏛️', morale: true, ordre: 10 },

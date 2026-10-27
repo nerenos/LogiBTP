@@ -15,7 +15,6 @@ export class PageFilCrm extends PageBase {
     const app = this.app;
     this.element = this.requete.type && this.requete.id ? { type: this.requete.type, id: String(this.requete.id) } : null;
     this.genres = new Set(this.requete.genres ? this.requete.genres.split(',') : GENRES_FIL.map((g) => g.code));
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     const e = this.element ? (await api.crm.elements([this.element]))[0] : null;
     this.titre = e ? `Fil : ${e.libelle}` : 'Fil d\'actualité';
     this.conteneur.innerHTML = `<div class="page-parametres page-crm-fil"><h1 class="page-titre">📰 Fil d'actualité${e ? ` : ${lienElement(e)}` : ''}</h1><div data-hote></div></div>`;

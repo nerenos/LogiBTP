@@ -4,12 +4,11 @@ import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
 import { D } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
-import { Disposition, GestionVuesDocument, FournisseurVuesMemoire, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
+import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
 import { sousTraiter, TYPES_SOUS_TRAITABLES } from '../sous-traitance/sous-traiter.js';
-import { VUES_DOCUMENT } from '../vues-document.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp, individusSociete, individusStructure } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
@@ -33,7 +32,7 @@ import { PanneauSuivi } from '../crm/panneau-suivi.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
 // /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
-// par la page d'import). Sans l'API (hors ligne), aucun document ne s'ouvre.
+// par la page d'import).
 
 const GABARIT = `
   <div class="document-barre">
@@ -282,16 +281,15 @@ export class PageDocument extends PageBase {
     const params = await s.bibliotheque.parametres?.().catch(() => null);
     this.coefsDefaut = { fg: params?.coef_fg_defaut ?? 1, benef: params?.coef_benef_defaut ?? 1 };
     this.natures = await s.bibliotheque.natures?.().catch(() => []) ?? [];
-    this.comptes = app.enLigne ? await api.comptesComptables().catch(() => []) : [];
-    // Règle de ventilation du module Comptabilité (compte hérité des lignes) ; hors ligne : compte de la nature.
-    this.regleVentilation = app.enLigne ? await api.comptabilite.regle().catch(() => null) : null;
+    this.comptes = await api.comptesComptables().catch(() => []);
+    // Règle de ventilation du module Comptabilité (compte hérité des lignes).
+    this.regleVentilation = await api.comptabilite.regle().catch(() => null);
     this.appel = new AppelBibliotheque({
       fournisseur: s.bibliotheque, editeur: () => this.editeur, message: (t, n) => app.message(t, n),
       bibliotheque: () => this.bibliotheques.find((b) => b.id === Number(this.editeur?.saisie.document.ent_bib_id))?.code ?? null,
     });
 
     const { id } = this.params;
-    if (!app.enLigne) throw new Error('Hors ligne : les documents s\'ouvrent depuis la base, l\'API est indisponible');
     this.types = await api.typesDocument();
     // Création depuis les listes : /document/nouveau?type=<code> ; depuis un marché : &marche=<id> (rattachement).
     if (id === 'nouveau') {
@@ -328,7 +326,7 @@ export class PageDocument extends PageBase {
    * reprend son propre verrou sans avertissement.
    */
   async prendreVerrou() {
-    if (!this.app.enLigne || !this.editeur || !this.#modifiable()) { this.#etatVerrou(null); return; }
+    if (!this.editeur || !this.#modifiable()) { this.#etatVerrou(null); return; }
     this.jeton ??= crypto.randomUUID();
     const id = this.editeur.saisie.document.ent_id;
     const r = await api.verrouillerDocument(id, this.jeton);
@@ -406,11 +404,11 @@ export class PageDocument extends PageBase {
       choisirTexte: () => this.appel?.choisir('', { type: 'TEXTE' }),
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
       // Ordres (famille E, module Exécution actif) : panneau Exécution de l'entête, répartition du détail.
-      execution: this.app.enLigne && this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
+      execution: this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
       // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
-      stock: this.app.enLigne && this.app.moduleActif('stock') ? { lieux: () => api.stock.lieux() } : null,
+      stock: this.app.moduleActif('stock') ? { lieux: () => api.stock.lieux() } : null,
       // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
-      arc: this.app.enLigne ? {
+      arc: {
         enregistrer: (id, arc) => api.arcDocument(id, arc),
         deposer: async (fichier, numero) => {
           const d = this.editeur.saisie.document;
@@ -418,7 +416,7 @@ export class PageDocument extends PageBase {
             type_element: this.editeur.definition.type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id) } });
           this.gedCle = null;
         },
-      } : null,
+      },
     });
     this.plan = new PlanDocument(this.$('#plan'), { editeur: this.editeur });
     this.recherche = new RechercheLignes(this.$('#recherche-lignes'), { editeur: this.editeur });
@@ -486,13 +484,9 @@ export class PageDocument extends PageBase {
     this.plan?.rendre();
   }
 
-  /** Vues de colonnes : API en ligne, mémoire (vues du cœur) hors ligne, partagée par les documents ouverts. */
+  /** Vues de colonnes (API), partagées par les documents ouverts. */
   fournisseurVues() {
-    if (this.app.enLigne) {
-      return { vues: (type) => api.vuesDocument(type), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) };
-    }
-    PageDocument.vuesDemo ??= new FournisseurVuesMemoire({ vues: VUES_DOCUMENT, utilisateur: () => this.app.utilisateur(), admin: () => this.app.estAdmin() });
-    return PageDocument.vuesDemo;
+    return { vues: (type) => api.vuesDocument(type), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) };
   }
 
   rafraichir() {
@@ -505,7 +499,6 @@ export class PageDocument extends PageBase {
       this.vues.changerModele().catch((x) => this.app.erreur(x));
     }
     const p = this.panneaux;
-    const enLigne = this.app.enLigne;
     p.rendreEntete(this.$('#entete'));
     this.plan?.rendre();
     if (this.disposition.p.onglet === 'analyse') this.analyse?.rendre();
@@ -523,35 +516,35 @@ export class PageDocument extends PageBase {
     this.$('[data-action="retablir"]').disabled = ed.magasin.pileRefaire.length === 0;
     const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
     const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille && !this.bloque;
-    this.$('[data-action="enregistrer"]').disabled = !enLigne || !modifiable;
+    this.$('[data-action="enregistrer"]').disabled = !modifiable;
     this.$('[data-action="enregistrer"]').textContent = this.importEnCours ? 'Créer le devis' : 'Enregistrer';
-    this.$('[data-action="valider"]').disabled = !enLigne || !modifiable || Boolean(this.importEnCours);
+    this.$('[data-action="valider"]').disabled = !modifiable || Boolean(this.importEnCours);
     // Cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17) : approbation interne si la règle l'active, envoi, validation du tiers.
     this.$('[data-action="valider"]').textContent = ed.definition.regles?.APPROBATION ? 'Approuver' : 'Valider';
     const enCours = statut?.std_code !== 'ANNULE' && statut?.std_code !== 'REMPLACE';
-    this.$('[data-action="envoyer"]').hidden = !enLigne || !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
-    this.$('[data-action="valider-tiers"]').hidden = !enLigne || !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
+    this.$('[data-action="envoyer"]').hidden = !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
+    this.$('[data-action="valider-tiers"]').hidden = !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
     this.$('[data-action="rejeter"]').hidden = this.$('[data-action="valider-tiers"]').hidden;
     const droits = ed.definition.droits ?? [];
-    this.$('[data-action="devalider"]').hidden = !enLigne || !doc.ent_verrouille || !enCours || !(droits.includes('DEVALIDER') || droits.includes('FORCER'));
+    this.$('[data-action="devalider"]').hidden = !doc.ent_verrouille || !enCours || !(droits.includes('DEVALIDER') || droits.includes('FORCER'));
     // Changement de numéro : droit de déverrouillage (administrateur), et FORCER en numérotation continue (contrôlés par le serveur).
-    this.$('[data-action="numero"]').hidden = !enLigne || !modifiable || !this.app.estAdmin() || Boolean(this.importEnCours)
+    this.$('[data-action="numero"]').hidden = !modifiable || !this.app.estAdmin() || Boolean(this.importEnCours)
       || (ed.definition.type?.tyd_numerotation_continue && !droits.includes('FORCER'));
-    this.$('[data-action="transformer"]').disabled = !enLigne || !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
+    this.$('[data-action="transformer"]').disabled = !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
-    this.$('[data-action="annuler-avoir"]').hidden = !enLigne || !doc.ent_verrouille || statut?.std_code === 'ANNULE'
+    this.$('[data-action="annuler-avoir"]').hidden = !doc.ent_verrouille || statut?.std_code === 'ANNULE'
       || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
-    this.$('[data-action="consultation"]').hidden = !enLigne || !doc.ent_id || !ed.definition.type?.tyd_consultation;
-    this.$('[data-action="sous-traiter"]').hidden = !enLigne || !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif('sous_traitance')
+    this.$('[data-action="consultation"]').hidden = !doc.ent_id || !ed.definition.type?.tyd_consultation;
+    this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif('sous_traitance')
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
-    this.$('[data-action="sources"]').hidden = !enLigne || !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
+    this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
     if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
     // Onglet Suivi (module CRM actif, document enregistré) : notes du groupe d'indices.
-    this.$('[data-onglet-vue="suivi"]').hidden = !enLigne || !this.app.moduleActif('crm') || !doc.ent_id;
+    this.$('[data-onglet-vue="suivi"]').hidden = !this.app.moduleActif('crm') || !doc.ent_id;
     // Ordres (module Exécution) : coefficients par nature et marge dans l'ordre d'exécution seulement (E3, E17).
     const typeDoc = this.editeur.definition.type;
     this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === 'E' && typeDoc.tyd_code !== 'E_OE';
@@ -641,7 +634,7 @@ export class PageDocument extends PageBase {
   async rattacher(r) {
     const ed = this.editeur;
     const complet = completerRattachement(r, this.structure ?? { chantiers: [], marches: [] });
-    if (!this.app.enLigne || (this.#modifiable() && !this.bloque && !ed.magasin.lectureSeule)) {
+    if (this.#modifiable() && !this.bloque && !ed.magasin.lectureSeule) {
       ed.magasin.modifier((b) => { Object.assign(b.document, complet); }, 'Rattachement');
       // Annuaire encore vide (tiers seul) : intervenants du marché ou du chantier repris d'office.
       if (this.panneaux.intervenantsDocument().length <= 1) {
@@ -673,7 +666,7 @@ export class PageDocument extends PageBase {
     if (!d) return;
     this.tracabiliteCle = this.cleTracabilite();
     if (this.importEnCours) { tracabiliteImport(this, zone); return; }
-    if (!this.app.enLigne || !d.ent_id) { zone.innerHTML = '<p class="aide">Traçabilité disponible pour les documents enregistrés.</p>'; return; }
+    if (!d.ent_id) { zone.innerHTML = '<p class="aide">Traçabilité disponible pour les documents enregistrés.</p>'; return; }
     afficherTracabilite(zone, {
       entId: d.ent_id, ged: this.servicesGed, debogage: Boolean(this.editeur.vue?.debogage),
       naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
@@ -780,7 +773,7 @@ export class PageDocument extends PageBase {
   async chargerRestes() {
     const ed = this.editeur;
     // Documents d'avancement : l'avancement remplace le reste à solder.
-    if (!this.app.enLigne || ed.saisie.document.ent_avt_presentation || !ed.saisie.lignes.some((l) => l.lig_origine_id)) return;
+    if (ed.saisie.document.ent_avt_presentation || !ed.saisie.lignes.some((l) => l.lig_origine_id)) return;
     try {
       ed.definirRestes(await api.restes(ed.saisie.document.ent_id));
     } catch (e) {
@@ -809,7 +802,7 @@ export class PageDocument extends PageBase {
   async chargerAvancement() {
     const d = this.editeur.saisie.document;
     this.avancement = null;
-    if (!this.app.enLigne || !d.ent_avt_presentation || !d.ent_marche_id) return;
+    if (!d.ent_avt_presentation || !d.ent_marche_id) return;
     try { this.avancement = await api.avancementDocument(d.ent_id); } catch { this.avancement = null; }
     this.rendreAvancement(this.$('#totaux-entete'));
   }

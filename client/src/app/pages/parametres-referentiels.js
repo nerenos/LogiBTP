@@ -23,7 +23,6 @@ export class PageParametresReferentiels extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🗃 Référentiels communs</h1>
       <div data-listes></div>
       <div data-section="modes"></div><div data-section="unites"></div><div data-section="numeros"></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-listes]').innerHTML = '<p class="aide">Référentiels disponibles en ligne seulement.</p>'; return; }
     const listes = await api.listesValeurs.listes();
     const zone = this.conteneur.querySelector('[data-listes]');
     zone.innerHTML = listes.map((l) => `<div data-liste="${echapper(l.code)}"></div>`).join('');

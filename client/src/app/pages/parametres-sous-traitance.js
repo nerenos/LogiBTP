@@ -22,7 +22,6 @@ export class PageParametresSousTraitance extends PageBase {
       <p class="aide">Pièces du sous-traitant (valables pour tous ses marchés : Kbis, URSSAF…) et documents du marché (DC4, contrat…). Une pièce fournie
       est un document de la GED de la catégorie indiquée ; sa validité court depuis son dépôt (durée) ou jusqu'à la date saisie. Une pièce
       bloquante manquante ou expirée empêche l'action cochée.</p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.pieces = await api.sousTraitance.typesPieces();
     this.#rendre();
   }

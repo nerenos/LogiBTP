@@ -1,6 +1,6 @@
-// Bibliothèque de démonstration : une seule source pour la démo hors ligne et pour db/116_bibliotheque_demo.sql
+// Bibliothèque de démonstration : source de db/116_bibliotheque_demo.sql
 // (généré par client/scripts/generer-vues-liste.mjs). Prix en unité de stock ; les prix calculés (PA, PR, PV)
-// sont recalculés au chargement (démo) ou par l'API à la première modification.
+// sont recalculés par le script ou par l'API à la première modification.
 
 export const BIBLIOTHEQUES = [
   { id: 1, code: 'GEN', libelle: 'Bibliothèque générale', defaut: true, actif: true, ordre: 1 },

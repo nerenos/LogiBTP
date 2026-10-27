@@ -18,12 +18,6 @@ export class PageConnexion extends PageBase {
   async ouvrir() {
     const app = this.app;
     this.titre = 'Connexion';
-    if (!app.enLigne) {
-      this.conteneur.innerHTML = `<div class="page-simple"><h1>🔑 Connexion</h1>
-        <p class="aide">Démonstration hors ligne : pas de connexion ; le profil de démonstration se choisit dans les <a href="/parametres">paramètres</a>.</p>
-        <p><a href="/">⌂ Accueil</a></p></div>`;
-      return;
-    }
     const session = app.session ?? {};
     if (this.requete.jeton) { await this.#rendreReinitialisation(); return; }
     if (session.connecte && !this.fenetreSeule) { this.#poursuivre(session); return; }

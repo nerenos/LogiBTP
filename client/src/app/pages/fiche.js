@@ -42,7 +42,7 @@ export class PageFiche extends PageBase {
       peutParametrer: app.estAdmin(),
       // Impression de la fiche (module Édition) avec les autres boutons de la fiche.
       actions: [{
-        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la fiche (modèle d’édition)', visible: app.enLigne,
+        icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la fiche (modèle d’édition)',
         action: () => app.naviguer(`/edition?source=fiche&id=${encodeURIComponent(`${type}/${this.fiche?.id ?? this.params.id}`)}`, { nouvelleFenetre: true }),
       },
       // Fiche ouverte depuis une liste : fiches précédente et suivante de la liste (ses lignes affichées).
@@ -53,7 +53,7 @@ export class PageFiche extends PageBase {
       // Élément de bibliothèque : référentiels, tarifs, GED (image, notices), définition du document de composition.
       services: s, definitionDocument: () => app.definitionDocument(), utilisateur: app.utilisateur(), admin: app.estAdmin(),
       // Composition des ouvrages : vues de colonnes des documents (en ligne).
-      vuesDocument: app.enLigne ? { vues: (t) => api.vuesDocument(t), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) } : null,
+      vuesDocument: { vues: (t) => api.vuesDocument(t), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) },
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       ouvrirFiche: ({ type: t, id }, e) => app.naviguer(`/fiche/${t}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
@@ -66,13 +66,13 @@ export class PageFiche extends PageBase {
         modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
       }),
       // Onglet Suivi (module CRM actif, en ligne) : notes, tâches et courriels des tiers, contacts et de la structure.
-      suivi: app.enLigne && app.moduleActif('crm') && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
+      suivi: app.moduleActif('crm') && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
         const p = new PanneauSuivi(corps, { app, type: t, id });
         p.ouvrir().catch((e) => app.erreur(e));
         return p;
       } : null,
       // Onglet Fil des fiches affaire et chantier (module CRM actif, en ligne) : fil d'actualité de l'élément.
-      fil: app.enLigne && app.moduleActif('crm') ? (corps, { type: t, id, libelle }) => {
+      fil: app.moduleActif('crm') ? (corps, { type: t, id, libelle }) => {
         // Sous-conteneur propre au fil : le corps de la fiche, commun à tous les onglets, garde sa largeur.
         const hote = document.createElement('div');
         corps.replaceChildren(hote);
@@ -82,12 +82,12 @@ export class PageFiche extends PageBase {
       } : null,
       moduleActif: (code) => app.moduleActif(code),
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.
-      compte: app.enLigne && app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
+      compte: app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
       // Référentiel des ressources (en ligne) : habilitations, missions d'intérim, habilitations exigées d'un matériel.
-      dotations: app.enLigne && app.moduleActif('stock') ? (corps, p) => rendreDotationsSalarie(corps, {
+      dotations: app.moduleActif('stock') ? (corps, p) => rendreDotationsSalarie(corps, {
         ...p, naviguer: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       }).catch((e) => app.erreur(e)) : null,
-      ressources: app.enLigne ? {
+      ressources: {
         habilitations: (corps, p) => rendreHabilitations(corps, { app, ...p }).catch((e) => app.erreur(e)),
         missions: (corps, p) => rendreMissions(corps, { app, annuaire: s.annuaire, ...p }).catch((e) => app.erreur(e)),
         exigees: (corps, p) => rendreHabilitationsExigees(corps, { app, ...p }).catch((e) => app.erreur(e)),
@@ -95,7 +95,7 @@ export class PageFiche extends PageBase {
         materielAffecte: (corps, p) => rendreMaterielAffecte(corps, { app, ...p }).catch((e) => app.erreur(e)),
         couts: (corps, p) => rendreCoutsMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
         compteurs: (corps, p) => rendreCompteursMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
-      } : null,
+      },
       surEnregistre: (f, { cree }) => {
         app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
         if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);

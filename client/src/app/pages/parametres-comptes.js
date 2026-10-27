@@ -25,7 +25,6 @@ export class PageParametresComptes extends PageBase {
     this.titre = 'Comptes utilisateurs';
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">👥 Comptes utilisateurs</h1><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!app.enLigne) { corps.innerHTML = '<p class="aide">Comptes : en ligne seulement (la démonstration hors ligne n\'a pas de connexion).</p>'; return; }
     if (!app.estAdmin()) { corps.innerHTML = '<p class="aide">Réservé aux administrateurs.</p>'; return; }
     if (this.requete.compte) await this.#rendreCompte(corps, Number(this.requete.compte));
     else await this.#rendreListe(corps);

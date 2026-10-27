@@ -34,10 +34,7 @@ export class PageParametres extends PageBase {
           <button type="button" data-action="session" class="danger">⏻ Fermer la session…</button></p>
       </section>
       <section class="carte"><h2>Utilisateur</h2>
-        <p>Utilisateur <b>${echapper(app.utilisateur())}</b>, profil <b>${echapper(app.profil())}</b>.
-          ${app.enLigne ? '<span class="aide">(L\'identification et les droits seront gérés par le module de connexion.)</span>' : ''}</p>
-        ${app.enLigne ? '' : `<label class="ligne">Profil de démonstration <select data-action="profil">${['ADMIN', 'SAISIE'].map((p) => `<option ${p === app.profil() ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
-          <p class="aide">SAISIE : sans informations confidentielles, sans reprise de la main sur les fiches, sans purge ni suppression au coffre-fort.</p>`}
+        <p>Utilisateur <b>${echapper(app.utilisateur())}</b>, profil <b>${echapper(app.profil())}</b>. <a href="/compte">👤 Mon compte</a></p>
       </section>
       <section class="carte"><h2>Listes et fiches</h2>
         <p><button type="button" data-action="themes" ${app.peutGererThemes() ? '' : 'disabled'}>🗂 Thèmes et vues de liste…</button>
@@ -57,13 +54,11 @@ export class PageParametres extends PageBase {
           Deux sociétés ouvertes en même temps ne partagent ni fenêtres, ni session, ni préférences.</p>
       </section>
       <section class="carte" id="apropos"><h2>À propos</h2>
-        <dl class="definitions"><dt>Application</dt><dd>LogiBTP</dd><dt>Moteur de calcul</dt><dd>${echapper(VERSION_MOTEUR)}</dd>
-        <dt>Mode</dt><dd>${app.enLigne ? 'API connectée' : 'Démo hors ligne (données de démonstration, calcul local)'}</dd></dl>
+        <dl class="definitions"><dt>Application</dt><dd>LogiBTP</dd><dt>Moteur de calcul</dt><dd>${echapper(VERSION_MOTEUR)}</dd></dl>
       </section>
     </div>`;
     this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
     this.conteneur.querySelector('[data-pref="nouvelleFenetre"]').addEventListener('change', (e) => app.preferences.set('nouvelleFenetre', e.target.checked));
-    this.conteneur.querySelector('[data-action="profil"]')?.addEventListener('change', (e) => app.changerProfilDemo(e.target.value));
     this.conteneur.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
       if (!b) return;

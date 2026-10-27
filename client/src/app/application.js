@@ -6,14 +6,13 @@ import { ParametrageFiche } from '@logibtp/fiche/ui';
 import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
-import { creerFournisseurListe, donneesDemo, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
+import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
 import { creerFournisseurFiche } from './fiches/fiches.js';
 import { ficheDeLigne } from './fiches/definitions.js';
 import { creerFournisseurGed } from './ged/ged.js';
 import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
-import { creerFournisseurAnnuaire, creerFournisseurEntreprises, relierTarifs } from './annuaire/annuaire.js';
+import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuaire/annuaire.js';
 import { creerFournisseurStructure } from './structure/structure.js';
-import { DEFINITION_DEMO } from './demo.js';
 import { societeCourante } from './societe.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
@@ -33,9 +32,8 @@ export const LISTE_PAR_TYPE = {
 
 export class Application {
   constructor() {
-    this.enLigne = false;
     this.societe = null;
-    this.preferences = new Preferences('logibtp.navigation', { nouvelleFenetre: false, profilDemo: 'ADMIN', theme: 'auto' });
+    this.preferences = new Preferences('logibtp.navigation', { nouvelleFenetre: false, theme: 'auto' });
     appliquerTheme(this.preferences.get('theme'));
     // Thème changé dans une autre fenêtre de la session (même localStorage) : appliqué ici aussi.
     window.addEventListener('storage', (e) => {
@@ -55,18 +53,18 @@ export class Application {
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
     });
-    this.enLigne = await api.disponible();
-    document.body.classList.toggle('hors-ligne', !this.enLigne);
-    this.societe = await societeCourante(this.enLigne);
+    this.societe = await societeCourante();
+    // L'application exige l'API : injoignable au démarrage, un écran d'attente la recontrôle jusqu'à son retour.
+    if (!(await api.disponible())) { this.#attendreApi(); return; }
     // Session (module Authentification) : sans session, seule la page de connexion s'ouvre ; mot de passe provisoire :
-    // page Mon compte jusqu'au changement. Hors ligne (démo) : pas de connexion, profil choisi dans les paramètres.
-    this.session = this.enLigne ? await api.auth.session().catch(() => null) : null;
+    // page Mon compte jusqu'au changement.
+    this.session = await api.auth.session().catch(() => null);
     this.#surveillerSession();
     const ici = `${location.pathname}${location.search}`;
     const publique = location.pathname === '/borne';
-    if (this.enLigne && !this.session?.connecte && location.pathname !== '/connexion' && !publique) history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
+    if (!this.session?.connecte && location.pathname !== '/connexion' && !publique) history.replaceState(null, '', `/connexion?retour=${encodeURIComponent(ici)}`);
     else if (this.session?.mdp_a_changer && location.pathname !== '/compte') history.replaceState(null, '', '/compte?changer=1');
-    if (!this.enLigne || this.session?.connecte) await this.chargerModules();
+    if (this.session?.connecte) await this.chargerModules();
     this.rendreInfos();
     if (this.session?.connecte && !this.session.mdp_a_changer) this.#surveillerNotifications();
 
@@ -104,68 +102,43 @@ export class Application {
 
   // ---------------------------------------------------------------- services partagés par les pages
 
-  /** Fournisseurs des modules (API ou démo hors ligne), créés à la première page qui en a besoin. */
+  /** Fournisseurs des modules (API), créés à la première page qui en a besoin. */
   services() {
-    this.servicesPrets ??= (async () => {
-      const lignes = donneesDemo();
-      const ged = await creerFournisseurGed({ enLigne: this.enLigne, lignes });
-      const bibliotheque = creerFournisseurBibliotheque({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo') });
-      const elements = this.enLigne ? [] : bibliotheque.elements;
-      const annuaire = creerFournisseurAnnuaire({ enLigne: this.enLigne, utilisateur: this.utilisateur(), profil: this.preferences.get('profilDemo'), salaries: lignes.salaries });
-      const entreprises = creerFournisseurEntreprises({ enLigne: this.enLigne });
-      if (!this.enLigne) relierTarifs(bibliotheque);
-      // Structure des affaires (projets, affaires, chantiers, marchés) : hors ligne, mêmes lignes pour les listes et les fiches.
-      let liste = null;
-      const structure = creerFournisseurStructure({ enLigne: this.enLigne, annuaire, documents: () => liste?.sourcesDonnees?.documents?.lignes ?? [] });
-      liste = creerFournisseurListe({ enLigne: this.enLigne, ged, elements, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure });
-      const fiche = creerFournisseurFiche({
-        enLigne: this.enLigne, lignes, bibliotheque: this.enLigne ? null : bibliotheque, annuaire: this.enLigne ? null : annuaire, structure: this.enLigne ? null : structure,
-      });
-      if (!this.enLigne) {
-        fiche.profil = this.preferences.get('profilDemo');
-        ged.profil = this.preferences.get('profilDemo');
-        // Démo : comme SpecialisationListeBtp côté serveur, une fiche en cours de modification bloque la saisie dans la liste.
-        liste.verifierModification = (source, id) => {
-          const type = { salaries: 'salarie', materiels: 'materiel' }[source];
-          const v = type && fiche.verrouActif(type, id);
-          if (v) throw Object.assign(new Error(`Fiche en cours de modification par ${v.utilisateur} : saisie impossible pour l'instant`), { code: 'FICHE_EN_MODIFICATION', statut: 409 });
-        };
-      }
-      return { liste, fiche, ged, bibliotheque, annuaire, entreprises, structure };
-    })();
+    this.servicesPrets ??= Promise.resolve({
+      liste: creerFournisseurListe(), fiche: creerFournisseurFiche(), ged: creerFournisseurGed(), bibliotheque: creerFournisseurBibliotheque(),
+      annuaire: creerFournisseurAnnuaire(), entreprises: creerFournisseurEntreprises(), structure: creerFournisseurStructure(),
+    });
     return this.servicesPrets;
   }
 
   /**
-   * Modules activés pour la société (db/193 : module_societe) : menus et écrans des modules désactivés masqués ;
-   * hors ligne, tous les modules sont actifs. Rappelée après un changement d'activation.
+   * Modules activés pour la société (db/193 : module_societe) : menus et écrans des modules désactivés masqués.
+   * Rappelée après un changement d'activation.
    */
   async chargerModules() {
     this.modules = new Map();
-    if (this.enLigne) {
-      try { for (const m of await api.modules()) this.modules.set(m.code, m.actif); } catch { /* table absente : tout est actif */ }
-      try { this.typesActifs = new Set((await api.typesDocument()).map((t) => t.tyd_code)); } catch { this.typesActifs = null; }
-      // Droits du profil (module Droits) : menus et commandes masqués ; le serveur reste seul juge.
-      try { this.droits = await api.droits.moi(); } catch { this.droits = null; }
-    }
+    try { for (const m of await api.modules()) this.modules.set(m.code, m.actif); } catch { /* table absente : tout est actif */ }
+    try { this.typesActifs = new Set((await api.typesDocument()).map((t) => t.tyd_code)); } catch { this.typesActifs = null; }
+    // Droits du profil (module Droits) : menus et commandes masqués ; le serveur reste seul juge.
+    try { this.droits = await api.droits.moi(); } catch { this.droits = null; }
     if (this.bandeau) { this.bandeau.menus = menus(this); this.bandeau.rendre(); }
   }
 
   /** Module actif pour la société (inconnu : actif). */
   moduleActif(code) { return this.modules?.get(code) ?? true; }
 
-  /** Type de document actif (types non chargés, hors ligne : actif). */
+  /** Type de document actif (types non chargés : actif). */
   typeActif(code) { return !this.typesActifs || this.typesActifs.has(code); }
 
-  /** Accès à un nœud du module Droits (au moins une action sur lui ou ses descendants) ; hors ligne ou droits inconnus : oui. */
+  /** Accès à un nœud du module Droits (au moins une action sur lui ou ses descendants) ; droits inconnus : oui. */
   acces(noeud, ecriture = false) { return !this.droits || accesSousArbre(this.droits, noeud, ecriture); }
 
-  /** Action permise sur un nœud du module Droits (au moins la portée demandée) ; hors ligne ou droits inconnus : oui. */
+  /** Action permise sur un nœud du module Droits (au moins la portée demandée) ; droits inconnus : oui. */
   peut(noeud, action, portee = 'SOI') { return !this.droits || autorise(this.droits, noeud, action, portee); }
 
   // Usurpation (module Authentification) : l'application est celle du compte usurpé (profil, droits, menus).
-  profil() { return this.enLigne ? (this.session?.usurpation?.profil ?? this.session?.profil ?? '') : this.preferences.get('profilDemo'); }
-  utilisateur() { return this.enLigne ? (this.session?.usurpation?.code ?? this.session?.code ?? '') : 'demo'; }
+  profil() { return this.session?.usurpation?.profil ?? this.session?.profil ?? ''; }
+  utilisateur() { return this.session?.usurpation?.code ?? this.session?.code ?? ''; }
 
   /** Usurpation d'un compte par un administrateur (motif obligatoire) : l'application est rechargée sous ce compte. */
   async usurper(identifiant, motif) {
@@ -181,23 +154,12 @@ export class Application {
     location.assign('/parametres/comptes');
   }
   estAdmin() { return this.profil() === 'ADMIN'; }
-  peutGererThemes() { return !this.enLigne || this.estAdmin(); }
+  peutGererThemes() { return this.estAdmin(); }
 
   /** Thème d'affichage : 'auto' (système), 'clair' ou 'sombre' ; gardé dans le navigateur pour toutes les fenêtres. */
   changerTheme(theme) {
     this.preferences.set('theme', theme);
     appliquerTheme(theme);
-  }
-
-  async changerProfilDemo(profil) {
-    this.preferences.set('profilDemo', profil);
-    const s = await this.services();
-    s.fiche.profil = profil;
-    s.ged.profil = profil;
-    if ('profil' in s.bibliotheque) s.bibliotheque.profil = profil;
-    if ('profil' in s.annuaire) s.annuaire.profil = profil;
-    this.rendreInfos();
-    this.message(`Profil de démonstration : ${profil}`);
   }
 
   // ---------------------------------------------------------------- session (module Authentification)
@@ -207,7 +169,7 @@ export class Application {
    * connexion, ou page Mon compte pour changer le mot de passe provisoire.
    */
   #surveillerSession() {
-    if (!this.enLigne || window.fetch.surveille) return;
+    if (window.fetch.surveille) return;
     const origine = window.fetch.bind(window);
     const surveille = async (entree, init) => {
       const url = typeof entree === 'string' ? entree : entree?.url ?? '';
@@ -311,18 +273,16 @@ export class Application {
 
   /** Définition du document qui porte la composition d'un ouvrage (types de lignes, unités, TVA). */
   definitionDocument() {
-    this.definitionDoc ??= this.enLigne ? api.definition('V_DEVIS') : Promise.resolve(DEFINITION_DEMO);
+    this.definitionDoc ??= api.definition('V_DEVIS');
     return this.definitionDoc;
   }
 
   /** URL de l'écran d'un élément de liste (document, fiche, document GED), null si aucun écran. */
   urlElement({ id, type }) {
-    if (estTypeDocument(type)) {
-      return this.enLigne ? `/document/${id}` : null;
-    }
+    if (estTypeDocument(type)) return `/document/${id}`;
     if (type === 'document_ged') return `/ged/${id}`;
     if (type === 'pointage') return `/pointage/saisie?pointage=${id}`;
-    if (type === 'mouvement_stock') return this.enLigne ? `/stock/mouvement/${id}` : null;
+    if (type === 'mouvement_stock') return `/stock/mouvement/${id}`;
     const f = ficheDeLigne({ id, type });
     return f ? `/fiche/${f.type}/${f.id}` : null;
   }
@@ -334,8 +294,7 @@ export class Application {
   ouvrirElement(element, { nouvelleFenetre = false } = {}) {
     const url = this.urlElement(element);
     if (!url) {
-      const quoi = estTypeDocument(element.type) ? "Hors ligne : les documents s'ouvrent depuis la base, l'API est indisponible" : `Fiche ${LIBELLES_ELEMENTS[element.type] ?? element.type} n° ${element.id} : écran pas encore disponible`;
-      this.message(quoi, 'avertissement');
+      this.message(`Fiche ${LIBELLES_ELEMENTS[element.type] ?? element.type} n° ${element.id} : écran pas encore disponible`, 'avertissement');
       return;
     }
     const prefere = this.preferences.get('nouvelleFenetre');
@@ -395,14 +354,12 @@ export class Application {
     const s = this.societe;
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
       ${this.#etatApi()}
-      ${!this.enLigne ? `<a href="/parametres" title="Profil de démonstration (Paramètres)">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
-        : this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
+      ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : '<a href="/connexion">👤 Se connecter</a>'}`);
   }
 
-  /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus (démo hors ligne : neutre). */
+  /** État de l'API dans le bandeau : vert si connectée, rouge si elle ne répond plus. */
   #etatApi() {
-    if (!this.enLigne) return '<span class="etat-api" title="Démo hors ligne : données de démonstration, calcul local">○ Démo</span>';
     return this.apiPerdue
       ? `<span class="etat-api deconnectee" title="L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.">● Hors ligne</span>`
       : '<span class="etat-api connectee" title="API connectée">● API</span>';
@@ -428,6 +385,18 @@ export class Application {
     } finally {
       this.verificationApi = false;
     }
+  }
+
+  /** API injoignable au démarrage : écran d'attente, nouvel essai toutes les 15 secondes, puis rechargement. */
+  #attendreApi() {
+    this.apiPerdue = true;
+    this.rendreInfos();
+    document.querySelector('#pages').innerHTML = `<div class="page-simple"><h1>● Serveur injoignable</h1>
+      <p class="aide">L'API LogiBTP ne répond pas. Nouvel essai toutes les 15 secondes : la page se rechargera à son retour.</p>
+      <p><button type="button" data-reessayer>⟳ Réessayer maintenant</button></p></div>`;
+    const essayer = async () => { if (await api.disponible()) location.reload(); };
+    document.querySelector('[data-reessayer]').addEventListener('click', essayer);
+    setInterval(essayer, 15000);
   }
 
   /** Pastille d'usurpation du bandeau : compte usurpé, administrateur, fin ; clic = terminer. */

@@ -15,7 +15,6 @@ export class PageRappelsCrm extends PageBase {
     const app = this.app;
     this.titre = 'Mes rappels';
     this.tous = this.requete.tous === '1';
-    if (!app.enLigne) { this.conteneur.innerHTML = '<p class="aide">Suivi (CRM) disponible en ligne seulement.</p>'; return; }
     this.conteneur.innerHTML = `<div class="page-parametres page-crm-rappels"><h1 class="page-titre">⏰ Mes rappels</h1>
       <p><label class="fiche-option"><input type="checkbox" data-tous ${this.tous ? 'checked' : ''}> À venir aussi (avant leur délai)</label>
       <span class="aide"> · <span class="crm-pastille crm-pastille-rouge"></span> échu ou imminent · <span class="crm-pastille crm-pastille-orange"></span> bientôt · <span class="crm-pastille crm-pastille-vert"></span> à venir</span></p>

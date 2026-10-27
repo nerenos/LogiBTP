@@ -28,7 +28,6 @@ export class PageInventaires extends PageBase {
       <p class="aide">Un lot regroupe les bordereaux d'un dépôt comptés à la même date-heure ; il ne bloque rien : les mouvements datés avant le
         comptage n'y changent rien, ceux d'après partent de la quantité comptée. Un article non saisi garde son calcul.</p>
       <div data-creation hidden></div><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.lieux = await api.stock.lieux();
     this.lieu = Number(new URLSearchParams(globalThis.location?.search ?? '').get('lieu')) || null;
     const combo = creerCombo({ options: this.lieux.map((l) => ({ valeur: l.id, libelle: `${l.depot ? '📦' : '🏗'} ${l.code} – ${l.libelle}` })), valeur: this.lieu ?? '', titre: 'Tous les lieux' });
@@ -79,7 +78,6 @@ export class PageInventaire extends PageBase {
 
   async ouvrir() {
     this.titre = 'Inventaire';
-    if (!this.app.enLigne) { this.conteneur.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.conteneur.innerHTML = '<div class="page-parametres page-inventaire"></div>';
     const [articles, marques] = await Promise.all([api.stock.articles(), api.stock.marques()]);
     this.articles = new Map(articles.map((a) => [a.id, a]));

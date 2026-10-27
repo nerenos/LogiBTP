@@ -34,7 +34,6 @@ export class PageParametresEditions extends PageBase {
       <h2>Modèles et blocs</h2><div class="import"></div><div class="modeles"></div>
       <p class="aide">Images des modèles (logo, logos de qualification…) : déposez-les dans la GED, catégorie
       « Image des éditions », avec leur code (LOGO…) en mot-clé ; PNG ou JPEG, 300 dpi à la taille imprimée.</p></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('.mentions').innerHTML = '<p class="aide">Disponible avec le serveur.</p>'; return; }
     await Promise.all([this.ouvrirMentions(), this.ouvrirDefauts(), this.ouvrirModeles()]);
     this.ouvrirImport();
   }

@@ -28,7 +28,6 @@ export class PageParametresStock extends PageBase {
       <h2>Emplacements</h2><p class="ligne"><label>Dépôt <span data-lieu></span></label></p>
       <p class="aide">Code complet unique dans le dépôt (ex. A, A-01, A-01-2) ; le parent se désigne par son code. Un dépôt est un chantier
         coché « Dépôt de stock » (affaire STOCK).</p><div data-emplacements></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-emplacements]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const [p, lieux] = await Promise.all([api.stock.parametres(), api.stock.lieux()]);
     const methode = creerCombo({ options: Object.entries(METHODES_VALORISATION).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: p.methode, vide: false });
     methode.addEventListener('change', async () => {

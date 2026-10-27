@@ -1,12 +1,11 @@
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
 import { PanneauArbres } from '@logibtp/bibliotheque/ui';
-import { simulerModificationsAutres } from '../listes.js';
 import { SOURCES_LISTE } from '../vues-liste.js';
 import { FiltreRattachement, NIVEAUX } from '../structure/filtre-rattachement.js';
 import { groupesThemes } from '../navigation/menus.js';
 import { api } from '../api.js';
-import { marquerArticles } from '../stock/marquer.js';
+import { marquerArticles } from '../stock/marquer.js';
 import { memoriserSuite } from '../suite-liste.js';
 import { transformerDocument } from '../documents/transformation.js';
 
@@ -16,7 +15,7 @@ function creationDepuisVue(vue, app, themes = []) {
   // Documents (en ligne) : premier type du thème (Commandes clients → commande client).
   if (source === 'documents') {
     const type = themes.find((t) => t.thl_code === vue.definition.theme)?.thl_types?.[0];
-    if (!type || !app.enLigne) return null;
+    if (!type) return null;
     return { libelle: `＋ ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
   }
   // Structure des affaires : fiches projet, affaire, chantier, marché.
@@ -53,7 +52,6 @@ function actionsDepuisVue(vue, app, services, themes = []) {
   const theme = themes.find((t) => t.thl_code === vue?.definition?.theme);
   const consulter = (l, e) => app.ouvrirElement({ id: l._id, type: l._type, ligne: l }, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) });
   if (source === 'documents') {
-    if (!app.enLigne) return null;
     return {
       consulter,
       copier: async (l) => {
@@ -81,7 +79,7 @@ function actionsDepuisVue(vue, app, services, themes = []) {
   const type = FICHE_PAR_SOURCE[source];
   if (!type || (theme?.thl_types?.length ?? 0) > 1) return null;
   // Bibliothèque, module Stock actif : marquage en masse des articles sélectionnés.
-  const marquer = type === 'element' && app.enLigne && app.moduleActif('stock') ? [{
+  const marquer = type === 'element' && app.moduleActif('stock') ? [{
     code: 'marquer', icone: '🏷', libelle: 'Marquer', titre: 'Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés',
     actif: (lignes) => lignes.length > 0,
     action: async (lignes) => {
@@ -108,11 +106,7 @@ export class PageListe extends PageBase {
 
   async ouvrir() {
     const app = this.app;
-    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div>
-      <div class="liste-demo" hidden>
-        <button type="button" data-action="simuler" title="Démo hors ligne : modifie, supprime et crée des matériels comme le ferait un autre poste">Simuler une modification d'un autre utilisateur</button>
-        <span class="aide">Le contrôle des lignes chargées s'exécute toutes les 30 s, au retour sur la fenêtre et avec ⟳. Double-clic : ouvrir · Ctrl+double-clic : nouvelle fenêtre.</span>
-      </div></div>`;
+    this.conteneur.innerHTML = `<div class="page-liste"><div class="page-liste-filtre" hidden></div><div class="page-liste-zone"></div></div>`;
     const s = await app.services();
     // Rattachement demandé par l'adresse (raccourcis des fiches projet, affaire, chantier, marché).
     const codes = Object.fromEntries(NIVEAUX.filter((n) => this.requete[n.type]).map((n) => [n.type, this.requete[n.type]]));
@@ -126,15 +120,15 @@ export class PageListe extends PageBase {
         return app.ouvrirElement(l, { nouvelleFenetre: l.nouvelleFenetre });
       },
       message: (t, n) => app.message(t, n),
-      // Requête manuelle : profil ADMIN, contrôlée côté serveur (indisponible hors ligne).
-      peutRequete: app.enLigne && app.estAdmin(),
+      // Requête manuelle : profil ADMIN, contrôlée côté serveur.
+      peutRequete: app.estAdmin(),
       peutGererThemes: app.peutGererThemes(),
       // Combo des thèmes regroupée comme les menus du bandeau.
       groupeTheme: (t) => groupesThemes().get(t.thl_code) ?? null,
       creation: (vue) => creationDepuisVue(vue, app, this.liste?.themes ?? []),
       actionsElements: (vue) => actionsDepuisVue(vue, app, s, this.liste?.themes ?? []),
       // Impression de la vue (recherche en cours comprise) ou d'étiquettes (module Édition).
-      actionsVue: (vue) => (app.enLigne && vue?.vli_id ? [{
+      actionsVue: (vue) => (vue?.vli_id ? [{
         icone: '🖨', libelle: 'Imprimer', titre: 'Aperçu et impression de la liste (vue et recherche en cours) ou d’étiquettes',
         action: () => {
           const recherche = this.liste?.recherche ? `&recherche=${encodeURIComponent(this.liste.recherche)}` : '';
@@ -169,9 +163,6 @@ export class PageListe extends PageBase {
         liste: this.liste, refs, surChange: () => this.#vueChoisie(this.liste.theme, this.liste.vue?.vli_id ?? null),
       });
     }
-    const demo = this.conteneur.querySelector('.liste-demo');
-    demo.hidden = app.enLigne;
-    demo.querySelector('[data-action="simuler"]').addEventListener('click', () => app.message(simulerModificationsAutres(s.liste)));
     if (this.params.theme) this.liste.theme = this.params.theme;
     // Fiche enregistrée dans cette fenêtre ou dans une autre : rafraîchissement ciblé des lignes.
     this.desabonner = [

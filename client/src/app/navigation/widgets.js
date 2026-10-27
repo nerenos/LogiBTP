@@ -1,5 +1,5 @@
 // Widgets de l'accueil (cœur) : données lues par les fournisseurs des modules (listes : comptes par segment et
-// premiers lots, appliqués par la base en ligne ; GED). Mêmes widgets en ligne et dans la démo hors ligne.
+// premiers lots, appliqués par la base ; GED).
 
 import { api } from '../api.js';
 
@@ -15,7 +15,7 @@ export function catalogueWidgets(app) {
   // Widgets d'un module désactivé (propriété module) retirés du catalogue.
   return [
     {
-      code: 'crm-rappels', type: 'alertes', titre: 'Mes rappels', icone: '⏰', taille: 'moyen', url: '/crm/rappels', module: 'crm', enLigne: true,
+      code: 'crm-rappels', type: 'alertes', titre: 'Mes rappels', icone: '⏰', taille: 'moyen', url: '/crm/rappels', module: 'crm',
       description: 'Rappels du suivi (CRM) arrivés dans leur délai : rouge échu ou imminent, orange bientôt, vert à venir',
       charger: async () => {
         const rappels = await api.crm.rappels();
@@ -27,7 +27,7 @@ export function catalogueWidgets(app) {
       },
     },
     {
-      code: 'oauth-alertes', type: 'alertes', titre: 'Connexions à reconnecter', icone: '🔐', taille: 'moyen', url: '/parametres/connexions', enLigne: true,
+      code: 'oauth-alertes', type: 'alertes', titre: 'Connexions à reconnecter', icone: '🔐', taille: 'moyen', url: '/parametres/connexions',
       description: 'Connexions externes (Gmail…) à reconnecter ou dont l’autorisation expire bientôt (personnes autorisées)',
       charger: async () => (await api.oauth.alertes()).map((c) => ({
         niveau: c.pastille === 'ROUGE' ? 'erreur' : 'alerte', texte: c.nom,
@@ -124,7 +124,7 @@ export function catalogueWidgets(app) {
         };
       },
     },
-  ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false) && (!w.enLigne || app.enLigne));
+  ].filter((w) => (!w.module || app.moduleActif?.(w.module) !== false));
 }
 
 export const WIDGETS_DEFAUT = [{ code: 'chiffres' }, { code: 'crm-rappels' }, { code: 'oauth-alertes' }, { code: 'alertes' }, { code: 'derniers-documents' }, { code: 'materiels-etat' }, { code: 'salaries-service' }, { code: 'documents-statut' }];

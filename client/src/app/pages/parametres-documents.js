@@ -1,9 +1,8 @@
 import { PageBase } from '@logibtp/navigation';
-import { ParametrageAffichageDocument, FournisseurAffichageMemoire, variablesTexteDocument } from '@logibtp/document/ui';
+import { ParametrageAffichageDocument, variablesTexteDocument } from '@logibtp/document/ui';
 import { echapper, lireNombre, formatLibre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
 import { FAMILLES_REGLE } from '@logibtp/document';
 import { api } from '../api.js';
-import { ETIQUETTES_LIGNE, COULEURS_TYPE_PRIX } from '../vues-document.js';
 
 /**
  * Échéances d'une condition de paiement en texte : « 30% 0j; 70% 30j FM » (FM : fin de mois, « le 10 » : jour fixe,
@@ -41,13 +40,10 @@ export class PageParametresDocuments extends PageBase {
       <h2>Textes de l'édition</h2><div class="textes-types"></div>
       <h2>Règles des documents</h2><div class="regles-documents"></div>
       ${app.moduleActif('execution') ? "<h2>Types d'ordres (Exécution)</h2><div class='types-ordres'></div>" : ''}</div>`;
-    // Hors ligne : les listes de la définition de démonstration sont modifiées en place (visibles dans le devis de démo).
-    const fournisseur = app.enLigne
-      ? {
-        etiquettes: () => api.etiquettesLigne(), enregistrerEtiquettes: (l) => api.enregistrerEtiquettesLigne(l),
-        couleursTypePrix: () => api.couleursTypePrix(), enregistrerCouleurs: (l) => api.enregistrerCouleursTypePrix(l),
-      }
-      : new FournisseurAffichageMemoire({ etiquettes: ETIQUETTES_LIGNE, couleurs: COULEURS_TYPE_PRIX, admin: () => app.estAdmin() });
+    const fournisseur = {
+      etiquettes: () => api.etiquettesLigne(), enregistrerEtiquettes: (l) => api.enregistrerEtiquettesLigne(l),
+      couleursTypePrix: () => api.couleursTypePrix(), enregistrerCouleurs: (l) => api.enregistrerCouleursTypePrix(l),
+    };
     const p = new ParametrageAffichageDocument(this.conteneur.querySelector('.corps'), { fournisseur, admin: app.estAdmin(), message: (t, n) => app.message(t, n) });
     await p.ouvrir();
     await this.ouvrirSeuils(this.conteneur.querySelector('.seuils-solde'));
@@ -65,7 +61,6 @@ export class PageParametresDocuments extends PageBase {
    */
   async ouvrirTypesOrdres(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = "<p class='aide'>Types d'ordres disponibles en ligne seulement.</p>"; return; }
     const [types, services] = await Promise.all([api.execution.types(), api.services()]);
     const admin = app.estAdmin();
     const options = services.filter((x) => x.actif).map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code }));
@@ -98,7 +93,6 @@ export class PageParametresDocuments extends PageBase {
    */
   async ouvrirRegles(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Règles des documents disponibles en ligne seulement.</p>'; return; }
     let [p, types] = await Promise.all([api.reglesDocuments(), api.typesDocument()]);
     const admin = app.estAdmin();
     const niveaux = [{ valeur: '', libelle: 'Global' }, ...FAMILLES_REGLE.map(([v, l]) => ({ valeur: `F:${v}`, libelle: l })),
@@ -176,7 +170,6 @@ export class PageParametresDocuments extends PageBase {
    */
   async ouvrirTextes(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Textes disponibles en ligne seulement.</p>'; return; }
     const types = (await api.typesDocument()).filter((t) => t.tyd_actif !== false);
     zone.innerHTML = `<p class="aide">Introduction : avant le bloc des lignes ; conclusion : après le pied et les récapitulatifs (marché, factures).
       Le modèle est recopié dans chaque nouveau document du type, puis modifiable ; les variables sont figées à la validation.</p>
@@ -211,7 +204,6 @@ export class PageParametresDocuments extends PageBase {
 
   async ouvrirAcomptes(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Mode d\'acompte disponible en ligne seulement.</p>'; return; }
     const mode = await api.modeAcomptes();
     zone.innerHTML = `<p class="aide">Avance de trésorerie : demande puis reçu d'acompte (non comptable, sans TVA), déduction TTC au pied des factures.
       Chiffre d'affaires : demande puis facture d'acompte (TVA du marché, comptée dans le facturé), déduction HT dans le pied de chaque commande.</p>
@@ -233,7 +225,6 @@ export class PageParametresDocuments extends PageBase {
    */
   async ouvrirConditions(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Conditions de paiement disponibles en ligne seulement.</p>'; return; }
     let [conditions, defauts] = await Promise.all([api.conditionsPaiement(), api.conditionsDefaut()]);
     const admin = app.estAdmin();
     const ro = admin ? '' : 'disabled';
@@ -303,7 +294,6 @@ export class PageParametresDocuments extends PageBase {
    */
   async ouvrirSeuils(zone) {
     const app = this.app;
-    if (!app.enLigne) { zone.innerHTML = '<p class="aide">Seuils de solde disponibles en ligne seulement.</p>'; return; }
     const seuils = await api.seuilsSolde();
     const admin = app.estAdmin();
     const ro = admin ? '' : 'disabled';

@@ -1,6 +1,6 @@
 import { CASQUETTES, NIVEAUX, ROLES } from './annuaire/donnees.js';
 
-// Thèmes, sources et vues de liste fournis par le cœur. Les mêmes définitions alimentent la démo hors ligne et le
+// Thèmes, sources et vues de liste fournis par le cœur. Ces définitions alimentent le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
 
 export const SOURCES_LISTE = {
@@ -582,16 +582,6 @@ const vueElements = (vli_id, vli_nom, filtres) => ({
 VUES_LISTE.push(vueElements(12, 'Articles', [{ colonne: 'type', op: '=', valeur: 'ARTICLE' }]), vueElements(13, 'Ouvrages', [{ colonne: 'type', op: '=', valeur: 'OUVRAGE' }]),
   vueElements(14, 'Tous les éléments', []), vueElements(15, 'Ensembles', [{ colonne: 'type', op: '=', valeur: 'ENSEMBLE' }]),
   vueElements(1400, 'Textes', [{ colonne: 'type', op: '=', valeur: 'TEXTE' }]));
-
-/** Sources au format du fournisseur (colonnes { code, type }). */
-export function sourcesFournisseur(donnees = {}) {
-  return Object.fromEntries(Object.entries(SOURCES_LISTE).map(([code, s]) => [code, {
-    libelle: s.libelle, colonne_id: s.colonne_id, colonne_type: s.colonne_type ?? null, type_element: s.type_element ?? null,
-    modifiable: !!s.modifiable,
-    colonnes: s.colonnes.map(([c, type]) => ({ code: c, type, modifiable: !!s.modifiable && !(s.lecture_seule ?? []).includes(c) })),
-    lignes: donnees[code] ?? [],
-  }]));
-}
 
 // Annuaire : tiers (personnes) par relation, contacts (individus).
 const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.libelle, picto: c.icone }));

@@ -16,7 +16,6 @@ export class PageParametresModules extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧩 Modules de la société</h1>
       <p class="aide">Un module désactivé disparaît des menus et ses écrans sont refusés ; ses données sont conservées et
       reviennent à la réactivation.</p><div data-corps></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">Hors ligne, tous les modules sont actifs.</p>'; return; }
     await this.rendre(await api.modules());
   }
 

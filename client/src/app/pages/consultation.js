@@ -19,7 +19,7 @@ export class PageComparatifConsultation extends PageBase {
     this.titre = 'Comparatif des offres';
     this.conteneur.innerHTML = '<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">⚖ Comparatif des offres</h1></div><div data-corps><p class="aide">Chargement…</p></div></div>';
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.app.enLigne || !id) { corps.innerHTML = '<p class="aide">En ligne seulement, depuis un document du lot.</p>'; return; }
+    if (!id) { corps.innerHTML = '<p class="aide">En ligne seulement, depuis un document du lot.</p>'; return; }
     let c;
     try { c = await api.comparatifConsultation(id); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     this.titre = `Comparatif ${c.code}`;

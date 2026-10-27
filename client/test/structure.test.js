@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
-import { completerRattachement, controlerIntervenants, FournisseurStructureMemoire } from '../src/app/structure/structure.js';
+import { completerRattachement, controlerIntervenants } from '../src/app/structure/structure.js';
 import { FONCTIONS_INTERVENANT } from '../src/app/structure/donnees.js';
 import { prochainCode, codeMarche } from '../src/app/fiches/fiche-structure.js';
 
@@ -19,18 +19,6 @@ describe('Structure des affaires', () => {
     const refs = { chantiers: [{ id: 2, aff_id: 1 }], marches: [{ id: 5, cha_id: 2 }] };
     expect(completerRattachement({ ent_marche_id: 5 }, refs)).toEqual({ ent_projet_id: null, ent_affaire_id: 1, ent_chantier_id: 2, ent_marche_id: 5 });
     expect(completerRattachement({ ent_projet_id: 3 }, refs)).toEqual({ ent_projet_id: 3, ent_affaire_id: null, ent_chantier_id: null, ent_marche_id: null });
-  });
-
-  it('calcule le facturé et le reste à facturer des marchés (hors ligne)', () => {
-    const docs = [
-      { type_element: 'V_FACTURE_AVT', total_ht: 1000, ent_marche_id: 1 },
-      { type_element: 'V_AVOIR', total_ht: 200, ent_marche_id: 1 },
-      { type_element: 'V_DEVIS', total_ht: 5000, ent_marche_id: 1 },
-    ];
-    const s = new FournisseurStructureMemoire({ documents: () => docs });
-    const m = s.lignesListe('marches').find((x) => x.id === 1);
-    expect(m.facture_ht).toBe(800);
-    expect(m.reste_a_facturer).toBe(Number(m.montant_ht) - 800);
   });
 
   it('contrôle les intervenants comme le serveur (Intervenants.Controler)', () => {
@@ -52,16 +40,5 @@ describe('Structure des affaires', () => {
     const lignes = [...sql.matchAll(/^\('([A-Z_]+)', '((?:[^']|'')*)', '([STD])', (TRUE|FALSE), (TRUE|FALSE), (\d+)\)/gm)]
       .map((m) => ({ code: m[1], libelle: m[2].replace(/''/g, "'"), portee: m[3], unique: m[4] === 'TRUE', paiement_direct: m[5] === 'TRUE', ordre: Number(m[6]) }));
     expect(lignes).toEqual(FONCTIONS_INTERVENANT);
-  });
-
-  it("lit et remplace les intervenants d'une fiche hors ligne", async () => {
-    const s = new FournisseurStructureMemoire({ annuaire: { personnes: [{ id: 14, raison_sociale: 'SCI Les Érables' }], individus: [{ id: 13, prenom: 'Paul', nom: 'Garnier' }] } });
-    const g = s.geres('chantier');
-    const { intervenants } = await g.lire({ id: 2 });
-    expect(intervenants[0]).toMatchObject({ fonction: 'CLIENT', per_id: 14, tiers: 'SCI Les Érables', contact: 'Paul Garnier', principal: true });
-    await expect(g.valider({ id: 2 }, { intervenants: [{ fonction: 'CLIENT', per_id: 1 }, { fonction: 'CLIENT', per_id: 2 }] })).rejects.toMatchObject({ code: 'VALIDATION' });
-    await g.ecrire({ id: 2 }, { intervenants: [{ fonction: 'BC', per_id: 13 }] });
-    expect((await g.lire({ id: 2 })).intervenants.map((x) => x.fonction)).toEqual(['BC']);
-    expect((await s.intervenants('chantier', 1)).length).toBeGreaterThan(0);
   });
 });

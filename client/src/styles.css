@@ -39,8 +39,6 @@
 /* Liste */
 .page-liste { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem 1rem 0.6rem; }
 .page-liste-zone { flex: 1; min-height: 0; }
-.liste-demo { display: flex; align-items: center; gap: 0.6rem; flex: none; }
-.liste-demo[hidden] { display: none; }
 
 /* Fiche */
 .page-fiche { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0.6rem 1rem; }

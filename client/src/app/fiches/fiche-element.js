@@ -26,7 +26,7 @@ const L = (o) => ({ lig_ent_id: 0, lig_proprietes: {}, lig_coef_remise: 1, lig_p
 export class FicheElement extends FicheLogiBTP {
   /**
    * options.services : { bibliotheque, ged } ; options.definitionDocument() : définition du document de composition ;
-   * options.vuesDocument : fournisseur des vues de colonnes (vues(type), enregistrer, supprimer), null hors ligne.
+   * options.vuesDocument : fournisseur des vues de colonnes (vues(type), enregistrer, supprimer).
    */
   constructor(options) {
     super(options);

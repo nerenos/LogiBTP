@@ -14,13 +14,11 @@ export function sousDomaine(hote) {
   return sd === 'www' ? null : sd;
 }
 
-export async function societeCourante(enLigne) {
-  if (enLigne) {
-    try {
-      const r = await fetch('/api/societe');
-      if (r.ok) return await r.json();
-    } catch { /* hors ligne : déduite de l'adresse */ }
-  }
+export async function societeCourante() {
+  try {
+    const r = await fetch('/api/societe');
+    if (r.ok) return await r.json();
+  } catch { /* API injoignable : déduite de l'adresse */ }
   const code = sousDomaine(globalThis.location?.hostname);
   return { code, libelle: code ? code.toUpperCase() : 'Société principale', principale: !code };
 }

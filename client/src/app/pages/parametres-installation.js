@@ -32,7 +32,6 @@ export class PageParametresInstallation extends PageBase {
 
   async charger() {
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     try {
       corps.innerHTML = this.rendu(await api.etatInstallation());
     } catch (e) { this.app.erreur(e); }

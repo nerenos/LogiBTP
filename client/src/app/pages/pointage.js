@@ -506,7 +506,6 @@ export class PageSaisiePointage extends PageBase {
     brancherPanneau(this.conteneur);
     brancherFiltresSalaries(this.conteneur, this, 'saisie', () => this.#rendreSalaries());
     this.conteneur.querySelector('[data-legende]').innerHTML = '<span class="aide">Heures saisies de la semaine · clic : grille du salarié · 🔒 jour validé (correction par demande au service RH)</span>';
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     if (this.requete.pointage) {
       const pos = await api.pointage.position(this.requete.pointage).catch(() => null);
       if (pos) Object.assign(this.requete, { salarie: String(pos.salarie), lundi: pos.lundi });
@@ -672,7 +671,6 @@ export class PageSynthesePointage extends PageBase {
     filtres: `<label title="Aussi les salariés sans exception"><input type="checkbox" data-tout> Tout voir</label>${FILTRES_SALARIES}`,
     actions: `${action('valider', '☑', 'Valider la sélection')}${action('tout-valider', '✅', 'Tout valider sans exception')}${action('devalider', '↩', 'Dévalider la sélection… (motif demandé)')}`,
   })}</div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     brancherPanneau(this.conteneur);
     brancherFiltresSalaries(this.conteneur, this, 'synthese', () => this.#rendreListe());
     this.ref = await api.pointage.referentiels();
@@ -936,7 +934,6 @@ export class PageExportPointage extends PageBase {
       <p data-import hidden><textarea data-taux rows="4" cols="50" placeholder="matricule (ou matricule de paie);coût horaire (une ligne par salarié)"></textarea></p>
       <h2>Exports précédents</h2><div data-historique class="tableau-defilant"></div></div>`;
     const c = this.conteneur;
-    if (!this.app.enLigne) { c.querySelector('[data-resultat]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const ref = await api.pointage.referentiels();
     const srv = creerCombo({ options: ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), valeur: '', vide: true, titre: 'Service (vide : tous)' });
     c.querySelector('[data-service]').append(srv);
@@ -999,7 +996,6 @@ export class PageParametresPointage extends PageBase {
     this.titre = 'Paramètres du pointage';
     this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">⏱ Paramètres du pointage</h1></div><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!this.app.enLigne) { corps.innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const admin = this.app.estAdmin();
     const ro = admin ? '' : 'disabled';
     let p = await api.pointage.parametres();
@@ -1214,7 +1210,6 @@ export class PageCongesPointage extends PageBase {
         <button type="button" class="bouton-icone" data-nouveau title="Nouvelle demande de congé (pour vous ou un équipier)" aria-label="Nouvelle demande de congé">＋</button></p></div>
       <div data-resultat></div></div>`;
     const c = this.conteneur;
-    if (!this.app.enLigne) { c.querySelector('[data-resultat]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.ref = await api.pointage.referentiels();
     const etat = creerCombo({ options: [{ valeur: 'DEMANDE', libelle: 'À valider' }, { valeur: 'VALIDE', libelle: 'Validés' }, { valeur: 'REFUSE', libelle: 'Refusés' }, { valeur: 'ANNULE', libelle: 'Annulés' }],
       valeur: this.etat, vide: true, titre: 'État (vide : tous)' });

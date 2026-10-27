@@ -1,5 +1,5 @@
 // Types de fiches du cœur : table, clé, colonne JSONB des champs supplémentaires et définition (sections, champs).
-// Les codes de champs reprennent les colonnes des vues de liste (la démo hors ligne partage les mêmes lignes) ;
+// Les codes de champs reprennent les colonnes des vues de liste ;
 // « colonne » est la colonne de la table, utilisée par le serveur. Ces définitions alimentent aussi le script
 // db/131_fiches_parametrage.sql (généré par client/scripts/generer-vues-liste.mjs).
 

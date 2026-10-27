@@ -21,7 +21,6 @@ export class PageHabilitations extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres pleine"><h1 class="page-titre">🪪 Habilitations, entretiens et visites à surveiller</h1>
       <p class="ligne">${[['', 'Tout'], ['salarie', 'Salariés'], ['materiel', 'Matériels']].map(([v, l]) => `<label class="ligne"><input type="radio" name="element" value="${v}" ${v === this.element ? 'checked' : ''}> ${l}</label>`).join(' ')}
         · échéance dans <input data-jours value="${this.jours}" size="4" inputmode="numeric"> jours</p><div data-liste></div></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.conteneur.querySelectorAll('[name="element"]').forEach((r) => r.addEventListener('change', () => { this.element = r.value; this.#charger(); }));
     this.conteneur.querySelector('[data-jours]').addEventListener('change', (e) => { this.jours = Math.max(0, Number(e.target.value) || 0); this.#charger(); });
     await this.#charger();

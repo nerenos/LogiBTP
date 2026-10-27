@@ -35,7 +35,6 @@ export class PageParametresDroits extends PageBase {
     this.titre = 'Profils et droits';
     this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">🛡 Profils et droits</h1></div><div data-corps></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
-    if (!app.enLigne) { corps.innerHTML = '<p class="aide">Droits : en ligne seulement.</p>'; return; }
     if (!app.acces('administration/profils')) { corps.innerHTML = '<p class="aide">Réservé aux profils qui gèrent les droits.</p>'; return; }
     this.peutModifier = app.peut('administration/profils', 'MODIFIER');
     [this.catalogue, this.profils] = await Promise.all([api.droits.catalogue(), api.droits.profils()]);

@@ -55,7 +55,6 @@ export class PagePlanComptable extends PageBase {
       <label class="fiche-option"><input type="checkbox" data-inactifs> Inactifs</label>
       ${peutModifier(this.app) ? '<button type="button" data-ajouter>＋ Compte</button>' : ''}</span></div>
       <p class="aide" data-regle></p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const q = (s) => this.conteneur.querySelector(s);
     poserCombo(this.conteneur, '[data-classe]', { options: Object.entries(CLASSES).map(([k, v]) => ({ valeur: Number(k), libelle: `${k} – ${v}` })), valeur: this.classe, titre: 'Classe' },
       (v) => { this.classe = v === null ? null : Number(v); this.#rendre(); });
@@ -192,7 +191,6 @@ export class PageTiersComptables extends PageBase {
       <p class="aide">Collectif vide : celui du type (client professionnel ou particulier selon le niveau du tiers, fournisseur, sous-traitant).
       Un sous-traitant sans compte propre prend son compte fournisseur (en italique). · <a href="/comptabilite/plan">Plan comptable</a> ·
       <a href="/parametres/comptabilite">Paramètres</a></p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const q = (s) => this.conteneur.querySelector(s);
     poserCombo(this.conteneur, '[data-type]', { options: Object.entries(TYPES_COMPTE_TIERS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.type, titre: 'Type de compte' },
       (v) => { this.type = v; this.#rendre(); });
@@ -312,7 +310,6 @@ export class PageParametresComptabilite extends PageBase {
       <span class="ligne"><a href="/comptabilite/plan">Plan comptable</a> · <a href="/comptabilite/tiers">Tiers par compte</a></span></div>
       <section data-parametres></section><section data-collectifs></section><section data-types></section><section data-documents></section>
       <section data-categories></section><section data-taux></section></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-parametres]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     try {
       [this.parametres, this.plan, this.collectifs, this.categories, this.taux, this.types, this.documents] = await Promise.all([
         api.comptabilite.parametres(), api.comptabilite.plan(), api.comptabilite.collectifs(), api.comptabilite.categoriesTva(), api.comptabilite.tauxTva(),
@@ -560,7 +557,6 @@ export class PageVentilation extends PageBase {
       <p class="aide">Compte d'une ligne sans compte saisi : nature et taux, sinon nature (colonne « Tous taux »), sinon taux (ligne « Toutes natures »),
       sinon compte par défaut du type comptable ; un type hérite des clés de son parent. Case vide : compte hérité, en gris.
       · <a href="/parametres/comptabilite">Types comptables</a> · <a href="/comptabilite/plan">Plan comptable</a></p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const q = (s) => this.conteneur.querySelector(s);
     try {
       [this.plan, this.types, this.cles, this.natures, this.taux] = await Promise.all([api.comptabilite.plan(), api.comptabilite.typesComptables(),
@@ -653,7 +649,6 @@ export class PageExportComptable extends PageBase {
       (date de la pièce du fournisseur pour un achat). Une pièce en erreur n'est jamais exportée. Modèle du fichier : <span data-modele></span>
       · <a href="/comptabilite/ventilation">Ventilation</a> · <a href="/parametres/comptabilite">Paramètres</a></p>
       <div data-apercu-zone></div><h2>Lots d'export</h2><div data-lots></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-apercu-zone]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const q = (s) => this.conteneur.querySelector(s);
     try {
       [this.types, this.modeles, this.modele] = await Promise.all([api.comptabilite.typesComptables(), api.comptabilite.modelesExport(), api.comptabilite.modeleExport()]);

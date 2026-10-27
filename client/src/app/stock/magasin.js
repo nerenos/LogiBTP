@@ -32,7 +32,6 @@ export class PageMagasin extends PageBase {
       <div data-panier></div>
       <p class="ligne"><label>Commentaire <input data-commentaire size="40"></label> <button type="button" class="principal" data-valider>Valider</button></p>
       <div data-resultat></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-panier]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     const [lieux, articles, marques, salaries, refs] = await Promise.all([api.stock.lieux(), api.stock.articles(), api.stock.marques(), api.stock.salaries(),
       (await this.app.services()).structure?.referentiels().catch(() => null)]);
     this.articles = articles;
@@ -140,7 +139,6 @@ export class PageDotations extends PageBase {
       <label>Du <input type="date" data-du value="${p.get('du') ?? an.toISOString().slice(0, 10)}"></label> <label>au <input type="date" data-au value="${p.get('au') ?? new Date().toISOString().slice(0, 10)}"></label>
       <span data-type></span><input type="search" data-recherche placeholder="Salarié, service…" size="20"> <button type="button" data-csv>⭳ CSV</button></div>
       <p class="aide">Quantité nette dotée sur la période (sorties − retours) ; au survol : les dates. ✱ : encore en dotation aujourd'hui (net).</p><div data-corps></div></div>`;
-    if (!this.app.enLigne) { this.conteneur.querySelector('[data-corps]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.articlesStock = new Map((await api.stock.articles()).map((a) => [a.id, a]));
     const type = creerCombo({ options: [{ valeur: 'EPI', libelle: 'EPI' }, { valeur: 'OUTILLAGE', libelle: 'Outillage' }], valeur: '', titre: 'Tous les articles' });
     type.placeholder = 'EPI, outillage…';
@@ -219,7 +217,6 @@ export class PageSaisiesAValider extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">✅ Saisies de stock à valider</h1></div>
       <p class="aide">Sorties et retours saisis à la borne : déjà comptés dans le stock. Accepter les confirme ; refuser annule la pièce (le stock se recalcule sans elle).</p>
       <div data-corps></div></div>`;
-    if (!this.app.enLigne) return;
     await this.#charger();
   }
 

@@ -45,7 +45,6 @@ export class PageParametresCalendriers extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">📅 Calendriers de travail</h1>
       <section class="carte" data-liste></section><section class="carte" data-edition hidden></section>
       <section class="carte" data-feries></section><section class="carte" data-services></section></div>`;
-    if (!app.enLigne) { this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="aide">En ligne seulement.</p>'; return; }
     this.admin = app.estAdmin();
     await this.#rendreListe();
     await Promise.all([this.#rendreFeries(), this.#rendreServices()]);
