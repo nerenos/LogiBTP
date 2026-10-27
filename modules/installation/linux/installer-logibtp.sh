@@ -113,6 +113,27 @@ tester_docker compose version || echec 'docker compose (v2) introuvable : apt-ge
 systemctl is-enabled --quiet docker.service 2>/dev/null || alerte 'docker.service non activé au démarrage : systemctl enable docker'
 info "Rôle $role ; dossier $dossier"
 
+# Ports publiés libres : sinon Docker refuse de démarrer le conteneur (« port is already allocated » quand un autre
+# conteneur le tient, « address already in use » pour un service de l'hôte : Apache, nginx…). Un port déjà tenu par le
+# conteneur LogiBTP lui-même (relance de l'installeur) est libre.
+verifier_port() {
+    local port="$1" conteneur="$2" option="$3" occupant processus
+    [[ "$port" =~ ([0-9]+)$ ]] && port="${BASH_REMATCH[1]}"
+    [[ -z "$(docker ps -q --filter "name=^${conteneur}$" --filter "publish=$port")" ]] || return 0
+    occupant="$(docker ps --format '{{.Names}}' --filter "publish=$port" | paste -sd ' ' -)"
+    [[ -z "$occupant" ]] || echec "Port $port déjà publié par le conteneur $occupant : l'arrêter (docker stop $occupant ; docker update --restart=no $occupant) ou relancer avec $option <autre port>"
+    if ss -Hltn "sport = :$port" 2>/dev/null | grep -q .; then
+        processus="$(ss -Hltnp "sport = :$port" 2>/dev/null | grep -o 'users:(("[^"]*"' | cut -d'"' -f2 | sort -u | paste -sd ' ' -)"
+        [[ -n "$processus" ]] || processus="un service de l'hôte"
+        echec "Port $port déjà ouvert par $processus :l'arrêter et le désactiver (ex. systemctl disable --now apache2 ou nginx) ou relancer avec $option <autre port>"
+    fi
+}
+if [[ "$role" != base ]]; then
+    verifier_port "$port_http" logibtp-api --port-http
+    verifier_port "$port_https" logibtp-api --port-https
+fi
+[[ "$role" == api ]] || verifier_port "$port_base" logibtp-base --port-base
+
 # ---------------------------------------------------------------- 2. dossier et réglages
 etape "2. Dossier de l'installation"
 mkdir -p "$dossier"/{base,api,outils,sauvegardes}

@@ -423,6 +423,7 @@ script `restaurer-base.sh` écrit par `restaurer-logibtp.sh`).
 
 | Symptôme | Piste |
 |---|---|
+| `Bind for 0.0.0.0:80 failed: port is already allocated` (ou 443, 5432) | Le port est déjà pris : `docker ps --filter publish=80` (autre conteneur : `docker stop` puis `docker update --restart=no`) et `ss -ltnp 'sport = :80'` (service de l'hôte, Apache ou nginx : `systemctl disable --now apache2`). Sinon relancer l'installeur avec `--port-http 8080` (et `--port-https 8443`) ; l'installeur contrôle désormais les ports avant de démarrer |
 | `logibtp-api` redémarre en boucle | `docker logs logibtp-api` ; `.env` incomplet → relancer l'installeur (rejouable) |
 | `logibtp-base` « unhealthy » | `docker logs logibtp-base` ; droits de `base.key` ; espace disque (`df -h /var/lib/docker`) |
 | Le navigateur refuse le certificat | Autorité non installée sur le poste (§ 6.1), ou nom hors du domaine (adresse IP, autre nom) |
