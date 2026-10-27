@@ -56,7 +56,7 @@ const GABARIT = `
       <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
     <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
     <div class="groupe barre-droite">
-      <span class="bouton-menu menu-deroulant">
+      <span class="bouton-menu bouton-menu-superchamps">
         <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="Valider, transformer et autres actions du document" aria-label="Autres actions du document" aria-haspopup="menu">▾</button>
         <div class="menu-deroulant-contenu menu-actions-document" role="menu" data-menu-actions hidden>
         <button role="menuitem" class="mo-ligne" data-action="valider" title="Valider et bloquer le document">Valider</button>

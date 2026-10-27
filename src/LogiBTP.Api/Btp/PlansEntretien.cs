@@ -23,6 +23,9 @@ public sealed record EcheanceMateriel(int MaterielId, string MaterielCode, strin
 /// </summary>
 public static partial class PlansEntretien
 {
+    private const string FiltreType = "mpl_type = @t";
+    private const string FiltreMateriel = "mpl_mat_id = @m";
+
     private sealed record PlanSql(int Id, string? Type, int? MatId, string Code, string? Libelle, string? Operations, string Nature,
         decimal? Heures, decimal? Km, int? Mois, bool Actif, int Ordre);
     private sealed record MaterielSql(int Id, string Code, string Designation, string? Famille, string? Parent, string Compteurs,
@@ -34,11 +37,6 @@ public static partial class PlansEntretien
 
     [GeneratedRegex("^[A-Z0-9_]{1,20}$")]
     private static partial Regex CodeValable();
-
-    private const string ColonnesPlan = """
-        mpl_id AS id, mpl_type AS type, mpl_mat_id AS mat_id, mpl_code AS code, mpl_libelle AS libelle, mpl_operations AS operations,
-        mpl_nature AS nature, mpl_heures AS heures, mpl_km AS km, mpl_mois AS mois, mpl_actif AS actif, mpl_ordre AS ordre
-        """;
 
     private static PlanEntretien Regle(PlanSql p, string origine) => new(p.Code, p.Libelle, p.Heures, p.Km, p.Mois, p.Actif, p.Id, origine);
 
@@ -60,12 +58,14 @@ public static partial class PlansEntretien
     private static async Task EnregistrerAsync(LogiBtpContext db, string? type, int? materiel, List<PlanSaisi> plans, string utilisateur, CancellationToken ct)
     {
         Controler(plans);
-        var proprio = type is not null ? "mpl_type = @p" : "mpl_mat_id = @p";
+        var parType = type is not null;
         object cle = (object?)type ?? materiel!.Value;
         var codes = plans.Select(p => p.Code!.Trim().ToUpperInvariant()).ToArray();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        await db.Database.ExecuteSqlRawAsync($"DELETE FROM materiel_plan WHERE {proprio} AND NOT (mpl_code = ANY(@codes))",
-            [new NpgsqlParameter("p", cle), new NpgsqlParameter("codes", codes)], ct);
+        var sql = parType
+            ? "SELECT mpl_code FROM materiel_plan WHERE mpl_type = @p AND NOT (mpl_code = ANY(@codes))"
+            : "SELECT mpl_code FROM materiel_plan WHERE mpl_mat_id = @p AND NOT (mpl_code = ANY(@codes))";
+        await db.Database.ExecuteSqlRawAsync(sql, [new NpgsqlParameter("p", cle), new NpgsqlParameter("codes", codes)], ct);
         foreach (var p in plans)
         {
             NpgsqlParameter[] v =
@@ -75,24 +75,48 @@ public static partial class PlansEntretien
                 new("h", (object?)p.Heures ?? DBNull.Value), new("k", (object?)p.Km ?? DBNull.Value), new("m", (object?)p.Mois ?? DBNull.Value),
                 new("a", p.Actif), new("r", p.Ordre), new("u", utilisateur),
             ];
-            var n = await db.Database.ExecuteSqlRawAsync($"""
+            var update = parType ? """
                 UPDATE materiel_plan SET mpl_libelle = @l, mpl_operations = @o, mpl_nature = @n, mpl_heures = @h, mpl_km = @k, mpl_mois = @m,
                        mpl_actif = @a, mpl_ordre = @r, mpl_maj_par = @u, mpl_maj_le = now()
-                WHERE {proprio} AND mpl_code = @c
-                """, v, ct);
+                WHERE mpl_type = @p AND mpl_code = @c
+                """ : """
+                UPDATE materiel_plan SET mpl_libelle = @l, mpl_operations = @o, mpl_nature = @n, mpl_heures = @h, mpl_km = @k, mpl_mois = @m,
+                       mpl_actif = @a, mpl_ordre = @r, mpl_maj_par = @u, mpl_maj_le = now()
+                WHERE mpl_mat_id = @p AND mpl_code = @c
+                """;
+            var n = await db.Database.ExecuteSqlRawAsync(update, v, ct);
             if (n == 0)
             {
-                await db.Database.ExecuteSqlRawAsync($"""
-                    INSERT INTO materiel_plan ({(type is not null ? "mpl_type" : "mpl_mat_id")}, mpl_code, mpl_libelle, mpl_operations, mpl_nature, mpl_heures, mpl_km, mpl_mois, mpl_actif, mpl_ordre, mpl_maj_par)
+                var insert = parType ? """
+                    INSERT INTO materiel_plan (mpl_type, mpl_code, mpl_libelle, mpl_operations, mpl_nature, mpl_heures, mpl_km, mpl_mois, mpl_actif, mpl_ordre, mpl_maj_par)
                     VALUES (@p, @c, @l, @o, @n, @h, @k, @m, @a, @r, @u)
-                    """, v.Select(x => x.Clone()).ToArray(), ct);
+                    """ : """
+                    INSERT INTO materiel_plan (mpl_mat_id, mpl_code, mpl_libelle, mpl_operations, mpl_nature, mpl_heures, mpl_km, mpl_mois, mpl_actif, mpl_ordre, mpl_maj_par)
+                    VALUES (@p, @c, @l, @o, @n, @h, @k, @m, @a, @r, @u)
+                    """;
+                await db.Database.ExecuteSqlRawAsync(insert, v.Select(x => x.Clone()).ToArray(), ct);
             }
         }
         await tx.CommitAsync(ct);
     }
 
-    private static Task<List<PlanSql>> PlansAsync(LogiBtpContext db, string filtre, params NpgsqlParameter[] p) =>
-        db.Database.SqlQueryRaw<PlanSql>($"SELECT {ColonnesPlan} FROM materiel_plan WHERE {filtre} ORDER BY mpl_ordre, mpl_code", p).ToListAsync();
+    private static Task<List<PlanSql>> PlansAsync(LogiBtpContext db, string filtre, params NpgsqlParameter[] p)
+    {
+        var clause = filtre switch
+        {
+            "TRUE" => "TRUE",
+            "mpl_type IS NOT NULL" => "mpl_type IS NOT NULL",
+            FiltreType => FiltreType,
+            FiltreMateriel => FiltreMateriel,
+            _ => throw new ArgumentOutOfRangeException(nameof(filtre), "Filtre de plans inconnu")
+        };
+        var sql = """
+            SELECT mpl_id AS id, mpl_type AS type, mpl_mat_id AS mat_id, mpl_code AS code, mpl_libelle AS libelle,
+                   mpl_operations AS operations, mpl_nature AS nature, mpl_heures AS heures, mpl_km AS km, mpl_mois AS mois, mpl_actif AS actif, mpl_ordre AS ordre
+            FROM materiel_plan WHERE
+            """ + clause + " ORDER BY mpl_ordre, mpl_code";
+        return db.Database.SqlQueryRaw<PlanSql>(sql, p).ToListAsync();
+    }
 
     /// <summary>Plans effectifs d'un matériel : type parent, type, matériel (origines TYPE_PARENT, TYPE, MATERIEL).</summary>
     private static List<PlanEntretien> Effectifs(MaterielSql m, List<PlanSql> plans) => ReglesEntretiens.PlansEffectifs(
@@ -158,7 +182,7 @@ public static partial class PlansEntretien
         g.MapPut("/plans-entretien/types/{type}", async (string type, List<PlanSaisi> plans, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerAsync(db, type, null, plans, Utilisateur.Depuis(http).Code, ct);
-            return Results.Ok(await PlansAsync(db, "mpl_type = @t", new NpgsqlParameter("t", type)));
+            return Results.Ok(await PlansAsync(db, FiltreType, new NpgsqlParameter("t", type)));
         });
         // Plans d'un matériel : hérités (type parent, type) et propres.
         g.MapGet("/materiels/{id:int}/plans", async (int id, LogiBtpContext db, CancellationToken ct) =>
@@ -169,15 +193,15 @@ public static partial class PlansEntretien
                 new NpgsqlParameter("f", m)).FirstOrDefaultAsync(ct);
             var herites = ReglesEntretiens.PlansEffectifs(
             [
-                (await PlansAsync(db, "mpl_type = @t", new NpgsqlParameter("t", (object?)parent ?? DBNull.Value))).Select(p => Regle(p, "TYPE_PARENT")),
-                (await PlansAsync(db, "mpl_type = @t", new NpgsqlParameter("t", m))).Select(p => Regle(p, "TYPE")),
+                (await PlansAsync(db, FiltreType, new NpgsqlParameter("t", (object?)parent ?? DBNull.Value))).Select(p => Regle(p, "TYPE_PARENT")),
+                (await PlansAsync(db, FiltreType, new NpgsqlParameter("t", m))).Select(p => Regle(p, "TYPE")),
             ]);
-            return Results.Ok(new { herites, propres = await PlansAsync(db, "mpl_mat_id = @m", new NpgsqlParameter("m", id)) });
+            return Results.Ok(new { herites, propres = await PlansAsync(db, FiltreMateriel, new NpgsqlParameter("m", id)) });
         });
         g.MapPut("/materiels/{id:int}/plans", async (int id, List<PlanSaisi> plans, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerAsync(db, null, id, plans, Utilisateur.Depuis(http).Code, ct);
-            return Results.Ok(await PlansAsync(db, "mpl_mat_id = @m", new NpgsqlParameter("m", id)));
+            return Results.Ok(await PlansAsync(db, FiltreMateriel, new NpgsqlParameter("m", id)));
         });
         g.MapGet("/materiels/{id:int}/echeances", async (int id, LogiBtpContext db, CancellationToken ct) =>
             Results.Ok(await CalculerAsync(db, id, DateOnly.FromDateTime(DateTime.Today), ct)));

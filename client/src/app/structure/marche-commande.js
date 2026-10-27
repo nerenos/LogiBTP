@@ -51,6 +51,8 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
         <label class="large">Affaire <span data-affaire></span></label>
         <label>Conducteur de travaux <span data-conducteur></span></label>
         <label>Fin prévue <input type="date" data-cha="date_fin_prevue"></label>
+        <label>Dépôt de stock <input type="checkbox" data-cha="depot"></label>
+        <label>Tient un stock <input type="checkbox" data-cha="stock_tenu"></label>
       </div>
     </fieldset>
     <fieldset><legend>Marché</legend>
@@ -126,7 +128,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
         if (!$('[data-code]').value.trim() || !$('[data-libelle]').value.trim()) { erreur('Code et libellé du marché obligatoires'); return; }
         let chaId = chantier()?.id ?? null;
         if (nouveauChantier()) {
-          const v = Object.fromEntries([...dlg.querySelectorAll('[data-cha]')].map((el) => [el.dataset.cha, el.value.trim() || null]));
+          const v = Object.fromEntries([...dlg.querySelectorAll('[data-cha]')].map((el) => [el.dataset.cha, el.type === 'checkbox' ? el.checked : (el.value.trim() || null)]));
           if (!v.code || !v.libelle) { erreur('Code et libellé du chantier obligatoires'); return; }
           const cree = await creerChantier({
             ...v, conducteur_ind_id: comboConducteur.resoudre() === '' ? null : Number(comboConducteur.resoudre()), tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),

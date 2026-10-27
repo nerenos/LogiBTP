@@ -14,7 +14,7 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public sealed class JournalTechnique : ILoggerProvider
 {
-    private sealed record Entree(DateTimeOffset Le, string Niveau, string Categorie, string Message, string? Exception);
+    private sealed record Entree(DateTimeOffset Le, string logLevel, string Categorie, string Message, string? Exception);
 
     private readonly Channel<Entree> file = Channel.CreateBounded<Entree>(new BoundedChannelOptions(10_000) { FullMode = BoundedChannelFullMode.DropOldest });
     private readonly string? connexion;
@@ -37,12 +37,12 @@ public sealed class JournalTechnique : ILoggerProvider
     private sealed class Journal(JournalTechnique j, string categorie) : ILogger
     {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel niveau) => niveau >= j.niveau && niveau != LogLevel.None;
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= j.niveau && logLevel != LogLevel.None;
 
-        public void Log<TState>(LogLevel niveau, EventId id, TState etat, Exception? exception, Func<TState, Exception?, string> formater)
+        public void Log<TState>(LogLevel logLevel, EventId id, TState etat, Exception? exception, Func<TState, Exception?, string> formater)
         {
-            if (!IsEnabled(niveau)) return;
-            j.file.Writer.TryWrite(new Entree(DateTimeOffset.UtcNow, niveau.ToString(), categorie,
+            if (!IsEnabled(logLevel)) return;
+            j.file.Writer.TryWrite(new Entree(DateTimeOffset.UtcNow, logLevel.ToString(), categorie,
                 Masquage.Texte(formater(etat, exception)) ?? "", Masquage.Texte(exception?.ToString())));
         }
     }
@@ -60,19 +60,19 @@ public sealed class JournalTechnique : ILoggerProvider
                     INSERT INTO journal_technique (jte_le, jte_niveau, jte_categorie, jte_message, jte_exception) VALUES (@le, @n, @c, @m, @e)
                     """, cnx);
                 cmd.Parameters.AddWithValue("le", e.Le);
-                cmd.Parameters.AddWithValue("n", e.Niveau);
+                cmd.Parameters.AddWithValue("n", e.logLevel);
                 cmd.Parameters.AddWithValue("c", e.Categorie.Length > 200 ? e.Categorie[..200] : e.Categorie);
                 cmd.Parameters.AddWithValue("m", e.Message);
                 cmd.Parameters.AddWithValue("e", (object?)e.Exception ?? DBNull.Value);
                 await cmd.ExecuteNonQueryAsync();
             }
-            catch (Exception) when (true)
+            catch (Exception)
             {
                 try
                 {
                     Directory.CreateDirectory(dossier);
                     await File.AppendAllTextAsync(Path.Combine(dossier, $"technique-{e.Le:yyyyMMdd}.log"),
-                        $"{e.Le:O} {e.Niveau} {e.Categorie} {e.Message}{(e.Exception is null ? "" : Environment.NewLine + e.Exception)}{Environment.NewLine}");
+                        $"{e.Le:O} {e.logLevel} {e.Categorie} {e.Message}{(e.Exception is null ? "" : Environment.NewLine + e.Exception)}{Environment.NewLine}");
                 }
                 catch (IOException)
                 {
@@ -110,21 +110,24 @@ public sealed class PurgeJournaux(Microsoft.Extensions.Options.IOptions<OptionsS
         "DELETE FROM session_utilisateur WHERE (ses_fermee_le IS NOT NULL OR ses_expire_le < now()) AND ses_vu_le < now() - interval '6 months'",
     ];
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromMinutes(5), ct);
-        while (!ct.IsCancellationRequested)
+        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        while (!stoppingToken.IsCancellationRequested)
         {
             foreach (var s in societes.Value.Societes())
             {
                 await using var cnx = new NpgsqlConnection(s.Connexion);
                 try
                 {
-                    await cnx.OpenAsync(ct);
+                    await cnx.OpenAsync(stoppingToken);
                     foreach (var r in Requetes)
                     {
-                        try { await new NpgsqlCommand(r, cnx).ExecuteNonQueryAsync(ct); }
-                        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable) { }
+                        try { await new NpgsqlCommand(r, cnx).ExecuteNonQueryAsync(stoppingToken); }
+                        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable)
+                        {
+                            journal.LogDebug(e, "Table absente, ignorée pendant la purge des journaux");
+                        }
                     }
                 }
                 catch (Exception e) when (e is NpgsqlException or InvalidOperationException)
@@ -132,7 +135,7 @@ public sealed class PurgeJournaux(Microsoft.Extensions.Options.IOptions<OptionsS
                     journal.LogError(e, "Purge des journaux impossible pour la société {Societe}", s.Code ?? "principale");
                 }
             }
-            await Task.Delay(TimeSpan.FromHours(24), ct);
+            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
         }
     }
 }

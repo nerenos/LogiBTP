@@ -102,7 +102,7 @@ public static class Equipes
     {
         var e = await db.Database.SqlQueryRaw<EquipeLue>(SqlEquipe, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable($"Équipe {id}");
         var (periodes, lignes) = await LireAsync(db, id, ct);
-        var datees = ReglesEquipes.Periodes(lignes, periodes.Select(p => p.Du)).OrderByDescending(p => p.Du).Where(p => avant is null || p.Du < avant).ToList();
+        var datees = ReglesEquipes.Periodes(lignes, periodes.Select(p => p.Du)).Where(p => avant is null || p.Du < avant).OrderByDescending(p => p.Du).ToList();
         var lot = datees.Take(Math.Clamp(nombre, 1, 100)).ToList();
         var cles = lot.SelectMany(p => p.Membres).Select(m => $"{m.Type}:{m.Id}").Distinct().ToArray();
         var lib = (await db.Database.SqlQueryRaw<LibelleMembre>($"SELECT type, id, libelle FROM ({SqlMembres}) x WHERE type || ':' || id = ANY(@c)",
@@ -138,8 +138,8 @@ public static class Equipes
                 vef_depuis = CASE WHEN verrou_fiche.vef_jeton = EXCLUDED.vef_jeton THEN verrou_fiche.vef_depuis ELSE now() END
             WHERE verrou_fiche.vef_jeton = EXCLUDED.vef_jeton
                OR verrou_fiche.vef_utilisateur = EXCLUDED.vef_utilisateur
-               OR verrou_fiche.vef_renouvele < now() - make_interval(secs => {ExpirationVerrou})
-            """, [new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", cle), new NpgsqlParameter("u", u.Code), new NpgsqlParameter("j", jeton)], ct);
+               OR verrou_fiche.vef_renouvele < now() - make_interval(secs => @ExpirationVerrou)
+            """, [new NpgsqlParameter("ExpirationVerrou", ExpirationVerrou), new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", cle), new NpgsqlParameter("u", u.Code), new NpgsqlParameter("j", jeton)], ct);
         var v = await db.Database.SqlQueryRaw<VerrouLu>("""
             SELECT vef_utilisateur AS utilisateur, vef_depuis AS depuis, vef_jeton = @j AS moi FROM verrou_fiche WHERE vef_type = @t AND vef_id = @id
             """, new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", cle), new NpgsqlParameter("j", jeton)).FirstOrDefaultAsync(ct);
@@ -159,13 +159,14 @@ public static class Equipes
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var gardees = new List<(PeriodeEquipe Periode, string? Commentaire)>();
         if (id is int e0)
-        {
-            var lue = await db.Database.SqlQueryRaw<EquipeLue>(SqlEquipe.Trim() + " FOR UPDATE", new NpgsqlParameter("id", e0)).ToListAsync(ct);
+        {   
+            string? sSQL = SqlEquipe.Trim() + " FOR UPDATE";
+            var lue = await db.Database.SqlQueryRaw<EquipeLue>(sSQL, new NpgsqlParameter("id", e0)).ToListAsync(ct);
             if (lue.Count == 0) throw ExceptionMetier.Introuvable($"Équipe {e0}");
             await DroitAsync(db, u, new[] { s.SrvId, lue[0].SrvId }.OfType<int>().ToArray(), ct);
             var verrou = await db.Database.SqlQueryRaw<bool>($"""
-                SELECT EXISTS (SELECT 1 FROM verrou_fiche WHERE vef_type = @t AND vef_id = @id AND vef_jeton = @j AND vef_renouvele >= now() - make_interval(secs => {ExpirationVerrou})) AS "Value"
-                """, new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", e0.ToString(CultureInfo.InvariantCulture)),
+                SELECT EXISTS (SELECT 1 FROM verrou_fiche WHERE vef_type = @t AND vef_id = @id AND vef_jeton = @j AND vef_renouvele >= now() - make_interval(secs => @ExpirationVerrou)) AS "Value"
+                """, new NpgsqlParameter("ExpirationVerrou", ExpirationVerrou),new NpgsqlParameter("t", TypeVerrou), new NpgsqlParameter("id", e0.ToString(CultureInfo.InvariantCulture)),
                 new NpgsqlParameter("j", NpgsqlDbType.Uuid) { Value = (object?)s.Jeton ?? DBNull.Value }).FirstAsync(ct);
             if (!verrou) throw ExceptionMetier.Conflit("EQU_VERROU", "Le verrou de modification de l'équipe n'est plus détenu : elle est rechargée");
             if (s.Version != lue[0].EquVersion) throw ExceptionMetier.Conflit("EQU_VERSION", "L'équipe a été modifiée par ailleurs : elle est rechargée", new { version = lue[0].EquVersion });
@@ -194,10 +195,9 @@ public static class Equipes
                 SELECT DISTINCT eqc_equ_id AS equipe, eqc_ressource::int AS sous_equipe FROM equipe_composition WHERE eqc_type = 'EQUIPE' AND eqc_equ_id <> @id
                 """, new NpgsqlParameter("id", e1)).ToListAsync(ct);
             var graphe = liens.GroupBy(l => l.Equipe).ToDictionary(g => g.Key, g => g.Select(l => l.SousEquipe).ToHashSet());
-            foreach (var sous in lignesNouvelles.Where(l => l.Type == "EQUIPE").Select(l => int.Parse(l.Id, CultureInfo.InvariantCulture)).Distinct())
-            {
-                if (ReglesEquipes.Contient(graphe, sous, e1)) throw ExceptionMetier.Invalide("EQU_CYCLE", Message("EQU_CYCLE"));
-            }
+            if (lignesNouvelles.Where(l => l.Type == "EQUIPE").Select(l => int.Parse(l.Id, CultureInfo.InvariantCulture)).Distinct()
+                .Any(sous => ReglesEquipes.Contient(graphe, sous, e1)))
+                throw ExceptionMetier.Invalide("EQU_CYCLE", Message("EQU_CYCLE"));
         }
         var p = new[]
         {

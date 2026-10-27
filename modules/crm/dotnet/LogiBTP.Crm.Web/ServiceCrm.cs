@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Crm.Web;
 
+
 /// <summary>Type de note lu ou saisi.</summary>
 public sealed record TypeNoteDto(int? Id, string Code, string Libelle, int? SrvId, string? Icone, string? ModeleHtml, int Ordre, bool Actif);
 
@@ -54,6 +55,9 @@ public sealed record NoteDetail(NoteListe Note, List<ElementDecrit> Liens, strin
 /// </summary>
 public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage, IDroits? droitsProfil = null)
 {
+    private const string ActionSuperviser = "SUPERVISER";
+    private const string ActionPrivee = "PRIVEE";
+    private const string ActionRgpd = "RGPD";
     private sealed record Courant(Utilisateur U, long? Ind, HashSet<int> Services, bool Superviser, bool Rgpd);
 
     private async Task<Courant> CourantAsync(Utilisateur u, CancellationToken ct)
@@ -63,8 +67,8 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         // Module Droits branché : actions SUPERVISER et RGPD du nœud crm ; sinon crm_droit.
         var droits = droitsProfil is null
             ? await db.Droits.AsNoTracking().Where(d => d.CdrProfil == u.Profil).Select(d => d.CdrAction).ToListAsync(ct)
-            : [await droitsProfil.AutoriseAsync(u, "crm", "SUPERVISER", ct) ? "SUPERVISER" : "", await droitsProfil.AutoriseAsync(u, "crm", "RGPD", ct) ? "RGPD" : ""];
-        return new Courant(u, ind, services, droits.Contains("SUPERVISER"), droits.Contains("RGPD"));
+            : [await droitsProfil.AutoriseAsync(u, "crm", ActionSuperviser, ct) ? ActionSuperviser : "", await droitsProfil.AutoriseAsync(u, "crm", ActionRgpd, ct) ? ActionRgpd : ""];
+        return new Courant(u, ind, services, droits.Contains(ActionSuperviser), droits.Contains(ActionRgpd));
     }
 
     public async Task<ContexteCrm> Contexte(Utilisateur u, CancellationToken ct)
@@ -168,8 +172,8 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
     private static string? Masque(CrmNote n, Courant c, bool destinataire)
     {
         var auteur = n.NotCreePar == c.U.Code;
-        if (n.NotPrive && !auteur && !(c.Ind is long i && (n.NotResponsableId == i || destinataire))) return "PRIVEE";
-        if (n.NotRgpd && !auteur) return "RGPD";
+        if (n.NotPrive && !auteur && !(c.Ind is long i && (n.NotResponsableId == i || destinataire))) return ActionPrivee;
+        if (n.NotRgpd && !auteur) return ActionRgpd;
         return null;
     }
 
@@ -235,7 +239,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
             ElementDecrit? element = principaux.TryGetValue(n.NotId, out var l) ? decrits.GetValueOrDefault((l.NliTypeElement, l.NliIdElement)) : null;
             return new NoteListe(n.NotId, n.NotNature, n.NotEtat, n.NotTnoId, t?.TnoLibelle, t?.TnoIcone, n.NotSrvId,
                 n.NotSrvId is int s && services.TryGetValue(s, out var srv) ? srv.Libelle : null,
-                masque is null ? n.NotObjet : masque == "PRIVEE" ? "Note privée" : "Données personnelles",
+                masque is null ? n.NotObjet : masque == ActionPrivee ? "Note privée" : "Données personnelles",
                 n.NotResponsableId, n.NotResponsableId is long r ? noms.GetValueOrDefault(r) : null, n.NotEcheance, n.NotPrive, n.NotRgpd, n.NotDansFil,
                 masque, n.NotCreePar, n.NotCreeLe, n.NotMajLe, element, liens.Count(x => x.NliNotId == n.NotId), reponses.GetValueOrDefault(n.NotId),
                 n.NotResponsableId is null && n.NotSrvId is int ss && c.Services.Contains(ss) && !Close(n),
@@ -255,10 +259,10 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         var destinataires = await db.Destinataires.AsNoTracking().Where(d => d.NdeNotId == id).ToListAsync(ct);
         var estDestinataire = c.Ind is long i && destinataires.Any(d => d.NdeIndId == i);
         var masque = Masque(n, c, estDestinataire);
-        var peutReveler = masque switch { "PRIVEE" => c.Superviser && (!n.NotRgpd || c.Rgpd), "RGPD" => c.Rgpd, _ => false };
+        var peutReveler = masque switch { ActionPrivee => c.Superviser && (!n.NotRgpd || c.Rgpd), ActionRgpd => c.Rgpd, _ => false };
         if (masque is not null && reveler)
         {
-            if (!peutReveler) throw ExceptionMetier.AccesRefuse(masque == "PRIVEE" ? "SUPERVISER" : "RGPD");
+            if (!peutReveler) throw ExceptionMetier.AccesRefuse(masque == ActionPrivee ? ActionSuperviser : ActionRgpd);
             db.Consultations.Add(new CrmConsultation { CcoNotId = id, CcoMotif = masque, CcoPar = u.Code, CcoLe = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync(ct);
             masque = null;
@@ -271,7 +275,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         var decrits = liens.Select(l => parElement[(l.NliTypeElement, l.NliIdElement)]).ToList();
         var historique = await db.Historique.AsNoTracking().Where(h => h.NhiNotId == id).OrderBy(h => h.NhiLe).ThenBy(h => h.NhiId).ToListAsync(ct);
         var individus = destinataires.Select(d => d.NdeIndId)
-            .Concat(historique.Where(h => h.NhiQuoi == "RESPONSABLE").SelectMany(h => new[] { h.NhiAvant, h.NhiApres }).Where(x => long.TryParse(x, out _)).Select(long.Parse))
+            .Concat(historique.Where(h => h.NhiQuoi == "RESPONSABLE").SelectMany(h => new[] { h.NhiAvant, h.NhiApres }).Where(x => long.TryParse(x, out _)).Select(x => long.Parse(x!)))
             .ToList();
         var noms = await specialisation.IndividusAsync(db, individus, ct);
         var services = (await specialisation.ServicesAsync(db, ct)).ToDictionary(s => s.Id.ToString(), s => s.Libelle);

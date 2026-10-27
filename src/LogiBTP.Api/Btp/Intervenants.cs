@@ -104,17 +104,29 @@ public static class Intervenants
     /// <summary>Remplace les intervenants de l'objet par la liste saisie (ordre de saisie conservé).</summary>
     public static async Task Ecrire(LogiBtpContext db, string type, long id, IReadOnlyList<IntervenantSaisi> liste, CancellationToken ct)
     {
-        var col = Colonnes[type];
-        await db.Database.ExecuteSqlRawAsync($"DELETE FROM intervenant WHERE {col} = {{0}}", [(int)id], ct);
+        static NpgsqlParameter P(string nom, NpgsqlDbType type, object? v) => new(nom, type) { Value = v ?? DBNull.Value };
+        var deleteSql = type switch
+        {
+            "projet" => "DELETE FROM intervenant WHERE itv_prj_id = @id",
+            "affaire" => "DELETE FROM intervenant WHERE itv_aff_id = @id",
+            "chantier" => "DELETE FROM intervenant WHERE itv_cha_id = @id",
+            "marche" => "DELETE FROM intervenant WHERE itv_mar_id = @id",
+            _ => throw new ArgumentOutOfRangeException(nameof(type)),
+        };
+        await db.Database.ExecuteSqlRawAsync(deleteSql, [P("id", NpgsqlDbType.Integer, (int)id)], ct);
+        var insertSql = type switch
+        {
+            "projet" => "INSERT INTO intervenant (itv_prj_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            "affaire" => "INSERT INTO intervenant (itv_aff_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            "chantier" => "INSERT INTO intervenant (itv_cha_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            "marche" => "INSERT INTO intervenant (itv_mar_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            _ => throw new ArgumentOutOfRangeException(nameof(type)),
+        };
         var ordre = 0;
         foreach (var x in liste)
         {
             ordre++;
-            static NpgsqlParameter P(string nom, NpgsqlDbType type, object? v) => new(nom, type) { Value = v ?? DBNull.Value };
-            await db.Database.ExecuteSqlRawAsync($"""
-                INSERT INTO intervenant ({col}, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre)
-                VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)
-                """, [P("objet", NpgsqlDbType.Integer, (int)id), P("fonction", NpgsqlDbType.Varchar, x.Fonction), P("per", NpgsqlDbType.Bigint, x.PerId),
+            await db.Database.ExecuteSqlRawAsync(insertSql, [P("objet", NpgsqlDbType.Integer, (int)id), P("fonction", NpgsqlDbType.Varchar, x.Fonction), P("per", NpgsqlDbType.Bigint, x.PerId),
                     P("ind", NpgsqlDbType.Bigint, x.IndId), P("principal", NpgsqlDbType.Boolean, x.Principal), P("pd", NpgsqlDbType.Boolean, x.PaiementDirect),
                     P("commentaire", NpgsqlDbType.Text, x.Commentaire),
                     P("ordre", NpgsqlDbType.Integer, ordre)], ct);

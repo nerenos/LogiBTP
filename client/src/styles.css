@@ -60,7 +60,8 @@
 /* Bouton Enregistrer à menu (▾ : valider, transformer…) ; le menu s'ouvre sous le bouton, aligné à droite. */
 .bouton-menu { display: inline-flex; }
 .bouton-menu > button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.bouton-menu > .bouton-menu-fleche { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(255, 255, 255, .35); padding: 0 .4rem; }
+.bouton-menu > .bouton-menu-fleche { height: auto; vertical-align: middle; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(255, 255, 255, .35); padding: 0 .4rem; }
+.bouton-menu-superchamps { display: inline-flex; align-items: stretch; position: relative;}
 .menu-actions-document { left: auto; right: 0; min-width: 14rem; display: flex; flex-direction: column; gap: 1px; }
 .menu-actions-document[hidden] { display: none; }
 .menu-actions-document > button { background: none; border: none; text-align: left; justify-content: flex-start; width: 100%; color: var(--texte); }

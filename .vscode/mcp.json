@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "graphify-mon-projet": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-m",
+        "graphify.serve",
+        "${workspaceFolder}/graphify-out/graph.json"
+      ]
+    }
+  }
+}

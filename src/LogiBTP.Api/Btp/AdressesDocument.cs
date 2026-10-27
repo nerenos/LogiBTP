@@ -16,6 +16,10 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public static class AdressesDocument
 {
+    private const string ChampContact = "contact";
+    private const string ChampTelephone = "telephone";
+    private const string ChampIndividuId = "ind_id";
+
     private const string SqlChantier = """
         SELECT json_build_object('origine', 'CHANTIER', 'source_id', c.cha_id, 'libelle', c.cha_code || ' – ' || c.cha_libelle,
           'adresse', json_build_object('ligne1', c.cha_adresse, 'ligne2', NULL, 'ligne3', NULL, 'code_postal', c.cha_code_postal, 'ville', c.cha_ville, 'pays', 'FR'),
@@ -44,8 +48,8 @@ public static class AdressesDocument
             ["source_id"] = perId,
             ["libelle"] = Texte(p, "raison_sociale"),
             ["adresse"] = p.TryGetProperty("adresse", out var a) && a.ValueKind == JsonValueKind.Object ? a.Clone() : null,
-            ["contact"] = null,
-            ["telephone"] = Texte(p, "telephone"),
+            [ChampContact] = null,
+            [ChampTelephone] = Texte(p, ChampTelephone),
             ["instructions"] = null,
             ["mention"] = origine == "COMPTOIR" ? "Retrait au comptoir" : null,
             ["releve_le"] = DateOnly.FromDateTime(DateTime.Today),
@@ -59,12 +63,26 @@ public static class AdressesDocument
     /// </summary>
     public static async Task<object> Proposees(DbContext db, int? chantier, long? fournisseur, CancellationToken ct)
     {
-        async Task<List<JsonDocument>> Arbre(string racine, string origine)
+        async Task<List<JsonDocument>> Arbre(string origine)
         {
-            var ids = await db.Database.SqlQueryRaw<long>($"""
-                WITH RECURSIVE a AS ({racine} UNION SELECT p.per_id FROM personne p JOIN a ON p.per_parent_id = a.per_id WHERE p.per_actif)
-                SELECT per_id AS "Value" FROM a ORDER BY per_id LIMIT 50
-                """, new NpgsqlParameter("f", NpgsqlDbType.Bigint) { Value = (object?)fournisseur ?? DBNull.Value }).ToListAsync(ct);
+            string racine = origine switch
+            {
+                "DEPOT" => "SELECT per_id FROM personne WHERE per_societe_base",
+                "COMPTOIR" => "SELECT per_id FROM personne WHERE per_id = @f",
+                _ => throw new ArgumentException("Origine non supportée", nameof(origine))
+            };
+            var query = $"""
+            WITH RECURSIVE a AS (
+                {racine} 
+                UNION 
+                SELECT p.per_id FROM personne p JOIN a ON p.per_parent_id = a.per_id WHERE p.per_actif
+            )
+            SELECT per_id AS "Value" FROM a ORDER BY per_id LIMIT 50
+            """;
+            var param = new NpgsqlParameter("f", NpgsqlDbType.Bigint) { Value = (object?)fournisseur ?? DBNull.Value };
+    
+            // On récupère d'abord les IDs pour libérer la connexion EF Core
+            var ids = await db.Database.SqlQueryRaw<long>(query, param).ToListAsync(ct);
             var res = new List<JsonDocument>();
             foreach (var id in ids) if (await Personne(db, id, origine, ct) is { } x) res.Add(x);
             return res;
@@ -72,8 +90,8 @@ public static class AdressesDocument
         return new
         {
             chantier = chantier is int c ? await Chantier(db, c, ct) : null,
-            depots = await Arbre("SELECT per_id FROM personne WHERE per_societe_base", "DEPOT"),
-            comptoirs = fournisseur is null ? [] : await Arbre("SELECT per_id FROM personne WHERE per_id = @f", "COMPTOIR"),
+            depots = await Arbre("DEPOT"),
+            comptoirs = fournisseur is null ? [] : await Arbre("COMPTOIR"),
         };
     }
 
@@ -109,10 +127,10 @@ public static class AdressesDocument
         var c = client.RootElement;
         if (!MemeAdresse(Objet(a, "adresse"), Objet(c, "adresse"))) return false;
         if (Normaliser(Texte(a, "instructions")) != "" || Normaliser(Texte(a, "mention")) != "") return false;
-        var contact = Entier(Objet(a, "contact"), "ind_id");
-        if (contact is not null && contact != Entier(Objet(c, "contact"), "ind_id")) return false;
-        var tel = Normaliser(Texte(a, "telephone"));
-        return tel == "" || tel == Normaliser(Texte(c, "telephone"));
+        var contact = Entier(Objet(a, ChampContact), ChampIndividuId);
+        if (contact is not null && contact != Entier(Objet(c, ChampContact), ChampIndividuId)) return false;
+        var tel = Normaliser(Texte(a, ChampTelephone));
+        return tel == "" || tel == Normaliser(Texte(c, ChampTelephone));
     }
 
     /// <summary>Payeur identique au client : même personne et même contact.</summary>
@@ -121,7 +139,7 @@ public static class AdressesDocument
         if (payeur is null || client is null) return false;
         var p = payeur.RootElement;
         var c = client.RootElement;
-        return Entier(p, "per_id") == Entier(c, "per_id") && Entier(Objet(p, "contact"), "ind_id") == Entier(Objet(c, "contact"), "ind_id");
+        return Entier(p, "per_id") == Entier(c, "per_id") && Entier(Objet(p, ChampContact), ChampIndividuId) == Entier(Objet(c, ChampContact), ChampIndividuId);
     }
 
     /// <summary>Ventes : payeur et adresse des travaux vidés s'ils sont identiques au client (enregistrement, validation).</summary>

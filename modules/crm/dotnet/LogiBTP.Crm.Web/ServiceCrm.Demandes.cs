@@ -22,8 +22,11 @@ public sealed record DemandeDetail(DemandeDto Demande, List<HistoriqueDto> Histo
 /// <summary>Demandes (lot 3) : pré-dossiers de veille, prise en charge par un service, transformation en projet, sans suite.</summary>
 public partial class ServiceCrm
 {
+    private const string TypeDemande = "crm_demande";
+    private const string EtatTransformee = "TRANSFORMEE";
+
     /// <summary>Types d'élément propres au module, rattachables à une note.</summary>
-    public static readonly TypeElementCrm[] TypesPropres = [new("crm_demande", "Demande", "📨"), new("crm_plan", "Plan", "📐")];
+    public static readonly TypeElementCrm[] TypesPropres = [new(TypeDemande, "Demande", "📨"), new("crm_plan", "Plan", "📐")];
 
     public async Task<PageDemandes> Demandes(string? vue, string? etat, string? recherche, long? tiers, int page, int taille, Utilisateur u, CancellationToken ct)
     {
@@ -67,7 +70,7 @@ public partial class ServiceCrm
         var services = (await specialisation.ServicesAsync(db, ct)).ToDictionary(s => s.Id);
         var noms = await specialisation.IndividusAsync(db, liste.Where(d => d.DemResponsableId != null).Select(d => d.DemResponsableId!.Value).ToList(), ct);
         var ids = liste.Select(d => d.DemId.ToString()).ToList();
-        var notes = await db.Liens.AsNoTracking().Where(l => l.NliTypeElement == "crm_demande" && ids.Contains(l.NliIdElement))
+        var notes = await db.Liens.AsNoTracking().Where(l => l.NliTypeElement == TypeDemande && ids.Contains(l.NliIdElement))
             .GroupBy(l => l.NliIdElement).Select(g => new { g.Key, Nb = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Nb, ct);
         ElementDecrit? E(string type, object? id) => id is null ? null : decrits.GetValueOrDefault((type, id.ToString()!));
         return liste.Select(d => new DemandeDto(d.DemId, d.DemNumero, d.DemObjet, d.DemDescriptionHtml, d.DemEtat, d.DemMotif, d.DemTiersId, E("personne", d.DemTiersId),
@@ -94,7 +97,7 @@ public partial class ServiceCrm
         var d = await db.Demandes.AsNoTracking().FirstOrDefaultAsync(x => x.DemId == id, ct) ?? throw ExceptionMetier.Introuvable($"Demande {id}");
         var historique = await db.HistoriqueDemandes.AsNoTracking().Where(h => h.DhiDemId == id).OrderBy(h => h.DhiLe).ThenBy(h => h.DhiId).ToListAsync(ct);
         var individus = historique.Where(h => h.DhiQuoi == "RESPONSABLE").SelectMany(h => new[] { h.DhiAvant, h.DhiApres })
-            .Where(x => long.TryParse(x, out _)).Select(long.Parse).ToList();
+            .Where(x => long.TryParse(x, out _)).Select(x => long.Parse(x!)).ToList();
         var noms = await specialisation.IndividusAsync(db, individus, ct);
         var services = (await specialisation.ServicesAsync(db, ct)).ToDictionary(s => s.Id.ToString(), s => s.Libelle);
         string? Lisible(string quoi, string? v) => v is null ? null : quoi switch
@@ -128,12 +131,12 @@ public partial class ServiceCrm
                 throw ExceptionMetier.Conflit("DEMANDE_MODIFIEE", $"Demande modifiée entre-temps par {d.DemMajPar ?? d.DemCreePar} : rechargez-la");
             }
             // Transformée : seul « Créer le projet » y conduit ; le projet reste désigné tant que l'état ne change pas.
-            if (s.Etat == "TRANSFORMEE" && d.DemEtat != "TRANSFORMEE") throw ExceptionMetier.Invalide("DEMANDE_CIBLE", "Utilisez « Créer le projet » pour transformer la demande");
-            if (s.Etat != "TRANSFORMEE") { d.DemCibleType = null; d.DemCibleId = null; }
+            if (s.Etat == EtatTransformee && d.DemEtat != EtatTransformee) throw ExceptionMetier.Invalide("DEMANDE_CIBLE", "Utilisez « Créer le projet » pour transformer la demande");
+            if (s.Etat != EtatTransformee) { d.DemCibleType = null; d.DemCibleId = null; }
         }
         else
         {
-            if (s.Etat == "TRANSFORMEE") throw ExceptionMetier.Invalide("DEMANDE_CIBLE", "Une demande se crée avant son projet");
+            if (s.Etat == EtatTransformee) throw ExceptionMetier.Invalide("DEMANDE_CIBLE", "Une demande se crée avant son projet");
             var annee = DateTime.UtcNow.Year;
             var prefixe = $"DEM-{annee}-";
             var derniers = await db.Demandes.Where(z => z.DemNumero.StartsWith(prefixe)).Select(z => z.DemNumero).ToListAsync(ct);
@@ -201,7 +204,7 @@ public partial class ServiceCrm
         var responsable = d.DemResponsableId is long r ? (await specialisation.IndividusAsync(db, [r], ct)).GetValueOrDefault(r) : null;
         var projet = await specialisation.CreerProjetAsync(db, d, responsable, ct)
             ?? throw ExceptionMetier.Conflit("PROJET_IMPOSSIBLE", "L'application ne crée pas de projet depuis une demande");
-        d.DemEtat = "TRANSFORMEE";
+        d.DemEtat = EtatTransformee;
         d.DemCibleType = projet.Type;
         d.DemCibleId = projet.Id;
         d.DemMotif = null;
@@ -209,7 +212,7 @@ public partial class ServiceCrm
         d.DemMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         var idDemande = id.ToString();
-        var notes = await db.Liens.Where(l => l.NliTypeElement == "crm_demande" && l.NliIdElement == idDemande).Select(l => l.NliNotId).ToListAsync(ct);
+        var notes = await db.Liens.Where(l => l.NliTypeElement == TypeDemande && l.NliIdElement == idDemande).Select(l => l.NliNotId).ToListAsync(ct);
         var dejaLiees = await db.Liens.Where(l => notes.Contains(l.NliNotId) && l.NliTypeElement == projet.Type && l.NliIdElement == projet.Id).Select(l => l.NliNotId).ToListAsync(ct);
         db.Liens.AddRange(notes.Except(dejaLiees).Select(n => new CrmNoteLien { NliNotId = n, NliTypeElement = projet.Type, NliIdElement = projet.Id }));
         await db.SaveChangesAsync(ct);
@@ -226,12 +229,12 @@ public partial class ServiceCrm
         if (!u.EstAdmin)
         {
             if (d.DemCreePar != u.Code) throw ExceptionMetier.AccesRefuse("SUPPRIMER");
-            if (d.DemCibleId is not null || await db.Liens.AnyAsync(l => l.NliTypeElement == "crm_demande" && l.NliIdElement == idDemande, ct))
+            if (d.DemCibleId is not null || await db.Liens.AnyAsync(l => l.NliTypeElement == TypeDemande && l.NliIdElement == idDemande, ct))
             {
                 throw ExceptionMetier.Conflit("DEMANDE_UTILISEE", "Demande suivie par des notes ou transformée : passez-la sans suite");
             }
         }
-        await db.Liens.Where(l => l.NliTypeElement == "crm_demande" && l.NliIdElement == idDemande).ExecuteDeleteAsync(ct);
+        await db.Liens.Where(l => l.NliTypeElement == TypeDemande && l.NliIdElement == idDemande).ExecuteDeleteAsync(ct);
         await db.Demandes.Where(x => x.DemId == id).ExecuteDeleteAsync(ct);
     }
 
@@ -244,10 +247,10 @@ public partial class ServiceCrm
             var p = await db.Plans.AsNoTracking().Where(x => EF.Functions.ILike(x.PlaRepere, m) || EF.Functions.ILike(x.PlaNom, m)).OrderBy(x => x.PlaRepere).Take(15).ToListAsync(ct);
             return p.Select(x => new ElementDecrit("crm_plan", x.PlaId.ToString(), $"{x.PlaRepere} – {x.PlaNom}", $"/crm/plan/{x.PlaId}", "📐")).ToList();
         }
-        if (type != "crm_demande") return await specialisation.RechercherAsync(db, type, texte ?? "", ct);
+        if (type != TypeDemande) return await specialisation.RechercherAsync(db, type, texte ?? "", ct);
         var motif = $"%{(texte ?? "").Trim()}%";
         var d = await db.Demandes.AsNoTracking().Where(x => EF.Functions.ILike(x.DemObjet, motif) || EF.Functions.ILike(x.DemNumero, motif))
             .OrderByDescending(x => x.DemCreeLe).Take(15).ToListAsync(ct);
-        return d.Select(x => new ElementDecrit("crm_demande", x.DemId.ToString(), $"{x.DemNumero} – {x.DemObjet}", $"/crm/demande/{x.DemId}", "📨")).ToList();
+        return d.Select(x => new ElementDecrit(TypeDemande, x.DemId.ToString(), $"{x.DemNumero} – {x.DemObjet}", $"/crm/demande/{x.DemId}", "📨")).ToList();
     }
 }
