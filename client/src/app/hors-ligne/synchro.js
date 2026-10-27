@@ -6,7 +6,8 @@ import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttent
 // création du document s'il a été créé hors ligne (entrée aussitôt rattachée au document créé : jamais deux
 // créations), puis enregistrement. Envoyé : entrée retirée, sujet `hors-ligne-envoye` publié (la page du document,
 // dans cette fenêtre ou une autre, reprend les identifiants définitifs). Version du serveur changée (409) : CONFLIT,
-// la saisie reste sur le poste (fusion : lot 4). Autre refus : ERREUR, à corriger en ouvrant le document.
+// la saisie reste sur le poste, à fusionner (pages/fusion-document.js). Autre refus : ERREUR, à corriger en ouvrant le
+// document. FUSION : envoyée par la page document quand l'utilisateur enregistre la saisie fusionnée.
 
 /** Sujet publié quand les entrées en attente changent (compteur du bandeau). */
 export const SUJET_ATTENTE = 'attente-hors-ligne';

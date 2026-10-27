@@ -15,7 +15,7 @@ import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuair
 import { creerFournisseurStructure } from './structure/structure.js';
 import { societeCourante } from './societe.js';
 import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
-import { listeAttente, ETATS_ATTENTE } from './hors-ligne/attente.js';
+import { listeAttente, ETATS_ATTENTE, urlAttente } from './hors-ligne/attente.js';
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
@@ -406,7 +406,7 @@ export class Application {
     if (!l.length) return '';
     const probleme = l.find((e) => e.etat !== 'ATTENTE');
     const titre = l.map((e) => `${e.libelle} : ${ETATS_ATTENTE[e.etat] ?? e.etat}${e.erreur ? ` (${e.erreur})` : ''}`).join('\n');
-    return `<a href="/document/${(probleme ?? l[0]).id_local}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
+    return `<a href="${urlAttente(probleme ?? l[0])}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
   }
 
   /** Passage hors ligne (API perdue) : bandeau rouge, classe `hors-ligne` du corps, contrôle toutes les 15 secondes. */

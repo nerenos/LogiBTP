@@ -244,10 +244,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ## Interface
 
-- [ ] **Mode hors ligne, lot 4 : fusion à trois voies** (lots 1 à 3 faits ; entrées CONFLIT de la file `logibtp-hors-ligne`,
-  version de départ dans `depart`) (départ de la coupure, saisie locale, version du serveur) par
-  ligne et par champ (entête, lignes, métrés, variables, ventilations), écran de comparaison et d'arbitrage, recalcul
-  par le moteur avant l'envoi ; choix : fusionner, écraser (droit), copie en brouillon, abandon. Jeu de cas partagé.
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.

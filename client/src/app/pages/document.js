@@ -8,7 +8,7 @@ import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from 
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
-import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE } from '../hors-ligne/attente.js';
+import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE, urlAttente } from '../hors-ligne/attente.js';
 import { envoyerDocument, SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 import { appliquerReponse } from '../documents/reponse.js';
 import { sousTraiter, TYPES_SOUS_TRAITABLES } from '../sous-traitance/sous-traiter.js';
@@ -311,6 +311,13 @@ export class PageDocument extends PageBase {
     this.types = await api.typesDocument();
     // Saisie faite hors ligne envoyée au serveur (par cette fenêtre ou une autre) : identifiants définitifs repris.
     this.desabonnerEnvoi = app.abonner('hors-ligne-envoye', (e) => this.#surEnvoiHorsLigne(e));
+    // File changée (conflit ou refus noté par l'envoi) : bandeau de la saisie hors ligne relu.
+    this.desabonnerAttente = app.abonner(SUJET_ATTENTE, async () => {
+      const id = this.editeur?.saisie.document.ent_id;
+      if (id === undefined || !this.attente) return;
+      this.attente = await lireAttente(app.utilisateur(), id).catch(() => this.attente);
+      this.rafraichir();
+    });
     if (!app.apiPerdue) prechargerDefinitions(this.types);
     // Création depuis les listes : /document/nouveau?type=<code> ; depuis un marché : &marche=<id> (rattachement).
     if (id === 'nouveau') {
@@ -601,7 +608,9 @@ export class PageDocument extends PageBase {
     zone.classList.toggle('probleme', a.etat !== 'ATTENTE');
     zone.innerHTML = a.etat === 'CONFLIT'
       ? `⚠ <b>${ETATS_ATTENTE.CONFLIT}</b> : le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications
-        (enregistrées sur ce poste le ${le}) sont conservées ; la fusion des deux versions viendra au lot 4.`
+        (enregistrées sur ce poste le ${le}) sont conservées. <a href="${urlAttente(a)}" title="Comparer ma saisie à la version du serveur et trancher">⇄ Comparer et fusionner</a>`
+      : a.etat === 'FUSION'
+        ? `⇄ <b>${ETATS_ATTENTE.FUSION}</b> : saisie fusionnée (totaux recalculés) ; contrôlez puis enregistrez pour l'envoyer au serveur.`
       : a.etat === 'ERREUR'
         ? `⚠ <b>${ETATS_ATTENTE.ERREUR}</b> : ${echapper(a.erreur ?? '')}. Corrigez puis enregistrez de nouveau (saisie du ${le} gardée sur ce poste).`
         : `⏳ Enregistré sur ce poste le ${le}${a.id ? '' : ' (document créé hors ligne)'} : envoi au serveur dès son retour.`;
@@ -684,7 +693,7 @@ export class PageDocument extends PageBase {
       rep = await api.enregistrer(id, envoi);
     } catch (e) {
       if (estHorsLigne(e)) { await this.#enregistrerSurPoste(envoi); return; }
-      // Saisie hors ligne refusée (version du serveur changée) : gardée sur ce poste pour la fusion (lot 4).
+      // Saisie hors ligne refusée (version du serveur changée) : gardée sur ce poste, à fusionner (/fusion/document/:id).
       if (this.attente && e.statut === 409) { this.attente = await marquerAttente(compte, id, { etat: 'CONFLIT', erreur: e.message }); this.rafraichir(); }
       throw e;
     }
@@ -1157,6 +1166,7 @@ export class PageDocument extends PageBase {
   fermer() {
     fermerAideMemoire();
     this.desabonnerEnvoi?.();
+    this.desabonnerAttente?.();
     this.suivi?.fermer();
     this.liberer();
     document.removeEventListener('keydown', this.clavier);

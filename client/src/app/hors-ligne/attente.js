@@ -3,13 +3,17 @@
 // Entrée : { cle, compte, id_local (ent_id du document, négatif s'il a été créé hors ligne), id (serveur, null tant
 // qu'il n'est pas créé), creation ({ params, initial } : création à faire), envoi (résultat du moteur, corps du PUT),
 // saisie (contenu de l'éditeur, pour rouvrir le document), depart (document du serveur au début de la saisie hors
-// ligne, base de la fusion), type_code, libelle, etat (ATTENTE | CONFLIT | ERREUR), erreur, le }.
+// ligne, base de la fusion), type_code, libelle, etat (ATTENTE | CONFLIT | FUSION | ERREUR), erreur, le }. FUSION : saisie fusionnée
+// (lot 4) rouverte dans la page document, envoyée seulement quand l'utilisateur l'enregistre.
 // Rien n'est effacé à la déconnexion : la saisie reste sur le poste jusqu'à son envoi.
 
 const BASE = 'logibtp-hors-ligne';
 const MAGASIN = 'documents';
 
-export const ETATS_ATTENTE = { ATTENTE: 'En attente d’envoi', CONFLIT: 'Conflit à résoudre', ERREUR: 'Envoi refusé' };
+export const ETATS_ATTENTE = { ATTENTE: 'En attente d’envoi', CONFLIT: 'Conflit à résoudre', FUSION: 'Fusion à vérifier puis enregistrer', ERREUR: 'Envoi refusé' };
+
+/** Page d'arbitrage d'une entrée en conflit, sinon le document. */
+export const urlAttente = (e) => (e.etat === 'CONFLIT' ? `/fusion/document/${e.id_local}` : `/document/${e.id_local}`);
 
 /** Clé d'une entrée : compte et identifiant local du document. */
 export const cleAttente = (compte, idLocal) => `${compte}:${idLocal}`;

@@ -2,6 +2,7 @@ import { PageAccueil } from './accueil.js';
 import { PageListe } from './liste.js';
 import { PageFiche } from './fiche.js';
 import { PageDocument } from './document.js';
+import { PageFusionDocument } from './fusion-document.js';
 import { PageGed } from './ged.js';
 import { PageParametres } from './parametres.js';
 import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
@@ -66,6 +67,7 @@ export const ROUTES = [
   { nom: 'liste', chemin: '/liste/:theme?', page: PageListe, titre: 'Listes' },
   { nom: 'fiche', chemin: '/fiche/:type/:id', page: PageFiche, titre: 'Fiche' },
   { nom: 'document', chemin: '/document/:id', page: PageDocument, titre: 'Document' },
+  { nom: 'fusion-document', chemin: '/fusion/document/:id', page: PageFusionDocument, titre: 'Fusion' },
   { nom: 'ged', chemin: '/ged/:id?', page: PageGed, titre: 'Documents (GED)' },
   { nom: 'parametres', chemin: '/parametres', page: PageParametres, titre: 'Paramètres' },
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
