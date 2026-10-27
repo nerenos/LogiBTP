@@ -204,6 +204,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] **Module d'installation** ([analyse](documentation/conception/ANALYSE-MODULE-INSTALLATION.md), lots 1 à 4 réalisés) :
   reste à essayer Let's Encrypt avec de vrais identifiants DNS et les rôles Api / Base sur deux machines ; vérifier le
   coffre de la GED après une restauration (`installation verifier`) ; page d'amorçage sans contrôle DNS du poste.
+- [ ] Scripts Debian 13 (`modules/installation/linux`, [procédure](documentation/INSTALLATION-DEBIAN.md)) : essai de bout
+  en bout sur un vrai Debian 13 (installation, rejeu, sauvegarde, restauration, mise à jour avec retour arrière,
+  minuteries systemd) ; seules la syntaxe, shellcheck et la rotation 7 / 4 / 12 sont vérifiées.
 
 ### Demandes du 25/10/2026
 

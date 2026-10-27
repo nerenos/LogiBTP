@@ -2,7 +2,7 @@
 
 ## But
 Installer LogiBTP chez un client sur deux conteneurs Docker indépendants : l'API (qui sert aussi le client web) et
-PostgreSQL ; hôte Windows en réseau local ([analyse](../../documentation/conception/ANALYSE-MODULE-INSTALLATION.md),
+PostgreSQL ; hôte Windows ou Debian 13 en réseau local ([analyse](../../documentation/conception/ANALYSE-MODULE-INSTALLATION.md),
 décisions I1 à I14).
 
 ## Contraintes absolues
@@ -63,6 +63,13 @@ décisions I1 à I14).
   colonnes texte et JSON, empreintes déclarées par le cœur — adresse des comptes de messagerie, compte OAuth —, une
   transaction par base ; ancienne clé gardée dans `LOGIBTP_CLE_CHIFFREMENT_PRECEDENTES`, lue par `Chiffrement` du socle
   et par le déchiffrement des sauvegardes ; clé de l'autorité rechiffrée ; `Changer-CleDonnees-LogiBTP.ps1`).
+
+- Debian 13 : scripts bash `linux/` (même déroulé que `windows/`, fichiers par `docker cp`, `commun.sh` ; root, dossier
+  `/opt/logibtp` en 700) : `installer-logibtp.sh` (mêmes rôles et options en `--kebab-case`, `--installer-docker` : dépôt
+  officiel de Docker et journaux bornés ; autorité par `update-ca-certificates` ; minuteries systemd `logibtp-sauvegarde`
+  et `logibtp-certificat` à la place des tâches planifiées ; pare-feu non géré : chaîne `DOCKER-USER` documentée),
+  `sauvegarder-logibtp.sh`, `restaurer-logibtp.sh`, `mettre-a-jour-logibtp.sh`, `certificat-letsencrypt.sh`,
+  `changer-cle-donnees-logibtp.sh` ; procédure : [INSTALLATION-DEBIAN.md](../../documentation/INSTALLATION-DEBIAN.md).
 
 ## Bibliothèque (`dotnet/LogiBTP.Installation`)
 - `ManifesteScripts` (`Lire`, `Analyser`, `Ecarts`), `BaseDonnees` (`DefinirRolesAsync`,
