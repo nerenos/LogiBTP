@@ -15,6 +15,8 @@ import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuair
 import { creerFournisseurStructure } from './structure/structure.js';
 import { societeCourante } from './societe.js';
 import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
+import { listeAttente, ETATS_ATTENTE } from './hors-ligne/attente.js';
+import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 
@@ -107,7 +109,11 @@ export class Application {
     definirAideRaccourcis(() => this.naviguer('/parametres/raccourcis', { nouvelleFenetre: true }));
     // Changements de titre ou de modifications de la page : diffusés aux autres fenêtres.
     this.minuterie = setInterval(() => this.majPage(), 1000);
+    // Documents enregistrés hors ligne : compteur du bandeau, envoi dès que l'API répond.
+    this.abonner(SUJET_ATTENTE, () => this.majAttentes());
     await this.routeur.demarrer();
+    this.majAttentes();
+    this.envoyerAttentes();
   }
 
   // ---------------------------------------------------------------- services partagés par les pages
@@ -249,7 +255,7 @@ export class Application {
   async #sessionChangee({ connecte }) {
     this.session = await api.auth.session().catch(() => null);
     this.sessionPerdueSignalee = false;
-    if (this.session?.connecte) signalerCompte(this.utilisateur());
+    if (this.session?.connecte) { signalerCompte(this.utilisateur()); this.envoyerAttentes(); }
     if (connecte && location.pathname === '/connexion' && !this.routeur?.page?.fenetreSeule) location.assign(new URLSearchParams(location.search).get('retour') || '/');
     else if (!connecte && !this.routeur?.page?.modifiee && location.pathname !== '/connexion') { this.fermetureForcee = true; location.assign('/connexion'); }
     else { await this.chargerModules(); this.rendreInfos(); }
@@ -367,7 +373,7 @@ export class Application {
   rendreInfos() {
     const s = this.societe;
     this.bandeau.infos(`${s ? `<span class="bandeau-societe" title="${echapper(s.principale ? 'Base principale' : `Base de la société ${s.libelle} (sous-domaine ${s.code})`)}">🏢 ${echapper(s.libelle)}</span>` : ''}
-      ${this.#etatApi()}
+      ${this.#etatApi()}${this.#attentes()}
       ${this.session?.connecte ? `${this.#usurpation()}${this.#cloche()}<a href="/compte" title="${echapper(`${this.session.libelle ?? this.session.code} : mon compte, mot de passe, déconnexion`)}">👤 ${echapper(this.utilisateur())} · ${echapper(this.profil())}</a>`
         : '<a href="/connexion">👤 Se connecter</a>'}`);
   }
@@ -379,6 +385,28 @@ export class Application {
       ? "Serveur injoignable : les données déjà consultées sur ce poste s'affichent depuis le navigateur ; rien ne peut être enregistré. Nouvel essai toutes les 15 secondes."
       : "L'API ne répond plus : rien ne peut être enregistré. Nouvel essai toutes les 15 secondes.";
     return `<span class="etat-api deconnectee" title="${titre}">● Hors ligne</span>`;
+  }
+
+  /** Envoi des documents enregistrés hors ligne (API joignable, session ouverte). */
+  envoyerAttentes() {
+    if (this.apiPerdue || !this.session?.connecte) return;
+    envoyerAttentes(this).catch((e) => console.warn('Envoi des documents hors ligne', e));
+  }
+
+  /** Documents enregistrés hors ligne du compte : relus pour le bandeau. */
+  async majAttentes() {
+    const compte = this.utilisateur();
+    this.attentes = compte ? await listeAttente(compte).catch(() => []) : [];
+    this.rendreInfos();
+  }
+
+  /** Pastille du bandeau : documents enregistrés sur ce poste et pas encore envoyés (lien vers le plus ancien). */
+  #attentes() {
+    const l = this.attentes ?? [];
+    if (!l.length) return '';
+    const probleme = l.find((e) => e.etat !== 'ATTENTE');
+    const titre = l.map((e) => `${e.libelle} : ${ETATS_ATTENTE[e.etat] ?? e.etat}${e.erreur ? ` (${e.erreur})` : ''}`).join('\n');
+    return `<a href="/document/${(probleme ?? l[0]).id_local}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
   }
 
   /** Passage hors ligne (API perdue) : bandeau rouge, classe `hors-ligne` du corps, contrôle toutes les 15 secondes. */
@@ -408,6 +436,7 @@ export class Application {
         document.body.classList.remove('hors-ligne');
         clearInterval(this.minuterieApi);
         this.message('API de nouveau connectée', 'succes');
+        this.envoyerAttentes();
       }
       this.rendreInfos();
     } finally {

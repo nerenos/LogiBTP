@@ -20,6 +20,9 @@
 /* État de l'API dans le bandeau : vert connectée, rouge si elle ne répond plus. */
 .etat-api.connectee { color: var(--succes); font-weight: 600; }
 .etat-api.deconnectee { color: var(--erreur); font-weight: 700; }
+/* Documents enregistrés hors ligne, pas encore envoyés (rouge : conflit ou envoi refusé). */
+.etat-attente { color: var(--alerte); font-weight: 700; text-decoration: none; }
+.etat-attente.probleme { color: var(--erreur); }
 
 /* Notifications : cloche du bandeau et boîte. */
 .cloche { position: relative; text-decoration: none; }
@@ -85,7 +88,11 @@
 .definitions dd { margin: 0; }
 .document-verrou { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 1rem 0; padding: 0.35rem 0.7rem; flex: none;
   border: 1px solid var(--alerte); background: var(--alerte-fond); border-radius: 6px; }
-.document-verrou[hidden] { display: none; }
+.document-verrou[hidden], .document-attente[hidden] { display: none; }
+/* Saisie enregistrée sur ce poste (mode hors ligne), pas encore envoyée au serveur. */
+.document-attente { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0.4rem 1rem 0; padding: 0.35rem 0.7rem; flex: none;
+  border: 1px solid var(--accent, #1d5fbf); border-radius: 6px; }
+.document-attente.probleme { border-color: var(--erreur); background: var(--alerte-fond); }
 .document-verrou button.danger { border-color: var(--erreur); color: var(--erreur); }
 
 /* Bibliothèque : fiche élément */

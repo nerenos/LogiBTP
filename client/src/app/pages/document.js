@@ -8,6 +8,9 @@ import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from 
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
+import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE } from '../hors-ligne/attente.js';
+import { envoyerDocument, SUJET_ATTENTE } from '../hors-ligne/synchro.js';
+import { appliquerReponse } from '../documents/reponse.js';
 import { sousTraiter, TYPES_SOUS_TRAITABLES } from '../sous-traitance/sous-traiter.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp, individusSociete, individusStructure } from '../panneaux-btp.js';
@@ -77,6 +80,7 @@ const GABARIT = `
     </div>
   </div>
   <div class="document-verrou" hidden></div>
+  <div class="document-attente" hidden></div>
   <div class="document-import" hidden></div>
   <main class="document-zone">
     <section id="vue-entete" class="vue vue-entete" role="tabpanel">
@@ -148,6 +152,20 @@ const GABARIT = `
     </section>
   </main>
   <aside id="metre" class="tiroir" hidden></aside>`;
+
+/**
+ * Définitions de tous les types de documents lues une fois par session en ligne : gardées par le service worker, elles
+ * permettent de créer hors ligne un document d'un type jamais ouvert sur ce poste.
+ */
+function prechargerDefinitions(types) {
+  try {
+    if (sessionStorage.getItem('logibtp.definitions')) return;
+    sessionStorage.setItem('logibtp.definitions', '1');
+  } catch { return; }
+  setTimeout(async () => {
+    for (const t of types) await api.definition(t.tyd_code).catch(() => {});
+  }, 5000);
+}
 
 /** Contenu de saisie à partir d'un document complet renvoyé par l'API. */
 const versSaisie = (d) => ({
@@ -291,6 +309,9 @@ export class PageDocument extends PageBase {
 
     const { id } = this.params;
     this.types = await api.typesDocument();
+    // Saisie faite hors ligne envoyée au serveur (par cette fenêtre ou une autre) : identifiants définitifs repris.
+    this.desabonnerEnvoi = app.abonner('hors-ligne-envoye', (e) => this.#surEnvoiHorsLigne(e));
+    if (!app.apiPerdue) prechargerDefinitions(this.types);
     // Création depuis les listes : /document/nouveau?type=<code> ; depuis un marché : &marche=<id> (rattachement).
     if (id === 'nouveau') {
       await this.nouveau(this.requete.type ?? 'V_DEVIS');
@@ -303,7 +324,12 @@ export class PageDocument extends PageBase {
   async chargerDocument(id) {
     await this.liberer();
     this.importEnCours = null;
-    const complet = await api.document(id);
+    // Saisie enregistrée sur ce poste (hors ligne) et pas encore envoyée : rouverte telle quelle.
+    this.attente = await lireAttente(this.app.utilisateur(), id).catch(() => null);
+    if (!this.attente && id < 0) throw new Error('Document créé hors ligne introuvable sur ce poste : il a peut-être déjà été envoyé');
+    const complet = this.attente?.saisie ?? await api.document(id);
+    // Version du serveur au début de la saisie : base de la fusion si le document change entre-temps (lot 4).
+    this.depart = this.attente ? null : complet;
     const type = this.types.find((t) => t.tyd_id === complet.document.ent_tyd_id);
     const definition = await api.definition(type.tyd_code);
     await this.charger(definition, complet);
@@ -326,15 +352,25 @@ export class PageDocument extends PageBase {
    * reprend son propre verrou sans avertissement.
    */
   async prendreVerrou() {
-    if (!this.editeur || !this.#modifiable()) { this.#etatVerrou(null); return; }
+    // Document créé hors ligne (pas encore sur le serveur) : rien à verrouiller.
+    if (!this.editeur || !this.#modifiable() || this.editeur.saisie.document.ent_id < 0) { this.#etatVerrou(null); return; }
     this.jeton ??= crypto.randomUUID();
     const id = this.editeur.saisie.document.ent_id;
-    const r = await api.verrouillerDocument(id, this.jeton);
-    this.verrouDetenu = r.ok ? id : null;
-    this.#etatVerrou(r.ok ? null : r.verrou);
     clearInterval(this.battement);
+    // Serveur injoignable : saisie permise (enregistrée sur ce poste), verrou repris au retour de l'API.
+    let r;
+    try {
+      r = await api.verrouillerDocument(id, this.jeton);
+    } catch (e) {
+      if (!estHorsLigne(e)) throw e;
+      r = null;
+    }
+    this.verrouAReprendre = r === null;
+    this.verrouDetenu = r?.ok ? id : null;
+    this.#etatVerrou(r && !r.ok ? r.verrou : null);
     // Battement : dernière activité (information pour l'administrateur) ; détecte un déverrouillage forcé.
     this.battement = setInterval(() => {
+      if (this.verrouAReprendre && !this.app.apiPerdue) { this.prendreVerrou().catch(() => {}); return; }
       if (!this.verrouDetenu) return;
       api.verrouillerDocument(this.verrouDetenu, this.jeton).then((x) => {
         if (!x.ok) { this.verrouDetenu = null; this.#etatVerrou(x.verrou); this.app.message(`Document repris en modification par ${x.verrou?.utilisateur}`, 'erreur'); }
@@ -353,8 +389,10 @@ export class PageDocument extends PageBase {
     zone.hidden = !verrou;
     if (verrou) {
       const h = (d) => new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      // Plus de battement depuis deux minutes : fenêtre fermée ou poste hors ligne (sa saisie sera envoyée à son retour).
+      const inactif = Date.now() - Date.parse(verrou.vu) > 120000;
       zone.innerHTML = `🔒 Document ouvert en modification par <b>${echapper(verrou.utilisateur)}</b> depuis le ${h(verrou.depuis)}
-        <span class="aide">(dernière activité ${h(verrou.vu)}) : lecture seule.</span>
+        <span class="aide">(${inactif ? `aucune activité depuis le ${h(verrou.vu)} : poste hors ligne ou fenêtre fermée` : `dernière activité ${h(verrou.vu)}`}) : lecture seule.</span>
         <button type="button" data-verrou="reessayer">Réessayer</button>
         ${this.app.estAdmin() ? '<button type="button" data-verrou="forcer" class="danger" title="Fenêtre fermée, connexion perdue… : le verrou n’expire pas tout seul">Déverrouiller</button>' : ''}`;
       zone.querySelector('[data-verrou="reessayer"]').addEventListener('click', () => this.prendreVerrou().catch((e) => this.app.erreur(e)));
@@ -540,6 +578,7 @@ export class PageDocument extends PageBase {
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
     this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
+    this.#rendreAttente();
     document.body.classList.toggle('lecture-seule', !modifiable);
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
     if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
@@ -552,9 +591,55 @@ export class PageDocument extends PageBase {
     this.app.majPage();
   }
 
+  /** Bandeau de la saisie enregistrée sur ce poste et pas encore envoyée (état, date, erreur). */
+  #rendreAttente() {
+    const zone = this.$('.document-attente');
+    const a = this.attente;
+    zone.hidden = !a;
+    if (!a) return;
+    const le = new Date(a.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    zone.classList.toggle('probleme', a.etat !== 'ATTENTE');
+    zone.innerHTML = a.etat === 'CONFLIT'
+      ? `⚠ <b>${ETATS_ATTENTE.CONFLIT}</b> : le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications
+        (enregistrées sur ce poste le ${le}) sont conservées ; la fusion des deux versions viendra au lot 4.`
+      : a.etat === 'ERREUR'
+        ? `⚠ <b>${ETATS_ATTENTE.ERREUR}</b> : ${echapper(a.erreur ?? '')}. Corrigez puis enregistrez de nouveau (saisie du ${le} gardée sur ce poste).`
+        : `⏳ Enregistré sur ce poste le ${le}${a.id ? '' : ' (document créé hors ligne)'} : envoi au serveur dès son retour.`;
+  }
+
+  /** Document créé hors ligne : brouillon local à identifiant provisoire négatif, créé sur le serveur à l'envoi. */
+  async #nouveauHorsLigne(type) {
+    let definition;
+    try {
+      definition = await api.definition(type.tyd_code);
+    } catch (e) {
+      if (estHorsLigne(e)) throw new Error(`Hors ligne : aucun ${type.tyd_libelle.toLowerCase()} n'a été ouvert sur ce poste, création impossible avant le retour du serveur`);
+      throw e;
+    }
+    const brouillon = definition.statuts?.find((s) => s.std_code === 'BROUILLON') ?? definition.statuts?.[0];
+    const params = { ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` };
+    const id = -Date.now();
+    const document = {
+      ent_id: id, ent_tyd_id: type.tyd_id, ent_numero: null, ent_std_id: brouillon?.std_id ?? 1, ent_version: 1, ent_indice: null,
+      ent_tiers_id: null, ent_objet: params.ent_objet, ent_date: new Date().toISOString().slice(0, 10), ent_precision_montant: 2,
+      ent_num_format: { separateur: '.', niveaux: [{ style: '1' }] }, ent_modele: null, ent_bib_id: null, ent_intervenants: [], ent_proprietes: {},
+    };
+    this.attente = null;
+    this.depart = null;
+    await this.charger(definition, { document, lignes: [] });
+    await ecrireAttente({ ...this.#entreeAttente(), creation: { params, initial: document } });
+    this.attente = await lireAttente(this.app.utilisateur(), id);
+    this.app.routeur.remplacerUrl(`/document/${id}`);
+    this.disposition.onglet('entete');
+    this.rafraichir();
+    this.app.publier(SUJET_ATTENTE, {});
+    this.app.message(`${type.tyd_libelle} créé hors ligne : numéroté et enregistré sur le serveur à son retour`, 'avertissement');
+  }
+
   async nouveau(code) {
     const type = this.types.find((t) => t.tyd_code === code);
     if (!type) throw new Error(`Type de document inconnu : ${code}`);
+    if (this.app.apiPerdue) { await this.#nouveauHorsLigne(type); return; }
     // Tiers choisi ensuite dans l'annuaire du document (obligatoire à la validation).
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
     this.app.routeur.remplacerUrl(`/document/${cree.document.ent_id}`);
@@ -577,36 +662,39 @@ export class PageDocument extends PageBase {
       document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables, ventilations: r.ventilations ?? [],
       ventilations_lignes: r.ventilations_lignes ?? [], version_moteur_client: VERSION_MOTEUR,
     };
+    const compte = this.app.utilisateur();
+    const id = ed.saisie.document.ent_id;
+    // Serveur injoignable, ou document créé hors ligne : enregistré sur ce poste, puis envoyé s'il répond (la page
+    // reprend la réponse par le sujet hors-ligne-envoye).
+    if (this.app.apiPerdue || id < 0) {
+      await this.#enregistrerSurPoste(envoi);
+      if (!this.app.apiPerdue) {
+        await envoyerDocument(this.app, compte, id).catch(async (e) => {
+          if (estHorsLigne(e)) return;
+          this.attente = await marquerAttente(compte, id, { etat: 'ERREUR', erreur: e.message });
+          this.rafraichir();
+          throw e;
+        });
+      }
+      return;
+    }
     const saisieEnvoyee = structuredClone(ed.entree(ed.saisie));
-    const rep = await api.enregistrer(ed.saisie.document.ent_id, envoi);
-    const map = (table, id) => (id === null || id === undefined ? id : table[id] ?? id);
-    // Correspondances des compléments du module Métré, par table (réponse générique du module Document).
-    const cl = rep.correspondance_lignes;
-    const { metres: cm = {}, variables: cv = {}, ventilations: cf = {} } = rep.correspondances ?? {};
-    ed.magasin.appliquerServeur((d) => {
-      d.document = rep.document.document;
-      for (const l of d.lignes) {
-        l.lig_id = map(cl, l.lig_id);
-        l.lig_parent_id = map(cl, l.lig_parent_id);
-        l.lig_st_depuis_id = map(cl, l.lig_st_depuis_id);
-        l.lig_variante_de_id = map(cl, l.lig_variante_de_id);
-        l.lig_pied_base_id = map(cl, l.lig_pied_base_id);
-        l.lig_mtr_id = map(cm, l.lig_mtr_id);
-        l.lig_ent_id = d.document.ent_id;
-      }
-      for (const m of d.metres) { m.mtr_id = map(cm, m.mtr_id); m.mtr_lig_id = map(cl, m.mtr_lig_id); }
-      for (const v of d.variables) { v.var_id = map(cv, v.var_id); v.var_lig_id = map(cl, v.var_lig_id); v.var_mtr_id = map(cm, v.var_mtr_id); }
-      for (const k of d.ventilations ?? []) {
-        k.vfr_id = map(cf, k.vfr_id);
-        k.vfr_source_lig_id = map(cl, k.vfr_source_lig_id);
-        k.vfr_lig_id = map(cl, k.vfr_lig_id);
-        k.vfr_ent_id = d.document.ent_id;
-      }
-    });
-    if (this.selection !== null) this.selection = map(cl, this.selection);
-    ed.grille.courant = map(cl, ed.grille.courant);
-    ed.grille.selection = ed.grille.selection.map((id) => map(cl, id));
-    this.ecarts = rep.ecarts.length ? rep.ecarts : null;
+    let rep;
+    try {
+      rep = await api.enregistrer(id, envoi);
+    } catch (e) {
+      if (estHorsLigne(e)) { await this.#enregistrerSurPoste(envoi); return; }
+      // Saisie hors ligne refusée (version du serveur changée) : gardée sur ce poste pour la fusion (lot 4).
+      if (this.attente && e.statut === 409) { this.attente = await marquerAttente(compte, id, { etat: 'CONFLIT', erreur: e.message }); this.rafraichir(); }
+      throw e;
+    }
+    // Saisie hors ligne de ce document : remplacée par cet enregistrement.
+    if (this.attente) {
+      await retirerAttente(compte, id).catch(() => {});
+      this.attente = null;
+      this.app.publier(SUJET_ATTENTE, {});
+    }
+    this.#appliquerReponse(rep, false);
     this.dernierEnvoi = { entree: saisieEnvoyee, client: envoi, serveur: rep.document };
     this.marque = ed.magasin.pile.at(-1);
     this.rafraichir();
@@ -614,6 +702,59 @@ export class PageDocument extends PageBase {
     this.app.publier('enregistre', { type: rep.document.document.ent_tyd_id, ids: [rep.document.document.ent_id] });
     this.app.message(rep.ecarts.length ? `Enregistré avec ${rep.ecarts.length} écart(s) de calcul à arbitrer` : `Enregistré (version ${rep.document.document.ent_version})`,
       rep.ecarts.length ? 'avertissement' : 'succes');
+  }
+
+  /** Réponse de l'enregistrement appliquée à l'éditeur ; `identiteSeule` : l'entête saisi depuis l'envoi est gardé. */
+  #appliquerReponse(rep, identiteSeule) {
+    const ed = this.editeur;
+    let map = (x) => x;
+    ed.magasin.appliquerServeur((d) => { map = appliquerReponse(d, rep, { identiteSeule }); });
+    if (this.selection !== null) this.selection = map(this.selection);
+    ed.grille.courant = map(ed.grille.courant);
+    ed.grille.selection = ed.grille.selection.map(map);
+    this.ecarts = rep.ecarts?.length ? rep.ecarts : null;
+  }
+
+  /** Entrée de la file hors ligne pour la saisie en cours (dernier résultat du moteur et contenu de l'éditeur). */
+  #entreeAttente(envoi) {
+    const ed = this.editeur;
+    const doc = ed.saisie.document;
+    const r = ed.resultat;
+    return {
+      compte: this.app.utilisateur(), id_local: doc.ent_id, id: doc.ent_id > 0 ? doc.ent_id : null,
+      envoi: envoi ?? {
+        document: r.document, lignes: r.lignes, metres: r.metres, variables: r.variables, ventilations: r.ventilations ?? [],
+        ventilations_lignes: r.ventilations_lignes ?? [], version_moteur_client: VERSION_MOTEUR,
+      },
+      saisie: structuredClone(ed.saisie), depart: this.depart ?? null, type_code: ed.definition.type?.tyd_code ?? null,
+      libelle: `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? '(créé hors ligne)'}`, etat: 'ATTENTE',
+    };
+  }
+
+  /** Enregistrement sur ce poste (serveur injoignable) : la saisie part dès le retour de l'API. */
+  async #enregistrerSurPoste(envoi) {
+    this.attente = await ecrireAttente(this.#entreeAttente(envoi));
+    this.marque = this.editeur.magasin.pile.at(-1);
+    this.rafraichir();
+    this.app.publier(SUJET_ATTENTE, {});
+    if (this.app.apiPerdue) this.app.message('Serveur injoignable : enregistré sur ce poste, envoyé dès son retour', 'avertissement');
+  }
+
+  /** Saisie hors ligne envoyée (cette fenêtre ou une autre) : identifiants définitifs, numéro, verrou repris. */
+  #surEnvoiHorsLigne({ compte, id_local: idLocal, id, rep }) {
+    const ed = this.editeur;
+    if (!ed || compte !== this.app.utilisateur() || ed.saisie.document.ent_id !== idLocal) return;
+    // Saisie continuée depuis l'envoi : elle reste à enregistrer, seule l'identité de l'entête est reprise.
+    const modifiee = this.modifiee;
+    this.#appliquerReponse(rep, modifiee);
+    if (!modifiee) this.marque = ed.magasin.pile.at(-1);
+    this.attente = null;
+    this.depart = null;
+    if (idLocal !== id) this.app.routeur.remplacerUrl(`/document/${id}`);
+    this.rafraichir();
+    this.prendreVerrou().catch(() => {});
+    this.app.publier('enregistre', { type: ed.definition.type?.tyd_code, ids: [id], cree: idLocal !== id });
+    this.app.message(`${ed.definition.type?.tyd_libelle ?? 'Document'} ${rep.document.document.ent_numero ?? ''} envoyé au serveur (saisie hors ligne)`, 'succes');
   }
 
   async arbitrer(decision, commentaire) {
@@ -1015,6 +1156,7 @@ export class PageDocument extends PageBase {
 
   fermer() {
     fermerAideMemoire();
+    this.desabonnerEnvoi?.();
     this.suivi?.fermer();
     this.liberer();
     document.removeEventListener('keydown', this.clavier);
