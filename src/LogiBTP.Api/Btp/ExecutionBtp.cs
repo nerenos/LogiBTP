@@ -1,5 +1,7 @@
 using System.Text.Json;
 using LogiBTP.Crm.Web;
+using LogiBTP.Crm;
+using LogiBTP.Execution;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -20,8 +22,6 @@ public sealed record ExecutionSaisie(string? Etat, int? MotifId, string? Comment
 /// </summary>
 public static class ExecutionBtp
 {
-    public static readonly string[] Etats = ["A_FAIRE", "EN_ATTENTE", "EN_COURS", "BLOQUE", "TERMINE"];
-
     private static NpgsqlParameter P(string nom, object? valeur, NpgsqlDbType type) => new(nom, type) { Value = valeur ?? DBNull.Value };
 
     private sealed record LigneOrdre(long EntId, long GroupeId, string TydCode, string Famille, string StdCode, int? ChantierId, string? Numero, string? Objet,
@@ -96,12 +96,12 @@ public static class ExecutionBtp
         var o = await OrdreAsync(db, id, ct);
         if (o.Famille != "E") throw ExceptionMetier.Invalide("EXE_FAMILLE", "Ce document n'est pas un ordre d'exécution");
         if (o.StdCode is "ANNULE" or "REMPLACE") throw ExceptionMetier.Conflit("EXE_CLOS", "Ordre annulé ou remplacé : exécution non modifiable");
-        var etat = s.Etat ?? o.EntExeEtat ?? "A_FAIRE";
-        if (!Etats.Contains(etat)) throw ExceptionMetier.Invalide("EXE_ETAT", $"État inconnu : {etat}");
-        if (etat == "BLOQUE" && s.MotifId is null) throw ExceptionMetier.Invalide("EXE_MOTIF", "Motif obligatoire pour bloquer un ordre");
+        var etat = s.Etat ?? o.EntExeEtat ?? EtatOrdre.AFaire;
+        if (!ReglesEtats.EtatsOrdre.Contains(etat)) throw ExceptionMetier.Invalide("EXE_ETAT", $"État inconnu : {etat}");
+        if (etat == EtatOrdre.Bloque && s.MotifId is null) throw ExceptionMetier.Invalide("EXE_MOTIF", "Motif obligatoire pour bloquer un ordre");
         if (s.DebutPrevu is { } d && s.FinPrevue is { } f && f < d) throw ExceptionMetier.Invalide("EXE_DATES", "Fin prévue avant le début");
-        var motif = etat == "BLOQUE" ? s.MotifId : null;
-        var bloque = etat == "BLOQUE" && (o.EntExeEtat != "BLOQUE" || o.EntExeMotifId != motif);
+        var motif = etat == EtatOrdre.Bloque ? s.MotifId : null;
+        var bloque = etat == EtatOrdre.Bloque && (o.EntExeEtat != EtatOrdre.Bloque || o.EntExeMotifId != motif);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlRawAsync("""
             UPDATE document SET ent_exe_etat = @e, ent_exe_motif_id = @m, ent_exe_commentaire = @c, ent_srv_id = @s, ent_responsable_id = @r,
@@ -118,7 +118,7 @@ public static class ExecutionBtp
             """,
             [
                 new NpgsqlParameter("id", id), new NpgsqlParameter("e", etat), P("m", motif, NpgsqlDbType.Integer), P("c", s.Commentaire, NpgsqlDbType.Text),
-                P("det", etat != (o.EntExeEtat ?? "A_FAIRE") ? $"{o.EntExeEtat ?? "A_FAIRE"} → {etat}" : "affectation, dates ou commentaire", NpgsqlDbType.Varchar),
+                P("det", etat != (o.EntExeEtat ?? EtatOrdre.AFaire) ? $"{o.EntExeEtat ?? EtatOrdre.AFaire} → {etat}" : "affectation, dates ou commentaire", NpgsqlDbType.Varchar),
                 new NpgsqlParameter("u", u.Code),
             ], ct);
         await tx.CommitAsync(ct);
@@ -134,7 +134,7 @@ public static class ExecutionBtp
                 // Le blocage est enregistré : une tâche impossible à créer est signalée au journal sans annuler le blocage.
                 try
                 {
-                    await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+                    await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                         $"Ordre {o.Numero ?? o.EntId.ToString()} bloqué : {libelle}", s.Commentaire is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(s.Commentaire)}</p>",
                         null, DateTimeOffset.UtcNow.AddDays(3), null, false, false, false, liens, null), u, ct);
                 }

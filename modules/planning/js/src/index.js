@@ -6,3 +6,4 @@ export { plagesVisibles, creerAxe } from './axe.js';
 export { calculerTache, retirerAbsences, MESSAGES_CALCUL } from './calcul.js';
 export { calculerCharge } from './charge.js';
 export { debutMinimum, controlerDependances, ordreTopologique, propagerDependances, MESSAGES_DEPENDANCES } from './dependances.js';
+export * from './codes.js';

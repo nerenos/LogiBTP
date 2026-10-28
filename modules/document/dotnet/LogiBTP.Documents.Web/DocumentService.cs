@@ -60,7 +60,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public static readonly string[] ActionsDocument = ["CONSULTER", "CREER", "MODIFIER", "VALIDER", "TRANSFORMER", "SUPPRIMER", "APPROUVER", "DEVALIDER", "FORCER"];
 
     /// <summary>Nœud du type dans l'arbre des droits (module Droits) : documents/{famille}/{code}.</summary>
-    public static string NoeudDroits(TypeDocument t) => $"documents/{t.TydFamille}/{t.TydCode}";
+    public static string NoeudDroits(TypeDocument t) => FamillesDocument.NoeudDroits(t.TydFamille, t.TydCode);
 
     /// <summary>
     /// Droit d'une action sur un type : par le module Droits s'il est branché (IDroits, alias des noms historiques), sinon

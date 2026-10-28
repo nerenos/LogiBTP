@@ -1,3 +1,4 @@
+import { NATURE_NOTE, ETAT_NOTE } from '@logibtp/crm';
 import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { contexteCrm, nouvelleSaisie, iconeNature, pastilleEtat, echeanceNote, estCourriel, noteDepuisCourriel, estClose } from './crm.js';
@@ -50,7 +51,7 @@ export class PanneauSuivi {
     await this.charger();
   }
 
-  urlNouvelle(nature = 'ACTION') {
+  urlNouvelle(nature = NATURE_NOTE.ACTION) {
     return `/crm/note/nouveau?type_element=${this.element.type}&id_element=${encodeURIComponent(this.element.id)}&nature=${nature}`;
   }
 
@@ -83,7 +84,7 @@ export class PanneauSuivi {
   /** Note rapide : pour mémo, ou tâche pour l'utilisateur (son individu, sinon son service principal) échéance demain 9 h. */
   async noteRapide(objet, tache) {
     try {
-      const s = nouvelleSaisie({ nature: tache ? 'TACHE' : 'ACTION', etat: tache ? 'A_FAIRE' : 'MEMO', element: this.element });
+      const s = nouvelleSaisie({ nature: tache ? NATURE_NOTE.TACHE : NATURE_NOTE.ACTION, etat: tache ? ETAT_NOTE.A_FAIRE : ETAT_NOTE.MEMO, element: this.element });
       s.objet = objet;
       if (tache) {
         const ctx = await contexteCrm(this.app);

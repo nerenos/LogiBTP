@@ -1,7 +1,7 @@
 import { ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
-import { ecrireDuree, lireDuree } from '@logibtp/pointage';
+import { ecrireDuree, lireDuree, ERREUR_POINTAGE } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
@@ -237,7 +237,7 @@ export class PageBorne extends PageBase {
 
   async #erreur(e) {
     await alerter(e.message);
-    if (e.code === 'BORNE_JETON') this.#accueil('Identification expirée : identifiez-vous pour reprendre la saisie.');
+    if (e.code === ERREUR_POINTAGE.BORNE_JETON) this.#accueil('Identification expirée : identifiez-vous pour reprendre la saisie.');
   }
 
   #totalJour() { return this.etat.lignes.reduce((s, l) => s + (l.minutes > 0 ? l.minutes : 0), 0); }

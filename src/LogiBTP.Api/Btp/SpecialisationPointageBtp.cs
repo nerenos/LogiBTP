@@ -1,6 +1,7 @@
 using LogiBTP.Annuaire.Web;
 using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
+using LogiBTP.Crm;
 using LogiBTP.Planning.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
@@ -78,7 +79,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             {
                 try
                 {
-                    await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+                    await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                         $"Congé demandé : {salarie.Nom} {salarie.Prenom} du {c.PcoDu:dd/MM/yyyy}{(c.PcoDebutMidi ? " après-midi" : "")} au {c.PcoAu:dd/MM/yyyy}{(c.PcoFinMidi ? " midi" : "")}",
                         c.PcoCommentaire is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoCommentaire)}</p>",
                         null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);
@@ -372,7 +373,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         }
         try
         {
-            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                 $"Non-conformité signalée par {salarie.Prenom} {salarie.Nom} : {motif}", null, null, DateTimeOffset.UtcNow.AddDays(1), null, false, false, false, liens, null), auteur, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -390,7 +391,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         if (srv is not int service) return;
         try
         {
-            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, service,
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                 $"Pointages de {salarie.Nom} {salarie.Prenom} : correction demandée (semaine du {c.PcoLundi:dd/MM/yyyy})",
                 c.PcoMotif is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoMotif)}</p>",
                 null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);

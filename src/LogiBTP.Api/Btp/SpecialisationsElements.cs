@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using LogiBTP.Annuaire;
 using LogiBTP.Annuaire.Web;
+using LogiBTP.Documents;
 using LogiBTP.Fiches;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -193,7 +194,7 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
         var refuses = new List<string>();
         foreach (var t in types)
         {
-            var noeud = t.Famille is null ? $"fiches/{t.Code}" : $"documents/{t.Famille}/{t.Code}";
+            var noeud = t.Famille is null ? $"fiches/{t.Code}" : FamillesDocument.NoeudDroits(t.Famille, t.Code);
             if (!await droits.AutoriseAsync(u, noeud, "CONSULTER", ct)) refuses.Add(t.Code);
         }
         var masquees = new HashSet<string>(StringComparer.Ordinal);
@@ -213,7 +214,7 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
         var verrou = await scope.ServiceProvider.GetRequiredService<ServiceFiche>().Verrou(type, id, null, ct);
         if (verrou is not null)
         {
-            throw ExceptionMetier.Conflit("FICHE_EN_MODIFICATION", $"Fiche en cours de modification par {verrou.Utilisateur} : saisie impossible pour l'instant", verrou);
+            throw ExceptionMetier.Conflit(ErreursFiche.FicheEnModification, $"Fiche en cours de modification par {verrou.Utilisateur} : saisie impossible pour l'instant", verrou);
         }
     }
 }

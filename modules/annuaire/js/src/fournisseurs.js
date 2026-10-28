@@ -1,3 +1,4 @@
+import { ERREUR_ANNUAIRE } from './codes.js';
 import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES } from './coordonnees.js';
 import { compacter } from './identifiants.js';
 import { construireGraphe } from './graphe.js';
@@ -258,8 +259,8 @@ export class FournisseurAnnuaireMemoire {
     const s = texte(siret) ? compacter(siret) : null;
     if (s && !siretValide(s)) throw erreur('siret', 'SIRET', 'SIRET invalide (14 chiffres, clé de contrôle)');
     const d = await this.doublons({ raison_sociale: raison, siret: s });
-    if (d.siret) throw new ErreurAnnuaire(409, 'DOUBLON_SIRET', `SIRET déjà enregistré : ${d.siret.raison_sociale} (${d.siret.code})`, { personne: d.siret });
-    if (!confirme && d.noms.length) throw new ErreurAnnuaire(409, 'DOUBLON_NOM', 'Des tiers de nom proche existent déjà : vérifiez avant de créer', { personnes: d.noms });
+    if (d.siret) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_SIRET, `SIRET déjà enregistré : ${d.siret.raison_sociale} (${d.siret.code})`, { personne: d.siret });
+    if (!confirme && d.noms.length) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_NOM, 'Des tiers de nom proche existent déjà : vérifiez avant de créer', { personnes: d.noms });
     const niv = texte(niveau) ?? 'SOCIETE';
     if (!this.refs.niveaux.some((n) => n.code === niv)) throw erreur('niveau', 'NIVEAU', `Niveau ${niv} inconnu`);
     const id = this.#id(this.personnes);

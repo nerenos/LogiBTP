@@ -463,7 +463,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
                      != Empreinte(d, s.Pointages.Where(p => p.Date == d).Select(p => (p.Id, p.ChaId ?? 0, p.EntId, p.TypeMo ?? 0, p.SousType, p.Minutes, string.IsNullOrWhiteSpace(p.Motif) ? null : p.Motif.Trim()))))
             .ToList();
         if (bloques.Count > 0)
-            throw ExceptionMetier.Conflit("POI_VALIDE", "Jours déjà validés : envoyer une demande de correction au service RH", new { dates = bloques });
+            throw ExceptionMetier.Conflit(ErreursPointage.PoiValide, "Jours déjà validés : envoyer une demande de correction au service RH", new { dates = bloques });
         var gardes = s.Pointages.Where(p => p.Id is not null).Select(p => p.Id!.Value).ToHashSet();
         if (gardes.Any(id => existants.All(e => e.PoiId != id))) throw ExceptionMetier.Conflit("POI_MODIFIE", "Pointage introuvable dans la semaine : relire la semaine");
         db.Pointages.RemoveRange(existants.Where(e => !gardes.Contains(e.PoiId)));

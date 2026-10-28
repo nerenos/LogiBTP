@@ -1,3 +1,4 @@
+import { FAMILLE_DOCUMENT } from '@logibtp/document';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { parcourirEnLargeur } from '@logibtp/graphe';
 import { VueGraphe, tronquer } from '@logibtp/graphe/ui';
@@ -108,7 +109,7 @@ export class VueGrapheStructure extends VueGraphe {
   corpsNoeud(n, g) {
     if (n.type !== 'document') return super.corpsNoeud(n, g);
     const { x, y, w, h, bord } = g;
-    const couleur = n.famille === 'A' ? '#2f6fd1' : n.famille === 'T' ? '#7c3aed' : '#2e9d5b';
+    const couleur = n.famille === FAMILLE_DOCUMENT.ACHAT ? '#2f6fd1' : n.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? '#7c3aed' : '#2e9d5b';
     return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="var(--fond)" ${bord}/>
       <rect x="${x}" y="${y}" width="5" height="${h}" rx="2" fill="${couleur}"/>
       <text x="${x + 12}" y="${y + 14}" font-size="11" font-weight="600" fill="var(--texte)">${echapper(tronquer(n.libelle, 22))}</text>

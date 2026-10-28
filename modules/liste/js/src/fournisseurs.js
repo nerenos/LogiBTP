@@ -1,3 +1,4 @@
+import { ERREUR_LISTE } from './codes.js';
 import { normaliserDefinition } from './modele.js';
 import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs } from './requete.js';
 
@@ -173,7 +174,7 @@ export class FournisseurMemoire {
   }
 
   async colonnesRequete() {
-    throw new ErreurFournisseur(501, 'HORS_LIGNE', 'Requête manuelle indisponible hors ligne');
+    throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, 'Requête manuelle indisponible hors ligne');
   }
 
   async #definition(d) {
@@ -185,7 +186,7 @@ export class FournisseurMemoire {
   /** Lignes de la source au format du serveur : colonnes de la vue + _id, _type, _h. */
   async #lignesSource(d) {
     const def = await this.#definition(d);
-    if (def.source.mode !== 'vue') throw new ErreurFournisseur(501, 'HORS_LIGNE', 'Requête manuelle indisponible hors ligne');
+    if (def.source.mode !== 'vue') throw new ErreurFournisseur(501, ERREUR_LISTE.REQUETE_HORS_LIGNE, 'Requête manuelle indisponible hors ligne');
     const s = this.sourcesDonnees[def.source.vue];
     if (!s) throw new ErreurFournisseur(404, 'SOURCE', `Source ${def.source.vue} introuvable`);
     const connues = new Set(s.colonnes.map((c) => c.code));
@@ -256,7 +257,7 @@ export class FournisseurMemoire {
     if (!brute) throw new ErreurFournisseur(404, 'INTROUVABLE', `Ligne ${id} introuvable`);
     const actuelle = async () => (await this.#lignesSource({ definition: def })).lignes.find((l) => String(l._id) === String(id));
     const avant = await actuelle();
-    if (h && avant._h !== h) throw new ErreurFournisseur(409, 'LIGNE_MODIFIEE', 'La ligne a été modifiée par ailleurs : valeurs actualisées', structuredClone(avant));
+    if (h && avant._h !== h) throw new ErreurFournisseur(409, ERREUR_LISTE.LIGNE_MODIFIEE, 'La ligne a été modifiée par ailleurs : valeurs actualisées', structuredClone(avant));
     for (const [code, v] of Object.entries(valeurs)) {
       const type = s.colonnes.find((c) => c.code === code).type ?? '';
       if (v === null || v === undefined || v === '') brute[code] = null;

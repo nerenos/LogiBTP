@@ -3,8 +3,9 @@
 // nature ou refuse. Règles répliquées dans ReglesConges.cs (jeu tests/cas/04_conges.json) : contrôle d'une demande
 // (dates, demi-journées, chevauchement à la demi-journée avec les demandes et congés en cours du salarié), jours
 // décomptés (jours travaillés seulement, 0,5 aux bornes en demi-journée), traitements permis.
+import { ETAT_CONGE } from './codes.js';
 
-export const ETATS_CONGE = { DEMANDE: 'Demandé', VALIDE: 'Validé', REFUSE: 'Refusé', ANNULE: 'Annulé' };
+export const ETATS_CONGE = { [ETAT_CONGE.DEMANDE]: 'Demandé', [ETAT_CONGE.VALIDE]: 'Validé', [ETAT_CONGE.REFUSE]: 'Refusé', [ETAT_CONGE.ANNULE]: 'Annulé' };
 
 export const MESSAGES_CONGES = {
   CNG_DATES: 'Dates du congé : début et fin obligatoires, la fin après le début',
@@ -22,7 +23,7 @@ function demiJournees(c) {
 }
 
 /** Congé en cours (compte dans les chevauchements) : demandé ou validé. */
-export const enCours = (c) => c.etat === 'DEMANDE' || c.etat === 'VALIDE';
+export const enCours = (c) => c.etat === ETAT_CONGE.DEMANDE || c.etat === ETAT_CONGE.VALIDE;
 
 /**
  * Contrôle d'une demande : codes triés. `autres` : congés du salarié (le congé contrôlé exclu par son identifiant) ;

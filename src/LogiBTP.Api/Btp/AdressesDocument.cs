@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -145,7 +146,7 @@ public static class AdressesDocument
     /// <summary>Ventes : payeur et adresse des travaux vidés s'ils sont identiques au client (enregistrement, validation).</summary>
     public static void ViderIdentiques(DocumentBtp d, string famille)
     {
-        if (famille != "V") return;
+        if (famille != FamillesDocument.Vente) return;
         if (PayeurIdentiqueAuClient(d.EntContactPayeur, d.EntContactClient)) d.EntContactPayeur = null;
         if (AdresseIdentiqueAuClient(d.EntAdresseLivraison, d.EntContactClient)) d.EntAdresseLivraison = null;
     }

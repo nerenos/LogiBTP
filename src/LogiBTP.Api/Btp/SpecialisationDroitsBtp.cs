@@ -1,3 +1,4 @@
+using LogiBTP.Documents;
 using LogiBTP.Droits.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -35,8 +36,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         };
         foreach (var f in types.Select(t => t.Famille).Distinct())
         {
-            n.Add(new($"documents/{f}", Familles.GetValueOrDefault(f, f), Cycle));
-            n.AddRange(types.Where(t => t.Famille == f).Select(t => new NoeudCatalogue($"documents/{f}/{t.Code}", t.Libelle, Cycle)));
+            n.Add(new(FamillesDocument.NoeudDroits(f), Familles.GetValueOrDefault(f, f), Cycle));
+            n.AddRange(types.Where(t => t.Famille == f).Select(t => new NoeudCatalogue(FamillesDocument.NoeudDroits(f, t.Code), t.Libelle, Cycle)));
         }
         n.Add(new("fiches", "Fiches", Fiche, Icone: "🗂", Aide: "Salariés, matériels, tiers, structure des affaires, éléments de bibliothèque"));
         n.AddRange(fiches.Select(f => new NoeudCatalogue($"fiches/{f.Code}", f.Libelle, Fiche)));

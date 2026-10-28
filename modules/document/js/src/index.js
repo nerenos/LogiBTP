@@ -7,3 +7,4 @@ export { unitesOptionnelles } from './options.js';
 export { calculerEcheances, dateEcheance, montantRetenue, MODES_REGLEMENT } from './echeances.js';
 export { regle, FAMILLES_REGLE, estFamilleAchat } from './regles-type.js';
 export * from './types.js';
+export * from './codes.js';

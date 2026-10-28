@@ -1,8 +1,9 @@
+import { NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
-const NIVEAUX = { URGENT: '🔴', ATTENTION: '🟠', INFO: '🔵' };
+const NIVEAUX = { [NIVEAU_NOTIFICATION.URGENT]: '🔴', [NIVEAU_NOTIFICATION.ATTENTION]: '🟠', [NIVEAU_NOTIFICATION.INFO]: '🔵' };
 const MODULES = { crm: 'Suivi (CRM)', ressources: 'Ressources', planning: 'Planning', execution: 'Exécution', pointage: 'Pointage', mail: 'Messagerie', oauth: 'Connexions externes' };
 
 /**

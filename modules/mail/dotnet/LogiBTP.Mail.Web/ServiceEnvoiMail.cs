@@ -146,7 +146,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         var estimation = await EstimerAsync(c, aEnvoyer, ct);
         if (!automatique && estimation.ConfirmationRequise && !d.ConfirmationMassive)
         {
-            throw ExceptionMetier.Conflit("MAIL_CONFIRMATION", estimation.Avertissement ?? $"Envoi à {total} destinataires : confirmer", estimation);
+            throw ExceptionMetier.Conflit(ErreursMail.MailConfirmation, estimation.Avertissement ?? $"Envoi à {total} destinataires : confirmer", estimation);
         }
         var identite = comptes.Identite(c);
         LotEntite? lot = lotExistant is long l ? await db.Lots.FirstOrDefaultAsync(x => x.MloId == l, ct) : null;
@@ -228,7 +228,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         var n = await db.Messages.CountAsync(m => m.MmeCreePar == u.Code && m.MmeSens == "E" && m.MmeCreeLe > heure, ct);
         if (seuil <= 0 || n <= seuil) return;
         await SignalerAdministrateursAsync(new SignalMail("VOLUME", $"Envois inhabituels : {n} courriels en une heure par {u.Code}",
-            "Vérifier qu'il s'agit d'un usage normal de la messagerie de l'application.", "ATTENTION", "/mail?vue=envois", $"mail:volume:{u.Code}:{Maintenant:yyyyMMddHH}"), ct);
+            "Vérifier qu'il s'agit d'un usage normal de la messagerie de l'application.", NiveauNotification.Attention, "/mail?vue=envois", $"mail:volume:{u.Code}:{Maintenant:yyyyMMddHH}"), ct);
     }
 
     // --- Traitement de la file (tâche de fond) ---
@@ -336,7 +336,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
             await ApresEnvoiAsync(m, dest, eml, ct);
             if (attendait)
             {
-                await SignalerAsync(m.MmeCreePar, new SignalMail("PARTI", $"Courriel parti : {m.MmeObjet}", "Le courriel qui attendait dans la file est envoyé.", "INFO",
+                await SignalerAsync(m.MmeCreePar, new SignalMail("PARTI", $"Courriel parti : {m.MmeObjet}", "Le courriel qui attendait dans la file est envoyé.", NiveauNotification.Info,
                     $"/mail/message/{m.MmeId}", $"mail:parti:{m.MmeId}", m.MmeTypeElement, m.MmeIdElement), ct);
             }
             await QuotaAsync(c, limites, passes, amv.Destinataires, ct);
@@ -381,7 +381,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
                 Journaliser(c, m, amv, adresses, "ECHEC", e.Code, texte, 0, chrono);
                 await SignalerAdministrateursAsync(new SignalMail("COMPTE", "Messagerie : authentification refusée",
                     $"Le serveur refuse l'identifiant du compte {c.McoCode} : vérifier le mot de passe ou reconnecter la connexion OAuth. Les courriels attendent.",
-                    "URGENT", "/parametres/mail", $"mail:auth:{c.McoId}:{Maintenant:yyyyMMdd}"), ct);
+                    NiveauNotification.Urgent, "/parametres/mail", $"mail:auth:{c.McoId}:{Maintenant:yyyyMMdd}"), ct);
                 break;
             case GenreErreur.Blocage:
                 Reporter(m, Maintenant.AddHours(1), "hébergeur : limite ou blocage, envois groupés suspendus");
@@ -389,7 +389,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
                 Journaliser(c, m, amv, adresses, "ECHEC", e.Code, texte, 0, chrono);
                 await SignalerAdministrateursAsync(new SignalMail("BLOCAGE", "Messagerie : envois groupés suspendus",
                     $"L'hébergeur du compte {c.McoCode} refuse les envois (limite ou suspicion de spam) : {texte}. Examiner puis « Reprendre » dans le suivi des envois.",
-                    "URGENT", "/mail?vue=envois", $"mail:blocage:{c.McoId}:{Maintenant:yyyyMMddHH}"), ct);
+                    NiveauNotification.Urgent, "/mail?vue=envois", $"mail:blocage:{c.McoId}:{Maintenant:yyyyMMddHH}"), ct);
                 break;
             default:
                 await DefinitiveAsync(m, texte, ct);
@@ -405,7 +405,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         m.MmeErreur = texte;
         m.MmeAttente = null;
         await CompterLotAsync(m, false, ct);
-        await SignalerAsync(m.MmeCreePar, new SignalMail("ERREUR", $"Courriel non envoyé : {m.MmeObjet}", texte, "ATTENTION", $"/mail/message/{m.MmeId}",
+        await SignalerAsync(m.MmeCreePar, new SignalMail("ERREUR", $"Courriel non envoyé : {m.MmeObjet}", texte, NiveauNotification.Attention, $"/mail/message/{m.MmeId}",
             $"mail:erreur:{m.MmeId}", m.MmeTypeElement, m.MmeIdElement), ct);
     }
 
@@ -433,7 +433,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         if (lot.MloEnvoyes + lot.MloErreurs == lot.MloMessages)
         {
             await SignalerAsync(lot.MloAuteur, new SignalMail("LOT", $"Envoi groupé terminé : {lot.MloLibelle}",
-                $"{lot.MloEnvoyes} courriel(s) envoyé(s), {lot.MloErreurs} en erreur.", lot.MloErreurs > 0 ? "ATTENTION" : "INFO", $"/mail?vue=envoyes&lot={lot.MloId}",
+                $"{lot.MloEnvoyes} courriel(s) envoyé(s), {lot.MloErreurs} en erreur.", lot.MloErreurs > 0 ? NiveauNotification.Attention : NiveauNotification.Info, $"/mail?vue=envoyes&lot={lot.MloId}",
                 $"mail:lot:{lot.MloId}"), ct);
         }
     }
@@ -465,7 +465,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
         var alias = await db.Alias.AsNoTracking().Where(a => a.MalMcoId == c.McoId && a.MalPrincipal).Select(a => a.MalNom).FirstOrDefaultAsync(ct) ?? c.McoCode;
         await SignalerAdministrateursAsync(new SignalMail("QUOTA", $"Messagerie « {alias} » : {apres} % du quota journalier",
             $"Au-delà du quota ({l.DestinatairesParJour} destinataires par jour), les envois attendront le lendemain ; les envois prioritaires gardent une réserve.",
-            "ATTENTION", "/mail?vue=envois", $"mail:quota:{c.McoId}:{Maintenant:yyyyMMdd}"), ct);
+            NiveauNotification.Attention, "/mail?vue=envois", $"mail:quota:{c.McoId}:{Maintenant:yyyyMMdd}"), ct);
     }
 
     private async Task SignalerAsync(string utilisateur, SignalMail s, CancellationToken ct)

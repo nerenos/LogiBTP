@@ -1,3 +1,4 @@
+import { STATUT_DOCUMENT } from '@logibtp/document';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -27,7 +28,7 @@ export async function ouvrirImport(page, jeton) {
   const definition = await api.definition(format.type);
   const redacteurs = page.servicesAnnuaire ? await individusSociete(page.servicesAnnuaire) : [];
   const saisie = saisieDevisImporte(devis, { definition, natures: page.natures, redacteurs });
-  const brouillon = definition.statuts?.find((s) => s.std_code === 'BROUILLON') ?? definition.statuts?.[0];
+  const brouillon = definition.statuts?.find((s) => s.std_code === STATUT_DOCUMENT.BROUILLON) ?? definition.statuts?.[0];
   const document = {
     ent_id: 0, ent_tyd_id: type.tyd_id, ent_numero: null, ent_std_id: brouillon?.std_id ?? 1, ent_version: 1, ent_indice: null,
     ent_tiers_id: null, ent_precision_montant: 2, ent_modele: null, ent_bib_id: null, ent_intervenants: [],

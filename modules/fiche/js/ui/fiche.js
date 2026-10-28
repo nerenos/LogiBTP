@@ -1,3 +1,4 @@
+import { ERREUR_FICHE } from '../src/codes.js';
 import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
@@ -598,7 +599,7 @@ export class FicheBase {
       return true;
     } catch (e) {
       if (e.code === 'VALIDATION' && Array.isArray(e.details)) { this.erreurs = e.details; this.#allerErreur(); }
-      else if (e.code === 'VERROU_PERDU') { this.#verrouPerdu(e.details); return false; }
+      else if (e.code === ERREUR_FICHE.VERROU_PERDU) { this.#verrouPerdu(e.details); return false; }
       this.#erreur(e);
       return false;
     }

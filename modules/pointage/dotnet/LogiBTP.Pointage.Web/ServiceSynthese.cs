@@ -170,8 +170,8 @@ public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage
     internal async Task ControlerModifiableAsync(int salarie, DateOnly lundi, Roles roles, CancellationToken ct)
     {
         var etats = (await pointage.EtatsAsync([salarie], lundi, (await pointage.ParametresAsync(ct)).Validation, ct))[salarie];
-        if (etats.Contains(ReglesValidation.Valide)) throw ExceptionMetier.Conflit("POI_VALIDE", "Semaine validée par le service RH : la dévalider d'abord");
-        if (!roles.Rh && etats.Contains(ReglesValidation.ValideChef)) throw ExceptionMetier.Conflit("POI_VALIDE", "Semaine validée : la dévalider d'abord");
+        if (etats.Contains(ReglesValidation.Valide)) throw ExceptionMetier.Conflit(ErreursPointage.PoiValide, "Semaine validée par le service RH : la dévalider d'abord");
+        if (!roles.Rh && etats.Contains(ReglesValidation.ValideChef)) throw ExceptionMetier.Conflit(ErreursPointage.PoiValide, "Semaine validée : la dévalider d'abord");
     }
 
     /// <summary>Corrections du chef ou du RH : couche validée (créée à la première modification), journalisée.</summary>

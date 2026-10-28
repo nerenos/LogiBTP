@@ -1,3 +1,4 @@
+using LogiBTP.Fiches;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,7 +62,7 @@ public static class SuppressionFiches
             if (nb > 0) trouves.Add($"{nb} {u.Libelle}");
         }
         if (trouves.Count > 0)
-            throw ExceptionMetier.Conflit("FICHE_UTILISEE", $"Cet élément est utilisé ({string.Join(", ", trouves)}) : suppression impossible", trouves);
+            throw ExceptionMetier.Conflit(ErreursFiche.FicheUtilisee, $"Cet élément est utilisé ({string.Join(", ", trouves)}) : suppression impossible", trouves);
     }
 
     private static Task<int> Compter(LogiBtpContext db, string sql, long id, CancellationToken ct) =>

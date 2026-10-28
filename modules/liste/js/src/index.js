@@ -9,3 +9,4 @@ export {
 export { filtrer, correspondFiltreVue, filtresEffectifs, COLONNE_USAGE, OPERATEURS_VUE, trier, lot, jusqua, comptesSegment, cleTri, comparerCles, texteBrut, empreinte } from './requete.js';
 export { FournisseurApi, FournisseurMemoire, ErreurFournisseur } from './fournisseurs.js';
 export { calculerLargeurs } from './largeurs.js';
+export * from './codes.js';

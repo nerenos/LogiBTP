@@ -335,7 +335,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     }
 
     private int Identifie(AppareilEntite a, string jeton) =>
-        jetons.Salarie(jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "BORNE_JETON", "Identification expirée : recommencer");
+        jetons.Salarie(jeton, a.PapId) ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursPointage.BorneJeton, "Identification expirée : recommencer");
 
     /// <summary>
     /// Journée d'un salarié à une date : pointages saisis du jour (commentaire, motif), jour validé (consultation seule),

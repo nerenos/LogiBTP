@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using LogiBTP.Crm.Web;
+using LogiBTP.Crm;
 using LogiBTP.Documents;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
@@ -10,6 +11,7 @@ using LogiBTP.Mail;
 using LogiBTP.Mail.Web;
 using LogiBTP.Notifications.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using DestinataireSaisi = LogiBTP.Mail.Web.DestinataireSaisi;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -26,7 +28,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     ILogger<SpecialisationMailBtp> journal) : SpecialisationMail
 {
     /// <summary>Utilisateur des traitements de fond (compte de service, db/206) : accès de la GED d'un administrateur.</summary>
-    public static readonly Utilisateur Fond = new("mail_fond", "ADMIN");
+    public static readonly Utilisateur Fond = new(ServiceReceptionMail.Fond, "ADMIN");
 
     /// <summary>Types publiés (préférences de notification).</summary>
     public static readonly TypeNotification[] Types =
@@ -266,7 +268,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             {
                 var lien = c.TypeElement == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(c.TypeElement, c.IdElement, true);
                 var html = $"<p>À : {WebUtility.HtmlEncode(string.Join(", ", c.A.Concat(c.Cc)))}</p>{c.CorpsHtml}";
-                await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("ACTION", "MEMO", null, null,
+                await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Action, EtatNote.Memo, null, null,
                     $"📧 Courriel envoyé : {(c.Objet.Length > 180 ? c.Objet[..180] : c.Objet)}", html, null, null, null, false, false, false, [lien], null),
                     new Utilisateur(c.Auteur, "ADMIN"), ct);
             });
@@ -430,7 +432,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id LEFT JOIN individu i ON i.ind_id = e.ent_redacteur_id WHERE e.ent_id = @id
                 """, new NpgsqlParameter("id", entId)).FirstOrDefaultAsync(ct);
         }
-        var code = service ?? (doc is null ? null : FamillesDocument.EstAchat(doc.TydFamille) ? "ACHAT" : doc.TydFamille == "V" ? "VENTE" : null);
+        var code = service ?? (doc is null ? null : FamillesDocument.EstAchat(doc.TydFamille) ? "ACHAT" : doc.TydFamille == FamillesDocument.Vente ? "VENTE" : null);
         var srvId = code is null ? doc?.SrvId
             : await db.Database.SqlQueryRaw<long?>("SELECT srv_id::bigint AS \"Value\" FROM service WHERE srv_code = @c AND srv_actif", new NpgsqlParameter("c", code)).FirstOrDefaultAsync(ct)
               ?? doc?.SrvId;
@@ -449,7 +451,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         {
             var (typeGed, idGed, _) = await ElementGedAsync(element.Type, element.Id, ct);
             var lien = element.Type == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(element.Type, element.Id, true);
-            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, srvId is long s ? (int)s : null,
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srvId is long s ? (int)s : null,
                 objet.Length > 200 ? objet[..200] : objet, html, srvId is null ? doc?.RedacteurId : null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [lien], null),
                 Fond, ct);
             return;
@@ -462,7 +464,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             : [];
         if (destinataires.Count == 0 && doc?.Redacteur is { } red) destinataires = [red];
         if (destinataires.Count == 0) destinataires = [.. await AdministrateursAsync(ct)];
-        await SignalerAsync(new SignalMail("ALERTE", objet, conseil, "ATTENTION", $"/mail/message/{m.Id}", $"mail:alerte:{m.Id}:{element.Type}:{element.Id}",
+        await SignalerAsync(new SignalMail("ALERTE", objet, conseil, NiveauNotification.Attention, $"/mail/message/{m.Id}", $"mail:alerte:{m.Id}:{element.Type}:{element.Id}",
             element.Type, element.Id), destinataires, ct);
     }
 
@@ -566,9 +568,9 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             {
                 var lien = element.Type == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(element.Type, element.Id, true);
                 var html = $"<p>De : {WebUtility.HtmlEncode(m.De ?? "?")}</p>{m.CorpsHtml}";
-                await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("ACTION", "MEMO", null, null,
+                await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Action, EtatNote.Memo, null, null,
                     $"📨 Courriel reçu : {(m.Objet.Length > 180 ? m.Objet[..180] : m.Objet)}", html, null, null, null, false, false, false, [lien], null),
-                    new Utilisateur(m.Utilisateur == "mail_fond" ? Fond.Code : m.Utilisateur, "ADMIN"), ct);
+                    new Utilisateur(m.Utilisateur, "ADMIN"), ct);
             });
         }
     }
@@ -629,7 +631,7 @@ public sealed class CanalCourrielBtp(IServiceProvider services, SocieteCourante 
             var corps = $"<p><strong>{WebUtility.HtmlEncode(n.Titre)}</strong></p>{(n.Texte is null ? "" : $"<p>{WebUtility.HtmlEncode(n.Texte)}</p>")}{lien}"
                 + "<p style=\"color:#667085\">Notification de LogiBTP : préférences dans Paramètres › Notifications.</p>";
             await envoi.EnvoyerAutomatiqueAsync(new EnvoiAutomatique("NOTIFICATION", [new DestinataireSaisi(adresses[n.Utilisateur]!)], $"[LogiBTP] {n.Titre}", corps,
-                SpecialisationMailBtp.Fond.Code, n.Niveau == "URGENT" ? "HAUTE" : "NORMALE", n.TypeElement, n.IdElement, Lot: lot), ct);
+                SpecialisationMailBtp.Fond.Code, n.Niveau == NiveauNotification.Urgent ? "HAUTE" : "NORMALE", n.TypeElement, n.IdElement, Lot: lot), ct);
         }
     }
 }

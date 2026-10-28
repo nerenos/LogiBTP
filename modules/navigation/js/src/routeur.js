@@ -71,10 +71,10 @@ export function appliquerDefilements(racine, liste = []) {
   }
 }
 
-/** Clé (sessionStorage, propre à l'onglet du navigateur) de l'aperçu de la page gardé pendant un rechargement. */
+/** Clé (sessionStorage, propre à l'onglet du navigateur) de l'aperçu de la page gardé pendant un rechargement (recopiée dans client/public/demarrage-apercu.js). */
 export const CLE_APERCU = 'logibtp.apercu';
 /** Clé (sessionStorage) de l'état d'affichage gardé pendant un rechargement (history.replaceState est ignoré dans pagehide). */
-export const CLE_AFFICHAGE = 'logibtp.affichage';
+export const CLE_AFFICHAGE = 'logibtp.etat-affichage';
 const TAILLE_MAX_APERCU = 1_500_000;
 
 /**

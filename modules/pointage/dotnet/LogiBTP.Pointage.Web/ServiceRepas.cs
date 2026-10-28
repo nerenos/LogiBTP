@@ -58,7 +58,7 @@ public sealed class ServiceRepas(PointageDbContext db, SpecialisationPointage sp
         var p0 = await pointage.ParametresAsync(ct);
         var etat = (await pointage.EtatsAsync([salarie.Id], lundi, p0.Validation, ct))[salarie.Id][s.Date.DayNumber - lundi.DayNumber];
         if (ReglesValidation.EstBloque(etat))
-            throw ExceptionMetier.Conflit("POI_VALIDE", "Jour déjà validé : envoyer une demande de correction au service RH", new { dates = new[] { s.Date } });
+            throw ExceptionMetier.Conflit(ErreursPointage.PoiValide, "Jour déjà validé : envoyer une demande de correction au service RH", new { dates = new[] { s.Date } });
         var existant = await db.Repas.FirstOrDefaultAsync(r => r.PrpSalId == salarie.Id && r.PrpDate == s.Date, ct);
         RestaurantPointage? restaurant = null;
         if (!string.IsNullOrWhiteSpace(s.Nouveau))

@@ -401,7 +401,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
             if (d.H is not null && (string?)verrou[0]["h"] != d.H)
             {
                 var actuelle = (await LireDans(cnx, tx, Requete(() => c.LigneBrute(d.Id)), ct)).FirstOrDefault();
-                throw ExceptionMetier.Conflit("LIGNE_MODIFIEE", "La ligne a été modifiée par ailleurs : valeurs actualisées", actuelle);
+                throw ExceptionMetier.Conflit(ErreursListe.LigneModifiee, "La ligne a été modifiée par ailleurs : valeurs actualisées", actuelle);
             }
             await using (var cmd = Commande(cnx, tx, Requete(() => c.MiseAJour(d.Id, valeurs))))
             {

@@ -1,3 +1,4 @@
+import { ERREUR_AUTHENTIFICATION } from '@logibtp/authentification';
 import { Routeur, PageBase, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
 import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
@@ -19,6 +20,7 @@ import { listeAttente, ETATS_ATTENTE, urlAttente } from './hors-ligne/attente.js
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
+import { CLE_PREFERENCES_NAVIGATION } from './codes.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
 // fenêtre), fenêtres séparées et session (module Navigation), bandeau à menus.
@@ -36,12 +38,12 @@ export const LISTE_PAR_TYPE = {
 export class Application {
   constructor() {
     this.societe = null;
-    this.preferences = new Preferences('logibtp.navigation', { nouvelleFenetre: false, theme: 'auto' });
+    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto' });
     appliquerTheme(this.preferences.get('theme'));
     // Thème changé dans une autre fenêtre de la session (même localStorage) : appliqué ici aussi.
     window.addEventListener('storage', (e) => {
-      if (e.key !== 'logibtp.navigation') return;
-      this.preferences = new Preferences('logibtp.navigation', this.preferences.defauts);
+      if (e.key !== CLE_PREFERENCES_NAVIGATION) return;
+      this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, this.preferences.defauts);
       appliquerTheme(this.preferences.get('theme'));
     });
     // Page modifiée quittée : question dans une fenêtre <dialog> (socle) plutôt que confirm() du navigateur.
@@ -202,8 +204,8 @@ export class Application {
       if (r.status === 401 || r.status === 403) {
         if (versApi && !url.includes('/api/auth/')) {
           const code = await r.clone().json().then((d) => d?.code).catch(() => null);
-          if (code === 'SESSION_REQUISE') this.#sessionPerdue();
-          else if (code === 'MDP_A_CHANGER' && location.pathname !== '/compte') this.naviguer('/compte?changer=1');
+          if (code === ERREUR_AUTHENTIFICATION.SESSION_REQUISE) this.#sessionPerdue();
+          else if (code === ERREUR_AUTHENTIFICATION.MDP_A_CHANGER && location.pathname !== '/compte') this.naviguer('/compte?changer=1');
         }
       }
       return r;

@@ -118,7 +118,7 @@ public static class Extensions
                 }
                 if (session.MdpAChanger && !publique && !chemin.StartsWithSegments("/api/auth/mot-de-passe") && !chemin.StartsWithSegments("/api/auth/deconnexion"))
                 {
-                    await Refuser(http, StatusCodes.Status403Forbidden, "MDP_A_CHANGER", "Mot de passe provisoire : changez-le pour continuer");
+                    await Refuser(http, StatusCodes.Status403Forbidden, ErreursAuthentification.MdpAChanger, "Mot de passe provisoire : changez-le pour continuer");
                     return;
                 }
                 await next(http);
@@ -134,7 +134,7 @@ public static class Extensions
                 await next(http);
                 return;
             }
-            await Refuser(http, StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            await Refuser(http, StatusCodes.Status401Unauthorized, ErreursAuthentification.SessionRequise, "Connexion requise");
         });
     }
 
@@ -248,7 +248,7 @@ public static class Extensions
         });
 
         // Mes sessions et mes machines connues (déconnexion à distance), double facteur choisi.
-        static SessionLue Courante(HttpContext http) => http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+        static SessionLue Courante(HttpContext http) => http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursAuthentification.SessionRequise, "Connexion requise");
         g.MapGet("/sessions", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) => new
         {
             sessions = await s.SessionsAsync(Courante(http).CptId, Courante(http).SesId, ct),
@@ -277,7 +277,7 @@ public static class Extensions
         });
         g.MapPost("/mot-de-passe", async (ChangementMotDePasse c, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
         {
-            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursAuthentification.SessionRequise, "Connexion requise");
             await s.ChangerMotDePasseAsync(session, c, ServiceAuthentification.Origine.Depuis(http), ct);
             return s.Decrire(session with { MdpAChanger = false }, await s.ParametresAsync(ct), Dev(http));
         });
@@ -285,12 +285,12 @@ public static class Extensions
         // Usurpation (administrateur) : agir pour un autre compte, puis terminer.
         g.MapPost("/usurper", async (DemandeUsurpation d, HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
         {
-            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursAuthentification.SessionRequise, "Connexion requise");
             return s.Decrire(await s.UsurperAsync(session, d, http.RequestServices, ServiceAuthentification.Origine.Depuis(http), ct), await s.ParametresAsync(ct), Dev(http));
         });
         g.MapPost("/usurper/fin", async (HttpContext http, ServiceAuthentification s, CancellationToken ct) =>
         {
-            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, "SESSION_REQUISE", "Connexion requise");
+            var session = http.Session() ?? throw new ExceptionMetier(StatusCodes.Status401Unauthorized, ErreursAuthentification.SessionRequise, "Connexion requise");
             return s.Decrire(await s.TerminerUsurpationAsync(session, ServiceAuthentification.Origine.Depuis(http), ct), await s.ParametresAsync(ct), Dev(http));
         });
 

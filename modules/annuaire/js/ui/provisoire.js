@@ -1,3 +1,4 @@
+import { ERREUR_ANNUAIRE } from '../src/codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { dialogue } from './coordonnees.js';
 import { choisirPersonne } from './selection.js';
@@ -37,8 +38,8 @@ export async function creerTiersProvisoire({ annuaire, raison_sociale = '', sire
     try {
       d.fermer(await annuaire.creerProvisoire({ raison_sociale: valeur('raison_sociale'), siret: valeur('siret') || null, casquettes: relations, confirme }));
     } catch (e) {
-      if (e.code === 'DOUBLON_SIRET') proposer([e.details.personne], 'Ce SIRET est déjà dans l’annuaire : choisissez la fiche existante.');
-      else if (e.code === 'DOUBLON_NOM') proposer(e.details.personnes, 'Des tiers de nom proche existent : est-ce l’un d’eux ?', { creer: true });
+      if (e.code === ERREUR_ANNUAIRE.DOUBLON_SIRET) proposer([e.details.personne], 'Ce SIRET est déjà dans l’annuaire : choisissez la fiche existante.');
+      else if (e.code === ERREUR_ANNUAIRE.DOUBLON_NOM) proposer(e.details.personnes, 'Des tiers de nom proche existent : est-ce l’un d’eux ?', { creer: true });
       else message(e.message);
     }
   };

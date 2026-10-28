@@ -2,6 +2,8 @@
 // ordre (statut documentaire + état d'exécution propre), état de chaque service d'un élément (chantier) d'après son
 // parcours, ses ordres et les états imposés à la main (ANALYSE-MODULE-EXECUTION.md § 4).
 
+import { ETAT_ORDRE, STATUT_ORDRE } from './codes.js';
+
 /** États d'un service sur un élément, du moins au plus avancé. */
 export const ETATS_SERVICE = {
   SANS_OBJET: { libelle: 'Sans objet', icone: '—' },
@@ -13,20 +15,20 @@ export const ETATS_SERVICE = {
 };
 
 /** États d'exécution propres à un ordre (ent_exe_etat). */
-export const ETATS_ORDRE = ['A_FAIRE', 'EN_ATTENTE', 'EN_COURS', 'BLOQUE', 'TERMINE'];
+export const ETATS_ORDRE = Object.values(ETAT_ORDRE);
 
 /**
  * État d'un ordre : null s'il est annulé ou remplacé (ignoré) ; bloqué ; terminé (soldé ou terminé) ; en cours ;
  * à faire (brouillon) ; en attente ; un ordre transmis ou pris en charge sans état propre est en cours.
  */
 export function etatOrdre(o) {
-  if (['ANNULE', 'REMPLACE'].includes(o.statut)) return null;
-  if (o.etat === 'BLOQUE') return 'BLOQUE';
-  if (o.statut === 'SOLDE' || o.etat === 'TERMINE') return 'TERMINE';
-  if (o.etat === 'EN_COURS') return 'EN_COURS';
-  if (o.statut === 'BROUILLON') return 'A_FAIRE';
-  if (o.etat === 'EN_ATTENTE') return 'EN_ATTENTE';
-  return 'EN_COURS';
+  if (o.statut === STATUT_ORDRE.ANNULE || o.statut === STATUT_ORDRE.REMPLACE) return null;
+  if (o.etat === ETAT_ORDRE.BLOQUE) return ETAT_ORDRE.BLOQUE;
+  if (o.statut === STATUT_ORDRE.SOLDE || o.etat === ETAT_ORDRE.TERMINE) return ETAT_ORDRE.TERMINE;
+  if (o.etat === ETAT_ORDRE.EN_COURS) return ETAT_ORDRE.EN_COURS;
+  if (o.statut === STATUT_ORDRE.BROUILLON) return ETAT_ORDRE.A_FAIRE;
+  if (o.etat === ETAT_ORDRE.EN_ATTENTE) return ETAT_ORDRE.EN_ATTENTE;
+  return ETAT_ORDRE.EN_COURS;
 }
 
 /** État automatique d'un service d'après ses ordres (non annulés) : null s'il n'en a aucun. */

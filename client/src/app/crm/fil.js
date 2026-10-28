@@ -1,3 +1,4 @@
+import { ETAT_NOTE } from '@logibtp/crm';
 import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { lienElement, nouvelleSaisie, texteEnHtml } from './crm.js';
@@ -90,7 +91,7 @@ export class FilCrm {
     const fichiers = [...(this.conteneur.querySelector('[data-photos]').files ?? [])];
     if (!texte && !fichiers.length) { this.app.message('Écrivez un message ou joignez des photos', 'avertissement'); return; }
     try {
-      const s = nouvelleSaisie({ etat: 'MEMO', element: this.element });
+      const s = nouvelleSaisie({ etat: ETAT_NOTE.MEMO, element: this.element });
       s.objet = (texte.split('\n')[0] || `${fichiers.length} photo(s)`).slice(0, 200);
       s.message_html = texte.includes('\n') || texte.length > 200 ? texteEnHtml(texte) : null;
       s.dans_fil = true;

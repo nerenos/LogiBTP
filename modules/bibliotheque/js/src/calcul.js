@@ -1,3 +1,4 @@
+import { GESTION_ELEMENT } from './codes.js';
 import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
 // Prix et unités d'un élément de bibliothèque. Même calcul que CalculElement.cs (jeu partagé
@@ -18,7 +19,7 @@ export const SCENARIOS_PA = [
   ['FIXE', 'Prix fixe'], ['FOURNISSEUR_PRINCIPAL', 'Prix du fournisseur principal'], ['DERNIER_PA', "Dernier prix d'achat"],
   ['MEILLEUR_MIN', 'Meilleur prix fournisseur (minimum)'], ['MEILLEUR_MAX', 'Prix fournisseur maximum'], ['PMP', 'Prix moyen pondéré'],
 ];
-export const GESTIONS = [['STOCK', 'Stock'], ['ACHAT', 'Achat'], ['SOUS_TRAITANCE', 'Sous-traitance'], ['NON_GERE', 'Non géré']];
+export const GESTIONS = [[GESTION_ELEMENT.STOCK, 'Stock'], [GESTION_ELEMENT.ACHAT, 'Achat'], [GESTION_ELEMENT.SOUS_TRAITANCE, 'Sous-traitance'], [GESTION_ELEMENT.NON_GERE, 'Non géré']];
 
 /** Quantité en unité de stock pour 1 unité (Dec). Erreur UNITE si l'unité n'est pas déclarée. */
 export function ratio(unite, { unite_stock, unites = [], donnees = {} }) {

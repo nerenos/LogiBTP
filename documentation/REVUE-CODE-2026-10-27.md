@@ -147,6 +147,20 @@ vérifient que rien ne change.
 
 ## Lot G — Constantes de chaque module (JS + C#, parité testée)
 
+> **Fait** (28/10/2026) : un `codes.js` par module (objets figés `Object.freeze`) ↔ `Codes.cs` (classes de constantes),
+> parité vérifiée par un `CodesTests` par module (`Constantes.Ecarts` de `LogiBTP.Socle.Testing`). Socle :
+> `NIVEAU_NOTIFICATION` ↔ `NiveauNotification` (utilisé par Mail, OAuth, Planning, Notifications et le cœur). Document :
+> `FAMILLE_DOCUMENT`, `STATUT_DOCUMENT`, `STATUTS_HORS_VIGUEUR`, `noeudDroitsDocument` ↔ `FamillesDocument` (constantes,
+> `NoeudDroits`), `StatutsDocument`. Exécution : `ETAT_ORDRE`, `STATUT_ORDRE` (copie déclarée des statuts, vérifiée par
+> `client/test/codes.test.js`) ; `ExecutionBtp.Etats` retiré. CRM : `NATURE_NOTE`, `ETAT_NOTE`. Bibliothèque :
+> `GESTION_ELEMENT` (`GESTIONS` et la fiche élément en dérivent). Pointage : `ETAT_CONGE`. Planning : sujet
+> `DIFFUSION_PLANNING`. Erreurs testées par l'interface : `ERREUR_ANNUAIRE`, `ERREUR_FICHE`, `ERREUR_LISTE` (le
+> `HORS_LIGNE` 501 de la liste devient `REQUETE_HORS_LIGNE`), `ERREUR_POINTAGE`, `ERREUR_AUTHENTIFICATION`,
+> `ERREUR_MAIL` ; `"mail_fond"` lu de `ServiceReceptionMail.Fond`. Navigation : l'état d'affichage du routeur
+> (`sessionStorage`) devient `logibtp.etat-affichage` ; clés des scripts `public/demarrage-*.js` vérifiées par un test.
+> Gardé : les statuts et natures écrits dans le SQL des requêtes (prédicat « pièce vivante » : lot F) ;
+> `FICHE_UTILISEE` de l'Annuaire (le module ne dépend pas du module Fiche).
+
 Un fichier de codes par module (`codes.js` ↔ `Codes*.cs`), dont une section `ERREURS` pour les codes testés par
 l'interface ; le cœur importe ces constantes au lieu de réécrire les chaînes.
 

@@ -73,9 +73,9 @@ public partial class ServiceAnnuaire
         if (siret is not null && !Identifiants.SiretValide(siret)) throw Validation("SIRET invalide", "siret", "SIRET", "SIRET invalide (14 chiffres, clé de contrôle)");
         var doublons = await Doublons(raison, siret, null, ct);
         if (doublons.Siret is { } existant)
-            throw ExceptionMetier.Conflit("DOUBLON_SIRET", $"SIRET déjà enregistré : {existant.RaisonSociale} ({existant.Code})", new { personne = existant });
+            throw ExceptionMetier.Conflit(ErreursAnnuaire.DoublonSiret, $"SIRET déjà enregistré : {existant.RaisonSociale} ({existant.Code})", new { personne = existant });
         if (!saisie.Confirme && doublons.Noms.Count > 0)
-            throw ExceptionMetier.Conflit("DOUBLON_NOM", "Des tiers de nom proche existent déjà : vérifiez avant de créer", new { personnes = doublons.Noms });
+            throw ExceptionMetier.Conflit(ErreursAnnuaire.DoublonNom, "Des tiers de nom proche existent déjà : vérifiez avant de créer", new { personnes = doublons.Noms });
         var niveau = Texte(saisie.Niveau) ?? specialisation.NiveauProvisoire;
         if (!await db.Niveaux.AnyAsync(n => n.NivCode == niveau, ct)) throw Validation("Niveau inconnu", "niveau", "NIVEAU", $"Niveau {niveau} inconnu");
         var personne = new Personne

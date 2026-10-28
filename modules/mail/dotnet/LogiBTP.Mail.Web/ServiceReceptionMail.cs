@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -264,7 +265,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
         if (origine is null)
         {
             await SignalerAsync(await specialisation.AdministrateursAsync(ct), new SignalMail("NON_REMIS", $"Courriel non remis : {string.Join(", ", adresses)}",
-                "Avis de non-remise sans envoi d'origine retrouvé (envoyé hors de l'application ?).", "ATTENTION", $"/mail/message/{avis.MmeId}", $"mail:non-remis:{avis.MmeId}"), ct);
+                "Avis de non-remise sans envoi d'origine retrouvé (envoyé hors de l'application ?).", NiveauNotification.Attention, $"/mail/message/{avis.MmeId}", $"mail:non-remis:{avis.MmeId}"), ct);
             return;
         }
         foreach (var d in await db.Destinataires.Where(x => x.MdeMmeId == origine.MmeId && adresses.Contains(x.MdeAdresse.ToLower())).ToListAsync(ct))
@@ -282,7 +283,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
         await SignalerAsync(destinataires, new SignalMail("NON_REMIS", $"Courriel non remis : {origine.MmeObjet}",
             $"Adresse(s) en échec : {string.Join(", ", lu.NonRemises.Select(x => $"{x.Adresse}{(x.Statut is null ? "" : $" ({x.Statut})")}"))}. "
             + "Corriger l'adresse et renvoyer ; l'adresse peut être signalée non remise dans l'annuaire depuis le courriel.",
-            "ATTENTION", $"/mail/message/{origine.MmeId}", $"mail:non-remis:{origine.MmeId}:{string.Join(',', adresses)}", origine.MmeTypeElement, origine.MmeIdElement), ct);
+            NiveauNotification.Attention, $"/mail/message/{origine.MmeId}", $"mail:non-remis:{origine.MmeId}:{string.Join(',', adresses)}", origine.MmeTypeElement, origine.MmeIdElement), ct);
     }
 
     // --- Consultation et rattachement ---

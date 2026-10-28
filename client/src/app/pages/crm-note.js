@@ -1,7 +1,7 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, htmlSur, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
-import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET, TYPES_RAPPEL, controlerRappel, MESSAGES_RAPPEL } from '@logibtp/crm';
+import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET, TYPES_RAPPEL, controlerRappel, MESSAGES_RAPPEL, NATURE_NOTE } from '@logibtp/crm';
 import { api } from '../api.js';
 import { choisirRattachement } from '../structure/selection.js';
 import { contexteCrm, individusCrm, nouvelleSaisie, saisieDeNote, versChampDate, depuisChampDate, zoneRiche, lienElement, pastilleEtat, iconeNature, libelleEtat, pastilleRappel, libelleRappel } from '../crm/crm.js';
@@ -27,11 +27,11 @@ export class PageNoteCrm extends PageBase {
       const r = this.requete;
       this.detail = null;
       this.saisie = nouvelleSaisie({
-        nature: NATURES_NOTE.some((n) => n.valeur === r.nature) ? r.nature : 'ACTION',
+        nature: NATURES_NOTE.some((n) => n.valeur === r.nature) ? r.nature : NATURE_NOTE.ACTION,
         element: r.type_element && r.id_element ? { type: r.type_element, id: r.id_element } : null,
         parent: r.parent ? Number(r.parent) : null,
       });
-      if (this.saisie.nature === 'TACHE') this.saisie.responsable_id = this.ctx.individu_id;
+      if (this.saisie.nature === NATURE_NOTE.TACHE) this.saisie.responsable_id = this.ctx.individu_id;
       this.liens = [];
       if (this.saisie.liens.length) this.liens = await this.decrire(this.saisie.liens);
       this.titre = 'Nouvelle note';
@@ -145,7 +145,7 @@ export class PageNoteCrm extends PageBase {
     $('[data-reveler]')?.addEventListener('click', async () => {
       try { await this.charger(this.detail.note.id, true); this.rendre(); } catch (e) { this.app.erreur(e); }
     });
-    $('[data-repondre]')?.addEventListener('click', (e) => this.app.naviguer(`/crm/note/nouveau?nature=MESSAGE&parent=${this.detail.note.id}${this.liens[0] ? `&type_element=${this.liens[0].type}&id_element=${encodeURIComponent(this.liens[0].id)}` : ''}`, { nouvelleFenetre: e.ctrlKey || e.shiftKey }));
+    $('[data-repondre]')?.addEventListener('click', (e) => this.app.naviguer(`/crm/note/nouveau?nature=${NATURE_NOTE.MESSAGE}&parent=${this.detail.note.id}${this.liens[0] ? `&type_element=${this.liens[0].type}&id_element=${encodeURIComponent(this.liens[0].id)}` : ''}`, { nouvelleFenetre: e.ctrlKey || e.shiftKey }));
     $('[data-supprimer]')?.addEventListener('click', async () => {
       if (!await confirmer('Supprimer définitivement cette note ?')) return;
       try {

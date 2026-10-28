@@ -1,3 +1,4 @@
+import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
@@ -566,7 +567,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="valider"]').disabled = !modifiable || Boolean(this.importEnCours);
     // Cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17) : approbation interne si la règle l'active, envoi, validation du tiers.
     this.$('[data-action="valider"]').textContent = ed.definition.regles?.APPROBATION ? 'Approuver' : 'Valider';
-    const enCours = statut?.std_code !== 'ANNULE' && statut?.std_code !== 'REMPLACE';
+    const enCours = !STATUTS_HORS_VIGUEUR.includes(statut?.std_code);
     this.$('[data-action="envoyer"]').hidden = !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
     this.$('[data-action="valider-tiers"]').hidden = !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
     this.$('[data-action="rejeter"]').hidden = this.$('[data-action="valider-tiers"]').hidden;
@@ -578,7 +579,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="transformer"]').disabled = !(ed.definition.transformations?.length) || Boolean(this.importEnCours);
     // Documents alimentés par d'autres (BL, factures, situations) : ajout de sources tant qu'ils sont en brouillon.
     // Pièce comptable validée (facture, avoir) non annulée : annulation par avoir.
-    this.$('[data-action="annuler-avoir"]').hidden = !doc.ent_verrouille || statut?.std_code === 'ANNULE'
+    this.$('[data-action="annuler-avoir"]').hidden = !doc.ent_verrouille || statut?.std_code === STATUT_DOCUMENT.ANNULE
       || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
     this.$('[data-action="consultation"]').hidden = !doc.ent_id || !ed.definition.type?.tyd_consultation;
     this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif('sous_traitance')
@@ -593,7 +594,7 @@ export class PageDocument extends PageBase {
     this.$('[data-onglet-vue="suivi"]').hidden = !this.app.moduleActif('crm') || !doc.ent_id;
     // Ordres (module Exécution) : coefficients par nature et marge dans l'ordre d'exécution seulement (E3, E17).
     const typeDoc = this.editeur.definition.type;
-    this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === 'E' && typeDoc.tyd_code !== 'E_OE';
+    this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION && typeDoc.tyd_code !== 'E_OE';
     if (this.disposition?.p.onglet === 'suivi') this.afficherSuivi();
     this.app.majPage();
   }
@@ -625,7 +626,7 @@ export class PageDocument extends PageBase {
       if (estHorsLigne(e)) throw new Error(`Hors ligne : aucun ${type.tyd_libelle.toLowerCase()} n'a été ouvert sur ce poste, création impossible avant le retour du serveur`);
       throw e;
     }
-    const brouillon = definition.statuts?.find((s) => s.std_code === 'BROUILLON') ?? definition.statuts?.[0];
+    const brouillon = definition.statuts?.find((s) => s.std_code === STATUT_DOCUMENT.BROUILLON) ?? definition.statuts?.[0];
     const params = { ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` };
     const id = -Date.now();
     const document = {

@@ -1,3 +1,6 @@
+using CodeEtat = LogiBTP.Execution.EtatOrdre;
+using CodeStatut = LogiBTP.Execution.StatutOrdre;
+
 namespace LogiBTP.Execution;
 
 /// <summary>Étape d'un parcours : code, service, étapes amont (plusieurs pour une jonction).</summary>
@@ -19,17 +22,17 @@ public sealed record EtatService(int SrvId, string Etat, string Automatique, str
 public static class ReglesEtats
 {
     public static readonly string[] EtatsService = ["SANS_OBJET", "A_VENIR", "EN_ATTENTE", "EN_COURS", "BLOQUE", "TERMINE"];
-    public static readonly string[] EtatsOrdre = ["A_FAIRE", "EN_ATTENTE", "EN_COURS", "BLOQUE", "TERMINE"];
+    public static readonly string[] EtatsOrdre = [CodeEtat.AFaire, CodeEtat.EnAttente, CodeEtat.EnCours, CodeEtat.Bloque, CodeEtat.Termine];
 
     public static string? EtatOrdre(OrdreEvalue o) => o switch
     {
-        { Statut: "ANNULE" or "REMPLACE" } => null,
-        { Etat: "BLOQUE" } => "BLOQUE",
-        { Statut: "SOLDE" } or { Etat: "TERMINE" } => "TERMINE",
-        { Etat: "EN_COURS" } => "EN_COURS",
-        { Statut: "BROUILLON" } => "A_FAIRE",
-        { Etat: "EN_ATTENTE" } => "EN_ATTENTE",
-        _ => "EN_COURS",
+        { Statut: CodeStatut.Annule or CodeStatut.Remplace } => null,
+        { Etat: CodeEtat.Bloque } => CodeEtat.Bloque,
+        { Statut: CodeStatut.Solde } or { Etat: CodeEtat.Termine } => CodeEtat.Termine,
+        { Etat: CodeEtat.EnCours } => CodeEtat.EnCours,
+        { Statut: CodeStatut.Brouillon } => CodeEtat.AFaire,
+        { Etat: CodeEtat.EnAttente } => CodeEtat.EnAttente,
+        _ => CodeEtat.EnCours,
     };
 
     private static string? EtatDesOrdres(List<string> etats)

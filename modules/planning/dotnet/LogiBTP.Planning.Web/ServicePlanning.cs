@@ -175,7 +175,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
 {
     /// <summary>Événement « planning » diffusé aux navigateurs de la société (lot 3, temps réel).</summary>
     private void Publier(string action, IEnumerable<long> taches, Utilisateur u) =>
-        diffuseur.Publier(societe, "planning", new { action, taches = taches.ToList(), par = u.Code });
+        diffuseur.Publier(societe, DiffusionPlanning.Sujet, new { action, taches = taches.ToList(), par = u.Code });
 
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
     private const int HorizonJours = 120;

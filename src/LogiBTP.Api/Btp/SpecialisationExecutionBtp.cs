@@ -1,5 +1,6 @@
 using LogiBTP.Calendrier.Web;
 using LogiBTP.Crm.Web;
+using LogiBTP.Crm;
 using LogiBTP.Planning.Web;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
@@ -262,7 +263,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
                 new NpgsqlParameter("id", o.Id)).FirstAsync(ct);
             var liens = new List<LienSaisi> { new("document", groupe.ToString(), true) };
             if (o.IdElement is string cha) liens.Add(new LienSaisi("chantier", cha));
-            await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, srv,
+            await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srv,
                 $"Ordre {numero} : contrôle à faire ({string.Join(", ", s.AControler)})", null, responsable, DateTimeOffset.UtcNow.AddDays(2), null,
                 false, false, false, liens, null), u, ct);
         }

@@ -2,6 +2,7 @@
 // Les codes de champs reprennent les colonnes des vues de liste ;
 // « colonne » est la colonne de la table, utilisée par le serveur. Ces définitions alimentent aussi le script
 // db/131_fiches_parametrage.sql (généré par client/scripts/generer-vues-liste.mjs).
+import { GESTION_ELEMENT, GESTIONS } from '@logibtp/bibliotheque';
 
 const c = (code, libelle, colonne, type, extra = {}) => ({ code, libelle, colonne, type, ...extra });
 const options = (...v) => v.map((x) => (Array.isArray(x) ? { valeur: x[0], libelle: x[1] } : { valeur: x, libelle: x }));
@@ -204,7 +205,7 @@ export const TYPES_FICHE = {
         c('fam_id', 'Famille', 'ele_fam_id', 'nombre', { reference: 'famille' }),
         c('nat_id', 'Nature', 'ele_nat_id', 'nombre', { reference: 'nature' }),
         c('gestion', 'Type de gestion', 'ele_gestion', 'liste', {
-          obligatoire: true, defaut: 'NON_GERE', options: options(['STOCK', 'Stock'], ['ACHAT', 'Achat'], ['SOUS_TRAITANCE', 'Sous-traitance'], ['NON_GERE', 'Non géré']),
+          obligatoire: true, defaut: GESTION_ELEMENT.NON_GERE, options: options(...GESTIONS),
         }),
         c('unite_stock', 'Unité de stock', 'ele_unt_stock', 'texte', { obligatoire: true, longueur: 10 }),
         c('unite_achat', "Unité d'achat", 'ele_unt_achat', 'texte', { longueur: 10 }),

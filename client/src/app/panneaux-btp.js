@@ -2,7 +2,7 @@ import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDerou
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
 import { PanneauxDocument, opt } from '@logibtp/document/ui';
-import { estFamilleAchat } from '@logibtp/document';
+import { estFamilleAchat, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { ventilerFactureRecue, MESSAGES_VENTILATION } from '@logibtp/sous-traitance';
 import { D, S } from '@logibtp/socle';
 import { TL, estChiffree, estTranche, natureObligatoire, controlesValidation } from '../calcul/index.js';
@@ -491,7 +491,7 @@ export class PanneauxBtp extends PanneauxDocument {
   async choisirTexte() { return (await this.choisirTexteBibliotheque?.())?.libelle_html ?? null; }
 
   /** Ordre du module Exécution (famille E) avec le module actif. */
-  estOrdre() { return Boolean(this.execution) && this.editeur.definition.type?.tyd_famille === 'E'; }
+  estOrdre() { return Boolean(this.execution) && this.editeur.definition.type?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION; }
 
   lierEntete(zone) {
     const m = this.editeur.magasin;

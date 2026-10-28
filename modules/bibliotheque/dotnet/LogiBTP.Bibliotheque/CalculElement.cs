@@ -53,7 +53,7 @@ public sealed record ResultatElement(decimal? Pa, decimal? Pr, decimal? Pv, deci
 public static class CalculElement
 {
     public static readonly string[] Scenarios = ["FIXE", "FOURNISSEUR_PRINCIPAL", "DERNIER_PA", "MEILLEUR_MIN", "MEILLEUR_MAX", "PMP"];
-    public static readonly string[] Gestions = ["STOCK", "ACHAT", "SOUS_TRAITANCE", "NON_GERE"];
+    public static readonly string[] Gestions = [GestionElement.Stock, GestionElement.Achat, GestionElement.SousTraitance, GestionElement.NonGere];
 
     private static decimal Arr6(decimal v) => ArrondiCalcul.Arr6(v);
 

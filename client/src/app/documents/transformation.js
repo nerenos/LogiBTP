@@ -1,5 +1,5 @@
 import { echapper, formatNombre } from '@logibtp/socle/ui';
-import { unitesOptionnelles } from '@logibtp/document';
+import { unitesOptionnelles, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { api } from '../api.js';
 import { confirmerAvertissements } from './avertissements.js';
 
@@ -50,7 +50,7 @@ export function ciblesTransformation(definition, types) {
       tyd_id: ty.tyd_id, code: ty.tyd_code, libelle: ty.tyd_libelle, famille: ty.tyd_famille, etape: t.tra_etape, vaut: t.tra_vaut_etapes ?? [],
       intermediaire: inter?.tyd_libelle ?? null,
     } : null;
-  }).filter(Boolean).sort((a, b) => rang(a.etape) - rang(b.etape) || (a.famille === b.famille ? 0 : a.famille === 'V' ? -1 : 1) || a.libelle.localeCompare(b.libelle, 'fr'));
+  }).filter(Boolean).sort((a, b) => rang(a.etape) - rang(b.etape) || (a.famille === b.famille ? 0 : a.famille === FAMILLE_DOCUMENT.VENTE ? -1 : 1) || a.libelle.localeCompare(b.libelle, 'fr'));
 }
 
 /** Fenêtre de choix ; résout la cible choisie ou null. source : { numero, libelle_type, objet }. */
@@ -67,7 +67,7 @@ export function choisirTransformation({ source, cibles }) {
     <div class="transformation-choix">${groupes.map((g) => `<section><h4>${echapper(g.titre)}${g.aide ? ` <small>${echapper(g.aide)}</small>` : ''}</h4>
       ${g.cibles.map((c) => `<button type="button" class="transformation-cible" data-i="${i++}">
         <span class="transformation-icone">${ICONES[c.code] ?? '📄'}</span>
-        <span><b>${echapper(c.libelle)}</b>${c.famille === 'A' ? ' <span class="pastille">Achat</span>' : c.famille === 'T' ? ' <span class="pastille">Sous-traitance</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
+        <span><b>${echapper(c.libelle)}</b>${c.famille === FAMILLE_DOCUMENT.ACHAT ? ' <span class="pastille">Achat</span>' : c.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? ' <span class="pastille">Sous-traitance</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
       </button>`).join('')}</section>`).join('')}</div>
     <p class="aide">Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).</p>
     <div class="boutons"><button value="annuler">Annuler</button></div></form>`;

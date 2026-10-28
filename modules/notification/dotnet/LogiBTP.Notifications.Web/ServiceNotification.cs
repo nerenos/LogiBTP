@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -7,7 +8,7 @@ using NpgsqlTypes;
 namespace LogiBTP.Notifications.Web;
 
 /// <summary>Notification à publier pour un utilisateur (code du compte) ; la clé évite les doublons.</summary>
-public sealed record NouvelleNotification(string Utilisateur, string Module, string Type, string Titre, string? Texte = null, string Niveau = "INFO",
+public sealed record NouvelleNotification(string Utilisateur, string Module, string Type, string Titre, string? Texte = null, string Niveau = NiveauNotification.Info,
     string? Url = null, string? TypeElement = null, string? IdElement = null, string? Cle = null);
 
 /// <summary>Type de notification proposé dans les préférences.</summary>
@@ -50,7 +51,7 @@ public interface ISourceNotifications
 public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<ISourceNotifications> sources, IEnumerable<ICanalNotification> canaux,
     ILogger<ServiceNotification> journal, IModulesActifs? modules = null)
 {
-    public static readonly HashSet<string> Niveaux = ["INFO", "ATTENTION", "URGENT"];
+    public static readonly HashSet<string> Niveaux = [NiveauNotification.Info, NiveauNotification.Attention, NiveauNotification.Urgent];
 
     /// <summary>
     /// Publie les notifications (préférence « écran » désactivée : ignorée) ; renvoie le nombre de nouvelles. Les nouvelles
@@ -83,7 +84,7 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
                 """,
                 [
                     new NpgsqlParameter("u", n.Utilisateur), new NpgsqlParameter("m", n.Module), new NpgsqlParameter("t", n.Type),
-                    new NpgsqlParameter("n", Niveaux.Contains(n.Niveau) ? n.Niveau : "INFO"), new NpgsqlParameter("titre", n.Titre),
+                    new NpgsqlParameter("n", Niveaux.Contains(n.Niveau) ? n.Niveau : NiveauNotification.Info), new NpgsqlParameter("titre", n.Titre),
                     Texte("texte", n.Texte), Texte("url", n.Url), Texte("te", n.TypeElement), Texte("ie", n.IdElement), Texte("cle", n.Cle),
                     new NpgsqlParameter("masque", p is { NprEcran: false }),
                 ], ct);
@@ -157,7 +158,7 @@ public sealed class ServiceNotification(NotificationDbContext db, IEnumerable<IS
     {
         var masques = await ModulesMasquesAsync(u.Code, ct);
         var q = Boite(u.Code).AsNoTracking().Where(n => n.NtfTraiteeLe == null && !masques.Contains(n.NtfModule));
-        var c = await q.GroupBy(_ => 1).Select(g => new Compteur(g.Count(n => n.NtfLueLe == null), g.Count(), g.Count(n => n.NtfNiveau == "URGENT"))).FirstOrDefaultAsync(ct);
+        var c = await q.GroupBy(_ => 1).Select(g => new Compteur(g.Count(n => n.NtfLueLe == null), g.Count(), g.Count(n => n.NtfNiveau == NiveauNotification.Urgent))).FirstOrDefaultAsync(ct);
         return c ?? new Compteur(0, 0, 0);
     }
 
@@ -213,7 +214,7 @@ public class NotificationEntite
     public string NtfUtilisateur { get; set; } = "";
     public string NtfModule { get; set; } = "";
     public string NtfType { get; set; } = "";
-    public string NtfNiveau { get; set; } = "INFO";
+    public string NtfNiveau { get; set; } = NiveauNotification.Info;
     public string NtfTitre { get; set; } = "";
     public string? NtfTexte { get; set; }
     public string? NtfUrl { get; set; }

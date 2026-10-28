@@ -1,3 +1,4 @@
+import { ERREUR_FICHE } from './codes.js';
 import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 
 // Fournisseurs de données des fiches. Même interface pour l'API (routes MapModuleFiche) et pour la mémoire
@@ -295,7 +296,7 @@ export class FournisseurFicheMemoire {
     const l = this.#ligne(type, id);
     const v = this.#verrou(type, id);
     if (!v || v.jeton !== jeton) {
-      throw new ErreurFiche(409, 'VERROU_PERDU', v ? `Fiche reprise en modification par ${v.utilisateur}` : 'Verrou de modification expiré : reprenez la modification', this.#vueVerrou(v, jeton));
+      throw new ErreurFiche(409, ERREUR_FICHE.VERROU_PERDU, v ? `Fiche reprise en modification par ${v.utilisateur}` : 'Verrou de modification expiré : reprenez la modification', this.#vueVerrou(v, jeton));
     }
     if (h && h !== this.#empreinte(type, l)) throw new ErreurFiche(409, 'FICHE_MODIFIEE', 'La fiche a été modifiée par ailleurs : rechargez-la');
     const essai = structuredClone(l);
@@ -330,7 +331,7 @@ export class FournisseurFicheMemoire {
     this.#exiger(type, 'supprimer');
     const t = this.#type(type);
     const v = this.verrous.get(`${type}:${id}`);
-    if (v && v.utilisateur !== this.utilisateur) throw new ErreurFiche(409, 'FICHE_EN_MODIFICATION', `Fiche en cours de modification par ${v.utilisateur} : suppression impossible`);
+    if (v && v.utilisateur !== this.utilisateur) throw new ErreurFiche(409, ERREUR_FICHE.FICHE_EN_MODIFICATION, `Fiche en cours de modification par ${v.utilisateur} : suppression impossible`);
     const i = t.lignes.findIndex((x) => String(x[t.cle]) === String(id));
     if (i < 0) throw new ErreurFiche(404, 'INTROUVABLE', `Fiche ${type} ${id} introuvable`);
     await t.avantSuppression?.(t.lignes[i]);

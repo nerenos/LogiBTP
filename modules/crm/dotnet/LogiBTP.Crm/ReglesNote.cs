@@ -12,9 +12,9 @@ public sealed record NoteAControler(string? Nature, string? Etat, string? Objet,
 /// </summary>
 public static class ReglesNote
 {
-    public static readonly string[] Natures = ["ACTION", "MESSAGE", "TACHE"];
-    public static readonly string[] Etats = ["A_FAIRE", "EN_COURS", "TERMINE", "MEMO", "ANNULEE"];
-    public static readonly string[] EtatsClos = ["TERMINE", "MEMO", "ANNULEE"];
+    public static readonly string[] Natures = [NatureNote.Action, NatureNote.Message, NatureNote.Tache];
+    public static readonly string[] Etats = [EtatNote.AFaire, EtatNote.EnCours, EtatNote.Termine, EtatNote.Memo, EtatNote.Annulee];
+    public static readonly string[] EtatsClos = [EtatNote.Termine, EtatNote.Memo, EtatNote.Annulee];
     public const int LongueurObjet = 200;
 
     /// <summary>Codes d'erreur, dans l'ordre de controlerNote.</summary>
@@ -24,12 +24,12 @@ public static class ReglesNote
         if (!Natures.Contains(n.Nature)) erreurs.Add("NOTE_NATURE");
         if (!Etats.Contains(n.Etat)) erreurs.Add("NOTE_ETAT");
         if (string.IsNullOrWhiteSpace(n.Objet) || n.Objet.Trim().Length > LongueurObjet) erreurs.Add("NOTE_OBJET");
-        if (n.Nature == "TACHE")
+        if (n.Nature == NatureNote.Tache)
         {
             if (n.ResponsableId is null && n.SrvId is null) erreurs.Add("NOTE_RESPONSABLE");
             if (n.Echeance is null) erreurs.Add("NOTE_ECHEANCE");
         }
-        if (n.Nature == "MESSAGE" && n.ParentId is null && (n.Destinataires?.Count ?? 0) == 0) erreurs.Add("NOTE_DESTINATAIRE");
+        if (n.Nature == NatureNote.Message && n.ParentId is null && (n.Destinataires?.Count ?? 0) == 0) erreurs.Add("NOTE_DESTINATAIRE");
         if (n.DansFil && n.Prive) erreurs.Add("NOTE_PRIVEE_FIL");
         if (n.DansFil && n.Rgpd) erreurs.Add("NOTE_RGPD_FIL");
         return erreurs;

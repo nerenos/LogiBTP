@@ -394,7 +394,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         if (n.NotResponsableId is not null) throw ExceptionMetier.Conflit("NOTE_PRISE", "Note déjà prise en charge");
         if (n.NotSrvId is not int s || !(c.Services.Contains(s) || u.EstAdmin)) throw ExceptionMetier.AccesRefuse("PRENDRE");
         n.NotResponsableId = ind;
-        if (n.NotEtat == "A_FAIRE") n.NotEtat = "EN_COURS";
+        if (n.NotEtat == EtatNote.AFaire) n.NotEtat = EtatNote.EnCours;
         n.NotMajPar = u.Code;
         n.NotMajLe = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);

@@ -360,7 +360,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             var message = depassement.Motif == "PIECE"
                 ? $"<p>{System.Net.WebUtility.HtmlEncode(u.Code)} ne peut valider que {depassement.Limite.Piece:0.00} € HT par pièce.</p>"
                 : $"<p>Cumul validé par {System.Net.WebUtility.HtmlEncode(u.Code)} pour ce tiers sur {depassement.Limite.Jours} jours : {depassement.Cumul + depassement.Montant:0.00} € HT pour une limite de {depassement.Limite.Cumul:0.00} €.</p>";
-            await services.GetRequiredService<LogiBTP.Crm.Web.ServiceCrm>().Enregistrer(null, new LogiBTP.Crm.Web.NoteSaisie("TACHE", "A_FAIRE", null, srv, objet, message,
+            await services.GetRequiredService<LogiBTP.Crm.Web.ServiceCrm>().Enregistrer(null, new LogiBTP.Crm.Web.NoteSaisie(LogiBTP.Crm.NatureNote.Tache, LogiBTP.Crm.EtatNote.AFaire, null, srv, objet, message,
                 null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LogiBTP.Crm.Web.LienSaisi("document", (d.EntGroupeId ?? d.EntId).ToString(), true)], null), u, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -441,7 +441,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         if (await PostesMarche.Portee(db, type, saisie.Document, ct) is string portee) await PostesMarche.Appliquer(db, saisie, portee, ct);
         // Stock : le tiers est notre société (P6).
-        if (type.TydFamille is "S" or "E" && saisie.Document.EntTiersId is null)
+        if (type.TydFamille is FamillesDocument.Stock or FamillesDocument.Execution && saisie.Document.EntTiersId is null)
         {
             saisie.Document.EntTiersId = (await db.Database.SqlQuery<long?>($"SELECT per_id AS \"Value\" FROM personne WHERE per_societe_base LIMIT 1").ToListAsync(ct)).FirstOrDefault();
         }

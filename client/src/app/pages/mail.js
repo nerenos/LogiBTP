@@ -1,3 +1,4 @@
+import { ERREUR_MAIL } from '@logibtp/mail';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { api, ErreurApi } from '../api.js';
@@ -146,7 +147,7 @@ export class PageRedactionMail extends PageBase {
       this.app.publier('mail', { messages: r.messages });
       this.app.fermerPage(r.messages.length === 1 ? `/mail/message/${r.messages[0]}` : '/mail?vue=attente');
     } catch (e) {
-      if (e instanceof ErreurApi && e.code === 'MAIL_CONFIRMATION') {
+      if (e instanceof ErreurApi && e.code === ERREUR_MAIL.MAIL_CONFIRMATION) {
         if (await confirmer(`${e.details?.avertissement ?? e.message}\n\nConfirmer l'envoi ?`)) await this.envoyer(true);
         return;
       }

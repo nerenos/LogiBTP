@@ -1,5 +1,6 @@
 using System.Globalization;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Planning.Web;
@@ -95,18 +96,18 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
         var r = new List<NotificationPlanning>();
         foreach (var s in d.Charge.Surcharges)
         {
-            r.Add(new($"SUROCCUPATION:{s.Ressource}:{s.Date}", "SUROCCUPATION", "URGENT",
+            r.Add(new($"SUROCCUPATION:{s.Ressource}:{s.Date}", "SUROCCUPATION", NiveauNotification.Urgent,
                 $"{lib.GetValueOrDefault(s.Ressource) ?? s.Ressource} : {Heures(s.Planifie)} h planifiées pour {Heures(s.Capacite)} h le {Jour(s.Date)} ({string.Join(", ", s.Taches.Select(t => libTache.GetValueOrDefault(long.Parse(t, CultureInfo.InvariantCulture)) ?? t))})",
                 long.Parse(s.Taches[0], CultureInfo.InvariantCulture), s.Ressource, s.Date));
         }
         foreach (var c in d.Charge.Services.Where(c => c.SrvId is not null && c.Capacite > 0 && c.Disponible * 100 > c.Capacite * p.PplSousOccupation))
         {
-            r.Add(new($"SOUSOCCUPATION:{c.SrvId}:{c.Date}", "SOUSOCCUPATION", "INFO",
+            r.Add(new($"SOUSOCCUPATION:{c.SrvId}:{c.Date}", "SOUSOCCUPATION", NiveauNotification.Info,
                 $"{services.GetValueOrDefault(c.SrvId!.Value)} : {Heures(c.Disponible)} h disponibles sur {Heures(c.Capacite)} h le {Jour(c.Date)}", null, null, c.Date));
         }
         foreach (var m in d.Charge.Materiels.Where(m => m.Stock is decimal s && m.Utilise > s))
         {
-            r.Add(new($"MATERIEL:{m.Ressource}:{m.Date}", "MATERIEL", "ATTENTION",
+            r.Add(new($"MATERIEL:{m.Ressource}:{m.Date}", "MATERIEL", NiveauNotification.Attention,
                 $"{lib.GetValueOrDefault(m.Ressource) ?? m.Ressource} : {m.Utilise} unités utilisées pour {m.Stock} disponibles le {Jour(m.Date)}", null, m.Ressource, m.Date));
         }
         // Habilitations exigées par une tâche (P19) : chaque ressource affectée doit les détenir, valides au début de la tâche.
@@ -119,7 +120,7 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
                 var manque = t.TacHabilitations.Where(h => !(valides.GetValueOrDefault(res)?.Contains(h) ?? false)).ToList();
                 if (manque.Count > 0)
                 {
-                    r.Add(new($"HABILITATION:{t.TacId}:{res}", "HABILITATION", "URGENT",
+                    r.Add(new($"HABILITATION:{t.TacId}:{res}", "HABILITATION", NiveauNotification.Urgent,
                         $"{lib.GetValueOrDefault(res) ?? res} n'a pas d'habilitation valable ({string.Join(", ", manque)}) pour « {t.TacLibelle} »", t.TacId, res));
                 }
             }
@@ -135,7 +136,7 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
             foreach (var (e, c) in copies)
             {
                 if (await RessourcesTache.ChangementAsync(db, specialisation, t, e, c, ct) is not { } ch) continue;
-                r.Add(new($"EQUIPE:{t.TacId}:{e}:{ch.Date:yyyy-MM-dd}:{string.Join(",", ch.Membres.Order())}", "EQUIPE", "ATTENTION",
+                r.Add(new($"EQUIPE:{t.TacId}:{e}:{ch.Date:yyyy-MM-dd}:{string.Join(",", ch.Membres.Order())}", "EQUIPE", NiveauNotification.Attention,
                     $"« {t.TacLibelle} » : la composition de {libEquipes.GetValueOrDefault(e) ?? "l'équipe"} change le {Jour(ch.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))} ({ch.Entrees.Count} entrée(s), {ch.Sorties.Count} sortie(s))",
                     t.TacId, null, ch.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), "APPLIQUER_EQUIPE", e));
             }
@@ -147,13 +148,13 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
             {
                 var de = long.Parse(a.De!, CultureInfo.InvariantCulture);
                 var vers = long.Parse(a.Vers!, CultureInfo.InvariantCulture);
-                r.Add(new($"DEPENDANCE:{a.De}:{a.Vers}", "DEPENDANCE", "ATTENTION",
+                r.Add(new($"DEPENDANCE:{a.De}:{a.Vers}", "DEPENDANCE", NiveauNotification.Attention,
                     $"« {libTache.GetValueOrDefault(vers)} » démarre avant le {Temps.Ecrire(a.Minimum!.Value).Replace('T', ' ')} (dépendance de « {libTache.GetValueOrDefault(de)} »)", vers));
             }
             else
             {
                 var t = long.Parse(a.Tache!, CultureInfo.InvariantCulture);
-                r.Add(new($"LIEE:{a.Tache}", "LIEE", "ATTENTION", $"« {libTache.GetValueOrDefault(t)} » sort de la période de sa tâche principale", t));
+                r.Add(new($"LIEE:{a.Tache}", "LIEE", NiveauNotification.Attention, $"« {libTache.GetValueOrDefault(t)} » sort de la période de sa tâche principale", t));
             }
         }
         var etats = await db.Notifications.AsNoTracking().Where(n => r.Select(x => x.Cle).Contains(n.PnoCle)).ToDictionaryAsync(n => n.PnoCle, n => n.PnoEtat, ct);

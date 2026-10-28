@@ -1,3 +1,4 @@
+import { ERREUR_LISTE } from '../src/codes.js';
 import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
@@ -1320,7 +1321,7 @@ export class ListeDonnees {
       this.#remplacerLigne(id, relue);
       return true;
     } catch (e) {
-      if (e.code === 'LIGNE_MODIFIEE' && e.details) {
+      if (e.code === ERREUR_LISTE.LIGNE_MODIFIEE && e.details) {
         this.#remplacerLigne(id, e.details);
         this.message(e.message, 'avertissement');
         return true;

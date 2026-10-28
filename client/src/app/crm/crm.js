@@ -1,5 +1,5 @@
 import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
-import { NATURES_NOTE, ETATS_NOTE, ETATS_CLOS } from '@logibtp/crm';
+import { NATURES_NOTE, ETATS_NOTE, ETATS_CLOS, NATURE_NOTE, ETAT_NOTE } from '@logibtp/crm';
 import { lireMail } from '@logibtp/ged';
 import { api } from '../api.js';
 import { individusSociete } from '../panneaux-btp.js';
@@ -66,7 +66,7 @@ export function lienElement(e) {
 }
 
 /** Note à créer : valeurs par défaut (lien vers l'élément de départ). */
-export function nouvelleSaisie({ nature = 'ACTION', etat = 'A_FAIRE', element = null, parent = null } = {}) {
+export function nouvelleSaisie({ nature = NATURE_NOTE.ACTION, etat = ETAT_NOTE.A_FAIRE, element = null, parent = null } = {}) {
   return {
     nature, etat, tno_id: null, srv_id: null, objet: '', message_html: null, responsable_id: null, echeance: null, parent_id: parent,
     prive: false, rgpd: false, dans_fil: false, liens: element ? [{ type_element: element.type, id_element: String(element.id), principal: true }] : [], destinataires: [],
@@ -97,7 +97,7 @@ export const estCourriel = (fichier) => /\.(eml|msg)$/i.test(fichier?.name ?? ''
 export async function noteDepuisCourriel(app, fichier, element) {
   const mail = await lireMail(fichier);
   const ctx = await contexteCrm(app);
-  const s = nouvelleSaisie({ etat: 'MEMO', element });
+  const s = nouvelleSaisie({ etat: ETAT_NOTE.MEMO, element });
   s.tno_id = ctx.types.find((t) => t.code === 'COURRIEL')?.id ?? null;
   s.objet = (mail.objet || fichier.name).slice(0, 200);
   s.message_html = `<p><b>De :</b> ${echapper(mail.de)}${mail.a ? `<br><b>À :</b> ${echapper(mail.a)}` : ''}${mail.date ? `<br><b>Date :</b> ${echapper(formatDateHeure(mail.date))}` : ''}</p>${texteEnHtml(mail.message)}`;

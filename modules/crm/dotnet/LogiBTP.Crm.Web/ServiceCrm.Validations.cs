@@ -295,7 +295,7 @@ public partial class ServiceCrm
         if (d?.DfdNotId is not long note) return;
         var complet = !await db.Visas.AnyAsync(v => v.VisDfdId == dfd && v.VisStvCode == null, ct);
         var n = await db.Notes.FirstOrDefaultAsync(x => x.NotId == note, ct);
-        if (n is null || n.NotEtat is "ANNULEE" or "MEMO") return;
+        if (n is null || n.NotEtat is EtatNote.Annulee or EtatNote.Memo) return;
         var etat = complet ? "TERMINE" : n.NotEtat == "TERMINE" ? "EN_COURS" : n.NotEtat;
         if (etat == n.NotEtat) return;
         n.NotEtat = etat;
@@ -401,7 +401,7 @@ public partial class ServiceCrm
                 var objet = $"Retour de visa : {noms.GetValueOrDefault(d.TiersId.ToString(), $"tiers {d.TiersId}")} – {dif.DifNumero}";
                 var tache = db.Notes.Add(new CrmNote
                 {
-                    NotNature = "TACHE", NotEtat = "A_FAIRE", NotObjet = objet[..Math.Min(200, objet.Length)], NotResponsableId = c.Ind, NotSrvId = srv, NotEcheance = new DateTimeOffset(attendu.ToDateTime(new TimeOnly(9, 0)), TimeSpan.Zero),
+                    NotNature = NatureNote.Tache, NotEtat = EtatNote.AFaire, NotObjet = objet[..Math.Min(200, objet.Length)], NotResponsableId = c.Ind, NotSrvId = srv, NotEcheance = new DateTimeOffset(attendu.ToDateTime(new TimeOnly(9, 0)), TimeSpan.Zero),
                     NotCreePar = u.Code, NotCreeLe = DateTimeOffset.UtcNow, NotMajPar = u.Code, NotMajLe = DateTimeOffset.UtcNow,
                 }).Entity;
                 await db.SaveChangesAsync(ct);

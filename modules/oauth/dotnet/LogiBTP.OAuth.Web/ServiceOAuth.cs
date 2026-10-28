@@ -498,7 +498,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
         await db.SaveChangesAsync(ct);
         if (!etaitOk) return;
         await SignalerAsync(c, new SignalOAuth(c.OcoId, c.OcoNom, "ECHEC", $"Connexion {c.OcoNom} à reconnecter",
-            "Le fournisseur refuse le renouvellement du jeton : reconnecter la connexion pour rétablir les envois et la réception.", "URGENT",
+            "Le fournisseur refuse le renouvellement du jeton : reconnecter la connexion pour rétablir les envois et la réception.", NiveauNotification.Urgent,
             $"oauth:{c.OcoId}:echec:{Maintenant:yyyyMMddHHmm}"), ct);
     }
 
@@ -557,7 +557,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
             var quand = d.Delai == 0 ? "a expiré" : $"expire le {d.Date.ToLocalTime():dd/MM/yyyy HH:mm}";
             var action = d.Echeance == "SECRET" ? "renouveler le secret chez le fournisseur puis l'enregistrer" : "reconnecter la connexion";
             await SignalerAsync(c, new SignalOAuth(c.OcoId, c.OcoNom, "RAPPEL", $"Connexion {c.OcoNom} : échéance {(d.Delai == 0 ? "dépassée" : $"dans {d.Delai} jour(s) au plus")}",
-                $"{quoi} {quand} : {action}.", d.Delai is 0 or 1 ? "URGENT" : d.Delai <= 7 ? "ATTENTION" : "INFO",
+                $"{quoi} {quand} : {action}.", d.Delai is 0 or 1 ? NiveauNotification.Urgent : d.Delai <= 7 ? NiveauNotification.Attention : NiveauNotification.Info,
                 $"oauth:{c.OcoId}:{d.Echeance}:{d.Date:yyyyMMddHHmm}:{d.Delai}"), ct);
         }
     }

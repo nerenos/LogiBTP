@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, confirmer, saisir, formatDateHeure, formatDate } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
-  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE,
+  ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE, ETAT_CONGE, ERREUR_POINTAGE, enCours,
 } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { ouvrirConge, pastilleConge, periodeConge } from '../pointage/conges.js';
@@ -568,10 +568,10 @@ export class PageSaisiePointage extends PageBase {
   /** Congés du salarié touchant la semaine et les huit suivantes (clic : ouvrir la demande). */
   async #rendreConges(zone) {
     try { this.conges = await api.pointage.conges({ salarie: this.salarie, du: this.lundi, au: ajouterJours(this.lundi, 62) }); } catch (e) { zone.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; return; }
-    const l = this.conges.conges.filter((c) => c.etat === 'DEMANDE' || c.etat === 'VALIDE');
+    const l = this.conges.conges.filter(enCours);
     zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Période</th><th class="nombre">Jours</th><th>Nature<br><small>état</small></th><th>Commentaire</th></tr></thead><tbody>
       ${l.map((c) => `<tr class="cliquable" data-id="${c.id}"><td>${periodeConge(c)}</td><td class="nombre">${String(c.jours).replace('.', ',')}</td>
-        <td>${pastilleConge(c, this.conges.natures)} ${echapper(c.etat === 'VALIDE' ? (this.conges.natures.find((n) => n.code === c.nature)?.libelle ?? c.nature) : 'à valider')}</td><td>${echapper(c.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>`
+        <td>${pastilleConge(c, this.conges.natures)} ${echapper(c.etat === ETAT_CONGE.VALIDE ? (this.conges.natures.find((n) => n.code === c.nature)?.libelle ?? c.nature) : 'à valider')}</td><td>${echapper(c.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>`
       : '<p class="aide">Aucun congé demandé ou validé sur la semaine et les huit suivantes.</p>';
     zone.querySelectorAll('tr[data-id]').forEach((tr) => tr.addEventListener('click', async () => {
       const r = await ouvrirConge(this.app, { conge: l.find((c) => String(c.id) === tr.dataset.id), rh: this.conges.rh, natures: this.conges.natures });
@@ -634,7 +634,7 @@ export class PageSaisiePointage extends PageBase {
         this.app.message('Semaine enregistrée', 'succes');
         this.#chargerSalaries();
       } catch (e) {
-        if (e.code === 'POI_VALIDE' && await confirmer(`${e.message}\n\nEnvoyer la semaine au service RH comme demande de correction ?`)) await correction();
+        if (e.code === ERREUR_POINTAGE.POI_VALIDE && await confirmer(`${e.message}\n\nEnvoyer la semaine au service RH comme demande de correction ?`)) await correction();
         else this.app.erreur(e);
       }
     });
@@ -1209,7 +1209,7 @@ export class PageCongesPointage extends PageBase {
       <div data-resultat></div></div>`;
     const c = this.conteneur;
     this.ref = await api.pointage.referentiels();
-    const etat = creerCombo({ options: [{ valeur: 'DEMANDE', libelle: 'À valider' }, { valeur: 'VALIDE', libelle: 'Validés' }, { valeur: 'REFUSE', libelle: 'Refusés' }, { valeur: 'ANNULE', libelle: 'Annulés' }],
+    const etat = creerCombo({ options: [{ valeur: ETAT_CONGE.DEMANDE, libelle: 'À valider' }, { valeur: ETAT_CONGE.VALIDE, libelle: 'Validés' }, { valeur: ETAT_CONGE.REFUSE, libelle: 'Refusés' }, { valeur: ETAT_CONGE.ANNULE, libelle: 'Annulés' }],
       valeur: this.etat, vide: true, titre: 'État (vide : tous)' });
     c.querySelector('[data-etat]').append(etat);
     const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle, detail: s.code })), valeur: this.service, vide: true, titre: 'Service (vide : tous)' });
@@ -1244,7 +1244,7 @@ export class PageCongesPointage extends PageBase {
         <th>Nature<br><small>état</small></th><th>Commentaire<br><small>réponse</small></th><th>Demandé par<br><small>le</small></th><th>Traité par<br><small>le</small></th></tr></thead><tbody>
         ${d.conges.map((x) => `<tr class="cliquable etat-conge-${x.etat.toLowerCase()}" data-id="${x.id}"><td class="synthese-nom">${echapper(nomSalarie(x, ordre))}<br><small class="aide">${echapper([x.matricule, x.service].filter(Boolean).join(' · '))}</small></td>
           <td>${periodeConge(x)}</td><td class="nombre">${String(x.jours).replace('.', ',')}</td>
-          <td>${pastilleConge(x, d.natures)} ${echapper(x.etat === 'VALIDE' ? nature(x.nature) : ETATS_CONGE[x.etat])}</td>
+          <td>${pastilleConge(x, d.natures)} ${echapper(x.etat === ETAT_CONGE.VALIDE ? nature(x.nature) : ETATS_CONGE[x.etat])}</td>
           <td>${echapper(x.commentaire ?? '')}${x.reponse ? `<br><small class="aide">${echapper(x.reponse)}</small>` : ''}</td>
           <td>${echapper(x.demande_par)}<br><small>${formatDate(x.demande_le)}</small></td><td>${echapper(x.traite_par ?? '')}<br><small>${x.traite_le ? formatDate(x.traite_le) : ''}</small></td></tr>`).join('')}</tbody></table></div>`
     : '<p class="aide">Aucun congé sur la période.</p>'}`;

@@ -1,7 +1,7 @@
 namespace LogiBTP.Pointage;
 
 /// <summary>Congé (dates « AAAA-MM-JJ » incluses ; demi-journée : commence l'après-midi, finit à midi).</summary>
-public sealed record CongePeriode(long? Id, string? Du, string? Au, bool DebutMidi = false, bool FinMidi = false, string Etat = "DEMANDE");
+public sealed record CongePeriode(long? Id, string? Du, string? Au, bool DebutMidi = false, bool FinMidi = false, string Etat = EtatConge.Demande);
 
 /// <summary>Jour décompté d'un congé (1 ou 0,5).</summary>
 public sealed record JourConge(string Date, decimal Part);
@@ -26,7 +26,7 @@ public static class ReglesConges
     private static (int Debut, int Fin) DemiJournees(CongePeriode c) =>
         (Jour(c.Du!) * 2 + (c.DebutMidi ? 1 : 0), Jour(c.Au!) * 2 + (c.FinMidi ? 0 : 1));
 
-    public static bool EnCours(CongePeriode c) => c.Etat is "DEMANDE" or "VALIDE";
+    public static bool EnCours(CongePeriode c) => c.Etat is EtatConge.Demande or EtatConge.Valide;
 
     public static List<string> Controler(CongePeriode c, IEnumerable<CongePeriode> autres)
     {
@@ -64,7 +64,7 @@ public static class ReglesConges
         var r = new List<string>();
         if (action is "VALIDER" or "REFUSER")
         {
-            if (c.Etat != "DEMANDE") r.Add("CNG_ETAT");
+            if (c.Etat != EtatConge.Demande) r.Add("CNG_ETAT");
             if (action == "VALIDER" && string.IsNullOrEmpty(nature)) r.Add("CNG_NATURE");
         }
         else if (action == "ANNULER" && !EnCours(c)) r.Add("CNG_ETAT");

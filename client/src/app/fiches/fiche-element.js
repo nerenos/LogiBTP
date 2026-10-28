@@ -1,3 +1,4 @@
+import { GESTION_ELEMENT } from '@logibtp/bibliotheque';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, creerCombo, formatDate } from '@logibtp/socle/ui';
@@ -185,7 +186,7 @@ export class FicheElement extends FicheLogiBTP {
         ? [{ code: 'composition', titre: 'Composition', champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
         : [{ code: 'tarifs', titre: 'Tarifs fournisseurs', rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
       // Module Stock : quantités par lieu, valorisation, PMP, emplacements, mouvements (article géré en stock).
-      ...(this.id !== null && this.valeur('gestion') === 'STOCK' && this.valeur('type') === 'ARTICLE' && this.moduleActif('stock')
+      ...(this.id !== null && this.valeur('gestion') === GESTION_ELEMENT.STOCK && this.valeur('type') === 'ARTICLE' && this.moduleActif('stock')
         ? [{ code: 'stock', titre: 'Stock', rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
           .catch((e) => { corps.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; }) }]
         : []),

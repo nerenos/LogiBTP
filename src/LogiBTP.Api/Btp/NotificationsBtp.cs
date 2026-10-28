@@ -2,6 +2,7 @@ using System.Text.Json;
 using LogiBTP.Crm;
 using LogiBTP.Domaine.Ressources;
 using LogiBTP.Notifications.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -40,7 +41,7 @@ public sealed class SourceRappelsCrm(LogiBtpContext db, ModulesSociete modules) 
             if (!e.Actif || !e.Visible || l.Utilisateur is null) continue;
             res.Add(new NouvelleNotification(l.Utilisateur, "crm", "RAPPEL", $"Rappel : {l.NotObjet}",
                 l.NotEcheance is { } ech ? $"Échéance le {ech.ToLocalTime():dd/MM/yyyy HH:mm}" : null,
-                e.Couleur switch { "ROUGE" => "URGENT", "ORANGE" => "ATTENTION", _ => "INFO" }, $"/crm/note/{l.NotId}", "crm_note", l.NotId.ToString(),
+                e.Couleur switch { "ROUGE" => NiveauNotification.Urgent, "ORANGE" => NiveauNotification.Attention, _ => NiveauNotification.Info }, $"/crm/note/{l.NotId}", "crm_note", l.NotId.ToString(),
                 $"crm-rappel:{l.RapId}:{e.Couleur}"));
         }
         return res;
@@ -89,7 +90,7 @@ public sealed class SourceHabilitations(LogiBtpContext db) : ISourceNotification
             var aRenouveler = g.Count() - expirees;
             return new NouvelleNotification(g.First().Dest, "ressources", "HABILITATION",
                 $"Habilitations : {expirees} expirée(s), {aRenouveler} à renouveler dans les 30 jours",
-                "CACES, visites médicales, contrôles des matériels…", expirees > 0 ? "ATTENTION" : "INFO", "/ressources/habilitations?jours=30",
+                "CACES, visites médicales, contrôles des matériels…", expirees > 0 ? NiveauNotification.Attention : NiveauNotification.Info, "/ressources/habilitations?jours=30",
                 null, null, $"habilitations:{aujourdhui:yyyy-MM-dd}");
         }).ToList();
     }
@@ -120,7 +121,7 @@ public sealed class SourceEntretiens(LogiBtpContext db) : ISourceNotifications
             var retard = g.Count(x => x.Etat == "EN_RETARD");
             return new NouvelleNotification(g.First().Dest, "ressources", "ENTRETIEN",
                 $"Entretiens du matériel : {retard} en retard, {g.Count() - retard} à prévoir dans les 30 jours",
-                "Plans d'entretien (heures, kilomètres, mois)", retard > 0 ? "ATTENTION" : "INFO", "/ressources/habilitations?jours=30",
+                "Plans d'entretien (heures, kilomètres, mois)", retard > 0 ? NiveauNotification.Attention : NiveauNotification.Info, "/ressources/habilitations?jours=30",
                 null, null, $"entretiens:{aujourdhui:yyyy-MM-dd}");
         }).ToList();
     }
@@ -169,9 +170,9 @@ public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotificati
         var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
         return lignes.SelectMany(l => (l.Destinataire is { } d ? [d] : admins).Select(dest => l.Genre == "RETARD"
             ? new NouvelleNotification(dest, "execution", "ETAPE_RETARD", $"Ordre {l.Numero ?? l.EntId.ToString()} : « {l.Libelle} » en retard",
-                $"Prévue le {l.PrevuLe:dd/MM/yyyy}, pas encore validée", "ATTENTION", $"/document/{l.EntId}", null, null, $"exe-retard:{l.OreId}:{l.PrevuLe:yyyy-MM-dd}")
+                $"Prévue le {l.PrevuLe:dd/MM/yyyy}, pas encore validée", NiveauNotification.Attention, $"/document/{l.EntId}", null, null, $"exe-retard:{l.OreId}:{l.PrevuLe:yyyy-MM-dd}")
             : new NouvelleNotification(dest, "execution", "ETAPE_CONTROLE", $"Ordre {l.Numero ?? l.EntId.ToString()} : contrôle de « {l.Libelle} » attendu",
-                $"Étape validée le {l.ValideLe:dd/MM/yyyy}", "INFO", $"/document/{l.EntId}", null, null, $"exe-controle:{l.OreId}"))).ToList();
+                $"Étape validée le {l.ValideLe:dd/MM/yyyy}", NiveauNotification.Info, $"/document/{l.EntId}", null, null, $"exe-controle:{l.OreId}"))).ToList();
     }
 }
 
@@ -212,7 +213,7 @@ public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifi
         var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
         return destinataires.Select(dest => new NouvelleNotification(dest, "sous_traitance", "PIECES",
             $"Sous-traitance : {defaut} pièce(s) manquante(s) ou expirée(s), {echeance} à renouveler",
-            $"{concernes} marché(s) de sous-traitance concerné(s)", defaut > 0 ? "ATTENTION" : "INFO", "/liste/marches_st?vue=1203", null, null,
+            $"{concernes} marché(s) de sous-traitance concerné(s)", defaut > 0 ? NiveauNotification.Attention : NiveauNotification.Info, "/liste/marches_st?vue=1203", null, null,
             $"st-pieces:{jour:yyyy-MM-dd}")).ToList();
     }
 }
@@ -261,7 +262,7 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
                 from dest in i.Conducteur is { } cond ? [cond] : destinataires
                 select new NouvelleNotification(dest, "sous_traitance", "PAIEMENT",
                     d.Delai.Depasse ? $"Demande de paiement en retard : {i.Tiers}" : $"Demande de paiement à accepter avant le {d.Delai.Echeance:dd/MM/yyyy} : {i.Tiers}",
-                    $"Facture {i.Facture}, marché {i.Marche}", d.Delai.Depasse ? "ATTENTION" : "INFO", $"/fiche/marche/{i.MarcheId}", null, null,
+                    $"Facture {i.Facture}, marché {i.Marche}", d.Delai.Depasse ? NiveauNotification.Attention : NiveauNotification.Info, $"/fiche/marche/{i.MarcheId}", null, null,
                     $"st-paiement:{d.Id}:{jour:yyyy-MM-dd}")).ToList();
     }
 }
@@ -310,7 +311,7 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
             var dest = magasiniers.Union(x.Salarie is { } sa ? await ChefsAsync(sa, ct) : []).Distinct().ToList();
             if (dest.Count == 0) dest = await AdministrateursAsync(ct);
             r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "A_VALIDER", $"Stock : saisie à la borne à valider ({x.Numero})",
-                $"{x.Nom ?? "Salarié"} : sortie ou retour comptés dans le stock, à accepter ou refuser", "INFO", "/stock/a-valider", null, null, $"stock-a-valider:{x.EntId}")));
+                $"{x.Nom ?? "Salarié"} : sortie ou retour comptés dans le stock, à accepter ou refuser", NiveauNotification.Info, "/stock/a-valider", null, null, $"stock-a-valider:{x.EntId}")));
         }
         // Renouvellements : une fois par jour (clé datée), articles dont la date de renouvellement tombe dans les 30 jours.
         var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
@@ -322,7 +323,7 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
             if (dest.Count == 0) dest = await AdministrateursAsync(ct);
             var echus = g.Count(x => x.Renouveler <= jour);
             r.AddRange(dest.Select(d => new NouvelleNotification(d, "stock", "RENOUVELER", $"Dotations : {g.Count()} article(s) à renouveler pour {nom}",
-                echus > 0 ? $"{echus} déjà échu(s)" : "Dans les 30 jours", echus > 0 ? "ATTENTION" : "INFO", $"/fiche/salarie/{g.Key}", null, null,
+                echus > 0 ? $"{echus} déjà échu(s)" : "Dans les 30 jours", echus > 0 ? NiveauNotification.Attention : NiveauNotification.Info, $"/fiche/salarie/{g.Key}", null, null,
                 $"stock-renouveler:{g.Key}:{jour:yyyy-MM-dd}")));
         }
         return r;
@@ -355,7 +356,7 @@ public sealed class SourceCertificat(LogiBtpContext db, LogiBTP.Installation.Web
             _ => $"Certificat émis par {infos?.Emetteur} : le renouveler auprès de son émetteur puis « installation certificat importer ».",
         };
         var aujourdhui = DateOnly.FromDateTime(maintenant.LocalDateTime);
-        return admins.Select(a => new NouvelleNotification(a, "installation", "CERTIFICAT", titre, texte, jours < 7 ? "URGENT" : "ATTENTION",
+        return admins.Select(a => new NouvelleNotification(a, "installation", "CERTIFICAT", titre, texte, jours < 7 ? NiveauNotification.Urgent : NiveauNotification.Attention,
             "/parametres/installation", null, null, $"certificat:{aujourdhui:yyyy-MM-dd}"));
     }
 }

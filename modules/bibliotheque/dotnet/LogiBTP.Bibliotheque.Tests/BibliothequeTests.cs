@@ -97,3 +97,11 @@ public class CoefficientsElementTests
         Assert.Equal(a["sources"]!["coef_fg"]!["debut"]?.GetValue<string>(), r.SourceFg.Debut);
     }
 }
+
+/// <summary>Codes du module : Codes.cs ↔ modules/bibliotheque/js/src/codes.js.</summary>
+public class CodesTests
+{
+    [Fact]
+    public void Parite_avec_le_js() =>
+        Assert.Empty(Constantes.Ecarts(CasPartages.Chemin("modules", "bibliotheque", "js", "src", "codes.js"), "GESTION_ELEMENT", typeof(GestionElement)));
+}

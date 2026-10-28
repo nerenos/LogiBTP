@@ -435,7 +435,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             if (!actif || (string)verrou!["jeton"]! != d.Jeton.ToString())
             {
                 var etat = actif ? new EtatVerrou((string)verrou!["vef_utilisateur"]!, new DateTimeOffset((DateTime)verrou["vef_depuis"]!), false) : null;
-                throw ExceptionMetier.Conflit("VERROU_PERDU", etat is null ? "Verrou de modification expiré : reprenez la modification" : $"Fiche reprise en modification par {etat.Utilisateur}", etat);
+                throw ExceptionMetier.Conflit(ErreursFiche.VerrouPerdu, etat is null ? "Verrou de modification expiré : reprenez la modification" : $"Fiche reprise en modification par {etat.Utilisateur}", etat);
             }
             var h = (await LireDans(cnx, tx, Requete(() => c.Verrou(id)), ct)).FirstOrDefault()?["h"] as string ?? throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
             if (d.H is not null && d.H != h) throw ExceptionMetier.Conflit("FICHE_MODIFIEE", "La fiche a été modifiée par ailleurs : rechargez-la");
@@ -510,7 +510,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
                     "SELECT vef_utilisateur, vef_renouvele FROM verrou_fiche WHERE vef_type = @p0 AND vef_id = @p1 FOR UPDATE",
                     [new("p0", code), new("p1", id)]), ct)).FirstOrDefault();
                 if (verrou is not null && (DateTime)verrou["vef_renouvele"]! > limite.UtcDateTime && (string)verrou["vef_utilisateur"]! != u.Code)
-                    throw ExceptionMetier.Conflit("FICHE_EN_MODIFICATION", $"Fiche en cours de modification par {verrou["vef_utilisateur"]} : suppression impossible");
+                    throw ExceptionMetier.Conflit(ErreursFiche.FicheEnModification, $"Fiche en cours de modification par {verrou["vef_utilisateur"]} : suppression impossible");
                 await using (var cmd = Commande(cnx, tx, Requete(() => specialisation.Constructeur(t).Suppression(id))))
                 {
                     if (await cmd.ExecuteNonQueryAsync(ct) == 0) throw ExceptionMetier.Introuvable($"Fiche {code} {id}");
@@ -524,7 +524,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         }
         catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.ForeignKeyViolation)
         {
-            throw ExceptionMetier.Conflit("FICHE_UTILISEE", "Cet élément est utilisé ailleurs : suppression impossible");
+            throw ExceptionMetier.Conflit(ErreursFiche.FicheUtilisee, "Cet élément est utilisé ailleurs : suppression impossible");
         }
     }
 

@@ -1,4 +1,5 @@
 using LogiBTP.Crm.Web;
+using LogiBTP.Crm;
 using LogiBTP.Documents.Web;
 using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
@@ -140,7 +141,7 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
             if (c.ChantierId is int cha) liens.Add(new LienSaisi("chantier", cha.ToString()));
             var echeance = new DateTimeOffset(d.Delai.Echeance.ToDateTime(new TimeOnly(12, 0)));
             var mode = d.Mode == "DIRECT" ? "paiement direct" : "délégation de paiement";
-            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie("TACHE", "A_FAIRE", null, c.Conducteur is null && srv.Count > 0 ? srv[0] : null,
+            await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, c.Conducteur is null && srv.Count > 0 ? srv[0] : null,
                 $"Demande de {mode} à accepter : {c.Tiers ?? "sous-traitant"}, facture {f.Reference ?? f.Numero}",
                 $"<p>Montant demandé : {d.MontantDemande.ToString("N2", new System.Globalization.NumberFormatInfo { NumberGroupSeparator = " ", NumberDecimalSeparator = "," })} €. À accepter ou refuser avant le {d.Delai.Echeance:dd/MM/yyyy}.</p>",
                 c.Conducteur, echeance, null, false, false, false, liens, null), u, ct);

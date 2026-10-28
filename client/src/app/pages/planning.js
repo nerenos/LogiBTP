@@ -1,7 +1,7 @@
-import { dateLocale } from '@logibtp/socle';
+import { dateLocale, NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer } from '@logibtp/socle/ui';
-import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui } from '@logibtp/planning';
+import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui, DIFFUSION_PLANNING } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -459,7 +459,7 @@ export class PagePlanning extends PageBase {
       e.preventDefault();
       this.app.naviguer(`/planning?${new URLSearchParams(Object.entries({ vue: this.vue, du: this.du, consultation: '1' }).filter(([, v]) => v))}`, { nouvelleFenetre: true });
     });
-    this.desabonner = ecouter('planning', () => {
+    this.desabonner = ecouter(DIFFUSION_PLANNING.SUJET, () => {
       this.attente++;
       if (this.synchro === 'TEMPS_REEL') { clearTimeout(this.minuterie); this.minuterie = setTimeout(() => this.#charger(), 400); } else this.#majAttente();
     });
@@ -993,7 +993,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const p = this.periode;
     let l;
     try { l = await api.planning.notifications({ vue: this.vue, du: depuisMinutes(p.debut), au: depuisMinutes(p.fin), services: this.filtreServices?.join(',') }); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    const importantes = l.filter((n) => n.niveau !== 'INFO' && n.etat !== 'VUE').length;
+    const importantes = l.filter((n) => n.niveau !== NIVEAU_NOTIFICATION.INFO && n.etat !== 'VUE').length;
     this.#badge('alertes', importantes, `${importantes} alerte${importantes > 1 ? 's' : ''} à examiner`);
     const TYPES = { DEPENDANCE: '🔗 Dépendances', LIEE: '📎 Tâches liées', SUROCCUPATION: '⛔ Sur-occupation', HABILITATION: '🎓 Habilitations', MATERIEL: '🧱 Matériel', EQUIPE: '👥 Équipes', SOUSOCCUPATION: '💤 Sous-occupation' };
     zone.innerHTML = l.length ? Object.entries(TYPES).filter(([t]) => l.some((n) => n.type === t)).map(([t, titre]) => {

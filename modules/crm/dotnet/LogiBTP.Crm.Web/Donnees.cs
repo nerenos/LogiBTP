@@ -20,8 +20,8 @@ public class CrmTypeNote
 public class CrmNote
 {
     public long NotId { get; set; }
-    public string NotNature { get; set; } = "ACTION";
-    public string NotEtat { get; set; } = "A_FAIRE";
+    public string NotNature { get; set; } = NatureNote.Action;
+    public string NotEtat { get; set; } = EtatNote.AFaire;
     public int? NotTnoId { get; set; }
     public int? NotSrvId { get; set; }
     public string NotObjet { get; set; } = "";

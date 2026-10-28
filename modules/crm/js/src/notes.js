@@ -4,23 +4,24 @@
 // Une note est une action, un message ou une tâche. Une tâche a un responsable (individu) ou un service qui la prendra,
 // et une échéance ; un message a au moins un destinataire, sauf une réponse dans un fil. Une note privée ou de données
 // personnelles (RGPD) ne paraît jamais dans le fil d'actualité.
+import { NATURE_NOTE, ETAT_NOTE } from './codes.js';
 
 export const NATURES_NOTE = [
-  { valeur: 'ACTION', libelle: 'Action', icone: '⚡' },
-  { valeur: 'MESSAGE', libelle: 'Message', icone: '💬' },
-  { valeur: 'TACHE', libelle: 'Tâche', icone: '☑' },
+  { valeur: NATURE_NOTE.ACTION, libelle: 'Action', icone: '⚡' },
+  { valeur: NATURE_NOTE.MESSAGE, libelle: 'Message', icone: '💬' },
+  { valeur: NATURE_NOTE.TACHE, libelle: 'Tâche', icone: '☑' },
 ];
 
 export const ETATS_NOTE = [
-  { valeur: 'A_FAIRE', libelle: 'À faire' },
-  { valeur: 'EN_COURS', libelle: 'En cours' },
-  { valeur: 'TERMINE', libelle: 'Terminé' },
-  { valeur: 'MEMO', libelle: 'Pour mémo' },
-  { valeur: 'ANNULEE', libelle: 'Annulée' },
+  { valeur: ETAT_NOTE.A_FAIRE, libelle: 'À faire' },
+  { valeur: ETAT_NOTE.EN_COURS, libelle: 'En cours' },
+  { valeur: ETAT_NOTE.TERMINE, libelle: 'Terminé' },
+  { valeur: ETAT_NOTE.MEMO, libelle: 'Pour mémo' },
+  { valeur: ETAT_NOTE.ANNULEE, libelle: 'Annulée' },
 ];
 
 /** États qui sortent une note des listes de travail et des rappels. */
-export const ETATS_CLOS = ['TERMINE', 'MEMO', 'ANNULEE'];
+export const ETATS_CLOS = [ETAT_NOTE.TERMINE, ETAT_NOTE.MEMO, ETAT_NOTE.ANNULEE];
 
 export const LONGUEUR_OBJET = 200;
 
@@ -36,11 +37,11 @@ export function controlerNote(note) {
   if (!NATURES_NOTE.some((n) => n.valeur === note.nature)) erreurs.push('NOTE_NATURE');
   if (!ETATS_NOTE.some((e) => e.valeur === note.etat)) erreurs.push('NOTE_ETAT');
   if (vide(note.objet) || String(note.objet).trim().length > LONGUEUR_OBJET) erreurs.push('NOTE_OBJET');
-  if (note.nature === 'TACHE') {
+  if (note.nature === NATURE_NOTE.TACHE) {
     if (vide(note.responsable_id) && vide(note.srv_id)) erreurs.push('NOTE_RESPONSABLE');
     if (vide(note.echeance)) erreurs.push('NOTE_ECHEANCE');
   }
-  if (note.nature === 'MESSAGE' && vide(note.parent_id) && !(note.destinataires ?? []).length) erreurs.push('NOTE_DESTINATAIRE');
+  if (note.nature === NATURE_NOTE.MESSAGE && vide(note.parent_id) && !(note.destinataires ?? []).length) erreurs.push('NOTE_DESTINATAIRE');
   if (note.dans_fil && note.prive) erreurs.push('NOTE_PRIVEE_FIL');
   if (note.dans_fil && note.rgpd) erreurs.push('NOTE_RGPD_FIL');
   return erreurs;

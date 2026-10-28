@@ -460,7 +460,7 @@ public static class SourceDocumentEdition
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
         // Ordre (module Exécution, E47) : étapes dans l'ordre (dates prévisionnelles, validation, contrôle, ressource).
-        if (famille == "E")
+        if (famille == FamillesDocument.Execution)
         {
             resultat["etapes"] = JsonNode.Parse(await db.Database.SqlQueryRaw<string>("""
                 SELECT coalesce(json_agg(json_build_object('code', e.ore_code, 'libelle', e.ore_libelle, 'nature', e.ore_nature,

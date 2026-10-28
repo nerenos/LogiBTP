@@ -1,5 +1,5 @@
 import { echapper, creerCombo, confirmer, formatDateHeure, formatDate } from '@logibtp/socle/ui';
-import { controlerConge, MESSAGES_CONGES, ETATS_CONGE } from '@logibtp/pointage';
+import { controlerConge, MESSAGES_CONGES, ETATS_CONGE, ETAT_CONGE } from '@logibtp/pointage';
 import { api } from '../api.js';
 
 // Congés et absences (module Pointage) : fenêtre commune de demande et de traitement, utilisée par la page des congés,
@@ -32,7 +32,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
   return new Promise((resoudre) => {
     const c = conge ?? { etat: 'DEMANDE', ...initial };
     const nouveau = !conge;
-    const traitable = nouveau || c.etat === 'DEMANDE' || (rh && c.etat === 'VALIDE');
+    const traitable = nouveau || c.etat === ETAT_CONGE.DEMANDE || (rh && c.etat === ETAT_CONGE.VALIDE);
     const actives = natures.filter((n) => n.actif || n.code === c.nature);
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure dialogue-conge';
@@ -57,7 +57,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
         ${traitable ? `<button type="button" data-enregistrer title="${nouveau ? 'Envoyer la demande au service RH' : 'Enregistrer les modifications'}">${nouveau ? '✉ Demander' : '💾 Enregistrer'}</button>` : ''}
         ${rh && (nouveau || c.etat === 'DEMANDE') ? '<button type="button" data-valider title="Valider avec la nature choisie">✅ Valider</button>' : ''}
         ${rh && !nouveau && c.etat === 'DEMANDE' ? '<button type="button" data-refuser title="Refuser la demande (réponse conseillée)">⛔ Refuser</button>' : ''}
-        ${!nouveau && (c.etat === 'DEMANDE' || (rh && c.etat === 'VALIDE')) ? '<button type="button" data-annuler title="Annuler ce congé">🗑 Annuler le congé</button>' : ''}
+        ${!nouveau && (c.etat === ETAT_CONGE.DEMANDE || (rh && c.etat === ETAT_CONGE.VALIDE)) ? '<button type="button" data-annuler title="Annuler ce congé">🗑 Annuler le congé</button>' : ''}
         <button type="button" data-fermer>Fermer</button></p>`;
     document.body.append(dlg);
     const q = (s) => dlg.querySelector(s);

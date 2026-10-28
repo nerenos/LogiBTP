@@ -1,6 +1,7 @@
 using System.Net;
 using LogiBTP.Authentification.Web;
 using LogiBTP.Mail.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -27,7 +28,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Usurpation commencée : notification au compte usurpé (administrateur, motif).</summary>
     public override async Task ApresUsurpationAsync(IServiceProvider services, Compte cible, string administrateur, string motif, CancellationToken ct) =>
         await services.GetRequiredService<LogiBTP.Notifications.Web.ServiceNotification>().PublierAsync(
-            [new(cible.CptCode, "authentification", "USURPATION", $"{administrateur} agit pour votre compte", motif, "ATTENTION")], ct);
+            [new(cible.CptCode, "authentification", "USURPATION", $"{administrateur} agit pour votre compte", motif, NiveauNotification.Attention)], ct);
 
     private const string SqlPersonnes = """
         SELECT i.ind_id::text AS id, concat_ws(' ', i.ind_prenom, i.ind_nom) AS libelle, i.ind_actif AS individu_actif,
@@ -124,7 +125,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
             """).ToListAsync(ct);
         await services.GetRequiredService<LogiBTP.Notifications.Web.ServiceNotification>().PublierAsync(admins.Select(a =>
             new LogiBTP.Notifications.Web.NouvelleNotification(a, "authentification", "EXCLUSION_IP", $"Adresse {prefixe} exclue ({echecs} échecs de connexion)",
-                $"Jusqu'à {fin.ToLocalTime():dd/MM HH:mm} ; levée possible dans les comptes utilisateurs", "ATTENTION", "/parametres/comptes?onglet=exclusions",
+                $"Jusqu'à {fin.ToLocalTime():dd/MM HH:mm} ; levée possible dans les comptes utilisateurs", NiveauNotification.Attention, "/parametres/comptes?onglet=exclusions",
                 Cle: $"exclusion-ip:{prefixe}:{fin:yyyyMMddHHmm}")), ct);
     }
 
