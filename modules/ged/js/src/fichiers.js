@@ -1,4 +1,5 @@
 // Types de fichiers : aperçu possible (images, PDF, textes, mails) ou téléchargement, icônes, tailles.
+import { dateLocale } from '@logibtp/socle';
 
 const EXTENSIONS = {
   image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'],
@@ -45,4 +46,4 @@ export function formatTaille(octets) {
 export const titreDepuisNom = (nom) => String(nom ?? '').replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim();
 
 /** Date du fichier (dernière modification) au format ISO, sinon aujourd'hui. */
-export const dateDepuisFichier = (f) => new Date(f?.lastModified || Date.now()).toISOString().slice(0, 10);
+export const dateDepuisFichier = (f) => dateLocale(f?.lastModified || Date.now());

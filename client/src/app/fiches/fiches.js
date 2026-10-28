@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
 import { formatNombre, echapper } from '@logibtp/socle/ui';
@@ -11,7 +12,6 @@ import { AGENCES_SALARIES } from '../annuaire/donnees.js';
 // Fiches du cœur : spécialisations de FicheBase (module Fiche) pour les salariés et les matériels.
 
 const jours = (iso) => (iso ? (Date.now() - Date.parse(String(iso).slice(0, 10))) / 86400000 : null);
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const info = (libelle, valeur, alerte = false) => `<span class="info ${alerte ? 'alerte' : ''}"><small>${libelle}</small>${valeur}</span>`;
 
 /** Fiche du cœur : onglet Suivi (module CRM), modules actifs. */

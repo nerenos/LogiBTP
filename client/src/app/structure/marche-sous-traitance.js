@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo, alerter } from '@logibtp/socle/ui';
 import { codeMarche } from '../fiches/fiche-structure.js';
 
@@ -80,7 +81,7 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
           sens: 'ST', code: $('[data-code]').value.trim(), libelle: $('[data-libelle]').value.trim(), cha_id: chantier.id, tiers_id: doc.ent_tiers_id,
           marche_vente_id: comboVente.valeurCombo ? Number(comboVente.valeurCombo) : null, nature: nature(), garantie: comboGarantie.valeurCombo,
           montant_agree: agree ? Number(agree.replace(/\s/g, '').replace(',', '.')) : null, autoliquidation: $('[data-auto]').checked,
-          date: new Date().toISOString().slice(0, 10), statut: 'EN_COURS', depassement_autorise: false,
+          date: aujourdhui(), statut: 'EN_COURS', depassement_autorise: false,
         });
         dlg.close();
         resoudre({ ent_marche_id: Number(m.id), cree: true });

@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const ORIGINES = {
@@ -8,8 +8,6 @@ const ORIGINES = {
   LETSENCRYPT: 'Let\'s Encrypt (défi DNS)',
 };
 
-const date = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '');
-const dateHeure = (v) => (v ? new Date(v).toLocaleString('fr-FR') : '');
 const go = (mo) => (mo >= 1024 ? `${(mo / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go` : `${mo} Mo`);
 
 /**
@@ -46,7 +44,7 @@ export class PageParametresInstallation extends PageBase {
           <tr><th>Origine</th><td>${echapper(ORIGINES[c.origine] ?? c.origine)}</td></tr>
           <tr><th>Noms</th><td>${c.noms.map(echapper).join(', ')}</td></tr>
           <tr><th>Émetteur</th><td>${echapper(c.emetteur)}</td></tr>
-          <tr><th>Valable jusqu'au</th><td>${date(c.fin)} (${c.jours_restants} jour(s))</td></tr>
+          <tr><th>Valable jusqu'au</th><td>${formatDate(c.fin)} (${c.jours_restants} jour(s))</td></tr>
           ${c.empreinte_racine ? `<tr><th>Empreinte de l'autorité</th><td><code>${echapper(c.empreinte_racine)}</code></td></tr>` : ''}
         </tbody></table>${c.jours_restants < 30 ? alerte('Certificat à renouveler') : ''}
         <p class="aide">Postes et tablettes : page <a href="/certificat" target="_blank" rel="noopener">/certificat</a>.</p>`;
@@ -59,7 +57,7 @@ export class PageParametresInstallation extends PageBase {
     const s = e.sauvegarde;
     const anciennete = s ? (Date.now() - new Date(s.le).getTime()) / 86400000 : null;
     const sauvegarde = !s ? alerte('Aucune sauvegarde connue')
-      : `<p>Dernière sauvegarde : <b>${dateHeure(s.le)}</b>, ${s.bases.length} base(s), ${go(s.taille_mo)}${s.chiffree ? ', chiffrée' : ''}.</p>
+      : `<p>Dernière sauvegarde : <b>${formatDateHeure(s.le)}</b>, ${s.bases.length} base(s), ${go(s.taille_mo)}${s.chiffree ? ', chiffrée' : ''}.</p>
         ${s.erreur ? alerte(`Échec : ${s.erreur}`) : ''}${anciennete > 2 ? alerte('Sauvegarde de plus de deux jours') : ''}`;
     const disques = e.disques.length === 0 ? '' : `<table class="tableau-compact largeur-contenu"><thead><tr><th>Usage</th><th>Libre</th><th>Total</th></tr></thead><tbody>
       ${e.disques.map((d) => `<tr><td>${echapper(d.usage)}</td><td>${go(d.libre_mo)}${d.libre_mo < d.total_mo / 10 ? ' ⚠' : ''}</td><td>${go(d.total_mo)}</td></tr>`).join('')}

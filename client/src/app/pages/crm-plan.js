@@ -1,5 +1,6 @@
+import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDate } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { api } from '../api.js';
@@ -8,7 +9,6 @@ import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { extraireNomPlan } from '@logibtp/crm';
 import { pastillePlan } from './crm-plans.js';
 
-const date = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 /** Indice affiché : l'indice vide est le premier (avant A). */
 export const libelleIndice = (i) => (i ? `Indice ${i}` : 'Premier indice (vide)');
 /** Nom du répertoire de la GED d'un indice (sous l'élément crm_plan). */
@@ -125,14 +125,14 @@ export class PagePlanCrm extends PageBase {
     const indices = [...this.detail.indices].reverse();
     const titre = (id) => this.pieces.find((x) => x.id === id)?.titre ?? (id ? `Document ${id}` : '');
     zone.innerHTML = indices.length ? indices.map((i) => `<div class="crm-indice" data-indice="${i.id}">
-      <div class="crm-indice-entete"><b>${echapper(libelleIndice(i.indice))}</b> <span class="aide">${i.date ? `diffusé le ${date(i.date)}` : 'à diffuser'}${i.motif ? ` · ${echapper(i.motif)}` : ''}</span>
+      <div class="crm-indice-entete"><b>${echapper(libelleIndice(i.indice))}</b> <span class="aide">${i.date ? `diffusé le ${formatDate(i.date)}` : 'à diffuser'}${i.motif ? ` · ${echapper(i.motif)}` : ''}</span>
         ${i.dge_id ? `<a href="/ged/${i.dge_id}">📄 ${echapper(titre(i.dge_id))}</a>` : ''}
         <label class="crm-photos" title="Ajouter des fichiers dans le répertoire de l'indice"><input type="file" data-fichiers-de="${i.id}" multiple hidden>📎</label>
         <button type="button" data-supprimer-indice="${i.id}" title="Supprimer l'indice">✕</button></div>
       ${(() => { const f = this.pieces.filter((x) => i.rge_id && x.repertoire_id === i.rge_id && x.id !== i.dge_id); return f.length ? `<ul class="crm-liens">${f.map((x) => `<li>📄 <a href="/ged/${x.id}">${echapper(x.titre)}</a></li>`).join('')}</ul>` : ''; })()}
       ${i.visas.length ? `<table class="crm-table"><thead><tr><th>Tiers</th><th>Attendu le</th><th>Visa</th><th>Reçu le</th><th>Observation</th><th>Retour</th><th></th></tr></thead><tbody>
         ${i.visas.map((v) => `<tr data-visa="${v.id}"><td>${lienElement(v.tiers)}${v.contact ? `<br><small>${lienElement(v.contact)}</small>` : ''}${v.diffusion_numero ? `<br><small class="aide">${echapper(v.diffusion_numero)}</small>` : ''}</td>
-          <td class="${!v.statut && v.attendu_le && v.attendu_le < new Date().toISOString().slice(0, 10) ? 'crm-retard' : ''}">${date(v.attendu_le)}</td>
+          <td class="${!v.statut && v.attendu_le && v.attendu_le < aujourdhui() ? 'crm-retard' : ''}">${formatDate(v.attendu_le)}</td>
           <td><span data-statut></span></td><td><input type="date" data-recu value="${v.recu_le ?? ''}"></td>
           <td><input data-observation size="22" value="${echapper(v.observation ?? '')}"></td><td><span data-retour></span></td>
           <td><button type="button" data-enregistrer-visa title="Enregistrer le visa">✓</button><button type="button" data-supprimer-visa title="Retirer">✕</button></td></tr>`).join('')}</tbody></table>`

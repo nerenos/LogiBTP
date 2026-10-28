@@ -29,13 +29,8 @@ public static class ReglesConformite
     public static readonly string[] Etats = ["FOURNIE", "A_ECHEANCE", "EXPIREE", "MANQUANTE", "ABSENTE", "DISPENSEE"];
     public static readonly string[] Actions = ["COMMANDE", "FACTURE", "PAIEMENT"];
 
-    public static DateOnly AjouterMois(DateOnly d, int n)
-    {
-        var total = d.Year * 12 + (d.Month - 1) + n;
-        var an = total / 12;
-        var mois = total - an * 12 + 1;
-        return new DateOnly(an, mois, Math.Min(d.Day, DateTime.DaysInMonth(an, mois)));
-    }
+    /// <summary>Date + n mois, jour ramené au dernier du mois s'il n'existe pas (comme `ajouterMois` du socle JS).</summary>
+    public static DateOnly AjouterMois(DateOnly d, int n) => d.AddMonths(n);
 
     public static bool Applicable(Exigence e, ContexteMarche c) =>
         (e.CondPublic is not bool p || c.Public == p)

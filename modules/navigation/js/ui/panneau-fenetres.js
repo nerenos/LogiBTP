@@ -1,9 +1,8 @@
-import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, confirmer, formatHeure } from '@logibtp/socle/ui';
 
 // Liste des fenêtres ouvertes de la session : afficher (premier plan), signaler, fermer ; fermer la session.
 // fenetres : GestionFenetres ; fermerSession() : procédure de l'application (contrôle des modifications).
 
-const heure = (t) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 export class PanneauFenetres {
   constructor({ fenetres, fermerSession, fermerFenetre, message = () => {} }) {
@@ -41,7 +40,7 @@ export class PanneauFenetres {
       <td>${echapper(f.icone || '🗔')}</td>
       <td><b>${echapper(f.titre || '(sans titre)')}</b>${f.modifiee ? ' <span class="nav-modifiee" title="Modifications non enregistrées">●</span>' : ''}${f.courante ? ' <small>(cette fenêtre)</small>' : ''}${f.principale ? ' <small>principale</small>' : ''}</td>
       <td><code>${echapper(f.url)}</code></td>
-      <td>${heure(f.ouverteLe)}</td>
+      <td>${formatHeure(f.ouverteLe)}</td>
       <td class="nav-actions">${f.courante ? '<button type="button" data-action="fermer-courante">Fermer</button>'
         : '<button type="button" data-action="afficher">Afficher</button><button type="button" data-action="signaler" title="Signaler sa présence">🔔</button>'}</td>
     </tr>`).join('');

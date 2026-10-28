@@ -1,3 +1,4 @@
+import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import {
@@ -8,7 +9,6 @@ import { TYPES_AFFECTATION, LIBELLES_AFFECTATION, MESSAGES_AFFECTATIONS, control
 // Écrans du référentiel des ressources (db/195) : habilitations d'un salarié ou d'un matériel, missions d'un intérimaire,
 // habilitations exigées du conducteur d'un matériel. Enregistrés à part de la fiche (bouton propre), en ligne seulement.
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const CLASSES = { VALIDE: 'ok', A_RENOUVELER: 'attention', EXPIREE: 'erreur', NON_ACQUISE: 'neutre' };
 
@@ -193,7 +193,7 @@ export async function rendreAffectations(corps, { app, materiel }) {
     });
     corps.querySelector('[data-ajouter]').addEventListener('click', () => {
       const jourCourant = aujourdhui();
-      const veille = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const veille = ajouterJours(aujourdhui(), -1);
       for (const a of saisie) if (!a.au && a.du && a.du < jourCourant) a.au = veille;
       saisie.push({ type: 'SALARIE', ressource: null, du: jourCourant, au: null, commentaire: null });
       modifiee = true;

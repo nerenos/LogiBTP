@@ -1,12 +1,11 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
-import { Dz } from '@logibtp/socle';
+import { Dz, aujourdhui } from '@logibtp/socle';
 import { MODES_REGLEMENT } from '@logibtp/document';
 import { proposerPointage, nonPointe } from '@logibtp/reglement';
 import { api } from '../api.js';
 
 /** Date du jour (locale) au format ISO. */
-const aujourdhui = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 /**
  * Règlements d'un tiers (module Règlements, CONCEPTION-MARCHES-REGLEMENTS.md, Q15 à Q18) : `/reglements?sens=E|D&tiers=`.

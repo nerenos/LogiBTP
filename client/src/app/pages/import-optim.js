@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatDate } from '@logibtp/socle/ui';
 import { formatImport } from '../import/formats.js';
 import { deposerImport } from '../import/depot-import.js';
 import { derniereVersionGed } from '../documents/tracabilite.js';
@@ -71,7 +71,7 @@ export class PageImportOptim extends PageBase {
       <section class="import-resume">
         <h2>${echapper(d.entete.objet ?? 'Devis sans objet')}</h2>
         <dl>
-          <dt>Fichier</dt><dd>${echapper(this.nomFichier)} — référence ${echapper(d.entete.reference ?? '?')}${d.entete.date ? `, du ${new Date(d.entete.date).toLocaleDateString('fr-FR')}` : ''}</dd>
+          <dt>Fichier</dt><dd>${echapper(this.nomFichier)} — référence ${echapper(d.entete.reference ?? '?')}${d.entete.date ? `, du ${formatDate(d.entete.date)}` : ''}</dd>
           <dt>Lignes</dt><dd>${compte('TITRE')} titre(s), ${compte('OUVRAGE')} ouvrage(s), ${compte('ELEMENT')} élément(s), ${compte('TEXTE')} texte(s)</dd>
           <dt>Total d'origine</dt><dd>${formatNombre(d.entete.controle.total_ht, 2)} € HT — ${formatNombre(d.entete.controle.total_ttc, 2)} € TTC</dd>
           <dt>Rédacteur</dt><dd>${echapper(d.entete.redacteur ?? '—')}</dd>

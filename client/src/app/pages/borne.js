@@ -1,5 +1,6 @@
+import { ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -42,7 +43,6 @@ function ecrireReprise(r) {
 }
 
 const dateLongue = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
-const decalerJour = (d, n) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
 class ErreurBorne extends Error {
   constructor(statut, code, message) { super(message); this.statut = statut; this.code = code; }
@@ -277,7 +277,7 @@ export class PageBorne extends PageBase {
   async #changerDate(delta) {
     const j = this.etat.journee;
     if (this.etat.modifie && !await confirmer('Les modifications non enregistrées de cette journée seront perdues. Changer de jour ?')) return;
-    const date = delta === 0 ? j.aujourdhui : decalerJour(j.date, delta);
+    const date = delta === 0 ? j.aujourdhui : ajouterJours(j.date, delta);
     try { this.etat.journee = await appel('POST', '/journee', { jeton: j.jeton, date }); } catch (e) { this.#erreur(e); return; }
     this.#chargerLignes();
     this.#memoriser();
@@ -817,7 +817,7 @@ export class PageParametresBornes extends PageBase {
     const resume = (valeurs) => (valeurs.length ? echapper(valeurs.join(', ')) : '<span class="aide">tous</span>');
     zone.innerHTML = `<table class="tableau-compact largeur-contenu bornes"><thead><tr><th>Borne<br><small>état · vue le</small></th><th>PIN<br><small>exigé</small></th>
         <th>Services<br><small>fonctions</small></th><th>Types de main-d'œuvre</th><th></th></tr></thead><tbody>
-      ${l.map((a) => `<tr data-borne="${a.id}"${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${a.actif ? 'active' : 'désactivée'} · ${a.vu_le ? new Date(a.vu_le).toLocaleString('fr-FR') : 'jamais vue'}</small></td>
+      ${l.map((a) => `<tr data-borne="${a.id}"${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${a.actif ? 'active' : 'désactivée'} · ${a.vu_le ? formatDateHeure(a.vu_le) : 'jamais vue'}</small></td>
         <td>${a.pin_exige ? 'oui' : 'non'}</td>
         <td>${resume(libelles(a.services, ref.services))}<br><small class="aide">${a.fonctions.length ? echapper(a.fonctions.join(', ')) : 'toutes fonctions'}</small></td>
         <td>${resume(libelles(a.types_mo, ref.types_mo))}</td>

@@ -1,10 +1,9 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const NIVEAUX = { URGENT: '🔴', ATTENTION: '🟠', INFO: '🔵' };
 const MODULES = { crm: 'Suivi (CRM)', ressources: 'Ressources', planning: 'Planning', execution: 'Exécution', pointage: 'Pointage', mail: 'Messagerie', oauth: 'Connexions externes' };
-const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
 /**
  * Boîte de notifications (module Notifications) : à traiter, non lues ou toutes, par module ; ouvrir une notification
@@ -53,7 +52,7 @@ export class PageNotifications extends PageBase {
     zone.innerHTML = l.length ? `<ul class="liste-notifications">${l.map((n) => `<li data-id="${n.id}" tabindex="0" class="ligne-actions-survol ${n.lue_le ? 'lue' : 'non-lue'}${n.traitee_le ? ' traitee' : ''}">
         <span class="niveau" title="${echapper(n.niveau)}">${NIVEAUX[n.niveau] ?? '•'}</span>
         <div class="las-corps"><b>${n.url ? `<a href="${echapper(n.url)}" data-ouvrir>${echapper(n.titre)}</a>` : echapper(n.titre)}</b>
-          ${n.texte ? `<br><span class="aide">${echapper(n.texte)}</span>` : ''}<br><small class="aide">${echapper(MODULES[n.module] ?? n.module)} · ${date(n.cree_le)}</small></div>
+          ${n.texte ? `<br><span class="aide">${echapper(n.texte)}</span>` : ''}<br><small class="aide">${echapper(MODULES[n.module] ?? n.module)} · ${formatDateHeure(n.cree_le)}</small></div>
         ${n.traitee_le ? '<small class="aide">traitée</small>' : ''}
         <span class="las-actions">${n.lue_le ? '' : '<button type="button" class="bouton-icone" data-lue title="Marquer lue" aria-label="Marquer lue">👁</button>'}
           ${n.traitee_le ? '' : '<button type="button" class="bouton-icone" data-traitee title="Traitée : retirer de la boîte" aria-label="Traitée : retirer de la boîte">✔</button>'}</span></li>`).join('')}</ul>`

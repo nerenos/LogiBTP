@@ -5,6 +5,7 @@
 //   - échéances comptées en mois depuis la date du document (à défaut, la date UTC du dépôt), fin de mois ramenée au
 //     dernier jour du mois d'arrivée (31 janvier + 1 mois = 28 ou 29 février) ;
 //   - statut à une date : FIN_CONSERVATION (fin atteinte), A_ARCHIVER (archivage atteint), sinon ACTIF.
+import { ajouterMois } from '@logibtp/socle';
 
 export const ACTIONS_FIN = [['REVOIR', 'À revoir'], ['DETRUIRE', 'À détruire']];
 
@@ -30,15 +31,7 @@ export function regleRetention(doc, regles) {
     .sort((a, b) => precision(b) - precision(a) || (a.priorite ?? 100) - (b.priorite ?? 100) || a.id - b.id)[0] ?? null;
 }
 
-/** Date ISO (AAAA-MM-JJ) + n mois, jour ramené au dernier jour du mois d'arrivée. */
-export function ajouterMois(dateIso, mois) {
-  const [a, m, j] = dateIso.split('-').map(Number);
-  const total = a * 12 + (m - 1) + mois;
-  const annee = Math.floor(total / 12);
-  const moisArrivee = total - annee * 12 + 1;
-  const dernier = new Date(Date.UTC(annee, moisArrivee, 0)).getUTCDate();
-  return `${String(annee).padStart(4, '0')}-${String(moisArrivee).padStart(2, '0')}-${String(Math.min(j, dernier)).padStart(2, '0')}`;
-}
+export { ajouterMois };
 
 /**
  * Échéances du document à la date `aujourdhui` (AAAA-MM-JJ) :

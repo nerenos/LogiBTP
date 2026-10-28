@@ -1,4 +1,5 @@
-import { echapper, confirmer } from '@logibtp/socle/ui';
+import { aujourdhui } from '@logibtp/socle';
+import { echapper, confirmer, formatDate } from '@logibtp/socle/ui';
 import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul.js';
 
 // Paramétrage de la bibliothèque (classe mère) : bibliothèques (code d'appel, bibliothèque par défaut), familles éditées
@@ -10,7 +11,6 @@ import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul
 const ONGLETS = [['bibliotheques', 'Bibliothèques'], ['familles', 'Familles'], ['natures', 'Natures'], ['regroupements', 'Regroupements'],
   ['coefficients', 'Coefficients'], ['prix', 'Prix d\'achat']];
 const date = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const coef = (v) => (v === null || v === undefined || v === '' ? '—' : String(v).replace('.', ','));
 
 export class GestionReferentiels {
@@ -226,7 +226,7 @@ export class GestionReferentiels {
         ${liste.map((x) => {
           const etat = x.debut > jour ? 'à venir' : (x.id === enVigueur.coef_fg || x.id === enVigueur.coef_benef ? 'en vigueur' : 'passée');
           return `<tr class="periode-${etat.replace(' ', '-')}"><td>${date(x.debut)}</td><td class="nombre">${coef(x.coef_fg)}</td><td class="nombre">${coef(x.coef_benef)}</td>
-            <td>${echapper(x.commentaire ?? '')}</td><td><small>${echapper(x.cree_par ?? '')} ${x.cree_le ? new Date(x.cree_le).toLocaleDateString('fr-FR') : ''}</small></td><td>${etat}</td>
+            <td>${echapper(x.commentaire ?? '')}</td><td><small>${echapper(x.cree_par ?? '')} ${formatDate(x.cree_le)}</small></td><td>${etat}</td>
             <td>${this.admin && etat === 'à venir' ? `<button type="button" data-supprimer-periode="${x.id}" title="Supprimer (pas encore commencée)">🗑</button>` : ''}</td></tr>`;
         }).join('') || `<tr><td colspan="7" class="aide">Aucune période${nat === null ? ` : coefficients de repli ${coef(p.coef_fg_defaut)} et ${coef(p.coef_benef_defaut)}, créez une période globale` : ' : les coefficients globaux s\'appliquent'}.</td></tr>`}
       </tbody></table>

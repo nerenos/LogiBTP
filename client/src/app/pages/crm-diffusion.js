@@ -1,5 +1,6 @@
+import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatDate } from '@logibtp/socle/ui';
 import { choisirPersonne } from '@logibtp/annuaire/ui';
 import { api } from '../api.js';
 import { lienElement } from '../crm/crm.js';
@@ -16,7 +17,6 @@ export const MODES_DIFFUSION = [
 const VISEURS = ['ARCHITECTE', 'MOE', 'MAITRE_OEUVRE', 'BUREAU_CONTROLE', 'CONTROLEUR', 'BET', 'CLIENT', 'MAITRE_OUVRAGE', 'MOA'];
 
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Bordereau de diffusion (module CRM) : `/crm/diffusion/nouveau?plans=1,2&type_element=&id_element=` (saisie) ou
@@ -131,7 +131,7 @@ export class PageDiffusionCrm extends PageBase {
         <button type="button" data-courriel title="Envoyer les pièces aux destinataires « par courriel » (module Mail), dans une autre fenêtre">📧 Envoyer par courriel</button>
         ${d.element ? `<a href="/crm/diffusions?type=${encodeURIComponent(d.type_element)}&id=${encodeURIComponent(d.id_element)}">Autres bordereaux</a>` : ''}</div>
       <h1 class="page-titre">Bordereau de diffusion ${echapper(d.numero)}</h1>
-      <p><b>${echapper(d.objet)}</b><br>Date : ${new Date(d.date).toLocaleDateString('fr-FR')}${d.element ? ` · ${lienElement(d.element)}` : ''} · émis par ${echapper(d.cree_par)}</p>
+      <p><b>${echapper(d.objet)}</b><br>Date : ${formatDate(d.date)}${d.element ? ` · ${lienElement(d.element)}` : ''} · émis par ${echapper(d.cree_par)}</p>
       <h2>Pièces diffusées</h2><table class="crm-table"><thead><tr><th>N°</th><th>Pièce</th></tr></thead><tbody>
         ${d.pieces.map((p, i) => `<tr><td>${i + 1}</td><td>${p.plan_id ? `<a href="/crm/plan/${p.plan_id}">${echapper(p.libelle)}</a>` : echapper(p.libelle)}</td></tr>`).join('')}</tbody></table>
       <h2>Destinataires</h2><table class="crm-table"><thead><tr><th>Destinataire</th><th>Contact</th><th>Mode</th><th class="nombre">Ex.</th><th>Visa</th></tr></thead><tbody>

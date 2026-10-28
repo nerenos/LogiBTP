@@ -1,4 +1,4 @@
-import { echapper, ouvrirModale } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, formatDateHeure } from '@logibtp/socle/ui';
 import { NATURES, RESEAUX, texteCoordonnee, memesValeurs, estVide } from '../src/coordonnees.js';
 import { formaterTelephone } from '../src/identifiants.js';
 
@@ -145,7 +145,7 @@ export class EditeurCoordonnees {
     const h = await this.options.historique(u.coo_id);
     dialogue('🕘 Historique de la coordonnée', `<p>Valeur actuelle : <b>${echapper(texteCoordonnee(u))}</b></p>
       ${h.length ? `<table class="coord-table"><thead><tr><th>Remplacée le</th><th>Par</th><th>Valeur précédente</th></tr></thead><tbody>
-        ${h.map((x) => `<tr><td>${new Date(x.le).toLocaleString('fr-FR')}</td><td>${echapper(x.par ?? '')}</td><td>${echapper(texteCoordonnee({ ...x.avant, nature: u.nature }))}</td></tr>`).join('')}</tbody></table>`
+        ${h.map((x) => `<tr><td>${formatDateHeure(x.le)}</td><td>${echapper(x.par ?? '')}</td><td>${echapper(texteCoordonnee({ ...x.avant, nature: u.nature }))}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune modification enregistrée.</p>'}`);
   }
 

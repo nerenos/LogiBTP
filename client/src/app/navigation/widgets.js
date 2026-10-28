@@ -1,5 +1,6 @@
 // Widgets de l'accueil (cœur) : données lues par les fournisseurs des modules (listes : comptes par segment et
 // premiers lots, appliqués par la base ; GED).
+import { formatDate, formatDateHeure } from '@logibtp/socle/ui';
 
 import { api } from '../api.js';
 
@@ -7,7 +8,6 @@ const demande = (vue_id, extra = {}) => ({ vue_id, definition: null, recherche: 
 // Valeurs de segment comparées en texte (la base renvoie « true », « PANNE »…).
 const compte = (segments, valeur) => segments.find((s) => String(s.valeur) === String(valeur))?.nombre ?? 0;
 const ETATS_MATERIEL = { DISPO: ['Disponible', '#2e9e5b'], CHANTIER: ['En chantier', '#1d5fbf'], PANNE: ['En panne', '#c0392b'], REBUT: ['Rebut', '#667085'] };
-const date = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 const NIVEAUX_RAPPEL = { ROUGE: 'erreur', ORANGE: 'alerte', VERT: 'info' };
 
 export function catalogueWidgets(app) {
@@ -21,7 +21,7 @@ export function catalogueWidgets(app) {
         const rappels = await api.crm.rappels();
         return rappels.slice(0, 8).map((r) => ({
           niveau: NIVEAUX_RAPPEL[r.couleur] ?? 'info', texte: r.note?.objet ?? `Note ${r.note_id}`,
-          detail: `${r.type === 'DATE' ? 'Rappel le' : 'Échéance le'} ${r.reference ? new Date(r.reference).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}${r.note?.element ? ` · ${r.note.element.libelle}` : ''}`,
+          detail: `${r.type === 'DATE' ? 'Rappel le' : 'Échéance le'} ${r.reference ? formatDateHeure(r.reference) : ''}${r.note?.element ? ` · ${r.note.element.libelle}` : ''}`,
           url: `/crm/note/${r.note_id}`,
         }));
       },
@@ -31,7 +31,7 @@ export function catalogueWidgets(app) {
       description: 'Connexions externes (Gmail…) à reconnecter ou dont l’autorisation expire bientôt (personnes autorisées)',
       charger: async () => (await api.oauth.alertes()).map((c) => ({
         niveau: c.pastille === 'ROUGE' ? 'erreur' : 'alerte', texte: c.nom,
-        detail: c.etat === 'OK' ? `Autorisation jusqu'au ${date(c.rafraichissement_expire_le ?? c.secret_expire_le)}` : c.etat === 'A_CONNECTER' ? 'À connecter' : 'À reconnecter',
+        detail: c.etat === 'OK' ? `Autorisation jusqu'au ${formatDate(c.rafraichissement_expire_le ?? c.secret_expire_le)}` : c.etat === 'A_CONNECTER' ? 'À connecter' : 'À reconnecter',
         url: `/parametres/connexions?id=${c.id}`,
       })),
     },
@@ -108,7 +108,7 @@ export function catalogueWidgets(app) {
         const { lignes } = await liste.lot(demande(1, { tri: [{ colonne: 'date_document', sens: 'desc' }], taille: 6 }));
         return {
           colonnes: [{ code: 'numero', libelle: 'N°' }, { code: 'type_document', libelle: 'Type' }, { code: 'date', libelle: 'Date' }, { code: 'net_a_payer', libelle: 'Net à payer', nombre: true }],
-          lignes: lignes.map((l) => ({ ...l, date: date(l.date_document), _url: app.urlElement({ id: l._id, type: l._type }) })),
+          lignes: lignes.map((l) => ({ ...l, date: formatDate(l.date_document), _url: app.urlElement({ id: l._id, type: l._type }) })),
         };
       },
     },
@@ -120,7 +120,7 @@ export function catalogueWidgets(app) {
         const docs = (await ged.lister({})).slice(0, 6);
         return {
           colonnes: [{ code: 'titre', libelle: 'Titre' }, { code: 'categorie', libelle: 'Catégorie' }, { code: 'date', libelle: 'Date' }, { code: 'coffre', libelle: '' }],
-          lignes: docs.map((d) => ({ titre: d.titre, categorie: d.categorie ?? '', date: date(d.date_document), coffre: d.coffre ? '🔒' : '', _url: `/ged/${d.id}` })),
+          lignes: docs.map((d) => ({ titre: d.titre, categorie: d.categorie ?? '', date: formatDate(d.date_document), coffre: d.coffre ? '🔒' : '', _url: `/ged/${d.id}` })),
         };
       },
     },

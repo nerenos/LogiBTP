@@ -3,7 +3,7 @@ import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer, formatHeure } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -461,7 +461,7 @@ export class Application {
   #usurpation() {
     const us = this.session?.usurpation;
     if (!us) return '';
-    const fin = new Date(us.fin).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const fin = formatHeure(us.fin);
     return `<button type="button" class="bandeau-usurpation" data-fin-usurpation title="${echapper(`${this.session.code} agit pour ${us.libelle ?? us.code} jusqu'à ${fin} : ${us.motif}. Cliquer pour terminer.`)}">🎭 ${echapper(us.code)} · fin ${fin} ✕</button>`;
   }
 

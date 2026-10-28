@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 
 // Adresse des travaux (ventes) ou de livraison (achats) d'un document, figée dans ent_adresse_livraison
@@ -81,7 +82,7 @@ export function saisirAdresse(x, { titre = 'Adresse' } = {}) {
       fermer({
         ...v, origine: v.origine ?? 'LIBRE', libelle: lire('libelle'),
         adresse: { ligne1: lire('ligne1'), ligne2: lire('ligne2'), ligne3: a.ligne3 ?? null, code_postal: lire('code_postal'), ville: lire('ville'), pays: lire('pays') ?? 'FR' },
-        contact, telephone: lire('telephone'), instructions: lire('instructions'), releve_le: v.releve_le ?? new Date().toISOString().slice(0, 10),
+        contact, telephone: lire('telephone'), instructions: lire('instructions'), releve_le: v.releve_le ?? aujourdhui(),
       });
     });
     fond.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(undefined); } });

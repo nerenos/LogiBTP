@@ -1,3 +1,4 @@
+import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -42,7 +43,7 @@ export class PageHabilitations extends PageBase {
     zone.insertAdjacentHTML('beforeend', `<h2>Matériels : entretiens en retard ou à prévoir</h2>${tableauEcheances(ent, { materiel: true })}`);
     const e = await api.ressources.echeancesMateriels(this.jours).catch(() => []);
     if (!e.length) return;
-    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const aujourdhui = dateLocale();
     zone.insertAdjacentHTML('beforeend', `<h2>Matériels : fins de location et de garantie</h2>
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Échéance</th><th>Date</th><th>Loueur</th></tr></thead><tbody>
       ${e.map((x) => `<tr><td><a href="/fiche/materiel/${x.id}">🚜 ${echapper(x.code)} ${echapper(x.designation ?? '')}</a></td>

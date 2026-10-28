@@ -1,4 +1,4 @@
-import { echapper, htmlSur } from '@logibtp/socle/ui';
+import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
 import { NATURES_NOTE, ETATS_NOTE, ETATS_CLOS } from '@logibtp/crm';
 import { lireMail } from '@logibtp/ged';
 import { api } from '../api.js';
@@ -24,12 +24,6 @@ export const iconeNature = (code) => NATURES_NOTE.find((n) => n.valeur === code)
 export const libelleEtat = (code) => ETATS_NOTE.find((e) => e.valeur === code)?.libelle ?? code;
 export const estClose = (note) => ETATS_CLOS.includes(note.etat);
 
-/** Date-heure locale lisible (sans les secondes). */
-export function formatDateHeure(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-}
 
 /** Valeur d'un champ datetime-local pour une date ISO (heure locale). */
 export function versChampDate(iso) {

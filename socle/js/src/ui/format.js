@@ -22,6 +22,19 @@ export function formatLibre(v, max = 6) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: max }).format(Number(v));
 }
 
+// Une date seule « AAAA-MM-JJ » est un jour civil : lue à minuit local (new Date() la lirait à minuit UTC).
+const instant = (v) => (v instanceof Date ? v : new Date(typeof v === 'string' && v.length === 10 ? `${v}T00:00:00` : v));
+const FORMAT_DATE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short' });
+const FORMAT_DATE_HEURE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+const FORMAT_HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+/** « JJ/MM/AAAA » ; vide → `vide`. */
+export const formatDate = (v, { vide = '' } = {}) => (v ? FORMAT_DATE.format(instant(v)) : vide);
+/** « JJ/MM/AAAA HH:MM » ; vide → `vide`. */
+export const formatDateHeure = (v, { vide = '' } = {}) => (v ? FORMAT_DATE_HEURE.format(instant(v)) : vide);
+/** « HH:MM » ; vide → `vide`. */
+export const formatHeure = (v, { vide = '' } = {}) => (v ? FORMAT_HEURE.format(instant(v)) : vide);
+
 const BALISES = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'SUB', 'SUP', 'SPAN', 'UL', 'OL', 'LI',
   'H1', 'H2', 'H3', 'H4', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD']);
 

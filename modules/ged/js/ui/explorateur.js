@@ -1,4 +1,4 @@
-import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { icone, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -23,8 +23,6 @@ import { separateur } from './separateur.js';
 // (ArborescenceGed ou dérivée), compact (vue des fiches), modifiable, admin, utilisateur, message, documentInitial,
 // coffre (filtre coffre-fort), envoi (pièces jointes à envoyer, module Mail), ouvrirUrl(url) (nœud qui ouvre une page).
 
-const dateFr = (iso) => (iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('fr-FR') : '');
-const dateHeure = (iso) => (iso ? new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const libelleEtape = (code) => ETAPES.find(([c]) => c === code)?.[1] ?? code ?? '';
 const cleChemin = (chemin) => chemin.map((n) => n.cle).join('/');
 const cleElement = (e) => (e ? `${e.type_element}|${e.id_element}` : '∅');
@@ -469,7 +467,7 @@ export class ExplorateurGed {
         case 'nom': return `<td class="ged-nom"><span class="ged-ico">${icone(d)}</span><span class="ged-titre">${echapper(d.titre)}</span>${this.#badges(d)}
           ${recherche && d.type_element ? `<small class="ged-emplacement">${echapper(`${d.type_element} ${d.id_element ?? ''}`)}</small>` : ''}</td>`;
         case 'categorie': return `<td>${echapper(this.libelleCategorie(d.categorie))}</td>`;
-        case 'date': return `<td>${dateFr(d.date_document)}</td>`;
+        case 'date': return `<td>${formatDate(d.date_document)}</td>`;
         case 'auteur': return `<td>${echapper(d.auteur ?? '')}</td>`;
         case 'taille': return `<td class="nombre">${formatTaille(d.version?.taille)}</td>`;
         case 'confidentialite': return `<td>${(d.confidentialite ?? 'INTERNE') === 'INTERNE' && !(d.acces_profils ?? []).length && !(d.acces_utilisateurs ?? []).length ? ''
@@ -709,7 +707,7 @@ export class ExplorateurGed {
         <div class="ged-visu-titre"><h3 title="${echapper(d.titre)}">${echapper(d.titre)}</h3>
           <small>${echapper(this.libelleCategorie(d.categorie) || 'Sans catégorie')}${d.etat ? ` · ${echapper(libelleEtape(d.etat))}` : ''}
           ${d.confidentialite && d.confidentialite !== 'INTERNE' ? ` · ${echapper(libelleConfidentialite(d.confidentialite))}` : ''}
-          ${d.archive ? ' · <b>archivé</b>' : ''}${d.supprime ? ` · <b class="erreur">supprimé le ${dateFr(d.supprime_le)}</b>` : ''}</small></div>
+          ${d.archive ? ' · <b>archivé</b>' : ''}${d.supprime ? ` · <b class="erreur">supprimé le ${formatDate(d.supprime_le)}</b>` : ''}</small></div>
         <div class="ged-visu-actions">
           ${courante ? `<a class="ged-icone-bouton" href="${echapper(this.#lienContenu(courante))}" download="${echapper(courante.nom_fichier)}" data-bulle="Télécharger" aria-label="Télécharger">⬇</a>` : ''}
           ${editable && !d.coffre ? `${bouton('version', '⟳', `Nouvelle version (les ${this.parametres.editions_conservees} dernières éditions sont conservées)`)}<input type="file" hidden data-version>` : ''}
@@ -859,9 +857,9 @@ export class ExplorateurGed {
         ${d.classification?.regles?.length ? `<dt>Classement automatique</dt><dd>${d.classification.regles.length} règle${d.classification.regles.length > 1 ? 's' : ''} appliquée${d.classification.regles.length > 1 ? 's' : ''}
           ${d.classification.categorie ? ` · catégorie proposée : ${echapper(this.libelleCategorie(d.classification.categorie))}` : ''}</dd>` : ''}
         ${r ? `<dt>Rétention</dt><dd>${echapper(r.libelle ?? 'aucune règle')} · <b>${STATUTS_RETENTION[r.statut] ?? r.statut}</b>
-          ${r.archiver_le ? ` · archivage le ${dateFr(r.archiver_le)}` : ''}${r.fin_le ? ` · fin de conservation le ${dateFr(r.fin_le)}` : ''}</dd>` : ''}
-        ${d.archive ? `<dt>Archivé</dt><dd>le ${dateHeure(d.archive_le)}</dd>` : ''}
-        <dt>Créé</dt><dd>le ${dateHeure(d.cree_le)} par ${echapper(d.cree_par ?? '')}${d.modifie_le ? ` · modifié le ${dateHeure(d.modifie_le)}` : ''} · ${d.nb_versions ?? d.versions.length} version(s) · ${d.nb_consultations ?? 0} consultation(s)</dd>
+          ${r.archiver_le ? ` · archivage le ${formatDate(r.archiver_le)}` : ''}${r.fin_le ? ` · fin de conservation le ${formatDate(r.fin_le)}` : ''}</dd>` : ''}
+        ${d.archive ? `<dt>Archivé</dt><dd>le ${formatDateHeure(d.archive_le)}</dd>` : ''}
+        <dt>Créé</dt><dd>le ${formatDateHeure(d.cree_le)} par ${echapper(d.cree_par ?? '')}${d.modifie_le ? ` · modifié le ${formatDateHeure(d.modifie_le)}` : ''} · ${d.nb_versions ?? d.versions.length} version(s) · ${d.nb_consultations ?? 0} consultation(s)</dd>
       </dl>`;
     const categorie = creerCombo({ options: (this.parametres.categories ?? []).map((c) => ({ valeur: c.code, libelle: c.libelle })), valeur: d.categorie ?? '', titre: 'Catégorie' });
     const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? 'INTERNE', vide: false, titre: 'Confidentialité' });
@@ -882,8 +880,8 @@ export class ExplorateurGed {
   }
 
   #ligneVersion(v, etape = false) {
-    return `<tr${etape ? ` data-texte="${echapper(`${libelleEtape(v.etape)} ${v.etat ?? ''} ${v.auteur} ${dateHeure(v.date)} ${v.commentaire ?? ''}`.toLowerCase())}"` : ''}>
-      <td>v${v.numero}</td><td>${dateHeure(v.date)}</td><td>${echapper(v.auteur)}</td>
+    return `<tr${etape ? ` data-texte="${echapper(`${libelleEtape(v.etape)} ${v.etat ?? ''} ${v.auteur} ${formatDateHeure(v.date)} ${v.commentaire ?? ''}`.toLowerCase())}"` : ''}>
+      <td>v${v.numero}</td><td>${formatDateHeure(v.date)}</td><td>${echapper(v.auteur)}</td>
       ${etape ? `<td><b>${echapper(libelleEtape(v.etape))}</b></td><td>${echapper(v.commentaire ?? '')}</td>` : `<td>${echapper(v.nom_fichier)}</td><td class="nombre">${formatTaille(v.taille)}</td>`}
       <td class="ged-versions-actions"><a href="${echapper(this.#lienContenu(v))}" download="${echapper(v.nom_fichier)}" data-bulle="Télécharger" aria-label="Télécharger">⬇</a>
         <a href="#" data-apercu="${v.id}" data-bulle="Aperçu" aria-label="Aperçu">👁</a></td></tr>`;
@@ -947,7 +945,7 @@ export class ExplorateurGed {
 
   #ongletCoffre(z) {
     z.innerHTML = `<dl class="ged-coffre">${(this.doc.journal_coffre ?? []).map((e) => `
-        <dt>Archivé le</dt><dd>${dateHeure(e.horodatage)} par ${echapper(e.utilisateur)}${e.motif ? ` · ${echapper(e.motif)}` : ''}</dd>
+        <dt>Archivé le</dt><dd>${formatDateHeure(e.horodatage)} par ${echapper(e.utilisateur)}${e.motif ? ` · ${echapper(e.motif)}` : ''}</dd>
         <dt>Empreinte (SHA-256)</dt><dd><code>${e.empreinte_document}</code></dd>
         <dt>Entrée du journal</dt><dd><code>${e.empreinte_entree}</code></dd>`).join('')}</dl>`;
   }

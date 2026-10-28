@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import {
@@ -10,7 +11,6 @@ import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entre
 // événements et entretiens), journal des relevés et des événements ; saisie d'un relevé, d'un plein de carburant ou
 // d'un événement dans une fenêtre <dialog>. Contrôles de compteurs.js (↔ ReglesCompteurs.cs) avant l'envoi.
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const SOURCES = { SAISIE: 'Saisie', CARBURANT: 'Plein', ORDRE: 'Ordre', BORNE: 'Borne', REPRISE: 'Reprise de la fiche' };
 const message = (e) => MESSAGES_COMPTEURS[e.code] ?? e.message;

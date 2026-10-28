@@ -1,13 +1,10 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, htmlSur, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, htmlSur, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { NATURES_NOTE, ETATS_NOTE, controlerNote, MESSAGES_NOTE, LONGUEUR_OBJET, TYPES_RAPPEL, controlerRappel, MESSAGES_RAPPEL } from '@logibtp/crm';
 import { api } from '../api.js';
 import { choisirRattachement } from '../structure/selection.js';
-import {
-  contexteCrm, individusCrm, nouvelleSaisie, saisieDeNote, versChampDate, depuisChampDate, zoneRiche, lienElement, pastilleEtat,
-  formatDateHeure, iconeNature, libelleEtat, pastilleRappel, libelleRappel,
-} from '../crm/crm.js';
+import { contexteCrm, individusCrm, nouvelleSaisie, saisieDeNote, versChampDate, depuisChampDate, zoneRiche, lienElement, pastilleEtat, iconeNature, libelleEtat, pastilleRappel, libelleRappel } from '../crm/crm.js';
 
 const QUOI = { CREATION: 'Création', ETAT: 'État', RESPONSABLE: 'Responsable', SERVICE: 'Service', ECHEANCE: 'Échéance' };
 const STRUCTURE = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' };

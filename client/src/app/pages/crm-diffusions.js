@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDate } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { lienElement } from '../crm/crm.js';
 
@@ -36,7 +36,7 @@ export class PageDiffusionsCrm extends PageBase {
       ${liste.map((d) => {
         const recus = d.destinataires.reduce((t, x) => t + x.visas_recus, 0);
         const attendus = d.destinataires.reduce((t, x) => t + x.visas_attendus, 0);
-        return `<tr><td><a href="/crm/diffusion/${d.id}"><b>${echapper(d.numero)}</b></a></td><td>${new Date(d.date).toLocaleDateString('fr-FR')}</td><td>${echapper(d.objet)}</td>
+        return `<tr><td><a href="/crm/diffusion/${d.id}"><b>${echapper(d.numero)}</b></a></td><td>${formatDate(d.date)}</td><td>${echapper(d.objet)}</td>
           ${this.element ? '' : `<td>${lienElement(d.element)}</td>`}<td class="nombre">${d.pieces.length}</td><td class="nombre">${d.destinataires.length}</td>
           <td>${attendus ? `${recus} / ${attendus}` : '—'}</td></tr>`;
       }).join('')}</tbody></table>`;

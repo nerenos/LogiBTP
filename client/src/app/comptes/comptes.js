@@ -1,13 +1,13 @@
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { aujourdhui } from '@logibtp/socle';
+import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ETATS_COMPTE, MESSAGES_AUTH, controlerPseudo, controlerCompte, suggererPseudo } from '@logibtp/authentification';
 import { api } from '../api.js';
 
 // Gestion des comptes (module Authentification, lot 1) : compte d'une personne (onglet Compte de la fiche salarié,
 // page des comptes), création avec pseudo proposé, modification, réinitialisation, déverrouillage.
 
-const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+const date = (d) => formatDateHeure(d, { vide: '—' });
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /** Pastille de l'état d'un compte. */
 export function pastilleCompte(c) {

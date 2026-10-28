@@ -1,10 +1,9 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const ETATS = { A_CONNECTER: 'À connecter', OK: 'Connectée', A_RECONNECTER: 'À reconnecter', DESACTIVEE: 'Désactivée' };
 const CLASSES_PASTILLE = { VERT: 'ok', ORANGE: 'attention', ROUGE: 'erreur' };
-const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const jour = (d) => (d ? String(d).slice(0, 10) : '');
 const liste = (texte) => String(texte ?? '').split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
 
@@ -101,7 +100,7 @@ export class PageParametresConnexions extends PageBase {
       ${this.connexions.map((c) => `<tr data-id="${c.id}"${c.id === this.selection ? ' class="selection"' : ''}>
         <td>${pastilleConnexion(c)}</td><td>${echapper(c.nom)}${c.mode_test ? ' <span class="aide" title="Application du fournisseur non vérifiée : autorisation courte">(test)</span>' : ''}</td>
         <td>${echapper(c.code)}</td><td>${echapper(c.fournisseur_libelle)}</td>
-        <td>${date(c.rafraichissement_expire_le)}</td><td>${date(c.secret_expire_le)}</td>
+        <td>${formatDateHeure(c.rafraichissement_expire_le)}</td><td>${formatDateHeure(c.secret_expire_le)}</td>
         <td>${echapper(c.utilisations.join(', '))}</td>
         <td class="cellule-boutons">${c.peut_reconnecter && c.client_configure ? `<button type="button" data-connecter title="${c.flux === 'CODE_PKCE' ? 'Ouvrir la page du fournisseur' : 'Obtenir le jeton directement (sans utilisateur)'}">${c.connectee ? '🔁 Reconnecter' : '🔗 Se connecter'}</button>` : ''}
           ${c.etat === 'OK' ? '<button type="button" data-tester title="Renouveler le jeton maintenant">✓ Tester</button>' : ''}
@@ -250,7 +249,7 @@ export class PageParametresConnexions extends PageBase {
       const z = zone.querySelector('[data-journal]');
       if (!z) return;
       z.innerHTML = j.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Événement</th><th>Détail</th><th>Par</th></tr></thead><tbody>
-        ${j.map((x) => `<tr><td>${date(x.le)}</td><td>${echapper(x.evenement)}</td><td>${echapper(x.detail ?? '')}</td><td>${echapper(x.utilisateur ?? '')}</td></tr>`).join('')}
+        ${j.map((x) => `<tr><td>${formatDateHeure(x.le)}</td><td>${echapper(x.evenement)}</td><td>${echapper(x.detail ?? '')}</td><td>${echapper(x.utilisateur ?? '')}</td></tr>`).join('')}
         </tbody></table>` : '<p class="aide">Vide.</p>';
     }).catch(() => {});
   }

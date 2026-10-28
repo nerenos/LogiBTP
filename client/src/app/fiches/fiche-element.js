@@ -1,5 +1,6 @@
+import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, formatDate } from '@logibtp/socle/ui';
 import { GestionVuesDocument } from '@logibtp/document/ui';
 import { OngletPrix, OngletUnites, OngletTarifs } from '@logibtp/bibliotheque/ui';
 import { rendreStockArticle } from '../stock/article.js';
@@ -218,7 +219,7 @@ export class FicheElement extends FicheLogiBTP {
     const zone = corps.querySelector('[data-achats]');
     if (!zone) return;
     const charger = async () => {
-      const du = filtre.periode === 'tout' ? null : new Date(Date.now() - Number(filtre.periode) * 86400000).toISOString().slice(0, 10);
+      const du = filtre.periode === 'tout' ? null : ajouterJours(aujourdhui(), -Number(filtre.periode));
       const l = await api.achatsElement(id, { du, encours: filtre.encours });
       zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Pièce</th><th>Type</th><th>Fournisseur</th><th>Statut</th>
           <th>Qté</th><th>U.</th><th>PU HT</th><th>Montant HT</th><th></th></tr></thead><tbody>
@@ -371,7 +372,7 @@ export class FicheElement extends FicheLogiBTP {
       </fieldset>
       <fieldset class="fiche-groupe"><legend>Notices techniques (DOE)</legend>
         ${notices.length ? `<ul class="element-notices">${notices.map((d) => `<li>📘 <a href="${echapper(ged.urlContenu(d.version.id, { telecharger: true }))}" target="_blank" rel="noopener">${echapper(d.titre)}</a>
-          <small>${echapper(d.version?.nom_fichier ?? '')}${d.date_document ? ` · ${new Date(d.date_document).toLocaleDateString('fr-FR')}` : ''}</small></li>`).join('')}</ul>` : '<p class="aide">Aucune notice technique.</p>'}
+          <small>${echapper(d.version?.nom_fichier ?? '')}${d.date_document ? ` · ${formatDate(d.date_document)}` : ''}</small></li>`).join('')}</ul>` : '<p class="aide">Aucune notice technique.</p>'}
         <p><button type="button" data-ajout="notice">＋ Ajouter une notice technique</button></p>
         <p class="aide">Les notices techniques (catégorie GED « Notice technique (DOE) ») seront jointes au dossier des ouvrages exécutés remis au client.</p>
       </fieldset>
@@ -397,7 +398,7 @@ export class FicheElement extends FicheLogiBTP {
         await ged.deposer({
           fichier, meta: {
             titre: fichier.name.replace(/\.[^.]+$/, ''), categorie: genre === 'image' ? 'photo' : 'notice_technique', type_element: 'element', id_element: String(this.id),
-            date_document: new Date().toISOString().slice(0, 10), auteur: this.utilisateur,
+            date_document: aujourdhui(), auteur: this.utilisateur,
           },
         });
         this.message(genre === 'image' ? 'Image ajoutée à la GED de l\'élément' : 'Notice technique ajoutée', 'succes');

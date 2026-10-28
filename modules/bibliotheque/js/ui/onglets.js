@@ -1,4 +1,5 @@
-import { echapper, formatNombre, formatLibre, confirmer } from '@logibtp/socle/ui';
+import { aujourdhui } from '@logibtp/socle';
+import { echapper, formatNombre, formatLibre, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { calculerElement, coefficientsEffectifs, prixNetTarif, SCENARIOS_PA } from '../src/calcul.js';
 import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 
@@ -37,7 +38,7 @@ export class OngletPrix {
 
   /** Coefficients effectifs : imposés par l'élément, sinon nature ou global en vigueur, sinon défaut. */
   effectifs() {
-    return coefficientsEffectifs(this.ctx.valeurs(), this.ctx.periodes ?? [], new Date().toISOString().slice(0, 10), this.ctx.parametres);
+    return coefficientsEffectifs(this.ctx.valeurs(), this.ctx.periodes ?? [], aujourdhui(), this.ctx.parametres);
   }
 
   rendre() {
@@ -129,7 +130,7 @@ export class OngletPrix {
         return `<td class="nombre ${change ? 'change' : ''}" title="${change ? `Avant : ${prix(v(e.avant, k), d)}` : ''}">${prix(v(e.apres, k), d)}</td>`;
       };
       zone.innerHTML = h.length ? `<table class="bib-table"><thead><tr><th>Date</th><th>Auteur</th><th>Scénario</th><th>PA</th><th>FG</th><th>PR</th><th>Bénéf.</th><th>PV</th><th>Remise</th><th>PV net</th><th>Commentaire</th></tr></thead><tbody>
-        ${h.map((e) => `<tr><td>${new Date(e.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</td><td>${echapper(e.auteur ?? '')}</td>
+        ${h.map((e) => `<tr><td>${formatDateHeure(e.date)}</td><td>${echapper(e.auteur ?? '')}</td>
           <td>${echapper(SCENARIOS_PA.find(([c]) => c === e.apres.scenario)?.[1] ?? e.apres.scenario ?? '')}</td>
           ${cellule(e, 'pa')}${cellule(e, 'coef_fg', 4)}${cellule(e, 'pr')}${cellule(e, 'coef_benef', 4)}${cellule(e, 'pv')}${cellule(e, 'coef_remise', 4)}${cellule(e, 'pv_net')}
           <td>${echapper(e.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune modification de prix.</p>';

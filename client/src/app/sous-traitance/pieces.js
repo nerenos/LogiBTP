@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, saisir } from '@logibtp/socle/ui';
 import { ETATS_PIECE, ACTIONS_BLOQUEES, PORTEES_PIECE } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
@@ -54,7 +55,7 @@ export async function rendrePieces(corps, { element, ged, message, demander = nu
       const x = cible(p);
       try {
         await ged.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: p.libelle, categorie: type(p.code)?.categorie ?? p.code, type_element: x.type, id_element: String(x.id),
-          date_document: new Date().toISOString().slice(0, 10) } });
+          date_document: aujourdhui() } });
         message(`${p.libelle} déposée`, 'succes');
         await recharger();
       } catch (e) { message(e.message, 'erreur'); }

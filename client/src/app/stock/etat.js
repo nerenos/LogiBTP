@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, formatDateHeure } from '@logibtp/socle/ui';
 import { METHODES_VALORISATION } from '@logibtp/stock';
 import { api } from '../api.js';
 
@@ -11,7 +11,7 @@ import { api } from '../api.js';
 /** Date-heure locale du champ (« AAAA-MM-JJTHH:MM ») → ISO UTC, ou null. */
 export const isoDepuisLocal = (v) => (v ? new Date(v).toISOString() : null);
 /** Date-heure UTC à la minute renvoyée par le serveur (« AAAA-MM-JJTHH:MM ») → texte local. */
-export const dateHeureLocale = (v) => (v ? new Date(`${v}Z`).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+export const dateHeureLocale = (v) => (v ? formatDateHeure(`${v}Z`) : '');
 
 const SOURCES = { PMP: 'PMP', DERNIER_PA: 'Dernier PA', REPLI: 'PA de la bibliothèque (aucun achat)' };
 

@@ -1,4 +1,4 @@
-import { D, S, arr6, evaluerExpression, ErreurCalcul } from '@logibtp/socle';
+import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
 // Prix et unités d'un élément de bibliothèque. Même calcul que CalculElement.cs (jeu partagé
 // modules/bibliotheque/tests/cas/01_calcul.json). Les prix sont exprimés par unité de stock, à 6 décimales.
@@ -78,7 +78,7 @@ export function prixAchat(e, date) {
  * prix_public, remise1, remise2, unite, principal, debut, fin }], coef_fg, coef_benef, pv, pv_fixe, coef_remise }. Sortie (textes décimaux) : { pa, pr, pv,
  * coef_benef, pv_net, prix_unites: [{ unite, ratio, pa, pr, pv_net }], alertes }.
  */
-export function calculerElement(e, date = new Date().toISOString().slice(0, 10)) {
+export function calculerElement(e, date = aujourdhui()) {
   const { pa, alertes } = prixAchat(e, date);
   const coefFg = D(e.coef_fg) ?? D(1);
   let coefBenef = D(e.coef_benef) ?? D(1);
@@ -150,7 +150,7 @@ function coefficient(e, periodes, date, champ, defaut) {
  * Coefficients effectifs d'un élément : { coef_fg, coef_benef, sources: { coef_fg, coef_benef } }.
  * e : { nat_id, coef_fg, coef_fg_impose, coef_benef, coef_benef_impose } ; periodes : [{ nat_id, debut, coef_fg, coef_benef }].
  */
-export function coefficientsEffectifs(e, periodes = [], date = new Date().toISOString().slice(0, 10), { coef_fg_defaut = 1, coef_benef_defaut = 1 } = {}) {
+export function coefficientsEffectifs(e, periodes = [], date = aujourdhui(), { coef_fg_defaut = 1, coef_benef_defaut = 1 } = {}) {
   const fg = coefficient(e, periodes, date, 'coef_fg', coef_fg_defaut);
   const benef = coefficient(e, periodes, date, 'coef_benef', coef_benef_defaut);
   return { coef_fg: fg.valeur, coef_benef: benef.valeur, sources: { coef_fg: fg.source, coef_benef: benef.source } };

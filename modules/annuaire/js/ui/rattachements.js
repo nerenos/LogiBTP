@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDate } from '@logibtp/socle/ui';
 import { texteCoordonnee, estVide, coordonneesParDefaut } from '../src/coordonnees.js';
 import { TAILLE_PAGE_RATTACHEMENTS } from '../src/fournisseurs.js';
 import { EditeurCoordonnees } from './coordonnees.js';
@@ -11,7 +11,6 @@ import { choisirPersonne, choisirIndividu } from './selection.js';
 // Lecture par page (une société peut compter des milliers de salariés) avec recherche ; la valeur éditée (champ géré)
 // ne contient que les modifications : rattachements modifiés, ajoutés (sans rat_id) ou retirés ({ rat_id, supprime }).
 
-const dateFr = (d) => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('fr-FR') : '');
 let compteur = 0;
 
 export class EditeurRattachements {
@@ -115,7 +114,7 @@ export class EditeurRattachements {
         ${r.principal ? '<span class="badge" title="Contact principal de la personne">★ principal</span>' : ''}${r.titulaire ? '<span class="badge">titulaire</span>' : ''}${r.actif === false ? '<span class="badge gris">inactif</span>' : ''}
         ${r.supprime ? '<span class="badge alerte">retiré à l\'enregistrement</span>' : modifie ? '<span class="badge">modifié</span>' : ''}
         <span class="rattachement-fonction">${echapper([r.fonction, r.service].filter(Boolean).join(' · '))}</span>
-        <span class="aide">${r.debut || r.fin ? `${dateFr(r.debut) || '…'} → ${dateFr(r.fin) || '…'}` : ''}</span>
+        <span class="aide">${r.debut || r.fin ? `${formatDate(r.debut) || '…'} → ${formatDate(r.fin) || '…'}` : ''}</span>
         <span class="rattachement-coords">${coords.slice(0, 3).map((u) => echapper(texteCoordonnee(u))).join(' · ')}</span>
         ${r.supprime ? (modifiable ? '<button type="button" data-annuler-retrait>Annuler le retrait</button>' : '')
           : `<button type="button" data-plier title="${ouvert ? 'Replier' : 'Détails et coordonnées propres'}">${ouvert ? '▴' : '▾'}</button>

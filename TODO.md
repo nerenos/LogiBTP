@@ -253,6 +253,16 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Remplacer les derniers `<select>` par `creerCombo` : vues de liste, menu de filtre, sélecteurs de thème et de vue
   des listes.
+
+## Revue du code du 27/10/2026 ([rapport](documentation/REVUE-CODE-2026-10-27.md))
+
+- [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
+  touchent ce code ; à reprendre ensuite.
+- [ ] Lots G (constantes de chaque module, JS + C#, parité testée) et H (`Btp/Codes.cs` ↔ `client/src/app/codes.js` :
+  types de fiches, types de documents, modules, sujets de diffusion).
+- [ ] Lots E (socle C# : `ExigerAdmin`, profils, actions de droits, `JsonCalcul.Options`), F (requêtes en double du
+  cœur : destinataires, comptes, aide `Json`, pièce vivante) et D (utilitaires JS du socle : `normaliser`, `ErreurApi`,
+  IndexedDB, export CSV, pastilles, panneau latéral, `<dialog>` et `<select>` restants).
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

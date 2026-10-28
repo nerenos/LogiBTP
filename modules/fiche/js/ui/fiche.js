@@ -1,4 +1,4 @@
-import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, formatLibre, htmlSur, editerLibelle, creerCombo, confirmer, formatHeure } from '@logibtp/socle/ui';
 import { MODES, LIBELLES_MODES, enSaisie, titreFiche } from '../src/modes.js';
 import { validerFiche, MESSAGES } from '../src/validation.js';
 import { ParametrageFiche } from './parametrage.js';
@@ -8,7 +8,6 @@ const CLE_CONFIDENTIEL = 'logibtp.fiche.confidentiel';
 
 const jetonNeuf = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const vide = (v) => v === null || v === undefined || v === '';
-const heure = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 /** Option de session : afficher les informations confidentielles sans les masquer (durée de l'onglet). */
 export function confidentielSession() {
@@ -272,7 +271,7 @@ export class FicheBase {
     // Son propre verrou (autre fenêtre, onglet fermé) n'est pas annoncé : il sera repris en passant en modification.
     if (!v || v.moi || v.meme_utilisateur) { b.hidden = true; return; }
     b.hidden = false;
-    b.innerHTML = `🔒 En cours de modification par <strong>${echapper(v.utilisateur)}</strong> depuis ${heure(v.depuis)}
+    b.innerHTML = `🔒 En cours de modification par <strong>${echapper(v.utilisateur)}</strong> depuis ${formatHeure(v.depuis)}
       ${this.definition.droits.debloquer && this.definition.droits.modifier ? '<button type="button" data-reprendre>Reprendre la main</button>' : ''}`;
     b.querySelector('[data-reprendre]')?.addEventListener('click', () => this.modifier({ forcer: true }).catch((e) => this.#erreur(e)));
   }

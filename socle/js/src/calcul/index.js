@@ -3,3 +3,4 @@ export { Dec, D, Dz, S, ZERO, UN, coef, arrondir, arr6, formatNombre } from './d
 export { evaluerExpression, referencesDe, ErreurCalcul } from './expression.js';
 export { analyserReference, analyserCibleVariable } from './references.js';
 export { remplacerVariables, texteBrut, formaterValeur, echapperHtml } from './libelles.js';
+export { dateLocale, aujourdhui, numeroJour, depuisNumero, ajouterJours, joursEntre, jourSemaine, joursDuMois, ajouterMois } from './dates.js';

@@ -1,3 +1,4 @@
+import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { ECHELLES, versMinutes, debutUnite, depuisMinutes } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
@@ -50,7 +51,7 @@ export class PagePlanningPrototype extends PageBase {
         <button type="button" data-aujourdhui>Aujourd'hui</button>
         <span class="aide" data-mesures></span> <span class="aide" data-action></span></div>
       <div class="zone-planning"><div data-planning></div></div></div>`;
-    const debut = debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'SEMAINE') - 14 * 1440;
+    const debut = debutUnite(versMinutes(dateLocale()), 'SEMAINE') - 14 * 1440;
     const jours = 91;
     const t0 = performance.now();
     const { lignes, taches } = generer(n, t, debut, jours);

@@ -1,5 +1,6 @@
+import { dateLocale, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 // Module Stock, lot 4 (ANALYSE-MODULE-STOCK.md § 5.5, § 5.6, S16 à S21) : magasin (comptoir de sortie et de retour
@@ -9,7 +10,6 @@ import { api } from '../api.js';
 
 const DOTATIONS = { EPI: 'EPI', OUTILLAGE: 'Outillage' };
 const nombre = (v) => { const t = String(v ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
-const dateFr = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 const nomSalarie = (s) => `${s.nom} ${s.prenom}${s.code ? ` (${s.code})` : ''}`;
 
 /** Comptoir du magasin : /stock/magasin?lieu=&mode=sortie|retour&salarie=. */
@@ -136,7 +136,7 @@ export class PageDotations extends PageBase {
     const p = new URLSearchParams(globalThis.location?.search ?? '');
     const an = new Date(); an.setFullYear(an.getFullYear() - 1);
     this.conteneur.innerHTML = `<div class="page-parametres"><div class="entete-page"><h1 class="page-titre">🦺 Dotations des salariés</h1>
-      <label>Du <input type="date" data-du value="${p.get('du') ?? an.toISOString().slice(0, 10)}"></label> <label>au <input type="date" data-au value="${p.get('au') ?? new Date().toISOString().slice(0, 10)}"></label>
+      <label>Du <input type="date" data-du value="${p.get('du') ?? dateLocale(an)}"></label> <label>au <input type="date" data-au value="${p.get('au') ?? aujourdhui()}"></label>
       <span data-type></span><input type="search" data-recherche placeholder="Salarié, service…" size="20"> <button type="button" data-csv>⭳ CSV</button></div>
       <p class="aide">Quantité nette dotée sur la période (sorties − retours) ; au survol : les dates. ✱ : encore en dotation aujourd'hui (net).</p><div data-corps></div></div>`;
     this.articlesStock = new Map((await api.stock.articles()).map((a) => [a.id, a]));
@@ -170,7 +170,7 @@ export class PageDotations extends PageBase {
       const x = s.articles.find((y) => y.ele === a.id);
       if (!x) return '<td></td>';
       const net = Number(x.sorti) - Number(x.rendu) - Number(x.rebut);
-      const dates = x.mouvements.map((m) => `${dateFr(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} ${m.numero ?? ''}`).join('\n');
+      const dates = x.mouvements.map((m) => `${formatDate(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} ${m.numero ?? ''}`).join('\n');
       return `<td class="nombre" title="${echapper(`Sorti ${formatNombre(x.sorti, 2)}, rendu ${formatNombre(x.rendu, 2)}, rebut ${formatNombre(x.rebut, 2)}\n${dates}`)}">${net ? formatNombre(net, 2) : ''}${Number(x.net) ? ' ✱' : ''}${pastilleRenouvellement(x)}</td>`;
     };
     this.conteneur.querySelector('[data-corps]').innerHTML = salaries.length ? `<table class="tableau-compact"><thead><tr><th>Salarié</th><th>Service</th>
@@ -189,7 +189,7 @@ export class PageDotations extends PageBase {
         const a = articles.find((y) => y.id === x.ele);
         if (!a) continue;
         lignes.push([cel(nomSalarie(s)), cel(s.service), cel(a.code), cel(a.libelle), x.sorti, x.rendu, x.rebut, x.net,
-          cel(x.mouvements.map((m) => `${dateFr(m.date)} ${m.quantite}`).join(' | '))].map((v) => String(v).replace('.', ',')).join(';'));
+          cel(x.mouvements.map((m) => `${formatDate(m.date)} ${m.quantite}`).join(' | '))].map((v) => String(v).replace('.', ',')).join(';'));
       }
     }
     const lien = document.createElement('a');
@@ -205,7 +205,7 @@ export function pastilleRenouvellement(x) {
   if (!x?.renouveler_le || !(Number(x.net) > 0)) return '';
   const jours = (new Date(`${x.renouveler_le}T00:00`) - new Date(new Date().toDateString())) / 86400000;
   if (jours > 30) return '';
-  return ` <span class="${jours < 0 ? 'avertissement' : ''}" title="À renouveler le ${new Date(`${x.renouveler_le}T00:00`).toLocaleDateString('fr-FR')}">${jours < 0 ? '⏰' : '⌛'}</span>`;
+  return ` <span class="${jours < 0 ? 'avertissement' : ''}" title="À renouveler le ${formatDate(x.renouveler_le)}">${jours < 0 ? '⏰' : '⌛'}</span>`;
 }
 
 /** Saisies de la borne à valider (S17, S18) : /stock/a-valider ; accepter, ou refuser avec un motif (pièce annulée). */
@@ -224,7 +224,7 @@ export class PageSaisiesAValider extends PageBase {
     const l = await api.stock.aValider();
     const z = this.conteneur.querySelector('[data-corps]');
     z.innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>Date</th><th>Pièce</th><th>Salarié</th><th>De</th><th>Vers</th><th>Articles</th><th class="cellule-boutons"></th></tr></thead><tbody>
-      ${l.map((x) => `<tr data-id="${x.ent_id}"><td>${x.date ? new Date(x.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : ''}</td>
+      ${l.map((x) => `<tr data-id="${x.ent_id}"><td>${formatDateHeure(x.date)}</td>
         <td><a href="/document/${x.ent_id}" data-doc>${echapper(x.numero ?? '')}</a> <small>${echapper(x.type)}</small></td><td>${echapper(x.nom ?? '')}</td>
         <td>${echapper(x.origine ?? '')}</td><td>${echapper(x.destination ?? '')}</td><td>${echapper(x.lignes)}</td>
         <td class="cellule-boutons"><button type="button" class="bouton-icone" data-accepter title="Accepter">✔</button><button type="button" class="bouton-icone" data-refuser title="Refuser (motif)">✕</button></td></tr>`).join('')}
@@ -257,9 +257,9 @@ export class PageFicheDotation extends PageBase {
     this.conteneur.innerHTML = `<div class="page-parametres fiche-dotation"><div class="entete-page sans-impression"><h1 class="page-titre">🖨 Fiche de dotation</h1>
         <button type="button" class="principal" data-imprimer>🖨 Imprimer</button></div>
       <h2>Fiche de dotation en équipements de protection individuelle et outillage</h2>
-      <p>Salarié : <b>${s ? echapper(`${s.prenom} ${s.nom}`) : '—'}</b>${s?.code ? ` (${echapper(s.code)})` : ''}${s?.service ? ` · ${echapper(s.service)}` : ''} · période du ${dateFr(d.du)} au ${dateFr(d.au)}</p>
+      <p>Salarié : <b>${s ? echapper(`${s.prenom} ${s.nom}`) : '—'}</b>${s?.code ? ` (${echapper(s.code)})` : ''}${s?.service ? ` · ${echapper(s.service)}` : ''} · période du ${formatDate(d.du)} au ${formatDate(d.au)}</p>
       <table class="tableau-compact pleine-largeur"><thead><tr><th>Date</th><th>Article</th><th>Libellé</th><th>Remis</th><th>Rendu</th><th>Pièce</th></tr></thead><tbody>
-        ${lignes.map((m) => `<tr><td>${dateFr(m.date)}</td><td>${echapper(m.a?.code ?? '')}</td><td>${echapper(m.a?.libelle ?? '')}</td>
+        ${lignes.map((m) => `<tr><td>${formatDate(m.date)}</td><td>${echapper(m.a?.code ?? '')}</td><td>${echapper(m.a?.libelle ?? '')}</td>
           <td class="nombre">${Number(m.quantite) > 0 ? formatNombre(m.quantite, 2) : ''}</td><td class="nombre">${Number(m.quantite) < 0 ? formatNombre(-m.quantite, 2) : ''}</td>
           <td>${echapper(m.numero ?? '')}</td></tr>`).join('') || '<tr><td colspan="6">Aucun mouvement</td></tr>'}</tbody></table>
       <p>Je reconnais avoir reçu les équipements ci-dessus, en avoir été informé de l'usage et m'engage à les porter et à les entretenir.</p>
@@ -280,7 +280,7 @@ export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
   const debut = new Date();
   if (periode.mois) debut.setMonth(debut.getMonth() - periode.mois);
   corps.innerHTML = '<p class="aide">Chargement…</p>';
-  const d = await api.stock.dotations({ du: periode.mois ? debut.toISOString().slice(0, 10) : '2000-01-01', salarie });
+  const d = await api.stock.dotations({ du: periode.mois ? dateLocale(debut) : '2000-01-01', salarie });
   const s = d.salaries[0];
   const art = new Map(d.articles.map((a) => [a.id, a]));
   const boutons = PERIODES_DOTATION.map((p) => `<button type="button" data-periode="${p.code}" class="${p === periode ? 'actif principal' : ''}" title="Mouvements ${p.mois ? `des ${p.libelle} passés` : 'de toutes dates'}">${p.libelle}</button>`).join('');
@@ -301,7 +301,7 @@ export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Article</th><th>Libellé</th><th>Doté<br><small>aujourd'hui</small></th><th>Sorti<br><small>${echapper(periode.libelle)}</small></th><th>Rendu<br><small>${echapper(periode.libelle)}</small></th><th>Rebut<br><small>${echapper(periode.libelle)}</small></th><th>Mouvements de la période</th></tr></thead><tbody>
       ${s.articles.map((x) => { const a = art.get(x.ele); return `<tr><td>${echapper(a?.code ?? '')}</td><td>${echapper(a?.libelle ?? '')}</td><td class="nombre"><b>${formatNombre(x.net, 2)}</b> ${echapper(a?.unite ?? '')}${pastilleRenouvellement(x)}</td>
         <td class="nombre">${formatNombre(x.sorti, 2)}</td><td class="nombre">${formatNombre(x.rendu, 2)}</td><td class="nombre">${formatNombre(x.rebut, 2)}</td>
-        <td>${x.mouvements.map((m) => `${dateFr(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="/document/${m.ent_id}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
+        <td>${x.mouvements.map((m) => `${formatDate(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="/document/${m.ent_id}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
       </tbody><tfoot>${[...totaux].map(([u, t]) => `<tr><th colspan="2">Total${u ? ` (${echapper(u)})` : ''} <small>${t.n} article${t.n > 1 ? 's' : ''}</small></th>
         <th class="nombre">${formatNombre(t.net, 2)}</th><th class="nombre">${formatNombre(t.sorti, 2)}</th><th class="nombre">${formatNombre(t.rendu, 2)}</th><th class="nombre">${formatNombre(t.rebut, 2)}</th><th></th></tr>`).join('')}</tfoot></table>`;
   }

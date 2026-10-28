@@ -1,8 +1,9 @@
+import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, confirmer, formatHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { TYPES_RESSOURCE, choisirRessources } from '../planning/ressources-tache.js';
-import { finsPeriodes, controlerEquipe, ajouterJours, periodeA, MESSAGES_EQUIPES, TYPES_CHEF } from '../ressources/equipes.js';
+import { finsPeriodes, controlerEquipe, periodeA, MESSAGES_EQUIPES, TYPES_CHEF } from '../ressources/equipes.js';
 
 // Planning (cœur) : équipes et compositions. Une composition est datée par son seul début et vaut jusqu'à la veille de la
 // suivante (ni trou ni chevauchement). Membres : salariés, intérimaires, matériels, sous-traitants et autres équipes
@@ -16,13 +17,8 @@ const LOT = 10;
 const BATTEMENT = 30000;
 const TYPES_MEMBRE = { ...TYPES_RESSOURCE, EQUIPE: 'Équipe' };
 const ICONES = { SALARIE: '👷', INTERIM: '🧑‍🔧', MATERIEL: '🚜', SOUS_TRAITANT: '🏢', EQUIPE: '👥' };
-const aujourdhui = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 const jour = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : '');
 const cle = (m) => `${m.type}:${m.id}`;
-const heure = (d) => new Date(d).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 export class PageEquipes extends PageBase {
   icone = '👥';
@@ -141,7 +137,7 @@ export class PageEquipes extends PageBase {
       let r;
       try { r = await api.ressources.verrouillerEquipe(this.id, this.jeton); } catch (err) { this.app.erreur(err); return false; }
       if (!r.ok) {
-        this.app.message(`${MESSAGES_EQUIPES.EQU_VERROU} (${r.verrou?.utilisateur ?? '?'} depuis ${r.verrou ? heure(r.verrou.depuis) : '?'})`, 'avertissement');
+        this.app.message(`${MESSAGES_EQUIPES.EQU_VERROU} (${r.verrou?.utilisateur ?? '?'} depuis ${r.verrou ? formatHeure(r.verrou.depuis) : '?'})`, 'avertissement');
         this.#rendre();
         return false;
       }

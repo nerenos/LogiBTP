@@ -1,4 +1,4 @@
-import { Dz, S, ZERO } from '@logibtp/socle';
+import { Dz, S, ZERO, ajouterJours } from '@logibtp/socle';
 
 // Module Sous-traitance : paiement direct d'un sous-traitant par le maître d'ouvrage (ANALYSE-MODULE-SOUS-TRAITANCE.md
 // § 5.5, ST14 à ST16, ST32). Règles partagées avec ReglesPaiementDirect.cs (jeu tests/cas/03_plafonds.json) : montant
@@ -21,15 +21,13 @@ export const MESSAGES_PAIEMENT_DIRECT = {
 };
 export const DELAI_ACCEPTATION_JOURS = 15;
 
-const jours = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
-
 /** Montant que le maître d'ouvrage paie au sous-traitant : TTC de sa facture, HT en autoliquidation (la TVA reste due par nous). */
 export const montantPaiementDirect = ({ ht, ttc, autoliquidation }) => S(autoliquidation ? Dz(ht) : Dz(ttc));
 
 /** Fin du délai d'acceptation d'une demande reçue, et demande en retard à une date. */
 export function delaiAcceptation(recueLe, aujourdhui) {
-  const echeance = jours(recueLe, DELAI_ACCEPTATION_JOURS);
-  return { echeance, depasse: aujourdhui > echeance, alerte: aujourdhui >= jours(echeance, -3) };
+  const echeance = ajouterJours(recueLe, DELAI_ACCEPTATION_JOURS);
+  return { echeance, depasse: aujourdhui > echeance, alerte: aujourdhui >= ajouterJours(echeance, -3) };
 }
 
 /**

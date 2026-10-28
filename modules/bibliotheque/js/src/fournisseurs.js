@@ -1,5 +1,5 @@
 import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
-import { texteBrut, S } from '@logibtp/socle';
+import { texteBrut, S, dateLocale } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
@@ -238,7 +238,7 @@ export class FournisseurBibliothequeMemoire {
 
   async unites() { return structuredClone(this.unts); }
 
-  #aujourdhui() { return new Date(this.horloge()).toISOString().slice(0, 10); }
+  #aujourdhui() { return dateLocale(this.horloge()); }
 
   async periodes() {
     return structuredClone([...this.periodesCoefs].sort((a, b) => (a.nat_id ?? 0) - (b.nat_id ?? 0) || String(b.debut).localeCompare(String(a.debut))));

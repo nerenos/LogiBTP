@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 /**
@@ -27,7 +27,7 @@ export class PageParametresModules extends PageBase {
       ${modules.map((m) => `<tr><td><b>${echapper(m.libelle)}</b></td><td>${echapper(m.description ?? '')}
         ${m.dependances?.length ? `<br><small class="aide">Nécessite : ${m.dependances.map(echapper).join(', ')}</small>` : ''}</td>
         <td><input type="checkbox" data-module="${echapper(m.code)}" ${m.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}></td>
-        <td><small class="aide">${m.maj_par ? `${echapper(m.maj_par)}, ` : ''}${m.maj_le ? new Date(m.maj_le).toLocaleString('fr-FR') : ''}</small></td></tr>`).join('')}
+        <td><small class="aide">${m.maj_par ? `${echapper(m.maj_par)}, ` : ''}${m.maj_le ? formatDateHeure(m.maj_le) : ''}</small></td></tr>`).join('')}
       </tbody></table>${admin ? '' : '<p class="aide">Seul un administrateur change l\'activation des modules.</p>'}`;
     corps.querySelectorAll('[data-module]').forEach((c) => c.addEventListener('change', async () => {
       try {

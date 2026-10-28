@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { ETATS_PAIEMENT_DIRECT, MESSAGES_PAIEMENT_DIRECT, MESSAGES_RETENUE, controlerAcceptation } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
@@ -11,7 +12,6 @@ import { api } from '../api.js';
 
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /** Onglet complet d'un marché de sous-traitance : paiements puis retenue. */
 export async function rendrePaiements(corps, { marche, message }) {

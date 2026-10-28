@@ -2,7 +2,7 @@ import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
 import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
-import { D } from '@logibtp/socle';
+import { D, aujourdhui } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
@@ -630,7 +630,7 @@ export class PageDocument extends PageBase {
     const id = -Date.now();
     const document = {
       ent_id: id, ent_tyd_id: type.tyd_id, ent_numero: null, ent_std_id: brouillon?.std_id ?? 1, ent_version: 1, ent_indice: null,
-      ent_tiers_id: null, ent_objet: params.ent_objet, ent_date: new Date().toISOString().slice(0, 10), ent_precision_montant: 2,
+      ent_tiers_id: null, ent_objet: params.ent_objet, ent_date: aujourdhui(), ent_precision_montant: 2,
       ent_num_format: { separateur: '.', niveaux: [{ style: '1' }] }, ent_modele: null, ent_bib_id: null, ent_intervenants: [], ent_proprietes: {},
     };
     this.attente = null;

@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, lirePreferences, ecrirePreferences, alerter } from '@logibtp/socle/ui';
 import { versMinutes, depuisMinutes } from '@logibtp/planning';
 import { ecrireDuree } from '@logibtp/pointage';
@@ -143,7 +144,7 @@ export class RessourcesTache {
     const zone = this.zone.querySelector('[data-apercu-equipe]');
     if (!id) { zone.innerHTML = ''; return; }
     if (this.equipes.has(id)) { zone.innerHTML = '<p class="aide">Équipe déjà dans la tâche : retirer ou remettre ses membres ci-dessus.</p>'; return; }
-    const date = (this.debut() || depuisMinutes(versMinutes(new Date().toISOString().slice(0, 10)))).slice(0, 10);
+    const date = (this.debut() || depuisMinutes(versMinutes(aujourdhui()))).slice(0, 10);
     let membres;
     try { membres = await api.planning.membresEquipe(id, date); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const equipe = this.listeEquipes.find((e) => e.id === id);

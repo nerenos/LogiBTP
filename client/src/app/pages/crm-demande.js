@@ -1,10 +1,10 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { choisirPersonne, choisirIndividu, creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { ETATS_DEMANDE, MOTIFS_SANS_SUITE, controlerDemande, MESSAGES_DEMANDE } from '@logibtp/crm';
 import { api } from '../api.js';
-import { contexteCrm, individusCrm, zoneRiche, lienElement, formatDateHeure } from '../crm/crm.js';
+import { contexteCrm, individusCrm, zoneRiche, lienElement } from '../crm/crm.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { pastilleDemande } from './crm-demandes.js';
 

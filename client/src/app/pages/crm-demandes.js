@@ -1,5 +1,6 @@
+import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, formatDate } from '@logibtp/socle/ui';
 import { ETATS_DEMANDE, ETATS_DEMANDE_CLOS, MOTIFS_SANS_SUITE } from '@logibtp/crm';
 import { api } from '../api.js';
 import { lienElement } from '../crm/crm.js';
@@ -62,13 +63,13 @@ export class PageDemandesCrm extends PageBase {
     try { page = await api.crm.demandes({ ...this.filtre, taille: 50 }); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     if (!page.demandes.length) { corps.innerHTML = '<p class="aide">Aucune demande.</p>'; return; }
     const pages = Math.ceil(page.total / page.taille);
-    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const aujourdhui = dateLocale();
     corps.innerHTML = `<table class="crm-table"><thead><tr><th>N°</th><th>Objet</th><th>Tiers</th><th>État</th><th>Responsable</th><th>Réponse attendue</th><th class="nombre">Montant estimé</th><th>Projet</th><th></th></tr></thead>
       <tbody>${page.demandes.map((d) => {
         const clos = ETATS_DEMANDE_CLOS.includes(d.etat);
         return `<tr class="${clos ? 'discret' : ''}"><td><a href="/crm/demande/${d.id}">${echapper(d.numero)}</a></td><td>${echapper(d.objet)}${d.nb_notes ? ` <span class="aide">💬 ${d.nb_notes}</span>` : ''}</td>
           <td>${lienElement(d.tiers)}</td><td>${pastilleDemande(d)}</td><td>${echapper(d.responsable ?? (d.service ? `${d.service} (à prendre)` : ''))}</td>
-          <td class="${!clos && d.echeance && d.echeance < aujourdhui ? 'crm-retard' : ''}">${d.echeance ? new Date(d.echeance).toLocaleDateString('fr-FR') : ''}</td>
+          <td class="${!clos && d.echeance && d.echeance < aujourdhui ? 'crm-retard' : ''}">${d.echeance ? formatDate(d.echeance) : ''}</td>
           <td class="nombre">${d.montant_estime === null || d.montant_estime === undefined ? '' : formatNombre(d.montant_estime, 0)}</td><td>${lienElement(d.cible)}</td>
           <td>${d.a_prendre ? `<button type="button" data-prendre="${d.id}">Prendre</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>

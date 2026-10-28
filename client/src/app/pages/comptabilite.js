@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer, alerter, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, alerter, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
 import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
 import { api } from '../api.js';
 
@@ -741,7 +741,7 @@ export class PageExportComptable extends PageBase {
       const ecrire = peutModifier(this.app);
       zone.innerHTML = lots.length ? `<table class="tableau-compact"><thead><tr><th>Lot</th><th>Le</th><th>Par</th><th>Période</th><th>Types</th><th>Modèle</th>
         <th class="nombre">Pièces</th><th class="nombre">Lignes</th><th class="nombre">Total</th><th>Fichier</th><th class="cellule-boutons"></th></tr></thead><tbody>
-        ${lots.map((l) => `<tr data-id="${l.id}"${l.annule_le ? ' class="discret"' : ''}><td>${l.id}</td><td>${echapper(new Date(l.le).toLocaleString('fr-FR'))}</td><td>${echapper(l.par)}</td>
+        ${lots.map((l) => `<tr data-id="${l.id}"${l.annule_le ? ' class="discret"' : ''}><td>${l.id}</td><td>${echapper(formatDateHeure(l.le))}</td><td>${echapper(l.par)}</td>
           <td>${dateFr(l.du) || '…'} – ${dateFr(l.au) || '…'}</td><td>${echapper(l.types.join(', '))}</td><td>${echapper(l.modele)}</td>
           <td class="nombre">${l.nb_pieces}</td><td class="nombre">${l.nb_lignes}</td><td class="nombre">${montant(l.total)}</td>
           <td><a href="/api/comptabilite/export/${l.id}/fichier" download>⬇ ${echapper(l.nom_fichier)}</a></td>

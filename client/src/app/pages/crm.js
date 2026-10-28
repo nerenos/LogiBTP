@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate } from '@logibtp/socle/ui';
 import { NATURES_NOTE, ETATS_NOTE } from '@logibtp/crm';
 import { api } from '../api.js';
 import { contexteCrm, iconeNature, pastilleEtat, echeanceNote, lienElement, estClose } from '../crm/crm.js';
@@ -94,7 +94,7 @@ export class PageCrm extends PageBase {
           <td><a href="/crm/note/${n.id}">${n.masquee ? '🔒 ' : ''}${echapper(n.objet)}</a>${n.nb_reponses ? ` <span class="aide">💬 ${n.nb_reponses}</span>` : ''}</td>
           <td>${lienElement(n.element)}${n.nb_liens > 1 ? ` <span class="aide">+${n.nb_liens - 1}</span>` : ''}</td><td>${pastilleEtat(n)}</td>
           <td>${echapper(n.responsable ?? (n.service ? `${n.service} (à prendre)` : ''))}</td><td class="${e.classe}">${echapper(e.texte)}</td>
-          <td><span class="aide">${echapper(n.cree_par)}, ${new Date(n.cree_le).toLocaleDateString('fr-FR')}</span></td>
+          <td><span class="aide">${echapper(n.cree_par)}, ${formatDate(n.cree_le)}</span></td>
           <td>${n.a_prendre ? `<button type="button" data-prendre="${n.id}" title="Je la prends : j'en deviens responsable">Prendre</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
       <p class="aide">${page.total} note(s)${pages > 1 ? ` · page ${page.page} / ${pages} <button type="button" data-page="-1" ${page.page <= 1 ? 'disabled' : ''}>◀</button> <button type="button" data-page="1" ${page.page >= pages ? 'disabled' : ''}>▶</button>` : ''}</p>`;

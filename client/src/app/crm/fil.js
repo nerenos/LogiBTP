@@ -1,6 +1,6 @@
-import { echapper, htmlSur } from '@logibtp/socle/ui';
+import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
-import { lienElement, formatDateHeure, nouvelleSaisie, texteEnHtml } from './crm.js';
+import { lienElement, nouvelleSaisie, texteEnHtml } from './crm.js';
 
 export const GENRES_FIL = [
   { code: 'NOTE', libelle: 'Notes', icone: '💬' },

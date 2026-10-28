@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer, saisir } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { ETATS_COMPTE } from '@logibtp/authentification';
 import { api } from '../api.js';
 import { pastilleCompte, rendreComptePersonne, dateCompte, jourCompte } from '../comptes/comptes.js';
@@ -32,13 +32,12 @@ export class PageParametresComptes extends PageBase {
 
   /** Sessions ouvertes et machines connues d'un compte : fermeture à distance, machine oubliée. */
   #rendreSessionsCompte(zone, compte, sessions, machines, recharger) {
-    const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     zone.innerHTML = `<h2 class="titre-actions">Sessions et machines <span>${sessions.length ? '<button type="button" data-fermer>⏻ Fermer toutes les sessions</button>' : ''}</span></h2>
       ${sessions.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th></tr></thead><tbody>
-        ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ' 💻' : ''}${s.api ? ' API' : ''}</td><td>${echapper(s.adresse ?? '')}</td><td>${date(s.cree_le)}</td>
-          <td>${date(s.vu_le)}</td><td>${date(s.expire_le)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune session ouverte.</p>'}
+        ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ' 💻' : ''}${s.api ? ' API' : ''}</td><td>${echapper(s.adresse ?? '')}</td><td>${formatDateHeure(s.cree_le)}</td>
+          <td>${formatDateHeure(s.vu_le)}</td><td>${formatDateHeure(s.expire_le)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucune session ouverte.</p>'}
       ${machines.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Machine connue</th><th>Adresse</th><th>Depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
-        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${date(m.cree_le)}</td><td>${date(m.vu_le)}</td>
+        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${formatDateHeure(m.cree_le)}</td><td>${formatDateHeure(m.vu_le)}</td>
           <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine">✕</button></td></tr>`).join('')}</tbody></table>` : ''}`;
     zone.querySelector('[data-fermer]')?.addEventListener('click', () => api.auth.fermerSessionsCompte(compte.id).then(recharger).catch((e) => this.app.erreur(e)));
     zone.querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', () => api.auth.oublierMachineCompte(compte.id, b.dataset.oublier).then(recharger).catch((e) => this.app.erreur(e))));
@@ -96,10 +95,9 @@ export class PageParametresComptes extends PageBase {
     const exclusions = corps.querySelector('[data-exclusions]');
     const chargerExclusions = async () => {
       const l = await api.auth.exclusions();
-      const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
       exclusions.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Adresse</th><th class="nombre">Échecs</th><th>Du</th><th>Au</th><th>Levée</th><th></th></tr></thead><tbody>
-        ${l.map((x) => `<tr><td>${echapper(x.prefixe)}</td><td class="nombre">${x.echecs}</td><td>${date(x.debut)}</td><td>${date(x.fin)}</td>
-          <td>${x.levee_le ? `${date(x.levee_le)} par ${echapper(x.levee_par ?? '')}` : ''}</td>
+        ${l.map((x) => `<tr><td>${echapper(x.prefixe)}</td><td class="nombre">${x.echecs}</td><td>${formatDateHeure(x.debut)}</td><td>${formatDateHeure(x.fin)}</td>
+          <td>${x.levee_le ? `${formatDateHeure(x.levee_le)} par ${echapper(x.levee_par ?? '')}` : ''}</td>
           <td class="cellule-boutons">${!x.levee_le && new Date(x.fin) > new Date() ? `<button type="button" class="bouton-icone" data-lever="${x.id}" title="Lever l'exclusion">🔓</button>` : ''}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune adresse exclue ces 7 derniers jours.</p>';
       exclusions.querySelectorAll('[data-lever]').forEach((b) => b.addEventListener('click', () => api.auth.leverExclusion(b.dataset.lever).then(chargerExclusions).catch((e) => this.app.erreur(e))));

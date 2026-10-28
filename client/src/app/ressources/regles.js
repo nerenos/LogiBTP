@@ -1,6 +1,7 @@
 // Règles du référentiel des ressources, répliquées dans src/LogiBTP.Domaine/Ressources/ReglesRessources.cs (jeux
 // tests/ressources) : validité des habilitations (fin calculée depuis la durée du type, état à une date), habilitations
 // exigées manquantes, contrôle des habilitations et des missions d'intérim, mission en cours. Dates au format AAAA-MM-JJ.
+import { ajouterMois, joursEntre } from '@logibtp/socle';
 
 export const ETATS_HABILITATION = {
   VALIDE: 'Valide', A_RENOUVELER: 'À renouveler', EXPIREE: 'Expirée', NON_ACQUISE: 'Pas encore acquise',
@@ -20,22 +21,7 @@ export const MESSAGES_RESSOURCES = {
   MIS_CHEVAUCHEMENT: 'Missions qui se chevauchent',
 };
 
-const pad = (n) => String(n).padStart(2, '0');
-const joursDuMois = (a, m) => new Date(Date.UTC(a, m, 0)).getUTCDate(); // m : 1 à 12
-
-/** Date + n mois, jour ramené au dernier du mois s'il n'existe pas (31 janvier + 1 mois = 28 ou 29 février). */
-export function ajouterMois(date, n) {
-  const [a, m, j] = date.split('-').map(Number);
-  const total = a * 12 + (m - 1) + n;
-  const an = Math.floor(total / 12);
-  const mois = total - an * 12 + 1;
-  return `${an}-${pad(mois)}-${pad(Math.min(j, joursDuMois(an, mois)))}`;
-}
-
-/** Nombre de jours de `de` à `a` (dates AAAA-MM-JJ). */
-export function joursEntre(de, a) {
-  return Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86400000);
-}
+export { ajouterMois };
 
 /** Fin de validité : saisie, sinon obtention + durée du type (mois), sinon sans fin (null). */
 export function finValidite(h, dureeMois) {

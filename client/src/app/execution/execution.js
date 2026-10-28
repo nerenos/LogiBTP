@@ -1,4 +1,4 @@
-import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { rendreEtapes, optionsRessources, ressourceDe } from './etapes.js';
 
@@ -22,7 +22,6 @@ export const TYPES_ORDRE = {
 };
 
 const nombre = (v, d = 2) => (v === null || v === undefined || v === '' ? '' : formatNombre(Number(v), d));
-const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
 /** Pastille d'état d'exécution. */
 export function pastilleExecution(etat) {
@@ -70,9 +69,9 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
     ${x.heures?.length ? `<p class="aide">Heures de main-d'œuvre : ${x.heures.map((h) => `${echapper(h.service ?? 'sans service')} ${nombre(h.heures)} h`).join(' · ')}${x.heures_realisees ? ` · réalisé ${nombre(x.heures_realisees)} h` : ''}</p>` : ''}
     <div data-planning-ordre></div>
     ${budget ? `<h4>Budget</h4><table><thead><tr><th></th><th class="nombre">Déboursé (PR)</th><th class="nombre">Vente HT</th><th class="nombre">Heures</th></tr></thead><tbody>
-      ${ligneBudget('Vendu (commandes)', budget.vendu)}${reference ? ligneBudget(`Référence (${date(reference.le)})`, reference) : ''}${ligneBudget('Planifié (cet ordre)', budget.planifie)}</tbody></table>
+      ${ligneBudget('Vendu (commandes)', budget.vendu)}${reference ? ligneBudget(`Référence (${formatDateHeure(reference.le)})`, reference) : ''}${ligneBudget('Planifié (cet ordre)', budget.planifie)}</tbody></table>
       ${reference && budget.planifie?.pr !== null ? `<p class="aide">Dérive du planifié sur la référence : ${nombre(Number(budget.planifie.pr ?? 0) - Number(reference.pr ?? 0))} € de déboursé.</p>` : '<p class="aide">Le budget de référence est figé à la première validation de l\'ordre.</p>'}` : ''}
-    ${x.historique?.length ? `<details><summary>Historique (${x.historique.length})</summary><ul class="liste-simple">${x.historique.map((h) => `<li>${date(h.le)} · ${echapper(h.par)} : ${pastilleExecution(h.etat)}
+    ${x.historique?.length ? `<details><summary>Historique (${x.historique.length})</summary><ul class="liste-simple">${x.historique.map((h) => `<li>${formatDateHeure(h.le)} · ${echapper(h.par)} : ${pastilleExecution(h.etat)}
       ${h.motif ? ` — ${echapper(h.motif)}` : ''}${h.detail ? ` <small class="aide">(${echapper(h.detail)})</small>` : ''}${h.commentaire ? `<br><small>${echapper(h.commentaire)}</small>` : ''}</li>`).join('')}</ul></details>` : ''}
   </div>`;
   const combo = (sel, options, valeur, vide, champ, apres = () => {}) => {
@@ -115,8 +114,8 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
 async function rendrePlanningOrdre(zone, { app, entId, recharger }) {
   const p = await api.liaisons.proposition(entId).catch(() => null);
   if (!p) return;
-  zone.innerHTML = `<h4>Planning</h4>${p.taches ? `<p class="aide">${p.taches} tâche(s) au planning : du ${date(p.debut)} au ${date(p.fin)}.</p>
-      ${p.ecart ? `<p class="avertissement">Le planning propose d'autres dates que celles de l'ordre (${date(p.debut_ordre) || '—'} → ${date(p.fin_ordre) || '—'}). <button type="button" data-accepter>Accepter les dates du planning</button></p>` : ''}`
+  zone.innerHTML = `<h4>Planning</h4>${p.taches ? `<p class="aide">${p.taches} tâche(s) au planning : du ${formatDateHeure(p.debut)} au ${formatDateHeure(p.fin)}.</p>
+      ${p.ecart ? `<p class="avertissement">Le planning propose d'autres dates que celles de l'ordre (${formatDateHeure(p.debut_ordre) || '—'} → ${formatDateHeure(p.fin_ordre) || '—'}). <button type="button" data-accepter>Accepter les dates du planning</button></p>` : ''}`
     : '<p class="aide">Ordre non planifié.</p>'}
     <p><button type="button" data-planifier>📅 Planifier l'ordre</button>
       <button type="button" data-planifier-etapes title="Une tâche par étape (jalons de durée nulle, attentes en décalage), après les ordres amont du parcours">📅 Planifier les étapes</button>

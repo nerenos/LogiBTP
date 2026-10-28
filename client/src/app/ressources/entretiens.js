@@ -4,7 +4,7 @@
 // moyen par jour ; échéance d'un plan (heures, kilomètres, mois : le premier atteint déclenche) et état.
 // Dates ISO ; valeurs de compteurs en nombres (jamais des montants).
 
-import { ajouterMois, joursEntre } from './regles.js';
+import { ajouterJours, ajouterMois, joursEntre } from '@logibtp/socle';
 import { cumuls } from './compteurs.js';
 
 export const ETATS_ECHEANCE = {
@@ -17,13 +17,6 @@ export const SEUIL_ENTRETIEN = 30;
 export const JOURS_MOYENNE = 90;
 
 const arrondi4 = (x) => Math.round(x * 10000) / 10000;
-
-/** Ajoute n jours à une date ISO. */
-export function ajouterJours(date, n) {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 /** Plans effectifs : listes du plus général au plus précis ; même code = remplacé, inactif = retiré. */
 export function plansEffectifs(listes) {

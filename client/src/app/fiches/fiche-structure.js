@@ -2,7 +2,7 @@ import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
-import { D, Dz } from '@logibtp/socle';
+import { D, Dz, aujourdhui } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { api } from '../api.js';
 import { TableIntervenants } from '../structure/intervenants.js';
@@ -24,7 +24,6 @@ const LIBELLES_STATUT = {
   OUVERT: 'Ouvert', TERMINE: 'Terminé', CLOS: 'Clos', SOLDE: 'Soldé', RESILIE: 'Résilié',
 };
 const parametre = (nom) => Number(new URLSearchParams(globalThis.location?.search ?? '').get(nom)) || null;
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 /** Raccourcis des fiches vers les listes (thème, libellé), filtrées par le code de la fiche (?projet=CODE…). */
 const RACCOURCIS = {

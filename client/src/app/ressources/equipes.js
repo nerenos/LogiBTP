@@ -4,6 +4,7 @@
 // au plus un chef par composition (salarié ou intérimaire, contact des communications). En base : les compositions
 // (`equipe_periode`, commentaire) et une ligne par membre et par suite continue de compositions (`equipe_composition`).
 // Répliqué dans ReglesEquipes.cs (jeu tests/ressources/03_equipes.json).
+import { ajouterJours } from '@logibtp/socle';
 
 export const TYPES_MEMBRE = ['SALARIE', 'INTERIM', 'MATERIEL', 'SOUS_TRAITANT', 'EQUIPE'];
 export const TYPES_CHEF = ['SALARIE', 'INTERIM'];
@@ -23,13 +24,6 @@ export const MESSAGES_EQUIPES = {
   EQU_VERSION: 'L\'équipe a été modifiée par ailleurs',
   EQU_VERROU: 'L\'équipe est en cours de modification par un autre utilisateur',
 };
-
-/** « AAAA-MM-JJ » + n jours. */
-export function ajouterJours(date, n) {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 const cle = (m) => `${m.type}:${m.id}`;
 /** Comparaisons identiques en C# : ordinale pour les textes, numérique pour deux identifiants numériques. */

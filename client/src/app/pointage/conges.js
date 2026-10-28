@@ -1,4 +1,4 @@
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure, formatDate } from '@logibtp/socle/ui';
 import { controlerConge, MESSAGES_CONGES, ETATS_CONGE } from '@logibtp/pointage';
 import { api } from '../api.js';
 
@@ -6,13 +6,11 @@ import { api } from '../api.js';
 // la saisie des pointages et le clic droit du planning. La demande n'a pas de nature (commentaire libre) ; le service
 // RH la valide en affectant la nature (liste modifiable : /parametres/pointage) ou la refuse.
 
-const horodatage = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
-export const dateCourte = (d) => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : '');
 
 /** Période lisible d'un congé (demi-journées aux bornes). */
 export const periodeConge = (c) => (c.du === c.au
-  ? `${dateCourte(c.du)}${c.debut_midi ? ' après-midi' : c.fin_midi ? ' matin' : ''}`
-  : `du ${dateCourte(c.du)}${c.debut_midi ? ' après-midi' : ''} au ${dateCourte(c.au)}${c.fin_midi ? ' midi' : ''}`);
+  ? `${formatDate(c.du)}${c.debut_midi ? ' après-midi' : c.fin_midi ? ' matin' : ''}`
+  : `du ${formatDate(c.du)}${c.debut_midi ? ' après-midi' : ''} au ${formatDate(c.au)}${c.fin_midi ? ' midi' : ''}`);
 
 /**
  * Pastille d'un congé : couleur de la nature (validé), contour pointillé tant qu'il est demandé ; libellé en bulle.
@@ -52,7 +50,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
         <label class="large"><span>Réponse au demandeur</span><input type="text" data-reponse value="${echapper(c.reponse ?? '')}"></label></div></fieldset>`
         : c.nature ? `<p>Nature : ${pastilleConge(c, natures)} ${echapper(natures.find((n) => n.code === c.nature)?.libelle ?? c.nature)}</p>` : ''}
       <p class="aide">${nouveau ? `Demandé par ${echapper(demandeur ?? app.utilisateur?.() ?? '')} ; la nature sera affectée par le service RH à la validation.`
-        : `Demandé par ${echapper(c.demande_par)} le ${horodatage(c.demande_le)}${c.traite_par ? ` · traité par ${echapper(c.traite_par)} le ${horodatage(c.traite_le)}` : ''}${c.jours != null ? ` · ${String(c.jours).replace('.', ',')} jour(s) décompté(s)` : ''}`}
+        : `Demandé par ${echapper(c.demande_par)} le ${formatDateHeure(c.demande_le)}${c.traite_par ? ` · traité par ${echapper(c.traite_par)} le ${formatDateHeure(c.traite_le)}` : ''}${c.jours != null ? ` · ${String(c.jours).replace('.', ',')} jour(s) décompté(s)` : ''}`}
         ${!rh && c.reponse ? `<br>Réponse : ${echapper(c.reponse)}` : ''}</p>
       <p class="erreur" data-erreur></p>
       <p class="boutons">

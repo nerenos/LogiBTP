@@ -8,6 +8,7 @@
 //   cond_public (true | false | null), cond_garantie (code | null), cond_montant_min (nombre | null), ordre } ;
 // piece : { categorie, portee, dge_id, depose_le, valide_au } ; ajustement : { code, mode (AJOUTEE | DISPENSEE), motif } ;
 // contexte : { public, garantie, montant_ht } ; dates 'AAAA-MM-JJ'.
+import { ajouterMois, ajouterJours } from '@logibtp/socle';
 
 export const ETATS_PIECE = {
   FOURNIE: { libelle: 'Fournie', icone: '✅' },
@@ -20,19 +21,7 @@ export const ETATS_PIECE = {
 export const ACTIONS_BLOQUEES = { COMMANDE: 'Validation de la commande', FACTURE: 'Validation de la facture', PAIEMENT: 'Bon à payer, paiement' };
 export const PORTEES_PIECE = { TIERS: 'Sous-traitant (toutes ses affaires)', MARCHE: 'Marché' };
 
-const pad = (n) => String(n).padStart(2, '0');
-const joursDuMois = (a, m) => new Date(Date.UTC(a, m, 0)).getUTCDate();
-
-/** Date + n mois (jour ramené à la fin du mois si besoin). */
-export function ajouterMois(date, n) {
-  const [a, m, j] = date.split('-').map(Number);
-  const total = a * 12 + (m - 1) + n;
-  const an = Math.floor(total / 12);
-  const mois = total - an * 12 + 1;
-  return `${an}-${pad(mois)}-${pad(Math.min(j, joursDuMois(an, mois)))}`;
-}
-
-const ajouterJours = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+export { ajouterMois };
 
 /** Exigence applicable au contexte du marché (conditions vides : toujours). */
 export function applicable(e, contexte = {}) {

@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { tableNonRepris } from '../import/rapport-import.js';
 
@@ -8,7 +8,7 @@ import { tableNonRepris } from '../import/rapport-import.js';
 
 const ACTIONS = { CREATION: 'Création', MODIFICATION: 'Modification', VALIDATION: 'Validation', ANNULATION: 'Annulation' };
 const LIENS = { TRANSFORMATION: 'Transformation', COPIE: 'Copie' };
-const date = (d, heure = false) => (d ? new Date(d).toLocaleString('fr-FR', heure ? { dateStyle: 'short', timeStyle: 'short' } : { dateStyle: 'short' }) : '');
+const date = (d, heure = false) => (heure ? formatDateHeure(d) : formatDate(d));
 
 /** Version la plus récente d'un document de la GED (pour télécharger ou réutiliser le fichier source). */
 export async function derniereVersionGed(ged, id) {

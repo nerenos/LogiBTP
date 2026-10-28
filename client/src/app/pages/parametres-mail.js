@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { reconnaitre, NATURES, ACTIONS, ZONES } from '@logibtp/mail';
@@ -39,7 +39,6 @@ export const pastilleCompteMail = (etat) => {
   const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
   return `<span class="pastille-compte ${c}">${echapper(l)}</span>`;
 };
-const date = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 
 /**
  * Messagerie (module Mail, administrateur) : comptes système (adresse et connexion chiffrées, jamais réaffichées :
@@ -146,7 +145,7 @@ export class PageParametresMail extends PageBase {
       ${this.comptes.map((c) => `<tr data-id="${c.id}"${c.actif ? '' : ' class="discret"'}><td title="${echapper(c.derniere_erreur ?? '')}">${pastilleCompteMail(c.etat)}</td>
         <td>${echapper(c.alias)}${c.autres_alias.length ? ` <span class="aide">(+ ${echapper(c.autres_alias.join(', '))})</span>` : ''}</td><td>${echapper(c.code)}</td>
         <td>${c.envoi ? '✓' : ''}</td><td>${c.reception ? '✓' : ''}</td><td>${c.authentification === 'OAUTH2' ? 'OAuth 2.0' : 'Mot de passe'}</td>
-        <td>${echapper(HEBERGEURS.find((h) => h.valeur === c.hebergeur)?.libelle ?? c.hebergeur)}</td><td>${date(c.verifie_le)}</td>
+        <td>${echapper(HEBERGEURS.find((h) => h.valeur === c.hebergeur)?.libelle ?? c.hebergeur)}</td><td>${formatDateHeure(c.verifie_le)}</td>
         <td class="cellule-boutons"><button type="button" data-tester title="Se connecter aux serveurs du compte">🔌 Tester</button>
           ${c.etat === 'SUSPENDU' ? '<button type="button" data-reprendre title="Reprendre les envois groupés">▶ Reprendre</button>' : ''}
           <button type="button" data-modifier title="Modifier le compte">✎</button></td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun compte : les envois de courriels sont indisponibles.</p>'}
@@ -202,7 +201,7 @@ export class PageParametresMail extends PageBase {
         <label class="ligne">dossier <input data-o="dossier_traites" size="20" value="${echapper(c?.options?.dossier_traites ?? 'LogiBTP/Traités')}"></label><br>
         <label class="ligne">Dossiers relevés <input data-dossiers size="50" value="${echapper((c?.dossiers ?? [{ nom: 'INBOX', role: 'RECEPTION' }]).map((d) => `${d.nom}=${d.role}`).join('; '))}"></label>
         <p class="aide">« INBOX=RECEPTION; LogiBTP/À traiter=A_TRAITER » : un courriel déposé dans un dossier A_TRAITER va toujours dans « À rapprocher ». Jamais de suppression sur le serveur.
-          ${c?.releve_le ? `Dernière relève : ${date(c.releve_le)}${c.releve_erreur ? ` — <span class="erreur">${echapper(c.releve_erreur)}</span>` : ''}` : ''}</p></td></tr>
+          ${c?.releve_le ? `Dernière relève : ${formatDateHeure(c.releve_le)}${c.releve_erreur ? ` — <span class="erreur">${echapper(c.releve_erreur)}</span>` : ''}` : ''}</p></td></tr>
       <tr><th>Services qui voient la boîte</th><td><input data-c="services" value="${echapper((c?.services ?? []).join(', '))}" size="30" placeholder="codes des services (réception)"></td></tr>
       <tr><th>Signature</th><td data-signature></td></tr>
       <tr><th>Actif</th><td><input type="checkbox" data-c="actif" ${c?.actif ?? true ? 'checked' : ''}></td></tr>

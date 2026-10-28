@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
 import { codeMarche, prochainCode } from '../fiches/fiche-structure.js';
 
@@ -132,7 +133,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
           if (!v.code || !v.libelle) { erreur('Code et libellé du chantier obligatoires'); return; }
           const cree = await creerChantier({
             ...v, conducteur_ind_id: comboConducteur.resoudre() === '' ? null : Number(comboConducteur.resoudre()), tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
-            prj_id: projet?.id ?? null, statut: 'OUVERT', date_ouverture: new Date().toISOString().slice(0, 10),
+            prj_id: projet?.id ?? null, statut: 'OUVERT', date_ouverture: aujourdhui(),
           });
           chaId = cree.id;
         }
@@ -141,7 +142,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
         const marche = await creerMarche({
           code: $('[data-code]').value.trim(), libelle: $('[data-libelle]').value.trim(), cha_id: chaId, tiers_id: client,
           ent_id: doc.ent_id, nature: comboNature.valeurCombo, retenue_pct: nombre($('[data-retenue]')),
-          date: doc.ent_date ?? new Date().toISOString().slice(0, 10), statut: 'EN_COURS',
+          date: doc.ent_date ?? aujourdhui(), statut: 'EN_COURS',
         });
         finir({ ent_marche_id: marche.id, cree: true, avenant: false });
       } catch (e) {

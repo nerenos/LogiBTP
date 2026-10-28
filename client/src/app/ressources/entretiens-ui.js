@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_EXECUTION } from '../execution/execution.js';
@@ -10,7 +11,6 @@ import { ETATS_ECHEANCE } from './entretiens.js';
 
 export const NATURES_ENTRETIEN = { PREVENTIF: 'Préventif', CURATIF: 'Curatif (réparation)', REGLEMENTAIRE: 'Réglementaire' };
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const optionsNature = () => Object.entries(NATURES_ENTRETIEN).map(([valeur, libelle]) => ({ valeur, libelle }));
 

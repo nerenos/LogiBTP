@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { coordonneesParDefaut, erreursIdentifiants, compacter, principale, texteCoordonnee, formaterTelephone, siretValide } from '@logibtp/annuaire';
@@ -240,7 +241,7 @@ export class FichePersonne extends FicheAnnuaire {
     if (contact && this.morale) parts.push(info('Contact', echapper([contact.individu, contact.fonction].filter(Boolean).join(' – '))));
     if (v.etat_administratif === 'F') parts.push(info('État', 'Établissement fermé', true));
     if (v.siret && !siretValide(compacter(v.siret))) parts.push(info('SIRET', 'invalide', true));
-    if (v.st_decennale_fin && (v.casquettes ?? []).includes('SOUS_TRAITANT') && String(v.st_decennale_fin) < new Date().toISOString().slice(0, 10)) parts.push(info('Décennale', 'expirée', true));
+    if (v.st_decennale_fin && (v.casquettes ?? []).includes('SOUS_TRAITANT') && String(v.st_decennale_fin) < aujourdhui()) parts.push(info('Décennale', 'expirée', true));
     return parts.join('');
   }
 

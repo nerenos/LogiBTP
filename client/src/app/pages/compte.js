@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, confirmer } from '@logibtp/socle/ui';
+import { echapper, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
 import { api } from '../api.js';
 import { urlPhotoIndividu, vignette } from '../annuaire/photo.js';
@@ -35,7 +35,7 @@ export class PageCompte extends PageBase {
         <dl class="definitions"><dt>Identifiant</dt><dd><b>${echapper(s.code)}</b></dd>
         <dt>Nom</dt><dd>${echapper(s.libelle ?? '')}</dd><dt>Profil</dt><dd>${echapper(s.profil)}</dd>
         <dt>Société</dt><dd>${echapper(app.societe?.libelle ?? '')}</dd>
-        ${s.expire_le ? `<dt>Expire</dt><dd>${new Date(s.expire_le).toLocaleString('fr-FR')} (prolongée à chaque utilisation, sauf « Rester connecté »)</dd>` : ''}</dl>
+        ${s.expire_le ? `<dt>Expire</dt><dd>${formatDateHeure(s.expire_le)} (prolongée à chaque utilisation, sauf « Rester connecté »)</dd>` : ''}</dl>
         ${impose ? '' : '<p><button type="button" data-action="deconnecter" class="danger">⏻ Se déconnecter</button></p>'}
       </section>
       <form class="carte" data-form autocomplete="on"><h2>Changer mon mot de passe</h2>
@@ -60,16 +60,15 @@ export class PageCompte extends PageBase {
    */
   async #rendreSessions(zone) {
     const { sessions, machines, double_facteur: double } = await api.auth.sessions();
-    const date = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     zone.innerHTML = `<h2 class="titre-actions">Mes sessions <span>${sessions.length > 1 ? '<button type="button" data-fermer-autres>⏻ Fermer les autres sessions</button>' : ''}</span></h2>
       <table class="tableau-compact"><thead><tr><th>Navigateur</th><th>Adresse</th><th>Ouverte</th><th>Dernière activité</th><th>Expire</th><th></th></tr></thead><tbody>
       ${sessions.map((s) => `<tr><td>${echapper(s.navigateur ?? '')}${s.machine ? ` <span class="pastille" title="Machine connue : ${echapper(s.machine)}">💻</span>` : ''}${s.api ? ' <span class="pastille">API</span>' : ''}</td>
-        <td>${echapper(s.adresse ?? '')}</td><td>${date(s.cree_le)}</td><td>${date(s.vu_le)}</td><td>${date(s.expire_le)}</td>
+        <td>${echapper(s.adresse ?? '')}</td><td>${formatDateHeure(s.cree_le)}</td><td>${formatDateHeure(s.vu_le)}</td><td>${formatDateHeure(s.expire_le)}</td>
         <td class="cellule-boutons">${s.courante ? '<span class="aide">celle-ci</span>' : `<button type="button" class="bouton-icone" data-fermer="${s.id}" title="Fermer cette session">⏻</button>`}</td></tr>`).join('')}</tbody></table>
       <h2>Mes machines connues</h2>
       <p class="aide">Une machine connue permet « Rester connecté » (7 jours) et la connexion sans code. Oubliez une machine perdue ou partagée.</p>
       ${machines.length ? `<table class="tableau-compact"><thead><tr><th>Machine</th><th>Adresse</th><th>Connue depuis</th><th>Dernière connexion</th><th></th></tr></thead><tbody>
-        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${date(m.cree_le)}</td><td>${date(m.vu_le)}</td>
+        ${machines.map((m) => `<tr><td>${echapper(m.nom ?? '')}</td><td>${echapper(m.adresse ?? '')}</td><td>${formatDateHeure(m.cree_le)}</td><td>${formatDateHeure(m.vu_le)}</td>
           <td class="cellule-boutons"><button type="button" class="bouton-icone" data-oublier="${m.id}" title="Oublier cette machine (ses sessions sont fermées)">✕</button></td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune machine connue.</p>'}
       <p><label class="ligne"><input type="checkbox" data-double ${double ? 'checked' : ''}> Me demander un code par courriel à chaque connexion depuis une machine inconnue</label></p>`;

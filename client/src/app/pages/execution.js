@@ -1,5 +1,6 @@
+import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, ouvrirMenuContextuel, confirmer, saisir } from '@logibtp/socle/ui';
+import { echapper, creerCombo, ouvrirMenuContextuel, confirmer, saisir, formatDate } from '@logibtp/socle/ui';
 import { ETATS_SERVICE, controlerParcours, MESSAGES_EXECUTION } from '@logibtp/execution';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { api } from '../api.js';
@@ -13,7 +14,6 @@ const TYPES_ORDRE = [
   ['E_CO', 'Colisage'], ['E_LI', 'Livraison'], ['E_PO', 'Ordre de pose'], ['E_SAV', 'Intervention SAV'], ['E_OST', 'Sous-traitance'],
   ['E_DAP', "Demande d'approvisionnement"], ['E_DAC', "Demande d'achat"], ['E_ENT', 'Entretien du matériel'],
 ].map(([valeur, libelle]) => ({ valeur, libelle, detail: valeur }));
-const date = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 
 /** Pastille d'état d'un service (manuel : souligné ; écart avec l'automatique signalé). */
 function pastille(e) {
@@ -128,7 +128,7 @@ export class PageSyntheseExecution extends PageBase {
     zone.innerHTML = `<table class="pleine-largeur synthese-execution"><thead><tr><th>Chantier</th><th>Client</th><th>Conducteur</th><th>Fin prévue</th>
         ${s.services.map((x) => `<th title="${echapper(x.libelle)}">${echapper(x.code)}</th>`).join('')}<th>Ordres</th><th>Dernier message</th></tr></thead><tbody>
       ${s.lignes.map((l, i) => `<tr data-i="${i}"><td><a href="/execution/chantier/${encodeURIComponent(l.element.id)}">${echapper(l.element.code)}</a> ${echapper(l.element.libelle)}</td>
-        <td>${echapper(l.element.client ?? '')}</td><td>${echapper(l.element.responsable ?? '')}</td><td>${date(l.element.fin_prevue)}</td>
+        <td>${echapper(l.element.client ?? '')}</td><td>${echapper(l.element.responsable ?? '')}</td><td>${formatDate(l.element.fin_prevue)}</td>
         ${s.services.map((x) => { const e = l.etats.find((y) => y.srv_id === x.id); return `<td class="centre" data-srv="${x.id}">${e && e.etat !== 'SANS_OBJET' ? pastille(e) : ''}</td>`; }).join('')}
         <td>${l.nb_ordres}${l.bloques ? ` · <span title="Bloqués">⛔ ${l.bloques}</span>` : ''}${l.en_retard ? ` · <span title="En retard">⏰ ${l.en_retard}</span>` : ''}</td>
         <td class="aide">${echapper(l.element.dernier_message ?? '')}</td></tr>`).join('')}</tbody></table>`;
@@ -170,7 +170,7 @@ export class PageExecutionChantier extends PageBase {
     const etapes = d.etapes.map((e) => ({ ...e, amonts: [...(e.amonts ?? [])] }));
     let modifie = false;
     corps.innerHTML = `<h1 class="page-titre">🧭 ${el ? `<a href="${echapper(el.url)}">${echapper(el.code)}</a> ${echapper(el.libelle)}` : 'Chantier introuvable'}</h1>
-      ${el ? `<p class="aide">${echapper(el.client ?? '')}${el.responsable ? ` · conducteur : ${echapper(el.responsable)}` : ''}${el.fin_prevue ? ` · fin prévue : ${date(el.fin_prevue)}` : ''}</p>` : ''}
+      ${el ? `<p class="aide">${echapper(el.client ?? '')}${el.responsable ? ` · conducteur : ${echapper(el.responsable)}` : ''}${el.fin_prevue ? ` · fin prévue : ${formatDate(el.fin_prevue)}` : ''}</p>` : ''}
       <h2>États des services</h2><div data-etats></div>
       <h2>Parcours</h2><p class="ligne">Modèle : <span data-modele></span> <button type="button" data-appliquer>Appliquer le modèle</button>
         <button type="button" data-enregistrer disabled>Enregistrer le parcours</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>Retirer le parcours</button>
@@ -184,7 +184,7 @@ export class PageExecutionChantier extends PageBase {
     zEtats.innerHTML = visibles.length ? `<table><tbody>${visibles.map((e) => {
       const m = d.manuels.find((x) => x.srv_id === e.srv_id);
       return `<tr data-srv="${e.srv_id}"><td>${echapper(services.get(e.srv_id)?.libelle ?? `Service ${e.srv_id}`)}</td><td>${pastille(e)} ${echapper(ETATS_SERVICE[e.etat]?.libelle ?? e.etat)}</td>
-        <td class="aide">${m ? `imposé par ${echapper(m.par ?? '')} le ${date(m.le)}${m.motif ? ` : ${echapper(m.motif)}` : ''}` : ''}</td>
+        <td class="aide">${m ? `imposé par ${echapper(m.par ?? '')} le ${formatDate(m.le)}${m.motif ? ` : ${echapper(m.motif)}` : ''}` : ''}</td>
         <td><button type="button" data-imposer title="Imposer un état ou revenir à l'automatique">…</button></td></tr>`;
     }).join('')}</tbody></table>` : '<p class="aide">Aucun service concerné : attribuez un parcours ou créez des ordres.</p>';
     zEtats.querySelectorAll('tr[data-srv]').forEach((tr) => {
@@ -215,7 +215,7 @@ export class PageExecutionChantier extends PageBase {
     });
     corps.querySelector('[data-retirer-parcours]').addEventListener('click', async () => { if (await confirmer('Retirer le parcours de ce chantier ?')) enregistrer({ etapes: [] }); });
     corps.querySelector('[data-theorique]')?.addEventListener('click', async () => {
-      const debut = await saisir('Début du planning théorique (AAAA-MM-JJ) :', new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+      const debut = await saisir('Début du planning théorique (AAAA-MM-JJ) :', ajouterJours(aujourdhui(), 1));
       if (!debut) return;
       try {
         const r = await api.liaisons.planningTheorique(this.params.id, `${debut}T08:00`);
@@ -234,7 +234,7 @@ export class PageExecutionChantier extends PageBase {
       <table><thead><tr><th>Numéro</th><th>Type</th><th>Objet</th><th>Statut</th><th>État</th><th>Fin prévue</th></tr></thead><tbody>
       ${l.map((o) => `<tr${o.en_retard ? ' class="en-retard"' : ''}><td><a href="${echapper(o.url)}">${echapper(o.numero ?? `#${o.ent_id}`)}</a></td><td>${echapper(o.type_libelle ?? o.type_ordre)}</td>
         <td>${echapper(o.objet ?? '')}</td><td>${echapper(o.statut_libelle ?? o.statut)}</td>
-        <td>${echapper(o.etat ?? '')}${o.motif ? ` <span class="aide">(${echapper(o.motif)})</span>` : ''}</td><td>${date(o.fin_prevue)}${o.en_retard ? ' ⏰' : ''}</td></tr>`).join('')}</tbody></table>`).join('')
+        <td>${echapper(o.etat ?? '')}${o.motif ? ` <span class="aide">(${echapper(o.motif)})</span>` : ''}</td><td>${formatDate(o.fin_prevue)}${o.en_retard ? ' ⏰' : ''}</td></tr>`).join('')}</tbody></table>`).join('')
       : '<p class="aide">Aucun ordre.</p>';
   }
 }

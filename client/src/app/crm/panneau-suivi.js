@@ -1,8 +1,6 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
-import {
-  contexteCrm, nouvelleSaisie, iconeNature, pastilleEtat, echeanceNote, formatDateHeure, estCourriel, noteDepuisCourriel, estClose,
-} from './crm.js';
+import { contexteCrm, nouvelleSaisie, iconeNature, pastilleEtat, echeanceNote, estCourriel, noteDepuisCourriel, estClose } from './crm.js';
 
 /** Éléments de la structure des affaires : plans et bordereaux proposés depuis leur suivi. */
 const STRUCTURE = ['projet', 'affaire', 'chantier', 'marche'];

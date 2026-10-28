@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper } from '@logibtp/socle/ui';
 
 // Photo d'un individu ou logo d'une personne (lot 4 des demandes du 25/10/2026, db/229 : ind_image_ged,
@@ -56,7 +57,7 @@ export async function rendrePhoto(corps, { ged, typeElement, id, valeur, definir
       const d = await ged.deposer({
         fichier, meta: {
           titre: fichier.name.replace(/\.[^.]+$/, ''), categorie: 'photo', type_element: typeElement, id_element: String(id),
-          date_document: new Date().toISOString().slice(0, 10), auteur: utilisateur,
+          date_document: aujourdhui(), auteur: utilisateur,
         },
       });
       message('Image ajoutée à la GED de la fiche', 'succes');

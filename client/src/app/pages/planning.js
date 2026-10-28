@@ -1,3 +1,4 @@
+import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui } from '@logibtp/planning';
@@ -562,7 +563,7 @@ export class PagePlanning extends PageBase {
     this.filtreServices = this.#servicesMemorises();
     this.#rendreFiltreServices();
     const jours = d.avant + d.apres + 1;
-    const p = this.du ? { debut: versMinutes(this.du), fin: versMinutes(this.du) + jours * 1440 } : periodeFlottante(new Date().toISOString().slice(0, 10), d.avant, d.apres);
+    const p = this.du ? { debut: versMinutes(this.du), fin: versMinutes(this.du) + jours * 1440 } : periodeFlottante(dateLocale(), d.avant, d.apres);
     this.periode = p;
     this.comboEchelle.definirValeur(d.echelle);
     this.planning.regroupement = d.regroupement;
@@ -1104,7 +1105,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     if (id) {
       try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
     } else {
-      const debut = depuisMinutes(debutUnite(versMinutes(new Date().toISOString().slice(0, 10)), 'JOUR') + 1440 + 480);
+      const debut = depuisMinutes(debutUnite(aujourdhui(), 'JOUR') + 1440 + 480);
       t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: null, affectations: [], ...preremplie };
       this.#onglet('tache');
     }

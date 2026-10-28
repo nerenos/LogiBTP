@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import {
   ACTIONS, LIBELLES_ACTIONS, LIBELLES_PORTEES, PORTEES, MESSAGES_DROITS, actionsEffectives, cocher, decocher, reappliquer,
   controlerProfil, parent,
@@ -8,7 +8,6 @@ import { api } from '../api.js';
 
 const EVENEMENTS = { CREATION: '＋ Création', MODIFICATION: '✎ Profil modifié', SUPPRESSION: '🗑 Suppression', DROITS: '🛡 Droits', LIMITE: '💶 Montant de validation' };
 
-const dateHeure = (d) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '');
 const montant = (v) => (v === undefined || v === null || String(v) === '-1' ? 'sans limite' : `${v} €`);
 const limiteTexte = (l) => (l ? `pièce ${montant(l.piece)}, cumul ${montant(l.cumul)} sur ${l.jours} j` : '—');
 const texteJournal = (j, v) => (j.evenement === 'DROITS' ? actionsTexte(v) : j.evenement === 'LIMITE' ? limiteTexte(v) : JSON.stringify(v ?? ''));
@@ -159,7 +158,7 @@ export class PageParametresDroits extends PageBase {
       if (!e.target.open) return;
       const journal = await api.droits.journal(p.code).catch((x) => { this.app.erreur(x); return []; });
       zone.querySelector('[data-lignes-journal]').innerHTML = journal.length ? `<table class="tableau-compact"><thead><tr><th>Quand</th><th>Par</th><th>Événement</th><th>Nœud</th><th>Avant</th><th>Après</th></tr></thead><tbody>
-        ${journal.map((j) => `<tr><td>${dateHeure(j.le)}</td><td>${echapper(j.par)}</td><td>${echapper(EVENEMENTS[j.evenement] ?? j.evenement)}</td><td>${echapper(j.noeud ?? '')}</td>
+        ${journal.map((j) => `<tr><td>${formatDateHeure(j.le)}</td><td>${echapper(j.par)}</td><td>${echapper(EVENEMENTS[j.evenement] ?? j.evenement)}</td><td>${echapper(j.noeud ?? '')}</td>
           <td>${echapper(texteJournal(j, j.avant))}</td><td>${echapper(texteJournal(j, j.apres))}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune modification.</p>';
     });

@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import {
@@ -11,7 +12,6 @@ const ZONES = {
 };
 const OPTIONS_REGLES = Object.entries(REGLES_FERME).map(([valeur, libelle]) => ({ valeur, libelle }));
 const OPTIONS_JOURS = JOURS_SEMAINE.map((libelle, i) => ({ valeur: i + 1, libelle }));
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 const messages = (codes) => codes.map((c) => MESSAGES_CALENDRIER[c] ?? c).join(' · ');
 const entier = (v) => (String(v ?? '').trim() === '' ? null : Number(v));

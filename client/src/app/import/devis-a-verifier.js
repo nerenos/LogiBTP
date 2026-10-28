@@ -1,3 +1,4 @@
+import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
@@ -31,7 +32,7 @@ export async function ouvrirImport(page, jeton) {
     ent_id: 0, ent_tyd_id: type.tyd_id, ent_numero: null, ent_std_id: brouillon?.std_id ?? 1, ent_version: 1, ent_indice: null,
     ent_tiers_id: null, ent_precision_montant: 2, ent_modele: null, ent_bib_id: null, ent_intervenants: [],
     ...saisie.document,
-    ent_date: saisie.document.ent_date ?? new Date().toISOString().slice(0, 10),
+    ent_date: saisie.document.ent_date ?? aujourdhui(),
   };
   page.importEnCours = { jeton, entree, format, devis, saisie };
   await page.charger(definition, { document, lignes: saisie.lignes });
@@ -113,7 +114,7 @@ export async function creerDepuisImport(page) {
         fichier: imp.entree.fichier, nom_fichier: imp.entree.nom_fichier,
         meta: {
           titre: `Import ${imp.format.libelle} – ${imp.entree.nom_fichier}`, categorie: 'import', type_element: ed.definition.type.tyd_code,
-          id_element: String(cree.document.ent_groupe_id ?? id), date_document: new Date().toISOString().slice(0, 10),
+          id_element: String(cree.document.ent_groupe_id ?? id), date_document: aujourdhui(),
           notes: `Fichier source de l'import (${imp.format.libelle}${imp.devis.entete.reference ? `, référence ${imp.devis.entete.reference}` : ''})`,
         },
       });
