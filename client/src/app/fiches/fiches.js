@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
@@ -76,7 +77,7 @@ export class FicheSalarie extends FicheLogiBTP {
       rendre: (corps) => {
         const ind = this.valeur('ind_id');
         if (!ind) { corps.innerHTML = "<p class=\"aide\">Liez d'abord le salarié à un individu de l'annuaire (onglet principal) : le compte de connexion se rattache à l'individu.</p>"; return; }
-        this.compte(corps, { type: 'individu', id: ind, prenom: this.valeur('prenom'), nom: this.valeur('nom') });
+        this.compte(corps, { type: TYPE_FICHE.INDIVIDU, id: ind, prenom: this.valeur('prenom'), nom: this.valeur('nom') });
       },
     };
   }
@@ -98,7 +99,7 @@ export class FicheSalarie extends FicheLogiBTP {
   /** Création depuis un individu (?individu=ID) : sa fiche est lue pour préremplir le salarié. */
   async ouvrir() {
     const ind = Number(new URLSearchParams(globalThis.location?.search ?? '').get('individu')) || null;
-    if (this.mode === MODES.CREATION && ind) this.individuSource = await this.fournisseur.charger('individu', ind).catch(() => null);
+    if (this.mode === MODES.CREATION && ind) this.individuSource = await this.fournisseur.charger(TYPE_FICHE.INDIVIDU, ind).catch(() => null);
     return super.ouvrir();
   }
 
@@ -121,12 +122,12 @@ export class FicheSalarie extends FicheLogiBTP {
     const el = document.createElement('div');
     el.className = 'fiche-saisie-champ annuaire-parent';
     const saisie = this.estEnSaisie();
-    el.innerHTML = valeur ? `<a href="/fiche/individu/${valeur}" data-ouvrir>👤 ${echapper(this.libelleIndividu ?? `Individu ${valeur}`)}</a>` : '<span class="aide">Non lié à l\'annuaire</span>';
+    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, valeur)}" data-ouvrir>👤 ${echapper(this.libelleIndividu ?? `Individu ${valeur}`)}</a>` : '<span class="aide">Non lié à l\'annuaire</span>';
     if (saisie) {
       el.insertAdjacentHTML('beforeend', ` <button type="button" data-lier title="Lier à un individu existant de l'annuaire">…</button>
         ${valeur ? '<button type="button" data-delier title="Retirer le lien">✕</button>' : '<button type="button" data-creer title="Créer l\'individu dans l\'annuaire (rattaché à l\'agence)">＋ Créer dans l\'annuaire</button>'}`);
     }
-    el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: 'individu', id: valeur }, e); });
+    el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: valeur }, e); });
     el.querySelector('[data-delier]')?.addEventListener('click', () => { this.definirValeur('ind_id', null); this.rendre(); });
     el.querySelector('[data-lier]')?.addEventListener('click', async () => {
       const r = await choisirIndividu({ annuaire: this.services.annuaire, titre: 'Individu du salarié', nom: [this.valeur('nom'), this.valeur('prenom')].filter(Boolean).join(' ') });
@@ -152,7 +153,7 @@ export class FicheSalarie extends FicheLogiBTP {
       v.telephone ? { nature: 'TELEPHONE', usage: 'PORTABLE', valeur: v.telephone, principal: true } : null,
     ].filter(Boolean);
     const agence = AGENCES_SALARIES[v.agence] ?? AGENCES_SALARIES.Lyon;
-    const i = await this.fournisseur.creer('individu', {
+    const i = await this.fournisseur.creer(TYPE_FICHE.INDIVIDU, {
       valeurs: {
         civilite, nom, prenom, pays: 'FR', actif: true, roles: rolesSalarie(v),
         rattachements: [{ per_id: agence, fonction: v.poste ?? null, service: v.service ?? null, debut: v.date_entree ?? null, actif: true, coordonnees }],
@@ -168,7 +169,7 @@ export class FicheSalarie extends FicheLogiBTP {
   actionsSupplementaires() {
     const ind = this.valeur('ind_id');
     return [
-      { libelle: '👤 Fiche annuaire', titre: 'Ouvrir la fiche de l\'individu (coordonnées, rattachements)', visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: 'individu', id: ind }) },
+      { libelle: '👤 Fiche annuaire', titre: 'Ouvrir la fiche de l\'individu (coordonnées, rattachements)', visible: !this.estEnSaisie() && !!ind, action: () => this.ouvrirFiche({ type: TYPE_FICHE.INDIVIDU, id: ind }) },
       ...super.actionsSupplementaires(),
     ];
   }

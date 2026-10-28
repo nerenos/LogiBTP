@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.RateLimiting;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -29,10 +30,10 @@ public sealed class OptionsSecurite
     /// <summary>Variables LOGIBTP_DEPLOIEMENT, LOGIBTP_CORS_ORIGINES, LOGIBTP_PROXYS, LOGIBTP_ADRESSES_CONFIANCE (listes séparées par des virgules).</summary>
     public static OptionsSecurite Lire(IConfiguration c) => new()
     {
-        Deploiement = string.IsNullOrWhiteSpace(c["LOGIBTP_DEPLOIEMENT"]) ? "LOCAL" : c["LOGIBTP_DEPLOIEMENT"]!.Trim().ToUpperInvariant(),
-        OriginesCors = Liste(c["LOGIBTP_CORS_ORIGINES"]),
-        Proxys = Liste(c["LOGIBTP_PROXYS"]),
-        AdressesConfiance = Liste(c["LOGIBTP_ADRESSES_CONFIANCE"]),
+        Deploiement = string.IsNullOrWhiteSpace(c[VariablesEnv.Deploiement]) ? "LOCAL" : c[VariablesEnv.Deploiement]!.Trim().ToUpperInvariant(),
+        OriginesCors = Liste(c[VariablesEnv.CorsOrigines]),
+        Proxys = Liste(c[VariablesEnv.Proxys]),
+        AdressesConfiance = Liste(c[VariablesEnv.AdressesConfiance]),
     };
 
     /// <summary>Adresse comprise dans les adresses de confiance (CIDR ; adresse seule = /32 ou /128).</summary>

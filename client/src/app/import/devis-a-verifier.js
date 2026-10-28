@@ -1,3 +1,4 @@
+import { urlDocument, SUJET_FENETRE } from '../codes.js';
 import { STATUT_DOCUMENT } from '@logibtp/document';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
@@ -131,8 +132,8 @@ export async function creerDepuisImport(page) {
   });
   await retirerImport(imp.jeton).catch(() => {});
   page.importEnCours = null;
-  page.app.routeur.remplacerUrl(`/document/${id}`);
+  page.app.routeur.remplacerUrl(urlDocument(id));
   await page.chargerDocument(id);
-  page.app.publier('enregistre', { type: ed.definition.type.tyd_code, ids: [id], cree: true });
+  page.app.publier(SUJET_FENETRE.ENREGISTRE, { type: ed.definition.type.tyd_code, ids: [id], cree: true });
   page.app.message(`${ed.definition.type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé depuis ${imp.format.libelle}`, 'succes');
 }

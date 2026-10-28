@@ -51,7 +51,7 @@ public static class Structure
         """;
 
     /// <summary>Types de documents qui reçoivent un accusé de réception (↔ TYPES_ARC de client/src/app/panneaux-btp.js).</summary>
-    public static readonly HashSet<string> TypesArc = ["A_COMMANDE", "T_COMMANDE"];
+    public static readonly HashSet<string> TypesArc = [.. TypesDocument.Arc];
 
     public static IEndpointRouteBuilder MapStructure(this IEndpointRouteBuilder api)
     {

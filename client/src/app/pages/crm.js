@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate } from '@logibtp/socle/ui';
 import { NATURES_NOTE, ETATS_NOTE } from '@logibtp/crm';
@@ -59,7 +60,7 @@ export class PageCrm extends PageBase {
     let minuterie;
     $('[data-recherche]').addEventListener('input', (e) => { clearTimeout(minuterie); minuterie = setTimeout(() => { this.filtre.recherche = e.target.value; this.filtre.page = 1; this.charger(); }, 300); });
     $('[data-nouvelle]').addEventListener('click', (e) => app.naviguer('/crm/note/nouveau', { nouvelleFenetre: e.ctrlKey || e.shiftKey }));
-    this.desabonner = app.abonner('crm', () => this.charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger());
     await this.charger();
   }
 
@@ -99,7 +100,7 @@ export class PageCrm extends PageBase {
       }).join('')}</tbody></table>
       <p class="aide">${page.total} note(s)${pages > 1 ? ` · page ${page.page} / ${pages} <button type="button" data-page="-1" ${page.page <= 1 ? 'disabled' : ''}>◀</button> <button type="button" data-page="1" ${page.page >= pages ? 'disabled' : ''}>▶</button>` : ''}</p>`;
     corps.querySelectorAll('[data-prendre]').forEach((b) => b.addEventListener('click', async () => {
-      try { await api.crm.prendre(Number(b.dataset.prendre)); this.app.message('Note prise en charge', 'succes'); this.app.publier('crm', {}); } catch (e) { this.app.erreur(e); }
+      try { await api.crm.prendre(Number(b.dataset.prendre)); this.app.message('Note prise en charge', 'succes'); this.app.publier(SUJET_FENETRE.CRM, {}); } catch (e) { this.app.erreur(e); }
     }));
     corps.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => { this.filtre.page += Number(b.dataset.page); this.charger(); }));
   }

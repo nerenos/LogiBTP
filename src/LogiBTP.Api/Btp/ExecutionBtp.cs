@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LogiBTP.Crm.Web;
 using LogiBTP.Crm;
+using LogiBTP.Domaine;
 using LogiBTP.Execution;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,7 @@ public static class ExecutionBtp
             FROM document d WHERE d.ent_id = @id
             """, new NpgsqlParameter("id", id)).FirstAsync(ct);
         var reponse = JsonSerializer.Deserialize<Dictionary<string, object?>>(json)!;
-        if (o.TydCode == "E_OE") reponse["budget"] = await BudgetAsync(db, o, ct);
+        if (o.TydCode == TypesDocument.EOe) reponse["budget"] = await BudgetAsync(db, o, ct);
         return Results.Json(reponse);
     }
 
@@ -123,14 +124,14 @@ public static class ExecutionBtp
             ], ct);
         await tx.CommitAsync(ct);
         // Blocage : tâche à prendre par le service du motif (module CRM actif), rattachée à l'ordre (groupe d'indices).
-        if (bloque && await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct))
+        if (bloque && await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct))
         {
             var srv = await db.Database.SqlQueryRaw<int?>("SELECT mot_srv_id AS \"Value\" FROM motif WHERE mot_id = @m", new NpgsqlParameter("m", motif!.Value)).FirstOrDefaultAsync(ct);
             var libelle = await db.Database.SqlQueryRaw<string>("SELECT mot_libelle AS \"Value\" FROM motif WHERE mot_id = @m", new NpgsqlParameter("m", motif.Value)).FirstAsync(ct);
             if (srv is int service)
             {
                 var liens = new List<LienSaisi> { new("document", o.GroupeId.ToString(), true) };
-                if (o.ChantierId is int cha) liens.Add(new LienSaisi("chantier", cha.ToString()));
+                if (o.ChantierId is int cha) liens.Add(new LienSaisi(TypesFiche.Chantier, cha.ToString()));
                 // Le blocage est enregistré : une tâche impossible à créer est signalée au journal sans annuler le blocage.
                 try
                 {

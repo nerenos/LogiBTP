@@ -180,6 +180,20 @@ l'interface ; le cœur importe ces constantes au lieu de réécrire les chaînes
 
 ## Lot H — Constantes du cœur : `src/LogiBTP.Api/Btp/Codes.cs` ↔ `client/src/app/codes.js`
 
+> **Fait** (28/10/2026) : `client/src/app/codes.js` ↔ `src/LogiBTP.Domaine/Codes.cs` (dans le Domaine pour que
+> `tests/LogiBTP.Calcul.Tests/CodesTests.cs` vérifie la parité) : `TYPE_FICHE` ↔ `TypesFiche` (comparaisons, `case`,
+> propriétés `type` / `type_element`, appels des fournisseurs de fiches ; égal aux clés de `TYPES_FICHE`, test client),
+> `urlFiche(type, id)` et `urlDocument(id)` (≈ 90 adresses), `TYPE_DOCUMENT` ↔ `TypesDocument` (hors SQL), listes
+> `TYPES_ARC` ↔ `TypesDocument.Arc` et `TYPES_SOUS_TRAITABLES` ↔ `SousTraitables` (parité des listes :
+> `Constantes.ListeJs`), `TYPE_POSTE_MARCHE` ↔ `TypesPosteMarche`, `TYPE_RESSOURCE` ↔ `TypesRessource` (`TypesConnus` du
+> planning retiré : `ReglesAffectations.Types`), `MODULE_FACULTATIF` ↔ `ModulesFacultatifs` (`moduleActif`, `module:`,
+> `EstActifAsync`, `ExigeModule`), `SUJET_FENETRE` (sujets entre fenêtres), `ETAT_ATTENTE` de `hors-ligne/attente.js`.
+> Serveur seulement : `CategoriesGed` (edition, ressource_edition, mail) ; `VariablesEnv` du socle (variables
+> `LOGIBTP_*` du socle, de l'Installation et du cœur ; les tests gardent les leurs).
+> Gardé : SQL des requêtes (affaires techniques MATERIEL / DOTATIONS, services, `cha_statut 'OUVERT'`, articles stockés :
+> la vue `v_articles_stock` est un changement de `db/`, hors périmètre), fichiers de données (`donnees.js`,
+> `vues-liste.js`, `definitions.js`), libellés et paramètres d'URL qui ressemblent à un type de fiche.
+
 Test de parité (comme pour les colonnes). Contenu proposé, par ordre d'utilité :
 
 1. **Listes déjà recopiées entre les deux côtés** (parité aujourd'hui non testée) : `Structure.TypesArc` ↔

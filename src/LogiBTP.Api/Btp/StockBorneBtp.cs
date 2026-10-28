@@ -121,10 +121,10 @@ public static class StockBorneBtp
             {
                 var bons = x.Lignes.Where(l => !l.Rebut).ToList();
                 var rebuts = x.Lignes.Where(l => l.Rebut).ToList();
-                if (bons.Count > 0) pieces.Add(await MagasinBtp.PieceAsync(db, documents, "S_TRANSFERT", cible, depot.Id, cible, bons, $"Retour à la borne{com}", null, auteur, ct));
-                if (rebuts.Count > 0) pieces.Add(await MagasinBtp.PieceAsync(db, documents, "S_SORTIE", cible, null, cible, rebuts, $"Rebut à la borne{com}", null, auteur, ct));
+                if (bons.Count > 0) pieces.Add(await MagasinBtp.PieceAsync(db, documents, TypesDocument.STransfert, cible, depot.Id, cible, bons, $"Retour à la borne{com}", null, auteur, ct));
+                if (rebuts.Count > 0) pieces.Add(await MagasinBtp.PieceAsync(db, documents, TypesDocument.SSortie, cible, null, cible, rebuts, $"Rebut à la borne{com}", null, auteur, ct));
             }
-            else pieces.Add(await MagasinBtp.PieceAsync(db, documents, "S_TRANSFERT", depot.Id, cible, cible, x.Lignes, $"{(x.Dotation ? "Dotation" : "Sortie")} à la borne{com}", null, auteur, ct));
+            else pieces.Add(await MagasinBtp.PieceAsync(db, documents, TypesDocument.STransfert, depot.Id, cible, cible, x.Lignes, $"{(x.Dotation ? "Dotation" : "Sortie")} à la borne{com}", null, auteur, ct));
             var ids = pieces.Select(p => p.EntId).ToArray();
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_stk_a_valider = TRUE, ent_stk_salarie_id = {s} WHERE ent_id = ANY({ids})", ct);
             await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -132,7 +132,7 @@ public static class StockBorneBtp
                 """, ct);
             return Results.Ok(new { essai = false, pieces });
         });
-        b.ExigeModule("stock", "Stock");
+        b.ExigeModule(ModulesFacultatifs.Stock, "Stock");
         return api;
     }
 }

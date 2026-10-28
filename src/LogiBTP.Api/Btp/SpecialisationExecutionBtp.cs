@@ -251,7 +251,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     /// </summary>
     private async Task ControlesAsync(ExecutionDbContext db, OrdreEtapes o, SuitesEtapes s, Utilisateur u, CancellationToken ct)
     {
-        if (s.AControler.Count == 0 || o.SrvId is not int srv || !await Services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        if (s.AControler.Count == 0 || o.SrvId is not int srv || !await Services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         try
         {
             var responsable = await db.Database.SqlQueryRaw<long?>("""
@@ -262,7 +262,7 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
             var groupe = await db.Database.SqlQueryRaw<long>("SELECT coalesce(ent_groupe_id, ent_id) AS \"Value\" FROM document WHERE ent_id = @id",
                 new NpgsqlParameter("id", o.Id)).FirstAsync(ct);
             var liens = new List<LienSaisi> { new("document", groupe.ToString(), true) };
-            if (o.IdElement is string cha) liens.Add(new LienSaisi("chantier", cha));
+            if (o.IdElement is string cha) liens.Add(new LienSaisi(TypesFiche.Chantier, cha));
             await Services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, srv,
                 $"Ordre {numero} : contrôle à faire ({string.Join(", ", s.AControler)})", null, responsable, DateTimeOffset.UtcNow.AddDays(2), null,
                 false, false, false, liens, null), u, ct);

@@ -136,17 +136,17 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
         if (type.TydFamille == "E") return ControlerOrdreAsync(db, document, erreurs, ct);
-        if (type.TydCode == "V_COMMANDE" && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
+        if (type.TydCode == TypesDocument.VCommande && !document.Document.EntIntermediaire && document.Document.EntMarcheId is null)
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_OBLIGATOIRE", "Marché à créer ou à choisir avant de valider la commande"));
         }
         // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2) ; sens et sous-traitant contrôlés ensuite.
-        if (type.TydCode == "T_COMMANDE" && document.Document.EntMarcheId is null)
+        if (type.TydCode == TypesDocument.TCommande && document.Document.EntMarcheId is null)
         {
             erreurs.Add(new MessageCalcul(null, "MARCHE_ST_OBLIGATOIRE", "Marché de sous-traitance à créer ou à choisir avant de valider la commande"));
         }
         // Commande fournisseur : adresse de livraison obligatoire (chantier rattaché : reprise à la validation).
-        if (type.TydCode == "A_COMMANDE" && document.Document.EntAdresseLivraison is null && document.Document.EntChantierId is null)
+        if (type.TydCode == TypesDocument.ACommande && document.Document.EntAdresseLivraison is null && document.Document.EntChantierId is null)
         {
             erreurs.Add(new MessageCalcul(null, "ADRESSE_LIVRAISON", "Commande fournisseur : adresse de livraison à choisir (chantier, dépôt, retrait au comptoir ou saisie libre)"));
         }
@@ -165,7 +165,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         var d = document.Document;
         // Facture de sous-traitance reçue (ST8, ST10) : le total ventilé sur les lignes doit retrouver le HT de la facture.
-        if (type.TydCode == "T_FACTURE_AVT" && d.EntStSaisie == "RECUE")
+        if (type.TydCode == TypesDocument.TFactureAvt && d.EntStSaisie == "RECUE")
         {
             var tolerance = decimal.TryParse(await Regle(db, "ECART_FACTURE_RECUE", type.TydId, ct), System.Globalization.NumberStyles.Number,
                 System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : 1m;
@@ -178,7 +178,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
         // Pièces exigées du sous-traitant (module Sous-traitance, ST13) : commande et facture de sous-traitance.
         await SpecialisationSousTraitanceBtp.ControlerPiecesAsync(Http?.HttpContext?.RequestServices, type.TydCode, d.EntMarcheId, erreurs, ct);
-        if (type.TydCode == "T_COMMANDE" && d.EntMarcheId is int mst)
+        if (type.TydCode == TypesDocument.TCommande && d.EntMarcheId is int mst)
         {
             var m = await db.Database.SqlQuery<string>($"SELECT mar_sens || ':' || coalesce(mar_tiers_id::text, '') AS \"Value\" FROM marche WHERE mar_id = {mst}").FirstOrDefaultAsync(ct);
             if (m is null || !m.StartsWith("ST:", StringComparison.Ordinal) || (d.EntTiersId is long t && m != $"ST:{t}"))
@@ -209,7 +209,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         List<MessageCalcul> erreurs, CancellationToken ct)
     {
         var d = document.Document;
-        if (type.TydCode == "V_COMMANDE" && d.EntMarcheId is int marche && string.IsNullOrWhiteSpace(d.EntReferenceExterne)
+        if (type.TydCode == TypesDocument.VCommande && d.EntMarcheId is int marche && string.IsNullOrWhiteSpace(d.EntReferenceExterne)
             && await Regle(db, "REFERENCE_MARCHE_PUBLIC", type.TydId, ct) == "true"
             && await db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM marche WHERE mar_id = {marche} AND mar_nature = 'U'").FirstAsync(ct) > 0)
         {
@@ -282,7 +282,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         }
 
         // Encours du client : échéances non réglées des pièces validées + commandes en cours + ce document (la fiche du tiers l'emporte).
-        if (type.TydFamille == "V" && d.EntTiersId is long tiers && (type.TydCode == "V_COMMANDE" || type.TydNumerotationContinue))
+        if (type.TydFamille == FamillesDocument.Vente && d.EntTiersId is long tiers && (type.TydCode == TypesDocument.VCommande || type.TydNumerotationContinue))
         {
             var plafond = (await db.Database.SqlQuery<decimal?>($"SELECT per_cli_encours_max AS \"Value\" FROM personne WHERE per_id = {tiers}").ToListAsync(ct)).FirstOrDefault()
                 ?? Seuil(regles, "ENCOURS_CLIENT");
@@ -348,7 +348,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         Utilisateur u, DepassementValidation depassement, CancellationToken ct)
     {
         var services = Http?.HttpContext?.RequestServices;
-        if (services is null || !await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        if (services is null || !await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         var d = document.Document;
         try
         {
@@ -380,7 +380,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         if (type.TydFamille == "E")
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_exe_etat = 'A_FAIRE' WHERE ent_id = {entId} AND ent_exe_etat IS NULL", ct);
-            if (type.TydCode == "E_OE") await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
+            if (type.TydCode == TypesDocument.EOe) await ExecutionBtp.FigerBudgetAsync(db, entId, "validation", ct);
             return;
         }
         // Stock : mouvements des livraisons, réceptions, factures sans livraison et transferts (module Stock, § 4).
@@ -393,9 +393,9 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"INSERT INTO edition_tache (ett_source, ett_id_element, ett_motif, ett_coffre, ett_demande_par) VALUES ('document', {entId.ToString()}, 'VALIDATION', {coffre}, 'validation')", ct);
         }
-        if (type.TydCode is "V_COMMANDE" or "T_COMMANDE") await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
+        if (type.TydCode is TypesDocument.VCommande or TypesDocument.TCommande) await db.Database.ExecuteSqlInterpolatedAsync($"SELECT f_marche_commande({entId})", ct);
         // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
-        if (type.TydAvancement == "F" || type.TydCode == "V_AVOIR") await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
+        if (type.TydAvancement == "F" || type.TydCode == TypesDocument.VAvoir) await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
         // Un avoir d'annulation reprend la pièce annulée (son numéro de situation) : ni numéro ni déduction.
         if (doc.EntAvtPresentation is null || doc.EntMarcheId is null || doc.EntNatureAvoir == "ANNULATION") return;
@@ -785,8 +785,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     {
         // Type d'ordre désactivé (E39) : plus de nouvel ordre de ce type.
         if (!typeCible.TydActif) throw LogiBTP.Socle.Web.ExceptionMetier.Invalide("TYPE_INACTIF", $"{typeCible.TydLibelle} : type de document désactivé");
-        if (!depuisPlusieurs && typeSource.TydCode == "V_COMMANDE" && source.Document.EntMarcheId is not null
-            && typeCible.TydCode is "V_RECEPTION" or "V_SITUATION" or "V_FACTURE_AVT" or "V_REPRISE_AVT")
+        if (!depuisPlusieurs && typeSource.TydCode == TypesDocument.VCommande && source.Document.EntMarcheId is not null
+            && typeCible.TydCode is TypesDocument.VReception or TypesDocument.VSituation or TypesDocument.VFactureAvt or TypesDocument.VRepriseAvt)
         {
             throw LogiBTP.Socle.Web.ExceptionMetier.Invalide("MARCHE_CREATION", "Commande d'un marché : créez ce document depuis la fiche du marché (toutes ses commandes)");
         }

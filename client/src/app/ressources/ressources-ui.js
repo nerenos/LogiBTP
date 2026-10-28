@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -36,7 +37,7 @@ const action = (attr, icone, titre) => `<button type="button" class="bouton-icon
  */
 export async function rendreHabilitations(corps, { app, element, id, titre = 'Habilitations' }) {
   const [{ liste: types, index }, lignes] = await Promise.all([typesHabilitation(), api.ressources.habilitations(element, id)]);
-  const concerne = element === 'materiel' ? 'MATERIEL' : 'SALARIE';
+  const concerne = element === TYPE_FICHE.MATERIEL ? 'MATERIEL' : 'SALARIE';
   const options = types.filter((t) => t.actif && (t.concerne === concerne || t.concerne === 'LES_DEUX')).map((t) => ({ valeur: t.code, libelle: t.libelle, detail: t.code }));
   let saisie = lignes.map((h) => ({ ...h }));
   let modifiee = false;
@@ -220,7 +221,7 @@ export async function rendreAffectations(corps, { app, materiel }) {
  */
 export async function rendreMaterielAffecte(corps, { app, type, id }) {
   const d = await api.ressources.materielAffecte(type, id);
-  const lien = (m) => `<a href="/fiche/materiel/${m.id}">🚜 ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
+  const lien = (m) => `<a href="${urlFiche(TYPE_FICHE.MATERIEL, m.id)}">🚜 ${echapper(m.code)} ${echapper(m.designation ?? '')}</a>`;
   corps.innerHTML = `<div class="ressources-materiel-affecte"><h3>Matériel affecté</h3>
     ${d.courant.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Type</th><th>Immatriculation</th><th>Depuis</th><th>Par</th></tr></thead><tbody>
       ${d.courant.map((m) => `<tr><td>${'&nbsp;&nbsp;'.repeat(m.niveau)}${lien(m)}</td><td>${echapper(m.type ?? '')}</td><td>${echapper(m.immatriculation ?? '')}</td>
@@ -256,7 +257,7 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
     const filtre = encodeURIComponent(c.code);
     corps.innerHTML = `<div class="ressources-couts"><div class="titre-actions"><h3>Coûts</h3>
         <span class="titre-actions-boutons"><span data-annee></span></span></div>
-      <p>Chantier de suivi <a href="/fiche/chantier/${c.id}">${echapper(c.code)}</a> ${echapper(c.libelle)}
+      <p>Chantier de suivi <a href="${urlFiche(TYPE_FICHE.CHANTIER, c.id)}">${echapper(c.code)}</a> ${echapper(c.libelle)}
         ${c.statut === 'OUVERT' ? '' : '<span class="pastille-compte neutre">Clos</span>'}
         ${c.partage ? `<span class="aide">— partagé par les ${c.materiels} matériels gérés par nombre de ce type</span>` : ''}
         · <a href="/liste/documents?chantier=${filtre}">Documents</a> · <a href="/liste/pointages?chantier=${filtre}">Pointages</a></p>

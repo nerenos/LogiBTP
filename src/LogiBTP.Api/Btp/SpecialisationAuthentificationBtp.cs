@@ -1,5 +1,6 @@
 using System.Net;
 using LogiBTP.Authentification.Web;
+using LogiBTP.Domaine;
 using LogiBTP.Mail.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
@@ -47,13 +48,13 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
             : l.Statut is null ? "aucun salarié ni intérimaire lié à cet individu"
             : l.SalarieActif != true ? (interim ? "intérimaire inactif" : "salarié inactif (sorti)") : null;
         var statut = l.Statut switch { "INTERIM" => "Intérimaire", "CDD" => "Salarié (CDD)", "CDI" => "Salarié (CDI)", _ => null };
-        return new PersonneCompte("individu", l.Id, l.Libelle, motif is null, interim, interim ? ["ADMIN"] : [],
+        return new PersonneCompte(TypesFiche.Individu, l.Id, l.Libelle, motif is null, interim, interim ? ["ADMIN"] : [],
             statut is null ? null : l.Matricule is null ? statut : $"{statut} · {l.Matricule}", finMission, motif);
     }
 
     public override async Task<PersonneCompte?> PersonneAsync(AuthDbContext db, string type, string id, CancellationToken ct)
     {
-        if (type != "individu" || !long.TryParse(id, out var ind)) return null;
+        if (type != TypesFiche.Individu || !long.TryParse(id, out var ind)) return null;
         var l = await db.Database.SqlQueryRaw<LignePersonne>(SqlPersonnes + " WHERE i.ind_id = @id", new NpgsqlParameter("id", ind)).FirstOrDefaultAsync(ct);
         if (l is null) return null;
         // Intérimaire : fin de la mission en cours proposée comme fin de validité du compte (référentiel des ressources).
@@ -74,7 +75,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Pseudo libre : aucun autre individu ne le porte comme identifiant de connexion.</summary>
     public override async Task<bool> PseudoLibreAsync(AuthDbContext db, string code, string? type, string? id, CancellationToken ct)
     {
-        var ind = type == "individu" ? id : null;
+        var ind = type == TypesFiche.Individu ? id : null;
         return !await db.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\" FROM individu WHERE lower(ind_utilisateur) = @code AND ind_id::text IS DISTINCT FROM @ind",
             new NpgsqlParameter("code", code), new NpgsqlParameter("ind", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)ind ?? DBNull.Value }).AnyAsync(ct);
     }
@@ -82,7 +83,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Le pseudo du compte devient l'identifiant de connexion de l'individu (ancien identifiant retiré).</summary>
     public override async Task ApresEcritureAsync(AuthDbContext db, Compte compte, string? ancienCode, CancellationToken ct)
     {
-        if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return;
+        if (compte.CptTypeElement != TypesFiche.Individu || !long.TryParse(compte.CptIdElement, out var ind)) return;
         await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = NULL WHERE ind_id <> @id AND lower(ind_utilisateur) = lower(@code)",
             [new NpgsqlParameter("id", ind), new NpgsqlParameter("code", compte.CptCode)], ct);
         await db.Database.ExecuteSqlRawAsync("UPDATE individu SET ind_utilisateur = @code WHERE ind_id = @id",
@@ -97,7 +98,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Code du double facteur envoyé à la coordonnée EMAIL de l'individu du compte (module Mail, envoi automatique prioritaire).</summary>
     public override async Task<string?> EnvoyerCodeAsync(IServiceProvider services, Compte compte, string code, DateTimeOffset expireLe, CancellationToken ct)
     {
-        if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return null;
+        if (compte.CptTypeElement != TypesFiche.Individu || !long.TryParse(compte.CptIdElement, out var ind)) return null;
         var db = services.GetRequiredService<LogiBtpContext>();
         var adresse = await db.Database.SqlQueryRaw<string>("""
             SELECT c.coo_valeur AS "Value" FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id
@@ -131,7 +132,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
 
     public override async Task<bool> EnvoyerReinitialisationAsync(IServiceProvider services, Compte compte, string lien, DateTimeOffset expireLe, CancellationToken ct)
     {
-        if (compte.CptTypeElement != "individu" || !long.TryParse(compte.CptIdElement, out var ind)) return false;
+        if (compte.CptTypeElement != TypesFiche.Individu || !long.TryParse(compte.CptIdElement, out var ind)) return false;
         var db = services.GetRequiredService<LogiBtpContext>();
         var adresse = await db.Database.SqlQueryRaw<string>("""
             SELECT c.coo_valeur AS "Value" FROM usage_coordonnee u JOIN coordonnee c ON c.coo_id = u.uco_coo_id

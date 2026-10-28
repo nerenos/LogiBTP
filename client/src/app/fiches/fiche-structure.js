@@ -1,3 +1,4 @@
+import { urlDocument, urlFiche, TYPE_FICHE, TYPE_POSTE_MARCHE, TYPE_DOCUMENT, MODULE_FACULTATIF } from '../codes.js';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
@@ -109,7 +110,7 @@ export class FicheStructure extends FicheLogiBTP {
       const span = document.createElement('span');
       span.className = 'fiche-valeur';
       const c = (this.refs.commandes ?? []).find((x) => x.id === Number(valeur));
-      span.innerHTML = valeur ? `<a href="/document/${Number(valeur)}">${echapper(c ? `${c.numero ?? ''} ${c.objet ?? ''}` : `Document ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlDocument(Number(valeur))}">${echapper(c ? `${c.numero ?? ''} ${c.objet ?? ''}` : `Document ${valeur}`)}</a>` : '—';
       return span;
     }
     // Zone de code, libellé en lien vers la fiche, double-clic ou F4 : liste de choix.
@@ -139,7 +140,7 @@ export class FicheStructure extends FicheLogiBTP {
       }).catch(() => {});
     }
     if (lecture) {
-      span.innerHTML = valeur ? `<a href="/fiche/personne/${Number(valeur)}">${echapper(nom || `Tiers ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(valeur))}">${echapper(nom || `Tiers ${valeur}`)}</a>` : '—';
       return span;
     }
     const id = `tiers-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
@@ -191,7 +192,7 @@ export class FicheStructure extends FicheLogiBTP {
     this.individusSociete.then((liste) => {
       const choisi = liste.find((x) => Number(x.valeur) === Number(valeur));
       if (lecture) {
-        span.innerHTML = valeur ? `<a href="/fiche/individu/${Number(valeur)}">${echapper(choisi?.libelle ?? `Individu ${valeur}`)}</a>` : '—';
+        span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(choisi?.libelle ?? `Individu ${valeur}`)}</a>` : '—';
         return;
       }
       const combo = creerCombo({ valeur: valeur ?? '', options: liste.map((x) => ({ valeur: x.valeur, libelle: x.libelle, detail: x.detail })), titre: champ.aide ?? '' });
@@ -217,7 +218,7 @@ export class FicheStructure extends FicheLogiBTP {
       }).catch(() => {});
     }
     if (lecture) {
-      span.innerHTML = valeur ? `<a href="/fiche/individu/${Number(valeur)}">${echapper(nom || `Individu ${valeur}`)}</a>` : '—';
+      span.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(valeur))}">${echapper(nom || `Individu ${valeur}`)}</a>` : '—';
       return span;
     }
     const id = `individu-${champ.code}-${Math.random().toString(36).slice(2, 8)}`;
@@ -245,11 +246,11 @@ export class FicheStructure extends FicheLogiBTP {
     const liens = this.liens(v).filter((l) => l.elements.length);
     const raccourcis = this.id !== null && v.code ? [...(RACCOURCIS[this.type] ?? []), ...this.raccourcisModules()] : [];
     return liens.map((l) => `<div class="fiche-info"><span>${echapper(l.titre)}</span>
-      <b>${l.elements.map((x) => `<a href="/fiche/${l.type}/${x.id}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('')
+      <b>${l.elements.map((x) => `<a href="${urlFiche(l.type, x.id)}">${echapper(x.code)}</a> ${echapper(x.libelle ?? '')}${x.extra ? ` <small>${echapper(x.extra)}</small>` : ''}`).join(' · ')}</b></div>`).join('')
       + (raccourcis.length ? `<div class="fiche-info fiche-raccourcis"><span>Listes</span><b>${raccourcis.map(([theme, libelle]) =>
         `<a href="/liste/${theme}?${new URLSearchParams({ [this.type]: v.code })}" title="${echapper(`${libelle} filtrés sur ${v.code} (Ctrl : nouvelle fenêtre)`)}">${echapper(libelle)}</a>`).join(' · ')}</b></div>` : '')
-      + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif('reglement')
-        ? `<div class="fiche-info"><span>Règlements</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="Échéances des pièces validées du ${this.type === 'chantier' ? 'chantier' : 'marché'}, pointé et reste, tous tiers">Échéances et règlements</a></b></div>` : '');
+      + (this.id !== null && ['chantier', 'marche'].includes(this.type) && this.moduleActif(MODULE_FACULTATIF.REGLEMENT)
+        ? `<div class="fiche-info"><span>Règlements</span><b><a href="/reglements?${this.type}=${Number(this.id)}" title="Échéances des pièces validées du ${this.type === TYPE_FICHE.CHANTIER ? 'chantier' : 'marché'}, pointé et reste, tous tiers">Échéances et règlements</a></b></div>` : '');
   }
 
   /** Champ tiers qui propose un nouveau prospect (tiers provisoire) : aucun par défaut. */
@@ -257,7 +258,7 @@ export class FicheStructure extends FicheLogiBTP {
 
   /** Raccourcis vers les listes des modules facultatifs actifs (thème, libellé). */
   raccourcisModules() {
-    if (this.type !== 'chantier' || !this.moduleActif('sous_traitance')) return [];
+    if (this.type !== TYPE_FICHE.CHANTIER || !this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)) return [];
     return [['marches_st', 'Marchés de sous-traitance'], ['st_commandes', 'Commandes de sous-traitance'], ['st_factures', 'Factures de sous-traitance']];
   }
 
@@ -298,7 +299,7 @@ export class FicheProjet extends FicheStructure {
   prospectAutorise(champ) { return champ.code === 'tiers_id'; }
 
   liens() {
-    return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.prj_id === Number(this.id)) }];
+    return [{ titre: 'Chantier', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.prj_id === Number(this.id)) }];
   }
 
   /** Passage à « Obtenu » : proposer d'ouvrir le chantier (fiche de création préremplie depuis le projet). */
@@ -319,7 +320,7 @@ export class FicheProjet extends FicheStructure {
 
 export class FicheAffaire extends FicheStructure {
   liens() {
-    return [{ titre: 'Chantiers', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.aff_id === Number(this.id)) }];
+    return [{ titre: 'Chantiers', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.aff_id === Number(this.id)) }];
   }
 }
 
@@ -346,7 +347,7 @@ export class FicheChantier extends FicheStructure {
 
   /** Zones de déplacement du Pointage (par agence, lot 6 : A26), lues une fois par fiche. */
   rendreInformations(v) {
-    if (this.id !== null && this.zones === undefined && this.moduleActif('pointage')) {
+    if (this.id !== null && this.zones === undefined && this.moduleActif(MODULE_FACULTATIF.POINTAGE)) {
       this.zones = null;
       api.pointage.zones(Number(this.id)).then((l) => { this.zones = l; this.rendre(); }).catch(() => { this.zones = []; });
     }
@@ -358,9 +359,9 @@ export class FicheChantier extends FicheStructure {
     const marches = (this.refs.marches ?? []).filter((m) => m.cha_id === Number(this.id))
       .map((m) => ({ ...m, extra: m.montant_ht !== null ? `${formatNombre(m.montant_ht, 2)} € HT` : '' }));
     return [
-      { titre: 'Affaire', type: 'affaire', elements: (this.refs.affaires ?? []).filter((a) => a.id === Number(v.aff_id)) },
-      { titre: 'Projet', type: 'projet', elements: (this.refs.projets ?? []).filter((p) => p.id === Number(v.prj_id)) },
-      { titre: 'Marchés', type: 'marche', elements: marches },
+      { titre: 'Affaire', type: TYPE_FICHE.AFFAIRE, elements: (this.refs.affaires ?? []).filter((a) => a.id === Number(v.aff_id)) },
+      { titre: 'Projet', type: TYPE_FICHE.PROJET, elements: (this.refs.projets ?? []).filter((p) => p.id === Number(v.prj_id)) },
+      { titre: 'Marchés', type: TYPE_FICHE.MARCHE, elements: marches },
     ];
   }
 }
@@ -410,7 +411,7 @@ export class FicheMarche extends FicheStructure {
   }
 
   liens(v) {
-    return [{ titre: 'Chantier', type: 'chantier', elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
+    return [{ titre: 'Chantier', type: TYPE_FICHE.CHANTIER, elements: (this.refs.chantiers ?? []).filter((c) => c.id === Number(v.cha_id)) }];
   }
 
   /**
@@ -428,7 +429,7 @@ export class FicheMarche extends FicheStructure {
         · Réalisé <strong>${f(e.facture)}</strong> · ${ecart.isNegative() ? `<span class="erreur">Dépassement ${f(ecart.abs().toString())}</span>` : `Reste prévu non engagé ${f(ecart.toString())}`}</p>
       ${e.marches.length ? `<table class="tableau-gestion"><thead><tr><th>Marché</th><th>Sous-traitant</th><th>Garantie</th><th class="nombre">Agréé</th>
         <th class="nombre">Engagé HT</th><th class="nombre">Réalisé HT</th><th class="nombre">Reste à facturer</th><th class="nombre">Paiement direct</th><th>Prestations</th></tr></thead><tbody>
-        ${e.marches.map((m) => `<tr><td><a href="/fiche/marche/${m.marche_id}">${echapper(m.code)}</a> <small class="aide">${echapper(m.libelle ?? '')}</small></td>
+        ${e.marches.map((m) => `<tr><td><a href="${urlFiche(TYPE_FICHE.MARCHE, m.marche_id)}">${echapper(m.code)}</a> <small class="aide">${echapper(m.libelle ?? '')}</small></td>
           <td>${echapper(m.sous_traitant ?? '')}</td><td>${echapper(m.garantie ?? '')}</td><td class="nombre">${f(m.montant_agree)}</td><td class="nombre">${f(m.engage)}</td>
           <td class="nombre">${f(m.facture)}</td><td class="nombre">${f(Dz(m.engage).minus(Dz(m.facture)).toString())}</td><td class="nombre">${f(m.paiement_direct)}</td>
           <td><a href="/liste/st_commandes?${new URLSearchParams({ marche: m.code })}">Commandes</a> · <a href="/liste/st_factures?${new URLSearchParams({ marche: m.code })}">Factures</a></td></tr>`).join('')}</tbody></table>`
@@ -438,11 +439,11 @@ export class FicheMarche extends FicheStructure {
   /** Onglet Gestion (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q4) avant le graphe. */
   ongletsSpecifiques() {
     // Marché de sous-traitance (module Sous-traitance, lot 2) : pièces du sous-traitant et du marché.
-    const pieces = this.valeur('sens') === 'ST' && this.id !== null && this.moduleActif('sous_traitance') && this.services.structure.gestion
+    const pieces = this.valeur('sens') === 'ST' && this.id !== null && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) && this.services.structure.gestion
       ? [{
         code: 'pieces', titre: 'Pièces',
         rendre: (corps) => rendrePieces(corps, {
-          element: { type: 'marche', id: Number(this.id), tiers: this.valeur('tiers_id') }, ged: this.services.ged, message: this.message,
+          element: { type: TYPE_FICHE.MARCHE, id: Number(this.id), tiers: this.valeur('tiers_id') }, ged: this.services.ged, message: this.message,
           demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=marche:${this.id}`, { ctrlKey: true }),
         }).catch((e) => this.message(e.message, 'erreur')),
       }, {
@@ -478,7 +479,7 @@ export class FicheMarche extends FicheStructure {
       const s = formatNombre(D(n).div(D(d)).times(100).toDecimalPlaces(2).toString(), 2);
       return `${s.includes(',') ? s.replace(/0+$/, '').replace(/,$/, '') : s} %`;
     };
-    const lien = (x) => `<a href="/document/${Number(x.ent_id)}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
+    const lien = (x) => `<a href="${urlDocument(Number(x.ent_id))}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(x.numero ?? `#${x.ent_id}`)}</a>`;
     const somme = (liste, cle) => liste.reduce((s, x) => s.plus(Dz(x[cle])), D(0)).toString();
     const total = (cle) => somme(g.commandes, cle);
     const prevu = total('prevu_ht');
@@ -507,7 +508,7 @@ export class FicheMarche extends FicheStructure {
     const B = (type) => (creation ? [CREATIONS_MARCHE[type]] : []);
 
     corps.innerHTML = `<div class="gestion-marche">
-      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', [...B('V_RECEPTION'), ...(this.moduleActif('execution') ? B('E_OE') : [])], `
+      ${groupe('recapitulatif', 'Récapitulatif du marché et des avenants', [...B(TYPE_DOCUMENT.V_RECEPTION), ...(this.moduleActif(MODULE_FACULTATIF.EXECUTION) ? B(TYPE_DOCUMENT.E_OE) : [])], `
       <table class="tableau-gestion"><thead><tr><th>Commande</th><th>N°</th><th>Objet</th><th class="nombre">HT net</th><th class="nombre">TTC net</th>
         <th class="nombre">Travaux HT</th><th class="nombre">Situé</th><th class="nombre">Avancement</th><th class="nombre">Facturé HT</th><th class="nombre">Reste à facturer</th></tr></thead>
       <tbody>${g.commandes.map((c) => `<tr><td>${c.role === 'BASE' ? 'Marché' : `TS ${c.rang}`}</td><td>${lien(c)}</td><td>${echapper(c.objet ?? '')}</td>
@@ -520,14 +521,14 @@ export class FicheMarche extends FicheStructure {
       <p class="aide">Situé : dernière situation de référence ; facturé par commande : factures et avoirs d'avancement non annulés (travaux) ;
         facturé du marché : toutes ses factures et avoirs validés. Reste du marché = montant du marché − facturé.</p>`)}
 
-      ${groupe('situations', 'Situations', B('V_SITUATION'), g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
+      ${groupe('situations', 'Situations', B(TYPE_DOCUMENT.V_SITUATION), g.situations.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Document</th><th>Indice</th><th>Date</th><th>Statut</th>
         <th class="nombre">Cumul HT</th><th class="nombre" title="Cumul de la situation sur le total HT net du marché et de ses avenants">Avancement du marché</th><th></th></tr></thead><tbody>${g.situations.map((x) => `<tr><td>${x.rang ?? ''}</td><td>${lien(x)}</td>
         <td>${echapper(x.indice ?? '')}${x.indices > 1 ? ` <small>(${x.indices} indices)</small>` : ''}</td><td>${echapper(x.date ?? '')}</td>
         <td>${echapper(x.statut ?? '')}${x.facturee ? ' · facturée' : ''}</td><td class="nombre">${f(x.total_ht)}</td><td class="nombre">${pct(x.total_ht, prevu)}</td>
         <td>${x.valide && !x.facturee ? `<button type="button" data-facturer="${x.ent_id}">Facturer</button> <button type="button" data-reviser="${x.ent_id}">Réviser</button>` : ''}</td></tr>`).join('')}
         </tbody></table>` : '<p class="aide">Aucune situation.</p>')}
 
-      ${groupe('factures', "Factures et avoirs d'avancement", [...B('V_FACTURE_AVT'), ...B('V_REPRISE_AVT')], `
+      ${groupe('factures', "Factures et avoirs d'avancement", [...B(TYPE_DOCUMENT.V_FACTURE_AVT), ...B(TYPE_DOCUMENT.V_REPRISE_AVT)], `
       ${nbAnnulees ? `<label class="fiche-option"><input type="checkbox" data-annulees ${this.voirAnnulees ? 'checked' : ''}> Afficher les pièces annulées (${nbAnnulees})</label>` : ''}
       ${factures.length ? `<table class="tableau-gestion"><thead><tr><th>N° de situation</th><th>Pièce</th><th>Type</th><th>Date</th><th>Statut</th>
         <th class="nombre">HT net</th><th class="nombre">TTC net</th><th class="nombre">Net à payer</th>${reglements ? '<th class="nombre">Réglé</th><th class="nombre">Reste à payer</th>' : ''}<th></th></tr></thead><tbody>${factures.map((x) => `<tr class="${x.annule ? 'annulee' : ''}">
@@ -549,7 +550,7 @@ export class FicheMarche extends FicheStructure {
           du marché dont le paiement direct du sous-traitant est égal au TTC de la pièce, sinon la première à sa date ou après.</p>`
         : '<p class="aide">Aucune facture de sous-traitant en paiement direct (postes « Paiement direct » du marché, intervenants marqués paiement direct).</p>')}
 
-      ${this.valeur('sens') !== 'ST' && this.moduleActif('sous_traitance') ? groupe('sous_traitance', 'Sous-traitance : engagé et réalisé', [], '<div data-engage></div>') : ''}
+      ${this.valeur('sens') !== 'ST' && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) ? groupe('sous_traitance', 'Sous-traitance : engagé et réalisé', [], '<div data-engage></div>') : ''}
       ${groupe('acomptes', 'Acomptes', [], '<div data-acomptes></div>')}
       ${groupe('postes', 'Postes de pied', [], '<div data-postes></div>')}
     </div>`;
@@ -573,12 +574,12 @@ export class FicheMarche extends FicheStructure {
     corps.querySelectorAll('[data-facturer]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
       const r = await this.services.structure.facturerSituation(id);
       this.message(`Facture d'avancement créée depuis la situation`, 'succes');
-      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+      this.ouvrirUrl(urlDocument(r.document.ent_id), e);
     })));
     corps.querySelectorAll('[data-reviser]').forEach((b) => b.addEventListener('click', action(async (id, e) => {
       const r = await this.services.structure.reviser(id);
       this.message(`Révision créée (indice ${r.document.ent_indice})`, 'succes');
-      this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+      this.ouvrirUrl(urlDocument(r.document.ent_id), e);
     })));
     corps.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', action(async (id) => {
       const pieces = await this.services.structure.piecesAnnulation(id);
@@ -604,7 +605,7 @@ export class FicheMarche extends FicheStructure {
     const ca = mode.mode === 'CA';
     const DEDUCTIONS = [['LINEAIRE', 'Linéaire (au prorata de l\'avancement)'], ['PREMIERE', 'Première facture'], ['DERNIERE', 'Dernière facture']];
     const f = (v) => formatNombre(v ?? 0, 2);
-    const lien = (x) => (x ? `<a href="/document/${Number(x.ent_id)}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small>${echapper(x.statut ?? '')}</small>` : '');
+    const lien = (x) => (x ? `<a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small>${echapper(x.statut ?? '')}</small>` : '');
     zone.innerHTML = `<p class="aide">Mode de la société : ${ca ? 'chiffre d\'affaires (facture d\'acompte avec TVA, déduction HT par commande)'
       : 'avance de trésorerie (reçu sans TVA, déduction TTC au pied global)'} ; montants ${ca ? 'HT' : 'TTC'}. La déduction est calculée à la validation
       de chaque facture d'avancement, une fois la facture ou le reçu de l'acompte validé.</p>
@@ -634,7 +635,7 @@ export class FicheMarche extends FicheStructure {
           libelle: zone.querySelector('[data-a="libelle"]').value.trim() || null, saisie: saisie.valeurCombo, valeur, deduction: deduction.valeurCombo,
         });
         this.message(`Demande d'acompte créée : ${r.document.ent_numero ?? ''}`, 'succes');
-        this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+        this.ouvrirUrl(urlDocument(r.document.ent_id), e);
         this.rendreGestion(corps);
       } catch (x) { this.message(x.message, 'erreur'); }
     });
@@ -642,7 +643,7 @@ export class FicheMarche extends FicheStructure {
       try {
         const r = await this.services.structure.emettreAcompte(Number(b.dataset.emettre));
         this.message(`${ca ? 'Facture' : 'Reçu'} d'acompte créé : à valider`, 'succes');
-        this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+        this.ouvrirUrl(urlDocument(r.document.ent_id), e);
         this.rendreGestion(corps);
       } catch (x) { this.message(x.message, 'erreur'); }
     }));
@@ -657,7 +658,7 @@ export class FicheMarche extends FicheStructure {
     if (!zone || !this.services.structure.postes) return;
     let postes = await this.services.structure.postes(Number(this.id)).catch((e) => { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return null; });
     if (!postes) return;
-    const TYPES = [['PAIEMENT_DIRECT', 'Paiement direct'], ['PRORATA', 'Compte prorata'], ['REMISE', 'Remise'], ['AUTRE', 'Autre']];
+    const TYPES = [[TYPE_POSTE_MARCHE.PAIEMENT_DIRECT, 'Paiement direct'], [TYPE_POSTE_MARCHE.PRORATA, 'Compte prorata'], [TYPE_POSTE_MARCHE.REMISE, 'Remise'], [TYPE_POSTE_MARCHE.AUTRE, 'Autre']];
     const PORTEES = [['G', 'Factures (pied global)'], ['C', 'Commandes (modèle)']];
     const MODES = [['P', '%'], ['M', 'Montant']];
     const SENS = [[-1, 'Déduction'], [1, 'Ajout']];
@@ -736,17 +737,17 @@ export class FicheMarche extends FicheStructure {
    */
   async creerDocumentMarche(type, e) {
     const c = CREATIONS_MARCHE[type];
-    if (type === 'A_FACTURE') { this.ouvrirUrl(`/document/nouveau?type=A_FACTURE&marche=${Number(this.id)}`, e); return; }
+    if (type === TYPE_DOCUMENT.A_FACTURE) { this.ouvrirUrl(`/document/nouveau?type=A_FACTURE&marche=${Number(this.id)}`, e); return; }
     const r = await this.services.structure.documentMarche(Number(this.id), type);
     this.message(`${c.nom} ${r.document.ent_numero ?? ''} créé`, 'succes');
-    this.ouvrirUrl(`/document/${r.document.ent_id}`, e);
+    this.ouvrirUrl(urlDocument(r.document.ent_id), e);
   }
 
   /** Commandes du marché (db/170 : marche_document) : la commande de base puis les avenants, avec leur montant. */
   rendreInformations(v) {
     const commandes = (this.refs.marche_documents ?? []).filter((x) => x.mar_id === Number(this.id));
     if (!commandes.length) return super.rendreInformations(v);
-    const ligne = (x) => `<a href="/document/${Number(x.ent_id)}">${echapper(x.numero ?? `Document ${x.ent_id}`)}</a> ${echapper(x.objet ?? '')}`
+    const ligne = (x) => `<a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `Document ${x.ent_id}`)}</a> ${echapper(x.objet ?? '')}`
       + ` <small>${formatNombre(x.total_ht ?? 0, 2)} € HT</small>`;
     const base = commandes.filter((x) => x.role === 'BASE');
     const avenants = commandes.filter((x) => x.role === 'AVENANT');
@@ -758,12 +759,12 @@ export class FicheMarche extends FicheStructure {
 
 /** Boutons de création des regroupements de l'onglet Gestion du marché. */
 const CREATIONS_MARCHE = {
-  V_RECEPTION: { type: 'V_RECEPTION', libelle: '🚚 Nouveau BL', nom: 'Bon de livraison', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)' },
-  E_OE: { type: 'E_OE', libelle: "▶ Ordre d'exécution", nom: "Ordre d'exécution", titre: "Lancer l'exécution : ordre d'exécution repris des commandes du marché (une section par commande ; module Exécution)" },
-  V_SITUATION: { type: 'V_SITUATION', libelle: '📈 Nouvelle situation', nom: 'Situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)' },
-  V_FACTURE_AVT: { type: 'V_FACTURE_AVT', libelle: "📊 Nouvelle facture d'avancement", nom: "Facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période" },
-  V_REPRISE_AVT: { type: 'V_REPRISE_AVT', libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },
-  A_FACTURE: { type: 'A_FACTURE', libelle: '＋ Facture sous-traitant', nom: 'Facture fournisseur', titre: 'Facture fournisseur rattachée au marché (choisir le sous-traitant dans l’annuaire du document)' },
+  V_RECEPTION: { type: TYPE_DOCUMENT.V_RECEPTION, libelle: '🚚 Nouveau BL', nom: 'Bon de livraison', titre: 'Bon de livraison des commandes du marché (reste à livrer de chaque commande)' },
+  E_OE: { type: TYPE_DOCUMENT.E_OE, libelle: "▶ Ordre d'exécution", nom: "Ordre d'exécution", titre: "Lancer l'exécution : ordre d'exécution repris des commandes du marché (une section par commande ; module Exécution)" },
+  V_SITUATION: { type: TYPE_DOCUMENT.V_SITUATION, libelle: '📈 Nouvelle situation', nom: 'Situation', titre: 'Situation de travaux : avancement cumulé des commandes du marché (non comptable)' },
+  V_FACTURE_AVT: { type: TYPE_DOCUMENT.V_FACTURE_AVT, libelle: "📊 Nouvelle facture d'avancement", nom: "Facture d'avancement", titre: "Facture d'avancement : avancement cumulé, facture de la période" },
+  V_REPRISE_AVT: { type: TYPE_DOCUMENT.V_REPRISE_AVT, libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },
+  A_FACTURE: { type: TYPE_DOCUMENT.A_FACTURE, libelle: '＋ Facture sous-traitant', nom: 'Facture fournisseur', titre: 'Facture fournisseur rattachée au marché (choisir le sous-traitant dans l’annuaire du document)' },
 };
 
 /** Code d'un marché du chantier : M-2026-002-1, M-2026-002-2… (d'après le code du chantier CH-2026-002). */

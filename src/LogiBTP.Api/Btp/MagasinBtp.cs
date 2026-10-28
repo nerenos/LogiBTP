@@ -142,7 +142,7 @@ public static class MagasinBtp
             Controler(s);
             var cible = s.Salarie is { } sal ? await ChantierDotationAsync(db, sal, ct) : s.Chantier!.Value;
             var objet = s.Salarie is null ? "Sortie du magasin" : "Dotation du magasin";
-            var p = await PieceAsync(db, documents, "S_TRANSFERT", (int)s.Lieu!.Value, cible, cible, s.Lignes!, string.IsNullOrWhiteSpace(s.Commentaire) ? objet : $"{objet} : {s.Commentaire.Trim()}", s.Date, u, ct);
+            var p = await PieceAsync(db, documents, TypesDocument.STransfert, (int)s.Lieu!.Value, cible, cible, s.Lignes!, string.IsNullOrWhiteSpace(s.Commentaire) ? objet : $"{objet} : {s.Commentaire.Trim()}", s.Date, u, ct);
             if (s.Salarie is { } sa) await MarquerDotationAsync(db, [p.EntId], sa, ct);
             return Results.Ok(new[] { p });
         });
@@ -157,8 +157,8 @@ public static class MagasinBtp
             var bons = s.Lignes!.Where(l => !l.Rebut).ToList();
             var rebuts = s.Lignes!.Where(l => l.Rebut).ToList();
             var com = string.IsNullOrWhiteSpace(s.Commentaire) ? "" : $" : {s.Commentaire.Trim()}";
-            if (bons.Count > 0) pieces.Add(await PieceAsync(db, documents, "S_TRANSFERT", source, (int)s.Lieu!.Value, source, bons, $"Retour au magasin{com}", s.Date, u, ct));
-            if (rebuts.Count > 0) pieces.Add(await PieceAsync(db, documents, "S_SORTIE", source, null, source, rebuts, $"Mise au rebut{com}", s.Date, u, ct));
+            if (bons.Count > 0) pieces.Add(await PieceAsync(db, documents, TypesDocument.STransfert, source, (int)s.Lieu!.Value, source, bons, $"Retour au magasin{com}", s.Date, u, ct));
+            if (rebuts.Count > 0) pieces.Add(await PieceAsync(db, documents, TypesDocument.SSortie, source, null, source, rebuts, $"Mise au rebut{com}", s.Date, u, ct));
             if (s.Salarie is { } sa) await MarquerDotationAsync(db, pieces.Select(p => p.EntId), sa, ct);
             return Results.Ok(pieces);
         });
@@ -205,8 +205,8 @@ public static class MagasinBtp
                         return new
                         {
                             derniere_sortie = rv.Ele == 0 ? (DateTimeOffset?)null : rv.Derniere, renouveler_le = rv.Ele == 0 ? null : rv.Renouveler,
-                            ele = a, sorti = l.Where(m => m.Quantite > 0).Sum(m => m.Quantite), rendu = -l.Where(m => m.Quantite < 0 && m.TypeCode == "S_TRANSFERT").Sum(m => m.Quantite),
-                            rebut = -l.Where(m => m.Quantite < 0 && m.TypeCode != "S_TRANSFERT").Sum(m => m.Quantite), net,
+                            ele = a, sorti = l.Where(m => m.Quantite > 0).Sum(m => m.Quantite), rendu = -l.Where(m => m.Quantite < 0 && m.TypeCode == TypesDocument.STransfert).Sum(m => m.Quantite),
+                            rebut = -l.Where(m => m.Quantite < 0 && m.TypeCode != TypesDocument.STransfert).Sum(m => m.Quantite), net,
                             mouvements = l.Select(m => new { date = m.Date, quantite = m.Quantite, m.EntId, m.Numero, m.TypeCode }),
                         };
                     }).Where(a => a.sorti != 0 || a.rendu != 0 || a.rebut != 0 || a.net != 0),

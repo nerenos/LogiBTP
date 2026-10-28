@@ -57,7 +57,7 @@ public static class ReglesRessources
     {
         var erreurs = new List<string>();
         if (!types.TryGetValue(h.Code, out var t) || !t.Actif) erreurs.Add("HAB_TYPE");
-        else if (t.Concerne != "LES_DEUX" && t.Concerne != (element == "materiel" ? "MATERIEL" : "SALARIE")) erreurs.Add("HAB_CONCERNE");
+        else if (t.Concerne != "LES_DEUX" && t.Concerne != (element == TypesFiche.Materiel ? "MATERIEL" : "SALARIE")) erreurs.Add("HAB_CONCERNE");
         if (h.ObtenueLe is { } o && h.ValideJusquAu is { } f && f < o) erreurs.Add("HAB_DATES");
         erreurs.Sort(StringComparer.Ordinal);
         return erreurs;

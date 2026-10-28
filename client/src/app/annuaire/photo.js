@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper } from '@logibtp/socle/ui';
 
@@ -17,7 +18,7 @@ export async function urlImage(ged, id) {
 /** Adresse de la photo d'un individu (lue dans sa fiche par le fournisseur des fiches), null sans photo. */
 export async function urlPhotoIndividu(fiches, ged, indId) {
   if (!indId || !fiches) return null;
-  const f = await fiches.charger('individu', indId).catch(() => null);
+  const f = await fiches.charger(TYPE_FICHE.INDIVIDU, indId).catch(() => null);
   return urlImage(ged, f?.valeurs?.image_ged ?? null);
 }
 

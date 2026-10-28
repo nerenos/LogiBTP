@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, formatDate } from '@logibtp/socle/ui';
@@ -116,7 +117,7 @@ export class PageDiffusionCrm extends PageBase {
       this.diffusion = d;
       this.titre = `${d.numero} – ${d.objet}`;
       this.app.routeur.remplacerUrl(`/crm/diffusion/${d.id}`);
-      this.app.publier('crm', { diffusion: d.id });
+      this.app.publier(SUJET_FENETRE.CRM, { diffusion: d.id });
       this.app.message('Bordereau créé : visas attendus et tâches de retour posés', 'succes');
       this.rendreBordereau();
     } catch (e) { this.app.erreur(e); }

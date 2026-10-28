@@ -1,3 +1,4 @@
+import { urlFiche, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { rendreDotationsSalarie } from '../stock/magasin.js';
 import { ExplorateurGed } from '@logibtp/ged/ui';
@@ -33,7 +34,7 @@ export class PageFiche extends PageBase {
     this.titre = nouveau ? `Nouvelle fiche ${type}` : `Fiche ${type} ${this.params.id}`;
     this.conteneur.innerHTML = '<div class="page-fiche"><div class="page-fiche-corps"></div></div>';
     const s = await app.services();
-    const voisinage = nouveau ? null : voisins(`/fiche/${type}/${this.params.id}`);
+    const voisinage = nouveau ? null : voisins(urlFiche(type, this.params.id));
     this.voisinage = voisinage;
     this.fiche = new Classe({
       conteneur: this.conteneur.querySelector('.page-fiche-corps'), fournisseur: s.fiche, type,
@@ -56,7 +57,7 @@ export class PageFiche extends PageBase {
       vuesDocument: { vues: (t) => api.vuesDocument(t), enregistrer: (v) => api.enregistrerVueDocument(v), supprimer: (id) => api.supprimerVueDocument(id) },
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
-      ouvrirFiche: ({ type: t, id }, e) => app.naviguer(`/fiche/${t}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+      ouvrirFiche: ({ type: t, id }, e) => app.naviguer(urlFiche(t, id), { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
       // Arborescence : la fiche est la racine (projet, affaire, chantier, marché : structure et documents rattachés).
       ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {
@@ -66,13 +67,13 @@ export class PageFiche extends PageBase {
         modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
       }),
       // Onglet Suivi (module CRM actif, en ligne) : notes, tâches et courriels des tiers, contacts et de la structure.
-      suivi: app.moduleActif('crm') && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
+      suivi: app.moduleActif(MODULE_FACULTATIF.CRM) && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {
         const p = new PanneauSuivi(corps, { app, type: t, id });
         p.ouvrir().catch((e) => app.erreur(e));
         return p;
       } : null,
       // Onglet Fil des fiches affaire et chantier (module CRM actif, en ligne) : fil d'actualité de l'élément.
-      fil: app.moduleActif('crm') ? (corps, { type: t, id, libelle }) => {
+      fil: app.moduleActif(MODULE_FACULTATIF.CRM) ? (corps, { type: t, id, libelle }) => {
         // Sous-conteneur propre au fil : le corps de la fiche, commun à tous les onglets, garde sa largeur.
         const hote = document.createElement('div');
         corps.replaceChildren(hote);
@@ -84,7 +85,7 @@ export class PageFiche extends PageBase {
       // Onglet Compte de la fiche salarié (module Authentification) : administrateur en ligne.
       compte: app.estAdmin() ? (corps, p) => rendreComptePersonne(corps, { app, ...p }).catch((e) => app.erreur(e)) : null,
       // Référentiel des ressources (en ligne) : habilitations, missions d'intérim, habilitations exigées d'un matériel.
-      dotations: app.moduleActif('stock') ? (corps, p) => rendreDotationsSalarie(corps, {
+      dotations: app.moduleActif(MODULE_FACULTATIF.STOCK) ? (corps, p) => rendreDotationsSalarie(corps, {
         ...p, naviguer: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       }).catch((e) => app.erreur(e)) : null,
       ressources: {
@@ -97,12 +98,12 @@ export class PageFiche extends PageBase {
         compteurs: (corps, p) => rendreCompteursMateriel(corps, { app, ...p }).catch((e) => app.erreur(e)),
       },
       surEnregistre: (f, { cree }) => {
-        app.publier('enregistre', { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
-        if (cree) app.routeur.remplacerUrl(`/fiche/${type}/${f.id}`);
+        app.publier(SUJET_FENETRE.ENREGISTRE, { type, ids: [f.id, `SAL-${f.id}`, `MAT-${f.id}`], cree });
+        if (cree) app.routeur.remplacerUrl(urlFiche(type, f.id));
         this.#titre();
       },
       // Fiche supprimée : les listes ouvertes se contrôlent (ligne disparue).
-      surSupprime: (id) => app.publier('enregistre', { type, ids: [id], cree: true }),
+      surSupprime: (id) => app.publier(SUJET_FENETRE.ENREGISTRE, { type, ids: [id], cree: true }),
       surFerme: () => {
         this.ferme = true;
         if (!this.enQuittant) app.fermerPage(LISTE_PAR_TYPE[type] ?? '/');
@@ -114,7 +115,7 @@ export class PageFiche extends PageBase {
     // Copie demandée par une liste (/fiche/<type>/<id>?copie=1) : nouvelle fiche à partir de celle-ci.
     if (!nouveau && this.requete.copie === '1') {
       await this.fiche.copier();
-      app.routeur.remplacerUrl(`/fiche/${type}/${this.params.id}`);
+      app.routeur.remplacerUrl(urlFiche(type, this.params.id));
     }
     this.#titre();
     // Le titre suit les changements de mode et d'enregistrement.

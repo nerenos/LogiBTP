@@ -258,8 +258,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lot H (`Btp/Codes.cs` ↔ `client/src/app/codes.js` : types de fiches, types de documents, modules, sujets de
-  diffusion).
 - [ ] Lots E (socle C# : `ExigerAdmin`, profils, actions de droits, `JsonCalcul.Options`), F (requêtes en double du
   cœur : destinataires, comptes, aide `Json`, pièce vivante) et D (utilitaires JS du socle : `normaliser`, `ErreurApi`,
   IndexedDB, export CSV, pastilles, panneau latéral, `<dialog>` et `<select>` restants).

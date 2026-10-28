@@ -1,5 +1,7 @@
 using LogiBTP.Calendrier;
 using LogiBTP.Calendrier.Web;
+using LogiBTP.Domaine.Ressources;
+using LogiBTP.Domaine;
 using LogiBTP.Planning;
 using LogiBTP.Planning.Web;
 using LogiBTP.Socle.Web;
@@ -20,14 +22,12 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
 {
     private IServiceProvider Services => http.HttpContext?.RequestServices ?? throw new InvalidOperationException("Planning : contexte HTTP absent");
 
-    private static readonly string[] TypesConnus = ["SALARIE", "INTERIM", "MATERIEL", "SOUS_TRAITANT"];
-
     /// <summary>Absences des congés du Pointage : tenues par <see cref="SpecialisationPointageBtp.ApresCongeAsync"/>.</summary>
     public override bool TacheGeree(string? origineType) => origineType == "conge";
 
     public override Task<List<RessourcePlanning>> RessourcesAsync(PlanningDbContext db, FiltreRessources f, CancellationToken ct)
     {
-        var types = f.Types is { Count: > 0 } ? f.Types.ToArray() : TypesConnus;
+        var types = f.Types is { Count: > 0 } ? f.Types.ToArray() : ReglesAffectations.Types;
         return db.Database.SqlQueryRaw<RessourcePlanning>("""
             SELECT r.type, r.id, r.libelle, r.srv_id, r.service, r.capacite, r.quantite FROM (
               SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id, s.sal_nom || ' ' || s.sal_prenom AS libelle,
@@ -126,7 +126,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             WHERE f_module_actif('crm') AND n.not_nature = 'TACHE' AND n.not_etat IN ('A_FAIRE', 'EN_COURS') AND NOT n.not_prive AND NOT n.not_rgpd
               AND n.not_echeance::date BETWEEN @du AND @au
             """, new NpgsqlParameter("du", du), new NpgsqlParameter("au", au)).ToListAsync(ct))
-        .Select(j => new JalonPlanning(j.Cle, Temps.Ecrire(Temps.VersMinutes(j.Quand) + (j.Type == "ALERTE" ? 0 : 1020)), j.Type, j.Libelle, "chantier", j.Id, null,
+        .Select(j => new JalonPlanning(j.Cle, Temps.Ecrire(Temps.VersMinutes(j.Quand) + (j.Type == "ALERTE" ? 0 : 1020)), j.Type, j.Libelle, TypesFiche.Chantier, j.Id, null,
             j.Type == "ALERTE" ? "CRM" : "APPLICATION")).ToList();
 
     private sealed record TypeHabilitation(string Code, string Libelle);
@@ -170,7 +170,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             "SALARIE" or "INTERIM" => await db.Database.SqlQueryRaw<int?>("""
                 SELECT (SELECT m.sme_srv_id FROM service_membre m WHERE m.sme_ind_id = s.sal_ind_id AND m.sme_principal) AS "Value" FROM salarie s WHERE s.sal_id = @id
                 """, new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct),
-            "MATERIEL" => await db.Database.SqlQueryRaw<int?>("SELECT mat_srv_id AS \"Value\" FROM materiel WHERE mat_id = @id", new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct),
+            TypesRessource.Materiel => await db.Database.SqlQueryRaw<int?>("SELECT mat_srv_id AS \"Value\" FROM materiel WHERE mat_id = @id", new NpgsqlParameter("id", rid)).FirstOrDefaultAsync(ct),
             _ => throw ExceptionMetier.Invalide("PLA_SERVICE_RESSOURCE", "Le service de cette ressource ne se change pas depuis le planning"),
         };
         var services = actuel is int a ? new[] { service, a } : new[] { service };
@@ -178,7 +178,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             SELECT EXISTS (SELECT 1 FROM service s JOIN individu i ON i.ind_id = s.srv_responsable_id WHERE i.ind_utilisateur = @u AND s.srv_id = ANY(@s)) AS "Value"
             """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", services)).FirstAsync(ct);
         if (!u.EstAdmin && !responsable) throw ExceptionMetier.AccesRefuse("PLA_SERVICE_RESSOURCE");
-        if (type == "MATERIEL")
+        if (type == TypesRessource.Materiel)
         {
             await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_srv_id = @s WHERE mat_id = @id", [new NpgsqlParameter("s", service), new NpgsqlParameter("id", rid)], ct);
             return;
@@ -252,7 +252,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             new NpgsqlParameter("q", NpgsqlTypes.NpgsqlDbType.Text) { Value = string.IsNullOrWhiteSpace(recherche) ? DBNull.Value : $"%{recherche.Trim()}%" }).ToListAsync(ct);
     }
 
-    public override Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct) => type == "projet"
+    public override Task<List<ElementPlanning>> ElementsAsync(PlanningDbContext db, string type, IReadOnlyCollection<string>? ids, string? recherche, CancellationToken ct) => type == TypesFiche.Projet
         ? db.Database.SqlQueryRaw<ElementPlanning>("""
             SELECT 'projet' AS type, p.prj_id::text AS id, p.prj_code AS code, p.prj_libelle AS libelle, '/fiche/projet/' || p.prj_id AS url
             FROM projet p

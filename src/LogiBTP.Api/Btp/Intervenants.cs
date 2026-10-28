@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using LogiBTP.Domaine;
 using LogiBTP.Fiches;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,7 @@ public static class Intervenants
     /// <summary>Colonne de rattachement par type de fiche (liste fermée : jamais de nom de colonne saisi).</summary>
     public static readonly IReadOnlyDictionary<string, string> Colonnes = new Dictionary<string, string>
     {
-        ["projet"] = "itv_prj_id", ["affaire"] = "itv_aff_id", ["chantier"] = "itv_cha_id", ["marche"] = "itv_mar_id",
+        [TypesFiche.Projet] = "itv_prj_id", [TypesFiche.Affaire] = "itv_aff_id", [TypesFiche.Chantier] = "itv_cha_id", [TypesFiche.Marche] = "itv_mar_id",
     };
 
     public static bool Gere(string type) => Colonnes.ContainsKey(type);
@@ -107,19 +108,19 @@ public static class Intervenants
         static NpgsqlParameter P(string nom, NpgsqlDbType type, object? v) => new(nom, type) { Value = v ?? DBNull.Value };
         var deleteSql = type switch
         {
-            "projet" => "DELETE FROM intervenant WHERE itv_prj_id = @id",
-            "affaire" => "DELETE FROM intervenant WHERE itv_aff_id = @id",
-            "chantier" => "DELETE FROM intervenant WHERE itv_cha_id = @id",
-            "marche" => "DELETE FROM intervenant WHERE itv_mar_id = @id",
+            TypesFiche.Projet => "DELETE FROM intervenant WHERE itv_prj_id = @id",
+            TypesFiche.Affaire => "DELETE FROM intervenant WHERE itv_aff_id = @id",
+            TypesFiche.Chantier => "DELETE FROM intervenant WHERE itv_cha_id = @id",
+            TypesFiche.Marche => "DELETE FROM intervenant WHERE itv_mar_id = @id",
             _ => throw new ArgumentOutOfRangeException(nameof(type)),
         };
         await db.Database.ExecuteSqlRawAsync(deleteSql, [P("id", NpgsqlDbType.Integer, (int)id)], ct);
         var insertSql = type switch
         {
-            "projet" => "INSERT INTO intervenant (itv_prj_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
-            "affaire" => "INSERT INTO intervenant (itv_aff_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
-            "chantier" => "INSERT INTO intervenant (itv_cha_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
-            "marche" => "INSERT INTO intervenant (itv_mar_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            TypesFiche.Projet => "INSERT INTO intervenant (itv_prj_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            TypesFiche.Affaire => "INSERT INTO intervenant (itv_aff_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            TypesFiche.Chantier => "INSERT INTO intervenant (itv_cha_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
+            TypesFiche.Marche => "INSERT INTO intervenant (itv_mar_id, itv_fin_code, itv_per_id, itv_ind_id, itv_principal, itv_paiement_direct, itv_commentaire, itv_ordre) VALUES (@objet, @fonction, @per, @ind, @principal, @pd, @commentaire, @ordre)",
             _ => throw new ArgumentOutOfRangeException(nameof(type)),
         };
         var ordre = 0;

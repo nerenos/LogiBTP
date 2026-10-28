@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using LogiBTP.Socle;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +9,7 @@ namespace LogiBTP.Socle.Web;
 /// <summary>Fichier .env (secrets de l'installation hors du dépôt) et service de chiffrement.</summary>
 public static class ExtensionsConfiguration
 {
-    public const string CleChiffrement = "LOGIBTP_CLE_CHIFFREMENT";
+    public const string CleChiffrement = VariablesEnv.CleChiffrement;
 
     /// <summary>
     /// Variables « NOM=valeur » du premier fichier .env trouvé en remontant depuis le dossier donné (dossier de
@@ -34,8 +35,8 @@ public static class ExtensionsConfiguration
     public static void AjouterConnexionsModele(this ConfigurationManager config)
     {
         if (ModeleConnexion.Lire(k => config[k]) is not { } m) return;
-        var utilisateur = string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_UTILISATEUR"]) ? "logibtp_app" : config["LOGIBTP_BASE_UTILISATEUR"]!;
-        var mdp = config["LOGIBTP_BASE_MOT_DE_PASSE_APP"];
+        var utilisateur = string.IsNullOrWhiteSpace(config[VariablesEnv.BaseUtilisateur]) ? "logibtp_app" : config[VariablesEnv.BaseUtilisateur]!;
+        var mdp = config[VariablesEnv.BaseMotDePasseApp];
         var ajouts = new Dictionary<string, string?>();
         if (string.IsNullOrWhiteSpace(config.GetConnectionString("LogiBTP"))) ajouts["ConnectionStrings:LogiBTP"] = m.Chaine(m.NomBase(null), utilisateur, mdp);
         foreach (var s in config.GetSection("Societes:Liste").GetChildren())

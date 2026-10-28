@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDateHeure } from '@logibtp/socle/ui';
@@ -30,9 +31,9 @@ export class PageNotifications extends PageBase {
     this.conteneur.querySelectorAll('[name="module"]').forEach((r) => r.addEventListener('change', () => { this.module = r.value; this.#charger(); }));
     this.conteneur.querySelector('[data-tout-lire]').addEventListener('click', () => this.#marquer({ tout: true }, false));
     this.conteneur.querySelector('[data-executer]')?.addEventListener('click', async () => {
-      try { await api.notifications.executer(); await this.#charger(); app.publier('notifications', {}); } catch (e) { app.erreur(e); }
+      try { await api.notifications.executer(); await this.#charger(); app.publier(SUJET_FENETRE.NOTIFICATIONS, {}); } catch (e) { app.erreur(e); }
     });
-    this.desabonner = app.abonner('notifications', () => this.#charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.NOTIFICATIONS, () => this.#charger());
     await this.#charger();
   }
 

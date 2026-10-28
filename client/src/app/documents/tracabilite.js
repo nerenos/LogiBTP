@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { echapper, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { tableNonRepris } from '../import/rapport-import.js';
@@ -25,7 +26,7 @@ export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer
   const t = await api.tracabilite(entId);
   const o = t.origine;
   const lies = (liste, titre, vide) => `<section class="trac-bloc"><h3>${titre}</h3>${liste.length ? `<ul class="trac-liens">${liste.map((d) => `
-      <li><a href="/document/${d.ent_id}" data-document="${d.ent_id}">${echapper(d.type_libelle)} ${echapper(d.numero ?? `#${d.ent_id}`)}${d.indice && d.indice !== 'A' ? ` (${echapper(d.indice)})` : ''}</a>
+      <li><a href="${urlDocument(d.ent_id)}" data-document="${d.ent_id}">${echapper(d.type_libelle)} ${echapper(d.numero ?? `#${d.ent_id}`)}${d.indice && d.indice !== 'A' ? ` (${echapper(d.indice)})` : ''}</a>
         <span class="aide">${echapper(LIENS[d.lien] ?? d.lien)} · ${echapper(d.statut ?? '')} · ${date(d.date)}${d.objet ? ` · ${echapper(d.objet)}` : ''}</span></li>`).join('')}</ul>` : `<p class="aide">${vide}</p>`}</section>`;
   const rapport = o?.dor_rapport ?? null;
   zone.innerHTML = `<div class="tracabilite">
@@ -43,7 +44,7 @@ export async function afficherTracabilite(zone, { entId, ged, debogage, naviguer
       ${t.historique.map((h) => `<tr><td class="nombre">${h.his_version}</td><td>${echapper(ACTIONS[h.his_action] ?? h.his_action)}</td><td>${date(h.his_date, true)}</td><td>${echapper(h.his_utilisateur)}</td></tr>`).join('')}</tbody></table>`
     : '<p class="aide">Aucune version enregistrée.</p>'}</section>
   </div>`;
-  zone.querySelectorAll('[data-document]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(`/document/${a.dataset.document}`, e); }));
+  zone.querySelectorAll('[data-document]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(urlDocument(a.dataset.document), e); }));
   zone.querySelector('[data-trac="telecharger"]')?.addEventListener('click', async () => {
     const v = await derniereVersionGed(ged, o.dor_fichier_id);
     if (v) window.open(ged.urlContenu(v.id, { telecharger: true }), '_blank');

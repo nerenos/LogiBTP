@@ -20,6 +20,20 @@ public static class Constantes
             .ToDictionary(m => Cle(m.Groups[1].Value), m => m.Groups[2].Value);
     }
 
+    /// <summary>
+    /// Valeurs d'une liste figée déclarée dans un fichier JS (<c>export const NOM = Object.freeze([OBJET.CLE, 'valeur', …])</c>),
+    /// les références <c>OBJET.CLE</c> lues dans les objets figés du même fichier.
+    /// </summary>
+    public static List<string> ListeJs(string fichier, string nom)
+    {
+        var source = File.ReadAllText(fichier);
+        var bloc = Regex.Match(source, $@"export const {nom} = Object\.freeze\(\[(.*?)\]\);", RegexOptions.Singleline);
+        if (!bloc.Success) throw new InvalidOperationException($"{nom} introuvable dans {fichier}");
+        return Regex.Matches(bloc.Groups[1].Value, @"([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)|'([^']*)'")
+            .Select(m => m.Groups[3].Success ? m.Groups[3].Value : Js(fichier, m.Groups[1].Value)[Cle(m.Groups[2].Value)])
+            .ToList();
+    }
+
     /// <summary>Constantes chaînes d'une classe statique.</summary>
     public static Dictionary<string, string> Cs(Type type) =>
         type.GetFields(BindingFlags.Public | BindingFlags.Static)

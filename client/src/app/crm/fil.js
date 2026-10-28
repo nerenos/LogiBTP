@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { ETAT_NOTE } from '@logibtp/crm';
 import { echapper, htmlSur, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -47,7 +48,7 @@ export class FilCrm {
     $('[data-suite]').addEventListener('click', () => this.charger(false));
     $('[data-photos]')?.addEventListener('change', (ev) => { const n = ev.target.files.length; $('[data-nb-photos]').textContent = n ? `${n} photo(s)` : ''; });
     $('[data-publier]')?.addEventListener('click', () => this.publier());
-    this.desabonner = app.abonner('crm', () => this.charger(true));
+    this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger(true));
     await this.charger(true);
   }
 
@@ -103,7 +104,7 @@ export class FilCrm {
       this.conteneur.querySelector('[data-message]').value = '';
       this.conteneur.querySelector('[data-photos]').value = '';
       this.conteneur.querySelector('[data-nb-photos]').textContent = '';
-      this.app.publier('crm', { fil: true });
+      this.app.publier(SUJET_FENETRE.CRM, { fil: true });
       this.app.message('Publié dans le fil', 'succes');
     } catch (e) { this.app.erreur(e); }
   }

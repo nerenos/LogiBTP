@@ -97,21 +97,21 @@ public static class CommandeInstallation
         var memoire = Option(args, "--memoire");
         var ajoutees = CompleterEnv(env,
         [
-            ("LOGIBTP_DOMAINE", domaine, "Nom de l'installation : base principale sur ce nom, chaque société sur un sous-domaine (certificat joker)."),
-            ("LOGIBTP_BASE_HOTE", Option(args, "--base-hote") ?? "logibtp-base", "Serveur PostgreSQL : bases logibtp (principale) et logibtp_<code> (sociétés)."),
-            ("LOGIBTP_BASE_PORT", "5432", null),
-            ("LOGIBTP_BASE_RESEAU", reseau ?? "172.30.70.0/24", "Réseau Docker « logibtp » (pg_hba.conf), mémoire de PostgreSQL (Mo)."),
-            ("LOGIBTP_BASE_MEMOIRE_MO", memoire ?? "2048", null),
-            ("LOGIBTP_BASE_MOT_DE_PASSE_ADMIN", Secrets.MotDePasse(), "Mots de passe des rôles PostgreSQL (générés) : superutilisateur, schéma, application, lecture."),
-            ("LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA", Secrets.MotDePasse(), null),
-            ("LOGIBTP_BASE_MOT_DE_PASSE_APP", Secrets.MotDePasse(), null),
-            ("LOGIBTP_BASE_MOT_DE_PASSE_LECTURE", Secrets.MotDePasse(), null),
+            (VariablesEnv.Domaine, domaine, "Nom de l'installation : base principale sur ce nom, chaque société sur un sous-domaine (certificat joker)."),
+            (VariablesEnv.BaseHote, Option(args, "--base-hote") ?? "logibtp-base", "Serveur PostgreSQL : bases logibtp (principale) et logibtp_<code> (sociétés)."),
+            (VariablesEnv.BasePort, "5432", null),
+            (VariablesEnv.BaseReseau, reseau ?? "172.30.70.0/24", "Réseau Docker « logibtp » (pg_hba.conf), mémoire de PostgreSQL (Mo)."),
+            (VariablesEnv.BaseMemoireMo, memoire ?? "2048", null),
+            (VariablesEnv.BaseMotDePasseAdmin, Secrets.MotDePasse(), "Mots de passe des rôles PostgreSQL (générés) : superutilisateur, schéma, application, lecture."),
+            (VariablesEnv.BaseMotDePasseSchema, Secrets.MotDePasse(), null),
+            (VariablesEnv.BaseMotDePasseApp, Secrets.MotDePasse(), null),
+            (VariablesEnv.BaseMotDePasseLecture, Secrets.MotDePasse(), null),
         ]);
         // Réglages explicites : remplacent ceux du .env (relance de « preparer » pour changer le réseau ou la mémoire).
         var remplaces = new Dictionary<string, string>();
-        if (reseau is not null) remplaces["LOGIBTP_BASE_RESEAU"] = reseau;
-        if (memoire is not null) remplaces["LOGIBTP_BASE_MEMOIRE_MO"] = memoire;
-        if (Option(args, "--confiance") is { } confiance) remplaces["LOGIBTP_ADRESSES_CONFIANCE"] = confiance;
+        if (reseau is not null) remplaces[VariablesEnv.BaseReseau] = reseau;
+        if (memoire is not null) remplaces[VariablesEnv.BaseMemoireMo] = memoire;
+        if (Option(args, "--confiance") is { } confiance) remplaces[VariablesEnv.AdressesConfiance] = confiance;
         RemplacerEnv(env, remplaces);
         sortie.WriteLine($"{ajoutees} variable(s) ajoutée(s), {remplaces.Count} réglage(s) mis à jour ; valeurs sensibles chiffrées");
 
@@ -132,7 +132,7 @@ public static class CommandeInstallation
         var mdp = Path.Combine(dossierBase, "postgres-mdp");
         if (!File.Exists(Path.Combine(dossierBase, "base-initialisee")))
         {
-            File.WriteAllText(mdp, config["LOGIBTP_BASE_MOT_DE_PASSE_ADMIN"]);
+            File.WriteAllText(mdp, config[VariablesEnv.BaseMotDePasseAdmin]);
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(mdp, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
         }
         else if (!File.Exists(mdp)) File.WriteAllText(mdp, "");
@@ -146,23 +146,23 @@ public static class CommandeInstallation
     {
         var config = Configuration(dossier);
         var modele = Modele(config);
-        var admin = modele.Chaine("postgres", "postgres", Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_ADMIN"));
+        var admin = modele.Chaine("postgres", "postgres", Exiger(config, VariablesEnv.BaseMotDePasseAdmin));
         var base_ = modele.NomBase(societe);
         var bd = new BaseDonnees(sortie);
         await bd.DefinirRolesAsync(admin, new Dictionary<string, string?>
         {
-            [RoleSchema] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"),
-            ["logibtp_app"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_APP"),
-            ["logibtp_lecture"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_LECTURE"),
+            [RoleSchema] = Exiger(config, VariablesEnv.BaseMotDePasseSchema),
+            ["logibtp_app"] = Exiger(config, VariablesEnv.BaseMotDePasseApp),
+            ["logibtp_lecture"] = Exiger(config, VariablesEnv.BaseMotDePasseLecture),
         });
         var neuve = await bd.CreerBaseAsync(admin, base_, RoleSchema);
         var racine = RacineSql();
         var manifeste = ManifesteScripts.Lire(racine);
-        var applique = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config["LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"]));
+        var applique = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
         if (!neuve && applique.Count == 0) throw new InvalidOperationException($"La base {base_} existe sans journal des scripts : elle n'a pas été créée par l'installeur");
         // Base neuve, ou reprise d'une création interrompue : scripts absents du journal, dans l'ordre.
-        await bd.AppliquerAsync(modele.Chaine(base_, RoleSchema, config["LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"]), racine, manifeste.Scripts);
-        await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config["LOGIBTP_BASE_MOT_DE_PASSE_ADMIN"]), Path.Combine(racine, "db/installation/roles.sql"));
+        await bd.AppliquerAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]), racine, manifeste.Scripts);
+        await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config[VariablesEnv.BaseMotDePasseAdmin]), Path.Combine(racine, "db/installation/roles.sql"));
         if (societe is not null)
         {
             var chemin = Path.Combine(dossier, FichierSocietes);
@@ -184,9 +184,9 @@ public static class CommandeInstallation
     {
         var config = Configuration(dossier);
         var modele = ModeleConnexion.Lire(k => config[k]);
-        sortie.WriteLine($"(principale) {config["Societes:LibellePrincipale"] ?? "Société principale"} : {config["LOGIBTP_DOMAINE"]} → {modele?.NomBase(null)}");
+        sortie.WriteLine($"(principale) {config["Societes:LibellePrincipale"] ?? "Société principale"} : {config[VariablesEnv.Domaine]} → {modele?.NomBase(null)}");
         foreach (var (code, libelle) in SocietesInstallation.Societes(SocietesInstallation.Lire(Path.Combine(dossier, FichierSocietes))))
-            sortie.WriteLine($"{code} {libelle} : {code}.{config["LOGIBTP_DOMAINE"]} → {modele?.NomBase(code)}");
+            sortie.WriteLine($"{code} {libelle} : {code}.{config[VariablesEnv.Domaine]} → {modele?.NomBase(code)}");
         return 0;
     }
 
@@ -210,7 +210,7 @@ public static class CommandeInstallation
         var modele = Modele(config);
         foreach (var (_, base_) in Bases(dossier, modele))
         {
-            var (metres, elements) = await ConversionMetresBases.ConvertirBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA")));
+            var (metres, elements) = await ConversionMetresBases.ConvertirBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)));
             sortie.WriteLine(metres < 0 ? $"{base_} : rien à convertir" : $"{base_} : {metres} métré(s), {elements} composition(s) convertis");
         }
         return 0;
@@ -221,12 +221,12 @@ public static class CommandeInstallation
         var config = Configuration(dossier);
         var modele = Modele(config);
         var manifeste = ManifesteScripts.Lire(RacineSql());
-        sortie.WriteLine($"Installation {config["LOGIBTP_DOMAINE"]} ({config["LOGIBTP_DEPLOIEMENT"] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}");
+        sortie.WriteLine($"Installation {config[VariablesEnv.Domaine]} ({config[VariablesEnv.Deploiement] ?? "LOCAL"}), serveur {modele.Hote}:{modele.Port}");
         foreach (var (code, base_) in Bases(dossier, modele))
         {
             try
             {
-                var s = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config["LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"]));
+                var s = await BaseDonnees.ScriptsAppliquesAsync(modele.Chaine(base_, RoleSchema, config[VariablesEnv.BaseMotDePasseSchema]));
                 var attendus = manifeste.Scripts.Where(x => !x.Rejouable).Select(x => x.Chemin).Except(s.Select(x => x.Chemin)).Count();
                 sortie.WriteLine($"{code ?? "(principale)"} → {base_} : {s.Count} script(s) appliqué(s)" + (attendus > 0 ? $", {attendus} en attente (mise à jour)" : ", à jour"));
             }
@@ -241,12 +241,12 @@ public static class CommandeInstallation
     // ---------------------------------------------------------------- certificats (§ 5)
 
     private static DossierCertificats Certificats() =>
-        new(Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICATS") ?? Path.Combine(Directory.GetCurrentDirectory(), "certificats"));
+        new(Environment.GetEnvironmentVariable(VariablesEnv.Certificats) ?? Path.Combine(Directory.GetCurrentDirectory(), "certificats"));
 
     private static int CreerCertificat(string[] args, string dossier, TextWriter sortie)
     {
         var config = Configuration(dossier);
-        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var domaine = Exiger(config, VariablesEnv.Domaine);
         var cleDonnees = Exiger(config, ExtensionsConfiguration.CleChiffrement);
         var jours = int.TryParse(Option(args, "--jours"), out var j) ? j : AutoriteCertificats.JoursServeurMax;
         var d = Certificats();
@@ -298,11 +298,11 @@ public static class CommandeInstallation
     private static int ImporterCertificat(string[] args, string dossier, TextWriter sortie)
     {
         var config = Configuration(dossier);
-        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var domaine = Exiger(config, VariablesEnv.Domaine);
         var fichier = Option(args, "--certificat") ?? throw new ArgumentException("--certificat obligatoire (.pfx, .p12 ou .pem)");
         var origine = (Option(args, "--origine") ?? OrigineCertificat.Importe).ToUpperInvariant();
         if (origine is not (OrigineCertificat.Importe or OrigineCertificat.LetsEncrypt)) throw new ArgumentException("--origine : IMPORTE ou LETSENCRYPT");
-        var (chaine, cle, racine) = DossierCertificats.LireFourni(fichier, Option(args, "--cle"), Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICAT_MOT_DE_PASSE"));
+        var (chaine, cle, racine) = DossierCertificats.LireFourni(fichier, Option(args, "--cle"), Environment.GetEnvironmentVariable(VariablesEnv.CertificatMotDePasse));
         using var cert = X509Certificate2.CreateFromPem(chaine, cle);
         foreach (var (nom, essai) in new[] { (domaine, domaine), ("*." + domaine, "societe." + domaine) })
             if (!AutoriteCertificats.Couvre(cert, essai)) throw new InvalidOperationException($"Le certificat ne couvre pas {nom} : il faut le nom {domaine} et le joker *.{domaine}");
@@ -323,18 +323,18 @@ public static class CommandeInstallation
     {
         var dossierBase = DossierBase();
         var crt = Path.Combine(dossierBase, "base.crt");
-        if (config["LOGIBTP_BASE_SSL_SERVEUR"] is "1" or "true" or "on" && File.Exists(crt) && File.Exists(Path.Combine(dossierBase, "base.key"))
+        if (config[VariablesEnv.BaseSslServeur] is "1" or "true" or "on" && File.Exists(crt) && File.Exists(Path.Combine(dossierBase, "base.key"))
             && X509Certificate2.CreateFromPem(File.ReadAllText(crt)).NotAfter > DateTime.Now.AddDays(60))
             return;
-        var hote = config["LOGIBTP_BASE_HOTE"];
+        var hote = config[VariablesEnv.BaseHote];
         var nom = hote is not null && hote.EndsWith("." + domaine, StringComparison.OrdinalIgnoreCase) ? hote.ToLowerInvariant() : "base." + domaine;
         var d = Certificats();
         var (racine, cleRacine) = Racine(d, domaine, Exiger(config, ExtensionsConfiguration.CleChiffrement), false, null, DateTimeOffset.Now, sortie);
         var emis = AutoriteCertificats.Emettre(racine, cleRacine, [nom], DateTimeOffset.Now);
         EcrireCertificatBase(dossierBase, emis.CertificatPem, emis.ClePem);
-        var valeurs = new Dictionary<string, string> { ["LOGIBTP_BASE_SSL_SERVEUR"] = "1" };
-        if (string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_SSL"])) valeurs["LOGIBTP_BASE_SSL"] = "VerifyCA";
-        if (string.IsNullOrWhiteSpace(config["LOGIBTP_BASE_RACINE"])) valeurs["LOGIBTP_BASE_RACINE"] = d.Racine.Replace('\\', '/');
+        var valeurs = new Dictionary<string, string> { [VariablesEnv.BaseSslServeur] = "1" };
+        if (string.IsNullOrWhiteSpace(config[VariablesEnv.BaseSsl])) valeurs[VariablesEnv.BaseSsl] = "VerifyCA";
+        if (string.IsNullOrWhiteSpace(config[VariablesEnv.BaseRacine])) valeurs[VariablesEnv.BaseRacine] = d.Racine.Replace('\\', '/');
         RemplacerEnv(env, valeurs);
         sortie.WriteLine($"Certificat de la base {nom} valable jusqu'au {emis.Certificat.NotAfter:dd/MM/yyyy} : TLS de la base actif (redémarrer le conteneur logibtp-base)");
     }
@@ -354,17 +354,17 @@ public static class CommandeInstallation
     private static int CertificatBase(string[] args, string dossier, TextWriter sortie)
     {
         var config = Configuration(dossier);
-        var domaine = Exiger(config, "LOGIBTP_DOMAINE");
+        var domaine = Exiger(config, VariablesEnv.Domaine);
         var nom = (Option(args, "--nom") ?? throw new ArgumentException("--nom obligatoire (nom DNS du serveur de la base, ex. base." + domaine + ")")).Trim().ToLowerInvariant();
         if (!nom.EndsWith("." + domaine, StringComparison.Ordinal)) throw new ArgumentException($"Le nom de la base doit être un sous-domaine de {domaine} (contrainte de noms de l'autorité)");
-        var adresses = Option(args, "--adresses-api") ?? config["LOGIBTP_BASE_ADRESSES_API"];
+        var adresses = Option(args, "--adresses-api") ?? config[VariablesEnv.BaseAdressesApi];
         if (string.IsNullOrWhiteSpace(adresses)) throw new ArgumentException("--adresses-api obligatoire : adresse (ou CIDR) du serveur de l'API vue par la base");
         var dossierBase = DossierBase();
         Directory.CreateDirectory(dossierBase);
         string crt, cle;
         if (Option(args, "--certificat") is { } fourni)
         {
-            var (chaine, clePem, _) = DossierCertificats.LireFourni(fourni, Option(args, "--cle"), Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICAT_MOT_DE_PASSE"));
+            var (chaine, clePem, _) = DossierCertificats.LireFourni(fourni, Option(args, "--cle"), Environment.GetEnvironmentVariable(VariablesEnv.CertificatMotDePasse));
             (crt, cle) = (chaine, clePem);
         }
         else
@@ -379,11 +379,11 @@ public static class CommandeInstallation
         var env = Path.Combine(dossier, ".env");
         RemplacerEnv(env, new Dictionary<string, string>
         {
-            ["LOGIBTP_BASE_HOTE"] = nom,
-            ["LOGIBTP_BASE_SSL"] = "VerifyFull",
-            ["LOGIBTP_BASE_RACINE"] = Path.Combine(Certificats().Dossier, "racine.crt").Replace('\\', '/'),
-            ["LOGIBTP_BASE_SSL_SERVEUR"] = "1",
-            ["LOGIBTP_BASE_ADRESSES_API"] = adresses,
+            [VariablesEnv.BaseHote] = nom,
+            [VariablesEnv.BaseSsl] = "VerifyFull",
+            [VariablesEnv.BaseRacine] = Path.Combine(Certificats().Dossier, "racine.crt").Replace('\\', '/'),
+            [VariablesEnv.BaseSslServeur] = "1",
+            [VariablesEnv.BaseAdressesApi] = adresses,
         });
         var reglages = Reglages(Configuration(dossier));
         File.WriteAllText(Path.Combine(dossierBase, "pg_hba.conf"), ConfigurationPostgres.PgHba(reglages));
@@ -398,14 +398,14 @@ public static class CommandeInstallation
         var config = Configuration(dossier);
         var modele = Modele(config);
         var bd = new BaseDonnees(sortie);
-        await bd.DefinirRolesAsync(modele.Chaine("postgres", "postgres", Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_ADMIN")), new Dictionary<string, string?>
+        await bd.DefinirRolesAsync(modele.Chaine("postgres", "postgres", Exiger(config, VariablesEnv.BaseMotDePasseAdmin)), new Dictionary<string, string?>
         {
-            [RoleSchema] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"),
-            ["logibtp_app"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_APP"),
-            ["logibtp_lecture"] = Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_LECTURE"),
+            [RoleSchema] = Exiger(config, VariablesEnv.BaseMotDePasseSchema),
+            ["logibtp_app"] = Exiger(config, VariablesEnv.BaseMotDePasseApp),
+            ["logibtp_lecture"] = Exiger(config, VariablesEnv.BaseMotDePasseLecture),
         });
         foreach (var (_, base_) in Bases(dossier, modele))
-            await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config["LOGIBTP_BASE_MOT_DE_PASSE_ADMIN"]), Path.Combine(RacineSql(), "db/installation/roles.sql"));
+            await bd.ExecuterFichierAsync(modele.Chaine(base_, "postgres", config[VariablesEnv.BaseMotDePasseAdmin]), Path.Combine(RacineSql(), "db/installation/roles.sql"));
         return 0;
     }
 
@@ -452,7 +452,7 @@ public static class CommandeInstallation
         var modifies = 0;
         foreach (var (code, base_) in Bases(dossier, modele))
         {
-            var schema = modele.Chaine(base_, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA"));
+            var schema = modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema));
             if ((await BaseDonnees.ScriptsAppliquesAsync(schema)).Count == 0)
                 throw new InvalidOperationException($"La base {base_} n'a pas de journal des scripts : « installation base adopter --base {base_} --confirmer » si elle est à jour du manifeste précédent");
             modifies += (await bd.AppliquerAsync(schema, racine, manifeste.Scripts)).Modifies.Count;
@@ -478,7 +478,7 @@ public static class CommandeInstallation
         if (bases.Count == 0) throw new ArgumentException("--base NOM ou --toutes");
         var racine = RacineSql();
         foreach (var b in bases)
-            await new BaseDonnees(sortie).AppliquerAsync(modele.Chaine(b, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA")), racine, ManifesteScripts.Lire(racine).Scripts, adopter: true);
+            await new BaseDonnees(sortie).AppliquerAsync(modele.Chaine(b, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)), racine, ManifesteScripts.Lire(racine).Scripts, adopter: true);
         return 0;
     }
 
@@ -524,7 +524,7 @@ public static class CommandeInstallation
         var chiffrement = new Chiffrement(cle, Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"]));
         foreach (var (_, base_) in Bases(dossier, modele))
         {
-            var bilan = await RotationCle.RechiffrerBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, "LOGIBTP_BASE_MOT_DE_PASSE_SCHEMA")), chiffrement, chiffrement, Empreintes);
+            var bilan = await RotationCle.RechiffrerBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)), chiffrement, chiffrement, Empreintes);
             sortie.WriteLine($"{base_} : {bilan.Valeurs} valeur(s) rechiffrée(s), {bilan.Empreintes} empreinte(s) recalculée(s)" + (bilan.Tables.Count > 0 ? $" ({string.Join(", ", bilan.Tables)})" : ""));
         }
         sortie.WriteLine("Sauvegarder le nouveau .env hors du serveur ; les sessions ouvertes sont fermées (jetons signés par l'ancienne clé)");
@@ -550,19 +550,19 @@ public static class CommandeInstallation
 
     internal static ReglagesPostgres Reglages(IConfiguration c) => new()
     {
-        Reseau = c["LOGIBTP_BASE_RESEAU"] is { Length: > 0 } r ? r : "172.30.70.0/24",
-        MemoireMo = int.TryParse(c["LOGIBTP_BASE_MEMOIRE_MO"], out var m) ? m : 2048,
-        AdressesApi = (c["LOGIBTP_BASE_ADRESSES_API"] ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries),
-        Ssl = c["LOGIBTP_BASE_SSL_SERVEUR"] is "1" or "true" or "on",
+        Reseau = c[VariablesEnv.BaseReseau] is { Length: > 0 } r ? r : "172.30.70.0/24",
+        MemoireMo = int.TryParse(c[VariablesEnv.BaseMemoireMo], out var m) ? m : 2048,
+        AdressesApi = (c[VariablesEnv.BaseAdressesApi] ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries),
+        Ssl = c[VariablesEnv.BaseSslServeur] is "1" or "true" or "on",
     };
 
     /// <summary>Dossier de la configuration du conteneur de la base (volume partagé) : LOGIBTP_CONFIG_BASE.</summary>
-    internal static string DossierBase() => Environment.GetEnvironmentVariable("LOGIBTP_CONFIG_BASE") ?? Path.Combine(Directory.GetCurrentDirectory(), "base-config");
+    internal static string DossierBase() => Environment.GetEnvironmentVariable(VariablesEnv.ConfigBase) ?? Path.Combine(Directory.GetCurrentDirectory(), "base-config");
 
     /// <summary>Racine des scripts SQL : LOGIBTP_SQL (/app/sql dans l'image), sinon la racine du dépôt (dossier de LogiBTP.slnx).</summary>
     internal static string RacineSql()
     {
-        if (Environment.GetEnvironmentVariable("LOGIBTP_SQL") is { Length: > 0 } d) return d;
+        if (Environment.GetEnvironmentVariable(VariablesEnv.Sql) is { Length: > 0 } d) return d;
         foreach (var depart in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
         {
             for (var r = new DirectoryInfo(depart); r is not null; r = r.Parent)

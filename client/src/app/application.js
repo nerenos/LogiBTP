@@ -16,11 +16,11 @@ import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuair
 import { creerFournisseurStructure } from './structure/structure.js';
 import { societeCourante } from './societe.js';
 import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
-import { listeAttente, ETATS_ATTENTE, urlAttente } from './hors-ligne/attente.js';
+import { listeAttente, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from './hors-ligne/attente.js';
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
-import { CLE_PREFERENCES_NAVIGATION } from './codes.js';
+import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
 // fenêtre), fenêtres séparées et session (module Navigation), bandeau à menus.
@@ -90,7 +90,7 @@ export class Application {
       surDonnees: (sujet, contenu) => this.#notifier(sujet, contenu, false),
     });
     // Connexion ou déconnexion dans une autre fenêtre du navigateur (même cookie) : cette fenêtre suit.
-    this.abonner('session', (e) => this.#sessionChangee(e));
+    this.abonner(SUJET_FENETRE.SESSION, (e) => this.#sessionChangee(e));
     document.addEventListener('click', async (e) => {
       if (e.target.closest?.('[data-fin-usurpation]') && await confirmer('Terminer l\'usurpation et revenir à votre compte ?')) this.terminerUsurpation().catch((x) => this.erreur(x));
     });
@@ -161,14 +161,14 @@ export class Application {
   /** Usurpation d'un compte par un administrateur (motif obligatoire) : l'application est rechargée sous ce compte. */
   async usurper(identifiant, motif) {
     this.session = await api.auth.usurper(identifiant, motif);
-    this.publier('session', { connecte: true });
+    this.publier(SUJET_FENETRE.SESSION, { connecte: true });
     location.assign('/');
   }
 
   /** Fin de l'usurpation : retour au compte de l'administrateur. */
   async terminerUsurpation() {
     this.session = await api.auth.finUsurpation();
-    this.publier('session', { connecte: true });
+    this.publier(SUJET_FENETRE.SESSION, { connecte: true });
     location.assign('/parametres/comptes');
   }
   estAdmin() { return this.profil() === 'ADMIN'; }
@@ -227,7 +227,7 @@ export class Application {
     clearInterval(this.minuterieNotifications);
     this.minuterieNotifications = setInterval(lire, 60000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) lire(); });
-    this.abonner('compteur-notifications', (c) => { this.notifications = c; this.rendreInfos(); });
+    this.abonner(SUJET_FENETRE.COMPTEUR_NOTIFICATIONS, (c) => { this.notifications = c; this.rendreInfos(); });
   }
 
   /** Nouveau compteur de notifications : bandeau de cette fenêtre et des autres. */
@@ -235,7 +235,7 @@ export class Application {
     const change = JSON.stringify(c) !== JSON.stringify(this.notifications);
     this.notifications = c;
     if (change) this.rendreInfos();
-    if (diffuser) this.publier('compteur-notifications', c);
+    if (diffuser) this.publier(SUJET_FENETRE.COMPTEUR_NOTIFICATIONS, c);
   }
 
   /** Session expirée ou fermée : connexion dans cette fenêtre, ou dans une autre si la page a des modifications en cours. */
@@ -271,7 +271,7 @@ export class Application {
     try { await api.auth.deconnexion(); } catch (e) { this.erreur(e); return; }
     // Données consultées gardées par le service worker : effacées avec la session.
     await purgerDonnees();
-    this.publier('session', { connecte: false });
+    this.publier(SUJET_FENETRE.SESSION, { connecte: false });
     this.fermetureForcee = true;
     location.assign('/connexion');
   }
@@ -295,18 +295,18 @@ export class Application {
 
   /** Définition du document qui porte la composition d'un ouvrage (types de lignes, unités, TVA). */
   definitionDocument() {
-    this.definitionDoc ??= api.definition('V_DEVIS');
+    this.definitionDoc ??= api.definition(TYPE_DOCUMENT.V_DEVIS);
     return this.definitionDoc;
   }
 
   /** URL de l'écran d'un élément de liste (document, fiche, document GED), null si aucun écran. */
   urlElement({ id, type }) {
-    if (estTypeDocument(type)) return `/document/${id}`;
+    if (estTypeDocument(type)) return urlDocument(id);
     if (type === 'document_ged') return `/ged/${id}`;
     if (type === 'pointage') return `/pointage/saisie?pointage=${id}`;
     if (type === 'mouvement_stock') return `/stock/mouvement/${id}`;
     const f = ficheDeLigne({ id, type });
-    return f ? `/fiche/${f.type}/${f.id}` : null;
+    return f ? urlFiche(f.type, f.id) : null;
   }
 
   /** Retour à la page précédente de la fenêtre (bouton ◀ du bandeau, raccourci), sinon l'accueil. */
@@ -406,7 +406,7 @@ export class Application {
   #attentes() {
     const l = this.attentes ?? [];
     if (!l.length) return '';
-    const probleme = l.find((e) => e.etat !== 'ATTENTE');
+    const probleme = l.find((e) => e.etat !== ETAT_ATTENTE.ATTENTE);
     const titre = l.map((e) => `${e.libelle} : ${ETATS_ATTENTE[e.etat] ?? e.etat}${e.erreur ? ` (${e.erreur})` : ''}`).join('\n');
     return `<a href="${urlAttente(probleme ?? l[0])}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
   }
@@ -579,7 +579,7 @@ export class Application {
 
   async gererThemes() {
     const s = await this.services();
-    new GestionThemes({ fournisseur: s.liste, message: (t, n) => this.message(t, n), fermer: () => this.publier('themes', {}) });
+    new GestionThemes({ fournisseur: s.liste, message: (t, n) => this.message(t, n), fermer: () => this.publier(SUJET_FENETRE.THEMES, {}) });
   }
 
   async parametrerFiche(type) {

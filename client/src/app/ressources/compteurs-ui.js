@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -140,7 +141,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
         const r = x.r;
         return `<tr><td>${jour(r.date)}</td><td>📟 Relevé</td><td>${echapper(r.commentaire ?? '')}${r.remise ? ' <span class="pastille-compte attention">remise à zéro</span>' : ''}</td>
           <td class="nombre">${formatNombre(r.valeur, 1)} ${LIBELLES_UNITE[r.unite]}</td><td></td><td></td>
-          <td>${r.numero ? `<a href="/document/${r.ent_id}">${echapper(r.numero)}</a>` : echapper(SOURCES[r.source] ?? r.source)}</td>
+          <td>${r.numero ? `<a href="${urlDocument(r.ent_id)}">${echapper(r.numero)}</a>` : echapper(SOURCES[r.source] ?? r.source)}</td>
           <td class="cellule-boutons">${r.source !== 'ORDRE' ? `<button type="button" class="bouton-icone" data-retirer-releve="${r.id}" title="Retirer ce relevé">✕</button>` : ''}</td></tr>`;
       }
       const e = x.e;
@@ -148,7 +149,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
         <td>${echapper(e.libelle ?? '')}${e.litres ? ` ${formatNombre(e.litres, 2)} l` : ''}</td>
         <td class="nombre">${e.releve ? `${formatNombre(e.releve.valeur, 1)} ${LIBELLES_UNITE[e.releve.unite]}` : ''}</td>
         <td class="nombre">${e.cout != null ? formatNombre(e.cout, 2) : ''}</td><td></td>
-        <td>${e.numero ? `<a href="/document/${e.ent_id}">${echapper(e.numero)}</a>` : ''}</td>
+        <td>${e.numero ? `<a href="${urlDocument(e.ent_id)}">${echapper(e.numero)}</a>` : ''}</td>
         <td class="cellule-boutons"><button type="button" class="bouton-icone" data-modifier="${e.id}" title="Modifier">✎</button>
           <button type="button" class="bouton-icone" data-retirer-evenement="${e.id}" title="Supprimer cet événement">✕</button></td></tr>`;
     };

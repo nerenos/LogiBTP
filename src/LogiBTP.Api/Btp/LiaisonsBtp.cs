@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogiBTP.Domaine;
 using LogiBTP.Execution.Web;
 using LogiBTP.Planning.Web;
 using LogiBTP.Socle.Web;
@@ -40,7 +41,7 @@ public static class LiaisonsBtp
         var r = JsonDocument.Parse(ressource).RootElement;
         var type = r.TryGetProperty("type", out var t) ? t.GetString() : null;
         var id = r.TryGetProperty("id", out var i) ? i.ToString() : null;
-        return type is "SALARIE" or "MATERIEL" or "SOUS_TRAITANT" && id is not null ? [new AffectationSaisie(type, id)] : [];
+        return type is TypesRessource.Salarie or TypesRessource.Materiel or TypesRessource.SousTraitant && id is not null ? [new AffectationSaisie(type, id)] : [];
     }
 
     public static RouteGroupBuilder MapLiaisons(this RouteGroupBuilder api)
@@ -51,7 +52,7 @@ public static class LiaisonsBtp
         g.MapPost("/chantiers/{id:int}/planning-theorique", async (int id, DemandeTheorique d, HttpContext http, LogiBtpContext db, ModulesSociete modules,
             ServicePlanning planning, ServiceLiens liens, CancellationToken ct) =>
         {
-            if (!await modules.EstActifAsync("planning", ct) || !await modules.EstActifAsync("execution", ct))
+            if (!await modules.EstActifAsync(ModulesFacultatifs.Planning, ct) || !await modules.EstActifAsync(ModulesFacultatifs.Execution, ct))
                 throw ExceptionMetier.Conflit("MODULE_INACTIF", "Modules Planning et Exécution nécessaires");
             var u = Utilisateur.Depuis(http);
             var etapes = await db.Database.SqlQueryRaw<Etape>("""
@@ -70,7 +71,7 @@ public static class LiaisonsBtp
             {
                 var heures = budgets.FirstOrDefault(b => b.SrvId == e.SrvId)?.Minutes is int m && m > 0 ? m : 420;
                 // Assez de ressources théoriques pour que l'étape tienne en deux semaines (10 jours de 7 h).
-                var tache = await planning.CreerIdAsync(new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 4200d)), e.SrvId, "chantier", id.ToString(), e.Libelle ?? e.Code, [],
+                var tache = await planning.CreerIdAsync(new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 4200d)), e.SrvId, TypesFiche.Chantier, id.ToString(), e.Libelle ?? e.Code, [],
                     "parcours", e.Code), u, ct);
                 parCode[e.Code] = tache;
                 var amonts = e.Amonts.Where(parCode.ContainsKey).Select(a => new DependanceSaisie(parCode[a], "FD", 0, "OUV", "FIXE")).ToList();
@@ -82,7 +83,7 @@ public static class LiaisonsBtp
         // Ordre → tâche théorique du planning (origine ordre : heures MO de l'ordre, service et dates prévues de l'ordre).
         g.MapPost("/ordres/{id:long}/planifier", async (long id, HttpContext http, LogiBtpContext db, ModulesSociete modules, ServicePlanning planning, CancellationToken ct) =>
         {
-            if (!await modules.EstActifAsync("planning", ct)) throw ExceptionMetier.Conflit("MODULE_INACTIF", "Module Planning nécessaire");
+            if (!await modules.EstActifAsync(ModulesFacultatifs.Planning, ct)) throw ExceptionMetier.Conflit("MODULE_INACTIF", "Module Planning nécessaire");
             var o = await OrdreAsync(db, id, ct);
             if (o.ChantierId is null) throw ExceptionMetier.Invalide("EXE_CHANTIER", "Ordre sans chantier");
             var jour = o.Debut ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1));
@@ -91,8 +92,8 @@ public static class LiaisonsBtp
             // Dates prévues de l'ordre : charge ventilée entre elles (mode 3) ; sinon mode 1 avec assez de ressources
             // théoriques pour tenir en quatre semaines (20 jours de 7 h).
             var saisie = o.Fin is DateOnly f && f >= jour
-                ? new TacheSaisie(3, debut, f.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", heures, 1, o.SrvId, "chantier", o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString())
-                : new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 8400d)), o.SrvId, "chantier", o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString());
+                ? new TacheSaisie(3, debut, f.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", heures, 1, o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString())
+                : new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 8400d)), o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString());
             var t = await planning.CreerIdAsync(saisie, Utilisateur.Depuis(http), ct);
             return await planning.TacheAsync(t, ct);
         });
@@ -101,7 +102,7 @@ public static class LiaisonsBtp
         g.MapGet("/ordres/{id:long}/proposition", async (long id, LogiBtpContext db, ModulesSociete modules, CancellationToken ct) =>
         {
             var o = await OrdreAsync(db, id, ct);
-            if (!await modules.EstActifAsync("planning", ct)) return Results.Ok(new { taches = 0 });
+            if (!await modules.EstActifAsync(ModulesFacultatifs.Planning, ct)) return Results.Ok(new { taches = 0 });
             var p = await db.Database.SqlQueryRaw<Periode>("""
                 SELECT min(tac_debut) AS debut, max(tac_fin) AS fin FROM pla_tache WHERE tac_origine_type = 'ordre' AND tac_origine_id = @o
                 """, new NpgsqlParameter("o", id.ToString())).FirstAsync(ct);
@@ -132,7 +133,7 @@ public static class LiaisonsBtp
         g.MapPost("/ordres/{id:long}/planifier-etapes", async (long id, HttpContext http, LogiBtpContext db, ModulesSociete modules, ServicePlanning planning,
             ServiceLiens liens, ServiceEtapes etapes, CancellationToken ct) =>
         {
-            if (!await modules.EstActifAsync("planning", ct)) throw ExceptionMetier.Conflit("MODULE_INACTIF", "Module Planning nécessaire");
+            if (!await modules.EstActifAsync(ModulesFacultatifs.Planning, ct)) throw ExceptionMetier.Conflit("MODULE_INACTIF", "Module Planning nécessaire");
             var u = Utilisateur.Depuis(http);
             var o = await OrdreAsync(db, id, ct);
             if (o.ChantierId is null) throw ExceptionMetier.Invalide("EXE_CHANTIER", "Ordre sans chantier");
@@ -189,12 +190,12 @@ public static class LiaisonsBtp
                 var libelle = $"{o.Numero ?? $"Ordre {id}"} · {e.OreLibelle}";
                 var affs = Affectations(e.OreRessource ?? ressourceOrdre);
                 TacheSaisie saisie;
-                if (e.OreNature == "JALON") saisie = new TacheSaisie(2, debut, debut, null, 1, e.OreSrvId ?? o.SrvId, "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                if (e.OreNature == "JALON") saisie = new TacheSaisie(2, debut, debut, null, 1, e.OreSrvId ?? o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
                 else if (Minutes(e) is int m)
-                    saisie = new TacheSaisie(1, debut, null, m, 1, e.OreSrvId ?? o.SrvId, "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                    saisie = new TacheSaisie(1, debut, null, m, 1, e.OreSrvId ?? o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
                 else
                     saisie = new TacheSaisie(2, debut, jour.AddDays((int)Math.Max(1, Math.Ceiling(e.OreDuree))).ToString("yyyy-MM-dd") + "T00:00", null, 1, e.OreSrvId ?? o.SrvId,
-                        "chantier", o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
+                        TypesFiche.Chantier, o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
                 var tache = await planning.CreerIdAsync(saisie with { Couleur = e.OreCouleur }, u, ct);
                 e.OreTacId = tache;
                 await etapes.LierTacheAsync(id, e.OreCode, tache, ct);
@@ -221,7 +222,7 @@ public static class LiaisonsBtp
         // Heures réalisées d'une tâche du planning : pointages retenus de ses ressources sur son chantier pendant sa période.
         g.MapGet("/taches/{id:long}/realise", async (long id, LogiBtpContext db, ModulesSociete modules, CancellationToken ct) =>
         {
-            if (!await modules.EstActifAsync("pointage", ct)) return Results.Ok(new { minutes = (int?)null });
+            if (!await modules.EstActifAsync(ModulesFacultatifs.Pointage, ct)) return Results.Ok(new { minutes = (int?)null });
             var m = await db.Database.SqlQueryRaw<int?>("""
                 SELECT sum(p.minutes)::int AS "Value"
                 FROM pla_tache t

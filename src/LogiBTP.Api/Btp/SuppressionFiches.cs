@@ -1,3 +1,4 @@
+using LogiBTP.Domaine;
 using LogiBTP.Fiches;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public static class SuppressionFiches
 
     private static readonly Dictionary<string, Usage[]> Usages = new()
     {
-        ["personne"] =
+        [TypesFiche.Personne] =
         [
             new("document(s) dont elle est le tiers", "SELECT count(*)::int AS \"Value\" FROM document WHERE ent_tiers_id = @id"),
             new("intervention(s) dans les projets, affaires, chantiers ou marchés", "SELECT count(*)::int AS \"Value\" FROM intervenant WHERE itv_per_id = @id"),
@@ -25,11 +26,11 @@ public static class SuppressionFiches
             new("règlement(s)", "SELECT count(*)::int AS \"Value\" FROM reglement WHERE reg_tiers_id = @id", "reglement"),
             new("caution(s)", "SELECT count(*)::int AS \"Value\" FROM caution WHERE cau_tiers_id = @id", "caution"),
         ],
-        ["individu"] =
+        [TypesFiche.Individu] =
         [
             new("intervention(s) dans les projets, affaires, chantiers ou marchés", "SELECT count(*)::int AS \"Value\" FROM intervenant WHERE itv_ind_id = @id"),
         ],
-        ["element"] =
+        [TypesFiche.Element] =
         [
             new("ligne(s) de document", "SELECT count(*)::int AS \"Value\" FROM document_ligne WHERE lig_art_id = @id"),
             new("composition(s) d'autres éléments", """
@@ -41,9 +42,9 @@ public static class SuppressionFiches
 
     private static readonly Dictionary<string, (string Sql, string Message)> Protections = new()
     {
-        ["personne"] = ("SELECT count(*)::int AS \"Value\" FROM personne WHERE per_id = @id AND per_societe_base",
+        [TypesFiche.Personne] = ("SELECT count(*)::int AS \"Value\" FROM personne WHERE per_id = @id AND per_societe_base",
             "Fiche de notre société : suppression impossible"),
-        ["individu"] = ("SELECT count(*)::int AS \"Value\" FROM individu WHERE ind_id = @id AND ind_utilisateur IS NOT NULL",
+        [TypesFiche.Individu] = ("SELECT count(*)::int AS \"Value\" FROM individu WHERE ind_id = @id AND ind_utilisateur IS NOT NULL",
             "Individu titulaire d'un compte utilisateur : suppression impossible"),
     };
 

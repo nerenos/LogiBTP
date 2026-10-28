@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { VueGrapheAnnuaire } from '@logibtp/annuaire/ui';
 
@@ -17,9 +18,9 @@ export class PageGraphe extends PageBase {
     if (!depart) {
       const societe = await s.annuaire.societeBase();
       if (!societe) { this.conteneur.innerHTML = '<p class="aide">Aucune fiche : ouvrez le graphe depuis une personne ou un individu.</p>'; return; }
-      depart = { type: 'personne', id: societe.id };
+      depart = { type: TYPE_FICHE.PERSONNE, id: societe.id };
     }
-    const resume = depart.type === 'personne' ? await s.annuaire.personne(depart.id).catch(() => null) : await s.annuaire.individu(depart.id).catch(() => null);
+    const resume = depart.type === TYPE_FICHE.PERSONNE ? await s.annuaire.personne(depart.id).catch(() => null) : await s.annuaire.individu(depart.id).catch(() => null);
     const libelle = resume?.raison_sociale ?? resume?.nom_complet ?? `${depart.type} ${depart.id}`;
     this.titre = `Graphe – ${libelle}`;
     this.conteneur.innerHTML = `<div class="page-graphe"><h1 class="page-titre">🕸️ Relations de ${libelle.replace(/[<&>]/g, '')}</h1><div class="page-graphe-corps graphe-hote"></div></div>`;
@@ -31,7 +32,7 @@ export class PageGraphe extends PageBase {
     const referentiels = await s.annuaire.referentiels();
     this.vue = new VueGrapheAnnuaire(this.conteneur.querySelector('.page-graphe-corps'), {
       annuaire: s.annuaire, depart, referentiels, reglages, message: (t, n) => app.message(t, n),
-      ouvrirFiche: ({ type, id }, e) => app.naviguer(`/fiche/${type}/${id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+      ouvrirFiche: ({ type, id }, e) => app.naviguer(urlFiche(type, id), { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       recentrer: (d, r) => app.naviguer(url(d, r)),
       surReglages: (r) => app.routeur.remplacerUrl(url(depart, r)),
     });

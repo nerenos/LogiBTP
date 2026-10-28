@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { intervenantPropre } from './structure.js';
@@ -47,7 +48,7 @@ export class TableIntervenants {
   #contactsDe(perId) {
     if (!perId) return Promise.resolve([]);
     if (!this.contacts.has(perId)) {
-      this.contacts.set(perId, this.annuaire.pageRattachements('personne', perId, { taille: 100 }).then((p) => p.lignes ?? []).catch(() => []));
+      this.contacts.set(perId, this.annuaire.pageRattachements(TYPE_FICHE.PERSONNE, perId, { taille: 100 }).then((p) => p.lignes ?? []).catch(() => []));
     }
     return this.contacts.get(perId);
   }
@@ -72,8 +73,8 @@ export class TableIntervenants {
   #ligne(x, i) {
     const f = this.fonction(x.fonction);
     const fixe = this.fixe && i === 0 && x.fonction === this.fixe;
-    const lienTiers = x.per_id ? `<a href="/fiche/personne/${Number(x.per_id)}" title="Ouvrir la fiche du tiers">${echapper(x.tiers ?? `Tiers ${x.per_id}`)}</a>` : '—';
-    const lienContact = x.ind_id ? `<a href="/fiche/individu/${Number(x.ind_id)}" title="Ouvrir la fiche du contact">${echapper(x.contact ?? `Contact ${x.ind_id}`)}</a>` : '—';
+    const lienTiers = x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="Ouvrir la fiche du tiers">${echapper(x.tiers ?? `Tiers ${x.per_id}`)}</a>` : '—';
+    const lienContact = x.ind_id ? `<a href="${urlFiche(TYPE_FICHE.INDIVIDU, Number(x.ind_id))}" title="Ouvrir la fiche du contact">${echapper(x.contact ?? `Contact ${x.ind_id}`)}</a>` : '—';
     const paiement = f?.paiement_direct
       ? (this.lecture
         ? (x.paiement_direct ? 'Oui' : 'Non')
@@ -86,7 +87,7 @@ export class TableIntervenants {
     return `<tr data-i="${i}">
       <td><select data-champ="fonction" ${fixe ? 'disabled' : ''}>${this.fonctionsProposees(x.fonction).map((y) => `<option value="${y.code}" ${y.code === x.fonction ? 'selected' : ''}>${echapper(y.libelle)}</option>`).join('')}</select></td>
       <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
-        ${x.per_id ? `<a href="/fiche/personne/${Number(x.per_id)}" title="Ouvrir la fiche du tiers">↗</a>` : ''}
+        ${x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="Ouvrir la fiche du tiers">↗</a>` : ''}
         ${fixe && this.tiersFige && x.per_id ? '' : '<button type="button" data-nouveau-tiers title="Nouveau tiers (provisoire), après contrôle des doublons">＋</button>'}</td>
       <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
       <td class="coordonnees"></td>

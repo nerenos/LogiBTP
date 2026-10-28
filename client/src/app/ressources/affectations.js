@@ -1,8 +1,9 @@
 // Affectations d'un matériel (lot 5b des demandes du 25/10/2026), répliquées dans ReglesAffectations.cs (jeu
 // tests/ressources/04_affectations.json) : une affectation datée (du, au facultatif = en cours) à un salarié, un
 // intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; une seule à la fois.
+import { TYPE_RESSOURCE } from '../codes.js';
 
-export const TYPES_AFFECTATION = ['SALARIE', 'INTERIM', 'SOUS_TRAITANT', 'MATERIEL'];
+export const TYPES_AFFECTATION = Object.values(TYPE_RESSOURCE);
 
 export const LIBELLES_AFFECTATION = { SALARIE: 'Salarié', INTERIM: 'Intérimaire', SOUS_TRAITANT: 'Sous-traitant', MATERIEL: 'Matériel (porteur)' };
 

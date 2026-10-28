@@ -1,3 +1,4 @@
+import { urlDocument, urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
 import { PanneauArbres } from '@logibtp/bibliotheque/ui';
@@ -34,7 +35,7 @@ function creationDepuisVue(vue, app, themes = []) {
   if (source === 'individus') return { libelle: '＋ Individu', action: () => app.naviguer('/fiche/individu/nouveau') };
   const type = { salaries: 'salarie', materiels: 'materiel' }[source];
   if (!type) return null;
-  return { libelle: type === 'salarie' ? '＋ Salarié' : '＋ Matériel', action: () => app.naviguer(`/fiche/${type}/nouveau`) };
+  return { libelle: type === TYPE_FICHE.SALARIE ? '＋ Salarié' : '＋ Matériel', action: () => app.naviguer(`/fiche/${type}/nouveau`) };
 }
 
 /** Fiche de chaque source de liste (thèmes d'un seul type de fiche). */
@@ -57,9 +58,9 @@ function actionsDepuisVue(vue, app, services, themes = []) {
       copier: async (l) => {
         const rep = await api.copier(l._id);
         const id = rep.document?.ent_id ?? rep.ent_id;
-        app.publier('enregistre', { ids: [id], cree: true });
+        app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [id], cree: true });
         app.message(`Copie créée : ${rep.document?.ent_numero ?? ''}`, 'succes');
-        await app.naviguer(`/document/${id}`);
+        await app.naviguer(urlDocument(id));
       },
       supprimer: app.estAdmin() ? (l) => api.supprimerDocument(l._id) : null,
       // Transformation d'un document validé (même fenêtre de choix que la page document) ; le document créé s'ouvre.
@@ -69,9 +70,9 @@ function actionsDepuisVue(vue, app, services, themes = []) {
         action: async ([l], e) => {
           const cree = await transformerDocument({ entId: l._id, typeCode: l._type, numero: l.numero, objet: l.objet, message: (t, n) => app.message(t, n) });
           if (!cree) return;
-          app.publier('enregistre', { ids: [cree.ent_id], cree: true });
+          app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [cree.ent_id], cree: true });
           app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé`, 'succes');
-          await app.naviguer(`/document/${cree.ent_id}`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) });
+          await app.naviguer(urlDocument(cree.ent_id), { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) });
         },
       }],
     };
@@ -79,17 +80,17 @@ function actionsDepuisVue(vue, app, services, themes = []) {
   const type = FICHE_PAR_SOURCE[source];
   if (!type || (theme?.thl_types?.length ?? 0) > 1) return null;
   // Bibliothèque, module Stock actif : marquage en masse des articles sélectionnés.
-  const marquer = type === 'element' && app.moduleActif('stock') ? [{
+  const marquer = type === TYPE_FICHE.ELEMENT && app.moduleActif(MODULE_FACULTATIF.STOCK) ? [{
     code: 'marquer', icone: '🏷', libelle: 'Marquer', titre: 'Ajouter ou retirer des marques (listes rapides du stock) aux articles sélectionnés',
     actif: (lignes) => lignes.length > 0,
     action: async (lignes) => {
       const n = await marquerArticles(lignes.map((l) => Number(l._id)));
-      if (n !== null) { app.message(`${n} article(s) marqué(s)`, 'succes'); app.publier('enregistre', { ids: lignes.map((l) => l._id) }); }
+      if (n !== null) { app.message(`${n} article(s) marqué(s)`, 'succes'); app.publier(SUJET_FENETRE.ENREGISTRE, { ids: lignes.map((l) => l._id) }); }
     },
   }] : [];
   return {
     consulter,
-    copier: (l, e) => app.naviguer(`/fiche/${type}/${l._id}?copie=1`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+    copier: (l, e) => app.naviguer(`${urlFiche(type, l._id)}?copie=1`, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
     supprimer: app.estAdmin() ? (l) => services.fiche.supprimer(type, l._id) : null,
     ...(marquer.length ? { autres: marquer } : {}),
   };
@@ -166,8 +167,8 @@ export class PageListe extends PageBase {
     if (this.params.theme) this.liste.theme = this.params.theme;
     // Fiche enregistrée dans cette fenêtre ou dans une autre : rafraîchissement ciblé des lignes.
     this.desabonner = [
-      app.abonner('enregistre', ({ ids, cree }) => (cree ? this.liste.verifier() : this.liste.rafraichirLignes(ids)).catch(() => {})),
-      app.abonner('themes', () => this.liste.chargerThemes().then(() => this.liste.chargerVues()).catch(() => {})),
+      app.abonner(SUJET_FENETRE.ENREGISTRE, ({ ids, cree }) => (cree ? this.liste.verifier() : this.liste.rafraichirLignes(ids)).catch(() => {})),
+      app.abonner(SUJET_FENETRE.THEMES, () => this.liste.chargerThemes().then(() => this.liste.chargerVues()).catch(() => {})),
     ];
     await this.liste.demarrer(this.requete.vue ? Number(this.requete.vue) : null);
   }

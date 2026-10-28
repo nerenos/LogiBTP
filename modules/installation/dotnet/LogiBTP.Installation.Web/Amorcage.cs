@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -25,15 +26,15 @@ public static class Amorcage
         {
             http.Response.Headers.ContentSecurityPolicy = ClientWeb.Csp;
             http.Response.Headers.CacheControl = "no-cache";
-            return Results.Content(Page(d, c["LOGIBTP_DOMAINE"], s.Value), "text/html; charset=utf-8");
+            return Results.Content(Page(d, c[VariablesEnv.Domaine], s.Value), "text/html; charset=utf-8");
         });
         routes.MapGet("/certificat/logibtp-racine.cer", (DossierCertificats d) =>
             d.LireRacine() is { } r ? Results.File(r.RawData, "application/pkix-cert", "logibtp-racine.cer") : Results.NotFound());
         routes.MapGet("/certificat/Installer-Certificat-LogiBTP.ps1", (DossierCertificats d, IConfiguration c) =>
-            d.LireRacine() is { } r ? Results.File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(AutoriteCertificats.ScriptPostes(r, c["LOGIBTP_DOMAINE"] ?? ""))).ToArray(),
+            d.LireRacine() is { } r ? Results.File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(AutoriteCertificats.ScriptPostes(r, c[VariablesEnv.Domaine] ?? ""))).ToArray(),
                 "text/plain; charset=utf-8", "Installer-Certificat-LogiBTP.ps1") : Results.NotFound());
         routes.MapGet("/certificat/logibtp.mobileconfig", (DossierCertificats d, IConfiguration c) =>
-            d.LireRacine() is { } r ? Results.File(Encoding.UTF8.GetBytes(AutoriteCertificats.ProfilApple(r, c["LOGIBTP_DOMAINE"] ?? "")),
+            d.LireRacine() is { } r ? Results.File(Encoding.UTF8.GetBytes(AutoriteCertificats.ProfilApple(r, c[VariablesEnv.Domaine] ?? "")),
                 "application/x-apple-aspen-config", "logibtp.mobileconfig") : Results.NotFound());
         return routes;
     }

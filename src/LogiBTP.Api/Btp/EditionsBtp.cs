@@ -89,7 +89,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var modele = preparation.Modele["code"]?.GetValue<string>() ?? "";
         var depot = await ged.DeposerFichier(fichier, new MetaDepot
         {
-            Titre = preparation.Element, Categorie = "edition", TypeElement = d.TydCode, IdElement = element, Auteur = u.Code,
+            Titre = preparation.Element, Categorie = CategoriesGed.Edition, TypeElement = d.TydCode, IdElement = element, Auteur = u.Code,
             DateDocument = d.EntDate.ToString("yyyy-MM-dd"), Confidentialite = preparation.Modele["niveau_acces"]?.GetValue<string>() ?? "INTERNE",
             Resume = $"Édition « {preparation.Modele["libelle"]?.GetValue<string>()} » ({tache.EttMotif.ToLowerInvariant()}), {pdf.Pages} page(s)",
             MotsCles = ["edition", modele.ToLowerInvariant()],
@@ -118,7 +118,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
     {
         var res = new Dictionary<string, RessourceEdition>();
         var gedDb = services.GetRequiredService<GedDbContext>();
-        var candidats = await gedDb.Documents.AsNoTracking().Where(x => x.DgeCategorie == "ressource_edition" && !x.DgeSupprime)
+        var candidats = await gedDb.Documents.AsNoTracking().Where(x => x.DgeCategorie == CategoriesGed.RessourceEdition && !x.DgeSupprime)
             .OrderByDescending(x => x.DgeCreeLe).ThenByDescending(x => x.DgeId).ToListAsync(ct);
         var ged = services.GetRequiredService<ServiceGed>();
         var pool = services.GetRequiredService<PoolMoteursEdition>();
@@ -150,7 +150,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         };
         await services.GetRequiredService<ServiceGed>().DeposerFichier(fichier, new MetaDepot
         {
-            Titre = code, Categorie = "ressource_edition", MotsCles = [code], Resume = "Image des éditions importée avec un modèle", Auteur = u.Code,
+            Titre = code, Categorie = CategoriesGed.RessourceEdition, MotsCles = [code], Resume = "Image des éditions importée avec un modèle", Auteur = u.Code,
         }, u, ct);
         return true;
     }
@@ -215,7 +215,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
     /// </summary>
     private static async Task<JsonNode?> MarcheSousTraitanceAsync(LogiBtpContext db, JsonObject donnees, CancellationToken ct)
     {
-        if (donnees["fiche"]?["type"]?.GetValue<string>() != "marche" || !int.TryParse(donnees["fiche"]?["id"]?.ToString(), out var id)) return null;
+        if (donnees["fiche"]?["type"]?.GetValue<string>() != TypesFiche.Marche || !int.TryParse(donnees["fiche"]?["id"]?.ToString(), out var id)) return null;
         var m = await db.Database.SqlQueryRaw<LigneMarcheEdition>("""
             SELECT m.mar_id AS id, m.mar_code AS code, m.mar_libelle AS libelle, m.mar_sens AS sens, m.mar_nature AS nature, m.mar_montant_ht AS montant_ht,
                    m.mar_montant_agree AS montant_agree, m.mar_garantie AS garantie, m.mar_autoliquidation AS autoliquidation, m.mar_retenue_pct AS retenue_pct,
@@ -279,7 +279,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
     {
         var ged = services.GetRequiredService<GedDbContext>();
         var doc = await ged.Documents.AsNoTracking()
-            .Where(x => x.DgeCategorie == "edition" && x.DgeTypeElement == type && x.DgeIdElement == element && !x.DgeSupprime)
+            .Where(x => x.DgeCategorie == CategoriesGed.Edition && x.DgeTypeElement == type && x.DgeIdElement == element && !x.DgeSupprime)
             .OrderByDescending(x => x.DgeCreeLe).ThenByDescending(x => x.DgeId).FirstOrDefaultAsync(ct);
         if (doc is null) return null;
         var version = await ged.Versions.AsNoTracking().Where(v => v.VgeDocument == doc.DgeId).OrderByDescending(v => v.VgeNumero).FirstAsync(ct);

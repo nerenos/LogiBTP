@@ -58,7 +58,7 @@ public static class EntretiensMateriel
         var designation = await db.Database.SqlQueryRaw<string>("SELECT mat_code || ' ' || mat_designation AS \"Value\" FROM materiel WHERE mat_id = @m",
             new NpgsqlParameter("m", materiel)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable("Matériel");
         var chantier = await CoutsMateriel.ChantierMaterielAsync(db, materiel, ct);
-        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == "E_ENT").Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == TypesDocument.EEnt).Select(t => t.TydId).FirstAsync(ct);
         var objet = string.IsNullOrWhiteSpace(n.Objet) ? $"Entretien {designation}" : n.Objet.Trim();
         var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntObjet = objet.Length > 200 ? objet[..200] : objet }, u, ct);
         var c = await documents.Charger(cree.Document.EntId, ct);

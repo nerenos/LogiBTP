@@ -97,7 +97,7 @@ public static class Acomptes
         if (montant <= 0) throw ExceptionMetier.Invalide("ACOMPTE", "Montant du marché nul : saisir un montant");
         var libelle = string.IsNullOrWhiteSpace(d.Libelle) ? $"Acompte n° {m.Rang} – marché {m.Code}" : d.Libelle.Trim();
 
-        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == "V_DEMANDE_ACOMPTE").Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == TypesDocument.VDemandeAcompte).Select(t => t.TydId).FirstAsync(ct);
         var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntTiersId = m.Tiers, EntObjet = libelle }, u, ct);
         var c = await documents.Charger(cree.Document.EntId, ct);
         c.Document.EntMarcheId = marche;

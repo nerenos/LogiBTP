@@ -1,3 +1,4 @@
+import { urlFiche, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, htmlSur, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
@@ -45,7 +46,7 @@ export class PageNoteCrm extends PageBase {
     this.liens = this.detail.liens;
     this.titre = this.detail.note.objet;
     this.modifie = false;
-    if (this.detail.note.non_lue) api.crm.lue(id).then(() => this.app.publier('crm', {})).catch(() => {});
+    if (this.detail.note.non_lue) api.crm.lue(id).then(() => this.app.publier(SUJET_FENETRE.CRM, {})).catch(() => {});
   }
 
   /** Éléments rattachés d'une nouvelle note, décrits par le serveur (libellé, page, icône). */
@@ -151,7 +152,7 @@ export class PageNoteCrm extends PageBase {
       try {
         await api.crm.supprimer(this.detail.note.id);
         this.modifie = false;
-        this.app.publier('crm', {});
+        this.app.publier(SUJET_FENETRE.CRM, {});
         this.app.message('Note supprimée', 'succes');
         this.app.routeur.retour('/crm');
       } catch (e) { this.app.erreur(e); }
@@ -184,7 +185,7 @@ export class PageNoteCrm extends PageBase {
     const ajouter = (t, id, libelle, url = null) => {
       if (this.liens.some((l) => l.type === t && String(l.id) === String(id))) return;
       const def = this.ctx.types_elements.find((x) => x.code === t);
-      this.liens.push({ type: t, id: String(id), libelle, icone: def?.icone, url: url ?? `/fiche/${t}/${id}` });
+      this.liens.push({ type: t, id: String(id), libelle, icone: def?.icone, url: url ?? urlFiche(t, id) });
       maj();
     };
     const chercher = async () => {
@@ -251,7 +252,7 @@ export class PageNoteCrm extends PageBase {
     const pour = creerCombo({ options: this.individus, valeur: this.ctx.individu_id ?? '', titre: 'Pour qui (vide : pour moi)' });
     zone.querySelector('[data-pour]').replaceWith(pour);
     const appliquer = async (f) => {
-      try { this.detail.rappels = await f(); this.app.publier('crm', { rappels: true }); this.rendreRappels(); } catch (e) { this.app.erreur(e); }
+      try { this.detail.rappels = await f(); this.app.publier(SUJET_FENETRE.CRM, { rappels: true }); this.rendreRappels(); } catch (e) { this.app.erreur(e); }
     };
     zone.querySelector('[data-ajouter-rappel]').addEventListener('click', () => {
       const r = { type: type.valeurCombo, quand: depuisChampDate(quand.value), delai_jours: delai.value === '' ? null : Number(delai.value), ind_id: pour.valeurCombo === '' ? null : Number(pour.valeurCombo) };
@@ -286,7 +287,7 @@ export class PageNoteCrm extends PageBase {
       this.titre = this.detail.note.objet;
       this.modifie = false;
       if (nouveau) this.app.routeur.remplacerUrl(`/crm/note/${this.detail.note.id}`);
-      this.app.publier('crm', { id: this.detail.note.id });
+      this.app.publier(SUJET_FENETRE.CRM, { id: this.detail.note.id });
       this.app.message('Note enregistrée', 'succes');
       this.rendre();
     } catch (e) { this.app.erreur(e); }
@@ -299,7 +300,7 @@ export class PageNoteCrm extends PageBase {
       this.saisie = saisieDeNote(this.detail);
       this.liens = this.detail.liens;
       this.modifie = false;
-      this.app.publier('crm', { id: this.detail.note.id });
+      this.app.publier(SUJET_FENETRE.CRM, { id: this.detail.note.id });
       this.app.message(texte, 'succes');
       this.rendre();
     } catch (e) { this.app.erreur(e); }

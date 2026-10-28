@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, urlDocument, MODULE_FACULTATIF } from '../codes.js';
 import { GESTION_ELEMENT } from '@logibtp/bibliotheque';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
@@ -186,7 +187,7 @@ export class FicheElement extends FicheLogiBTP {
         ? [{ code: 'composition', titre: 'Composition', champs: ['composition'], rendre: (corps, { modifiable }) => this.#composition(corps, modifiable).catch((e) => this.message(e.message, 'erreur')) }]
         : [{ code: 'tarifs', titre: 'Tarifs fournisseurs', rendre: (corps, { modifiable }) => new OngletTarifs(corps, this.#contexte(modifiable)) }]),
       // Module Stock : quantités par lieu, valorisation, PMP, emplacements, mouvements (article géré en stock).
-      ...(this.id !== null && this.valeur('gestion') === GESTION_ELEMENT.STOCK && this.valeur('type') === 'ARTICLE' && this.moduleActif('stock')
+      ...(this.id !== null && this.valeur('gestion') === GESTION_ELEMENT.STOCK && this.valeur('type') === 'ARTICLE' && this.moduleActif(MODULE_FACULTATIF.STOCK)
         ? [{ code: 'stock', titre: 'Stock', rendre: (corps) => rendreStockArticle(corps, { id: Number(this.id), message: this.message, naviguer: (url, e) => this.ouvrirUrl(url, e) })
           .catch((e) => { corps.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; }) }]
         : []),
@@ -212,7 +213,7 @@ export class FicheElement extends FicheLogiBTP {
     const filtre = { periode: '365', encours: false };
     corps.innerHTML = `<div class="element-utilisations"><h3>Ouvrages et ensembles qui l'utilisent</h3>
       ${composes.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Quantité</th><th>U.</th></tr></thead><tbody>
-        ${composes.map((c) => `<tr><td>${icone[c.type] ?? ''}</td><td><a href="/fiche/element/${c.id}">${echapper(c.bib_code)}:${echapper(c.code)}</a></td>
+        ${composes.map((c) => `<tr><td>${icone[c.type] ?? ''}</td><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, c.id)}">${echapper(c.bib_code)}:${echapper(c.code)}</a></td>
           <td>${echapper(c.libelle ?? '')}</td><td class="nombre">${c.quantite !== null && c.quantite !== undefined ? formatNombre(c.quantite, 4) : ''}</td><td>${echapper(c.unite ?? '')}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Utilisé dans aucun ouvrage ni ensemble.</p>'}
       ${this.valeur('type') === 'ARTICLE' ? `<div class="titre-actions"><h3>Achats</h3><span class="titre-actions-boutons"><span data-periode></span>
@@ -224,7 +225,7 @@ export class FicheElement extends FicheLogiBTP {
       const l = await api.achatsElement(id, { du, encours: filtre.encours });
       zone.innerHTML = l.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Pièce</th><th>Type</th><th>Fournisseur</th><th>Statut</th>
           <th>Qté</th><th>U.</th><th>PU HT</th><th>Montant HT</th><th></th></tr></thead><tbody>
-        ${l.map((a) => `<tr><td>${jour(a.date)}</td><td><a href="/document/${a.ent_id}">${echapper(a.numero ?? 'Brouillon')}</a></td><td>${echapper(a.type)}</td>
+        ${l.map((a) => `<tr><td>${jour(a.date)}</td><td><a href="${urlDocument(a.ent_id)}">${echapper(a.numero ?? 'Brouillon')}</a></td><td>${echapper(a.type)}</td>
           <td>${echapper(a.tiers ?? '')}</td><td>${echapper(a.statut)}</td><td class="nombre">${formatNombre(a.qte ?? 0, 2)}</td><td>${echapper(a.unite ?? '')}</td>
           <td class="nombre">${prix(a.pu)}</td><td class="nombre">${formatNombre(a.montant ?? 0, 2)}</td><td>${a.en_cours ? '<span class="pastille-compte attention">En cours</span>' : a.solde ? '<span class="pastille-compte neutre">Soldée</span>' : ''}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune ligne d\'achat sur la période.</p>';
@@ -359,7 +360,7 @@ export class FicheElement extends FicheLogiBTP {
   async #imageNotices(corps, modifiable) {
     const ged = this.services.ged;
     if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez l\'élément pour lui associer une image et des notices techniques.</p>'; return; }
-    const docs = await ged.lister({ type_element: 'element', id_element: String(this.id) });
+    const docs = await ged.lister({ type_element: TYPE_FICHE.ELEMENT, id_element: String(this.id) });
     const images = docs.filter((d) => d.version?.type_mime?.startsWith('image/'));
     const notices = docs.filter((d) => d.categorie === 'notice_technique');
     const choisie = Number(this.valeur('image_ged')) || null;
@@ -398,7 +399,7 @@ export class FicheElement extends FicheLogiBTP {
       try {
         await ged.deposer({
           fichier, meta: {
-            titre: fichier.name.replace(/\.[^.]+$/, ''), categorie: genre === 'image' ? 'photo' : 'notice_technique', type_element: 'element', id_element: String(this.id),
+            titre: fichier.name.replace(/\.[^.]+$/, ''), categorie: genre === 'image' ? 'photo' : 'notice_technique', type_element: TYPE_FICHE.ELEMENT, id_element: String(this.id),
             date_document: aujourdhui(), auteur: this.utilisateur,
           },
         });

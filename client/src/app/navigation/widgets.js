@@ -1,5 +1,6 @@
 // Widgets de l'accueil (cœur) : données lues par les fournisseurs des modules (listes : comptes par segment et
 // premiers lots, appliqués par la base ; GED).
+import { MODULE_FACULTATIF } from '../codes.js';
 import { formatDate, formatDateHeure } from '@logibtp/socle/ui';
 
 import { api } from '../api.js';
@@ -15,7 +16,7 @@ export function catalogueWidgets(app) {
   // Widgets d'un module désactivé (propriété module) retirés du catalogue.
   return [
     {
-      code: 'crm-rappels', type: 'alertes', titre: 'Mes rappels', icone: '⏰', taille: 'moyen', url: '/crm/rappels', module: 'crm',
+      code: 'crm-rappels', type: 'alertes', titre: 'Mes rappels', icone: '⏰', taille: 'moyen', url: '/crm/rappels', module: MODULE_FACULTATIF.CRM,
       description: 'Rappels du suivi (CRM) arrivés dans leur délai : rouge échu ou imminent, orange bientôt, vert à venir',
       charger: async () => {
         const rappels = await api.crm.rappels();

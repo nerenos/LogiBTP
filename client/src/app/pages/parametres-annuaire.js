@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { GestionReferentielsAnnuaire } from '@logibtp/annuaire/ui';
 import { TYPES_FICHE } from '../fiches/definitions.js';
@@ -30,7 +31,7 @@ export class PageNotreSociete extends PageBase {
     const s = await app.services();
     const societe = await s.annuaire.societeBase();
     if (societe) {
-      setTimeout(() => app.naviguer(`/fiche/personne/${societe.id}`, { remplacer: true }), 0);
+      setTimeout(() => app.naviguer(urlFiche(TYPE_FICHE.PERSONNE, societe.id), { remplacer: true }), 0);
       this.conteneur.innerHTML = '<p class="aide">Ouverture de la fiche de la société…</p>';
       return;
     }

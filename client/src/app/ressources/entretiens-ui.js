@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -23,7 +24,7 @@ export async function rendreEntretienOrdre(zone, { app, entId }) {
     const m = d.materiel;
     const unites = unitesCompteurs(m.compteurs);
     const r = d.releve ?? {};
-    zone.innerHTML = `<p><a href="/fiche/materiel/${m.id}">🚜 ${echapper(m.code)} ${echapper(m.designation)}</a>
+    zone.innerHTML = `<p><a href="${urlFiche(TYPE_FICHE.MATERIEL, m.id)}">🚜 ${echapper(m.code)} ${echapper(m.designation)}</a>
         <span class="aide">${unites.includes('H') ? `${formatNombre(m.heures ?? 0, 0)} h` : ''} ${unites.includes('KM') && m.kilometres != null ? `· ${formatNombre(m.kilometres, 0)} km` : ''}</span></p>
       <div class="formulaire-compact"><label>Nature <span data-nature></span></label>
       ${unites.length ? `<label>Compteur à l'intervention <input type="date" data-c="date" value="${echapper(r.date ? String(r.date).slice(0, 10) : '')}">
@@ -79,7 +80,7 @@ export async function creerOrdreEntretien(app, materiel, valeurs) {
   if (!n) return false;
   try {
     const { ent_id: id } = await api.ressources.creerOrdreEntretien(materiel, n);
-    app.naviguer(`/document/${id}`, { nouvelleFenetre: true });
+    app.naviguer(urlDocument(id), { nouvelleFenetre: true });
     return true;
   } catch (e) { app.erreur(e); return false; }
 }
@@ -88,7 +89,7 @@ export async function creerOrdreEntretien(app, materiel, valeurs) {
 export function tableauOrdres(ordres) {
   if (!ordres.length) return '<p class="aide">Aucun ordre d\'entretien.</p>';
   return `<table class="tableau-compact largeur-contenu"><thead><tr><th>Ordre</th><th>Date</th><th>Objet</th><th>Nature</th><th>État</th><th>Statut</th></tr></thead><tbody>
-    ${ordres.map((o) => `<tr><td><a href="/document/${o.id}">${echapper(o.numero ?? 'Brouillon')}</a></td><td>${jour(o.date)}</td><td>${echapper(o.objet ?? '')}</td>
+    ${ordres.map((o) => `<tr><td><a href="${urlDocument(o.id)}">${echapper(o.numero ?? 'Brouillon')}</a></td><td>${jour(o.date)}</td><td>${echapper(o.objet ?? '')}</td>
       <td>${echapper(NATURES_ENTRETIEN[o.nature] ?? '')}</td><td>${o.etat ? `${ETATS_EXECUTION[o.etat]?.icone ?? ''} ${echapper(ETATS_EXECUTION[o.etat]?.libelle ?? o.etat)}` : ''}</td><td>${echapper(o.statut ?? '')}</td></tr>`).join('')}</tbody></table>`;
 }
 
@@ -117,7 +118,7 @@ function criteres(e) {
 export function tableauEcheances(l, { materiel = false, actions = false } = {}) {
   if (!l.length) return `<p class="aide">${materiel ? 'Aucun entretien en retard ni à prévoir dans ce délai.' : 'Aucun plan d\'entretien.'}</p>`;
   return `<table class="tableau-compact largeur-contenu"><thead><tr>${materiel ? '<th>Matériel</th>' : ''}<th>Plan</th><th>Périodicité</th><th>Dernier</th><th>Échéance</th><th>État</th>${actions ? '<th></th>' : ''}</tr></thead><tbody>
-    ${l.map((x, i) => `<tr>${materiel ? `<td><a href="/fiche/materiel/${x.materiel_id}">🚜 ${echapper(x.materiel_code)} ${echapper(x.designation ?? '')}</a></td>` : ''}
+    ${l.map((x, i) => `<tr>${materiel ? `<td><a href="${urlFiche(TYPE_FICHE.MATERIEL, x.materiel_id)}">🚜 ${echapper(x.materiel_code)} ${echapper(x.designation ?? '')}</a></td>` : ''}
       <td>${echapper(x.libelle ?? x.code)} <small class="aide">${echapper(x.code)} · ${echapper(ORIGINES_PLAN[x.origine] ?? '')}</small></td>
       <td>${periodicite(x)}</td><td>${x.dernier_le ? jour(x.dernier_le) : '<span class="aide">jamais</span>'}</td>
       <td>${criteres(x.echeance)}</td><td>${pastilleEcheance(x.echeance.etat)}</td>

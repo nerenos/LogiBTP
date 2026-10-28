@@ -1,3 +1,4 @@
+import { TYPE_DOCUMENT } from '../codes.js';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
@@ -6,7 +7,6 @@ import { api } from '../api.js';
 // ou plusieurs sous-traitants (un document du même lot de consultation chacun) ou commande à un seul sous-traitant.
 // Le serveur transforme le document (POST /api/structure/documents/{id}/sous-traiter) ; le premier créé s'ouvre.
 
-export const TYPES_SOUS_TRAITABLES = ['V_COMMANDE', 'V_DEVIS', 'E_OST', 'E_DAC'];
 
 /** Fenêtre de l'assistant ; rend les identifiants créés (null si abandon). */
 export async function sousTraiter({ entId, selection = [], message }) {
@@ -25,10 +25,10 @@ export async function sousTraiter({ entId, selection = [], message }) {
     </div>
     <p class="ligne"><button type="button" class="principal" data-creer>Créer</button> <button value="annuler">Annuler</button></p></form>`;
   document.body.append(dlg);
-  const cible = creerCombo({ vide: false, valeur: 'T_AO', options: [{ valeur: 'T_AO', libelle: 'Appel d\'offres de sous-traitance' }, { valeur: 'T_COMMANDE', libelle: 'Commande de sous-traitance' }] });
+  const cible = creerCombo({ vide: false, valeur: TYPE_DOCUMENT.T_AO, options: [{ valeur: TYPE_DOCUMENT.T_AO, libelle: 'Appel d\'offres de sous-traitance' }, { valeur: TYPE_DOCUMENT.T_COMMANDE, libelle: 'Commande de sous-traitance' }] });
   dlg.querySelector('[data-cible]').replaceWith(cible);
   const aide = () => {
-    dlg.querySelector('[data-aide]').textContent = cible.resoudre() === 'T_AO'
+    dlg.querySelector('[data-aide]').textContent = cible.resoudre() === TYPE_DOCUMENT.T_AO
       ? 'Un appel d\'offres par sous-traitant coché, dans le même lot de consultation (comparatif des offres).'
       : 'Une commande pour un seul sous-traitant ; elle se valide dans un marché de sous-traitance.';
   };
@@ -44,7 +44,7 @@ export async function sousTraiter({ entId, selection = [], message }) {
     dlg.querySelector('[data-creer]').addEventListener('click', async () => {
       const type = cible.resoudre();
       const sts = [...dlg.querySelectorAll('[data-liste] input:checked')].map((c) => Number(c.value));
-      if (type === 'T_COMMANDE' && sts.length > 1) { message('Une commande de sous-traitance va à un seul sous-traitant', 'erreur'); return; }
+      if (type === TYPE_DOCUMENT.T_COMMANDE && sts.length > 1) { message('Une commande de sous-traitance va à un seul sous-traitant', 'erreur'); return; }
       const lignes = dlg.querySelector('input[name="portee"]:checked')?.value === 'selection' ? selection : [];
       try {
         const r = await api.sousTraiter(entId, { cible: type, lignes, sous_traitants: sts });

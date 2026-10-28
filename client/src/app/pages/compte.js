@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { controlerMotDePasse, MESSAGES_AUTH } from '@logibtp/authentification';
@@ -22,7 +23,7 @@ export class PageCompte extends PageBase {
     }
     this.politique = await api.auth.politique().catch(() => ({ longueur_min: 12, courants: [] }));
     // Photo de l'individu du compte (fiche de l'annuaire), affichée dans la carte Session une fois lue.
-    if (s.type_element === 'individu' && s.id_element) {
+    if (s.type_element === TYPE_FICHE.INDIVIDU && s.id_element) {
       app.services().then((sv) => urlPhotoIndividu(sv.fiche, sv.ged, s.id_element)).then((url) => {
         const z = this.conteneur.querySelector('[data-photo]');
         if (z && url) z.innerHTML = vignette(url);

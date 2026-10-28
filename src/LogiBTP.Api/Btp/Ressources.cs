@@ -1,4 +1,5 @@
 using LogiBTP.Domaine.Ressources;
+using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -20,7 +21,7 @@ public sealed record NatureService(int Id, int? SrvId);
 /// </summary>
 public static class Ressources
 {
-    private static readonly HashSet<string> Elements = ["salarie", "materiel"];
+    private static readonly HashSet<string> Elements = [TypesFiche.Salarie, TypesFiche.Materiel];
     private static readonly HashSet<string> Categories = ["CACES", "HAUTEUR", "ELECTRIQUE", "SECURITE", "MEDICAL", "CONTROLE", "AUTRE"];
     private static readonly HashSet<string> Concernes = ["SALARIE", "MATERIEL", "LES_DEUX"];
     private static readonly HashSet<string> Domaines = ["BLOCAGE", "NON_CONFORMITE", "ECART_PLANNING", "AUTRE"];
@@ -80,7 +81,7 @@ public static class Ressources
     public static async Task EnregistrerHabilitationsAsync(LogiBtpContext db, string element, int id, List<HabilitationSaisie> liste, Utilisateur u, CancellationToken ct)
     {
         if (!Elements.Contains(element)) throw ExceptionMetier.Invalide("ELEMENT", $"Élément inconnu : {element}");
-        var table = element == "salarie" ? "SELECT count(*)::int AS \"Value\" FROM salarie WHERE sal_id = @i" : "SELECT count(*)::int AS \"Value\" FROM materiel WHERE mat_id = @i";
+        var table = element == TypesFiche.Salarie ? "SELECT count(*)::int AS \"Value\" FROM salarie WHERE sal_id = @i" : "SELECT count(*)::int AS \"Value\" FROM materiel WHERE mat_id = @i";
         if (await db.Database.SqlQueryRaw<int>(table, P("i", id)).FirstAsync(ct) == 0) throw ExceptionMetier.Introuvable($"{element} {id}");
         var types = await TypesAsync(db, ct);
         var erreurs = liste.Select((h, i) => new { i, codes = ReglesRessources.Controler(new HabilitationEvaluee(h.Code, h.ObtenueLe, h.ValideJusquAu), types, element) })

@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper, formatNombre, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
 import { prixNetTarif } from '@logibtp/bibliotheque';
 import { lireCsvTarifs, modeleCsvTarifs, COLONNES_TARIFS } from './import-tarifs.js';
@@ -33,7 +34,7 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
   let elementsTrouves = [];
   const rendre = () => {
     const ligne = (t, i) => `<tr data-i="${i}">
-      <td>${t.id ? `<a href="/fiche/element/${t.ele_id}" data-element="${t.ele_id}"><b>${echapper(t.bib_code ?? '')}:${echapper(t.code ?? '')}</b></a><br><small>${echapper(t.element ?? '')}</small>`
+      <td>${t.id ? `<a href="${urlFiche(TYPE_FICHE.ELEMENT, t.ele_id)}" data-element="${t.ele_id}"><b>${echapper(t.bib_code ?? '')}:${echapper(t.code ?? '')}</b></a><br><small>${echapper(t.element ?? '')}</small>`
         : `<input data-c="recherche" list="tarifs-elements" size="22" placeholder="Élément : code, libellé, code-barres…" value="${echapper(t.recherche ?? '')}">`}</td>
       <td><input data-c="reference" value="${echapper(t.reference ?? '')}" size="9"></td>
       <td><input data-c="libelle" value="${echapper(t.libelle ?? '')}" size="18"></td>

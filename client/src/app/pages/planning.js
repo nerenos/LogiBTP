@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { dateLocale, NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer } from '@logibtp/socle/ui';
@@ -371,14 +372,14 @@ export class PagePlanning extends PageBase {
       c.querySelector('[data-panneau-rattacher]').hidden = false;
       c.querySelector('[data-panneau-rattacher]').addEventListener('click', () => window.close());
       this.titre = 'Planning — panneau';
-      this.desabonnements = [this.app.abonner('planning-selection', ({ tache }) => { this.#editer(tache); this.#onglet('tache'); })];
-      this.app.publier('planning-panneau', { ouvert: true });
-      this.quitterFenetre = () => this.app.publier('planning-panneau', { ouvert: false });
+      this.desabonnements = [this.app.abonner(SUJET_FENETRE.PLANNING_SELECTION, ({ tache }) => { this.#editer(tache); this.#onglet('tache'); })];
+      this.app.publier(SUJET_FENETRE.PLANNING_PANNEAU, { ouvert: true });
+      this.quitterFenetre = () => this.app.publier(SUJET_FENETRE.PLANNING_PANNEAU, { ouvert: false });
       window.addEventListener('pagehide', this.quitterFenetre);
     } else {
       this.desabonnements = [
-        this.app.abonner('planning-panneau', ({ ouvert }) => { this.panneauEnFenetre = ouvert; this.#appliquerPanneau(); }),
-        this.app.abonner('planning-aller', ({ tache }) => {
+        this.app.abonner(SUJET_FENETRE.PLANNING_PANNEAU, ({ ouvert }) => { this.panneauEnFenetre = ouvert; this.#appliquerPanneau(); }),
+        this.app.abonner(SUJET_FENETRE.PLANNING_ALLER, ({ tache }) => {
           const b = this.barres?.find((x) => x.tache === tache);
           if (b) { this.planning.selection = b; this.planning.montrer(b); }
         }),
@@ -412,7 +413,7 @@ export class PagePlanning extends PageBase {
 
   /** Détail d'une tâche (null : nouvelle, éventuellement pré-remplie) : dans le panneau, ou dans la fenêtre du panneau s'il y est ouvert. */
   #afficherTache(id, preremplie) {
-    if (this.panneauEnFenetre) { this.app.publier('planning-selection', { tache: id }); return; }
+    if (this.panneauEnFenetre) { this.app.publier(SUJET_FENETRE.PLANNING_SELECTION, { tache: id }); return; }
     if (this.etatPanneau === 'reduit') this.#etatPanneau('normal');
     this.#editer(id, preremplie);
     this.#onglet('tache');
@@ -594,7 +595,7 @@ export class PagePlanning extends PageBase {
       this.planning.charge.get(c.srv_id).push(c);
     }
     this.planning.jalons = await api.planning.jalons(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []);
-    this.planning.attentes = this.app.moduleActif('execution') ? await api.liaisons.attentes(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []) : [];
+    this.planning.attentes = this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) ? await api.liaisons.attentes(depuisMinutes(p.debut), depuisMinutes(p.fin)).catch(() => []) : [];
     await this.#feries(p);
     this.planning.definirDonnees(this.lignes, this.barres);
     if (!this.consultation) { this.#alertes(); this.#rendreJalons(); }
@@ -695,7 +696,7 @@ export class PagePlanning extends PageBase {
     const ressource = ligne.cle.includes(':') && !ligne.cle.startsWith('srv:') && !ligne.cle.startsWith('chantier:') ? ligne.cle.split(':') : null;
     const srv = ligne.srv_id ?? x.srv_id;
     const r = await this.#apres(api.planning.creer({
-      calcul: 1, debut: depuisMinutes(instant), heures: Math.max(15, Math.min(x.reste, 2100)), nb_ressources: 1, srv_id: srv, type_element: 'chantier', id_element: x.id,
+      calcul: 1, debut: depuisMinutes(instant), heures: Math.max(15, Math.min(x.reste, 2100)), nb_ressources: 1, srv_id: srv, type_element: TYPE_FICHE.CHANTIER, id_element: x.id,
       libelle: `${x.service ?? 'Travaux'}`, affectations: ressource ? [{ type: ressource[0], id: ressource[1] }] : [],
     }), 'Tâche planifiée');
     if (r) this.#memoriserCreation(r, 'planification');
@@ -753,12 +754,12 @@ export class PagePlanning extends PageBase {
 
   #elementsRessource(ressource, l, instant = null) {
     const fiche = { SALARIE: 'salarie', INTERIM: 'salarie', MATERIEL: 'materiel' }[ressource.type];
-    const salarie = fiche === 'salarie' && this.app.moduleActif('pointage');
+    const salarie = fiche === TYPE_FICHE.SALARIE && this.app.moduleActif(MODULE_FACULTATIF.POINTAGE);
     return [
       ...(salarie ? [{ libelle: '🏖 Demander un congé…', titre: 'Demande pré-remplie (date, salarié, demandeur), à valider par le service RH pour la nature',
         action: () => this.#demanderConge(ressource, instant) }] : []),
       { libelle: '🏢 Changer le service principal…', actif: Boolean(fiche), titre: 'Service principal de la ressource (lignes du planning, charge des services)', action: () => this.#changerService(ressource, l) },
-      { libelle: '📋 Ouvrir la fiche', actif: Boolean(fiche), action: () => this.app.naviguer(`/fiche/${fiche}/${ressource.id}`, { nouvelleFenetre: true }) },
+      { libelle: '📋 Ouvrir la fiche', actif: Boolean(fiche), action: () => this.app.naviguer(urlFiche(fiche, ressource.id), { nouvelleFenetre: true }) },
     ];
   }
 
@@ -1010,7 +1011,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       li.querySelector('[data-aller]')?.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.aller;
         const b = this.barres.find((x) => String(x.tache) === id);
-        if (this.panneauSeul) this.app.publier('planning-aller', { tache: Number(id) });
+        if (this.panneauSeul) this.app.publier(SUJET_FENETRE.PLANNING_ALLER, { tache: Number(id) });
         else if (b) { this.planning.selection = b; this.planning.montrer(b); }
         this.#editer(Number(id));
       });
@@ -1106,10 +1107,10 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       try { t = await api.planning.tache(id); } catch (e) { this.app.erreur(e); return; }
     } else {
       const debut = depuisMinutes(debutUnite(aujourdhui(), 'JOUR') + 1440 + 480);
-      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: 'chantier', id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: null, affectations: [], ...preremplie };
+      t = { id: null, calcul: 1, debut, fin: null, heures: 420, nb_ressources: 1, srv_id: null, type_element: TYPE_FICHE.CHANTIER, id_element: null, libelle: '', memo: '', avancement: 0, couleur: null, etat: null, affectations: [], ...preremplie };
       this.#onglet('tache');
     }
-    const typeElement = t.type_element === 'projet' ? 'projet' : 'chantier';
+    const typeElement = t.type_element === TYPE_FICHE.PROJET ? TYPE_FICHE.PROJET : TYPE_FICHE.CHANTIER;
     const elements = await api.planning.elements('', typeElement).catch(() => []);
     if (t.element && !elements.some((e) => e.id === t.id_element)) elements.unshift(t.element);
     const mobile = t.mobile ?? {};
@@ -1120,7 +1121,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         <button type="button" data-abandonner title="Abandonner les modifications (Échap)">Annuler</button>
         ${t.id ? '<button type="button" data-supprimer>Supprimer</button>' : ''}</p><div data-resultat class="aide"></div>`;
     zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
-        <p class="ligne">${typeElement === 'projet' ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
+        <p class="ligne">${typeElement === TYPE_FICHE.PROJET ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
         ${t.origine_type === 'ordre' ? `<p class="aide">Depuis l'ordre n° ${echapper(String(t.origine_id))}</p>` : ''}
         <p class="ligne">Calcul <span data-mode></span></p>
         <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
@@ -1139,7 +1140,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     zone.querySelectorAll('details[data-groupe]').forEach((d) => d.addEventListener('toggle', () => {
       ecrirePreferences({ planningGroupesReplies: [...zone.querySelectorAll('details[data-groupe]:not([open])')].map((x) => x.dataset.groupe) });
     }));
-    if (t.id && this.app.moduleActif('pointage')) {
+    if (t.id && this.app.moduleActif(MODULE_FACULTATIF.POINTAGE)) {
       api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
     }
     this.#rendreLiens(zone.querySelector('[data-liens]'), t);

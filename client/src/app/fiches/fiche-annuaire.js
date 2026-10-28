@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
@@ -130,7 +131,7 @@ class FicheAnnuaire extends FicheLogiBTP {
 
   /** Ouverture d'une fiche liée (Ctrl / Maj : nouvelle fenêtre) ; un rattachement ouvre l'individu. */
   ouvrirLiee(f, evenement) {
-    const cible = f.type === 'rattachement' ? { type: 'individu', id: f.individu_id } : f;
+    const cible = f.type === 'rattachement' ? { type: TYPE_FICHE.INDIVIDU, id: f.individu_id } : f;
     if (cible.id) this.ouvrirFiche(cible, evenement);
   }
 
@@ -207,7 +208,7 @@ export class FichePersonne extends FicheAnnuaire {
     if (!r) return;
     const n = Object.values(r.reports ?? {}).reduce((s, x) => s + x, 0);
     this.message(`Tiers fusionné${n ? ` (${n} élément(s) reporté(s))` : ''}`, 'succes');
-    this.ouvrirFiche({ type: 'personne', id: r.cible_id }, e);
+    this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: r.cible_id }, e);
   }
 
   valeursCreation() {
@@ -275,7 +276,7 @@ export class FichePersonne extends FicheAnnuaire {
       { libelle: '🇫🇷 Annuaire des entreprises', titre: 'Rechercher l\'entreprise (nom, SIREN, SIRET) et reprendre ses informations', action: () => this.importerEntreprise(), visible: this.estEnSaisie() && this.morale },
       { libelle: '✔ Valider le tiers', titre: 'Valider la création de ce tiers provisoire (fiche définitive)', action: () => this.validerProvisoire().catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
       { libelle: '⇄ Fusionner…', titre: 'Fusionner ce tiers provisoire avec une fiche existante (valeurs choisies, documents et contacts reportés)', action: (e) => this.fusionnerProvisoire(e).catch((x) => this.message(x.message, 'erreur')), visible: !this.estEnSaisie() && this.provisoire },
-      { libelle: '＋ Établissement', titre: 'Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne', action: () => this.ouvrirFiche({ type: 'personne', id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
+      { libelle: '＋ Établissement', titre: 'Créer un niveau inférieur (établissement, agence, dépôt…) de cette personne', action: () => this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: `nouveau?parent=${this.id}&niveau=ETABLISSEMENT` }), visible: !this.estEnSaisie() && this.id !== null && this.morale },
       ...super.actionsSupplementaires(),
     ];
   }
@@ -334,9 +335,9 @@ export class FichePersonne extends FicheAnnuaire {
     const el = document.createElement('div');
     el.className = 'fiche-saisie-champ annuaire-parent';
     const libelle = this.libelleParent ?? (valeur ? `Personne ${valeur}` : '');
-    el.innerHTML = valeur ? `<a href="/fiche/personne/${valeur}" data-ouvrir>${echapper(libelle)}</a>` : '<span class="aide">Aucun (racine)</span>';
+    el.innerHTML = valeur ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, valeur)}" data-ouvrir>${echapper(libelle)}</a>` : '<span class="aide">Aucun (racine)</span>';
     if (!lecture) el.insertAdjacentHTML('beforeend', ` <button type="button" data-choisir title="Choisir le niveau supérieur">…</button>${valeur ? ' <button type="button" data-vider title="Retirer">✕</button>' : ''}`);
-    el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: 'personne', id: valeur }, e); });
+    el.querySelector('[data-ouvrir]')?.addEventListener('click', (e) => { e.preventDefault(); this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: valeur }, e); });
     el.querySelector('[data-choisir]')?.addEventListener('click', async () => {
       const p = await choisirPersonne({ annuaire: this.annuaire, titre: 'Niveau supérieur', exclure: this.id === null ? [] : [Number(this.id)] });
       if (!p) return;
@@ -354,8 +355,8 @@ export class FichePersonne extends FicheAnnuaire {
   ongletsSpecifiques() {
     const fournisseur = (this.valeur('casquettes') ?? []).some((c) => c === 'FOURNISSEUR' || c === 'LOUEUR');
     return [
-      this.ongletCoordonnees('personne'),
-      this.ongletRattachements('personne', 'contacts', this.morale ? 'Contacts' : 'Titulaire'),
+      this.ongletCoordonnees(TYPE_FICHE.PERSONNE),
+      this.ongletRattachements(TYPE_FICHE.PERSONNE, 'contacts', this.morale ? 'Contacts' : 'Titulaire'),
       {
         code: 'liens', titre: 'Liens', champs: ['liens'],
         rendre: (corps, { modifiable }) => new EditeurLiens(corps, {
@@ -365,15 +366,15 @@ export class FichePersonne extends FicheAnnuaire {
           ouvrirFiche: (f, e) => this.ouvrirFiche(f, e), message: this.message,
         }),
       },
-      this.ongletGraphe('personne'),
-      this.ongletPhoto('personne', 'Logo'),
+      this.ongletGraphe(TYPE_FICHE.PERSONNE),
+      this.ongletPhoto(TYPE_FICHE.PERSONNE, 'Logo'),
       ...(fournisseur && this.id !== null && this.services.bibliotheque?.tarifsTiers ? [{ code: 'tarifs', titre: 'Tarifs', rendre: (corps) => this.#tarifs(corps).catch((e) => this.message(e.message, 'erreur')) }] : []),
       // Sous-traitant (module Sous-traitance, lot 2) : pièces annexes valables pour tous ses marchés.
-      ...((this.valeur('casquettes') ?? []).includes('SOUS_TRAITANT') && this.id !== null && this.moduleActif('sous_traitance') && this.services.ged
+      ...((this.valeur('casquettes') ?? []).includes('SOUS_TRAITANT') && this.id !== null && this.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE) && this.services.ged
         ? [{
           code: 'pieces-st', titre: 'Pièces',
           rendre: (corps) => rendrePieces(corps, {
-            element: { type: 'personne', id: Number(this.id), tiers: Number(this.id) }, ged: this.services.ged, message: this.message,
+            element: { type: TYPE_FICHE.PERSONNE, id: Number(this.id), tiers: Number(this.id) }, ged: this.services.ged, message: this.message,
             demander: () => this.ouvrirUrl(`/mail/nouveau?type=st_pieces&id=personne:${this.id}`, { ctrlKey: true }),
           }).catch((e) => this.message(e.message, 'erreur')),
         }]
@@ -399,7 +400,7 @@ export class FichePersonne extends FicheAnnuaire {
     const doublon = e.siret ? await this.annuaire.parSiret(e.siret).catch(() => null) : null;
     if (doublon && Number(doublon.id) !== Number(this.id)) {
       if (await confirmer(`Cet établissement est déjà dans l'annuaire : ${doublon.raison_sociale} (${doublon.code}). L'ouvrir plutôt que de créer un doublon ?`)) {
-        this.ouvrirFiche({ type: 'personne', id: doublon.id });
+        this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: doublon.id });
         return;
       }
       this.message('SIRET déjà enregistré : il ne pourra pas l\'être deux fois', 'avertissement');
@@ -511,19 +512,19 @@ export class FicheIndividu extends FicheAnnuaire {
         libelle: salarie ? `👷 Salarié ${salarie.matricule}` : '👷 Créer la fiche salarié',
         titre: salarie ? `Ouvrir la fiche salarié (${salarie.poste ?? ''}${salarie.agence ? `, ${salarie.agence}` : ''})` : 'Créer la fiche salarié à partir de cet individu (identité, agence, coordonnées professionnelles)',
         visible: !this.estEnSaisie() && this.id !== null && (!!salarie || roles.includes('SALARIE') || roles.includes('INTERIMAIRE')),
-        action: () => this.ouvrirFiche({ type: 'salarie', id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),
+        action: () => this.ouvrirFiche({ type: TYPE_FICHE.SALARIE, id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),
       },
       {
         libelle: particulier ? '🏠 Compte particulier' : '🏠 Créer le compte particulier',
         titre: particulier ? 'Ouvrir son compte particulier (client)' : 'Créer une personne « Particulier » dont il est titulaire, avec ses coordonnées personnelles partagées',
         visible: !this.estEnSaisie() && this.id !== null,
         action: async () => {
-          if (particulier) { this.ouvrirFiche({ type: 'personne', id: particulier.per_id }); return; }
+          if (particulier) { this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: particulier.per_id }); return; }
           const r = await this.annuaire.creerParticulier(this.id);
           this.message('Compte particulier créé : coordonnées personnelles partagées', 'succes');
           await this.recharger();
           this.rendre();
-          this.ouvrirFiche({ type: 'personne', id: r.id });
+          this.ouvrirFiche({ type: TYPE_FICHE.PERSONNE, id: r.id });
         },
       },
       ...super.actionsSupplementaires(),
@@ -532,10 +533,10 @@ export class FicheIndividu extends FicheAnnuaire {
 
   ongletsSpecifiques() {
     return [
-      this.ongletCoordonnees('individu'),
-      this.ongletRattachements('individu', 'rattachements', 'Rattachements'),
-      this.ongletGraphe('individu'),
-      this.ongletPhoto('individu', 'Photo'),
+      this.ongletCoordonnees(TYPE_FICHE.INDIVIDU),
+      this.ongletRattachements(TYPE_FICHE.INDIVIDU, 'rattachements', 'Rattachements'),
+      this.ongletGraphe(TYPE_FICHE.INDIVIDU),
+      this.ongletPhoto(TYPE_FICHE.INDIVIDU, 'Photo'),
       ...this.ongletsSuivi(),
     ];
   }

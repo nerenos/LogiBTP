@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDate } from '@logibtp/socle/ui';
@@ -90,7 +91,7 @@ export class PagePlanCrm extends PageBase {
     $('[data-enregistrer]').addEventListener('click', () => this.enregistrer());
     $('[data-supprimer]')?.addEventListener('click', async () => {
       if (!await confirmer('Supprimer ce plan, ses indices et ses visas ?')) return;
-      try { await api.crm.supprimerPlan(d.plan.id); this.modifie = false; this.app.publier('crm', {}); this.app.routeur.retour('/crm/plans'); } catch (e) { this.app.erreur(e); }
+      try { await api.crm.supprimerPlan(d.plan.id); this.modifie = false; this.app.publier(SUJET_FENETRE.CRM, {}); this.app.routeur.retour('/crm/plans'); } catch (e) { this.app.erreur(e); }
     });
     $('[data-diffuser]')?.addEventListener('click', () => this.app.naviguer(`/crm/diffusion/nouveau?plans=${d.plan.id}${s.type_element ? `&type_element=${encodeURIComponent(s.type_element)}&id_element=${encodeURIComponent(s.id_element)}` : ''}`));
     if (!d) return;
@@ -169,7 +170,7 @@ export class PagePlanCrm extends PageBase {
   async appliquer(f, texte = null) {
     try {
       this.detail = await f();
-      this.app.publier('crm', { plan: this.detail.plan.id });
+      this.app.publier(SUJET_FENETRE.CRM, { plan: this.detail.plan.id });
       if (texte) this.app.message(texte, 'succes');
       await this.charger(this.detail.plan.id);
       await this.rendre();
@@ -190,7 +191,7 @@ export class PagePlanCrm extends PageBase {
       }
       await this.charger(r.plan.id);
       if (nouveau) this.app.routeur.remplacerUrl(`/crm/plan/${r.plan.id}`);
-      this.app.publier('crm', { plan: r.plan.id });
+      this.app.publier(SUJET_FENETRE.CRM, { plan: r.plan.id });
       this.app.message('Plan enregistré', 'succes');
       await this.rendre();
     } catch (e) { this.app.erreur(e); }

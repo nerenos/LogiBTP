@@ -1,3 +1,4 @@
+import { TYPE_DOCUMENT } from '../codes.js';
 import { api } from '../api.js';
 
 // Structure des affaires côté client : référentiels des listes de choix (projets, affaires, chantiers, marchés,
@@ -79,7 +80,7 @@ export function creerFournisseurStructure() {
     emettreAcompte: (id) => api.emettreAcompte(id),
     enregistrerPostes: (marche, postes) => api.enregistrerPostesMarche(marche, postes),
     facturerSituation: async (id) => {
-      const cible = (await api.typesDocument()).find((t) => t.tyd_code === 'V_FACTURE_AVT');
+      const cible = (await api.typesDocument()).find((t) => t.tyd_code === TYPE_DOCUMENT.V_FACTURE_AVT);
       return api.transformer(id, { cible_tyd_id: cible.tyd_id, lignes: [] });
     },
     reviser: (id) => api.creerIndice(id),

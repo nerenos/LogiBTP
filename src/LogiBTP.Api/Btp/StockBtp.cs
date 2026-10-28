@@ -114,7 +114,7 @@ public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : 
 /// </summary>
 public static class MouvementsStockBtp
 {
-    private static readonly string[] Codes = ["A_RECEPTION", "A_FACTURE", "A_RETOUR", "V_RECEPTION", "V_FACTURE", "V_RETOUR", "S_ENTREE", "S_SORTIE", "S_TRANSFERT"];
+    private static readonly string[] Codes = [TypesDocument.AReception, TypesDocument.AFacture, TypesDocument.ARetour, TypesDocument.VReception, TypesDocument.VFacture, TypesDocument.VRetour, TypesDocument.SEntree, TypesDocument.SSortie, TypesDocument.STransfert];
 
     private sealed record EnteteSql(DateTimeOffset? DateMouvement, DateOnly Date, int? Origine, int? Destination, int? Chantier, long? Tiers);
     private sealed record LieuSql(int Id, bool Tenu);
@@ -139,18 +139,18 @@ public static class MouvementsStockBtp
                    ent_chantier_id AS chantier, ent_tiers_id AS tiers FROM document WHERE ent_id = {entId}
             """).FirstAsync(ct);
         var code = type.TydCode;
-        var achat = code is "A_RECEPTION" or "A_FACTURE" or "A_RETOUR";
+        var achat = code is TypesDocument.AReception or TypesDocument.AFacture or TypesDocument.ARetour;
         int? entree = code switch
         {
-            "A_RECEPTION" or "A_FACTURE" => e.Destination ?? e.Chantier,
-            "V_RETOUR" => e.Origine,
-            "S_ENTREE" or "S_TRANSFERT" => e.Destination,
+            TypesDocument.AReception or TypesDocument.AFacture => e.Destination ?? e.Chantier,
+            TypesDocument.VRetour => e.Origine,
+            TypesDocument.SEntree or TypesDocument.STransfert => e.Destination,
             _ => null,
         };
         int? sortie = code switch
         {
-            "A_RETOUR" => e.Destination ?? e.Chantier,
-            "V_RECEPTION" or "V_FACTURE" or "S_SORTIE" or "S_TRANSFERT" => e.Origine,
+            TypesDocument.ARetour => e.Destination ?? e.Chantier,
+            TypesDocument.VReception or TypesDocument.VFacture or TypesDocument.SSortie or TypesDocument.STransfert => e.Origine,
             _ => null,
         };
         var ids = new[] { entree, sortie }.Where(x => x is not null).Select(x => x!.Value).ToArray();
@@ -183,9 +183,9 @@ public static class MouvementsStockBtp
             decimal? prix = (achat ? l.MontantHt : l.MontantPa) is { } mt && mt != 0 ? ArrondiCalcul.Arr6(Math.Abs(mt / q)) : null;
             // Facture issue d'une livraison ou d'une réception : pas de nouveau mouvement ; facture fournisseur : son prix
             // remplace celui de la réception (S31).
-            if (code is "A_FACTURE" or "V_FACTURE" && l.Source is { } source)
+            if (code is TypesDocument.AFacture or TypesDocument.VFacture && l.Source is { } source)
             {
-                if (code == "A_FACTURE" && prix is not null)
+                if (code == TypesDocument.AFacture && prix is not null)
                     await db.Database.ExecuteSqlInterpolatedAsync($"""
                         UPDATE stk_mouvement SET mvt_prix = {prix}, mvt_provisoire = FALSE, mvt_prix_ent_id = {entId}
                         WHERE mvt_lig_id = {source} AND mvt_quantite > 0
@@ -194,9 +194,9 @@ public static class MouvementsStockBtp
             }
             if (entree is { } lieuE)
             {
-                var valorise = achat || (code == "S_ENTREE" || code == "S_TRANSFERT" && sortie is null && e.Origine is null);
+                var valorise = achat || (code == TypesDocument.SEntree || code == TypesDocument.STransfert && sortie is null && e.Origine is null);
                 var p = valorise ? prix : null;
-                await Inserer(db, l, lieuE, date, q, p, code == "A_RECEPTION" && p is not null, entId, e.Tiers, ct);
+                await Inserer(db, l, lieuE, date, q, p, code == TypesDocument.AReception && p is not null, entId, e.Tiers, ct);
             }
             if (sortie is { } lieuS) await Inserer(db, l, lieuS, date, -q, null, false, entId, e.Tiers, ct);
         }
@@ -245,13 +245,13 @@ public static class MouvementsStockBtp
         if (!Concerne(type)) return;
         if (d.EntDateMouvement is { } dm && dm > DateTimeOffset.UtcNow.AddMinutes(1))
             erreurs.Add(new MessageCalcul(null, "STK_DATE_FUTURE", "Date du mouvement de stock à venir"));
-        if (type.TydCode == "S_TRANSFERT" && d.EntStkOrigineId is null && d.EntStkDestinationId is null)
+        if (type.TydCode == TypesDocument.STransfert && d.EntStkOrigineId is null && d.EntStkDestinationId is null)
             erreurs.Add(new MessageCalcul(null, "STK_LIEUX", "Transfert : origine ou destination obligatoire"));
-        if (type.TydCode == "S_TRANSFERT" && d.EntStkOrigineId is not null && d.EntStkOrigineId == d.EntStkDestinationId)
+        if (type.TydCode == TypesDocument.STransfert && d.EntStkOrigineId is not null && d.EntStkOrigineId == d.EntStkDestinationId)
             erreurs.Add(new MessageCalcul(null, "STK_LIEUX", "Transfert : origine et destination identiques"));
-        if (type.TydCode == "S_ENTREE" && d.EntStkDestinationId is null)
+        if (type.TydCode == TypesDocument.SEntree && d.EntStkDestinationId is null)
             erreurs.Add(new MessageCalcul(null, "STK_LIEUX", "Entrée de stock : destination obligatoire"));
-        if (type.TydCode == "S_SORTIE" && d.EntStkOrigineId is null)
+        if (type.TydCode == TypesDocument.SSortie && d.EntStkOrigineId is null)
             erreurs.Add(new MessageCalcul(null, "STK_LIEUX", "Sortie de stock : origine obligatoire"));
     }
 }

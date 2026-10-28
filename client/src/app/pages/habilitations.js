@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
@@ -33,7 +34,7 @@ export class PageHabilitations extends PageBase {
     const expirees = l.filter((h) => h.etat === 'EXPIREE').length;
     zone.innerHTML = l.length ? `<p class="aide">${l.length} habilitation(s), dont ${expirees} expirée(s).</p>
       <table class="pleine-largeur"><thead><tr><th>Élément</th><th>Habilitation</th><th>Obtenue le</th><th>Fin de validité</th><th>État</th><th>Organisme</th></tr></thead><tbody>
-      ${l.map((h) => `<tr><td><a href="/fiche/${h.type_element}/${h.id_element}">${h.type_element === 'salarie' ? '👷' : '🚜'} ${echapper(h.element ?? '')}</a></td>
+      ${l.map((h) => `<tr><td><a href="${urlFiche(h.type_element, h.id_element)}">${h.type_element === TYPE_FICHE.SALARIE ? '👷' : '🚜'} ${echapper(h.element ?? '')}</a></td>
         <td>${echapper(h.libelle)}</td><td>${jourRessource(h.obtenue_le)}</td><td>${jourRessource(h.fin)}</td><td>${pastilleHabilitation(h)}</td><td>${echapper(h.organisme ?? '')}</td></tr>`).join('')}
       </tbody></table>` : '<p class="aide">Aucune habilitation expirée ni à renouveler dans ce délai.</p>';
     // Matériels : fins de location et de garantie (db/230) dans le même délai.
@@ -46,7 +47,7 @@ export class PageHabilitations extends PageBase {
     const aujourdhui = dateLocale();
     zone.insertAdjacentHTML('beforeend', `<h2>Matériels : fins de location et de garantie</h2>
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Matériel</th><th>Échéance</th><th>Date</th><th>Loueur</th></tr></thead><tbody>
-      ${e.map((x) => `<tr><td><a href="/fiche/materiel/${x.id}">🚜 ${echapper(x.code)} ${echapper(x.designation ?? '')}</a></td>
+      ${e.map((x) => `<tr><td><a href="${urlFiche(TYPE_FICHE.MATERIEL, x.id)}">🚜 ${echapper(x.code)} ${echapper(x.designation ?? '')}</a></td>
         <td>${x.genre === 'LOCATION' ? 'Fin de location' : 'Fin de garantie'}</td>
         <td class="${x.date < aujourdhui ? 'erreur' : ''}">${jourRessource(x.date)}</td><td>${echapper(x.tiers ?? '')}</td></tr>`).join('')}</tbody></table>`);
   }

@@ -22,7 +22,7 @@ public sealed record ErreurEquipe(string Code, int? Periode);
 /// </summary>
 public static class ReglesEquipes
 {
-    public static readonly string[] TypesMembre = ["SALARIE", "INTERIM", "MATERIEL", "SOUS_TRAITANT", "EQUIPE"];
+    public static readonly string[] TypesMembre = [TypesRessource.Salarie, TypesRessource.Interim, TypesRessource.Materiel, TypesRessource.SousTraitant, "EQUIPE"];
     public static readonly string[] TypesChef = ["SALARIE", "INTERIM"];
 
     private static int CompId(string a, string b) =>

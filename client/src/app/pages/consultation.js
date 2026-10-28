@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, confirmer } from '@logibtp/socle/ui';
 import { D, Dz } from '@logibtp/socle';
@@ -34,7 +35,7 @@ export class PageComparatifConsultation extends PageBase {
     corps.innerHTML = `<p class="aide">Lot ${echapper(c.code)} : ${docs.length} offre(s), ${c.lignes.length} ligne(s) rapprochée(s) par leur code, sinon leur libellé.
       L'offre la moins chère de chaque ligne est en gras ; ouvrez l'offre retenue pour la transformer en commande.</p>
       <div class="tableau-defilant"><table class="tableau-compact"><thead><tr><th>Code</th><th>Libellé</th>
-        ${docs.map((d) => `<th colspan="2" class="nombre"><a href="/document/${d.id}" title="Ouvrir l'offre (Ctrl : nouvelle fenêtre)">${echapper(d.numero ?? `#${d.id}`)}</a><br>
+        ${docs.map((d) => `<th colspan="2" class="nombre"><a href="${urlDocument(d.id)}" title="Ouvrir l'offre (Ctrl : nouvelle fenêtre)">${echapper(d.numero ?? `#${d.id}`)}</a><br>
           <small>${echapper(d.tiers ?? '— sans fournisseur —')} · ${echapper(d.statut)}</small>
           ${d.valide && !d.terminal ? `<br><button type="button" data-retenir="${d.id}" title="Transformer cette offre (commande) ; les autres offres du lot passent « Non retenue »">✓ Retenir</button>` : ''}</th>`).join('')}</tr>
         <tr><th></th><th></th>${docs.map(() => '<th class="nombre">Qté × PU</th><th class="nombre">Montant</th>').join('')}</tr></thead><tbody>
@@ -63,7 +64,7 @@ export class PageComparatifConsultation extends PageBase {
       const r = await api.retenirConsultation(offre.id);
       this.app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé(e) ; ${r.non_retenues} offre(s) non retenue(s)`, 'succes');
       this.app.publier?.('enregistre', { ids: docs.map((d) => d.id) });
-      this.app.naviguer(`/document/${cree.ent_id}`, { nouvelleFenetre: true });
+      this.app.naviguer(urlDocument(cree.ent_id), { nouvelleFenetre: true });
       await this.ouvrir();
     } catch (e) { this.app.erreur(e); }
   }

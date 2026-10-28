@@ -27,7 +27,7 @@ public static class PostesMarche
 {
     public const string Marqueur = "poste_marche";
     public const string CleRetenue = "R";
-    private static readonly HashSet<string> Types = ["PAIEMENT_DIRECT", "PRORATA", "REMISE", "AUTRE"];
+    private static readonly HashSet<string> Types = [.. TypesPosteMarche.Tous];
 
     private const string SqlPostes = """
         SELECT coalesce(json_agg(json_build_object('id', mpo_id, 'portee', mpo_portee, 'type', mpo_type, 'libelle', mpo_libelle,
@@ -91,7 +91,7 @@ public static class PostesMarche
     public static async Task<string?> Portee(DbContext db, TypeDocument type, DocumentBtp doc, CancellationToken ct)
     {
         if (doc.EntMarcheId is null || doc.EntNatureAvoir is not null) return null;
-        if (type.TydCode == "V_COMMANDE") return doc.EntIntermediaire ? null : "C";
+        if (type.TydCode == TypesDocument.VCommande) return doc.EntIntermediaire ? null : "C";
         // Factures qui reçoivent les postes du marché : règle POSTES_MARCHE (factures d'avancement et simples ; I2).
         var regle = await db.Database.SqlQuery<string>($"SELECT coalesce(f_regle_document('POSTES_MARCHE', {type.TydId})::text, 'false') AS \"Value\"").FirstAsync(ct);
         return regle == "true" ? "G" : null;

@@ -1,8 +1,9 @@
+import { urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
-import { lireAttente, ecrireAttente, retirerAttente, marquerAttente } from '../hors-ligne/attente.js';
+import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 import { fusionner, copieLocale } from '../hors-ligne/fusion.js';
 
@@ -46,7 +47,7 @@ export class PageFusionDocument extends PageBase {
     const compte = this.app.utilisateur();
     this.entree = await lireAttente(compte, Number(this.params.id));
     if (!this.entree) { corps.innerHTML = '<p class="aide">Aucune saisie hors ligne de ce document sur ce poste.</p>'; return; }
-    if (!this.entree.id) { this.app.naviguer(`/document/${this.entree.id_local}`, { remplacer: true }); return; }
+    if (!this.entree.id) { this.app.naviguer(urlDocument(this.entree.id_local), { remplacer: true }); return; }
     if (this.app.apiPerdue) { corps.innerHTML = '<p class="aide">La fusion compare votre saisie à la version actuelle du serveur : elle sera possible à son retour.</p>'; return; }
     this.serveur = await api.document(this.entree.id);
     const definition = await api.definition(this.entree.type_code).catch(() => null);
@@ -108,12 +109,12 @@ export class PageFusionDocument extends PageBase {
   async #ouvrirFusion(mode) {
     const f = mode === 'ecraser' ? fusionner(this.contenus, { mode }) : this.fusion;
     await marquerAttente(this.entree.compte, this.entree.id_local, {
-      saisie: f.saisie, depart: this.serveur, etat: 'FUSION', erreur: null, le: new Date().toISOString(),
+      saisie: f.saisie, depart: this.serveur, etat: ETAT_ATTENTE.FUSION, erreur: null, le: new Date().toISOString(),
     });
     this.app.publier(SUJET_ATTENTE, {});
     this.app.message(mode === 'ecraser' ? 'Votre saisie est posée sur la version du serveur : vérifiez puis enregistrez'
       : 'Saisie fusionnée : vérifiez (totaux recalculés) puis enregistrez', 'avertissement');
-    await this.app.naviguer(`/document/${this.entree.id_local}`, { remplacer: true });
+    await this.app.naviguer(urlDocument(this.entree.id_local), { remplacer: true });
   }
 
   fusionner() { return this.#ouvrirFusion('fusion'); }
@@ -132,18 +133,18 @@ export class PageFusionDocument extends PageBase {
       compte: this.entree.compte, id_local: id, id: null, type_code: this.entree.type_code,
       creation: { params: { ent_tyd_id: d.ent_tyd_id, ent_tiers_id: d.ent_tiers_id ?? null, ent_objet: d.ent_objet }, initial: null },
       envoi: { document: d, lignes: saisie.lignes, metres: saisie.metres, variables: saisie.variables, ventilations: saisie.ventilations, version_moteur_client: VERSION_MOTEUR },
-      saisie, depart: null, libelle: `${this.entree.libelle.split(' ')[0]} (copie hors ligne)`, etat: 'FUSION',
+      saisie, depart: null, libelle: `${this.entree.libelle.split(' ')[0]} (copie hors ligne)`, etat: ETAT_ATTENTE.FUSION,
     });
     await retirerAttente(this.entree.compte, this.entree.id_local);
     this.app.publier(SUJET_ATTENTE, {});
     this.app.message('Copie en brouillon : vérifiez puis enregistrez pour la créer sur le serveur', 'avertissement');
-    await this.app.naviguer(`/document/${id}`, { remplacer: true });
+    await this.app.naviguer(urlDocument(id), { remplacer: true });
   }
 
   async abandonner() {
     if (!await confirmer('Supprimer votre saisie hors ligne de ce poste ? La version du serveur sera rouverte.', { ok: 'Abandonner ma saisie', danger: true })) return;
     await retirerAttente(this.entree.compte, this.entree.id_local);
     this.app.publier(SUJET_ATTENTE, {});
-    await this.app.naviguer(`/document/${this.entree.id}`, { remplacer: true });
+    await this.app.naviguer(urlDocument(this.entree.id), { remplacer: true });
   }
 }

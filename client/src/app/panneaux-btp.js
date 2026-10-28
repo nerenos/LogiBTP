@@ -1,3 +1,4 @@
+import { TYPE_FICHE, TYPE_DOCUMENT, TYPES_ARC } from './codes.js';
 import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, ListeDeroulante } from '@logibtp/socle/ui';
 import { rendreExecution, sectionRepartition } from './execution/execution.js';
 import { rendreEntretienOrdre } from './ressources/entretiens-ui.js';
@@ -26,7 +27,7 @@ export async function individusSociete(annuaire) {
   // Toutes les pages de rattachements (200 au plus par page).
   const lignes = [];
   for (let page = 1; page <= 50; page++) {
-    const r = await annuaire.pageRattachements('personne', societe.id, { page, taille: 200 }).catch(() => ({ lignes: [], total: 0 }));
+    const r = await annuaire.pageRattachements(TYPE_FICHE.PERSONNE, societe.id, { page, taille: 200 }).catch(() => ({ lignes: [], total: 0 }));
     lignes.push(...r.lignes);
     if (!r.lignes.length || lignes.length >= (r.total ?? 0)) break;
   }
@@ -53,7 +54,6 @@ export const LIEUX_STOCK = {
 /** Date prévue des pièces sans mouvement (module Stock, lot 3) : colonne et libellé ; les autres portent la date du mouvement. */
 const DATE_PREVUE_STOCK = { S_RESERVATION: ['ent_date_besoin', 'Date de besoin'], A_COMMANDE: ['ent_date_livraison', 'Livraison prévue'] };
 /** Types qui reçoivent un accusé de réception de commande (↔ Structure.TypesArc). */
-export const TYPES_ARC = new Set(['A_COMMANDE', 'T_COMMANDE']);
 
 /**
  * Individus de notre structure, agences comprises (conducteur de travaux des chantiers) : lus par le serveur
@@ -190,7 +190,7 @@ export class PanneauxBtp extends PanneauxDocument {
     const lecture = !!ed.magasin.lectureSeule || ed.fige;
     const chaId = d.ent_chantier_id ? Number(d.ent_chantier_id) : null;
     const chantier = chaId ? this.adressesChantierLues?.get(chaId) : undefined;
-    const obligatoire = ed.definition.type?.tyd_code === 'A_COMMANDE';
+    const obligatoire = ed.definition.type?.tyd_code === TYPE_DOCUMENT.A_COMMANDE;
     const vide = achat ? `<span class="${obligatoire ? 'erreur' : 'aide'}">${obligatoire ? 'À choisir (obligatoire pour valider)' : 'Non renseignée'}</span>` : '<span class="aide">Identique au client</span>';
     const ecart = x && chantier && !memeAdresse(x.adresse, chantier.adresse) ? '<span class="alerte">⚠ Adresse différente de celle du chantier</span>' : '';
     const bouton = (action, texte, titre) => `<button type="button" class="bouton-icone" data-adresse-action="${action}" title="${titre}">${texte}</button>`;
@@ -355,10 +355,10 @@ export class PanneauxBtp extends PanneauxDocument {
         <div class="contacts-blocs"><div data-contact="CLIENT"></div>${estFamilleAchat(this.editeur.definition.type?.tyd_famille) ? '' : '<div data-contact="PAYEUR"></div>'}<div data-adresse></div></div></fieldset>` : ''}
       ${!section && nbVars ? `<p class="aide">${nbVars} variable(s) du document ($$) : ajoutez une ligne de section pour les modifier (F4 sur la section).</p>` : ''}
       ${this.estOrdre() ? '<fieldset class="execution-document"><legend>Exécution</legend><div data-execution></div></fieldset>' : ''}
-      ${this.estOrdre() && this.editeur.definition.type?.tyd_code === 'E_ENT' ? '<fieldset class="entretien-document"><legend>Matériel entretenu</legend><div data-entretien></div></fieldset>' : ''}
-      ${this.editeur.definition.type?.tyd_code === 'T_FACTURE_AVT' ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}
+      ${this.estOrdre() && this.editeur.definition.type?.tyd_code === TYPE_DOCUMENT.E_ENT ? '<fieldset class="entretien-document"><legend>Matériel entretenu</legend><div data-entretien></div></fieldset>' : ''}
+      ${this.editeur.definition.type?.tyd_code === TYPE_DOCUMENT.T_FACTURE_AVT ? '<fieldset class="facture-st"><legend>Facture du sous-traitant</legend><div data-facture-st></div></fieldset>' : ''}
       ${this.stock && LIEUX_STOCK[this.editeur.definition.type?.tyd_code] ? '<fieldset class="stock-document"><legend>Stock</legend><div data-stock></div></fieldset>' : ''}
-      ${this.arc && TYPES_ARC.has(this.editeur.definition.type?.tyd_code) ? '<fieldset class="arc-document"><legend>Accusé de réception (ARC)</legend><div data-arc></div></fieldset>' : ''}`;
+      ${this.arc && TYPES_ARC.includes(this.editeur.definition.type?.tyd_code) ? '<fieldset class="arc-document"><legend>Accusé de réception (ARC)</legend><div data-arc></div></fieldset>' : ''}`;
   }
 
   /**
@@ -646,7 +646,7 @@ export class PanneauxBtp extends PanneauxDocument {
    */
   sectionRepartition(zone, l) {
     const d = this.editeur.saisie.document;
-    if (!this.estOrdre() || this.editeur.definition.type.tyd_code === 'E_OE' || !d.ent_id) return;
+    if (!this.estOrdre() || this.editeur.definition.type.tyd_code === TYPE_DOCUMENT.E_OE || !d.ent_id) return;
     const cle = `${d.ent_id}:${d.ent_version}`;
     if (this.repartition?.cle !== cle) this.repartition = { cle, promesse: api.execution.repartition(d.ent_id).catch(() => []) };
     this.repartition.promesse.then((liste) => {

@@ -26,11 +26,12 @@ using LogiBTP.OAuth.Web;
 using LogiBTP.Mail.Web;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 // Dossier de la configuration de l'installation (.env, societes.json) : LOGIBTP_CONFIG (/app/config dans l'image Docker),
 // sinon le dossier courant ou celui de l'application et ses parents (développement).
-var dossierConfig = Environment.GetEnvironmentVariable("LOGIBTP_CONFIG");
+var dossierConfig = Environment.GetEnvironmentVariable(VariablesEnv.Config);
 // Commande du fichier .env (env initialiser | chiffrer | verifier) : sans démarrer l'application.
 if (args.Length > 0 && args[0] == "env")
 {
@@ -63,7 +64,7 @@ var securite = OptionsSecurite.Lire(builder.Configuration);
 builder.Services.AddSecurite(securite);
 // Journal technique (niveau LOGIBTP_JOURNAL_NIVEAU, masqué) dans la base principale, repli sur fichier ; purge nocturne.
 builder.Logging.AddProvider(new JournalTechnique(builder.Configuration.GetConnectionString("LogiBTP"),
-    Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration["LOGIBTP_JOURNAL_NIVEAU"])));
+    Path.Combine(builder.Environment.ContentRootPath, "journaux"), JournalTechnique.Niveau(builder.Configuration[VariablesEnv.JournalNiveau])));
 builder.Services.AddHostedService<PurgeJournaux>();
 
 // Une base par société, choisie par le sous-domaine (section Societes ; sans sous-domaine : ConnectionStrings:LogiBTP).
@@ -195,21 +196,21 @@ api.MapModuleBibliotheque();
 api.MapModuleAnnuaire();
 api.MapModuleEntreprisesFr();
 // Modules facultatifs : sous-groupe propre, pour que le filtre d'activation ne touche que leurs routes.
-api.MapGroup("").ExigeModule("reglement", "Règlements").MapModuleReglement();
-api.MapModuleCrm().ExigeModule("crm", "CRM");
-api.MapExecution().ExigeModule("execution", "Exécution");
-api.MapModuleExecution().ExigeModule("execution", "Exécution");
-api.MapModuleSousTraitance().ExigeModule("sous_traitance", "Sous-traitance");
-api.MapModuleStock().ExigeModule("stock", "Stock");
-api.MapGroup("").ExigeModule("stock", "Stock").MapMagasinStock();
-api.MapGroup("").ExigeModule("stock", "Stock").MapStockBorne();
-api.MapModulePointage().ExigeModule("pointage", "Pointage MO");
-api.MapModulePlanning().ExigeModule("planning", "Planning");
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Reglement, "Règlements").MapModuleReglement();
+api.MapModuleCrm().ExigeModule(ModulesFacultatifs.Crm, "CRM");
+api.MapExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+api.MapModuleExecution().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+api.MapModuleSousTraitance().ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
+api.MapModuleStock().ExigeModule(ModulesFacultatifs.Stock, "Stock");
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapMagasinStock();
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Stock, "Stock").MapStockBorne();
+api.MapModulePointage().ExigeModule(ModulesFacultatifs.Pointage, "Pointage MO");
+api.MapModulePlanning().ExigeModule(ModulesFacultatifs.Planning, "Planning");
 api.MapDiffusion();
 // Liaisons croisées entre modules facultatifs (Exécution, Planning, Pointage, CRM) : portées par le cœur.
 api.MapLiaisons();
 // Étapes validées depuis l'atelier (page tablette, borne du Pointage) : lot 2e de l'Exécution.
-api.MapAtelier().ExigeModule("execution", "Exécution");
+api.MapAtelier().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
 api.MapStructure();
 api.MapConsultations();
 api.MapRetenuesMarche();

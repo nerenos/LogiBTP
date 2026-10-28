@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { ETATS_PAIEMENT_DIRECT, MESSAGES_PAIEMENT_DIRECT, MESSAGES_RETENUE, controlerAcceptation } from '@logibtp/sous-traitance';
@@ -31,7 +32,7 @@ async function rendreDemandes(zone, { marche, message }) {
   }
   const direct = s.mode === 'DIRECT';
   const recharger = () => rendreDemandes(zone, { marche, message });
-  const lienDoc = (id, numero) => `<a href="/document/${Number(id)}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(numero ?? `#${id}`)}</a>`;
+  const lienDoc = (id, numero) => `<a href="${urlDocument(Number(id))}" title="Ouvrir (Ctrl : nouvelle fenêtre)">${echapper(numero ?? `#${id}`)}</a>`;
   const clients = s.factures_clients ?? [];
   const client = (id) => clients.find((c) => Number(c.id) === Number(id));
   const delai = (d) => (d.etat !== 'RECUE' ? '' : `<span class="${d.delai.depasse ? 'erreur' : d.delai.alerte ? 'avertissement' : 'aide'}">⏳ avant le ${jour(d.delai.echeance)}</span>`);
@@ -121,7 +122,7 @@ export async function rendreRetenue(zone, { marche, message }) {
       ${!r.liberee_le && lib.liberable && nonDatees.length ? '<button type="button" data-liberer title="Dater les échéances de retenue au jour : le module Règlements les propose au pointage">🔓 Libérer</button>' : ''}</p>
     <p class="aide">Réception, réserves et levée se saisissent dans l'onglet du marché (groupe Conditions).</p>
     <table class="tableau-compact"><thead><tr><th>Pièce</th><th>Date</th><th class="nombre">Retenue</th><th>Échéance</th></tr></thead><tbody>
-    ${r.retenues.length ? r.retenues.map((x) => `<tr><td><a href="/document/${Number(x.ent_id)}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small class="aide">${echapper(x.type)}</small></td>
+    ${r.retenues.length ? r.retenues.map((x) => `<tr><td><a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small class="aide">${echapper(x.type)}</small></td>
       <td>${jour(x.date_document)}</td><td class="nombre">${f(x.montant)}</td><td>${x.date ? jour(x.date) : '<span class="aide">à la libération</span>'}</td></tr>`).join('')
     : '<tr><td colspan="4" class="aide">Aucune retenue sur les pièces validées du marché.</td></tr>'}
     </tbody><tfoot><tr><th colspan="2">Total</th><th class="nombre">${f(r.total)}</th><th></th></tr></tfoot></table>

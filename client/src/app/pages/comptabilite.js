@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, alerter, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
 import { normaliserCompte, normaliserCompteTiers, MESSAGES_COMPTES, compteVentilation, ORIGINES_VENTILATION } from '@logibtp/comptabilite';
@@ -270,7 +271,7 @@ export class PageTiersComptables extends PageBase {
           <td><input data-compte size="14" value="${herite ? '' : echapper(t.compte ?? '')}" placeholder="${herite ? echapper(t.compte) : ''}" ${ecrire ? '' : 'readonly'}
             ${herite ? 'title="Compte fournisseur (hérité)" class="herite"' : ''}>${t.doublon ? ' <span title="Compte porté par plusieurs tiers">⚠</span>' : ''}</td>
           <td>${echapper(TYPES_COMPTE_TIERS[t.type_compte] ?? t.type_compte)}</td>
-          <td><a href="/fiche/personne/${Number(t.tiers_id)}">${echapper(t.raison_sociale)}</a></td><td>${echapper(t.code_tiers ?? '')}</td>
+          <td><a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(t.tiers_id))}">${echapper(t.raison_sociale)}</a></td><td>${echapper(t.code_tiers ?? '')}</td>
           <td>${t.type_compte === 'CLIENT' ? (t.particulier ? 'Particulier' : 'Professionnel') : ''}</td>
           <td data-collectif title="${echapper(col ? `Par défaut : ${col.libelle} (${col.compte ?? 'sans compte'})` : '')}"></td>
           <td>${echapper(t.siret ?? '')}</td><td>${echapper(t.tva_intra ?? '')}</td></tr>`;
@@ -684,7 +685,7 @@ export class PageExportComptable extends PageBase {
   #tablePieces(pieces) {
     return `<table class="tableau-compact"><thead><tr><th></th><th>Pièce</th><th>Type</th><th>Journal</th><th>Date</th><th>Tiers</th><th class="nombre">TTC</th>
       <th>Contrôle</th></tr></thead><tbody>${pieces.map((p, i) => `<tr data-i="${i}"><td><button type="button" data-deplier title="Écriture">▸</button></td>
-      <td><a href="/document/${Number(p.id)}">${echapper(p.numero)}</a></td><td>${echapper(p.type_document)}</td><td>${echapper(p.journal)}</td><td>${dateFr(p.date)}</td>
+      <td><a href="${urlDocument(Number(p.id))}">${echapper(p.numero)}</a></td><td>${echapper(p.type_document)}</td><td>${echapper(p.journal)}</td><td>${dateFr(p.date)}</td>
       <td>${echapper(p.tiers ?? '')}</td><td class="nombre">${montant(p.total_ttc)}</td>
       <td>${p.erreurs.length ? `<span class="erreur">⚠ ${echapper(p.erreurs.join(' · '))}</span>` : '✓'}</td></tr>
       <tr data-ecriture="${i}" hidden><td></td><td colspan="7"><table class="tableau-compact"><thead><tr><th>Compte</th><th>Tiers</th><th>Libellé</th><th>Échéance</th>

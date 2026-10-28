@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -60,7 +61,7 @@ public static class ExtensionsHttpsInstallation
 
     public static WebApplicationBuilder AddHttpsInstallation(this WebApplicationBuilder builder)
     {
-        var dossier = new DossierCertificats(Environment.GetEnvironmentVariable("LOGIBTP_CERTIFICATS")
+        var dossier = new DossierCertificats(Environment.GetEnvironmentVariable(VariablesEnv.Certificats)
             ?? Path.Combine(builder.Environment.ContentRootPath, "certificats"));
         var certificat = new CertificatServeur(dossier);
         builder.Services.AddSingleton(dossier);
@@ -86,8 +87,8 @@ public static class ExtensionsHttpsInstallation
         var certificat = app.ApplicationServices.GetRequiredService<CertificatServeur>();
         if (!certificat.Actif) return app;
         var config = app.ApplicationServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
-        var domaine = config["LOGIBTP_DOMAINE"]?.Trim().ToLowerInvariant();
-        var port = int.TryParse(config["LOGIBTP_PORT_HTTPS_PUBLIC"], out var p) ? p : 443;
+        var domaine = config[VariablesEnv.Domaine]?.Trim().ToLowerInvariant();
+        var port = int.TryParse(config[VariablesEnv.PortHttpsPublic], out var p) ? p : 443;
         return app.Use(async (http, next) =>
         {
             var chemin = http.Request.Path;

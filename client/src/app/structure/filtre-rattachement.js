@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { champRattachement } from './selection.js';
 
@@ -8,10 +9,10 @@ import { champRattachement } from './selection.js';
 // Adresse : /liste/<thème>?<type>=CODE (un seul type : projet, affaire, chantier ou marche ; raccourcis des fiches).
 
 export const NIVEAUX = [
-  { type: 'projet', colonne: 'projet_id', liste: 'projets', titre: 'Projet' },
-  { type: 'affaire', colonne: 'affaire_id', liste: 'affaires', titre: 'Affaire' },
-  { type: 'chantier', colonne: 'chantier_id', liste: 'chantiers', titre: 'Chantier' },
-  { type: 'marche', colonne: 'marche_id', liste: 'marches', titre: 'Marché' },
+  { type: TYPE_FICHE.PROJET, colonne: 'projet_id', liste: 'projets', titre: 'Projet' },
+  { type: TYPE_FICHE.AFFAIRE, colonne: 'affaire_id', liste: 'affaires', titre: 'Affaire' },
+  { type: TYPE_FICHE.CHANTIER, colonne: 'chantier_id', liste: 'chantiers', titre: 'Chantier' },
+  { type: TYPE_FICHE.MARCHE, colonne: 'marche_id', liste: 'marches', titre: 'Marché' },
 ];
 
 export class FiltreRattachement {

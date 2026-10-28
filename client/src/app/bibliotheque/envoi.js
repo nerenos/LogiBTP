@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { codeAppel } from '@logibtp/bibliotheque';
 import { texteBrut, D, arrondir } from '@logibtp/socle';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
@@ -231,22 +232,22 @@ export class EnvoiBibliotheque {
         if (c.action === 'creer') {
           if (!c.codeSaisi) throw new Error('code obligatoire');
           const valeurs = { ...valeursDepuisLigne(l, c.type, { composition, creation: true }), bib_id: c.bibId, code: c.codeSaisi, type: c.type, actif: true };
-          id = (await this.fiche.creer('element', { valeurs })).id;
+          id = (await this.fiche.creer(TYPE_FICHE.ELEMENT, { valeurs })).id;
           crees++;
         } else {
           id = Number(c.action.split(':')[1]);
-          const actuel = await this.fiche.charger('element', id);
+          const actuel = await this.fiche.charger(TYPE_FICHE.ELEMENT, id);
           if (actuel.valeurs.type !== c.type) throw new Error(`l'élément ${actuel.valeurs.code} est un ${actuel.valeurs.type.toLowerCase()}, la ligne un ${c.type.toLowerCase()}`);
           const valeurs = valeursDepuisLigne(l, c.type, { composition });
           // PA : repris seulement pour un article à prix fixe (sinon tarifs ou dernier prix d'achat).
           if (c.type === 'ARTICLE' && actuel.valeurs.scenario_pa !== 'FIXE') delete valeurs.pa_fixe;
           const jeton = crypto.randomUUID();
-          const v = await this.fiche.verrouiller('element', id, { jeton });
+          const v = await this.fiche.verrouiller(TYPE_FICHE.ELEMENT, id, { jeton });
           if (v.ok === false) throw new Error(`fiche en cours de modification par ${v.verrou?.utilisateur ?? 'un autre utilisateur'}`);
           try {
-            await this.fiche.enregistrer('element', id, { jeton, h: actuel.h, valeurs: { ...valeurs, commentaire_prix: `Depuis le document ${ed.saisie.document.ent_numero ?? ''}`.trim() } });
+            await this.fiche.enregistrer(TYPE_FICHE.ELEMENT, id, { jeton, h: actuel.h, valeurs: { ...valeurs, commentaire_prix: `Depuis le document ${ed.saisie.document.ent_numero ?? ''}`.trim() } });
           } finally {
-            await this.fiche.deverrouiller('element', id, jeton).catch(() => {});
+            await this.fiche.deverrouiller(TYPE_FICHE.ELEMENT, id, jeton).catch(() => {});
           }
           majs++;
         }

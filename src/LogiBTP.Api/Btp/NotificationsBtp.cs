@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LogiBTP.Crm;
 using LogiBTP.Domaine.Ressources;
+using LogiBTP.Domaine;
 using LogiBTP.Notifications.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,7 @@ public sealed class SourceRappelsCrm(LogiBtpContext db, ModulesSociete modules) 
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
-        if (!await modules.EstActifAsync("crm", ct)) return [];
+        if (!await modules.EstActifAsync(ModulesFacultatifs.Crm, ct)) return [];
         // Pas d'accolades dans le SQL brut d'EF (lues comme paramètres) : valeur absente traitée ici.
         var seuilsJson = await db.Database.SqlQueryRaw<string>("SELECT cpa_valeur::text AS \"Value\" FROM crm_parametre WHERE cpa_cle = 'seuils_rappel'").FirstOrDefaultAsync(ct);
         var seuils = seuilsJson is null ? new SeuilsRappel() : JsonSerializer.Deserialize<SeuilsRappel>(seuilsJson, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new SeuilsRappel();
@@ -189,7 +190,7 @@ public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifi
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
-        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("sous_traitance", ct)) return [];
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.SousTraitance, ct)) return [];
         var marches = await db.Database.SqlQueryRaw<int>("SELECT mar_id AS \"Value\" FROM marche WHERE mar_sens = 'ST' AND mar_statut = 'EN_COURS'").ToListAsync(ct);
         if (marches.Count == 0) return [];
         var service = portee.GetRequiredService<LogiBTP.SousTraitance.Web.ServiceSousTraitance>();
@@ -234,7 +235,7 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
-        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("sous_traitance", ct)) return [];
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.SousTraitance, ct)) return [];
         var demandes = await portee.GetRequiredService<LogiBTP.SousTraitance.Web.ServicePaiementDirect>().AEcheanceAsync(ct);
         if (demandes.Count == 0) return [];
         var infos = (await db.Database.SqlQueryRaw<Demande>("""
@@ -296,7 +297,7 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
-        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync("stock", ct)) return [];
+        if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Stock, ct)) return [];
         var r = new List<NouvelleNotification>();
         var magasiniers = await db.Database.SqlQueryRaw<string>("""
             SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id

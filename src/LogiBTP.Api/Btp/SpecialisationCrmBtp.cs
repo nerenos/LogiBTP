@@ -1,4 +1,5 @@
 using LogiBTP.Crm.Web;
+using LogiBTP.Domaine;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -13,19 +14,19 @@ public class SpecialisationCrmBtp : SpecialisationCrm
 {
     public override IReadOnlyList<TypeElementCrm> TypesElements { get; } =
     [
-        new("personne", "Tiers", "🏢"), new("individu", "Contact", "👤"), new("projet", "Projet", "🎯"), new("affaire", "Affaire", "🗂"),
-        new("chantier", "Chantier", "🏗"), new("marche", "Marché", "📜"), new("document", "Document", "📄"),
+        new(TypesFiche.Personne, "Tiers", "🏢"), new(TypesFiche.Individu, "Contact", "👤"), new(TypesFiche.Projet, "Projet", "🎯"), new(TypesFiche.Affaire, "Affaire", "🗂"),
+        new(TypesFiche.Chantier, "Chantier", "🏗"), new(TypesFiche.Marche, "Marché", "📜"), new("document", "Document", "📄"),
     ];
 
     /// <summary>Libellé de chaque type : requête sur ses identifiants (liste fermée, jamais saisie).</summary>
     private static readonly Dictionary<string, string> Libelles = new()
     {
-        ["personne"] = "SELECT per_id::text AS id, coalesce(nullif(per_nom_commercial, ''), per_raison_sociale) AS libelle, NULL::text AS url FROM personne WHERE per_id = ANY(@ids)",
-        ["individu"] = "SELECT ind_id::text AS id, concat_ws(' ', ind_prenom, ind_nom) AS libelle, NULL::text AS url FROM individu WHERE ind_id = ANY(@ids)",
-        ["projet"] = "SELECT prj_id::text AS id, concat_ws(' – ', prj_code, prj_libelle) AS libelle, NULL::text AS url FROM projet WHERE prj_id = ANY(@ids)",
-        ["affaire"] = "SELECT aff_id::text AS id, concat_ws(' – ', aff_code, aff_libelle) AS libelle, NULL::text AS url FROM affaire WHERE aff_id = ANY(@ids)",
-        ["chantier"] = "SELECT cha_id::text AS id, concat_ws(' – ', cha_code, cha_libelle) AS libelle, NULL::text AS url FROM chantier WHERE cha_id = ANY(@ids)",
-        ["marche"] = "SELECT mar_id::text AS id, concat_ws(' – ', mar_code, mar_libelle) AS libelle, NULL::text AS url FROM marche WHERE mar_id = ANY(@ids)",
+        [TypesFiche.Personne] = "SELECT per_id::text AS id, coalesce(nullif(per_nom_commercial, ''), per_raison_sociale) AS libelle, NULL::text AS url FROM personne WHERE per_id = ANY(@ids)",
+        [TypesFiche.Individu] = "SELECT ind_id::text AS id, concat_ws(' ', ind_prenom, ind_nom) AS libelle, NULL::text AS url FROM individu WHERE ind_id = ANY(@ids)",
+        [TypesFiche.Projet] = "SELECT prj_id::text AS id, concat_ws(' – ', prj_code, prj_libelle) AS libelle, NULL::text AS url FROM projet WHERE prj_id = ANY(@ids)",
+        [TypesFiche.Affaire] = "SELECT aff_id::text AS id, concat_ws(' – ', aff_code, aff_libelle) AS libelle, NULL::text AS url FROM affaire WHERE aff_id = ANY(@ids)",
+        [TypesFiche.Chantier] = "SELECT cha_id::text AS id, concat_ws(' – ', cha_code, cha_libelle) AS libelle, NULL::text AS url FROM chantier WHERE cha_id = ANY(@ids)",
+        [TypesFiche.Marche] = "SELECT mar_id::text AS id, concat_ws(' – ', mar_code, mar_libelle) AS libelle, NULL::text AS url FROM marche WHERE mar_id = ANY(@ids)",
         ["document"] = """
             SELECT DISTINCT ON (coalesce(d.ent_groupe_id, d.ent_id)) coalesce(d.ent_groupe_id, d.ent_id)::text AS id,
                    concat_ws(' ', t.tyd_libelle, coalesce(d.ent_numero, '(brouillon)'), '–', d.ent_objet) AS libelle, '/document/' || d.ent_id AS url
@@ -36,7 +37,7 @@ public class SpecialisationCrmBtp : SpecialisationCrm
 
     private static string? Url(string type, string id) => type switch
     {
-        "personne" or "individu" or "projet" or "affaire" or "chantier" or "marche" => $"/fiche/{type}/{id}",
+        TypesFiche.Personne or TypesFiche.Individu or TypesFiche.Projet or TypesFiche.Affaire or TypesFiche.Chantier or TypesFiche.Marche => $"/fiche/{type}/{id}",
         _ => null,
     };
 
@@ -76,7 +77,7 @@ public class SpecialisationCrmBtp : SpecialisationCrm
             new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Varchar) { Value = (object?)responsable ?? DBNull.Value },
             new NpgsqlParameter("commentaire", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)commentaire ?? DBNull.Value },
             new NpgsqlParameter("demande", d.DemNumero)).ToListAsync(ct); // pas d'accolades dans le SQL : EF les lit comme des paramètres
-        return new ElementCrm("projet", id[0].ToString());
+        return new ElementCrm(TypesFiche.Projet, id[0].ToString());
     }
 
     /// <summary>
@@ -86,7 +87,7 @@ public class SpecialisationCrmBtp : SpecialisationCrm
     public override async Task<List<ElementCrm>> PerimetreAsync(CrmDbContext db, ElementCrm element, CancellationToken ct)
     {
         var res = new List<ElementCrm> { element };
-        if (element.Type is not ("projet" or "affaire" or "chantier" or "marche") || !int.TryParse(element.Id, out var id)) return res;
+        if (element.Type is not (TypesFiche.Projet or TypesFiche.Affaire or TypesFiche.Chantier or TypesFiche.Marche) || !int.TryParse(element.Id, out var id)) return res;
         var lignes = await db.Database.SqlQueryRaw<PerimetreSql>("""
             WITH chantiers AS (
                 SELECT cha_id FROM chantier WHERE (@type = 'affaire' AND cha_aff_id = @id) OR (@type = 'projet' AND cha_prj_id = @id) OR (@type = 'chantier' AND cha_id = @id)),

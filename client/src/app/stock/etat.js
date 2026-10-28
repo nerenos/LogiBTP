@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo, formatDateHeure } from '@logibtp/socle/ui';
 import { METHODES_VALORISATION } from '@logibtp/stock';
@@ -76,7 +77,7 @@ export class PageStock extends PageBase {
     const total = lignes.reduce((s, l) => s + Number(l.valeur ?? 0), 0);
     this.conteneur.querySelector('[data-corps]').innerHTML = lignes.length ? `<table class="tableau-compact"><thead><tr><th>Article</th><th>Libellé</th><th>Emplacements</th>
       <th>Quantité</th><th>U.</th><th>Valeur unitaire</th><th>Source</th><th>Valeur</th><th>Dernier mouvement</th></tr></thead><tbody>
-      ${lignes.map((l) => `<tr class="${Number(l.quantite) < 0 ? 'negatif' : ''}"><td><a href="/fiche/element/${l.ele_id}" data-element="${l.ele_id}">${echapper(l.code)}</a></td>
+      ${lignes.map((l) => `<tr class="${Number(l.quantite) < 0 ? 'negatif' : ''}"><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, l.ele_id)}" data-element="${l.ele_id}">${echapper(l.code)}</a></td>
         <td>${echapper(l.libelle)}</td><td>${echapper(l.emplacements.join(', '))}</td>
         <td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${formatNombre(l.quantite, l.precision)}</td><td>${echapper(l.unite)}</td>
         <td class="nombre">${l.valeur_unitaire === null ? '' : formatNombre(l.valeur_unitaire, 4)}${l.provisoire ? ' <span title="Prix de réception non encore facturé">⏳</span>' : ''}</td>
@@ -86,7 +87,7 @@ export class PageStock extends PageBase {
       : '<p class="aide">Aucun article en stock à cette date.</p>';
     this.conteneur.querySelectorAll('[data-element]').forEach((a) => a.addEventListener('click', (ev) => {
       ev.preventDefault();
-      this.app.naviguer(`/fiche/element/${a.dataset.element}`, { nouvelleFenetre: ev.ctrlKey });
+      this.app.naviguer(urlFiche(TYPE_FICHE.ELEMENT, a.dataset.element), { nouvelleFenetre: ev.ctrlKey });
     }));
   }
 
@@ -111,6 +112,6 @@ export class PageMouvementStock extends PageBase {
   async ouvrir() {
     this.titre = 'Mouvement de stock';
     const m = await api.stock.mouvement(this.params.id);
-    this.app.naviguer(m.ent_id ? `/document/${m.ent_id}` : `/fiche/element/${m.ele_id}`);
+    this.app.naviguer(m.ent_id ? urlDocument(m.ent_id) : urlFiche(TYPE_FICHE.ELEMENT, m.ele_id));
   }
 }

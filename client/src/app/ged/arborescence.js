@@ -1,3 +1,4 @@
+import { urlDocument, TYPE_FICHE } from '../codes.js';
 import { ArborescenceGed } from '@logibtp/ged/ui';
 
 // Arborescence de la GED du cœur (spécialisation d'ArborescenceGed) : dossiers automatiques de la structure des
@@ -57,7 +58,7 @@ export class ArborescenceBtp extends ArborescenceGed {
     if (!c) return { cle: 'racine', libelle: 'Documents', icone: '🗂', element: null, type: 'racine' };
     if (STRUCTURE.includes(c.type_element)) {
       const refs = await this.#refs();
-      const x = refs[`${c.type_element === 'marche' ? 'marches' : `${c.type_element}s`}`]?.find((y) => String(y.id) === String(c.id_element));
+      const x = refs[`${c.type_element === TYPE_FICHE.MARCHE ? 'marches' : `${c.type_element}s`}`]?.find((y) => String(y.id) === String(c.id_element));
       if (x) return this.#noeudStructure(c.type_element, x);
     }
     const r = await super.racine();
@@ -89,7 +90,7 @@ export class ArborescenceBtp extends ArborescenceGed {
   /** Documents du périmètre d'un nœud de la structure (le rattachement complète les parents : tout le sous-arbre). */
   async #documents(n) {
     if (!this.documentsParNoeud.has(n.cle)) {
-      this.documentsParNoeud.set(n.cle, this.structure.documents({ [`${n.type === 'marche' ? 'marches' : `${n.type}s`}`]: [n.id] }));
+      this.documentsParNoeud.set(n.cle, this.structure.documents({ [`${n.type === TYPE_FICHE.MARCHE ? 'marches' : `${n.type}s`}`]: [n.id] }));
     }
     return this.documentsParNoeud.get(n.cle);
   }
@@ -99,14 +100,14 @@ export class ArborescenceBtp extends ArborescenceGed {
     const contexte = await this.#documents(n);
     const { projet = null } = n.filtre ?? {};
     const sous = [];
-    if (n.type === 'projet') {
+    if (n.type === TYPE_FICHE.PROJET) {
       const chantiers = refs.chantiers.filter((c) => c.prj_id === n.id);
       const affaires = new Set([...chantiers.map((c) => c.aff_id), ...contexte.documents.map((d) => d.affaire_id)].filter(Boolean));
       sous.push(...refs.affaires.filter((a) => affaires.has(a.id)).map((a) => this.#noeudStructure('affaire', a, { projet: n.id })));
       sous.push(...chantiers.filter((c) => !c.aff_id).map((c) => this.#noeudStructure('chantier', c)));
-    } else if (n.type === 'affaire') {
+    } else if (n.type === TYPE_FICHE.AFFAIRE) {
       sous.push(...refs.chantiers.filter((c) => c.aff_id === n.id && (!projet || c.prj_id === projet)).map((c) => this.#noeudStructure('chantier', c)));
-    } else if (n.type === 'chantier') {
+    } else if (n.type === TYPE_FICHE.CHANTIER) {
       sous.push(...refs.marches.filter((m) => m.cha_id === n.id).map((m) => this.#noeudStructure('marche', m)));
     }
     // Documents rangés sous ce nœud : rattachement le plus précis égal au nœud.
@@ -173,7 +174,7 @@ export class ArborescenceBtp extends ArborescenceGed {
       const chemin = base ? this.#cheminDepuis(base, d) : null;
       const libelle = `${d.type_libelle ?? d.type} ${d.numero ?? `#${d.id}`}`;
       return chemin ? { cle: `L${d.groupe_id ?? d.id}`, libelle, sous_titre: d.objet ?? null, icone: '📄', lien: { cle: `D${d.groupe_id ?? d.id}`, chemin, libelle } }
-        : { cle: `U${d.id}`, libelle, sous_titre: d.objet ?? null, icone: '📄', url: `/document/${d.id}` };
+        : { cle: `U${d.id}`, libelle, sous_titre: d.objet ?? null, icone: '📄', url: urlDocument(d.id) };
     });
   }
 }

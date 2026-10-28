@@ -1,5 +1,6 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { api, ErreurApi } from '../api.js';
-import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttente, envoiCree, estHorsLigne } from './attente.js';
+import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttente, envoiCree, estHorsLigne, ETAT_ATTENTE } from './attente.js';
 
 // Envoi des documents enregistrés hors ligne (mode hors ligne, lot 3) : au retour de l'API, au démarrage et après une
 // reconnexion. Une seule fenêtre envoie à la fois (verrou du navigateur). Pour chaque entrée en attente du compte :
@@ -27,7 +28,7 @@ async function envoyerEntree(app, entree) {
   }
   const rep = await api.enregistrer(e.id, e.envoi);
   await retirerAttente(e.compte, e.id_local);
-  app.publier('hors-ligne-envoye', { compte: e.compte, id_local: e.id_local, id: e.id, rep, envoi: e.envoi });
+  app.publier(SUJET_FENETRE.HORS_LIGNE_ENVOYE, { compte: e.compte, id_local: e.id_local, id: e.id, rep, envoi: e.envoi });
   app.publier(SUJET_ATTENTE, {});
   return { id: e.id, rep };
 }
@@ -45,13 +46,13 @@ export async function envoyerAttentes(app) {
   const envoyer = async () => {
     let n = 0;
     for (const e of await listeAttente(compte)) {
-      if (e.etat !== 'ATTENTE') continue;
+      if (e.etat !== ETAT_ATTENTE.ATTENTE) continue;
       try {
         if (await envoyerEntree(app, e)) n++;
       } catch (x) {
         if (estHorsLigne(x) || x?.statut === 401) break;
         const conflit = x instanceof ErreurApi && x.statut === 409;
-        await marquerAttente(compte, e.id_local, { etat: conflit ? 'CONFLIT' : 'ERREUR', erreur: x.message });
+        await marquerAttente(compte, e.id_local, { etat: conflit ? ETAT_ATTENTE.CONFLIT : ETAT_ATTENTE.ERREUR, erreur: x.message });
         app.publier(SUJET_ATTENTE, {});
         app.message(`${e.libelle} : ${conflit ? 'modifié entre-temps sur le serveur, vos modifications restent sur ce poste' : `envoi refusé (${x.message})`}`, 'erreur');
       }

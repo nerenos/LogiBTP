@@ -1,3 +1,4 @@
+using LogiBTP.Domaine;
 using LogiBTP.Reglements.Web;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
@@ -17,12 +18,12 @@ public static class ReglementsStructure
         {
             var pieces = type switch
             {
-                "chantier" => await db.Database.SqlQuery<long>($"SELECT ent_id AS \"Value\" FROM document WHERE ent_chantier_id = {id} AND ent_verrouille").ToListAsync(ct),
-                "marche" => await db.Database.SqlQuery<long>($"SELECT ent_id AS \"Value\" FROM document WHERE ent_marche_id = {id} AND ent_verrouille").ToListAsync(ct),
+                TypesFiche.Chantier => await db.Database.SqlQuery<long>($"SELECT ent_id AS \"Value\" FROM document WHERE ent_chantier_id = {id} AND ent_verrouille").ToListAsync(ct),
+                TypesFiche.Marche => await db.Database.SqlQuery<long>($"SELECT ent_id AS \"Value\" FROM document WHERE ent_marche_id = {id} AND ent_verrouille").ToListAsync(ct),
                 _ => throw ExceptionMetier.Invalide("TYPE", "Chantier ou marché"),
             };
             return pieces.Count == 0 ? [] : await s.Echeances(new FiltreEcheances(Pieces: pieces), ouvertes ?? false, ct);
-        }).ExigeModule("reglement", "Règlements");
+        }).ExigeModule(ModulesFacultatifs.Reglement, "Règlements");
         return api;
     }
 }

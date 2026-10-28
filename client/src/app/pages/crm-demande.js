@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ExplorateurGed } from '@logibtp/ged/ui';
@@ -29,7 +30,7 @@ export class PageDemandeCrm extends PageBase {
       this.detail = null;
       this.saisie = { objet: '', description_html: null, etat: 'VEILLE', motif: null, tiers_id: this.requete.tiers ? Number(this.requete.tiers) : null, ind_id: null,
         srv_id: this.ctx.services[0]?.id ?? null, responsable_id: null, echeance: null, montant_estime: null, origine: '' };
-      this.tiers = this.saisie.tiers_id ? (await api.crm.elements([{ type: 'personne', id: String(this.saisie.tiers_id) }]))[0] : null;
+      this.tiers = this.saisie.tiers_id ? (await api.crm.elements([{ type: TYPE_FICHE.PERSONNE, id: String(this.saisie.tiers_id) }]))[0] : null;
       this.contact = null;
       this.titre = 'Nouvelle demande';
     } else await this.charger(Number(this.params.id));
@@ -134,7 +135,7 @@ export class PageDemandeCrm extends PageBase {
     $('[data-choisir-contact]')?.addEventListener('click', async () => {
       const { annuaire } = await this.app.services();
       const r = await choisirIndividu({ annuaire, titre: 'Contact de la demande' });
-      if (r?.individu) { s.ind_id = r.individu.id; this.contact = { type: 'individu', id: String(r.individu.id), libelle: r.individu.nom_complet, icone: '👤', url: `/fiche/individu/${r.individu.id}` }; this.marquer(); this.rendre(); } else if (r?.nouveau) this.app.message('Créez d\'abord le contact dans l\'annuaire (fiche individu)', 'avertissement');
+      if (r?.individu) { s.ind_id = r.individu.id; this.contact = { type: TYPE_FICHE.INDIVIDU, id: String(r.individu.id), libelle: r.individu.nom_complet, icone: '👤', url: urlFiche(TYPE_FICHE.INDIVIDU, r.individu.id) }; this.marquer(); this.rendre(); } else if (r?.nouveau) this.app.message('Créez d\'abord le contact dans l\'annuaire (fiche individu)', 'avertissement');
     });
     $('[data-retirer-contact]')?.addEventListener('click', () => { s.ind_id = null; this.contact = null; this.marquer(); this.rendre(); });
     $('[data-enregistrer]')?.addEventListener('click', () => this.enregistrer());
@@ -147,7 +148,7 @@ export class PageDemandeCrm extends PageBase {
     });
     $('[data-supprimer]')?.addEventListener('click', async () => {
       if (!await confirmer('Supprimer définitivement cette demande ?')) return;
-      try { await api.crm.supprimerDemande(this.detail.demande.id); this.modifie = false; this.app.publier('crm', {}); this.app.routeur.retour('/crm/demandes'); } catch (e) { this.app.erreur(e); }
+      try { await api.crm.supprimerDemande(this.detail.demande.id); this.modifie = false; this.app.publier(SUJET_FENETRE.CRM, {}); this.app.routeur.retour('/crm/demandes'); } catch (e) { this.app.erreur(e); }
     });
     if (this.detail) {
       this.suivi?.fermer();
@@ -166,7 +167,7 @@ export class PageDemandeCrm extends PageBase {
 
   definirTiers(p) {
     this.saisie.tiers_id = p.id;
-    this.tiers = { type: 'personne', id: String(p.id), libelle: p.nom_commercial || p.raison_sociale, icone: '🏢', url: `/fiche/personne/${p.id}` };
+    this.tiers = { type: TYPE_FICHE.PERSONNE, id: String(p.id), libelle: p.nom_commercial || p.raison_sociale, icone: '🏢', url: urlFiche(TYPE_FICHE.PERSONNE, p.id) };
     this.marquer();
     this.rendre();
   }
@@ -195,7 +196,7 @@ export class PageDemandeCrm extends PageBase {
   async apres(d, texte) {
     this.detail = d;
     await this.charger(d.demande.id);
-    this.app.publier('crm', { demande: d.demande.id });
+    this.app.publier(SUJET_FENETRE.CRM, { demande: d.demande.id });
     this.app.message(texte, 'succes');
     this.rendre();
   }

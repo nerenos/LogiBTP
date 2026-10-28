@@ -1,3 +1,4 @@
+import { MODULE_FACULTATIF } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { ParametrageAffichageDocument, variablesTexteDocument } from '@logibtp/document/ui';
 import { echapper, lireNombre, formatLibre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
@@ -39,7 +40,7 @@ export class PageParametresDocuments extends PageBase {
       <h2>Acomptes</h2><div class="mode-acomptes"></div>
       <h2>Textes de l'édition</h2><div class="textes-types"></div>
       <h2>Règles des documents</h2><div class="regles-documents"></div>
-      ${app.moduleActif('execution') ? "<h2>Types d'ordres (Exécution)</h2><div class='types-ordres'></div>" : ''}</div>`;
+      ${app.moduleActif(MODULE_FACULTATIF.EXECUTION) ? "<h2>Types d'ordres (Exécution)</h2><div class='types-ordres'></div>" : ''}</div>`;
     const fournisseur = {
       etiquettes: () => api.etiquettesLigne(), enregistrerEtiquettes: (l) => api.enregistrerEtiquettesLigne(l),
       couleursTypePrix: () => api.couleursTypePrix(), enregistrerCouleurs: (l) => api.enregistrerCouleursTypePrix(l),

@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -20,7 +21,7 @@ export class PageRappelsCrm extends PageBase {
       <span class="aide"> · <span class="crm-pastille crm-pastille-rouge"></span> échu ou imminent · <span class="crm-pastille crm-pastille-orange"></span> bientôt · <span class="crm-pastille crm-pastille-vert"></span> à venir</span></p>
       <div data-corps></div></div>`;
     this.conteneur.querySelector('[data-tous]').addEventListener('change', (e) => { this.tous = e.target.checked; this.app.routeur.remplacerUrl(this.urlCourante()); this.charger(); });
-    this.desabonner = app.abonner('crm', () => this.charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger());
     await this.charger();
   }
 
@@ -42,7 +43,7 @@ export class PageRappelsCrm extends PageBase {
         <td>${lienElement(r.note?.element)}</td><td>${r.note ? pastilleEtat(r.note) : ''}</td>
         <td><button type="button" data-traiter="${r.id}" title="Rappel traité : il ne paraît plus (la note reste ouverte)">Fait</button></td></tr>`).join('')}</tbody></table>`;
     corps.querySelectorAll('[data-traiter]').forEach((b) => b.addEventListener('click', async () => {
-      try { await api.crm.traiterRappel(Number(b.dataset.traiter)); this.app.publier('crm', { rappels: true }); } catch (e) { this.app.erreur(e); }
+      try { await api.crm.traiterRappel(Number(b.dataset.traiter)); this.app.publier(SUJET_FENETRE.CRM, { rappels: true }); } catch (e) { this.app.erreur(e); }
     }));
   }
 }

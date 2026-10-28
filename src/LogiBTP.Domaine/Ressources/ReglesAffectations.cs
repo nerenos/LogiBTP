@@ -14,7 +14,7 @@ public sealed record ErreurAffectation(string Code, int Affectation);
 /// </summary>
 public static class ReglesAffectations
 {
-    public static readonly string[] Types = ["SALARIE", "INTERIM", "SOUS_TRAITANT", "MATERIEL"];
+    public static readonly string[] Types = [TypesRessource.Salarie, TypesRessource.Interim, TypesRessource.SousTraitant, TypesRessource.Materiel];
 
     private static bool DatesValables(AffectationMateriel a) => a.Du is { } du && (a.Au is not { } au || au >= du);
 
@@ -27,7 +27,7 @@ public static class ReglesAffectations
             if (!Types.Contains(a.Type)) r.Add(new("AFF_TYPE", i));
             if (string.IsNullOrWhiteSpace(a.Id)) r.Add(new("AFF_CIBLE", i));
             if (!DatesValables(a)) r.Add(new("AFF_DATE", i));
-            if (a.Type == "MATERIEL" && a.Id == materiel) r.Add(new("AFF_SOI", i));
+            if (a.Type == TypesRessource.Materiel && a.Id == materiel) r.Add(new("AFF_SOI", i));
             // Chevauchement avec une affectation précédente (dates valables des deux côtés).
             var chevauche = DatesValables(a) && affectations.Take(i).Any(b => DatesValables(b)
                 && a.Du!.Value <= (b.Au ?? DateOnly.MaxValue) && b.Du!.Value <= (a.Au ?? DateOnly.MaxValue));

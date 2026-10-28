@@ -1,3 +1,4 @@
+import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, ouvrirMenuContextuel, confirmer, saisir, formatDate } from '@logibtp/socle/ui';
@@ -157,7 +158,7 @@ export class PageExecutionChantier extends PageBase {
   async ouvrir() {
     this.titre = 'Exécution du chantier';
     this.conteneur.innerHTML = '<div class="page-parametres page-execution" data-corps></div>';
-    const [modeles, d] = await Promise.all([api.execution.modeles(), api.execution.detail('chantier', this.params.id)]);
+    const [modeles, d] = await Promise.all([api.execution.modeles(), api.execution.detail(TYPE_FICHE.CHANTIER, this.params.id)]);
     this.modeles = modeles;
     this.#rendre(d);
   }
@@ -174,7 +175,7 @@ export class PageExecutionChantier extends PageBase {
       <h2>États des services</h2><div data-etats></div>
       <h2>Parcours</h2><p class="ligne">Modèle : <span data-modele></span> <button type="button" data-appliquer>Appliquer le modèle</button>
         <button type="button" data-enregistrer disabled>Enregistrer le parcours</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>Retirer le parcours</button>
-        ${this.app.moduleActif('planning') && etapes.length ? '<button type="button" data-theorique title="Une tâche par étape, heures budget du service, enchaînées par des dépendances">📅 Planning théorique</button>' : ''}</p>
+        ${this.app.moduleActif(MODULE_FACULTATIF.PLANNING) && etapes.length ? '<button type="button" data-theorique title="Une tâche par étape, heures budget du service, enchaînées par des dépendances">📅 Planning théorique</button>' : ''}</p>
       <div data-etapes></div>
       <h2>Ordres</h2><div data-ordres></div>
       <p><a href="/execution/synthese">← Synthèse</a> · <a href="/liste/ordres?vue=1000&chantier=${encodeURIComponent(el?.code ?? '')}">Liste des ordres du chantier</a></p>`;
@@ -202,7 +203,7 @@ export class PageExecutionChantier extends PageBase {
     const controler = editerEtapes(corps.querySelector('[data-etapes]'), etapes, optionsServices(d.services), { change: () => { modifie = true; btnEnr.disabled = false; } });
     this.#modifie = () => modifie;
     const enregistrer = async (saisie) => {
-      try { this.#rendre(await api.execution.enregistrerParcours('chantier', this.params.id, saisie)); } catch (x) { this.app.erreur(x); }
+      try { this.#rendre(await api.execution.enregistrerParcours(TYPE_FICHE.CHANTIER, this.params.id, saisie)); } catch (x) { this.app.erreur(x); }
     };
     corps.querySelector('[data-appliquer]').addEventListener('click', async () => {
       if (!modele.valeurCombo) return;

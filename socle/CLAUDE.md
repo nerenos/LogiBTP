@@ -16,7 +16,7 @@
 - `js/src/calcul/references.js` : `analyserReference` (variable `$$ $ @@ @` ou donnée `table[id].colonne`), `analyserCibleVariable`.
 - `js/src/calcul/libelles.js` : `remplacerVariables`, `texteBrut`, `formaterValeur`, `echapperHtml`.
 - `js/src/calcul/dates.js` : dates « AAAA-MM-JJ » (jour civil, calculs à minuit UTC) : `aujourdhui()` et `dateLocale(instant)` dans le fuseau du poste (jamais `toISOString().slice(0, 10)`, qui donne la veille entre 0 h et 2 h), `numeroJour`, `depuisNumero`, `ajouterJours`, `joursEntre`, `jourSemaine`, `joursDuMois`, `ajouterMois` (fin de mois ramenée, comme `DateOnly.AddMonths`). Les modules JS sans dépendance (Calendrier, Pointage, Exécution) gardent leurs propres calculs.
-- `js/src/codes.js` (exporté par `@logibtp/socle`) ↔ `dotnet/LogiBTP.Socle/Codes.cs` : codes communs aux modules, `NIVEAU_NOTIFICATION` ↔ `NiveauNotification` (INFO, ATTENTION, URGENT ; parité : `CodesTests`).
+- `js/src/codes.js` (exporté par `@logibtp/socle`) ↔ `dotnet/LogiBTP.Socle/Codes.cs` : codes communs aux modules, `NIVEAU_NOTIFICATION` ↔ `NiveauNotification` (INFO, ATTENTION, URGENT ; parité : `CodesTests`). `dotnet/LogiBTP.Socle/VariablesEnv.cs` : noms des variables `LOGIBTP_*` du `.env`.
 - `js/src/ui/grille.js` : `GrilleArbre` (≈580 l., mode ligne / édition, glisser-déposer, dépôt externe, `definirColonnes`).
 - `js/src/ui/liste-deroulante.js` : `ListeDeroulante` (combo, mode strict), `AssistantFormule` (`{{` ou Ctrl+Espace).
 - `js/src/ui/etat.js` : `Magasin` (pile annuler / rétablir par patchs Immer, `lectureSeule`, `surRefus`).
@@ -49,7 +49,7 @@
 - `Utilisateur(Code, Profil, Groupe)` : `EstAdmin` (profil `ADMIN`), `Utilisateur.Depuis(http)` : utilisateur posé par l'authentification (`Utilisateur.Poser(http, u)`, session du module Authentification) ; sinon (tests, mode `EnTetes` de développement) en-têtes `X-Utilisateur` / `X-Profil` / `X-Groupe` (défauts `demo` / `ADMIN`).
 - Sociétés : `OptionsSocietes` (section `Societes` : `Domaines`, `Principale` ← `ConnectionStrings:LogiBTP`, `LibellePrincipale`, `Liste`), `SocieteConfiguree`, `SocieteCourante(Code, Libelle, Connexion)` (`Principale` si Code null, injectée en scoped), `AddSocietes(configuration)`, `UseSocietes()` (sous-domaine de l'hôte ; inconnu → 404 `SOCIETE_INCONNUE` ; `www`, IP, domaine nu → base principale), `SousDomaine(hote, domaines)` ; hors requête (tâches de fond) : `OptionsSocietes.Societes()` (principale puis liste, connexion renseignée) et `services.CreerPorteeSociete(societe)` (portée dont la `SocieteCourante` est imposée par `PorteeSociete`).
 - `CasPartages` : `RacineDepot` (dossier de `LogiBTP.slnx`), `Chemin`, `Fichiers` (MemberData), `Lire`, `Egal`, `Verifier`, `Trouver`, `VerifierErreurs`, `ColonnesJs(fichier, nom)` (lit un `NOM = new Set([...])` JS pour les tests d'alignement des colonnes).
-- `Constantes` : `Js(fichier, nom)` (paires d'un `export const NOM = Object.freeze({ CLE: 'valeur' })`), `Cs(type)` (constantes chaînes d'une classe), `Ecarts(fichier, nom, type)` (parité d'un `codes.js` et d'un `Codes.cs` : `A_FAIRE` ↔ `AFaire`).
+- `Constantes` : `Js(fichier, nom)` (paires d'un `export const NOM = Object.freeze({ CLE: 'valeur' })`), `Cs(type)` (constantes chaînes d'une classe), `Ecarts(fichier, nom, type)` (parité d'un `codes.js` et d'un `Codes.cs` : `A_FAIRE` ↔ `AFaire`), `ListeJs(fichier, nom)` (valeurs d'un `Object.freeze([OBJET.CLE, …])`).
 
 ## Règles répliquées JS / C#
 - Arrondi : `arrondir` ↔ `ArrondiCalcul.Arrondir` (demi vers l'infini, jamais bancaire) ; `arr6` ↔ `Arr6` (NUMERIC(18,6)).

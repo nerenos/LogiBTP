@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
 import { codeMarche, prochainCode } from '../fiches/fiche-structure.js';
@@ -44,7 +45,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
     <label class="large">Chantier <span data-chantier></span></label>
     <fieldset data-nouveau-chantier><legend>Nouveau chantier</legend>
       <div class="grille-champs">
-        <label>Code <input data-cha="code" required value="${echapper(prochainCode('chantier', codesChantiers))}"></label>
+        <label>Code <input data-cha="code" required value="${echapper(prochainCode(TYPE_FICHE.CHANTIER, codesChantiers))}"></label>
         <label class="large">Libellé <input data-cha="libelle" required value="${echapper(doc.ent_objet ?? projet?.libelle ?? '')}"></label>
         <label class="large">Adresse <input data-cha="adresse"></label>
         <label>Code postal <input data-cha="code_postal"></label>

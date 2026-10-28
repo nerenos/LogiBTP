@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -100,7 +101,7 @@ export class PageApprovisionnement extends PageBase {
         try {
           const creees = await api.stock.commander(this.lieu, choisies);
           this.app.message(`${creees.length} commande(s) créée(s) : ${creees.map((c) => `${c.fournisseur ?? ''} (${c.lignes} ligne(s))`).join(', ')}`, 'succes');
-          if (creees.length === 1) this.app.naviguer(`/document/${creees[0].ent_id}`, { nouvelleFenetre: true });
+          if (creees.length === 1) this.app.naviguer(urlDocument(creees[0].ent_id), { nouvelleFenetre: true });
           await this.#charger();
         } catch (e) { this.app.erreur(e); }
       });
@@ -184,7 +185,7 @@ export class PageProjection extends PageBase {
         dispo += e.type === 'ENTREE' ? Number(e.quantite) : -Number(e.quantite);
         const x = resa.get(e.id);
         return `<tr class="${dispo < 0 ? 'avertissement' : ''}"><td>${jourFr(e.date)}${e.retard ? ' <span title="En retard : compté aujourd\'hui">⏰</span>' : ''}</td>
-          <td><a href="/document/${e.ent_id}" data-doc="${e.ent_id}">${echapper(e.numero ?? '')}</a></td><td>${echapper(e.type_piece)}</td><td>${echapper(e.chantier ?? e.tiers ?? '')}</td>
+          <td><a href="${urlDocument(e.ent_id)}" data-doc="${e.ent_id}">${echapper(e.numero ?? '')}</a></td><td>${echapper(e.type_piece)}</td><td>${echapper(e.chantier ?? e.tiers ?? '')}</td>
           <td class="nombre">${e.type === 'ENTREE' ? nb(e.quantite) : ''}</td><td class="nombre">${e.type === 'SORTIE' ? nb(e.quantite) : ''}</td><td class="nombre"><b>${nb(dispo)}</b></td>
           <td>${x ? (Number(x.manque) ? `servi ${nb(x.servi)} / ${nb(x.demande)}, manque ${nb(x.manque)}${x.couverte_le ? ` jusqu'au ${jourFr(x.couverte_le)}` : ' (non couvert)'}` : 'honorée') : ''}</td></tr>`;
       }).join('')}</tbody></table></div>`;

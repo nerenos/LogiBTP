@@ -1,3 +1,4 @@
+import { urlDocument, SUJET_FENETRE } from '../codes.js';
 import { ERREUR_MAIL } from '@logibtp/mail';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
@@ -144,7 +145,7 @@ export class PageRedactionMail extends PageBase {
       this.change = false;
       const [texte, niveau] = messageEnvoi(r);
       this.app.message(texte, niveau);
-      this.app.publier('mail', { messages: r.messages });
+      this.app.publier(SUJET_FENETRE.MAIL, { messages: r.messages });
       this.app.fermerPage(r.messages.length === 1 ? `/mail/message/${r.messages[0]}` : '/mail?vue=attente');
     } catch (e) {
       if (e instanceof ErreurApi && e.code === ERREUR_MAIL.MAIL_CONFIRMATION) {
@@ -178,7 +179,7 @@ export class PageMail extends PageBase {
     this.conteneur.querySelectorAll('[name="vue"]').forEach((x) => x.addEventListener('change', () => { this.vue = x.value; this.lot = null; this.charger(); }));
     this.conteneur.querySelector('[data-nouveau]').addEventListener('click', () => app.naviguer('/mail/nouveau', { nouvelleFenetre: true }));
     this.conteneur.querySelector('[data-parametres]')?.addEventListener('click', () => app.naviguer('/parametres/mail'));
-    this.desabonner = app.abonner('mail', () => this.charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.MAIL, () => this.charger());
     await this.charger();
   }
 
@@ -262,7 +263,7 @@ export class PageMessageMail extends PageBase {
   async ouvrir() {
     this.titre = 'Courriel';
     this.conteneur.innerHTML = '<div class="page-parametres" data-detail></div>';
-    this.desabonner = this.app.abonner('mail', () => this.charger());
+    this.desabonner = this.app.abonner(SUJET_FENETRE.MAIL, () => this.charger());
     await this.charger();
   }
 
@@ -305,23 +306,23 @@ export class PageMessageMail extends PageBase {
     // Corps du courriel isolé (module Droits, lot 5) : cadre sans script ni accès à l'application, liens dans un nouvel onglet.
     zone.querySelector('[data-corps]').srcdoc = `<!doctype html><meta charset="utf-8"><base target="_blank"><style>body{font-family:sans-serif;margin:.6rem;color:#1f2328;background:#fff}</style>${d.corps_html ?? ''}`;
     const action = (sel, f) => zone.querySelector(sel)?.addEventListener('click', async () => {
-      try { await f(); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { await f(); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });
     action('[data-annuler]', () => api.mail.annuler(m.id));
     action('[data-relancer]', () => api.mail.relancer(m.id));
-    zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(`/document/${m.id_element}`, { nouvelleFenetre: true }));
+    zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(urlDocument(m.id_element), { nouvelleFenetre: true }));
     zone.querySelectorAll('[data-lien]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: true }); }));
     zone.querySelectorAll('[data-marquer]').forEach((b) => b.addEventListener('click', async () => {
       try { const r = await api.mail.marquerAdresse(m.id, b.dataset.marquer); this.app.message(`${r.coordonnees} coordonnée(s) signalée(s) dans l'annuaire`, 'succes'); } catch (e) { this.app.erreur(e); }
     }));
     zone.querySelectorAll('[data-detacher]').forEach((b) => b.addEventListener('click', async () => {
       const [type, id] = b.dataset.detacher.split('|');
-      try { await api.mail.detacher(m.id, type, id); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { await api.mail.detacher(m.id, type, id); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
     if (m.sens !== 'R') return;
     zone.querySelectorAll('[data-proposition]').forEach((b) => b.addEventListener('click', async () => {
       const [type, id] = b.dataset.proposition.split('|');
-      try { await api.mail.rattacher(m.id, { type, id }); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { await api.mail.rattacher(m.id, { type, id }); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
     const types = await api.mail.typesRattachement().catch(() => []);
     const type = creerCombo({ options: types.map((t) => ({ valeur: t.type, libelle: t.libelle, detail: t.aide })), valeur: types[0]?.type ?? '' });
@@ -331,14 +332,14 @@ export class PageMessageMail extends PageBase {
     code.placeholder = types[0]?.aide ?? '';
     const rattacher = async () => {
       if (!code.value.trim()) return;
-      try { await api.mail.rattacher(m.id, { type: type.valeurCombo, code: code.value.trim() }); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { await api.mail.rattacher(m.id, { type: type.valeurCombo, code: code.value.trim() }); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     };
     zone.querySelector('[data-rattacher]').addEventListener('click', rattacher);
     code.addEventListener('keydown', (e) => { if (e.key === 'Enter') rattacher(); });
     zone.querySelector('[data-ignorer]')?.addEventListener('click', async () => {
       const motif = await saisir('Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :', '');
       if (motif === null) return;
-      try { await api.mail.ignorer(m.id, motif); this.app.publier('mail', {}); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { await api.mail.ignorer(m.id, motif); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });
   }
 }

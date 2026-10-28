@@ -1,5 +1,6 @@
 using LogiBTP.Calendrier;
 using LogiBTP.Calendrier.Web;
+using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -57,8 +58,8 @@ public static class CalendriersBtp
     {
         var (cal, srv) = type switch
         {
-            "salarie" => await SalarieAsync(db, id, ct),
-            "materiel" => await MaterielAsync(db, id, ct),
+            TypesFiche.Salarie => await SalarieAsync(db, id, ct),
+            TypesFiche.Materiel => await MaterielAsync(db, id, ct),
             _ => throw ExceptionMetier.Invalide("ELEMENT", $"Ressource inconnue : {type}"),
         };
         return await calendriers.JourneesAsync(cal, du, au, srv is int s ? [new Portee("service", s.ToString())] : [], ct);

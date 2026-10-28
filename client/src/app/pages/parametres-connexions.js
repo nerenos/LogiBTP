@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -49,7 +50,7 @@ export class PageParametresConnexions extends PageBase {
     // Retour du fournisseur dans la fenêtre d'autorisation : les autres fenêtres sont prévenues, celle-ci se ferme si le
     // navigateur le permet (le lien avec la fenêtre d'origine peut avoir été coupé par la page du fournisseur).
     if (r.oauth) {
-      app.publier('oauth', { id: Number(r.id), ok: r.oauth === 'ok', message: r.message ?? '' });
+      app.publier(SUJET_FENETRE.OAUTH, { id: Number(r.id), ok: r.oauth === 'ok', message: r.message ?? '' });
       setTimeout(() => window.close(), 400);
     }
     this.selection = r.id ? Number(r.id) : null;
@@ -61,7 +62,7 @@ export class PageParametresConnexions extends PageBase {
       <div data-liste></div><div data-detail></div><div data-parametres></div></div>`;
     if (r.oauth) app.message(r.message ?? '', r.oauth === 'ok' ? 'succes' : 'erreur');
     this.admin = app.estAdmin();
-    this.desabonner = app.abonner('oauth', async (m) => {
+    this.desabonner = app.abonner(SUJET_FENETRE.OAUTH, async (m) => {
       this.app.message(m.message, m.ok ? 'succes' : 'erreur');
       if (!m.ok && /autre compte/.test(m.message) && await confirmer(`${m.message}.\nReconnecter avec le nouveau compte ?`)) this.connecter(m.id, true);
       this.charger();

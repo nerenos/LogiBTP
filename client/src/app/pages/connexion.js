@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -107,7 +108,7 @@ export class PageConnexion extends PageBase {
       // Double facteur (module Droits, D3) : code reçu par courriel, à saisir avant l'ouverture de la session.
       if (session.double_facteur) { this.#rendreCode(session); return; }
       this.app.session = session;
-      this.app.publier('session', { connecte: true });
+      this.app.publier(SUJET_FENETRE.SESSION, { connecte: true });
       this.#poursuivre(session);
     } catch (e) {
       erreur.textContent = e.message;

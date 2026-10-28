@@ -1,6 +1,7 @@
 // Règles du référentiel des ressources, répliquées dans src/LogiBTP.Domaine/Ressources/ReglesRessources.cs (jeux
 // tests/ressources) : validité des habilitations (fin calculée depuis la durée du type, état à une date), habilitations
 // exigées manquantes, contrôle des habilitations et des missions d'intérim, mission en cours. Dates au format AAAA-MM-JJ.
+import { TYPE_FICHE } from '../codes.js';
 import { ajouterMois, joursEntre } from '@logibtp/socle';
 
 export const ETATS_HABILITATION = {
@@ -56,7 +57,7 @@ export function controlerHabilitation(h, types, element) {
   const erreurs = [];
   const t = types[h.code];
   if (!t || t.actif === false) erreurs.push('HAB_TYPE');
-  else if (t.concerne !== 'LES_DEUX' && t.concerne !== (element === 'materiel' ? 'MATERIEL' : 'SALARIE')) erreurs.push('HAB_CONCERNE');
+  else if (t.concerne !== 'LES_DEUX' && t.concerne !== (element === TYPE_FICHE.MATERIEL ? 'MATERIEL' : 'SALARIE')) erreurs.push('HAB_CONCERNE');
   if (h.obtenue_le && h.valide_jusqu_au && h.valide_jusqu_au < h.obtenue_le) erreurs.push('HAB_DATES');
   return erreurs.sort();
 }

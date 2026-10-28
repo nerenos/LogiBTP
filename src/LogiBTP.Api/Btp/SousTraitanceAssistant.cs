@@ -18,7 +18,7 @@ public sealed record DemandeSousTraiter(string Cible, List<long>? Lignes, List<l
 /// </summary>
 public static class SousTraitanceAssistant
 {
-    private static readonly string[] Sources = ["V_COMMANDE", "V_DEVIS", "E_OST", "E_DAC"];
+    private static readonly string[] Sources = TypesDocument.SousTraitables;
 
     // Lignes de prix d'un document (éléments et ouvrages, hors composantes d'un ouvrage) ; clé de rapprochement.
     private const string SqlLignes = """
@@ -75,13 +75,13 @@ public static class SousTraitanceAssistant
     public static async Task<object> SousTraiterAsync(LogiBtpContext db, TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations,
         DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, long id, DemandeSousTraiter d, Utilisateur u, CancellationToken ct)
     {
-        if (d.Cible is not ("T_AO" or "T_COMMANDE")) throw ExceptionMetier.Invalide("ST_CIBLE", "Appel d'offres ou commande de sous-traitance");
+        if (d.Cible is not (TypesDocument.TAo or TypesDocument.TCommande)) throw ExceptionMetier.Invalide("ST_CIBLE", "Appel d'offres ou commande de sous-traitance");
         var sources = await db.Database.SqlQueryRaw<string>("""
             SELECT t.tyd_code AS "Value" FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @id
             """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
         if (!Sources.Contains(sources)) throw ExceptionMetier.Invalide("ST_SOURCE", "Seuls une commande ou un devis client, un ordre de sous-traitance se sous-traitent");
         var sts = (d.SousTraitants ?? []).Distinct().ToList();
-        if (d.Cible == "T_COMMANDE" && sts.Count > 1) throw ExceptionMetier.Invalide("ST_UN_SEUL", "Une commande de sous-traitance est passée à un seul sous-traitant");
+        if (d.Cible == TypesDocument.TCommande && sts.Count > 1) throw ExceptionMetier.Invalide("ST_UN_SEUL", "Une commande de sous-traitance est passée à un seul sous-traitant");
         var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == d.Cible).Select(t => t.TydId).FirstAsync(ct);
         // Sélection développée : titres et sections donnent leurs lignes de prix (éléments, ouvrages hors composantes).
         var lignes = d.Lignes is { Count: > 0 } choisies
@@ -98,7 +98,7 @@ public static class SousTraitanceAssistant
         var demande = new DemandeTransformation { CibleTydId = tyd, Lignes = lignes.Select(l => new LigneATransformer { LigId = l }).ToList() };
         var cree = await transformations.Transformer(id, demande, u, ct);
         var ids = new List<long> { cree.Document.EntId };
-        if (d.Cible == "T_AO")
+        if (d.Cible == TypesDocument.TAo)
         {
             for (var i = 1; i < sts.Count; i++)
             {
@@ -152,7 +152,7 @@ public static class SousTraitanceAssistant
     public static RouteGroupBuilder MapSousTraitanceAssistant(this RouteGroupBuilder api)
     {
         api.MapGet("/structure/documents/{id:long}/consultation/comparatif", (long id, LogiBtpContext db, CancellationToken ct) => ComparatifAsync(db, id, ct));
-        var st = api.MapGroup("").ExigeModule("sous_traitance", "Sous-traitance");
+        var st = api.MapGroup("").ExigeModule(ModulesFacultatifs.SousTraitance, "Sous-traitance");
         st.MapPost("/structure/documents/{id:long}/sous-traiter", (long id, DemandeSousTraiter d, HttpContext http, LogiBtpContext db,
             TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
             CancellationToken ct) => SousTraiterAsync(db, transformations, documents, id, d, Utilisateur.Depuis(http), ct));

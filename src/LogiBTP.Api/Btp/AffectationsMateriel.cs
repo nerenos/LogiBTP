@@ -1,4 +1,5 @@
 using LogiBTP.Domaine.Ressources;
+using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -83,7 +84,7 @@ public static class AffectationsMateriel
         }
         // Porteurs actuels des autres matériels : un matériel ne peut pas porter, même indirectement, son porteur.
         var aujourdhui = DateOnly.FromDateTime(DateTime.Today);
-        if (ReglesAffectations.A(regles, aujourdhui) is int i && regles[i].Type == "MATERIEL")
+        if (ReglesAffectations.A(regles, aujourdhui) is int i && regles[i].Type == TypesRessource.Materiel)
         {
             var porteurs = (await db.Database.SqlQueryRaw<Porteur>("""
                 SELECT maf_mat_id::text AS mat, maf_ressource AS ressource FROM materiel_affectation

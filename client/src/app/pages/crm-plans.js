@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper } from '@logibtp/socle/ui';
 import { STATUTS_PLAN } from '@logibtp/crm';
@@ -38,7 +39,7 @@ export class PagePlansCrm extends PageBase {
       if (!ids.length) { app.message('Cochez les plans à diffuser', 'avertissement'); return; }
       app.naviguer(`/crm/diffusion/nouveau?plans=${ids.join(',')}${suffixe ? `&${suffixe}` : ''}`);
     });
-    this.desabonner = app.abonner('crm', () => this.charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger());
     await this.charger();
   }
 

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -40,12 +41,12 @@ public static class EtatInstallation
         var infos = d.Infos();
         var certificat = infos is null ? null : new EtatCertificat(infos.Origine, infos.Noms, infos.Emetteur, infos.Fin,
             (int)Math.Floor((infos.Fin - DateTimeOffset.Now).TotalDays), infos.EmpreinteRacine);
-        var racineSql = Environment.GetEnvironmentVariable("LOGIBTP_SQL");
+        var racineSql = Environment.GetEnvironmentVariable(VariablesEnv.Sql);
         var attendus = racineSql is not null && File.Exists(Path.Combine(racineSql, ManifesteScripts.CheminRelatif))
             ? ManifesteScripts.Lire(racineSql).Scripts.Where(x => !x.Rejouable).Select(x => x.Chemin).ToHashSet() : null;
         var bases = new List<EtatBase>();
         foreach (var soc in societes.Societes()) bases.Add(await BaseAsync(soc, attendus, ct));
-        var dossierSauvegardes = Environment.GetEnvironmentVariable("LOGIBTP_SAUVEGARDES") ?? "/app/sauvegardes";
+        var dossierSauvegardes = Environment.GetEnvironmentVariable(VariablesEnv.Sauvegardes) ?? "/app/sauvegardes";
         var fichier = Path.Combine(dossierSauvegardes, "derniere-sauvegarde.json");
         DerniereSauvegarde? sauvegarde = null;
         try { if (File.Exists(fichier)) sauvegarde = JsonSerializer.Deserialize<DerniereSauvegarde>(await File.ReadAllTextAsync(fichier, ct), Json); }
@@ -58,7 +59,7 @@ public static class EtatInstallation
             disques.Add(new EtatDisque(usage, lecteur.AvailableFreeSpace / 1048576, lecteur.TotalSize / 1048576));
         }
         var version = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "?";
-        return new Etat(version.Split('+')[0], c["LOGIBTP_DEPLOIEMENT"] ?? "LOCAL", c["LOGIBTP_DOMAINE"], cs.Actif, certificat, bases, sauvegarde, disques);
+        return new Etat(version.Split('+')[0], c[VariablesEnv.Deploiement] ?? "LOCAL", c[VariablesEnv.Domaine], cs.Actif, certificat, bases, sauvegarde, disques);
     }
 
     private static async Task<EtatBase> BaseAsync(SocieteCourante s, HashSet<string>? attendus, CancellationToken ct)

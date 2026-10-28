@@ -13,13 +13,13 @@ public sealed record ModeleConnexion(string Hote, int Port = 5432, string Prefix
     /// <summary>Lit le modèle (null sans LOGIBTP_BASE_HOTE).</summary>
     public static ModeleConnexion? Lire(Func<string, string?> valeur)
     {
-        var hote = valeur("LOGIBTP_BASE_HOTE");
+        var hote = valeur(VariablesEnv.BaseHote);
         if (string.IsNullOrWhiteSpace(hote)) return null;
-        var port = int.TryParse(valeur("LOGIBTP_BASE_PORT"), out var p) ? p : 5432;
-        var prefixe = valeur("LOGIBTP_BASE_PREFIXE");
+        var port = int.TryParse(valeur(VariablesEnv.BasePort), out var p) ? p : 5432;
+        var prefixe = valeur(VariablesEnv.BasePrefixe);
         return new ModeleConnexion(hote.Trim(), port, string.IsNullOrWhiteSpace(prefixe) ? "logibtp" : prefixe.Trim(),
-            string.IsNullOrWhiteSpace(valeur("LOGIBTP_BASE_SSL")) ? null : valeur("LOGIBTP_BASE_SSL")!.Trim(),
-            string.IsNullOrWhiteSpace(valeur("LOGIBTP_BASE_RACINE")) ? null : valeur("LOGIBTP_BASE_RACINE")!.Trim());
+            string.IsNullOrWhiteSpace(valeur(VariablesEnv.BaseSsl)) ? null : valeur(VariablesEnv.BaseSsl)!.Trim(),
+            string.IsNullOrWhiteSpace(valeur(VariablesEnv.BaseRacine)) ? null : valeur(VariablesEnv.BaseRacine)!.Trim());
     }
 
     /// <summary>Base d'une société (null : base principale) ; le tiret du sous-domaine devient « _ ».</summary>

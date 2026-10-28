@@ -1,3 +1,4 @@
+import { MODULE_FACULTATIF } from '../codes.js';
 import { ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
@@ -837,7 +838,7 @@ export class PageParametresBornes extends PageBase {
           <div><b>Services</b> <small class="aide">service principal du salarié ou son service parent ; aucun : tous</small><div data-p-services></div></div>
           <div><b>Fonctions</b> <small class="aide">poste du salarié ; aucune : toutes</small><div data-p-fonctions></div></div>
           <div><b>Types de main-d'œuvre</b> <small class="aide">proposés à la borne ; aucun : tous</small><div data-p-types></div></div>
-          ${this.app.moduleActif('stock') ? '<div><b>Dépôt de stock</b> <small class="aide">sorties et retours de l\'atelier (📦 Stock) ; vide : aucun</small><div data-p-depot></div></div>' : ''}
+          ${this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? '<div><b>Dépôt de stock</b> <small class="aide">sorties et retours de l\'atelier (📦 Stock) ; vide : aucun</small><div data-p-depot></div></div>' : ''}
         </div><p class="ligne"><button type="button" class="principal" data-p-enregistrer title="Enregistrer le paramétrage de la borne">💾 Enregistrer</button>
           <button type="button" data-p-annuler>Annuler</button></p></td>`;
       tr.after(ligne);
@@ -849,7 +850,7 @@ export class PageParametresBornes extends PageBase {
       ligne.querySelector('[data-p-types]').append(types);
       // Module Stock : dépôt de la borne (liaison Pointage → Stock, lu et écrit par le cœur).
       let depot = null;
-      if (this.app.moduleActif('stock')) {
+      if (this.app.moduleActif(MODULE_FACULTATIF.STOCK)) {
         Promise.all([api.stock.lieux(), api.stock.depotBorne(a.id)]).then(([lieux, d]) => {
           depot = creerCombo({ options: lieux.filter((x) => x.depot).map((x) => ({ valeur: x.id, libelle: `${x.code} – ${x.libelle}` })), valeur: d.lieu ?? '' });
           ligne.querySelector('[data-p-depot]')?.append(depot);

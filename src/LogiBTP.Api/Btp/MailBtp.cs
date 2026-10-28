@@ -98,7 +98,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         long? tiers;
         string libelle;
         LogiBTP.SousTraitance.Conformite c;
-        if (p[0] == "marche")
+        if (p[0] == TypesFiche.Marche)
         {
             var m = await db.Database.SqlQueryRaw<MarchePieces>("SELECT mar_tiers_id AS tiers, mar_code || ' – ' || mar_libelle AS libelle FROM marche WHERE mar_id = @m",
                 new NpgsqlParameter("m", (int)n)).FirstOrDefaultAsync(ct);
@@ -123,7 +123,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             ["pieces_manquantes"] = Liste(c.Pieces.Where(x => x.Etat is "MANQUANTE" or "EXPIREE" && x.Obligatoire).Select(x => x.Libelle)),
             ["pieces_a_renouveler"] = Liste(c.Pieces.Where(x => x.Etat == "A_ECHEANCE").Select(x => $"{x.Libelle} (jusqu'au {x.Fin:dd/MM/yyyy})")),
         };
-        return new ElementMail("st_pieces", id, $"{libelle} : pièces à fournir", p[0] == "marche" ? $"/fiche/marche/{n}" : $"/fiche/personne/{n}", "DOCUMENT_ACHAT", "st_pieces",
+        return new ElementMail("st_pieces", id, $"{libelle} : pièces à fournir", p[0] == TypesFiche.Marche ? $"/fiche/marche/{n}" : $"/fiche/personne/{n}", "DOCUMENT_ACHAT", "st_pieces",
             variables, destinataires, []);
     }
 
@@ -131,8 +131,8 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
 
     public override async Task<ElementMail?> DecrireAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
-        if (type == "crm_diffusion") return await modules.EstActifAsync("crm", ct) ? await DecrireDiffusionAsync(id, ct) : null;
-        if (type == "st_pieces") return await modules.EstActifAsync("sous_traitance", ct) ? await DecrirePiecesAsync(id, ct) : null;
+        if (type == "crm_diffusion") return await modules.EstActifAsync(ModulesFacultatifs.Crm, ct) ? await DecrireDiffusionAsync(id, ct) : null;
+        if (type == "st_pieces") return await modules.EstActifAsync(ModulesFacultatifs.SousTraitance, ct) ? await DecrirePiecesAsync(id, ct) : null;
         if (type != "document" || !long.TryParse(id, out var entId)) return null;
         var d = await db.Database.SqlQueryRaw<DocumentMail>("""
             SELECT e.ent_id, e.ent_numero, e.ent_date, e.ent_objet, e.ent_date_validite, e.ent_total_ht, e.ent_total_ttc, e.ent_net_a_payer, e.ent_groupe_id,
@@ -231,7 +231,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             });
             var d = await ged.DeposerFichier(fichier, new MetaDepot
             {
-                Titre = c.Objet, Categorie = "mail", Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = c.Auteur,
+                Titre = c.Objet, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = c.Auteur,
                 DateDocument = c.Le.ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = "INTERNE", MotsCles = ["courriel", "envoi"],
                 Resume = $"Courriel envoyé par « {c.Expediteur} » à {c.A.Count + c.Cc.Count + c.Cci.Count} destinataire(s)",
             }, new Utilisateur(c.Auteur, "ADMIN"), ct);
@@ -262,7 +262,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                     await services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>().Envoyer(ent, new Utilisateur(c.Auteur, "ADMIN"), ct);
             });
         }
-        if (c.TypeElement is not null && c.IdElement is not null && await modules.EstActifAsync("crm", ct))
+        if (c.TypeElement is not null && c.IdElement is not null && await modules.EstActifAsync(ModulesFacultatifs.Crm, ct))
         {
             await Tenter("note du suivi", async () =>
             {
@@ -340,7 +340,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         });
         var depot = await DeposerAsync(ged, c.Eml, NomFichier(c.Objet, ".eml"), "message/rfc822", new MetaDepot
         {
-            Titre = c.Objet.Length == 0 ? "(sans objet)" : c.Objet, Categorie = "mail", Nature = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(),
+            Titre = c.Objet.Length == 0 ? "(sans objet)" : c.Objet, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(),
             Auteur = Fond.Code, DateDocument = (c.Date ?? DateTimeOffset.UtcNow).ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = "CONFIDENTIEL",
             AccesUtilisateurs = acces, MotsCles = ["courriel", "reception"],
         }, ct);
@@ -349,7 +349,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         {
             var enfant = await DeposerAsync(ged, p.Octets, p.Nom, p.Type, new MetaDepot
             {
-                Titre = p.Nom, Categorie = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(), ParentId = depot, Auteur = Fond.Code,
+                Titre = p.Nom, Categorie = CategoriesGed.Mail, TypeElement = "mail_compte", IdElement = c.Compte.ToString(), ParentId = depot, Auteur = Fond.Code,
                 Confidentialite = "CONFIDENTIEL", AccesUtilisateurs = acces,
             }, ct);
             pieces.Add(new PieceInfo($"ged:{enfant}", p.Nom, p.Type, p.Octets.Length));
@@ -412,7 +412,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 LIMIT 5
                 """, new NpgsqlParameter("d", domaine)).ToListAsync(ct);
         }
-        return new CandidatsReconnaissance(candidats, tiers, tiers.Select(t => new ElementCible("personne", t.ToString())).ToList());
+        return new CandidatsReconnaissance(candidats, tiers, tiers.Select(t => new ElementCible(TypesFiche.Personne, t.ToString())).ToList());
     }
 
     private sealed record ContexteAlerte(long? SrvId, long? RedacteurId, string? Redacteur, string TydFamille);
@@ -447,7 +447,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         };
         var objet = $"{titre} : {element.Libelle}";
         var html = $"<p>{WebUtility.HtmlEncode(conseil)}</p><p>De : {WebUtility.HtmlEncode(m.De ?? "?")} — objet : {WebUtility.HtmlEncode(m.Objet)}</p>";
-        if (await modules.EstActifAsync("crm", ct) && (srvId is not null || doc?.RedacteurId is not null))
+        if (await modules.EstActifAsync(ModulesFacultatifs.Crm, ct) && (srvId is not null || doc?.RedacteurId is not null))
         {
             var (typeGed, idGed, _) = await ElementGedAsync(element.Type, element.Id, ct);
             var lien = element.Type == "document" && idGed is not null ? new LienSaisi("document", idGed, true) : new LienSaisi(element.Type, element.Id, true);
@@ -483,8 +483,8 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
 
     public override IReadOnlyList<TypeRattachement> TypesRattachement { get; } =
     [
-        new("document", "Document", "Numéro (DV2026-00012…)"), new("personne", "Tiers", "Code du tiers"), new("chantier", "Chantier", "Code du chantier"),
-        new("marche", "Marché", "Code du marché"), new("affaire", "Affaire", "Code de l'affaire"), new("projet", "Projet", "Code du projet"),
+        new("document", "Document", "Numéro (DV2026-00012…)"), new(TypesFiche.Personne, "Tiers", "Code du tiers"), new(TypesFiche.Chantier, "Chantier", "Code du chantier"),
+        new(TypesFiche.Marche, "Marché", "Code du marché"), new(TypesFiche.Affaire, "Affaire", "Code de l'affaire"), new(TypesFiche.Projet, "Projet", "Code du projet"),
     ];
 
     private sealed record Trouve(long Id, string Libelle);
@@ -495,11 +495,11 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         var sql = type switch
         {
             "document" => "SELECT e.ent_id AS id, t.tyd_libelle || ' ' || e.ent_numero AS libelle FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id WHERE lower(e.ent_numero) = lower(@c) ORDER BY e.ent_id DESC",
-            "personne" => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE lower(per_code) = lower(@c)",
-            "chantier" => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE lower(cha_code) = lower(@c)",
-            "marche" => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE lower(mar_code) = lower(@c)",
-            "affaire" => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE lower(aff_code) = lower(@c)",
-            "projet" => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE lower(prj_code) = lower(@c)",
+            TypesFiche.Personne => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE lower(per_code) = lower(@c)",
+            TypesFiche.Chantier => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE lower(cha_code) = lower(@c)",
+            TypesFiche.Marche => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE lower(mar_code) = lower(@c)",
+            TypesFiche.Affaire => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE lower(aff_code) = lower(@c)",
+            TypesFiche.Projet => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE lower(prj_code) = lower(@c)",
             _ => null,
         };
         if (sql is null) return null;
@@ -513,11 +513,11 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         var sql = type switch
         {
             "document" => "SELECT e.ent_id AS id, t.tyd_libelle || ' ' || coalesce(e.ent_numero, '(brouillon)') AS libelle FROM document e JOIN type_document t ON t.tyd_id = e.ent_tyd_id WHERE e.ent_id = @n",
-            "personne" => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE per_id = @n",
-            "chantier" => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE cha_id = @n",
-            "marche" => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE mar_id = @n",
-            "affaire" => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE aff_id = @n",
-            "projet" => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE prj_id = @n",
+            TypesFiche.Personne => "SELECT per_id AS id, coalesce(per_nom_commercial, per_raison_sociale, per_code) AS libelle FROM personne WHERE per_id = @n",
+            TypesFiche.Chantier => "SELECT cha_id AS id, cha_code || ' ' || coalesce(cha_libelle, '') AS libelle FROM chantier WHERE cha_id = @n",
+            TypesFiche.Marche => "SELECT mar_id AS id, mar_code || ' ' || coalesce(mar_libelle, '') AS libelle FROM marche WHERE mar_id = @n",
+            TypesFiche.Affaire => "SELECT aff_id AS id, aff_code || ' ' || coalesce(aff_libelle, '') AS libelle FROM affaire WHERE aff_id = @n",
+            TypesFiche.Projet => "SELECT prj_id AS id, prj_code || ' ' || coalesce(prj_libelle, '') AS libelle FROM projet WHERE prj_id = @n",
             "crm_diffusion" => "SELECT dif_id AS id, 'Bordereau ' || dif_numero AS libelle FROM crm_diffusion WHERE dif_id = @n",
             _ => null,
         };
@@ -530,7 +530,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     {
         "document" => $"/document/{id}",
         "crm_diffusion" => $"/crm/diffusion/{id}",
-        "personne" or "chantier" or "marche" or "affaire" or "projet" => $"/fiche/{type}/{id}",
+        TypesFiche.Personne or TypesFiche.Chantier or TypesFiche.Marche or TypesFiche.Affaire or TypesFiche.Projet => $"/fiche/{type}/{id}",
         _ => null,
     };
 
@@ -549,7 +549,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 var source = await ged.Document(dge, Fond, ct);
                 var copie = await DeposerAsync(ged, eml.Octets, eml.NomFichier, "message/rfc822", new MetaDepot
                 {
-                    Titre = source.Titre, Categorie = "mail", Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = m.Utilisateur,
+                    Titre = source.Titre, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = m.Utilisateur,
                     DateDocument = source.DateDocument, Mail = source.Mail, Confidentialite = "INTERNE", MotsCles = ["courriel", "reception"],
                 }, ct);
                 foreach (var p in m.Pieces.Where(p => p.StartsWith("ged:")))
@@ -557,12 +557,12 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                     if (!long.TryParse(p[4..], out var pid) || await ged.LireContenu(pid, Fond, ct) is not { } contenu) continue;
                     await DeposerAsync(ged, contenu.Octets, contenu.NomFichier, contenu.TypeMime ?? "application/octet-stream", new MetaDepot
                     {
-                        Titre = contenu.NomFichier, Categorie = "mail", TypeElement = typeGed, IdElement = idGed, ParentId = copie, Auteur = m.Utilisateur, Confidentialite = "INTERNE",
+                        Titre = contenu.NomFichier, Categorie = CategoriesGed.Mail, TypeElement = typeGed, IdElement = idGed, ParentId = copie, Auteur = m.Utilisateur, Confidentialite = "INTERNE",
                     }, ct);
                 }
             });
         }
-        if (await modules.EstActifAsync("crm", ct))
+        if (await modules.EstActifAsync(ModulesFacultatifs.Crm, ct))
         {
             await Tenter("note du suivi", async () =>
             {

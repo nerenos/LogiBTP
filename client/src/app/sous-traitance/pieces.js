@@ -1,3 +1,4 @@
+import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, saisir } from '@logibtp/socle/ui';
 import { ETATS_PIECE, ACTIONS_BLOQUEES, PORTEES_PIECE } from '@logibtp/sous-traitance';
@@ -11,13 +12,13 @@ import { api } from '../api.js';
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
 
 /**
- * Rend l'onglet. `element` : { type: 'marche' | 'personne', id, tiers } (tiers : sous-traitant du marché) ; `ged` :
+ * Rend l'onglet. `element` : { type: TYPE_FICHE.MARCHE | 'personne', id, tiers } (tiers : sous-traitant du marché) ; `ged` :
  * fournisseur GED de l'application (deposer) ; `demander` : demande des pièces par courriel (facultatif).
  */
 export async function rendrePieces(corps, { element, ged, message, demander = null, ouvrirGed = null }) {
   const [types, c] = await Promise.all([
     api.sousTraitance.typesPieces(),
-    element.type === 'marche' ? api.sousTraitance.conformiteMarche(element.id) : api.sousTraitance.conformiteTiers(element.id),
+    element.type === TYPE_FICHE.MARCHE ? api.sousTraitance.conformiteMarche(element.id) : api.sousTraitance.conformiteTiers(element.id),
   ]);
   const type = (code) => types.find((t) => t.code === code);
   const enDefaut = c.pieces.filter((p) => p.etat === 'MANQUANTE' || p.etat === 'EXPIREE');
@@ -34,15 +35,15 @@ export async function rendrePieces(corps, { element, ged, message, demander = nu
       <td>${ETATS_PIECE[p.etat]?.icone ?? ''} ${echapper(ETATS_PIECE[p.etat]?.libelle ?? p.etat)}</td>
       <td>${p.dge_id ? `<input type="date" data-validite value="${echapper(p.fin ?? '')}" title="Fin de validité (vide : durée de la pièce depuis son dépôt)">` : echapper(jour(p.fin))}</td>
       <td>${p.dge_id ? `<a href="/ged/${p.dge_id}" data-ged="${p.dge_id}">📄 voir</a>` : '—'}</td>
-      <td class="cellule-boutons"><label class="bouton-fichier" title="Déposer la pièce (GED ${echapper(element.type === 'marche' && p.portee === 'TIERS' ? 'du sous-traitant' : 'de la fiche')})">📎<input type="file" data-deposer hidden></label>
+      <td class="cellule-boutons"><label class="bouton-fichier" title="Déposer la pièce (GED ${echapper(element.type === TYPE_FICHE.MARCHE && p.portee === 'TIERS' ? 'du sous-traitant' : 'de la fiche')})">📎<input type="file" data-deposer hidden></label>
         ${p.etat === 'DISPENSEE' ? '<button type="button" data-retablir title="Ne plus dispenser">↩</button>' : '<button type="button" data-dispenser title="Dispenser (motif)">➖</button>'}</td></tr>`).join('')}
     </tbody></table>
-    <p class="ligne">Ajouter une pièce exigée pour ${element.type === 'marche' ? 'ce marché' : 'ce sous-traitant'} :
+    <p class="ligne">Ajouter une pièce exigée pour ${element.type === TYPE_FICHE.MARCHE ? 'ce marché' : 'ce sous-traitant'} :
       <span data-ajout></span> <button type="button" data-ajouter>＋</button></p>
   </div>`;
   const recharger = () => rendrePieces(corps, { element, ged, message, demander, ouvrirGed });
   // Les ajustements d'une pièce du sous-traitant (portée TIERS) valent pour tous ses marchés : ils se posent sur la personne.
-  const cible = (p) => (p.portee === 'TIERS' && element.type === 'marche' ? { type: 'personne', id: element.tiers } : element);
+  const cible = (p) => (p.portee === 'TIERS' && element.type === TYPE_FICHE.MARCHE ? { type: TYPE_FICHE.PERSONNE, id: element.tiers } : element);
   const ajuster = async (p, mode, motif = null) => {
     const x = cible(p);
     try { await api.sousTraitance.ajuster(x.type, x.id, p.code, { mode, motif }); await recharger(); } catch (e) { message(e.message, 'erreur'); }
@@ -72,13 +73,13 @@ export async function rendrePieces(corps, { element, ged, message, demander = nu
   });
   const ajout = creerCombo({
     vide: true, valeur: '',
-    options: types.filter((t) => t.actif && !c.pieces.some((p) => p.code === t.code) && (element.type === 'marche' || t.portee === 'TIERS'))
+    options: types.filter((t) => t.actif && !c.pieces.some((p) => p.code === t.code) && (element.type === TYPE_FICHE.MARCHE || t.portee === 'TIERS'))
       .map((t) => ({ valeur: t.code, libelle: t.libelle, detail: PORTEES_PIECE[t.portee] ?? t.portee })),
   });
   corps.querySelector('[data-ajout]').replaceWith(ajout);
   corps.querySelector('[data-ajouter]').addEventListener('click', () => {
     const code = ajout.valeurCombo;
-    if (code) ajuster({ code, portee: element.type === 'personne' ? 'TIERS' : 'MARCHE' }, 'AJOUTEE', 'Ajoutée sur la fiche');
+    if (code) ajuster({ code, portee: element.type === TYPE_FICHE.PERSONNE ? 'TIERS' : 'MARCHE' }, 'AJOUTEE', 'Ajoutée sur la fiche');
   });
   corps.querySelector('[data-demander]')?.addEventListener('click', () => demander({ manquantes: enDefaut.map((p) => p.libelle), a_renouveler: c.pieces.filter((p) => p.etat === 'A_ECHEANCE').map((p) => p.libelle) }));
 }

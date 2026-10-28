@@ -1,3 +1,4 @@
+import { urlDocument, urlFiche, TYPE_FICHE } from '../codes.js';
 import { FAMILLE_DOCUMENT } from '@logibtp/document';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 import { parcourirEnLargeur } from '@logibtp/graphe';
@@ -18,7 +19,7 @@ const LIBELLES = { projet: 'Projet', affaire: 'Affaire', chantier: 'Chantier', m
 export function perimetreStructure(refs, depart) {
   const g = construireGrapheStructure(refs, { documents: [], liens: [] }, depart, { profondeur: 10, documents: false, liens: false });
   const ids = (t) => g.noeuds.filter((n) => n.type === t).map((n) => n.id);
-  return { projets: ids('projet'), affaires: ids('affaire'), chantiers: ids('chantier'), marches: ids('marche') };
+  return { projets: ids(TYPE_FICHE.PROJET), affaires: ids(TYPE_FICHE.AFFAIRE), chantiers: ids(TYPE_FICHE.CHANTIER), marches: ids(TYPE_FICHE.MARCHE) };
 }
 
 /**
@@ -39,15 +40,15 @@ export function construireGrapheStructure(refs, docs, depart, { profondeur = 3, 
     return cle;
   };
   const arete = (de, vers, type, libelle = null) => aretes.push({ cle: `${type}:${de}-${vers}`, de, vers, type, libelle, actif: true });
-  for (const a of refs.affaires ?? []) noeud('affaire', a);
-  for (const p of refs.projets ?? []) noeud('projet', p);
+  for (const a of refs.affaires ?? []) noeud(TYPE_FICHE.AFFAIRE, a);
+  for (const p of refs.projets ?? []) noeud(TYPE_FICHE.PROJET, p);
   for (const c of refs.chantiers ?? []) {
-    const k = noeud('chantier', c);
+    const k = noeud(TYPE_FICHE.CHANTIER, c);
     if (c.aff_id && tous.has(`A${c.aff_id}`)) arete(`A${c.aff_id}`, k, 'structure');
     if (c.prj_id && tous.has(`P${c.prj_id}`)) arete(`P${c.prj_id}`, k, 'structure');
   }
   for (const m of refs.marches ?? []) {
-    const k = noeud('marche', m, { montant_ht: m.montant_ht ?? null });
+    const k = noeud(TYPE_FICHE.MARCHE, m, { montant_ht: m.montant_ht ?? null });
     if (m.cha_id && tous.has(`C${m.cha_id}`)) arete(`C${m.cha_id}`, k, 'structure');
   }
   if (documents) {
@@ -84,7 +85,7 @@ export class VueGrapheStructure extends VueGraphe {
 
   /** options (en plus de celles de VueGraphe) : structure (referentiels, documents) ; naviguer(url, evenement). */
   constructor(conteneur, options) {
-    super(conteneur, { ...options, ouvrir: (n, e) => options.naviguer(n.type === 'document' ? `/document/${n.id}` : `/fiche/${n.type}/${n.id}`, e) });
+    super(conteneur, { ...options, ouvrir: (n, e) => options.naviguer(n.type === 'document' ? urlDocument(n.id) : urlFiche(n.type, n.id), e) });
   }
 
   async chargerGraphe(depart, reglages) {

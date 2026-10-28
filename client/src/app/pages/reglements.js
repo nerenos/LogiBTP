@@ -1,3 +1,4 @@
+import { urlFiche, urlDocument, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
 import { Dz, aujourdhui } from '@logibtp/socle';
@@ -21,8 +22,8 @@ export class PageReglements extends PageBase {
     // Modes de règlement paramétrables (module Document), sinon la liste du module.
     this.modes = await api.modesReglement().then((l) => l.map((m) => [m.code, m.libelle, m.actif])).catch(() => MODES_REGLEMENT);
     const app = this.app;
-    this.perimetre = this.requete.chantier ? { type: 'chantier', id: Number(this.requete.chantier) }
-      : this.requete.marche ? { type: 'marche', id: Number(this.requete.marche) } : null;
+    this.perimetre = this.requete.chantier ? { type: TYPE_FICHE.CHANTIER, id: Number(this.requete.chantier) }
+      : this.requete.marche ? { type: TYPE_FICHE.MARCHE, id: Number(this.requete.marche) } : null;
     if (this.perimetre) { await this.#ouvrirPerimetre(); return; }
     this.sens = this.requete.sens === 'D' ? 'D' : 'E';
     this.titre = this.sens === 'D' ? 'Règlements fournisseurs' : 'Règlements clients';
@@ -42,14 +43,14 @@ export class PageReglements extends PageBase {
   /** Échéances d'un chantier ou d'un marché, tous tiers (lecture ; pointage dans la page du tiers). */
   async #ouvrirPerimetre() {
     const { type, id } = this.perimetre;
-    const libelle = type === 'chantier' ? 'chantier' : 'marché';
+    const libelle = type === TYPE_FICHE.CHANTIER ? 'chantier' : 'marché';
     this.titre = `Échéances du ${libelle}`;
-    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">💳 ${echapper(this.titre)} <a href="/fiche/${type}/${id}" data-element></a></h1>
+    this.conteneur.innerHTML = `<div class="page-parametres page-reglements"><div class="entete-page"><h1 class="page-titre">💳 ${echapper(this.titre)} <a href="${urlFiche(type, id)}" data-element></a></h1>
       <label class="fiche-option"><input type="checkbox" data-toutes> Échéances réglées aussi</label></div><div data-corps></div></div>`;
     this.conteneur.querySelector('[data-toutes]').addEventListener('change', (e) => { this.toutes = e.target.checked; this.#rendrePerimetre(); });
     const { structure } = await this.app.services();
     const refs = await structure.referentiels().catch(() => ({}));
-    const el = (refs[type === 'chantier' ? 'chantiers' : 'marches'] ?? []).find((x) => x.id === id);
+    const el = (refs[type === TYPE_FICHE.CHANTIER ? 'chantiers' : 'marches'] ?? []).find((x) => x.id === id);
     if (el) this.conteneur.querySelector('[data-element]').textContent = `${el.code} – ${el.libelle ?? ''}`;
     await this.#rendrePerimetre();
   }
@@ -67,7 +68,7 @@ export class PageReglements extends PageBase {
       return `<h2>${titre}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Tiers</th><th>Pièce</th><th>Type</th><th>Échéance</th>
         <th class="nombre">Montant</th><th class="nombre">Pointé</th><th class="nombre">Reste</th></tr></thead><tbody>
         ${lignes.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}><td><a href="/reglements?sens=${sens}&tiers=${Number(e.tiers_id)}" title="Pointer les règlements de ce tiers">${echapper(e.tiers ?? '')}</a></td>
-          <td><a href="/document/${Number(e.piece_id)}">${echapper(e.piece ?? `#${e.piece_id}`)}</a></td><td>${echapper(e.type)}</td>
+          <td><a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a></td><td>${echapper(e.type)}</td>
           <td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
           <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td></tr>`).join('')}</tbody>
         <tfoot><tr><th colspan="4">Total</th><th class="nombre">${f(total('montant'))}</th><th class="nombre">${f(total('pointe'))}</th><th class="nombre">${f(total('reste'))}</th></tr></tfoot></table>`;
@@ -95,7 +96,7 @@ export class PageReglements extends PageBase {
     // Toutes les échéances du tiers (pièces des règlements), affichées ouvertes seulement sauf demande.
     const parId = new Map(toutes.map((e) => [e.id, e]));
     const echeances = this.toutes ? toutes : toutes.filter((e) => !e.reglee);
-    const lien = (e) => `<a href="/document/${Number(e.piece_id)}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
+    const lien = (e) => `<a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
     corps.innerHTML = `
       <h2>Échéances</h2>
       ${echeances.length ? `<table><thead><tr><th>Pièce</th><th>Type</th><th>Échéance</th><th class="nombre">Montant</th><th class="nombre">Pointé</th>

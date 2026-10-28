@@ -1,3 +1,4 @@
+using LogiBTP.Domaine;
 using LogiBTP.Execution.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
@@ -140,7 +141,7 @@ public static class AtelierBtp
             if (test) return await etapes.AtelierAsync(v.EntId, ct) ?? new { };
             return await etapes.ActionAsync(v.EntId, v.Code, new ActionEtape("VALIDER"), await AuteurAsync(db, s, appareil, ct), ct, droitVerifie: true);
         });
-        b.ExigeModule("execution", "Exécution");
+        b.ExigeModule(ModulesFacultatifs.Execution, "Exécution");
         return g;
     }
 }

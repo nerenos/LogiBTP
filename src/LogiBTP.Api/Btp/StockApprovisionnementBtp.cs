@@ -68,7 +68,7 @@ public sealed partial class SpecialisationStockBtp
             var q = Socle.ArrondiCalcul.Arrondir(reste * MouvementsStockBtp.Ratio(x.Unite, new MouvementsStockBtp.UnitesArticle(x.UniteStock, x.Unites, x.Proprietes,
                 x.Poids, x.Surface, x.SurfacePeinture, x.Volume, x.Hauteur, x.Largeur, x.Epaisseur, x.Longueur)), x.Precision);
             if (q <= 0) continue;
-            var reservation = x.Code == "S_RESERVATION";
+            var reservation = x.Code == TypesDocument.SReservation;
             r.Add(new PrevisionStock(x.EleId, reservation ? "SORTIE" : "ENTREE", reservation ? x.DateBesoin : x.DateLivraison, q, x.EntId, x.Numero, x.TypePiece, x.Tiers, x.Chantier));
         }
         return r;
@@ -109,7 +109,7 @@ public sealed partial class SpecialisationStockBtp
         var documents = sp.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>();
         var lb = sp.GetRequiredService<LogiBtpContext>();
         var appros = (await ApprosAsync(db.Database, lignes.Select(l => l.Ele).Distinct().ToArray(), ct)).ToDictionary(a => a.Ele);
-        var tyd = await lb.TypesDocument.AsNoTracking().Where(t => t.TydCode == "A_COMMANDE").Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await lb.TypesDocument.AsNoTracking().Where(t => t.TydCode == TypesDocument.ACommande).Select(t => t.TydId).FirstAsync(ct);
         var tva = await lb.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
         var lieuCode = (await LieuxAsync(db, ct)).FirstOrDefault(x => x.Id == lieu)?.Code ?? lieu.ToString();
         var creees = new List<CommandeCreee>();

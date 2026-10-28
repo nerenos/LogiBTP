@@ -125,7 +125,7 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
     public override async Task ApresDemandeAsync(SousTraitanceDbContext db, DemandePaiement d, FactureSousTraitance f, Utilisateur u, CancellationToken ct)
     {
         if (SpecialisationBtp.Http?.HttpContext?.RequestServices is not { } services) return;
-        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         try
         {
             var srv = await db.Database.SqlQueryRaw<int>(
@@ -137,8 +137,8 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
                 LEFT JOIN chantier c ON c.cha_id = coalesce(d.ent_chantier_id, m.mar_cha_id)
                 WHERE d.ent_id = @id
                 """, new NpgsqlParameter("id", f.Id)).FirstAsync(ct);
-            var liens = new List<LienSaisi> { new("document", c.GroupeId.ToString(), true), new("marche", f.MarcheId.ToString()) };
-            if (c.ChantierId is int cha) liens.Add(new LienSaisi("chantier", cha.ToString()));
+            var liens = new List<LienSaisi> { new("document", c.GroupeId.ToString(), true), new(TypesFiche.Marche, f.MarcheId.ToString()) };
+            if (c.ChantierId is int cha) liens.Add(new LienSaisi(TypesFiche.Chantier, cha.ToString()));
             var echeance = new DateTimeOffset(d.Delai.Echeance.ToDateTime(new TimeOnly(12, 0)));
             var mode = d.Mode == "DIRECT" ? "paiement direct" : "délégation de paiement";
             await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, c.Conducteur is null && srv.Count > 0 ? srv[0] : null,
@@ -158,9 +158,9 @@ public class SpecialisationSousTraitanceBtp : SpecialisationSousTraitance
     /// </summary>
     public static async Task ControlerPiecesAsync(IServiceProvider? services, string typeCode, int? marche, List<LogiBTP.Socle.MessageCalcul> erreurs, CancellationToken ct)
     {
-        var action = typeCode switch { "T_COMMANDE" => "COMMANDE", "T_FACTURE_AVT" => "FACTURE", _ => null };
+        var action = typeCode switch { TypesDocument.TCommande => "COMMANDE", TypesDocument.TFactureAvt => "FACTURE", _ => null };
         if (action is null || marche is not int m || services is null) return;
-        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("sous_traitance", ct)) return;
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.SousTraitance, ct)) return;
         var pieces = await services.GetRequiredService<ServiceSousTraitance>().BloquantsAsync(m, action, ct);
         if (pieces.Count > 0)
         {

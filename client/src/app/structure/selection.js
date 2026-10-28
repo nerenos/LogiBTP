@@ -1,3 +1,4 @@
+import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper, formatNombre } from '@logibtp/socle/ui';
 
 // Choix d'un projet, d'une affaire, d'un chantier ou d'un marché dans une liste (double-clic sur la zone de code du
@@ -11,8 +12,8 @@ const LIBELLES_STATUT = {
 
 /** Parent affiché dans la liste : affaire d'un chantier, chantier d'un marché. */
 function parent(type, x, refs) {
-  if (type === 'chantier') return [refs.affaires?.find((a) => a.id === x.aff_id)?.code, refs.projets?.find((p) => p.id === x.prj_id)?.code].filter(Boolean).join(' · ');
-  if (type === 'marche') return refs.chantiers?.find((c) => c.id === x.cha_id)?.code ?? '';
+  if (type === TYPE_FICHE.CHANTIER) return [refs.affaires?.find((a) => a.id === x.aff_id)?.code, refs.projets?.find((p) => p.id === x.prj_id)?.code].filter(Boolean).join(' · ');
+  if (type === TYPE_FICHE.MARCHE) return refs.chantiers?.find((c) => c.id === x.cha_id)?.code ?? '';
   return '';
 }
 
@@ -31,8 +32,8 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
       ${filtre ? `<label><input type="checkbox" data-filtre checked> ${echapper(filtre.libelle)}</label>` : ''}
       <label><input type="checkbox" data-fermes> Clos et soldés</label>
     </div>
-    <div class="selection-liste"><table class="table-selection"><thead><tr><th>Code</th><th>Libellé</th><th>${type === 'marche' ? 'Chantier' : type === 'chantier' ? 'Affaire · projet' : ''}</th>
-      <th>Statut</th>${type === 'marche' ? '<th class="col-nombre">Montant HT</th>' : ''}</tr></thead><tbody></tbody></table></div>
+    <div class="selection-liste"><table class="table-selection"><thead><tr><th>Code</th><th>Libellé</th><th>${type === TYPE_FICHE.MARCHE ? 'Chantier' : type === TYPE_FICHE.CHANTIER ? 'Affaire · projet' : ''}</th>
+      <th>Statut</th>${type === TYPE_FICHE.MARCHE ? '<th class="col-nombre">Montant HT</th>' : ''}</tr></thead><tbody></tbody></table></div>
     <div class="boutons"><button value="annuler">Annuler</button><button type="button" data-vider title="Retirer le rattachement">Aucun</button>
       <button type="button" class="principal" data-choisir>Choisir</button></div></form>`;
   document.body.append(dlg);
@@ -47,7 +48,7 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
     index = Math.max(0, lignes.findIndex((x) => x.id === courant));
     $('tbody').innerHTML = lignes.map((x, i) => `<tr data-i="${i}" class="${i === index ? 'courante' : ''}"><td><b>${echapper(x.code)}</b></td><td>${echapper(x.libelle ?? '')}</td>
       <td>${echapper(parent(type, x, refs))}</td><td>${echapper(LIBELLES_STATUT[x.statut] ?? x.statut ?? '')}</td>
-      ${type === 'marche' ? `<td class="col-nombre">${x.montant_ht === null || x.montant_ht === undefined ? '' : formatNombre(x.montant_ht, 2)}</td>` : ''}</tr>`).join('')
+      ${type === TYPE_FICHE.MARCHE ? `<td class="col-nombre">${x.montant_ht === null || x.montant_ht === undefined ? '' : formatNombre(x.montant_ht, 2)}</td>` : ''}</tr>`).join('')
       || '<tr><td colspan="5" class="aide">Aucun élément</td></tr>';
   };
   const marquer = () => {
@@ -98,7 +99,7 @@ export function champRattachement({ type, refs, valeur, choisir, titre = null, l
   div.innerHTML = `${titre ? `<label>${echapper(titre)} </label>` : ''}
     <input class="rattachement-code" value="${echapper(x?.code ?? '')}" placeholder="${lecture ? '' : 'Code'}" autocomplete="off"
       ${lecture ? 'readonly' : 'title="Code (double-clic ou F4 : choisir dans la liste)"'}>
-    <span class="rattachement-libelle">${x ? `<a href="/fiche/${type}/${x.id}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span>`;
+    <span class="rattachement-libelle">${x ? `<a href="${urlFiche(type, x.id)}" title="Ouvrir la fiche">${echapper(x.libelle ?? '')}</a>` : '<span class="aide">—</span>'}</span>`;
   const input = div.querySelector('input');
   if (titre) div.querySelector('label').append(input);
   if (lecture) return div;

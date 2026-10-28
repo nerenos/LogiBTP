@@ -1,3 +1,4 @@
+import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
@@ -9,10 +10,10 @@ import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from 
 import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 import { api } from '../api.js';
-import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE, urlAttente } from '../hors-ligne/attente.js';
+import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { envoyerDocument, SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 import { appliquerReponse } from '../documents/reponse.js';
-import { sousTraiter, TYPES_SOUS_TRAITABLES } from '../sous-traitance/sous-traiter.js';
+import { sousTraiter } from '../sous-traitance/sous-traiter.js';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
 import { PanneauxBtp, individusSociete, individusStructure } from '../panneaux-btp.js';
 import { AnalyseCoefficients } from '../analyse-coefs.js';
@@ -28,7 +29,7 @@ import { choisirSources } from '../documents/sources.js';
 
 /** Types alimentés par d'autres documents (ajout de sources en brouillon) ; types créés depuis un marché. */
 const TYPES_SOURCES = /_(RECEPTION|FACTURE|FACTURE_AVT|SITUATION|AVOIR)$/;
-const MARCHE_TYPES = ['V_RECEPTION', 'V_SITUATION', 'V_FACTURE_AVT'];
+const MARCHE_TYPES = [TYPE_DOCUMENT.V_RECEPTION, TYPE_DOCUMENT.V_SITUATION, TYPE_DOCUMENT.V_FACTURE_AVT];
 import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
@@ -207,9 +208,9 @@ export class PageDocument extends PageBase {
         if (!motif?.trim()) return;
         try {
           const nouveau = await api.devalider(this.editeur.saisie.document.ent_id, motif.trim());
-          this.app.publier('enregistre', { ids: [this.editeur.saisie.document.ent_id, nouveau.document.ent_id] });
+          this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [this.editeur.saisie.document.ent_id, nouveau.document.ent_id] });
           this.app.message(`Nouvelle version (indice ${nouveau.document.ent_indice}) en brouillon`, 'succes');
-          await this.app.naviguer(`/document/${nouveau.document.ent_id}`);
+          await this.app.naviguer(urlDocument(nouveau.document.ent_id));
         } catch (e) { this.app.erreur(e); }
       },
       numero: () => this.changerNumero(),
@@ -311,7 +312,7 @@ export class PageDocument extends PageBase {
     const { id } = this.params;
     this.types = await api.typesDocument();
     // Saisie faite hors ligne envoyée au serveur (par cette fenêtre ou une autre) : identifiants définitifs repris.
-    this.desabonnerEnvoi = app.abonner('hors-ligne-envoye', (e) => this.#surEnvoiHorsLigne(e));
+    this.desabonnerEnvoi = app.abonner(SUJET_FENETRE.HORS_LIGNE_ENVOYE, (e) => this.#surEnvoiHorsLigne(e));
     // File changée (conflit ou refus noté par l'envoi) : bandeau de la saisie hors ligne relu.
     this.desabonnerAttente = app.abonner(SUJET_ATTENTE, async () => {
       const id = this.editeur?.saisie.document.ent_id;
@@ -322,7 +323,7 @@ export class PageDocument extends PageBase {
     if (!app.apiPerdue) prechargerDefinitions(this.types);
     // Création depuis les listes : /document/nouveau?type=<code> ; depuis un marché : &marche=<id> (rattachement).
     if (id === 'nouveau') {
-      await this.nouveau(this.requete.type ?? 'V_DEVIS');
+      await this.nouveau(this.requete.type ?? TYPE_DOCUMENT.V_DEVIS);
       if (this.requete.marche) await this.rattacher({ ...this.editeur.saisie.document, ent_marche_id: Number(this.requete.marche) });
     } else if (id === 'import') {
       await ouvrirImport(this, this.requete.jeton);
@@ -450,9 +451,9 @@ export class PageDocument extends PageBase {
       choisirTexte: () => this.appel?.choisir('', { type: 'TEXTE' }),
       annuaire: this.servicesAnnuaire, intervenants: (type, id) => this.servicesStructure.intervenants(type, id),
       // Ordres (famille E, module Exécution actif) : panneau Exécution de l'entête, répartition du détail.
-      execution: this.app.moduleActif('execution') ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
+      execution: this.app.moduleActif(MODULE_FACULTATIF.EXECUTION) ? { app: this.app, individus: () => individusSociete(this.servicesAnnuaire) } : null,
       // Pièces qui mouvementent le stock (module Stock actif) : lieux d'origine et de destination.
-      stock: this.app.moduleActif('stock') ? { lieux: () => api.stock.lieux() } : null,
+      stock: this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? { lieux: () => api.stock.lieux() } : null,
       // Accusé de réception des commandes (lot 9, A24e) : enregistré à part, fichier rangé dans la GED du document.
       arc: {
         enregistrer: (id, arc) => api.arcDocument(id, arc),
@@ -582,7 +583,7 @@ export class PageDocument extends PageBase {
     this.$('[data-action="annuler-avoir"]').hidden = !doc.ent_verrouille || statut?.std_code === STATUT_DOCUMENT.ANNULE
       || !ed.definition.type?.tyd_numerotation_continue || doc.ent_nature_avoir === 'ANNULATION';
     this.$('[data-action="consultation"]').hidden = !doc.ent_id || !ed.definition.type?.tyd_consultation;
-    this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif('sous_traitance')
+    this.$('[data-action="sous-traiter"]').hidden = !doc.ent_id || !doc.ent_verrouille || !this.app.moduleActif(MODULE_FACULTATIF.SOUS_TRAITANCE)
       || !TYPES_SOUS_TRAITABLES.includes(ed.definition.type?.tyd_code);
     this.$('[data-action="sources"]').hidden = !modifiable || !TYPES_SOURCES.test(ed.definition.type?.tyd_code ?? '');
     rendreBandeauImport(this);
@@ -591,10 +592,10 @@ export class PageDocument extends PageBase {
     if (this.disposition?.p.onglet === 'pieces') this.afficherPieces();
     if (this.disposition?.p.onglet === 'tracabilite' && this.tracabiliteCle !== this.cleTracabilite()) this.afficherTracabilite();
     // Onglet Suivi (module CRM actif, document enregistré) : notes du groupe d'indices.
-    this.$('[data-onglet-vue="suivi"]').hidden = !this.app.moduleActif('crm') || !doc.ent_id;
+    this.$('[data-onglet-vue="suivi"]').hidden = !this.app.moduleActif(MODULE_FACULTATIF.CRM) || !doc.ent_id;
     // Ordres (module Exécution) : coefficients par nature et marge dans l'ordre d'exécution seulement (E3, E17).
     const typeDoc = this.editeur.definition.type;
-    this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION && typeDoc.tyd_code !== 'E_OE';
+    this.$('[data-onglet-vue="analyse"]').hidden = typeDoc?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION && typeDoc.tyd_code !== TYPE_DOCUMENT.E_OE;
     if (this.disposition?.p.onglet === 'suivi') this.afficherSuivi();
     this.app.majPage();
   }
@@ -606,13 +607,13 @@ export class PageDocument extends PageBase {
     zone.hidden = !a;
     if (!a) return;
     const le = new Date(a.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    zone.classList.toggle('probleme', a.etat !== 'ATTENTE');
-    zone.innerHTML = a.etat === 'CONFLIT'
+    zone.classList.toggle('probleme', a.etat !== ETAT_ATTENTE.ATTENTE);
+    zone.innerHTML = a.etat === ETAT_ATTENTE.CONFLIT
       ? `⚠ <b>${ETATS_ATTENTE.CONFLIT}</b> : le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications
         (enregistrées sur ce poste le ${le}) sont conservées. <a href="${urlAttente(a)}" title="Comparer ma saisie à la version du serveur et trancher">⇄ Comparer et fusionner</a>`
-      : a.etat === 'FUSION'
+      : a.etat === ETAT_ATTENTE.FUSION
         ? `⇄ <b>${ETATS_ATTENTE.FUSION}</b> : saisie fusionnée (totaux recalculés) ; contrôlez puis enregistrez pour l'envoyer au serveur.`
-      : a.etat === 'ERREUR'
+      : a.etat === ETAT_ATTENTE.ERREUR
         ? `⚠ <b>${ETATS_ATTENTE.ERREUR}</b> : ${echapper(a.erreur ?? '')}. Corrigez puis enregistrez de nouveau (saisie du ${le} gardée sur ce poste).`
         : `⏳ Enregistré sur ce poste le ${le}${a.id ? '' : ' (document créé hors ligne)'} : envoi au serveur dès son retour.`;
   }
@@ -639,7 +640,7 @@ export class PageDocument extends PageBase {
     await this.charger(definition, { document, lignes: [] });
     await ecrireAttente({ ...this.#entreeAttente(), creation: { params, initial: document } });
     this.attente = await lireAttente(this.app.utilisateur(), id);
-    this.app.routeur.remplacerUrl(`/document/${id}`);
+    this.app.routeur.remplacerUrl(urlDocument(id));
     this.disposition.onglet('entete');
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
@@ -652,10 +653,10 @@ export class PageDocument extends PageBase {
     if (this.app.apiPerdue) { await this.#nouveauHorsLigne(type); return; }
     // Tiers choisi ensuite dans l'annuaire du document (obligatoire à la validation).
     const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
-    this.app.routeur.remplacerUrl(`/document/${cree.document.ent_id}`);
+    this.app.routeur.remplacerUrl(urlDocument(cree.document.ent_id));
     await this.chargerDocument(cree.document.ent_id);
     this.disposition.onglet('entete');
-    this.app.publier('enregistre', { type: code, ids: [cree.document.ent_id], cree: true });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: code, ids: [cree.document.ent_id], cree: true });
     this.app.message(`${type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé`);
   }
 
@@ -681,7 +682,7 @@ export class PageDocument extends PageBase {
       if (!this.app.apiPerdue) {
         await envoyerDocument(this.app, compte, id).catch(async (e) => {
           if (estHorsLigne(e)) return;
-          this.attente = await marquerAttente(compte, id, { etat: 'ERREUR', erreur: e.message });
+          this.attente = await marquerAttente(compte, id, { etat: ETAT_ATTENTE.ERREUR, erreur: e.message });
           this.rafraichir();
           throw e;
         });
@@ -695,7 +696,7 @@ export class PageDocument extends PageBase {
     } catch (e) {
       if (estHorsLigne(e)) { await this.#enregistrerSurPoste(envoi); return; }
       // Saisie hors ligne refusée (version du serveur changée) : gardée sur ce poste, à fusionner (/fusion/document/:id).
-      if (this.attente && e.statut === 409) { this.attente = await marquerAttente(compte, id, { etat: 'CONFLIT', erreur: e.message }); this.rafraichir(); }
+      if (this.attente && e.statut === 409) { this.attente = await marquerAttente(compte, id, { etat: ETAT_ATTENTE.CONFLIT, erreur: e.message }); this.rafraichir(); }
       throw e;
     }
     // Saisie hors ligne de ce document : remplacée par cet enregistrement.
@@ -709,7 +710,7 @@ export class PageDocument extends PageBase {
     this.marque = ed.magasin.pile.at(-1);
     this.rafraichir();
     // Rafraîchissement ciblé de la ligne du document dans les listes (cette fenêtre et les autres).
-    this.app.publier('enregistre', { type: rep.document.document.ent_tyd_id, ids: [rep.document.document.ent_id] });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: rep.document.document.ent_tyd_id, ids: [rep.document.document.ent_id] });
     this.app.message(rep.ecarts.length ? `Enregistré avec ${rep.ecarts.length} écart(s) de calcul à arbitrer` : `Enregistré (version ${rep.document.document.ent_version})`,
       rep.ecarts.length ? 'avertissement' : 'succes');
   }
@@ -737,7 +738,7 @@ export class PageDocument extends PageBase {
         ventilations_lignes: r.ventilations_lignes ?? [], version_moteur_client: VERSION_MOTEUR,
       },
       saisie: structuredClone(ed.saisie), depart: this.depart ?? null, type_code: ed.definition.type?.tyd_code ?? null,
-      libelle: `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? '(créé hors ligne)'}`, etat: 'ATTENTE',
+      libelle: `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? '(créé hors ligne)'}`, etat: ETAT_ATTENTE.ATTENTE,
     };
   }
 
@@ -760,10 +761,10 @@ export class PageDocument extends PageBase {
     if (!modifiee) this.marque = ed.magasin.pile.at(-1);
     this.attente = null;
     this.depart = null;
-    if (idLocal !== id) this.app.routeur.remplacerUrl(`/document/${id}`);
+    if (idLocal !== id) this.app.routeur.remplacerUrl(urlDocument(id));
     this.rafraichir();
     this.prendreVerrou().catch(() => {});
-    this.app.publier('enregistre', { type: ed.definition.type?.tyd_code, ids: [id], cree: idLocal !== id });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: ed.definition.type?.tyd_code, ids: [id], cree: idLocal !== id });
     this.app.message(`${ed.definition.type?.tyd_libelle ?? 'Document'} ${rep.document.document.ent_numero ?? ''} envoyé au serveur (saisie hors ligne)`, 'succes');
   }
 
@@ -796,7 +797,7 @@ export class PageDocument extends PageBase {
     }
     const doc = ed.saisie.document;
     Object.assign(doc, await this.servicesStructure.rattacher(doc.ent_id, complet));
-    this.app.publier('enregistre', { ids: [doc.ent_id] });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [doc.ent_id] });
     this.app.message('Rattachement enregistré', 'succes');
     this.rafraichir();
   }
@@ -867,9 +868,9 @@ export class PageDocument extends PageBase {
     if (this.modifiee && !await confirmer('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
-    if (ed.definition.type?.tyd_code === 'V_COMMANDE' && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
+    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.V_COMMANDE && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
     // Commande de sous-traitance : marché de sous-traitance obligatoire (ST2, ST4).
-    if (ed.definition.type?.tyd_code === 'T_COMMANDE' && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
+    if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
     if (orphelines.length && !await confirmer(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
@@ -879,7 +880,7 @@ export class PageDocument extends PageBase {
     if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', 'Valider'))) return;
     const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
     await this.chargerDocument(rep.document.document.ent_id);
-    this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [rep.document.document.ent_id] });
     this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
   }
 
@@ -903,7 +904,7 @@ export class PageDocument extends PageBase {
     try {
       const rep = await api.changerNumero(doc.ent_id, numero.trim(), motif?.trim() ?? null);
       await this.chargerDocument(doc.ent_id);
-      this.app.publier('enregistre', { ids: [doc.ent_id] });
+      this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [doc.ent_id] });
       this.app.message(rep.avertissement ?? `Numéro ${rep.numero} attribué`, rep.avertissement ? 'avertissement' : 'succes');
     } catch (e) { this.app.erreur(e); }
   }
@@ -912,7 +913,7 @@ export class PageDocument extends PageBase {
     try {
       const rep = await appel(this.editeur.saisie.document.ent_id);
       await this.chargerDocument(rep.document.document.ent_id);
-      this.app.publier('enregistre', { ids: [rep.document.document.ent_id] });
+      this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [rep.document.document.ent_id] });
       this.app.message(message, 'succes');
     } catch (e) { this.app.erreur(e); }
   }
@@ -943,10 +944,10 @@ export class PageDocument extends PageBase {
     const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''} (${formatNombre(x.total_ht, 2)} € HT)`).join('\n');
     if (!await confirmer(`${pieces.length > 1 ? `Les ${pieces.length} pièces suivantes seront annulées` : 'La pièce suivante sera annulée'} par avoir (pièces comptables : un avoir chacune) :\n\n${liste}\n\nAnnuler ?`)) return;
     const r = await api.annulerParAvoir(d.ent_id);
-    this.app.publier('enregistre', { ids: [d.ent_id, ...r.avoirs] });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [d.ent_id, ...r.avoirs] });
     await this.chargerDocument(d.ent_id);
     this.app.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours (nouvel indice)' : ''}`, 'succes');
-    if (r.situation && await confirmer('Ouvrir la situation remise en cours ?')) await this.app.naviguer(`/document/${r.situation}`, { nouvelleFenetre: true });
+    if (r.situation && await confirmer('Ouvrir la situation remise en cours ?')) await this.app.naviguer(urlDocument(r.situation), { nouvelleFenetre: true });
   }
 
   /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */
@@ -998,7 +999,7 @@ export class PageDocument extends PageBase {
     const r = await proposerMarcheSousTraitance({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
       nomTiers: (doc.ent_intervenants ?? []).find((i) => i.per_id === doc.ent_tiers_id)?.tiers ?? '',
-      creerMarche: async (valeurs) => this.servicesFiche.creer('marche', { valeurs: { ...valeurs, intervenants: [] }, proprietes: {} }),
+      creerMarche: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.MARCHE, { valeurs: { ...valeurs, intervenants: [] }, proprietes: {} }),
     });
     if (!r) return false;
     this.structure = await this.servicesStructure.referentiels();
@@ -1015,10 +1016,10 @@ export class PageDocument extends PageBase {
     const r = await proposerMarche({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
       individus: await individusStructure(this.servicesAnnuaire).catch(() => []),
-      creerChantier: async (valeurs) => this.servicesFiche.creer('chantier', { valeurs, proprietes: {} }),
+      creerChantier: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.CHANTIER, { valeurs, proprietes: {} }),
       // Le marché reprend les intervenants du chantier.
-      creerMarche: async (valeurs) => this.servicesFiche.creer('marche', {
-        valeurs: { ...valeurs, intervenants: await this.servicesStructure.intervenants('chantier', valeurs.cha_id).catch(() => []) }, proprietes: {},
+      creerMarche: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.MARCHE, {
+        valeurs: { ...valeurs, intervenants: await this.servicesStructure.intervenants(TYPE_FICHE.CHANTIER, valeurs.cha_id).catch(() => []) }, proprietes: {},
       }),
     });
     if (!r) return false;
@@ -1041,7 +1042,7 @@ export class PageDocument extends PageBase {
     dlg.className = 'dialogue-structure';
     dlg.innerHTML = `<form method="dialog"><h3>📨 Lot de consultation ${echapper(lot.code ?? '')}</h3>
       ${lot.documents.length ? `<table class="tableau-compact"><thead><tr><th>Numéro</th><th>Fournisseur</th><th class="nombre">Total HT</th><th>Statut</th></tr></thead><tbody>
-        ${lot.documents.map((x) => `<tr><td><a href="/document/${x.id}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
+        ${lot.documents.map((x) => `<tr><td><a href="${urlDocument(x.id)}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
           <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Pas encore de lot : « Autre fournisseur » crée la première copie et donne à la demande le code du lot (son numéro).</p>'}
       <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button>
@@ -1063,7 +1064,7 @@ export class PageDocument extends PageBase {
         const r = await api.copierConsultation(d.ent_id);
         dlg.close();
         this.app.message('Demande copiée pour un autre fournisseur : choisissez-le dans l\'entête', 'succes');
-        this.app.naviguer(`/document/${r.id}`, { nouvelleFenetre: true });
+        this.app.naviguer(urlDocument(r.id), { nouvelleFenetre: true });
       } catch (e) { this.app.erreur(e); }
     });
     dlg.showModal();
@@ -1101,7 +1102,7 @@ export class PageDocument extends PageBase {
     const ids = await sousTraiter({ entId: d.ent_id, selection, message: (m, n) => this.app.message(m, n) });
     if (!ids?.length) return;
     this.app.message(`${ids.length} document(s) de sous-traitance créé(s)`, 'succes');
-    this.app.naviguer(`/document/${ids[0]}`, { nouvelleFenetre: true });
+    this.app.naviguer(urlDocument(ids[0]), { nouvelleFenetre: true });
   }
 
   /**
@@ -1126,7 +1127,7 @@ export class PageDocument extends PageBase {
     }
     await api.ajouterSources(d.ent_id, sources);
     await this.chargerDocument(d.ent_id);
-    this.app.publier('enregistre', { ids: [d.ent_id] });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [d.ent_id] });
     this.app.message(`${sources.length} document(s) repris`, 'succes');
   }
 
@@ -1139,10 +1140,10 @@ export class PageDocument extends PageBase {
       definition: ed.definition, message: (t, n) => this.app.message(t, n),
     });
     if (!cree) return;
-    this.app.publier('enregistre', { ids: [cree.ent_id], cree: true });
+    this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [cree.ent_id], cree: true });
     this.app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé`, 'succes');
     // Le nouveau document s'ouvre comme une nouvelle page (le document d'origine reste dans l'historique).
-    await this.app.naviguer(`/document/${cree.ent_id}`);
+    await this.app.naviguer(urlDocument(cree.ent_id));
   }
 
   /** Aide-mémoire des raccourcis des lignes (touches effectives, personnalisées comprises) et de la page. */

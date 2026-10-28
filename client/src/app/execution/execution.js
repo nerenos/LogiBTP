@@ -1,3 +1,4 @@
+import { urlDocument, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { echapper, creerCombo, formatNombre, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { rendreEtapes, optionsRessources, ressourceDe } from './etapes.js';
@@ -90,17 +91,17 @@ export async function rendreExecution(bloc, { app, entId, typeCode, individus, s
   // Étapes de l'ordre (lot 2c) : une action peut changer l'état d'exécution et les dates prévues : panneau relu.
   rendreEtapes(bloc.querySelector('[data-etapes]'), {
     app, entId, ressources: refs.ressources, ressourceOrdre: s.ressource,
-    surChange: () => { app.publier('enregistre', { type: typeCode, ids: [entId] }); surChange(); rendreExecution(bloc, { app, entId, typeCode, individus, surChange }); },
+    surChange: () => { app.publier(SUJET_FENETRE.ENREGISTRE, { type: typeCode, ids: [entId] }); surChange(); rendreExecution(bloc, { app, entId, typeCode, individus, surChange }); },
   });
   bloc.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.value || null; }));
-  if (app.moduleActif('planning')) rendrePlanningOrdre(bloc.querySelector('[data-planning-ordre]'), { app, entId, recharger: () => rendreExecution(bloc, { app, entId, typeCode, individus, surChange }) });
+  if (app.moduleActif(MODULE_FACULTATIF.PLANNING)) rendrePlanningOrdre(bloc.querySelector('[data-planning-ordre]'), { app, entId, recharger: () => rendreExecution(bloc, { app, entId, typeCode, individus, surChange }) });
   bloc.querySelector('[data-enregistrer]').addEventListener('click', async () => {
     const erreur = bloc.querySelector('[data-erreur]');
     if (s.etat === 'BLOQUE' && !s.motif_id) { erreur.textContent = 'Motif obligatoire pour bloquer un ordre'; erreur.hidden = false; return; }
     try {
       await api.execution.enregistrer(entId, s);
       app.message(s.etat === 'BLOQUE' ? 'Ordre bloqué : le service du motif est prévenu (tâche du suivi si le module CRM est actif)' : 'Exécution enregistrée', 'succes');
-      app.publier('enregistre', { type: typeCode, ids: [entId] });
+      app.publier(SUJET_FENETRE.ENREGISTRE, { type: typeCode, ids: [entId] });
       surChange();
       await rendreExecution(bloc, { app, entId, typeCode, individus, surChange });
     } catch (e) { erreur.textContent = e.message; erreur.hidden = false; }
@@ -142,7 +143,7 @@ async function rendrePlanningOrdre(zone, { app, entId, recharger }) {
 export function sectionRepartition(info) {
   if (!info) return '';
   return `<fieldset class="execution-repartition${info.depassement ? ' depassement' : ''}"><legend>Exécution</legend>
-    <dl class="definitions"><dt>Ordre parent</dt><dd>${echapper(TYPES_ORDRE[info.type_source] ?? info.type_source)} <a href="/document/${info.source_ent_id}">${echapper(info.numero_source ?? '')}</a></dd>
+    <dl class="definitions"><dt>Ordre parent</dt><dd>${echapper(TYPES_ORDRE[info.type_source] ?? info.type_source)} <a href="${urlDocument(info.source_ent_id)}">${echapper(info.numero_source ?? '')}</a></dd>
     <dt>Quantité de l'ordre parent</dt><dd>${nombre(info.qte_source, 3)} ${echapper(info.unite ?? '')}</dd>
     ${info.montant_pr_source !== null ? `<dt>Budget (déboursé)</dt><dd>${nombre(info.montant_pr_source)} €</dd>` : ''}
     ${info.heures_source ? `<dt>Heures</dt><dd>${nombre(info.heures_source)} h</dd>` : ''}

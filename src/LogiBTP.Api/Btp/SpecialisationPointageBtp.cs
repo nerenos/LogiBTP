@@ -71,7 +71,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     {
         var modules = services.GetRequiredService<ModulesSociete>();
         var journal = services.GetRequiredService<ILoggerFactory>().CreateLogger("Pointage");
-        if (action == "DEMANDER" && await modules.EstActifAsync("crm", ct))
+        if (action == "DEMANDER" && await modules.EstActifAsync(ModulesFacultatifs.Crm, ct))
         {
             var srv = await db.Database.SqlQueryRaw<int?>(
                 "SELECT srv_id AS \"Value\" FROM service WHERE srv_nature = 'ADMINISTRATIF' AND srv_actif ORDER BY srv_parent_id NULLS FIRST, srv_ordre LIMIT 1").FirstOrDefaultAsync(ct);
@@ -82,7 +82,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
                     await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                         $"Congé demandé : {salarie.Nom} {salarie.Prenom} du {c.PcoDu:dd/MM/yyyy}{(c.PcoDebutMidi ? " après-midi" : "")} au {c.PcoAu:dd/MM/yyyy}{(c.PcoFinMidi ? " midi" : "")}",
                         c.PcoCommentaire is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoCommentaire)}</p>",
-                        null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);
+                        null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi(TypesFiche.Salarie, salarie.Id.ToString(), true)], null), u, ct);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
@@ -90,7 +90,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
                 }
             }
         }
-        if (!await modules.EstActifAsync("planning", ct)) return;
+        if (!await modules.EstActifAsync(ModulesFacultatifs.Planning, ct)) return;
         try
         {
             var planning = services.GetRequiredService<ServicePlanning>();
@@ -361,11 +361,11 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     public override async Task ApresNonConformiteAsync(PointageDbContext db, IServiceProvider services, Utilisateur auteur, SalariePointage salarie, int chantier, long? ordre,
         string motif, CancellationToken ct)
     {
-        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         var m = await db.Database.SqlQueryRaw<MotifService>("SELECT mot_srv_id AS srv_id, mot_libelle AS libelle FROM motif WHERE mot_domaine = 'NON_CONFORMITE' AND mot_libelle = @l LIMIT 1",
             new NpgsqlParameter("l", motif)).FirstOrDefaultAsync(ct);
         if ((m?.SrvId ?? salarie.SrvId) is not int service) return;
-        var liens = new List<LienSaisi> { new("chantier", chantier.ToString(), true) };
+        var liens = new List<LienSaisi> { new(TypesFiche.Chantier, chantier.ToString(), true) };
         if (ordre is long o)
         {
             var groupe = await db.Database.SqlQueryRaw<long>("SELECT ent_groupe_id AS \"Value\" FROM document WHERE ent_id = @o", new NpgsqlParameter("o", o)).FirstOrDefaultAsync(ct);
@@ -385,7 +385,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     /// <summary>Tâche du CRM au premier service administratif (RH), rattachée au salarié ; sans effet si le CRM est inactif.</summary>
     public override async Task ApresCorrectionAsync(PointageDbContext db, IServiceProvider services, Utilisateur u, SalariePointage salarie, CorrectionEntite c, CancellationToken ct)
     {
-        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync("crm", ct)) return;
+        if (!await services.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Crm, ct)) return;
         var srv = await db.Database.SqlQueryRaw<int?>(
             "SELECT srv_id AS \"Value\" FROM service WHERE srv_nature = 'ADMINISTRATIF' AND srv_actif ORDER BY srv_parent_id NULLS FIRST, srv_ordre LIMIT 1").FirstOrDefaultAsync(ct);
         if (srv is not int service) return;
@@ -394,7 +394,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Tache, EtatNote.AFaire, null, service,
                 $"Pointages de {salarie.Nom} {salarie.Prenom} : correction demandée (semaine du {c.PcoLundi:dd/MM/yyyy})",
                 c.PcoMotif is null ? null : $"<p>{System.Net.WebUtility.HtmlEncode(c.PcoMotif)}</p>",
-                null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi("salarie", salarie.Id.ToString(), true)], null), u, ct);
+                null, DateTimeOffset.UtcNow.AddDays(2), null, false, false, false, [new LienSaisi(TypesFiche.Salarie, salarie.Id.ToString(), true)], null), u, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

@@ -1,3 +1,4 @@
+import { urlDocument, urlFiche, TYPE_FICHE } from '../codes.js';
 import { dateLocale, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences, formatDate, formatDateHeure } from '@logibtp/socle/ui';
@@ -120,7 +121,7 @@ export class PageMagasin extends PageBase {
       const pieces = await (this.mode === 'retour' ? api.stock.retourMagasin(saisie) : api.stock.sortieMagasin(saisie));
       this.#panier = [];
       this.#rendre();
-      this.conteneur.querySelector('[data-resultat]').innerHTML = `<p class="succes">✔ ${pieces.map((p) => `<a href="/document/${p.ent_id}" data-doc>${echapper(p.numero ?? '')}</a> (${p.lignes} ligne(s))`).join(', ')}</p>`;
+      this.conteneur.querySelector('[data-resultat]').innerHTML = `<p class="succes">✔ ${pieces.map((p) => `<a href="${urlDocument(p.ent_id)}" data-doc>${echapper(p.numero ?? '')}</a> (${p.lignes} ligne(s))`).join(', ')}</p>`;
       this.conteneur.querySelectorAll('[data-doc]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: true }); }));
       this.app.message(this.mode === 'retour' ? 'Retour enregistré' : 'Sortie enregistrée', 'succes');
     } catch (e) { this.app.erreur(e); }
@@ -175,7 +176,7 @@ export class PageDotations extends PageBase {
     };
     this.conteneur.querySelector('[data-corps]').innerHTML = salaries.length ? `<table class="tableau-compact"><thead><tr><th>Salarié</th><th>Service</th>
       ${articles.map((a) => `<th title="${echapper(a.libelle ?? '')}">${echapper(a.code ?? '')}</th>`).join('')}</tr></thead><tbody>
-      ${salaries.map((s) => `<tr><td><a href="/fiche/salarie/${s.id}" data-sal>${echapper(nomSalarie(s))}</a></td><td>${echapper(s.service ?? '')}</td>${articles.map((a) => cellule(s, a)).join('')}</tr>`).join('')}
+      ${salaries.map((s) => `<tr><td><a href="${urlFiche(TYPE_FICHE.SALARIE, s.id)}" data-sal>${echapper(nomSalarie(s))}</a></td><td>${echapper(s.service ?? '')}</td>${articles.map((a) => cellule(s, a)).join('')}</tr>`).join('')}
       </tbody></table>` : '<p class="aide">Aucune dotation sur la période.</p>';
     this.conteneur.querySelectorAll('[data-sal]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: e.ctrlKey }); }));
   }
@@ -225,7 +226,7 @@ export class PageSaisiesAValider extends PageBase {
     const z = this.conteneur.querySelector('[data-corps]');
     z.innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>Date</th><th>Pièce</th><th>Salarié</th><th>De</th><th>Vers</th><th>Articles</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${l.map((x) => `<tr data-id="${x.ent_id}"><td>${formatDateHeure(x.date)}</td>
-        <td><a href="/document/${x.ent_id}" data-doc>${echapper(x.numero ?? '')}</a> <small>${echapper(x.type)}</small></td><td>${echapper(x.nom ?? '')}</td>
+        <td><a href="${urlDocument(x.ent_id)}" data-doc>${echapper(x.numero ?? '')}</a> <small>${echapper(x.type)}</small></td><td>${echapper(x.nom ?? '')}</td>
         <td>${echapper(x.origine ?? '')}</td><td>${echapper(x.destination ?? '')}</td><td>${echapper(x.lignes)}</td>
         <td class="cellule-boutons"><button type="button" class="bouton-icone" data-accepter title="Accepter">✔</button><button type="button" class="bouton-icone" data-refuser title="Refuser (motif)">✕</button></td></tr>`).join('')}
       </tbody></table>` : '<p class="aide">Aucune saisie à valider.</p>';
@@ -301,7 +302,7 @@ export async function rendreDotationsSalarie(corps, { salarie, naviguer }) {
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Article</th><th>Libellé</th><th>Doté<br><small>aujourd'hui</small></th><th>Sorti<br><small>${echapper(periode.libelle)}</small></th><th>Rendu<br><small>${echapper(periode.libelle)}</small></th><th>Rebut<br><small>${echapper(periode.libelle)}</small></th><th>Mouvements de la période</th></tr></thead><tbody>
       ${s.articles.map((x) => { const a = art.get(x.ele); return `<tr><td>${echapper(a?.code ?? '')}</td><td>${echapper(a?.libelle ?? '')}</td><td class="nombre"><b>${formatNombre(x.net, 2)}</b> ${echapper(a?.unite ?? '')}${pastilleRenouvellement(x)}</td>
         <td class="nombre">${formatNombre(x.sorti, 2)}</td><td class="nombre">${formatNombre(x.rendu, 2)}</td><td class="nombre">${formatNombre(x.rebut, 2)}</td>
-        <td>${x.mouvements.map((m) => `${formatDate(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="/document/${m.ent_id}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
+        <td>${x.mouvements.map((m) => `${formatDate(m.date)} ${Number(m.quantite) > 0 ? '+' : ''}${formatNombre(m.quantite, 2)} <a href="${urlDocument(m.ent_id)}" data-url>${echapper(m.numero ?? '')}</a>`).join('<br>')}</td></tr>`; }).join('')}
       </tbody><tfoot>${[...totaux].map(([u, t]) => `<tr><th colspan="2">Total${u ? ` (${echapper(u)})` : ''} <small>${t.n} article${t.n > 1 ? 's' : ''}</small></th>
         <th class="nombre">${formatNombre(t.net, 2)}</th><th class="nombre">${formatNombre(t.sorti, 2)}</th><th class="nombre">${formatNombre(t.rendu, 2)}</th><th class="nombre">${formatNombre(t.rebut, 2)}</th><th></th></tr>`).join('')}</tfoot></table>`;
   }

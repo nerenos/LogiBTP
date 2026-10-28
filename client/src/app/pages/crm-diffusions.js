@@ -1,3 +1,4 @@
+import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, formatDate } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -16,7 +17,7 @@ export class PageDiffusionsCrm extends PageBase {
       <p class="aide">Un bordereau se crée depuis la liste des plans (« Diffuser la sélection ») ou depuis un plan (« Diffuser… »).
       ${this.element ? `<a href="/crm/plans?type=${encodeURIComponent(this.element.type)}&id=${encodeURIComponent(this.element.id)}">Plans de l'élément</a>` : '<a href="/crm/plans">Plans</a>'}</p>
       <div data-corps></div></div>`;
-    this.desabonner = app.abonner('crm', () => this.charger());
+    this.desabonner = app.abonner(SUJET_FENETRE.CRM, () => this.charger());
     await this.charger();
   }
 

@@ -1,3 +1,4 @@
+import { urlDocument } from '../codes.js';
 import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
 import { METHODES_VALORISATION } from '@logibtp/stock';
 import { api } from '../api.js';
@@ -36,7 +37,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
       <label><input type="checkbox" data-cpmp> Appliquer au PMP</label> <label>Commentaire <input data-ccom size="24"></label> <button type="button" data-corriger>Corriger</button></p>
     <h3>Valorisation</h3>
     <p>PMP : <b>${nb(f.pmp, 6) || '—'}</b> · Dernier prix d'achat : <b>${nb(f.dernier_pa, 6) || '—'}</b>${f.provisoire ? ' <span title="Réception non encore facturée">⏳ provisoire</span>' : ''}
-      ${piece ? ` — ${echapper(piece.type)} <a href="/document/${piece.id}" data-piece="${piece.id}">${echapper(piece.numero)}</a>${piece.tiers ? `, ${echapper(piece.tiers)}` : ''}, ${dateHeureLocale(f.dernier_pa_date)}` : ''}</p>
+      ${piece ? ` — ${echapper(piece.type)} <a href="${urlDocument(piece.id)}" data-piece="${piece.id}">${echapper(piece.numero)}</a>${piece.tiers ? `, ${echapper(piece.tiers)}` : ''}, ${dateHeureLocale(f.dernier_pa_date)}` : ''}</p>
     <p class="ligne"><label>Nouveau PMP <input data-pmp size="10"></label> <label>Au <input type="datetime-local" data-date title="Vide : maintenant"></label>
       <label>Commentaire <input data-commentaire size="30"></label> <button type="button" data-reevaluer>Corriger le PMP</button></p>
     ${f.reevaluations.length ? `<table class="tableau-compact"><thead><tr><th>Date</th><th>Ancien PMP</th><th>PMP</th><th>Commentaire</th><th>Par</th></tr></thead><tbody>
@@ -50,7 +51,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
       ${f.mouvements.map((m) => `<tr><td>${dateHeureLocale(m.date)}</td><td>${echapper(m.lieu_code ?? '')}</td>
         <td class="nombre${Number(m.quantite) < 0 ? '' : ' entree'}">${Number(m.quantite) > 0 ? '+' : ''}${nb(m.quantite)}</td>
         <td class="nombre">${nb(m.prix, 4)}${m.provisoire ? ' ⏳' : ''}</td><td class="nombre">${nb(m.pmp, 4)}</td>
-        <td>${m.ent_id ? `<a href="/document/${m.ent_id}" data-piece="${m.ent_id}">${echapper(m.piece ?? '')}</a> <small>${echapper(m.type_piece ?? '')}</small>` : echapper(ORIGINES[m.origine] ?? m.origine)}</td>
+        <td>${m.ent_id ? `<a href="${urlDocument(m.ent_id)}" data-piece="${m.ent_id}">${echapper(m.piece ?? '')}</a> <small>${echapper(m.type_piece ?? '')}</small>` : echapper(ORIGINES[m.origine] ?? m.origine)}</td>
         <td>${echapper(m.tiers ?? '')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Aucun mouvement</td></tr>'}</tbody></table></div>`;
   // Dotation (lot 4) : EPI ou outillage consommable, durée de vie (renouvellement).
   const typeDotation = creerCombo({ options: [{ valeur: 'EPI', libelle: 'EPI' }, { valeur: 'OUTILLAGE', libelle: 'Outillage consommable' }], valeur: dotation.type ?? '' });
@@ -84,7 +85,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
     } catch (e) { message(e.message, 'erreur'); }
   });
   corps.querySelectorAll('[data-url]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(a.getAttribute('href'), e); }));
-  corps.querySelectorAll('[data-piece]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(`/document/${a.dataset.piece}`, e); }));
+  corps.querySelectorAll('[data-piece]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); naviguer(urlDocument(a.dataset.piece), e); }));
   corps.querySelector('[data-reevaluer]').addEventListener('click', async () => {
     const v = corps.querySelector('[data-pmp]').value.trim().replace(/\s/g, '').replace(',', '.');
     const d = corps.querySelector('[data-date]').value;

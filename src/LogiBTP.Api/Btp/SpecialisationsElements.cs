@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogiBTP.Annuaire;
 using LogiBTP.Annuaire.Web;
 using LogiBTP.Documents;
+using LogiBTP.Domaine;
 using LogiBTP.Fiches;
 using LogiBTP.Fiches.Web;
 using LogiBTP.Ged.Web;
@@ -25,14 +26,14 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     /// <summary>Champs des fiches de la structure qui désignent un individu de notre structure (code du champ, libellé).</summary>
     private static readonly Dictionary<string, (string Champ, string Libelle)[]> ChampsIndividuStructure = new()
     {
-        ["chantier"] = [("conducteur_ind_id", "Conducteur de travaux"), ("charge_ind_id", "Chargé d'affaires"), ("chef_ind_id", "Chef d'équipe")],
-        ["projet"] = [("responsable_ind_id", "Responsable"), ("metreur_ind_id", "Métreur")],
+        [TypesFiche.Chantier] = [("conducteur_ind_id", "Conducteur de travaux"), ("charge_ind_id", "Chargé d'affaires"), ("chef_ind_id", "Chef d'équipe")],
+        [TypesFiche.Projet] = [("responsable_ind_id", "Responsable"), ("metreur_ind_id", "Métreur")],
     };
 
     /// <summary>Champs HTML des fiches (libellé d'un élément de bibliothèque…) : même liste blanche que les libellés des documents.</summary>
     public override string NettoyerHtml(string html) => Html.Nettoyer(html) ?? "";
 
-    private static bool Annuaire(string type) => type is "personne" or "individu";
+    private static bool Annuaire(string type) => type is TypesFiche.Personne or TypesFiche.Individu;
 
     public override async Task AvantEcritureAsync(string type, bool creation, string? id, Dictionary<string, string?> aEcrire,
         IReadOnlyDictionary<string, object?> valeurs, IReadOnlyDictionary<string, object?> proprietes, Utilisateur u, CancellationToken ct)
@@ -45,12 +46,12 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             aEcrire["actif"] = actif ? "true" : "false";
             valeurs = new Dictionary<string, object?>(valeurs) { ["actif"] = actif };
         }
-        if (type == "element")
+        if (type == TypesFiche.Element)
         {
             await ElementsBibliotheque.AvantEcriture(scope.ServiceProvider, id, aEcrire, valeurs, proprietes, u, ct);
             return;
         }
-        if (type == "salarie") await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
+        if (type == TypesFiche.Salarie) await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
         // Conducteur de travaux, chargé d'affaires, chef d'équipe d'un chantier, responsable et métreur d'un projet (lot 6) :
         // individus de notre structure (rattachés à notre société ou à un niveau inférieur).
         if (ChampsIndividuStructure.TryGetValue(type, out var champsIndividus))
@@ -65,7 +66,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
                 }
             }
         }
-        if (type == "personne")
+        if (type == TypesFiche.Personne)
         {
             // Identifiants enregistrés sans espaces ; pays en majuscules (comme FichePersonne.enregistrer).
             foreach (var k in new[] { "siren", "siret", "tva_intra", "iban", "bic" })
@@ -97,7 +98,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         using var scope = scopes.CreateScope();
         var geres = new Dictionary<string, object?>(await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().LireGeres(type, long.Parse(id), ct));
         // Fiche individu : salarié lié (module salariés du cœur).
-        if (type == "individu") geres["salarie"] = await SalariesAnnuaire.Salarie(scope.ServiceProvider, long.Parse(id), ct);
+        if (type == TypesFiche.Individu) geres["salarie"] = await SalariesAnnuaire.Salarie(scope.ServiceProvider, long.Parse(id), ct);
         return geres;
     }
 
@@ -135,11 +136,11 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
     {
         switch (type)
         {
-            case "personne":
+            case TypesFiche.Personne:
                 string? T(string k) => v.GetValueOrDefault(k)?.ToString();
                 foreach (var e in Identifiants.Erreurs(new(T("pays"), T("siren"), T("siret"), T("tva_intra"), T("iban"), T("bic")))) yield return new(e.Champ, "METIER", e.Message);
                 break;
-            case "salarie":
+            case TypesFiche.Salarie:
                 var entree = Date(v.GetValueOrDefault("date_entree"));
                 var naissance = Date(v.GetValueOrDefault("date_naissance"));
                 if (entree is not null && string.CompareOrdinal(entree, Aujourdhui) > 0) yield return new("date_entree", "METIER", "Date d'entrée dans le futur");
@@ -149,7 +150,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
                     if (entree is not null && string.CompareOrdinal(naissance, entree) >= 0) yield return new("date_naissance", "METIER", "Naissance postérieure à l'entrée");
                 }
                 break;
-            case "materiel":
+            case TypesFiche.Materiel:
                 if (ValidationFiche.Nombre(v.GetValueOrDefault("heures_utilisation")) is < 0) yield return new("heures_utilisation", "METIER", "Nombre d'heures négatif");
                 var achat = Date(v.GetValueOrDefault("date_achat"));
                 if (achat is not null && string.CompareOrdinal(achat, Aujourdhui) > 0) yield return new("date_achat", "METIER", "Date d'achat dans le futur");
@@ -166,13 +167,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
 /// </summary>
 public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : SpecialisationListe
 {
-    private static readonly Dictionary<string, string> FicheParSource = new() { ["salaries"] = "salarie", ["materiels"] = "materiel" };
+    private static readonly Dictionary<string, string> FicheParSource = new() { ["salaries"] = TypesFiche.Salarie, ["materiels"] = TypesFiche.Materiel };
 
     /// <summary>Fiche dont les champs confidentiels sont masqués dans la liste de chaque source (RGPD).</summary>
     private static readonly Dictionary<string, string> FicheRgpd = new()
     {
-        ["salaries"] = "salarie", ["materiels"] = "materiel", ["personnes"] = "personne", ["individus"] = "individu", ["elements"] = "element",
-        ["projets"] = "projet", ["affaires"] = "affaire", ["chantiers"] = "chantier", ["marches"] = "marche", ["marches_st"] = "marche",
+        ["salaries"] = TypesFiche.Salarie, ["materiels"] = TypesFiche.Materiel, ["personnes"] = TypesFiche.Personne, ["individus"] = TypesFiche.Individu, ["elements"] = TypesFiche.Element,
+        ["projets"] = TypesFiche.Projet, ["affaires"] = TypesFiche.Affaire, ["chantiers"] = TypesFiche.Chantier, ["marches"] = TypesFiche.Marche, ["marches_st"] = TypesFiche.Marche,
     };
 
     private sealed record TypeElement(string Code, string? Famille);
