@@ -2,7 +2,7 @@ import { PROFIL } from '@logibtp/socle';
 import { ERREUR_AUTHENTIFICATION } from '@logibtp/authentification';
 import { Routeur, PageBase, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
 import { accesSousArbre, autorise } from '@logibtp/droits';
-import { Bandeau, PanneauFenetres, confirmerFermetureSession } from '@logibtp/navigation/ui';
+import { Bandeau, PanneauFenetres, confirmerFermetureSession, DISPOSITION_DEFAUT } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
 import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos } from '@logibtp/socle/ui';
@@ -39,13 +39,14 @@ export const LISTE_PAR_TYPE = {
 export class Application {
   constructor() {
     this.societe = null;
-    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto' });
+    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', menu: { ...DISPOSITION_DEFAUT } });
     appliquerTheme(this.preferences.get('theme'));
-    // Thème changé dans une autre fenêtre de la session (même localStorage) : appliqué ici aussi.
+    // Thème et disposition du menu changés dans une autre fenêtre de la session (même localStorage) : appliqués ici aussi.
     window.addEventListener('storage', (e) => {
       if (e.key !== CLE_PREFERENCES_NAVIGATION) return;
       this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, this.preferences.defauts);
       appliquerTheme(this.preferences.get('theme'));
+      this.bandeau?.disposer(this.preferences.get('menu'));
     });
     // Page modifiée quittée : question dans une fenêtre <dialog> (socle) plutôt que confirm() du navigateur.
     PageBase.confirmer = (message) => confirmer(message, { titre: 'Modifications non enregistrées', ok: 'Quitter' });
@@ -60,6 +61,7 @@ export class Application {
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
       menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
+      disposition: this.preferences.get('menu'), surDisposition: (d) => this.preferences.set('menu', d),
     });
     // Application installable : le service worker garde le client et les données consultées (mode hors ligne).
     enregistrerServiceWorker({
@@ -181,6 +183,12 @@ export class Application {
   changerTheme(theme) {
     this.preferences.set('theme', theme);
     appliquerTheme(theme);
+  }
+
+  /** Disposition du menu (`DISPOSITION_DEFAUT` du module Navigation : mode haut / droite, largeur, masquage) ; gardée dans le navigateur. */
+  changerMenu(changement) {
+    this.bandeau.disposer(changement);
+    this.preferences.set('menu', { ...this.bandeau.disposition });
   }
 
   // ---------------------------------------------------------------- session (module Authentification)

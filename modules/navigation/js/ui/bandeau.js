@@ -9,6 +9,16 @@ import { echapper } from '@logibtp/socle/ui';
 //             vrai par défaut pour une URL), titre (bulle), creation ({ url, titre } : bouton ＋ de création rapide
 //             sur la même ligne ; Ctrl : nouvelle fenêtre), sousMenu ([...] ou () => [...] : éléments du sous-menu) }
 // naviguer(url, { nouvelleFenetre }) : navigation demandée (Ctrl, Maj ou clic milieu, ou ⧉ : nouvelle fenêtre).
+//
+// Disposition (`disposition`, `disposer()`) : mode 'haut' (bandeau ci-dessus, par défaut) ou 'droite' (panneau sur
+// toute la hauteur à droite : titres des menus dépliés en dessous au clic, sous-menus imbriqués, lignes hautes pour le
+// tactile, ascenseur s'il déborde, message et informations fixés en bas ; largeur réglable par la poignée de gauche,
+// masquable, masquage automatique à la sortie du survol). Les changements faits depuis le panneau (largeur, masquage)
+// sont rendus par `surDisposition(disposition)` pour être gardés.
+
+export const DISPOSITION_MENU = Object.freeze({ HAUT: 'haut', DROITE: 'droite' });
+export const DISPOSITION_DEFAUT = Object.freeze({ mode: DISPOSITION_MENU.HAUT, largeur: 280, masque: false, masquageAuto: false });
+export const LARGEUR_MENU = Object.freeze({ min: 200, max: 600 });
 
 const lettre = (libelle) => /&(.)/.exec(libelle)?.[1]?.toLowerCase() ?? null;
 const libelleHtml = (libelle) => echapper(libelle).replace(/&amp;(.)/, '<u>$1</u>');
@@ -17,22 +27,33 @@ const liste = (e) => (typeof e === 'function' ? e() : e) ?? [];
 
 export class Bandeau {
   /** `retour()` : retour à la page précédente (bouton ◀ après le logo), absent : pas de bouton. */
-  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null } = {}) {
+  constructor(conteneur, { menus, naviguer, logo = '', accueil = '/', titreApplication = 'LogiBTP', retour = null, disposition = {}, surDisposition = () => {} } = {}) {
     this.racine = conteneur;
     this.menus = menus;
     this.naviguer = naviguer;
     this.ouvert = null;
     // Niveaux ouverts : 0 = menu déroulant, 1 = sous-menu ; { el, elements, actif }.
     this.niveaux = [];
+    this.disposition = { ...DISPOSITION_DEFAUT, ...disposition };
+    this.surDisposition = surDisposition;
+    // Panneau à droite : menus et sous-menus dépliés (chemins « code » ou « code/i/j »), éléments par chemin.
+    this.deplies = new Set();
+    this.lignes = new Map();
     this.racine.classList.add('bandeau');
     this.racine.innerHTML = `
       <a class="bandeau-logo" href="${echapper(accueil)}" title="${echapper(titreApplication)} : accueil (Alt+Origine)">${logo || `<span class="bandeau-logo-texte">${echapper(titreApplication)}</span>`}</a>
       ${retour ? '<button type="button" class="bandeau-retour" title="Revenir à la page précédente" aria-label="Revenir à la page précédente">◀</button>' : ''}
+      <span class="bandeau-outils">
+        <button type="button" data-masquage-auto aria-pressed="false" title="Masquer automatiquement le menu quand la souris le quitte">📌</button>
+        <button type="button" data-masquer title="Masquer le menu" aria-label="Masquer le menu">⇥</button>
+      </span>
       <nav class="bandeau-menus" role="menubar" aria-label="Menu principal"></nav>
       <span class="bandeau-message" role="status"></span>
       <span class="bandeau-infos"></span>
       <div class="bandeau-deroulant" role="menu" hidden></div>
-      <div class="bandeau-deroulant bandeau-sous-menu" role="menu" hidden></div>`;
+      <div class="bandeau-deroulant bandeau-sous-menu" role="menu" hidden></div>
+      <div class="bandeau-poignee" title="Largeur du menu (double-clic : largeur par défaut)"></div>
+      <button type="button" class="bandeau-languette" title="Afficher le menu" aria-label="Afficher le menu">☰</button>`;
     this.barre = this.racine.querySelector('.bandeau-menus');
     this.deroulant = this.racine.querySelector('.bandeau-deroulant');
     this.sous = this.racine.querySelector('.bandeau-sous-menu');
@@ -41,10 +62,13 @@ export class Bandeau {
       this.naviguer(accueil, { nouvelleFenetre: e.ctrlKey || e.shiftKey });
     });
     this.racine.querySelector('.bandeau-retour')?.addEventListener('click', () => retour());
+    this.#evenementsPanneau();
     this.barre.addEventListener('click', (e) => {
+      if (this.vertical) { this.#clicVertical(e); return; }
       const b = e.target.closest('[data-menu]');
       if (b) this.ouvert === b.dataset.menu ? this.fermer() : this.ouvrir(b.dataset.menu);
     });
+    this.barre.addEventListener('auxclick', (e) => { if (this.vertical && e.button === 1) this.#clicVertical(e, true); });
     this.barre.addEventListener('mouseover', (e) => {
       const b = e.target.closest('[data-menu]');
       if (b && this.ouvert && this.ouvert !== b.dataset.menu) this.ouvrir(b.dataset.menu);
@@ -61,7 +85,11 @@ export class Bandeau {
         if (niveau === 0) this.#survolSous(i);
       });
     });
-    this.fermetureExterieure = (e) => { if (this.ouvert && !this.racine.contains(e.target)) this.fermer(); };
+    this.fermetureExterieure = (e) => {
+      if (this.racine.contains(e.target)) return;
+      if (this.ouvert) this.fermer();
+      if (this.racine.classList.contains('bandeau-survol')) this.#replier();
+    };
     document.addEventListener('pointerdown', this.fermetureExterieure, true);
     this.clavier = (e) => this.#clavier(e);
     document.addEventListener('keydown', this.clavier, true);
@@ -72,10 +100,99 @@ export class Bandeau {
     }, true);
     // Bandeau trop étroit pour les libellés complets : libellés courts (`court`) des menus qui en ont.
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.ajuster()).observe(this.racine);
-    this.rendre();
+    this.disposer(this.disposition);
+  }
+
+  get vertical() { return this.disposition.mode === DISPOSITION_MENU.DROITE; }
+
+  /** Applique une disposition ({ mode, largeur, masque, masquageAuto }, complétée par la disposition courante). */
+  disposer(disposition = {}) {
+    const avant = this.disposition.mode;
+    this.disposition = { ...this.disposition, ...disposition };
+    const d = this.disposition;
+    d.largeur = Math.round(Math.max(LARGEUR_MENU.min, Math.min(LARGEUR_MENU.max, Number(d.largeur) || DISPOSITION_DEFAUT.largeur)));
+    if (avant !== d.mode) this.fermer();
+    const r = this.racine;
+    r.classList.toggle('bandeau-vertical', this.vertical);
+    r.classList.toggle('bandeau-masque', this.vertical && d.masque && !d.masquageAuto);
+    r.classList.toggle('bandeau-auto', this.vertical && d.masquageAuto);
+    if (!this.vertical || !d.masquageAuto) r.classList.remove('bandeau-survol');
+    r.style.setProperty('--largeur-menu', `${d.largeur}px`);
+    const auto = r.querySelector('[data-masquage-auto]');
+    auto.setAttribute('aria-pressed', String(Boolean(d.masquageAuto)));
+    auto.title = d.masquageAuto ? 'Garder le menu affiché' : 'Masquer automatiquement le menu quand la souris le quitte';
+    r.querySelector('[data-masquer]').hidden = Boolean(d.masquageAuto);
+    if (avant !== d.mode || !this.rendu) this.rendre();
+    else this.ajuster();
+  }
+
+  /** Disposition changée depuis le panneau : appliquée puis rendue au cœur pour être gardée. */
+  #changerDisposition(changement) {
+    this.disposer(changement);
+    this.surDisposition({ ...this.disposition });
+  }
+
+  /** Panneau à droite : outils, poignée de largeur, languette, survol (masquage automatique). */
+  #evenementsPanneau() {
+    const r = this.racine;
+    r.querySelector('[data-masquer]').addEventListener('click', () => this.#changerDisposition({ masque: true }));
+    r.querySelector('[data-masquage-auto]').addEventListener('click', () => {
+      const auto = !this.disposition.masquageAuto;
+      this.#changerDisposition({ masquageAuto: auto, masque: false });
+      if (auto) this.#deplier();
+    });
+    r.querySelector('.bandeau-languette').addEventListener('click', () => {
+      if (this.disposition.masquageAuto) this.#deplier();
+      else this.#changerDisposition({ masque: false });
+    });
+    // Masquage automatique : déplié au survol (ou au toucher de la languette), replié peu après la sortie de la souris.
+    r.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && r.classList.contains('bandeau-auto')) this.#deplier(); });
+    r.addEventListener('pointerleave', (e) => {
+      if (e.pointerType !== 'mouse' || !r.classList.contains('bandeau-auto') || this.redimension) return;
+      clearTimeout(this.minuterieRepli);
+      this.minuterieRepli = setTimeout(() => this.#replier(), 350);
+    });
+    r.addEventListener('focusout', (e) => { if (r.classList.contains('bandeau-auto') && !r.contains(e.relatedTarget) && !r.matches(':hover')) this.#replier(); });
+    const poignee = r.querySelector('.bandeau-poignee');
+    poignee.addEventListener('dblclick', () => this.#changerDisposition({ largeur: DISPOSITION_DEFAUT.largeur }));
+    poignee.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      poignee.setPointerCapture(e.pointerId);
+      const depart = { x: e.clientX, largeur: this.disposition.largeur };
+      this.redimension = true;
+      document.body.classList.add('redim-x');
+      const deplacer = (m) => this.disposer({ largeur: depart.largeur + depart.x - m.clientX });
+      const fin = () => {
+        poignee.removeEventListener('pointermove', deplacer);
+        this.redimension = false;
+        document.body.classList.remove('redim-x');
+        this.#changerDisposition({});
+      };
+      poignee.addEventListener('pointermove', deplacer);
+      poignee.addEventListener('pointerup', fin, { once: true });
+      poignee.addEventListener('pointercancel', fin, { once: true });
+    });
+  }
+
+  #deplier() {
+    clearTimeout(this.minuterieRepli);
+    if (this.racine.classList.contains('bandeau-auto')) this.racine.classList.add('bandeau-survol');
+  }
+
+  #replier() {
+    clearTimeout(this.minuterieRepli);
+    this.racine.classList.remove('bandeau-survol');
+  }
+
+  /** Panneau masqué (à la main ou automatiquement) : affiché avant un accès au clavier. */
+  #afficherPanneau() {
+    if (this.disposition.masquageAuto) this.#deplier();
+    else if (this.disposition.masque) this.#changerDisposition({ masque: false });
   }
 
   rendre() {
+    this.rendu = true;
+    if (this.vertical) { this.#rendreVertical(); return; }
     this.barre.innerHTML = this.menus.map((m) => `<button type="button" role="menuitem" aria-haspopup="true" data-menu="${echapper(m.code)}"${m.court ? ` title="${echapper(sansEsperluette(m.libelle))}"` : ''}>
       <span class="bandeau-long">${libelleHtml(m.libelle)}</span>${m.court ? `<span class="bandeau-court">${echapper(m.court)}</span>` : ''}</button>`).join('');
     this.#marquerOuvert();
@@ -90,6 +207,7 @@ export class Bandeau {
     const r = this.racine;
     const deborde = () => r.scrollWidth > r.clientWidth + 1;
     r.classList.remove('bandeau-compact', 'bandeau-serre');
+    if (this.vertical) return;
     if (deborde()) r.classList.add('bandeau-compact');
     if (deborde()) r.classList.add('bandeau-serre');
   }
@@ -194,7 +312,126 @@ export class Bandeau {
 
   #focaliserBarre() {
     this.racine.classList.add('acces-clavier');
+    if (this.vertical) { this.#afficherPanneau(); this.barre.querySelector('[data-ligne]')?.focus(); return; }
     this.barre.querySelector('[data-menu]')?.focus();
+  }
+
+  // ---------------------------------------------------------------- panneau à droite
+
+  /** Titres des menus, éléments des menus dépliés en dessous, sous-menus dépliés imbriqués (aucune fenêtre surgissante). */
+  #rendreVertical() {
+    const defilement = this.barre.scrollTop;
+    this.lignes.clear();
+    this.barre.setAttribute('role', 'tree');
+    this.barre.innerHTML = this.menus.map((m) => {
+      const ouvert = this.deplies.has(m.code);
+      this.lignes.set(m.code, { menu: m });
+      return `<div class="bandeau-groupe${ouvert ? ' ouvert' : ''}">
+        <button type="button" class="bandeau-titre" role="treeitem" data-ligne="${echapper(m.code)}" aria-expanded="${ouvert}" tabindex="-1">
+          <span class="bandeau-libelle">${libelleHtml(m.libelle)}</span><span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span></button>
+        ${ouvert ? `<div role="group">${this.#htmlVertical(liste(m.elements), m.code, 1)}</div>` : ''}
+      </div>`;
+    }).join('');
+    this.barre.scrollTop = defilement;
+  }
+
+  #htmlVertical(elements, parent, profondeur) {
+    return elements.map((x, i) => {
+      if (x.separateur) return `<div class="bandeau-separateur" role="separator">${x.libelle ? `<span>${echapper(x.libelle)}</span>` : ''}</div>`;
+      const chemin = `${parent}/${i}`;
+      this.lignes.set(chemin, { element: x });
+      const ouvert = Boolean(x.sousMenu) && !x.desactive && this.deplies.has(chemin);
+      const fenetre = x.url && x.fenetre !== false && !x.desactive && !x.sousMenu;
+      return `<div class="bandeau-element${x.desactive ? ' desactive' : ''}${x.sousMenu ? ' a-sous-menu' : ''}${ouvert ? ' sous-ouvert' : ''}${x.classe ? ` ${echapper(x.classe)}` : ''}"
+          role="treeitem" data-ligne="${echapper(chemin)}" tabindex="-1" style="--profondeur: ${profondeur}"
+          aria-disabled="${Boolean(x.desactive)}"${x.sousMenu ? ` aria-expanded="${ouvert}"` : ''} title="${echapper(x.titre ?? x.info ?? '')}">
+        <span class="bandeau-coche">${x.coche ? '✓' : ''}</span>
+        <span class="bandeau-icone">${echapper(x.icone ?? '')}</span>
+        <span class="bandeau-libelle">${echapper(x.libelle)}${x.info ? `<small>${echapper(x.info)}</small>` : ''}</span>
+        ${x.creation && !x.desactive ? `<button type="button" class="bandeau-fenetre bandeau-creation" data-creation tabindex="-1" title="${echapper(x.creation.titre ?? 'Créer')} (Ctrl : nouvelle fenêtre)">＋</button>` : '<span></span>'}
+        ${fenetre ? '<button type="button" class="bandeau-fenetre" data-fenetre tabindex="-1" title="Ouvrir dans une nouvelle fenêtre (Ctrl+clic)">⧉</button>' : x.sousMenu ? `<span class="bandeau-fleche">${ouvert ? '▾' : '▸'}</span>` : '<span></span>'}
+      </div>${ouvert ? `<div role="group">${this.#htmlVertical(liste(x.sousMenu), chemin, profondeur + 1)}</div>` : ''}`;
+    }).join('') || `<div class="bandeau-vide" style="--profondeur: ${profondeur}">(vide)</div>`;
+  }
+
+  /** Déplie ou replie un menu ou un sous-menu, la ligne garde le focus. */
+  #basculer(chemin, ouvrir = !this.deplies.has(chemin)) {
+    if (ouvrir) this.deplies.add(chemin);
+    else [...this.deplies].filter((c) => c === chemin || c.startsWith(`${chemin}/`)).forEach((c) => this.deplies.delete(c));
+    this.#rendreVertical();
+    this.#ligne(chemin)?.focus({ preventScroll: true });
+    if (ouvrir) this.#ligne(chemin)?.parentElement?.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  #ligne(chemin) { return this.barre.querySelector(`[data-ligne="${CSS.escape(chemin)}"]`); }
+
+  #clicVertical(e, milieu = false) {
+    const el = e.target.closest('[data-ligne]');
+    if (!el) return;
+    e.preventDefault();
+    const chemin = el.dataset.ligne;
+    const { menu, element: x } = this.lignes.get(chemin) ?? {};
+    if (menu) { this.#basculer(chemin); return; }
+    if (!x || x.desactive) return;
+    const ctrl = milieu || e.ctrlKey || e.shiftKey || e.metaKey;
+    if (e.target.closest('[data-creation]') && x.creation) { this.#apresChoix(); this.naviguer(x.creation.url, { nouvelleFenetre: ctrl }); return; }
+    this.#executerVertical(chemin, ctrl || Boolean(e.target.closest('[data-fenetre]')));
+  }
+
+  #executerVertical(chemin, nouvelleFenetre = false) {
+    const x = this.lignes.get(chemin)?.element;
+    if (!x || x.desactive || x.separateur) return;
+    if (x.sousMenu) { this.#basculer(chemin); return; }
+    this.#apresChoix();
+    if (x.action) {
+      x.action({ nouvelleFenetre });
+      // Coches et informations des menus construits à l'ouverture (thème…) : relues.
+      if (this.vertical) this.#rendreVertical();
+    } else if (x.url) this.naviguer(x.url, { nouvelleFenetre });
+  }
+
+  /** Après un choix : le panneau à masquage automatique se replie, le focus rend la main à la page. */
+  #apresChoix() {
+    this.racine.classList.remove('acces-clavier');
+    if (this.barre.contains(document.activeElement)) document.activeElement.blur();
+    this.#replier();
+  }
+
+  #clavierVertical(e) {
+    if (e.altKey && !e.ctrlKey && e.key !== 'Alt') {
+      if (e.key === 'Home') { e.preventDefault(); this.naviguer('/', { nouvelleFenetre: false }); return; }
+      const m = this.menus.find((x) => lettre(x.libelle) === e.key.toLowerCase());
+      if (!m) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.racine.classList.add('acces-clavier');
+      this.#afficherPanneau();
+      this.#basculer(m.code, true);
+      this.#ligne(m.code)?.parentElement.querySelector('[role="group"] [data-ligne]:not([aria-disabled="true"])')?.focus();
+      return;
+    }
+    const actuel = document.activeElement?.closest?.('[data-ligne]');
+    if (!actuel || !this.barre.contains(actuel)) return;
+    const chemin = actuel.dataset.ligne;
+    const lignes = [...this.barre.querySelectorAll('[data-ligne]')];
+    const i = lignes.indexOf(actuel);
+    const aller = (k) => lignes[Math.max(0, Math.min(lignes.length - 1, k))]?.focus();
+    const deplie = this.deplies.has(chemin);
+    const extensible = Boolean(this.lignes.get(chemin)?.menu || this.lignes.get(chemin)?.element?.sousMenu);
+    const parent = chemin.includes('/') ? chemin.slice(0, chemin.lastIndexOf('/')) : null;
+    const touches = {
+      ArrowDown: () => aller(i + 1), ArrowUp: () => aller(i - 1), Home: () => aller(0), End: () => aller(lignes.length - 1),
+      ArrowRight: () => { if (extensible && !deplie) this.#basculer(chemin, true); else if (extensible) aller(i + 1); },
+      ArrowLeft: () => { if (extensible && deplie) this.#basculer(chemin, false); else if (parent) this.#ligne(parent)?.focus(); },
+      Enter: () => (this.lignes.get(chemin)?.menu ? this.#basculer(chemin) : this.#executerVertical(chemin, e.ctrlKey || e.shiftKey)),
+      ' ': () => (this.lignes.get(chemin)?.menu ? this.#basculer(chemin) : this.#executerVertical(chemin, e.ctrlKey || e.shiftKey)),
+      Escape: () => this.#apresChoix(),
+    };
+    if (touches[e.key] && !e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      touches[e.key]();
+    }
   }
 
   #surligner(niveau, i) {
@@ -251,6 +488,7 @@ export class Bandeau {
     // Fenêtre <dialog> au premier plan : le clavier lui appartient.
     if (document.activeElement?.closest?.('dialog[open]')) return;
     this.altSeul = e.key === 'Alt' && !e.ctrlKey && !e.shiftKey && !e.metaKey;
+    if (this.vertical) { this.#clavierVertical(e); return; }
     if (e.altKey && !e.ctrlKey && e.key !== 'Alt') {
       if (e.key === 'Home') { e.preventDefault(); this.naviguer('/', { nouvelleFenetre: false }); return; }
       const m = this.menus.find((x) => lettre(x.libelle) === e.key.toLowerCase());

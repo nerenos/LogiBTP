@@ -1,5 +1,5 @@
 import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
-import { Bandeau } from '@logibtp/navigation/ui';
+import { Bandeau, DISPOSITION_MENU } from '@logibtp/navigation/ui';
 import { THEMES } from '@logibtp/socle/ui';
 
 // Menus du bandeau, regroupés par classe de métier, et catalogue des raccourcis de l'accueil (tous les éléments
@@ -248,6 +248,13 @@ export function menus(app) {
         {
           libelle: "Thème d'affichage", icone: '🎨', info: THEMES.find((t) => t.code === app.preferences.get('theme'))?.libelle,
           sousMenu: () => THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
+        },
+        {
+          libelle: 'Position du menu', icone: '▐', info: app.bandeau?.vertical ? 'À droite' : 'En haut',
+          sousMenu: () => [
+            { libelle: 'En haut', icone: '☰', coche: !app.bandeau?.vertical, action: () => app.changerMenu({ mode: DISPOSITION_MENU.HAUT }) },
+            { libelle: 'À droite, sur toute la hauteur', icone: '▐', coche: Boolean(app.bandeau?.vertical), action: () => app.changerMenu({ mode: DISPOSITION_MENU.DROITE }) },
+          ],
         },
         { code: 'themes', libelle: 'Thèmes et vues de liste…', icone: '🗂', action: () => app.gererThemes(), desactive: !app.peutGererThemes() },
         {

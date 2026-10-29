@@ -59,6 +59,79 @@
 .bandeau-element.fenetre-modifiee .bandeau-libelle::after { content: " ●"; color: var(--alerte); }
 .bandeau-vide { padding: 0.3rem 1rem; color: var(--discret); }
 
+/* Outils, poignée et languette : propres au panneau à droite. */
+.bandeau-outils, .bandeau-poignee, .bandeau-languette { display: none; }
+
+/* Menu à droite sur toute la hauteur (disposition 'droite') : le corps passe en ligne, pages à gauche. */
+body:has(> .bandeau-vertical) { flex-direction: row; }
+body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
+.bandeau.bandeau-vertical {
+  order: 2; height: auto; width: var(--largeur-menu, 280px); padding: 0; gap: 0; font-size: 14px;
+  border-bottom: 0; border-left: 1px solid var(--bord); display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "logo retour outils" "menus menus menus" "message message message" "infos infos infos";
+}
+.bandeau-vertical .bandeau-logo { grid-area: logo; border-right: 0; padding: 0.55rem 0.7rem; min-width: 0; }
+.bandeau-vertical .bandeau-logo svg, .bandeau-vertical .bandeau-logo img { height: 26px; }
+.bandeau-vertical .bandeau-retour { grid-area: retour; min-width: 2.6rem; min-height: 2.6rem; font-size: 1rem; }
+.bandeau-vertical .bandeau-outils { grid-area: outils; display: flex; align-items: center; padding-right: 0.3rem; }
+.bandeau-vertical .bandeau-outils button { border: 0; background: none; color: inherit; min-width: 2.6rem; min-height: 2.6rem; border-radius: 6px; font-size: 1rem; opacity: 0.7; cursor: pointer; }
+.bandeau-vertical .bandeau-outils button:hover { background: var(--titre-fond); opacity: 1; }
+.bandeau-vertical .bandeau-outils button[aria-pressed="true"] { opacity: 1; background: var(--accent-clair); }
+.bandeau-vertical .bandeau-outils button[hidden] { display: none; }
+.bandeau-vertical .bandeau-menus {
+  grid-area: menus; display: block; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  border-top: 1px solid var(--bord); padding: 0.3rem 0; scrollbar-gutter: stable;
+}
+.bandeau-vertical .bandeau-deroulant { display: none; }
+.bandeau-vertical .bandeau-groupe + .bandeau-groupe { border-top: 1px solid var(--bord); }
+.bandeau-vertical .bandeau-titre {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; height: auto; min-height: 46px;
+  padding: 0 0.9rem; border: 0; border-radius: 0; background: transparent; text-align: left; font-weight: 600; cursor: pointer;
+}
+.bandeau-vertical .bandeau-titre:hover, .bandeau-vertical .bandeau-titre:focus-visible { background: var(--accent-clair); color: var(--accent); outline: none; }
+.bandeau-vertical .bandeau-groupe.ouvert > .bandeau-titre { color: var(--accent); }
+.bandeau-vertical .bandeau-element {
+  grid-template-columns: 1.1rem 1.6rem minmax(0, 1fr) 2.4rem 2.4rem; min-height: 42px; gap: 0.15rem; cursor: pointer;
+  padding: 0.2rem 0.2rem 0.2rem calc(0.25rem + (var(--profondeur, 1) - 1) * 1.1rem);
+}
+.bandeau-vertical .bandeau-element:hover { background: var(--titre-fond); }
+.bandeau-vertical .bandeau-element:focus-visible { background: var(--accent); color: #fff; outline: none; }
+.bandeau-vertical .bandeau-element:focus-visible small { color: #e8efff; }
+.bandeau-vertical .bandeau-element.sous-ouvert { background: var(--accent-clair); }
+.bandeau-vertical .bandeau-element.desactive { cursor: default; }
+.bandeau-vertical .bandeau-libelle { overflow-wrap: anywhere; min-width: 0; }
+.bandeau-vertical .bandeau-libelle small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bandeau-vertical .bandeau-fenetre { align-self: stretch; min-height: 38px; border-radius: 6px; }
+.bandeau-vertical .bandeau-fenetre:hover { background: var(--accent-clair); }
+.bandeau-vertical .bandeau-separateur span { padding-left: 1.2rem; }
+.bandeau-vertical .bandeau-vide { padding-left: calc(1rem + var(--profondeur, 1) * 1.1rem); }
+.bandeau-vertical .bandeau-message { grid-area: message; margin: 0; max-width: none; white-space: normal; padding: 0 0.7rem; }
+.bandeau-vertical .bandeau-message:not(:empty) { padding: 0.4rem 0.7rem; border-top: 1px solid var(--bord); }
+.bandeau-vertical .bandeau-infos {
+  grid-area: infos; flex-wrap: wrap; white-space: normal; gap: 0.35rem 0.6rem; padding: 0.55rem 0.7rem;
+  border-top: 1px solid var(--bord); background: var(--titre-fond);
+}
+.bandeau-vertical .bandeau-infos > * { min-height: 1.9rem; display: inline-flex; align-items: center; }
+/* Poignée de largeur sur le bord gauche. */
+.bandeau-vertical .bandeau-poignee { display: block; position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 2; touch-action: none; }
+.bandeau-vertical .bandeau-poignee:hover { background: linear-gradient(to right, transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px); }
+/* Masqué (à la main) ou masquage automatique replié : une languette étroite seule. */
+.bandeau-vertical.bandeau-masque, .bandeau-vertical.bandeau-auto { width: 16px; }
+.bandeau-vertical.bandeau-masque > :not(.bandeau-languette),
+.bandeau-vertical.bandeau-auto:not(.bandeau-survol) > :not(.bandeau-languette) { display: none; }
+.bandeau-vertical.bandeau-masque .bandeau-languette, .bandeau-vertical.bandeau-auto:not(.bandeau-survol) .bandeau-languette {
+  display: block; grid-area: 1 / 1 / -1 / -1; width: 100%; height: 100%; border: 0; border-radius: 0; padding: 0;
+  background: var(--surface); color: var(--discret); cursor: pointer; writing-mode: vertical-rl; font-size: 0.9rem;
+}
+.bandeau-vertical .bandeau-languette:hover { background: var(--accent-clair); color: var(--accent); }
+/* Masquage automatique déplié : par-dessus la page, sans la décaler. */
+.bandeau-vertical.bandeau-auto.bandeau-survol {
+  position: fixed; top: 0; right: 0; bottom: 0; width: var(--largeur-menu, 280px); z-index: 45; background: var(--surface);
+  box-shadow: -6px 0 24px rgb(0 0 0 / 0.22);
+}
+body:has(> .bandeau-auto.bandeau-survol) > .pages { margin-right: 16px; }
+
 /* Zone des pages */
 .pages { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
 /* Copie de la page pendant un rechargement : par-dessus la page qui se reconstruit, retirée quand elle est prête. */

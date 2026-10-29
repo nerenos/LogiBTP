@@ -1,5 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, THEMES } from '@logibtp/socle/ui';
+import { DISPOSITION_MENU, LARGEUR_MENU } from '@logibtp/navigation/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 
 /** Paramètres : préférences de navigation, profil (démo), listes, fiches, GED, société, à propos. */
@@ -12,12 +13,25 @@ export class PageParametres extends PageBase {
     const s = await app.services();
     const parametresGed = await s.ged.parametres().catch(() => null);
     const societe = app.societe ?? {};
+    const menu = app.bandeau.disposition;
     this.conteneur.innerHTML = `<div class="page-parametres">
       <h1 class="page-titre">⚙ Paramètres</h1>
       <section class="carte"><h2>Affichage</h2>
         <div class="ligne" role="radiogroup" aria-label="Thème">${THEMES.map((t) => `<label class="ligne"><input type="radio" name="theme" value="${t.code}"
           ${app.preferences.get('theme') === t.code ? 'checked' : ''}> ${t.icone} ${echapper(t.libelle)}</label>`).join('')}</div>
         <p class="aide">Automatique suit le réglage clair / sombre du système. Le choix s'applique à toutes les fenêtres de ce navigateur.</p>
+        <h3>Menu</h3>
+        <div class="ligne" role="radiogroup" aria-label="Position du menu">
+          <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.HAUT}" ${menu.mode !== DISPOSITION_MENU.DROITE ? 'checked' : ''}> ☰ En haut (barre de menus)</label>
+          <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.DROITE}" ${menu.mode === DISPOSITION_MENU.DROITE ? 'checked' : ''}> ▐ À droite, sur toute la hauteur</label>
+        </div>
+        <div class="options-menu-droite"${menu.mode === DISPOSITION_MENU.DROITE ? '' : ' hidden'}>
+          <label class="ligne">Largeur <input type="number" data-menu="largeur" min="${LARGEUR_MENU.min}" max="${LARGEUR_MENU.max}" step="10" size="5" value="${menu.largeur}"> px</label>
+          <label class="ligne"><input type="checkbox" data-menu="masque" ${menu.masque ? 'checked' : ''}> Masquer le menu (☰ sur le bord droit pour le rouvrir)</label>
+          <label class="ligne"><input type="checkbox" data-menu="masquageAuto" ${menu.masquageAuto ? 'checked' : ''}> Masquer automatiquement quand la souris quitte le menu</label>
+        </div>
+        <p class="aide">À droite : les menus se déplient en dessous de leur titre au clic, avec des lignes hautes pour le tactile ; la société, l'utilisateur et
+          les notifications sont fixés en bas du menu. La largeur se règle aussi en glissant le bord gauche du menu.</p>
       </section>
       <section class="carte"><h2>Raccourcis clavier</h2>
         <p class="aide">Toutes les fonctions qui acceptent un raccourci, avec leurs touches ; chaque raccourci se remplace (gardé dans ce navigateur).
@@ -58,6 +72,17 @@ export class PageParametres extends PageBase {
       </section>
     </div>`;
     this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
+    const optionsDroite = this.conteneur.querySelector('.options-menu-droite');
+    this.conteneur.querySelectorAll('input[name="menu-mode"]').forEach((r) => r.addEventListener('change', () => {
+      app.changerMenu({ mode: r.value });
+      optionsDroite.hidden = r.value !== DISPOSITION_MENU.DROITE;
+    }));
+    optionsDroite.addEventListener('change', (e) => {
+      const champ = e.target.closest('[data-menu]');
+      if (!champ) return;
+      app.changerMenu({ [champ.dataset.menu]: champ.type === 'checkbox' ? champ.checked : Number(champ.value) });
+      champ.value = champ.type === 'checkbox' ? champ.value : app.bandeau.disposition.largeur;
+    });
     this.conteneur.querySelector('[data-pref="nouvelleFenetre"]').addEventListener('change', (e) => app.preferences.set('nouvelleFenetre', e.target.checked));
     this.conteneur.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');
