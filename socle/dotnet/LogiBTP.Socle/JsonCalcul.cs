@@ -8,6 +8,9 @@ public static class JsonCalcul
 {
     public static readonly JsonSerializerOptions Options = Creer();
 
+    /// <summary>Options web (noms insensibles à la casse en lecture, nombres en chaîne acceptés) en snake_case.</summary>
+    public static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+
     public static JsonSerializerOptions Creer() => new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

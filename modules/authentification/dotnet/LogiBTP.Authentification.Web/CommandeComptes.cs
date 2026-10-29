@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -58,7 +59,7 @@ public static class CommandeComptes
                 db.Comptes.Add(new Compte
                 {
                     CptCode = pseudo, CptType = "PERSONNE", CptLibelle = options.GetValueOrDefault("libelle") ?? "Administrateur de l'installation",
-                    CptHash = HachageMotDePasse.Hacher(mdp), CptMdpProvisoire = true, CptProfil = "ADMIN", CptCreePar = "console",
+                    CptHash = HachageMotDePasse.Hacher(mdp), CptMdpProvisoire = true, CptProfil = Profils.Admin, CptCreePar = "console",
                 });
                 await service.JournaliserAsync(pseudo, "COMPTE", "création de l'administrateur de l'installation", console, "console", default);
                 await sortie.WriteLineAsync($"Compte administrateur {pseudo} créé ({societe.Libelle}). Mot de passe provisoire, à changer à la première connexion : {mdp}");

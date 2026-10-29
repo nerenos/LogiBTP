@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -253,7 +254,7 @@ public sealed class ServiceBorne(PointageDbContext db, SpecialisationPointage sp
     private const string CleTest = "borne-test";
     private static bool EnTest(HttpContext http) => http.Items.ContainsKey(CleTest);
 
-    private static Utilisateur Auteur(AppareilEntite a) => new($"borne:{a.PapId}", "BORNE", null);
+    private static Utilisateur Auteur(AppareilEntite a) => new($"borne:{a.PapId}", Profils.Borne, null);
 
     /// <summary>Ouverture de la borne : appareil, paramètres, référentiels, salariés du service (PIN posé ou non).</summary>
     public async Task<object> OuvrirAsync(HttpContext http, CancellationToken ct)

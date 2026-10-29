@@ -257,7 +257,7 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
 {
     private static void Admin(Utilisateur u)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
     }
 
     public async Task<ParametresDto> ParametresAsync(CancellationToken ct)

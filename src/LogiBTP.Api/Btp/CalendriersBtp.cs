@@ -75,7 +75,7 @@ public static class CalendriersBtp
             """).FirstAsync(ct), "application/json"));
         api.MapPut("/ressources/calendriers-services", async (List<CalendrierService> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
-            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            Utilisateur.Depuis(http).ExigerAdmin();
             foreach (var x in l)
             {
                 await db.Database.ExecuteSqlRawAsync("UPDATE service SET srv_cal_id = @c, srv_maj_le = now() WHERE srv_id = @s",

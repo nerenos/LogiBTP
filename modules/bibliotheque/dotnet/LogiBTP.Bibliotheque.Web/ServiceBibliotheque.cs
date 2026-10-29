@@ -34,7 +34,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     private void Parametrage(Utilisateur u)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
     }
 
     private static string? Texte(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();

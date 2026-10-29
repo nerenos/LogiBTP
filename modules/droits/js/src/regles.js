@@ -5,7 +5,7 @@
 // a une (« hérité »), un nœud avec une ligne garde la sienne (« propre », même vide). Un profil total (ADMIN) a tout.
 
 /** Actions en cascade (l'interface coche les précédentes) ; les nœuds peuvent déclarer des actions supplémentaires (RGPD…). */
-export const ACTIONS = ['CONSULTER', 'MODIFIER', 'VALIDER', 'CREER', 'SUPPRIMER', 'DEVERROUILLER', 'FORCER'];
+export const ACTIONS = Object.freeze(['CONSULTER', 'MODIFIER', 'VALIDER', 'CREER', 'SUPPRIMER', 'DEVERROUILLER', 'FORCER']);
 
 /** Portées, de la plus étroite à la plus large. */
 export const PORTEES = ['SOI', 'SERVICE', 'TOUT'];

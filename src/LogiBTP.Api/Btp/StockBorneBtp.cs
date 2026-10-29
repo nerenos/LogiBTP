@@ -2,6 +2,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Documents.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using LogiBTP.Stock.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,7 +50,7 @@ public static class StockBorneBtp
             new DepotBorne((await DepotAsync(db, id, ct))?.Id));
         api.MapPut("/stock/bornes/{id:int}/depot", async (int id, DepotBorne d, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
-            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse("ADMIN");
+            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse(Profils.Admin);
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE poi_appareil SET pap_stk_lieu_id = {d.Lieu} WHERE pap_id = {id}", ct);
             return new DepotBorne(d.Lieu);
         });
@@ -113,7 +114,7 @@ public static class StockBorneBtp
             var code = await db.Database.SqlQuery<string?>($"""
                 SELECT coalesce(i.ind_utilisateur, 'salarie:' || s.sal_id) AS "Value" FROM salarie s LEFT JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_id = {s}
                 """).FirstAsync(ct);
-            var auteur = new Utilisateur(code ?? $"borne:{appareil}", "BORNE", null);
+            var auteur = new Utilisateur(code ?? $"borne:{appareil}", Profils.Borne, null);
             var cible = x.Dotation ? await MagasinBtp.ChantierDotationAsync(db, s, ct) : x.Chantier!.Value;
             var com = string.IsNullOrWhiteSpace(x.Commentaire) ? "" : $" : {x.Commentaire.Trim()}";
             var pieces = new List<PieceMagasin>();

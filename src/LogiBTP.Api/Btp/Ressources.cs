@@ -34,7 +34,7 @@ public static class Ressources
 
     private static void Admin(Utilisateur u)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
     }
 
     private sealed record LigneType(string Code, int? DureeMois, string Concerne, bool Actif);

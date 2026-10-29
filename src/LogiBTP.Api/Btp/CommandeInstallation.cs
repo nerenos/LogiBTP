@@ -416,7 +416,7 @@ public static class CommandeInstallation
         if (!Directory.Exists(jeu)) throw new ArgumentException($"Dossier introuvable : {jeu}");
         // Déchiffrement : clé courante, puis clés précédentes (sauvegardes antérieures à une rotation).
         var n = chiffrer ? ChiffrementSauvegarde.ChiffrerDossier(jeu, cle)
-            : ChiffrementSauvegarde.DechiffrerDossier(jeu, [cle, .. Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"])]);
+            : ChiffrementSauvegarde.DechiffrerDossier(jeu, [cle, .. ExtensionsConfiguration.ClesPrecedentes(config)]);
         sortie.WriteLine($"{n} fichier(s) {(chiffrer ? "chiffré(s)" : "déchiffré(s)")}");
         return 0;
     }
@@ -498,7 +498,7 @@ public static class CommandeInstallation
     {
         var config = Configuration(dossier);
         var ancienne = Exiger(config, ExtensionsConfiguration.CleChiffrement);
-        var precedentes = Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"]).ToList();
+        var precedentes = ExtensionsConfiguration.ClesPrecedentes(config).ToList();
         var nouvelle = Secrets.CleDonnees();
         var d = Certificats();
         if (File.Exists(d.CleRacine))
@@ -509,7 +509,7 @@ public static class CommandeInstallation
         RemplacerEnv(Path.Combine(dossier, ".env"), new Dictionary<string, string>
         {
             [ExtensionsConfiguration.CleChiffrement] = nouvelle,
-            [ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"] = string.Join(",", new[] { ancienne }.Concat(precedentes).Distinct()),
+            [VariablesEnv.CleChiffrementPrecedentes] = string.Join(",", new[] { ancienne }.Concat(precedentes).Distinct()),
         });
         sortie.WriteLine("Nouvelle clé des données enregistrée dans le .env (l'ancienne reste lisible en clé précédente)");
         return await RechiffrerAsync(dossier, sortie);
@@ -520,8 +520,8 @@ public static class CommandeInstallation
     {
         var config = Configuration(dossier);
         var modele = Modele(config);
-        var cle = Exiger(config, ExtensionsConfiguration.CleChiffrement);
-        var chiffrement = new Chiffrement(cle, Chiffrement.Liste(config[ExtensionsConfiguration.CleChiffrement + "_PRECEDENTES"]));
+        Exiger(config, ExtensionsConfiguration.CleChiffrement);
+        var chiffrement = ExtensionsConfiguration.ChiffrementDepuis(config);
         foreach (var (_, base_) in Bases(dossier, modele))
         {
             var bilan = await RotationCle.RechiffrerBaseAsync(modele.Chaine(base_, RoleSchema, Exiger(config, VariablesEnv.BaseMotDePasseSchema)), chiffrement, chiffrement, Empreintes);

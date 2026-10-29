@@ -87,7 +87,7 @@ public sealed class ServiceCalendrier(CalendrierDbContext db, SpecialisationCale
 {
     private static void Admin(Utilisateur u)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
     }
 
     private static CalendrierTravail Travail(CalendrierEntite c, IEnumerable<PlageEntite> plages) =>

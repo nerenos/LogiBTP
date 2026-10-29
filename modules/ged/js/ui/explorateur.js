@@ -1,3 +1,4 @@
+import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
 import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure } from '@logibtp/socle/ui';
 import { icone, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
@@ -408,7 +409,7 @@ export class ExplorateurGed {
       case 'date': return d.date_document ?? '';
       case 'auteur': return d.auteur ?? '';
       case 'taille': return d.version?.taille ?? 0;
-      case 'confidentialite': return CONFIDENTIALITES.findIndex(([c]) => c === (d.confidentialite ?? 'INTERNE'));
+      case 'confidentialite': return CONFIDENTIALITES.findIndex(([c]) => c === (d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE));
       default: return d.titre ?? '';
     }
   }
@@ -470,7 +471,7 @@ export class ExplorateurGed {
         case 'date': return `<td>${formatDate(d.date_document)}</td>`;
         case 'auteur': return `<td>${echapper(d.auteur ?? '')}</td>`;
         case 'taille': return `<td class="nombre">${formatTaille(d.version?.taille)}</td>`;
-        case 'confidentialite': return `<td>${(d.confidentialite ?? 'INTERNE') === 'INTERNE' && !(d.acces_profils ?? []).length && !(d.acces_utilisateurs ?? []).length ? ''
+        case 'confidentialite': return `<td>${(d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE) === NIVEAU_CONFIDENTIALITE.INTERNE && !(d.acces_profils ?? []).length && !(d.acces_utilisateurs ?? []).length ? ''
           : `<span class="ged-badge acces">${echapper(libelleConfidentialite(d.confidentialite))}${(d.acces_profils ?? []).length + (d.acces_utilisateurs ?? []).length ? ' 👥' : ''}</span>`}</td>`;
         default: return '<td></td>';
       }
@@ -693,7 +694,7 @@ export class ExplorateurGed {
 
   #lienContenu(v, telecharger = true) { return this.fournisseur.urlContenu(v.id, { telecharger }); }
 
-  get #utilisateurCourant() { return { code: this.utilisateur, profil: this.admin ? 'ADMIN' : '' }; }
+  get #utilisateurCourant() { return { code: this.utilisateur, profil: this.admin ? PROFIL.ADMIN : '' }; }
 
   #rendreDetail() {
     const d = this.doc;
@@ -706,7 +707,7 @@ export class ExplorateurGed {
         <span class="ged-icone-grande">${icone(d)}</span>
         <div class="ged-visu-titre"><h3 title="${echapper(d.titre)}">${echapper(d.titre)}</h3>
           <small>${echapper(this.libelleCategorie(d.categorie) || 'Sans catégorie')}${d.etat ? ` · ${echapper(libelleEtape(d.etat))}` : ''}
-          ${d.confidentialite && d.confidentialite !== 'INTERNE' ? ` · ${echapper(libelleConfidentialite(d.confidentialite))}` : ''}
+          ${d.confidentialite && d.confidentialite !== NIVEAU_CONFIDENTIALITE.INTERNE ? ` · ${echapper(libelleConfidentialite(d.confidentialite))}` : ''}
           ${d.archive ? ' · <b>archivé</b>' : ''}${d.supprime ? ` · <b class="erreur">supprimé le ${formatDate(d.supprime_le)}</b>` : ''}</small></div>
         <div class="ged-visu-actions">
           ${courante ? `<a class="ged-icone-bouton" href="${echapper(this.#lienContenu(courante))}" download="${echapper(courante.nom_fichier)}" data-bulle="Télécharger" aria-label="Télécharger">⬇</a>` : ''}
@@ -862,7 +863,7 @@ export class ExplorateurGed {
         <dt>Créé</dt><dd>le ${formatDateHeure(d.cree_le)} par ${echapper(d.cree_par ?? '')}${d.modifie_le ? ` · modifié le ${formatDateHeure(d.modifie_le)}` : ''} · ${d.nb_versions ?? d.versions.length} version(s) · ${d.nb_consultations ?? 0} consultation(s)</dd>
       </dl>`;
     const categorie = creerCombo({ options: (this.parametres.categories ?? []).map((c) => ({ valeur: c.code, libelle: c.libelle })), valeur: d.categorie ?? '', titre: 'Catégorie' });
-    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? 'INTERNE', vide: false, titre: 'Confidentialité' });
+    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, vide: false, titre: 'Confidentialité' });
     categorie.readOnly = lecture;
     confidentialite.readOnly = !acces;
     z.querySelector('[data-place="categorie"]').replaceWith(categorie);

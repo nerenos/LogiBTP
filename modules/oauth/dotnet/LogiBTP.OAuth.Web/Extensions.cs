@@ -68,7 +68,7 @@ public static class Extensions
         // Passage de fond immédiat sur la base courante (administrateur) : contrôle et démonstration.
         g.MapPost("/passer", async (HttpContext http, ServiceOAuth s, CancellationToken ct) =>
         {
-            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            Utilisateur.Depuis(http).ExigerAdmin();
             await s.PasserAsync(ct);
             return Results.NoContent();
         });

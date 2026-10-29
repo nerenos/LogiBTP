@@ -12,6 +12,9 @@ public class ExceptionMetier(int statut, string code, string message, object? de
 
     public static ExceptionMetier Introuvable(string quoi) => new(StatusCodes.Status404NotFound, "INTROUVABLE", $"{quoi} introuvable");
     public static ExceptionMetier AccesRefuse(string action) => new(StatusCodes.Status403Forbidden, "ACCES_REFUSE", $"Droit {action} refusé");
+
+    /// <summary>Refus du paramétrage (403 ACCES_REFUSE, droit PARAMETRER).</summary>
+    public static ExceptionMetier ParametrageRefuse() => AccesRefuse(ActionsDroits.Parametrer);
     public static ExceptionMetier Conflit(string code, string message, object? details = null) => new(StatusCodes.Status409Conflict, code, message, details);
     public static ExceptionMetier Invalide(string code, string message, object? details = null) => new(StatusCodes.Status422UnprocessableEntity, code, message, details);
 }
@@ -24,14 +27,20 @@ public sealed record Utilisateur(string Code, string Profil, string? Groupe = nu
 {
     private const string Cle = "LogiBTP.Utilisateur";
 
-    public bool EstAdmin => Profil == "ADMIN";
+    public bool EstAdmin => Profil == Profils.Admin;
+
+    /// <summary>Refus du paramétrage (403) si l'utilisateur n'est pas administrateur.</summary>
+    public void ExigerAdmin()
+    {
+        if (!EstAdmin) throw ExceptionMetier.ParametrageRefuse();
+    }
 
     /// <summary>Usurpation (module Authentification) : code de l'administrateur qui agit pour cet utilisateur (null sinon).</summary>
     public string? Usurpateur { get; init; }
 
     public static Utilisateur Depuis(HttpContext http) => http.Items[Cle] as Utilisateur ?? new(
         http.Request.Headers["X-Utilisateur"].FirstOrDefault() ?? "demo",
-        http.Request.Headers["X-Profil"].FirstOrDefault() ?? "ADMIN",
+        http.Request.Headers["X-Profil"].FirstOrDefault() ?? Profils.Admin,
         http.Request.Headers["X-Groupe"].FirstOrDefault());
 
     /// <summary>Utilisateur de la requête établi par l'authentification (prime sur les en-têtes).</summary>

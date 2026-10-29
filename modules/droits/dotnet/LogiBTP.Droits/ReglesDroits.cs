@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using LogiBTP.Socle;
 
 namespace LogiBTP.Droits;
 
@@ -24,13 +25,14 @@ public sealed record Limite(decimal Piece, decimal Cumul, int Jours);
 /// </summary>
 public static partial class ReglesDroits
 {
-    public static readonly IReadOnlyList<string> Actions = ["CONSULTER", "MODIFIER", "VALIDER", "CREER", "SUPPRIMER", "DEVERROUILLER", "FORCER"];
+    public static readonly IReadOnlyList<string> Actions = ActionsDroits.Cascade;
     public static readonly IReadOnlyList<string> Portees = ["SOI", "SERVICE", "TOUT"];
 
     public static readonly IReadOnlyDictionary<string, string> Alias = new Dictionary<string, string>
     {
-        ["VOIR"] = "CONSULTER", ["TRANSFORMER"] = "CONSULTER", ["APPROUVER"] = "VALIDER", ["DEVALIDER"] = "DEVERROUILLER",
-        ["DEBLOQUER"] = "DEVERROUILLER", ["CONFIDENTIEL"] = "RGPD",
+        [ActionsDroits.Voir] = ActionsDroits.Consulter, [ActionsDroits.Transformer] = ActionsDroits.Consulter, [ActionsDroits.Approuver] = ActionsDroits.Valider,
+        [ActionsDroits.Devalider] = ActionsDroits.Deverrouiller,
+        [ActionsDroits.Debloquer] = ActionsDroits.Deverrouiller, [ActionsDroits.Confidentiel] = ActionsDroits.Rgpd,
     };
 
     public static readonly IReadOnlyDictionary<string, string> Messages = new Dictionary<string, string>
@@ -88,7 +90,7 @@ public static partial class ReglesDroits
     public static bool AccesSousArbre(DroitsProfil droits, string noeud, bool ecriture = false)
     {
         if (droits.Total) return true;
-        bool Utile(IReadOnlyDictionary<string, string> actions) => actions.Keys.Any(a => !ecriture || a != "CONSULTER");
+        bool Utile(IReadOnlyDictionary<string, string> actions) => actions.Keys.Any(a => !ecriture || a != ActionsDroits.Consulter);
         if (Utile(Effectives(droits, noeud).Actions)) return true;
         var prefixe = noeud + "/";
         return droits.Lignes.Any(l => l.Key.StartsWith(prefixe, StringComparison.Ordinal) && Utile(l.Value));

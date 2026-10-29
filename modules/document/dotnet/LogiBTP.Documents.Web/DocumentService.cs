@@ -57,7 +57,8 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     }
 
     /// <summary>Actions du type employées par le module (noms historiques de droit_document).</summary>
-    public static readonly string[] ActionsDocument = ["CONSULTER", "CREER", "MODIFIER", "VALIDER", "TRANSFORMER", "SUPPRIMER", "APPROUVER", "DEVALIDER", "FORCER"];
+    public static readonly string[] ActionsDocument = [ActionsDroits.Consulter, ActionsDroits.Creer, ActionsDroits.Modifier, ActionsDroits.Valider,
+        ActionsDroits.Transformer, ActionsDroits.Supprimer, ActionsDroits.Approuver, ActionsDroits.Devalider, ActionsDroits.Forcer];
 
     /// <summary>Nœud du type dans l'arbre des droits (module Droits) : documents/{famille}/{code}.</summary>
     public static string NoeudDroits(TypeDocument t) => FamillesDocument.NoeudDroits(t.TydFamille, t.TydCode);
@@ -68,7 +69,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// </summary>
     protected internal async Task<bool> PeutAsync(Utilisateur u, TypeDocument type, string action, CancellationToken ct) =>
         droits is not null ? await droits.AutoriseAsync(u, NoeudDroits(type), action, ct)
-        : action == "CONSULTER" || await db.DroitsDocument.AnyAsync(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId && d.DrtAction == action, ct);
+        : action == ActionsDroits.Consulter || await db.DroitsDocument.AnyAsync(d => d.DrtProfil == u.Profil && d.DrtTydId == type.TydId && d.DrtAction == action, ct);
 
     protected async Task<List<string>> ActionsAsync(Utilisateur u, TypeDocument type, CancellationToken ct)
     {
@@ -164,11 +165,11 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var avant = await persistance.Charger(id, ct);
         var doc = avant.Document;
         var type = await Type(doc.EntTydId, ct);
-        if (!specialisation.PeutDeverrouiller(u)) throw ExceptionMetier.AccesRefuse("DEVERROUILLER");
+        if (!specialisation.PeutDeverrouiller(u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Deverrouiller);
         var motif = demande.Motif?.Trim();
         if (type.TydNumerotationContinue)
         {
-            await VerifierDroit(u, type.TydId, "FORCER", ct);
+            await VerifierDroit(u, type.TydId, ActionsDroits.Forcer, ct);
             if (string.IsNullOrEmpty(motif)) throw ExceptionMetier.Invalide("NUMERO_MOTIF", "Numérotation continue : motif du changement de numéro obligatoire");
         }
         await VerifierModifiable(doc, ct);
@@ -270,7 +271,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Modèles des textes d'un type (administrateur) : recopiés dans les documents créés ensuite.</summary>
     public async Task<TextesType> EnregistrerTextesType(string code, TextesType textes, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var t = await db.TypesDocument.FirstOrDefaultAsync(x => x.TydCode == code, ct) ?? throw ExceptionMetier.Introuvable($"Type de document {code}");
         t.TydTexteIntroHtml = string.IsNullOrWhiteSpace(textes.IntroHtml) ? null : html.Nettoyer(textes.IntroHtml);
         t.TydTexteFinHtml = string.IsNullOrWhiteSpace(textes.FinHtml) ? null : html.Nettoyer(textes.FinHtml);
@@ -292,7 +293,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<TComplet> Creer(CreationDocument c, Utilisateur u, CancellationToken ct)
     {
         var type = await Type(c.EntTydId, ct);
-        await VerifierDroit(u, type.TydId, "CREER", ct);
+        await VerifierDroit(u, type.TydId, ActionsDroits.Creer, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var doc = new TDoc
         {
@@ -346,7 +347,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         var avant = await persistance.Charger(id, ct);
         var type = await Type(avant.Document.EntTydId, ct);
-        await VerifierDroit(u, type.TydId, "MODIFIER", ct);
+        await VerifierDroit(u, type.TydId, ActionsDroits.Modifier, ct);
         await VerifierModifiable(avant.Document, ct);
         if (d.Document.EntVersion != avant.Document.EntVersion)
         {
@@ -460,7 +461,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await ControlerMontantAsync(id, u, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var avant = await persistance.Charger(id, ct);
-        await VerifierDroit(u, avant.Document.EntTydId, "VALIDER", ct);
+        await VerifierDroit(u, avant.Document.EntTydId, ActionsDroits.Valider, ct);
         if (v.EntVersion != avant.Document.EntVersion) throw ExceptionMetier.Conflit("VERSION", "Le document a été modifié par un autre utilisateur");
         var reponse = await ValiderDans(id, u, ct);
         await tx.CommitAsync(ct);
@@ -478,7 +479,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var doc = await persistance.Charger(id, ct);
         var type = await Type(doc.Document.EntTydId, ct);
         var noeud = NoeudDroits(type);
-        if (await droits.LimiteAsync(u, noeud, ct) is not { } limite || await droits.AutoriseAsync(u, noeud, "FORCER", ct)) return;
+        if (await droits.LimiteAsync(u, noeud, ct) is not { } limite || await droits.AutoriseAsync(u, noeud, ActionsDroits.Forcer, ct)) return;
         var montant = doc.Document.EntTotalHt;
         var depuis = DateTimeOffset.UtcNow.AddDays(-limite.Jours);
         var cumul = limite.Cumul < 0 ? 0m : await db.Database.SqlQuery<decimal>($"""
@@ -648,7 +649,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         var d = complet.Document;
         var type = await Type(d.EntTydId, ct);
         var res = new List<MessageCalcul>();
-        if (action == "TRANSFORMER")
+        if (action == ActionsDroits.Transformer)
         {
             if (d.EntRejeteLe is not null) res.Add(new MessageCalcul(null, "DOCUMENT_REJETE", $"Document rejeté par le tiers : {d.EntRejetMotif}"));
             if (d.EntDateValidite is DateOnly fin && fin < Aujourdhui && await Regles.Booleen("VALIDITE_ALERTE", type, ct))
@@ -656,7 +657,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
                 res.Add(new MessageCalcul(null, "VALIDITE_DEPASSEE", $"Validité dépassée depuis le {fin:dd/MM/yyyy}"));
             }
         }
-        else if (action == "VALIDER")
+        else if (action == ActionsDroits.Valider)
         {
             if (d.EntTotalHt == 0 && await Regles.Texte("MONTANT_NUL", type, ct) == "AVERTISSEMENT")
             {
@@ -709,7 +710,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var avant = await persistance.Charger(id, ct);
-        await VerifierDroit(u, avant.Document.EntTydId, "VALIDER", ct);
+        await VerifierDroit(u, avant.Document.EntTydId, ActionsDroits.Valider, ct);
         var type = await Type(avant.Document.EntTydId, ct);
         var doc = await db.Documents.FirstAsync(d => d.EntId == id, ct);
         await appliquer(doc, type);
@@ -745,7 +746,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             WHERE s.lig_ent_id = {id} AND dc.ent_id <> {id} AND dc.ent_verrouille AND sc.std_code NOT IN ('ANNULE', 'REMPLACE')
             """).ToListAsync(ct)).Count > 0;
         var forcer = avalValide || await Regles.Booleen("PIECE_COMPTABLE", type, ct);
-        await VerifierDroit(u, type.TydId, forcer ? "FORCER" : "DEVALIDER", ct);
+        await VerifierDroit(u, type.TydId, forcer ? ActionsDroits.Forcer : ActionsDroits.Devalider, ct);
 
         var indices = await db.Documents.Where(d => d.EntGroupeId == avant.Document.EntGroupeId).Select(d => d.EntIndice).ToListAsync(ct);
         var suivant = Numerotation.FormaterRang(indices.Select(i => Numerotation.LireDepart(i) ?? 0).Max() + 1, "A");
@@ -936,7 +937,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     /// <summary>Seuils de solde (administrateur) : valeurs positives, % au plus 100.</summary>
     public async Task<SeuilsSolde> EnregistrerSeuilsSolde(SeuilsSolde s, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var f in new[] { s.Achat, s.Vente })
         {
             if (f.Pct < 0 || f.Qte < 0) throw ExceptionMetier.Invalide("SEUIL", "Un seuil de solde est positif ou nul");
@@ -1004,14 +1005,14 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     public async Task<List<DocumentEcheance>> ModifierEcheances(long id, List<EcheanceSaisie> saisie, Utilisateur u, CancellationToken ct)
     {
         var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
-        await VerifierDroit(u, doc.EntTydId, "MODIFIER", ct);
+        await VerifierDroit(u, doc.EntTydId, ActionsDroits.Modifier, ct);
         return await Echeancier.Modifier(id, saisie, ct);
     }
 
     public async Task Supprimer(long id, Utilisateur u, CancellationToken ct)
     {
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
-        await VerifierDroit(u, doc.EntTydId, "SUPPRIMER", ct);
+        await VerifierDroit(u, doc.EntTydId, ActionsDroits.Supprimer, ct);
         await VerifierModifiable(doc, ct);
         // Un document déjà transformé (source) ne se supprime pas ; un brouillon issu d'une transformation (cible) se
         // supprime avec ses liens (ses quantités ne comptent plus dans le reste de ses sources). Copie : simple trace.
@@ -1035,7 +1036,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var source = await persistance.Charger(id, ct);
-        await VerifierDroit(u, source.Document.EntTydId, "CREER", ct);
+        await VerifierDroit(u, source.Document.EntTydId, ActionsDroits.Creer, ct);
         var typeSource = await Type(source.Document.EntTydId, ct);
         // Situation de travaux (non comptable, Q29) : une situation validée se révise par un nouvel indice, qui devient la
         // référence, tant qu'aucune facture non annulée n'en est issue.
@@ -1081,7 +1082,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
-        await VerifierDroit(u, doc.EntTydId, "MODIFIER", ct);
+        await VerifierDroit(u, doc.EntTydId, ActionsDroits.Modifier, ct);
         await db.Documents.Where(d => d.EntGroupeId == doc.EntGroupeId && d.EntId != id)
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.EntIsReference, false), ct);
         await db.Documents.Where(d => d.EntId == id).ExecuteUpdateAsync(s => s.SetProperty(d => d.EntIsReference, true), ct);
@@ -1095,7 +1096,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var source = await persistance.Charger(id, ct);
         var type = await Type(source.Document.EntTydId, ct);
-        await VerifierDroit(u, type.TydId, "CREER", ct);
+        await VerifierDroit(u, type.TydId, ActionsDroits.Creer, ct);
         var numero = type.TydNumerotationContinue ? null : await AttribuerNumero(type, DateOnly.FromDateTime(DateTime.Today), ct);
         var copie = await Dupliquer(source, d =>
         {

@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogiBTP.Domaine;
 using LogiBTP.Fiches;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
@@ -61,12 +62,11 @@ public static class Intervenants
     public static List<IntervenantSaisi> Lus(JsonElement liste)
     {
         if (liste.ValueKind != JsonValueKind.Array) throw ExceptionMetier.Invalide("VALIDATION", "Intervenants : liste attendue");
-        static string? Texte(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String && v.GetString()!.Trim() != "" ? v.GetString()!.Trim() : null;
         static long? Entier(JsonElement e, string k) => e.TryGetProperty(k, out var v)
             ? v.ValueKind == JsonValueKind.Number ? v.GetInt64() : v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out var n) ? n : null : null;
         static bool Vrai(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.True;
-        return liste.EnumerateArray().Select(e => new IntervenantSaisi(Texte(e, "fonction"), Entier(e, "per_id"), Entier(e, "ind_id"), Vrai(e, "principal"),
-            Vrai(e, "paiement_direct"), Texte(e, "commentaire"))).ToList();
+        return liste.EnumerateArray().Select(e => new IntervenantSaisi(LectureJson.TexteNonVide(e, "fonction"), Entier(e, "per_id"), Entier(e, "ind_id"), Vrai(e, "principal"),
+            Vrai(e, "paiement_direct"), LectureJson.TexteNonVide(e, "commentaire"))).ToList();
     }
 
     /// <summary>

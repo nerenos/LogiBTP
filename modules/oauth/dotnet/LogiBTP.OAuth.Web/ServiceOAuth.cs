@@ -89,7 +89,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     /// <summary>Compte connecté en clair (administrateur, journalisé) : jamais dans les listes.</summary>
     public async Task<string?> CompteAsync(Utilisateur u, long id, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = await Connexion(id, ct);
         Journaliser(c.OcoId, "AFFICHAGE_COMPTE", null, u.Code);
         await db.SaveChangesAsync(ct);
@@ -107,7 +107,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
 
     public async Task<ConnexionDto> CreerAsync(Utilisateur u, SaisieConnexion s, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = new ConnexionEntite { OcoCreePar = u.Code, OcoCreeLe = Maintenant };
         await AppliquerAsync(c, s, ct);
         if (await db.Connexions.AnyAsync(x => x.OcoCode == c.OcoCode, ct)) throw ExceptionMetier.Conflit("CONNEXION_CODE_PRIS", $"Code {c.OcoCode} déjà utilisé");
@@ -120,7 +120,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
 
     public async Task<ConnexionDto> ModifierAsync(Utilisateur u, long id, SaisieConnexion s, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = await Connexion(id, ct);
         var fournisseur = c.OcoOfoCode;
         await AppliquerAsync(c, s, ct);
@@ -175,7 +175,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     /// </summary>
     public async Task<ConnexionDto> EnregistrerClientAsync(Utilisateur u, long id, SaisieClient s, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = await Connexion(id, ct);
         var ancien = LireClient(c);
         var cle = Vide(s.CleCompteService) ?? ancien?.CleCompteService;
@@ -238,7 +238,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
 
     public async Task<int[]> EnregistrerRappelsGlobauxAsync(Utilisateur u, int[] jours, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var l = jours.Where(d => d > 0).Distinct().OrderByDescending(d => d).ToArray();
         if (l.Length == 0) throw ExceptionMetier.Invalide("OAUTH_RAPPELS", "Au moins un délai de rappel");
         var p = await db.Parametres.FirstOrDefaultAsync(x => x.OpaCle == "rappels_jours", ct);
@@ -251,7 +251,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     /// <summary>Suppression (administrateur) : refusée tant qu'un module s'en sert ; jetons révoqués auprès du fournisseur.</summary>
     public async Task SupprimerAsync(Utilisateur u, long id, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = await Connexion(id, ct);
         var utilisations = await UtilisationsAsync(id, ct);
         if (utilisations.Count > 0) throw ExceptionMetier.Conflit("CONNEXION_UTILISEE", $"Connexion utilisée : {string.Join(", ", utilisations)}", utilisations);
@@ -264,7 +264,7 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
     /// <summary>Révocation (administrateur) : jetons révoqués chez le fournisseur et effacés, connexion désactivée (reconnecter la réactive).</summary>
     public async Task<ConnexionDto> RevoquerAsync(Utilisateur u, long id, CancellationToken ct)
     {
-        Exiger(u.EstAdmin, "PARAMETRER");
+        u.ExigerAdmin();
         var c = await Connexion(id, ct);
         await RevoquerChezFournisseurAsync(c, ct);
         c.OcoJetons = null;
@@ -628,11 +628,6 @@ public sealed class ServiceOAuth(OAuthDbContext db, Chiffrement chiffrement, Cli
 
     private static ExceptionMetier AReconnecter(ConnexionEntite c) =>
         ExceptionMetier.Conflit(IFournisseurJeton.AReconnecter, $"Connexion {c.OcoNom} à reconnecter", new { connexion = c.OcoId });
-
-    private static void Exiger(bool droit, string action)
-    {
-        if (!droit) throw ExceptionMetier.AccesRefuse(action);
-    }
 
     private static string Tronquer(string s) => s.Length > 500 ? s[..500] : s;
 

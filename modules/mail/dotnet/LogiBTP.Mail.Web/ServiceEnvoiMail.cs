@@ -100,7 +100,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
             ?? throw NonConfigure();
         var d = new DemandeEnvoi(alias, e.A, e.Cc, e.Cci, e.Objet, e.CorpsHtml, e.Pieces, e.TypeElement, e.IdElement, e.Usage, false, true, null,
             e.Lot is null ? e.Priorite : ReglesEnvoi.Basse);
-        return await MettreEnFileAsync(new Utilisateur(e.Auteur, "ADMIN"), d, e.Lot, true, ct);
+        return await MettreEnFileAsync(new Utilisateur(e.Auteur, Profils.Admin), d, e.Lot, true, ct);
     }
 
     /// <summary>Un compte d'envoi actif existe (fonctions qui dépendent du courriel : proposées ou masquées).</summary>
@@ -577,7 +577,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
 
     public async Task<List<LigneJournalDto>> JournalAsync(Utilisateur u, long? compte, DateTimeOffset? du, DateTimeOffset? au, string? resultat, int page, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var q = db.Journal.AsNoTracking();
         if (compte is not null) q = q.Where(j => j.MjoMcoId == compte);
         if (du is not null) q = q.Where(j => j.MjoLe >= du);
@@ -592,7 +592,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
     /// <summary>Compteurs de chaque compte face à ses limitations (administrateur).</summary>
     public async Task<List<CompteurCompte>> CompteursAsync(Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var res = new List<CompteurCompte>();
         var alias = await db.Alias.AsNoTracking().Where(a => a.MalPrincipal).ToDictionaryAsync(a => a.MalMcoId, a => a.MalNom, ct);
         foreach (var c in await db.Comptes.AsNoTracking().Where(c => c.McoEnvoi).OrderBy(c => c.McoCode).ToListAsync(ct))
@@ -621,7 +621,7 @@ public sealed class ServiceEnvoiMail(MailDbContext db, ServiceComptesMail compte
     /// <summary>Reprise d'un compte suspendu (administrateur) : courriels suspendus remis en file.</summary>
     public async Task<List<CompteurCompte>> ReprendreAsync(Utilisateur u, long compte, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var c = await comptes.Compte(compte, ct);
         (c.McoEtat, c.McoSuspenduLe) = ("OK", null);
         await db.Messages.Where(m => m.MmeMcoId == compte && m.MmeEtat == "SUSPENDU")

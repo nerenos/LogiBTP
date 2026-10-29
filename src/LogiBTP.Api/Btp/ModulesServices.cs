@@ -106,7 +106,7 @@ public static class ModulesServices
     /// <summary>Active ou désactive un module : ses dépendances doivent être actives, et aucun module actif ne doit dépendre de lui.</summary>
     public static async Task Activer(LogiBtpContext db, string code, bool actif, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var modules = await db.Database.SqlQueryRaw<LigneModule>(
             "SELECT mod_code AS code, mod_libelle AS libelle, mod_actif AS actif, mod_dependances::text AS dependances FROM module_societe").ToListAsync(ct);
         var m = modules.FirstOrDefault(x => x.Code == code) ?? throw ExceptionMetier.Introuvable($"Module {code}");
@@ -133,7 +133,7 @@ public static class ModulesServices
     /// </summary>
     public static async Task EnregistrerServices(LogiBtpContext db, List<ServiceSaisi> services, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var s in services)
         {
             if (string.IsNullOrWhiteSpace(s.Code) || string.IsNullOrWhiteSpace(s.Libelle)) throw ExceptionMetier.Invalide("SERVICE", "Code et libellé obligatoires");
@@ -196,7 +196,7 @@ public static class ModulesServices
     /// </summary>
     public static async Task EnregistrerMembres(LogiBtpContext db, int service, List<MembreService> membres, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (membres.Select(m => m.IndId).Distinct().Count() != membres.Count) throw ExceptionMetier.Invalide("SERVICE_MEMBRE", "Membre en double");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         if (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM service WHERE srv_id = @s", new NpgsqlParameter("s", service)).FirstAsync(ct) == 0)

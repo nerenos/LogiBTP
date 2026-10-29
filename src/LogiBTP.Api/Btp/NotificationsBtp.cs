@@ -28,7 +28,7 @@ public sealed class SourceRappelsCrm(LogiBtpContext db, ModulesSociete modules) 
         if (!await modules.EstActifAsync(ModulesFacultatifs.Crm, ct)) return [];
         // Pas d'accolades dans le SQL brut d'EF (lues comme paramètres) : valeur absente traitée ici.
         var seuilsJson = await db.Database.SqlQueryRaw<string>("SELECT cpa_valeur::text AS \"Value\" FROM crm_parametre WHERE cpa_cle = 'seuils_rappel'").FirstOrDefaultAsync(ct);
-        var seuils = seuilsJson is null ? new SeuilsRappel() : JsonSerializer.Deserialize<SeuilsRappel>(seuilsJson, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new SeuilsRappel();
+        var seuils = seuilsJson is null ? new SeuilsRappel() : JsonSerializer.Deserialize<SeuilsRappel>(seuilsJson, JsonSerializerOptions.Web) ?? new SeuilsRappel();
         var lignes = await db.Database.SqlQueryRaw<Ligne>("""
             SELECT r.rap_id, r.rap_type, r.rap_quand, r.rap_delai_jours, n.not_id, n.not_etat, n.not_echeance, n.not_objet,
                    coalesce(i.ind_utilisateur, r.rap_cree_par) AS utilisateur

@@ -1,5 +1,5 @@
 import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
-import { texteBrut, S, dateLocale } from '@logibtp/socle';
+import { texteBrut, S, dateLocale, PROFIL } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
@@ -118,7 +118,7 @@ export function entreeDepuisLigne(l, tarifs = []) {
  */
 export class FournisseurBibliothequeMemoire {
   constructor({ bibliotheques = [], familles = [], regroupements = [], natures = [], unites = [], elements = [], tarifs = [],
-    parametres = {}, periodes = [], profil = 'ADMIN', utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    parametres = {}, periodes = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now() } = {}) {
     this.bibs = structuredClone(bibliotheques);
     this.fams = structuredClone(familles);
     this.rgns = structuredClone(regroupements);
@@ -135,7 +135,7 @@ export class FournisseurBibliothequeMemoire {
     for (const e of this.elements) this.apresEcriture(e, { creation: true, commentaire: 'Reprise des données' });
   }
 
-  #admin() { if (this.profil !== 'ADMIN') throw new ErreurBibliotheque(403, 'ACCES_REFUSE', 'Droit PARAMETRER refusé'); }
+  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurBibliotheque(403, 'ACCES_REFUSE', 'Droit PARAMETRER refusé'); }
   #id(liste, cle = 'id') { return Math.max(0, ...liste.map((x) => Number(x[cle]) || 0)) + 1; }
   #element(id) {
     const e = this.elements.find((x) => String(x.id) === String(id));

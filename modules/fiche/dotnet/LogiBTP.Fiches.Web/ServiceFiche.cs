@@ -41,14 +41,14 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             ? await db.Droits.AsNoTracking().Where(d => d.DrfType == type && d.DrfProfil == u.Profil).Select(d => d.DrfAction).ToListAsync(ct)
             : await ActionsDroitsAsync(droits, type, u, ct);
         var plus = specialisation.DroitsSupplementaires(type, u);
-        return new DroitsFiche(actions.Contains("VOIR") || plus.Voir, actions.Contains("MODIFIER") || plus.Modifier,
-            actions.Contains("DEBLOQUER") || plus.Debloquer, actions.Contains("CONFIDENTIEL") || plus.Confidentiel, actions.Contains("SUPPRIMER") || plus.Supprimer);
+        return new DroitsFiche(actions.Contains(ActionsDroits.Voir) || plus.Voir, actions.Contains(ActionsDroits.Modifier) || plus.Modifier,
+            actions.Contains(ActionsDroits.Debloquer) || plus.Debloquer, actions.Contains(ActionsDroits.Confidentiel) || plus.Confidentiel, actions.Contains(ActionsDroits.Supprimer) || plus.Supprimer);
     }
 
     private static async Task<List<string>> ActionsDroitsAsync(IDroits droits, string type, Utilisateur u, CancellationToken ct)
     {
         var actions = new List<string>();
-        foreach (var a in new[] { "VOIR", "MODIFIER", "DEBLOQUER", "CONFIDENTIEL", "SUPPRIMER" })
+        foreach (var a in new[] { ActionsDroits.Voir, ActionsDroits.Modifier, ActionsDroits.Debloquer, ActionsDroits.Confidentiel, ActionsDroits.Supprimer })
         {
             if (await droits.AutoriseAsync(u, $"fiches/{type}", a, ct)) actions.Add(a);
         }
@@ -185,7 +185,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<DefinitionFicheDto> Definition(string code, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        var droits = await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);
         var t = await Type(code, ct);
         await ResoudreOptions(t, ct);
         return new DefinitionFicheDto
@@ -278,14 +278,14 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<FicheDto> Charger(string code, string id, bool confidentiel, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        var droits = await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);
         var t = await Type(code, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), confidentiel, droits, u, null, ct);
     }
 
     public virtual async Task<ReponseConfidentiel> Reveler(string code, string id, Utilisateur u, CancellationToken ct)
     {
-        await Exiger(code, u, d => d.Voir && d.Confidentiel, "CONFIDENTIEL", ct);
+        await Exiger(code, u, d => d.Voir && d.Confidentiel, ActionsDroits.Confidentiel, ct);
         var t = await Type(code, ct);
         var l = await LigneComplete(t, id, null, null, ct);
         await Journaliser(t, l.Id, u, ct);
@@ -300,12 +300,12 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     /// </summary>
     public virtual async Task<ReponseSecret> RevelerSecret(string code, string id, string champ, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        var droits = await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);
         var t = await Type(code, ct);
         var supplementaire = champ.StartsWith('+');
         var c = supplementaire ? t.Supplementaires.FirstOrDefault(x => x.Code == champ[1..]) : t.Definition.Champs.FirstOrDefault(x => x.Code == champ && x.Colonne is not null);
         if (c is null || !c.EstSecret) throw ExceptionMetier.Invalide("CHAMP", $"Champ {champ} : pas un mot de passe");
-        if (c.Confidentiel && !droits.Confidentiel) throw ExceptionMetier.AccesRefuse("CONFIDENTIEL");
+        if (c.Confidentiel && !droits.Confidentiel) throw ExceptionMetier.AccesRefuse(ActionsDroits.Confidentiel);
         var l = await LigneComplete(t, id, null, null, ct);
         await Journaliser(t, l.Id, [champ], u, ct);
         return new ReponseSecret(supplementaire
@@ -329,8 +329,8 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     /// </summary>
     public virtual async Task<ReponseVerrou> Verrouiller(string code, string id, DemandeVerrou d, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, x => x.Modifier, "MODIFIER", ct);
-        if (d.Forcer && !droits.Debloquer) throw ExceptionMetier.AccesRefuse("DEBLOQUER");
+        var droits = await Exiger(code, u, x => x.Modifier, ActionsDroits.Modifier, ct);
+        if (d.Forcer && !droits.Debloquer) throw ExceptionMetier.AccesRefuse(ActionsDroits.Debloquer);
         var t = await Type(code, ct);
         await LigneComplete(t, id, null, null, ct);
         var expiration = (int)specialisation.ExpirationVerrou.TotalSeconds;
@@ -413,7 +413,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<FicheDto> Enregistrer(string code, string id, DemandeEnregistrement d, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, x => x.Modifier, "MODIFIER", ct);
+        var droits = await Exiger(code, u, x => x.Modifier, ActionsDroits.Modifier, ct);
         var t = await Type(code, ct);
         await ResoudreOptions(t, ct);
         var c = specialisation.Constructeur(t);
@@ -472,7 +472,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<FicheDto> Creer(string code, DemandeEnregistrement d, Utilisateur u, CancellationToken ct)
     {
-        var droits = await Exiger(code, u, x => x.Modifier, "MODIFIER", ct);
+        var droits = await Exiger(code, u, x => x.Modifier, ActionsDroits.Modifier, ct);
         var t = await Type(code, ct);
         await ResoudreOptions(t, ct);
         var valeurs = t.Definition.Champs.Where(c => c.Colonne is not null).ToDictionary(c => c.Code, c => d.Valeurs.TryGetValue(c.Code, out var v) ? ValidationFiche.Normaliser(v) : null);
@@ -498,7 +498,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
     /// </summary>
     public virtual async Task Supprimer(string code, string id, Utilisateur u, CancellationToken ct)
     {
-        await Exiger(code, u, x => x.Supprimer, "SUPPRIMER", ct);
+        await Exiger(code, u, x => x.Supprimer, ActionsDroits.Supprimer, ct);
         var t = await Type(code, ct);
         await specialisation.AvantSuppressionAsync(code, id, u, ct);
         try
@@ -532,7 +532,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<ParametrageFicheDto> Parametrage(string code, Utilisateur u, CancellationToken ct)
     {
-        await Exiger(code, u, d => d.Voir, "VOIR", ct);
+        await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);
         var parametres = await db.Parametres.AsNoTracking().Where(p => p.PcfType == code).ToListAsync(ct);
         return new ParametrageFicheDto
         {
@@ -544,7 +544,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
 
     public virtual async Task<ParametrageFicheDto> EnregistrerParametrage(string code, ParametrageFicheDto p, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var t = await Type(code, ct);
         var codes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var c in p.Supplementaires)

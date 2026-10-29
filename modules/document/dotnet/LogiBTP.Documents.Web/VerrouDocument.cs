@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Documents.Web;
@@ -63,7 +64,7 @@ public class VerrouDocumentService<TDoc, TLigne, TComplet>(DocumentDbContext<TDo
     /// <summary>Déverrouillage manuel d'un verrou resté posé (fenêtre fermée, connexion perdue…).</summary>
     public virtual async Task Forcer(long id, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutDeverrouiller(u)) throw ExceptionMetier.AccesRefuse("DEVERROUILLER");
+        if (!specialisation.PeutDeverrouiller(u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Deverrouiller);
         await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM verrou_document WHERE vdo_ent_id = {id}", ct);
     }
 

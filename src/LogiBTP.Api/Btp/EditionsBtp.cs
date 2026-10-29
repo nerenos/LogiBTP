@@ -90,7 +90,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var depot = await ged.DeposerFichier(fichier, new MetaDepot
         {
             Titre = preparation.Element, Categorie = CategoriesGed.Edition, TypeElement = d.TydCode, IdElement = element, Auteur = u.Code,
-            DateDocument = d.EntDate.ToString("yyyy-MM-dd"), Confidentialite = preparation.Modele["niveau_acces"]?.GetValue<string>() ?? "INTERNE",
+            DateDocument = d.EntDate.ToString("yyyy-MM-dd"), Confidentialite = preparation.Modele["niveau_acces"]?.GetValue<string>() ?? NiveauConfidentialite.Interne,
             Resume = $"Édition « {preparation.Modele["libelle"]?.GetValue<string>()} » ({tache.EttMotif.ToLowerInvariant()}), {pdf.Pages} page(s)",
             MotsCles = ["edition", modele.ToLowerInvariant()],
         }, u, ct);
@@ -1070,7 +1070,7 @@ public static class ParametresEditionBtp
         g.MapPut("/mentions", async (JsonObject mentions, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             var u = Utilisateur.Depuis(http);
-            if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            u.ExigerAdmin();
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO parametre_edition (pae_cle, pae_valeur, pae_modifie_le, pae_modifie_par) VALUES ('mentions', @v::jsonb, now(), @u)
                 ON CONFLICT (pae_cle) DO UPDATE SET pae_valeur = excluded.pae_valeur, pae_modifie_le = now(), pae_modifie_par = excluded.pae_modifie_par

@@ -38,7 +38,7 @@ public static class Acomptes
     /// <summary>Mode de la société (administrateur) ; modifiable tant qu'aucun acompte n'existe (11.1).</summary>
     public static async Task<ModeAcomptes> EnregistrerMode(LogiBtpContext db, ModeAcomptes m, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (m.Mode is not ("TRESORERIE" or "CA")) throw ExceptionMetier.Invalide("MODE_ACOMPTE", "Mode TRESORERIE ou CA");
         var actuel = await Mode(db, ct);
         if (actuel.Mode != m.Mode && await db.Database.SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM marche_acompte").FirstAsync(ct) > 0)

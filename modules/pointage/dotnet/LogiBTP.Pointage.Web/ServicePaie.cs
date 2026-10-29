@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -89,7 +90,7 @@ public sealed record DemandeValorisation(DateOnly Du, DateOnly Au, int? Service,
 /// </summary>
 public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, ServiceSynthese synthese, ServiceConges conges)
 {
-    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    internal static readonly JsonSerializerOptions Json = JsonCalcul.Web;
 
     private async Task Rh(Utilisateur u, CancellationToken ct)
     {
@@ -113,7 +114,7 @@ public sealed class ServicePaie(PointageDbContext db, SpecialisationPointage spe
     /// <summary>Remplace les profils (administrateur) ; un profil retiré passe inactif (il peut être attribué).</summary>
     public async Task<List<ProfilDto>> EnregistrerProfilsAsync(List<ProfilDto> l, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var p in l)
         {
             if (string.IsNullOrWhiteSpace(p.Code) || string.IsNullOrWhiteSpace(p.Libelle)) throw ExceptionMetier.Invalide("PRF_CODE", "Code et libellé du profil obligatoires");

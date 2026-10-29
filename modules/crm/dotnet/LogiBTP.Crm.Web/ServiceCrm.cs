@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Crm.Web;
@@ -55,9 +56,9 @@ public sealed record NoteDetail(NoteListe Note, List<ElementDecrit> Liens, strin
 /// </summary>
 public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisation, NettoyageHtmlCrm nettoyage, IDroits? droitsProfil = null)
 {
-    private const string ActionSuperviser = "SUPERVISER";
+    private const string ActionSuperviser = ActionsDroits.Superviser;
     private const string ActionPrivee = "PRIVEE";
-    private const string ActionRgpd = "RGPD";
+    private const string ActionRgpd = ActionsDroits.Rgpd;
     private sealed record Courant(Utilisateur U, long? Ind, HashSet<int> Services, bool Superviser, bool Rgpd);
 
     private async Task<Courant> CourantAsync(Utilisateur u, CancellationToken ct)
@@ -138,7 +139,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
     /// <summary>Liste complète des types (administrateur) ; un type retiré utilisé par des notes est désactivé.</summary>
     public async Task<List<TypeNoteDto>> EnregistrerTypesNotes(List<TypeNoteDto> types, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (types.Any(t => string.IsNullOrWhiteSpace(t.Code) || string.IsNullOrWhiteSpace(t.Libelle))) throw ExceptionMetier.Invalide("TYPE_NOTE", "Code et libellé obligatoires");
         var codes = types.Select(t => t.Code.Trim().ToUpperInvariant()).ToList();
         if (codes.Distinct().Count() != codes.Count) throw ExceptionMetier.Invalide("TYPE_NOTE", "Codes en double");
@@ -335,7 +336,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         {
             n = await db.Notes.FirstOrDefaultAsync(z => z.NotId == x, ct) ?? throw ExceptionMetier.Introuvable($"Note {x}");
             var estDestinataire = c.Ind is long i && await db.Destinataires.AnyAsync(d => d.NdeNotId == x && d.NdeIndId == i, ct);
-            if (!Droits(n, c, estDestinataire, Masque(n, c, estDestinataire), false, false).Modifier) throw ExceptionMetier.AccesRefuse("MODIFIER");
+            if (!Droits(n, c, estDestinataire, Masque(n, c, estDestinataire), false, false).Modifier) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
             if (s.MajLe is DateTimeOffset maj && Math.Abs((maj - n.NotMajLe).TotalMilliseconds) >= 1)
             {
                 throw ExceptionMetier.Conflit("NOTE_MODIFIEE", $"Note modifiée entre-temps par {n.NotMajPar ?? n.NotCreePar} : rechargez-la");
@@ -379,7 +380,7 @@ public partial class ServiceCrm(CrmDbContext db, SpecialisationCrm specialisatio
         var n = await db.Notes.AsNoTracking().FirstOrDefaultAsync(x => x.NotId == id, ct) ?? throw ExceptionMetier.Introuvable($"Note {id}");
         if (!u.EstAdmin)
         {
-            if (n.NotCreePar != u.Code) throw ExceptionMetier.AccesRefuse("SUPPRIMER");
+            if (n.NotCreePar != u.Code) throw ExceptionMetier.AccesRefuse(ActionsDroits.Supprimer);
             if (await AutresTracesAsync(n, ct)) throw ExceptionMetier.Conflit("NOTE_UTILISEE", "Note déjà lue, modifiée ou suivie d'une réponse : annulez-la plutôt");
         }
         await db.Notes.Where(x => x.NotId == id).ExecuteDeleteAsync(ct);

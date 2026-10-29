@@ -48,7 +48,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
             : l.Statut is null ? "aucun salarié ni intérimaire lié à cet individu"
             : l.SalarieActif != true ? (interim ? "intérimaire inactif" : "salarié inactif (sorti)") : null;
         var statut = l.Statut switch { "INTERIM" => "Intérimaire", "CDD" => "Salarié (CDD)", "CDI" => "Salarié (CDI)", _ => null };
-        return new PersonneCompte(TypesFiche.Individu, l.Id, l.Libelle, motif is null, interim, interim ? ["ADMIN"] : [],
+        return new PersonneCompte(TypesFiche.Individu, l.Id, l.Libelle, motif is null, interim, interim ? [LogiBTP.Socle.Profils.Admin] : [],
             statut is null ? null : l.Matricule is null ? statut : $"{statut} · {l.Matricule}", finMission, motif);
     }
 

@@ -6,6 +6,7 @@ using LogiBTP.Planning.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
 using LogiBTP.Domaine;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -267,7 +268,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     public override async Task<bool> PeutSaisirAsync(PointageDbContext db, Utilisateur u, int salarie, CancellationToken ct)
     {
         var droits = http.HttpContext?.RequestServices.GetService<IDroits>();
-        var portee = droits is null ? "SERVICE" : await droits.PorteeAsync(u, "pointage", "MODIFIER", ct);
+        var portee = droits is null ? "SERVICE" : await droits.PorteeAsync(u, "pointage", ActionsDroits.Modifier, ct);
         if (portee is null) return false;
         if (portee == "TOUT") return true;
         return await db.Database.SqlQueryRaw<bool>("""

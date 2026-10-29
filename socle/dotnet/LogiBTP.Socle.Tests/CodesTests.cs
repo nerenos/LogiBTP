@@ -10,5 +10,8 @@ public class CodesTests
 
     [Theory]
     [InlineData("NIVEAU_NOTIFICATION", typeof(NiveauNotification))]
+    [InlineData("PROFIL", typeof(Profils))]
+    [InlineData("ACTION_DROIT", typeof(ActionsDroits))]
+    [InlineData("NIVEAU_CONFIDENTIALITE", typeof(NiveauConfidentialite))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 }

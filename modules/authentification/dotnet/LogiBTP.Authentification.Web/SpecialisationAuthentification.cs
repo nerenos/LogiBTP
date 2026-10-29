@@ -22,7 +22,7 @@ public sealed record PersonneCompte(string Type, string Id, string Libelle, bool
 public abstract class SpecialisationAuthentification
 {
     /// <summary>Profils attribuables sans module Droits (codes employés par les droits historiques de l'application).</summary>
-    public virtual IReadOnlyList<ProfilCompte> Profils { get; } = [new("ADMIN", "Administrateur"), new("SAISIE", "Saisie")];
+    public virtual IReadOnlyList<ProfilCompte> Profils { get; } = [new(LogiBTP.Socle.Profils.Admin, "Administrateur"), new("SAISIE", "Saisie")];
 
     /// <summary>Profils attribuables : ceux du module Droits s'il est branché (IDroits du socle), sinon <see cref="Profils"/>.</summary>
     public virtual async Task<IReadOnlyList<ProfilCompte>> ProfilsAsync(IServiceProvider services, CancellationToken ct) =>
@@ -37,7 +37,7 @@ public abstract class SpecialisationAuthentification
     public virtual async Task<bool> ProfilTotalAsync(IServiceProvider services, string profil, CancellationToken ct) =>
         services.GetService(typeof(IDroits)) is IDroits droits
             ? (await droits.ProfilsAsync(ct)).Any(p => p.Code == profil && p.Total)
-            : profil == "ADMIN";
+            : profil == LogiBTP.Socle.Profils.Admin;
 
     /// <summary>
     /// Code du double facteur (D3) à envoyer par courriel à la personne liée au compte ; renvoie la destination masquée

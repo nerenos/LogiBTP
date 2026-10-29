@@ -1,3 +1,4 @@
+import { PROFIL } from '@logibtp/socle';
 import { ERREUR_AUTHENTIFICATION } from '@logibtp/authentification';
 import { Routeur, PageBase, GestionFenetres, Preferences, afficherApercu } from '@logibtp/navigation';
 import { accesSousArbre, autorise } from '@logibtp/droits';
@@ -171,7 +172,7 @@ export class Application {
     this.publier(SUJET_FENETRE.SESSION, { connecte: true });
     location.assign('/parametres/comptes');
   }
-  estAdmin() { return this.profil() === 'ADMIN'; }
+  estAdmin() { return this.profil() === PROFIL.ADMIN; }
   peutGererThemes() { return this.estAdmin(); }
 
   /** Thème d'affichage : 'auto' (système), 'clair' ou 'sombre' ; gardé dans le navigateur pour toutes les fenêtres. */

@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Authentification.Web;
@@ -167,7 +168,7 @@ public sealed class ServiceComptes(AuthDbContext db, SpecialisationAuthentificat
         var profil = s.Profil ?? c.CptProfil;
         var actif = s.Actif ?? c.CptActif;
         var propre = string.Equals(c.CptCode, u.Code, StringComparison.OrdinalIgnoreCase);
-        if (propre && (!actif || (c.CptProfil == "ADMIN" && profil != "ADMIN")))
+        if (propre && (!actif || (c.CptProfil == Profils.Admin && profil != Profils.Admin)))
         {
             throw ExceptionMetier.Conflit("COMPTE_PROPRE", "Vous ne pouvez ni désactiver votre propre compte ni retirer son profil administrateur");
         }

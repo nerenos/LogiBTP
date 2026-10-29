@@ -1,3 +1,4 @@
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Editions.Web;
@@ -25,7 +26,7 @@ public class ModeleEdition
     public List<string> MedTypes { get; set; } = [];
     public string MedContenu { get; set; } = "{}";
     public int MedVersion { get; set; } = 1;
-    public string MedNiveauAcces { get; set; } = "INTERNE";
+    public string MedNiveauAcces { get; set; } = NiveauConfidentialite.Interne;
     public List<string> MedAccesProfils { get; set; } = [];
     public string? MedCharte { get; set; }
     public int MedOrdre { get; set; }

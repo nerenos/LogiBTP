@@ -155,7 +155,7 @@ public sealed class ServiceExecution(ExecutionDbContext db, SpecialisationExecut
 {
     private static void Admin(Utilisateur u)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
     }
 
     private static void Controler(List<EtapeDto> etapes)

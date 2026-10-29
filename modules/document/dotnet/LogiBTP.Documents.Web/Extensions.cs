@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -88,7 +89,7 @@ public static class Extensions
         api.MapGet("/documents/{id:long}", async (long id, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>
         {
             var c = await s.Charger(id, ct);
-            await s.VerifierDroit(Utilisateur.Depuis(http), c.Document.EntTydId, "CONSULTER", ct);
+            await s.VerifierDroit(Utilisateur.Depuis(http), c.Document.EntTydId, ActionsDroits.Consulter, ct);
             return c;
         });
         api.MapPost("/documents", async (CreationDocument c, HttpContext http, DocumentService<TDoc, TLigne, TComplet> s, CancellationToken ct) =>

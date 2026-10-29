@@ -1,4 +1,4 @@
-import { aujourdhui } from '@logibtp/socle';
+import { aujourdhui, PROFIL } from '@logibtp/socle';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ETATS_COMPTE, MESSAGES_AUTH, controlerPseudo, controlerCompte, suggererPseudo } from '@logibtp/authentification';
 import { api } from '../api.js';
@@ -18,7 +18,7 @@ export function pastilleCompte(c) {
 let profilsCache = null;
 /** Profils attribuables (`GET /api/auth/profils`). */
 export async function profilsComptes() {
-  profilsCache ??= api.auth.profils().catch(() => ({ profils: [{ code: 'ADMIN', libelle: 'Administrateur' }, { code: 'SAISIE', libelle: 'Saisie' }], defaut: 'SAISIE' }));
+  profilsCache ??= api.auth.profils().catch(() => ({ profils: [{ code: PROFIL.ADMIN, libelle: 'Administrateur' }, { code: 'SAISIE', libelle: 'Saisie' }], defaut: 'SAISIE' }));
   return profilsCache;
 }
 

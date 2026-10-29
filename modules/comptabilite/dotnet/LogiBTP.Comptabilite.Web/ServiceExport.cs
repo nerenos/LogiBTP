@@ -59,7 +59,7 @@ public sealed record ResultatExport(LotExport? Lot, List<PieceApercu> Exclues);
 /// </summary>
 public sealed class ServiceExport(ComptabiliteDbContext db, SpecialisationComptabilite specialisation)
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = JsonSerializerOptions.Web;
 
     public async Task<ModeleExport> ModeleAsync(CancellationToken ct)
     {

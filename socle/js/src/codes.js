@@ -6,3 +6,38 @@ export const NIVEAU_NOTIFICATION = Object.freeze({
   ATTENTION: 'ATTENTION',
   URGENT: 'URGENT',
 });
+
+/** Profils connus du code (les autres profils sont du paramétrage) : ADMIN = profil total, BORNE = saisies d'une borne. */
+export const PROFIL = Object.freeze({
+  ADMIN: 'ADMIN',
+  BORNE: 'BORNE',
+});
+
+/** Actions des droits : actions du modèle, actions propres à un nœud et noms employés par les modules. */
+export const ACTION_DROIT = Object.freeze({
+  CONSULTER: 'CONSULTER',
+  MODIFIER: 'MODIFIER',
+  VALIDER: 'VALIDER',
+  CREER: 'CREER',
+  SUPPRIMER: 'SUPPRIMER',
+  DEVERROUILLER: 'DEVERROUILLER',
+  FORCER: 'FORCER',
+  RGPD: 'RGPD',
+  SUPERVISER: 'SUPERVISER',
+  USURPER: 'USURPER',
+  PARAMETRER: 'PARAMETRER',
+  VOIR: 'VOIR',
+  TRANSFORMER: 'TRANSFORMER',
+  APPROUVER: 'APPROUVER',
+  DEVALIDER: 'DEVALIDER',
+  DEBLOQUER: 'DEBLOQUER',
+  CONFIDENTIEL: 'CONFIDENTIEL',
+});
+
+/** Niveaux de confidentialité (GED, modèles d'édition), du plus ouvert au plus strict. */
+export const NIVEAU_CONFIDENTIALITE = Object.freeze({
+  PUBLIC: 'PUBLIC',
+  INTERNE: 'INTERNE',
+  CONFIDENTIEL: 'CONFIDENTIEL',
+  SECRET: 'SECRET',
+});

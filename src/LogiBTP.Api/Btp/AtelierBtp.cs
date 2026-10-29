@@ -2,6 +2,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Execution.Web;
 using LogiBTP.Pointage.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -80,7 +81,7 @@ public static class AtelierBtp
         foreach (var o in ordres)
         {
             if (await etapes.AtelierAsync(o.EntId, ct) is not { } e) continue;
-            var j = System.Text.Json.JsonSerializer.SerializeToNode(e, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!.AsObject();
+            var j = System.Text.Json.JsonSerializer.SerializeToNode(e, System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
             j["ent_id"] = o.EntId;
             j["numero"] = o.Numero;
             j["objet"] = o.Objet;
@@ -103,7 +104,7 @@ public static class AtelierBtp
         var code = await db.Database.SqlQueryRaw<string?>("""
             SELECT coalesce(i.ind_utilisateur, 'salarie:' || s.sal_id) AS "Value" FROM salarie s LEFT JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_id = @s
             """, new NpgsqlParameter("s", salarie)).FirstOrDefaultAsync(ct);
-        return new Utilisateur(code ?? $"borne:{appareil}", "BORNE", null);
+        return new Utilisateur(code ?? $"borne:{appareil}", Profils.Borne, null);
     }
 
     public static RouteGroupBuilder MapAtelier(this RouteGroupBuilder api)

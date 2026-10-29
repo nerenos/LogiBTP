@@ -1,4 +1,5 @@
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 
 namespace LogiBTP.Editions.Web;
 
@@ -13,8 +14,8 @@ public static class AccesEdition
     public static bool Autorise(string niveau, IReadOnlyCollection<string> profils, Utilisateur u)
     {
         if (profils.Contains(u.Profil)) return true;
-        if (niveau == "SECRET") return false;
+        if (niveau == NiveauConfidentialite.Secret) return false;
         if (u.EstAdmin) return true;
-        return niveau != "CONFIDENTIEL" && profils.Count == 0;
+        return niveau != NiveauConfidentialite.Confidentiel && profils.Count == 0;
     }
 }

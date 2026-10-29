@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using LogiBTP.Editions;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Editions.Web;
@@ -74,7 +75,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
     /// </summary>
     public async Task<JsonObject> Enregistrer(string code, SaisieModele s, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         if (string.IsNullOrWhiteSpace(code) || code.Length > 80) throw ExceptionMetier.Invalide("MODELE_CODE", "Code de modèle obligatoire (80 caractères au plus)");
         var genre = s.Genre == "BLOC" ? "BLOC" : "RAPPORT";
         if (genre == "RAPPORT" && string.IsNullOrWhiteSpace(s.Cible)) throw ExceptionMetier.Invalide("MODELE_CIBLE", "Cible obligatoire pour un rapport");
@@ -98,7 +99,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
         m.MedSource = genre == "BLOC" ? null : s.Source;
         m.MedTypes = s.Types ?? [];
         m.MedContenu = json;
-        m.MedNiveauAcces = s.NiveauAcces is "PUBLIC" or "INTERNE" or "CONFIDENTIEL" or "SECRET" ? s.NiveauAcces : "INTERNE";
+        m.MedNiveauAcces = NiveauConfidentialite.Tous.Contains(s.NiveauAcces) ? s.NiveauAcces : NiveauConfidentialite.Interne;
         m.MedAccesProfils = s.AccesProfils ?? [];
         m.MedCharte = string.IsNullOrWhiteSpace(s.Charte) ? null : s.Charte;
         m.MedActif = s.Actif;
@@ -169,7 +170,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
 
     public async Task Supprimer(string code, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var m = await Lire(code, ct);
         var utilisateurs = await (from l in db.Liens join p in db.Modeles on l.MelMedId equals p.MedId
                                   where l.MelCode == code && l.MelGenre != "RESSOURCE" select p.MedLibelle).ToListAsync(ct);
@@ -203,7 +204,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
 
     public async Task<JsonObject> EnregistrerCharte(string code, SaisieCharte s, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var json = s.Contenu.ToJsonString();
         var erreurs = await pool.ExecuterAsync(m => m.VerifierCharte(json), ct);
         if (erreurs != "[]") throw ExceptionMetier.Invalide("CHARTE_INVALIDE", "Charte invalide", JsonNode.Parse(erreurs));
@@ -225,7 +226,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
 
     public async Task<DefautModele> EnregistrerDefaut(DefautModele d, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var m = await Lire(d.Modele, ct);
         if (m.MedGenre != "RAPPORT" || m.MedCible != d.Cible) throw ExceptionMetier.Invalide("MODELE_CIBLE", $"Le modèle {d.Modele} n'édite pas la cible {d.Cible}");
         var e = await db.Defauts.FirstOrDefaultAsync(x => x.MddCible == d.Cible && x.MddType == d.Type, ct);
@@ -387,7 +388,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
     /// </summary>
     public async Task<JsonObject> Importer(IServiceProvider services, DemandeImport d, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var p = d.Paquet;
         if (p["format"]?.GetValue<string>() != "logibtp-edition") throw ExceptionMetier.Invalide("IMPORT_FORMAT", "Paquet de modèles d'édition attendu (format logibtp-edition)");
         if ((p["version"]?.GetValue<int>() ?? 0) > 1) throw ExceptionMetier.Invalide("IMPORT_VERSION", "Paquet d'une version plus récente de l'application");
@@ -517,7 +518,7 @@ public sealed class ServiceEdition(EditionDbContext db, SpecialisationEdition sp
             try
             {
                 // Utilisateur de la production : le demandeur, avec les droits d'une tâche système (comme l'archivage de la GED).
-                var u = new Utilisateur(string.IsNullOrEmpty(t.EttDemandePar) ? "editions_fond" : t.EttDemandePar, "ADMIN");
+                var u = new Utilisateur(string.IsNullOrEmpty(t.EttDemandePar) ? "editions_fond" : t.EttDemandePar, Profils.Admin);
                 var d = new DemandeEdition(t.EttSource, t.EttIdElement, t.EttModele, t.EttPresentation);
                 var p = await Preparer(services, d, u, ct);
                 var env = Env(p, d, u);

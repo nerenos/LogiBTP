@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -96,7 +97,7 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
             Lire<List<string>>("pseudos_reserves", []));
     }
 
-    private static readonly JsonSerializerOptions JsonCalculOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions JsonCalculOptions = JsonCalcul.Options;
 
     // ---------------------------------------------------------------- connexion
 
@@ -314,7 +315,7 @@ public sealed partial class ServiceAuthentification(AuthDbContext db, Specialisa
     public async Task<SessionLue> UsurperAsync(SessionLue s, DemandeUsurpation d, IServiceProvider services, Origine origine, CancellationToken ct)
     {
         if (s.Usurpation is not null) throw ExceptionMetier.Conflit("USURPATION_EN_COURS", "Une usurpation est déjà en cours : terminez-la d'abord");
-        if (!await specialisation.PeutUsurperAsync(services, new Utilisateur(s.Code, s.Profil), ct)) throw ExceptionMetier.AccesRefuse("USURPER");
+        if (!await specialisation.PeutUsurperAsync(services, new Utilisateur(s.Code, s.Profil), ct)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Usurper);
         var motif = d.Motif?.Trim() ?? "";
         if (motif.Length < 3) throw ExceptionMetier.Invalide("USURPATION_MOTIF", "Motif de l'usurpation obligatoire (test des droits, dépannage…)");
         var code = ReglesCompte.Normaliser(d.Identifiant);

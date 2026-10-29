@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
@@ -47,10 +48,10 @@ public static class AdressesDocument
         {
             ["origine"] = origine,
             ["source_id"] = perId,
-            ["libelle"] = Texte(p, "raison_sociale"),
+            ["libelle"] = LectureJson.Texte(p, "raison_sociale"),
             ["adresse"] = p.TryGetProperty("adresse", out var a) && a.ValueKind == JsonValueKind.Object ? a.Clone() : null,
             [ChampContact] = null,
-            [ChampTelephone] = Texte(p, ChampTelephone),
+            [ChampTelephone] = LectureJson.Texte(p, ChampTelephone),
             ["instructions"] = null,
             ["mention"] = origine == "COMPTOIR" ? "Retrait au comptoir" : null,
             ["releve_le"] = DateOnly.FromDateTime(DateTime.Today),
@@ -98,9 +99,6 @@ public static class AdressesDocument
 
     // ------------------------------------------------------------------ comparaison avec le client
 
-    private static string? Texte(JsonElement e, string nom) =>
-        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
     private static long? Entier(JsonElement e, string nom) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : null;
 
@@ -114,8 +112,8 @@ public static class AdressesDocument
 
     /// <summary>Même adresse postale (lignes, code postal, ville, pays FR par défaut).</summary>
     public static bool MemeAdresse(JsonElement a, JsonElement b) =>
-        ChampsAdresse.All(c => Normaliser(Texte(a, c)) == Normaliser(Texte(b, c)))
-        && Normaliser(Texte(a, "pays") ?? "FR") == Normaliser(Texte(b, "pays") ?? "FR");
+        ChampsAdresse.All(c => Normaliser(LectureJson.Texte(a, c)) == Normaliser(LectureJson.Texte(b, c)))
+        && Normaliser(LectureJson.Texte(a, "pays") ?? "FR") == Normaliser(LectureJson.Texte(b, "pays") ?? "FR");
 
     /// <summary>
     /// Adresse des travaux identique au client : même adresse, sans instructions ni mention, contact absent ou celui du
@@ -127,11 +125,11 @@ public static class AdressesDocument
         var a = adresse.RootElement;
         var c = client.RootElement;
         if (!MemeAdresse(Objet(a, "adresse"), Objet(c, "adresse"))) return false;
-        if (Normaliser(Texte(a, "instructions")) != "" || Normaliser(Texte(a, "mention")) != "") return false;
+        if (Normaliser(LectureJson.Texte(a, "instructions")) != "" || Normaliser(LectureJson.Texte(a, "mention")) != "") return false;
         var contact = Entier(Objet(a, ChampContact), ChampIndividuId);
         if (contact is not null && contact != Entier(Objet(c, ChampContact), ChampIndividuId)) return false;
-        var tel = Normaliser(Texte(a, ChampTelephone));
-        return tel == "" || tel == Normaliser(Texte(c, ChampTelephone));
+        var tel = Normaliser(LectureJson.Texte(a, ChampTelephone));
+        return tel == "" || tel == Normaliser(LectureJson.Texte(c, ChampTelephone));
     }
 
     /// <summary>Payeur identique au client : même personne et même contact.</summary>

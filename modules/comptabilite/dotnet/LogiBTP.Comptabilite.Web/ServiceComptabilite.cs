@@ -16,7 +16,7 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
 {
     private static readonly string[] Types = ["GENERAL", "COLLECTIF", "TVA", "TRESORERIE"];
     private static readonly string[] Sens = ["VENTE", "ACHAT", "LES_DEUX", "AUCUN"];
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = JsonSerializerOptions.Web;
 
     // ---- Paramètres ----
 

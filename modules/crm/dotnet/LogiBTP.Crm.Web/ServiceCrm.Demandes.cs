@@ -1,5 +1,6 @@
 using LogiBTP.Crm;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Crm.Web;
@@ -125,7 +126,7 @@ public partial class ServiceCrm
         if (id is long x)
         {
             d = await db.Demandes.FirstOrDefaultAsync(z => z.DemId == x, ct) ?? throw ExceptionMetier.Introuvable($"Demande {x}");
-            if (!DroitsDemande(d, c).Modifier) throw ExceptionMetier.AccesRefuse("MODIFIER");
+            if (!DroitsDemande(d, c).Modifier) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
             if (s.MajLe is DateTimeOffset maj && Math.Abs((maj - d.DemMajLe).TotalMilliseconds) >= 1)
             {
                 throw ExceptionMetier.Conflit("DEMANDE_MODIFIEE", $"Demande modifiée entre-temps par {d.DemMajPar ?? d.DemCreePar} : rechargez-la");
@@ -200,7 +201,7 @@ public partial class ServiceCrm
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var d = await db.Demandes.FirstOrDefaultAsync(x => x.DemId == id, ct) ?? throw ExceptionMetier.Introuvable($"Demande {id}");
         if (ReglesDemande.EtatsClos.Contains(d.DemEtat)) throw ExceptionMetier.Conflit("DEMANDE_CLOSE", "Demande déjà transformée ou sans suite");
-        if (!DroitsDemande(d, c).Modifier) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        if (!DroitsDemande(d, c).Modifier) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
         var responsable = d.DemResponsableId is long r ? (await specialisation.IndividusAsync(db, [r], ct)).GetValueOrDefault(r) : null;
         var projet = await specialisation.CreerProjetAsync(db, d, responsable, ct)
             ?? throw ExceptionMetier.Conflit("PROJET_IMPOSSIBLE", "L'application ne crée pas de projet depuis une demande");
@@ -228,7 +229,7 @@ public partial class ServiceCrm
         var idDemande = id.ToString();
         if (!u.EstAdmin)
         {
-            if (d.DemCreePar != u.Code) throw ExceptionMetier.AccesRefuse("SUPPRIMER");
+            if (d.DemCreePar != u.Code) throw ExceptionMetier.AccesRefuse(ActionsDroits.Supprimer);
             if (d.DemCibleId is not null || await db.Liens.AnyAsync(l => l.NliTypeElement == TypeDemande && l.NliIdElement == idDemande, ct))
             {
                 throw ExceptionMetier.Conflit("DEMANDE_UTILISEE", "Demande suivie par des notes ou transformée : passez-la sans suite");

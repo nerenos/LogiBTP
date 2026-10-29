@@ -146,5 +146,13 @@ public static class ExtensionsConfiguration
 
     /// <summary>Chiffrement des valeurs secrètes par la chaîne unique de l'installation (LOGIBTP_CLE_CHIFFREMENT).</summary>
     public static IServiceCollection AddChiffrement(this IServiceCollection services, IConfiguration configuration) =>
-        services.AddSingleton(new Chiffrement(configuration[CleChiffrement], Chiffrement.Liste(configuration[CleChiffrement + "_PRECEDENTES"])));
+        services.AddSingleton(ChiffrementDepuis(configuration));
+
+    /// <summary>Chiffrement par la chaîne de l'installation, les chaînes précédentes (rotation) déchiffrant encore.</summary>
+    public static Chiffrement ChiffrementDepuis(IConfiguration configuration) =>
+        new(configuration[CleChiffrement], ClesPrecedentes(configuration));
+
+    /// <summary>Chaînes de chiffrement précédentes (LOGIBTP_CLE_CHIFFREMENT_PRECEDENTES, séparées par des virgules).</summary>
+    public static IEnumerable<string> ClesPrecedentes(IConfiguration configuration) =>
+        Chiffrement.Liste(configuration[VariablesEnv.CleChiffrementPrecedentes]);
 }

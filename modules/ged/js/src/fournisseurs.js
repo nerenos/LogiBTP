@@ -1,3 +1,4 @@
+import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
 import { sha256, horodatage, empreinteEntree, verifierChaine, EMPREINTE_ORIGINE } from './coffre.js';
 import { editionsAPurger, GENRES } from './versions.js';
 import { normaliserRecherche, texteRecherche } from './recherche.js';
@@ -150,7 +151,7 @@ const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ?
 const memeElement = (a, b) => (a.type_element ?? null) === (b.type_element ?? null) && String(a.id_element ?? '') === String(b.id_element ?? '');
 
 function confidentialite(v) {
-  const n = texte(v)?.toUpperCase() ?? 'INTERNE';
+  const n = texte(v)?.toUpperCase() ?? NIVEAU_CONFIDENTIALITE.INTERNE;
   if (!CONFIDENTIALITES.some(([c]) => c === n)) throw new ErreurGed(422, 'CONFIDENTIALITE', `Confidentialité inconnue : ${v}`);
   return n;
 }
@@ -163,7 +164,7 @@ function confidentialite(v) {
  */
 export class FournisseurGedMemoire {
   /** elementExiste(type, id) → true (existe), false (inexistant) ou null (type inconnu) : élément lié vérifié au dépôt. */
-  constructor({ utilisateur = 'demo', profil = 'ADMIN', parametres = {}, horloge = () => Date.now(), elementExiste = () => true,
+  constructor({ utilisateur = 'demo', profil = PROFIL.ADMIN, parametres = {}, horloge = () => Date.now(), elementExiste = () => true,
     reglesRetention = REGLES_RETENTION_DEFAUT, reglesClassification = REGLES_CLASSIFICATION_DEFAUT } = {}) {
     this.elementExiste = elementExiste;
     this.utilisateur = utilisateur;
@@ -182,7 +183,7 @@ export class FournisseurGedMemoire {
     this.urls = new Map();
   }
 
-  get admin() { return this.profil === 'ADMIN'; }
+  get admin() { return this.profil === PROFIL.ADMIN; }
   get #moi() { return { code: this.utilisateur, profil: this.profil }; }
   #maintenant() { return new Date(this.horloge()).toISOString(); }
   #aujourdhui() { return this.#maintenant().slice(0, 10); }
@@ -357,7 +358,7 @@ export class FournisseurGedMemoire {
       mail: m.mail ?? null, resume: m.resume ?? null, notes: m.notes ?? null, etat: null, coffre: false, coffre_le: null, a_envoyer: false,
       supprime: false, supprime_le: null, supprime_par: null, cree_le: this.#maintenant(), cree_par: this.utilisateur, modifie_le: null,
       nb_consultations: 0, consulte_le: null, repertoire_id: texte(m.repertoire_id) ? Number(m.repertoire_id) : null,
-      confidentialite: saisie ?? classe.confidentialite ?? 'INTERNE', acces_profils: liste(m.acces_profils ?? []), acces_utilisateurs: liste(m.acces_utilisateurs ?? []),
+      confidentialite: saisie ?? classe.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, acces_profils: liste(m.acces_profils ?? []), acces_utilisateurs: liste(m.acces_utilisateurs ?? []),
       mots_cles: liste([...(m.mots_cles ?? []), ...classe.mots_cles]), langue: 'fr', index_etat: etat, texte_contenu: contenu,
       classification: classe.regles.length ? { regles: classe.regles, categorie: classe.categorie, confidentialite: classe.confidentialite, le: this.#maintenant() } : null,
       archive: false, archive_le: null,
@@ -746,7 +747,7 @@ export class FournisseurGedMemoire {
 
   /** Lignes de la source de liste « ged » (comme la vue v_liste_ged), pour la recherche dans les listes. */
   lignesListe() {
-    return this.documents.filter((d) => !d.supprime && !d.archive && ['PUBLIC', 'INTERNE'].includes(d.confidentialite ?? 'INTERNE')
+    return this.documents.filter((d) => !d.supprime && !d.archive && [NIVEAU_CONFIDENTIALITE.PUBLIC, NIVEAU_CONFIDENTIALITE.INTERNE].includes(d.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE)
       && !(d.acces_profils ?? []).length && !(d.acces_utilisateurs ?? []).length).map((d) => {
       const v = this.#versions(d.id).at(-1);
       return {

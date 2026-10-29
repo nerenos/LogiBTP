@@ -92,7 +92,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
     /// <summary>Liste globale des étiquettes remplacée (administrateur) ; codes en majuscules.</summary>
     public virtual async Task<List<EtiquetteDto>> EnregistrerEtiquettes(List<EtiquetteDto> liste, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var codes = new HashSet<string>();
         foreach (var e in liste)
         {
@@ -115,7 +115,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
 
     public virtual async Task<List<CouleurTypePrixDto>> EnregistrerCouleurs(List<CouleurTypePrixDto> liste, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var c in liste)
         {
             var e = await db.Set<CouleurTypePrix>().FindAsync([c.Type], ct) ?? throw ExceptionMetier.Introuvable($"Mode de vente {c.Type}");
@@ -149,12 +149,12 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
     public virtual async Task<VueDocumentDto> EnregistrerVue(VueDocumentDto d, Utilisateur u, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(d.Nom)) throw ExceptionMetier.Invalide("NOM", "Nom de la vue obligatoire");
-        if ((d.Globale || d.ParDefaut) && !u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if ((d.Globale || d.ParDefaut) && !u.EstAdmin) throw ExceptionMetier.ParametrageRefuse();
         if (d.Definition.ValueKind != JsonValueKind.Object || !d.Definition.TryGetProperty("colonnes", out var cols) || cols.ValueKind != JsonValueKind.Array)
             throw ExceptionMetier.Invalide("DEFINITION", "Définition de vue : colonnes attendues");
         var v = d.Id > 0 ? await db.Set<VueDocument>().FindAsync([d.Id], ct) ?? throw ExceptionMetier.Introuvable($"Vue {d.Id}") : null;
-        if (v is not null && v.VdoProprietaire is not null && v.VdoProprietaire != u.Code) throw ExceptionMetier.AccesRefuse("MODIFIER");
-        if (v is not null && v.VdoProprietaire is null && !u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (v is not null && v.VdoProprietaire is not null && v.VdoProprietaire != u.Code) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
+        if (v is not null && v.VdoProprietaire is null && !u.EstAdmin) throw ExceptionMetier.ParametrageRefuse();
         v ??= db.Set<VueDocument>().Add(new VueDocument()).Entity;
         v.VdoNom = d.Nom.Trim();
         v.VdoTydId = d.TydId;
@@ -177,7 +177,7 @@ public class AffichageDocumentService<TDoc, TLigne>(DocumentDbContext<TDoc, TLig
     public virtual async Task SupprimerVue(int id, Utilisateur u, CancellationToken ct)
     {
         var v = await db.Set<VueDocument>().FindAsync([id], ct) ?? throw ExceptionMetier.Introuvable($"Vue {id}");
-        if (v.VdoProprietaire is null ? !u.EstAdmin : v.VdoProprietaire != u.Code) throw ExceptionMetier.AccesRefuse("SUPPRIMER");
+        if (v.VdoProprietaire is null ? !u.EstAdmin : v.VdoProprietaire != u.Code) throw ExceptionMetier.AccesRefuse(ActionsDroits.Supprimer);
         db.Remove(v);
         await db.SaveChangesAsync(ct);
     }

@@ -101,7 +101,7 @@ public sealed class ServiceSousTraitance(SousTraitanceDbContext db, Specialisati
     /// <summary>Liste complète des pièces exigées (administrateur) : une pièce retirée est supprimée avec ses ajustements.</summary>
     public async Task<List<PieceTypeDto>> EnregistrerTypesAsync(List<PieceTypeDto> l, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var p in l)
         {
             if (string.IsNullOrWhiteSpace(p.Code) || string.IsNullOrWhiteSpace(p.Libelle)) throw ExceptionMetier.Invalide("STT_PIECE", "Code et libellé de la pièce obligatoires");

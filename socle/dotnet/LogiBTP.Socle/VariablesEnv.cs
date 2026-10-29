@@ -24,6 +24,7 @@ public static class VariablesEnv
     public const string Certificats = "LOGIBTP_CERTIFICATS";
     public const string CertificatMotDePasse = "LOGIBTP_CERTIFICAT_MOT_DE_PASSE";
     public const string CleChiffrement = "LOGIBTP_CLE_CHIFFREMENT";
+    public const string CleChiffrementPrecedentes = "LOGIBTP_CLE_CHIFFREMENT_PRECEDENTES";
     public const string Config = "LOGIBTP_CONFIG";
     public const string ConfigBase = "LOGIBTP_CONFIG_BASE";
     public const string CorsOrigines = "LOGIBTP_CORS_ORIGINES";

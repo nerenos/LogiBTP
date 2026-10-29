@@ -10,6 +10,7 @@ using LogiBTP.Ged.Web;
 using LogiBTP.Listes;
 using LogiBTP.Listes.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Api.Btp;
@@ -196,10 +197,10 @@ public sealed class SpecialisationListeBtp(IServiceScopeFactory scopes) : Specia
         foreach (var t in types)
         {
             var noeud = t.Famille is null ? $"fiches/{t.Code}" : FamillesDocument.NoeudDroits(t.Famille, t.Code);
-            if (!await droits.AutoriseAsync(u, noeud, "CONSULTER", ct)) refuses.Add(t.Code);
+            if (!await droits.AutoriseAsync(u, noeud, ActionsDroits.Consulter, ct)) refuses.Add(t.Code);
         }
         var masquees = new HashSet<string>(StringComparer.Ordinal);
-        if (source.Code is not null && FicheRgpd.TryGetValue(source.Code, out var fiche) && !await droits.AutoriseAsync(u, $"fiches/{fiche}", "RGPD", ct))
+        if (source.Code is not null && FicheRgpd.TryGetValue(source.Code, out var fiche) && !await droits.AutoriseAsync(u, $"fiches/{fiche}", ActionsDroits.Rgpd, ct))
         {
             var type = await services.GetRequiredService<ServiceFiche>().Type(fiche, ct);
             var colonnes = source.Colonnes.Select(c => c.Code).ToHashSet(StringComparer.Ordinal);

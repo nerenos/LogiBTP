@@ -66,7 +66,7 @@ public sealed class ReglesDocuments<TDoc, TLigne, TComplet>(DocumentDbContext<TD
     /// <summary>Valeurs paramétrées remplacées (administrateur) : codes du catalogue, niveau unique, valeur du bon genre.</summary>
     public async Task<ReglesParametrage> Enregistrer(List<RegleSaisie> saisie, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var types = await db.TypesDocument.AsNoTracking().ToDictionaryAsync(t => t.TydCode, t => t.TydId, ct);
         var catalogue = Catalogue.ToDictionary(d => d.Code);
         var erreurs = new List<string>();

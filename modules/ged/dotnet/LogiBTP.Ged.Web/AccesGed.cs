@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 
 namespace LogiBTP.Ged.Web;
 
@@ -11,13 +12,6 @@ namespace LogiBTP.Ged.Web;
 /// </summary>
 public static class AccesGed
 {
-    public const string Public = "PUBLIC";
-    public const string Interne = "INTERNE";
-    public const string Confidentiel = "CONFIDENTIEL";
-    public const string Secret = "SECRET";
-
-    public static readonly string[] Niveaux = [Public, Interne, Confidentiel, Secret];
-
     /// <summary>Filtre traduisible en SQL (tableaux PostgreSQL : = ANY, cardinality).</summary>
     public static Expression<Func<DocumentGed, bool>> Filtre(Utilisateur u)
     {
@@ -25,18 +19,18 @@ public static class AccesGed
         var profil = u.Profil;
         var admin = u.EstAdmin;
         return d => d.DgeCreePar == code || d.DgeAccesProfils.Contains(profil) || d.DgeAccesUtilisateurs.Contains(code)
-            || (d.DgeConfidentialite != Secret && (admin
-                || (d.DgeConfidentialite != Confidentiel && d.DgeAccesProfils.Length == 0 && d.DgeAccesUtilisateurs.Length == 0)));
+            || (d.DgeConfidentialite != NiveauConfidentialite.Secret && (admin
+                || (d.DgeConfidentialite != NiveauConfidentialite.Confidentiel && d.DgeAccesProfils.Length == 0 && d.DgeAccesUtilisateurs.Length == 0)));
     }
 
     /// <summary>Même règle sur des valeurs (documents de l'archive).</summary>
     public static bool Autorise(string creePar, string? confidentialite, string[] profils, string[] utilisateurs, Utilisateur u)
     {
         if (creePar == u.Code || profils.Contains(u.Profil) || utilisateurs.Contains(u.Code)) return true;
-        var niveau = confidentialite ?? Interne;
-        if (niveau == Secret) return false;
+        var niveau = confidentialite ?? NiveauConfidentialite.Interne;
+        if (niveau == NiveauConfidentialite.Secret) return false;
         if (u.EstAdmin) return true;
-        return niveau != Confidentiel && profils.Length == 0 && utilisateurs.Length == 0;
+        return niveau != NiveauConfidentialite.Confidentiel && profils.Length == 0 && utilisateurs.Length == 0;
     }
 
     /// <summary>Changer la confidentialité ou les accès : auteur du dépôt ou administrateur.</summary>

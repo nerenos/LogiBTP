@@ -228,7 +228,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
     /// <summary>Règles réécrites en entier (codes uniques, nature, action et zones connues ; mots ou expéditeur obligatoires).</summary>
     public async Task<List<RegleDto>> EnregistrerReglesAsync(Utilisateur u, List<RegleDto> l, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var x in l)
         {
             if (string.IsNullOrWhiteSpace(x.Code) || x.Code.Length > 30 || string.IsNullOrWhiteSpace(x.Libelle)) throw ExceptionMetier.Invalide("MAIL_REGLE", "Code et libellé obligatoires");
@@ -429,7 +429,7 @@ public sealed class ServiceReceptionMail(MailDbContext db, ServiceComptesMail co
     public async Task<int> MarquerAdresseAsync(Utilisateur u, long id, string adresse, CancellationToken ct)
     {
         var m = await db.Messages.FirstOrDefaultAsync(x => x.MmeId == id && x.MmeSens == "E", ct) ?? throw ExceptionMetier.Introuvable("Courriel");
-        if (!u.EstAdmin && m.MmeCreePar != u.Code) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        if (!u.EstAdmin && m.MmeCreePar != u.Code) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
         var d = await db.Destinataires.AsNoTracking().FirstOrDefaultAsync(x => x.MdeMmeId == id && x.MdeAdresse.ToLower() == adresse.ToLower() && x.MdeNonRemis != null, ct)
             ?? throw ExceptionMetier.Invalide("MAIL_ADRESSE", "Cette adresse n'est pas signalée non remise pour ce courriel");
         return await specialisation.MarquerAdresseAsync(d.MdeAdresse, d.MdeNonRemis!, u, ct);

@@ -1,6 +1,7 @@
 using LogiBTP.Documents;
 using LogiBTP.Droits.Web;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Api.Btp;
@@ -12,10 +13,10 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public sealed class SpecialisationDroitsBtp : SpecialisationDroits
 {
-    private static readonly string[] Cycle = ["CONSULTER", "MODIFIER", "VALIDER", "CREER", "SUPPRIMER", "DEVERROUILLER", "FORCER"];
-    private static readonly string[] Simple = ["CONSULTER", "MODIFIER", "CREER", "SUPPRIMER"];
-    private static readonly string[] Fiche = ["CONSULTER", "MODIFIER", "CREER", "SUPPRIMER", "DEVERROUILLER", "RGPD"];
-    private static readonly string[] Lecture = ["CONSULTER", "MODIFIER"];
+    private static readonly string[] Cycle = [.. ActionsDroits.Cascade];
+    private static readonly string[] Simple = [ActionsDroits.Consulter, ActionsDroits.Modifier, ActionsDroits.Creer, ActionsDroits.Supprimer];
+    private static readonly string[] Fiche = [.. Simple, ActionsDroits.Deverrouiller, ActionsDroits.Rgpd];
+    private static readonly string[] Lecture = [ActionsDroits.Consulter, ActionsDroits.Modifier];
 
     private static readonly Dictionary<string, string> Familles = new()
     {
@@ -51,14 +52,14 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("editions", "Éditions", Simple, Icone: "🖨"),
             new("ressources", "Ressources", Simple, Icone: "🧰", Aide: "Habilitations, équipes, missions d'intérim, services"),
             new("calendriers", "Calendriers", Simple, Icone: "📅"),
-            new("crm", "CRM", ["CONSULTER", "MODIFIER", "CREER", "SUPPRIMER", "SUPERVISER", "RGPD"], Icone: "💬",
+            new("crm", "CRM", [.. Simple, ActionsDroits.Superviser, ActionsDroits.Rgpd], Icone: "💬",
                 Aide: "Superviser : voir les notes de tous ; RGPD : lever le masquage des notes privées"),
             new("reglement", "Règlements", Simple, Icone: "💶"),
             new("execution", "Exécution", Simple, Icone: "🧭"),
             new("sous_traitance", "Sous-traitance", Simple, Icone: "🤝"),
             new("stock", "Stock", Simple, Icone: "📦"),
             new("comptabilite", "Comptabilité", Simple, Icone: "📒", Aide: "Plan comptable, comptes des tiers, TVA et catégories de TVA"),
-            new("pointage", "Pointage MO", ["CONSULTER", "MODIFIER", "VALIDER", "CREER", "SUPPRIMER"], Portee: true, Icone: "⏱",
+            new("pointage", "Pointage MO", [ActionsDroits.Consulter, ActionsDroits.Modifier, ActionsDroits.Valider, ActionsDroits.Creer, ActionsDroits.Supprimer], Portee: true, Icone: "⏱",
                 Aide: "Portée : soi (ses heures), son service (responsable), tout"),
             new("pointage/bornes", "Bornes d'atelier", Simple, Aide: "Appareils, PIN, paramétrage des bornes"),
             new("planning", "Planning", Simple, Icone: "📆"),
@@ -113,10 +114,10 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/fiches/{type}", ModeRoute.Module, "fiches/{type}"),
         new("/api/listes", ModeRoute.Module, "listes"),
         // Lectures des listes envoyées en POST (demande dans le corps) : consultation.
-        new("/api/listes/lot", ModeRoute.Action, "listes", "CONSULTER"),
-        new("/api/listes/segments", ModeRoute.Action, "listes", "CONSULTER"),
-        new("/api/listes/controle", ModeRoute.Action, "listes", "CONSULTER"),
-        new("/api/listes/lignes", ModeRoute.Action, "listes", "CONSULTER"),
+        new("/api/listes/lot", ModeRoute.Action, "listes", ActionsDroits.Consulter),
+        new("/api/listes/segments", ModeRoute.Action, "listes", ActionsDroits.Consulter),
+        new("/api/listes/controle", ModeRoute.Action, "listes", ActionsDroits.Consulter),
+        new("/api/listes/lignes", ModeRoute.Action, "listes", ActionsDroits.Consulter),
         new("/api/structure", ModeRoute.Module, "structure"),
         new("/api/annuaire", ModeRoute.Module, "annuaire"),
         new("/api/entreprises-fr", ModeRoute.Module, "annuaire"),

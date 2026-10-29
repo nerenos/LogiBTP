@@ -22,6 +22,10 @@ public class ReglesDroitsTests
     private static IEnumerable<JsonNode> Cas(string nom) => Jeu[nom]!.AsArray().Select(c => c!);
 
     [Fact]
+    public void Actions_en_cascade_identiques_au_js() =>
+        Assert.Equal(ReglesDroits.Actions, Constantes.ListeJs(CasPartages.Chemin("modules", "droits", "js", "src", "regles.js"), "ACTIONS"));
+
+    [Fact]
     public void Effectifs_identiques_au_js()
     {
         foreach (var c in Cas("effectifs"))

@@ -5,4 +5,8 @@
     <Description>Module Droits LogiBTP : règles de l'arbre des droits (héritage, actions, portées, alias), partagées avec regles.js.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
 using System.Globalization;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -62,7 +63,7 @@ public class ArchivageGed(IServiceProvider services, IOptions<OptionsArchivageGe
     /// <summary>Un passage d'archivage sur toutes les bases (appelé chaque nuit ; public pour les tests).</summary>
     public virtual async Task<List<ArchivageBaseGed>> ArchiverAsync(CancellationToken ct)
     {
-        var u = new Utilisateur(options.Value.Utilisateur, "ADMIN");
+        var u = new Utilisateur(options.Value.Utilisateur, Profils.Admin);
         var resultats = new List<ArchivageBaseGed>();
         foreach (var societe in societes.Value.Societes())
         {

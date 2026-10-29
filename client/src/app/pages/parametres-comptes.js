@@ -1,3 +1,4 @@
+import { PROFIL } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { ETATS_COMPTE } from '@logibtp/authentification';
@@ -159,7 +160,7 @@ export class PageParametresComptes extends PageBase {
       ${compte.type === 'PERSONNE' ? `<div data-provisoire></div><p><button type="button" data-reinitialiser>🔐 Réinitialiser le mot de passe</button>
         ${compte.etat === 'VERROUILLE' ? '<button type="button" data-deverrouiller>🔓 Déverrouiller</button>' : ''}</p>` : ''}`;
     // Usurpation (administrateur, jamais un compte administrateur) : tester les droits du compte, dépanner.
-    if (compte.type === 'PERSONNE' && compte.code !== this.app.utilisateur() && compte.profil !== 'ADMIN') {
+    if (compte.type === 'PERSONNE' && compte.code !== this.app.utilisateur() && compte.profil !== PROFIL.ADMIN) {
       zone.insertAdjacentHTML('beforeend', `<p><button type="button" data-usurper title="Agir pour ce compte (une heure au plus, motif obligatoire, tracé au journal et notifié)">🎭 Agir à sa place…</button></p>`);
       zone.querySelector('[data-usurper]').addEventListener('click', async () => {
         const motif = await saisir(`Agir pour ${compte.code} : motif (test des droits, dépannage…)`);

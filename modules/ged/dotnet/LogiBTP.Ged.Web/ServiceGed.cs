@@ -68,7 +68,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     /// <summary>Règles de rétention remplacées en bloc (administrateur).</summary>
     public virtual async Task<ReglesGedDto> RemplacerReglesRetention(List<RegleRetentionDto> regles, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutPurger(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutPurger(u)) throw ExceptionMetier.ParametrageRefuse();
         foreach (var r in regles)
         {
             if (string.IsNullOrWhiteSpace(r.Libelle)) throw ExceptionMetier.Invalide("LIBELLE", "Libellé de règle obligatoire");
@@ -93,7 +93,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     /// <summary>Règles de classification remplacées en bloc (administrateur).</summary>
     public virtual async Task<ReglesGedDto> RemplacerReglesClassification(List<RegleClassificationDto> regles, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutPurger(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutPurger(u)) throw ExceptionMetier.ParametrageRefuse();
         foreach (var r in regles)
         {
             if (string.IsNullOrWhiteSpace(r.Libelle)) throw ExceptionMetier.Invalide("LIBELLE", "Libellé de règle obligatoire");
@@ -101,7 +101,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
                 throw ExceptionMetier.Invalide("CRITERE", $"Au moins un critère attendu ({r.Libelle})");
             if (Texte(r.Categorie) is null && Texte(r.Confidentialite) is null && r.MotsCles.Length == 0)
                 throw ExceptionMetier.Invalide("RESULTAT", $"Catégorie, confidentialité ou mots-clés attendus ({r.Libelle})");
-            if (Texte(r.Confidentialite) is { } n && !AccesGed.Niveaux.Contains(n)) throw ExceptionMetier.Invalide("CONFIDENTIALITE", $"Confidentialité inconnue : {n}");
+            if (Texte(r.Confidentialite) is { } n && !NiveauConfidentialite.Tous.Contains(n)) throw ExceptionMetier.Invalide("CONFIDENTIALITE", $"Confidentialité inconnue : {n}");
         }
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.ReglesClassification.ExecuteDeleteAsync(ct);
@@ -339,8 +339,8 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
 
     private static string Confidentialite(string? v)
     {
-        var n = Texte(v)?.ToUpperInvariant() ?? AccesGed.Interne;
-        return AccesGed.Niveaux.Contains(n) ? n : throw ExceptionMetier.Invalide("CONFIDENTIALITE", $"Confidentialité inconnue : {v}");
+        var n = Texte(v)?.ToUpperInvariant() ?? NiveauConfidentialite.Interne;
+        return NiveauConfidentialite.Tous.Contains(n) ? n : throw ExceptionMetier.Invalide("CONFIDENTIALITE", $"Confidentialité inconnue : {v}");
     }
 
     private static string? Champ(JsonElement? mail, string cle) =>
@@ -389,7 +389,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
             DgeDateDocument = Date(meta.DateDocument) ?? DateOnly.FromDateTime(DateTime.Today), DgeParentId = meta.ParentId,
             DgeMail = meta.Mail is { ValueKind: JsonValueKind.Object } m ? JsonDocument.Parse(m.GetRawText()) : null,
             DgeResume = Texte(meta.Resume), DgeNotes = Texte(meta.Notes), DgeCreeLe = maintenant, DgeCreePar = u.Code,
-            DgeRepertoireId = meta.RepertoireId, DgeConfidentialite = confidentialiteSaisie ?? classe.Confidentialite ?? AccesGed.Interne,
+            DgeRepertoireId = meta.RepertoireId, DgeConfidentialite = confidentialiteSaisie ?? classe.Confidentialite ?? NiveauConfidentialite.Interne,
             DgeAccesProfils = Liste(meta.AccesProfils), DgeAccesUtilisateurs = Liste(meta.AccesUtilisateurs),
             DgeMotsCles = Liste([.. meta.MotsCles ?? [], .. classe.MotsCles]),
             DgeTexteContenu = texte, DgeIndexEtat = etat, DgeIndexeLe = maintenant,
@@ -490,7 +490,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
 
     private void Modifiable(DocumentGed d, Utilisateur u)
     {
-        if (!specialisation.PeutModifier(u, d)) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        if (!specialisation.PeutModifier(u, d)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
     }
 
     private static string? TexteJson(JsonElement valeur) =>

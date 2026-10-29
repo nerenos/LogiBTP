@@ -28,7 +28,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     ILogger<SpecialisationMailBtp> journal) : SpecialisationMail
 {
     /// <summary>Utilisateur des traitements de fond (compte de service, db/206) : accès de la GED d'un administrateur.</summary>
-    public static readonly Utilisateur Fond = new(ServiceReceptionMail.Fond, "ADMIN");
+    public static readonly Utilisateur Fond = new(ServiceReceptionMail.Fond, Profils.Admin);
 
     /// <summary>Types publiés (préférences de notification).</summary>
     public static readonly TypeNotification[] Types =
@@ -64,9 +64,9 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             new NpgsqlParameter("id", difId)).ToListAsync(ct))
         {
             var inst = await ContactsDocument.Instantane(db, x.DfdTiersId, x.DfdIndId, ct);
-            if (inst?.RootElement is not { } r || Texte(r, "email") is not { } email || destinataires.Any(p => p.Adresse.Equals(email, StringComparison.OrdinalIgnoreCase))) continue;
-            var nom = r.TryGetProperty("contact", out var c) && c.ValueKind == JsonValueKind.Object ? Texte(c, "nom") : null;
-            destinataires.Add(new DestinatairePropose(email, nom ?? Texte(r, "raison_sociale"), x.DfdAttendVisa ? "visa attendu" : "diffusion", true, x.DfdTiersId, x.DfdIndId));
+            if (inst?.RootElement is not { } r || LectureJson.TexteNonVide(r, "email") is not { } email || destinataires.Any(p => p.Adresse.Equals(email, StringComparison.OrdinalIgnoreCase))) continue;
+            var nom = r.TryGetProperty("contact", out var c) && c.ValueKind == JsonValueKind.Object ? LectureJson.TexteNonVide(c, "nom") : null;
+            destinataires.Add(new DestinatairePropose(email, nom ?? LectureJson.TexteNonVide(r, "raison_sociale"), x.DfdAttendVisa ? "visa attendu" : "diffusion", true, x.DfdTiersId, x.DfdIndId));
         }
         var pieces = await db.Database.SqlQueryRaw<PieceGed>("""
             SELECT g.dge_id AS id, g.dge_titre AS titre, v.vge_nom_fichier AS nom_fichier, v.vge_taille AS taille
@@ -113,8 +113,8 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         string? nom = null;
         if (tiers is long t && await ContactsDocument.Instantane(db, t, null, ct) is { } inst)
         {
-            nom = Texte(inst.RootElement, "raison_sociale");
-            if (Texte(inst.RootElement, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom, "sous-traitant", true, t));
+            nom = LectureJson.TexteNonVide(inst.RootElement, "raison_sociale");
+            if (LectureJson.TexteNonVide(inst.RootElement, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom, "sous-traitant", true, t));
         }
         string Liste(IEnumerable<string> l) => string.Join(", ", l) is { Length: > 0 } x ? x : "aucune";
         var variables = new Dictionary<string, string?>
@@ -149,19 +149,19 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         string? tiers = null;
         if (d.ContactClient is { } cc && JsonDocument.Parse(cc).RootElement is { ValueKind: JsonValueKind.Object } contact)
         {
-            tiers = Texte(contact, "raison_sociale");
-            var nom = contact.TryGetProperty("contact", out var ct2) && ct2.ValueKind == JsonValueKind.Object ? Texte(ct2, "nom") : null;
-            if (Texte(contact, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom ?? tiers, FamillesDocument.EstAchat(d.TydFamille) ? "Fournisseur" : "Client", true));
+            tiers = LectureJson.TexteNonVide(contact, "raison_sociale");
+            var nom = contact.TryGetProperty("contact", out var ct2) && ct2.ValueKind == JsonValueKind.Object ? LectureJson.TexteNonVide(ct2, "nom") : null;
+            if (LectureJson.TexteNonVide(contact, "email") is { } email) destinataires.Add(new DestinatairePropose(email, nom ?? tiers, FamillesDocument.EstAchat(d.TydFamille) ? "Fournisseur" : "Client", true));
         }
         foreach (var i in JsonDocument.Parse(d.Intervenants ?? "[]").RootElement.EnumerateArray())
         {
             if (!i.TryGetProperty("per_id", out var per) || per.ValueKind != JsonValueKind.Number) continue;
             long? ind = i.TryGetProperty("ind_id", out var x) && x.ValueKind == JsonValueKind.Number ? x.GetInt64() : null;
             var inst = await ContactsDocument.Instantane(db, per.GetInt64(), ind, ct);
-            if (inst?.RootElement is not { } r || Texte(r, "email") is not { } email || destinataires.Any(p => p.Adresse.Equals(email, StringComparison.OrdinalIgnoreCase))) continue;
-            var fonction = Texte(i, "fonction");
-            tiers ??= Texte(i, "tiers");
-            destinataires.Add(new DestinatairePropose(email, Texte(i, "contact") ?? Texte(i, "tiers"), fonction?.ToLowerInvariant(),
+            if (inst?.RootElement is not { } r || LectureJson.TexteNonVide(r, "email") is not { } email || destinataires.Any(p => p.Adresse.Equals(email, StringComparison.OrdinalIgnoreCase))) continue;
+            var fonction = LectureJson.TexteNonVide(i, "fonction");
+            tiers ??= LectureJson.TexteNonVide(i, "tiers");
+            destinataires.Add(new DestinatairePropose(email, LectureJson.TexteNonVide(i, "contact") ?? LectureJson.TexteNonVide(i, "tiers"), fonction?.ToLowerInvariant(),
                 destinataires.Count == 0 && fonction is "CLIENT" or "FOURNISSEUR", per.GetInt64(), ind));
         }
         var element = (d.EntGroupeId ?? d.EntId).ToString();
@@ -232,9 +232,9 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             var d = await ged.DeposerFichier(fichier, new MetaDepot
             {
                 Titre = c.Objet, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = c.Auteur,
-                DateDocument = c.Le.ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = "INTERNE", MotsCles = ["courriel", "envoi"],
+                DateDocument = c.Le.ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = NiveauConfidentialite.Interne, MotsCles = ["courriel", "envoi"],
                 Resume = $"Courriel envoyé par « {c.Expediteur} » à {c.A.Count + c.Cc.Count + c.Cci.Count} destinataire(s)",
-            }, new Utilisateur(c.Auteur, "ADMIN"), ct);
+            }, new Utilisateur(c.Auteur, Profils.Admin), ct);
             depot = d.Id;
         });
         foreach (var r in c.Pieces.Where(r => r.StartsWith("ged:")))
@@ -259,7 +259,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             {
                 var etat = await db.Documents.AsNoTracking().Where(x => x.EntId == ent).Select(x => new { x.EntVerrouille, x.EntApprouveLe, x.EntEnvoyeLe }).FirstAsync(ct);
                 if (etat.EntVerrouille && etat.EntApprouveLe is not null && etat.EntEnvoyeLe is null)
-                    await services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>().Envoyer(ent, new Utilisateur(c.Auteur, "ADMIN"), ct);
+                    await services.GetRequiredService<DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp>>().Envoyer(ent, new Utilisateur(c.Auteur, Profils.Admin), ct);
             });
         }
         if (c.TypeElement is not null && c.IdElement is not null && await modules.EstActifAsync(ModulesFacultatifs.Crm, ct))
@@ -270,7 +270,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 var html = $"<p>À : {WebUtility.HtmlEncode(string.Join(", ", c.A.Concat(c.Cc)))}</p>{c.CorpsHtml}";
                 await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Action, EtatNote.Memo, null, null,
                     $"📧 Courriel envoyé : {(c.Objet.Length > 180 ? c.Objet[..180] : c.Objet)}", html, null, null, null, false, false, false, [lien], null),
-                    new Utilisateur(c.Auteur, "ADMIN"), ct);
+                    new Utilisateur(c.Auteur, Profils.Admin), ct);
             });
         }
         return depot;
@@ -310,9 +310,6 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         notifications.PublierAsync(destinataires.Select(d => new NouvelleNotification(d, "mail", s.Genre, s.Titre, s.Texte, s.Niveau, s.Url, s.TypeElement,
             s.IdElement, s.Cle)), ct);
 
-    private static string? Texte(JsonElement e, string nom) =>
-        e.TryGetProperty(nom, out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()) ? v.GetString() : null;
-
     // --- Réception (lot 3) ---
 
     public override async Task<IReadOnlyList<string>> ServicesAsync(string utilisateur, CancellationToken ct) =>
@@ -341,7 +338,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
         var depot = await DeposerAsync(ged, c.Eml, NomFichier(c.Objet, ".eml"), "message/rfc822", new MetaDepot
         {
             Titre = c.Objet.Length == 0 ? "(sans objet)" : c.Objet, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = "mail_compte", IdElement = c.Compte.ToString(),
-            Auteur = Fond.Code, DateDocument = (c.Date ?? DateTimeOffset.UtcNow).ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = "CONFIDENTIEL",
+            Auteur = Fond.Code, DateDocument = (c.Date ?? DateTimeOffset.UtcNow).ToString("yyyy-MM-dd"), Mail = mail, Confidentialite = NiveauConfidentialite.Confidentiel,
             AccesUtilisateurs = acces, MotsCles = ["courriel", "reception"],
         }, ct);
         var pieces = new List<PieceInfo>();
@@ -350,7 +347,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             var enfant = await DeposerAsync(ged, p.Octets, p.Nom, p.Type, new MetaDepot
             {
                 Titre = p.Nom, Categorie = CategoriesGed.Mail, TypeElement = "mail_compte", IdElement = c.Compte.ToString(), ParentId = depot, Auteur = Fond.Code,
-                Confidentialite = "CONFIDENTIEL", AccesUtilisateurs = acces,
+                Confidentialite = NiveauConfidentialite.Confidentiel, AccesUtilisateurs = acces,
             }, ct);
             pieces.Add(new PieceInfo($"ged:{enfant}", p.Nom, p.Type, p.Octets.Length));
         }
@@ -550,14 +547,14 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 var copie = await DeposerAsync(ged, eml.Octets, eml.NomFichier, "message/rfc822", new MetaDepot
                 {
                     Titre = source.Titre, Categorie = CategoriesGed.Mail, Nature = "mail", TypeElement = typeGed, IdElement = idGed, Auteur = m.Utilisateur,
-                    DateDocument = source.DateDocument, Mail = source.Mail, Confidentialite = "INTERNE", MotsCles = ["courriel", "reception"],
+                    DateDocument = source.DateDocument, Mail = source.Mail, Confidentialite = NiveauConfidentialite.Interne, MotsCles = ["courriel", "reception"],
                 }, ct);
                 foreach (var p in m.Pieces.Where(p => p.StartsWith("ged:")))
                 {
                     if (!long.TryParse(p[4..], out var pid) || await ged.LireContenu(pid, Fond, ct) is not { } contenu) continue;
                     await DeposerAsync(ged, contenu.Octets, contenu.NomFichier, contenu.TypeMime ?? "application/octet-stream", new MetaDepot
                     {
-                        Titre = contenu.NomFichier, Categorie = CategoriesGed.Mail, TypeElement = typeGed, IdElement = idGed, ParentId = copie, Auteur = m.Utilisateur, Confidentialite = "INTERNE",
+                        Titre = contenu.NomFichier, Categorie = CategoriesGed.Mail, TypeElement = typeGed, IdElement = idGed, ParentId = copie, Auteur = m.Utilisateur, Confidentialite = NiveauConfidentialite.Interne,
                     }, ct);
                 }
             });
@@ -570,7 +567,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
                 var html = $"<p>De : {WebUtility.HtmlEncode(m.De ?? "?")}</p>{m.CorpsHtml}";
                 await services.GetRequiredService<ServiceCrm>().Enregistrer(null, new NoteSaisie(NatureNote.Action, EtatNote.Memo, null, null,
                     $"📨 Courriel reçu : {(m.Objet.Length > 180 ? m.Objet[..180] : m.Objet)}", html, null, null, null, false, false, false, [lien], null),
-                    new Utilisateur(m.Utilisateur, "ADMIN"), ct);
+                    new Utilisateur(m.Utilisateur, Profils.Admin), ct);
             });
         }
     }

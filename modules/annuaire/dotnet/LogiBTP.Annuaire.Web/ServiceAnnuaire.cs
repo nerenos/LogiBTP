@@ -76,7 +76,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     public virtual async Task<ReferentielsDto> EnregistrerReferentiel(string genre, ReferentielDto r, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var code = (r.Code ?? "").Trim().ToUpperInvariant();
         if (!CodeReferentiel().IsMatch(code)) throw ExceptionMetier.Invalide("CODE", "Code : lettres majuscules, chiffres et _ (30 caractères au plus)");
         var libelle = Texte(r.Libelle) ?? throw ExceptionMetier.Invalide("LIBELLE", "Libellé obligatoire");
@@ -109,7 +109,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
 
     public virtual async Task<ReferentielsDto> SupprimerReferentiel(string genre, string code, Utilisateur u, CancellationToken ct)
     {
-        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!specialisation.PeutParametrer(u)) throw ExceptionMetier.ParametrageRefuse();
         var json = JsonSerializer.Serialize(new[] { code });
         var utilise = genre switch
         {

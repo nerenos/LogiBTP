@@ -1,3 +1,4 @@
+import { PROFIL } from '@logibtp/socle';
 import { ERREUR_ANNUAIRE } from './codes.js';
 import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES } from './coordonnees.js';
 import { compacter } from './identifiants.js';
@@ -122,7 +123,7 @@ export const libelleIndividu = (i) => [i?.civilite, i?.prenom, i?.nom].filter(Bo
  */
 export class FournisseurAnnuaireMemoire {
   constructor({ niveaux = [], casquettes = [], types_lien = [], roles = [], personnes = [], individus = [], rattachements = [], liens = [],
-    coordonnees = [], usages = [], profil = 'ADMIN', utilisateur = 'demo', horloge = () => Date.now() } = {}) {
+    coordonnees = [], usages = [], profil = PROFIL.ADMIN, utilisateur = 'demo', horloge = () => Date.now() } = {}) {
     this.refs = { niveaux: structuredClone(niveaux), casquettes: structuredClone(casquettes), 'types-lien': structuredClone(types_lien), roles: structuredClone(roles) };
     this.personnes = structuredClone(personnes);
     this.individus = structuredClone(individus);
@@ -139,7 +140,7 @@ export class FournisseurAnnuaireMemoire {
 
   #maintenant() { return new Date(this.horloge()).toISOString(); }
   #id(liste) { return Math.max(0, ...liste.map((x) => Number(x.id) || 0)) + 1; }
-  #admin() { if (this.profil !== 'ADMIN') throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Paramétrage de l\'annuaire réservé au profil ADMIN'); }
+  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Paramétrage de l\'annuaire réservé au profil ADMIN'); }
 
   // ---------------------------------------------------------------- référentiels
 
@@ -273,7 +274,7 @@ export class FournisseurAnnuaireMemoire {
     return this.personne(id);
   }
 
-  #validateur() { if (this.profil !== 'ADMIN') throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Droit VALIDER_TIERS refusé'); }
+  #validateur() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Droit VALIDER_TIERS refusé'); }
 
   async validerProvisoire(id) {
     this.#validateur();

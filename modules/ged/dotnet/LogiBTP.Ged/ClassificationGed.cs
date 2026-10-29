@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using LogiBTP.Socle;
 
 namespace LogiBTP.Ged;
 
@@ -21,8 +22,6 @@ public static partial class ClassificationGed
 {
     public const int TexteMax = 20000;
 
-    private static readonly string[] Niveaux = ["PUBLIC", "INTERNE", "CONFIDENTIEL", "SECRET"];
-
     [GeneratedRegex(@"\.([a-z0-9]+)$", RegexOptions.IgnoreCase)]
     private static partial Regex RegexExtension();
 
@@ -31,7 +30,7 @@ public static partial class ClassificationGed
 
     /// <summary>Niveau le plus strict de deux confidentialités (null ignoré).</summary>
     public static string? PlusStricte(string? a, string? b) =>
-        a is null ? b : b is null ? a : Array.IndexOf(Niveaux, b) > Array.IndexOf(Niveaux, a) ? b : a;
+        a is null ? b : b is null ? a : Array.IndexOf(NiveauConfidentialite.Tous, b) > Array.IndexOf(NiveauConfidentialite.Tous, a) ? b : a;
 
     private static IEnumerable<string> Liste(IReadOnlyList<string>? l) => (l ?? []).Where(x => !string.IsNullOrEmpty(x));
 

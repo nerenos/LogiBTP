@@ -1,3 +1,4 @@
+import { PROFIL } from '@logibtp/socle';
 import { ERREUR_FICHE } from './codes.js';
 import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 
@@ -88,7 +89,7 @@ const TYPES_SUPPLEMENTAIRES = ['texte', 'nombre', 'booleen', 'date', 'liste', 'm
  * sont indexées par code de champ (elles peuvent être partagées avec une source de liste en mémoire).
  */
 export class FournisseurFicheMemoire {
-  constructor({ types = {}, droits = [], profil = 'ADMIN', utilisateur = 'demo', parametrage = {}, horloge = () => Date.now(), requete = null } = {}) {
+  constructor({ types = {}, droits = [], profil = PROFIL.ADMIN, utilisateur = 'demo', parametrage = {}, horloge = () => Date.now(), requete = null } = {}) {
     this.types = types;
     this.requete = requete;
     this.droits = droits;
@@ -345,7 +346,7 @@ export class FournisseurFicheMemoire {
   }
 
   async enregistrerParametrage(type, p) {
-    if (this.profil !== 'ADMIN') throw new ErreurFiche(403, 'ACCES_REFUSE', 'Paramétrage réservé au profil ADMIN');
+    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', 'Paramétrage réservé au profil ADMIN');
     const codes = new Set();
     for (const c of p.supplementaires ?? []) {
       if (!/^[a-z][a-z0-9_]{0,62}$/.test(c.code ?? '')) throw new ErreurFiche(422, 'CODE', `Code de champ invalide : ${c.code ?? ''} (minuscules, chiffres, _)`);

@@ -245,7 +245,7 @@ public sealed class ServiceCharge(PlanningDbContext db, SpecialisationPlanning s
     /// <summary>Enregistre les paramètres globaux (administrateur ; heures entières, début avant la fin).</summary>
     public async Task<ParametresPlanning> EnregistrerParametresAsync(ParametresPlanning s, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (s.HeureDebut < 0 || s.HeureFin > 1440 || s.HeureDebut >= s.HeureFin || s.HeureDebut % 60 != 0 || s.HeureFin % 60 != 0)
             throw ExceptionMetier.Invalide("PLA_HEURES_TRAVAIL", "Heures travaillées : heures entières, le début avant la fin");
         if (s.SousOccupation is < 0 or > 100 || s.HorizonCreneau is < 1 or > 365) throw ExceptionMetier.Invalide("PLA_PARAMETRE", "Seuil (0 à 100 %) ou horizon (1 à 365 jours) invalide");

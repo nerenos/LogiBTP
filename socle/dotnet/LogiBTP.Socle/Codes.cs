@@ -11,3 +11,49 @@ public static class NiveauNotification
 
     public static readonly string[] Tous = [Info, Attention, Urgent];
 }
+
+/// <summary>Profils connus du code (les autres profils sont du paramétrage) : ADMIN = profil total, BORNE = saisies d'une borne.</summary>
+public static class Profils
+{
+    public const string Admin = "ADMIN";
+    public const string Borne = "BORNE";
+}
+
+/// <summary>
+/// Actions des droits (contrat <c>IDroits</c>) : les sept actions du modèle en cascade, les actions propres à un nœud
+/// (RGPD, SUPERVISER, USURPER) et les noms employés par les modules, ramenés au modèle par le module Droits.
+/// </summary>
+public static class ActionsDroits
+{
+    public const string Consulter = "CONSULTER";
+    public const string Modifier = "MODIFIER";
+    public const string Valider = "VALIDER";
+    public const string Creer = "CREER";
+    public const string Supprimer = "SUPPRIMER";
+    public const string Deverrouiller = "DEVERROUILLER";
+    public const string Forcer = "FORCER";
+    public const string Rgpd = "RGPD";
+    public const string Superviser = "SUPERVISER";
+    public const string Usurper = "USURPER";
+    public const string Parametrer = "PARAMETRER";
+    public const string Voir = "VOIR";
+    public const string Transformer = "TRANSFORMER";
+    public const string Approuver = "APPROUVER";
+    public const string Devalider = "DEVALIDER";
+    public const string Debloquer = "DEBLOQUER";
+    public const string Confidentiel = "CONFIDENTIEL";
+
+    /// <summary>Actions du modèle, en cascade (l'interface coche les précédentes).</summary>
+    public static readonly IReadOnlyList<string> Cascade = [Consulter, Modifier, Valider, Creer, Supprimer, Deverrouiller, Forcer];
+}
+
+/// <summary>Niveaux de confidentialité (GED, modèles d'édition), du plus ouvert au plus strict.</summary>
+public static class NiveauConfidentialite
+{
+    public const string Public = "PUBLIC";
+    public const string Interne = "INTERNE";
+    public const string Confidentiel = "CONFIDENTIEL";
+    public const string Secret = "SECRET";
+
+    public static readonly string[] Tous = [Public, Interne, Confidentiel, Secret];
+}

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NpgsqlTypes;
@@ -46,7 +47,7 @@ public class DocumentGed
     /// <summary>Répertoire de l'explorateur (même élément lié que le document).</summary>
     public long? DgeRepertoireId { get; set; }
     /// <summary>PUBLIC, INTERNE, CONFIDENTIEL ou SECRET (règle d'accès : AccesGed).</summary>
-    public string DgeConfidentialite { get; set; } = AccesGed.Interne;
+    public string DgeConfidentialite { get; set; } = NiveauConfidentialite.Interne;
     public string[] DgeAccesProfils { get; set; } = [];
     public string[] DgeAccesUtilisateurs { get; set; } = [];
     /// <summary>Texte extrait du contenu courant (indexation plein texte).</summary>
@@ -90,7 +91,7 @@ public class DocumentArchiveGed
     public DateTimeOffset? DgeModifieLe { get; set; }
     public string? DgeRecherche { get; set; }
     public long? DgeRepertoireId { get; set; }
-    public string DgeConfidentialite { get; set; } = AccesGed.Interne;
+    public string DgeConfidentialite { get; set; } = NiveauConfidentialite.Interne;
     public string[] DgeAccesProfils { get; set; } = [];
     public string[] DgeAccesUtilisateurs { get; set; } = [];
     public string[] DgeMotsCles { get; set; } = [];
@@ -433,7 +434,7 @@ public class DocumentDto
     public int NbConsultations { get; set; }
     public DateTimeOffset? ConsulteLe { get; set; }
     public long? RepertoireId { get; set; }
-    public string Confidentialite { get; set; } = AccesGed.Interne;
+    public string Confidentialite { get; set; } = NiveauConfidentialite.Interne;
     public string[] AccesProfils { get; set; } = [];
     public string[] AccesUtilisateurs { get; set; } = [];
     public string[] MotsCles { get; set; } = [];

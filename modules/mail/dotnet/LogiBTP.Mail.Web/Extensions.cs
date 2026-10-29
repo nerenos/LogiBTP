@@ -110,7 +110,7 @@ public static class Extensions
         // Passage immédiat de la file de la base courante (administrateur).
         g.MapPost("/traiter", async (HttpContext http, ServiceEnvoiMail s, CancellationToken ct) =>
         {
-            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            Utilisateur.Depuis(http).ExigerAdmin();
             return Results.Ok(new { envoyes = await s.TraiterFileAsync(50, ct) });
         });
         return g;

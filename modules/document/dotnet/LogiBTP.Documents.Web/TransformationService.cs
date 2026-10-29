@@ -169,8 +169,8 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     {
         var source = await documents.Charger(sourceId, ct);
         var typeSource = await documents.Type(source.Document.EntTydId, ct);
-        await documents.VerifierDroit(u, typeSource.TydId, "TRANSFORMER", ct);
-        await documents.VerifierDroit(u, typeCible.TydId, "CREER", ct);
+        await documents.VerifierDroit(u, typeSource.TydId, ActionsDroits.Transformer, ct);
+        await documents.VerifierDroit(u, typeCible.TydId, ActionsDroits.Creer, ct);
         var regle = await db.TransformationsAutorisees.AsNoTracking()
             .FirstOrDefaultAsync(t => t.TraSourceTydId == typeSource.TydId && t.TraCibleTydId == typeCible.TydId, ct)
             ?? throw ExceptionMetier.Invalide("TRANSFORMATION_INTERDITE", $"Transformation {typeSource.TydCode} → {typeCible.TydCode} non autorisée");
@@ -439,7 +439,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
             ?? (source.Document.EntNatureAvoir is not null ? type.TydId
                 : throw ExceptionMetier.Invalide("ANNULATION_IMPOSSIBLE", $"Le type {type.TydCode} ne s'annule pas par un avoir"));
         var typeAvoir = await documents.Type(avoirTydId, ct);
-        await documents.VerifierDroit(u, typeAvoir.TydId, "CREER", ct);
+        await documents.VerifierDroit(u, typeAvoir.TydId, ActionsDroits.Creer, ct);
         var avoir = await documents.Dupliquer(source, d =>
         {
             d.EntTydId = typeAvoir.TydId;
@@ -697,7 +697,7 @@ public class TransformationService<TDoc, TLigne, TComplet>(
     {
         var ligne = await db.Lignes.AsNoTracking().FirstOrDefaultAsync(l => l.LigId == ligId, ct) ?? throw ExceptionMetier.Introuvable($"Ligne {ligId}");
         var doc = await db.Documents.AsNoTracking().FirstAsync(x => x.EntId == ligne.LigEntId, ct);
-        await documents.VerifierDroit(u, doc.EntTydId, "TRANSFORMER", ct);
+        await documents.VerifierDroit(u, doc.EntTydId, ActionsDroits.Transformer, ct);
         if (s.Qte <= 0) throw ExceptionMetier.Invalide("QTE", "La quantité soldée doit être positive");
         db.LignesSolde.Add(new DocumentLigneSolde
         {

@@ -35,7 +35,7 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
     /// <summary>Conditions (administrateur) : une condition absente est supprimée, ou désactivée si un document l'utilise.</summary>
     public async Task<List<ConditionPaiementDto>> EnregistrerConditions(List<ConditionPaiementDto> conditions, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         var erreurs = new List<string>();
         foreach (var c in conditions)
         {
@@ -73,7 +73,7 @@ public sealed class EcheancierDocument<TDoc, TLigne, TComplet>(DocumentDbContext
 
     public async Task<ConditionsDefaut> EnregistrerDefauts(ConditionsDefaut d, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         foreach (var code in new[] { d.Vente, d.Achat }.Where(c => !string.IsNullOrEmpty(c)))
         {
             if (!await db.ConditionsPaiement.AnyAsync(c => c.CpaCode == code, ct)) throw ExceptionMetier.Invalide("CONDITION_PAIEMENT", $"Condition {code} inconnue");

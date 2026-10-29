@@ -59,7 +59,7 @@ public class TracabiliteService<TDoc, TLigne, TComplet>(DocumentDbContext<TDoc, 
     public async Task EnregistrerOrigine(long id, OrigineDocumentDto o, Utilisateur u, CancellationToken ct)
     {
         var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
-        await documents.VerifierDroit(u, doc.EntTydId, "CREER", ct);
+        await documents.VerifierDroit(u, doc.EntTydId, ActionsDroits.Creer, ct);
         if (string.IsNullOrWhiteSpace(o.Format)) throw ExceptionMetier.Invalide("FORMAT", "Format d'import obligatoire");
         var e = await db.Origines.FirstOrDefaultAsync(x => x.DorEntId == id, ct);
         if (e is null) db.Origines.Add(e = new DocumentOrigine { DorEntId = id });

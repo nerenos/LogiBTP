@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Planning.Web;
@@ -177,7 +178,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     private void Publier(string action, IEnumerable<long> taches, Utilisateur u) =>
         diffuseur.Publier(societe, DiffusionPlanning.Sujet, new { action, taches = taches.ToList(), par = u.Code });
 
-    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    internal static readonly JsonSerializerOptions Json = JsonCalcul.Web;
     private const int HorizonJours = 120;
 
     private static DateTime Lire(string s) => Temps.DateHeureDe(Temps.VersMinutes(s));
@@ -190,7 +191,7 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
     /// <summary>Enregistre une vue personnelle (code libre préfixé par l'utilisateur) ou globale (administrateur).</summary>
     public async Task<object> EnregistrerVueAsync(string code, string libelle, DefinitionVue d, bool globale, Utilisateur u, CancellationToken ct)
     {
-        if (globale && !u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (globale && !u.EstAdmin) throw ExceptionMetier.ParametrageRefuse();
         var e = await db.Vues.FirstOrDefaultAsync(v => v.PvuCode == code, ct);
         if (e is not null && e.PvuUtilisateur != (globale ? null : u.Code)) throw ExceptionMetier.Conflit("PLA_VUE", "Vue d'un autre utilisateur ou vue globale");
         if (e is null) db.Vues.Add(e = new VueEntite { PvuCode = code, PvuOrdre = 100 });

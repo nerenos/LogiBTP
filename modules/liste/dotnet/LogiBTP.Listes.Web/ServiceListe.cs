@@ -97,7 +97,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
     protected async Task<VueListe> Charger(long id, Utilisateur u, CancellationToken ct)
     {
         var v = await db.Vues.AsNoTracking().FirstOrDefaultAsync(x => x.VliId == id, ct) ?? throw ExceptionMetier.Introuvable($"Vue {id}");
-        if (!specialisation.PeutVoir(v, u)) throw ExceptionMetier.AccesRefuse("VOIR");
+        if (!specialisation.PeutVoir(v, u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Voir);
         return v;
     }
 
@@ -156,7 +156,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         if (dto.VliId is long id)
         {
             v = await db.Vues.FirstOrDefaultAsync(x => x.VliId == id, ct) ?? throw ExceptionMetier.Introuvable($"Vue {id}");
-            if (!specialisation.PeutModifier(v, u)) throw ExceptionMetier.AccesRefuse("MODIFIER");
+            if (!specialisation.PeutModifier(v, u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
             if (v.VliVersion != dto.VliVersion) throw ExceptionMetier.Conflit("VERSION", "La vue a été modifiée par ailleurs : rechargez-la");
             v.VliVersion++;
             v.VliModifieLe = DateTimeOffset.UtcNow;
@@ -186,7 +186,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
     public virtual async Task Supprimer(long id, Utilisateur u, CancellationToken ct)
     {
         var v = await db.Vues.FirstOrDefaultAsync(x => x.VliId == id, ct) ?? throw ExceptionMetier.Introuvable($"Vue {id}");
-        if (!specialisation.PeutModifier(v, u)) throw ExceptionMetier.AccesRefuse("SUPPRIMER");
+        if (!specialisation.PeutModifier(v, u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Supprimer);
         db.Vues.Remove(v);
         await db.SaveChangesAsync(ct);
     }
@@ -387,7 +387,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         var c = await Constructeur(demande, u, ct);
         var source = c.SourceResolue;
         if (source.Table is null) throw ExceptionMetier.Invalide("SOURCE_LECTURE_SEULE", "Cette source n'est pas modifiable dans les listes");
-        if (!specialisation.PeutModifierDonnees(source, u)) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        if (!specialisation.PeutModifierDonnees(source, u)) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
         var valeurs = d.Valeurs.ToDictionary(kv => kv.Key, kv => DemandeModification.Texte(kv.Value), StringComparer.Ordinal);
         foreach (var code in valeurs.Keys)
         {

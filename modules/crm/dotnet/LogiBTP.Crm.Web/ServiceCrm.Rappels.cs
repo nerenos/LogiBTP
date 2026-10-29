@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LogiBTP.Crm;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Crm.Web;
@@ -29,7 +30,7 @@ public partial class ServiceCrm
     public async Task<ParametresCrm> Parametres(CancellationToken ct)
     {
         var p = await db.Parametres.AsNoTracking().Where(x => x.CpaCle == CleSeuils || x.CpaCle == CleFormatPlan).ToListAsync(ct);
-        var seuils = p.FirstOrDefault(x => x.CpaCle == CleSeuils)?.CpaValeur.Deserialize<SeuilsRappel>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new SeuilsRappel();
+        var seuils = p.FirstOrDefault(x => x.CpaCle == CleSeuils)?.CpaValeur.Deserialize<SeuilsRappel>(JsonSerializerOptions.Web) ?? new SeuilsRappel();
         var format = p.FirstOrDefault(x => x.CpaCle == CleFormatPlan)?.CpaValeur.RootElement.TryGetProperty("format", out var f) == true ? f.GetString() : null;
         return new ParametresCrm(seuils, string.IsNullOrWhiteSpace(format) ? FormatPlanDefaut : format);
     }
@@ -46,7 +47,7 @@ public partial class ServiceCrm
     /// <summary>Seuils globaux (administrateur) : rouge ≥ 0, orange ≥ rouge.</summary>
     public async Task<ParametresCrm> EnregistrerParametres(ParametresCrm p, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (p.Seuils.Rouge < 0 || p.Seuils.Orange < p.Seuils.Rouge) throw ExceptionMetier.Invalide("SEUILS_RAPPEL", "Seuils en jours : rouge positif ou nul, orange au moins égal au rouge");
         var valeur = JsonSerializer.SerializeToDocument(new { orange = p.Seuils.Orange, rouge = p.Seuils.Rouge });
         var e = await db.Parametres.FirstOrDefaultAsync(x => x.CpaCle == CleSeuils, ct);
@@ -135,7 +136,7 @@ public partial class ServiceCrm
         if (pour != c.Ind)
         {
             var destinataire = c.Ind is long i && await db.Destinataires.AnyAsync(d => d.NdeNotId == note && d.NdeIndId == i, ct);
-            if (!Droits(n, c, destinataire, null, false, false).Modifier) throw ExceptionMetier.AccesRefuse("MODIFIER");
+            if (!Droits(n, c, destinataire, null, false, false).Modifier) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
         }
         db.Rappels.Add(new CrmRappel
         {
@@ -150,7 +151,7 @@ public partial class ServiceCrm
     {
         var r = await db.Rappels.FirstOrDefaultAsync(x => x.RapId == id, ct) ?? throw ExceptionMetier.Introuvable($"Rappel {id}");
         var c = await CourantAsync(u, ct);
-        if (!(u.EstAdmin || r.RapCreePar == u.Code || (c.Ind is long i && r.RapIndId == i))) throw ExceptionMetier.AccesRefuse("MODIFIER");
+        if (!(u.EstAdmin || r.RapCreePar == u.Code || (c.Ind is long i && r.RapIndId == i))) throw ExceptionMetier.AccesRefuse(ActionsDroits.Modifier);
         return r;
     }
 

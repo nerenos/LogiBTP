@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogiBTP.Socle.Web;
+using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Pointage.Web;
@@ -15,7 +16,7 @@ public sealed record ReponseCorrection(string? Reponse);
 /// </summary>
 public sealed class ServiceSynthese(PointageDbContext db, SpecialisationPointage specialisation, ServicePointage pointage, ServiceConges conges, IServiceProvider services)
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions Json = JsonCalcul.Web;
 
     internal sealed record Roles(bool Rh, HashSet<int> Chef);
 

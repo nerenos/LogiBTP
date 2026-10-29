@@ -73,7 +73,7 @@ public partial class ServiceCrm
     /// <summary>Liste complète (administrateur) ; un statut retiré déjà utilisé est désactivé.</summary>
     public async Task<List<StatutVisaDto>> EnregistrerStatutsVisa(List<StatutVisaDto> statuts, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (statuts.Any(s => string.IsNullOrWhiteSpace(s.Code) || string.IsNullOrWhiteSpace(s.Libelle) || !ReglesValidation.Effets.Contains(s.Effet)))
         {
             throw ExceptionMetier.Invalide("STATUT_VISA", "Code, libellé et effet (ACCEPTE, REFUSE, NEUTRE) obligatoires");

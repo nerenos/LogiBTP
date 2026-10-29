@@ -42,7 +42,7 @@ public static class ListesValeurs
 
     public static async Task<List<ValeurListe>> EnregistrerAsync(LogiBtpContext db, string liste, List<ValeurListe> valeurs, Utilisateur u, CancellationToken ct)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
         if (!Listes.TryGetValue(liste, out var def)) throw ExceptionMetier.Introuvable($"Liste {liste}");
         var erreurs = new List<string>();
         var codes = valeurs.Select(v => v.Code).ToHashSet();

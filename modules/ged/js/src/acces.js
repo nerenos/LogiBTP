@@ -4,12 +4,15 @@
 //   - SECRET : personne d'autre, pas même un administrateur ;
 //   - CONFIDENTIEL : en plus, les administrateurs ;
 //   - PUBLIC, INTERNE : tout le monde, sauf si des accès sont listés (alors réservé à ces accès et aux administrateurs).
+import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
+
+const N = NIVEAU_CONFIDENTIALITE;
 
 export const CONFIDENTIALITES = [
-  ['PUBLIC', 'Public'], ['INTERNE', 'Interne'], ['CONFIDENTIEL', 'Confidentiel'], ['SECRET', 'Secret'],
+  [N.PUBLIC, 'Public'], [N.INTERNE, 'Interne'], [N.CONFIDENTIEL, 'Confidentiel'], [N.SECRET, 'Secret'],
 ];
 
-const NIVEAUX = { PUBLIC: 0, INTERNE: 1, CONFIDENTIEL: 2, SECRET: 3 };
+const NIVEAUX = Object.fromEntries(CONFIDENTIALITES.map(([c], i) => [c, i]));
 
 export const libelleConfidentialite = (code) => CONFIDENTIALITES.find(([c]) => c === code)?.[1] ?? code ?? '';
 
@@ -25,11 +28,11 @@ export function accesAutorise(doc, { code, profil }) {
   const profils = doc.acces_profils ?? [];
   const utilisateurs = doc.acces_utilisateurs ?? [];
   if (doc.cree_par === code || profils.includes(profil) || utilisateurs.includes(code)) return true;
-  const niveau = doc.confidentialite ?? 'INTERNE';
-  if (niveau === 'SECRET') return false;
-  if (profil === 'ADMIN') return true;
-  return niveau !== 'CONFIDENTIEL' && profils.length === 0 && utilisateurs.length === 0;
+  const niveau = doc.confidentialite ?? N.INTERNE;
+  if (niveau === N.SECRET) return false;
+  if (profil === PROFIL.ADMIN) return true;
+  return niveau !== N.CONFIDENTIEL && profils.length === 0 && utilisateurs.length === 0;
 }
 
 /** Changer la confidentialité ou les accès : auteur du dépôt ou administrateur. */
-export const peutChangerAcces = (doc, { code, profil }) => profil === 'ADMIN' || doc.cree_par === code;
+export const peutChangerAcces = (doc, { code, profil }) => profil === PROFIL.ADMIN || doc.cree_par === code;

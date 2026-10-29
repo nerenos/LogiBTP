@@ -34,7 +34,7 @@ public static class EtatInstallation
         return api;
     }
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = JsonSerializerOptions.Web;
 
     public static async Task<Etat> LireAsync(IConfiguration c, OptionsSocietes societes, DossierCertificats d, CertificatServeur cs, CancellationToken ct)
     {

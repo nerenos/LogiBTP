@@ -258,9 +258,12 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lots E (socle C# : `ExigerAdmin`, profils, actions de droits, `JsonCalcul.Options`), F (requêtes en double du
-  cœur : destinataires, comptes, aide `Json`, pièce vivante) et D (utilitaires JS du socle : `normaliser`, `ErreurApi`,
-  IndexedDB, export CSV, pastilles, panneau latéral, `<dialog>` et `<select>` restants).
+- [ ] Lots F (requêtes en double du cœur : destinataires, comptes, aide `Json`, pièce vivante) et D (utilitaires JS du
+  socle : `normaliser`, `ErreurApi`, IndexedDB, export CSV, pastilles, panneau latéral, `<dialog>` et `<select>`
+  restants).
+- [ ] Lot E, reste à trancher : une seule table d'accents C# (`NormalisationGed`, `MoteurDocument.NormaliserLibelle`,
+  `ReconnaissanceMail.Normaliser`) : les trois tables diffèrent (couverture, ligatures, apostrophe) et chacune a sa
+  copie JS (et SQL pour la GED) avec son jeu de cas ; unifier change des résultats, à décider règle par règle.
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

@@ -15,7 +15,7 @@ namespace LogiBTP.Socle.Web;
 /// </summary>
 public sealed class Diffuseur
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions Json = JsonCalcul.Web;
     private readonly ConcurrentDictionary<Guid, Abonne> abonnes = new();
 
     private sealed record Abonne(string Base, HashSet<string> Sujets, Channel<string> Canal);

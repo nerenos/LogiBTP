@@ -109,7 +109,7 @@ public sealed class ServiceEtapes(ExecutionDbContext db, SpecialisationExecution
 {
     private static void Admin(Utilisateur u)
     {
-        if (!u.EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        u.ExigerAdmin();
     }
 
     private static readonly Dictionary<string, string> Messages = new()

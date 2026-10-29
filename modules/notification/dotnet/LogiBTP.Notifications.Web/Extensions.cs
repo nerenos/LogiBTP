@@ -50,7 +50,7 @@ public static class Extensions
         // Exécution immédiate des sources de la base courante (administrateur) : contrôle et démonstration.
         g.MapPost("/executer", async (HttpContext http, PlanificateurNotifications p, CancellationToken ct) =>
         {
-            if (!Utilisateur.Depuis(http).EstAdmin) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+            Utilisateur.Depuis(http).ExigerAdmin();
             await p.ExecuterBaseAsync(http.RequestServices, ct);
             return Results.NoContent();
         });

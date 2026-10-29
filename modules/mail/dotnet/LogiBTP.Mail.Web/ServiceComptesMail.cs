@@ -383,6 +383,6 @@ public sealed class ServiceComptesMail(MailDbContext db, Chiffrement chiffrement
 
     private static void Exiger(bool droit)
     {
-        if (!droit) throw ExceptionMetier.AccesRefuse("PARAMETRER");
+        if (!droit) throw ExceptionMetier.ParametrageRefuse();
     }
 }

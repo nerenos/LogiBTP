@@ -113,6 +113,23 @@ vérifient que rien ne change.
 
 ## Lot E — Utilitaires et constantes C# du socle
 
+> **Fait** (29/10/2026) : `Utilisateur.ExigerAdmin()` et `ExceptionMetier.ParametrageRefuse()` (`Web.cs`, ≈ 60 refus du
+> paramétrage, aide `Exiger` d'OAuth retirée) ; `Codes.cs` du socle ↔ `socle/js/src/codes.js` (parité `CodesTests`) :
+> `Profils` ↔ `PROFIL` (ADMIN, BORNE), `ActionsDroits` ↔ `ACTION_DROIT` (actions du modèle, propres aux nœuds et noms
+> des modules ; `Cascade` = `ReglesDroits.Actions`, liste `ACTIONS` de `droits/js/src/regles.js` vérifiée par
+> `ReglesDroitsTests`), `NiveauConfidentialite` ↔ `NIVEAU_CONFIDENTIALITE` (constantes d'`AccesGed` et liste de
+> `ClassificationGed` retirées ; Édition, cœur, `ged/acces.js`, fournisseur mémoire et explorateur de la GED) ;
+> `LogiBTP.Droits` et `LogiBTP.Ged` référencent désormais `LogiBTP.Socle`. Côté JS : profil ADMIN des fournisseurs
+> mémoire (Annuaire, Bibliothèque, Fiche, GED) et du client. `ExtensionsConfiguration.ChiffrementDepuis` /
+> `ClesPrecedentes` et `VariablesEnv.CleChiffrementPrecedentes` (socle et commandes d'installation). Options JSON :
+> `JsonCalcul.Web` (web + snake_case : diffusion, planning, paie, synthèse du pointage), `JsonCalcul.Options`
+> (authentification), `JsonSerializerOptions.Web` au lieu d'instances recréées. `LectureJson.Texte` / `TexteNonVide`
+> du socle (adresses des documents, courriels, intervenants ; MailBtp retire désormais les espaces de bord).
+> Gardé : les mots VALIDER / MODIFIER / SUPPRIMER qui sont des codes d'opération propres (coordonnées de l'annuaire,
+> congés, synthèse du pointage, étapes de l'exécution, `ActionEtape`) ; ServiceEtapes garde ses options JSON
+> (`WhenWritingNull`) ; `Texte` des Entreprises françaises (accepte les nombres) et des valeurs de fiche ou de liste
+> (conversion de toute valeur) ; OAuth (règles sans dépendance au socle). Reporté : tables d'accents (voir TODO).
+
 | Sujet | Constat | Proposition |
 |---|---|---|
 | `AccesRefuse("PARAMETRER")` | ~50 fois dans ~35 fichiers, souvent précédé de `if (!u.EstAdmin)` | `Utilisateur.ExigerAdmin()` / `ExceptionMetier.ParametrageRefuse()` |
