@@ -1,3 +1,4 @@
+import { lireStockage, ecrireStockage } from './preferences.js';
 import config from './raccourcis.json';
 
 // Raccourcis clavier personnalisables. Chaque fonction appartient à un groupe (grille des lignes, application,
@@ -41,17 +42,11 @@ let personnalisation = lire();
 const index = new Map();
 
 function lire() {
-  try {
-    const o = JSON.parse(localStorage.getItem(CLE) ?? 'null');
-    return o && typeof o === 'object' ? o : {};
-  } catch {
-    return {};
-  }
+  const o = lireStockage(CLE, {});
+  return typeof o === 'object' ? o : {};
 }
 
-function ecrire() {
-  try { localStorage.setItem(CLE, JSON.stringify(personnalisation)); } catch { /* stockage indisponible : non conservé */ }
-}
+const ecrire = () => ecrireStockage(CLE, personnalisation);
 
 /** Touches effectives d'une action : personnalisées, sinon par défaut. */
 export function touchesDe(groupe, action) {

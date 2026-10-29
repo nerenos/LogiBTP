@@ -1,31 +1,13 @@
 // Dépôt temporaire d'un import entre la page d'import et la fenêtre du devis importé (vérification avant création) :
 // IndexedDB du navigateur (même origine, partagé entre fenêtres), fichier source compris. L'entrée est retirée à la
 // création du devis ou à l'abandon ; les entrées de plus d'un jour sont purgées.
+import { magasinIdb } from '@logibtp/socle/ui';
 
 const BASE = 'logibtp-imports';
 const MAGASIN = 'imports';
 const UN_JOUR = 24 * 3600 * 1000;
 
-function ouvrir() {
-  return new Promise((ok, ko) => {
-    const r = indexedDB.open(BASE, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(MAGASIN);
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => ko(r.error);
-  });
-}
-
-async function operation(mode, f) {
-  const db = await ouvrir();
-  try {
-    return await new Promise((ok, ko) => {
-      const tx = db.transaction(MAGASIN, mode);
-      const r = f(tx.objectStore(MAGASIN));
-      tx.oncomplete = () => ok(r?.result);
-      tx.onerror = () => ko(tx.error);
-    });
-  } finally { db.close(); }
-}
+const operation = magasinIdb(BASE, MAGASIN, (db) => db.createObjectStore(MAGASIN));
 
 /** Dépose un import : { format, nom_fichier, fichier (Blob), ... } ; renvoie le jeton à passer à la fenêtre. */
 export async function deposerImport(entree) {

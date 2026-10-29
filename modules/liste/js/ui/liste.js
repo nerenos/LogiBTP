@@ -1,5 +1,5 @@
 import { ERREUR_LISTE } from '../src/codes.js';
-import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer } from '@logibtp/socle/ui';
+import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
 import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
@@ -608,17 +608,13 @@ export class ListeDonnees {
 
   #lirePreferences() {
     const defaut = { dock: 'droite', largeur: 260, hauteur: 160, reduit: false, tout: false };
-    try {
-      const p = { ...defaut, ...JSON.parse(localStorage.getItem(`${this.cleVue}.affichage`) ?? '{}') };
-      if (!['gauche', 'droite', 'bas'].includes(p.dock)) p.dock = 'droite';
-      return p;
-    } catch {
-      return defaut;
-    }
+    const p = { ...defaut, ...lireStockage(`${this.cleVue}.affichage`, {}) };
+    if (!['gauche', 'droite', 'bas'].includes(p.dock)) p.dock = 'droite';
+    return p;
   }
 
   #ecrirePreferences() {
-    try { localStorage.setItem(`${this.cleVue}.affichage`, JSON.stringify({ ...this.prefs, tout: !!this.modeTout })); } catch { /* préférences non conservées */ }
+    ecrireStockage(`${this.cleVue}.affichage`, { ...this.prefs, tout: !!this.modeTout });
   }
 
   #appliquerDock() {

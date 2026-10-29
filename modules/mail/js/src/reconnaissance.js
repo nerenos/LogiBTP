@@ -1,22 +1,16 @@
 // Reconnaissance d'un courriel reçu (module Mail, lot 4), répliquée avec ReconnaissanceMail.cs (jeu partagé
 // tests/cas/01_reconnaissance.json) : nature par les règles, score des candidats fournis par l'application, décision.
+import { sansAccent } from '@logibtp/socle';
 
-/** Accents remplacés par une table explicite (le C# tourne sans globalisation : pas de décomposition Unicode). */
-const ACCENTS = {
-  à: 'a', â: 'a', ä: 'a', á: 'a', ã: 'a', å: 'a', ç: 'c', é: 'e', è: 'e', ê: 'e', ë: 'e', î: 'i', ï: 'i', í: 'i', ì: 'i', ñ: 'n',
-  ô: 'o', ö: 'o', ó: 'o', ò: 'o', õ: 'o', ù: 'u', û: 'u', ü: 'u', ú: 'u', ÿ: 'y', œ: 'oe', æ: 'ae', '’': "'",
-};
 
 export const SCORES = { NUMERO_OBJET: 70, NUMERO_TEXTE: 60, NUMERO_PIECE: 60, NUMERO_PIECE_TEXTE: 50, REFERENCE: 40, EXPEDITEUR: 20, FIL: 100, TIERS: 50 };
 export const ZONES = ['objet', 'texte', 'pieces'];
 export const ACTIONS = ['ALERTER', 'RATTACHER', 'IGNORER'];
 export const NATURES = ['ARC', 'REPONSE_DEVIS', 'FACTURE_FOURNISSEUR', 'BL', 'RELANCE', 'AUTRE'];
 
-/** Minuscules, accents retirés, espaces resserrés. */
+/** Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés. */
 export function normaliser(texte) {
-  let r = '';
-  for (const c of String(texte ?? '').toLowerCase()) r += ACCENTS[c] ?? c;
-  return r.replace(/\s+/g, ' ').trim();
+  return sansAccent(texte).replace(/’/g, "'").replace(/\s+/g, ' ').trim();
 }
 
 const alnum = (c) => c !== undefined && /[a-z0-9]/.test(c);

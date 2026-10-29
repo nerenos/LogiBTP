@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, telechargerFichier, saisir, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 const CHAMPS_MENTIONS = [
@@ -125,19 +125,15 @@ export class PageParametresEditions extends PageBase {
           this.app.message(l.length ? `Utilisé par : ${l.map((x) => x.libelle).join(', ')}` : 'Bloc utilisé par aucun modèle', 'info');
         } else if (b.dataset.action === 'exporter') {
           const paquet = await api.editions.exporter(code);
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(new Blob([JSON.stringify(paquet, null, 2)], { type: 'application/json' }));
-          a.download = `${code}.logibtp-edition.json`;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+          telechargerFichier(`${code}.logibtp-edition.json`, JSON.stringify(paquet, null, 2), 'application/json');
         } else if (b.dataset.action === 'copier') {
-          const nouveau = globalThis.prompt?.('Code du nouveau modèle (lettres, chiffres, _) :', `${code}_SOCIETE`);
+          const nouveau = await saisir('Code du nouveau modèle (lettres, chiffres, _) :', `${code}_SOCIETE`, { obligatoire: true });
           if (!nouveau?.trim()) return;
           await api.editions.copierModele(code, nouveau.trim().toUpperCase(), null);
           this.app.message('Modèle copié', 'succes');
           await this.ouvrirModeles();
         } else if (b.dataset.action === 'supprimer') {
-          if (!globalThis.confirm?.(`Supprimer le modèle ${code} ?`)) return;
+          if (!(await confirmer(`Supprimer le modèle ${code} ?`))) return;
           await api.editions.supprimerModele(code);
           await this.ouvrirModeles();
         }

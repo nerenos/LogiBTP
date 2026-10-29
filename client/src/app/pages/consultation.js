@@ -10,7 +10,7 @@ import { transformerDocument } from '../documents/transformation.js';
 // chère de chaque ligne en évidence, totaux et écart au moins-disant. ✓ Retenir (lot 9, A24d) : l'offre choisie est
 // transformée (fenêtre de transformation commune : commande), les autres offres en cours du lot passent « Non retenue ».
 
-const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+const f = (v) => formatNombre(v, 2);
 
 export class PageComparatifConsultation extends PageBase {
   icone = '⚖';

@@ -21,7 +21,12 @@ export function creerCombo({ options = [], valeur = '', vide = true, titre = '' 
   if (titre) champ.title = titre;
   const liste = [...(vide ? [{ valeur: '', libelle: '—' }] : []), ...options.map((o) => ({ ...o, valeur: o.valeur ?? '' }))];
   const egal = (a, b) => String(a ?? '') === String(b ?? '');
-  const libelle = (v) => (v === '' || v === null || v === undefined ? '' : liste.find((o) => egal(o.valeur, v))?.libelle ?? String(v));
+  // Valeur vide : libellé de son option s'il en a un vrai (« Par défaut », « Tous »…), sinon champ vide.
+  const libelle = (v) => {
+    const o = liste.find((x) => egal(x.valeur, v));
+    if (v === '' || v === null || v === undefined) return o && o.libelle !== '—' ? o.libelle : '';
+    return o?.libelle ?? String(v);
+  };
   let courante = valeur ?? '';
   let deroulante = null;
   /** Pastille de l'option retenue (fond du champ). */
@@ -65,4 +70,63 @@ export function creerCombo({ options = [], valeur = '', vide = true, titre = '' 
   });
   champ.addEventListener('blur', () => { retenir(); fermer(); });
   return champ;
+}
+
+const VALEUR_SELECT = typeof HTMLSelectElement === 'undefined' ? null : Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+
+/**
+ * Affiche un <select> simple en combo : le <select>, masqué, reste la valeur de référence (`.value` lu ou écrit,
+ * événements `change` et `input`, options et `disabled` modifiés après coup : combo reconstruit) ; le code qui le
+ * manipule est inchangé. Options de groupe (`optgroup`) reprises en groupes. Renvoie le combo.
+ */
+export function comboDepuisSelect(select) {
+  if (select.combo) return select.combo;
+  const options = () => [...select.options].map((o) => ({
+    valeur: o.value, libelle: o.textContent.trim() || '—', groupe: o.parentElement?.tagName === 'OPTGROUP' ? o.parentElement.label : undefined,
+  }));
+  const construire = () => {
+    const c = creerCombo({ options: options(), valeur: VALEUR_SELECT.get.call(select), vide: false, titre: select.title });
+    c.disabled = select.disabled;
+    if (select.getAttribute('aria-label')) c.setAttribute('aria-label', select.getAttribute('aria-label'));
+    // La frappe dans le combo ne regarde que lui : les écouteurs de la page ne voient que le <select>.
+    c.addEventListener('input', (e) => e.stopPropagation());
+    c.addEventListener('change', (e) => {
+      e.stopPropagation();
+      VALEUR_SELECT.set.call(select, c.valeurCombo);
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    return c;
+  };
+  let combo = construire();
+  Object.defineProperty(select, 'value', {
+    configurable: true,
+    get() { return VALEUR_SELECT.get.call(this); },
+    set(v) { VALEUR_SELECT.set.call(this, v); combo.definirValeur(VALEUR_SELECT.get.call(this)); },
+  });
+  new MutationObserver(() => {
+    const n = construire();
+    combo.replaceWith(n);
+    combo = n;
+    select.combo = n;
+  }).observe(select, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled'] });
+  select.hidden = true;
+  select.after(combo);
+  select.combo = combo;
+  return combo;
+}
+
+/**
+ * Combos à la place de tous les <select> simples (non `multiple`, sans `data-natif`) présents et à venir sous `racine` :
+ * un seul appel par l'application ; les nouveaux écrans créent directement leurs combos par `creerCombo`.
+ */
+export function activerCombos(racine = document.body) {
+  const SELECTEUR = 'select:not([multiple]):not([data-natif])';
+  const ameliorer = (n) => {
+    if (n.nodeType !== 1) return;
+    if (n.matches(SELECTEUR)) comboDepuisSelect(n);
+    n.querySelectorAll(SELECTEUR).forEach(comboDepuisSelect);
+  };
+  ameliorer(racine);
+  new MutationObserver((mutations) => mutations.forEach((m) => m.addedNodes.forEach(ameliorer))).observe(racine, { childList: true, subtree: true });
 }

@@ -251,23 +251,20 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.
 
-- [ ] Remplacer les derniers `<select>` par `creerCombo` : vues de liste, menu de filtre, sélecteurs de thème et de vue
-  des listes.
+- [ ] Écrans encore construits avec des `<select>` (affichés en combos par `activerCombos` du socle) : les réécrire
+  directement avec `creerCombo` au fil des évolutions (concepteur et menu de filtre des listes, onglets de la
+  bibliothèque, panneaux du document, annuaire, graphe…). Séparateurs à proportion (onglet Analyse, arbres de la
+  bibliothèque) : restés propres (part en % et non largeur).
 
 ## Revue du code du 27/10/2026 ([rapport](documentation/REVUE-CODE-2026-10-27.md))
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lot D de la revue du code (utilitaires JS du socle : `normaliser`, `ErreurApi`, IndexedDB, export CSV, pastilles,
-  panneau latéral, `<dialog>` et `<select>` restants).
 - [ ] Lot F, reste à trancher : listes de statuts différentes selon les requêtes d'ordres (Pointage : sans SOLDE ; sources
   du planning et jalons : aucun filtre de statut, un ordre annulé y reste proposé) ; `lower(ind_utilisateur)` seulement
   dans Mail et OAuth (casse du pseudo non unifiée) ; listes de statuts des requêtes paramétrées par interpolation
   (`SpecialisationBtp` encours client, `StockApprovisionnementBtp`) et `std_code <> 'ANNULE'` laissés en littéraux ;
   ~60 `?? DBNull.Value` en ligne (aide `SqlBtp.P` disponible).
-- [ ] Lot E, reste à trancher : une seule table d'accents C# (`NormalisationGed`, `MoteurDocument.NormaliserLibelle`,
-  `ReconnaissanceMail.Normaliser`) : les trois tables diffèrent (couverture, ligatures, apostrophe) et chacune a sa
-  copie JS (et SQL pour la GED) avec son jeu de cas ; unifier change des résultats, à décider règle par règle.
 - [ ] Raccourcis clavier : déclarer les fonctions des fiches, des listes et de la GED (groupes à ajouter avec
   `declarerRaccourcis`) ; les accélérateurs des menus du bandeau (`&Paramètres`) ne sont pas personnalisables ; menu
   contextuel à étendre (fiches, explorateur GED, entête du document).

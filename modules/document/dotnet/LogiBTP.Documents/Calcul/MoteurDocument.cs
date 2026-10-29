@@ -971,20 +971,8 @@ public class MoteurDocument<TDoc, TLigne>
         EcrireTotaux(tva, cumul);
     }
 
-    /// <summary>Lettres accentuées et ligatures (table explicite, identique dans moteur-document.js).</summary>
-    private static readonly Dictionary<char, string> SansAccent = new() { ['À'] = "a", ['Á'] = "a", ['Â'] = "a", ['Ã'] = "a", ['Ä'] = "a", ['Å'] = "a", ['Æ'] = "ae", ['Ç'] = "c", ['È'] = "e", ['É'] = "e", ['Ê'] = "e", ['Ë'] = "e", ['Ì'] = "i", ['Í'] = "i", ['Î'] = "i", ['Ï'] = "i", ['Ñ'] = "n", ['Ò'] = "o", ['Ó'] = "o", ['Ô'] = "o", ['Õ'] = "o", ['Ö'] = "o", ['Ø'] = "o", ['Ù'] = "u", ['Ú'] = "u", ['Û'] = "u", ['Ü'] = "u", ['Ý'] = "y", ['ß'] = "ss", ['à'] = "a", ['á'] = "a", ['â'] = "a", ['ã'] = "a", ['ä'] = "a", ['å'] = "a", ['æ'] = "ae", ['ç'] = "c", ['è'] = "e", ['é'] = "e", ['ê'] = "e", ['ë'] = "e", ['ì'] = "i", ['í'] = "i", ['î'] = "i", ['ï'] = "i", ['ñ'] = "n", ['ò'] = "o", ['ó'] = "o", ['ô'] = "o", ['õ'] = "o", ['ö'] = "o", ['ø'] = "o", ['ù'] = "u", ['ú'] = "u", ['û'] = "u", ['ü'] = "u", ['ý'] = "y", ['ÿ'] = "y", ['Ā'] = "a", ['ā'] = "a", ['Ć'] = "c", ['ć'] = "c", ['Č'] = "c", ['č'] = "c", ['Ď'] = "d", ['ď'] = "d", ['Đ'] = "d", ['đ'] = "d", ['Ē'] = "e", ['ē'] = "e", ['Ė'] = "e", ['ė'] = "e", ['Ę'] = "e", ['ę'] = "e", ['Ě'] = "e", ['ě'] = "e", ['Ī'] = "i", ['ī'] = "i", ['Į'] = "i", ['į'] = "i", ['Ł'] = "l", ['ł'] = "l", ['Ń'] = "n", ['ń'] = "n", ['Ň'] = "n", ['ň'] = "n", ['Ō'] = "o", ['ō'] = "o", ['Œ'] = "oe", ['œ'] = "oe", ['Ř'] = "r", ['ř'] = "r", ['Ś'] = "s", ['ś'] = "s", ['Ş'] = "s", ['ş'] = "s", ['Š'] = "s", ['š'] = "s", ['Ū'] = "u", ['ū'] = "u", ['Ů'] = "u", ['ů'] = "u", ['Ű'] = "u", ['ű'] = "u", ['Ÿ'] = "y", ['Ź'] = "z", ['ź'] = "z", ['Ż'] = "z", ['ż'] = "z", ['Ž'] = "z", ['ž'] = "z" };
-
-    /// <summary>Libellé comparé pour regrouper les lignes des pieds de section : sans accents ni casse, espaces réduits.</summary>
-    public static string NormaliserLibelle(string? texte)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var ch in texte ?? "")
-        {
-            if (ch > '\x7f' && SansAccent.TryGetValue(ch, out var s)) sb.Append(s);
-            else sb.Append(ch);
-        }
-        return MotifsMoteur.Espaces().Replace(sb.ToString().ToLowerInvariant(), " ").Trim();
-    }
+    /// <summary>Libellé comparé pour regrouper les lignes des pieds de section : sans accents (table du socle) ni casse, espaces réduits.</summary>
+    public static string NormaliserLibelle(string? texte) => MotifsMoteur.Espaces().Replace(LogiBTP.Socle.SansAccent.Retirer(texte), " ").Trim();
 
     /// <summary>Base d'une ligne de pied en pourcentage ou coefficient (LigPiedBase).</summary>
     protected decimal BasePied(TLigne p, decimal cumul, decimal totalHt, decimal totalTtc, decimal htNet, IReadOnlyDictionary<long, decimal> sousTotaux)

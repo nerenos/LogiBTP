@@ -1,4 +1,4 @@
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 
 // Choix de documents sources (CONCEPTION-ACHATS-MARCHES.md Q10, 13.4 bis) : documents validés encore ouverts (BL et
 // commandes en attente de facturation…), cochés puis repris dans le document, une section par document.
@@ -31,6 +31,6 @@ export function choisirSources({ documents, titre }) {
     dlg.querySelector('[data-valider]')?.addEventListener('click', () => {
       finir([...dlg.querySelectorAll('input[type="checkbox"]:checked')].map((c) => Number(c.value)));
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }

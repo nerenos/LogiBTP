@@ -1,5 +1,5 @@
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
-import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, creerCombo, confirmer, saisir, formatDate, formatDateHeure, separateur } from '@logibtp/socle/ui';
 import { icone, formatTaille } from '../src/fichiers.js';
 import { versionsVisibles, etapes, ETAPES, GENRES } from '../src/versions.js';
 import { normaliserRecherche } from '../src/recherche.js';
@@ -7,7 +7,6 @@ import { CONFIDENTIALITES, libelleConfidentialite, peutChangerAcces } from '../s
 import { rendreApercu, libererApercu, htmlMail } from './apercu.js';
 import { DialogueDepot } from './depot.js';
 import { ArborescenceGed } from './arborescence.js';
-import { separateur } from './separateur.js';
 
 // Explorateur de la GED (classe mère), à la façon de l'explorateur Windows :
 //   - barre : précédent / suivant / dossier parent, chemin du dossier courant (la racine est la fiche ou le document

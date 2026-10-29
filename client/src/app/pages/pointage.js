@@ -1,6 +1,7 @@
+import { gabaritPanneau, brancherPanneau } from '../panneau-lateral.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, confirmer, saisir, formatDateHeure, formatDate } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, confirmer, saisir, formatDateHeure, formatDate, telechargerCsv } from '@logibtp/socle/ui';
 import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
   ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE, ETAT_CONGE, ERREUR_POINTAGE, enCours,
@@ -401,47 +402,6 @@ class GrillePointage {
       focaliser(premierChamp(0, CHAMPS_LIGNE.indexOf('j0')) ?? premierChamp(0));
     };
   }
-}
-
-/**
- * Présentation de référence du module (synthèse) : corps à panneau latéral. Panneau à gauche (barre : titre, filtres,
- * actions à droite et « pour réduire ; liste ; légende fixée en bas), séparateur à glisser (largeur), bouton 👥 quand il
- * est réduit, détail à droite. Préférences `<cle>Reduite` et `<cle>Largeur` (navigateur).
- */
-function gabaritPanneau(cle, { titre, objet, filtres = '', actions = '' }) {
-  const prefs = lirePreferences();
-  const reduit = prefs[`${cle}Reduite`] ?? window.matchMedia('(max-width: 900px)').matches;
-  return `<div class="corps-panneau${reduit ? ' panneau-reduit' : ''}" data-panneau="${cle}">
-      <aside class="panneau-lateral" style="width: ${Number(prefs[`${cle}Largeur`]) || 560}px">
-        <div class="panneau-lateral-barre"><b>${titre}</b> ${filtres}
-          <span class="panneau-actions">${actions}<button type="button" class="bouton-icone" data-replier title="Réduire le panneau des ${objet}" aria-label="Réduire le panneau des ${objet}">«</button></span></div>
-        <div data-corrections></div><div data-liste class="panneau-lateral-liste"></div><div class="panneau-legende" data-legende></div></aside>
-      <div class="panneau-separateur" data-separateur title="Glisser pour élargir le panneau"></div>
-      <button type="button" class="bouton-icone panneau-deplier" data-deplier title="Afficher le panneau des ${objet}" aria-label="Afficher le panneau des ${objet}">👥</button>
-      <div data-detail class="panneau-detail"></div></div>`;
-}
-
-/** Comportement du panneau latéral : réduire / déplier, largeur au glisser du séparateur (préférences du navigateur). */
-function brancherPanneau(conteneur) {
-  const corps = conteneur.querySelector('[data-panneau]');
-  const cle = corps.dataset.panneau;
-  const panneau = corps.querySelector('.panneau-lateral');
-  const reduire = (r) => { corps.classList.toggle('panneau-reduit', r); ecrirePreferences({ [`${cle}Reduite`]: r }); };
-  corps.querySelector('[data-replier]').addEventListener('click', () => reduire(true));
-  corps.querySelector('[data-deplier]').addEventListener('click', () => reduire(false));
-  corps.querySelector('[data-separateur]').addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    const depart = e.clientX;
-    const largeur = panneau.getBoundingClientRect().width;
-    const bouger = (m) => { panneau.style.width = `${Math.max(280, Math.min(window.innerWidth - 320, largeur + m.clientX - depart))}px`; };
-    const finir = () => {
-      window.removeEventListener('pointermove', bouger);
-      window.removeEventListener('pointerup', finir);
-      ecrirePreferences({ [`${cle}Largeur`]: Math.round(panneau.getBoundingClientRect().width) });
-    };
-    window.addEventListener('pointermove', bouger);
-    window.addEventListener('pointerup', finir);
-  });
 }
 
 /** Filtres communs des salariés : « Pointés » (masque les salariés sans pointage) et intérimaires (préférences `<cle>…`). */
@@ -948,13 +908,7 @@ export class PageExportPointage extends PageBase {
           ${r.lignes.slice(0, 300).map((l) => `<tr><td class="synthese-nom">${echapper(l.nom)} ${echapper(l.prenom)}<br><small class="aide">${echapper(l.matricule)}</small></td><td>${echapper(l.rubrique)}<br><small class="aide">${echapper(l.code_paie ?? '')}</small></td><td>${echapper(l.libelle)}</td><td class="nombre">${l.quantite}</td></tr>`).join('')}</tbody></table></div>
           ${r.lignes.length > 300 ? '<p class="aide">Aperçu limité à 300 lignes (le fichier contient tout).</p>' : ''}` : ''}`;
     };
-    const telecharger = (csv, nom) => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
-      a.download = nom;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    };
+    const telecharger = (csv, nom) => telechargerCsv(nom, csv);
     const historique = async () => {
       const l = await api.pointage.exports().catch(() => []);
       c.querySelector('[data-historique]').innerHTML = l.length ? `<table class="tableau-compact"><thead><tr><th>N°</th><th>Période</th><th class="nombre">Salariés<br><small>lignes</small></th><th>Par<br><small>le</small></th><th></th></tr></thead><tbody>

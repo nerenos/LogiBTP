@@ -4,7 +4,7 @@ import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { MODES } from '@logibtp/fiche';
 import { echapper, formatNombre, creerCombo, formatDate } from '@logibtp/socle/ui';
 import { GestionVuesDocument } from '@logibtp/document/ui';
-import { OngletPrix, OngletUnites, OngletTarifs } from '@logibtp/bibliotheque/ui';
+import { OngletPrix, OngletUnites, OngletTarifs, formatPrix } from '@logibtp/bibliotheque/ui';
 import { rendreStockArticle } from '../stock/article.js';
 import { PanneauMetre } from '@logibtp/metre/ui';
 import { EditeurDevisBtp, DictionnaireBtp } from '../editeur-btp.js';
@@ -20,7 +20,7 @@ import { api } from '../api.js';
 // fournisseurs, Composition des ouvrages (éditeur de devis et métrés), Image et notices techniques (GED, DOE).
 
 const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
-const prix = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
+const prix = formatPrix;
 /** Valeurs par défaut d'un poste de pied : unité (obligatoire en base), poste HT en pourcentage déduit du cumul. */
 const DEFAUTS_POSTE = { unite_stock: 'u', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_sens: 'DEDUCTION', pied_retenue: false, gestion: 'NON_GERE' };
 const DEFAUTS_TEXTE = { unite_stock: 'u', gestion: 'NON_GERE' };

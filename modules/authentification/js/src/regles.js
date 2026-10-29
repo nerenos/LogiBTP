@@ -1,5 +1,6 @@
 // Règles des comptes, répliquées dans ReglesCompte.cs (jeux modules/authentification/tests/cas) : pseudo, mot de passe,
 // état d'un compte (connexion possible ou non), contrôle d'un compte saisi pour sa personne liée.
+import { sansAccent } from '@logibtp/socle';
 
 export const TYPES_COMPTE = ['PERSONNE', 'SERVICE'];
 
@@ -101,11 +102,9 @@ export function controlerCompte(saisie, personne, profils, aujourdhui) {
   return erreurs.sort();
 }
 
-const ACCENTS = { à: 'a', â: 'a', ä: 'a', á: 'a', ã: 'a', ç: 'c', é: 'e', è: 'e', ê: 'e', ë: 'e', î: 'i', ï: 'i', í: 'i', ì: 'i', ô: 'o', ö: 'o', ó: 'o', ò: 'o', õ: 'o', ù: 'u', û: 'u', ü: 'u', ú: 'u', ÿ: 'y', ñ: 'n', œ: 'oe', æ: 'ae' };
-
 /** Pseudo proposé à la création (modifiable) : initiale du prénom, point, nom ; sans accents ni espaces. */
 export function suggererPseudo(prenom, nom) {
-  const net = (t) => [...String(t ?? '').toLowerCase()].map((c) => ACCENTS[c] ?? c).join('').replace(/[^a-z0-9]+/g, '');
+  const net = (t) => sansAccent(t).replace(/[^a-z0-9]+/g, '');
   const p = net(prenom);
   const n = net(nom);
   return [p.slice(0, 1), n].filter(Boolean).join('.').slice(0, LONGUEUR_PSEUDO.max);

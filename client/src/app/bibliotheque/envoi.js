@@ -1,7 +1,7 @@
 import { TYPE_FICHE } from '../codes.js';
 import { codeAppel } from '@logibtp/bibliotheque';
 import { texteBrut, D, arrondir } from '@logibtp/socle';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 import { TL, estTranche } from '../../calcul/index.js';
 
 // Depuis un document : mettre à jour les éléments de la bibliothèque ou en créer de nouveaux.
@@ -207,7 +207,7 @@ export class EnvoiBibliotheque {
       fermer();
       await this.executer(choix);
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   }
 
   /** Écritures (fiches « element »), puis lien des lignes du document vers les éléments (une étape d'annulation). */

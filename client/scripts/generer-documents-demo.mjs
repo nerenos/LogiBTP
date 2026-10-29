@@ -6,37 +6,10 @@
 //   base principale : localhost 2 ; base de démonstration : demo.localhost 1
 // Session : LOGIBTP_COMPTE (pseudo d'un compte administrateur) et LOGIBTP_MDP ; sans mot de passe, connexion de test
 // (développement, Authentification:ComptesTest) ; sans compte, en-têtes X-Utilisateur (mode EnTetes de développement).
-import http from 'node:http';
+import { clientDemo } from './api-demo.mjs';
 
 const [hote, idDemo] = [process.argv[2] ?? 'localhost', Number(process.argv[3] ?? 2)];
-const ENTETES = { 'Content-Type': 'application/json', 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' };
-
-const COOKIES = new Map();
-
-function appel(methode, chemin, corps) {
-  return new Promise((ok, ko) => {
-    const donnees = corps === undefined ? null : JSON.stringify(corps);
-    const req = http.request({ host: '127.0.0.1', port: 5080, path: `/api${chemin}`, method: methode,
-      headers: { ...ENTETES, Host: `${hote}:5080`, ...(donnees ? { 'Content-Length': Buffer.byteLength(donnees) } : {}) } }, (r) => {
-      let t = '';
-      r.on('data', (c) => { t += c; });
-      r.on('end', () => {
-        // Cookies de la session (jeton d'accès, jeton de rafraîchissement rotatif) : tous gardés et renvoyés.
-        for (const c of r.headers['set-cookie'] ?? []) {
-          const [nom, valeur] = c.split(';')[0].split('=');
-          if (valeur) COOKIES.set(nom, valeur); else COOKIES.delete(nom);
-        }
-        if (COOKIES.size) ENTETES.Cookie = [...COOKIES].map(([k, v]) => `${k}=${v}`).join('; ');
-        const j = t ? JSON.parse(t) : null;
-        if (r.statusCode >= 400) ko(new Error(`${methode} ${chemin} → ${r.statusCode} ${j?.code ?? ''} ${j?.title ?? t.slice(0, 200)} ${JSON.stringify(j?.details ?? '').slice(0, 300)}`));
-        else ok(j);
-      });
-    });
-    req.on('error', ko);
-    if (donnees) req.write(donnees);
-    req.end();
-  });
-}
+const appel = clientDemo(hote, { 'X-Utilisateur': 'demo', 'X-Profil': 'ADMIN' });
 
 if (process.env.LOGIBTP_COMPTE) {
   await (process.env.LOGIBTP_MDP

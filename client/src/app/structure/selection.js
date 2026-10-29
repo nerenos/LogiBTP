@@ -1,5 +1,5 @@
 import { urlFiche, TYPE_FICHE } from '../codes.js';
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 
 // Choix d'un projet, d'une affaire, d'un chantier ou d'un marché dans une liste (double-clic sur la zone de code du
 // rattachement) : recherche sur le code, le libellé et le parent, flèches + Entrée ou double-clic pour choisir.
@@ -48,7 +48,7 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
     index = Math.max(0, lignes.findIndex((x) => x.id === courant));
     $('tbody').innerHTML = lignes.map((x, i) => `<tr data-i="${i}" class="${i === index ? 'courante' : ''}"><td><b>${echapper(x.code)}</b></td><td>${echapper(x.libelle ?? '')}</td>
       <td>${echapper(parent(type, x, refs))}</td><td>${echapper(LIBELLES_STATUT[x.statut] ?? x.statut ?? '')}</td>
-      ${type === TYPE_FICHE.MARCHE ? `<td class="col-nombre">${x.montant_ht === null || x.montant_ht === undefined ? '' : formatNombre(x.montant_ht, 2)}</td>` : ''}</tr>`).join('')
+      ${type === TYPE_FICHE.MARCHE ? `<td class="col-nombre">${formatNombre(x.montant_ht, 2)}</td>` : ''}</tr>`).join('')
       || '<tr><td colspan="5" class="aide">Aucun élément</td></tr>';
   };
   const marquer = () => {
@@ -77,7 +77,7 @@ export function choisirRattachement({ type, titre, liste, refs, courant = null, 
       if (e.key === 'Enter') { e.preventDefault(); if (lignes[index]) choisir(lignes[index]); }
     });
     rendre();
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
     $('[data-recherche]').focus();
   });
 }

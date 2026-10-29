@@ -1,3 +1,4 @@
+import { formatPrix } from '@logibtp/bibliotheque/ui';
 import { ratio, codeAppel } from '@logibtp/bibliotheque';
 import { D, S, arr6 } from '@logibtp/socle';
 import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
@@ -17,7 +18,7 @@ import { TL } from '../../calcul/index.js';
 // les reprend pour les lignes choisies.
 
 const nombre = (v) => (v === null || v === undefined || v === '' ? null : Number(S(arr6(D(v)))));
-const prix = (v) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 ? 4 : 2));
+const prix = formatPrix;
 
 /** Unité de la ligne (unité de vente, sinon de stock) et quantité en unité de stock pour 1 unité. */
 export function uniteLigne(e) {

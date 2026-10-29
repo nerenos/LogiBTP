@@ -1,4 +1,4 @@
-import { echapper, creerCombo, confirmer, formatDateHeure, formatDate } from '@logibtp/socle/ui';
+import { echapper, creerCombo, confirmer, formatDateHeure, formatDate, ouvrirModale } from '@logibtp/socle/ui';
 import { controlerConge, MESSAGES_CONGES, ETATS_CONGE, ETAT_CONGE } from '@logibtp/pointage';
 import { api } from '../api.js';
 
@@ -116,7 +116,7 @@ export function ouvrirConge(app, { conge = null, initial = {}, salarieLibelle = 
       if (!await confirmer('Annuler ce congé ?')) return;
       agir(() => api.pointage.traiterConge(c.id, 'annuler', { version: c.version, reponse: q('[data-reponse]')?.value.trim() || null }));
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
     (comboSalarie ?? q('[data-du]')).focus();
   });
 }

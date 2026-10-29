@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, nombreSaisi, confirmer } from '@logibtp/socle/ui';
 import { controlerLot, MESSAGES_INVENTAIRE } from '@logibtp/stock';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
@@ -15,7 +15,6 @@ const GENERATIONS = [
   { valeur: 'STOCK', libelle: 'Articles du lieu (stock ou mouvement)' }, { valeur: 'EMPLACEMENT', libelle: 'Par emplacement (zone)' },
   { valeur: 'FAMILLE', libelle: 'Par famille d\'articles' }, { valeur: 'MARQUE', libelle: 'Par marque' },
 ];
-const nombre = (v) => { const t = String(v ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 
 /** Liste des lots d'inventaire : /stock/inventaires?lieu= ; nouveau lot (lieu, date-heure, libellé). */
 export class PageInventaires extends PageBase {
@@ -132,13 +131,13 @@ export class PageInventaire extends PageBase {
       this.app.message('Lot validé : comptages enregistrés', 'succes');
     });
     action('[data-supprimer]', async () => {
-      if (!globalThis.confirm('Supprimer ce lot et ses bordereaux ?')) return;
+      if (!(await confirmer('Supprimer ce lot et ses bordereaux ?'))) return;
       await api.stock.supprimerInventaire(lot.id);
       this.#modifies.clear();
       this.app.naviguer(`/stock/inventaires?lieu=${lot.lieu}`);
     });
     action('[data-annuler]', async () => {
-      if (!globalThis.confirm('Annuler ce lot ? Ses comptages sont retirés et le stock se recalcule sans eux.')) return;
+      if (!(await confirmer('Annuler ce lot ? Ses comptages sont retirés et le stock se recalcule sans eux.'))) return;
       await this.#charger(await api.stock.annulerInventaire(lot.id));
     });
     action('[data-entete]', async () => {
@@ -205,8 +204,8 @@ export class PageInventaire extends PageBase {
     const doublon = l.emp && this.doublons.has(`${l.ele}|${l.emp}`);
     const champ = (c, v, taille) => (lecture ? echapper(v ?? '') : `<input data-c="${c}" size="${taille}" value="${echapper(v ?? '')}">`);
     return `<tr data-i="${i}" class="${doublon ? 'avertissement' : ''}"><td>${echapper(l.code ?? a?.code ?? '')}</td><td>${echapper(l.libelle ?? a?.libelle ?? '')}</td>
-      <td data-emp>${lecture ? echapper(l.emp_code ?? '') : ''}</td><td class="nombre theorique">${l.theorique === null ? '' : formatNombre(l.theorique, l.precision)}</td>
-      <td class="nombre">${champ('quantite', l.quantite === null ? '' : formatNombre(l.quantite, l.precision), 8)}</td><td>${echapper(l.unite ?? a?.unite ?? '')}</td>
+      <td data-emp>${lecture ? echapper(l.emp_code ?? '') : ''}</td><td class="nombre theorique">${formatNombre(l.theorique, l.precision)}</td>
+      <td class="nombre">${champ('quantite', formatNombre(l.quantite, l.precision), 8)}</td><td>${echapper(l.unite ?? a?.unite ?? '')}</td>
       <td class="nombre">${champ('prix', l.prix === null ? '' : String(l.prix).replace('.', ','), 8)}</td>
       <td><input type="checkbox" data-c="appliquer_pmp" ${l.appliquer_pmp ? 'checked' : ''} ${lecture ? 'disabled' : ''}></td>
       <td>${champ('commentaire', l.commentaire, 18)}</td><td class="cellule-boutons sans-impression">${lecture ? '' : '<button type="button" data-retirer title="Retirer la ligne">✕</button>'}</td></tr>`;
@@ -225,7 +224,7 @@ export class PageInventaire extends PageBase {
       tr.querySelector('[data-emp]').append(emp);
       tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => {
         const c = x.dataset.c;
-        l[c] = x.type === 'checkbox' ? x.checked : c === 'commentaire' ? x.value : nombre(x.value);
+        l[c] = x.type === 'checkbox' ? x.checked : c === 'commentaire' ? x.value : nombreSaisi(x.value);
         modifier();
       }));
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { b.lignes.splice(b.lignes.indexOf(l), 1); modifier(); this.#bordereaux(this.conteneur.querySelector('[data-contenu]')); });
@@ -249,7 +248,7 @@ export class PageInventaire extends PageBase {
       try { await this.#charger(await api.stock.enregistrerBordereau(b.id, { libelle: b.libelle, compteur: b.compteur, lignes: b.lignes })); this.app.message('Bordereau enregistré', 'succes'); } catch (e) { this.app.erreur(e); }
     });
     sec.querySelector('[data-suppr]').addEventListener('click', async () => {
-      if (!globalThis.confirm(`Supprimer le bordereau « ${b.libelle} » ?`)) return;
+      if (!(await confirmer(`Supprimer le bordereau « ${b.libelle} » ?`))) return;
       try { await this.#charger(await api.stock.supprimerBordereau(b.id)); } catch (e) { this.app.erreur(e); }
     });
   }
@@ -263,9 +262,9 @@ export class PageInventaire extends PageBase {
         <th>Valeur de l'écart</th><th>Prix saisi</th><th>Valeur d'inventaire</th><th>Commentaire</th></tr></thead><tbody>
       ${e.articles.map((a) => `<tr><td>${echapper(a.code)}</td><td>${echapper(a.libelle)}</td><td class="nombre">${formatNombre(a.theorique, a.precision)}</td>
         <td class="nombre">${formatNombre(a.compte, a.precision)}</td><td class="nombre ${Number(a.ecart) ? 'avertissement' : ''}">${Number(a.ecart) > 0 ? '+' : ''}${formatNombre(a.ecart, a.precision)}</td>
-        <td>${echapper(a.unite)}</td><td class="nombre">${a.valeur_unitaire === null ? '' : formatNombre(a.valeur_unitaire, 4)}${a.source === 'REPLI' ? ' <span title="Aucun achat : PA de la bibliothèque">⚠</span>' : ''}</td>
-        <td class="nombre">${a.valeur_ecart === null ? '' : formatNombre(a.valeur_ecart, 2)}</td><td class="nombre">${a.prix === null ? '' : formatNombre(a.prix, 4)}${a.appliquer_pmp ? ' → PMP' : ''}</td>
-        <td class="nombre">${a.valeur_inventaire === null ? '' : formatNombre(a.valeur_inventaire, 2)}</td><td>${echapper(a.commentaire ?? '')}</td></tr>`).join('')}</tbody>
+        <td>${echapper(a.unite)}</td><td class="nombre">${formatNombre(a.valeur_unitaire, 4)}${a.source === 'REPLI' ? ' <span title="Aucun achat : PA de la bibliothèque">⚠</span>' : ''}</td>
+        <td class="nombre">${formatNombre(a.valeur_ecart, 2)}</td><td class="nombre">${formatNombre(a.prix, 4)}${a.appliquer_pmp ? ' → PMP' : ''}</td>
+        <td class="nombre">${formatNombre(a.valeur_inventaire, 2)}</td><td>${echapper(a.commentaire ?? '')}</td></tr>`).join('')}</tbody>
       <tfoot><tr><th colspan="7">Total</th><th class="nombre">${formatNombre(e.valeur_ecarts, 2)}</th><th></th><th class="nombre">${formatNombre(e.valeur_inventaire, 2)}</th><th></th></tr></tfoot></table>`
       : '<p class="aide">Aucune quantité comptée.</p>';
   }

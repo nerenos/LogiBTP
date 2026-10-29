@@ -5,4 +5,8 @@
     <Description>Module Mail LogiBTP : règles de l'envoi (limitations, créneau, estimation d'un lot, classement des erreurs SMTP), adresses et gabarits.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\socle\dotnet\LogiBTP.Socle\LogiBTP.Socle.csproj" />
+  </ItemGroup>
+
 </Project>

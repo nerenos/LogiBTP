@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 
@@ -28,6 +28,6 @@ export async function marquerArticles(ids) {
         finir(r.articles);
       } catch (e) { dlg.remove(); rejeter(e); }
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }

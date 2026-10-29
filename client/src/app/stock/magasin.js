@@ -1,7 +1,7 @@
 import { urlDocument, urlFiche, TYPE_FICHE } from '../codes.js';
 import { dateLocale, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences, formatDate, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, lirePreferences, ecrirePreferences, formatDate, formatDateHeure, telechargerCsv, celluleCsv, nombreSaisi, saisir } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 // Module Stock, lot 4 (ANALYSE-MODULE-STOCK.md § 5.5, § 5.6, S16 à S21) : magasin (comptoir de sortie et de retour
@@ -10,7 +10,6 @@ import { api } from '../api.js';
 // doté ; dates au survol ; export CSV) et onglet Dotations de la fiche salarié.
 
 const DOTATIONS = { EPI: 'EPI', OUTILLAGE: 'Outillage' };
-const nombre = (v) => { const t = String(v ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 const nomSalarie = (s) => `${s.nom} ${s.prenom}${s.code ? ` (${s.code})` : ''}`;
 
 /** Comptoir du magasin : /stock/magasin?lieu=&mode=sortie|retour&salarie=. */
@@ -81,7 +80,7 @@ export class PageMagasin extends PageBase {
 
   #ajouter() {
     const a = this.articles.find((x) => x.id === Number(this.comboArticle.valeurCombo));
-    const q = nombre(this.conteneur.querySelector('[data-quantite]').value);
+    const q = nombreSaisi(this.conteneur.querySelector('[data-quantite]').value);
     if (!a || !q || Number(q) <= 0) { this.app.message('Article et quantité positive', 'avertissement'); return; }
     const l = this.#panier.find((x) => x.ele === a.id && !x.rebut);
     if (l) l.quantite = String(Number(l.quantite) + Number(q)); else this.#panier.push({ ele: a.id, code: a.code, libelle: a.libelle, unite: a.unite, quantite: q, rebut: false });
@@ -104,7 +103,7 @@ export class PageMagasin extends PageBase {
       : `<p class="aide">${retour ? 'Articles rendus : réutilisables (remis au dépôt) ou au rebut.' : 'Articles à sortir du dépôt.'}</p>`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const l = this.#panier[Number(tr.dataset.i)];
-      tr.querySelector('[data-q]').addEventListener('change', (e) => { l.quantite = nombre(e.target.value); });
+      tr.querySelector('[data-q]').addEventListener('change', (e) => { l.quantite = nombreSaisi(e.target.value); });
       tr.querySelector('[data-rebut]')?.addEventListener('change', (e) => { l.rebut = e.target.checked; });
       tr.querySelector('[data-retirer]').addEventListener('click', () => { this.#panier.splice(this.#panier.indexOf(l), 1); this.#rendre(); });
     });
@@ -183,7 +182,7 @@ export class PageDotations extends PageBase {
 
   #exporter() {
     const { articles, salaries } = this.#vue();
-    const cel = (v) => `"${String(v ?? '').replaceAll('"', '""')}"`;
+    const cel = celluleCsv;
     const lignes = [['Salarié', 'Service', 'Article', 'Libellé', 'Sorti', 'Rendu', 'Rebut', 'Net doté aujourd\'hui', 'Dates'].map(cel).join(';')];
     for (const s of salaries) {
       for (const x of s.articles) {
@@ -193,11 +192,7 @@ export class PageDotations extends PageBase {
           cel(x.mouvements.map((m) => `${formatDate(m.date)} ${m.quantite}`).join(' | '))].map((v) => String(v).replace('.', ',')).join(';'));
       }
     }
-    const lien = document.createElement('a');
-    lien.href = URL.createObjectURL(new Blob([`﻿${lignes.join('\r\n')}`], { type: 'text/csv;charset=utf-8' }));
-    lien.download = `dotations-${this.donnees.du}-${this.donnees.au}.csv`;
-    lien.click();
-    URL.revokeObjectURL(lien.href);
+    telechargerCsv(`dotations-${this.donnees.du}-${this.donnees.au}.csv`, lignes);
   }
 }
 
@@ -234,7 +229,7 @@ export class PageSaisiesAValider extends PageBase {
       const id = Number(tr.dataset.id);
       tr.querySelector('[data-accepter]').addEventListener('click', async () => { try { await api.stock.traiterSaisie(id, true); await this.#charger(); } catch (e) { this.app.erreur(e); } });
       tr.querySelector('[data-refuser]').addEventListener('click', async () => {
-        const motif = globalThis.prompt('Motif du refus (la pièce sera annulée) :');
+        const motif = await saisir('Motif du refus (la pièce sera annulée) :', '', { obligatoire: true });
         if (!motif) return;
         try { await api.stock.traiterSaisie(id, false, motif); await this.#charger(); } catch (e) { this.app.erreur(e); }
       });

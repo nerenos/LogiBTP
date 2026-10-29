@@ -10,7 +10,9 @@ import { entreeDepuisLigne, DONNEES_TECHNIQUES } from '../src/fournisseurs.js';
 //   unites : [{ unt_code, unt_libelle }]      parametres : paramètres de la bibliothèque ; periodes : coefficients par période
 //   donnees : [{ code, libelle }]             données techniques (champs supplémentaires) utilisables dans les formules
 
-const prix = (v, d = 2) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 && d === 2 ? 4 : d));
+/** Prix affiché : 4 décimales sous 10 (2 sinon, ou `d` imposé), tiret si absent. */
+export const formatPrix = (v, d = 2) => (v === null || v === undefined || v === '' ? '—' : formatNombre(v, Math.abs(Number(v)) < 10 && d === 2 ? 4 : d));
+const prix = formatPrix;
 const json = (v, defaut) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return defaut; } })() : v ?? defaut);
 const nombreSaisi = (s) => { const t = String(s ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 const MESSAGES_ALERTES = {

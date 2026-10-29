@@ -1,4 +1,4 @@
-import { echapper, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
+import { echapper, lirePreferences, ecrirePreferences, confirmer, ouvrirModale } from '@logibtp/socle/ui';
 
 // Vues de colonnes de la grille des lignes : choix de la vue, dialogue des colonnes (visibilité, ordre, largeurs, mode
 // débogage et colonnes système), enregistrement personnel ou global, vue par défaut d'un type et d'un modèle de document.
@@ -317,6 +317,6 @@ export class GestionVuesDocument {
       etat.visibles = new Set(etat.ordre);
       redessiner();
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   }
 }

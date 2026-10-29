@@ -1,3 +1,4 @@
+import { pastille } from '../pastilles.js';
 import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre } from '@logibtp/socle/ui';
@@ -16,7 +17,7 @@ const CLASSES = { VALIDE: 'ok', A_RENOUVELER: 'attention', EXPIREE: 'erreur', NO
 /** Pastille de l'état d'une habilitation (avec les jours restants). */
 export function pastilleHabilitation(e) {
   const jours = e.jours_restants === null || e.jours_restants === undefined ? '' : e.jours_restants >= 0 ? ` · ${e.jours_restants} j` : ` · depuis ${-e.jours_restants} j`;
-  return `<span class="pastille-compte ${CLASSES[e.etat] ?? 'neutre'}">${echapper(ETATS_HABILITATION[e.etat] ?? e.etat)}${jours}</span>`;
+  return pastille(`${ETATS_HABILITATION[e.etat] ?? e.etat}${jours}`, CLASSES[e.etat] ?? 'neutre');
 }
 
 let typesCache = null;
@@ -121,7 +122,7 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Agence</th><th>Début</th><th>Fin</th><th>Taux horaire<br><small>facturé (€)</small></th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((m, i) => `<tr data-i="${i}"><td data-agence></td>
         <td><input type="date" data-c="debut" value="${echapper(m.debut ?? '')}"></td><td><input type="date" data-c="fin" value="${echapper(m.fin ?? '')}"></td>
-        <td><input data-c="taux_horaire" class="nombre" value="${m.taux_horaire === null || m.taux_horaire === undefined ? '' : formatNombre(m.taux_horaire, 2)}" size="8" inputmode="decimal"></td>
+        <td><input data-c="taux_horaire" class="nombre" value="${formatNombre(m.taux_horaire, 2)}" size="8" inputmode="decimal"></td>
         <td><input data-c="commentaire" value="${echapper(m.commentaire ?? '')}" size="28"></td>
         <td>${m.en_cours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
         <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette mission')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Aucune mission.</td></tr>'}</tbody></table>

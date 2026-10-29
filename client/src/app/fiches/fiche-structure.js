@@ -1,6 +1,6 @@
 import { urlDocument, urlFiche, TYPE_FICHE, TYPE_POSTE_MARCHE, TYPE_DOCUMENT, MODULE_FACULTATIF } from '../codes.js';
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
 import { D, Dz, aujourdhui } from '@logibtp/socle';
@@ -310,7 +310,7 @@ export class FicheProjet extends FicheStructure {
     await this.rechargerReferentiels();
     const obtenu = this.valeur('statut') === 'OBTENU' && avant !== 'OBTENU';
     if (obtenu && !(this.refs.chantiers ?? []).some((c) => c.prj_id === Number(this.id))
-      && globalThis.confirm?.(`Projet obtenu : ouvrir le chantier de « ${this.valeur('libelle')} » ?`)) {
+      && await confirmer(`Projet obtenu : ouvrir le chantier de « ${this.valeur('libelle')} » ?`)) {
       this.ouvrirUrl(`/fiche/chantier/nouveau?projet=${this.id}`);
     }
     this.rendre();
@@ -423,7 +423,7 @@ export class FicheMarche extends FicheStructure {
     if (!zone) return;
     let e;
     try { e = await api.engageSousTraitance(Number(this.id)); } catch (x) { zone.innerHTML = `<p class="erreur">${echapper(x.message)}</p>`; return; }
-    const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+    const f = (v) => formatNombre(v, 2);
     const ecart = Dz(e.prevu).minus(Dz(e.engage));
     zone.innerHTML = `<p class="ligne">Déboursé de sous-traitance prévu <strong>${f(e.prevu)}</strong> · Engagé <strong>${f(e.engage)}</strong>
         · Réalisé <strong>${f(e.facture)}</strong> · ${ecart.isNegative() ? `<span class="erreur">Dépassement ${f(ecart.abs().toString())}</span>` : `Reste prévu non engagé ${f(ecart.toString())}`}</p>
@@ -472,7 +472,7 @@ export class FicheMarche extends FicheStructure {
     corps.innerHTML = '<p class="aide">Chargement…</p>';
     let g;
     try { g = await this.services.structure.gestion(Number(this.id)); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+    const f = (v) => formatNombre(v, 2);
     // Pourcentage sous sa forme la plus simple (deux décimales au plus : 30 %, 85,26 %).
     const pct = (n, d) => {
       if (Dz(d).isZero() || n === null || n === undefined) return '';
@@ -584,7 +584,7 @@ export class FicheMarche extends FicheStructure {
     corps.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', action(async (id) => {
       const pieces = await this.services.structure.piecesAnnulation(id);
       const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''}`).join('\n');
-      if (!globalThis.confirm?.(`Pièces annulées par avoir :\n\n${liste}\n\nAnnuler ?`)) return;
+      if (!(await confirmer(`Pièces annulées par avoir :\n\n${liste}\n\nAnnuler ?`, { titre: 'Annulation par avoir', danger: true }))) return;
       const r = await this.services.structure.annuler(id);
       this.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours' : ''}`, 'succes');
     })));

@@ -20,7 +20,7 @@ export async function rendreStockArticle(corps, { id, message, naviguer }) {
     api.stock.dotationArticle(id)]);
   const depots = lieux.filter((l) => l.depot);
   const emplacements = new Map(await Promise.all(depots.map(async (d) => [d.id, await api.stock.emplacements(d.id)])));
-  const nb = (v, p = f.precision) => (v === null || v === undefined ? '' : formatNombre(v, p));
+  const nb = (v, p = f.precision) => (formatNombre(v, p));
   const piece = f.dernier_pa_piece;
   corps.innerHTML = `<div class="stock-article">
     <div class="ligne"><b>Stock total : ${nb(f.quantite)} ${echapper(f.unite)}</b>

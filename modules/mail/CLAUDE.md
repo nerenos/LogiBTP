@@ -10,7 +10,7 @@ Messagerie de l'application par des comptes système (SMTP / IMAP, mot de passe 
 - **Tout envoi passe par la file** ; limites comptées en destinataires ; envoi groupé au-delà du seuil confirmé (409 `MAIL_CONFIRMATION`).
 - SSL ou STARTTLS obligatoire. HTML toujours nettoyé côté serveur (corps, signatures, modèles, reçus).
 - Réception : **jamais de suppression** sur le serveur IMAP ; **jamais de changement de statut automatique** depuis un courriel reçu.
-- Reconnaissance répliquée JS ↔ C# : `js/src/reconnaissance.js` ↔ `LogiBTP.Mail/ReconnaissanceMail.cs` (jeu `tests/cas/01_reconnaissance.json`), normalisation par table d'accents explicite.
+- Reconnaissance répliquée JS ↔ C# : `js/src/reconnaissance.js` ↔ `LogiBTP.Mail/ReconnaissanceMail.cs` (jeu `tests/cas/01_reconnaissance.json`), normalisation par la table d'accents du socle (`sansAccent` ↔ `SansAccent.Retirer`) et l'apostrophe typographique ramenée à la droite.
 - Envois automatiques uniquement depuis le cœur, par `EnvoyerAutomatiqueAsync` (usage → expéditeur).
 - Scripts SQL rejouables, pas de migrations EF.
 

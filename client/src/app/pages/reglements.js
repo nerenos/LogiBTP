@@ -1,6 +1,6 @@
 import { urlFiche, urlDocument, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { Dz, aujourdhui } from '@logibtp/socle';
 import { MODES_REGLEMENT } from '@logibtp/document';
 import { proposerPointage, nonPointe } from '@logibtp/reglement';
@@ -162,11 +162,11 @@ export class PageReglements extends PageBase {
       } catch (e) { this.app.message(e.message, 'erreur'); }
     });
     corps.querySelectorAll('[data-supprimer]').forEach((b) => b.addEventListener('click', async () => {
-      if (!globalThis.confirm?.('Supprimer ce règlement et ses pointages ?')) return;
+      if (!(await confirmer('Supprimer ce règlement et ses pointages ?'))) return;
       try { await api.supprimerReglement(Number(b.dataset.supprimer)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelectorAll('[data-supprimer-caution]').forEach((b) => b.addEventListener('click', async () => {
-      if (!globalThis.confirm?.('Supprimer cette caution et ses pointages ?')) return;
+      if (!(await confirmer('Supprimer cette caution et ses pointages ?'))) return;
       try { await api.supprimerCaution(Number(b.dataset.supprimerCaution)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelector('[data-caution]').addEventListener('click', async () => {

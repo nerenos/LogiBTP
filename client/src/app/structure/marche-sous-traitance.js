@@ -1,5 +1,5 @@
 import { aujourdhui } from '@logibtp/socle';
-import { echapper, formatNombre, creerCombo, alerter } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, alerter, ouvrirModale } from '@logibtp/socle/ui';
 import { codeMarche } from '../fiches/fiche-structure.js';
 
 // Validation d'une commande de sous-traitance (ANALYSE-MODULE-SOUS-TRAITANCE.md ST2, ST4, ST5, ST14) : le marché de
@@ -88,6 +88,6 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
       } catch (x) { $('[data-erreur]').textContent = x.message; $('[data-erreur]').hidden = false; }
     });
     dlg.addEventListener('close', () => { dlg.remove(); resoudre(null); });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }

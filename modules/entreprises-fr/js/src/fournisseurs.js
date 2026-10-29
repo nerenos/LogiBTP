@@ -1,3 +1,4 @@
+import { ErreurApi, appelApi } from '@logibtp/socle';
 import { versEntreprise } from './correspondance.js';
 
 // Fournisseurs de la recherche d'entreprises. Même interface :
@@ -8,13 +9,7 @@ import { versEntreprise } from './correspondance.js';
 
 export const URL_API = 'https://recherche-entreprises.api.gouv.fr/search';
 
-export class ErreurEntreprises extends Error {
-  constructor(statut, code, message) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-  }
-}
+export class ErreurEntreprises extends ErreurApi {}
 
 /** SIRET cherché (14 chiffres, espaces acceptés), sinon null. */
 export const siretCherche = (recherche) => {
@@ -37,12 +32,8 @@ export class FournisseurEntreprisesApi {
     this.entetes = entetes;
   }
 
-  async rechercher(recherche, { page = 1 } = {}) {
-    const r = await fetch(`${this.base}/recherche?${new URLSearchParams({ q: recherche, page: String(page) })}`, { headers: this.entetes });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurEntreprises(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText);
-    return data;
+  rechercher(recherche, { page = 1 } = {}) {
+    return appelApi(`${this.base}/recherche?${new URLSearchParams({ q: recherche, page: String(page) })}`, { entetes: this.entetes, Erreur: ErreurEntreprises });
   }
 }
 

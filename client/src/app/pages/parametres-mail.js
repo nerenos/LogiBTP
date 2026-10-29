@@ -1,3 +1,4 @@
+import { pastilleTable } from '../pastilles.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { api } from '../api.js';
@@ -35,10 +36,7 @@ const ETATS = { A_VERIFIER: ['À vérifier', 'neutre'], OK: ['Opérationnel', 'o
 export const VARIABLES_MODELE = ['numero', 'type', 'document', 'objet', 'date', 'validite', 'montant_ht', 'montant_ttc', 'net_a_payer', 'tiers', 'contact', 'redacteur', 'utilisateur',
   'pieces_manquantes', 'pieces_a_renouveler'];
 
-export const pastilleCompteMail = (etat) => {
-  const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
-  return `<span class="pastille-compte ${c}">${echapper(l)}</span>`;
-};
+export const pastilleCompteMail = (etat) => pastilleTable(ETATS, etat);
 
 /**
  * Messagerie (module Mail, administrateur) : comptes système (adresse et connexion chiffrées, jamais réaffichées :

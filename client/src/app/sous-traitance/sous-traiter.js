@@ -1,5 +1,5 @@
 import { TYPE_DOCUMENT } from '../codes.js';
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 // Module Sous-traitance, lot 5 : assistant « Sous-traiter » d'une commande ou d'un devis client (ANALYSE § 5.1) :
@@ -52,6 +52,6 @@ export async function sousTraiter({ entId, selection = [], message }) {
         resoudre(r.documents);
       } catch (e) { message(e.message, 'erreur'); }
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }

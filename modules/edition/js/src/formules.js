@@ -3,16 +3,15 @@
 // Valeurs : décimal (Dec, jamais Number), chaîne, booléen, null, liste (collection), objet, texte riche
 // ({ riche: [{ texte, style }] }, produit par Gras, Taille, Style…) ou valeur spéciale (Retrait).
 // Analyseur sans eval ; noms de fonctions sans accents ni casse ; arguments séparés par « ; » (virgule décimale).
-import { Dec, D, formatNombre } from '@logibtp/socle';
+import { Dec, D, formatNombre, sansAccent } from '@logibtp/socle';
 import { montantEnLettres, entierEnLettres } from './lettres.js';
 
 export class ErreurFormule extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 
-const TABLE_ACCENTS = { à: 'a', â: 'a', ä: 'a', é: 'e', è: 'e', ê: 'e', ë: 'e', î: 'i', ï: 'i', ô: 'o', ö: 'o', ù: 'u', û: 'u', ü: 'u', ç: 'c' };
-// Normalisation par table explicite (Jint : pas de garantie sur normalize).
-const normaliser = (s) => [...String(s).toLowerCase()].map((c) => TABLE_ACCENTS[c] ?? c).join('');
+// Normalisation par la table explicite du socle (Jint : pas de garantie sur normalize).
+const normaliser = (s) => sansAccent(String(s));
 
 // ---------------------------------------------------------------------------------------------------------------
 // Lexeur

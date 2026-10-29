@@ -1179,7 +1179,7 @@ export class EditeurDocument {
    */
   colonnesAvancement(saisissable) {
     if (!this.saisie.document.ent_avt_presentation) return [];
-    const nombre = (v, d = 2) => (v === null || v === undefined ? '' : formatNombre(v, d));
+    const nombre = (v, d = 2) => (formatNombre(v, d));
     const avt = (l) => Boolean(l?.lig_avt_mode);
     const tranche = (l) => estTranche(l) && this.lignesAvancement(l.lig_id).length > 0;
     const saisi = (r, mode, texte) => (r.item.lig_avt_mode === mode ? { html: `<b>${echapper(texte)}</b> ✎` } : texte);

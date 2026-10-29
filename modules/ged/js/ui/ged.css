@@ -49,8 +49,6 @@
 .ged-sep:hover::after, .ged-sep.actif::after, .ged-sep:focus-visible::after { background: var(--accent); }
 .ged-sep-h { flex: 0 0 7px; cursor: row-resize; }
 .ged-sep-h::after { inset: 3px 0; }
-body.ged-redim-x, body.ged-redim-x * { cursor: col-resize !important; user-select: none; }
-body.ged-redim-y, body.ged-redim-y * { cursor: row-resize !important; user-select: none; }
 @media (max-width: 900px) {
   .ged-corps { flex-direction: column; }
   .ged-arbre, .ged-visu { width: auto !important; flex: 0 0 auto !important; max-height: 40vh; }

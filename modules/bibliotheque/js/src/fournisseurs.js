@@ -1,5 +1,5 @@
 import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
-import { texteBrut, S, dateLocale, PROFIL } from '@logibtp/socle';
+import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
@@ -22,13 +22,7 @@ import { texteBrut, S, dateLocale, PROFIL } from '@logibtp/socle';
 //   importerTarifs({ tiers_id, fournisseur, fichier, lignes, simulation })  → { crees, mises_a_jour, erreurs, lignes: [{ rang, ele_id, code, action, message }] }
 //                                                         (tarif : prix public, remises 1 et 2 en %, prix net = prix public remisé, délai, code-barres)
 
-export class ErreurBibliotheque extends Error {
-  constructor(statut, code, message) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-  }
-}
+export class ErreurBibliotheque extends ErreurApi {}
 
 export class FournisseurBibliothequeApi {
   constructor({ base = '/api/bibliotheque', entetes = {} } = {}) {
@@ -36,12 +30,8 @@ export class FournisseurBibliothequeApi {
     this.entetes = { 'Content-Type': 'application/json', ...entetes };
   }
 
-  async appel(methode, url, corps) {
-    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurBibliotheque(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText);
-    return data;
+  appel(methode, url, corps) {
+    return appelApi(`${this.base}${url}`, { methode, corps, entetes: this.entetes, Erreur: ErreurBibliotheque });
   }
 
   parametres() { return this.appel('GET', '/parametres'); }

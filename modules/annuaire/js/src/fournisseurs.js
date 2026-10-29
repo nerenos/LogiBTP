@@ -1,4 +1,4 @@
-import { PROFIL } from '@logibtp/socle';
+import { PROFIL, normaliser, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_ANNUAIRE } from './codes.js';
 import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES } from './coordonnees.js';
 import { compacter } from './identifiants.js';
@@ -39,14 +39,7 @@ import { siretValide } from './identifiants.js';
 /** Rattachements lus avec une fiche (première page) et par page dans l'onglet Contacts. */
 export const TAILLE_PAGE_RATTACHEMENTS = 20;
 
-export class ErreurAnnuaire extends Error {
-  constructor(statut, code, message, details = null) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-    this.details = details;
-  }
-}
+export class ErreurAnnuaire extends ErreurApi {}
 
 export class FournisseurAnnuaireApi {
   constructor({ base = '/api/annuaire', entetes = {} } = {}) {
@@ -54,12 +47,8 @@ export class FournisseurAnnuaireApi {
     this.entetes = { 'Content-Type': 'application/json', ...entetes };
   }
 
-  async appel(methode, url, corps) {
-    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurAnnuaire(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
-    return data;
+  appel(methode, url, corps) {
+    return appelApi(`${this.base}${url}`, { methode, corps, entetes: this.entetes, Erreur: ErreurAnnuaire });
   }
 
   referentiels() { return this.appel('GET', '/referentiels'); }
@@ -95,9 +84,8 @@ export class FournisseurAnnuaireApi {
 // ------------------------------------------------------------------ mémoire
 
 const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
-// Même règle que f_annuaire_normaliser (SQL) : ligatures développées, diacritiques retirés, ponctuation conservée.
-const SPECIAUX = { 'œ': 'oe', 'Œ': 'oe', 'æ': 'ae', 'Æ': 'ae', 'ß': 'ss', 'ø': 'o', 'Ø': 'o', 'đ': 'd', 'Đ': 'd', 'ł': 'l', 'Ł': 'l' };
-const sansAccent = (s) => String(s ?? '').replace(/[œŒæÆßøØđĐłŁ]/g, (c) => SPECIAUX[c]).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+// Même règle que f_annuaire_normaliser (SQL) : normaliser du socle (ligatures développées, diacritiques retirés).
+const sansAccent = normaliser;
 const correspond = (mots, ...textes) => {
   const t = sansAccent(textes.filter(Boolean).join(' '));
   return mots.every((m) => t.includes(m));

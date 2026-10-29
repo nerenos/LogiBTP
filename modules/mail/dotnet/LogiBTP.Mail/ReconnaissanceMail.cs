@@ -1,3 +1,4 @@
+using LogiBTP.Socle;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -39,23 +40,11 @@ public static partial class ReconnaissanceMail
     public static readonly string[] Actions = ["ALERTER", "RATTACHER", "IGNORER"];
     public static readonly string[] Natures = ["ARC", "REPONSE_DEVIS", "FACTURE_FOURNISSEUR", "BL", "RELANCE", "AUTRE"];
 
-    private static readonly Dictionary<char, string> Accents = new()
-    {
-        ['à'] = "a", ['â'] = "a", ['ä'] = "a", ['á'] = "a", ['ã'] = "a", ['å'] = "a", ['ç'] = "c", ['é'] = "e", ['è'] = "e", ['ê'] = "e", ['ë'] = "e",
-        ['î'] = "i", ['ï'] = "i", ['í'] = "i", ['ì'] = "i", ['ñ'] = "n", ['ô'] = "o", ['ö'] = "o", ['ó'] = "o", ['ò'] = "o", ['õ'] = "o", ['ù'] = "u",
-        ['û'] = "u", ['ü'] = "u", ['ú'] = "u", ['ÿ'] = "y", ['œ'] = "oe", ['æ'] = "ae", ['’'] = "'",
-    };
-
     [GeneratedRegex(@"\s+")]
     private static partial Regex Espaces();
 
-    /// <summary>Minuscules, accents retirés, espaces resserrés.</summary>
-    public static string Normaliser(string? texte)
-    {
-        var sb = new StringBuilder();
-        foreach (var c in (texte ?? "").ToLowerInvariant()) sb.Append(Accents.TryGetValue(c, out var r) ? r : c);
-        return Espaces().Replace(sb.ToString(), " ").Trim();
-    }
+    /// <summary>Minuscules, accents retirés (table du socle), apostrophe typographique droite, espaces resserrés.</summary>
+    public static string Normaliser(string? texte) => Espaces().Replace(SansAccent.Retirer(texte).Replace('’', '\''), " ").Trim();
 
     private static bool Alnum(string t, int i) => i >= 0 && i < t.Length && (t[i] is >= 'a' and <= 'z' || char.IsAsciiDigit(t[i]));
 

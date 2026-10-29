@@ -1,0 +1,45 @@
+{
+  "description": "Texte sans accents ni casse (accents.js sansAccent ↔ SansAccent.Retirer) : ligatures développées, lettres latines précomposées ramenées à leur base, marques combinantes retirées, minuscules ; attendus = décomposition NFD.",
+  "cas": [
+    {
+      "nom": "phrase française",
+      "texte": "Œuvre d'Été : façade, cœur, Ægide — « Ça » 12,5 €",
+      "attendu": "oeuvre d'ete : facade, coeur, aegide — « ca » 12,5 €"
+    },
+    {
+      "nom": "ligatures et barrées",
+      "texte": "ŒœÆæßØøĐđŁł",
+      "attendu": "oeoeaeaessooddll"
+    },
+    {
+      "nom": "marques combinantes seules",
+      "texte": "é à ñ o⃗",
+      "attendu": "e a n o"
+    },
+    {
+      "nom": "lettres hors table conservées",
+      "texte": "ħıĸŋŧĳ Ωλ ж 東京",
+      "attendu": "ħıĸŋŧĳ ωλ ж 東京"
+    },
+    {
+      "nom": "ponctuation conservée",
+      "texte": "– … ’ “ ”",
+      "attendu": "– … ’ “ ”"
+    },
+    {
+      "nom": "majuscule pointée",
+      "texte": "İstanbul",
+      "attendu": "istanbul"
+    },
+    {
+      "nom": "vide",
+      "texte": "",
+      "attendu": ""
+    },
+    {
+      "nom": "table complète",
+      "texte": "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĨĩĪīĬĭĮįİĴĵĶķĹĺĻļĽľŃńŅņŇňŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžƠơƯưǍǎǏǐǑǒǓǔǕǖǗǘǙǚǛǜǞǟǠǡǢǣǦǧǨǩǪǫǬǭǮǯǰǴǵǸǹǺǻǼǽǾǿȀȁȂȃȄȅȆȇȈȉȊȋȌȍȎȏȐȑȒȓȔȕȖȗȘșȚțȞȟȦȧȨȩȪȫȬȭȮȯȰȱȲȳḀḁḂḃḄḅḆḇḈḉḊḋḌḍḎḏḐḑḒḓḔḕḖḗḘḙḚḛḜḝḞḟḠḡḢḣḤḥḦḧḨḩḪḫḬḭḮḯḰḱḲḳḴḵḶḷḸḹḺḻḼḽḾḿṀṁṂṃṄṅṆṇṈṉṊṋṌṍṎṏṐṑṒṓṔṕṖṗṘṙṚṛṜṝṞṟṠṡṢṣṤṥṦṧṨṩṪṫṬṭṮṯṰṱṲṳṴṵṶṷṸṹṺṻṼṽṾṿẀẁẂẃẄẅẆẇẈẉẊẋẌẍẎẏẐẑẒẓẔẕẖẗẘẙẛẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ",
+      "attendu": "aaaaaaceeeeiiiinooooouuuuyaaaaaaceeeeiiiinooooouuuuyyaaaaaaccccccccddeeeeeeeeeegggggggghhiiiiiiiiijjkkllllllnnnnnnoooooorrrrrrssssssssttttuuuuuuuuuuuuwwyyyzzzzzzoouuaaiioouuuuuuuuuuaaaaææggkkooooʒʒjggnnaaææøøaaaaeeeeiiiioooorrrruuuusstthhaaeeooooooooyyaabbbbbbccddddddddddeeeeeeeeeeffgghhhhhhhhhhiiiikkkkkkllllllllmmmmmmnnnnnnnnoooooooopppprrrrrrrrssssssssssttttttttuuuuuuuuuuvvvvwwwwwwwwwwxxxxyyzzzzzzhtwyſaaaaaaaaaaaaaaaaaaaaaaaaeeeeeeeeeeeeeeeeiiiioooooooooooooooooooooooouuuuuuuuuuuuuuyyyyyyyy"
+    }
+  ]
+}

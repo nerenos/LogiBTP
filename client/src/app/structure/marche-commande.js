@@ -1,6 +1,6 @@
 import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
 import { codeMarche, prochainCode } from '../fiches/fiche-structure.js';
 
 // Validation d'une commande client (CONCEPTION-ACHATS-MARCHES.md, Q16, Q17, 13.2) : le marché est obligatoire. Avant la
@@ -152,6 +152,6 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
         bouton.disabled = false;
       }
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }

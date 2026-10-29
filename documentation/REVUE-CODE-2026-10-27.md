@@ -93,6 +93,31 @@ vérifient que rien ne change.
 
 ## Lot D — Utilitaires JS en double (socle)
 
+> **Fait** (29/10/2026) : table d'accents unique du socle (`accents.js` : `SPECIAUX`, `ACCENTUEES` / `BASES` =
+> décomposition NFD des lettres latines U+00C0–U+024F et U+1E00–U+1EFF, `sansAccent`, `normaliser` = table puis NFD ↔
+> `SansAccent.cs`, jeu `socle/tests/sans_accent.json` aux attendus calculés par NFD, tables comparées par
+> `SansAccentTests`) : Liste, Annuaire, GED (JS et `NormalisationGed`), Document (`normaliserLibelle` ↔
+> `NormaliserLibelle`), Mail (`normaliser` ↔ `Normaliser`, apostrophe typographique gardée en plus), Édition
+> (formules, Jint), Authentification (pseudo proposé), liste déroulante du socle, import des tarifs ; fonctions SQL
+> inchangées (même résultat sur ces lettres). Effets : plus de lettres reconnues (ligatures et lettres d'Europe centrale
+> dans le Mail, l'Édition, l'Authentification, la liste déroulante ; marques combinantes retirées dans le Document et le
+> Mail). `echapper` = `echapperHtml` (apostrophe échappée). `lireStockage` / `ecrireStockage` (préférences,
+> raccourcis, arbres de la bibliothèque, liste, fournisseur mémoire des listes). `ErreurApi` + `appelApi` du socle
+> (fournisseurs de l'Annuaire, de la Bibliothèque, de la Fiche, de la GED, de la Liste, des Entreprises françaises —
+> erreurs du module dérivées d'`ErreurApi` — et client). `magasinIdb` (file hors ligne, dépôt d'import).
+> `telechargerCsv` / `telechargerFichier` / `celluleCsv` (stock, dotations, export de paie, modèle de tarifs —
+> désormais avec BOM, que la lecture retire —, paquet d'édition). `nombreSaisi` (stock, tarifs), `formatNombre` sans
+> enveloppe nulle, `formatPrix` de la Bibliothèque. `client/scripts/api-demo.mjs` (`clientDemo`). Pastilles
+> `client/src/app/pastilles.js` (`pastille`, `pastilleTable` : comptes, courriels, connexions, habilitations,
+> échéances). `separateur` dans le socle (GED, panneau latéral, planning, édition ; curseur `redim-x|y`), panneau
+> latéral `client/src/app/panneau-lateral.js` (`gabaritPanneau`, `brancherPanneau`). Fenêtres : 13 `showModal()`
+> directs → `ouvrirModale` ; 17 `confirm()` / `prompt()` du navigateur → `confirmer` / `saisir`. `<select>` :
+> `activerCombos` (socle, appelé au démarrage du client) affiche tout `<select>` simple en combo, le `<select>` masqué
+> restant la valeur de référence (code des écrans inchangé) ; option à valeur vide : son libellé s'affiche s'il n'est pas
+> « — ». Vérifié au navigateur : paramètres de la bibliothèque, liste et choix de vue, entête d'un document (choix puis
+> annulation), fenêtre de transformation (Échap), synthèse du pointage et planning (séparateurs), GED, concepteur de vue.
+> Gardé : séparateurs à proportion (Analyse, arbres de la bibliothèque) ; repli `confirm` documenté du routeur.
+
 | Doublon | Copies | Regroupement |
 |---|---|---|
 | `normaliser` (table `SPECIAUX` + NFD + minuscules) | `liste/normaliser.js:6`, `annuaire/fournisseurs.js:97`, `ged/recherche.js:5` (identiques) | `socle/js/src/calcul` |

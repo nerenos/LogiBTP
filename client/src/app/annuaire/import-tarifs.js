@@ -3,6 +3,7 @@
 // sur l'en-tête). Colonnes reconnues (COLONNES_TARIFS) ; une ligne doit désigner l'élément (code d'appel, référence
 // fournisseur ou code-barres) et porter un prix public ou un prix net. Nombres à virgule ou à point, dates JJ/MM/AAAA
 // ou AAAA-MM-JJ, principal : oui / 1 / x. Le serveur rapproche les éléments et contrôle (ServiceBibliotheque.ImporterTarifs).
+import { normaliser as normaliserTexte } from '@logibtp/socle';
 
 export const COLONNES_TARIFS = [
   ['element', "Code de l'élément (CODE ou BIB:CODE)"], ['reference', 'Référence fournisseur'], ['code_barre', 'Code-barres'],
@@ -12,7 +13,7 @@ export const COLONNES_TARIFS = [
 ];
 
 const NOMBRES = ['prix_public', 'remise1', 'remise2', 'prix'];
-const normaliser = (s) => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/[\s-]+/g, '_');
+const normaliser = (s) => normaliserTexte(String(s ?? '').trim()).replace(/[\s-]+/g, '_');
 
 /** Découpe une ligne CSV (guillemets doubles, "" = guillemet). */
 function cellules(ligne, separateur) {

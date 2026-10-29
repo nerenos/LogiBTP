@@ -1,7 +1,7 @@
 import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { dateLocale, NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer, separateur, ouvrirModale } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui, DIFFUSION_PLANNING } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
@@ -65,7 +65,7 @@ function choisirService(services, actuel, objet) {
     dlg.addEventListener('close', () => finir(null));
     dlg.querySelector('[data-abandon]').addEventListener('click', () => finir(null));
     dlg.querySelector('[data-valider]').addEventListener('click', () => finir(combo.valeurCombo === '' ? null : Number(combo.valeurCombo)));
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
     combo.focus();
   });
 }
@@ -351,19 +351,13 @@ export class PagePlanning extends PageBase {
       this.panneauEnFenetre = true;
       this.#appliquerPanneau();
     });
-    c.querySelector('[data-separateur-panneau]').addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      const depart = e.clientX;
-      const largeur = aside.getBoundingClientRect().width;
-      const bouger = (m) => { aside.style.setProperty('--largeur-panneau', `${Math.max(260, Math.min(window.innerWidth - 360, largeur - (m.clientX - depart)))}px`); };
-      const finir = () => {
-        window.removeEventListener('pointermove', bouger);
-        window.removeEventListener('pointerup', finir);
+    separateur(c.querySelector('[data-separateur-panneau]'), {
+      cible: aside, sens: -1, min: 260, max: () => window.innerWidth - 360,
+      appliquer: (a, v) => a.style.setProperty('--largeur-panneau', `${v}px`),
+      surFin: (v) => {
         if (this.etatPanneau !== 'normal') this.#etatPanneau('normal');
-        ecrirePreferences({ planningPanneauLargeur: Math.round(aside.getBoundingClientRect().width) });
-      };
-      window.addEventListener('pointermove', bouger);
-      window.addEventListener('pointerup', finir);
+        ecrirePreferences({ planningPanneauLargeur: v });
+      },
     });
     // Panneau réduit : un clic sur un onglet le rouvre.
     c.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => { if (this.etatPanneau === 'reduit') this.#etatPanneau('normal'); }));

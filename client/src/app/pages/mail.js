@@ -1,3 +1,4 @@
+import { pastilleTable } from '../pastilles.js';
 import { urlDocument, SUJET_FENETRE } from '../codes.js';
 import { ERREUR_MAIL } from '@logibtp/mail';
 import { PageBase } from '@logibtp/navigation';
@@ -20,10 +21,7 @@ export const NATURES = { ARC: 'ARC', REPONSE_DEVIS: 'Réponse au devis', FACTURE
 const INDICES = { FIL: 'réponse à un envoi', NUMERO_OBJET: 'numéro dans l’objet', NUMERO_TEXTE: 'numéro dans le texte', NUMERO_PIECE: 'numéro dans le nom d’une pièce',
   NUMERO_PIECE_TEXTE: 'numéro dans une pièce', REFERENCE: 'référence citée', EXPEDITEUR: 'expéditeur = tiers', TIERS: 'tiers de l’expéditeur' };
 
-export const pastilleMessage = (etat) => {
-  const [l, c] = ETATS[etat] ?? [etat, 'neutre'];
-  return `<span class="pastille-compte ${c}">${echapper(l)}</span>`;
-};
+export const pastilleMessage = (etat) => pastilleTable(ETATS, etat);
 
 /** Message affiché après la mise en file : parti tout de suite ou en attente (position, départ estimé, cause). */
 export function messageEnvoi(r) {

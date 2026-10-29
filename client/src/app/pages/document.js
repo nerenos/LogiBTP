@@ -3,7 +3,7 @@ import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibt
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir } from '@logibtp/socle/ui';
 import { D, aujourdhui } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
 import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
@@ -204,7 +204,7 @@ export class PageDocument extends PageBase {
       envoyer: () => this.etapeCycle((id) => api.envoyer(id), 'Document envoyé'),
       'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), 'Document validé par le tiers'),
       devalider: async () => {
-        const motif = globalThis.prompt?.('Dévalider : une nouvelle version (indice suivant) remplace celle-ci, sans retour en arrière.\nMotif (tracé dans l\'historique) :');
+        const motif = await saisir('Dévalider : une nouvelle version (indice suivant) remplace celle-ci, sans retour en arrière.\nMotif (tracé dans l\'historique) :', '', { obligatoire: true });
         if (!motif?.trim()) return;
         try {
           const nouveau = await api.devalider(this.editeur.saisie.document.ent_id, motif.trim());
@@ -214,8 +214,8 @@ export class PageDocument extends PageBase {
         } catch (e) { this.app.erreur(e); }
       },
       numero: () => this.changerNumero(),
-      rejeter: () => {
-        const motif = globalThis.prompt?.('Motif du rejet (plateforme de facturation, client, fournisseur) :');
+      rejeter: async () => {
+        const motif = await saisir('Motif du rejet (plateforme de facturation, client, fournisseur) :', '', { obligatoire: true });
         if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
       },
       sources: () => this.ajouterSources(),
@@ -894,11 +894,11 @@ export class PageDocument extends PageBase {
     const doc = this.editeur.saisie.document;
     const type = this.editeur.definition.type ?? {};
     const exemple = `${type.tyd_prefixe_numero ?? ''}${String(doc.ent_date ?? '').slice(0, 4) || new Date().getFullYear()}-00001`;
-    const numero = globalThis.prompt?.(`Nouveau numéro (format ${exemple}) :`, doc.ent_numero ?? exemple);
+    const numero = await saisir(`Nouveau numéro (format ${exemple}) :`, doc.ent_numero ?? exemple, { obligatoire: true });
     if (!numero?.trim() || numero.trim() === doc.ent_numero) return;
     let motif = null;
     if (type.tyd_numerotation_continue) {
-      motif = globalThis.prompt?.('Numérotation continue : motif du changement (tracé dans l\'historique) :');
+      motif = await saisir('Numérotation continue : motif du changement (tracé dans l\'historique) :', '', { obligatoire: true });
       if (!motif?.trim()) return;
     }
     try {
@@ -1067,7 +1067,7 @@ export class PageDocument extends PageBase {
         this.app.naviguer(urlDocument(r.id), { nouvelleFenetre: true });
       } catch (e) { this.app.erreur(e); }
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   }
 
   /**

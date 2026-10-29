@@ -1,6 +1,6 @@
 import { urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, nombreSaisi } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 
 // Module Stock, lot 3 (ANALYSE-MODULE-STOCK.md § 5.4, S13 à S15) : approvisionnement d'un dépôt : ruptures à venir
@@ -11,7 +11,6 @@ import { api } from '../api.js';
 
 const ONGLETS = { ruptures: 'Ruptures à venir', propositions: 'Propositions de commande', seuils: 'Mini / maxi' };
 const jourFr = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '');
-const nombre = (v) => { const t = String(v ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 
 /** Approvisionnement d'un dépôt : /stock/approvisionnement?lieu=&onglet=. */
 export class PageApprovisionnement extends PageBase {
@@ -66,7 +65,7 @@ export class PageApprovisionnement extends PageBase {
   #lienProjection(l) { return `<a href="/stock/projection?lieu=${this.lieu}&article=${l.ele}" data-projection="${l.ele}">${echapper(l.code)}</a>`; }
 
   #synthese(corps, lignes) {
-    const nb = (v, p) => (v === null || v === undefined ? '' : formatNombre(v, p));
+    const nb = (v, p) => (formatNombre(v, p));
     if (this.onglet === 'ruptures') {
       corps.innerHTML = lignes.length ? `<table class="tableau-compact"><thead><tr><th>Article</th><th>Libellé</th><th>Stock</th><th>Réservé</th><th>Attendu</th>
         <th>Disponible</th><th>U.</th><th>1re rupture</th><th>Plus bas</th><th>Mini</th><th>Maxi</th><th>À commander</th></tr></thead><tbody>
@@ -95,7 +94,7 @@ export class PageApprovisionnement extends PageBase {
       corps.querySelector('[data-commander]')?.addEventListener('click', async () => {
         const choisies = [...corps.querySelectorAll('tr[data-i]')].filter((tr) => tr.querySelector('[data-coche]').checked).map((tr) => {
           const l = props[Number(tr.dataset.i)];
-          return { ele: l.ele, unites_achat: nombre(tr.querySelector('[data-unites]').value), fournisseur_id: l.appro?.fournisseur_id ?? null };
+          return { ele: l.ele, unites_achat: nombreSaisi(tr.querySelector('[data-unites]').value), fournisseur_id: l.appro?.fournisseur_id ?? null };
         });
         if (!choisies.length) { this.app.message('Cochez au moins un article', 'avertissement'); return; }
         try {
@@ -125,7 +124,7 @@ export class PageApprovisionnement extends PageBase {
       corps.querySelectorAll('tr[data-i]').forEach((tr) => {
         const s = l[Number(tr.dataset.i)];
         tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => {
-          s[x.dataset.c] = x.dataset.c === 'delai_jours' ? (x.value.trim() === '' ? null : Number(x.value)) : nombre(x.value);
+          s[x.dataset.c] = x.dataset.c === 'delai_jours' ? (x.value.trim() === '' ? null : Number(x.value)) : nombreSaisi(x.value);
           this.#modifie = true;
         }));
         tr.querySelector('[data-retirer]').addEventListener('click', () => { l.splice(l.indexOf(s), 1); this.#modifie = true; rendre(); });
@@ -165,7 +164,7 @@ export class PageProjection extends PageBase {
     const p = new URLSearchParams(globalThis.location?.search ?? '');
     const r = await api.stock.projection(Number(p.get('lieu')), Number(p.get('article')));
     this.titre = `Projection ${r.code}`;
-    const nb = (v) => (v === null || v === undefined ? '' : formatNombre(v, r.precision));
+    const nb = (v) => (formatNombre(v, r.precision));
     const resa = new Map(r.projection.reservations.map((x) => [x.id, x]));
     let dispo = Number(r.stock);
     const lignes = [...r.evenements].sort((a, b) => {

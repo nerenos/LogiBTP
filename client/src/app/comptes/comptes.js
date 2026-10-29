@@ -1,3 +1,4 @@
+import { pastille } from '../pastilles.js';
 import { aujourdhui, PROFIL } from '@logibtp/socle';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
 import { ETATS_COMPTE, MESSAGES_AUTH, controlerPseudo, controlerCompte, suggererPseudo } from '@logibtp/authentification';
@@ -12,7 +13,8 @@ const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') :
 /** Pastille de l'état d'un compte. */
 export function pastilleCompte(c) {
   const classe = { ACTIF: 'ok', A_CHANGER: 'attention', VERROUILLE: 'attention', SERVICE: 'neutre' }[c.etat] ?? 'erreur';
-  return `<span class="pastille-compte ${classe}" title="${echapper(ETATS_COMPTE[c.etat] ?? c.etat)}">${echapper(ETATS_COMPTE[c.etat] ?? c.etat)}</span>`;
+  const libelle = ETATS_COMPTE[c.etat] ?? c.etat;
+  return pastille(libelle, classe, { titre: libelle });
 }
 
 let profilsCache = null;

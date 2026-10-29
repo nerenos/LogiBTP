@@ -1,5 +1,5 @@
 import { urlFiche, TYPE_FICHE } from '../codes.js';
-import { echapper, formatNombre, confirmer, ouvrirDialogue } from '@logibtp/socle/ui';
+import { echapper, formatNombre, confirmer, ouvrirDialogue, telechargerCsv, nombreSaisi } from '@logibtp/socle/ui';
 import { prixNetTarif } from '@logibtp/bibliotheque';
 import { lireCsvTarifs, modeleCsvTarifs, COLONNES_TARIFS } from './import-tarifs.js';
 
@@ -10,19 +10,9 @@ import { lireCsvTarifs, modeleCsvTarifs, COLONNES_TARIFS } from './import-tarifs
 
 const jour = (d) => (d ? String(d).slice(0, 10) : '');
 const saisi = (v) => echapper(v === undefined || v === null ? '' : String(v).replace('.', ','));
-const nombre = (s) => { const t = String(s ?? '').trim().replace(/\s/g, '').replace(',', '.'); return t === '' ? null : t; };
 const net = (t) => {
   try { return formatNombre(String(prixNetTarif({ ...t, prix: t.prix ?? 0 })), 4); } catch { return ''; }
 };
-
-/** Télécharge un texte en fichier (modèle CSV). */
-function telecharger(nom, texte) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([texte], { type: 'text/csv;charset=utf-8' }));
-  a.download = nom;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
 
 /**
  * Onglet Tarifs : bibliotheque (fournisseur du module), tiers { id, nom }, message(texte, niveau), ouvrir(type, id, e).
@@ -79,8 +69,8 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
       tr.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
         const v = { ...t };
         tr.querySelectorAll('[data-c]').forEach((el) => { if (el.dataset.c !== 'recherche') v[el.dataset.c] = el.type === 'checkbox' ? el.checked : el.value || null; });
-        for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombre(v[c]);
-        v.delai = v.delai === null ? null : Number(nombre(v.delai));
+        for (const c of ['prix', 'prix_public', 'remise1', 'remise2']) v[c] = nombreSaisi(v[c]);
+        v.delai = v.delai === null ? null : Number(nombreSaisi(v.delai));
         if (v.prix === null) v.prix = v.prix_public === null ? null : '0';
         const eleId = t.id ? t.ele_id : nouveau.ele_id;
         if (!eleId) { message('Choisissez l\'élément dans la liste proposée', 'avertissement'); return; }
@@ -98,7 +88,7 @@ export async function rendreTarifsFournisseur(corps, { bibliotheque, tiers, mess
         try { await bibliotheque.supprimerTarif(t.ele_id, t.id); tarifs = await bibliotheque.tarifsTiers(tiers.id); rendre(); } catch (e) { message(e.message, 'erreur'); }
       });
     });
-    corps.querySelector('[data-modele]')?.addEventListener('click', () => telecharger('modele-tarifs.csv', modeleCsvTarifs()));
+    corps.querySelector('[data-modele]')?.addEventListener('click', () => telechargerCsv('modele-tarifs.csv', modeleCsvTarifs()));
     corps.querySelector('[data-importer]')?.addEventListener('click', () => {
       const f = document.createElement('input');
       f.type = 'file';

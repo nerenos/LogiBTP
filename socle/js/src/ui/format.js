@@ -1,10 +1,17 @@
 // Saisie et affichage des nombres, nettoyage du HTML affiché.
+import { echapperHtml } from '../calcul/libelles.js';
 
 /** « 12,5 » → « 12.5 » ; vide → null ; invalide → undefined. */
 export function lireNombre(texte) {
   const t = String(texte ?? '').replace(/[\s  ]/g, '').replace(',', '.');
   if (t === '') return null;
   return /^-?\d+(\.\d+)?$/.test(t) ? t : undefined;
+}
+
+/** Nombre saisi envoyé au serveur : comme lireNombre, mais un texte invalide est gardé tel quel (le serveur le refuse). */
+export function nombreSaisi(texte) {
+  const n = lireNombre(texte);
+  return n === undefined ? String(texte).trim() : n;
 }
 
 const formateurs = new Map();
@@ -99,6 +106,5 @@ export function htmlSur(html) {
   return racine.innerHTML;
 }
 
-export function echapper(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+/** Texte échappé pour le HTML (échappeur unique du socle : echapperHtml, apostrophe comprise). */
+export const echapper = (s) => echapperHtml(String(s ?? ''));

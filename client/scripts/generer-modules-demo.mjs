@@ -8,39 +8,11 @@
 // L'API doit tourner (port 5080) avec les documents de démonstration (generer-documents-demo.mjs) déjà créés.
 // Usage : node client/scripts/generer-modules-demo.mjs [host] [--force]   (host par défaut : demo.localhost)
 // Session : LOGIBTP_COMPTE (administrateur, défaut gerant) et LOGIBTP_MDP ; sans mot de passe, connexion de test.
-import http from 'node:http';
+import { clientDemo } from './api-demo.mjs';
 
 const hote = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'demo.localhost';
 const force = process.argv.includes('--force');
-const ENTETES = { 'Content-Type': 'application/json' };
-
-const COOKIES = new Map();
-
-function appel(methode, chemin, corps, entetes = {}) {
-  return new Promise((ok, ko) => {
-    const donnees = corps === undefined ? null : JSON.stringify(corps);
-    const req = http.request({ host: '127.0.0.1', port: 5080, path: `/api${chemin}`, method: methode,
-      headers: { ...ENTETES, ...entetes, Host: `${hote}:5080`, ...(donnees ? { 'Content-Length': Buffer.byteLength(donnees) } : {}) } }, (r) => {
-      let t = '';
-      r.on('data', (c) => { t += c; });
-      r.on('end', () => {
-        // Cookies de la session (jeton d'accès, jeton de rafraîchissement rotatif) : tous gardés et renvoyés.
-        for (const c of r.headers['set-cookie'] ?? []) {
-          const [nom, valeur] = c.split(';')[0].split('=');
-          if (valeur) COOKIES.set(nom, valeur); else COOKIES.delete(nom);
-        }
-        if (COOKIES.size) ENTETES.Cookie = [...COOKIES].map(([k, v]) => `${k}=${v}`).join('; ');
-        let j = null;
-        try { j = t ? JSON.parse(t) : null; } catch { j = t; }
-        if (r.statusCode >= 400) ko(new Error(`${methode} ${chemin} → ${r.statusCode} ${j?.code ?? ''} ${j?.title ?? String(t).slice(0, 200)}`));
-        else ok(j);
-      });
-    });
-    req.on('error', ko);
-    if (donnees) req.write(donnees);
-    req.end();
-  });
-}
+const appel = clientDemo(hote);
 
 const compte = process.env.LOGIBTP_COMPTE ?? 'gerant';
 await (process.env.LOGIBTP_MDP

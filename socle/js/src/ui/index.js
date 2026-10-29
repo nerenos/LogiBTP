@@ -3,9 +3,12 @@ export * from './arbre.js';
 export { GrilleArbre } from './grille.js';
 export { Magasin } from './etat.js';
 export { ListeDeroulante, AssistantFormule } from './liste-deroulante.js';
-export { creerCombo } from './combo.js';
-export { lireNombre, formatNombre, formatLibre, formatDate, formatDateHeure, formatHeure, htmlSur, echapper, estHtml, decoderEntites } from './format.js';
-export { lirePreferences, ecrirePreferences } from './preferences.js';
+export { creerCombo, comboDepuisSelect, activerCombos } from './combo.js';
+export { lireNombre, nombreSaisi, formatNombre, formatLibre, formatDate, formatDateHeure, formatHeure, htmlSur, echapper, estHtml, decoderEntites } from './format.js';
+export { lirePreferences, ecrirePreferences, lireStockage, ecrireStockage } from './preferences.js';
+export { magasinIdb } from './idb.js';
+export { separateur } from './separateur.js';
+export { telechargerFichier, telechargerCsv, celluleCsv } from './fichier.js';
 export {
   actionDe, combinaison, estModificateur, libelleRaccourci, libelleTouches, touchesDe, configurerRaccourcis, declarerRaccourcis, catalogueRaccourcis,
   conflitsRaccourci, personnaliserRaccourci, reinitialiserRaccourcis, definirAideRaccourcis, ouvrirAideRaccourcis,

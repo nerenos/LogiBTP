@@ -1,4 +1,4 @@
-import { echapper, formatNombre } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 import { unitesOptionnelles, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { api } from '../api.js';
 import { confirmerAvertissements } from './avertissements.js';
@@ -91,7 +91,7 @@ export function choisirTransformation({ source, cibles }) {
       const k = boutons.indexOf(document.activeElement);
       boutons[(k + (e.key === 'ArrowDown' ? 1 : -1) + boutons.length) % boutons.length]?.focus();
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
     boutons[0]?.focus();
   });
 }
@@ -153,7 +153,7 @@ export function choisirOptions({ lignes, unites, precision = 2 }) {
       }
       finir([...unites.map((u) => u.lig_id), ...bases].map((id) => ({ lig_id: id, retenue: choixDe(id) === '1' })));
     });
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
   });
 }
 

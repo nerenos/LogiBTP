@@ -1,24 +1,13 @@
 // Accès à l'API C#. L'utilisateur est celui de la session (cookie HttpOnly posé par /api/auth/connexion, envoyé par le
 // navigateur à chaque appel) ; sans session, l'API répond 401 SESSION_REQUISE et l'application ouvre /connexion.
 
+import { ErreurApi, appelApi } from '@logibtp/socle';
+
 export const ENTETES = { 'Content-Type': 'application/json' };
 
-export class ErreurApi extends Error {
-  constructor(statut, code, message, details) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-    this.details = details;
-  }
-}
+export { ErreurApi };
 
-async function appel(methode, url, corps, { keepalive = false } = {}) {
-  const r = await fetch(`/api${url}`, { method: methode, headers: ENTETES, body: corps === undefined ? undefined : JSON.stringify(corps), keepalive });
-  const texte = await r.text();
-  const data = texte ? JSON.parse(texte) : null;
-  if (!r.ok) throw new ErreurApi(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details);
-  return data;
-}
+const appel = (methode, url, corps, { keepalive = false } = {}) => appelApi(`/api${url}`, { methode, corps, keepalive });
 
 /** PDF d'une édition produit par le serveur (Blob) ; en-têtes : nombre de pages, alertes. */
 async function pdfEdition(demande, imprimer) {

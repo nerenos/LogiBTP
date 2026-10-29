@@ -8,7 +8,7 @@ import {
 } from '@codemirror/language';
 import { linter, lintGutter } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
-import { creerCombo, echapper } from '@logibtp/socle/ui';
+import { creerCombo, echapper, confirmer } from '@logibtp/socle/ui';
 import { verifierModele } from '@logibtp/edition';
 import { api } from '../api.js';
 import { DictionnaireModele } from './dictionnaire-modele.js';
@@ -296,10 +296,10 @@ export class EditeurModeleApercu {
     this.vue.focus();
   }
 
-  fermerOnglet(code) {
+  async fermerOnglet(code) {
     if (this.onglets.length <= 1) return;
     const texte = (code === this.courant ? this.vue.state : this.etats.get(code))?.doc.toString();
-    if (texte !== undefined && this.saisieModifiee(code, texte) && !globalThis.confirm?.(`${code} : abandonner la saisie non appliquée ?`)) return;
+    if (texte !== undefined && this.saisieModifiee(code, texte) && !(await confirmer(`${code} : abandonner la saisie non appliquée ?`))) return;
     const i = this.onglets.indexOf(code);
     this.onglets.splice(i, 1);
     this.etats.delete(code);
@@ -377,8 +377,8 @@ export class EditeurModeleApercu {
     const m = await api.editions.modele(e.code);
     const impacts = e.code !== this.page.prep.modele.code ? await api.editions.impacts(e.code).catch(() => []) : [];
     const avis = impacts.length ? `\n\nUtilisé aussi par : ${impacts.map((x) => x.libelle ?? x.code).join(', ')}.` : '';
-    if (m.fourni && !globalThis.confirm?.(`${e.code} est un modèle fourni : l'enregistrer le marque modifié localement.${avis}\n\nEnregistrer ?`)) return;
-    if (!m.fourni && avis && !globalThis.confirm?.(`Enregistrer ${e.code} ?${avis}`)) return;
+    if (m.fourni && !(await confirmer(`${e.code} est un modèle fourni : l'enregistrer le marque modifié localement.${avis}\n\nEnregistrer ?`))) return;
+    if (!m.fourni && avis && !(await confirmer(`Enregistrer ${e.code} ?${avis}`))) return;
     const r = await api.editions.enregistrerModele(e.code, {
       libelle: contenu.libelle ?? m.libelle, genre: m.genre, cible: m.cible, source: m.source, types: m.types, contenu,
       niveau_acces: m.niveau_acces, acces_profils: m.acces_profils, charte: m.charte, actif: m.actif, ordre: m.ordre,

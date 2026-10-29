@@ -1,3 +1,4 @@
+import { pastille } from '../pastilles.js';
 import { SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
@@ -29,7 +30,7 @@ function lireFichier(input, base64) {
 }
 
 export function pastilleConnexion(c) {
-  return `<span class="pastille-compte ${CLASSES_PASTILLE[c.pastille] ?? 'neutre'}" title="${echapper(c.derniere_erreur ?? '')}">${ETATS[c.etat] ?? c.etat}</span>`;
+  return pastille(ETATS[c.etat] ?? c.etat, CLASSES_PASTILLE[c.pastille] ?? 'neutre', { titre: c.derniere_erreur });
 }
 
 /**

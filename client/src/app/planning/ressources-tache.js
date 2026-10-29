@@ -1,5 +1,5 @@
 import { aujourdhui } from '@logibtp/socle';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences, alerter } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, alerter, ouvrirModale } from '@logibtp/socle/ui';
 import { versMinutes, depuisMinutes } from '@logibtp/planning';
 import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
@@ -261,7 +261,7 @@ export async function choisirRessources({ du, au, exclure, selection }) {
     dlg.querySelector('[data-abandon]').addEventListener('click', () => finir(null));
     dlg.querySelector('[data-valider]').addEventListener('click', () => finir({ cles: new Set(choisies), libelles: new Map(liste.map((r) => [r.cle, r.libelle])) }));
     rendre();
-    dlg.showModal();
+    ouvrirModale(dlg, () => dlg.close());
     dlg.querySelector('[data-texte]').focus();
   });
 }

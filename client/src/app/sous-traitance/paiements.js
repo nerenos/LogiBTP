@@ -1,6 +1,6 @@
 import { urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
-import { echapper, formatNombre, lireNombre, creerCombo } from '@logibtp/socle/ui';
+import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ETATS_PAIEMENT_DIRECT, MESSAGES_PAIEMENT_DIRECT, MESSAGES_RETENUE, controlerAcceptation } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
 
@@ -12,7 +12,7 @@ import { api } from '../api.js';
 // échéance de libération (retenue.js ↔ ReglesRetenue.cs), retenues des pièces, cautions, libération.
 
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const f = (v) => (v === null || v === undefined ? '' : formatNombre(v, 2));
+const f = (v) => formatNombre(v, 2);
 
 /** Onglet complet d'un marché de sous-traitance : paiements puis retenue. */
 export async function rendrePaiements(corps, { marche, message }) {
@@ -101,8 +101,8 @@ async function rendreDemandes(zone, { marche, message }) {
       agir(api.sousTraitance.transmettrePaiement(d.id, { le: aujourdhui(), facture_client_id: fc }), 'Demande transmise');
     });
     tr.querySelector('[data-payer]')?.addEventListener('click', () => agir(api.sousTraitance.payerPaiement(d.id, { le: aujourdhui() }), 'Paiement constaté'));
-    tr.querySelector('[data-supprimer]')?.addEventListener('click', () => {
-      if (globalThis.confirm?.('Supprimer la demande de paiement ?')) agir(api.sousTraitance.supprimerPaiement(d.id), 'Demande supprimée');
+    tr.querySelector('[data-supprimer]')?.addEventListener('click', async () => {
+      if (await confirmer('Supprimer la demande de paiement ?')) agir(api.sousTraitance.supprimerPaiement(d.id), 'Demande supprimée');
     });
   });
 }

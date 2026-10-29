@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { creerCombo, lirePreferences, ecrirePreferences, echapper } from '@logibtp/socle/ui';
+import { creerCombo, lirePreferences, ecrirePreferences, echapper, separateur } from '@logibtp/socle/ui';
 import { editer, pageSvg, base64VersOctets } from '@logibtp/edition';
 import { api } from '../api.js';
 import { policesEdition } from '../editions/polices.js';
@@ -88,25 +88,12 @@ export class PageEdition extends PageBase {
   separateur() {
     const sep = this.$('[data-zone="separateur"]');
     const zone = this.$('[data-zone="editeur"]');
-    sep.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      sep.setPointerCapture(e.pointerId);
-      const corps = this.$('.edition-corps').getBoundingClientRect();
-      const bouger = (ev) => {
-        const largeur = Math.round(Math.min(Math.max(corps.right - ev.clientX, 280), corps.width - 200));
-        zone.style.flexBasis = `${largeur}px`;
-      };
-      const finir = () => {
-        sep.removeEventListener('pointermove', bouger);
-        sep.removeEventListener('pointerup', finir);
-        sep.removeEventListener('pointercancel', finir);
-        ecrirePreferences({ apercuEditeurLargeur: Math.round(zone.getBoundingClientRect().width) });
-      };
-      sep.addEventListener('pointermove', bouger);
-      sep.addEventListener('pointerup', finir);
-      sep.addEventListener('pointercancel', finir);
+    separateur(sep, {
+      cible: zone, sens: -1, min: 280, max: () => this.$('.edition-corps').getBoundingClientRect().width - 200,
+      appliquer: (z, v) => { z.style.flexBasis = `${v}px`; },
+      surFin: (v) => ecrirePreferences({ apercuEditeurLargeur: v }),
+      surDoubleClic: () => { zone.style.flexBasis = ''; ecrirePreferences({ apercuEditeurLargeur: null }); },
     });
-    sep.addEventListener('dblclick', () => { zone.style.flexBasis = ''; ecrirePreferences({ apercuEditeurLargeur: null }); });
   }
 
   /** Préparation par le serveur (modèle, données, charte, blocs, ressources), puis rendu. */

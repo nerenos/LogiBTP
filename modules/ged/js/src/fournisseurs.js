@@ -1,4 +1,4 @@
-import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
+import { NIVEAU_CONFIDENTIALITE, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 import { sha256, horodatage, empreinteEntree, verifierChaine, EMPREINTE_ORIGINE } from './coffre.js';
 import { editionsAPurger, GENRES } from './versions.js';
 import { normaliserRecherche, texteRecherche } from './recherche.js';
@@ -44,13 +44,7 @@ import { extraireTexte, ETATS_INDEX } from './texte.js';
 // mémoire ; en base : f_ged_element_existe remplacée par l'application), pièces jointes et dérivations sans boucle,
 // répertoire du même élément que ses documents. Accès : acces.js (comme AccesGed.cs).
 
-export class ErreurGed extends Error {
-  constructor(statut, code, message) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-  }
-}
+export class ErreurGed extends ErreurApi {}
 
 const requete = (filtre) => new URLSearchParams(Object.entries(filtre).filter(([, v]) => v !== null && v !== undefined && v !== '' && v !== false).map(([k, v]) => [k, String(v)]));
 
@@ -60,19 +54,9 @@ export class FournisseurGedApi {
     this.entetes = entetes;
   }
 
-  async appel(methode, url, corps) {
-    const formulaire = corps instanceof FormData;
-    const r = await fetch(`${this.base}${url}`, {
-      method: methode,
-      // Formulaire : le navigateur pose le Content-Type multipart (avec sa frontière) ; jamais celui des en-têtes communs.
-      headers: formulaire ? Object.fromEntries(Object.entries(this.entetes).filter(([k]) => k.toLowerCase() !== 'content-type'))
-        : { 'Content-Type': 'application/json', ...this.entetes },
-      body: corps === undefined ? undefined : formulaire ? corps : JSON.stringify(corps),
-    });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurGed(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText);
-    return data;
+  /** JSON ou formulaire multipart (FormData : Content-Type posé par le navigateur, appelApi du socle). */
+  appel(methode, url, corps) {
+    return appelApi(`${this.base}${url}`, { methode, corps, entetes: this.entetes, Erreur: ErreurGed });
   }
 
   #formulaire(fichier, nomFichier, donnees) {

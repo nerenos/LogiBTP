@@ -6,6 +6,7 @@
 // ligne, base de la fusion), type_code, libelle, etat (ATTENTE | CONFLIT | FUSION | ERREUR), erreur, le }. FUSION : saisie fusionnée
 // (lot 4) rouverte dans la page document, envoyée seulement quand l'utilisateur l'enregistre.
 // Rien n'est effacé à la déconnexion : la saisie reste sur le poste jusqu'à son envoi.
+import { magasinIdb } from '@logibtp/socle/ui';
 import { urlDocument } from '../codes.js';
 
 const BASE = 'logibtp-hors-ligne';
@@ -59,26 +60,7 @@ export function estHorsLigne(e) {
   return e?.code === 'HTTP' && [500, 502, 503, 504].includes(e?.statut);
 }
 
-function ouvrir() {
-  return new Promise((ok, ko) => {
-    const r = indexedDB.open(BASE, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(MAGASIN, { keyPath: 'cle' }).createIndex('compte', 'compte');
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => ko(r.error);
-  });
-}
-
-async function operation(mode, f) {
-  const db = await ouvrir();
-  try {
-    return await new Promise((ok, ko) => {
-      const tx = db.transaction(MAGASIN, mode);
-      const r = f(tx.objectStore(MAGASIN));
-      tx.oncomplete = () => ok(r?.result);
-      tx.onerror = () => ko(tx.error);
-    });
-  } finally { db.close(); }
-}
+const operation = magasinIdb(BASE, MAGASIN, (db) => db.createObjectStore(MAGASIN, { keyPath: 'cle' }).createIndex('compte', 'compte'));
 
 /** Écrit (ou remplace) l'entrée d'un document ; la version de départ et la création à faire déjà notées sont gardées. */
 export async function ecrireAttente(entree) {

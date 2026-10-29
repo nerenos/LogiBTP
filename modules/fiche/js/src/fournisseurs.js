@@ -1,4 +1,4 @@
-import { PROFIL } from '@logibtp/socle';
+import { PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_FICHE } from './codes.js';
 import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 
@@ -28,14 +28,7 @@ import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 // verrou : null (personne ne modifie) ou { utilisateur, depuis, moi, meme_utilisateur } (le même utilisateur reprend son verrou) ; une erreur 422 VALIDATION porte
 // details = [{ champ, code, message, supplementaire }].
 
-export class ErreurFiche extends Error {
-  constructor(statut, code, message, details = null) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-    this.details = details;
-  }
-}
+export class ErreurFiche extends ErreurApi {}
 
 export class FournisseurFicheApi {
   constructor({ base = '/api/fiches', entetes = {} } = {}) {
@@ -43,12 +36,8 @@ export class FournisseurFicheApi {
     this.entetes = { 'Content-Type': 'application/json', ...entetes };
   }
 
-  async appel(methode, url, corps, { keepalive = false } = {}) {
-    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps), keepalive });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurFiche(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
-    return data;
+  appel(methode, url, corps, { keepalive = false } = {}) {
+    return appelApi(`${this.base}${url}`, { methode, corps, entetes: this.entetes, keepalive, Erreur: ErreurFiche });
   }
 
   #u(type, id = null, suite = '') {

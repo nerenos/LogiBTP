@@ -1,4 +1,4 @@
-import { echapper } from '@logibtp/socle/ui';
+import { echapper, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
 
 // Panneau des arbres d'une liste d'éléments (logé dans le panneau ancrable de la liste, option panneau) : familles par
 // bibliothèque et natures par regroupement, en deux parties séparées par un délimiteur déplaçable. Sélection multiple ;
@@ -36,10 +36,8 @@ export class PanneauArbres {
     this.charger().catch((e) => console.error(e));
   }
 
-  #lire() { try { return JSON.parse(localStorage.getItem(this.cle)) ?? {}; } catch { return {}; } }
-  #ecrire() {
-    try { localStorage.setItem(this.cle, JSON.stringify({ ...this.prefs, ouverts: [...this.ouverts] })); } catch { /* préférence non conservée */ }
-  }
+  #lire() { return lireStockage(this.cle, {}); }
+  #ecrire() { ecrireStockage(this.cle, { ...this.prefs, ouverts: [...this.ouverts] }); }
 
   /** Arbres : familles sous leur bibliothèque, natures sous leur regroupement ; nœuds « sans ». */
   async charger() {

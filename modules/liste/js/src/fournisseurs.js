@@ -1,3 +1,4 @@
+import { lireStockage, ecrireStockage, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_LISTE } from './codes.js';
 import { normaliserDefinition } from './modele.js';
 import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectifs } from './requete.js';
@@ -20,14 +21,7 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectif
 //
 // demande = { vue_id, definition, recherche, segments: { colonne: [valeurs] }, tri: [{ colonne, sens }], apres, taille }
 
-export class ErreurFournisseur extends Error {
-  constructor(statut, code, message, details = null) {
-    super(message);
-    this.statut = statut;
-    this.code = code;
-    this.details = details;
-  }
-}
+export class ErreurFournisseur extends ErreurApi {}
 
 /** Fournisseur branché sur les routes du module (MapModuleListe côté serveur). */
 export class FournisseurApi {
@@ -36,12 +30,8 @@ export class FournisseurApi {
     this.entetes = { 'Content-Type': 'application/json', ...entetes };
   }
 
-  async appel(methode, url, corps) {
-    const r = await fetch(`${this.base}${url}`, { method: methode, headers: this.entetes, body: corps === undefined ? undefined : JSON.stringify(corps) });
-    const texte = await r.text();
-    const data = texte ? JSON.parse(texte) : null;
-    if (!r.ok) throw new ErreurFournisseur(r.status, data?.code ?? 'HTTP', data?.title ?? r.statusText, data?.details ?? null);
-    return data;
+  appel(methode, url, corps) {
+    return appelApi(`${this.base}${url}`, { methode, corps, entetes: this.entetes, Erreur: ErreurFournisseur });
   }
 
   /** Corps envoyé : la définition sert pour une vue non enregistrée (concepteur) ; le serveur contrôle la source. */
@@ -94,16 +84,13 @@ export class FournisseurMemoire {
   }
 
   #lireStockage(suffixe = '') {
-    if (!this.cleStockage) return null;
-    try { return JSON.parse(localStorage.getItem(this.cleStockage + suffixe) ?? 'null'); } catch { return null; }
+    return this.cleStockage ? lireStockage(this.cleStockage + suffixe) : null;
   }
 
   #ecrireStockage() {
     if (!this.cleStockage) return;
-    try {
-      localStorage.setItem(this.cleStockage, JSON.stringify(this.vuesStockees));
-      localStorage.setItem(`${this.cleStockage}.themes`, JSON.stringify(this.themesStockes));
-    } catch { /* stockage indisponible */ }
+    ecrireStockage(this.cleStockage, this.vuesStockees);
+    ecrireStockage(`${this.cleStockage}.themes`, this.themesStockes);
   }
 
   async themes() {

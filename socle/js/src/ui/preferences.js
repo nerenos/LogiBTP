@@ -2,18 +2,27 @@
 
 const CLE = 'logibtp.affichage';
 
-export function lirePreferences() {
+/** Valeur JSON conservée dans le navigateur sous cette clé ; absente, illisible ou stockage indisponible : `defaut`. */
+export function lireStockage(cle, defaut = null) {
   try {
-    const o = JSON.parse(localStorage.getItem(CLE) ?? 'null');
-    return o && typeof o === 'object' ? o : {};
+    const v = JSON.parse(localStorage.getItem(cle) ?? 'null');
+    return v ?? defaut;
   } catch {
-    return {};
+    return defaut;
   }
+}
+
+/** Conserve une valeur JSON dans le navigateur (stockage indisponible : non conservée, sans erreur). */
+export function ecrireStockage(cle, valeur) {
+  try { localStorage.setItem(cle, JSON.stringify(valeur)); } catch { /* stockage indisponible : non conservé */ }
+}
+
+export function lirePreferences() {
+  const o = lireStockage(CLE, {});
+  return typeof o === 'object' ? o : {};
 }
 
 /** Fusionne des valeurs dans les préférences enregistrées. */
 export function ecrirePreferences(valeurs) {
-  try {
-    localStorage.setItem(CLE, JSON.stringify({ ...lirePreferences(), ...valeurs }));
-  } catch { /* stockage indisponible : préférences non conservées */ }
+  ecrireStockage(CLE, { ...lirePreferences(), ...valeurs });
 }

@@ -1,6 +1,5 @@
 import { echapper } from './format.js';
-
-const normaliser = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+import { normaliser } from '../calcul/accents.js';
 
 /**
  * Liste de choix attachée à un champ texte : la saisie reste libre, la liste propose les valeurs

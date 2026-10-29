@@ -1,6 +1,6 @@
 import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, formatNombre, creerCombo, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, formatNombre, creerCombo, formatDateHeure, telechargerCsv, celluleCsv } from '@logibtp/socle/ui';
 import { METHODES_VALORISATION } from '@logibtp/stock';
 import { api } from '../api.js';
 
@@ -80,9 +80,9 @@ export class PageStock extends PageBase {
       ${lignes.map((l) => `<tr class="${Number(l.quantite) < 0 ? 'negatif' : ''}"><td><a href="${urlFiche(TYPE_FICHE.ELEMENT, l.ele_id)}" data-element="${l.ele_id}">${echapper(l.code)}</a></td>
         <td>${echapper(l.libelle)}</td><td>${echapper(l.emplacements.join(', '))}</td>
         <td class="nombre${Number(l.quantite) < 0 ? ' avertissement' : ''}">${formatNombre(l.quantite, l.precision)}</td><td>${echapper(l.unite)}</td>
-        <td class="nombre">${l.valeur_unitaire === null ? '' : formatNombre(l.valeur_unitaire, 4)}${l.provisoire ? ' <span title="Prix de réception non encore facturé">⏳</span>' : ''}</td>
+        <td class="nombre">${formatNombre(l.valeur_unitaire, 4)}${l.provisoire ? ' <span title="Prix de réception non encore facturé">⏳</span>' : ''}</td>
         <td class="${l.source === 'REPLI' ? 'avertissement' : ''}">${echapper(SOURCES[l.source] ?? '—')}</td>
-        <td class="nombre">${l.valeur === null ? '' : formatNombre(l.valeur, 2)}</td><td>${dateHeureLocale(l.dernier_mouvement)}</td></tr>`).join('')}
+        <td class="nombre">${formatNombre(l.valeur, 2)}</td><td>${dateHeureLocale(l.dernier_mouvement)}</td></tr>`).join('')}
       </tbody><tfoot><tr><th colspan="7">Total (${lignes.length} article${lignes.length > 1 ? 's' : ''})</th><th class="nombre">${formatNombre(total, 2)}</th><th></th></tr></tfoot></table>`
       : '<p class="aide">Aucun article en stock à cette date.</p>';
     this.conteneur.querySelectorAll('[data-element]').forEach((a) => a.addEventListener('click', (ev) => {
@@ -93,15 +93,11 @@ export class PageStock extends PageBase {
 
   #exporter() {
     const lignes = this.#lignes();
-    const cel = (v) => `"${String(v ?? '').replaceAll('"', '""')}"`;
+    const cel = celluleCsv;
     const num = (v) => (v === null || v === undefined ? '' : String(v).replace('.', ','));
     const csv = [['Article', 'Libellé', 'Emplacements', 'Quantité', 'Unité', 'Valeur unitaire', 'Source', 'Valeur'].map(cel).join(';'),
       ...lignes.map((l) => [cel(l.code), cel(l.libelle), cel(l.emplacements.join(', ')), num(l.quantite), cel(l.unite), num(l.valeur_unitaire), cel(SOURCES[l.source] ?? ''), num(l.valeur)].join(';'))].join('\r\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' }));
-    a.download = `stock-${this.lieux.find((l) => l.id === this.lieu)?.code ?? this.lieu}-${(this.etat?.date ?? '').slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    telechargerCsv(`stock-${this.lieux.find((l) => l.id === this.lieu)?.code ?? this.lieu}-${(this.etat?.date ?? '').slice(0, 10)}.csv`, csv);
   }
 }
 

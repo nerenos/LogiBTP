@@ -1,3 +1,4 @@
+import { pastille } from '../pastilles.js';
 import { urlFiche, TYPE_FICHE, urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue } from '@logibtp/socle/ui';
@@ -101,7 +102,7 @@ const periodicite = (p) => [p.heures ? `${formatNombre(p.heures, 0)} h` : '', p.
 /** Pastille de l'état d'une échéance. */
 export function pastilleEcheance(etat) {
   const e = ETATS_ECHEANCE[etat] ?? ETATS_ECHEANCE.INCONNU;
-  return `<span class="pastille-compte ${e.classe}">${echapper(e.libelle)}</span>`;
+  return pastille(e.libelle, e.classe);
 }
 
 /** Détail des critères d'une échéance : reste en heures, kilomètres ou jours, date estimée. */

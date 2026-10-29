@@ -71,7 +71,7 @@ export class PageDemandesCrm extends PageBase {
         return `<tr class="${clos ? 'discret' : ''}"><td><a href="/crm/demande/${d.id}">${echapper(d.numero)}</a></td><td>${echapper(d.objet)}${d.nb_notes ? ` <span class="aide">💬 ${d.nb_notes}</span>` : ''}</td>
           <td>${lienElement(d.tiers)}</td><td>${pastilleDemande(d)}</td><td>${echapper(d.responsable ?? (d.service ? `${d.service} (à prendre)` : ''))}</td>
           <td class="${!clos && d.echeance && d.echeance < aujourdhui ? 'crm-retard' : ''}">${d.echeance ? formatDate(d.echeance) : ''}</td>
-          <td class="nombre">${d.montant_estime === null || d.montant_estime === undefined ? '' : formatNombre(d.montant_estime, 0)}</td><td>${lienElement(d.cible)}</td>
+          <td class="nombre">${formatNombre(d.montant_estime, 0)}</td><td>${lienElement(d.cible)}</td>
           <td>${d.a_prendre ? `<button type="button" data-prendre="${d.id}">Prendre</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
       <p class="aide">${page.total} demande(s)${pages > 1 ? ` · page ${page.page} / ${pages} <button type="button" data-page="-1" ${page.page <= 1 ? 'disabled' : ''}>◀</button> <button type="button" data-page="1" ${page.page >= pages ? 'disabled' : ''}>▶</button>` : ''}</p>`;
