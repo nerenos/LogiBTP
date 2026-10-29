@@ -10,13 +10,13 @@ import { echapper } from '@logibtp/socle/ui';
 //             sur la même ligne ; Ctrl : nouvelle fenêtre), sousMenu ([...] ou () => [...] : éléments du sous-menu) }
 // naviguer(url, { nouvelleFenetre }) : navigation demandée (Ctrl, Maj ou clic milieu, ou ⧉ : nouvelle fenêtre).
 //
-// Disposition (`disposition`, `disposer()`) : mode 'haut' (bandeau ci-dessus, par défaut) ou 'droite' (panneau sur
-// toute la hauteur à droite : titres des menus dépliés en dessous au clic, sous-menus imbriqués, lignes hautes pour le
-// tactile, ascenseur s'il déborde, message et informations fixés en bas ; largeur réglable par la poignée de gauche,
+// Disposition (`disposition`, `disposer()`) : mode 'haut' (bandeau ci-dessus, par défaut), 'droite' ou 'gauche'
+// (panneau sur toute la hauteur, du côté choisi : titres des menus dépliés en dessous au clic, sous-menus imbriqués, lignes hautes pour le
+// tactile, ascenseur s'il déborde, message et informations fixés en bas ; largeur réglable par la poignée du bord intérieur,
 // masquable, masquage automatique à la sortie du survol). Les changements faits depuis le panneau (largeur, masquage)
 // sont rendus par `surDisposition(disposition)` pour être gardés.
 
-export const DISPOSITION_MENU = Object.freeze({ HAUT: 'haut', DROITE: 'droite' });
+export const DISPOSITION_MENU = Object.freeze({ HAUT: 'haut', DROITE: 'droite', GAUCHE: 'gauche' });
 export const DISPOSITION_DEFAUT = Object.freeze({ mode: DISPOSITION_MENU.HAUT, largeur: 280, masque: false, masquageAuto: false });
 export const LARGEUR_MENU = Object.freeze({ min: 200, max: 600 });
 
@@ -36,7 +36,7 @@ export class Bandeau {
     this.niveaux = [];
     this.disposition = { ...DISPOSITION_DEFAUT, ...disposition };
     this.surDisposition = surDisposition;
-    // Panneau à droite : menus et sous-menus dépliés (chemins « code » ou « code/i/j »), éléments par chemin.
+    // Panneau latéral : menus et sous-menus dépliés (chemins « code » ou « code/i/j »), éléments par chemin.
     this.deplies = new Set();
     this.lignes = new Map();
     this.racine.classList.add('bandeau');
@@ -103,7 +103,9 @@ export class Bandeau {
     this.disposer(this.disposition);
   }
 
-  get vertical() { return this.disposition.mode === DISPOSITION_MENU.DROITE; }
+  /** Panneau sur toute la hauteur, à droite ou à gauche. */
+  get vertical() { return this.disposition.mode === DISPOSITION_MENU.DROITE || this.disposition.mode === DISPOSITION_MENU.GAUCHE; }
+  get aGauche() { return this.disposition.mode === DISPOSITION_MENU.GAUCHE; }
 
   /** Applique une disposition ({ mode, largeur, masque, masquageAuto }, complétée par la disposition courante). */
   disposer(disposition = {}) {
@@ -114,6 +116,7 @@ export class Bandeau {
     if (avant !== d.mode) this.fermer();
     const r = this.racine;
     r.classList.toggle('bandeau-vertical', this.vertical);
+    r.classList.toggle('bandeau-gauche', this.aGauche);
     r.classList.toggle('bandeau-masque', this.vertical && d.masque && !d.masquageAuto);
     r.classList.toggle('bandeau-auto', this.vertical && d.masquageAuto);
     if (!this.vertical || !d.masquageAuto) r.classList.remove('bandeau-survol');
@@ -121,7 +124,9 @@ export class Bandeau {
     const auto = r.querySelector('[data-masquage-auto]');
     auto.setAttribute('aria-pressed', String(Boolean(d.masquageAuto)));
     auto.title = d.masquageAuto ? 'Garder le menu affiché' : 'Masquer automatiquement le menu quand la souris le quitte';
-    r.querySelector('[data-masquer]').hidden = Boolean(d.masquageAuto);
+    const masquer = r.querySelector('[data-masquer]');
+    masquer.hidden = Boolean(d.masquageAuto);
+    masquer.textContent = this.aGauche ? '⇤' : '⇥';
     if (avant !== d.mode || !this.rendu) this.rendre();
     else this.ajuster();
   }
@@ -132,7 +137,7 @@ export class Bandeau {
     this.surDisposition({ ...this.disposition });
   }
 
-  /** Panneau à droite : outils, poignée de largeur, languette, survol (masquage automatique). */
+  /** Panneau latéral : outils, poignée de largeur, languette, survol (masquage automatique). */
   #evenementsPanneau() {
     const r = this.racine;
     r.querySelector('[data-masquer]').addEventListener('click', () => this.#changerDisposition({ masque: true }));
@@ -161,7 +166,7 @@ export class Bandeau {
       const depart = { x: e.clientX, largeur: this.disposition.largeur };
       this.redimension = true;
       document.body.classList.add('redim-x');
-      const deplacer = (m) => this.disposer({ largeur: depart.largeur + depart.x - m.clientX });
+      const deplacer = (m) => this.disposer({ largeur: depart.largeur + (this.aGauche ? m.clientX - depart.x : depart.x - m.clientX) });
       const fin = () => {
         poignee.removeEventListener('pointermove', deplacer);
         this.redimension = false;
@@ -316,7 +321,7 @@ export class Bandeau {
     this.barre.querySelector('[data-menu]')?.focus();
   }
 
-  // ---------------------------------------------------------------- panneau à droite
+  // ---------------------------------------------------------------- panneau latéral (droite ou gauche)
 
   /** Titres des menus, éléments des menus dépliés en dessous, sous-menus dépliés imbriqués (aucune fenêtre surgissante). */
   #rendreVertical() {

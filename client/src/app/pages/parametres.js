@@ -23,15 +23,16 @@ export class PageParametres extends PageBase {
         <h3>Menu</h3>
         <div class="ligne" role="radiogroup" aria-label="Position du menu">
           <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.HAUT}" ${menu.mode !== DISPOSITION_MENU.DROITE ? 'checked' : ''}> ☰ En haut (barre de menus)</label>
+          <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.GAUCHE}" ${menu.mode === DISPOSITION_MENU.GAUCHE ? 'checked' : ''}> ▌ À gauche, sur toute la hauteur</label>
           <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.DROITE}" ${menu.mode === DISPOSITION_MENU.DROITE ? 'checked' : ''}> ▐ À droite, sur toute la hauteur</label>
         </div>
-        <div class="options-menu-droite"${menu.mode === DISPOSITION_MENU.DROITE ? '' : ' hidden'}>
+        <div class="options-menu-lateral"${menu.mode === DISPOSITION_MENU.HAUT ? ' hidden' : ''}>
           <label class="ligne">Largeur <input type="number" data-menu="largeur" min="${LARGEUR_MENU.min}" max="${LARGEUR_MENU.max}" step="10" size="5" value="${menu.largeur}"> px</label>
-          <label class="ligne"><input type="checkbox" data-menu="masque" ${menu.masque ? 'checked' : ''}> Masquer le menu (☰ sur le bord droit pour le rouvrir)</label>
+          <label class="ligne"><input type="checkbox" data-menu="masque" ${menu.masque ? 'checked' : ''}> Masquer le menu (☰ sur le bord de l'écran pour le rouvrir)</label>
           <label class="ligne"><input type="checkbox" data-menu="masquageAuto" ${menu.masquageAuto ? 'checked' : ''}> Masquer automatiquement quand la souris quitte le menu</label>
         </div>
-        <p class="aide">À droite : les menus se déplient en dessous de leur titre au clic, avec des lignes hautes pour le tactile ; la société, l'utilisateur et
-          les notifications sont fixés en bas du menu. La largeur se règle aussi en glissant le bord gauche du menu.</p>
+        <p class="aide">À gauche ou à droite : les menus se déplient en dessous de leur titre au clic, avec des lignes hautes pour le tactile ; la société,
+          l'utilisateur et les notifications sont fixés en bas du menu. La largeur se règle aussi en glissant le bord du menu côté page.</p>
       </section>
       <section class="carte"><h2>Raccourcis clavier</h2>
         <p class="aide">Toutes les fonctions qui acceptent un raccourci, avec leurs touches ; chaque raccourci se remplace (gardé dans ce navigateur).
@@ -72,12 +73,12 @@ export class PageParametres extends PageBase {
       </section>
     </div>`;
     this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
-    const optionsDroite = this.conteneur.querySelector('.options-menu-droite');
+    const optionsLateral = this.conteneur.querySelector('.options-menu-lateral');
     this.conteneur.querySelectorAll('input[name="menu-mode"]').forEach((r) => r.addEventListener('change', () => {
       app.changerMenu({ mode: r.value });
-      optionsDroite.hidden = r.value !== DISPOSITION_MENU.DROITE;
+      optionsLateral.hidden = r.value === DISPOSITION_MENU.HAUT;
     }));
-    optionsDroite.addEventListener('change', (e) => {
+    optionsLateral.addEventListener('change', (e) => {
       const champ = e.target.closest('[data-menu]');
       if (!champ) return;
       app.changerMenu({ [champ.dataset.menu]: champ.type === 'checkbox' ? champ.checked : Number(champ.value) });

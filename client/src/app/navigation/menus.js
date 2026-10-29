@@ -6,6 +6,12 @@ import { THEMES } from '@logibtp/socle/ui';
 // de menu ayant une URL). Les menus Fenêtres et Paramètres sont construits à l'ouverture (état courant).
 
 const L = (theme) => `/liste/${theme}`;
+/** Positions du menu (sous-menu Paramètres › Position du menu). */
+const POSITIONS_MENU = [
+  { mode: DISPOSITION_MENU.HAUT, libelle: 'En haut', icone: '☰' },
+  { mode: DISPOSITION_MENU.GAUCHE, libelle: 'À gauche, sur toute la hauteur', icone: '▌' },
+  { mode: DISPOSITION_MENU.DROITE, libelle: 'À droite, sur toute la hauteur', icone: '▐' },
+];
 /** Création rapide (bouton ＋ sur la ligne du menu) : fiche ou document. */
 const F = (type, titre, requete = '') => ({ url: `/fiche/${type}/nouveau${requete}`, titre });
 const D = (code, titre) => ({ url: `/document/nouveau?type=${code}`, titre });
@@ -250,11 +256,10 @@ export function menus(app) {
           sousMenu: () => THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
         },
         {
-          libelle: 'Position du menu', icone: '▐', info: app.bandeau?.vertical ? 'À droite' : 'En haut',
-          sousMenu: () => [
-            { libelle: 'En haut', icone: '☰', coche: !app.bandeau?.vertical, action: () => app.changerMenu({ mode: DISPOSITION_MENU.HAUT }) },
-            { libelle: 'À droite, sur toute la hauteur', icone: '▐', coche: Boolean(app.bandeau?.vertical), action: () => app.changerMenu({ mode: DISPOSITION_MENU.DROITE }) },
-          ],
+          libelle: 'Position du menu', icone: '▐', info: POSITIONS_MENU.find((p) => p.mode === (app.bandeau?.disposition.mode ?? DISPOSITION_MENU.HAUT))?.libelle,
+          sousMenu: () => POSITIONS_MENU.map((p) => ({
+            libelle: p.libelle, icone: p.icone, coche: app.bandeau?.disposition.mode === p.mode, action: () => app.changerMenu({ mode: p.mode }),
+          })),
         },
         { code: 'themes', libelle: 'Thèmes et vues de liste…', icone: '🗂', action: () => app.gererThemes(), desactive: !app.peutGererThemes() },
         {

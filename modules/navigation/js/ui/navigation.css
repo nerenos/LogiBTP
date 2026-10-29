@@ -62,7 +62,7 @@
 /* Outils, poignée et languette : propres au panneau à droite. */
 .bandeau-outils, .bandeau-poignee, .bandeau-languette { display: none; }
 
-/* Menu à droite sur toute la hauteur (disposition 'droite') : le corps passe en ligne, pages à gauche. */
+/* Menu sur toute la hauteur (dispositions 'droite' et 'gauche') : le corps passe en ligne, pages à côté. */
 body:has(> .bandeau-vertical) { flex-direction: row; }
 body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
 .bandeau.bandeau-vertical {
@@ -113,7 +113,7 @@ body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
   border-top: 1px solid var(--bord); background: var(--titre-fond);
 }
 .bandeau-vertical .bandeau-infos > * { min-height: 1.9rem; display: inline-flex; align-items: center; }
-/* Poignée de largeur sur le bord gauche. */
+/* Poignée de largeur sur le bord intérieur (gauche du panneau à droite). */
 .bandeau-vertical .bandeau-poignee { display: block; position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 2; touch-action: none; }
 .bandeau-vertical .bandeau-poignee:hover { background: linear-gradient(to right, transparent 3px, var(--accent) 3px, var(--accent) 5px, transparent 5px); }
 /* Masqué (à la main) ou masquage automatique replié : une languette étroite seule. */
@@ -131,6 +131,12 @@ body:has(> .bandeau-vertical) > .pages { flex: 1; min-width: 0; min-height: 0; }
   box-shadow: -6px 0 24px rgb(0 0 0 / 0.22);
 }
 body:has(> .bandeau-auto.bandeau-survol) > .pages { margin-right: 16px; }
+
+/* À gauche : même panneau en miroir (avant les pages, poignée sur le bord droit, déplié vers la droite). */
+.bandeau.bandeau-vertical.bandeau-gauche { order: -1; border-left: 0; border-right: 1px solid var(--bord); }
+.bandeau-vertical.bandeau-gauche .bandeau-poignee { left: auto; right: -4px; }
+.bandeau-vertical.bandeau-auto.bandeau-gauche.bandeau-survol { right: auto; left: 0; box-shadow: 6px 0 24px rgb(0 0 0 / 0.22); }
+body:has(> .bandeau-auto.bandeau-gauche.bandeau-survol) > .pages { margin-right: 0; margin-left: 16px; }
 
 /* Zone des pages */
 .pages { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
