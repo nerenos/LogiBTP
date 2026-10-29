@@ -1,7 +1,6 @@
 import { TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
-import { codeMarche, prochainCode } from '../fiches/fiche-structure.js';
 
 // Validation d'une commande client (CONCEPTION-ACHATS-MARCHES.md, Q16, Q17, 13.2) : le marché est obligatoire. Avant la
 // validation, l'utilisateur choisit le chantier (existant, ou nouveau chantier pré-rempli avec les valeurs de la
@@ -15,9 +14,10 @@ const NOUVEAU = 'nouveau';
 /**
  * Ouvre le dialogue ; résout { ent_marche_id, cree, avenant } ou null (abandon).
  * refs : référentiels de la structure ; doc : entête de la commande ; totalHt : total HT ;
- * creerChantier(valeurs) → { id } ; creerMarche(valeurs) → { id }.
+ * creerChantier(valeurs) → { id } ; creerMarche(valeurs) → { id } ; codePrevisionnel(type, valeurs) → code prévisionnel
+ * (texte indicatif ; code vide = calculé par le chrono à la création).
  */
-export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche, individus = [] }) {
+export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche, individus = [], codePrevisionnel = async () => '' }) {
   const chantiers = ouverts(refs.chantiers ?? []);
   const client = doc.ent_tiers_id ?? null;
   const projet = (refs.projets ?? []).find((p) => p.id === doc.ent_projet_id) ?? null;
@@ -34,7 +34,6 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
   });
   const comboNature = creerCombo({ vide: false, valeur: 'P', options: [{ valeur: 'P', libelle: 'Marché privé' }, { valeur: 'U', libelle: 'Marché public' }] });
   let comboMarche = null;
-  const codesChantiers = (refs.chantiers ?? []).map((c) => c.code);
 
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure';
@@ -45,7 +44,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
     <label class="large">Chantier <span data-chantier></span></label>
     <fieldset data-nouveau-chantier><legend>Nouveau chantier</legend>
       <div class="grille-champs">
-        <label>Code <input data-cha="code" required value="${echapper(prochainCode(TYPE_FICHE.CHANTIER, codesChantiers))}"></label>
+        <label>Code <input data-cha="code" class="code-previsionnel" title="Vide : code calculé à la création"></label>
         <label class="large">Libellé <input data-cha="libelle" required value="${echapper(doc.ent_objet ?? projet?.libelle ?? '')}"></label>
         <label class="large">Adresse <input data-cha="adresse"></label>
         <label>Code postal <input data-cha="code_postal"></label>
@@ -61,7 +60,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
       <label><input type="radio" name="choix" value="creer" checked> Nouveau marché (cette commande en est la base)</label>
       <label><input type="radio" name="choix" value="avenant"> Avenant d'un marché en cours du chantier</label>
       <div data-creer class="grille-champs">
-        <label>Code <input data-code required></label>
+        <label>Code <input data-code class="code-previsionnel" title="Vide : code calculé à la création"></label>
         <label class="large">Libellé <input data-libelle required value="${echapper(doc.ent_objet ?? '')}"></label>
         <label>Nature <span data-nature></span></label>
         <label>Retenue de garantie (%) <input data-retenue value="5"></label>
@@ -86,8 +85,9 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
 
   const majChantier = () => {
     $('[data-nouveau-chantier]').hidden = !nouveauChantier();
-    const c = nouveauChantier() ? { code: $('[data-cha="code"]').value } : chantier();
-    $('[data-code]').value = c ? codeMarche(c, refs.marches ?? []) : '';
+    // Code du marché : prévisionnel du chantier existant (le chrono le calcule d'après le code du chantier).
+    $('[data-code]').placeholder = nouveauChantier() ? 'd’après le code du chantier' : '';
+    if (chantier()) codePrevisionnel(TYPE_FICHE.MARCHE, { cha_id: chantier().id, sens: 'V' }).then((c) => { if (chantier() && c) $('[data-code]').placeholder = c; });
     const marches = marchesDuChantier().sort((a, b) => Number(b.tiers_id === client) - Number(a.tiers_id === client));
     const options = marches.map((m) => ({ valeur: m.id, libelle: `${m.code} – ${m.libelle}`, detail: m.montant_ht !== null ? `${formatNombre(m.montant_ht, 2)} € HT` : '' }));
     comboMarche = creerCombo({ vide: false, valeur: options[0]?.valeur ?? '', options });
@@ -102,7 +102,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
     $('[data-avenant]').hidden = choix() !== 'avenant';
   };
   comboChantier.addEventListener('change', majChantier);
-  $('[data-cha="code"]').addEventListener('input', () => { if (nouveauChantier()) $('[data-code]').value = codeMarche({ code: $('[data-cha="code"]').value }, refs.marches ?? []); });
+  codePrevisionnel(TYPE_FICHE.CHANTIER, {}).then((c) => { if (c) $('[data-cha="code"]').placeholder = c; });
   dlg.querySelectorAll('[name="choix"]').forEach((r) => r.addEventListener('change', majChoix));
   majChantier();
 
@@ -127,11 +127,11 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
           finir({ ent_marche_id: id, cree: false, avenant: true });
           return;
         }
-        if (!$('[data-code]').value.trim() || !$('[data-libelle]').value.trim()) { erreur('Code et libellé du marché obligatoires'); return; }
+        if (!$('[data-libelle]').value.trim()) { erreur('Libellé du marché obligatoire'); return; }
         let chaId = chantier()?.id ?? null;
         if (nouveauChantier()) {
           const v = Object.fromEntries([...dlg.querySelectorAll('[data-cha]')].map((el) => [el.dataset.cha, el.type === 'checkbox' ? el.checked : (el.value.trim() || null)]));
-          if (!v.code || !v.libelle) { erreur('Code et libellé du chantier obligatoires'); return; }
+          if (!v.libelle) { erreur('Libellé du chantier obligatoire'); return; }
           const cree = await creerChantier({
             ...v, conducteur_ind_id: comboConducteur.resoudre() === '' ? null : Number(comboConducteur.resoudre()), tiers_id: client, aff_id: comboAffaire.valeurCombo === '' ? null : Number(comboAffaire.valeurCombo),
             prj_id: projet?.id ?? null, statut: 'OUVERT', date_ouverture: aujourdhui(),
@@ -141,7 +141,7 @@ export function proposerMarche({ refs, doc, totalHt, creerChantier, creerMarche,
         if (!chaId) { erreur('Choisissez le chantier'); return; }
         const nombre = (s) => (s.value.trim() === '' ? null : s.value.replace(/\s/g, '').replace(',', '.'));
         const marche = await creerMarche({
-          code: $('[data-code]').value.trim(), libelle: $('[data-libelle]').value.trim(), cha_id: chaId, tiers_id: client,
+          code: $('[data-code]').value.trim() || null, libelle: $('[data-libelle]').value.trim(), cha_id: chaId, tiers_id: client,
           ent_id: doc.ent_id, nature: comboNature.valeurCombo, retenue_pct: nombre($('[data-retenue]')),
           date: doc.ent_date ?? aujourdhui(), statut: 'EN_COURS',
         });

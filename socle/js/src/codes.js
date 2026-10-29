@@ -32,6 +32,7 @@ export const ACTION_DROIT = Object.freeze({
   DEVALIDER: 'DEVALIDER',
   DEBLOQUER: 'DEBLOQUER',
   CONFIDENTIEL: 'CONFIDENTIEL',
+  MODIFIER_CODE: 'MODIFIER_CODE',
 });
 
 /** Niveaux de confidentialité (GED, modèles d'édition), du plus ouvert au plus strict. */

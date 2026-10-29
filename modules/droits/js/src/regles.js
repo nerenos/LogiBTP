@@ -19,6 +19,7 @@ export const ALIAS_ACTIONS = {
 export const LIBELLES_ACTIONS = {
   CONSULTER: 'Consulter', MODIFIER: 'Modifier', VALIDER: 'Valider', CREER: 'Créer', SUPPRIMER: 'Supprimer',
   DEVERROUILLER: 'Déverrouiller', FORCER: 'Forcer', RGPD: 'Données RGPD', SUPERVISER: 'Superviser', USURPER: 'Usurper',
+  MODIFIER_CODE: 'Modifier le code',
 };
 
 export const LIBELLES_PORTEES = { SOI: 'Soi', SERVICE: 'Son service', TOUT: 'Tout' };

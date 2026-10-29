@@ -80,6 +80,27 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         await base.AvantEcritureAsync(type, creation, id, aEcrire, valeurs, proprietes, u, ct);
     }
 
+    /// <summary>
+    /// Chrono d'un marché ({PARENT}) : code de son chantier sans le préfixe du chrono des chantiers (CH-2026-002 →
+    /// 2026-002, d'où M-2026-002-1).
+    /// </summary>
+    public override async Task<string?> CodeParentChronoAsync(string type, string champ, string valeur, CancellationToken ct)
+    {
+        if (type != TypesFiche.Marche || champ != "cha_id" || !long.TryParse(valeur, NumberStyles.None, CultureInfo.InvariantCulture, out var cha)) return null;
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<LogiBtpContext>();
+        var l = await db.Database.SqlQuery<ParentChrono>($"""
+            SELECT c.cha_code AS code, coalesce(p.chf_prefixe, t.tyf_definition -> 'chrono' ->> 'prefixe') AS prefixe
+            FROM chantier c CROSS JOIN type_fiche t
+            LEFT JOIN chrono_fiche p ON p.chf_type = t.tyf_code AND p.chf_variante = ''
+            WHERE c.cha_id = {cha} AND t.tyf_code = 'chantier'
+            """).FirstOrDefaultAsync(ct);
+        if (l?.Code is not { } code) return null;
+        return !string.IsNullOrEmpty(l.Prefixe) && code.StartsWith(l.Prefixe, StringComparison.Ordinal) && code.Length > l.Prefixe.Length ? code[l.Prefixe.Length..] : code;
+    }
+
+    private sealed record ParentChrono(string? Code, string? Prefixe);
+
     public override async Task AvantSuppressionAsync(string type, string id, Utilisateur u, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();

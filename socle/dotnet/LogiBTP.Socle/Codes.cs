@@ -42,6 +42,8 @@ public static class ActionsDroits
     public const string Devalider = "DEVALIDER";
     public const string Debloquer = "DEBLOQUER";
     public const string Confidentiel = "CONFIDENTIEL";
+    /// <summary>Modifier le code d'une fiche déjà créée (module Fiche).</summary>
+    public const string ModifierCode = "MODIFIER_CODE";
 
     /// <summary>Actions du modèle, en cascade (l'interface coche les précédentes).</summary>
     public static readonly IReadOnlyList<string> Cascade = [Consulter, Modifier, Valider, Creer, Supprimer, Deverrouiller, Forcer];

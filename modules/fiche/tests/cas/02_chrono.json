@@ -1,0 +1,48 @@
+{
+  "description": "Chrono du code d'une fiche : format (jetons {P}, {AAAA}, {AA}, {N}, {N:k}, {PARENT}), lecture d'un code, début commun des codes, contrôle du format, code suivant une saisie déjà prise. Même résultat côté JS (chrono.js) et C# (ChronoFiche).",
+  "formater": [
+    { "nom": "défaut", "format": null, "prefixe": "T", "annee": 2026, "rang": 41, "attendu": "T000041" },
+    { "nom": "projet", "format": "{P}{AAAA}-{N:3}", "prefixe": "PRJ-", "annee": 2026, "rang": 7, "attendu": "PRJ-2026-007" },
+    { "nom": "rang plus long que le format", "format": "{P}{N:3}", "prefixe": "MAT", "annee": 2026, "rang": 1234, "attendu": "MAT1234" },
+    { "nom": "année sur deux chiffres", "format": "{P}{AA}/{N:4}", "prefixe": "AF", "annee": 2027, "rang": 12, "attendu": "AF27/0012" },
+    { "nom": "marché d'un chantier", "format": "{P}{PARENT}-{N}", "prefixe": "M-", "annee": 2026, "rang": 3, "parent": "2026-002", "attendu": "M-2026-002-3" },
+    { "nom": "élément", "format": "{P}{N:6}", "prefixe": "ELE", "annee": 2026, "rang": 1, "attendu": "ELE000001" }
+  ],
+  "lire": [
+    { "nom": "projet", "format": "{P}{AAAA}-{N:3}", "prefixe": "PRJ-", "code": "PRJ-2026-012", "attendu": { "annee": 2026, "rang": 12 } },
+    { "nom": "année sur deux chiffres", "format": "{P}{AA}/{N:4}", "prefixe": "AF", "code": "AF26/0007", "attendu": { "annee": 2026, "rang": 7 } },
+    { "nom": "sans année", "format": null, "prefixe": "T", "code": "T000123", "attendu": { "annee": null, "rang": 123 } },
+    { "nom": "rang nul", "format": null, "prefixe": "T", "code": "T000000", "attendu": null },
+    { "nom": "autre préfixe", "format": null, "prefixe": "T", "code": "X000001", "attendu": null },
+    { "nom": "préfixe littéral", "format": "{P}-{N}", "prefixe": "C.", "code": "CX-1", "attendu": null },
+    { "nom": "marché du chantier", "format": "{P}{PARENT}-{N}", "prefixe": "M-", "parent": "2026-002", "code": "M-2026-002-4", "attendu": { "annee": null, "rang": 4 } },
+    { "nom": "marché d'un autre chantier", "format": "{P}{PARENT}-{N}", "prefixe": "M-", "parent": "2026-002", "code": "M-2026-003-4", "attendu": null },
+    { "nom": "lot alphanumérique du chantier", "format": "{P}{PARENT}-{N}", "prefixe": "M-", "parent": "2026-002", "code": "M-2026-002-GO", "attendu": null },
+    { "nom": "code vide", "format": null, "prefixe": "T", "code": "  ", "attendu": null }
+  ],
+  "debut": [
+    { "nom": "exercice", "format": "{P}{AAAA}-{N:3}", "prefixe": "PRJ-", "annee": 2026, "attendu": "PRJ-2026-" },
+    { "nom": "jamais remis à zéro", "format": "{P}{AAAA}-{N:3}", "prefixe": "PRJ-", "annee": null, "attendu": "PRJ-" },
+    { "nom": "parent", "format": "{P}{PARENT}-{N}", "prefixe": "M-", "annee": null, "parent": "2026-002", "attendu": "M-2026-002-" }
+  ],
+  "controler": [
+    { "nom": "défaut", "format": null, "raz": "J", "valide": true },
+    { "nom": "projet", "format": "{P}{AAAA}-{N:3}", "raz": "A", "valide": true },
+    { "nom": "parent", "format": "{P}{PARENT}-{N}", "raz": "J", "valide": true },
+    { "nom": "remise annuelle sans année", "format": "{P}{N:6}", "raz": "A", "valide": false },
+    { "nom": "sans rang", "format": "{P}{AAAA}", "raz": "J", "valide": false },
+    { "nom": "deux rangs", "format": "{P}{N}{N}", "raz": "J", "valide": false },
+    { "nom": "deux parents", "format": "{PARENT}{PARENT}{N}", "raz": "J", "valide": false },
+    { "nom": "jeton inconnu", "format": "{P}{MM}{N}", "raz": "J", "valide": false }
+  ],
+  "suivant": [
+    { "nom": "nombre final", "code": "CH-2026-010", "attendu": "CH-2026-011" },
+    { "nom": "même longueur", "code": "T000099", "attendu": "T000100" },
+    { "nom": "longueur dépassée", "code": "A99", "attendu": "A100" },
+    { "nom": "sans nombre final", "code": "DUPONT", "attendu": "DUPONT1" },
+    { "nom": "après DUPONT1", "code": "DUPONT1", "attendu": "DUPONT2" },
+    { "nom": "lot de chantier", "code": "M-2026-002-GO", "attendu": "M-2026-002-GO1" },
+    { "nom": "espaces retirés", "code": " HEA100 ", "attendu": "HEA101" },
+    { "nom": "vide", "code": "", "attendu": null }
+  ]
+}

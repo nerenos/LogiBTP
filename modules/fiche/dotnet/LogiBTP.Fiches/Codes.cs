@@ -8,4 +8,6 @@ public static class ErreursFiche
     public const string VerrouPerdu = "VERROU_PERDU";
     public const string FicheEnModification = "FICHE_EN_MODIFICATION";
     public const string FicheUtilisee = "FICHE_UTILISEE";
+    /// <summary>Code déjà porté par une autre fiche (création : code suivant proposé).</summary>
+    public const string CodePris = "CODE_PRIS";
 }

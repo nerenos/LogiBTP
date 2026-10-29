@@ -41,8 +41,13 @@ export function definirConfidentielSession(actif) {
 const bulle = (b) => (b.icone ? [b.libelle, b.titre].filter(Boolean).join(' — ') : (b.titre ?? ''));
 
 export class FicheBase {
-  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime }) {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime, ouvrirFiche = null }) {
     this.conteneur = conteneur;
+    // Ouverture d'une autre fiche ({ type, id }, événement) : fiche qui porte déjà un code saisi.
+    this.ouvrirFiche = ouvrirFiche;
+    // Chrono du code : code prévisionnel (création) et fiche qui porte déjà le code saisi.
+    this.etatCode = { previsionnel: null, pris: null, saisi: null };
+    this.demandeCode = 0;
     this.fournisseur = fournisseur;
     this.type = type;
     this.id = id;
@@ -93,6 +98,7 @@ export class FicheBase {
   definirValeur(code, valeur) {
     this.saisie.valeurs[code] = valeur;
     this.#majTitre();
+    this.#contexteCodeModifie(code);
   }
 
   /** Fiche en saisie (modification, création ou copie). */
@@ -118,6 +124,7 @@ export class FicheBase {
       }
     }
     this.#construire();
+    if (this.#creation()) await this.#majCode({ immediat: true });
     return this;
   }
 
@@ -352,6 +359,7 @@ export class FicheBase {
 
   /** Champ saisissable selon son type ; lecture seule en consultation (ou champ en lecture seule). */
   rendreChamp(champ, valeur) {
+    if (!champ.supplementaire && champ.code === this.definition.chrono?.champ) return this.#champCode(champ, valeur);
     const lecture = !enSaisie(this.mode) || champ.lecture_seule || (champ.saisie === 'creation' && this.mode === MODES.MODIFICATION);
     let el;
     switch (champ.type) {
@@ -418,8 +426,120 @@ export class FicheBase {
       const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
       cible[champ.code] = v;
       this.#majTitre();
+      if (!champ.supplementaire) this.#contexteCodeModifie(champ.code);
     });
     return el;
+  }
+
+  // ---------------------------------------------------------------- code à chrono
+
+  #creation() { return this.mode === MODES.CREATION || this.mode === MODES.COPIE; }
+
+  /** Code modifiable : création ou copie, ou modification avec le droit « Modifier le code ». */
+  #codeModifiable(champ) {
+    if (!enSaisie(this.mode) || champ.lecture_seule) return false;
+    return this.#creation() || !!this.definition.droits.modifier_code;
+  }
+
+  /**
+   * Champ du code à chrono : en création, champ vide avec le code prévisionnel en texte indicatif (⇥ le reprend pour le
+   * modifier) ; la saisie est contrôlée en direct (déjà utilisé par une autre fiche) ; en modification, saisissable avec
+   * le droit « Modifier le code » seulement.
+   */
+  #champCode(champ, valeur) {
+    const bloc = document.createElement('div');
+    const zone = document.createElement('div');
+    zone.className = 'fiche-code';
+    zone.dataset.codeChrono = '';
+    const el = document.createElement('input');
+    el.type = 'text';
+    el.className = 'fiche-saisie-champ';
+    el.value = valeur ?? '';
+    if (champ.longueur) el.maxLength = champ.longueur;
+    zone.append(el);
+    bloc.append(zone);
+    if (!this.#codeModifiable(champ)) {
+      el.readOnly = true;
+      if (this.mode === MODES.MODIFICATION && !champ.lecture_seule) el.title = 'Code non modifiable : droit « Modifier le code » nécessaire';
+      return bloc;
+    }
+    if (this.#creation()) {
+      const reprendre = document.createElement('button');
+      reprendre.type = 'button';
+      reprendre.dataset.reprendre = '';
+      reprendre.textContent = '⇥';
+      reprendre.title = 'Reprendre le code prévisionnel pour le modifier';
+      reprendre.setAttribute('aria-label', reprendre.title);
+      reprendre.addEventListener('click', () => {
+        if (!this.etatCode.previsionnel) return;
+        el.value = this.etatCode.previsionnel;
+        this.saisie.valeurs[champ.code] = el.value;
+        this.#majCode();
+        el.focus();
+      });
+      zone.append(reprendre);
+    }
+    const etat = document.createElement('div');
+    etat.className = 'fiche-code-etat';
+    etat.dataset.codeEtat = '';
+    bloc.append(etat);
+    el.addEventListener('input', () => {
+      this.saisie.valeurs[champ.code] = el.value;
+      this.#majTitre();
+      this.#majCode();
+    });
+    queueMicrotask(() => this.#afficherEtatCode());
+    return bloc;
+  }
+
+  /** Champs dont dépend le code (portée, parent, variante) : leur changement recalcule le prévisionnel. */
+  #contexteCodeModifie(code) {
+    const c = this.definition?.chrono;
+    if (c && [c.portee, c.parent, c.variante].includes(code)) this.#majCode();
+  }
+
+  /** Code prévisionnel et contrôle du code saisi, demandés au serveur (après une courte pause de frappe). */
+  #majCode({ immediat = false } = {}) {
+    const c = this.definition?.chrono;
+    if (!c || !this.fournisseur.code) return Promise.resolve();
+    clearTimeout(this.minuterieCode);
+    const n = ++this.demandeCode;
+    const demander = async () => {
+      if (!enSaisie(this.mode)) return;
+      const valeurs = Object.fromEntries([c.portee, c.parent, c.variante].filter(Boolean).map((k) => [k, this.valeur(k) ?? null]));
+      const saisi = String(this.valeur(c.champ) ?? '').trim() || null;
+      const creation = this.#creation();
+      // Modification : code inchangé, rien à contrôler.
+      if (!creation && (saisi === (this.fiche.valeurs[c.champ] ?? null) || !saisi)) { this.etatCode = { previsionnel: null, pris: null, saisi: null }; this.#afficherEtatCode(); return; }
+      try {
+        const r = await this.fournisseur.code(this.type, { code: saisi, valeurs, id: creation ? null : this.id });
+        if (n !== this.demandeCode) return;
+        this.etatCode = { previsionnel: r.previsionnel ?? null, pris: r.pris ?? null, saisi };
+        this.#afficherEtatCode();
+      } catch { /* contrôle indicatif : le serveur contrôle encore à l'enregistrement */ }
+    };
+    if (immediat) return demander();
+    this.minuterieCode = setTimeout(demander, 300);
+    return Promise.resolve();
+  }
+
+  /** Prévisionnel en texte indicatif et état de la saisie sous le champ du code (sans reconstruire la fiche). */
+  #afficherEtatCode() {
+    const zone = this.conteneur.querySelector('[data-code-chrono]');
+    const etat = this.conteneur.querySelector('[data-code-etat]');
+    if (!zone || !etat) return;
+    const { previsionnel, pris, saisi } = this.etatCode;
+    const creation = this.#creation();
+    const input = zone.querySelector('input');
+    if (creation) input.placeholder = previsionnel ?? 'calculé à l\'enregistrement';
+    const reprendre = zone.querySelector('[data-reprendre]');
+    if (reprendre) reprendre.disabled = !previsionnel;
+    etat.className = `fiche-code-etat${pris ? ' pris' : saisi ? ' libre' : ''}`;
+    if (pris) {
+      etat.innerHTML = `⚠ Déjà utilisé${this.ouvrirFiche ? ` par la <button type="button">fiche ${echapper(pris.code)}</button>` : ''}${creation ? ' : le prochain code libre sera proposé à l\'enregistrement' : ''}`;
+      etat.querySelector('button')?.addEventListener('click', (e) => this.ouvrirFiche({ type: this.type, id: pris.id }, e));
+    } else if (saisi) etat.textContent = '✓ Disponible';
+    else etat.textContent = creation ? (previsionnel ? 'Code prévisionnel, attribué à l\'enregistrement' : '') : '';
   }
 
   /**
@@ -550,7 +670,9 @@ export class FicheBase {
   async copier() {
     this.#preparerCopie();
     this.erreurs = [];
+    this.etatCode = { previsionnel: null, pris: null, saisi: null };
     this.rendre();
+    await this.#majCode({ immediat: true });
   }
 
   async reveler() {
@@ -566,10 +688,13 @@ export class FicheBase {
 
   async enregistrer() {
     const valeurs = this.valeurs(), proprietes = this.proprietes();
+    // Création : code à chrono laissé vide = calculé par le serveur (le prévisionnel tient lieu de valeur pour le contrôle).
+    const chrono = this.definition.chrono;
+    const controle = chrono && this.#creation() && vide(valeurs[chrono.champ]) ? { ...valeurs, [chrono.champ]: this.etatCode.previsionnel ?? '…' } : valeurs;
     this.erreurs = [
       // Mots de passe enregistrés et non ressaisis : inconnus du poste, contrôlés par le serveur.
-      ...validerFiche(this.definition, valeurs, proprietes, { masques: new Set([...this.masques, ...this.#secretsIntacts()]) }),
-      ...this.validerMetier(valeurs, proprietes).map((e) => ({ supplementaire: false, code: 'METIER', ...e })),
+      ...validerFiche(this.definition, controle, proprietes, { masques: new Set([...this.masques, ...this.#secretsIntacts()]) }),
+      ...this.validerMetier(controle, proprietes).map((e) => ({ supplementaire: false, code: 'METIER', ...e })),
     ];
     if (this.erreurs.length) {
       this.#allerErreur();
@@ -598,11 +723,31 @@ export class FicheBase {
       this.surEnregistre?.(fiche, { cree });
       return true;
     } catch (e) {
+      if (e.code === ERREUR_FICHE.CODE_PRIS) return this.#codePris(e);
       if (e.code === 'VALIDATION' && Array.isArray(e.details)) { this.erreurs = e.details; this.#allerErreur(); }
       else if (e.code === ERREUR_FICHE.VERROU_PERDU) { this.#verrouPerdu(e.details); return false; }
       this.#erreur(e);
       return false;
     }
+  }
+
+  /**
+   * Code saisi déjà pris : à la création, le prochain code libre à partir de la saisie est proposé (accepté : la fiche
+   * est enregistrée avec lui) ; en modification, erreur sur le champ (l'utilisateur choisit un autre code).
+   */
+  async #codePris(e) {
+    const champ = this.definition.chrono?.champ ?? 'code';
+    const { code, pris, propose } = e.details ?? {};
+    if (this.#creation() && propose && await confirmer(`Le code ${code} est déjà utilisé${pris?.code ? ` (fiche ${pris.code})` : ''}. Utiliser le prochain code disponible : ${propose} ?`, { ok: `Utiliser ${propose}` })) {
+      this.saisie.valeurs[champ] = propose;
+      this.etatCode = { previsionnel: this.etatCode.previsionnel, pris: null, saisi: propose };
+      this.rendre();
+      return this.enregistrer();
+    }
+    this.erreurs = [{ champ, code: ERREUR_FICHE.CODE_PRIS, message: e.message, supplementaire: false }];
+    this.#allerErreur();
+    this.message(e.message, 'erreur');
+    return false;
   }
 
   #secretsIntacts() {

@@ -1,6 +1,6 @@
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo, alerter, ouvrirModale } from '@logibtp/socle/ui';
-import { codeMarche } from '../fiches/fiche-structure.js';
+import { TYPE_FICHE } from '../codes.js';
 
 // Validation d'une commande de sous-traitance (ANALYSE-MODULE-SOUS-TRAITANCE.md ST2, ST4, ST5, ST14) : le marché de
 // sous-traitance est obligatoire. Avant la validation, l'utilisateur rattache la commande comme avenant d'un marché de
@@ -15,9 +15,10 @@ const GARANTIES = {
 
 /**
  * Ouvre le dialogue ; résout { ent_marche_id, cree } ou null (abandon). refs : référentiels de la structure ; doc :
- * entête de la commande (sous-traitant et chantier obligatoires) ; creerMarche(valeurs) → { id }.
+ * entête de la commande (sous-traitant et chantier obligatoires) ; creerMarche(valeurs) → { id } ;
+ * codePrevisionnel(type, valeurs) → code prévisionnel (texte indicatif ; code vide = calculé par le chrono).
  */
-export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers = '', creerMarche }) {
+export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers = '', creerMarche, codePrevisionnel = async () => '' }) {
   const chantier = (refs.chantiers ?? []).find((c) => c.id === doc.ent_chantier_id);
   if (!chantier || !doc.ent_tiers_id) {
     await alerter('Commande de sous-traitance : choisissez le sous-traitant (intervenant) et le chantier (rattachement) avant de la valider.');
@@ -41,7 +42,7 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
       <label><input type="radio" name="choix" value="avenant" ${axes.length ? 'checked' : 'disabled'}> Avenant du marché ${axes.length ? '<span data-axe></span>' : '(aucun marché de ce sous-traitant sur le chantier)'}</label>
       <label><input type="radio" name="choix" value="creer" ${axes.length ? '' : 'checked'}> Nouveau marché (nouvel axe de facturation)</label>
       <div data-creer class="grille-champs">
-        <label>Code <input data-code required value="${echapper(codeMarche(chantier, marches, 'ST'))}"></label>
+        <label>Code <input data-code class="code-previsionnel" title="Vide : code calculé à la création"></label>
         <label class="large">Libellé <input data-libelle required value="${echapper(doc.ent_objet ?? '')}"></label>
         <label class="large">Marché de vente lié <span data-vente></span></label>
         <label>Nature <input data-nature readonly></label>
@@ -54,6 +55,7 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
     <p class="ligne"><button value="ok" class="principal">Valider la commande</button> <button value="annuler" formnovalidate>Annuler</button></p>
   </form>`;
   const $ = (s) => dlg.querySelector(s);
+  codePrevisionnel(TYPE_FICHE.MARCHE, { cha_id: chantier.id, sens: 'ST' }).then((c) => { if (c) $('[data-code]').placeholder = c; });
   if (comboAxe) $('[data-axe]').append(comboAxe);
   $('[data-vente]').append(comboVente);
   const majNature = () => {
@@ -78,7 +80,7 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
         if (choix === 'avenant') { dlg.close(); resoudre({ ent_marche_id: Number(comboAxe.valeurCombo), cree: false }); return; }
         const agree = $('[data-agree]').value.trim();
         const m = await creerMarche({
-          sens: 'ST', code: $('[data-code]').value.trim(), libelle: $('[data-libelle]').value.trim(), cha_id: chantier.id, tiers_id: doc.ent_tiers_id,
+          sens: 'ST', code: $('[data-code]').value.trim() || null, libelle: $('[data-libelle]').value.trim(), cha_id: chantier.id, tiers_id: doc.ent_tiers_id,
           marche_vente_id: comboVente.valeurCombo ? Number(comboVente.valeurCombo) : null, nature: nature(), garantie: comboGarantie.valeurCombo,
           montant_agree: agree ? Number(agree.replace(/\s/g, '').replace(',', '.')) : null, autoliquidation: $('[data-auto]').checked,
           date: aujourdhui(), statut: 'EN_COURS', depassement_autorise: false,

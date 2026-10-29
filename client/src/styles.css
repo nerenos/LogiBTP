@@ -141,6 +141,8 @@
 dialog.dialogue-structure { max-width: min(640px, calc(100vw - 32px)); width: 100%; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); padding: 16px; }
 dialog.dialogue-structure::backdrop { background: rgba(0, 0, 0, 0.35); }
 dialog.dialogue-structure label { display: block; margin: 6px 0; }
+/* Code à chrono laissé vide : code prévisionnel en texte indicatif (comme le champ code des fiches). */
+input.code-previsionnel::placeholder { font-style: italic; color: var(--discret); opacity: 0.75; }
 dialog.dialogue-structure fieldset { border: 1px solid var(--bord); border-radius: 6px; margin: 8px 0; }
 dialog.dialogue-structure .grille-champs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; }
 dialog.dialogue-structure .grille-champs .large { grid-column: 1 / -1; }

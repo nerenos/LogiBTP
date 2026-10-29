@@ -25,6 +25,8 @@ public static class Extensions
         // Chiffrement des mots de passe : celui de l'application (AddChiffrement) s'il est enregistré, sinon non configuré.
         services.TryAddSingleton(new LogiBTP.Socle.Chiffrement(null));
         services.AddScoped<ServiceFiche>();
+        // Chrono des codes pour les créations hors fiche (tiers provisoire…).
+        services.AddScoped<LogiBTP.Socle.Web.IChronosFiches>(sp => sp.GetRequiredService<ServiceFiche>());
         return services;
     }
 
@@ -39,6 +41,9 @@ public static class Extensions
         g.MapGet("/parametrage", (string type, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Parametrage(type, Utilisateur.Depuis(http), ct));
         g.MapPut("/parametrage", (string type, ParametrageFicheDto p, HttpContext http, ServiceFiche s, CancellationToken ct) => s.EnregistrerParametrage(type, p, Utilisateur.Depuis(http), ct));
         g.MapPost("", (string type, DemandeEnregistrement d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Creer(type, d, Utilisateur.Depuis(http), ct));
+        g.MapPost("/code", (string type, DemandeCode d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Code(type, d, Utilisateur.Depuis(http), ct));
+        g.MapGet("/chrono", (string type, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Chronos(type, Utilisateur.Depuis(http), ct));
+        g.MapPut("/chrono", (string type, ChronoSaisie c, HttpContext http, ServiceFiche s, CancellationToken ct) => s.EnregistrerChrono(type, c, Utilisateur.Depuis(http), ct));
         g.MapGet("/{id}", (string type, string id, bool? confidentiel, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Charger(type, id, confidentiel == true, Utilisateur.Depuis(http), ct));
         g.MapPut("/{id}", (string type, string id, DemandeEnregistrement d, HttpContext http, ServiceFiche s, CancellationToken ct) => s.Enregistrer(type, id, d, Utilisateur.Depuis(http), ct));
         g.MapDelete("/{id}", async (string type, string id, HttpContext http, ServiceFiche s, CancellationToken ct) =>

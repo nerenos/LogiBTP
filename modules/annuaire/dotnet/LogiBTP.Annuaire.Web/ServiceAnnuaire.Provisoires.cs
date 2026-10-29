@@ -82,7 +82,7 @@ public partial class ServiceAnnuaire
         {
             PerNivCode = niveau, PerRaisonSociale = raison, PerSiret = siret, PerSiren = siret?[..9],
             PerCasquettes = JsonSerializer.SerializeToDocument((saisie.Casquettes ?? []).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList()),
-            PerProvisoire = true, PerProvisoirePar = u.Code, PerProvisoireLe = DateTimeOffset.UtcNow,
+            PerProvisoire = true, PerProvisoirePar = u.Code, PerProvisoireLe = DateTimeOffset.UtcNow, PerCode = await CodeTiers(ct),
         };
         db.Personnes.Add(personne);
         await db.SaveChangesAsync(ct);

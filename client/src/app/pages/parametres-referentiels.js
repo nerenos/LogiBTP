@@ -1,14 +1,17 @@
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
+import { TYPES_FICHE } from '../fiches/definitions.js';
 
 // Référentiels communs (lot 2 des demandes du 25/10/2026) : listes de valeurs du cœur (types de matériel, activités,
 // priorités et évaluations des projets ; deux niveaux pour les deux premières), modes de règlement, unités (décimales
-// par défaut, synonymes) et numérotation des documents (format, remise à zéro, reprise du dernier numéro). Chaque
-// section s'enregistre à part ; écriture : administrateur. Un élément retiré encore employé est désactivé.
+// par défaut, synonymes), numérotation des documents (format, remise à zéro, reprise du dernier numéro) et codes des
+// fiches (chrono du module Fiche : mêmes réglages, jeton {PARENT} du marché). Chaque section s'enregistre à part ;
+// écriture : administrateur. Un élément retiré encore employé est désactivé.
 
 const action = (attr, icone, titre) => `<button type="button" class="bouton-icone" ${attr} title="${titre}" aria-label="${titre}">${icone}</button>`;
 const JETONS_NUMERO = '{P} préfixe du type, {AAAA} ou {AA} année, {N} rang ou {N:5} rang sur 5 chiffres ; vide : {P}{AAAA}-{N:5}';
+const JETONS_CODE = '{P} préfixe, {AAAA} ou {AA} année, {N} rang ou {N:5} rang sur 5 chiffres, {PARENT} code du chantier (marchés) ; vide : format par défaut du type';
 
 export class PageParametresReferentiels extends PageBase {
   icone = '🗃';
@@ -22,7 +25,7 @@ export class PageParametresReferentiels extends PageBase {
     this.admin = app.estAdmin();
     this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🗃 Référentiels communs</h1>
       <div data-listes></div>
-      <div data-section="modes"></div><div data-section="unites"></div><div data-section="numeros"></div></div>`;
+      <div data-section="modes"></div><div data-section="unites"></div><div data-section="numeros"></div><div data-section="codes"></div></div>`;
     const listes = await api.listesValeurs.listes();
     const zone = this.conteneur.querySelector('[data-listes]');
     zone.innerHTML = listes.map((l) => `<div data-liste="${echapper(l.code)}"></div>`).join('');
@@ -31,6 +34,7 @@ export class PageParametresReferentiels extends PageBase {
       this.#modes(this.conteneur.querySelector('[data-section="modes"]')),
       this.#unites(this.conteneur.querySelector('[data-section="unites"]')),
       this.#numeros(this.conteneur.querySelector('[data-section="numeros"]')),
+      this.#codes(this.conteneur.querySelector('[data-section="codes"]')),
     ]);
   }
 
@@ -183,6 +187,54 @@ export class PageParametresReferentiels extends PageBase {
             saisies.delete(t.code);
             if (!saisies.size) this.#modifier('numeros', zone, false);
             this.app.message(`Numérotation de « ${t.libelle} » enregistrée`, 'succes');
+            rendre();
+          } catch (e) { this.app.erreur(e); }
+        });
+      });
+    };
+    rendre();
+  }
+
+  /**
+   * Codes des fiches (chrono du module Fiche) : par type (et par variante : sens d'un marché), préfixe, format, remise
+   * à zéro et reprise du dernier rang de l'exercice en cours ; le code prévisionnel s'affiche à la création d'une fiche.
+   * Rang tiré du parent (marché : plus grand rang des marchés du chantier) : pas de compteur ; compteur par portée
+   * (élément : par bibliothèque) : reprise du compteur commun seulement.
+   */
+  async #codes(zone) {
+    const fournisseur = (await this.app.services()).fiche;
+    const types = Object.keys(TYPES_FICHE).filter((t) => TYPES_FICHE[t].definition.chrono);
+    let lignes = (await Promise.all(types.map((t) => fournisseur.chronos(t).catch(() => [])))).flat();
+    const saisies = new Map();
+    const cle = (l) => `${l.type}|${l.variante}`;
+    const rendre = () => {
+      zone.innerHTML = `<div class="titre-actions"><h2>Codes des fiches</h2></div>
+        <p class="aide">Format : ${echapper(JETONS_CODE)}. À la création d'une fiche, le code prévisionnel s'affiche en italique ; laissé tel quel, le code calculé est attribué à l'enregistrement (un code déjà pris est sauté). Un code saisi déjà pris : le prochain code libre à partir de la saisie est proposé. Reprise : dernier rang déjà attribué cette année (ou depuis toujours sans remise à zéro).</p>
+        <table class="tableau-compact largeur-contenu"><thead><tr><th>Fiche</th><th>Préfixe</th><th>Format</th><th>Remise<br><small>à zéro</small></th><th>Dernier<br><small>rang</small></th><th>Prochain<br><small>code</small></th><th></th></tr></thead><tbody>
+        ${lignes.map((l) => `<tr data-cle="${echapper(cle(l))}"><td>${echapper(l.libelle)}${l.libelle_variante ? ` · ${echapper(l.libelle_variante)}` : ''}<div><small>${echapper(l.type)}${l.portee ? ' · compteur par bibliothèque' : ''}${l.parent ? ' · rang d’après le chantier' : ''}</small></div></td>
+          <td><input data-c="prefixe" value="${echapper(l.prefixe ?? '')}" size="5" maxlength="10" ${this.admin ? '' : 'readonly'}></td>
+          <td><input data-c="format" value="${echapper(l.format ?? '')}" size="16" maxlength="40" ${this.admin ? '' : 'readonly'}></td>
+          <td data-raz></td>
+          <td><input data-c="dernier" value="${l.parent ? '' : l.dernier}" size="5" inputmode="numeric" ${this.admin && !l.parent ? '' : 'readonly'}></td>
+          <td>${echapper(l.prochain)}</td>
+          <td class="cellule-boutons">${this.admin ? '<button type="button" data-appliquer disabled>Appliquer</button>' : ''}</td></tr>`).join('')}</tbody></table>`;
+      zone.querySelectorAll('tr[data-cle]').forEach((tr) => {
+        const l = lignes.find((x) => cle(x) === tr.dataset.cle);
+        const s = { variante: l.variante, prefixe: l.prefixe, format: l.format, raz: l.raz, dernier: l.parent ? null : l.dernier };
+        const changer = () => { saisies.set(cle(l), s); tr.querySelector('[data-appliquer]').disabled = false; this.#modifier('codes', zone); };
+        const raz = creerCombo({ options: [{ valeur: 'A', libelle: 'Chaque exercice' }, { valeur: 'J', libelle: 'Jamais' }], valeur: l.raz, vide: false });
+        raz.disabled = !this.admin;
+        raz.addEventListener('change', () => { s.raz = raz.valeurCombo; changer(); });
+        tr.querySelector('[data-raz]').append(raz);
+        tr.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { s[c.dataset.c] = c.dataset.c === 'dernier' ? Number(c.value) || 0 : c.value.trim() || null; changer(); }));
+        tr.querySelector('[data-appliquer]')?.addEventListener('click', async () => {
+          if (!l.parent && s.dernier !== l.dernier && !(await confirmer(`Reprendre les codes « ${l.libelle} » après le rang ${s.dernier} ?`))) return;
+          try {
+            const r = await fournisseur.enregistrerChrono(l.type, s);
+            lignes = [...lignes.filter((x) => x.type !== l.type), ...r].sort((a, b) => types.indexOf(a.type) - types.indexOf(b.type));
+            saisies.delete(cle(l));
+            if (!saisies.size) this.#modifier('codes', zone, false);
+            this.app.message(`Codes « ${l.libelle} » enregistrés`, 'succes');
             rendre();
           } catch (e) { this.app.erreur(e); }
         });

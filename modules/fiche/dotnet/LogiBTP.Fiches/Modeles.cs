@@ -11,6 +11,34 @@ public sealed class DefinitionFiche
     public string? SousTitre { get; set; }
     public List<SectionFiche> Sections { get; set; } = [];
     public List<ChampFiche> Champs { get; set; } = [];
+    /// <summary>Chrono du code (code prévisionnel à la création, compteur, contrôle « déjà utilisé ») ; null : code libre.</summary>
+    public ChronoDefinition? Chrono { get; set; }
+}
+
+/// <summary>
+/// Chrono du code d'un type de fiche (format par défaut, remplacé par le paramétrage chrono_fiche) : champ du code,
+/// préfixe, format (ChronoFiche), remise à zéro ; portée (champ qui sépare compteurs et unicité : bibliothèque d'un
+/// élément) ; parent (champ qui désigne la fiche parente du jeton {PARENT}) ; variante (champ dont la valeur choisit
+/// un préfixe et un paramétrage propres : sens d'un marché).
+/// </summary>
+public sealed class ChronoDefinition
+{
+    public string Champ { get; set; } = "code";
+    public string? Prefixe { get; set; }
+    public string? Format { get; set; }
+    public string Raz { get; set; } = "J";
+    public string? Portee { get; set; }
+    public string? Parent { get; set; }
+    public string? Variante { get; set; }
+    public List<VarianteChrono>? Variantes { get; set; }
+}
+
+/// <summary>Variante d'un chrono : valeur du champ de variante, libellé, préfixe par défaut.</summary>
+public sealed class VarianteChrono
+{
+    public string Valeur { get; set; } = "";
+    public string? Libelle { get; set; }
+    public string? Prefixe { get; set; }
 }
 
 /// <summary>Onglet de fiche : groupes de champs (cadres titrés), ou champs à plat (un seul groupe).</summary>

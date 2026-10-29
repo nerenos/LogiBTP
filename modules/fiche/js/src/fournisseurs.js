@@ -1,6 +1,7 @@
 import { PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_FICHE } from './codes.js';
 import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
+import { controlerChrono, formaterCode, lireCode, debutCode, codeSuivant, exerciceChrono } from './chrono.js';
 
 // Fournisseurs de données des fiches. Même interface pour l'API (routes MapModuleFiche) et pour la mémoire
 // (démo hors ligne, tests) :
@@ -17,6 +18,13 @@ import { validerChamp, erreurRequete, MESSAGES } from './validation.js';
 //   supprimer(type, id)                       → droit SUPPRIMER ; 409 FICHE_EN_MODIFICATION (verrou d'un autre), FICHE_UTILISEE
 //   (confidentiel : relire les champs confidentiels, si l'utilisateur les avait affichés et en a le droit)
 //   parametrage(type) / enregistrerParametrage(type, { obligatoires, confidentiels, supplementaires })   (profil ADMIN)
+//   code(type, { code, valeurs, id })        → { previsionnel, pris: { id, code } | null } (chrono : code prévisionnel
+//                                               d'une création, fiche qui porte déjà le code saisi)
+//   chronos(type) / enregistrerChrono(type, { variante, prefixe, format, raz, dernier })   (paramétrage : ADMIN)
+//
+// Chrono (definition.chrono : champ, prefixe, format, raz, portee, parent, variante, variantes) : création avec le code
+// vide = code calculé attribué (compteur avancé) ; code saisi déjà pris = 409 CODE_PRIS (details { code, pris, propose }) ;
+// code changé en modification = droit modifier_code, 422 CODE_PRIS s'il est pris.
 //
 // Mots de passe (type motdepasse) : jamais envoyés au chargement (valeur null, code dans secrets s'il est enregistré),
 // révélés à la demande ; chiffrés en base par le serveur. Listes de valeurs par requête SQL (champ supplémentaire
@@ -56,6 +64,9 @@ export class FournisseurFicheApi {
   supprimer(type, id) { return this.appel('DELETE', this.#u(type, id)); }
   parametrage(type) { return this.appel('GET', this.#u(type, null, '/parametrage')); }
   enregistrerParametrage(type, p) { return this.appel('PUT', this.#u(type, null, '/parametrage'), p); }
+  code(type, demande) { return this.appel('POST', this.#u(type, null, '/code'), demande); }
+  chronos(type) { return this.appel('GET', this.#u(type, null, '/chrono')); }
+  enregistrerChrono(type, saisie) { return this.appel('PUT', this.#u(type, null, '/chrono'), saisie); }
 }
 
 const EXPIRATION_VERROU = 120000;
@@ -78,8 +89,12 @@ const TYPES_SUPPLEMENTAIRES = ['texte', 'nombre', 'booleen', 'date', 'liste', 'm
  * sont indexées par code de champ (elles peuvent être partagées avec une source de liste en mémoire).
  */
 export class FournisseurFicheMemoire {
-  constructor({ types = {}, droits = [], profil = PROFIL.ADMIN, utilisateur = 'demo', parametrage = {}, horloge = () => Date.now(), requete = null } = {}) {
+  constructor({ types = {}, droits = [], profil = PROFIL.ADMIN, utilisateur = 'demo', parametrage = {}, horloge = () => Date.now(), requete = null, parentChrono = null } = {}) {
     this.types = types;
+    // Chrono à {PARENT} : texte du jeton pour la fiche parente (type, champ, valeur) → texte ou null (comme CodeParentChronoAsync).
+    this.parentChrono = parentChrono;
+    this.chronosParametres = new Map();
+    this.compteurs = new Map();
     this.requete = requete;
     this.droits = droits;
     this.profil = profil;
@@ -98,7 +113,10 @@ export class FournisseurFicheMemoire {
 
   #droits(type) {
     const a = new Set(this.droits.filter((d) => d.profil === this.profil && d.type === type).map((d) => d.action));
-    return { voir: a.has('VOIR'), modifier: a.has('MODIFIER'), debloquer: a.has('DEBLOQUER'), confidentiel: a.has('CONFIDENTIEL'), supprimer: a.has('SUPPRIMER') };
+    return {
+      voir: a.has('VOIR'), modifier: a.has('MODIFIER'), debloquer: a.has('DEBLOQUER'), confidentiel: a.has('CONFIDENTIEL'), supprimer: a.has('SUPPRIMER'),
+      modifier_code: a.has('MODIFIER_CODE'),
+    };
   }
 
   #exiger(type, droit) {
@@ -293,6 +311,7 @@ export class FournisseurFicheMemoire {
     this.#ecrire(type, essai, valeurs, proprietes);
     const def = await this.definition(type);
     await this.#valider(type, Object.fromEntries(def.champs.filter((c) => !c.gere).map((c) => [c.code, essai[c.code] ?? null])), essai[t.proprietes] ?? {});
+    this.#controlerCodeModifie(type, id, l, essai);
     if (Object.keys(geres).length) await t.geres.valider?.(l, geres);
     Object.assign(l, essai, t.derivees?.(essai) ?? {});
     if (Object.keys(geres).length) await t.geres.ecrire(l, geres, { creation: false });
@@ -306,9 +325,11 @@ export class FournisseurFicheMemoire {
     const [valeurs, geres] = this.#separer(type, saisies);
     const l = {};
     this.#ecrire(type, l, valeurs, proprietes);
+    const chrono = this.#preparerCodeCreation(type, l);
     const def = await this.definition(type);
     await this.#valider(type, Object.fromEntries(def.champs.filter((c) => !c.gere).map((c) => [c.code, l[c.code] ?? null])), l[t.proprietes] ?? {});
     if (Object.keys(geres).length) await t.geres.valider?.(null, geres);
+    if (chrono) l[chrono.definition.champ] = this.#attribuer(type, chrono);
     l[t.cle] = Math.max(0, ...t.lignes.map((x) => Number(x[t.cle]) || 0)) + 1;
     Object.assign(l, t.derivees?.(l) ?? {});
     t.lignes.push(l);
@@ -327,6 +348,135 @@ export class FournisseurFicheMemoire {
     await t.avantSuppression?.(t.lignes[i]);
     t.lignes.splice(i, 1);
     this.verrous.delete(`${type}:${id}`);
+  }
+
+  // ---------------------------------------------------------------- chrono (mêmes règles que ServiceFiche.Chrono.cs)
+
+  #chrono(type, valeurs) {
+    const def = this.#type(type).definition.chrono;
+    if (!def) return null;
+    const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+    const variante = def.variante ? texte(valeurs[def.variante]) ?? def.variantes?.[0]?.valeur ?? '' : '';
+    const p = this.chronosParametres.get(`${type}:${variante}`);
+    const prefixe = p ? p.prefixe : def.variantes?.find((v) => v.valeur === variante)?.prefixe ?? def.prefixe;
+    const format = p ? p.format ?? def.format : def.format;
+    const raz = p ? p.raz : def.raz ?? 'J';
+    const portee = def.portee ? texte(valeurs[def.portee]) ?? '' : '';
+    const aParent = (format ?? '').includes('{PARENT}');
+    const valeurParent = def.parent && aParent ? texte(valeurs[def.parent]) : null;
+    const parent = valeurParent !== null ? this.parentChrono?.(type, def.parent, valeurParent) ?? null : null;
+    return { definition: def, variante, prefixe, format, raz, portee, parent, aParent };
+  }
+
+  #pris(type, ch, code, exclure = null) {
+    const t = this.#type(type);
+    const l = t.lignes.find((x) => x[ch.definition.champ] === code && String(x[t.cle]) !== String(exclure)
+      && (!ch.definition.portee || String(x[ch.definition.portee] ?? '') === ch.portee));
+    return l ? { id: String(l[t.cle]), code } : null;
+  }
+
+  #rangsPris(type, ch, annee) {
+    const t = this.#type(type);
+    const exercice = exerciceChrono(ch.raz, annee);
+    const debut = debutCode(ch, { annee: ch.aParent || exercice === 0 ? null : annee, parent: ch.parent ?? '' });
+    return new Set(t.lignes
+      .filter((x) => String(x[ch.definition.champ] ?? '').startsWith(debut) && (!ch.definition.portee || String(x[ch.definition.portee] ?? '') === ch.portee))
+      .map((x) => lireCode(ch, x[ch.definition.champ], { parent: ch.parent ?? '' }))
+      .filter((x) => x && (ch.aParent || exerciceChrono(ch.raz, x.annee ?? annee) === exercice)).map((x) => x.rang));
+  }
+
+  #cleCompteur(type, ch, exercice) { return `${type}|${ch.variante}|${ch.portee}|${exercice}`; }
+
+  #previsionnel(type, ch) {
+    if (ch.aParent && ch.parent === null) return null;
+    const annee = new Date(this.horloge()).getFullYear();
+    const pris = this.#rangsPris(type, ch, annee);
+    if (ch.aParent) return formaterCode(ch, { annee, rang: Math.max(0, ...pris) + 1, parent: ch.parent });
+    let rang = (this.compteurs.get(this.#cleCompteur(type, ch, exerciceChrono(ch.raz, annee))) ?? 0) + 1;
+    while (pris.has(rang)) rang++;
+    return formaterCode(ch, { annee, rang });
+  }
+
+  #attribuer(type, ch) {
+    const code = this.#previsionnel(type, ch);
+    if (!ch.aParent && code !== null) {
+      const annee = new Date(this.horloge()).getFullYear();
+      this.compteurs.set(this.#cleCompteur(type, ch, exerciceChrono(ch.raz, annee)), lireCode(ch, code).rang);
+    }
+    return code;
+  }
+
+  #suivantLibre(type, ch, code) {
+    let c = codeSuivant(code);
+    for (let i = 0; c !== null && i < 1000; i++, c = codeSuivant(c)) if (!this.#pris(type, ch, c)) return c;
+    return null;
+  }
+
+  /** Création : code vide = prévisionnel (validation), attribué ensuite ; code saisi pris = 409 CODE_PRIS. */
+  #preparerCodeCreation(type, l) {
+    const ch = this.#chrono(type, l);
+    if (!ch) return null;
+    const saisi = l[ch.definition.champ];
+    if (saisi !== null && saisi !== undefined && String(saisi).trim() !== '') {
+      const pris = this.#pris(type, ch, String(saisi).trim());
+      if (pris) throw new ErreurFiche(409, ERREUR_FICHE.CODE_PRIS, `Le code ${saisi} est déjà utilisé`, { code: saisi, pris, propose: this.#suivantLibre(type, ch, saisi) });
+      return null;
+    }
+    l[ch.definition.champ] = this.#previsionnel(type, ch);
+    return ch;
+  }
+
+  #controlerCodeModifie(type, id, avant, apres) {
+    const def = this.#type(type).definition.chrono;
+    if (!def) return;
+    const nouveau = apres[def.champ] ?? null;
+    if (nouveau === (avant[def.champ] ?? null)) return;
+    this.#exiger(type, 'modifier_code');
+    const pris = nouveau !== null ? this.#pris(type, this.#chrono(type, apres), nouveau, id) : null;
+    if (pris) throw new ErreurFiche(422, ERREUR_FICHE.CODE_PRIS, `Le code ${nouveau} est déjà utilisé`, { code: nouveau, pris, propose: null });
+  }
+
+  async code(type, { code = null, valeurs = {}, id = null } = {}) {
+    this.#exiger(type, 'modifier');
+    const ch = this.#chrono(type, valeurs);
+    if (!ch) return { previsionnel: null, pris: null };
+    const saisi = code === null || code === undefined || String(code).trim() === '' ? null : String(code).trim();
+    return { previsionnel: id === null ? this.#previsionnel(type, ch) : null, pris: saisi === null ? null : this.#pris(type, ch, saisi, id) };
+  }
+
+  async chronos(type) {
+    this.#exiger(type, 'voir');
+    const t = this.#type(type);
+    const def = t.definition.chrono;
+    if (!def) return [];
+    const annee = new Date(this.horloge()).getFullYear();
+    return (def.variantes?.length ? def.variantes : [{ valeur: '' }]).map((v) => {
+      const ch = this.#chrono(type, def.variante ? { [def.variante]: v.valeur } : {});
+      const exercice = exerciceChrono(ch.raz, annee);
+      const dernier = ch.aParent ? 0 : this.compteurs.get(this.#cleCompteur(type, { ...ch, portee: '' }, exercice)) ?? 0;
+      return {
+        type, libelle: t.definition.libelle, variante: v.valeur, libelle_variante: v.libelle ?? null, prefixe: ch.prefixe ?? null, format: ch.format ?? null, raz: ch.raz,
+        parent: ch.aParent, portee: !!def.portee, exercice, dernier,
+        // Prochain code : celui que recevra une création (rang déjà pris sauté) ; d'après le parent pour un chrono à {PARENT}.
+        prochain: ch.aParent || def.portee ? formaterCode(ch, { annee, rang: dernier + 1, parent: ch.aParent ? '…' : '' }) : this.#previsionnel(type, ch),
+      };
+    });
+  }
+
+  async enregistrerChrono(type, { variante = '', prefixe = null, format = null, raz = 'J', dernier = null }) {
+    if (this.profil !== PROFIL.ADMIN) throw new ErreurFiche(403, 'ACCES_REFUSE', 'Paramétrage réservé au profil ADMIN');
+    const def = this.#type(type).definition.chrono;
+    if (!def) throw new ErreurFiche(422, 'CHRONO', `Les fiches ${type} n'ont pas de chrono`);
+    const f = format?.trim() || null;
+    const r = raz === 'A' ? 'A' : 'J';
+    const e = controlerChrono({ format: f ?? def.format, raz: r });
+    if (e) throw new ErreurFiche(422, 'CHRONO_FORMAT', e);
+    this.chronosParametres.set(`${type}:${variante}`, { prefixe: prefixe?.trim() || null, format: f, raz: r });
+    if (dernier !== null && dernier !== undefined) {
+      const ch = this.#chrono(type, def.variante ? { [def.variante]: variante } : {});
+      this.compteurs.set(this.#cleCompteur(type, { ...ch, portee: '' }, exerciceChrono(r, new Date(this.horloge()).getFullYear())), Number(dernier));
+    }
+    return this.chronos(type);
   }
 
   async parametrage(type) {

@@ -5,7 +5,8 @@ import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
 import { TL } from '../../calcul/index.js';
 
 // Appel de la bibliothèque dans un éditeur de document (devis, facture… et composition d'un ouvrage) :
-//   - colonne Code : « CODE » dans la bibliothèque du document, « BIB:CODE » dans une autre ; inconnu → recherche ;
+//   - colonne Code : « CODE » dans la bibliothèque du document, « BIB:CODE » dans une autre ; absent de la bibliothèque
+//     du document → élément de même code d'une autre bibliothèque (liste s'ils sont plusieurs), sinon recherche ;
 //   - F3 : recherche dans la bibliothèque (code ou libellé, articles et ouvrages) ;
 //   - article : la ligne reçoit le code d'appel, le libellé, l'unité de vente, le PA converti dans cette unité, les
 //     coefficients, la remise, la nature et le lien vers l'élément (lig_art_id, lig_proprietes.element) ;
@@ -155,11 +156,32 @@ export class AppelBibliotheque {
       const e = await this.fournisseur.appelCode(code, this.bibliotheque());
       await this.deployer(ligId, e, { surLigne: true });
     } catch (x) {
-      if (x.statut === 404 || x.code === 'INTROUVABLE') {
-        this.message(`${code} : introuvable dans la bibliothèque, choisissez un élément`, 'avertissement');
-        await this.rechercher(ligId, code, { surLigne: true });
-      } else this.message(x.message ?? String(x), 'erreur');
+      if (x.statut !== 404 && x.code !== 'INTROUVABLE') { this.message(x.message ?? String(x), 'erreur'); return; }
+      // Code absent de la bibliothèque du document : élément de même code d'une autre bibliothèque (le seul : pris
+      // d'office ; plusieurs : liste de ces éléments, appelés ensuite par BIB:CODE), sinon recherche.
+      const memeCode = await this.memeCode(code);
+      if (memeCode.length === 1) {
+        await this.deployer(ligId, await this.fournisseur.element(memeCode[0].id), { surLigne: true });
+        return;
+      }
+      if (memeCode.length > 1) {
+        this.message(`${code} : présent dans plusieurs bibliothèques, choisissez l'élément`, 'avertissement');
+        const choisi = await this.choisir(code, { memeCode: true });
+        if (choisi) await this.deployer(ligId, await this.fournisseur.element(choisi.id), { surLigne: true });
+        return;
+      }
+      this.message(`${code} : introuvable dans la bibliothèque, choisissez un élément`, 'avertissement');
+      await this.rechercher(ligId, code, { surLigne: true });
     }
+  }
+
+  /** Éléments de toutes les bibliothèques dont le code est celui saisi (sans préfixe de bibliothèque, casse ignorée). */
+  async memeCode(code) {
+    const c = String(code ?? '').trim();
+    if (!c || c.includes(':')) return [];
+    const cle = c.toLocaleLowerCase('fr');
+    return (await this.fournisseur.rechercher({ recherche: c, type: null }).catch(() => []))
+      .filter((e) => String(e.code ?? '').toLocaleLowerCase('fr') === cle);
   }
 
   /** F3 : recherche puis déploiement de l'élément choisi (après la ligne courante, ou à sa place si elle est vide). */
@@ -323,8 +345,11 @@ export class AppelBibliotheque {
     this.message(`${elements.size} ligne(s) actualisée(s) depuis la bibliothèque`, 'succes');
   }
 
-  /** Dialogue de recherche (tous types, toutes bibliothèques ; `type` présélectionné) ; résout avec l'élément choisi ou null. */
-  choisir(texte = '', { type = '' } = {}) {
+  /**
+   * Dialogue de recherche (tous types, toutes bibliothèques ; `type` présélectionné ; `memeCode` : seulement les
+   * éléments dont le code est le texte cherché) ; résout avec l'élément choisi ou null.
+   */
+  choisir(texte = '', { type = '', memeCode = false } = {}) {
     return new Promise((resoudre) => {
       const fond = document.createElement('dialog');
       fond.className = 'fiche-dialogue-fond dialogue-plein';
@@ -344,6 +369,9 @@ export class AppelBibliotheque {
       const surligner = () => zone.querySelectorAll('tr[data-i]').forEach((tr) => tr.classList.toggle('actif', Number(tr.dataset.i) === actif));
       const chercher = async () => {
         resultats = await this.fournisseur.rechercher({ recherche: entree.value, type: fond.querySelector('[data-type]').value || null });
+        // Même code dans plusieurs bibliothèques : tant que le texte cherché est ce code, seuls ses éléments sont listés.
+        const cle = texte.trim().toLocaleLowerCase('fr');
+        if (memeCode && entree.value.trim().toLocaleLowerCase('fr') === cle) resultats = resultats.filter((e) => String(e.code ?? '').toLocaleLowerCase('fr') === cle);
         actif = 0;
         zone.innerHTML = resultats.length ? `<table class="bib-table"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>U.</th><th>PA</th><th>PV net</th></tr></thead><tbody>
           ${resultats.map((e, i) => `<tr data-i="${i}"><td>${{ OUVRAGE: '🏗️', ENSEMBLE: '🧩', POSTE_PIED: '🧾', TEXTE: '📝' }[e.type] ?? '🧱'}</td><td><b>${echapper(e.bib_code)}:${echapper(e.code)}</b></td><td>${echapper(e.libelle ?? '')}</td>

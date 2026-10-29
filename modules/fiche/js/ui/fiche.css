@@ -54,6 +54,15 @@ select.fiche-saisie-champ:disabled { opacity: 1; background: transparent; border
 .fiche-masque { display: flex; align-items: center; gap: 0.5rem; color: var(--discret); letter-spacing: 0.15em; }
 .fiche-masque button { letter-spacing: normal; padding: 0 0.5rem; }
 .fiche-pieces { height: 100%; min-height: 24rem; }
+/* Code à chrono : prévisionnel en texte indicatif (italique, atténué), état de la saisie sous le champ. */
+.fiche-code { display: flex; gap: 0.25rem; align-items: center; }
+.fiche-code > input { flex: 1; min-width: 0; }
+.fiche-code > input::placeholder { font-style: italic; color: var(--discret); opacity: 0.75; }
+.fiche-code > button { padding: 0 0.4rem; flex: none; }
+.fiche-code-etat { font-size: 0.85em; color: var(--discret); }
+.fiche-code-etat.pris { color: var(--erreur); }
+.fiche-code-etat.libre { color: var(--succes); }
+.fiche-code-etat button { border: none; background: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 .fiche-secret { display: flex; gap: 0.25rem; align-items: center; }
 .fiche-secret > button { padding: 0 0.4rem; flex: none; }
 

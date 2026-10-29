@@ -49,6 +49,16 @@ public class ChampSupplementaire
     public string? ChsGroupe { get; set; }
 }
 
+/// <summary>Format paramétré du chrono d'un type de fiche (et d'une variante) ; sans ligne : celui de la définition.</summary>
+public class ChronoParametre
+{
+    public string ChfType { get; set; } = "";
+    public string ChfVariante { get; set; } = "";
+    public string? ChfPrefixe { get; set; }
+    public string? ChfFormat { get; set; }
+    public string ChfRaz { get; set; } = "J";
+}
+
 public class VerrouFiche
 {
     public string VefType { get; set; } = "";
@@ -77,6 +87,7 @@ public class FicheDbContext(DbContextOptions<FicheDbContext> options) : DbContex
     public DbSet<ParametreChampFiche> Parametres => Set<ParametreChampFiche>();
     public DbSet<ChampSupplementaire> Supplementaires => Set<ChampSupplementaire>();
     public DbSet<VerrouFiche> Verrous => Set<VerrouFiche>();
+    public DbSet<ChronoParametre> Chronos => Set<ChronoParametre>();
     public DbSet<JournalConfidentiel> Journal => Set<JournalConfidentiel>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -86,13 +97,15 @@ public class FicheDbContext(DbContextOptions<FicheDbContext> options) : DbContex
         b.Entity<ParametreChampFiche>().ToTable("parametre_champ_fiche").HasKey(x => new { x.PcfType, x.PcfChamp });
         b.Entity<ChampSupplementaire>(e => { e.ToTable("champ_supplementaire").HasKey(x => new { x.ChsType, x.ChsCode }); e.Property(x => x.ChsOptions).HasColumnType("jsonb"); });
         b.Entity<VerrouFiche>().ToTable("verrou_fiche").HasKey(x => new { x.VefType, x.VefId });
+        b.Entity<ChronoParametre>().ToTable("chrono_fiche").HasKey(x => new { x.ChfType, x.ChfVariante });
         b.Entity<JournalConfidentiel>().ToTable("journal_confidentiel").HasKey(x => x.JcfId);
     }
 }
 
 // ------------------------------------------------------------------ contrats HTTP
 
-public sealed record DroitsFiche(bool Voir, bool Modifier, bool Debloquer, bool Confidentiel, bool Supprimer = false);
+/// <summary>Droits d'un type de fiche ; ModifierCode : changer le code d'une fiche déjà créée (chrono).</summary>
+public sealed record DroitsFiche(bool Voir, bool Modifier, bool Debloquer, bool Confidentiel, bool Supprimer = false, bool ModifierCode = false);
 
 /// <summary>Définition envoyée au client : champs (avec obligatoire_parametre), champs supplémentaires, droits.</summary>
 public sealed class DefinitionFicheDto
@@ -104,6 +117,8 @@ public sealed class DefinitionFicheDto
     public List<SectionFiche> Sections { get; set; } = [];
     public List<ChampFiche> Champs { get; set; } = [];
     public List<ChampFiche> Supplementaires { get; set; } = [];
+    /// <summary>Chrono du code (champ, portée, parent, variante) : code prévisionnel et contrôle à la saisie.</summary>
+    public ChronoDefinition? Chrono { get; set; }
     public DroitsFiche Droits { get; set; } = new(false, false, false, false);
 }
 
@@ -139,6 +154,43 @@ public sealed class DemandeEnregistrement
     public Dictionary<string, JsonElement> Proprietes { get; set; } = [];
     /// <summary>Relire les champs confidentiels (s'ils étaient affichés et si le droit le permet).</summary>
     public bool Confidentiel { get; set; }
+}
+
+/// <summary>
+/// Code d'une fiche (création ou modification) : code saisi (vide : seulement le prévisionnel), valeurs de la fiche
+/// qui le déterminent (portée, parent, variante), fiche modifiée (exclue du contrôle).
+/// </summary>
+public sealed class DemandeCode
+{
+    public string? Code { get; set; }
+    public Dictionary<string, JsonElement> Valeurs { get; set; } = [];
+    public string? Id { get; set; }
+}
+
+/// <summary>Fiche qui porte déjà un code.</summary>
+public sealed record FichePrise(string Id, string Code);
+
+/// <summary>Code prévisionnel (calculé par le chrono, sans faire avancer le compteur) et fiche qui porte déjà le code saisi.</summary>
+public sealed record ReponseCode(string? Previsionnel, FichePrise? Pris);
+
+/// <summary>Refus CODE_PRIS d'une création : code saisi, fiche qui le porte, prochain code libre proposé à partir de la saisie.</summary>
+public sealed record CodePrisDetails(string Code, FichePrise Pris, string? Propose);
+
+/// <summary>
+/// Chrono d'un type de fiche (Paramètres › Référentiels communs) : variante, préfixe, format, remise à zéro, rang
+/// tiré du parent (sans compteur), compteur par portée, dernier rang de l'exercice en cours (portée commune) et
+/// prochain code.
+/// </summary>
+public sealed record ChronoTypeDto(string Type, string Libelle, string Variante, string? LibelleVariante, string? Prefixe, string? Format, string Raz,
+    bool Parent, bool Portee, int Exercice, int Dernier, string Prochain);
+
+public sealed class ChronoSaisie
+{
+    public string Variante { get; set; } = "";
+    public string? Prefixe { get; set; }
+    public string? Format { get; set; }
+    public string Raz { get; set; } = "J";
+    public int? Dernier { get; set; }
 }
 
 /// <summary>Révélation d'un mot de passe : code du champ (« +code » pour un champ supplémentaire).</summary>

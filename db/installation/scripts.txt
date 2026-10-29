@@ -45,6 +45,7 @@ modules/liste/db/031_liste_themes.sql
 modules/liste/db/032_liste_saisie.sql
 modules/fiche/db/040_fiche_schema.sql
 modules/fiche/db/041_fiche_parametrage.sql
+modules/fiche/db/042_fiche_chrono.sql
 modules/ged/db/050_ged_schema.sql
 modules/ged/db/051_ged_organisation.sql
 modules/ged/db/052_ged_validite.sql
@@ -56,6 +57,7 @@ modules/bibliotheque/db/064_bibliotheque_complements.sql
 modules/bibliotheque/db/065_bibliotheque_tarifs.sql
 modules/annuaire/db/070_annuaire_schema.sql
 modules/annuaire/db/071_annuaire_provisoire.sql
+modules/annuaire/db/072_annuaire_code_secours.sql
 modules/reglement/db/080_reglement_schema.sql
 modules/execution/db/085_execution.sql
 modules/execution/db/085b_execution_etapes.sql

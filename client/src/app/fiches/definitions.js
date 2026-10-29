@@ -5,6 +5,10 @@
 import { GESTION_ELEMENT, GESTIONS } from '@logibtp/bibliotheque';
 
 const c = (code, libelle, colonne, type, extra = {}) => ({ code, libelle, colonne, type, ...extra });
+// Chrono du code (module Fiche) : format par défaut, remplaçable dans Paramètres › Référentiels communs ; le code
+// prévisionnel s'affiche à la création, le code calculé est attribué à l'enregistrement (compteur jamais remis à zéro :
+// J, ou chaque exercice : A).
+const chrono = (prefixe, format, raz = 'J', extra = {}) => ({ champ: 'code', prefixe, format, raz, ...extra });
 const options = (...v) => v.map((x) => (Array.isArray(x) ? { valeur: x[0], libelle: x[1] } : { valeur: x, libelle: x }));
 
 // Comptes collectifs du plan comptable (module Comptabilité) : surcharge du collectif d'un tiers par relation.
@@ -29,6 +33,7 @@ export const TYPES_FICHE = {
     definition: {
       libelle: 'Salarié',
       titre: '[prenom] [nom]',
+      chrono: chrono('S', '{P}{N:5}'),
       sous_titre: '[matricule] · [poste]',
       // Peu d'onglets, des groupes de champs : informations liées à l'entreprise, puis données privées (RGPD).
       sections: [
@@ -107,6 +112,7 @@ export const TYPES_FICHE = {
     definition: {
       libelle: 'Matériel',
       titre: '[designation]',
+      chrono: chrono('MAT', '{P}{N:5}'),
       sous_titre: '[code] · [marque] [modele]',
       sections: [
         {
@@ -176,6 +182,8 @@ export const TYPES_FICHE = {
     definition: {
       libelle: 'Élément de bibliothèque',
       titre: '[code] – [libelle]',
+      // Un compteur par bibliothèque ; le code se change ensuite pour un appel rapide (HEA100…).
+      chrono: chrono('ELE', '{P}{N:6}', 'J', { portee: 'bib_id' }),
       sous_titre: '[bib_code] · [famille]',
       sections: [
         {
@@ -275,6 +283,7 @@ export const TYPES_FICHE = {
     definition: {
       libelle: 'Personne',
       titre: '[raison_sociale]',
+      chrono: chrono('T', '{P}{N:6}'),
       sous_titre: '[code]',
       sections: [
         {
@@ -308,7 +317,7 @@ export const TYPES_FICHE = {
         },
       ],
       champs: [
-        c('code', 'Code', 'per_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code du tiers : T000123 par défaut' }),
+        c('code', 'Code', 'per_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code du tiers : vide à la création = chrono (T000123 par défaut)' }),
         c('niveau', 'Niveau', 'per_niv_code', 'texte', { obligatoire: true, defaut: 'SOCIETE', reference: 'niveau' }),
         c('raison_sociale', 'Raison sociale ou nom', 'per_raison_sociale', 'texte', { obligatoire: true, longueur: 150 }),
         c('nom_commercial', 'Nom commercial (enseigne)', 'per_nom_commercial', 'texte', { longueur: 150 }),
@@ -429,7 +438,7 @@ export const TYPES_FICHE = {
   projet: {
     libelle: 'Projet', table: 'projet', cle: 'prj_id', colonne_proprietes: 'prj_proprietes',
     definition: {
-      libelle: 'Projet', titre: '[code] – [libelle]', sous_titre: '[ville]',
+      libelle: 'Projet', titre: '[code] – [libelle]', sous_titre: '[ville]', chrono: chrono('PRJ-', '{P}{AAAA}-{N:3}', 'A'),
       sections: [{
         code: 'informations', titre: 'Projet',
         groupes: [
@@ -477,7 +486,7 @@ export const TYPES_FICHE = {
   affaire: {
     libelle: 'Affaire', table: 'affaire', cle: 'aff_id', colonne_proprietes: 'aff_proprietes',
     definition: {
-      libelle: 'Affaire', titre: '[code] – [libelle]', sous_titre: '[responsable]',
+      libelle: 'Affaire', titre: '[code] – [libelle]', sous_titre: '[responsable]', chrono: chrono('AFF-', '{P}{AAAA}-{N:3}', 'A'),
       sections: [{
         code: 'informations', titre: 'Affaire',
         groupes: [
@@ -508,7 +517,7 @@ export const TYPES_FICHE = {
   chantier: {
     libelle: 'Chantier', table: 'chantier', cle: 'cha_id', colonne_proprietes: 'cha_proprietes',
     definition: {
-      libelle: 'Chantier', titre: '[code] – [libelle]', sous_titre: '[ville]',
+      libelle: 'Chantier', titre: '[code] – [libelle]', sous_titre: '[ville]', chrono: chrono('CH-', '{P}{AAAA}-{N:3}', 'A'),
       sections: [{
         code: 'informations', titre: 'Chantier',
         groupes: [
@@ -556,6 +565,12 @@ export const TYPES_FICHE = {
     libelle: 'Marché', table: 'marche', cle: 'mar_id', colonne_proprietes: 'mar_proprietes',
     definition: {
       libelle: 'Marché', titre: '[code] – [libelle]', sous_titre: '',
+      // Code d'après le chantier (M-2026-002-1) : rang = plus grand rang des marchés du chantier + 1 ; suffixe saisissable
+      // en lettres (lot du chantier : M-2026-002-GO) ; préfixe selon le sens.
+      chrono: chrono('M-', '{P}{PARENT}-{N}', 'J', {
+        parent: 'cha_id', variante: 'sens',
+        variantes: [{ valeur: 'V', libelle: 'Vente', prefixe: 'M-' }, { valeur: 'ST', libelle: 'Sous-traitance', prefixe: 'MST-' }],
+      }),
       sections: [{
         code: 'informations', titre: 'Marché',
         groupes: [
@@ -616,6 +631,8 @@ export const DROITS_FICHE = [
   ]),
   // Suppression (listes et fiches) : profil ADMIN, refusée si la fiche est utilisée ailleurs.
   ...['salarie', 'materiel', 'element', 'personne', 'individu', 'projet', 'affaire', 'chantier', 'marche'].map((type) => ({ profil: 'ADMIN', type, action: 'SUPPRIMER' })),
+  // Code d'une fiche déjà créée (chrono) : profil ADMIN.
+  ...['salarie', 'materiel', 'element', 'personne', 'projet', 'affaire', 'chantier', 'marche'].map((type) => ({ profil: 'ADMIN', type, action: 'MODIFIER_CODE' })),
 ];
 
 /** Paramétrage de démonstration : un champ du programme rendu obligatoire, des champs supplémentaires. */

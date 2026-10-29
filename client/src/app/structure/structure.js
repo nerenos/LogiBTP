@@ -1,5 +1,7 @@
 import { TYPE_DOCUMENT } from '../codes.js';
 import { api } from '../api.js';
+import { ERREUR_FICHE } from '@logibtp/fiche';
+import { confirmer } from '@logibtp/socle/ui';
 
 // Structure des affaires côté client : référentiels des listes de choix (projets, affaires, chantiers, marchés,
 // commandes clients) et rattachement d'un document par les routes /api/structure.
@@ -60,6 +62,25 @@ export function changerNiveau(r, cle, id, refs) {
   }
   if (cle === 'ent_chantier_id' && res.ent_marche_id && refs.marches?.find((x) => x.id === res.ent_marche_id)?.cha_id !== id) res.ent_marche_id = null;
   return completerRattachement(res, { chantiers: refs.chantiers ?? [], marches: refs.marches ?? [] });
+}
+
+/**
+ * Création d'une fiche à chrono hors de la fiche (fenêtres de la validation d'une commande) : code vide = calculé par le
+ * serveur ; code saisi déjà pris = prochain code libre proposé, puis création avec lui si l'utilisateur l'accepte.
+ */
+export async function creerFicheCodeLibre(fournisseur, type, corps) {
+  try {
+    return await fournisseur.creer(type, corps);
+  } catch (e) {
+    const { code, propose } = e.details ?? {};
+    if (e.code !== ERREUR_FICHE.CODE_PRIS || !propose || !await confirmer(`Le code ${code} est déjà utilisé. Utiliser le prochain code disponible : ${propose} ?`, { ok: `Utiliser ${propose}` })) throw e;
+    return fournisseur.creer(type, { ...corps, valeurs: { ...corps.valeurs, code: propose } });
+  }
+}
+
+/** Code prévisionnel d'une fiche à créer (texte indicatif), ou '' s'il ne peut pas encore être calculé. */
+export async function codePrevisionnel(fournisseur, type, valeurs = {}) {
+  try { return (await fournisseur.code(type, { valeurs })).previsionnel ?? ''; } catch { return ''; }
 }
 
 export function creerFournisseurStructure() {

@@ -20,7 +20,7 @@ CREATE TABLE type_fiche (
 CREATE TABLE droit_fiche (
     drf_profil   VARCHAR(50)  NOT NULL,
     drf_type     VARCHAR(50)  NOT NULL REFERENCES type_fiche(tyf_code) ON DELETE CASCADE,
-    drf_action   VARCHAR(20)  NOT NULL CHECK (drf_action IN ('VOIR','MODIFIER','DEBLOQUER','CONFIDENTIEL','SUPPRIMER')),
+    drf_action   VARCHAR(20)  NOT NULL CHECK (drf_action IN ('VOIR','MODIFIER','DEBLOQUER','CONFIDENTIEL','SUPPRIMER','MODIFIER_CODE')),
     PRIMARY KEY (drf_profil, drf_type, drf_action)
 );
 

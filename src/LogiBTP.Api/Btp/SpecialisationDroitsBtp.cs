@@ -15,7 +15,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
 {
     private static readonly string[] Cycle = [.. ActionsDroits.Cascade];
     private static readonly string[] Simple = [ActionsDroits.Consulter, ActionsDroits.Modifier, ActionsDroits.Creer, ActionsDroits.Supprimer];
-    private static readonly string[] Fiche = [.. Simple, ActionsDroits.Deverrouiller, ActionsDroits.Rgpd];
+    private static readonly string[] Fiche = [.. Simple, ActionsDroits.Deverrouiller, ActionsDroits.Rgpd, ActionsDroits.ModifierCode];
     private static readonly string[] Lecture = [ActionsDroits.Consulter, ActionsDroits.Modifier];
 
     private static readonly Dictionary<string, string> Familles = new()
@@ -40,7 +40,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             n.Add(new(FamillesDocument.NoeudDroits(f), Familles.GetValueOrDefault(f, f), Cycle));
             n.AddRange(types.Where(t => t.Famille == f).Select(t => new NoeudCatalogue(FamillesDocument.NoeudDroits(f, t.Code), t.Libelle, Cycle)));
         }
-        n.Add(new("fiches", "Fiches", Fiche, Icone: "🗂", Aide: "Salariés, matériels, tiers, structure des affaires, éléments de bibliothèque"));
+        n.Add(new("fiches", "Fiches", Fiche, Icone: "🗂", Aide: "Salariés, matériels, tiers, structure des affaires, éléments de bibliothèque ; Modifier le code : changer le code d'une fiche déjà créée"));
         n.AddRange(fiches.Select(f => new NoeudCatalogue($"fiches/{f.Code}", f.Libelle, Fiche)));
         n.AddRange(
         [

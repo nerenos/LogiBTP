@@ -43,6 +43,12 @@ public class SpecialisationFiche
 
     public virtual ConstructeurFiche Constructeur(TypeFicheResolu type) => new(type);
 
+    /// <summary>
+    /// Chrono à {PARENT} : texte du jeton pour la fiche parente désignée par la valeur du champ parent (code du chantier
+    /// d'un marché…) ; null si la fiche parente est inconnue (pas de code prévisionnel). Par défaut : aucun.
+    /// </summary>
+    public virtual Task<string?> CodeParentChronoAsync(string type, string champ, string valeur, CancellationToken ct) => Task.FromResult<string?>(null);
+
     /// <summary>Valeurs des champs gérés (ChampFiche.Gere) d'une fiche : code du champ → valeur (objet, tableau…).</summary>
     public virtual Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct) =>
         Task.FromResult<IReadOnlyDictionary<string, object?>>(new Dictionary<string, object?>());

@@ -10,7 +10,7 @@ namespace LogiBTP.Api.Btp;
 /// documents : groupe d'indices, page de l'indice de référence) avec leur libellé et leur page, individu de l'utilisateur (`ind_utilisateur`), services de l'entreprise et
 /// leurs membres (db/193).
 /// </summary>
-public class SpecialisationCrmBtp : SpecialisationCrm
+public class SpecialisationCrmBtp(IServiceScopeFactory scopes) : SpecialisationCrm
 {
     public override IReadOnlyList<TypeElementCrm> TypesElements { get; } =
     [
@@ -61,18 +61,19 @@ public class SpecialisationCrmBtp : SpecialisationCrm
         return res;
     }
 
-    /// <summary>Projet de la structure (code PRJ-AAAA-NNN, statut En cours) repris de la demande.</summary>
+    /// <summary>Projet de la structure (code du chrono des fiches projet, statut En cours) repris de la demande.</summary>
     public override async Task<ElementCrm?> CreerProjetAsync(CrmDbContext db, CrmDemande d, string? responsable, CancellationToken ct)
     {
+        using var scope = scopes.CreateScope();
+        var code = await scope.ServiceProvider.GetRequiredService<LogiBTP.Socle.Web.IChronosFiches>().AttribuerAsync(TypesFiche.Projet, new Dictionary<string, object?>(), ct)
+            ?? throw LogiBTP.Socle.Web.ExceptionMetier.Conflit("PROJET_IMPOSSIBLE", "Chrono des projets indisponible");
         var commentaire = d.DemDescriptionHtml is null ? null : System.Text.RegularExpressions.Regex.Replace(d.DemDescriptionHtml, "<[^>]+>", " ").Trim();
         var id = await db.Database.SqlQueryRaw<int>("""
             INSERT INTO projet (prj_code, prj_libelle, prj_tiers_id, prj_statut, prj_montant_estime, prj_responsable, prj_commentaire, prj_proprietes)
-            SELECT 'PRJ-' || extract(year FROM now())::int || '-' || lpad((coalesce(max(substring(prj_code FROM '^PRJ-[0-9][0-9][0-9][0-9]-([0-9]+)$')::int), 0) + 1)::text, 3, '0'),
-                   left(@libelle, 150), @tiers, 'EN_COURS', @montant, left(@responsable, 100), @commentaire, jsonb_build_object('crm_demande', @demande::text)
-            FROM projet WHERE prj_code LIKE 'PRJ-' || extract(year FROM now())::int || '-%'
+            VALUES (@code, left(@libelle, 150), @tiers, 'EN_COURS', @montant, left(@responsable, 100), @commentaire, jsonb_build_object('crm_demande', @demande::text))
             RETURNING prj_id AS "Value"
             """,
-            new NpgsqlParameter("libelle", d.DemObjet), new NpgsqlParameter("tiers", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)d.DemTiersId ?? DBNull.Value },
+            new NpgsqlParameter("code", code), new NpgsqlParameter("libelle", d.DemObjet), new NpgsqlParameter("tiers", NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (object?)d.DemTiersId ?? DBNull.Value },
             new NpgsqlParameter("montant", NpgsqlTypes.NpgsqlDbType.Numeric) { Value = (object?)d.DemMontantEstime ?? DBNull.Value },
             new NpgsqlParameter("responsable", NpgsqlTypes.NpgsqlDbType.Varchar) { Value = (object?)responsable ?? DBNull.Value },
             new NpgsqlParameter("commentaire", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)commentaire ?? DBNull.Value },

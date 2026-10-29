@@ -23,7 +23,7 @@ public sealed class CacheTypesColonnes
 /// (verrou détenu, empreinte inchangée, ligne complète validée), création, paramétrage. Mots de passe (type motdepasse) :
 /// chiffrés en base par la chaîne de l'installation, déchiffrés en mémoire, jamais envoyés sans demande (RevelerSecret).
 /// </summary>
-public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache, Chiffrement chiffrement, IDroits? droits = null)
+public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation, CacheTypesColonnes cache, Chiffrement chiffrement, IDroits? droits = null)
 {
     /// <summary>Nombre maximal de valeurs lues par la requête d'une liste.</summary>
     public const int MaxOptionsRequete = 1000;
@@ -42,13 +42,14 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             : await ActionsDroitsAsync(droits, type, u, ct);
         var plus = specialisation.DroitsSupplementaires(type, u);
         return new DroitsFiche(actions.Contains(ActionsDroits.Voir) || plus.Voir, actions.Contains(ActionsDroits.Modifier) || plus.Modifier,
-            actions.Contains(ActionsDroits.Debloquer) || plus.Debloquer, actions.Contains(ActionsDroits.Confidentiel) || plus.Confidentiel, actions.Contains(ActionsDroits.Supprimer) || plus.Supprimer);
+            actions.Contains(ActionsDroits.Debloquer) || plus.Debloquer, actions.Contains(ActionsDroits.Confidentiel) || plus.Confidentiel, actions.Contains(ActionsDroits.Supprimer) || plus.Supprimer,
+            actions.Contains(ActionsDroits.ModifierCode) || plus.ModifierCode);
     }
 
     private static async Task<List<string>> ActionsDroitsAsync(IDroits droits, string type, Utilisateur u, CancellationToken ct)
     {
         var actions = new List<string>();
-        foreach (var a in new[] { ActionsDroits.Voir, ActionsDroits.Modifier, ActionsDroits.Debloquer, ActionsDroits.Confidentiel, ActionsDroits.Supprimer })
+        foreach (var a in new[] { ActionsDroits.Voir, ActionsDroits.Modifier, ActionsDroits.Debloquer, ActionsDroits.Confidentiel, ActionsDroits.Supprimer, ActionsDroits.ModifierCode })
         {
             if (await droits.AutoriseAsync(u, $"fiches/{type}", a, ct)) actions.Add(a);
         }
@@ -194,6 +195,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             Sections = t.Definition.Sections, Champs = t.Definition.Champs.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Colonne = null; copie.Requete = null; return copie; }).ToList(),
             // La requête d'une liste reste sur le serveur (paramétrage seulement) : le client reçoit ses valeurs.
             Supplementaires = t.Supplementaires.Select(c => { var copie = JsonCalcul.Cloner(c); copie.Requete = null; return copie; }).ToList(), Droits = droits,
+            Chrono = t.Definition.Chrono,
         };
     }
 
@@ -447,6 +449,7 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
             var proprietes = actuelle.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
             foreach (var (k, v) in d.Proprietes) proprietes[k] = ValidationFiche.Normaliser(v);
             Valider(t, valeurs, proprietes);
+            await ControlerCodeModifie(t, id, actuelle.Valeurs, valeurs, droits, cnx, tx, ct);
             await specialisation.ValiderGeresAsync(code, id, geres, valeurs, u, ct);
             valide = valeurs;
 
@@ -479,15 +482,21 @@ public class ServiceFiche(FicheDbContext db, SpecialisationFiche specialisation,
         var proprietes = d.Proprietes.ToDictionary(kv => kv.Key, kv => ValidationFiche.Normaliser(kv.Value));
         var geres = Geres(t, d.Valeurs);
         foreach (var (k, v) in geres) valeurs[k] = ValidationFiche.Normaliser(v);
+        // Chrono : code vide = prévisionnel pour la validation, attribué dans la transaction ; code saisi déjà pris = CODE_PRIS.
+        var chrono = await PreparerCodeCreation(t, valeurs, ct);
         Valider(t, valeurs, proprietes);
         await specialisation.ValiderGeresAsync(code, null, geres, valeurs, u, ct);
         var aEcrire = d.Valeurs.Where(kv => !geres.ContainsKey(kv.Key) && Texte(kv.Value) is not null).ToDictionary(kv => kv.Key, kv => Texte(kv.Value));
+        if (chrono is not null) aEcrire[chrono.Definition.Champ] = valeurs[chrono.Definition.Champ] as string;
         await specialisation.AvantEcritureAsync(code, true, null, aEcrire, valeurs, proprietes, u, ct);
         var calcules = aEcrire.Keys.Except(d.Valeurs.Keys).ToHashSet();
         ChiffrerSecrets(t, aEcrire);
         var json = Requete(() => ProprietesJson(t, d.Proprietes));
         var id = await Ecrire(async (cnx, tx) =>
-            (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!, ct);
+        {
+            if (chrono is not null) valeurs[chrono.Definition.Champ] = aEcrire[chrono.Definition.Champ] = await AttribuerCode(t, chrono, cnx, tx, ct);
+            return (string)(await LireDans(cnx, tx, Requete(() => specialisation.Constructeur(t).Insertion(aEcrire, json, calcules)), ct)).First()["id"]!;
+        }, ct);
         if (geres.Count > 0) await specialisation.EcrireGeresAsync(code, id, true, geres, valeurs, u, ct);
         return await VersFiche(t, await LigneComplete(t, id, null, null, ct), d.Confidentiel, droits, u, null, ct);
     }

@@ -14,12 +14,10 @@ import { individusStructure } from '../panneaux-btp.js';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 
 // Fiches de la structure des affaires : projet, affaire, chantier, marché. Listes de choix des références (affaire,
-// projet, chantier, commande d'origine, tiers de l'annuaire), code proposé (PRJ-2026-001…), préremplissage depuis un
+// projet, chantier, commande d'origine, tiers de l'annuaire), code prévisionnel du chrono (module Fiche), préremplissage depuis un
 // projet (?projet=) ou un chantier (?chantier=, ?commande=), liens vers les éléments rattachés. Un projet passé
 // « Obtenu » propose d'ouvrir son chantier.
 
-const PREFIXES = { projet: 'PRJ', affaire: 'AFF', chantier: 'CH', marche: 'M' };
-const LISTES = { projet: 'projets', affaire: 'affaires', chantier: 'chantiers', marche: 'marches' };
 const LIBELLES_STATUT = {
   EN_COURS: 'En cours', REMIS: 'Offre remise', OBTENU: 'Obtenu', PERDU: 'Perdu', ABANDONNE: 'Abandonné', OUVERTE: 'Ouverte', CLOSE: 'Close',
   OUVERT: 'Ouvert', TERMINE: 'Terminé', CLOS: 'Clos', SOLDE: 'Soldé', RESILIE: 'Résilié',
@@ -34,13 +32,6 @@ const RACCOURCIS = {
     ['marches', 'Marchés'], ['achats_commandes', 'Commandes fournisseurs'], ['achats_factures', 'Factures fournisseurs']],
   marche: [['documents', 'Documents'], ['situations', 'Situations'], ['factures', 'Factures']],
 };
-
-/** Prochain code de l'année : PRJ-2026-006 (le plus grand numéro existant + 1). */
-export function prochainCode(type, existants, annee = new Date().getFullYear()) {
-  const prefixe = `${PREFIXES[type]}-${annee}-`;
-  const max = Math.max(0, ...existants.filter((c) => c?.startsWith(prefixe)).map((c) => Number(c.slice(prefixe.length)) || 0));
-  return `${prefixe}${String(max + 1).padStart(3, '0')}`;
-}
 
 export class FicheStructure extends FicheLogiBTP {
   constructor(options) {
@@ -66,18 +57,11 @@ export class FicheStructure extends FicheLogiBTP {
     return controlerIntervenants(v.intervenants ?? [], this.refs.fonctions ?? [], 'S').map((message) => ({ champ: 'intervenants', message }));
   }
 
-  /** Copie : code suivant proposé (le code n'est pas copié). */
-  async copier() {
-    await super.copier();
-    this.definirValeur('code', prochainCode(this.type, (this.refs[LISTES[this.type]] ?? []).map((x) => x.code)));
-    this.rendre();
-  }
-
   /** Recharge les référentiels (après une création liée). */
   async rechargerReferentiels() { this.refs = await this.services.structure.referentiels(); }
 
   valeursCreation() {
-    const v = { ...super.valeursCreation(), code: prochainCode(this.type, (this.refs[LISTES[this.type]] ?? []).map((x) => x.code)) };
+    const v = super.valeursCreation();
     if (this.intervenantsRepris?.length) v.intervenants = this.intervenantsRepris;
     for (const c of this.definition.champs) if (c.type === 'date' && c.obligatoire && !v[c.code]) v[c.code] = aujourdhui();
     return v;
@@ -379,11 +363,11 @@ export class FicheMarche extends FicheStructure {
     return { libelle: 'Marchés de vente du chantier', test: (x) => (x.sens ?? 'V') === 'V' && (!cha || x.cha_id === Number(cha)) };
   }
 
-  /** Code du marché : M-<année>-<n° du chantier>-<rang> ; création depuis un chantier (?chantier=) ou une commande (?commande=). */
+  /** Création depuis un chantier (?chantier=) ou une commande (?commande=) ; le code prévisionnel suit le chantier (chrono à {PARENT}). */
   valeursCreation() {
     const v = super.valeursCreation();
     const cha = (this.refs.chantiers ?? []).find((c) => c.id === parametre('chantier'));
-    if (cha) Object.assign(v, { cha_id: cha.id, tiers_id: v.sens === 'ST' ? null : cha.tiers_id, code: codeMarche(cha, this.refs.marches ?? [], v.sens) });
+    if (cha) Object.assign(v, { cha_id: cha.id, tiers_id: v.sens === 'ST' ? null : cha.tiers_id });
     const cde = (this.refs.commandes ?? []).find((c) => c.id === parametre('commande'));
     if (cde) Object.assign(v, { ent_id: cde.id, libelle: cde.objet, tiers_id: v.tiers_id ?? cde.tiers_id });
     return v;
@@ -393,10 +377,7 @@ export class FicheMarche extends FicheStructure {
     super.choisirReference(code, id);
     if (code !== 'cha_id' || !id || this.mode !== MODES.CREATION) return;
     const cha = (this.refs.chantiers ?? []).find((c) => c.id === id);
-    if (cha) {
-      this.definirValeur('code', codeMarche(cha, this.refs.marches ?? [], this.valeur('sens')));
-      if (!this.valeur('tiers_id') && this.valeur('sens') !== 'ST') this.definirValeur('tiers_id', cha.tiers_id);
-    }
+    if (cha && !this.valeur('tiers_id') && this.valeur('sens') !== 'ST') this.definirValeur('tiers_id', cha.tiers_id);
   }
 
   /** Marché créé depuis une commande : la commande lui est rattachée (et donc à son chantier et à son affaire). */
@@ -766,12 +747,5 @@ const CREATIONS_MARCHE = {
   V_REPRISE_AVT: { type: TYPE_DOCUMENT.V_REPRISE_AVT, libelle: '↺ Reprise', nom: "Reprise d'avancement", titre: "Reprise d'avancement : cumul déjà facturé dans un autre logiciel (non comptable, déduit des factures suivantes)" },
   A_FACTURE: { type: TYPE_DOCUMENT.A_FACTURE, libelle: '＋ Facture sous-traitant', nom: 'Facture fournisseur', titre: 'Facture fournisseur rattachée au marché (choisir le sous-traitant dans l’annuaire du document)' },
 };
-
-/** Code d'un marché du chantier : M-2026-002-1, M-2026-002-2… (d'après le code du chantier CH-2026-002). */
-export function codeMarche(chantier, marches, sens = 'V') {
-  const base = `${sens === 'ST' ? 'MST' : 'M'}-${String(chantier.code ?? chantier.id).replace(/^CH-/, '')}-`;
-  const rang = Math.max(0, ...marches.filter((m) => m.code?.startsWith(base)).map((m) => Number(m.code.slice(base.length)) || 0)) + 1;
-  return `${base}${rang}`;
-}
 
 export const CLASSES_STRUCTURE = { projet: FicheProjet, affaire: FicheAffaire, chantier: FicheChantier, marche: FicheMarche };

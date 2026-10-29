@@ -2,4 +2,5 @@
 export { validerChamp, validerFiche, nombreSaisi, erreurRequete, MESSAGES, FORMATS_PREDEFINIS } from './validation.js';
 export { MODES, LIBELLES_MODES, enSaisie, titreFiche } from './modes.js';
 export { FournisseurFicheApi, FournisseurFicheMemoire, ErreurFiche, convertir } from './fournisseurs.js';
+export { FORMAT_CHRONO_DEFAUT, exerciceChrono, controlerChrono, formaterCode, lireCode, debutCode, codeSuivant } from './chrono.js';
 export * from './codes.js';

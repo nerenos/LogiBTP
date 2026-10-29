@@ -42,7 +42,7 @@ public class SpecialisationAnnuaire
 /// coordonnées partagées (plan, choix, historique), rattachements, liens, compte particulier. Les fiches personne et
 /// individu passent par le module Fiche ; leurs champs gérés (coordonnées, rattachements, liens) sont lus et écrits ici.
 /// </summary>
-public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuaire specialisation)
+public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuaire specialisation, IChronosFiches? chronos = null)
 {
     protected AnnuaireDbContext Db => db;
 
@@ -724,6 +724,12 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         return GrapheAnnuaire.Construire(new DonneesGraphe(niveaux, types, personnes, individus, rattachements, liens), type, id, options);
     }
 
+    /// <summary>
+    /// Code d'un tiers créé hors de sa fiche (tiers provisoire, compte particulier) : chrono des fiches personne s'il est
+    /// branché (IChronosFiches) ; sinon null et le trigger de la base pose T + identifiant.
+    /// </summary>
+    protected async Task<string?> CodeTiers(CancellationToken ct) => chronos is null ? null : await chronos.AttribuerAsync("personne", new Dictionary<string, object?>(), ct);
+
     /// <summary>Compte particulier d'un individu : personne titulaire, coordonnées personnelles partagées (même identifiant).</summary>
     public virtual async Task<ParticulierDto> CreerParticulier(long indId, Utilisateur u, CancellationToken ct)
     {
@@ -739,6 +745,7 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
         {
             PerNivCode = niveau, PerRaisonSociale = string.Join(" ", new[] { i.IndCivilite, i.IndNom.ToUpperInvariant(), i.IndPrenom }.Where(x => !string.IsNullOrWhiteSpace(x))),
             PerCasquettes = JsonSerializer.SerializeToDocument(specialisation.CasquettesParticulier), PerPays = i.IndPays,
+            PerCode = await CodeTiers(ct),
         };
         db.Personnes.Add(personne);
         await db.SaveChangesAsync(ct);

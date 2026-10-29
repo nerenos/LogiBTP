@@ -66,6 +66,26 @@ public partial class ConstructeurFiche(TypeFicheResolu type)
         return Fin($"SELECT {string.Join(", ", colonnes)} FROM {Table} t WHERE {Cle}::text = {P(id)}");
     }
 
+    /// <summary>
+    /// Fiche qui porte déjà ce code (identifiant et code), dans la même portée (colonne du champ de portée), hors de la
+    /// fiche exclue (modification) ; une ligne au plus.
+    /// </summary>
+    public virtual RequeteFiche CodePris(string colonne, string code, string? colonnePortee, string? portee, string? exclure)
+    {
+        var filtre = $"t.{Identifiant(colonne)} = {P(code)}";
+        if (colonnePortee is not null) filtre += $" AND t.{Identifiant(colonnePortee)}::text IS NOT DISTINCT FROM {P(portee)}";
+        if (exclure is not null) filtre += $" AND {Cle}::text <> {P(exclure)}";
+        return Fin($"SELECT {Cle}::text AS id, t.{Identifiant(colonne)}::text AS code FROM {Table} t WHERE {filtre} LIMIT 1");
+    }
+
+    /// <summary>Codes qui commencent par un début commun (rangs déjà pris d'un chrono), dans la même portée.</summary>
+    public virtual RequeteFiche CodesCommencantPar(string colonne, string debut, string? colonnePortee, string? portee)
+    {
+        var filtre = $"left(t.{Identifiant(colonne)}::text, {debut.Length}) = {P(debut)}";
+        if (colonnePortee is not null) filtre += $" AND t.{Identifiant(colonnePortee)}::text IS NOT DISTINCT FROM {P(portee)}";
+        return Fin($"SELECT t.{Identifiant(colonne)}::text AS code FROM {Table} t WHERE {filtre}");
+    }
+
     /// <summary>Suppression de la ligne de la fiche.</summary>
     public virtual RequeteFiche Suppression(string id) => Fin($"DELETE FROM {Table} t WHERE {Cle}::text = {P(id)}");
 

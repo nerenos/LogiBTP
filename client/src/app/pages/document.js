@@ -20,7 +20,7 @@ import { AnalyseCoefficients } from '../analyse-coefs.js';
 import { messagesFrais } from '../frais-annexes.js';
 import { EnvoiBibliotheque } from '../bibliotheque/envoi.js';
 import { AppelBibliotheque } from '../bibliotheque/appel.js';
-import { completerRattachement } from '../structure/structure.js';
+import { completerRattachement, creerFicheCodeLibre, codePrevisionnel } from '../structure/structure.js';
 import { proposerMarche } from '../structure/marche-commande.js';
 import { transformerDocument } from '../documents/transformation.js';
 import { confirmerAvertissements } from '../documents/avertissements.js';
@@ -999,7 +999,8 @@ export class PageDocument extends PageBase {
     const r = await proposerMarcheSousTraitance({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
       nomTiers: (doc.ent_intervenants ?? []).find((i) => i.per_id === doc.ent_tiers_id)?.tiers ?? '',
-      creerMarche: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.MARCHE, { valeurs: { ...valeurs, intervenants: [] }, proprietes: {} }),
+      creerMarche: async (valeurs) => creerFicheCodeLibre(this.servicesFiche, TYPE_FICHE.MARCHE, { valeurs: { ...valeurs, intervenants: [] }, proprietes: {} }),
+      codePrevisionnel: (type, valeurs) => codePrevisionnel(this.servicesFiche, type, valeurs),
     });
     if (!r) return false;
     this.structure = await this.servicesStructure.referentiels();
@@ -1016,11 +1017,12 @@ export class PageDocument extends PageBase {
     const r = await proposerMarche({
       refs: this.structure, doc, totalHt: this.editeur.resultat.document?.ent_total_ht ?? null,
       individus: await individusStructure(this.servicesAnnuaire).catch(() => []),
-      creerChantier: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.CHANTIER, { valeurs, proprietes: {} }),
+      creerChantier: async (valeurs) => creerFicheCodeLibre(this.servicesFiche, TYPE_FICHE.CHANTIER, { valeurs, proprietes: {} }),
       // Le marché reprend les intervenants du chantier.
-      creerMarche: async (valeurs) => this.servicesFiche.creer(TYPE_FICHE.MARCHE, {
+      creerMarche: async (valeurs) => creerFicheCodeLibre(this.servicesFiche, TYPE_FICHE.MARCHE, {
         valeurs: { ...valeurs, intervenants: await this.servicesStructure.intervenants(TYPE_FICHE.CHANTIER, valeurs.cha_id).catch(() => []) }, proprietes: {},
       }),
+      codePrevisionnel: (type, valeurs) => codePrevisionnel(this.servicesFiche, type, valeurs),
     });
     if (!r) return false;
     this.structure = await this.servicesStructure.referentiels();
