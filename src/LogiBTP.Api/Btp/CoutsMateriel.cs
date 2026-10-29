@@ -50,38 +50,21 @@ public static class CoutsMateriel
                 return x;
             }
         }
-        var code = (parNombre ? $"MAT-T-{m.Famille}" : $"MAT-{m.Code}").ToUpperInvariant();
-        if (code.Length > 20) code = code[..20];
-        var libelle = parNombre ? $"Matériel par nombre : {m.Type}" : $"Matériel {m.Code} {m.Designation}";
-        if (libelle.Length > 150) libelle = libelle[..150];
-        var pris = await db.Database.SqlQueryRaw<int>("""
-            SELECT count(*)::int AS "Value" FROM chantier c
-            WHERE c.cha_code = @code AND c.cha_aff_id IS DISTINCT FROM (SELECT aff_id FROM affaire WHERE aff_code = 'MATERIEL')
-            """, new NpgsqlParameter("code", code)).FirstAsync(ct);
-        if (pris > 0)
-        {
-            var suffixe = $"-{materiel}";
-            code = (code.Length + suffixe.Length > 20 ? code[..(20 - suffixe.Length)] : code) + suffixe;
-        }
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var id = await db.Database.SqlQueryRaw<int>("""
-            INSERT INTO chantier (cha_code, cha_libelle, cha_aff_id, cha_statut, cha_commentaire)
-            VALUES (@code, @libelle, (SELECT aff_id FROM affaire WHERE aff_code = 'MATERIEL'), 'OUVERT',
-                    'Chantier de suivi des coûts du matériel : main-d''œuvre, pièces du stock, achats, sous-traitance (lot 5c)')
-            ON CONFLICT (cha_code) DO UPDATE SET cha_libelle = chantier.cha_libelle
-            RETURNING cha_id AS "Value"
-            """, new NpgsqlParameter("code", code), new NpgsqlParameter("libelle", libelle)).ToListAsync(ct);
+        var id = await ChantiersTechniques.CreerAsync(db, parNombre ? $"MAT-T-{m.Famille}" : $"MAT-{m.Code}", $"-{materiel}",
+            parNombre ? $"Matériel par nombre : {m.Type}" : $"Matériel {m.Code} {m.Designation}", "MATERIEL", "OUVERT", false,
+            "Chantier de suivi des coûts du matériel : main-d'œuvre, pièces du stock, achats, sous-traitance (lot 5c)", ct);
         if (parNombre)
         {
             await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_cha_id = @c WHERE (mat_mode = 'NOMBRE' AND mat_famille = @f AND mat_cha_id IS NULL) OR mat_id = @m",
-                [new NpgsqlParameter("c", id[0]), new NpgsqlParameter("f", m.Famille), new NpgsqlParameter("m", materiel)], ct);
+                [new NpgsqlParameter("c", id), new NpgsqlParameter("f", m.Famille), new NpgsqlParameter("m", materiel)], ct);
         }
         else
         {
-            await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_cha_id = @c WHERE mat_id = @m", [new NpgsqlParameter("c", id[0]), new NpgsqlParameter("m", materiel)], ct);
+            await db.Database.ExecuteSqlRawAsync("UPDATE materiel SET mat_cha_id = @c WHERE mat_id = @m", [new NpgsqlParameter("c", id), new NpgsqlParameter("m", materiel)], ct);
         }
         await tx.CommitAsync(ct);
-        return id[0];
+        return id;
     }
 
     private static Dictionary<string, decimal> Totaux(IEnumerable<CoutSql> l)

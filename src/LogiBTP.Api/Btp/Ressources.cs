@@ -3,6 +3,7 @@ using LogiBTP.Domaine;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using static LogiBTP.Api.Btp.SqlBtp;
 using NpgsqlTypes;
 
 namespace LogiBTP.Api.Btp;
@@ -25,12 +26,6 @@ public static class Ressources
     private static readonly HashSet<string> Categories = ["CACES", "HAUTEUR", "ELECTRIQUE", "SECURITE", "MEDICAL", "CONTROLE", "AUTRE"];
     private static readonly HashSet<string> Concernes = ["SALARIE", "MATERIEL", "LES_DEUX"];
     private static readonly HashSet<string> Domaines = ["BLOCAGE", "NON_CONFORMITE", "ECART_PLANNING", "AUTRE"];
-
-    private static NpgsqlParameter P(string nom, object? valeur, NpgsqlDbType? type = null) =>
-        type is { } t ? new NpgsqlParameter(nom, t) { Value = valeur ?? DBNull.Value } : new NpgsqlParameter(nom, valeur ?? DBNull.Value);
-
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
 
     private static void Admin(Utilisateur u)
     {
@@ -257,11 +252,11 @@ public static class Ressources
     public static IEndpointRouteBuilder MapRessources(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/ressources");
-        g.MapGet("/types-habilitation", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlTypes, ct));
+        g.MapGet("/types-habilitation", (LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlTypes, ct));
         g.MapPut("/types-habilitation", async (List<TypeHabilitationSaisi> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerTypesAsync(db, l, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlTypes, ct);
+            return await db.JsonAsync(SqlTypes, ct);
         });
         g.MapGet("/habilitations", (string? element, int? jours, LogiBtpContext db, CancellationToken ct) => ASurveillerAsync(db, element, jours ?? 60, ct));
         g.MapGet("/habilitations/{element}/{id:int}", (string element, int id, LogiBtpContext db, CancellationToken ct) => HabilitationsAsync(db, element, id, ct));
@@ -276,15 +271,15 @@ public static class Ressources
             await EnregistrerMissionsAsync(db, salarie, l, Utilisateur.Depuis(http), ct);
             return await MissionsAsync(db, salarie, ct);
         });
-        g.MapGet("/motifs", (string? domaine, LogiBtpContext db, CancellationToken ct) => Json(db, SqlMotifs, ct, P("d", domaine, NpgsqlDbType.Varchar)));
+        g.MapGet("/motifs", (string? domaine, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlMotifs, ct, P("d", domaine, NpgsqlDbType.Varchar)));
         g.MapPut("/motifs", async (List<MotifSaisi> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerMotifsAsync(db, l, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlMotifs, ct, P("d", null, NpgsqlDbType.Varchar));
+            return await db.JsonAsync(SqlMotifs, ct, P("d", null, NpgsqlDbType.Varchar));
         });
-        g.MapGet("/natures-mo", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlNatures, ct));
+        g.MapGet("/natures-mo", (LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlNatures, ct));
         g.MapGet("/materiels/echeances", (int? jours, LogiBtpContext db, CancellationToken ct) =>
-            Json(db, SqlEcheancesMateriels, ct, P("j", Math.Clamp(jours ?? 60, 0, 3650), NpgsqlDbType.Integer)));
+            db.JsonAsync(SqlEcheancesMateriels, ct, P("j", Math.Clamp(jours ?? 60, 0, 3650), NpgsqlDbType.Integer)));
         g.MapPut("/natures-mo", async (List<NatureService> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             Admin(Utilisateur.Depuis(http));
@@ -293,11 +288,11 @@ public static class Ressources
                 await db.Database.ExecuteSqlRawAsync("UPDATE nature_element SET nat_srv_id = @s WHERE nat_id = @n AND nat_rgn_code = 'MO'",
                     [P("s", n.SrvId, NpgsqlDbType.Integer), P("n", n.Id)], ct);
             }
-            return await Json(db, SqlNatures, ct);
+            return await db.JsonAsync(SqlNatures, ct);
         });
         // Habilitations exigées du conducteur d'un matériel (codes de types concernant un salarié).
         g.MapGet("/materiels/{id:int}/exigees", (int id, LogiBtpContext db, CancellationToken ct) =>
-            Json(db, "SELECT coalesce((SELECT mat_habilitations::text FROM materiel WHERE mat_id = @i), '[]') AS \"Value\"", ct, P("i", id)));
+            db.JsonAsync("SELECT coalesce((SELECT mat_habilitations::text FROM materiel WHERE mat_id = @i), '[]') AS \"Value\"", ct, P("i", id)));
         g.MapPut("/materiels/{id:int}/exigees", async (int id, List<string> codes, LogiBtpContext db, CancellationToken ct) =>
         {
             var types = await TypesAsync(db, ct);
@@ -307,7 +302,7 @@ public static class Ressources
                 [P("c", System.Text.Json.JsonSerializer.Serialize(codes.Distinct().Order(StringComparer.Ordinal))), P("i", id)], ct);
             return Results.NoContent();
         });
-        g.MapGet("/equipes", (DateOnly? date, LogiBtpContext db, CancellationToken ct) => Json(db, SqlEquipes, ct, P("d", date ?? DateOnly.FromDateTime(DateTime.Now), NpgsqlDbType.Date)));
+        g.MapGet("/equipes", (DateOnly? date, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlEquipes, ct, P("d", date ?? DateOnly.FromDateTime(DateTime.Now), NpgsqlDbType.Date)));
         return api;
     }
 

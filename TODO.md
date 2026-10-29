@@ -258,9 +258,13 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] Lots A (code mort sûr) et B (code apparemment inutilisé, à trancher) : en attente des évolutions à venir qui
   touchent ce code ; à reprendre ensuite.
-- [ ] Lots F (requêtes en double du cœur : destinataires, comptes, aide `Json`, pièce vivante) et D (utilitaires JS du
-  socle : `normaliser`, `ErreurApi`, IndexedDB, export CSV, pastilles, panneau latéral, `<dialog>` et `<select>`
-  restants).
+- [ ] Lot D de la revue du code (utilitaires JS du socle : `normaliser`, `ErreurApi`, IndexedDB, export CSV, pastilles,
+  panneau latéral, `<dialog>` et `<select>` restants).
+- [ ] Lot F, reste à trancher : listes de statuts différentes selon les requêtes d'ordres (Pointage : sans SOLDE ; sources
+  du planning et jalons : aucun filtre de statut, un ordre annulé y reste proposé) ; `lower(ind_utilisateur)` seulement
+  dans Mail et OAuth (casse du pseudo non unifiée) ; listes de statuts des requêtes paramétrées par interpolation
+  (`SpecialisationBtp` encours client, `StockApprovisionnementBtp`) et `std_code <> 'ANNULE'` laissés en littéraux ;
+  ~60 `?? DBNull.Value` en ligne (aide `SqlBtp.P` disponible).
 - [ ] Lot E, reste à trancher : une seule table d'accents C# (`NormalisationGed`, `MoteurDocument.NormaliserLibelle`,
   `ReconnaissanceMail.Normaliser`) : les trois tables diffèrent (couverture, ligatures, apostrophe) et chacune a sa
   copie JS (et SQL pour la GED) avec son jeu de cas ; unifier change des résultats, à décider règle par règle.

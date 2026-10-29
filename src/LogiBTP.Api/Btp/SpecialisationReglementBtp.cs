@@ -3,6 +3,7 @@ using LogiBTP.Reglements.Web;
 using LogiBTP.Socle;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using static LogiBTP.Api.Btp.SqlBtp;
 using NpgsqlTypes;
 
 namespace LogiBTP.Api.Btp;
@@ -40,7 +41,6 @@ public sealed class SpecialisationReglementBtp : SpecialisationReglement
 
     public override async Task<List<EcheanceSource>> EcheancesAsync(ReglementDbContext db, FiltreEcheances f, CancellationToken ct)
     {
-        NpgsqlParameter P(string nom, object? v, NpgsqlDbType type) => new(nom, type) { Value = v ?? DBNull.Value };
         var json = await db.Database.SqlQueryRaw<string>(SqlEcheances,
             P("tiers", f.TiersId, NpgsqlDbType.Bigint), P("sens", f.Sens, NpgsqlDbType.Text),
             P("ids", f.Ids?.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint), P("pieces", f.Pieces?.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Bigint),

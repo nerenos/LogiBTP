@@ -34,11 +34,7 @@ public static class CalendriersBtp
     public static async Task<(int? CalId, int? SrvId)> SalarieAsync(LogiBtpContext db, int salarie, CancellationToken ct)
     {
         var l = await db.Database.SqlQueryRaw<Ligne>("""
-            SELECT coalesce(s.sal_cal_id, v.srv_cal_id) AS cal_id, v.srv_id AS srv_id
-            FROM salarie s
-            LEFT JOIN LATERAL (SELECT sv.srv_id, sv.srv_cal_id FROM service_membre m JOIN service sv ON sv.srv_id = m.sme_srv_id
-                               WHERE m.sme_ind_id = s.sal_ind_id ORDER BY m.sme_principal DESC, sv.srv_ordre LIMIT 1) v ON TRUE
-            WHERE s.sal_id = @s
+            SELECT cal_id, srv_id FROM v_salarie_calendrier WHERE sal_id = @s
             """, new NpgsqlParameter("s", salarie)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable($"Salarié {salarie}");
         return (l.CalId, l.SrvId);
     }

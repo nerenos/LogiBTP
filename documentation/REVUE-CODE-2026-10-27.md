@@ -143,6 +143,23 @@ vérifient que rien ne change.
 
 ## Lot F — Requêtes en double dans le cœur serveur
 
+> **Fait** (29/10/2026) : `SqlBtp` (`P` paramètre nullable, `db.JsonAsync` : 6 copies de `Json` et 5 de `P` retirées ;
+> `HorsVigueur` / `HorsVigueurOuSolde` tirées de `StatutsDocument`, une constante par liste existante, sans changement de
+> résultat) et `TypesDocumentBtp` (`IdAsync`, `CodeAsync`) ; `DestinatairesBtp` (administrateurs actifs, membres d'un
+> service par identifiant, codes ou nature, services d'un utilisateur ; fragments `SqlAdministrateurs`,
+> `SqlMembresServices`) ; `ComptesBtp` (individu et salarié du compte, `AuteurBorneAsync`, `EstResponsableAsync`,
+> fragment `SqlChefs` : responsable du service principal ou du parent) ; `LiaisonsBtp.SqlChantiersDuJour` et
+> `LiaisonsBtp.DateHeure` (date-heure du planning en culture invariante par `Temps.Ecrire`) ;
+> `SourceDocumentEdition.LignesAdresse` (adresse imprimable : le pays hors France s'ajoute aussi au tiers des annexes de
+> marché et à la société) ; `ChantiersTechniques.CreerAsync` (MATERIEL, DOTATIONS : un code pris hors de l'affaire reçoit
+> un suffixe, le Magasin ne reprend plus le chantier d'une autre affaire). Vues de `db/240_vues_communes.sql` :
+> `v_salarie_calendrier` (calendrier, planning, pointage), `v_ressource` (planning, équipes, affectations, exécution ;
+> libellé unique « nom prénom », sous-traitant avec son corps d'état ; point d'accroche du « Ne plus utiliser »),
+> `v_ordres_ouverts` (atelier, notifications). Gardé : casse du pseudo (`lower` dans Mail et OAuth seulement) ;
+> `AdressesDocument.MemeAdresse` (comparaison, pas un formatage) ; ordres du Pointage (SOLDE gardé), sources et jalons du
+> planning (sans filtre de statut) ; listes de statuts des requêtes paramétrées par interpolation (`SpecialisationBtp`,
+> `StockApprovisionnementBtp`) et `<> 'ANNULE'` ; `?? DBNull.Value` en ligne (voir TODO).
+
 | Sujet | Copies | Proposition |
 |---|---|---|
 | Comptes administrateurs actifs | 9 (`MailBtp`, `NotificationsBtp` ×7, `SpecialisationAuthentificationBtp`, `OAuthBtp`) | `DestinatairesBtp.AdministrateursAsync` |

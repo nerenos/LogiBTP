@@ -97,7 +97,7 @@ public static class Acomptes
         if (montant <= 0) throw ExceptionMetier.Invalide("ACOMPTE", "Montant du marché nul : saisir un montant");
         var libelle = string.IsNullOrWhiteSpace(d.Libelle) ? $"Acompte n° {m.Rang} – marché {m.Code}" : d.Libelle.Trim();
 
-        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == TypesDocument.VDemandeAcompte).Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await TypesDocumentBtp.IdAsync(db, TypesDocument.VDemandeAcompte, ct);
         var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntTiersId = m.Tiers, EntObjet = libelle }, u, ct);
         var c = await documents.Charger(cree.Document.EntId, ct);
         c.Document.EntMarcheId = marche;
@@ -165,7 +165,7 @@ public static class Acomptes
         var doc = await db.Documents.AsNoTracking().FirstAsync(x => x.EntId == demande, ct);
         if (!doc.EntVerrouille) await documents.Valider(demande, new DemandeVersion { EntVersion = doc.EntVersion }, u, ct);
         var code = a.Mode == "CA" ? "V_FACTURE_ACOMPTE" : "V_RECU_ACOMPTE";
-        var cible = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == code).Select(t => t.TydId).FirstAsync(ct);
+        var cible = await TypesDocumentBtp.IdAsync(db, code, ct);
         var piece = await transformations.Transformer(demande, new DemandeTransformation { CibleTydId = cible }, u, ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_acompte SET mac_piece_ent_id = {piece.Document.EntId} WHERE mac_id = {acompte}", ct);
         return piece;

@@ -53,10 +53,10 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
         [.. await db.Database.SqlQueryRaw<string>("SELECT tyd_code AS \"Value\" FROM type_document WHERE tyd_famille = 'E' AND NOT tyd_actif").ToListAsync(ct)];
 
     public override Task<List<OrdreExe>> OrdresAsync(ExecutionDbContext db, IReadOnlyCollection<string> ids, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<OrdreExe>("""
+        db.Database.SqlQueryRaw<OrdreExe>($"""
             SELECT d.ent_chantier_id::text AS id_element, d.ent_id, d.ent_numero AS numero, d.ent_objet AS objet, t.tyd_code AS type_ordre, t.tyd_libelle AS type_libelle,
                    d.ent_srv_id AS srv_id, s.std_code AS statut, s.std_libelle AS statut_libelle, d.ent_exe_etat AS etat, m.mot_libelle AS motif, d.ent_fin_prevue AS fin_prevue,
-                   coalesce(d.ent_fin_prevue < current_date AND coalesce(d.ent_exe_etat, '') <> 'TERMINE' AND s.std_code NOT IN ('ANNULE', 'REMPLACE', 'SOLDE'), FALSE) AS en_retard,
+                   coalesce(d.ent_fin_prevue < current_date AND coalesce(d.ent_exe_etat, '') <> 'TERMINE' AND s.std_code NOT IN ({SqlBtp.HorsVigueurOuSolde}), FALSE) AS en_retard,
                    '/document/' || d.ent_id AS url
             FROM document d
             JOIN type_document t ON t.tyd_id = d.ent_tyd_id
@@ -70,9 +70,9 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
 
     public override async Task<OrdreEtapes?> OrdreAsync(ExecutionDbContext db, long id, CancellationToken ct)
     {
-        var l = await db.Database.SqlQueryRaw<LigneOrdre>("""
+        var l = await db.Database.SqlQueryRaw<LigneOrdre>($"""
             SELECT d.ent_id AS id, t.tyd_code AS type_ordre, d.ent_chantier_id::text AS id_element, d.ent_srv_id AS srv_id, d.ent_debut_prevu AS debut,
-                   d.ent_exe_etat AS etat, s.std_code IN ('ANNULE', 'REMPLACE') AS clos, d.ent_ressource::text AS ressource
+                   d.ent_exe_etat AS etat, s.std_code IN ({SqlBtp.HorsVigueur}) AS clos, d.ent_ressource::text AS ressource
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             WHERE d.ent_id = @id AND t.tyd_famille = 'E'
             """, new NpgsqlParameter("id", id)).FirstOrDefaultAsync(ct);
@@ -80,9 +80,9 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
     }
 
     public override Task<List<long>> OrdresEnCoursAsync(ExecutionDbContext db, string typeOrdre, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<long>("""
+        db.Database.SqlQueryRaw<long>($"""
             SELECT d.ent_id AS "Value" FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-            WHERE t.tyd_code = @t AND d.ent_is_reference AND s.std_code NOT IN ('SOLDE', 'ANNULE', 'REMPLACE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+            WHERE t.tyd_code = @t AND d.ent_is_reference AND s.std_code NOT IN ({SqlBtp.HorsVigueurOuSolde}) AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
             """, new NpgsqlParameter("t", typeOrdre)).ToListAsync(ct);
 
     /// <summary>Calendrier du service de l'ordre (journées et fermetures du module Calendrier ; sans service : défaut).</summary>
@@ -105,17 +105,13 @@ public class SpecialisationExecutionBtp(IHttpContextAccessor http) : Specialisat
         return (await db.Database.SqlQueryRaw<LigneTache>("""
             SELECT t.tac_id, (CASE WHEN t.tac_fin > t.tac_debut THEN t.tac_fin - interval '1 minute' ELSE t.tac_fin END)::date AS fin,
                    (SELECT json_build_object('type', CASE a.aff_res_type WHEN 'INTERIM' THEN 'SALARIE' ELSE a.aff_res_type END, 'id', a.aff_res_id::bigint,
-                           'libelle', coalesce((SELECT concat_ws(' ', s.sal_prenom, s.sal_nom) FROM salarie s WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND s.sal_id::text = a.aff_res_id),
-                                               (SELECT m.mat_designation FROM materiel m WHERE a.aff_res_type = 'MATERIEL' AND m.mat_id::text = a.aff_res_id),
-                                               (SELECT x.per_raison_sociale FROM personne x WHERE a.aff_res_type = 'SOUS_TRAITANT' AND x.per_id::text = a.aff_res_id)))::text
+                           'libelle', (SELECT r.libelle FROM v_ressource r WHERE r.id = a.aff_res_id AND (r.type = a.aff_res_type OR r.type IN ('SALARIE', 'INTERIM') AND a.aff_res_type IN ('SALARIE', 'INTERIM'))))::text
                       FROM pla_affectation a WHERE a.aff_tac_id = t.tac_id AND a.aff_res_id ~ '^[0-9]+$' ORDER BY a.aff_id LIMIT 1) AS ressource
             FROM pla_tache t WHERE t.tac_id = ANY(@ids)
             """, new NpgsqlParameter("ids", ids.ToArray())).ToListAsync(ct)).Select(t => new TacheEtape(t.TacId, t.Fin, t.Ressource)).ToList();
     }
 
-    private static Task<long?> IndividuAsync(ExecutionDbContext db, Utilisateur u, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<long?>("SELECT ind_id AS \"Value\" FROM individu WHERE ind_utilisateur = @u ORDER BY ind_id LIMIT 1",
-            new NpgsqlParameter("u", u.Code)).FirstOrDefaultAsync(ct);
+    private static Task<long?> IndividuAsync(ExecutionDbContext db, Utilisateur u, CancellationToken ct) => ComptesBtp.IndividuAsync(db, u.Code, ct);
 
     /// <summary>
     /// Validation d'une étape (E46) : administrateur, responsable de l'ordre, membre du service porteur ou de son parent,

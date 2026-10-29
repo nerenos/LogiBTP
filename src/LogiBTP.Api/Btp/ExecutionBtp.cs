@@ -6,6 +6,7 @@ using LogiBTP.Execution;
 using LogiBTP.Socle.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using static LogiBTP.Api.Btp.SqlBtp;
 using NpgsqlTypes;
 
 namespace LogiBTP.Api.Btp;
@@ -23,8 +24,6 @@ public sealed record ExecutionSaisie(string? Etat, int? MotifId, string? Comment
 /// </summary>
 public static class ExecutionBtp
 {
-    private static NpgsqlParameter P(string nom, object? valeur, NpgsqlDbType type) => new(nom, type) { Value = valeur ?? DBNull.Value };
-
     private sealed record LigneOrdre(long EntId, long GroupeId, string TydCode, string Famille, string StdCode, int? ChantierId, string? Numero, string? Objet,
         string? EntExeEtat, int? EntExeMotifId);
 
@@ -154,7 +153,7 @@ public static class ExecutionBtp
     /// annulés et remplacés), le reste et le nombre d'ordres ; dépassement signalé.
     /// </summary>
     public static async Task<IResult> RepartitionAsync(LogiBtpContext db, long id, CancellationToken ct) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>("""
+        Results.Content(await db.Database.SqlQueryRaw<string>($"""
             WITH cible AS (SELECT d.ent_id, d.ent_tyd_id FROM document d WHERE d.ent_id = @id),
             lignes AS (
                 SELECT l.lig_id, x.lil_source_lig_id AS source_lig_id, coalesce(l.lig_qte_totale, l.lig_qte_vendue, 0) AS qte
@@ -175,7 +174,7 @@ public static class ExecutionBtp
                 JOIN document dc ON dc.ent_id = c.lig_ent_id
                 JOIN statut_document sc ON sc.std_id = dc.ent_std_id
                 WHERE x.lil_source_lig_id IN (SELECT source_lig_id FROM lignes) AND dc.ent_tyd_id = (SELECT ent_tyd_id FROM cible)
-                  AND dc.ent_id <> @id AND sc.std_code NOT IN ('ANNULE', 'REMPLACE')
+                  AND dc.ent_id <> @id AND sc.std_code NOT IN ({SqlBtp.HorsVigueur})
                 GROUP BY 1)
             SELECT coalesce(json_agg(json_build_object('lig_id', l.lig_id, 'source_lig_id', s.lig_id, 'type_source', s.type_source, 'numero_source', s.numero_source,
                      'source_ent_id', s.lig_ent_id, 'qte_source', s.qte, 'unite', s.unite, 'montant_pr_source', s.montant_pr, 'heures_source', s.heures,
@@ -207,9 +206,9 @@ public static class ExecutionBtp
     public sealed record TypeOrdreSaisi(bool Actif, int? SrvId);
 
     /// <summary>Ordres d'un type non terminés : ni soldés, ni annulés, ni remplacés, ni d'état d'exécution « terminé ».</summary>
-    private const string EnCours = """
+    private const string EnCours = $"""
         (SELECT count(*)::int FROM document d JOIN statut_document s ON s.std_id = d.ent_std_id
-          WHERE d.ent_tyd_id = t.tyd_id AND d.ent_is_reference AND s.std_code NOT IN ('SOLDE', 'ANNULE', 'REMPLACE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE')
+          WHERE d.ent_tyd_id = t.tyd_id AND d.ent_is_reference AND s.std_code NOT IN ({SqlBtp.HorsVigueurOuSolde}) AND coalesce(d.ent_exe_etat, '') <> 'TERMINE')
         """;
 
     /// <summary>Types de la famille E, actifs ou non (le paramétrage voit aussi les types désactivés).</summary>
@@ -242,7 +241,7 @@ public static class ExecutionBtp
     /// <summary>Ressources principales possibles d'un ordre ou d'une étape (actives).</summary>
     public static Task<List<RessourceOrdre>> RessourcesAsync(LogiBtpContext db, CancellationToken ct) =>
         db.Database.SqlQueryRaw<RessourceOrdre>("""
-            SELECT 'SALARIE' AS type, s.sal_id::bigint AS id, concat_ws(' ', s.sal_prenom, s.sal_nom) AS libelle, coalesce(s.sal_code, s.sal_service) AS detail
+            SELECT 'SALARIE' AS type, s.sal_id::bigint AS id, concat_ws(' ', s.sal_nom, s.sal_prenom) AS libelle, coalesce(s.sal_code, s.sal_service) AS detail
               FROM salarie s WHERE s.sal_actif
             UNION ALL SELECT 'EQUIPE', e.equ_id, e.equ_libelle, e.equ_code FROM equipe e WHERE e.equ_active
             UNION ALL SELECT 'MATERIEL', m.mat_id, m.mat_designation, m.mat_code FROM materiel m

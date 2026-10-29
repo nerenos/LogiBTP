@@ -33,11 +33,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     {
         var calendriers = Services.GetRequiredService<ServiceCalendrier>();
         var lignes = await db.Database.SqlQueryRaw<CalendrierSalarie>("""
-            SELECT s.sal_id AS id, coalesce(s.sal_cal_id, v.srv_cal_id) AS cal_id, v.srv_id AS srv_id
-            FROM salarie s
-            LEFT JOIN LATERAL (SELECT sv.srv_id, sv.srv_cal_id FROM service_membre m JOIN service sv ON sv.srv_id = m.sme_srv_id
-                               WHERE m.sme_ind_id = s.sal_ind_id ORDER BY m.sme_principal DESC, sv.srv_ordre LIMIT 1) v ON TRUE
-            WHERE s.sal_id = ANY(@ids)
+            SELECT sal_id AS id, cal_id, srv_id FROM v_salarie_calendrier WHERE sal_id = ANY(@ids)
             """, new NpgsqlParameter("ids", salaries.ToArray())).ToListAsync(ct);
         var cache = new Dictionary<(int?, int?), List<DateOnly>>();
         var r = new Dictionary<int, List<DateOnly>>();
@@ -55,10 +51,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         return r;
     }
 
-    public override async Task<int?> SalarieDeAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<int?>("""
-            SELECT s.sal_id AS "Value" FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id WHERE i.ind_utilisateur = @u AND s.sal_actif ORDER BY s.sal_id LIMIT 1
-            """, new NpgsqlParameter("u", u.Code)).FirstOrDefaultAsync(ct);
+    public override Task<int?> SalarieDeAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) => ComptesBtp.SalarieAsync(db, u.Code, ct);
 
     private sealed record TacheExistante(long Id, int Version);
 
@@ -107,8 +100,8 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             {
                 var nature = c.PcoNature is null ? null : await db.NaturesAbsence.AsNoTracking().FirstOrDefaultAsync(n => n.PnaCode == c.PcoNature, ct);
                 var valide = c.PcoEtat == "VALIDE";
-                var saisie = new TacheSaisie(2, c.PcoDu.ToString("yyyy-MM-dd") + (c.PcoDebutMidi ? "T12:00" : "T00:00"),
-                    c.PcoFinMidi ? c.PcoAu.ToString("yyyy-MM-dd") + "T12:00" : c.PcoAu.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", null, 1, salarie.SrvId, "absence", null,
+                var saisie = new TacheSaisie(2, LiaisonsBtp.DateHeure(c.PcoDu, c.PcoDebutMidi ? 12 : 0),
+                    c.PcoFinMidi ? LiaisonsBtp.DateHeure(c.PcoAu, 12) : LiaisonsBtp.DateHeure(c.PcoAu.AddDays(1)), null, 1, salarie.SrvId, "absence", null,
                     valide ? nature?.PnaLibelle ?? "Absence" : "Congé demandé", [new AffectationSaisie(salarie.Interimaire ? "INTERIM" : "SALARIE", salarie.Id.ToString())],
                     "conge", c.PcoId.ToString(), c.PcoCommentaire, 0, valide ? nature?.PnaCouleur : null, valide ? "CONFIRMEE" : "OPTION", existante?.Version);
                 if (existante is not null) await planning.ModifierAsync(existante.Id, saisie, u, ct, true);
@@ -253,11 +246,11 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             """).ToListAsync(ct);
 
     public override Task<List<OrdrePointage>> OrdresAsync(PointageDbContext db, IReadOnlyCollection<int> chantiers, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<OrdrePointage>("""
+        db.Database.SqlQueryRaw<OrdrePointage>($"""
             SELECT d.ent_id AS id, d.ent_chantier_id AS cha_id, d.ent_numero AS numero, d.ent_objet AS objet, t.tyd_libelle AS type, d.ent_srv_id AS srv_id
             FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
             WHERE f_module_actif('execution') AND t.tyd_famille = 'E' AND d.ent_is_reference AND d.ent_chantier_id = ANY(@ids)
-              AND s.std_code NOT IN ('ANNULE', 'REMPLACE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+              AND s.std_code NOT IN ({SqlBtp.HorsVigueur}) AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
             ORDER BY d.ent_chantier_id, d.ent_numero
             """, new NpgsqlParameter("ids", chantiers.ToArray())).ToListAsync(ct);
 
@@ -289,13 +282,8 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
             """, new NpgsqlParameter("u", u.Code)).FirstAsync(ct);
 
     public override async Task<HashSet<int>> ChefDeAsync(PointageDbContext db, Utilisateur u, IReadOnlyCollection<int> salaries, CancellationToken ct) =>
-        (await db.Database.SqlQueryRaw<int>("""
-            SELECT s.sal_id AS "Value" FROM salarie s
-            JOIN individu i ON i.ind_utilisateur = @u
-            JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
-            JOIN service sv ON sv.srv_id = sm.sme_srv_id
-            LEFT JOIN service sp ON sp.srv_id = sv.srv_parent_id
-            WHERE s.sal_id = ANY(@ids) AND (sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id)
+        (await db.Database.SqlQueryRaw<int>($"""
+            SELECT DISTINCT c.sal_id AS "Value" FROM ({ComptesBtp.SqlChefs}) c WHERE c.sal_id = ANY(@ids) AND c.ind_utilisateur = @u
             """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("ids", salaries.ToArray())).ToListAsync(ct)).ToHashSet();
 
     /// <summary>
@@ -345,12 +333,8 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
 
     /// <summary>Chantiers des tâches du planning du jour où le salarié est affecté (module Planning actif) : journée pré-remplie.</summary>
     public override async Task<List<int>> ChantiersDuJourAsync(PointageDbContext db, int salarie, DateOnly date, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<int>("""
-            SELECT DISTINCT t.tac_id_element::int AS "Value"
-            FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
-            WHERE f_module_actif('planning') AND t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$'
-              AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text
-              AND t.tac_debut < (@d::date + 1) AND t.tac_fin > @d::date
+        await db.Database.SqlQueryRaw<int>($"""
+            SELECT j.cha_id AS "Value" FROM ({LiaisonsBtp.SqlChantiersDuJour("@d::date")}) j
             """, new NpgsqlParameter("s", salarie.ToString()), new NpgsqlParameter("d", date)).ToListAsync(ct);
 
     private sealed record MotifService(int? SrvId, string Libelle);

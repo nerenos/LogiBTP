@@ -23,9 +23,6 @@ public static class CompteursMateriel
 {
     private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId, long? EntId, string Source);
 
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
-
     /// <summary>Historique du matériel : unités suivies, compteurs, relevés (récents d'abord), événements.</summary>
     public const string SqlHistorique = """
         SELECT json_build_object(
@@ -43,7 +40,7 @@ public static class CompteursMateriel
         FROM materiel m WHERE m.mat_id = @m
         """;
 
-    public static Task<IResult> HistoriqueAsync(LogiBtpContext db, int materiel, CancellationToken ct) => Json(db, SqlHistorique, ct, new NpgsqlParameter("m", materiel));
+    public static Task<IResult> HistoriqueAsync(LogiBtpContext db, int materiel, CancellationToken ct) => db.JsonAsync(SqlHistorique, ct, new NpgsqlParameter("m", materiel));
 
     private static async Task<string[]> UnitesAsync(LogiBtpContext db, int materiel, CancellationToken ct) =>
         ReglesCompteurs.UnitesCompteurs(await db.Database.SqlQueryRaw<string>("SELECT mat_compteurs AS \"Value\" FROM materiel WHERE mat_id = @m", new NpgsqlParameter("m", materiel))

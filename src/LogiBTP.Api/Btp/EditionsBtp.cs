@@ -193,7 +193,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                          ORDER BY d.ent_date, d.ent_id), '[]')::text AS "Value"
                 FROM document cur JOIN document d ON d.ent_marche_id = cur.ent_marche_id AND d.ent_id <> cur.ent_id
                 JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-                WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND d.ent_verrouille AND s.std_code NOT IN ('ANNULE', 'REMPLACE')
+                WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND d.ent_verrouille AND s.std_code NOT IN ({SqlBtp.HorsVigueur})
                   AND d.ent_is_reference AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
                 """,
             _ => null,
@@ -235,11 +235,7 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         {
             if (per is not long p || await ContactsDocument.Instantane(db, p, null, ct) is not { } j) return null;
             var o = JsonNode.Parse(j.RootElement.GetRawText())!.AsObject();
-            var a = o["adresse"] as JsonObject;
-            var lignes = new JsonArray();
-            foreach (var k in new[] { "ligne1", "ligne2", "ligne3" }) if (a?[k]?.GetValue<string>() is { Length: > 0 } t) lignes.Add(t);
-            if (a is not null && $"{a["code_postal"]} {a["ville"]}".Trim() is { Length: > 0 } cp) lignes.Add(cp);
-            o["adresse"] = lignes;
+            o["adresse"] = SourceDocumentEdition.LignesAdresse(o["adresse"]);
             return o;
         }
         var garanties = new Dictionary<string, string>
@@ -347,8 +343,7 @@ public static class SourceDocumentEdition
         if (societe["per_id"] is JsonValue p && await ContactsDocument.Instantane(db, p.GetValue<long>(), null, ct) is { } inst)
         {
             var co = JsonNode.Parse(inst.RootElement.GetRawText());
-            societe["adresse"] = co?["adresse"] is JsonObject a ? new JsonArray(new[] { "ligne1", "ligne2", "ligne3" }.Select(k => a[k]?.GetValue<string>()).Where(x => !string.IsNullOrWhiteSpace(x))
-                .Append(string.Join(' ', new[] { a["code_postal"]?.GetValue<string>(), a["ville"]?.GetValue<string>() }.Where(x => !string.IsNullOrWhiteSpace(x)))).Where(x => x!.Length > 0).Select(x => (JsonNode?)x).ToArray()) : new JsonArray();
+            societe["adresse"] = co?["adresse"] is JsonObject a ? LignesAdresse(a) : new JsonArray();
             societe["telephone"] = co?["telephone"]?.DeepClone();
             societe["courriel"] = co?["email"]?.DeepClone();
         }
@@ -416,7 +411,7 @@ public static class SourceDocumentEdition
         }
         var payeur = d.EntContactPayeur is not null ? JsonNode.Parse(d.EntContactPayeur.RootElement.GetRawText()) : null;
         var adresseTravaux = d.EntAdresseLivraison is not null ? JsonNode.Parse(d.EntAdresseLivraison.RootElement.GetRawText())?.AsObject() : null;
-        if (adresseTravaux is not null) adresseTravaux["adresse"] = Lignes(adresseTravaux["adresse"]);
+        if (adresseTravaux is not null) adresseTravaux["adresse"] = LignesAdresse(adresseTravaux["adresse"]);
 
         var document = Objet(d);
         var lignes = r.Lignes.ToDictionary(l => l.LigId);
@@ -550,13 +545,13 @@ public static class SourceDocumentEdition
         return new JsonObject
         {
             ["nom"] = o["raison_sociale"]?.DeepClone(), ["code"] = o["code"]?.DeepClone(), ["contact"] = o["contact"]?["nom"]?.DeepClone(),
-            ["adresse"] = Lignes(o["adresse"]), ["courriel"] = (o["email"] ?? o["courriel"])?.DeepClone(), ["telephone"] = o["telephone"]?.DeepClone(),
+            ["adresse"] = LignesAdresse(o["adresse"]), ["courriel"] = (o["email"] ?? o["courriel"])?.DeepClone(), ["telephone"] = o["telephone"]?.DeepClone(),
             ["siret"] = o["siret"]?.DeepClone(), ["tva"] = (o["tva_intra"] ?? o["tva"])?.DeepClone(),
         };
     }
 
     /// <summary>Adresse en lignes imprimables (vides retirées ; code postal et ville sur une ligne ; pays hors France).</summary>
-    private static JsonArray Lignes(JsonNode? a)
+    public static JsonArray LignesAdresse(JsonNode? a)
     {
         var res = new JsonArray();
         if (a is JsonArray dejaLignes) { foreach (var x in dejaLignes) if (x is not null) res.Add(x.DeepClone()); return res; }

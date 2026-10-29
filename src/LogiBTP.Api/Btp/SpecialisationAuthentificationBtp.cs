@@ -121,9 +121,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     /// <summary>Adresse exclue après trop d'échecs : notification aux comptes administrateurs.</summary>
     public override async Task ApresExclusionAsync(IServiceProvider services, string prefixe, DateTimeOffset fin, int echecs, CancellationToken ct)
     {
-        var admins = await services.GetRequiredService<LogiBtpContext>().Database.SqlQueryRaw<string>("""
-            SELECT cpt_code AS "Value" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'
-            """).ToListAsync(ct);
+        var admins = await DestinatairesBtp.AdministrateursAsync(services.GetRequiredService<LogiBtpContext>(), ct);
         await services.GetRequiredService<LogiBTP.Notifications.Web.ServiceNotification>().PublierAsync(admins.Select(a =>
             new LogiBTP.Notifications.Web.NouvelleNotification(a, "authentification", "EXCLUSION_IP", $"Adresse {prefixe} exclue ({echecs} échecs de connexion)",
                 $"Jusqu'à {fin.ToLocalTime():dd/MM HH:mm} ; levée possible dans les comptes utilisateurs", NiveauNotification.Attention, "/parametres/comptes?onglet=exclusions",

@@ -54,32 +54,26 @@ public static class MagasinBtp
             """).ToListAsync(ct);
 
     /// <summary>
-    /// Chantier de dotation du salarié, créé à la première sortie (DOT-code, affaire DOTATIONS, tient un stock) : ouvert
+    /// Chantier de dotation du salarié, créé à la première sortie (DOT-code, suffixé de l'identifiant du salarié si ce code
+    /// est pris hors de l'affaire DOTATIONS ; tient un stock) : ouvert
     /// tant que le salarié n'est pas en sommeil (clos ensuite, db/228) ; écarté des chantiers proposés (f_chantier_dotation).
     /// </summary>
     public static async Task<int> ChantierDotationAsync(LogiBtpContext db, int salarie, CancellationToken ct)
     {
         var s = (await SalariesAsync(db, salarie, ct)).FirstOrDefault() ?? throw ExceptionMetier.Introuvable("Salarié");
         if (s.Chantier is { } c) return c;
-        var code = $"DOT-{(s.Code ?? s.Matricule ?? s.Id.ToString()).ToUpperInvariant()}";
-        if (code.Length > 20) code = code[..20];
-        var id = await db.Database.SqlQuery<int>($"""
-            INSERT INTO chantier (cha_code, cha_libelle, cha_aff_id, cha_statut, cha_stock_tenu, cha_commentaire)
-            VALUES ({code}, {$"Dotations {s.Prenom} {s.Nom}"}, (SELECT aff_id FROM affaire WHERE aff_code = 'DOTATIONS'),
-                    (SELECT CASE WHEN sal_usage = 'S' THEN 'CLOS' ELSE 'OUVERT' END FROM salarie WHERE sal_id = {salarie}), TRUE,
-                    'Chantier de dotation du salarié : son stock = EPI et outillage dotés non rendus (module Stock)')
-            ON CONFLICT (cha_code) DO UPDATE SET cha_stock_tenu = TRUE
-            RETURNING cha_id AS "Value"
-            """).ToListAsync(ct);
-        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE salarie SET sal_cha_dotation_id = {id[0]} WHERE sal_id = {salarie}", ct);
-        return id[0];
+        var statut = await db.Database.SqlQuery<string>($"SELECT CASE WHEN sal_usage = 'S' THEN 'CLOS' ELSE 'OUVERT' END AS \"Value\" FROM salarie WHERE sal_id = {salarie}").FirstAsync(ct);
+        var id = await ChantiersTechniques.CreerAsync(db, $"DOT-{s.Code ?? s.Matricule ?? s.Id.ToString()}", $"-{salarie}", $"Dotations {s.Prenom} {s.Nom}", "DOTATIONS", statut, true,
+            "Chantier de dotation du salarié : son stock = EPI et outillage dotés non rendus (module Stock)", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE salarie SET sal_cha_dotation_id = {id} WHERE sal_id = {salarie}", ct);
+        return id;
     }
 
     /// <summary>Crée, enregistre et valide une pièce de stock (transfert ou sortie) aux lignes en unité de stock.</summary>
     public static async Task<PieceMagasin> PieceAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
         string type, int? origine, int? destination, int? chantier, List<LigneMagasin> lignes, string? objet, DateTimeOffset? date, Utilisateur u, CancellationToken ct)
     {
-        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == type).Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await TypesDocumentBtp.IdAsync(db, type, ct);
         var tva = await db.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
         var ids = lignes.Select(l => l.Ele).Distinct().ToArray();
         var articles = (await db.Database.SqlQuery<ArticleSql>($"""

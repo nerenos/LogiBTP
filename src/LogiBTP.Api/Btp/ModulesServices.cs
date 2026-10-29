@@ -74,32 +74,29 @@ public static class ModulesServices
         FROM service_membre m JOIN service s ON s.srv_id = m.sme_srv_id WHERE m.sme_ind_id = @ind
         """;
 
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
-
     public static IEndpointRouteBuilder MapModulesServices(this IEndpointRouteBuilder api)
     {
-        api.MapGet("/modules", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlModules, ct));
+        api.MapGet("/modules", (LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlModules, ct));
         api.MapPut("/modules/{code}", async (string code, ActivationModule a, HttpContext http, LogiBtpContext db, ModulesSociete modules, CancellationToken ct) =>
         {
             await Activer(db, code, a.Actif, Utilisateur.Depuis(http), ct);
             modules.Oublier();
-            return await Json(db, SqlModules, ct);
+            return await db.JsonAsync(SqlModules, ct);
         });
 
-        api.MapGet("/services", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlServices, ct));
+        api.MapGet("/services", (LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlServices, ct));
         api.MapPut("/services", async (List<ServiceSaisi> s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerServices(db, s, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlServices, ct);
+            return await db.JsonAsync(SqlServices, ct);
         });
-        api.MapGet("/services/{id:int}/membres", (int id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlMembres, ct, new NpgsqlParameter("srv", id)));
+        api.MapGet("/services/{id:int}/membres", (int id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlMembres, ct, new NpgsqlParameter("srv", id)));
         api.MapPut("/services/{id:int}/membres", async (int id, List<MembreService> m, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerMembres(db, id, m, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlMembres, ct, new NpgsqlParameter("srv", id));
+            return await db.JsonAsync(SqlMembres, ct, new NpgsqlParameter("srv", id));
         });
-        api.MapGet("/services/individu/{id:long}", (long id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlServicesIndividu, ct, new NpgsqlParameter("ind", id)));
+        api.MapGet("/services/individu/{id:long}", (long id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlServicesIndividu, ct, new NpgsqlParameter("ind", id)));
         return api;
     }
 

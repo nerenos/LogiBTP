@@ -16,16 +16,11 @@ public sealed record AffectationMaterielSaisie(string Type, string? Ressource, D
 /// </summary>
 public static class AffectationsMateriel
 {
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
 
     /// <summary>Libellé d'une ressource affectée (type, identifiant texte).</summary>
     private const string Libelle = """
-        CASE a.maf_type
-            WHEN 'MATERIEL' THEN (SELECT m.mat_code || ' ' || m.mat_designation FROM materiel m WHERE m.mat_id::text = a.maf_ressource)
-            WHEN 'SOUS_TRAITANT' THEN (SELECT p.per_raison_sociale FROM personne p WHERE p.per_id::text = a.maf_ressource)
-            ELSE (SELECT s.sal_prenom || ' ' || s.sal_nom || coalesce(' (' || s.sal_code || ')', '') FROM salarie s WHERE s.sal_id::text = a.maf_ressource)
-        END
+        (SELECT r.libelle || CASE WHEN r.type IN ('SALARIE', 'INTERIM') THEN coalesce(' (' || r.code || ')', '') ELSE '' END
+         FROM v_ressource r WHERE r.id = a.maf_ressource AND (r.type = a.maf_type OR r.type IN ('SALARIE', 'INTERIM') AND a.maf_type IN ('SALARIE', 'INTERIM')))
         """;
 
     private const string SqlHistorique = $"""
@@ -37,13 +32,8 @@ public static class AffectationsMateriel
     /// <summary>Ressources proposées : salariés et intérimaires actifs, sous-traitants actifs, matériels en service.</summary>
     private const string SqlCibles = """
         SELECT coalesce(json_agg(json_build_object('type', x.type, 'id', x.id, 'libelle', x.libelle) ORDER BY x.type, x.libelle), '[]') AS "Value"
-        FROM (SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id,
-                     s.sal_nom || ' ' || s.sal_prenom || coalesce(' (' || s.sal_code || ')', '') AS libelle
-              FROM salarie s WHERE s.sal_actif
-              UNION ALL
-              SELECT 'SOUS_TRAITANT', p.per_id::text, p.per_raison_sociale FROM personne p WHERE p.per_actif AND p.per_casquettes ? 'SOUS_TRAITANT'
-              UNION ALL
-              SELECT 'MATERIEL', m.mat_id::text, m.mat_code || ' ' || m.mat_designation FROM materiel m WHERE m.mat_usage = 'A') x
+        FROM (SELECT r.type, r.id, r.libelle || CASE WHEN r.type IN ('SALARIE', 'INTERIM') THEN coalesce(' (' || r.code || ')', '') ELSE '' END AS libelle
+              FROM v_ressource r WHERE r.actif AND r.type <> 'EQUIPE') x
         """;
 
     /// <summary>
@@ -113,15 +103,15 @@ public static class AffectationsMateriel
     public static IEndpointRouteBuilder MapAffectationsMateriel(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/ressources");
-        g.MapGet("/materiels/{id:int}/affectations", (int id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlHistorique, ct, new NpgsqlParameter("m", id)));
+        g.MapGet("/materiels/{id:int}/affectations", (int id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlHistorique, ct, new NpgsqlParameter("m", id)));
         g.MapPut("/materiels/{id:int}/affectations", async (int id, List<AffectationMaterielSaisie> l, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerAsync(db, id, l, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlHistorique, ct, new NpgsqlParameter("m", id));
+            return await db.JsonAsync(SqlHistorique, ct, new NpgsqlParameter("m", id));
         });
-        g.MapGet("/affectations/cibles", (LogiBtpContext db, CancellationToken ct) => Json(db, SqlCibles, ct));
+        g.MapGet("/affectations/cibles", (LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlCibles, ct));
         g.MapGet("/affectations/{type}/{id}", (string type, string id, LogiBtpContext db, CancellationToken ct) =>
-            Json(db, SqlRessource, ct, new NpgsqlParameter("t", type.ToUpperInvariant()), new NpgsqlParameter("r", id)));
+            db.JsonAsync(SqlRessource, ct, new NpgsqlParameter("t", type.ToUpperInvariant()), new NpgsqlParameter("r", id)));
         return api;
     }
 }

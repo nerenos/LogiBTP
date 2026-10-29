@@ -26,6 +26,21 @@ public static class LiaisonsBtp
     private sealed record OrdreAmont(long Id, string Type);
     private sealed record Attente(string Chantier, DateOnly Debut, DateOnly Prevu, string Libelle, string? Numero);
 
+    /// <summary>Date-heure d'une tâche du planning (« yyyy-MM-ddTHH:mm », culture invariante) : ce jour à cette heure.</summary>
+    public static string DateHeure(DateOnly jour, int heure = 0) => LogiBTP.Planning.Temps.Ecrire(LogiBTP.Planning.Temps.VersMinutes(jour) + heure * 60);
+
+    /// <summary>
+    /// Chantiers du jour d'un salarié (paramètre <c>@s</c>) : chantiers des tâches du planning où il est affecté ce jour-là
+    /// (expression SQL de date <paramref name="jour"/>), module Planning actif ; colonne <c>cha_id</c>.
+    /// </summary>
+    public static string SqlChantiersDuJour(string jour) => $"""
+        SELECT DISTINCT t.tac_id_element::int AS cha_id
+        FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
+        WHERE f_module_actif('planning') AND t.tac_type_element = 'chantier' AND t.tac_id_element ~ '^[0-9]+$'
+          AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text
+          AND t.tac_debut < ({jour} + 1) AND t.tac_fin > {jour}
+        """;
+
     /// <summary>Minutes d'une étape de nature tâche : heures, jours ouvrés (7 h) ; jours calendaires : null (période).</summary>
     private static int? Minutes(EtapeOrdreEntite e) => e.OreUnite switch
     {
@@ -87,12 +102,12 @@ public static class LiaisonsBtp
             var o = await OrdreAsync(db, id, ct);
             if (o.ChantierId is null) throw ExceptionMetier.Invalide("EXE_CHANTIER", "Ordre sans chantier");
             var jour = o.Debut ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1));
-            var debut = jour.ToString("yyyy-MM-dd") + "T08:00";
+            var debut = DateHeure(jour, 8);
             var heures = Math.Max(15, (int)Math.Round((o.Heures ?? 7) * 60));
             // Dates prévues de l'ordre : charge ventilée entre elles (mode 3) ; sinon mode 1 avec assez de ressources
             // théoriques pour tenir en quatre semaines (20 jours de 7 h).
             var saisie = o.Fin is DateOnly f && f >= jour
-                ? new TacheSaisie(3, debut, f.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", heures, 1, o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString())
+                ? new TacheSaisie(3, debut, DateHeure(f.AddDays(1)), heures, 1, o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString())
                 : new TacheSaisie(1, debut, null, heures, Math.Max(1, (int)Math.Ceiling(heures / 8400d)), o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), o.Numero ?? o.Objet ?? $"Ordre {id}", [], "ordre", id.ToString());
             var t = await planning.CreerIdAsync(saisie, Utilisateur.Depuis(http), ct);
             return await planning.TacheAsync(t, ct);
@@ -178,15 +193,14 @@ public static class LiaisonsBtp
                 JOIN document d ON d.ent_tyd_id = t.tyd_id AND d.ent_chantier_id = @c AND d.ent_is_reference AND d.ent_id <> @o
                 JOIN LATERAL (SELECT x.ore_tac_id FROM exe_ordre_etape x WHERE x.ore_ordre_id = d.ent_id AND x.ore_tac_id IS NOT NULL ORDER BY x.ore_ordre DESC LIMIT 1) e ON TRUE
                 WHERE p.par_type_element = 'chantier' AND p.par_id_element = @cs
-                """, new NpgsqlParameter("type", await db.Database.SqlQueryRaw<string>("SELECT t.tyd_code AS \"Value\" FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id WHERE d.ent_id = @o",
-                    new NpgsqlParameter("o", id)).FirstAsync(ct)),
+                """, new NpgsqlParameter("type", await TypesDocumentBtp.CodeAsync(db, id, ct)),
                 new NpgsqlParameter("c", o.ChantierId.Value), new NpgsqlParameter("o", id), new NpgsqlParameter("cs", o.ChantierId.Value.ToString())).ToListAsync(ct);
             var creees = new List<long>();
             var premiere = true;
             foreach (var e in liste.Where(e => e.OreNature != "ATTENTE" && e.OreTacId is null))
             {
                 var jour = e.OreDebutLe ?? DateOnly.FromDateTime(DateTime.Today);
-                var debut = jour.ToString("yyyy-MM-dd") + "T08:00";
+                var debut = DateHeure(jour, 8);
                 var libelle = $"{o.Numero ?? $"Ordre {id}"} · {e.OreLibelle}";
                 var affs = Affectations(e.OreRessource ?? ressourceOrdre);
                 TacheSaisie saisie;
@@ -194,7 +208,7 @@ public static class LiaisonsBtp
                 else if (Minutes(e) is int m)
                     saisie = new TacheSaisie(1, debut, null, m, 1, e.OreSrvId ?? o.SrvId, TypesFiche.Chantier, o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
                 else
-                    saisie = new TacheSaisie(2, debut, jour.AddDays((int)Math.Max(1, Math.Ceiling(e.OreDuree))).ToString("yyyy-MM-dd") + "T00:00", null, 1, e.OreSrvId ?? o.SrvId,
+                    saisie = new TacheSaisie(2, debut, DateHeure(jour.AddDays((int)Math.Max(1, Math.Ceiling(e.OreDuree)))), null, 1, e.OreSrvId ?? o.SrvId,
                         TypesFiche.Chantier, o.ChantierId.ToString(), libelle, affs, "etape", e.OreId.ToString());
                 var tache = await planning.CreerIdAsync(saisie with { Couleur = e.OreCouleur }, u, ct);
                 e.OreTacId = tache;
@@ -210,14 +224,14 @@ public static class LiaisonsBtp
 
         // Attentes des étapes (séchage, validation d'un tiers) d'une période : bandes hachurées sur les lignes de chantier (E34).
         g.MapGet("/attentes", async (string du, string au, LogiBtpContext db, CancellationToken ct) =>
-            (await db.Database.SqlQueryRaw<Attente>("""
+            (await db.Database.SqlQueryRaw<Attente>($"""
                 SELECT d.ent_chantier_id::text AS chantier, e.ore_debut_le AS debut, e.ore_prevu_le AS prevu, e.ore_libelle AS libelle, d.ent_numero AS numero
                 FROM exe_ordre_etape e JOIN document d ON d.ent_id = e.ore_ordre_id JOIN statut_document s ON s.std_id = d.ent_std_id
                 WHERE e.ore_nature = 'ATTENTE' AND e.ore_valide_le IS NULL AND e.ore_debut_le IS NOT NULL AND e.ore_prevu_le IS NOT NULL
-                  AND d.ent_chantier_id IS NOT NULL AND s.std_code NOT IN ('ANNULE', 'REMPLACE')
+                  AND d.ent_chantier_id IS NOT NULL AND s.std_code NOT IN ({SqlBtp.HorsVigueur})
                   AND e.ore_prevu_le >= @du AND e.ore_debut_le <= @au
                 """, new NpgsqlParameter("du", DateOnly.Parse(du[..10])), new NpgsqlParameter("au", DateOnly.Parse(au[..10]))).ToListAsync(ct))
-            .Select(a => new { a.Chantier, debut = a.Debut.ToString("yyyy-MM-dd") + "T00:00", fin = a.Prevu.AddDays(1).ToString("yyyy-MM-dd") + "T00:00", a.Libelle, a.Numero }));
+            .Select(a => new { a.Chantier, debut = DateHeure(a.Debut), fin = DateHeure(a.Prevu.AddDays(1)), a.Libelle, a.Numero }));
 
         // Heures réalisées d'une tâche du planning : pointages retenus de ses ressources sur son chantier pendant sa période.
         g.MapGet("/taches/{id:long}/realise", async (long id, LogiBtpContext db, ModulesSociete modules, CancellationToken ct) =>

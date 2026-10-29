@@ -303,8 +303,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             WHERE lower(i.ind_utilisateur) = lower(@u) AND c.coo_nature = 'EMAIL' ORDER BY u.uco_principal DESC, c.coo_id LIMIT 1
             """, new NpgsqlParameter("u", utilisateur)).FirstOrDefaultAsync(ct);
 
-    public override async Task<IReadOnlyList<string>> AdministrateursAsync(CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+    public override async Task<IReadOnlyList<string>> AdministrateursAsync(CancellationToken ct) => await DestinatairesBtp.AdministrateursAsync(db, ct);
 
     public override Task SignalerAsync(SignalMail s, IReadOnlyList<string> destinataires, CancellationToken ct) =>
         notifications.PublierAsync(destinataires.Select(d => new NouvelleNotification(d, "mail", s.Genre, s.Titre, s.Texte, s.Niveau, s.Url, s.TypeElement,
@@ -313,10 +312,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
     // --- Réception (lot 3) ---
 
     public override async Task<IReadOnlyList<string>> ServicesAsync(string utilisateur, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<string>("""
-            SELECT DISTINCT s.srv_code AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id
-            JOIN individu i ON i.ind_id = m.sme_ind_id WHERE lower(i.ind_utilisateur) = lower(@u)
-            """, new NpgsqlParameter("u", utilisateur)).ToListAsync(ct);
+        await DestinatairesBtp.ServicesAsync(db, utilisateur, ct);
 
     /// <summary>
     /// Courriel reçu rangé dans la GED de sa boîte (élément `mail_compte`), confidentiel : visible des administrateurs et des
@@ -454,10 +450,7 @@ public sealed class SpecialisationMailBtp(LogiBtpContext db, IServiceProvider se
             return;
         }
         var destinataires = srvId is long sid
-            ? await db.Database.SqlQueryRaw<string>("""
-                SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service_membre m JOIN individu i ON i.ind_id = m.sme_ind_id
-                WHERE m.sme_srv_id = @s AND i.ind_utilisateur IS NOT NULL
-                """, new NpgsqlParameter("s", sid)).ToListAsync(ct)
+            ? await DestinatairesBtp.MembresAsync(db, sid, ct)
             : [];
         if (destinataires.Count == 0 && doc?.Redacteur is { } red) destinataires = [red];
         if (destinataires.Count == 0) destinataires = [.. await AdministrateursAsync(ct)];

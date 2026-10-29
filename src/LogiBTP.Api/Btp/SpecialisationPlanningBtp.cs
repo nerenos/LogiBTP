@@ -29,22 +29,10 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
     {
         var types = f.Types is { Count: > 0 } ? f.Types.ToArray() : ReglesAffectations.Types;
         return db.Database.SqlQueryRaw<RessourcePlanning>("""
-            SELECT r.type, r.id, r.libelle, r.srv_id, r.service, r.capacite, r.quantite FROM (
-              SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id, s.sal_nom || ' ' || s.sal_prenom AS libelle,
-                     sv.srv_id, sv.srv_libelle AS service, TRUE AS capacite, NULL::numeric AS quantite, sv.srv_parent_id AS parent
-              FROM salarie s
-              LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
-              LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
-              WHERE s.sal_actif
-              UNION ALL
-              SELECT 'MATERIEL', m.mat_id::text, m.mat_code || ' ' || m.mat_designation, sv.srv_id, sv.srv_libelle, FALSE,
-                     CASE WHEN m.mat_mode = 'NOMBRE' THEN m.mat_quantite END, sv.srv_parent_id
-              FROM materiel m LEFT JOIN service sv ON sv.srv_id = m.mat_srv_id
-              UNION ALL
-              SELECT 'SOUS_TRAITANT', t.per_id::text, t.per_raison_sociale || coalesce(' (' || t.per_st_corps_etat || ')', ''), NULL::int, NULL, FALSE, NULL::numeric, NULL::int
-              FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT' AND t.per_actif
-            ) r
-            WHERE (@cles IS NULL AND r.type = ANY(@types) AND (@srv IS NULL OR r.srv_id = ANY(@srv) OR r.parent = ANY(@srv))
+            SELECT r.type, r.id, r.libelle, r.srv_id, sv.srv_libelle AS service, r.capacite, r.quantite
+            FROM v_ressource r LEFT JOIN service sv ON sv.srv_id = r.srv_id
+            WHERE r.type <> 'EQUIPE' AND (r.actif OR r.type = 'MATERIEL')
+              AND (@cles IS NULL AND r.type = ANY(@types) AND (@srv IS NULL OR r.srv_id = ANY(@srv) OR r.srv_parent_id = ANY(@srv))
                    AND (@q IS NULL OR r.libelle ILIKE @q)
                    OR r.type || ':' || r.id = ANY(@cles))
             ORDER BY r.libelle
@@ -71,11 +59,9 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
         var calendriers = Services.GetRequiredService<ServiceCalendrier>();
         var cles = ressources.Select(r => r.Cle).ToArray();
         var lignes = await db.Database.SqlQueryRaw<CalendrierRessource>("""
-            SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END || ':' || s.sal_id AS cle, coalesce(s.sal_cal_id, v.srv_cal_id) AS cal_id, v.srv_id
-            FROM salarie s
-            LEFT JOIN LATERAL (SELECT sv.srv_id, sv.srv_cal_id FROM service_membre m JOIN service sv ON sv.srv_id = m.sme_srv_id
-                               WHERE m.sme_ind_id = s.sal_ind_id ORDER BY m.sme_principal DESC, sv.srv_ordre LIMIT 1) v ON TRUE
-            WHERE (CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END || ':' || s.sal_id) = ANY(@cles)
+            SELECT r.type || ':' || r.id AS cle, v.cal_id, v.srv_id
+            FROM v_ressource r JOIN v_salarie_calendrier v ON v.sal_id::text = r.id
+            WHERE r.type IN ('SALARIE', 'INTERIM') AND (r.type || ':' || r.id) = ANY(@cles)
             UNION ALL
             SELECT 'MATERIEL:' || m.mat_id, coalesce(m.mat_cal_id, sv.srv_cal_id), m.mat_srv_id
             FROM materiel m LEFT JOIN service sv ON sv.srv_id = m.mat_srv_id WHERE ('MATERIEL:' || m.mat_id) = ANY(@cles)
@@ -174,9 +160,7 @@ public class SpecialisationPlanningBtp(IHttpContextAccessor http) : Specialisati
             _ => throw ExceptionMetier.Invalide("PLA_SERVICE_RESSOURCE", "Le service de cette ressource ne se change pas depuis le planning"),
         };
         var services = actuel is int a ? new[] { service, a } : new[] { service };
-        var responsable = await db.Database.SqlQueryRaw<bool>("""
-            SELECT EXISTS (SELECT 1 FROM service s JOIN individu i ON i.ind_id = s.srv_responsable_id WHERE i.ind_utilisateur = @u AND s.srv_id = ANY(@s)) AS "Value"
-            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", services)).FirstAsync(ct);
+        var responsable = await ComptesBtp.EstResponsableAsync(db, u.Code, services, ct);
         if (!u.EstAdmin && !responsable) throw ExceptionMetier.AccesRefuse("PLA_SERVICE_RESSOURCE");
         if (type == TypesRessource.Materiel)
         {

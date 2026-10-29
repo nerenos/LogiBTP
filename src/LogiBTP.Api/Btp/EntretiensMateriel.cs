@@ -27,9 +27,6 @@ public static class EntretiensMateriel
 
     private sealed record MaterielOrdreSql(int? MatId, string? Nature, int Tyd);
 
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
-
     /// <summary>Ordres d'entretien d'un matériel (indice de référence), les plus récents d'abord.</summary>
     private const string SqlOrdres = """
         SELECT coalesce(json_agg(json_build_object('id', d.ent_id, 'numero', d.ent_numero, 'objet', d.ent_objet, 'date', d.ent_date,
@@ -58,7 +55,7 @@ public static class EntretiensMateriel
         var designation = await db.Database.SqlQueryRaw<string>("SELECT mat_code || ' ' || mat_designation AS \"Value\" FROM materiel WHERE mat_id = @m",
             new NpgsqlParameter("m", materiel)).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable("Matériel");
         var chantier = await CoutsMateriel.ChantierMaterielAsync(db, materiel, ct);
-        var tyd = await db.TypesDocument.AsNoTracking().Where(t => t.TydCode == TypesDocument.EEnt).Select(t => t.TydId).FirstAsync(ct);
+        var tyd = await TypesDocumentBtp.IdAsync(db, TypesDocument.EEnt, ct);
         var objet = string.IsNullOrWhiteSpace(n.Objet) ? $"Entretien {designation}" : n.Objet.Trim();
         var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntObjet = objet.Length > 200 ? objet[..200] : objet }, u, ct);
         var c = await documents.Charger(cree.Document.EntId, ct);
@@ -110,15 +107,15 @@ public static class EntretiensMateriel
     public static IEndpointRouteBuilder MapEntretiensMateriel(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/ressources");
-        g.MapGet("/materiels/{id:int}/ordres", (int id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlOrdres, ct, new NpgsqlParameter("m", id)));
+        g.MapGet("/materiels/{id:int}/ordres", (int id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlOrdres, ct, new NpgsqlParameter("m", id)));
         g.MapPost("/materiels/{id:int}/ordres", async (int id, NouvelEntretien n, HttpContext http, LogiBtpContext db,
             DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
             Results.Ok(new { ent_id = await CreerAsync(db, documents, id, n, Utilisateur.Depuis(http), ct) }));
-        g.MapGet("/entretiens/{entId:long}", (long entId, LogiBtpContext db, CancellationToken ct) => Json(db, SqlEntretien, ct, new NpgsqlParameter("e", entId)));
+        g.MapGet("/entretiens/{entId:long}", (long entId, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlEntretien, ct, new NpgsqlParameter("e", entId)));
         g.MapPut("/entretiens/{entId:long}", async (long entId, EntretienSaisi s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await EnregistrerAsync(db, entId, s, Utilisateur.Depuis(http), ct);
-            return await Json(db, SqlEntretien, ct, new NpgsqlParameter("e", entId));
+            return await db.JsonAsync(SqlEntretien, ct, new NpgsqlParameter("e", entId));
         });
         return api;
     }

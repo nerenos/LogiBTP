@@ -1,4 +1,5 @@
 using LogiBTP.Notifications.Web;
+using LogiBTP.Socle;
 using LogiBTP.OAuth.Web;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -20,21 +21,16 @@ public sealed class SpecialisationOAuthBtp(LogiBtpContext db, ServiceNotificatio
     ];
 
     public override async Task<IReadOnlyList<string>> ServicesAsync(string utilisateur, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<string>("""
-            SELECT DISTINCT s.srv_code AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id
-            JOIN individu i ON i.ind_id = m.sme_ind_id WHERE lower(i.ind_utilisateur) = lower(@u)
-            """, new NpgsqlParameter("u", utilisateur)).ToListAsync(ct);
+        await DestinatairesBtp.ServicesAsync(db, utilisateur, ct);
 
     public override async Task<IReadOnlyList<string>> DestinatairesAsync(IReadOnlyList<string> droits, CancellationToken ct)
     {
-        var profils = droits.Where(d => !d.StartsWith("service:", StringComparison.OrdinalIgnoreCase)).ToArray();
+        string[] profils = [Profils.Admin, .. droits.Where(d => !d.StartsWith("service:", StringComparison.OrdinalIgnoreCase))];
         var services = droits.Where(d => d.StartsWith("service:", StringComparison.OrdinalIgnoreCase)).Select(d => d["service:".Length..]).ToArray();
-        return await db.Database.SqlQueryRaw<string>("""
-            SELECT DISTINCT c.cpt_code AS "Value" FROM compte c
-            WHERE c.cpt_type = 'PERSONNE' AND c.cpt_actif AND (c.cpt_profil = 'ADMIN' OR c.cpt_profil = ANY(@profils))
+        return await db.Database.SqlQueryRaw<string>($"""
+            SELECT DISTINCT c.cpt_code AS "Value" FROM compte c WHERE c.cpt_type = 'PERSONNE' AND c.cpt_actif AND c.cpt_profil = ANY(@profils)
             UNION
-            SELECT DISTINCT i.ind_utilisateur FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
-            WHERE s.srv_code = ANY(@services) AND i.ind_utilisateur IS NOT NULL
+            {DestinatairesBtp.SqlMembresServices}
             """, new NpgsqlParameter("profils", profils), new NpgsqlParameter("services", services)).ToListAsync(ct);
     }
 

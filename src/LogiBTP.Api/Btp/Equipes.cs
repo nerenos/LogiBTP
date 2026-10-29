@@ -33,10 +33,7 @@ public static class Equipes
 
     /// <summary>Libellé de chaque membre possible (type, identifiant).</summary>
     private const string SqlMembres = """
-        SELECT CASE WHEN s.sal_statut = 'INTERIM' THEN 'INTERIM' ELSE 'SALARIE' END AS type, s.sal_id::text AS id, s.sal_nom || ' ' || s.sal_prenom AS libelle FROM salarie s
-        UNION ALL SELECT 'MATERIEL', m.mat_id::text, m.mat_code || ' ' || m.mat_designation FROM materiel m
-        UNION ALL SELECT 'SOUS_TRAITANT', t.per_id::text, t.per_raison_sociale || coalesce(' (' || t.per_st_corps_etat || ')', '') FROM personne t WHERE t.per_casquettes ? 'SOUS_TRAITANT'
-        UNION ALL SELECT 'EQUIPE', e.equ_id::text, e.equ_libelle FROM equipe e
+        SELECT type, id, libelle FROM v_ressource
         """;
 
     private const string SqlListe = $$"""
@@ -251,9 +248,7 @@ public static class Equipes
     private static async Task DroitAsync(LogiBtpContext db, Utilisateur u, int[] services, CancellationToken ct)
     {
         if (u.EstAdmin) return;
-        var responsable = services.Length > 0 && await db.Database.SqlQueryRaw<bool>("""
-            SELECT EXISTS (SELECT 1 FROM service s JOIN individu i ON i.ind_id = s.srv_responsable_id WHERE i.ind_utilisateur = @u AND s.srv_id = ANY(@s)) AS "Value"
-            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", services)).FirstAsync(ct);
+        var responsable = await ComptesBtp.EstResponsableAsync(db, u.Code, services, ct);
         if (!responsable) throw ExceptionMetier.AccesRefuse("EQUIPE");
     }
 

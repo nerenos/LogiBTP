@@ -151,7 +151,7 @@ public class SpecialisationCrmBtp : SpecialisationCrm
     }
 
     public override Task<long?> IndividuAsync(CrmDbContext db, string utilisateur, CancellationToken ct) =>
-        db.Database.SqlQueryRaw<long?>("SELECT ind_id AS \"Value\" FROM individu WHERE ind_utilisateur = @u", new NpgsqlParameter("u", utilisateur)).FirstOrDefaultAsync(ct);
+        ComptesBtp.IndividuAsync(db, utilisateur, ct);
 
     public override async Task<Dictionary<long, string>> IndividusAsync(CrmDbContext db, IReadOnlyCollection<long> ids, CancellationToken ct)
     {

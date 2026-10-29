@@ -82,7 +82,7 @@ public sealed class SourceHabilitations(LogiBtpContext db) : ISourceNotification
         var alertes = lignes.Select(l => (l.Responsable, Etat: ReglesRessources.Etat(new HabilitationEvaluee(l.Code, l.ObtenueLe, l.ValideJusquAu), l.DureeMois, aujourdhui, 30).Etat))
             .Where(x => x.Etat is "EXPIREE" or "A_RENOUVELER").ToList();
         if (alertes.Count == 0) return [];
-        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var admins = await DestinatairesBtp.AdministrateursAsync(db, ct);
         var parDestinataire = alertes.SelectMany(a => a.Responsable is { } r ? [(Dest: r, a.Etat)] : admins.Select(x => (Dest: x, a.Etat)))
             .GroupBy(x => x.Dest.ToLowerInvariant());
         return parDestinataire.Select(g =>
@@ -114,7 +114,7 @@ public sealed class SourceEntretiens(LogiBtpContext db) : ISourceNotifications
         var alertes = (await PlansEntretien.CalculerAsync(db, null, aujourdhui, ct))
             .Where(e => e.Echeance.Etat is "EN_RETARD" or "A_PREVOIR").ToList();
         if (alertes.Count == 0) return [];
-        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var admins = await DestinatairesBtp.AdministrateursAsync(db, ct);
         var parDestinataire = alertes.SelectMany(a => a.Responsable is { } r ? [(Dest: r, a.Echeance.Etat)] : admins.Select(x => (Dest: x, a.Echeance.Etat)))
             .GroupBy(x => x.Dest.ToLowerInvariant());
         return parDestinataire.Select(g =>
@@ -148,9 +148,7 @@ public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotificati
         var lignes = await db.Database.SqlQueryRaw<Ligne>("""
             WITH ordres AS (
                 SELECT d.ent_id, d.ent_numero, d.ent_srv_id, d.ent_responsable_id, d.ent_ressource
-                FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
-                WHERE t.tyd_famille = 'E' AND f_module_actif('execution') AND d.ent_is_reference AND s.std_code NOT IN ('ANNULE', 'REMPLACE', 'SOLDE')
-                  AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'),
+                FROM v_ordres_ouverts v JOIN document d ON d.ent_id = v.ent_id WHERE f_module_actif('execution')),
             responsable AS (
                 SELECT s.srv_id, (SELECT i.ind_utilisateur FROM individu i WHERE i.ind_id = coalesce(s.srv_responsable_id, p.srv_responsable_id)) AS code
                 FROM service s LEFT JOIN service p ON p.srv_id = s.srv_parent_id)
@@ -168,7 +166,7 @@ public sealed class SourceEtapesExecution(LogiBtpContext db) : ISourceNotificati
             WHERE e.ore_controle AND e.ore_valide_le IS NOT NULL AND e.ore_controle_le IS NULL AND e.ore_valide_le <= @j - 2
             """, new Npgsql.NpgsqlParameter("j", aujourdhui)).ToListAsync(ct);
         if (lignes.Count == 0) return [];
-        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var admins = await DestinatairesBtp.AdministrateursAsync(db, ct);
         return lignes.SelectMany(l => (l.Destinataire is { } d ? [d] : admins).Select(dest => l.Genre == "RETARD"
             ? new NouvelleNotification(dest, "execution", "ETAPE_RETARD", $"Ordre {l.Numero ?? l.EntId.ToString()} : « {l.Libelle} » en retard",
                 $"Prévue le {l.PrevuLe:dd/MM/yyyy}, pas encore validée", NiveauNotification.Attention, $"/document/{l.EntId}", null, null, $"exe-retard:{l.OreId}:{l.PrevuLe:yyyy-MM-dd}")
@@ -203,13 +201,10 @@ public sealed class SourcePiecesSousTraitance(LogiBtpContext db) : ISourceNotifi
             (defaut, echeance) = (defaut + d, echeance + c.AEcheance.Count);
         }
         if (concernes == 0) return [];
-        var destinataires = await db.Database.SqlQueryRaw<string>("""
-            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
-            WHERE s.srv_code = 'ACHAT' AND i.ind_utilisateur IS NOT NULL
-            """).ToListAsync(ct);
+        var destinataires = await DestinatairesBtp.MembresAsync(db, ["ACHAT"], ct);
         if (destinataires.Count == 0)
         {
-            destinataires = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+            destinataires = await DestinatairesBtp.AdministrateursAsync(db, ct);
         }
         var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
         return destinataires.Select(dest => new NouvelleNotification(dest, "sous_traitance", "PIECES",
@@ -254,7 +249,7 @@ public sealed class SourcePaiementsDirects(LogiBtpContext db) : ISourceNotificat
             """).ToListAsync(ct);
         if (destinataires.Count == 0)
         {
-            destinataires = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+            destinataires = await DestinatairesBtp.AdministrateursAsync(db, ct);
         }
         var jour = DateOnly.FromDateTime(maintenant.LocalDateTime);
         return (from d in demandes
@@ -285,24 +280,17 @@ public sealed class SourceStockBtp(LogiBtpContext db) : ISourceNotifications
     private sealed record SalarieSql(int Id, string Nom, int? Service);
 
     private Task<List<string>> ChefsAsync(int salarie, CancellationToken ct) =>
-        db.Database.SqlQuery<string>($"""
-            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM salarie s JOIN service_membre m ON m.sme_ind_id = s.sal_ind_id AND m.sme_principal
-            JOIN service v ON v.srv_id = m.sme_srv_id LEFT JOIN service p ON p.srv_id = v.srv_parent_id
-            JOIN individu i ON i.ind_id IN (v.srv_responsable_id, p.srv_responsable_id)
-            WHERE s.sal_id = {salarie} AND i.ind_utilisateur IS NOT NULL
-            """).ToListAsync(ct);
+        db.Database.SqlQueryRaw<string>($"""
+            SELECT DISTINCT c.ind_utilisateur AS "Value" FROM ({ComptesBtp.SqlChefs}) c WHERE c.sal_id = @s AND c.ind_utilisateur IS NOT NULL
+            """, new Npgsql.NpgsqlParameter("s", salarie)).ToListAsync(ct);
 
-    private Task<List<string>> AdministrateursAsync(CancellationToken ct) =>
-        db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+    private Task<List<string>> AdministrateursAsync(CancellationToken ct) => DestinatairesBtp.AdministrateursAsync(db, ct);
 
     public async Task<IEnumerable<NouvelleNotification>> ProduireAsync(IServiceProvider portee, DateTimeOffset maintenant, CancellationToken ct)
     {
         if (!await portee.GetRequiredService<ModulesSociete>().EstActifAsync(ModulesFacultatifs.Stock, ct)) return [];
         var r = new List<NouvelleNotification>();
-        var magasiniers = await db.Database.SqlQueryRaw<string>("""
-            SELECT DISTINCT i.ind_utilisateur AS "Value" FROM service s JOIN service_membre m ON m.sme_srv_id = s.srv_id JOIN individu i ON i.ind_id = m.sme_ind_id
-            WHERE s.srv_nature = 'LOGISTIQUE' AND i.ind_utilisateur IS NOT NULL
-            """).ToListAsync(ct);
+        var magasiniers = await DestinatairesBtp.MembresNatureAsync(db, "LOGISTIQUE", ct);
         var saisies = await db.Database.SqlQueryRaw<SaisieSql>("""
             SELECT d.ent_id, d.ent_numero AS numero, s.sal_prenom || ' ' || s.sal_nom AS nom, d.ent_stk_salarie_id AS salarie
             FROM document d LEFT JOIN salarie s ON s.sal_id = d.ent_stk_salarie_id WHERE d.ent_stk_a_valider
@@ -347,7 +335,7 @@ public sealed class SourceCertificat(LogiBtpContext db, LogiBTP.Installation.Web
         if (certificat.Fin is not { } fin) return [];
         var jours = (int)Math.Floor((fin - maintenant).TotalDays);
         if (jours > 30) return [];
-        var admins = await db.Database.SqlQueryRaw<string>("SELECT cpt_code AS \"Value\" FROM compte WHERE cpt_type = 'PERSONNE' AND cpt_actif AND cpt_profil = 'ADMIN'").ToListAsync(ct);
+        var admins = await DestinatairesBtp.AdministrateursAsync(db, ct);
         var infos = certificat.Dossier.Infos();
         var titre = jours < 0 ? $"Certificat HTTPS expiré depuis le {fin:dd/MM/yyyy}" : $"Certificat HTTPS à renouveler : échéance le {fin:dd/MM/yyyy} ({jours} jour(s))";
         var texte = infos?.Origine switch

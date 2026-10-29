@@ -11,8 +11,6 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public static class UtilisationsElement
 {
-    private static async Task<IResult> Json(LogiBtpContext db, string sql, CancellationToken ct, params NpgsqlParameter[] p) =>
-        Results.Content(await db.Database.SqlQueryRaw<string>(sql, p).FirstAsync(ct), "application/json");
 
     private const string SqlComposes = """
         SELECT coalesce(json_agg(json_build_object('id', x.compose_id, 'code', x.compose_code, 'type', x.compose_type, 'libelle', x.compose_libelle,
@@ -21,7 +19,7 @@ public static class UtilisationsElement
         JOIN bibliotheque b ON b.bib_id = x.compose_bib_id
         """;
 
-    private const string SqlAchats = """
+    private const string SqlAchats = $"""
         SELECT coalesce(json_agg(json_build_object('ent_id', d.ent_id, 'numero', d.ent_numero, 'date', d.ent_date, 'type', t.tyd_libelle,
                'statut', s.std_libelle, 'tiers', p.per_raison_sociale, 'qte', l.lig_qte, 'unite', l.lig_unt_code,
                'pu', coalesce(l.lig_pv_remise, l.lig_pv), 'montant', l.lig_montant_ht, 'solde', coalesce(l.lig_solde, FALSE),
@@ -31,7 +29,7 @@ public static class UtilisationsElement
         JOIN type_document t ON t.tyd_id = d.ent_tyd_id
         JOIN statut_document s ON s.std_id = d.ent_std_id
         LEFT JOIN personne p ON p.per_id = d.ent_tiers_id
-        WHERE l.lig_art_id = @e AND f_famille_achat(t.tyd_famille) AND d.ent_is_reference AND s.std_code NOT IN ('ANNULE', 'REMPLACE')
+        WHERE l.lig_art_id = @e AND f_famille_achat(t.tyd_famille) AND d.ent_is_reference AND s.std_code NOT IN ({SqlBtp.HorsVigueur})
           AND (@du::date IS NULL OR d.ent_date >= @du::date) AND (@au::date IS NULL OR d.ent_date <= @au::date)
           AND (NOT @encours OR (NOT s.std_terminal AND NOT coalesce(l.lig_solde, FALSE)))
         """;
@@ -39,9 +37,9 @@ public static class UtilisationsElement
     public static IEndpointRouteBuilder MapUtilisationsElement(this IEndpointRouteBuilder api)
     {
         var g = api.MapGroup("/bibliotheque/elements/{id:long}");
-        g.MapGet("/composes", (long id, LogiBtpContext db, CancellationToken ct) => Json(db, SqlComposes, ct, new NpgsqlParameter("e", id)));
+        g.MapGet("/composes", (long id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync(SqlComposes, ct, new NpgsqlParameter("e", id)));
         g.MapGet("/achats", (long id, DateOnly? du, DateOnly? au, bool? encours, LogiBtpContext db, CancellationToken ct) =>
-            Json(db, SqlAchats, ct, new NpgsqlParameter("e", id),
+            db.JsonAsync(SqlAchats, ct, new NpgsqlParameter("e", id),
                 new NpgsqlParameter("du", NpgsqlTypes.NpgsqlDbType.Date) { Value = (object?)du ?? DBNull.Value },
                 new NpgsqlParameter("au", NpgsqlTypes.NpgsqlDbType.Date) { Value = (object?)au ?? DBNull.Value },
                 new NpgsqlParameter("encours", encours ?? false)));

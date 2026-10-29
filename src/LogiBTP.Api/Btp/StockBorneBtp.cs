@@ -5,6 +5,7 @@ using LogiBTP.Socle.Web;
 using LogiBTP.Socle;
 using LogiBTP.Stock.Web;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace LogiBTP.Api.Btp;
 
@@ -35,12 +36,9 @@ public static class StockBorneBtp
     {
         if (u.EstAdmin || await SpecialisationStockBtp.MagasinierAsync(db.Database, u.Code, ct)) return true;
         if (salarie is null) return false;
-        return await db.Database.SqlQuery<bool>($"""
-            SELECT EXISTS (SELECT 1 FROM salarie s JOIN service_membre m ON m.sme_ind_id = s.sal_ind_id AND m.sme_principal
-                           JOIN service v ON v.srv_id = m.sme_srv_id LEFT JOIN service p ON p.srv_id = v.srv_parent_id
-                           JOIN individu i ON i.ind_id IN (v.srv_responsable_id, p.srv_responsable_id)
-                           WHERE s.sal_id = {salarie} AND i.ind_utilisateur = {u.Code}) AS "Value"
-            """).FirstAsync(ct);
+        return await db.Database.SqlQueryRaw<bool>($"""
+            SELECT EXISTS (SELECT 1 FROM ({ComptesBtp.SqlChefs}) c WHERE c.sal_id = @s AND c.ind_utilisateur = @u) AS "Value"
+            """, new NpgsqlParameter("s", salarie), new NpgsqlParameter("u", u.Code)).FirstAsync(ct);
     }
 
     public static RouteGroupBuilder MapStockBorne(this RouteGroupBuilder api)
@@ -111,10 +109,7 @@ public static class StockBorneBtp
             if (!x.Dotation && x.Chantier is null) throw ExceptionMetier.Invalide("STK_BENEFICIAIRE", "Chantier ou dotation personnelle");
             if (test) return Results.Ok(new { essai = true, pieces = Array.Empty<PieceMagasin>() });
             // Pièce créée au nom du compte du salarié ; droits de création portés par la borne : profil BORNE (D16, appareil enregistré, PIN).
-            var code = await db.Database.SqlQuery<string?>($"""
-                SELECT coalesce(i.ind_utilisateur, 'salarie:' || s.sal_id) AS "Value" FROM salarie s LEFT JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_id = {s}
-                """).FirstAsync(ct);
-            var auteur = new Utilisateur(code ?? $"borne:{appareil}", Profils.Borne, null);
+            var auteur = await ComptesBtp.AuteurBorneAsync(db, s, appareil, ct);
             var cible = x.Dotation ? await MagasinBtp.ChantierDotationAsync(db, s, ct) : x.Chantier!.Value;
             var com = string.IsNullOrWhiteSpace(x.Commentaire) ? "" : $" : {x.Commentaire.Trim()}";
             var pieces = new List<PieceMagasin>();

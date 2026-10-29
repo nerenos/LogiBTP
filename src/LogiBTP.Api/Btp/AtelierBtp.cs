@@ -36,9 +36,8 @@ public static class AtelierBtp
         """;
 
     private const string Ouverts = """
-        FROM document d JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document st ON st.std_id = d.ent_std_id
-        LEFT JOIN chantier c ON c.cha_id = d.ent_chantier_id
-        WHERE t.tyd_famille = 'E' AND d.ent_is_reference AND st.std_code NOT IN ('ANNULE', 'REMPLACE', 'SOLDE') AND coalesce(d.ent_exe_etat, '') <> 'TERMINE'
+        FROM v_ordres_ouverts o JOIN document d ON d.ent_id = o.ent_id LEFT JOIN chantier c ON c.cha_id = d.ent_chantier_id
+        WHERE TRUE
         """;
 
     /// <summary>Ordres proposés au salarié (E51), ou l'ordre de ce numéro s'il en a le droit.</summary>
@@ -57,10 +56,7 @@ public static class AtelierBtp
                                  AND m.type IN ('SALARIE', 'INTERIM') AND m.ressource = @s::text)
                     OR (EXISTS (SELECT 1 FROM salarie sa JOIN service_membre sm ON sm.sme_ind_id = sa.sal_ind_id JOIN service sv ON sv.srv_id = d.ent_srv_id
                                 WHERE sa.sal_id = @s AND sm.sme_srv_id IN (sv.srv_id, sv.srv_parent_id))
-                        AND d.ent_chantier_id IN (SELECT tc.tac_id_element::int FROM pla_tache tc JOIN pla_affectation a ON a.aff_tac_id = tc.tac_id
-                                                  WHERE f_module_actif('planning') AND tc.tac_type_element = 'chantier' AND tc.tac_id_element ~ '^[0-9]+$'
-                                                    AND a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text
-                                                    AND tc.tac_debut < current_date + 1 AND tc.tac_fin > current_date)))
+                        AND d.ent_chantier_id IN ({LiaisonsBtp.SqlChantiersDuJour("current_date")})))
                 ORDER BY d.ent_fin_prevue NULLS LAST, d.ent_id
                 LIMIT 50
                 """
@@ -93,19 +89,8 @@ public static class AtelierBtp
 
     /// <summary>Salarié du compte connecté (individu du compte), sinon refus.</summary>
     private static async Task<int> SalarieAsync(LogiBtpContext db, Utilisateur u, CancellationToken ct) =>
-        await db.Database.SqlQueryRaw<int?>("""
-            SELECT s.sal_id AS "Value" FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id WHERE i.ind_utilisateur = @u AND s.sal_actif ORDER BY s.sal_id LIMIT 1
-            """, new NpgsqlParameter("u", u.Code)).FirstOrDefaultAsync(ct)
+        await ComptesBtp.SalarieAsync(db, u.Code, ct)
         ?? throw ExceptionMetier.Invalide("ATELIER_SALARIE", "Votre compte n'est lié à aucun salarié : l'écran de l'atelier propose les étapes d'un salarié");
-
-    /// <summary>Utilisateur inscrit comme auteur d'une validation à la borne (compte du salarié, sinon son matricule).</summary>
-    private static async Task<Utilisateur> AuteurAsync(LogiBtpContext db, int salarie, int appareil, CancellationToken ct)
-    {
-        var code = await db.Database.SqlQueryRaw<string?>("""
-            SELECT coalesce(i.ind_utilisateur, 'salarie:' || s.sal_id) AS "Value" FROM salarie s LEFT JOIN individu i ON i.ind_id = s.sal_ind_id WHERE s.sal_id = @s
-            """, new NpgsqlParameter("s", salarie)).FirstOrDefaultAsync(ct);
-        return new Utilisateur(code ?? $"borne:{appareil}", Profils.Borne, null);
-    }
 
     public static RouteGroupBuilder MapAtelier(this RouteGroupBuilder api)
     {
@@ -140,7 +125,7 @@ public static class AtelierBtp
             if (!await PeutAsync(db, s, v.EntId, ct)) throw ExceptionMetier.AccesRefuse("VALIDER_ETAPE");
             // Borne d'essai : rien n'est enregistré, l'écran affiche la réponse actuelle.
             if (test) return await etapes.AtelierAsync(v.EntId, ct) ?? new { };
-            return await etapes.ActionAsync(v.EntId, v.Code, new ActionEtape("VALIDER"), await AuteurAsync(db, s, appareil, ct), ct, droitVerifie: true);
+            return await etapes.ActionAsync(v.EntId, v.Code, new ActionEtape("VALIDER"), await ComptesBtp.AuteurBorneAsync(db, s, appareil, ct), ct, droitVerifie: true);
         });
         b.ExigeModule(ModulesFacultatifs.Execution, "Exécution");
         return g;

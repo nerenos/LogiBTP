@@ -54,7 +54,7 @@ public sealed class Geocodage(HttpClient client, IConfiguration configuration, I
             if (p is null && !Actif) return null;
             await db.Database.ExecuteSqlRawAsync("""
                 UPDATE chantier SET cha_latitude = @lat, cha_longitude = @lon, cha_geocode_score = @score, cha_geocode_adresse = @t WHERE cha_id = @id
-                """, [P("lat", p?.Latitude), P("lon", p?.Longitude), P("score", p?.Score), new NpgsqlParameter("t", texte), new NpgsqlParameter("id", chantier)], ct);
+                """, [SqlBtp.P("lat", p?.Latitude, NpgsqlTypes.NpgsqlDbType.Numeric), SqlBtp.P("lon", p?.Longitude, NpgsqlTypes.NpgsqlDbType.Numeric), SqlBtp.P("score", p?.Score, NpgsqlTypes.NpgsqlDbType.Numeric), new NpgsqlParameter("t", texte), new NpgsqlParameter("id", chantier)], ct);
             return p is null ? null : (p.Latitude, p.Longitude);
         }
         return texte is not null && c.Latitude is { } lat && c.Longitude is { } lon ? (lat, lon) : null;
@@ -73,11 +73,10 @@ public sealed class Geocodage(HttpClient client, IConfiguration configuration, I
             var p = await GeocoderAsync(a.Texte, ct);
             await db.Database.ExecuteSqlRawAsync("""
                 UPDATE coordonnee SET coo_latitude = @lat, coo_longitude = @lon, coo_geocode_score = @score, coo_geocode_adresse = @t WHERE coo_id = @id
-                """, [P("lat", p?.Latitude), P("lon", p?.Longitude), P("score", p?.Score), new NpgsqlParameter("t", a.Texte), new NpgsqlParameter("id", a.CooId)], ct);
+                """, [SqlBtp.P("lat", p?.Latitude, NpgsqlTypes.NpgsqlDbType.Numeric), SqlBtp.P("lon", p?.Longitude, NpgsqlTypes.NpgsqlDbType.Numeric), SqlBtp.P("score", p?.Score, NpgsqlTypes.NpgsqlDbType.Numeric), new NpgsqlParameter("t", a.Texte), new NpgsqlParameter("id", a.CooId)], ct);
             if (p is not null) r[a.CooId] = p;
         }
         return r;
     }
 
-    private static NpgsqlParameter P(string nom, decimal? v) => new(nom, NpgsqlTypes.NpgsqlDbType.Numeric) { Value = (object?)v ?? DBNull.Value };
 }
