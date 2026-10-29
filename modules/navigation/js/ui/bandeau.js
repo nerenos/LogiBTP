@@ -359,13 +359,22 @@ export class Bandeau {
     }).join('') || `<div class="bandeau-vide" style="--profondeur: ${profondeur}">(vide)</div>`;
   }
 
-  /** Déplie ou replie un menu ou un sous-menu, la ligne garde le focus. */
+  /**
+   * Déplie ou replie un menu ou un sous-menu, la ligne garde le focus. En accordéon : déplier un menu replie les autres
+   * menus (un sous-menu, les autres sous-menus du même menu), avec leurs sous-menus.
+   */
   #basculer(chemin, ouvrir = !this.deplies.has(chemin)) {
-    if (ouvrir) this.deplies.add(chemin);
-    else [...this.deplies].filter((c) => c === chemin || c.startsWith(`${chemin}/`)).forEach((c) => this.deplies.delete(c));
+    const parent = (c) => (c.includes('/') ? c.slice(0, c.lastIndexOf('/')) : null);
+    const replier = (racine) => [...this.deplies].filter((c) => c === racine || c.startsWith(`${racine}/`)).forEach((c) => this.deplies.delete(c));
+    if (ouvrir) {
+      [...this.deplies].filter((c) => c !== chemin && parent(c) === parent(chemin)).forEach(replier);
+      this.deplies.add(chemin);
+    } else replier(chemin);
     this.#rendreVertical();
-    this.#ligne(chemin)?.focus({ preventScroll: true });
-    if (ouvrir) this.#ligne(chemin)?.parentElement?.scrollIntoView?.({ block: 'nearest' });
+    const ligne = this.#ligne(chemin);
+    ligne?.focus({ preventScroll: true });
+    // Menu déplié : son titre en haut, ses éléments en dessous ; sous-menu : rendu visible.
+    if (ouvrir) (parent(chemin) ? ligne?.parentElement : ligne)?.scrollIntoView?.({ block: parent(chemin) ? 'nearest' : 'start' });
   }
 
   #ligne(chemin) { return this.barre.querySelector(`[data-ligne="${CSS.escape(chemin)}"]`); }
