@@ -45,7 +45,22 @@ public static partial class TerrainBtp
     private sealed record EtapeLue(string Code, string Libelle, DateOnly? ValideLe);
     private sealed record ExecutionLue(string? Commentaire, int? SrvId, long? ResponsableId, DateOnly? DebutPrevu, DateOnly? FinPrevue, string? Ressource);
 
+    /// <summary>
+    /// Compte de service des éditions : bon et PV sont édités et déposés par le serveur, la personne du terrain n'a ni le
+    /// droit d'imprimer les modèles ni celui de déposer dans la GED (son droit sur l'ordre est contrôlé par la route).
+    /// </summary>
+    private static readonly Utilisateur ServeurEditions = new("editions_fond", Profils.Admin);
+
     private static async Task<OrdreReception> OrdreReceptionAsync(LogiBtpContext db, Utilisateur u, long ent, CancellationToken ct)
+    {
+        await ExigerOrdrePersonneAsync(db, u, ent, ct);
+        var o = await LireOrdreAsync(db, ent, ct);
+        if (o.Type != TypesDocument.EPo) throw ExceptionMetier.Invalide("TERRAIN_RECEPTION_TYPE", "La réception se signe sur un ordre de pose");
+        return o;
+    }
+
+    /// <summary>Ordre lisible par la personne : règle de l'atelier (E51) ou tâche du planning sur l'ordre ou ses étapes.</summary>
+    private static async Task ExigerOrdrePersonneAsync(LogiBtpContext db, Utilisateur u, long ent, CancellationToken ct)
     {
         var s = await ComptesBtp.SalarieAsync(db, u.Code, ct) ?? throw ExceptionMetier.Invalide("TERRAIN_PERSONNE", "Compte sans salarié lié");
         var permis = await AtelierBtp.PeutAsync(db, s, ent, ct) || await db.Database.SqlQueryRaw<bool>("""
@@ -55,7 +70,10 @@ public static partial class TerrainBtp
                              AND (t.tac_origine_type = 'ordre' AND t.tac_origine_id = @e::text OR e.ore_ordre_id = @e)) AS "Value"
             """, new NpgsqlParameter("s", s), new NpgsqlParameter("e", ent)).FirstAsync(ct);
         if (!permis) throw ExceptionMetier.Introuvable($"Ordre {ent} de votre planning");
-        var o = await db.Database.SqlQueryRaw<OrdreReception>("""
+    }
+
+    private static Task<OrdreReception> LireOrdreAsync(LogiBtpContext db, long ent, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<OrdreReception>("""
             SELECT d.ent_id AS id, d.ent_numero AS numero, d.ent_objet AS objet, t.tyd_code AS type, coalesce(d.ent_groupe_id, d.ent_id) AS groupe,
                    d.ent_chantier_id AS cha_id, c.cha_code || ' – ' || c.cha_libelle AS chantier, d.ent_srv_id AS srv_id,
                    coalesce(d.ent_contact_client ->> 'raison_sociale', p.per_raison_sociale) AS client,
@@ -64,9 +82,6 @@ public static partial class TerrainBtp
             LEFT JOIN personne p ON p.per_id = c.cha_tiers_id
             WHERE d.ent_id = @e
             """, new NpgsqlParameter("e", ent)).FirstAsync(ct);
-        if (o.Type != TypesDocument.EPo) throw ExceptionMetier.Invalide("TERRAIN_RECEPTION_TYPE", "La réception se signe sur un ordre de pose");
-        return o;
-    }
 
     private static Task<List<ReceptionLue>> ReceptionsAsync(LogiBtpContext db, long ent, CancellationToken ct) =>
         db.Database.SqlQueryRaw<ReceptionLue>("""
@@ -143,7 +158,7 @@ public static partial class TerrainBtp
             long? dge = null;
             try
             {
-                var (pdf, _, _) = await services.GetRequiredService<ServiceEdition>().Pdf(services, new DemandeEdition("document", ent.ToString(CultureInfo.InvariantCulture), ModelePv), false, u, ct);
+                var (pdf, _, _) = await services.GetRequiredService<ServiceEdition>().Pdf(services, new DemandeEdition("document", ent.ToString(CultureInfo.InvariantCulture), ModelePv), false, ServeurEditions, ct);
                 var empreinte = Convert.ToHexStringLower(SHA256.HashData(pdf.Octets));
                 await using var flux = new MemoryStream(pdf.Octets);
                 var nom = $"PV-reception-{(o.Numero ?? ent.ToString(CultureInfo.InvariantCulture))}-{DateTime.Today:yyyyMMdd}.pdf";
@@ -153,7 +168,7 @@ public static partial class TerrainBtp
                     Titre = $"PV de réception {o.Numero} du {DateTime.Today:dd/MM/yyyy}", Categorie = CategoriesGed.PvReception, TypeElement = o.Type,
                     IdElement = o.Groupe.ToString(CultureInfo.InvariantCulture), Auteur = u.Code,
                     Resume = $"Réception {r.Etat switch { "SANS_RESERVE" => "sans réserve", "AVEC_RESERVES" => "avec réserves", _ => "refusée" }}, signée par {r.Nom.Trim()} ; empreinte SHA-256 {empreinte}",
-                }, u, ct);
+                }, ServeurEditions, ct);
                 dge = d.Id;
                 await db.Database.ExecuteSqlRawAsync("UPDATE signature SET sig_empreinte = @h, sig_dge_id = @d WHERE sig_id = @s",
                     [new NpgsqlParameter("h", empreinte), new NpgsqlParameter("d", d.Id), new NpgsqlParameter("s", sigId)], ct);
@@ -170,6 +185,7 @@ public static partial class TerrainBtp
                 await SuiteAsync(avertissements, "Étape « Réception » à valider par le bureau", async () =>
                 {
                     var etapes = services.GetRequiredService<ServiceEtapes>();
+                    await etapes.InitialiserAsync(ent, ct);
                     if (await db.Database.SqlQueryRaw<bool>("SELECT EXISTS (SELECT 1 FROM exe_ordre_etape WHERE ore_ordre_id = @e AND ore_code = @c AND ore_valide_le IS NULL) AS \"Value\"",
                         new NpgsqlParameter("e", ent), new NpgsqlParameter("c", EtapeReception)).FirstAsync(ct))
                         await etapes.ActionAsync(ent, EtapeReception, new ActionEtape("VALIDER"), u, ct);

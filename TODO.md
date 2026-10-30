@@ -52,7 +52,7 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   test sera disponible : autorisations IMAP.AccessAsApp / SMTP.SendAsApp et principal de service dans Exchange.
 - [ ] Essai réel de l'envoi avec les boîtes de test (Gmail en OAuth 2.0, Exchange OVH par mot de passe) : relever les
   quotas réels des hébergeurs et ajuster les limitations par défaut (`Limites.Defaut`).
-- [ ] Envois à brancher quand les fonctions existeront : confirmation du SAV avec le bon signé (Exécution E22), relevé
+- [ ] Envois à brancher quand les fonctions existeront : relevé
   hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
 - [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
 - [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements).
@@ -190,11 +190,8 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] **Lots 6 et 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lots 1 à 5 réalisés) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
-  leur partie mobile `tac_mobile`, navigation, pointage sur la tâche `poi_tac_id`, chef d'équipe, saisie libre solo ou
-  en équipe, étapes des ordres de pose, avancement réel, NC et photos, hors ligne, PV de réception signé, SAV sur
-  droit). Plus tard : option de présaisie des heures (T7). Reprend les lots 5 et 6 du Pointage, la partie mobile des tâches et
-  l'avancement réel du Planning, le lot 5 de l'Exécution (signature, SAV).
+- [ ] **Lot 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), lots 1 à 6 réalisés) : présaisie des heures,
+  réception de livraison simplifiée, pointage des matériels, avancement comparé aux situations.
 - [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
   bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
 - [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8) ; option de
@@ -207,6 +204,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
   seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
   gardée hors ligne horodatée à l'envoi par le serveur.
+- [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
+  création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
+  des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
 
 ### Import
 

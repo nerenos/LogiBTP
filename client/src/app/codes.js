@@ -35,6 +35,7 @@ export const TYPE_DOCUMENT = Object.freeze({
   E_OE: 'E_OE',
   E_PO: 'E_PO',
   E_DAP: 'E_DAP',
+  E_SAV: 'E_SAV',
   E_OST: 'E_OST',
   E_DAC: 'E_DAC',
   E_ENT: 'E_ENT',

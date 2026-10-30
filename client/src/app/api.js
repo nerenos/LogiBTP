@@ -174,6 +174,13 @@ export const api = {
     enregistrerReception: (ordre, r) => appel('POST', `/terrain/receptions/${ordre}`, r),
     urlPv: (ordre, reception) => `/api/terrain/receptions/${ordre}/pv/${reception}`,
     demande: (d) => appel('POST', '/terrain/demandes', d),
+    interventions: () => appel('GET', '/terrain/sav'),
+    choixSav: () => appel('GET', '/terrain/sav/choix'),
+    creerIntervention: (c) => appel('POST', '/terrain/sav', c),
+    sav: (ordre) => appel('GET', `/terrain/sav/${ordre}`),
+    enregistrerSav: (ordre, c) => appel('POST', `/terrain/sav/${ordre}`, c),
+    photosSav: (ordre, formulaire) => appel('POST', `/terrain/sav/${ordre}/photos`, formulaire),
+    urlBonSav: (ordre, compteRendu) => `/api/terrain/sav/${ordre}/bon/${compteRendu}`,
     urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
   },
   planning: {

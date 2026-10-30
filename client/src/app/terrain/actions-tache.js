@@ -12,7 +12,7 @@ import { estHorsLigne } from '../hors-ligne/attente.js';
 // Lot 4 : serveur injoignable, la saisie est gardée sur l'appareil (photos déjà réduites) et envoyée au retour.
 
 /** Sélecteur de photos (prise de vue, galerie en lot), case « qualité d'origine » ; `photos()` : fichiers choisis. */
-function selecteurPhotos(racine) {
+export function selecteurPhotos(racine) {
   let fichiers = [];
   racine.innerHTML = `<div class="terrain-actions">
       <label class="terrain-bouton">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" hidden data-prise></label>
@@ -155,7 +155,7 @@ export async function demanderApprovisionnement(app, tache) {
 }
 
 /** Bouton principal ajouté à côté des boutons de la fenêtre. */
-function boutonPrincipal(dlg, libelle, action) {
+export function boutonPrincipal(dlg, libelle, action) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'principal';

@@ -570,7 +570,42 @@ const RECEPTIONS = [{
   },
 }];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS];
+// Application de terrain, lot 6 (ANALYSE-TERRAIN.md T20 ; Exécution E12) : bon d'intervention SAV ; source annexe
+// intervention_sav (dernier compte rendu de l'ordre), image SIGNATURE_SAV fournie par le serveur (table signature).
+const IS = 'sources.intervention_sav';
+const BONS_SAV = [{
+  code: 'BON_SAV', libelle: "Bon d'intervention SAV", genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['E_SAV'], ordre: 96,
+  contenu: {
+    format_version: 1, code: 'BON_SAV', libelle: "Bon d'intervention SAV", cible: 'DOCUMENT', source: 'document',
+    page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
+    sources_annexes: ['intervention_sav'],
+    bandes: [
+      { type: 'PIED_PAGE', contenu: bloc('PIED_VENTES_ACHATS') },
+      { type: 'TITRE', nom: 'entete', contenu: { type: 'pile', espacement: 4, enfants: [
+        bloc('ENTETE_SOCIETE'), bloc('COORDONNEES_DOCUMENT', { titre: "Bon d'intervention", libelle_adresse: "Lieu d'intervention" }),
+      ] } },
+      { type: 'CORPS', nom: 'intervention', contenu: { type: 'pile', espacement: 3, enfants: [
+        retrait("Date d'intervention", `Date(${IS}.date; "long")`, `${IS}.date`),
+        champ('Constat', { style: 'section', fond: 'fond_section', marges: 1 }),
+        champ(`=${IS}.constat`),
+        champ('Travaux réalisés', { style: 'section', fond: 'fond_section', marges: 1 }),
+        champ(`=${IS}.travaux`),
+        champ('Fournitures', { style: 'section', fond: 'fond_section', marges: 1 }),
+        { type: 'repete', collection: `${IS}.fournitures`, contenu: champ('="• " & element') },
+        champ(`=Si(${IS}.terminee; "Intervention terminée."; "Intervention à reprendre : une nouvelle visite est nécessaire.")`, { style: 'gras' }),
+        { type: 'pile', espacement: 1, secable: false, marges: { haut: 6 }, enfants: [
+          champ(`=Si(${IS}.absent; "Client absent : bon non signé."; "Le client ou son représentant")`, { style: 'gras' }),
+          champ(`=Joindre(" – "; ${IS}.signataire; ${IS}.qualite)`, { condition: `${IS}.signe` }),
+          champ(`="Signé sur place le " & ${IS}.signe_le`, { style: 'discret', condition: `${IS}.signe` }),
+          { type: 'image', ressource: 'SIGNATURE_SAV', hauteur: 30, largeur: '70mm', condition: `${IS}.signe` },
+          champ('Signature numérique simple : image tracée sur l’écran, horodatée par le serveur ; l’empreinte du présent document est conservée.', { style: 'petit', condition: `${IS}.signe` }),
+        ] },
+      ] } },
+    ],
+  },
+}];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS, ...BONS_SAV];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

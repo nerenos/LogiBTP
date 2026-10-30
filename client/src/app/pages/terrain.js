@@ -1,4 +1,4 @@
-import { aujourdhui, ajouterJours } from '@logibtp/socle';
+import { aujourdhui, ajouterJours, ACTION_DROIT } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF, TYPE_DOCUMENT } from '../codes.js';
@@ -7,6 +7,7 @@ import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
 import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
+import { SavTerrain } from '../terrain/sav-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
 import { fournisseurEtapes } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
@@ -19,9 +20,9 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 // (terrain/pointage-terrain.js) ; lot 3 : onglet Ordres (étapes, composant de l'atelier), avancement, photos et
 // non-conformité depuis la carte d'une tâche (terrain/actions-tache.js) ; lot 4 : saisies gardées sur l'appareil hors
 // ligne (terrain/operations-terrain.js), listées en tête (refusées : réessayer, abandonner), lectures de la période
-// préchargées une fois par jour pour être consultées sans réseau.
+// préchargées une fois par jour pour être consultées sans réseau ; lot 6 : onglet SAV (droit execution/sav).
 
-const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage', ordres: '🧩 Ordres' };
+const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage', ordres: '🧩 Ordres', sav: '🧰 SAV' };
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
 const jourDe = (instant) => instant.slice(0, 10);
@@ -38,8 +39,9 @@ export class PageTerrain extends PageBase {
 
   async ouvrir() {
     this.titre = 'Mon terrain';
-    // Onglet Ordres : module Exécution actif seulement.
-    this.onglets = Object.fromEntries(Object.entries(ONGLETS).filter(([cle]) => cle !== 'ordres' || this.app.moduleActif(MODULE_FACULTATIF.EXECUTION)));
+    // Onglets Ordres et SAV : module Exécution actif seulement ; SAV : droit à part, refusé par défaut (T20).
+    const execution = this.app.moduleActif(MODULE_FACULTATIF.EXECUTION);
+    this.onglets = Object.fromEntries(Object.entries(ONGLETS).filter(([cle]) => (cle !== 'ordres' && cle !== 'sav') || (execution && (cle === 'ordres' || this.app.peut('execution/sav', ACTION_DROIT.CONSULTER)))));
     this.onglet = this.onglets[this.requete.onglet] ? this.requete.onglet : 'jour';
     this.jour = /^\d{4}-\d{2}-\d{2}$/.test(this.requete.jour ?? '') ? this.requete.jour : aujourdhui();
     this.conteneur.innerHTML = `<div class="page-terrain">
@@ -145,8 +147,9 @@ export class PageTerrain extends PageBase {
     this.conteneur.querySelector('[data-periode]').textContent = du === au ? nomJour(du) : `du ${formatDate(du)} au ${formatDate(au)}`;
     this.app.routeur?.remplacerUrl(this.urlCourante());
     this.#modifiee = false;
-    this.conteneur.querySelector('[data-barre-periode]').hidden = this.onglet === 'ordres';
+    this.conteneur.querySelector('[data-barre-periode]').hidden = this.onglet === 'ordres' || this.onglet === 'sav';
     if (this.onglet === 'pointage') { await this.pointage.ouvrir(du); return; }
+    if (this.onglet === 'sav') { await new SavTerrain(this.conteneur.querySelector('[data-liste]'), { app: this.app }).ouvrir(); return; }
     if (this.onglet === 'ordres') {
       await new EcranEtapesAtelier(this.conteneur.querySelector('[data-liste]'), fournisseurEtapes(this.app, () => api.terrain.etapes()), { titre: '🧩 Mes ordres : étapes à valider', message: (t, n) => this.app.message(t, n) }).ouvrir();
       return;

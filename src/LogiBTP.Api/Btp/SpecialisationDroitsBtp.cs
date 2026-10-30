@@ -56,6 +56,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
                 Aide: "Superviser : voir les notes de tous ; RGPD : lever le masquage des notes privées"),
             new("reglement", "Règlements", Simple, Icone: "💶"),
             new("execution", "Exécution", Simple, Icone: "🧭"),
+            new("execution/sav", "Interventions SAV sur le terrain", Simple, Aide: "Refusé par défaut : ses interventions dans « Mon terrain », compte rendu, bon signé par le client"),
             new("sous_traitance", "Sous-traitance", Simple, Icone: "🤝"),
             new("stock", "Stock", Simple, Icone: "📦"),
             new("comptabilite", "Comptabilité", Simple, Icone: "📒", Aide: "Plan comptable, comptes des tiers, TVA et catégories de TVA"),
@@ -153,6 +154,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         // la demande crée un ordre E_DAP sous le droit CREER de son type).
         new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        // SAV du terrain : droit à part, refusé par défaut (T20).
+        new("/api/terrain/sav", ModeRoute.Module, "execution/sav"),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];

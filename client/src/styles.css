@@ -955,6 +955,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-onglets button, .terrain-periode button, .terrain-bouton { min-height: 44px; font-size: 1rem; border-radius: 8px; }
 .terrain-onglets button[aria-selected="true"] { background: var(--accent, #2b6cb0); color: #fff; border-color: transparent; font-weight: 600; }
 .terrain-periode { display: flex; align-items: center; gap: 0.5rem; }
+.terrain-periode[hidden] { display: none; }
 .terrain-periode b { flex: 1; text-align: center; }
 .terrain-periode button[data-decaler] { min-width: 44px; }
 .terrain-jour { font-size: 1.05rem; margin: 0.75rem 0 0; }
@@ -984,7 +985,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
   .terrain-consignes, .terrain-pieces, .terrain-liens { grid-column: 1 / -1; }
 }
 /* Application de terrain, lot 2 : pointage de la journée. */
-.terrain-onglets { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.terrain-onglets { grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); }
 .terrain-onglets button { padding: 0 0.3rem; font-size: 0.95rem; }
 .terrain-bilan { font-weight: 600; margin: 0; }
 .terrain-a-pointer, .terrain-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
@@ -1005,6 +1006,8 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-champ { display: flex; flex-direction: column; gap: 0.2rem; margin: 0.5rem 0; }
 .terrain-champ[hidden] { display: none; }
 .terrain-champ textarea, .terrain-champ input { width: 100%; box-sizing: border-box; font-size: 1rem; min-height: 40px; }
+.terrain-intervention { display: block; text-decoration: none; color: inherit; overflow-wrap: anywhere; }
+.terrain-intervention small { display: block; }
 [data-reception] .terrain-onglets { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; margin-top: 0.75rem; }
 [data-reception] .terrain-champs input { min-height: 40px; font-size: 1rem; }
 .terrain-historique { margin: 0.5rem 0; }

@@ -54,6 +54,7 @@ import { PageMail, PageMessageMail, PageRedactionMail } from './mail.js';
 import { PageSyntheseExecution, PageExecutionChantier, PageParametresExecution, PageAtelierExecution } from './execution.js';
 import { PageTerrain } from './terrain.js';
 import { PageReceptionTerrain } from './terrain-reception.js';
+import { PageSavTerrain } from './terrain-sav.js';
 import { PagePlanningPrototype } from './planning-prototype.js';
 import { PageBorne, PageParametresBornes, PageGroupePointage } from './borne.js';
 import { PagePlanning, PageParametresPlanning } from './planning.js';
@@ -102,6 +103,7 @@ export const ROUTES = [
   { nom: 'execution-atelier', chemin: '/execution/atelier', page: PageAtelierExecution, titre: 'Étapes à valider' },
   { nom: 'terrain', chemin: '/terrain', page: PageTerrain, titre: 'Mon terrain' },
   { nom: 'terrain-reception', chemin: '/terrain/reception/:id', page: PageReceptionTerrain, titre: 'Réception de pose' },
+  { nom: 'terrain-sav', chemin: '/terrain/sav/:id', page: PageSavTerrain, titre: 'Intervention SAV' },
   { nom: 'parametres-execution', chemin: '/parametres/execution', page: PageParametresExecution, titre: 'Modèles de parcours' },
   { nom: 'borne', chemin: '/borne', page: PageBorne, titre: 'Borne de pointage' },
   { nom: 'parametres-bornes', chemin: '/parametres/bornes', page: PageParametresBornes, titre: 'Bornes de pointage' },

@@ -125,9 +125,9 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         foreach (var code in codes)
         {
             // Signature de la réception de pose : image de la table signature, pas une ressource de la GED.
-            if (code == CodeSignatureReception)
+            if (code is CodeSignatureReception or CodeSignatureSav)
             {
-                if (donnees["sources"]?["reception_pose"]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
+                if (donnees["sources"]?[code == CodeSignatureSav ? "intervention_sav" : "reception_pose"]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
                     && await SignatureAsync(services.GetRequiredService<LogiBtpContext>(), pool, sigId, ct) is { } sig) res[code] = sig;
                 continue;
             }
@@ -147,6 +147,8 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
 
     /// <summary>Code de la ressource image de la signature d'une réception de pose (modèle PV_RECEPTION).</summary>
     public const string CodeSignatureReception = "SIGNATURE_RECEPTION";
+    /// <summary>Code de la ressource image de la signature d'un bon d'intervention SAV (modèle BON_SAV).</summary>
+    public const string CodeSignatureSav = "SIGNATURE_SAV";
 
     private static async Task<RessourceEdition?> SignatureAsync(LogiBtpContext db, PoolMoteursEdition pool, long id, CancellationToken ct)
     {
@@ -223,6 +225,15 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                          'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', r.rec_cree_par)::text AS "Value"
                 FROM reception_pose r LEFT JOIN signature s ON s.sig_id = r.rec_sig_id
                 WHERE r.rec_ent_id = @id ORDER BY r.rec_id DESC LIMIT 1
+                """,
+            // Intervention SAV (application de terrain, lot 6) : dernier compte rendu de l'ordre, signataire.
+            "intervention_sav" => """
+                SELECT json_build_object('id', i.isv_id, 'date', i.isv_le, 'constat', i.isv_constat, 'travaux', i.isv_travaux, 'fournitures', i.isv_fournitures,
+                         'terminee', i.isv_terminee, 'absent', i.isv_absent, 'signataire', s.sig_nom, 'qualite', s.sig_qualite,
+                         'signe_le', to_char(s.sig_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                         'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', i.isv_cree_par)::text AS "Value"
+                FROM intervention_sav i LEFT JOIN signature s ON s.sig_id = i.isv_sig_id
+                WHERE i.isv_ent_id = @id ORDER BY i.isv_id DESC LIMIT 1
                 """,
             _ => null,
         };

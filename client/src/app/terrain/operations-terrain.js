@@ -11,7 +11,7 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 /** Types d'opérations du terrain. */
 export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
-  ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande',
+  ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande', SAV: 'terrain-sav',
 });
 
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
@@ -40,6 +40,12 @@ declarerOperation(OPERATION_TERRAIN.DEMANDE, {
   envoyer: async (c) => {
     await api.terrain.demande(c.demande);
     if (c.photos?.fichiers?.length && c.tache) await api.terrain.photos(c.tache, formulairePhotos(c.photos));
+  },
+});
+declarerOperation(OPERATION_TERRAIN.SAV, {
+  envoyer: async (c) => {
+    if (c.photos?.fichiers?.length) await api.terrain.photosSav(c.ordre, formulairePhotos(c.photos));
+    await api.terrain.enregistrerSav(c.ordre, c.compteRendu);
   },
 });
 declarerOperation(OPERATION_TERRAIN.ETAPE, { envoyer: (c) => api.terrain.validerEtape(c.ent_id, c.code) });

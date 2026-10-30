@@ -37,6 +37,15 @@
 > réception reste enregistrée) ; demande d'approvisionnement (E_DAP) en lignes de texte sur le chantier de la tâche
 > (adresse du chantier, photos dans la GED de la tâche) : droit `documents/E/E_DAP` CREER et MODIFIER donné aux
 > profils MOBILE et CHEF_EQUIPE ; hors ligne : réception (signature comprise) et demande gardées sur l'appareil.
+>
+> Lot 6 réalisé le 30/10/2026 (`Btp/TerrainSavBtp.cs`, `client/src/app/pages/terrain-sav.js`, `terrain/sav-terrain.js`, modèle
+> d'édition `BON_SAV`, `db/245`). Écarts : compte rendu dans `intervention_sav` (plusieurs passages possibles par ordre) ;
+> client absent = bon sans signature, étape SIGNATURE non validée, ordre laissé ouvert ; pièces créées par le serveur au
+> profil système BORNE et bon édité par le compte `editions_fond`, le droit de la personne étant `execution/sav` (aucun
+> profil ne le reçoit) ; chantier du client `SAV-<client>` dans l'affaire de gestion SAV ; à la fin, tâche du CRM « à
+> facturer » ou « à reprendre » au service de l'ordre, la facture restant une transformation au bureau ; création d'une
+> intervention en ligne seulement, compte rendu gardé hors ligne. Corrige le lot 5 : le PV échouait pour un profil sans
+> droit d'édition, et les étapes d'un ordre jamais ouvert au bureau n'existaient pas encore.
 
 Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)

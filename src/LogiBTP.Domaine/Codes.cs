@@ -39,6 +39,7 @@ public static class TypesDocument
     public const string EOe = "E_OE";
     public const string EPo = "E_PO";
     public const string EDap = "E_DAP";
+    public const string ESav = "E_SAV";
     public const string EOst = "E_OST";
     public const string EDac = "E_DAC";
     public const string EEnt = "E_ENT";
@@ -92,5 +93,6 @@ public static class CategoriesGed
     public const string RessourceEdition = "ressource_edition";
     public const string Mail = "mail";
     public const string PvReception = "pv_reception";
+    public const string BonSav = "bon_sav";
     public const string Photo = "photo";
 }
