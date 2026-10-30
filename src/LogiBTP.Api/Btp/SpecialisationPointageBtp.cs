@@ -118,7 +118,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
     public override Task<List<SalariePointage>> SalariesAsync(PointageDbContext db, FiltreSalaries f, CancellationToken ct) =>
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, s.sal_matricule AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,
-                   (s.sal_statut = 'INTERIM') AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence,
+                   coalesce(s.sal_statut = 'INTERIM', FALSE) AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence,
                    s.sal_code AS code, s.sal_matricule_paie AS matricule_paie, s.sal_poste AS fonction
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal

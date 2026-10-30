@@ -37,8 +37,8 @@ public static class SalariesAnnuaire
         if (!await rd.ReadAsync(ct)) return null;
         return new
         {
-            id = rd.GetInt32(0), matricule = rd.GetString(1), poste = rd.GetString(2), agence = rd.IsDBNull(3) ? null : rd.GetString(3),
-            statut = rd.GetString(4), actif = rd.GetBoolean(5),
+            id = rd.GetInt32(0), matricule = rd.GetString(1), poste = rd.IsDBNull(2) ? null : rd.GetString(2), agence = rd.IsDBNull(3) ? null : rd.GetString(3),
+            statut = rd.IsDBNull(4) ? null : rd.GetString(4), actif = rd.GetBoolean(5),
         };
     }, ct);
 

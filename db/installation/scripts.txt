@@ -178,6 +178,7 @@ db/237_bibliotheque_complements.sql
 db/238_documents_arc.sql
 db/239_restaurants_geocodage.sql
 db/240_vues_communes.sql
+db/241_fiches_champs_facultatifs.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

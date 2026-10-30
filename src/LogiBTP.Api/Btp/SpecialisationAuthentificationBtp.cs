@@ -45,9 +45,10 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     {
         var interim = l.Statut == "INTERIM";
         string? motif = !l.IndividuActif ? "individu inactif"
-            : l.Statut is null ? "aucun salarié ni intérimaire lié à cet individu"
+            : l.SalId is null ? "aucun salarié ni intérimaire lié à cet individu"
             : l.SalarieActif != true ? (interim ? "intérimaire inactif" : "salarié inactif (sorti)") : null;
-        var statut = l.Statut switch { "INTERIM" => "Intérimaire", "CDD" => "Salarié (CDD)", "CDI" => "Salarié (CDI)", _ => null };
+        // Contrat facultatif : un salarié sans contrat saisi reste un salarié.
+        var statut = l.Statut switch { "INTERIM" => "Intérimaire", "CDD" => "Salarié (CDD)", "CDI" => "Salarié (CDI)", _ => l.SalId is null ? null : "Salarié" };
         return new PersonneCompte(TypesFiche.Individu, l.Id, l.Libelle, motif is null, interim, interim ? [LogiBTP.Socle.Profils.Admin] : [],
             statut is null ? null : l.Matricule is null ? statut : $"{statut} · {l.Matricule}", finMission, motif);
     }
@@ -65,7 +66,7 @@ public class SpecialisationAuthentificationBtp : SpecialisationAuthentification
     public override async Task<List<PersonneCompte>> RechercherPersonnesAsync(AuthDbContext db, string texte, CancellationToken ct)
     {
         var lignes = await db.Database.SqlQueryRaw<LignePersonne>(SqlPersonnes + """
-             WHERE s.sal_statut IS NOT NULL AND s.sal_actif AND i.ind_actif
+             WHERE s.sal_id IS NOT NULL AND s.sal_actif AND i.ind_actif
                AND (concat_ws(' ', i.ind_prenom, i.ind_nom) ILIKE @t OR concat_ws(' ', i.ind_nom, i.ind_prenom) ILIKE @t OR s.sal_matricule ILIKE @t)
              ORDER BY lower(i.ind_nom), lower(i.ind_prenom) LIMIT 30
             """, new NpgsqlParameter("t", $"%{texte.Trim()}%")).ToListAsync(ct);
