@@ -15,13 +15,17 @@ const VUES_TRANSFORMES = [
   // Avancement : vue réglée par l'utilisateur (quantités, %, montants : parent, précédent, cumul saisissable).
   { nom: 'Avancement', types: ['V_SITUATION', 'V_FACTURE_AVT', 'V_REPRISE_AVT', 'A_FACTURE_AVT', 'T_FACTURE_AVT'],
     colonnes: ['num', 'libelle', 'unite', 'pvnet', 'qte_parent', 'qte_prec', 'qte_cumul', 'pct_prec', 'pct_cumul', 'montant_parent', 'montant_cumul', 'montant'] },
-  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR', 'T_COMMANDE', 'T_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'] },
+  // Commandes : date de livraison de la ligne (lot 9) avant le commentaire.
+  { nom: 'Ventilation (achats)', types: ['A_COMMANDE', 'A_RECEPTION', 'A_RETOUR', 'A_FACTURE', 'A_AVOIR', 'T_COMMANDE', 'T_AVOIR'], colonnes: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'commentaire'],
+    parType: { A_COMMANDE: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'], T_COMMANDE: [...ENTETE, 'pv', 'remise', 'pvnet', ...VENTILATION, 'tva', 'livraison', 'commentaire'] } },
   // Ordres (module Exécution) : l'ordre d'exécution porte le budget planifié (prix et coefficients modifiables) ; les
   // ordres suivants montrent les quantités (parent, reste), sans prix (E2, E17).
   { nom: 'Budget planifié', types: ['E_OE'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'pa', 'fg', 'pv', 'montant', 'commentaire'] },
   { nom: 'Quantités', types: ['E_PO', 'E_DAP', 'E_BE', 'E_BM', 'E_OF', 'E_CO', 'E_LI', 'E_SAV', 'E_OST', 'E_DAC'], colonnes: [...ENTETE, 'qte_parent', 'qte', 'reste', 'solde', 'commentaire'] },
   // Entretien du matériel (lot 5c-3) : opérations (heures) et pièces, prix d'achat pour information.
   { nom: 'Entretien', types: ['E_ENT'], colonnes: [...ENTETE, 'qte', 'pa', 'commentaire'] },
+  // Réservations de stock : quantités et date de livraison de la ligne (lot 9).
+  { nom: 'Réservation', types: ['S_RESERVATION'], colonnes: [...ENTETE, 'qte', 'livraison', 'commentaire'] },
 ];
 
 export const VUES_DOCUMENT = [
@@ -49,7 +53,7 @@ export const VUES_DOCUMENT = [
   // Une vue par défaut par type (tyd_code : identifiant résolu dans la base par le script généré).
   ...VUES_TRANSFORMES.flatMap((g, i) => g.types.map((code, j) => ({
     id: 10 + i * 10 + j, nom: g.nom, tyd_id: null, tyd_code: code, mod_code: null, globale: true, proprietaire: null, par_defaut: true,
-    definition: { colonnes: cols(...g.colonnes), debogage: false, systeme: [] },
+    definition: { colonnes: cols(...(g.parType?.[code] ?? g.colonnes)), debogage: false, systeme: [] },
   }))),
 ];
 
