@@ -131,3 +131,9 @@
 
 
 
+
+### Petites suites du 31/10/2026
+
+- [x] Rafraîchissement simultané d'un jeton sans erreur 500, délai du fournisseur en repli de l'approvisionnement,
+  colonne Livraison des commandes et réservations, retrait de la révision en heures du matériel, marque « non remise »
+  des courriels dans l'annuaire, précédent / suivant dans la page document, décision Q9 reportée.

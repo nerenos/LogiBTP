@@ -11,7 +11,6 @@
   d'écriture, validations serveur systématiques, écritures SQL paramétrées partout (avertissements
   `ExecuteSqlRawAsync` dans `Intervenants.cs`), transactions englobant les champs gérés des fiches
   (`EcrireGeresAsync` est hors de la transaction de la ligne).
-- [ ] `f_annuaire_normaliser` utilise encore `unaccent` (ponctuation transformée) : à aligner sur `f_sans_accent`.
 
 ### Bases existantes à mettre à niveau (`logibtp` et `logibtp_demo`)
 
@@ -30,6 +29,7 @@
   M-2026-005-1, BL, factures et avoirs d'avancement, situations). La facture d'avancement SI2026-00002 (validée avant
   le lot 6b) n'a pas de numéro de situation.
 - [ ] Groupes de démonstration (`db/131`) absents des bases existantes (régénéré, non rejoué).
+- [ ] Colonne Livraison des commandes et vue Réservation : `db/176` (`ON CONFLICT DO NOTHING`) ne change pas les vues déjà présentes ; retrait de la colonne Révision du matériel : `db/121` et `db/131` à rejouer ; colonne `mat_heures_revision` gardée en base.
 
 ## Fonctionnel
 
@@ -56,7 +56,6 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
   hebdomadaire signé (Pointage M21), relances des devis et factures (CRM C27) ; double authentification par courriel.
 - [ ] Création d'un tiers provisoire depuis l'expéditeur d'un courriel reçu ; transfert d'un reçu à un service.
 - [ ] Lot 5 : relances par courriel (CRM C27, avec le module Règlements).
-- [ ] Annuaire : afficher et effacer la marque « non remise » des coordonnées EMAIL (`coo_non_remis_le`).
 - [ ] Avant la mise en production : vérification de l'application Google par Google (portée restreinte
   `https://mail.google.com/`), sinon reconnexion des boîtes Gmail tous les 7 jours (mode test) ou mot de passe
   d'application.
@@ -140,7 +139,6 @@ comptables, ventilation) et 3 (écritures, export Sage 100).
 
 ### Fiches et listes
 
-- [ ] Les listes affichent la valeur chiffrée d'un champ supplémentaire mot de passe (à exclure des colonnes proposées).
 - [ ] Listes par requête SQL indisponibles hors ligne (démo : options saisies).
 - [ ] Module Fiche : `AvantSuppressionAsync` n'est surchargé nulle part dans le cœur (contrôles métier avant suppression).
 
@@ -169,8 +167,6 @@ Analyse du 23/10/2026 : [ANALYSE-MODULE-SOUS-TRAITANCE.md](documentation/concept
 - [ ] Module Facturation électronique (réception obligatoire depuis le 01/09/2026) à analyser : formats (Factur-X,
   UBL, CII), connexion à la plateforme agréée, commun aux ventes, aux achats et à la sous-traitance ; en attendant,
   saisie libre des factures reçues (ST22).
-- [ ] Reporter dans Q9 de `CONCEPTION-MARCHES-REGLEMENTS.md` (toujours sans décision) ce que ST5, ST14 et ST15 ont
-  tranché (paiement direct réalisé au lot 4 de la sous-traitance).
 
 ### Stock
 
@@ -255,15 +251,13 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] « Ne plus utiliser » (db/228) : écarter ces fiches des choix de nouvelle saisie (recherche des tiers de l'annuaire, appel de la bibliothèque, ressources du planning, salariés du pointage et du magasin) : point d'accroche à prévoir dans les modules Annuaire et Bibliothèque (colonne du cœur).
 - [ ] Fournisseur « TVA intracommunautaire » (db/229) : proposer la catégorie de TVA autoliquidée (module Comptabilité) sur les lignes de ses pièces d'achat ; type de tiers FE à reprendre par le futur module Facturation électronique.
-- [ ] Précédent / suivant : aussi dans la page document ouverte depuis une liste (`suite-liste.js`).
 - [ ] Sécurité de la base (lot 11 réalisé) : `MettreAJour-LogiBTP.ps1` pourrait relancer la préparation et redémarrer la base quand la connexion n'est pas chiffrée (aujourd'hui : relancer l'installeur) ; renouvellement du certificat de la base dans la tâche planifiée (aujourd'hui : à chaque préparation, 60 jours avant l'échéance ; certificat de 730 jours).
 - [ ] Restaurants (lot 10 réalisé) : repas dans la saisie d'équipe de la borne (aujourd'hui : chacun pour soi), liste des repas d'une période (contrôle RH, notes de frais), géocodage à l'enregistrement d'un chantier ou d'une adresse (aujourd'hui : au premier besoin) et carte des restaurants.
-- [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; colonne « Livraison » dans les vues par défaut des commandes fournisseur et des réservations (`vues-document.js`) ; date de livraison par ligne modifiable sur une commande validée (aujourd'hui : l'ARC de l'entête seulement).
-- [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b), délai du fournisseur (`per_fou_delai_livraison`) en dernier repli du délai d'un article.
+- [ ] Documents (lot 9 réalisé) : reconnaissance des accusés de réception reçus par courriel (module Mail, lot 4 : numéro de commande, rattachement, proposition de la livraison confirmée) ; date de livraison par ligne modifiable sur une commande validée (aujourd'hui : l'ARC de l'entête seulement).
+- [ ] Tarifs fournisseurs (lot 8 réalisé) : formats d'import personnalisés (module Import : correspondance de colonnes enregistrée par fournisseur), remises par famille d'articles et catalogues, unités synonymes à l'import (A18b).
 - [ ] Projet (lot 6) : retirer l'ancien texte `prj_responsable` quand les responsables auront été repris en individus (démo `structure/donnees.js`, `db/161`, `SpecialisationCrmBtp.CreerProjetAsync` qui l'écrit encore) ; zone de déplacement du projet reprise par le chantier ouvert depuis le projet (zones du Pointage par agence).
-- [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; retirer le champ « Révision tous les (heures) » (`mat_heures_revision`) et l'encart « Avant révision » de la fiche, remplacés par les plans d'entretien ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
+- [ ] Matériel (lot 5c réalisé) : import des cartes carburant (module Import, M8) ; relevés de compteurs saisis à la borne (source BORNE prévue) ; données de démonstration d'entretiens (aujourd'hui tous en retard faute d'historique).
 - [ ] Refacturation interne du matériel aux chantiers où il travaille (coût horaire d'usage, M4 du lot 5c) : décision de la future analyse de rentabilité ; le coût par heure est affiché dans l'onglet Coûts.
-- [ ] Authentification : rafraîchissement simultané du même jeton par deux requêtes → 500 (`jeton_remplace_pkey` en double, `RafraichirAsync`), vu au démarrage de l'API.
 
 ## Interface
 
