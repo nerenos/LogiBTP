@@ -27,6 +27,18 @@ public static class ComptesBtp
             new NpgsqlParameter("u", utilisateur)).FirstOrDefaultAsync(ct);
 
     /// <summary>Salarié actif de l'individu du compte.</summary>
+    /// <summary>
+    /// Salariés et intérimaires des équipes dont le compte @u est le chef à la date @jour (composition du jour,
+    /// sous-équipes développées : <c>f_membres_equipe</c>) ; colonne <c>Value</c>.
+    /// </summary>
+    public const string SqlEquipiers = """
+        SELECT m.ressource::int AS "Value" FROM equipe e
+        CROSS JOIN LATERAL f_membres_equipe(e.equ_id, @jour) m
+        WHERE m.type IN ('SALARIE', 'INTERIM') AND EXISTS (
+          SELECT 1 FROM f_membres_equipe(e.equ_id, @jour) c JOIN salarie cs ON cs.sal_id::text = c.ressource JOIN individu ci ON ci.ind_id = cs.sal_ind_id
+          WHERE c.chef AND c.type IN ('SALARIE', 'INTERIM') AND ci.ind_utilisateur = @u)
+        """;
+
     public static Task<int?> SalarieAsync(DbContext db, string utilisateur, CancellationToken ct) =>
         db.Database.SqlQueryRaw<int?>("""
             SELECT s.sal_id AS "Value" FROM salarie s JOIN individu i ON i.ind_id = s.sal_ind_id WHERE i.ind_utilisateur = @u AND s.sal_actif ORDER BY s.sal_id LIMIT 1

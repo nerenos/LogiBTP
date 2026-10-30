@@ -4,12 +4,14 @@ import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate } 
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
 import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel } from '../terrain/terrain.js';
+import { PointageTerrain } from '../terrain/pointage-terrain.js';
 
 // Application de terrain, lot 1 (ANALYSE-TERRAIN.md) : page personnelle pour tablette et smartphone. Tâches du planning
 // de la personne connectée (aujourd'hui ou la semaine), partie mobile (adresse, contact, consignes, liens) complétée par
-// le chantier, itinéraire, pièces de la GED diffusées sur le terrain. Lecture seule ; pointage et ordres : lots suivants.
+// le chantier, itinéraire, pièces de la GED diffusées sur le terrain ; lot 2 : onglet Pointage de la journée
+// (terrain/pointage-terrain.js). Ordres de pose : lot 3.
 
-const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine' };
+const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage' };
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
 const jourDe = (instant) => instant.slice(0, 10);
@@ -19,6 +21,10 @@ const taille = (o) => (o == null ? '' : o < 1048576 ? `${Math.max(1, Math.round(
 
 export class PageTerrain extends PageBase {
   icone = '📱';
+
+  #modifiee = false;
+
+  get modifiee() { return this.#modifiee; }
 
   async ouvrir() {
     this.titre = 'Mon terrain';
@@ -34,12 +40,14 @@ export class PageTerrain extends PageBase {
         <p class="aide">L'itinéraire s'ouvre dans l'application choisie ; aucune position n'est enregistrée.</p></details>
     </div>`;
     const $ = (s) => this.conteneur.querySelector(s);
-    this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => { this.onglet = b.dataset.onglet; this.#charger(); }));
-    this.conteneur.querySelectorAll('[data-decaler]').forEach((b) => b.addEventListener('click', () => {
+    // Changement d'onglet ou de jour : une journée pointée non enregistrée est d'abord confirmée.
+    const aller = async (changer) => { if (this.#modifiee && !(await this.quitter())) return; changer(); this.#charger(); };
+    this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => aller(() => { this.onglet = b.dataset.onglet; })));
+    this.conteneur.querySelectorAll('[data-decaler]').forEach((b) => b.addEventListener('click', () => aller(() => {
       this.jour = ajouterJours(this.jour, Number(b.dataset.decaler) * (this.onglet === 'semaine' ? 7 : 1));
-      this.#charger();
-    }));
-    $('[data-aujourdhui]').addEventListener('click', () => { this.jour = aujourdhui(); this.#charger(); });
+    })));
+    $('[data-aujourdhui]').addEventListener('click', () => aller(() => { this.jour = aujourdhui(); }));
+    this.pointage = new PointageTerrain($('[data-liste]'), { app: this.app, modifiee: (m) => { this.#modifiee = m; } });
     const nav = creerCombo({ options: Object.entries(NAVIGATIONS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.#navigation(), vide: false });
     nav.addEventListener('change', () => { ecrirePreferences({ terrainNavigation: nav.valeurCombo }); this.#rendre(); });
     $('[data-navigation]').append(nav);
@@ -51,7 +59,7 @@ export class PageTerrain extends PageBase {
   #navigation() { const n = lirePreferences().terrainNavigation; return NAVIGATIONS[n] ? n : 'AUTO'; }
 
   #periode() {
-    if (this.onglet === 'jour') return { du: this.jour, au: this.jour };
+    if (this.onglet !== 'semaine') return { du: this.jour, au: this.jour };
     const du = lundiDe(this.jour);
     return { du, au: ajouterJours(du, 6) };
   }
@@ -61,6 +69,8 @@ export class PageTerrain extends PageBase {
     this.conteneur.querySelectorAll('[data-onglet]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.onglet === this.onglet)));
     this.conteneur.querySelector('[data-periode]').textContent = du === au ? nomJour(du) : `du ${formatDate(du)} au ${formatDate(au)}`;
     this.app.routeur?.remplacerUrl(this.urlCourante());
+    this.#modifiee = false;
+    if (this.onglet === 'pointage') { await this.pointage.ouvrir(du); return; }
     try {
       this.donnees = await api.terrain.taches(du, au);
     } catch (e) { this.app.erreur(e); return; }

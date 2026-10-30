@@ -896,6 +896,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 
 /* Exécution, lot 2d : étapes au planning (jalon de durée nulle en losange, attente en bande hachurée). */
 .vp-barre.jalon-etape { min-width: 14px; width: 14px !important; transform: translateX(-7px) rotate(45deg) scale(0.75); border-radius: 2px; padding: 0; overflow: hidden; color: transparent; }
+.vp-barre.saisie-libre { border-style: dashed; opacity: .9; }
 .vp-deco.attente-etape { background: repeating-linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0 6px, transparent 6px 12px); opacity: 1; }
 
 /* Sous-traitance, lot 2 : pièces exigées (onglet Pièces du marché et du sous-traitant). */
@@ -982,3 +983,20 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
   .terrain-detail { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
   .terrain-consignes, .terrain-pieces, .terrain-liens { grid-column: 1 / -1; }
 }
+/* Application de terrain, lot 2 : pointage de la journée. */
+.terrain-onglets { grid-template-columns: repeat(3, 1fr); }
+.terrain-bilan { font-weight: 600; margin: 0; }
+.terrain-a-pointer, .terrain-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.terrain-a-pointer b { flex-basis: 100%; }
+.terrain-saisie { border: 1px solid var(--bord); border-radius: 10px; background: var(--surface); padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.terrain-saisie + .terrain-saisie { margin-top: 0.5rem; }
+.terrain-saisie .terrain-bouton[data-retirer] { min-width: 44px; justify-content: center; }
+.terrain-champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.5rem; }
+.terrain-champs label, .terrain-saisie label.large { display: flex; flex-direction: column; gap: 0.2rem; }
+.terrain-saisie input:not([type="checkbox"]), .terrain-saisie .combo input { min-height: 40px; font-size: 1rem; }
+.terrain-membres { border: 1px solid var(--bord); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.terrain-membres label { min-height: 36px; display: inline-flex; align-items: center; gap: 0.35rem; }
+.terrain-enregistrer { position: sticky; bottom: 0; padding: 0.5rem 0; background: var(--fond, var(--surface)); }
+.terrain-enregistrer button { width: 100%; min-height: 48px; font-size: 1.05rem; }
+.terrain-champs > label > span, .terrain-champs input.combo, .terrain-champs input { width: 100%; min-width: 0; box-sizing: border-box; }
+.terrain-champs > label { min-width: 0; }

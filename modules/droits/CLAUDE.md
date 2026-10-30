@@ -1,7 +1,7 @@
 # Module Droits – contexte
 
 ## Rôle
-- Droits par profil ([analyse](../../documentation/conception/ANALYSE-MODULE-DROITS.md), décisions D1 à D33) : un compte = un profil ; arbre des droits par nœud « module/élément » (documents/V/V_DEVIS, fiches/salarie, administration/profils…), actions en cascade à la saisie et indépendantes en base, portée (SOI, SERVICE, TOUT), héritage du plus proche ancêtre qui a une ligne ; profil total (ADMIN) : tout.
+- Droits par profil ([analyse](../../documentation/conception/ANALYSE-MODULE-DROITS.md), décisions D1 à D33) : un compte = un profil ; arbre des droits par nœud « module/élément » (documents/V/V_DEVIS, fiches/salarie, administration/profils…), actions en cascade à la saisie et indépendantes en base, portée (SOI, EQUIPE, SERVICE, TOUT), héritage du plus proche ancêtre qui a une ligne ; profil total (ADMIN) : tout.
 - Le serveur décide : chaque route `/api` est rattachée à un nœud par la table de la spécialisation ; une route absente de la table est refusée (403 `DROIT_NON_DECLARE`) et signalée au démarrage (exception en développement).
 - Fournit le contrat `IDroits` du socle aux autres modules (Document, Fiche, CRM, Authentification) ; sans module Droits, ces modules gardent leurs tables historiques (`droit_document`, `droit_fiche`, `crm_droit`).
 

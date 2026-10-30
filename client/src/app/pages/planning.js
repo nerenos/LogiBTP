@@ -9,7 +9,7 @@ import { api } from '../api.js';
 import { ecouter } from '../diffusion.js';
 import { RessourcesTache, rendreOngletRessources, TYPE_GLISSER_RESSOURCE } from '../planning/ressources-tache.js';
 import { ouvrirConge } from '../pointage/conges.js';
-import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
+import { ETATS_TACHE, COULEURS_ETAT, ORIGINE_TERRAIN } from '../planning/etats.js';
 
 // Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
 // tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
@@ -102,7 +102,7 @@ class VuePlanningBtp extends VuePlanning {
     return `${pastilleEtat(t.etat)}${code}${echapper(t.libelle)}${res}`;
   }
 
-  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}${t.geree ? ' geree' : ''}${t.origine_type === 'conge' ? ' absence-conge' : ''}${t.origine_type === 'etape' && t.fin <= t.debut ? ' jalon-etape' : ''}`; }
+  classeBarre(t) { return `${t.theorique ? 'theorique' : ''}${t.etat ? ` etat-${t.etat.toLowerCase()}` : ''}${t.geree ? ' geree' : ''}${t.origine_type === 'conge' ? ' absence-conge' : ''}${t.origine_type === 'etape' && t.fin <= t.debut ? ' jalon-etape' : ''}${t.origine_type === ORIGINE_TERRAIN ? ' saisie-libre' : ''}`; }
 
   /** Capacité des services (lot 4) : un bloc par jour coloré par le rapport planifié / capacité ; jalons des chantiers (lot 5). */
   decorationsLigne(l) {
@@ -1117,6 +1117,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     zone.innerHTML = `      ${groupe('tache', `<p><label>Libellé <input data-libelle size="30" value="${echapper(t.libelle)}"></label></p>
         <p class="ligne">${typeElement === TYPE_FICHE.PROJET ? 'Projet' : 'Chantier'} <span data-element></span></p><p class="ligne">Service <span data-service></span></p>
         ${t.origine_type === 'ordre' ? `<p class="aide">Depuis l'ordre n° ${echapper(String(t.origine_id))}</p>` : ''}
+        ${t.origine_type === ORIGINE_TERRAIN ? '<p class="aide">🛠 Réalisée sans être planifiée : créée par une saisie libre du terrain</p>' : ''}
         <p class="ligne">Calcul <span data-mode></span></p>
         <p><label>Début <input type="datetime-local" data-debut value="${versLocal(t.debut)}"></label></p>
         <p><label>Fin <input type="datetime-local" data-fin value="${versLocal(t.fin)}"></label></p>

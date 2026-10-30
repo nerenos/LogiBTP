@@ -8,7 +8,7 @@
 export const ACTIONS = Object.freeze(['CONSULTER', 'MODIFIER', 'VALIDER', 'CREER', 'SUPPRIMER', 'DEVERROUILLER', 'FORCER']);
 
 /** Portées, de la plus étroite à la plus large. */
-export const PORTEES = ['SOI', 'SERVICE', 'TOUT'];
+export const PORTEES = ['SOI', 'EQUIPE', 'SERVICE', 'TOUT'];
 
 /** Noms d'actions employés par les modules, ramenés aux actions du modèle. */
 export const ALIAS_ACTIONS = {
@@ -22,14 +22,14 @@ export const LIBELLES_ACTIONS = {
   MODIFIER_CODE: 'Modifier le code',
 };
 
-export const LIBELLES_PORTEES = { SOI: 'Soi', SERVICE: 'Son service', TOUT: 'Tout' };
+export const LIBELLES_PORTEES = { SOI: 'Soi', EQUIPE: 'Son équipe', SERVICE: 'Son service', TOUT: 'Tout' };
 
 export const MESSAGES_DROITS = {
   PROFIL_CODE: 'Code du profil : 2 à 30 caractères, une lettre puis lettres, chiffres ou _ (majuscules)',
   PROFIL_LIBELLE: 'Libellé du profil obligatoire (100 caractères au plus)',
   NOEUD_INVALIDE: 'Nœud de droits invalide',
   ACTION_INCONNUE: 'Action inconnue pour ce nœud',
-  PORTEE_INCONNUE: 'Portée inconnue (SOI, SERVICE ou TOUT)',
+  PORTEE_INCONNUE: 'Portée inconnue (SOI, EQUIPE, SERVICE ou TOUT)',
 };
 
 const rang = (p) => PORTEES.indexOf(p);

@@ -182,9 +182,12 @@ public sealed record EquipePointage(int Id, string Libelle, int[] Membres);
 public sealed record FiltreSalaries(int? Service, string? Recherche, IReadOnlyCollection<int>? Ids = null, int Taille = 200,
     IReadOnlyCollection<int>? Services = null, IReadOnlyCollection<string>? Fonctions = null);
 
-/// <summary>Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau).</summary>
+/// <summary>
+/// Pointage saisi dans la grille d'une semaine (identifiant absent : nouveau). Tâche du planning d'origine et groupe
+/// d'une saisie d'équipe : posés par l'application ; absents d'une ligne existante = inchangés.
+/// </summary>
 public sealed record PointageSaisi(long? Id, DateOnly Date, int? ChaId, long? EntId, int? TypeMo, string? SousType, int Minutes,
-    int? Debut, int? Fin, string? Motif, string? Commentaire, long? OrigineId = null);
+    int? Debut, int? Fin, string? Motif, string? Commentaire, long? OrigineId = null, long? TacId = null, Guid? Groupe = null);
 public sealed record SemaineSaisie(List<PointageSaisi> Pointages);
 
 /// <summary>
@@ -361,6 +364,14 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
             && (corrigees.Contains(p.PoiSalId) ? p.PoiCouche == Couches.Valide : p.PoiCouche == Couches.Saisie));
     }
 
+    /// <summary>Jour validé (bloqué) d'un salarié : saisie refusée (409 POI_VALIDE).</summary>
+    public async Task<bool> JourBloqueAsync(int salarie, DateOnly date, CancellationToken ct)
+    {
+        var lundi = ReglesPointage.LundiDe(date);
+        var etats = (await EtatsAsync([salarie], lundi, (await ParametresAsync(ct)).Validation, ct))[salarie];
+        return ReglesValidation.EstBloque(etats[date.DayNumber - lundi.DayNumber]);
+    }
+
     /// <summary>États de validation des sept jours d'une semaine pour des salariés.</summary>
     internal async Task<Dictionary<int, List<string>>> EtatsAsync(IReadOnlyCollection<int> salaries, DateOnly lundi, string mode, CancellationToken ct)
     {
@@ -473,8 +484,11 @@ public sealed class ServicePointage(PointageDbContext db, SpecialisationPointage
             var nouveau = e is null;
             e ??= new PointageEntite { PoiSalId = salarie, PoiCouche = Couches.Saisie };
             var change = nouveau || e.PoiDate != p.Date || e.PoiChaId != p.ChaId || e.PoiEntId != p.EntId || e.PoiTypeMo != p.TypeMo || e.PoiSousType != p.SousType
-                || e.PoiMinutes != p.Minutes || e.PoiDebut != p.Debut || e.PoiFin != p.Fin || e.PoiMotif != p.Motif || e.PoiCommentaire != p.Commentaire;
+                || e.PoiMinutes != p.Minutes || e.PoiDebut != p.Debut || e.PoiFin != p.Fin || e.PoiMotif != p.Motif || e.PoiCommentaire != p.Commentaire
+                || p.TacId is long tac && e.PoiTacId != tac || p.Groupe is Guid g && e.PoiGroupe != g;
             if (!change) continue;
+            if (p.TacId is not null) e.PoiTacId = p.TacId;
+            if (p.Groupe is not null) e.PoiGroupe = p.Groupe;
             e.PoiDate = p.Date;
             e.PoiChaId = p.ChaId!.Value;
             e.PoiEntId = p.EntId;

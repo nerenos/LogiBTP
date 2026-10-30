@@ -38,3 +38,14 @@ describe('application de terrain', () => {
     expect(numeroTel('voir accueil')).toBeNull();
   });
 });
+
+describe('compléter la journée', () => {
+  it('répartit le reste au prorata des poids, au pas, reste à la plus lourde', async () => {
+    const { completerJournee } = await import('../src/app/terrain/terrain.js');
+    expect(completerJournee([{ minutes: 60 }, { minutes: null, poids: 300 }, { minutes: 0, poids: 100 }], 480, 15)).toEqual([null, 315, 105]);
+    expect(completerJournee([{ minutes: null }, { minutes: null }], 420, 15)).toEqual([210, 210]);
+    expect(completerJournee([{ minutes: 480 }, { minutes: null, poids: 1 }], 420, 15)).toEqual([null, null]);
+    expect(completerJournee([{ minutes: null, poids: 1 }, { minutes: null, poids: 2 }], 425, 0)).toEqual([141, 284]);
+    expect(completerJournee([{ minutes: null, poids: 105.9 }, { minutes: null, poids: 0 }], 420, 15)).toEqual([420, null]);
+  });
+});

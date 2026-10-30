@@ -6,7 +6,14 @@
 > `modules/ged/db/053`, `db/242`). Écarts : la partie mobile était déjà saisie au planning (constat du § 2 erroné) :
 > le lot y ajoute le téléphone et les repères du chantier ; plans au dernier indice validé du CRM (T6) non repris
 > (pièces cochées « Terrain » seulement) ; nœud de droits `terrain` (consultation) donné aux profils MOBILE et SAISIE ;
-> bandeau du haut trop large sur un téléphone (défaut commun à l'application, à traiter avec le gabarit du lot 2). Reprend les parties restées
+> bandeau du haut trop large sur un téléphone (défaut commun à l'application, à traiter avec le gabarit du lot 2).
+>
+> Lot 2 réalisé le 30/10/2026 (`Btp/TerrainPointageBtp.cs`, `client/src/app/terrain/pointage-terrain.js`, `db/243`, portée
+> EQUIPE du module Droits). Écarts : tâche libre repérée par son origine `terrain` (pas de colonne `tac_libre`) ; nœud
+> `pointage/saisie_libre` (les nœuds n'admettent pas le tiret) ; équipiers d'une saisie libre en équipe = membres de
+> ses équipes du jour et salariés de son service principal, choisis par recherche ; pointage à la ligne d'ordre
+> (`poi_lig_id`, tâche d'origine « ligne ») non repris : niveau chantier et ordre ; route `/api/terrain/journee` rattachée
+> au droit MODIFIER du pointage ; bandeau : menus défilant dans le bandeau sous 700 px. Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)
 > § 2.3 (partie mobile des tâches) et possibilité 10 (avancement réel), [Exécution](ANALYSE-MODULE-EXECUTION.md) lot 5
 > (signature) et E50 à E53 (étapes hors de l'atelier). Socle commun : [transverse](ANALYSE-MODULES-TRANSVERSE.md) § 6
@@ -116,7 +123,7 @@ graph LR
 | Table / colonne | Module | Contenu |
 |---|---|---|
 | `pla_tache.tac_libre` | Planning | Tâche créée par une saisie libre du terrain (réalisée non planifiée, T21) |
-| Nœuds `pointage/saisie-libre` (portées SOI, EQUIPE), `execution/sav` ; profil CHEF_EQUIPE | Droits | T4, T20, T22 |
+| Nœuds `pointage/saisie_libre` (portées SOI, EQUIPE), `execution/sav` ; profil CHEF_EQUIPE | Droits | T4, T20, T22 |
 | `pla_tache.tac_mobile` (existante) | Planning | { adresse, contact, telephone, consignes, liens[], ged[] } ; vide = reprise du chantier par la spécialisation |
 | `pla_avancement` | Planning | `pav_tac_id`, `pav_le` (date), `pav_pourcent`, `pav_par`, `pav_commentaire` : avancement réel daté (T12) |
 | `poi_pointage.poi_tac_id` (existante) | Pointage | Tâche d'origine, enfin renseignée |
@@ -155,7 +162,7 @@ Questions nées des décisions :
 | N° | Question | Proposition | Décision |
 |---|---|---|---|
 | T21 | Saisie libre : crée-t-elle une tâche dans le planning ? | Oui : une tâche **réalisée non planifiée** (`tac_etat` TERMINEE, marquée `tac_libre`) sur le chantier ou l'ordre choisi, affectée au saisissant et à l'équipe qu'il a composée ; les pointages y sont rattachés (`poi_tac_id`) ; le planificateur la voit dans le planning (couleur propre) et le réalisé reste cohérent | ✔ |
-| T22 | Droit de saisie libre : où se règle-t-il ? | Nœud `pointage/saisie-libre` du module Droits, action CREER à portée **SOI** (salarié : solo) ou **EQUIPE** (chef d'équipe : nouvelle portée, entre SOI et SERVICE) ; profil MOBILE = SOI, nouveau profil CHEF_EQUIPE = EQUIPE ; nœud `execution/sav` pour T20 | ✔ (la portée EQUIPE s'ajoute aux règles répliquées `regles.js` ↔ `ReglesDroits.cs`, jeu `01_droits.json`) |
+| T22 | Droit de saisie libre : où se règle-t-il ? | Nœud `pointage/saisie_libre` du module Droits, action CREER à portée **SOI** (salarié : solo) ou **EQUIPE** (chef d'équipe : nouvelle portée, entre SOI et SERVICE) ; profil MOBILE = SOI, nouveau profil CHEF_EQUIPE = EQUIPE ; nœud `execution/sav` pour T20 | ✔ (la portée EQUIPE s'ajoute aux règles répliquées `regles.js` ↔ `ReglesDroits.cs`, jeu `01_droits.json`) |
 
 ### 6.1 T9 : la saisie sans réseau (proposition retenue)
 

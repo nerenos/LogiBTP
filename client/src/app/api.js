@@ -161,6 +161,8 @@ export const api = {
   terrain: {
     taches: (du, au) => appel('GET', `/terrain?${new URLSearchParams({ du, au })}`),
     chantier: (id) => appel('GET', `/terrain/chantiers/${id}`),
+    journee: (date) => appel('GET', `/terrain/journee?date=${date}`),
+    enregistrerJournee: (j) => appel('PUT', '/terrain/journee', j),
     urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
   },
   planning: {

@@ -47,3 +47,24 @@ export function numeroTel(telephone) {
   const n = (telephone ?? '').replace(/[^\d+]/g, '');
   return n.length >= 4 ? n : null;
 }
+
+/**
+ * « Compléter la journée » (T7) : les minutes prévues au calendrier moins celles déjà saisies sont réparties entre les
+ * lignes sans durée, au prorata de leur poids (heures planifiées de la tâche ce jour ; aucune n'en a : parts égales), au pas
+ * de saisie ; le reste d'arrondi va à la ligne la plus lourde. Renvoie les minutes de chaque ligne (null : inchangée).
+ */
+export function completerJournee(lignes, minutesPrevues, pas = 0) {
+  const vides = lignes.map((l, i) => ({ i, poids: Number(l.poids) > 0 ? Number(l.poids) : 0 })).filter(({ i }) => !(lignes[i].minutes > 0));
+  const resultat = lignes.map(() => null);
+  const reste = minutesPrevues - lignes.reduce((s, l) => s + (l.minutes > 0 ? l.minutes : 0), 0);
+  if (!vides.length || reste <= 0) return resultat;
+  if (vides.every((v) => v.poids === 0)) vides.forEach((v) => { v.poids = 1; });
+  // Une ligne sans heures planifiées (saisie libre) reste vide quand d'autres en ont.
+  const servies = vides.filter((v) => v.poids > 0);
+  const total = servies.reduce((s, v) => s + v.poids, 0);
+  const p = pas > 0 ? pas : 1;
+  for (const v of servies) resultat[v.i] = Math.floor((reste * v.poids) / total / p) * p;
+  const lourde = servies.reduce((a, b) => (b.poids > a.poids ? b : a));
+  resultat[lourde.i] += reste - servies.reduce((s, v) => s + resultat[v.i], 0);
+  return resultat;
+}

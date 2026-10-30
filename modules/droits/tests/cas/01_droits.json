@@ -9,6 +9,7 @@
       "fiches": { "CONSULTER": "TOUT" },
       "fiches/salarie": { "CONSULTER": "SERVICE", "MODIFIER": "SOI", "RGPD": "SOI" },
       "pointage": { "CONSULTER": "SOI", "MODIFIER": "SOI", "CREER": "SOI" },
+      "pointage/saisie_libre": { "CREER": "EQUIPE" },
       "pointage/validation": {}
     }
   },
@@ -30,13 +31,17 @@
     { "nom": "alias confidentiel = RGPD", "noeud": "fiches/salarie", "action": "CONFIDENTIEL", "attendu": "SOI" },
     { "nom": "portée service", "noeud": "fiches/salarie", "action": "CONSULTER", "attendu": "SERVICE" },
     { "nom": "portée héritée", "noeud": "pointage/saisie", "action": "CREER", "attendu": "SOI" },
+    { "nom": "portée équipe", "noeud": "pointage/saisie_libre", "action": "CREER", "attendu": "EQUIPE" },
     { "nom": "nœud inconnu", "noeud": "stock/magasin", "action": "CONSULTER", "attendu": null }
   ],
   "autorisations": [
     { "nom": "portée suffisante", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "SOI", "attendu": true },
     { "nom": "portée égale", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "SERVICE", "attendu": true },
     { "nom": "portée insuffisante", "noeud": "fiches/salarie", "action": "CONSULTER", "minimum": "TOUT", "attendu": false },
-    { "nom": "refusée", "noeud": "documents/V_DEVIS", "action": "SUPPRIMER", "minimum": "SOI", "attendu": false }
+    { "nom": "refusée", "noeud": "documents/V_DEVIS", "action": "SUPPRIMER", "minimum": "SOI", "attendu": false },
+    { "nom": "équipe couvre soi", "noeud": "pointage/saisie_libre", "action": "CREER", "minimum": "SOI", "attendu": true },
+    { "nom": "équipe égale", "noeud": "pointage/saisie_libre", "action": "CREER", "minimum": "EQUIPE", "attendu": true },
+    { "nom": "équipe sous le service", "noeud": "pointage/saisie_libre", "action": "CREER", "minimum": "SERVICE", "attendu": false }
   ],
   "sous_arbres": [
     { "nom": "racine vide avec un enfant", "noeud": "documents", "ecriture": false, "attendu": true },
@@ -65,8 +70,8 @@
       "attendu": { "CONSULTER": "TOUT", "VALIDER": "TOUT" } }
   ],
   "reappliquer": [
-    { "nom": "descendants retirés", "noeud": "fiches", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "pointage", "pointage/validation"] },
-    { "nom": "préfixe sans séparateur conservé", "noeud": "point", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "fiches/salarie", "pointage", "pointage/validation"] }
+    { "nom": "descendants retirés", "noeud": "fiches", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "pointage", "pointage/saisie_libre", "pointage/validation"] },
+    { "nom": "préfixe sans séparateur conservé", "noeud": "point", "attendu": ["documents", "documents/V_DEVIS", "documents/V_FACTURE", "fiches", "fiches/salarie", "pointage", "pointage/saisie_libre", "pointage/validation"] }
   ],
   "profils": [
     { "nom": "correct", "profil": { "code": "CHEF_EQUIPE", "libelle": "Chef d'équipe" }, "attendu": [] },

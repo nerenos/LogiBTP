@@ -96,6 +96,8 @@
 - [x] **Lot 1** (30/10/2026) : page `/terrain` (tâches du jour ou de la semaine, adresse et itinéraire, contact,
   consignes, liens, pièces de la GED diffusées sur le terrain), téléphone et repères du chantier dans la partie mobile
   des tâches du planning, case 📱 « Diffusée sur le terrain » de la GED (chantier, marché, ordres).
+- [x] **Lot 2** (30/10/2026) : onglet Pointage de `/terrain` (tâches du jour, saisie libre avec tâche réalisée non
+  planifiée, chef d'équipe, « Compléter la journée », repas), portée EQUIPE et profil CHEF_EQUIPE, bandeau sur téléphone.
 
 ### Import
 

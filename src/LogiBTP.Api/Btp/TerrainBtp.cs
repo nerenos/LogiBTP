@@ -15,7 +15,7 @@ namespace LogiBTP.Api.Btp;
 /// (<c>dge_terrain</c>) du chantier, de ses marchés et de l'ordre d'origine de la tâche (ordre ou étape d'ordre).
 /// Pièces confidentielles, secrètes ou à accès restreint jamais proposées. Routes <c>/api/terrain</c> (nœud « terrain »).
 /// </summary>
-public static class TerrainBtp
+public static partial class TerrainBtp
 {
     /// <summary>Période lue au plus (jours).</summary>
     private const int JoursMax = 31;
@@ -105,7 +105,7 @@ public static class TerrainBtp
                 ?? throw ExceptionMetier.Introuvable($"Pièce {id}");
             return await ged.Contenu(version, telecharger == true, http, u, ct);
         });
-        return g;
+        return g.MapJournee();
     }
 
     private static NpgsqlParameter[] Parametres(int salarie, DateOnly du, DateOnly au) =>

@@ -21,12 +21,12 @@ public sealed record Limite(decimal Piece, decimal Cumul, int Jours);
 /// <summary>
 /// Règles des droits, mêmes que regles.js (jeu partagé modules/droits/tests/cas/01_droits.json) : nœud = chemin
 /// « module/élément » ; un nœud sans ligne hérite de son plus proche ancêtre qui en a une ; actions en cascade pour la
-/// saisie, indépendantes en base ; portées SOI &lt; SERVICE &lt; TOUT ; alias des noms d'actions des modules.
+/// saisie, indépendantes en base ; portées SOI &lt; EQUIPE &lt; SERVICE &lt; TOUT ; alias des noms d'actions des modules.
 /// </summary>
 public static partial class ReglesDroits
 {
     public static readonly IReadOnlyList<string> Actions = ActionsDroits.Cascade;
-    public static readonly IReadOnlyList<string> Portees = ["SOI", "SERVICE", "TOUT"];
+    public static readonly IReadOnlyList<string> Portees = ["SOI", "EQUIPE", "SERVICE", "TOUT"];
 
     public static readonly IReadOnlyDictionary<string, string> Alias = new Dictionary<string, string>
     {
@@ -41,7 +41,7 @@ public static partial class ReglesDroits
         ["PROFIL_LIBELLE"] = "Libellé du profil obligatoire (100 caractères au plus)",
         ["NOEUD_INVALIDE"] = "Nœud de droits invalide",
         ["ACTION_INCONNUE"] = "Action inconnue pour ce nœud",
-        ["PORTEE_INCONNUE"] = "Portée inconnue (SOI, SERVICE ou TOUT)",
+        ["PORTEE_INCONNUE"] = "Portée inconnue (SOI, EQUIPE, SERVICE ou TOUT)",
         ["LIMITE_MONTANT"] = "Montant de validation : −1 (sans limite), 0 (sur demande) ou un montant positif",
         ["LIMITE_JOURS"] = "Période du cumul : de 1 à 366 jours",
     };

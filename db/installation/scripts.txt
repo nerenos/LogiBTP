@@ -181,6 +181,7 @@ db/239_restaurants_geocodage.sql
 db/240_vues_communes.sql
 db/241_fiches_champs_facultatifs.sql
 db/242_terrain.sql
+db/243_terrain_pointage.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

@@ -23,6 +23,13 @@
 .bandeau.acces-clavier .bandeau-menus u, .bandeau-deroulant:not([hidden]) ~ * u, .bandeau:has(.bandeau-deroulant:not([hidden])) .bandeau-menus u { text-decoration: underline; }
 .bandeau-message { margin-left: auto; align-self: center; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .bandeau-message.erreur { color: var(--erreur); }
+/* Téléphone (application de terrain) : les menus défilent dans le bandeau au lieu d'élargir la page ; message masqué. */
+@media (max-width: 700px) {
+  .bandeau-menus { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .bandeau-menus::-webkit-scrollbar { display: none; }
+  .bandeau-menus button { height: 27px; }
+  .bandeau-message { display: none; }
+}
 .bandeau-message.avertissement { color: var(--alerte); }
 .bandeau-message.succes { color: var(--succes); }
 .bandeau-infos { display: flex; align-items: center; gap: 0.4rem; color: var(--discret); padding: 0 0.4rem; white-space: nowrap; }

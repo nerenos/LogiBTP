@@ -256,7 +256,8 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
 
     /// <summary>
     /// Droit de saisie des heures d'un salarié selon la portée du nœud « pointage » (module Droits ; sans lui : SERVICE) :
-    /// SOI = ses propres heures, SERVICE = aussi celles des salariés de son service ou du service fils (responsable), TOUT = tous.
+    /// SOI = ses propres heures, EQUIPE = aussi celles des membres des équipes dont il est le chef aujourd'hui,
+    /// SERVICE = aussi celles des salariés de son service ou du service fils (responsable) et de ses équipes, TOUT = tous.
     /// </summary>
     public override async Task<bool> PeutSaisirAsync(PointageDbContext db, Utilisateur u, int salarie, CancellationToken ct)
     {
@@ -264,15 +265,17 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         var portee = droits is null ? "SERVICE" : await droits.PorteeAsync(u, "pointage", ActionsDroits.Modifier, ct);
         if (portee is null) return false;
         if (portee == "TOUT") return true;
-        return await db.Database.SqlQueryRaw<bool>("""
+        return await db.Database.SqlQueryRaw<bool>($$"""
             SELECT EXISTS (
               SELECT 1 FROM salarie s
               JOIN individu i ON i.ind_utilisateur = @u
               LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal
               LEFT JOIN service sv ON sv.srv_id = sm.sme_srv_id
               LEFT JOIN service sp ON sp.srv_id = sv.srv_parent_id
-              WHERE s.sal_id = @s AND (s.sal_ind_id = i.ind_id OR (@service AND (sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id)))) AS "Value"
-            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", salarie), new NpgsqlParameter("service", portee == "SERVICE")).FirstAsync(ct);
+              WHERE s.sal_id = @s AND (s.sal_ind_id = i.ind_id OR (@service AND (sv.srv_responsable_id = i.ind_id OR sp.srv_responsable_id = i.ind_id))
+                OR (@equipe AND s.sal_id IN ({{ComptesBtp.SqlEquipiers}})))) AS "Value"
+            """, new NpgsqlParameter("u", u.Code), new NpgsqlParameter("s", salarie), new NpgsqlParameter("service", portee == "SERVICE"),
+            new NpgsqlParameter("equipe", portee is "EQUIPE" or "SERVICE"), new NpgsqlParameter("jour", DateOnly.FromDateTime(DateTime.Today))).FirstAsync(ct);
     }
 
     public override async Task<bool> EstRhAsync(PointageDbContext db, Utilisateur u, CancellationToken ct) =>

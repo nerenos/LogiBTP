@@ -60,7 +60,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("stock", "Stock", Simple, Icone: "📦"),
             new("comptabilite", "Comptabilité", Simple, Icone: "📒", Aide: "Plan comptable, comptes des tiers, TVA et catégories de TVA"),
             new("pointage", "Pointage MO", [ActionsDroits.Consulter, ActionsDroits.Modifier, ActionsDroits.Valider, ActionsDroits.Creer, ActionsDroits.Supprimer], Portee: true, Icone: "⏱",
-                Aide: "Portée : soi (ses heures), son service (responsable), tout"),
+                Aide: "Portée : soi (ses heures), son équipe (chef du jour), son service (responsable), tout"),
+            new("pointage/saisie_libre", "Saisie libre du terrain", [ActionsDroits.Creer], Portee: true,
+                Aide: "Travail non planifié saisi sur le terrain : soi (seul), son équipe (le chef compose l'équipe de la tâche)"),
             new("pointage/bornes", "Bornes d'atelier", Simple, Aide: "Appareils, PIN, paramétrage des bornes"),
             new("planning", "Planning", Simple, Icone: "📆"),
             new("terrain", "Application de terrain", [ActionsDroits.Consulter], Icone: "📱", Aide: "Ses tâches du planning, leur adresse, leur contact et les pièces diffusées sur le terrain"),
@@ -142,6 +144,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/pointage/pins", ModeRoute.Module, "pointage/bornes"),
         new("/api/planning", ModeRoute.Module, "planning"),
         new("/api/terrain", ModeRoute.Module, "terrain"),
+        // Pointage de la journée sur le terrain : droit de saisie de ses heures (équipe et saisie libre contrôlées ensuite).
+        new("/api/terrain/journee", ModeRoute.Action, "pointage", ActionsDroits.Modifier),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];
