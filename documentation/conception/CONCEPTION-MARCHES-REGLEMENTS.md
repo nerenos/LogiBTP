@@ -135,7 +135,11 @@ saisi sur la facture d'avancement (ou importé de sa situation fournisseur) ; po
 — <sous-traitant> » ; le reste à payer du client baisse d'autant ; le module Règlements suit le paiement fait au
 sous-traitant par le maître d'ouvrage. Autoliquidation de la TVA de sous-traitance : à confirmer.
 
-**Décision** :
+**Décision** (tranchée par l'analyse du module Sous-traitance, paiement direct réalisé à son lot 4) : marché de vente lié
+facultatif, y compris en paiement direct, la déduction pouvant se faire sur une facture directe (ST5) ; marchés publics
+en paiement direct, marchés privés en délégation de paiement ou caution, traitées à part du paiement direct (ST14) ;
+montant déduit de notre facture = celui que le maître d'ouvrage paie au sous-traitant, le HT en autoliquidation (ST15).
+Écritures comptables à préciser avec le module Comptabilité et l'expert-comptable.
 
 ## 5. Acomptes
 

@@ -210,7 +210,7 @@ graph LR
 | Lot de consultation (`ent_consultation` : code commun aux copies) | Module Document | Sert aussi aux demandes de prix d'achat (ST3) |
 | `mar_sens`, `mar_tiers_id`, `mar_marche_vente_id`, `mar_montant_agree`, `mar_garantie`, `mar_autoliquidation`, `mar_public` | Cœur (`marche`) | `v_liste_marches` séparée par sens |
 | Facture reçue : `ent_ref_tiers_numero`, `ent_ref_tiers_date`, mode de saisie (`ent_st_saisie` : AVANCEMENT / RECUE), totaux saisis | Module Document (référence externe déjà présente) ou cœur | Le moteur ne recalcule pas un total saisi : ventilation sur les lignes ou ligne unique |
-| Lien `PAIEMENT_DIRECT` et poste de déduction (HT en autoliquidation, ST15) | Module Document (`document_lien.lie_type`) ; cœur (poste) | Q9 à décider |
+| Lien `PAIEMENT_DIRECT` et poste de déduction (HT en autoliquidation, ST15) | Module Document (`document_lien.lie_type`) ; cœur (poste) | Q9 décidée |
 | Autoliquidation : TVA nulle et mention | Cœur (taux « autoliquidation ») | Écritures : module Comptabilité |
 | Validité des pièces : `dge_valide_du`, `dge_valide_au` | Module GED (générique) | Utile aussi hors sous-traitance (habilitations, assurances des véhicules) |
 
