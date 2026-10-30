@@ -206,8 +206,11 @@ public sealed partial class ServiceAuthentification
         }
         var (nouveau, nouvelleEmpreinte) = HachageMotDePasse.NouveauJeton();
         var maintenant = DateTimeOffset.UtcNow;
+        // Rotation conditionnelle : de deux requêtes simultanées, une seule remplace le jeton, l'autre est reçue sans rotation.
+        var remplacees = await db.Sessions.Where(s => s.SesId == lue.SesId && s.SesJetonHache == empreinte)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.SesJetonHache, nouvelleEmpreinte), ct);
+        if (remplacees == 0) return (lue, null);
         db.JetonsRemplaces.Add(new JetonRemplace { JreEmpreinte = empreinte, JreSesId = lue.SesId, JreRemplaceLe = maintenant });
-        await db.Sessions.Where(s => s.SesId == lue.SesId).ExecuteUpdateAsync(s => s.SetProperty(x => x.SesJetonHache, nouvelleEmpreinte), ct);
         await db.SaveChangesAsync(ct);
         Cache.TryRemove((societe.Connexion, empreinte), out _);
         return (lue, nouveau);
