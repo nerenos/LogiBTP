@@ -34,6 +34,7 @@ import { afficherTracabilite } from '../documents/tracabilite.js';
 import { ouvrirImport, creerDepuisImport, rendreBandeauImport, tracabiliteImport } from '../import/devis-a-verifier.js';
 import { formatImport } from '../import/formats.js';
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
+import { voisins } from '../suite-liste.js';
 
 // Document (devis, facture…) dans l'éditeur du cœur, toujours lu dans la base : /document/<id>,
 // /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
@@ -53,6 +54,8 @@ const GABARIT = `
       <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
       <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
       <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
+      <button data-action="precedent" hidden>◀</button>
+      <button data-action="suivant" hidden>▶</button>
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
@@ -201,6 +204,7 @@ export class PageDocument extends PageBase {
     });
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
+      precedent: () => this.precedent(), suivant: () => this.suivant(),
       envoyer: () => this.etapeCycle((id) => api.envoyer(id), 'Document envoyé'),
       'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), 'Document validé par le tiers'),
       devalider: async () => {
@@ -249,6 +253,7 @@ export class PageDocument extends PageBase {
     const aide = this.conteneur.querySelector('[data-aide-raccourcis]');
     aide.addEventListener('click', () => this.aideRaccourcis());
     aide.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.aideRaccourcis(); } });
+    this.#voisinage();
     this.conteneur.querySelector('.document-barre').addEventListener('click', (e) => {
       const plan = e.target.closest('[data-basculer-dock]');
       if (plan) { this.disposition.afficher(plan.dataset.basculerDock); return; }
@@ -728,6 +733,23 @@ export class PageDocument extends PageBase {
    * Enregistrement en un seul appel : le client envoie ses résultats, le serveur recalcule, compare,
    * renvoie les ID définitifs et les écarts. La pile d'annulation est conservée.
    */
+  /** Document ouvert depuis une liste : boutons ◀ ▶ vers ses voisins dans les lignes affichées (suite-liste.js). */
+  #voisinage() {
+    this.voisinage = voisins(urlDocument(this.params.id));
+    if (!this.voisinage) return;
+    const { rang, total, precedent, suivant } = this.voisinage;
+    for (const [action, cible, libelle] of [['precedent', precedent, 'précédent'], ['suivant', suivant, 'suivant']]) {
+      const b = this.$(`[data-action="${action}"]`);
+      b.hidden = !cible;
+      b.title = `Document ${libelle} de la liste (${rang} / ${total})`;
+    }
+  }
+
+  /** Document précédent ou suivant de la liste d'origine, à la place de celui-ci (modifications en cours : confirmation). */
+  precedent() { if (this.voisinage?.precedent) this.app.naviguer(this.voisinage.precedent, { remplacer: true }); }
+
+  suivant() { if (this.voisinage?.suivant) this.app.naviguer(this.voisinage.suivant, { remplacer: true }); }
+
   async enregistrer() {
     if (this.$('[data-action="enregistrer"]').disabled) return;
     if (this.importEnCours) { await creerDepuisImport(this); return; }
