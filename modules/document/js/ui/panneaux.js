@@ -1,4 +1,4 @@
-import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur } from '@logibtp/socle/ui';
+import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur, confirmer } from '@logibtp/socle/ui';
 import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
 
@@ -54,6 +54,27 @@ export class PanneauxDocument {
 
   // ------------------------------------------------------------------ entête
 
+  /**
+   * Taux de TVA par défaut du document (nouvelles lignes de prix hors d'un titre à taux ; vide : taux par défaut du
+   * paramétrage) et action qui l'impose à tous les titres et à toutes les lignes de prix.
+   */
+  champTauxDocument(d) {
+    const ed = this.editeur;
+    const taux = ed.definition.taux_tva ?? [];
+    const defaut = taux.find((t) => t.ttv_defaut) ?? taux[0];
+    // Toujours proposée (le panneau ne se redessine pas tant que le champ a le focus) : taux saisi, sinon celui du paramétrage.
+    const appliquer = !ed.fige && !ed.estAvancement && defaut;
+    return `<label title="Taux des nouvelles lignes de prix hors d'un titre qui porte un taux">TVA par défaut
+      <select data-champ="ent_tva_id" data-entier>${opt('', defaut ? `${defaut.ttv_code} (paramétrage)` : '—', d.ent_tva_id)}${taux.map((t) => opt(t.ttv_id, t.ttv_code, d.ent_tva_id)).join('')}</select></label>
+      ${appliquer ? '<button type="button" data-action="appliquer-tva-document" title="Impose ce taux à tous les titres et à toutes les lignes de prix">Appliquer à toutes les lignes</button>' : ''}`;
+  }
+
+  /** Taux effectif du document : saisi, sinon taux par défaut du paramétrage, sinon le premier. */
+  tauxDocument(d) {
+    const taux = this.editeur.definition.taux_tva ?? [];
+    return taux.some((t) => t.ttv_id === d.ent_tva_id) ? d.ent_tva_id : (taux.find((t) => t.ttv_defaut) ?? taux[0])?.ttv_id ?? null;
+  }
+
   /** Champs propres à la spécialisation, ajoutés après les champs génériques (data-champ sur le document). */
   champsEntete(_d) { return []; }
 
@@ -93,6 +114,7 @@ export class PanneauxDocument {
         <label title="Durée de validité ; la date de fin est calculée à la validation du document">Validité (jours)
           <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
         ${d.ent_date_validite ? `<label>Valable jusqu'au <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
+        ${this.champTauxDocument(d)}
         ${def.modeles?.length ? `<label title="Modèle de saisie : vue de colonnes proposée par défaut">Modèle <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
         <label>Décimales montants <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
@@ -122,6 +144,14 @@ export class PanneauxDocument {
     this.lierReglement(zone);
     this.lierTextes(zone);
     lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, 'Entête'));
+    zone.querySelector('[data-action="appliquer-tva-document"]')?.addEventListener('click', async (e) => {
+      e.currentTarget.blur();
+      const id = this.tauxDocument(editeur.saisie.document);
+      if (!id) return;
+      const ok = await confirmer(`Appliquer le taux ${editeur.libelleTaux(id)} à tous les titres et à toutes les lignes de prix du document ?`,
+        { titre: 'TVA du document', ok: 'Appliquer' });
+      if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), 'TVA du document');
+    });
     const majFormat = () => {
       const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
       const separateur = zone.querySelector('[data-separateur]').value || '.';
@@ -346,8 +376,8 @@ export class PanneauxDocument {
     const taux = this.editeur.definition.taux_tva;
     const champs = [];
     if (l.lig_tyl_id === TL.TITRE) {
-      champs.push(f.sel('lig_tva_id', 'TVA par défaut', [['', '—'], ...taux.map((t) => [t.ttv_id, t.ttv_libelle])], true));
-      champs.push('<button data-action="appliquer-tva" title="Écrase le taux de toutes les lignes de prix descendantes">Appliquer ce taux aux lignes</button>');
+      champs.push(f.sel('lig_tva_id', 'TVA (imposée à toute la tranche)', [['', '—'], ...taux.map((t) => [t.ttv_id, t.ttv_libelle])], true));
+      champs.push('<button data-action="appliquer-tva" title="Impose de nouveau le taux du titre à ses sous-titres et à toutes ses lignes de prix">Réappliquer ce taux aux lignes</button>');
       champs.push(f.txt('lig_num_depart', 'Départ de numérotation'));
     }
     // Type de prix d'une tranche : appliqué à toute sa descendance (hérité). Frais annexes : titres seulement.

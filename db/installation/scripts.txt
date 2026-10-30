@@ -39,6 +39,7 @@ modules/document/db/019k_document_referentiels.sql
 modules/document/db/019l_document_ligne_livraison.sql
 modules/document/db/019m_document_consultation_issue.sql
 modules/document/db/019n_document_taux_tva_ordre.sql
+modules/document/db/019o_document_taux_tva_defaut.sql
 modules/metre/db/020_metre_schema.sql
 modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql

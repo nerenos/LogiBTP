@@ -369,6 +369,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             throw ExceptionMetier.Invalide("TIERS_FIGE", "Document issu d'une transformation : le tiers ne change plus");
         }
         e.EntValiditeJours = d.Document.EntValiditeJours;
+        e.EntTvaId = d.Document.EntTvaId;
         e.EntTexteIntroHtml = string.IsNullOrWhiteSpace(d.Document.EntTexteIntroHtml) ? null : html.Nettoyer(d.Document.EntTexteIntroHtml);
         e.EntTexteFinHtml = string.IsNullOrWhiteSpace(d.Document.EntTexteFinHtml) ? null : html.Nettoyer(d.Document.EntTexteFinHtml);
         e.EntTiersId = d.Document.EntTiersId;

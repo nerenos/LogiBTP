@@ -14,9 +14,13 @@ export class ReglesDocument {
   titreAncetre(lignes, id) { return ancetres(C, lignes, id).find((a) => a.lig_tyl_id === TL.TITRE) ?? null; }
   estLigneDePrix(lignes, l) { return estChiffree(l) && !this.ouvrageAncetre(lignes, l.lig_id); }
 
-  /** Taux par défaut d'une nouvelle ligne de prix : titre le plus proche, sinon taux par défaut du paramétrage, sinon le premier. */
-  tauxParDefaut(lignes, id, tauxTva) {
+  /**
+   * Taux par défaut d'une nouvelle ligne de prix : titre le plus proche, sinon taux du document (`ent_tva_id`), sinon
+   * taux par défaut du paramétrage, sinon le premier.
+   */
+  tauxParDefaut(lignes, id, tauxTva, document = null) {
     for (const t of ancetres(C, lignes, id)) if (t.lig_tyl_id === TL.TITRE && t.lig_tva_id) return t.lig_tva_id;
+    if (document?.ent_tva_id && tauxTva?.some((t) => t.ttv_id === document.ent_tva_id)) return document.ent_tva_id;
     return (tauxTva?.find((t) => t.ttv_defaut) ?? tauxTva?.[0])?.ttv_id ?? null;
   }
 
@@ -41,14 +45,14 @@ export class ReglesDocument {
         for (const k of this.champsHeritesOuvrage) c[k] = ouvrage[k] ?? 1;
       }
     } else if (estChiffree(l)) {
-      l.lig_tva_id ??= this.tauxParDefaut(lignes, id, tauxTva);
+      l.lig_tva_id ??= this.tauxParDefaut(lignes, id, tauxTva, brouillon.document);
       l.lig_taux_tva = null;
       for (const c of cibles) if (c !== l && estChiffree(c)) { c.lig_tva_id = null; c.lig_taux_tva = null; }
     }
     // Tranche insérée (ensemble de la bibliothèque, collage) : ses lignes de prix sans taux prennent le taux par défaut.
     if (estTranche(l)) {
       for (const c of cibles) {
-        if (c !== l && !c.lig_tva_id && this.estLigneDePrix(lignes, c)) c.lig_tva_id = this.tauxParDefaut(lignes, c.lig_id, tauxTva);
+        if (c !== l && !c.lig_tva_id && this.estLigneDePrix(lignes, c)) c.lig_tva_id = this.tauxParDefaut(lignes, c.lig_id, tauxTva, brouillon.document);
       }
     }
   }
@@ -67,17 +71,27 @@ export class ReglesDocument {
     if (champ === 'lig_is_non_editee') for (const d of desc()) d.lig_is_non_editee = l.lig_is_non_editee;
     if (l.lig_tyl_id === TL.OUVRAGE && this.champsHeritesOuvrage.includes(champ)) for (const d of desc()) d[champ] = l[champ];
     if (champ === 'lig_tva_id') l.lig_taux_tva = null;
+    // Taux d'un titre : imposé à toute sa descendance (sous-titres et lignes de prix).
+    if (champ === 'lig_tva_id' && l.lig_tyl_id === TL.TITRE && l.lig_tva_id) this.appliquerTauxTitre(brouillon, id);
     if (champ === 'lig_numerotation') l.lig_num_manuelle = !!l.lig_numerotation;
   }
 
-  /** Action explicite : le taux du titre écrase celui de toutes les lignes de prix descendantes. */
+  /** Le taux du titre écrase celui de ses sous-titres et de toutes ses lignes de prix descendantes. */
   appliquerTauxTitre(brouillon, titreId) {
     const lignes = brouillon.lignes;
     const index = parId(C, lignes);
     const t = index.get(titreId);
     for (const d of descendants(C, lignes, titreId)) {
       const x = index.get(d);
-      if (this.estLigneDePrix(lignes, x)) { x.lig_tva_id = t.lig_tva_id; x.lig_taux_tva = null; }
+      if (x.lig_tyl_id === TL.TITRE || this.estLigneDePrix(lignes, x)) { x.lig_tva_id = t.lig_tva_id; x.lig_taux_tva = null; }
+    }
+  }
+
+  /** Le taux du document (`ent_tva_id`, sinon celui du paramétrage) écrase celui de tous les titres et de toutes les lignes de prix. */
+  appliquerTauxDocument(brouillon, taux) {
+    if (!taux) return;
+    for (const x of brouillon.lignes) {
+      if (x.lig_tyl_id === TL.TITRE || this.estLigneDePrix(brouillon.lignes, x)) { x.lig_tva_id = taux; x.lig_taux_tva = null; }
     }
   }
 

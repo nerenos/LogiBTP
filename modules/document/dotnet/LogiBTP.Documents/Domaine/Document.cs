@@ -22,6 +22,8 @@ public class Document
     public short? EntValiditeJours { get; set; }
     /// <summary>Fin de validité : date de validation + durée, calculée par le serveur à la validation.</summary>
     public DateOnly? EntDateValidite { get; set; }
+    /// <summary>Taux de TVA par défaut des nouvelles lignes de prix hors d'un titre à taux (vide : celui du paramétrage).</summary>
+    public int? EntTvaId { get; set; }
     public int EntStdId { get; set; }
     public long? EntTiersId { get; set; }
     public JsonDocument? EntAdresseFacturation { get; set; }

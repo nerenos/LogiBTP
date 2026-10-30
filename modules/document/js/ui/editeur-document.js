@@ -1419,7 +1419,7 @@ export class EditeurDocument {
           const x = d.lignes.at(-1);
           placer(C, d.lignes, [x], ref ? refId : null, ref ? pos : 'racine');
           regles.appliquerContexte(d, id, taux);
-          if (regles.estLigneDePrix(d.lignes, x) && x.lig_tva_id === null) x.lig_tva_id = regles.tauxParDefaut(d.lignes, id, taux);
+          if (regles.estLigneDePrix(d.lignes, x) && x.lig_tva_id === null) x.lig_tva_id = regles.tauxParDefaut(d.lignes, id, taux, d.document);
         }, 'Insertion');
         return id;
       },
