@@ -1,7 +1,7 @@
 import { urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { dateLocale, NIVEAU_NOTIFICATION } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer, separateur, ouvrirModale } from '@logibtp/socle/ui';
+import { echapper, creerCombo, actionDe, lirePreferences, ecrirePreferences, ouvrirMenuContextuel, libelleRaccourci, confirmer, separateur, ouvrirModale, formatDate } from '@logibtp/socle/ui';
 import { ECHELLES, versMinutes, depuisMinutes, debutUnite, periodeFlottante, aujourdhui, DIFFUSION_PLANNING } from '@logibtp/planning';
 import { VuePlanning } from '@logibtp/planning/ui';
 import { ecrireDuree, lireDuree } from '@logibtp/pointage';
@@ -1130,13 +1130,19 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
       ${groupe('ressource', `<div data-ressources-tache></div>
         <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
         <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
-      ${groupe('detail', `<p><b>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</b></p><p class="aide" data-realise></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
+      ${groupe('detail', `<p><b>${t.id ? `Tâche n° ${t.id}` : 'Nouvelle tâche'}</b></p><p class="aide" data-realise></p><p class="aide" data-avancement-reel></p>${t.maj_par ? `<p class="aide">Modifiée par ${echapper(t.maj_par)}</p>` : ''}`)}
       ${groupe('dependance', '<div data-liens></div>')}`;
     zone.querySelectorAll('details[data-groupe]').forEach((d) => d.addEventListener('toggle', () => {
       ecrirePreferences({ planningGroupesReplies: [...zone.querySelectorAll('details[data-groupe]:not([open])')].map((x) => x.dataset.groupe) });
     }));
     if (t.id && this.app.moduleActif(MODULE_FACULTATIF.POINTAGE)) {
       api.liaisons.realise(t.id).then((r) => { if (r.minutes != null) zone.querySelector('[data-realise]').textContent = `Réalisé (pointages) : ${ecrireDuree(r.minutes) || '0:00'} h sur ${ecrireDuree(t.heures) || '0:00'} h planifiées`; }).catch(() => {});
+    }
+    // Avancement réel relevé sur le terrain (pla_avancement), distinct de l'avancement théorique saisi ici.
+    if (t.id) {
+      api.planning.avancements(t.id).then((l) => {
+        if (l[0]) zone.querySelector('[data-avancement-reel]').textContent = `Avancement réel : ${l[0].pourcent} % le ${formatDate(l[0].le)} (${l[0].par})${l[0].commentaire ? ` — ${l[0].commentaire}` : ''}`;
+      }).catch(() => {});
     }
     this.#rendreLiens(zone.querySelector('[data-liens]'), t);
     const habs = [...(t.habilitations ?? [])];

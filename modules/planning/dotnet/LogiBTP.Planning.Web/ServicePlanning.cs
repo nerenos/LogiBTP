@@ -69,6 +69,7 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
     public DbSet<DependanceEntite> Dependances => Set<DependanceEntite>();
     public DbSet<JalonEntite> Jalons => Set<JalonEntite>();
     public DbSet<PrevisionEntite> Previsions => Set<PrevisionEntite>();
+    public DbSet<AvancementEntite> Avancements => Set<AvancementEntite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -84,6 +85,7 @@ public class PlanningDbContext(DbContextOptions<PlanningDbContext> options) : Db
         b.Entity<NotificationEntite>().ToTable("pla_notification").HasKey(x => x.PnoCle);
         b.Entity<DependanceEntite>().ToTable("pla_dependance").HasKey(x => x.DepId);
         b.Entity<JalonEntite>().ToTable("pla_jalon").HasKey(x => x.JalId);
+        b.Entity<AvancementEntite>().ToTable("pla_avancement").HasKey(x => x.PavId);
         b.Entity<PrevisionEntite>().ToTable("pla_prevision").HasKey(x => new { x.PprTypeElement, x.PprIdElement, x.PprSrvId });
         b.Entity<JalonEntite>().Property(x => x.JalQuand).HasColumnType("timestamp(0)");
     }
@@ -115,6 +117,20 @@ public class PrevisionEntite
 }
 
 public sealed record PrevisionSaisie(string Type, string Id, int SrvId, string? Date);
+
+/// <summary>Avancement réel d'une tâche relevé un jour (pla_avancement).</summary>
+public class AvancementEntite
+{
+    public long PavId { get; set; }
+    public long PavTacId { get; set; }
+    public DateOnly PavLe { get; set; }
+    public short PavPourcent { get; set; }
+    public string? PavCommentaire { get; set; }
+    public string PavPar { get; set; } = "";
+    public DateTimeOffset PavSaisiLe { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record AvancementSaisi(DateOnly Date, int Pourcent, string? Commentaire);
 
 public sealed record BudgetPlanning(string Type, string Id, int SrvId, int Minutes);
 public sealed record EquipePlanning(int Id, string Code, string Libelle, int? SrvId);
@@ -470,6 +486,27 @@ public sealed class ServicePlanning(PlanningDbContext db, SpecialisationPlanning
             });
         }
         return r;
+    }
+
+    /// <summary>Relevés d'avancement réel d'une tâche, du plus récent au plus ancien.</summary>
+    public async Task<List<object>> AvancementsAsync(long id, CancellationToken ct) =>
+        [.. (await db.Avancements.AsNoTracking().Where(a => a.PavTacId == id).OrderByDescending(a => a.PavLe).ToListAsync(ct))
+            .Select(a => (object)new { le = a.PavLe, pourcent = a.PavPourcent, commentaire = a.PavCommentaire, par = a.PavPar, saisi_le = a.PavSaisiLe })];
+
+    /// <summary>Relevé d'avancement réel d'un jour (remplace celui du même jour) ; droit vérifié par l'appelant.</summary>
+    public async Task<List<object>> EnregistrerAvancementAsync(long id, AvancementSaisi s, Utilisateur u, CancellationToken ct)
+    {
+        if (s.Pourcent is < 0 or > 100) throw ExceptionMetier.Invalide("PLA_AVANCEMENT", "Avancement de 0 à 100 %");
+        if (!await db.Taches.AnyAsync(t => t.TacId == id, ct)) throw ExceptionMetier.Introuvable($"Tâche {id}");
+        var a = await db.Avancements.FirstOrDefaultAsync(x => x.PavTacId == id && x.PavLe == s.Date, ct);
+        if (a is null) db.Avancements.Add(a = new AvancementEntite { PavTacId = id, PavLe = s.Date });
+        a.PavPourcent = (short)s.Pourcent;
+        a.PavCommentaire = string.IsNullOrWhiteSpace(s.Commentaire) ? null : s.Commentaire.Trim();
+        a.PavPar = u.Code;
+        a.PavSaisiLe = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);
+        Publier("modifiee", [id], u);
+        return await AvancementsAsync(id, ct);
     }
 
     public async Task<object> CreerAsync(TacheSaisie s, Utilisateur u, CancellationToken ct) => await TacheAsync(await CreerIdAsync(s, u, ct), ct);

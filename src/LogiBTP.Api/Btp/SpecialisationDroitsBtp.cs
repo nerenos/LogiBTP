@@ -146,6 +146,9 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/terrain", ModeRoute.Module, "terrain"),
         // Pointage de la journée sur le terrain : droit de saisie de ses heures (équipe et saisie libre contrôlées ensuite).
         new("/api/terrain/journee", ModeRoute.Action, "pointage", ActionsDroits.Modifier),
+        // Étapes, avancement, non-conformités et photos : sur ses ordres et ses tâches seulement (contrôlé par la route).
+        new("/api/terrain/etapes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        new("/api/terrain/taches", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];

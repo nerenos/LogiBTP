@@ -68,3 +68,34 @@ export function completerJournee(lignes, minutesPrevues, pas = 0) {
   resultat[lourde.i] += reste - servies.reduce((s, v) => s + resultat[v.i], 0);
   return resultat;
 }
+
+/** Côté le plus long d'une photo réduite par défaut (T17 : « qualité d'origine » au choix). */
+export const PHOTO_COTE_MAX = 2000;
+
+/** Dimensions d'une image réduite pour que son plus grand côté ne dépasse pas `max` (jamais agrandie). */
+export function dimensionsReduites(largeur, hauteur, max = PHOTO_COTE_MAX) {
+  const r = Math.min(1, max / Math.max(largeur, hauteur));
+  return { largeur: Math.round(largeur * r), hauteur: Math.round(hauteur * r), reduite: r < 1 };
+}
+
+/**
+ * Photo prête à envoyer : réduite en JPEG (qualité 0,85) si elle dépasse `max`, sinon le fichier d'origine ; en cas
+ * d'échec de lecture (format non affichable par le navigateur, HEIC…) : le fichier d'origine.
+ */
+export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE_MAX } = {}) {
+  if (origine || typeof createImageBitmap !== 'function') return fichier;
+  try {
+    const image = await createImageBitmap(fichier);
+    const d = dimensionsReduites(image.width, image.height, max);
+    if (!d.reduite) { image.close?.(); return fichier; }
+    const canvas = document.createElement('canvas');
+    canvas.width = d.largeur;
+    canvas.height = d.hauteur;
+    canvas.getContext('2d').drawImage(image, 0, 0, d.largeur, d.hauteur);
+    image.close?.();
+    const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/jpeg', 0.85));
+    return blob ? new File([blob], fichier.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : fichier;
+  } catch {
+    return fichier;
+  }
+}

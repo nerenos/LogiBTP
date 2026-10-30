@@ -18,7 +18,7 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public static class AtelierBtp
 {
-    private sealed record OrdreAtelier(long EntId, string? Numero, string? Objet, string? Chantier);
+    internal sealed record OrdreAtelier(long EntId, string? Numero, string? Objet, string? Chantier);
     public sealed record ValidationAtelier(long EntId, string Code);
     public sealed record ValidationBorne(string Jeton, long EntId, string Code);
 
@@ -41,7 +41,7 @@ public static class AtelierBtp
         """;
 
     /// <summary>Ordres proposés au salarié (E51), ou l'ordre de ce numéro s'il en a le droit.</summary>
-    private static Task<List<OrdreAtelier>> OrdresAsync(LogiBtpContext db, int salarie, string? numero, CancellationToken ct) =>
+    internal static Task<List<OrdreAtelier>> OrdresAsync(LogiBtpContext db, int salarie, string? numero, CancellationToken ct) =>
         db.Database.SqlQueryRaw<OrdreAtelier>(numero is null
             ? $"""
                 SELECT d.ent_id, d.ent_numero AS numero, d.ent_objet AS objet, c.cha_code || ' – ' || c.cha_libelle AS chantier
@@ -67,11 +67,19 @@ public static class AtelierBtp
                 """,
             new NpgsqlParameter("s", salarie), new NpgsqlParameter("n", (object?)numero ?? DBNull.Value)).ToListAsync(ct);
 
-    private static async Task<bool> PeutAsync(LogiBtpContext db, int salarie, long ent, CancellationToken ct) =>
+    /// <summary>Ordres ouverts de ces identifiants que le salarié peut lire (étape proposée après un pointage, E52).</summary>
+    internal static Task<List<OrdreAtelier>> OrdresParIdsAsync(LogiBtpContext db, int salarie, long[] ids, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<OrdreAtelier>($"""
+            SELECT d.ent_id, d.ent_numero AS numero, d.ent_objet AS objet, c.cha_code || ' – ' || c.cha_libelle AS chantier
+            {Ouverts}
+              AND d.ent_id = ANY(@ids) AND {Droit}
+            """, new NpgsqlParameter("s", salarie), new NpgsqlParameter("ids", ids)).ToListAsync(ct);
+
+    internal static async Task<bool> PeutAsync(LogiBtpContext db, int salarie, long ent, CancellationToken ct) =>
         await db.Database.SqlQueryRaw<bool>($"SELECT EXISTS (SELECT 1 {Ouverts} AND d.ent_id = @e AND {Droit}) AS \"Value\"",
             new NpgsqlParameter("s", salarie), new NpgsqlParameter("e", ent)).FirstAsync(ct);
 
-    private static async Task<object> ReponseAsync(ServiceEtapes etapes, List<OrdreAtelier> ordres, CancellationToken ct)
+    internal static async Task<object> ReponseAsync(ServiceEtapes etapes, List<OrdreAtelier> ordres, CancellationToken ct)
     {
         var res = new List<object>();
         foreach (var o in ordres)

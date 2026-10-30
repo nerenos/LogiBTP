@@ -49,3 +49,12 @@ describe('compléter la journée', () => {
     expect(completerJournee([{ minutes: null, poids: 105.9 }, { minutes: null, poids: 0 }], 420, 15)).toEqual([420, null]);
   });
 });
+
+describe('photos', () => {
+  it('réduit le plus grand côté sans jamais agrandir', async () => {
+    const { dimensionsReduites } = await import('../src/app/terrain/terrain.js');
+    expect(dimensionsReduites(4000, 3000)).toEqual({ largeur: 2000, hauteur: 1500, reduite: true });
+    expect(dimensionsReduites(3000, 4032)).toEqual({ largeur: 1488, hauteur: 2000, reduite: true });
+    expect(dimensionsReduites(1200, 900)).toEqual({ largeur: 1200, hauteur: 900, reduite: false });
+  });
+});

@@ -123,6 +123,7 @@ public static partial class TerrainBtp
             pointages,
             libre, equipiers = libre is "EQUIPE" or "SERVICE" or "TOUT" ? await EquipiersLibresAsync(db, u, s, jour, ct) : [],
             chantiers, ordres = await specialisation.OrdresAsync(pdb, chantiers.Select(c => c.Id).ToList(), ct),
+            motifs = await MotifsAsync(db, ct),
         };
     }
 

@@ -984,7 +984,8 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
   .terrain-consignes, .terrain-pieces, .terrain-liens { grid-column: 1 / -1; }
 }
 /* Application de terrain, lot 2 : pointage de la journée. */
-.terrain-onglets { grid-template-columns: repeat(3, 1fr); }
+.terrain-onglets { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.terrain-onglets button { padding: 0 0.3rem; font-size: 0.95rem; }
 .terrain-bilan { font-weight: 600; margin: 0; }
 .terrain-a-pointer, .terrain-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .terrain-a-pointer b { flex-basis: 100%; }

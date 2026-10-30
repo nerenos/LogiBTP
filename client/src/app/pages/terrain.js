@@ -1,17 +1,21 @@
 import { aujourdhui, ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
+import { EcranEtapesAtelier } from '@logibtp/execution/ui';
+import { MODULE_FACULTATIF } from '../codes.js';
 import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
 import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
+import { saisirAvancement, envoyerPhotos, signalerNonConformite } from '../terrain/actions-tache.js';
 
 // Application de terrain, lot 1 (ANALYSE-TERRAIN.md) : page personnelle pour tablette et smartphone. Tâches du planning
 // de la personne connectée (aujourd'hui ou la semaine), partie mobile (adresse, contact, consignes, liens) complétée par
 // le chantier, itinéraire, pièces de la GED diffusées sur le terrain ; lot 2 : onglet Pointage de la journée
-// (terrain/pointage-terrain.js). Ordres de pose : lot 3.
+// (terrain/pointage-terrain.js) ; lot 3 : onglet Ordres (étapes, composant de l'atelier), avancement, photos et
+// non-conformité depuis la carte d'une tâche (terrain/actions-tache.js).
 
-const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage' };
+const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage', ordres: '🧩 Ordres' };
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
 const jourDe = (instant) => instant.slice(0, 10);
@@ -28,12 +32,14 @@ export class PageTerrain extends PageBase {
 
   async ouvrir() {
     this.titre = 'Mon terrain';
-    this.onglet = ONGLETS[this.requete.onglet] ? this.requete.onglet : 'jour';
+    // Onglet Ordres : module Exécution actif seulement.
+    this.onglets = Object.fromEntries(Object.entries(ONGLETS).filter(([cle]) => cle !== 'ordres' || this.app.moduleActif(MODULE_FACULTATIF.EXECUTION)));
+    this.onglet = this.onglets[this.requete.onglet] ? this.requete.onglet : 'jour';
     this.jour = /^\d{4}-\d{2}-\d{2}$/.test(this.requete.jour ?? '') ? this.requete.jour : aujourdhui();
     this.conteneur.innerHTML = `<div class="page-terrain">
       <div class="terrain-entete"><h1 class="page-titre">📱 Mon terrain</h1><span class="aide" data-personne></span></div>
-      <nav class="terrain-onglets" role="tablist">${Object.entries(ONGLETS).map(([cle, l]) => `<button type="button" role="tab" data-onglet="${cle}">${l}</button>`).join('')}</nav>
-      <div class="terrain-periode"><button type="button" data-decaler="-1" aria-label="Période précédente">◀</button><b data-periode></b>
+      <nav class="terrain-onglets" role="tablist">${Object.entries(this.onglets).map(([cle, l]) => `<button type="button" role="tab" data-onglet="${cle}">${l}</button>`).join('')}</nav>
+      <div class="terrain-periode" data-barre-periode><button type="button" data-decaler="-1" aria-label="Période précédente">◀</button><b data-periode></b>
         <button type="button" data-decaler="1" aria-label="Période suivante">▶</button><button type="button" data-aujourdhui>Aujourd'hui</button></div>
       <div class="terrain-liste" data-liste></div>
       <details class="terrain-reglages"><summary>⚙ Itinéraire</summary><p class="ligne">Application de navigation <span data-navigation></span></p>
@@ -51,6 +57,16 @@ export class PageTerrain extends PageBase {
     const nav = creerCombo({ options: Object.entries(NAVIGATIONS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.#navigation(), vide: false });
     nav.addEventListener('change', () => { ecrirePreferences({ terrainNavigation: nav.valeurCombo }); this.#rendre(); });
     $('[data-navigation]').append(nav);
+    // Actions d'une carte de tâche (avancement, photos, non-conformité).
+    $('[data-liste]').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-action-tache]');
+      if (!b) return;
+      const t = this.donnees?.taches.find((x) => x.id === Number(b.dataset.tache));
+      if (!t) return;
+      if (b.dataset.actionTache === 'avancement') await saisirAvancement(this.app, t);
+      else if (b.dataset.actionTache === 'photos') await envoyerPhotos(this.app, t);
+      else if (b.dataset.actionTache === 'nc') await signalerNonConformite(this.app, t, this.donnees.motifs ?? []);
+    });
     await this.#charger();
   }
 
@@ -70,7 +86,14 @@ export class PageTerrain extends PageBase {
     this.conteneur.querySelector('[data-periode]').textContent = du === au ? nomJour(du) : `du ${formatDate(du)} au ${formatDate(au)}`;
     this.app.routeur?.remplacerUrl(this.urlCourante());
     this.#modifiee = false;
+    this.conteneur.querySelector('[data-barre-periode]').hidden = this.onglet === 'ordres';
     if (this.onglet === 'pointage') { await this.pointage.ouvrir(du); return; }
+    if (this.onglet === 'ordres') {
+      await new EcranEtapesAtelier(this.conteneur.querySelector('[data-liste]'), {
+        charger: () => api.terrain.etapes(), valider: (entId, code) => api.terrain.validerEtape(entId, code), ordre: (numero) => api.terrain.ordreEtapes(numero),
+      }, { titre: '🧩 Mes ordres : étapes à valider', message: (t, n) => this.app.message(t, n) }).ouvrir();
+      return;
+    }
     try {
       this.donnees = await api.terrain.taches(du, au);
     } catch (e) { this.app.erreur(e); return; }
@@ -117,6 +140,8 @@ export class PageTerrain extends PageBase {
       liens.length && `<ul class="terrain-liens">${liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" target="_blank" rel="noopener noreferrer">🔗 ${echapper(l.libelle)}</a>` : echapper(l.texte)}</li>`).join('')}</ul>`,
       t.equipiers.length && `<p>👥 ${t.equipiers.map(echapper).join(', ')}</p>`,
       t.memo && `<p class="aide">${echapper(t.memo)}</p>`,
+      t.chantier && `<div class="terrain-actions">${[['avancement', '📈 Avancement'], ['photos', '📷 Photos'], ['nc', '⚠ Non-conformité']]
+        .map(([a, l]) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}">${l}</button>`).join('')}</div>`,
       t.pieces.length && `<div class="terrain-pieces"><b>Pièces</b>${t.pieces.map((p) => `<a class="terrain-piece" href="${echapper(api.terrain.urlPiece(p.id))}" target="_blank" rel="noopener">
         📄 <span>${echapper(p.titre)}</span><small class="aide">${echapper([p.nom_fichier, taille(p.taille)].filter(Boolean).join(' · '))}</small></a>`).join('')}</div>`,
     ].filter(Boolean);

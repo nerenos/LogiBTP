@@ -13,7 +13,13 @@
 > `pointage/saisie_libre` (les nœuds n'admettent pas le tiret) ; équipiers d'une saisie libre en équipe = membres de
 > ses équipes du jour et salariés de son service principal, choisis par recherche ; pointage à la ligne d'ordre
 > (`poi_lig_id`, tâche d'origine « ligne ») non repris : niveau chantier et ordre ; route `/api/terrain/journee` rattachée
-> au droit MODIFIER du pointage ; bandeau : menus défilant dans le bandeau sous 700 px. Reprend les parties restées
+> au droit MODIFIER du pointage ; bandeau : menus défilant dans le bandeau sous 700 px.
+>
+> Lot 3 réalisé le 30/10/2026 (`Btp/TerrainOrdresBtp.cs`, `client/src/app/terrain/actions-tache.js`, module Planning
+> `089e` : `pla_avancement`). Écarts : « Étape terminée ? » proposé sous la journée enregistrée (pas d'écran à part) ;
+> ordres visibles selon la règle de l'atelier (E51), donc pas forcément tous les ordres pointés ; non-conformité signalée
+> depuis la carte d'une tâche (et toujours par l'activité NC d'un pointage) ; photos réduites dans le navigateur
+> (JPEG 0,85, côté de 2 000 px ; HEIC non lisible : envoyé tel quel) ; motifs de non-conformité proposés (écart du lot 2 levé). Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)
 > § 2.3 (partie mobile des tâches) et possibilité 10 (avancement réel), [Exécution](ANALYSE-MODULE-EXECUTION.md) lot 5
 > (signature) et E50 à E53 (étapes hors de l'atelier). Socle commun : [transverse](ANALYSE-MODULES-TRANSVERSE.md) § 6

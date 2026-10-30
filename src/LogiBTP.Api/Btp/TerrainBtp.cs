@@ -83,7 +83,7 @@ public static partial class TerrainBtp
             var chantiers = new Dictionary<string, object?>();
             foreach (var id in taches.Where(t => t.GetProperty("chantier").ValueKind == JsonValueKind.Object).Select(t => t.GetProperty("chantier").GetProperty("id").GetInt32()).Distinct())
                 chantiers[id.ToString(CultureInfo.InvariantCulture)] = await DefautChantierAsync(db, id, ct);
-            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers });
+            return Results.Ok(new { personne = new { id = personne.Id, libelle = personne.Libelle }, du = Jour(debut), au = Jour(fin), taches, chantiers, motifs = await MotifsAsync(db, ct) });
         });
 
         // Valeurs par défaut de la partie mobile d'une tâche sur ce chantier (repères du détail de la tâche du planning).
@@ -105,8 +105,12 @@ public static partial class TerrainBtp
                 ?? throw ExceptionMetier.Introuvable($"Pièce {id}");
             return await ged.Contenu(version, telecharger == true, http, u, ct);
         });
-        return g.MapJournee();
+        return g.MapJournee().MapOrdresTerrain();
     }
+
+    /// <summary>Motifs de non-conformité proposés (paramètres des ressources) ; tout autre motif reste saisissable.</summary>
+    private static Task<List<string>> MotifsAsync(LogiBtpContext db, CancellationToken ct) =>
+        db.Database.SqlQueryRaw<string>("SELECT mot_libelle AS \"Value\" FROM motif WHERE mot_domaine = 'NON_CONFORMITE' AND mot_actif ORDER BY mot_ordre, mot_libelle").ToListAsync(ct);
 
     private static NpgsqlParameter[] Parametres(int salarie, DateOnly du, DateOnly au) =>
         [new("s", salarie), new("du", Jour(du)), new("au", Jour(au))];

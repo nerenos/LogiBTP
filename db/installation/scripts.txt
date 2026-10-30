@@ -74,6 +74,7 @@ modules/planning/db/089_planning.sql
 modules/planning/db/089b_planning_charge.sql
 modules/planning/db/089c_planning_liens.sql
 modules/planning/db/089d_planning_previsions.sql
+modules/planning/db/089e_planning_avancement.sql
 modules/edition/db/090_edition_schema.sql
 modules/edition/db/091_edition_taches.sql
 modules/sous-traitance/db/092_sous_traitance.sql

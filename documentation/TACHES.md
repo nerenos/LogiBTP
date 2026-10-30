@@ -98,6 +98,8 @@
   des tâches du planning, case 📱 « Diffusée sur le terrain » de la GED (chantier, marché, ordres).
 - [x] **Lot 2** (30/10/2026) : onglet Pointage de `/terrain` (tâches du jour, saisie libre avec tâche réalisée non
   planifiée, chef d'équipe, « Compléter la journée », repas), portée EQUIPE et profil CHEF_EQUIPE, bandeau sur téléphone.
+- [x] **Lot 3** (30/10/2026) : onglet Ordres (étapes à valider), « Étape terminée ? » après un pointage sur un ordre,
+  avancement réel daté des tâches, non-conformité et photos (galerie, réduction au choix) depuis la carte d'une tâche.
 
 ### Import
 

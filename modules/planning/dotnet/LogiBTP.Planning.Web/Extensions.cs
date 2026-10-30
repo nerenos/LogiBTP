@@ -48,6 +48,7 @@ public static class Extensions
         });
         g.MapPost("/calcul", (TacheSaisie t, ServicePlanning s, CancellationToken ct) => s.ApercuAsync(t, ct));
         g.MapGet("/taches/{id:long}", (long id, ServicePlanning s, CancellationToken ct) => s.TacheAsync(id, ct));
+        g.MapGet("/taches/{id:long}/avancements", (long id, ServicePlanning s, CancellationToken ct) => s.AvancementsAsync(id, ct));
         g.MapPost("/taches", (TacheSaisie t, HttpContext http, ServicePlanning s, CancellationToken ct) => s.CreerAsync(t, Utilisateur.Depuis(http), ct));
         g.MapPut("/taches/{id:long}", async (long id, TacheSaisie t, HttpContext http, ServicePlanning s, ServiceLiens l, CancellationToken ct) =>
         {

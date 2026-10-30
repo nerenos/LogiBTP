@@ -3,6 +3,8 @@ import { lireDuree, ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { choisirRestaurant } from '../pointage/repas.js';
 import { choixMultiple } from '../choix-multiple.js';
+import { EcranEtapesAtelier } from '@logibtp/execution/ui';
+import { MODULE_FACULTATIF } from '../codes.js';
 import { completerJournee } from './terrain.js';
 
 // Application de terrain, lot 2 (ANALYSE-TERRAIN.md, T4, T7, T8, T21, T22) : pointage de la journée sur le terrain.
@@ -55,7 +57,9 @@ export class PointageTerrain {
       <p class="terrain-bilan" data-bilan></p>
       ${lecture ? '<p class="carte">🔒 Journée validée : consultation seulement (une correction se demande au service RH).</p>' : ''}
       ${!lecture && sansLigne.length ? `<div class="terrain-a-pointer"><b>À pointer</b>${sansLigne.map((t) => `<button type="button" class="terrain-bouton" data-pointer="${t.id}">＋ ${echapper(t.libelle)}${t.chef && t.membres.length ? ` · 👥 ${t.membres.length + 1}` : ''}</button>`).join('')}</div>` : ''}
+      <datalist id="terrain-motifs-pointage">${(d.motifs ?? []).map((m) => `<option value="${echapper(m)}">`).join('')}</datalist>
       <div data-lignes></div>
+      <div data-etape-terminee></div>
       ${lecture ? '' : `<div class="terrain-actions">
         ${d.libre ? '<button type="button" class="terrain-bouton" data-libre>🛠 Saisie libre</button>' : ''}
         <button type="button" class="terrain-bouton" data-completer title="Répartit les heures prévues au calendrier, moins celles déjà saisies, entre les lignes sans durée">⇥ Compléter la journée</button>
@@ -135,7 +139,7 @@ export class PointageTerrain {
           <label>Activité <span data-combo="sous-type"></span></label>
           <label>Durée <input data-minutes inputmode="decimal" size="6" placeholder="7:30" value="${ecrireDuree(l.minutes ?? 0)}" ${lecture ? 'readonly' : ''}></label>
         </div>
-        ${nc ? `<label class="large">Motif de non-conformité <input data-motif value="${echapper(l.motif ?? '')}" ${lecture ? 'readonly' : ''}></label>` : ''}
+        ${nc ? `<label class="large">Motif de non-conformité <input data-motif list="terrain-motifs-pointage" value="${echapper(l.motif ?? '')}" ${lecture ? 'readonly' : ''}></label>` : ''}
         <label class="large">Commentaire <input data-commentaire value="${echapper(l.commentaire ?? '')}" ${lecture ? 'readonly' : ''}></label>
         ${proposes.length && !lecture ? `<fieldset class="terrain-membres"><legend>👥 Pour l'équipe</legend>${proposes.map((m) => `<label class="coche"><input type="checkbox" data-membre="${m.id}" ${l.membres.includes(m.id) ? 'checked' : ''}> ${echapper(m.libelle)}</label>`).join('')}</fieldset>` : ''}
         ${libreEquipe && !lecture ? '<fieldset class="terrain-membres"><legend>👥 Équipiers (même pointage pour chacun)</legend><span data-equipiers></span></fieldset>' : ''}
@@ -193,10 +197,27 @@ export class PointageTerrain {
           motif: l.motif, commentaire: l.commentaire, membres: l.id ? null : l.membres, equipe: l.equipe })),
       });
     } catch (e) { this.app.erreur(e); return false; }
+    const ordres = [...new Set(this.lignes.filter((l) => l.ent_id).map((l) => l.ent_id))];
     this.lignes = this.d.pointages.map(depuisPointage);
     this.modifiee(false);
     this.app.message('Journée enregistrée', 'succes');
     this.#rendre();
+    await this.#etapeTerminee(ordres);
     return true;
+  }
+
+  /** E52 : après un pointage sur des ordres, leur étape en cours est proposée (« Étape terminée ? »). */
+  async #etapeTerminee(ordres) {
+    if (!ordres.length || !this.app.moduleActif(MODULE_FACULTATIF.EXECUTION)) return;
+    let r;
+    try { r = await api.terrain.etapes(ordres); } catch { return; }
+    const aValider = r.ordres.filter((o) => o.etapes.some((e) => !e.valide_le));
+    if (!aValider.length) return;
+    const zone = this.zone.querySelector('[data-etape-terminee]');
+    await new EcranEtapesAtelier(zone, {
+      charger: async () => ({ ordres: (await api.terrain.etapes(ordres)).ordres }),
+      valider: (entId, code) => api.terrain.validerEtape(entId, code), ordre: (numero) => api.terrain.ordreEtapes(numero),
+    }, { titre: 'Étape terminée ?', message: (t, n) => this.app.message(t, n) }).ouvrir();
+    zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
