@@ -74,7 +74,7 @@ public static class MagasinBtp
         string type, int? origine, int? destination, int? chantier, List<LigneMagasin> lignes, string? objet, DateTimeOffset? date, Utilisateur u, CancellationToken ct)
     {
         var tyd = await TypesDocumentBtp.IdAsync(db, type, ct);
-        var tva = await db.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+        var tva = await db.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvDefaut).ThenByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
         var ids = lignes.Select(l => l.Ele).Distinct().ToArray();
         var articles = (await db.Database.SqlQuery<ArticleSql>($"""
             SELECT ele_id AS id, ele_code AS code, ele_libelle_html AS libelle_html, ele_unt_stock AS unite, ele_nat_id AS nat_id

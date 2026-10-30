@@ -117,7 +117,7 @@ public static class Acomptes
         if (taux.Count == 0)
         {
             var exo = mode == "CA" ? null : await db.TauxTva.Where(t => t.TtvCategorie == "E" && t.TtvActif).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
-            exo ??= await db.TauxTva.Where(t => t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+            exo ??= await db.TauxTva.Where(t => t.TtvActif).OrderByDescending(t => t.TtvDefaut).ThenByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
             taux = [new TauxAcompteSql(exo, 1)];
         }
         var totalBase = taux.Sum(t => t.Montant);

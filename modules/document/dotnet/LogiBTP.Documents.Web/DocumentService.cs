@@ -41,7 +41,7 @@ public class DocumentService<TDoc, TLigne, TComplet>(
             Proprietes = await db.ProprietesDefinition.AsNoTracking().Where(p => p.PrdTydId == type.TydId).OrderBy(p => p.PrdOrdre).ToListAsync(ct),
             Statuts = await db.StatutsDocument.AsNoTracking().Where(s => s.StdTydId == type.TydId).OrderBy(s => s.StdOrdre).ToListAsync(ct),
             TypesLigne = await db.TypesLigne.AsNoTracking().OrderBy(t => t.TylId).ToListAsync(ct),
-            TauxTva = await db.TauxTva.AsNoTracking().Where(t => t.TtvActif).OrderBy(t => t.TtvCode).ToListAsync(ct),
+            TauxTva = await db.TauxTva.AsNoTracking().Where(t => t.TtvActif).OrderBy(t => t.TtvOrdre).ThenBy(t => t.TtvCode).ToListAsync(ct),
             Unites = await db.Unites.AsNoTracking().Where(x => x.UntActif).OrderBy(x => x.UntOrdre).ThenBy(x => x.UntCode).ToListAsync(ct),
             Transformations = await db.TransformationsAutorisees.AsNoTracking().Where(t => t.TraSourceTydId == type.TydId).ToListAsync(ct),
             Droits = await ActionsAsync(u, type, ct),

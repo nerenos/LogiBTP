@@ -113,7 +113,7 @@ public sealed record CategorieTvaDto(string Code, string Libelle, string Comport
 /// collectée (débits), collectée à encaisser, déductible et autoliquidée (due par le preneur).
 /// </summary>
 public sealed record TauxTvaDto(int Id, string Code, string Libelle, decimal Taux, string? Categorie, string Comportement, string? Mention, bool Actif,
-    string? CompteCollectee, string? CompteCollecteeEncaissement, string? CompteDeductible, string? CompteAutoliquidee);
+    string? CompteCollectee, string? CompteCollecteeEncaissement, string? CompteDeductible, string? CompteAutoliquidee, int Ordre, bool Defaut);
 
 /// <summary>
 /// Tiers vu par le module, une ligne par type de compte (CLIENT, FOURNISSEUR, SOUS_TRAITANT…) : compte auxiliaire

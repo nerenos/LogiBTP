@@ -7,7 +7,7 @@ namespace LogiBTP.Comptabilite.Web;
 public abstract class SpecialisationComptabilite
 {
     public abstract Task<List<TauxTvaDto>> TauxAsync(ComptabiliteDbContext db, CancellationToken ct);
-    /// <summary>Catégorie, mention, actif et comptes des taux existants (le code et le taux restent ceux de l'application).</summary>
+    /// <summary>Catégorie, mention, actif, comptes, ordre et taux par défaut des taux existants (le code et le taux restent ceux de l'application).</summary>
     public abstract Task EnregistrerTauxAsync(ComptabiliteDbContext db, List<TauxTvaDto> taux, CancellationToken ct);
     /// <summary>Tiers pour la liste par compte (une ligne par type de compte de chaque tiers).</summary>
     public abstract Task<List<TiersComptable>> TiersAsync(ComptabiliteDbContext db, CancellationToken ct);

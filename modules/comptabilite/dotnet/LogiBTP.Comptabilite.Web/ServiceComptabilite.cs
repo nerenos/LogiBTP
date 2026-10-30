@@ -192,12 +192,18 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
 
     public Task<List<TauxTvaDto>> TauxAsync(CancellationToken ct) => specialisation.TauxAsync(db, ct);
 
-    /// <summary>Catégorie connue et comportement repris d'elle ; comptes du plan comptable.</summary>
+    /// <summary>
+    /// Catégorie connue et comportement repris d'elle ; comptes du plan comptable ; ordre = position dans la liste ;
+    /// un seul taux par défaut, actif.
+    /// </summary>
     public async Task<List<TauxTvaDto>> EnregistrerTauxAsync(List<TauxTvaDto> l, CancellationToken ct)
     {
+        var defauts = l.Where(t => t.Defaut).ToList();
+        if (defauts.Count > 1) throw ExceptionMetier.Invalide("TVA_DEFAUT", "Un seul taux de TVA par défaut");
+        if (defauts.Count == 1 && !defauts[0].Actif) throw ExceptionMetier.Invalide("TVA_DEFAUT", $"{defauts[0].Code} : le taux par défaut doit être actif");
         var categories = await db.CategoriesTva.AsNoTracking().ToDictionaryAsync(x => x.CtvCode, ct);
         var corriges = new List<TauxTvaDto>();
-        foreach (var t in l)
+        foreach (var (t, i) in l.Select((t, i) => (t with { Ordre = (i + 1) * 10 }, i)))
         {
             if (t.Categorie is null) { corriges.Add(t); continue; }
             if (!categories.TryGetValue(t.Categorie, out var c)) throw ExceptionMetier.Invalide("TVA_CATEGORIE", $"{t.Code} : catégorie inconnue");

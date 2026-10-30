@@ -110,7 +110,7 @@ public sealed partial class SpecialisationStockBtp
         var lb = sp.GetRequiredService<LogiBtpContext>();
         var appros = (await ApprosAsync(db.Database, lignes.Select(l => l.Ele).Distinct().ToArray(), ct)).ToDictionary(a => a.Ele);
         var tyd = await TypesDocumentBtp.IdAsync(lb, TypesDocument.ACommande, ct);
-        var tva = await lb.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
+        var tva = await lb.TauxTva.Where(t => t.TtvCategorie == "N" && t.TtvActif).OrderByDescending(t => t.TtvDefaut).ThenByDescending(t => t.TtvTaux).Select(t => (int?)t.TtvId).FirstOrDefaultAsync(ct);
         var lieuCode = (await LieuxAsync(db, ct)).FirstOrDefault(x => x.Id == lieu)?.Code ?? lieu.ToString();
         var creees = new List<CommandeCreee>();
         foreach (var g in lignes.GroupBy(l => l.FournisseurId))

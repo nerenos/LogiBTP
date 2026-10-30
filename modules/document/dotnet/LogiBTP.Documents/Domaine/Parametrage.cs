@@ -88,6 +88,10 @@ public class TauxTva
     public string TtvCategorie { get; set; } = "N";
     public string? TtvMention { get; set; }
     public bool TtvActif { get; set; } = true;
+    /// <summary>Ordre des listes de choix (019n).</summary>
+    public int TtvOrdre { get; set; }
+    /// <summary>Taux d'une nouvelle ligne de prix sans titre porteur d'un taux (un seul).</summary>
+    public bool TtvDefaut { get; set; }
 }
 
 /// <summary>Unité du référentiel ; lig_unt_code reste une saisie libre.</summary>

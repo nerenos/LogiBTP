@@ -14,10 +14,10 @@ export class ReglesDocument {
   titreAncetre(lignes, id) { return ancetres(C, lignes, id).find((a) => a.lig_tyl_id === TL.TITRE) ?? null; }
   estLigneDePrix(lignes, l) { return estChiffree(l) && !this.ouvrageAncetre(lignes, l.lig_id); }
 
-  /** Taux par défaut d'une nouvelle ligne de prix : titre le plus proche, sinon premier taux du paramétrage. */
+  /** Taux par défaut d'une nouvelle ligne de prix : titre le plus proche, sinon taux par défaut du paramétrage, sinon le premier. */
   tauxParDefaut(lignes, id, tauxTva) {
     for (const t of ancetres(C, lignes, id)) if (t.lig_tyl_id === TL.TITRE && t.lig_tva_id) return t.lig_tva_id;
-    return tauxTva?.[0]?.ttv_id ?? null;
+    return (tauxTva?.find((t) => t.ttv_defaut) ?? tauxTva?.[0])?.ttv_id ?? null;
   }
 
   /**

@@ -301,7 +301,17 @@ export class PageTiersComptables extends PageBase {
   }
 }
 
-/** Paramètres de la comptabilité, collectifs par type de tiers, catégories de TVA et comptes des taux. */
+/** Boutons ↑ ↓ d'une ligne d'une liste ordonnée par sa position (ordre enregistré par le serveur). */
+const boutonsOrdre = (i, n) => `<button type="button" data-monter title="Monter" ${i ? '' : 'disabled'}>↑</button>`
+  + `<button type="button" data-descendre title="Descendre" ${i < n - 1 ? '' : 'disabled'}>↓</button>`;
+
+function lierOrdre(tr, liste, x, rendre) {
+  const deplacer = (d) => { const i = liste.indexOf(x); liste.splice(i + d, 0, ...liste.splice(i, 1)); rendre(); };
+  tr.querySelector('[data-monter]')?.addEventListener('click', () => deplacer(-1));
+  tr.querySelector('[data-descendre]')?.addEventListener('click', () => deplacer(1));
+}
+
+/** Paramètres de la comptabilité, collectifs par type de tiers, catégories de TVA et comptes des taux (ordre, taux par défaut). */
 export class PageParametresComptabilite extends PageBase {
   icone = '📒';
 
@@ -467,7 +477,7 @@ export class PageParametresComptabilite extends PageBase {
         <td><input data-c="libelle" size="30" value="${echapper(c.libelle)}" ${ro}></td><td data-comportement></td>
         <td><textarea data-c="mention" rows="2" cols="50" ${ro}>${echapper(c.mention ?? '')}</textarea></td><td data-exigibilite></td>
         <td><input type="checkbox" data-c="actif" ${c.actif ? 'checked' : ''} ${ecrire ? '' : 'disabled'}></td>
-        <td class="cellule-boutons">${ecrire ? '<button type="button" data-retirer title="Retirer (catégorie sans taux)">✕</button>' : ''}</td></tr>`).join('')}
+        <td class="cellule-boutons">${ecrire ? `${boutonsOrdre(i, l.length)}<button type="button" data-retirer title="Retirer (catégorie sans taux)">✕</button>` : ''}</td></tr>`).join('')}
       </tbody></table>`;
     z.querySelectorAll('tr[data-i]').forEach((tr) => {
       const c = l[Number(tr.dataset.i)];
@@ -475,6 +485,7 @@ export class PageParametresComptabilite extends PageBase {
       poserCombo(tr, '[data-exigibilite]', { options: EXIGIBILITES, valeur: c.exigibilite, lecture: !ecrire, titre: 'Vide : selon le paramètre de la société' }, (v) => { c.exigibilite = v; });
       tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => { c[x.dataset.c] = x.type === 'checkbox' ? x.checked : x.value; }));
       tr.querySelector('[data-retirer]')?.addEventListener('click', () => { l.splice(l.indexOf(c), 1); this.#rendreCategories(); });
+      lierOrdre(tr, l, c, () => this.#rendreCategories());
     });
     z.querySelector('[data-ajouter]')?.addEventListener('click', () => {
       l.push({ code: '', libelle: '', comportement: 'N', mention: '', exigibilite: null, ordre: 0, actif: true });
@@ -498,17 +509,22 @@ export class PageParametresComptabilite extends PageBase {
     const comptesTva = optionsComptes(this.plan, (c) => c.type === 'TVA');
     const categories = this.categories.filter((c) => c.actif).map((c) => ({ valeur: c.code, libelle: c.libelle }));
     z.innerHTML = `<h2 class="titre-actions">Taux de TVA ${ecrire ? '<span><button type="button" class="principal" data-enregistrer>Enregistrer</button></span>' : ''}</h2>
-      <p class="aide">Collectée : TVA sur les débits ; à encaisser : TVA exigible à l'encaissement (travaux) ; autoliquidée : TVA due par le preneur (achats en autoliquidation, intracommunautaire).</p>
-      <table class="tableau-compact"><thead><tr><th>Code</th><th>Libellé</th><th class="nombre">Taux</th><th>Catégorie</th><th>Comportement</th><th>Mention</th>
-      <th>Collectée</th><th>À encaisser</th><th>Déductible</th><th>Autoliquidée</th><th>Actif</th></tr></thead><tbody>
-      ${this.taux.map((t, i) => `<tr data-i="${i}"${t.actif ? '' : ' class="discret"'}><td>${echapper(t.code)}</td><td>${echapper(t.libelle)}</td>
+      <p class="aide">Collectée : TVA sur les débits ; à encaisser : TVA exigible à l'encaissement (travaux) ; autoliquidée : TVA due par le preneur (achats en autoliquidation, intracommunautaire).
+      Défaut : taux d'une nouvelle ligne de prix hors d'un titre qui porte un taux ; l'ordre est celui des listes de choix.</p>
+      <table class="tableau-compact"><thead><tr><th>Défaut</th><th>Code</th><th>Libellé</th><th class="nombre">Taux</th><th>Catégorie</th><th>Comportement</th><th>Mention</th>
+      <th>Collectée</th><th>À encaisser</th><th>Déductible</th><th>Autoliquidée</th><th>Actif</th><th class="cellule-boutons"></th></tr></thead><tbody>
+      ${this.taux.map((t, i) => `<tr data-i="${i}"${t.actif ? '' : ' class="discret"'}>
+        <td><input type="radio" name="taux-defaut" data-defaut title="Taux par défaut" ${t.defaut ? 'checked' : ''} ${ecrire && t.actif ? '' : 'disabled'}></td><td>${echapper(t.code)}</td><td>${echapper(t.libelle)}</td>
         <td class="nombre">${echapper(String(t.taux).replace('.', ','))} %</td><td data-categorie></td><td data-comportement>${echapper(libelleOption(COMPORTEMENTS_TVA, t.comportement))}</td>
         <td><textarea data-c="mention" rows="2" cols="40" ${ro}>${echapper(t.mention ?? '')}</textarea></td>
         <td data-compte="compte_collectee"></td><td data-compte="compte_collectee_encaissement"></td><td data-compte="compte_deductible"></td><td data-compte="compte_autoliquidee"></td>
-        <td><input type="checkbox" data-c="actif" ${t.actif ? 'checked' : ''} ${ecrire ? '' : 'disabled'}></td></tr>`).join('')}
+        <td><input type="checkbox" data-c="actif" ${t.actif ? 'checked' : ''} ${ecrire ? '' : 'disabled'}></td>
+        <td class="cellule-boutons">${ecrire ? boutonsOrdre(i, this.taux.length) : ''}</td></tr>`).join('')}
       </tbody></table>`;
     z.querySelectorAll('tr[data-i]').forEach((tr) => {
       const t = this.taux[Number(tr.dataset.i)];
+      tr.querySelector('[data-defaut]').addEventListener('change', () => { for (const x of this.taux) x.defaut = x === t; });
+      lierOrdre(tr, this.taux, t, () => this.#rendreTaux());
       poserCombo(tr, '[data-categorie]', { options: categories, valeur: t.categorie, lecture: !ecrire }, (v) => {
         t.categorie = v;
         const c = this.categories.find((x) => x.code === v);
@@ -523,7 +539,11 @@ export class PageParametresComptabilite extends PageBase {
         const cle = td.dataset.compte;
         poserCombo(tr, `[data-compte="${cle}"]`, { options: comptesTva, valeur: t[cle], lecture: !ecrire }, (v) => { t[cle] = v; });
       });
-      tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => { t[x.dataset.c] = x.type === 'checkbox' ? x.checked : x.value; }));
+      tr.querySelectorAll('[data-c]').forEach((x) => x.addEventListener('change', () => {
+        t[x.dataset.c] = x.type === 'checkbox' ? x.checked : x.value;
+        // Un taux inactif ne peut pas être le taux par défaut.
+        if (x.dataset.c === 'actif') { if (!t.actif) t.defaut = false; this.#rendreTaux(); }
+      }));
     });
     z.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {

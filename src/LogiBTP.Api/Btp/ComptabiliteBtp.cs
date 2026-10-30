@@ -14,31 +14,37 @@ namespace LogiBTP.Api.Btp;
 public sealed partial class SpecialisationComptabiliteBtp : SpecialisationComptabilite
 {
     private sealed record TauxSql(int Id, string Code, string Libelle, decimal Taux, string? Categorie, string Comportement, string? Mention, bool Actif,
-        string? CompteCollectee, string? CompteCollecteeEncaissement, string? CompteDeductible, string? CompteAutoliquidee);
+        string? CompteCollectee, string? CompteCollecteeEncaissement, string? CompteDeductible, string? CompteAutoliquidee, int Ordre, bool Defaut);
 
     public override async Task<List<TauxTvaDto>> TauxAsync(ComptabiliteDbContext db, CancellationToken ct) =>
         (await db.Database.SqlQuery<TauxSql>($"""
             SELECT ttv_id AS id, ttv_code AS code, ttv_libelle AS libelle, ttv_taux AS taux, ttv_ctv_code AS categorie,
                    ttv_categorie::text AS comportement, ttv_mention AS mention, ttv_actif AS actif,
                    ttv_cpt_collectee AS compte_collectee, ttv_cpt_collectee_encaissement AS compte_collectee_encaissement,
-                   ttv_cpt_deductible AS compte_deductible, ttv_cpt_autoliquidee AS compte_autoliquidee
-            FROM taux_tva ORDER BY ttv_actif DESC, ttv_taux DESC, ttv_code
+                   ttv_cpt_deductible AS compte_deductible, ttv_cpt_autoliquidee AS compte_autoliquidee,
+                   ttv_ordre AS ordre, ttv_defaut AS defaut
+            FROM taux_tva ORDER BY ttv_ordre, ttv_code
             """).ToListAsync(ct))
         .Select(t => new TauxTvaDto(t.Id, t.Code, t.Libelle, t.Taux, t.Categorie, t.Comportement, t.Mention, t.Actif,
-            t.CompteCollectee, t.CompteCollecteeEncaissement, t.CompteDeductible, t.CompteAutoliquidee))
+            t.CompteCollectee, t.CompteCollecteeEncaissement, t.CompteDeductible, t.CompteAutoliquidee, t.Ordre, t.Defaut))
         .ToList();
 
-    /// <summary>Le comportement (ttv_categorie, lu par les moteurs) suit la catégorie choisie.</summary>
+    /// <summary>
+    /// Le comportement (ttv_categorie, lu par les moteurs) suit la catégorie choisie ; défaut retiré d'abord (index
+    /// unique), puis posé sur le taux choisi.
+    /// </summary>
     public override async Task EnregistrerTauxAsync(ComptabiliteDbContext db, List<TauxTvaDto> taux, CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE taux_tva SET ttv_defaut = FALSE WHERE ttv_defaut", ct);
         foreach (var t in taux)
         {
             var mention = string.IsNullOrWhiteSpace(t.Mention) ? null : t.Mention.Trim();
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 UPDATE taux_tva SET ttv_ctv_code = {t.Categorie}, ttv_categorie = {t.Comportement}, ttv_mention = {mention}, ttv_actif = {t.Actif},
                        ttv_cpt_collectee = {Vide(t.CompteCollectee)}, ttv_cpt_collectee_encaissement = {Vide(t.CompteCollecteeEncaissement)},
-                       ttv_cpt_deductible = {Vide(t.CompteDeductible)}, ttv_cpt_autoliquidee = {Vide(t.CompteAutoliquidee)}
+                       ttv_cpt_deductible = {Vide(t.CompteDeductible)}, ttv_cpt_autoliquidee = {Vide(t.CompteAutoliquidee)},
+                       ttv_ordre = {t.Ordre}, ttv_defaut = {t.Defaut}
                 WHERE ttv_id = {t.Id}
                 """, ct);
         }
