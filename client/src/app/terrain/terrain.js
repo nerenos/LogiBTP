@@ -69,6 +69,17 @@ export function completerJournee(lignes, minutesPrevues, pas = 0) {
   return resultat;
 }
 
+/**
+ * Présaisie (T7, lot 7) : une ligne par tâche du jour, les heures du calendrier réparties au prorata des heures planifiées.
+ * Tâches : [{ id, cha_id, ent_id, type_mo, chef, membres, poids }] ; rien à proposer sans tâche ou sans heures prévues.
+ */
+export function presaisirJournee(taches, minutesPrevues, pas = 0) {
+  if (!taches.length || !(minutesPrevues > 0)) return [];
+  const minutes = completerJournee(taches.map((t) => ({ minutes: null, poids: t.poids })), minutesPrevues, pas);
+  return taches.map((t, i) => ({ id: null, tac_id: t.id, cha_id: t.cha_id, ent_id: t.ent_id, type_mo: t.type_mo, sous_type: null, minutes: minutes[i], motif: null, commentaire: null,
+    membres: t.chef ? t.membres.map((m) => m.id) : [], groupe: null, nb_groupe: 0, equipe: false }));
+}
+
 /** Côté le plus long d'une photo réduite par défaut (T17 : « qualité d'origine » au choix). */
 export const PHOTO_COTE_MAX = 2000;
 

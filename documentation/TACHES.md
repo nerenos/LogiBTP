@@ -102,6 +102,9 @@
   avancement réel daté des tâches, non-conformité et photos (galerie, réduction au choix) depuis la carte d'une tâche.
 - [x] **Lot 4** (31/10/2026) : saisie sans réseau (journée, repas, avancement, photos, non-conformité, étapes gardés sur
   l'appareil et envoyés au retour), refus affichés avec Réessayer / Abandonner, deux semaines préchargées.
+- [x] **Lot 7** (30/10/2026) : présaisie des heures en préférence, réception de livraison simplifiée (bon brouillon validé
+  au bureau, droit `terrain/livraison`), pointage des matériels depuis une tâche (heures, compteurs, plein), avancement
+  réel comparé au situé dans l'onglet Gestion du marché.
 - [x] **Lot 6** (30/10/2026) : interventions SAV dans `/terrain` (onglet 🧰, droit `execution/sav` refusé par défaut),
   nouvelle intervention sur un chantier ou chantier « Entretien et dépannage » du client, compte rendu, photos, bon signé
   en GED, courriel de confirmation ; correction du lot 5 : PV édité quel que soit le profil, étapes créées si besoin.

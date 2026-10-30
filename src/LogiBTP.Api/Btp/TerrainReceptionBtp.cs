@@ -241,12 +241,7 @@ public static partial class TerrainBtp
             var s = await ComptesBtp.SalarieAsync(db, u.Code, ct) ?? throw ExceptionMetier.Invalide("TERRAIN_PERSONNE", "Compte sans salarié lié");
             var articles = (dm.Articles ?? []).Select(a => a.Trim()).Where(a => a.Length > 0).ToList();
             if (articles.Count == 0) throw ExceptionMetier.Invalide("TERRAIN_DEMANDE", "Au moins un article ou besoin");
-            if (!await db.Database.SqlQueryRaw<bool>("""
-                SELECT EXISTS (SELECT 1 FROM pla_tache t JOIN pla_affectation a ON a.aff_tac_id = t.tac_id
-                               WHERE a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text AND t.tac_type_element = 'chantier' AND t.tac_id_element = @c::text
-                                 AND t.tac_debut < current_date + 31 AND t.tac_fin > current_date - 31) AS "Value"
-                """, new NpgsqlParameter("s", s), new NpgsqlParameter("c", dm.ChaId)).FirstAsync(ct))
-                throw ExceptionMetier.Introuvable($"Chantier {dm.ChaId} de votre planning");
+            await ExigerChantierPlanningAsync(db, s, dm.ChaId, ct);
             var tyd = await TypesDocumentBtp.IdAsync(db, TypesDocument.EDap, ct);
             var objet = $"Demande du terrain : {articles[0]}{(articles.Count > 1 ? $" (+{articles.Count - 1})" : "")}";
             var cree = await documents.Creer(new CreationDocument { EntTydId = tyd, EntObjet = objet.Length > 200 ? objet[..200] : objet }, u, ct);

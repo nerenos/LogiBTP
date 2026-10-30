@@ -46,6 +46,15 @@
 > facturer » ou « à reprendre » au service de l'ordre, la facture restant une transformation au bureau ; création d'une
 > intervention en ligne seulement, compte rendu gardé hors ligne. Corrige le lot 5 : le PV échouait pour un profil sans
 > droit d'édition, et les étapes d'un ordre jamais ouvert au bureau n'existaient pas encore.
+>
+> Lot 7 réalisé le 30/10/2026 (`Btp/TerrainComplementsBtp.cs`, `client/src/app/terrain/complements-terrain.js`, `db/246`).
+> Écarts : présaisie en préférence du navigateur `terrainPresaisie` (journée vide, passée ou du jour, à enregistrer soi-même) ;
+> livraison depuis une commande fournisseur du chantier : bon A_RECEPTION **brouillon** à valider au bureau (tâche du CRM au
+> service Achat), pour que le stock ne bouge qu'après contrôle ; nœud `terrain/livraison` donné aux profils MOBILE et
+> CHEF_EQUIPE ; pointage des matériels sur la tâche seulement (matériels de la tâche ou affectés à la personne) : durée dans
+> `pointage_materiel`, relevés de source TERRAIN, plein ; aucune valorisation (pas de coût horaire) ; comparaison dans l'onglet
+> Gestion du marché : moyenne des tâches du chantier pondérée par leurs heures, à côté du % situé (T12 écartait une moyenne
+> à l'ordre, pas cette lecture par marché). Bibliothèque simplifiée (T18) non faite.
 
 Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)

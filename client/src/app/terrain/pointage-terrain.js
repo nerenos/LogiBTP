@@ -1,11 +1,12 @@
-import { echapper, creerCombo, formatDate, confirmer } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatDate, confirmer, lirePreferences } from '@logibtp/socle/ui';
+import { aujourdhui } from '@logibtp/socle';
 import { lireDuree, ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { choisirRestaurant } from '../pointage/repas.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
-import { completerJournee } from './terrain.js';
+import { completerJournee, presaisirJournee } from './terrain.js';
 import { envoyerOuGarder, fournisseurEtapes, OPERATION_TERRAIN } from './operations-terrain.js';
 import { lireOperation, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
@@ -49,6 +50,10 @@ export class PointageTerrain {
     }
     // Journée gardée sur l'appareil et pas encore envoyée : elle remplace celle du serveur.
     this.lignes = this.operation ? this.operation.corps.lignes.map(depuisOperation) : (this.d.pointages ?? []).map(depuisPointage);
+    // Présaisie en préférence (T7) : journée vide, passée ou du jour ; rien n'est enregistré sans « Enregistrer ».
+    const presaisie = !this.operation && !this.lignes.length && !this.d.valide && lirePreferences().terrainPresaisie && jour <= aujourdhui()
+      ? presaisirJournee(this.d.taches ?? [], this.d.minutes_prevues, this.#pas) : [];
+    this.lignes.push(...presaisie);
     this.desabonner?.();
     this.desabonner = this.app.abonner(SUJET_ATTENTE, async () => {
       if (!this.operation || !this.zone.isConnected) return;
@@ -58,7 +63,7 @@ export class PointageTerrain {
     });
     this.repas = null;
     if (this.d.personne) api.pointage.repas(this.d.personne.id, jour, jour).then((r) => { this.repas = r[0] ?? null; this.#rendreRepas(); }).catch(() => {});
-    this.modifiee(false);
+    this.modifiee(presaisie.length > 0);
     this.#rendre();
   }
 

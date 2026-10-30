@@ -223,6 +223,21 @@ public static class LiaisonsBtp
         });
 
         // Attentes des étapes (séchage, validation d'un tiers) d'une période : bandes hachurées sur les lignes de chantier (E34).
+        // Avancement réel des tâches du chantier d'un marché, comparé aux situations par la fiche (T12) : moyenne pondérée
+        // par les heures des tâches, une tâche sans relevé comptant pour 0.
+        g.MapGet("/marches/{id:int}/avancement", (int id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync("""
+            WITH t AS (
+              SELECT ta.tac_id, ta.tac_libelle, coalesce(ta.tac_heures, 0) AS heures, a.pav_pourcent AS pourcent, a.pav_le AS le
+              FROM marche m JOIN pla_tache ta ON ta.tac_type_element = 'chantier' AND ta.tac_id_element = m.mar_cha_id::text
+              LEFT JOIN LATERAL (SELECT x.pav_pourcent, x.pav_le FROM pla_avancement x WHERE x.pav_tac_id = ta.tac_id ORDER BY x.pav_le DESC, x.pav_id DESC LIMIT 1) a ON TRUE
+              WHERE m.mar_id = @m)
+            SELECT json_build_object(
+              'reel', (SELECT round(sum(heures * coalesce(pourcent, 0)) / nullif(sum(heures), 0), 1) FROM t),
+              'dernier', (SELECT max(le) FROM t),
+              'taches', (SELECT coalesce(json_agg(json_build_object('id', tac_id, 'libelle', tac_libelle, 'heures', heures, 'pourcent', pourcent, 'le', le) ORDER BY tac_id), '[]') FROM t)
+            )::text AS "Value"
+            """, ct, new NpgsqlParameter("m", id)));
+
         g.MapGet("/attentes", async (string du, string au, LogiBtpContext db, CancellationToken ct) =>
             (await db.Database.SqlQueryRaw<Attente>($"""
                 SELECT d.ent_chantier_id::text AS chantier, e.ore_debut_le AS debut, e.ore_prevu_le AS prevu, e.ore_libelle AS libelle, d.ent_numero AS numero

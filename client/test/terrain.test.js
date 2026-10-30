@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel } from '../src/app/terrain/terrain.js';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, presaisirJournee } from '../src/app/terrain/terrain.js';
 
 describe('application de terrain', () => {
+  it('présaisie : heures du calendrier au prorata des tâches, équipe du chef reprise', () => {
+    const taches = [{ id: 1, cha_id: 7, ent_id: null, type_mo: 3, poids: 300, chef: false, membres: [] }, { id: 2, cha_id: 8, ent_id: 4, type_mo: 3, poids: 100, chef: true, membres: [{ id: 9 }] }];
+    const l = presaisirJournee(taches, 480, 15);
+    expect(l.map((x) => x.minutes)).toEqual([360, 120]);
+    expect(l[1]).toMatchObject({ id: null, tac_id: 2, ent_id: 4, membres: [9] });
+    expect(presaisirJournee([], 480)).toEqual([]);
+    expect(presaisirJournee(taches, 0)).toEqual([]);
+  });
+
   it('lundi de la semaine', () => {
     expect(lundiDe('2026-10-30')).toBe('2026-10-26');
     expect(lundiDe('2026-10-26')).toBe('2026-10-26');

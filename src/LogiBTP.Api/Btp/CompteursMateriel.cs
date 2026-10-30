@@ -21,6 +21,7 @@ public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin,
 /// </summary>
 public static class CompteursMateriel
 {
+    private sealed record PointageMaterielLu(long Id, DateOnly Date, int Minutes, string? Chantier, string? Salarie, string? Commentaire);
     private sealed record ReleveSql(int Id, DateOnly Date, string Unite, decimal Valeur, bool Remise, int? MevId, long? EntId, string Source);
 
     /// <summary>Historique du matériel : unités suivies, compteurs, relevés (récents d'abord), événements.</summary>
@@ -124,6 +125,12 @@ public static class CompteursMateriel
     {
         var g = api.MapGroup("/ressources/materiels/{id:int}");
         g.MapGet("/compteurs", (int id, LogiBtpContext db, CancellationToken ct) => HistoriqueAsync(db, id, ct));
+        // Heures pointées sur le terrain (application de terrain, lot 7).
+        g.MapGet("/pointages", (int id, LogiBtpContext db, CancellationToken ct) => db.Database.SqlQueryRaw<PointageMaterielLu>("""
+            SELECT p.pma_id AS id, p.pma_date AS date, p.pma_minutes AS minutes, c.cha_code AS chantier, concat_ws(' ', s.sal_prenom, s.sal_nom) AS salarie, p.pma_commentaire AS commentaire
+            FROM pointage_materiel p LEFT JOIN chantier c ON c.cha_id = p.pma_cha_id LEFT JOIN salarie s ON s.sal_id = p.pma_sal_id
+            WHERE p.pma_mat_id = @m ORDER BY p.pma_date DESC, p.pma_id DESC LIMIT 50
+            """, new NpgsqlParameter("m", id)).ToListAsync(ct));
         g.MapPost("/releves", async (int id, ReleveSaisi r, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
         {
             await AjouterReleveAsync(db, id, r, "SAISIE", null, Utilisateur.Depuis(http).Code, ct);

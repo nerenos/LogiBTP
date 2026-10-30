@@ -1,6 +1,7 @@
 import { urlDocument } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, creerCombo, formatNombre, ouvrirDialogue, confirmer } from '@logibtp/socle/ui';
+import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import {
   LIBELLES_UNITE, LIBELLES_EVENEMENT, ICONES_EVENEMENT, TYPES_EVENEMENT, MESSAGES_COMPTEURS,
@@ -13,7 +14,7 @@ import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entre
 // d'un événement dans une fenêtre <dialog>. Contrôles de compteurs.js (↔ ReglesCompteurs.cs) avant l'envoi.
 
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const SOURCES = { SAISIE: 'Saisie', CARBURANT: 'Plein', ORDRE: 'Ordre', BORNE: 'Borne', REPRISE: 'Reprise de la fiche' };
+const SOURCES = { SAISIE: 'Saisie', CARBURANT: 'Plein', ORDRE: 'Ordre', BORNE: 'Borne', REPRISE: 'Reprise de la fiche', TERRAIN: 'Terrain' };
 const message = (e) => MESSAGES_COMPTEURS[e.code] ?? e.message;
 
 /** Frise SVG : une courbe par unité (valeurs cumulées), événements en pastilles au-dessus, sur la période des données. */
@@ -162,6 +163,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
       <p>${actuels.length ? `Compteurs : <b>${actuels.join(' · ')}</b>` : '<span class="aide">Aucun compteur suivi (champ Compteurs de la fiche).</span>'}</p>
       ${frise(d, unites)}
       <div data-plans></div>
+      <div data-pointages-materiel></div>
       <h4>Ordres d'entretien</h4>${tableauOrdres(ordres)}
       <h4>Journal</h4>
       <table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Type</th><th>Libellé</th><th>Compteur</th><th>Coût HT</th><th></th><th>Origine</th><th></th></tr></thead><tbody>
@@ -195,6 +197,14 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.querySelectorAll('[data-retirer-evenement]').forEach((b) => b.addEventListener('click', async () => {
       if (await confirmer('Supprimer cet événement et son relevé ?')) await appliquer(api.ressources.supprimerEvenement(materiel, b.dataset.retirerEvenement), 'Événement supprimé');
     }));
+    // Heures pointées sur le terrain (lot 7) : section affichée seulement s'il y en a.
+    api.ressources.pointagesMateriel(materiel).then((p) => {
+      const z = corps.querySelector('[data-pointages-materiel]');
+      if (z && p.length) {
+        z.innerHTML = `<h4>Heures pointées sur le terrain</h4><table class="tableau-compact"><thead><tr><th>Date</th><th>Chantier</th><th>Conducteur</th><th class="nombre">Durée</th><th>Commentaire</th></tr></thead>
+          <tbody>${p.map((x) => `<tr><td>${jour(x.date)}</td><td>${echapper(x.chantier ?? '')}</td><td>${echapper(x.salarie ?? '')}</td><td class="nombre">${ecrireDuree(x.minutes)}</td><td>${echapper(x.commentaire ?? '')}</td></tr>`).join('')}</tbody></table>`;
+      }
+    }).catch(() => {});
     rendrePlansMateriel(corps.querySelector('[data-plans]'), {
       app, materiel, surOrdre: async () => { ordres = await api.ressources.ordresEntretien(materiel).catch(() => ordres); rendre(); },
     }).then((l) => { plans = l; }).catch((e) => app.erreur(e));

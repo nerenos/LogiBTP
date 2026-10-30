@@ -67,6 +67,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("pointage/bornes", "Bornes d'atelier", Simple, Aide: "Appareils, PIN, paramétrage des bornes"),
             new("planning", "Planning", Simple, Icone: "📆"),
             new("terrain", "Application de terrain", [ActionsDroits.Consulter], Icone: "📱", Aide: "Ses tâches du planning, leur adresse, leur contact et les pièces diffusées sur le terrain"),
+            new("terrain/livraison", "Réception de livraison sur le terrain", [ActionsDroits.Creer], Aide: "Bon de livraison en brouillon depuis une commande du chantier, validé au bureau"),
             new("mail", "Messagerie", Simple, Icone: "📧"),
             new("connexions", "Connexions externes (OAuth)", Simple, Icone: "🔐"),
             new("administration", "Administration", Lecture, Icone: "⚙"),
@@ -156,6 +157,8 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // SAV du terrain : droit à part, refusé par défaut (T20).
         new("/api/terrain/sav", ModeRoute.Module, "execution/sav"),
+        // Livraison : chantiers de son planning (contrôlé par la route), bon brouillon créé par le serveur.
+        new("/api/terrain/livraisons", ModeRoute.Action, "terrain/livraison", ActionsDroits.Creer),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];

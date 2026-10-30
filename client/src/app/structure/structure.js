@@ -92,6 +92,7 @@ export function creerFournisseurStructure() {
     documentMarche: (marche, type) => api.documentMarche(marche, type),
     // Onglet Gestion du marché : lecture, facturation d'une situation, révision, annulation par avoir.
     gestion: (marche) => api.gestionMarche(marche),
+    avancementReel: (marche) => api.liaisons.avancementMarche(marche),
     // Postes de pied du marché (pied global des factures, modèle de pied des commandes).
     postes: (marche) => api.postesMarche(marche),
     acomptes: (marche) => api.acomptesMarche(marche),

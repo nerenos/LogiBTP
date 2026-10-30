@@ -185,6 +185,7 @@ db/242_terrain.sql
 db/243_terrain_pointage.sql
 db/244_terrain_reception.sql
 db/245_terrain_sav.sql
+db/246_terrain_complements.sql
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

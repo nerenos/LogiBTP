@@ -1,6 +1,6 @@
 import { urlDocument, urlFiche, TYPE_FICHE, TYPE_POSTE_MARCHE, TYPE_DOCUMENT, MODULE_FACULTATIF } from '../codes.js';
 import { MODES } from '@logibtp/fiche';
-import { echapper, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
+import { echapper, formatDate, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
 import { D, Dz, aujourdhui } from '@logibtp/socle';
@@ -447,6 +447,22 @@ export class FicheMarche extends FicheStructure {
    * net à payer, annulés masqués et réaffichables ; totaux), factures des sous-traitants en paiement direct (facture du
    * marché liée ; totaux), acomptes, postes de pied.
    */
+  /** Avancement réel des tâches du chantier (terrain, T12) comparé à l'avancement situé, sous le récapitulatif. */
+  async rendreAvancementReel(corps, situe) {
+    let a;
+    try { a = await this.services.structure.avancementReel(Number(this.id)); } catch { return; }
+    if (!a.taches.length) return;
+    const bloc = document.createElement('details');
+    bloc.className = 'groupe-gestion';
+    const n = (v) => (v == null ? '–' : `${formatNombre(v, 1).replace(/,0$/, '')} %`);
+    bloc.innerHTML = `<summary><h3>Avancement réel et situations</h3></summary>
+      <p>Réel sur le chantier : <b>${n(a.reel)}</b>${a.dernier ? ` (dernier relevé le ${formatDate(a.dernier)})` : ''} · situé : <b>${situe || '–'}</b>
+        <span class="aide">Réel = moyenne des tâches pondérée par leurs heures ; un chantier à plusieurs marchés compte toutes ses tâches.</span></p>
+      <table class="tableau-gestion"><thead><tr><th>Tâche</th><th class="nombre">Heures</th><th class="nombre">Réel</th><th>Relevé</th></tr></thead>
+      <tbody>${a.taches.map((t) => `<tr><td>${echapper(t.libelle)}</td><td class="nombre">${formatNombre(t.heures, 1)}</td><td class="nombre">${n(t.pourcent)}</td><td>${t.le ? formatDate(t.le) : ''}</td></tr>`).join('')}</tbody></table>`;
+    corps.querySelector('[data-groupe="recapitulatif"]')?.after(bloc);
+  }
+
   async rendreGestion(corps) {
     if (this.id === null) { corps.innerHTML = '<p class="aide">Enregistrez la fiche pour gérer le marché.</p>'; return; }
     if (!this.services.structure.gestion) { corps.innerHTML = '<p class="aide">Gestion du marché disponible en ligne seulement.</p>'; return; }
@@ -548,6 +564,7 @@ export class FicheMarche extends FicheStructure {
     this.rendreAcomptes(corps.querySelector('[data-acomptes]'), corps);
     this.rendrePostes(corps.querySelector('[data-postes]'));
     const recharger = () => this.rendreGestion(corps);
+    if (this.moduleActif(MODULE_FACULTATIF.PLANNING)) this.rendreAvancementReel(corps, pct(total('situe_ht'), total('travaux_ht')));
     const action = (fn) => async (e) => {
       try { await fn(Number(e.currentTarget.dataset.facturer ?? e.currentTarget.dataset.reviser ?? e.currentTarget.dataset.annuler), e); await recharger(); } catch (x) { this.message(x.message, 'erreur'); }
     };

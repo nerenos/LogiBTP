@@ -8,6 +8,7 @@ import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
 import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { SavTerrain } from '../terrain/sav-terrain.js';
+import { recevoirLivraison, pointerMateriel } from '../terrain/complements-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
 import { fournisseurEtapes } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
@@ -52,7 +53,8 @@ export class PageTerrain extends PageBase {
       <div data-attentes></div>
       <div class="terrain-liste" data-liste></div>
       <details class="terrain-reglages"><summary>⚙ Itinéraire</summary><p class="ligne">Application de navigation <span data-navigation></span></p>
-        <p class="aide">L'itinéraire s'ouvre dans l'application choisie ; aucune position n'est enregistrée.</p></details>
+        <p class="aide">L'itinéraire s'ouvre dans l'application choisie ; aucune position n'est enregistrée.</p>
+        <label class="coche"><input type="checkbox" data-presaisie> Présaisir mes heures (journée vide : heures du calendrier réparties sur mes tâches, à vérifier avant d'enregistrer)</label></details>
     </div>`;
     const $ = (s) => this.conteneur.querySelector(s);
     // Changement d'onglet ou de jour : une journée pointée non enregistrée est d'abord confirmée.
@@ -66,6 +68,8 @@ export class PageTerrain extends PageBase {
     const nav = creerCombo({ options: Object.entries(NAVIGATIONS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.#navigation(), vide: false });
     nav.addEventListener('change', () => { ecrirePreferences({ terrainNavigation: nav.valeurCombo }); this.#rendre(); });
     $('[data-navigation]').append(nav);
+    $('[data-presaisie]').checked = Boolean(lirePreferences().terrainPresaisie);
+    $('[data-presaisie]').addEventListener('change', (e) => ecrirePreferences({ terrainPresaisie: e.target.checked }));
     // Actions d'une carte de tâche (avancement, photos, non-conformité).
     $('[data-liste]').addEventListener('click', async (e) => {
       const b = e.target.closest('[data-action-tache]');
@@ -76,6 +80,8 @@ export class PageTerrain extends PageBase {
       else if (b.dataset.actionTache === 'photos') await envoyerPhotos(this.app, t);
       else if (b.dataset.actionTache === 'nc') await signalerNonConformite(this.app, t, this.donnees.motifs ?? []);
       else if (b.dataset.actionTache === 'demande') await demanderApprovisionnement(this.app, t);
+      else if (b.dataset.actionTache === 'livraison') await recevoirLivraison(this.app, t);
+      else if (b.dataset.actionTache === 'materiel') await pointerMateriel(this.app, t);
       else if (b.dataset.actionTache === 'reception') this.app.naviguer(`/terrain/reception/${t.ordre.id}`);
     });
     this.desabonner = this.app.abonner(SUJET_ATTENTE, () => this.#rendreAttentes());
@@ -205,7 +211,8 @@ export class PageTerrain extends PageBase {
       liens.length && `<ul class="terrain-liens">${liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" target="_blank" rel="noopener noreferrer">🔗 ${echapper(l.libelle)}</a>` : echapper(l.texte)}</li>`).join('')}</ul>`,
       t.equipiers.length && `<p>👥 ${t.equipiers.map(echapper).join(', ')}</p>`,
       t.memo && `<p class="aide">${echapper(t.memo)}</p>`,
-      t.chantier && `<div class="terrain-actions">${[['avancement', '📈 Avancement'], ['photos', '📷 Photos'], ['nc', '⚠ Non-conformité'], ['demande', '📦 Demande'],
+      t.chantier && `<div class="terrain-actions">${[['avancement', '📈 Avancement'], ['photos', '📷 Photos'], ['nc', '⚠ Non-conformité'], ['demande', '📦 Demande'], ['materiel', '🚜 Matériel'],
+        ...(this.app.peut('terrain/livraison', ACTION_DROIT.CREER) ? [['livraison', '🚚 Livraison']] : []),
         ...(t.ordre?.type === TYPE_DOCUMENT.E_PO ? [['reception', '✍ Réception']] : [])]
         .map(([a, l]) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}">${l}</button>`).join('')}</div>`,
       t.pieces.length && `<div class="terrain-pieces"><b>Pièces</b>${t.pieces.map((p) => `<a class="terrain-piece" href="${echapper(api.terrain.urlPiece(p.id))}" target="_blank" rel="noopener">

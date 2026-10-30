@@ -190,13 +190,10 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] **Lot 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), lots 1 à 6 réalisés) : présaisie des heures,
-  réception de livraison simplifiée, pointage des matériels, avancement comparé aux situations.
 - [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
   bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
-- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8) ; option de
-  présaisie des heures (T7).
-- [ ] Lot 3, suites : comparaison de l'avancement réel aux situations de travaux (second temps) ; photos HEIC converties
+- [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8).
+- [ ] Lot 3, suites : photos HEIC converties
   (le navigateur ne sait pas les réduire).
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
@@ -204,6 +201,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
   seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
   gardée hors ligne horodatée à l'envoi par le serveur.
+- [ ] Lot 7, suites : bibliothèque simplifiée sur le terrain (T18) ; heures de matériel non valorisées dans le coût du
+  chantier (aucun coût horaire du matériel) ; pointage et relevés de matériel à la borne ; réception d'une commande à options
+  ou variantes (refusée) ; avancement réel par marché quand un chantier en porte plusieurs (aujourd'hui : tout le chantier).
 - [ ] Lot 6, suites : temps et fournitures du bon de SAV non repris dans la facture (facture = transformation au bureau) ;
   création d'une intervention impossible hors ligne ; chantier « Entretien et dépannage » créé sans passer par le chrono
   des chantiers (code `SAV-<client>`) ; contrats d'entretien (Exécution, second temps).
