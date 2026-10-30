@@ -536,7 +536,41 @@ const MARCHES_ST = [
   ] }),
 ];
 
-export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST];
+// Application de terrain, lot 5 (ANALYSE-TERRAIN.md T14, T15) : procès-verbal de réception d'un ordre de pose, signé
+// sur le terrain ; source annexe reception_pose (dernière réception de l'ordre), image SIGNATURE_RECEPTION fournie par
+// le serveur depuis la table signature (EditionsBtp.CodeSignatureReception).
+const PV = 'sources.reception_pose';
+const RECEPTIONS = [{
+  code: 'PV_RECEPTION', libelle: 'Procès-verbal de réception de pose', genre: 'RAPPORT', cible: 'DOCUMENT', source: 'document', types: ['E_PO'], ordre: 95,
+  contenu: {
+    format_version: 1, code: 'PV_RECEPTION', libelle: 'Procès-verbal de réception de pose', cible: 'DOCUMENT', source: 'document',
+    page: { format: 'A4', orientation: 'portrait', marges: { haut: 10, bas: 10, gauche: 12, droite: 12 } },
+    sources_annexes: ['reception_pose'],
+    bandes: [
+      { type: 'PIED_PAGE', contenu: bloc('PIED_VENTES_ACHATS') },
+      { type: 'TITRE', nom: 'entete', contenu: { type: 'pile', espacement: 4, enfants: [
+        bloc('ENTETE_SOCIETE'), bloc('COORDONNEES_DOCUMENT', { titre: 'Procès-verbal de réception', libelle_adresse: 'Adresse des travaux' }),
+      ] } },
+      { type: 'CORPS', nom: 'reception', contenu: { type: 'pile', espacement: 3, enfants: [
+        champ('Décision', { style: 'section', fond: 'fond_section', marges: 1 }),
+        champ(`=Si(${PV}.etat = "SANS_RESERVE"; "La réception des travaux est prononcée sans réserve."; Si(${PV}.etat = "AVEC_RESERVES"; "La réception des travaux est prononcée avec les réserves ci-dessous."; "La réception des travaux est refusée."))`, { style: 'gras' }),
+        retrait('Date de réception', `Date(${PV}.date; "long")`, `${PV}.date`),
+        champ('Réserves', { style: 'section', fond: 'fond_section', marges: 1, condition: `${PV}.etat = "AVEC_RESERVES"` }),
+        { type: 'repete', collection: `${PV}.reserves`, condition: `${PV}.etat = "AVEC_RESERVES"`, contenu: champ('="• " & element') },
+        retrait('Motif du refus', `${PV}.motif`, `${PV}.etat = "REFUSEE"`),
+        { type: 'pile', espacement: 1, secable: false, marges: { haut: 6 }, enfants: [
+          champ('Le client ou son représentant', { style: 'gras' }),
+          champ(`=Joindre(" – "; ${PV}.signataire; ${PV}.qualite)`),
+          champ(`="Signé sur le chantier le " & ${PV}.signe_le`, { style: 'discret', condition: `${PV}.signe` }),
+          { type: 'image', ressource: 'SIGNATURE_RECEPTION', hauteur: 30, largeur: '70mm', condition: `${PV}.signe` },
+          champ('Signature numérique simple : image tracée sur l’écran, horodatée par le serveur ; l’empreinte du présent document est conservée.', { style: 'petit' }),
+        ] },
+      ] } },
+    ],
+  },
+}];
+
+export const MODELES_EDITION = [...BLOCS, ...SOUS_RAPPORTS, ...RAPPORTS, ...AUTRES, ...MARCHES_ST, ...RECEPTIONS];
 
 /** Modèle par défaut de chaque type de document (Q12 : un modèle par type). */
 export const DEFAUTS_EDITION = [

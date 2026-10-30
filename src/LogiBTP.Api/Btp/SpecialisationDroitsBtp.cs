@@ -149,6 +149,10 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         // Étapes, avancement, non-conformités et photos : sur ses ordres et ses tâches seulement (contrôlé par la route).
         new("/api/terrain/etapes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/terrain/taches", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        // Réception de pose et demande d'approvisionnement : ordres et chantiers de son planning (contrôlé par la route ;
+        // la demande crée un ordre E_DAP sous le droit CREER de son type).
+        new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];

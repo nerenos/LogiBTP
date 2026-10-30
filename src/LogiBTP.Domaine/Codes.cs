@@ -37,6 +37,8 @@ public static class TypesDocument
     public const string TCommande = "T_COMMANDE";
     public const string TFactureAvt = "T_FACTURE_AVT";
     public const string EOe = "E_OE";
+    public const string EPo = "E_PO";
+    public const string EDap = "E_DAP";
     public const string EOst = "E_OST";
     public const string EDac = "E_DAC";
     public const string EEnt = "E_ENT";
@@ -89,4 +91,6 @@ public static class CategoriesGed
     public const string Edition = "edition";
     public const string RessourceEdition = "ressource_edition";
     public const string Mail = "mail";
+    public const string PvReception = "pv_reception";
+    public const string Photo = "photo";
 }

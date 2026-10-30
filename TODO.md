@@ -190,7 +190,7 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] **Lots 5 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lots 1 à 4 réalisés) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
+- [ ] **Lots 6 et 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lots 1 à 5 réalisés) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
   leur partie mobile `tac_mobile`, navigation, pointage sur la tâche `poi_tac_id`, chef d'équipe, saisie libre solo ou
   en équipe, étapes des ordres de pose, avancement réel, NC et photos, hors ligne, PV de réception signé, SAV sur
   droit). Plus tard : option de présaisie des heures (T7). Reprend les lots 5 et 6 du Pointage, la partie mobile des tâches et
@@ -204,6 +204,9 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
   recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
   l'envoi (limite de dépôt de la GED).
+- [ ] Lot 5, suites : valeur juridique de la signature simple à faire confirmer ; levée des réserves suivie (tâche du CRM
+  seulement) ; demande d'approvisionnement en texte libre (articles de la bibliothèque à choisir plus tard) ; réception
+  gardée hors ligne horodatée à l'envoi par le serveur.
 
 ### Import
 

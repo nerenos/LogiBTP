@@ -124,6 +124,13 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
         var pool = services.GetRequiredService<PoolMoteursEdition>();
         foreach (var code in codes)
         {
+            // Signature de la réception de pose : image de la table signature, pas une ressource de la GED.
+            if (code == CodeSignatureReception)
+            {
+                if (donnees["sources"]?["reception_pose"]?["signature_id"] is JsonValue sv && sv.TryGetValue<long>(out var sigId)
+                    && await SignatureAsync(services.GetRequiredService<LogiBtpContext>(), pool, sigId, ct) is { } sig) res[code] = sig;
+                continue;
+            }
             var doc = candidats.FirstOrDefault(x => x.DgeMotsCles.Any(m => string.Equals(m, code, StringComparison.OrdinalIgnoreCase))
                 || string.Equals(x.DgeTitre, code, StringComparison.OrdinalIgnoreCase));
             if (doc is null) continue;
@@ -136,6 +143,19 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                 info["hauteur"]!.GetValue<int>(), info["dpi"]?.GetValue<int?>(), info["orientation"]?.GetValue<int?>());
         }
         return res;
+    }
+
+    /// <summary>Code de la ressource image de la signature d'une réception de pose (modèle PV_RECEPTION).</summary>
+    public const string CodeSignatureReception = "SIGNATURE_RECEPTION";
+
+    private static async Task<RessourceEdition?> SignatureAsync(LogiBtpContext db, PoolMoteursEdition pool, long id, CancellationToken ct)
+    {
+        var octets = await db.Database.SqlQueryRaw<byte[]>("SELECT sig_image AS \"Value\" FROM signature WHERE sig_id = @s", new NpgsqlParameter("s", id)).FirstOrDefaultAsync(ct);
+        if (octets is null || octets.Length == 0) return null;
+        var info = JsonNode.Parse(await pool.ExecuterAsync(m => m.LireImage(octets), ct))!;
+        if (info["erreur"] is not null) return null;
+        return new RessourceEdition(info["type"]!.GetValue<string>(), Convert.ToBase64String(octets), info["largeur"]!.GetValue<int>(),
+            info["hauteur"]!.GetValue<int>(), info["dpi"]?.GetValue<int?>(), info["orientation"]?.GetValue<int?>());
     }
 
     /// <summary>Image importée avec un modèle : déposée en GED (catégorie ressource_edition, code en mot-clé, sans élément).</summary>
@@ -195,6 +215,14 @@ public sealed class SpecialisationEditionBtp : SpecialisationEdition
                 JOIN type_document t ON t.tyd_id = d.ent_tyd_id JOIN statut_document s ON s.std_id = d.ent_std_id
                 WHERE cur.ent_id = @id AND t.tyd_avancement IN ('S', 'F') AND d.ent_verrouille AND s.std_code NOT IN ({SqlBtp.HorsVigueur})
                   AND d.ent_is_reference AND (d.ent_date, d.ent_id) < (cur.ent_date, cur.ent_id)
+                """,
+            // Réception de pose (application de terrain, lot 5) : dernière réception de l'ordre, réserves, signataire.
+            "reception_pose" => """
+                SELECT json_build_object('id', r.rec_id, 'date', r.rec_le, 'etat', r.rec_etat, 'reserves', r.rec_reserves, 'motif', r.rec_motif,
+                         'signataire', s.sig_nom, 'qualite', s.sig_qualite, 'signe_le', to_char(s.sig_le AT TIME ZONE 'Europe/Paris', 'DD/MM/YYYY HH24:MI'),
+                         'signe', s.sig_image IS NOT NULL, 'signature_id', s.sig_id, 'par', r.rec_cree_par)::text AS "Value"
+                FROM reception_pose r LEFT JOIN signature s ON s.sig_id = r.rec_sig_id
+                WHERE r.rec_ent_id = @id ORDER BY r.rec_id DESC LIMIT 1
                 """,
             _ => null,
         };

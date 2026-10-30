@@ -11,7 +11,7 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 /** Types d'opérations du terrain. */
 export const OPERATION_TERRAIN = Object.freeze({
   JOURNEE: 'terrain-journee', AVANCEMENT: 'terrain-avancement', NON_CONFORMITE: 'terrain-nc', PHOTOS: 'terrain-photos',
-  ETAPE: 'terrain-etape', REPAS: 'terrain-repas',
+  ETAPE: 'terrain-etape', REPAS: 'terrain-repas', RECEPTION: 'terrain-reception', DEMANDE: 'terrain-demande',
 });
 
 /** Formulaire d'envoi de photos gardées ({ fichiers: [File], commentaire }). */
@@ -34,6 +34,14 @@ declarerOperation(OPERATION_TERRAIN.NON_CONFORMITE, {
   },
 });
 declarerOperation(OPERATION_TERRAIN.PHOTOS, { envoyer: (c) => api.terrain.photos(c.tache, formulairePhotos(c.photos)) });
+// Réception signée hors ligne : signature gardée en image ; horodatage du serveur à l'envoi (date de réception saisie gardée).
+declarerOperation(OPERATION_TERRAIN.RECEPTION, { envoyer: (c) => api.terrain.enregistrerReception(c.ordre, c.reception) });
+declarerOperation(OPERATION_TERRAIN.DEMANDE, {
+  envoyer: async (c) => {
+    await api.terrain.demande(c.demande);
+    if (c.photos?.fichiers?.length && c.tache) await api.terrain.photos(c.tache, formulairePhotos(c.photos));
+  },
+});
 declarerOperation(OPERATION_TERRAIN.ETAPE, { envoyer: (c) => api.terrain.validerEtape(c.ent_id, c.code) });
 declarerOperation(OPERATION_TERRAIN.REPAS, { envoyer: (c) => api.pointage.enregistrerRepas(c.salarie, c.repas) });
 

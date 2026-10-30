@@ -1001,3 +1001,11 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .terrain-enregistrer button { width: 100%; min-height: 48px; font-size: 1.05rem; }
 .terrain-champs > label > span, .terrain-champs input.combo, .terrain-champs input { width: 100%; min-width: 0; box-sizing: border-box; }
 .terrain-champs > label { min-width: 0; }
+/* Application de terrain, lot 5 : réception de pose signée (pages/terrain-reception.js). */
+.terrain-champ { display: flex; flex-direction: column; gap: 0.2rem; margin: 0.5rem 0; }
+.terrain-champ[hidden] { display: none; }
+.terrain-champ textarea, .terrain-champ input { width: 100%; box-sizing: border-box; font-size: 1rem; min-height: 40px; }
+[data-reception] .terrain-onglets { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; margin-top: 0.75rem; }
+[data-reception] .terrain-champs input { min-height: 40px; font-size: 1rem; }
+.terrain-historique { margin: 0.5rem 0; }
+.terrain-historique ul { margin: 0.25rem 0; padding-left: 1.2rem; }

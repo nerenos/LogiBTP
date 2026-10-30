@@ -170,6 +170,10 @@ export const api = {
     enregistrerAvancement: (tache, a) => appel('POST', `/terrain/taches/${tache}/avancement`, a),
     nonConformite: (tache, n) => appel('POST', `/terrain/taches/${tache}/non-conformite`, n),
     photos: (tache, formulaire) => appel('POST', `/terrain/taches/${tache}/photos`, formulaire),
+    reception: (ordre) => appel('GET', `/terrain/receptions/${ordre}`),
+    enregistrerReception: (ordre, r) => appel('POST', `/terrain/receptions/${ordre}`, r),
+    urlPv: (ordre, reception) => `/api/terrain/receptions/${ordre}/pv/${reception}`,
+    demande: (d) => appel('POST', '/terrain/demandes', d),
     urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
   },
   planning: {

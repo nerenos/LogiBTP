@@ -102,6 +102,9 @@
   avancement réel daté des tâches, non-conformité et photos (galerie, réduction au choix) depuis la carte d'une tâche.
 - [x] **Lot 4** (31/10/2026) : saisie sans réseau (journée, repas, avancement, photos, non-conformité, étapes gardés sur
   l'appareil et envoyés au retour), refus affichés avec Réessayer / Abandonner, deux semaines préchargées.
+- [x] **Lot 5** (31/10/2026) : réception de pose signée sur l'écran (`/terrain/reception/:id` : sans réserve, avec
+  réserves, refus), PV édité et rangé dans la GED de l'ordre avec son empreinte, réserves au CRM, ordre bloqué au refus,
+  PV envoyé au client par courriel ; demande d'approvisionnement depuis une tâche ; pad de signature du socle.
 
 ### Import
 

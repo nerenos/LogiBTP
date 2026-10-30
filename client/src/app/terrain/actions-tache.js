@@ -8,6 +8,7 @@ import { estHorsLigne } from '../hors-ligne/attente.js';
 // Application de terrain, lot 3 (ANALYSE-TERRAIN.md, T12, T17) : actions sur une tâche depuis sa carte — avancement
 // réel du jour, photos (prise de vue ou lot de la galerie, réduites sauf « qualité d'origine »), non-conformité
 // (motif proposé ou libre, photos jointes). Serveur : TerrainOrdresBtp.cs (tâche de la personne seulement).
+// Lot 5 : demande d'approvisionnement (E_DAP) sur le chantier de la tâche.
 // Lot 4 : serveur injoignable, la saisie est gardée sur l'appareil (photos déjà réduites) et envoyée au retour.
 
 /** Sélecteur de photos (prise de vue, galerie en lot), case « qualité d'origine » ; `photos()` : fichiers choisis. */
@@ -113,6 +114,39 @@ export async function signalerNonConformite(app, tache, motifs = []) {
             return rep;
           });
           if (r.reponse) app.message(r.reponse.crm ? 'Non-conformité signalée au service concerné' : 'Non-conformité enregistrée (suivi CRM inactif : aucune tâche créée)', r.reponse.crm ? 'succes' : 'avertissement');
+          fermer(true);
+        } catch (e) { app.erreur(e); }
+      });
+    },
+  });
+}
+
+/**
+ * Demande d'approvisionnement (E_DAP, lot 5) depuis une tâche : articles demandés (un par ligne), commentaire, photos
+ * jointes (GED de la tâche). Le serveur crée la demande sur le chantier de la tâche ; vrai si envoyée.
+ */
+export async function demanderApprovisionnement(app, tache) {
+  return ouvrirDialogue({
+    titre: `📦 Demande d'approvisionnement · ${tache.libelle}`,
+    html: `<p><label>Articles demandés (un par ligne, quantité comprise)<br><textarea data-articles rows="5" cols="34" placeholder="20 sacs de colle C2&#10;1 rouleau de bande"></textarea></label></p>
+      <p><label>Commentaire (date souhaitée, lieu de livraison…)<br><textarea data-commentaire rows="2" cols="34"></textarea></label></p>
+      <details><summary>📷 Joindre des photos</summary><div data-photos></div></details>`,
+    boutons: [{ libelle: 'Annuler', valeur: false }],
+    construire: (dlg, fermer) => {
+      const s = selecteurPhotos(dlg.querySelector('[data-photos]'));
+      boutonPrincipal(dlg, 'Envoyer la demande', async () => {
+        const articles = dlg.querySelector('[data-articles]').value.split('\n').map((x) => x.trim()).filter(Boolean);
+        if (!articles.length) { dlg.querySelector('[data-articles]').focus(); return; }
+        const demande = { cha_id: tache.chantier.id, ent_id: tache.ordre?.id ?? null, articles, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
+        try {
+          const photos = s.nombre ? await s.photos(`Demande d'approvisionnement : ${articles.join(', ')}`) : null;
+          const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.DEMANDE, id: Date.now(), corps: { demande, tache: tache.id, photos },
+            libelle: `Demande d'approvisionnement · ${tache.libelle}` }, async () => {
+            const rep = await api.terrain.demande(demande);
+            if (photos) await api.terrain.photos(tache.id, formulairePhotos(photos));
+            return rep;
+          });
+          if (r.reponse) app.message(`Demande ${r.reponse.numero ?? ''} envoyée`.replace('  ', ' '), 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });

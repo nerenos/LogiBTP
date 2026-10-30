@@ -25,7 +25,20 @@
 > d'opérations typées dans une base IndexedDB à part (`logibtp-operations`), envoyée par la même boucle, le même verrou
 > et la même pastille ⏳ que les documents ; préchargement une fois par jour à l'ouverture de « Mon terrain » ; pièces
 > « Terrain » gardées par le service worker jusqu'à 25 Mo ; journée envoyée avec les pointages connus de l'appareil
-> (`connus`) : un pointage ajouté ailleurs entre-temps n'est jamais retiré par une journée périmée (constaté à l'essai). Reprend les parties restées
+> (`connus`) : un pointage ajouté ailleurs entre-temps n'est jamais retiré par une journée périmée (constaté à l'essai).
+>
+> Lot 5 réalisé le 31/10/2026 (`Btp/TerrainReceptionBtp.cs`, `client/src/app/pages/terrain-reception.js`, pad de signature
+> `PadSignature` du socle, modèle d'édition `PV_RECEPTION`, `db/244`). Écarts : réception sur un ordre de pose (E_PO)
+> seulement, par une personne affectée à une tâche de l'ordre ou de ses étapes, ou ayant le droit de l'atelier ;
+> signature simple (image PNG tracée, horodatée par le serveur, table `signature` générique avec l'empreinte SHA-256 du
+> PV rangé dans la GED de l'ordre, catégorie `pv_reception`) ; refus : signature facultative, ordre bloqué au motif
+> RECEPTION_REFUSEE ; étape de code `RECEPTION` validée si l'ordre en a une ; réserves en une tâche du CRM au service
+> de l'ordre (CRM actif) ; courriel du PV par le module Mail, échec rendu en avertissement ; suites indépendantes (la
+> réception reste enregistrée) ; demande d'approvisionnement (E_DAP) en lignes de texte sur le chantier de la tâche
+> (adresse du chantier, photos dans la GED de la tâche) : droit `documents/E/E_DAP` CREER et MODIFIER donné aux
+> profils MOBILE et CHEF_EQUIPE ; hors ligne : réception (signature comprise) et demande gardées sur l'appareil.
+
+Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)
 > § 2.3 (partie mobile des tâches) et possibilité 10 (avancement réel), [Exécution](ANALYSE-MODULE-EXECUTION.md) lot 5
 > (signature) et E50 à E53 (étapes hors de l'atelier). Socle commun : [transverse](ANALYSE-MODULES-TRANSVERSE.md) § 6

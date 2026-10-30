@@ -33,6 +33,8 @@ export const TYPE_DOCUMENT = Object.freeze({
   T_COMMANDE: 'T_COMMANDE',
   T_FACTURE_AVT: 'T_FACTURE_AVT',
   E_OE: 'E_OE',
+  E_PO: 'E_PO',
+  E_DAP: 'E_DAP',
   E_OST: 'E_OST',
   E_DAC: 'E_DAC',
   E_ENT: 'E_ENT',

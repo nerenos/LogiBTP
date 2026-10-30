@@ -109,7 +109,7 @@ public static partial class TerrainBtp
             {
                 var d = await ged.DeposerFichier(f, new MetaDepot
                 {
-                    Titre = $"Photo · {t.Libelle} · {DateTime.Now:dd/MM/yyyy HH:mm}", Categorie = "photo", TypeElement = type, IdElement = element,
+                    Titre = $"Photo · {t.Libelle} · {DateTime.Now:dd/MM/yyyy HH:mm}", Categorie = CategoriesGed.Photo, TypeElement = type, IdElement = element,
                     Resume = string.IsNullOrWhiteSpace(commentaire) ? null : commentaire.Trim(),
                 }, u, ct);
                 deposees.Add(d.Id);

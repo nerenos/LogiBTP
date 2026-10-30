@@ -257,3 +257,9 @@ dialog.dialogue-plein:not([open]) { display: none; }
 /* Séparateur glissé (separateur.js) : curseur et sélection bloqués sur toute la page pendant le glisser. */
 body.redim-x, body.redim-x * { cursor: col-resize !important; user-select: none; }
 body.redim-y, body.redim-y * { cursor: row-resize !important; user-select: none; }
+
+/* Signature tracée sur l'écran (PadSignature) : cadre blanc même en thème sombre (l'image est rangée telle quelle). */
+.pad-signature { position: relative; border: 1px dashed var(--bord, #9aa4b2); border-radius: 8px; background: #fff; touch-action: none; }
+.pad-signature canvas { display: block; width: 100%; cursor: crosshair; touch-action: none; }
+.pad-signature-ligne { position: absolute; left: 8%; right: 8%; bottom: 28%; border-bottom: 1px solid #cbd5e1; pointer-events: none; }
+.pad-signature-effacer { position: absolute; top: 6px; right: 6px; min-height: 36px; }
