@@ -1,5 +1,6 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, THEMES } from '@logibtp/socle/ui';
+import { echapper, THEMES, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { MODES_REMISE } from '@logibtp/document/ui';
 import { DISPOSITION_MENU, LARGEUR_MENU } from '@logibtp/navigation/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
 
@@ -14,6 +15,7 @@ export class PageParametres extends PageBase {
     const parametresGed = await s.ged.parametres().catch(() => null);
     const societe = app.societe ?? {};
     const menu = app.bandeau.disposition;
+    const remisesPct = lirePreferences().remises === MODES_REMISE.POURCENTAGE;
     this.conteneur.innerHTML = `<div class="page-parametres">
       <h1 class="page-titre">⚙ Paramètres</h1>
       <section class="carte"><h2>Affichage</h2>
@@ -33,6 +35,12 @@ export class PageParametres extends PageBase {
         </div>
         <p class="aide">À gauche ou à droite : les menus se déplient en dessous de leur titre au clic, avec des lignes hautes pour le tactile ; la société,
           l'utilisateur et les notifications sont fixés en bas du menu. La largeur se règle aussi en glissant le bord du menu côté page.</p>
+        <h3>Remises des lignes de documents</h3>
+        <div class="ligne" role="radiogroup" aria-label="Remises">
+          <label class="ligne"><input type="radio" name="remises" value="${MODES_REMISE.COEFFICIENT}" ${remisesPct ? '' : 'checked'}> × En coefficient (0,95 = 5 %)</label>
+          <label class="ligne"><input type="radio" name="remises" value="${MODES_REMISE.POURCENTAGE}" ${remisesPct ? 'checked' : ''}> % En pourcentage (30 = 0,70)</label>
+        </div>
+        <p class="aide">Affichage et saisie de la colonne Remise ; le document garde le coefficient. Le bouton de l'entête de la colonne bascule aussi ce choix.</p>
       </section>
       <section class="carte"><h2>Raccourcis clavier</h2>
         <p class="aide">Toutes les fonctions qui acceptent un raccourci, avec leurs touches ; chaque raccourci se remplace (gardé dans ce navigateur).
@@ -73,7 +81,8 @@ export class PageParametres extends PageBase {
       </section>
     </div>`;
     this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
-    const optionsLateral = this.conteneur.querySelector('.options-menu-lateral');
+    this.conteneur.querySelectorAll('input[name="remises"]').forEach((r) => r.addEventListener('change', () => ecrirePreferences({ remises: r.value })));
+    const optionsLateral =this.conteneur.querySelector('.options-menu-lateral');
     this.conteneur.querySelectorAll('input[name="menu-mode"]').forEach((r) => r.addEventListener('change', () => {
       app.changerMenu({ mode: r.value });
       optionsLateral.hidden = r.value === DISPOSITION_MENU.HAUT;

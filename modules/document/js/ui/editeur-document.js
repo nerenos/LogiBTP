@@ -3,7 +3,7 @@ import {
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
   editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
 } from '@logibtp/socle/ui';
-import { Dz } from '@logibtp/socle';
+import { D, Dz, S, UN } from '@logibtp/socle';
 import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
@@ -21,6 +21,21 @@ export function lireDateSaisie(texte, aujourdhui = new Date()) {
   const d = new Date(Date.UTC(a, m - 1, j));
   if (d.getUTCFullYear() !== a || d.getUTCMonth() !== m - 1 || d.getUTCDate() !== j) return undefined;
   return d.toISOString().slice(0, 10);
+}
+
+/** Saisie et affichage des remises (préférence `remises` du navigateur) : coefficient (0,95) ou pourcentage (5 %). */
+export const MODES_REMISE = Object.freeze({ COEFFICIENT: 'coefficient', POURCENTAGE: 'pourcentage' });
+
+/** Remise en % d'un coefficient (0,95 → '5'), en décimal exact ; null si vide. */
+export function pctDepuisCoef(coefficient) {
+  const c = D(coefficient);
+  return c === null ? null : S(UN.minus(c).times(100));
+}
+
+/** Coefficient d'une remise en % (30 → '0.7'), en décimal exact ; null si vide. */
+export function coefDepuisPct(pct) {
+  const p = D(pct);
+  return p === null ? null : S(UN.minus(p.div(100)));
 }
 
 /** Date ISO affichée JJ/MM/AAAA. */
@@ -157,6 +172,7 @@ export class EditeurDocument {
     this.libellesUneLigne = (this.transforme ? preferences.libellesTransformes ?? 'ligne' : preferences.libelles) === 'ligne';
     conteneur.classList.toggle('libelles-une-ligne', this.libellesUneLigne);
     conteneur.classList.toggle('document-transforme', this.transforme);
+    this.remisesPct = preferences.remises === MODES_REMISE.POURCENTAGE;
     this.magasin = new Magasin(saisie, {
       recalculer: (s) => this.figerResultat(this.calculer(this.entree(s)), s),
       identifiants: (s, r) => this.identifiants(s, r),
@@ -909,6 +925,37 @@ export class EditeurDocument {
     };
   }
 
+  /**
+   * Colonne Remise : coefficient (0,95) ou pourcentage (5 %) selon la préférence de l'utilisateur, basculée par le bouton
+   * de l'entête ; la valeur enregistrée reste le coefficient `lig_coef_remise` (`versValeur` convertit la saisie en %).
+   */
+  colonneRemise(editable) {
+    const pct = () => this.remisesPct;
+    return {
+      cle: 'remise', titre: 'Remise', classe: 'col-coef', editeur: 'nombre', editable, champ: () => 'lig_coef_remise',
+      lire: (l) => formatLibre(pct() ? pctDepuisCoef(l.lig_coef_remise) : l.lig_coef_remise),
+      versValeur: (v) => (pct() ? coefDepuisPct(v) : v),
+      valeur: (r) => {
+        const c = r.calcule;
+        if (!estChiffree(c) || Number(c.lig_coef_remise ?? 1) === 1) return '';
+        if (!pct()) return this.coefAffiche(c.lig_coef_remise, 1);
+        const s = document.createElement('span');
+        s.className = Number(c.lig_coef_remise) < 1 ? 'coef-bas' : 'coef-ok';
+        s.textContent = `${formatLibre(pctDepuisCoef(c.lig_coef_remise), 4)} %`;
+        s.title = `Coefficient ${formatLibre(c.lig_coef_remise, 6)}`;
+        return s;
+      },
+      enteteBouton: {
+        texte: () => (pct() ? '%' : '×'),
+        titre: () => (pct() ? 'Remises en % : afficher et saisir en coefficient (0,95 = 5 %)' : 'Remises en coefficient : afficher et saisir en % (5 % = 0,95)'),
+        clic: () => {
+          this.remisesPct = !this.remisesPct;
+          ecrirePreferences({ remises: this.remisesPct ? MODES_REMISE.POURCENTAGE : MODES_REMISE.COEFFICIENT });
+        },
+      },
+    };
+  }
+
   colonnes() {
     const saisissable = (l) => this.saisissable(l);
     const chiffree = (l) => saisissable(l) && estChiffree(l);
@@ -995,10 +1042,7 @@ export class EditeurDocument {
         cle: 'pv', titre: 'PV', classe: 'col-nombre', ...this.colonneNombre('lig_pv', (l) => chiffree(l) && !this.estCompose(l)),
         valeur: (r) => this.baseAffichee(r.calcule) ?? (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv, r.calcule.lig_precision_pv ?? 2) : ''),
       },
-      {
-        cle: 'remise', titre: 'Remise', classe: 'col-coef', ...this.colonneNombre('lig_coef_remise', chiffree),
-        valeur: (r) => (estChiffree(r.calcule) && Number(r.calcule.lig_coef_remise) !== 1 ? this.coefAffiche(r.calcule.lig_coef_remise, 1) : ''),
-      },
+      this.colonneRemise(chiffree),
       {
         cle: 'pvnet', titre: 'PV net', classe: 'col-nombre', editable: () => false,
         valeur: (r) => (estChiffree(r.calcule) ? formatNombre(r.calcule.lig_pv_remise, r.calcule.lig_precision_pv ?? 2) : ''),
@@ -1326,6 +1370,7 @@ export class EditeurDocument {
     if (colonne.editeur === 'nombre') {
       valeur = lireNombre(texte);
       if (valeur === undefined) { this.surMessage?.('Nombre invalide'); return false; }
+      if (colonne.versValeur) valeur = colonne.versValeur(valeur);
     }
     if (champ === 'lig_tyl_id') {
       const type = Number(texte);
