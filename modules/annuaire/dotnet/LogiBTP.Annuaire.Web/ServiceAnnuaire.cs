@@ -283,10 +283,17 @@ public partial class ServiceAnnuaire(AnnuaireDbContext db, SpecialisationAnnuair
                     UcoId = u.UcoId, CooId = c.CooId, Nature = c.CooNature, Usage = u.UcoUsage, Libelle = u.UcoLibelle, Principal = u.UcoPrincipal,
                     Ligne1 = v.GetValueOrDefault("ligne1"), Ligne2 = v.GetValueOrDefault("ligne2"), Ligne3 = v.GetValueOrDefault("ligne3"),
                     CodePostal = v.GetValueOrDefault("code_postal"), Ville = v.GetValueOrDefault("ville"), Pays = v.GetValueOrDefault("pays"),
-                    Valeur = v.GetValueOrDefault("valeur"), Reseau = v.GetValueOrDefault("reseau"), Origine = v, Maj = c.CooModifieLe, Partages = partages,
+                    Valeur = v.GetValueOrDefault("valeur"), Reseau = v.GetValueOrDefault("reseau"), Origine = v, Maj = c.CooModifieLe,
+                    NonRemisLe = c.CooNonRemisLe, NonRemisMotif = c.CooNonRemisMotif, Partages = partages,
                 };
             }).ToList());
     }
+
+    /// <summary>Efface la marque « non remise » d'une coordonnée (adresse vérifiée).</summary>
+    public virtual Task EffacerNonRemise(long cooId, Utilisateur u, CancellationToken ct) =>
+        db.Coordonnees.Where(c => c.CooId == cooId).ExecuteUpdateAsync(s => s
+            .SetProperty(c => c.CooNonRemisLe, (DateTimeOffset?)null).SetProperty(c => c.CooNonRemisMotif, (string?)null)
+            .SetProperty(c => c.CooModifiePar, u.Code), ct);
 
     /// <summary>Coordonnées des fiches liées, à reprendre avec le même identifiant (mêmes sources que la démo).</summary>
     public virtual async Task<List<UsageDto>> CoordonneesProposees(string type, long? id, CancellationToken ct)

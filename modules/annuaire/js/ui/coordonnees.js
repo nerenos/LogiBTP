@@ -1,4 +1,4 @@
-import { echapper, ouvrirModale, formatDateHeure } from '@logibtp/socle/ui';
+import { echapper, ouvrirModale, formatDateHeure, confirmer } from '@logibtp/socle/ui';
 import { NATURES, RESEAUX, texteCoordonnee, memesValeurs, estVide } from '../src/coordonnees.js';
 import { formaterTelephone } from '../src/identifiants.js';
 
@@ -62,6 +62,19 @@ export class EditeurCoordonnees {
   }
 
   #etat(u) {
+    return `${this.#nonRemise(u)}${this.#partage(u)}`;
+  }
+
+  /** Adresse signalée non remise par la messagerie : effaçable une fois vérifiée, retirée si la valeur change. */
+  #nonRemise(u) {
+    if (!u.non_remis_le || coordonneeChangee(u)) return '';
+    const titre = `Non remise le ${formatDateHeure(u.non_remis_le)}${u.non_remis_motif ? ` : ${u.non_remis_motif}` : ''}`;
+    return this.options.effacerNonRemise
+      ? `<button type="button" class="coord-partage change" data-non-remise title="${echapper(titre)} (cliquer pour effacer la marque)">⚠ non remise</button>`
+      : `<span class="coord-partage change" title="${echapper(titre)}">⚠ non remise</span>`;
+  }
+
+  #partage(u) {
     const n = u.partages?.length ?? 0;
     if (!n) return '';
     const titre = `Partagée avec : ${u.partages.map(libelleFiche).join(', ')}`;
@@ -123,6 +136,7 @@ export class EditeurCoordonnees {
       ligne.querySelector('[data-supprimer]')?.addEventListener('click', () => this.#definir(this.usages.filter((_, j) => j !== i)));
       ligne.querySelector('[data-historique]')?.addEventListener('click', () => this.#historique(this.usages[i]).catch(() => {}));
       ligne.querySelector('[data-partages]')?.addEventListener('click', () => this.#partages(this.usages[i]));
+      ligne.querySelector('[data-non-remise]')?.addEventListener('click', () => this.#effacerNonRemise(i).catch((e) => this.options.message?.(e.message, 'erreur')));
     });
     c.querySelectorAll('[data-ajout]').forEach((b) => b.addEventListener('click', () => {
       const nature = b.dataset.ajout;
@@ -139,6 +153,13 @@ export class EditeurCoordonnees {
       <p>Même coordonnée (même identifiant) utilisée par :</p><ul class="coord-fiches">${u.partages.map((p, i) => `<li><a href="#" data-f="${i}">${echapper(libelleFiche(p))}</a></li>`).join('')}</ul>
       <p class="aide">Une modification de cette coordonnée vous demandera, à l'enregistrement, si elle vaut pour toutes ces fiches ou seulement pour celle-ci.</p>`);
     d.corps.querySelectorAll('[data-f]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); d.fermer(); this.options.ouvrirFiche?.(u.partages[Number(a.dataset.f)]); }));
+  }
+
+  async #effacerNonRemise(i) {
+    const u = this.usages[i];
+    if (!await confirmer(`Effacer la marque « non remise » de ${texteCoordonnee(u)} ?`)) return;
+    await this.options.effacerNonRemise(u.coo_id);
+    this.#modifier(i, { non_remis_le: null, non_remis_motif: null, choix: u.choix }, true);
   }
 
   async #historique(u) {

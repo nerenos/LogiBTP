@@ -61,6 +61,7 @@ modules/bibliotheque/db/065_bibliotheque_tarifs.sql
 modules/annuaire/db/070_annuaire_schema.sql
 modules/annuaire/db/071_annuaire_provisoire.sql
 modules/annuaire/db/072_annuaire_code_secours.sql
+modules/annuaire/db/073_annuaire_non_remis.sql
 modules/reglement/db/080_reglement_schema.sql
 modules/execution/db/085_execution.sql
 modules/execution/db/085b_execution_etapes.sql

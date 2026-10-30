@@ -118,6 +118,8 @@ public class Coordonnee
     public string? CooReseau { get; set; }
     public DateTimeOffset CooModifieLe { get; set; }
     public string? CooModifiePar { get; set; }
+    public DateTimeOffset? CooNonRemisLe { get; set; }
+    public string? CooNonRemisMotif { get; set; }
 
     /// <summary>Valeurs au format des saisies (comparaison avec l'origine, plan).</summary>
     public SaisieCoordonnee VersSaisie() => new()
@@ -128,6 +130,8 @@ public class Coordonnee
 
     public void Affecter(IReadOnlyDictionary<string, string?> v)
     {
+        // Adresse corrigée : la marque « non remise » visait l'ancienne valeur.
+        if (v.GetValueOrDefault("valeur") != CooValeur) { CooNonRemisLe = null; CooNonRemisMotif = null; }
         CooValeur = v.GetValueOrDefault("valeur");
         CooReseau = v.GetValueOrDefault("reseau");
         CooLigne1 = v.GetValueOrDefault("ligne1");
@@ -241,6 +245,8 @@ public sealed class UsageDto
     public string? Reseau { get; set; }
     public Dictionary<string, string?> Origine { get; set; } = [];
     public DateTimeOffset? Maj { get; set; }
+    public DateTimeOffset? NonRemisLe { get; set; }
+    public string? NonRemisMotif { get; set; }
     public List<FicheUsage> Partages { get; set; } = [];
     /// <summary>Coordonnées proposées : fiche liée d'où vient la coordonnée.</summary>
     public FicheUsage? Source { get; set; }

@@ -158,7 +158,8 @@ class FicheAnnuaire extends FicheLogiBTP {
       rendre: (corps, { modifiable }) => new EditeurCoordonnees(corps, {
         valeur: () => this.valeur('coordonnees') ?? [], definir: (u) => this.definirValeur('coordonnees', u), modifiable, nom: 'fiche',
         proposer: this.id === null ? null : () => this.annuaire.coordonneesProposees(type, this.id),
-        historique: (id) => this.annuaire.historiqueCoordonnee(id), ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
+        historique: (id) => this.annuaire.historiqueCoordonnee(id), effacerNonRemise: (id) => this.annuaire.effacerNonRemise(id),
+        ouvrirFiche: (f, e) => this.ouvrirLiee(f, e), message: this.message,
       }),
     };
   }

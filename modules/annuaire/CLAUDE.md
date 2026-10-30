@@ -13,6 +13,7 @@
 
 ## Structure
 - `db/070_annuaire_schema.sql` : schéma complet (tables, triggers, vues) ; `071_annuaire_provisoire.sql` (rejouable) : tiers provisoires (`per_provisoire`, `per_provisoire_par|le`, `per_valide_par|le`), journal `fusion_personne`, `v_annuaire_personnes.per_provisoire`.
+- `db/073_annuaire_non_remis.sql` (rejouable) : marque « non remise » d'une coordonnée (`coo_non_remis_le|motif`), posée par la messagerie du cœur, affichée par `EditeurCoordonnees` (⚠, option `effacerNonRemise`), effacée par `PUT /coordonnees/{id}/remise` ou une nouvelle valeur.
 - `js/src/identifiants.js` : `compacter`, `luhn`, `sirenValide`, `siretValide`, `cleTva`, `tvaDepuisSiren`, `tvaValide`, `ibanValide`, `bicValide`, `emailValide`, `formaterIban`, `formaterTelephone`, `erreursIdentifiants`.
 - `js/src/coordonnees.js` : `NATURES`, `RESEAUX`, `CHAMPS_NATURE`, `CHOIX`, `valeursCoordonnee`, `estVide`, `memesValeurs`, `texteCoordonnee`, `erreurCoordonnee`, `planifierCoordonnees`, `coordonneesParDefaut`, `principale`.
 - `js/src/fournisseurs.js` : `FournisseurAnnuaireApi` (base `/api/annuaire`), `FournisseurAnnuaireMemoire` (tests), `ErreurAnnuaire`, `libelleIndividu`, `TAILLE_PAGE_RATTACHEMENTS` (20).

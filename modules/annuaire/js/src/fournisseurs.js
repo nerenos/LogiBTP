@@ -24,6 +24,7 @@ import { siretValide } from './identifiants.js';
 //   fusionner(id, { cible_id, choix })              { cible_id, reports } : tiers provisoire fusionné puis supprimé (ADMIN)
 //   coordonneesProposees(type, id)                  coordonnées des fiches liées, à reprendre (même identifiant)
 //   historiqueCoordonnee(cooId)                     [{ avant, le, par }]
+//   effacerNonRemise(cooId)                         marque « non remise » d'une adresse retirée (API seulement)
 //   creerParticulier(indId)                         { id } : compte particulier (personne) de l'individu, coordonnées partagées
 //   graphe(type, id, { profondeur, contacts, liens, max_contacts })   graphe relationnel autour d'une fiche (graphe.js)
 //   pageRattachements(type, id, { recherche, page, taille })   page de rattachements : { lignes, total, page, taille }
@@ -64,6 +65,8 @@ export class FournisseurAnnuaireApi {
   async parSiret(siret) { return (await this.appel('GET', `/siret/${encodeURIComponent(compacter(siret))}`)) ?? null; }
   coordonneesProposees(type, id) { return this.appel('GET', `/coordonnees/proposees?${new URLSearchParams({ type, id: String(id ?? '') })}`); }
   historiqueCoordonnee(cooId) { return this.appel('GET', `/coordonnees/${cooId}/historique`); }
+
+  effacerNonRemise(cooId) { return this.appel('PUT', `/coordonnees/${cooId}/remise`); }
   creerParticulier(indId) { return this.appel('POST', `/individus/${indId}/particulier`); }
   doublons({ raison_sociale = '', siret = '', exclure = null } = {}) {
     return this.appel('GET', `/doublons?${new URLSearchParams({ raison_sociale, siret, ...(exclure ? { exclure: String(exclure) } : {}) })}`);

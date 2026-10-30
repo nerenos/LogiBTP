@@ -52,6 +52,7 @@ public static class Extensions
             s.Graphe(type, id, new OptionsGraphe(profondeur ?? 1, contacts ?? true, liens ?? true, Math.Clamp(max_contacts ?? 8, 1, 200)), ct));
         g.MapGet("/coordonnees/proposees", (string type, long? id, ServiceAnnuaire s, CancellationToken ct) => s.CoordonneesProposees(type, id, ct));
         g.MapGet("/coordonnees/{id:long}/historique", (long id, ServiceAnnuaire s, CancellationToken ct) => s.HistoriqueCoordonnee(id, ct));
+        g.MapPut("/coordonnees/{id:long}/remise", (long id, HttpContext http, ServiceAnnuaire s, CancellationToken ct) => s.EffacerNonRemise(id, Utilisateur.Depuis(http), ct));
         return api;
     }
 }
