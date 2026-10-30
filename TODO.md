@@ -188,6 +188,14 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 - [ ] Délégation du contrôle N+1 à un autre membre du service : module de droits (E30).
 
+### Application de terrain (poseurs, chefs d'équipe)
+
+- [ ] **Lots 1 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
+  leur partie mobile `tac_mobile`, navigation, pointage sur la tâche `poi_tac_id`, chef d'équipe, saisie libre solo ou
+  en équipe, étapes des ordres de pose, avancement réel, NC et photos, hors ligne, PV de réception signé, SAV sur
+  droit). Plus tard : option de présaisie des heures (T7). Reprend les lots 5 et 6 du Pointage, la partie mobile des tâches et
+  l'avancement réel du Planning, le lot 5 de l'Exécution (signature, SAV).
+
 ### Import
 
 - [ ] OptimBTP : décider du sort des champs non repris (heures, poste de travaux, compléments de pied, première page
