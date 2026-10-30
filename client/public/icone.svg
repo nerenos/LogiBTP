@@ -1,28 +1,26 @@
 <svg xmlns="http://w3.org" viewBox="0 0 512 512" width="100%" height="100%">
-
   <!-- Fond carré vert menthe avec coins très arrondis -->
   <rect x="32" y="32" width="448" height="448" rx="110" ry="110" fill="#68B695"/>
 
-  <!-- Groupe contenant les modules du logo avec effet d'ombre -->
-  <g filter="url(#shadow)" stroke="#68B695" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Groupe contenant les modules du logo avec séparations vert menthe précises -->
+  <g stroke="#68B695" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
     
     <!-- MODULE BLEU (Base gauche) -->
     <path d="M 120,410 L 250,410 L 250,330 L 190,330 L 190,240 L 120,290 Z" fill="#1D5BBF"/>
-    <!-- Lignes logiques internes du module bleu -->
     <path d="M 145,385 L 225,385 M 155,310 L 155,360 L 200,360" fill="none" stroke="#68B695" stroke-width="5"/>
 
     <!-- MODULE JAUNE (Base droite) -->
     <path d="M 262,410 L 392,410 L 392,290 L 322,240 L 322,330 L 262,330 Z" fill="#DDA625"/>
-    <!-- Lignes logiques internes du module jaune -->
     <path d="M 287,385 L 367,385 M 357,310 L 357,360 L 312,360" fill="none" stroke="#68B695" stroke-width="5"/>
 
     <!-- MODULE ORANGE (Sommet / Toit) -->
     <path d="M 175,225 L 256,155 L 337,225 L 302,265 L 256,215 L 210,265 Z" fill="#E86E1B"/>
-    <!-- Engrenage simplifié central (Logique / Mécanique) -->
+    
+    <!-- Engrenage central épuré -->
     <circle cx="256" cy="245" r="22" fill="#E86E1B" stroke="#68B695" stroke-width="5"/>
     <circle cx="256" cy="245" r="8" fill="#68B695"/>
-    <!-- Flèche montante (Croissance / Futur) -->
+    
+    <!-- Flèche montante -->
     <path d="M 290,210 L 340,160 M 315,160 L 340,160 L 340,185" fill="none" stroke="#E86E1B" stroke-width="7" stroke-linecap="square"/>
-
   </g>
 </svg>
