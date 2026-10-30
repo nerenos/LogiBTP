@@ -2,18 +2,24 @@ import { aujourdhui, ajouterJours } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate } from '@logibtp/socle/ui';
+import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
-import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel } from '../terrain/terrain.js';
+import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite } from '../terrain/actions-tache.js';
+import { fournisseurEtapes } from '../terrain/operations-terrain.js';
+import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
+import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
+import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 
 // Application de terrain, lot 1 (ANALYSE-TERRAIN.md) : page personnelle pour tablette et smartphone. Tâches du planning
 // de la personne connectée (aujourd'hui ou la semaine), partie mobile (adresse, contact, consignes, liens) complétée par
 // le chantier, itinéraire, pièces de la GED diffusées sur le terrain ; lot 2 : onglet Pointage de la journée
 // (terrain/pointage-terrain.js) ; lot 3 : onglet Ordres (étapes, composant de l'atelier), avancement, photos et
-// non-conformité depuis la carte d'une tâche (terrain/actions-tache.js).
+// non-conformité depuis la carte d'une tâche (terrain/actions-tache.js) ; lot 4 : saisies gardées sur l'appareil hors
+// ligne (terrain/operations-terrain.js), listées en tête (refusées : réessayer, abandonner), lectures de la période
+// préchargées une fois par jour pour être consultées sans réseau.
 
 const ONGLETS = { jour: 'Aujourd\'hui', semaine: 'Semaine', pointage: '⏱ Pointage', ordres: '🧩 Ordres' };
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -41,6 +47,7 @@ export class PageTerrain extends PageBase {
       <nav class="terrain-onglets" role="tablist">${Object.entries(this.onglets).map(([cle, l]) => `<button type="button" role="tab" data-onglet="${cle}">${l}</button>`).join('')}</nav>
       <div class="terrain-periode" data-barre-periode><button type="button" data-decaler="-1" aria-label="Période précédente">◀</button><b data-periode></b>
         <button type="button" data-decaler="1" aria-label="Période suivante">▶</button><button type="button" data-aujourdhui>Aujourd'hui</button></div>
+      <div data-attentes></div>
       <div class="terrain-liste" data-liste></div>
       <details class="terrain-reglages"><summary>⚙ Itinéraire</summary><p class="ligne">Application de navigation <span data-navigation></span></p>
         <p class="aide">L'itinéraire s'ouvre dans l'application choisie ; aucune position n'est enregistrée.</p></details>
@@ -67,7 +74,57 @@ export class PageTerrain extends PageBase {
       else if (b.dataset.actionTache === 'photos') await envoyerPhotos(this.app, t);
       else if (b.dataset.actionTache === 'nc') await signalerNonConformite(this.app, t, this.donnees.motifs ?? []);
     });
+    this.desabonner = this.app.abonner(SUJET_ATTENTE, () => this.#rendreAttentes());
+    this.#rendreAttentes();
     await this.#charger();
+    this.#precharger();
+  }
+
+  fermer() { this.desabonner?.(); this.pointage?.desabonner?.(); super.fermer?.(); }
+
+  /** Saisies du terrain gardées sur l'appareil : nombre en attente, refusées avec la raison (réessayer, abandonner). */
+  async #rendreAttentes() {
+    const zone = this.conteneur.querySelector('[data-attentes]');
+    if (!zone) return;
+    const ops = (await listeOperations(this.app.utilisateur()).catch(() => [])).filter((o) => o.type.startsWith('terrain-'));
+    const refusees = ops.filter((o) => o.etat === ETAT_ATTENTE.ERREUR);
+    const attente = ops.length - refusees.length;
+    zone.innerHTML = `${attente ? `<p class="carte">⏳ ${attente} saisie${attente > 1 ? 's' : ''} sur cet appareil, envoyée${attente > 1 ? 's' : ''} au retour du réseau.</p>` : ''}
+      ${refusees.map((o) => `<div class="carte avertissement terrain-refus">⛔ <b>${echapper(o.libelle)}</b> : envoi refusé (${echapper(o.erreur ?? '')})
+        <span class="terrain-actions"><button type="button" class="terrain-bouton" data-reessayer="${echapper(o.cle)}">↻ Réessayer</button>
+        <button type="button" class="terrain-bouton" data-abandonner="${echapper(o.cle)}">✕ Abandonner</button>
+        ${o.url ? `<a class="terrain-bouton" href="${echapper(o.url)}">Ouvrir</a>` : ''}</span></div>`).join('')}`;
+    zone.querySelectorAll('[data-reessayer]').forEach((b) => b.addEventListener('click', async () => {
+      await marquerOperation(b.dataset.reessayer, { etat: ETAT_ATTENTE.ATTENTE, erreur: null });
+      this.app.publier(SUJET_ATTENTE, {});
+      this.app.envoyerAttentes();
+    }));
+    zone.querySelectorAll('[data-abandonner]').forEach((b) => b.addEventListener('click', async () => {
+      if (!(await confirmer('Abandonner cette saisie gardée sur l\'appareil ? Elle ne sera jamais envoyée.'))) return;
+      await retirerOperation(b.dataset.abandonner);
+      this.app.publier(SUJET_ATTENTE, {});
+    }));
+  }
+
+  /**
+   * Préchargement (T10), une fois par jour et par compte, réseau joignable : les lectures de la période sont faites pour
+   * que le service worker les garde, puis les pièces « Terrain » des tâches lues (taille limitée par le service worker).
+   */
+  async #precharger() {
+    if (this.app.apiPerdue || globalThis.navigator?.onLine === false) return;
+    const cle = `terrainPrecharge:${this.app.utilisateur()}`;
+    const jour = aujourdhui();
+    try { if (localStorage.getItem(cle) === jour) return; } catch { /* stockage indisponible : préchargement refait */ }
+    const lire = async (url) => { try { const r = await fetch(url, { credentials: 'same-origin' }); return r.ok && /json/.test(r.headers.get('Content-Type') ?? '') ? r.json() : null; } catch { return null; } };
+    const premier = await lire(`/api/terrain?${new URLSearchParams({ du: jour, au: jour })}`);
+    if (!premier?.personne) return;
+    const pieces = new Set();
+    for (const url of adressesAPrecharger(jour, premier.personne.id)) {
+      const r = await lire(url);
+      for (const t of r?.taches ?? []) for (const p of t.pieces ?? []) pieces.add(p.id);
+    }
+    for (const id of pieces) await fetch(api.terrain.urlPiece(id), { credentials: 'same-origin' }).catch(() => null);
+    try { localStorage.setItem(cle, jour); } catch { /* sans stockage : refait à la prochaine ouverture */ }
   }
 
   urlCourante() { return `/terrain?onglet=${this.onglet}&jour=${this.jour}`; }
@@ -89,14 +146,17 @@ export class PageTerrain extends PageBase {
     this.conteneur.querySelector('[data-barre-periode]').hidden = this.onglet === 'ordres';
     if (this.onglet === 'pointage') { await this.pointage.ouvrir(du); return; }
     if (this.onglet === 'ordres') {
-      await new EcranEtapesAtelier(this.conteneur.querySelector('[data-liste]'), {
-        charger: () => api.terrain.etapes(), valider: (entId, code) => api.terrain.validerEtape(entId, code), ordre: (numero) => api.terrain.ordreEtapes(numero),
-      }, { titre: '🧩 Mes ordres : étapes à valider', message: (t, n) => this.app.message(t, n) }).ouvrir();
+      await new EcranEtapesAtelier(this.conteneur.querySelector('[data-liste]'), fournisseurEtapes(this.app, () => api.terrain.etapes()), { titre: '🧩 Mes ordres : étapes à valider', message: (t, n) => this.app.message(t, n) }).ouvrir();
       return;
     }
     try {
       this.donnees = await api.terrain.taches(du, au);
-    } catch (e) { this.app.erreur(e); return; }
+    } catch (e) {
+      if (!estHorsLigne(e)) { this.app.erreur(e); return; }
+      this.donnees = null;
+      this.conteneur.querySelector('[data-liste]').innerHTML = '<p class="carte avertissement">📵 Hors ligne : cette période n\'a pas été consultée sur cet appareil. Les deux semaines autour d\'aujourd\'hui sont gardées dès l\'ouverture de « Mon terrain » avec le réseau.</p>';
+      return;
+    }
     this.#rendre();
   }
 

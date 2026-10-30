@@ -190,7 +190,7 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] **Lots 4 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lots 1 à 3 réalisés) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
+- [ ] **Lots 5 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lots 1 à 4 réalisés) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
   leur partie mobile `tac_mobile`, navigation, pointage sur la tâche `poi_tac_id`, chef d'équipe, saisie libre solo ou
   en équipe, étapes des ordres de pose, avancement réel, NC et photos, hors ligne, PV de réception signé, SAV sur
   droit). Plus tard : option de présaisie des heures (T7). Reprend les lots 5 et 6 du Pointage, la partie mobile des tâches et
@@ -200,7 +200,10 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 - [ ] Lot 2, écarts : pointage à la ligne d'ordre (`poi_lig_id`) quand la tâche vient d'une ligne (T8) ; option de
   présaisie des heures (T7).
 - [ ] Lot 3, suites : comparaison de l'avancement réel aux situations de travaux (second temps) ; photos HEIC converties
-  (le navigateur ne sait pas les réduire) ; photos et avancement hors ligne (lot 4).
+  (le navigateur ne sait pas les réduire).
+- [ ] Lot 4, suites : saisie libre hors ligne limitée aux chantiers et ordres déjà lus (journée gardée) ; nouvelle
+  recherche d'un ordre par son numéro impossible hors ligne ; envoi des photos gardées sans contrôle de taille avant
+  l'envoi (limite de dépôt de la GED).
 
 ### Import
 

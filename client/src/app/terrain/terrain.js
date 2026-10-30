@@ -99,3 +99,21 @@ export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE
     return fichier;
   }
 }
+
+/**
+ * Lectures à garder sur l'appareil pour le hors ligne (T10) : tâches de chaque jour et de chaque semaine, de la
+ * semaine en cours et de la suivante ; journées de pointage et repas de la semaine en cours ; référentiels du
+ * pointage, ordres et étapes. Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
+ */
+export function adressesAPrecharger(jour, salarie = null) {
+  const lundi = lundiDe(jour);
+  const jours = Array.from({ length: 14 }, (_, i) => ajouterJours(lundi, i));
+  const params = (o) => new URLSearchParams(o).toString();
+  return [
+    ...jours.map((d) => `/api/terrain?${params({ du: d, au: d })}`),
+    ...[lundi, ajouterJours(lundi, 7)].map((d) => `/api/terrain?${params({ du: d, au: ajouterJours(d, 6) })}`),
+    ...jours.slice(0, 7).map((d) => `/api/terrain/journee?date=${d}`),
+    ...(salarie ? jours.slice(0, 7).map((d) => `/api/pointage/repas/${salarie}?du=${d}&au=${d}`) : []),
+    '/api/pointage/referentiels', '/api/terrain/etapes',
+  ];
+}

@@ -17,7 +17,12 @@ namespace LogiBTP.Api.Btp;
 /// </summary>
 public sealed record LigneTerrain(long? Id, long? TacId, int ChaId, long? EntId, int TypeMo, string? SousType, int Minutes, string? Motif,
     string? Commentaire, List<int>? Membres, bool Equipe = false);
-public sealed record JourneeTerrain(DateOnly Date, List<LigneTerrain> Lignes);
+/// <summary>
+/// Journée envoyée. <c>Connus</c> : pointages du jour que l'appareil connaissait (lus avec la journée) ; seuls
+/// ceux-là peuvent être retirés, un pointage ajouté entre-temps ailleurs (bureau, borne, autre appareil, saisie hors
+/// ligne d'une journée périmée) est gardé. Absent : la journée est remplacée entièrement.
+/// </summary>
+public sealed record JourneeTerrain(DateOnly Date, List<LigneTerrain> Lignes, List<long>? Connus = null);
 
 /// <summary>
 /// Application de terrain, lot 2 (ANALYSE-TERRAIN.md, T4, T7, T8, T21, T22) : pointage de la journée de la personne
@@ -193,7 +198,8 @@ public static partial class TerrainBtp
             var groupes = new Dictionary<int, Guid>();
             bool Modifiee(LigneTerrain l) => l.Id is not long id || avant[id] is var e && (e.PoiChaId != l.ChaId || e.PoiEntId != l.EntId || e.PoiTypeMo != l.TypeMo
                 || e.PoiSousType != l.SousType || e.PoiMinutes != l.Minutes);
-            var saisie = semaine.Where(x => x.PoiDate != j.Date)
+            var envoyes = j.Lignes.Where(l => l.Id is not null).Select(l => l.Id!.Value).ToHashSet();
+            var saisie = semaine.Where(x => x.PoiDate != j.Date || j.Connus is not null && !j.Connus.Contains(x.PoiId) && !envoyes.Contains(x.PoiId))
                 .Select(x => new PointageSaisi(x.PoiId, x.PoiDate, x.PoiChaId, x.PoiEntId, x.PoiTypeMo, x.PoiSousType, x.PoiMinutes, x.PoiDebut, x.PoiFin, x.PoiMotif, x.PoiCommentaire))
                 .Concat(j.Lignes.Select((l, i) =>
                 {

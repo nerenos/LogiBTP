@@ -19,6 +19,8 @@ import { societeCourante } from './societe.js';
 import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
 import { listeAttente, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from './hors-ligne/attente.js';
 import { envoyerAttentes, SUJET_ATTENTE } from './hors-ligne/synchro.js';
+import { listeOperations } from './hors-ligne/operations.js';
+import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
@@ -409,7 +411,8 @@ export class Application {
   /** Documents enregistrés hors ligne du compte : relus pour le bandeau. */
   async majAttentes() {
     const compte = this.utilisateur();
-    this.attentes = compte ? await listeAttente(compte).catch(() => []) : [];
+    // Documents et opérations (saisies du terrain) : l'opération porte la page où sa saisie se reprend.
+    this.attentes = compte ? [...await listeAttente(compte).catch(() => []), ...await listeOperations(compte).catch(() => [])] : [];
     this.rendreInfos();
   }
 
@@ -419,7 +422,8 @@ export class Application {
     if (!l.length) return '';
     const probleme = l.find((e) => e.etat !== ETAT_ATTENTE.ATTENTE);
     const titre = l.map((e) => `${e.libelle} : ${ETATS_ATTENTE[e.etat] ?? e.etat}${e.erreur ? ` (${e.erreur})` : ''}`).join('\n');
-    return `<a href="${urlAttente(probleme ?? l[0])}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
+    const cible = probleme ?? l[0];
+    return `<a href="${cible.url ?? urlAttente(cible)}" class="etat-attente${probleme ? ' probleme' : ''}" title="${echapper(`Enregistrés sur ce poste, pas encore envoyés au serveur :\n${titre}`)}">⏳ ${l.length}</a>`;
   }
 
   /** Passage hors ligne (API perdue) : bandeau rouge, classe `hors-ligne` du corps, contrôle toutes les 15 secondes. */

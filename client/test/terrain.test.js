@@ -58,3 +58,17 @@ describe('photos', () => {
     expect(dimensionsReduites(1200, 900)).toEqual({ largeur: 1200, hauteur: 900, reduite: false });
   });
 });
+
+describe('hors ligne', () => {
+  it('adresses à garder : deux semaines de tâches, la semaine des journées', async () => {
+    const { adressesAPrecharger } = await import('../src/app/terrain/terrain.js');
+    const a = adressesAPrecharger('2026-10-30', 12);
+    expect(a).toContain('/api/terrain?du=2026-10-26&au=2026-10-26');
+    expect(a).toContain('/api/terrain?du=2026-11-08&au=2026-11-08');
+    expect(a).toContain('/api/terrain?du=2026-11-02&au=2026-11-08');
+    expect(a).toContain('/api/terrain/journee?date=2026-11-01');
+    expect(a).not.toContain('/api/terrain/journee?date=2026-11-02');
+    expect(a).toContain('/api/pointage/repas/12?du=2026-10-30&au=2026-10-30');
+    expect(a.length).toBe(14 + 2 + 7 + 7 + 2);
+  });
+});

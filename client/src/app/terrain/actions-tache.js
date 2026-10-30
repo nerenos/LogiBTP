@@ -2,10 +2,13 @@ import { echapper, ouvrirDialogue, formatDate } from '@logibtp/socle/ui';
 import { aujourdhui } from '@logibtp/socle';
 import { api } from '../api.js';
 import { preparerPhoto } from './terrain.js';
+import { envoyerOuGarder, OPERATION_TERRAIN, formulairePhotos } from './operations-terrain.js';
+import { estHorsLigne } from '../hors-ligne/attente.js';
 
 // Application de terrain, lot 3 (ANALYSE-TERRAIN.md, T12, T17) : actions sur une tâche depuis sa carte — avancement
 // réel du jour, photos (prise de vue ou lot de la galerie, réduites sauf « qualité d'origine »), non-conformité
 // (motif proposé ou libre, photos jointes). Serveur : TerrainOrdresBtp.cs (tâche de la personne seulement).
+// Lot 4 : serveur injoignable, la saisie est gardée sur l'appareil (photos déjà réduites) et envoyée au retour.
 
 /** Sélecteur de photos (prise de vue, galerie en lot), case « qualité d'origine » ; `photos()` : fichiers choisis. */
 function selecteurPhotos(racine) {
@@ -22,12 +25,10 @@ function selecteurPhotos(racine) {
   racine.querySelectorAll('input[type="file"]').forEach((i) => i.addEventListener('change', () => { fichiers = [...fichiers, ...i.files]; i.value = ''; afficher(); }));
   return {
     get nombre() { return fichiers.length; },
-    async formulaire(commentaire) {
-      const f = new FormData();
+    /** Photos prêtes à envoyer (réduites sauf « qualité d'origine ») et commentaire : { fichiers, commentaire }. */
+    async photos(commentaire) {
       const origine = racine.querySelector('[data-origine]').checked;
-      for (const p of fichiers) f.append('fichiers', await preparerPhoto(p, { origine }));
-      if (commentaire) f.append('commentaire', commentaire);
-      return f;
+      return { fichiers: await Promise.all(fichiers.map((p) => preparerPhoto(p, { origine }))), commentaire: commentaire || null };
     },
   };
 }
@@ -35,7 +36,8 @@ function selecteurPhotos(racine) {
 /** Avancement réel du jour de la tâche (relevés précédents affichés) ; vrai si enregistré. */
 export async function saisirAvancement(app, tache) {
   let releves = [];
-  try { releves = await api.terrain.avancements(tache.id); } catch (e) { app.erreur(e); return false; }
+  // Hors ligne : relevés précédents indisponibles, la saisie reste possible (gardée sur l'appareil).
+  try { releves = await api.terrain.avancements(tache.id); } catch (e) { if (!estHorsLigne(e)) { app.erreur(e); return false; } }
   const dernier = releves[0];
   return ouvrirDialogue({
     titre: `📈 Avancement · ${tache.libelle}`,
@@ -53,8 +55,10 @@ export async function saisirAvancement(app, tache) {
         const pourcent = Number(champ.value);
         if (champ.value === '' || !(pourcent >= 0 && pourcent <= 100)) { champ.focus(); return; }
         try {
-          await api.terrain.enregistrerAvancement(tache.id, { date: aujourdhui(), pourcent, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null });
-          app.message(`Avancement enregistré : ${pourcent} %`, 'succes');
+          const avancement = { date: aujourdhui(), pourcent, commentaire: dlg.querySelector('[data-commentaire]').value.trim() || null };
+          const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.AVANCEMENT, id: `${tache.id}:${avancement.date}`, corps: { tache: tache.id, avancement },
+            libelle: `Avancement ${pourcent} % · ${tache.libelle}` }, () => api.terrain.enregistrerAvancement(tache.id, avancement));
+          if (r.reponse) app.message(`Avancement enregistré : ${pourcent} %`, 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -73,8 +77,10 @@ export async function envoyerPhotos(app, tache) {
       boutonPrincipal(dlg, 'Envoyer', async () => {
         if (!s.nombre) { app.message('Choisissez au moins une photo', 'avertissement'); return; }
         try {
-          const r = await api.terrain.photos(tache.id, await s.formulaire(dlg.querySelector('[data-commentaire]').value.trim()));
-          app.message(`${r.deposees.length} photo${r.deposees.length > 1 ? 's envoyées' : ' envoyée'}`, 'succes');
+          const photos = await s.photos(dlg.querySelector('[data-commentaire]').value.trim());
+          const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.PHOTOS, id: Date.now(), corps: { tache: tache.id, photos },
+            libelle: `${photos.fichiers.length} photo${photos.fichiers.length > 1 ? 's' : ''} · ${tache.libelle}` }, () => api.terrain.photos(tache.id, formulairePhotos(photos)));
+          if (r.reponse) app.message(`${r.reponse.deposees.length} photo${r.reponse.deposees.length > 1 ? 's envoyées' : ' envoyée'}`, 'succes');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });
@@ -98,9 +104,15 @@ export async function signalerNonConformite(app, tache, motifs = []) {
         if (!motif) { dlg.querySelector('[data-motif]').focus(); return; }
         const commentaire = dlg.querySelector('[data-commentaire]').value.trim() || null;
         try {
-          const r = await api.terrain.nonConformite(tache.id, { motif, commentaire });
-          if (s.nombre) await api.terrain.photos(tache.id, await s.formulaire(`Non-conformité : ${motif}${commentaire ? ` — ${commentaire}` : ''}`));
-          app.message(r.crm ? 'Non-conformité signalée au service concerné' : 'Non-conformité enregistrée (suivi CRM inactif : aucune tâche créée)', r.crm ? 'succes' : 'avertissement');
+          const nc = { motif, commentaire };
+          const photos = s.nombre ? await s.photos(`Non-conformité : ${motif}${commentaire ? ` — ${commentaire}` : ''}`) : null;
+          const r = await envoyerOuGarder(app, { type: OPERATION_TERRAIN.NON_CONFORMITE, id: Date.now(), corps: { tache: tache.id, nc, photos },
+            libelle: `Non-conformité « ${motif} » · ${tache.libelle}` }, async () => {
+            const rep = await api.terrain.nonConformite(tache.id, nc);
+            if (photos) await api.terrain.photos(tache.id, formulairePhotos(photos));
+            return rep;
+          });
+          if (r.reponse) app.message(r.reponse.crm ? 'Non-conformité signalée au service concerné' : 'Non-conformité enregistrée (suivi CRM inactif : aucune tâche créée)', r.reponse.crm ? 'succes' : 'avertissement');
           fermer(true);
         } catch (e) { app.erreur(e); }
       });

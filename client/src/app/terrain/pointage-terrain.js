@@ -1,4 +1,4 @@
-import { echapper, creerCombo } from '@logibtp/socle/ui';
+import { echapper, creerCombo, formatDate, confirmer } from '@logibtp/socle/ui';
 import { lireDuree, ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import { choisirRestaurant } from '../pointage/repas.js';
@@ -6,18 +6,27 @@ import { choixMultiple } from '../choix-multiple.js';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
 import { MODULE_FACULTATIF } from '../codes.js';
 import { completerJournee } from './terrain.js';
+import { envoyerOuGarder, fournisseurEtapes, OPERATION_TERRAIN } from './operations-terrain.js';
+import { lireOperation, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
+import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
+import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 
 // Application de terrain, lot 2 (ANALYSE-TERRAIN.md, T4, T7, T8, T21, T22) : pointage de la journée sur le terrain.
 // Une ligne par tâche du jour (niveau de détail planifié) ou en saisie libre (chantier puis ordre choisis) ; chef de
 // l'équipe d'une tâche ou droit de saisie libre en équipe : la ligne nouvelle vaut aussi pour les membres cochés ;
 // ligne d'une saisie d'équipe : « pour l'équipe » applique la modification aux membres encore identiques.
 // Serveur : TerrainPointageBtp.cs (mêmes contrôles et blocages que la saisie au bureau).
+// Lot 4 : serveur injoignable, la journée est gardée sur l'appareil (file d'opérations) et rouverte telle quelle ;
+// refusée à l'envoi : bandeau avec la raison, Réessayer ou Abandonner ma saisie.
 
 let referentiels = null;
 
 /** Ligne éditable depuis un pointage enregistré. */
 const depuisPointage = (p) => ({ id: p.id, tac_id: p.tac_id, cha_id: p.cha_id, ent_id: p.ent_id, type_mo: p.type_mo, sous_type: p.sous_type, minutes: p.minutes,
   motif: p.motif, commentaire: p.commentaire, membres: [], groupe: p.groupe, nb_groupe: p.nb_groupe, equipe: false });
+
+/** Ligne éditable depuis une journée gardée sur l'appareil (corps de l'envoi). */
+const depuisOperation = (l) => ({ ...l, membres: l.membres ?? [], groupe: null, nb_groupe: 0, equipe: Boolean(l.equipe), libre: !l.id && !l.tac_id });
 
 export class PointageTerrain {
   /** Options : app, message(texte, niveau), modifiee(bool) : signale une saisie non enregistrée. */
@@ -29,11 +38,24 @@ export class PointageTerrain {
 
   async ouvrir(jour) {
     this.jour = jour;
+    this.operation = await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.JOURNEE, jour).catch(() => null);
     try {
       referentiels ??= await api.pointage.referentiels();
       this.d = await api.terrain.journee(jour);
-    } catch (e) { this.app.erreur(e); return; }
-    this.lignes = (this.d.pointages ?? []).map(depuisPointage);
+    } catch (e) {
+      if (!estHorsLigne(e)) { this.app.erreur(e); return; }
+      this.zone.innerHTML = '<p class="carte avertissement">📵 Hors ligne : cette journée n\'a pas été consultée sur cet appareil, elle n\'est pas disponible. Ouvrez « Mon terrain » avec le réseau pour la garder.</p>';
+      return;
+    }
+    // Journée gardée sur l'appareil et pas encore envoyée : elle remplace celle du serveur.
+    this.lignes = this.operation ? this.operation.corps.lignes.map(depuisOperation) : (this.d.pointages ?? []).map(depuisPointage);
+    this.desabonner?.();
+    this.desabonner = this.app.abonner(SUJET_ATTENTE, async () => {
+      if (!this.operation || !this.zone.isConnected) return;
+      const op = await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.JOURNEE, this.jour).catch(() => null);
+      if (!op) this.ouvrir(this.jour);
+      else if (op.etat !== this.operation.etat) { this.operation = op; this.#rendre(); }
+    });
     this.repas = null;
     if (this.d.personne) api.pointage.repas(this.d.personne.id, jour, jour).then((r) => { this.repas = r[0] ?? null; this.#rendreRepas(); }).catch(() => {});
     this.modifiee(false);
@@ -54,6 +76,7 @@ export class PointageTerrain {
     const lecture = d.valide;
     const sansLigne = d.taches.filter((t) => !this.lignes.some((l) => l.tac_id === t.id));
     this.zone.innerHTML = `<div class="terrain-pointage">
+      ${this.#bandeauOperation()}
       <p class="terrain-bilan" data-bilan></p>
       ${lecture ? '<p class="carte">🔒 Journée validée : consultation seulement (une correction se demande au service RH).</p>' : ''}
       ${!lecture && sansLigne.length ? `<div class="terrain-a-pointer"><b>À pointer</b>${sansLigne.map((t) => `<button type="button" class="terrain-bouton" data-pointer="${t.id}">＋ ${echapper(t.libelle)}${t.chef && t.membres.length ? ` · 👥 ${t.membres.length + 1}` : ''}</button>`).join('')}</div>` : ''}
@@ -89,10 +112,35 @@ export class PointageTerrain {
       this.#rendre();
     });
     $('[data-choisir-repas]')?.addEventListener('click', () => this.#choisirRepas());
+    $('[data-reessayer]')?.addEventListener('click', async () => {
+      await marquerOperation(this.operation.cle, { etat: ETAT_ATTENTE.ATTENTE, erreur: null });
+      this.operation = { ...this.operation, etat: ETAT_ATTENTE.ATTENTE, erreur: null };
+      this.app.publier(SUJET_ATTENTE, {});
+      this.app.envoyerAttentes();
+      this.#rendre();
+    });
+    $('[data-abandonner]')?.addEventListener('click', async () => {
+      if (!(await confirmer('Abandonner la journée gardée sur cet appareil ? Les pointages du serveur seront réaffichés.'))) return;
+      await retirerOperation(this.operation.cle);
+      this.app.publier(SUJET_ATTENTE, {});
+      this.ouvrir(this.jour);
+    });
     $('[data-enregistrer]')?.addEventListener('click', () => this.enregistrer());
     this.#rendreLignes(lecture);
     this.#rendreBilan();
     this.#rendreRepas();
+  }
+
+  /** Bandeau d'une journée gardée sur l'appareil : en attente d'envoi, ou refusée avec la raison. */
+  #bandeauOperation() {
+    const o = this.operation;
+    if (!o) return '';
+    if (o.etat === ETAT_ATTENTE.ERREUR) {
+      return `<div class="carte avertissement">⛔ Envoi de cette journée refusé : ${echapper(o.erreur ?? '')}. Corrigez puis enregistrez, ou
+        <span class="terrain-actions"><button type="button" class="terrain-bouton" data-reessayer>↻ Réessayer</button>
+        <button type="button" class="terrain-bouton" data-abandonner>✕ Abandonner ma saisie</button></span></div>`;
+    }
+    return `<p class="carte">⏳ Journée enregistrée sur cet appareil le ${echapper(formatDate(o.le.slice(0, 10)))} : elle sera envoyée au retour du réseau.</p>`;
   }
 
   #rendreBilan() {
@@ -110,8 +158,15 @@ export class PointageTerrain {
     const chantier = this.lignes.find((l) => l.cha_id)?.cha_id ?? null;
     const choix = await choisirRestaurant({ charger: (q) => api.pointage.restaurants(chantier, q), actuel: this.repas });
     if (!choix) return;
+    const repas = { date: this.jour, restaurant_id: choix.restaurant_id ?? null, nouveau: choix.nouveau ?? null, ville: choix.ville ?? null, cha_id: chantier };
     try {
-      await api.pointage.enregistrerRepas(this.d.personne.id, { date: this.jour, restaurant_id: choix.restaurant_id ?? null, nouveau: choix.nouveau ?? null, ville: choix.ville ?? null, cha_id: chantier });
+      const r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.REPAS, id: this.jour, corps: { salarie: this.d.personne.id, repas },
+        libelle: `Repas du ${formatDate(this.jour)}`, url: `/terrain?onglet=pointage&jour=${this.jour}` }, () => api.pointage.enregistrerRepas(this.d.personne.id, repas));
+      if (r.horsLigne) {
+        this.repas = choix.aucun ? null : { restaurant: `${choix.nouveau ?? 'Restaurant choisi'} (⏳ sur l'appareil)` };
+        this.#rendreRepas();
+        return;
+      }
       this.repas = (await api.pointage.repas(this.d.personne.id, this.jour, this.jour))[0] ?? null;
       this.#rendreRepas();
       this.app.message(choix.aucun ? 'Repas retiré' : 'Repas enregistré', 'succes');
@@ -190,13 +245,29 @@ export class PointageTerrain {
   async enregistrer() {
     const incompletes = this.lignes.filter((l) => !l.cha_id || !l.type_mo || !(l.minutes > 0));
     if (incompletes.length) { this.app.message('Chaque ligne a un chantier, un type et une durée (ou retirez-la)', 'avertissement'); return false; }
+    const corps = {
+      date: this.jour,
+      // Pointages du jour connus de l'appareil : seuls ceux-là peuvent être retirés (un pointage ajouté ailleurs reste).
+      connus: (this.d.pointages ?? []).map((p) => p.id),
+      lignes: this.lignes.map((l) => ({ id: l.id, tac_id: l.tac_id, cha_id: l.cha_id, ent_id: l.ent_id, type_mo: l.type_mo, sous_type: l.sous_type, minutes: l.minutes,
+        motif: l.motif, commentaire: l.commentaire, membres: l.id ? null : l.membres, equipe: l.equipe })),
+    };
+    let r;
     try {
-      this.d = await api.terrain.enregistrerJournee({
-        date: this.jour,
-        lignes: this.lignes.map((l) => ({ id: l.id, tac_id: l.tac_id, cha_id: l.cha_id, ent_id: l.ent_id, type_mo: l.type_mo, sous_type: l.sous_type, minutes: l.minutes,
-          motif: l.motif, commentaire: l.commentaire, membres: l.id ? null : l.membres, equipe: l.equipe })),
-      });
+      r = await envoyerOuGarder(this.app, { type: OPERATION_TERRAIN.JOURNEE, id: this.jour, corps, libelle: `Journée du ${formatDate(this.jour)}`,
+        url: `/terrain?onglet=pointage&jour=${this.jour}` }, () => api.terrain.enregistrerJournee(corps));
     } catch (e) { this.app.erreur(e); return false; }
+    if (r.horsLigne) {
+      this.operation = await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.JOURNEE, this.jour);
+      this.modifiee(false);
+      this.#rendre();
+      return true;
+    }
+    this.d = r.reponse;
+    // Journée relue pour que l'appareil garde sa dernière version (consultation hors ligne).
+    api.terrain.journee(this.jour).catch(() => {});
+    // Envoyée : une journée gardée sur l'appareil (refusée puis corrigée) n'a plus lieu d'être.
+    if (this.operation) { await retirerOperation(this.operation.cle); this.operation = null; this.app.publier(SUJET_ATTENTE, {}); }
     const ordres = [...new Set(this.lignes.filter((l) => l.ent_id).map((l) => l.ent_id))];
     this.lignes = this.d.pointages.map(depuisPointage);
     this.modifiee(false);
@@ -214,10 +285,7 @@ export class PointageTerrain {
     const aValider = r.ordres.filter((o) => o.etapes.some((e) => !e.valide_le));
     if (!aValider.length) return;
     const zone = this.zone.querySelector('[data-etape-terminee]');
-    await new EcranEtapesAtelier(zone, {
-      charger: async () => ({ ordres: (await api.terrain.etapes(ordres)).ordres }),
-      valider: (entId, code) => api.terrain.validerEtape(entId, code), ordre: (numero) => api.terrain.ordreEtapes(numero),
-    }, { titre: 'Étape terminée ?', message: (t, n) => this.app.message(t, n) }).ouvrir();
+    await new EcranEtapesAtelier(zone, fournisseurEtapes(this.app, () => api.terrain.etapes(ordres)), { titre: 'Étape terminée ?', message: (t, n) => this.app.message(t, n) }).ouvrir();
     zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

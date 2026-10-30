@@ -68,7 +68,7 @@ async function donnee(requete) {
     reponse = await fetch(requete);
   } catch { /* serveur injoignable */ }
   if (reponse && !reponseEnPanne(reponse.status, reponse.headers.get('Content-Type'))) {
-    if (reponseAGarder({ statut: reponse.status, typeContenu: reponse.headers.get('Content-Type'), taille: reponse.headers.get('Content-Length') })) {
+    if (reponseAGarder({ statut: reponse.status, typeContenu: reponse.headers.get('Content-Type'), taille: reponse.headers.get('Content-Length'), url: requete.url })) {
       garder(cle, reponse.clone()).catch(() => {});
     }
     return reponse;

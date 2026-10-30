@@ -100,6 +100,8 @@
   planifiée, chef d'équipe, « Compléter la journée », repas), portée EQUIPE et profil CHEF_EQUIPE, bandeau sur téléphone.
 - [x] **Lot 3** (30/10/2026) : onglet Ordres (étapes à valider), « Étape terminée ? » après un pointage sur un ordre,
   avancement réel daté des tâches, non-conformité et photos (galerie, réduction au choix) depuis la carte d'une tâche.
+- [x] **Lot 4** (31/10/2026) : saisie sans réseau (journée, repas, avancement, photos, non-conformité, étapes gardés sur
+  l'appareil et envoyés au retour), refus affichés avec Réessayer / Abandonner, deux semaines préchargées.
 
 ### Import
 

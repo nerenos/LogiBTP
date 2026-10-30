@@ -19,7 +19,13 @@
 > `089e` : `pla_avancement`). Écarts : « Étape terminée ? » proposé sous la journée enregistrée (pas d'écran à part) ;
 > ordres visibles selon la règle de l'atelier (E51), donc pas forcément tous les ordres pointés ; non-conformité signalée
 > depuis la carte d'une tâche (et toujours par l'activité NC d'un pointage) ; photos réduites dans le navigateur
-> (JPEG 0,85, côté de 2 000 px ; HEIC non lisible : envoyé tel quel) ; motifs de non-conformité proposés (écart du lot 2 levé). Reprend les parties restées
+> (JPEG 0,85, côté de 2 000 px ; HEIC non lisible : envoyé tel quel) ; motifs de non-conformité proposés (écart du lot 2 levé).
+>
+> Lot 4 réalisé le 31/10/2026 (`client/src/app/hors-ligne/operations.js`, `terrain/operations-terrain.js`). Écarts : file
+> d'opérations typées dans une base IndexedDB à part (`logibtp-operations`), envoyée par la même boucle, le même verrou
+> et la même pastille ⏳ que les documents ; préchargement une fois par jour à l'ouverture de « Mon terrain » ; pièces
+> « Terrain » gardées par le service worker jusqu'à 25 Mo ; journée envoyée avec les pointages connus de l'appareil
+> (`connus`) : un pointage ajouté ailleurs entre-temps n'est jamais retiré par une journée périmée (constaté à l'essai). Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)
 > § 2.3 (partie mobile des tâches) et possibilité 10 (avancement réel), [Exécution](ANALYSE-MODULE-EXECUTION.md) lot 5
 > (signature) et E50 à E53 (étapes hors de l'atelier). Socle commun : [transverse](ANALYSE-MODULES-TRANSVERSE.md) § 6

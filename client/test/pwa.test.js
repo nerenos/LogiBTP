@@ -39,6 +39,9 @@ describe('règles du service worker', () => {
     expect(reponseAGarder({ statut: 200, typeContenu: 'application/pdf', taille: '10' })).toBe(false);
     expect(reponseAGarder({ statut: 401, typeContenu: 'application/problem+json', taille: '10' })).toBe(false);
     expect(reponseAGarder({ statut: 200, typeContenu: 'application/json', taille: String(TAILLE_MAX_DONNEE + 1) })).toBe(false);
+    // Pièces de l'application de terrain : gardées quel que soit leur type, jusqu'à 25 Mo.
+    expect(reponseAGarder({ statut: 200, typeContenu: 'application/pdf', taille: '1000000', url: 'https://a.fr/api/terrain/pieces/7' })).toBe(true);
+    expect(reponseAGarder({ statut: 200, typeContenu: 'image/jpeg', taille: String(26 * 1024 * 1024), url: 'https://a.fr/api/terrain/pieces/7' })).toBe(false);
   });
 
   it('traite un relais sans API comme une panne et répond HORS_LIGNE', () => {

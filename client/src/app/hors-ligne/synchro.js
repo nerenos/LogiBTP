@@ -1,6 +1,7 @@
 import { SUJET_FENETRE } from '../codes.js';
 import { api, ErreurApi } from '../api.js';
 import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttente, envoiCree, estHorsLigne, ETAT_ATTENTE } from './attente.js';
+import { envoyerOperations } from './operations.js';
 
 // Envoi des documents enregistrés hors ligne (mode hors ligne, lot 3) : au retour de l'API, au démarrage et après une
 // reconnexion. Une seule fenêtre envoie à la fois (verrou du navigateur). Pour chaque entrée en attente du compte :
@@ -9,6 +10,7 @@ import { listeAttente, lireAttente, ecrireAttente, retirerAttente, marquerAttent
 // dans cette fenêtre ou une autre, reprend les identifiants définitifs). Version du serveur changée (409) : CONFLIT,
 // la saisie reste sur le poste, à fusionner (pages/fusion-document.js). Autre refus : ERREUR, à corriger en ouvrant le
 // document. FUSION : envoyée par la page document quand l'utilisateur enregistre la saisie fusionnée.
+// Puis les opérations typées (operations.js : saisies de l'application de terrain), dans l'ordre de saisie.
 
 /** Sujet publié quand les entrées en attente changent (compteur du bandeau). */
 export const SUJET_ATTENTE = 'attente-hors-ligne';
@@ -58,7 +60,11 @@ export async function envoyerAttentes(app) {
       }
     }
     if (n) app.message(`${n} document${n > 1 ? 's' : ''} saisi${n > 1 ? 's' : ''} hors ligne envoyé${n > 1 ? 's' : ''} au serveur`, 'succes');
-    return n;
+    const o = await envoyerOperations(compte);
+    if (o.envoyees || o.refusees.length) app.publier(SUJET_ATTENTE, {});
+    if (o.envoyees) app.message(`${o.envoyees} saisie${o.envoyees > 1 ? 's' : ''} du terrain envoyée${o.envoyees > 1 ? 's' : ''} au serveur`, 'succes');
+    for (const r of o.refusees) app.message(`${r.libelle} : envoi refusé (${r.erreur}) ; la saisie reste sur cet appareil`, 'erreur');
+    return n + o.envoyees;
   };
   // Une seule fenêtre envoie : les autres passent leur tour.
   return sousVerrou({ ifAvailable: true }, (verrou) => (verrou ? envoyer() : 0));

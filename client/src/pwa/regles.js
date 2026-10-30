@@ -60,9 +60,16 @@ export function cleDonnee(url, methode, corps = '') {
   return u.href;
 }
 
-/** Réponse de l'API à garder : succès en JSON, de taille raisonnable (taille inconnue : gardée). */
-export function reponseAGarder({ statut, typeContenu, taille }) {
+/** Taille maximale d'une pièce de l'application de terrain gardée pour le hors ligne (octets, ANALYSE-TERRAIN.md T6). */
+export const TAILLE_MAX_PIECE = 25 * 1024 * 1024;
+
+/**
+ * Réponse de l'API à garder : succès en JSON, de taille raisonnable (taille inconnue : gardée) ; pièces de
+ * l'application de terrain (`/api/terrain/pieces/`) : tout type, jusqu'à TAILLE_MAX_PIECE.
+ */
+export function reponseAGarder({ statut, typeContenu, taille, url = '' }) {
   if (statut !== 200) return false;
+  if (/\/api\/terrain\/pieces\//.test(url)) return !(Number(taille) > TAILLE_MAX_PIECE);
   if (!/json/i.test(typeContenu ?? '')) return false;
   return !(Number(taille) > TAILLE_MAX_DONNEE);
 }
