@@ -39,10 +39,13 @@ public sealed partial class SpecialisationStockBtp(IHttpContextAccessor http) : 
         var l = await db.Database.SqlQuery<ArticleSql>($"""
             SELECT e.ele_id AS id, e.ele_code AS code, e.ele_libelle AS libelle, e.ele_unt_stock AS unite,
                    coalesce(u.unt_precision_qte, 2)::int AS precision, e.ele_pa AS pa,
-                   coalesce((SELECT f.tfo_delai FROM tarif_fournisseur f WHERE f.tfo_ele_id = e.ele_id AND f.tfo_principal), e.ele_delai_livraison) AS delai
-            FROM element e LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock WHERE e.ele_id = ANY({t})
+                   coalesce(f.tfo_delai, e.ele_delai_livraison, p.per_fou_delai_livraison) AS delai
+            FROM element e LEFT JOIN unite u ON u.unt_code = e.ele_unt_stock
+            LEFT JOIN tarif_fournisseur f ON f.tfo_ele_id = e.ele_id AND f.tfo_principal
+            LEFT JOIN personne p ON p.per_id = f.tfo_tiers_id
+            WHERE e.ele_id = ANY({t})
             """).ToListAsync(ct);
-        // Délai de l'article (lot 8) : tarif principal, sinon délai global de l'élément ; celui du dépôt prime (module).
+        // Délai de l'article (lot 8) : tarif principal, sinon délai global de l'élément, sinon délai du fournisseur principal ; celui du dépôt prime (module).
         return l.ToDictionary(x => x.Id, x => new ArticleStock(x.Id, x.Code, x.Libelle ?? "", x.Unite, x.Precision, x.Pa, x.Delai));
     }
 
