@@ -768,6 +768,37 @@ export class EditeurDocument {
     this.surDepotExterne?.(donnees, cibleId, position);
   }
 
+  /**
+   * Messages d'une ligne : ceux du panneau des notifications si l'hôte l'a branché (propriété notificationsLigne(ligId)
+   * → [{ gravite, code, message }]), sinon les erreurs et avertissements du calcul.
+   */
+  messagesLigne(r) {
+    if (r.virtuelle) return [];
+    if (this.notificationsLigne) return this.notificationsLigne(r.item.lig_id);
+    return r.messages.map((x) => ({ ...x, gravite: this.resultat.erreurs.includes(x) ? 'erreur' : 'avertissement' }));
+  }
+
+  /** Gravité la plus forte des messages d'une ligne (erreur, avertissement) ou null. */
+  graviteLigne(r) {
+    const m = this.messagesLigne(r);
+    return m.some((x) => x.gravite === 'erreur') ? 'erreur' : m.length ? 'avertissement' : null;
+  }
+
+  /** Icône de la poignée d'une ligne notifiée (seulement si le panneau des notifications est branché). */
+  signal(r) {
+    if (!this.notificationsLigne) return null;
+    const gravite = this.graviteLigne(r);
+    if (!gravite) return null;
+    const messages = this.messagesLigne(r).map((x) => x.message).join('\n');
+    return { icone: gravite === 'erreur' ? '⛔' : '⚠', classe: gravite, titre: `${messages}\n(clic : notifications de la ligne)` };
+  }
+
+  /** Numéro et libellé d'une ligne (messages, notifications). */
+  titreLigne(ligId) {
+    const l = this.resultat.lignes.find((x) => x.lig_id === ligId);
+    return `${l?.lig_numerotation ?? ''} ${l?.lig_libelle_brut ?? LIBELLES_TYPE[CODES_TL[l?.lig_tyl_id]] ?? ''}`;
+  }
+
   /** Lignes marquées par la recherche (surlignées), la ligne courante de la recherche ; null : aucune. */
   marquer(ids, courant = null) {
     this.marques = ids ? { ids, courant } : null;
@@ -1555,12 +1586,16 @@ export class EditeurDocument {
       marqueur: (r) => this.marqueur(r),
       entetePoignee: (th) => this.entetePoignee(th),
       choisirMarqueur: (id, ancre) => this.choisirEtiquette(id, ancre),
+      // Notifications de la ligne (hôte : notificationsLigne) : icône de la poignée, clic → panneau des notifications.
+      signal: (r) => this.signal(r),
+      choisirSignal: (id) => this.surSignal?.(id),
+      menuContextuel: (elements, id) => this.surMenuContextuel?.(elements, id) ?? elements,
 
       classeLigne: (r) => [
         r.virtuelle ? `pied-calcule pied-${r.virtuelle.type}` : '',
         `type-${(CODES_TL[r.calcule.lig_tyl_id] ?? '').toLowerCase()}`,
         r.estCalculee ? 'calculee' : '',
-        r.messages.some((x) => this.resultat.erreurs.includes(x)) ? 'erreur' : r.messages.length ? 'avertissement' : '',
+        this.graviteLigne(r) ?? '',
         !r.virtuelle && this.typePrixEffectif(r.calcule) !== 'V' ? 'hors-total' : '',
         !r.virtuelle && r.calcule.lig_tyl_id === TL.TITRE && r.calcule.lig_type_prix === 'F' ? 'tranche-frais' : '',
         r.calcule.lig_is_non_editee ? 'non-editee' : '',
@@ -1569,7 +1604,7 @@ export class EditeurDocument {
         this.marques?.ids.has(r.item.lig_id) ? (r.item.lig_id === this.marques.courant ? 'trouvee trouvee-courante' : 'trouvee') : '',
       ].join(' '),
 
-      titreLigne: (r) => r.messages.map((x) => x.message).join('\n'),
+      titreLigne: (r) => this.messagesLigne(r).map((x) => x.message).join('\n'),
       selection: (id) => this.surSelection?.(id),
     };
   }

@@ -100,6 +100,26 @@ table.totaux tr.net th, table.totaux tr.net td { font-weight: 700; color: var(--
 .controles li { cursor: pointer; margin-bottom: 0.2rem; }
 .controles li.erreur { color: var(--erreur); }
 .controles li.avertissement { color: var(--alerte); }
+/* Panneau des notifications (dock en bas par défaut) : filtres en pastilles, liste cliquable, notification courante. */
+.notifications-document .filtres-notifications { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; padding: 0.2rem 0.3rem;
+  position: sticky; top: 0; background: var(--fond); z-index: 1; border-bottom: 1px solid var(--bord); }
+.notifications-document .filtre { border: 1px solid var(--bord); border-radius: 999px; background: none; padding: 0 0.5rem; font-size: 0.85em;
+  color: var(--discret); text-decoration: line-through; }
+.notifications-document .filtre.actif { color: var(--texte); background: var(--titre-fond); text-decoration: none; }
+.notifications-document .filtre .nombre { font-variant-numeric: tabular-nums; color: var(--discret); }
+.notifications-document .sep { width: 1px; align-self: stretch; background: var(--bord); margin: 0 0.2rem; }
+.notifications-document .tout-afficher { border: none; background: none; color: var(--discret); font-size: 0.85em; }
+.notifications-document ul { list-style: none; margin: 0; padding: 0; }
+.notifications-document li button { display: flex; gap: 0.5rem; align-items: baseline; width: 100%; text-align: left; border: none;
+  background: none; padding: 0.15rem 0.4rem; border-radius: 3px; }
+.notifications-document li button:hover { background: var(--titre-fond); }
+.notifications-document li button.courante { background: var(--selection, var(--titre-fond)); box-shadow: inset 2px 0 0 var(--accent, var(--texte)); }
+.notifications-document .ligne { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(22rem, 40%); flex: none; }
+.notifications-document .message { flex: 1; }
+.notifications-document code { color: var(--discret); font-size: 0.85em; }
+.notifications-document .erreur .icone, .notifications-document .erreur .message { color: var(--erreur); }
+.notifications-document .avertissement .icone, .notifications-document .avertissement .message { color: var(--alerte); }
+.notifications-document .aide { padding: 0.3rem 0.5rem; }
 .ecarts { border-color: var(--alerte); background: var(--alerte-fond); }
 .ecarts table { border-collapse: collapse; margin: 0.3rem 0 0.6rem; }
 .ecarts td, .ecarts th { padding: 0.1rem 0.6rem; text-align: left; }

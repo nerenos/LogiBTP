@@ -1,6 +1,19 @@
 import { echapper } from '@logibtp/socle/ui';
 
 /**
+ * Erreurs et avertissements des scripts d'un résultat de l'hôte (resultat.scripts), dans l'ordre des scripts :
+ * [{ gravite, ligId, lig_id, mtrId, ligne, colonne, code, message }] (aussi source du panneau des notifications de l'hôte).
+ */
+export function messagesMetres(resultat) {
+  const res = [];
+  for (const s of resultat?.scripts ?? []) {
+    for (const e of s.erreurs ?? []) res.push({ gravite: 'erreur', ligId: s.lig_id, lig_id: s.lig_id, mtrId: s.mtr_id, ...e });
+    for (const a of s.avertissements ?? []) res.push({ gravite: 'avertissement', ligId: s.lig_id, lig_id: s.lig_id, mtrId: s.mtr_id, ...a });
+  }
+  return res;
+}
+
+/**
  * Notifications des métrés, comme dans un IDE : toutes les erreurs et tous les avertissements des scripts du document
  * (ligne de l'hôte, position dans le script, message), dans l'ordre des lignes. Un clic ouvre le métré à l'erreur.
  * Les erreurs ne bloquent ni la saisie ni l'enregistrement.
@@ -23,12 +36,7 @@ export class NotificationsMetre {
   /** Messages : { gravite 'erreur' | 'avertissement', ligId, mtrId, ligne, colonne, code, message }. */
   messages() {
     const rang = new Map((this.hote.resultat.lignes ?? []).map((l, i) => [l.lig_id, i]));
-    const res = [];
-    for (const s of this.hote.resultat.scripts ?? []) {
-      for (const e of s.erreurs ?? []) res.push({ gravite: 'erreur', ligId: s.lig_id, mtrId: s.mtr_id, ...e });
-      for (const a of s.avertissements ?? []) res.push({ gravite: 'avertissement', ligId: s.lig_id, mtrId: s.mtr_id, ...a });
-    }
-    return res.sort((a, b) => ((rang.get(a.ligId) ?? 0) - (rang.get(b.ligId) ?? 0))
+    return messagesMetres(this.hote.resultat).sort((a, b) => ((rang.get(a.ligId) ?? 0) - (rang.get(b.ligId) ?? 0))
       || (a.gravite === b.gravite ? 0 : a.gravite === 'erreur' ? -1 : 1) || ((a.ligne ?? 0) - (b.ligne ?? 0)));
   }
 

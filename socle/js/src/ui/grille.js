@@ -24,6 +24,8 @@ const largeursDe = (colonnes) => new Map(colonnes.filter((c) => Number(c.largeur
  *  actions                 { modifier, inserer, deplacer, indenter, desindenter, decaler, supprimer, dupliquer,
  *                            copier, coller, ouvrirMetre, rechercher (F3), annuler, retablir, depotAutorise, classeLigne, titreLigne, selection,
  *                            marqueur(ligne) → { fond, titre } | null (pastille colorée de la poignée), choisirMarqueur(id, element),
+ *                            signal(ligne) → { icone, classe, titre } | null (icône d'erreur ou d'avertissement de la poignée),
+ *                            choisirSignal(id) (clic sur l'icône),
  *                            entetePoignee(th) (contenu de l'entête de la colonne des poignées),
  *                            libelleDepot(cibleId, position) → texte du badge pendant un glisser (avant, après, composant…),
  *                            depotExterne : { types, autorise(cibleId, position, types), deposer(cibleId, position, dataTransfer) }
@@ -153,6 +155,18 @@ export class GrilleArbre {
       if (titre) tr.title = titre;
       const poignee = document.createElement('td');
       poignee.className = 'poignee';
+      // Signal (erreur, avertissement…) : icône de la poignée, bulle = messages, clic transmis à l'hôte.
+      const s = this.o.actions.signal?.(r);
+      if (s) {
+        const icone = document.createElement('span');
+        icone.className = `signal ${s.classe ?? ''}`;
+        icone.textContent = s.icone;
+        if (s.titre) icone.title = s.titre;
+        icone.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+        icone.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        icone.addEventListener('click', (ev) => { ev.stopPropagation(); this.o.actions.choisirSignal?.(id); });
+        poignee.appendChild(icone);
+      }
       // Pastille colorée (étiquette, mode de vente…) : un clic ouvre le choix de l'hôte.
       const m = this.o.actions.marqueur?.(r);
       if (m) {

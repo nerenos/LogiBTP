@@ -8,3 +8,4 @@ export { GestionVuesDocument, FournisseurVuesMemoire, vueParDefaut, fusionnerDis
 export { ParametrageAffichageDocument, FournisseurAffichageMemoire, controlerEtiquettes } from './parametrage.js';
 export { PlanDocument } from './plan.js';
 export { RechercheLignes } from './recherche.js';
+export { NotificationsDocument, GRAVITES } from './notifications.js';

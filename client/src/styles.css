@@ -261,9 +261,9 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 .trac-liens li { padding: 3px 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .trac-rapport summary { cursor: pointer; font-weight: 600; }
 
-/* Page document : compteur des erreurs et avertissements des métrés (ouvre le panneau des notifications) */
-.compteur-metres.avec-erreurs { color: var(--erreur); border-color: var(--erreur); }
-.compteur-metres.avec-avertissements { color: var(--alerte); }
+/* Page document : compteur des notifications (erreurs et avertissements) (ouvre le panneau des notifications) */
+.compteur-notifications.avec-erreurs { color: var(--erreur); border-color: var(--erreur); }
+.compteur-notifications.avec-avertissements { color: var(--alerte); }
 
 /* Tiroirs (métré) : sous le bandeau de navigation (28 px, modules/navigation). */
 :root { --decalage-tiroir: 28px; }

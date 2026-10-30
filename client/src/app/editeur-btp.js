@@ -1,9 +1,9 @@
 import { CFG_LIGNES as C, parId, ancetres, descendants, formatNombre, formatLibre, lireNombre, echapper } from '@logibtp/socle/ui';
 import {
-  EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes, LIBELLES_TYPE,
+  EditeurDocument, ReglesDocument, PressePapiers, correspondance, modifierColonne, insererColonnes,
 } from '@logibtp/document/ui';
 import { DictionnaireMetre } from '@logibtp/metre/ui';
-import { calculerDocument, TL, CODES_TL, estChiffree, natureObligatoire } from '../calcul/index.js';
+import { calculerDocument, TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
 import { compteLigne, libelleCompte } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
@@ -367,11 +367,6 @@ export class EditeurDevisBtp extends EditeurDocument {
   }
 
   // ---------------------------------------------------------------- hôte du panneau de métré
-
-  titreLigne(ligId) {
-    const l = this.resultat.lignes.find((x) => x.lig_id === ligId);
-    return `${l?.lig_numerotation ?? ''} ${l?.lig_libelle_brut ?? LIBELLES_TYPE[CODES_TL[l?.lig_tyl_id]] ?? ''}`;
-  }
 
   metreDeLigne(ligId) {
     const l = this.saisie.lignes.find((x) => x.lig_id === ligId);

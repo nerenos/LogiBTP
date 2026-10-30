@@ -529,12 +529,17 @@ export class PanneauxDocument {
   /** Contrôles de la spécialisation affichés avec ceux du calcul : [{ lig_id, code, message, niveau }]. */
   controlesSupplementaires() { return []; }
 
-  rendreMessages(zone, selectionner) {
+  /**
+   * Contrôles du document ; messages : ceux à afficher à la place ([{ lig_id, code, message, gravite }], ex. les
+   * notifications de la ligne courante quand le panneau des notifications regroupe tout le document).
+   */
+  rendreMessages(zone, selectionner, messages = null) {
     const r = this.editeur.resultat;
-    const items = [...r.erreurs.map((e) => ({ ...e, niveau: 'erreur' })), ...this.controlesSupplementaires(),
-      ...r.avertissements.map((e) => ({ ...e, niveau: 'avertissement' }))];
+    const items = messages?.map((e) => ({ ...e, niveau: e.gravite ?? 'avertissement' }))
+      ?? [...r.erreurs.map((e) => ({ ...e, niveau: 'erreur' })), ...this.controlesSupplementaires(),
+        ...r.avertissements.map((e) => ({ ...e, niveau: 'avertissement' }))];
     zone.hidden = items.length === 0;
-    zone.innerHTML = `<h3>Contrôles (${items.length})</h3><ul>${items.map((e) =>
+    zone.innerHTML = `<h3>${messages ? 'Notifications de la ligne' : 'Contrôles'} (${items.length})</h3><ul>${items.map((e) =>
       `<li class="${e.niveau}" data-lig="${e.lig_id ?? ''}"><code>${echapper(e.code)}</code> ${echapper(e.message)}</li>`).join('')}</ul>`;
     zone.querySelectorAll('li[data-lig]').forEach((li) => li.addEventListener('click', () => {
       if (li.dataset.lig) selectionner(Number(li.dataset.lig));

@@ -3,12 +3,12 @@ import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibt
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
-import { echapper, formatNombre, actionDe, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir } from '@logibtp/socle/ui';
+import { echapper, formatNombre, actionDe, libelleRaccourci, basculerAideMemoire, fermerAideMemoire, confirmer, ouvrirDialogue, ouvrirModale, saisir } from '@logibtp/socle/ui';
 import { D, aujourdhui } from '@logibtp/socle';
 import { ONGLETS_DOCUMENT } from '../raccourcis.js';
-import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes } from '@logibtp/document/ui';
-import { PanneauMetre, NotificationsMetre } from '@logibtp/metre/ui';
-import { VERSION_MOTEUR } from '../../calcul/index.js';
+import { Disposition, GestionVuesDocument, PlanDocument, RechercheLignes, NotificationsDocument } from '@logibtp/document/ui';
+import { PanneauMetre, messagesMetres } from '@logibtp/metre/ui';
+import { VERSION_MOTEUR, controlesSaisie, controlesValidation, LIBELLES_CONTROLE_SAISIE } from '../../calcul/index.js';
 import { api } from '../api.js';
 import { lireAttente, ecrireAttente, retirerAttente, marquerAttente, estHorsLigne, ETATS_ATTENTE, urlAttente, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { envoyerDocument, SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -56,7 +56,7 @@ const GABARIT = `
     </div>
     <span class="groupe" data-vues></span>
     <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
-      <button data-basculer-dock="notifications" class="compteur-metres" title="Erreurs et avertissements des métrés (sans blocage de l'enregistrement)">⚠ 0</button>
+      <button data-basculer-dock="notifications" class="compteur-notifications" title="Notifications : erreurs et avertissements du document (calcul, saisie, validation, métrés), sans blocage de l'enregistrement (Alt+7 ; F8 / Maj+F8 : suivante / précédente)">⚠ 0</button>
       <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
     <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
     <div class="groupe barre-droite">
@@ -140,16 +140,16 @@ const GABARIT = `
       </aside>
       <aside class="dock" data-dock-id="notifications">
         <header class="dock-entete">
-          <span class="dock-titre">Métrés : erreurs et avertissements</span>
+          <span class="dock-titre">Notifications</span>
           <div class="dock-boutons">
             <button data-dock="gauche" title="Ancrer à gauche">◧</button>
             <button data-dock="bas" title="Ancrer en bas">⬓</button>
             <button data-dock="droite" title="Ancrer à droite">◨</button>
             <button data-action="reduire" title="Réduire">–</button>
-            <button data-action="fermer" title="Fermer (bouton ⚠ de la barre pour le rouvrir)">✕</button>
+            <button data-action="fermer" title="Fermer (bouton ⚠ de la barre ou Alt+7 pour le rouvrir)">✕</button>
           </div>
         </header>
-        <div class="dock-contenu"><section id="notifications-metre"></section></div>
+        <div class="dock-contenu"><section id="notifications"></section></div>
       </aside>
     </section>
   </main>
@@ -187,7 +187,7 @@ export class PageDocument extends PageBase {
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
       racine: this.conteneur,
-      // Notifications des métrés : en bas, ouvertes par le compteur ⚠ de la barre.
+      // Notifications du document : en bas, ouvertes par le compteur ⚠ de la barre (Alt+7).
       docks: { notifications: { position: 'bas', reduit: false, visible: false } },
       surOnglet: (o) => {
         if (o === 'lignes') this.editeur?.grille.focus();
@@ -240,6 +240,10 @@ export class PageDocument extends PageBase {
         app.naviguer(`/mail/nouveau?type=document&id=${id}`, { nouvelleFenetre: true });
       },
       'fermer-page': () => app.fermerPage('/liste/documents'),
+      // Notifications : panneau affiché ou masqué, suivante / précédente (F8, Maj+F8) à partir de la ligne courante.
+      notifications: () => this.disposition.afficher('notifications'),
+      notificationSuivante: () => this.allerNotification(1),
+      notificationPrecedente: () => this.allerNotification(-1),
     };
     // Raccourcis ⓘ : bulle au survol, aide-mémoire complet (fenêtre déplaçable) au clic.
     const aide = this.conteneur.querySelector('[data-aide-raccourcis]');
@@ -437,6 +441,7 @@ export class PageDocument extends PageBase {
         this.selection = id;
         this.plan?.rendre();
         this.panneaux?.rendreDetail(this.$('#detail'), id);
+        this.rendreControlesLigne();
         this.metre?.suivre(id); // le métré ouvert suit la ligne sélectionnée
       },
       surMessage: (t) => this.app.message(t),
@@ -494,24 +499,83 @@ export class PageDocument extends PageBase {
       message: (t) => this.app.message(t),
       dictionnaire: new DictionnaireBtp(this.editeur),
     });
-    this.notifications = new NotificationsMetre(this.$('#notifications-metre'), this.editeur, {
-      ouvrir: (ligId, mtrId, position) => {
-        this.disposition.onglet('lignes');
-        this.editeur.grille.selectionner(ligId, { colonne: 3 });
-        this.metre.ouvrir(ligId, mtrId, position);
-      },
-      surCompte: ({ erreurs, avertissements }) => {
-        const b = this.$('.compteur-metres');
-        b.textContent = `${erreurs ? '⛔' : '⚠'} ${erreurs + avertissements}`;
-        b.classList.toggle('avec-erreurs', erreurs > 0);
-        b.classList.toggle('avec-avertissements', !erreurs && avertissements > 0);
-      },
-    });
+    this.brancherNotifications();
     this.editeur.magasin.abonner(() => this.rafraichir());
     this.marque = this.editeur.magasin.pile.at(-1);
     this.ecarts = null;
     this.rafraichir();
     if (this.disposition.p.onglet === 'lignes') this.editeur.grille.focus();
+  }
+
+  /**
+   * Panneau des notifications (en bas, masquable) : calcul du moteur, contrôles de saisie (avertissements), contrôles de
+   * la validation, métrés ; icône dans la poignée des lignes, entrée du clic droit, compteur de la barre.
+   */
+  brancherNotifications() {
+    const ed = this.editeur;
+    const regles = ed.definition.regles ?? {};
+    const lignes = () => ed.resultat.lignes ?? [];
+    this.notifications = new NotificationsDocument(this.$('#notifications'), ed, {
+      sources: [
+        {
+          cle: 'saisie', libelle: 'Saisie',
+          messages: () => controlesSaisie(lignes(), {
+            famille: ed.definition.type?.tyd_famille ?? 'V', modeOuvrage: ed.saisie.document.ent_mode_calcul_ouvrage ?? 'V',
+            typePrix: (l) => ed.typePrixEffectif(l), qteNulle: !ed.transforme,
+          }),
+        },
+        {
+          cle: 'validation', libelle: 'Validation',
+          messages: () => controlesValidation(lignes(), regles).map((m) => ({ ...m, gravite: 'erreur', message: `${m.message} (bloque la validation)` })),
+        },
+        { cle: 'metres', libelle: 'Métrés', messages: () => messagesMetres(ed.resultat) },
+      ],
+      libelles: { ...LIBELLES_CONTROLE_SAISIE, NATURE_OBLIGATOIRE: 'Nature manquante' },
+      // Métré : ouvert à la position de l'erreur ; sinon la ligne (tranches dépliées, filtre retiré au besoin).
+      aller: (m) => {
+        this.disposition.onglet('lignes');
+        if (m.source === 'metres') {
+          ed.allerA(m.lig_id, { focus: false });
+          this.metre.ouvrir(m.lig_id, m.mtrId, m.ligne ? { ligne: m.ligne, colonne: m.colonne } : null);
+        } else ed.allerA(m.lig_id);
+      },
+      surCompte: ({ erreurs, avertissements }) => {
+        const b = this.$('.compteur-notifications');
+        b.textContent = `${erreurs ? '⛔' : '⚠'} ${erreurs + avertissements}`;
+        b.classList.toggle('avec-erreurs', erreurs > 0);
+        b.classList.toggle('avec-avertissements', !erreurs && avertissements > 0);
+      },
+    });
+    ed.notificationsLigne = (id) => this.notifications.messagesLigne(id);
+    ed.surSignal = (id) => this.montrerNotifications(id);
+    ed.surMenuContextuel = (elements, id) => {
+      const n = this.notifications.messagesLigne(id).length;
+      return [...elements, { separateur: true },
+        { libelle: `Notifications de la ligne${n ? ` (${n})` : ''}`, raccourci: libelleRaccourci('notifications', 'document'), action: () => this.montrerNotifications(id), actif: n > 0 },
+        { libelle: 'Notification suivante', raccourci: libelleRaccourci('notificationSuivante', 'document'), action: () => this.allerNotification(1) },
+        { libelle: 'Notification précédente', raccourci: libelleRaccourci('notificationPrecedente', 'document'), action: () => this.allerNotification(-1) }];
+    };
+    ed.grille.rendre();
+  }
+
+  /** Contrôles du détail : notifications de la ligne courante (le panneau des notifications montre tout le document). */
+  rendreControlesLigne() {
+    if (!this.panneaux || !this.notifications) return;
+    const messages = this.selection === null ? [] : this.notifications.messagesLigne(this.selection);
+    this.panneaux.rendreMessages(this.$('#controles'), (id) => this.editeur.grille.selectionner(id), messages);
+  }
+
+  /** Panneau des notifications ouvert sur celles d'une ligne. */
+  montrerNotifications(ligId) {
+    if (!this.disposition.p.docks.notifications?.visible) this.disposition.afficher('notifications', true);
+    this.notifications.montrerLigne(ligId);
+  }
+
+  /** Notification suivante (1) ou précédente (−1) : panneau affiché, ligne sélectionnée. */
+  allerNotification(sens) {
+    if (!this.notifications) return;
+    if (!this.disposition.p.docks.notifications?.visible) this.disposition.afficher('notifications', true);
+    if (!this.notifications.suivante(sens)) this.app.message('Aucune notification');
   }
 
   /** Modifications non enregistrées : la pile d'annulation a changé depuis l'ouverture ou le dernier enregistrement. */
@@ -557,7 +621,7 @@ export class PageDocument extends PageBase {
     const d = ed.resultat.document;
     this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
     // Le net à payer est affiché dans les totaux sous la grille.
-    p.rendreMessages(this.$('#controles'), (id) => ed.grille.selectionner(id));
+    this.rendreControlesLigne();
     p.rendreEcarts(this.$('#ecarts'), this.ecarts, (decision, commentaire) => this.arbitrer(decision, commentaire).catch((x) => this.app.erreur(x)));
     this.$('[data-action="annuler"]').disabled = ed.magasin.pile.length === 0;
     this.$('[data-action="retablir"]').disabled = ed.magasin.pileRefaire.length === 0;

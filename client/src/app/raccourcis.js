@@ -32,6 +32,9 @@ declarerRaccourcis('document', {
     transformer: { libelle: 'Transformer le document', defaut: [] },
     bibliotheque: { libelle: 'Ouvrir la bibliothèque', defaut: [] },
     apercu: { libelle: 'Aperçu et impression', defaut: 'Ctrl+P' },
+    notifications: { libelle: 'Afficher ou masquer les notifications', defaut: 'Alt+7' },
+    notificationSuivante: { libelle: 'Notification suivante (ligne)', defaut: 'F8' },
+    notificationPrecedente: { libelle: 'Notification précédente (ligne)', defaut: 'Shift+F8' },
   },
 });
 
