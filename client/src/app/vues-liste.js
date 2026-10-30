@@ -343,11 +343,6 @@ export const VUES_LISTE = [
         }),
         col('chantier', 'Chantier', { modifiable: true, ...prop(1.5, 110) }),
         col('heures_utilisation', 'Heures\nd\'utilisation', { modifiable: true, ...nombre(0), ...fixe(96), recherche: false }),
-        col('heures_revision', 'Révision\n(heures)', { modifiable: true, ...nombre(0), ...fixe(84), recherche: false }),
-        col('revision', 'Révision', {
-          calcul: true, formule: 'SI [Heures d\'utilisation] > [heures_revision] ALORS "Révision à prévoir" SINON ""', ...fixe(130),
-          regles: [{ condition: '[revision] <> ""', style: { fond: '#fff4e0', gras: true, couleur: '#a15c00' } }],
-        }),
         col('controle_ok', 'Contrôle\nOK', { modifiable: true, format: 'coche', ...fixe(64), recherche: false }),
         col('valeur_achat', 'Valeur\nd\'achat', { ...nombre(), ...fixe(100), recherche: false }),
         col('observations', 'Observations', { modifiable: true, ...prop(2, 140), masquee: false }),

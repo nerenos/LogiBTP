@@ -221,9 +221,7 @@ export class FicheMateriel extends FicheLogiBTP {
   }
 
   rendreInformations(v) {
-    const h = Number(v.heures_utilisation), r = Number(v.heures_revision);
     const parts = [];
-    if (r > 0) parts.push(h > r ? info('Révision', `dépassée de ${h - r} h`, true) : info('Avant révision', `${r - h} h`));
     const age = jours(v.date_achat);
     if (age !== null) parts.push(info('Âge', `${(age / 365.25).toFixed(1).replace('.', ',')} an(s)`));
     if (v.etat === 'PANNE') parts.push(info('État', 'En panne', true));
