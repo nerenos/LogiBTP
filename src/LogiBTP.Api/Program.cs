@@ -211,6 +211,8 @@ api.MapDiffusion();
 api.MapLiaisons();
 // Étapes validées depuis l'atelier (page tablette, borne du Pointage) : lot 2e de l'Exécution.
 api.MapAtelier().ExigeModule(ModulesFacultatifs.Execution, "Exécution");
+// Application de terrain (ANALYSE-TERRAIN.md) : tâches du planning de la personne connectée, partie mobile, pièces « Terrain ».
+api.MapGroup("").ExigeModule(ModulesFacultatifs.Planning, "Planning").MapTerrain();
 api.MapStructure();
 api.MapConsultations();
 api.MapRetenuesMarche();

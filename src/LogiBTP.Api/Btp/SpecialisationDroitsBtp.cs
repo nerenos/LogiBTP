@@ -63,6 +63,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
                 Aide: "Portée : soi (ses heures), son service (responsable), tout"),
             new("pointage/bornes", "Bornes d'atelier", Simple, Aide: "Appareils, PIN, paramétrage des bornes"),
             new("planning", "Planning", Simple, Icone: "📆"),
+            new("terrain", "Application de terrain", [ActionsDroits.Consulter], Icone: "📱", Aide: "Ses tâches du planning, leur adresse, leur contact et les pièces diffusées sur le terrain"),
             new("mail", "Messagerie", Simple, Icone: "📧"),
             new("connexions", "Connexions externes (OAuth)", Simple, Icone: "🔐"),
             new("administration", "Administration", Lecture, Icone: "⚙"),
@@ -140,6 +141,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         new("/api/pointage/appareils", ModeRoute.Module, "pointage/bornes"),
         new("/api/pointage/pins", ModeRoute.Module, "pointage/bornes"),
         new("/api/planning", ModeRoute.Module, "planning"),
+        new("/api/terrain", ModeRoute.Module, "terrain"),
         new("/api/mail", ModeRoute.Module, "mail"),
         new("/api/oauth", ModeRoute.Module, "connexions"),
     ];

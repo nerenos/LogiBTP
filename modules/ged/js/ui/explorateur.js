@@ -41,7 +41,7 @@ const bouton = (action, icone, bulle, { classe = '', pos = '' } = {}) =>
 
 export class ExplorateurGed {
   constructor(conteneur, { fournisseur, contexte = null, arborescence = null, compact = false, modifiable = true, admin = false, utilisateur = '', message,
-    documentInitial = null, coffre = false, envoi = false, ouvrirUrl = null }) {
+    documentInitial = null, coffre = false, envoi = false, terrain = false, ouvrirUrl = null }) {
     this.conteneur = conteneur;
     this.ouvrirUrl = ouvrirUrl;
     this.fournisseur = fournisseur;
@@ -53,8 +53,9 @@ export class ExplorateurGed {
     this.utilisateur = utilisateur;
     this.message = message ?? (() => {});
     this.documentInitial = documentInitial;
-    this.options = { coffre, supprimes: false, archives: false, aEnvoyer: false };
+    this.options = { coffre, supprimes: false, archives: false, aEnvoyer: false, terrain: false };
     this.envoi = envoi;
+    this.terrain = terrain;
     this.clePrefs = compact ? 'gedCompact' : 'ged';
     const p = this.#prefs();
     this.vue = p.vue ?? 'details';
@@ -102,6 +103,7 @@ export class ExplorateurGed {
           <span class="ged-separateur-outils"></span>
           ${this.contexte ? '' : bouton('filtre-coffre', '🔒', 'Coffre-fort seulement', { classe: 'bascule' })}
           ${this.envoi ? bouton('filtre-envoi', '📧', 'Pièces jointes à envoyer seulement', { classe: 'bascule' }) : ''}
+          ${this.terrain ? bouton('filtre-terrain', '📱', 'Pièces diffusées sur le terrain seulement', { classe: 'bascule' }) : ''}
           ${bouton('filtre-archives', '🗄', 'Documents archivés', { classe: 'bascule' })}
           ${this.admin ? bouton('filtre-supprimes', '🗑', 'Afficher les documents supprimés', { classe: 'bascule' }) : ''}
           ${this.admin && !this.contexte ? bouton('coffre', '🛡', 'Vérifier toute la chaîne du coffre-fort') : ''}
@@ -158,6 +160,7 @@ export class ExplorateurGed {
     });
     bascule('filtre-coffre', 'coffre');
     bascule('filtre-envoi', 'aEnvoyer', false);
+    bascule('filtre-terrain', 'terrain', false);
     bascule('filtre-archives', 'archives');
     bascule('filtre-supprimes', 'supprimes');
     c.querySelector('[data-action="filtre-coffre"]')?.setAttribute('aria-pressed', String(this.options.coffre));
@@ -426,15 +429,18 @@ export class ExplorateurGed {
     const dossiers = (this.dossiers ?? []).filter((n) => this.#correspond(n.libelle));
     let docs = (this.documents ?? []).filter((d) => this.#correspond(`${d.titre} ${d.version?.nom_fichier ?? ''} ${this.libelleCategorie(d.categorie)} ${d.auteur ?? ''} ${(d.mots_cles ?? []).join(' ')}`));
     if (this.options.aEnvoyer) docs = docs.filter((d) => d.a_envoyer);
+    if (this.options.terrain) docs = docs.filter((d) => d.terrain);
     // Pièces jointes d'un mail : sous le mail quand il est dans la liste.
     const ids = new Set(docs.map((d) => d.id));
     const racines = this.#trier(docs.filter((d) => !d.parent_id || !ids.has(d.parent_id)));
     const ordonnes = racines.flatMap((d) => [d, ...docs.filter((x) => x.parent_id === d.id)]);
     this.visibles = { dossiers, docs: ordonnes };
     const nbEnvoi = docs.filter((d) => d.a_envoyer).length;
+    const nbTerrain = docs.filter((d) => d.terrain).length;
     this.conteneur.querySelector('.ged-compteur').textContent = [
       dossiers.length ? `${dossiers.length} dossier${dossiers.length > 1 ? 's' : ''}` : '',
       `${docs.length} document${docs.length > 1 ? 's' : ''}`, this.envoi && nbEnvoi ? `${nbEnvoi} à envoyer` : '',
+      this.terrain && nbTerrain ? `${nbTerrain} sur le terrain` : '',
     ].filter(Boolean).join(' · ');
     this.#rendreActionsDossier();
     if (!dossiers.length && !ordonnes.length) {
@@ -476,12 +482,13 @@ export class ExplorateurGed {
       }
     }).join('');
     const vide = colonnes.length - 1;
-    return `<table class="ged-table"><thead><tr>${this.envoi ? '<th class="ged-envoi" data-bulle="Pièce jointe à envoyer (module Mail)">📧</th>' : ''}${entete}</tr></thead><tbody>
+    return `<table class="ged-table"><thead><tr>${this.envoi ? '<th class="ged-envoi" data-bulle="Pièce jointe à envoyer (module Mail)">📧</th>' : ''}${this.terrain ? '<th class="ged-envoi" data-bulle="Pièce diffusée sur le terrain">📱</th>' : ''}${entete}</tr></thead><tbody>
       ${dossiers.map((n, i) => `<tr data-noeud="${i}" class="ged-ligne-dossier ${this.selection?.noeud === n.cle ? 'selectionnee' : ''} ${n.lien || n.url ? 'lien' : ''}" draggable="false">
-        ${this.envoi ? '<td></td>' : ''}<td class="ged-nom"><span class="ged-ico">${n.lien || n.url ? '↪' : ''}${n.icone ?? '📁'}</span><span class="ged-titre">${echapper(n.libelle)}</span>
+        ${this.envoi ? '<td></td>' : ''}${this.terrain ? '<td></td>' : ''}<td class="ged-nom"><span class="ged-ico">${n.lien || n.url ? '↪' : ''}${n.icone ?? '📁'}</span><span class="ged-titre">${echapper(n.libelle)}</span>
         ${n.sous_titre ? `<small class="ged-emplacement">${echapper(n.sous_titre)}</small>` : ''}</td>${'<td></td>'.repeat(vide)}</tr>`).join('')}
       ${docs.map((d) => `<tr data-doc="${d.id}" class="${this.#classeDoc(d, ids)}" draggable="${this.modifiable && !d.archive}">
         ${this.envoi ? `<td class="ged-envoi"><input type="checkbox" data-envoi="${d.id}" ${d.a_envoyer ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="Pièce jointe à envoyer"></td>` : ''}
+        ${this.terrain ? `<td class="ged-envoi"><input type="checkbox" data-terrain="${d.id}" ${d.terrain ? 'checked' : ''} ${this.modifiable && !d.supprime && !d.archive ? '' : 'disabled'} aria-label="Pièce diffusée sur le terrain"></td>` : ''}
         ${cellules(d)}</tr>`).join('')}
     </tbody></table>`;
   }
@@ -516,6 +523,7 @@ export class ExplorateurGed {
       });
     });
     this.contenu.querySelectorAll('[data-envoi]').forEach((c) => c.addEventListener('change', () => this.#lancer(() => this.marquerEnvoi(Number(c.dataset.envoi), c.checked))));
+    this.contenu.querySelectorAll('[data-terrain]').forEach((c) => c.addEventListener('change', () => this.#lancer(() => this.marquerTerrain(Number(c.dataset.terrain), c.checked))));
   }
 
   #selectionnerNoeud(n) {
@@ -848,6 +856,7 @@ export class ExplorateurGed {
         <label class="large">Résumé <textarea rows="2" data-m="resume" ${editable ? '' : 'readonly'} placeholder="Résumé du document">${echapper(d.resume ?? '')}</textarea></label>
         <label class="large">Notes <textarea rows="2" data-m="notes" ${editable ? '' : 'readonly'}>${echapper(d.notes ?? '')}</textarea></label>
         ${this.envoi ? `<label class="coche"><input type="checkbox" data-envoi-detail ${d.a_envoyer ? 'checked' : ''} ${editable ? '' : 'disabled'}> 📧 Pièce jointe à envoyer</label>` : ''}
+        ${this.terrain ? `<label class="coche"><input type="checkbox" data-terrain-detail ${d.terrain ? 'checked' : ''} ${editable ? '' : 'disabled'}> 📱 Diffusée sur le terrain</label>` : ''}
       </div>
       <dl class="ged-proprietes">
         <dt>Élément lié</dt><dd>${echapper(d.type_element ? `${d.type_element} ${d.id_element}` : 'aucun')}${d.repertoire_id ? ' · classé dans un dossier' : ''}</dd>
@@ -872,6 +881,7 @@ export class ExplorateurGed {
     z.querySelectorAll('[data-m]').forEach((el) => el.addEventListener('change', () => this.#lancer(() => this.#modifier({ [el.dataset.m]: el.value }))));
     z.querySelectorAll('[data-t]').forEach((el) => el.addEventListener('change', () => this.#lancer(() => this.#modifier({ [el.dataset.t]: el.value.split(',').map((x) => x.trim()).filter(Boolean) }))));
     z.querySelector('[data-envoi-detail]')?.addEventListener('change', (e) => this.#lancer(() => this.marquerEnvoi(d.id, e.target.checked)));
+    z.querySelector('[data-terrain-detail]')?.addEventListener('change', (e) => this.#lancer(() => this.marquerTerrain(d.id, e.target.checked)));
     z.querySelector('[data-action="indexer"]')?.addEventListener('click', () => this.#lancer(async () => {
       this.doc = await this.fournisseur.indexer(d.id);
       this.message(ETATS_INDEX[this.doc.index_etat] ?? 'Indexé', this.doc.index_etat === 'ECHEC' ? 'erreur' : 'succes');
@@ -975,6 +985,15 @@ export class ExplorateurGed {
     if (this.doc?.id === id) this.doc.a_envoyer = valeur;
     this.#rendreListe();
     this.message(valeur ? 'Pièce jointe à envoyer' : 'Pièce jointe retirée de l\'envoi', 'succes');
+  }
+
+  /** Diffuse (ou non) le document sur le terrain (application de terrain de l'élément lié). */
+  async marquerTerrain(id, valeur) {
+    await this.fournisseur.modifier(id, { terrain: valeur });
+    for (const d of this.documents ?? []) if (d.id === id) d.terrain = valeur;
+    if (this.doc?.id === id) this.doc.terrain = valeur;
+    this.#rendreListe();
+    this.message(valeur ? 'Pièce diffusée sur le terrain' : 'Pièce retirée du terrain', 'succes');
   }
 
   // ================================================================ administration

@@ -1,4 +1,4 @@
-import { urlFiche, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
+import { urlFiche, MODULE_FACULTATIF, SUJET_FENETRE, TYPE_FICHE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { rendreDotationsSalarie } from '../stock/magasin.js';
 import { ExplorateurGed } from '@logibtp/ged/ui';
@@ -13,6 +13,8 @@ import { LISTE_PAR_TYPE } from '../application.js';
 import { voisins } from '../suite-liste.js';
 import { api } from '../api.js';
 
+// Fiches dont les pièces peuvent être diffusées sur le terrain (case 📱 de la GED, application de terrain).
+const TYPES_TERRAIN = new Set([TYPE_FICHE.CHANTIER, TYPE_FICHE.MARCHE]);
 const ICONES = { salarie: '👷', materiel: '🚜', element: '📚', personne: '🏢', individu: '👤', projet: '🎯', affaire: '🗂', chantier: '🏗', marche: '📜' };
 
 /**
@@ -64,7 +66,7 @@ export class PageFiche extends PageBase {
         fournisseur: s.ged, contexte: { type_element: typeElement, id_element: String(idElement), libelle, icone: ICONES[typeElement] }, compact: true,
         arborescence: new ArborescenceBtp({ type_element: typeElement, id_element: String(idElement), libelle, icone: ICONES[typeElement] }, { structure: s.structure }),
         ouvrirUrl: (url) => app.naviguer(url, { nouvelleFenetre: true }),
-        modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n),
+        modifiable, admin: app.estAdmin(), utilisateur: app.utilisateur(), message: (t, n) => app.message(t, n), terrain: TYPES_TERRAIN.has(typeElement),
       }),
       // Onglet Suivi (module CRM actif, en ligne) : notes, tâches et courriels des tiers, contacts et de la structure.
       suivi: app.moduleActif(MODULE_FACULTATIF.CRM) && TYPES_SUIVI.has(type) ? (corps, { type: t, id }) => {

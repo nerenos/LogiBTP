@@ -22,6 +22,7 @@ import { extraireTexte, ETATS_INDEX } from './texte.js';
 //                                          classification automatique quand elle n'est pas saisie
 //   modifier(id, meta)                   → document (informations seulement ; le contenu passe par une version ;
 //                                          a_envoyer : pièce jointe à envoyer avec l'élément lié, module Mail ;
+//                                          terrain : pièce diffusée sur le terrain (application de terrain) ;
 //                                          repertoire_id : classement, lie le document à l'élément du répertoire)
 //   nouvelleVersion(id, { fichier, genre, etape, etat, commentaire })  → document (édition : N dernières conservées)
 //   etape(id, { etape, etat, commentaire })   → document (étape sans nouveau fichier)
@@ -125,7 +126,7 @@ export const PARAMETRES_DEFAUT = {
 };
 
 const TYPES_DERIVATION = ['VERSION', 'TRADUCTION', 'ADAPTATION', 'EXTRAIT', 'ANNOTATION'];
-const MODIFIABLES_COFFRE = ['resume', 'notes', 'a_envoyer', 'confidentialite', 'acces_profils', 'acces_utilisateurs', 'mots_cles', 'langue', 'repertoire_id'];
+const MODIFIABLES_COFFRE = ['resume', 'notes', 'a_envoyer', 'terrain', 'confidentialite', 'acces_profils', 'acces_utilisateurs', 'mots_cles', 'langue', 'repertoire_id'];
 const MODIFIABLES = [...MODIFIABLES_COFFRE, 'titre', 'categorie', 'date_document', 'auteur', 'type_element', 'id_element'];
 const CLES_ACCES = ['confidentialite', 'acces_profils', 'acces_utilisateurs'];
 const EXTRAIT_MAX = 2000;
@@ -339,7 +340,7 @@ export class FournisseurGedMemoire {
       categorie: texte(m.categorie) ?? classe.categorie, nature: m.nature ?? 'fichier',
       type_element: texte(m.type_element), id_element: texte(m.id_element), auteur: m.auteur ?? this.utilisateur,
       date_document: m.date_document ?? this.#aujourdhui(), parent_id: m.parent_id ?? null,
-      mail: m.mail ?? null, resume: m.resume ?? null, notes: m.notes ?? null, etat: null, coffre: false, coffre_le: null, a_envoyer: false,
+      mail: m.mail ?? null, resume: m.resume ?? null, notes: m.notes ?? null, etat: null, coffre: false, coffre_le: null, a_envoyer: false, terrain: false,
       supprime: false, supprime_le: null, supprime_par: null, cree_le: this.#maintenant(), cree_par: this.utilisateur, modifie_le: null,
       nb_consultations: 0, consulte_le: null, repertoire_id: texte(m.repertoire_id) ? Number(m.repertoire_id) : null,
       confidentialite: saisie ?? classe.confidentialite ?? NIVEAU_CONFIDENTIALITE.INTERNE, acces_profils: liste(m.acces_profils ?? []), acces_utilisateurs: liste(m.acces_utilisateurs ?? []),
@@ -366,7 +367,7 @@ export class FournisseurGedMemoire {
           continue;
         }
         if (CLES_ACCES.includes(k) && !peutChangerAcces(d, this.#moi)) throw new ErreurGed(403, 'ACCES_REFUSE', 'Droit CONFIDENTIALITE refusé');
-        if (k === 'a_envoyer') d.a_envoyer = v === true || v === 'true';
+        if (k === 'a_envoyer' || k === 'terrain') d[k] = v === true || v === 'true';
         else if (k === 'confidentialite') d.confidentialite = confidentialite(v);
         else if (['acces_profils', 'acces_utilisateurs', 'mots_cles'].includes(k)) d[k] = liste(v);
         else if (k === 'repertoire_id') this.#classer(d, texte(v) === null ? null : Number(v));

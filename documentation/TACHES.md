@@ -91,6 +91,12 @@
 - [x] **Exécution, lots 2b à 2e** (24/10/2026) : types d'ordres activables, étapes des ordres par états (règles
   répliquées), planning par étapes, validation des étapes depuis l'atelier et la borne.
 
+### Application de terrain
+
+- [x] **Lot 1** (30/10/2026) : page `/terrain` (tâches du jour ou de la semaine, adresse et itinéraire, contact,
+  consignes, liens, pièces de la GED diffusées sur le terrain), téléphone et repères du chantier dans la partie mobile
+  des tâches du planning, case 📱 « Diffusée sur le terrain » de la GED (chantier, marché, ordres).
+
 ### Import
 
 ### Installation

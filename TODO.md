@@ -190,11 +190,13 @@ Analyse du 24/10/2026 : [ANALYSE-MODULE-STOCK.md](documentation/conception/ANALY
 
 ### Application de terrain (poseurs, chefs d'équipe)
 
-- [ ] **Lots 1 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
+- [ ] **Lots 2 à 7** ([analyse](documentation/conception/ANALYSE-TERRAIN.md), T1 à T22 tranchées le 30/10/2026, lot 1 réalisé) : page personnelle `/terrain` pour tablette et smartphone (tâches du planning et
   leur partie mobile `tac_mobile`, navigation, pointage sur la tâche `poi_tac_id`, chef d'équipe, saisie libre solo ou
   en équipe, étapes des ordres de pose, avancement réel, NC et photos, hors ligne, PV de réception signé, SAV sur
   droit). Plus tard : option de présaisie des heures (T7). Reprend les lots 5 et 6 du Pointage, la partie mobile des tâches et
   l'avancement réel du Planning, le lot 5 de l'Exécution (signature, SAV).
+- [ ] Lot 1, écarts : plans au dernier indice validé du suivi des validations (CRM) parmi les pièces du terrain (T6) ;
+  bandeau trop large sur un téléphone (gabarit tactile commun avec le lot 2).
 
 ### Import
 

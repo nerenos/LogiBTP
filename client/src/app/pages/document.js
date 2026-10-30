@@ -920,7 +920,7 @@ export class PageDocument extends PageBase {
     // Arborescence : le document est la racine, ses documents enfants (transformations, copies) sont des dossiers.
     const contexte = { type_element: type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id), libelle: `${type?.tyd_libelle ?? 'Document'} ${d.ent_numero ?? ''}`.trim(), icone: '📄' };
     this.ged = new ExplorateurGed(zone, {
-      fournisseur: this.servicesGed, envoi: true, modifiable: true, admin: this.app.estAdmin(), utilisateur: this.app.utilisateur(), contexte,
+      fournisseur: this.servicesGed, envoi: true, terrain: type?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION, modifiable: true, admin: this.app.estAdmin(), utilisateur: this.app.utilisateur(), contexte,
       arborescence: this.servicesStructure ? new ArborescenceBtp(contexte, { structure: this.servicesStructure, entId: d.ent_id }) : null,
       ouvrirUrl: (url) => this.app.naviguer(url, { nouvelleFenetre: true }),
       message: (t, n) => this.app.message(t, n),

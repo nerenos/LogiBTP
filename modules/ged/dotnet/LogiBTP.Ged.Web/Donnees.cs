@@ -32,6 +32,8 @@ public class DocumentGed
     public bool DgeCoffre { get; set; }
     /// <summary>Pièce jointe à envoyer avec l'élément lié (module Mail).</summary>
     public bool DgeAEnvoyer { get; set; }
+    /// <summary>Pièce diffusée sur le terrain (application de terrain de l'élément lié).</summary>
+    public bool DgeTerrain { get; set; }
     public DateTimeOffset? DgeCoffreLe { get; set; }
     public bool DgeSupprime { get; set; }
     public DateTimeOffset? DgeSupprimeLe { get; set; }
@@ -421,6 +423,7 @@ public class DocumentDto
     public string? Notes { get; set; }
     public string? Etat { get; set; }
     public bool AEnvoyer { get; set; }
+    public bool Terrain { get; set; }
     public bool Coffre { get; set; }
     public DateTimeOffset? CoffreLe { get; set; }
     public bool Supprime { get; set; }

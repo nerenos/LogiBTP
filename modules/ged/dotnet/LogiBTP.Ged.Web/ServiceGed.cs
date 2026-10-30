@@ -23,7 +23,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
     private readonly List<string> aEffacer = [];
 
     /// <summary>Informations de classement modifiables même au coffre-fort (le contenu et l'élément lié restent figés).</summary>
-    private static readonly string[] ModifiablesCoffre = ["resume", "notes", "a_envoyer", "confidentialite", "acces_profils", "acces_utilisateurs", "mots_cles", "langue", "repertoire_id"];
+    private static readonly string[] ModifiablesCoffre = ["resume", "notes", "a_envoyer", "terrain", "confidentialite", "acces_profils", "acces_utilisateurs", "mots_cles", "langue", "repertoire_id"];
     private static readonly string[] Modifiables = [.. ModifiablesCoffre, "titre", "categorie", "date_document", "auteur", "type_element", "id_element"];
     private static readonly string[] CleAcces = ["confidentialite", "acces_profils", "acces_utilisateurs"];
     private static readonly string[] TypesDerivation = ["VERSION", "TRADUCTION", "ADAPTATION", "EXTRAIT", "ANNOTATION"];
@@ -216,7 +216,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
         dto.TypeElement = d.DgeTypeElement; dto.IdElement = d.DgeIdElement; dto.Auteur = d.DgeAuteur;
         dto.DateDocument = d.DgeDateDocument?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture); dto.ParentId = d.DgeParentId;
         dto.Mail = d.DgeMail?.RootElement.Clone(); dto.Resume = d.DgeResume; dto.Notes = d.DgeNotes; dto.Etat = d.DgeEtat;
-        dto.Coffre = d.DgeCoffre; dto.CoffreLe = d.DgeCoffreLe; dto.AEnvoyer = d.DgeAEnvoyer; dto.Supprime = d.DgeSupprime; dto.SupprimeLe = d.DgeSupprimeLe;
+        dto.Coffre = d.DgeCoffre; dto.CoffreLe = d.DgeCoffreLe; dto.AEnvoyer = d.DgeAEnvoyer; dto.Terrain = d.DgeTerrain; dto.Supprime = d.DgeSupprime; dto.SupprimeLe = d.DgeSupprimeLe;
         dto.SupprimePar = d.DgeSupprimePar; dto.CreeLe = d.DgeCreeLe; dto.CreePar = d.DgeCreePar; dto.ModifieLe = d.DgeModifieLe;
         dto.Version = v is null ? null : new(v.VgeId, v.VgeNumero, v.VgeNomFichier, v.VgeTypeMime, v.VgeTaille, v.VgeGenre);
         dto.NbPieces = nbPieces;
@@ -535,6 +535,7 @@ public class ServiceGed(GedDbContext db, SpecialisationGed specialisation, Stock
                 case "resume": d.DgeResume = Texte(texte); break;
                 case "notes": d.DgeNotes = Texte(texte); break;
                 case "a_envoyer": d.DgeAEnvoyer = texte == "true"; break;
+                case "terrain": d.DgeTerrain = texte == "true"; break;
                 case "confidentialite": d.DgeConfidentialite = Confidentialite(texte); break;
                 case "acces_profils": d.DgeAccesProfils = TableauJson(valeur); break;
                 case "acces_utilisateurs": d.DgeAccesUtilisateurs = TableauJson(valeur); break;

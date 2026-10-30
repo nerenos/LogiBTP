@@ -1,0 +1,40 @@
+import { describe, it, expect } from 'vitest';
+import { lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel } from '../src/app/terrain/terrain.js';
+
+describe('application de terrain', () => {
+  it('lundi de la semaine', () => {
+    expect(lundiDe('2026-10-30')).toBe('2026-10-26');
+    expect(lundiDe('2026-10-26')).toBe('2026-10-26');
+    expect(lundiDe('2026-11-01')).toBe('2026-10-26');
+  });
+
+  it('partie mobile complétée par le chantier', () => {
+    const defauts = { 7: { adresse: '1 rue du Port, 13002 Marseille', contact: 'M. Martin', telephone: '04 91 00 00 00' } };
+    const m = mobileAffiche({ chantier: { id: 7 }, mobile: { contact: 'Mme Durand ', commentaire: 'Badge à l\'accueil' } }, defauts);
+    expect(m.adresse).toEqual({ valeur: '1 rue du Port, 13002 Marseille', herite: true });
+    expect(m.contact).toEqual({ valeur: 'Mme Durand', herite: false });
+    expect(m.telephone.herite).toBe(true);
+    expect(m.commentaire).toBe('Badge à l\'accueil');
+    expect(mobileAffiche({ chantier: null, mobile: {} }, defauts).adresse).toBeNull();
+  });
+
+  it('itinéraire selon l\'appareil ou le choix', () => {
+    const a = '1 rue du Port, Marseille';
+    expect(lienItineraire(a, 'AUTO', 'Mozilla/5.0 (Linux; Android 14)')).toBe(`geo:0,0?q=${encodeURIComponent(a)}`);
+    expect(lienItineraire(a, 'AUTO', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Mobile')).toMatch(/^https:\/\/maps\.apple\.com\//);
+    expect(lienItineraire(a, 'AUTO', 'Mozilla/5.0 (Windows NT 10.0)')).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\//);
+    expect(lienItineraire(a, 'WAZE')).toMatch(/^https:\/\/waze\.com\/ul\?q=/);
+  });
+
+  it('liens saisis : http(s) seulement cliquables', () => {
+    expect(liensTexte('https://exemple.fr/plan.pdf\n\njavascript:alert(1)\nportail : code 1234')).toEqual([
+      { url: 'https://exemple.fr/plan.pdf', libelle: 'exemple.fr/plan.pdf' }, { texte: 'javascript:alert(1)' }, { texte: 'portail : code 1234' },
+    ]);
+  });
+
+  it('numéro de téléphone', () => {
+    expect(numeroTel('04 91 00-00-00')).toBe('0491000000');
+    expect(numeroTel('+33 6 12')).toBe('+33612');
+    expect(numeroTel('voir accueil')).toBeNull();
+  });
+});

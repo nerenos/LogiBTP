@@ -945,3 +945,40 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 /* Fiches de la structure : champ tiers avec bouton (nouveau prospect) sur la même ligne (lot 6). */
 .champ-tiers:has(> button) { display: flex; gap: .3rem; align-items: center; }
 .champ-tiers:has(> button) > input { flex: 1; min-width: 0; }
+
+/* Application de terrain (/terrain, ANALYSE-TERRAIN.md) : tablette et smartphone d'abord (cibles d'au moins 44 px). */
+.page-terrain { max-width: 52rem; margin: 0 auto; padding: 0 0.75rem 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.terrain-entete { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.terrain-entete .page-titre { margin: 0.5rem 0 0; }
+.terrain-onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.terrain-onglets button, .terrain-periode button, .terrain-bouton { min-height: 44px; font-size: 1rem; border-radius: 8px; }
+.terrain-onglets button[aria-selected="true"] { background: var(--accent, #2b6cb0); color: #fff; border-color: transparent; font-weight: 600; }
+.terrain-periode { display: flex; align-items: center; gap: 0.5rem; }
+.terrain-periode b { flex: 1; text-align: center; }
+.terrain-periode button[data-decaler] { min-width: 44px; }
+.terrain-jour { font-size: 1.05rem; margin: 0.75rem 0 0; }
+.terrain-vide { text-align: center; color: var(--texte-discret, #777); padding: 2rem 0; }
+.terrain-tache { border: 1px solid var(--bord); border-left: 6px solid var(--couleur); border-radius: 10px; background: var(--surface); }
+.terrain-tache + .terrain-tache { margin-top: 0.5rem; }
+.terrain-tache > summary { list-style: none; cursor: pointer; padding: 0.75rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; min-height: 44px; }
+.terrain-tache > summary::-webkit-details-marker { display: none; }
+.terrain-horaires { font-variant-numeric: tabular-nums; font-weight: 600; }
+.terrain-libelle { flex-basis: 100%; font-size: 1.1rem; }
+.terrain-element { flex-basis: 100%; color: var(--texte-discret, #777); }
+.terrain-etat { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; color: #fff; background: var(--couleur); }
+.terrain-detail { padding: 0 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.terrain-detail p { margin: 0; }
+.terrain-ligne { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.terrain-bouton { display: inline-flex; align-items: center; padding: 0 0.9rem; border: 1px solid var(--bord); background: var(--surface); text-decoration: none; color: inherit; white-space: nowrap; }
+.terrain-consignes { padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--selection); }
+.terrain-liens { margin: 0; padding-left: 1.2rem; }
+.terrain-liens a { display: inline-block; padding: 0.4rem 0; word-break: break-all; }
+.terrain-pieces { display: flex; flex-direction: column; gap: 0.4rem; }
+.terrain-piece { display: grid; grid-template-columns: auto 1fr; column-gap: 0.5rem; align-items: center; padding: 0.6rem 0.75rem; min-height: 44px;
+  border: 1px solid var(--bord); border-radius: 8px; text-decoration: none; color: inherit; }
+.terrain-piece small { grid-column: 2; }
+.terrain-reglages { margin-top: 1rem; color: var(--texte-discret, #777); }
+@media (min-width: 720px) {
+  .terrain-detail { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .terrain-consignes, .terrain-pieces, .terrain-liens { grid-column: 1 / -1; }
+}

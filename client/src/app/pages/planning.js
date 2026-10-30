@@ -9,14 +9,13 @@ import { api } from '../api.js';
 import { ecouter } from '../diffusion.js';
 import { RessourcesTache, rendreOngletRessources, TYPE_GLISSER_RESSOURCE } from '../planning/ressources-tache.js';
 import { ouvrirConge } from '../pointage/conges.js';
+import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
 
 // Module Planning, lot 2 : page du planning (vue choisie, période flottante, échelle, zoom), panneau ancré à droite :
 // tâches à planifier (budget − planifié par chantier et service, glissées sur une ligne) et détail de la tâche
 // sélectionnée (saisie, affectations, aperçu du calcul). Calcul par le serveur (ReglesPlanning.cs ↔ calcul.js).
 
-const ETATS = { OPTION: 'Option', PREVUE: 'Prévue', CONFIRMEE: 'Confirmée', EN_COURS: 'En cours', TERMINEE: 'Terminée' };
-/** Couleur de la pastille de chaque état (combo du détail, barres). */
-const COULEURS_ETAT = { OPTION: '#98a2b3', PREVUE: '#2563eb', CONFIRMEE: '#16a34a', EN_COURS: '#d97706', TERMINEE: '#475467' };
+const ETATS = ETATS_TACHE;
 /** Pastille de l'état ; sans état (vide, par défaut) : aucune pastille. */
 const pastilleEtat = (etat) => (etat ? `<i class="pastille-etat-tache" style="background:${COULEURS_ETAT[etat] ?? '#98a2b3'}" title="${echapper(ETATS[etat] ?? etat)}"></i>` : '');
 /** États proposés à la saisie : « Aucun » (vide) d'abord. */
@@ -46,7 +45,8 @@ const UNITES_DEP = { CAL: 'jours calendaires', OUV: 'jours ouvrés' };
 const MODES_DEP = { FIXE: 'Fixe (propagée)', ALERTE: 'Alerte' };
 const FREQUENCES = { JOUR: 'Chaque jour', SEMAINE: 'Chaque semaine', MOIS: 'Chaque mois' };
 const TYPES_JALON = { LIVRAISON: 'Livraison', FIN_CHANTIER: 'Fin de chantier', FIN_ORDRE: 'Fin d\'ordre', ALERTE: 'Alerte', INTERVENTION: 'Intervention', AUTRE: 'Autre' };
-const CHAMPS_MOBILE = { adresse: 'Adresse', contact: 'Contact', commentaire: 'Commentaire', liens: 'Liens' };
+// Partie mobile de la tâche, lue par l'application de terrain (/terrain) ; vide : adresse, contact et téléphone du chantier.
+const CHAMPS_MOBILE = { adresse: 'Adresse', contact: 'Contact', telephone: 'Téléphone', commentaire: 'Consignes', liens: 'Liens (un par ligne)' };
 const GROUPES_TACHE = { tache: 'Tâche', mobile: 'Mobile', ressource: 'Ressource', detail: 'Détail', dependance: 'Dépendance' };
 const SYNCHRO = { TEMPS_REEL: 'Temps réel', 30: 'Toutes les 30 s', 60: 'Toutes les minutes', 300: 'Toutes les 5 min', PAUSE: 'En pause', MANUEL: 'Manuelle (⟳)' };
 
@@ -1125,7 +1125,7 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
         <p class="ligne"><label>Couleur <input type="color" data-couleur value="${t.couleur ?? '#3b82f6'}"></label> <label><input type="checkbox" data-sans-couleur ${t.couleur ? '' : 'checked'}> par service</label></p>
         <p><label>Avancement <input type="number" data-avancement min="0" max="100" size="3" value="${t.avancement}"> %</label></p>
         <p><textarea data-memo rows="2" cols="34" placeholder="Mémo">${echapper(t.memo ?? '')}</textarea></p>`)}
-      ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${cle === 'adresse' || cle === 'contact' ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
+      ${groupe('mobile', Object.entries(CHAMPS_MOBILE).map(([cle, libelle]) => `<p><label>${libelle}<br><textarea data-mobile="${cle}" rows="${['adresse', 'contact', 'telephone'].includes(cle) ? 1 : 2}" cols="34">${echapper(mobile[cle] ?? '')}</textarea></label></p>`).join(''))}
       ${groupe('ressource', `<div data-ressources-tache></div>
         <p><b>Habilitations exigées</b></p><p class="ligne" data-habilitations></p><p class="ligne"><span data-habilitation></span> <button type="button" data-ajouter-hab>＋</button></p>
         <p><button type="button" data-creneau title="Première plage libre de la première ressource affectée, sinon d'une ressource habilitée du service">🔎 Premier créneau libre</button> <span data-proposition class="aide"></span></p>`)}
@@ -1141,6 +1141,16 @@ Budget ${ecrireDuree(x.budget) || '0:00'} h · planifié ${ecrireDuree(x.planifi
     const habs = [...(t.habilitations ?? [])];
     const combo = (cle, opts, valeur, vide = true) => { const c = creerCombo({ options: opts, valeur: valeur ?? '', vide }); zone.querySelector(`[data-${cle}]`).append(c); return c; };
     const element = combo('element', elements.map((e) => ({ valeur: e.id, libelle: `${e.code} ${e.libelle}` })), t.id_element);
+    // Partie mobile vide : le terrain affiche l'adresse, le contact et le téléphone du chantier (indiqués en grisé).
+    const reperesChantier = async () => {
+      const champs = ['adresse', 'contact', 'telephone'].map((cle) => zone.querySelector(`[data-mobile="${cle}"]`));
+      champs.forEach((c) => { c.placeholder = ''; });
+      if (typeElement !== TYPE_FICHE.CHANTIER || !element.valeurCombo || !this.app.acces('terrain')) return;
+      const d = await api.terrain.chantier(element.valeurCombo).catch(() => null);
+      champs.forEach((c) => { if (d?.[c.dataset.mobile]) c.placeholder = `Chantier : ${d[c.dataset.mobile]}`; });
+    };
+    element.addEventListener('change', reperesChantier);
+    reperesChantier();
     const service = combo('service', this.ref.services.map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle })), t.srv_id);
     const mode = combo('mode', options(MODES), String(t.calcul), false);
     const etat = combo('etat-tache', options(ETATS_SAISIE).map((o) => ({ ...o, couleur: COULEURS_ETAT[o.valeur] })), t.etat ?? '', false);

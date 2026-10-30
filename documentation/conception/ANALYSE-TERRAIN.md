@@ -1,6 +1,12 @@
 # LogiBTP – analyse de l'application de terrain (poseurs, chefs d'équipe)
 
-> Analyse préalable (30/10/2026). Questions T1 à T22 tranchées le 30/10/2026 (§ 6) ; prête pour le lot 1. Reprend les parties restées
+> Analyse préalable (30/10/2026). Questions T1 à T22 tranchées le 30/10/2026 (§ 6).
+>
+> **Réalisation** : lot 1 réalisé le 30/10/2026 (`Btp/TerrainBtp.cs`, `client/src/app/pages/terrain.js`, `terrain/terrain.js`,
+> `modules/ged/db/053`, `db/242`). Écarts : la partie mobile était déjà saisie au planning (constat du § 2 erroné) :
+> le lot y ajoute le téléphone et les repères du chantier ; plans au dernier indice validé du CRM (T6) non repris
+> (pièces cochées « Terrain » seulement) ; nœud de droits `terrain` (consultation) donné aux profils MOBILE et SAISIE ;
+> bandeau du haut trop large sur un téléphone (défaut commun à l'application, à traiter avec le gabarit du lot 2). Reprend les parties restées
 > ouvertes de trois analyses : [Pointage](ANALYSE-MODULE-POINTAGE.md) § 2.3 et lots 5 et 6, [Planning](ANALYSE-MODULE-PLANNING.md)
 > § 2.3 (partie mobile des tâches) et possibilité 10 (avancement réel), [Exécution](ANALYSE-MODULE-EXECUTION.md) lot 5
 > (signature) et E50 à E53 (étapes hors de l'atelier). Socle commun : [transverse](ANALYSE-MODULES-TRANSVERSE.md) § 6
@@ -32,7 +38,7 @@ au **bureau** (`/pointage/saisie`, `/pointage/groupe`). Le poseur sur chantier n
 | Étapes des ordres validées hors bureau (ordres dont il est la ressource, ou de son service sur ses chantiers du jour) | Fait (atelier) | `EcranEtapesAtelier` (module Exécution), `AtelierBtp`, `/execution/atelier`, 🧩 de la borne |
 | Type d'ordre de pose `E_PO` (étapes de démonstration : préparation, pose, réception) | Fait | `db/197`, `db/209` |
 | Pointage rattaché à une tâche (`poi_tac_id`) | **Colonne seule** : jamais écrite | `modules/pointage/db/086` |
-| Partie mobile de la tâche (`tac_mobile` : adresse, contact, commentaire, liens) | **Colonne seule** : ni lue ni écrite | `modules/planning/db/089` |
+| Partie mobile de la tâche (`tac_mobile` : adresse, contact, commentaire, liens) | Saisie dans le détail de la tâche (groupe Mobile), lue par personne | `modules/planning/db/089`, `pages/planning.js` |
 | Avancement de la tâche (`tac_avancement`) | Saisi au bureau (théorique) | Détail de la tâche du planning |
 | Hors ligne : consultation des lectures de l'API, saisie des documents (IndexedDB, envoi au retour, fusion) | Fait pour les documents seulement ; écriture des pointages hors ligne = 503 `HORS_LIGNE` | `client/src/pwa/`, `client/src/app/hors-ligne/` |
 | Photos dans le fil du chantier (GED, images) | Fait (dépôt depuis le bureau) | Module CRM, fil d'actualité |

@@ -157,6 +157,12 @@ export const api = {
     traiterConge: (id, action, t) => appel('POST', `/pointage/conges/${id}/${action}`, t),
   },
   // Module Planning : vues, données d'une période, ressources, chantiers, à planifier, tâches (calcul par le serveur).
+  // Application de terrain (ANALYSE-TERRAIN.md) : tâches du planning de la personne connectée.
+  terrain: {
+    taches: (du, au) => appel('GET', `/terrain?${new URLSearchParams({ du, au })}`),
+    chantier: (id) => appel('GET', `/terrain/chantiers/${id}`),
+    urlPiece: (id, telecharger = false) => `/api/terrain/pieces/${id}${telecharger ? '?telecharger=true' : ''}`,
+  },
   planning: {
     vues: () => appel('GET', '/planning/vues'),
     enregistrerVue: (v) => appel('PUT', '/planning/vues', v),

@@ -157,6 +157,11 @@ export const MENUS_METIER = [
     ],
   },
   {
+    code: 'terrain', libelle: 'Terra&in', module: MODULE_FACULTATIF.PLANNING, droit: 'terrain', elements: [
+      { code: 'terrain', libelle: 'Mon terrain (tâches, adresses, pièces)', icone: '📱', url: '/terrain', info: 'Vos tâches du planning du jour ou de la semaine, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain' },
+    ],
+  },
+  {
     code: 'pointage', libelle: '&Pointage', module: MODULE_FACULTATIF.POINTAGE, droit: 'pointage', elements: [
       { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
       { code: 'pointage-synthese', libelle: 'Synthèse et validation', icone: '✅', url: '/pointage/synthese', info: 'Salariés à examiner, corrections, validation simple ou double, demandes de correction' },
