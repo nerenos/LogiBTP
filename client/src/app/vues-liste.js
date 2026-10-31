@@ -297,8 +297,7 @@ export const VUES_LISTE = [
       theme: 'salaries',
       source: { mode: 'vue', vue: 'salaries', colonne_id: 'id', colonne_type: 'type_element' },
       colonnes: [
-        col('matricule', 'Matricule', { ...fixe(90) }),
-        col('code', 'Code', { modifiable: true, ...fixe(80), bulle: 'Code court du salarié (recherche, homonymes)' }),
+        col('code', 'Code', { ...fixe(80), bulle: 'Identifiant du salarié (recherche, homonymes)' }),
         col('matricule_paie', 'Matricule\nde paie', { modifiable: true, ...fixe(96) }),
         col('nom', 'Nom', { modifiable: true, ...prop(1.5, 110), style: { gras: true },
           regles: [{ condition: 'NON [actif]', style: { couleur: '#667085', italique: true, barre: true } }],

@@ -34,13 +34,13 @@ export const TYPES_FICHE = {
       libelle: 'Salarié',
       titre: '[prenom] [nom]',
       chrono: chrono('S', '{P}{N:5}'),
-      sous_titre: '[matricule] · [poste]',
+      sous_titre: '[code] · [poste]',
       // Peu d'onglets, des groupes de champs : informations liées à l'entreprise, puis données privées (RGPD).
       sections: [
         {
           code: 'entreprise', titre: 'Entreprise',
           groupes: [
-            { titre: 'Identité', champs: ['matricule', 'code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
+            { titre: 'Identité', champs: ['code', 'matricule_paie', 'nom', 'prenom', 'ind_id'] },
             { titre: 'Emploi', champs: ['agence', 'service', 'poste', 'qualification', 'type_mo', 'statut', 'date_entree', 'date_sortie', 'usage'] },
             { titre: 'Coordonnées professionnelles', champs: ['email', 'telephone'] },
             { titre: 'Rémunération', champs: ['salaire_brut', 'heures_mois', 'cout_horaire'] },
@@ -59,9 +59,10 @@ export const TYPES_FICHE = {
         },
       ],
       champs: [
-        c('matricule', 'Matricule', 'sal_matricule', 'texte', { obligatoire: true, longueur: 10, saisie: 'creation', non_copie: true, aide: 'Identifiant unique, saisi à la création' }),
-        c('code', 'Code', 'sal_code', 'texte', { longueur: 20, non_copie: true, aide: 'Code court du salarié : recherche rapide, homonymes' }),
-        c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le matricule' }),
+        // Le code est l'identifiant du salarié (plus de matricule saisi, db/247) ; le matricule de paie n'est demandé que
+        // s'il diffère du code.
+        c('code', 'Code', 'sal_code', 'texte', { obligatoire: true, longueur: 10, non_copie: true, aide: 'Identifiant unique du salarié : recherche rapide, homonymes' }),
+        c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le code' }),
         c('nom', 'Nom', 'sal_nom', 'texte', { obligatoire: true, longueur: 60 }),
         c('ind_id', 'Individu (annuaire)', 'sal_ind_id', 'nombre', { reference: 'individu', non_copie: true, aide: "Fiche de l'individu dans l'annuaire : identité et coordonnées partagées avec les autres modules" }),
         c('prenom', 'Prénom', 'sal_prenom', 'texte', { obligatoire: true, longueur: 60 }),
@@ -77,7 +78,12 @@ export const TYPES_FICHE = {
           aide: 'Service principal (planning, pointage, exécution) ; les autres appartenances se gèrent dans Paramètres › Services',
         }),
         c('poste', 'Poste', 'sal_poste', 'texte', { longueur: 60 }),
-        c('agence', 'Agence', 'sal_agence', 'liste', { options: options('Lyon', 'Saint-Étienne', 'Grenoble', 'Bourg-en-Bresse') }),
+        // Agence = notre société ou l'un de ses niveaux inférieurs dans l'annuaire (db/247) : une agence ajoutée dans
+        // l'annuaire est proposée d'office.
+        c('agence', 'Agence', 'sal_agence_per_id', 'liste', {
+          requete: 'SELECT per_id, nom FROM v_agences_societe WHERE actif ORDER BY profondeur, nom',
+          aide: "Notre société ou l'un de ses niveaux inférieurs dans l'annuaire (agences, établissements)",
+        }),
         c('type_mo', 'Type de main-d\'œuvre', 'sal_type_mo', 'liste', {
           options: options(['OUVRIER', 'Ouvrier'], ['ETAM', 'ETAM'], ['CADRE', 'Ingénieur et cadre']), aide: 'Catégorie conventionnelle BTP',
         }),

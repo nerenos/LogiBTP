@@ -475,7 +475,7 @@ export class FicheIndividu extends FicheAnnuaire {
     if (mail) parts.push(info('E-mail', `<a href="mailto:${echapper(mail)}">${echapper(mail)}</a>`));
     const n = v.nb_rattachements ?? this.rattachementsLus.length;
     if (n > 1) parts.push(info('Rattachements', `${n} personnes`));
-    if (v.salarie) parts.push(info('Salarié', `${echapper(v.salarie.matricule)} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ' (sorti)'}`));
+    if (v.salarie) parts.push(info('Salarié', `${echapper(v.salarie.code ?? '')} · ${echapper(v.salarie.poste ?? '')}${v.salarie.actif ? '' : ' (sorti)'}`));
     if (this.homonymes?.length && this.mode === MODES.CREATION) parts.push(info('Homonymes', echapper(this.homonymes.map((h) => h.nom_complet + (h.personnes ? ` (${h.personnes})` : '')).join(' · ')), true));
     return parts.join('');
   }
@@ -510,7 +510,7 @@ export class FicheIndividu extends FicheAnnuaire {
     const roles = this.fiche?.valeurs?.roles ?? [];
     return [
       {
-        libelle: salarie ? `👷 Salarié ${salarie.matricule}` : '👷 Créer la fiche salarié',
+        libelle: salarie ? `👷 Salarié ${salarie.code ?? ''}` : '👷 Créer la fiche salarié',
         titre: salarie ? `Ouvrir la fiche salarié (${salarie.poste ?? ''}${salarie.agence ? `, ${salarie.agence}` : ''})` : 'Créer la fiche salarié à partir de cet individu (identité, agence, coordonnées professionnelles)',
         visible: !this.estEnSaisie() && this.id !== null && (!!salarie || roles.includes('SALARIE') || roles.includes('INTERIMAIRE')),
         action: () => this.ouvrirFiche({ type: TYPE_FICHE.SALARIE, id: salarie ? salarie.id : `nouveau?individu=${this.id}` }),

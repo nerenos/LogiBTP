@@ -275,5 +275,6 @@ input.champ-date {
   background-repeat: no-repeat;
 }
 input.champ-date[readonly], input.champ-date:disabled { background-image: none; padding-right: 0.3em; }
+input.champ-date[readonly]::placeholder, input.champ-date:disabled::placeholder { color: transparent; }
 input.champ-date.invalide { border-color: var(--erreur); background-color: var(--erreur-fond); }
 input.champ-date-cache { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }

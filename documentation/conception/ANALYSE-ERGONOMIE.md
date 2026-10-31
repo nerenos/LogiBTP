@@ -503,3 +503,21 @@ client` pour les lots qui changent des vues fournies.
 - **Contrôles** : `npm test`, construction du client ; essai dans le navigateur (fiche du module Fiche en mémoire :
   consultation, saisie « 15/05/23 » → 15/05/2023 enregistrée, calendrier, saisie impossible).
 - **Reste** : champs mois (`type="month"`), voir `TODO.md`.
+
+## 10. Réalisation du lot E8 : salariés (31/10/2026)
+
+- **Agences (FS2)** : `salarie.sal_agence_per_id` (`db/247`, rejouable) désigne notre société ou l'un de ses niveaux
+  inférieurs dans l'annuaire (vue `v_agences_societe`, hors dépôts, nom court = nom commercial sinon raison sociale) ;
+  une agence ajoutée dans l'annuaire est proposée d'office. `sal_agence` garde le nom court, tenu par trigger : il reste
+  la clé des zones de déplacement et de la règle de paie REPAS du module Pointage (renommer une agence renomme ces
+  clés). Reprise : agence texte → personne (nom, raison sociale ou fin de raison sociale), sinon notre société.
+  Le rattachement de l'individu suit l'agence (`SalariesAnnuaire.cs`). Plus de table d'agences de démonstration.
+- **Code (FS3)** : le code (`sal_code`, 10 caractères, unique, chrono S) est l'identifiant ; le matricule n'est plus
+  saisi (`sal_matricule` recopie le code par trigger, encore lu par quelques requêtes) ; le matricule de paie reprend
+  l'ancien matricule là où il était vide (export de paie inchangé). Colonne Matricule retirée des listes de salariés.
+- **Reprise de l'individu (FS1)** : lier un individu existant complète les champs vides (nom, prénom, agence, service,
+  poste, coordonnées professionnelles du rattachement, intérim) sans rien écraser, avec le nombre de champs complétés.
+- **Correction** : « Créer dans l'annuaire » échouait (utilisation de l'individu obligatoire) ; l'individu est créé
+  « En service ».
+- **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (création avec agence et individu
+  créé, rattachement à l'agence ; liaison d'un individu existant).

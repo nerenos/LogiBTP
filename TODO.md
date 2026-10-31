@@ -268,9 +268,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] E3 : densité confortable / compacte (I6), « Mon terrain » dans le menu Pointage (I9).
 - [ ] E4 à E6 : listes — pastilles de statut, barre réordonnée, création des ordres (L2, L5, O1) ; panneau des vues à
   droite, distinct du panneau des segments (L1) ; totaux et bandeau d'indicateurs répliqués JS / C# (L3, L4).
-- [ ] E7 à E9 : fiches — synthèse et compteurs d'onglets, « — » des champs vides, booléens jamais obligatoires (F1–F3,
-  FK1) ; salarié : reprise de l'individu, agences de l'annuaire, code à la place du matricule (FS1–FS3) ; matériel :
-  quantité 1 si identifié, relevés initiaux et rectification, historique d'état et état de retour (FM1–FM3).
+- [ ] E7, E9 : fiches — synthèse et compteurs d'onglets, « — » des champs vides, booléens jamais obligatoires (F1–F3,
+  FK1) ; matériel : quantité 1 si identifié, relevés initiaux et rectification, historique d'état et état de retour
+  (FM1–FM3). (E8 salarié fait.)
+- [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/247`) des requêtes qui le lisent encore (magasin,
+  habilitations, comptes), puis la colonne.
 - [ ] E10, E11 : page document (après les PR de personnalisation et des règlements) — filtre des notifications,
   unités de l'article et conversion du prix, retrait limité, totaux, légende du plan (D1–D6) ; Suivi + Traçabilité,
   onglet Options en dernier (textes de l'édition restent dans l'entête), règlement dans l'onglet Règlements placé après
