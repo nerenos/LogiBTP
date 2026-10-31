@@ -197,4 +197,5 @@ Clause de sauvegarde ou butoir, révision des prix unitaires de la bibliothèque
   commandes T inscrites au marché) ; onglet Révision du marché de sous-traitance, formule du marché de vente lié proposée
   tant que le marché n'a pas ses propres paramètres ; pas de facture simple (la régularisation passe sur la facture suivante).
 - Éditions : bloc `revision` du dictionnaire (type de prix, formule, périodes du détail figé, total), guide § 10.5.
-- Reste : révision affichée sur les situations (information) ; bloc à placer dans les modèles de facture si souhaité.
+- Situations : révision pour information dans l'édition (périodes facturées à ce jour, puis la période de la situation au
+  coefficient de son mois), sans ligne de pied ; bloc lié `REVISION_PRIX` dans les modèles des pièces de marché (`db/191`).

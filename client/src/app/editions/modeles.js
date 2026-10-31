@@ -216,6 +216,28 @@ const BLOCS = [
     },
   },
   {
+    // Révision des prix du marché (lots G1, G3) : formule et périodes ; situation : pour information, calculée à ce jour.
+    code: 'REVISION_PRIX', libelle: 'Révision des prix (formule, périodes, coefficients)',
+    contenu: {
+      type: 'pile', condition: 'revision', marges: { haut: 3 }, espacement: 1, enfants: [
+        champ('="Révision des prix" & Si(revision.information; " (pour information, à ce jour)"; "") & " – mois zéro " & revision.mois_zero & " – Cn = " & revision.formule', { style: 'sous_titre' }),
+        {
+          type: 'tableau', collection: 'revision.periodes', remplir: false, report: false,
+          colonnes: [
+            { cle: 'piece', titre: 'Période', largeur: '*', valeur: '=ligne.piece & Si(ligne.commande; " – " & ligne.commande; "") & Si(ligne.regularisation; " (régularisation)"; "")' },
+            { cle: 'mois', titre: 'Mois', largeur: '16mm', valeur: '{{ligne.mois}}' },
+            { cle: 'index', titre: 'Index', largeur: '16mm', valeur: '{{ligne.mois_index}}' },
+            { cle: 'base', titre: 'Base HT', largeur: '26mm', valeur: '{{ligne.base}}', format: 'montant', alignement: 'droite', style: 'montant' },
+            { cle: 'coef', titre: 'Coefficient', largeur: '20mm', valeur: '=Si(ligne.coef; Simple(ligne.coef; 6); "index manquant") & Si(ligne.provisoire; " *"; "")', alignement: 'droite' },
+            { cle: 'revision', titre: 'Révision due', largeur: '26mm', valeur: '{{ligne.revision}}', format: 'montant', alignement: 'droite', style: 'montant' },
+            { cle: 'montant', titre: '=Si(revision.information; "À facturer"; "Facturé")', largeur: '26mm', valeur: '{{ligne.montant}}', format: 'montant', alignement: 'droite', style: 'montant' },
+          ],
+        },
+        champ('* index provisoire ou dernier index connu : la révision sera régularisée.', { style: 'petit', condition: 'revision.provisoire' }),
+      ],
+    },
+  },
+  {
     code: 'MENTIONS_PAIEMENT', libelle: 'Mentions de paiement (pièces entre professionnels)',
     contenu: champ('=Joindre(" "; societe.mentions.penalites; societe.mentions.indemnite; societe.mentions.escompte; Si(societe.mentions.tva_debits; "Option pour le paiement de la TVA d’après les débits."; Nul))', { style: 'mentions', marges: { haut: 2 } }),
   },
@@ -315,6 +337,7 @@ function piece({ code, libelle, types, titre = '', accord = false, lettres = fal
           { type: 'CORPS', nom: 'marche', condition: 'NON Parametre("facturation_marche")', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_DOCUMENTS_MARCHE', donnees: 'sources.marche_documents' } },
           { type: 'CORPS', nom: 'facturation_marche', condition: 'Parametre("facturation_marche")', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_FACTURATION_MARCHE', donnees: 'sources.marche_documents' } },
           { type: 'CORPS', nom: 'precedents', options: { garder_ensemble: true }, contenu: { type: 'sous_rapport', rapport: 'SR_AVANCEMENTS_PRECEDENTS', donnees: 'sources.avancements_precedents' } },
+          { type: 'CORPS', nom: 'revision', condition: 'revision', options: { garder_ensemble: true }, contenu: bloc('REVISION_PRIX') },
         ] : []),
         { type: 'RESUME', nom: 'totaux', options: { bas_de_page: true, garder_ensemble: true }, contenu: { type: 'pile', enfants: [
           ...(marche ? [bloc('TOTAUX_AVANCEMENT')] : []),

@@ -673,7 +673,7 @@ ni les tranches de frais annexes ; pieds de section en lignes `PIED`.
 
 #### Révision des prix (pièces d'un marché révisable ou actualisable)
 
-Présent sur une pièce validée qui porte une révision (sinon vide) : `revision` (objet).
+Présent sur une pièce validée qui porte une révision, ou sur une situation (pour information, calculée à ce jour : `revision.information`), sinon vide : `revision` (objet). Bloc lié `REVISION_PRIX` (formule, tableau des périodes), placé dans les modèles des situations, des factures d'avancement et des propositions de situation de sous-traitance.
 
 | Chemin | Libellé | Type |
 |---|---|---|
@@ -683,7 +683,8 @@ Présent sur une pièce validée qui porte une révision (sinon vide) : `revisio
 | `revision.periodes[].piece`, `.commande`, `.mois`, `.mois_index` | Pièce, commande, mois des travaux, mois de l'index | texte |
 | `revision.periodes[].base`, `.revision`, `.montant` | HT de la période, révision due, facturé par la pièce | montant |
 | `revision.periodes[].coef`, `.provisoire`, `.regularisation` | Coefficient, index provisoire, période régularisée | nombre, booléen |
-| `revision.total`, `revision.provisoire` | Révision facturée par la pièce, au moins un index provisoire | montant, booléen |
+| `revision.total`, `revision.provisoire` | Révision facturée par la pièce (situation : due à ce jour), au moins un index provisoire | montant, booléen |
+| `revision.information` | Situation : pour information (`montant` = à facturer) | booléen |
 
 #### Étapes d'un ordre (module Exécution, documents de la famille E)
 

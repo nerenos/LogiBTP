@@ -27,7 +27,8 @@
   lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois) ; lot F : appliquer
   `modules/reglement/db/081` (anciens pointages de caution retirés : la consommation des cautions est calculée) ;
   lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
-  valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier.
+  valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
+  (bloc `REVISION_PRIX` des situations et factures d'avancement).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -90,7 +91,6 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Révision de prix (lots G1, G3 faits, [CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) § 10) : révision affichée sur les situations ; bloc `revision` à placer dans les modèles de facture d'avancement (`db/191`) si souhaité.
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
 

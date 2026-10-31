@@ -386,16 +386,74 @@ public static class RevisionPrix
             LEFT JOIN document p ON p.ent_id = r.dre_periode_ent_id LEFT JOIN document c ON c.ent_id = r.dre_commande_ent_id
             WHERE r.dre_ent_id = @id
             """, new NpgsqlParameter("id", entId)).FirstAsync(ct))!.AsArray();
-        if (periodes.Count == 0) return null;
+        var information = false;
+        if (periodes.Count == 0)
+        {
+            // Situation (non comptable, Q8) : révision pour information, calculée à ce jour.
+            if (await SituationAsync(db, entId, marche, ct) is not { } situation) return null;
+            (periodes, information) = (situation, true);
+        }
         var (p, _, _, _, _) = await ParametresAsync(db, marche, ct);
         return new System.Text.Json.Nodes.JsonObject
         {
             ["type_prix"] = p.TypePrix, ["mois_zero"] = p.MoisZero?.ToString("yyyy-MM", CultureInfo.InvariantCulture),
             ["formule"] = TexteFormule(p.PartieFixe, p.Termes ?? []), ["decalage"] = p.Decalage,
             ["periodes"] = periodes,
-            ["total"] = periodes.Sum(x => x!["montant"]!.GetValue<decimal>()),
+            ["information"] = information,
+            ["total"] = periodes.Sum(x => x![information ? "revision" : "montant"]!.GetValue<decimal>()),
             ["provisoire"] = periodes.Any(x => x!["provisoire"]!.GetValue<bool>()),
         };
+    }
+
+    private sealed record EnteteSql(string? Presentation, DateOnly Mois, string? Numero);
+    private sealed record CumulSql(long Commande, decimal Cumul);
+
+    /// <summary>
+    /// Révision d'une situation, pour information (Q8) : périodes des factures d'avancement validées du marché (révision
+    /// due avec les index connus, à facturer = due − déjà facturée), puis la période de la situation par commande (cumul
+    /// situé − déjà facturé) au coefficient du mois de la situation. Null hors situation ou sans révision.
+    /// </summary>
+    private static async Task<System.Text.Json.Nodes.JsonArray?> SituationAsync(DbContext db, long entId, int marche, CancellationToken ct)
+    {
+        var e = await db.Database.SqlQuery<EnteteSql>($"""
+            SELECT ent_avt_presentation AS presentation, coalesce(ent_mois_revision, date_trunc('month', ent_date)::date) AS mois, ent_numero AS numero
+            FROM document WHERE ent_id = {entId}
+            """).FirstOrDefaultAsync(ct);
+        if (e?.Presentation != "C" || await ContexteAsync(db, marche, ct) is not { } c) return null;
+        var periodes = await RegulariserAsync(db, marche, c, null, ct);
+        var cumuls = await db.Database.SqlQuery<CumulSql>($"""
+            SELECT s.lig_ent_id AS commande, sum(coalesce(l.lig_avt_montant_cumul, 0)) AS cumul
+            FROM document_ligne l JOIN document_ligne s ON s.lig_id = l.lig_avt_source_lig_id
+            LEFT JOIN document_ligne p ON p.lig_id = l.lig_parent_id
+            WHERE l.lig_ent_id = {entId} AND l.lig_tyl_id IN ({TL.Ouvrage}, {TL.Element}) AND coalesce(l.lig_type_prix, 'V') = 'V'
+              AND (p.lig_id IS NULL OR p.lig_tyl_id <> {TL.Ouvrage})
+            GROUP BY 1
+            """).ToListAsync(ct);
+        string? Numero(long commande) => c.Commandes.FirstOrDefault(x => x.EntId == commande)?.Numero;
+        string? M(DateOnly? m) => m?.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        var res = new System.Text.Json.Nodes.JsonArray();
+        foreach (var x in periodes)
+        {
+            res.Add(new System.Text.Json.Nodes.JsonObject
+            {
+                ["piece"] = x.Sql.Numero, ["commande"] = Numero(x.Sql.Commande), ["mois"] = M(x.Sql.Mois), ["mois_index"] = M(x.Coef.MoisIndex),
+                ["base"] = x.Sql.Base, ["coef"] = x.Coef.Coef, ["provisoire"] = x.Coef.Provisoire, ["revision"] = x.Revision.Revision,
+                ["montant"] = x.Revision.AFacturer, ["regularisation"] = false,
+            });
+        }
+        foreach (var k in cumuls)
+        {
+            var reste = k.Cumul - periodes.Where(x => x.Sql.Commande == k.Commande).Sum(x => x.Sql.Base);
+            if (reste == 0) continue;
+            var cn = ReglesRevision.CoefficientPiece(c.Pour(k.Commande), c.Series, e.Mois);
+            var due = cn.Coef is decimal coef ? ArrondiCalcul.Arrondir(reste * (coef - 1), 2) : 0;
+            res.Add(new System.Text.Json.Nodes.JsonObject
+            {
+                ["piece"] = e.Numero, ["commande"] = Numero(k.Commande), ["mois"] = M(e.Mois), ["mois_index"] = M(cn.MoisIndex),
+                ["base"] = reste, ["coef"] = cn.Coef, ["provisoire"] = cn.Provisoire, ["revision"] = due, ["montant"] = due, ["regularisation"] = false,
+            });
+        }
+        return res.Count == 0 ? null : res;
     }
 
     // ------------------------------------------------------------------ fiche du marché
