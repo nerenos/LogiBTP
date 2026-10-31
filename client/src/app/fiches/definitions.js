@@ -128,7 +128,7 @@ export const TYPES_FICHE = {
             { titre: 'Dates', champs: ['date_entree', 'date_mise_service', 'fin_garantie', 'date_sortie'] },
             { titre: 'Poids et dimensions', champs: ['poids', 'longueur', 'largeur', 'hauteur'] },
             { titre: 'Location', champs: ['loueur_id', 'location_ent_id', 'fin_location'] },
-            { titre: 'Exploitation', champs: ['etat', 'chantier', 'compteurs', 'heures_utilisation', 'kilometres', 'controle_ok'] },
+            { titre: 'Exploitation', champs: ['etat', 'condition', 'chantier', 'compteurs', 'heures_utilisation', 'kilometres', 'controle_ok'] },
             { titre: 'Planification', champs: ['mode', 'quantite', 'unite', 'srv_id', 'cal_id'] },
             { titre: 'Achat', champs: ['valeur_achat', 'date_achat'] },
             { titre: 'Observations', champs: ['observations'], largeur: 'plein' },
@@ -141,12 +141,21 @@ export const TYPES_FICHE = {
         c('famille', 'Type', 'mat_famille', 'liste', { obligatoire: true, requete: REQUETE_TYPES_MATERIEL, aide: 'Types de matériel regroupés (Paramètres › Référentiels communs)' }),
         c('marque', 'Marque', 'mat_marque', 'texte', { longueur: 60 }),
         c('numero_serie', 'N° de série', 'mat_numero_serie', 'texte', { longueur: 40, non_copie: true }),
-        c('etat', 'État', 'mat_etat', 'liste', {
+        // Disponibilité et condition (db/248) : chaque changement est tracé avec son motif (onglet Historique).
+        c('etat', 'Disponibilité', 'mat_etat', 'liste', {
           obligatoire: true, defaut: 'DISPO',
           options: options(['DISPO', 'Disponible'], ['CHANTIER', 'En chantier'], ['PANNE', 'En panne'], ['REBUT', 'Rebut']),
         }),
+        c('condition', 'Condition', 'mat_condition', 'liste', {
+          obligatoire: true, defaut: 'BON',
+          requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ETAT_MATERIEL' AND lva_actif ORDER BY lva_ordre, lva_code",
+          aide: 'État physique du matériel (Paramètres › Référentiels communs) ; aussi saisi au retour d\'une affectation',
+        }),
+        c('etat_motif', 'Motif du changement d\'état', 'mat_etat_motif', 'texte', { longueur: 200, non_copie: true }),
+        c('etat_par', 'Changement d\'état par', 'mat_etat_par', 'texte', { longueur: 50, lecture_seule: true, non_copie: true }),
         c('chantier', 'Chantier', 'mat_chantier', 'texte', { longueur: 100 }),
-        c('heures_utilisation', "Heures d'utilisation", 'mat_heures', 'nombre', { lecture_seule: true, format: '99999', aide: 'Dernier relevé du compteur (onglet Compteurs)' }),
+        // Compteurs (db/248) : saisis à la création (relevé initial), puis par relevés et rectifications (onglet Compteurs).
+        c('heures_utilisation', "Heures d'utilisation", 'mat_heures', 'nombre', { saisie: 'creation', format: '99999', aide: 'Saisi à la création (relevé initial) ; ensuite : onglet Compteurs (relevé ou rectification)' }),
         c('controle_ok', 'Contrôle réglementaire à jour', 'mat_controle_ok', 'booleen', { defaut: false }),
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { format: '9999999.99' }),
         c('date_achat', "Date d'achat", 'mat_date_achat', 'date'),
@@ -154,7 +163,7 @@ export const TYPES_FICHE = {
         // Référentiel des ressources (db/195) : matériel identifié (engin, véhicule) ou par nombre (banches, étais).
         c('usage', 'Utilisation', 'mat_usage', 'liste', USAGE),
         c('mode', 'Gestion', 'mat_mode', 'liste', { obligatoire: true, defaut: 'IDENTIFIE', options: options(['IDENTIFIE', 'Identifié (un engin)'], ['NOMBRE', 'Par nombre (stock)']) }),
-        c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà' }),
+        c('quantite', 'Quantité disponible', 'mat_quantite', 'nombre', { obligatoire: true, defaut: 1, format: '999999.999', aide: 'Matériel par nombre : le planning avertit au-delà ; matériel identifié : toujours 1' }),
         c('unite', 'Unité', 'mat_unite', 'texte', { longueur: 10 }),
         c('cal_id', 'Calendrier', 'mat_cal_id', 'liste', { requete: 'SELECT cal_id, cal_libelle FROM calendrier WHERE cal_actif ORDER BY cal_defaut DESC, cal_code', aide: 'Vide : calendrier du service' }),
         // Lot 5a des demandes du 25/10/2026 (db/230).
@@ -163,7 +172,7 @@ export const TYPES_FICHE = {
         c('energie', 'Énergie', 'mat_energie', 'liste', { requete: "SELECT lva_code, lva_libelle FROM liste_valeur WHERE lva_liste = 'ENERGIE' AND lva_actif ORDER BY lva_ordre, lva_code" }),
         // Lot 5c-2 (db/233) : compteurs suivis, valeurs = derniers relevés.
         c('compteurs', 'Compteurs', 'mat_compteurs', 'liste', { obligatoire: true, defaut: 'H', options: options(['H', 'Heures'], ['KM', 'Kilomètres'], ['H_KM', 'Heures et kilomètres'], ['AUCUN', 'Aucun']) }),
-        c('kilometres', 'Kilométrage', 'mat_kilometres', 'nombre', { lecture_seule: true, format: '9999999', aide: 'Dernier relevé du compteur (onglet Compteurs)' }),
+        c('kilometres', 'Kilométrage', 'mat_kilometres', 'nombre', { saisie: 'creation', format: '9999999', aide: 'Saisi à la création (relevé initial) ; ensuite : onglet Compteurs (relevé ou rectification)' }),
         c('date_entree', "Date d'entrée", 'mat_date_entree', 'date'),
         c('date_mise_service', 'Mise en service', 'mat_date_mise_service', 'date'),
         c('fin_garantie', 'Fin de garantie', 'mat_fin_garantie', 'date'),

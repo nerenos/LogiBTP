@@ -5,7 +5,7 @@ import { ecrireDuree } from '@logibtp/pointage';
 import { api } from '../api.js';
 import {
   LIBELLES_UNITE, LIBELLES_EVENEMENT, ICONES_EVENEMENT, TYPES_EVENEMENT, MESSAGES_COMPTEURS,
-  unitesCompteurs, cumuls, controlerEvenement,
+  unitesCompteurs, cumuls, controlerEvenement, controlerReleves,
 } from './compteurs.js';
 import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entretiens-ui.js';
 
@@ -14,7 +14,7 @@ import { creerOrdreEntretien, tableauOrdres, rendrePlansMateriel } from './entre
 // d'un événement dans une fenêtre <dialog>. Contrôles de compteurs.js (↔ ReglesCompteurs.cs) avant l'envoi.
 
 const jour = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '');
-const SOURCES = { SAISIE: 'Saisie', CARBURANT: 'Plein', ORDRE: 'Ordre', BORNE: 'Borne', REPRISE: 'Reprise de la fiche', TERRAIN: 'Terrain' };
+const SOURCES = { SAISIE: 'Saisie', CARBURANT: 'Plein', ORDRE: 'Ordre', BORNE: 'Borne', REPRISE: 'Reprise de la fiche', TERRAIN: 'Terrain', INVENTAIRE: 'Rectification' };
 const message = (e) => MESSAGES_COMPTEURS[e.code] ?? e.message;
 
 /** Frise SVG : une courbe par unité (valeurs cumulées), événements en pastilles au-dessus, sur la période des données. */
@@ -48,14 +48,18 @@ function frise(d, unites) {
     <text x="${L - D}" y="${H - 4}" text-anchor="end" class="frise-axe">${jour(new Date(fin).toISOString())}</text></svg>`;
 }
 
-/** Fenêtre de saisie d'un relevé seul. */
-async function saisirReleve(unites) {
+/**
+ * Fenêtre de saisie d'un relevé seul ; rectification (db/248) : valeur corrigée, qui peut être inférieure au relevé
+ * précédent, avec un motif obligatoire.
+ */
+async function saisirReleve(unites, { rectification = false } = {}) {
   return ouvrirDialogue({
-    titre: 'Relevé du compteur',
-    html: `<div class="formulaire-compact"><label>Date <input type="date" data-c="date" value="${aujourdhui()}"></label>
-      <label>Compteur <span data-unite></span></label><label>Valeur <input type="number" min="0" step="0.1" data-c="valeur"></label>
-      <label><input type="checkbox" data-c="remise"> Remise à zéro (compteur remplacé)</label>
-      <label>Commentaire <input data-c="commentaire" maxlength="200" size="30"></label></div>`,
+    titre: rectification ? 'Rectification du compteur' : 'Relevé du compteur',
+    html: `<div class="formulaire-compact">${rectification ? '<p class="aide">Corrige une valeur erronée (relevé initial, saisie) : la valeur peut être inférieure au relevé précédent ; le motif est gardé dans le journal.</p>' : ''}
+      <label>Date <input type="date" data-c="date" value="${aujourdhui()}"></label>
+      <label>Compteur <span data-unite></span></label><label>Valeur ${rectification ? 'corrigée ' : ''}<input type="number" min="0" step="0.1" data-c="valeur"></label>
+      ${rectification ? '' : '<label><input type="checkbox" data-c="remise"> Remise à zéro (compteur remplacé)</label>'}
+      <label>${rectification ? 'Motif' : 'Commentaire'} <input data-c="commentaire" maxlength="200" size="30"></label></div>`,
     focus: '[data-c="valeur"]',
     construire: (dlg) => { dlg._unite = creerCombo({ options: unites.map((u) => ({ valeur: u, libelle: LIBELLES_UNITE[u] })), valeur: unites[0], vide: false }); dlg.querySelector('[data-unite]').append(dlg._unite); },
     boutons: [{ libelle: 'Annuler', valeur: null }, {
@@ -63,7 +67,8 @@ async function saisirReleve(unites) {
       valeur: (dlg) => ({
         date: dlg.querySelector('[data-c="date"]').value || null, unite: dlg._unite.valeurCombo,
         valeur: dlg.querySelector('[data-c="valeur"]').value === '' ? null : Number(dlg.querySelector('[data-c="valeur"]').value),
-        remise: dlg.querySelector('[data-c="remise"]').checked, commentaire: dlg.querySelector('[data-c="commentaire"]').value || null,
+        remise: dlg.querySelector('[data-c="remise"]')?.checked ?? false, commentaire: dlg.querySelector('[data-c="commentaire"]').value || null,
+        rectification,
       }),
     }],
   });
@@ -140,7 +145,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     const ligne = (x) => {
       if (x.genre === 'releve') {
         const r = x.r;
-        return `<tr><td>${jour(r.date)}</td><td>📟 Relevé</td><td>${echapper(r.commentaire ?? '')}${r.remise ? ' <span class="pastille-compte attention">remise à zéro</span>' : ''}</td>
+        return `<tr><td>${jour(r.date)}</td><td>📟 Relevé</td><td>${echapper(r.commentaire ?? '')}${r.remise ? ' <span class="pastille-compte attention">remise à zéro</span>' : ''}${r.source === 'INVENTAIRE' ? ' <span class="pastille-compte attention">rectification</span>' : ''}</td>
           <td class="nombre">${formatNombre(r.valeur, 1)} ${LIBELLES_UNITE[r.unite]}</td><td></td><td></td>
           <td>${r.numero ? `<a href="${urlDocument(r.ent_id)}">${echapper(r.numero)}</a>` : echapper(SOURCES[r.source] ?? r.source)}</td>
           <td class="cellule-boutons">${r.source !== 'ORDRE' ? `<button type="button" class="bouton-icone" data-retirer-releve="${r.id}" title="Retirer ce relevé">✕</button>` : ''}</td></tr>`;
@@ -157,6 +162,7 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.innerHTML = `<div class="ressources-compteurs"><div class="titre-actions"><h3>Compteurs et événements</h3>
         <span class="titre-actions-boutons">
           ${unites.length ? '<button type="button" class="bouton-icone" data-releve title="Nouveau relevé du compteur">📟</button>' : ''}
+          ${unites.length ? '<button type="button" class="bouton-icone" data-rectifier title="Rectifier le compteur (valeur erronée, motif obligatoire)">⚖</button>' : ''}
           <button type="button" class="bouton-icone" data-plein title="Plein de carburant (coût porté au chantier de suivi)">⛽</button>
           <button type="button" class="bouton-icone" data-evenement title="Nouvel événement : panne, sinistre, contrôle…">＋</button>
           <button type="button" class="bouton-icone" data-ordre title="Nouvel ordre d'entretien (atelier)">🔧</button></span></div>
@@ -181,6 +187,13 @@ export async function rendreCompteursMateriel(corps, { app, materiel }) {
     corps.querySelector('[data-releve]')?.addEventListener('click', async () => {
       const r = await saisirReleve(unites);
       if (r) await appliquer(api.ressources.ajouterReleve(materiel, r), 'Relevé enregistré');
+    });
+    corps.querySelector('[data-rectifier]')?.addEventListener('click', async () => {
+      const r = await saisirReleve(unites, { rectification: true });
+      if (!r) return;
+      const fautes = controlerReleves(unites, [r]);
+      if (fautes.length) { app.erreur(new Error(fautes.map((f) => MESSAGES_COMPTEURS[f.code]).join(' · '))); return; }
+      await appliquer(api.ressources.ajouterReleve(materiel, r), 'Compteur rectifié');
     });
     corps.querySelector('[data-plein]').addEventListener('click', () => evenement({ type: 'CARBURANT' }));
     corps.querySelector('[data-evenement]').addEventListener('click', () => evenement({}));

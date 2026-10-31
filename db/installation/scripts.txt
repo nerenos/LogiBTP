@@ -188,6 +188,7 @@ db/244_terrain_reception.sql
 db/245_terrain_sav.sql
 db/246_terrain_complements.sql
 db/247_salaries_agences_codes.sql rejouable
+db/248_materiel_etats.sql rejouable
 
 # Vues de colonnes des types de documents créés après 176 : rejouée en dernier.
 db/176_documents_vues_types.sql rejouable

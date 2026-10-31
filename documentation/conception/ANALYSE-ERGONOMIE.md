@@ -521,3 +521,25 @@ client` pour les lots qui changent des vues fournies.
   « En service ».
 - **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (création avec agence et individu
   créé, rattachement à l'agence ; liaison d'un individu existant).
+
+## 11. Réalisation du lot E9 : matériel (31/10/2026)
+
+- **Quantité (FM1)** : un matériel identifié a toujours une quantité de 1 (trigger de `db/248`, reprise des
+  données) ; dans la fiche, quantité 1 en lecture seule et unité masquée, le passage à « Identifié » remet 1.
+- **Compteurs (FM2)** : heures et kilomètres saisissables à la création de la fiche (relevés initiaux de source
+  REPRISE à la date d'entrée, par trigger) ; ensuite, onglet Compteurs : relevé ou **rectification** (⚖, source
+  INVENTAIRE, motif obligatoire), seule exception à la règle « jamais sous le relevé précédent » ; une rectification
+  ne décale pas la série cumulée. Règle `REL_MOTIF` répliquée (`compteurs.js` ↔ `ReglesCompteurs.cs`, jeu
+  `tests/ressources/05_compteurs.json`).
+- **État (FM3)** : la disponibilité (`mat_etat`, libellé « Disponibilité ») et la condition (`mat_condition`, liste
+  paramétrable `ETAT_MATERIEL` : bon état, usé, endommagé, hors service) sont séparées ; chaque changement est tracé
+  dans `materiel_etat` (date, valeurs, motif, origine création / fiche / affectation, auteur) et affiché dans l'onglet
+  Historique ; un changement dans la fiche demande un motif. Affectations : état au départ (celui du matériel) et au
+  retour, obligatoire pour terminer l'affectation d'un matériel identifié (`AFF_RETOUR`, `affectations.js` ↔
+  `ReglesAffectations.cs`, jeu `04_affectations.json` ; affectations déjà terminées dispensées) ; le retour devient la
+  condition du matériel ; endommagé ou hors service → événement « Sinistre » et notification au responsable du
+  service du matériel, sinon aux administrateurs (type `MATERIEL_RETOUR`).
+- **Reste** : photo du retour (la GED du matériel, onglet Pièces jointes, l'accueille déjà ; dépôt depuis la ligne
+  d'affectation à faire avec l'application de terrain).
+- **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (création avec 120 h, condition
+  modifiée avec motif, affectation rendue endommagée, rectification à 100 h, refus sans motif ni état de retour).

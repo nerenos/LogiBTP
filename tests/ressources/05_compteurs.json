@@ -1,5 +1,5 @@
 {
-  "description": "Compteurs et événements du matériel (client/src/app/ressources/compteurs.js ↔ ReglesCompteurs.cs) : relevés datés en heures (H) ou kilomètres (KM) ; un relevé ne descend pas sous le précédent de la même unité (ordre : date puis saisie) sauf remise à zéro ; compteur à une date ; série cumulée (une remise ajoute la valeur atteinte avant elle) ; contrôle d'un événement. Dates ISO.",
+  "description": "Compteurs et événements du matériel (client/src/app/ressources/compteurs.js ↔ ReglesCompteurs.cs) : relevés datés en heures (H) ou kilomètres (KM) ; un relevé ne descend pas sous le précédent de la même unité (ordre : date puis saisie) sauf remise à zéro ou rectification (motif obligatoire) ; compteur à une date ; série cumulée (une remise ajoute la valeur atteinte avant elle) ; contrôle d'un événement. Dates ISO.",
   "controles": [
     {
       "nom": "relevés croissants dans deux unités, saisis dans le désordre",
@@ -34,6 +34,18 @@
         { "unite": "KM", "date": "2026-03-01", "valeur": 5 }
       ],
       "attendu": [{ "code": "REL_DECROISSANT", "releve": 0 }, { "code": "REL_DECROISSANT", "releve": 4 }]
+    },
+    {
+      "nom": "rectification : une baisse acceptée avec un motif, motif vide signalé",
+      "unites": ["H"],
+      "releves": [
+        { "unite": "H", "date": "2026-01-01", "valeur": 1000 },
+        { "unite": "H", "date": "2026-02-01", "valeur": 800, "rectification": true, "commentaire": "Relevé initial erroné" },
+        { "unite": "H", "date": "2026-03-01", "valeur": 850 },
+        { "unite": "H", "date": "2026-03-02", "valeur": 840, "rectification": true, "commentaire": "  " },
+        { "unite": "H", "date": "2026-03-03", "valeur": 845 }
+      ],
+      "attendu": [{ "code": "REL_MOTIF", "releve": 3 }]
     }
   ],
   "a_date": [
@@ -66,6 +78,20 @@
         { "releve": 1, "date": "2026-02-01", "valeur": 250, "cumul": 250 },
         { "releve": 3, "date": "2026-03-01", "valeur": 10, "cumul": 260 },
         { "releve": 4, "date": "2026-04-01", "valeur": 60, "cumul": 310 }
+      ]
+    },
+    {
+      "nom": "une rectification ne décale pas la série (correction, pas un compteur remplacé)",
+      "unite": "H",
+      "releves": [
+        { "unite": "H", "date": "2026-01-01", "valeur": 1000 },
+        { "unite": "H", "date": "2026-02-01", "valeur": 800, "rectification": true, "commentaire": "Erreur de saisie" },
+        { "unite": "H", "date": "2026-03-01", "valeur": 850 }
+      ],
+      "attendu": [
+        { "releve": 0, "date": "2026-01-01", "valeur": 1000, "cumul": 1000 },
+        { "releve": 1, "date": "2026-02-01", "valeur": 800, "cumul": 800 },
+        { "releve": 2, "date": "2026-03-01", "valeur": 850, "cumul": 850 }
       ]
     }
   ],

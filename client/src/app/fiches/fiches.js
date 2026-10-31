@@ -2,7 +2,7 @@ import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { aujourdhui } from '@logibtp/socle';
 import { FicheBase } from '@logibtp/fiche/ui';
 import { FournisseurFicheApi, MODES } from '@logibtp/fiche';
-import { formatNombre, echapper } from '@logibtp/socle/ui';
+import { formatNombre, echapper, saisir } from '@logibtp/socle/ui';
 import { principale } from '@logibtp/annuaire';
 import { choisirIndividu } from '@logibtp/annuaire/ui';
 import { ENTETES } from '../api.js';
@@ -244,9 +244,45 @@ export class FicheMateriel extends FicheLogiBTP {
         r.habilitations(corps.querySelector('[data-controles]'), { element: 'materiel', id: this.id, titre: 'Contrôles réglementaires' });
         r.exigees(corps.querySelector('[data-exigees]'), { materiel: this.id });
       },
-    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id }) }] : []),
+    }, ...(r.affectations ? [{ code: 'affectations', titre: 'Affectations', rendre: (corps) => r.affectations(corps, { materiel: this.id, identifie: this.valeur('mode') === 'IDENTIFIE' }) }] : []),
       ...(r.compteurs ? [{ code: 'compteurs', titre: 'Compteurs', rendre: (corps) => r.compteurs(corps, { materiel: this.id }) }] : []),
+      ...(r.etats ? [{ code: 'historique', titre: 'Historique', rendre: (corps) => r.etats(corps, { materiel: this.id }) }] : []),
       ...(r.couts ? [{ code: 'couts', titre: 'Coûts', rendre: (corps) => r.couts(corps, { materiel: this.id }) }] : [])];
+  }
+
+  /**
+   * Matériel identifié (FM1) : quantité 1 en lecture seule, unité masquée ; changement de disponibilité ou de condition
+   * en modification (FM3) : motif demandé, tracé dans l'historique (db/248).
+   */
+  rendreChamp(champ, valeur) {
+    const identifie = this.valeur('mode') === 'IDENTIFIE';
+    if (identifie && (champ.code === 'quantite' || champ.code === 'unite')) {
+      const el = super.rendreChamp({ ...champ, lecture_seule: true }, champ.code === 'quantite' ? 1 : null);
+      el.title = 'Matériel identifié : toujours un seul';
+      if (champ.code === 'unite') el.placeholder = '—';
+      return el;
+    }
+    const el = super.rendreChamp(champ, valeur);
+    if (!this.estEnSaisie()) return el;
+    if (champ.code === 'mode') {
+      el.addEventListener('change', () => {
+        if (this.valeur('mode') === 'IDENTIFIE') this.definirValeur('quantite', 1);
+        this.rendre();
+      });
+    }
+    if ((champ.code === 'etat' || champ.code === 'condition') && this.mode === MODES.MODIFICATION) {
+      el.addEventListener('change', async () => {
+        // Un seul motif par valeur choisie (le combo peut signaler deux fois le même choix) ; retour à la valeur
+        // enregistrée : pas de motif.
+        const v = this.valeur(champ.code);
+        this.etatsDemandes ??= {};
+        if (v === this.etatsDemandes[champ.code] || v === this.fiche.valeurs[champ.code]) { this.etatsDemandes[champ.code] = v; return; }
+        this.etatsDemandes[champ.code] = v;
+        const motif = await saisir('Motif du changement (gardé dans l\'historique du matériel) :', this.valeur('etat_motif') ?? '', { titre: 'Changement d\'état du matériel' });
+        if (motif !== null) this.definirValeur('etat_motif', motif.trim() || null);
+      });
+    }
+    return el;
   }
 
   rendreInformations(v) {
@@ -254,6 +290,7 @@ export class FicheMateriel extends FicheLogiBTP {
     const age = jours(v.date_achat);
     if (age !== null) parts.push(info('Âge', `${(age / 365.25).toFixed(1).replace('.', ',')} an(s)`));
     if (v.etat === 'PANNE') parts.push(info('État', 'En panne', true));
+    if (v.condition === 'ENDOMMAGE' || v.condition === 'HS') parts.push(info('Condition', v.condition === 'HS' ? 'Hors service' : 'Endommagé', true));
     if (v.controle_ok === false) parts.push(info('Contrôle réglementaire', 'à faire', true));
     return parts.join('');
   }

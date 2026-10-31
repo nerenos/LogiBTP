@@ -398,6 +398,7 @@ export const api = {
     enregistrerHabilitations: (element, id, l) => appel('PUT', `/ressources/habilitations/${element}/${id}`, l),
     // Affectations du matériel (db/231).
     affectations: (materiel) => appel('GET', `/ressources/materiels/${materiel}/affectations`),
+    etatsMateriel: (materiel) => appel('GET', `/ressources/materiels/${materiel}/etats`),
     enregistrerAffectations: (materiel, l) => appel('PUT', `/ressources/materiels/${materiel}/affectations`, l),
     ciblesAffectation: () => appel('GET', '/ressources/affectations/cibles'),
     materielAffecte: (type, id) => appel('GET', `/ressources/affectations/${encodeURIComponent(type)}/${encodeURIComponent(id)}`),

@@ -53,6 +53,8 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             return;
         }
         if (type == TypesFiche.Salarie) await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
+        // Matériel (db/248) : l'auteur d'un changement de disponibilité ou de condition est tracé dans materiel_etat.
+        if (type == TypesFiche.Materiel && (creation || aEcrire.ContainsKey("etat") || aEcrire.ContainsKey("condition"))) aEcrire["etat_par"] = u.Code;
         // Conducteur de travaux, chargé d'affaires, chef d'équipe d'un chantier, responsable et métreur d'un projet (lot 6) :
         // individus de notre structure (rattachés à notre société ou à un niveau inférieur).
         if (ChampsIndividuStructure.TryGetValue(type, out var champsIndividus))

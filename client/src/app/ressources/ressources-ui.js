@@ -163,9 +163,14 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
 /**
  * Affectations d'un matériel (lot 5b, db/231) : historique saisi en tableau (type, ressource, du, au, commentaire),
  * affectation en cours signalée, contrôles du jeu partagé avant l'envoi (affectations.js ↔ ReglesAffectations.cs).
+ * Condition du matériel (db/248) : au départ (celle du matériel, affichée) et au retour (obligatoire pour terminer
+ * l'affectation d'un matériel identifié ; endommagé ou hors service : événement et notification).
  */
-export async function rendreAffectations(corps, { app, materiel }) {
-  const [historique, cibles] = await Promise.all([api.ressources.affectations(materiel), api.ressources.ciblesAffectation()]);
+export async function rendreAffectations(corps, { app, materiel, identifie = false }) {
+  const [historique, cibles, conditions] = await Promise.all([api.ressources.affectations(materiel), api.ressources.ciblesAffectation(),
+    api.listesValeurs.lire('ETAT_MATERIEL').catch(() => [])]);
+  const libelleCondition = (c) => conditions.find((x) => x.code === c)?.libelle ?? c ?? '';
+  const optionsConditions = conditions.filter((c) => c.actif).map((c) => ({ valeur: c.code, libelle: c.libelle }));
   const options = (type) => cibles.filter((c) => c.type === type && !(type === 'MATERIEL' && String(c.id) === String(materiel))).map((c) => ({ valeur: c.id, libelle: c.libelle }));
   let saisie = historique.map((a) => ({ ...a }));
   let modifiee = false;
@@ -175,12 +180,13 @@ export async function rendreAffectations(corps, { app, materiel }) {
         <span class="titre-actions-boutons">${action('data-ajouter', '＋', 'Nouvelle affectation (la précédente se termine la veille)')}
           <button type="button" class="principal" data-enregistrer ${modifiee ? '' : 'disabled'}>Enregistrer</button></span></div>
       <p class="aide">Une affectation à la fois : un salarié, un intérimaire, un sous-traitant ou un autre matériel (porteur : le petit outillage d'un camion suit le camion).</p>
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Affecté à</th><th>Ressource</th><th>Du</th><th>Au</th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
+      <table class="tableau-compact largeur-contenu"><thead><tr><th>Affecté à</th><th>Ressource</th><th>Du</th><th>Au</th><th>État au départ</th><th>État au retour</th><th>Commentaire</th><th></th><th></th></tr></thead><tbody>
       ${saisie.map((a, i) => `<tr data-i="${i}"><td data-type></td><td data-ressource></td>
         <td><input type="date" data-c="du" value="${echapper(a.du ?? '')}"></td><td><input type="date" data-c="au" value="${echapper(a.au ?? '')}"></td>
+        <td>${echapper(libelleCondition(a.depart))}</td><td data-retour></td>
         <td><input data-c="commentaire" value="${echapper(a.commentaire ?? '')}" size="28" maxlength="200"></td>
         <td>${i === encours ? '<span class="pastille-compte ok">En cours</span>' : ''}</td>
-        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette affectation')}</td></tr>`).join('') || '<tr><td colspan="7" class="aide">Jamais affecté.</td></tr>'}</tbody></table>
+        <td class="cellule-boutons">${action('data-retirer', '✕', 'Retirer cette affectation')}</td></tr>`).join('') || '<tr><td colspan="9" class="aide">Jamais affecté.</td></tr>'}</tbody></table>
       <p class="connexion-erreur" data-erreur hidden></p></div>`;
     corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const a = saisie[Number(tr.dataset.i)];
@@ -190,6 +196,13 @@ export async function rendreAffectations(corps, { app, materiel }) {
       const ressource = creerCombo({ options: options(a.type), valeur: a.ressource ?? '', vide: true });
       ressource.addEventListener('change', () => { a.ressource = ressource.valeurCombo || null; modifiee = true; corps.querySelector('[data-enregistrer]').disabled = false; });
       tr.querySelector('[data-ressource]').append(ressource);
+      // État au retour : saisi dès que l'affectation a une fin (obligatoire pour un matériel identifié).
+      if (a.au) {
+        const retour = creerCombo({ options: optionsConditions, valeur: a.retour ?? '', vide: true });
+        retour.title = identifie && a.retour_requis !== false ? 'Obligatoire pour terminer l\'affectation' : 'Facultatif';
+        retour.addEventListener('change', () => { a.retour = retour.valeurCombo || null; modifiee = true; corps.querySelector('[data-enregistrer]').disabled = false; });
+        tr.querySelector('[data-retour]').append(retour);
+      }
       tr.querySelectorAll('[data-c]').forEach((c) => c.addEventListener('change', () => { a[c.dataset.c] = c.value || null; modifiee = true; rendre(); }));
       tr.querySelector('[data-retirer]').addEventListener('click', () => { saisie.splice(Number(tr.dataset.i), 1); modifiee = true; rendre(); });
     });
@@ -203,7 +216,7 @@ export async function rendreAffectations(corps, { app, materiel }) {
     });
     corps.querySelector('[data-enregistrer]').addEventListener('click', async () => {
       const erreur = corps.querySelector('[data-erreur]');
-      const fautes = controlerAffectations(materiel, saisie.map((a) => ({ type: a.type, id: a.ressource, du: a.du, au: a.au })));
+      const fautes = controlerAffectations(materiel, saisie.map((a) => ({ type: a.type, id: a.ressource, du: a.du, au: a.au, retour: a.retour, retour_requis: a.retour_requis })), { identifie });
       if (fautes.length) { erreur.textContent = fautes.map((f) => `affectation ${f.affectation + 1} : ${MESSAGES_AFFECTATIONS[f.code] ?? f.code}`).join(' · '); erreur.hidden = false; return; }
       try {
         saisie = (await api.ressources.enregistrerAffectations(materiel, saisie)).map((a) => ({ ...a }));
@@ -279,3 +292,18 @@ export async function rendreCoutsMateriel(corps, { app, materiel }) {
 }
 
 export { finValidite, jour as jourRessource };
+
+const SOURCES_ETAT = { CREATION: 'Création', FICHE: 'Fiche', AFFECTATION: 'Affectation', REPRISE: 'Reprise' };
+const DISPONIBILITES = { DISPO: 'Disponible', CHANTIER: 'En chantier', PANNE: 'En panne', REBUT: 'Rebut' };
+
+/** Onglet Historique de la fiche matériel (db/248) : disponibilité et condition datées, motif, origine, auteur. */
+export async function rendreEtatsMateriel(corps, { materiel }) {
+  const l = await api.ressources.etatsMateriel(materiel);
+  const heure = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  corps.innerHTML = `<div class="ressources-etats"><h3>Historique de l'état</h3>
+    <p class="aide">Chaque changement de disponibilité ou de condition (fiche, retour d'une affectation) est gardé avec son motif.</p>
+    <table class="tableau-compact largeur-contenu"><thead><tr><th>Date</th><th>Disponibilité</th><th>Condition</th><th>Motif</th><th>Origine</th><th>Par</th></tr></thead><tbody>
+    ${l.map((e) => `<tr><td>${heure(e.le)}</td><td>${echapper(DISPONIBILITES[e.etat] ?? e.etat)}</td><td>${echapper(e.condition_libelle ?? e.condition)}</td>
+      <td>${echapper(e.motif ?? '')}</td><td>${echapper(SOURCES_ETAT[e.source] ?? e.source)}</td><td>${echapper(e.par ?? '')}</td></tr>`).join('')
+      || '<tr><td colspan="6" class="aide">Aucun changement.</td></tr>'}</tbody></table></div>`;
+}

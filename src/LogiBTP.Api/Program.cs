@@ -155,6 +155,7 @@ ServiceNotification.TypesDirects.AddRange(SpecialisationOAuthBtp.Types);
 builder.Services.AddModuleMail<SpecialisationMailBtp>(Base, builder.Configuration.GetSection("Mail"));
 ServiceNotification.TypesDirects.AddRange(SpecialisationMailBtp.Types);
 ServiceNotification.TypesDirects.AddRange(SpecialisationAuthentificationBtp.Types);
+ServiceNotification.TypesDirects.Add(new("ressources", "MATERIEL_RETOUR", "Matériel rendu endommagé ou hors service"));
 builder.Services.PostConfigure<OptionsAuthentification>(o =>
 {
     o.RoutesPubliques.AddRange(["/api/sante", "/api/societe", "/api/pointage/borne", LogiBTP.OAuth.Web.Extensions.RouteRetour]);

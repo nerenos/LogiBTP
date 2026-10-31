@@ -1,6 +1,8 @@
 // Affectations d'un matériel (lot 5b des demandes du 25/10/2026), répliquées dans ReglesAffectations.cs (jeu
 // tests/ressources/04_affectations.json) : une affectation datée (du, au facultatif = en cours) à un salarié, un
 // intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; une seule à la fois.
+// Matériel identifié : une affectation terminée porte l'état du matériel au retour (FM3 de l'analyse d'ergonomie),
+// sauf une affectation terminée avant cette règle (retour_requis à false, posé par la reprise de db/248).
 import { TYPE_RESSOURCE } from '../codes.js';
 
 export const TYPES_AFFECTATION = Object.values(TYPE_RESSOURCE);
@@ -14,13 +16,14 @@ export const MESSAGES_AFFECTATIONS = {
   AFF_SOI: 'Un matériel ne s\'affecte pas à lui-même',
   AFF_CHEVAUCHEMENT: 'Une seule affectation à la fois : périodes qui se chevauchent',
   AFF_BOUCLE: 'Matériels porteurs en boucle',
+  AFF_RETOUR: 'État du matériel au retour obligatoire pour terminer l\'affectation',
 };
 
 const ordinal = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const FIN = '9999-12-31';
 
-/** Erreurs d'une saisie [{ code, affectation }], triées par affectation puis code. */
-export function controlerAffectations(materiel, affectations) {
+/** Erreurs d'une saisie [{ code, affectation }], triées par affectation puis code ; identifie : matériel identifié. */
+export function controlerAffectations(materiel, affectations, { identifie = false } = {}) {
   const r = [];
   affectations.forEach((a, i) => {
     if (!TYPES_AFFECTATION.includes(a.type)) r.push({ code: 'AFF_TYPE', affectation: i });
@@ -31,6 +34,7 @@ export function controlerAffectations(materiel, affectations) {
     // Chevauchement avec une affectation précédente (dates valables des deux côtés).
     const chevauche = datesValables(a) && affectations.slice(0, i).some((b) => datesValables(b) && a.du <= (b.au ?? FIN) && b.du <= (a.au ?? FIN));
     if (chevauche) r.push({ code: 'AFF_CHEVAUCHEMENT', affectation: i });
+    if (identifie && a.au && !String(a.retour ?? '').trim() && a.retour_requis !== false) r.push({ code: 'AFF_RETOUR', affectation: i });
   });
   return r.sort((a, b) => a.affectation - b.affectation || ordinal(a.code, b.code));
 }

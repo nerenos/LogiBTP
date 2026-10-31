@@ -1,6 +1,7 @@
 // Compteurs et événements du matériel (lot 5c-2 des demandes du 25/10/2026), répliqués dans ReglesCompteurs.cs (jeu
 // tests/ressources/05_compteurs.json) : relevés datés en heures (H) ou kilomètres (KM), deux unités au plus par
-// matériel (M7) ; un relevé ne descend pas sous le précédent de la même unité, sauf remise à zéro (compteur remplacé) ;
+// matériel (M7) ; un relevé ne descend pas sous le précédent de la même unité, sauf remise à zéro (compteur remplacé)
+// ou rectification (valeur corrigée, motif obligatoire : FM2 de l'analyse d'ergonomie) ;
 // compteur à une date ; série cumulée (les remises à zéro ajoutent la valeur atteinte avant elles) ; contrôle d'un
 // événement (panne, sinistre, accident, immobilisation, contrôle, entretien, plein de carburant, autre).
 // Relevés ordonnés par date puis par ordre de saisie ; dates ISO comparées en texte.
@@ -21,6 +22,7 @@ export const MESSAGES_COMPTEURS = {
   REL_DATE: 'Date du relevé obligatoire',
   REL_VALEUR: 'Valeur du compteur obligatoire et positive',
   REL_DECROISSANT: 'Compteur inférieur au relevé précédent : cocher « remise à zéro » si le compteur a été remplacé',
+  REL_MOTIF: 'Motif de la rectification obligatoire',
   EVT_TYPE: 'Type d\'événement inconnu',
   EVT_DATE: 'Date obligatoire, fin après le début',
   EVT_LIBELLE: 'Libellé obligatoire',
@@ -51,11 +53,12 @@ export function controlerReleves(unites, releves) {
     if (!unites.includes(x.unite)) r.push({ code: 'REL_UNITE', releve: i });
     if (!x.date) r.push({ code: 'REL_DATE', releve: i });
     if (nombre(x.valeur) === null || nombre(x.valeur) < 0) r.push({ code: 'REL_VALEUR', releve: i });
+    if (x.rectification && !String(x.commentaire ?? '').trim()) r.push({ code: 'REL_MOTIF', releve: i });
   });
   for (const unite of UNITES_COMPTEUR) {
     const l = ordonnes(releves, unite);
     for (let k = 1; k < l.length; k++) {
-      if (!l[k].r.remise && nombre(l[k].r.valeur) < nombre(l[k - 1].r.valeur)) r.push({ code: 'REL_DECROISSANT', releve: l[k].i });
+      if (!l[k].r.remise && !l[k].r.rectification && nombre(l[k].r.valeur) < nombre(l[k - 1].r.valeur)) r.push({ code: 'REL_DECROISSANT', releve: l[k].i });
     }
   }
   return r.sort((a, b) => a.releve - b.releve || ordinal(a.code, b.code));
