@@ -245,6 +245,15 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.OAuth.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.OAuth.Tests |
 
+## modules/personnalisation
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/personnalisation/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Personnalisation.Tests |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Personnalisation.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Personnalisation.Tests |
+
 ## modules/planning
 
 | Type | Dépendance | Version | Licence | Usage |

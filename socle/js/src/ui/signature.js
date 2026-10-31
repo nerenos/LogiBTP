@@ -1,5 +1,6 @@
 // Signature tracée sur l'écran (doigt, stylet ou souris) : cadre de dessin, effacement, image PNG. Sans métier :
 // l'application range l'image avec le nom et la qualité du signataire, l'horodatage et l'empreinte du document signé.
+import { texteHtml } from '../dictionnaire/index.js';
 
 /** Épaisseur du trait selon la pression (stylet), sinon une valeur fixe ; bornée. */
 export const epaisseurTrait = (pression) => (pression > 0 && pression < 1 ? 1.2 + pression * 2.6 : 2.4);
@@ -14,9 +15,9 @@ export class PadSignature {
   /** conteneur : élément qui reçoit le cadre ; options : hauteur (px), changer(vide) appelé après chaque trait ou effacement. */
   constructor(conteneur, { hauteur = 180, changer = () => {} } = {}) {
     this.#changer = changer;
-    conteneur.innerHTML = `<div class="pad-signature"><canvas aria-label="Zone de signature : signer avec le doigt ou le stylet"></canvas>
+    conteneur.innerHTML = `<div class="pad-signature"><canvas aria-label="${texteHtml('socle.signature.zone')}"></canvas>
       <span class="pad-signature-ligne" aria-hidden="true"></span>
-      <button type="button" class="pad-signature-effacer" title="Effacer la signature">✕ Effacer</button></div>`;
+      <button type="button" class="pad-signature-effacer" title="${texteHtml('socle.signature.effacer_titre')}">✕ ${texteHtml('socle.signature.effacer')}</button></div>`;
     this.#canvas = conteneur.querySelector('canvas');
     this.#canvas.style.height = `${hauteur}px`;
     this.#ctx = this.#canvas.getContext('2d');

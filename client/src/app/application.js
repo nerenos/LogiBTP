@@ -24,13 +24,11 @@ import './terrain/operations-terrain.js';
 import { menus } from './navigation/menus.js';
 import { ROUTES } from './pages/index.js';
 import { CLE_PREFERENCES_NAVIGATION, urlDocument, urlFiche, TYPE_DOCUMENT, SUJET_FENETRE } from './codes.js';
+import { texte } from '@logibtp/socle/dictionnaire';
+import { logoApplication } from '../personnalisation.js';
 
 // Application web LogiBTP (cœur) : services partagés par les pages, routeur (navigation classique dans la
 // fenêtre), fenêtres séparées et session (module Navigation), bandeau à menus.
-
-const LOGO = `<svg viewBox="0 0 104 24" role="img" aria-label="LogiBTP"><g fill="currentColor">
-  <rect x="1" y="13" width="9" height="9" rx="1"/><rect x="11" y="13" width="9" height="9" rx="1" opacity=".75"/><rect x="6" y="3" width="9" height="9" rx="1" opacity=".55"/></g>
-  <text x="25" y="18" font-family="system-ui, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="currentColor">Logi<tspan fill="#e8a33d">BTP</tspan></text></svg>`;
 
 /** Pour une fiche, la liste où revenir quand elle a été ouverte directement (fenêtre séparée, session restaurée). */
 export const LISTE_PAR_TYPE = {
@@ -62,7 +60,7 @@ export class Application {
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {
-      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: LOGO, titreApplication: 'LogiBTP', retour: () => this.retour(),
+      menus: menus(this), naviguer: (url, o) => this.naviguer(url, o), logo: logoApplication(), titreApplication: texte('application.nom'), retour: () => this.retour(),
       disposition: this.preferences.get('menu'), surDisposition: (d) => this.preferences.set('menu', d),
     });
     // Application installable : le service worker garde le client et les données consultées (mode hors ligne).

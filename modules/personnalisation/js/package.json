@@ -1,0 +1,20 @@
+{
+  "name": "@logibtp/personnalisation",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Personnalisation LogiBTP : composition des textes (fr.json), du thème (theme.css) et des images des couches socle → modules → cœur, greffon Vite et vérification des clés",
+  "exports": {
+    ".": "./src/index.js",
+    "./vite": "./src/vite.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@logibtp/socle": "0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

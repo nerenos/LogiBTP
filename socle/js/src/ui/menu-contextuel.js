@@ -1,5 +1,6 @@
 import { echapper } from './format.js';
 import { aideRaccourcisDisponible, ouvrirAideRaccourcis } from './raccourcis.js';
+import { texte, icone } from '../dictionnaire/index.js';
 
 // Menu contextuel (clic droit, touche Menu ou Maj+F10) : court, il rappelle surtout les raccourcis clavier des
 // fonctions (aide-mémoire) ; tout ce qu'il propose reste accessible sans lui (clavier, boutons). En bas : lien vers la
@@ -19,7 +20,7 @@ export function ouvrirMenuContextuel(e, elements, { aide = true } = {}) {
   fermerMenuContextuel();
   e?.preventDefault?.();
   const items = elements.filter((x, i, t) => !(x.separateur && (i === 0 || t[i - 1].separateur || i === t.length - 1)));
-  if (aide && aideRaccourcisDisponible()) items.push({ separateur: true }, { libelle: '⌨ Personnaliser les raccourcis…', action: ouvrirAideRaccourcis });
+  if (aide && aideRaccourcisDisponible()) items.push({ separateur: true }, { libelle: `${icone('raccourcis')} ${texte('socle.aide_memoire.personnaliser')}`, action: ouvrirAideRaccourcis });
   const menu = document.createElement('div');
   menu.className = 'menu-contextuel';
   menu.setAttribute('role', 'menu');

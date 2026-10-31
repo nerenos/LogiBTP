@@ -1,5 +1,6 @@
 import { echapper, htmlSur } from './format.js';
 import { ouvrirModale } from './dialogue.js';
+import { texte } from '../dictionnaire/index.js';
 
 // Éditeur de mise en forme d'un libellé (double-clic sur un libellé).
 // Ctrl+B / Ctrl+I / Ctrl+U, barre d'outils, insertion de variables {{...}}.
@@ -8,20 +9,21 @@ import { ouvrirModale } from './dialogue.js';
 const COULEURS = ['#1f2328', '#b42318', '#c4320a', '#067647', '#1d5fbf', '#6941c6', '#667085'];
 
 const BOUTONS = [
-  { cmd: 'bold', texte: '<b>G</b>', titre: 'Gras (Ctrl+B)' },
-  { cmd: 'italic', texte: '<i>I</i>', titre: 'Italique (Ctrl+I)' },
-  { cmd: 'underline', texte: '<u>S</u>', titre: 'Souligné (Ctrl+U)' },
-  { cmd: 'strikeThrough', texte: '<s>B</s>', titre: 'Barré' },
+  // Bulle de chaque bouton : socle.editeur.<cmd> du dictionnaire ; texte = aperçu du bouton (balises, pas de libellé).
+  { cmd: 'bold', texte: '<b>G</b>' },
+  { cmd: 'italic', texte: '<i>I</i>' },
+  { cmd: 'underline', texte: '<u>S</u>' },
+  { cmd: 'strikeThrough', texte: '<s>B</s>' },
   { sep: true },
-  { cmd: 'superscript', texte: 'x²', titre: 'Exposant (m², m³)' },
-  { cmd: 'subscript', texte: 'x₂', titre: 'Indice' },
+  { cmd: 'superscript', texte: 'x²' },
+  { cmd: 'subscript', texte: 'x₂' },
   { sep: true },
-  { cmd: 'insertUnorderedList', texte: '•≡', titre: 'Liste à puces' },
-  { cmd: 'insertOrderedList', texte: '1≡', titre: 'Liste numérotée' },
+  { cmd: 'insertUnorderedList', texte: '•≡' },
+  { cmd: 'insertOrderedList', texte: '1≡' },
   { sep: true },
   { couleurs: true },
   { sep: true },
-  { cmd: 'removeFormat', texte: '⌫', titre: 'Effacer la mise en forme' },
+  { cmd: 'removeFormat', texte: '⌫' },
 ];
 
 /** Ouvre l'éditeur ; résout avec le HTML saisi (null si vidé), ou undefined si l'utilisateur annule. */
@@ -30,25 +32,25 @@ export function editerLibelle({ html, titre, variables = [], lecture = false }) 
     const fond = document.createElement('dialog');
     fond.className = 'modale-fond dialogue-plein';
     fond.innerHTML = `
-      <div class="modale editeur-riche" role="dialog" aria-modal="true" aria-label="Mise en forme du libellé">
-        <header><h2>Libellé</h2><span class="aide">${echapper(titre ?? '')}</span></header>
+      <div class="modale editeur-riche" role="dialog" aria-modal="true" aria-label="${echapper(texte('socle.editeur.titre_fenetre'))}">
+        <header><h2>${echapper(texte('socle.editeur.titre'))}</h2><span class="aide">${echapper(titre ?? '')}</span></header>
         <div class="barre-outils" role="toolbar">
           ${BOUTONS.map((b) => {
             if (b.sep) return '<span class="sep"></span>';
-            if (b.couleurs) return COULEURS.map((c) => `<button type="button" class="couleur" data-couleur="${c}" title="Couleur ${c}" style="--c:${c}"></button>`).join('');
-            return `<button type="button" data-cmd="${b.cmd}" title="${echapper(b.titre)}">${b.texte}</button>`;
+            if (b.couleurs) return COULEURS.map((c) => `<button type="button" class="couleur" data-couleur="${c}" title="${echapper(texte('socle.editeur.couleur', { couleur: c }))}" style="--c:${c}"></button>`).join('');
+            return `<button type="button" data-cmd="${b.cmd}" title="${echapper(texte(`socle.editeur.${b.cmd}`))}">${b.texte}</button>`;
           }).join('')}
-          <select data-variable title="Insérer une variable">
-            <option value="">Variable…</option>
+          <select data-variable title="${echapper(texte('socle.editeur.inserer_variable'))}">
+            <option value="">${echapper(texte('socle.editeur.variable'))}</option>
             ${variables.map((v) => `<option value="${echapper(v.valeur)}">${echapper(v.libelle)}</option>`).join('')}
           </select>
         </div>
         <div class="zone-saisie${lecture ? ' lecture' : ''}" contenteditable="${lecture ? 'false' : 'true'}" spellcheck="${lecture ? 'false' : 'true'}"></div>
         <footer>
-          ${lecture ? '<span class="aide">Consultation seule : libellé non modifiable · Échap : fermer</span><button type="button" class="principal" data-action="annuler">Fermer</button>'
-    : `<span class="aide">Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler</span>
-          <button type="button" data-action="annuler">Annuler</button>
-          <button type="button" class="principal" data-action="valider">Valider</button>`}
+          ${lecture ? `<span class="aide">${echapper(texte('socle.editeur.aide_consultation'))}</span><button type="button" class="principal" data-action="annuler">${echapper(texte('commun.fermer'))}</button>`
+    : `<span class="aide">${echapper(texte('socle.editeur.aide_saisie'))}</span>
+          <button type="button" data-action="annuler">${echapper(texte('commun.annuler'))}</button>
+          <button type="button" class="principal" data-action="valider">${echapper(texte('commun.valider'))}</button>`}
         </footer>
       </div>`;
     ouvrirModale(fond);

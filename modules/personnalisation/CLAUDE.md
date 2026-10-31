@@ -1,0 +1,29 @@
+# Module Personnalisation – contexte
+
+## Rôle
+- Textes (`fr.json`), thème (`theme.css`) et images (`images/`, dont le catalogue des icônes `images/icones.json`) de l'application, rangés sous des clés stables et modifiables sans toucher au code ([analyse](../../documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md)). Une langue, un thème : le but est de structurer, pas le multilingue.
+- Lot P1 : fichiers statiques par couche (socle → modules → cœur) surchargés par l'installation. Phase 2 (à venir) : interface `/parametres/personnalisation`, stockage en base par société, génération des fichiers, application aux données système (§ 8 et 9 de l'analyse).
+
+## Dépendances
+- Dépend de : `@logibtp/socle` (`fusionner`, `cles`, `valeurBrute` de `@logibtp/socle/dictionnaire`) ; .NET : `LogiBTP.Socle.Web` (`Dictionnaire.Fusionner` du socle, `VariablesEnv`).
+- Utilisé par : le client (greffon Vite dans `client/vite.config.js`, composition dans `client/test/preparation.js` et `client/test/personnalisation.test.js`), l'API (`app.UsePersonnalisation()` avant `UseClientWeb` dans `Program.cs`).
+- **La résolution des textes n'est pas ici** : elle est dans le socle (`@logibtp/socle/dictionnaire`, `Dictionnaire.cs`), utilisé par tous les modules (un module ne dépend pas d'un autre module).
+
+## Structure
+- `js/src/composition.js` : `composer(couches)` → `{ libelles, icones, theme, images, fichiers }` (fusion profonde des `fr.json` et `images/icones.json`, thèmes concaténés dans l'ordre, image de la dernière couche qui la fournit, `_meta.version` = empreinte de tout le contenu composé) ; `contenu(composition, relatif)` → `{ type, corps }`.
+- `js/src/vite.js` : `personnalisation({ couches, precharger, icone, modules })` — développement : `/personnalisation/*` servi composé (no-cache), page rechargée quand un fichier d'une couche change ; construction : `dist/personnalisation/` ; module virtuel `virtual:logibtp-personnalisation` (`{ libelles, icones }` du programme : dictionnaire de secours) ; `index.html` : icône de la page, préchargement de `fr.json`, `images/icones.json` et des fichiers `precharger`, feuille `theme.css`, `modulepreload` des `modules` (paquet de l'application) ; `balisesHtml`.
+- `js/src/verification.js` : `clesUtilisees(source)` (appels `texte`, `texteHtml`, `pluriel`, `icone`, `iconeHtml` à clé littérale ou construite), `verifierCles({ fichiers, libelles, icones })` → `{ manquantes, construites }` (pluriel : `_un` et `_autre` exigées ; clé construite : une clé doit commencer par son préfixe).
+- `dotnet/LogiBTP.Personnalisation.Web/` : `FichiersPersonnalisation(dossierProgramme, dossierInstallation)` (`Lire(relatif)` : `fr.json` et `images/icones.json` fusionnés — version = empreinte —, `theme.css` du programme puis de l'installation, autres images remplacées ; chemins hors des dossiers refusés ; résultats gardés tant que date et taille des sources ne changent pas), `Extensions.UsePersonnalisation()` (GET / HEAD `/personnalisation/*`, `no-cache`, `ETag` / 304, sans session ; rien sans client construit) et `DossierInstallation` (`Personnalisation:Dossier`, sinon `LOGIBTP_PERSONNALISATION`, sinon `{LOGIBTP_CONFIG}/personnalisation`, sinon `personnalisation/` à côté de l'API).
+
+## Couches et fichiers
+- Une couche = un dossier `personnalisation/` : `socle/js/personnalisation` (`commun.*`, `socle.*`, variables du thème, icônes du socle), `modules/<nom>/js/personnalisation` (préfixe = le module, ex. `navigation.*`), `client/personnalisation` (cœur : `application.*`, logo, icône de la page). Ordre dans `client/personnalisation/couches.js` (`COUCHES`) ; un module qui reçoit des textes ajoute son dossier et sa ligne.
+- Installation : mêmes fichiers dans le dossier de l'installation (seules les clés changées dans `fr.json`), relus à chaque requête modifiée.
+
+## Conventions et pièges
+- Clés en minuscules, à points (`module.ecran.element`), jamais le texte comme clé ; `commun.*` pour les mots partagés ; variables `{{nom}}` en français ; pluriel par `_un` / `_autre` (`_zero` facultatif) ; référence `$t(commun.x)`.
+- Un libellé est du texte : `texteHtml` l'échappe avec ses valeurs ; seules les clés finissant par `_html` gardent leurs balises.
+- Chargement : `client/src/main.js` attend `chargerPersonnalisation()` avant d'importer l'application ; une constante de module qui appelle `texte()` est donc permise dans le client et les modules. Dans les tests, `test/preparation.js` pose le dictionnaire.
+- Nouveau code : aucun texte, icône ni couleur en dur (`texte()`, `icone()`, variables du thème).
+
+## Tests
+- `npm test --workspace modules/personnalisation/js` ; `dotnet test modules/personnalisation/dotnet/LogiBTP.Personnalisation.Tests` ; jeu commun du socle `socle/tests/dictionnaire.json` (`socle/js/test/dictionnaire.test.js`, `DictionnaireTests.cs`) ; clés du code : `client/test/personnalisation.test.js`.

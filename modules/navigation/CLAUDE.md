@@ -32,6 +32,7 @@
 - `pages/document.js`, `fiche.js`, `graphe.js`, `liste.js` appellent `app.routeur.remplacerUrl` (création, réglages, thème / vue).
 
 ## Conventions et pièges
+- Textes dans `js/personnalisation/fr.json` (`navigation.*`, module Personnalisation), lus par `texte` / `texteHtml` / `pluriel` de `@logibtp/socle/dictionnaire` ; les tests posent le dictionnaire socle + navigation (`js/test/preparation.js`).
 - Toute ouverture d'écran passe par `app.naviguer(url, { nouvelleFenetre })`, jamais par un panneau superposé ; chaque URL désigne un écran précis (partage, nouvelle fenêtre, restauration de session).
 - `PageBase` a `fermer()` ; la méthode `liberer()` (verrous) est propre aux pages `document.js` / `fiche.js` du cœur.
 - Les navigations sont sérialisées par `Routeur.enCours` ; `popstate` refusé par la garde → `history.go(delta)` avec `ignorerPopstate`.

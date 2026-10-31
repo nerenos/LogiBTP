@@ -261,6 +261,27 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ## Interface
 
+### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
+
+Lot P1 fait (module, chargement, socle et navigation migrés). Suites, dans l'ordre de l'analyse (§ 7.1) :
+
+- [ ] **P2 — erreurs par code** : le client affiche `erreurs.<code>` s'il existe, sinon le `title` du serveur ; extraire
+  les ~400 codes de `ExceptionMetier` et des moteurs (`{ code, message }`) avec leur message actuel dans `fr.json`
+  (couche du module qui lève l'erreur), `details` passés en valeurs.
+- [ ] **P3… — un lot par module puis par zone du cœur** : textes, icônes (`icone()`, `images/icones.json`) et couleurs en
+  dur (variables du thème) ; Pointage d'abord (pages de référence, borne), puis Document, Liste, Fiche, GED…, menus
+  (`navigation/menus.js`), pages du cœur. Chaque module reçoit son dossier `js/personnalisation/` et sa ligne dans
+  `client/personnalisation/couches.js`. Outil d'extraction semi-automatique (§ 7.2) à écrire au premier lot.
+- [ ] **Données système en base** (§ 8) : libellés `donnees.<table>.<code>.<colonne>` appliqués par le serveur
+  (`installation personnalisation appliquer`, démarrage, mise à jour) sans écraser une valeur modifiée par la société
+  (table `personnalisation_applique`).
+- [ ] **Serveur** : notifications, courriels automatiques, éditions (Jint : `initialiserDictionnaire`) et messages
+  d'exception lus par `Dictionnaire.cs`.
+- [ ] **Phase 2** (§ 9) : stockage par base, génération des fichiers par société, page `/parametres/personnalisation`,
+  repérage des clés à l'écran en mode débogage.
+- [ ] Images de l'application à ajouter au répertoire : icônes PNG 192 / 512 de la PWA, logo de la page de connexion et de
+  la borne.
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.

@@ -1,4 +1,5 @@
-// Saisie et affichage des nombres, nettoyage du HTML affiché.
+// Saisie et affichage des nombres, nettoyage du HTML affiché. Formats dans la langue du dictionnaire (_meta.langue).
+import { langue } from '../dictionnaire/index.js';
 import { echapperHtml } from '../calcul/libelles.js';
 
 /** « 12,5 » → « 12.5 » ; vide → null ; invalide → undefined. */
@@ -18,7 +19,7 @@ const formateurs = new Map();
 export function formatNombre(v, decimales = 2, { vide = '' } = {}) {
   if (v === null || v === undefined || v === '') return vide;
   if (!formateurs.has(decimales)) {
-    formateurs.set(decimales, new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }));
+    formateurs.set(decimales, new Intl.NumberFormat(langue(), { minimumFractionDigits: decimales, maximumFractionDigits: decimales }));
   }
   return formateurs.get(decimales).format(Number(v));
 }
@@ -26,14 +27,14 @@ export function formatNombre(v, decimales = 2, { vide = '' } = {}) {
 /** Nombre avec ses décimales significatives (coefficients, quantités saisies). */
 export function formatLibre(v, max = 6) {
   if (v === null || v === undefined || v === '') return '';
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: max }).format(Number(v));
+  return new Intl.NumberFormat(langue(), { maximumFractionDigits: max }).format(Number(v));
 }
 
 // Une date seule « AAAA-MM-JJ » est un jour civil : lue à minuit local (new Date() la lirait à minuit UTC).
 const instant = (v) => (v instanceof Date ? v : new Date(typeof v === 'string' && v.length === 10 ? `${v}T00:00:00` : v));
-const FORMAT_DATE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short' });
-const FORMAT_DATE_HEURE = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-const FORMAT_HEURE = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const FORMAT_DATE = new Intl.DateTimeFormat(langue(), { dateStyle: 'short' });
+const FORMAT_DATE_HEURE = new Intl.DateTimeFormat(langue(), { dateStyle: 'short', timeStyle: 'short' });
+const FORMAT_HEURE = new Intl.DateTimeFormat(langue(), { hour: '2-digit', minute: '2-digit' });
 
 /** « JJ/MM/AAAA » ; vide → `vide`. */
 export const formatDate = (v, { vide = '' } = {}) => (v ? FORMAT_DATE.format(instant(v)) : vide);

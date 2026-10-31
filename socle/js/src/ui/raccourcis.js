@@ -1,5 +1,6 @@
 import { lireStockage, ecrireStockage } from './preferences.js';
 import config from './raccourcis.json';
+import { texte, existe } from '../dictionnaire/index.js';
 
 // Raccourcis clavier personnalisables. Chaque fonction appartient à un groupe (grille des lignes, application,
 // document…) déclaré par le module ou l'application qui la traite : declarerRaccourcis(groupe, { libelle, actions }).
@@ -28,14 +29,8 @@ export function combinaison(e) {
 /** Touche seule de modification (Ctrl, Maj…) : pas un raccourci. */
 export const estModificateur = (e) => ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsLock'].includes(e.key);
 
-const LIBELLES_GRILLE = {
-  insererApres: 'Insérer une ligne après', insererAvant: 'Insérer une ligne avant', insererEnfant: 'Insérer une ligne enfant',
-  monter: 'Monter la ligne', descendre: 'Descendre la ligne', indenter: 'Augmenter le niveau', desindenter: 'Diminuer le niveau',
-  etendreHaut: 'Étendre la sélection vers le haut', etendreBas: 'Étendre la sélection vers le bas',
-  couper: 'Couper', copier: 'Copier', coller: 'Coller', dupliquer: 'Dupliquer', supprimer: 'Supprimer',
-  annuler: 'Annuler', retablir: 'Rétablir', ouvrirMetre: 'Ouvrir le métré', rechercher: 'Rechercher dans la bibliothèque',
-  replier: 'Replier la tranche', deplier: 'Déplier la tranche', menu: 'Menu contextuel (aide-mémoire ; touche Menu et Maj+F10 aussi)',
-};
+// Libellés des actions de la grille : socle.raccourcis.grille.<action> du dictionnaire (l'action elle-même à défaut).
+const libelleGrille = (action) => texte(`socle.raccourcis.grille.${action}`, null, action);
 
 const groupes = new Map();
 let personnalisation = lire();
@@ -81,9 +76,9 @@ export function configurerRaccourcis(surcharge = {}) {
   const fusion = { ...config, ...surcharge };
   const actions = {};
   for (const [action, defaut] of Object.entries(fusion)) {
-    if (!action.startsWith('_')) actions[action] = { libelle: LIBELLES_GRILLE[action] ?? action, defaut };
+    if (!action.startsWith('_')) actions[action] = { libelle: libelleGrille(action), defaut };
   }
-  declarerRaccourcis('grille', { libelle: 'Lignes (document, métré)', actions });
+  declarerRaccourcis('grille', { libelle: texte('socle.raccourcis.groupe_grille'), actions });
 }
 configurerRaccourcis();
 
@@ -94,10 +89,8 @@ export function actionDe(e, groupe = 'grille') {
 
 /** Libellé lisible d'une combinaison : « Ctrl+Maj+Entrée ». */
 export function libelleTouches(t) {
-  return String(t ?? '').split('+').map((p) => ({
-    Shift: 'Maj', Enter: 'Entrée', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Delete: 'Suppr', Escape: 'Échap',
-    Space: 'Espace', Backspace: 'Retour arrière', ContextMenu: 'Menu', PageUp: 'Pg préc.', PageDown: 'Pg suiv.', Home: 'Début', End: 'Fin',
-  }[p] ?? p)).join('+');
+  // Nom affiché d'une touche : socle.touches.<nom de la touche> (Shift → Maj…), la touche elle-même à défaut.
+  return String(t ?? '').split('+').map((p) => (existe(`socle.touches.${p}`) ? texte(`socle.touches.${p}`) : p)).join('+');
 }
 
 /** Premier raccourci d'une action, lisible (aide-mémoire, bulles, menus) ; '' si aucun. */

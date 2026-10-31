@@ -23,6 +23,8 @@ export const TAILLE_MAX_DONNEE = 5 * 1024 * 1024;
  * - 'donnee' : lecture de l'API, réseau d'abord puis réponse gardée ;
  * - 'ecriture' : écriture de l'API, réseau seul, hors ligne : 503 HORS_LIGNE ;
  * - 'page' : navigation vers une route du client, réseau d'abord puis index.html gardé ;
+ * - 'personnalisation' : textes, thème et images (/personnalisation/, module Personnalisation), modifiables sur le serveur
+ *   sans nouvelle version du client : réseau d'abord, copie gardée pour le hors ligne ;
  * - 'fichier' : fichier de l'application (scripts, styles, polices), cache d'abord.
  */
 export function traitement({ methode, url, origine, navigation = false }) {
@@ -39,6 +41,7 @@ export function traitement({ methode, url, origine, navigation = false }) {
   }
   if (methode !== 'GET') return 'reseau';
   if (navigation) return 'page';
+  if (chemin.startsWith('/personnalisation/')) return 'personnalisation';
   return 'fichier';
 }
 
