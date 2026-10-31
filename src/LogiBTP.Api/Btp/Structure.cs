@@ -11,8 +11,11 @@ namespace LogiBTP.Api.Btp;
 /// <summary>Éléments de la structure dont on veut les documents (graphe des fiches projet, affaire, chantier, marché).</summary>
 public sealed record PerimetreStructure(List<int>? Projets, List<int>? Affaires, List<int>? Chantiers, List<int>? Marches);
 
-/// <summary>Document à créer depuis un marché : code du type (V_RECEPTION…).</summary>
-public sealed record DocumentMarche(string Type);
+/// <summary>
+/// Document à créer depuis un marché : code du type (V_RECEPTION…) ; mois facturé (marchés à facturer, lot E) : la pièce
+/// est datée d'aujourd'hui pour le mois en cours, du dernier jour du mois pour un mois passé.
+/// </summary>
+public sealed record DocumentMarche(string Type, DateOnly? Mois = null);
 
 /// <summary>Rattachement d'un document à la structure des affaires (champs facultatifs).</summary>
 public sealed record RattachementDocument(int? EntProjetId, int? EntAffaireId, int? EntChantierId, int? EntMarcheId);
@@ -116,7 +119,13 @@ public static class Structure
                 WHERE x.mdo_mar_id = {id} AND c.ent_verrouille ORDER BY x.mdo_rang
                 """).ToListAsync(ct);
             if (commandes.Count == 0) throw ExceptionMetier.Invalide("MARCHE_SANS_COMMANDE", "Le marché n'a pas de commande validée");
+            var date = d.Mois is { } mois ? MarchesAFacturer.DatePiece(mois, DateOnly.FromDateTime(DateTime.Today)) : (DateOnly?)null;
             var cree = await transformations.TransformerPlusieurs(new DemandeTransformationMultiple { CibleTydId = tyd, Sources = commandes }, Utilisateur.Depuis(http), ct);
+            if (date is { } jour)
+            {
+                await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_date = {jour} WHERE ent_id = {cree.Document.EntId}", ct);
+                cree.Document.EntDate = jour;
+            }
             // Avancement : l'option du marché permet (ou non) de dépasser son montant (Q27).
             var entId = cree.Document.EntId;
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document SET ent_avt_depassement = (SELECT mar_depassement_autorise FROM marche WHERE mar_id = {id}) WHERE ent_id = {entId} AND ent_avt_presentation IS NOT NULL", ct);
@@ -133,6 +142,10 @@ public static class Structure
             }
             return cree;
         });
+        // Marchés à facturer d'un mois (13.9, lot E) et « pas d'avancement » d'un marché pour un mois.
+        g.MapGet("/marches/a-facturer", (DateOnly mois, LogiBtpContext db, CancellationToken ct) => MarchesAFacturer.ListeAsync(db, mois, ct));
+        g.MapPut("/marches/{id:int}/sans-avancement", (int id, SansAvancement s, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            MarchesAFacturer.EnregistrerSansAvancementAsync(db, id, s, Utilisateur.Depuis(http), ct));
         // Adresse des travaux ou de livraison : chantier, dépôts de notre société, comptoirs du fournisseur (lot F).
         g.MapGet("/adresses-livraison", async (int? chantier, long? fournisseur, LogiBtpContext db, CancellationToken ct) =>
             await AdressesDocument.Proposees(db, chantier, fournisseur, ct));

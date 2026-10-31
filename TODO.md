@@ -23,7 +23,8 @@
   des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied) ; règlements (lot C) :
   rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux) ; lot D : appliquer
   `db/248` (chantier par ligne, colonne `chantiers` de `v_liste_documents`), rejouer les `150` et `176` régénérés
-  (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue).
+  (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue) ;
+  lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -86,8 +87,6 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Proposition des marchés à facturer pour une période (13.9) : mois civil, marchés ouverts non soldés sans
-  situation validée dans le mois, « pas d'avancement » mémorisé par marché et par mois, situations créées d'un clic.
 - [ ] Cautions de retenue de garantie : une caution sur plusieurs retenues, retenue partiellement cautionnée ; le
   montant cautionné se consomme en premier, la retenue non cautionnée reste due une fois la caution épuisée (une pièce
   peut avoir une part cautionnée et une part retenue).

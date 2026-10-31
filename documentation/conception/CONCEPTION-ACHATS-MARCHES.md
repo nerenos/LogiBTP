@@ -776,6 +776,9 @@ préparée pour le module Comptabilité, valeur « Sans écriture » pour un tot
 seulement une situation ?
 
 **Décision** : OK. Précision : l'absence de numéro concerne les situations. Pour une période, on propose à l'utilisateur les marchés à facturer ; il peut indiquer qu'il n'y a pas eu d'avancement (aucune situation créée, aucun numéro de situation consommé).
+Réalisé le 31/10/2026 (lot E) : page « Marchés à facturer » (mois civil ; marchés de vente en cours non soldés sans pièce
+d'avancement validée du mois ; création d'un clic ou groupée ; « pas d'avancement » mémorisé par marché et par mois,
+`marche_sans_avancement`).
 
 ### 13.10 Lignes de pied en montant fixe (Q28)
 

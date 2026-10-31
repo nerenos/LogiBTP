@@ -516,7 +516,11 @@ export const api = {
   transformerPlusieurs: (demande) => appel('POST', '/documents/plusieurs', demande),
   ajouterSources: (id, sources) => appel('POST', `/documents/${id}/sources`, { sources }),
   documentsEnAttente: (cible, tiers) => appel('GET', `/documents/en-attente?cible=${cible}${tiers ? `&tiers=${tiers}` : ''}`),
-  documentMarche: (marche, type) => appel('POST', `/structure/marches/${marche}/documents`, { type }),
+  // mois (AAAA-MM, marchés à facturer) : pièce datée d'aujourd'hui ou du dernier jour d'un mois passé.
+  documentMarche: (marche, type, mois = null) => appel('POST', `/structure/marches/${marche}/documents`, { type, ...(mois ? { mois: `${mois}-01` } : {}) }),
+  // Marchés à facturer d'un mois (13.9, lot E) ; « pas d'avancement » d'un marché pour un mois ({ mois, sans, commentaire }).
+  marchesAFacturer: (mois) => appel('GET', `/structure/marches/a-facturer?mois=${mois}-01`),
+  sansAvancementMarche: (marche, v) => appel('PUT', `/structure/marches/${marche}/sans-avancement`, v),
   gestionMarche: (marche) => appel('GET', `/structure/marches/${marche}/gestion`),
   // Réception et retenue de garantie d'un marché (vente ou sous-traitance).
   retenueMarche: (marche) => appel('GET', `/structure/marches/${marche}/retenue`),

@@ -22,6 +22,7 @@ import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
 import { PageReglements } from './reglements.js';
+import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
@@ -137,6 +138,7 @@ export const ROUTES = [
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
+  { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: 'Marchés à facturer' },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: 'Note' },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: 'Suivi' },
   { nom: 'crm-rappels', chemin: '/crm/rappels', page: PageRappelsCrm, titre: 'Mes rappels' },
