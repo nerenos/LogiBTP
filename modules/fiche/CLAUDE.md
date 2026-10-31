@@ -67,6 +67,11 @@
 - Champs `liste` : `creerCombo` du socle (valeur lue par `valeurCombo`, événement `change` ; en lecture, champ en lecture seule sans flèche).
 - Dans `SpecialisationFiche.cs`, le commentaire de `AvantEcritureAsync` est mal placé (au-dessus de `AvantSuppressionAsync`).
 
+## Textes, icônes et couleurs (module Personnalisation, lot P3e)
+- Textes `fiche.*` de `js/personnalisation/fr.json` (zones `validation`, `formats`, `requete`, `chrono`, `modes`, `fournisseur`, `fiche`, `parametrage`) ; icônes `fiche_*` de `images/icones.json` et communes du socle (`verrou`, `retirer`, `supprimer`, `avertissement`) ; couleurs de la fenêtre du paramétrage : `--fiche-*` de `theme.css`.
+- `MESSAGES` et `LIBELLES_MODES` : `textesParCode` ; `FORMATS_PREDEFINIS` et types du paramétrage : `pairesParCode` (même forme qu'avant). Les messages de `ValidationFiche.cs` et `ServiceFiche` restent ceux du serveur (mêmes textes).
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/fiche/js` (vitest : jeu partagé + fournisseur mémoire) ; `dotnet test LogiBTP.slnx` (projet `LogiBTP.Fiches.Tests`).
 - Toute règle de validation modifiée : JS + C# + cas dans `01_validation.json`.

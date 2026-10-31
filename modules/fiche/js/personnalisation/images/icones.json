@@ -1,0 +1,15 @@
+{
+  "fiche_modifier": "✎",
+  "fiche_copier": "⧉",
+  "fiche_confidentiel": "👁",
+  "fiche_parametrer": "⚙",
+  "fiche_obligatoire": "*",
+  "fiche_obligatoire_parametre": "◆",
+  "fiche_masque": "••••••••",
+  "fiche_reprendre_code": "⇥",
+  "fiche_code_libre": "✓",
+  "fiche_monter": "↑",
+  "fiche_descendre": "↓",
+  "fiche_deplier": "▸",
+  "fiche_replier": "▾"
+}

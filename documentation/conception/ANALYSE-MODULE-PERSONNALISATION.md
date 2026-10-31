@@ -451,3 +451,26 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   clés de `modules/liste/js` vérifiées par le test du client, clés composées relues contre le dictionnaire ; affichage
   contrôlé dans le navigateur (liste en mémoire : barre, filtres de vue, segments, en-têtes, menu de filtre, concepteur
   sur ses deux onglets).
+
+## 18. Réalisation du lot P3e : module Fiche (31/10/2026)
+
+- **Périmètre** : `modules/fiche/js` : règles (messages de validation des champs, formats prédéfinis, contrôle des
+  requêtes de liste, contrôle du format de chrono, libellés des modes, fournisseur en mémoire) et interface (fiche :
+  en-tête, actions, bandeau du verrou, erreurs, onglets, groupes, marques des champs, champs masqués, code à chrono,
+  mots de passe, pièces jointes, messages et confirmations ; paramétrage : champs du logiciel, champs supplémentaires,
+  détails) ; `ui/fiche.css`.
+- **Textes** : `fiche.*` du `fr.json` du module (zones `validation`, `formats`, `requete`, `chrono`, `modes`,
+  `fournisseur`, `fiche`, `parametrage` dont `types`) ; compteur d'erreurs par `pluriel` (`fiche.fiche.erreurs`) ; mots
+  communs du socle (`commun.enregistrer`, `annuler`, `supprimer`, `fermer`, `fermer_echap`, `afficher`, `code`,
+  `libelle`). Les tables exportées (`MESSAGES`, `LIBELLES_MODES`, `FORMATS_PREDEFINIS`) gardent leur forme. Les jetons du
+  format de chrono (`{P}`, `{N:k}`…) restent dans les textes (accolades simples, distinctes des variables `{{nom}}`).
+- **Icônes** : `fiche_*` du module (modifier, copier, confidentiel, paramétrer, marques obligatoires, valeur masquée,
+  reprise du code prévisionnel, code libre, ordre, détails), communes du socle (`verrou`, `retirer`, `supprimer`,
+  `avertissement`).
+- **Couleurs** : fond et ombre de la fenêtre du paramétrage : variables `--fiche-*` du `theme.css` du module (valeurs
+  inchangées).
+- **Gardé** : les messages du serveur (`ValidationFiche.cs`, `ServiceFiche`), mêmes textes ; le marqueur « ⚠ » des
+  onglets en erreur dans `fiche.css` (comme celui de la grille des documents).
+- **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/fiche/js`
+  vérifiées par le test du client ; affichage contrôlé dans le navigateur (fiche en mémoire : en-tête, bulles, onglets,
+  champs masqués, erreurs de saisie, confirmation, paramétrage avec détails ouverts).

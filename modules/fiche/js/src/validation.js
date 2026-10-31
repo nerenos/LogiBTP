@@ -1,3 +1,5 @@
+import { texte, textesParCode, pairesParCode } from '@logibtp/socle/dictionnaire';
+
 // Validation des champs d'une fiche : même sémantique que ValidationFiche côté C# (jeu partagé
 // modules/fiche/tests/cas/01_validation.json).
 //
@@ -6,19 +8,9 @@
 //           comme un texte (longueur, format), sur sa valeur en clair.
 // Formats : email, telephone, code_postal, masque numérique (999.99 : 3 chiffres entiers, 2 décimales), regex:…
 
-export const MESSAGES = {
-  OBLIGATOIRE: 'Saisie obligatoire',
-  LONGUEUR: 'Texte trop long',
-  NOMBRE: 'Nombre attendu',
-  DATE: 'Date invalide',
-  LISTE: 'Valeur non prévue dans la liste',
-  BOOLEEN: 'Oui ou non attendu',
-  FORMAT: 'Format incorrect',
-};
+export const MESSAGES = textesParCode('fiche.validation', ['OBLIGATOIRE', 'LONGUEUR', 'NOMBRE', 'DATE', 'LISTE', 'BOOLEEN', 'FORMAT']);
 
-export const FORMATS_PREDEFINIS = [
-  ['email', 'Adresse e-mail'], ['telephone', 'Numéro de téléphone'], ['code_postal', 'Code postal'],
-];
+export const FORMATS_PREDEFINIS = pairesParCode('fiche.formats', ['email', 'telephone', 'code_postal']);
 
 const vide = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 const estObligatoire = (c) => !!(c.obligatoire || c.obligatoire_parametre);
@@ -68,9 +60,9 @@ function respecteFormat(texte, format) {
  */
 export function erreurRequete(sql) {
   const t = String(sql ?? '').trim().replace(/;+\s*$/, '').trim();
-  if (!t) return 'Requête vide';
-  if (!/^(select|with)\b/i.test(t)) return 'La requête doit commencer par SELECT (ou WITH)';
-  if (t.includes(';')) return 'Une seule instruction est permise';
+  if (!t) return texte('fiche.requete.vide');
+  if (!/^(select|with)\b/i.test(t)) return texte('fiche.requete.select');
+  if (t.includes(';')) return texte('fiche.requete.une_instruction');
   return null;
 }
 

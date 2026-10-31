@@ -263,7 +263,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
-Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code), P3a (Pointage), P3b (module Document), P3c (page document du cœur) et P3d (module Liste) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
+Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code), P3a (Pointage), P3b (module Document), P3c (page document du cœur), P3d (module Liste) et P3e (module Fiche) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
 
 - [ ] **Erreurs par code, suite de P2** (P2 fait : 237 codes sûrs au dictionnaire, § 13 de l'analyse) : 258 codes gardent
   le message du serveur (messages composés, plusieurs messages pour un code, codes employés ailleurs) ; les rendre sûrs
@@ -273,8 +273,8 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
   dur (variables du thème). P3a Pointage fait (§ 14 de l'analyse : règles du module par `textesParCode`, pages pointage
   et borne, congés, repas, titres des routes, styles) ; P3b module Document fait (§ 15 : éditeur, panneaux, vues, plan,
   notifications, `document.css`) ; P3c page document du cœur fait (§ 16 : page, `PanneauxBtp`, `EditeurDevisBtp` ; restent
-  les fichiers qu'ils appellent : structure, adresses, sous-traitance, analyse, contrôles de saisie, hors ligne) ; P3d module Liste fait (§ 17 : règles, liste, concepteur, menu de filtre, thèmes, `liste.css`). Suivants :
-  Fiche, GED…, menus
+  les fichiers qu'ils appellent : structure, adresses, sous-traitance, analyse, contrôles de saisie, hors ligne) ; P3d module Liste fait (§ 17 : règles, liste, concepteur, menu de filtre, thèmes, `liste.css`) ; P3e module Fiche fait (§ 18 : validation, chrono, fournisseur, fiche, paramétrage, `fiche.css`). Suivants :
+  GED…, menus
   (`navigation/menus.js`), pages du cœur ; liste de contrôle d'un fichier par `extraire` du module Personnalisation.
 - [ ] **Données système en base** (§ 8) : libellés `donnees.<table>.<code>.<colonne>` appliqués par le serveur
   (`installation personnalisation appliquer`, démarrage, mise à jour) sans écraser une valeur modifiée par la société
