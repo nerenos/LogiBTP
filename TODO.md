@@ -88,7 +88,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Révision de prix par index BT (formule, index provisoires puis définitifs) : à concevoir avant de coder.
+- [ ] Révision de prix par index BT : analyse [CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) (Q1 à Q12) à valider avant de coder.
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
 
