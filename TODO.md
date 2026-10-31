@@ -265,7 +265,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] E1 : fenêtre des messages d'erreur à décompte (I4), détail des erreurs de validation (I5), infobulles du thème
   (I8), séparateurs des barres d'outils (I7) ; après la PR de personnalisation (dictionnaire, `theme.css`).
-- [ ] E3 : densité confortable / compacte (I6), « Mon terrain » dans le menu Pointage (I9).
 - [ ] E4 à E6 : listes — pastilles de statut, barre réordonnée, création des ordres (L2, L5, O1) ; panneau des vues à
   droite, distinct du panneau des segments (L1) ; totaux et bandeau d'indicateurs répliqués JS / C# (L3, L4).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).

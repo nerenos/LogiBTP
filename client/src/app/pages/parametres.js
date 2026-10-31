@@ -1,5 +1,5 @@
 import { PageBase } from '@logibtp/navigation';
-import { echapper, THEMES, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, THEMES, DENSITES, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { MODES_REMISE } from '@logibtp/document/ui';
 import { DISPOSITION_MENU, LARGEUR_MENU } from '@logibtp/navigation/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
@@ -22,6 +22,10 @@ export class PageParametres extends PageBase {
         <div class="ligne" role="radiogroup" aria-label="Thème">${THEMES.map((t) => `<label class="ligne"><input type="radio" name="theme" value="${t.code}"
           ${app.preferences.get('theme') === t.code ? 'checked' : ''}> ${t.icone} ${echapper(t.libelle)}</label>`).join('')}</div>
         <p class="aide">Automatique suit le réglage clair / sombre du système. Le choix s'applique à toutes les fenêtres de ce navigateur.</p>
+        <h3>Densité</h3>
+        <div class="ligne" role="radiogroup" aria-label="Densité">${DENSITES.map((d) => `<label class="ligne"><input type="radio" name="densite" value="${d.code}"
+          ${(app.preferences.get('densite') ?? 'confortable') === d.code ? 'checked' : ''}> ${d.icone} ${echapper(d.libelle)}</label>`).join('')}</div>
+        <p class="aide">Confortable : texte de 14 px et lignes plus hautes ; compacte : texte de 13 px et lignes serrées, pour voir plus de lignes à l'écran.</p>
         <h3>Menu</h3>
         <div class="ligne" role="radiogroup" aria-label="Position du menu">
           <label class="ligne"><input type="radio" name="menu-mode" value="${DISPOSITION_MENU.HAUT}" ${menu.mode !== DISPOSITION_MENU.DROITE ? 'checked' : ''}> ☰ En haut (barre de menus)</label>
@@ -81,6 +85,7 @@ export class PageParametres extends PageBase {
       </section>
     </div>`;
     this.conteneur.querySelectorAll('input[name="theme"]').forEach((r) => r.addEventListener('change', () => app.changerTheme(r.value)));
+    this.conteneur.querySelectorAll('input[name="densite"]').forEach((r) => r.addEventListener('change', () => app.changerDensite(r.value)));
     this.conteneur.querySelectorAll('input[name="remises"]').forEach((r) => r.addEventListener('change', () => ecrirePreferences({ remises: r.value })));
     const optionsLateral =this.conteneur.querySelector('.options-menu-lateral');
     this.conteneur.querySelectorAll('input[name="menu-mode"]').forEach((r) => r.addEventListener('change', () => {

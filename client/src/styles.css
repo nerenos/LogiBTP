@@ -611,7 +611,7 @@ details.avertissement > summary { cursor: pointer; }
 .synthese-exceptions .badge-exception { margin: 1px 0; }
 /* Tableau compact : séparations atténuées, en-têtes figés au défilement de leur conteneur, titres sur deux lignes. */
 .tableau-compact { border-collapse: separate; border-spacing: 0; width: 100%; }
-.tableau-compact th, .tableau-compact td { padding: 2px 6px; border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); vertical-align: top; line-height: 1.25; }
+.tableau-compact th, .tableau-compact td { padding: var(--cellule-marge); border-bottom: 1px solid color-mix(in srgb, var(--bord) 45%, transparent); vertical-align: top; line-height: 1.25; }
 .tableau-compact th + th, .tableau-compact td + td { border-left: 1px solid color-mix(in srgb, var(--bord) 30%, transparent); }
 .tableau-compact thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--bord); font-weight: 600; white-space: nowrap; }
 .tableau-compact small { font-size: .78em; color: var(--discret); font-weight: normal; }

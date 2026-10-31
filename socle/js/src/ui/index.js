@@ -17,6 +17,6 @@ export {
 export { ouvrirMenuContextuel, fermerMenuContextuel } from './menu-contextuel.js';
 export { basculerAideMemoire, fermerAideMemoire } from './aide-memoire.js';
 export { editerLibelle } from './editeur-riche.js';
-export { THEMES, appliquerTheme } from './theme.js';
+export { THEMES, appliquerTheme, DENSITES, appliquerDensite } from './theme.js';
 export { ouvrirDialogue, confirmer, alerter, saisir, ouvrirModale } from './dialogue.js';
 export { PadSignature, epaisseurTrait } from './signature.js';

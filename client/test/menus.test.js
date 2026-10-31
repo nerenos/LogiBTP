@@ -63,6 +63,16 @@ describe('répartition des menus', () => {
       expect(elements(complet, menu).map((e) => e.url)).toContain(url);
     }
   });
+  it('place Mon terrain en tête du menu Pointage, seul quand le Pointage est désactivé (I9, Q16)', () => {
+    expect(menus(complet).map((m) => m.code)).not.toContain('terrain');
+    const p = elements(complet, 'pointage');
+    expect(p[0].url).toBe('/terrain');
+    expect(p[1].separateur).toBe(true);
+    expect(elements(app(['pointage']), 'pointage').map((e) => e.url)).toEqual(['/terrain']);
+    expect(menus(app(['pointage', 'planning'])).map((m) => m.code)).not.toContain('pointage');
+    const sansTerrain = { ...app(), acces: (n) => n !== 'terrain' };
+    expect(elements(sansTerrain, 'pointage')[0].url).toBe('/pointage/saisie');
+  });
   it('codes des raccourcis uniques', () => {
     const codes = catalogueRaccourcis().map((e) => e.code);
     expect(new Set(codes).size).toBe(codes.length);

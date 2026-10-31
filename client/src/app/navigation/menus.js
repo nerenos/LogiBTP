@@ -1,6 +1,6 @@
 import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { Bandeau, DISPOSITION_MENU } from '@logibtp/navigation/ui';
-import { THEMES } from '@logibtp/socle/ui';
+import { THEMES, DENSITES } from '@logibtp/socle/ui';
 
 // Menus du bandeau, regroupés par classe de métier, et catalogue des raccourcis de l'accueil (tous les éléments
 // de menu ayant une URL). Les menus Fenêtres et Paramètres sont construits à l'ouverture (état courant).
@@ -157,12 +157,10 @@ export const MENUS_METIER = [
     ],
   },
   {
-    code: 'terrain', libelle: 'Terra&in', module: MODULE_FACULTATIF.PLANNING, droit: 'terrain', elements: [
-      { code: 'terrain', libelle: 'Mon terrain (tâches, adresses, pièces)', icone: '📱', url: '/terrain', info: 'Vos tâches du planning du jour ou de la semaine, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain' },
-    ],
-  },
-  {
     code: 'pointage', libelle: '&Pointage', module: MODULE_FACULTATIF.POINTAGE, droit: 'pointage', elements: [
+      // Mon terrain (I9) : conditions propres, affiché même sans le module ni le droit du Pointage (`independant`).
+      { code: 'terrain', libelle: 'Mon terrain (tâches, pointage, pièces)', icone: '📱', url: '/terrain', module: MODULE_FACULTATIF.PLANNING, droit: 'terrain', independant: true, info: 'Vos tâches du planning du jour ou de la semaine, pointage, adresse et itinéraire, contact sur place, consignes et pièces diffusées sur le terrain' },
+      { separateur: true },
       { code: 'pointage-saisie', libelle: 'Saisie des pointages', icone: '⏱', url: '/pointage/saisie', info: 'Grille hebdomadaire par salarié, au chantier ou sur un chantier interne' },
       { code: 'pointage-synthese', libelle: 'Synthèse et validation', icone: '✅', url: '/pointage/synthese', info: 'Salariés à examiner, corrections, validation simple ou double, demandes de correction' },
       { code: 'pointage-export', libelle: 'Export de paie et valorisation', icone: '📤', url: '/pointage/export', info: 'Variables de paie des jours validés (CSV), coût des heures' },
@@ -235,6 +233,15 @@ export function groupesThemes() {
 const visible = (app, x) => (!x.module || app.moduleActif?.(x.module) !== false) && (!x.type || app.typeActif?.(x.type) !== false)
   && (!x.droit || app.acces?.(x.droit) !== false);
 
+/**
+ * Éléments visibles d'un menu : un élément `independant` ne dépend que de ses propres conditions ; sans les conditions
+ * du menu, seuls ceux-là restent (menu Pointage réduit à Mon terrain, Q16).
+ */
+export function elementsMenu(app, m) {
+  const menuVisible = visible(app, m);
+  return elementsVisibles(app, (m.elements ?? []).filter((e) => menuVisible || e.independant));
+}
+
 /** Éléments visibles, sans séparateur en tête, en fin ni en double (le dernier des deux est gardé). */
 export function elementsVisibles(app, elements) {
   const res = [];
@@ -251,7 +258,7 @@ export function elementsVisibles(app, elements) {
 /** Menus complets : métier (filtrés par les modules actifs), puis Paramètres et Fenêtres (dynamiques). */
 export function menus(app) {
   return [
-    ...MENUS_METIER.filter((m) => visible(app, m)).map((m) => ({ ...m, elements: () => elementsVisibles(app, m.elements) })),
+    ...MENUS_METIER.filter((m) => elementsMenu(app, m).length).map((m) => ({ ...m, elements: () => elementsMenu(app, m) })),
     {
       code: 'parametres', libelle: '&Paramètres', court: 'Param.', elements: () => elementsVisibles(app, [
         { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres' },
@@ -259,6 +266,10 @@ export function menus(app) {
         {
           libelle: "Thème d'affichage", icone: '🎨', info: THEMES.find((t) => t.code === app.preferences.get('theme'))?.libelle,
           sousMenu: () => THEMES.map((t) => ({ libelle: t.libelle, icone: t.icone, coche: app.preferences.get('theme') === t.code, action: () => app.changerTheme(t.code) })),
+        },
+        {
+          libelle: "Densité d'affichage", icone: '🔍', info: DENSITES.find((d) => d.code === (app.preferences.get('densite') ?? 'confortable'))?.libelle,
+          sousMenu: () => DENSITES.map((d) => ({ libelle: d.libelle, icone: d.icone, coche: (app.preferences.get('densite') ?? 'confortable') === d.code, action: () => app.changerDensite(d.code) })),
         },
         {
           libelle: 'Position du menu', icone: '▐', info: POSITIONS_MENU.find((p) => p.mode === (app.bandeau?.disposition.mode ?? DISPOSITION_MENU.HAUT))?.libelle,
@@ -332,7 +343,7 @@ export function menus(app) {
 /** Raccourcis proposés à l'accueil : éléments de menu métier ayant une URL. */
 export function catalogueRaccourcis(app = null) {
   return [
-    ...MENUS_METIER.filter((m) => !app || visible(app, m)).flatMap((m) => m.elements.filter((e) => e.url && e.code && (!app || visible(app, e))).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
+    ...MENUS_METIER.flatMap((m) => (app ? elementsMenu(app, m) : m.elements).filter((e) => e.url && e.code).map((e) => ({ code: e.code, libelle: e.libelle, icone: e.icone, url: e.url, groupe: Bandeau.libelle(m.libelle) }))),
     { code: 'preferences', libelle: 'Préférences', icone: '⚙', url: '/parametres', groupe: 'Paramètres' },
   ];
 }

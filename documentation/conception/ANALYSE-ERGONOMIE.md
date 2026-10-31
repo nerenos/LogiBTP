@@ -561,3 +561,17 @@ client` pour les lots qui changent des vues fournies.
   `ValidationFiche.cs`, jeu `01_validation.json`), ni marquée comme telle.
 - **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (fiches salarié, matériel et
   marché).
+
+## 13. Réalisation du lot E3 : densité et Mon terrain (31/10/2026)
+
+- **Densité (I6)** : préférence « Densité d'affichage » (Paramètres › Affichage et menu Paramètres), confortable par
+  défaut (texte de 14 px, lignes de la grille et cellules des tableaux compacts plus hautes), compacte en option
+  (13 px, valeurs antérieures). Posée sur `<html data-densite="compacte">` (`appliquerDensite` du socle, appliquée
+  avant le premier affichage par `demarrage-theme.js` et dans toutes les fenêtres ouvertes) ; variables
+  `--taille-texte`, `--grille-hauteur-ligne`, `--grille-marge-ligne`, `--cellule-marge` du socle. Le dictionnaire et
+  le thème de la PR de personnalisation pourront reprendre ces variables.
+- **Mon terrain (I9)** : en tête du menu Pointage, suivi d'un séparateur ; le menu Terrain disparaît. L'entrée garde
+  ses conditions (module Planning, droit `terrain`) et ignore celles du menu (`independant`) : sans le module ou le
+  droit du Pointage, le menu Pointage n'affiche qu'elle (Q16).
+- **Contrôles** : `npm test` (dont `menus.test.js`) ; essai dans le navigateur (synthèse du pointage dans les deux
+  densités, menu Pointage).

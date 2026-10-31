@@ -5,7 +5,7 @@ import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession, DISPOSITION_DEFAUT } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos, activerDates } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, appliquerDensite, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos, activerDates } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -41,13 +41,15 @@ export const LISTE_PAR_TYPE = {
 export class Application {
   constructor() {
     this.societe = null;
-    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', menu: { ...DISPOSITION_DEFAUT } });
+    this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, { nouvelleFenetre: false, theme: 'auto', densite: 'confortable', menu: { ...DISPOSITION_DEFAUT } });
     appliquerTheme(this.preferences.get('theme'));
+    appliquerDensite(this.preferences.get('densite'));
     // Thème et disposition du menu changés dans une autre fenêtre de la session (même localStorage) : appliqués ici aussi.
     window.addEventListener('storage', (e) => {
       if (e.key !== CLE_PREFERENCES_NAVIGATION) return;
       this.preferences = new Preferences(CLE_PREFERENCES_NAVIGATION, this.preferences.defauts);
       appliquerTheme(this.preferences.get('theme'));
+      appliquerDensite(this.preferences.get('densite'));
       this.bandeau?.disposer(this.preferences.get('menu'));
     });
     // Page modifiée quittée : question dans une fenêtre <dialog> (socle) plutôt que confirm() du navigateur.
@@ -186,6 +188,12 @@ export class Application {
   changerTheme(theme) {
     this.preferences.set('theme', theme);
     appliquerTheme(theme);
+  }
+
+  /** Densité d'affichage : 'confortable' (défaut) ou 'compacte' ; gardée dans le navigateur pour toutes les fenêtres. */
+  changerDensite(densite) {
+    this.preferences.set('densite', densite);
+    appliquerDensite(densite);
   }
 
   /** Disposition du menu (`DISPOSITION_DEFAUT` du module Navigation : mode haut / droite, largeur, masquage) ; gardée dans le navigateur. */
