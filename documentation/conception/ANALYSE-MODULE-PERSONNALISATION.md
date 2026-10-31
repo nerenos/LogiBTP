@@ -499,3 +499,28 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/ged/js`
   vérifiées par le test du client ; affichage contrôlé dans le navigateur (GED en mémoire : barre et bulles, arbre,
   liste, visualisation et actions, dock et ses onglets, paramétrage des règles, dialogue de dépôt de deux fichiers).
+
+## 20. Réalisation du lot P3g : module Annuaire (31/10/2026)
+
+- **Périmètre** : `modules/annuaire/js` : règles (natures et usages des coordonnées, réseaux, messages des contrôles
+  de coordonnées et d'identifiants, nœuds résumés du graphe, messages du fournisseur en mémoire) et interface (éditeur
+  des coordonnées, choix des coordonnées partagées, rattachements, liens, choix d'une personne ou d'un individu, tiers
+  provisoires et fusion, paramétrage des référentiels, graphe relationnel).
+- **Textes** : `annuaire.*` du `fr.json` du module (zones `natures` — libellé, nom d'une coordonnée, usages par
+  nature —, `reseaux`, `coordonnees`, `identifiants`, `fournisseur`, `partage`, `liens`, `provisoire`, `fusion`,
+  `selection`, `rattachements`, `referentiels`, `graphe`) ; compteurs par `pluriel` (contacts, rattachements,
+  modifications, fiches partageant une coordonnée, choix restant à faire, nœuds du graphe, distance) ; mots communs du
+  socle. Les tables exportées (`NATURES`, `RESEAUX`, `MESSAGES_COORDONNEES`, `MESSAGES_IDENTIFIANTS`) gardent leur
+  forme ; les utilitaires de texte locaux deviennent `nettoye`.
+- **Icônes** : `annuaire_*` du module (natures de coordonnées, personne, individu, groupe de contacts, rattachement,
+  partage, principal, historique, reprise, sens des liens, pages, plier), communes du socle (`ajouter`, `retirer`,
+  `supprimer`, `avertissement`).
+- **Couleurs** : couleur de la relation principale dans le graphe : variables `--annuaire-relation-<code>` du
+  `theme.css` du module (valeurs inchangées ; une relation sans variable garde la bordure).
+- **Gardé** : civilités proposées (`M.`, `Mme` : valeurs enregistrées) ; mots ignorés pour les doublons de nom (règle) ;
+  le libellé « + N contacts » et les icônes des nœuds du graphe restent ceux du jeu `03_graphe.json` (même texte par
+  défaut que `GrapheAnnuaire.cs`, qui reste littéral comme les autres messages du serveur).
+- **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/annuaire/js`
+  vérifiées par le test du client ; affichage contrôlé dans le navigateur (annuaire en mémoire : coordonnées,
+  rattachements, liens, référentiels, graphe et ses couleurs, tiers provisoire avec doublons, choix des coordonnées
+  partagées).

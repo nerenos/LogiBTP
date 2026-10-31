@@ -1,0 +1,19 @@
+/* Thème du module Annuaire (module Personnalisation) : variables propres à l'annuaire, après celles du socle. */
+
+:root {
+  /* Graphe relationnel : couleur de la relation principale d'une personne (code du référentiel des relations). */
+  --annuaire-relation-client: #2e9d5b;
+  --annuaire-relation-prospect: #7cc497;
+  --annuaire-relation-fournisseur: #2f6fd1;
+  --annuaire-relation-loueur: #5b8fe0;
+  --annuaire-relation-sous-traitant: #e07b24;
+  --annuaire-relation-cotraitant: #c99a2e;
+  --annuaire-relation-interim: #b5651d;
+  --annuaire-relation-architecte: #8b5cf6;
+  --annuaire-relation-moe: #7c3aed;
+  --annuaire-relation-be: #6d5bd0;
+  --annuaire-relation-bc: #0f9fa8;
+  --annuaire-relation-moa: #d14d72;
+  --annuaire-relation-banque: #64748b;
+  --annuaire-relation-assurance: #475569;
+}

@@ -1,3 +1,4 @@
+import { texte, icone, pairesParCode, textesParCode } from '@logibtp/socle/dictionnaire';
 import { emailValide } from './identifiants.js';
 
 // Coordonnées partagées (adresses, téléphones, e-mails, web) : natures, usages, contrôles et plan d'enregistrement.
@@ -9,27 +10,19 @@ import { emailValide } from './identifiants.js';
 // origine : valeurs de la coordonnée à la lecture (ou à la reprise d'une coordonnée d'une autre fiche) ; elle sert à
 // savoir si l'utilisateur a changé la coordonnée, et au serveur à détecter une modification faite entre-temps.
 
+const nature = (code, nomIcone, usages) => ({
+  code, libelle: texte(`annuaire.natures.${code}.libelle`), un: texte(`annuaire.natures.${code}.un`), icone: icone(nomIcone),
+  usages: pairesParCode(`annuaire.natures.${code}.usages`, usages),
+});
+
 export const NATURES = [
-  {
-    code: 'ADRESSE', libelle: 'Adresses', un: 'Adresse', icone: '🏠',
-    usages: [['PRINCIPALE', 'Principale'], ['SIEGE', 'Siège'], ['FACTURATION', 'Facturation'], ['COMMANDE', 'Commande'], ['LIVRAISON', 'Livraison'],
-      ['PERSONNELLE', 'Personnelle'], ['AUTRE', 'Autre']],
-  },
-  {
-    code: 'TELEPHONE', libelle: 'Téléphones', un: 'Téléphone', icone: '📞',
-    usages: [['FIXE', 'Fixe'], ['PORTABLE', 'Portable'], ['PRO', 'Professionnel'], ['PERSO', 'Personnel'], ['STANDARD', 'Standard'], ['FAX', 'Fax'], ['AUTRE', 'Autre']],
-  },
-  {
-    code: 'EMAIL', libelle: 'E-mails', un: 'E-mail', icone: '✉️',
-    usages: [['PRO', 'Professionnel'], ['PERSO', 'Personnel'], ['FACTURATION', 'Facturation'], ['COMMANDE', 'Commande'], ['AUTRE', 'Autre']],
-  },
-  {
-    code: 'WEB', libelle: 'Web et réseaux', un: 'Lien web', icone: '🌐',
-    usages: [['SITE', 'Site'], ['PAGE', 'Page'], ['RESEAU', 'Réseau social'], ['PSEUDO', 'Pseudo'], ['AUTRE', 'Autre']],
-  },
+  nature('ADRESSE', 'annuaire_adresse', ['PRINCIPALE', 'SIEGE', 'FACTURATION', 'COMMANDE', 'LIVRAISON', 'PERSONNELLE', 'AUTRE']),
+  nature('TELEPHONE', 'annuaire_telephone', ['FIXE', 'PORTABLE', 'PRO', 'PERSO', 'STANDARD', 'FAX', 'AUTRE']),
+  nature('EMAIL', 'annuaire_email', ['PRO', 'PERSO', 'FACTURATION', 'COMMANDE', 'AUTRE']),
+  nature('WEB', 'annuaire_web', ['SITE', 'PAGE', 'RESEAU', 'PSEUDO', 'AUTRE']),
 ];
 
-export const RESEAUX = [['LINKEDIN', 'LinkedIn'], ['FACEBOOK', 'Facebook'], ['INSTAGRAM', 'Instagram'], ['X', 'X'], ['YOUTUBE', 'YouTube'], ['TIKTOK', 'TikTok'], ['AUTRE', 'Autre']];
+export const RESEAUX = pairesParCode('annuaire.reseaux', ['LINKEDIN', 'FACEBOOK', 'INSTAGRAM', 'X', 'YOUTUBE', 'TIKTOK', 'AUTRE']);
 
 /** Champs de valeur d'une coordonnée selon sa nature. */
 export const CHAMPS_NATURE = {
@@ -41,7 +34,7 @@ export const CHAMPS_NATURE = {
 
 export const CHOIX = { MODIFICATION: 'MODIFICATION', AUTRE: 'AUTRE' };
 
-const texte = (v) => {
+const nettoye = (v) => {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
   return s === '' ? null : s;
@@ -50,7 +43,7 @@ const texte = (v) => {
 /** Valeurs normalisées d'une coordonnée (textes sans espaces de bord, vides à null, pays d'une adresse : FR par défaut). */
 export function valeursCoordonnee(c) {
   const v = {};
-  for (const k of CHAMPS_NATURE[c.nature] ?? []) v[k] = texte(c[k]);
+  for (const k of CHAMPS_NATURE[c.nature] ?? []) v[k] = nettoye(c[k]);
   if (c.nature === 'ADRESSE') v.pays = (v.pays ?? 'FR').toUpperCase();
   if (c.nature === 'EMAIL' && v.valeur) v.valeur = v.valeur.toLowerCase();
   return v;
@@ -74,15 +67,7 @@ export function texteCoordonnee(c) {
   return [v.ligne1, v.ligne2, v.ligne3, [v.code_postal, v.ville].filter(Boolean).join(' '), v.pays !== 'FR' ? v.pays : null].filter(Boolean).join(', ');
 }
 
-export const MESSAGES_COORDONNEES = {
-  ADRESSE: 'Adresse : ligne d\'adresse ou ville à saisir',
-  PAYS: 'Code pays sur 2 lettres (ISO)',
-  EMAIL: 'Adresse e-mail invalide',
-  TELEPHONE: 'Numéro de téléphone invalide',
-  WEB: 'Lien ou pseudo à saisir',
-  NATURE: 'Nature de coordonnée inconnue',
-  CHOIX: 'Coordonnée partagée modifiée : indiquez s\'il s\'agit d\'une modification ou d\'une autre information',
-};
+export const MESSAGES_COORDONNEES = textesParCode('annuaire.coordonnees.erreurs', ['ADRESSE', 'PAYS', 'EMAIL', 'TELEPHONE', 'WEB', 'NATURE', 'CHOIX']);
 
 /** Contrôle d'une coordonnée non vide : { champ, code } ou null. */
 export function erreurCoordonnee(c) {
@@ -139,7 +124,7 @@ export function planifierCoordonnees({ existantes = [], saisies = [], partages =
     if (err) { erreurs.push({ index, ...err, message: MESSAGES_COORDONNEES[err.code] }); continue; }
     const existant = s.uco_id !== null && s.uco_id !== undefined && connus.has(Number(s.uco_id));
     const cooId = s.coo_id === null || s.coo_id === undefined ? null : Number(s.coo_id);
-    const usage = { nature: s.nature, usage: texte(s.usage), libelle: texte(s.libelle), principal: r.principal, ordre: r.ordre };
+    const usage = { nature: s.nature, usage: nettoye(s.usage), libelle: nettoye(s.libelle), principal: r.principal, ordre: r.ordre };
     let coordonnee = 'NOUVELLE';
     if (cooId !== null) {
       const change = !memesValeurs(s, s.origine ?? s);

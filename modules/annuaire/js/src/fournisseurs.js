@@ -1,10 +1,11 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { PROFIL, normaliser, ErreurApi, appelApi } from '@logibtp/socle';
 import { ERREUR_ANNUAIRE } from './codes.js';
-import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES } from './coordonnees.js';
+import { planifierCoordonnees, valeursCoordonnee, memesValeurs, texteCoordonnee, principale, estVide, CHAMPS_NATURE, MESSAGES_COORDONNEES, NATURES } from './coordonnees.js';
 import { compacter } from './identifiants.js';
 import { construireGraphe } from './graphe.js';
 import { planFusion, motsDoublon, COLONNES_NON_FUSIONNEES } from './fusion.js';
-import { siretValide } from './identifiants.js';
+import { siretValide, MESSAGES_IDENTIFIANTS } from './identifiants.js';
 
 // Fournisseurs de l'annuaire. Même interface pour l'API (routes MapModuleAnnuaire) et pour la mémoire (démo hors ligne,
 // tests ; mêmes règles que ServiceAnnuaire) :
@@ -86,7 +87,7 @@ export class FournisseurAnnuaireApi {
 
 // ------------------------------------------------------------------ mémoire
 
-const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+const nettoye = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
 // Même règle que f_annuaire_normaliser (SQL) : normaliser du socle (ligatures développées, diacritiques retirés).
 const sansAccent = normaliser;
 const correspond = (mots, ...textes) => {
@@ -94,7 +95,7 @@ const correspond = (mots, ...textes) => {
   return mots.every((m) => t.includes(m));
 };
 const mots = (q) => sansAccent(q).split(/\s+/).filter(Boolean);
-const date = (v) => (texte(v) ? String(v).slice(0, 10) : null);
+const date = (v) => (nettoye(v) ? String(v).slice(0, 10) : null);
 const vrai = (v) => v === true || v === 'true';
 
 // Lignes de personne en mémoire (codes des champs de fiche) ↔ colonnes de la table (fusion).
@@ -131,7 +132,7 @@ export class FournisseurAnnuaireMemoire {
 
   #maintenant() { return new Date(this.horloge()).toISOString(); }
   #id(liste) { return Math.max(0, ...liste.map((x) => Number(x.id) || 0)) + 1; }
-  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Paramétrage de l\'annuaire réservé au profil ADMIN'); }
+  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', texte('annuaire.fournisseur.admin')); }
 
   // ---------------------------------------------------------------- référentiels
 
@@ -143,12 +144,12 @@ export class FournisseurAnnuaireMemoire {
   async enregistrerReferentiel(genre, r) {
     this.#admin();
     const liste = this.refs[genre];
-    if (!liste) throw new ErreurAnnuaire(404, 'REFERENTIEL', `Référentiel ${genre} inconnu`);
+    if (!liste) throw new ErreurAnnuaire(404, 'REFERENTIEL', texte('annuaire.fournisseur.referentiel_inconnu', { genre }));
     const code = String(r.code ?? '').trim().toUpperCase();
-    if (!/^[A-Z][A-Z0-9_]{0,29}$/.test(code)) throw new ErreurAnnuaire(422, 'CODE', 'Code : lettres majuscules, chiffres et _ (30 caractères au plus)');
-    if (!texte(r.libelle)) throw new ErreurAnnuaire(422, 'LIBELLE', 'Libellé obligatoire');
-    if (genre === 'types-lien' && !texte(r.libelle_inverse)) throw new ErreurAnnuaire(422, 'LIBELLE', 'Libellé vu depuis la cible obligatoire');
-    const ligne = { ...structuredClone(r), code, libelle: texte(r.libelle), ordre: Number(r.ordre ?? 0), actif: r.actif !== false };
+    if (!/^[A-Z][A-Z0-9_]{0,29}$/.test(code)) throw new ErreurAnnuaire(422, 'CODE', texte('annuaire.fournisseur.code_format'));
+    if (!nettoye(r.libelle)) throw new ErreurAnnuaire(422, 'LIBELLE', texte('annuaire.fournisseur.libelle_obligatoire'));
+    if (genre === 'types-lien' && !nettoye(r.libelle_inverse)) throw new ErreurAnnuaire(422, 'LIBELLE', texte('annuaire.fournisseur.libelle_inverse_obligatoire'));
+    const ligne = { ...structuredClone(r), code, libelle: nettoye(r.libelle), ordre: Number(r.ordre ?? 0), actif: r.actif !== false };
     const i = liste.findIndex((x) => x.code === code);
     if (i >= 0) liste[i] = { ...liste[i], ...ligne }; else liste.push(ligne);
     this.deriver();
@@ -163,8 +164,8 @@ export class FournisseurAnnuaireMemoire {
       'types-lien': () => this.liens.some((l) => l.tli_code === code),
       roles: () => this.individus.some((i) => (i.roles ?? []).includes(code)),
     }[genre];
-    if (!utilise) throw new ErreurAnnuaire(404, 'REFERENTIEL', `Référentiel ${genre} inconnu`);
-    if (utilise()) throw new ErreurAnnuaire(409, 'UTILISE', 'Code utilisé : désactivez-le plutôt');
+    if (!utilise) throw new ErreurAnnuaire(404, 'REFERENTIEL', texte('annuaire.fournisseur.referentiel_inconnu', { genre }));
+    if (utilise()) throw new ErreurAnnuaire(409, 'UTILISE', texte('annuaire.fournisseur.code_utilise'));
     this.refs[genre] = this.refs[genre].filter((x) => x.code !== code);
     return this.referentiels();
   }
@@ -214,13 +215,13 @@ export class FournisseurAnnuaireMemoire {
 
   async personne(id) {
     const p = this.personnes.find((x) => x.id === Number(id));
-    if (!p) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Personne ${id} introuvable`);
+    if (!p) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.personne_introuvable', { id }));
     return this.#resumePersonne(p);
   }
 
   async individu(id) {
     const i = this.individus.find((x) => x.id === Number(id));
-    if (!i) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Individu ${id} introuvable`);
+    if (!i) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.individu_introuvable', { id }));
     return this.#resumeIndividu(i);
   }
 
@@ -234,7 +235,7 @@ export class FournisseurAnnuaireMemoire {
   // ---------------------------------------------------------------- tiers provisoires (mêmes règles que ServiceAnnuaire)
 
   async doublons({ raison_sociale = '', siret = '', exclure = null } = {}) {
-    let s = texte(siret) ? await this.parSiret(siret) : null;
+    let s = nettoye(siret) ? await this.parSiret(siret) : null;
     if (s && s.id === Number(exclure)) s = null;
     const m = motsDoublon(raison_sociale).slice(0, 8).map(sansAccent);
     if (m.length === 0) return { siret: s, noms: [] };
@@ -245,16 +246,16 @@ export class FournisseurAnnuaireMemoire {
   }
 
   async creerProvisoire({ raison_sociale, siret = null, casquettes = [], niveau = null, confirme = false } = {}) {
-    const raison = texte(raison_sociale);
+    const raison = nettoye(raison_sociale);
     const erreur = (champ, code, message) => new ErreurAnnuaire(422, 'VALIDATION', message, [{ champ, code, message }]);
-    if (!raison) throw erreur('raison_sociale', 'OBLIGATOIRE', 'Raison sociale obligatoire');
-    const s = texte(siret) ? compacter(siret) : null;
-    if (s && !siretValide(s)) throw erreur('siret', 'SIRET', 'SIRET invalide (14 chiffres, clé de contrôle)');
+    if (!raison) throw erreur('raison_sociale', 'OBLIGATOIRE', texte('annuaire.fournisseur.raison_sociale_obligatoire'));
+    const s = nettoye(siret) ? compacter(siret) : null;
+    if (s && !siretValide(s)) throw erreur('siret', 'SIRET', MESSAGES_IDENTIFIANTS.SIRET);
     const d = await this.doublons({ raison_sociale: raison, siret: s });
-    if (d.siret) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_SIRET, `SIRET déjà enregistré : ${d.siret.raison_sociale} (${d.siret.code})`, { personne: d.siret });
-    if (!confirme && d.noms.length) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_NOM, 'Des tiers de nom proche existent déjà : vérifiez avant de créer', { personnes: d.noms });
-    const niv = texte(niveau) ?? 'SOCIETE';
-    if (!this.refs.niveaux.some((n) => n.code === niv)) throw erreur('niveau', 'NIVEAU', `Niveau ${niv} inconnu`);
+    if (d.siret) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_SIRET, texte('annuaire.fournisseur.siret_enregistre', { nom: d.siret.raison_sociale, code: d.siret.code }), { personne: d.siret });
+    if (!confirme && d.noms.length) throw new ErreurAnnuaire(409, ERREUR_ANNUAIRE.DOUBLON_NOM, texte('annuaire.fournisseur.doublon_nom'), { personnes: d.noms });
+    const niv = nettoye(niveau) ?? 'SOCIETE';
+    if (!this.refs.niveaux.some((n) => n.code === niv)) throw erreur('niveau', 'NIVEAU', texte('annuaire.fournisseur.niveau_inconnu', { niveau: niv }));
     const id = this.#id(this.personnes);
     this.personnes.push({
       id, code: `T${String(id).padStart(6, '0')}`, niveau: niv, raison_sociale: raison, siret: s, siren: s?.slice(0, 9) ?? null,
@@ -265,12 +266,12 @@ export class FournisseurAnnuaireMemoire {
     return this.personne(id);
   }
 
-  #validateur() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', 'Droit VALIDER_TIERS refusé'); }
+  #validateur() { if (this.profil !== PROFIL.ADMIN) throw new ErreurAnnuaire(403, 'ACCES_REFUSE', texte('annuaire.fournisseur.validation_refusee')); }
 
   async validerProvisoire(id) {
     this.#validateur();
     const p = this.personnes.find((x) => x.id === Number(id));
-    if (!p || !vrai(p.provisoire)) throw new ErreurAnnuaire(409, 'NON_PROVISOIRE', "Cette fiche n'est pas un tiers provisoire");
+    if (!p || !vrai(p.provisoire)) throw new ErreurAnnuaire(409, 'NON_PROVISOIRE', texte('annuaire.fournisseur.non_provisoire'));
     Object.assign(p, { provisoire: false, valide_par: this.utilisateur, valide_le: this.#maintenant() });
     return this.personne(id);
   }
@@ -278,7 +279,7 @@ export class FournisseurAnnuaireMemoire {
   /** Ligne de personne aux noms de colonnes de la table (per_…), sans les colonnes dérivées des listes. */
   #ligneFusion(id) {
     const p = this.personnes.find((x) => x.id === Number(id));
-    if (!p) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Personne ${id} introuvable`);
+    if (!p) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.personne_introuvable', { id }));
     const l = {};
     for (const [k, v] of Object.entries(p)) if (!DERIVEES.includes(k)) l[colonnePersonne(k)] = v;
     return { p, l };
@@ -286,7 +287,7 @@ export class FournisseurAnnuaireMemoire {
 
   #memeFiche(id, cibleId) {
     if (Number(id) === Number(cibleId)) {
-      throw new ErreurAnnuaire(422, 'VALIDATION', 'Choisissez une autre fiche que le tiers provisoire', [{ champ: 'cible_id', code: 'MEME_FICHE' }]);
+      throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.meme_fiche'), [{ champ: 'cible_id', code: 'MEME_FICHE' }]);
     }
   }
 
@@ -311,7 +312,7 @@ export class FournisseurAnnuaireMemoire {
     this.#memeFiche(id, cibleId);
     const src = Number(id), cible = Number(cibleId);
     const { p: ps, l: s } = this.#ligneFusion(src);
-    if (!vrai(ps.provisoire)) throw new ErreurAnnuaire(409, 'NON_PROVISOIRE', 'Seul un tiers provisoire se fusionne dans une autre fiche');
+    if (!vrai(ps.provisoire)) throw new ErreurAnnuaire(409, 'NON_PROVISOIRE', texte('annuaire.fournisseur.fusion_provisoire'));
     const { p: pk, l: k } = this.#ligneFusion(cible);
     const plan = planFusion(s, k, Object.fromEntries(Object.entries(choix ?? {}).filter(([, v]) => v === 'source' || v === 'cible')));
     for (const [c, v] of Object.entries(plan.valeurs)) pk[champPersonne(c)] = v;
@@ -447,19 +448,20 @@ export class FournisseurAnnuaireMemoire {
   #controlerPlan(saisies, plan, contexte) {
     const nom = (i) => {
       const s = saisies[i];
-      const n = { ADRESSE: 'Adresse', TELEPHONE: 'Téléphone', EMAIL: 'E-mail', WEB: 'Lien web' }[s?.nature] ?? 'Coordonnée';
-      return `${contexte ? `${contexte} – ` : ''}${n} ${texteCoordonnee(s) || `n° ${i + 1}`}`;
+      const n = NATURES.find((x) => x.code === s?.nature)?.un ?? texte('annuaire.fournisseur.coordonnee');
+      const libelle = `${n} ${texteCoordonnee(s) || texte('annuaire.fournisseur.numero', { numero: i + 1 })}`;
+      return contexte ? texte('annuaire.fournisseur.dans_contexte', { contexte, libelle }) : libelle;
     };
     for (const s of saisies) {
       if (s.coo_id === null || s.coo_id === undefined || estVide(s)) continue;
       const c = this.#coordonnee(s.coo_id);
-      if (!c) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Coordonnée ${s.coo_id} introuvable`);
+      if (!c) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.coordonnee_introuvable', { id: s.coo_id }));
       if (s.origine && !memesValeurs({ ...c, nature: c.nature }, { ...s.origine })) {
-        throw new ErreurAnnuaire(409, 'COORDONNEE_MODIFIEE', `${nom(saisies.indexOf(s))} : modifiée par ailleurs entre-temps, rechargez la fiche`);
+        throw new ErreurAnnuaire(409, 'COORDONNEE_MODIFIEE', texte('annuaire.fournisseur.coordonnee_modifiee', { coordonnee: nom(saisies.indexOf(s)) }));
       }
     }
     if (plan.erreurs.length) {
-      throw new ErreurAnnuaire(422, 'VALIDATION', 'Coordonnées incorrectes', plan.erreurs.map((e) => ({ champ: 'coordonnees', code: e.code, message: `${nom(e.index)} : ${e.message}` })));
+      throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.coordonnees_incorrectes'), plan.erreurs.map((e) => ({ champ: 'coordonnees', code: e.code, message: texte('annuaire.fournisseur.erreur_de', { element: nom(e.index), message: e.message }) })));
     }
     if (plan.choix_requis.length) {
       throw new ErreurAnnuaire(422, 'CHOIX_REQUIS', MESSAGES_COORDONNEES.CHOIX, plan.choix_requis.map((c) => ({ champ: 'coordonnees', code: 'CHOIX', message: nom(c.index), ...c })));
@@ -562,22 +564,22 @@ export class FournisseurAnnuaireMemoire {
     const plans = [];
     for (const [i, s] of saisies.entries()) {
       const r = s.rat_id ? existants.find((x) => x.id === Number(s.rat_id)) : null;
-      if (s.rat_id && !r) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Rattachement ${s.rat_id} introuvable`);
-      if (r && s.maj && r.modifie_le && s.maj !== r.modifie_le) throw new ErreurAnnuaire(409, 'RATTACHEMENT_MODIFIE', 'Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche');
+      if (s.rat_id && !r) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.rattachement_introuvable', { id: s.rat_id }));
+      if (r && s.maj && r.modifie_le && s.maj !== r.modifie_le) throw new ErreurAnnuaire(409, 'RATTACHEMENT_MODIFIE', texte('annuaire.fournisseur.rattachement_modifie'));
       if (s.supprime) {
-        if (!r) throw new ErreurAnnuaire(422, 'VALIDATION', 'Retrait impossible', [{ champ: 'rattachements', code: 'RETRAIT', message: `Rattachement n° ${i + 1} : pas encore enregistré` }]);
+        if (!r) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.retrait_impossible'), [{ champ: 'rattachements', code: 'RETRAIT', message: texte('annuaire.fournisseur.retrait_non_enregistre', { numero: i + 1 }) }]);
         retires.push(r);
         continue;
       }
       const cible = s[autre] ?? null;
-      if (!cible && !(type === 'personne' && s.nouvel_individu)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Rattachement incomplet', [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: `Rattachement n° ${i + 1} : ${type === 'personne' ? 'individu' : 'personne'} à choisir` }]);
-      if (s.nouvel_individu && !texte(s.nouvel_individu.nom)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Rattachement incomplet', [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: `Contact n° ${i + 1} : nom obligatoire` }]);
+      if (!cible && !(type === 'personne' && s.nouvel_individu)) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.rattachement_incomplet'), [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: type === 'personne' ? texte('annuaire.fournisseur.individu_a_choisir', { numero: i + 1 }) : texte('annuaire.fournisseur.personne_a_choisir', { numero: i + 1 }) }]);
+      if (s.nouvel_individu && !nettoye(s.nouvel_individu.nom)) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.rattachement_incomplet'), [{ champ: 'rattachements', code: 'OBLIGATOIRE', message: texte('annuaire.fournisseur.contact_nom', { numero: i + 1 }) }]);
       if (cible) {
-        if (vus.has(Number(cible))) throw new ErreurAnnuaire(422, 'VALIDATION', 'Rattachement en double', [{ champ: 'rattachements', code: 'DOUBLON', message: `Rattachement n° ${i + 1} : déjà rattaché` }]);
+        if (vus.has(Number(cible))) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.rattachement_double'), [{ champ: 'rattachements', code: 'DOUBLON', message: texte('annuaire.fournisseur.deja_rattache', { numero: i + 1 }) }]);
         vus.add(Number(cible));
-        if (!(type === 'personne' ? this.individus : this.personnes).some((x) => x.id === Number(cible))) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Fiche ${cible} introuvable`);
+        if (!(type === 'personne' ? this.individus : this.personnes).some((x) => x.id === Number(cible))) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.fiche_introuvable', { id: cible }));
       }
-      if (s.debut && s.fin && date(s.fin) < date(s.debut)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Dates incohérentes', [{ champ: 'rattachements', code: 'DATES', message: `Rattachement n° ${i + 1} : fin avant le début` }]);
+      if (s.debut && s.fin && date(s.fin) < date(s.debut)) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.dates_incoherentes'), [{ champ: 'rattachements', code: 'DATES', message: texte('annuaire.fournisseur.fin_avant_debut', { numero: i + 1 }) }]);
       const libelle = s.individu ?? s.personne ?? libelleIndividu(s.nouvel_individu);
       plans.push({ s, r, plan: this.#planifier('rattachement', r?.id ?? null, s.coordonnees ?? [], libelle) });
     }
@@ -603,11 +605,11 @@ export class FournisseurAnnuaireMemoire {
       let cible = s[autre] ? Number(s[autre]) : null;
       if (!cible && s.nouvel_individu) {
         cible = this.#id(this.individus);
-        this.individus.push({ id: cible, civilite: texte(s.nouvel_individu.civilite), nom: texte(s.nouvel_individu.nom), prenom: texte(s.nouvel_individu.prenom), pays: 'FR', roles: [], actif: true, proprietes: {} });
+        this.individus.push({ id: cible, civilite: nettoye(s.nouvel_individu.civilite), nom: nettoye(s.nouvel_individu.nom), prenom: nettoye(s.nouvel_individu.prenom), pays: 'FR', roles: [], actif: true, proprietes: {} });
       }
       const valeurs = {
-        [cle]: Number(id), [autre]: cible, fonction: texte(s.fonction), service: texte(s.service), principal: p.principal ?? vrai(s.principal), titulaire: vrai(s.titulaire),
-        debut: date(s.debut), fin: date(s.fin), actif: s.actif !== false, commentaire: texte(s.commentaire), modifie_le: this.#maintenant(),
+        [cle]: Number(id), [autre]: cible, fonction: nettoye(s.fonction), service: nettoye(s.service), principal: p.principal ?? vrai(s.principal), titulaire: vrai(s.titulaire),
+        debut: date(s.debut), fin: date(s.fin), actif: s.actif !== false, commentaire: nettoye(s.commentaire), modifie_le: this.#maintenant(),
       };
       let ratId;
       if (r) { Object.assign(r, valeurs); ratId = r.id; } else { ratId = this.#id(this.rattachements); this.rattachements.push({ id: ratId, ...valeurs }); }
@@ -625,11 +627,11 @@ export class FournisseurAnnuaireMemoire {
 
   #controlerLiens(id, saisies) {
     for (const [i, s] of saisies.entries()) {
-      const err = (message) => new ErreurAnnuaire(422, 'VALIDATION', 'Lien incorrect', [{ champ: 'liens', code: 'LIEN', message: `Lien n° ${i + 1} : ${message}` }]);
-      if (!s.autre_id) throw err('personne à choisir');
-      if (Number(s.autre_id) === Number(id)) throw err('une personne ne peut pas être liée à elle-même');
-      if (!this.refs['types-lien'].some((t) => t.code === s.tli_code)) throw err('type de lien à choisir');
-      if (!this.personnes.some((p) => p.id === Number(s.autre_id))) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Personne ${s.autre_id} introuvable`);
+      const err = (message) => new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.lien_incorrect'), [{ champ: 'liens', code: 'LIEN', message: texte('annuaire.fournisseur.lien_erreur', { numero: i + 1, message }) }]);
+      if (!s.autre_id) throw err(texte('annuaire.fournisseur.lien_personne'));
+      if (Number(s.autre_id) === Number(id)) throw err(texte('annuaire.fournisseur.lien_soi'));
+      if (!this.refs['types-lien'].some((t) => t.code === s.tli_code)) throw err(texte('annuaire.fournisseur.lien_type'));
+      if (!this.personnes.some((p) => p.id === Number(s.autre_id))) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.personne_introuvable', { id: s.autre_id }));
     }
   }
 
@@ -640,7 +642,7 @@ export class FournisseurAnnuaireMemoire {
     for (const s of saisies) {
       const valeurs = {
         per_id: s.inverse ? Number(s.autre_id) : n, cible_id: s.inverse ? n : Number(s.autre_id), tli_code: s.tli_code,
-        commentaire: texte(s.commentaire), debut: date(s.debut), fin: date(s.fin),
+        commentaire: nettoye(s.commentaire), debut: date(s.debut), fin: date(s.fin),
       };
       const l = s.lpe_id ? this.liens.find((x) => x.id === Number(s.lpe_id)) : null;
       if (l) Object.assign(l, valeurs); else this.liens.push({ id: this.#id(this.liens), ...valeurs });
@@ -650,15 +652,15 @@ export class FournisseurAnnuaireMemoire {
   /** Contrôles d'une personne nécessitant les données : société de la base unique, parent sans boucle, SIRET unique. */
   controlerPersonne(id, v) {
     if (vrai(v.societe_base) && this.personnes.some((p) => vrai(p.societe_base) && p.id !== Number(id))) {
-      throw new ErreurAnnuaire(422, 'VALIDATION', 'Société de la base', [{ champ: 'societe_base', code: 'UNIQUE', message: 'La société de la base existe déjà' }]);
+      throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.societe_base'), [{ champ: 'societe_base', code: 'UNIQUE', message: texte('annuaire.fournisseur.societe_base_existe') }]);
     }
     if (v.siret && this.personnes.some((p) => p.siret && compacter(p.siret) === compacter(v.siret) && p.id !== Number(id))) {
-      throw new ErreurAnnuaire(422, 'VALIDATION', 'SIRET déjà utilisé', [{ champ: 'siret', code: 'UNIQUE', message: 'SIRET déjà enregistré pour une autre personne' }]);
+      throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.siret_utilise'), [{ champ: 'siret', code: 'UNIQUE', message: texte('annuaire.fournisseur.siret_autre') }]);
     }
     if (v.parent_id) {
       const vus = new Set([Number(id)]);
       for (let p = this.personnes.find((x) => x.id === Number(v.parent_id)); p; p = this.personnes.find((x) => x.id === Number(p.parent_id))) {
-        if (vus.has(p.id)) throw new ErreurAnnuaire(422, 'VALIDATION', 'Hiérarchie', [{ champ: 'parent_id', code: 'BOUCLE', message: 'Niveau supérieur : la hiérarchie bouclerait' }]);
+        if (vus.has(p.id)) throw new ErreurAnnuaire(422, 'VALIDATION', texte('annuaire.fournisseur.hierarchie'), [{ champ: 'parent_id', code: 'BOUCLE', message: texte('annuaire.fournisseur.boucle') }]);
         vus.add(p.id);
       }
     }
@@ -690,7 +692,7 @@ export class FournisseurAnnuaireMemoire {
   /** Compte particulier d'un individu : personne PARTICULIER titulaire, coordonnées personnelles partagées. */
   async creerParticulier(indId) {
     const i = this.individus.find((x) => x.id === Number(indId));
-    if (!i) throw new ErreurAnnuaire(404, 'INTROUVABLE', `Individu ${indId} introuvable`);
+    if (!i) throw new ErreurAnnuaire(404, 'INTROUVABLE', texte('annuaire.fournisseur.individu_introuvable', { id: indId }));
     const existant = this.rattachements.find((r) => r.ind_id === i.id && r.titulaire && this.personnes.find((p) => p.id === r.per_id)?.niveau === 'PARTICULIER');
     if (existant) return { id: existant.per_id, existant: true };
     const id = this.#id(this.personnes);

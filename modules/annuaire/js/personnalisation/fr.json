@@ -1,4 +1,367 @@
 {
+  "annuaire": {
+    "natures": {
+      "ADRESSE": {
+        "libelle": "Adresses",
+        "un": "Adresse",
+        "usages": {
+          "PRINCIPALE": "Principale",
+          "SIEGE": "Siège",
+          "FACTURATION": "Facturation",
+          "COMMANDE": "Commande",
+          "LIVRAISON": "Livraison",
+          "PERSONNELLE": "Personnelle",
+          "AUTRE": "Autre"
+        }
+      },
+      "TELEPHONE": {
+        "libelle": "Téléphones",
+        "un": "Téléphone",
+        "usages": {
+          "FIXE": "Fixe",
+          "PORTABLE": "Portable",
+          "PRO": "Professionnel",
+          "PERSO": "Personnel",
+          "STANDARD": "Standard",
+          "FAX": "Fax",
+          "AUTRE": "Autre"
+        }
+      },
+      "EMAIL": {
+        "libelle": "E-mails",
+        "un": "E-mail",
+        "usages": {
+          "PRO": "Professionnel",
+          "PERSO": "Personnel",
+          "FACTURATION": "Facturation",
+          "COMMANDE": "Commande",
+          "AUTRE": "Autre"
+        }
+      },
+      "WEB": {
+        "libelle": "Web et réseaux",
+        "un": "Lien web",
+        "usages": {
+          "SITE": "Site",
+          "PAGE": "Page",
+          "RESEAU": "Réseau social",
+          "PSEUDO": "Pseudo",
+          "AUTRE": "Autre"
+        }
+      }
+    },
+    "reseaux": {
+      "LINKEDIN": "LinkedIn",
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram",
+      "X": "X",
+      "YOUTUBE": "YouTube",
+      "TIKTOK": "TikTok",
+      "AUTRE": "Autre"
+    },
+    "coordonnees": {
+      "erreurs": {
+        "ADRESSE": "Adresse : ligne d'adresse ou ville à saisir",
+        "PAYS": "Code pays sur 2 lettres (ISO)",
+        "EMAIL": "Adresse e-mail invalide",
+        "TELEPHONE": "Numéro de téléphone invalide",
+        "WEB": "Lien ou pseudo à saisir",
+        "NATURE": "Nature de coordonnée inconnue",
+        "CHOIX": "Coordonnée partagée modifiée : indiquez s'il s'agit d'une modification ou d'une autre information"
+      },
+      "non_remise_motif": "Non remise le {{le}} : {{motif}}",
+      "non_remise_le": "Non remise le {{le}}",
+      "non_remise_effacer": "{{titre}} (cliquer pour effacer la marque)",
+      "non_remise": "non remise",
+      "partagee_avec": "Partagée avec : {{fiches}}",
+      "choix": {
+        "MODIFICATION": "modifiée partout",
+        "AUTRE": "autre information"
+      },
+      "choix_a_faire": "choix à l'enregistrement",
+      "aucune": "Aucune.",
+      "aucune_coordonnee": "Aucune coordonnée.",
+      "reprendre_aide": "Reprendre une coordonnée d'une fiche liée : elle reste partagée (même identifiant)",
+      "reprendre_bouton": "Reprendre d'une fiche liée…",
+      "principal": "Principal",
+      "historique_aide": "Historique des valeurs",
+      "champs": {
+        "ligne1": "N° et voie",
+        "ligne2": "Complément",
+        "code_postal": "CP",
+        "ville": "Ville",
+        "pays": "Pays",
+        "numero": "Numéro",
+        "email": "adresse@exemple.fr",
+        "lien": "Lien",
+        "web": "https://… ou pseudo"
+      },
+      "principale_aide": "Coordonnée principale",
+      "retirer_aide": "Retirer de cette fiche",
+      "partagee": {
+        "titre": "{{icone}} Coordonnée partagée",
+        "utilisee_par": "Même coordonnée (même identifiant) utilisée par :",
+        "aide": "Une modification de cette coordonnée vous demandera, à l'enregistrement, si elle vaut pour toutes ces fiches ou seulement pour celle-ci."
+      },
+      "non_remise_confirmer": "Effacer la marque « non remise » de {{coordonnee}} ?",
+      "historique": {
+        "titre": "{{icone}} Historique de la coordonnée",
+        "actuelle": "Valeur actuelle :",
+        "le": "Remplacée le",
+        "par": "Par",
+        "avant": "Valeur précédente",
+        "aucune": "Aucune modification enregistrée."
+      },
+      "reprise": {
+        "titre": "{{icone}} Reprendre une coordonnée",
+        "aide": "La coordonnée reste partagée avec la fiche d'origine (même identifiant) : une correction faite d'un côté pourra valoir pour les deux.",
+        "aucune": "Aucune coordonnée à reprendre : les fiches liées (niveaux supérieurs et inférieurs, contacts, personnes rattachées) n'en ont pas d'autre.",
+        "action": "Reprendre"
+      }
+    },
+    "identifiants": {
+      "erreurs": {
+        "SIREN": "SIREN invalide (9 chiffres, clé de contrôle)",
+        "SIRET": "SIRET invalide (14 chiffres, clé de contrôle)",
+        "SIRET_SIREN": "Le SIRET ne commence pas par le SIREN",
+        "TVA": "Numéro de TVA intracommunautaire invalide",
+        "TVA_SIREN": "Le numéro de TVA ne correspond pas au SIREN",
+        "IBAN": "IBAN invalide",
+        "BIC": "BIC invalide",
+        "PAYS": "Code pays sur 2 lettres (ISO)"
+      }
+    },
+    "graphe": {
+      "contacts_resumes_un": "+ {{nombre}} contact",
+      "contacts_resumes_autre": "+ {{nombre}} contacts",
+      "reglages": {
+        "contacts": "Contacts",
+        "liens": "Liens",
+        "max_contacts": "Contacts par personne",
+        "max_contacts_aide": "Au-delà, les contacts d'une personne sont résumés (« + N contacts »)"
+      },
+      "legende": {
+        "hierarchie": "Hiérarchie",
+        "lien": "Lien",
+        "contact": "Contact",
+        "inactif": "Inactif"
+      },
+      "compte": {
+        "personnes_un": "{{nombre}} personne",
+        "personnes_autre": "{{nombre}} personnes",
+        "contacts_un": "{{nombre}} contact",
+        "contacts_autre": "{{nombre}} contacts",
+        "relations_un": "{{nombre}} relation",
+        "relations_autre": "{{nombre}} relations"
+      },
+      "introuvable": "Fiche introuvable",
+      "individu": "Individu",
+      "contacts_masques": "Contacts non affichés",
+      "depart": "fiche de départ",
+      "distance_un": "à {{nombre}} saut",
+      "distance_autre": "à {{nombre}} sauts",
+      "inactif": "inactif",
+      "tous_contacts": "Afficher tous les contacts",
+      "voisin": {
+        "inferieur": "Niveau inférieur",
+        "superieur": "Niveau supérieur",
+        "vers_fiche": "{{lien}} (vers cette fiche)",
+        "lien": "Lien",
+        "contact": "Contact",
+        "contacts": "Contacts"
+      }
+    },
+    "fournisseur": {
+      "admin": "Paramétrage de l'annuaire réservé au profil ADMIN",
+      "referentiel_inconnu": "Référentiel {{genre}} inconnu",
+      "code_format": "Code : lettres majuscules, chiffres et _ (30 caractères au plus)",
+      "libelle_obligatoire": "Libellé obligatoire",
+      "libelle_inverse_obligatoire": "Libellé vu depuis la cible obligatoire",
+      "code_utilise": "Code utilisé : désactivez-le plutôt",
+      "personne_introuvable": "Personne {{id}} introuvable",
+      "individu_introuvable": "Individu {{id}} introuvable",
+      "raison_sociale_obligatoire": "Raison sociale obligatoire",
+      "siret_enregistre": "SIRET déjà enregistré : {{nom}} ({{code}})",
+      "doublon_nom": "Des tiers de nom proche existent déjà : vérifiez avant de créer",
+      "niveau_inconnu": "Niveau {{niveau}} inconnu",
+      "validation_refusee": "Droit VALIDER_TIERS refusé",
+      "non_provisoire": "Cette fiche n'est pas un tiers provisoire",
+      "meme_fiche": "Choisissez une autre fiche que le tiers provisoire",
+      "fusion_provisoire": "Seul un tiers provisoire se fusionne dans une autre fiche",
+      "coordonnee": "Coordonnée",
+      "numero": "n° {{numero}}",
+      "dans_contexte": "{{contexte}} – {{libelle}}",
+      "coordonnee_introuvable": "Coordonnée {{id}} introuvable",
+      "coordonnee_modifiee": "{{coordonnee}} : modifiée par ailleurs entre-temps, rechargez la fiche",
+      "coordonnees_incorrectes": "Coordonnées incorrectes",
+      "erreur_de": "{{element}} : {{message}}",
+      "rattachement_introuvable": "Rattachement {{id}} introuvable",
+      "rattachement_modifie": "Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche",
+      "retrait_impossible": "Retrait impossible",
+      "retrait_non_enregistre": "Rattachement n° {{numero}} : pas encore enregistré",
+      "rattachement_incomplet": "Rattachement incomplet",
+      "individu_a_choisir": "Rattachement n° {{numero}} : individu à choisir",
+      "personne_a_choisir": "Rattachement n° {{numero}} : personne à choisir",
+      "contact_nom": "Contact n° {{numero}} : nom obligatoire",
+      "rattachement_double": "Rattachement en double",
+      "deja_rattache": "Rattachement n° {{numero}} : déjà rattaché",
+      "fiche_introuvable": "Fiche {{id}} introuvable",
+      "dates_incoherentes": "Dates incohérentes",
+      "fin_avant_debut": "Rattachement n° {{numero}} : fin avant le début",
+      "lien_incorrect": "Lien incorrect",
+      "lien_erreur": "Lien n° {{numero}} : {{message}}",
+      "lien_personne": "personne à choisir",
+      "lien_soi": "une personne ne peut pas être liée à elle-même",
+      "lien_type": "type de lien à choisir",
+      "societe_base": "Société de la base",
+      "societe_base_existe": "La société de la base existe déjà",
+      "siret_utilise": "SIRET déjà utilisé",
+      "siret_autre": "SIRET déjà enregistré pour une autre personne",
+      "hierarchie": "Hiérarchie",
+      "boucle": "Niveau supérieur : la hiérarchie bouclerait"
+    },
+    "partage": {
+      "titre": "{{icone}} Coordonnées partagées modifiées",
+      "aide_html": "Ces coordonnées sont aussi utilisées par d'autres fiches. Pour chacune, indiquez s'il s'agit d'une <b>modification</b> (elle change pour toutes les fiches) ou d'une <b>autre information</b> (propre à cette fiche, les autres fiches gardent l'ancienne valeur).",
+      "dans_contexte": "{{contexte}} – {{nature}}",
+      "modification_html": "<b>Modification</b> : correction ou mise à jour pour toutes les fiches",
+      "autres_un": "{{nombre}} autre",
+      "autres_autre": "{{nombre}} autres",
+      "autre_html": "<b>Autre information</b> : propre à cette fiche seulement",
+      "tout_modification": "Tout en modification",
+      "tout_autre": "Tout en autre information",
+      "manque_un": "{{nombre}} choix à faire",
+      "manque_autre": "{{nombre}} choix à faire"
+    },
+    "liens": {
+      "hierarchie": "Hiérarchie",
+      "superieur": "Niveau supérieur :",
+      "racine": "aucun (racine)",
+      "superieur_aide": "(champ « Niveau supérieur » de l'onglet Identité)",
+      "inferieurs": "Niveaux inférieurs :",
+      "aucun": "aucun",
+      "titre": "Liens avec d'autres personnes",
+      "colonnes": {
+        "lien": "Lien",
+        "personne": "Personne",
+        "commentaire": "Commentaire",
+        "debut": "Début",
+        "fin": "Fin"
+      },
+      "personne_numero": "Personne {{id}}",
+      "choisir": "Choisir la personne",
+      "aucun_lien": "Aucun lien.",
+      "ajouter": "Lien",
+      "personne_liee": "Personne liée"
+    },
+    "provisoire": {
+      "provisoire": "provisoire",
+      "titre": "Nouveau tiers",
+      "raison_sociale": "Raison sociale",
+      "siret": "SIRET",
+      "facultatif": "facultatif",
+      "verifier": "Vérifier et créer",
+      "aide_html": "Le tiers est créé <b>provisoire</b> : utilisable tout de suite, sa création sera validée ou il sera fusionné avec une fiche existante par un utilisateur habilité.",
+      "choisir": "Choisir",
+      "forcer": "Créer quand même un nouveau tiers",
+      "doublon_siret": "Ce SIRET est déjà dans l’annuaire : choisissez la fiche existante.",
+      "doublon_nom": "Des tiers de nom proche existent : est-ce l’un d’eux ?"
+    },
+    "fusion": {
+      "choisir": "Fusionner avec la fiche…",
+      "repris": "repris",
+      "titre": "Fusionner le tiers provisoire",
+      "aide_html": "Le tiers provisoire {{source}} sera fusionné dans {{cible}} puis supprimé : ses contacts, coordonnées, liens, documents, intervenants et pièces passent sur la fiche conservée.",
+      "conflits": "Valeurs différentes : choisissez celle à garder",
+      "champ": "Champ",
+      "source": "Tiers provisoire",
+      "cible": "Fiche conservée",
+      "aucun_conflit": "Aucune valeur en conflit.",
+      "reprises": "Champs vides de la fiche conservée, repris du provisoire",
+      "action": "Fusionner"
+    },
+    "selection": {
+      "personne": "Choisir une personne",
+      "personne_aide": "Raison sociale, code, SIRET, ville…",
+      "choisir": "Choisir",
+      "inactif": "inactif",
+      "individu": "Choisir un individu",
+      "individu_aide": "Nom, prénom, e-mail, téléphone…",
+      "nouveau": "Ou nouvel individu",
+      "prenom": "Prénom",
+      "nom": "Nom",
+      "nouveau_aide": "Vérifiez d'abord qu'il n'existe pas déjà (recherche ci-dessus) : un même individu peut être rattaché à plusieurs personnes.",
+      "nom_obligatoire": "Nom obligatoire",
+      "aucun_resultat": "Aucun résultat.",
+      "aucune": "Aucune"
+    },
+    "rattachements": {
+      "recherche_contact": "Rechercher un contact (nom, fonction, service)…",
+      "recherche_personne": "Rechercher une personne…",
+      "nb_contacts_un": "{{nombre}} contact",
+      "nb_contacts_autre": "{{nombre}} contacts",
+      "nb_rattachements_un": "{{nombre}} rattachement",
+      "nb_rattachements_autre": "{{nombre}} rattachements",
+      "trouves": " trouvé(s)",
+      "modifications_un": "{{nombre}} modification à enregistrer",
+      "modifications_autre": "{{nombre}} modifications à enregistrer",
+      "page_precedente": "Page précédente",
+      "pages": "{{debut}}–{{fin}} sur {{total}}",
+      "page_suivante": "Page suivante",
+      "ajout_contact": "Contact",
+      "ajout_personne": "Rattacher à une personne",
+      "nouveaux": "Nouveaux (enregistrement de la fiche)",
+      "aucun_resultat": "Aucun résultat.",
+      "aucun_contact": "Aucun contact rattaché.",
+      "aucune_personne": "Rattaché à aucune personne.",
+      "nouveau": "(nouveau)",
+      "principal_aide": "Contact principal de la personne",
+      "principal": "principal",
+      "titulaire": "titulaire",
+      "inactif": "inactif",
+      "retire": "retiré à l'enregistrement",
+      "modifie": "modifié",
+      "annuler_retrait": "Annuler le retrait",
+      "replier": "Replier",
+      "deplier": "Détails et coordonnées propres",
+      "retirer": "Retirer ce rattachement (à l'enregistrement)",
+      "champs": {
+        "fonction": "Fonction",
+        "service": "Service",
+        "debut": "Début",
+        "fin": "Fin",
+        "principal": "Contact principal",
+        "actif": "Actif",
+        "commentaire": "Commentaire"
+      },
+      "coordonnees": "Coordonnées propres à ce rattachement",
+      "ajouter_contact": "Ajouter un contact"
+    },
+    "referentiels": {
+      "onglets": {
+        "niveaux": "Niveaux",
+        "casquettes": "Relations",
+        "types_lien": "Types de lien",
+        "roles": "Rôles des individus"
+      },
+      "consultation": "Consultation : le paramétrage est réservé à un administrateur.",
+      "colonnes": {
+        "icone": "Icône",
+        "ordre": "Ordre",
+        "actif": "Actif",
+        "morale": "Personne morale",
+        "morale_aide": "Décoché : particulier (pas de SIRET, titulaire individu)",
+        "groupes": "Champs déverrouillés (groupes de la fiche)",
+        "libelle_inverse": "Vu depuis la cible"
+      },
+      "filtre_seulement": "Filtre seulement",
+      "supprimer_aide": "Supprimer (si non utilisé)",
+      "aide_casquettes": "Relations d'une personne avec notre société (client, fournisseur, sous-traitant… ; plusieurs possibles). Une relation sans groupe de champs sert de filtre (listes, recherches) ; les groupes cochés apparaissent dans l'onglet « Par relation » des personnes qui l'ont.",
+      "aide_niveaux": "Les personnes s'organisent en hiérarchie (groupe › société › établissement, agence, dépôt…) par leur niveau supérieur.",
+      "enregistre": "Référentiel enregistré",
+      "supprimer_confirmer": "Supprimer « {{libelle}} » ?"
+    }
+  },
   "erreurs": {
     "DOUBLON_NOM": "Des tiers de nom proche existent déjà : vérifiez avant de créer",
     "RATTACHEMENT_MODIFIE": "Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche"
