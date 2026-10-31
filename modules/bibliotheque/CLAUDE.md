@@ -44,6 +44,12 @@
 - Prix copiés dans le document à l'appel (ne suivent plus la bibliothèque) ; envoi document → bibliothèque : coefficients de la ligne imposés à l'élément.
 - Démo : modifier `client/src/app/bibliotheque/donnees.js` puis `npm run generer-vues-liste --workspace client` (régénère `db/116`).
 
+## Textes et icônes (module Personnalisation, lot P3h)
+- Textes `bibliotheque.*` de `js/personnalisation/fr.json` (zones `scenarios`, `gestions`, `types_nature`, `donnees_techniques`, `fournisseur`, `arbres`, `prix`, `unites`, `tarifs`, `referentiels`) ; icônes `bibliotheque_*` de `images/icones.json` et communes du socle ; aucune couleur propre (variables du socle).
+- `SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`, `DONNEES_TECHNIQUES` : `pairesParCode` (même forme) ; état d'une période de coefficients par code (`a_venir`, `en_vigueur`, `passee`).
+- Gardés : messages d'erreur de `calcul.js` (moteur répliqué avec `CalculElement.cs`) ; commentaires de l'historique des prix écrits par le fournisseur mémoire.
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/bibliotheque/js` ; `dotnet test modules/bibliotheque/dotnet/LogiBTP.Bibliotheque.Tests` (ou `dotnet test LogiBTP.slnx`).
 - Composés : jeux du cœur (`npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx`).

@@ -1,3 +1,4 @@
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { GESTION_ELEMENT } from './codes.js';
 import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibtp/socle';
 
@@ -15,11 +16,8 @@ import { D, S, arr6, evaluerExpression, ErreurCalcul, aujourdhui } from '@logibt
 // futurs modules Achats et Stock. Puis PR = PA × coef FG ; PV = PR × coef bénéfice (ou PV fixe : le coefficient est
 // déduit) ; PV net = PV × coef de remise.
 
-export const SCENARIOS_PA = [
-  ['FIXE', 'Prix fixe'], ['FOURNISSEUR_PRINCIPAL', 'Prix du fournisseur principal'], ['DERNIER_PA', "Dernier prix d'achat"],
-  ['MEILLEUR_MIN', 'Meilleur prix fournisseur (minimum)'], ['MEILLEUR_MAX', 'Prix fournisseur maximum'], ['PMP', 'Prix moyen pondéré'],
-];
-export const GESTIONS = [[GESTION_ELEMENT.STOCK, 'Stock'], [GESTION_ELEMENT.ACHAT, 'Achat'], [GESTION_ELEMENT.SOUS_TRAITANCE, 'Sous-traitance'], [GESTION_ELEMENT.NON_GERE, 'Non géré']];
+export const SCENARIOS_PA = pairesParCode('bibliotheque.scenarios', ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP']);
+export const GESTIONS = pairesParCode('bibliotheque.gestions', [GESTION_ELEMENT.STOCK, GESTION_ELEMENT.ACHAT, GESTION_ELEMENT.SOUS_TRAITANCE, GESTION_ELEMENT.NON_GERE]);
 
 /** Quantité en unité de stock pour 1 unité (Dec). Erreur UNITE si l'unité n'est pas déclarée. */
 export function ratio(unite, { unite_stock, unites = [], donnees = {} }) {
@@ -127,10 +125,7 @@ export function analyserCodeAppel(saisie, bibliothequeParDefaut) {
 // coefficient (frais généraux, bénéfice) : imposé par l'élément, sinon la période de la nature de l'élément en vigueur
 // à la date (dernier début ≤ date, coefficient renseigné), sinon la période globale, sinon la valeur par défaut.
 
-export const TYPES_NATURE = [
-  ['MO', "Main-d'œuvre"], ['ENGIN', 'Engin'], ['MATERIAUX', 'Matériaux'], ['SOUS_TRAITANCE', 'Sous-traitance'], ['FRAIS', 'Frais'],
-  ['FACTURATION_INTERNE', 'Facturation interne'], ['AMORTISSEMENT', 'Amortissement'], ['DIVERS', 'Divers'],
-];
+export const TYPES_NATURE = pairesParCode('bibliotheque.types_nature', ['MO', 'ENGIN', 'MATERIAUX', 'SOUS_TRAITANCE', 'FRAIS', 'FACTURATION_INTERNE', 'AMORTISSEMENT', 'DIVERS']);
 
 function periodeEnVigueur(periodes, natId, champ, date) {
   return periodes

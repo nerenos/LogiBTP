@@ -263,7 +263,7 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
-Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code), P3a (Pointage), P3b (module Document), P3c (page document du cœur), P3d (module Liste), P3e (module Fiche), P3f (module GED) et P3g (module Annuaire) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
+Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code), P3a (Pointage), P3b (module Document), P3c (page document du cœur), P3d (module Liste), P3e (module Fiche), P3f (module GED), P3g (module Annuaire) et P3h (module Bibliothèque) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
 
 - [ ] **Erreurs par code, suite de P2** (P2 fait : 237 codes sûrs au dictionnaire, § 13 de l'analyse) : 258 codes gardent
   le message du serveur (messages composés, plusieurs messages pour un code, codes employés ailleurs) ; les rendre sûrs
@@ -273,8 +273,8 @@ Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code)
   dur (variables du thème). P3a Pointage fait (§ 14 de l'analyse : règles du module par `textesParCode`, pages pointage
   et borne, congés, repas, titres des routes, styles) ; P3b module Document fait (§ 15 : éditeur, panneaux, vues, plan,
   notifications, `document.css`) ; P3c page document du cœur fait (§ 16 : page, `PanneauxBtp`, `EditeurDevisBtp` ; restent
-  les fichiers qu'ils appellent : structure, adresses, sous-traitance, analyse, contrôles de saisie, hors ligne) ; P3d module Liste fait (§ 17 : règles, liste, concepteur, menu de filtre, thèmes, `liste.css`) ; P3e module Fiche fait (§ 18 : validation, chrono, fournisseur, fiche, paramétrage, `fiche.css`) ; P3f module GED fait (§ 19 : fournisseur, explorateur, dépôt, aperçu, règles, `ged.css`) ; P3g module Annuaire fait (§ 20 : coordonnées, identifiants, fournisseur, rattachements, liens, tiers provisoires, référentiels, graphe). Suivants :
-  modules suivants (Bibliothèque, CRM…), menus
+  les fichiers qu'ils appellent : structure, adresses, sous-traitance, analyse, contrôles de saisie, hors ligne) ; P3d module Liste fait (§ 17 : règles, liste, concepteur, menu de filtre, thèmes, `liste.css`) ; P3e module Fiche fait (§ 18 : validation, chrono, fournisseur, fiche, paramétrage, `fiche.css`) ; P3f module GED fait (§ 19 : fournisseur, explorateur, dépôt, aperçu, règles, `ged.css`) ; P3g module Annuaire fait (§ 20 : coordonnées, identifiants, fournisseur, rattachements, liens, tiers provisoires, référentiels, graphe) ; P3h module Bibliothèque fait (§ 21 : tables de libellés, fournisseur, arbres, onglets de la fiche, paramétrage). Suivants :
+  modules suivants (CRM…), menus
   (`navigation/menus.js`), pages du cœur ; liste de contrôle d'un fichier par `extraire` du module Personnalisation.
 - [ ] **Données système en base** (§ 8) : libellés `donnees.<table>.<code>.<colonne>` appliqués par le serveur
   (`installation personnalisation appliquer`, démarrage, mise à jour) sans écraser une valeur modifiée par la société

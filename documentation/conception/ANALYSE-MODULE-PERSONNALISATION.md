@@ -524,3 +524,26 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   vérifiées par le test du client ; affichage contrôlé dans le navigateur (annuaire en mémoire : coordonnées,
   rattachements, liens, référentiels, graphe et ses couleurs, tiers provisoire avec doublons, choix des coordonnées
   partagées).
+
+## 21. Réalisation du lot P3h : module Bibliothèque (31/10/2026)
+
+- **Périmètre** : `modules/bibliotheque/js` : tables de libellés (scénarios de prix d'achat, gestions, types de nature,
+  données techniques), messages du fournisseur en mémoire, interface (arbres des familles et des natures, onglets Prix,
+  Unités et Tarifs de la fiche d'un élément, paramétrage : bibliothèques, familles, natures, regroupements, coefficients
+  par période, scénarios).
+- **Textes** : `bibliotheque.*` du `fr.json` du module (zones `scenarios`, `gestions`, `types_nature`,
+  `donnees_techniques`, `fournisseur`, `arbres`, `prix` — dont `alertes` et `sources` —, `unites`, `tarifs`,
+  `referentiels` — dont `onglets`, `types_courts`, `etats`, `familles`, `natures`, `coefficients`, `prix` —) ; compteurs
+  par `pluriel` (entrées retenues des arbres, éléments recalculés) ; mots communs du socle. Les tables exportées
+  (`SCENARIOS_PA`, `GESTIONS`, `TYPES_NATURE`, `DONNEES_TECHNIQUES`) gardent leur forme (`pairesParCode`).
+- **Icônes** : `bibliotheque_*` du module (arbres, plier, attente, résultat, principal, lien, enregistrer), communes du
+  socle (`ajouter`, `retirer`, `supprimer`, `avertissement`).
+- **Couleurs** : aucune couleur en dur dans `bibliotheque.css` (variables du socle) : pas de `theme.css` pour ce module.
+- **Écart corrigé** : l'état d'une période de coefficients devient un code (`a_venir`, `en_vigueur`, `passee`) ; la
+  classe `periode-passee` du style s'applique enfin (l'ancien libellé « passée » donnait `periode-passée`).
+- **Gardé** : messages des erreurs de calcul de `calcul.js` (moteur répliqué avec `CalculElement.cs`, comme les moteurs
+  du lot P3b) ; commentaires écrits dans l'historique des prix par le fournisseur en mémoire (données, comme le serveur) ;
+  variables des formules d'unités (`{{poids}}`…) passées en valeurs des textes d'aide pour rester affichées.
+- **Contrôles** : tests du module sur le dictionnaire composé, clés de `modules/bibliotheque/js` vérifiées par le test
+  du client ; affichage contrôlé dans le navigateur (bibliothèque en mémoire : onglets Prix, Unités et Tarifs, arbres,
+  paramétrage sur ses onglets).

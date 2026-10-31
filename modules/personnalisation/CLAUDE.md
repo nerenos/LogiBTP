@@ -2,7 +2,7 @@
 
 ## Rôle
 - Textes (`fr.json`), thème (`theme.css`) et images (`images/`, dont le catalogue des icônes `images/icones.json`) de l'application, rangés sous des clés stables et modifiables sans toucher au code ([analyse](../../documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md)). Une langue, un thème : le but est de structurer, pas le multilingue.
-- Lots P1, P2 (erreurs par code), P3a (Pointage, § 14 de l'analyse) P3b (module Document, § 15) , P3c (page document du cœur, § 16) , P3d (module Liste, § 17), P3e (module Fiche, § 18), P3f (module GED, § 19) et P3g (module Annuaire, § 20) : fichiers statiques par couche (socle → modules → cœur) surchargés par l'installation. Phase 2 (à venir) : interface `/parametres/personnalisation`, stockage en base par société, génération des fichiers, application aux données système (§ 8 et 9 de l'analyse).
+- Lots P1, P2 (erreurs par code), P3a (Pointage, § 14 de l'analyse) P3b (module Document, § 15) , P3c (page document du cœur, § 16) , P3d (module Liste, § 17), P3e (module Fiche, § 18), P3f (module GED, § 19), P3g (module Annuaire, § 20) et P3h (module Bibliothèque, § 21) : fichiers statiques par couche (socle → modules → cœur) surchargés par l'installation. Phase 2 (à venir) : interface `/parametres/personnalisation`, stockage en base par société, génération des fichiers, application aux données système (§ 8 et 9 de l'analyse).
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (`fusionner`, `cles`, `valeurBrute` de `@logibtp/socle/dictionnaire`) ; .NET : `LogiBTP.Socle.Web` (`Dictionnaire.Fusionner` du socle, `VariablesEnv`).

@@ -1,3 +1,4 @@
+import { texte, pairesParCode } from '@logibtp/socle/dictionnaire';
 import { calculerElement, coefficientsEffectifs, prixNetTarif, ratio, analyserCodeAppel } from './calcul.js';
 import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/socle';
 
@@ -73,11 +74,9 @@ export class FournisseurBibliothequeApi {
 export const SCENARIOS_TOUS = ['FIXE', 'FOURNISSEUR_PRINCIPAL', 'DERNIER_PA', 'MEILLEUR_MIN', 'MEILLEUR_MAX', 'PMP'];
 
 /** Données techniques de l'élément (par unité de stock ; dimensions en mm), utilisables dans les formules d'unités. */
-export const DONNEES_TECHNIQUES = [
-  ['poids', 'Poids (kg)'], ['surface', 'Surface (m²)'], ['surface_peinture', 'Surface à peindre (m²)'], ['volume', 'Volume (m³)'],
-  ['hauteur', 'Hauteur (mm)'], ['largeur', 'Largeur (mm)'], ['epaisseur', 'Épaisseur (mm)'], ['longueur', 'Longueur (mm)'],
-  ['isolant_r', 'Résistance thermique R'], ['isolant_lambda', 'Conductivité λ'], ['isolant_u', 'Coefficient U'],
-];
+export const DONNEES_TECHNIQUES = pairesParCode('bibliotheque.donnees_techniques', [
+  'poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur', 'isolant_r', 'isolant_lambda', 'isolant_u',
+]);
 
 const CHAMPS_PRIX = ['scenario', 'pa', 'coef_fg', 'pr', 'coef_benef', 'pv', 'pv_fixe', 'coef_remise', 'pv_net'];
 
@@ -85,9 +84,9 @@ const CHAMPS_PRIX = ['scenario', 'pa', 'coef_fg', 'pr', 'coef_benef', 'pv', 'pv_
 /** Contrôles d'un tarif (comme ServiceBibliotheque.ControlerTarif) : prix positifs, remises de 0 à 100 %, délai positif. */
 function controlerTarif(t) {
   const n = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
-  if (n(t.prix) < 0 || n(t.prix_public) < 0) throw new ErreurBibliotheque(422, 'PRIX', 'Prix négatif');
-  if ([t.remise1, t.remise2].some((r) => n(r) !== null && (n(r) < 0 || n(r) > 100))) throw new ErreurBibliotheque(422, 'REMISE', 'Remise de 0 à 100 %');
-  if (n(t.delai) < 0) throw new ErreurBibliotheque(422, 'DELAI', 'Délai négatif');
+  if (n(t.prix) < 0 || n(t.prix_public) < 0) throw new ErreurBibliotheque(422, 'PRIX', texte('bibliotheque.fournisseur.prix_negatif'));
+  if ([t.remise1, t.remise2].some((r) => n(r) !== null && (n(r) < 0 || n(r) > 100))) throw new ErreurBibliotheque(422, 'REMISE', texte('bibliotheque.fournisseur.remise'));
+  if (n(t.delai) < 0) throw new ErreurBibliotheque(422, 'DELAI', texte('bibliotheque.fournisseur.delai'));
 }
 
 export function entreeDepuisLigne(l, tarifs = []) {
@@ -125,18 +124,18 @@ export class FournisseurBibliothequeMemoire {
     for (const e of this.elements) this.apresEcriture(e, { creation: true, commentaire: 'Reprise des données' });
   }
 
-  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurBibliotheque(403, 'ACCES_REFUSE', 'Droit PARAMETRER refusé'); }
+  #admin() { if (this.profil !== PROFIL.ADMIN) throw new ErreurBibliotheque(403, 'ACCES_REFUSE', texte('bibliotheque.fournisseur.parametrer_refuse')); }
   #id(liste, cle = 'id') { return Math.max(0, ...liste.map((x) => Number(x[cle]) || 0)) + 1; }
   #element(id) {
     const e = this.elements.find((x) => String(x.id) === String(id));
-    if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${id} introuvable`);
+    if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', texte('bibliotheque.fournisseur.element_introuvable', { id }));
     return e;
   }
 
   async parametres() { return structuredClone(this.params); }
   async enregistrerParametres(p) {
     this.#admin();
-    if (!p.scenarios_autorises.includes(p.scenario_defaut)) throw new ErreurBibliotheque(422, 'SCENARIO', 'Le scénario par défaut doit être autorisé');
+    if (!p.scenarios_autorises.includes(p.scenario_defaut)) throw new ErreurBibliotheque(422, 'SCENARIO', texte('bibliotheque.fournisseur.scenario_defaut'));
     this.params = { ...this.params, ...p };
     return this.parametres();
   }
@@ -145,8 +144,8 @@ export class FournisseurBibliothequeMemoire {
   async enregistrerBibliotheque(b) {
     this.#admin();
     const code = String(b.code ?? '').trim().toUpperCase();
-    if (!/^[A-Z0-9_]{1,10}$/.test(code)) throw new ErreurBibliotheque(422, 'CODE', 'Code : lettres, chiffres ou _ (10 au plus), sans « : »');
-    if (this.bibs.some((x) => x.code === code && x.id !== b.id)) throw new ErreurBibliotheque(409, 'CODE', `Bibliothèque ${code} déjà existante`);
+    if (!/^[A-Z0-9_]{1,10}$/.test(code)) throw new ErreurBibliotheque(422, 'CODE', texte('bibliotheque.fournisseur.code_bibliotheque'));
+    if (this.bibs.some((x) => x.code === code && x.id !== b.id)) throw new ErreurBibliotheque(409, 'CODE', texte('bibliotheque.fournisseur.bibliotheque_existante', { code }));
     if (b.defaut) for (const x of this.bibs) x.defaut = false;
     const existante = this.bibs.find((x) => x.id === b.id);
     const v = { ordre: 0, actif: true, defaut: false, ...b, code, id: existante?.id ?? this.#id(this.bibs) };
@@ -155,7 +154,7 @@ export class FournisseurBibliothequeMemoire {
   }
   async supprimerBibliotheque(id) {
     this.#admin();
-    if (this.elements.some((e) => e.bib_id === id)) throw new ErreurBibliotheque(409, 'UTILISEE', 'Bibliothèque contenant des éléments : désactivez-la plutôt');
+    if (this.elements.some((e) => e.bib_id === id)) throw new ErreurBibliotheque(409, 'UTILISEE', texte('bibliotheque.fournisseur.bibliotheque_utilisee'));
     this.bibs = this.bibs.filter((b) => b.id !== id);
     return this.bibliotheques();
   }
@@ -173,10 +172,10 @@ export class FournisseurBibliothequeMemoire {
   async enregistrerFamille(f) {
     this.#admin();
     const code = String(f.code ?? '').trim().toUpperCase();
-    if (!code || !String(f.libelle ?? '').trim()) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Code et libellé obligatoires');
-    if (this.fams.some((x) => x.bib_id === f.bib_id && x.code === code && x.id !== f.id)) throw new ErreurBibliotheque(409, 'CODE', `Famille ${code} déjà existante`);
+    if (!code || !String(f.libelle ?? '').trim()) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.code_libelle'));
+    if (this.fams.some((x) => x.bib_id === f.bib_id && x.code === code && x.id !== f.id)) throw new ErreurBibliotheque(409, 'CODE', texte('bibliotheque.fournisseur.famille_existante', { code }));
     for (let p = f.parent_id; p; p = this.fams.find((x) => x.id === p)?.parent_id) {
-      if (p === f.id) throw new ErreurBibliotheque(422, 'PARENT', 'Une famille ne peut pas être rangée sous elle-même');
+      if (p === f.id) throw new ErreurBibliotheque(422, 'PARENT', texte('bibliotheque.fournisseur.famille_boucle'));
     }
     const existante = this.fams.find((x) => x.id === f.id);
     const v = { id: existante?.id ?? this.#id(this.fams), bib_id: f.bib_id, parent_id: f.parent_id ?? null, code, libelle: f.libelle.trim(), ordre: f.ordre ?? 0 };
@@ -186,7 +185,7 @@ export class FournisseurBibliothequeMemoire {
   async supprimerFamille(id) {
     this.#admin();
     const f = this.fams.find((x) => x.id === id);
-    if (this.fams.some((x) => x.parent_id === id)) throw new ErreurBibliotheque(409, 'SOUS_FAMILLES', 'Famille contenant des sous-familles');
+    if (this.fams.some((x) => x.parent_id === id)) throw new ErreurBibliotheque(409, 'SOUS_FAMILLES', texte('bibliotheque.fournisseur.sous_familles'));
     this.fams = this.fams.filter((x) => x.id !== id);
     for (const e of this.elements) if (e.fam_id === id) e.fam_id = null;
     return this.familles(f?.bib_id);
@@ -204,7 +203,7 @@ export class FournisseurBibliothequeMemoire {
   }
   async supprimerRegroupement(code) {
     this.#admin();
-    if (this.nats.some((n) => n.regroupement === code)) throw new ErreurBibliotheque(409, 'UTILISE', 'Regroupement utilisé par des natures');
+    if (this.nats.some((n) => n.regroupement === code)) throw new ErreurBibliotheque(409, 'UTILISE', texte('bibliotheque.fournisseur.regroupement_utilise'));
     this.rgns = this.rgns.filter((r) => r.code !== code);
     return this.regroupements();
   }
@@ -213,7 +212,7 @@ export class FournisseurBibliothequeMemoire {
   async enregistrerNature(n) {
     this.#admin();
     const code = String(n.code ?? '').trim().toUpperCase();
-    if (this.nats.some((x) => x.code === code && x.id !== n.id)) throw new ErreurBibliotheque(409, 'CODE', `Nature ${code} déjà existante`);
+    if (this.nats.some((x) => x.code === code && x.id !== n.id)) throw new ErreurBibliotheque(409, 'CODE', texte('bibliotheque.fournisseur.nature_existante', { code }));
     const existante = this.nats.find((x) => x.id === n.id);
     const v = { actif: true, ...n, code, id: existante?.id ?? this.#id(this.nats) };
     if (existante) Object.assign(existante, v); else this.nats.push(v);
@@ -238,14 +237,14 @@ export class FournisseurBibliothequeMemoire {
   async enregistrerPeriode(p) {
     this.#admin();
     const debut = String(p.debut ?? '').slice(0, 10);
-    if (!debut) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Début obligatoire');
+    if (!debut) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.debut_obligatoire'));
     const v = (x) => (x === null || x === undefined || x === '' ? null : String(x));
-    if (v(p.coef_fg) === null && v(p.coef_benef) === null) throw new ErreurBibliotheque(422, 'COEF', 'Au moins un coefficient');
-    if (Number(p.coef_fg) <= 0 || Number(p.coef_benef) <= 0) throw new ErreurBibliotheque(422, 'COEF', 'Coefficients strictement positifs');
+    if (v(p.coef_fg) === null && v(p.coef_benef) === null) throw new ErreurBibliotheque(422, 'COEF', texte('bibliotheque.fournisseur.un_coefficient'));
+    if (Number(p.coef_fg) <= 0 || Number(p.coef_benef) <= 0) throw new ErreurBibliotheque(422, 'COEF', texte('bibliotheque.fournisseur.coefficients_positifs'));
     const existante = this.periodesCoefs.find((x) => x.id === p.id);
-    if (existante && existante.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', 'Période commencée : créez une nouvelle période');
+    if (existante && existante.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', texte('bibliotheque.fournisseur.periode_commencee'));
     const nat = p.nat_id === null || p.nat_id === undefined || p.nat_id === '' ? null : Number(p.nat_id);
-    if (this.periodesCoefs.some((x) => (x.nat_id ?? null) === nat && x.debut === debut && x.id !== p.id)) throw new ErreurBibliotheque(409, 'PERIODE', 'Une période commence déjà à cette date pour cette portée');
+    if (this.periodesCoefs.some((x) => (x.nat_id ?? null) === nat && x.debut === debut && x.id !== p.id)) throw new ErreurBibliotheque(409, 'PERIODE', texte('bibliotheque.fournisseur.periode_existante'));
     const ligne = { id: existante?.id ?? Math.max(0, ...this.periodesCoefs.map((x) => x.id)) + 1, nat_id: nat, debut, coef_fg: v(p.coef_fg), coef_benef: v(p.coef_benef),
       commentaire: p.commentaire || null, cree_le: new Date(this.horloge()).toISOString(), cree_par: this.utilisateur };
     if (existante) Object.assign(existante, ligne); else this.periodesCoefs.push(ligne);
@@ -256,7 +255,7 @@ export class FournisseurBibliothequeMemoire {
   async supprimerPeriode(id) {
     this.#admin();
     const p = this.periodesCoefs.find((x) => x.id === id);
-    if (p && p.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', "Période commencée : elle fait partie de l'historique");
+    if (p && p.debut <= this.#aujourdhui()) throw new ErreurBibliotheque(422, 'PERIODE_COMMENCEE', texte('bibliotheque.fournisseur.periode_historique'));
     this.periodesCoefs = this.periodesCoefs.filter((x) => x.id !== id);
     return { periodes: await this.periodes(), elements_recalcules: 0 };
   }
@@ -295,9 +294,9 @@ export class FournisseurBibliothequeMemoire {
   }
   async enregistrerTarif(eleId, t) {
     this.#element(eleId);
-    if (!String(t.fournisseur ?? '').trim() || !t.unite) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Fournisseur et unité obligatoires');
+    if (!String(t.fournisseur ?? '').trim() || !t.unite) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.fournisseur_unite'));
     controlerTarif(t);
-    if (t.debut && t.fin && t.fin < t.debut) throw new ErreurBibliotheque(422, 'DATES', 'Fin de validité avant le début');
+    if (t.debut && t.fin && t.fin < t.debut) throw new ErreurBibliotheque(422, 'DATES', texte('bibliotheque.fournisseur.dates'));
     if (t.principal) for (const x of this.tarifsElements) if (String(x.ele_id) === String(eleId)) x.principal = false;
     // Prix net : prix public remisé s'il est renseigné (comme ServiceBibliotheque.EnregistrerTarif).
     t = { ...t, prix: S(prixNetTarif({ ...t, prix: t.prix ?? 0 })) };
@@ -369,13 +368,13 @@ export class FournisseurBibliothequeMemoire {
     // Code d'élément, sinon code-barres (lecteur), dans la bibliothèque du document d'abord (comme ServiceBibliotheque.Appel).
     const e = (b && this.elements.find((x) => x.bib_id === b.id && x.code === c && x.actif !== false))
       ?? this.elements.filter((x) => x.code_barre && x.code_barre === s && x.actif !== false).sort((x, y) => Number(y.bib_id === b?.id) - Number(x.bib_id === b?.id))[0];
-    if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', `Élément ${c} introuvable dans la bibliothèque ${bib ?? '?'}`);
+    if (!e) throw new ErreurBibliotheque(404, 'INTROUVABLE', texte('bibliotheque.fournisseur.element_bibliotheque', { code: c, bibliotheque: bib ?? '?' }));
     return this.#detail(e);
   }
 
   /** Import des tarifs d'un fournisseur : mêmes règles que ServiceBibliotheque.ImporterTarifs. */
   async importerTarifs({ tiers_id: tiersId, fournisseur, fichier = null, lignes = [], simulation = true }) {
-    if (!String(fournisseur ?? '').trim()) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', 'Fournisseur obligatoire');
+    if (!String(fournisseur ?? '').trim()) throw new ErreurBibliotheque(422, 'OBLIGATOIRE', texte('bibliotheque.fournisseur.fournisseur_obligatoire'));
     const defaut = this.bibs.find((b) => b.defaut)?.code ?? null;
     const existants = this.tarifsElements.filter((t) => String(t.tiers_id) === String(tiersId));
     const resultats = [];
@@ -383,31 +382,31 @@ export class FournisseurBibliothequeMemoire {
     lignes.forEach((l, i) => {
       const rang = i + 1;
       try {
-        const texte = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
+        const nettoye = (v) => (v === null || v === undefined || String(v).trim() === '' ? null : String(v).trim());
         let e = null;
-        if (texte(l.element)) {
+        if (nettoye(l.element)) {
           const { bibliotheque, code } = analyserCodeAppel(l.element, defaut);
           const b = this.bibs.find((x) => x.code === bibliotheque);
           e = (b && this.elements.find((x) => x.bib_id === b.id && x.code === code && x.actif !== false)) ?? null;
         }
-        const reference = texte(l.reference);
-        const codeBarre = texte(l.code_barre);
+        const reference = nettoye(l.reference);
+        const codeBarre = nettoye(l.code_barre);
         const parReference = reference && existants.find((t) => t.reference === reference && (!e || t.ele_id === e.id));
         const parCodeBarre = codeBarre && existants.find((t) => t.code_barre === codeBarre && (!e || t.ele_id === e.id));
         let eleId = e?.id ?? parReference?.ele_id ?? parCodeBarre?.ele_id ?? null;
         if (eleId === null && codeBarre) eleId = this.elements.find((x) => x.code_barre === codeBarre && x.actif !== false)?.id ?? null;
-        if (eleId === null) throw new ErreurBibliotheque(422, 'ELEMENT', 'Élément introuvable (code, référence fournisseur ou code-barres)');
+        if (eleId === null) throw new ErreurBibliotheque(422, 'ELEMENT', texte('bibliotheque.fournisseur.element_import'));
         e ??= this.#element(eleId);
-        if (!['ARTICLE', 'OUVRAGE'].includes(e.type)) throw new ErreurBibliotheque(422, 'ELEMENT', `${e.code} : ni article ni ouvrage`);
+        if (!['ARTICLE', 'OUVRAGE'].includes(e.type)) throw new ErreurBibliotheque(422, 'ELEMENT', texte('bibliotheque.fournisseur.ni_article_ni_ouvrage', { code: e.code }));
         const tarif = parReference || parCodeBarre || existants.find((t) => t.ele_id === e.id) || null;
-        const unite = texte(l.unite) ?? tarif?.unite ?? e.unite_achat ?? e.unite_stock;
-        try { ratio(unite, entreeDepuisLigne(e)); } catch (x) { throw new ErreurBibliotheque(422, 'UNITE', `${unite} : ${x.message}`); }
-        if ((l.prix_public ?? null) === null && (l.prix ?? null) === null) throw new ErreurBibliotheque(422, 'PRIX', 'Prix public ou prix net obligatoire');
+        const unite = nettoye(l.unite) ?? tarif?.unite ?? e.unite_achat ?? e.unite_stock;
+        try { ratio(unite, entreeDepuisLigne(e)); } catch (x) { throw new ErreurBibliotheque(422, 'UNITE', texte('bibliotheque.fournisseur.unite_erreur', { unite, message: x.message })); }
+        if ((l.prix_public ?? null) === null && (l.prix ?? null) === null) throw new ErreurBibliotheque(422, 'PRIX', texte('bibliotheque.fournisseur.prix_obligatoire'));
         controlerTarif({ ...l, prix: l.prix ?? 0 });
-        if (l.debut && l.fin && l.fin < l.debut) throw new ErreurBibliotheque(422, 'DATES', 'Fin de validité avant le début');
+        if (l.debut && l.fin && l.fin < l.debut) throw new ErreurBibliotheque(422, 'DATES', texte('bibliotheque.fournisseur.dates'));
         const v = {
           ...(tarif ?? { ele_id: e.id, tiers_id: tiersId }), fournisseur: String(fournisseur).trim(), reference: reference ?? tarif?.reference ?? null,
-          code_barre: codeBarre ?? tarif?.code_barre ?? null, libelle: texte(l.libelle) ?? tarif?.libelle ?? null, unite,
+          code_barre: codeBarre ?? tarif?.code_barre ?? null, libelle: nettoye(l.libelle) ?? tarif?.libelle ?? null, unite,
           prix_public: l.prix_public ?? null, remise1: l.remise1 ?? null, remise2: l.remise2 ?? null, prix: S(prixNetTarif({ ...l, prix: l.prix ?? 0 })),
           delai: l.delai ?? tarif?.delai ?? null, debut: l.debut ?? tarif?.debut ?? null, fin: l.fin ?? tarif?.fin ?? null, principal: Boolean(l.principal) || Boolean(tarif?.principal),
         };
