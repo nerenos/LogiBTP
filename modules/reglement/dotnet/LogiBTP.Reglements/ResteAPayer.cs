@@ -50,4 +50,11 @@ public static class ResteAPayer
         }
         return res;
     }
+
+    /// <summary>
+    /// Montant imputable au plus (avoir ou trop-perçu sur une échéance à régler) : plus petit de |disponible| et du reste
+    /// de l'échéance ; 0 si l'un est nul ou si l'échéance n'est pas à régler.
+    /// </summary>
+    public static decimal MaximumImputation(decimal disponible, decimal reste) =>
+        reste <= 0 || disponible == 0 ? 0 : Math.Min(Math.Abs(disponible), reste);
 }

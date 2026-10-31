@@ -20,7 +20,8 @@
 - [ ] Frais annexes : redémarrer l'API (tables et colonnes de `db/167`, appliqué le 16/10/2026).
 - [ ] Comptabilité, décisions du 31/10/2026 : appliquer `modules/bibliotheque/db/066`, `modules/comptabilite/db/094d`,
   `db/247` (clés de ventilation converties en identifiants, `nat_compte_*` retirées, comptes de produit et de charge
-  des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied).
+  des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied) ; règlements (lot C) :
+  rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -94,17 +95,13 @@ global). Lots à venir :
   peut avoir une part cautionnée et une part retenue).
 - [ ] Révision de prix par index BT (formule, index provisoires puis définitifs) : à concevoir avant de coder.
 - [ ] Écran de transformation ligne à ligne (hors marché : lignes décochées laissées en reliquat, quantité modifiable).
-- [ ] Imputation d'un règlement ou d'un avoir sur une facture suivante : partie document (enregistrée en base, visible
-  sur le document associé dans les éditions et le reste à payer) ; écritures avec le module Comptabilité complet.
+- [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
+  éditions, reste à payer) : écritures avec le module Comptabilité complet.
 
 ### Marchés et règlements
 
-- [ ] Échéancier proposé par le calcul (bouton Rafraîchir) puis modifiable à la main : ajout, suppression,
-  ventilation, dates (route `PUT /documents/{id}/echeances` prête) ; date de libération des retenues ; avertissement si
-  la somme des échéances diffère du montant à payer.
-- [ ] Onglet Règlements de la page document.
-- [ ] Aperçu des déductions d'acompte avant validation (pas de mode « entre deux seuils » : l'avance se déduit au fil des
-  factures d'avancement réelles, décision du 31/10/2026).
+- [ ] Échéancier modifiable avant la validation (aujourd'hui : pièce validée seulement, l'échéancier n'existe qu'à la
+  validation) et contrôle d'une échéance ramenée sous son pointé (le module Document ignore les pointages) : à décider.
 - [ ] Relances.
 - [ ] Propositions sans décision explicite (retenues par défaut, conception `CONCEPTION-MARCHES-REGLEMENTS.md` § 11) à
   faire valider : modes d'acompte (11.1), déduction en mode chiffre d'affaires (11.2), postes HT sur commandes (11.3),

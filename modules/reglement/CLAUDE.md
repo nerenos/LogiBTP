@@ -7,15 +7,17 @@
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (decimal), `LogiBTP.Socle` / `LogiBTP.Socle.Web`, EF Core Npgsql. Jamais du cœur ni d'un autre module.
-- Utilisé par : cœur (`SpecialisationReglementBtp` : échéances `document_echeance` des pièces validées non annulées ; `db/175` : clé étrangère des pointages ; page `client/src/app/pages/reglements.js` ; colonnes réglé / reste de l'onglet Gestion du marché).
+- Utilisé par : cœur (`SpecialisationReglementBtp` : échéances `document_echeance` des pièces validées non annulées ; `db/175` : clé étrangère des pointages ; page `client/src/app/pages/reglements.js` ; onglet Règlements de la page document `client/src/app/documents/reglements-document.js` ; imputations des éditions `SourceDocumentEdition` ; colonnes réglé / reste de l'onglet Gestion du marché).
 
 ## Structure
-- `js/src/reste.js` : `etatEcheance`, `etatPiece`, `nonPointe`, `proposerPointage` ↔ `dotnet/LogiBTP.Reglements/ResteAPayer.cs` (`Echeance`, `Piece`, `NonPointe`, `Proposer`) ; jeu `tests/cas/01_reste.json`.
+- `js/src/reste.js` : `etatEcheance`, `etatPiece`, `nonPointe`, `proposerPointage`, `maximumImputation` ↔ `dotnet/LogiBTP.Reglements/ResteAPayer.cs` (`Echeance`, `Piece`, `NonPointe`, `Proposer`, `MaximumImputation`) ; jeu `tests/cas/01_reste.json`.
+- `js/src/codes.js` ↔ `dotnet/LogiBTP.Reglements/Codes.cs` : `MODE_REGLEMENT_SYSTEME` (IMPUTATION), `SOURCE_POINTAGE` (REGLEMENT, CAUTION, IMPUTATION) ; parité par `CodesTests`.
 - `dotnet/LogiBTP.Reglements.Web` : `Donnees.cs` (`Reglement`, `Caution`, `Pointage`, `ReglementDbContext`), `SpecialisationReglement.cs` (`EcheanceSource`, `FiltreEcheances`, `TiersReglement`, `EcheancesAsync`, `TiersAsync`, `Seuil`), `ServiceReglement.cs` (échéances avec reste, état des pièces, règlements, cautions, contrôles des pointages), `Extensions.cs` (`AddModuleReglement<T>`, `MapModuleReglement`).
 - `db/080_reglement_schema.sql` : `reglement`, `caution`, `pointage` (règlement ou caution → échéance ; sans clé étrangère vers l'application).
 
 ## Règles
 - Reste d'une échéance = montant (signé : négatif pour un avoir) − pointé ; réglée si |reste| ≤ seuil. Pièce : REGLEE, PARTIELLE ou A_REGLER. Règlement : non pointé = montant − pointages (trop-perçu) ; une facture et un avoir pointés par un même règlement se compensent.
+- Imputation (décision du 31/10/2026) : un avoir s'impute sur une facture du même tiers et du même sens par un règlement de mode IMPUTATION et de montant nul qui pointe l'avoir (négatif) et la facture (positif) ; le trop-perçu d'un règlement s'impute en ajoutant un pointage à ce règlement ; plafond : le plus petit des deux restes (`maximumImputation`) ; supprimer le règlement d'imputation l'annule ; écritures comptables avec le module Comptabilité complet.
 - Pointage proposé : montant réparti sur les échéances ouvertes de même signe, plus ancienne d'abord, sans date en dernier.
 - Contrôles à l'enregistrement : échéances connues, même tiers (et même sens pour un règlement), signe de l'échéance, échéance non dépassée (autres pointages compris), source non dépassée ; une caution ne pointe que des retenues de garantie (nature RETENUE).
 - Décisions (propositions retenues faute de réponse, à relire dans [CONCEPTION-MARCHES-REGLEMENTS.md](../../documentation/conception/CONCEPTION-MARCHES-REGLEMENTS.md), Q15 à Q18) : un règlement couvre plusieurs échéances ou pièces, et inversement ; le trop-perçu reste non pointé et s'utilise plus tard ; un avoir se pointe sur une facture (compensation) ; une caution couvrant la retenue de garantie est pointée sur les retenues (retenue « libérée par caution ») ; mainlevée à la réception + 1 an ; pointage proposé automatiquement par montant et date.
@@ -24,6 +26,7 @@
 
 ## Routes HTTP (préfixe `/api/reglements`)
 - `GET /tiers`, `GET /echeances?tiers=&sens=&piece=&objet=&ouvertes=`, `POST /etat` ({ pieces }).
+- `GET /pointages?piece=` (pointages des échéances d'une pièce avec leur origine et, pour une imputation, les pièces en contrepartie), `POST /imputations` ({ echeance_id, montant, avoir_echeance_id | reglement_id, date, commentaire }).
 - `GET ?tiers=&sens=`, `POST`, `PUT /{id}`, `DELETE /{id}` (règlements avec pointages).
 - `GET /cautions?tiers=&objet=&objet_id=`, `POST /cautions`, `PUT /cautions/{id}`, `DELETE /cautions/{id}`.
 

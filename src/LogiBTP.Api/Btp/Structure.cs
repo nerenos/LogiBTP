@@ -152,6 +152,10 @@ public static class Structure
         g.MapPost("/acomptes/{id:int}/emettre", async (int id, HttpContext http, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents,
             TransformationService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> transformations, CancellationToken ct) =>
             await Acomptes.Emettre(db, documents, transformations, id, Utilisateur.Depuis(http), ct));
+        // Aperçu des déductions d'acompte d'une facture d'avancement (onglet Règlements) : avant validation, celles que la
+        // validation posera ; validée, celles qui sont écrites.
+        g.MapGet("/documents/{id:long}/acomptes", (long id, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+            Acomptes.ApercuAsync(db, documents, id, ct));
         g.MapGet("/marches/{id:int}/postes", (int id, LogiBtpContext db, CancellationToken ct) => PostesMarche.Lire(db, id, ct));
         g.MapPut("/marches/{id:int}/postes", (int id, List<PosteMarche> postes, LogiBtpContext db, CancellationToken ct) => PostesMarche.Enregistrer(db, id, postes, ct));
         // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,

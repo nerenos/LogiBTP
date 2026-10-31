@@ -165,6 +165,25 @@ const BLOCS = [
                     champ('{{totaux.net}}', { format: 'monnaie', style: 'total', alignement: 'droite', largeur: '35mm' }),
                   ],
                 },
+                {
+                  // Avoirs imputés (module Règlements) et reste après imputation.
+                  type: 'pile', condition: 'Compte(imputations) > 0', enfants: [
+                    {
+                      type: 'repete', collection: 'imputations', contenu: {
+                        type: 'rangee', enfants: [
+                          champ('="Imputation : " & element.type & " " & element.piece', { largeur: '*', style: 'petit' }),
+                          champ('=Montant(-element.montant)', { largeur: '28mm', alignement: 'droite', style: 'montant' }),
+                        ],
+                      },
+                    },
+                    {
+                      type: 'rangee', enfants: [
+                        champ('Reste après imputation', { style: 'gras', largeur: '*' }),
+                        champ('{{totaux.reste_imputation}}', { format: 'monnaie', style: 'gras', alignement: 'droite', largeur: '35mm' }),
+                      ],
+                    },
+                  ],
+                },
               ],
             },
             {

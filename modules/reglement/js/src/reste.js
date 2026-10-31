@@ -8,7 +8,8 @@ import { Dz, S, ZERO } from '@logibtp/socle';
 // PARTIELLE (quelque chose est pointé), A_REGLER. Un règlement peut pointer plusieurs échéances (une facture et un avoir :
 // compensation) ; son reste non pointé (trop-perçu) = montant − somme des pointages. Proposition de pointage : le montant
 // disponible est réparti sur les échéances ouvertes de même signe, de la plus ancienne à la plus récente (sans date en
-// dernier), sans dépasser leur reste.
+// dernier), sans dépasser leur reste. Imputation sur une facture suivante (décision du 31/10/2026) : un avoir (reste
+// négatif) ou le trop-perçu d'un règlement s'impute sur une échéance à régler au plus du plus petit des deux restes.
 
 const egalAuSeuil = (reste, seuil) => reste.abs().lte(Dz(seuil));
 
@@ -51,4 +52,15 @@ export function proposerPointage(disponible, echeances) {
     reste = reste.minus(m);
   }
   return res;
+}
+
+/**
+ * Montant imputable au plus : disponible = reste d'un avoir (négatif) ou non pointé d'un règlement, reste = reste de
+ * l'échéance à régler (positif) ; 0 si l'un des deux est nul ou si l'échéance n'est pas à régler.
+ */
+export function maximumImputation(disponible, reste) {
+  const d = Dz(disponible).abs();
+  const r = Dz(reste);
+  if (!r.gt(ZERO) || d.isZero()) return S(ZERO);
+  return S(d.lt(r) ? d : r);
 }

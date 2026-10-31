@@ -54,4 +54,13 @@ public class ResteAPayerTests
             Assert.Equal(attendu, ResteAPayer.Proposer(Dec(c["disponible"]), echeances));
         }
     }
+
+    [Fact]
+    public void Imputations_identiques_au_js()
+    {
+        foreach (var c in Jeu()["imputations"]!.AsArray())
+        {
+            Assert.Equal(Dec(c!["attendu"]), ResteAPayer.MaximumImputation(Dec(c["disponible"]), Dec(c["reste"])));
+        }
+    }
 }

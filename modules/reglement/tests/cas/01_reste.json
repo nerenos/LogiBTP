@@ -1,5 +1,5 @@
 {
-  "description": "Reste à payer et pointage (reste.js ↔ ResteAPayer.cs) : échéance, pièce (statuts), non pointé d'un règlement, proposition de pointage (plus ancienne d'abord, sans date en dernier, même signe).",
+  "description": "Reste à payer et pointage (reste.js ↔ ResteAPayer.cs) : échéance, pièce (statuts), non pointé d'un règlement, proposition de pointage (plus ancienne d'abord, sans date en dernier, même signe), montant imputable (avoir ou trop-perçu sur une échéance à régler).",
   "echeances": [
     { "nom": "échéance réglée", "montant": "1200", "pointe": "1200", "seuil": "0", "attendu": { "reste": "0", "reglee": true } },
     { "nom": "échéance partielle", "montant": "1200", "pointe": "1000", "seuil": "0", "attendu": { "reste": "200", "reglee": false } },
@@ -29,5 +29,12 @@
     { "nom": "remboursement d'avoirs (montant négatif)", "disponible": "-250",
       "echeances": [ { "id": 8, "date": "2026-04-01", "reste": "-100" }, { "id": 9, "date": "2026-05-01", "reste": "-200" }, { "id": 10, "date": "2026-03-01", "reste": "900" } ],
       "attendu": [ { "id": 8, "montant": "-100" }, { "id": 9, "montant": "-150" } ] }
+  ],
+  "imputations": [
+    { "nom": "avoir plus petit que la facture", "disponible": "-120", "reste": "500", "attendu": "120" },
+    { "nom": "avoir plus grand que le reste de la facture", "disponible": "-800", "reste": "500", "attendu": "500" },
+    { "nom": "trop-perçu d'un règlement", "disponible": "75.5", "reste": "300", "attendu": "75.5" },
+    { "nom": "facture déjà réglée", "disponible": "-120", "reste": "0", "attendu": "0" },
+    { "nom": "avoir entièrement imputé", "disponible": "0", "reste": "300", "attendu": "0" }
   ]
 }

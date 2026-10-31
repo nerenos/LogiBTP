@@ -493,6 +493,27 @@ public static class SourceDocumentEdition
             ["echeances"] = c["echeances"]?.DeepClone() ?? new JsonArray(),
             ["textes"] = new JsonObject { ["intro"] = document["ent_texte_intro"]?.DeepClone(), ["fin"] = document["ent_texte_fin"]?.DeepClone() },
         };
+        // Imputations d'avoirs (module Règlements, facultatif ; décision du 31/10/2026) : sur une facture, les avoirs imputés ;
+        // sur un avoir, les factures sur lesquelles il est imputé ; montant pointé sur l'échéance de ce document.
+        resultat["imputations"] = new JsonArray();
+        if (await db.Database.SqlQueryRaw<bool>("SELECT to_regclass('pointage') IS NOT NULL AS \"Value\"").FirstAsync(ct))
+        {
+            var imputations = JsonNode.Parse(await db.Database.SqlQueryRaw<string>("""
+                SELECT coalesce(json_agg(json_build_object('piece', o.ent_numero, 'type', t.tyd_libelle, 'date', r.reg_date, 'montant', p.poi_montant)
+                         ORDER BY r.reg_date, p.poi_id), '[]')::text AS "Value"
+                FROM document_echeance e
+                JOIN pointage p ON p.poi_echeance_id = e.ech_id
+                JOIN reglement r ON r.reg_id = p.poi_reg_id AND r.reg_mode = 'IMPUTATION'
+                JOIN LATERAL (SELECT q.poi_echeance_id FROM pointage q JOIN document_echeance x ON x.ech_id = q.poi_echeance_id
+                              WHERE q.poi_reg_id = r.reg_id AND x.ech_ent_id <> e.ech_ent_id ORDER BY q.poi_id LIMIT 1) q ON true
+                JOIN document_echeance eo ON eo.ech_id = q.poi_echeance_id
+                JOIN document o ON o.ent_id = eo.ech_ent_id JOIN type_document t ON t.tyd_id = o.ent_tyd_id
+                WHERE e.ech_ent_id = @id
+                """, new NpgsqlParameter("id", d.EntId)).FirstAsync(ct))!.AsArray();
+            resultat["imputations"] = imputations;
+            var impute = imputations.Sum(x => x!["montant"]!.GetValue<decimal>());
+            ((JsonObject)resultat["totaux"]!)["reste_imputation"] = imputations.Count == 0 ? null : JsonValue.Create(d.EntNetAPayer - impute);
+        }
         // Ordre (module Exécution, E47) : étapes dans l'ordre (dates prévisionnelles, validation, contrôle, ressource).
         if (famille == FamillesDocument.Execution)
         {
@@ -805,7 +826,11 @@ public static class SourceDocumentEdition
             ("tva[].montant", "Montant de TVA", "montant"), ("tva[].mention", "Mention", "texte"),
             ("totaux.ht", "Total HT net", "montant"), ("totaux.tva", "Total TVA", "montant"), ("totaux.ttc", "Total TTC", "montant"), ("totaux.net", "Net à payer", "montant"),
             ("echeances", "Échéancier", "collection"), ("echeances[].rang", "Rang", "nombre"), ("echeances[].date", "Date (vide : à réception)", "date"),
-            ("echeances[].montant", "Montant", "montant"), ("echeances[].mode", "Mode de règlement", "texte"), ("echeances[].nature", "Nature (RETENUE : retenue de garantie)", "texte"));
+            ("echeances[].montant", "Montant", "montant"), ("echeances[].mode", "Mode de règlement", "texte"), ("echeances[].nature", "Nature (RETENUE : retenue de garantie)", "texte"),
+            ("imputations", "Imputations d'avoirs (module Règlements) : avoirs imputés sur une facture, factures d'un avoir", "collection"),
+            ("imputations[].type", "Type de la pièce en contrepartie", "texte"), ("imputations[].piece", "Numéro de la pièce en contrepartie", "texte"),
+            ("imputations[].date", "Date de l'imputation", "date"), ("imputations[].montant", "Montant imputé sur ce document (signe de son échéance)", "montant"),
+            ("totaux.reste_imputation", "Reste après imputation (net à payer − imputations ; vide sans imputation)", "montant"));
         G("Étapes d'un ordre (module Exécution)",
             ("etapes", "Étapes de l'ordre (dans l'ordre)", "collection"), ("etapes[].libelle", "État", "texte"), ("etapes[].code", "Code de l'état", "texte"),
             ("etapes[].nature", "Nature (TACHE, JALON, ATTENTE)", "texte"), ("etapes[].date_obligatoire", "Date obligatoire (colonne du tableau)", "booleen"),

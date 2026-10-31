@@ -27,6 +27,7 @@ declarerRaccourcis('document', {
     ongletPieces: { libelle: 'Onglet Pièces', defaut: 'Alt+4' },
     ongletTracabilite: { libelle: 'Onglet Traçabilité', defaut: 'Alt+5' },
     ongletSuivi: { libelle: 'Onglet Suivi (CRM)', defaut: 'Alt+6' },
+    ongletReglements: { libelle: 'Onglet Règlements', defaut: 'Alt+8' },
     rechercher: { libelle: 'Rechercher dans les lignes', defaut: 'Ctrl+F' },
     valider: { libelle: 'Valider le document', defaut: [] },
     transformer: { libelle: 'Transformer le document', defaut: [] },
@@ -65,4 +66,4 @@ declarerRaccourcis('pointage', {
 });
 
 /** Onglet de la page document désigné par une action. */
-export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi' };
+export const ONGLETS_DOCUMENT = { ongletEntete: 'entete', ongletLignes: 'lignes', ongletAnalyse: 'analyse', ongletPieces: 'pieces', ongletTracabilite: 'tracabilite', ongletSuivi: 'suivi', ongletReglements: 'reglements' };

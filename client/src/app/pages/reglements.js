@@ -3,7 +3,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { Dz, aujourdhui } from '@logibtp/socle';
 import { MODES_REGLEMENT } from '@logibtp/document';
-import { proposerPointage, nonPointe } from '@logibtp/reglement';
+import { proposerPointage, nonPointe, MODE_REGLEMENT_SYSTEME } from '@logibtp/reglement';
 import { api } from '../api.js';
 
 /** Date du jour (locale) au format ISO. */
@@ -116,7 +116,7 @@ export class PageReglements extends PageBase {
       </div>
       <h2>Règlements</h2>
       ${reglements.length ? `<table><thead><tr><th>Date</th><th>Mode</th><th>Référence</th><th class="nombre">Montant</th><th class="nombre">Non pointé</th><th>Pièces</th><th></th></tr></thead>
-        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
+        <tbody>${reglements.map((r) => `<tr><td>${echapper(r.date)}</td><td>${r.mode === MODE_REGLEMENT_SYSTEME.IMPUTATION ? 'Imputation d\'avoir' : echapper(this.modes.find(([c]) => c === r.mode)?.[1] ?? r.mode)}</td>
         <td>${echapper(r.reference ?? '')}</td><td class="nombre">${f(r.montant)}</td><td class="nombre">${f(r.non_pointe)}</td>
         <td>${r.pointages.map((p) => echapper(parId.get(p.echeance_id)?.piece ?? `échéance ${p.echeance_id}`)).join(', ')}</td>
         <td><button type="button" data-supprimer="${r.id}" title="Supprimer le règlement et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
