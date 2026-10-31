@@ -666,3 +666,26 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/execution/js` vérifiées par le
   test du client) ; affichage contrôlé dans le navigateur (API simulée : synthèse, vue d'un chantier, modèles et
   catalogue, atelier, panneau d'un ordre avec étapes, planning et budget, répartition).
+
+## 27. Réalisation du lot P3n : module Sous-traitance (31/10/2026)
+
+- **Périmètre** : le module (`modules/sous-traitance/js/src` : états des pièces et des demandes de paiement direct,
+  actions bloquées, portées, messages du paiement direct, de la retenue et de la ventilation) et ses écrans du cœur :
+  `client/src/app/sous-traitance/` (onglet Pièces, onglet Paiements, réception et retenue de garantie, assistant
+  Sous-traiter), `structure/marche-sous-traitance.js` (marché de sous-traitance proposé à la validation d'une commande),
+  pages `parametres-sous-traitance.js` (pièces exigées) et `consultation.js` (comparatif des offres d'un lot de
+  consultation, commun aux demandes de prix), titres des routes.
+- **Textes** : `sous_traitance.*` du module (`pieces.etats`, `pieces.actions`, `pieces.portees`, `paiement_direct.etats`,
+  `paiement_direct.erreurs`, `retenue.erreurs`, `ventilation.erreurs`) ; `sous_traitance_btp.*` du cœur (`routes`,
+  `paiements`, `retenue`, `pieces`, `assistant`, `garanties`, `marche`, `parametres` — dont `publics`, `garanties`,
+  `bloque` : en-têtes des actions bloquées par code, plus déduits du libellé —, `comparatif`) ; compteurs par `pluriel`
+  (pièces à renouveler, offres, lignes rapprochées, autres offres, offres non retenues). Le motif « Ajoutée sur la
+  fiche » d'une pièce ajoutée est lu dans le dictionnaire au moment de l'écriture.
+- **Icônes** : `sous_traitance_piece_*`, `sous_traitance_pd_*` du module ; `sous_traitance_btp_*` du cœur (délai,
+  déclarer, accepter, transmettre, payer, libération, conformité, courriel, document, dépôt, dispense, rétablir,
+  sous-traiter, comparatif, retenir, monter) ; communes du socle (`ajouter`, `retirer`, `supprimer`).
+- **Couleurs** : `--sous-traitance-conforme`, `--sous-traitance-conforme-fond`, `--sous-traitance-non-conforme`,
+  `--sous-traitance-non-conforme-fond`, `--sous-traitance-a-echeance` (`styles.css`).
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/sous-traitance/js/src` vérifiées
+  par le test du client) ; affichage contrôlé dans le navigateur (API simulée : paiements et retenue, pièces, pièces
+  exigées, comparatif, assistant Sous-traiter).

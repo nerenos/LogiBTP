@@ -901,10 +901,10 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 
 /* Sous-traitance, lot 2 : pièces exigées (onglet Pièces du marché et du sous-traitant). */
 .pastille-conformite { padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-.pastille-conformite.conforme { background: rgba(22, 163, 74, 0.15); color: #15803d; }
-.pastille-conformite.non-conforme { background: rgba(220, 38, 38, 0.15); color: #b42318; }
-.pieces-st tr.etat-manquante td:nth-child(3), .pieces-st tr.etat-expiree td:nth-child(3) { color: #b42318; font-weight: 600; }
-.pieces-st tr.etat-a_echeance td:nth-child(3) { color: #b45309; }
+.pastille-conformite.conforme { background: var(--sous-traitance-conforme-fond); color: var(--sous-traitance-conforme); }
+.pastille-conformite.non-conforme { background: var(--sous-traitance-non-conforme-fond); color: var(--sous-traitance-non-conforme); }
+.pieces-st tr.etat-manquante td:nth-child(3), .pieces-st tr.etat-expiree td:nth-child(3) { color: var(--sous-traitance-non-conforme); font-weight: 600; }
+.pieces-st tr.etat-a_echeance td:nth-child(3) { color: var(--sous-traitance-a-echeance); }
 .pieces-st .bouton-fichier { cursor: pointer; padding: 0 4px; }
 
 /* Stock : état du stock, fiche de stock de l'article, inventaires (bordereaux imprimables). */

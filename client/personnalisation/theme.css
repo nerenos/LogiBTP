@@ -86,3 +86,12 @@
   --execution-alerte: #b42318;
   --execution-etape-defaut: #94a3b8;
 }
+
+/* Sous-traitance (lot P3n) : pastille de conformité, pièces manquantes, expirées ou à échéance. */
+:root {
+  --sous-traitance-conforme: #15803d;
+  --sous-traitance-conforme-fond: rgb(22 163 74 / 0.15);
+  --sous-traitance-non-conforme: #b42318;
+  --sous-traitance-non-conforme-fond: rgb(220 38 38 / 0.15);
+  --sous-traitance-a-echeance: #b45309;
+}

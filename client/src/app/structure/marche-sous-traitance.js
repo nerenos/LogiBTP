@@ -1,3 +1,4 @@
+import { texte, texteHtml } from '@logibtp/socle/dictionnaire';
 import { aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, creerCombo, alerter, ouvrirModale } from '@logibtp/socle/ui';
 import { TYPE_FICHE } from '../codes.js';
@@ -8,9 +9,10 @@ import { TYPE_FICHE } from '../codes.js';
 // (facultatif), nature reprise du marché de vente (publique ou privée), garantie selon la nature, montant agréé.
 
 const ouverts = (liste) => liste.filter((x) => !['SOLDE', 'RESILIE'].includes(x.statut));
+const garantie = (valeur, cle = valeur) => ({ valeur, libelle: texte(`sous_traitance_btp.garanties.${cle}`) });
 const GARANTIES = {
-  U: [{ valeur: 'PAIEMENT_DIRECT', libelle: 'Paiement direct' }, { valeur: 'AUCUNE', libelle: 'Aucune (sous le seuil)' }],
-  P: [{ valeur: 'CAUTION', libelle: 'Caution' }, { valeur: 'DELEGATION', libelle: 'Délégation de paiement' }, { valeur: 'AUCUNE', libelle: 'Aucune' }],
+  U: [garantie('PAIEMENT_DIRECT'), garantie('AUCUNE', 'AUCUNE_SEUIL')],
+  P: [garantie('CAUTION'), garantie('DELEGATION'), garantie('AUCUNE')],
 };
 
 /**
@@ -21,7 +23,7 @@ const GARANTIES = {
 export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers = '', creerMarche, codePrevisionnel = async () => '' }) {
   const chantier = (refs.chantiers ?? []).find((c) => c.id === doc.ent_chantier_id);
   if (!chantier || !doc.ent_tiers_id) {
-    await alerter('Commande de sous-traitance : choisissez le sous-traitant (intervenant) et le chantier (rattachement) avant de la valider.');
+    await alerter(texte('sous_traitance_btp.marche.incomplete'));
     return Promise.resolve(null);
   }
   const marches = refs.marches ?? [];
@@ -35,24 +37,23 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure';
   dlg.innerHTML = `<form method="dialog">
-    <h3>Marché de sous-traitance de la commande ${echapper(doc.ent_numero ?? '')}</h3>
-    <p class="aide">${echapper(nomTiers)} sur le chantier ${echapper(`${chantier.code} – ${chantier.libelle}`)}. Une commande de sous-traitance se valide dans un
-      marché : un marché par axe de facturation du sous-traitant (un seul s'il facture tout ensemble).${totalHt !== null ? ` Montant de la commande : ${formatNombre(Number(totalHt), 2)} € HT.` : ''}</p>
-    <fieldset><legend>Marché</legend>
-      <label><input type="radio" name="choix" value="avenant" ${axes.length ? 'checked' : 'disabled'}> Avenant du marché ${axes.length ? '<span data-axe></span>' : '(aucun marché de ce sous-traitant sur le chantier)'}</label>
-      <label><input type="radio" name="choix" value="creer" ${axes.length ? '' : 'checked'}> Nouveau marché (nouvel axe de facturation)</label>
+    <h3>${texteHtml('sous_traitance_btp.marche.titre', { numero: doc.ent_numero ?? '' })}</h3>
+    <p class="aide">${texteHtml('sous_traitance_btp.marche.aide', { tiers: nomTiers, chantier: `${chantier.code} – ${chantier.libelle}` })}${totalHt !== null ? ` ${texteHtml('sous_traitance_btp.marche.montant', { montant: formatNombre(Number(totalHt), 2) })}` : ''}</p>
+    <fieldset><legend>${texteHtml('sous_traitance_btp.marche.marche')}</legend>
+      <label><input type="radio" name="choix" value="avenant" ${axes.length ? 'checked' : 'disabled'}> ${texteHtml('sous_traitance_btp.marche.avenant')} ${axes.length ? '<span data-axe></span>' : texteHtml('sous_traitance_btp.marche.aucun')}</label>
+      <label><input type="radio" name="choix" value="creer" ${axes.length ? '' : 'checked'}> ${texteHtml('sous_traitance_btp.marche.nouveau')}</label>
       <div data-creer class="grille-champs">
-        <label>Code <input data-code class="code-previsionnel" title="Vide : code calculé à la création"></label>
-        <label class="large">Libellé <input data-libelle required value="${echapper(doc.ent_objet ?? '')}"></label>
-        <label class="large">Marché de vente lié <span data-vente></span></label>
-        <label>Nature <input data-nature readonly></label>
-        <label>Garantie de paiement <span data-garantie></span></label>
-        <label>Montant agréé (DC4) <input data-agree inputmode="decimal" size="12"></label>
-        <label><input type="checkbox" data-auto checked> Autoliquidation de la TVA</label>
+        <label>${texteHtml('commun.code')} <input data-code class="code-previsionnel" title="${texteHtml('sous_traitance_btp.marche.code_titre')}"></label>
+        <label class="large">${texteHtml('commun.libelle')} <input data-libelle required value="${echapper(doc.ent_objet ?? '')}"></label>
+        <label class="large">${texteHtml('sous_traitance_btp.marche.vente')} <span data-vente></span></label>
+        <label>${texteHtml('sous_traitance_btp.marche.nature')} <input data-nature readonly></label>
+        <label>${texteHtml('sous_traitance_btp.marche.garantie')} <span data-garantie></span></label>
+        <label>${texteHtml('sous_traitance_btp.marche.agree')} <input data-agree inputmode="decimal" size="12"></label>
+        <label><input type="checkbox" data-auto checked> ${texteHtml('sous_traitance_btp.marche.autoliquidation')}</label>
       </div>
     </fieldset>
     <p class="connexion-erreur" data-erreur hidden></p>
-    <p class="ligne"><button value="ok" class="principal">Valider la commande</button> <button value="annuler" formnovalidate>Annuler</button></p>
+    <p class="ligne"><button value="ok" class="principal">${texteHtml('sous_traitance_btp.marche.valider')}</button> <button value="annuler" formnovalidate>${texteHtml('commun.annuler')}</button></p>
   </form>`;
   const $ = (s) => dlg.querySelector(s);
   codePrevisionnel(TYPE_FICHE.MARCHE, { cha_id: chantier.id, sens: 'ST' }).then((c) => { if (c) $('[data-code]').placeholder = c; });
@@ -60,7 +61,7 @@ export async function proposerMarcheSousTraitance({ refs, doc, totalHt, nomTiers
   $('[data-vente]').append(comboVente);
   const majNature = () => {
     const n = nature();
-    $('[data-nature]').value = n === 'U' ? 'Marché public' : 'Marché privé';
+    $('[data-nature]').value = n === 'U' ? texte('sous_traitance_btp.marche.public') : texte('sous_traitance_btp.marche.prive');
     const g = creerCombo({ vide: false, valeur: GARANTIES[n][0].valeur, options: GARANTIES[n] });
     if (comboGarantie) comboGarantie.replaceWith(g); else $('[data-garantie]').append(g);
     comboGarantie = g;

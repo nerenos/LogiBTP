@@ -22,5 +22,8 @@
 - `GET /marches/{id}/paiements` ; `POST /factures/{id}/paiement` { recue_le, facture_client_id, montant } ; `POST /paiements/{id}/accepter` { montant, motif, le } ; `POST /paiements/{id}/transmettre` { le, facture_client_id } ; `POST /paiements/{id}/payer` { le } ; `DELETE /paiements/{id}`.
 - `GET|PUT /pieces-types` ; `GET /marches/{id}/conformite` ; `GET /tiers/{id}/conformite` ; `PUT /elements/{marche|personne}/{id}/pieces/{code}` { mode, motif } ; `PUT /pieces/{dge}/validite` { valide_au }.
 
+## Textes et icônes (module Personnalisation, lot P3n)
+- Textes `sous_traitance.*` du `fr.json` du module (`pieces` : états, actions bloquées, portées ; `paiement_direct` : états, erreurs ; `retenue`, `ventilation` : erreurs), icônes `sous_traitance_piece_*` et `sous_traitance_pd_*` ; `ETATS_PIECE` et `ETATS_PAIEMENT_DIRECT` gardent leur forme { libelle, icone } par accesseurs, les autres tables par `textesParCode` ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `sous_traitance_btp.*`, icônes `sous_traitance_btp_*`, couleurs `--sous-traitance-*` de `client/personnalisation/theme.css`.
+
 ## Tests
 - `npm test --workspace modules/sous-traitance/js` ; `dotnet test modules/sous-traitance/dotnet/LogiBTP.SousTraitance.Tests` (même jeu).
