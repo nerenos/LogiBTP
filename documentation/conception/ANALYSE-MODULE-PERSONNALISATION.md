@@ -400,3 +400,30 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/document/js`
   vérifiées par le test du client ; affichage contrôlé dans le navigateur (entête, totaux, détail, plan, grille et pied
   du devis de démonstration).
+
+## 16. Réalisation du lot P3c : page document du cœur (31/10/2026)
+
+- **Périmètre** : `client/src/app/pages/document.js` (barre, onglets, menu des actions, panneaux ancrables, verrou de
+  modification, saisie hors ligne, cycle de vie, numéro, annulation par avoir, bloc d'avancement, lot de consultation,
+  aide-mémoire des raccourcis), `client/src/app/panneaux-btp.js` (`PanneauxBtp` : entête, rattachement, coordonnées,
+  adresse des travaux ou de livraison, stock, accusé de réception, facture du sous-traitant, détail de la ligne, frais
+  annexes) et `client/src/app/editeur-btp.js` (`EditeurDevisBtp` : colonnes BTP, données proposées aux métrés,
+  messages). Les fichiers qu'ils appellent (structure, adresses, sous-traitance, analyse, contrôles de saisie,
+  hors ligne…) suivront avec leur zone du cœur.
+- **Textes** : `document_btp.*` du `fr.json` du cœur : `page` (dont `onglets`, `actions`, `dock`, `verrou`, `attente`,
+  `cycle`, `numero`, `annulation`, `avancement`, `lot`, `raccourcis_notes`), `panneaux` (dont `roles`, `modes_calcul`,
+  `adresse_actions`, `sections`, `niveaux`, `detail`, `calcul`, `actions`, `frais`), `editeur`, `colonnes` (colonnes
+  ajoutées par le cœur), `donnees` (données des métrés), `stock_lieux.<type>.<colonne>`, `stock_date_prevue.<type>` et
+  `etapes` (étapes d'annulation). `LIEUX_STOCK` garde sa forme (libellés relus à chaque accès). Le gabarit de la page
+  devient une fonction (`gabarit()`), les entêtes des panneaux ancrables un seul modèle (`enteteDock`).
+- **Icônes** : `document_btp_*` du cœur (page, métré, PV imposé, rechargement, dépôt, comptoir, lieux de stock, pièce,
+  ventilation, envoi, consultation, sous-traitance, ancrages, attente, fusion…), `telephone` ajoutée au socle ; reprises
+  du socle et du module Document (`verrou`, `retirer`, `ajouter`, `avertissement`, `erreur`, `enregistrer`,
+  `document_reduire`, `document_textes`, `document_modifier`, `document_puce`…).
+- **Gardé** : le script de départ d'un métré garde le mot du langage `Renvoyer` (seul le commentaire est un texte) ;
+  les libellés des origines d'adresse (`structure/adresses.js`), des états d'attente (`hors-ligne/attente.js`) et des
+  contrôles de saisie (`calcul/controles-btp.js`) restent dans leurs fichiers jusqu'à leur lot.
+- **Contrôles** : `npm test` complet ; clés statiques vérifiées par le test du client, clés composées (lieux de stock,
+  rôles, modes de calcul, actions d'adresse, voisins, étapes de frais, notes de raccourcis) relues contre le
+  dictionnaire ; affichage contrôlé dans le navigateur (barre, onglets, titres et panneaux ancrables de la page, entête,
+  totaux, détail, grille et pied du devis de démonstration).

@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
@@ -40,48 +41,62 @@ import { voisins } from '../suite-liste.js';
 // /document/nouveau?type=<code>, /document/import?jeton=<jeton> (devis importé à vérifier avant sa création, ouvert
 // par la page d'import).
 
-const GABARIT = `
+/** Barre et zones de la page (textes et icônes lus dans le dictionnaire). */
+const enteteDock = (titre, fermer = '') => `
+        <header class="dock-entete">
+          <span class="dock-titre">${titre}</span>
+          <div class="dock-boutons">
+            <button data-dock="gauche" title="${texteHtml('document_btp.page.dock.gauche')}">${iconeHtml('document_btp_ancrer_gauche')}</button>
+            <button data-dock="bas" title="${texteHtml('document_btp.page.dock.bas')}">${iconeHtml('document_btp_ancrer_bas')}</button>
+            <button data-dock="droite" title="${texteHtml('document_btp.page.dock.droite')}">${iconeHtml('document_btp_ancrer_droite')}</button>
+            <button data-action="reduire" title="${texteHtml('document_btp.page.dock.reduire')}">${iconeHtml('document_reduire')}</button>
+            ${fermer ? `<button data-action="fermer" title="${fermer}">${iconeHtml('retirer')}</button>` : ''}
+          </div>
+        </header>`;
+const separateur = (cote) => `<div class="separateur" data-sep="${cote}" title="${texteHtml('document_btp.page.separateur')}"></div>`;
+
+const gabarit = () => `
   <div class="document-barre">
     <nav class="onglets" role="tablist">
-      <button role="tab" data-onglet-vue="entete" title="Alt+1">Entête</button>
-      <button role="tab" data-onglet-vue="lignes" title="Alt+2">Lignes</button>
-      <button role="tab" data-onglet-vue="analyse" title="Alt+3 : coefficients par nature ou par tranche">Analyse</button>
-      <button role="tab" data-onglet-vue="pieces" title="Alt+4 : documents de la GED liés au document, pièces jointes à envoyer">Pièces</button>
-      <button role="tab" data-onglet-vue="tracabilite" title="Alt+5 : origine (import), documents liés, historique des versions">Traçabilité</button>
-      <button role="tab" data-onglet-vue="suivi" title="Alt+6 : notes, tâches et courriels du document (module CRM)" hidden>Suivi</button>
+      <button role="tab" data-onglet-vue="entete" title="${texteHtml('document_btp.page.onglets.entete_aide')}">${texteHtml('document_btp.page.onglets.entete')}</button>
+      <button role="tab" data-onglet-vue="lignes" title="${texteHtml('document_btp.page.onglets.lignes_aide')}">${texteHtml('document_btp.page.onglets.lignes')}</button>
+      <button role="tab" data-onglet-vue="analyse" title="${texteHtml('document_btp.page.onglets.analyse_aide')}">${texteHtml('document_btp.page.onglets.analyse')}</button>
+      <button role="tab" data-onglet-vue="pieces" title="${texteHtml('document_btp.page.onglets.pieces_aide')}">${texteHtml('document_btp.page.onglets.pieces')}</button>
+      <button role="tab" data-onglet-vue="tracabilite" title="${texteHtml('document_btp.page.onglets.tracabilite_aide')}">${texteHtml('document_btp.page.onglets.tracabilite')}</button>
+      <button role="tab" data-onglet-vue="suivi" title="${texteHtml('document_btp.page.onglets.suivi_aide')}" hidden>${texteHtml('document_btp.page.onglets.suivi')}</button>
     </nav>
     <div class="groupe">
-      <button data-action="annuler" title="Annuler (Ctrl+Z)">↶</button>
-      <button data-action="retablir" title="Rétablir (Ctrl+Y)">↷</button>
-      <button data-action="bibliotheque" title="Bibliothèque dans une autre fenêtre (pour insérer un élément : F3 dans la grille, son code dans la colonne Code, ou glisser-déposer)">📚 Bib</button>
-      <button data-action="precedent" hidden>◀</button>
-      <button data-action="suivant" hidden>▶</button>
+      <button data-action="annuler" title="${texteHtml('document_btp.page.annuler')}">${iconeHtml('document_btp_annuler')}</button>
+      <button data-action="retablir" title="${texteHtml('document_btp.page.retablir')}">${iconeHtml('document_btp_retablir')}</button>
+      <button data-action="bibliotheque" title="${texteHtml('document_btp.page.bibliotheque_aide')}">${iconeHtml('document_textes')} ${texteHtml('document_btp.page.bibliotheque')}</button>
+      <button data-action="precedent" hidden>${iconeHtml('precedent')}</button>
+      <button data-action="suivant" hidden>${iconeHtml('suivant')}</button>
     </div>
     <span class="groupe" data-vues></span>
-    <span class="groupe"><button data-basculer-dock="plan" title="Afficher ou masquer le plan du document (tranches)">☰ Plan</button>
-      <button data-basculer-dock="notifications" class="compteur-notifications" title="Notifications : erreurs et avertissements du document (calcul, saisie, validation, métrés), sans blocage de l'enregistrement (Alt+7 ; F8 / Maj+F8 : suivante / précédente)">⚠ 0</button>
-      <button data-action="rechercher" title="Rechercher dans les lignes sans filtrer (Ctrl+F)">🔍</button></span>
+    <span class="groupe"><button data-basculer-dock="plan" title="${texteHtml('document_btp.page.plan_aide')}">${iconeHtml('document_btp_plan')} ${texteHtml('document_btp.page.plan')}</button>
+      <button data-basculer-dock="notifications" class="compteur-notifications" title="${texteHtml('document_btp.page.notifications_aide')}">${iconeHtml('avertissement')} 0</button>
+      <button data-action="rechercher" title="${texteHtml('document_btp.page.rechercher')}">${iconeHtml('rechercher')}</button></span>
     <!-- Calé à droite : Enregistrer (clic) et ses suites dans le menu ▾, puis Aperçu, Envoyer, Fermer en icônes. -->
     <div class="groupe barre-droite">
       <span class="bouton-menu bouton-menu-superchamps">
-        <button data-action="enregistrer" class="principal" title="Enregistrer (Ctrl+S)">Enregistrer</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="Valider, transformer et autres actions du document" aria-label="Autres actions du document" aria-haspopup="menu">▾</button>
+        <button data-action="enregistrer" class="principal" title="${texteHtml('document_btp.page.enregistrer_aide')}">${texteHtml('document_btp.page.enregistrer')}</button><button type="button" class="principal bouton-menu-fleche" data-ouvrir-actions title="${texteHtml('document_btp.page.actions_aide')}" aria-label="${texteHtml('document_btp.page.actions_libelle')}" aria-haspopup="menu">${iconeHtml('replier')}</button>
         <div class="menu-deroulant-contenu menu-actions-document" role="menu" data-menu-actions hidden>
-        <button role="menuitem" class="mo-ligne" data-action="valider" title="Valider et bloquer le document">Valider</button>
-        <button role="menuitem" class="mo-ligne" data-action="envoyer" title="Envoyer le document approuvé (validation de l'entreprise)" hidden>Envoyer</button>
-        <button role="menuitem" class="mo-ligne" data-action="valider-tiers" title="Document accepté par le client ou le fournisseur (devis accepté, situation visée, facture acceptée…)" hidden>Validé par le tiers</button>
-        <button role="menuitem" class="mo-ligne" data-action="rejeter" title="Document rejeté par le tiers ou la plateforme : le motif est noté, la pièce s'annule ensuite par un avoir" hidden>Rejeté…</button>
-        <button role="menuitem" class="mo-ligne" data-action="numero" title="Changer le numéro du document (brouillon ; un document validé se dévalide d'abord) : tous les indices sont renommés, le compteur repart du premier numéro libre" hidden>N°…</button>
-        <button role="menuitem" class="mo-ligne" data-action="devalider" title="Dévalider : l'indice suivant devient la référence, en brouillon ; cette version est remplacée (droit de haut niveau, motif tracé)" hidden>Dévalider…</button>
-        <button role="menuitem" class="mo-ligne" data-action="transformer" title="Transformer le reliquat en un autre document">Transformer…</button>
-        <button role="menuitem" class="mo-ligne" data-action="annuler-avoir" title="Annuler cette pièce par un avoir (dans un marché : aussi les pièces d'avancement suivantes)" hidden>Annuler par avoir…</button>
-        <button role="menuitem" class="mo-ligne" data-action="consultation" title="Lot de consultation : la même demande pour un autre fournisseur (copie sans tiers) ; documents du lot" hidden>📨 Lot de consultation</button>
-        <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="Sous-traiter les lignes sélectionnées (ou tout) : appel d'offres à un ou plusieurs sous-traitants, ou commande de sous-traitance" hidden>🤝 Sous-traiter</button>
-        <button role="menuitem" class="mo-ligne" data-action="sources" title="Ajouter des documents sources : BL et commandes en attente, avenants du marché (une section par document)" hidden>＋ Documents</button>
+        <button role="menuitem" class="mo-ligne" data-action="valider" title="${texteHtml('document_btp.page.actions.valider_aide')}">${texteHtml('document_btp.page.actions.valider')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="envoyer" title="${texteHtml('document_btp.page.actions.envoyer_aide')}" hidden>${texteHtml('document_btp.page.actions.envoyer')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="valider-tiers" title="${texteHtml('document_btp.page.actions.valider_tiers_aide')}" hidden>${texteHtml('document_btp.page.actions.valider_tiers')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="rejeter" title="${texteHtml('document_btp.page.actions.rejeter_aide')}" hidden>${texteHtml('document_btp.page.actions.rejeter')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="numero" title="${texteHtml('document_btp.page.actions.numero_aide')}" hidden>${texteHtml('document_btp.page.actions.numero')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="devalider" title="${texteHtml('document_btp.page.actions.devalider_aide')}" hidden>${texteHtml('document_btp.page.actions.devalider')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="transformer" title="${texteHtml('document_btp.page.actions.transformer_aide')}">${texteHtml('document_btp.page.actions.transformer')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="annuler-avoir" title="${texteHtml('document_btp.page.actions.annuler_avoir_aide')}" hidden>${texteHtml('document_btp.page.actions.annuler_avoir')}</button>
+        <button role="menuitem" class="mo-ligne" data-action="consultation" title="${texteHtml('document_btp.page.actions.consultation_aide')}" hidden>${texteHtml('document_btp.page.actions.consultation', { icone: icone('document_btp_consultation') })}</button>
+        <button role="menuitem" class="mo-ligne" data-action="sous-traiter" title="${texteHtml('document_btp.page.actions.sous_traiter_aide')}" hidden>${texteHtml('document_btp.page.actions.sous_traiter', { icone: icone('document_btp_sous_traiter') })}</button>
+        <button role="menuitem" class="mo-ligne" data-action="sources" title="${texteHtml('document_btp.page.actions.sources_aide')}" hidden>${texteHtml('document_btp.page.actions.sources', { icone: icone('ajouter') })}</button>
         </div>
       </span>
-      <button data-action="apercu" class="bouton-icone" title="Aperçu et impression (modèle d'édition du type, présentation des lignes) dans une autre fenêtre (Ctrl+P)" aria-label="Aperçu et impression">🖨</button>
-      <button data-action="courriel" class="bouton-icone" title="Envoyer le document par courriel (pièces marquées 📧 « à envoyer » dans l'onglet Pièces) dans une autre fenêtre" aria-label="Envoyer par courriel">📧</button>
-      <button data-action="fermer-page" class="bouton-icone" title="Fermer le document (fenêtre séparée : la fenêtre se ferme)" aria-label="Fermer le document">✕</button>
+      <button data-action="apercu" class="bouton-icone" title="${texteHtml('document_btp.page.apercu_aide')}" aria-label="${texteHtml('document_btp.page.apercu')}">${iconeHtml('document_btp_apercu')}</button>
+      <button data-action="courriel" class="bouton-icone" title="${texteHtml('document_btp.page.courriel_aide', { icone: icone('document_btp_envoyer') })}" aria-label="${texteHtml('document_btp.page.courriel')}">${iconeHtml('document_btp_envoyer')}</button>
+      <button data-action="fermer-page" class="bouton-icone" title="${texteHtml('document_btp.page.fermer_aide')}" aria-label="${texteHtml('document_btp.page.fermer')}">${iconeHtml('retirer')}</button>
     </div>
   </div>
   <div class="document-verrou" hidden></div>
@@ -98,7 +113,7 @@ const GABARIT = `
     <section id="vue-suivi" class="vue vue-suivi" role="tabpanel"></section>
     <section id="vue-lignes" class="vue vue-lignes" role="tabpanel">
       <div class="zone-dock" data-zone="gauche"></div>
-      <div class="separateur" data-sep="gauche" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      ${separateur('gauche')}
       <div class="zone-lignes">
         <section id="ecarts" class="panneau ecarts" hidden></section>
         <div class="barre-filtre" hidden></div>
@@ -106,52 +121,23 @@ const GABARIT = `
         <div id="grille"></div>
         <footer class="pied-lignes">
           <div id="totaux" class="totaux-compacts"></div>
-          <span class="aide aide-raccourcis" data-aide-raccourcis role="button" tabindex="0" title="Cliquer : liste de tous les raccourcis · Entrée, F2 ou double-clic : saisir · Échap : mode ligne · Ctrl+Entrée : insérer après · Ctrl+Maj+Entrée : avant · Alt+Entrée : composante · Ctrl+→ / Ctrl+← (ou Tab / Maj+Tab) : niveau · Ctrl+↑↓ (ou Alt+↑↓) : ordre · Ctrl+D : dupliquer · Suppr · Ctrl+X/C/V · F4 : métré · + / − : déplier / replier · glisser par ⋮⋮">Raccourcis ⓘ</span>
+          <span class="aide aide-raccourcis" data-aide-raccourcis role="button" tabindex="0" title="${texteHtml('document_btp.page.raccourcis_aide')}">${texteHtml('document_btp.page.raccourcis')} ${iconeHtml('document_btp_info')}</span>
         </footer>
       </div>
-      <div class="separateur" data-sep="droite" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      ${separateur('droite')}
       <div class="zone-dock" data-zone="droite"></div>
-      <div class="separateur" data-sep="bas" title="Glisser pour redimensionner · double-clic pour réduire"></div>
+      ${separateur('bas')}
       <div class="zone-dock" data-zone="bas"></div>
-      <aside class="dock" data-dock-id="plan">
-        <header class="dock-entete">
-          <span class="dock-titre">Plan du document</span>
-          <div class="dock-boutons">
-            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
-            <button data-dock="bas" title="Ancrer en bas">⬓</button>
-            <button data-dock="droite" title="Ancrer à droite">◨</button>
-            <button data-action="reduire" title="Réduire">–</button>
-            <button data-action="fermer" title="Fermer le plan (bouton Plan de la barre pour le rouvrir)">✕</button>
-          </div>
-        </header>
+      <aside class="dock" data-dock-id="plan">${enteteDock(texteHtml('document_btp.page.dock.plan'), texteHtml('document_btp.page.dock.plan_fermer'))}
         <div class="dock-contenu"><section id="plan"></section></div>
       </aside>
-      <aside class="dock" data-dock-id="detail">
-        <header class="dock-entete">
-          <span class="dock-titre">Détail de la ligne</span>
-          <div class="dock-boutons">
-            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
-            <button data-dock="bas" title="Ancrer en bas">⬓</button>
-            <button data-dock="droite" title="Ancrer à droite">◨</button>
-            <button data-action="reduire" title="Réduire">–</button>
-          </div>
-        </header>
+      <aside class="dock" data-dock-id="detail">${enteteDock(texteHtml('document_btp.page.dock.detail'))}
         <div class="dock-contenu">
           <section id="detail" class="detail"></section>
           <section id="controles" class="controles" hidden></section>
         </div>
       </aside>
-      <aside class="dock" data-dock-id="notifications">
-        <header class="dock-entete">
-          <span class="dock-titre">Notifications</span>
-          <div class="dock-boutons">
-            <button data-dock="gauche" title="Ancrer à gauche">◧</button>
-            <button data-dock="bas" title="Ancrer en bas">⬓</button>
-            <button data-dock="droite" title="Ancrer à droite">◨</button>
-            <button data-action="reduire" title="Réduire">–</button>
-            <button data-action="fermer" title="Fermer (bouton ⚠ de la barre ou Alt+7 pour le rouvrir)">✕</button>
-          </div>
-        </header>
+      <aside class="dock" data-dock-id="notifications">${enteteDock(texteHtml('document_btp.page.dock.notifications'), texteHtml('document_btp.page.dock.notifications_fermer', { icone: icone('avertissement') }))}
         <div class="dock-contenu"><section id="notifications"></section></div>
       </aside>
     </section>
@@ -180,13 +166,13 @@ const versSaisie = (d) => ({
 });
 
 export class PageDocument extends PageBase {
-  icone = '📝';
+  icone = icone('document_btp_page');
 
   $(s) { return this.conteneur.querySelector(s); }
 
   async ouvrir() {
     const app = this.app;
-    this.conteneur.innerHTML = GABARIT;
+    this.conteneur.innerHTML = gabarit();
     this.conteneur.classList.add('page-document');
     this.disposition = new Disposition({
       racine: this.conteneur,
@@ -205,22 +191,22 @@ export class PageDocument extends PageBase {
     const actions = {
       enregistrer: () => this.enregistrer(), valider: () => this.valider(), transformer: () => this.transformer(),
       precedent: () => this.precedent(), suivant: () => this.suivant(),
-      envoyer: () => this.etapeCycle((id) => api.envoyer(id), 'Document envoyé'),
-      'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), 'Document validé par le tiers'),
+      envoyer: () => this.etapeCycle((id) => api.envoyer(id), texte('document_btp.page.cycle.envoye')),
+      'valider-tiers': () => this.etapeCycle((id) => api.validerTiers(id), texte('document_btp.page.cycle.valide_tiers')),
       devalider: async () => {
-        const motif = await saisir('Dévalider : une nouvelle version (indice suivant) remplace celle-ci, sans retour en arrière.\nMotif (tracé dans l\'historique) :', '', { obligatoire: true });
+        const motif = await saisir(texte('document_btp.page.cycle.devalider_motif'), '', { obligatoire: true });
         if (!motif?.trim()) return;
         try {
           const nouveau = await api.devalider(this.editeur.saisie.document.ent_id, motif.trim());
           this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [this.editeur.saisie.document.ent_id, nouveau.document.ent_id] });
-          this.app.message(`Nouvelle version (indice ${nouveau.document.ent_indice}) en brouillon`, 'succes');
+          this.app.message(texte('document_btp.page.cycle.nouvelle_version', { indice: nouveau.document.ent_indice }), 'succes');
           await this.app.naviguer(urlDocument(nouveau.document.ent_id));
         } catch (e) { this.app.erreur(e); }
       },
       numero: () => this.changerNumero(),
       rejeter: async () => {
-        const motif = await saisir('Motif du rejet (plateforme de facturation, client, fournisseur) :', '', { obligatoire: true });
-        if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), 'Rejet noté : annulez la pièce par un avoir');
+        const motif = await saisir(texte('document_btp.page.cycle.rejet_motif'), '', { obligatoire: true });
+        if (motif?.trim()) this.etapeCycle((id) => api.rejeter(id, motif.trim()), texte('document_btp.page.cycle.rejete'));
       },
       sources: () => this.ajouterSources(),
       consultation: () => this.lotConsultation(),
@@ -233,14 +219,14 @@ export class PageDocument extends PageBase {
       // Aperçu : l'édition lit le document enregistré (les modifications en cours n'y sont pas).
       apercu: () => {
         const id = this.editeur?.saisie.document.ent_id;
-        if (!id || id < 0) { app.message('Enregistrez le document avant de l’éditer', 'avertissement'); return; }
-        if (this.modifiee) app.message('Modifications non enregistrées : l’aperçu montre la dernière version enregistrée', 'avertissement');
+        if (!id || id < 0) { app.message(texte('document_btp.page.enregistrer_avant_edition'), 'avertissement'); return; }
+        if (this.modifiee) app.message(texte('document_btp.page.apercu_non_enregistre'), 'avertissement');
         app.naviguer(`/edition?source=document&id=${id}`, { nouvelleFenetre: true });
       },
       // Courriel : destinataires, modèle et pièces « à envoyer » proposés par l'application (module Mail).
       courriel: () => {
         const id = this.editeur?.saisie.document.ent_id;
-        if (!id || id < 0) { app.message('Enregistrez le document avant de l’envoyer', 'avertissement'); return; }
+        if (!id || id < 0) { app.message(texte('document_btp.page.enregistrer_avant_courriel'), 'avertissement'); return; }
         app.naviguer(`/mail/nouveau?type=document&id=${id}`, { nouvelleFenetre: true });
       },
       'fermer-page': () => app.fermerPage('/liste/documents'),
@@ -344,7 +330,7 @@ export class PageDocument extends PageBase {
     this.importEnCours = null;
     // Saisie enregistrée sur ce poste (hors ligne) et pas encore envoyée : rouverte telle quelle.
     this.attente = await lireAttente(this.app.utilisateur(), id).catch(() => null);
-    if (!this.attente && id < 0) throw new Error('Document créé hors ligne introuvable sur ce poste : il a peut-être déjà été envoyé');
+    if (!this.attente && id < 0) throw new Error(texte('document_btp.page.hors_ligne_introuvable'));
     const complet = this.attente?.saisie ?? await api.document(id);
     // Version du serveur au début de la saisie : base de la fusion si le document change entre-temps (lot 4).
     this.depart = this.attente ? null : complet;
@@ -391,7 +377,7 @@ export class PageDocument extends PageBase {
       if (this.verrouAReprendre && !this.app.apiPerdue) { this.prendreVerrou().catch(() => {}); return; }
       if (!this.verrouDetenu) return;
       api.verrouillerDocument(this.verrouDetenu, this.jeton).then((x) => {
-        if (!x.ok) { this.verrouDetenu = null; this.#etatVerrou(x.verrou); this.app.message(`Document repris en modification par ${x.verrou?.utilisateur}`, 'erreur'); }
+        if (!x.ok) { this.verrouDetenu = null; this.#etatVerrou(x.verrou); this.app.message(texte('document_btp.page.verrou.repris', { utilisateur: x.verrou?.utilisateur }), 'erreur'); }
       }).catch(() => {});
     }, 30000);
   }
@@ -402,24 +388,24 @@ export class PageDocument extends PageBase {
     const magasin = this.editeur?.magasin;
     if (magasin) {
       magasin.lectureSeule = Boolean(verrou);
-      magasin.surRefus = () => this.app.message(`Lecture seule : document ouvert en modification par ${verrou?.utilisateur}`, 'avertissement');
+      magasin.surRefus = () => this.app.message(texte('document_btp.page.verrou.lecture_seule', { utilisateur: verrou?.utilisateur }), 'avertissement');
     }
     zone.hidden = !verrou;
     if (verrou) {
       const h = (d) => new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
       // Plus de battement depuis deux minutes : fenêtre fermée ou poste hors ligne (sa saisie sera envoyée à son retour).
       const inactif = Date.now() - Date.parse(verrou.vu) > 120000;
-      zone.innerHTML = `🔒 Document ouvert en modification par <b>${echapper(verrou.utilisateur)}</b> depuis le ${h(verrou.depuis)}
-        <span class="aide">(${inactif ? `aucune activité depuis le ${h(verrou.vu)} : poste hors ligne ou fenêtre fermée` : `dernière activité ${h(verrou.vu)}`}) : lecture seule.</span>
-        <button type="button" data-verrou="reessayer">Réessayer</button>
-        ${this.app.estAdmin() ? '<button type="button" data-verrou="forcer" class="danger" title="Fenêtre fermée, connexion perdue… : le verrou n’expire pas tout seul">Déverrouiller</button>' : ''}`;
+      zone.innerHTML = `${iconeHtml('verrou')} ${texteHtml('document_btp.page.verrou.ouvert_html', { utilisateur: verrou.utilisateur, depuis: h(verrou.depuis) })}
+        <span class="aide">${texteHtml(inactif ? 'document_btp.page.verrou.inactif' : 'document_btp.page.verrou.actif', { vu: h(verrou.vu) })}</span>
+        <button type="button" data-verrou="reessayer">${texteHtml('document_btp.page.verrou.reessayer')}</button>
+        ${this.app.estAdmin() ? `<button type="button" data-verrou="forcer" class="danger" title="${texteHtml('document_btp.page.verrou.forcer_aide')}">${texteHtml('document_btp.page.verrou.forcer')}</button>` : ''}`;
       zone.querySelector('[data-verrou="reessayer"]').addEventListener('click', () => this.prendreVerrou().catch((e) => this.app.erreur(e)));
       zone.querySelector('[data-verrou="forcer"]')?.addEventListener('click', async () => {
-        if (!await confirmer(`Déverrouiller le document ? Les modifications non enregistrées de ${verrou.utilisateur} seront perdues.`)) return;
+        if (!await confirmer(texte('document_btp.page.verrou.confirmer', { utilisateur: verrou.utilisateur }))) return;
         try {
           await api.forcerDeverrouillageDocument(this.editeur.saisie.document.ent_id);
           await this.prendreVerrou();
-          this.app.message('Document déverrouillé', 'succes');
+          this.app.message(texte('document_btp.page.verrou.deverrouille'), 'succes');
         } catch (e) { this.app.erreur(e); }
       });
     }
@@ -469,7 +455,7 @@ export class PageDocument extends PageBase {
         enregistrer: (id, arc) => api.arcDocument(id, arc),
         deposer: async (fichier, numero) => {
           const d = this.editeur.saisie.document;
-          await this.servicesGed.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: numero ? `ARC ${numero}` : `ARC ${d.ent_numero ?? ''}`.trim(), categorie: 'arc',
+          await this.servicesGed.deposer({ fichier, nom_fichier: fichier.name, meta: { titre: texte('document_btp.page.arc_titre', { numero: numero ?? d.ent_numero ?? '' }).trim(), categorie: 'arc',
             type_element: this.editeur.definition.type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id) } });
           this.gedCle = null;
         },
@@ -523,19 +509,19 @@ export class PageDocument extends PageBase {
     this.notifications = new NotificationsDocument(this.$('#notifications'), ed, {
       sources: [
         {
-          cle: 'saisie', libelle: 'Saisie',
+          cle: 'saisie', libelle: texte('document_btp.page.notifications.saisie'),
           messages: () => controlesSaisie(lignes(), {
             famille: ed.definition.type?.tyd_famille ?? 'V', modeOuvrage: ed.saisie.document.ent_mode_calcul_ouvrage ?? 'V',
             typePrix: (l) => ed.typePrixEffectif(l), qteNulle: !ed.transforme,
           }),
         },
         {
-          cle: 'validation', libelle: 'Validation',
-          messages: () => controlesValidation(lignes(), regles).map((m) => ({ ...m, gravite: 'erreur', message: `${m.message} (bloque la validation)` })),
+          cle: 'validation', libelle: texte('document_btp.page.notifications.validation'),
+          messages: () => controlesValidation(lignes(), regles).map((m) => ({ ...m, gravite: 'erreur', message: texte('document_btp.page.notifications.bloquant', { message: m.message }) })),
         },
-        { cle: 'metres', libelle: 'Métrés', messages: () => messagesMetres(ed.resultat) },
+        { cle: 'metres', libelle: texte('document_btp.page.notifications.metres'), messages: () => messagesMetres(ed.resultat) },
       ],
-      libelles: { ...LIBELLES_CONTROLE_SAISIE, NATURE_OBLIGATOIRE: 'Nature manquante' },
+      libelles: { ...LIBELLES_CONTROLE_SAISIE, NATURE_OBLIGATOIRE: texte('document_btp.page.notifications.nature_manquante') },
       // Métré : ouvert à la position de l'erreur ; sinon la ligne (tranches dépliées, filtre retiré au besoin).
       aller: (m) => {
         this.disposition.onglet('lignes');
@@ -546,7 +532,7 @@ export class PageDocument extends PageBase {
       },
       surCompte: ({ erreurs, avertissements }) => {
         const b = this.$('.compteur-notifications');
-        b.textContent = `${erreurs ? '⛔' : '⚠'} ${erreurs + avertissements}`;
+        b.textContent = `${icone(erreurs ? 'erreur' : 'avertissement')} ${erreurs + avertissements}`;
         b.classList.toggle('avec-erreurs', erreurs > 0);
         b.classList.toggle('avec-avertissements', !erreurs && avertissements > 0);
       },
@@ -556,9 +542,9 @@ export class PageDocument extends PageBase {
     ed.surMenuContextuel = (elements, id) => {
       const n = this.notifications.messagesLigne(id).length;
       return [...elements, { separateur: true },
-        { libelle: `Notifications de la ligne${n ? ` (${n})` : ''}`, raccourci: libelleRaccourci('notifications', 'document'), action: () => this.montrerNotifications(id), actif: n > 0 },
-        { libelle: 'Notification suivante', raccourci: libelleRaccourci('notificationSuivante', 'document'), action: () => this.allerNotification(1) },
-        { libelle: 'Notification précédente', raccourci: libelleRaccourci('notificationPrecedente', 'document'), action: () => this.allerNotification(-1) }];
+        { libelle: n ? texte('document_btp.page.notifications.ligne_nombre', { nombre: n }) : texte('document_btp.page.notifications.ligne'), raccourci: libelleRaccourci('notifications', 'document'), action: () => this.montrerNotifications(id), actif: n > 0 },
+        { libelle: texte('document_btp.page.notifications.suivante'), raccourci: libelleRaccourci('notificationSuivante', 'document'), action: () => this.allerNotification(1) },
+        { libelle: texte('document_btp.page.notifications.precedente'), raccourci: libelleRaccourci('notificationPrecedente', 'document'), action: () => this.allerNotification(-1) }];
     };
     ed.grille.rendre();
   }
@@ -580,7 +566,7 @@ export class PageDocument extends PageBase {
   allerNotification(sens) {
     if (!this.notifications) return;
     if (!this.disposition.p.docks.notifications?.visible) this.disposition.afficher('notifications', true);
-    if (!this.notifications.suivante(sens)) this.app.message('Aucune notification');
+    if (!this.notifications.suivante(sens)) this.app.message(texte('document_btp.page.notifications.aucune'));
   }
 
   /** Modifications non enregistrées : la pile d'annulation a changé depuis l'ouverture ou le dernier enregistrement. */
@@ -594,7 +580,7 @@ export class PageDocument extends PageBase {
     barre.hidden = description === null;
     barre.replaceChildren();
     if (description !== null) {
-      barre.innerHTML = `<span>Affichage filtré : <strong>${echapper(description)}</strong> (saisie et totaux sur tout le document)</span><button type="button">✕ Tout afficher</button>`;
+      barre.innerHTML = `<span>${texteHtml('document_btp.page.filtre_html', { description })}</span><button type="button">${iconeHtml('retirer')} ${texteHtml('document_btp.page.tout_afficher')}</button>`;
       barre.querySelector('button').addEventListener('click', () => { ed.retirerFiltres(); ed.grille.focus(); });
     }
     this.plan?.rendre();
@@ -624,7 +610,7 @@ export class PageDocument extends PageBase {
     this.rendreAvancement(this.$('#totaux-entete'));
     const doc = ed.saisie.document;
     const d = ed.resultat.document;
-    this.titre = `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? ''}`.trim();
+    this.titre = `${ed.definition.type?.tyd_libelle ?? texte('document_btp.page.document')} ${doc.ent_numero ?? ''}`.trim();
     // Le net à payer est affiché dans les totaux sous la grille.
     this.rendreControlesLigne();
     p.rendreEcarts(this.$('#ecarts'), this.ecarts, (decision, commentaire) => this.arbitrer(decision, commentaire).catch((x) => this.app.erreur(x)));
@@ -633,10 +619,10 @@ export class PageDocument extends PageBase {
     const statut = ed.definition.statuts?.find((s) => s.std_id === doc.ent_std_id);
     const modifiable = statut?.std_modifiable !== false && !doc.ent_verrouille && !this.bloque;
     this.$('[data-action="enregistrer"]').disabled = !modifiable;
-    this.$('[data-action="enregistrer"]').textContent = this.importEnCours ? 'Créer le devis' : 'Enregistrer';
+    this.$('[data-action="enregistrer"]').textContent = texte(this.importEnCours ? 'document_btp.page.creer_devis' : 'document_btp.page.enregistrer');
     this.$('[data-action="valider"]').disabled = !modifiable || Boolean(this.importEnCours);
     // Cycle de vie (CONCEPTION-REGLES-DOCUMENTS.md, P17) : approbation interne si la règle l'active, envoi, validation du tiers.
-    this.$('[data-action="valider"]').textContent = ed.definition.regles?.APPROBATION ? 'Approuver' : 'Valider';
+    this.$('[data-action="valider"]').textContent = texte(ed.definition.regles?.APPROBATION ? 'document_btp.page.actions.approuver' : 'document_btp.page.actions.valider');
     const enCours = !STATUTS_HORS_VIGUEUR.includes(statut?.std_code);
     this.$('[data-action="envoyer"]').hidden = !doc.ent_approuve_le || Boolean(doc.ent_envoye_le) || !enCours;
     this.$('[data-action="valider-tiers"]').hidden = !doc.ent_envoye_le || Boolean(doc.ent_valide_tiers_le) || !enCours;
@@ -678,13 +664,13 @@ export class PageDocument extends PageBase {
     const le = new Date(a.le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     zone.classList.toggle('probleme', a.etat !== ETAT_ATTENTE.ATTENTE);
     zone.innerHTML = a.etat === ETAT_ATTENTE.CONFLIT
-      ? `⚠ <b>${ETATS_ATTENTE.CONFLIT}</b> : le document a été modifié sur le serveur pendant la saisie hors ligne. Vos modifications
-        (enregistrées sur ce poste le ${le}) sont conservées. <a href="${urlAttente(a)}" title="Comparer ma saisie à la version du serveur et trancher">⇄ Comparer et fusionner</a>`
+      ? `${iconeHtml('avertissement')} <b>${echapper(ETATS_ATTENTE.CONFLIT)}</b> : ${texteHtml('document_btp.page.attente.conflit', { le })}
+        <a href="${urlAttente(a)}" title="${texteHtml('document_btp.page.attente.comparer_aide')}">${iconeHtml('document_btp_fusion')} ${texteHtml('document_btp.page.attente.comparer')}</a>`
       : a.etat === ETAT_ATTENTE.FUSION
-        ? `⇄ <b>${ETATS_ATTENTE.FUSION}</b> : saisie fusionnée (totaux recalculés) ; contrôlez puis enregistrez pour l'envoyer au serveur.`
+        ? `${iconeHtml('document_btp_fusion')} <b>${echapper(ETATS_ATTENTE.FUSION)}</b> : ${texteHtml('document_btp.page.attente.fusion')}`
       : a.etat === ETAT_ATTENTE.ERREUR
-        ? `⚠ <b>${ETATS_ATTENTE.ERREUR}</b> : ${echapper(a.erreur ?? '')}. Corrigez puis enregistrez de nouveau (saisie du ${le} gardée sur ce poste).`
-        : `⏳ Enregistré sur ce poste le ${le}${a.id ? '' : ' (document créé hors ligne)'} : envoi au serveur dès son retour.`;
+        ? `${iconeHtml('avertissement')} <b>${echapper(ETATS_ATTENTE.ERREUR)}</b> : ${texteHtml('document_btp.page.attente.erreur', { erreur: a.erreur ?? '', le })}`
+        : `${iconeHtml('document_btp_attente')} ${texteHtml(a.id ? 'document_btp.page.attente.attente' : 'document_btp.page.attente.attente_creation', { le })}`;
   }
 
   /** Document créé hors ligne : brouillon local à identifiant provisoire négatif, créé sur le serveur à l'envoi. */
@@ -693,11 +679,11 @@ export class PageDocument extends PageBase {
     try {
       definition = await api.definition(type.tyd_code);
     } catch (e) {
-      if (estHorsLigne(e)) throw new Error(`Hors ligne : aucun ${type.tyd_libelle.toLowerCase()} n'a été ouvert sur ce poste, création impossible avant le retour du serveur`);
+      if (estHorsLigne(e)) throw new Error(texte('document_btp.page.hors_ligne_type', { type: type.tyd_libelle.toLowerCase() }));
       throw e;
     }
     const brouillon = definition.statuts?.find((s) => s.std_code === STATUT_DOCUMENT.BROUILLON) ?? definition.statuts?.[0];
-    const params = { ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` };
+    const params = { ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: texte('document_btp.page.objet_nouveau', { type: type.tyd_libelle.toLowerCase() }) };
     const id = -Date.now();
     const document = {
       ent_id: id, ent_tyd_id: type.tyd_id, ent_numero: null, ent_std_id: brouillon?.std_id ?? 1, ent_version: 1, ent_indice: null,
@@ -713,20 +699,20 @@ export class PageDocument extends PageBase {
     this.disposition.onglet('entete');
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
-    this.app.message(`${type.tyd_libelle} créé hors ligne : numéroté et enregistré sur le serveur à son retour`, 'avertissement');
+    this.app.message(texte('document_btp.page.cree_hors_ligne', { type: type.tyd_libelle }), 'avertissement');
   }
 
   async nouveau(code) {
     const type = this.types.find((t) => t.tyd_code === code);
-    if (!type) throw new Error(`Type de document inconnu : ${code}`);
+    if (!type) throw new Error(texte('document_btp.page.type_inconnu', { code }));
     if (this.app.apiPerdue) { await this.#nouveauHorsLigne(type); return; }
     // Tiers choisi ensuite dans l'annuaire du document (obligatoire à la validation).
-    const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: `Nouveau ${type.tyd_libelle.toLowerCase()}` });
+    const cree = await api.creer({ ent_tyd_id: type.tyd_id, ent_tiers_id: null, ent_objet: texte('document_btp.page.objet_nouveau', { type: type.tyd_libelle.toLowerCase() }) });
     this.app.routeur.remplacerUrl(urlDocument(cree.document.ent_id));
     await this.chargerDocument(cree.document.ent_id);
     this.disposition.onglet('entete');
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: code, ids: [cree.document.ent_id], cree: true });
-    this.app.message(`${type.tyd_libelle} ${cree.document.ent_numero ?? ''} créé`);
+    this.app.message(texte('document_btp.page.cree', { type: type.tyd_libelle, numero: cree.document.ent_numero ?? '' }));
   }
 
   /**
@@ -738,10 +724,10 @@ export class PageDocument extends PageBase {
     this.voisinage = voisins(urlDocument(this.params.id));
     if (!this.voisinage) return;
     const { rang, total, precedent, suivant } = this.voisinage;
-    for (const [action, cible, libelle] of [['precedent', precedent, 'précédent'], ['suivant', suivant, 'suivant']]) {
+    for (const [action, cible] of [['precedent', precedent], ['suivant', suivant]]) {
       const b = this.$(`[data-action="${action}"]`);
       b.hidden = !cible;
-      b.title = `Document ${libelle} de la liste (${rang} / ${total})`;
+      b.title = texte(`document_btp.page.voisins.${action}`, { rang, total });
     }
   }
 
@@ -797,7 +783,7 @@ export class PageDocument extends PageBase {
     this.rafraichir();
     // Rafraîchissement ciblé de la ligne du document dans les listes (cette fenêtre et les autres).
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: rep.document.document.ent_tyd_id, ids: [rep.document.document.ent_id] });
-    this.app.message(rep.ecarts.length ? `Enregistré avec ${rep.ecarts.length} écart(s) de calcul à arbitrer` : `Enregistré (version ${rep.document.document.ent_version})`,
+    this.app.message(rep.ecarts.length ? texte('document_btp.page.enregistre_ecarts', { nombre: rep.ecarts.length }) : texte('document_btp.page.enregistre', { version: rep.document.document.ent_version }),
       rep.ecarts.length ? 'avertissement' : 'succes');
   }
 
@@ -824,7 +810,7 @@ export class PageDocument extends PageBase {
         ventilations_lignes: r.ventilations_lignes ?? [], version_moteur_client: VERSION_MOTEUR,
       },
       saisie: structuredClone(ed.saisie), depart: this.depart ?? null, type_code: ed.definition.type?.tyd_code ?? null,
-      libelle: `${ed.definition.type?.tyd_libelle ?? 'Document'} ${doc.ent_numero ?? '(créé hors ligne)'}`, etat: ETAT_ATTENTE.ATTENTE,
+      libelle: `${ed.definition.type?.tyd_libelle ?? texte('document_btp.page.document')} ${doc.ent_numero ?? texte('document_btp.page.cree_hors_ligne_numero')}`, etat: ETAT_ATTENTE.ATTENTE,
     };
   }
 
@@ -834,7 +820,7 @@ export class PageDocument extends PageBase {
     this.marque = this.editeur.magasin.pile.at(-1);
     this.rafraichir();
     this.app.publier(SUJET_ATTENTE, {});
-    if (this.app.apiPerdue) this.app.message('Serveur injoignable : enregistré sur ce poste, envoyé dès son retour', 'avertissement');
+    if (this.app.apiPerdue) this.app.message(texte('document_btp.page.serveur_injoignable'), 'avertissement');
   }
 
   /** Saisie hors ligne envoyée (cette fenêtre ou une autre) : identifiants définitifs, numéro, verrou repris. */
@@ -851,7 +837,7 @@ export class PageDocument extends PageBase {
     this.rafraichir();
     this.prendreVerrou().catch(() => {});
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { type: ed.definition.type?.tyd_code, ids: [id], cree: idLocal !== id });
-    this.app.message(`${ed.definition.type?.tyd_libelle ?? 'Document'} ${rep.document.document.ent_numero ?? ''} envoyé au serveur (saisie hors ligne)`, 'succes');
+    this.app.message(texte('document_btp.page.envoye_serveur', { type: ed.definition.type?.tyd_libelle ?? texte('document_btp.page.document'), numero: rep.document.document.ent_numero ?? '' }), 'succes');
   }
 
   async arbitrer(decision, commentaire) {
@@ -862,7 +848,7 @@ export class PageDocument extends PageBase {
     });
     this.ecarts = null;
     this.rafraichir();
-    this.app.message(`Cas de test n° ${rep.cas_id} enregistré (${decision === 'S' ? 'serveur validé' : 'anomalie'})`, 'succes');
+    this.app.message(texte(decision === 'S' ? 'document_btp.page.cas_serveur' : 'document_btp.page.cas_anomalie', { numero: rep.cas_id }), 'succes');
   }
 
   /**
@@ -873,18 +859,18 @@ export class PageDocument extends PageBase {
     const ed = this.editeur;
     const complet = completerRattachement(r, this.structure ?? { chantiers: [], marches: [] });
     if (this.#modifiable() && !this.bloque && !ed.magasin.lectureSeule) {
-      ed.magasin.modifier((b) => { Object.assign(b.document, complet); }, 'Rattachement');
+      ed.magasin.modifier((b) => { Object.assign(b.document, complet); }, texte('document_btp.etapes.rattachement'));
       // Annuaire encore vide (tiers seul) : intervenants du marché ou du chantier repris d'office.
       if (this.panneaux.intervenantsDocument().length <= 1) {
         const n = await this.panneaux.reprendreIntervenants();
-        if (n) this.app.message(`${n} intervenant(s) repris du rattachement`);
+        if (n) this.app.message(texte('document_btp.page.intervenants_repris', { nombre: n }));
       }
       return;
     }
     const doc = ed.saisie.document;
     Object.assign(doc, await this.servicesStructure.rattacher(doc.ent_id, complet));
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [doc.ent_id] });
-    this.app.message('Rattachement enregistré', 'succes');
+    this.app.message(texte('document_btp.page.rattachement_enregistre'), 'succes');
     this.rafraichir();
   }
 
@@ -904,7 +890,7 @@ export class PageDocument extends PageBase {
     if (!d) return;
     this.tracabiliteCle = this.cleTracabilite();
     if (this.importEnCours) { tracabiliteImport(this, zone); return; }
-    if (!d.ent_id) { zone.innerHTML = '<p class="aide">Traçabilité disponible pour les documents enregistrés.</p>'; return; }
+    if (!d.ent_id) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.tracabilite_indisponible')}</p>`; return; }
     afficherTracabilite(zone, {
       entId: d.ent_id, ged: this.servicesGed, debogage: Boolean(this.editeur.vue?.debogage),
       naviguer: (url, e) => this.app.naviguer(url, { nouvelleFenetre: Boolean(e?.ctrlKey || e?.shiftKey) }),
@@ -917,7 +903,7 @@ export class PageDocument extends PageBase {
   afficherSuivi() {
     const zone = this.$('#vue-suivi');
     const d = this.editeur?.saisie.document;
-    if (!d?.ent_id) { zone.innerHTML = '<p class="aide">Suivi disponible pour les documents enregistrés.</p>'; return; }
+    if (!d?.ent_id) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.suivi_indisponible')}</p>`; return; }
     const id = String(d.ent_groupe_id ?? d.ent_id);
     if (this.suivi && this.suiviId === id) return;
     this.suivi?.fermer();
@@ -931,16 +917,16 @@ export class PageDocument extends PageBase {
     const zone = this.$('#vue-pieces');
     const d = this.editeur?.saisie.document;
     if (!d) return;
-    if (this.importEnCours) { zone.innerHTML = '<p class="aide">Le fichier importé sera conservé dans les pièces du devis à sa création.</p>'; return; }
+    if (this.importEnCours) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.pieces_import')}</p>`; return; }
     const cle = `${d.ent_tyd_id}-${d.ent_groupe_id ?? d.ent_id}`;
     if (this.ged && this.gedCle === cle) return;
     this.ged?.detruire?.();
     zone.replaceChildren();
-    if (!this.servicesGed) { zone.innerHTML = '<p class="aide">La GED n\'est pas branchée.</p>'; return; }
+    if (!this.servicesGed) { zone.innerHTML = `<p class="aide">${texteHtml('document_btp.page.ged_absente')}</p>`; return; }
     const type = this.editeur.definition.type;
     this.gedCle = cle;
     // Arborescence : le document est la racine, ses documents enfants (transformations, copies) sont des dossiers.
-    const contexte = { type_element: type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id), libelle: `${type?.tyd_libelle ?? 'Document'} ${d.ent_numero ?? ''}`.trim(), icone: '📄' };
+    const contexte = { type_element: type?.tyd_code ?? 'document', id_element: String(d.ent_groupe_id ?? d.ent_id), libelle: `${type?.tyd_libelle ?? texte('document_btp.page.document')} ${d.ent_numero ?? ''}`.trim(), icone: icone('document_btp_piece_document') };
     this.ged = new ExplorateurGed(zone, {
       fournisseur: this.servicesGed, envoi: true, terrain: type?.tyd_famille === FAMILLE_DOCUMENT.EXECUTION, modifiable: true, admin: this.app.estAdmin(), utilisateur: this.app.utilisateur(), contexte,
       arborescence: this.servicesStructure ? new ArborescenceBtp(contexte, { structure: this.servicesStructure, entId: d.ent_id }) : null,
@@ -951,7 +937,7 @@ export class PageDocument extends PageBase {
 
   async valider() {
     const ed = this.editeur;
-    if (this.modifiee && !await confirmer('Le document doit d\'abord être enregistré. Enregistrer puis valider ?')) return;
+    if (this.modifiee && !await confirmer(texte('document_btp.page.valider_enregistrer'))) return;
     // Commande client : marché obligatoire (sauf commande intermédiaire d'un devis facturé directement).
     const d = ed.saisie.document;
     if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.V_COMMANDE && !d.ent_marche_id && !d.ent_intermediaire && !(await this.choisirMarche())) return;
@@ -959,15 +945,14 @@ export class PageDocument extends PageBase {
     if (ed.definition.type?.tyd_code === TYPE_DOCUMENT.T_COMMANDE && !d.ent_marche_id && !(await this.choisirMarcheSousTraitance())) return;
     // Frais annexes : à la validation, la ventilation est figée en clés de ligne ; les clés orphelines sont supprimées.
     const orphelines = messagesFrais(ed.resultat).filter((m) => m.code === 'FA_CLE_ORPHELINE' || m.code === 'FA_CLE_BLOQUEE');
-    if (orphelines.length && !await confirmer(`La validation fige la ventilation des frais annexes et supprime ${orphelines.length} clé(s) inutilisée(s) :\n\n`
-      + `${orphelines.map((m) => `• ${m.message}`).join('\n')}\n\nValider ?`)) return;
+    if (orphelines.length && !await confirmer(texte('document_btp.page.valider_cles', { nombre: orphelines.length, liste: orphelines.map((m) => `${icone('document_puce')} ${m.message}`).join('\n') }))) return;
     if (this.modifiee) await this.enregistrer();
     // Contrôles de gestion (lot 6 des règles) : avertissements non bloquants, l'utilisateur choisit.
-    if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', 'Valider'))) return;
+    if (!(await confirmerAvertissements(ed.saisie.document.ent_id, 'VALIDER', texte('document_btp.page.actions.valider')))) return;
     const rep = await api.valider(ed.saisie.document.ent_id, ed.saisie.document.ent_version);
     await this.chargerDocument(rep.document.document.ent_id);
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [rep.document.document.ent_id] });
-    this.app.message(`Document validé : ${rep.document.document.ent_numero}`, 'succes');
+    this.app.message(texte('document_btp.page.valide', { numero: rep.document.document.ent_numero }), 'succes');
   }
 
   /** Étape du cycle de vie (envoi, validation du tiers, rejet) puis rechargement du document. */
@@ -976,22 +961,22 @@ export class PageDocument extends PageBase {
    * le prochain libre (avertissement du serveur).
    */
   async changerNumero() {
-    if (this.modifiee) { this.app.message('Enregistrez le document avant de changer son numéro', 'avertissement'); return; }
+    if (this.modifiee) { this.app.message(texte('document_btp.page.numero.enregistrer_avant'), 'avertissement'); return; }
     const doc = this.editeur.saisie.document;
     const type = this.editeur.definition.type ?? {};
     const exemple = `${type.tyd_prefixe_numero ?? ''}${String(doc.ent_date ?? '').slice(0, 4) || new Date().getFullYear()}-00001`;
-    const numero = await saisir(`Nouveau numéro (format ${exemple}) :`, doc.ent_numero ?? exemple, { obligatoire: true });
+    const numero = await saisir(texte('document_btp.page.numero.nouveau', { exemple }), doc.ent_numero ?? exemple, { obligatoire: true });
     if (!numero?.trim() || numero.trim() === doc.ent_numero) return;
     let motif = null;
     if (type.tyd_numerotation_continue) {
-      motif = await saisir('Numérotation continue : motif du changement (tracé dans l\'historique) :', '', { obligatoire: true });
+      motif = await saisir(texte('document_btp.page.numero.motif'), '', { obligatoire: true });
       if (!motif?.trim()) return;
     }
     try {
       const rep = await api.changerNumero(doc.ent_id, numero.trim(), motif?.trim() ?? null);
       await this.chargerDocument(doc.ent_id);
       this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [doc.ent_id] });
-      this.app.message(rep.avertissement ?? `Numéro ${rep.numero} attribué`, rep.avertissement ? 'avertissement' : 'succes');
+      this.app.message(rep.avertissement ?? texte('document_btp.page.numero.attribue', { numero: rep.numero }), rep.avertissement ? 'avertissement' : 'succes');
     } catch (e) { this.app.erreur(e); }
   }
 
@@ -1015,7 +1000,7 @@ export class PageDocument extends PageBase {
     try {
       ed.definirRestes(await api.restes(ed.saisie.document.ent_id));
     } catch (e) {
-      this.app.message(`Restes à solder indisponibles : ${e.message}`, 'avertissement');
+      this.app.message(texte('document_btp.page.restes_indisponibles', { message: e.message }), 'avertissement');
     }
   }
 
@@ -1026,14 +1011,14 @@ export class PageDocument extends PageBase {
   async annulerParAvoir() {
     const d = this.editeur.saisie.document;
     const pieces = await api.piecesAnnulation(d.ent_id);
-    if (!pieces.length) { this.app.message('Rien à annuler', 'avertissement'); return; }
-    const liste = pieces.map((x) => `• ${x.rang ? `n° ${x.rang} · ` : ''}${x.type} ${x.numero ?? ''} (${formatNombre(x.total_ht, 2)} € HT)`).join('\n');
-    if (!await confirmer(`${pieces.length > 1 ? `Les ${pieces.length} pièces suivantes seront annulées` : 'La pièce suivante sera annulée'} par avoir (pièces comptables : un avoir chacune) :\n\n${liste}\n\nAnnuler ?`)) return;
+    if (!pieces.length) { this.app.message(texte('document_btp.page.annulation.rien'), 'avertissement'); return; }
+    const liste = pieces.map((x) => `${icone('document_puce')} ${x.rang ? `${texte('document_btp.page.rang', { rang: x.rang })} · ` : ''}${x.type} ${x.numero ?? ''} (${texte('document_btp.page.montant_ht', { montant: formatNombre(x.total_ht, 2) })})`).join('\n');
+    if (!await confirmer(texte(pieces.length > 1 ? 'document_btp.page.annulation.confirmer_plusieurs' : 'document_btp.page.annulation.confirmer_une', { nombre: pieces.length, liste }))) return;
     const r = await api.annulerParAvoir(d.ent_id);
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [d.ent_id, ...r.avoirs] });
     await this.chargerDocument(d.ent_id);
-    this.app.message(`${r.avoirs.length} avoir(s) d'annulation créé(s)${r.situation ? ' ; dernière situation remise en cours (nouvel indice)' : ''}`, 'succes');
-    if (r.situation && await confirmer('Ouvrir la situation remise en cours ?')) await this.app.naviguer(urlDocument(r.situation), { nouvelleFenetre: true });
+    this.app.message(texte(r.situation ? 'document_btp.page.annulation.creees_situation' : 'document_btp.page.annulation.creees', { nombre: r.avoirs.length }), 'succes');
+    if (r.situation && await confirmer(texte('document_btp.page.annulation.ouvrir_situation'))) await this.app.naviguer(urlDocument(r.situation), { nouvelleFenetre: true });
   }
 
   /** Document d'avancement d'un marché : numéro de situation et documents précédents (bloc de déduction, 13.7). */
@@ -1062,14 +1047,15 @@ export class PageDocument extends PageBase {
     const f = (v) => formatNombre(v, pm);
     const bloc = document.createElement('section');
     bloc.className = 'bloc-avancement';
-    bloc.innerHTML = `<h4>Avancement${a.rang ? ` — situation n° ${a.rang}` : ''}</h4>
+    const rang = (x) => (x.rang ? `${texteHtml('document_btp.page.rang', { rang: x.rang })} · ` : '');
+    bloc.innerHTML = `<h4>${a.rang ? texteHtml('document_btp.page.avancement.titre_rang', { rang: a.rang }) : texteHtml('document_btp.page.avancement.titre')}</h4>
       <table><tbody>
-        <tr><th>Cumul HT</th><td class="nombre">${f(cumul)}</td></tr>
-        ${periode ? `${precedents.map((x) => `<tr><td>À déduire : ${x.rang ? `n° ${x.rang} · ` : ''}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}</td><td class="nombre">−${f(x.total_ht)}</td></tr>`).join('')}
-        <tr><th>Période HT (ce document)</th><td class="nombre">${f(d.ent_total_ht)}</td></tr>` : `<tr><td colspan="2"><small>Situation : état cumulé, non comptable${precedents.length ? ` ; déjà facturé ${f(deduit)} HT` : ''}</small></td></tr>`}
+        <tr><th>${texteHtml('document_btp.page.avancement.cumul')}</th><td class="nombre">${f(cumul)}</td></tr>
+        ${periode ? `${precedents.map((x) => `<tr><td>${texteHtml('document_btp.page.avancement.a_deduire')} ${rang(x)}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}</td><td class="nombre">−${f(x.total_ht)}</td></tr>`).join('')}
+        <tr><th>${texteHtml('document_btp.page.avancement.periode')}</th><td class="nombre">${f(d.ent_total_ht)}</td></tr>` : `<tr><td colspan="2"><small>${precedents.length ? texteHtml('document_btp.page.avancement.situation_deduit', { montant: f(deduit) }) : texteHtml('document_btp.page.avancement.situation')}</small></td></tr>`}
       </tbody></table>
-      ${(a.annules ?? []).length ? `<label class="coche"><input type="checkbox" data-annules ${this.voirAnnules ? 'checked' : ''}> Afficher les pièces annulées (${a.annules.length})</label>
-        ${this.voirAnnules ? `<table class="annules"><tbody>${a.annules.map((x) => `<tr><td>${x.rang ? `n° ${x.rang} · ` : ''}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}${x.nature === 'ANNULATION' ? ' (avoir d\'annulation)' : ''}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}` : ''}`;
+      ${(a.annules ?? []).length ? `<label class="coche"><input type="checkbox" data-annules ${this.voirAnnules ? 'checked' : ''}> ${texteHtml('document_btp.page.avancement.annules', { nombre: a.annules.length })}</label>
+        ${this.voirAnnules ? `<table class="annules"><tbody>${a.annules.map((x) => `<tr><td>${rang(x)}${echapper(x.type ?? '')} ${echapper(x.numero ?? '')}${x.nature === 'ANNULATION' ? ` ${texteHtml('document_btp.page.avancement.avoir_annulation')}` : ''}</td><td class="nombre">${f(x.total_ht)}</td></tr>`).join('')}</tbody></table>` : ''}` : ''}`;
     bloc.querySelector('[data-annules]')?.addEventListener('change', (e) => { this.voirAnnules = e.target.checked; this.rendreAvancement(zone); });
     zone.append(bloc);
   }
@@ -1079,7 +1065,7 @@ export class PageDocument extends PageBase {
    * rattachement comme avenant d'un marché en cours. Renvoie vrai si la commande est rattachée (validation à suivre).
    */
   async choisirMarcheSousTraitance() {
-    if (!this.servicesStructure || !this.servicesFiche) { this.app.message('Marché obligatoire : structure des affaires indisponible', 'avertissement'); return false; }
+    if (!this.servicesStructure || !this.servicesFiche) { this.app.message(texte('document_btp.page.marche.indisponible'), 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();
     const doc = this.editeur.saisie.document;
     const r = await proposerMarcheSousTraitance({
@@ -1092,12 +1078,12 @@ export class PageDocument extends PageBase {
     this.structure = await this.servicesStructure.referentiels();
     this.panneaux.structure = this.structure;
     await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
-    this.app.message(r.cree ? 'Marché de sous-traitance créé et commande rattachée' : 'Commande rattachée comme avenant du marché de sous-traitance', 'succes');
+    this.app.message(r.cree ? texte('document_btp.page.marche.st_cree') : texte('document_btp.page.marche.st_avenant'), 'succes');
     return true;
   }
 
   async choisirMarche() {
-    if (!this.servicesStructure || !this.servicesFiche) { this.app.message('Marché obligatoire : structure des affaires indisponible', 'avertissement'); return false; }
+    if (!this.servicesStructure || !this.servicesFiche) { this.app.message(texte('document_btp.page.marche.indisponible'), 'avertissement'); return false; }
     this.structure = await this.servicesStructure.referentiels();
     const doc = this.editeur.saisie.document;
     const r = await proposerMarche({
@@ -1114,7 +1100,7 @@ export class PageDocument extends PageBase {
     this.structure = await this.servicesStructure.referentiels();
     this.panneaux.structure = this.structure;
     await this.rattacher({ ...doc, ent_marche_id: r.ent_marche_id });
-    this.app.message(r.cree ? 'Marché créé et commande rattachée' : 'Commande rattachée comme avenant du marché', 'succes');
+    this.app.message(r.cree ? texte('document_btp.page.marche.cree') : texte('document_btp.page.marche.avenant'), 'succes');
     return true;
   }
 
@@ -1128,15 +1114,15 @@ export class PageDocument extends PageBase {
     const lot = await api.consultation(d.ent_id);
     const dlg = document.createElement('dialog');
     dlg.className = 'dialogue-structure';
-    dlg.innerHTML = `<form method="dialog"><h3>📨 Lot de consultation ${echapper(lot.code ?? '')}</h3>
-      ${lot.documents.length ? `<table class="tableau-compact"><thead><tr><th>Numéro</th><th>Fournisseur</th><th class="nombre">Total HT</th><th>Statut</th></tr></thead><tbody>
+    dlg.innerHTML = `<form method="dialog"><h3>${iconeHtml('document_btp_consultation')} ${texteHtml('document_btp.page.lot.titre', { code: lot.code ?? '' })}</h3>
+      ${lot.documents.length ? `<table class="tableau-compact"><thead><tr><th>${texteHtml('document_btp.page.lot.numero')}</th><th>${texteHtml('document_btp.page.lot.fournisseur')}</th><th class="nombre">${texteHtml('document_btp.page.lot.total')}</th><th>${texteHtml('document_btp.page.lot.statut')}</th></tr></thead><tbody>
         ${lot.documents.map((x) => `<tr><td><a href="${urlDocument(x.id)}">${echapper(x.numero ?? `#${x.id}`)}</a></td><td>${echapper(x.tiers ?? '—')}</td>
           <td class="nombre">${formatNombre(Number(x.total_ht), 2)}</td><td>${echapper(x.statut)}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="aide">Pas encore de lot : « Autre fournisseur » crée la première copie et donne à la demande le code du lot (son numéro).</p>'}
-      <p class="ligne"><button type="button" class="principal" data-copier>＋ Autre fournisseur</button>
-        ${lot.documents.length > 1 ? '<button type="button" data-comparer title="Comparatif ligne à ligne des offres du lot, choix de l’offre retenue (nouvelle fenêtre)">⚖ Comparer les offres</button>' : ''}
-        ${lot.documents.length ? '<button type="button" data-envoyer title="Un courriel par fournisseur (offres validées), comme 📧 Envoyer depuis chaque document">📧 Envoyer le lot</button>' : ''}
-        <button value="fermer">Fermer</button></p></form>`;
+        : `<p class="aide">${texteHtml('document_btp.page.lot.vide')}</p>`}
+      <p class="ligne"><button type="button" class="principal" data-copier>${iconeHtml('ajouter')} ${texteHtml('document_btp.page.lot.autre')}</button>
+        ${lot.documents.length > 1 ? `<button type="button" data-comparer title="${texteHtml('document_btp.page.lot.comparer_aide')}">${iconeHtml('document_btp_ventiler')} ${texteHtml('document_btp.page.lot.comparer')}</button>` : ''}
+        ${lot.documents.length ? `<button type="button" data-envoyer title="${texteHtml('document_btp.page.lot.envoyer_aide', { icone: icone('document_btp_envoyer') })}">${iconeHtml('document_btp_envoyer')} ${texteHtml('document_btp.page.lot.envoyer')}</button>` : ''}
+        <button value="fermer">${texteHtml('document_btp.page.fermer_bouton')}</button></p></form>`;
     document.body.append(dlg);
     dlg.addEventListener('close', () => dlg.remove());
     dlg.querySelector('[data-comparer]')?.addEventListener('click', () => {
@@ -1151,7 +1137,7 @@ export class PageDocument extends PageBase {
       try {
         const r = await api.copierConsultation(d.ent_id);
         dlg.close();
-        this.app.message('Demande copiée pour un autre fournisseur : choisissez-le dans l\'entête', 'succes');
+        this.app.message(texte('document_btp.page.lot.copiee'), 'succes');
         this.app.naviguer(urlDocument(r.id), { nouvelleFenetre: true });
       } catch (e) { this.app.erreur(e); }
     });
@@ -1164,21 +1150,21 @@ export class PageDocument extends PageBase {
    */
   async envoyerLot(id, lot) {
     const choix = await ouvrirDialogue({
-      titre: `📧 Envoyer le lot ${lot.code ?? ''}`,
-      message: `Un courriel par fournisseur, avec ses pièces « à envoyer », pour les ${lot.documents.length} offre(s) du lot (les brouillons sont écartés).`,
-      boutons: [{ libelle: 'Annuler', valeur: null }, { libelle: 'Renvoyer aussi les offres déjà envoyées', valeur: 'tout' }, { libelle: 'Envoyer', principal: true, valeur: 'nouveaux' }],
+      titre: `${icone('document_btp_envoyer')} ${texte('document_btp.page.lot.envoi_titre', { code: lot.code ?? '' })}`,
+      message: texte('document_btp.page.lot.envoi_message', { nombre: lot.documents.length }),
+      boutons: [{ libelle: texte('document_btp.page.lot.annuler'), valeur: null }, { libelle: texte('document_btp.page.lot.renvoyer'), valeur: 'tout' }, { libelle: texte('document_btp.page.lot.envoyer_bouton'), principal: true, valeur: 'nouveaux' }],
     });
     if (!choix) return;
     let r;
     try { r = await api.envoyerConsultation(id, choix === 'tout'); } catch (e) { this.app.erreur(e); return; }
-    const libelles = { ENVOYE: '📧 En file d’envoi', IGNORE: '— Non envoyée', ERREUR: '⚠ Erreur' };
+    const libelles = { ENVOYE: `${iconeHtml('document_btp_envoyer')} ${texteHtml('document_btp.page.lot.resultats.ENVOYE')}`, IGNORE: texteHtml('document_btp.page.lot.resultats.IGNORE'), ERREUR: `${iconeHtml('avertissement')} ${texteHtml('document_btp.page.lot.resultats.ERREUR')}` };
     await ouvrirDialogue({
-      titre: `📧 Lot ${lot.code ?? ''} : ${r.filter((x) => x.resultat === 'ENVOYE').length} courriel(s) en file`,
-      html: `<table class="tableau-compact"><thead><tr><th>Offre</th><th>Fournisseur</th><th>Résultat</th><th>Détail</th></tr></thead><tbody>
+      titre: `${icone('document_btp_envoyer')} ${texte('document_btp.page.lot.compte_rendu', { code: lot.code ?? '', nombre: r.filter((x) => x.resultat === 'ENVOYE').length })}`,
+      html: `<table class="tableau-compact"><thead><tr><th>${texteHtml('document_btp.page.lot.offre')}</th><th>${texteHtml('document_btp.page.lot.fournisseur')}</th><th>${texteHtml('document_btp.page.lot.resultat')}</th><th>${texteHtml('document_btp.page.lot.detail')}</th></tr></thead><tbody>
         ${r.map((x) => `<tr class="${x.resultat === 'ERREUR' ? 'erreur' : ''}"><td>${echapper(x.numero ?? `#${x.id}`)}</td><td>${echapper(x.tiers ?? '—')}</td>
-          <td>${libelles[x.resultat] ?? x.resultat}</td><td>${echapper(x.message ?? '')}</td></tr>`).join('')}</tbody></table>
-        <p class="aide">Suivi des envois : menu Courriels.</p>`,
-      boutons: [{ libelle: 'Fermer', principal: true, valeur: true }],
+          <td>${libelles[x.resultat] ?? echapper(x.resultat)}</td><td>${echapper(x.message ?? '')}</td></tr>`).join('')}</tbody></table>
+        <p class="aide">${texteHtml('document_btp.page.lot.suivi')}</p>`,
+      boutons: [{ libelle: texte('document_btp.page.fermer_bouton'), principal: true, valeur: true }],
     });
   }
 
@@ -1189,7 +1175,7 @@ export class PageDocument extends PageBase {
     const selection = (this.editeur.grille?.selection ?? []).filter((id) => Number(id) > 0);
     const ids = await sousTraiter({ entId: d.ent_id, selection, message: (m, n) => this.app.message(m, n) });
     if (!ids?.length) return;
-    this.app.message(`${ids.length} document(s) de sous-traitance créé(s)`, 'succes');
+    this.app.message(texte('document_btp.page.st_crees', { nombre: ids.length }), 'succes');
     this.app.naviguer(urlDocument(ids[0]), { nouvelleFenetre: true });
   }
 
@@ -1205,12 +1191,12 @@ export class PageDocument extends PageBase {
     let sources;
     if (d.ent_marche_id && MARCHE_TYPES.includes(ed.definition.type?.tyd_code)) {
       const ids = await api.commandesMarche(d.ent_id);
-      if (!ids.length) { this.app.message('Toutes les commandes validées du marché sont déjà reprises', 'avertissement'); return; }
-      if (!await confirmer(`${ids.length} commande(s) du marché (avenants) pas encore reprise(s) : les ajouter ?`)) return;
+      if (!ids.length) { this.app.message(texte('document_btp.page.sources.toutes_reprises'), 'avertissement'); return; }
+      if (!await confirmer(texte('document_btp.page.sources.confirmer', { nombre: ids.length }))) return;
       sources = ids;
     } else {
       const attente = await api.documentsEnAttente(d.ent_tyd_id, d.ent_tiers_id ?? null);
-      sources = await choisirSources({ documents: attente, titre: `Documents à reprendre dans ${ed.definition.type?.tyd_libelle ?? 'le document'}` });
+      sources = await choisirSources({ documents: attente, titre: texte('document_btp.page.sources.titre', { cible: ed.definition.type?.tyd_libelle ?? texte('document_btp.page.sources.le_document') }) });
       if (!sources?.length) return;
     }
     await api.ajouterSources(d.ent_id, sources);
@@ -1222,14 +1208,14 @@ export class PageDocument extends PageBase {
   async transformer() {
     const ed = this.editeur;
     const d = ed.saisie.document;
-    if (this.modifiee) { this.app.message('Enregistrez le document avant de le transformer', 'avertissement'); return; }
+    if (this.modifiee) { this.app.message(texte('document_btp.page.enregistrer_avant_transformation'), 'avertissement'); return; }
     const cree = await transformerDocument({
       entId: d.ent_id, typeCode: ed.definition.type.tyd_code, numero: d.ent_numero, objet: d.ent_objet, types: this.types,
       definition: ed.definition, message: (t, n) => this.app.message(t, n),
     });
     if (!cree) return;
     this.app.publier(SUJET_FENETRE.ENREGISTRE, { ids: [cree.ent_id], cree: true });
-    this.app.message(`${cree.libelle} ${cree.ent_numero ?? ''} créé`, 'succes');
+    this.app.message(texte('document_btp.page.cree', { type: cree.libelle, numero: cree.ent_numero ?? '' }), 'succes');
     // Le nouveau document s'ouvre comme une nouvelle page (le document d'origine reste dans l'historique).
     await this.app.naviguer(urlDocument(cree.ent_id));
   }
@@ -1237,19 +1223,10 @@ export class PageDocument extends PageBase {
   /** Aide-mémoire des raccourcis des lignes (touches effectives, personnalisées comprises) et de la page. */
   aideRaccourcis() {
     basculerAideMemoire({
-      titre: 'Raccourcis des lignes',
+      titre: texte('document_btp.page.raccourcis_titre'),
       groupes: ['grille', 'document', 'application'],
-      notes: [
-        ['Entrée, F2, double-clic', 'Saisir dans la cellule'],
-        ['Échap', 'Revenir au mode ligne'],
-        ['Entrée en saisie', 'Ligne du dessous, même colonne'],
-        ['Tab en saisie', 'Cellule suivante (Maj+Tab : précédente)'],
-        ['↑ ↓ ← →', 'Changer de ligne ou de colonne'],
-        ['Ctrl+clic, Maj+clic', 'Sélection multiple'],
-        ['Glisser ⋮⋮', 'Déplacer les lignes sélectionnées'],
-        ['Glisser l’entête','Déplacer la colonne (bordure droite : largeur)'],
-        ['Clic droit', 'Menu de la ligne'],
-      ],
+      notes: ['saisir', 'echap', 'entree', 'tab', 'fleches', 'selection', 'glisser', 'colonne', 'clic_droit']
+        .map((c) => [texte(`document_btp.page.raccourcis_notes.${c}_touche`), texte(`document_btp.page.raccourcis_notes.${c}`)]),
     });
   }
 
