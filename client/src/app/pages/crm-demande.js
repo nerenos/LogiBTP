@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml, textesParCode } from '@logibtp/socle/dictionnaire';
 import { urlFiche, TYPE_FICHE, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, confirmer, formatDateHeure } from '@logibtp/socle/ui';
@@ -9,7 +10,7 @@ import { contexteCrm, individusCrm, zoneRiche, lienElement } from '../crm/crm.js
 import { PanneauSuivi } from '../crm/panneau-suivi.js';
 import { pastilleDemande } from './crm-demandes.js';
 
-const QUOI = { CREATION: 'Création', ETAT: 'État', RESPONSABLE: 'Responsable', SERVICE: 'Service' };
+const QUOI = textesParCode('crm_btp.historique', ['CREATION', 'ETAT', 'RESPONSABLE', 'SERVICE']);
 const libelleEtat = (v) => ETATS_DEMANDE.find((e) => e.valeur === v)?.libelle ?? v;
 
 /**
@@ -19,7 +20,7 @@ const libelleEtat = (v) => ETATS_DEMANDE.find((e) => e.valeur === v)?.libelle ??
  * (demande transformée, notes rattachées au projet), sans suite avec motif.
  */
 export class PageDemandeCrm extends PageBase {
-  icone = '📨';
+  icone = icone('crm_btp_demandes');
 
   get modifiee() { return Boolean(this.modifie); }
 
@@ -32,7 +33,7 @@ export class PageDemandeCrm extends PageBase {
         srv_id: this.ctx.services[0]?.id ?? null, responsable_id: null, echeance: null, montant_estime: null, origine: '' };
       this.tiers = this.saisie.tiers_id ? (await api.crm.elements([{ type: TYPE_FICHE.PERSONNE, id: String(this.saisie.tiers_id) }]))[0] : null;
       this.contact = null;
-      this.titre = 'Nouvelle demande';
+      this.titre = texte('crm_btp.demandes.nouvelle');
     } else await this.charger(Number(this.params.id));
     this.rendre();
   }
@@ -59,39 +60,39 @@ export class PageDemandeCrm extends PageBase {
     const lecture = !droits.modifier;
     const ouverte = !['TRANSFORMEE', 'SANS_SUITE'].includes(d?.etat);
     this.conteneur.innerHTML = `<div class="page-parametres page-crm-note">
-      <h1 class="page-titre">📨 ${echapper(d ? `${d.numero} – ${d.objet}` : 'Nouvelle demande')} ${d ? pastilleDemande(d) : ''}</h1>
+      <h1 class="page-titre">${iconeHtml('crm_btp_demandes')} ${echapper(d ? `${d.numero} – ${d.objet}` : texte('crm_btp.demandes.nouvelle'))} ${d ? pastilleDemande(d) : ''}</h1>
       <div class="boutons crm-actions">
-        ${lecture ? '' : '<button type="button" class="principal" data-enregistrer title="Enregistrer (Ctrl+S)">Enregistrer</button>'}
-        ${droits.prendre ? '<button type="button" data-prendre>Prendre</button>' : ''}
-        ${droits.rendre ? '<button type="button" data-rendre>Rendre au service</button>' : ''}
-        ${d && ouverte && !lecture ? '<button type="button" data-projet title="Créer le projet (chiffrage) : la demande est transformée, ses notes suivent le projet">🎯 Créer le projet</button>' : ''}
-        ${d?.cible ? `<span>Projet : ${lienElement(d.cible)}</span>` : ''}
-        ${droits.supprimer ? '<button type="button" data-supprimer title="Supprimer (sinon : sans suite)">Supprimer</button>' : ''}
+        ${lecture ? '' : `<button type="button" class="principal" data-enregistrer title="${texteHtml('crm_btp.commun.enregistrer_titre')}">${texteHtml('commun.enregistrer')}</button>`}
+        ${droits.prendre ? `<button type="button" data-prendre>${texteHtml('crm_btp.liste.prendre')}</button>` : ''}
+        ${droits.rendre ? `<button type="button" data-rendre>${texteHtml('crm_btp.commun.rendre')}</button>` : ''}
+        ${d && ouverte && !lecture ? `<button type="button" data-projet title="${texteHtml('crm_btp.demande.projet_titre')}">${iconeHtml('crm_btp_projet')} ${texteHtml('crm_btp.demande.projet')}</button>` : ''}
+        ${d?.cible ? `<span>${texteHtml('crm_btp.demande.projet_lie')} ${lienElement(d.cible)}</span>` : ''}
+        ${droits.supprimer ? `<button type="button" data-supprimer title="${texteHtml('crm_btp.demande.supprimer_titre')}">${texteHtml('commun.supprimer')}</button>` : ''}
       </div>
       <div class="crm-note-grille">
         <section class="crm-note-principal">
-          <label class="crm-objet">Objet <input data-c="objet" maxlength="200" value="${echapper(s.objet)}" ${lecture ? 'disabled' : ''} placeholder="Objet de la demande"></label>
+          <label class="crm-objet">${texteHtml('crm_btp.liste.objet')} <input data-c="objet" maxlength="200" value="${echapper(s.objet)}" ${lecture ? 'disabled' : ''} placeholder="${texteHtml('crm_btp.demande.objet_aide')}"></label>
           <div class="formulaire crm-formulaire">
-            <label>Tiers <span class="crm-tiers">${this.tiers ? lienElement(this.tiers) : '<span class="aide">—</span>'}
-              ${lecture ? '' : '<button type="button" data-choisir-tiers title="Choisir un tiers de l\'annuaire">…</button><button type="button" data-nouveau-tiers title="Nouveau tiers (provisoire, doublons contrôlés)">＋</button>'}</span></label>
-            <label>Contact <span class="crm-tiers">${this.contact ? lienElement(this.contact) : '<span class="aide">—</span>'}
-              ${lecture ? '' : '<button type="button" data-choisir-contact title="Choisir un contact">…</button>'}${!lecture && this.contact ? '<button type="button" data-retirer-contact>✕</button>' : ''}</span></label>
-            <label>Origine <input data-c="origine" maxlength="80" value="${echapper(s.origine ?? '')}" ${lecture ? 'disabled' : ''} placeholder="Appel d'offres, recommandation, site…"></label>
-            <label>État <span data-etat></span></label>
-            <label data-zone-motif ${s.etat === 'SANS_SUITE' ? '' : 'hidden'}>Motif <span data-motif></span></label>
-            <label>Service <span data-srv></span></label>
-            <label>Responsable <span data-responsable></span></label>
-            <label>Réponse attendue <input type="date" data-c="echeance" value="${s.echeance ?? ''}" ${lecture ? 'disabled' : ''}></label>
-            <label>Montant estimé (HT) <input data-c="montant_estime" inputmode="decimal" value="${s.montant_estime ?? ''}" ${lecture ? 'disabled' : ''}></label>
+            <label>${texteHtml('crm_btp.demandes.tiers')} <span class="crm-tiers">${this.tiers ? lienElement(this.tiers) : `<span class="aide">${iconeHtml('crm_btp_aucun')}</span>`}
+              ${lecture ? '' : `<button type="button" data-choisir-tiers title="${texteHtml('crm_btp.demande.choisir_tiers')}">${iconeHtml('crm_btp_choisir')}</button><button type="button" data-nouveau-tiers title="${texteHtml('crm_btp.demande.nouveau_tiers')}">${iconeHtml('ajouter')}</button>`}</span></label>
+            <label>${texteHtml('crm_btp.demande.contact')} <span class="crm-tiers">${this.contact ? lienElement(this.contact) : `<span class="aide">${iconeHtml('crm_btp_aucun')}</span>`}
+              ${lecture ? '' : `<button type="button" data-choisir-contact title="${texteHtml('crm_btp.demande.choisir_contact')}">${iconeHtml('crm_btp_choisir')}</button>`}${!lecture && this.contact ? `<button type="button" data-retirer-contact title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>` : ''}</span></label>
+            <label>${texteHtml('crm_btp.demande.origine')} <input data-c="origine" maxlength="80" value="${echapper(s.origine ?? '')}" ${lecture ? 'disabled' : ''} placeholder="${texteHtml('crm_btp.demande.origine_aide')}"></label>
+            <label>${texteHtml('crm_btp.liste.etat')} <span data-etat></span></label>
+            <label data-zone-motif ${s.etat === 'SANS_SUITE' ? '' : 'hidden'}>${texteHtml('crm_btp.demande.motif')} <span data-motif></span></label>
+            <label>${texteHtml('crm_btp.liste.service')} <span data-srv></span></label>
+            <label>${texteHtml('crm_btp.liste.responsable')} <span data-responsable></span></label>
+            <label>${texteHtml('crm_btp.demandes.reponse')} <input type="date" data-c="echeance" value="${s.echeance ?? ''}" ${lecture ? 'disabled' : ''}></label>
+            <label>${texteHtml('crm_btp.demande.montant_ht')} <input data-c="montant_estime" inputmode="decimal" value="${s.montant_estime ?? ''}" ${lecture ? 'disabled' : ''}></label>
           </div>
           <div data-description></div>
           <div class="crm-erreurs erreur" hidden></div>
-          ${d ? '<h2>Suivi</h2><div data-suivi></div>' : '<p class="aide">Notes, tâches et courriels : après le premier enregistrement.</p>'}
+          ${d ? `<h2>${texteHtml('crm_btp.routes.suivi')}</h2><div data-suivi></div>` : `<p class="aide">${texteHtml('crm_btp.commun.suivi_apres')}</p>`}
         </section>
         <aside class="crm-note-cote">
-          ${d ? '<h2>Pièces</h2><div data-pieces class="crm-pieces"></div>' : ''}
-          ${d ? `<h2>Historique</h2><ul class="crm-historique">${this.detail.historique.map((h) => `<li><span class="aide">${echapper(formatDateHeure(h.le))} · ${echapper(h.par ?? '')}</span>
-            ${echapper(QUOI[h.quoi] ?? h.quoi)} ${h.quoi === 'ETAT' || h.quoi === 'CREATION' ? `${h.avant ? `${echapper(libelleEtat(h.avant))} → ` : ''}${echapper(libelleEtat(h.apres ?? ''))}` : `${echapper(h.avant ?? '—')} → ${echapper(h.apres ?? '—')}`}</li>`).join('')}</ul>` : ''}
+          ${d ? `<h2>${texteHtml('crm_btp.diffusions.pieces')}</h2><div data-pieces class="crm-pieces"></div>` : ''}
+          ${d ? `<h2>${texteHtml('crm_btp.commun.historique')}</h2><ul class="crm-historique">${this.detail.historique.map((h) => `<li><span class="aide">${echapper(formatDateHeure(h.le))} · ${echapper(h.par ?? '')}</span>
+            ${echapper(QUOI[h.quoi] ?? h.quoi)} ${h.quoi === 'ETAT' || h.quoi === 'CREATION' ? `${h.avant ? `${echapper(libelleEtat(h.avant))} ${iconeHtml('crm_btp_vers')} ` : ''}${echapper(libelleEtat(h.apres ?? ''))}` : `${echapper(h.avant ?? icone('crm_btp_aucun'))} ${iconeHtml('crm_btp_vers')} ${echapper(h.apres ?? icone('crm_btp_aucun'))}`}</li>`).join('')}</ul>` : ''}
         </aside>
       </div></div>`;
     this.brancher(lecture);
@@ -124,30 +125,30 @@ export class PageDemandeCrm extends PageBase {
     $('[data-description]').replaceWith(this.description.element);
     $('[data-choisir-tiers]')?.addEventListener('click', async () => {
       const { annuaire } = await this.app.services();
-      const p = await choisirPersonne({ annuaire, titre: 'Tiers de la demande' });
+      const p = await choisirPersonne({ annuaire, titre: texte('crm_btp.demande.tiers_titre') });
       if (p) this.definirTiers(p);
     });
     $('[data-nouveau-tiers]')?.addEventListener('click', async () => {
       const { annuaire } = await this.app.services();
-      const p = await creerTiersProvisoire({ annuaire, casquettes: ['CLIENT'], titre: 'Nouveau tiers (prospect)' });
+      const p = await creerTiersProvisoire({ annuaire, casquettes: ['CLIENT'], titre: texte('crm_btp.demande.prospect_titre') });
       if (p) this.definirTiers(p);
     });
     $('[data-choisir-contact]')?.addEventListener('click', async () => {
       const { annuaire } = await this.app.services();
-      const r = await choisirIndividu({ annuaire, titre: 'Contact de la demande' });
-      if (r?.individu) { s.ind_id = r.individu.id; this.contact = { type: TYPE_FICHE.INDIVIDU, id: String(r.individu.id), libelle: r.individu.nom_complet, icone: '👤', url: urlFiche(TYPE_FICHE.INDIVIDU, r.individu.id) }; this.marquer(); this.rendre(); } else if (r?.nouveau) this.app.message('Créez d\'abord le contact dans l\'annuaire (fiche individu)', 'avertissement');
+      const r = await choisirIndividu({ annuaire, titre: texte('crm_btp.demande.contact_titre') });
+      if (r?.individu) { s.ind_id = r.individu.id; this.contact = { type: TYPE_FICHE.INDIVIDU, id: String(r.individu.id), libelle: r.individu.nom_complet, icone: icone('annuaire_individu'), url: urlFiche(TYPE_FICHE.INDIVIDU, r.individu.id) }; this.marquer(); this.rendre(); } else if (r?.nouveau) this.app.message(texte('crm_btp.demande.contact_a_creer'), 'avertissement');
     });
     $('[data-retirer-contact]')?.addEventListener('click', () => { s.ind_id = null; this.contact = null; this.marquer(); this.rendre(); });
     $('[data-enregistrer]')?.addEventListener('click', () => this.enregistrer());
-    $('[data-prendre]')?.addEventListener('click', () => this.action(() => api.crm.prendreDemande(this.detail.demande.id), 'Demande prise en charge'));
-    $('[data-rendre]')?.addEventListener('click', () => this.action(() => api.crm.rendreDemande(this.detail.demande.id), 'Demande rendue au service'));
+    $('[data-prendre]')?.addEventListener('click', () => this.action(() => api.crm.prendreDemande(this.detail.demande.id), texte('crm_btp.demandes.prise')));
+    $('[data-rendre]')?.addEventListener('click', () => this.action(() => api.crm.rendreDemande(this.detail.demande.id), texte('crm_btp.demande.rendue')));
     $('[data-projet]')?.addEventListener('click', async () => {
-      if (this.modifie) { this.app.message('Enregistrez d\'abord la demande', 'avertissement'); return; }
-      if (!await confirmer('Créer le projet de chiffrage depuis cette demande ? Elle passera « Transformée en projet ».')) return;
-      await this.action(() => api.crm.creerProjet(this.detail.demande.id), 'Projet créé');
+      if (this.modifie) { this.app.message(texte('crm_btp.demande.enregistrer_avant'), 'avertissement'); return; }
+      if (!await confirmer(texte('crm_btp.demande.projet_confirmer'))) return;
+      await this.action(() => api.crm.creerProjet(this.detail.demande.id), texte('crm_btp.demande.projet_cree'));
     });
     $('[data-supprimer]')?.addEventListener('click', async () => {
-      if (!await confirmer('Supprimer définitivement cette demande ?')) return;
+      if (!await confirmer(texte('crm_btp.demande.supprimer_confirmer'))) return;
       try { await api.crm.supprimerDemande(this.detail.demande.id); this.modifie = false; this.app.publier(SUJET_FENETRE.CRM, {}); this.app.routeur.retour('/crm/demandes'); } catch (e) { this.app.erreur(e); }
     });
     if (this.detail) {
@@ -156,7 +157,7 @@ export class PageDemandeCrm extends PageBase {
       this.suivi.ouvrir().catch((e) => this.app.erreur(e));
       this.app.services().then((sv) => {
         this.ged = new ExplorateurGed($('[data-pieces]'), {
-          fournisseur: sv.ged, contexte: { type_element: 'crm_demande', id_element: String(this.detail.demande.id), libelle: this.detail.demande.numero, icone: '📨' }, compact: true,
+          fournisseur: sv.ged, contexte: { type_element: 'crm_demande', id_element: String(this.detail.demande.id), libelle: this.detail.demande.numero, icone: icone('crm_btp_demandes') }, compact: true,
           ouvrirUrl: (url) => this.app.naviguer(url, { nouvelleFenetre: true }), modifiable: !lecture, admin: this.app.estAdmin(), utilisateur: this.app.utilisateur(),
           message: (t, n) => this.app.message(t, n),
         });
@@ -167,7 +168,7 @@ export class PageDemandeCrm extends PageBase {
 
   definirTiers(p) {
     this.saisie.tiers_id = p.id;
-    this.tiers = { type: TYPE_FICHE.PERSONNE, id: String(p.id), libelle: p.nom_commercial || p.raison_sociale, icone: '🏢', url: urlFiche(TYPE_FICHE.PERSONNE, p.id) };
+    this.tiers = { type: TYPE_FICHE.PERSONNE, id: String(p.id), libelle: p.nom_commercial || p.raison_sociale, icone: icone('annuaire_personne'), url: urlFiche(TYPE_FICHE.PERSONNE, p.id) };
     this.marquer();
     this.rendre();
   }
@@ -175,7 +176,7 @@ export class PageDemandeCrm extends PageBase {
   controler() {
     const zone = this.conteneur.querySelector('.crm-erreurs');
     const erreurs = controlerDemande({ ...this.saisie, cible_type: this.detail?.demande.cible?.type, cible_id: this.detail?.demande.cible?.id });
-    if (zone) { zone.hidden = !erreurs.length || !this.modifie; zone.innerHTML = erreurs.map((e) => `<div>⚠ ${echapper(MESSAGES_DEMANDE[e] ?? e)}</div>`).join(''); }
+    if (zone) { zone.hidden = !erreurs.length || !this.modifie; zone.innerHTML = erreurs.map((e) => `<div>${iconeHtml('avertissement')} ${echapper(MESSAGES_DEMANDE[e] ?? e)}</div>`).join(''); }
     return erreurs;
   }
 
@@ -183,27 +184,27 @@ export class PageDemandeCrm extends PageBase {
     if (!this.conteneur.querySelector('[data-enregistrer]')) return;
     this.saisie.description_html = this.description?.valeur() ?? null;
     this.modifie = true;
-    if (this.controler().length) { this.app.message('Demande incomplète : voir les messages sous la saisie', 'avertissement'); return; }
+    if (this.controler().length) { this.app.message(texte('crm_btp.demande.incomplete'), 'avertissement'); return; }
     try {
       const nouveau = !this.detail;
       const s = { ...this.saisie, montant_estime: this.saisie.montant_estime === null ? null : this.saisie.montant_estime };
       const d = nouveau ? await api.crm.creerDemande(s) : await api.crm.enregistrerDemande(this.detail.demande.id, s);
-      await this.apres(d, 'Demande enregistrée');
+      await this.apres(d, texte('crm_btp.demande.enregistree'));
       if (nouveau) this.app.routeur.remplacerUrl(`/crm/demande/${d.demande.id}`);
     } catch (e) { this.app.erreur(e); }
   }
 
-  async apres(d, texte) {
+  async apres(d, message) {
     this.detail = d;
     await this.charger(d.demande.id);
     this.app.publier(SUJET_FENETRE.CRM, { demande: d.demande.id });
-    this.app.message(texte, 'succes');
+    this.app.message(message, 'succes');
     this.rendre();
   }
 
-  async action(f, texte) {
-    if (this.modifie && !await confirmer('Les modifications non enregistrées seront perdues. Continuer ?')) return;
-    try { await this.apres(await f(), texte); } catch (e) { this.app.erreur(e); }
+  async action(f, message) {
+    if (this.modifie && !await confirmer(texte('crm_btp.commun.perdues'))) return;
+    try { await this.apres(await f(), message); } catch (e) { this.app.erreur(e); }
   }
 
   fermer() { this.suivi?.fermer(); }

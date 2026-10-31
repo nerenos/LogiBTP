@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { SUJET_FENETRE } from '../codes.js';
 import { dateLocale } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
@@ -7,10 +8,10 @@ import { api } from '../api.js';
 import { lienElement } from '../crm/crm.js';
 
 const VUES = [
-  { code: 'mes', libelle: 'Mes demandes', aide: 'Demandes dont je suis responsable, ouvertes' },
-  { code: 'a_prendre', libelle: 'À prendre', aide: 'Demandes en attente dans mes services' },
-  { code: 'creees', libelle: 'Créées par moi', aide: 'Demandes que j\'ai saisies' },
-  { code: 'toutes', libelle: 'Toutes', aide: 'Toutes les demandes' },
+  { code: 'mes', libelle: texte('crm_btp.demandes.vues.mes.libelle'), aide: texte('crm_btp.demandes.vues.mes.aide') },
+  { code: 'a_prendre', libelle: texte('crm_btp.demandes.vues.a_prendre.libelle'), aide: texte('crm_btp.demandes.vues.a_prendre.aide') },
+  { code: 'creees', libelle: texte('crm_btp.demandes.vues.creees.libelle'), aide: texte('crm_btp.demandes.vues.creees.aide') },
+  { code: 'toutes', libelle: texte('crm_btp.demandes.vues.toutes.libelle'), aide: texte('crm_btp.demandes.vues.toutes.aide') },
 ];
 
 /** Pastille d'état d'une demande. */
@@ -21,21 +22,21 @@ export const pastilleDemande = (d) => `<span class="crm-etat crm-dem-${String(d.
  * création du projet, triés par réponse attendue ; prise en charge des demandes en attente dans mes services.
  */
 export class PageDemandesCrm extends PageBase {
-  icone = '📨';
+  icone = icone('crm_btp_demandes');
 
   async ouvrir() {
     const app = this.app;
     const r = this.requete;
     this.filtre = { vue: VUES.some((v) => v.code === r.vue) ? r.vue : 'toutes', etat: r.etat ?? 'ouvertes', recherche: r.recherche ?? '', page: 1 };
-    this.titre = 'Demandes';
-    this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">📨 Demandes (veille commerciale)</h1>
+    this.titre = texte('crm_btp.routes.demandes');
+    this.conteneur.innerHTML = `<div class="page-parametres page-crm"><h1 class="page-titre">${iconeHtml('crm_btp_demandes')} ${texteHtml('crm_btp.demandes.titre')}</h1>
       <nav class="onglets crm-vues">${VUES.map((v) => `<button type="button" data-vue="${v.code}" title="${echapper(v.aide)}">${echapper(v.libelle)}</button>`).join('')}</nav>
-      <div class="crm-filtres"><input type="search" data-recherche placeholder="Rechercher (numéro, objet, origine)" value="${echapper(this.filtre.recherche)}"><span data-etat></span>
-        <button type="button" class="principal" data-nouvelle title="Nouvelle demande (Ctrl : autre fenêtre)">＋ Nouvelle demande</button></div>
+      <div class="crm-filtres"><input type="search" data-recherche placeholder="${texteHtml('crm_btp.demandes.recherche')}" value="${echapper(this.filtre.recherche)}"><span data-etat></span>
+        <button type="button" class="principal" data-nouvelle title="${texteHtml('crm_btp.demandes.nouvelle_titre')}">${iconeHtml('ajouter')} ${texteHtml('crm_btp.demandes.nouvelle')}</button></div>
       <div data-corps></div></div>`;
     const $ = (s) => this.conteneur.querySelector(s);
     this.conteneur.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => { this.filtre.vue = b.dataset.vue; this.filtre.page = 1; this.charger(); }));
-    const etat = creerCombo({ options: [{ valeur: 'ouvertes', libelle: 'Ouvertes' }, ...ETATS_DEMANDE], valeur: this.filtre.etat });
+    const etat = creerCombo({ options: [{ valeur: 'ouvertes', libelle: texte('crm_btp.liste.ouvertes') }, ...ETATS_DEMANDE], valeur: this.filtre.etat });
     etat.addEventListener('change', () => { this.filtre.etat = etat.valeurCombo; this.filtre.page = 1; this.charger(); });
     $('[data-etat]').replaceWith(etat);
     let minuterie;
@@ -62,21 +63,21 @@ export class PageDemandesCrm extends PageBase {
     this.app.routeur?.remplacerUrl(this.urlCourante());
     let page;
     try { page = await api.crm.demandes({ ...this.filtre, taille: 50 }); } catch (e) { corps.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
-    if (!page.demandes.length) { corps.innerHTML = '<p class="aide">Aucune demande.</p>'; return; }
+    if (!page.demandes.length) { corps.innerHTML = `<p class="aide">${texteHtml('crm_btp.demandes.aucune')}</p>`; return; }
     const pages = Math.ceil(page.total / page.taille);
     const aujourdhui = dateLocale();
-    corps.innerHTML = `<table class="crm-table"><thead><tr><th>N°</th><th>Objet</th><th>Tiers</th><th>État</th><th>Responsable</th><th>Réponse attendue</th><th class="nombre">Montant estimé</th><th>Projet</th><th></th></tr></thead>
+    corps.innerHTML = `<table class="crm-table"><thead><tr><th>${texteHtml('crm_btp.demandes.numero')}</th><th>${texteHtml('crm_btp.liste.objet')}</th><th>${texteHtml('crm_btp.demandes.tiers')}</th><th>${texteHtml('crm_btp.liste.etat')}</th><th>${texteHtml('crm_btp.liste.responsable')}</th><th>${texteHtml('crm_btp.demandes.reponse')}</th><th class="nombre">${texteHtml('crm_btp.demandes.montant')}</th><th>${texteHtml('crm_btp.demandes.projet')}</th><th></th></tr></thead>
       <tbody>${page.demandes.map((d) => {
         const clos = ETATS_DEMANDE_CLOS.includes(d.etat);
-        return `<tr class="${clos ? 'discret' : ''}"><td><a href="/crm/demande/${d.id}">${echapper(d.numero)}</a></td><td>${echapper(d.objet)}${d.nb_notes ? ` <span class="aide">💬 ${d.nb_notes}</span>` : ''}</td>
-          <td>${lienElement(d.tiers)}</td><td>${pastilleDemande(d)}</td><td>${echapper(d.responsable ?? (d.service ? `${d.service} (à prendre)` : ''))}</td>
+        return `<tr class="${clos ? 'discret' : ''}"><td><a href="/crm/demande/${d.id}">${echapper(d.numero)}</a></td><td>${echapper(d.objet)}${d.nb_notes ? ` <span class="aide">${iconeHtml('crm_btp_note')} ${d.nb_notes}</span>` : ''}</td>
+          <td>${lienElement(d.tiers)}</td><td>${pastilleDemande(d)}</td><td>${echapper(d.responsable ?? (d.service ? texte('crm_btp.liste.service_a_prendre', { service: d.service }) : ''))}</td>
           <td class="${!clos && d.echeance && d.echeance < aujourdhui ? 'crm-retard' : ''}">${d.echeance ? formatDate(d.echeance) : ''}</td>
           <td class="nombre">${formatNombre(d.montant_estime, 0)}</td><td>${lienElement(d.cible)}</td>
-          <td>${d.a_prendre ? `<button type="button" data-prendre="${d.id}">Prendre</button>` : ''}</td></tr>`;
+          <td>${d.a_prendre ? `<button type="button" data-prendre="${d.id}">${texteHtml('crm_btp.liste.prendre')}</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
-      <p class="aide">${page.total} demande(s)${pages > 1 ? ` · page ${page.page} / ${pages} <button type="button" data-page="-1" ${page.page <= 1 ? 'disabled' : ''}>◀</button> <button type="button" data-page="1" ${page.page >= pages ? 'disabled' : ''}>▶</button>` : ''}</p>`;
+      <p class="aide">${echapper(pluriel('crm_btp.demandes.nb', page.total))}${pages > 1 ? ` · ${texteHtml('crm_btp.liste.page', { page: page.page, pages })} <button type="button" data-page="-1" ${page.page <= 1 ? 'disabled' : ''}>${iconeHtml('precedent')}</button> <button type="button" data-page="1" ${page.page >= pages ? 'disabled' : ''}>${iconeHtml('suivant')}</button>` : ''}</p>`;
     corps.querySelectorAll('[data-prendre]').forEach((b) => b.addEventListener('click', async () => {
-      try { await api.crm.prendreDemande(Number(b.dataset.prendre)); this.app.message('Demande prise en charge', 'succes'); this.app.publier(SUJET_FENETRE.CRM, {}); } catch (e) { this.app.erreur(e); }
+      try { await api.crm.prendreDemande(Number(b.dataset.prendre)); this.app.message(texte('crm_btp.demandes.prise'), 'succes'); this.app.publier(SUJET_FENETRE.CRM, {}); } catch (e) { this.app.erreur(e); }
     }));
     corps.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => { this.filtre.page += Number(b.dataset.page); this.charger(); }));
   }

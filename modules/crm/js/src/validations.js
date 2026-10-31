@@ -5,16 +5,18 @@
 // de visa a un effet : ACCEPTE (bon pour exécution, avec observations), REFUSE (bloquant), NEUTRE (sans objet, pour
 // information). L'indice en vigueur est le dernier dont tous les visas attendus sont reçus, sans refus, avec au moins
 // une acceptation.
+import { texte } from '@logibtp/socle/dictionnaire';
+
 
 export const EFFETS_VISA = ['ACCEPTE', 'REFUSE', 'NEUTRE'];
 
 export const STATUTS_PLAN = [
-  { valeur: 'SANS_INDICE', libelle: 'Sans indice' },
-  { valeur: 'A_DIFFUSER', libelle: 'À diffuser' },
-  { valeur: 'SANS_VISA', libelle: 'Diffusé sans visa attendu' },
-  { valeur: 'EN_ATTENTE', libelle: 'Visas en attente' },
-  { valeur: 'REFUSE', libelle: 'Refusé' },
-  { valeur: 'VALIDE', libelle: 'Bon pour exécution' },
+  { valeur: 'SANS_INDICE', libelle: texte('crm.statuts_plan.SANS_INDICE') },
+  { valeur: 'A_DIFFUSER', libelle: texte('crm.statuts_plan.A_DIFFUSER') },
+  { valeur: 'SANS_VISA', libelle: texte('crm.statuts_plan.SANS_VISA') },
+  { valeur: 'EN_ATTENTE', libelle: texte('crm.statuts_plan.EN_ATTENTE') },
+  { valeur: 'REFUSE', libelle: texte('crm.statuts_plan.REFUSE') },
+  { valeur: 'VALIDE', libelle: texte('crm.statuts_plan.VALIDE') },
 ];
 
 const jour = (v) => (v ? String(v).slice(0, 10) : null);

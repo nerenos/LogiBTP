@@ -468,26 +468,26 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .crm-note-cote, .crm-note-principal { min-width: 0; }
 .vue-suivi { overflow: auto; }
 .crm-pastille { display: inline-block; width: .75em; height: .75em; border-radius: 50%; background: var(--bord); vertical-align: middle; }
-.crm-pastille-rouge { background: #d92d20; }
-.crm-pastille-orange { background: #f79009; }
-.crm-pastille-vert { background: #12b76a; }
+.crm-pastille-rouge { background: var(--crm-rappel-rouge); }
+.crm-pastille-orange { background: var(--crm-rappel-orange); }
+.crm-pastille-vert { background: var(--crm-rappel-vert); }
 .crm-ajout-rappel { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .4rem; }
 .crm-tiers { display: flex; gap: .3rem; align-items: center; min-height: 1.8rem; }
 .crm-dem-veille { font-style: italic; }
 .crm-dem-a_etudier { background: var(--alerte-fond); }
 .crm-dem-en_cours { background: var(--accent-clair); }
-.crm-dem-transformee { background: #d1fadf; color: #05603a; }
+.crm-dem-transformee { background: var(--crm-valide-fond); color: var(--crm-valide-texte); }
 .crm-dem-sans_suite { color: var(--discret); }
 .crm-indice { border: 1px solid var(--bord); border-radius: .4rem; padding: .5rem; margin: .5rem 0; }
 .crm-indice-entete { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; margin-bottom: .3rem; }
-.crm-plan-valide { background: #d1fadf; color: #05603a; }
+.crm-plan-valide { background: var(--crm-valide-fond); color: var(--crm-valide-texte); }
 .crm-plan-refuse { background: var(--erreur-fond); color: var(--erreur); }
 .crm-plan-en_attente { background: var(--alerte-fond); }
 .crm-plan-a_diffuser, .crm-plan-sans_indice, .crm-plan-sans_visa { font-style: italic; }
 .crm-signature { margin-top: 3rem; }
 @media print {
   #bandeau, .crm-actions, .crm-ecran { display: none !important; }
-  .crm-bordereau { color: #000; background: #fff; }
+  .crm-bordereau { color: var(--crm-impression-texte); background: var(--crm-impression-fond); }
   .crm-bordereau a { color: inherit; text-decoration: none; }
 }
 .crm-publier { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: .5rem 0; }

@@ -547,3 +547,31 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : tests du module sur le dictionnaire composé, clés de `modules/bibliotheque/js` vérifiées par le test
   du client ; affichage contrôlé dans le navigateur (bibliothèque en mémoire : onglets Prix, Unités et Tarifs, arbres,
   paramétrage sur ses onglets).
+
+## 22. Réalisation du lot P3i : module CRM (31/10/2026)
+
+- **Périmètre** : `modules/crm/js/src` (règles : natures, états, demandes, motifs sans suite, types de rappels, statuts
+  des plans, messages d'erreur, format des noms de plans) et, le module n'ayant pas d'interface propre, ses écrans du
+  cœur : `client/src/app/crm/` (outils communs, fil d'actualité, onglet Suivi), pages `crm*.js` (notes, note, demandes,
+  demande, plans, plan, bordereaux, bordereau, rappels, suivi, fil) et `parametres-crm.js`, titres des routes.
+- **Textes** : `crm.*` du `fr.json` du module (`natures_note`, `etats_note`, `etats_demande`, `motifs_sans_suite`,
+  `types_rappel`, `statuts_plan`, `notes.erreurs`, `demandes.erreurs`, `rappels.erreurs`, `plans`) ; `crm_btp.*` du
+  `fr.json` du cœur pour les écrans (`routes`, `liste`, `vues`, `suivi`, `fil`, `rappel`, `rappels`, `note`, `demandes`,
+  `demande`, `plans`, `plan`, `diffusions`, `diffusion`, `modes_diffusion`, `historique`, `couleurs_rappel`,
+  `parametres`, `commun`, `riche`, `courriel`) ; compteurs par `pluriel` (notes, demandes, photos, réponses, courriels,
+  fichiers, visas). Les tables exportées gardent leur forme (`NATURES_NOTE`… : `{ valeur, libelle }`,
+  `MODES_DIFFUSION`, effets des statuts de visa : `pairesParCode`).
+- **Message à variable** : `MESSAGES_NOTE.NOTE_OBJET` est un accesseur qui passe `LONGUEUR_OBJET` (`{{longueur}}`) ; les
+  autres messages restent fournis par `textesParCode`.
+- **Icônes** : `crm_action`, `crm_message`, `crm_tache` du module ; `crm_btp_*` du cœur (suivi, note, fil, plans,
+  bordereaux, rappels, demandes, projet, fichiers, imprimer, courriel, mise en forme…) ; communes du socle (`ajouter`,
+  `retirer`, `verrou`, `avertissement`, `precedent`, `suivant`) et de l'annuaire (`annuaire_individu`,
+  `annuaire_personne`).
+- **Couleurs** : pastilles des rappels, demande transformée et plan validé, bordereau imprimé par des variables du thème
+  du cœur (`--crm-rappel-rouge|orange|vert`, `--crm-valide-fond|texte`, `--crm-impression-texte|fond`).
+- **Gardé** : codes (`COURRIEL`, catégorie GED `crm`, types d'éléments) ; noms des répertoires d'indices de la GED
+  passés au dictionnaire (`crm_btp.plan.indice`) mais retrouvés d'abord par l'identifiant retenu sur l'indice.
+- **Contrôles** : tests du module sur le dictionnaire composé (`test/preparation.js`, clé manquante = échec), clés de
+  `modules/crm/js/src` vérifiées par le test du client ; affichage contrôlé dans le navigateur (API simulée : onglet
+  Suivi, fil, rappels, plans, paramétrage).
+

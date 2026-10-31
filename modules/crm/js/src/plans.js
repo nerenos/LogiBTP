@@ -6,6 +6,7 @@
 // nom « Plan de masse », indice B. Un indice en fin de format est facultatif (« R01_Plan de masse.pdf » : indice
 // vide, le premier) ; il s'écrit en une ou deux lettres majuscules. L'extension est retirée ; les « _ » restants du
 // nom deviennent des espaces quand le séparateur n'est pas « _ ».
+import { texte } from '@logibtp/socle/dictionnaire';
 
 export const FORMAT_PLAN_DEFAUT = '{repere}_{nom}_{indice}';
 export const CHAMPS_FORMAT_PLAN = ['repere', 'nom', 'lot', 'indice', '*'];
@@ -18,17 +19,17 @@ export function analyserFormatPlan(format) {
   const re = /\{([^{}]*)\}/g;
   let dernier = 0;
   let m;
-  const texte = String(format ?? '');
-  while ((m = re.exec(texte))) {
-    if (m.index > dernier) morceaux.push({ texte: texte.slice(dernier, m.index) });
+  const chaine = String(format ?? '');
+  while ((m = re.exec(chaine))) {
+    if (m.index > dernier) morceaux.push({ texte: chaine.slice(dernier, m.index) });
     const champ = m[1].trim().toLowerCase();
-    if (!CHAMPS_FORMAT_PLAN.includes(champ)) return { erreur: `Champ inconnu : {${m[1]}} (champs : ${CHAMPS_FORMAT_PLAN.map((c) => `{${c}}`).join(', ')})` };
+    if (!CHAMPS_FORMAT_PLAN.includes(champ)) return { erreur: texte('crm.plans.champ_inconnu', { champ: `{${m[1]}}`, champs: CHAMPS_FORMAT_PLAN.map((c) => `{${c}}`).join(', ') }) };
     morceaux.push({ champ });
     dernier = re.lastIndex;
   }
-  if (dernier < texte.length) morceaux.push({ texte: texte.slice(dernier) });
-  if (!morceaux.some((x) => x.champ && x.champ !== '*')) return { erreur: 'Le format doit contenir au moins un champ ({repere}, {nom}…)' };
-  for (let i = 1; i < morceaux.length; i++) if (morceaux[i].champ && morceaux[i - 1].champ) return { erreur: 'Deux champs doivent être séparés par un texte fixe' };
+  if (dernier < chaine.length) morceaux.push({ texte: chaine.slice(dernier) });
+  if (!morceaux.some((x) => x.champ && x.champ !== '*')) return { erreur: texte('crm.plans.aucun_champ') };
+  for (let i = 1; i < morceaux.length; i++) if (morceaux[i].champ && morceaux[i - 1].champ) return { erreur: texte('crm.plans.separateur') };
   return { morceaux };
 }
 

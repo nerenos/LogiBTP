@@ -16,3 +16,14 @@
   --borne-test-fond: #fef3c7;
   --borne-test-texte: #92400e;
 }
+
+/* CRM (lot P3i) : pastilles des rappels, états validés (demande transformée, plan validé), bordereau imprimé. */
+:root {
+  --crm-rappel-rouge: #d92d20;
+  --crm-rappel-orange: #f79009;
+  --crm-rappel-vert: #12b76a;
+  --crm-valide-fond: #d1fadf;
+  --crm-valide-texte: #05603a;
+  --crm-impression-texte: #000;
+  --crm-impression-fond: #fff;
+}
