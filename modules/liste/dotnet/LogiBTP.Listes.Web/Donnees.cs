@@ -27,6 +27,8 @@ public class ThemeListe
     public int ThlOrdre { get; set; }
     public JsonDocument ThlTypes { get; set; } = JsonDocument.Parse("[]");
     public bool ThlActif { get; set; } = true;
+    /// <summary>Vue ouverte d'un clic sur le thème, sauf vue ★ de l'utilisateur (033).</summary>
+    public long? ThlVliDefaut { get; set; }
 }
 
 public sealed class ThemeListeDto
@@ -37,6 +39,8 @@ public sealed class ThemeListeDto
     public int ThlOrdre { get; set; }
     public List<TypeElementTheme> ThlTypes { get; set; } = [];
     public bool ThlActif { get; set; } = true;
+    /// <summary>Vue ouverte d'un clic sur le thème, sauf vue ★ de l'utilisateur (033).</summary>
+    public long? ThlVliDefaut { get; set; }
 }
 
 /// <summary>Vue de liste enregistrée (vue_liste).</summary>

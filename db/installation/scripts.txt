@@ -45,6 +45,7 @@ modules/metre/db/021_metre_script.sql
 modules/liste/db/030_liste_schema.sql
 modules/liste/db/031_liste_themes.sql
 modules/liste/db/032_liste_saisie.sql
+modules/liste/db/033_liste_vue_defaut.sql rejouable
 modules/fiche/db/040_fiche_schema.sql
 modules/fiche/db/041_fiche_parametrage.sql
 modules/fiche/db/042_fiche_chrono.sql

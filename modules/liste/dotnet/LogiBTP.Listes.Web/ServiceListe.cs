@@ -47,7 +47,7 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
 
     protected static ThemeListeDto VersDto(ThemeListe t) => new()
     {
-        ThlCode = t.ThlCode, ThlLibelle = t.ThlLibelle, ThlIcone = t.ThlIcone, ThlOrdre = t.ThlOrdre, ThlActif = t.ThlActif,
+        ThlCode = t.ThlCode, ThlLibelle = t.ThlLibelle, ThlIcone = t.ThlIcone, ThlOrdre = t.ThlOrdre, ThlActif = t.ThlActif, ThlVliDefaut = t.ThlVliDefaut,
         ThlTypes = t.ThlTypes.Deserialize<List<TypeElementTheme>>(JsonCalcul.Options) ?? [],
     };
 
@@ -73,6 +73,8 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         theme.ThlOrdre = dto.ThlOrdre;
         theme.ThlActif = dto.ThlActif;
         theme.ThlTypes = JsonSerializer.SerializeToDocument(types, JsonCalcul.Options);
+        // Vue par défaut : une vue de ce thème, sinon aucune.
+        theme.ThlVliDefaut = dto.ThlVliDefaut is long v && await db.Vues.AnyAsync(x => x.VliId == v && x.VliTheme == theme.ThlCode, ct) ? v : null;
         await db.SaveChangesAsync(ct);
         return VersDto(theme);
     }

@@ -595,3 +595,17 @@ client` pour les lots qui changent des vues fournies.
   d'entretien : renvoi vers les matériels (création depuis la fiche).
 - **Contrôles** : `npm test` ; essai dans le navigateur (projets, chantiers, salariés en pastilles ; création d'un ordre
   d'exécution avec choix du marché).
+
+## 15. Réalisation du lot E5 : panneau des vues (31/10/2026)
+
+- **Panneau des vues (L1)** : `PanneauVues` du module Liste (`modules/liste/js/ui/panneau-vues.js`) à droite de la
+  liste, à la place des combos du thème et de la vue : arbre groupe du menu › thème › vues, recherche, vue courante en
+  surbrillance, partage (👤 personnelle, 👥 groupe), ✎ modifier au survol, clic droit (★, modifier, enregistrer sous,
+  nouvelle vue), ＋ nouvelle vue, ⚙ thèmes et vues (administrateur) ; largeur au glisser, réduit en un bouton (d'office
+  sous 900 px), état gardé dans le navigateur. Le panneau des segments reste à part (Q2), à gauche du panneau des vues
+  quand les deux sont à droite.
+- **Vue par défaut (Q1)** : un clic sur un thème ouvre sa vue ★ de l'utilisateur (navigateur), sinon celle de
+  l'administrateur (`theme_liste.thl_vli_defaut`, `modules/liste/db/033`, colonne « Vue par défaut » des thèmes),
+  sinon la première ; la dernière vue ouverte n'est plus retenue. Les adresses `/liste/<thème>?vue=` sont inchangées.
+- **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (changement de thème par le
+  panneau, adresse et titre de la page, panneau réduit).

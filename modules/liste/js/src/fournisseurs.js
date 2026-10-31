@@ -5,7 +5,7 @@ import { filtrer, trier, lot, jusqua, comptesSegment, empreinte, filtresEffectif
 
 // Fournisseurs de données d'une liste. Même interface pour l'API et pour la mémoire (démo hors ligne, tests) :
 //
-//   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif }]
+//   themes()                      → [{ thl_code, thl_libelle, thl_icone, thl_ordre, thl_types: [{ code, libelle }], thl_actif, thl_vli_defaut }]
 //   enregistrerTheme(theme)       supprimerTheme(code)    (profil ADMIN)
 //   vues(contexte, theme)         → [{ vli_id, vli_nom, vli_contexte, vli_theme, vli_partage, vli_proprietaire, modifiable }]
 //   vue(id)                       → { vli_id, vli_nom, vli_contexte, vli_partage, vli_groupe, vli_version, definition }
