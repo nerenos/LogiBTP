@@ -27,3 +27,9 @@
   --crm-impression-texte: #000;
   --crm-impression-fond: #fff;
 }
+
+/* Mail (lot P3j) : corps d'un courriel affiché dans son cadre isolé (sans accès aux variables de la page). */
+:root {
+  --mail-corps-texte: #1f2328;
+  --mail-corps-fond: #fff;
+}

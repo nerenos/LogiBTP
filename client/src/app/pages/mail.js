@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml, textesParCode, pairesParCode, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { pastilleTable } from '../pastilles.js';
 import { urlDocument, SUJET_FENETRE } from '../codes.js';
 import { ERREUR_MAIL } from '@logibtp/mail';
@@ -7,27 +8,24 @@ import { api, ErreurApi } from '../api.js';
 import { zoneRiche } from '../crm/crm.js';
 import { pastilleCompteMail } from './parametres-mail.js';
 
-const ETATS = {
-  A_ENVOYER: ['⏳ En attente', 'attention'], EN_COURS: ['En cours', 'attention'], ENVOYE: ['Envoyé', 'ok'], ERREUR: ['Erreur', 'erreur'],
-  ANNULE: ['Annulé', 'neutre'], SUSPENDU: ['Suspendu', 'erreur'], BROUILLON: ['Brouillon', 'neutre'],
-  A_RAPPROCHER: ['À rapprocher', 'attention'], PROPOSE: ['Proposé', 'attention'], RAPPROCHE: ['Rapproché', 'ok'], IGNORE: ['Ignoré', 'neutre'], RECU: ['Reçu', 'neutre'],
-};
-const VUES = [['a-rapprocher', 'À rapprocher'], ['recus', 'Reçus'], ['envoyes', 'Envoyés'], ['attente', 'En attente'], ['erreurs', 'Erreurs'], ['tous', 'Envois'],
-  ['envois', 'Suivi des envois']];
+// Libellés par code (module Personnalisation) ; classe de la pastille par état.
+const CLASSES_ETATS = { A_ENVOYER: 'attention', EN_COURS: 'attention', ENVOYE: 'ok', ERREUR: 'erreur', ANNULE: 'neutre', SUSPENDU: 'erreur', BROUILLON: 'neutre',
+  A_RAPPROCHER: 'attention', PROPOSE: 'attention', RAPPROCHE: 'ok', IGNORE: 'neutre', RECU: 'neutre' };
+const ETATS = Object.fromEntries(pairesParCode('mail_btp.etats', Object.keys(CLASSES_ETATS))
+  .map(([code, libelle]) => [code, [code === 'A_ENVOYER' ? `${icone('mail_btp_attente')} ${libelle}` : libelle, CLASSES_ETATS[code]]]));
+const VUES = pairesParCode('mail_btp.vues', [['a-rapprocher', 'a_rapprocher'], 'recus', 'envoyes', 'attente', 'erreurs', 'tous', 'envois']);
 const VUES_RECUES = { 'a-rapprocher': 'a-rapprocher', recus: 'tous' };
-const taille = (n) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`);
+const taille = (n) => (n > 1024 * 1024 ? texte('mail_btp.taille_mo', { taille: (n / 1024 / 1024).toFixed(1) }) : texte('mail_btp.taille_ko', { taille: Math.max(1, Math.round(n / 1024)) }));
 
-export const NATURES = { ARC: 'ARC', REPONSE_DEVIS: 'Réponse au devis', FACTURE_FOURNISSEUR: 'Facture fournisseur', BL: 'Livraison', RELANCE: 'Relance', AUTRE: 'Autre' };
-const INDICES = { FIL: 'réponse à un envoi', NUMERO_OBJET: 'numéro dans l’objet', NUMERO_TEXTE: 'numéro dans le texte', NUMERO_PIECE: 'numéro dans le nom d’une pièce',
-  NUMERO_PIECE_TEXTE: 'numéro dans une pièce', REFERENCE: 'référence citée', EXPEDITEUR: 'expéditeur = tiers', TIERS: 'tiers de l’expéditeur' };
+export const NATURES = textesParCode('mail_btp.natures', ['ARC', 'REPONSE_DEVIS', 'FACTURE_FOURNISSEUR', 'BL', 'RELANCE', 'AUTRE']);
+const INDICES = textesParCode('mail_btp.indices', ['FIL', 'NUMERO_OBJET', 'NUMERO_TEXTE', 'NUMERO_PIECE', 'NUMERO_PIECE_TEXTE', 'REFERENCE', 'EXPEDITEUR', 'TIERS']);
 
 export const pastilleMessage = (etat) => pastilleTable(ETATS, etat);
 
 /** Message affiché après la mise en file : parti tout de suite ou en attente (position, départ estimé, cause). */
 export function messageEnvoi(r) {
-  if (!r.en_attente) return [`Courriel envoyé à la file : départ immédiat${r.messages.length > 1 ? ` (${r.messages.length} courriels)` : ''}`, 'succes'];
-  return [`Votre courriel est en attente d'envoi (position ${r.position + 1}, départ estimé vers ${formatDateHeure(r.depart)}${r.cause ? ` : ${r.cause}` : ''}). `
-    + 'Vous serez prévenu de son départ.', 'avertissement'];
+  if (!r.en_attente) return [r.messages.length > 1 ? texte('mail_btp.envoi.immediat_plusieurs', { nombre: r.messages.length }) : texte('mail_btp.envoi.immediat'), 'succes'];
+  return [texte('mail_btp.envoi.attente', { position: r.position + 1, depart: formatDateHeure(r.depart), cause: r.cause ? ` : ${r.cause}` : '' }), 'avertissement'];
 }
 
 /**
@@ -36,15 +34,15 @@ export function messageEnvoi(r) {
  * par la file : l'utilisateur est prévenu d'une attente, un envoi groupé demande confirmation.
  */
 export class PageRedactionMail extends PageBase {
-  icone = '✉';
+  icone = icone('mail_btp_courriel');
 
   get modifiee() { return Boolean(this.change); }
 
   async ouvrir() {
     const app = this.app;
     const r = this.requete ?? {};
-    this.titre = 'Nouveau courriel';
-    this.conteneur.innerHTML = '<div class="page-parametres page-mail"><p class="aide">Préparation…</p></div>';
+    this.titre = texte('mail_btp.routes.nouveau');
+    this.conteneur.innerHTML = `<div class="page-parametres page-mail"><p class="aide">${texteHtml('mail_btp.redaction.preparation')}</p></div>`;
     try {
       this.brouillon = await api.mail.preparer({ type: r.type, id: r.id, usage: r.usage });
     } catch (e) {
@@ -57,24 +55,24 @@ export class PageRedactionMail extends PageBase {
   rendre() {
     const b = this.brouillon;
     const el = b.element;
-    if (el) this.titre = `Courriel : ${el.libelle}`;
-    const champ = (role, libelle) => `<tr><th>${libelle}</th><td><textarea data-role="${role}" rows="1" cols="70" placeholder="Nom <adresse@domaine.fr>, …"></textarea></td></tr>`;
+    if (el) this.titre = texte('mail_btp.redaction.titre', { libelle: el.libelle });
+    const champ = (role, libelle) => `<tr><th>${libelle}</th><td><textarea data-role="${role}" rows="1" cols="70" placeholder="${texteHtml('mail_btp.redaction.adresses_aide')}"></textarea></td></tr>`;
     this.conteneur.innerHTML = `<div class="page-parametres page-mail">
-      <div class="entete-page"><h1 class="page-titre">✉ ${echapper(this.titre)}</h1>
-        <span><button type="button" class="principal" data-envoyer title="Mettre le courriel dans la file d'envoi">📤 Envoyer</button>
-        <button type="button" data-fermer>✕ Fermer</button></span></div>
-      ${el ? `<p class="aide">Depuis <a href="${echapper(el.url ?? '#')}" data-lien>${echapper(el.libelle)}</a> : le courriel envoyé est rangé dans la GED et le suivi de l'élément.</p>` : ''}
+      <div class="entete-page"><h1 class="page-titre">${iconeHtml('mail_btp_courriel')} ${echapper(this.titre)}</h1>
+        <span><button type="button" class="principal" data-envoyer title="${texteHtml('mail_btp.redaction.envoyer_titre')}">${iconeHtml('mail_btp_envoyer')} ${texteHtml('mail_btp.redaction.envoyer')}</button>
+        <button type="button" data-fermer>${iconeHtml('retirer')} ${texteHtml('commun.fermer')}</button></span></div>
+      ${el ? `<p class="aide">${texteHtml('mail_btp.redaction.depuis')} <a href="${echapper(el.url ?? '#')}" data-lien>${echapper(el.libelle)}</a> ${texteHtml('mail_btp.redaction.depuis_suite')}</p>` : ''}
       <table class="pleine-largeur"><tbody>
-        <tr><th>De</th><td><span data-expediteur></span> <span class="aide" data-estimation></span></td></tr>
-        ${champ('a', 'À')}${champ('cc', 'Cc')}${champ('cci', 'Cci')}
-        ${b.destinataires.length ? `<tr><th></th><td>Proposés : ${b.destinataires.map((d, i) => `<button type="button" class="etiquette" data-propose="${i}"
-          title="${echapper(d.adresse)}">＋ ${echapper(d.nom ?? d.adresse)}${d.role ? ` <span class="aide">(${echapper(d.role)})</span>` : ''}</button>`).join(' ')}</td></tr>` : ''}
-        <tr><th>Objet</th><td><input data-objet size="80" value="${echapper(b.objet)}"></td></tr>
-        <tr><th>Message</th><td data-corps></td></tr>
-        <tr><th>Pièces jointes</th><td>${b.pieces.length ? b.pieces.map((p, i) => `<label class="ligne"><input type="checkbox" data-piece="${i}" ${p.cochee ? 'checked' : ''}>
-          📎 ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span></label>`).join('<br>') : '<span class="aide">Aucune pièce marquée « à envoyer » (📧 dans l’onglet Pièces).</span>'}
+        <tr><th>${texteHtml('mail_btp.champs.de')}</th><td><span data-expediteur></span> <span class="aide" data-estimation></span></td></tr>
+        ${champ('a', texteHtml('mail_btp.champs.a'))}${champ('cc', texteHtml('mail_btp.champs.cc'))}${champ('cci', texteHtml('mail_btp.champs.cci'))}
+        ${b.destinataires.length ? `<tr><th></th><td>${texteHtml('mail_btp.redaction.proposes')} ${b.destinataires.map((d, i) => `<button type="button" class="etiquette" data-propose="${i}"
+          title="${echapper(d.adresse)}">${iconeHtml('ajouter')} ${echapper(d.nom ?? d.adresse)}${d.role ? ` <span class="aide">(${echapper(d.role)})</span>` : ''}</button>`).join(' ')}</td></tr>` : ''}
+        <tr><th>${texteHtml('mail_btp.champs.objet')}</th><td><input data-objet size="80" value="${echapper(b.objet)}"></td></tr>
+        <tr><th>${texteHtml('mail_btp.champs.message')}</th><td data-corps></td></tr>
+        <tr><th>${texteHtml('mail_btp.champs.pieces_jointes')}</th><td>${b.pieces.length ? b.pieces.map((p, i) => `<label class="ligne"><input type="checkbox" data-piece="${i}" ${p.cochee ? 'checked' : ''}>
+          ${iconeHtml('mail_btp_piece')} ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span></label>`).join('<br>') : `<span class="aide">${texteHtml('mail_btp.redaction.aucune_piece')}</span>`}
           <div class="aide" data-taille></div></td></tr>
-        <tr><th></th><td><label class="ligne"><input type="checkbox" data-copie> Copie à moi (Cci)</label></td></tr>
+        <tr><th></th><td><label class="ligne"><input type="checkbox" data-copie> ${texteHtml('mail_btp.redaction.copie')}</label></td></tr>
       </tbody></table></div>`;
     const expediteur = creerCombo({ options: b.expediteurs.map((a) => ({ valeur: a.id, libelle: a.nom })), valeur: b.alias_id });
     this.conteneur.querySelector('[data-expediteur]').replaceWith(expediteur);
@@ -115,7 +113,7 @@ export class PageRedactionMail extends PageBase {
     const total = this.pieces().reduce((t, p) => t + p.taille, 0);
     const z = this.conteneur.querySelector('[data-taille]');
     if (!z) return;
-    z.textContent = total ? `Total ${taille(total)} (au plus ${taille(this.brouillon.taille_max)} par courriel)` : '';
+    z.textContent = total ? texte('mail_btp.redaction.taille_totale', { total: taille(total), max: taille(this.brouillon.taille_max) }) : '';
     z.classList.toggle('erreur', total * 4 / 3 > this.brouillon.taille_max);
   }
 
@@ -126,8 +124,8 @@ export class PageRedactionMail extends PageBase {
     if (!z || !n) { if (z) z.textContent = ''; return; }
     try {
       const e = await api.mail.estimer({ alias_id: Number(this.expediteur.valeurCombo), messages: 1, destinataires_par_message: n, priorite: 'HAUTE' });
-      z.textContent = e.immediat ? `Départ immédiat · quota du jour utilisé à ${e.taux_quota} %`
-        : `⏳ Départ estimé vers ${formatDateHeure(e.depart)}${e.cause ? ` (${e.cause})` : ''} · ${e.position} courriel(s) en file`;
+      z.textContent = e.immediat ? texte('mail_btp.redaction.depart_immediat', { taux: e.taux_quota })
+        : `${icone('mail_btp_attente')} ${texte('mail_btp.redaction.depart_estime', { depart: formatDateHeure(e.depart), cause: e.cause ? ` (${e.cause})` : '' })} · ${pluriel('mail_btp.redaction.en_file', e.position)}`;
     } catch { z.textContent = ''; }
   }
 
@@ -147,7 +145,7 @@ export class PageRedactionMail extends PageBase {
       this.app.fermerPage(r.messages.length === 1 ? `/mail/message/${r.messages[0]}` : '/mail?vue=attente');
     } catch (e) {
       if (e instanceof ErreurApi && e.code === ERREUR_MAIL.MAIL_CONFIRMATION) {
-        if (await confirmer(`${e.details?.avertissement ?? e.message}\n\nConfirmer l'envoi ?`)) await this.envoyer(true);
+        if (await confirmer(`${e.details?.avertissement ?? e.message}\n\n${texte('mail_btp.redaction.confirmer')}`)) await this.envoyer(true);
         return;
       }
       this.app.erreur(e);
@@ -157,7 +155,7 @@ export class PageRedactionMail extends PageBase {
 
 /** Courriels de l'utilisateur (tous pour un administrateur) par état ; suivi des envois (administrateur) : compteurs, lots, journal. */
 export class PageMail extends PageBase {
-  icone = '📬';
+  icone = icone('mail_btp_boite');
 
   urlCourante() { return `/mail?vue=${this.vue}${this.lot ? `&lot=${this.lot}` : ''}`; }
 
@@ -167,12 +165,12 @@ export class PageMail extends PageBase {
     this.vue = r.vue ?? 'a-rapprocher';
     this.compte = r.compte ? Number(r.compte) : null;
     this.lot = r.lot ?? null;
-    this.titre = 'Courriels';
+    this.titre = texte('mail_btp.routes.mail');
     const vues = VUES.filter(([v]) => v !== 'envois' || app.estAdmin());
     this.conteneur.innerHTML = `<div class="page-parametres">
-      <div class="entete-page"><h1 class="page-titre">📬 Courriels</h1><span><button type="button" data-nouveau>✉ Nouveau courriel</button>
-        ${app.estAdmin() ? '<button type="button" data-parametres>⚙ Messagerie</button>' : ''}</span></div>
-      <p class="ligne">${vues.map(([v, l]) => `<label class="ligne"><input type="radio" name="vue" value="${v}" ${v === this.vue ? 'checked' : ''}> ${l}</label>`).join(' ')}</p>
+      <div class="entete-page"><h1 class="page-titre">${iconeHtml('mail_btp_boite')} ${texteHtml('mail_btp.routes.mail')}</h1><span><button type="button" data-nouveau>${iconeHtml('mail_btp_courriel')} ${texteHtml('mail_btp.routes.nouveau')}</button>
+        ${app.estAdmin() ? `<button type="button" data-parametres>${iconeHtml('mail_btp_parametres')} ${texteHtml('mail_btp.routes.parametres')}</button>` : ''}</span></div>
+      <p class="ligne">${vues.map(([v, l]) => `<label class="ligne"><input type="radio" name="vue" value="${v}" ${v === this.vue ? 'checked' : ''}> ${echapper(l)}</label>`).join(' ')}</p>
       <div data-liste></div></div>`;
     this.conteneur.querySelectorAll('[name="vue"]').forEach((x) => x.addEventListener('change', () => { this.vue = x.value; this.lot = null; this.charger(); }));
     this.conteneur.querySelector('[data-nouveau]').addEventListener('click', () => app.naviguer('/mail/nouveau', { nouvelleFenetre: true }));
@@ -189,7 +187,7 @@ export class PageMail extends PageBase {
       if (this.vue === 'envois') { await this.rendreSuivi(zone); return; }
       if (VUES_RECUES[this.vue]) { await this.rendreRecus(zone); return; }
       const l = await api.mail.messages({ vue: this.vue, lot: this.lot });
-      zone.innerHTML = l.length ? tableMessages(l) : '<p class="aide">Aucun courriel.</p>';
+      zone.innerHTML = l.length ? tableMessages(l) : `<p class="aide">${texteHtml('mail_btp.liste.aucun')}</p>`;
       brancherMessages(zone, this.app);
     } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; }
   }
@@ -197,44 +195,44 @@ export class PageMail extends PageBase {
   /** Courriels reçus des boîtes visibles : à rapprocher ou tous ; « Relever maintenant » par boîte. */
   async rendreRecus(zone) {
     const [boites, l] = await Promise.all([api.mail.boites(), api.mail.recus({ vue: VUES_RECUES[this.vue], compte: this.compte })]);
-    if (!boites.length) { zone.innerHTML = '<p class="aide">Aucune boîte de réception visible (compte de réception et services de la boîte : Paramètres › Messagerie).</p>'; return; }
+    if (!boites.length) { zone.innerHTML = `<p class="aide">${texteHtml('mail_btp.liste.aucune_boite')}</p>`; return; }
     zone.innerHTML = `<p class="ligne">${boites.map((b) => `<span class="etiquette-choix"><label class="ligne"><input type="radio" name="boite" value="${b.id}" ${this.compte === b.id ? 'checked' : ''}>
-        📥 ${echapper(b.alias)}</label><button type="button" data-relever="${b.id}" title="Relever maintenant (dernière relève : ${formatDateHeure(b.releve_le) || 'jamais'}${b.releve_erreur ? ` — ${echapper(b.releve_erreur)}` : ''})">⟳</button></span>`).join(' ')}
-      <label class="ligne"><input type="radio" name="boite" value="" ${this.compte ? '' : 'checked'}> toutes</label></p>
-      ${l.length ? tableMessages(l) : '<p class="aide">Aucun courriel.</p>'}`;
+        ${iconeHtml('mail_btp_reception')} ${echapper(b.alias)}</label><button type="button" data-relever="${b.id}" title="${texteHtml('mail_btp.liste.relever_titre', { releve: formatDateHeure(b.releve_le) || texte('mail_btp.liste.jamais'), erreur: b.releve_erreur ? ` — ${b.releve_erreur}` : '' })}">${iconeHtml('mail_btp_relever')}</button></span>`).join(' ')}
+      <label class="ligne"><input type="radio" name="boite" value="" ${this.compte ? '' : 'checked'}> ${texteHtml('mail_btp.liste.toutes')}</label></p>
+      ${l.length ? tableMessages(l) : `<p class="aide">${texteHtml('mail_btp.liste.aucun')}</p>`}`;
     zone.querySelectorAll('[name="boite"]').forEach((x) => x.addEventListener('change', () => { this.compte = x.value ? Number(x.value) : null; this.charger(); }));
     zone.querySelectorAll('[data-relever]').forEach((b) => b.addEventListener('click', async () => {
-      try { const r = await api.mail.relever(Number(b.dataset.relever)); this.app.message(`${r.nouveaux} nouveau(x) courriel(s)`, 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { const r = await api.mail.relever(Number(b.dataset.relever)); this.app.message(pluriel('mail_btp.liste.nouveaux', r.nouveaux), 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
     brancherMessages(zone, this.app);
   }
 
   async rendreSuivi(zone) {
     const [compteurs, lots, journal] = await Promise.all([api.mail.compteurs(), api.mail.lots(), api.mail.journal()]);
-    zone.innerHTML = `<h2>Comptes</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Compte</th><th>État</th><th class="nombre">Dest. / heure</th>
-      <th class="nombre">Dest. / jour</th><th class="nombre">Quota</th><th class="nombre">En file</th><th class="nombre">Suspendus</th><th class="nombre">Échecs (24 h)</th>
-      <th>Prochain départ</th><th class="cellule-boutons"></th></tr></thead><tbody>
+    zone.innerHTML = `<h2>${texteHtml('mail_btp.suivi.comptes')}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.suivi.compte')}</th><th>${texteHtml('mail_btp.champs.etat')}</th><th class="nombre">${texteHtml('mail_btp.suivi.dest_heure')}</th>
+      <th class="nombre">${texteHtml('mail_btp.suivi.dest_jour')}</th><th class="nombre">${texteHtml('mail_btp.suivi.quota')}</th><th class="nombre">${texteHtml('mail_btp.suivi.en_file')}</th><th class="nombre">${texteHtml('mail_btp.suivi.suspendus')}</th><th class="nombre">${texteHtml('mail_btp.suivi.echecs')}</th>
+      <th>${texteHtml('mail_btp.suivi.prochain')}</th><th class="cellule-boutons"></th></tr></thead><tbody>
       ${compteurs.map((c) => `<tr data-compte="${c.compte}"><td>${echapper(c.alias)}</td><td>${pastilleCompteMail(c.etat)}</td>
         <td class="nombre">${c.destinataires_heure} / ${c.limites.destinataires_par_heure}</td><td class="nombre">${c.destinataires_jour} / ${c.limites.destinataires_par_jour}</td>
         <td class="nombre">${c.taux_quota} %</td><td class="nombre">${c.en_file}</td><td class="nombre">${c.suspendus}</td><td class="nombre">${c.erreurs_jour}</td>
-        <td>${formatDateHeure(c.prochain_depart)}</td><td class="cellule-boutons">${c.etat === 'SUSPENDU' ? '<button type="button" data-reprendre>▶ Reprendre</button>' : ''}</td></tr>`).join('')}
-      </tbody></table><div class="boutons"><button type="button" data-traiter title="Traiter la file maintenant (tâche de fond)">⟳ Traiter la file</button></div>
-      <h2>Envois groupés</h2>${lots.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Objet</th><th>Auteur</th><th class="nombre">Courriels</th>
-        <th class="nombre">Destinataires</th><th class="nombre">Envoyés</th><th class="nombre">Erreurs</th><th>Fin estimée</th></tr></thead><tbody>
+        <td>${formatDateHeure(c.prochain_depart)}</td><td class="cellule-boutons">${c.etat === 'SUSPENDU' ? `<button type="button" data-reprendre>${iconeHtml('mail_btp_reprendre')} ${texteHtml('mail_btp.suivi.reprendre')}</button>` : ''}</td></tr>`).join('')}
+      </tbody></table><div class="boutons"><button type="button" data-traiter title="${texteHtml('mail_btp.suivi.traiter_titre')}">${iconeHtml('mail_btp_relever')} ${texteHtml('mail_btp.suivi.traiter')}</button></div>
+      <h2>${texteHtml('mail_btp.suivi.lots')}</h2>${lots.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.suivi.le')}</th><th>${texteHtml('mail_btp.champs.objet')}</th><th>${texteHtml('mail_btp.suivi.auteur')}</th><th class="nombre">${texteHtml('mail_btp.routes.mail')}</th>
+        <th class="nombre">${texteHtml('mail_btp.suivi.destinataires')}</th><th class="nombre">${texteHtml('mail_btp.vues.envoyes')}</th><th class="nombre">${texteHtml('mail_btp.vues.erreurs')}</th><th>${texteHtml('mail_btp.suivi.fin')}</th></tr></thead><tbody>
         ${lots.map((l) => `<tr data-lot="${l.id}" class="ligne-actions-survol" title="${echapper(l.avertissement ?? '')}"><td>${formatDateHeure(l.cree_le)}</td><td>${echapper(l.libelle ?? '')}</td>
           <td>${echapper(l.auteur)}</td><td class="nombre">${l.messages}</td><td class="nombre">${l.destinataires}</td><td class="nombre">${l.envoyes}</td>
-          <td class="nombre">${l.erreurs}</td><td>${formatDateHeure(l.fin_estimee)}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Aucun.</p>'}
-      <h2>Journal des envois</h2>${journal.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Compte</th><th>Par</th><th>Origine</th>
-        <th class="nombre">Dest.</th><th class="nombre">Nouveaux</th><th>Résultat</th><th>Réponse</th></tr></thead><tbody>
+          <td class="nombre">${l.erreurs}</td><td>${formatDateHeure(l.fin_estimee)}</td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('mail_btp.suivi.aucun')}</p>`}
+      <h2>${texteHtml('mail_btp.suivi.journal')}</h2>${journal.length ? `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.suivi.le')}</th><th>${texteHtml('mail_btp.suivi.compte')}</th><th>${texteHtml('mail_btp.suivi.par')}</th><th>${texteHtml('mail_btp.suivi.origine')}</th>
+        <th class="nombre">${texteHtml('mail_btp.suivi.dest')}</th><th class="nombre">${texteHtml('mail_btp.suivi.nouveaux')}</th><th>${texteHtml('mail_btp.suivi.resultat')}</th><th>${texteHtml('mail_btp.suivi.reponse')}</th></tr></thead><tbody>
         ${journal.map((j) => `<tr${j.message ? ` data-message="${j.message}" class="ligne-actions-survol"` : ''}><td>${formatDateHeure(j.le)}</td><td>${echapper(j.alias ?? '')}</td>
           <td>${echapper(j.utilisateur)}</td><td>${echapper(j.origine ?? '')}</td><td class="nombre">${j.destinataires}</td><td class="nombre">${j.nouveaux}</td>
           <td>${pastilleMessage(j.resultat === 'OK' ? 'ENVOYE' : j.resultat === 'REPORT' ? 'A_ENVOYER' : 'ERREUR')}</td>
-          <td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td></tr>`).join('')}</tbody></table>` : '<p class="aide">Vide.</p>'}`;
+          <td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td></tr>`).join('')}</tbody></table>` : `<p class="aide">${texteHtml('mail_btp.suivi.vide')}</p>`}`;
     zone.querySelectorAll('[data-reprendre]').forEach((b) => b.addEventListener('click', async () => {
       try { await api.mail.reprendre(Number(b.closest('tr').dataset.compte)); await this.charger(); } catch (e) { this.app.erreur(e); }
     }));
     zone.querySelector('[data-traiter]').addEventListener('click', async () => {
-      try { const r = await api.mail.traiter(); this.app.message(`${r.envoyes} courriel(s) envoyé(s)`, 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
+      try { const r = await api.mail.traiter(); this.app.message(pluriel('mail_btp.suivi.envoyes', r.envoyes), 'succes'); await this.charger(); } catch (e) { this.app.erreur(e); }
     });
     zone.querySelectorAll('tr[data-lot]').forEach((tr) => tr.addEventListener('click', () => { this.vue = 'tous'; this.lot = Number(tr.dataset.lot); this.charger(); }));
     zone.querySelectorAll('tr[data-message]').forEach((tr) => tr.addEventListener('click', () => this.app.naviguer(`/mail/message/${tr.dataset.message}`)));
@@ -243,10 +241,10 @@ export class PageMail extends PageBase {
 
 /** Tableau de courriels (boîte, onglet d'un élément). */
 export function tableMessages(l) {
-  return `<table class="tableau-compact largeur-contenu"><thead><tr><th>État</th><th>Créé le</th><th>De</th><th>À</th><th>Objet</th><th>📎</th><th>Envoyé / départ</th></tr></thead><tbody>
+  return `<table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.champs.etat')}</th><th>${texteHtml('mail_btp.liste.cree_le')}</th><th>${texteHtml('mail_btp.champs.de')}</th><th>${texteHtml('mail_btp.champs.a')}</th><th>${texteHtml('mail_btp.champs.objet')}</th><th>${iconeHtml('mail_btp_piece')}</th><th>${texteHtml('mail_btp.liste.envoye_depart')}</th></tr></thead><tbody>
     ${l.map((m) => `<tr data-id="${m.id}" class="ligne-actions-survol" title="${echapper(m.erreur ?? m.attente ?? '')}"><td>${pastilleMessage(m.etat)}</td><td>${formatDateHeure(m.cree_le)}</td>
       <td>${echapper(m.expediteur ?? '')}</td><td>${echapper(m.a.join(', '))}${m.nb_destinataires > m.a.length ? ` <span class="aide">+${m.nb_destinataires - m.a.length}</span>` : ''}</td>
-      <td>${m.nature ? `<span class="etiquette-choix">${echapper(NATURES[m.nature] ?? m.nature)}</span> ` : ''}${echapper(m.objet)}</td><td>${m.nb_pieces || ''}</td><td>${m.envoye_le ? formatDateHeure(m.envoye_le) : m.prochain_essai && m.etat === 'A_ENVOYER' ? `⏳ ${formatDateHeure(m.prochain_essai)}` : ''}</td></tr>`).join('')}
+      <td>${m.nature ? `<span class="etiquette-choix">${echapper(NATURES[m.nature] ?? m.nature)}</span> ` : ''}${echapper(m.objet)}</td><td>${m.nb_pieces || ''}</td><td>${m.envoye_le ? formatDateHeure(m.envoye_le) : m.prochain_essai && m.etat === 'A_ENVOYER' ? `${iconeHtml('mail_btp_attente')} ${formatDateHeure(m.prochain_essai)}` : ''}</td></tr>`).join('')}
     </tbody></table>`;
 }
 
@@ -256,10 +254,10 @@ export function brancherMessages(zone, app) {
 
 /** Détail d'un courriel : état, attente ou erreur, destinataires, pièces, journal ; annuler (en attente) ou relancer (erreur). */
 export class PageMessageMail extends PageBase {
-  icone = '✉';
+  icone = icone('mail_btp_courriel');
 
   async ouvrir() {
-    this.titre = 'Courriel';
+    this.titre = texte('mail_btp.routes.message');
     this.conteneur.innerHTML = '<div class="page-parametres" data-detail></div>';
     this.desabonner = this.app.abonner(SUJET_FENETRE.MAIL, () => this.charger());
     await this.charger();
@@ -272,37 +270,37 @@ export class PageMessageMail extends PageBase {
     let d;
     try { d = await api.mail.message(Number(this.params.id)); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const m = d.message;
-    this.titre = `Courriel : ${m.objet}`;
-    zone.innerHTML = `<div class="entete-page"><h1 class="page-titre">✉ ${echapper(m.objet)}</h1><span>
-        ${['A_ENVOYER', 'SUSPENDU'].includes(m.etat) ? '<button type="button" data-annuler>✕ Annuler l’envoi</button>' : ''}
-        ${m.etat === 'ERREUR' ? '<button type="button" data-relancer>↻ Nouvel essai</button>' : ''}
-        ${m.type_element === 'document' ? `<button type="button" data-element>📄 Document</button>` : ''}</span></div>
-      <table><tbody><tr><th>État</th><td>${pastilleMessage(m.etat)} ${m.attente ? `<span class="aide">${echapper(m.attente)}</span>` : ''}
+    this.titre = texte('mail_btp.redaction.titre', { libelle: m.objet });
+    zone.innerHTML = `<div class="entete-page"><h1 class="page-titre">${iconeHtml('mail_btp_courriel')} ${echapper(m.objet)}</h1><span>
+        ${['A_ENVOYER', 'SUSPENDU'].includes(m.etat) ? `<button type="button" data-annuler>${iconeHtml('retirer')} ${texteHtml('mail_btp.message.annuler')}</button>` : ''}
+        ${m.etat === 'ERREUR' ? `<button type="button" data-relancer>${iconeHtml('mail_btp_relancer')} ${texteHtml('mail_btp.message.relancer')}</button>` : ''}
+        ${m.type_element === 'document' ? `<button type="button" data-element>${iconeHtml('mail_btp_document')} ${texteHtml('mail_btp.message.document')}</button>` : ''}</span></div>
+      <table><tbody><tr><th>${texteHtml('mail_btp.champs.etat')}</th><td>${pastilleMessage(m.etat)} ${m.attente ? `<span class="aide">${echapper(m.attente)}</span>` : ''}
           ${m.erreur ? `<div class="erreur">${echapper(m.erreur)}</div>` : ''}</td></tr>
-        <tr><th>De</th><td>${echapper(m.sens === 'R' ? d.de ?? '' : m.expediteur ?? '')}</td></tr>
-        ${m.sens === 'R' ? `<tr><th>Boîte</th><td>${echapper(m.a.join(', '))}${d.auto ? ' <span class="aide">(réponse automatique)</span>' : ''}</td></tr>` : ''}
-        ${['A', 'CC', 'CCI'].map((r) => d.destinataires.some((x) => x.role === r) ? `<tr><th>${r === 'A' ? 'À' : r === 'CC' ? 'Cc' : 'Cci'}</th><td>${d.destinataires.filter((x) => x.role === r)
-          .map((x) => `${echapper(x.nom ? `${x.nom} <${x.adresse}>` : x.adresse)}${x.non_remis ? ` <span class="erreur">non remis : ${echapper(x.non_remis)}</span>
-            <button type="button" data-marquer="${echapper(x.adresse)}" title="Signaler cette adresse non remise sur les coordonnées de l'annuaire">⚠ Signaler dans l'annuaire</button>` : ''}`).join(', ')}</td></tr>` : '').join('')}
-        <tr><th>Créé</th><td>${formatDateHeure(m.cree_le)} par ${echapper(m.cree_par)}</td></tr>
-        <tr><th>${m.envoye_le ? 'Envoyé' : 'Départ prévu'}</th><td>${formatDateHeure(m.envoye_le ?? m.prochain_essai)}${m.tentatives ? ` · ${m.tentatives} essai(s)` : ''}</td></tr>
-        ${d.pieces.length ? `<tr><th>Pièces</th><td>${d.pieces.map((p) => `📎 ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>`).join('<br>')}</td></tr>` : ''}
+        <tr><th>${texteHtml('mail_btp.champs.de')}</th><td>${echapper(m.sens === 'R' ? d.de ?? '' : m.expediteur ?? '')}</td></tr>
+        ${m.sens === 'R' ? `<tr><th>${texteHtml('mail_btp.message.boite')}</th><td>${echapper(m.a.join(', '))}${d.auto ? ` <span class="aide">${texteHtml('mail_btp.message.auto')}</span>` : ''}</td></tr>` : ''}
+        ${['A', 'CC', 'CCI'].map((r) => d.destinataires.some((x) => x.role === r) ? `<tr><th>${r === 'A' ? texteHtml('mail_btp.champs.a') : r === 'CC' ? texteHtml('mail_btp.champs.cc') : texteHtml('mail_btp.champs.cci')}</th><td>${d.destinataires.filter((x) => x.role === r)
+          .map((x) => `${echapper(x.nom ? `${x.nom} <${x.adresse}>` : x.adresse)}${x.non_remis ? ` <span class="erreur">${texteHtml('mail_btp.message.non_remis', { raison: x.non_remis })}</span>
+            <button type="button" data-marquer="${echapper(x.adresse)}" title="${texteHtml('mail_btp.message.signaler_titre')}">${iconeHtml('avertissement')} ${texteHtml('mail_btp.message.signaler')}</button>` : ''}`).join(', ')}</td></tr>` : '').join('')}
+        <tr><th>${texteHtml('mail_btp.message.cree')}</th><td>${texteHtml('mail_btp.message.cree_par', { date: formatDateHeure(m.cree_le), nom: m.cree_par })}</td></tr>
+        <tr><th>${m.envoye_le ? texteHtml('mail_btp.message.envoye') : texteHtml('mail_btp.message.depart_prevu')}</th><td>${formatDateHeure(m.envoye_le ?? m.prochain_essai)}${m.tentatives ? ` · ${echapper(pluriel('mail_btp.message.essais', m.tentatives))}` : ''}</td></tr>
+        ${d.pieces.length ? `<tr><th>${texteHtml('mail_btp.message.pieces')}</th><td>${d.pieces.map((p) => `${iconeHtml('mail_btp_piece')} ${echapper(p.nom)} <span class="aide">${taille(p.taille)}</span>`).join('<br>')}</td></tr>` : ''}
       </tbody></table>
-      ${m.sens === 'R' ? `<h2>Rattachements</h2>${d.liens.length ? `<ul>${d.liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" data-lien>${echapper(l.libelle ?? `${l.type} ${l.id}`)}</a>` : echapper(l.libelle ?? `${l.type} ${l.id}`)}
+      ${m.sens === 'R' ? `<h2>${texteHtml('mail_btp.message.rattachements')}</h2>${d.liens.length ? `<ul>${d.liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" data-lien>${echapper(l.libelle ?? `${l.type} ${l.id}`)}</a>` : echapper(l.libelle ?? `${l.type} ${l.id}`)}
           <span class="aide">${echapper(l.origine.toLowerCase())}${l.score != null ? ` ${l.score} %` : ''}, ${echapper(l.par)}</span>
-          <button type="button" data-detacher="${echapper(l.type)}|${echapper(l.id)}" title="Retirer ce rattachement">✕</button></li>`).join('')}</ul>` : '<p class="aide">Aucun.</p>'}
-        ${d.propositions.filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).length ? `<p>Propositions${m.nature ? ` (${echapper(NATURES[m.nature] ?? m.nature)})` : ''} :</p><ul>${d.propositions
-          .filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).map((p) => `<li><button type="button" data-proposition="${echapper(p.type)}|${echapper(p.id)}" title="Rattacher">✓</button>
+          <button type="button" data-detacher="${echapper(l.type)}|${echapper(l.id)}" title="${texteHtml('mail_btp.message.detacher')}">${iconeHtml('retirer')}</button></li>`).join('')}</ul>` : `<p class="aide">${texteHtml('mail_btp.suivi.aucun')}</p>`}
+        ${d.propositions.filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).length ? `<p>${texteHtml('mail_btp.message.propositions')}${m.nature ? ` (${echapper(NATURES[m.nature] ?? m.nature)})` : ''} :</p><ul>${d.propositions
+          .filter((p) => !d.liens.some((l) => l.type === p.type && l.id === p.id)).map((p) => `<li><button type="button" data-proposition="${echapper(p.type)}|${echapper(p.id)}" title="${texteHtml('mail_btp.message.rattacher')}">${iconeHtml('mail_btp_valider')}</button>
           ${p.url ? `<a href="${echapper(p.url)}" data-lien>${echapper(p.libelle ?? `${p.type} ${p.id}`)}</a>` : echapper(p.libelle ?? `${p.type} ${p.id}`)}
           <span class="aide">${p.score} % : ${p.indices.map((i) => echapper(INDICES[i] ?? i)).join(', ')}</span></li>`).join('')}</ul>` : ''}
-        <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="numéro ou code"> <button type="button" data-rattacher>🔗 Rattacher</button>
-          ${m.etat !== 'IGNORE' ? '<button type="button" data-ignorer title="Courriel sans rapport (publicité, personnel) : retiré de la liste et de la GED">🚫 Ignorer…</button>' : ''}</p>` : ''}
-      <iframe class="mail-corps" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Corps du courriel" data-corps></iframe>
-      ${d.journal.length ? `<h2>Journal</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>Le</th><th>Résultat</th><th>Réponse du serveur</th><th class="nombre">Durée</th></tr></thead><tbody>
+        <p class="ligne"><span data-type-rattachement></span> <input data-code size="20" placeholder="${texteHtml('mail_btp.message.code')}"> <button type="button" data-rattacher>${iconeHtml('mail_btp_rattacher')} ${texteHtml('mail_btp.message.rattacher')}</button>
+          ${m.etat !== 'IGNORE' ? `<button type="button" data-ignorer title="${texteHtml('mail_btp.message.ignorer_titre')}">${iconeHtml('mail_btp_ignorer')} ${texteHtml('mail_btp.message.ignorer')}</button>` : ''}</p>` : ''}
+      <iframe class="mail-corps" sandbox="allow-popups allow-popups-to-escape-sandbox" title="${texteHtml('mail_btp.message.corps')}" data-corps></iframe>
+      ${d.journal.length ? `<h2>${texteHtml('mail_btp.message.journal')}</h2><table class="tableau-compact largeur-contenu"><thead><tr><th>${texteHtml('mail_btp.suivi.le')}</th><th>${texteHtml('mail_btp.suivi.resultat')}</th><th>${texteHtml('mail_btp.message.reponse_serveur')}</th><th class="nombre">${texteHtml('mail_btp.message.duree')}</th></tr></thead><tbody>
         ${d.journal.map((j) => `<tr><td>${formatDateHeure(j.le)}</td><td>${echapper(j.resultat)}</td><td>${echapper([j.code, j.reponse].filter(Boolean).join(' '))}</td>
-          <td class="nombre">${j.duree_ms ?? ''} ms</td></tr>`).join('')}</tbody></table>` : ''}`;
+          <td class="nombre">${j.duree_ms != null ? texteHtml('mail_btp.message.ms', { duree: j.duree_ms }) : ''}</td></tr>`).join('')}</tbody></table>` : ''}`;
     // Corps du courriel isolé (module Droits, lot 5) : cadre sans script ni accès à l'application, liens dans un nouvel onglet.
-    zone.querySelector('[data-corps]').srcdoc = `<!doctype html><meta charset="utf-8"><base target="_blank"><style>body{font-family:sans-serif;margin:.6rem;color:#1f2328;background:#fff}</style>${d.corps_html ?? ''}`;
+    zone.querySelector('[data-corps]').srcdoc = `<!doctype html><meta charset="utf-8"><base target="_blank"><style>body{font-family:sans-serif;margin:.6rem;color:${couleurTheme('--mail-corps-texte', '#1f2328')};background:${couleurTheme('--mail-corps-fond', '#fff')}}</style>${d.corps_html ?? ''}`;
     const action = (sel, f) => zone.querySelector(sel)?.addEventListener('click', async () => {
       try { await f(); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });
@@ -311,7 +309,7 @@ export class PageMessageMail extends PageBase {
     zone.querySelector('[data-element]')?.addEventListener('click', () => this.app.naviguer(urlDocument(m.id_element), { nouvelleFenetre: true }));
     zone.querySelectorAll('[data-lien]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); this.app.naviguer(a.getAttribute('href'), { nouvelleFenetre: true }); }));
     zone.querySelectorAll('[data-marquer]').forEach((b) => b.addEventListener('click', async () => {
-      try { const r = await api.mail.marquerAdresse(m.id, b.dataset.marquer); this.app.message(`${r.coordonnees} coordonnée(s) signalée(s) dans l'annuaire`, 'succes'); } catch (e) { this.app.erreur(e); }
+      try { const r = await api.mail.marquerAdresse(m.id, b.dataset.marquer); this.app.message(pluriel('mail_btp.message.signalees', r.coordonnees), 'succes'); } catch (e) { this.app.erreur(e); }
     }));
     zone.querySelectorAll('[data-detacher]').forEach((b) => b.addEventListener('click', async () => {
       const [type, id] = b.dataset.detacher.split('|');
@@ -335,7 +333,7 @@ export class PageMessageMail extends PageBase {
     zone.querySelector('[data-rattacher]').addEventListener('click', rattacher);
     code.addEventListener('keydown', (e) => { if (e.key === 'Enter') rattacher(); });
     zone.querySelector('[data-ignorer]')?.addEventListener('click', async () => {
-      const motif = await saisir('Ignorer ce courriel (il est retiré de la liste et de la GED). Motif :', '');
+      const motif = await saisir(texte('mail_btp.message.ignorer_motif'), '');
       if (motif === null) return;
       try { await api.mail.ignorer(m.id, motif); this.app.publier(SUJET_FENETRE.MAIL, {}); await this.charger(); } catch (e) { this.app.erreur(e); }
     });

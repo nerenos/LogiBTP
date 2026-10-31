@@ -575,3 +575,24 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   `modules/crm/js/src` vérifiées par le test du client ; affichage contrôlé dans le navigateur (API simulée : onglet
   Suivi, fil, rappels, plans, paramétrage).
 
+## 23. Réalisation du lot P3j : module Mail (31/10/2026)
+
+- **Périmètre** : le module (`modules/mail/js/src` : reconnaissance des courriels reçus, sans texte affiché ; erreurs déjà
+  par code au lot P2) et ses écrans du cœur : `client/src/app/pages/mail.js` (boîte, rédaction, détail d'un courriel,
+  suivi des envois), `parametres-mail.js` (comptes, alias, usages, modèles, règles de reconnaissance, limitations),
+  titres des routes.
+- **Textes** : `mail_btp.*` du `fr.json` du cœur (`routes`, `etats`, `vues`, `natures`, `indices`, `envoi`, `redaction`,
+  `champs`, `liste`, `suivi`, `message`, `hebergeurs`, `securites`, `authentifications`, `limites`, `reglages`,
+  `apres_rattachement`, `etats_compte`, `parametres`) ; compteurs par `pluriel` (courriels en file, nouveaux, envoyés,
+  essais, coordonnées signalées). Les tables gardent leur forme (`ETATS` : { code : [libellé, classe] }, `VUES`,
+  `LIMITES`, `PARAMETRES` : paires, `HEBERGEURS`… : `{ valeur, libelle }`, `NATURES` : `textesParCode`).
+- **Modèle par défaut** : corps proposé à un nouveau modèle de courriel dans `mail_btp.parametres.corps_defaut_html`
+  (variable `{{document}}` passée en valeur pour rester affichée).
+- **Icônes** : `mail_btp_*` du cœur ; communes du socle (`ajouter`, `retirer`, `avertissement`).
+- **Couleurs** : corps d'un courriel affiché dans son cadre isolé par `--mail-corps-texte` et `--mail-corps-fond` du thème
+  du cœur (lues par `couleurTheme`, le cadre n'ayant pas accès aux variables de la page).
+- **Gardé** : codes des natures et actions des règles affichés tels quels dans le paramétrage (valeurs de la règle),
+  préréglages des serveurs (données techniques).
+- **Contrôles** : `npm test`, `extraire-erreurs` sans écart ; affichage contrôlé dans le navigateur (API simulée : suivi
+  des envois, détail d'un courriel reçu avec propositions, paramétrage complet avec un compte et un modèle).
+
