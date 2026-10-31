@@ -59,6 +59,11 @@
 - `lignesSelectionnees()` : lignes de `selections` dans l'ordre affiché ; sans sélection multiple, la ligne courante (`selection`). Sert aux boutons Consulter / Copier / Supprimer et aux actions `autres`.
 - Saisie des formats combo / picto : `creerCombo` du socle (la saisie filtre ou désigne l'option ; texte inconnu refusé ; choix à la souris = saisie terminée).
 
+## Textes, icônes et couleurs (module Personnalisation, lot P3d)
+- Jamais en dur dans `js/src` ni `js/ui` : `js/personnalisation/fr.json` (préfixe `liste.*` : `operateurs`, `operateurs_vue`, `formule` (erreurs de compilation des formules), `fournisseur`, `modele`, `formats`, `themes`, `menu`, `concepteur`, `liste` ; section `erreurs` générée), icônes `liste_*` de `js/personnalisation/images/icones.json`, couleurs `--liste-*` de `js/personnalisation/theme.css` (couleurs proposées des champs couleur du concepteur par `couleurTheme` du socle).
+- `OPERATEURS_NOMBRE`, `OPERATEURS_TEXTE`, `OPERATEURS_VUE` : `pairesParCode` avec `[symbole, clé]` (`'='` → `egal`…), même forme qu'avant ; formats du concepteur : `textesParCode`.
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/liste/js` (vitest) ; `dotnet test LogiBTP.slnx` (projet `LogiBTP.Listes.Tests`).
 - Tests SQL des jeux partagés (`f_sans_accent`, lots, segments) : seulement si la variable `LOGIBTP_TEST_PG` (chaîne de connexion PostgreSQL) est définie, sinon ignorés silencieusement.

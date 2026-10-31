@@ -28,7 +28,7 @@ describe('personnalisation du programme', () => {
   const composition = composer(COUCHES);
 
   it('toute clé littérale du code existe (texte, pluriel, icône)', () => {
-    const fichiers = [...sources('socle/js/src'), ...sources('modules/navigation/js'), ...sources('modules/pointage/js/src'), ...sources('modules/document/js/src'), ...sources('modules/document/js/ui'), ...sources('client/src')];
+    const fichiers = [...sources('socle/js/src'), ...sources('modules/navigation/js'), ...sources('modules/pointage/js/src'), ...sources('modules/document/js/src'), ...sources('modules/document/js/ui'), ...sources('modules/liste/js/src'), ...sources('modules/liste/js/ui'), ...sources('client/src')];
     const { manquantes } = verifierCles({ fichiers, libelles: composition.libelles, icones: composition.icones });
     expect(manquantes.map((m) => `${path.relative(racine, m.ou.split(':')[0])} ${m.cle}`)).toEqual([]);
   });

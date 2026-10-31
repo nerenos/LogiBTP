@@ -104,9 +104,11 @@ export function textesParCode(prefixe, codes) {
  * `prefixe.CODE` ; la déstructuration `[code, libelle]` et `map` gardent leur forme.
  */
 export function pairesParCode(prefixe, codes) {
-  return Object.freeze(codes.map((c) => {
+  return Object.freeze(codes.map((x) => {
+    // Code qui ne peut pas servir de clé (symbole : '=', '<>'…) : [code, clé].
+    const [c, cle] = Array.isArray(x) ? x : [x, x];
     const p = [c];
-    Object.defineProperty(p, 1, { get: () => texte(`${prefixe}.${c}`), enumerable: true });
+    Object.defineProperty(p, 1, { get: () => texte(`${prefixe}.${cle}`), enumerable: true });
     return Object.freeze(p);
   }));
 }

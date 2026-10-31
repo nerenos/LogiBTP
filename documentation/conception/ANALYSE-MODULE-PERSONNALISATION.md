@@ -427,3 +427,27 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   rôles, modes de calcul, actions d'adresse, voisins, étapes de frais, notes de raccourcis) relues contre le
   dictionnaire ; affichage contrôlé dans le navigateur (barre, onglets, titres et panneaux ancrables de la page, entête,
   totaux, détail, grille et pied du devis de démonstration).
+
+## 17. Réalisation du lot P3d : module Liste (31/10/2026)
+
+- **Périmètre** : `modules/liste/js` : règles (opérateurs des filtres de colonne et des filtres de vue, erreurs de
+  compilation des formules, fournisseur en mémoire, erreurs de colonne du modèle) et interface (liste : barre, panneau
+  des segments, en-têtes, tri, compteur, suite, menu contextuel, suppression, saisie dans la liste ; concepteur de vue ;
+  menu de filtre ; gestion des thèmes ; formats de cellule) ; `ui/liste.css`.
+- **Socle** : `pairesParCode(prefixe, codes)` accepte une entrée `[code, clé]` pour un code qui ne peut pas servir de clé
+  (symboles des opérateurs : `'='` → `egal`, `'<>'` → `different`…).
+- **Textes** : `liste.*` du `fr.json` du module (zones `operateurs`, `operateurs_vue`, `formule`, `fournisseur`,
+  `modele`, `formats`, `themes`, `menu`, `concepteur`, `liste`) ; compteurs par `pluriel` (`liste.liste.lignes`,
+  `liste.liste.fin`) ; mots communs du socle (`commun.enregistrer`, `oui`, `non`, `annuler`, `ok`). Les tables exportées
+  (`OPERATEURS_*`) gardent leur forme.
+- **Icônes** : `liste_*` du module (tri, filtre, segments, ancrages, lignes entières ou simples, coche, saisie, formule…),
+  communes du socle (`retirer`, `supprimer`, `ajouter`).
+- **Couleurs** : texte sur couleur d'accent, hachures de la saisie, ombres et fond des fenêtres, couleurs proposées par
+  le concepteur (colonne sans couleur, nouvelle règle) : variables `--liste-*` du `theme.css` du module (valeurs
+  inchangées) ; les couleurs proposées dans les champs couleur passent par `couleurTheme`.
+- **Gardé** : les mots du langage des formules (`SI`, `ALORS`, `ARRONDI`…) et les tests de touches de navigation de la
+  grille (Entrée, Échap, flèches ; hors du périmètre de la personnalisation).
+- **Contrôles** : tests du module sur le dictionnaire composé (les jeux de formules vérifient les messages d'erreur),
+  clés de `modules/liste/js` vérifiées par le test du client, clés composées relues contre le dictionnaire ; affichage
+  contrôlé dans le navigateur (liste en mémoire : barre, filtres de vue, segments, en-têtes, menu de filtre, concepteur
+  sur ses deux onglets).

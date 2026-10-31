@@ -1,4 +1,5 @@
 import { Dec } from '@logibtp/socle';
+import { texte } from '@logibtp/socle/dictionnaire';
 import { normaliser } from './normaliser.js';
 
 // Formules des colonnes calculées et conditions de mise en forme, évaluées sur les lignes chargées.
@@ -14,7 +15,7 @@ import { normaliser } from './normaliser.js';
 
 export class ErreurFormule extends Error {
   constructor(message, position = null) {
-    super(position === null ? message : `${message} (position ${position + 1})`);
+    super(position === null ? message : texte('liste.formule.position', { message, position: position + 1 }));
     this.position = position;
   }
 }
@@ -41,18 +42,18 @@ function decouper(source) {
         }
         texte += source[i++];
       }
-      if (i >= source.length) throw new ErreurFormule('Chaîne non terminée', debut);
+      if (i >= source.length) throw new ErreurFormule(texte('liste.formule.chaine'), debut);
       i++;
       jetons.push({ t: 'texte', v: texte, p: debut });
     } else if (c === '[') {
       const fin = source.indexOf(']', i);
-      if (fin < 0) throw new ErreurFormule('Crochet non fermé', debut);
+      if (fin < 0) throw new ErreurFormule(texte('liste.formule.crochet'), debut);
       jetons.push({ t: 'ref', v: source.slice(i + 1, fin).trim(), p: debut });
       i = fin + 1;
     } else if (/[0-9]/.test(c) || (c === ',' && /[0-9]/.test(source[i + 1] ?? '')) || (c === '.' && /[0-9]/.test(source[i + 1] ?? ''))) {
       while (i < source.length && /[0-9.,]/.test(source[i])) i++;
       const brut = source.slice(debut, i).replace(',', '.');
-      if (!/^\d*\.?\d+$|^\d+\.$/.test(brut)) throw new ErreurFormule(`Nombre invalide ${source.slice(debut, i)}`, debut);
+      if (!/^\d*\.?\d+$|^\d+\.$/.test(brut)) throw new ErreurFormule(texte('liste.formule.nombre', { valeur: source.slice(debut, i) }), debut);
       jetons.push({ t: 'nombre', v: new Dec(brut), p: debut });
     } else if (/[\p{L}_]/u.test(c)) {
       while (i < source.length && /[\p{L}\p{N}_]/u.test(source[i])) i++;
@@ -62,7 +63,7 @@ function decouper(source) {
       const deux = source.slice(i, i + 2);
       if (['<=', '>=', '<>', '!='].includes(deux)) { jetons.push({ t: deux === '!=' ? '<>' : deux, p: debut }); i += 2; continue; }
       if ('+-*/&=<>();'.includes(c)) { jetons.push({ t: c, p: debut }); i++; continue; }
-      throw new ErreurFormule(`Caractère inattendu « ${c} »`, debut);
+      throw new ErreurFormule(texte('liste.formule.caractere', { caractere: c }), debut);
     }
   }
   jetons.push({ t: 'fin', p: source.length });
@@ -86,7 +87,7 @@ function nombre(v) {
 const versNombre = (v, quoi) => {
   if (estVide(v)) return new Dec(0);
   const n = nombre(v);
-  if (n === null) throw new ErreurFormule(`${quoi} : « ${v} » n'est pas un nombre`);
+  if (n === null) throw new ErreurFormule(texte('liste.formule.pas_nombre', { quoi, valeur: v }));
   return n;
 };
 
@@ -118,11 +119,11 @@ export const resultat = (v) => (estDec(v) ? (v.isZero() ? '0' : v.toFixed()) : v
 
 const FONCTIONS = {
   SI: (args) => {
-    if (args.length < 2 || args.length > 3) throw new ErreurFormule('SI attend 2 ou 3 arguments');
+    if (args.length < 2 || args.length > 3) throw new ErreurFormule(texte('liste.formule.si'));
     return (ctx) => (vrai(args[0](ctx)) ? args[1](ctx) : args[2] ? args[2](ctx) : '');
   },
   ARRONDI: (args) => {
-    if (args.length < 1 || args.length > 2) throw new ErreurFormule('ARRONDI attend 1 ou 2 arguments');
+    if (args.length < 1 || args.length > 2) throw new ErreurFormule(texte('liste.formule.arrondi'));
     return (ctx) => versNombre(args[0](ctx), 'ARRONDI').toDecimalPlaces(args[1] ? versNombre(args[1](ctx), 'ARRONDI').toNumber() : 0, Dec.ROUND_HALF_UP);
   },
   ABS: (args) => (ctx) => versNombre(args[0]?.(ctx), 'ABS').abs(),
@@ -146,13 +147,13 @@ class Analyseur {
   suivant() { return this.j[this.i++]; }
   accepter(t) { if (this.courant.t === t) { this.i++; return true; } return false; }
   attendre(t, quoi) {
-    if (this.courant.t !== t) throw new ErreurFormule(`${quoi} attendu`, this.courant.p);
+    if (this.courant.t !== t) throw new ErreurFormule(texte('liste.formule.attendu', { quoi }), this.courant.p);
     return this.suivant();
   }
 
   formule() {
     const e = this.expression();
-    if (this.courant.t !== 'fin') throw new ErreurFormule('Fin de formule attendue', this.courant.p);
+    if (this.courant.t !== 'fin') throw new ErreurFormule(texte('liste.formule.fin'), this.courant.p);
     return e;
   }
 
@@ -219,7 +220,7 @@ class Analyseur {
         const a = g, b = this.unaire();
         g = (ctx) => {
           const d = versNombre(b(ctx), '/');
-          if (d.isZero()) throw new ErreurFormule('Division par zéro');
+          if (d.isZero()) throw new ErreurFormule(texte('liste.formule.division'));
           return versNombre(a(ctx), '/').div(d);
         };
       } else return g;
@@ -242,31 +243,31 @@ class Analyseur {
       case 'VIDE': return () => null;
       case 'ref': {
         const code = this.resoudre(j.v);
-        if (code === null || code === undefined) throw new ErreurFormule(`Colonne inconnue [${j.v}]`, j.p);
+        if (code === null || code === undefined) throw new ErreurFormule(texte('liste.formule.colonne', { colonne: j.v }), j.p);
         this.references.add(code);
         return (ctx) => ctx.valeur(code);
       }
       case '(': {
         const e = this.expression();
-        this.attendre(')', 'Parenthèse fermante');
+        this.attendre(')', texte('liste.formule.parenthese_fermante'));
         return e;
       }
       case 'SI':
       case 'nom': {
         const fabrique = FONCTIONS[j.v];
-        if (!fabrique) throw new ErreurFormule(`Fonction inconnue ${j.v}`, j.p);
-        this.attendre('(', 'Parenthèse ouvrante');
+        if (!fabrique) throw new ErreurFormule(texte('liste.formule.fonction', { fonction: j.v }), j.p);
+        this.attendre('(', texte('liste.formule.parenthese_ouvrante'));
         const args = [];
         if (!this.accepter(')')) {
           do args.push(this.expression()); while (this.accepter(';'));
-          this.attendre(')', 'Parenthèse fermante');
+          this.attendre(')', texte('liste.formule.parenthese_fermante'));
         }
         // « SI (condition) ALORS … » : forme à mots-clés dont la condition est entre parenthèses.
         if (j.t === 'SI' && args.length === 1 && this.courant.t === 'ALORS') return this.siMot(args[0]);
         return fabrique(args);
       }
       default:
-        throw new ErreurFormule(j.t === 'fin' ? 'Formule incomplète' : 'Expression attendue', j.p);
+        throw new ErreurFormule(texte(j.t === 'fin' ? 'liste.formule.incomplete' : 'liste.formule.expression'), j.p);
     }
   }
 }

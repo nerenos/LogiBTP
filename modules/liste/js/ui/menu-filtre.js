@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 import { normaliser } from '../src/normaliser.js';
 import {
@@ -17,7 +18,7 @@ export function fermerMenuFiltre() {
 
 const opt = (v, l, courant) => `<option value="${echapper(v)}" ${String(courant ?? '') === String(v) ? 'selected' : ''}>${echapper(l)}</option>`;
 const triEtat = (nom, libelle, v) => `<label>${libelle}<select data-format="${nom}">
-  ${opt('', 'Indifférent', v === undefined || v === null ? '' : String(v))}${opt('true', 'Oui', v === true ? 'true' : '')}${opt('false', 'Non', v === false ? 'false' : '')}</select></label>`;
+  ${opt('', texte('liste.menu.indifferent'), v === undefined || v === null ? '' : String(v))}${opt('true', texte('commun.oui'), v === true ? 'true' : '')}${opt('false', texte('commun.non'), v === false ? 'false' : '')}</select></label>`;
 
 /**
  * Ouvre le menu sous `ancre`. `appliquer(filtre | null)` reçoit le nouveau filtre ; `trier(sens, base)` trie
@@ -35,8 +36,8 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
   const fmt = filtre?.format ?? {};
   const pastilles = (nom, couleurs, courant) => `
     <div class="liste-pastilles" data-pastilles="${nom}">
-      <button type="button" data-couleur="" class="${courant === undefined || courant === null ? 'actif' : ''}">Toutes</button>
-      <button type="button" data-couleur="aucune" class="${courant === '' ? 'actif' : ''}" title="Sans couleur">∅</button>
+      <button type="button" data-couleur="" class="${courant === undefined || courant === null ? 'actif' : ''}">${texteHtml('liste.menu.toutes')}</button>
+      <button type="button" data-couleur="aucune" class="${courant === '' ? 'actif' : ''}" title="${texteHtml('liste.menu.sans_couleur')}">${iconeHtml('liste_sans_couleur')}</button>
       ${couleurs.map((c) => `<button type="button" data-couleur="${echapper(c)}" class="pastille ${courant === c ? 'actif' : ''}" style="background:${echapper(c)}" title="${echapper(c)}"></button>`).join('')}
     </div>`;
 
@@ -44,38 +45,37 @@ export function ouvrirMenuFiltre({ ancre, colonne, modele, lignes, filtre, appli
   menu.className = 'liste-menu';
   menu.innerHTML = `
     <div class="liste-menu-tri">
-      <button type="button" data-tri="asc" title="Trier les lignes chargées">${numerique ? '1 → 9' : 'A → Z'}</button>
-      <button type="button" data-tri="desc" title="Trier les lignes chargées">${numerique ? '9 → 1' : 'Z → A'}</button>
-      ${triBase ? `<button type="button" data-tri-base="asc" ${colonne.calcul ? 'disabled title="Colonne calculée : tri des lignes chargées uniquement"' : 'title="Recharge la liste depuis la base dans cet ordre"'}>Toute la base ▲</button>
-      <button type="button" data-tri-base="desc" ${colonne.calcul ? 'disabled' : ''}>Toute la base ▼</button>` : ''}
+      <button type="button" data-tri="asc" title="${texteHtml('liste.menu.trier_charge')}">${texteHtml(numerique ? 'liste.menu.tri_nombre_asc' : 'liste.menu.tri_texte_asc')}</button>
+      <button type="button" data-tri="desc" title="${texteHtml('liste.menu.trier_charge')}">${texteHtml(numerique ? 'liste.menu.tri_nombre_desc' : 'liste.menu.tri_texte_desc')}</button>
+      ${triBase ? `<button type="button" data-tri-base="asc" ${colonne.calcul ? `disabled title="${texteHtml('liste.menu.tri_calcule')}"` : `title="${texteHtml('liste.menu.tri_base_aide')}"`}>${texteHtml('liste.menu.tri_base')} ${iconeHtml('liste_tri_asc')}</button>
+      <button type="button" data-tri-base="desc" ${colonne.calcul ? 'disabled' : ''}>${texteHtml('liste.menu.tri_base')} ${iconeHtml('liste_tri_desc')}</button>` : ''}
     </div>
-    <details open><summary>Valeurs (${distinctes.length})</summary>
-      <input type="search" data-recherche placeholder="Rechercher une valeur…">
+    <details open><summary>${texteHtml('liste.menu.valeurs', { nombre: distinctes.length })}</summary>
+      <input type="search" data-recherche placeholder="${texteHtml('liste.menu.rechercher')}">
       <div class="liste-menu-valeurs">
-        <label class="tout"><input type="checkbox" data-tout> (Tout sélectionner)</label>
+        <label class="tout"><input type="checkbox" data-tout> ${texteHtml('liste.menu.tout')}</label>
         ${distinctes.map((d, i) => `<label data-texte="${echapper(normaliser(d.texte))}"><input type="checkbox" data-valeur="${i}" ${!retenues || retenues.has(d.texte) ? 'checked' : ''}>
-          ${d.texte === '' ? '<em>(Vides)</em>' : echapper(d.texte)} <small>${d.nombre}</small></label>`).join('')}
+          ${d.texte === '' ? `<em>${texteHtml('liste.menu.vides')}</em>` : echapper(d.texte)} <small>${d.nombre}</small></label>`).join('')}
       </div>
     </details>
-    <details ${cond.op ? 'open' : ''}><summary>Condition</summary>
+    <details ${cond.op ? 'open' : ''}><summary>${texteHtml('liste.menu.condition')}</summary>
       <div class="liste-menu-condition">
         <select data-op>${opt('', '—', cond.op)}${ops.map(([v, l]) => opt(v, l, cond.op)).join('')}</select>
-        <input data-a value="${echapper(cond.a ?? '')}" placeholder="${numerique ? (colonne.format === 'date' ? 'jj/mm/aaaa' : 'Nombre') : 'Texte'}">
-        <input data-b value="${echapper(cond.b ?? '')}" placeholder="et">
+        <input data-a value="${echapper(cond.a ?? '')}" placeholder="${texteHtml(numerique ? (colonne.format === 'date' ? 'liste.menu.saisie_date' : 'liste.menu.saisie_nombre') : 'liste.menu.saisie_texte')}">
+        <input data-b value="${echapper(cond.b ?? '')}" placeholder="${texteHtml('liste.menu.et')}">
       </div>
     </details>
-    <details ${filtreActif({ format: fmt }) ? 'open' : ''} ${miseEnForme ? '' : 'hidden'}><summary>Mise en forme</summary>
+    <details ${filtreActif({ format: fmt }) ? 'open' : ''} ${miseEnForme ? '' : 'hidden'}><summary>${texteHtml('liste.menu.mise_en_forme')}</summary>
       <div class="liste-menu-format">
-        <span>Couleur de fond</span>${pastilles('fond', formats.fonds, fmt.fond)}
-        <span>Couleur de police</span>${pastilles('couleur', formats.couleurs, fmt.couleur)}
-        ${triEtat('gras', 'Gras', fmt.gras)}${triEtat('italique', 'Italique', fmt.italique)}
-        ${triEtat('souligne', 'Souligné', fmt.souligne)}${triEtat('barre', 'Barré', fmt.barre)}
+        <span>${texteHtml('liste.menu.fond')}</span>${pastilles('fond', formats.fonds, fmt.fond)}
+        <span>${texteHtml('liste.menu.couleur')}</span>${pastilles('couleur', formats.couleurs, fmt.couleur)}
+        ${['gras', 'italique', 'souligne', 'barre'].map((n) => triEtat(n, texteHtml(`liste.menu.styles.${n}`), fmt[n])).join('')}
       </div>
     </details>
     <div class="liste-menu-boutons">
-      <button type="button" data-action="effacer">Effacer le filtre</button>
-      <button type="button" data-action="annuler">Annuler</button>
-      <button type="button" class="principal" data-action="ok">OK</button>
+      <button type="button" data-action="effacer">${texteHtml('liste.menu.effacer')}</button>
+      <button type="button" data-action="annuler">${texteHtml('commun.annuler')}</button>
+      <button type="button" class="principal" data-action="ok">${texteHtml('commun.ok')}</button>
     </div>`;
   document.body.append(menu);
 

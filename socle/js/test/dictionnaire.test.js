@@ -96,5 +96,6 @@ describe('tables de libellés par code', () => {
     expect(t.A).toBe('Autre');
     expect(p[0][1]).toBe('Autre');
     expect(Object.isFrozen(p) && Object.isFrozen(p[0])).toBe(true);
+    expect(pairesParCode('m', [['=', 'A']])[0]).toEqual(['=', 'Autre']);
   });
 });

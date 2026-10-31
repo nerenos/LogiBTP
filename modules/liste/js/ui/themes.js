@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
 
 // Gestion des thèmes de vues (profil ADMIN) : la liste n'est pas figée. Un thème regroupe des vues et déclare
@@ -19,11 +20,11 @@ export class GestionThemes {
     this.fond = document.createElement('dialog');
     this.fond.className = 'concepteur-fond dialogue-plein';
     this.fond.innerHTML = `
-      <div class="concepteur themes" role="dialog" aria-label="Thèmes de vues">
-        <header><strong>Thèmes de vues</strong><span class="aide">Les types d'élément restreignent les lignes des vues du thème (aucun = tous).</span>
-          <button type="button" data-action="fermer" title="Fermer (Échap)">✕</button></header>
+      <div class="concepteur themes" role="dialog" aria-label="${texteHtml('liste.themes.titre')}">
+        <header><strong>${texteHtml('liste.themes.titre')}</strong><span class="aide">${texteHtml('liste.themes.aide')}</span>
+          <button type="button" data-action="fermer" title="${texteHtml('liste.themes.fermer')}">${iconeHtml('retirer')}</button></header>
         <div class="concepteur-corps"></div>
-        <footer><span class="concepteur-message"></span><button type="button" data-action="ajouter">Nouveau thème</button></footer>
+        <footer><span class="concepteur-message"></span><button type="button" data-action="ajouter">${texteHtml('liste.themes.nouveau')}</button></footer>
       </div>`;
     ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.concepteur-corps');
@@ -54,16 +55,16 @@ export class GestionThemes {
   rendre() {
     this.corps.innerHTML = `
       <table class="concepteur-table themes-table">
-        <thead><tr><th>Icône</th><th>Code</th><th>Libellé</th><th>Ordre</th><th>Types d'élément (code = libellé ; …)</th><th></th></tr></thead>
+        <thead><tr>${['icone', 'code', 'libelle', 'ordre', 'types'].map((c) => `<th>${texteHtml(`liste.themes.colonnes.${c}`)}</th>`).join('')}<th></th></tr></thead>
         <tbody>${this.themes.map((t, i) => `
           <tr data-i="${i}">
             <td><input data-c="thl_icone" value="${echapper(t.thl_icone ?? '')}" maxlength="4" size="3"></td>
             <td><input data-c="thl_code" value="${echapper(t.thl_code)}" ${t.nouveau ? '' : 'readonly'} size="10"></td>
             <td><input data-c="thl_libelle" value="${echapper(t.thl_libelle ?? '')}"></td>
             <td><input data-c="thl_ordre" type="number" value="${t.thl_ordre ?? 0}" style="width:4.5rem"></td>
-            <td><input data-c="thl_types" class="large" value="${echapper(typesVersTexte(t.thl_types))}" placeholder="vide = tous les types"></td>
-            <td><button type="button" data-enregistrer class="principal">Enregistrer</button> <button type="button" data-supprimer title="Supprimer le thème (ses vues restent, sans thème)">✕</button></td>
-          </tr>`).join('') || '<tr><td colspan="6" class="aide">Aucun thème</td></tr>'}</tbody>
+            <td><input data-c="thl_types" class="large" value="${echapper(typesVersTexte(t.thl_types))}" placeholder="${texteHtml('liste.themes.types_vide')}"></td>
+            <td><button type="button" data-enregistrer class="principal">${texteHtml('commun.enregistrer')}</button> <button type="button" data-supprimer title="${texteHtml('liste.themes.supprimer_aide')}">${iconeHtml('retirer')}</button></td>
+          </tr>`).join('') || `<tr><td colspan="6" class="aide">${texteHtml('liste.themes.aucun')}</td></tr>`}</tbody>
       </table>`;
     this.corps.querySelectorAll('tr[data-i]').forEach((tr) => {
       const t = this.themes[Number(tr.dataset.i)];
@@ -77,13 +78,13 @@ export class GestionThemes {
           await this.fournisseur.enregistrerTheme({ thl_actif: true, ...theme });
           delete t.nouveau;
           this.#erreur('');
-          this.message(`Thème « ${t.thl_libelle} » enregistré`, 'succes');
+          this.message(texte('liste.themes.enregistre', { libelle: t.thl_libelle }), 'succes');
           await this.charger();
         } catch (e) { this.#erreur(e.message); }
       });
       tr.querySelector('[data-supprimer]').addEventListener('click', async () => {
         if (t.nouveau) { this.themes.splice(Number(tr.dataset.i), 1); this.rendre(); return; }
-        if (!await confirmer(`Supprimer le thème « ${t.thl_libelle} » ? Ses vues restent disponibles, sans thème.`)) return;
+        if (!await confirmer(texte('liste.themes.supprimer', { libelle: t.thl_libelle }))) return;
         try { await this.fournisseur.supprimerTheme(t.thl_code); await this.charger(); } catch (e) { this.#erreur(e.message); }
       });
     });
