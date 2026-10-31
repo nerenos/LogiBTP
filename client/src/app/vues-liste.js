@@ -1,4 +1,5 @@
 import { CASQUETTES, NIVEAUX, ROLES } from './annuaire/donnees.js';
+import { PASTILLES_ETAT_DOCUMENT, PASTILLES_STATUT_STRUCTURE } from './codes.js';
 
 // Thèmes, sources et vues de liste fournis par le cœur. Ces définitions alimentent le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
@@ -13,7 +14,7 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
@@ -26,7 +27,7 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'],
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
       ['etat_execution', 'text'], ['motif', 'text'], ['service', 'text'], ['service_id', 'integer'], ['responsable', 'text'],
       ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],
       ['etape_en_cours', 'text'], ['prochaine_date', 'date'], ['ressource', 'text'],
@@ -270,14 +271,9 @@ export const VUES_LISTE = [
         col('affaire', 'Affaire', { ...fixe(90), masquee: true }),
         col('projet', 'Projet', { ...fixe(90), masquee: true }),
         col('marche', 'Marché', { ...fixe(90), masquee: true }),
-        col('statut', 'Statut', {
-          format: 'picto', ...fixe(64),
-          options: [
-            { valeur: 'Brouillon', libelle: 'Brouillon', picto: '📝' }, { valeur: 'Validé', libelle: 'Validé', picto: '✅' },
-            { valeur: 'Accepté', libelle: 'Accepté', picto: '👍' }, { valeur: 'Facturé', libelle: 'Facturé', picto: '💶' },
-            { valeur: 'Soldé', libelle: 'Soldé', picto: '🔒' }, { valeur: 'Annulé', libelle: 'Annulé', picto: '⛔' },
-          ],
-        }),
+        // Statut en pastille (L2) : état affiché calculé (refusé, expiré) sinon code du statut ; libellé de la base masqué.
+        col('etat', 'Statut', { format: 'pastille', ...fixe(110), options: PASTILLES_ETAT_DOCUMENT }),
+        col('statut', 'Libellé du statut', { ...fixe(110), masquee: true }),
         col('total_ht', 'Total\nHT', { ...nombre(), ...fixe(100), recherche: false }),
         col('net_a_payer', 'Net à\npayer', { ...nombre(), ...fixe(100), recherche: false, style: { gras: true } }),
         col('reference', 'Réf.', { format: 'coche', ...fixe(48), bulle: 'Indice de référence du groupe', recherche: false }),
@@ -285,7 +281,7 @@ export const VUES_LISTE = [
         // Alertes (CONCEPTION-REGLES-DOCUMENTS.md, R3, P25) : document rejeté à annuler, validité dépassée.
         col('alerte', 'Alerte', { ...prop(1.5, 90, 220), style: { couleur: '#b42318' } }),
       ],
-      segments: [{ colonne: 'type_document', titre: 'Type' }, { colonne: 'statut', titre: 'Statut' }],
+      segments: [{ colonne: 'type_document', titre: 'Type' }, { colonne: 'etat', titre: 'Statut' }],
       tri: [{ colonne: 'date_document', sens: 'desc' }],
       lignes: 'multi',
       taille_lot: 100,
@@ -305,9 +301,8 @@ export const VUES_LISTE = [
         col('prenom', 'Prénom', { modifiable: true, ...prop(1.2, 100) }),
         col('service', 'Service', { ...prop(1.2, 100) }),
         col('poste', 'Poste', { modifiable: true, ...prop(1.5, 120) }),
-        col('statut', 'Contrat', { modifiable: true, format: 'combo', ...fixe(90),
-          options: [{ valeur: 'CDI', libelle: 'CDI' }, { valeur: 'CDD', libelle: 'CDD' }, { valeur: 'INTERIM', libelle: 'Intérim' }],
-          regles: [{ condition: '[statut] = "INTERIM"', style: { fond: '#fff4e0', couleur: '#7a4500' } }, { condition: '[statut] = "CDD"', style: { fond: '#e3edfb', couleur: '#1d4f91' } }],
+        col('statut', 'Contrat', { modifiable: true, format: 'pastille', ...fixe(90),
+          options: [{ valeur: 'CDI', libelle: 'CDI', teinte: 'neutre' }, { valeur: 'CDD', libelle: 'CDD', teinte: 'info' }, { valeur: 'INTERIM', libelle: 'Intérim', teinte: 'attention' }],
         }),
         col('date_entree', 'Date\nd\'entrée', { modifiable: true, format: 'date', ...fixe(92), recherche: false }),
         col('salaire_brut', 'Salaire\nbrut', { modifiable: true, ...nombre(), ...fixe(96), recherche: false,
@@ -369,7 +364,7 @@ const COLONNES_AVANCEMENT = [
   col('facture', 'Facture / situation', { ...fixe(130) }),
 ];
 const vueDocuments = (vli_id, vli_nom, theme) => {
-  const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'statut', titre: 'Statut' }] };
+  const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }] };
   if (['situations', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'numero');
     definition.colonnes.splice(i + 1, 0, ...structuredClone(COLONNES_AVANCEMENT));
@@ -404,24 +399,23 @@ const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colon
   },
 });
 const montant = (code, titre, extra = {}) => col(code, titre, { ...nombre(), ...fixe(110), recherche: false, ...extra });
-const statut = (options) => col('statut', 'Statut', { format: 'picto', ...fixe(64), options });
+const statut = (options) => col('statut', 'Statut', { format: 'pastille', ...fixe(100), options });
 VUES_LISTE.push(
   vueStructure(31, 'Projets', 'projets', [
     col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Projet', { ...prop(3, 160) }), col('client', 'Client', { ...prop(2, 120) }),
-    statut([{ valeur: 'EN_COURS', libelle: 'En cours', picto: '✏️' }, { valeur: 'REMIS', libelle: 'Offre remise', picto: '📨' },
-      { valeur: 'OBTENU', libelle: 'Obtenu', picto: '🏆' }, { valeur: 'PERDU', libelle: 'Perdu', picto: '❌' }, { valeur: 'ABANDONNE', libelle: 'Abandonné', picto: '⛔' }]),
+    statut(PASTILLES_STATUT_STRUCTURE.projet),
     col('date_remise', 'Remise', { format: 'date', ...fixe(92), recherche: false }), montant('montant_estime', 'Montant\nestimé'),
     col('ville', 'Ville', { ...prop(1, 90) }), col('chantier', 'Chantier', { ...fixe(100) }), col('responsable', 'Responsable', { masquee: true }),
     col('nb_documents', 'Docs', { ...nombre(0), ...fixe(56), recherche: false }),
   ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'responsable', titre: 'Responsable' }]),
   vueStructure(32, 'Affaires', 'affaires', [
     col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Affaire', { ...prop(3, 160) }), col('nature', 'Nature', { ...fixe(90) }),
-    col('client', 'Client', { ...prop(2, 120) }), col('statut', 'Statut', { ...fixe(80) }), col('nb_chantiers', 'Chantiers', { ...nombre(0), ...fixe(70), recherche: false }),
+    col('client', 'Client', { ...prop(2, 120) }), statut(PASTILLES_STATUT_STRUCTURE.affaire), col('nb_chantiers', 'Chantiers', { ...nombre(0), ...fixe(70), recherche: false }),
     montant('montant_marches', 'Marchés\nHT'), montant('facture_ht', 'Facturé\nHT'), col('responsable', 'Responsable', { masquee: true }),
   ], [{ colonne: 'nature', titre: 'Nature' }, { colonne: 'statut', titre: 'Statut' }]),
   vueStructure(33, 'Chantiers', 'chantiers', [
     col('code', 'Code', { ...fixe(100), style: { gras: true } }), col('libelle', 'Chantier', { ...prop(3, 160) }), col('affaire', 'Affaire', { ...fixe(90) }),
-    col('client', 'Client', { ...prop(2, 120) }), col('ville', 'Ville', { ...prop(1, 90) }), col('statut', 'Statut', { ...fixe(80) }),
+    col('client', 'Client', { ...prop(2, 120) }), col('ville', 'Ville', { ...prop(1, 90) }), statut(PASTILLES_STATUT_STRUCTURE.chantier),
     col('conducteur', 'Conducteur', { masquee: true }), col('projet', 'Projet', { masquee: true }),
     col('nb_marches', 'Marchés', { ...nombre(0), ...fixe(64), recherche: false }), montant('montant_marches', 'Marchés\nHT'), montant('facture_ht', 'Facturé\nHT'),
     col('type_chantier', 'Type', { format: 'combo', ...fixe(90), options: TYPES_CHANTIER }),
@@ -430,14 +424,14 @@ VUES_LISTE.push(
     col('code', 'Code', { ...fixe(110), style: { gras: true } }), col('libelle', 'Marché', { ...prop(3, 160) }), col('chantier', 'Chantier', { ...fixe(100) }),
     col('client', 'Client', { ...prop(2, 120) }), col('commande', 'Commande', { ...fixe(110) }), col('nature', 'Nature', { ...fixe(70) }),
     montant('montant_ht', 'Montant\nHT'), montant('facture_ht', 'Facturé\nHT'), montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }),
-    col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
+    statut(PASTILLES_STATUT_STRUCTURE.marche), col('affaire', 'Affaire', { masquee: true }),
   ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'chantier', titre: 'Chantier' }]),
   vueStructure(1203, 'Marchés de sous-traitance', 'marches_st', [
     col('code', 'Code', { ...fixe(120), style: { gras: true } }), col('libelle', 'Marché', { ...prop(3, 160) }), col('sous_traitant', 'Sous-traitant', { ...prop(2, 120) }),
     col('chantier', 'Chantier', { ...fixe(100) }), col('marche_vente', 'Marché de vente', { ...fixe(110) }), col('nature', 'Nature', { ...fixe(70) }),
     col('garantie', 'Garantie', { ...fixe(120) }), montant('montant_ht', 'Commandé\nHT'), montant('montant_agree', 'Agréé'), montant('facture_ht', 'Facturé\nHT'),
     montant('reste_a_facturer', 'Reste à\nfacturer', { style: { gras: true } }), col('fin_contractuelle', 'Fin\ncontractuelle', { format: 'date', ...fixe(92), recherche: false }),
-    col('statut', 'Statut', { ...fixe(80) }), col('affaire', 'Affaire', { masquee: true }),
+    statut(PASTILLES_STATUT_STRUCTURE.marche), col('affaire', 'Affaire', { masquee: true }),
   ], [{ colonne: 'statut', titre: 'Statut' }, { colonne: 'sous_traitant', titre: 'Sous-traitant' }]),
 );
 
@@ -658,6 +652,8 @@ const ETATS_EXECUTION_LISTE = [
   { valeur: 'A_FAIRE', libelle: 'À faire', picto: '⚪' }, { valeur: 'EN_ATTENTE', libelle: 'En attente', picto: '⏸' },
   { valeur: 'EN_COURS', libelle: 'En cours', picto: '🔵' }, { valeur: 'BLOQUE', libelle: 'Bloqué', picto: '⛔' }, { valeur: 'TERMINE', libelle: 'Terminé', picto: '✅' },
 ];
+/** Ordres : « Validé » s'affiche « Pris en charge » (libellé du statut des types de la famille E). */
+const PASTILLES_ORDRE = PASTILLES_ETAT_DOCUMENT.map((o) => (o.valeur === 'VALIDE' ? { ...o, libelle: 'Pris en charge' } : o));
 const vueOrdres = (vli_id, vli_nom, filtres = []) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
   definition: {
@@ -678,7 +674,8 @@ const vueOrdres = (vli_id, vli_nom, filtres = []) => ({
       col('prochaine_date', 'Prochaine date', { format: 'date', ...fixe(92), recherche: false,
         regles: [{ condition: '[en_retard]', style: { couleur: '#b42318', gras: true } }] }),
       col('ressource', 'Ressource', { ...prop(1.4, 100), masquee: true }),
-      col('statut', 'Statut', { ...fixe(100) }),
+      col('etat', 'Statut', { format: 'pastille', ...fixe(110), options: PASTILLES_ORDRE }),
+      col('statut', 'Libellé du statut', { ...fixe(110), masquee: true }),
       col('debut_prevu', 'Début prévu', { format: 'date', ...fixe(92), recherche: false }),
       col('fin_prevue', 'Fin prévue', { format: 'date', ...fixe(92), recherche: false,
         regles: [{ condition: '[en_retard]', style: { couleur: '#b42318', gras: true } }] }),

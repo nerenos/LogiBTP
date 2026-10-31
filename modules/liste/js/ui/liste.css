@@ -2,6 +2,11 @@
 
 .liste { display: flex; flex-direction: column; min-height: 0; height: 100%; gap: 0.4rem; }
 .liste-barre { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; flex: none; }
+/* Barre (L5) : vue, puis recherche, puis groupes d'actions calés à droite et séparés ; un bouton inutilisable est grisé. */
+.liste-groupe { display: inline-flex; align-items: center; gap: 0.25rem; }
+.liste-groupe:empty, .liste-groupe:not(:has(> :not([hidden]):not(:empty))) { display: none; }
+.liste-groupe-recherche { flex: 1 1 18rem; min-width: 12rem; gap: 0.4rem; }
+.liste-elements, .liste-groupe-affichage, .liste-groupe-hote { padding-left: 0.4rem; border-left: 1px solid var(--bord); }
 .liste-vues { max-width: 16rem; }
 .liste-themes { max-width: 12rem; font-weight: 600; }
 .liste-themes[hidden] { display: none; }
@@ -121,6 +126,51 @@ textarea.liste-editeur { display: block; }
 .liste-coche { font-size: 1.05em; color: var(--discret); }
 .liste-coche.coche { color: var(--succes); }
 .liste-picto img { height: 1.2em; width: auto; vertical-align: middle; }
+/* Pastilles à libellé (format pastille) : teintes de rôle, contraste AA en clair et en sombre. */
+:root {
+  --pastille-neutre-fond: #eceff3; --pastille-neutre-texte: #3d4451;
+  --pastille-info-fond: #e6effc; --pastille-info-texte: #1d4f91;
+  --pastille-envoye-fond: #dff1fb; --pastille-envoye-texte: #0b5a80;
+  --pastille-succes-fond: #e3f4ea; --pastille-succes-texte: #156036;
+  --pastille-attention-fond: #fff1db; --pastille-attention-texte: #7a4500;
+  --pastille-erreur-fond: #fdecea; --pastille-erreur-texte: #a3201a;
+  --pastille-termine-fond: #efe8fb; --pastille-termine-texte: #5a2e9c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pastille-neutre-fond: #343a44; --pastille-neutre-texte: #d4d9e1;
+    --pastille-info-fond: #1d3557; --pastille-info-texte: #b9d3f7;
+    --pastille-envoye-fond: #123f55; --pastille-envoye-texte: #a9dcf3;
+    --pastille-succes-fond: #173f2a; --pastille-succes-texte: #a6e3bf;
+    --pastille-attention-fond: #4a3312; --pastille-attention-texte: #f5cf94;
+    --pastille-erreur-fond: #4f1f1c; --pastille-erreur-texte: #f6b8b2;
+    --pastille-termine-fond: #36255a; --pastille-termine-texte: #d6c3f7;
+  }
+}
+:root[data-theme="dark"] {
+  --pastille-neutre-fond: #343a44; --pastille-neutre-texte: #d4d9e1;
+  --pastille-info-fond: #1d3557; --pastille-info-texte: #b9d3f7;
+  --pastille-envoye-fond: #123f55; --pastille-envoye-texte: #a9dcf3;
+  --pastille-succes-fond: #173f2a; --pastille-succes-texte: #a6e3bf;
+  --pastille-attention-fond: #4a3312; --pastille-attention-texte: #f5cf94;
+  --pastille-erreur-fond: #4f1f1c; --pastille-erreur-texte: #f6b8b2;
+  --pastille-termine-fond: #36255a; --pastille-termine-texte: #d6c3f7;
+}
+.liste-pastille { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+  padding: 0 0.5em; border-radius: 0.75em; font-size: 0.85em; line-height: 1.55; font-weight: 500; white-space: nowrap;
+  background: var(--pastille-neutre-fond); color: var(--pastille-neutre-texte); }
+.liste-pastille + .liste-pastille { margin-left: 0.25em; }
+.teinte-info { --t-fond: var(--pastille-info-fond); --t-texte: var(--pastille-info-texte); }
+.teinte-envoye { --t-fond: var(--pastille-envoye-fond); --t-texte: var(--pastille-envoye-texte); }
+.teinte-succes { --t-fond: var(--pastille-succes-fond); --t-texte: var(--pastille-succes-texte); }
+.teinte-attention { --t-fond: var(--pastille-attention-fond); --t-texte: var(--pastille-attention-texte); }
+.teinte-erreur { --t-fond: var(--pastille-erreur-fond); --t-texte: var(--pastille-erreur-texte); }
+.teinte-termine { --t-fond: var(--pastille-termine-fond); --t-texte: var(--pastille-termine-texte); }
+.liste-pastille[class*="teinte-"]:not(.teinte-neutre):not(.teinte-barre) { background: var(--t-fond); color: var(--t-texte); }
+.liste-pastille.teinte-barre { text-decoration: line-through; }
+.segment-teinte { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; vertical-align: middle;
+  background: var(--t-texte, var(--pastille-neutre-texte)); }
+.segment-teinte.teinte-neutre, .segment-teinte.teinte-barre { background: var(--pastille-neutre-texte); }
 .liste-suite { padding: 0.5rem; text-align: center; color: var(--discret); }
 .liste-attente::before { content: "⏳ "; }
 

@@ -1,5 +1,5 @@
 import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
-import { normaliserDefinition, FORMATS, STYLE_VIDE } from '../src/modele.js';
+import { normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
 import { OPERATEURS_VUE, COLONNE_USAGE } from '../src/requete.js';
 
@@ -21,7 +21,7 @@ export function libelleFiltreVue(f, titre = f.colonne) {
 //   Colonnes et source   vue de la base ou requête manuelle (ADMIN), identifiant et type d'élément (ouverture
 //                        de la fiche), colonnes affichées, colonnes de recherche, segments, tri par défaut
 
-const LIB_FORMATS = { texte: 'Texte', nombre: 'Numérique', date: 'Date', coche: 'Case à cocher', combo: 'Liste (combo)', picto: 'Picto (petite image)' };
+const LIB_FORMATS = { texte: 'Texte', nombre: 'Numérique', date: 'Date', coche: 'Case à cocher', combo: 'Liste (combo)', picto: 'Picto (petite image)', pastille: 'Pastille (libellé coloré)' };
 const opt = (v, l, courant) => `<option value="${echapper(v ?? '')}" ${String(courant ?? '') === String(v ?? '') ? 'selected' : ''}>${echapper(l)}</option>`;
 const premiereLigne = (t) => String(t ?? '').replace(/\s*\n\s*/g, ' ');
 
@@ -284,8 +284,9 @@ export class ConcepteurVue {
         <label>Format <select data-col="format">${FORMATS.map((f) => opt(f, LIB_FORMATS[f], c.format)).join('')}</select></label>
         <label ${c.format === 'nombre' ? '' : 'hidden'}>Décimales <input type="number" min="0" max="6" data-col="decimales" value="${c.decimales ?? 2}"></label>
         <label>Alignement <select data-col="alignement">${opt('', 'Automatique', c.alignement)}${opt('gauche', 'Gauche', c.alignement)}${opt('centre', 'Centré', c.alignement)}${opt('droite', 'Droite', c.alignement)}</select></label>
-        <label class="large" ${c.format === 'combo' || c.format === 'picto' ? '' : 'hidden'}>Valeurs (une par ligne : valeur | libellé | picto)
-          <textarea rows="4" data-options placeholder="P | En panne | 🔴">${echapper(c.options.map((o) => [o.valeur, o.libelle, o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
+        <label class="large" ${['combo', 'picto', 'pastille'].includes(c.format) ? '' : 'hidden'}>${c.format === 'pastille'
+          ? `Valeurs (une par ligne : valeur | libellé | teinte : ${TEINTES_PASTILLE.join(', ')})` : 'Valeurs (une par ligne : valeur | libellé | picto)'}
+          <textarea rows="4" data-options placeholder="${c.format === 'pastille' ? 'P | En panne | erreur' : 'P | En panne | 🔴'}">${echapper(c.options.map((o) => [o.valeur, o.libelle, c.format === 'pastille' ? o.teinte : o.picto].filter((x) => x !== undefined && x !== null && x !== '').join(' | ')).join('\n'))}</textarea></label>
         <fieldset class="large"><legend>Mise en forme</legend>
           ${couleur('couleur', 'Texte')}${couleur('fond', 'Fond')}
           ${bascule('gras', 'G', 'Gras')}${bascule('italique', 'I', 'Italique')}${bascule('souligne', 'S', 'Souligné')}${bascule('barre', 'B', 'Barré')}
@@ -335,7 +336,8 @@ export class ConcepteurVue {
     });
     zone.querySelector('[data-options]')?.addEventListener('input', (e) => {
       c.options = e.target.value.split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0] !== '')
-        .map(([valeur, libelle, picto]) => ({ valeur, libelle: libelle || valeur, ...(picto ? { picto } : {}) }));
+        .map(([valeur, libelle, image]) => ({ valeur, libelle: libelle || valeur,
+          ...(image ? (c.format === 'pastille' ? { teinte: TEINTES_PASTILLE.includes(image) ? image : 'neutre' } : { picto: image }) : {}) }));
     });
     zone.querySelectorAll('[data-style]').forEach((el) => el.addEventListener(el.type === 'color' ? 'input' : 'change', () => {
       const k = el.dataset.style;

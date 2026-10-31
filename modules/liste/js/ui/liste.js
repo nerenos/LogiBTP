@@ -10,6 +10,8 @@ import { ConcepteurVue, libelleFiltreVue } from './concepteur.js';
 import { GestionThemes } from './themes.js';
 
 const LARGEUR_COIN = 30;
+/** Taille du texte (px) pour laquelle les largeurs fixes des vues sont données (densité compacte). */
+const TAILLE_REFERENCE = 13;
 const DELAI_RECHERCHE = 350;
 const DUREE_MARQUE = 4000;
 
@@ -108,23 +110,29 @@ export class ListeDonnees {
         <span class="liste-themes"></span>
         <select class="liste-vues" title="Vue"></select>
         <button type="button" data-action="concevoir" title="Modifier la vue (mise en forme, colonnes, partage, enregistrer comme nouvelle vue)">✎</button>
-        <span class="liste-elements">
-          <button type="button" data-action="creer" class="principal" hidden></button>
+        <span class="liste-groupe liste-groupe-recherche">
+          <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
+          <span class="liste-filtres-vue" hidden></span>
+          <span class="liste-compteur"></span>
+        </span>
+        <span class="liste-groupe liste-groupe-creer"><button type="button" data-action="creer" class="principal" hidden></button></span>
+        <span class="liste-groupe liste-elements">
           <button type="button" data-element="consulter" class="bouton-icone" title="Consulter — l'élément sélectionné (double-clic ; Ctrl : nouvelle fenêtre)" aria-label="Consulter" hidden>👁</button>
           <button type="button" data-element="copier" class="bouton-icone" title="Copier — créer un nouvel élément à partir de l'élément sélectionné" aria-label="Copier" hidden>⧉</button>
           <button type="button" data-element="supprimer" class="bouton-icone" title="Supprimer — les éléments sélectionnés" aria-label="Supprimer" hidden>🗑</button>
           <span class="liste-elements-autres"></span>
         </span>
-        <input type="search" class="liste-recherche" placeholder="Rechercher…" title="Contient, sans casse ni accents, sur toute la base">
-        <span class="liste-filtres-vue" hidden></span>
-        <span class="liste-compteur"></span>
-        <button type="button" data-action="effacer" class="bouton-icone" title="Effacer les filtres et le tri des colonnes" aria-label="Effacer les filtres" hidden>⨯</button>
-        <button type="button" data-action="lignes" aria-pressed="false"></button>
-        <button type="button" data-action="tout" aria-pressed="false">⇊</button>
-        <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
+        <span class="liste-groupe liste-groupe-affichage">
+          <button type="button" data-action="effacer" class="bouton-icone" title="Effacer les filtres et le tri des colonnes" aria-label="Effacer les filtres" disabled>⨯</button>
+          <button type="button" data-action="lignes" aria-pressed="false"></button>
+          <button type="button" data-action="tout" aria-pressed="false">⇊</button>
+          <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
+        </span>
+        <span class="liste-groupe liste-groupe-hote">
         <span class="liste-actions-hote"></span>
         <button type="button" data-action="saisie" aria-pressed="false" hidden
           title="Saisie dans la liste : clic sur une cellule modifiable, Entrée ligne suivante, Tab colonne suivante, Échap annule">✎ Saisie</button>
+        </span>
       </div>
       <p class="liste-erreurs" hidden></p>
       <div class="liste-corps">
@@ -168,7 +176,12 @@ export class ListeDonnees {
     r.querySelectorAll('[data-element]').forEach((b) => b.addEventListener('click', (e) => this.#actionElement(b.dataset.element, e).catch((x) => this.#erreur(x))));
     r.querySelector('[data-action="rafraichir"]').addEventListener('click', () => this.recharger());
     r.querySelector('[data-action="saisie"]').addEventListener('click', () => this.basculerSaisie());
-    r.querySelector('[data-action="creer"]').addEventListener('click', () => this.actionCreation?.action());
+    // Création : action directe, ou liste de choix (`choix` : [{ libelle, action }], plusieurs types).
+    r.querySelector('[data-action="creer"]').addEventListener('click', (e) => {
+      const c = this.actionCreation;
+      if (c?.choix) ouvrirMenuContextuel({ target: e.currentTarget, preventDefault() {} }, c.choix.map((x) => ({ libelle: x.libelle, titre: x.titre, action: x.action })), { aide: false });
+      else c?.action();
+    });
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
     r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
@@ -353,7 +366,7 @@ export class ListeDonnees {
     const creer = this.racine.querySelector('[data-action="creer"]');
     creer.hidden = !this.actionCreation;
     creer.textContent = this.actionCreation?.libelle ?? '';
-    creer.title = this.actionCreation ? `Créer : ${this.actionCreation.libelle.replace('＋', '').trim()}` : '';
+    creer.title = this.actionCreation ? this.actionCreation.titre ?? `Créer : ${this.actionCreation.libelle.replace(/[＋▾]/g, '').trim()}` : '';
     this.actionsElements = this.vue ? this.fabriqueActions?.(this.vue) ?? null : null;
     // Actions supplémentaires de l'application (transformer…) : un bouton chacune.
     const autres = this.racine.querySelector('.liste-elements-autres');
@@ -780,6 +793,7 @@ export class ListeDonnees {
     const o = (col.options ?? []).find((x) => String(x.valeur) === String(valeur));
     if (o?.image) return `<img class="segment-image" src="${echapper(o.image)}" alt="">`;
     if (o?.picto) return `<span class="segment-picto">${echapper(o.picto)}</span>`;
+    if (col.format === 'pastille') return `<span class="segment-teinte teinte-${echapper(o?.teinte || 'neutre')}"></span>`;
     if (col.format === 'coche') return `<span class="segment-picto">${String(valeur) === 'true' ? '☑' : '☐'}</span>`;
     return '';
   }
@@ -830,7 +844,7 @@ export class ListeDonnees {
     }
     thead.replaceChildren(tr);
     const filtres = [...this.filtres.values()].some(filtreActif);
-    this.racine.querySelector('[data-action="effacer"]').hidden = !filtres && !this.triLocal;
+    this.racine.querySelector('[data-action="effacer"]').disabled = !filtres && !this.triLocal;
     this.#largeurs();
   }
 
@@ -1070,8 +1084,12 @@ export class ListeDonnees {
   #largeurs() {
     const ajustees = this.#largeursAjustees();
     // Une colonne ajustée à la souris devient fixe (pour cet utilisateur) ; les autres se partagent le reste.
+    // Largeurs fixes de la vue pensées pour un texte de 13 px : mises à l'échelle de la densité (I6, 14 px en confortable).
+    const echelle = (parseFloat(getComputedStyle(this.table).fontSize) || TAILLE_REFERENCE) / TAILLE_REFERENCE;
+    const aLEchelle = (l) => (l?.mode === 'fixe' && echelle !== 1
+      ? { ...l, valeur: Number(l.valeur) * echelle, ...(l.min ? { min: Number(l.min) * echelle } : {}), ...(l.max ? { max: Number(l.max) * echelle } : {}) } : l);
     const visibles = this.#visibles().map((c) => (ajustees[c.code]
-      ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : c));
+      ? { ...c, largeur: { mode: 'fixe', valeur: ajustees[c.code], min: 36, max: null } } : { ...c, largeur: aLEchelle(c.largeur) }));
     const dispo = Math.max(this.zone.clientWidth - LARGEUR_COIN - 2, 200);
     const largeurs = calculerLargeurs(visibles, dispo);
     const cg = this.table.querySelector('colgroup');
@@ -1235,7 +1253,7 @@ export class ListeDonnees {
     const valeur = ligne[code];
     if (c.format === 'coche') { this.#enregistrer(id, code, !vraiDonnee(valeur)); return; }
     let ed;
-    if (c.format === 'combo' || c.format === 'picto') {
+    if (c.format === 'combo' || c.format === 'picto' || c.format === 'pastille') {
       // Combo saisissable : la saisie filtre les options ou désigne directement l'option (libellé ou code).
       ed = creerCombo({
         options: c.options.map((o) => ({ valeur: String(o.valeur), libelle: `${o.picto ?? ''} ${o.libelle ?? o.valeur}`.trim() })),

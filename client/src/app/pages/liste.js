@@ -1,4 +1,4 @@
-import { urlDocument, urlFiche, TYPE_FICHE, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
+import { urlDocument, urlFiche, TYPE_FICHE, TYPE_DOCUMENT, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
 import { PageBase } from '@logibtp/navigation';
 import { ListeDonnees } from '@logibtp/liste/ui';
 import { PanneauArbres } from '@logibtp/bibliotheque/ui';
@@ -9,15 +9,57 @@ import { api } from '../api.js';
 import { marquerArticles } from '../stock/marquer.js';
 import { memoriserSuite } from '../suite-liste.js';
 import { transformerDocument } from '../documents/transformation.js';
+import { choisirRattachement } from '../structure/selection.js';
+
+/**
+ * Types de documents créables depuis une vue : types du thème actifs pour la société, restreints au type filtré par la
+ * vue (`type_element` = ou dans).
+ */
+function typesCreables(vue, app, themes) {
+  const types = (themes.find((t) => t.thl_code === vue.definition.theme)?.thl_types ?? []).filter((t) => app.typeActif?.(t.code) !== false);
+  const f = (vue.definition.filtres ?? []).find((x) => x.colonne === 'type_element');
+  const filtres = f ? [f.valeur, ...(f.valeurs ?? [])].filter(Boolean).map(String) : null;
+  return filtres ? types.filter((t) => filtres.includes(t.code)) : types;
+}
+
+/**
+ * Création d'un document d'un type (O1) : ordre d'exécution depuis le marché choisi (commandes du marché reprises),
+ * ordre d'entretien depuis la fiche du matériel ; sinon nouveau document du type.
+ */
+function creationType(type, app) {
+  if (type.code === TYPE_DOCUMENT.E_OE) {
+    return {
+      libelle: `${type.libelle} (choisir le marché)…`,
+      action: async () => {
+        const { structure } = await app.services();
+        const refs = await structure.referentiels();
+        const marche = await choisirRattachement({ type: TYPE_FICHE.MARCHE, titre: `${type.libelle} : marché à lancer`, liste: refs.marches ?? [], refs });
+        if (!marche?.id) return;
+        try {
+          const r = await structure.documentMarche(marche.id, TYPE_DOCUMENT.E_OE);
+          app.naviguer(urlDocument(r.document.ent_id));
+        } catch (e) { app.erreur(e); }
+      },
+    };
+  }
+  if (type.code === TYPE_DOCUMENT.E_ENT) {
+    return { libelle: `${type.libelle} (depuis la fiche du matériel)…`, action: () => app.naviguer('/liste/materiels') };
+  }
+  return { libelle: type.libelle, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
+}
 
 /** Bouton de création proposé par la liste, d'après la source de la vue ouverte. */
 function creationDepuisVue(vue, app, themes = []) {
   const source = vue?.definition?.source?.vue;
-  // Documents (en ligne) : premier type du thème (Commandes clients → commande client).
-  if (source === 'documents') {
-    const type = themes.find((t) => t.thl_code === vue.definition.theme)?.thl_types?.[0];
-    if (!type) return null;
-    return { libelle: `＋ ${type.libelle}`, action: () => app.naviguer(`/document/nouveau?type=${encodeURIComponent(type.code)}`) };
+  // Documents et ordres : type du thème (ou de la vue) ; plusieurs types : bouton à liste de choix.
+  if (source === 'documents' || source === 'ordres') {
+    const types = typesCreables(vue, app, themes);
+    if (!types.length) return null;
+    if (types.length === 1) {
+      const c = creationType(types[0], app);
+      return { libelle: `＋ ${types[0].libelle}`, titre: c.libelle, action: c.action };
+    }
+    return { libelle: `＋ ${source === 'ordres' ? 'Ordre' : 'Document'} ▾`, choix: types.map((t) => creationType(t, app)) };
   }
   // Structure des affaires : fiches projet, affaire, chantier, marché.
   const structure = { projets: ['projet', 'Projet'], affaires: ['affaire', 'Affaire'], chantiers: ['chantier', 'Chantier'], marches: ['marche', 'Marché'], marches_st: ['marche', 'Marché'] }[source];

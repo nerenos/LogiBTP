@@ -265,8 +265,10 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 - [ ] E1 : fenêtre des messages d'erreur à décompte (I4), détail des erreurs de validation (I5), infobulles du thème
   (I8), séparateurs des barres d'outils (I7) ; après la PR de personnalisation (dictionnaire, `theme.css`).
-- [ ] E4 à E6 : listes — pastilles de statut, barre réordonnée, création des ordres (L2, L5, O1) ; panneau des vues à
-  droite, distinct du panneau des segments (L1) ; totaux et bandeau d'indicateurs répliqués JS / C# (L3, L4).
+- [ ] E5, E6 : listes — panneau des vues à droite, distinct du panneau des segments (L1) ; totaux et bandeau
+  d'indicateurs répliqués JS / C# (L3, L4). (E4 fait : pastilles, barre, création des ordres.)
+- [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la
+  colonne `etat` en pastille (script de reprise des définitions JSON).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
 - [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/247`) des requêtes qui le lisent encore (magasin,
   habilitations, comptes), puis la colonne.

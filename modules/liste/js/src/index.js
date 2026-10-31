@@ -1,7 +1,7 @@
 // @logibtp/liste – liste chargée par lots : modèle de vue, formules, filtres, requêtes, fournisseurs.
 export { normaliser, motsRecherche } from './normaliser.js';
 export { compilerFormule, resolveurColonnes, ErreurFormule, vrai } from './formule.js';
-export { ModeleVue, normaliserDefinition, FORMATS, STYLE_VIDE, dateFr, vraiDonnee } from './modele.js';
+export { ModeleVue, normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE, dateFr, vraiDonnee } from './modele.js';
 export {
   filtreActif, correspond, comparerValeurs, valeursDistinctes, formatsPresents, nombreDe, estNumerique,
   OPERATEURS_NOMBRE, OPERATEURS_TEXTE,

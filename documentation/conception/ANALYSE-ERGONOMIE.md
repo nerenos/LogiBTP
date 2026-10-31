@@ -575,3 +575,23 @@ client` pour les lots qui changent des vues fournies.
   droit du Pointage, le menu Pointage n'affiche qu'elle (Q16).
 - **Contrôles** : `npm test` (dont `menus.test.js`) ; essai dans le navigateur (synthèse du pointage dans les deux
   densités, menu Pointage).
+
+## 14. Réalisation du lot E4 : listes (31/10/2026)
+
+- **Pastilles (L2)** : nouveau format de cellule `pastille` du module Liste (options { valeur, libellé, teinte } ;
+  teintes neutre, info, envoyé, succès, attention, erreur, terminé, barré, définies en clair et en sombre dans
+  `liste.css` ; point de couleur dans les segments ; saisie en combo ; concepteur : « valeur | libellé | teinte »).
+  `v_liste_documents` et `v_liste_ordres` exposent `statut_code` et `etat` (`db/249`) : refusé (rejeté ou non retenu),
+  expiré (validité dépassée d'un document approuvé ou envoyé, comme l'alerte), sinon le code du statut ; aucun statut
+  n'est posé (Q3). Vues fournies : colonne Statut en pastille sur `etat` (segments compris), libellé de la base masqué ;
+  projets, affaires, chantiers, marchés et contrats des salariés en pastilles (couleurs en dur retirées). Les vues
+  enregistrées par les utilisateurs gardent l'ancien picto (reprise à faire, TODO).
+- **Barre (L5)** : vue, puis recherche avec les filtres de la vue et le compteur, puis groupes séparés calés à droite :
+  ＋ Créer | 👁 ⧉ 🗑 et actions de l'application | ⨯ ≡ ⇊ ⟳ | 🖨 ✎ Saisie ; « ⨯ » grisé sans filtre au lieu d'être masqué ;
+  les largeurs fixes des vues suivent la densité (texte de 14 px en confortable).
+- **Création (O1)** : documents et ordres : types du thème actifs, restreints au type filtré par la vue ; un type :
+  bouton direct, plusieurs : « ＋ Ordre ▾ » ou « ＋ Document ▾ » (liste de choix, option `creation(vue)` →
+  `{ libelle, choix }`). Ordre d'exécution : choix du marché puis création par le marché (commandes reprises) ; ordre
+  d'entretien : renvoi vers les matériels (création depuis la fiche).
+- **Contrôles** : `npm test` ; essai dans le navigateur (projets, chantiers, salariés en pastilles ; création d'un ordre
+  d'exécution avec choix du marché).

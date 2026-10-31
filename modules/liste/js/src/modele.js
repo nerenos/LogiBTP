@@ -6,7 +6,7 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 // Définition d'une vue (stockée en JSONB dans vue_liste.vli_definition) :
 // {
 //   source: { mode: 'vue' | 'requete', vue, requete, colonne_id, colonne_type, type_element },
-//   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto }],
+//   colonnes: [{ code, calcul, formule, titre, bulle, format, decimales, options: [{ valeur, libelle, picto, teinte }],
 //                style: { couleur, fond, gras, italique, souligne, barre }, regles: [{ condition, style }],
 //                largeur: { mode: 'auto' | 'fixe' | 'proportionnel', valeur, min, max }, masquee, recherche, alignement,
 //                modifiable (saisie dans la liste, si la source et la colonne de la base le permettent) }],
@@ -15,7 +15,9 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 //   theme: code du thème (regroupement des vues ; ses types d'élément restreignent les lignes)
 // }
 
-export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto'];
+export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'pastille'];
+/** Teintes des pastilles (format `pastille`, option `teinte`) : variables `--pastille-<teinte>-fond / -texte` du thème. */
+export const TEINTES_PASTILLE = ['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre'];
 export const STYLE_VIDE = Object.freeze({ couleur: null, fond: null, gras: false, italique: false, souligne: false, barre: false });
 
 /** Définition complétée par les valeurs par défaut (une vue ancienne reste lisible). */
@@ -143,6 +145,7 @@ export class ModeleVue {
       case 'date': return dateFr(valeur);
       case 'coche': return vraiDonnee(valeur) ? 'Oui' : 'Non';
       case 'combo':
+      case 'pastille':
       case 'picto': return this.option(colonne, valeur)?.libelle ?? String(valeur);
       default: return String(valeur);
     }
