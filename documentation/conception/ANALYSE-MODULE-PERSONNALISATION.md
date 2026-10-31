@@ -377,3 +377,26 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   est lue dans `--pointage-nature-defaut`.
 - **Contrôles** : le test des clés du client couvre aussi `modules/pointage/js/src`. Hors périmètre : la barre
   d'absence du planning (styles du module Planning, lot à venir) et les messages de l'API du Pointage (P2).
+
+## 15. Réalisation du lot P3b : module Document (31/10/2026)
+
+- **Périmètre** : `modules/document/js` (règles et interface : éditeur de la grille, panneaux, vues de colonnes, plan,
+  notifications, recherche, paramétrage de l'affichage, disposition) et `ui/document.css`. Les pages du cœur qui
+  l'utilisent (page document, `PanneauxBtp`, `EditeurDevisBtp`…) viendront avec les pages du cœur.
+- **Socle** : `pairesParCode(prefixe, codes)` (listes `[code, libellé]` figées, libellé relu à chaque accès) à côté de
+  `textesParCode` ; `couleurTheme(variable, defaut)` lit une variable du thème pour un champ qui exige une couleur
+  explicite (nouvelle étiquette, nature d'absence du Pointage).
+- **Textes** : `document.*` du `fr.json` du module (zones `editeur`, `colonnes.<clé>` — titres des colonnes de la grille,
+  repris par les alias d'avancement —, `panneaux`, `vues`, `plan`, `notifications`, `recherche`, `parametrage`,
+  `etapes` — libellés des étapes d'annulation —, `variables` — variables des libellés et des textes de l'édition —,
+  tables par code). Les tables exportées gardent leur forme (`Object.entries`, déstructuration). L'origine « défaut » de
+  la condition de paiement devient le code `defaut` (texte `document.panneaux.origines.defaut`).
+- **Icônes** : `document_*` du module (pli, filtre, colonnes, vue par défaut, débogage, remise, soldé…), communes du
+  socle (`rechercher`, `supprimer`, `erreur`, `avertissement`, `retirer`, `ajouter`, `replier`).
+- **Couleurs** : ombres, contours, fond des fenêtres, surlignage de la recherche et de l'analyse, couleurs par défaut
+  des étiquettes et des modes de vente : variables `--document-*` du `theme.css` du module (valeurs inchangées).
+- **Gardé** : les messages des moteurs de calcul (repli de `messageErreur`, parité avec le C#) ; le tiret « — » des
+  listes vides.
+- **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/document/js`
+  vérifiées par le test du client ; affichage contrôlé dans le navigateur (entête, totaux, détail, plan, grille et pied
+  du devis de démonstration).

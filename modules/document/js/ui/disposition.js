@@ -1,6 +1,7 @@
 // Environnement d'affichage : onglet actif et panneaux ancrables (détail de la ligne, plan du document…).
 // Trois zones autour de la grille (gauche, droite, bas), chacune redimensionnable ; plusieurs panneaux peuvent partager
 // une zone (empilés). Chaque panneau a sa position, son état réduit et sa visibilité, gardés dans le navigateur.
+import { texte, icone } from '@logibtp/socle/dictionnaire';
 import { lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 
 const POSITIONS = ['gauche', 'droite', 'bas'];
@@ -84,8 +85,8 @@ export class Disposition {
       dock.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('actif', b.dataset.dock === d.position));
       const bouton = dock.querySelector('[data-action="reduire"]');
       if (bouton) {
-        bouton.textContent = d.reduit ? '▢' : '–';
-        bouton.title = d.reduit ? 'Agrandir le panneau' : 'Réduire le panneau';
+        bouton.textContent = icone(d.reduit ? 'document_agrandir' : 'document_reduire');
+        bouton.title = texte(d.reduit ? 'document.disposition.agrandir' : 'document.disposition.reduire');
       }
     }
     this.racine.querySelectorAll('[data-basculer-dock]').forEach((b) => b.classList.toggle('actif', Boolean(docks[b.dataset.basculerDock]?.visible)));

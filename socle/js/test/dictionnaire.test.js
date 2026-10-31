@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   resoudre, resoudrePluriel, fusionner, cles, variablesDe,
   initialiserDictionnaire, chargerDictionnaire, texte, pluriel, texteHtml, existe, langue, icone, iconeHtml, image, clesManquantes,
-  messageErreur,
+  messageErreur, textesParCode, pairesParCode,
 } from '../src/dictionnaire/index.js';
 import { ErreurApi } from '../src/api.js';
 
@@ -82,5 +82,19 @@ describe('dictionnaire courant', () => {
     expect(texte('t')).toBe('intégré');
     await expect(chargerDictionnaire()).rejects.toThrow();
     delete globalThis.fetch;
+  });
+});
+
+describe('tables de libellés par code', () => {
+  it('relisent le dictionnaire à chaque accès et gardent leur forme', () => {
+    initialiserDictionnaire({ libelles: { m: { A: 'Alpha', B: 'Bêta' } } });
+    const t = textesParCode('m', ['A', 'B']);
+    const p = pairesParCode('m', ['A', 'B']);
+    expect(Object.keys(t)).toEqual(['A', 'B']);
+    expect(p.map(([c, l]) => `${c}=${l}`)).toEqual(['A=Alpha', 'B=Bêta']);
+    initialiserDictionnaire({ libelles: { m: { A: 'Autre', B: 'Bêta' } } });
+    expect(t.A).toBe('Autre');
+    expect(p[0][1]).toBe('Autre');
+    expect(Object.isFrozen(p) && Object.isFrozen(p[0])).toBe(true);
   });
 });

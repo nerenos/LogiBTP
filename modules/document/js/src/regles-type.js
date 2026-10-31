@@ -2,6 +2,7 @@
 // (GET /types-document/{code}/definition) porte `regles` : code → valeur (type, sinon famille, sinon global, sinon
 // défaut du catalogue). Valeur absente : `defaut`.
 
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { FAMILLE_DOCUMENT } from './codes.js';
 
 /** Valeur d'une règle pour le type d'une définition. */
@@ -10,8 +11,8 @@ export function regle(definition, code, defaut = null) {
   return v === undefined || v === null ? defaut : v;
 }
 
-/** Libellés des niveaux de règle. */
-export const FAMILLES_REGLE = [['V', 'Ventes'], ['A', 'Achats'], ['S', 'Stock'], ['E', 'Exécution'], ['T', 'Sous-traitance']];
+/** Libellés des niveaux de règle (fr.json : document.familles.<FAMILLE>). */
+export const FAMILLES_REGLE = pairesParCode('document.familles', ['V', 'A', 'S', 'E', 'T']);
 
 /** Famille d'achat : achats et sous-traitance (tiers fournisseur, comptes d'achat, décaissement). */
 export const estFamilleAchat = (famille) => famille === FAMILLE_DOCUMENT.ACHAT || famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE;

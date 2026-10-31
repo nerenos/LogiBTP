@@ -6,7 +6,7 @@ import {
   controlerSemaine, MESSAGES_POINTAGE, lundiDe, joursSemaine, lireDuree, ecrireDuree,
   ETATS_VALIDATION, MESSAGES_VALIDATION, estBloque, UNITES_RUBRIQUE, SAISIES_RUBRIQUE, TYPES_REGLE, controlerProfil, MESSAGES_PAIE, ETATS_CONGE, ETAT_CONGE, ERREUR_POINTAGE, enCours,
 } from '@logibtp/pointage';
-import { texte, texteHtml, icone, iconeHtml, langue } from '@logibtp/socle/dictionnaire';
+import { texte, texteHtml, icone, iconeHtml, langue, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { api } from '../api.js';
 import { ouvrirConge, pastilleConge, periodeConge } from '../pointage/conges.js';
 import { rendreRepasSemaine } from '../pointage/repas.js';
@@ -430,7 +430,7 @@ const joursAffiches = (lignes) => [0, 1, 2, 3, 4, 5, 6].filter((i) => i < 5 || l
 /** Bouton à icône seule : attribut data-<cle>, icône du catalogue, bulle et nom accessible (aide : bulle plus longue). */
 const boutonIcone = (cle, nom, libelle, aide = libelle) => `<button type="button" class="bouton-icone" data-${cle} title="${texteHtml(aide)}" aria-label="${texteHtml(libelle)}">${iconeHtml(nom)}</button>`;
 /** Couleur proposée pour une nouvelle nature d'absence : variable du thème --pointage-nature-defaut (champ couleur : #rrggbb). */
-const couleurNatureDefaut = () => getComputedStyle(document.documentElement).getPropertyValue('--pointage-nature-defaut').trim() || '#000000';
+const couleurNatureDefaut = () => couleurTheme('--pointage-nature-defaut');
 
 /** En-têtes communs des tableaux de salariés : salarié et matricule, total de la semaine. */
 const ENTETE_SALARIE = `<th>${texteHtml('pointage.panneau.salarie')}<br><small>${texteHtml('pointage.panneau.matricule')}</small></th>`;

@@ -2,7 +2,7 @@
 
 ## Rôle
 - Textes (`fr.json`), thème (`theme.css`) et images (`images/`, dont le catalogue des icônes `images/icones.json`) de l'application, rangés sous des clés stables et modifiables sans toucher au code ([analyse](../../documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md)). Une langue, un thème : le but est de structurer, pas le multilingue.
-- Lots P1, P2 (erreurs par code) et P3a (Pointage, § 14 de l'analyse) : fichiers statiques par couche (socle → modules → cœur) surchargés par l'installation. Phase 2 (à venir) : interface `/parametres/personnalisation`, stockage en base par société, génération des fichiers, application aux données système (§ 8 et 9 de l'analyse).
+- Lots P1, P2 (erreurs par code), P3a (Pointage, § 14 de l'analyse) et P3b (module Document, § 15) : fichiers statiques par couche (socle → modules → cœur) surchargés par l'installation. Phase 2 (à venir) : interface `/parametres/personnalisation`, stockage en base par société, génération des fichiers, application aux données système (§ 8 et 9 de l'analyse).
 
 ## Dépendances
 - Dépend de : `@logibtp/socle` (`fusionner`, `cles`, `valeurBrute` de `@logibtp/socle/dictionnaire`) ; .NET : `LogiBTP.Socle.Web` (`Dictionnaire.Fusionner` du socle, `VariablesEnv`).
@@ -27,7 +27,7 @@
 - Un libellé est du texte : `texteHtml` l'échappe avec ses valeurs ; seules les clés finissant par `_html` gardent leurs balises.
 - Chargement : `client/src/main.js` attend `chargerPersonnalisation()` avant d'importer l'application ; une constante de module qui appelle `texte()` est donc permise dans le client et les modules. Dans les tests, `test/preparation.js` pose le dictionnaire.
 - Nouveau code : aucun texte, icône ni couleur en dur (`texte()`, `icone()`, variables du thème).
-- Table de libellés par code dans un module : `textesParCode(prefixe, codes)` du socle (accesseurs relus à chaque accès, forme de l'objet inchangée). Titre d'un `ouvrirDialogue` échappé : `icone()`, pas `iconeHtml()`.
+- Table de libellés par code dans un module : `textesParCode(prefixe, codes)` (objet) ou `pairesParCode(prefixe, codes)` (liste `[code, libellé]`) du socle (relus à chaque accès, forme inchangée) ; couleur explicite d'un champ : `couleurTheme('--variable', defaut)`. Titre d'un `ouvrirDialogue` échappé : `icone()`, pas `iconeHtml()`.
 
 ## Tests
 - `npm test --workspace modules/personnalisation/js` ; `dotnet test modules/personnalisation/dotnet/LogiBTP.Personnalisation.Tests` ; jeu commun du socle `socle/tests/dictionnaire.json` (`socle/js/test/dictionnaire.test.js`, `DictionnaireTests.cs`) ; clés du code : `client/test/personnalisation.test.js`.

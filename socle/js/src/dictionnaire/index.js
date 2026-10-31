@@ -99,6 +99,27 @@ export function textesParCode(prefixe, codes) {
   return Object.freeze(o);
 }
 
+/**
+ * Paires [code, libellé] figées (listes de choix des modules) : le libellé est relu à chaque accès dans
+ * `prefixe.CODE` ; la déstructuration `[code, libelle]` et `map` gardent leur forme.
+ */
+export function pairesParCode(prefixe, codes) {
+  return Object.freeze(codes.map((c) => {
+    const p = [c];
+    Object.defineProperty(p, 1, { get: () => texte(`${prefixe}.${c}`), enumerable: true });
+    return Object.freeze(p);
+  }));
+}
+
+/**
+ * Valeur d'une variable du thème (`--nom`, feuille theme.css des couches) pour un champ qui exige une valeur explicite
+ * (couleur #rrggbb d'un champ couleur, couleur par défaut enregistrée) ; `defaut` hors navigateur ou si elle est vide.
+ */
+export function couleurTheme(variable, defaut = '#000000') {
+  if (typeof document === 'undefined' || typeof getComputedStyle === 'undefined') return defaut;
+  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || defaut;
+}
+
 /** La clé existe-t-elle ? */
 export const existe = (cle) => valeurBrute(etat.libelles, cle) !== undefined;
 

@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
 import { TL, estTranche } from '../src/index.js';
 import { ID_PIED } from './editeur-document.js';
@@ -71,33 +72,33 @@ export class PlanDocument {
       const complement = ligne ? ed.complementTranche(ligne) : null;
       return `
       <li data-id="${id}" ${id !== ID_PIED && !ed.magasin?.lectureSeule ? 'draggable="true"' : ''} class="${classe} ${frais ? 'tranche-frais' : ''} ${id === courante ? 'courant' : ''} ${id === filtre ? 'filtre' : ''}" style="padding-left:${0.3 + profondeur * 0.9}rem" title="${echapper(complement ? `${libelle} — ${complement}` : libelle)}">
-        <span class="pli" ${aEnfants ? 'data-pli' : ''}>${aEnfants ? (this.replies.has(id) ? '▸' : '▾') : ''}</span>
+        <span class="pli" ${aEnfants ? 'data-pli' : ''}>${aEnfants ? iconeHtml(this.replies.has(id) ? 'document_deplier' : 'replier') : ''}</span>
         ${pastille}<span class="num">${echapper(num)}</span><span class="lib">${echapper(libelle)}</span>${complement ? `<small class="complement">${echapper(complement)}</small>` : ''}<span class="mt">${formatNombre(montant, pm)}</span></li>`;
     };
     const net = ed.resultat.document.ent_net_a_payer;
     this.conteneur.innerHTML = `
       <div class="plan-barre">
-        <span class="plan-modes" role="group" aria-label="Clic sur une tranche">
-          <button type="button" data-mode="aller" class="${this.mode === 'aller' ? 'actif' : ''}" title="Clic : aller à la ligne de la tranche dans la grille">↧<span class="lib-bouton"> Aller à</span></button>
-          <button type="button" data-mode="filtrer" class="${this.mode === 'filtrer' ? 'actif' : ''}" title="Clic : n'afficher que la tranche dans la grille (affichage seulement)">⧩<span class="lib-bouton"> Filtrer</span></button>
+        <span class="plan-modes" role="group" aria-label="${texteHtml('document.plan.clic')}">
+          <button type="button" data-mode="aller" class="${this.mode === 'aller' ? 'actif' : ''}" title="${texteHtml('document.plan.aller_aide')}">${iconeHtml('document_aller')}<span class="lib-bouton"> ${texteHtml('document.plan.aller')}</span></button>
+          <button type="button" data-mode="filtrer" class="${this.mode === 'filtrer' ? 'actif' : ''}" title="${texteHtml('document.plan.filtrer_aide')}">${iconeHtml('document_filtrer')}<span class="lib-bouton"> ${texteHtml('document.plan.filtrer')}</span></button>
         </span>
-        <span class="plan-plis" role="group" aria-label="Lignes de la grille">
-          ${this.boutonPli('ouvrages', 'Ouvrages', 'les lignes d\'ouvrage (composantes)', ed.toutReplie({ ouvrages: true }), ed.lignesRepliables({ ouvrages: true }).length > 0)}
-          ${this.boutonPli('tout', 'Tout', 'toutes les lignes (titres, ouvrages, pied)', ed.toutReplie(), ed.lignesRepliables().length > 0)}
+        <span class="plan-plis" role="group" aria-label="${texteHtml('document.plan.lignes')}">
+          ${this.boutonPli('ouvrages', ed.toutReplie({ ouvrages: true }), ed.lignesRepliables({ ouvrages: true }).length > 0)}
+          ${this.boutonPli('tout', ed.toutReplie(), ed.lignesRepliables().length > 0)}
         </span>
-        ${filtre !== null ? '<button type="button" data-tout class="filtre" title="Retirer le filtre d\'affichage">✕<span class="lib-bouton"> Tout afficher</span></button>' : ''}
+        ${filtre !== null ? `<button type="button" data-tout class="filtre" title="${texteHtml('document.plan.retirer_filtre')}">${iconeHtml('retirer')}<span class="lib-bouton"> ${texteHtml('document.plan.tout_afficher')}</span></button>` : ''}
       </div>
       <ul class="plan-arbre">
-        ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || (t.ligne.lig_tyl_id === TL.SECTION ? 'Section' : 'Titre'), t.ligne.lig_montant_ht, t)).join('')}
-        ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', 'Pied du document', net, { classe: 'pied' }) : ''}
+        ${tranches.filter((t) => !masquees.has(t.ligne.lig_id)).map((t) => item(t.ligne.lig_id, t.ligne.lig_numerotation ?? '', t.ligne.lig_libelle_brut || texte(t.ligne.lig_tyl_id === TL.SECTION ? 'document.plan.section' : 'document.plan.titre'), t.ligne.lig_montant_ht, t)).join('')}
+        ${(ed.resultat.pied ?? []).length ? item(ID_PIED, '', texte('document.plan.pied'), net, { classe: 'pied' }) : ''}
       </ul>
-      ${tranches.length ? '' : '<p class="aide">Aucun titre : ajoutez des lignes de type Titre pour structurer le document en tranches.</p>'}`;
+      ${tranches.length ? '' : `<p class="aide">${texteHtml('document.plan.aucun_titre')}</p>`}`;
     this.#ajusterBarre();
   }
 
   /** Bouton d'ouverture / réduction des lignes de la grille : réduit tant qu'une ligne est ouverte, sinon ouvre tout. */
-  boutonPli(code, libelle, quoi, replie, actif) {
-    return `<button type="button" data-plis="${code}" ${actif ? '' : 'disabled'} title="${replie ? 'Ouvrir' : 'Réduire'} ${quoi}">${replie ? '⊞' : '⊟'}<span class="lib-bouton"> ${libelle}</span></button>`;
+  boutonPli(code, replie, actif) {
+    return `<button type="button" data-plis="${code}" ${actif ? '' : 'disabled'} title="${texteHtml(`document.plan.plis.${code}_${replie ? 'ouvrir' : 'reduire'}`)}">${iconeHtml(replie ? 'document_tout_ouvrir' : 'document_tout_reduire')}<span class="lib-bouton"> ${texteHtml(`document.plan.plis.${code}`)}</span></button>`;
   }
 
   /**

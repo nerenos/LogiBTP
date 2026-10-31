@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { CFG_LIGNES as C, ordreAffichage, echapper, formatNombre, formatLibre, lireNombre, creerCombo, editerLibelle, htmlSur, confirmer } from '@logibtp/socle/ui';
 import { TL, estChiffree, estPied, estTranche, calculerEcheances, montantRetenue, MODES_REGLEMENT, regle, estFamilleAchat } from '../src/index.js';
 import { LIBELLES_BASE_PIED, LIBELLES_TYPE_PRIX } from './editeur-document.js';
@@ -64,9 +65,9 @@ export class PanneauxDocument {
     const defaut = taux.find((t) => t.ttv_defaut) ?? taux[0];
     // Toujours proposée (le panneau ne se redessine pas tant que le champ a le focus) : taux saisi, sinon celui du paramétrage.
     const appliquer = !ed.fige && !ed.estAvancement && defaut;
-    return `<label title="Taux des nouvelles lignes de prix hors d'un titre qui porte un taux">TVA par défaut
-      <select data-champ="ent_tva_id" data-entier>${opt('', defaut ? `${defaut.ttv_code} (paramétrage)` : '—', d.ent_tva_id)}${taux.map((t) => opt(t.ttv_id, t.ttv_code, d.ent_tva_id)).join('')}</select></label>
-      ${appliquer ? '<button type="button" data-action="appliquer-tva-document" title="Impose ce taux à tous les titres et à toutes les lignes de prix">Appliquer à toutes les lignes</button>' : ''}`;
+    return `<label title="${texteHtml('document.panneaux.tva_defaut_aide')}">${texteHtml('document.panneaux.tva_defaut')}
+      <select data-champ="ent_tva_id" data-entier>${opt('', defaut ? texte('document.panneaux.tva_parametrage', { code: defaut.ttv_code }) : '—', d.ent_tva_id)}${taux.map((t) => opt(t.ttv_id, t.ttv_code, d.ent_tva_id)).join('')}</select></label>
+      ${appliquer ? `<button type="button" data-action="appliquer-tva-document" title="${texteHtml('document.panneaux.tva_appliquer_aide')}">${texteHtml('document.panneaux.tva_appliquer')}</button>` : ''}`;
   }
 
   /** Taux effectif du document : saisi, sinon taux par défaut du paramétrage, sinon le premier. */
@@ -79,7 +80,7 @@ export class PanneauxDocument {
   champsEntete(_d) { return []; }
 
   /** Champ du tiers de l'entête (identifiant) ; une spécialisation peut le saisir ailleurs (annuaire du document). */
-  champTiers(d) { return `<label>Tiers <input data-champ="ent_tiers_id" data-entier value="${echapper(d.ent_tiers_id ?? '')}"></label>`; }
+  champTiers(d) { return `<label>${texteHtml('document.panneaux.tiers')} <input data-champ="ent_tiers_id" data-entier value="${echapper(d.ent_tiers_id ?? '')}"></label>`; }
 
   /** Sections HTML ajoutées sous le formulaire d'entête. */
   sectionsEntete() { return ''; }
@@ -100,27 +101,27 @@ export class PanneauxDocument {
     zone.innerHTML = `
       <div class="entete-titre">
         <strong>${echapper(def.type.tyd_libelle)}</strong>
-        <span class="numero">${echapper(d.ent_numero ?? 'non numéroté')}${d.ent_indice ? ` · indice ${echapper(d.ent_indice)}` : ''}</span>
+        <span class="numero">${echapper(d.ent_numero ?? texte('document.panneaux.non_numerote'))}${d.ent_indice ? ` · ${texteHtml('document.panneaux.indice', { indice: d.ent_indice })}` : ''}</span>
         <span class="statut">${echapper(statut?.std_libelle ?? '')} · v${d.ent_version ?? 1}</span>
       </div>
       <div class="formulaire">
-        <label class="large">Objet <input data-champ="ent_objet" value="${echapper(d.ent_objet ?? '')}"></label>
-        <label>Date <input type="date" data-champ="ent_date" value="${echapper(d.ent_date ?? '')}"></label>
+        <label class="large">${texteHtml('document.panneaux.objet')} <input data-champ="ent_objet" value="${echapper(d.ent_objet ?? '')}"></label>
+        <label>${texteHtml('document.panneaux.date')} <input type="date" data-champ="ent_date" value="${echapper(d.ent_date ?? '')}"></label>
         ${this.champTiers(d)}
-        <label>Notre référence <input data-champ="ent_notre_reference" maxlength="50" value="${echapper(d.ent_notre_reference ?? '')}"></label>
-        <label>Référence externe <input data-champ="ent_reference_externe" maxlength="100" title="Référence du client ou du fournisseur" value="${echapper(d.ent_reference_externe ?? '')}"></label>
-        ${def.type?.tyd_consultation ? `<label title="Lot de consultation : code commun aux demandes envoyées à plusieurs fournisseurs">Lot de consultation <input data-champ="ent_consultation" maxlength="30" size="12" value="${echapper(d.ent_consultation ?? '')}"></label>` : ''}
-        ${estFamilleAchat(def.type?.tyd_famille) ? `<label title="Date de la pièce du fournisseur : date comptable et départ de l'échéancier">Date fournisseur <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
-        <label title="Durée de validité ; la date de fin est calculée à la validation du document">Validité (jours)
+        <label>${texteHtml('document.panneaux.notre_reference')} <input data-champ="ent_notre_reference" maxlength="50" value="${echapper(d.ent_notre_reference ?? '')}"></label>
+        <label>${texteHtml('document.panneaux.reference_externe')} <input data-champ="ent_reference_externe" maxlength="100" title="${texteHtml('document.panneaux.reference_externe_aide')}" value="${echapper(d.ent_reference_externe ?? '')}"></label>
+        ${def.type?.tyd_consultation ? `<label title="${texteHtml('document.panneaux.consultation_aide')}">${texteHtml('document.panneaux.consultation')} <input data-champ="ent_consultation" maxlength="30" size="12" value="${echapper(d.ent_consultation ?? '')}"></label>` : ''}
+        ${estFamilleAchat(def.type?.tyd_famille) ? `<label title="${texteHtml('document.panneaux.date_externe_aide')}">${texteHtml('document.panneaux.date_externe')} <input type="date" data-champ="ent_date_externe" value="${echapper(d.ent_date_externe ?? '')}"></label>` : ''}
+        <label title="${texteHtml('document.panneaux.validite_aide')}">${texteHtml('document.panneaux.validite')}
           <input data-champ="ent_validite_jours" data-entier type="number" min="1" max="3650" value="${d.ent_validite_jours ?? ''}"></label>
-        ${d.ent_date_validite ? `<label>Valable jusqu'au <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
+        ${d.ent_date_validite ? `<label>${texteHtml('document.panneaux.valable_jusqu')} <input type="date" value="${echapper(d.ent_date_validite)}" disabled></label>` : ''}
         ${this.champTauxDocument(d)}
-        ${def.modeles?.length ? `<label title="Modèle de saisie : vue de colonnes proposée par défaut">Modèle <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
+        ${def.modeles?.length ? `<label title="${texteHtml('document.panneaux.modele_aide')}">${texteHtml('document.panneaux.modele')} <select data-champ="ent_modele">${opt('', '—', d.ent_modele)}${def.modeles.map((x) => opt(x.code, x.libelle, d.ent_modele)).join('')}</select></label>` : ''}
         ${this.champsEntete(d).join('')}
-        <label>Décimales montants <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
-        <fieldset class="numerotation"><legend>Numérotation</legend>
+        <label>${texteHtml('document.panneaux.decimales_montants')} <input data-champ="ent_precision_montant" data-entier type="number" min="0" max="6" value="${d.ent_precision_montant ?? 2}"></label>
+        <fieldset class="numerotation"><legend>${texteHtml('document.panneaux.numerotation')}</legend>
           ${niveaux.map((s, i) => `<select data-niveau="${i}">${i > 0 ? opt('', '—', s) : ''}${STYLES_NUM.map(([v, l]) => opt(v, l, s)).join('')}</select>`).join('')}
-          <input data-separateur maxlength="2" value="${echapper(fmt.separateur ?? '.')}" title="Séparateur">
+          <input data-separateur maxlength="2" value="${echapper(fmt.separateur ?? '.')}" title="${texteHtml('document.panneaux.separateur')}">
         </fieldset>
         ${props.map((p) => {
           const v = valeurs[p.prd_code] ?? '';
@@ -143,26 +144,26 @@ export class PanneauxDocument {
     this.lierEtiquettes(zone);
     this.lierReglement(zone);
     this.lierTextes(zone);
-    lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, 'Entête'));
+    lier(zone.querySelector('.formulaire'), '[data-champ]', (champ, v, el) => m.modifier((b) => { b.document[champ] = valeurChamp(el, v); }, texte('document.etapes.entete')));
     zone.querySelector('[data-action="appliquer-tva-document"]')?.addEventListener('click', async (e) => {
       e.currentTarget.blur();
       const id = this.tauxDocument(editeur.saisie.document);
       if (!id) return;
-      const ok = await confirmer(`Appliquer le taux ${editeur.libelleTaux(id)} à tous les titres et à toutes les lignes de prix du document ?`,
-        { titre: 'TVA du document', ok: 'Appliquer' });
-      if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), 'TVA du document');
+      const ok = await confirmer(texte('document.panneaux.tva_confirmer', { taux: editeur.libelleTaux(id) }),
+        { titre: texte('document.etapes.tva_document'), ok: texte('document.panneaux.appliquer') });
+      if (ok) m.modifier((b) => this.regles.appliquerTauxDocument(b, id), texte('document.etapes.tva_document'));
     });
     const majFormat = () => {
       const styles = [...zone.querySelectorAll('[data-niveau]')].map((s) => s.value).filter(Boolean);
       const separateur = zone.querySelector('[data-separateur]').value || '.';
-      m.modifier((b) => { b.document.ent_num_format = { separateur, niveaux: styles.map((style) => ({ style })) }; }, 'Numérotation');
+      m.modifier((b) => { b.document.ent_num_format = { separateur, niveaux: styles.map((style) => ({ style })) }; }, texte('document.etapes.numerotation'));
     };
     zone.querySelectorAll('[data-niveau], [data-separateur]').forEach((el) => el.addEventListener('change', majFormat));
     zone.querySelectorAll('[data-prop]').forEach((el) => el.addEventListener('change', () => {
       let v = el.type === 'checkbox' ? el.checked : el.value;
       if (el.dataset.type === 'entier') v = v === '' ? null : Number(v);
       if (el.dataset.type === 'decimal') v = v === '' ? null : Number(lireNombre(v));
-      m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, 'Propriété');
+      m.modifier((b) => { b.document.ent_proprietes = { ...(b.document.ent_proprietes ?? {}), [el.dataset.prop]: v === '' ? null : v }; }, texte('document.etapes.propriete'));
     }));
     this.lierEntete(zone);
   }
@@ -182,14 +183,14 @@ export class PanneauxDocument {
       const apercu = calcule[`ent_texte_${cle}`] ?? html;
       return `<div class="texte-document" data-texte="${cle}">
         <div class="texte-document-titre"><strong>${titre}</strong> <span class="aide">${aide}</span>
-          <button type="button" data-texte-editer="${cle}">${ed.fige ? 'Consulter' : '✎ Modifier'}</button>
-          ${!ed.fige && ed.definition.type?.[`tyd_texte_${cle}_html`] ? `<button type="button" data-texte-modele="${cle}" title="Remplacer par le modèle du type de document">↺ Modèle</button>` : ''}
-          ${!ed.fige && this.peutChoisirTexte() ? `<button type="button" data-texte-choisir="${cle}" title="Ajouter un texte réutilisable (à la suite du texte saisi)">📚 Texte</button>` : ''}</div>
-        <div class="texte-document-apercu">${apercu ? htmlSur(apercu) : '<span class="aide">Aucun texte</span>'}</div></div>`;
+          <button type="button" data-texte-editer="${cle}">${ed.fige ? texteHtml('document.panneaux.consulter') : `${iconeHtml('document_modifier')} ${texteHtml('commun.modifier')}`}</button>
+          ${!ed.fige && ed.definition.type?.[`tyd_texte_${cle}_html`] ? `<button type="button" data-texte-modele="${cle}" title="${texteHtml('document.panneaux.texte_modele_aide')}">${iconeHtml('document_modele')} ${texteHtml('document.panneaux.modele')}</button>` : ''}
+          ${!ed.fige && this.peutChoisirTexte() ? `<button type="button" data-texte-choisir="${cle}" title="${texteHtml('document.panneaux.texte_choisir_aide')}">${iconeHtml('document_textes')} ${texteHtml('document.panneaux.texte')}</button>` : ''}</div>
+        <div class="texte-document-apercu">${apercu ? htmlSur(apercu) : `<span class="aide">${texteHtml('document.panneaux.aucun_texte')}</span>`}</div></div>`;
     };
-    return `<fieldset class="textes-document"><legend>Textes de l'édition</legend>
-      ${bloc('intro', 'Introduction', 'avant les lignes')}
-      ${bloc('fin', 'Conclusion', 'après le pied et les récapitulatifs')}</fieldset>`;
+    return `<fieldset class="textes-document"><legend>${texteHtml('document.panneaux.textes')}</legend>
+      ${bloc('intro', texteHtml('document.panneaux.introduction'), texteHtml('document.panneaux.introduction_aide'))}
+      ${bloc('fin', texteHtml('document.panneaux.conclusion'), texteHtml('document.panneaux.conclusion_aide'))}</fieldset>`;
   }
 
   /** Point d'accroche : textes réutilisables proposés dans les textes de l'édition (aucun par défaut). */
@@ -200,12 +201,12 @@ export class PanneauxDocument {
 
   lierTextes(zone) {
     const ed = this.editeur;
-    const titres = { intro: 'Texte d\'introduction', fin: 'Texte de conclusion' };
+    const titres = { intro: texte('document.panneaux.texte_intro'), fin: texte('document.panneaux.texte_fin') };
     zone.querySelectorAll('[data-texte-editer]').forEach((b) => b.addEventListener('click', async () => {
       const cle = b.dataset.texteEditer;
       const champ = `ent_texte_${cle}_html`;
       if (ed.fige) {
-        await editerLibelle({ html: ed.resultat?.document?.[`ent_texte_${cle}`] ?? ed.saisie.document[champ] ?? '', titre: `${titres[cle]} · lecture seule`, lecture: true });
+        await editerLibelle({ html: ed.resultat?.document?.[`ent_texte_${cle}`] ?? ed.saisie.document[champ] ?? '', titre: texte('document.panneaux.lecture_seule', { titre: titres[cle] }), lecture: true });
         return;
       }
       const v = await editerLibelle({ html: ed.saisie.document[champ] ?? '', titre: titres[cle], variables: ed.variablesTexte() });
@@ -224,7 +225,7 @@ export class PanneauxDocument {
     zone.querySelectorAll('[data-texte-modele]').forEach((b) => b.addEventListener('click', () => {
       const cle = b.dataset.texteModele;
       b.blur();
-      ed.magasin.modifier((d) => { d.document[`ent_texte_${cle}_html`] = ed.definition.type[`tyd_texte_${cle}_html`]; }, 'Texte du modèle');
+      ed.magasin.modifier((d) => { d.document[`ent_texte_${cle}_html`] = ed.definition.type[`tyd_texte_${cle}_html`]; }, texte('document.etapes.texte_modele'));
     }));
   }
 
@@ -233,10 +234,10 @@ export class PanneauxDocument {
   /** Section Règlement de l'entête : condition de paiement, mode de règlement et échéancier (aperçu ou enregistré). */
   sectionReglement() {
     if (!this.editeur.definition.conditions_paiement?.length) return '';
-    return `<fieldset class="reglement-document"><legend>Règlement</legend>
+    return `<fieldset class="reglement-document"><legend>${texteHtml('document.panneaux.reglement')}</legend>
       <div class="formulaire">
-        <label title="Vide : condition du tiers, sinon la condition par défaut (figée à la validation)">Condition de paiement <span data-condition-paiement></span></label>
-        <label title="Vide : mode de règlement du tiers">Mode de règlement <span data-mode-reglement></span></label>
+        <label title="${texteHtml('document.panneaux.condition_aide')}">${texteHtml('document.panneaux.condition')} <span data-condition-paiement></span></label>
+        <label title="${texteHtml('document.panneaux.mode_aide')}">${texteHtml('document.panneaux.mode')} <span data-mode-reglement></span></label>
       </div>
       <div data-echeancier></div></fieldset>`;
   }
@@ -254,7 +255,7 @@ export class PanneauxDocument {
     let condition = connue(d.ent_cpa_code);
     let origine = 'document';
     if (!condition && tiers?.condition && connue(tiers.condition)) { condition = connue(tiers.condition); origine = 'tiers'; }
-    if (!condition) { condition = connue(this.editeur.definition.condition_defaut); origine = 'défaut'; }
+    if (!condition) { condition = connue(this.editeur.definition.condition_defaut); origine = 'defaut'; }
     return { condition: condition ?? null, origine, mode: d.ent_mode_reglement ?? tiers?.mode ?? null };
   }
 
@@ -268,7 +269,7 @@ export class PanneauxDocument {
       c.readOnly = !!m.lectureSeule;
       c.title = titre;
       c.addEventListener('change', () => {
-        m.modifier((b) => { b.document[champ] = c.valeurCombo || null; }, 'Règlement');
+        m.modifier((b) => { b.document[champ] = c.valeurCombo || null; }, texte('document.etapes.reglement'));
         this.rendreEcheancier(zone.querySelector('[data-echeancier]'));
       });
       return c;
@@ -300,19 +301,19 @@ export class PanneauxDocument {
     let titre;
     if (s.echeances?.length) {
       lignes = s.echeances.map((e) => ({ rang: e.ech_rang, date: e.ech_date, montant: e.ech_montant, mode: e.ech_mode, nature: e.ech_nature, manuel: e.ech_manuel }));
-      titre = `Échéancier enregistré${s.document.ent_cpa_code ? ` (${echapper(condition?.libelle ?? s.document.ent_cpa_code)})` : ''}`;
+      titre = s.document.ent_cpa_code ? texteHtml('document.panneaux.echeancier_condition', { condition: condition?.libelle ?? s.document.ent_cpa_code }) : texteHtml('document.panneaux.echeancier');
     } else {
       if (!r?.document || !s.document.ent_date) { div.innerHTML = ''; return; }
       lignes = calculerEcheances({
         date: s.document.ent_date, montant: r.document.ent_net_a_payer ?? 0, lignes: condition?.lignes ?? [],
         retenue: montantRetenue(r.lignes), mode, precision: s.document.ent_precision_montant ?? 2,
       });
-      titre = `Aperçu${condition ? ` : ${echapper(condition.libelle)} (${origine})` : ' : comptant'}`;
+      titre = condition ? texteHtml('document.panneaux.apercu_condition', { condition: condition.libelle, origine: texte(`document.panneaux.origines.${origine}`) }) : texteHtml('document.panneaux.apercu_comptant');
     }
     div.innerHTML = `<p class="aide">${titre}</p>
-      <table class="echeancier"><thead><tr><th>N°</th><th>Échéance</th><th class="nombre">Montant</th><th>Mode</th></tr></thead>
+      <table class="echeancier"><thead><tr><th>${texteHtml('document.panneaux.numero')}</th><th>${texteHtml('document.panneaux.echeance')}</th><th class="nombre">${texteHtml('document.panneaux.montant')}</th><th>${texteHtml('document.panneaux.mode_court')}</th></tr></thead>
       <tbody>${lignes.map((e) => `<tr${e.nature === 'RETENUE' ? ' class="retenue"' : ''}><td>${e.rang}</td>
-        <td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · libérée le ${echapper(e.date)}` : ' (à la libération)'}` : echapper(e.date ?? '')}${e.manuel ? ' ✎' : ''}</td>
+        <td>${e.nature === 'RETENUE' ? (e.date ? texteHtml('document.panneaux.retenue_liberee', { date: e.date }) : texteHtml('document.panneaux.retenue')) : echapper(e.date ?? '')}${e.manuel ? ` ${iconeHtml('document_modifier')}` : ''}</td>
         <td class="nombre">${formatNombre(e.montant, s.document.ent_precision_montant ?? 2)}</td><td>${echapper(libelleMode(e.mode))}</td></tr>`).join('')}</tbody></table>`;
   }
 
@@ -323,16 +324,16 @@ export class PanneauxDocument {
   sectionEtiquettes(d) {
     const propres = lireEtiquettes(d.ent_etiquettes);
     const globales = (this.editeur.definition.etiquettes ?? []).filter((e) => e.actif !== false);
-    return `<fieldset class="etiquettes-document"><legend>Étiquettes de lignes</legend>
-      <p class="aide">Globales : ${globales.map((e) => `<span class="pastille-couleur" style="background:${echapper(e.couleur)}"></span> ${echapper(e.libelle)}`).join(' · ') || 'aucune'}</p>
+    return `<fieldset class="etiquettes-document"><legend>${texteHtml('document.parametrage.etiquettes')}</legend>
+      <p class="aide">${texteHtml('document.panneaux.etiquettes_globales')} ${globales.map((e) => `<span class="pastille-couleur" style="background:${echapper(e.couleur)}"></span> ${echapper(e.libelle)}`).join(' · ') || texteHtml('document.panneaux.aucune')}</p>
       <table class="etiquettes"><tbody>
         ${propres.map((e, i) => `<tr data-i="${i}">
-          <td><input data-etq="code" value="${echapper(e.code)}" size="10" title="Code (reprendre un code global pour le personnaliser)"></td>
+          <td><input data-etq="code" value="${echapper(e.code)}" size="10" title="${texteHtml('document.panneaux.etiquette_code_aide')}"></td>
           <td><input data-etq="libelle" value="${echapper(e.libelle ?? '')}"></td>
-          <td><input data-etq="couleur" type="color" value="${echapper(e.couleur ?? '#999999')}"></td>
-          <td><button type="button" data-etq-suppr title="Retirer">✕</button></td></tr>`).join('')}
+          <td><input data-etq="couleur" type="color" value="${echapper(e.couleur ?? couleurTheme('--document-etiquette-vide', '#999999'))}"></td>
+          <td><button type="button" data-etq-suppr title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button></td></tr>`).join('')}
       </tbody></table>
-      <button type="button" data-etq-ajout>Ajouter une étiquette au document</button>
+      <button type="button" data-etq-ajout>${texteHtml('document.panneaux.etiquette_ajouter')}</button>
     </fieldset>`;
   }
 
@@ -347,25 +348,25 @@ export class PanneauxDocument {
       const i = Number(el.closest('tr').dataset.i);
       const champ = el.dataset.etq;
       const v = champ === 'code' ? el.value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_') : el.value;
-      ecrire((l) => { l[i][champ] = v; }, 'Étiquettes du document');
+      ecrire((l) => { l[i][champ] = v; }, texte('document.etapes.etiquettes'));
     }));
     zone.querySelectorAll('[data-etq-suppr]').forEach((b) => b.addEventListener('click', () => {
       const i = Number(b.closest('tr').dataset.i);
-      ecrire((l) => l.splice(i, 1), 'Étiquettes du document');
+      ecrire((l) => l.splice(i, 1), texte('document.etapes.etiquettes'));
     }));
     zone.querySelector('[data-etq-ajout]')?.addEventListener('click', () => {
       ecrire((l) => {
         let n = l.length + 1;
         while (l.some((e) => e.code === `DOC_${n}`)) n += 1;
-        l.push({ code: `DOC_${n}`, libelle: `Étiquette ${n}`, couleur: '#64748b' });
-      }, 'Étiquettes du document');
+        l.push({ code: `DOC_${n}`, libelle: texte('document.parametrage.etiquette_n', { n }), couleur: couleurTheme('--document-etiquette-defaut', '#64748b') });
+      }, texte('document.etapes.etiquettes'));
     });
   }
 
   // ------------------------------------------------------------------ détail de la ligne
 
   /** Message affiché quand la ligne sélectionnée n'est pas saisie (ligne calculée…). */
-  aideLigneAbsente(_calculee) { return '<p class="aide">Sélectionnez une ligne.</p>'; }
+  aideLigneAbsente(_calculee) { return `<p class="aide">${texteHtml('document.panneaux.selectionner')}</p>`; }
 
   /**
    * Champs du détail de la ligne `l` (saisie). `f` fournit sel, txt et coche. Une spécialisation
@@ -376,55 +377,55 @@ export class PanneauxDocument {
     const taux = this.editeur.definition.taux_tva;
     const champs = [];
     if (l.lig_tyl_id === TL.TITRE) {
-      champs.push(f.sel('lig_tva_id', 'TVA (imposée à toute la tranche)', [['', '—'], ...taux.map((t) => [t.ttv_id, t.ttv_libelle])], true));
-      champs.push('<button data-action="appliquer-tva" title="Impose de nouveau le taux du titre à ses sous-titres et à toutes ses lignes de prix">Réappliquer ce taux aux lignes</button>');
-      champs.push(f.txt('lig_num_depart', 'Départ de numérotation'));
+      champs.push(f.sel('lig_tva_id', texteHtml('document.panneaux.tva_tranche'), [['', '—'], ...taux.map((t) => [t.ttv_id, t.ttv_libelle])], true));
+      champs.push(`<button data-action="appliquer-tva" title="${texteHtml('document.panneaux.tva_reappliquer_aide')}">${texteHtml('document.panneaux.tva_reappliquer')}</button>`);
+      champs.push(f.txt('lig_num_depart', texteHtml('document.panneaux.num_depart')));
     }
     // Type de prix d'une tranche : appliqué à toute sa descendance (hérité). Frais annexes : titres seulement.
     if (estTranche(l)) {
       // Frais annexes (F) : sur un titre, si la règle FRAIS_ANNEXES le permet (ventes).
       const fraisPermis = regle(this.editeur.definition, 'FRAIS_ANNEXES', true);
       const types = Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || (l.lig_tyl_id === TL.TITRE && fraisPermis) || l.lig_type_prix === 'F');
-      champs.push(f.sel('lig_type_prix', 'Type de prix (toute la tranche)', types));
+      champs.push(f.sel('lig_type_prix', texteHtml('document.panneaux.type_prix_tranche'), types));
     }
     if (estChiffree(l)) {
-      if (this.regles.ouvrageAncetre(lignes, l.lig_id)) champs.push(f.sel('lig_qte_type', 'Quantité', [['R', 'Relative (par unité du parent)'], ['A', 'Absolue pour le parent']]));
-      champs.push(f.sel('lig_precision_qte', 'Décimales quantité', [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
-      champs.push(f.sel('lig_precision_pv', 'Décimales PV', [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
+      if (this.regles.ouvrageAncetre(lignes, l.lig_id)) champs.push(f.sel('lig_qte_type', texteHtml('document.panneaux.quantite'), [['R', texte('document.panneaux.qte_relative')], ['A', texte('document.panneaux.qte_absolue')]]));
+      champs.push(f.sel('lig_precision_qte', texteHtml('document.panneaux.decimales_qte'), [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
+      champs.push(f.sel('lig_precision_pv', texteHtml('document.panneaux.decimales_pv'), [0, 1, 2, 3, 4, 5, 6].map((n) => [n, n]), true));
       // Frais annexes : choisis sur un titre (la ligne l'hérite) ; une ligne seule ne peut pas en être.
-      champs.push(f.sel('lig_type_prix', 'Type de prix', Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || l.lig_type_prix === 'F')));
-      champs.push(f.txt('lig_code', 'Code article'));
-      champs.push(f.txt('lig_art_id', 'ID article'));
-      champs.push(f.txt('lig_num_depart', 'Départ de numérotation'));
+      champs.push(f.sel('lig_type_prix', texteHtml('document.panneaux.type_prix'), Object.entries(LIBELLES_TYPE_PRIX).filter(([t]) => t !== 'F' || l.lig_type_prix === 'F')));
+      champs.push(f.txt('lig_code', texteHtml('document.panneaux.code_article')));
+      champs.push(f.txt('lig_art_id', texteHtml('document.panneaux.id_article')));
+      champs.push(f.txt('lig_num_depart', texteHtml('document.panneaux.num_depart')));
     }
     if (l.lig_tyl_id === TL.SOUS_TOTAL) {
       const precedents = ordreAffichage(C, lignes).map((r) => r.item).filter((x) => x.lig_tyl_id === TL.SOUS_TOTAL && x.lig_id !== l.lig_id);
-      champs.push(f.sel('lig_st_depuis_id', 'Additionner depuis', [['', 'Le début du document'], ...precedents.map((x) => [x.lig_id, `Sous-total : ${x.lig_libelle_html ?? x.lig_id}`])], true));
+      champs.push(f.sel('lig_st_depuis_id', texteHtml('document.panneaux.st_depuis'), [['', texte('document.panneaux.st_debut')], ...precedents.map((x) => [x.lig_id, texte('document.panneaux.st_libelle', { libelle: x.lig_libelle_html ?? x.lig_id })])], true));
     }
     if (l.lig_tyl_id === TL.PIED_HT || l.lig_tyl_id === TL.PIED_TTC) {
-      champs.push(f.sel('lig_pied_mode', 'Mode', [['P', 'Pourcentage'], ['C', 'Coefficient'], ['M', 'Montant']]));
+      champs.push(f.sel('lig_pied_mode', texteHtml('document.panneaux.mode_court'), [['P', texte('document.panneaux.pourcentage')], ['C', texte('document.panneaux.coefficient')], ['M', texte('document.panneaux.montant')]]));
       if ((l.lig_pied_mode ?? 'M') !== 'M') {
-        champs.push(f.sel('lig_pied_base', 'Base', Object.entries(LIBELLES_BASE_PIED)));
+        champs.push(f.sel('lig_pied_base', texteHtml('document.panneaux.base'), Object.entries(LIBELLES_BASE_PIED)));
         if (l.lig_pied_base === 'LIGNE') {
           const st = this.sousTotauxPiedAvant(l.lig_id);
-          champs.push(f.sel('lig_pied_base_id', 'Sous-total de base', [['', '—'], ...st.map((x) => [x.lig_id, `${x.lig_libelle_brut || 'Sous-total'} (${formatNombre(x.lig_montant_ht, 2)})`])], true));
+          champs.push(f.sel('lig_pied_base_id', texteHtml('document.panneaux.st_base'), [['', '—'], ...st.map((x) => [x.lig_id, texte('document.panneaux.st_montant', { libelle: x.lig_libelle_brut || texte('document.panneaux.sous_total'), montant: formatNombre(x.lig_montant_ht, 2) })])], true));
         }
       }
-      champs.push(f.sel('lig_pied_sens', 'Sens', [[1, 'Ajout'], [-1, 'Déduction']], true));
-      champs.push(f.txt('lig_pied_valeur', 'Valeur', true));
-      champs.push(f.sel('lig_type_prix', 'Traitement', [['V', 'Dans le net à payer'], ['M', 'Pour mémoire']]));
-      if (l.lig_tyl_id === TL.PIED_TTC) champs.push(f.coche('lig_pied_retenue', 'Retenue de garantie (échéance à part)'));
+      champs.push(f.sel('lig_pied_sens', texteHtml('document.panneaux.sens'), [[1, texte('document.panneaux.ajout')], [-1, texte('document.panneaux.deduction')]], true));
+      champs.push(f.txt('lig_pied_valeur', texteHtml('document.panneaux.valeur'), true));
+      champs.push(f.sel('lig_type_prix', texteHtml('document.panneaux.traitement'), [['V', texte('document.panneaux.dans_net')], ['M', texte('document.panneaux.pour_memoire')]]));
+      if (l.lig_tyl_id === TL.PIED_TTC) champs.push(f.coche('lig_pied_retenue', texteHtml('document.panneaux.retenue_aide')));
     }
     if (!estPied(l)) {
       champs.push(l.lig_type_prix === 'F'
-        ? '<label class="coche" title="Une ligne de frais annexes n’est jamais imprimée"><input type="checkbox" checked disabled> Ne pas imprimer (frais annexes)</label>'
-        : f.coche('lig_is_non_editee', 'Ne pas imprimer'));
+        ? `<label class="coche" title="${texteHtml('document.panneaux.frais_non_imprime_aide')}"><input type="checkbox" checked disabled> ${texteHtml('document.panneaux.non_imprimer_frais')}</label>`
+        : f.coche('lig_is_non_editee', texteHtml('document.panneaux.non_imprimer')));
     }
     const etiquettes = this.editeur.etiquettes();
-    if (etiquettes.length) champs.push(f.sel('lig_etiquette', 'Étiquette', [['', '—'], ...etiquettes.map((e) => [e.code, e.libelle])]));
+    if (etiquettes.length) champs.push(f.sel('lig_etiquette', texteHtml('document.panneaux.etiquette'), [['', '—'], ...etiquettes.map((e) => [e.code, e.libelle])]));
     const parent = l.lig_proprietes?.commentaire_parent;
-    if (parent) champs.push(`<label class="large">Commentaire du parent<textarea rows="2" disabled>${echapper(parent)}</textarea></label>`);
-    champs.push(f.zone('lig_commentaire', parent ? 'Commentaire du document (non imprimé)' : 'Commentaire (non imprimé)'));
+    if (parent) champs.push(`<label class="large">${texteHtml('document.panneaux.commentaire_parent')}<textarea rows="2" disabled>${echapper(parent)}</textarea></label>`);
+    champs.push(f.zone('lig_commentaire', texteHtml(parent ? 'document.panneaux.commentaire_document' : 'document.panneaux.commentaire')));
     return champs;
   }
 
@@ -442,11 +443,11 @@ export class PanneauxDocument {
   /** Valeurs calculées affichées sous le formulaire : [libellé, valeur formatée]. */
   calculDetail(c) {
     if (estChiffree(c)) {
-      return [['Qté vendue', formatLibre(c.lig_qte_vendue)], ['Qté totale', formatLibre(c.lig_qte_totale)],
-        ['PV net', formatNombre(c.lig_pv_remise, c.lig_precision_pv ?? 2)], ['Montant HT', formatNombre(c.lig_montant_ht, 2)]];
+      return [[texte('document.panneaux.qte_vendue'), formatLibre(c.lig_qte_vendue)], [texte('document.panneaux.qte_totale'), formatLibre(c.lig_qte_totale)],
+        [texte('document.panneaux.pv_net'), formatNombre(c.lig_pv_remise, c.lig_precision_pv ?? 2)], [texte('document.panneaux.montant_ht'), formatNombre(c.lig_montant_ht, 2)]];
     }
     if (estPied(c) && c.lig_base_calcul !== undefined && c.lig_base_calcul !== null) {
-      return [['Base', `${formatNombre(c.lig_base_calcul, 2)} <small>(${echapper(this.editeur.libelleBasePied(c))})</small>`]];
+      return [[texte('document.panneaux.base'), `${formatNombre(c.lig_base_calcul, 2)} <small>(${echapper(this.editeur.libelleBasePied(c))})</small>`]];
     }
     return [];
   }
@@ -484,10 +485,10 @@ export class PanneauxDocument {
       m.modifier((b) => {
         const x = b.lignes.find((y) => y.lig_id === ligId);
         x.lig_proprietes = { ...(x.lig_proprietes ?? {}), [el.dataset.prop]: el.value || null };
-      }, 'Propriété');
+      }, texte('document.etapes.propriete'));
     }));
     zone.querySelector('[data-action="appliquer-tva"]')?.addEventListener('click', () => {
-      m.modifier((b) => this.regles.appliquerTauxTitre(b, ligId), 'TVA du titre');
+      m.modifier((b) => this.regles.appliquerTauxTitre(b, ligId), texte('document.etapes.tva_titre'));
     });
   }
 
@@ -503,25 +504,25 @@ export class PanneauxDocument {
     const pm = editeur.saisie.document.ent_precision_montant ?? 2;
     const extra = this.lignesTotaux(d);
     if (compact) {
-      const detailTva = r.tva.map((t) => `${t.tva_code} : ${formatNombre(t.tva_montant_net, pm)} sur ${formatNombre(t.tva_base_ht, pm)}`).join(' · ');
+      const detailTva = r.tva.map((t) => texte('document.panneaux.tva_detail', { code: t.tva_code, montant: formatNombre(t.tva_montant_net, pm), base: formatNombre(t.tva_base_ht, pm) })).join(' · ');
       zone.innerHTML = `
-        <span><small>Total HT</small> ${formatNombre(d.ent_total_ht, pm)}</span>
-        <span title="${echapper(detailTva)}"><small>TVA</small> ${formatNombre(d.ent_total_tva, pm)}</span>
-        <span><small>TTC</small> ${formatNombre(d.ent_total_ttc, pm)}</span>
-        <span class="net"><small>Net à payer</small> ${formatNombre(d.ent_net_a_payer, pm)}</span>
+        <span><small>${texteHtml('document.panneaux.total_ht')}</small> ${formatNombre(d.ent_total_ht, pm)}</span>
+        <span title="${echapper(detailTva)}"><small>${texteHtml('document.panneaux.tva')}</small> ${formatNombre(d.ent_total_tva, pm)}</span>
+        <span><small>${texteHtml('document.panneaux.ttc')}</small> ${formatNombre(d.ent_total_ttc, pm)}</span>
+        <span class="net"><small>${texteHtml('document.panneaux.net')}</small> ${formatNombre(d.ent_net_a_payer, pm)}</span>
         ${extra.map(([t, v]) => `<span><small>${echapper(t)}</small> ${v}</span>`).join('')}`;
       return;
     }
-    zone.innerHTML = `<h3>Totaux</h3>
+    zone.innerHTML = `<h3>${texteHtml('document.panneaux.totaux')}</h3>
       <table class="totaux">
-        <tr><th>Total HT</th><td>${formatNombre(d.ent_total_ht, pm)}</td></tr>
+        <tr><th>${texteHtml('document.panneaux.total_ht')}</th><td>${formatNombre(d.ent_total_ht, pm)}</td></tr>
         ${r.tva.map((t) => `
-          <tr class="tva"><th>${echapper(t.tva_code)} · base ${formatNombre(t.tva_base_ht, pm)}</th><td>${formatNombre(t.tva_montant, pm)}</td></tr>
-          ${Number(t.tva_montant_annulation) !== 0 ? `<tr class="tva annulation"><th>Annulation ${echapper(t.tva_code)}</th><td>${formatNombre(t.tva_montant_annulation, pm)}</td></tr>` : ''}
+          <tr class="tva"><th>${texteHtml('document.panneaux.tva_base', { code: t.tva_code, base: formatNombre(t.tva_base_ht, pm) })}</th><td>${formatNombre(t.tva_montant, pm)}</td></tr>
+          ${Number(t.tva_montant_annulation) !== 0 ? `<tr class="tva annulation"><th>${texteHtml('document.panneaux.tva_annulation', { code: t.tva_code })}</th><td>${formatNombre(t.tva_montant_annulation, pm)}</td></tr>` : ''}
           ${t.tva_mention ? `<tr class="mention"><td colspan="2">${echapper(t.tva_mention)}</td></tr>` : ''}`).join('')}
-        <tr><th>Total TVA</th><td>${formatNombre(d.ent_total_tva, pm)}</td></tr>
-        <tr><th>Total TTC</th><td>${formatNombre(d.ent_total_ttc, pm)}</td></tr>
-        <tr class="net"><th>Net à payer</th><td>${formatNombre(d.ent_net_a_payer, pm)}</td></tr>
+        <tr><th>${texteHtml('document.panneaux.total_tva')}</th><td>${formatNombre(d.ent_total_tva, pm)}</td></tr>
+        <tr><th>${texteHtml('document.panneaux.total_ttc')}</th><td>${formatNombre(d.ent_total_ttc, pm)}</td></tr>
+        <tr class="net"><th>${texteHtml('document.panneaux.net')}</th><td>${formatNombre(d.ent_net_a_payer, pm)}</td></tr>
         ${extra.map(([t, v]) => `<tr class="mention"><th>${echapper(t)}</th><td>${v}</td></tr>`).join('')}
       </table>`;
   }
@@ -539,7 +540,7 @@ export class PanneauxDocument {
       ?? [...r.erreurs.map((e) => ({ ...e, niveau: 'erreur' })), ...this.controlesSupplementaires(),
         ...r.avertissements.map((e) => ({ ...e, niveau: 'avertissement' }))];
     zone.hidden = items.length === 0;
-    zone.innerHTML = `<h3>${messages ? 'Notifications de la ligne' : 'Contrôles'} (${items.length})</h3><ul>${items.map((e) =>
+    zone.innerHTML = `<h3>${texteHtml(messages ? 'document.panneaux.notifications_ligne' : 'document.panneaux.controles', { nombre: items.length })}</h3><ul>${items.map((e) =>
       `<li class="${e.niveau}" data-lig="${e.lig_id ?? ''}"><code>${echapper(e.code)}</code> ${echapper(e.message)}</li>`).join('')}</ul>`;
     zone.querySelectorAll('li[data-lig]').forEach((li) => li.addEventListener('click', () => {
       if (li.dataset.lig) selectionner(Number(li.dataset.lig));
@@ -551,14 +552,14 @@ export class PanneauxDocument {
     zone.hidden = !ecarts?.length;
     if (!ecarts?.length) return;
     zone.innerHTML = `
-      <h3>Écarts entre le calcul du client et celui du serveur (${ecarts.length})</h3>
-      <table><thead><tr><th>Ligne</th><th>Champ</th><th>Client</th><th>Serveur</th></tr></thead>
-      <tbody>${ecarts.map((e) => `<tr><td>${e.lig_id ?? 'document'}</td><td><code>${echapper(e.champ)}</code></td>
+      <h3>${texteHtml('document.panneaux.ecarts', { nombre: ecarts.length })}</h3>
+      <table><thead><tr><th>${texteHtml('document.panneaux.ligne')}</th><th>${texteHtml('document.panneaux.champ')}</th><th>${texteHtml('document.panneaux.client')}</th><th>${texteHtml('document.panneaux.serveur')}</th></tr></thead>
+      <tbody>${ecarts.map((e) => `<tr><td>${e.lig_id ?? texteHtml('document.panneaux.document')}</td><td><code>${echapper(e.champ)}</code></td>
         <td>${echapper(e.valeur_client ?? '∅')}</td><td>${echapper(e.valeur_serveur ?? '∅')}</td></tr>`).join('')}</tbody></table>
-      <label>Commentaire <input data-commentaire></label>
+      <label>${texteHtml('document.panneaux.commentaire_court')} <input data-commentaire></label>
       <div class="boutons">
-        <button data-decision="S" title="Le résultat serveur est correct : anomalie du moteur client">S – Serveur validé</button>
-        <button data-decision="A" title="Le résultat attendu n'est ni l'un ni l'autre, ou le client a raison">A – Anomalie</button>
+        <button data-decision="S" title="${texteHtml('document.panneaux.serveur_valide_aide')}">${texteHtml('document.panneaux.serveur_valide')}</button>
+        <button data-decision="A" title="${texteHtml('document.panneaux.anomalie_aide')}">${texteHtml('document.panneaux.anomalie')}</button>
       </div>`;
     zone.querySelectorAll('[data-decision]').forEach((b) => b.addEventListener('click', () => {
       arbitrer(b.dataset.decision, zone.querySelector('[data-commentaire]').value);

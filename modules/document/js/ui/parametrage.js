@@ -1,3 +1,4 @@
+import { texte, texteHtml, iconeHtml, couleurTheme } from '@logibtp/socle/dictionnaire';
 import { echapper } from '@logibtp/socle/ui';
 
 // Paramétrage global de l'affichage des documents : étiquettes de lignes (couleur en début de ligne) et couleurs des
@@ -19,18 +20,18 @@ export class FournisseurAffichageMemoire {
   async couleursTypePrix() { return structuredClone(this.couleurs); }
 
   async enregistrerEtiquettes(liste) {
-    if (!this.admin()) throw new Error('Paramétrage réservé à un administrateur');
+    if (!this.admin()) throw new Error(texte('document.parametrage.reserve'));
     const propres = controlerEtiquettes(liste);
     this.liste.splice(0, this.liste.length, ...propres);
     return this.etiquettes();
   }
 
   async enregistrerCouleurs(liste) {
-    if (!this.admin()) throw new Error('Paramétrage réservé à un administrateur');
+    if (!this.admin()) throw new Error(texte('document.parametrage.reserve'));
     for (const c of liste) {
       const x = this.couleurs.find((y) => y.type === c.type);
-      if (!x) throw new Error(`Mode de vente ${c.type} inconnu`);
-      if (!/^#[0-9a-f]{6}$/i.test(c.couleur)) throw new Error(`Couleur #rrggbb attendue (${c.type})`);
+      if (!x) throw new Error(texte('document.parametrage.mode_inconnu', { type: c.type }));
+      if (!/^#[0-9a-f]{6}$/i.test(c.couleur)) throw new Error(texte('document.parametrage.couleur_attendue', { code: c.type }));
       x.couleur = c.couleur.toLowerCase();
     }
     return this.couleursTypePrix();
@@ -42,11 +43,11 @@ export function controlerEtiquettes(liste) {
   const codes = new Set();
   return liste.map((e, i) => {
     const code = String(e.code ?? '').trim().toUpperCase();
-    if (!/^[A-Z][A-Z0-9_]{0,19}$/.test(code)) throw new Error(`Code d'étiquette invalide : ${e.code}`);
-    if (codes.has(code)) throw new Error(`Code d'étiquette en double : ${code}`);
+    if (!/^[A-Z][A-Z0-9_]{0,19}$/.test(code)) throw new Error(texte('document.parametrage.code_invalide', { code: e.code }));
+    if (codes.has(code)) throw new Error(texte('document.parametrage.code_double', { code }));
     codes.add(code);
-    if (!String(e.libelle ?? '').trim()) throw new Error(`Libellé obligatoire (${code})`);
-    if (!/^#[0-9a-f]{6}$/i.test(e.couleur ?? '')) throw new Error(`Couleur #rrggbb attendue (${code})`);
+    if (!String(e.libelle ?? '').trim()) throw new Error(texte('document.parametrage.libelle_obligatoire', { code }));
+    if (!/^#[0-9a-f]{6}$/i.test(e.couleur ?? '')) throw new Error(texte('document.parametrage.couleur_attendue', { code }));
     return { code, libelle: e.libelle.trim(), couleur: e.couleur.toLowerCase(), ordre: e.ordre ?? (i + 1) * 10, actif: e.actif !== false };
   });
 }
@@ -70,28 +71,28 @@ export class ParametrageAffichageDocument {
     const ro = this.admin ? '' : 'disabled';
     const apercu = (c1, c2) => `<span class="pastille-couleur" style="background:${c1 && c2 ? `linear-gradient(135deg, ${c1} 50%, ${c2} 50%)` : c1 ?? `linear-gradient(135deg, transparent 50%, ${c2} 50%)`}"></span>`;
     this.conteneur.innerHTML = `
-      ${this.admin ? '' : '<p class="aide">Lecture seule : paramétrage réservé à un administrateur.</p>'}
+      ${this.admin ? '' : `<p class="aide">${texteHtml('document.parametrage.lecture_seule')}</p>`}
       <section class="panneau">
-        <h2>Étiquettes de lignes</h2>
-        <p class="aide">Couleur affichée en début de ligne (pastille de la poignée) ; cliquer la pastille d'une ligne pour la choisir. Chaque document peut ajouter ses étiquettes ou personnaliser celles-ci (entête du document).</p>
-        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>Code</th><th>Libellé</th><th>Couleur</th><th>Active</th><th></th></tr></thead>
+        <h2>${texteHtml('document.parametrage.etiquettes')}</h2>
+        <p class="aide">${texteHtml('document.parametrage.etiquettes_aide')}</p>
+        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('document.parametrage.couleur')}</th><th>${texteHtml('document.parametrage.active')}</th><th></th></tr></thead>
         <tbody>${this.etiquettes.map((e, i) => `<tr data-i="${i}">
           <td>${apercu(e.couleur)}</td>
           <td><input data-c="code" value="${echapper(e.code)}" size="14" ${ro}></td>
           <td><input data-c="libelle" value="${echapper(e.libelle)}" ${ro}></td>
           <td><input data-c="couleur" type="color" value="${echapper(e.couleur)}" ${ro}></td>
           <td><input data-c="actif" type="checkbox" ${e.actif !== false ? 'checked' : ''} ${ro}></td>
-          <td><button type="button" data-haut ${ro || (i === 0 ? 'disabled' : '')} title="Monter">↑</button><button type="button" data-bas ${ro || (i === this.etiquettes.length - 1 ? 'disabled' : '')} title="Descendre">↓</button><button type="button" data-suppr ${ro} title="Supprimer">✕</button></td>
+          <td><button type="button" data-haut ${ro || (i === 0 ? 'disabled' : '')} title="${texteHtml('document.parametrage.monter')}">${iconeHtml('document_haut')}</button><button type="button" data-bas ${ro || (i === this.etiquettes.length - 1 ? 'disabled' : '')} title="${texteHtml('document.parametrage.descendre')}">${iconeHtml('document_bas')}</button><button type="button" data-suppr ${ro} title="${texteHtml('commun.supprimer')}">${iconeHtml('retirer')}</button></td>
         </tr>`).join('')}</tbody></table>
-        ${this.admin ? '<div class="boutons"><button type="button" data-ajout>＋ Ajouter une étiquette</button><button type="button" class="principal" data-enreg-etq>Enregistrer les étiquettes</button></div>' : ''}
+        ${this.admin ? `<div class="boutons"><button type="button" data-ajout>${iconeHtml('ajouter')} ${texteHtml('document.parametrage.ajouter_etiquette')}</button><button type="button" class="principal" data-enreg-etq>${texteHtml('document.parametrage.enregistrer_etiquettes')}</button></div>` : ''}
       </section>
       <section class="panneau">
-        <h2>Couleurs des modes de vente</h2>
-        <p class="aide">Seconde couleur de la pastille (coin bas droit, coupé en diagonale) : une ligne vendue n'en a pas ; option, pour mémoire, variante et frais annexes ont chacune leur couleur.</p>
-        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>Mode de vente</th><th>Couleur</th></tr></thead>
+        <h2>${texteHtml('document.parametrage.couleurs')}</h2>
+        <p class="aide">${texteHtml('document.parametrage.couleurs_aide')}</p>
+        <table class="table-parametres tableau-compact largeur-contenu"><thead><tr><th></th><th>${texteHtml('document.parametrage.mode_vente')}</th><th>${texteHtml('document.parametrage.couleur')}</th></tr></thead>
         <tbody>${this.couleurs.map((c, i) => `<tr data-i="${i}"><td>${apercu(this.etiquettes[0]?.couleur, c.couleur)}</td><td>${echapper(c.libelle)}</td>
           <td><input data-couleur type="color" value="${echapper(c.couleur)}" ${ro}></td></tr>`).join('')}</tbody></table>
-        ${this.admin ? '<div class="boutons"><button type="button" class="principal" data-enreg-coul>Enregistrer les couleurs</button></div>' : ''}
+        ${this.admin ? `<div class="boutons"><button type="button" class="principal" data-enreg-coul>${texteHtml('document.parametrage.enregistrer_couleurs')}</button></div>` : ''}
       </section>`;
     if (!this.admin) return;
     const z = this.conteneur;
@@ -112,14 +113,14 @@ export class ParametrageAffichageDocument {
     z.querySelector('[data-ajout]').addEventListener('click', () => {
       let n = this.etiquettes.length + 1;
       while (this.etiquettes.some((e) => e.code === `ETIQUETTE_${n}`)) n += 1;
-      this.etiquettes.push({ code: `ETIQUETTE_${n}`, libelle: `Étiquette ${n}`, couleur: '#64748b', actif: true });
+      this.etiquettes.push({ code: `ETIQUETTE_${n}`, libelle: texte('document.parametrage.etiquette_n', { n }), couleur: couleurTheme('--document-etiquette-defaut', '#64748b'), actif: true });
       this.rendre();
     });
     z.querySelector('[data-enreg-etq]').addEventListener('click', async () => {
       try {
         this.etiquettes = await this.fournisseur.enregistrerEtiquettes(controlerEtiquettes(this.etiquettes).map((e, i) => ({ ...e, ordre: (i + 1) * 10 })));
         this.rendre();
-        this.message('Étiquettes enregistrées');
+        this.message(texte('document.parametrage.etiquettes_enregistrees'));
       } catch (e) { this.message(e.message, 'erreur'); }
     });
     z.querySelectorAll('[data-couleur]').forEach((el) => el.addEventListener('change', () => {
@@ -129,7 +130,7 @@ export class ParametrageAffichageDocument {
       try {
         this.couleurs = await this.fournisseur.enregistrerCouleurs(this.couleurs);
         this.rendre();
-        this.message('Couleurs enregistrées');
+        this.message(texte('document.parametrage.couleurs_enregistrees'));
       } catch (e) { this.message(e.message, 'erreur'); }
     });
   }
