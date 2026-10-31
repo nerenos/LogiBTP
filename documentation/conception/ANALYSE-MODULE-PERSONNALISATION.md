@@ -354,3 +354,26 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Suites** : rendre sûrs les codes écartés en passant les valeurs dans `details` (puis `{{nom}}` dans le message) ou
   en donnant un code propre à chaque message ; les messages des moteurs C# et du serveur (journaux, courriels) seront
   traduits côté serveur (P7, lot « serveur »).
+
+## 14. Réalisation du lot P3a : module Pointage (31/10/2026)
+
+- **Extraction** : `extraire(source)` du module (`modules/personnalisation/js/src/extraction.js`) relève dans une source
+  JS les textes, icônes (pictogrammes) et couleurs en dur restants, avec leur ligne ; il sert de liste de contrôle à
+  chaque lot (le rapport d'un fichier migré ne garde que des commentaires et des valeurs de secours).
+- **Règles du module** (`modules/pointage/js/src`) : les tables de messages et de libellés par code (`MESSAGES_*`,
+  `ETATS_CONGE`, `TYPES_REGLE`, `UNITES_RUBRIQUE`, `SAISIES_RUBRIQUE`, libellé et icône de `ETATS_VALIDATION`) gardent
+  leur forme, mais lisent le dictionnaire à chaque accès : `textesParCode(prefixe, codes)` du socle rend un objet figé
+  d'accesseurs `texte(prefixe.CODE)`. Textes dans `modules/pointage/js/personnalisation/fr.json` (`pointage.*`), icônes
+  des états dans son `images/icones.json`. Le module dépend désormais de `@logibtp/socle` (dictionnaire) ; ses tests
+  composent les couches socle + module et échouent sur une clé manquante (`test/preparation.js`).
+- **Pages du cœur** : `pages/pointage.js` (saisie, synthèse, export, paramètres, congés), `pages/borne.js` (borne,
+  bornes, saisie d'équipe, repas), `pointage/conges.js`, `pointage/repas.js` et les titres des routes : textes sous
+  `pointage.<zone>.*` du `fr.json` du cœur, icônes `pointage_*` dans `client/personnalisation/images/icones.json`, mots
+  et pictogrammes partagés dans le socle (`commun.*`, `commun.jours_courts.*`, icônes `erreur`, `avertissement`,
+  `verrou`, `ajouter`, `retirer`, `enregistrer`, `supprimer`…). Jours et dates par `langue()`.
+- **Couleurs** : les styles du Pointage et de la borne (`client/src/styles.css`) lisent des variables du thème : celles
+  du socle (`--erreur`, `--bord`, `--fond`) ou celles du cœur (`client/personnalisation/theme.css` : `--pointage-*`,
+  `--borne-*`, valeurs inchangées) ; fonds dérivés par `color-mix`. La couleur proposée d'une nouvelle nature d'absence
+  est lue dans `--pointage-nature-defaut`.
+- **Contrôles** : le test des clés du client couvre aussi `modules/pointage/js/src`. Hors périmètre : la barre
+  d'absence du planning (styles du module Planning, lot à venir) et les messages de l'API du Pointage (P2).

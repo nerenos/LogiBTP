@@ -1,2 +1,18 @@
 /* Thème du cœur (module Personnalisation) : complète ou remplace les variables du socle (socle/js/personnalisation/
    theme.css) ; servi après elles dans /personnalisation/theme.css. Une installation ajoute le sien après celui-ci. */
+
+/* Pointage (lot P3a) : couleurs des états, des avertissements et de la borne d'atelier (client/src/styles.css). */
+:root {
+  /* Couleur proposée pour une nouvelle nature d'absence (champ couleur : #rrggbb) et pastille d'un congé sans nature. */
+  --pointage-nature-defaut: #94a3b8;
+  --pointage-valide: #15803d;
+  --pointage-valide-chef: #1d4ed8;
+  --pointage-etat-bord: #98a2b3;
+  --pointage-avertissement: #d97706;
+  --pointage-avertissement-texte: #b45309;
+  --pointage-texte-sur-couleur: #fff;
+  --borne-choix: #2563eb;
+  --borne-principal: #16a34a;
+  --borne-test-fond: #fef3c7;
+  --borne-test-texte: #92400e;
+}

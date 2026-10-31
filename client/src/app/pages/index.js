@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { PageAccueil } from './accueil.js';
 import { PageListe } from './liste.js';
 import { PageFiche } from './fiche.js';
@@ -105,18 +106,18 @@ export const ROUTES = [
   { nom: 'terrain-reception', chemin: '/terrain/reception/:id', page: PageReceptionTerrain, titre: 'Réception de pose' },
   { nom: 'terrain-sav', chemin: '/terrain/sav/:id', page: PageSavTerrain, titre: 'Intervention SAV' },
   { nom: 'parametres-execution', chemin: '/parametres/execution', page: PageParametresExecution, titre: 'Modèles de parcours' },
-  { nom: 'borne', chemin: '/borne', page: PageBorne, titre: 'Borne de pointage' },
-  { nom: 'parametres-bornes', chemin: '/parametres/bornes', page: PageParametresBornes, titre: 'Bornes de pointage' },
-  { nom: 'pointage-groupe', chemin: '/pointage/groupe', page: PageGroupePointage, titre: 'Saisie d\'équipe' },
+  { nom: 'borne', chemin: '/borne', page: PageBorne, titre: texte('pointage.routes.borne') },
+  { nom: 'parametres-bornes', chemin: '/parametres/bornes', page: PageParametresBornes, titre: texte('pointage.routes.parametres_bornes') },
+  { nom: 'pointage-groupe', chemin: '/pointage/groupe', page: PageGroupePointage, titre: texte('pointage.routes.pointage_groupe') },
   { nom: 'planning', chemin: '/planning', page: PagePlanning, titre: 'Planning' },
   { nom: 'planning-prototype', chemin: '/planning/prototype', page: PagePlanningPrototype, titre: 'Planning — prototype' },
   { nom: 'parametres-planning', chemin: '/parametres/planning', page: PageParametresPlanning, titre: 'Paramètres du planning' },
   { nom: 'planning-equipes', chemin: '/planning/equipes', page: PageEquipes, titre: 'Équipes et compositions' },
-  { nom: 'pointage-saisie', chemin: '/pointage/saisie', page: PageSaisiePointage, titre: 'Saisie des pointages' },
-  { nom: 'pointage-synthese', chemin: '/pointage/synthese', page: PageSynthesePointage, titre: 'Synthèse des pointages' },
-  { nom: 'pointage-export', chemin: '/pointage/export', page: PageExportPointage, titre: 'Export de paie et valorisation' },
-  { nom: 'pointage-conges', chemin: '/pointage/conges', page: PageCongesPointage, titre: 'Congés et absences' },
-  { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: 'Paramètres du pointage' },
+  { nom: 'pointage-saisie', chemin: '/pointage/saisie', page: PageSaisiePointage, titre: texte('pointage.routes.pointage_saisie') },
+  { nom: 'pointage-synthese', chemin: '/pointage/synthese', page: PageSynthesePointage, titre: texte('pointage.routes.pointage_synthese') },
+  { nom: 'pointage-export', chemin: '/pointage/export', page: PageExportPointage, titre: texte('pointage.routes.pointage_export') },
+  { nom: 'pointage-conges', chemin: '/pointage/conges', page: PageCongesPointage, titre: texte('pointage.routes.pointage_conges') },
+  { nom: 'parametres-pointage', chemin: '/parametres/pointage', page: PageParametresPointage, titre: texte('pointage.routes.parametres_pointage') },
   { nom: 'notifications', chemin: '/notifications', page: PageNotifications, titre: 'Notifications' },
   { nom: 'parametres-notifications', chemin: '/parametres/notifications', page: PageParametresNotifications, titre: 'Préférences de notification' },
   { nom: 'parametres-mail', chemin: '/parametres/mail', page: PageParametresMail, titre: 'Messagerie' },

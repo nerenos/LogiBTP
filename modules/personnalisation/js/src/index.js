@@ -3,3 +3,4 @@
 export { composer, contenu, empreinte, DICTIONNAIRE, THEME, ICONES } from './composition.js';
 export { clesUtilisees, verifierCles } from './verification.js';
 export { catalogueErreurs, sitesCs, sitesJs, constantesCs } from './erreurs.js';
+export { extraire, estTexte } from './extraction.js';

@@ -89,6 +89,16 @@ export function texteHtml(cle, valeurs, defaut) {
   return echapperHtml(texte(cle, valeurs, defaut));
 }
 
+/**
+ * Table de libellés par code lue dans le dictionnaire : { CODE: texte(`${prefixe}.CODE`) } (accès paresseux, figée).
+ * Les codes restent dans le code (règles répliquées), les libellés dans fr.json : `MESSAGES_X[code]` reste utilisable.
+ */
+export function textesParCode(prefixe, codes) {
+  const o = {};
+  for (const c of codes) Object.defineProperty(o, c, { get: () => texte(`${prefixe}.${c}`), enumerable: true });
+  return Object.freeze(o);
+}
+
 /** La clé existe-t-elle ? */
 export const existe = (cle) => valeurBrute(etat.libelles, cle) !== undefined;
 

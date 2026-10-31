@@ -263,16 +263,16 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
-Lots P1 (module, chargement, socle et navigation migrés) et P2 (erreurs par code) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
+Lots P1 (module, chargement, socle et navigation migrés), P2 (erreurs par code) et P3a (Pointage) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
 
 - [ ] **Erreurs par code, suite de P2** (P2 fait : 237 codes sûrs au dictionnaire, § 13 de l'analyse) : 258 codes gardent
   le message du serveur (messages composés, plusieurs messages pour un code, codes employés ailleurs) ; les rendre sûrs
   au fil des lots par module (valeurs dans `details` et `{{nom}}`, ou un code par message), puis
   `npm run extraire-erreurs --workspace client`.
 - [ ] **P3… — un lot par module puis par zone du cœur** : textes, icônes (`icone()`, `images/icones.json`) et couleurs en
-  dur (variables du thème) ; Pointage d'abord (pages de référence, borne), puis Document, Liste, Fiche, GED…, menus
-  (`navigation/menus.js`), pages du cœur. Chaque module reçoit son dossier `js/personnalisation/` et sa ligne dans
-  `client/personnalisation/couches.js`. Outil d'extraction semi-automatique (§ 7.2) à écrire au premier lot.
+  dur (variables du thème). P3a Pointage fait (§ 14 de l'analyse : règles du module par `textesParCode`, pages pointage
+  et borne, congés, repas, titres des routes, styles). Suivants : Document, Liste, Fiche, GED…, menus
+  (`navigation/menus.js`), pages du cœur ; liste de contrôle d'un fichier par `extraire` du module Personnalisation.
 - [ ] **Données système en base** (§ 8) : libellés `donnees.<table>.<code>.<colonne>` appliqués par le serveur
   (`installation personnalisation appliquer`, démarrage, mise à jour) sans écraser une valeur modifiée par la société
   (table `personnalisation_applique`).

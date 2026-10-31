@@ -2,5 +2,19 @@
   "theme_auto": "🖥",
   "theme_clair": "☀️",
   "theme_sombre": "🌙",
-  "raccourcis": "⌨"
+  "raccourcis": "⌨",
+  "erreur": "⛔",
+  "avertissement": "⚠",
+  "verrou": "🔒",
+  "ajouter": "＋",
+  "retirer": "✕",
+  "enregistrer": "💾",
+  "precedent": "◀",
+  "suivant": "▶",
+  "sous_niveau": "↳",
+  "courriel": "✉",
+  "replier": "▾",
+  "telecharger": "📥",
+  "moins": "−",
+  "supprimer": "🗑"
 }

@@ -22,7 +22,17 @@
     "creer": "Créer",
     "code": "Code",
     "libelle": "Libellé",
-    "sans_titre": "(sans titre)"
+    "sans_titre": "(sans titre)",
+    "total": "Total",
+    "jours_courts": {
+      "lundi": "Lun",
+      "mardi": "Mar",
+      "mercredi": "Mer",
+      "jeudi": "Jeu",
+      "vendredi": "Ven",
+      "samedi": "Sam",
+      "dimanche": "Dim"
+    }
   },
   "socle": {
     "dialogue": {

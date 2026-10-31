@@ -4,6 +4,7 @@ import { PageBase } from '@logibtp/navigation';
 import { echapper, creerCombo, formatNombre, alerter, confirmer, saisir, formatDateHeure } from '@logibtp/socle/ui';
 import { ecrireDuree, lireDuree, ERREUR_POINTAGE } from '@logibtp/pointage';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
+import { texte, texteHtml, icone, iconeHtml, langue, messageErreur } from '@logibtp/socle/dictionnaire';
 import { api } from '../api.js';
 import { choixMultiple } from '../choix-multiple.js';
 import { tuilesChoix, filtrerChoix, tuileExacte } from '../pointage/choix-borne.js';
@@ -43,10 +44,10 @@ function ecrireReprise(r) {
   } catch { /* navigateur sans stockage : pas de reprise */ }
 }
 
-const dateLongue = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+const dateLongue = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString(langue(), { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
 
 class ErreurBorne extends Error {
-  constructor(statut, code, message) { super(message); this.statut = statut; this.code = code; }
+  constructor(statut, code, message) { super(messageErreur(code, message)); this.statut = statut; this.code = code; }
 }
 
 async function appel(methode, url, corps) {
@@ -55,17 +56,22 @@ async function appel(methode, url, corps) {
   });
   const t = await r.text();
   const d = t ? JSON.parse(t) : null;
-  if (!r.ok) throw new ErreurBorne(r.status, d?.code, d?.title ?? d?.message ?? `Erreur ${r.status}`);
+  if (!r.ok) throw new ErreurBorne(r.status, d?.code, d?.title ?? d?.message ?? texte('pointage.borne.erreur', { statut: r.status }));
   return d;
 }
+
+/** Bouton « Signaler un problème » (non-conformité) des écrans de choix. */
+const BOUTON_PROBLEME = `<button type="button" class="borne-bouton alerte" data-probleme>${iconeHtml('avertissement')} ${texteHtml('pointage.borne.signaler')}</button>`;
+/** Affichage du PIN encore vide (points du catalogue des icônes). */
+const PIN_VIDE = icone('pointage_pin_vide');
 
 const initiales = (s) => `${s.prenom?.[0] ?? ''}${s.nom?.[0] ?? ''}`.toUpperCase();
 
 export class PageBorne extends PageBase {
-  icone = '🏭';
+  icone = icone('pointage_borne');
 
   async ouvrir() {
-    this.titre = 'Borne de pointage';
+    this.titre = texte('pointage.borne.titre');
     document.body.classList.add('mode-borne');
     this.conteneur.innerHTML = '<div class="borne" data-borne></div>';
     this.zone = this.conteneur.querySelector('[data-borne]');
@@ -85,16 +91,16 @@ export class PageBorne extends PageBase {
       return;
     }
     this.test = Boolean(this.donnees.appareil.test);
-    this.titre = `${this.test ? '🧪 ' : ''}${this.donnees.appareil.libelle}`;
+    this.titre = `${this.test ? `${icone('pointage_essai')} ` : ''}${this.donnees.appareil.libelle}`;
     this.#accueil();
   }
 
   fermer() { document.body.classList.remove('mode-borne'); clearTimeout(this.retour); }
 
   #enregistrement(message) {
-    this.zone.innerHTML = `<h1>🏭 Borne de pointage</h1>${message ? `<p class="borne-erreur">${echapper(message)}</p>` : ''}
-      <p>Cette borne n'est pas enregistrée. Un administrateur crée la borne (Paramètres › Pointage › Bornes) et colle ici le jeton remis.</p>
-      <p><input data-jeton size="48" placeholder="Jeton de la borne"> <button type="button" class="borne-bouton" data-ok>Enregistrer</button></p>`;
+    this.zone.innerHTML = `<h1>${iconeHtml('pointage_borne')} ${texteHtml('pointage.borne.titre')}</h1>${message ? `<p class="borne-erreur">${echapper(message)}</p>` : ''}
+      <p>${texteHtml('pointage.borne.non_enregistree')}</p>
+      <p><input data-jeton size="48" placeholder="${texteHtml('pointage.borne.jeton')}"> <button type="button" class="borne-bouton" data-ok>${texteHtml('commun.enregistrer')}</button></p>`;
     this.zone.querySelector('[data-ok]').addEventListener('click', () => {
       try { localStorage.setItem(CLE_JETON, this.zone.querySelector('[data-jeton]').value.trim()); } catch { /* sans stockage */ }
       this.ouvrir();
@@ -107,22 +113,22 @@ export class PageBorne extends PageBase {
    */
   #minuterie(ms = 60000) {
     clearTimeout(this.retour);
-    this.retour = setTimeout(() => this.#accueil(this.etat?.modifie || this.etat?.saisie ? 'Saisie interrompue : identifiez-vous pour la reprendre.' : undefined), ms);
+    this.retour = setTimeout(() => this.#accueil(this.etat?.modifie || this.etat?.saisie ? texte('pointage.borne.interrompue') : undefined), ms);
   }
 
   #accueil(message) {
     clearTimeout(this.retour);
     this.etat = null;
     const d = this.donnees;
-    this.zone.innerHTML = `<div class="borne-entete"><h1>🏭 ${echapper(d.appareil.libelle)}</h1><span>${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span></div>
-      ${this.test ? `<p class="borne-test">🧪 Mode essai (administrateur) : PIN facultatif, pointages contrôlés mais non enregistrés${d.appareil.actif ? '' : ' · borne désactivée'}.</p>` : ''}
+    this.zone.innerHTML = `<div class="borne-entete"><h1>${iconeHtml('pointage_borne')} ${echapper(d.appareil.libelle)}</h1><span>${new Date().toLocaleDateString(langue(), { weekday: 'long', day: 'numeric', month: 'long' })}</span></div>
+      ${this.test ? `<p class="borne-test">${iconeHtml('pointage_essai')} ${texteHtml('pointage.borne.mode_essai')}${d.appareil.actif ? '' : ` · ${texteHtml('pointage.borne.desactivee')}`}.</p>` : ''}
       ${message ? `<p class="borne-succes">${echapper(message)}</p>` : ''}
-      <p><input type="search" data-cherche placeholder="Chercher mon nom…" class="borne-champ"> ${d.equipes.length ? '<button type="button" class="borne-bouton" data-equipe>👥 Saisie d\'équipe (chef)</button>' : ''}</p>
+      <p><input type="search" data-cherche placeholder="${texteHtml('pointage.borne.chercher_nom')}" class="borne-champ"> ${d.equipes.length ? `<button type="button" class="borne-bouton" data-equipe>${iconeHtml('pointage_equipe')} ${texteHtml('pointage.borne.saisie_equipe')}</button>` : ''}</p>
       <div class="borne-grille" data-salaries></div>`;
     const rendre = (q = '') => {
       const l = d.salaries.filter((s) => !q || `${s.nom} ${s.prenom} ${s.matricule}`.toLowerCase().includes(q.toLowerCase())).slice(0, 60);
       this.zone.querySelector('[data-salaries]').innerHTML = l.map((s) => `<button type="button" class="borne-carte" data-id="${s.id}"><span class="borne-avatar">${echapper(initiales(s))}</span>${echapper(s.prenom)} ${echapper(s.nom)}</button>`).join('')
-        || '<p>Aucun salarié.</p>';
+        || `<p>${texteHtml('pointage.saisie.aucun')}</p>`;
       this.zone.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => this.#identifier(Number(b.dataset.id), false)));
     };
     rendre();
@@ -131,8 +137,8 @@ export class PageBorne extends PageBase {
   }
 
   #choisirChef() {
-    this.zone.innerHTML = `<h2>👥 Saisie d'équipe : qui êtes-vous (chef d'équipe) ?</h2><div class="borne-grille">${this.donnees.salaries.slice(0, 60).map((s) => `<button type="button" class="borne-carte" data-id="${s.id}"><span class="borne-avatar">${echapper(initiales(s))}</span>${echapper(s.prenom)} ${echapper(s.nom)}</button>`).join('')}</div>
-      <p><button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+    this.zone.innerHTML = `<h2>${iconeHtml('pointage_equipe')} ${texteHtml('pointage.borne.qui_chef')}</h2><div class="borne-grille">${this.donnees.salaries.slice(0, 60).map((s) => `<button type="button" class="borne-carte" data-id="${s.id}"><span class="borne-avatar">${echapper(initiales(s))}</span>${echapper(s.prenom)} ${echapper(s.nom)}</button>`).join('')}</div>
+      <p><button type="button" class="borne-bouton" data-annuler>${texteHtml('commun.annuler')}</button></p>`;
     this.zone.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => this.#identifier(Number(b.dataset.id), true)));
     this.zone.querySelector('[data-annuler]').addEventListener('click', () => this.#accueil());
     this.#minuterie();
@@ -156,17 +162,17 @@ export class PageBorne extends PageBase {
 
   #pin(s, envoyer, erreur) {
     let saisi = '';
-    this.zone.innerHTML = `<h2>${echapper(s.prenom)} ${echapper(s.nom)} : code PIN</h2>${erreur ? `<p class="borne-erreur">${echapper(erreur)}</p>` : ''}
-      <p class="borne-pin" data-affichage>····</p>
-      <div class="borne-clavier">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0, '✔'].map((k) => `<button type="button" class="borne-touche" data-k="${k}">${k}</button>`).join('')}</div>
-      <p>${this.test ? '<button type="button" class="borne-bouton" data-passer title="Mode essai : identification sans PIN">Passer (essai)</button> ' : ''}<button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+    this.zone.innerHTML = `<h2>${texteHtml('pointage.borne.code_pin', { nom: `${s.prenom} ${s.nom}` })}</h2>${erreur ? `<p class="borne-erreur">${echapper(erreur)}</p>` : ''}
+      <p class="borne-pin" data-affichage>${PIN_VIDE}</p>
+      <div class="borne-clavier">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 'effacer', 0, 'ok'].map((k) => `<button type="button" class="borne-touche" data-k="${k}">${typeof k === 'number' ? k : iconeHtml(`pointage_pin_${k}`)}</button>`).join('')}</div>
+      <p>${this.test ? `<button type="button" class="borne-bouton" data-passer title="${texteHtml('pointage.borne.passer_aide')}">${texteHtml('pointage.borne.passer')}</button> ` : ''}<button type="button" class="borne-bouton" data-annuler>${texteHtml('commun.annuler')}</button></p>`;
     this.zone.querySelector('[data-passer]')?.addEventListener('click', () => envoyer(null));
     const aff = this.zone.querySelector('[data-affichage]');
     this.zone.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.k;
-      if (k === '⌫') saisi = saisi.slice(0, -1);
-      else if (k === '✔') { envoyer(saisi); return; } else if (saisi.length < 8) saisi += k;
-      aff.textContent = '•'.repeat(saisi.length) || '····';
+      if (k === 'effacer') saisi = saisi.slice(0, -1);
+      else if (k === 'ok') { envoyer(saisi); return; } else if (saisi.length < 8) saisi += k;
+      aff.textContent = icone('pointage_pin_chiffre').repeat(saisi.length) || PIN_VIDE;
     }));
     this.zone.querySelector('[data-annuler]').addEventListener('click', () => this.#accueil());
     this.#minuterie();
@@ -174,8 +180,8 @@ export class PageBorne extends PageBase {
 
   #choisirEquipe() {
     const d = this.donnees;
-    this.zone.innerHTML = `<h2>👥 Équipe</h2><div class="borne-grille">${d.equipes.map((e) => `<button type="button" class="borne-carte" data-e="${e.id}">${echapper(e.libelle)}<small>${e.membres.length} membre(s)</small></button>`).join('')}</div>
-      <p><button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+    this.zone.innerHTML = `<h2>${iconeHtml('pointage_equipe')} ${texteHtml('pointage.borne.equipe')}</h2><div class="borne-grille">${d.equipes.map((e) => `<button type="button" class="borne-carte" data-e="${e.id}">${echapper(e.libelle)}<small>${texteHtml('pointage.borne.membres', { nombre: e.membres.length })}</small></button>`).join('')}</div>
+      <p><button type="button" class="borne-bouton" data-annuler>${texteHtml('commun.annuler')}</button></p>`;
     this.zone.querySelectorAll('[data-e]').forEach((b) => b.addEventListener('click', () => {
       const e = d.equipes.find((x) => String(x.id) === b.dataset.e);
       this.#membres(e);
@@ -185,11 +191,11 @@ export class PageBorne extends PageBase {
   }
 
   #membres(e) {
-    const nom = (id) => { const s = this.donnees.salaries.find((x) => x.id === id); return s ? `${s.prenom} ${s.nom}` : `Salarié ${id}`; };
+    const nom = (id) => { const s = this.donnees.salaries.find((x) => x.id === id); return s ? `${s.prenom} ${s.nom}` : texte('pointage.synthese.salarie', { id }); };
     const choisis = new Set(e.membres);
     const rendre = () => {
-      this.zone.innerHTML = `<h2>👥 ${echapper(e.libelle)} : présents</h2><div class="borne-grille">${e.membres.map((m) => `<button type="button" class="borne-carte ${choisis.has(m) ? 'choisi' : ''}" data-m="${m}">${choisis.has(m) ? '✔ ' : ''}${echapper(nom(m))}</button>`).join('')}</div>
-        <p><button type="button" class="borne-bouton principal" data-suite ${choisis.size ? '' : 'disabled'}>Continuer (${choisis.size})</button> <button type="button" class="borne-bouton" data-annuler>Annuler</button></p>`;
+      this.zone.innerHTML = `<h2>${iconeHtml('pointage_equipe')} ${texteHtml('pointage.borne.presents', { equipe: e.libelle })}</h2><div class="borne-grille">${e.membres.map((m) => `<button type="button" class="borne-carte ${choisis.has(m) ? 'choisi' : ''}" data-m="${m}">${choisis.has(m) ? `${iconeHtml('pointage_ok')} ` : ''}${echapper(nom(m))}</button>`).join('')}</div>
+        <p><button type="button" class="borne-bouton principal" data-suite ${choisis.size ? '' : 'disabled'}>${texteHtml('pointage.borne.continuer', { nombre: choisis.size })}</button> <button type="button" class="borne-bouton" data-annuler>${texteHtml('commun.annuler')}</button></p>`;
       this.zone.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => { const m = Number(b.dataset.m); if (choisis.has(m)) choisis.delete(m); else choisis.add(m); rendre(); }));
       this.zone.querySelector('[data-suite]').addEventListener('click', () => { this.etat.membres = [...choisis]; this.#memoriser(); this.#journee(); });
       this.zone.querySelector('[data-annuler]').addEventListener('click', () => this.#accueil());
@@ -215,10 +221,10 @@ export class PageBorne extends PageBase {
   #proposerReprise(r) {
     this.ecran = () => this.#proposerReprise(r);
     const n = r.lignes.filter((l) => l.nouveau || l.id === null).length;
-    this.zone.innerHTML = `${this.#entete('Saisie interrompue')}
-      <h2>Reprendre la saisie en cours ?</h2>
-      <p>Journée du ${echapper(dateLongue(r.date))} : ${r.lignes.length} ligne(s)${n ? ` dont ${n} nouvelle(s)` : ''}, non enregistrée(s)${r.saisie ? ', une ligne en cours de choix' : ''}.</p>
-      <p><button type="button" class="borne-bouton principal" data-reprendre>▶ Reprendre</button> <button type="button" class="borne-bouton" data-nouvelle>Nouvelle saisie</button></p>`;
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_interrompue'))}
+      <h2>${texteHtml('pointage.borne.reprendre_question')}</h2>
+      <p>${texteHtml('pointage.borne.reprise', { date: dateLongue(r.date), lignes: r.lignes.length })}${n ? ` ${texteHtml('pointage.borne.reprise_nouvelles', { nombre: n })}` : ''}${texteHtml('pointage.borne.reprise_non_enregistrees')}${r.saisie ? texteHtml('pointage.borne.reprise_en_cours') : ''}.</p>
+      <p><button type="button" class="borne-bouton principal" data-reprendre>${iconeHtml('suivant')} ${texteHtml('pointage.borne.reprendre')}</button> <button type="button" class="borne-bouton" data-nouvelle>${texteHtml('pointage.borne.nouvelle_saisie')}</button></p>`;
     this.#brancherEntete();
     this.zone.querySelector('[data-nouvelle]').addEventListener('click', () => {
       ecrireReprise(null);
@@ -238,7 +244,7 @@ export class PageBorne extends PageBase {
 
   async #erreur(e) {
     await alerter(e.message);
-    if (e.code === ERREUR_POINTAGE.BORNE_JETON) this.#accueil('Identification expirée : identifiez-vous pour reprendre la saisie.');
+    if (e.code === ERREUR_POINTAGE.BORNE_JETON) this.#accueil(texte('pointage.borne.identification_expiree'));
   }
 
   #totalJour() { return this.etat.lignes.reduce((s, l) => s + (l.minutes > 0 ? l.minutes : 0), 0); }
@@ -251,22 +257,22 @@ export class PageBorne extends PageBase {
     const j = this.etat.journee;
     const m = this.etat.membres;
     return `<div class="borne-entete-saisie">
-        <div><b>${echapper(j.salarie.prenom)} ${echapper(j.salarie.nom)}</b>${m ? ` — équipe de ${m.length}` : ''}<br><span class="aide">${this.test ? '🧪 essai · ' : ''}${echapper(ecran)}</span></div>
-        <div class="borne-date"><button type="button" class="borne-touche" data-jour="-1" ${j.date <= j.premier_jour ? 'disabled' : ''} title="Jour précédent" aria-label="Jour précédent">◀</button>
+        <div><b>${echapper(j.salarie.prenom)} ${echapper(j.salarie.nom)}</b>${m ? ` — ${texteHtml('pointage.borne.equipe_de', { nombre: m.length })}` : ''}<br><span class="aide">${this.test ? `${iconeHtml('pointage_essai')} ${texteHtml('pointage.borne.essai')} · ` : ''}${echapper(ecran)}</span></div>
+        <div class="borne-date"><button type="button" class="borne-touche" data-jour="-1" ${j.date <= j.premier_jour ? 'disabled' : ''} title="${texteHtml('pointage.borne.jour_precedent')}" aria-label="${texteHtml('pointage.borne.jour_precedent')}">${iconeHtml('precedent')}</button>
           <span${j.date === j.aujourdhui ? '' : ' class="autre-jour"'}>${echapper(dateLongue(j.date))}</span>
-          <button type="button" class="borne-touche" data-jour="1" ${j.date >= j.aujourdhui ? 'disabled' : ''} title="Jour suivant" aria-label="Jour suivant">▶</button>
-          ${j.date === j.aujourdhui ? '' : '<button type="button" class="borne-bouton" data-jour="0">Aujourd\'hui</button>'}</div>
-        <div class="borne-totaux">Déjà saisi : <b data-total-jour></b> ce jour<br><small data-total-semaine></small></div>
-      </div>${j.bloque ? '<p class="borne-test">🔒 Journée validée : consultation seulement.</p>' : ''}`;
+          <button type="button" class="borne-touche" data-jour="1" ${j.date >= j.aujourdhui ? 'disabled' : ''} title="${texteHtml('pointage.borne.jour_suivant')}" aria-label="${texteHtml('pointage.borne.jour_suivant')}">${iconeHtml('suivant')}</button>
+          ${j.date === j.aujourdhui ? '' : `<button type="button" class="borne-bouton" data-jour="0">${texteHtml('pointage.borne.aujourdhui')}</button>`}</div>
+        <div class="borne-totaux">${texteHtml('pointage.borne.deja_saisi_html')}<br><small data-total-semaine></small></div>
+      </div>${j.bloque ? `<p class="borne-test">${iconeHtml('verrou')} ${texteHtml('pointage.borne.journee_validee')}</p>` : ''}`;
   }
 
   #majTotaux() {
     const j = this.etat.journee;
     const total = this.#totalJour();
     const tj = this.zone.querySelector('[data-total-jour]');
-    if (tj) tj.textContent = `${ecrireDuree(total) || '0:00'} h`;
+    if (tj) tj.textContent = texte('pointage.borne.heures', { duree: ecrireDuree(total) || '0:00' });
     const ts = this.zone.querySelector('[data-total-semaine]');
-    if (ts) ts.textContent = `${ecrireDuree(j.total_semaine - j.total_jour + total) || '0:00'} h la semaine`;
+    if (ts) ts.textContent = texte('pointage.borne.heures_semaine', { duree: ecrireDuree(j.total_semaine - j.total_jour + total) || '0:00' });
   }
 
   #brancherEntete() {
@@ -277,7 +283,7 @@ export class PageBorne extends PageBase {
   /** Autre journée (oubli de saisie) : relue par le serveur ; la ligne en cours de choix est gardée. */
   async #changerDate(delta) {
     const j = this.etat.journee;
-    if (this.etat.modifie && !await confirmer('Les modifications non enregistrées de cette journée seront perdues. Changer de jour ?')) return;
+    if (this.etat.modifie && !await confirmer(texte('pointage.borne.changer_jour'))) return;
     const date = delta === 0 ? j.aujourdhui : ajouterJours(j.date, delta);
     try { this.etat.journee = await appel('POST', '/journee', { jeton: j.jeton, date }); } catch (e) { this.#erreur(e); return; }
     this.#chargerLignes();
@@ -295,14 +301,14 @@ export class PageBorne extends PageBase {
     if (j.bloque) { this.#liste(); return; }
     this.ecran = () => this.#journee();
     const n = this.etat.lignes.length;
-    this.zone.innerHTML = `${this.#entete('Chantier ou ordre')}
-      <p><input data-ordre class="borne-champ" placeholder="Code, nom, ville, client, n° d'ordre ou QR code" autocomplete="off"> <button type="button" class="borne-bouton" data-lire>OK</button>
-        <button type="button" class="borne-bouton ${this.etat.tous ? 'principal' : ''}" data-tous title="Tous les chantiers ouverts et les ordres en cours">🔎 Tous</button></p>
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_chantier'))}
+      <p><input data-ordre class="borne-champ" placeholder="${texteHtml('pointage.borne.chercher_chantier')}" autocomplete="off"> <button type="button" class="borne-bouton" data-lire>${texteHtml('commun.ok')}</button>
+        <button type="button" class="borne-bouton ${this.etat.tous ? 'principal' : ''}" data-tous title="${texteHtml('pointage.borne.tous_aide')}">${iconeHtml('pointage_tous')} ${texteHtml('pointage.borne.tous')}</button></p>
       <div class="borne-grille" data-tuiles></div>
-      <p><button type="button" class="borne-bouton principal" data-liste title="Aller directement à la liste des pointages de la journée">📋 Pointages du jour${n ? ` (${n})` : ''} ⏭</button>
-        <button type="button" class="borne-bouton" data-etapes title="Étapes des ordres à valider (module Exécution)">🧩 Étapes</button>
-        <button type="button" class="borne-bouton" data-stock title="Sortie ou retour d'articles du magasin de l'atelier (module Stock)">📦 Stock</button>
-        <button type="button" class="borne-bouton" data-terminer>Terminer</button></p>`;
+      <p><button type="button" class="borne-bouton principal" data-liste title="${texteHtml('pointage.borne.pointages_jour_aide')}">${iconeHtml('pointage_liste')} ${texteHtml('pointage.borne.pointages_jour')}${n ? ` (${n})` : ''} ${iconeHtml('pointage_passer')}</button>
+        <button type="button" class="borne-bouton" data-etapes title="${texteHtml('pointage.borne.etapes_aide')}">${iconeHtml('pointage_ordre')} ${texteHtml('pointage.borne.etapes')}</button>
+        <button type="button" class="borne-bouton" data-stock title="${texteHtml('pointage.borne.stock_aide')}">${iconeHtml('pointage_stock')} ${texteHtml('pointage.borne.stock')}</button>
+        <button type="button" class="borne-bouton" data-terminer>${texteHtml('pointage.borne.terminer')}</button></p>`;
     this.#brancherEntete();
     this.zone.querySelector('[data-etapes]').addEventListener('click', () => this.#etapes());
     this.zone.querySelector('[data-stock]').addEventListener('click', () => this.#stock());
@@ -325,10 +331,10 @@ export class PageBorne extends PageBase {
       const liste = filtrerChoix(tuiles(), champ.value);
       grille.innerHTML = liste.slice(0, 200).map((t) => {
         const propose = t.genre === 'chantier' && j.proposes.includes(t.cha_id);
-        return `<button type="button" class="borne-carte ${propose ? 'propose' : ''}" data-t="${t.id}">${propose ? '📅 ' : t.genre === 'ordre' ? '🧩 ' : ''}<b>${echapper(t.code)}</b>
+        return `<button type="button" class="borne-carte ${propose ? 'propose' : ''}" data-t="${t.id}">${propose ? `${iconeHtml('pointage_planning')} ` : t.genre === 'ordre' ? `${iconeHtml('pointage_ordre')} ` : ''}<b>${echapper(t.code)}</b>
           <small>${echapper(t.libelle)}</small>${t.detail ? `<small>${echapper(t.detail)}</small>` : ''}</button>`;
-      }).join('') + (liste.length > 200 ? `<p class="aide">${liste.length - 200} autre(s) : précisez la saisie.</p>` : '')
-        + (!liste.length ? `<p class="aide">Aucun chantier${this.etat.tous ? ' ni ordre' : ''} ne correspond${this.etat.tous ? '' : ' : 🔎 Tous'}.</p>` : '');
+      }).join('') + (liste.length > 200 ? `<p class="aide">${texteHtml('pointage.borne.autres', { nombre: liste.length - 200 })}</p>` : '')
+        + (!liste.length ? `<p class="aide">${texteHtml(this.etat.tous ? 'pointage.borne.aucun_tous' : 'pointage.borne.aucun_chantier', { tous: `${icone('pointage_tous')} ${texte('pointage.borne.tous')}` })}</p>` : '');
       grille.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => prendre(liste.find((t) => String(t.id) === b.dataset.t))));
     };
     champ.addEventListener('input', afficher);
@@ -365,11 +371,11 @@ export class PageBorne extends PageBase {
    * Étapes des ordres (Exécution, lot 2e, E51 à E53) : écran du module Exécution avec les ordres proposés au salarié (ou
    * ceux d'une liste : fin de pointage) ; validation par la borne, jamais de contrôle du N+1. `apres` : écran suivant.
    */
-  async #etapes({ ordres = null, titre = 'Étapes à valider', apres = () => this.#journee() } = {}) {
+  async #etapes({ ordres = null, titre = texte('pointage.borne.etapes_titre'), apres = () => this.#journee() } = {}) {
     const j = this.etat.journee;
     this.ecran = () => this.#etapes({ ordres, titre, apres });
     this.zone.innerHTML = `${this.#entete(titre)}<div data-atelier></div>
-      <p><button type="button" class="borne-bouton principal" data-suite>${ordres ? 'Non, terminer' : 'Retour'}</button></p>`;
+      <p><button type="button" class="borne-bouton principal" data-suite>${texteHtml(ordres ? 'pointage.borne.non_terminer' : 'pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     const fournisseur = {
       charger: async () => {
@@ -383,7 +389,7 @@ export class PageBorne extends PageBase {
     };
     const ecran = new EcranEtapesAtelier(this.zone.querySelector('[data-atelier]'), fournisseur, {
       titre: '', message: (t, n) => (n === 'erreur' ? alerter(t) : this.app?.message?.(t, n)),
-      aide: this.test ? 'Essai : les validations ne sont pas enregistrées.' : '',
+      aide: this.test ? texte('pointage.borne.essai_etapes') : '',
     });
     this.zone.querySelector('[data-suite]').addEventListener('click', () => apres());
     try { await ecran.ouvrir(); } catch (e) { this.#erreur(e); }
@@ -399,27 +405,27 @@ export class PageBorne extends PageBase {
     const j = this.etat.journee;
     let d;
     try { d = await appel('GET', `/stock?jeton=${encodeURIComponent(j.jeton)}`); } catch (e) { this.#erreur(e); return; }
-    if (!d.depot) { await alerter('Aucun dépôt de stock pour cette borne (paramétrage des bornes).'); return; }
+    if (!d.depot) { await alerter(texte('pointage.borne.sans_depot')); return; }
     const s = etat ?? { mode: 'SORTIE', dotation: true, chantier: null, marque: null, recherche: '', lignes: [] };
     this.ecran = () => this.#stock(s);
     const dotes = new Map(d.dotations.map((x) => [x.ele, Number(x.quantite)]));
     const articles = d.articles.filter((a) => (!s.marque || a.marques.includes(s.marque)) && (!s.recherche || `${a.code} ${a.libelle}`.toLowerCase().includes(s.recherche.toLowerCase()))
       && (s.mode === 'SORTIE' || !s.dotation || dotes.has(a.id)));
     const marques = [...new Set(d.articles.flatMap((a) => a.marques))];
-    this.zone.innerHTML = `${this.#entete(`Stock · ${d.depot.code}`)}
-      <p><button type="button" class="borne-bouton ${s.mode === 'SORTIE' ? 'principal' : ''}" data-mode="SORTIE">📤 Je prends</button>
-        <button type="button" class="borne-bouton ${s.mode === 'RETOUR' ? 'principal' : ''}" data-mode="RETOUR">📥 Je rends</button>
-        <button type="button" class="borne-bouton ${s.dotation ? 'principal' : ''}" data-dotation>🦺 Pour moi (dotation)</button>
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_stock', { depot: d.depot.code }))}
+      <p><button type="button" class="borne-bouton ${s.mode === 'SORTIE' ? 'principal' : ''}" data-mode="SORTIE">${iconeHtml('pointage_export')} ${texteHtml('pointage.borne.je_prends')}</button>
+        <button type="button" class="borne-bouton ${s.mode === 'RETOUR' ? 'principal' : ''}" data-mode="RETOUR">${iconeHtml('telecharger')} ${texteHtml('pointage.borne.je_rends')}</button>
+        <button type="button" class="borne-bouton ${s.dotation ? 'principal' : ''}" data-dotation>${iconeHtml('pointage_dotation')} ${texteHtml('pointage.borne.pour_moi')}</button>
         ${j.chantiers.map((c) => `<button type="button" class="borne-bouton ${!s.dotation && s.chantier === c.id ? 'principal' : ''}" data-chantier="${c.id}">${echapper(c.code)}</button>`).join('')}</p>
       <p>${marques.map((m) => `<button type="button" class="borne-bouton ${s.marque === m ? 'principal' : ''}" data-marque="${echapper(m)}">${echapper(m)}</button>`).join('')}
-        <input data-recherche class="borne-champ" placeholder="Rechercher un article" value="${echapper(s.recherche)}"></p>
+        <input data-recherche class="borne-champ" placeholder="${texteHtml('pointage.borne.rechercher_article')}" value="${echapper(s.recherche)}"></p>
       <div class="borne-grille">${articles.slice(0, 60).map((a) => `<button type="button" class="borne-carte" data-article="${a.id}"><b>${echapper(a.code)}</b><small>${echapper(a.libelle)}</small>
-        ${dotes.has(a.id) ? `<small>doté : ${formatNombre(dotes.get(a.id), a.precision)}</small>` : ''}</button>`).join('') || '<p class="aide">Aucun article.</p>'}</div>
+        ${dotes.has(a.id) ? `<small>${texteHtml('pointage.borne.dote', { quantite: formatNombre(dotes.get(a.id), a.precision) })}</small>` : ''}</button>`).join('') || `<p class="aide">${texteHtml('pointage.borne.aucun_article')}</p>`}</div>
       ${s.lignes.length ? `<table class="borne-liste"><tbody>${s.lignes.map((l, i) => `<tr><td><b>${echapper(l.code)}</b> ${echapper(l.libelle)}</td>
-        <td><button type="button" class="borne-touche" data-moins="${i}">−</button> <b>${formatNombre(l.quantite, 2)}</b> ${echapper(l.unite)} <button type="button" class="borne-touche" data-plus="${i}">＋</button></td>
-        ${s.mode === 'RETOUR' ? `<td><label><input type="checkbox" data-rebut="${i}" ${l.rebut ? 'checked' : ''}> hors d'usage</label></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
-      <p><button type="button" class="borne-bouton principal" data-enregistrer ${s.lignes.length ? '' : 'disabled'}>✔ Enregistrer</button>
-        <button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+        <td><button type="button" class="borne-touche" data-moins="${i}">${iconeHtml('moins')}</button> <b>${formatNombre(l.quantite, 2)}</b> ${echapper(l.unite)} <button type="button" class="borne-touche" data-plus="${i}">${iconeHtml('ajouter')}</button></td>
+        ${s.mode === 'RETOUR' ? `<td><label><input type="checkbox" data-rebut="${i}" ${l.rebut ? 'checked' : ''}> ${texteHtml('pointage.borne.hors_usage')}</label></td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
+      <p><button type="button" class="borne-bouton principal" data-enregistrer ${s.lignes.length ? '' : 'disabled'}>${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button>
+        <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     const z = this.zone;
     z.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { s.mode = b.dataset.mode; s.lignes = []; this.#stock(s); }));
@@ -443,11 +449,11 @@ export class PageBorne extends PageBase {
     z.querySelectorAll('[data-rebut]').forEach((c) => c.addEventListener('change', () => { s.lignes[Number(c.dataset.rebut)].rebut = c.checked; }));
     z.querySelector('[data-retour]').addEventListener('click', () => this.#journee());
     z.querySelector('[data-enregistrer]').addEventListener('click', async () => {
-      if (!s.dotation && !s.chantier) { await alerter('Choisissez le chantier ou « Pour moi ».'); return; }
+      if (!s.dotation && !s.chantier) { await alerter(texte('pointage.borne.choisir_chantier')); return; }
       try {
         const r = await appel('POST', '/stock', { jeton: j.jeton, mode: s.mode, dotation: s.dotation, chantier: s.chantier,
           lignes: s.lignes.map((l) => ({ ele: l.ele, quantite: l.quantite, rebut: s.mode === 'RETOUR' && l.rebut })) });
-        await alerter(r.essai ? 'Essai : rien n\'est enregistré.' : `Enregistré (${r.pieces.map((x) => x.numero).join(', ')}) : à valider par votre chef ou le magasin.`);
+        await alerter(r.essai ? texte('pointage.borne.essai_rien') : texte('pointage.borne.stock_enregistre', { pieces: r.pieces.map((x) => x.numero).join(', ') }));
         this.#journee();
       } catch (e) { await alerter(e.message); }
     });
@@ -469,7 +475,7 @@ export class PageBorne extends PageBase {
   }
 
   async #terminer() {
-    if (this.etat.modifie && !await confirmer('Abandonner les modifications non enregistrées de la journée ?')) return;
+    if (this.etat.modifie && !await confirmer(texte('pointage.borne.abandonner'))) return;
     ecrireReprise(null);
     this.#accueil();
   }
@@ -478,12 +484,12 @@ export class PageBorne extends PageBase {
    * Grille de choix avec filtre (au-delà de `seuil` options) : `options` [{ cle, libelle, detail }], clic = `choisir(cle)`.
    */
   #grilleFiltree(conteneur, options, choisir, seuil = 6) {
-    conteneur.innerHTML = `${options.length > seuil ?'<p><input type="search" data-filtre class="borne-champ" placeholder="Filtrer…"></p>' : ''}<div class="borne-grille" data-options></div>`;
+    conteneur.innerHTML = `${options.length > seuil ?`<p><input type="search" data-filtre class="borne-champ" placeholder="${texteHtml('pointage.borne.filtrer')}"></p>` : ''}<div class="borne-grille" data-options></div>`;
     const rendre = (q = '') => {
       const t = q.trim().toLowerCase();
       const l = options.filter((o) => !t || `${o.libelle} ${o.detail ?? ''}`.toLowerCase().includes(t));
       conteneur.querySelector('[data-options]').innerHTML = l.map((o) => `<button type="button" class="borne-carte" data-o="${echapper(String(o.cle))}">${echapper(o.libelle)}${o.detail ? `<small>${echapper(o.detail)}</small>` : ''}</button>`).join('')
-        || '<p>Aucun choix.</p>';
+        || `<p>${texteHtml('pointage.borne.aucun_choix')}</p>`;
       conteneur.querySelectorAll('[data-o]').forEach((b) => b.addEventListener('click', () => choisir(b.dataset.o)));
     };
     rendre();
@@ -497,8 +503,8 @@ export class PageBorne extends PageBase {
     if (types.length === 1) { s.type_mo = types[0].id; s.type_auto = true; this.#activite(); return; }
     s.type_auto = false;
     this.ecran = () => this.#typeMo();
-    this.zone.innerHTML = `${this.#entete(`Type de main-d'œuvre${s.motif ? ` — ⚠ ${s.motif}` : ''}`)}<div data-grille></div>
-      <p>${s.motif ? '' : '<button type="button" class="borne-bouton alerte" data-probleme>⚠ Signaler un problème</button> '}<button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+    this.zone.innerHTML = `${this.#entete(`${texte('pointage.grille.type_main_oeuvre')}${s.motif ? ` — ${icone('avertissement')} ${s.motif}` : ''}`)}<div data-grille></div>
+      <p>${s.motif ? '' : `${BOUTON_PROBLEME} `}<button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     this.#grilleFiltree(this.zone.querySelector('[data-grille]'), types.map((t) => ({ cle: t.id, libelle: t.libelle, detail: t.code })), (cle) => {
       s.type_mo = Number(cle);
@@ -520,8 +526,8 @@ export class PageBorne extends PageBase {
     s.activite_auto = false;
     this.ecran = () => this.#activite();
     const type = this.donnees.referentiels.types_mo.find((t) => t.id === s.type_mo);
-    this.zone.innerHTML = `${this.#entete(`Activité — ${type?.libelle ?? ''}`)}<div data-grille></div>
-      <p><button type="button" class="borne-bouton alerte" data-probleme>⚠ Signaler un problème</button> <button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+    this.zone.innerHTML = `${this.#entete(texte('pointage.borne.ecran_activite', { type: type?.libelle ?? '' }))}<div data-grille></div>
+      <p>${BOUTON_PROBLEME} <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     this.#grilleFiltree(this.zone.querySelector('[data-grille]'), l.map((x) => ({ cle: x.code, libelle: x.libelle })), (cle) => { s.sous_type = cle; this.#ajouterLigne(); }, 3);
     this.zone.querySelector('[data-probleme]').addEventListener('click', () => this.#probleme());
@@ -533,9 +539,9 @@ export class PageBorne extends PageBase {
   #probleme() {
     this.ecran = () => this.#probleme();
     // Motifs proposés (paramètres des ressources), plus « Autre… » : toute autre raison, saisie librement.
-    this.zone.innerHTML = `${this.#entete('⚠ Quel problème ?')}<div class="borne-grille">${this.donnees.motifs.map((m) => `<button type="button" class="borne-carte" data-m="${echapper(m.libelle)}">${echapper(m.libelle)}</button>`).join('')}
-        <button type="button" class="borne-carte" data-autre>✏ Autre…</button></div>
-      <p><button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+    this.zone.innerHTML = `${this.#entete(`${icone('avertissement')} ${texte('pointage.borne.quel_probleme')}`)}<div class="borne-grille">${this.donnees.motifs.map((m) => `<button type="button" class="borne-carte" data-m="${echapper(m.libelle)}">${echapper(m.libelle)}</button>`).join('')}
+        <button type="button" class="borne-carte" data-autre>${iconeHtml('pointage_autre')} ${texteHtml('pointage.borne.autre')}</button></div>
+      <p><button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
     this.zone.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => {
       this.etat.saisie.motif = b.dataset.m;
@@ -543,7 +549,7 @@ export class PageBorne extends PageBase {
       this.#typeMo();
     }));
     this.zone.querySelector('[data-autre]').addEventListener('click', async () => {
-      const motif = (await saisir('Décrivez le problème :', '', { titre: 'Autre problème', obligatoire: true }))?.trim();
+      const motif = (await saisir(texte('pointage.borne.decrire_probleme'), '', { titre: texte('pointage.borne.autre_probleme'), obligatoire: true }))?.trim();
       if (!motif) return;
       this.etat.saisie.motif = motif.slice(0, 200);
       this.#memoriser();
@@ -577,20 +583,20 @@ export class PageBorne extends PageBase {
     const j = this.etat.journee;
     this.ecran = () => this.#repas();
     const chantier = chantierDuJour(this.etat.lignes.map((l) => ({ ...l, date: j.date })), String(j.date).slice(0, 10)) ?? j.proposes[0] ?? null;
-    this.zone.innerHTML = `${this.#entete('Repas au restaurant')}
-      <p><input data-recherche class="borne-champ" placeholder="Rechercher un restaurant (nom, ville)" autocomplete="off">
-        <button type="button" class="borne-bouton" data-non-trouve>Restaurant non trouvé</button>
-        ${j.repas ? '<button type="button" class="borne-bouton" data-aucun>Pas de repas</button>' : ''}
-        <button type="button" class="borne-bouton" data-retour>Retour</button></p>
-      ${j.repas ? `<p>Repas noté : <b>${echapper(j.repas.restaurant)}</b></p>` : ''}
-      <div class="borne-grille" data-restaurants><p class="aide">Recherche des restaurants proches…</p></div>`;
+    this.zone.innerHTML = `${this.#entete(texte('pointage.saisie.repas'))}
+      <p><input data-recherche class="borne-champ" placeholder="${texteHtml('pointage.repas.rechercher')}" autocomplete="off">
+        <button type="button" class="borne-bouton" data-non-trouve>${texteHtml('pointage.repas.non_trouve')}</button>
+        ${j.repas ? `<button type="button" class="borne-bouton" data-aucun>${texteHtml('pointage.repas.aucun')}</button>` : ''}
+        <button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>
+      ${j.repas ? `<p>${texteHtml('pointage.repas.note_html', { restaurant: j.repas.restaurant })}</p>` : ''}
+      <div class="borne-grille" data-restaurants><p class="aide">${texteHtml('pointage.repas.recherche_proches')}</p></div>`;
     this.#brancherEntete();
     const grille = this.zone.querySelector('[data-restaurants]');
     const enregistrer = async (r) => {
       try {
         const l = await appel('POST', '/repas', { jeton: j.jeton, repas: { date: j.date, cha_id: chantier, ...r } });
         j.repas = l.find((x) => String(x.date).slice(0, 10) === String(j.date).slice(0, 10)) ?? null;
-        if (this.test) await alerter('Essai : rien n’est enregistré.');
+        if (this.test) await alerter(texte('pointage.borne.essai_rien'));
         this.#liste();
       } catch (e) { await alerter(e.message); }
     };
@@ -601,15 +607,15 @@ export class PageBorne extends PageBase {
       catch (e) { grille.innerHTML = `<p class="aide">${echapper(e.message)}</p>`; return; }
       grille.innerHTML = l.slice(0, 60).map((r) => `<button type="button" class="borne-carte ${j.repas?.restaurant_id === r.id ? 'choisi' : ''}" data-r="${r.id}"><b>${echapper(r.nom)}</b>
         <small>${echapper([r.ville, distanceRestaurant(r)].filter(Boolean).join(' · '))}</small></button>`).join('')
-        || '<p class="aide">Aucun restaurant trouvé : « Restaurant non trouvé ».</p>';
+        || `<p class="aide">${texteHtml('pointage.repas.aucun_trouve')}</p>`;
       grille.querySelectorAll('[data-r]').forEach((b) => b.addEventListener('click', () => enregistrer({ restaurant_id: Number(b.dataset.r) })));
     };
     let minuterie = null;
     this.zone.querySelector('[data-recherche]').addEventListener('input', () => { clearTimeout(minuterie); minuterie = setTimeout(charger, 300); });
     this.zone.querySelector('[data-non-trouve]').addEventListener('click', async () => {
-      const nom = await saisir('Nom du restaurant :', this.zone.querySelector('[data-recherche]').value.trim(), { obligatoire: true });
+      const nom = await saisir(texte('pointage.repas.nom'), this.zone.querySelector('[data-recherche]').value.trim(), { obligatoire: true });
       if (!nom?.trim()) return;
-      const ville = await saisir('Ville du restaurant (facultatif) :', '');
+      const ville = await saisir(texte('pointage.repas.ville'), '');
       if (ville === null) return;
       enregistrer({ nouveau: nom.trim(), ville: ville.trim() || null });
     });
@@ -643,24 +649,24 @@ export class PageBorne extends PageBase {
       const st = ref.sous_types.find((x) => x.code === l.sous_type);
       const m = modifiable(l);
       return `<div class="borne-ligne${l.nouveau ? ' nouvelle' : ''}" data-i="${i}">
-        <div class="borne-ligne-detail"><b>${echapper(c?.code ?? `Chantier ${l.cha_id}`)}</b> ${echapper(c?.libelle ?? '')}${o ? `<br><small>Ordre ${echapper(o.numero ?? '')} ${echapper(o.objet ?? '')}</small>` : ''}
-          <br><span>${echapper(t?.libelle ?? '')}${st ? ` · ${echapper(st.libelle)}` : ''}</span>${l.groupe ? ' <small class="aide">👥 équipe</small>' : ''}</div>
-        <div class="borne-ligne-duree">${m ? `<button type="button" class="borne-touche" data-moins="${i}" aria-label="Moins">−</button><input class="borne-duree-champ" data-duree="${i}" value="${ecrireDuree(l.minutes)}" inputmode="decimal" aria-label="Durée"><button type="button" class="borne-touche" data-plus="${i}" aria-label="Plus">＋</button>`
-          : `<span class="borne-duree-lecture">${ecrireDuree(l.minutes)} h</span>`}</div>
+        <div class="borne-ligne-detail"><b>${echapper(c?.code ?? texte('pointage.borne.chantier', { id: l.cha_id }))}</b> ${echapper(c?.libelle ?? '')}${o ? `<br><small>${texteHtml('pointage.borne.ordre', { numero: o.numero ?? '', objet: o.objet ?? '' })}</small>` : ''}
+          <br><span>${echapper(t?.libelle ?? '')}${st ? ` · ${echapper(st.libelle)}` : ''}</span>${l.groupe ? ` <small class="aide">${iconeHtml('pointage_equipe')} ${texteHtml('pointage.borne.equipe_court')}</small>` : ''}</div>
+        <div class="borne-ligne-duree">${m ? `<button type="button" class="borne-touche" data-moins="${i}" aria-label="${texteHtml('pointage.borne.moins')}">${iconeHtml('moins')}</button><input class="borne-duree-champ" data-duree="${i}" value="${ecrireDuree(l.minutes)}" inputmode="decimal" aria-label="${texteHtml('pointage.borne.duree')}"><button type="button" class="borne-touche" data-plus="${i}" aria-label="${texteHtml('pointage.borne.plus')}">${iconeHtml('ajouter')}</button>`
+          : `<span class="borne-duree-lecture">${texteHtml('pointage.borne.heures', { duree: ecrireDuree(l.minutes) })}</span>`}</div>
         <div class="borne-ligne-notes">
-          <button type="button" class="borne-note${l.commentaire ? ' renseigne' : ''}" data-note="${i}" data-genre="commentaire" ${m || l.commentaire ? '' : 'disabled'} title="${l.commentaire ? echapper(l.commentaire) : 'Ajouter un commentaire pour la synthèse MO'}">💬 ${l.commentaire ? 'Commentaire' : 'Commenter'}</button>
-          <button type="button" class="borne-note nc${l.motif ? ' renseigne' : ''}" data-note="${i}" data-genre="nc" ${m || l.motif ? '' : 'disabled'} title="${l.motif ? echapper(l.motif) : 'Ajouter une note de non-conformité'}">⚠ ${l.motif ? 'NC notée' : 'Note NC'}</button>
-          ${m ? `<button type="button" class="borne-touche" data-retirer="${i}" title="Retirer la ligne" aria-label="Retirer la ligne">✕</button>` : ''}
+          <button type="button" class="borne-note${l.commentaire ? ' renseigne' : ''}" data-note="${i}" data-genre="commentaire" ${m || l.commentaire ? '' : 'disabled'} title="${l.commentaire ? echapper(l.commentaire) : texteHtml('pointage.borne.commenter_aide')}">${iconeHtml('pointage_commentaire')} ${texteHtml(l.commentaire ? 'pointage.borne.commentaire' : 'pointage.borne.commenter')}</button>
+          <button type="button" class="borne-note nc${l.motif ? ' renseigne' : ''}" data-note="${i}" data-genre="nc" ${m || l.motif ? '' : 'disabled'} title="${l.motif ? echapper(l.motif) : texteHtml('pointage.borne.nc_aide')}">${iconeHtml('avertissement')} ${texteHtml(l.motif ? 'pointage.borne.nc_notee' : 'pointage.borne.nc')}</button>
+          ${m ? `<button type="button" class="borne-touche" data-retirer="${i}" title="${texteHtml('pointage.borne.retirer')}" aria-label="${texteHtml('pointage.borne.retirer')}">${iconeHtml('retirer')}</button>` : ''}
         </div></div>`;
     };
-    this.zone.innerHTML = `${this.#entete(lecture ? 'Pointages du jour (consultation)' : 'Pointages du jour')}
-      <div class="borne-barre">${lecture ? '' : [60, 240, 420, 480].map((m) => `<button type="button" class="borne-bouton" data-rapide="${m}" title="Appliquer à la durée sélectionnée">${ecrireDuree(m)} h</button>`).join('')}
+    this.zone.innerHTML = `${this.#entete(texte(lecture ? 'pointage.borne.ecran_liste_lecture' : 'pointage.borne.pointages_jour'))}
+      <div class="borne-barre">${lecture ? '' : [60, 240, 420, 480].map((m) => `<button type="button" class="borne-bouton" data-rapide="${m}" title="${texteHtml('pointage.borne.rapide_aide')}">${texteHtml('pointage.borne.heures', { duree: ecrireDuree(m) })}</button>`).join('')}
         <span class="borne-barre-espace"></span>
-        ${lecture ? '' : '<button type="button" class="borne-bouton principal" data-enregistrer>✔ Enregistrer</button> <button type="button" class="borne-bouton" data-ajouter>＋ Ajouter</button>'}
-        ${lecture || equipe ? '' : `<button type="button" class="borne-bouton" data-repas title="Repas au restaurant ce jour">🍽 ${j.repas ? echapper(j.repas.restaurant) : 'Repas'}</button>`}
-        ${lecture ? '' : '<button type="button" class="borne-bouton" data-retour>Retour</button>'} <button type="button" class="borne-bouton" data-terminer>Terminer</button></div>
-      <div class="borne-lignes">${this.etat.lignes.map(ligne).join('') || '<p>Aucun pointage ce jour.</p>'}</div>
-      ${equipe ? '<p class="aide">Saisie d\'équipe : chaque nouvelle ligne est enregistrée pour chaque membre présent ; les lignes déjà saisies se modifient depuis la saisie de chacun.</p>' : ''}`;
+        ${lecture ? '' : `<button type="button" class="borne-bouton principal" data-enregistrer>${iconeHtml('pointage_ok')} ${texteHtml('commun.enregistrer')}</button> <button type="button" class="borne-bouton" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('commun.ajouter')}</button>`}
+        ${lecture || equipe ? '' : `<button type="button" class="borne-bouton" data-repas title="${texteHtml('pointage.borne.repas_aide')}">${iconeHtml('pointage_repas')} ${j.repas ? echapper(j.repas.restaurant) : texteHtml('pointage.borne.repas')}</button>`}
+        ${lecture ? '' : `<button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button>`} <button type="button" class="borne-bouton" data-terminer>${texteHtml('pointage.borne.terminer')}</button></div>
+      <div class="borne-lignes">${this.etat.lignes.map(ligne).join('') || `<p>${texteHtml('pointage.borne.aucun_pointage')}</p>`}</div>
+      ${equipe ? `<p class="aide">${texteHtml('pointage.borne.equipe_aide')}</p>` : ''}`;
     this.#brancherEntete();
     const changer = () => { this.etat.modifie = true; this.#memoriser(); this.#majTotaux(); };
     const champ = (i) => this.zone.querySelector(`[data-duree="${i}"]`);
@@ -734,15 +740,15 @@ export class PageBorne extends PageBase {
     const ref = this.donnees.referentiels;
     const c = this.etat.journee.chantiers.find((x) => x.id === l.cha_id);
     this.ecran = () => this.#note(i, genre);
-    this.zone.innerHTML = `${this.#entete(nc ? '⚠ Note de non-conformité' : '💬 Commentaire pour la synthèse MO')}
+    this.zone.innerHTML = `${this.#entete(nc ? `${icone('avertissement')} ${texte('pointage.borne.ecran_nc')}` : `${icone('pointage_commentaire')} ${texte('pointage.borne.ecran_commentaire')}`)}
       <p class="borne-journee"><b>${echapper(c?.code ?? '')}</b> ${echapper(c?.libelle ?? '')} · ${echapper(ref.types_mo.find((x) => x.id === l.type_mo)?.libelle ?? '')}
-        · ${echapper(ref.sous_types.find((x) => x.code === l.sous_type)?.libelle ?? '')} · ${ecrireDuree(l.minutes)} h</p>
+        · ${echapper(ref.sous_types.find((x) => x.code === l.sous_type)?.libelle ?? '')} · ${texteHtml('pointage.borne.heures', { duree: ecrireDuree(l.minutes) })}</p>
       ${nc && !lecture ? `<div class="borne-grille">${this.donnees.motifs.map((m) => `<button type="button" class="borne-carte" data-motif="${echapper(m.libelle)}">${echapper(m.libelle)}</button>`).join('')}</div>` : ''}
-      <textarea class="borne-texte" data-texte rows="4" ${lecture ? 'readonly' : ''} placeholder="${nc ? 'Motif de la non-conformité…' : 'Commentaire…'}">${echapper((nc ? l.motif : l.commentaire) ?? '')}</textarea>
-      <p>${lecture ? '' : '<button type="button" class="borne-bouton principal" data-ok>✔ OK</button> <button type="button" class="borne-bouton" data-effacer>Effacer</button> '}<button type="button" class="borne-bouton" data-retour>Retour</button></p>`;
+      <textarea class="borne-texte" data-texte rows="4" ${lecture ? 'readonly' : ''} placeholder="${texteHtml(nc ? 'pointage.borne.motif_nc' : 'pointage.borne.commentaire_vide')}">${echapper((nc ? l.motif : l.commentaire) ?? '')}</textarea>
+      <p>${lecture ? '' : `<button type="button" class="borne-bouton principal" data-ok>${iconeHtml('pointage_ok')} ${texteHtml('commun.ok')}</button> <button type="button" class="borne-bouton" data-effacer>${texteHtml('pointage.borne.effacer')}</button> `}<button type="button" class="borne-bouton" data-retour>${texteHtml('pointage.borne.retour')}</button></p>`;
     this.#brancherEntete();
-    const texte = this.zone.querySelector('[data-texte]');
-    this.zone.querySelectorAll('[data-motif]').forEach((b) => b.addEventListener('click', () => { texte.value = b.dataset.motif; texte.focus(); }));
+    const champTexte = this.zone.querySelector('[data-texte]');
+    this.zone.querySelectorAll('[data-motif]').forEach((b) => b.addEventListener('click', () => { champTexte.value = b.dataset.motif; champTexte.focus(); }));
     const fin = (valeur) => {
       if (valeur !== undefined) {
         l[nc ? 'motif' : 'commentaire'] = valeur.trim() || null;
@@ -751,10 +757,10 @@ export class PageBorne extends PageBase {
       }
       this.#liste(i);
     };
-    this.zone.querySelector('[data-ok]')?.addEventListener('click', () => fin(texte.value));
+    this.zone.querySelector('[data-ok]')?.addEventListener('click', () => fin(champTexte.value));
     this.zone.querySelector('[data-effacer]')?.addEventListener('click', () => fin(''));
     this.zone.querySelector('[data-retour]').addEventListener('click', () => fin());
-    if (!lecture) texte.focus();
+    if (!lecture) champTexte.focus();
     this.#minuterie();
   }
 
@@ -762,7 +768,7 @@ export class PageBorne extends PageBase {
   async #enregistrer() {
     const j = this.etat.journee;
     const lignes = this.etat.lignes;
-    if (lignes.some((l) => !(l.minutes > 0))) { await alerter('Durée invalide sur une ligne (exemples : 7:30, 7h30, 7,5).'); return; }
+    if (lignes.some((l) => !(l.minutes > 0))) { await alerter(texte('pointage.borne.duree_invalide')); return; }
     const corps = (l) => ({ id: l.id ?? null, cha_id: l.cha_id, ent_id: l.ent_id ?? null, type_mo: l.type_mo, sous_type: l.sous_type ?? null, minutes: l.minutes, motif: l.motif ?? null, commentaire: l.commentaire ?? null });
     try {
       if (this.etat.membres) {
@@ -779,24 +785,24 @@ export class PageBorne extends PageBase {
     const total = this.#totalJour();
     const membres = this.etat.membres;
     const fin = () => {
-      this.#accueil(`✔ ${dateLongue(j.date)} : ${ecrireDuree(total) || '0:00'} h ${this.test ? 'contrôlées (essai : non enregistrées)' : 'enregistrées'}${membres ? ` pour ${membres.length} personnes` : ''}.`);
+      this.#accueil(`${icone('pointage_ok')} ${texte(this.test ? 'pointage.borne.fin_essai' : 'pointage.borne.fin', { date: dateLongue(j.date), duree: ecrireDuree(total) || '0:00' })}${membres ? ` ${texte('pointage.borne.fin_equipe', { nombre: membres.length })}` : ''}.`);
       this.#minuterie(8000);
     };
     // Pointage sur un ordre : son étape en cours est proposée (E52), sinon retour à l'accueil.
     const ordres = membres ? [] : await this.#ordresAEtape();
-    if (ordres.length) { await this.#etapes({ ordres, titre: 'Étape terminée ?', apres: fin }); return; }
+    if (ordres.length) { await this.#etapes({ ordres, titre: texte('pointage.borne.etape_terminee'), apres: fin }); return; }
     fin();
   }
 }
 
 /** Administration des bornes (appareils enregistrés, jeton remis une fois) et des PIN des salariés. */
 export class PageParametresBornes extends PageBase {
-  icone = '🏭';
+  icone = icone('pointage_borne');
 
   async ouvrir() {
-    this.titre = 'Bornes de pointage';
-    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">🏭 Bornes de pointage</h1></div><div data-bornes></div>
-      <div class="titre-actions"><h2>PIN des salariés</h2></div><div data-pins></div></div>`;
+    this.titre = texte('pointage.bornes.titre');
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">${iconeHtml('pointage_borne')} ${texteHtml('pointage.bornes.titre')}</h1></div><div data-bornes></div>
+      <div class="titre-actions"><h2>${texteHtml('pointage.bornes.pins')}</h2></div><div data-pins></div></div>`;
     this.ref = await api.pointage.referentiels();
     await this.#bornes();
     await this.#pins();
@@ -815,36 +821,36 @@ export class PageParametresBornes extends PageBase {
     const admin = this.app.estAdmin();
     const ref = this.ref;
     const libelles = (ids, liste, champ = 'libelle') => ids.map((id) => liste.find((x) => x.id === id)?.[champ] ?? `#${id}`);
-    const resume = (valeurs) => (valeurs.length ? echapper(valeurs.join(', ')) : '<span class="aide">tous</span>');
-    zone.innerHTML = `<table class="tableau-compact largeur-contenu bornes"><thead><tr><th>Borne<br><small>état · vue le</small></th><th>PIN<br><small>exigé</small></th>
-        <th>Services<br><small>fonctions</small></th><th>Types de main-d'œuvre</th><th></th></tr></thead><tbody>
-      ${l.map((a) => `<tr data-borne="${a.id}"${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${a.actif ? 'active' : 'désactivée'} · ${a.vu_le ? formatDateHeure(a.vu_le) : 'jamais vue'}</small></td>
-        <td>${a.pin_exige ? 'oui' : 'non'}</td>
-        <td>${resume(libelles(a.services, ref.services))}<br><small class="aide">${a.fonctions.length ? echapper(a.fonctions.join(', ')) : 'toutes fonctions'}</small></td>
+    const resume = (valeurs) => (valeurs.length ? echapper(valeurs.join(', ')) : `<span class="aide">${texteHtml('pointage.bornes.tous')}</span>`);
+    const bouton = (attribut, nom, libelle, aide = libelle) => `<button type="button" class="bouton-icone" ${attribut} title="${texteHtml(aide)}" aria-label="${texteHtml(libelle)}">${iconeHtml(nom)}</button>`;
+    const deux = (a, b) => `<th>${texteHtml(`pointage.bornes.${a}`)}<br><small>${texteHtml(`pointage.bornes.${b}`)}</small></th>`;
+    zone.innerHTML = `<table class="tableau-compact largeur-contenu bornes"><thead><tr>${deux('borne', 'etat_vue')}${deux('pin', 'exige')}
+        ${deux('services', 'fonctions')}<th>${texteHtml('pointage.bornes.types_mo')}</th><th></th></tr></thead><tbody>
+      ${l.map((a) => `<tr data-borne="${a.id}"${a.actif ? '' : ' class="discret"'}><td>${echapper(a.libelle)}<br><small class="aide">${texteHtml(a.actif ? 'pointage.bornes.active' : 'pointage.bornes.desactivee')} · ${a.vu_le ? formatDateHeure(a.vu_le) : texteHtml('pointage.bornes.jamais_vue')}</small></td>
+        <td>${texteHtml(a.pin_exige ? 'commun.oui' : 'commun.non')}</td>
+        <td>${resume(libelles(a.services, ref.services))}<br><small class="aide">${a.fonctions.length ? echapper(a.fonctions.join(', ')) : texteHtml('pointage.bornes.toutes_fonctions')}</small></td>
         <td>${resume(libelles(a.types_mo, ref.types_mo))}</td>
-        <td class="cellule-boutons">${admin ? `<button type="button" class="bouton-icone" data-parametrer="${a.id}" title="Paramétrer la borne : salariés proposés (services, fonctions), types de main-d'œuvre" aria-label="Paramétrer la borne">✎</button>` : ''}
-          <button type="button" class="bouton-icone" data-basculer="${a.id}" title="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}" aria-label="${a.actif ? 'Désactiver la borne' : 'Réactiver la borne'}">${a.actif ? '⏸' : '⏵'}</button>
-          ${admin ? `<button type="button" class="bouton-icone" data-tester="${a.id}" title="Tester : ouvrir la borne dans une fenêtre séparée (PIN facultatif, pointages non enregistrés)" aria-label="Tester la borne">▶</button>` : ''}</td></tr>`).join('')}</tbody></table>
-      ${admin ? `<p class="ligne"><input data-libelle placeholder="Libellé (Atelier bois…)"> <label><input type="checkbox" data-pin checked> PIN exigé</label>
-        <button type="button" class="bouton-icone" data-creer title="Enregistrer une nouvelle borne (jeton affiché une seule fois), puis la paramétrer" aria-label="Enregistrer une borne">＋</button></p>` : ''}<div data-jeton></div>`;
+        <td class="cellule-boutons">${admin ? bouton(`data-parametrer="${a.id}"`, 'pointage_parametrer', 'pointage.bornes.parametrer', 'pointage.bornes.parametrer_aide') : ''}
+          ${bouton(`data-basculer="${a.id}"`, a.actif ? 'pointage_pause' : 'pointage_reprise', a.actif ? 'pointage.bornes.desactiver' : 'pointage.bornes.reactiver')}
+          ${admin ? bouton(`data-tester="${a.id}"`, 'suivant', 'pointage.bornes.tester', 'pointage.bornes.tester_aide') : ''}</td></tr>`).join('')}</tbody></table>
+      ${admin ? `<p class="ligne"><input data-libelle placeholder="${texteHtml('pointage.bornes.libelle_aide')}"> <label><input type="checkbox" data-pin checked> ${texteHtml('pointage.bornes.pin_exige')}</label>
+        ${bouton('data-creer', 'ajouter', 'pointage.bornes.creer', 'pointage.bornes.creer_aide')}</p>` : ''}<div data-jeton></div>`;
     const parametrer = (a) => {
       zone.querySelector('tr.parametrage-borne')?.remove();
       const tr = zone.querySelector(`tr[data-borne="${a.id}"]`);
       const ligne = document.createElement('tr');
       ligne.className = 'parametrage-borne';
       ligne.innerHTML = `<td colspan="5"><div class="formulaire parametrage-borne-champs">
-          <label>Libellé <input data-p-libelle value="${echapper(a.libelle)}" maxlength="80"></label>
-          <label class="fiche-option"><input type="checkbox" data-p-pin ${a.pin_exige ? 'checked' : ''}> PIN exigé</label>
-          <div><b>Services</b> <small class="aide">service principal du salarié ou son service parent ; aucun : tous</small><div data-p-services></div></div>
-          <div><b>Fonctions</b> <small class="aide">poste du salarié ; aucune : toutes</small><div data-p-fonctions></div></div>
-          <div><b>Types de main-d'œuvre</b> <small class="aide">proposés à la borne ; aucun : tous</small><div data-p-types></div></div>
-          ${this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? '<div><b>Dépôt de stock</b> <small class="aide">sorties et retours de l\'atelier (📦 Stock) ; vide : aucun</small><div data-p-depot></div></div>' : ''}
-        </div><p class="ligne"><button type="button" class="principal" data-p-enregistrer title="Enregistrer le paramétrage de la borne">💾 Enregistrer</button>
-          <button type="button" data-p-annuler>Annuler</button></p></td>`;
+          <label>${texteHtml('commun.libelle')} <input data-p-libelle value="${echapper(a.libelle)}" maxlength="80"></label>
+          <label class="fiche-option"><input type="checkbox" data-p-pin ${a.pin_exige ? 'checked' : ''}> ${texteHtml('pointage.bornes.pin_exige')}</label>
+          ${['services', 'fonctions', 'types'].map((k) => `<div><b>${texteHtml(`pointage.bornes.p_${k}`)}</b> <small class="aide">${texteHtml(`pointage.bornes.p_${k}_aide`)}</small><div data-p-${k}></div></div>`).join('')}
+          ${this.app.moduleActif(MODULE_FACULTATIF.STOCK) ? `<div><b>${texteHtml('pointage.bornes.p_depot')}</b> <small class="aide">${texteHtml('pointage.bornes.p_depot_aide', { stock: `${icone('pointage_stock')} ${texte('pointage.borne.stock')}` })}</small><div data-p-depot></div></div>` : ''}
+        </div><p class="ligne"><button type="button" class="principal" data-p-enregistrer title="${texteHtml('pointage.bornes.enregistrer_aide')}">${iconeHtml('enregistrer')} ${texteHtml('commun.enregistrer')}</button>
+          <button type="button" data-p-annuler>${texteHtml('commun.annuler')}</button></p></td>`;
       tr.after(ligne);
-      const services = choixMultiple({ options: ref.services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `↳ ${x.libelle}` : x.libelle, detail: x.code })), valeurs: a.services, titre: 'Ajouter un service' });
-      const fonctions = choixMultiple({ options: (ref.fonctions ?? []).map((x) => ({ valeur: x, libelle: x })), valeurs: a.fonctions, titre: 'Ajouter une fonction' });
-      const types = choixMultiple({ options: ref.types_mo.map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code })), valeurs: a.types_mo, titre: 'Ajouter un type de main-d\'œuvre' });
+      const services = choixMultiple({ options: ref.services.map((x) => ({ valeur: x.id, libelle: x.parent_id ? `${icone('sous_niveau')} ${x.libelle}` : x.libelle, detail: x.code })), valeurs: a.services, titre: texte('pointage.bornes.ajouter_service') });
+      const fonctions = choixMultiple({ options: (ref.fonctions ?? []).map((x) => ({ valeur: x, libelle: x })), valeurs: a.fonctions, titre: texte('pointage.bornes.ajouter_fonction') });
+      const types = choixMultiple({ options: ref.types_mo.map((x) => ({ valeur: x.id, libelle: x.libelle, detail: x.code })), valeurs: a.types_mo, titre: texte('pointage.bornes.ajouter_type') });
       ligne.querySelector('[data-p-services]').append(services);
       ligne.querySelector('[data-p-fonctions]').append(fonctions);
       ligne.querySelector('[data-p-types]').append(types);
@@ -864,7 +870,7 @@ export class PageParametresBornes extends PageBase {
             services: services.valeurs.map(Number), fonctions: fonctions.valeurs.map(String), types_mo: types.valeurs.map(Number),
           });
           if (depot) await api.stock.definirDepotBorne(a.id, depot.valeurCombo === '' ? null : Number(depot.valeurCombo));
-          this.app.message('Borne paramétrée', 'succes');
+          this.app.message(texte('pointage.bornes.parametree'), 'succes');
           await this.#bornes();
         } catch (e) { this.app.erreur(e); }
       });
@@ -887,8 +893,7 @@ export class PageParametresBornes extends PageBase {
         const r = await api.pointage.creerAppareil({ libelle: zone.querySelector('[data-libelle]').value, pin_exige: zone.querySelector('[data-pin]').checked });
         await this.#bornes(r.id);
         const lien = `${location.origin}/borne?jeton=${encodeURIComponent(r.jeton)}`;
-        this.conteneur.querySelector('[data-jeton]').innerHTML = `<p class="avertissement">Jeton de la borne (affiché une seule fois) : <code>${echapper(r.jeton)}</code><br>
-          Ouvrir sur la borne : <code>${echapper(lien)}</code> (le jeton est ensuite gardé par le navigateur de la borne).</p>`;
+        this.conteneur.querySelector('[data-jeton]').innerHTML = `<p class="avertissement">${texteHtml('pointage.bornes.jeton_html', { jeton: r.jeton, lien })}</p>`;
       } catch (e) { this.app.erreur(e); }
     });
   }
@@ -896,15 +901,15 @@ export class PageParametresBornes extends PageBase {
   async #pins() {
     const zone = this.conteneur.querySelector('[data-pins]');
     zone.innerHTML = '<p class="ligne"><span data-service></span></p><div data-liste></div>';
-    const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.libelle })), valeur: '', vide: true, titre: 'Service' });
+    const srv = creerCombo({ options: this.ref.services.map((s) => ({ valeur: s.id, libelle: s.libelle })), valeur: '', vide: true, titre: texte('pointage.barre.service') });
     zone.querySelector('[data-service]').append(srv);
     const charger = async () => {
-      if (!srv.valeurCombo) { zone.querySelector('[data-liste]').innerHTML = '<p class="aide">Choisissez un service.</p>'; return; }
+      if (!srv.valeurCombo) { zone.querySelector('[data-liste]').innerHTML = `<p class="aide">${texteHtml('pointage.bornes.choisir_service')}</p>`; return; }
       const l = await api.pointage.pins(srv.valeurCombo).catch((e) => { this.app.erreur(e); return []; });
-      zone.querySelector('[data-liste]').innerHTML = `<div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>Salarié<br><small>matricule</small></th><th>PIN</th><th>Nouveau PIN</th><th></th></tr></thead><tbody>${l.slice(0, 300).map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule)}</small></td><td>${x.pin ? `posé${x.bloque ? ' <span class="badge-exception">bloqué</span>' : ''}` : '<span class="aide">sans PIN</span>'}</td>
-        <td><input data-pin="${x.salarie.id}" size="8" inputmode="numeric" placeholder="4 à 8 chiffres"></td><td class="cellule-boutons"><button type="button" class="bouton-icone" data-poser="${x.salarie.id}" title="Poser ce PIN (débloque le salarié)" aria-label="Poser le PIN">✔</button>${x.pin ? ` <button type="button" class="bouton-icone" data-retirer="${x.salarie.id}" title="Retirer le PIN" aria-label="Retirer le PIN">✕</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+      zone.querySelector('[data-liste]').innerHTML = `<div class="tableau-defilant largeur-contenu"><table class="tableau-compact"><thead><tr><th>${texteHtml('pointage.panneau.salarie')}<br><small>${texteHtml('pointage.panneau.matricule')}</small></th><th>${texteHtml('pointage.bornes.pin')}</th><th>${texteHtml('pointage.bornes.nouveau_pin')}</th><th></th></tr></thead><tbody>${l.slice(0, 300).map((x) => `<tr><td class="synthese-nom">${echapper(x.salarie.nom)} ${echapper(x.salarie.prenom)}<br><small class="aide">${echapper(x.salarie.matricule)}</small></td><td>${x.pin ? `${texteHtml('pointage.bornes.pose')}${x.bloque ? ` <span class="badge-exception">${texteHtml('pointage.bornes.bloque')}</span>` : ''}` : `<span class="aide">${texteHtml('pointage.bornes.sans_pin')}</span>`}</td>
+        <td><input data-pin="${x.salarie.id}" size="8" inputmode="numeric" placeholder="${texteHtml('pointage.bornes.pin_aide')}"></td><td class="cellule-boutons"><button type="button" class="bouton-icone" data-poser="${x.salarie.id}" title="${texteHtml('pointage.bornes.poser_aide')}" aria-label="${texteHtml('pointage.bornes.poser')}">${iconeHtml('pointage_ok')}</button>${x.pin ? ` <button type="button" class="bouton-icone" data-retirer="${x.salarie.id}" title="${texteHtml('pointage.bornes.retirer_pin')}" aria-label="${texteHtml('pointage.bornes.retirer_pin')}">${iconeHtml('retirer')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
       zone.querySelectorAll('[data-poser]').forEach((b) => b.addEventListener('click', async () => {
-        try { await api.pointage.poserPin(b.dataset.poser, { pin: zone.querySelector(`[data-pin="${b.dataset.poser}"]`).value }); this.app.message('PIN enregistré', 'succes'); await charger(); } catch (e) { this.app.erreur(e); }
+        try { await api.pointage.poserPin(b.dataset.poser, { pin: zone.querySelector(`[data-pin="${b.dataset.poser}"]`).value }); this.app.message(texte('pointage.bornes.pin_enregistre'), 'succes'); await charger(); } catch (e) { this.app.erreur(e); }
       }));
       zone.querySelectorAll('[data-retirer]').forEach((b) => b.addEventListener('click', async () => {
         try { await api.pointage.poserPin(b.dataset.retirer, { pin: null }); await charger(); } catch (e) { this.app.erreur(e); }
@@ -917,11 +922,11 @@ export class PageParametresBornes extends PageBase {
 
 /** Saisie d'équipe (M6) : pointages du groupe, membres sortis du groupe signalés, modification de ceux encore identiques. */
 export class PageGroupePointage extends PageBase {
-  icone = '👥';
+  icone = icone('pointage_equipe');
 
   async ouvrir() {
-    this.titre = 'Saisie d\'équipe';
-    this.conteneur.innerHTML = '<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">👥 Saisie d\'équipe</h1></div><div data-groupe></div></div>';
+    this.titre = texte('pointage.groupe.titre');
+    this.conteneur.innerHTML = `<div class="page-parametres page-pointage"><div class="entete-page"><h1 class="page-titre">${iconeHtml('pointage_equipe')} ${texteHtml('pointage.groupe.titre')}</h1></div><div data-groupe></div></div>`;
     this.ref = await api.pointage.referentiels();
     await this.#charger();
   }
@@ -931,16 +936,16 @@ export class PageGroupePointage extends PageBase {
     let g;
     try { g = await api.pointage.groupe(this.requete.id); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
     const ref = g.pointages.find((p) => p.identique);
-    zone.innerHTML = `${g.origine ? '<p class="aide">Équipe d\'origine : tous les pointages sont identiques.</p>' : '<p class="avertissement">L\'équipe n\'est plus celle d\'origine : des pointages ont été modifiés à part.</p>'}
-      <table class="tableau-compact largeur-contenu"><thead><tr><th>Salarié</th><th>Date</th><th class="nombre">Heures</th><th>Groupe</th></tr></thead><tbody>
-      ${g.pointages.map((p) => `<tr><td>${echapper(p.salarie ? `${p.salarie.nom} ${p.salarie.prenom}` : '')}</td><td>${new Date(`${p.date}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' })}</td><td class="nombre">${ecrireDuree(p.minutes)}</td><td>${p.identique ? '✔' : '<span class="badge-exception">à part</span>'}</td></tr>`).join('')}</tbody></table>
-      <p class="ligne">Nouvelle durée pour les pointages du groupe : <input data-duree size="6" value="${ecrireDuree(ref?.minutes ?? 0)}"> <button type="button" data-appliquer title="Appliquer la durée à tous les pointages identiques du groupe">✔ Appliquer au groupe</button></p>`;
+    zone.innerHTML = `${g.origine ? `<p class="aide">${texteHtml('pointage.groupe.origine')}</p>` : `<p class="avertissement">${texteHtml('pointage.groupe.modifiee')}</p>`}
+      <table class="tableau-compact largeur-contenu"><thead><tr>${['salarie', 'date', 'heures', 'groupe'].map((k) => `<th${k === 'heures' ? ' class="nombre"' : ''}>${texteHtml(`pointage.groupe.${k}`)}</th>`).join('')}</tr></thead><tbody>
+      ${g.pointages.map((p) => `<tr><td>${echapper(p.salarie ? `${p.salarie.nom} ${p.salarie.prenom}` : '')}</td><td>${new Date(`${p.date}T00:00:00Z`).toLocaleDateString(langue(), { timeZone: 'UTC' })}</td><td class="nombre">${ecrireDuree(p.minutes)}</td><td>${p.identique ? iconeHtml('pointage_ok') : `<span class="badge-exception">${texteHtml('pointage.groupe.a_part')}</span>`}</td></tr>`).join('')}</tbody></table>
+      <p class="ligne">${texteHtml('pointage.groupe.nouvelle_duree')} <input data-duree size="6" value="${ecrireDuree(ref?.minutes ?? 0)}"> <button type="button" data-appliquer title="${texteHtml('pointage.groupe.appliquer_aide')}">${iconeHtml('pointage_ok')} ${texteHtml('pointage.groupe.appliquer')}</button></p>`;
     zone.querySelector('[data-appliquer]').addEventListener('click', async () => {
       const minutes = lireDuree(zone.querySelector('[data-duree]').value);
       if (!minutes || !ref) return;
       try {
         await api.pointage.modifierGroupe(this.requete.id, { cha_id: ref.cha_id, ent_id: ref.ent_id, type_mo: ref.type_mo, sous_type: ref.sous_type, minutes, motif: ref.motif });
-        this.app.message('Groupe modifié', 'succes');
+        this.app.message(texte('pointage.groupe.modifie'), 'succes');
         await this.#charger();
       } catch (e) { this.app.erreur(e); }
     });

@@ -518,26 +518,26 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .grille-pointage input:focus { outline: 2px solid var(--accent); }
 .grille-pointage td, .grille-pointage th { padding: 2px 4px; white-space: nowrap; }
 .grille-pointage input.duree { width: 4.2rem; text-align: right; }
-.grille-pointage input.invalide, .grille-pointage td.erreur input { outline: 2px solid #b42318; }
-.grille-pointage td.avertissement input { outline: 2px solid #d97706; }
+.grille-pointage input.invalide, .grille-pointage td.erreur input { outline: 2px solid var(--erreur); }
+.grille-pointage td.avertissement input { outline: 2px solid var(--pointage-avertissement); }
 td.nombre, th.nombre { text-align: right; }
 ul.controles { margin: 0; padding-left: 1.2rem; }
-ul.controles li.erreur { color: #b42318; }
-ul.controles li.avertissement { color: #b45309; }
+ul.controles li.erreur { color: var(--erreur); }
+ul.controles li.avertissement { color: var(--pointage-avertissement-texte); }
 
 /* Pointage (lot 2) : synthèse et validation. */
-.synthese-pointage td.etat-valide { color: #15803d; }
-.synthese-pointage td.etat-valide_chef { color: #1d4ed8; }
+.synthese-pointage td.etat-valide { color: var(--pointage-valide); }
+.synthese-pointage td.etat-valide_chef { color: var(--pointage-valide-chef); }
 /* États de validation : pastilles rondes de même taille, couleur par état (aussi dans la légende). */
-.pastille-etat { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 50%; box-sizing: border-box; vertical-align: middle; border: 2px solid #98a2b3; }
+.pastille-etat { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 50%; box-sizing: border-box; vertical-align: middle; border: 2px solid var(--pointage-etat-bord); }
 .pastille-etat.etat-non_valide { background: transparent; }
-.pastille-etat.etat-valide_chef { background: #1d4ed8; border-color: #1d4ed8; }
-.pastille-etat.etat-valide { background: #15803d; border-color: #15803d; }
+.pastille-etat.etat-valide_chef { background: var(--pointage-valide-chef); border-color: var(--pointage-valide-chef); }
+.pastille-etat.etat-valide { background: var(--pointage-valide); border-color: var(--pointage-valide); }
 .synthese-pointage td .pastille-etat { display: block; margin: 2px 0 0 auto; }
 .pastilles-etats { display: inline-flex; gap: 3px; vertical-align: middle; }
 /* Congés : pastille de la nature (couleur), contour pointillé tant que la demande n'est pas validée, demi-journée en dégradé. */
-.pastille-conge { --couleur-conge: #94a3b8; display: inline-block; min-width: 18px; padding: 0 3px; border-radius: 4px; font-size: 0.72em; line-height: 14px; text-align: center; vertical-align: middle;
-  background: var(--couleur-conge); color: #fff; border: 1px solid var(--couleur-conge); margin-right: 2px; font-weight: 600; }
+.pastille-conge { --couleur-conge: var(--pointage-nature-defaut); display: inline-block; min-width: 18px; padding: 0 3px; border-radius: 4px; font-size: 0.72em; line-height: 14px; text-align: center; vertical-align: middle;
+  background: var(--couleur-conge); color: var(--pointage-texte-sur-couleur); border: 1px solid var(--couleur-conge); margin-right: 2px; font-weight: 600; }
 .pastille-conge.etat-demande { background: transparent; color: var(--texte); border: 1px dashed var(--discret); }
 .pastille-conge.demi.etat-valide { background: linear-gradient(135deg, var(--couleur-conge) 50%, transparent 50%); color: var(--texte); }
 .etat-conge-refuse td, .etat-conge-annule td { color: var(--discret); text-decoration: line-through; }
@@ -547,8 +547,8 @@ dialog.dialogue-conge .grille-champs textarea { width: 100%; box-sizing: border-
 .panneau-legende:empty { display: none; }
 .panneau-legende { flex: none; display: flex; flex-wrap: wrap; gap: .3rem 1rem; align-items: center; padding: .35rem .6rem; border-top: 1px solid var(--bord); font-size: .85em; }
 .panneau-legende .aide { margin-left: auto; }
-.badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: rgba(217, 119, 6, .15); color: #b45309; white-space: nowrap; }
-.correction-attente { border: 1px solid #d97706; border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
+.badge-exception { display: inline-block; padding: 0 .35rem; border-radius: .6rem; font-size: .8em; background: color-mix(in srgb, var(--pointage-avertissement) 15%, transparent); color: var(--pointage-avertissement-texte); white-space: nowrap; }
+.correction-attente { border: 1px solid var(--pointage-avertissement); border-radius: .3rem; padding: .4rem .6rem; margin: .4rem 0; }
 /* Synthèse : page pleine hauteur, salariés dans un panneau à gauche (réductible, largeur au glisser), détail à droite. */
 .page-parametres.page-avec-panneau { overflow: hidden; gap: .35rem; }
 /* Ligne de titre d'une page : titre et commandes (semaine, filtres) sur la même ligne. */
@@ -728,43 +728,43 @@ body.mode-borne #bandeau { display: none; }
 .borne-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .7rem; margin: .6rem 0; }
 .borne-carte { min-height: 5.5rem; font-size: 1.1rem; border-radius: .6rem; border: 1px solid var(--bord); background: var(--fond-carte); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; padding: .5rem; }
 .borne-carte small { font-size: .8rem; opacity: .8; }
-.borne-carte.choisi, .borne-carte.propose { outline: 3px solid #2563eb; }
-.borne-avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.borne-carte.choisi, .borne-carte.propose { outline: 3px solid var(--borne-choix); }
+.borne-avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--borne-choix); color: var(--pointage-texte-sur-couleur); display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .borne-bouton { font-size: 1.15rem; padding: .7rem 1.2rem; border-radius: .5rem; }
-.borne-bouton.principal { background: #16a34a; color: #fff; border: none; }
-.borne-bouton.alerte { background: #d97706; color: #fff; border: none; }
+.borne-bouton.principal { background: var(--borne-principal); color: var(--pointage-texte-sur-couleur); border: none; }
+.borne-bouton.alerte { background: var(--pointage-avertissement); color: var(--pointage-texte-sur-couleur); border: none; }
 .borne-champ { font-size: 1.2rem; padding: .5rem; width: 22rem; max-width: 100%; }
 .borne-clavier { display: grid; grid-template-columns: repeat(3, 5rem); gap: .6rem; }
 .borne-touche { font-size: 1.8rem; height: 4.2rem; border-radius: .6rem; }
 .borne-pin { font-size: 2.4rem; letter-spacing: .4rem; }
 .borne-duree { font-size: 2.6rem; display: flex; align-items: center; gap: 1rem; }
 .borne-duree .borne-touche { width: 5rem; }
-.borne-erreur { color: #b42318; font-weight: 600; }
-.borne-succes { color: #15803d; font-weight: 600; font-size: 1.4rem; }
-.borne-test { background: #fef3c7; color: #92400e; border: 1px dashed #d97706; border-radius: .4rem; padding: .4rem .8rem; }
-.borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: rgba(37, 99, 235, .1); }
+.borne-erreur { color: var(--erreur); font-weight: 600; }
+.borne-succes { color: var(--pointage-valide); font-weight: 600; font-size: 1.4rem; }
+.borne-test { background: var(--borne-test-fond); color: var(--borne-test-texte); border: 1px dashed var(--pointage-avertissement); border-radius: .4rem; padding: .4rem .8rem; }
+.borne-journee { padding: .5rem .8rem; border-radius: .4rem; background: color-mix(in srgb, var(--borne-choix) 10%, transparent); }
 /* Entête des écrans de saisie : salarié, date de la journée (◀ ▶), heures déjà saisies. */
 .borne-entete-saisie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem 1.2rem; padding: .4rem 0 .7rem; margin-bottom: .6rem; border-bottom: 1px solid var(--bord); }
 .borne-date { display: flex; align-items: center; gap: .5rem; font-weight: 600; }
 .borne-date .borne-touche { width: 3.6rem; height: 3.2rem; font-size: 1.4rem; }
-.borne-date .autre-jour { color: #b45309; }
+.borne-date .autre-jour { color: var(--pointage-avertissement-texte); }
 .borne-totaux { text-align: right; }
 /* Liste des pointages de la journée : barre (durées fréquentes, enregistrer, retour) figée en haut. */
-.borne-barre { position: sticky; top: -1rem; z-index: 2; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .5rem 0; background: var(--fond, #fff); }
+.borne-barre { position: sticky; top: -1rem; z-index: 2; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .5rem 0; background: var(--fond); }
 .borne-barre-espace { flex: 1; }
 .borne-lignes { display: flex; flex-direction: column; gap: .6rem; margin: .4rem 0 1rem; }
 .borne-ligne { display: grid; grid-template-columns: minmax(14rem, 1fr) auto auto; gap: .6rem 1rem; align-items: center; padding: .6rem .8rem; border: 1px solid var(--bord); border-radius: .6rem; }
-.borne-ligne.nouvelle { border-left: 6px solid #16a34a; }
-.borne-ligne.focus { outline: 3px solid #2563eb; }
+.borne-ligne.nouvelle { border-left: 6px solid var(--borne-principal); }
+.borne-ligne.focus { outline: 3px solid var(--borne-choix); }
 .borne-ligne-duree { display: flex; align-items: center; gap: .4rem; }
 .borne-ligne-duree .borne-touche, .borne-ligne-notes .borne-touche { width: 3.6rem; height: 3.4rem; font-size: 1.5rem; }
 .borne-duree-champ { width: 6rem; font-size: 1.6rem; text-align: center; padding: .4rem; }
-.borne-duree-champ.invalide { outline: 3px solid #b42318; }
+.borne-duree-champ.invalide { outline: 3px solid var(--erreur); }
 .borne-duree-lecture { font-size: 1.5rem; font-weight: 600; }
 .borne-ligne-notes { display: flex; gap: .4rem; align-items: center; }
-.borne-note { font-size: 1.05rem; min-height: 3.4rem; padding: .4rem .8rem; border-radius: .5rem; border: 2px dashed var(--bord, #94a3b8); background: transparent; }
-.borne-note.renseigne { border-style: solid; border-color: #2563eb; background: rgba(37, 99, 235, .15); font-weight: 600; }
-.borne-note.nc.renseigne { border-color: #d97706; background: rgba(217, 119, 6, .18); }
+.borne-note { font-size: 1.05rem; min-height: 3.4rem; padding: .4rem .8rem; border-radius: .5rem; border: 2px dashed var(--bord); background: transparent; }
+.borne-note.renseigne { border-style: solid; border-color: var(--borne-choix); background: color-mix(in srgb, var(--borne-choix) 15%, transparent); font-weight: 600; }
+.borne-note.nc.renseigne { border-color: var(--pointage-avertissement); background: color-mix(in srgb, var(--pointage-avertissement) 18%, transparent); }
 .borne-texte { width: 100%; max-width: 48rem; font: inherit; font-size: 1.2rem; padding: .6rem; box-sizing: border-box; }
 @media (max-width: 900px) { .borne-ligne { grid-template-columns: 1fr; } }
 .page-parametres table.crm-table, .crm-principal table.crm-table { width: 100%; }
