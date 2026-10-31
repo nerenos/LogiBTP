@@ -5,7 +5,7 @@
 // AVANT l'import de l'application (client/src/main.js) : les constantes de module qui appellent texte() s'évaluent donc
 // avec les vrais textes. Hors navigateur (tests, Jint), initialiserDictionnaire() pose un dictionnaire synchrone.
 
-import { resoudre, resoudrePluriel, valeurBrute } from './resolution.js';
+import { resoudre, resoudrePluriel, valeurBrute, developper, variablesDe, interpoler } from './resolution.js';
 
 export { resoudre, resoudrePluriel, valeurBrute, interpoler, variablesDe, developper, clePluriel, cles, fusionner } from './resolution.js';
 
@@ -91,6 +91,20 @@ export function texteHtml(cle, valeurs, defaut) {
 
 /** La clé existe-t-elle ? */
 export const existe = (cle) => valeurBrute(etat.libelles, cle) !== undefined;
+
+/**
+ * Message d'une erreur par son code (lot P2) : « erreurs.<CODE> » du dictionnaire s'il existe, interpolé par les valeurs
+ * (les détails objet de l'erreur), sinon le message fourni (title du serveur, message du moteur) : aucune perte.
+ */
+export function messageErreur(code, message, valeurs) {
+  const brut = code ? valeurBrute(etat.libelles, `erreurs.${code}`) : undefined;
+  if (typeof brut !== 'string') return message;
+  const v = valeurs && typeof valeurs === 'object' && !Array.isArray(valeurs) ? valeurs : {};
+  // Une variable que l'erreur ne fournit pas : le message reçu, plus juste qu'un texte à trou.
+  const texte = developper(etat.libelles, brut);
+  if (variablesDe(texte).some((n) => v[n] === undefined || v[n] === null)) return message;
+  return interpoler(texte, v);
+}
 
 /** Langue des formats (dates, nombres) : _meta.langue du dictionnaire, « fr-FR » par défaut. */
 export const langue = () => etat.langue;

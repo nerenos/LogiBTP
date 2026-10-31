@@ -1,0 +1,20 @@
+{
+  "erreurs": {
+    "DEMANDE_CLOSE": "Demande déjà transformée ou sans suite",
+    "DEMANDE_PRISE": "Demande déjà prise en charge",
+    "DEMANDE_SERVICE": "Demande sans service : choisissez un autre responsable",
+    "DEMANDE_UTILISEE": "Demande suivie par des notes ou transformée : passez-la sans suite",
+    "FORMAT_PLAN": "Format des noms de plans : champs {repere}, {nom}, {lot}, {indice}, {*}, séparés par un texte fixe",
+    "INDICE_UTILISE": "Indice diffusé ou visé : suppression réservée à l'administrateur",
+    "INDIVIDU_INCONNU": "Votre identifiant de connexion n'est relié à aucun individu de l'annuaire",
+    "NOTE_LIEN": "Un seul élément principal",
+    "NOTE_PRISE": "Note déjà prise en charge",
+    "NOTE_SERVICE": "Note sans service : choisissez un autre responsable",
+    "NOTE_UTILISEE": "Note déjà lue, modifiée ou suivie d'une réponse : annulez-la plutôt",
+    "PLAN": "Repère et nom du plan obligatoires",
+    "PLAN_UTILISE": "Plan diffusé ou visé : suppression réservée à l'administrateur",
+    "SEUILS_RAPPEL": "Seuils en jours : rouge positif ou nul, orange au moins égal au rouge",
+    "VISA_EXISTANT": "Ce tiers a déjà un visa sur cet indice",
+    "VISA_RECU": "Visa reçu : remettez-le en attente ou demandez à l'administrateur"
+  }
+}

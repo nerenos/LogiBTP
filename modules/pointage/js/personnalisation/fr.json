@@ -1,0 +1,20 @@
+{
+  "erreurs": {
+    "BORNE_BLOQUE": "Trop d'essais : réessayer dans quelques minutes",
+    "BORNE_JETON": "Identification expirée : recommencer",
+    "BORNE_LIBELLE": "Libellé obligatoire",
+    "BORNE_SALARIE": "Ce salarié ne pointe pas sur cette borne",
+    "BORNE_SANS_PIN": "Aucun PIN : le demander au service RH",
+    "BORNE_TYPE_MO": "Type de main-d'œuvre non proposé par cette borne",
+    "CNG_NATURES": "Natures : code (20 caractères au plus, unique) et libellé obligatoires",
+    "CNG_VERSION": "Le congé a été modifié entre-temps : le recharger",
+    "POI_CORRECTION_TRAITEE": "Demande déjà traitée",
+    "POI_PARAMETRES": "Paramètres du pointage invalides",
+    "POI_RESTAURANT": "Création de restaurant non prise en charge",
+    "POI_RUBRIQUE": "Rubrique non saisissable ou date hors de la semaine",
+    "POI_SEMAINE_HORS": "Pointage hors de la semaine",
+    "POI_VALORISATION": "Mode de valorisation inconnu",
+    "POI_ZONE": "Agence obligatoire, zone de 0 à 9",
+    "PRF_CODE": "Code et libellé du profil obligatoires"
+  }
+}

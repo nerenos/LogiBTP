@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   resoudre, resoudrePluriel, fusionner, cles, variablesDe,
   initialiserDictionnaire, chargerDictionnaire, texte, pluriel, texteHtml, existe, langue, icone, iconeHtml, image, clesManquantes,
+  messageErreur,
 } from '../src/dictionnaire/index.js';
+import { ErreurApi } from '../src/api.js';
 
 const jeu = JSON.parse(readFileSync(new URL('../../tests/dictionnaire.json', import.meta.url), 'utf8'));
 
@@ -49,6 +51,21 @@ describe('dictionnaire courant', () => {
     texte('z.absente');
     expect(surManquante).toHaveBeenCalledTimes(1);
     expect(clesManquantes()).toEqual(['z.absente']);
+  });
+
+  it('message d\'erreur par code (lot P2) : dictionnaire, sinon message fourni', () => {
+    const surManquante = vi.fn();
+    initialiserDictionnaire({ libelles: { erreurs: { CODE_PRIS: 'Code {{code}} déjà pris', FIXE: 'Texte du dictionnaire' } }, surManquante });
+    expect(messageErreur('FIXE', 'Texte du serveur')).toBe('Texte du dictionnaire');
+    expect(messageErreur('CODE_PRIS', 'x', { code: 'C1' })).toBe('Code C1 déjà pris');
+    expect(messageErreur('CODE_PRIS', 'Code C1 pris', ['C1'])).toBe('Code C1 pris');
+    expect(messageErreur('CODE_PRIS', 'Code C1 pris')).toBe('Code C1 pris');
+    expect(messageErreur('INCONNU', 'Texte du serveur')).toBe('Texte du serveur');
+    expect(messageErreur(null, 'Texte du serveur')).toBe('Texte du serveur');
+    expect(surManquante).not.toHaveBeenCalled();
+    const e = new ErreurApi(422, 'FIXE', 'Texte du serveur');
+    expect([e.message, e.titre, e.code]).toEqual(['Texte du dictionnaire', 'Texte du serveur', 'FIXE']);
+    expect(new ErreurApi(500, 'HTTP', 'Erreur interne').message).toBe('Erreur interne');
   });
 
   it('chargement : fichiers servis, sinon secours', async () => {

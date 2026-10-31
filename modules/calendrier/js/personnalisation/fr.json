@@ -1,0 +1,8 @@
+{
+  "erreurs": {
+    "CALENDRIER": "Code et libellé obligatoires",
+    "CALENDRIER_DEFAUT": "Le calendrier par défaut ne se supprime pas",
+    "CALENDRIER_UTILISE": "Calendrier utilisé (services, ressources) : désactivez-le",
+    "FER_LIBELLE": "Libellé obligatoire"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "erreurs": {
+    "DELAI": "Délai négatif",
+    "SOUS_FAMILLES": "Famille contenant des sous-familles",
+    "UTILISEE": "Bibliothèque contenant des éléments : désactivez-la plutôt"
+  }
+}

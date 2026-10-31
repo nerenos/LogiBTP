@@ -1,0 +1,15 @@
+{
+  "erreurs": {
+    "ARCHIVE_PIECE": "Une pièce jointe s'archive avec son mail",
+    "DERIVATION_BOUCLE": "Un document ne dérive pas de lui-même",
+    "ETAPE": "Étape obligatoire",
+    "FORMULAIRE": "Formulaire multipart attendu",
+    "GENRE": "Genre edition ou etape attendu",
+    "INTEGRITE": "Contenu altéré : mise au coffre impossible",
+    "NON_ARCHIVE": "Ce document n'est pas archivé",
+    "NON_SUPPRIME": "Seul un document marqué comme supprimé peut être purgé",
+    "REPERTOIRE_ELEMENT": "Un répertoire se déplace sous le même élément",
+    "REPERTOIRE_NON_VIDE": "Le répertoire n'est pas vide",
+    "SUPPRIME": "Document supprimé : restaurez-le d'abord"
+  }
+}

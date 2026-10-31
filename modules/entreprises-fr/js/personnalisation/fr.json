@@ -1,0 +1,6 @@
+{
+  "erreurs": {
+    "INDISPONIBLE": "Annuaire des entreprises injoignable",
+    "RECHERCHE": "Saisissez au moins 3 caractères (nom, SIREN ou SIRET)"
+  }
+}

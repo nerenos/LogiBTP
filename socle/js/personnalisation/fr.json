@@ -131,5 +131,8 @@
       "aide_consultation": "Consultation seule : libellé non modifiable · Échap : fermer",
       "aide_saisie": "Entrée : paragraphe · Maj+Entrée : retour à la ligne · Ctrl+Entrée : valider · Échap : annuler"
     }
+  },
+  "erreurs": {
+    "FORMULE_VIDE": "Formule vide"
   }
 }

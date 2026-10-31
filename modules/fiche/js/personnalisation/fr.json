@@ -1,0 +1,7 @@
+{
+  "erreurs": {
+    "CHRONO_REPRISE": "Dernier rang positif ou nul",
+    "FICHE_MODIFIEE": "La fiche a été modifiée par ailleurs : rechargez-la",
+    "PROPRIETES": "Ce type de fiche n'a pas de champs supplémentaires"
+  }
+}

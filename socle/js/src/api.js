@@ -1,10 +1,13 @@
 // Appel de l'API du serveur (JSON ou formulaire multipart), commun aux fournisseurs des modules et au client.
 // Réponse d'erreur du serveur (UseErreursMetier) : { status, code, title, details } → ErreurApi (ou la classe dérivée
-// du module, pour qu'il garde son nom d'erreur).
+// du module, pour qu'il garde son nom d'erreur). Le message affiché est « erreurs.<code> » du dictionnaire s'il existe
+// (module Personnalisation, lot P2 ; détails objet en valeurs), sinon le title du serveur, gardé dans `titre`.
+import { messageErreur } from './dictionnaire/index.js';
 
 export class ErreurApi extends Error {
   constructor(statut, code, message, details = null) {
-    super(message);
+    super(messageErreur(code, message, details));
+    this.titre = message;
     this.statut = statut;
     this.code = code;
     this.details = details;

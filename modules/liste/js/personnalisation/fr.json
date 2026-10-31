@@ -1,0 +1,13 @@
+{
+  "erreurs": {
+    "COLONNE": "Colonne de segment attendue",
+    "COLONNES_DOUBLES": "La source contient des colonnes de même nom : donnez-leur un alias",
+    "CURSEUR": "Curseur incompatible avec le tri",
+    "LIGNE_MODIFIEE": "La ligne a été modifiée par ailleurs : valeurs actualisées",
+    "PARTAGE": "Partage P, G ou T",
+    "REQUETE_MULTIPLE": "Une seule instruction est autorisée",
+    "REQUETE_SELECT": "La requête doit commencer par SELECT ou WITH",
+    "REQUETE_VIDE": "Requête vide",
+    "TYPE_ELEMENT": "Type d'élément obligatoire"
+  }
+}

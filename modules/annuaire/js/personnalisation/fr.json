@@ -1,0 +1,6 @@
+{
+  "erreurs": {
+    "DOUBLON_NOM": "Des tiers de nom proche existent déjà : vérifiez avant de créer",
+    "RATTACHEMENT_MODIFIE": "Un rattachement a été modifié par ailleurs entre-temps : rechargez la fiche"
+  }
+}

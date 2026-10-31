@@ -327,3 +327,30 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   (`modules/personnalisation/js/test`), surcharge de l'installation (`LogiBTP.Personnalisation.Tests`), et côté client :
   toute clé littérale du code existe, chaque texte se résout (`client/test/personnalisation.test.js`). Les suites du
   socle, de la navigation et du client posent le dictionnaire avant les tests (`test/preparation.js`).
+
+## 13. Réalisation du lot P2 : erreurs par code (31/10/2026)
+
+- **Affichage** : `messageErreur(code, message, valeurs)` du socle (`@logibtp/socle/dictionnaire`) rend
+  `erreurs.<CODE>` s'il existe, sinon le message reçu. Il est appelé par `ErreurApi` (toutes les erreurs de l'API,
+  classes dérivées des modules comprises ; le `title` du serveur reste dans `titre`) et par `erreur` / `avertir` du
+  `MoteurDocument` JS (donc aussi du moteur BTP). Les détails objet de l'erreur sont les valeurs `{{nom}}` ; s'il manque
+  une valeur, le message reçu est gardé (jamais de texte à trou).
+- **Codes retenus** (`catalogueErreurs` du module, `modules/personnalisation/js/src/erreurs.js`) : un code n'entre au
+  dictionnaire que si tous les lieux qui le lèvent ont **le même message littéral**. Lieux relevés : C# de l'API
+  (`ExceptionMetier.Invalide` / `Conflit`, `new ExceptionMetier`, `ErreurListe`, `ErreurFiche`, codes littéraux ou
+  constantes) et JS des moteurs (`this.erreur`, `this.avertir`, `new ErreurCalcul`). Écartés : message composé
+  (interpolation, concaténation, choix), plusieurs messages pour un code, ou code employé ailleurs dans le C# (table
+  `Messages` d'un module de règles, aide propre à un service, code choisi par une expression) : le serveur pourrait le
+  lever avec un message plus précis, que le dictionnaire masquerait.
+- **Bilan** : 237 codes retenus ; 258 gardent le message du serveur (176 messages composés, 57 codes à plusieurs
+  messages, 25 employés ailleurs). `Introuvable` et `AccesRefuse` (messages composés) restent ceux du serveur.
+- **Couches** : chaque code va dans le `fr.json` de la couche la plus basse qui le lève (socle, puis module, puis cœur) ;
+  un module sans paquet JS (OAuth) a son dossier `personnalisation/` à sa racine. Vingt couches de modules s'ajoutent à
+  `couches.js` (ordre alphabétique, sans effet : textes sous le préfixe du module, erreurs sous leur code).
+- **Génération** : `npm run extraire-erreurs --workspace client` (`client/scripts/extraire-erreurs.mjs`) réécrit la
+  section `erreurs` de chaque couche et donne le bilan. Le test du client (`personnalisation.test.js`) refuse un code du
+  dictionnaire qui n'est plus sûr, dont le message a changé ou qui n'est pas dans sa couche, et toute couche du dépôt
+  absente de `couches.js`. Un message changé dans le C# : relancer l'extraction.
+- **Suites** : rendre sûrs les codes écartés en passant les valeurs dans `details` (puis `{{nom}}` dans le message) ou
+  en donnant un code propre à chaque message ; les messages des moteurs C# et du serveur (journaux, courriels) seront
+  traduits côté serveur (P7, lot « serveur »).

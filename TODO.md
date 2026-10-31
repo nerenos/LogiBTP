@@ -263,11 +263,12 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ### Personnalisation (textes, thème, images — [analyse](documentation/conception/ANALYSE-MODULE-PERSONNALISATION.md))
 
-Lot P1 fait (module, chargement, socle et navigation migrés). Suites, dans l'ordre de l'analyse (§ 7.1) :
+Lots P1 (module, chargement, socle et navigation migrés) et P2 (erreurs par code) faits. Suites, dans l'ordre de l'analyse (§ 7.1) :
 
-- [ ] **P2 — erreurs par code** : le client affiche `erreurs.<code>` s'il existe, sinon le `title` du serveur ; extraire
-  les ~400 codes de `ExceptionMetier` et des moteurs (`{ code, message }`) avec leur message actuel dans `fr.json`
-  (couche du module qui lève l'erreur), `details` passés en valeurs.
+- [ ] **Erreurs par code, suite de P2** (P2 fait : 237 codes sûrs au dictionnaire, § 13 de l'analyse) : 258 codes gardent
+  le message du serveur (messages composés, plusieurs messages pour un code, codes employés ailleurs) ; les rendre sûrs
+  au fil des lots par module (valeurs dans `details` et `{{nom}}`, ou un code par message), puis
+  `npm run extraire-erreurs --workspace client`.
 - [ ] **P3… — un lot par module puis par zone du cœur** : textes, icônes (`icone()`, `images/icones.json`) et couleurs en
   dur (variables du thème) ; Pointage d'abord (pages de référence, borne), puis Document, Liste, Fiche, GED…, menus
   (`navigation/menus.js`), pages du cœur. Chaque module reçoit son dossier `js/personnalisation/` et sa ligne dans

@@ -1,0 +1,6 @@
+{
+  "erreurs": {
+    "ETP_MOTIF": "Motif obligatoire pour annuler la validation d'une étape",
+    "PAR_MODELE": "Code et libellé du modèle obligatoires"
+  }
+}

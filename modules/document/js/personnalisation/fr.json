@@ -1,0 +1,31 @@
+{
+  "erreurs": {
+    "ARBRE": "Ligne hors arborescence (parent inconnu ou cycle)",
+    "CONTROLES": "Le document ne respecte pas le paramétrage",
+    "DECISION": "Décision S (serveur validé) ou A (anomalie)",
+    "DOCUMENT_BLOQUE": "Le statut du document ne permet pas la modification",
+    "DOCUMENT_LIE": "Le document a été transformé en d'autres documents",
+    "DOCUMENT_VALIDE": "Document validé et bloqué : créez une copie plutôt qu'un indice",
+    "INDICE_INTERDIT": "Pas d'indice pour ce type de document (règle Indices)",
+    "NUMERO_MOTIF": "Numérotation continue : motif du changement de numéro obligatoire",
+    "NUMERO_REPRISE": "Dernier numéro positif ou nul",
+    "NUMERO_TRANSFERE": "Pièce transférée en comptabilité : son numéro ne peut plus changer",
+    "OPTION_NON_TRAITEE": "Chaque option et chaque variante doit être retenue ou non avant la transformation",
+    "PARENT_INVALIDE": "Le type de la ligne parente n'accepte pas d'enfants",
+    "PIED_BASE": "La base doit être un sous-total de pied placé avant la ligne",
+    "PIED_GLOBAL": "Avec des pieds de section, le pied du document ne reçoit que des postes après TVA",
+    "PIED_RACINE": "Les lignes de pied sont au niveau racine ou dans une section",
+    "PIED_SECTION_INTERDIT": "Un pied de section n'existe que dans un document à plusieurs sections (plusieurs documents sources)",
+    "QTE": "La quantité soldée doit être positive",
+    "SECTION_RACINE": "Une section est au niveau racine",
+    "SITUATION_FACTUREE": "Situation déjà facturée : la correction passe par la situation suivante",
+    "SOURCES": "Aucun document source",
+    "SOURCE_DEJA_REPRISE": "Document déjà repris dans ce document",
+    "SOURCE_NON_VALIDEE": "Seul un document validé peut être transformé",
+    "SOUS_TOTAL_POINTE": "Le sous-total pointé doit être un sous-total précédent",
+    "TIERS_FIGE": "Document issu d'une transformation : le tiers ne change plus",
+    "TVA_DOUBLE": "Une seule ligne de ventilation TVA par document",
+    "TVA_MANQUANTE": "Taux de TVA manquant sur une ligne de prix",
+    "TVA_REPARTITION": "Aucune base de TVA sur laquelle répartir le poste"
+  }
+}

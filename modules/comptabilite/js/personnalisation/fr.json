@@ -1,0 +1,9 @@
+{
+  "erreurs": {
+    "CPT_LIBELLE": "Libellé du compte obligatoire",
+    "EXPORT_ANNULE": "Lot déjà annulé",
+    "TCO_LIBELLE": "Libellé du type comptable obligatoire",
+    "TVA_DOUBLON": "Même catégorie deux fois",
+    "VCO_CLE": "Une clé porte une nature, un taux de TVA ou les deux (sinon : compte par défaut du type)"
+  }
+}

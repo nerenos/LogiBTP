@@ -1,0 +1,16 @@
+{
+  "erreurs": {
+    "ADRESSE_INCONNUE": "Adresse de l'application non reconnue",
+    "CODE_EXPIRE": "Code expiré ou trop d'essais : reconnectez-vous pour recevoir un nouveau code",
+    "CODE_TROP_DEMANDE": "Trop de codes demandés : réessayez dans une heure",
+    "COMPTE_EXPIRE": "Compte expiré : adressez-vous à un administrateur",
+    "COMPTE_PROPRE": "Vous ne pouvez ni désactiver votre propre compte ni retirer son profil administrateur",
+    "LIEN_INVALIDE": "Lien expiré ou déjà utilisé : refaites une demande depuis la page de connexion",
+    "MDP_ACTUEL": "Mot de passe actuel incorrect",
+    "PERSONNE_OBLIGATOIRE": "Personne liée obligatoire",
+    "USURPATION_ADMIN": "Un compte administrateur ne peut pas être usurpé",
+    "USURPATION_EN_COURS": "Une usurpation est déjà en cours : terminez-la d'abord",
+    "USURPATION_MOTIF": "Motif de l'usurpation obligatoire (test des droits, dépannage…)",
+    "USURPATION_SOI": "Usurpation de son propre compte impossible"
+  }
+}

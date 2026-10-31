@@ -1,0 +1,10 @@
+{
+  "erreurs": {
+    "PD_EXISTE": "Une demande existe déjà pour cette facture",
+    "PD_FACTURE": "Seule une facture validée du sous-traitant fait l'objet d'une demande de paiement",
+    "PD_GARANTIE": "Le marché n'est ni en paiement direct ni en délégation de paiement",
+    "STT_DOUBLON": "Même pièce deux fois",
+    "STT_MOTIF": "Motif obligatoire pour dispenser une pièce",
+    "STT_PIECE": "Code et libellé de la pièce obligatoires"
+  }
+}
