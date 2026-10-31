@@ -217,5 +217,22 @@
   "sous_traitance_btp_sous_traiter": "🤝",
   "sous_traitance_btp_monter": "↑",
   "sous_traitance_btp_comparatif": "⚖",
-  "sous_traitance_btp_retenir": "✓"
+  "sous_traitance_btp_retenir": "✓",
+  "comptabilite_btp_plan": "📒",
+  "comptabilite_btp_hors_longueur": "⚠",
+  "comptabilite_btp_creer": "✓",
+  "comptabilite_btp_vers": "→",
+  "comptabilite_btp_tiers": "🗂",
+  "comptabilite_btp_generer": "⚙",
+  "comptabilite_btp_descendre": "↓",
+  "comptabilite_btp_monter": "↑",
+  "comptabilite_btp_piece": "✓",
+  "comptabilite_btp_ventilation": "🧮",
+  "comptabilite_btp_modifie": "●",
+  "comptabilite_btp_export": "📤",
+  "comptabilite_btp_apercu": "👁",
+  "comptabilite_btp_deplie": "▾",
+  "comptabilite_btp_replie": "▸",
+  "comptabilite_btp_telecharger": "⬇",
+  "comptabilite_btp_annuler": "↩"
 }

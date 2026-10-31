@@ -32,5 +32,8 @@
 ## Routes HTTP (préfixe `/api/comptabilite`, nœud de droits `comptabilite`)
 - `GET|PUT /parametres` ; `GET|POST /plan`, `PUT|DELETE /plan/{code}` ; `GET|PUT /collectifs` ; `GET|PUT /categories-tva` ; `GET|PUT /taux-tva` ; `GET|PUT /tiers`, `POST /tiers/generer` { type_compte } ; `GET|PUT /types-comptables` ; `GET /ventilation`, `PUT /ventilation/{type}` (liste complète du type), `GET /ventilation/regle` (types, clés, type comptable de chaque type de document) ; `GET /natures` ; `GET|PUT /types-documents` ; `GET /export/modeles`, `GET|PUT /export/modele`, `POST /export/apercu` { du, au, types }, `POST /export`, `GET /export` (lots), `GET /export/{id}/fichier`, `POST /export/{id}/annuler`.
 
+## Textes et icônes (module Personnalisation, lot P3o)
+- Textes `comptabilite.*` du `fr.json` du module (`comptes.erreurs`, `ventilation.origines`, `ventilation.erreurs` : `MESSAGES_COMPTES`, `ORIGINES_VENTILATION`, `MESSAGES_VENTILATION` par `textesParCode`) ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `comptabilite_btp.*`, icônes `comptabilite_btp_*`.
+
 ## Tests
 - `npm test --workspace modules/comptabilite/js` ; `dotnet test modules/comptabilite/dotnet/LogiBTP.Comptabilite.Tests` (même jeu).

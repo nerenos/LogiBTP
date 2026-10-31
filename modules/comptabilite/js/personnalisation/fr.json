@@ -5,5 +5,28 @@
     "TCO_LIBELLE": "Libellé du type comptable obligatoire",
     "TVA_DOUBLON": "Même catégorie deux fois",
     "VCO_CLE": "Une clé porte une nature, un taux de TVA ou les deux (sinon : compte par défaut du type)"
+  },
+  "comptabilite": {
+    "comptes": {
+      "erreurs": {
+        "CPT_VIDE": "Compte vide",
+        "CPT_CARACTERES": "Un compte général ne contient que des chiffres",
+        "CPT_CLASSE": "Un compte général commence par un chiffre de 1 à 9 (classe)",
+        "CPT_LONGUEUR": "Compte trop long",
+        "CPT_TIERS_CARACTERES": "Un compte de tiers ne contient que des lettres et des chiffres"
+      }
+    },
+    "ventilation": {
+      "origines": {
+        "LIGNE": "compte de la ligne",
+        "NATURE_TAUX": "nature et taux de TVA",
+        "NATURE": "nature",
+        "TAUX": "taux de TVA",
+        "TYPE": "type comptable"
+      },
+      "erreurs": {
+        "COMPTE_INTROUVABLE": "Aucun compte : ni sur la ligne, ni par la ventilation, ni par défaut pour le type comptable"
+      }
+    }
   }
 }

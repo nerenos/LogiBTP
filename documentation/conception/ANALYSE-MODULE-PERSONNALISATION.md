@@ -689,3 +689,24 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/sous-traitance/js/src` vérifiées
   par le test du client) ; affichage contrôlé dans le navigateur (API simulée : paiements et retenue, pièces, pièces
   exigées, comparatif, assistant Sous-traiter).
+
+## 28. Réalisation du lot P3o : module Comptabilité (31/10/2026)
+
+- **Périmètre** : le module (`modules/comptabilite/js/src` : messages des comptes, étapes et message de la règle de
+  ventilation ; dépendance au socle ajoutée) et ses écrans du cœur : page `comptabilite.js` (plan comptable, tiers par
+  compte, paramètres — comptes, collectifs, types comptables, types de documents, catégories et taux de TVA —,
+  ventilation natures × taux, export des écritures et lots), titres des routes.
+- **Textes** : `comptabilite.*` du module (`comptes.erreurs`, `ventilation.origines`, `ventilation.erreurs`) ;
+  `comptabilite_btp.*` du cœur (`routes`, `classes`, `types_compte`, `sens_compte`, `types_tiers`,
+  `comportements_tva`, `exigibilites`, `familles`, `postes` — comptes des postes des types comptables —, `plan`, `tiers`
+  — dont `segments` —, `ordre`, `parametres`, `ventilation`, `export`) ; compteurs par `pluriel` (comptes, lignes,
+  comptes créés, lignes sans compte, pièces, pièces exportables, exportées, exclues). Les tables gardent leur forme :
+  options { valeur, libelle } par `pairesParCode`, `CLASSES`, `TYPES_COMPTE_TIERS` et familles par `textesParCode` ;
+  bouton Enregistrer des sections commun (`boutonEnregistrer`).
+- **Icônes** : `comptabilite_btp_*` (plan, tiers, ventilation, export, aperçu, générer, hors longueur et doublon,
+  créer, pièce comptable, vers, modifié, replier / déplier une écriture, télécharger, annuler un lot, monter,
+  descendre) ; communes du socle (`ajouter`, `retirer`, `supprimer`).
+- **Couleurs** : aucune couleur en dur dans ces écrans (classes `discret`, `erreur` du thème).
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/comptabilite/js/src` vérifiées
+  par le test du client) ; affichage contrôlé dans le navigateur (API simulée : plan avec saisie d'un compte, tiers,
+  paramètres complets, ventilation, export avec aperçu et lots).

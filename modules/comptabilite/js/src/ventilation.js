@@ -4,18 +4,12 @@
 // comptable ; sinon COMPTE_INTROUVABLE. Aux étapes 2 à 5, le type comptable de la pièce passe avant son parent
 // (ex. sous-traitance → achat), puis le parent du parent.
 
-/** Étapes de la règle, dans l'ordre. */
-export const ORIGINES_VENTILATION = {
-  LIGNE: 'compte de la ligne',
-  NATURE_TAUX: 'nature et taux de TVA',
-  NATURE: 'nature',
-  TAUX: 'taux de TVA',
-  TYPE: 'type comptable',
-};
+import { textesParCode } from '@logibtp/socle/dictionnaire';
 
-export const MESSAGES_VENTILATION = {
-  COMPTE_INTROUVABLE: 'Aucun compte : ni sur la ligne, ni par la ventilation, ni par défaut pour le type comptable',
-};
+/** Étapes de la règle, dans l'ordre. */
+export const ORIGINES_VENTILATION = textesParCode('comptabilite.ventilation.origines', ['LIGNE', 'NATURE_TAUX', 'NATURE', 'TAUX', 'TYPE']);
+
+export const MESSAGES_VENTILATION = textesParCode('comptabilite.ventilation.erreurs', ['COMPTE_INTROUVABLE']);
 
 const texte = (v) => {
   const s = String(v ?? '').trim();
