@@ -59,6 +59,19 @@ export const TYPE_POSTE_MARCHE = Object.freeze({
   AUTRE: 'AUTRE',
 });
 
+/** Types de prix d'un marché (révision et actualisation, CONCEPTION-REVISION-PRIX.md Q1). */
+export const TYPE_PRIX = Object.freeze({
+  FERME: 'FERME',
+  ACTUALISABLE: 'ACTUALISABLE',
+  REVISABLE: 'REVISABLE',
+});
+
+/** Arrondi du coefficient de révision. */
+export const ARRONDI_REVISION = Object.freeze({
+  PROCHE: 'PROCHE',
+  SUPERIEUR: 'SUPERIEUR',
+});
+
 /** Types de ressources affectées (planning, affectations du matériel). */
 export const TYPE_RESSOURCE = Object.freeze({
   SALARIE: 'SALARIE',

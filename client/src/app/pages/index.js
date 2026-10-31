@@ -9,6 +9,7 @@ import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
+import { PageParametresRevision } from './parametres-revision.js';
 import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite, PageVentilation, PageExportComptable } from './comptabilite.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
@@ -22,6 +23,7 @@ import { PageGraphe } from './graphe.js';
 import { PageIntrouvable } from './introuvable.js';
 import { PageImportOptim } from './import-optim.js';
 import { PageReglements } from './reglements.js';
+import { PageMarchesAFacturer } from './marches-a-facturer.js';
 import { PageEdition } from './edition.js';
 import { PageParametresEditions } from './parametres-editions.js';
 import { PageParametresModules } from './parametres-modules.js';
@@ -76,6 +78,7 @@ export const ROUTES = [
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
+  { nom: 'parametres-revision', chemin: '/parametres/revision', page: PageParametresRevision, titre: 'Révision des prix' },
   { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: 'Pièces exigées des sous-traitants' },
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: 'Comparatif des offres' },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: 'État du stock' },
@@ -137,6 +140,7 @@ export const ROUTES = [
   { nom: 'notre-societe', chemin: '/annuaire/societe', page: PageNotreSociete, titre: 'Notre société' },
   { nom: 'import-optim', chemin: '/import/optimbtp', page: PageImportOptim, titre: "Import d'un devis OptimBTP" },
   { nom: 'reglements', chemin: '/reglements', page: PageReglements, titre: 'Règlements' },
+  { nom: 'marches-a-facturer', chemin: '/marches/a-facturer', page: PageMarchesAFacturer, titre: 'Marchés à facturer' },
   { nom: 'crm-note', chemin: '/crm/note/:id', page: PageNoteCrm, titre: 'Note' },
   { nom: 'crm-suivi', chemin: '/crm/suivi', page: PageSuiviCrm, titre: 'Suivi' },
   { nom: 'crm-rappels', chemin: '/crm/rappels', page: PageRappelsCrm, titre: 'Mes rappels' },

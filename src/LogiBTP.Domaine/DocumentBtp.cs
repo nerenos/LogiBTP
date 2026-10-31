@@ -41,6 +41,8 @@ public class DocumentBtp : Document
     public DateTimeOffset? EntDateMouvement { get; set; }
     public int? EntStkOrigineId { get; set; }
     public int? EntStkDestinationId { get; set; }
+    // Révision des prix (db/250) : mois des travaux d'une facture d'avancement (vide : mois de la date de la pièce).
+    public DateOnly? EntMoisRevision { get; set; }
     // Approvisionnement (db/218) : date de besoin d'une réservation, date de livraison prévue d'une commande fournisseur.
     public DateOnly? EntDateBesoin { get; set; }
     public DateOnly? EntDateLivraison { get; set; }

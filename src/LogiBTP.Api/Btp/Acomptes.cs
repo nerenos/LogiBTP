@@ -186,6 +186,64 @@ public static class Acomptes
         };
     }
 
+    /// <summary>Déduction calculée d'un acompte émis : acompte, déjà déduit par d'autres pièces, montant à déduire.</summary>
+    private sealed record DeductionCalculee(AcompteEmisSql Acompte, decimal Montant);
+
+    /// <summary>
+    /// Déductions des acomptes émis du marché pour une facture d'avancement (montants de la période et du cumul lus sur
+    /// ses lignes) : utilisées par <see cref="Appliquer"/> à la validation et par l'aperçu avant validation.
+    /// </summary>
+    private static async Task<(List<DeductionCalculee> Deductions, decimal Periode)> CalculerAsync(LogiBtpContext db, DocumentCompletBtp d, CancellationToken ct)
+    {
+        var marche = d.Document.EntMarcheId!.Value;
+        var acomptes = await db.Database.SqlQuery<AcompteEmisSql>($"""
+            SELECT a.mac_id AS id, a.mac_rang AS rang, a.mac_mode AS mode, a.mac_montant AS montant, a.mac_deduction AS deduction,
+              (SELECT coalesce(sum(x.acd_montant), 0) FROM acompte_deduction x JOIN document f ON f.ent_id = x.acd_ent_id
+               JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> 'ANNULE' AND f.ent_id <> {d.Document.EntId}) AS deduit,
+              a.mac_libelle AS libelle
+            FROM marche_acompte a JOIN document p ON p.ent_id = a.mac_piece_ent_id JOIN statut_document sp ON sp.std_id = p.ent_std_id
+            WHERE a.mac_mar_id = {marche} AND p.ent_verrouille AND sp.std_code <> 'ANNULE' ORDER BY a.mac_rang
+            """).ToListAsync(ct);
+        var avancees = d.Lignes.Where(l => l.LigAvtMode is not null && !TL.EstPied(l)).ToList();
+        var periode = avancees.Sum(l => l.LigMontantHt ?? 0);
+        var cumul = avancees.Sum(l => l.LigAvtMontantCumul ?? 0);
+        var total = avancees.Sum(l => l.LigAvtMontantMarche ?? 0);
+        var res = new List<DeductionCalculee>();
+        foreach (var a in acomptes)
+        {
+            // Trésorerie : déduction TTC (plafond PREMIERE : TTC de la période, au taux moyen du document).
+            var base_ = a.Mode == "CA" || d.Document.EntTotalHt == 0 ? periode : ArrondiCalcul.Arrondir(periode * d.Document.EntTotalTtc / d.Document.EntTotalHt, 2);
+            res.Add(new DeductionCalculee(a, Montant(a.Deduction, a.Montant, a.Deduit, base_, cumul, total)));
+        }
+        return (res, periode);
+    }
+
+    /// <summary>
+    /// Aperçu des déductions d'acompte d'une facture d'avancement d'un marché (onglet Règlements) : validée, les
+    /// déductions écrites ; sinon celles que la validation posera, calculées sur la saisie enregistrée.
+    /// </summary>
+    public static async Task<object> ApercuAsync(LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, long id, CancellationToken ct)
+    {
+        var d = await documents.Charger(id, ct);
+        var mode = (await Mode(db, ct)).Mode;
+        if (d.Document.EntMarcheId is null || d.Document.EntNatureAvoir is not null) return new { mode, valide = d.Document.EntVerrouille, deductions = Array.Empty<object>() };
+        var (calcul, _) = await CalculerAsync(db, d, ct);
+        var ecrites = d.Document.EntVerrouille
+            ? await db.Database.SqlQuery<DeductionEcriteSql>($"SELECT acd_mac_id AS acompte, acd_montant AS montant FROM acompte_deduction WHERE acd_ent_id = {id}").ToListAsync(ct)
+            : null;
+        return new
+        {
+            mode, valide = d.Document.EntVerrouille,
+            deductions = calcul.Select(x => new
+            {
+                acompte = x.Acompte.Id, rang = x.Acompte.Rang, libelle = x.Acompte.Libelle, mode = x.Acompte.Mode, deduction = x.Acompte.Deduction,
+                montant_acompte = x.Acompte.Montant, deja_deduit = x.Acompte.Deduit,
+                a_deduire = ecrites is null ? x.Montant : ecrites.Where(e => e.Acompte == x.Acompte.Id).Sum(e => e.Montant),
+                reste = x.Acompte.Montant - x.Acompte.Deduit - (ecrites is null ? x.Montant : ecrites.Where(e => e.Acompte == x.Acompte.Id).Sum(e => e.Montant)),
+            }).Where(x => x.a_deduire != 0 || x.montant_acompte != x.deja_deduit).ToList(),
+        };
+    }
+
     /// <summary>
     /// Déductions des acomptes émis du marché posées dans une facture d'avancement avant le calcul de sa validation
     /// (montants de la période et du cumul lus sur les lignes enregistrées).
@@ -193,25 +251,12 @@ public static class Acomptes
     public static async Task Appliquer(LogiBtpContext db, DocumentCompletBtp d, CancellationToken ct)
     {
         foreach (var l in d.Lignes.Where(l => (CleDe(l) ?? "").StartsWith('A')).ToList()) d.Lignes.Remove(l);
-        var marche = d.Document.EntMarcheId!.Value;
-        var acomptes = await db.Database.SqlQuery<AcompteEmisSql>($"""
-            SELECT a.mac_id AS id, a.mac_rang AS rang, a.mac_mode AS mode, a.mac_montant AS montant, a.mac_deduction AS deduction,
-              (SELECT coalesce(sum(x.acd_montant), 0) FROM acompte_deduction x JOIN document f ON f.ent_id = x.acd_ent_id
-               JOIN statut_document s ON s.std_id = f.ent_std_id WHERE x.acd_mac_id = a.mac_id AND s.std_code <> 'ANNULE' AND f.ent_id <> {d.Document.EntId}) AS deduit
-            FROM marche_acompte a JOIN document p ON p.ent_id = a.mac_piece_ent_id JOIN statut_document sp ON sp.std_id = p.ent_std_id
-            WHERE a.mac_mar_id = {marche} AND p.ent_verrouille AND sp.std_code <> 'ANNULE' ORDER BY a.mac_rang
-            """).ToListAsync(ct);
-        if (acomptes.Count == 0) return;
+        var (deductions, periode) = await CalculerAsync(db, d, ct);
+        if (deductions.Count == 0) return;
         var avancees = d.Lignes.Where(l => l.LigAvtMode is not null && !TL.EstPied(l)).ToList();
-        var periode = avancees.Sum(l => l.LigMontantHt ?? 0);
-        var cumul = avancees.Sum(l => l.LigAvtMontantCumul ?? 0);
-        var total = avancees.Sum(l => l.LigAvtMontantMarche ?? 0);
         var prochainId = Math.Min(0, d.Lignes.Count == 0 ? 0 : d.Lignes.Min(l => l.LigId)) - 1;
-        foreach (var a in acomptes)
+        foreach (var (a, montant) in deductions)
         {
-            // Trésorerie : déduction TTC (plafond PREMIERE : TTC de la période, au taux moyen du document).
-            var base_ = a.Mode == "CA" || d.Document.EntTotalHt == 0 ? periode : ArrondiCalcul.Arrondir(periode * d.Document.EntTotalTtc / d.Document.EntTotalHt, 2);
-            var montant = Montant(a.Deduction, a.Montant, a.Deduit, base_, cumul, total);
             if (montant == 0) continue;
             var libelle = $"Déduction de l'acompte n° {a.Rang}";
             if (a.Mode != "CA")
@@ -272,5 +317,6 @@ public static class Acomptes
     private sealed record MarcheAcompteSql(string Libelle, string Code, long? Tiers, decimal? Montant, int? Chantier, int Rang);
     private sealed record AcompteSql(string Mode, long? Demande, long? Piece);
     private sealed record TauxAcompteSql(int? Tva, decimal Montant);
-    private sealed record AcompteEmisSql(int Id, short Rang, string Mode, decimal Montant, string Deduction, decimal Deduit);
+    private sealed record AcompteEmisSql(int Id, short Rang, string Mode, decimal Montant, string Deduction, decimal Deduit, string? Libelle);
+    private sealed record DeductionEcriteSql(int Acompte, decimal Montant);
 }

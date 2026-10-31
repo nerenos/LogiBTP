@@ -1,5 +1,5 @@
 import { urlDocument } from '../codes.js';
-import { aujourdhui } from '@logibtp/socle';
+import { D, aujourdhui } from '@logibtp/socle';
 import { echapper, formatNombre, lireNombre, creerCombo, confirmer } from '@logibtp/socle/ui';
 import { ETATS_PAIEMENT_DIRECT, MESSAGES_PAIEMENT_DIRECT, MESSAGES_RETENUE, controlerAcceptation } from '@logibtp/sous-traitance';
 import { api } from '../api.js';
@@ -121,13 +121,15 @@ export async function rendreRetenue(zone, { marche, message }) {
       ${lib.echeance ? ` · échéance ${jour(lib.echeance)}` : ''} · ${etat}
       ${!r.liberee_le && lib.liberable && nonDatees.length ? '<button type="button" data-liberer title="Dater les échéances de retenue au jour : le module Règlements les propose au pointage">🔓 Libérer</button>' : ''}</p>
     <p class="aide">Réception, réserves et levée se saisissent dans l'onglet du marché (groupe Conditions).</p>
-    <table class="tableau-compact"><thead><tr><th>Pièce</th><th>Date</th><th class="nombre">Retenue</th><th>Échéance</th></tr></thead><tbody>
+    <table class="tableau-compact"><thead><tr><th>Pièce</th><th>Date</th><th class="nombre">Retenue</th><th class="nombre" title="Part couverte par une caution : exigible avec la pièce">Dont cautionné</th><th>Échéance</th></tr></thead><tbody>
     ${r.retenues.length ? r.retenues.map((x) => `<tr><td><a href="${urlDocument(Number(x.ent_id))}">${echapper(x.numero ?? `#${x.ent_id}`)}</a> <small class="aide">${echapper(x.type)}</small></td>
-      <td>${jour(x.date_document)}</td><td class="nombre">${f(x.montant)}</td><td>${x.date ? jour(x.date) : '<span class="aide">à la libération</span>'}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="aide">Aucune retenue sur les pièces validées du marché.</td></tr>'}
-    </tbody><tfoot><tr><th colspan="2">Total</th><th class="nombre">${f(r.total)}</th><th></th></tr></tfoot></table>
-    ${r.cautions.length ? `<h4>Cautions</h4><table class="tableau-compact"><thead><tr><th>Organisme</th><th>Référence</th><th class="nombre">Montant</th><th>Du</th><th>Au</th><th>Mainlevée</th></tr></thead><tbody>
-      ${r.cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td><td class="nombre">${f(c.montant)}</td><td>${jour(c.date)}</td>
+      <td>${jour(x.date_document)}</td><td class="nombre">${f(x.montant)}</td><td class="nombre">${!D(x.cautionne ?? 0).isZero() ? f(x.cautionne) : ''}</td><td>${x.date ? jour(x.date) : '<span class="aide">à la libération</span>'}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="aide">Aucune retenue sur les pièces validées du marché.</td></tr>'}
+    </tbody><tfoot><tr><th colspan="2">Total</th><th class="nombre">${f(r.total)}</th><th class="nombre">${!D(r.cautionne ?? 0).isZero() ? f(r.cautionne) : ''}</th><th></th></tr></tfoot></table>
+    ${r.cautions.length ? `<h4>Cautions</h4><p class="aide">Une caution remplace la retenue : la part cautionnée est exigible avec la pièce ; elle se consomme sur les retenues les plus anciennes, la retenue non couverte reste due à la libération.</p>
+      <table class="tableau-compact"><thead><tr><th>Organisme</th><th>Référence</th><th class="nombre">Montant</th><th class="nombre">Consommé</th><th>Portée</th><th>Du</th><th>Au</th><th>Mainlevée</th></tr></thead><tbody>
+      ${r.cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td><td class="nombre">${f(c.montant)}</td><td class="nombre">${f(c.consomme)}</td>
+        <td>${c.objet_id ? 'Ce marché' : 'Toutes les retenues du tiers'}</td><td>${jour(c.date)}</td>
         <td>${jour(c.date_fin)}</td><td>${jour(c.mainlevee)}</td></tr>`).join('')}</tbody></table>` : ''}`;
   zone.querySelector('[data-liberer]')?.addEventListener('click', async () => {
     try {

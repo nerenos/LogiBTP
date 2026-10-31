@@ -62,6 +62,7 @@ export const MENUS_METIER = [
       { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)', creation: F(TYPE_FICHE.AFFAIRE, 'Nouvelle affaire') },
       { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers'), creation: F(TYPE_FICHE.CHANTIER, 'Nouveau chantier') },
       { code: 'marches', libelle: 'Marchés', icone: '📜', url: L('marches'), info: 'Ouverts à la validation des commandes clients : suivi de la facturation', creation: F(TYPE_FICHE.MARCHE, 'Nouveau marché') },
+      { code: 'revision-prix', libelle: 'Révision des prix : index et formules', icone: '📈', url: '/parametres/revision', info: 'Valeurs mensuelles des index (saisie, import CSV), catalogue et modèles de formules' },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const MENUS_METIER = [
       { code: 'commandes', libelle: 'Commandes clients', icone: '🤝', url: L('commandes'), creation: D('V_COMMANDE', 'Nouvelle commande client') },
       { code: 'livraisons', libelle: 'Bons de livraison et de retour', icone: '🚚', url: L('livraisons'), creation: D('V_RECEPTION', 'Nouveau bon de livraison') },
       { code: 'situations', libelle: 'Situations de travaux', icone: '📈', url: L('situations'), creation: D('V_SITUATION', 'Nouvelle situation de travaux') },
+      { code: 'marches-a-facturer', libelle: 'Marchés à facturer du mois', icone: '🧾', url: '/marches/a-facturer', droit: 'structure', info: 'Marchés en cours sans situation du mois : créer les situations d\'un clic ou noter « pas d\'avancement »' },
       { code: 'factures', libelle: 'Factures, factures d\'avancement, avoirs', icone: '💶', url: L('factures'), creation: D('V_FACTURE', 'Nouvelle facture') },
       { code: 'documents', libelle: 'Tous les documents', icone: '📄', url: L('documents') },
       { code: 'reglements-clients', libelle: 'Règlements clients', icone: '💳', url: '/reglements?sens=E', info: 'Échéances, règlements, pointage et cautions (module Règlements)', module: MODULE_FACULTATIF.REGLEMENT },

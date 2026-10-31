@@ -63,11 +63,11 @@ INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, e
 
 -- Postes de pied (POSTE_PIED, modules/bibliotheque/db/063) : sans prix.
 INSERT INTO element (ele_id, ele_bib_id, ele_code, ele_type, ele_libelle_html, ele_libelle, ele_gestion, ele_unt_stock, ele_coef_fg, ele_coef_benef, ele_actif,
-  ele_maj_par, ele_commentaire_prix, ele_pied_niveau, ele_pied_mode, ele_pied_base, ele_pied_sens, ele_pied_valeur, ele_pied_retenue, ele_cpt_code, ele_tva_code) VALUES
- (11, 1, 'RG5', 'POSTE_PIED', '<p>Retenue de garantie 5 %</p>', 'Retenue de garantie 5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'TTC', 'P', 'CUMUL', 'DEDUCTION', 5, TRUE, '411700', NULL),
- (12, 1, 'PRORATA', 'POSTE_PIED', '<p>Compte prorata 1,5 %</p>', 'Compte prorata 1,5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'P', 'TOTAL_HT', 'DEDUCTION', 1.5, FALSE, NULL, NULL),
- (13, 1, 'REMISE5', 'POSTE_PIED', '<p>Remise commerciale 5 %</p>', 'Remise commerciale 5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'P', 'CUMUL', 'DEDUCTION', 5, FALSE, NULL, NULL),
- (14, 1, 'FRAISDOS', 'POSTE_PIED', '<p>Frais de dossier</p>', 'Frais de dossier', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'M', NULL, 'AJOUT', 150, FALSE, NULL, 'T20');
+  ele_maj_par, ele_commentaire_prix, ele_pied_niveau, ele_pied_mode, ele_pied_base, ele_pied_sens, ele_pied_valeur, ele_pied_retenue, ele_cpt_code, ele_tva_code, ele_pied_genre) VALUES
+ (11, 1, 'RG5', 'POSTE_PIED', '<p>Retenue de garantie 5 %</p>', 'Retenue de garantie 5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'TTC', 'P', 'CUMUL', 'DEDUCTION', 5, TRUE, '411700', NULL, 'RETENUE'),
+ (12, 1, 'PRORATA', 'POSTE_PIED', '<p>Compte prorata 1,5 %</p>', 'Compte prorata 1,5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'P', 'TOTAL_HT', 'DEDUCTION', 1.5, FALSE, NULL, NULL, 'PRORATA'),
+ (13, 1, 'REMISE5', 'POSTE_PIED', '<p>Remise commerciale 5 %</p>', 'Remise commerciale 5 %', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'P', 'CUMUL', 'DEDUCTION', 5, FALSE, NULL, NULL, 'REMISE'),
+ (14, 1, 'FRAISDOS', 'POSTE_PIED', '<p>Frais de dossier</p>', 'Frais de dossier', 'NON_GERE', 'u', 1, 1, TRUE, 'demo', 'Données de démonstration', 'HT', 'M', NULL, 'AJOUT', 150, FALSE, NULL, 'T20', 'AUTRE');
 
 INSERT INTO tarif_fournisseur (tfo_id, tfo_ele_id, tfo_fournisseur, tfo_reference, tfo_libelle, tfo_unt_code, tfo_prix, tfo_debut, tfo_fin, tfo_principal, tfo_lien, tfo_maj_par) VALUES
  (1, 1, 'Aciers du Rhône', 'HA10-12', 'HA10 L 12 m', 't', 1150, '2026-01-01', NULL, TRUE, 'https://example.com/tarifs/aciers-du-rhone', 'demo'),

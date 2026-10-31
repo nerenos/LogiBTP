@@ -223,5 +223,8 @@ public sealed class ConditionsDefaut
     public string? Achat { get; set; }
 }
 
-/// <summary>Échéance saisie (modification manuelle de l'échéancier d'une pièce validée).</summary>
-public sealed record EcheanceSaisie(DateOnly? Date, decimal Montant, string? Mode, string Nature);
+/// <summary>
+/// Échéance saisie (modification manuelle de l'échéancier d'une pièce validée) : identifiant d'une échéance existante
+/// (gardé : ses pointages la suivent), sinon nouvelle échéance.
+/// </summary>
+public sealed record EcheanceSaisie(DateOnly? Date, decimal Montant, string? Mode, string Nature, long? Id = null);

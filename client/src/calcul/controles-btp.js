@@ -31,6 +31,7 @@ export const CONTROLE_SAISIE = Object.freeze({
   COEF_BENEF_INFERIEUR: 'COEF_BENEF_INFERIEUR',
   PRIX_NUL: 'PRIX_NUL',
   QTE_NULLE: 'QTE_NULLE',
+  CHANTIER_LIGNE: 'CHANTIER_LIGNE',
 });
 export const LIBELLES_CONTROLE_SAISIE = Object.freeze({
   [CONTROLE_SAISIE.UNITE_MANQUANTE]: 'Sans unité',
@@ -38,6 +39,7 @@ export const LIBELLES_CONTROLE_SAISIE = Object.freeze({
   [CONTROLE_SAISIE.COEF_BENEF_INFERIEUR]: 'Coef bénéfice < 1',
   [CONTROLE_SAISIE.PRIX_NUL]: 'PA et PV à 0',
   [CONTROLE_SAISIE.QTE_NULLE]: 'Quantité à 0',
+  [CONTROLE_SAISIE.CHANTIER_LIGNE]: 'Autre chantier',
 });
 
 /**
@@ -45,9 +47,10 @@ export const LIBELLES_CONTROLE_SAISIE = Object.freeze({
  * gravite }]. Lignes écartées : écart d'arrondi, pour mémoire et frais annexes (type de prix effectif). Coefficients :
  * ventes seulement, sur les lignes sans composante et sur les ouvrages calculés par leurs coefficients (mode D).
  * options : { famille, modeOuvrage, typePrix(l) → type de prix effectif, qteNulle (false : quantités à 0 non signalées,
- * documents transformés ou d'avancement dont les lignes soldées restent à 0) }.
+ * documents transformés ou d'avancement dont les lignes soldées restent à 0), achat (document d'achat) et chantier
+ * (chantier de l'entête) : ligne d'achat d'un autre chantier signalée (plusieurs chantiers : entête à vider) }.
  */
-export function controlesSaisie(lignes, { famille = 'V', modeOuvrage = 'V', typePrix = (l) => l.lig_type_prix ?? 'V', qteNulle = true } = {}) {
+export function controlesSaisie(lignes, { famille = 'V', modeOuvrage = 'V', typePrix = (l) => l.lig_type_prix ?? 'V', qteNulle = true, achat = false, chantier = null } = {}) {
   const parents = new Set(lignes.map((l) => l.lig_parent_id).filter((p) => p !== null && p !== undefined));
   const res = [];
   const ajouter = (l, code, message) => res.push({ lig_id: l.lig_id, code, message, gravite: 'avertissement' });
@@ -61,6 +64,9 @@ export function controlesSaisie(lignes, { famille = 'V', modeOuvrage = 'V', type
     }
     if (Dz(l.lig_pa).isZero() && Dz(l.lig_pv).isZero()) ajouter(l, CONTROLE_SAISIE.PRIX_NUL, 'Ligne de prix à 0 (PA et PV)');
     if (qteNulle && Dz(l.lig_qte).isZero()) ajouter(l, CONTROLE_SAISIE.QTE_NULLE, 'Quantité à 0');
+    if (achat && chantier !== null && chantier !== undefined && l.lig_cha_id !== null && l.lig_cha_id !== undefined && Number(l.lig_cha_id) !== Number(chantier)) {
+      ajouter(l, CONTROLE_SAISIE.CHANTIER_LIGNE, 'Ligne d\'un autre chantier que l\'entête (plusieurs chantiers : laisser le chantier de l\'entête vide)');
+    }
   }
   return res;
 }

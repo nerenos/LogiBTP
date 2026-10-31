@@ -80,7 +80,7 @@ export function valeursPoste(e, bibDocument, taux = []) {
     lig_pied_mode: mode, lig_pied_base: mode === 'M' || !p.base || p.base === 'CUMUL' ? null : p.base,
     lig_pied_sens: p.sens === 'AJOUT' ? 1 : -1, lig_pied_valeur: nombre(p.valeur), lig_pied_retenue: p.retenue === true,
     lig_cpt_code: p.compte || null, ...(p.tva ? { lig_tva_id: taux.find((t) => t.ttv_code === p.tva)?.ttv_id ?? null } : {}),
-    lig_proprietes: { element: lien(e) },
+    lig_proprietes: { element: lien(e), ...(p.genre ? { genre_poste: p.genre } : {}) },
   };
 }
 

@@ -216,7 +216,15 @@ pointe sur une facture (compensation). Règle de calcul répliquée JS / C# avec
 couvrant la retenue de garantie : pointée sur les échéances de retenue (la retenue devient « libérée par caution ») ou
 empêche la retenue sur les factures suivantes (Q7). Mainlevée de la caution à la réception + 1 an.
 
-**Décision** :
+**Décision** (31/10/2026, lot F) : une caution remplace la retenue de garantie, elle ne la règle pas : la part
+cautionnée d'une retenue n'est pas retenue, elle est exigible avec la pièce (proposée au pointage à la date de la pièce) ;
+la part non couverte reste retenue jusqu'à la libération. Une caution couvre plusieurs retenues et une retenue peut
+n'être couverte qu'en partie (une pièce a alors une part cautionnée et une part retenue). Consommation calculée à la
+lecture, sans pointage (`consommerCautions` ↔ `ResteAPayer.ConsommerCautions`, jeu `tests/cas/02_cautions.json`) :
+retenues des pièces les plus anciennes d'abord (date de la pièce, sans date en dernier) ; cautions du marché avant
+celles sans objet (toutes les retenues du tiers), puis par date ; une caution levée ne couvre plus les pièces datées de
+sa mainlevée ou après. Part cautionnée restant à pointer : `exigibleCaution` (les règlements pointent d'abord la part
+cautionnée). Les anciens pointages de caution sont retirés (`modules/reglement/db/081`).
 
 ### Q18. Écrans
 
@@ -480,9 +488,10 @@ Développement lancé le 17/10/2026 : pour les questions sans décision, la prop
 - Règle répliquée `reste.js` ↔ `ResteAPayer.cs` (jeu `tests/cas/01_reste.json`) : reste d'une échéance et d'une pièce
   (REGLEE / PARTIELLE / A_REGLER), non pointé d'un règlement (trop-perçu, compensation facture / avoir), proposition de
   pointage (plus ancienne d'abord, sans date en dernier, même signe). Seuil d'écart : 0 (point d'accroche `Seuil`).
-- Contrôles : même tiers et sens, signe de l'échéance, échéance et source non dépassées, caution sur retenues seulement.
+- Contrôles : même tiers et sens, signe de l'échéance, échéance et source non dépassées ; cautions : consommation
+  calculée sur les retenues (Q17, lot F), aucun pointage.
 - Écrans : `/reglements?sens=E|D&tiers=` (menus Ventes et Achats) : échéances avec reste et saisie « à pointer »,
-  règlement (Répartir, Enregistrer), règlements du tiers, cautions pointant les retenues ; onglet Gestion du marché :
+  règlement (Répartir, Enregistrer), règlements du tiers, cautions (consommé, disponible, portée, pièces couvertes) ; onglet Gestion du marché :
   colonnes Réglé / Reste à payer des factures quand le module répond (11.5 : sans lui, pas de colonnes).
 - Vérifié sur la base de démo : virement de 30 000 € pointé sur SI2026-00004 et SI2026-00005, caution de 5 000 € sur la
   retenue de SI2026-00004 (pièce réglée), refus d'un pointage au-delà de l'échéance.

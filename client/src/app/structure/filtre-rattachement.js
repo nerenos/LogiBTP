@@ -11,7 +11,8 @@ import { champRattachement } from './selection.js';
 export const NIVEAUX = [
   { type: TYPE_FICHE.PROJET, colonne: 'projet_id', liste: 'projets', titre: 'Projet' },
   { type: TYPE_FICHE.AFFAIRE, colonne: 'affaire_id', liste: 'affaires', titre: 'Affaire' },
-  { type: TYPE_FICHE.CHANTIER, colonne: 'chantier_id', liste: 'chantiers', titre: 'Chantier' },
+  // Documents : chantier de l'entête, sinon des lignes d'achat et des documents sources (colonne chantiers, db/248).
+  { type: TYPE_FICHE.CHANTIER, colonne: 'chantier_id', colonneDocuments: 'chantiers', liste: 'chantiers', titre: 'Chantier' },
   { type: TYPE_FICHE.MARCHE, colonne: 'marche_id', liste: 'marches', titre: 'Marché' },
 ];
 
@@ -53,11 +54,11 @@ export class FiltreRattachement {
       this.id = (this.refs[voulu.liste] ?? []).find((x) => x.code.toLowerCase() === String(codes[voulu.type]).toLowerCase())?.id ?? null;
     }
     const f = {};
-    for (const n of NIVEAUX) { f[n.colonne] = null; f[n.type] = null; }
+    for (const n of NIVEAUX) { f[n.colonne] = null; f[n.type] = null; if (n.colonneDocuments) f[n.colonneDocuments] = null; }
     this.colonneSimple = null;
     const x = this.#element();
     if (!x) return f;
-    if (source === 'documents') f[this.niveau.colonne] = [String(x.id)];
+    if (source === 'documents') f[this.niveau.colonneDocuments ?? this.niveau.colonne] = [String(x.id)];
     else if (colonnes.includes(this.niveau.type) && `${this.niveau.type}s` !== source) {
       f[this.niveau.type] = [x.code];
       this.colonneSimple = this.niveau.type;

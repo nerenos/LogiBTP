@@ -67,8 +67,10 @@ public class VentilationEntite
 {
     public int VcoId { get; set; }
     public string VcoTcoCode { get; set; } = "";
-    public string? VcoNature { get; set; }
-    public string? VcoTaux { get; set; }
+    /// <summary>Nature (identifiant fourni par l'application) ; null : toutes natures.</summary>
+    public int? VcoNatId { get; set; }
+    /// <summary>Taux de TVA (identifiant fourni par l'application) ; null : tous taux.</summary>
+    public int? VcoTtvId { get; set; }
     public string VcoCptCode { get; set; } = "";
 }
 
@@ -145,7 +147,7 @@ public sealed record TypeComptableDto(string Code, string Libelle, string? Paren
 public sealed record CleVentilationDto(string Type, string? Nature, string? Taux, string Compte);
 
 /// <summary>Nature de l'application (code, libellé) pour le tableau de ventilation.</summary>
-public sealed record NatureVentilation(string Code, string Libelle, bool Actif);
+public sealed record NatureVentilation(int Id, string Code, string Libelle, bool Actif);
 
 /// <summary>Type de document et son type comptable : surcharge (TypeComptable) et effectif (celui de sa famille sinon).</summary>
 public sealed record TypeDocumentComptable(string Code, string Libelle, string Famille, string? TypeComptable, string? TypeEffectif, bool PieceComptable);
