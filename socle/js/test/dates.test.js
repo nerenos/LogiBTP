@@ -26,3 +26,17 @@ describe('dates', () => {
     expect(ajouterMois('2026-03-15', -3)).toBe('2025-12-15');
   });
 });
+
+describe('saisie abrégée des dates (jeu socle/tests/dates_saisie.json)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { completerDate, texteDate } = await import('../src/calcul/index.js');
+  const jeu = JSON.parse(readFileSync(new URL('../../tests/dates_saisie.json', import.meta.url), 'utf8'));
+  for (const c of jeu.cas) {
+    it(c.nom, () => expect(completerDate(c.saisie, jeu.reference)).toBe(c.attendu));
+  }
+  it('texte affiché', () => {
+    expect(texteDate('2026-05-16')).toBe('16/05/2026');
+    expect(texteDate('')).toBe('');
+    expect(texteDate(null)).toBe('');
+  });
+});

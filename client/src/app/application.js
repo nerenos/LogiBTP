@@ -5,7 +5,7 @@ import { accesSousArbre, autorise } from '@logibtp/droits';
 import { Bandeau, PanneauFenetres, confirmerFermetureSession, DISPOSITION_DEFAUT } from '@logibtp/navigation/ui';
 import { GestionThemes } from '@logibtp/liste/ui';
 import { ParametrageFiche } from '@logibtp/fiche/ui';
-import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos } from '@logibtp/socle/ui';
+import { echapper, appliquerTheme, actionDe, definirAideRaccourcis, confirmer, formatHeure, activerCombos, activerDates } from '@logibtp/socle/ui';
 import './raccourcis.js';
 import { api, ErreurApi } from './api.js';
 import { creerFournisseurListe, estTypeDocument, LIBELLES_ELEMENTS } from './listes.js';
@@ -59,6 +59,7 @@ export class Application {
   async demarrer() {
     // Listes de choix : les <select> encore construits par les écrans s'affichent en combos du socle.
     activerCombos(document.body);
+    activerDates(document.body);
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {

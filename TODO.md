@@ -261,6 +261,23 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 
 ## Interface
 
+### Ergonomie ([analyse du 31/10/2026](documentation/conception/ANALYSE-ERGONOMIE.md), décisions Q1–Q16 prises)
+
+- [ ] E1 : fenêtre des messages d'erreur à décompte (I4), détail des erreurs de validation (I5), infobulles du thème
+  (I8), séparateurs des barres d'outils (I7) ; après la PR de personnalisation (dictionnaire, `theme.css`).
+- [ ] E3 : densité confortable / compacte (I6), « Mon terrain » dans le menu Pointage (I9).
+- [ ] E4 à E6 : listes — pastilles de statut, barre réordonnée, création des ordres (L2, L5, O1) ; panneau des vues à
+  droite, distinct du panneau des segments (L1) ; totaux et bandeau d'indicateurs répliqués JS / C# (L3, L4).
+- [ ] E7 à E9 : fiches — synthèse et compteurs d'onglets, « — » des champs vides, booléens jamais obligatoires (F1–F3,
+  FK1) ; salarié : reprise de l'individu, agences de l'annuaire, code à la place du matricule (FS1–FS3) ; matériel :
+  quantité 1 si identifié, relevés initiaux et rectification, historique d'état et état de retour (FM1–FM3).
+- [ ] E10, E11 : page document (après les PR de personnalisation et des règlements) — filtre des notifications,
+  unités de l'article et conversion du prix, retrait limité, totaux, légende du plan (D1–D6) ; Suivi + Traçabilité,
+  onglet Options en dernier (textes de l'édition restent dans l'entête), règlement dans l'onglet Règlements placé après
+  l'Entête, champs en cause (D7–D9, I2).
+- [ ] E12 : sélection des tiers et des individus dans une liste filtrée selon l'appel (I1).
+- [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.
+
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le
   service worker) ; à étudier : copie locale des éléments consultés ou d'une bibliothèque choisie pour la recherche hors
   ligne. Écrans hors document (fiches, pointage…) : consultation seulement.

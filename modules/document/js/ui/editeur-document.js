@@ -3,24 +3,18 @@ import {
   Magasin, GrilleArbre, formatNombre, formatLibre, htmlSur, lireNombre, estHtml, decoderEntites, echapper,
   editerLibelle, lirePreferences, ecrirePreferences, enfants, libelleRaccourci,
 } from '@logibtp/socle/ui';
-import { D, Dz, S, UN } from '@logibtp/socle';
+import { D, Dz, S, UN, completerDate, dateLocale } from '@logibtp/socle';
 import { calculerDocument, TL, CODES_TL, estChiffree, estPied, accepteEnfants, estTranche, estTypeNumerote, etatSolde, regle } from '../src/index.js';
 import { ReglesDocument } from './regles.js';
 import { PressePapiers } from './presse-papiers.js';
 
-/** Date saisie dans la grille (JJ/MM/AAAA, JJ/MM/AA, JJ/MM de l'année en cours, AAAA-MM-JJ) en ISO ; null si vide, undefined si illisible. */
+/**
+ * Date saisie dans la grille en ISO, par la saisie abrégée du socle (completerDate : « 15 », « 16/05 », « 15/05/23 »,
+ * « 150523 », « t », « +3 »…) ; null si vide, undefined si illisible.
+ */
 export function lireDateSaisie(texte, aujourdhui = new Date()) {
-  const t = String(texte ?? '').trim();
-  if (t === '') return null;
-  let a; let m; let j;
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
-  const fr = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(t);
-  if (iso) [, a, m, j] = iso.map(Number);
-  else if (fr) { j = Number(fr[1]); m = Number(fr[2]); a = fr[3] ? Number(fr[3].length === 2 ? `20${fr[3]}` : fr[3]) : aujourdhui.getFullYear(); }
-  else return undefined;
-  const d = new Date(Date.UTC(a, m - 1, j));
-  if (d.getUTCFullYear() !== a || d.getUTCMonth() !== m - 1 || d.getUTCDate() !== j) return undefined;
-  return d.toISOString().slice(0, 10);
+  const r = completerDate(texte, dateLocale(aujourdhui));
+  return r === '' ? null : r ?? undefined;
 }
 
 /** Saisie et affichage des remises (préférence `remises` du navigateur) : coefficient (0,95) ou pourcentage (5 %). */
