@@ -1,6 +1,7 @@
 // Ressources images de l'édition (§ 3.13) : PNG et JPEG seulement, contrôlés au dépôt par ce même script (navigateur
 // et serveur). Dimensions et résolution lues dans l'entête du fichier, sans décoder l'image.
 
+import { texte } from '@logibtp/socle/dictionnaire';
 const u16 = (o, i) => (o[i] << 8) | o[i + 1];
 const u32 = (o, i) => ((o[i] << 24) >>> 0) + (o[i + 1] << 16) + (o[i + 2] << 8) + o[i + 3];
 
@@ -11,8 +12,8 @@ export function lireImage(octets) {
   const o = octets instanceof Uint8Array ? octets : new Uint8Array(octets ?? []);
   if (o.length > 24 && o[0] === 0x89 && o[1] === 0x50 && o[2] === 0x4e && o[3] === 0x47) return lirePng(o);
   if (o.length > 4 && o[0] === 0xff && o[1] === 0xd8) return lireJpeg(o);
-  if (o.length > 4 && o[0] === 0x3c) return { erreur: 'Format SVG refusé : exporter le logo en PNG haute résolution' };
-  return { erreur: 'Format d’image non accepté : PNG ou JPEG seulement' };
+  if (o.length > 4 && o[0] === 0x3c) return { erreur: texte('edition.images.svg') };
+  return { erreur: texte('edition.images.format') };
 }
 
 function lirePng(o) {
@@ -57,8 +58,8 @@ function lireJpeg(o) {
     }
     i += 2 + lg;
   }
-  if (!largeur || !hauteur) return { erreur: 'JPEG illisible (dimensions introuvables)' };
-  if (composantes === 4) return { erreur: 'JPEG CMJN refusé : enregistrer l’image en RVB' };
+  if (!largeur || !hauteur) return { erreur: texte('edition.images.jpeg_illisible') };
+  if (composantes === 4) return { erreur: texte('edition.images.cmjn') };
   // Photos de téléphone : orientations 5 à 8 = image tournée d'un quart de tour.
   const tournee = orientation >= 5 && orientation <= 8;
   return { type: 'jpeg', largeur: tournee ? hauteur : largeur, hauteur: tournee ? largeur : hauteur, dpi, orientation, progressif };

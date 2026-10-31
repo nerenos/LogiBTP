@@ -11,6 +11,7 @@
 // Composants : champ, pile, rangee, tableau, repete, image, trait, espace, code39, qr, absolu, saut_page,
 //   bloc (bloc lié : { bloc, parametres }), sous_rapport ({ rapport, donnees, parametres }).
 // Bloc : { format_version, code, libelle, genre: 'BLOC', parametres: [{ nom, defaut }], contenu: Composant }.
+import { texte } from '@logibtp/socle/dictionnaire';
 import { verifierFormule } from './formules.js';
 
 export const FORMAT_VERSION = 1;
@@ -78,8 +79,8 @@ export function chercherCycle(code, lire) {
 export function verifierModele(modele) {
   const erreurs = [];
   const m = typeof modele === 'string' ? JSON.parse(modele) : modele;
-  if (!m || typeof m !== 'object') return [{ chemin: '', code: 'MODELE', message: 'Modèle illisible' }];
-  if ((m.format_version ?? 1) > FORMAT_VERSION) erreurs.push({ chemin: 'format_version', code: 'VERSION', message: `Format ${m.format_version} plus récent que le moteur (${FORMAT_VERSION})` });
+  if (!m || typeof m !== 'object') return [{ chemin: '', code: 'MODELE', message: texte('edition.modele.illisible') }];
+  if ((m.format_version ?? 1) > FORMAT_VERSION) erreurs.push({ chemin: 'format_version', code: 'VERSION', message: texte('edition.modele.version', { version: m.format_version, moteur: FORMAT_VERSION }) });
   const formule = (v, chemin) => {
     if (typeof v !== 'string' || !v) return;
     const e = verifierFormule(v);
@@ -87,12 +88,12 @@ export function verifierModele(modele) {
   };
   parcourir(m, (c, chemin) => {
     if (c.type === 'bande') {
-      if (!TYPES_BANDE.has(c.type_bande)) erreurs.push({ chemin, code: 'BANDE', message: `Type de bande inconnu : ${c.type_bande}` });
+      if (!TYPES_BANDE.has(c.type_bande)) erreurs.push({ chemin, code: 'BANDE', message: texte('edition.modele.bande', { type: c.type_bande }) });
       formule(c.condition && (String(c.condition).startsWith('=') ? c.condition : '=' + c.condition), `${chemin}.condition`);
       formule(c.collection, `${chemin}.collection`);
       return;
     }
-    if (c.type !== 'cellule' && !TYPES_COMPOSANT.has(c.type) && !c.cle) erreurs.push({ chemin, code: 'COMPOSANT', message: `Type de composant inconnu : ${c.type}` });
+    if (c.type !== 'cellule' && !TYPES_COMPOSANT.has(c.type) && !c.cle) erreurs.push({ chemin, code: 'COMPOSANT', message: texte('edition.modele.composant', { type: c.type }) });
     for (const k of ['valeur', 'collection', 'cumul', 'donnees']) formule(c[k], `${chemin}.${k}`);
     if (c.condition) formule(String(c.condition).startsWith('=') ? c.condition : '=' + c.condition, `${chemin}.condition`);
   });

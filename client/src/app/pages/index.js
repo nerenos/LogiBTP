@@ -96,7 +96,7 @@ export const ROUTES = [
   { nom: 'comptabilite-ventilation', chemin: '/comptabilite/ventilation', page: PageVentilation, titre: texte('comptabilite_btp.routes.ventilation') },
   { nom: 'parametres-comptabilite', chemin: '/parametres/comptabilite', page: PageParametresComptabilite, titre: texte('comptabilite_btp.routes.parametres') },
   { nom: 'parametres-ged', chemin: '/parametres/ged', page: PageParametresGed, titre: 'Paramétrage de la GED' },
-  { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: 'Paramétrage des éditions' },
+  { nom: 'parametres-editions', chemin: '/parametres/editions', page: PageParametresEditions, titre: texte('edition_btp.routes.parametres') },
   { nom: 'parametres-modules', chemin: '/parametres/modules', page: PageParametresModules, titre: 'Modules de la société' },
   { nom: 'parametres-ressources', chemin: '/parametres/ressources', page: PageParametresRessources, titre: 'Référentiel des ressources' },
   { nom: 'execution-synthese', chemin: '/execution/synthese', page: PageSyntheseExecution, titre: texte('execution_btp.routes.synthese') },
@@ -149,6 +149,6 @@ export const ROUTES = [
   { nom: 'crm-diffusion', chemin: '/crm/diffusion/:id', page: PageDiffusionCrm, titre: texte('crm_btp.routes.diffusion') },
   { nom: 'crm-fil', chemin: '/crm/fil', page: PageFilCrm, titre: texte('crm_btp.routes.fil') },
   { nom: 'crm', chemin: '/crm', page: PageCrm, titre: texte('crm_btp.routes.crm') },
-  { nom: 'edition', chemin: '/edition', page: PageEdition, titre: 'Aperçu' },
+  { nom: 'edition', chemin: '/edition', page: PageEdition, titre: texte('edition_btp.routes.apercu') },
   { nom: '404', chemin: '/404', page: PageIntrouvable, titre: 'Page introuvable' },
 ];

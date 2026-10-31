@@ -238,5 +238,22 @@
   "calendrier_btp_calendrier": "📅",
   "calendrier_btp_defaut": "★",
   "calendrier_btp_actif": "✔",
-  "calendrier_btp_ferme": "🚫"
+  "calendrier_btp_ferme": "🚫",
+  "edition_btp_rapport": "📄",
+  "edition_btp_sous_rapport": "📑",
+  "edition_btp_bloc": "🧩",
+  "edition_btp_modele": "✎",
+  "edition_btp_dictionnaire": "📖",
+  "edition_btp_appliquer": "▶",
+  "edition_btp_verifier": "✔",
+  "edition_btp_retablir": "↺",
+  "edition_btp_saisie": "✎",
+  "edition_btp_applique": "●",
+  "edition_btp_imprimer": "🖨",
+  "edition_btp_pdf": "⤓",
+  "edition_btp_ranger": "🗄",
+  "edition_btp_double": "📄",
+  "edition_btp_actualiser": "⟳",
+  "edition_btp_attente": "⏳",
+  "edition_btp_fait": "✔"
 }

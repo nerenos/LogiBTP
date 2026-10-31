@@ -740,3 +740,24 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/metre/js/src` et `ui` vérifiées
   par le test du client) ; panneau de métré affiché dans le navigateur (devis de démonstration : script, variables,
   dictionnaire, notifications).
+
+## 31. Réalisation du lot P3r : module Édition (31/10/2026)
+
+- **Périmètre** : le moteur (`modules/edition/js/src` : alertes de la composition, du rapport, de la pagination et des
+  étiquettes, erreurs des formules, de la charte, des images, du modèle et du Code 39, libellés imprimés par défaut
+  — Report, À reporter, Total —, catalogue de l'aide du langage) et les écrans du cœur : aperçu (`pages/edition.js`),
+  éditeur du modèle et dictionnaire (`editions/editeur-modele.js`, `dictionnaire-modele.js`), paramétrage
+  (`pages/parametres-editions.js` : mentions, défauts, import, modèles), titres des routes.
+- **Serveur** : le moteur tourne aussi dans Jint ; `serveur/entree.js` pose le dictionnaire du module (fr.json intégré
+  au paquet par esbuild) : mêmes alertes et mêmes libellés imprimés qu'au navigateur, parité Node ↔ Jint vérifiée
+  (`dotnet test` du module). Les surcharges de l'installation ne s'appliquent qu'à l'aperçu (à reprendre si besoin :
+  passer le dictionnaire composé à `initialiser`).
+- **Textes** : `edition.*` du module ; `edition_btp.*` du cœur (`apercu` — dont `etats` et `motifs` des productions —,
+  `editeur`, `dictionnaire`, `parametres` — dont `conflits`, `actions` de l'import —, `mentions`, `routes`). Catégories
+  des fonctions par codes (`textesParCode`), descriptions par accesseurs.
+- **Hors lot** : modèles fournis `editions/modeles.js` (contenu des éditions écrit en base par `db/191` : données
+  système), couleurs de la charte par défaut, noms des mois et nombres en lettres du moteur.
+- **Icônes** : `edition_btp_*` (imprimer, PDF, ranger, double, actualiser, modèle, dictionnaire, appliquer, vérifier,
+  rétablir, rapport, sous-rapport, bloc, attente, fait…) ; communes du socle.
+- **Contrôles** : `npm test`, `npm run exporter-resultats` puis `dotnet test` du module (17 tests) ; aperçu, éditeur,
+  dictionnaire et paramétrage affichés dans le navigateur (API simulée).

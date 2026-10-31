@@ -6,6 +6,7 @@
 //   remplissage de la page par un cadre étiré (colonnes prolongées jusqu'au bas de la zone) ;
 // - fragments « bas de page » empilés au bas de la page (dernière page pour un bloc de totaux) ;
 // - fragments « chaque page » répétés en haut des pages suivantes.
+import { texte } from '@logibtp/socle/dictionnaire';
 import { Dec } from '@logibtp/socle';
 import { r2 } from './unites.js';
 import { traitFinTableau } from './composition.js';
@@ -129,7 +130,7 @@ export function paginer(fragments, page, zones, alertes = []) {
         b = parts[1];
       } else if (p.vide || p.y <= p.zone.haut + EPS) {
         // Ne tient pas sur une page vide et n'est pas sécable : posé quand même (débordement signalé).
-        alertes.push({ code: 'DEBORDEMENT', message: `Page ${p.numero} : un élément de ${b.hauteur.toFixed(1)} mm dépasse la zone imprimable` });
+        alertes.push({ code: 'DEBORDEMENT', message: texte('edition.alertes.debordement', { page: p.numero, hauteur: b.hauteur.toFixed(1) }) });
         placerBoite(b);
         if (premier) ajouterCumuls(f);
         return;

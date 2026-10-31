@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { EditorState } from '@codemirror/state';
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, Decoration, ViewPlugin, MatchDecorator,
@@ -175,9 +176,9 @@ export class EditeurModeleApercu {
   elements() {
     const p = this.page.prep;
     return [
-      { code: p.modele.code, libelle: `Rapport ${p.modele.code}`, genre: 'RAPPORT', icone: '📄', lire: () => p.modele.contenu, ecrire: (c) => { p.modele.contenu = c; } },
-      ...Object.keys(p.rapports ?? {}).sort().map((code) => ({ code, libelle: `Sous-rapport ${code}`, genre: 'RAPPORT', icone: '📑', lire: () => p.rapports[code], ecrire: (c) => { p.rapports[code] = c; } })),
-      ...Object.keys(p.blocs ?? {}).sort().map((code) => ({ code, libelle: `Bloc ${code}`, genre: 'BLOC', icone: '🧩', lire: () => p.blocs[code], ecrire: (c) => { p.blocs[code] = c; } })),
+      { code: p.modele.code, libelle: texte('edition_btp.editeur.rapport', { code: p.modele.code }), genre: 'RAPPORT', icone: icone('edition_btp_rapport'), lire: () => p.modele.contenu, ecrire: (c) => { p.modele.contenu = c; } },
+      ...Object.keys(p.rapports ?? {}).sort().map((code) => ({ code, libelle: texte('edition_btp.editeur.sous_rapport', { code }), genre: 'RAPPORT', icone: icone('edition_btp_sous_rapport'), lire: () => p.rapports[code], ecrire: (c) => { p.rapports[code] = c; } })),
+      ...Object.keys(p.blocs ?? {}).sort().map((code) => ({ code, libelle: texte('edition_btp.editeur.bloc', { code }), genre: 'BLOC', icone: icone('edition_btp_bloc'), lire: () => p.blocs[code], ecrire: (c) => { p.blocs[code] = c; } })),
     ];
   }
 
@@ -196,26 +197,25 @@ export class EditeurModeleApercu {
     this.vue?.destroy();
     this.conteneur.innerHTML = `
       <div class="edition-editeur-barre">
-        <strong>✎ Modèle</strong>
-        <span class="edition-editeur-ouvrir" title="Ouvrir un bloc ou un sous-rapport du modèle dans un onglet (ou Ctrl+clic sur son code)" data-combo="ouvrir"></span>
+        <strong>${iconeHtml('edition_btp_modele')} ${texteHtml('edition_btp.editeur.modele')}</strong>
+        <span class="edition-editeur-ouvrir" title="${texteHtml('edition_btp.editeur.ouvrir_aide')}" data-combo="ouvrir"></span>
         <span class="edition-editeur-espace"></span>
-        <button type="button" class="bouton-icone${this.dictionnaireVisible ? ' actif' : ''}" data-action="dictionnaire" title="Dictionnaire — données de la source, paramètres, fonctions, formats, charte : un clic insère l'entrée au curseur" aria-label="Dictionnaire">📖</button>
-        <button type="button" class="bouton-icone" data-action="masquer" title="Masquer l'éditeur — les modifications appliquées restent dans l'aperçu" aria-label="Masquer l'éditeur">✕</button>
+        <button type="button" class="bouton-icone${this.dictionnaireVisible ? ' actif' : ''}" data-action="dictionnaire" title="${texteHtml('edition_btp.editeur.dictionnaire_aide')}" aria-label="${texteHtml('edition_btp.editeur.dictionnaire')}">${iconeHtml('edition_btp_dictionnaire')}</button>
+        <button type="button" class="bouton-icone" data-action="masquer" title="${texteHtml('edition_btp.editeur.masquer_aide')}" aria-label="${texteHtml('edition_btp.editeur.masquer')}">${iconeHtml('retirer')}</button>
       </div>
       <div class="edition-editeur-onglets" role="tablist" data-zone="onglets"></div>
       <div class="edition-editeur-code" data-zone="code"></div>
       <div class="edition-dictionnaire" data-zone="dictionnaire" ${this.dictionnaireVisible ? '' : 'hidden'}></div>
       <div class="edition-editeur-actions">
-        <button data-action="appliquer" class="principal" title="Remplacer le contenu en mémoire et refaire l'aperçu (Ctrl+Entrée) ; rien n'est enregistré">▶ Appliquer</button>
-        <button data-action="verifier" title="Contrôle du modèle par le moteur du serveur (formules, format)">✔ Vérifier</button>
-        <button data-action="enregistrer" title="Enregistrer ce modèle en base (nouvelle version)">💾 Enregistrer</button>
-        <button data-action="retablir" title="Revenir au contenu lu à l'ouverture">↺ Rétablir</button>
+        <button data-action="appliquer" class="principal" title="${texteHtml('edition_btp.editeur.appliquer_aide')}">${iconeHtml('edition_btp_appliquer')} ${texteHtml('edition_btp.editeur.appliquer')}</button>
+        <button data-action="verifier" title="${texteHtml('edition_btp.editeur.verifier_aide')}">${iconeHtml('edition_btp_verifier')} ${texteHtml('edition_btp.editeur.verifier')}</button>
+        <button data-action="enregistrer" title="${texteHtml('edition_btp.editeur.enregistrer_aide')}">${iconeHtml('enregistrer')} ${texteHtml('commun.enregistrer')}</button>
+        <button data-action="retablir" title="${texteHtml('edition_btp.editeur.retablir_aide')}">${iconeHtml('edition_btp_retablir')} ${texteHtml('edition_btp.editeur.retablir')}</button>
       </div>
       <div class="edition-editeur-message" data-zone="message"></div>
-      <p class="aide">Ctrl+clic sur le code d'un bloc ou d'un sous-rapport : l'ouvre dans un onglet. Données de l'aperçu :
-        <code>${echapper(Object.keys(this.page.prep.donnees ?? {}).join(', '))}</code></p>`;
+      <p class="aide">${texteHtml('edition_btp.editeur.aide_html', { donnees: Object.keys(this.page.prep.donnees ?? {}).join(', ') })}</p>`;
     const ouvrir = creerCombo({ options: elements.map((e) => ({ valeur: e.code, libelle: `${e.icone} ${e.libelle}` })), valeur: '', vide: false });
-    ouvrir.placeholder = 'Ouvrir un bloc ou un sous-rapport…';
+    ouvrir.placeholder = texte('edition_btp.editeur.ouvrir');
     ouvrir.addEventListener('change', () => { if (ouvrir.valeurCombo) this.ouvrirOnglet(ouvrir.valeurCombo); ouvrir.definirValeur(''); });
     this.conteneur.querySelector('[data-combo="ouvrir"]').replaceChildren(ouvrir);
     this.conteneur.querySelector('[data-action="masquer"]').addEventListener('click', () => this.page.basculerEditeur(false));
@@ -260,7 +260,7 @@ export class EditeurModeleApercu {
             if (!code) return false;
             e.preventDefault();
             if (this.element(code)) this.ouvrirOnglet(code);
-            else this.message(`${echapper(code)} n'est pas inclus dans ce modèle (enregistrez puis actualisez)`, 'avertissement');
+            else this.message(texteHtml('edition_btp.editeur.non_inclus', { code }), 'avertissement');
             return true;
           },
         }),
@@ -298,8 +298,8 @@ export class EditeurModeleApercu {
 
   async fermerOnglet(code) {
     if (this.onglets.length <= 1) return;
-    const texte = (code === this.courant ? this.vue.state : this.etats.get(code))?.doc.toString();
-    if (texte !== undefined && this.saisieModifiee(code, texte) && !(await confirmer(`${code} : abandonner la saisie non appliquée ?`))) return;
+    const saisie = (code === this.courant ? this.vue.state : this.etats.get(code))?.doc.toString();
+    if (saisie !== undefined && this.saisieModifiee(code, saisie) && !(await confirmer(texte('edition_btp.editeur.abandonner', { code })))) return;
     const i = this.onglets.indexOf(code);
     this.onglets.splice(i, 1);
     this.etats.delete(code);
@@ -319,13 +319,13 @@ export class EditeurModeleApercu {
     if (!zone) return;
     zone.innerHTML = this.onglets.map((code) => {
       const e = this.element(code);
-      const texte = (code === this.courant ? this.vue?.state : this.etats.get(code))?.doc.toString();
-      const saisie = texte !== undefined && this.saisieModifiee(code, texte);
+      const contenu = (code === this.courant ? this.vue?.state : this.etats.get(code))?.doc.toString();
+      const saisie = contenu !== undefined && this.saisieModifiee(code, contenu);
       const applique = JSON.stringify(e?.lire()) !== this.origines.get(code);
-      const etat = saisie ? ' ✎' : applique ? ' ●' : '';
-      const bulle = `${e?.libelle ?? code}${saisie ? ' — saisie non appliquée' : applique ? ' — modifié, appliqué à l’aperçu, non enregistré' : ''}`;
+      const etat = saisie ? ` ${icone('edition_btp_saisie')}` : applique ? ` ${icone('edition_btp_applique')}` : '';
+      const bulle = saisie ? texte('edition_btp.editeur.bulle_saisie', { libelle: e?.libelle ?? code }) : applique ? texte('edition_btp.editeur.bulle_applique', { libelle: e?.libelle ?? code }) : e?.libelle ?? code;
       return `<span class="edition-onglet${code === this.courant ? ' actif' : ''}" role="tab" aria-selected="${code === this.courant}" data-onglet="${echapper(code)}" title="${echapper(bulle)}">
-        ${e?.icone ?? ''} ${echapper(code)}<b>${etat}</b>${this.onglets.length > 1 ? `<button type="button" class="bouton-icone" data-fermer="${echapper(code)}" title="Fermer l'onglet" aria-label="Fermer l'onglet">×</button>` : ''}</span>`;
+        ${e?.icone ?? ''} ${echapper(code)}<b>${etat}</b>${this.onglets.length > 1 ? `<button type="button" class="bouton-icone" data-fermer="${echapper(code)}" title="${texteHtml('edition_btp.editeur.fermer_onglet')}" aria-label="${texteHtml('edition_btp.editeur.fermer_onglet')}">${iconeHtml('retirer')}</button>` : ''}</span>`;
     }).join('');
     zone.querySelectorAll('[data-onglet]').forEach((o) => o.addEventListener('click', (ev) => {
       if (ev.target.closest('[data-fermer]')) { this.fermerOnglet(ev.target.closest('[data-fermer]').dataset.fermer); return; }
@@ -345,7 +345,7 @@ export class EditeurModeleApercu {
     try {
       return JSON.parse(this.vue.state.doc.toString());
     } catch (x) {
-      throw new Error(`JSON invalide : ${x.message}`);
+      throw new Error(texte('edition_btp.editeur.json_invalide', { message: x.message }));
     }
   }
 
@@ -362,13 +362,13 @@ export class EditeurModeleApercu {
     e.ecrire(contenu);
     this.rendreOnglets();
     await this.page.rendre();
-    this.message(erreurs.length ? `⚠ Appliqué avec ${erreurs.length} erreur(s) :${liste(erreurs)}` : `Appliqué (aperçu refait en ${this.page.$('[data-zone="pages"]').dataset.duree} ms) : non enregistré`, erreurs.length ? 'avertissement' : 'succes');
+    this.message(erreurs.length ? `${iconeHtml('avertissement')} ${texteHtml('edition_btp.editeur.applique_erreurs', { nombre: erreurs.length })}${liste(erreurs)}` : texteHtml('edition_btp.editeur.applique', { duree: this.page.$('[data-zone="pages"]').dataset.duree }), erreurs.length ? 'avertissement' : 'succes');
   }
 
   async verifier() {
     const r = await api.editions.verifier(this.lire());
     const erreurs = Array.isArray(r) ? r : (r?.erreurs ?? []);
-    this.message(erreurs.length ? `⛔ ${erreurs.length} erreur(s) :${liste(erreurs)}` : '✔ Modèle correct (contrôle du serveur)', erreurs.length ? 'erreur' : 'succes');
+    this.message(erreurs.length ? `${iconeHtml('erreur')} ${texteHtml('edition_btp.editeur.erreurs', { nombre: erreurs.length })}${liste(erreurs)}` : `${iconeHtml('edition_btp_verifier')} ${texteHtml('edition_btp.editeur.correct')}`, erreurs.length ? 'erreur' : 'succes');
   }
 
   async enregistrer() {
@@ -376,9 +376,9 @@ export class EditeurModeleApercu {
     const e = this.element();
     const m = await api.editions.modele(e.code);
     const impacts = e.code !== this.page.prep.modele.code ? await api.editions.impacts(e.code).catch(() => []) : [];
-    const avis = impacts.length ? `\n\nUtilisé aussi par : ${impacts.map((x) => x.libelle ?? x.code).join(', ')}.` : '';
-    if (m.fourni && !(await confirmer(`${e.code} est un modèle fourni : l'enregistrer le marque modifié localement.${avis}\n\nEnregistrer ?`))) return;
-    if (!m.fourni && avis && !(await confirmer(`Enregistrer ${e.code} ?${avis}`))) return;
+    const avis = impacts.length ? `\n\n${texte('edition_btp.editeur.utilise_par', { elements: impacts.map((x) => x.libelle ?? x.code).join(', ') })}` : '';
+    if (m.fourni && !(await confirmer(texte('edition_btp.editeur.confirmer_fourni', { code: e.code, avis })))) return;
+    if (!m.fourni && avis && !(await confirmer(texte('edition_btp.editeur.confirmer', { code: e.code, avis })))) return;
     const r = await api.editions.enregistrerModele(e.code, {
       libelle: contenu.libelle ?? m.libelle, genre: m.genre, cible: m.cible, source: m.source, types: m.types, contenu,
       niveau_acces: m.niveau_acces, acces_profils: m.acces_profils, charte: m.charte, actif: m.actif, ordre: m.ordre,
@@ -387,7 +387,7 @@ export class EditeurModeleApercu {
     this.origines.set(e.code, JSON.stringify(contenu));
     this.rendreOnglets();
     await this.page.rendre();
-    this.message(`💾 ${echapper(e.code)} enregistré${r?.version ? ` (version ${r.version})` : ''}`, 'succes');
+    this.message(`${iconeHtml('enregistrer')} ${r?.version ? texteHtml('edition_btp.editeur.enregistre_version', { code: e.code, version: r.version }) : texteHtml('edition_btp.editeur.enregistre', { code: e.code })}`, 'succes');
   }
 
   async retablir() {
@@ -400,7 +400,7 @@ export class EditeurModeleApercu {
     this.vue.setState(s);
     this.rendreOnglets();
     await this.page.rendre();
-    this.message('Contenu d’origine rétabli', 'info');
+    this.message(texteHtml('edition_btp.editeur.retabli'), 'info');
   }
 
   detruire() { this.vue?.destroy(); this.vue = null; }

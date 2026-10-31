@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { Dec } from '@logibtp/socle';
 // Composition : composants du modèle + données → boîtes mesurées (millimètres), prêtes à paginer.
 // Une boîte : { hauteur, largeur, dessiner(sortie, x, y, hauteurImposee?), decouper?(h) → [haut, bas] | null }.
@@ -69,7 +70,7 @@ export function evaluer(ctx, source, lieu = '') {
   try {
     return evaluerFormule(source, ctx.formule);
   } catch (e) {
-    alerter(ctx, e.code ?? 'FORMULE', `${lieu ? lieu + ' : ' : ''}${e.message}`, source);
+    alerter(ctx, e.code ?? 'FORMULE', lieu ? texte('edition.alertes.lieu', { lieu, message: e.message }) : e.message, source);
     return null;
   }
 }
@@ -86,7 +87,7 @@ export function condition(ctx, source, lieu = '') {
   try {
     return evaluerCondition(source, ctx.formule);
   } catch (e) {
-    alerter(ctx, e.code ?? 'FORMULE', `${lieu ? lieu + ' : ' : ''}condition : ${e.message}`, source);
+    alerter(ctx, e.code ?? 'FORMULE', lieu ? texte('edition.alertes.lieu_condition', { lieu, message: e.message }) : texte('edition.alertes.condition', { message: e.message }), source);
     return false;
   }
 }
@@ -229,7 +230,7 @@ export function composer(c, ctx, largeur) {
     case 'bloc': return composerBloc(c, ctx, largeur);
     case 'sous_rapport': return ctx.composerSousRapport ? ctx.composerSousRapport(c, ctx, largeur) : null;
     default:
-      alerter(ctx, 'COMPOSANT_INCONNU', `Composant inconnu : ${c.type}`);
+      alerter(ctx, 'COMPOSANT_INCONNU', texte('edition.alertes.composant_inconnu', { type: c.type }));
       return null;
   }
 }
@@ -250,7 +251,7 @@ function valeurChamp(c, ctx) {
       else if (nom === 'zero_vide' && estDec(v) && v.isZero()) v = '';
     } catch (e) {
       // Texte non numérique (« PM », « Forfait ») sous un format de nombre : affiché tel quel.
-      if (!(e.code === 'TYPE' && typeof v === 'string')) alerter(ctx, e.code ?? 'FORMAT', `${c.nom ?? 'champ'} : ${e.message}`, c.valeur);
+      if (!(e.code === 'TYPE' && typeof v === 'string')) alerter(ctx, e.code ?? 'FORMAT', texte('edition.alertes.lieu', { lieu: c.nom ?? texte('edition.alertes.champ'), message: e.message }), c.valeur);
     }
   }
   if (c.zero_vide && estDec(v) && v.isZero()) v = '';
@@ -332,7 +333,7 @@ function decaler(boite, dx, largeur) {
 }
 
 function composerTableauHtml(t, style, largeur, ctx) {
-  if (t.fusions) alerter(ctx, 'HTML_FUSION', 'Tableau d’un libellé : cellules fusionnées rendues sans fusion');
+  if (t.fusions) alerter(ctx, 'HTML_FUSION', texte('edition.alertes.html_fusion'));
   const nbCol = Math.max(...t.rangees.map((r) => r.cellules.length));
   const larg = largeur / nbCol;
   const trait = resoudreTrait(ctx.charte, 'fin');
@@ -461,7 +462,7 @@ function composerRangee(c, ctx, largeur) {
 
 /** Répétition d'un composant sur une collection (adresses, intervenants, TVA…), empilée verticalement. */
 function composerRepete(c, ctx, largeur) {
-  const liste = evaluerExpression(ctx, c.collection, 'répétition');
+  const liste = evaluerExpression(ctx, c.collection, texte('edition.lieux.repetition'));
   if (!Array.isArray(liste) || !liste.length) return c.masquer_si_vide === false ? vide(largeur, 0) : null;
   const boites = liste.map((el, i) => composer(c.contenu, enfant(ctx, { element: el, index: i }), largeur)).filter((b) => b && !b.flux);
   if (!boites.length) return null;
@@ -472,7 +473,7 @@ function composerImage(c, ctx, largeur) {
   const code = c.ressource ? (String(c.ressource).includes('{{') || String(c.ressource).startsWith('=') ? enTexte(evaluer(ctx, c.ressource, 'image')) : c.ressource) : null;
   const res = code ? ctx.ressources?.[code] : null;
   if (!res) {
-    if (code && c.obligatoire) alerter(ctx, 'RESSOURCE_INTROUVABLE', `Image introuvable : ${code}`);
+    if (code && c.obligatoire) alerter(ctx, 'RESSOURCE_INTROUVABLE', texte('edition.alertes.image_introuvable', { code }));
     return c.masquer_si_vide === false ? vide(largeur, c.hauteur ?? 0) : null;
   }
   const lMax = c.largeur ? Math.min(largeur, Number(lireLongueur(c.largeur).mode === 'pct' ? (largeur * lireLongueur(c.largeur).valeur) / 100 : lireLongueur(c.largeur).valeur)) : largeur;
@@ -482,7 +483,7 @@ function composerImage(c, ctx, largeur) {
   if (h > hMax) { h = hMax; l = h * ratio; }
   if (res.dpi && res.largeur) {
     const dpiImprime = res.largeur / (l / 25.4);
-    if (dpiImprime < 150) alerter(ctx, 'IMAGE_RESOLUTION', `Image ${code} : ${Math.round(dpiImprime)} dpi à la taille imprimée (300 conseillés)`);
+    if (dpiImprime < 150) alerter(ctx, 'IMAGE_RESOLUTION', texte('edition.alertes.image_resolution', { code, dpi: Math.round(dpiImprime) }));
   }
   const al = c.alignement ?? 'gauche';
   const dx = al === 'centre' ? (largeur - l) / 2 : al === 'droite' ? largeur - l : 0;
@@ -517,7 +518,7 @@ function composerCode39(c, ctx, largeur) {
   const al = c.alignement ?? 'gauche';
   const marge = c.marge_blanche ?? 3;
   const dx = al === 'centre' ? (largeur - lCode) / 2 : al === 'droite' ? largeur - lCode - marge : marge;
-  if (lCode + 2 * marge > largeur + 0.01) alerter(ctx, 'CODE39_LARGEUR', `Code-barres « ${code.donnee} » plus large que sa zone (${lCode.toFixed(1)} mm)`);
+  if (lCode + 2 * marge > largeur + 0.01) alerter(ctx, 'CODE39_LARGEUR', texte('edition.alertes.code39_largeur', { donnee: code.donnee, largeur: lCode.toFixed(1) }));
   const hauteur = hCode + (rTxt ? rTxt.hauteur + 0.5 : 0);
   return {
     hauteur, largeur,
@@ -529,10 +530,10 @@ function composerCode39(c, ctx, largeur) {
 }
 
 function composerQr(c, ctx, largeur) {
-  const v = enTexte(evaluer(ctx, c.valeur, 'QR code'));
+  const v = enTexte(evaluer(ctx, c.valeur, texte('edition.lieux.qr')));
   if (!v) return null;
   let q;
-  try { q = matriceQr(v, c.correction ?? 'M'); } catch (e) { alerter(ctx, 'QR', `QR code : ${e.message}`, c.valeur); return null; }
+  try { q = matriceQr(v, c.correction ?? 'M'); } catch (e) { alerter(ctx, 'QR', texte('edition.alertes.lieu', { lieu: texte('edition.lieux.qr'), message: e.message }), c.valeur); return null; }
   const taille = Math.min(c.taille ?? 25, largeur);
   const module = taille / q.taille;
   const al = c.alignement ?? 'gauche';
@@ -553,8 +554,8 @@ function composerAbsolu(c, ctx) {
 /** Bloc réutilisable (lié) : composant du bloc, paramètres du bloc lisibles par `bloc.<nom>` et `parametres`. */
 function composerBloc(c, ctx, largeur) {
   const def = ctx.blocs?.[c.bloc];
-  if (!def) { alerter(ctx, 'BLOC_INTROUVABLE', `Bloc introuvable : ${c.bloc}`); return null; }
-  if ((ctx.profondeur ?? 0) > 8) { alerter(ctx, 'BLOC_CYCLE', `Bloc ${c.bloc} : inclusion trop profonde (cycle ?)`); return null; }
+  if (!def) { alerter(ctx, 'BLOC_INTROUVABLE', texte('edition.alertes.bloc_introuvable', { bloc: c.bloc })); return null; }
+  if ((ctx.profondeur ?? 0) > 8) { alerter(ctx, 'BLOC_CYCLE', texte('edition.alertes.bloc_cycle', { bloc: c.bloc })); return null; }
   const params = {};
   for (const p of def.parametres ?? []) params[p.nom] = p.defaut ?? null;
   for (const [k, v] of Object.entries(c.parametres ?? {})) params[k] = typeof v === 'string' && (v.startsWith('=') || v.includes('{{')) ? evaluer(ctx, v, `bloc ${c.bloc}`) : v;
@@ -575,7 +576,7 @@ const PAD_V = 0.7;
  * 7 pt puis ellipse), pour une liste dont les colonnes viennent des données.
  */
 function definitionsColonnes(c, ctx) {
-  const dynamiques = c.colonnes_source ? evaluerExpression(ctx, c.colonnes_source, 'colonnes du tableau') : null;
+  const dynamiques = c.colonnes_source ? evaluerExpression(ctx, c.colonnes_source, texte('edition.lieux.colonnes')) : null;
   return [...(c.colonnes ?? []), ...(Array.isArray(dynamiques) ? dynamiques : []).filter((k) => k?.cle).map((k) => ({
     cle: k.cle, titre: k.titre ?? k.cle, largeur: k.largeur ?? '*', alignement: k.alignement ?? undefined, format: k.format ?? undefined,
     valeur: `=ligne.${k.cle}`, multiligne: k.multiligne ?? 'une', reduction_min: k.reduction_min ?? 7,
@@ -721,7 +722,7 @@ function composerTableau(c, ctx, largeur) {
     id: c.nom ?? 'tableau',
     entete: ent, report, largeur, remplir: !!c.remplir, colonnes: cols.map((k) => k.x).filter((x) => x > 0),
     traitCol, traitCadre, traitFin: traitEntete,
-    libelleReport: c.report?.libelle ?? 'Report', libelleAReporter: c.report?.libelle_a_reporter ?? 'À reporter',
+    libelleReport: c.report?.libelle ?? texte('edition.imprime.report'), libelleAReporter: c.report?.libelle_a_reporter ?? texte('edition.imprime.a_reporter'),
   };
   if (!fragments.length && c.vide) {
     const b = composerChamp({ type: 'champ', valeur: c.vide, style: 'discret', alignement: 'centre' }, ctx, largeur);
@@ -732,7 +733,7 @@ function composerTableau(c, ctx, largeur) {
   if (c.total && ligneCumuls && fragments.length) {
     const totaux = {};
     for (const f of fragments) for (const [k, v] of Object.entries(f.cumuls ?? {})) totaux[k] = (totaux[k] ?? new Dec(0)).plus(v);
-    fragments.push({ boite: ligneCumuls(c.total.libelle ?? 'Total', totaux), cumuls: {}, lieAuPrecedent: true });
+    fragments.push({ boite: ligneCumuls(c.total.libelle ?? texte('edition.imprime.total'), totaux), cumuls: {}, lieAuPrecedent: true });
   }
   return { flux: fragments.map((f) => ({ ...f, tableau: meta })), tableau: meta };
 }

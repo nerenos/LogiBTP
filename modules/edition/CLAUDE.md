@@ -36,6 +36,9 @@
 - Polices intégrées à chaque PDF (sous-ensembles TrueType, table ToUnicode) et rendues conformes par `truetype.js` : signature 0x00010000 (fontkit écrit « true »), sommes de contrôle des tables et ajustement de `head` recalculés, nom `ABCDEF+Inter-Regular` (préfixe déterministe) ; le PDF s'ouvre partout sans police installée.
 - Montants : décimaux (`Dec`) dans les formules ; positions en nombres flottants (jamais de montant).
 
+## Textes et icônes (module Personnalisation, lot P3r)
+- Textes `edition.*` du `fr.json` du module (`alertes`, `lieux`, `formules`, `charte`, `images`, `modele`, `codes`, `imprime` : Report, À reporter, Total par défaut, `catalogue` : catégories, fonctions, opérateurs, contextes et formats de l'aide) ; dans Jint, `serveur/entree.js` pose ce dictionnaire du programme intégré au paquet (les surcharges de l'installation ne valent que pour l'aperçu) ; `exporter-resultats` et les tests le posent aussi (`test/preparation.js`). Restent dans le code : couleurs de la charte par défaut (contenu des éditions, réglées par les chartes), noms des mois et nombres en lettres, métadonnées du PDF.
+
 ## Tests
 - `npm test --workspace modules/edition/js` ; `npm run exporter-resultats --workspace modules/edition/js` puis `dotnet test modules/edition/dotnet/LogiBTP.Editions.Tests` (parité Node ↔ Jint, durées affichées).
 - Après toute modification de `js/src` : `npm run construire --workspace modules/edition/js` (paquet serveur).

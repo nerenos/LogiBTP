@@ -7,6 +7,7 @@ import { editer, produirePdf } from '../src/index.js';
 import { polices } from '../test/aide.js';
 import { lireCasEdition, DOSSIER_TESTS } from './cas.mjs';
 import { ecrireApercu } from '../test/apercu.mjs';
+import '../test/preparation.js'; // dictionnaire du module (mêmes textes que le paquet du serveur)
 
 const sortie = DOSSIER_TESTS + 'resultats-js/';
 const essais = fileURLToPath(new URL('../.essais/', import.meta.url));
