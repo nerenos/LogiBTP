@@ -14,6 +14,7 @@ import { ficheDeLigne } from './fiches/definitions.js';
 import { creerFournisseurGed } from './ged/ged.js';
 import { creerFournisseurBibliotheque } from './bibliotheque/bibliotheque.js';
 import { creerFournisseurAnnuaire, creerFournisseurEntreprises } from './annuaire/annuaire.js';
+import { brancherChoixAnnuaire } from './annuaire/choix.js';
 import { creerFournisseurStructure } from './structure/structure.js';
 import { societeCourante } from './societe.js';
 import { enregistrerServiceWorker, pwaControle, signalerCompte, purgerDonnees, depuisCache } from '../pwa/enregistrement.js';
@@ -62,6 +63,8 @@ export class Application {
     // Listes de choix : les <select> encore construits par les écrans s'affichent en combos du socle.
     activerCombos(document.body);
     activerDates(document.body);
+    // Tiers et contacts choisis dans une vraie liste (I1) : injectés dans le module Annuaire.
+    brancherChoixAnnuaire();
     // Rechargement (F5, Vite) : la page quittée reste affichée pendant le démarrage au lieu d'un écran vide.
     afficherApercu(document.querySelector('#pages'), `${location.pathname}${location.search}`);
     this.bandeau = new Bandeau(document.querySelector('#bandeau'), {

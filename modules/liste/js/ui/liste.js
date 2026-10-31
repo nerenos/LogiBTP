@@ -35,8 +35,11 @@ const DUREE_MARQUE = 4000;
  * types d'élément qu'il couvre ; ses vues ne montrent que des lignes de ces types (aucun type = tous).
  */
 export class ListeDonnees {
-  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue, groupeTheme } = {}) {
+  constructor(racine, { fournisseur, contexte = null, ouvrir, message, peutRequete = false, peutGererThemes = false, intervalleControle = 30000, formats, cleVue, creation, surVue, panneau, glisser, filtresVue, actionsElements, actionsVue, groupeTheme, choix = false, themeFixe = null } = {}) {
     this.racine = racine;
+    // Mode choix (I1, `choisirDansListe`) : ni concepteur, ni saisie, ni actions sur les éléments ; vues d'un seul thème.
+    this.modeChoix = choix;
+    this.themeFixe = themeFixe;
     // Regroupement des thèmes dans leur combo (l'application : menus du bandeau) : groupeTheme(theme) → { groupe, ordre } | null.
     this.groupeTheme = groupeTheme ?? null;
     // Lignes glissables vers une autre fenêtre : glisser({ ligne, definition }) → { type, valeur, texte, rang } | null ;
@@ -63,7 +66,7 @@ export class ListeDonnees {
     this.fabriqueActionsVue = actionsVue ?? null;
     this.actionsElements = null;
     this.themes = [];
-    this.theme = null;             // code du thème affiché, null = toutes les vues
+    this.theme = themeFixe;        // code du thème affiché, null = toutes les vues
     this.formats = formats ?? new FormatsCellule();
     this.cleVue = cleVue ?? `logibtp.liste.${contexte ?? 'toutes'}`;
     this.vues = [];
@@ -109,6 +112,7 @@ export class ListeDonnees {
   #construire() {
     const r = this.racine;
     r.classList.add('liste');
+    r.classList.toggle('liste-mode-choix', this.modeChoix);
     r.innerHTML = `
       <div class="liste-principale">
       <div class="liste-barre">
@@ -317,7 +321,7 @@ export class ListeDonnees {
 
   async #ouvrirDansTheme(vueId) {
     let id = vueId ?? this.panneauVues.vueParDefaut(this.theme, this.vues);
-    if (!this.vues.some((v) => v.vli_id === id)) id = this.vues[0]?.vli_id ?? null;
+    if (!this.vues.some((v) => v.vli_id === id)) id = this.panneauVues.vueParDefaut(this.theme, this.vues);
     if (id !== null) { await this.ouvrirVue(id); return; }
     // Thème sans vue : liste vide, le concepteur (＋) en crée une.
     this.vue = null;

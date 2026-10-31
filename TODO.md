@@ -276,7 +276,8 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
   unités de l'article et conversion du prix, retrait limité, totaux, légende du plan (D1–D6) ; Suivi + Traçabilité,
   onglet Options en dernier (textes de l'édition restent dans l'entête), règlement dans l'onglet Règlements placé après
   l'Entête, champs en cause (D7–D9, I2).
-- [ ] E12 : sélection des tiers et des individus dans une liste filtrée selon l'appel (I1).
+- [ ] Choix en liste (I1, suite) : individus de notre société au poste voulu (conducteur, chargé d'affaires, rédacteur :
+  combos actuelles) et contact d'un intervenant dans la liste des contacts du tiers ; sélection multiple (destinataires).
 - [ ] Champs mois (`<input type="month">`, 13 écrans) : même saisie abrégée que les dates, à étudier.
 
 - [ ] Mode hors ligne : appel de la bibliothèque (F3) limité aux recherches déjà faites en ligne (réponses gardées par le

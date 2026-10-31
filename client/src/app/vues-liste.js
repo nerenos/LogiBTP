@@ -597,6 +597,8 @@ VUES_LISTE.push(vueElements(12, 'Articles', [{ colonne: 'type', op: '=', valeur:
 const OPTIONS_CASQUETTES = CASQUETTES.map((c) => ({ valeur: c.code, libelle: c.libelle, picto: c.icone }));
 const OPTIONS_NIVEAUX = NIVEAUX.map((n) => ({ valeur: n.code, libelle: n.libelle, picto: n.icone }));
 const OPTIONS_ROLES = ROLES.map((r) => ({ valeur: r.code, libelle: r.libelle, picto: r.icone }));
+/** Vues ouvertes d'abord par les fenêtres de choix (I1, `annuaire/choix.js`) : toutes les lignes, filtre de l'appel retirable. */
+export const VUES_CHOIX = Object.freeze({ tiers: 20, contacts: 25 });
 const vuePersonnes = (vli_id, vli_nom, casquettes = null, filtres = []) => ({
   vli_id, vli_nom, vli_contexte: null, vli_partage: 'T', vli_proprietaire: 'admin', vli_groupe: null,
   definition: {
@@ -632,7 +634,7 @@ const vuePersonnes = (vli_id, vli_nom, casquettes = null, filtres = []) => ({
   },
 });
 VUES_LISTE.push(
-  vuePersonnes(20, 'Tous les tiers'),
+  vuePersonnes(VUES_CHOIX.tiers, 'Tous les tiers'),
   vuePersonnes(21, 'Clients et prospects', ['CLIENT', 'PROSPECT']),
   vuePersonnes(22, 'Fournisseurs et loueurs', ['FOURNISSEUR', 'LOUEUR']),
   vuePersonnes(23, 'Sous-traitants, cotraitants, intérim', ['SOUS_TRAITANT', 'COTRAITANT', 'INTERIM']),
@@ -665,7 +667,7 @@ const vueIndividus = (vli_id, vli_nom, filtres = []) => ({
   },
 });
 VUES_LISTE.push(
-  vueIndividus(25, 'Tous les contacts'),
+  vueIndividus(VUES_CHOIX.contacts, 'Tous les contacts'),
   vueIndividus(26, 'Notre société (rôles internes)', [{ colonne: 'roles', op: 'nonvide' }]),
 );
 

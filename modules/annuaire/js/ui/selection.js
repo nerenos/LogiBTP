@@ -6,10 +6,22 @@ import { dialogue } from './coordonnees.js';
 
 const CIVILITES = ['M.', 'Mme'];
 
+// Choix injecté par l'application (ergonomie I1 : vraie liste filtrée selon l'appel, module Liste) ; le module
+// Annuaire n'en dépend pas : sans choix injecté, fenêtre de recherche du module.
+let choixInjecte = null;
+
+/**
+ * L'application fournit { personne(options), individu(options) } : options de choisirPersonne / choisirIndividu ;
+ * personne résout avec un résumé { id, raison_sociale, code… } ou null ; individu avec { individu }, { creer: nom }
+ * (création demandée : formulaire du module) ou null. Appelée sans argument : retour à la recherche du module.
+ */
+export function definirChoixAnnuaire(choix = null) { choixInjecte = choix; }
+
 /**
  * Recherche d'une personne ; résout avec son résumé ou null. Options : annuaire, casquette, titre, exclure (ids).
  */
 export async function choisirPersonne({ annuaire, casquette = '', titre = 'Choisir une personne', exclure = [] }) {
+  if (choixInjecte?.personne) return choixInjecte.personne({ annuaire, casquette, titre, exclure });
   const d = dialogue(titre, `<div class="annuaire-recherche"><input type="search" placeholder="Raison sociale, code, SIRET, ville…"></div><div class="annuaire-resultats"></div>`, 'Choisir');
   return choisir(d, async (q) => (await annuaire.rechercherPersonnes({ recherche: q, casquette, limite: 40 })).filter((p) => !exclure.includes(p.id)),
     (p) => `<td>${echapper(p.icone ?? '🏢')}</td><td><b>${echapper(p.raison_sociale)}</b>${p.chemin && p.chemin !== p.raison_sociale ? `<br><small class="aide">${echapper(p.chemin)}</small>` : ''}</td>
@@ -21,6 +33,16 @@ export async function choisirPersonne({ annuaire, casquette = '', titre = 'Chois
  * { individu } (existant), { nouveau: { civilite, prenom, nom } } ou null.
  */
 export async function choisirIndividu({ annuaire, titre = 'Choisir un individu', exclure = [], nom = '' }) {
+  if (choixInjecte?.individu) {
+    const r = await choixInjecte.individu({ annuaire, titre, exclure, nom });
+    if (!r || !('creer' in r)) return r ?? null;
+    // Création demandée depuis la liste : formulaire du module, nom repris de la recherche.
+    return rechercherIndividu({ annuaire, titre, exclure, nom: r.creer || nom });
+  }
+  return rechercherIndividu({ annuaire, titre, exclure, nom });
+}
+
+async function rechercherIndividu({ annuaire, titre, exclure, nom }) {
   const d = dialogue(titre, `<div class="annuaire-recherche"><input type="search" placeholder="Nom, prénom, e-mail, téléphone…" value="${echapper(nom)}"></div>
     <div class="annuaire-resultats"></div>
     <fieldset class="annuaire-nouveau"><legend>Ou nouvel individu</legend>

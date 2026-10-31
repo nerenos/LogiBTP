@@ -630,3 +630,25 @@ client` pour les lots qui changent des vues fournies.
 - **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` (avec `LOGIBTP_TEST_PG`) ; essai dans le navigateur (projets,
   devis : cartes, clic, filtre de colonne, concepteur).
 
+## 17. Réalisation du lot E12 : choix des tiers et des contacts dans une liste (31/10/2026)
+
+- **`choisirDansListe`** (module Liste, `ui/choix.js`) : fenêtre `<dialog>` qui présente les vues d'un thème en mode
+  choix (option `choix` de `ListeDonnees` : ni concepteur, ni saisie, ni actions sur les éléments ; panneau des vues
+  limité au thème, réduit d'office) ; Entrée, double-clic ou « Choisir », Échap ou « Annuler » ; sélection multiple en
+  option ; filtres de l'appel en pastilles retirables ; ligne refusée par `accepter` (déjà choisie…) signalée dans la
+  fenêtre (une notification resterait sous la fenêtre modale) ; bouton de création facultatif.
+- **Vues de choix** : plutôt que des vues propres à chaque contexte (`vli_contexte`), les vues des thèmes Tiers et
+  Contacts (celles de l'utilisateur comprises) ; la fenêtre ouvre d'abord la vue « Tous les tiers » ou « Tous les
+  contacts » (`VUES_CHOIX`), sauf vue ★ de l'utilisateur dans la fenêtre de choix, et le contexte de l'appel devient le
+  filtre par défaut.
+- **Branchements du cœur** (`client/src/app/annuaire/choix.js`) : `choisirTiers` (relations par défaut), `choisirContact` ;
+  module Annuaire par injection (`definirChoixAnnuaire`, sans dépendance au module Liste) : tous les appels de
+  `choisirPersonne` / `choisirIndividu` (contacts, rattachements, liens, niveau supérieur, fusion, CRM, salarié) passent
+  par la liste, la création d'un individu reprend le formulaire du module avec le nom cherché ; intervenants : bouton
+  🔍, F4 ou double-clic dans le champ, relations selon la fonction (`relationsFonction`) ; champs tiers des fiches de la
+  structure : client ou prospect, sous-traitant d'un marché de sous-traitance. La saisie directe (liste proposée) reste.
+- **Reste** (TODO) : individus de notre société au poste voulu (combos du conducteur, du chargé d'affaires, du
+  rédacteur), contact d'un intervenant choisi en liste, sélection multiple des destinataires.
+- **Contrôles** : `npm test` ; essai dans le navigateur (client d'un projet : filtre retiré, double-clic ; intervenant :
+  filtre de la fonction, Échap ; contact d'une personne : création d'un individu).
+

@@ -2,6 +2,7 @@ import { urlFiche, TYPE_FICHE } from '../codes.js';
 import { echapper } from '@logibtp/socle/ui';
 import { creerTiersProvisoire } from '@logibtp/annuaire/ui';
 import { intervenantPropre } from './structure.js';
+import { choisirTiers, relationsFonction } from '../annuaire/choix.js';
 
 // Intervenants (petit annuaire) d'un projet, d'une affaire, d'un chantier, d'un marché ou d'un document : fonction,
 // tiers de l'annuaire (recherche), contact choisi parmi les rattachements du tiers, coordonnées du contact (courriel,
@@ -86,7 +87,8 @@ export class TableIntervenants {
     }
     return `<tr data-i="${i}">
       <td><select data-champ="fonction" ${fixe ? 'disabled' : ''}>${this.fonctionsProposees(x.fonction).map((y) => `<option value="${y.code}" ${y.code === x.fonction ? 'selected' : ''}>${echapper(y.libelle)}</option>`).join('')}</select></td>
-      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
+      <td class="tiers"><input type="search" data-tiers list="itv-tiers-${i}" value="${echapper(x.tiers ?? '')}" placeholder="Rechercher un tiers (F4 : liste)" ${fixe && this.tiersFige && x.per_id ? 'disabled title="Document issu d\'une transformation : le tiers ne change plus"' : ''}><datalist id="itv-tiers-${i}"></datalist>
+        ${fixe && this.tiersFige && x.per_id ? '' : '<button type="button" class="bouton-icone" data-liste-tiers title="Choisir dans la liste des tiers (F4 ou double-clic dans le champ), filtrée selon la fonction">🔍</button>'}
         ${x.per_id ? `<a href="${urlFiche(TYPE_FICHE.PERSONNE, Number(x.per_id))}" title="Ouvrir la fiche du tiers">↗</a>` : ''}
         ${fixe && this.tiersFige && x.per_id ? '' : '<button type="button" data-nouveau-tiers title="Nouveau tiers (provisoire), après contrôle des doublons">＋</button>'}</td>
       <td><select data-contact><option value="">${x.ind_id ? echapper(x.contact ?? '') : '—'}</option></select></td>
@@ -170,25 +172,39 @@ export class TableIntervenants {
       this.#dessiner();
       this.#changer();
     }));
+    // Tiers choisi (liste proposée en saisie ou liste complète) : contact principal du tiers proposé d'office.
+    const prendreTiers = (x, choisi) => {
+      Object.assign(x, { per_id: choisi.id, tiers: choisi.raison_sociale, ind_id: null, contact: null });
+      this.#contactsDe(choisi.id).then((contacts) => {
+        const p = contacts.find((c) => c.principal && c.actif !== false);
+        if (p) Object.assign(x, { ind_id: p.ind_id, contact: p.individu });
+        this.#dessiner();
+        this.#changer();
+      });
+    };
+    // Liste complète des tiers (I1), filtrée par défaut selon la fonction de l'intervenant.
+    const ouvrirListe = async (el) => {
+      const x = ligne(el);
+      const saisie = el.closest('td').querySelector('[data-tiers]');
+      const libelle = this.fonction(x.fonction)?.libelle ?? 'intervenant';
+      const choisi = await choisirTiers({
+        relations: relationsFonction(x.fonction), titre: `Tiers : ${libelle}`,
+        recherche: x.per_id ? '' : saisie.value.trim(),
+      });
+      if (choisi) prendreTiers(x, choisi);
+    };
+    this.el.querySelectorAll('[data-liste-tiers]').forEach((b) => b.addEventListener('click', () => ouvrirListe(b)));
     this.el.querySelectorAll('[data-tiers]').forEach((input) => {
       let resultats = [];
       let minuterie = null;
       const liste = input.parentElement.querySelector('datalist');
+      input.addEventListener('keydown', (e) => { if (e.key === 'F4') { e.preventDefault(); ouvrirListe(input); } });
+      input.addEventListener('dblclick', () => ouvrirListe(input));
       input.addEventListener('input', () => {
         clearTimeout(minuterie);
         const x = ligne(input);
         const choisi = resultats.find((p) => `${p.code} – ${p.raison_sociale}` === input.value);
-        if (choisi) {
-          Object.assign(x, { per_id: choisi.id, tiers: choisi.raison_sociale, ind_id: null, contact: null });
-          // Contact principal du tiers proposé d'office.
-          this.#contactsDe(choisi.id).then((contacts) => {
-            const p = contacts.find((c) => c.principal && c.actif !== false);
-            if (p) Object.assign(x, { ind_id: p.ind_id, contact: p.individu });
-            this.#dessiner();
-            this.#changer();
-          });
-          return;
-        }
+        if (choisi) { prendreTiers(x, choisi); return; }
         minuterie = setTimeout(async () => {
           resultats = await this.annuaire.rechercherPersonnes({ recherche: input.value, limite: 20 }).catch(() => []);
           liste.innerHTML = resultats.map((p) => `<option value="${echapper(`${p.code} – ${p.raison_sociale}`)}">${echapper(p.ville ?? '')}</option>`).join('');

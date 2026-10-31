@@ -35,14 +35,15 @@ export class PanneauVues {
     conteneur.querySelector('[data-action="reduire-vues"]').addEventListener('click', () => this.reduire(!this.etat().reduit));
     conteneur.querySelector('[data-action="nouvelle-vue"]').addEventListener('click', () => this.liste.concevoir(true));
     const themes = conteneur.querySelector('[data-action="themes"]');
-    themes.hidden = !liste.peutGererThemes;
+    themes.hidden = !liste.peutGererThemes || liste.modeChoix;
+    conteneur.querySelector('[data-action="nouvelle-vue"]').hidden = liste.modeChoix;
     themes.addEventListener('click', () => liste.gererThemes());
     conteneur.querySelector('.liste-vues-recherche').addEventListener('input', (e) => { this.filtre = e.target.value.trim().toLowerCase(); this.rendre(); });
     this.arbre.addEventListener('click', (e) => this.#clic(e));
     this.arbre.addEventListener('contextmenu', (e) => this.#menu(e));
     this.#glisser();
     // Écran étroit : réduit d'office tant que l'utilisateur n'a rien choisi.
-    if (this.etat().reduit === undefined && globalThis.innerWidth < 900) this.etat().reduit = true;
+    if (this.etat().reduit === undefined && (globalThis.innerWidth < 900 || liste.modeChoix)) this.etat().reduit = true;
     this.appliquer();
   }
 
@@ -87,10 +88,10 @@ export class PanneauVues {
   /** Thèmes dans l'ordre des menus de l'application (groupe), puis les vues sans thème. */
   #themes() {
     const l = this.liste;
-    const themes = l.themes.map((t, i) => ({ t, g: l.groupeTheme?.(t) ?? null, i }))
+    const themes = l.themes.filter((t) => !l.themeFixe || t.thl_code === l.themeFixe).map((t, i) => ({ t, g: l.groupeTheme?.(t) ?? null, i }))
       .sort((a, b) => (a.g?.ordre ?? 1e6 + a.i) - (b.g?.ordre ?? 1e6 + b.i));
     const res = themes.map(({ t, g }) => ({ code: t.thl_code, libelle: t.thl_libelle, icone: t.thl_icone, groupe: l.groupeTheme ? g?.groupe ?? 'Autres' : null }));
-    if (this.toutes.some((v) => !v.vli_theme || !l.themes.some((t) => t.thl_code === v.vli_theme))) {
+    if (!l.themeFixe && this.toutes.some((v) => !v.vli_theme || !l.themes.some((t) => t.thl_code === v.vli_theme))) {
       res.push({ code: SANS_THEME, libelle: 'Sans thème', icone: '📋', groupe: l.groupeTheme ? 'Autres' : null });
     }
     return res;
@@ -162,6 +163,7 @@ export class PanneauVues {
     const theme = el.dataset.theme;
     const id = Number(el.dataset.vue);
     const ouvrir = () => this.liste.ouvrirVueDuTheme(theme === SANS_THEME ? null : theme, id);
+    if (this.liste.modeChoix) { ouvrirMenuContextuel(e, [{ libelle: '★ Vue par défaut du thème (pour moi)', action: () => this.#etoile(theme, id) }], { aide: false }); return; }
     ouvrirMenuContextuel(e, [
       { libelle: '★ Vue par défaut du thème (pour moi)', action: () => this.#etoile(theme, id) },
       { libelle: '✎ Modifier la vue…', action: async () => { await ouvrir(); this.liste.concevoir(false); } },

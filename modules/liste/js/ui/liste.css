@@ -306,3 +306,19 @@ button.liste-indicateur:hover { border-color: var(--accent); }
   .concepteur-forme, .concepteur-source { grid-template-columns: 1fr; }
 }
 .liste-table tr.glissable { cursor: grab; }
+
+/* Choix dans une liste (I1, choisirDansListe) : fenêtre de la liste en mode choix. */
+dialog.choix-liste { width: min(1150px, 96vw); height: min(760px, 92vh); max-width: none; max-height: none; padding: 0.75rem;
+  border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); }
+dialog.choix-liste[open] { display: flex; flex-direction: column; gap: 0.5rem; }
+.choix-liste-entete, .choix-liste-pied { display: flex; align-items: center; gap: 0.5rem; flex: none; flex-wrap: wrap; }
+.choix-liste-entete h2 { margin: 0; font-size: 1.1em; }
+.choix-liste-espace { flex: 1; }
+.choix-liste-filtres { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.choix-liste-filtre { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.25rem 0 0.6rem; border-radius: 1em;
+  background: var(--pastille-info-fond); color: var(--pastille-info-texte); font-size: 0.9em; }
+.choix-liste-zone { flex: 1; min-height: 0; }
+.liste-mode-choix [data-action="concevoir"], .liste-mode-choix [data-action="saisie"], .liste-mode-choix .liste-elements,
+.liste-mode-choix .liste-groupe-hote, .liste-mode-choix .liste-groupe-creer, .liste-mode-choix [data-modifier] { display: none; }
+.choix-liste-message.avertissement { color: var(--pastille-attention-texte); }
+.choix-liste-message.erreur { color: var(--erreur); }
