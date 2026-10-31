@@ -193,4 +193,8 @@ Clause de sauvegarde ou butoir, révision des prix unitaires de la bibliothèque
   au taux de TVA principal de la commande, recalculées à la validation. Routes `/api/structure/marches/{id}/revision`
   (+ `/facture`), `/api/structure/revision/index|valeurs|formules`.
 - Écrans : onglet Révision de la fiche marché (vente), page `/parametres/revision` (menu Affaires).
-- Restent : G3 (marchés de sous-traitance), bloc « Révision » des éditions, révision affichée sur les situations.
+- G3 (sous-traitance) : le calcul s'applique tel quel aux factures et avoirs d'avancement de sous-traitance (présentation P,
+  commandes T inscrites au marché) ; onglet Révision du marché de sous-traitance, formule du marché de vente lié proposée
+  tant que le marché n'a pas ses propres paramètres ; pas de facture simple (la régularisation passe sur la facture suivante).
+- Éditions : bloc `revision` du dictionnaire (type de prix, formule, périodes du détail figé, total), guide § 10.5.
+- Reste : révision affichée sur les situations (information) ; bloc à placer dans les modèles de facture si souhaité.

@@ -46,7 +46,7 @@ public static class RevisionPrix
     // ------------------------------------------------------------------ contexte d'un marché
 
     private sealed record ParametresSql(string TypePrix, DateOnly? MoisZero, decimal PartieFixe, string Termes, short Decalage, short Precision, string Arrondi,
-        DateOnly? DebutTravaux, bool Baisse, DateOnly? DebutEffectif, DateOnly? DateMarche);
+        DateOnly? DebutTravaux, bool Baisse, DateOnly? DebutEffectif, DateOnly? DateMarche, string Sens, bool Saisis);
     private sealed record CommandeSql(long EntId, string? Numero, string? Objet, DateOnly? MoisZero, short Rang);
     private sealed record ValeurSql(string Code, DateOnly Mois, decimal Valeur, bool Provisoire, string? Base);
     private sealed record RaccordementSql(string Code, string Base, decimal Coefficient);
@@ -67,18 +67,37 @@ public static class RevisionPrix
     private static List<TermeRevision> LireTermes(string json) =>
         JsonSerializer.Deserialize<List<TermeRevision>>(json, JsonCalcul.Options) ?? [];
 
-    private static async Task<(RevisionMarche Saisie, DateOnly? DebutEffectif, DateOnly? DateMarche)> ParametresAsync(DbContext db, int marche, CancellationToken ct)
+    /// <summary>Paramètres du marché ; <paramref name="applicables"/> faux (onglet) : proposition du marché de vente lié pour un marché de sous-traitance.</summary>
+    private static async Task<(RevisionMarche Saisie, DateOnly? DebutEffectif, DateOnly? DateMarche, string Sens, bool Proposee)> ParametresAsync(DbContext db, int marche,
+        CancellationToken ct, bool applicables = true)
     {
         var p = await db.Database.SqlQuery<ParametresSql>($"""
             SELECT coalesce(r.mre_type_prix, 'FERME') AS type_prix, r.mre_mois_zero AS mois_zero, coalesce(r.mre_partie_fixe, 0.15) AS partie_fixe,
                    coalesce(r.mre_termes, '[]')::text AS termes, coalesce(r.mre_decalage, 0)::smallint AS decalage, coalesce(r.mre_precision, 3)::smallint AS precision,
                    coalesce(r.mre_arrondi, 'PROCHE') AS arrondi, r.mre_debut_travaux AS debut_travaux, coalesce(r.mre_baisse, false) AS baisse,
-                   coalesce(r.mre_debut_travaux, c.cha_debut_reel, c.cha_debut_prevu) AS debut_effectif, m.mar_date AS date_marche
+                   coalesce(r.mre_debut_travaux, c.cha_debut_reel, c.cha_debut_prevu) AS debut_effectif, m.mar_date AS date_marche,
+                   m.mar_sens AS sens, r.mre_mar_id IS NOT NULL AS saisis
             FROM marche m LEFT JOIN marche_revision r ON r.mre_mar_id = m.mar_id LEFT JOIN chantier c ON c.cha_id = m.mar_cha_id
             WHERE m.mar_id = {marche}
             """).FirstOrDefaultAsync(ct) ?? throw ExceptionMetier.Introuvable($"Marché {marche}");
+        // Marché de sous-traitance sans paramètres (lot G3, Q4) : la formule du marché de vente lié est proposée, à
+        // enregistrer pour qu'elle s'applique (jamais appliquée aux pièces tant qu'elle n'est que proposée).
+        if (p.Sens == "ST" && !p.Saisis && !applicables)
+        {
+            var v = await db.Database.SqlQuery<ParametresSql>($"""
+                SELECT r.mre_type_prix AS type_prix, r.mre_mois_zero AS mois_zero, r.mre_partie_fixe AS partie_fixe, r.mre_termes::text AS termes,
+                       r.mre_decalage AS decalage, r.mre_precision AS precision, r.mre_arrondi AS arrondi, NULL::date AS debut_travaux, r.mre_baisse AS baisse,
+                       NULL::date AS debut_effectif, NULL::date AS date_marche, 'V' AS sens, true AS saisis
+                FROM marche m JOIN marche_revision r ON r.mre_mar_id = m.mar_marche_vente_id WHERE m.mar_id = {marche} AND r.mre_type_prix <> 'FERME'
+                """).FirstOrDefaultAsync(ct);
+            if (v is not null)
+            {
+                var proposee = new RevisionMarche(v.TypePrix, null, v.PartieFixe, LireTermes(v.Termes), v.Decalage, v.Precision, v.Arrondi, null, v.Baisse, null);
+                return (proposee, p.DebutEffectif, p.DateMarche, p.Sens, true);
+            }
+        }
         var saisie = new RevisionMarche(p.TypePrix, p.MoisZero, p.PartieFixe, LireTermes(p.Termes), p.Decalage, p.Precision, p.Arrondi, p.DebutTravaux, p.Baisse, null);
-        return (saisie, p.DebutEffectif, p.DateMarche);
+        return (saisie, p.DebutEffectif, p.DateMarche, p.Sens, false);
     }
 
     private static Task<List<CommandeSql>> CommandesAsync(DbContext db, int marche, CancellationToken ct) =>
@@ -111,7 +130,7 @@ public static class RevisionPrix
 
     private static async Task<Contexte?> ContexteAsync(DbContext db, int marche, CancellationToken ct)
     {
-        var (saisie, debut, _) = await ParametresAsync(db, marche, ct);
+        var (saisie, debut, _, _, _) = await ParametresAsync(db, marche, ct);
         if (saisie.TypePrix == TypesPrix.Ferme) return null;
         var formule = new FormuleRevision(saisie.PartieFixe, saisie.Termes ?? [], saisie.Precision, saisie.Arrondi);
         var parametres = new ParametresRevision(saisie.TypePrix, saisie.MoisZero, formule, saisie.Decalage, debut, saisie.Baisse);
@@ -341,6 +360,44 @@ public static class RevisionPrix
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE document_revision SET dre_commande_ent_id = {nouveau} WHERE dre_commande_ent_id = {ancien}", ct);
     }
 
+    // ------------------------------------------------------------------ éditions
+
+    /// <summary>Formule en texte : « 0,15 + 0,85 × BT01 » (coefficient Cn = partie fixe + Σ poids × In / I0).</summary>
+    public static string TexteFormule(decimal partieFixe, IEnumerable<TermeRevision> termes)
+    {
+        var fr = CultureInfo.GetCultureInfo("fr-FR");
+        return string.Join(" + ", new[] { partieFixe.ToString("0.######", fr) }.Concat(termes.Select(t => $"{t.Index} × {t.Poids.ToString("0.######", fr)}")));
+    }
+
+    /// <summary>
+    /// Bloc « revision » des éditions d'une pièce du marché (lots G1, G3) : type de prix, mois zéro, formule et détail figé
+    /// à la validation (période de la pièce et périodes régularisées) ; null sans détail (prix ferme, brouillon).
+    /// </summary>
+    public static async Task<System.Text.Json.Nodes.JsonNode?> EditionAsync(DbContext db, long entId, int marche, CancellationToken ct)
+    {
+        var periodes = System.Text.Json.Nodes.JsonNode.Parse(await db.Database.SqlQueryRaw<string>("""
+            SELECT coalesce(json_agg(json_build_object(
+                'piece', p.ent_numero, 'commande', c.ent_numero,
+                'mois', to_char(coalesce(p.ent_mois_revision, date_trunc('month', p.ent_date)::date), 'YYYY-MM'),
+                'mois_index', to_char(r.dre_mois_index, 'YYYY-MM'), 'base', r.dre_base, 'coef', r.dre_coef, 'provisoire', r.dre_provisoire,
+                'revision', r.dre_revision, 'montant', r.dre_montant, 'regularisation', r.dre_periode_ent_id <> r.dre_ent_id)
+              ORDER BY r.dre_periode_ent_id <> r.dre_ent_id, coalesce(p.ent_mois_revision, p.ent_date), c.ent_numero), '[]')::text AS "Value"
+            FROM document_revision r
+            LEFT JOIN document p ON p.ent_id = r.dre_periode_ent_id LEFT JOIN document c ON c.ent_id = r.dre_commande_ent_id
+            WHERE r.dre_ent_id = @id
+            """, new NpgsqlParameter("id", entId)).FirstAsync(ct))!.AsArray();
+        if (periodes.Count == 0) return null;
+        var (p, _, _, _, _) = await ParametresAsync(db, marche, ct);
+        return new System.Text.Json.Nodes.JsonObject
+        {
+            ["type_prix"] = p.TypePrix, ["mois_zero"] = p.MoisZero?.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+            ["formule"] = TexteFormule(p.PartieFixe, p.Termes ?? []), ["decalage"] = p.Decalage,
+            ["periodes"] = periodes,
+            ["total"] = periodes.Sum(x => x!["montant"]!.GetValue<decimal>()),
+            ["provisoire"] = periodes.Any(x => x!["provisoire"]!.GetValue<bool>()),
+        };
+    }
+
     // ------------------------------------------------------------------ fiche du marché
 
     /// <summary>
@@ -349,7 +406,7 @@ public static class RevisionPrix
     /// </summary>
     public static async Task<object> LireAsync(DbContext db, int marche, CancellationToken ct)
     {
-        var (saisie, debut, dateMarche) = await ParametresAsync(db, marche, ct);
+        var (saisie, debut, dateMarche, sens, proposee) = await ParametresAsync(db, marche, ct, applicables: false);
         var commandes = await CommandesAsync(db, marche, ct);
         var c = await ContexteAsync(db, marche, ct);
         List<Periode> periodes = c is null ? [] : await RegulariserAsync(db, marche, c, null, ct);
@@ -357,6 +414,10 @@ public static class RevisionPrix
         {
             parametres = saisie with { Commandes = [.. commandes.Select(x => new MoisZeroCommande(x.EntId, x.MoisZero))] },
             debut_effectif = debut,
+            sens,
+            // Sous-traitance : formule du marché de vente lié proposée (non enregistrée) ; pas de facture simple de régularisation.
+            proposee,
+            facture_simple = sens != "ST",
             mois_zero_propose = dateMarche is DateOnly dm ? ReglesRevision.Mois(dm) : (DateOnly?)null,
             commandes = commandes.Select(x => new { ent_id = x.EntId, numero = x.Numero, objet = x.Objet, rang = x.Rang, mois_zero = x.MoisZero }),
             periodes = periodes.Select(p => new
@@ -426,6 +487,10 @@ public static class RevisionPrix
         int marche, Utilisateur u, CancellationToken ct)
     {
         var c = await ContexteAsync(db, marche, ct) ?? throw ExceptionMetier.Invalide("REV_FERME", "Marché à prix ferme : aucune révision");
+        if ((await ParametresAsync(db, marche, ct)).Sens == "ST")
+        {
+            throw ExceptionMetier.Invalide("REV_SOUS_TRAITANCE", "Marché de sous-traitance : la régularisation passe sur la facture d'avancement suivante");
+        }
         var aFacturer = (await RegulariserAsync(db, marche, c, null, ct)).GroupBy(p => p.Sql.Commande)
             .Select(g => (Commande: g.Key, Montant: g.Sum(p => p.Revision.AFacturer))).Where(x => x.Montant != 0).ToList();
         if (aFacturer.Count == 0) throw ExceptionMetier.Invalide("REV_RIEN", "Aucune régularisation de révision à facturer");

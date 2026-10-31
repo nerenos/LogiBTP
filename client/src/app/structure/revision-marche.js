@@ -4,7 +4,8 @@ import { api } from '../api.js';
 import { urlDocument, TYPE_PRIX, ARRONDI_REVISION } from '../codes.js';
 import { controlerFormule, lireTermes, ecrireTermes, MESSAGES_REVISION } from './revision.js';
 
-// Onglet Révision de la fiche d'un marché de vente (CONCEPTION-REVISION-PRIX.md, lot G1) : type de prix, mois zéro, formule
+// Onglet Révision de la fiche d'un marché de vente ou de sous-traitance (CONCEPTION-REVISION-PRIX.md, lots G1 et G3 ; sous-traitance :
+// formule du marché de vente lié proposée, pas de facture simple) : type de prix, mois zéro, formule
 // (modèle à recopier, contrôle en direct), décalage, arrondi, actualisation (début des travaux, à la baisse), mois zéro
 // propre des commandes ; périodes facturées avec la révision due (meilleurs index connus), déjà facturée et à facturer ;
 // facture simple de régularisation. Le calcul est fait par le serveur (règle partagée : revision.js ↔ ReglesRevision.cs).
@@ -29,6 +30,7 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
       <label>Mois zéro <input type="month" data-r="mois_zero" value="${mois(p.mois_zero)}" title="Mois d'établissement des prix (I0)"></label>
       ${!p.mois_zero && r.mois_zero_propose ? `<small class="aide">proposé : ${mois(r.mois_zero_propose)} (date du marché)</small>` : ''}
     </div>
+    ${r.proposee ? '<p class="avertissement">Formule du marché de vente lié proposée : à vérifier (mois zéro du sous-traitant) puis enregistrer pour qu\'elle s\'applique.</p>' : ''}
     <div class="formulaire" data-formule>
       <label>Modèle <span data-r="modele"></span></label>
       <label>Partie fixe <input data-r="partie_fixe" size="8" inputmode="decimal" value="${echapper(String(p.partie_fixe ?? '').replace('.', ','))}"></label>
@@ -49,7 +51,7 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
     ${modifiable ? '<div class="boutons"><button type="button" class="principal" data-enregistrer>Enregistrer les prix</button></div>' : ''}
     <h3>Révision des périodes facturées</h3>
     ${ferme ? '<p class="aide">Prix ferme : aucune révision.</p>' : `<p class="aide">Révision due avec les meilleurs index connus à ce jour (✱ : index provisoire ou
-      dernier connu) ; l'écart avec la révision déjà facturée est régularisé sur la facture d'avancement suivante, ou par une facture de régularisation.</p>
+      dernier connu) ; l'écart avec la révision déjà facturée est régularisé sur la facture d'avancement suivante${r.facture_simple ? ', ou par une facture de régularisation' : ''}.</p>
       <table class="tableau-compact"><thead><tr><th>Pièce</th><th>Mois</th><th>Commande</th><th class="nombre">Base HT</th><th>Index</th><th class="nombre">Coefficient</th>
         <th class="nombre">Révision due</th><th class="nombre">Déjà facturée</th><th class="nombre">À facturer</th></tr></thead><tbody>
       ${periodes.length ? periodes.map((x) => `<tr><td><a href="${urlDocument(Number(x.piece))}">${echapper(x.numero ?? `#${x.piece}`)}</a></td><td>${mois(x.mois)}</td>
@@ -59,7 +61,7 @@ export async function rendreRevision(zone, { marche, message, ouvrir, modifiable
         : '<tr><td colspan="9" class="aide">Aucune facture d\'avancement validée.</td></tr>'}
       </tbody><tfoot><tr><th colspan="3">Total</th><th class="nombre">${f(r.totaux.base)}</th><th colspan="2"></th><th class="nombre">${f(r.totaux.revision)}</th>
         <th class="nombre">${f(r.totaux.deja)}</th><th class="nombre">${f(r.totaux.a_facturer)}</th></tr></tfoot></table>
-      ${modifiable && !Dz(r.totaux.a_facturer).isZero() ? '<div class="boutons"><button type="button" data-facture title="Facture simple au client du marché : une ligne par commande, montants recalculés à la validation">🧾 Facture de régularisation</button></div>' : ''}`}
+      ${modifiable && r.facture_simple && !Dz(r.totaux.a_facturer).isZero() ? '<div class="boutons"><button type="button" data-facture title="Facture simple au client du marché : une ligne par commande, montants recalculés à la validation">🧾 Facture de régularisation</button></div>' : ''}`}
   </div>`;
 
   const remplacer = (cle, combo) => { zone.querySelector(`[data-r="${cle}"]`).replaceWith(combo); return combo; };

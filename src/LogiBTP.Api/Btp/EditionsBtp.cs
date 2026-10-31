@@ -514,6 +514,8 @@ public static class SourceDocumentEdition
             var impute = imputations.Sum(x => x!["montant"]!.GetValue<decimal>());
             ((JsonObject)resultat["totaux"]!)["reste_imputation"] = imputations.Count == 0 ? null : JsonValue.Create(d.EntNetAPayer - impute);
         }
+        // Révision des prix du marché (lots G1, G3) : détail figé à la validation ; vide sans révision.
+        resultat["revision"] = d.EntMarcheId is int marcheRevision ? await RevisionPrix.EditionAsync(db, d.EntId, marcheRevision, ct) : null;
         // Ordre (module Exécution, E47) : étapes dans l'ordre (dates prévisionnelles, validation, contrôle, ressource).
         if (famille == FamillesDocument.Execution)
         {
@@ -831,6 +833,17 @@ public static class SourceDocumentEdition
             ("imputations[].type", "Type de la pièce en contrepartie", "texte"), ("imputations[].piece", "Numéro de la pièce en contrepartie", "texte"),
             ("imputations[].date", "Date de l'imputation", "date"), ("imputations[].montant", "Montant imputé sur ce document (signe de son échéance)", "montant"),
             ("totaux.reste_imputation", "Reste après imputation (net à payer − imputations ; vide sans imputation)", "montant"));
+        G("Révision des prix (marché)",
+            ("revision", "Révision des prix de la pièce validée (vide : prix ferme, brouillon ou pièce hors marché)", "objet"),
+            ("revision.type_prix", "FERME, ACTUALISABLE ou REVISABLE", "texte"), ("revision.mois_zero", "Mois zéro (AAAA-MM)", "texte"),
+            ("revision.formule", "Formule : partie fixe + index × poids", "texte"), ("revision.decalage", "Décalage de l'index (mois)", "nombre"),
+            ("revision.periodes", "Périodes révisées : celle de la pièce, puis les périodes régularisées", "collection"),
+            ("revision.periodes[].piece", "Pièce de la période", "texte"), ("revision.periodes[].commande", "Commande du marché", "texte"),
+            ("revision.periodes[].mois", "Mois des travaux (AAAA-MM)", "texte"), ("revision.periodes[].mois_index", "Mois de l'index (AAAA-MM)", "texte"),
+            ("revision.periodes[].base", "Montant HT de la période", "montant"), ("revision.periodes[].coef", "Coefficient", "nombre"),
+            ("revision.periodes[].provisoire", "Index provisoire ou dernier connu", "booleen"), ("revision.periodes[].revision", "Révision due", "montant"),
+            ("revision.periodes[].montant", "Facturé par cette pièce", "montant"), ("revision.periodes[].regularisation", "Période précédente régularisée", "booleen"),
+            ("revision.total", "Total de la révision facturée par la pièce", "montant"), ("revision.provisoire", "Au moins un index provisoire", "booleen"));
         G("Étapes d'un ordre (module Exécution)",
             ("etapes", "Étapes de l'ordre (dans l'ordre)", "collection"), ("etapes[].libelle", "État", "texte"), ("etapes[].code", "Code de l'état", "texte"),
             ("etapes[].nature", "Nature (TACHE, JALON, ATTENTE)", "texte"), ("etapes[].date_obligatoire", "Date obligatoire (colonne du tableau)", "booleen"),

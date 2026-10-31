@@ -90,7 +90,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Révision de prix par index BT, suite du lot G1 ([CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) § 10) : G3 marchés de sous-traitance, bloc « Révision » du dictionnaire des éditions (périodes, index, coefficients), révision affichée sur les situations.
+- [ ] Révision de prix (lots G1, G3 faits, [CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) § 10) : révision affichée sur les situations ; bloc `revision` à placer dans les modèles de facture d'avancement (`db/191`) si souhaité.
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
 

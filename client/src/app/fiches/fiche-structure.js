@@ -436,13 +436,15 @@ export class FicheMarche extends FicheStructure {
       : [];
     // Marché de vente : réception et retenue de garantie (en ligne).
     const retenue = this.valeur('sens') !== 'ST' && this.id !== null && this.services.structure.gestion
-      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) },
-        // Révision des prix (lot G1) : paramètres du marché et périodes révisées.
-        { code: 'revision', titre: 'Révision', rendre: (corps) => rendreRevision(corps, {
-          marche: Number(this.id), message: this.message, ouvrir: (url, e) => this.ouvrirUrl(url, e),
-        }).catch((e) => this.message(e.message, 'erreur')) }]
+      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
       : [];
-    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...super.ongletsSpecifiques()];
+    // Révision des prix (lots G1 et G3) : paramètres du marché et périodes révisées, vente et sous-traitance.
+    const revision = this.id !== null && this.services.structure.gestion
+      ? [{ code: 'revision', titre: 'Révision', rendre: (corps) => rendreRevision(corps, {
+        marche: Number(this.id), message: this.message, ouvrir: (url, e) => this.ouvrirUrl(url, e),
+      }).catch((e) => this.message(e.message, 'erreur')) }]
+      : [];
+    return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...revision, ...super.ongletsSpecifiques()];
   }
 
   /**
