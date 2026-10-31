@@ -5,9 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogiBTP.Reglements.Web;
 
-/// <summary>Échéance avec son pointé et son reste (ResteAPayer).</summary>
+/// <summary>
+/// Échéance avec son pointé et son reste (ResteAPayer) ; retenue de garantie : part cautionnée (exigible avec la pièce,
+/// datée de la pièce) et part cautionnée restant à pointer (ResteAPayer.ConsommerCautions, ExigibleCaution).
+/// </summary>
 public sealed record EcheanceDto(long Id, long PieceId, string? Piece, string Type, long TiersId, string? Tiers, string Sens,
-    DateOnly? Date, decimal Montant, string Nature, long? ObjetId, decimal Pointe, decimal Reste, bool Reglee);
+    DateOnly? Date, decimal Montant, string Nature, long? ObjetId, decimal Pointe, decimal Reste, bool Reglee,
+    DateOnly? DatePiece = null, decimal Cautionne = 0, decimal ExigibleCaution = 0);
 
 /// <summary>Pointage saisi : échéance et montant (du signe de l'échéance).</summary>
 public sealed record PointageSaisi(long EcheanceId, decimal Montant);
@@ -16,17 +20,23 @@ public sealed record PointageSaisi(long EcheanceId, decimal Montant);
 public sealed record ReglementSaisi(long TiersId, string Sens, DateOnly Date, string Mode, decimal Montant, string? Reference, string? Commentaire,
     List<PointageSaisi> Pointages);
 
-/// <summary>Caution saisie avec ses pointages (échéances de retenue).</summary>
+/// <summary>
+/// Caution saisie (objet : marché, sinon toutes les retenues du tiers). Elle ne pointe plus d'échéance : sa consommation
+/// sur les retenues est calculée (ResteAPayer.ConsommerCautions) ; Pointages est ignoré (compatibilité).
+/// </summary>
 public sealed record CautionSaisie(long TiersId, string? Objet, long? ObjetId, string Organisme, decimal Montant, DateOnly Date, DateOnly? DateFin,
-    string? Reference, DateOnly? Mainlevee, List<PointageSaisi> Pointages);
+    string? Reference, DateOnly? Mainlevee, List<PointageSaisi>? Pointages = null);
 
 /// <summary>Règlement lu : non pointé (trop-perçu) et pointages.</summary>
 public sealed record ReglementDto(long Id, long TiersId, string Sens, DateOnly Date, string Mode, decimal Montant, string? Reference, string? Commentaire,
     decimal NonPointe, List<PointageSaisi> Pointages);
 
-/// <summary>Caution lue : non pointé et pointages.</summary>
+/// <summary>
+/// Caution lue : consommé et disponible (NonPointe = disponible), retenues couvertes (Pointages : échéance et part
+/// cautionnée, calculées).
+/// </summary>
 public sealed record CautionDto(long Id, long TiersId, string? Objet, long? ObjetId, string Organisme, decimal Montant, DateOnly Date, DateOnly? DateFin,
-    string? Reference, DateOnly? Mainlevee, decimal NonPointe, List<PointageSaisi> Pointages);
+    string? Reference, DateOnly? Mainlevee, decimal NonPointe, List<PointageSaisi> Pointages, decimal Consomme = 0);
 
 /// <summary>
 /// Imputation sur une échéance à régler (décision du 31/10/2026) : d'un avoir (échéance négative du même tiers et du même
@@ -57,14 +67,40 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
     {
         var sources = await specialisation.EcheancesAsync(db, filtre, ct);
         var ids = sources.Select(e => e.Id).ToList();
-        var pointes = await db.Pointages.AsNoTracking().Where(p => ids.Contains(p.PoiEcheanceId))
+        // Pointés des règlements et imputations (une caution ne pointe plus : sa part est calculée).
+        var pointes = await db.Pointages.AsNoTracking().Where(p => ids.Contains(p.PoiEcheanceId) && p.PoiCauId == null)
             .GroupBy(p => p.PoiEcheanceId).Select(g => new { Id = g.Key, Total = g.Sum(p => p.PoiMontant) }).ToDictionaryAsync(x => x.Id, x => x.Total, ct);
+        var tiersRetenues = sources.Where(e => e.Nature == NatureRetenue).Select(e => e.TiersId).Distinct().ToList();
+        var cautionne = new Dictionary<long, decimal>();
+        foreach (var t in tiersRetenues)
+        {
+            foreach (var r in (await ConsommationAsync(t, ct)).Retenues) cautionne[r.Id] = r.Cautionne;
+        }
         return sources.Select(e =>
         {
             var pointe = pointes.GetValueOrDefault(e.Id);
             var etat = ResteAPayer.Echeance(e.Montant, pointe, specialisation.Seuil);
-            return new EcheanceDto(e.Id, e.PieceId, e.Piece, e.Type, e.TiersId, e.Tiers, e.Sens, e.Date, e.Montant, e.Nature, e.ObjetId, pointe, etat.Reste, etat.Reglee);
+            var c = cautionne.GetValueOrDefault(e.Id);
+            return new EcheanceDto(e.Id, e.PieceId, e.Piece, e.Type, e.TiersId, e.Tiers, e.Sens, e.Date, e.Montant, e.Nature, e.ObjetId, pointe, etat.Reste, etat.Reglee,
+                e.DatePiece, c, ResteAPayer.ExigibleCaution(c, pointe, etat.Reste));
         }).Where(e => !ouvertes || !e.Reglee).ToList();
+    }
+
+    /// <summary>Nature des échéances de retenue de garantie (seules couvertes par une caution).</summary>
+    private const string NatureRetenue = "RETENUE";
+
+    /// <summary>
+    /// Consommation des cautions d'un tiers sur toutes ses retenues de garantie (décision du 31/10/2026, lot F) : une
+    /// caution d'objet « marche » couvre les retenues de ce marché, une caution sans objet toutes celles du tiers.
+    /// </summary>
+    private async Task<ConsommationCautions> ConsommationAsync(long tiers, CancellationToken ct)
+    {
+        var cautions = await db.Cautions.AsNoTracking().Where(c => c.CauTiersId == tiers).ToListAsync(ct);
+        if (cautions.Count == 0) return new ConsommationCautions([], [], []);
+        var retenues = (await specialisation.EcheancesAsync(db, new FiltreEcheances(TiersId: tiers), ct)).Where(e => e.Nature == NatureRetenue).ToList();
+        return ResteAPayer.ConsommerCautions(
+            [.. cautions.Select(c => new CautionRetenue(c.CauId, c.CauObjetId, c.CauDate, c.CauMontant, c.CauMainlevee))],
+            [.. retenues.Select(r => new RetenueACouvrir(r.Id, r.ObjetId, r.DatePiece, r.Montant))]);
     }
 
     public async Task<List<EtatPieceDto>> EtatPieces(List<long> pieces, CancellationToken ct) =>
@@ -190,27 +226,22 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
 
     /// <summary>
     /// Pointages des échéances d'une pièce avec leur origine (onglet Règlements de la page document, éditions) :
-    /// règlements, cautions, imputations (pièces en contrepartie : les autres échéances pointées par l'imputation).
+    /// règlements, imputations (pièces en contrepartie : les autres échéances pointées par l'imputation), puis les parts
+    /// cautionnées des retenues (calculées, Id 0 : information, elles ne règlent rien).
     /// </summary>
     public async Task<List<PointagePieceDto>> PointagesPiece(long piece, CancellationToken ct)
     {
-        var ids = (await specialisation.EcheancesAsync(db, new FiltreEcheances(Pieces: [piece]), ct)).Select(e => e.Id).ToList();
-        var pointages = await db.Pointages.AsNoTracking().Where(p => ids.Contains(p.PoiEcheanceId)).OrderBy(p => p.PoiId).ToListAsync(ct);
-        var regIds = pointages.Where(p => p.PoiRegId != null).Select(p => p.PoiRegId!.Value).Distinct().ToList();
-        var cauIds = pointages.Where(p => p.PoiCauId != null).Select(p => p.PoiCauId!.Value).Distinct().ToList();
+        var echeancesPiece = await specialisation.EcheancesAsync(db, new FiltreEcheances(Pieces: [piece]), ct);
+        var ids = echeancesPiece.Select(e => e.Id).ToList();
+        var pointages = await db.Pointages.AsNoTracking().Where(p => ids.Contains(p.PoiEcheanceId) && p.PoiRegId != null).OrderBy(p => p.PoiId).ToListAsync(ct);
+        var regIds = pointages.Select(p => p.PoiRegId!.Value).Distinct().ToList();
         var reglements = await db.Reglements.AsNoTracking().Where(r => regIds.Contains(r.RegId)).ToDictionaryAsync(r => r.RegId, ct);
-        var cautions = await db.Cautions.AsNoTracking().Where(c => cauIds.Contains(c.CauId)).ToDictionaryAsync(c => c.CauId, ct);
         var imputations = reglements.Values.Where(r => r.RegMode == ModeReglementSysteme.Imputation).Select(r => r.RegId).ToList();
         var autres = await db.Pointages.AsNoTracking().Where(p => p.PoiRegId != null && imputations.Contains(p.PoiRegId.Value) && !ids.Contains(p.PoiEcheanceId)).ToListAsync(ct);
         var sources = autres.Count == 0 ? []
             : (await specialisation.EcheancesAsync(db, new FiltreEcheances(Ids: autres.Select(p => p.PoiEcheanceId).Distinct().ToList()), ct)).ToDictionary(e => e.Id);
-        return pointages.Select(p =>
+        var resultat = pointages.Select(p =>
         {
-            if (p.PoiCauId is long c)
-            {
-                var x = cautions[c];
-                return new PointagePieceDto(p.PoiId, p.PoiEcheanceId, p.PoiMontant, SourcePointage.Caution, c, x.CauDate, null, x.CauReference, x.CauOrganisme, []);
-            }
             var r = reglements[p.PoiRegId!.Value];
             var imputation = r.RegMode == ModeReglementSysteme.Imputation;
             var contreparties = !imputation ? [] : autres.Where(o => o.PoiRegId == r.RegId && sources.ContainsKey(o.PoiEcheanceId))
@@ -218,6 +249,19 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
             return new PointagePieceDto(p.PoiId, p.PoiEcheanceId, p.PoiMontant, imputation ? SourcePointage.Imputation : SourcePointage.Reglement, r.RegId,
                 r.RegDate, r.RegMode, r.RegReference, r.RegCommentaire, contreparties);
         }).ToList();
+        var retenues = echeancesPiece.Where(e => e.Nature == NatureRetenue).ToList();
+        if (retenues.Count == 0) return resultat;
+        var conso = await ConsommationAsync(retenues[0].TiersId, ct);
+        var allocations = conso.Allocations.Where(a => retenues.Any(r => r.Id == a.Retenue)).ToList();
+        if (allocations.Count == 0) return resultat;
+        var cauIds = allocations.Select(a => a.Caution).Distinct().ToList();
+        var cautions = await db.Cautions.AsNoTracking().Where(c => cauIds.Contains(c.CauId)).ToDictionaryAsync(c => c.CauId, ct);
+        resultat.AddRange(allocations.Select(a =>
+        {
+            var c = cautions[a.Caution];
+            return new PointagePieceDto(0, a.Retenue, a.Montant, SourcePointage.Caution, c.CauId, c.CauDate, null, c.CauReference, c.CauOrganisme, []);
+        }));
+        return resultat;
     }
 
     /// <summary>Échéances pointées par un règlement ou une caution (avant modification).</summary>
@@ -233,21 +277,26 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         var liste = await db.Cautions.AsNoTracking()
             .Where(c => (tiers == null || c.CauTiersId == tiers) && (objet == null || c.CauObjet == objet) && (objetId == null || c.CauObjetId == objetId))
             .OrderByDescending(c => c.CauDate).ToListAsync(ct);
-        var ids = liste.Select(c => c.CauId).ToList();
-        var pointages = await db.Pointages.AsNoTracking().Where(p => p.PoiCauId != null && ids.Contains(p.PoiCauId.Value)).ToListAsync(ct);
+        var consommations = new Dictionary<long, ConsommationCautions>();
+        foreach (var t in liste.Select(c => c.CauTiersId).Distinct()) consommations[t] = await ConsommationAsync(t, ct);
         return liste.Select(c =>
         {
-            var p = pointages.Where(x => x.PoiCauId == c.CauId).Select(x => new PointageSaisi(x.PoiEcheanceId, x.PoiMontant)).ToList();
+            var conso = consommations[c.CauTiersId];
+            var p = conso.Allocations.Where(a => a.Caution == c.CauId).Select(a => new PointageSaisi(a.Retenue, a.Montant)).ToList();
+            var etat = conso.Cautions.FirstOrDefault(x => x.Id == c.CauId);
             return new CautionDto(c.CauId, c.CauTiersId, c.CauObjet, c.CauObjetId, c.CauOrganisme, c.CauMontant, c.CauDate, c.CauDateFin, c.CauReference,
-                c.CauMainlevee, ResteAPayer.NonPointe(c.CauMontant, p.Select(x => x.Montant)), p);
+                c.CauMainlevee, etat?.Disponible ?? c.CauMontant, p, etat?.Consomme ?? 0);
         }).ToList();
     }
 
-    /// <summary>Caution : pointe des échéances de retenue de garantie (la retenue est « libérée par caution »).</summary>
+    /// <summary>
+    /// Caution : remplace la retenue de garantie (part cautionnée exigible avec la pièce), consommée sur les retenues du
+    /// tiers (de son marché, ou toutes sans objet) des plus anciennes aux plus récentes ; aucune échéance pointée.
+    /// </summary>
     public async Task<CautionDto> EnregistrerCaution(long? id, CautionSaisie s, CancellationToken ct)
     {
         if (s.Montant <= 0 || string.IsNullOrWhiteSpace(s.Organisme)) throw ExceptionMetier.Invalide("CAUTION", "Organisme et montant positif obligatoires");
-        await ControlerPointages(s.TiersId, null, s.Montant, s.Pointages, null, id, "RETENUE", ct);
+        if (s.Mainlevee is DateOnly levee && levee < s.Date) throw ExceptionMetier.Invalide("CAUTION", "Mainlevée antérieure à la date de la caution");
         var touchees = await EcheancesPointees(null, id, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var c = id is long x ? await db.Cautions.FirstOrDefaultAsync(c => c.CauId == x, ct) ?? throw ExceptionMetier.Introuvable($"Caution {x}")
@@ -262,10 +311,9 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         c.CauReference = s.Reference;
         c.CauMainlevee = s.Mainlevee;
         await db.SaveChangesAsync(ct);
+        // Anciens pointages de la caution (avant le lot F) : retirés, la consommation est calculée.
         await db.Pointages.Where(p => p.PoiCauId == c.CauId).ExecuteDeleteAsync(ct);
-        db.Pointages.AddRange(s.Pointages.Where(p => p.Montant != 0).Select(p => new Pointage { PoiCauId = c.CauId, PoiEcheanceId = p.EcheanceId, PoiMontant = p.Montant }));
-        await db.SaveChangesAsync(ct);
-        await specialisation.ApresPointageAsync(db, [.. touchees, .. s.Pointages.Select(p => p.EcheanceId)], ct);
+        await specialisation.ApresPointageAsync(db, touchees, ct);
         await tx.CommitAsync(ct);
         return (await Cautions(c.CauTiersId, null, null, ct)).First(x => x.Id == c.CauId);
     }
@@ -288,7 +336,7 @@ public class ServiceReglement(ReglementDbContext db, SpecialisationReglement spe
         var ids = pointages.Select(p => p.EcheanceId).ToList();
         var echeances = (await specialisation.EcheancesAsync(db, new FiltreEcheances(Ids: ids), ct)).ToDictionary(e => e.Id);
         var autres = await db.Pointages.AsNoTracking()
-            .Where(p => ids.Contains(p.PoiEcheanceId) && (regId == null || p.PoiRegId != regId) && (cauId == null || p.PoiCauId != cauId))
+            .Where(p => ids.Contains(p.PoiEcheanceId) && p.PoiCauId == null && (regId == null || p.PoiRegId != regId) && (cauId == null || p.PoiCauId != cauId))
             .GroupBy(p => p.PoiEcheanceId).Select(g => new { Id = g.Key, Total = g.Sum(p => p.PoiMontant) }).ToDictionaryAsync(x => x.Id, x => x.Total, ct);
         var erreurs = new List<string>();
         foreach (var p in pointages.Where(p => p.Montant != 0))

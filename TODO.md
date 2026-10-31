@@ -24,7 +24,8 @@
   rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux) ; lot D : appliquer
   `db/248` (chantier par ligne, colonne `chantiers` de `v_liste_documents`), rejouer les `150` et `176` régénérés
   (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue) ;
-  lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois).
+  lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois) ; lot F : appliquer
+  `modules/reglement/db/081` (anciens pointages de caution retirés : la consommation des cautions est calculée).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -87,9 +88,6 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Cautions de retenue de garantie : une caution sur plusieurs retenues, retenue partiellement cautionnée ; le
-  montant cautionné se consomme en premier, la retenue non cautionnée reste due une fois la caution épuisée (une pièce
-  peut avoir une part cautionnée et une part retenue).
 - [ ] Révision de prix par index BT (formule, index provisoires puis définitifs) : à concevoir avant de coder.
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.

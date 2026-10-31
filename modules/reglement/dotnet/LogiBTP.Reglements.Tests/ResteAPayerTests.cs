@@ -63,4 +63,34 @@ public class ResteAPayerTests
             Assert.Equal(Dec(c!["attendu"]), ResteAPayer.MaximumImputation(Dec(c["disponible"]), Dec(c["reste"])));
         }
     }
+
+    private static JsonObject JeuCautions() => CasPartages.Lire(CasPartages.Chemin("modules", "reglement", "tests", "cas", "02_cautions.json"));
+
+    private static DateOnly? Date(JsonNode? n) => n is null ? null : DateOnly.Parse(n.GetValue<string>(), CultureInfo.InvariantCulture);
+
+    private static long? Long(JsonNode? n) => n is null ? null : n.GetValue<long>();
+
+    [Fact]
+    public void Consommations_de_cautions_identiques_au_js()
+    {
+        foreach (var c in JeuCautions()["consommations"]!.AsArray())
+        {
+            var cautions = c!["cautions"]!.AsArray().Select(x => new CautionRetenue(x!["id"]!.GetValue<long>(), Long(x["objet"]), Date(x["date"]), Dec(x["montant"]), Date(x["mainlevee"]))).ToList();
+            var retenues = c["retenues"]!.AsArray().Select(x => new RetenueACouvrir(x!["id"]!.GetValue<long>(), Long(x["objet"]), Date(x["date_piece"]), Dec(x["montant"]))).ToList();
+            var r = ResteAPayer.ConsommerCautions(cautions, retenues);
+            var a = c["attendu"]!;
+            Assert.Equal(a["allocations"]!.AsArray().Select(x => new AllocationCaution(x!["caution"]!.GetValue<long>(), x["retenue"]!.GetValue<long>(), Dec(x["montant"]))).ToList(), r.Allocations);
+            Assert.Equal(a["retenues"]!.AsArray().Select(x => new RetenueCouverte(x!["id"]!.GetValue<long>(), Dec(x["cautionne"]), Dec(x["retenu"]))).ToList(), r.Retenues);
+            Assert.Equal(a["cautions"]!.AsArray().Select(x => new CautionConsommee(x!["id"]!.GetValue<long>(), Dec(x["consomme"]), Dec(x["disponible"]))).ToList(), r.Cautions);
+        }
+    }
+
+    [Fact]
+    public void Exigibles_identiques_au_js()
+    {
+        foreach (var c in JeuCautions()["exigibles"]!.AsArray())
+        {
+            Assert.Equal(Dec(c!["attendu"]), ResteAPayer.ExigibleCaution(Dec(c["cautionne"]), Dec(c["pointe"]), Dec(c["reste"])));
+        }
+    }
 }

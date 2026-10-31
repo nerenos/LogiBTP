@@ -11,7 +11,9 @@ import { api } from '../api.js';
 /**
  * Règlements d'un tiers (module Règlements, CONCEPTION-MARCHES-REGLEMENTS.md, Q15 à Q18) : `/reglements?sens=E|D&tiers=`.
  * Échéances ouvertes des pièces validées (reste à payer), saisie d'un règlement avec pointage (répartition proposée :
- * plus ancienne d'abord), règlements du tiers (non pointé), cautions pointant les retenues de garantie.
+ * plus ancienne d'abord), règlements du tiers (non pointé), cautions de retenue de garantie (lot F : la caution remplace la
+ * retenue ; sa consommation, calculée par le serveur, rend la part cautionnée exigible avec la pièce et proposée à la
+ * répartition à la date de la pièce ; la retenue non couverte reste due à la libération).
  * Périmètre d'un chantier ou d'un marché (lot 6 : A27) : `/reglements?chantier=` ou `?marche=` : échéances de ses pièces
  * validées, tous tiers, clients puis fournisseurs, avec le pointé et le reste ; le tiers ouvre sa page de pointage.
  */
@@ -95,14 +97,27 @@ export class PageReglements extends PageBase {
     const f = (v) => formatNombre(v ?? 0, 2);
     // Toutes les échéances du tiers (pièces des règlements), affichées ouvertes seulement sauf demande.
     const parId = new Map(toutes.map((e) => [e.id, e]));
+    // Marchés des retenues du tiers (portée d'une caution), libellés par les référentiels de la structure.
+    const idsMarches = [...new Set(toutes.filter((e) => e.nature === 'RETENUE' && e.objet_id).map((e) => Number(e.objet_id)))];
+    const refs = idsMarches.length ? await this.app.services().then(({ structure }) => structure.referentiels()).catch(() => ({})) : {};
+    const marches = new Map(idsMarches.map((id) => {
+      const m = (refs.marches ?? []).find((x) => x.id === id);
+      return [id, m ? `${m.code}${m.libelle ? ` – ${m.libelle}` : ''}` : `Marché #${id}`];
+    }));
     const echeances = this.toutes ? toutes : toutes.filter((e) => !e.reglee);
+    const NATURE_RETENUE = 'RETENUE';
+    // Échéance proposée à la répartition : normale (son reste), ou part cautionnée d'une retenue (datée de la pièce).
+    const aRepartir = (e) => (e.nature !== NATURE_RETENUE ? { id: e.id, date: e.date, reste: e.reste }
+      : !Dz(e.exigible_caution ?? 0).isZero() ? { id: e.id, date: e.date ?? e.date_piece, reste: e.exigible_caution }
+        : e.date ? { id: e.id, date: e.date, reste: e.reste } : null);
     const lien = (e) => `<a href="${urlDocument(Number(e.piece_id))}">${echapper(e.piece ?? `#${e.piece_id}`)}</a>`;
     corps.innerHTML = `
       <h2>Échéances</h2>
-      ${echeances.length ? `<table><thead><tr><th>Pièce</th><th>Type</th><th>Échéance</th><th class="nombre">Montant</th><th class="nombre">Pointé</th>
-        <th class="nombre">Reste</th><th class="nombre">À pointer</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
+      ${echeances.length ? `<table><thead><tr><th>Pièce</th><th>Type</th><th>Échéance</th><th class="nombre">Montant</th><th class="nombre" title="Retenue de garantie : part couverte par une caution, exigible avec la pièce">Dont cautionné</th>
+        <th class="nombre">Pointé</th><th class="nombre">Reste</th><th class="nombre">À pointer</th></tr></thead><tbody>${echeances.map((e) => `<tr${e.reglee ? ' class="discret"' : ''}>
         <td>${lien(e)}</td><td>${echapper(e.type)}</td><td>${e.nature === 'RETENUE' ? `Retenue de garantie${e.date ? ` · ${echapper(e.date)}` : ''}` : echapper(e.date ?? '')}</td>
-        <td class="nombre">${f(e.montant)}</td><td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
+        <td class="nombre">${f(e.montant)}</td><td class="nombre">${Dz(e.cautionne ?? 0).isZero() ? '' : f(e.cautionne)}</td>
+        <td class="nombre">${f(e.pointe)}</td><td class="nombre">${f(e.reste)}</td>
         <td class="nombre"><input data-pointer="${e.id}" size="10" inputmode="decimal" ${e.reglee ? 'disabled' : ''}></td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune échéance ouverte.</p>'}
       <h2>Nouveau règlement</h2>
@@ -123,27 +138,35 @@ export class PageReglements extends PageBase {
         : '<p class="aide">Aucun règlement.</p>'}
       <h2>Cautions</h2>
       ${cautions.length ? `<table><thead><tr><th>Organisme</th><th>Référence</th><th>Date</th><th>Fin</th><th>Mainlevée</th><th class="nombre">Montant</th>
-        <th class="nombre">Non pointé</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
+        <th class="nombre">Consommé</th><th class="nombre">Disponible</th><th>Portée</th><th>Pièces couvertes</th><th></th></tr></thead><tbody>${cautions.map((c) => `<tr><td>${echapper(c.organisme)}</td><td>${echapper(c.reference ?? '')}</td>
         <td>${echapper(c.date)}</td><td>${echapper(c.date_fin ?? '')}</td><td>${echapper(c.mainlevee ?? '')}</td><td class="nombre">${f(c.montant)}</td>
-        <td class="nombre">${f(c.non_pointe)}</td><td><button type="button" data-supprimer-caution="${c.id}" title="Supprimer la caution et ses pointages">✕</button></td></tr>`).join('')}</tbody></table>`
+        <td class="nombre">${f(c.consomme)}</td><td class="nombre">${f(c.non_pointe)}</td><td>${c.objet_id ? echapper(marches.get(c.objet_id) ?? `Marché #${c.objet_id}`) : 'Toutes les retenues'}</td>
+        <td>${c.pointages.map((p) => `${echapper(parId.get(p.echeance_id)?.piece ?? `échéance ${p.echeance_id}`)} (${f(p.montant)})`).join(', ')}</td>
+        <td><button type="button" data-supprimer-caution="${c.id}" title="Supprimer la caution">✕</button></td></tr>`).join('')}</tbody></table>`
         : '<p class="aide">Aucune caution.</p>'}
+      <p class="aide">Une caution remplace la retenue de garantie : la part cautionnée est exigible avec la pièce ; elle se consomme sur les retenues les plus anciennes, la retenue non couverte reste due à la libération.</p>
       <div class="formulaire">
         <label>Organisme <input data-c="organisme" maxlength="150"></label>
         <label>Montant <input data-c="montant" size="12" inputmode="decimal"></label>
         <label>Date <input type="date" data-c="date" value="${aujourdhui()}"></label>
         <label>Fin <input type="date" data-c="date_fin"></label>
+        <label>Mainlevée <input type="date" data-c="mainlevee"></label>
         <label>Référence <input data-c="reference" maxlength="100"></label>
-        <button type="button" data-caution title="Pointe les retenues de garantie ouvertes, de la plus ancienne à la plus récente">＋ Caution sur les retenues</button>
+        <label>Portée <span data-c-portee></span></label>
+        <button type="button" data-caution title="Couvre les retenues de garantie de la portée, de la plus ancienne à la plus récente">＋ Caution</button>
       </div>`;
     const mode = creerCombo({ options: this.modes.filter(([, , actif]) => actif !== false).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.modes[0]?.[0] ?? 'VIREMENT', vide: false });
     corps.querySelector('[data-r="mode"]').replaceWith(mode);
+    const portee = creerCombo({ options: [{ valeur: '', libelle: 'Toutes les retenues du tiers' }, ...[...marches].map(([valeur, libelle]) => ({ valeur, libelle }))],
+      valeur: marches.size === 1 ? [...marches.keys()][0] : '', vide: false });
+    corps.querySelector('[data-c-portee]').replaceWith(portee);
     const champ = (cle) => corps.querySelector(`[data-r="${cle}"]`);
     const pointages = () => [...corps.querySelectorAll('[data-pointer]')].map((el) => ({ echeance_id: Number(el.dataset.pointer), montant: lireNombre(el.value) }))
       .filter((p) => p.montant !== null && p.montant !== undefined && !Dz(p.montant).isZero());
     corps.querySelector('[data-repartir]').addEventListener('click', () => {
       const montant = lireNombre(champ('montant').value);
       if (montant === null || montant === undefined) { this.app.message('Montant du règlement à saisir', 'avertissement'); return; }
-      const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee && e.nature !== 'RETENUE').map((e) => ({ id: e.id, date: e.date, reste: e.reste })))
+      const proposes = new Map(proposerPointage(montant, echeances.filter((e) => !e.reglee).map(aRepartir).filter(Boolean))
         .map((p) => [p.id, p.montant]));
       corps.querySelectorAll('[data-pointer]').forEach((el) => { el.value = proposes.has(Number(el.dataset.pointer)) ? formatNombre(proposes.get(Number(el.dataset.pointer)), 2) : ''; });
       const reste = nonPointe(montant, [...proposes.values()].map((m) => ({ montant: m })));
@@ -166,21 +189,19 @@ export class PageReglements extends PageBase {
       try { await api.supprimerReglement(Number(b.dataset.supprimer)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelectorAll('[data-supprimer-caution]').forEach((b) => b.addEventListener('click', async () => {
-      if (!(await confirmer('Supprimer cette caution et ses pointages ?'))) return;
+      if (!(await confirmer('Supprimer cette caution ? Les retenues qu\'elle couvrait redeviennent dues à la libération.'))) return;
       try { await api.supprimerCaution(Number(b.dataset.supprimerCaution)); await this.rendre(); } catch (e) { this.app.message(e.message, 'erreur'); }
     }));
     corps.querySelector('[data-caution]').addEventListener('click', async () => {
       const c = (cle) => corps.querySelector(`[data-c="${cle}"]`).value.trim();
       const montant = lireNombre(c('montant'));
       if (!c('organisme') || montant === null || montant === undefined || Dz(montant).lte(0)) { this.app.message('Organisme et montant de la caution à saisir', 'avertissement'); return; }
-      // Retenues de garantie ouvertes pointées par la caution (plus anciennes d'abord).
-      const retenues = echeances.filter((e) => !e.reglee && e.nature === 'RETENUE');
-      const objet = retenues.find((e) => e.objet_id)?.objet_id ?? null;
+      // La consommation sur les retenues est calculée par le serveur (aucun pointage).
+      const objet = portee.valeurCombo === '' ? null : Number(portee.valeurCombo);
       try {
         await api.enregistrerCaution({
           tiers_id: this.tiers, objet: objet ? 'marche' : null, objet_id: objet, organisme: c('organisme'), montant, date: c('date'),
-          date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: null,
-          pointages: proposerPointage(montant, retenues.map((e) => ({ id: e.id, date: e.date, reste: e.reste }))).map((p) => ({ echeance_id: p.id, montant: p.montant })),
+          date_fin: c('date_fin') || null, reference: c('reference') || null, mainlevee: c('mainlevee') || null,
         });
         this.app.message('Caution enregistrée', 'succes');
         await this.rendre();

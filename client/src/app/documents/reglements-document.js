@@ -9,7 +9,8 @@ import { api } from '../api.js';
 // - échéancier d'une pièce validée : proposition calculée à la validation, « ⟳ Rafraîchir » la recalcule, modifiable à la
 //   main (ajout, suppression, découpage des montants, dates, modes) ; avertissement si la somme diffère du net à payer
 //   ou de la retenue ; retenue de garantie : libération prévue du marché (réception + 1 an, réserves), date modifiable ;
-// - pointé et reste de chaque échéance, règlements, cautions et imputations qui la pointent (module Règlements) ;
+// - pointé et reste de chaque échéance, règlements et imputations qui la pointent (module Règlements) ; retenue de
+//   garantie : part cautionnée (lot F, calculée : exigible avec la pièce, la caution ne règle rien) ;
 // - imputation d'un avoir ou d'un trop-perçu sur une facture (ou d'un avoir sur une facture suivante) ;
 // - déductions d'acompte d'une facture d'avancement d'un marché : aperçu avant la validation, écrites ensuite.
 
@@ -73,7 +74,7 @@ export async function afficherReglements(zone, { app, page, modes }) {
         <button type="button" class="principal" data-ech="enregistrer">Enregistrer l'échéancier</button></span>` : ''}</div>
       ${!echeancesDoc.length ? `<p class="aide">L'échéancier est calculé à la validation des factures et des avoirs (aperçu dans l'entête, section Règlement).</p>` : `
       <table class="tableau-compact echeancier-document"><thead><tr><th>N°</th><th>Nature</th><th>Échéance</th><th class="nombre">Montant</th><th>Mode</th>
-        ${moduleReglement ? '<th class="nombre">Pointé</th><th class="nombre">Reste</th>' : ''}<th class="cellule-boutons"></th></tr></thead>
+        ${moduleReglement ? '<th class="nombre" title="Retenue de garantie : part couverte par une caution, exigible avec la pièce">Dont cautionné</th><th class="nombre">Pointé</th><th class="nombre">Reste</th>' : ''}<th class="cellule-boutons"></th></tr></thead>
       <tbody>${saisie.map((e, i) => {
         const x = e.id ? etatParId.get(e.id) : null;
         const retenueLigne = e.nature === NATURE.RETENUE;
@@ -84,7 +85,7 @@ export async function afficherReglements(zone, { app, page, modes }) {
             ${retenueLigne && !e.date && retenue ? `<small class="aide">${echapper(texteLiberation(retenue.liberation))}</small>` : ''}</td>
           <td class="nombre"><input data-champ="montant" size="12" inputmode="decimal" value="${echapper(formatNombre(e.montant, pm))}" ${modifiable ? '' : 'disabled'}></td>
           <td><span data-mode="${i}"></span></td>
-          ${moduleReglement ? `<td class="nombre">${x ? f(x.pointe) : ''}</td><td class="nombre">${x ? f(x.reste) : ''}</td>` : ''}
+          ${moduleReglement ? `<td class="nombre">${x && !D(x.cautionne ?? 0).isZero() ? f(x.cautionne) : ''}</td><td class="nombre">${x ? f(x.pointe) : ''}</td><td class="nombre">${x ? f(x.reste) : ''}</td>` : ''}
           <td class="cellule-boutons">${modifiable && !(x && !D(x.pointe ?? 0).isZero()) ? `<button type="button" data-supprimer="${i}" title="Retirer l'échéance">✕</button>` : ''}</td></tr>`;
       }).join('')}</tbody></table>
       ${ecarts.map((e) => `<p class="avertissement">⚠ ${e.nature === NATURE.NORMALE ? `La somme des échéances diffère du net à payer (${f(netAPayer)}) de ${f(e.ecart)}`
@@ -94,7 +95,7 @@ export async function afficherReglements(zone, { app, page, modes }) {
         ${doc.ent_verrouille && ouvertes.length ? `<button type="button" data-imputer title="${D(netAPayer).isNegative() ? 'Imputer cet avoir sur une facture du tiers' : 'Imputer un avoir ou le trop-perçu d\'un règlement du tiers'}">⇄ Imputer…</button>` : ''}
         ${doc.ent_tiers_id ? `<a href="/reglements?sens=${sens}&tiers=${doc.ent_tiers_id}" data-lien>💳 Règlements du tiers</a>` : ''}</span></div>
         ${pointages.length ? `<table class="tableau-compact"><thead><tr><th>Date</th><th>Origine</th><th>Référence</th><th>Échéance</th><th class="nombre">Montant</th></tr></thead>
-        <tbody>${pointages.map((p) => `<tr><td>${formatDate(p.date)}</td><td>${p.source === SOURCE_POINTAGE.CAUTION ? `Caution ${echapper(p.commentaire ?? '')}`
+        <tbody>${pointages.map((p) => `<tr><td>${formatDate(p.date)}</td><td>${p.source === SOURCE_POINTAGE.CAUTION ? `Caution ${echapper(p.commentaire ?? '')} <small class="aide">(part cautionnée, exigible avec la pièce)</small>`
           : p.source === SOURCE_POINTAGE.IMPUTATION ? `Imputation : ${p.contreparties.map((c) => `<a href="${urlDocument(c.piece_id)}" data-lien>${echapper(c.type)} ${echapper(c.piece ?? `#${c.piece_id}`)}</a>`).join(', ')}`
           : `Règlement ${echapper(libelleMode(p.mode))}`}</td><td>${echapper(p.reference ?? '')}</td>
           <td>${(saisie.findIndex((e) => e.id === p.echeance_id) + 1) || ''}</td><td class="nombre">${f(p.montant)}</td></tr>`).join('')}</tbody></table>`

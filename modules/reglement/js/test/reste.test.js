@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { etatEcheance, etatPiece, nonPointe, proposerPointage, maximumImputation } from '../src/index.js';
+import { etatEcheance, etatPiece, nonPointe, proposerPointage, maximumImputation, consommerCautions, exigibleCaution } from '../src/index.js';
 
 // Jeu partagé avec ResteAPayer.cs (LogiBTP.Reglements.Tests).
 const jeu = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/01_reste.json'), 'utf8'));
@@ -13,4 +13,11 @@ describe('reste à payer et pointage (jeu partagé avec le C#)', () => {
   for (const c of jeu.non_pointes) it(`règlement : ${c.nom}`, () => expect(nonPointe(c.montant, c.pointages)).toEqual(c.attendu));
   for (const c of jeu.propositions) it(`pointage : ${c.nom}`, () => expect(proposerPointage(c.disponible, c.echeances)).toEqual(c.attendu));
   for (const c of jeu.imputations) it(`imputation : ${c.nom}`, () => expect(maximumImputation(c.disponible, c.reste)).toEqual(c.attendu));
+});
+
+const cautions = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/cas/02_cautions.json'), 'utf8'));
+
+describe('cautions de retenue de garantie (jeu partagé avec le C#)', () => {
+  for (const c of cautions.consommations) it(`consommation : ${c.nom}`, () => expect(consommerCautions(c.cautions, c.retenues)).toEqual(c.attendu));
+  for (const c of cautions.exigibles) it(`exigible : ${c.nom}`, () => expect(exigibleCaution(c.cautionne, c.pointe, c.reste)).toEqual(c.attendu));
 });
