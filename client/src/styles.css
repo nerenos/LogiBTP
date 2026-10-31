@@ -688,20 +688,20 @@ details.avertissement > summary { cursor: pointer; }
 .panneau-planning .onglets button.actif { font-weight: 600; text-decoration: underline; }
 .panneau-planning tr.glissable { cursor: grab; }
 /* Entête du panneau (onglets, boutons de la tâche) figée au défilement. */
-.panneau-planning > .entete-panneau { position: sticky; top: 0; z-index: 2; background: var(--fond, #fff); padding-bottom: .2rem; border-bottom: 1px solid var(--bord); }
+.panneau-planning > .entete-panneau { position: sticky; top: 0; z-index: 2; background: var(--fond); padding-bottom: .2rem; border-bottom: 1px solid var(--bord); }
 .panneau-planning [data-actions-tache] p { margin: .3rem 0 .1rem; }
 /* Pastille de l'état de la tâche (barres). */
-.pastille-etat-tache { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; box-shadow: 0 0 0 1px rgba(255, 255, 255, .85); }
+.pastille-etat-tache { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; box-shadow: 0 0 0 1px var(--planning-pastille-bord); }
 /* Détail de la tâche : groupes repliables (Tâche, Mobile, Ressource, Détail, Dépendance). */
 .groupe-tache { border-top: 1px solid var(--bord); padding: .2rem 0; }
 .groupe-tache > summary { cursor: pointer; padding: .2rem 0; }
 .groupe-tache > :not(summary) { margin-left: .6rem; }
 .groupe-tache textarea { width: calc(100% - .6rem); box-sizing: border-box; }
-.vp-barre.theorique { background: repeating-linear-gradient(45deg, var(--vp-couleur), var(--vp-couleur) 6px, rgba(255, 255, 255, .25) 6px, rgba(255, 255, 255, .25) 10px); }
+.vp-barre.theorique { background: repeating-linear-gradient(45deg, var(--vp-couleur), var(--vp-couleur) 6px, var(--planning-theorique) 6px, var(--planning-theorique) 10px); }
 .vp-barre.etat-option { opacity: .6; border-style: dashed; }
 /* Absences des congés (tâches tenues par le Pointage) : couleur de la nature une fois validées, hachurées grises tant qu'elles sont demandées ; jamais glissées. */
 .vp-barre.absence-conge { cursor: pointer; font-style: italic; }
-.vp-barre.absence-conge.etat-option { --vp-couleur: #94a3b8; opacity: .85; background: repeating-linear-gradient(-45deg, #e2e8f0, #e2e8f0 5px, #cbd5e1 5px, #cbd5e1 10px); color: #334155; }
+.vp-barre.absence-conge.etat-option { --vp-couleur: var(--planning-conge-option); opacity: .85; background: repeating-linear-gradient(-45deg, var(--planning-conge-hachure), var(--planning-conge-hachure) 5px, var(--planning-conge-hachure-fonce) 5px, var(--planning-conge-hachure-fonce) 10px); color: var(--planning-conge-texte); }
 .vp-barre.etat-terminee { filter: grayscale(.6); }
 
 /* Planning (lot 4) : alertes. */
@@ -873,7 +873,7 @@ button.filtre-actif { outline: 2px solid var(--accent); outline-offset: -2px; ba
 .periode-equipe .pe-entete { display: flex; align-items: center; gap: .6rem; }
 .periode-equipe .pe-entete .pe-resume { margin-left: auto; }
 .periode-equipe .pe-badge { position: static; background: var(--accent); padding: 0 .4rem; width: auto; }
-.chef-equipe { color: #d97706; font-size: .85em; }
+.chef-equipe { color: var(--planning-chef); font-size: .85em; }
 .badge-mode { padding: .1rem .5rem; border-radius: 10px; font-size: .85em; background: var(--titre-fond); color: var(--discret); }
 .badge-mode.modification { background: var(--alerte-fond); color: var(--alerte); font-weight: 600; }
 .periode-equipe textarea[data-commentaire-periode] { width: 100%; box-sizing: border-box; margin: .3rem 0 .1rem; resize: vertical; font-size: .9em; }
@@ -897,7 +897,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 /* Exécution, lot 2d : étapes au planning (jalon de durée nulle en losange, attente en bande hachurée). */
 .vp-barre.jalon-etape { min-width: 14px; width: 14px !important; transform: translateX(-7px) rotate(45deg) scale(0.75); border-radius: 2px; padding: 0; overflow: hidden; color: transparent; }
 .vp-barre.saisie-libre { border-style: dashed; opacity: .9; }
-.vp-deco.attente-etape { background: repeating-linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0 6px, transparent 6px 12px); opacity: 1; }
+.vp-deco.attente-etape { background: repeating-linear-gradient(135deg, var(--planning-attente) 0 6px, transparent 6px 12px); opacity: 1; }
 
 /* Sous-traitance, lot 2 : pièces exigées (onglet Pièces du marché et du sous-traitant). */
 .pastille-conformite { padding: 2px 8px; border-radius: 10px; font-weight: 600; }

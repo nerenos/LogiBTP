@@ -33,3 +33,40 @@
   --mail-corps-texte: #1f2328;
   --mail-corps-fond: #fff;
 }
+
+/* Planning (lot P3k) : états des tâches, couleurs des services, disponibilités des ressources, barres particulières. */
+:root {
+  --planning-etat-option: #98a2b3;
+  --planning-etat-prevue: #2563eb;
+  --planning-etat-confirmee: #16a34a;
+  --planning-etat-en-cours: #d97706;
+  --planning-etat-terminee: #475467;
+  /* Services, attribués dans l'ordre (barres sans couleur propre, tuiles « À planifier ») ; tuile sans service. */
+  --planning-service-1: #2563eb;
+  --planning-service-2: #16a34a;
+  --planning-service-3: #d97706;
+  --planning-service-4: #9333ea;
+  --planning-service-5: #0891b2;
+  --planning-service-6: #be185d;
+  --planning-service-7: #4d7c0f;
+  --planning-service-8: #dc2626;
+  --planning-service-aucun: #94a3b8;
+  /* Disponibilités sur la période (fenêtre de choix des ressources). */
+  --planning-dispo-libre: #16a34a;
+  --planning-dispo-partiel: #d97706;
+  --planning-dispo-occupe: #dc2626;
+  --planning-dispo-absent: #9333ea;
+  --planning-dispo-hors: #98a2b3;
+  --planning-dispo-sans: #98a2b3;
+  /* Contour de la pastille d'état, hachures d'une tâche théorique. */
+  --planning-pastille-bord: rgb(255 255 255 / 0.85);
+  --planning-theorique: rgb(255 255 255 / 0.25);
+  /* Congé demandé (option) : couleur, hachures, texte. */
+  --planning-conge-option: #94a3b8;
+  --planning-conge-hachure: #e2e8f0;
+  --planning-conge-hachure-fonce: #cbd5e1;
+  --planning-conge-texte: #334155;
+  /* Chef d'une équipe, attente d'une étape d'ordre. */
+  --planning-chef: #d97706;
+  --planning-attente: rgb(245 158 11 / 0.35);
+}

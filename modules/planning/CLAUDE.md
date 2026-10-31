@@ -21,5 +21,8 @@ Planifier les tâches des chantiers et des services sur des ressources : composa
 ## Routes (`/api/planning`, module activé par société)
 `GET|PUT /vues`, `GET /referentiels`, `GET /donnees?vue=&du=&au=&recherche=&services=`, `GET /ressources`, `GET /elements`, `GET /sources`, `GET /a-planifier`, `PUT /a-planifier/prevision`, `POST /calcul`, `POST /taches`, `GET|PUT|DELETE /taches/{id}`, `POST /taches/{id}/deplacer|scinder|repeter`, `GET|PUT /taches/{id}/dependances`, `POST /taches/{id}/equipes/{equipe}/appliquer`, `GET /equipes/{equipe}/membres`, `PUT /ressources/{type}/{id}/service`, `GET /disponibilites`, `GET /creneau`, `GET /charge`, `GET|PUT /notifications`, `GET|PUT /parametres`, `DELETE /series/{serie}`, `GET|POST /jalons`, `DELETE /jalons/{id}`, `GET /taches/{id}/avancements` (écriture par l'application : `EnregistrerAvancementAsync`).
 
+## Textes et icônes (module Personnalisation, lot P3k)
+- Textes `planning.*` du `fr.json` du module (échelles, jours et mois de l'axe, erreurs du calcul et des dépendances : `MESSAGES_CALCUL` / `MESSAGES_DEPENDANCES` par `textesParCode`, bulles de la vue), icône `planning_vers`, couleurs de la vue en variables `--pla-*` (`js/personnalisation/theme.css`) ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `planning_btp.*`, icônes `planning_btp_*`, couleurs des états, des services et des disponibilités `--planning-*` de `client/personnalisation`.
+
 ## Tests
 `npm test --workspace modules/planning/js` ; `dotnet test modules/planning/dotnet/LogiBTP.Planning.Tests` (mêmes jeux). Prototype : `/planning/prototype?ressources=500&taches=20000`.

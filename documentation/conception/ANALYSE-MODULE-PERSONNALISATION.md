@@ -596,3 +596,28 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test`, `extraire-erreurs` sans écart ; affichage contrôlé dans le navigateur (API simulée : suivi
   des envois, détail d'un courriel reçu avec propositions, paramétrage complet avec un compte et un modèle).
 
+## 24. Réalisation du lot P3k : module Planning (31/10/2026)
+
+- **Périmètre** : le module (`modules/planning/js` : messages du calcul et des dépendances, échelles, en-tête de l'axe —
+  jours, mois, semaines —, bulles et étiquettes de la vue, `planning.css`) et ses écrans du cœur : `client/src/app/planning/`
+  (états des tâches, ressources d'une tâche, fenêtre de choix des ressources, onglet Ressources), pages `planning.js`
+  (planning, panneau, détail d'une tâche, dépendances, jalons, alertes, paramètres), `planning-equipes.js`,
+  `planning-prototype.js`, titres des routes.
+- **Textes** : `planning.*` du `fr.json` du module (`calcul.erreurs`, `dependances.erreurs`, `echelles`, `temps`, `vue`) ;
+  `planning_btp.*` du `fr.json` du cœur (`routes`, `etats`, `onglets`, `modes`, `types_dependance`, `unites_dependance`,
+  `modes_dependance`, `frequences`, `types_jalon`, `champs_mobile`, `groupes_tache`, `synchro`, `tris`, `barre`,
+  `services`, `panneau`, `historique` — dont les opérations annulables —, `messages`, `menu`, `vue`, `bulle`, `creer`,
+  `aplanifier`, `alertes`, `jalons`, `liens`, `detail`, `parametres`, `types_ressource`, `disponibilites`, `ressources`,
+  `choix`, `onglet`, `equipes`, `prototype`) ; compteurs par `pluriel` (lignes, tâches, services, modifications, alertes,
+  jalons, sélection, membres). Les tables gardent leur forme (`ECHELLES` : libellé en accesseur, `ETATS_TACHE`,
+  `TYPES_RESSOURCE`… : `textesParCode`, onglets du panneau et disponibilités : objets à accesseurs).
+- **Raccourcis** : bulles d'annuler et rétablir par `libelleRaccourci` (touches personnalisées affichées).
+- **Icônes** : `planning_vers` du module ; `planning_btp_*` du cœur ; communes du socle (`ajouter`, `retirer`, `moins`,
+  `supprimer`, `precedent`, `suivant`, `replier`, `sous_niveau`, `rechercher`, `enregistrer`, `avertissement`).
+- **Couleurs** : vue du module en variables `--pla-*` (thème du module : barres, grille, aujourd'hui, fériés, charge,
+  jalons, avancement) ; cœur : `--planning-etat-*` (pastilles des états, `COULEURS_ETAT` en `var(...)`, aussi lues par
+  l'application de terrain), `--planning-service-1` à `8`, `--planning-dispo-*`, congé demandé, tâche théorique, chef
+  d'équipe, attente d'étape ; couleur proposée d'une tâche par `couleurTheme('--pla-barre')` (champ couleur).
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/planning/js` vérifiées par le test
+  du client) ; affichage contrôlé dans le navigateur (API simulée : planning, panneau complet, détail d'une tâche avec
+  dépendances, fenêtre de choix des ressources, équipes, paramètres, prototype).

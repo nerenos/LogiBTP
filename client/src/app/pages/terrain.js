@@ -198,7 +198,7 @@ export class PageTerrain extends PageBase {
     const m = mobileAffiche(t, this.donnees.chantiers);
     const plusieursJours = jourDe(t.debut) !== jourDe(t.fin.endsWith('T00:00') ? ajouterJours(jourDe(t.fin), -1) : t.fin);
     const horaires = plusieursJours ? `${formatDate(jourDe(t.debut))} ${heureDe(t.debut)} → ${formatDate(jourDe(t.fin))} ${heureDe(t.fin)}` : `${heureDe(t.debut)} – ${heureDe(t.fin)}`;
-    const etat = t.etat ? `<span class="terrain-etat" style="--couleur:${COULEURS_ETAT[t.etat] ?? '#98a2b3'}">${echapper(ETATS_TACHE[t.etat] ?? t.etat)}</span>` : '';
+    const etat = t.etat ? `<span class="terrain-etat" style="--couleur:${COULEURS_ETAT[t.etat] ?? COULEURS_ETAT.OPTION}">${echapper(ETATS_TACHE[t.etat] ?? t.etat)}</span>` : '';
     const herite = (c) => (c.herite ? ' <small class="aide">(chantier)</small>' : '');
     const tel = m.telephone && numeroTel(m.telephone.valeur);
     const liens = liensTexte(m.liens);
