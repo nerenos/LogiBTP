@@ -743,6 +743,16 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
     }
 
     /// <summary>
+    /// Contenu d'une source d'achat repris avec d'autres (facture de plusieurs livraisons) : chaque ligne garde son
+    /// chantier, celui de la ligne sinon celui de la source (l'entête de la facture reste vide s'ils diffèrent, db/248).
+    /// </summary>
+    public override void PreparerContenuSource(DocumentCompletBtp contenu, DocumentBtp source, TypeDocument typeSource, TypeDocument typeCible)
+    {
+        if (source.EntChantierId is not int chantier || !FamillesDocument.EstAchat(typeCible.TydFamille)) return;
+        foreach (var l in contenu.Lignes.Where(l => TL.EstChiffree(l) && l.LigChaId is null)) l.LigChaId = chantier;
+    }
+
+    /// <summary>
     /// Document créé depuis plusieurs sources : un rattachement (projet, affaire, chantier, marché) n'est gardé que s'il
     /// est commun à toutes (une facture fournisseur peut couvrir plusieurs chantiers).
     /// </summary>

@@ -1,5 +1,5 @@
 import { urlDocument, TYPE_FICHE, TYPE_DOCUMENT, TYPES_SOUS_TRAITABLES, MODULE_FACULTATIF, SUJET_FENETRE } from '../codes.js';
-import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR } from '@logibtp/document';
+import { FAMILLE_DOCUMENT, STATUT_DOCUMENT, STATUTS_HORS_VIGUEUR, estFamilleAchat } from '@logibtp/document';
 import { PageBase } from '@logibtp/navigation';
 import { ExplorateurGed } from '@logibtp/ged/ui';
 import { ArborescenceBtp } from '../ged/arborescence.js';
@@ -487,6 +487,8 @@ export class PageDocument extends PageBase {
     this.editeur.coefsDefaut = this.coefsDefaut;
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;
+    // Chantiers proposés pour la colonne Chantier des lignes d'achat.
+    this.editeur.chantiers = this.structure?.chantiers ?? [];
     this.editeur.regleVentilation = this.regleVentilation;
     // Compte de produit ou de charge du tiers (avant les clés de la ventilation).
     this.editeur.chargerComptesTiers = this.regleVentilation ? (id) => api.comptabilite.comptesLignesTiers(id).catch(() => null) : null;
@@ -533,6 +535,7 @@ export class PageDocument extends PageBase {
           messages: () => controlesSaisie(lignes(), {
             famille: ed.definition.type?.tyd_famille ?? 'V', modeOuvrage: ed.saisie.document.ent_mode_calcul_ouvrage ?? 'V',
             typePrix: (l) => ed.typePrixEffectif(l), qteNulle: !ed.transforme,
+            achat: estFamilleAchat(ed.definition.type?.tyd_famille), chantier: ed.saisie.document.ent_chantier_id ?? null,
           }),
         },
         {

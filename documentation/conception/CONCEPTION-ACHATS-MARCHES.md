@@ -952,7 +952,9 @@ Pied global                                          SECTION CF-2 + pied de CF-2
 
 **Proposition** : lecture 2 (la remise et le port de la commande s'appliquent une seule fois à toutes ses livraisons ;
 le pied global ne regroupe que deux pieds).
-**Décision** :
+**Décision** (31/10/2026) : lecture 2, réalisée (`RegroupementLivraisons`, module Document) : une section par commande
+d'origine, une tranche par BL, pied du premier BL (copie de celui de la commande) ; un BL ajouté à une facture
+brouillon rejoint la section de sa commande.
 
 **b) Chantier par ligne (13.4 bis a et d).**
 **Proposition** : colonne `lig_cha_id` (cœur, `ALTER TABLE document_ligne`), reprise de la ligne source (commande ou
@@ -960,7 +962,11 @@ BL), sinon du rattachement de son document ; colonne « Chantier » (code, combo
 d'entête, les listes de documents affichent « Plusieurs » et le filtre par chantier (`v_liste_documents`) trouve le
 document par ses lignes. Faut-il aussi l'affaire et le marché par ligne, ou le chantier suffit-il (les parents se
 déduisent du chantier) ?
-**Décision** :
+**Décision** (31/10/2026), réalisée (`db/248`) : chantier par ligne sur les documents d'achat seulement, vide = celui
+de l'entête (souligné dans la grille), modifiable ; repris du chantier de l'entête de chaque source quand la cible a
+plusieurs sources ; plusieurs chantiers : entête vide et avertissement « Autre chantier » des contrôles de saisie ;
+filtre par chantier : entête, sinon chantiers des lignes (achats) ou des documents sources (ventes), colonne
+`chantiers` de `v_liste_documents`. Le chantier suffit (parents déduits).
 
 **c) Avoir d'avoir (13.12 bis a).**
 **Proposition** : transformation `V_AVOIR → V_AVOIR` (étape AVOIR, nature ANNULATION) qui reprend l'avoir à
@@ -1064,8 +1070,9 @@ Comptabilité (lettrage, acomptes, déduction sur la facture suivante).
 - Q19 : BL, situation et facture d'avancement directs d'une commande d'un marché refusés (`MARCHE_CREATION`).
 - Suppression : un brouillon issu d'une transformation se supprime avec ses liens (sinon un BL brouillon créé par erreur
   bloquait le reste de ses sources, Q5) ; un document déjà transformé reste protégé.
-- Non fait (13.14 sans décision) : regroupement des BL d'une même commande en tranches dans la section de la commande,
-  chantier par ligne (`lig_cha_id`).
+- 13.14 a et b réalisés le 31/10/2026 (lot D) : regroupement des BL d'une même commande en tranches dans la section de
+  la commande, chantier par ligne (`lig_cha_id`) des achats ; transformation ligne à ligne hors marché (case « Choisir
+  les lignes » de la fenêtre de transformation : lignes décochées laissées en reliquat, quantité modifiable).
 - Vérifié sur la base de démo : BL du marché (deux sections, numéros des commandes, pieds dans les sections, totaux des
   deux commandes), refus du BL direct, documents en attente du fournisseur, ajout d'un second BL à une facture
   brouillon (deux sections, deux sources), bouton et composantes dans la page.

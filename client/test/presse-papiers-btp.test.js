@@ -21,11 +21,14 @@ const saisie = () => ({
   ],
 });
 
-const coller = (s, ids, cible) => {
+const coller = (s, ids, cible, parent) => {
   const pp = new PressePapiersBtp();
   const copie = pp.renumeroter(pp.extraire(s, ids, { entId: s.document.ent_id, coupe: false }), -100);
   cible.lignes.push(...copie.lignes);
   pp.insererComplements(cible, copie);
+  // Placement : les racines gardent leur parent d'origine, sauf un parent imposé.
+  if (parent !== undefined) for (const r of copie.racines) cible.lignes.find((l) => l.lig_id === r).lig_parent_id = parent;
+  pp.apresPlacement(cible, copie);
   return copie;
 };
 
@@ -38,6 +41,13 @@ describe('Presse-papiers BTP : clés de ventilation', () => {
     expect(nouvelle.vfr_id).toBeLessThan(0);
     expect(nouvelle).not.toHaveProperty('_source_externe');
     expect(s.ventilations).toHaveLength(4);
+  });
+
+  it('ligne collée dans le même document hors de la tranche parente : retour au prorata', () => {
+    const s = saisie();
+    s.lignes.push({ lig_id: 6, lig_parent_id: null, lig_tyl_id: 11, lig_ordre: 2 });
+    coller(s, [4], s, 6);
+    expect(s.ventilations).toHaveLength(3);
   });
 
   it('ligne copiée dans un autre document : la clé de la tranche restée dans l\'origine n\'est pas reprise', () => {

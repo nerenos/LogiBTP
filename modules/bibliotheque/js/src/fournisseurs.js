@@ -3,7 +3,8 @@ import { texteBrut, S, dateLocale, PROFIL, ErreurApi, appelApi } from '@logibtp/
 
 // Fournisseurs du module Bibliothèque. Même interface pour l'API (routes MapModuleBibliotheque) et pour la mémoire
 // (démo hors ligne, tests) :
-//   parametres() / enregistrerParametres(p)              { scenario_defaut, scenarios_autorises, coef_fg_defaut, coef_benef_defaut }
+//   parametres() / enregistrerParametres(p)              { scenario_defaut, scenarios_autorises, coef_fg_defaut, coef_benef_defaut,
+//                                                          pv_fixe_ouvrages_envoyes }
 //   bibliotheques() / enregistrerBibliotheque(b) / supprimerBibliotheque(id)        [{ id, code, libelle, defaut, actif, ordre }]
 //   familles(bibId) / enregistrerFamille(f) / supprimerFamille(id)                  [{ id, bib_id, parent_id, code, libelle, ordre, chemin, niveau }]
 //   regroupements() / enregistrerRegroupement(r) / supprimerRegroupement(code)      [{ code, libelle, ordre }]
@@ -118,7 +119,7 @@ export class FournisseurBibliothequeMemoire {
     this.tarifsElements = structuredClone(tarifs);
     this.historiques = [];
     this.periodesCoefs = structuredClone(periodes);
-    this.params = { scenario_defaut: 'FIXE', scenarios_autorises: SCENARIOS_TOUS, coef_fg_defaut: 1, coef_benef_defaut: 1, ...parametres };
+    this.params = { scenario_defaut: 'FIXE', scenarios_autorises: SCENARIOS_TOUS, coef_fg_defaut: 1, coef_benef_defaut: 1, pv_fixe_ouvrages_envoyes: false, ...parametres };
     this.profil = profil;
     this.utilisateur = utilisateur;
     this.horloge = horloge;

@@ -52,6 +52,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (p.TryGetValue("scenarios_autorises", out var a) && a.ValueKind == JsonValueKind.Array) r.ScenariosAutorises = a.EnumerateArray().Select(x => x.GetString()!).ToList();
         if (p.TryGetValue("coef_fg_defaut", out var f) && f.ValueKind == JsonValueKind.Number) r.CoefFgDefaut = f.GetDecimal();
         if (p.TryGetValue("coef_benef_defaut", out var b) && b.ValueKind == JsonValueKind.Number) r.CoefBenefDefaut = b.GetDecimal();
+        if (p.TryGetValue("pv_fixe_ouvrages_envoyes", out var o) && o.ValueKind is JsonValueKind.True or JsonValueKind.False) r.PvFixeOuvragesEnvoyes = o.GetBoolean();
         return r;
     }
 
@@ -66,6 +67,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         {
             ["scenario_defaut"] = p.ScenarioDefaut, ["scenarios_autorises"] = p.ScenariosAutorises,
             ["coef_fg_defaut"] = p.CoefFgDefaut, ["coef_benef_defaut"] = p.CoefBenefDefaut,
+            ["pv_fixe_ouvrages_envoyes"] = p.PvFixeOuvragesEnvoyes,
         };
         foreach (var (cle, v) in valeurs)
         {

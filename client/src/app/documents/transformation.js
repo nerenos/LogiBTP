@@ -1,4 +1,5 @@
-import { echapper, formatNombre, ouvrirModale } from '@logibtp/socle/ui';
+import { echapper, formatNombre, ouvrirModale, lireNombre } from '@logibtp/socle/ui';
+import { D } from '@logibtp/socle';
 import { unitesOptionnelles, FAMILLE_DOCUMENT } from '@logibtp/document';
 import { api } from '../api.js';
 import { confirmerAvertissements } from './avertissements.js';
@@ -7,7 +8,9 @@ import { confirmerAvertissements } from './avertissements.js';
 // type cible, regroupée par étape (commande, livraison, situation, facturation, retour et avoir) puis ventes / achats,
 // chaque choix décrit en une ligne ; un clic (ou flèches et Entrée) choisit. Tout le reliquat est transformé.
 // Options et variantes du document : chacune est retenue (prix vendu) ou non (non reprise), la ligne de base d'une
-// variante peut aussi être écartée (choisirOptions). Utilisée par la page document et par les listes de documents.
+// variante peut aussi être écartée (choisirOptions). Hors marché, « Choisir les lignes » transforme ligne à ligne : les
+// lignes décochées restent en reliquat, la quantité se modifie (choisirLignes, décision du 31/10/2026). Utilisée par la
+// page document et par les listes de documents.
 
 const ETAPES = [
   { code: 'COMMANDE', titre: 'Commande', aide: 'Engagement du client ou commande au fournisseur' },
@@ -53,8 +56,11 @@ export function ciblesTransformation(definition, types) {
   }).filter(Boolean).sort((a, b) => rang(a.etape) - rang(b.etape) || (a.famille === b.famille ? 0 : a.famille === FAMILLE_DOCUMENT.VENTE ? -1 : 1) || a.libelle.localeCompare(b.libelle, 'fr'));
 }
 
-/** Fenêtre de choix ; résout la cible choisie ou null. source : { numero, libelle_type, objet }. */
-export function choisirTransformation({ source, cibles }) {
+/**
+ * Fenêtre de choix ; résout la cible choisie ou null. source : { numero, libelle_type, objet } ; ligneALigne : case
+ * « Choisir les lignes et les quantités » proposée (la cible résolue porte alors parLignes).
+ */
+export function choisirTransformation({ source, cibles, ligneALigne = false }) {
   const dlg = document.createElement('dialog');
   dlg.className = 'dialogue-structure dialogue-transformation';
   const groupes = ETAPES.map((e) => ({ ...e, cibles: cibles.filter((c) => c.etape === e.code) }))
@@ -69,7 +75,8 @@ export function choisirTransformation({ source, cibles }) {
         <span class="transformation-icone">${ICONES[c.code] ?? '📄'}</span>
         <span><b>${echapper(c.libelle)}</b>${c.famille === FAMILLE_DOCUMENT.ACHAT ? ' <span class="pastille">Achat</span>' : c.famille === FAMILLE_DOCUMENT.SOUS_TRAITANCE ? ' <span class="pastille">Sous-traitance</span>' : ''}<small>${echapper(DESCRIPTIONS[c.code] ?? '')}${c.intermediaire ? ` (par une ${echapper(c.intermediaire.toLowerCase())} validée automatiquement)` : c.vaut.length ? ` (vaut aussi ${c.vaut.map((v) => ETAPES.find((e) => e.code === v)?.titre.toLowerCase() ?? v).join(', ')})` : ''}</small></span>
       </button>`).join('')}</section>`).join('')}</div>
-    <p class="aide">Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).</p>
+    ${ligneALigne ? `<label class="coche" title="Les lignes décochées restent à transformer ; la quantité de chaque ligne se modifie"><input type="checkbox" data-par-lignes> Choisir les lignes et les quantités</label>`
+      : '<p class="aide">Tout le reliquat du document est repris (quantités restant à transformer pour cette étape).</p>'}
     <div class="boutons"><button value="annuler">Annuler</button></div></form>`;
   document.body.append(dlg);
   const ordre = groupes.flatMap((g) => g.cibles);
@@ -84,7 +91,10 @@ export function choisirTransformation({ source, cibles }) {
       resoudre(c);
     };
     dlg.addEventListener('close', () => finir(null));
-    boutons.forEach((b) => b.addEventListener('click', () => finir(ordre[Number(b.dataset.i)])));
+    boutons.forEach((b) => b.addEventListener('click', () => {
+      const c = ordre[Number(b.dataset.i)];
+      finir({ ...c, parLignes: Boolean(dlg.querySelector('[data-par-lignes]')?.checked) });
+    }));
     dlg.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       e.preventDefault();
@@ -158,6 +168,54 @@ export function choisirOptions({ lignes, unites, precision = 2 }) {
 }
 
 /**
+ * Choix des lignes à transformer et de leur quantité (hors marché) : reliquat de l'étape (le plus petit des étapes
+ * couvertes par la cible) proposé, case décochée = ligne laissée en reliquat. Résout [{ lig_id, qte }] ou null.
+ * suivi : suivi des lignes de prix (GET /documents/{id}/suivi) ; etapes : étapes couvertes par la cible.
+ */
+export function choisirLignes({ suivi, etapes, precision = 3 }) {
+  const reliquat = (s) => s.etapes.filter((e) => etapes.includes(e.etape)).reduce((m, e) => (m === null || D(e.reliquat).lt(m) ? D(e.reliquat) : m), null) ?? D(s.qte ?? 0);
+  const lignes = suivi.map((s) => ({ ...s, reliquat: reliquat(s) }));
+  const dlg = document.createElement('dialog');
+  dlg.className = 'dialogue-structure dialogue-lignes-transformation';
+  dlg.innerHTML = `<form method="dialog">
+    <h3>Lignes à transformer</h3>
+    <p class="aide">Les lignes décochées restent à transformer ; la quantité proposée est le reste de l'étape.</p>
+    <div class="options-choix"><table class="tableau-compact"><thead><tr><th><input type="checkbox" data-toutes checked title="Tout cocher ou décocher"></th>
+      <th>N°</th><th>Libellé</th><th class="nombre">Quantité</th><th class="nombre">Reste</th><th class="nombre">À transformer</th></tr></thead>
+      <tbody>${lignes.map((l, i) => `<tr data-i="${i}"><td><input type="checkbox" data-coche ${l.reliquat.gt(0) ? 'checked' : ''}></td>
+        <td>${echapper(l.numerotation ?? '')}</td><td class="libelle">${echapper(String(l.libelle ?? '').replace(/<[^>]*>/g, '').trim() || '—')}</td>
+        <td class="nombre">${formatNombre(l.qte ?? 0, precision)}</td><td class="nombre">${formatNombre(l.reliquat.toString(), precision)}</td>
+        <td class="nombre"><input data-qte size="10" inputmode="decimal" value="${echapper(formatNombre(l.reliquat.toString(), precision))}"></td></tr>`).join('')}</tbody></table></div>
+    <p class="erreur" data-erreur></p>
+    <div class="boutons"><button value="annuler">Annuler</button><button type="button" class="principal" data-valider>Transformer</button></div></form>`;
+  document.body.append(dlg);
+  dlg.querySelector('[data-toutes]').addEventListener('change', (e) => dlg.querySelectorAll('[data-coche]').forEach((c) => { c.checked = e.target.checked; }));
+  return new Promise((resoudre) => {
+    let fini = false;
+    const finir = (r) => {
+      if (fini) return;
+      fini = true;
+      if (dlg.open) dlg.close();
+      dlg.remove();
+      resoudre(r);
+    };
+    dlg.addEventListener('close', () => finir(null));
+    dlg.querySelector('[data-valider]').addEventListener('click', () => {
+      const res = [];
+      for (const tr of dlg.querySelectorAll('tbody tr')) {
+        if (!tr.querySelector('[data-coche]').checked) continue;
+        const qte = lireNombre(tr.querySelector('[data-qte]').value);
+        if (qte === undefined || qte === null) { dlg.querySelector('[data-erreur]').textContent = 'Quantité invalide'; tr.querySelector('[data-qte]').focus(); return; }
+        if (!D(qte).isZero()) res.push({ lig_id: lignes[Number(tr.dataset.i)].lig_id, qte });
+      }
+      if (!res.length) { dlg.querySelector('[data-erreur]').textContent = 'Aucune ligne à transformer'; return; }
+      finir(res);
+    });
+    ouvrirModale(dlg, () => dlg.close());
+  });
+}
+
+/**
  * Transformation complète d'un document : choix de la cible, des options et variantes, puis transformation du
  * reliquat. Renvoie le document créé ({ ent_id, ent_numero, libelle }) ou null (aucune cible, choix abandonné).
  */
@@ -168,15 +226,21 @@ export async function transformerDocument({ entId, typeCode, numero, objet, type
   if (!cibles.length) { message('Ce type de document ne se transforme pas', 'avertissement'); return null; }
   // Validité dépassée, document rejeté : avertissement, l'utilisateur choisit (R3, P25).
   if (!(await confirmerAvertissements(entId, 'TRANSFORMER', 'Transformer'))) return null;
-  const cible = await choisirTransformation({ source: { numero, objet, libelle_type: def.type?.tyd_libelle }, cibles });
-  if (!cible) return null;
   const complet = await api.document(entId);
+  // Ligne à ligne : hors marché (les documents d'un marché se créent depuis le marché, avec toutes ses commandes).
+  const cible = await choisirTransformation({ source: { numero, objet, libelle_type: def.type?.tyd_libelle }, cibles, ligneALigne: !complet.document?.ent_marche_id });
+  if (!cible) return null;
   const unites = unitesOptionnelles(complet.lignes);
   let choix = [];
   if (unites.length) {
     choix = await choisirOptions({ lignes: complet.lignes, unites, precision: complet.document?.ent_precision_montant ?? 2 });
     if (!choix) return null;
   }
-  const rep = await api.transformer(entId, { cible_tyd_id: cible.tyd_id, lignes: [], choix });
+  let lignes = [];
+  if (cible.parLignes) {
+    lignes = await choisirLignes({ suivi: await api.suivi(entId), etapes: [cible.etape, ...cible.vaut] });
+    if (!lignes) return null;
+  }
+  const rep = await api.transformer(entId, { cible_tyd_id: cible.tyd_id, lignes, choix });
   return { ent_id: rep.document.ent_id, ent_numero: rep.document.ent_numero, libelle: cible.libelle };
 }

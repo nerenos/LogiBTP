@@ -53,4 +53,11 @@ describe('Contrôles de saisie BTP', () => {
   it('quantités à 0 non signalées dans un document transformé', () => {
     expect(controlesSaisie([ligne(1, { lig_qte: '0' })], { qteNulle: false })).toEqual([]);
   });
+
+  it('achats : ligne d\'un autre chantier que l\'entête signalée', () => {
+    const lignes = [ligne(1, { lig_cha_id: 5 }), ligne(2, { lig_cha_id: 7 }), ligne(3)];
+    expect(codes(controlesSaisie(lignes, { famille: 'A', achat: true, chantier: 5 }))).toEqual([[2, CONTROLE_SAISIE.CHANTIER_LIGNE]]);
+    expect(controlesSaisie(lignes, { famille: 'A', achat: true, chantier: null })).toEqual([]);
+    expect(controlesSaisie(lignes, { chantier: 5 })).toEqual([]);
+  });
 });

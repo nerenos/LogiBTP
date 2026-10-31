@@ -19,6 +19,8 @@ export const COLONNES_LIGNE_BTP = new Set([
   'lig_poids', 'lig_surface', 'lig_volume', 'lig_hauteur', 'lig_largeur', 'lig_epaisseur', 'lig_longueur',
   // Heures réalisées d'une ligne d'ordre (db/197).
   'lig_heures_realisees',
+  // Chantier de la ligne des documents d'achat (db/248).
+  'lig_cha_id',
 ]);
 
 export const COLONNES_DECIMALES_BTP = new Set([

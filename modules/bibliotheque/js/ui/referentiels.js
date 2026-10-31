@@ -259,6 +259,8 @@ export class GestionReferentiels {
       <fieldset><legend>Scénarios de prix d'achat autorisés</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
       <label>Scénario par défaut à la création <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
       <p class="aide">Chaque élément peut restreindre ses scénarios autorisés et choisir le sien dans l'onglet Prix de sa fiche.</p>
+      <label class="bib-ligne"><input type="checkbox" data-pv-ouvrages ${p.pv_fixe_ouvrages_envoyes ? 'checked' : ''} ${ro}> Envoi d'un ouvrage depuis un document : reprendre son PV fixe</label>
+      <p class="aide">Sans cette option, un ouvrage envoyé vers la bibliothèque prend le prix de sa composition ; le PV fixe se force dans sa fiche.</p>
       ${this.admin ? '<button type="button" class="principal" data-enregistrer>Enregistrer</button>' : ''}</div>`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
@@ -267,6 +269,7 @@ export class GestionReferentiels {
           scenarios_autorises: [...zone.querySelectorAll('[data-scenario]:checked')].map((x) => x.dataset.scenario),
           // Coefficients : gérés par période (onglet Coefficients) ; les valeurs de repli des paramètres sont conservées.
           coef_fg_defaut: p.coef_fg_defaut, coef_benef_defaut: p.coef_benef_defaut,
+          pv_fixe_ouvrages_envoyes: zone.querySelector('[data-pv-ouvrages]').checked,
         });
         this.message('Paramètres de prix enregistrés', 'succes');
       } catch (x) { this.#erreur(x); }

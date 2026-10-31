@@ -1638,6 +1638,7 @@ export class EditeurDocument {
       this.pressePapiers.insererComplements(d, copie);
       const racines = copie.racines.map((id) => d.lignes.find((l) => l.lig_id === id));
       placer(C, d.lignes, racines, ref ? refId : null, ref ? position : 'racine');
+      this.pressePapiers.apresPlacement(d, copie);
       if (ref && remplacer) this.apresSuppression(d, supprimer(C, d.lignes, [refId]));
       for (const r of racines) this.regles.appliquerContexte(d, r.lig_id, this.definition.taux_tva);
     }, libelle);
@@ -1658,6 +1659,7 @@ export class EditeurDocument {
       this.pressePapiers.insererComplements(d, copie);
       const racines = copie.racines.map((id) => d.lignes.find((l) => l.lig_id === id));
       placer(C, d.lignes, racines, ref ? refId : null, ref ? 'apres' : 'racine');
+      this.pressePapiers.apresPlacement(d, copie);
       for (const r of racines) this.regles.appliquerContexte(d, r.lig_id, this.definition.taux_tva);
     }, libelle);
     this.grille.selectionner(copie.racines[0]);

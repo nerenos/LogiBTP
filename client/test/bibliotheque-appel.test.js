@@ -50,8 +50,13 @@ describe('appel de la bibliothèque', () => {
     expect(libre.coef_benef).toBeUndefined();
     const racine = contenuOuvrage({ ...e, pv_fixe: true, pv: '99.5' }, 'GEN').lignes.find((l) => l.lig_parent_id === null);
     expect(racine).toMatchObject({ lig_pv_fixe: true, lig_pv: 99.5 });
-    expect(valeursDepuisLigne({ lig_tyl_id: 2, lig_libelle_html: 'Dalle', lig_pv_fixe: true, lig_pv: 99.5, lig_coef_fg: 1.1, lig_coef_benef: 1.2 }, 'OUVRAGE'))
+    expect(valeursDepuisLigne({ lig_tyl_id: 2, lig_libelle_html: 'Dalle', lig_pv_fixe: true, lig_pv: 99.5, lig_coef_fg: 1.1, lig_coef_benef: 1.2 }, 'OUVRAGE', { pvFixeOuvrages: true }))
       .toMatchObject({ pv_fixe: true, pv: '99.5', coef_fg_impose: true });
+    // Sans l'option de la société (défaut) : prix de la composition, PV fixe à non à la création, inchangé à la mise à jour.
+    const sans = { lig_tyl_id: 2, lig_libelle_html: 'Dalle', lig_pv_fixe: true, lig_pv: 99.5 };
+    expect(valeursDepuisLigne(sans, 'OUVRAGE', { creation: true })).toMatchObject({ pv_fixe: false, coef_fg_impose: false });
+    expect(valeursDepuisLigne(sans, 'OUVRAGE')).not.toHaveProperty('pv_fixe');
+    expect(valeursDepuisLigne(sans, 'OUVRAGE')).not.toHaveProperty('pv');
     expect(valeursDepuisLigne({ lig_tyl_id: 1, lig_libelle_html: 'Lot', lig_pv_fixe: true, lig_pv: 10 }, 'ENSEMBLE').pv_fixe).toBe(false);
   });
 });

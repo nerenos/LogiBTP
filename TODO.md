@@ -21,7 +21,9 @@
 - [ ] Comptabilité, décisions du 31/10/2026 : appliquer `modules/bibliotheque/db/066`, `modules/comptabilite/db/094d`,
   `db/247` (clés de ventilation converties en identifiants, `nat_compte_*` retirées, comptes de produit et de charge
   des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied) ; règlements (lot C) :
-  rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux).
+  rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux) ; lot D : appliquer
+  `db/248` (chantier par ligne, colonne `chantiers` de `v_liste_documents`), rejouer les `150` et `176` régénérés
+  (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -84,17 +86,12 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] 13.14 : une section par commande avec une tranche par BL ; chantier par ligne (`lig_cha_id`) sur les documents
-  d'achat seulement (repris de l'entête, modifiable) ; plusieurs chantiers : entête vide et avertissement ; filtre par
-  chantier sur l'entête (index), sinon sur les lignes (chantier de la ligne en achat, documents sources par
-  `document_ligne_lien` en vente).
 - [ ] Proposition des marchés à facturer pour une période (13.9) : mois civil, marchés ouverts non soldés sans
   situation validée dans le mois, « pas d'avancement » mémorisé par marché et par mois, situations créées d'un clic.
 - [ ] Cautions de retenue de garantie : une caution sur plusieurs retenues, retenue partiellement cautionnée ; le
   montant cautionné se consomme en premier, la retenue non cautionnée reste due une fois la caution épuisée (une pièce
   peut avoir une part cautionnée et une part retenue).
 - [ ] Révision de prix par index BT (formule, index provisoires puis définitifs) : à concevoir avant de coder.
-- [ ] Écran de transformation ligne à ligne (hors marché : lignes décochées laissées en reliquat, quantité modifiable).
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
 
@@ -121,13 +118,6 @@ comptables, ventilation) et 3 (écritures, export Sage 100).
   (module complet). La facture qui déduit l'acompte retire déjà cette TVA (décisions du 31/10/2026).
 - [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
   et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
-
-### Frais annexes
-
-- [ ] Envoi vers la bibliothèque d'un ouvrage à PV fixe : aujourd'hui le PV fixe est envoyé (`envoi.js`) ; option
-  globale de la société, par défaut sans PV fixe (l'utilisateur le force dans la bibliothèque).
-- [ ] Les clés de ventilation ne suivent pas un copier-coller de lignes : la clé suit la ligne collée dans le même
-  document et sous la même tranche parente, ailleurs la ligne revient au prorata.
 
 ### Fiches et listes
 

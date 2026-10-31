@@ -231,6 +231,8 @@ public sealed class ParametresBibliothequeDto
     public List<string> ScenariosAutorises { get; set; } = [.. CalculElement.Scenarios];
     public decimal CoefFgDefaut { get; set; } = 1;
     public decimal CoefBenefDefaut { get; set; } = 1;
+    /// <summary>Envoi d'un ouvrage d'un document vers la bibliothèque : son PV fixe est-il repris ? (non par défaut)</summary>
+    public bool PvFixeOuvragesEnvoyes { get; set; }
 }
 
 public sealed record BibliothequeDto(int Id, string Code, string Libelle, bool Defaut, bool Actif, int Ordre);
