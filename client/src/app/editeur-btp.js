@@ -5,7 +5,7 @@ import {
 import { DictionnaireMetre } from '@logibtp/metre/ui';
 import { calculerDocument, TL, estChiffree, natureObligatoire } from '../calcul/index.js';
 import { FONCTIONS_BTP } from '../calcul/fonctions-btp.js';
-import { compteLigne, libelleCompte } from './comptes.js';
+import { compteLigne, libelleCompte, relationTiers } from './comptes.js';
 import { fraisRecus, bilanTranche } from './frais-annexes.js';
 
 // Spécialisation BTP de l'éditeur du module Document : moteur de devis BTP, colonnes de déboursé, PV fixe,
@@ -349,9 +349,27 @@ export class EditeurDevisBtp extends EditeurDocument {
    */
   compteLigne(l) {
     return compteLigne(l, {
-      natures: this.natures ?? [], famille: this.definition.type?.tyd_famille ?? 'V', typeDocument: this.definition.type?.tyd_code ?? null,
-      tauxTva: this.definition.taux_tva ?? [], regle: this.regleVentilation ?? null,
+      natures: this.natures ?? [], typeDocument: this.definition.type?.tyd_code ?? null,
+      tauxTva: this.definition.taux_tva ?? [], regle: this.regleVentilation ?? null, compteTiers: this.compteTiersDocument(),
     });
+  }
+
+  /**
+   * Compte de produit ou de charge du tiers du document (relation selon la famille), lu une fois par tiers par
+   * `chargerComptesTiers(id)` posé par la page ; la grille est redessinée à son arrivée. null : inconnu ou aucun.
+   */
+  compteTiersDocument() {
+    const id = Number(this.saisie?.document?.ent_tiers_id) || null;
+    if (!id || !this.chargerComptesTiers) return null;
+    this.comptesTiers ??= new Map();
+    if (!this.comptesTiers.has(id)) {
+      this.comptesTiers.set(id, {});
+      Promise.resolve(this.chargerComptesTiers(id)).then((c) => {
+        this.comptesTiers.set(id, c ?? {});
+        if (c && Object.values(c).some(Boolean)) this.grille?.rendre();
+      }).catch(() => {});
+    }
+    return this.comptesTiers.get(id)?.[relationTiers(this.definition.type?.tyd_famille ?? 'V')] ?? null;
   }
 
   /** Variables de libellé : données génériques + variables de calcul et de métré. */

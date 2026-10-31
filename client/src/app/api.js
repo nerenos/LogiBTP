@@ -682,6 +682,7 @@ export const api = {
     ventilation: () => appel('GET', '/comptabilite/ventilation'),
     enregistrerVentilation: (type, l) => appel('PUT', `/comptabilite/ventilation/${encodeURIComponent(type)}`, l),
     regle: () => appel('GET', '/comptabilite/ventilation/regle'),
+    comptesLignesTiers: (id) => appel('GET', `/comptabilite/tiers/${encodeURIComponent(id)}/comptes-lignes`),
     natures: () => appel('GET', '/comptabilite/natures'),
     typesDocuments: () => appel('GET', '/comptabilite/types-documents'),
     enregistrerTypesDocuments: (l) => appel('PUT', '/comptabilite/types-documents', l),

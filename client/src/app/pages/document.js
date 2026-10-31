@@ -484,6 +484,8 @@ export class PageDocument extends PageBase {
     this.editeur.natures = this.natures;
     this.editeur.comptes = this.comptes;
     this.editeur.regleVentilation = this.regleVentilation;
+    // Compte de produit ou de charge du tiers (avant les clés de la ventilation).
+    this.editeur.chargerComptesTiers = this.regleVentilation ? (id) => api.comptabilite.comptesLignesTiers(id).catch(() => null) : null;
     this.editeur.surFiltre = () => this.afficherFiltre();
     // Mode débogage de la vue : rapport d'import (bandeau, traçabilité).
     this.editeur.surVue = () => {

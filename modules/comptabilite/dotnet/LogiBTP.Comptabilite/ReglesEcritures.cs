@@ -5,9 +5,10 @@ public sealed record LignePiece(string? Compte, string? Taux, decimal Montant, s
 
 /// <summary>
 /// Poste de pied (HT : dans la base de TVA ; TTC : après la TVA, déduit du tiers), montant signé tel que saisi ; compte
-/// auxiliaire pour un poste porté sur un compte de tiers (retenue de garantie).
+/// auxiliaire pour un poste porté sur un compte de tiers (retenue de garantie). Acompte : déduction TTC d'un acompte
+/// tenu en trésorerie (compte d'acompte en HT, TVA déjà collectée ou déduite à son encaissement ou à son paiement).
 /// </summary>
-public sealed record PostePiece(string Libelle, string? Compte, decimal Montant, string? Auxiliaire = null);
+public sealed record PostePiece(string Libelle, string? Compte, decimal Montant, string? Auxiliaire = null, bool Acompte = false);
 
 /// <summary>TVA d'un taux : base et montant nets, comportement (N, A, I, E), exigibilité (E encaissements, D débits) et comptes.</summary>
 public sealed record TvaPiece(string Taux, decimal TauxPct, decimal Base, decimal Montant, string Comportement, string Exigibilite,
@@ -39,7 +40,9 @@ public sealed record Ecriture(long Piece, List<LigneEcriture> Lignes, List<strin
 /// Produits ou charges : la base HT de chaque taux, moins sa part des postes HT, répartie entre les comptes des lignes du
 /// taux au prorata de leurs montants (le plus fort absorbe l'arrondi ; un taux sans ligne va au compte par défaut) ;
 /// postes HT et TTC sur leur compte ; TVA par taux (collectée à l'encaissement ou sur les débits, déductible,
-/// autoliquidée due et déductible sur la base) ; tiers par échéance, la retenue de garantie sur son compte ; écart
+/// autoliquidée due et déductible sur la base) ; déduction d'un acompte tenu en trésorerie : part HT au compte d'acompte,
+/// part de TVA (au prorata du TTC de chaque taux) retirée de la TVA de la pièce, déjà collectée ou déduite à
+/// l'encaissement ou au paiement de l'acompte (la TVA n'est jamais comptée deux fois) ; tiers par échéance, la retenue de garantie sur son compte ; écart
 /// d'équilibre jusqu'à 0,05 sur le compte d'écart, au-delà erreur. Montants arrondis au centime (demi vers l'infini).
 /// </summary>
 public static class ReglesEcritures
@@ -120,13 +123,14 @@ public static class ReglesEcritures
         }
         foreach (var x in p.PostesHt) Ajouter(x.Compte, null, $"{p.Libelle} – {x.Libelle}", x.Montant, produitDebit, null, "POSTE_SANS_COMPTE");
         // TVA : collectée au crédit d'une vente, déductible au débit d'un achat ; autoliquidation d'un achat : déductible et due.
+        bool TvaPostee(TvaPiece t) => vente ? t.Comportement is "N" or "E" : t.Comportement is not ("A" or "I");
+        string? CompteTva(TvaPiece t) => vente ? (t.Exigibilite == "D" ? t.CompteCollectee : t.CompteEncaissement ?? t.CompteCollectee) : t.CompteDeductible;
         foreach (var t in p.Tva)
         {
             var lib = $"{p.Libelle} – TVA {t.Taux}";
             if (vente)
             {
-                if (t.Comportement is "N" or "E")
-                    Ajouter(t.Exigibilite == "D" ? t.CompteCollectee : t.CompteEncaissement ?? t.CompteCollectee, null, lib, t.Montant, false, null, "TVA_SANS_COMPTE");
+                if (TvaPostee(t)) Ajouter(CompteTva(t), null, lib, t.Montant, false, null, "TVA_SANS_COMPTE");
             }
             else if (t.Comportement is "A" or "I")
             {
@@ -137,7 +141,27 @@ public static class ReglesEcritures
             else Ajouter(t.CompteDeductible, null, lib, t.Montant, true, null, "TVA_SANS_COMPTE");
         }
         // Postes après la TVA (déductions : acompte, paiement direct…) : contrepartie du tiers.
-        foreach (var x in p.PostesTtc) Ajouter(x.Compte, x.Auxiliaire, $"{p.Libelle} – {x.Libelle}", -x.Montant, vente, null, "POSTE_SANS_COMPTE");
+        foreach (var x in p.PostesTtc)
+        {
+            if (!x.Acompte || p.Tva.Count == 0)
+            {
+                Ajouter(x.Compte, x.Auxiliaire, $"{p.Libelle} – {x.Libelle}", -x.Montant, vente, null, "POSTE_SANS_COMPTE");
+                continue;
+            }
+            // Acompte tenu en trésorerie : la déduction TTC se répartit entre les taux au prorata de leur TTC ; la TVA de
+            // chaque part est retirée du compte de TVA du taux, le reste (HT) solde le compte d'acompte.
+            var poids = p.Tva.Select(t => Arrondir(t.Base) + (TvaPostee(t) ? Arrondir(t.Montant) : 0)).ToList();
+            var parts = Repartir(x.Montant, poids);
+            var ht = 0m;
+            for (var i = 0; i < p.Tva.Count; i++)
+            {
+                var t = p.Tva[i];
+                var partTva = TvaPostee(t) && poids[i] != 0 ? Arrondir(parts[i] * Arrondir(t.Montant) / poids[i]) : 0;
+                ht += parts[i] - partTva;
+                Ajouter(CompteTva(t), null, $"{p.Libelle} – {x.Libelle} – TVA {t.Taux}", -partTva, vente, null, "TVA_SANS_COMPTE");
+            }
+            Ajouter(x.Compte, x.Auxiliaire, $"{p.Libelle} – {x.Libelle}", -ht, vente, null, "POSTE_SANS_COMPTE");
+        }
         // Tiers : une ligne par échéance ; la retenue sur son compte (sinon le collectif du tiers).
         var tiersOk = !string.IsNullOrWhiteSpace(p.Collectif) && !string.IsNullOrWhiteSpace(p.CompteTiers);
         var echeances = p.Echeances.Count > 0 ? p.Echeances : [new EcheancePiece(null, p.TotalTtc + p.PostesTtc.Sum(x => x.Montant), false)];

@@ -6,21 +6,24 @@ public sealed record TypeVentilation(string Code, string? Parent, string? Compte
 /// <summary>Clé de ventilation : type comptable, nature et / ou taux de TVA (codes), compte.</summary>
 public sealed record CleVentilation(string Type, string? Nature, string? Taux, string? Compte);
 
-/// <summary>Ligne à ventiler : compte saisi, nature, taux de TVA, type comptable de la pièce.</summary>
-public sealed record EntreeVentilation(string? Compte, string? Nature, string? Taux, string? Type);
+/// <summary>
+/// Ligne à ventiler : compte saisi, nature, taux de TVA, type comptable de la pièce, compte de produit ou de charge du
+/// tiers de la pièce (distinct de son compte auxiliaire).
+/// </summary>
+public sealed record EntreeVentilation(string? Compte, string? Nature, string? Taux, string? Type, string? Tiers = null);
 
 public sealed record ResultatVentilation(string? Compte, string? Origine, string? Type, string? Erreur);
 
 /// <summary>
 /// Règle de ventilation, répliquée dans ventilation.js (jeu modules/comptabilite/tests/cas/02_ventilation.json) :
-/// compte de la ligne, clé nature + taux, clé nature, clé taux, compte par défaut du type comptable ; aux étapes 2 à 5,
+/// compte de la ligne, compte du tiers, clé nature + taux, clé nature, clé taux, compte par défaut du type comptable ; aux étapes 3 à 6,
 /// le type de la pièce avant son parent ; sinon COMPTE_INTROUVABLE.
 /// </summary>
 public static class ReglesVentilation
 {
     public static readonly IReadOnlyDictionary<string, string> Origines = new Dictionary<string, string>
     {
-        ["LIGNE"] = "compte de la ligne", ["NATURE_TAUX"] = "nature et taux de TVA", ["NATURE"] = "nature",
+        ["LIGNE"] = "compte de la ligne", ["TIERS"] = "compte du tiers", ["NATURE_TAUX"] = "nature et taux de TVA", ["NATURE"] = "nature",
         ["TAUX"] = "taux de TVA", ["TYPE"] = "type comptable",
     };
 
@@ -47,6 +50,7 @@ public static class ReglesVentilation
     public static ResultatVentilation Compte(EntreeVentilation e, IReadOnlyList<TypeVentilation> types, IReadOnlyList<CleVentilation> cles)
     {
         if (Texte(e.Compte) is string propre) return new(propre, "LIGNE", null, null);
+        if (Texte(e.Tiers) is string tiers) return new(tiers, "TIERS", null, null);
         var nature = Texte(e.Nature);
         var taux = Texte(e.Taux);
         var chaine = ChaineTypes(e.Type, types);

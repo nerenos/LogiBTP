@@ -152,10 +152,10 @@ export const ELEMENTS = [
     },
   }),
   // Postes de pied (POSTE_PIED) : insérés dans le pied des documents (code, F3 ou glisser), sans prix.
-  poste({ id: 11, code: 'RG5', libelle_html: '<p>Retenue de garantie 5 %</p>', pied_niveau: 'TTC', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5', pied_retenue: true, cpt_code: '411700' }),
-  poste({ id: 12, code: 'PRORATA', libelle_html: '<p>Compte prorata 1,5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'TOTAL_HT', pied_valeur: '1.5' }),
-  poste({ id: 13, code: 'REMISE5', libelle_html: '<p>Remise commerciale 5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5' }),
-  poste({ id: 14, code: 'FRAISDOS', libelle_html: '<p>Frais de dossier</p>', pied_niveau: 'HT', pied_mode: 'M', pied_sens: 'AJOUT', pied_valeur: '150', tva_code: 'T20' }),
+  poste({ id: 11, code: 'RG5', libelle_html: '<p>Retenue de garantie 5 %</p>', pied_niveau: 'TTC', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5', pied_retenue: true, cpt_code: '411700', pied_genre: 'RETENUE' }),
+  poste({ id: 12, code: 'PRORATA', libelle_html: '<p>Compte prorata 1,5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'TOTAL_HT', pied_valeur: '1.5', pied_genre: 'PRORATA' }),
+  poste({ id: 13, code: 'REMISE5', libelle_html: '<p>Remise commerciale 5 %</p>', pied_niveau: 'HT', pied_mode: 'P', pied_base: 'CUMUL', pied_valeur: '5', pied_genre: 'REMISE' }),
+  poste({ id: 14, code: 'FRAISDOS', libelle_html: '<p>Frais de dossier</p>', pied_niveau: 'HT', pied_mode: 'M', pied_sens: 'AJOUT', pied_valeur: '150', tva_code: 'T20', pied_genre: 'AUTRE' }),
 ];
 
 export const TARIFS = [

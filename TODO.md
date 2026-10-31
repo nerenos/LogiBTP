@@ -18,6 +18,9 @@
 - [ ] Métré en script : appliquer `021`, `061` (`ele_longueur`), `165` et le `131` régénéré. **Sauvegarder avant le
   premier démarrage** de l'API : il convertit les métrés en lignes et supprime `metre_ligne` (irréversible).
 - [ ] Frais annexes : redémarrer l'API (tables et colonnes de `db/167`, appliqué le 16/10/2026).
+- [ ] Comptabilité, décisions du 31/10/2026 : appliquer `modules/bibliotheque/db/066`, `modules/comptabilite/db/094d`,
+  `db/247` (clés de ventilation converties en identifiants, `nat_compte_*` retirées, comptes de produit et de charge
+  des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -113,25 +116,12 @@ Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conceptio
 (base en trois lots, puis module complet). Base réalisée : lots 1 (plan, collectifs, comptes des tiers, TVA), 2 (types
 comptables, ventilation) et 3 (écritures, export Sage 100).
 
-- [ ] Lot 2, écarts (décisions du 31/10/2026) : clés de ventilation enregistrées par l'identifiant de la nature et du
-  taux (saisies par leur code ; un code renommé ne laisse plus de clé orpheline) ; colonnes `nat_compte_vente|achat`
-  retirées (encore saisies dans les référentiels de la bibliothèque, reprises par `db/224`) ; une nouvelle nature sans
-  clé prend le compte par défaut du type (voulu).
 - [ ] Lot 3, à valider : modèle Sage 100 (colonnes, ANSI, JJMMAA, sens et montant) à reproduire dans le format
   d'import paramétrable de Sage puis à essayer sur un vrai fichier ; modèle personnalisé seulement par l'API
   (`PUT /api/comptabilite/export/modele`), pas d'écran de saisie des colonnes.
-- [ ] Lot 3, écarts (décisions du 31/10/2026 ; acceptés : lignes vendues prises comme poids, fichier des lots en
-  base ; virement de la TVA à encaisser : module complet) : genre explicite des postes de pied (REMISE, PRORATA,
-  ACOMPTE, PAIEMENT_DIRECT, RETENUE, AUTRE) porté par l'élément POSTE_PIED et recopié sur la ligne, au lieu du libellé ;
-  déduction d'acompte selon le mode de la société (`parametre_document.acomptes`) — aujourd'hui toujours portée au
-  compte d'acompte, d'où un CA compté deux fois en mode CA : mode CA, la déduction diminue les produits (pas de 4191) ;
-  mode trésorerie (4191 tenu en HT, TVA collectée à l'encaissement selon le PCG), la facture solde 4191 pour la part HT
-  et la TVA à encaisser est diminuée de la TVA déjà collectée sur l'acompte (jamais deux fois) ; achats symétriques
-  (4091, TVA déductible).
-- [ ] Compte de produit ou de charge du tiers, un par relation (client, fournisseur ; sous-traitant : celui du
-  fournisseur s'il est vide), distinct du compte auxiliaire 401 / 411 (ex. fournisseur de carburant : 60614) ; règle
-  du compte d'une ligne : ligne > tiers > nature + taux > nature > taux > défaut du type (`ventilation.js` ↔
-  `ReglesVentilation.cs`, jeu `02_ventilation.json`, grille et export).
+- [ ] Acomptes en mode trésorerie : la demande et le reçu (non comptables) ne portent pas de TVA ; la TVA due à
+  l'encaissement de l'acompte (PCG : 4191 en HT, TVA collectée à part) doit être écrite par l'export des règlements
+  (module complet). La facture qui déduit l'acompte retire déjà cette TVA (décisions du 31/10/2026).
 - [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
   et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
 
