@@ -136,7 +136,9 @@ public static class Structure
             // Facture : retenue de garantie et postes TTC du marché posés dans le pied global (Q5, 11.4), visibles dès la saisie.
             var type = await db.TypesDocument.AsNoTracking().FirstAsync(t => t.TydId == tyd, ct);
             var complet = await documents.Charger(entId, ct);
-            if (await PostesMarche.Portee(db, type, complet.Document, ct) is string portee && await PostesMarche.Appliquer(db, complet, portee, ct))
+            var postes = await PostesMarche.Portee(db, type, complet.Document, ct) is string portee && await PostesMarche.Appliquer(db, complet, portee, ct);
+            // Révision des prix du marché (lot G1) : poste de la période et régularisation, visibles dès la saisie.
+            if (await RevisionPrix.Appliquer(db, complet, type, ct) | postes)
             {
                 return (await documents.Enregistrer(entId, complet, Utilisateur.Depuis(http), ct)).Document ?? cree;
             }
@@ -169,6 +171,24 @@ public static class Structure
         // validation posera ; validée, celles qui sont écrites.
         g.MapGet("/documents/{id:long}/acomptes", (long id, LogiBtpContext db, DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
             Acomptes.ApercuAsync(db, documents, id, ct));
+        // Révision des prix (CONCEPTION-REVISION-PRIX.md, lot G1) : paramètres et périodes du marché, facture simple de
+        // régularisation ; catalogue des index, valeurs (saisie, import CSV avec simulation) et modèles de formules
+        // (écritures du catalogue et des modèles : administrateur).
+        g.MapGet("/marches/{id:int}/revision", (int id, LogiBtpContext db, CancellationToken ct) => RevisionPrix.LireAsync(db, id, ct));
+        g.MapPut("/marches/{id:int}/revision", (int id, RevisionMarche r, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            RevisionPrix.EnregistrerAsync(db, id, r, Utilisateur.Depuis(http), ct));
+        g.MapPost("/marches/{id:int}/revision/facture", async (int id, HttpContext http, LogiBtpContext db,
+            DocumentService<DocumentBtp, DocumentLigneBtp, DocumentCompletBtp> documents, CancellationToken ct) =>
+            await RevisionPrix.CreerFactureAsync(db, documents, id, Utilisateur.Depuis(http), ct));
+        g.MapGet("/revision/index", (LogiBtpContext db, CancellationToken ct) => RevisionPrix.IndexAsync(db, ct));
+        g.MapPut("/revision/index", (List<IndexPrix> index, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            RevisionPrix.EnregistrerIndexAsync(db, index, Utilisateur.Depuis(http), ct));
+        g.MapGet("/revision/valeurs", (string? du, string? au, LogiBtpContext db, CancellationToken ct) => RevisionPrix.ValeursAsync(db, du, au, ct));
+        g.MapPut("/revision/valeurs", (ValeursIndex v, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            RevisionPrix.EnregistrerValeursAsync(db, v, Utilisateur.Depuis(http), ct));
+        g.MapGet("/revision/formules", (LogiBtpContext db, CancellationToken ct) => RevisionPrix.FormulesAsync(db, ct));
+        g.MapPut("/revision/formules", (List<FormuleModele> f, HttpContext http, LogiBtpContext db, CancellationToken ct) =>
+            RevisionPrix.EnregistrerFormulesAsync(db, f, Utilisateur.Depuis(http), ct));
         g.MapGet("/marches/{id:int}/postes", (int id, LogiBtpContext db, CancellationToken ct) => PostesMarche.Lire(db, id, ct));
         g.MapPut("/marches/{id:int}/postes", (int id, List<PosteMarche> postes, LogiBtpContext db, CancellationToken ct) => PostesMarche.Enregistrer(db, id, postes, ct));
         // Onglet Gestion de la fiche marché (CONCEPTION-MARCHES-REGLEMENTS.md, Q1 à Q3) : commandes (marché, TS) avec prévu,

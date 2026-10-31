@@ -397,6 +397,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         // Déductions d'acompte de la pièce (facture ou avoir d'avancement), relues sur ses lignes.
         if (type.TydAvancement == "F" || type.TydCode == TypesDocument.VAvoir) await Acomptes.Ecrire((LogiBtpContext)db, entId, ct);
         var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.EntId == entId, ct);
+        // Révision des prix du marché (lot G1) : détail par période figé (pièces d'avancement, facture de régularisation).
+        if (doc.EntMarcheId is not null && (doc.EntAvtPresentation == "P" || type.TydCode == TypesDocument.VFacture)) await RevisionPrix.EcrireAsync(db, entId, ct);
         // Un avoir d'annulation reprend la pièce annulée (son numéro de situation) : ni numéro ni déduction.
         if (doc.EntAvtPresentation is null || doc.EntMarcheId is null || doc.EntNatureAvoir == "ANNULATION") return;
         await NumeroterAvancement(db, entId, ct);
@@ -468,6 +470,8 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         {
             await Acomptes.Appliquer((LogiBtpContext)db, saisie, ct);
         }
+        // Révision des prix du marché (lot G1) : poste de la période et régularisation des périodes précédentes.
+        await RevisionPrix.Appliquer(db, saisie, type, ct);
     }
 
     /// <summary>
@@ -483,6 +487,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE acompte_deduction SET acd_ent_id = {nouveau} WHERE acd_ent_id = {ancien}", ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_acompte SET mac_demande_ent_id = {nouveau} WHERE mac_demande_ent_id = {ancien}", ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE marche_acompte SET mac_piece_ent_id = {nouveau} WHERE mac_piece_ent_id = {ancien}", ct);
+        await RevisionPrix.ReporterVersionAsync(db, ancien, nouveau, ct);
     }
 
     /// <summary>Délai de paiement (mêmes codes que les conditions de paiement) et mode de règlement du tiers (annuaire).</summary>
@@ -527,6 +532,7 @@ public sealed class SpecialisationBtp : SpecialisationDocument<DocumentBtp, Docu
         cible.EntStkDestinationId = saisie.EntStkDestinationId;
         cible.EntDateBesoin = saisie.EntDateBesoin;
         cible.EntDateLivraison = saisie.EntDateLivraison;
+        cible.EntMoisRevision = saisie.EntMoisRevision is DateOnly m ? new DateOnly(m.Year, m.Month, 1) : null;
     }
 
     /// <summary>Ventes : payeur et adresse des travaux identiques au client restent vides (lot F).</summary>

@@ -1,6 +1,6 @@
 # Révision et actualisation des prix des marchés par index BT – analyse fonctionnelle
 
-> Document de travail (31/10/2026, lot G) : analyse, aucun développement engagé. Même principe que
+> Document de travail (31/10/2026, lot G) : décisions du 31/10/2026 renseignées, lot G1 réalisé (voir § 10). Même principe que
 > `CONCEPTION-MARCHES-REGLEMENTS.md` : pour chaque question, la **Proposition** est celle de l'analyse, renseigner
 > **Décision**. Récapitulatif au § 9.
 
@@ -46,7 +46,7 @@
 d'établissement des prix, défaut : mois de la date du marché) ; pour ACTUALISABLE, mois de début des travaux (défaut :
 date de début réelle du chantier, `db/236`, sinon prévue).
 
-**Décision** :
+**Décision** : Proposition retenue (paramètres dans `marche_revision`).
 
 ### Q2. Formule
 
@@ -55,21 +55,21 @@ date de début réelle du chantier, `db/236`, sinon prévue).
 coefficient (défaut 3 décimales, au plus proche ; option « supérieur ») ; modèles de formules réutilisables
 (`/parametres/revision` : « BT01 – 0,15 », « Gros œuvre BT01 50 % + BT06 35 % »…) recopiés dans le marché.
 
-**Décision** :
+**Décision** : Proposition retenue (termes en JSONB de `marche_revision`, modèles `formule_revision`).
 
 ### Q3. Avenants et TS
 
 **Proposition** : une commande ajoutée au marché hérite du mois zéro et de la formule du marché ; un mois zéro propre
 peut être saisi sur la commande (prix nouveaux établis plus tard), la formule restant celle du marché.
 
-**Décision** :
+**Décision** : Proposition retenue (`marche_document.mdo_mois_zero`).
 
 ### Q4. Marchés de sous-traitance (sens ST)
 
 **Proposition** : mêmes paramètres (souvent la formule du marché de vente lié, proposée par défaut) ; calcul sur les
 factures d'avancement de sous-traitance. À faire dans un second temps (lot G2) ?
 
-**Décision** :
+**Décision** : Proposition retenue : lot G3.
 
 ## 4. Index
 
@@ -80,7 +80,7 @@ la base suivante) et `index_valeur` (index, mois, valeur, état PROVISOIRE / DEF
 IMPORT / INSEE) ; historique des corrections (une valeur provisoire remplacée par la définitive reste tracée). Catalogue
 des BT livré (codes et libellés), valeurs vides. Page `/parametres/index` : grille mois × index, saisie et import CSV.
 
-**Décision** :
+**Décision** : Proposition retenue ; page `/parametres/revision`.
 
 ### Q6. Récupération automatique
 
@@ -89,14 +89,14 @@ sans clé), pour les index utilisés par au moins un marché ; une valeur relev�
 la publie comme telle ; notification « index publiés » aux personnes du service Facturation. Faut-il ce lot dès le
 début, ou la saisie et l'import CSV suffisent-ils pour commencer ?
 
-**Décision** :
+**Décision** : Pas de relève automatique de l'INSEE : saisie et import CSV seulement.
 
 ### Q7. Index non publié
 
 **Proposition** : In manquant → dernier index connu de la série (révision **provisoire**, signalée sur la pièce) ;
 aucun index connu depuis I0 → pas de révision sur la pièce (avertissement), elle sera rattrapée par la suivante.
 
-**Décision** :
+**Décision** : Proposition retenue.
 
 ## 5. Calcul et facturation
 
@@ -107,7 +107,7 @@ par commande / section), hors postes de pied ; mois n = mois de la pièce (lot E
 d'un autre mois). Les situations (non comptables) affichent la révision pour information ; seules les factures
 d'avancement la facturent.
 
-**Décision** :
+**Décision** : Proposition retenue (`document.ent_mois_revision`) ; situations : pas de révision affichée au lot G1.
 
 ### Q9. Régularisation (provisoire → définitif)
 
@@ -117,7 +117,7 @@ provisoirement est donc régularisée d'office sur la facture suivante dès que 
 période figé à la validation (`document_revision` : mois, montant de la période, I0, In, état de l'index, Cn,
 révision) ; la dernière facture (décompte) régularise tout ce qui est connu.
 
-**Décision** :
+**Décision** : Proposition retenue, avec une option : facture simple de la régularisation (bouton de l'onglet Révision du marché).
 
 ### Q10. Ligne de révision sur la pièce
 
@@ -126,21 +126,21 @@ révision) ; la dernière facture (décompte) régularise tout ce qui est connu.
 il porte la TVA de la section et passe dans l'export comptable (genre « révision », compte paramétrable par le type
 comptable comme les autres postes). Le pied global n'est pas touché (`PIED_GLOBAL` respecté).
 
-**Décision** :
+**Décision** : Proposition retenue.
 
 ### Q11. Actualisation (prix ferme actualisable)
 
 **Proposition** : coefficient unique Ca calculé une fois connus I(d − 3) et I0, appliqué comme une révision (même poste V)
 à chaque période facturée ; Ca ≤ 1 → pas d'actualisation (selon le contrat : option « à la baisse aussi »).
 
-**Décision** :
+**Décision** : Proposition retenue (option `mre_baisse`).
 
 ### Q12. Avoirs, annulations, retenue et acomptes
 
 **Proposition** : une facture annulée par avoir annule sa révision (l'avoir reprend la pièce, poste V compris) ; la
 révision entre dans la base de la retenue de garantie (cumul TTC) ; les acomptes ne sont pas révisés.
 
-**Décision** :
+**Décision** : Proposition retenue.
 
 ## 6. Écrans
 
@@ -179,3 +179,18 @@ Clause de sauvegarde ou butoir, révision des prix unitaires de la bibliothèque
 10. **Q10** – Poste HT V dans le pied de chaque section.
 11. **Q11** – Actualisation par le même mécanisme.
 12. **Q12** – Avoirs, retenue, acomptes.
+
+## 10. Réalisation du lot G1
+
+- Règle : `client/src/app/structure/revision.js` ↔ `src/LogiBTP.Domaine/ReglesRevision.cs`, jeu `tests/revision/01_revision.json`.
+- Base : `db/250_revision_prix.sql` (index, raccordements, valeurs et historique, modèles, `marche_revision`, mois zéro des
+  commandes, mois des travaux d'une pièce, `document_revision`).
+- Serveur : `src/LogiBTP.Api/Btp/RevisionPrix.cs`. Pièce d'avancement (factures et avoirs, présentation P) : poste HT
+  `V<commande>` en mode C (coefficient de la période sur le total HT de la section, calculé en direct par le moteur ;
+  absent si le coefficient vaut 1 ou s'il manque un index) et `VR<commande>` (régularisation des périodes précédentes, en
+  montant), posés à la création depuis le marché et à la validation, avant la TVA du pied de la section (deux sections
+  ou plus) ou de la racine ; détail figé à la validation. Facture simple de régularisation : lignes d'élément `VR<commande>`
+  au taux de TVA principal de la commande, recalculées à la validation. Routes `/api/structure/marches/{id}/revision`
+  (+ `/facture`), `/api/structure/revision/index|valeurs|formules`.
+- Écrans : onglet Révision de la fiche marché (vente), page `/parametres/revision` (menu Affaires).
+- Restent : G3 (marchés de sous-traitance), bloc « Révision » des éditions, révision affichée sur les situations.

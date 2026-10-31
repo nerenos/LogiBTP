@@ -9,6 +9,7 @@ import { PageParametresBibliotheque } from './parametres-bibliotheque.js';
 import { PageParametresAnnuaire, PageNotreSociete } from './parametres-annuaire.js';
 import { PageParametresDocuments } from './parametres-documents.js';
 import { PageParametresSousTraitance } from './parametres-sous-traitance.js';
+import { PageParametresRevision } from './parametres-revision.js';
 import { PagePlanComptable, PageTiersComptables, PageParametresComptabilite, PageVentilation, PageExportComptable } from './comptabilite.js';
 import { PageComparatifConsultation } from './consultation.js';
 import { PageStock, PageMouvementStock } from '../stock/etat.js';
@@ -77,6 +78,7 @@ export const ROUTES = [
   { nom: 'parametres-bibliotheque', chemin: '/parametres/bibliotheque', page: PageParametresBibliotheque, titre: 'Paramétrage de la bibliothèque' },
   { nom: 'parametres-annuaire', chemin: '/parametres/annuaire', page: PageParametresAnnuaire, titre: 'Paramétrage de l\'annuaire' },
   { nom: 'parametres-documents', chemin: '/parametres/documents', page: PageParametresDocuments, titre: 'Paramétrage des documents' },
+  { nom: 'parametres-revision', chemin: '/parametres/revision', page: PageParametresRevision, titre: 'Révision des prix' },
   { nom: 'parametres-sous-traitance', chemin: '/parametres/sous-traitance', page: PageParametresSousTraitance, titre: 'Pièces exigées des sous-traitants' },
   { nom: 'consultation-comparatif', chemin: '/consultation/comparatif', page: PageComparatifConsultation, titre: 'Comparatif des offres' },
   { nom: 'stock', chemin: '/stock', page: PageStock, titre: 'État du stock' },

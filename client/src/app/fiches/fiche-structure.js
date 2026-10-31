@@ -3,6 +3,7 @@ import { MODES } from '@logibtp/fiche';
 import { echapper, formatDate, formatNombre, formatLibre, lireNombre, creerCombo, lirePreferences, ecrirePreferences, confirmer } from '@logibtp/socle/ui';
 import { rendrePieces } from '../sous-traitance/pieces.js';
 import { rendrePaiements, rendreRetenue } from '../sous-traitance/paiements.js';
+import { rendreRevision } from '../structure/revision-marche.js';
 import { D, Dz, aujourdhui } from '@logibtp/socle';
 import { FicheLogiBTP } from './fiches.js';
 import { api } from '../api.js';
@@ -435,7 +436,11 @@ export class FicheMarche extends FicheStructure {
       : [];
     // Marché de vente : réception et retenue de garantie (en ligne).
     const retenue = this.valeur('sens') !== 'ST' && this.id !== null && this.services.structure.gestion
-      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) }]
+      ? [{ code: 'retenue', titre: 'Retenue', rendre: (corps) => rendreRetenue(corps, { marche: Number(this.id), message: this.message }).catch((e) => this.message(e.message, 'erreur')) },
+        // Révision des prix (lot G1) : paramètres du marché et périodes révisées.
+        { code: 'revision', titre: 'Révision', rendre: (corps) => rendreRevision(corps, {
+          marche: Number(this.id), message: this.message, ouvrir: (url, e) => this.ouvrirUrl(url, e),
+        }).catch((e) => this.message(e.message, 'erreur')) }]
       : [];
     return [{ code: 'gestion', titre: 'Gestion', rendre: (corps) => this.rendreGestion(corps) }, ...pieces, ...retenue, ...super.ongletsSpecifiques()];
   }

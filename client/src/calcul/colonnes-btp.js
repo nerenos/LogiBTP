@@ -9,7 +9,9 @@ export const COLONNES_DOCUMENT_BTP = new Set(['ent_mode_calcul_ouvrage', 'ent_co
   // Stock (db/216) : date-heure du mouvement, lieux d'origine et de destination.
   'ent_date_mouvement', 'ent_stk_origine_id', 'ent_stk_destination_id',
   // Approvisionnement (db/218) : date de besoin d'une réservation, livraison prévue d'une commande fournisseur.
-  'ent_date_besoin', 'ent_date_livraison', 'ent_arc_numero', 'ent_arc_date', 'ent_arc_livraison']);
+  'ent_date_besoin', 'ent_date_livraison', 'ent_arc_numero', 'ent_arc_date', 'ent_arc_livraison',
+  // Révision des prix (db/250) : mois des travaux d'une facture d'avancement.
+  'ent_mois_revision']);
 
 export const COLONNES_LIGNE_BTP = new Set([
   'lig_nat_id', 'lig_ptv_id', 'lig_mtr_id', 'lig_qte_source', 'lig_qte_base', 'lig_coef_perte',

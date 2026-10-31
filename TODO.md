@@ -25,7 +25,9 @@
   `db/248` (chantier par ligne, colonne `chantiers` de `v_liste_documents`), rejouer les `150` et `176` régénérés
   (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue) ;
   lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois) ; lot F : appliquer
-  `modules/reglement/db/081` (anciens pointages de caution retirés : la consommation des cautions est calculée).
+  `modules/reglement/db/081` (anciens pointages de caution retirés : la consommation des cautions est calculée) ;
+  lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
+  valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier.
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -88,7 +90,7 @@ Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
 global). Lots à venir :
 
-- [ ] Révision de prix par index BT : analyse [CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) (Q1 à Q12) à valider avant de coder.
+- [ ] Révision de prix par index BT, suite du lot G1 ([CONCEPTION-REVISION-PRIX.md](documentation/conception/CONCEPTION-REVISION-PRIX.md) § 10) : G3 marchés de sous-traitance, bloc « Révision » du dictionnaire des éditions (périodes, index, coefficients), révision affichée sur les situations.
 - [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
   éditions, reste à payer) : écritures avec le module Comptabilité complet.
 

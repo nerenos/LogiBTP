@@ -62,6 +62,7 @@ export const MENUS_METIER = [
       { code: 'affaires', libelle: 'Affaires', icone: '🗂', url: L('affaires'), info: 'Regroupement de chantiers, ou affaire de gestion (frais hors chantier)', creation: F(TYPE_FICHE.AFFAIRE, 'Nouvelle affaire') },
       { code: 'chantiers', libelle: 'Chantiers', icone: '🏗', url: L('chantiers'), creation: F(TYPE_FICHE.CHANTIER, 'Nouveau chantier') },
       { code: 'marches', libelle: 'Marchés', icone: '📜', url: L('marches'), info: 'Ouverts à la validation des commandes clients : suivi de la facturation', creation: F(TYPE_FICHE.MARCHE, 'Nouveau marché') },
+      { code: 'revision-prix', libelle: 'Révision des prix : index et formules', icone: '📈', url: '/parametres/revision', info: 'Valeurs mensuelles des index (saisie, import CSV), catalogue et modèles de formules' },
     ],
   },
   {
