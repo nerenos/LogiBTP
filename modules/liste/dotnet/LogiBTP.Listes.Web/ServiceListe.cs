@@ -364,6 +364,23 @@ public partial class ServiceListe(ListeDbContext db, SpecialisationListe special
         return lignes.Select(l => new CompteSegment(l["valeur"] as string, Convert.ToInt64(l["nombre"]))).ToList();
     }
 
+    /// <summary>Agrégats (totaux, indicateurs) sur toute la sélection : { "_lignes": n, code: valeur | null }.</summary>
+    public virtual async Task<Dictionary<string, decimal?>> Agregats(DemandeListe d, Utilisateur u, CancellationToken ct)
+    {
+        var c = await Constructeur(d, u, ct);
+        var ligne = (await Lignes(Requete(() => c.Agregats(d.Agregats)), ct)).FirstOrDefault() ?? [];
+        static decimal? Nombre(object? v) => v is null ? null : Convert.ToDecimal(v, System.Globalization.CultureInfo.InvariantCulture);
+        var res = new Dictionary<string, decimal?> { ["_lignes"] = Nombre(ligne.GetValueOrDefault("_lignes")) ?? 0 };
+        for (var i = 0; i < d.Agregats.Count; i++)
+        {
+            var a = d.Agregats[i];
+            res[a.Code] = a.Calcul == "ratio"
+                ? (Nombre(ligne.GetValueOrDefault($"a{i}d")) is decimal den && den != 0 ? (Nombre(ligne.GetValueOrDefault($"a{i}n")) ?? 0) / den : null)
+                : Nombre(ligne.GetValueOrDefault($"a{i}"));
+        }
+        return res;
+    }
+
     public virtual async Task<List<EtatLigne>> Controle(DemandeListe d, Utilisateur u, CancellationToken ct)
     {
         var c = await Constructeur(d, u, ct);

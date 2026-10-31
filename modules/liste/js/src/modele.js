@@ -18,6 +18,20 @@ import { compilerFormule, resolveurColonnes, resultat, vrai } from './formule.js
 export const FORMATS = ['texte', 'nombre', 'date', 'coche', 'combo', 'picto', 'pastille'];
 /** Teintes des pastilles (format `pastille`, option `teinte`) : variables `--pastille-<teinte>-fond / -texte` du thème. */
 export const TEINTES_PASTILLE = ['neutre', 'info', 'envoye', 'succes', 'attention', 'erreur', 'termine', 'barre'];
+/** Totaux de colonne (ligne de pied, L3) : calculs d'agrégat d'une colonne de la source. */
+export const TOTAUX_COLONNE = Object.freeze({ somme: 'Somme', moyenne: 'Moyenne', min: 'Minimum', max: 'Maximum', compte: 'Nombre de lignes' });
+/** Calculs et formats des indicateurs (bandeau de synthèse, L4). */
+export const CALCULS_INDICATEUR = Object.freeze({ somme: 'Somme', compte: 'Nombre de lignes', ratio: 'Ratio (lignes ÷ dénominateur)', moyenne: 'Moyenne', min: 'Minimum', max: 'Maximum' });
+export const FORMATS_INDICATEUR = Object.freeze({ nombre: 'Nombre', montant: 'Montant (€)', pourcentage: 'Pourcentage' });
+
+/** Texte d'une valeur d'indicateur selon son format (vide : « — »). */
+export function texteIndicateur(v, format, decimales) {
+  if (v === null || v === undefined || Number.isNaN(Number(v))) return '—';
+  if (format === 'pourcentage') return `${formatNombre(Number(v) * 100, decimales ?? 1)} %`;
+  if (format === 'montant') return `${formatNombre(v, decimales ?? 2)} €`;
+  return formatNombre(v, decimales ?? (Number.isInteger(Number(v)) ? 0 : 2));
+}
+
 export const STYLE_VIDE = Object.freeze({ couleur: null, fond: null, gras: false, italique: false, souligne: false, barre: false });
 
 /** Définition complétée par les valeurs par défaut (une vue ancienne reste lisible). */
@@ -26,13 +40,15 @@ export function normaliserDefinition(def = {}) {
     source: { mode: 'vue', vue: null, requete: '', colonne_id: null, colonne_type: null, type_element: null, ...def.source },
     colonnes: (def.colonnes ?? []).map((c) => ({
       calcul: false, formule: '', titre: c.code, bulle: '', format: 'texte', decimales: 2, options: [], regles: [],
-      masquee: false, recherche: !c.calcul, alignement: null, modifiable: false,
+      masquee: false, recherche: !c.calcul, alignement: null, modifiable: false, total: null,
       ...c,
       style: { ...STYLE_VIDE, ...c.style },
       largeur: { mode: 'auto', valeur: null, min: null, max: null, ...c.largeur },
     })),
     segments: def.segments ?? [],
     filtres: def.filtres ?? [],
+    // Bandeau d'indicateurs (L4) : [{ code, titre, calcul, colonne, filtres, denominateur, format, teinte }].
+    indicateurs: (def.indicateurs ?? []).map((i) => ({ titre: i.code, calcul: 'compte', colonne: null, filtres: [], denominateur: [], format: 'nombre', teinte: 'neutre', ...i })),
     // Lignes en sommeil (colonne usage = S) montrées ; masquées par défaut (filtresEffectifs).
     sommeil: def.sommeil ?? false,
     theme: def.theme ?? null,

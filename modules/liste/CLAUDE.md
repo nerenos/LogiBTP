@@ -11,7 +11,7 @@
 ## Structure
 - `db/030_liste_schema.sql` : `f_sans_accent`, `source_liste`, `vue_liste` ; `031_liste_themes.sql` : `theme_liste`, `vli_theme` ; `032_liste_saisie.sql` : `sli_modifiable`.
 - `js/src/normaliser.js` : `normaliser`, `motsRecherche` (= `f_sans_accent`).
-- `js/src/requete.js` : sémantique de référence (`filtrer`, `correspondFiltreVue`, `OPERATEURS_VUE`, `trier`, `lot`, `jusqua`, `comptesSegment`, `cleTri`, `comparerCles`, `texteBrut`, `empreinte`).
+- `js/src/requete.js` : sémantique de référence (`filtrer`, `correspondFiltreVue`, `OPERATEURS_VUE`, `trier`, `lot`, `jusqua`, `comptesSegment`, `cleTri`, `comparerCles`, `texteBrut`, `empreinte`, `agreger` / `CALCULS_AGREGAT` : somme, moyenne, min, max, compte, ratio avec filtres propres).
 - `js/src/formule.js` : `compilerFormule`, `resolveurColonnes`, `ErreurFormule` (SI/ALORS/SINON, ARRONDI, CONCAT… en décimal exact) ; `modele.js` : `ModeleVue`, `normaliserDefinition`, `FORMATS` (texte, nombre, date, coche, combo, picto).
 - `js/src/filtres.js` : filtres tableur sur lignes chargées (`OPERATEURS_NOMBRE`, `OPERATEURS_TEXTE`) ; `largeurs.js` : `calculerLargeurs` (fixe / proportionnel / auto, min-max).
 - `js/src/fournisseurs.js` : `FournisseurApi` (base `/api/listes`), `FournisseurMemoire` (mêmes règles, `cleStockage` localStorage pour la démo), `ErreurFournisseur`.
@@ -23,7 +23,7 @@
 - `source_liste` (`sli_code`, `sli_libelle`, `sli_vue`, `sli_colonne_id`, `sli_colonne_type` ou `sli_type_element`, `sli_actif`, `sli_modifiable`).
 - `vue_liste` (`vli_id`, `vli_nom`, `vli_contexte`, `vli_partage` P/G/T, `vli_proprietaire`, `vli_groupe`, `vli_definition` JSONB, `vli_version` verrouillage optimiste, `vli_theme`).
 - `theme_liste` (`thl_code`, `thl_libelle`, `thl_icone`, `thl_ordre`, `thl_types` JSONB `[{code, libelle}]` : types d'élément couverts, vide = tous).
-- Définition (JSONB) : `source { mode: vue|requete, vue, requete, colonne_id, colonne_type, type_element }`, `colonnes [{ code, calcul, formule, titre, format, options, style, regles, largeur, recherche, modifiable… }]`, `segments`, `tri`, `filtres [{ colonne, op, valeur, valeur2, valeurs }]`, `theme`, `taille_lot`.
+- Définition (JSONB) : `source { mode: vue|requete, vue, requete, colonne_id, colonne_type, type_element }`, `colonnes [{ code, calcul, formule, titre, format, options, style, regles, largeur, recherche, modifiable… }]`, `segments`, `tri`, `filtres [{ colonne, op, valeur, valeur2, valeurs }]`, `theme`, `taille_lot` ; total de pied par colonne `total` (somme, moyenne, min, max, compte) ; `indicateurs [{ code, titre, calcul, colonne, filtres, denominateur, format (nombre, montant, pourcentage), teinte, bulle }]`.
 - Sources du cœur (`SOURCES_LISTE` dans `client/src/app/vues-liste.js`, vues SQL dans `db/120` et modules) : documents (`v_liste_documents`), projets, affaires, chantiers, marches, salaries et materiels (modifiables), elements, personnes, individus, ged, ressources.
 - Lignes renvoyées : colonnes de la vue + `_id`, `_type`, `_h` (empreinte md5).
 
@@ -39,12 +39,12 @@
 ## Routes HTTP (sous `/api/listes`)
 - `GET/PUT/DELETE /themes[/{code}]` ; `GET /vues?contexte=&theme=`, `GET|PUT|DELETE /vues/{id}`, `POST /vues`.
 - `GET /sources`, `POST /sources/requete` (colonnes d'un SELECT, ADMIN).
-- Données (corps `DemandeListe`) : `POST /lot`, `/segments`, `/controle`, `/lignes` ; saisie : `POST /modifier` (`DemandeModification` : `id`, `h`, `valeurs`).
+- Données (corps `DemandeListe`, `filtres` = filtres supplémentaires en ET : indicateur cliqué) : `POST /lot`, `/segments`, `/controle`, `/lignes`, `/agregats` (`agregats [{ code, calcul, colonne, filtres, denominateur }]` → `{ _lignes, code: valeur }`, 40 au plus, colonne numérique) ; saisie : `POST /modifier` (`DemandeModification` : `id`, `h`, `valeurs`).
 - Erreurs : 422 (`ErreurListe` : DEFINITION, SOURCE, COLONNE_ID, REQUETE_*…), 409 `VERSION` (vue), 409 `LIGNE_MODIFIEE` (avec la ligne actuelle).
 
 ## Règles répliquées JS / C# et jeux de cas (`tests/cas`)
 - `01_normalisation.json` : `normaliser` ↔ `f_sans_accent` (SQL).
-- `02_requete.json` : types du thème, filtres fixes (ET), recherche (chaque mot dans au moins une colonne, `valeur::text`), segments (null = vide ; colonne `ARRAY` : l'une des valeurs, null = tableau vide), tri puis ID croissant, vides en dernier, curseur keyset ; `requete.js` ↔ `ConstructeurRequete.cs` (`OPERATEURS_VUE` ↔ `OperateursVue`).
+- `02_requete.json` : types du thème, filtres fixes (ET), recherche (chaque mot dans au moins une colonne, `valeur::text`), segments (null = vide ; colonne `ARRAY` : l'une des valeurs, null = tableau vide), tri puis ID croissant, vides en dernier, curseur keyset ; `requete.js` ↔ `ConstructeurRequete.cs` (`OPERATEURS_VUE` ↔ `OperateursVue`) ; « agregats » : somme (vides ignorés, ensemble vide 0), moyenne / min / max (ensemble vide null), compte, ratio (null si dénominateur nul), filtres de la requête.
 - `03_formules.json` : formules évaluées sur le poste (JS seul).
 - Fiches en sommeil : une source qui a la colonne `usage` masque les lignes `usage = S` (vide gardé), sauf si la vue les montre (`definition.sommeil`, case du concepteur) : `filtresEffectifs` (opérateur interne `sommeil`) ↔ `ConstructeurRequete.MasqueSommeil` (tests de chaque côté).
 
@@ -62,3 +62,4 @@
 ## Tests
 - `npm test --workspace modules/liste/js` (vitest) ; `dotnet test LogiBTP.slnx` (projet `LogiBTP.Listes.Tests`).
 - Tests SQL des jeux partagés (`f_sans_accent`, lots, segments) : seulement si la variable `LOGIBTP_TEST_PG` (chaîne de connexion PostgreSQL) est définie, sinon ignorés silencieusement.
+- Totaux et indicateurs (ergonomie L3, L4) : ligne de pied collante calculée par la base sur toute la sélection, ou sur les lignes affichées dès qu'un filtre de colonne est posé (ligne teintée, « affichées ») ; bandeau de cartes au-dessus de la liste (bouton ▦, masquage par vue dans le navigateur), calculé sans l'indicateur cliqué ; clic sur une carte à filtres = filtre de la demande (`filtreIndicateur`), second clic pour le retirer ; concepteur : « Total » d'une colonne numérique, onglet Indicateurs.

@@ -183,3 +183,37 @@ export function empreinte(ligne) {
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(16);
 }
+
+/** Calculs d'agrégat (même liste que ConstructeurRequete.CalculsAgregat côté C#). */
+export const CALCULS_AGREGAT = ['somme', 'moyenne', 'min', 'max', 'compte', 'ratio'];
+
+/** Colonnes lues par des agrégats (colonne et filtres), pour les lignes de la source. */
+export const colonnesAgregats = (agregats = []) => agregats.flatMap((a) => [a.colonne, ...(a.filtres ?? []), ...(a.denominateur ?? [])]
+  .map((x) => (typeof x === 'string' ? x : x?.colonne))).filter(Boolean);
+
+/**
+ * Agrégats sur les lignes de la sélection (totaux L3, indicateurs L4) : { _lignes, code: valeur | null }. Somme d'une
+ * colonne numérique (vides ignorés ; ensemble vide : 0), moyenne, min, max (ensemble vide : null), compte des lignes,
+ * ratio = compte(filtres) ÷ compte(dénominateur) (null si le dénominateur est nul) ; chaque agrégat porte ses filtres
+ * propres (sémantique des filtres de vue). Même règle que ConstructeurRequete.Agregats (jeu 02_requete.json, « agregats »).
+ */
+export function agreger(lignes, agregats = []) {
+  const res = { _lignes: lignes.length };
+  const retenues = (filtres) => (filtres?.length ? lignes.filter((l) => filtres.every((f) => correspondFiltreVue(l, f))) : lignes);
+  for (const a of agregats) {
+    if (!CALCULS_AGREGAT.includes(a.calcul)) throw new Error(`Calcul d'agrégat inconnu : ${a.calcul}`);
+    const l = retenues(a.filtres);
+    if (a.calcul === 'compte') { res[a.code] = l.length; continue; }
+    if (a.calcul === 'ratio') {
+      const d = retenues(a.denominateur).length;
+      res[a.code] = d ? l.length / d : null;
+      continue;
+    }
+    const v = l.map((x) => x[a.colonne]).filter((x) => !estVide(x) && x !== '').map(Number).filter((x) => !Number.isNaN(x));
+    if (a.calcul === 'somme') res[a.code] = v.reduce((s, x) => s + x, 0);
+    else if (!v.length) res[a.code] = null;
+    else if (a.calcul === 'moyenne') res[a.code] = v.reduce((s, x) => s + x, 0) / v.length;
+    else res[a.code] = a.calcul === 'min' ? Math.min(...v) : Math.max(...v);
+  }
+  return res;
+}

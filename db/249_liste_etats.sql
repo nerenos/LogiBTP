@@ -1,6 +1,7 @@
 -- Ergonomie, lot E4 (L2, ANALYSE-ERGONOMIE.md) : code du statut et état affiché des documents pour les pastilles
 -- des listes, colonnes ajoutées en fin de v_liste_documents (reprise de 208) ; v_liste_ordres (reprise de 209) est
 -- recréée pour les recevoir (v.* figé à la création de la vue).
+-- Lot E6 (L4) : âge et jours depuis l'envoi, pour les indicateurs des devis.
 
 DROP VIEW IF EXISTS v_liste_ordres;
 
@@ -54,7 +55,10 @@ SELECT d.ent_id                                   AS id,
          WHEN d.ent_date_validite < current_date AND s.std_code IN ('APPROUVE', 'ENVOYE')
               AND coalesce(f_regle_document('VALIDITE_ALERTE', t.tyd_id) = 'true'::jsonb, false) THEN 'EXPIRE'
          ELSE s.std_code
-       END::text                                  AS etat
+       END::text                                  AS etat,
+       -- Indicateurs des listes (L4) : âge du document en jours ; jours depuis l'envoi d'un document envoyé sans réponse.
+       (current_date - d.ent_date)                AS age_jours,
+       CASE WHEN s.std_code = 'ENVOYE' THEN current_date - coalesce(d.ent_envoye_le::date, d.ent_date) END AS jours_envoye
 FROM document d
 JOIN type_document t ON t.tyd_id = d.ent_tyd_id
 JOIN statut_document s ON s.std_id = d.ent_std_id

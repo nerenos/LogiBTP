@@ -1,5 +1,5 @@
 import { CASQUETTES, NIVEAUX, ROLES } from './annuaire/donnees.js';
-import { PASTILLES_ETAT_DOCUMENT, PASTILLES_STATUT_STRUCTURE } from './codes.js';
+import { ETAT_LISTE_DOCUMENT, PASTILLES_ETAT_DOCUMENT, PASTILLES_STATUT_STRUCTURE } from './codes.js';
 
 // Thèmes, sources et vues de liste fournis par le cœur. Ces définitions alimentent le
 // script db/121_vues_liste.sql (généré par client/scripts/generer-vues-liste.mjs) : une seule source de vérité.
@@ -15,6 +15,8 @@ export const SOURCES_LISTE = {
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
       ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
+      // db/249 : indicateurs des listes (âge en jours, jours depuis l'envoi).
+      ['age_jours', 'integer'], ['jours_envoye', 'integer'],
     ],
   },
   // Ordres du module Exécution (db/197 : v_liste_ordres = documents de la famille E + exécution).
@@ -28,6 +30,8 @@ export const SOURCES_LISTE = {
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
       ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
+      // db/249 : indicateurs des listes (âge en jours, jours depuis l'envoi).
+      ['age_jours', 'integer'], ['jours_envoye', 'integer'],
       ['etat_execution', 'text'], ['motif', 'text'], ['service', 'text'], ['service_id', 'integer'], ['responsable', 'text'],
       ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],
       ['etape_en_cours', 'text'], ['prochaine_date', 'date'], ['ressource', 'text'],
@@ -363,15 +367,33 @@ const COLONNES_AVANCEMENT = [
   col('numero_situation', 'N° sit.', { ...fixe(64), alignement: 'centre', ...nombre(0), recherche: false }),
   col('facture', 'Facture / situation', { ...fixe(130) }),
 ];
-const vueDocuments = (vli_id, vli_nom, theme) => {
-  const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }] };
+const vueDocuments = (vli_id, vli_nom, theme, indicateurs = []) => {
+  const definition = { ...structuredClone(documents.definition), theme, segments: [{ colonne: 'etat', titre: 'Statut' }], indicateurs };
+  // Ligne de total (L3) : montants d'un même type de pièces (pas dans la vue Documents, qui mélange les familles).
+  for (const c of definition.colonnes) if (['total_ht', 'net_a_payer'].includes(c.code)) c.total = 'somme';
   if (['situations', 'factures'].includes(theme)) {
     const i = definition.colonnes.findIndex((c) => c.code === 'numero');
     definition.colonnes.splice(i + 1, 0, ...structuredClone(COLONNES_AVANCEMENT));
   }
   return { ...structuredClone(documents), vli_id, vli_nom, definition };
 };
-VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis'), vueDocuments(6, 'Factures et avoirs', 'factures'));
+// Indicateurs des devis (L4, Q5) : relance après 15 jours sans réponse, taux d'acceptation sur 12 mois glissants.
+const JOURS_RELANCE = '15';
+// Devis acceptés : validés par le client (db/179 : ACCEPTE retiré, même sens que VALIDE), puis soldés ou facturés.
+const DEVIS_ACCEPTES = ['VALIDE', 'SOLDE', 'FACTURATION', 'FACTURE'];
+const INDICATEURS_DEVIS = [
+  { code: 'en_cours', titre: 'Total HT en cours', calcul: 'somme', colonne: 'total_ht', format: 'montant', teinte: 'info',
+    bulle: 'Devis approuvés ou envoyés, non expirés',
+    filtres: [{ colonne: 'etat', op: 'dans', valeurs: ['APPROUVE', 'ENVOYE'] }] },
+  { code: 'a_relancer', titre: 'Devis à relancer', calcul: 'compte', format: 'nombre', teinte: 'attention',
+    bulle: `Envoyés depuis plus de ${JOURS_RELANCE} jours, sans réponse`,
+    filtres: [{ colonne: 'etat', op: '=', valeur: 'ENVOYE' }, { colonne: 'jours_envoye', op: '>', valeur: JOURS_RELANCE }] },
+  { code: 'acceptation', titre: "Taux d'acceptation", calcul: 'ratio', format: 'pourcentage', teinte: 'succes',
+    bulle: 'Acceptés (validés par le client, puis soldés ou facturés) ÷ (acceptés + refusés + expirés), devis des 12 derniers mois',
+    filtres: [{ colonne: 'etat', op: 'dans', valeurs: DEVIS_ACCEPTES }, { colonne: 'age_jours', op: '<=', valeur: '365' }],
+    denominateur: [{ colonne: 'etat', op: 'dans', valeurs: [...DEVIS_ACCEPTES, ETAT_LISTE_DOCUMENT.REFUSE, ETAT_LISTE_DOCUMENT.EXPIRE] }, { colonne: 'age_jours', op: '<=', valeur: '365' }] },
+];
+VUES_LISTE.push(vueDocuments(5, 'Devis', 'devis', INDICATEURS_DEVIS), vueDocuments(6, 'Factures et avoirs', 'factures'));
 // Achats (menu Achats du bandeau) : mêmes colonnes, documents filtrés par les types du thème.
 VUES_LISTE.push(vueDocuments(9, 'Demandes de prix', 'achats_ddp'), vueDocuments(10, 'Commandes fournisseurs', 'achats_commandes'),
   vueDocuments(11, 'Factures fournisseurs', 'achats_factures'));
@@ -398,7 +420,7 @@ const vueStructure = (vli_id, vli_nom, theme, colonnes, segments, tri = [{ colon
     colonnes, segments, tri, lignes: 'multi', taille_lot: 100,
   },
 });
-const montant = (code, titre, extra = {}) => col(code, titre, { ...nombre(), ...fixe(110), recherche: false, ...extra });
+const montant = (code, titre, extra = {}) => col(code, titre, { ...nombre(), ...fixe(110), recherche: false, total: 'somme', ...extra });
 const statut = (options) => col('statut', 'Statut', { format: 'pastille', ...fixe(100), options });
 VUES_LISTE.push(
   vueStructure(31, 'Projets', 'projets', [
@@ -727,14 +749,14 @@ const vuePointages = (vli_id, vli_nom, filtres = []) => ({
       col('ordre', 'Ordre', { ...fixe(110) }),
       col('type_mo', 'Type de MO', { ...prop(1.3, 100) }),
       col('sous_type', 'Sous-type', { ...prop(1, 90) }),
-      col('heures', 'Heures', { ...nombre(2), ...fixe(70), recherche: false }),
+      col('heures', 'Heures', { ...nombre(2), ...fixe(70), recherche: false, total: 'somme' }),
       col('motif', 'Motif', { ...prop(1.5, 100), style: { couleur: '#b42318' } }),
       col('commentaire', 'Commentaire', { ...prop(2, 100), masquee: true }),
       col('couche', 'Couche', { ...fixe(70), masquee: true }),
       col('saisi_par', 'Saisi par', { ...fixe(90), masquee: true }),
       col('interimaire', 'Intérim', { format: 'coche', ...fixe(60), masquee: true }),
       col('productif', 'Productif', { format: 'coche', ...fixe(60), masquee: true }),
-      col('cout', 'Coût', { ...nombre(2), ...fixe(90), recherche: false, masquee: true }),
+      col('cout', 'Coût', { ...nombre(2), ...fixe(90), recherche: false, masquee: true, total: 'somme' }),
       col('valorisation', 'Valorisation', { ...fixe(90), masquee: true }),
     ],
     segments: [{ colonne: 'service', titre: 'Service' }, { colonne: 'type_mo', titre: 'Type de MO' }, { colonne: 'sous_type', titre: 'Sous-type' }],

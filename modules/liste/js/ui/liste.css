@@ -199,6 +199,23 @@ textarea.liste-editeur { display: block; }
 .segment-teinte { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; vertical-align: middle;
   background: var(--t-texte, var(--pastille-neutre-texte)); }
 .segment-teinte.teinte-neutre, .segment-teinte.teinte-barre { background: var(--pastille-neutre-texte); }
+/* Ligne de total collante (L3) : totaux de la base, ou des lignes affichées (filtres de colonnes, marqués). */
+.liste-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--titre-fond); font-weight: 600;
+  border-top: 2px solid var(--bord); white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.liste-totaux .liste-coin { color: var(--discret); text-align: center; }
+.liste-totaux-etiquette { color: var(--discret); font-weight: 500; }
+.liste-totaux.local td { background: var(--pastille-attention-fond); }
+.liste-totaux.local .liste-totaux-etiquette { color: var(--pastille-attention-texte); }
+/* Bandeau d'indicateurs (L4) : cartes au-dessus de la liste, cliquables quand elles portent un filtre. */
+.liste-indicateurs { display: flex; flex-wrap: wrap; gap: 0.5rem; flex: none; }
+.liste-indicateur { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; min-width: 9rem; max-width: 16rem;
+  padding: 0.35rem 0.75rem; border: 1px solid var(--bord); border-left: 4px solid var(--t-texte, var(--pastille-neutre-texte));
+  border-radius: 6px; background: var(--surface); color: var(--texte); font: inherit; text-align: left; }
+button.liste-indicateur { cursor: pointer; }
+button.liste-indicateur:hover { border-color: var(--accent); }
+.liste-indicateur.actif { background: var(--t-fond, var(--pastille-neutre-fond)); box-shadow: 0 0 0 2px var(--accent-clair); }
+.liste-indicateur-titre { font-size: 0.85em; color: var(--discret); }
+.liste-indicateur strong { font-size: 1.25em; font-variant-numeric: tabular-nums; }
 .liste-suite { padding: 0.5rem; text-align: center; color: var(--discret); }
 .liste-attente::before { content: "⏳ "; }
 
@@ -279,6 +296,10 @@ textarea.liste-editeur { display: block; }
 .concepteur-filtres { margin-top: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
 .filtre-vue { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
 .filtre-vue [hidden] { display: none; }
+.concepteur-indicateur { margin-bottom: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; flex-direction: column; gap: 0.5rem; }
+.filtres-indicateur { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
+.concepteur-indicateur-actions { display: flex; gap: 0.35rem; }
+.concepteur-indicateur [hidden] { display: none; }
 .concepteur-calculees { margin-top: 0.8rem; border: 1px solid var(--bord); border-radius: 4px; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
 .pastille-colonne { background: var(--accent-clair); border-radius: 999px; padding: 0.05rem 0.6rem; }
 @media (max-width: 760px) {

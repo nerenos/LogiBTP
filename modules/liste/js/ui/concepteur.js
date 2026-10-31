@@ -1,5 +1,5 @@
 import { echapper, ouvrirModale, confirmer } from '@logibtp/socle/ui';
-import { normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE } from '../src/modele.js';
+import { normaliserDefinition, FORMATS, TEINTES_PASTILLE, STYLE_VIDE, TOTAUX_COLONNE, CALCULS_INDICATEUR, FORMATS_INDICATEUR } from '../src/modele.js';
 import { compilerFormule, resolveurColonnes } from '../src/formule.js';
 import { OPERATEURS_VUE, COLONNE_USAGE } from '../src/requete.js';
 
@@ -14,12 +14,14 @@ export function libelleFiltreVue(f, titre = f.colonne) {
   return `${titre} ${op} ${f.valeur ?? ''}`;
 }
 
-// Concepteur de vue de liste, en deux onglets :
+// Concepteur de vue de liste, en trois onglets :
 //   Mise en forme        titres (multilignes), bulles, formats, couleurs, gras / italique / souligné / barré,
 //                        ordre, largeur (fixe, proportionnelle, min / max), colonnes masquées, formules,
 //                        règles de mise en forme conditionnelle, nom et partage de la vue
 //   Colonnes et source   vue de la base ou requête manuelle (ADMIN), identifiant et type d'élément (ouverture
 //                        de la fiche), colonnes affichées, colonnes de recherche, segments, tri par défaut
+//   Indicateurs          cartes du bandeau de synthèse (L4) : calcul, colonne, filtres, dénominateur d'un ratio,
+//                        format, teinte (le total de pied d'une colonne se choisit dans la mise en forme)
 
 const LIB_FORMATS = { texte: 'Texte', nombre: 'Numérique', date: 'Date', coche: 'Case à cocher', combo: 'Liste (combo)', picto: 'Picto (petite image)', pastille: 'Pastille (libellé coloré)' };
 const opt = (v, l, courant) => `<option value="${echapper(v ?? '')}" ${String(courant ?? '') === String(v ?? '') ? 'selected' : ''}>${echapper(l)}</option>`;
@@ -72,6 +74,7 @@ export class ConcepteurVue {
           <nav>
             <button type="button" data-onglet="forme">Mise en forme</button>
             <button type="button" data-onglet="colonnes">Colonnes et source</button>
+            <button type="button" data-onglet="indicateurs">Indicateurs</button>
           </nav>
           <button type="button" data-action="fermer" title="Fermer (Échap)">✕</button>
         </header>
@@ -166,11 +169,20 @@ export class ConcepteurVue {
     if (!d.source.colonne_id) erreurs.push('Colonne identifiant obligatoire (ouverture de la fiche)');
     if (!d.source.colonne_type && !d.source.type_element) erreurs.push('Type d\'élément obligatoire (colonne ou valeur constante)');
     if (!d.colonnes.length) erreurs.push('Au moins une colonne');
-    for (const f of d.filtres) {
-      if (!f.colonne) erreurs.push('Filtre de la vue : colonne à choisir');
-      else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : valeur à saisir`);
-      else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(`Filtre de la vue sur ${f.colonne} : seconde valeur à saisir`);
-      else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(`Filtre de la vue sur ${f.colonne} : valeurs à saisir`);
+    const controlerFiltres = (filtres, quoi) => {
+      for (const f of filtres) {
+        if (!f.colonne) erreurs.push(`${quoi} : colonne à choisir`);
+        else if (!SANS_VALEUR.has(f.op) && f.op !== 'dans' && (f.valeur ?? '') === '') erreurs.push(`${quoi} sur ${f.colonne} : valeur à saisir`);
+        else if (f.op === 'entre' && (f.valeur2 ?? '') === '') erreurs.push(`${quoi} sur ${f.colonne} : seconde valeur à saisir`);
+        else if (f.op === 'dans' && !(f.valeurs ?? []).length) erreurs.push(`${quoi} sur ${f.colonne} : valeurs à saisir`);
+      }
+    };
+    controlerFiltres(d.filtres, 'Filtre de la vue');
+    for (const ind of d.indicateurs) {
+      const nom = `Indicateur « ${ind.titre || ind.code} »`;
+      if (!['compte', 'ratio'].includes(ind.calcul) && !ind.colonne) erreurs.push(`${nom} : colonne à choisir`);
+      controlerFiltres(ind.filtres, `${nom}, filtre`);
+      if (ind.calcul === 'ratio') controlerFiltres(ind.denominateur, `${nom}, dénominateur`);
     }
     const resoudre = resolveurColonnes(d.colonnes);
     for (const c of d.colonnes) {
@@ -201,7 +213,9 @@ export class ConcepteurVue {
 
   rendre() {
     this.fond.querySelectorAll('[data-onglet]').forEach((b) => b.classList.toggle('actif', b.dataset.onglet === this.onglet));
-    if (this.onglet === 'forme') this.#rendreForme(); else this.#rendreColonnes();
+    if (this.onglet === 'forme') this.#rendreForme();
+    else if (this.onglet === 'indicateurs') this.#rendreIndicateurs();
+    else this.#rendreColonnes();
   }
 
   // ---------------------------------------------------------------- onglet Mise en forme
@@ -283,6 +297,8 @@ export class ConcepteurVue {
         <label class="large">Bulle d'aide <input data-col="bulle" value="${echapper(c.bulle ?? '')}"></label>
         <label>Format <select data-col="format">${FORMATS.map((f) => opt(f, LIB_FORMATS[f], c.format)).join('')}</select></label>
         <label ${c.format === 'nombre' ? '' : 'hidden'}>Décimales <input type="number" min="0" max="6" data-col="decimales" value="${c.decimales ?? 2}"></label>
+        <label ${c.format === 'nombre' && !c.calcul ? '' : 'hidden'} title="Ligne de total en bas de la liste, calculée par la base sur toute la sélection">Total
+          <select data-col="total">${opt('', 'Aucun', c.total)}${Object.entries(TOTAUX_COLONNE).map(([v, l]) => opt(v, l, c.total)).join('')}</select></label>
         <label>Alignement <select data-col="alignement">${opt('', 'Automatique', c.alignement)}${opt('gauche', 'Gauche', c.alignement)}${opt('centre', 'Centré', c.alignement)}${opt('droite', 'Droite', c.alignement)}</select></label>
         <label class="large" ${['combo', 'picto', 'pastille'].includes(c.format) ? '' : 'hidden'}>${c.format === 'pastille'
           ? `Valeurs (une par ligne : valeur | libellé | teinte : ${TEINTES_PASTILLE.join(', ')})` : 'Valeurs (une par ligne : valeur | libellé | picto)'}
@@ -449,18 +465,7 @@ export class ConcepteurVue {
         }).join('') || `<tr><td colspan="7" class="aide">${s.mode === 'requete' ? 'Testez la requête pour obtenir ses colonnes.' : 'Choisissez une source.'}</td></tr>`}</tbody>
       </table>
       <fieldset class="concepteur-filtres"><legend>Filtres de la vue (appliqués par la base, toujours actifs)</legend>
-        ${d.filtres.map((f, i) => {
-          const src = this.colonnesSource.find((c) => c.code === f.colonne);
-          const date = /date|time/.test(src?.type ?? '');
-          const type = date ? 'date' : 'text';
-          return `<div class="filtre-vue" data-filtre-vue="${i}">
-            <select data-f="colonne">${opt('', '— colonne —', f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
-            <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
-            <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${f.op === 'dans' ? 'valeur ; valeur…' : 'valeur'}">
-            <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="et">
-            <button type="button" data-supprimer-filtre title="Supprimer le filtre">✕</button>
-          </div>`;
-        }).join('') || '<p class="aide">Aucun filtre : toutes les lignes de la source sont proposées (ex. ajouter « actif est coché » pour les salariés actifs).</p>'}
+        ${this.#htmlFiltres(d.filtres, 'vue') || '<p class="aide">Aucun filtre : toutes les lignes de la source sont proposées (ex. ajouter « actif est coché » pour les salariés actifs).</p>'}
         <button type="button" data-action="ajouter-filtre" ${this.colonnesSource.length ? '' : 'disabled'}>Ajouter un filtre</button>
         ${this.colonnesSource.some((c) => c.code === COLONNE_USAGE) ? `<label class="fiche-option" title="Fiches mises en sommeil (avant archivage) : masquées par défaut"><input type="checkbox" data-sommeil ${d.sommeil ? 'checked' : ''}> Afficher les fiches en sommeil</label>` : ''}
       </fieldset>
@@ -501,25 +506,10 @@ export class ConcepteurVue {
         this.#rendreColonnes();
       });
     });
-    this.corps.querySelectorAll('[data-filtre-vue]').forEach((div) => {
-      const f = d.filtres[Number(div.dataset.filtreVue)];
-      div.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
-        const k = el.dataset.f;
-        if (k === 'valeur' && f.op === 'dans') { f.valeurs = el.value.split(';').map((x) => x.trim()).filter(Boolean); delete f.valeur; }
-        else f[k] = el.value || null;
-        if (k === 'op' || k === 'colonne') {
-          if (f.op === 'dans') { f.valeurs = f.valeur ? [f.valeur] : f.valeurs ?? []; delete f.valeur; } else delete f.valeurs;
-          if (SANS_VALEUR.has(f.op)) { delete f.valeur; delete f.valeur2; }
-          if (f.op !== 'entre') delete f.valeur2;
-          this.#rendreColonnes();
-        }
-      }));
-      div.querySelector('[data-supprimer-filtre]').addEventListener('click', () => { d.filtres.splice(Number(div.dataset.filtreVue), 1); this.#rendreColonnes(); });
-    });
+    this.#brancherFiltres(this.corps, d.filtres, 'vue', () => this.#rendreColonnes());
     this.corps.querySelector('[data-sommeil]')?.addEventListener('change', (e) => { d.sommeil = e.target.checked; });
     this.corps.querySelector('[data-action="ajouter-filtre"]').addEventListener('click', () => {
-      const booleen = this.colonnesSource.find((c) => /bool/.test(c.type ?? ''));
-      d.filtres.push(booleen ? { colonne: booleen.code, op: 'vrai' } : { colonne: this.colonnesSource[0]?.code ?? '', op: '=', valeur: '' });
+      d.filtres.push(this.#nouveauFiltre());
       this.#rendreColonnes();
     });
     this.corps.querySelector('[data-action="ajouter-calcul"]').addEventListener('click', () => {
@@ -529,6 +519,105 @@ export class ConcepteurVue {
       this.selection = `calcul_${n}`;
       this.onglet = 'forme';
       this.rendre();
+    });
+  }
+  #nouveauFiltre() {
+    const booleen = this.colonnesSource.find((c) => /bool/.test(c.type ?? ''));
+    return booleen ? { colonne: booleen.code, op: 'vrai' } : { colonne: this.colonnesSource[0]?.code ?? '', op: '=', valeur: '' };
+  }
+
+  /** Lignes d'édition d'une liste de filtres (filtres de la vue, d'un indicateur, de son dénominateur). */
+  #htmlFiltres(filtres, groupe) {
+    return filtres.map((f, i) => {
+      const src = this.colonnesSource.find((c) => c.code === f.colonne);
+      const type = /date|time/.test(src?.type ?? '') ? 'date' : 'text';
+      return `<div class="filtre-vue" data-filtres="${echapper(groupe)}" data-i="${i}">
+        <select data-f="colonne">${opt('', '— colonne —', f.colonne)}${this.colonnesSource.map((c) => opt(c.code, c.code, f.colonne)).join('')}</select>
+        <select data-f="op">${OPERATEURS_VUE.map(([v, l]) => opt(v, l, f.op)).join('')}</select>
+        <input data-f="valeur" type="${type}" value="${echapper(f.op === 'dans' ? (f.valeurs ?? []).join(' ; ') : f.valeur ?? '')}" ${SANS_VALEUR.has(f.op) ? 'hidden' : ''} placeholder="${f.op === 'dans' ? 'valeur ; valeur…' : 'valeur'}">
+        <input data-f="valeur2" type="${type}" value="${echapper(f.valeur2 ?? '')}" ${f.op === 'entre' ? '' : 'hidden'} placeholder="et">
+        <button type="button" data-supprimer-filtre title="Supprimer le filtre">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  #brancherFiltres(racine, filtres, groupe, rendre) {
+    racine.querySelectorAll(`[data-filtres="${CSS.escape(groupe)}"]`).forEach((div) => {
+      const f = filtres[Number(div.dataset.i)];
+      div.querySelectorAll('[data-f]').forEach((el) => el.addEventListener('change', () => {
+        const k = el.dataset.f;
+        if (k === 'valeur' && f.op === 'dans') { f.valeurs = el.value.split(';').map((x) => x.trim()).filter(Boolean); delete f.valeur; }
+        else f[k] = el.value || null;
+        if (k === 'op' || k === 'colonne') {
+          if (f.op === 'dans') { f.valeurs = f.valeur ? [f.valeur] : f.valeurs ?? []; delete f.valeur; } else delete f.valeurs;
+          if (SANS_VALEUR.has(f.op)) { delete f.valeur; delete f.valeur2; }
+          if (f.op !== 'entre') delete f.valeur2;
+          rendre();
+        }
+      }));
+      div.querySelector('[data-supprimer-filtre]').addEventListener('click', () => { filtres.splice(Number(div.dataset.i), 1); rendre(); });
+    });
+  }
+
+  // ---------------------------------------------------------------- onglet Indicateurs
+
+  /** Cartes du bandeau de synthèse : calculées par la base sur toute la sélection ; un clic pose leurs filtres. */
+  #rendreIndicateurs() {
+    const d = this.def;
+    const numeriques = this.colonnesSource.filter((c) => /int|numeric|decimal|real|double|money|float/.test(String(c.type ?? '').toLowerCase()));
+    this.corps.innerHTML = `
+      <p class="aide">Indicateurs calculés par la base sur toute la sélection (recherche, segments, filtres de la vue). Un indicateur qui porte
+        des filtres est cliquable : la liste n'affiche plus que ses lignes. Ratio = lignes retenues par ses filtres ÷ lignes retenues par le dénominateur.</p>
+      ${d.indicateurs.map((ind, i) => `
+        <fieldset class="concepteur-indicateur" data-indicateur="${i}"><legend>${echapper(ind.titre || ind.code)}</legend>
+          <div class="formulaire">
+            <label>Titre <input data-ind="titre" value="${echapper(ind.titre ?? '')}"></label>
+            <label>Calcul <select data-ind="calcul">${Object.entries(CALCULS_INDICATEUR).map(([v, l]) => opt(v, l, ind.calcul)).join('')}</select></label>
+            <label ${['compte', 'ratio'].includes(ind.calcul) ? 'hidden' : ''}>Colonne <select data-ind="colonne">${opt('', '—', ind.colonne)}${numeriques.map((c) => opt(c.code, c.code, ind.colonne)).join('')}</select></label>
+            <label>Format <select data-ind="format">${Object.entries(FORMATS_INDICATEUR).map(([v, l]) => opt(v, l, ind.format)).join('')}</select></label>
+            <label>Teinte <select data-ind="teinte">${TEINTES_PASTILLE.filter((t) => t !== 'barre').map((t) => opt(t, t, ind.teinte)).join('')}</select></label>
+            <label class="large">Bulle d'aide <input data-ind="bulle" value="${echapper(ind.bulle ?? '')}"></label>
+          </div>
+          <div class="filtres-indicateur"><strong>${ind.calcul === 'ratio' ? 'Numérateur' : 'Filtres'}</strong>
+            ${this.#htmlFiltres(ind.filtres, `ind-${i}`) || '<span class="aide">Aucun : toutes les lignes</span>'}
+            <button type="button" data-ajouter-filtre="filtres">Ajouter un filtre</button></div>
+          ${ind.calcul === 'ratio' ? `<div class="filtres-indicateur"><strong>Dénominateur</strong>
+            ${this.#htmlFiltres(ind.denominateur, `den-${i}`) || '<span class="aide">Aucun : toutes les lignes</span>'}
+            <button type="button" data-ajouter-filtre="denominateur">Ajouter un filtre</button></div>` : ''}
+          <div class="concepteur-indicateur-actions">
+            <button type="button" data-monter ${i ? '' : 'disabled'} title="Monter">↑</button>
+            <button type="button" data-descendre ${i < d.indicateurs.length - 1 ? '' : 'disabled'} title="Descendre">↓</button>
+            <button type="button" data-supprimer-indicateur>Supprimer l'indicateur</button>
+          </div>
+        </fieldset>`).join('') || '<p class="aide">Aucun indicateur.</p>'}
+      <button type="button" data-action="ajouter-indicateur" ${this.colonnesSource.length ? '' : 'disabled'}>Ajouter un indicateur</button>`;
+
+    const rendre = () => this.#rendreIndicateurs();
+    this.corps.querySelectorAll('[data-indicateur]').forEach((fs) => {
+      const i = Number(fs.dataset.indicateur);
+      const ind = d.indicateurs[i];
+      fs.querySelectorAll('[data-ind]').forEach((el) => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+        ind[el.dataset.ind] = el.value || null;
+        if (el.dataset.ind === 'titre') fs.querySelector('legend').textContent = el.value || ind.code;
+        if (el.dataset.ind === 'calcul') {
+          if (ind.calcul === 'ratio') ind.format = 'pourcentage';
+          if (['compte', 'ratio'].includes(ind.calcul)) ind.colonne = null;
+          rendre();
+        }
+      }));
+      this.#brancherFiltres(fs, ind.filtres, `ind-${i}`, rendre);
+      if (ind.calcul === 'ratio') this.#brancherFiltres(fs, ind.denominateur, `den-${i}`, rendre);
+      fs.querySelectorAll('[data-ajouter-filtre]').forEach((b) => b.addEventListener('click', () => { ind[b.dataset.ajouterFiltre].push(this.#nouveauFiltre()); rendre(); }));
+      const deplacer = (j) => { const [x] = d.indicateurs.splice(i, 1); d.indicateurs.splice(j, 0, x); rendre(); };
+      fs.querySelector('[data-monter]').addEventListener('click', () => deplacer(i - 1));
+      fs.querySelector('[data-descendre]').addEventListener('click', () => deplacer(i + 1));
+      fs.querySelector('[data-supprimer-indicateur]').addEventListener('click', () => { d.indicateurs.splice(i, 1); rendre(); });
+    });
+    this.corps.querySelector('[data-action="ajouter-indicateur"]').addEventListener('click', () => {
+      let n = 1;
+      while (d.indicateurs.some((x) => x.code === `ind_${n}`)) n++;
+      d.indicateurs.push(normaliserDefinition({ indicateurs: [{ code: `ind_${n}`, titre: `Indicateur ${n}` }] }).indicateurs[0]);
+      rendre();
     });
   }
 }

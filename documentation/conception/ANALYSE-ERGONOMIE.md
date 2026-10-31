@@ -609,3 +609,24 @@ client` pour les lots qui changent des vues fournies.
   sinon la première ; la dernière vue ouverte n'est plus retenue. Les adresses `/liste/<thème>?vue=` sont inchangées.
 - **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (changement de thème par le
   panneau, adresse et titre de la page, panneau réduit).
+
+## 16. Réalisation du lot E6 : totaux et indicateurs des listes (31/10/2026)
+
+- **Agrégats répliqués** : `agreger` (`modules/liste/js/src/requete.js`) ↔ `ConstructeurRequete.Agregats` (une requête
+  en lecture seule sur toute la sélection : vue, recherche, segments, filtres externes et de la demande) ; calculs
+  somme, moyenne, min, max, compte, ratio, chacun avec ses filtres (sémantique des filtres de vue) ; route
+  `POST /api/listes/agregats` (même nœud que la liste) ; cas « agregats » du jeu `modules/liste/tests/cas/02_requete.json`
+  rejoués par le fournisseur en mémoire et sur PostgreSQL.
+- **Ligne de total (L3, Q4)** : `total` par colonne numérique (concepteur : « Total »), `<tfoot>` collant en bas, nombre
+  de lignes dans la première colonne ; dès qu'un filtre de colonne est posé, totaux des lignes affichées (ligne teintée,
+  « n affichées »). Vues fournies : montants des documents par type, de la structure et heures / coût des pointages.
+- **Bandeau d'indicateurs (L4, Q5)** : `definition.indicateurs` (onglet Indicateurs du concepteur : calcul, colonne,
+  filtres, dénominateur d'un ratio, format nombre / montant / pourcentage, teinte, bulle) ; bouton ▦ pour masquer
+  (préférence par vue) ; un clic sur une carte à filtres n'affiche que ses lignes (totaux compris), un second clic le
+  retire ; les cartes restent calculées sans ce filtre. Devis : total HT en cours (approuvés ou envoyés, non expirés),
+  devis à relancer (envoyés depuis plus de 15 jours : `jours_envoye`), taux d'acceptation sur 12 mois glissants
+  (`age_jours` ; acceptés = validés par le client, soldés ou facturés, `ACCEPTE` n'existant plus depuis `db/179`).
+  La remise à zéro par une note de relance du CRM reste à faire (TODO).
+- **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` (avec `LOGIBTP_TEST_PG`) ; essai dans le navigateur (projets,
+  devis : cartes, clic, filtre de colonne, concepteur).
+

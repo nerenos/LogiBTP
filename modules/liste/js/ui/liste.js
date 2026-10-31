@@ -1,9 +1,9 @@
 import { ERREUR_LISTE } from '../src/codes.js';
 import { echapper, lireNombre, creerCombo, ouvrirMenuContextuel, confirmer, lireStockage, ecrireStockage } from '@logibtp/socle/ui';
-import { ModeleVue, normaliserDefinition, vraiDonnee } from '../src/modele.js';
+import { ModeleVue, normaliserDefinition, vraiDonnee, texteIndicateur, TOTAUX_COLONNE } from '../src/modele.js';
 import { filtreActif, correspond, comparerValeurs, estNumerique } from '../src/filtres.js';
 import { calculerLargeurs } from '../src/largeurs.js';
-import { comptesSegment } from '../src/requete.js';
+import { comptesSegment, agreger } from '../src/requete.js';
 import { FormatsCellule, appliquerStyle, alignement } from './formats.js';
 import { PanneauVues } from './panneau-vues.js';
 import { ouvrirMenuFiltre, fermerMenuFiltre } from './menu-filtre.js';
@@ -51,6 +51,9 @@ export class ListeDonnees {
     this.fabriquePanneau = panneau;
     this.panneauSpecifique = null;
     this.filtresExternes = new Map();
+    this.filtreIndicateur = null; // code de l'indicateur cliqué : ses filtres s'ajoutent à la demande (L4)
+    this.totauxBase = null;       // totaux de la base sur toute la sélection (L3)
+    this.valeursIndicateurs = null;
     this.filtresVue = filtresVue ?? null;
     this.message = message ?? (() => {});
     this.peutRequete = peutRequete;
@@ -126,6 +129,7 @@ export class ListeDonnees {
           <button type="button" data-action="effacer" class="bouton-icone" title="Effacer les filtres et le tri des colonnes" aria-label="Effacer les filtres" disabled>⨯</button>
           <button type="button" data-action="lignes" aria-pressed="false"></button>
           <button type="button" data-action="tout" aria-pressed="false">⇊</button>
+          <button type="button" data-action="indicateurs" class="bouton-icone" aria-pressed="true" hidden>▦</button>
           <button type="button" data-action="rafraichir" title="Recharger depuis la base">⟳</button>
         </span>
         <span class="liste-groupe liste-groupe-hote">
@@ -135,6 +139,7 @@ export class ListeDonnees {
         </span>
       </div>
       <p class="liste-erreurs" hidden></p>
+      <div class="liste-indicateurs" hidden></div>
       <div class="liste-corps">
         <div class="liste-zone" tabindex="0">
           <table class="liste-table"><colgroup></colgroup><thead></thead><tbody></tbody></table>
@@ -189,6 +194,11 @@ export class ListeDonnees {
       else c?.action();
     });
     r.querySelector('[data-action="tout"]').addEventListener('click', () => this.basculerTout());
+    r.querySelector('[data-action="indicateurs"]').addEventListener('click', () => this.basculerIndicateurs());
+    r.querySelector('.liste-indicateurs').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-indicateur]');
+      if (b) this.choisirIndicateur(b.dataset.indicateur);
+    });
     r.querySelector('[data-action="lignes"]').addEventListener('click', () => this.basculerLignes());
     r.querySelector('[data-action="effacer"]').addEventListener('click', () => {
       this.filtres.clear();
@@ -358,6 +368,8 @@ export class ListeDonnees {
     }
     this.triBase = null;
     this.triLocal = null;
+    this.filtreIndicateur = null;
+    this.#appliquerIndicateurs();
     const erreurs = [...this.modele.erreurs].map(([code, m]) => `${this.modele.parCode.get(code)?.titre ?? code} : ${m}`);
     const zoneErreurs = this.racine.querySelector('.liste-erreurs');
     zoneErreurs.hidden = !erreurs.length;
@@ -475,6 +487,7 @@ export class ListeDonnees {
       definition: this.nonEnregistree || !this.vue?.vli_id ? this.definition : null,
       recherche: this.recherche,
       segments,
+      filtres: this.#indicateurs().find((i) => i.code === this.filtreIndicateur)?.filtres ?? [],
       tri: this.triBase ?? this.definition.tri,
     };
   }
@@ -487,8 +500,10 @@ export class ListeDonnees {
     this.fin = false;
     this.enCours = false;
     this.marques.clear();
+    this.totauxBase = null;
     this.rendreCorps();
     if (!this.vue) return;
+    this.chargerAgregats();
     this.chargerSuite().catch((e) => this.#erreur(e));
   }
 
@@ -589,6 +604,7 @@ export class ListeDonnees {
     }
     this.lignes = etat.map((x) => relues.get(String(x.id)) ?? connues.get(String(x.id))).filter(Boolean);
     this.rendreCorps();
+    this.chargerAgregats();
     this.#effacerMarques();
     return { ajoutees, modifiees, supprimees };
   }
@@ -606,6 +622,7 @@ export class ListeDonnees {
       else this.lignes.splice(i, 1);
     }
     this.rendreCorps();
+    this.chargerAgregats();
     this.#effacerMarques();
     // Ligne nouvelle ou déplacée par le tri : sa place est donnée par le contrôle complet.
     if (inconnue) await this.verifier();
@@ -952,6 +969,7 @@ export class ListeDonnees {
     this.corps.replaceChildren(f);
     this.#compteur(affichees.length);
     this.#rendreSuite();
+    this.#rendreTotaux();
   }
 
   /** Nouveau lot : ajouté en fin de tableau, sauf tri local actif (le tableau est alors retrié). */
@@ -962,6 +980,141 @@ export class ListeDonnees {
     for (const l of this.lignesAffichees(nouvelles)) f.append(this.#ligneDom(l, visibles));
     this.corps.append(f);
     this.#compteur(this.corps.rows.length);
+    if (this.#filtresColonnesActifs()) this.#rendreTotaux();
+  }
+
+  // ---------------------------------------------------------------- totaux et indicateurs (L3, L4)
+
+  /** Colonnes visibles à total (lues dans la source). */
+  #colonnesTotal() { return this.modele ? this.#visibles().filter((c) => c.total && !c.calcul) : []; }
+
+  #agregatsTotal(colonnes = this.#colonnesTotal()) { return colonnes.map((c) => ({ code: c.code, calcul: c.total, colonne: c.code })); }
+
+  #indicateurs() { return this.modele ? this.definition.indicateurs ?? [] : []; }
+
+  /** Bandeau d'indicateurs affiché : la vue en déclare et l'utilisateur ne l'a pas masqué (préférence par vue). */
+  get indicateursAffiches() {
+    return this.#indicateurs().length > 0 && this.prefs.indicateurs?.[String(this.vue?.vli_id ?? 'nouvelle')] !== false;
+  }
+
+  basculerIndicateurs() {
+    const cle = String(this.vue?.vli_id ?? 'nouvelle');
+    const masquer = this.indicateursAffiches;
+    this.prefs.indicateurs = { ...this.prefs.indicateurs, [cle]: false };
+    if (!masquer) delete this.prefs.indicateurs[cle];
+    this.#ecrirePreferences();
+    // Bandeau masqué : son filtre ne doit pas rester posé sans être visible.
+    if (masquer && this.filtreIndicateur) { this.filtreIndicateur = null; this.#appliquerIndicateurs(); this.recharger(); this.rafraichirSegments().catch(() => {}); return; }
+    this.#appliquerIndicateurs();
+    if (!masquer) this.chargerAgregats();
+  }
+
+  /** Clic sur une carte : pose ses filtres (la liste n'affiche que ses lignes), un second clic les retire. */
+  choisirIndicateur(code) {
+    const ind = this.#indicateurs().find((i) => i.code === code);
+    if (!ind?.filtres?.length) return;
+    this.filtreIndicateur = this.filtreIndicateur === code ? null : code;
+    this.#rendreIndicateurs();
+    this.recharger();
+    this.rafraichirSegments().catch(() => {});
+  }
+
+  #appliquerIndicateurs() {
+    const b = this.racine.querySelector('[data-action="indicateurs"]');
+    const affiches = this.indicateursAffiches;
+    b.hidden = !this.#indicateurs().length;
+    b.setAttribute('aria-pressed', String(affiches));
+    b.classList.toggle('actif', affiches);
+    b.title = affiches ? 'Masquer les indicateurs' : 'Afficher les indicateurs';
+    if (!affiches) this.valeursIndicateurs = null;
+    this.#rendreIndicateurs();
+  }
+
+  /**
+   * Agrégats calculés par la base sur toute la sélection : totaux (indicateur cliqué compris) et indicateurs (sans
+   * l'indicateur cliqué : les cartes ne bougent pas quand on clique). Une erreur n'empêche pas la liste.
+   */
+  async chargerAgregats() {
+    if (!this.vue) return;
+    const gen = this.generation;
+    const totaux = this.#agregatsTotal();
+    const inds = this.indicateursAffiches ? this.#indicateurs() : [];
+    if (!totaux.length && !inds.length) { this.#rendreTotaux(); return; }
+    try {
+      const [t, i] = await Promise.all([
+        totaux.length ? this.fournisseur.agregats({ ...this.demande(), agregats: totaux }) : null,
+        inds.length ? this.fournisseur.agregats({
+          ...this.demande(), filtres: [],
+          agregats: inds.map((x) => ({ code: x.code, calcul: x.calcul, colonne: x.colonne, filtres: x.filtres ?? [], denominateur: x.denominateur ?? [] })),
+        }) : null,
+      ]);
+      if (gen !== this.generation) return;
+      this.totauxBase = t;
+      this.valeursIndicateurs = i;
+    } catch (e) {
+      if (gen !== this.generation) return;
+      this.message(`Totaux non calculés : ${e.message ?? e}`, 'avertissement');
+    }
+    this.#rendreTotaux();
+    this.#rendreIndicateurs();
+  }
+
+  /**
+   * Ligne de total collante en bas du tableau : totaux de la base sur toute la sélection ; dès qu'un filtre de
+   * colonne (lignes chargées) est posé, totaux des lignes affichées, signalés (Q4).
+   */
+  #rendreTotaux() {
+    const colonnes = this.#colonnesTotal();
+    if (!colonnes.length || !this.vue) { this.table.tFoot?.remove(); return; }
+    const pied = this.table.tFoot ?? this.table.createTFoot();
+    const local = this.#filtresColonnesActifs();
+    const valeurs = local ? agreger(this.lignesAffichees(), this.#agregatsTotal(colonnes)) : this.totauxBase;
+    const n = valeurs?._lignes;
+    const portee = local ? 'des lignes affichées (filtres de colonnes, lignes chargées)' : 'de toute la sélection';
+    const tr = document.createElement('tr');
+    tr.className = local ? 'liste-totaux local' : 'liste-totaux';
+    const coin = document.createElement('td');
+    coin.className = 'liste-coin';
+    coin.textContent = 'Σ';
+    coin.title = `Totaux ${portee}${n === undefined ? '' : ` : ${n} ligne${n > 1 ? 's' : ''}`}`;
+    tr.append(coin);
+    let etiquette = false;
+    for (const c of this.#visibles()) {
+      const td = document.createElement('td');
+      td.dataset.code = c.code;
+      td.className = `aligne-${alignement(c)}`;
+      if (c.total && !c.calcul) {
+        const v = valeurs?.[c.code];
+        td.textContent = valeurs ? (v === null || v === undefined ? '—' : c.total === 'compte' ? String(v) : this.modele.texte(v, { ...c, format: 'nombre' })) : '…';
+        td.title = `${TOTAUX_COLONNE[c.total] ?? c.total} ${portee}`;
+      } else if (!etiquette) {
+        // Première colonne sans total : rappel du nombre de lignes et de la portée.
+        td.className = 'aligne-gauche liste-totaux-etiquette';
+        td.textContent = n === undefined ? '' : `${n} ${local ? `affichée${n > 1 ? 's' : ''}` : `ligne${n > 1 ? 's' : ''}`}`;
+        td.title = coin.title;
+      }
+      etiquette = true;
+      tr.append(td);
+    }
+    pied.replaceChildren(tr);
+  }
+
+  #rendreIndicateurs() {
+    const zone = this.racine.querySelector('.liste-indicateurs');
+    const inds = this.indicateursAffiches ? this.#indicateurs() : [];
+    zone.hidden = !inds.length;
+    if (!inds.length) { zone.replaceChildren(); return; }
+    const v = this.valeursIndicateurs;
+    zone.innerHTML = inds.map((i) => {
+      const cliquable = i.filtres?.length > 0;
+      const actif = this.filtreIndicateur === i.code;
+      const texte = v ? texteIndicateur(v[i.code], i.format) : '…';
+      const titre = [i.bulle, cliquable ? (actif ? 'Cliquer pour retirer ce filtre' : 'Cliquer pour n\'afficher que ces lignes') : ''].filter(Boolean).join('\n');
+      const balise = cliquable ? 'button type="button"' : 'div';
+      return `<${balise} class="liste-indicateur teinte-${echapper(i.teinte ?? 'neutre')}${actif ? ' actif' : ''}" data-indicateur="${echapper(i.code)}"
+        ${cliquable ? `aria-pressed="${actif}"` : ''} title="${echapper(titre)}">
+        <span class="liste-indicateur-titre">${echapper(i.titre ?? i.code)}</span><strong>${echapper(texte)}</strong></${cliquable ? 'button' : 'div'}>`;
+    }).join('');
   }
 
   #compteur(affichees) {
@@ -1335,6 +1488,7 @@ export class ListeDonnees {
     try {
       const relue = await this.fournisseur.modifier(this.demande(), id, ligne._h, { [code]: valeur });
       this.#remplacerLigne(id, relue);
+      if (this.modele.parCode.get(code)?.total) this.chargerAgregats();
       return true;
     } catch (e) {
       if (e.code === ERREUR_LISTE.LIGNE_MODIFIEE && e.details) {
