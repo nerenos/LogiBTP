@@ -13,7 +13,7 @@ public sealed record AffectationMaterielSaisie(string Type, string? Ressource, D
 /// Affectations du matériel (db/231, lot 5b des demandes du 25/10/2026) : historique d'un matériel (saisi en entier,
 /// contrôlé par <see cref="ReglesAffectations"/> puis réécrit), ressources proposées, matériel affecté à une ressource
 /// aujourd'hui (directement, ou porté par un matériel qui lui est affecté, à toute profondeur) et son historique.
-/// Condition du matériel (db/248, FM3) : au départ (celle du matériel, gardée), au retour (obligatoire pour clore
+/// Condition du matériel (db/252, FM3) : au départ (celle du matériel, gardée), au retour (obligatoire pour clore
 /// l'affectation d'un matériel identifié) ; un nouveau retour devient la condition du matériel (tracée dans
 /// materiel_etat) ; retour endommagé ou hors service → événement du matériel et notification au responsable de son
 /// service, sinon aux administrateurs.
@@ -167,7 +167,7 @@ public static class AffectationsMateriel
             await EnregistrerAsync(db, id, l, Utilisateur.Depuis(http), ct, notifications);
             return await db.JsonAsync(SqlHistorique, ct, new NpgsqlParameter("m", id));
         });
-        // Historique de la disponibilité et de la condition (db/248), récent d'abord.
+        // Historique de la disponibilité et de la condition (db/252), récent d'abord.
         g.MapGet("/materiels/{id:int}/etats", (int id, LogiBtpContext db, CancellationToken ct) => db.JsonAsync("""
             SELECT coalesce(json_agg(json_build_object('le', e.met_le, 'etat', e.met_etat, 'condition', e.met_condition,
                    'condition_libelle', (SELECT lva_libelle FROM liste_valeur WHERE lva_liste = 'ETAT_MATERIEL' AND lva_code = e.met_condition),

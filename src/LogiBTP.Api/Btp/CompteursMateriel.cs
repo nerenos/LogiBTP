@@ -21,7 +21,7 @@ public sealed record EvenementSaisi(string? Type, DateOnly? Date, DateOnly? Fin,
 /// </summary>
 public static class CompteursMateriel
 {
-    /// <summary>Source d'un relevé de rectification (valeur corrigée avec motif, db/248).</summary>
+    /// <summary>Source d'un relevé de rectification (valeur corrigée avec motif, db/252).</summary>
     public const string SourceRectification = "INVENTAIRE";
 
     private sealed record PointageMaterielLu(long Id, DateOnly Date, int Minutes, string? Chantier, string? Salarie, string? Commentaire);

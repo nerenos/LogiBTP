@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using LogiBTP.Annuaire;
 using LogiBTP.Annuaire.Web;
+using LogiBTP.Comptabilite.Web;
 using LogiBTP.Documents;
 using LogiBTP.Domaine;
 using LogiBTP.Fiches;
@@ -53,7 +54,7 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             return;
         }
         if (type == TypesFiche.Salarie) await SalariesAnnuaire.Synchroniser(scope.ServiceProvider, valeurs, ct);
-        // Matériel (db/248) : l'auteur d'un changement de disponibilité ou de condition est tracé dans materiel_etat.
+        // Matériel (db/252) : l'auteur d'un changement de disponibilité ou de condition est tracé dans materiel_etat.
         if (type == TypesFiche.Materiel && (creation || aEcrire.ContainsKey("etat") || aEcrire.ContainsKey("condition"))) aEcrire["etat_par"] = u.Code;
         // Conducteur de travaux, chargé d'affaires, chef d'équipe d'un chantier, responsable et métreur d'un projet (lot 6) :
         // individus de notre structure (rattachés à notre société ou à un niveau inférieur).
@@ -75,6 +76,11 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
             foreach (var k in new[] { "siren", "siret", "tva_intra", "iban", "bic" })
                 if (aEcrire.TryGetValue(k, out var v) && v is not null) aEcrire[k] = Identifiants.Compacter(v);
             if (aEcrire.TryGetValue("pays", out var p) && p is not null) aEcrire["pays"] = p.Trim().ToUpperInvariant();
+            // Comptes auxiliaires : mêmes règles que /comptabilite/tiers (module Comptabilité).
+            var comptabilite = scope.ServiceProvider.GetRequiredService<ServiceComptabilite>();
+            foreach (var k in new[] { "cli_compte", "fou_compte", "st_compte" })
+                if (aEcrire.TryGetValue(k, out var compte))
+                    aEcrire[k] = await comptabilite.ControlerCompteTiersAsync(id is null ? null : long.Parse(id, CultureInfo.InvariantCulture), compte, ct);
             await scope.ServiceProvider.GetRequiredService<ServiceAnnuaire>().ControlerPersonne(id is null ? null : long.Parse(id),
                 Vrai(valeurs.GetValueOrDefault("societe_base")), valeurs.GetValueOrDefault("siret")?.ToString(),
                 ValidationFiche.Nombre(valeurs.GetValueOrDefault("parent_id")) is { } parent ? (long)parent : null, ct);

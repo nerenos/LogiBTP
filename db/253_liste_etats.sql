@@ -1,5 +1,5 @@
 -- Ergonomie, lot E4 (L2, ANALYSE-ERGONOMIE.md) : code du statut et état affiché des documents pour les pastilles
--- des listes, colonnes ajoutées en fin de v_liste_documents (reprise de 208) ; v_liste_ordres (reprise de 209) est
+-- des listes, colonnes ajoutées en fin de v_liste_documents (reprise de 248, après la colonne chantiers) ; v_liste_ordres (reprise de 209) est
 -- recréée pour les recevoir (v.* figé à la création de la vue).
 -- Lot E6 (L4) : âge et jours depuis l'envoi, pour les indicateurs des devis.
 
@@ -46,6 +46,14 @@ SELECT d.ent_id                                   AS id,
          WHERE l.lie_type = 'TRANSFORMATION' AND sx.std_code NOT IN ('ANNULE', 'REMPLACE')
            AND ((t.tyd_avancement = 'S' AND l.lie_source_ent_id = d.ent_id AND tx.tyd_avancement = 'F')
              OR (t.tyd_avancement = 'F' AND l.lie_cible_ent_id = d.ent_id AND tx.tyd_avancement = 'S'))) AS facture,
+       -- Chantiers du document (filtre par chantier) : celui de l'entête ; sans entête, ceux des lignes (achats) et des
+       -- documents sources (facture de plusieurs livraisons…).
+       CASE WHEN d.ent_chantier_id IS NOT NULL THEN ARRAY[d.ent_chantier_id]
+            ELSE (SELECT array_agg(DISTINCT c.cha_id ORDER BY c.cha_id) FROM (
+                    SELECT l.lig_cha_id AS cha_id FROM document_ligne l WHERE l.lig_ent_id = d.ent_id AND l.lig_cha_id IS NOT NULL
+                    UNION SELECT x.ent_chantier_id FROM document_lien k JOIN document x ON x.ent_id = k.lie_source_ent_id
+                     WHERE k.lie_cible_ent_id = d.ent_id AND k.lie_type = 'TRANSFORMATION' AND x.ent_chantier_id IS NOT NULL) c)
+       END                                        AS chantiers,
        s.std_code                                 AS statut_code,
        -- État affiché (pastille) : refusé si rejeté ou non retenu, expiré si la validité est dépassée (comme l'alerte),
        -- sinon le code du statut. Jamais de changement de statut (Q3).

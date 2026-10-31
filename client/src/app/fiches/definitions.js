@@ -2,7 +2,7 @@
 // Les codes de champs reprennent les colonnes des vues de liste ;
 // « colonne » est la colonne de la table, utilisée par le serveur. Ces définitions alimentent aussi le script
 // db/131_fiches_parametrage.sql (généré par client/scripts/generer-vues-liste.mjs).
-import { GESTION_ELEMENT, GESTIONS } from '@logibtp/bibliotheque';
+import { GESTION_ELEMENT, GESTIONS, GENRE_POSTE } from '@logibtp/bibliotheque';
 
 const c = (code, libelle, colonne, type, extra = {}) => ({ code, libelle, colonne, type, ...extra });
 // Chrono du code (module Fiche) : format par défaut, remplaçable dans Paramètres › Référentiels communs ; le code
@@ -26,6 +26,8 @@ const USAGE = {
 // Individus de notre société (rattachement actif à la société de la base ou à l'un de ses niveaux inférieurs).
 const REQUETE_INDIVIDUS_STRUCTURE = "WITH RECURSIVE s AS (SELECT per_id FROM personne WHERE per_societe_base UNION SELECT p.per_id FROM personne p JOIN s ON p.per_parent_id = s.per_id) SELECT DISTINCT ON (i.ind_nom, i.ind_prenom, i.ind_id) i.ind_id, concat_ws(' ', i.ind_prenom, i.ind_nom) FROM individu i JOIN rattachement r ON r.rat_ind_id = i.ind_id AND r.rat_actif JOIN s ON s.per_id = r.rat_per_id WHERE i.ind_actif ORDER BY i.ind_nom, i.ind_prenom, i.ind_id";
 const REQUETE_COLLECTIFS = "SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'COLLECTIF' ORDER BY cpt_code";
+// Comptes généraux de produits (classe 7) et de charges (classe 6) : compte des lignes d'un tiers (ventilation).
+const requeteComptesClasse = (classe) => `SELECT cpt_code, cpt_code || ' – ' || cpt_libelle FROM compte_comptable WHERE cpt_actif AND cpt_type = 'GENERAL' AND cpt_code LIKE '${classe}%' ORDER BY cpt_code`;
 
 export const TYPES_FICHE = {
   salarie: {
@@ -59,7 +61,7 @@ export const TYPES_FICHE = {
         },
       ],
       champs: [
-        // Le code est l'identifiant du salarié (plus de matricule saisi, db/247) ; le matricule de paie n'est demandé que
+        // Le code est l'identifiant du salarié (plus de matricule saisi, db/251) ; le matricule de paie n'est demandé que
         // s'il diffère du code.
         c('code', 'Code', 'sal_code', 'texte', { obligatoire: true, longueur: 10, non_copie: true, aide: 'Identifiant unique du salarié : recherche rapide, homonymes' }),
         c('matricule_paie', 'Matricule de paie', 'sal_matricule_paie', 'texte', { longueur: 30, non_copie: true, aide: 'Matricule du logiciel de paie (export des variables de paie) ; vide : le code' }),
@@ -78,7 +80,7 @@ export const TYPES_FICHE = {
           aide: 'Service principal (planning, pointage, exécution) ; les autres appartenances se gèrent dans Paramètres › Services',
         }),
         c('poste', 'Poste', 'sal_poste', 'texte', { longueur: 60 }),
-        // Agence = notre société ou l'un de ses niveaux inférieurs dans l'annuaire (db/247) : une agence ajoutée dans
+        // Agence = notre société ou l'un de ses niveaux inférieurs dans l'annuaire (db/251) : une agence ajoutée dans
         // l'annuaire est proposée d'office.
         c('agence', 'Agence', 'sal_agence_per_id', 'liste', {
           requete: 'SELECT per_id, nom FROM v_agences_societe WHERE actif ORDER BY profondeur, nom',
@@ -141,7 +143,7 @@ export const TYPES_FICHE = {
         c('famille', 'Type', 'mat_famille', 'liste', { obligatoire: true, requete: REQUETE_TYPES_MATERIEL, aide: 'Types de matériel regroupés (Paramètres › Référentiels communs)' }),
         c('marque', 'Marque', 'mat_marque', 'texte', { longueur: 60 }),
         c('numero_serie', 'N° de série', 'mat_numero_serie', 'texte', { longueur: 40, non_copie: true }),
-        // Disponibilité et condition (db/248) : chaque changement est tracé avec son motif (onglet Historique).
+        // Disponibilité et condition (db/252) : chaque changement est tracé avec son motif (onglet Historique).
         c('etat', 'Disponibilité', 'mat_etat', 'liste', {
           obligatoire: true, defaut: 'DISPO',
           options: options(['DISPO', 'Disponible'], ['CHANTIER', 'En chantier'], ['PANNE', 'En panne'], ['REBUT', 'Rebut']),
@@ -154,7 +156,7 @@ export const TYPES_FICHE = {
         c('etat_motif', 'Motif du changement d\'état', 'mat_etat_motif', 'texte', { longueur: 200, non_copie: true }),
         c('etat_par', 'Changement d\'état par', 'mat_etat_par', 'texte', { longueur: 50, lecture_seule: true, non_copie: true }),
         c('chantier', 'Chantier', 'mat_chantier', 'texte', { longueur: 100 }),
-        // Compteurs (db/248) : saisis à la création (relevé initial), puis par relevés et rectifications (onglet Compteurs).
+        // Compteurs (db/252) : saisis à la création (relevé initial), puis par relevés et rectifications (onglet Compteurs).
         c('heures_utilisation', "Heures d'utilisation", 'mat_heures', 'nombre', { saisie: 'creation', format: '99999', aide: 'Saisi à la création (relevé initial) ; ensuite : onglet Compteurs (relevé ou rectification)' }),
         c('controle_ok', 'Contrôle réglementaire à jour', 'mat_controle_ok', 'booleen', { defaut: false }),
         c('valeur_achat', "Valeur d'achat", 'mat_valeur_achat', 'nombre', { format: '9999999.99' }),
@@ -211,7 +213,7 @@ export const TYPES_FICHE = {
             { code: 'techniques', titre: 'Données techniques (par unité de stock)', champs: ['poids', 'surface', 'surface_peinture', 'volume', 'hauteur', 'largeur', 'epaisseur', 'longueur'], largeur: 'plein' },
             { code: 'isolation', titre: 'Isolation', champs: ['isolant_epaisseur', 'isolant_lambda', 'isolant_r', 'isolant_u'] },
             // Poste de pied (type POSTE_PIED seulement) : inséré dans le pied des documents depuis la bibliothèque.
-            { code: 'poste', titre: 'Poste de pied', champs: ['pied_niveau', 'pied_mode', 'pied_base', 'pied_sens', 'pied_valeur', 'pied_retenue', 'cpt_code', 'tva_code'] },
+            { code: 'poste', titre: 'Poste de pied', champs: ['pied_niveau', 'pied_genre', 'pied_mode', 'pied_base', 'pied_sens', 'pied_valeur', 'pied_retenue', 'cpt_code', 'tva_code'] },
           ],
         },
       ],
@@ -278,6 +280,11 @@ export const TYPES_FICHE = {
         c('pied_sens', 'Sens', 'ele_pied_sens', 'liste', { options: options(['DEDUCTION', 'Déduction'], ['AJOUT', 'Ajout']) }),
         c('pied_valeur', 'Valeur', 'ele_pied_valeur', 'nombre', { aide: 'Pourcentage (5 = 5 %), montant ou coefficient selon le mode' }),
         c('pied_retenue', 'Retenue de garantie', 'ele_pied_retenue', 'booleen', { defaut: false }),
+        c('pied_genre', 'Genre', 'ele_pied_genre', 'liste', {
+          options: options([GENRE_POSTE.REMISE, 'Remise'], [GENRE_POSTE.PRORATA, 'Compte prorata'], [GENRE_POSTE.ACOMPTE, 'Acompte'],
+            [GENRE_POSTE.PAIEMENT_DIRECT, 'Paiement direct'], [GENRE_POSTE.RETENUE, 'Retenue de garantie'], [GENRE_POSTE.AUTRE, 'Autre']),
+          aide: 'Recopié sur la ligne de pied : compte du poste dans le type comptable (Comptabilité)',
+        }),
         c('cpt_code', 'Compte comptable', 'ele_cpt_code', 'texte', { longueur: 20 }),
         c('tva_code', 'Code TVA', 'ele_tva_code', 'texte', { longueur: 10, aide: 'Code du taux de TVA du poste (T20…), vide : TVA du document' }),
         // Lot 7 des demandes du 25/10/2026 (module 064).
@@ -321,9 +328,9 @@ export const TYPES_FICHE = {
         {
           code: 'casquettes', titre: 'Par relation',
           groupes: [
-            { code: 'client', titre: 'Client', champs: ['cli_charge_ind_id', 'cli_mode_reglement', 'cli_delai_paiement', 'cli_compte', 'cli_collectif', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
-            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_mode_reglement', 'fou_delai_paiement', 'fou_tva_intracom', 'fou_compte', 'fou_collectif', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
-            { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_compte', 'st_collectif', 'st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
+            { code: 'client', titre: 'Client', champs: ['cli_charge_ind_id', 'cli_mode_reglement', 'cli_delai_paiement', 'cli_compte', 'cli_collectif', 'cli_compte_produit', 'cli_categorie', 'cli_encours_max', 'cli_remise'] },
+            { code: 'fournisseur', titre: 'Fournisseur', champs: ['fou_mode_reglement', 'fou_delai_paiement', 'fou_tva_intracom', 'fou_compte', 'fou_collectif', 'fou_compte_charge', 'fou_numero_client', 'fou_franco', 'fou_delai_livraison'] },
+            { code: 'sous_traitant', titre: 'Sous-traitant', champs: ['st_compte', 'st_collectif', 'st_compte_charge', 'st_corps_etat', 'st_qualifications', 'st_autoliquidation', 'st_decennale_assureur', 'st_decennale_police', 'st_decennale_fin'] },
             { code: 'interim', titre: "Agence d'intérim", champs: ['int_garantie_financiere', 'int_coefficient'] },
             { code: 'architecte', titre: 'Architecte', champs: ['arc_numero_ordre'] },
             { code: 'controle', titre: 'Bureau de contrôle', champs: ['bc_agrement', 'bc_missions'] },
@@ -383,16 +390,22 @@ export const TYPES_FICHE = {
         // Champs déverrouillés par les relations (groupes de l'onglet Par relation).
         c('cli_compte', 'Compte client', 'per_cli_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (411…)' }),
         c('cli_collectif', 'Collectif client', 'per_cli_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif du type (professionnel ou particulier), module Comptabilité' }),
+        c('cli_compte_produit', 'Compte de produit', 'per_cli_compte_produit', 'liste', { requete: requeteComptesClasse(7),
+          aide: 'Compte des lignes vendues à ce client, avant la ventilation par nature (distinct du compte auxiliaire)' }),
         c('cli_categorie', 'Catégorie tarifaire', 'per_cli_categorie', 'texte', { longueur: 40 }),
         c('cli_encours_max', 'Encours autorisé (€)', 'per_cli_encours_max', 'nombre', { format: '999999999999.99' }),
         c('cli_remise', 'Remise habituelle (%)', 'per_cli_remise', 'nombre', { format: '999.999' }),
         c('fou_compte', 'Compte fournisseur', 'per_fou_compte', 'texte', { longueur: 20, aide: 'Compte auxiliaire (401…)' }),
         c('fou_collectif', 'Collectif fournisseur', 'per_fou_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif des fournisseurs, module Comptabilité' }),
+        c('fou_compte_charge', 'Compte de charge', 'per_fou_compte_charge', 'liste', { requete: requeteComptesClasse(6),
+          aide: 'Compte des lignes achetées à ce fournisseur, avant la ventilation par nature (ex. carburant : 60614) ; distinct du compte auxiliaire' }),
         c('fou_numero_client', 'Notre n° de client', 'per_fou_numero_client', 'texte', { longueur: 40 }),
         c('fou_franco', 'Franco de port (€ HT)', 'per_fou_franco', 'nombre', { format: '999999999999.99' }),
         c('fou_delai_livraison', 'Délai de livraison (jours)', 'per_fou_delai_livraison', 'nombre', { format: '9999' }),
         c('st_compte', 'Compte sous-traitant', 'per_st_compte', 'texte', { longueur: 20, aide: 'Vide : compte fournisseur ; à saisir pour un compte auxiliaire propre' }),
         c('st_collectif', 'Collectif sous-traitant', 'per_st_collectif', 'liste', { requete: REQUETE_COLLECTIFS, aide: 'Vide : collectif des sous-traitants, module Comptabilité' }),
+        c('st_compte_charge', 'Compte de charge (sous-traitance)', 'per_st_compte_charge', 'liste', { requete: requeteComptesClasse(6),
+          aide: 'Vide : compte de charge du fournisseur ; distinct du compte auxiliaire' }),
         c('st_corps_etat', 'Corps d\'état', 'per_st_corps_etat', 'texte', { longueur: 100 }),
         c('st_qualifications', 'Qualifications (Qualibat…)', 'per_st_qualifications', 'texte', { longueur: 200 }),
         c('st_autoliquidation', 'Autoliquidation de la TVA', 'per_st_autoliquidation', 'booleen', { defaut: true }),

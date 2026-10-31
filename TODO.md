@@ -18,6 +18,17 @@
 - [ ] Métré en script : appliquer `021`, `061` (`ele_longueur`), `165` et le `131` régénéré. **Sauvegarder avant le
   premier démarrage** de l'API : il convertit les métrés en lignes et supprime `metre_ligne` (irréversible).
 - [ ] Frais annexes : redémarrer l'API (tables et colonnes de `db/167`, appliqué le 16/10/2026).
+- [ ] Comptabilité, décisions du 31/10/2026 : appliquer `modules/bibliotheque/db/066`, `modules/comptabilite/db/094d`,
+  `db/247` (clés de ventilation converties en identifiants, `nat_compte_*` retirées, comptes de produit et de charge
+  des tiers), puis le `131` régénéré (champs de la fiche personne et genre des postes de pied) ; règlements (lot C) :
+  rejouer le `191` régénéré (imputations et reste après imputation dans le bloc des totaux) ; lot D : appliquer
+  `db/248` (chantier par ligne, colonne `chantiers` de `v_liste_documents`), rejouer les `150` et `176` régénérés
+  (colonne Chantier des vues d'achat ; `ON CONFLICT DO NOTHING` : vues existantes à compléter par le dialogue) ;
+  lot E : appliquer `db/249` (« pas d'avancement » des marchés par mois) ; lot F : appliquer
+  `modules/reglement/db/081` (anciens pointages de caution retirés : la consommation des cautions est calculée) ;
+  lot G1 : appliquer `db/250` (révision des prix : index, formules, paramètres des marchés) puis saisir ou importer les
+  valeurs des index utilisés (`/parametres/revision`) ; libellés du catalogue BT à vérifier ; rejouer le `191` régénéré
+  (bloc `REVISION_PRIX` des situations et factures d'avancement).
 - [ ] GED : `modules/ged/db/051` appliqué ; après redémarrage de l'API, indexer les documents déposés avant
   (`POST /api/ged/indexation`, administrateur, lots de 200).
 - [ ] Vue de colonnes « Complet » : `db/150` (`ON CONFLICT DO NOTHING`) n'ajoute pas Compte et Commentaire aux bases
@@ -77,22 +88,17 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 
 Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
-- [ ] Vérifier `PIED_GLOBAL` (postes HT du pied global, ex. compte prorata) : la décision Q6 garde le pied global
-  après TVA seulement, les postes HT se saisissent sur les commandes.
-- [ ] 13.14 sans décision : regroupement des BL par commande (une section par document pour l'instant) et chantier
-  par ligne (`lig_cha_id`).
-- [ ] Proposition des marchés à facturer pour une période (13.9).
-- [ ] Retenue de garantie et révision de prix à affiner (Q22).
-- [ ] Écran de transformation ligne à ligne.
-- [ ] Déduction d'un règlement ou d'un avoir sur une facture suivante (module Comptabilité).
+Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
+global). Lots à venir :
+
+- [ ] Imputation d'un avoir ou d'un trop-perçu sur une facture (partie document faite le 31/10/2026 : onglet Règlements,
+  éditions, reste à payer) : écritures avec le module Comptabilité complet.
 
 ### Marchés et règlements
 
-- [ ] Saisie de l'échéancier à la main et date de libération des retenues à l'écran (route `PUT /documents/{id}/echeances`
-  prête).
-- [ ] Onglet Règlements de la page document.
-- [ ] Avance forfaitaire « entre deux seuils » ; aperçu des déductions d'acompte avant validation.
-- [ ] Liste du délai de paiement des tiers reliée à `condition_paiement` ; relances.
+- [ ] Échéancier modifiable avant la validation (aujourd'hui : pièce validée seulement, l'échéancier n'existe qu'à la
+  validation) et contrôle d'une échéance ramenée sous son pointé (le module Document ignore les pointages) : à décider.
+- [ ] Relances.
 - [ ] Propositions sans décision explicite (retenues par défaut, conception `CONCEPTION-MARCHES-REGLEMENTS.md` § 11) à
   faire valider : modes d'acompte (11.1), déduction en mode chiffre d'affaires (11.2), postes HT sur commandes (11.3),
   postes TTC restants (11.4), règlements sans le module (11.5).
@@ -103,39 +109,14 @@ Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conceptio
 (base en trois lots, puis module complet). Base réalisée : lots 1 (plan, collectifs, comptes des tiers, TVA), 2 (types
 comptables, ventilation) et 3 (écritures, export Sage 100).
 
-- [ ] Lot 2, écarts : clés de ventilation par code de nature et de taux (un code renommé laisse une clé orpheline) ;
-  colonnes `nat_compte_vente|achat` gardées dans la table du module Bibliothèque (plus saisies en ligne, encore dans
-  la démo hors ligne) ; une nouvelle nature n'a pas de compte tant qu'aucune clé ne la vise (compte par défaut du type).
 - [ ] Lot 3, à valider : modèle Sage 100 (colonnes, ANSI, JJMMAA, sens et montant) à reproduire dans le format
   d'import paramétrable de Sage puis à essayer sur un vrai fichier ; modèle personnalisé seulement par l'API
   (`PUT /api/comptabilite/export/modele`), pas d'écran de saisie des colonnes.
-- [ ] Lot 3, écarts : montants des lignes vendues pris comme poids (la base HT de chaque taux fait foi) ; postes de pied
-  reconnus par le marqueur du marché, sinon par leur libellé (remise, prorata, acompte, paiement direct, retenue) ;
-  déduction d'acompte en mode chiffre d'affaires portée au compte d'acompte (Q13, avis de l'expert-comptable) ;
-  virement de la TVA à encaisser à l'encaissement : module complet avec les règlements ; fichier des lots gardé en base
-  (pas en GED).
-- [ ] Lot 1, écarts : un changement de longueur des comptes ne convertit pas le plan (comptes signalés « hors
-  longueur ») ; les comptes de tiers saisis dans la fiche personne ne passent pas par `ReglesComptes` (seulement par
-  `/comptabilite/tiers`) ; génération filtrée sur les sous-traitants : un sous-traitant aussi fournisseur sans compte
-  n'en reçoit pas (générer sans filtre).
+- [ ] Acomptes en mode trésorerie : la demande et le reçu (non comptables) ne portent pas de TVA ; la TVA due à
+  l'encaissement de l'acompte (PCG : 4191 en HT, TVA collectée à part) doit être écrite par l'export des règlements
+  (module complet). La facture qui déduit l'acompte retire déjà cette TVA (décisions du 31/10/2026).
 - [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
   et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
-- [ ] Règle définitive du compte comptable des lignes (aujourd'hui provisoire : compte de la ligne, sinon de la nature
-  selon la famille du document, sinon du tiers) : à remplacer par `definirRegleCompte` de `client/src/app/comptes.js`,
-  côté serveur aussi s'il faut le compte effectif. Le compte du tiers (`per_cli_compte` / `per_fou_compte`) est un
-  compte auxiliaire (411 / 401) : son usage comme compte de produit ou de charge est à confirmer.
-
-### Frais annexes
-
-- [ ] Envoi vers la bibliothèque d'un ouvrage à PV fixe : le PV n'est pas envoyé (le prix d'un ouvrage de la
-  bibliothèque est celui de sa composition).
-- [ ] Les clés de ventilation ne suivent pas un copier-coller de lignes.
-
-### Métré
-
-- [ ] Les variables chaîne et booléen d'un script ne sont pas publiées dans les portées (`Portees` ne stocke que des
-  décimaux).
-- [ ] Les fonctions propres à l'hôte (option `fonctions`) ne sont branchées ni aux moteurs ni à l'éditeur.
 
 ### Fiches et listes
 
@@ -266,11 +247,11 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] E1 : fenêtre des messages d'erreur à décompte (I4), détail des erreurs de validation (I5), infobulles du thème
   (I8), séparateurs des barres d'outils (I7) ; après la PR de personnalisation (dictionnaire, `theme.css`).
 - [ ] Indicateur « Devis à relancer » : une note de relance du CRM doit remettre le délai de 15 jours à zéro (Q5 ;
-  aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/249`) ; délai de relance en paramètre.
+  aujourd'hui : jours depuis l'envoi, `jours_envoye` de `db/253`) ; délai de relance en paramètre.
 - [ ] Listes : vues enregistrées par les utilisateurs avec l'ancien picto du statut (colonne `statut`) à passer sur la
   colonne `etat` en pastille (script de reprise des définitions JSON).
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
-- [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/247`) des requêtes qui le lisent encore (magasin,
+- [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/251`) des requêtes qui le lisent encore (magasin,
   habilitations, comptes), puis la colonne.
 - [ ] E10, E11 : page document (après les PR de personnalisation et des règlements) — filtre des notifications,
   unités de l'article et conversion du prix, retrait limité, totaux, légende du plan (D1–D6) ; Suivi + Traçabilité,

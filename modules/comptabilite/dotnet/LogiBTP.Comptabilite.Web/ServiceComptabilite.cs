@@ -272,9 +272,20 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         return await TypesComptablesAsync(ct);
     }
 
-    public async Task<List<CleVentilationDto>> VentilationAsync(CancellationToken ct) =>
-        await db.Ventilations.AsNoTracking().OrderBy(x => x.VcoTcoCode).ThenBy(x => x.VcoNature).ThenBy(x => x.VcoTaux)
-            .Select(x => new CleVentilationDto(x.VcoTcoCode, x.VcoNature, x.VcoTaux, x.VcoCptCode)).ToListAsync(ct);
+    /// <summary>
+    /// Clés de ventilation, nature et taux par leur code (enregistrés par l'identifiant : le code du moment est lu) ; une
+    /// clé dont la nature ou le taux n'existe plus est écartée.
+    /// </summary>
+    public async Task<List<CleVentilationDto>> VentilationAsync(CancellationToken ct)
+    {
+        var natures = (await specialisation.NaturesAsync(db, ct)).ToDictionary(n => n.Id, n => n.Code);
+        var taux = (await specialisation.TauxAsync(db, ct)).ToDictionary(t => t.Id, t => t.Code);
+        return (await db.Ventilations.AsNoTracking().ToListAsync(ct))
+            .Where(x => (x.VcoNatId is null || natures.ContainsKey(x.VcoNatId.Value)) && (x.VcoTtvId is null || taux.ContainsKey(x.VcoTtvId.Value)))
+            .Select(x => new CleVentilationDto(x.VcoTcoCode, x.VcoNatId is int n ? natures[n] : null, x.VcoTtvId is int t ? taux[t] : null, x.VcoCptCode))
+            .OrderBy(c => c.Type, StringComparer.Ordinal).ThenBy(c => c.Nature, StringComparer.Ordinal).ThenBy(c => c.Taux, StringComparer.Ordinal)
+            .ToList();
+    }
 
     /// <summary>Clés d'un type comptable, liste complète (une clé sans compte est retirée) : nature et taux connus, sans doublon.</summary>
     public async Task<List<CleVentilationDto>> EnregistrerVentilationAsync(string type, List<CleVentilationDto> l, CancellationToken ct)
@@ -286,20 +297,27 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
             throw ExceptionMetier.Invalide("VCO_CLE", "Une clé porte une nature, un taux de TVA ou les deux (sinon : compte par défaut du type)");
         if (cles.GroupBy(c => (c.Nature, c.Taux)).FirstOrDefault(g => g.Count() > 1) is { } d)
             throw ExceptionMetier.Invalide("VCO_DOUBLON", $"Même clé deux fois ({d.Key.Nature ?? "toutes natures"} × {d.Key.Taux ?? "tous taux"})");
-        var natures = (await specialisation.NaturesAsync(db, ct)).Select(n => n.Code).ToHashSet();
-        var taux = (await specialisation.TauxAsync(db, ct)).Select(t => t.Code).ToHashSet();
-        if (cles.FirstOrDefault(c => c.Nature is not null && !natures.Contains(c.Nature)) is { } n) throw ExceptionMetier.Invalide("VCO_NATURE", $"Nature inconnue : {n.Nature}");
-        if (cles.FirstOrDefault(c => c.Taux is not null && !taux.Contains(c.Taux)) is { } x) throw ExceptionMetier.Invalide("VCO_TAUX", $"Taux de TVA inconnu : {x.Taux}");
+        // Saisies par le code, enregistrées par l'identifiant (un code renommé ensuite garde la clé).
+        var natures = (await specialisation.NaturesAsync(db, ct)).GroupBy(n => n.Code).ToDictionary(g => g.Key, g => g.First().Id);
+        var taux = (await specialisation.TauxAsync(db, ct)).GroupBy(t => t.Code).ToDictionary(g => g.Key, g => g.First().Id);
+        if (cles.FirstOrDefault(c => c.Nature is not null && !natures.ContainsKey(c.Nature)) is { } n) throw ExceptionMetier.Invalide("VCO_NATURE", $"Nature inconnue : {n.Nature}");
+        if (cles.FirstOrDefault(c => c.Taux is not null && !taux.ContainsKey(c.Taux)) is { } x) throw ExceptionMetier.Invalide("VCO_TAUX", $"Taux de TVA inconnu : {x.Taux}");
         await ControlerComptesExistent(cles.Select(c => c.Compte), "Ventilation", ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Ventilations.Where(v => v.VcoTcoCode == type).ExecuteDeleteAsync(ct);
-        db.Ventilations.AddRange(cles.Select(c => new VentilationEntite { VcoTcoCode = type, VcoNature = c.Nature, VcoTaux = c.Taux, VcoCptCode = c.Compte }));
+        db.Ventilations.AddRange(cles.Select(c => new VentilationEntite
+        {
+            VcoTcoCode = type, VcoNatId = c.Nature is string cn ? natures[cn] : null as int?, VcoTtvId = c.Taux is string tc ? taux[tc] : null as int?, VcoCptCode = c.Compte,
+        }));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return await VentilationAsync(ct);
     }
 
     public Task<List<NatureVentilation>> NaturesAsync(CancellationToken ct) => specialisation.NaturesAsync(db, ct);
+
+    /// <summary>Comptes de produit ou de charge d'un tiers par type de compte (compte hérité des lignes de ses pièces).</summary>
+    public Task<Dictionary<string, string?>> ComptesLignesTiersAsync(long tiers, CancellationToken ct) => specialisation.ComptesLignesTiersAsync(db, tiers, ct);
 
     public Task<List<TypeDocumentComptable>> TypesDocumentsAsync(CancellationToken ct) => specialisation.TypesDocumentsAsync(db, ct);
 
@@ -369,6 +387,23 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
     }
 
     /// <summary>
+    /// Compte auxiliaire saisi hors de /comptabilite/tiers (fiche du tiers) : mêmes règles qu'ici (normalisé par
+    /// ReglesComptes, un compte pour un seul tiers). Vide : null.
+    /// </summary>
+    public async Task<string?> ControlerCompteTiersAsync(long? tiersId, string? saisie, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(saisie)) return null;
+        var p = await ParametresAsync(ct);
+        var r = ReglesComptes.NormaliserTiers(saisie, p.LongueurComptesTiers);
+        if (r.Erreur is string e) throw ExceptionMetier.Invalide(e, $"{saisie} : {Message(e)}");
+        var autres = (await specialisation.TiersAsync(db, ct)).Where(t => t.TiersId != tiersId && t.Compte == r.Code)
+            .Select(t => t.RaisonSociale).Distinct().ToList();
+        if (autres.Count > 0)
+            throw ExceptionMetier.Conflit("CPT_TIERS_DOUBLON", $"Le compte {r.Code} serait celui de plusieurs tiers : " + string.Join(", ", autres));
+        return r.Code;
+    }
+
+    /// <summary>
     /// Comptes auxiliaires manquants proposés (préfixe du type de compte + code du tiers) et enregistrés ; un compte déjà
     /// pris ou impossible à former est refusé et signalé. typeCompte : un seul type, sinon tous.
     /// </summary>
@@ -379,10 +414,16 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         var pris = l.Where(t => t.Compte is not null).Select(t => t.Compte!).ToHashSet();
         var saisis = new List<CompteTiersSaisi>();
         var refus = new List<string>();
-        foreach (var t in l.Where(t => t.Compte is null && t.Actif && (typeCompte is null || t.TypeCompte == typeCompte)))
+        foreach (var candidat in l.Where(t => t.Compte is null && t.Actif && (typeCompte is null || t.TypeCompte == typeCompte)))
         {
-            // Type qui hérite d'un autre type du même tiers (sous-traitant → fournisseur) : le compte de l'autre suffit.
-            if (specialisation.TypeHerite(t.TypeCompte) is string parent && l.Any(x => x.TiersId == t.TiersId && x.TypeCompte == parent)) continue;
+            var t = candidat;
+            // Type qui hérite d'un autre type du même tiers (sous-traitant → fournisseur) : le compte de l'autre suffit. Sans
+            // filtre, l'autre type reçoit le sien à son tour ; filtré sur ce type, l'autre est écarté : son compte est créé ici.
+            if (specialisation.TypeHerite(t.TypeCompte) is string parent && l.FirstOrDefault(x => x.TiersId == t.TiersId && x.TypeCompte == parent) is { } herite)
+            {
+                if (typeCompte is null || herite.Compte is not null || !herite.Actif) continue;
+                t = herite;
+            }
             var r = ReglesComptes.Proposer(p.PrefixesTiers.GetValueOrDefault(t.TypeCompte), t.CodeTiers, p.LongueurComptesTiers);
             if (r.Erreur is string e) { refus.Add($"{t.RaisonSociale} : {Message(e)}"); continue; }
             if (!pris.Add(r.Code!)) { refus.Add($"{t.RaisonSociale} : compte {r.Code} déjà pris"); continue; }
@@ -445,6 +486,7 @@ public static class Extensions
         });
         g.MapPost("/export/{id:long}/annuler", (long id, HttpContext http, ServiceExport s, CancellationToken ct) => s.AnnulerAsync(id, Utilisateur.Depuis(http), ct));
         g.MapGet("/tiers", (ServiceComptabilite s, CancellationToken ct) => s.TiersAsync(ct));
+        g.MapGet("/tiers/{id:long}/comptes-lignes", (long id, ServiceComptabilite s, CancellationToken ct) => s.ComptesLignesTiersAsync(id, ct));
         g.MapPut("/tiers", (List<CompteTiersSaisi> l, ServiceComptabilite s, CancellationToken ct) => s.EnregistrerComptesTiersAsync(l, ct));
         g.MapPost("/tiers/generer", (DemandeGeneration d, ServiceComptabilite s, CancellationToken ct) => s.GenererComptesTiersAsync(d.TypeCompte, ct));
         return api;

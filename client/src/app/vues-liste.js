@@ -14,8 +14,8 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
-      // db/249 : indicateurs des listes (âge en jours, jours depuis l'envoi).
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['chantiers', 'ARRAY'], ['statut_code', 'text'], ['etat', 'text'],
+      // db/253 : indicateurs des listes (âge en jours, jours depuis l'envoi).
       ['age_jours', 'integer'], ['jours_envoye', 'integer'],
     ],
   },
@@ -29,8 +29,8 @@ export const SOURCES_LISTE = {
       ['verrouille', 'boolean'], ['modifie_le', 'timestamp with time zone'],
       ['client', 'text'], ['projet', 'text'], ['affaire', 'text'], ['marche', 'text'],
       ['projet_id', 'integer'], ['affaire_id', 'integer'], ['chantier_id', 'integer'], ['marche_id', 'integer'],
-      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['statut_code', 'text'], ['etat', 'text'],
-      // db/249 : indicateurs des listes (âge en jours, jours depuis l'envoi).
+      ['alerte', 'text'], ['numero_situation', 'integer'], ['facture', 'text'], ['chantiers', 'ARRAY'], ['statut_code', 'text'], ['etat', 'text'],
+      // db/253 : indicateurs des listes (âge en jours, jours depuis l'envoi).
       ['age_jours', 'integer'], ['jours_envoye', 'integer'],
       ['etat_execution', 'text'], ['motif', 'text'], ['service', 'text'], ['service_id', 'integer'], ['responsable', 'text'],
       ['debut_prevu', 'date'], ['fin_prevue', 'date'], ['heures_budget', 'numeric'], ['en_retard', 'boolean'],

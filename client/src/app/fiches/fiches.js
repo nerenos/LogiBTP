@@ -252,7 +252,7 @@ export class FicheMateriel extends FicheLogiBTP {
 
   /**
    * Matériel identifié (FM1) : quantité 1 en lecture seule, unité masquée ; changement de disponibilité ou de condition
-   * en modification (FM3) : motif demandé, tracé dans l'historique (db/248).
+   * en modification (FM3) : motif demandé, tracé dans l'historique (db/252).
    */
   rendreChamp(champ, valeur) {
     const identifie = this.valeur('mode') === 'IDENTIFIE';

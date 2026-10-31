@@ -52,6 +52,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (p.TryGetValue("scenarios_autorises", out var a) && a.ValueKind == JsonValueKind.Array) r.ScenariosAutorises = a.EnumerateArray().Select(x => x.GetString()!).ToList();
         if (p.TryGetValue("coef_fg_defaut", out var f) && f.ValueKind == JsonValueKind.Number) r.CoefFgDefaut = f.GetDecimal();
         if (p.TryGetValue("coef_benef_defaut", out var b) && b.ValueKind == JsonValueKind.Number) r.CoefBenefDefaut = b.GetDecimal();
+        if (p.TryGetValue("pv_fixe_ouvrages_envoyes", out var o) && o.ValueKind is JsonValueKind.True or JsonValueKind.False) r.PvFixeOuvragesEnvoyes = o.GetBoolean();
         return r;
     }
 
@@ -66,6 +67,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         {
             ["scenario_defaut"] = p.ScenarioDefaut, ["scenarios_autorises"] = p.ScenariosAutorises,
             ["coef_fg_defaut"] = p.CoefFgDefaut, ["coef_benef_defaut"] = p.CoefBenefDefaut,
+            ["pv_fixe_ouvrages_envoyes"] = p.PvFixeOuvragesEnvoyes,
         };
         foreach (var (cle, v) in valeurs)
         {
@@ -176,7 +178,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
 
     public virtual async Task<List<NatureDto>> Natures(CancellationToken ct) =>
         (await db.Natures.AsNoTracking().OrderBy(n => n.NatCode).ToListAsync(ct))
-        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatCompteAchat, n.NatCompteVente, n.NatActif, n.NatIsolant,
+        .Select(n => new NatureDto(n.NatId, n.NatCode, n.NatLibelle, n.NatRgnCode, n.NatAxeAnalytique, n.NatActif, n.NatIsolant,
             n.NatTypes.RootElement.ValueKind == JsonValueKind.Array ? n.NatTypes.RootElement.EnumerateArray().Select(x => x.GetString()!).ToList() : [])).ToList();
 
     public virtual async Task<List<NatureDto>> EnregistrerNature(NatureDto d, Utilisateur u, CancellationToken ct)
@@ -187,7 +189,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
         if (Texte(d.Regroupement) is { } rg && !await db.Regroupements.AnyAsync(r => r.RgnCode == rg, ct)) throw ExceptionMetier.Invalide("REGROUPEMENT", $"Regroupement {rg} inconnu");
         var n = d.Id > 0 ? await db.Natures.FirstOrDefaultAsync(x => x.NatId == d.Id, ct) ?? throw ExceptionMetier.Introuvable($"Nature {d.Id}") : new NatureElement();
         n.NatCode = code; n.NatLibelle = Obligatoire(d.Libelle, "Libellé"); n.NatRgnCode = Texte(d.Regroupement); n.NatAxeAnalytique = Texte(d.AxeAnalytique);
-        n.NatCompteAchat = Texte(d.CompteAchat); n.NatCompteVente = Texte(d.CompteVente); n.NatActif = d.Actif; n.NatIsolant = d.Isolant;
+        n.NatActif = d.Actif; n.NatIsolant = d.Isolant;
         var types = (d.Types ?? []).Distinct().ToList();
         if (types.Any(t => !CoefficientsElement.TypesNature.Contains(t))) throw ExceptionMetier.Invalide("TYPE", "Type de nature inconnu");
         n.NatTypes = JsonSerializer.SerializeToDocument(types);
@@ -526,7 +528,7 @@ public class ServiceBibliotheque(BibliothequeDbContext db, SpecialisationBibliot
     private static ElementDetailDto VersDetail(Element e, string bibCode) => new(e.EleId, e.EleBibId, bibCode, e.EleCode, e.EleType, e.EleLibelleHtml, e.EleLibelle,
         e.EleFamId, e.EleNatId, e.EleUntStock, e.EleUntAchat, e.EleUntVente, e.EleUnites.RootElement.Clone(), Donnees(e.EleProprietes.RootElement, Techniques(e)),
         e.ElePa, e.EleCoefFg, e.ElePr, e.EleCoefBenef, e.ElePv, e.ElePvFixe, e.EleCoefRemise, e.ElePvNet, e.EleComposition?.RootElement.Clone(), e.EleActif,
-        e.EleType == "POSTE_PIED" ? new PosteElementDto(e.ElePiedNiveau, e.ElePiedMode, e.ElePiedBase, e.ElePiedSens, e.ElePiedValeur, e.ElePiedRetenue, e.EleCptCode, e.EleTvaCode) : null,
+        e.EleType == "POSTE_PIED" ? new PosteElementDto(e.ElePiedNiveau, e.ElePiedMode, e.ElePiedBase, e.ElePiedSens, e.ElePiedValeur, e.ElePiedRetenue, e.EleCptCode, e.EleTvaCode, e.ElePiedGenre) : null,
         e.EleCodeBarre, e.EleDelaiLivraison);
 
     public virtual async Task<ElementDetailDto> Element(long id, CancellationToken ct)

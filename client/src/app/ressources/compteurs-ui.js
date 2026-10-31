@@ -49,7 +49,7 @@ function frise(d, unites) {
 }
 
 /**
- * Fenêtre de saisie d'un relevé seul ; rectification (db/248) : valeur corrigée, qui peut être inférieure au relevé
+ * Fenêtre de saisie d'un relevé seul ; rectification (db/252) : valeur corrigée, qui peut être inférieure au relevé
  * précédent, avec un motif obligatoire.
  */
 async function saisirReleve(unites, { rectification = false } = {}) {

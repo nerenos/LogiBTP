@@ -59,6 +59,19 @@ export const TYPE_POSTE_MARCHE = Object.freeze({
   AUTRE: 'AUTRE',
 });
 
+/** Types de prix d'un marché (révision et actualisation, CONCEPTION-REVISION-PRIX.md Q1). */
+export const TYPE_PRIX = Object.freeze({
+  FERME: 'FERME',
+  ACTUALISABLE: 'ACTUALISABLE',
+  REVISABLE: 'REVISABLE',
+});
+
+/** Arrondi du coefficient de révision. */
+export const ARRONDI_REVISION = Object.freeze({
+  PROCHE: 'PROCHE',
+  SUPERIEUR: 'SUPERIEUR',
+});
+
 /** Types de ressources affectées (planning, affectations du matériel). */
 export const TYPE_RESSOURCE = Object.freeze({
   SALARIE: 'SALARIE',
@@ -103,7 +116,7 @@ export const urlDocument = (id) => `/document/${id}`;
 /** Préférences de l'application dans le localStorage (recopiée dans public/demarrage-theme.js). */
 export const CLE_PREFERENCES_NAVIGATION = 'logibtp.navigation';
 
-/** États affichés d'un document dans les listes, calculés par v_liste_documents (db/249, Q3 : jamais de statut posé). */
+/** États affichés d'un document dans les listes, calculés par v_liste_documents (db/253, Q3 : jamais de statut posé). */
 export const ETAT_LISTE_DOCUMENT = Object.freeze({ EXPIRE: 'EXPIRE', REFUSE: 'REFUSE' });
 
 /** Pastilles de la colonne État des documents (format `pastille` du module Liste) : code → libellé et teinte (L2). */

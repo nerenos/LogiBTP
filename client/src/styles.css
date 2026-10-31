@@ -255,6 +255,9 @@ dialog.dialogue-options { max-width: min(820px, calc(100vw - 32px)); }
 
 /* Onglet Traçabilité : origine, documents liés, historique. */
 .vue-tracabilite { overflow: auto; padding: 1rem; }
+.vue-reglements { overflow: auto; padding: 1rem; }
+.reglements-document section { margin-bottom: 1.5rem; }
+.reglements-document .avertissement { color: var(--avertissement, #b45309); }
 .tracabilite { max-width: 1000px; display: flex; flex-direction: column; gap: 1rem; }
 .trac-bloc h3 { margin: 0 0 6px; font-size: 1rem; }
 .trac-liens { list-style: none; padding: 0; margin: 0; }

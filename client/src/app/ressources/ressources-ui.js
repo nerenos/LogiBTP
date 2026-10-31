@@ -163,7 +163,7 @@ export async function rendreMissions(corps, { app, salarie, annuaire }) {
 /**
  * Affectations d'un matériel (lot 5b, db/231) : historique saisi en tableau (type, ressource, du, au, commentaire),
  * affectation en cours signalée, contrôles du jeu partagé avant l'envoi (affectations.js ↔ ReglesAffectations.cs).
- * Condition du matériel (db/248) : au départ (celle du matériel, affichée) et au retour (obligatoire pour terminer
+ * Condition du matériel (db/252) : au départ (celle du matériel, affichée) et au retour (obligatoire pour terminer
  * l'affectation d'un matériel identifié ; endommagé ou hors service : événement et notification).
  */
 export async function rendreAffectations(corps, { app, materiel, identifie = false }) {
@@ -296,7 +296,7 @@ export { finValidite, jour as jourRessource };
 const SOURCES_ETAT = { CREATION: 'Création', FICHE: 'Fiche', AFFECTATION: 'Affectation', REPRISE: 'Reprise' };
 const DISPONIBILITES = { DISPO: 'Disponible', CHANTIER: 'En chantier', PANNE: 'En panne', REBUT: 'Rebut' };
 
-/** Onglet Historique de la fiche matériel (db/248) : disponibilité et condition datées, motif, origine, auteur. */
+/** Onglet Historique de la fiche matériel (db/252) : disponibilité et condition datées, motif, origine, auteur. */
 export async function rendreEtatsMateriel(corps, { materiel }) {
   const l = await api.ressources.etatsMateriel(materiel);
   const heure = (d) => new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });

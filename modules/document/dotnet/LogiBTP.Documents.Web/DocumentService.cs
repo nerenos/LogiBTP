@@ -1010,6 +1010,14 @@ public class DocumentService<TDoc, TLigne, TComplet>(
         return await Echeancier.Modifier(id, saisie, ct);
     }
 
+    /// <summary>Échéancier d'une pièce validée recalculé depuis sa condition (droit MODIFIER du type).</summary>
+    public async Task<List<DocumentEcheance>> RecalculerEcheances(long id, Utilisateur u, CancellationToken ct)
+    {
+        var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");
+        await VerifierDroit(u, doc.EntTydId, ActionsDroits.Modifier, ct);
+        return await Echeancier.Recalculer(id, ct);
+    }
+
     public async Task Supprimer(long id, Utilisateur u, CancellationToken ct)
     {
         var doc = await db.Documents.FirstOrDefaultAsync(d => d.EntId == id, ct) ?? throw ExceptionMetier.Introuvable($"Document {id}");

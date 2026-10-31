@@ -2,7 +2,7 @@ namespace LogiBTP.Domaine.Ressources;
 
 /// <summary>
 /// Affectation d'un matériel : type (SALARIE, INTERIM, SOUS_TRAITANT, MATERIEL), identifiant, période, état du matériel au
-/// retour, retour exigé (false : affectation terminée avant la règle, reprise de db/248).
+/// retour, retour exigé (false : affectation terminée avant la règle, reprise de db/252).
 /// </summary>
 public sealed record AffectationMateriel(string Type, string? Id, DateOnly? Du, DateOnly? Au, string? Retour = null, bool RetourRequis = true);
 

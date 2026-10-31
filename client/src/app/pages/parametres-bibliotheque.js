@@ -12,8 +12,6 @@ export class PageParametresBibliotheque extends PageBase {
     const s = await app.services();
     const gestion = new GestionReferentiels(this.conteneur.querySelector('.page-bibliotheque-corps'), {
       fournisseur: s.bibliotheque, message: (t, n) => app.message(t, n), admin: app.estAdmin(),
-      // Comptes des natures : ventilation du module Comptabilité (/comptabilite/ventilation).
-      sansComptesNatures: true,
     });
     await gestion.ouvrir();
   }

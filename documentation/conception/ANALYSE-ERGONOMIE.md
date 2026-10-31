@@ -506,7 +506,7 @@ client` pour les lots qui changent des vues fournies.
 
 ## 10. Réalisation du lot E8 : salariés (31/10/2026)
 
-- **Agences (FS2)** : `salarie.sal_agence_per_id` (`db/247`, rejouable) désigne notre société ou l'un de ses niveaux
+- **Agences (FS2)** : `salarie.sal_agence_per_id` (`db/251`, rejouable) désigne notre société ou l'un de ses niveaux
   inférieurs dans l'annuaire (vue `v_agences_societe`, hors dépôts, nom court = nom commercial sinon raison sociale) ;
   une agence ajoutée dans l'annuaire est proposée d'office. `sal_agence` garde le nom court, tenu par trigger : il reste
   la clé des zones de déplacement et de la règle de paie REPAS du module Pointage (renommer une agence renomme ces
@@ -524,7 +524,7 @@ client` pour les lots qui changent des vues fournies.
 
 ## 11. Réalisation du lot E9 : matériel (31/10/2026)
 
-- **Quantité (FM1)** : un matériel identifié a toujours une quantité de 1 (trigger de `db/248`, reprise des
+- **Quantité (FM1)** : un matériel identifié a toujours une quantité de 1 (trigger de `db/252`, reprise des
   données) ; dans la fiche, quantité 1 en lecture seule et unité masquée, le passage à « Identifié » remet 1.
 - **Compteurs (FM2)** : heures et kilomètres saisissables à la création de la fiche (relevés initiaux de source
   REPRISE à la date d'entrée, par trigger) ; ensuite, onglet Compteurs : relevé ou **rectification** (⚖, source
@@ -581,7 +581,7 @@ client` pour les lots qui changent des vues fournies.
 - **Pastilles (L2)** : nouveau format de cellule `pastille` du module Liste (options { valeur, libellé, teinte } ;
   teintes neutre, info, envoyé, succès, attention, erreur, terminé, barré, définies en clair et en sombre dans
   `liste.css` ; point de couleur dans les segments ; saisie en combo ; concepteur : « valeur | libellé | teinte »).
-  `v_liste_documents` et `v_liste_ordres` exposent `statut_code` et `etat` (`db/249`) : refusé (rejeté ou non retenu),
+  `v_liste_documents` et `v_liste_ordres` exposent `statut_code` et `etat` (`db/253`) : refusé (rejeté ou non retenu),
   expiré (validité dépassée d'un document approuvé ou envoyé, comme l'alerte), sinon le code du statut ; aucun statut
   n'est posé (Q3). Vues fournies : colonne Statut en pastille sur `etat` (segments compris), libellé de la base masqué ;
   projets, affaires, chantiers, marchés et contrats des salariés en pastilles (couleurs en dur retirées). Les vues

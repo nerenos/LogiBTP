@@ -5,7 +5,7 @@ namespace LogiBTP.Reglements.Web;
 /// payer), date (nulle : retenue non libérée), montant signé, nature NORMALE / RETENUE, objet (marché…).
 /// </summary>
 public sealed record EcheanceSource(long Id, long PieceId, string? Piece, string Type, long TiersId, string? Tiers, string Sens,
-    DateOnly? Date, decimal Montant, string Nature, long? ObjetId);
+    DateOnly? Date, decimal Montant, string Nature, long? ObjetId, DateOnly? DatePiece = null);
 
 /// <summary>Filtre des échéances : tiers, sens, identifiants d'échéances ou de pièces, objet (marché).</summary>
 public sealed record FiltreEcheances(long? TiersId = null, string? Sens = null, IReadOnlyCollection<long>? Ids = null,

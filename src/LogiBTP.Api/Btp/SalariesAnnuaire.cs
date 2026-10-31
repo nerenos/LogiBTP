@@ -74,7 +74,7 @@ public static class SalariesAnnuaire
                 """, ("i", ind));
             if (await compte.ExecuteNonQueryAsync(ct) > 0) LogiBTP.Authentification.Web.ServiceAuthentification.OublierSessions();
         }
-        // Agence : personne de l'annuaire (notre société ou un de ses niveaux inférieurs, v_agences_societe de db/247) ;
+        // Agence : personne de l'annuaire (notre société ou un de ses niveaux inférieurs, v_agences_societe de db/251) ;
         // le rattachement du salarié à l'une d'elles est déplacé, sinon créé.
         var agence = long.TryParse(Texte(v.GetValueOrDefault("agence")), out var a) ? a : (long?)null;
         var poste = Texte(v.GetValueOrDefault("poste"));

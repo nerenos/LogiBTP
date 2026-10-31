@@ -119,7 +119,7 @@ public class SpecialisationPointageBtp(IHttpContextAccessor http) : Specialisati
         db.Database.SqlQueryRaw<SalariePointage>("""
             SELECT s.sal_id AS id, coalesce(s.sal_matricule_paie, s.sal_code) AS matricule, s.sal_nom AS nom, s.sal_prenom AS prenom, sv.srv_id, sv.srv_libelle AS service,
                    coalesce(s.sal_statut = 'INTERIM', FALSE) AS interimaire, s.sal_ppf_id AS ppf_id, s.sal_agence AS agence,
-                   -- Matricule affiché : celui de la paie, suivi du code (db/247 : le matricule historique recopie le code).
+                   -- Matricule affiché : celui de la paie, suivi du code (db/251 : le matricule historique recopie le code).
                    CASE WHEN s.sal_matricule_paie IS NULL THEN NULL ELSE s.sal_code END AS code, s.sal_matricule_paie AS matricule_paie, s.sal_poste AS fonction
             FROM salarie s
             LEFT JOIN service_membre sm ON sm.sme_ind_id = s.sal_ind_id AND sm.sme_principal

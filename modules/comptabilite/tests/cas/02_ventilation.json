@@ -1,5 +1,5 @@
 {
-  "description": "Ventilation (ventilation.js ↔ ReglesVentilation.cs) : compte de la ligne, puis clé nature + taux, nature, taux, puis compte par défaut du type comptable ; à chaque étape le type de la pièce avant son parent (SOUS_TRAITANCE → ACHAT) ; sinon COMPTE_INTROUVABLE.",
+  "description": "Ventilation (ventilation.js ↔ ReglesVentilation.cs) : compte de la ligne, puis compte de produit ou de charge du tiers, puis clé nature + taux, nature, taux, puis compte par défaut du type comptable ; à chaque étape le type de la pièce avant son parent (SOUS_TRAITANCE → ACHAT) ; sinon COMPTE_INTROUVABLE.",
   "parametrage": {
     "types": [
       { "code": "VENTE", "parent": null, "compte_defaut": "704000" },
@@ -21,6 +21,12 @@
   "cas": [
     { "nom": "compte saisi sur la ligne", "entree": { "compte": " 708000 ", "nature": "MAT", "taux": "T20", "type": "VENTE" },
       "attendu": { "compte": "708000", "origine": "LIGNE", "type": null, "erreur": null } },
+    { "nom": "compte du tiers : avant les clés de nature (fournisseur de carburant)", "entree": { "compte": null, "tiers": " 606140 ", "nature": "ST", "taux": "IC20", "type": "ACHAT" },
+      "attendu": { "compte": "606140", "origine": "TIERS", "type": null, "erreur": null } },
+    { "nom": "compte saisi sur la ligne : avant le compte du tiers", "entree": { "compte": "708000", "tiers": "706000", "nature": "MAT", "taux": "T20", "type": "VENTE" },
+      "attendu": { "compte": "708000", "origine": "LIGNE", "type": null, "erreur": null } },
+    { "nom": "compte du tiers vide : clés", "entree": { "compte": null, "tiers": "", "nature": "MAT", "taux": "T20", "type": "VENTE" },
+      "attendu": { "compte": "701100", "origine": "NATURE_TAUX", "type": "VENTE", "erreur": null } },
     { "nom": "nature et taux", "entree": { "compte": null, "nature": "MAT", "taux": "T20", "type": "VENTE" },
       "attendu": { "compte": "701100", "origine": "NATURE_TAUX", "type": "VENTE", "erreur": null } },
     { "nom": "nature seule (autre taux)", "entree": { "compte": "", "nature": "MAT", "taux": "T10", "type": "VENTE" },

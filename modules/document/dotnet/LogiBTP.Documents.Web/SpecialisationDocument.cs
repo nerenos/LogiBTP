@@ -133,8 +133,8 @@ public class SpecialisationDocument<TDoc, TLigne, TComplet>
     /// <summary>Entête d'un document créé depuis plusieurs sources (il part de la première) : rattachements communs…</summary>
     public virtual void PreparerEntetePlusieurs(TDoc cible, IReadOnlyList<TDoc> sources) { }
 
-    /// <summary>Contenu repris d'une source d'un document à plusieurs sources (identifiants temporaires).</summary>
-    public virtual void PreparerContenuSource(TComplet contenu, TDoc source) { }
+    /// <summary>Contenu repris d'une source d'un document à plusieurs sources (identifiants temporaires), types source et cible.</summary>
+    public virtual void PreparerContenuSource(TComplet contenu, TDoc source, TypeDocument typeSource, TypeDocument typeCible) { }
 
     /// <summary>Ajoute à un contenu les compléments d'un autre (métrés, variables… ; identifiants temporaires distincts).</summary>
     public virtual void FusionnerComplements(TComplet cible, TComplet ajout) { }

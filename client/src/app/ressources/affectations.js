@@ -2,7 +2,7 @@
 // tests/ressources/04_affectations.json) : une affectation datée (du, au facultatif = en cours) à un salarié, un
 // intérimaire, un sous-traitant ou un autre matériel (porteur : petit outillage dans un camion) ; une seule à la fois.
 // Matériel identifié : une affectation terminée porte l'état du matériel au retour (FM3 de l'analyse d'ergonomie),
-// sauf une affectation terminée avant cette règle (retour_requis à false, posé par la reprise de db/248).
+// sauf une affectation terminée avant cette règle (retour_requis à false, posé par la reprise de db/252).
 import { TYPE_RESSOURCE } from '../codes.js';
 
 export const TYPES_AFFECTATION = Object.values(TYPE_RESSOURCE);

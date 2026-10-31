@@ -4,9 +4,9 @@ import { SCENARIOS_PA, TYPES_NATURE, coefficientsEffectifs } from '../src/calcul
 
 // Paramétrage de la bibliothèque (classe mère) : bibliothèques (code d'appel, bibliothèque par défaut), familles éditées
 // en arbre (ajout d'une racine, ou d'une sous-famille sous la famille sélectionnée), natures (types, regroupement, axe
-// analytique, comptes), regroupements personnalisables, coefficients de frais généraux et de bénéfice par période
-// (globaux ou par nature, historique), scénarios de prix d'achat. Option `sansComptesNatures` : comptes des natures
-// non affichés (l'application les tient ailleurs, ex. ventilation d'un module de comptabilité).
+// analytique), regroupements personnalisables, coefficients de frais généraux et de bénéfice par période
+// (globaux ou par nature, historique), scénarios de prix d'achat. Les comptes d'une nature sont tenus par l'application
+// (ventilation du module Comptabilité).
 
 const ONGLETS = [['bibliotheques', 'Bibliothèques'], ['familles', 'Familles'], ['natures', 'Natures'], ['regroupements', 'Regroupements'],
   ['coefficients', 'Coefficients'], ['prix', 'Prix d\'achat']];
@@ -14,9 +14,8 @@ const date = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') :
 const coef = (v) => (v === null || v === undefined || v === '' ? '—' : String(v).replace('.', ','));
 
 export class GestionReferentiels {
-  constructor(conteneur, { fournisseur, message = () => {}, admin = false, sansComptesNatures = false }) {
+  constructor(conteneur, { fournisseur, message = () => {}, admin = false }) {
     this.racine = conteneur;
-    this.sansComptesNatures = sansComptesNatures;
     this.fournisseur = fournisseur;
     this.message = message;
     this.admin = admin;
@@ -184,15 +183,14 @@ export class GestionReferentiels {
 
   async #natures(zone) {
     const [natures, regroupements] = await Promise.all([this.fournisseur.natures(), this.fournisseur.regroupements()]);
-    zone.innerHTML = `<p class="aide">Types (main-d\'œuvre, engin, matériaux, sous-traitance, frais, facturation interne, amortissement, divers) : plusieurs possibles. Le regroupement reste libre (ex. « Fabrication » : natures de main-d\'œuvre et de sous-traitance). ${this.sansComptesNatures ? 'Axe analytique : repris par la comptabilité ; comptes : ventilation de la comptabilité.' : 'Axe analytique et comptes de rattachement : repris par la comptabilité.'} Une nature « isolant » affiche les caractéristiques d\'isolation (R, λ, U) dans la fiche.</p><div></div>`;
+    zone.innerHTML = `<p class="aide">Types (main-d\'œuvre, engin, matériaux, sous-traitance, frais, facturation interne, amortissement, divers) : plusieurs possibles. Le regroupement reste libre (ex. « Fabrication » : natures de main-d\'œuvre et de sous-traitance). Axe analytique : repris par la comptabilité ; comptes : ventilation de la comptabilité. Une nature « isolant » affiche les caractéristiques d\'isolation (R, λ, U) dans la fiche.</p><div></div>`;
     this.#tableau(zone.lastElementChild, {
       cle: 'code', lignes: natures, vide: { id: 0, actif: true, isolant: false, types: [] },
       colonnes: [{ code: 'code', libelle: 'Code', largeur: '7rem' }, { code: 'libelle', libelle: 'Libellé', largeur: '14rem' },
         { code: 'types', libelle: 'Types', type: 'cases', options: TYPES_NATURE.map(([valeur, libelle]) => ({ valeur, libelle, court: { MO: 'MO', ENGIN: 'Engin', MATERIAUX: 'Mat.', SOUS_TRAITANCE: 'ST', FRAIS: 'Frais', FACTURATION_INTERNE: 'Fact. int.', AMORTISSEMENT: 'Amort.', DIVERS: 'Div.' }[valeur] })) },
         { code: 'regroupement', libelle: 'Regroupement', options: regroupements.map((r) => ({ valeur: r.code, libelle: r.libelle })) },
-        { code: 'axe_analytique', libelle: 'Axe analytique', largeur: '8rem' }, { code: 'compte_achat', libelle: 'Compte d\'achat', largeur: '7rem' },
-        { code: 'compte_vente', libelle: 'Compte de vente', largeur: '7rem' }, { code: 'isolant', libelle: 'Isolant', type: 'case' }, { code: 'actif', libelle: 'Active', type: 'case' }]
-        .filter((c) => !this.sansComptesNatures || !c.code.startsWith('compte_')),
+        { code: 'axe_analytique', libelle: 'Axe analytique', largeur: '8rem' },
+        { code: 'isolant', libelle: 'Isolant', type: 'case' }, { code: 'actif', libelle: 'Active', type: 'case' }],
       enregistrer: (v) => this.fournisseur.enregistrerNature(v), supprimer: (l) => this.fournisseur.supprimerNature(l.id),
     });
   }
@@ -261,6 +259,8 @@ export class GestionReferentiels {
       <fieldset><legend>Scénarios de prix d'achat autorisés</legend>${SCENARIOS_PA.map(([c, l]) => `<label class="bib-ligne"><input type="checkbox" data-scenario="${c}" ${p.scenarios_autorises.includes(c) ? 'checked' : ''} ${ro}> ${echapper(l)}</label>`).join('')}</fieldset>
       <label>Scénario par défaut à la création <select data-defaut ${ro}>${SCENARIOS_PA.map(([c, l]) => `<option value="${c}" ${c === p.scenario_defaut ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>
       <p class="aide">Chaque élément peut restreindre ses scénarios autorisés et choisir le sien dans l'onglet Prix de sa fiche.</p>
+      <label class="bib-ligne"><input type="checkbox" data-pv-ouvrages ${p.pv_fixe_ouvrages_envoyes ? 'checked' : ''} ${ro}> Envoi d'un ouvrage depuis un document : reprendre son PV fixe</label>
+      <p class="aide">Sans cette option, un ouvrage envoyé vers la bibliothèque prend le prix de sa composition ; le PV fixe se force dans sa fiche.</p>
       ${this.admin ? '<button type="button" class="principal" data-enregistrer>Enregistrer</button>' : ''}</div>`;
     zone.querySelector('[data-enregistrer]')?.addEventListener('click', async () => {
       try {
@@ -269,6 +269,7 @@ export class GestionReferentiels {
           scenarios_autorises: [...zone.querySelectorAll('[data-scenario]:checked')].map((x) => x.dataset.scenario),
           // Coefficients : gérés par période (onglet Coefficients) ; les valeurs de repli des paramètres sont conservées.
           coef_fg_defaut: p.coef_fg_defaut, coef_benef_defaut: p.coef_benef_defaut,
+          pv_fixe_ouvrages_envoyes: zone.querySelector('[data-pv-ouvrages]').checked,
         });
         this.message('Paramètres de prix enregistrés', 'succes');
       } catch (x) { this.#erreur(x); }
