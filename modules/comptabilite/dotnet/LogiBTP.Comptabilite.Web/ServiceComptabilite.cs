@@ -369,6 +369,23 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
     }
 
     /// <summary>
+    /// Compte auxiliaire saisi hors de /comptabilite/tiers (fiche du tiers) : mêmes règles qu'ici (normalisé par
+    /// ReglesComptes, un compte pour un seul tiers). Vide : null.
+    /// </summary>
+    public async Task<string?> ControlerCompteTiersAsync(long? tiersId, string? saisie, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(saisie)) return null;
+        var p = await ParametresAsync(ct);
+        var r = ReglesComptes.NormaliserTiers(saisie, p.LongueurComptesTiers);
+        if (r.Erreur is string e) throw ExceptionMetier.Invalide(e, $"{saisie} : {Message(e)}");
+        var autres = (await specialisation.TiersAsync(db, ct)).Where(t => t.TiersId != tiersId && t.Compte == r.Code)
+            .Select(t => t.RaisonSociale).Distinct().ToList();
+        if (autres.Count > 0)
+            throw ExceptionMetier.Conflit("CPT_TIERS_DOUBLON", $"Le compte {r.Code} serait celui de plusieurs tiers : " + string.Join(", ", autres));
+        return r.Code;
+    }
+
+    /// <summary>
     /// Comptes auxiliaires manquants proposés (préfixe du type de compte + code du tiers) et enregistrés ; un compte déjà
     /// pris ou impossible à former est refusé et signalé. typeCompte : un seul type, sinon tous.
     /// </summary>
@@ -379,10 +396,16 @@ public sealed class ServiceComptabilite(ComptabiliteDbContext db, Specialisation
         var pris = l.Where(t => t.Compte is not null).Select(t => t.Compte!).ToHashSet();
         var saisis = new List<CompteTiersSaisi>();
         var refus = new List<string>();
-        foreach (var t in l.Where(t => t.Compte is null && t.Actif && (typeCompte is null || t.TypeCompte == typeCompte)))
+        foreach (var candidat in l.Where(t => t.Compte is null && t.Actif && (typeCompte is null || t.TypeCompte == typeCompte)))
         {
-            // Type qui hérite d'un autre type du même tiers (sous-traitant → fournisseur) : le compte de l'autre suffit.
-            if (specialisation.TypeHerite(t.TypeCompte) is string parent && l.Any(x => x.TiersId == t.TiersId && x.TypeCompte == parent)) continue;
+            var t = candidat;
+            // Type qui hérite d'un autre type du même tiers (sous-traitant → fournisseur) : le compte de l'autre suffit. Sans
+            // filtre, l'autre type reçoit le sien à son tour ; filtré sur ce type, l'autre est écarté : son compte est créé ici.
+            if (specialisation.TypeHerite(t.TypeCompte) is string parent && l.FirstOrDefault(x => x.TiersId == t.TiersId && x.TypeCompte == parent) is { } herite)
+            {
+                if (typeCompte is null || herite.Compte is not null || !herite.Actif) continue;
+                t = herite;
+            }
             var r = ReglesComptes.Proposer(p.PrefixesTiers.GetValueOrDefault(t.TypeCompte), t.CodeTiers, p.LongueurComptesTiers);
             if (r.Erreur is string e) { refus.Add($"{t.RaisonSociale} : {Message(e)}"); continue; }
             if (!pris.Add(r.Code!)) { refus.Add($"{t.RaisonSociale} : compte {r.Code} déjà pris"); continue; }

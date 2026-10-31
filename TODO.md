@@ -77,22 +77,32 @@ Analyses validées le 23/10/2026 : [ANALYSE-MODULE-MAIL.md](documentation/concep
 
 Analyse achevée (lots 1 à 7 réalisés, voir « Réalisé »). Restent :
 
-- [ ] Vérifier `PIED_GLOBAL` (postes HT du pied global, ex. compte prorata) : la décision Q6 garde le pied global
-  après TVA seulement, les postes HT se saisissent sur les commandes.
-- [ ] 13.14 sans décision : regroupement des BL par commande (une section par document pour l'instant) et chantier
-  par ligne (`lig_cha_id`).
-- [ ] Proposition des marchés à facturer pour une période (13.9).
-- [ ] Retenue de garantie et révision de prix à affiner (Q22).
-- [ ] Écran de transformation ligne à ligne.
-- [ ] Déduction d'un règlement ou d'un avoir sur une facture suivante (module Comptabilité).
+Décisions du 31/10/2026 : `PIED_GLOBAL` gardé (prorata dans le pied de chaque document, somme affichée au pied
+global). Lots à venir :
+
+- [ ] 13.14 : une section par commande avec une tranche par BL ; chantier par ligne (`lig_cha_id`) sur les documents
+  d'achat seulement (repris de l'entête, modifiable) ; plusieurs chantiers : entête vide et avertissement ; filtre par
+  chantier sur l'entête (index), sinon sur les lignes (chantier de la ligne en achat, documents sources par
+  `document_ligne_lien` en vente).
+- [ ] Proposition des marchés à facturer pour une période (13.9) : mois civil, marchés ouverts non soldés sans
+  situation validée dans le mois, « pas d'avancement » mémorisé par marché et par mois, situations créées d'un clic.
+- [ ] Cautions de retenue de garantie : une caution sur plusieurs retenues, retenue partiellement cautionnée ; le
+  montant cautionné se consomme en premier, la retenue non cautionnée reste due une fois la caution épuisée (une pièce
+  peut avoir une part cautionnée et une part retenue).
+- [ ] Révision de prix par index BT (formule, index provisoires puis définitifs) : à concevoir avant de coder.
+- [ ] Écran de transformation ligne à ligne (hors marché : lignes décochées laissées en reliquat, quantité modifiable).
+- [ ] Imputation d'un règlement ou d'un avoir sur une facture suivante : partie document (enregistrée en base, visible
+  sur le document associé dans les éditions et le reste à payer) ; écritures avec le module Comptabilité complet.
 
 ### Marchés et règlements
 
-- [ ] Saisie de l'échéancier à la main et date de libération des retenues à l'écran (route `PUT /documents/{id}/echeances`
-  prête).
+- [ ] Échéancier proposé par le calcul (bouton Rafraîchir) puis modifiable à la main : ajout, suppression,
+  ventilation, dates (route `PUT /documents/{id}/echeances` prête) ; date de libération des retenues ; avertissement si
+  la somme des échéances diffère du montant à payer.
 - [ ] Onglet Règlements de la page document.
-- [ ] Avance forfaitaire « entre deux seuils » ; aperçu des déductions d'acompte avant validation.
-- [ ] Liste du délai de paiement des tiers reliée à `condition_paiement` ; relances.
+- [ ] Aperçu des déductions d'acompte avant validation (pas de mode « entre deux seuils » : l'avance se déduit au fil des
+  factures d'avancement réelles, décision du 31/10/2026).
+- [ ] Relances.
 - [ ] Propositions sans décision explicite (retenues par défaut, conception `CONCEPTION-MARCHES-REGLEMENTS.md` § 11) à
   faire valider : modes d'acompte (11.1), déduction en mode chiffre d'affaires (11.2), postes HT sur commandes (11.3),
   postes TTC restants (11.4), règlements sans le module (11.5).
@@ -103,39 +113,34 @@ Analyse du 25/10/2026 : [ANALYSE-MODULE-COMPTABILITE.md](documentation/conceptio
 (base en trois lots, puis module complet). Base réalisée : lots 1 (plan, collectifs, comptes des tiers, TVA), 2 (types
 comptables, ventilation) et 3 (écritures, export Sage 100).
 
-- [ ] Lot 2, écarts : clés de ventilation par code de nature et de taux (un code renommé laisse une clé orpheline) ;
-  colonnes `nat_compte_vente|achat` gardées dans la table du module Bibliothèque (plus saisies en ligne, encore dans
-  la démo hors ligne) ; une nouvelle nature n'a pas de compte tant qu'aucune clé ne la vise (compte par défaut du type).
+- [ ] Lot 2, écarts (décisions du 31/10/2026) : clés de ventilation enregistrées par l'identifiant de la nature et du
+  taux (saisies par leur code ; un code renommé ne laisse plus de clé orpheline) ; colonnes `nat_compte_vente|achat`
+  retirées (encore saisies dans les référentiels de la bibliothèque, reprises par `db/224`) ; une nouvelle nature sans
+  clé prend le compte par défaut du type (voulu).
 - [ ] Lot 3, à valider : modèle Sage 100 (colonnes, ANSI, JJMMAA, sens et montant) à reproduire dans le format
   d'import paramétrable de Sage puis à essayer sur un vrai fichier ; modèle personnalisé seulement par l'API
   (`PUT /api/comptabilite/export/modele`), pas d'écran de saisie des colonnes.
-- [ ] Lot 3, écarts : montants des lignes vendues pris comme poids (la base HT de chaque taux fait foi) ; postes de pied
-  reconnus par le marqueur du marché, sinon par leur libellé (remise, prorata, acompte, paiement direct, retenue) ;
-  déduction d'acompte en mode chiffre d'affaires portée au compte d'acompte (Q13, avis de l'expert-comptable) ;
-  virement de la TVA à encaisser à l'encaissement : module complet avec les règlements ; fichier des lots gardé en base
-  (pas en GED).
-- [ ] Lot 1, écarts : un changement de longueur des comptes ne convertit pas le plan (comptes signalés « hors
-  longueur ») ; les comptes de tiers saisis dans la fiche personne ne passent pas par `ReglesComptes` (seulement par
-  `/comptabilite/tiers`) ; génération filtrée sur les sous-traitants : un sous-traitant aussi fournisseur sans compte
-  n'en reçoit pas (générer sans filtre).
+- [ ] Lot 3, écarts (décisions du 31/10/2026 ; acceptés : lignes vendues prises comme poids, fichier des lots en
+  base ; virement de la TVA à encaisser : module complet) : genre explicite des postes de pied (REMISE, PRORATA,
+  ACOMPTE, PAIEMENT_DIRECT, RETENUE, AUTRE) porté par l'élément POSTE_PIED et recopié sur la ligne, au lieu du libellé ;
+  déduction d'acompte selon le mode de la société (`parametre_document.acomptes`) — aujourd'hui toujours portée au
+  compte d'acompte, d'où un CA compté deux fois en mode CA : mode CA, la déduction diminue les produits (pas de 4191) ;
+  mode trésorerie (4191 tenu en HT, TVA collectée à l'encaissement selon le PCG), la facture solde 4191 pour la part HT
+  et la TVA à encaisser est diminuée de la TVA déjà collectée sur l'acompte (jamais deux fois) ; achats symétriques
+  (4091, TVA déductible).
+- [ ] Compte de produit ou de charge du tiers, un par relation (client, fournisseur ; sous-traitant : celui du
+  fournisseur s'il est vide), distinct du compte auxiliaire 401 / 411 (ex. fournisseur de carburant : 60614) ; règle
+  du compte d'une ligne : ligne > tiers > nature + taux > nature > taux > défaut du type (`ventilation.js` ↔
+  `ReglesVentilation.cs`, jeu `02_ventilation.json`, grille et export).
 - [ ] **Module Comptabilité complet** : journaux tenus, exercices et clôture, saisie d'écritures, lettrage, règlements
   et TVA sur les encaissements (module Règlements), FEC, contre-passation des pièces modifiées après transfert.
-- [ ] Règle définitive du compte comptable des lignes (aujourd'hui provisoire : compte de la ligne, sinon de la nature
-  selon la famille du document, sinon du tiers) : à remplacer par `definirRegleCompte` de `client/src/app/comptes.js`,
-  côté serveur aussi s'il faut le compte effectif. Le compte du tiers (`per_cli_compte` / `per_fou_compte`) est un
-  compte auxiliaire (411 / 401) : son usage comme compte de produit ou de charge est à confirmer.
 
 ### Frais annexes
 
-- [ ] Envoi vers la bibliothèque d'un ouvrage à PV fixe : le PV n'est pas envoyé (le prix d'un ouvrage de la
-  bibliothèque est celui de sa composition).
-- [ ] Les clés de ventilation ne suivent pas un copier-coller de lignes.
-
-### Métré
-
-- [ ] Les variables chaîne et booléen d'un script ne sont pas publiées dans les portées (`Portees` ne stocke que des
-  décimaux).
-- [ ] Les fonctions propres à l'hôte (option `fonctions`) ne sont branchées ni aux moteurs ni à l'éditeur.
+- [ ] Envoi vers la bibliothèque d'un ouvrage à PV fixe : aujourd'hui le PV fixe est envoyé (`envoi.js`) ; option
+  globale de la société, par défaut sans PV fixe (l'utilisateur le force dans la bibliothèque).
+- [ ] Les clés de ventilation ne suivent pas un copier-coller de lignes : la clé suit la ligne collée dans le même
+  document et sous la même tranche parente, ailleurs la ligne revient au prorata.
 
 ### Fiches et listes
 
