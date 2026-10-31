@@ -621,3 +621,24 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/planning/js` vérifiées par le test
   du client) ; affichage contrôlé dans le navigateur (API simulée : planning, panneau complet, détail d'une tâche avec
   dépendances, fenêtre de choix des ressources, équipes, paramètres, prototype).
+
+## 25. Réalisation du lot P3l : module Stock (31/10/2026)
+
+- **Périmètre** : le module (`modules/stock/js/src` : messages du contrôle d'inventaire, méthodes de valorisation) et ses
+  écrans du cœur : `client/src/app/stock/` (état du stock et mouvement, onglet Stock de l'article, paramètres et marques,
+  marquage en masse, inventaires et bordereaux, approvisionnement et projection, magasin, dotations, saisies de la borne à
+  valider, fiche de dotation à signer, onglet Dotations du salarié), titres des routes. Les écrans Stock de la borne
+  relèvent du lot P3a (`pointage.borne.*`).
+- **Textes** : `stock.*` du module (`inventaire.erreurs`, `methodes`) ; `stock_btp.*` du cœur (`routes`, `sources`,
+  `etat`, `colonnes` — en-têtes communs aux écrans —, `marquer`, `niveaux`, `parametres`, `origines`, `article`,
+  `types_dotation`, `appro`, `projection`, `inventaire` — dont `etats`, `generations` —, `magasin` — dont `dotations` —,
+  `dotations` — dont `periodes` —, `a_valider`, `fiche`) ; compteurs par `pluriel` (articles, commandes, lignes).
+  Les tables gardent leur forme (`SOURCES`, `NIVEAUX`, `ORIGINES`, `DOTATIONS` : `textesParCode` ; générations et
+  types de dotation : `pairesParCode` ; périodes de l'onglet Dotations : libellé en accesseur).
+- **Icônes** : `stock_btp_*` du cœur (stock, chantier, CSV, provisoire, mouvement, marque, projection, retard,
+  approvisionnement, retour, inventaire et ses états, impression, magasin, sortie, entrée, dotation, renouvellement) ;
+  communes du socle (`ajouter`, `retirer`, `supprimer`).
+- **Couleurs** : `--stock-entree`, `--stock-impression-texte`, `--stock-impression-trait`, `--stock-frise-mini`,
+  `--stock-frise-rupture` (`styles.css`), couleur proposée d'une nouvelle marque par `couleurTheme('--stock-marque-defaut')`.
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/stock/js/src` vérifiées par le test
+  du client).

@@ -31,5 +31,8 @@
 - Gestion (paramètres, emplacements, réévaluation) : `PeutGererAsync` (cœur : administrateur ou membre d'un service LOGISTIQUE).
 - Borne et saisies à valider (lot 5) : routes du cœur (`StockBorneBtp.cs`) : `/api/pointage/borne/stock` (publique), `/api/stock/bornes/{id}/depot`, `/api/stock/magasin/a-valider`.
 
+## Textes et icônes (module Personnalisation, lot P3l)
+- Textes `stock.*` du `fr.json` du module (erreurs, messages du contrôle d'inventaire `MESSAGES_INVENTAIRE` et méthodes `METHODES_VALORISATION` par `textesParCode`) ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `stock_btp.*`, icônes `stock_btp_*`, couleurs `--stock-*` de `client/personnalisation/theme.css` (entrées, impression des bordereaux et de la fiche de dotation, frise, couleur proposée d'une marque).
+
 ## Tests
 - `npm test --workspace modules/stock/js` ; `dotnet test modules/stock/dotnet/LogiBTP.Stock.Tests` (mêmes jeux).

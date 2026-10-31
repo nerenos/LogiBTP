@@ -18,5 +18,19 @@
     "STK_METHODE": "Méthode de valorisation inconnue (PMP ou DERNIER_PA)",
     "STK_PMP": "PMP positif ou nul obligatoire",
     "STK_SEUIL_DOUBLON": "Un article en double dans les seuils"
+  },
+  "stock": {
+    "inventaire": {
+      "erreurs": {
+        "INV_DOUBLON_EMPLACEMENT": "Article compté plusieurs fois au même emplacement : les quantités sont cumulées",
+        "INV_QUANTITE_NEGATIVE": "Quantité comptée négative",
+        "INV_PRIX_DIFFERENTS": "Deux prix d'inventaire différents pour le même article",
+        "INV_PMP_SANS_PRIX": "« Appliquer au PMP » sans prix saisi"
+      }
+    },
+    "methodes": {
+      "PMP": "Prix moyen pondéré",
+      "DERNIER_PA": "Dernier prix d'achat"
+    }
   }
 }

@@ -70,3 +70,13 @@
   --planning-chef: #d97706;
   --planning-attente: rgb(245 158 11 / 0.35);
 }
+
+/* Stock (lot P3l) : entrées de la fiche de stock, impression des bordereaux et de la fiche de dotation, frise, marque. */
+:root {
+  --stock-entree: #05603a;
+  --stock-impression-texte: #000;
+  --stock-impression-trait: #999;
+  --stock-frise-mini: #f79009;
+  --stock-frise-rupture: #d92d20;
+  --stock-marque-defaut: #98a2b3;
+}

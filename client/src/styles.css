@@ -910,28 +910,28 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 /* Stock : état du stock, fiche de stock de l'article, inventaires (bordereaux imprimables). */
 .page-stock .negatif td, .page-inventaire tr.avertissement td { background: var(--alerte-fond); }
 .stock-article h3 { margin: 1rem 0 .3rem; }
-.stock-article .entree { color: #05603a; }
+.stock-article .entree { color: var(--stock-entree); }
 .page-inventaire .bordereau { margin: 1rem 0; }
 .page-inventaire .bordereau h2 { font-size: 1.05em; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 .page-inventaire.sans-theoriques .theorique { display: none; }
 .page-inventaire .onglets { padding-left: 0; }
 @media print {
   .page-inventaire .sans-impression, .page-inventaire .entete-page button, .page-inventaire .entete-page label { display: none !important; }
-  .page-inventaire .bordereau { break-after: page; color: #000; }
-  .page-inventaire .bordereau input { border: none; background: none; color: #000; }
-  .page-inventaire .bordereau td { border-bottom: 1px solid #999; height: 1.6rem; }
+  .page-inventaire .bordereau { break-after: page; color: var(--stock-impression-texte); }
+  .page-inventaire .bordereau input { border: none; background: none; color: var(--stock-impression-texte); }
+  .page-inventaire .bordereau td { border-bottom: 1px solid var(--stock-impression-trait); height: 1.6rem; }
 }
 /* Stock, lot 3 : frise du disponible projeté. */
 .frise-stock { width: 100%; max-width: 48rem; height: auto; margin: .5rem 0; }
 .frise-stock .frise-courbe { fill: none; stroke: var(--accent); stroke-width: 2; }
 .frise-stock .frise-zero { stroke: var(--discret); stroke-dasharray: 3 3; }
-.frise-stock .frise-mini { stroke: #f79009; stroke-dasharray: 6 3; }
+.frise-stock .frise-mini { stroke: var(--stock-frise-mini); stroke-dasharray: 6 3; }
 .frise-stock .frise-point { fill: var(--accent); }
-.frise-stock .frise-rupture { fill: #d92d20; }
+.frise-stock .frise-rupture { fill: var(--stock-frise-rupture); }
 /* Stock, lot 5 : fiche de dotation à signer. */
 .fiche-dotation .signatures { display: flex; gap: 4rem; margin-top: 2rem; }
 .fiche-dotation .signatures div { flex: 1; min-height: 6rem; border-top: 1px solid var(--bord); padding-top: .4rem; }
-@media print { .fiche-dotation .sans-impression { display: none !important; } .fiche-dotation { color: #000; } }
+@media print { .fiche-dotation .sans-impression { display: none !important; } .fiche-dotation { color: var(--stock-impression-texte); } }
 
 /* Profils et droits (module Droits) : arbre des droits, lignes héritées grisées. */
 .droits-arbre tr.herite td { color: var(--discret); }
