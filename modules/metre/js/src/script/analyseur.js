@@ -1,3 +1,4 @@
+import { texte } from '@logibtp/socle/dictionnaire';
 import { analyserReference, ErreurCalcul } from '@logibtp/socle';
 import { decouper, normaliser } from './lexeur.js';
 import { FONCTIONS } from './fonctions.js';
@@ -28,8 +29,8 @@ class ErreurSyntaxe extends Error {
  *  erreurs       [{ code, message, ligne, colonne }] triées par position.
  * options.fonctions : fonctions de l'hôte, ajoutées à FONCTIONS (nom normalisé → définition).
  */
-export function analyserScript(texte, { fonctions } = {}) {
-  const source = texte ?? '';
+export function analyserScript(script, { fonctions } = {}) {
+  const source = script ?? '';
   const { jetons, erreurs } = decouper(source);
   const catalogue = { ...FONCTIONS, ...(fonctions ?? {}) };
   const declarations = [];
@@ -46,16 +47,16 @@ export function analyserScript(texte, { fonctions } = {}) {
   const estMc = (n, j = courant()) => j.t === 'mc' && j.n === n;
   const faute = (message, j = courant(), code = 'SYNTAXE') => new ErreurSyntaxe(code, message, j);
   const signaler = (code, message, j) => erreurs.push({ code, message, ligne: j.ligne, colonne: j.colonne });
-  const decrire = (j) => (j.t === 'fin' ? 'fin du script' : j.t === 'nl' ? 'fin de ligne' : `« ${source.slice(j.debut, j.fin)} »`);
+  const decrire = (j) => (j.t === 'fin' ? texte('metre.script.decrire.fin') : j.t === 'nl' ? texte('metre.script.decrire.nl') : texte('metre.script.decrire.jeton', { jeton: source.slice(j.debut, j.fin) }));
   const attendreOp = (v, quoi) => {
-    if (!estOp(v)) throw faute(`${quoi} attendu, ${decrire(courant())} trouvé`);
+    if (!estOp(v)) throw faute(texte('metre.script.attendu', { quoi, trouve: decrire(courant()) }));
     return suivant();
   };
   const finInstruction = () => {
     const j = courant();
     if (j.t === 'nl') { i++; return; }
     if (j.t === 'fin') return;
-    throw faute(`Fin d'instruction attendue, ${decrire(j)} trouvé`);
+    throw faute(texte('metre.script.fin_instruction', { trouve: decrire(j) }));
   };
   const position = (j) => ({ ligne: j.ligne, colonne: j.colonne });
 
@@ -96,7 +97,7 @@ export function analyserScript(texte, { fonctions } = {}) {
       i++;
       const n = { k: 'bin', op: j.v, g, d: somme(), ...position(j) };
       const k = courant();
-      if (k.t === 'op' && COMPARAISONS.has(k.v)) throw faute('Comparaisons enchaînées : utiliser « et » / « ou »', k);
+      if (k.t === 'op' && COMPARAISONS.has(k.v)) throw faute(texte('metre.script.comparaisons_enchainees'), k);
       return n;
     }
     return g;
@@ -142,7 +143,7 @@ export function analyserScript(texte, { fonctions } = {}) {
   }
 
   function variable(j) {
-    if (!parNom.has(j.v)) signaler('VARIABLE_INCONNUE', `Variable « ${j.v} » non déclarée`, j);
+    if (!parNom.has(j.v)) signaler('VARIABLE_INCONNUE', texte('metre.script.variable_inconnue', { nom: j.v }), j);
     return { k: 'var', nom: j.v, ...position(j) };
   }
 
@@ -155,7 +156,7 @@ export function analyserScript(texte, { fonctions } = {}) {
     if (estOp('(')) {
       i++;
       const e = expression();
-      attendreOp(')', 'Parenthèse fermante « ) »');
+      attendreOp(')', texte('metre.script.quoi.parenthese'));
       return e;
     }
     if (j.t === 'id') {
@@ -167,22 +168,22 @@ export function analyserScript(texte, { fonctions } = {}) {
         args.push(expression());
         while (estOp(';')) { i++; args.push(expression()); }
       }
-      attendreOp(')', 'Parenthèse fermante « ) »');
+      attendreOp(')', texte('metre.script.quoi.parenthese'));
       const def = catalogue[j.n];
-      if (!def) signaler('FONCTION_INCONNUE', `Fonction « ${j.v} » inconnue`, j);
+      if (!def) signaler('FONCTION_INCONNUE', texte('metre.script.fonction_inconnue', { nom: j.v }), j);
       else if (args.length < def.min || (def.max !== null && args.length > def.max)) {
-        signaler('ARGUMENTS', `${def.signature} : ${args.length} argument(s) fourni(s)`, j);
+        signaler('ARGUMENTS', texte('metre.script.arguments', { signature: def.signature, nombre: args.length }), j);
       }
       return { k: 'appel', nom: j.n, texte: j.v, args, ...position(j) };
     }
-    throw faute(`Expression attendue, ${decrire(j)} trouvé`, j);
+    throw faute(texte('metre.script.expression_attendue', { trouve: decrire(j) }), j);
   }
 
   // ------------------------------------------------------------------ instructions
 
   function declarer(nom, type, local, implicite, j, extra = {}) {
     if (parNom.has(nom)) {
-      signaler('DECLARATION_DOUBLE', `Variable « ${nom} » déjà déclarée`, j);
+      signaler('DECLARATION_DOUBLE', texte('metre.script.declaration_double', { nom }), j);
       return null;
     }
     const d = { nom, type, local, implicite, parametre: false, defaut: null, ...position(j), ...extra };
@@ -196,14 +197,14 @@ export function analyserScript(texte, { fonctions } = {}) {
     const local = estMc('local');
     if (local) i++;
     const jn = courant();
-    if (jn.t !== 'id') throw faute(`Nom de variable attendu, ${decrire(jn)} trouvé`);
+    if (jn.t !== 'id') throw faute(texte('metre.script.nom_attendu', { trouve: decrire(jn) }));
     i++;
-    if (!(courant().t === 'id' && courant().n === 'est')) throw faute(`« est » attendu, ${decrire(courant())} trouvé`);
+    if (!(courant().t === 'id' && courant().n === 'est')) throw faute(texte('metre.script.est_attendu', { trouve: decrire(courant()) }));
     i++;
     if (courant().t === 'id' && (courant().n === 'un' || courant().n === 'une')) i++;
     const jt = courant();
     const type = jt.t === 'id' ? TYPES[jt.n] : undefined;
-    if (!type) throw faute(`Type attendu (chaîne, numérique ou booléen), ${decrire(jt)} trouvé`, jt);
+    if (!type) throw faute(texte('metre.script.type_attendu', { trouve: decrire(jt) }), jt);
     i++;
     let init = null;
     let defaut = null;
@@ -214,7 +215,7 @@ export function analyserScript(texte, { fonctions } = {}) {
       const dernier = jetons[i - 1];
       defaut = { debut: premier.debut, fin: dernier.fin, texte: source.slice(premier.debut, dernier.fin) };
     }
-    if (!enTete || boucles > 0 || profondeurBloc > 0) signaler('SYNTAXE', 'Les variables se déclarent en tête du script', debut);
+    if (!enTete || boucles > 0 || profondeurBloc > 0) signaler('SYNTAXE', texte('metre.script.declarations_tete'), debut);
     declarer(jn.v, type, local, false, jn, { defaut, declaration: { debut: debut.debut, fin: jetons[i - 1].fin } });
     return { k: 'decl', nom: jn.v, type, init, ...position(jn) };
   }
@@ -231,7 +232,7 @@ export function analyserScript(texte, { fonctions } = {}) {
       cibles.add(j.v);
       return variable(j);
     }
-    throw faute(`Instruction attendue, ${decrire(j)} trouvé`, j);
+    throw faute(texte('metre.script.instruction_attendue', { trouve: decrire(j) }), j);
   }
 
   function bloc(fins) {
@@ -251,7 +252,7 @@ export function analyserScript(texte, { fonctions } = {}) {
   }
 
   function exigerFin(ouverture, quoi) {
-    if (!estMc('fin')) throw faute(`« Fin » attendu pour fermer ${quoi} ouvert ligne ${ouverture.ligne}`, courant());
+    if (!estMc('fin')) throw faute(texte('metre.script.fin_attendue', { quoi, ligne: ouverture.ligne }), courant());
     i++;
   }
 
@@ -278,20 +279,20 @@ export function analyserScript(texte, { fonctions } = {}) {
       }
       break;
     }
-    exigerFin(ouverture, 'le « Si »');
+    exigerFin(ouverture, texte('metre.script.quoi.si'));
     return { k: 'si', branches, sinon, ...position(ouverture) };
   }
 
   function pour() {
     const ouverture = suivant();
     const jv = courant();
-    if (jv.t !== 'id') throw faute(`Variable de boucle attendue, ${decrire(jv)} trouvé`, jv);
+    if (jv.t !== 'id') throw faute(texte('metre.script.variable_boucle', { trouve: decrire(jv) }), jv);
     i++;
     if (!parNom.has(jv.v)) declarer(jv.v, 'N', true, true, jv);
     cibles.add(jv.v);
-    attendreOp('=', '« = »');
+    attendreOp('=', texte('metre.script.quoi.egal'));
     const debut = expression();
-    if (!(courant().t === 'id' && courant().n === 'a')) throw faute(`« à » attendu, ${decrire(courant())} trouvé`);
+    if (!(courant().t === 'id' && courant().n === 'a')) throw faute(texte('metre.script.a_attendu', { trouve: decrire(courant()) }));
     i++;
     const fin = expression();
     let pas = null;
@@ -304,7 +305,7 @@ export function analyserScript(texte, { fonctions } = {}) {
     } finally {
       boucles--;
     }
-    exigerFin(ouverture, 'le « Pour »');
+    exigerFin(ouverture, texte('metre.script.quoi.pour'));
     return { k: 'pour', nom: jv.v, debut, fin, pas, corps, ...position(ouverture) };
   }
 
@@ -320,7 +321,7 @@ export function analyserScript(texte, { fonctions } = {}) {
     }
     if (estMc('sortir') || estMc('continuer')) {
       i++;
-      if (boucles === 0) signaler('SYNTAXE', `« ${j.v} » hors d'une boucle « Pour »`, j);
+      if (boucles === 0) signaler('SYNTAXE', texte('metre.script.hors_boucle', { mot: j.v }), j);
       return { k: j.n, ...position(j) };
     }
     i++;
@@ -334,7 +335,7 @@ export function analyserScript(texte, { fonctions } = {}) {
       i++;
       return { k: 'aff', cible: c, op: op.v, e: expression(), ...position(op) };
     }
-    throw faute(`Affectation attendue (=, +=, -=, *=, /=, ++, --), ${decrire(op)} trouvé`, op);
+    throw faute(texte('metre.script.affectation_attendue', { trouve: decrire(op) }), op);
   }
 
   function instructionAvecReprise() {
@@ -354,7 +355,7 @@ export function analyserScript(texte, { fonctions } = {}) {
   const programme = [];
   while (courant().t !== 'fin') {
     if (courant().t === 'mc' && ['fin', 'sinon', 'sinonsi'].includes(courant().n)) {
-      signaler('SYNTAXE', `« ${courant().v} » sans « Si » ou « Pour » correspondant`, courant());
+      signaler('SYNTAXE', texte('metre.script.sans_ouverture', { mot: courant().v }), courant());
       i++;
       if (courant().t === 'nl') i++;
       continue;

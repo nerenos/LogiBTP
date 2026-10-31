@@ -48,6 +48,9 @@
 - Éditeur : une pause de saisie (300 ms) ou la sortie de l'éditeur = une étape d'annulation de l'hôte ; le texte de l'hôte ne remplace celui de l'éditeur que hors saisie en attente. Une fonction ajoutée au langage apparaît d'elle-même dans la complétion et le dictionnaire (signature, description).
 - Toute règle modifiée : JS + C# + cas, puis `npm test`, `npm run exporter-resultats`, `dotnet test LogiBTP.slnx` (le moteur BTP en dépend).
 
+## Textes et icônes (module Personnalisation, lot P3q)
+- Textes `metre.*` du `fr.json` du module (`script` : messages du langage et types, `fonctions` : descriptions et arguments, `portees`, `dictionnaire`, `editeur` : structures, `notifications`, `panneau`) ; couleurs du langage et ombre du panneau dans `personnalisation/theme.css` (`--code-*`, `--metre-ombre`) ; icônes `metre_*`. Les jeux comparent les codes, jamais les messages ; le texte des scripts (mots-clés, conversion des métrés en lignes) n'est pas traduit. Tests avec le dictionnaire (`test/preparation.js`).
+
 ## Tests
 - `npm test --workspace modules/metre/js` (vitest : `test/cas-script.test.js`, `test/conversion.test.js`, `test/editeur-script.test.js` : modèles de fonctions et de structures).
 - `dotnet test modules/metre/dotnet/LogiBTP.Metres.Tests` (`CasScriptTests.cs`, `CasConversionTests.cs`) ; jeux du cœur : `npm test` et `dotnet test LogiBTP.slnx`.

@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, pairesParCode, textesParCode } from '@logibtp/socle/dictionnaire';
 import { GrilleArbre, formatLibre, echapper } from '@logibtp/socle/ui';
 import { analyserScript } from '../src/script/analyseur.js';
 import { modifierDeclaration, litteral } from '../src/script/edition.js';
@@ -5,13 +6,12 @@ import { FONCTIONS } from '../src/script/fonctions.js';
 import { DictionnaireMetre } from './dictionnaire.js';
 import { EditeurScript, STRUCTURES, modeleFonction } from './editeur-script.js';
 
-const PORTEES = [
-  { valeur: '@', libelle: '@ ligne' }, { valeur: '@@', libelle: '@@ ouvrage' },
-  { valeur: '$', libelle: '$ titre' }, { valeur: '$$', libelle: '$$ document' },
-];
-const OPERATIONS = [{ valeur: '=', libelle: '= affecter' }, { valeur: '+=', libelle: '+= incrémenter' }];
+const PORTEES = pairesParCode('metre.panneau.portees', [['@', 'ligne'], ['@@', 'ouvrage'], ['$', 'titre'], ['$$', 'document']])
+  .map(([valeur, libelle]) => ({ valeur, libelle }));
+const OPERATIONS = pairesParCode('metre.panneau.operations', [['=', 'affecter'], ['+=', 'incrementer']])
+  .map(([valeur, libelle]) => ({ valeur, libelle }));
 const RE_NOM = /^[\p{L}_][\p{L}\p{N}_]*$/u;
-const TYPES = { N: 'numérique', C: 'chaîne', B: 'booléen' };
+const TYPES = textesParCode('metre.script.types', ['N', 'C', 'B']);
 const ATTENTE_SAISIE = 300;
 const RE_NOMBRE = /^-?\d+([.,]\d+)?$/;
 
@@ -55,35 +55,33 @@ export class PanneauMetre {
     this.minuterie = null;
     racine.innerHTML = `
       <header class="metre-entete">
-        <h2>Métré <span class="metre-titre"></span></h2>
+        <h2>${texteHtml('metre.panneau.titre')} <span class="metre-titre"></span></h2>
         <div class="metre-resultat"></div>
-        <button class="principal" data-action="valider" title="Revenir à la ligne avec la quantité calculée (Échap)">Valider</button>
+        <button class="principal" data-action="valider" title="${texteHtml('metre.panneau.valider_aide')}">${texteHtml('metre.panneau.valider')}</button>
       </header>
       <div class="metre-corps">
         <div class="metre-principal">
           <section class="metre-vide" hidden></section>
           <section class="metre-script">
-            <div class="metre-editeur" aria-label="Script du métré"></div>
+            <div class="metre-editeur" aria-label="${texteHtml('metre.panneau.script')}"></div>
             <div class="metre-messages"></div>
-            <h3>Variables du métré</h3>
+            <h3>${texteHtml('metre.panneau.variables_metre')}</h3>
             <div class="metre-variables-script"></div>
           </section>
           <section class="metre-variables-document" hidden>
-            <h3>Variables du document ($$) : évaluées avant toutes les lignes</h3>
+            <h3>${texteHtml('metre.panneau.variables_document')}</h3>
             <div class="metre-variables"></div>
-            <button data-action="ajouter-variable">Ajouter une variable</button>
+            <button data-action="ajouter-variable">${texteHtml('metre.panneau.ajouter_variable')}</button>
           </section>
         </div>
         <aside class="dictionnaire">
-          <h3>Dictionnaire</h3>
-          <input type="search" placeholder="Filtrer…" data-filtre>
+          <h3>${texteHtml('metre.panneau.dictionnaire')}</h3>
+          <input type="search" placeholder="${texteHtml('metre.panneau.filtrer')}" data-filtre>
           <div class="dictionnaire-liste"></div>
-          <p class="aide">Clic : insérer dans le script à la position du curseur (Tab : champ suivant d'un modèle).</p>
+          <p class="aide">${texteHtml('metre.panneau.aide_dictionnaire')}</p>
         </aside>
       </div>
-      <p class="aide metre-aide">Script : déclarations en tête (<code>Largeur est un numérique = 1.2</code>, <code>local</code> : interne),
-        instructions, <code>Renvoyer</code> = quantité de la ligne · Ctrl+Espace : complétion · Ctrl+/ : commentaire ·
-        Tab : indentation · Échap : revenir au devis</p>`;
+      <p class="aide metre-aide">${texteHtml('metre.panneau.aide_html')}</p>`;
     racine.querySelector('[data-action="valider"]').addEventListener('click', () => this.fermer());
     racine.querySelector('[data-action="ajouter-variable"]').addEventListener('click', () => {
       const id = this.actionsVariables().inserer('apres', this.grilleVariables.courant);
@@ -168,7 +166,7 @@ export class PanneauMetre {
       this.racine.querySelector('.metre-resultat').textContent = '';
       const possible = this.ligId !== null && this.hote.peutAvoirMetre(this.ligId);
       vide.innerHTML = possible
-        ? '<p>Cette ligne n\'a pas de métré.</p><button class="principal" data-action="creer">Créer le métré</button>'
+        ? `<p>${texteHtml('metre.panneau.sans_metre')}</p><button class="principal" data-action="creer">${texteHtml('metre.panneau.creer')}</button>`
         : `<p>${echapper(this.aideSansMetre())}</p>`;
       vide.querySelector('[data-action="creer"]')?.addEventListener('click', () => this.hote.creerMetre(this.ligId));
       return;
@@ -176,17 +174,17 @@ export class PanneauMetre {
     const calc = this.hote.resultat.metres.find((x) => x.mtr_id === this.mtrId);
     const diagnostic = this.diagnostic();
     this.racine.querySelector('.metre-resultat').innerHTML = diagnostic.erreurs.length
-      ? `<span class="erreur">${diagnostic.erreurs.length} erreur(s)</span>`
+      ? `<span class="erreur">${pluriel('metre.panneau.erreurs', diagnostic.erreurs.length)}</span>`
       : calc?.mtr_resultat === null || calc?.mtr_resultat === undefined
-        ? '<span class="avertissement">Pas de quantité (« Renvoyer » absent)</span>'
-        : `Résultat : <strong>${formatLibre(calc.mtr_resultat)}</strong> ${echapper(m.mtr_unt_code ?? '')}`;
+        ? `<span class="avertissement">${texteHtml('metre.panneau.sans_quantite')}</span>`
+        : texteHtml('metre.panneau.resultat_html', { quantite: formatLibre(calc.mtr_resultat), unite: m.mtr_unt_code ?? '' });
     this.rendreScript(m, diagnostic);
   }
 
   /** Section du document : variables du document ($$) au lieu d'un métré. */
   rendreVariablesDocument() {
     this.racine.classList.add('metre-mode-document');
-    this.racine.querySelector('.metre-titre').textContent = `${this.hote.titreLigne(this.ligId)} · variables du document`;
+    this.racine.querySelector('.metre-titre').textContent = texte('metre.panneau.titre_document', { ligne: this.hote.titreLigne(this.ligId) });
     this.racine.querySelector('.metre-vide').hidden = true;
     this.racine.querySelector('.metre-script').hidden = true;
     this.racine.querySelector('.metre-variables-document').hidden = false;
@@ -196,7 +194,7 @@ export class PanneauMetre {
   }
 
   /** Message quand la ligne sélectionnée ne peut pas porter de métré. */
-  aideSansMetre() { return 'Sélectionnez une ligne qui accepte un métré.'; }
+  aideSansMetre() { return texte('metre.panneau.aide_sans_metre'); }
 
   /** Exécution du script par le moteur : { erreurs, avertissements } (positionnés dans le script). */
   diagnostic() {
@@ -243,14 +241,14 @@ export class PanneauMetre {
       const defaut = d.parametre ? d.defaut?.texte ?? '' : '';
       return d.type === 'C' ? defaut.replace(/^"(.*)"$/s, '$1').replaceAll('""', '"') : defaut;
     };
-    zone.innerHTML = declarations.length ? `<table class="metre-table-variables"><thead><tr><th>Nom</th><th>Type</th><th>Valeur</th></tr></thead><tbody>
+    zone.innerHTML = declarations.length ? `<table class="metre-table-variables"><thead><tr><th>${texteHtml('metre.panneau.colonnes.nom')}</th><th>${texteHtml('metre.panneau.colonnes.type')}</th><th>${texteHtml('metre.panneau.colonnes.valeur')}</th></tr></thead><tbody>
       ${declarations.map((d) => `<tr><td><code>${echapper(d.nom)}</code></td><td>${TYPES[d.type]}</td><td>${d.parametre
-        ? `<input data-variable="${echapper(d.nom)}" data-type="${d.type}" value="${echapper(valeur(d) === '' ? '' : afficher(valeur(d)))}" title="Paramètre : la valeur par défaut est réécrite dans le script">`
-        : `<span title="Calculée par le script">${echapper(afficher(valeur(d)))}</span>`}</td></tr>`).join('')}
-      </tbody></table>` : '<p class="aide">Aucune variable non locale déclarée.</p>';
+        ? `<input data-variable="${echapper(d.nom)}" data-type="${d.type}" value="${echapper(valeur(d) === '' ? '' : afficher(valeur(d)))}" title="${texteHtml('metre.panneau.parametre')}">`
+        : `<span title="${texteHtml('metre.panneau.calculee')}">${echapper(afficher(valeur(d)))}</span>`}</td></tr>`).join('')}
+      </tbody></table>` : `<p class="aide">${texteHtml('metre.panneau.aucune_variable')}</p>`;
     zone.querySelectorAll('[data-variable]').forEach((i) => i.addEventListener('change', () => {
-      const texte = modifierDeclaration(this.metre().mtr_script ?? '', i.dataset.variable, litteral(i.value, i.dataset.type));
-      this.editeur.remplacer(texte);
+      const script = modifierDeclaration(this.metre().mtr_script ?? '', i.dataset.variable, litteral(i.value, i.dataset.type));
+      this.editeur.remplacer(script);
       this.enregistrerScript();
     }));
   }
@@ -265,9 +263,9 @@ export class PanneauMetre {
     clearTimeout(this.minuterie);
     this.minuterie = null;
     const m = this.metre();
-    const texte = this.editeur.valeur;
-    if (!m || this.modeDocument || texte === (m.mtr_script ?? '')) return;
-    this.hote.magasin.modifier((d) => { d.metres.find((x) => x.mtr_id === m.mtr_id).mtr_script = texte; }, 'Script du métré');
+    const script = this.editeur.valeur;
+    if (!m || this.modeDocument || script === (m.mtr_script ?? '')) return;
+    this.hote.magasin.modifier((d) => { d.metres.find((x) => x.mtr_id === m.mtr_id).mtr_script = script; }, texte('metre.panneau.script'));
   }
 
   // ---------------------------------------------------------------- dictionnaire
@@ -295,13 +293,13 @@ export class PanneauMetre {
     const variables = groupes.map((g) => section(`g:${g}`, g, entrees.filter((e) => e.groupe === g).map((e) => `
       <button type="button" data-ref="${echapper(e.valeur)}" title="${echapper(e.libelle)}">
         <code>${echapper(e.valeur)}</code><span>${echapper(afficher(e.detail))}</span></button>`).join(''))).join('')
-      || '<p class="aide">Aucune variable définie avant cette ligne.</p>';
+      || `<p class="aide">${texteHtml('metre.panneau.aucune_avant')}</p>`;
     const script = !this.modeDocument && this.metre();
     const fonctions = Object.values(this.fonctions()).filter((f) => garde(f.signature, f.description));
     const structures = STRUCTURES.filter((s) => garde(s.libelle, s.modele));
-    zone.innerHTML = section('variables', 'Variables et données', `<div class="branches">${variables}</div>`) + (script ? section('fonctions', 'Fonctions',
+    zone.innerHTML = section('variables', texte('metre.panneau.groupes.variables'), `<div class="branches">${variables}</div>`) + (script ? section('fonctions', texte('metre.panneau.groupes.fonctions'),
       fonctions.map((f, i) => `<button type="button" data-fonction="${i}" title="${echapper(f.description)}"><code>${echapper(f.signature)}</code></button>`).join(''))
-      + section('structures', 'Structures', structures.map((s, i) => `<button type="button" data-structure="${i}" title="${echapper(s.modele.replaceAll('${', '').replaceAll('}', ''))}"><span>${echapper(s.libelle)}</span></button>`).join('')) : '');
+      + section('structures', texte('metre.panneau.groupes.structures'), structures.map((s, i) => `<button type="button" data-structure="${i}" title="${echapper(s.modele.replaceAll('${', '').replaceAll('}', ''))}"><span>${echapper(s.libelle)}</span></button>`).join('')) : '');
     zone.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', (e) => {
       e.stopPropagation();
       if (filtre) return; // filtre en cours : tout est déplié, l'état choisi est gardé
@@ -323,7 +321,7 @@ export class PanneauMetre {
     const g = this.grilleVariables;
     if (!g.insererReference(ref, g.courant !== null ? 3 : undefined)) {
       navigator.clipboard?.writeText(ref).catch(() => {});
-      this.message?.(`${ref} copié : sélectionnez une ligne pour l'insérer`);
+      this.message?.(texte('metre.panneau.copie', { ref }));
     }
   }
 
@@ -343,16 +341,16 @@ export class PanneauMetre {
 
   colonnesVariables() {
     return [
-      { cle: 'portee', titre: 'Portée', editeur: 'select', editable: () => true, options: () => PORTEES,
+      { cle: 'portee', titre: texte('metre.panneau.colonnes.portee'), editeur: 'select', editable: () => true, options: () => PORTEES,
         champ: () => 'var_portee', lire: (v) => v.var_portee, valeur: (r) => PORTEES.find((p) => p.valeur === r.item.var_portee)?.libelle },
-      { cle: 'nom', titre: 'Nom', editeur: 'texte', editable: () => true, champ: () => 'var_nom', lire: (v) => v.var_nom,
+      { cle: 'nom', titre: texte('metre.panneau.colonnes.nom'), editeur: 'texte', editable: () => true, champ: () => 'var_nom', lire: (v) => v.var_nom,
         valeur: (r) => `${r.item.var_portee}${r.item.var_nom}` },
-      { cle: 'operation', titre: 'Opération', editeur: 'select', editable: () => true, options: () => OPERATIONS,
+      { cle: 'operation', titre: texte('metre.panneau.colonnes.operation'), editeur: 'select', editable: () => true, options: () => OPERATIONS,
         champ: () => 'var_operation', lire: (v) => v.var_operation, valeur: (r) => (r.item.var_operation === '+=' ? '+=' : '=') },
-      { cle: 'formule', titre: 'Formule', classe: 'col-formule', editeur: 'formule', editable: () => true,
+      { cle: 'formule', titre: texte('metre.panneau.colonnes.formule'), classe: 'col-formule', editeur: 'formule', editable: () => true,
         champ: () => 'var_formule', lire: (v) => v.var_formule, valeur: (r) => r.item.var_formule,
         suggestions: () => this.entreesDictionnaire() },
-      { cle: 'valeur', titre: 'Valeur', classe: 'col-nombre', editable: () => false,
+      { cle: 'valeur', titre: texte('metre.panneau.colonnes.valeur'), classe: 'col-nombre', editable: () => false,
         valeur: (r) => (r.calcule.var_valeur === null || r.calcule.var_valeur === undefined ? '—' : formatLibre(r.calcule.var_valeur)) },
     ];
   }
@@ -372,9 +370,9 @@ export class PanneauMetre {
     return {
       modifier: (id, champ, valeur) => {
         const v = valeur.trim();
-        if (champ === 'var_nom' && !RE_NOM.test(v)) { this.message?.('Nom de variable invalide (lettres, chiffres, _)'); return false; }
-        if (champ === 'var_formule' && !v) { this.message?.('Formule obligatoire'); return false; }
-        m().modifier((d) => { d.variables.find((x) => x.var_id === id)[champ] = v; }, 'Variable');
+        if (champ === 'var_nom' && !RE_NOM.test(v)) { this.message?.(texte('metre.panneau.nom_invalide')); return false; }
+        if (champ === 'var_formule' && !v) { this.message?.(texte('metre.panneau.formule_obligatoire')); return false; }
+        m().modifier((d) => { d.variables.find((x) => x.var_id === id)[champ] = v; }, texte('metre.panneau.annulation.variable'));
         return true;
       },
       inserer: (position, refId, { memeType = false } = {}) => {
@@ -391,7 +389,7 @@ export class PanneauMetre {
           const i = ref ? vars.indexOf(ref) + (position === 'avant' ? 0 : 1) : vars.length;
           vars.splice(i, 0, d.variables.at(-1));
           renumeroter(vars);
-        }, 'Nouvelle variable');
+        }, texte('metre.panneau.annulation.nouvelle'));
         return id;
       },
       deplacer: (ids, cibleId, position) => m().modifier((d) => {
@@ -401,7 +399,7 @@ export class PanneauMetre {
         const i = reste.findIndex((v) => v.var_id === cibleId);
         reste.splice(i < 0 ? reste.length : i + (position === 'avant' ? 0 : 1), 0, ...deplacees);
         renumeroter(reste);
-      }, 'Ordre des variables'),
+      }, texte('metre.panneau.annulation.ordre')),
       decaler: (id, sens) => m().modifier((d) => {
         const vars = liste(d);
         const i = vars.findIndex((v) => v.var_id === id);
@@ -409,11 +407,11 @@ export class PanneauMetre {
         if (i < 0 || j < 0 || j >= vars.length) return;
         [vars[i], vars[j]] = [vars[j], vars[i]];
         renumeroter(vars);
-      }, 'Ordre des variables'),
+      }, texte('metre.panneau.annulation.ordre')),
       supprimer: (ids) => m().modifier((d) => {
         d.variables = d.variables.filter((v) => !ids.includes(v.var_id));
         renumeroter(liste(d));
-      }, 'Suppression de variable'),
+      }, texte('metre.panneau.annulation.suppression')),
       dupliquer: (ids) => {
         for (const id of ids) {
           const source = this.saisie.variables.find((v) => v.var_id === id);
@@ -421,7 +419,7 @@ export class PanneauMetre {
           m().modifier((d) => {
             const v = d.variables.find((x) => x.var_id === nouveau);
             Object.assign(v, { var_portee: source.var_portee, var_operation: source.var_operation, var_formule: source.var_formule });
-          }, 'Dupliquer');
+          }, texte('metre.panneau.annulation.dupliquer'));
         }
       },
       indenter: () => {},
@@ -430,7 +428,7 @@ export class PanneauMetre {
       retablir: () => m().retablir(),
       depotAutorise: (ids, cibleId, position) => position !== 'enfant' && !ids.includes(cibleId),
       classeLigne: (r) => (r.calcule.var_valeur === null || r.calcule.var_valeur === undefined ? 'avertissement' : ''),
-      titreLigne: (r) => (r.calcule.var_valeur === null || r.calcule.var_valeur === undefined ? 'Non calculée : voir les messages du document' : ''),
+      titreLigne: (r) => (r.calcule.var_valeur === null || r.calcule.var_valeur === undefined ? texte('metre.panneau.non_calculee') : ''),
     };
   }
 }

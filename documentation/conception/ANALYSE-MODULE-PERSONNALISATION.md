@@ -722,3 +722,21 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Couleurs** : aucune couleur en dur (classes du thème).
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/calendrier/js/src` vérifiées par
   le test du client).
+
+## 30. Réalisation du lot P3q : module Métré (31/10/2026)
+
+- **Périmètre** : le module (`modules/metre/js/src` : messages du lexeur, de l'analyseur, de l'interpréteur, des fonctions
+  et des portées, message d'une erreur pour l'hôte ; `ui` : panneau de métré, éditeur CodeMirror, dictionnaire,
+  notifications) et la fonction `Conditionnements` du cœur (`client/src/calcul/fonctions-btp.js`, `document_btp.fonctions`).
+- **Textes** : `metre.*` (`script` — dont `types` N / C / B par `textesParCode` —, `fonctions` — descriptions par
+  accesseurs, arguments —, `portees`, `dictionnaire`, `editeur.structures`, `notifications`, `panneau` — dont
+  `erreurs` par `pluriel`, `resultat_html` —). Les jeux partagés comparent les codes d'erreur : les messages changent
+  sans toucher au C#. Restent dans le code : mots-clés et types du langage, signatures des fonctions, modèles des
+  structures, script produit par la conversion des métrés en lignes (`conversion.js`, miroir de `ConversionMetre`),
+  message de `RACINE_NEGATIVE` (déjà par `erreurs.<CODE>`, lot P2).
+- **Icônes** : `metre_erreur`, `metre_avertissement`.
+- **Couleurs** : couleurs du langage (`--code-*`, clair et sombre) et ombre du panneau (`--metre-ombre`) déplacées de
+  `metre.css` vers `personnalisation/theme.css` du module.
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/metre/js/src` et `ui` vérifiées
+  par le test du client) ; panneau de métré affiché dans le navigateur (devis de démonstration : script, variables,
+  dictionnaire, notifications).

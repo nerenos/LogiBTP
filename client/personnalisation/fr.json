@@ -1078,6 +1078,13 @@
         "clic_droit": "Menu de la ligne"
       },
       "raccourcis_titre": "Raccourcis des lignes"
+    },
+    "fonctions": {
+      "conditionnements": {
+        "description": "Nombre de conditionnements entiers (barres, plaques, rouleaux, sacs…) pour couvrir la quantité",
+        "contenance": "Conditionnements, contenance",
+        "contenance_positive": "Conditionnements : contenance positive attendue"
+      }
     }
   },
   "crm_btp": {
