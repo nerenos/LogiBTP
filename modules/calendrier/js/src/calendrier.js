@@ -2,31 +2,17 @@
 // Dates « AAAA-MM-JJ », instants « AAAA-MM-JJTHH:MM » en heure locale (pas de fuseau : le calendrier est celui du
 // chantier ou de l'atelier) ; durées en minutes entières (exactes, sans flottant).
 
-export const REGLES_FERME = {
-  DATE: 'Date unique', ANNUEL: 'Chaque année (jour et mois)', NIEME: 'N-ième jour de la semaine du mois', DERNIER: 'Dernier jour de la semaine du mois',
-  PAQUES: 'Relatif à Pâques', PERIODE: 'Période de fermeture',
-};
-export const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+import { texte, textesParCode } from '@logibtp/socle/dictionnaire';
+
+export const REGLES_FERME = textesParCode('calendrier.regles', ['DATE', 'ANNUEL', 'NIEME', 'DERNIER', 'PAQUES', 'PERIODE']);
+/** Noms des jours, du lundi (1) au dimanche (7), lus dans le dictionnaire (module Personnalisation). */
+export const JOURS_SEMAINE = Object.freeze([1, 2, 3, 4, 5, 6, 7].map((n) => texte(`calendrier.jours.${n}`)));
 export const CYCLE_MAX = 8;
 /** Recherche d'un temps de travail : au-delà, le calendrier est considéré comme vide. */
 export const HORIZON_JOURS = 3660;
 
-export const MESSAGES_CALENDRIER = {
-  CAL_CYCLE: `Cycle de 1 à ${CYCLE_MAX} semaines`,
-  CAL_REFERENCE: 'Date de référence obligatoire pour un cycle de plusieurs semaines',
-  PLG_JOUR: 'Jour de la semaine de 1 (lundi) à 7 (dimanche)',
-  PLG_SEMAINE: 'Semaine du cycle inexistante',
-  PLG_HEURES: 'Plage horaire : début avant la fin, entre 0 h et 24 h',
-  PLG_PERIODE: 'Période de la plage : fin avant le début',
-  PLG_CHEVAUCHEMENT: 'Plages horaires qui se chevauchent',
-  FER_REGLE: 'Règle de jour fermé inconnue',
-  FER_DATE: 'Date obligatoire',
-  FER_MOIS: 'Mois de 1 à 12',
-  FER_JOUR: 'Jour invalide',
-  FER_RANG: 'Rang de 1 à 5',
-  FER_PERIODE: 'Période : début et fin obligatoires, fin après le début',
-  CALENDRIER_VIDE: 'Aucun temps de travail dans le calendrier',
-};
+export const MESSAGES_CALENDRIER = Object.freeze(Object.defineProperties({}, Object.fromEntries(['CAL_CYCLE', 'CAL_REFERENCE', 'PLG_JOUR', 'PLG_SEMAINE', 'PLG_HEURES', 'PLG_PERIODE', 'PLG_CHEVAUCHEMENT', 'FER_REGLE', 'FER_DATE', 'FER_MOIS', 'FER_JOUR', 'FER_RANG', 'FER_PERIODE', 'CALENDRIER_VIDE']
+  .map((c) => [c, { enumerable: true, get: () => texte(`calendrier.erreurs_regles.${c}`, { max: CYCLE_MAX }) }]))));
 
 // ---------------------------------------------------------------- dates
 

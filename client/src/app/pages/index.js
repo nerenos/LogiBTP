@@ -125,7 +125,7 @@ export const ROUTES = [
   { nom: 'mail-nouveau', chemin: '/mail/nouveau', page: PageRedactionMail, titre: texte('mail_btp.routes.nouveau') },
   { nom: 'mail-message', chemin: '/mail/message/:id', page: PageMessageMail, titre: texte('mail_btp.routes.message') },
   { nom: 'parametres-connexions', chemin: '/parametres/connexions', page: PageParametresConnexions, titre: 'Connexions externes' },
-  { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: 'Calendriers de travail' },
+  { nom: 'parametres-calendriers', chemin: '/parametres/calendriers', page: PageParametresCalendriers, titre: texte('calendrier_btp.routes.calendriers') },
   { nom: 'habilitations', chemin: '/ressources/habilitations', page: PageHabilitations, titre: 'Habilitations, entretiens et visites à surveiller' },
   { nom: 'parametres-comptes', chemin: '/parametres/comptes', page: PageParametresComptes, titre: 'Comptes utilisateurs' },
   { nom: 'parametres-installation', chemin: '/parametres/installation', page: PageParametresInstallation, titre: 'Installation' },

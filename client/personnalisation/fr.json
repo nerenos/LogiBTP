@@ -3429,5 +3429,106 @@
       "herite_de": "Hérité : {{origine}}",
       "aucun_compte": "Aucun compte"
     }
+  },
+  "calendrier_btp": {
+    "zones": {
+      "NATIONAL": "France (nationaux)",
+      "ALSACE_MOSELLE": "Alsace-Moselle",
+      "MARTINIQUE": "Martinique",
+      "GUADELOUPE": "Guadeloupe",
+      "GUYANE": "Guyane",
+      "REUNION": "La Réunion",
+      "MAYOTTE": "Mayotte",
+      "SAINT_MARTIN": "Saint-Martin",
+      "SAINT_BARTHELEMY": "Saint-Barthélemy"
+    },
+    "fermes": {
+      "jours_un": "{{nombre}} jour",
+      "jours_autre": "{{nombre}} jours",
+      "saisie": "Saisie",
+      "zone": "Zone",
+      "regle": "Règle",
+      "jour_ferme": "Jour fermé",
+      "periode": "Période de fermeture",
+      "dates": "Dates de l'année",
+      "pont": "Pont",
+      "fermeture": "Fermeture",
+      "sans_libelle": "(sans libellé)",
+      "libelle_obligatoire": "libellé obligatoire",
+      "enregistres": "Jours fermés enregistrés",
+      "c_jour": "jour",
+      "c_mois": "mois",
+      "c_rang": "rang",
+      "c_jour_semaine": "jour (1 = lundi)",
+      "c_decalage": "décalage",
+      "c_jours": "jours",
+      "c_du": "du",
+      "c_au": "au",
+      "societe": "Jours fériés et fermetures de la société",
+      "societe_aide": "Liste française proposée : cochez les jours fériés de vos établissements (nationaux, Alsace-Moselle, outre-mer) ; ajoutez ponts et fermetures. Règles : date unique, chaque année, n-ième ou dernier jour de la semaine d'un mois, relatif à Pâques, période."
+    },
+    "resume": {
+      "annuel": "{{jour}}/{{mois}}",
+      "nieme_premier": "1er {{jour}} du mois {{mois}}",
+      "nieme": "{{rang}}e {{jour}} du mois {{mois}}",
+      "dernier": "dernier {{jour}} du mois {{mois}}",
+      "paques": "Pâques {{signe}} {{jours}} j",
+      "periode": "du {{du}} au {{au}}"
+    },
+    "routes": {
+      "calendriers": "Calendriers de travail"
+    },
+    "liste": {
+      "titre": "Calendriers",
+      "aide": "Un calendrier s'affecte à un service, et se surcharge sur la fiche d'un salarié ou d'un matériel ; sans calendrier, le calendrier par défaut s'applique.",
+      "cycle": "Cycle",
+      "heures": "Heures par semaine",
+      "defaut": "Défaut",
+      "actif": "Actif",
+      "utilise": "Utilisé",
+      "semaines": "{{nombre}} semaines",
+      "hebdomadaire": "hebdomadaire",
+      "modifier": "Modifier…",
+      "voir": "Voir…",
+      "calendrier": "Calendrier"
+    },
+    "edition": {
+      "titre": "Calendrier {{code}}",
+      "nouveau": "Nouveau calendrier",
+      "cycle": "Cycle (semaines)",
+      "reference": "Semaine 1 du cycle : celle du",
+      "par_defaut": "Par défaut",
+      "aide": "Plages par jour, par exemple « 8:00-12:00 13:00-17:00 » ; vide : jour non travaillé.",
+      "jour": "Jour",
+      "semaine": "Semaine {{numero}}",
+      "plages": "Plages",
+      "datees": "Plages datées",
+      "datees_aide": "Pendant leur période, elles remplacent les plages permanentes du même jour (horaires d'été…).",
+      "du": "Du",
+      "au": "Au",
+      "semaine_col": "Semaine",
+      "enregistrer": "Enregistrer le calendrier",
+      "apercu": "Aperçu (deux semaines)",
+      "chargement": "Chargement…",
+      "enregistrer_dabord": "Enregistrez le calendrier pour voir ses journées.",
+      "illisible": "{{jour}} : saisie illisible (ex. 8:00-12:00 13:00-17:00)",
+      "datees_illisible": "Plages datées : saisie illisible",
+      "code_libelle": "Code et libellé obligatoires",
+      "enregistre": "Calendrier enregistré",
+      "confirmer_suppression": "Supprimer le calendrier {{code}} ?",
+      "abandonner": "Abandonner les modifications du calendrier ?",
+      "date": "Date",
+      "duree": "Durée"
+    },
+    "services": {
+      "titre": "Services",
+      "aide": "Calendrier de chaque service (vide : par défaut) et ses fermetures propres.",
+      "service": "Service",
+      "fermetures": "Fermetures…",
+      "enregistrer": "Enregistrer les calendriers des services",
+      "titre_fermetures": "Fermetures du service {{service}}",
+      "aide_fermetures": "S'ajoutent aux jours fermés de la société pour les ressources de ce service.",
+      "enregistres": "Calendriers des services enregistrés"
+    }
   }
 }

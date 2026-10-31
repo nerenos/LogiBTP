@@ -234,5 +234,9 @@
   "comptabilite_btp_deplie": "▾",
   "comptabilite_btp_replie": "▸",
   "comptabilite_btp_telecharger": "⬇",
-  "comptabilite_btp_annuler": "↩"
+  "comptabilite_btp_annuler": "↩",
+  "calendrier_btp_calendrier": "📅",
+  "calendrier_btp_defaut": "★",
+  "calendrier_btp_actif": "✔",
+  "calendrier_btp_ferme": "🚫"
 }

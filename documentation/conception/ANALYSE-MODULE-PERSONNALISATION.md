@@ -710,3 +710,15 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/comptabilite/js/src` vérifiées
   par le test du client) ; affichage contrôlé dans le navigateur (API simulée : plan avec saisie d'un compte, tiers,
   paramètres complets, ventilation, export avec aperçu et lots).
+
+## 29. Réalisation du lot P3p : module Calendrier (31/10/2026)
+
+- **Périmètre** : le module (`modules/calendrier/js/src/calendrier.js` : règles des jours fériés, jours de la semaine,
+  messages des contrôles ; dépendance au socle ajoutée) et la page du cœur `parametres-calendriers.js` (liste des
+  calendriers, édition des plages et du cycle, jours fériés et fermetures par portée, services), titre de la route.
+- **Textes** : `calendrier.*` du module (`regles`, `jours`, `erreurs_regles` ; message du cycle à variable `{{max}}`) ;
+  `calendrier_btp.*` du cœur (`zones`, `resume`, `liste`, `edition`, `fermes`, `services`, `routes`).
+- **Icônes** : `calendrier_btp_*` (calendrier, par défaut, actif, fermé) ; communes du socle.
+- **Couleurs** : aucune couleur en dur (classes du thème).
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/calendrier/js/src` vérifiées par
+  le test du client).
