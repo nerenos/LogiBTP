@@ -1,3 +1,4 @@
+import { texte, texteHtml, pairesParCode, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { TYPE_FICHE, MODULE_FACULTATIF } from '../codes.js';
 import { ajouterJours, aujourdhui } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
@@ -10,30 +11,27 @@ import { rendreCatalogueEtats, rendreEtatsTypes } from '../execution/parametres-
 // Module Exécution, lot 2 : synthèse des chantiers (un état par service), vue détaillée d'un chantier (parcours, états,
 // ordres par service) et modèles de parcours. États calculés par le serveur (ReglesEtats.cs ↔ etats.js).
 
-const TYPES_ORDRE = [
-  ['E_OE', "Ordre d'exécution"], ['E_BE', "Bureau d'études"], ['E_BM', 'Méthodes'], ['E_OF', 'Ordre de fabrication'],
-  ['E_CO', 'Colisage'], ['E_LI', 'Livraison'], ['E_PO', 'Ordre de pose'], ['E_SAV', 'Intervention SAV'], ['E_OST', 'Sous-traitance'],
-  ['E_DAP', "Demande d'approvisionnement"], ['E_DAC', "Demande d'achat"], ['E_ENT', 'Entretien du matériel'],
-].map(([valeur, libelle]) => ({ valeur, libelle, detail: valeur }));
+const TYPES_ORDRE = pairesParCode('execution_btp.types_ordre_court', ['E_OE', 'E_BE', 'E_BM', 'E_OF', 'E_CO', 'E_LI', 'E_PO', 'E_SAV', 'E_OST', 'E_DAP', 'E_DAC', 'E_ENT'])
+  .map(([valeur, libelle]) => ({ valeur, libelle, detail: valeur }));
 
 /** Pastille d'état d'un service (manuel : souligné ; écart avec l'automatique signalé). */
 function pastille(e) {
-  const d = ETATS_SERVICE[e.etat] ?? { icone: '?', libelle: e.etat };
-  const titre = `${d.libelle}${e.manuel ? ` (imposé ; automatique : ${ETATS_SERVICE[e.automatique]?.libelle ?? e.automatique})` : ''}`;
-  return `<span class="pastille-etat etat-${e.etat.toLowerCase()}${e.manuel ? ' manuel' : ''}${e.ecart ? ' ecart' : ''}" title="${echapper(titre)}">${d.icone}${e.ecart ? '❗' : ''}</span>`;
+  const d = ETATS_SERVICE[e.etat] ?? { icone: icone('execution_btp_inconnu'), libelle: e.etat };
+  const titre = `${d.libelle}${e.manuel ? ` ${texte('execution_btp.synthese.impose', { etat: ETATS_SERVICE[e.automatique]?.libelle ?? e.automatique })}` : ''}`;
+  return `<span class="pastille-etat etat-${e.etat.toLowerCase()}${e.manuel ? ' manuel' : ''}${e.ecart ? ' ecart' : ''}" title="${echapper(titre)}">${echapper(d.icone)}${e.ecart ? iconeHtml('execution_btp_ecart') : ''}</span>`;
 }
 
 /** Menu contextuel d'un état : imposer un état ou revenir à l'automatique. */
 function menuEtat(ev, e, imposer) {
   ouvrirMenuContextuel(ev, [
-    ...Object.entries(ETATS_SERVICE).filter(([c]) => c !== 'SANS_OBJET').map(([c, d]) => ({ libelle: `${d.icone} Imposer « ${d.libelle} »`, action: () => imposer(c) })),
+    ...Object.entries(ETATS_SERVICE).filter(([c]) => c !== 'SANS_OBJET').map(([c, d]) => ({ libelle: `${d.icone} ${texte('execution_btp.synthese.imposer', { etat: d.libelle })}`, action: () => imposer(c) })),
     { separateur: true },
-    { libelle: '⟲ État automatique', actif: Boolean(e.manuel), action: () => imposer(null) },
+    { libelle: `${icone('execution_btp_automatique')} ${texte('execution_btp.synthese.automatique')}`, actif: Boolean(e.manuel), action: () => imposer(null) },
   ], { aide: false });
 }
 
 async function demanderEtat(app, type, id, srv, etat) {
-  const motif = etat ? await saisir('Motif (facultatif) :') ?? '' : null;
+  const motif = etat ? await saisir(texte('execution_btp.synthese.motif')) ?? '' : null;
   return api.execution.imposerEtat(type, id, srv, { etat, motif: motif || null });
 }
 
@@ -51,14 +49,14 @@ export const lireEtats = (texte) => String(texte ?? '').split(/[,;\s]+(?=[A-Za-z
 function editerEtapes(zone, etapes, services, { lecture = false, change = () => {} } = {}) {
   const rendre = () => {
     const erreurs = controlerParcours(etapes.map((e) => ({ code: e.code, srv_id: e.srv_id, amonts: e.amonts })));
-    zone.innerHTML = `<table><thead><tr><th>Code</th><th>Libellé</th><th>Service</th><th>Type d'ordre</th><th>Amont (codes)</th>
-      <th title="États retenus pour les ordres de cette étape, avec leur durée (ETUDE:5, VISA) ; vide : ceux du type d'ordre">États de l'ordre</th><th></th></tr></thead><tbody>
+    zone.innerHTML = `<table><thead><tr><th>${texteHtml('commun.code')}</th><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('execution_btp.catalogue.service')}</th><th>${texteHtml('execution_btp.types.type')}</th><th>${texteHtml('execution_btp.parcours.amont')}</th>
+      <th title="${texteHtml('execution_btp.parcours.etats_titre')}">${texteHtml('execution_btp.parcours.etats')}</th><th></th></tr></thead><tbody>
       ${etapes.map((e, i) => `<tr data-i="${i}"><td><input data-code size="9" value="${echapper(e.code ?? '')}" ${lecture ? 'readonly' : ''}></td>
         <td><input data-libelle size="24" value="${echapper(e.libelle ?? '')}" ${lecture ? 'readonly' : ''}></td><td data-service></td><td data-type></td>
         <td><input data-amonts size="16" value="${echapper((e.amonts ?? []).join(', '))}" ${lecture ? 'readonly' : ''}></td>
-        <td><input data-etats size="22" placeholder="ceux du type" value="${echapper(texteEtats(e.etats))}" ${lecture ? 'readonly' : ''}></td>
-        <td>${lecture ? '' : `<button type="button" data-monter title="Monter" ${i ? '' : 'disabled'}>↑</button><button type="button" data-retirer title="Retirer">✕</button>`}</td></tr>`).join('')}</tbody></table>
-      ${lecture ? '' : '<p><button type="button" data-ajouter>＋ Étape</button></p>'}
+        <td><input data-etats size="22" placeholder="${texteHtml('execution_btp.parcours.etats_vide')}" value="${echapper(texteEtats(e.etats))}" ${lecture ? 'readonly' : ''}></td>
+        <td>${lecture ? '' : `<button type="button" data-monter title="${texteHtml('execution_btp.types.monter')}" ${i ? '' : 'disabled'}>${iconeHtml('execution_btp_monter')}</button><button type="button" data-retirer title="${texteHtml('commun.retirer')}">${iconeHtml('retirer')}</button>`}</td></tr>`).join('')}</tbody></table>
+      ${lecture ? '' : `<p><button type="button" data-ajouter>${iconeHtml('ajouter')} ${texteHtml('execution_btp.parcours.etape')}</button></p>`}
       ${erreurs.length ? `<p class="erreur">${erreurs.map((c) => echapper(MESSAGES_EXECUTION[c] ?? c)).join(' · ')}</p>` : ''}`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const e = etapes[Number(tr.dataset.i)];
@@ -87,11 +85,11 @@ function editerEtapes(zone, etapes, services, { lecture = false, change = () => 
   return () => controlerParcours(etapes.map((e) => ({ code: e.code, srv_id: e.srv_id, amonts: e.amonts })));
 }
 
-const optionsServices = (services) => services.filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.parent_id ? `↳ ${s.libelle}` : s.libelle, detail: s.code }));
+const optionsServices = (services) => services.filter((s) => s.actif).map((s) => ({ valeur: s.id, libelle: s.parent_id ? `${icone('sous_niveau')} ${s.libelle}` : s.libelle, detail: s.code }));
 
 /** Synthèse : un chantier par ligne, une colonne par service présent ; filtres recherche, service, état. */
 export class PageSyntheseExecution extends PageBase {
-  icone = '🧭';
+  icone = icone('execution_btp_synthese');
 
   urlCourante() {
     const p = new URLSearchParams(Object.entries({ recherche: this.filtre.recherche, service: this.filtre.service, etat: this.filtre.etat }).filter(([, v]) => v));
@@ -99,16 +97,16 @@ export class PageSyntheseExecution extends PageBase {
   }
 
   async ouvrir() {
-    this.titre = "Synthèse de l'exécution";
+    this.titre = texte('execution_btp.routes.synthese');
     this.filtre = { recherche: this.requete.recherche ?? '', service: this.requete.service ?? '', etat: this.requete.etat ?? '' };
-    this.conteneur.innerHTML = `<div class="page-parametres page-execution"><h1 class="page-titre">🧭 Synthèse de l'exécution</h1>
-      <p class="ligne"><input type="search" data-recherche placeholder="Chantier, client…" value="${echapper(this.filtre.recherche)}">
-        <span data-service></span> <span data-etat></span> <button type="button" data-actualiser>⟳</button></p>
-      <p class="aide">Un état par service, calculé d'après le parcours et les ordres du chantier ; clic droit sur un état pour l'imposer. ❗ : état imposé différent de l'état calculé.</p>
+    this.conteneur.innerHTML = `<div class="page-parametres page-execution"><h1 class="page-titre">${iconeHtml('execution_btp_synthese')} ${texteHtml('execution_btp.routes.synthese')}</h1>
+      <p class="ligne"><input type="search" data-recherche placeholder="${texteHtml('execution_btp.synthese.recherche')}" value="${echapper(this.filtre.recherche)}">
+        <span data-service></span> <span data-etat></span> <button type="button" data-actualiser title="${texteHtml('commun.actualiser')}">${iconeHtml('execution_btp_actualiser')}</button></p>
+      <p class="aide">${texteHtml('execution_btp.synthese.aide', { ecart: icone('execution_btp_ecart') })}</p>
       <div data-liste></div></div>`;
     const services = await api.services().catch(() => []);
-    const srv = creerCombo({ options: optionsServices(services), valeur: this.filtre.service, vide: true, titre: 'Service' });
-    const etat = creerCombo({ options: Object.entries(ETATS_SERVICE).filter(([c]) => c !== 'SANS_OBJET').map(([valeur, d]) => ({ valeur, libelle: `${d.icone} ${d.libelle}` })), valeur: this.filtre.etat, vide: true, titre: 'État' });
+    const srv = creerCombo({ options: optionsServices(services), valeur: this.filtre.service, vide: true, titre: texte('execution_btp.catalogue.service') });
+    const etat = creerCombo({ options: Object.entries(ETATS_SERVICE).filter(([c]) => c !== 'SANS_OBJET').map(([valeur, d]) => ({ valeur, libelle: `${d.icone} ${d.libelle}` })), valeur: this.filtre.etat, vide: true, titre: texte('execution_btp.catalogue.etat') });
     this.conteneur.querySelector('[data-service]').append(srv);
     this.conteneur.querySelector('[data-etat]').append(etat);
     const relire = () => { this.app.routeur.remplacerUrl(this.urlCourante()); this.#charger(); };
@@ -125,13 +123,13 @@ export class PageSyntheseExecution extends PageBase {
     const zone = this.conteneur.querySelector('[data-liste]');
     let s;
     try { s = await api.execution.synthese(this.filtre); } catch (e) { this.app.erreur(e); return; }
-    if (!s.lignes.length) { zone.innerHTML = '<p class="aide">Aucun chantier suivi : lancez un ordre d\'exécution depuis la fiche d\'un marché ou attribuez un parcours à un chantier.</p>'; return; }
-    zone.innerHTML = `<table class="pleine-largeur synthese-execution"><thead><tr><th>Chantier</th><th>Client</th><th>Conducteur</th><th>Fin prévue</th>
-        ${s.services.map((x) => `<th title="${echapper(x.libelle)}">${echapper(x.code)}</th>`).join('')}<th>Ordres</th><th>Dernier message</th></tr></thead><tbody>
+    if (!s.lignes.length) { zone.innerHTML = `<p class="aide">${texteHtml('execution_btp.synthese.aucun')}</p>`; return; }
+    zone.innerHTML = `<table class="pleine-largeur synthese-execution"><thead><tr><th>${texteHtml('execution_btp.synthese.chantier')}</th><th>${texteHtml('execution_btp.synthese.client')}</th><th>${texteHtml('execution_btp.synthese.conducteur')}</th><th>${texteHtml('execution_btp.panneau.fin')}</th>
+        ${s.services.map((x) => `<th title="${echapper(x.libelle)}">${echapper(x.code)}</th>`).join('')}<th>${texteHtml('execution_btp.synthese.ordres')}</th><th>${texteHtml('execution_btp.synthese.message')}</th></tr></thead><tbody>
       ${s.lignes.map((l, i) => `<tr data-i="${i}"><td><a href="/execution/chantier/${encodeURIComponent(l.element.id)}">${echapper(l.element.code)}</a> ${echapper(l.element.libelle)}</td>
         <td>${echapper(l.element.client ?? '')}</td><td>${echapper(l.element.responsable ?? '')}</td><td>${formatDate(l.element.fin_prevue)}</td>
         ${s.services.map((x) => { const e = l.etats.find((y) => y.srv_id === x.id); return `<td class="centre" data-srv="${x.id}">${e && e.etat !== 'SANS_OBJET' ? pastille(e) : ''}</td>`; }).join('')}
-        <td>${l.nb_ordres}${l.bloques ? ` · <span title="Bloqués">⛔ ${l.bloques}</span>` : ''}${l.en_retard ? ` · <span title="En retard">⏰ ${l.en_retard}</span>` : ''}</td>
+        <td>${l.nb_ordres}${l.bloques ? ` · <span title="${texteHtml('execution_btp.synthese.bloques')}">${iconeHtml('execution_btp_bloque')} ${l.bloques}</span>` : ''}${l.en_retard ? ` · <span title="${texteHtml('execution_btp.synthese.en_retard')}">${iconeHtml('execution_btp_retard')} ${l.en_retard}</span>` : ''}</td>
         <td class="aide">${echapper(l.element.dernier_message ?? '')}</td></tr>`).join('')}</tbody></table>`;
     zone.querySelectorAll('tr[data-i]').forEach((tr) => {
       const l = s.lignes[Number(tr.dataset.i)];
@@ -148,7 +146,7 @@ export class PageSyntheseExecution extends PageBase {
 
 /** Vue détaillée d'un chantier : parcours (modèle ou étapes propres), états par service, ordres regroupés par service. */
 export class PageExecutionChantier extends PageBase {
-  icone = '🧭';
+  icone = icone('execution_btp_synthese');
   #modifie = () => false;
 
   get modifiee() { return this.#modifie(); }
@@ -156,7 +154,7 @@ export class PageExecutionChantier extends PageBase {
   urlCourante() { return `/execution/chantier/${encodeURIComponent(this.params.id)}`; }
 
   async ouvrir() {
-    this.titre = 'Exécution du chantier';
+    this.titre = texte('execution_btp.routes.chantier');
     this.conteneur.innerHTML = '<div class="page-parametres page-execution" data-corps></div>';
     const [modeles, d] = await Promise.all([api.execution.modeles(), api.execution.detail(TYPE_FICHE.CHANTIER, this.params.id)]);
     this.modeles = modeles;
@@ -166,28 +164,28 @@ export class PageExecutionChantier extends PageBase {
   #rendre(d) {
     const corps = this.conteneur.querySelector('[data-corps]');
     const el = d.element;
-    this.titre = el ? `Exécution ${el.code}` : 'Exécution du chantier';
+    this.titre = el ? texte('execution_btp.chantier.titre', { code: el.code }) : texte('execution_btp.routes.chantier');
     const services = new Map(d.services.map((s) => [s.id, s]));
     const etapes = d.etapes.map((e) => ({ ...e, amonts: [...(e.amonts ?? [])] }));
     let modifie = false;
-    corps.innerHTML = `<h1 class="page-titre">🧭 ${el ? `<a href="${echapper(el.url)}">${echapper(el.code)}</a> ${echapper(el.libelle)}` : 'Chantier introuvable'}</h1>
-      ${el ? `<p class="aide">${echapper(el.client ?? '')}${el.responsable ? ` · conducteur : ${echapper(el.responsable)}` : ''}${el.fin_prevue ? ` · fin prévue : ${formatDate(el.fin_prevue)}` : ''}</p>` : ''}
-      <h2>États des services</h2><div data-etats></div>
-      <h2>Parcours</h2><p class="ligne">Modèle : <span data-modele></span> <button type="button" data-appliquer>Appliquer le modèle</button>
-        <button type="button" data-enregistrer disabled>Enregistrer le parcours</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>Retirer le parcours</button>
-        ${this.app.moduleActif(MODULE_FACULTATIF.PLANNING) && etapes.length ? '<button type="button" data-theorique title="Une tâche par étape, heures budget du service, enchaînées par des dépendances">📅 Planning théorique</button>' : ''}</p>
+    corps.innerHTML = `<h1 class="page-titre">${iconeHtml('execution_btp_synthese')} ${el ? `<a href="${echapper(el.url)}">${echapper(el.code)}</a> ${echapper(el.libelle)}` : texteHtml('execution_btp.chantier.introuvable')}</h1>
+      ${el ? `<p class="aide">${echapper(el.client ?? '')}${el.responsable ? ` · ${texteHtml('execution_btp.chantier.conducteur', { nom: el.responsable })}` : ''}${el.fin_prevue ? ` · ${texteHtml('execution_btp.chantier.fin_prevue', { date: formatDate(el.fin_prevue) })}` : ''}</p>` : ''}
+      <h2>${texteHtml('execution_btp.chantier.etats')}</h2><div data-etats></div>
+      <h2>${texteHtml('execution_btp.chantier.parcours')}</h2><p class="ligne">${texteHtml('execution_btp.chantier.modele')} <span data-modele></span> <button type="button" data-appliquer>${texteHtml('execution_btp.chantier.appliquer')}</button>
+        <button type="button" data-enregistrer disabled>${texteHtml('execution_btp.chantier.enregistrer')}</button> <button type="button" data-retirer-parcours ${etapes.length ? '' : 'disabled'}>${texteHtml('execution_btp.chantier.retirer')}</button>
+        ${this.app.moduleActif(MODULE_FACULTATIF.PLANNING) && etapes.length ? `<button type="button" data-theorique title="${texteHtml('execution_btp.chantier.theorique_titre')}">${iconeHtml('execution_btp_planifier')} ${texteHtml('execution_btp.chantier.theorique')}</button>` : ''}</p>
       <div data-etapes></div>
-      <h2>Ordres</h2><div data-ordres></div>
-      <p><a href="/execution/synthese">← Synthèse</a> · <a href="/liste/ordres?vue=1000&chantier=${encodeURIComponent(el?.code ?? '')}">Liste des ordres du chantier</a></p>`;
+      <h2>${texteHtml('execution_btp.synthese.ordres')}</h2><div data-ordres></div>
+      <p><a href="/execution/synthese">${iconeHtml('precedent')} ${texteHtml('execution_btp.chantier.synthese')}</a> · <a href="/liste/ordres?vue=1000&chantier=${encodeURIComponent(el?.code ?? '')}">${texteHtml('execution_btp.chantier.liste')}</a></p>`;
     // États
     const zEtats = corps.querySelector('[data-etats]');
     const visibles = d.etats.filter((e) => e.etat !== 'SANS_OBJET');
     zEtats.innerHTML = visibles.length ? `<table><tbody>${visibles.map((e) => {
       const m = d.manuels.find((x) => x.srv_id === e.srv_id);
-      return `<tr data-srv="${e.srv_id}"><td>${echapper(services.get(e.srv_id)?.libelle ?? `Service ${e.srv_id}`)}</td><td>${pastille(e)} ${echapper(ETATS_SERVICE[e.etat]?.libelle ?? e.etat)}</td>
-        <td class="aide">${m ? `imposé par ${echapper(m.par ?? '')} le ${formatDate(m.le)}${m.motif ? ` : ${echapper(m.motif)}` : ''}` : ''}</td>
-        <td><button type="button" data-imposer title="Imposer un état ou revenir à l'automatique">…</button></td></tr>`;
-    }).join('')}</tbody></table>` : '<p class="aide">Aucun service concerné : attribuez un parcours ou créez des ordres.</p>';
+      return `<tr data-srv="${e.srv_id}"><td>${echapper(services.get(e.srv_id)?.libelle ?? texte('execution_btp.chantier.service', { id: e.srv_id }))}</td><td>${pastille(e)} ${echapper(ETATS_SERVICE[e.etat]?.libelle ?? e.etat)}</td>
+        <td class="aide">${m ? `${texteHtml('execution_btp.chantier.impose_par', { par: m.par ?? '', date: formatDate(m.le) })}${m.motif ? ` : ${echapper(m.motif)}` : ''}` : ''}</td>
+        <td><button type="button" data-imposer title="${texteHtml('execution_btp.chantier.imposer')}">…</button></td></tr>`;
+    }).join('')}</tbody></table>` : `<p class="aide">${texteHtml('execution_btp.chantier.aucun_service')}</p>`;
     zEtats.querySelectorAll('tr[data-srv]').forEach((tr) => {
       const e = d.etats.find((x) => x.srv_id === Number(tr.dataset.srv));
       const ouvrirMenu = (ev) => menuEtat(ev, e, async (etat) => {
@@ -207,20 +205,20 @@ export class PageExecutionChantier extends PageBase {
     };
     corps.querySelector('[data-appliquer]').addEventListener('click', async () => {
       if (!modele.valeurCombo) return;
-      if (etapes.length && !await confirmer('Remplacer les étapes du parcours par celles du modèle ?')) return;
+      if (etapes.length && !await confirmer(texte('execution_btp.chantier.remplacer'))) return;
       enregistrer({ pam_id: Number(modele.valeurCombo) });
     });
     btnEnr.addEventListener('click', () => {
-      if (controler().length) { this.app.erreur(new Error('Parcours incomplet : voir les contrôles sous le tableau.')); return; }
+      if (controler().length) { this.app.erreur(new Error(texte('execution_btp.chantier.incomplet'))); return; }
       enregistrer({ pam_id: d.modele ?? null, etapes });
     });
-    corps.querySelector('[data-retirer-parcours]').addEventListener('click', async () => { if (await confirmer('Retirer le parcours de ce chantier ?')) enregistrer({ etapes: [] }); });
+    corps.querySelector('[data-retirer-parcours]').addEventListener('click', async () => { if (await confirmer(texte('execution_btp.chantier.confirmer_retrait'))) enregistrer({ etapes: [] }); });
     corps.querySelector('[data-theorique]')?.addEventListener('click', async () => {
-      const debut = await saisir('Début du planning théorique (AAAA-MM-JJ) :', ajouterJours(aujourdhui(), 1));
+      const debut = await saisir(texte('execution_btp.chantier.debut'), ajouterJours(aujourdhui(), 1));
       if (!debut) return;
       try {
         const r = await api.liaisons.planningTheorique(this.params.id, `${debut}T08:00`);
-        this.app.message(`${r.taches.length} tâche(s) créée(s) au planning`, 'succes');
+        this.app.message(pluriel('execution_btp.planning.taches_crees', r.taches.length), 'succes');
         this.app.naviguer(`/planning?vue=CHANTIERS_GANTT&du=${debut}`);
       } catch (e) { this.app.erreur(e); }
     });
@@ -231,28 +229,28 @@ export class PageExecutionChantier extends PageBase {
       if (!groupes.has(k)) groupes.set(k, []);
       groupes.get(k).push(o);
     }
-    corps.querySelector('[data-ordres]').innerHTML = d.ordres.length ? [...groupes].map(([k, l]) => `<h3>${echapper(services.get(k)?.libelle ?? 'Sans service')}</h3>
-      <table><thead><tr><th>Numéro</th><th>Type</th><th>Objet</th><th>Statut</th><th>État</th><th>Fin prévue</th></tr></thead><tbody>
+    corps.querySelector('[data-ordres]').innerHTML = d.ordres.length ? [...groupes].map(([k, l]) => `<h3>${echapper(services.get(k)?.libelle ?? texte('execution_btp.chantier.sans_service'))}</h3>
+      <table><thead><tr><th>${texteHtml('execution_btp.chantier.numero')}</th><th>${texteHtml('execution_btp.chantier.type')}</th><th>${texteHtml('execution_btp.chantier.objet')}</th><th>${texteHtml('execution_btp.chantier.statut')}</th><th>${texteHtml('execution_btp.catalogue.etat')}</th><th>${texteHtml('execution_btp.panneau.fin')}</th></tr></thead><tbody>
       ${l.map((o) => `<tr${o.en_retard ? ' class="en-retard"' : ''}><td><a href="${echapper(o.url)}">${echapper(o.numero ?? `#${o.ent_id}`)}</a></td><td>${echapper(o.type_libelle ?? o.type_ordre)}</td>
         <td>${echapper(o.objet ?? '')}</td><td>${echapper(o.statut_libelle ?? o.statut)}</td>
-        <td>${echapper(o.etat ?? '')}${o.motif ? ` <span class="aide">(${echapper(o.motif)})</span>` : ''}</td><td>${formatDate(o.fin_prevue)}${o.en_retard ? ' ⏰' : ''}</td></tr>`).join('')}</tbody></table>`).join('')
-      : '<p class="aide">Aucun ordre.</p>';
+        <td>${echapper(o.etat ?? '')}${o.motif ? ` <span class="aide">(${echapper(o.motif)})</span>` : ''}</td><td>${formatDate(o.fin_prevue)}${o.en_retard ? ` ${iconeHtml('execution_btp_retard')}` : ''}</td></tr>`).join('')}</tbody></table>`).join('')
+      : `<p class="aide">${texteHtml('execution_btp.chantier.aucun_ordre')}</p>`;
   }
 }
 
 /** Modèles de parcours (paramétrage, administrateur) : étapes, services, types d'ordre, dépendances. */
 export class PageParametresExecution extends PageBase {
-  icone = '🧭';
+  icone = icone('execution_btp_synthese');
   #modifie = () => false;
 
   get modifiee() { return this.#modifie(); }
 
   async ouvrir() {
-    this.titre = 'Modèles de parcours';
-    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">🧭 Modèles de parcours (exécution)</h1>
-      <p class="aide">Un parcours enchaîne les services d'un chantier (études, fabrication, livraison, pose…) ; une étape démarre quand ses étapes amont sont terminées.</p><div data-corps></div>
-      <h2>Catalogue des états</h2><div data-catalogue></div>
-      <h2>États des types d'ordres</h2><div data-types></div></div>`;
+    this.titre = texte('execution_btp.routes.parametres');
+    this.conteneur.innerHTML = `<div class="page-parametres"><h1 class="page-titre">${iconeHtml('execution_btp_synthese')} ${texteHtml('execution_btp.modeles.titre')}</h1>
+      <p class="aide">${texteHtml('execution_btp.modeles.aide')}</p><div data-corps></div>
+      <h2>${texteHtml('execution_btp.modeles.catalogue')}</h2><div data-catalogue></div>
+      <h2>${texteHtml('execution_btp.modeles.types')}</h2><div data-types></div></div>`;
     const corps = this.conteneur.querySelector('[data-corps]');
     const admin = this.app.estAdmin();
     const [modeles, services] = await Promise.all([api.execution.modeles(), api.services()]);
@@ -264,14 +262,14 @@ export class PageParametresExecution extends PageBase {
     let modifie = false;
     this.#modifie = () => modifie;
     const rendre = () => {
-      corps.innerHTML = `<p class="ligne">${modeles.map((m, i) => `<button type="button" data-m="${i}" class="${m === courant ? 'actif' : ''}">${echapper(m.libelle || m.code || '(nouveau)')}${m.actif ? '' : ' (inactif)'}</button>`).join(' ')}
-        ${admin ? '<button type="button" data-nouveau>＋ Modèle</button>' : ''}</p>
-        ${courant ? `<p class="ligne"><label>Code <input data-code size="12" value="${echapper(courant.code)}" ${admin && !courant.id ? '' : 'readonly'}></label>
-          <label>Libellé <input data-libelle size="40" value="${echapper(courant.libelle)}" ${admin ? '' : 'readonly'}></label>
-          <label><input type="checkbox" data-actif ${courant.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}> Actif</label></p>
-          <p><label>Description <input data-description size="80" value="${echapper(courant.description ?? '')}" ${admin ? '' : 'readonly'}></label></p>
-          <div data-etapes></div>` : '<p class="aide">Aucun modèle.</p>'}
-        ${admin ? '<p><button type="button" data-enregistrer>Enregistrer les modèles</button></p>' : ''}`;
+      corps.innerHTML = `<p class="ligne">${modeles.map((m, i) => `<button type="button" data-m="${i}" class="${m === courant ? 'actif' : ''}">${echapper(m.libelle || m.code || texte('execution_btp.modeles.nouveau'))}${m.actif ? '' : ` ${texteHtml('execution_btp.modeles.inactif')}`}</button>`).join(' ')}
+        ${admin ? `<button type="button" data-nouveau>${iconeHtml('ajouter')} ${texteHtml('execution_btp.modeles.modele')}</button>` : ''}</p>
+        ${courant ? `<p class="ligne"><label>${texteHtml('commun.code')} <input data-code size="12" value="${echapper(courant.code)}" ${admin && !courant.id ? '' : 'readonly'}></label>
+          <label>${texteHtml('commun.libelle')} <input data-libelle size="40" value="${echapper(courant.libelle)}" ${admin ? '' : 'readonly'}></label>
+          <label><input type="checkbox" data-actif ${courant.actif ? 'checked' : ''} ${admin ? '' : 'disabled'}> ${texteHtml('execution_btp.catalogue.actif')}</label></p>
+          <p><label>${texteHtml('execution_btp.modeles.description')} <input data-description size="80" value="${echapper(courant.description ?? '')}" ${admin ? '' : 'readonly'}></label></p>
+          <div data-etapes></div>` : `<p class="aide">${texteHtml('execution_btp.modeles.aucun')}</p>`}
+        ${admin ? `<p><button type="button" data-enregistrer>${texteHtml('execution_btp.modeles.enregistrer')}</button></p>` : ''}`;
       const changer = () => { modifie = true; };
       corps.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => { courant = modeles[Number(b.dataset.m)]; rendre(); }));
       corps.querySelector('[data-nouveau]')?.addEventListener('click', () => {
@@ -304,16 +302,16 @@ export class PageParametresExecution extends PageBase {
  * Exécution (`EcranEtapesAtelier`), aussi inséré dans la borne du Pointage.
  */
 export class PageAtelierExecution extends PageBase {
-  icone = '🧩';
+  icone = icone('execution_btp_atelier');
 
   async ouvrir() {
-    this.titre = 'Étapes à valider';
+    this.titre = texte('execution_btp.routes.atelier');
     this.conteneur.innerHTML = '<div class="page-atelier" data-atelier></div>';
     const ecran = new EcranEtapesAtelier(this.conteneur.querySelector('[data-atelier]'), {
       charger: () => api.execution.atelier(),
       valider: (entId, code) => api.execution.validerAtelier(entId, code),
       ordre: async (numero) => (await api.execution.atelier(numero)).ordres[0] ?? null,
-    }, { titre: '🧩 Étapes à valider', message: (t, n) => this.app.message(t, n) });
+    }, { titre: `${icone('execution_btp_atelier')} ${texte('execution_btp.routes.atelier')}`, message: (t, n) => this.app.message(t, n) });
     await ecran.ouvrir();
   }
 }

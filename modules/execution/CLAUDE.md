@@ -21,5 +21,8 @@
 - Étapes : `GET|PUT /etats` (catalogue), `GET|PUT /etats-types/{type}`, `POST /etats-types/{type}/appliquer`, `GET /ordres/{id}/etapes` ({ etapes, en_cours, etat, peut_valider, peut_controler, avertissements }), `PUT /ordres/{id}/etapes/{code}` { action, date, ressource, commentaire, duree }, `POST /ordres/{id}/etapes/recalculer`.
 - `GET|PUT /parcours-modeles` ; `GET /synthese?recherche=&service=&etat=` ; `GET /elements/{type}/{id}` ; `PUT /elements/{type}/{id}/parcours` { pam_id?, etapes? } ; `PUT /elements/{type}/{id}/services/{srv}/etat` { etat, motif }.
 
+## Textes et icônes (module Personnalisation, lot P3m)
+- Textes `execution.*` du `fr.json` du module (`etapes` : natures, unités, erreurs ; `etats` : états des services, erreurs du parcours ; `atelier` : écran tactile), icônes `execution_*` (natures, états), couleurs de l'écran tactile `--exe-*` (`js/personnalisation/theme.css`) ; `NATURES_ETAPE` et `ETATS_SERVICE` gardent leur forme { libelle, icone } par accesseurs ; tests avec le dictionnaire (`test/preparation.js`). Écrans du cœur : `execution_btp.*`, icônes `execution_btp_*`, couleurs `--execution-*` de `client/personnalisation/theme.css`.
+
 ## Tests
 - `npm test --workspace modules/execution/js` ; `dotnet test modules/execution/dotnet/LogiBTP.Execution.Tests` (même jeu).

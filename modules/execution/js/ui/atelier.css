@@ -11,7 +11,7 @@
 .atelier-liste { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .atelier-liste li { display: flex; flex-direction: column; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--bord); font-size: 0.95em; }
 .atelier-liste li.validee { opacity: 0.6; }
-.atelier-liste li.proposee { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
-.atelier-liste li.retard span:last-child { color: #b42318; font-weight: 600; }
-.atelier-valider { font-size: 1.3em; padding: 14px 20px; width: 100%; border-radius: 8px; background: #16a34a; color: #fff; border: none; cursor: pointer; }
+.atelier-liste li.proposee { border-color: var(--exe-propose); box-shadow: 0 0 0 2px var(--exe-propose-halo); }
+.atelier-liste li.retard span:last-child { color: var(--exe-retard); font-weight: 600; }
+.atelier-valider { font-size: 1.3em; padding: 14px 20px; width: 100%; border-radius: 8px; background: var(--exe-valider); color: var(--exe-valider-texte); border: none; cursor: pointer; }
 .atelier-valider:disabled { opacity: 0.5; }

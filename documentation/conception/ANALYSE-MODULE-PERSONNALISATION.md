@@ -642,3 +642,27 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
   `--stock-frise-rupture` (`styles.css`), couleur proposée d'une nouvelle marque par `couleurTheme('--stock-marque-defaut')`.
 - **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/stock/js/src` vérifiées par le test
   du client).
+
+## 26. Réalisation du lot P3m : module Exécution (31/10/2026)
+
+- **Périmètre** : le module (`modules/execution/js` : natures et unités des étapes, états des services, messages des
+  contrôles d'étapes et de parcours, écran tactile `EcranEtapesAtelier`, `atelier.css`) et ses écrans du cœur :
+  `client/src/app/execution/` (panneau Exécution d'un ordre, liaison au planning, bloc de répartition d'une ligne,
+  tableau des étapes de l'entête, catalogue des états et états des types d'ordres), page `execution.js` (synthèse, vue
+  d'un chantier, modèles de parcours, atelier), titres des routes.
+- **Textes** : `execution.*` du module (`etapes.natures`, `etapes.unites`, `etapes.erreurs`, `etats.service`,
+  `etats.erreurs`, `atelier`) ; `execution_btp.*` du cœur (`routes`, `etats`, `types_ordre`, `types_ordre_court`,
+  `statuts`, `etapes`, `panneau`, `planning`, `repartition`, `catalogue`, `types`, `synthese`, `chantier`, `parcours`,
+  `modeles`) ; compteurs par `pluriel` (tâches au planning, tâches créées, ordres mis à jour, autres ordres). Les tables
+  gardent leur forme : `NATURES_ETAPE`, `ETATS_SERVICE` et `ETATS_EXECUTION` en objets { libelle, icone } à accesseurs
+  (aussi lus par l'onglet Entretiens du matériel), `MESSAGES_*`, `UNITES_ETAPE` et `TYPES_ORDRE` par `textesParCode`,
+  statuts déclenchés et types d'ordres courts par `pairesParCode`.
+- **Icônes** : `execution_*` du module (natures, états des services, étape validée, valider) ; `execution_btp_*` du cœur
+  (états d'exécution, types de ressources, date imposée, recalcul, planifier, synthèse, écart, retard, automatique,
+  atelier, monter) ; communes du socle (`ajouter`, `retirer`, `rechercher`, `sous_niveau`, `precedent`).
+- **Couleurs** : écran tactile en variables `--exe-*` (thème du module : étape proposée, retard, bouton de validation) ;
+  cœur : `--execution-alerte` (retards, écart d'un état imposé), `--execution-etape-defaut` (pastille et couleur proposée
+  d'un état, par `couleurTheme`).
+- **Contrôles** : `npm test` (module avec le dictionnaire, clés littérales de `modules/execution/js` vérifiées par le
+  test du client) ; affichage contrôlé dans le navigateur (API simulée : synthèse, vue d'un chantier, modèles et
+  catalogue, atelier, panneau d'un ordre avec étapes, planning et budget, répartition).

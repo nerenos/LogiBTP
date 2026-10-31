@@ -80,3 +80,9 @@
   --stock-frise-rupture: #d92d20;
   --stock-marque-defaut: #98a2b3;
 }
+
+/* Exécution (lot P3m) : retards et écarts, couleur par défaut d'un état d'étape. */
+:root {
+  --execution-alerte: #b42318;
+  --execution-etape-defaut: #94a3b8;
+}

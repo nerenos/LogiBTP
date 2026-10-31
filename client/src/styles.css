@@ -507,8 +507,8 @@ iframe.edition-impression { position: fixed; width: 0; height: 0; border: 0; vis
 .page-execution { max-width: none; }
 .synthese-execution td.centre { text-align: center; cursor: context-menu; }
 .pastille-etat.manuel { text-decoration: underline dotted; }
-.pastille-etat.ecart { outline: 1px dashed #b42318; border-radius: 3px; }
-.page-execution tr.en-retard td { color: #b42318; }
+.pastille-etat.ecart { outline: 1px dashed var(--execution-alerte); border-radius: 3px; }
+.page-execution tr.en-retard td { color: var(--execution-alerte); }
 
 /* Pointage (lot 1) : saisie hebdomadaire au bureau. */
 .page-pointage { max-width: none; }
@@ -891,7 +891,7 @@ button.lien { background: none; border: none; padding: 0; color: var(--lien, #1d
 .etapes-ordre { overflow-x: auto; margin-bottom: 0.5rem; }
 .etapes-tableau th.en-cours { box-shadow: inset 0 -3px 0 var(--accent, #2563eb); }
 .etapes-tableau td { white-space: nowrap; }
-.etapes-tableau td.erreur input[type="date"] { color: #b42318; font-weight: 600; }
+.etapes-tableau td.erreur input[type="date"] { color: var(--execution-alerte); font-weight: 600; }
 .etape-pastille { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
 /* Exécution, lot 2d : étapes au planning (jalon de durée nulle en losange, attente en bande hachurée). */

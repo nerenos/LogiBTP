@@ -2,17 +2,12 @@
 // ordre (statut documentaire + état d'exécution propre), état de chaque service d'un élément (chantier) d'après son
 // parcours, ses ordres et les états imposés à la main (ANALYSE-MODULE-EXECUTION.md § 4).
 
+import { texte, textesParCode, icone } from '@logibtp/socle/dictionnaire';
 import { ETAT_ORDRE, STATUT_ORDRE } from './codes.js';
 
 /** États d'un service sur un élément, du moins au plus avancé. */
-export const ETATS_SERVICE = {
-  SANS_OBJET: { libelle: 'Sans objet', icone: '—' },
-  A_VENIR: { libelle: 'À venir', icone: '⏳' },
-  EN_ATTENTE: { libelle: 'En attente', icone: '🟡' },
-  EN_COURS: { libelle: 'En cours', icone: '🔵' },
-  BLOQUE: { libelle: 'Bloqué', icone: '⛔' },
-  TERMINE: { libelle: 'Terminé', icone: '✅' },
-};
+const etat = (code) => Object.freeze({ get libelle() { return texte(`execution.etats.service.${code}`); }, get icone() { return icone(`execution_etat_${code.toLowerCase()}`); } });
+export const ETATS_SERVICE = Object.freeze(Object.fromEntries(['SANS_OBJET', 'A_VENIR', 'EN_ATTENTE', 'EN_COURS', 'BLOQUE', 'TERMINE'].map((c) => [c, etat(c)])));
 
 /** États d'exécution propres à un ordre (ent_exe_etat). */
 export const ETATS_ORDRE = Object.values(ETAT_ORDRE);
@@ -98,10 +93,6 @@ export function controlerParcours(etapes) {
   return [...e].sort();
 }
 
-export const MESSAGES_EXECUTION = {
-  PAR_CODE: "Code d'étape obligatoire",
-  PAR_DOUBLON: "Codes d'étape en double",
-  PAR_SERVICE: 'Service obligatoire pour chaque étape',
-  PAR_AMONT: 'Étape amont inconnue',
-  PAR_BOUCLE: 'Parcours en boucle',
-};
+export const MESSAGES_EXECUTION = textesParCode('execution.etats.erreurs', [
+  'PAR_CODE', 'PAR_DOUBLON', 'PAR_SERVICE', 'PAR_AMONT', 'PAR_BOUCLE',
+]);

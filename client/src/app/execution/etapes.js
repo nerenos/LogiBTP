@@ -1,3 +1,4 @@
+import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, saisir } from '@logibtp/socle/ui';
 import { NATURES_ETAPE } from '@logibtp/execution';
 import { api } from '../api.js';
@@ -8,11 +9,11 @@ import { api } from '../api.js';
 // règles (ordre de validation, dates) sont celles du serveur (ReglesEtapes.cs ↔ etapes.js).
 
 const jour = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '');
-const TYPES_RESSOURCE = { SALARIE: '👷', EQUIPE: '👥', MATERIEL: '🚜', SOUS_TRAITANT: '🤝', SERVICE: '🏢' };
+const TYPES_RESSOURCE = { SALARIE: 'execution_btp_salarie', EQUIPE: 'execution_btp_equipe', MATERIEL: 'execution_btp_materiel', SOUS_TRAITANT: 'execution_btp_sous_traitant', SERVICE: 'execution_btp_service' };
 
 /** Options de combo des ressources principales (valeur : « TYPE:id »). */
 export function optionsRessources(ressources) {
-  return ressources.map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: `${TYPES_RESSOURCE[r.type] ?? ''} ${r.libelle}`, detail: r.detail ?? '' }));
+  return ressources.map((r) => ({ valeur: `${r.type}:${r.id}`, libelle: `${TYPES_RESSOURCE[r.type] ? icone(TYPES_RESSOURCE[r.type]) : ''} ${r.libelle}`, detail: r.detail ?? '' }));
 }
 
 /** Ressource { type, id, libelle } depuis une valeur de combo ; null si vide. */
@@ -32,7 +33,7 @@ export async function rendreEtapes(zone, { app, entId, ressources, ressourceOrdr
   let r;
   try { r = await api.execution.etapes(entId); } catch (e) { zone.innerHTML = `<p class="erreur">${echapper(e.message)}</p>`; return; }
   if (!r.etapes.length) {
-    zone.innerHTML = '<p class="aide">Aucun état paramétré pour ce type d\'ordre (Exécution › Modèles de parcours › États).</p>';
+    zone.innerHTML = `<p class="aide">${texteHtml('execution_btp.etapes.aucun')}</p>`;
     return;
   }
   const tout = zone.dataset.tout === '1';
@@ -50,29 +51,29 @@ export async function rendreEtapes(zone, { app, entId, ressources, ressourceOrdr
   zone.innerHTML = `<div class="etapes-ordre">
     <table class="tableau-compact etapes-tableau"><thead><tr><th></th>
       ${colonnes.map((e) => `<th class="${e.code === r.en_cours ? 'en-cours' : ''}" title="${echapper(NATURES_ETAPE[e.nature]?.libelle ?? '')}">
-        <span class="etape-pastille" style="background:${echapper(e.couleur ?? '#94a3b8')}"></span>${NATURES_ETAPE[e.nature]?.icone ?? ''} ${echapper(e.libelle)}
-        ${e.date_obligatoire ? '' : '<small class="aide">(masqué)</small>'}</th>`).join('')}</tr></thead>
+        <span class="etape-pastille" style="background:${echapper(e.couleur ?? 'var(--execution-etape-defaut)')}"></span>${echapper(NATURES_ETAPE[e.nature]?.icone ?? '')} ${echapper(e.libelle)}
+        ${e.date_obligatoire ? '' : `<small class="aide">${texteHtml('execution_btp.etapes.masque')}</small>`}</th>`).join('')}</tr></thead>
     <tbody>
-      <tr><th>Prévisionnelle</th>${colonnes.map((e) => `<td data-code="${e.code}" class="${e.en_retard ? 'erreur' : ''}">
-        <input type="date" data-prevu value="${echapper(e.prevu_le ?? '')}" ${e.valide_le || !r.peut_valider ? 'disabled' : ''} title="Date saisie : imposée ; vide : calculée">
-        ${e.prevu_impose ? '<span title="Date imposée">📌</span>' : ''}</td>`).join('')}</tr>
-      <tr><th>Validation</th>${colonnes.map((e) => `<td data-code="${e.code}">${e.valide_le
-        ? `✅ ${jour(e.valide_le)} <small>${echapper(e.valide_par ?? '')}</small>${r.peut_valider ? ' <button type="button" data-annuler title="Annuler la validation">✕</button>' : ''}`
-        : r.peut_valider ? `<button type="button" data-valider class="${e.code === r.en_cours ? 'principal' : ''}">✓ Valider</button>` : '—'}</td>`).join('')}</tr>
-      <tr><th>Contrôle N+1</th>${colonnes.map((e) => `<td data-code="${e.code}">${e.controle
+      <tr><th>${texteHtml('execution_btp.etapes.previsionnelle')}</th>${colonnes.map((e) => `<td data-code="${e.code}" class="${e.en_retard ? 'erreur' : ''}">
+        <input type="date" data-prevu value="${echapper(e.prevu_le ?? '')}" ${e.valide_le || !r.peut_valider ? 'disabled' : ''} title="${texteHtml('execution_btp.etapes.prevu_titre')}">
+        ${e.prevu_impose ? `<span title="${texteHtml('execution_btp.etapes.impose')}">${iconeHtml('execution_btp_impose')}</span>` : ''}</td>`).join('')}</tr>
+      <tr><th>${texteHtml('execution_btp.etapes.validation')}</th>${colonnes.map((e) => `<td data-code="${e.code}">${e.valide_le
+        ? `${iconeHtml('execution_btp_valide')} ${jour(e.valide_le)} <small>${echapper(e.valide_par ?? '')}</small>${r.peut_valider ? ` <button type="button" data-annuler title="${texteHtml('execution_btp.etapes.annuler')}">${iconeHtml('retirer')}</button>` : ''}`
+        : r.peut_valider ? `<button type="button" data-valider class="${e.code === r.en_cours ? 'principal' : ''}">${iconeHtml('execution_btp_valider')} ${texteHtml('commun.valider')}</button>` : '—'}</td>`).join('')}</tr>
+      <tr><th>${texteHtml('execution_btp.etapes.controle')}</th>${colonnes.map((e) => `<td data-code="${e.code}">${e.controle
         ? `<label><input type="checkbox" data-controle ${e.controle_le ? 'checked' : ''} ${r.peut_controler && e.valide_le ? '' : 'disabled'}>
-           ${e.controle_le ? `${jour(e.controle_le)} <small>${echapper(e.controle_par ?? '')}</small>` : e.controle_bloquant ? '<small>bloquant</small>' : '<small>alerte</small>'}</label>`
+           ${e.controle_le ? `${jour(e.controle_le)} <small>${echapper(e.controle_par ?? '')}</small>` : e.controle_bloquant ? `<small>${texteHtml('execution_btp.etapes.bloquant')}</small>` : `<small>${texteHtml('execution_btp.etapes.alerte')}</small>`}</label>`
         : '—'}</td>`).join('')}</tr>
-      <tr><th>Ressource</th>${colonnes.map((e) => `<td data-code="${e.code}" data-ressource></td>`).join('')}</tr>
+      <tr><th>${texteHtml('execution_btp.etapes.ressource')}</th>${colonnes.map((e) => `<td data-code="${e.code}" data-ressource></td>`).join('')}</tr>
     </tbody></table>
-    <p class="ligne"><button type="button" data-tout>${tout ? 'Masquer les étapes sans date obligatoire' : `Toutes les étapes (${r.etapes.length})`}</button>
-      ${r.peut_valider ? '<button type="button" data-recalculer title="Les dates imposées reprennent leur valeur calculée">⟳ Recalculer les dates</button>' : ''}</p>
+    <p class="ligne"><button type="button" data-tout>${tout ? texteHtml('execution_btp.etapes.masquer') : texteHtml('execution_btp.etapes.toutes', { nombre: r.etapes.length })}</button>
+      ${r.peut_valider ? `<button type="button" data-recalculer title="${texteHtml('execution_btp.etapes.recalculer_titre')}">${iconeHtml('execution_btp_recalculer')} ${texteHtml('execution_btp.etapes.recalculer')}</button>` : ''}</p>
   </div>`;
   zone.querySelectorAll('td[data-ressource]').forEach((td) => {
     const e = r.etapes.find((x) => x.code === td.dataset.code);
     const c = creerCombo({ options, valeur: valeurRessource(e.ressource), vide: true });
     c.placeholder = ressourceOrdre?.libelle ?? '';
-    c.title = e.ressource ? '' : 'Ressource de l\'ordre';
+    c.title = e.ressource ? '' : texte('execution_btp.etapes.ressource_ordre');
     c.readOnly = !r.peut_valider;
     c.addEventListener('change', () => action(e.code, { action: 'RESSOURCE', ressource: ressourceDe(c.valeurCombo, ressources) }));
     td.append(c);
@@ -80,7 +81,7 @@ export async function rendreEtapes(zone, { app, entId, ressources, ressourceOrdr
   zone.querySelectorAll('input[data-prevu]').forEach((i) => i.addEventListener('change', () => action(i.closest('td').dataset.code, { action: 'PREVOIR', date: i.value || null })));
   zone.querySelectorAll('[data-valider]').forEach((b) => b.addEventListener('click', () => action(b.closest('td').dataset.code, { action: 'VALIDER' })));
   zone.querySelectorAll('[data-annuler]').forEach((b) => b.addEventListener('click', async () => {
-    const motif = await saisir('Motif de l\'annulation de la validation (tracé) :');
+    const motif = await saisir(texte('execution_btp.etapes.motif'));
     if (motif) action(b.closest('td').dataset.code, { action: 'ANNULER', commentaire: motif });
   }));
   zone.querySelectorAll('[data-controle]').forEach((c) => c.addEventListener('change', () => action(c.closest('td').dataset.code, { action: c.checked ? 'CONTROLER' : 'DECONTROLER' })));
