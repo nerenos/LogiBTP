@@ -474,3 +474,28 @@ restant livrable seul (le repli sur la clé ou sur le message du serveur ne cass
 - **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/fiche/js`
   vérifiées par le test du client ; affichage contrôlé dans le navigateur (fiche en mémoire : en-tête, bulles, onglets,
   champs masqués, erreurs de saisie, confirmation, paramétrage avec détails ouverts).
+
+## 19. Réalisation du lot P3f : module GED (31/10/2026)
+
+- **Périmètre** : `modules/ged/js` : règles (confidentialités, étapes, actions de fin de rétention, unités de taille,
+  icônes des fichiers, messages du fournisseur en mémoire) et interface (explorateur : barre, chemin, arbre, liste,
+  badges, visualisation, actions, dock des informations, versions, historique, dérivations, coffre-fort, messages et
+  confirmations ; dialogue de dépôt ; aperçu ; arborescence ; paramétrage des règles de rétention et de
+  classification) ; `ui/ged.css`.
+- **Textes** : `ged.*` du `fr.json` du module (zones `confidentialites`, `etapes`, `actions_fin`, `derivations`,
+  `statuts_retention`, `etats_index`, `colonnes`, `tailles`, `champs` — champs communs au dépôt et aux informations —,
+  `fournisseur`, `apercu`, `depot`, `regles`, `explorateur`) ; compteurs par `pluriel` (dossiers, documents, versions,
+  consultations, règles appliquées, archivés, échus) ; mots communs du socle. Les tables exportées
+  (`CONFIDENTIALITES`, `ETAPES`, `ACTIONS_FIN`) gardent leur forme ; l'icône d'un document devient
+  `iconeDocument(doc)` (le nom `icone` est celui du dictionnaire), l'utilitaire de texte du fournisseur `nettoye`.
+- **Icônes** : `ged_*` du module (types de fichiers, navigation, outils, filtres, actions sur un document, dérivations,
+  tri, téléchargement…), communes du socle (`verrou`, `ajouter`, `retirer`, `supprimer`, `replier`, `rechercher`).
+- **Couleurs** : bulles, survols, fond de l'aperçu PDF, zone de dépôt, fond et ombre de la fenêtre de dépôt : variables
+  `--ged-*` du `theme.css` du module (valeurs inchangées).
+- **Gardé** : les règles par défaut de rétention et de classification et les catégories du fournisseur en mémoire
+  (copies des INSERT de `db/051` : données système, § 8) ; les raisons de rupture de la chaîne du coffre-fort
+  (répliquées avec `ChaineCoffre.cs` et testées des deux côtés) ; les commentaires de version écrits par le fournisseur
+  en mémoire (données, comme le serveur).
+- **Contrôles** : tests du module sur le dictionnaire composé (clé manquante = échec), clés de `modules/ged/js`
+  vérifiées par le test du client ; affichage contrôlé dans le navigateur (GED en mémoire : barre et bulles, arbre,
+  liste, visualisation et actions, dock et ses onglets, paramétrage des règles, dialogue de dépôt de deux fichiers).

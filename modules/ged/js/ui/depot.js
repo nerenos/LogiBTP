@@ -1,8 +1,10 @@
+import { texte, texteHtml, pluriel, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo, ouvrirModale } from '@logibtp/socle/ui';
-import { estMail, titreDepuisNom, dateDepuisFichier, formatTaille, icone } from '../src/fichiers.js';
+import { estMail, titreDepuisNom, dateDepuisFichier, formatTaille, iconeDocument } from '../src/fichiers.js';
 import { lireMail } from '../src/mails.js';
 import { classer } from '../src/classification.js';
 import { CONFIDENTIALITES, libelleConfidentialite } from '../src/acces.js';
+import { NIVEAU_CONFIDENTIALITE } from '@logibtp/socle';
 
 // Dépôt de documents (sélection par l'explorateur de fichiers ou glisser-déposer) dans un dossier de l'explorateur :
 // le document est lié à l'élément du dossier (destination), même si ce n'est pas l'élément ouvert, et classé dans le
@@ -37,16 +39,16 @@ export class DialogueDepot {
     this.fond = document.createElement('dialog');
     this.fond.className = 'ged-dialogue-fond dialogue-plein';
     this.fond.innerHTML = `
-      <div class="ged-dialogue" role="dialog" aria-label="Ajouter des documents">
-        <header><strong>Ajouter ${n} document${n > 1 ? 's' : ''}</strong>
-          ${this.destination.libelle ? `<span class="aide">dans 📁 ${echapper(this.destination.libelle)}</span>` : ''}
-          ${n > 1 ? `<span class="ged-modes" role="group" aria-label="Saisie des informations">
-            <button type="button" data-mode="commun">Informations communes</button><button type="button" data-mode="fichier">Par fichier</button></span>` : ''}
-          <button type="button" class="ged-fermer" data-action="fermer" title="Annuler (Échap)">✕</button></header>
-        <div class="ged-dialogue-corps"><p class="aide">Lecture des fichiers…</p></div>
+      <div class="ged-dialogue" role="dialog" aria-label="${texteHtml('ged.depot.dialogue')}">
+        <header><strong>${pluriel('ged.depot.titre', n)}</strong>
+          ${this.destination.libelle ? `<span class="aide">${texteHtml('ged.depot.dans')} ${iconeHtml('ged_dossier')} ${echapper(this.destination.libelle)}</span>` : ''}
+          ${n > 1 ? `<span class="ged-modes" role="group" aria-label="${texteHtml('ged.depot.saisie')}">
+            <button type="button" data-mode="commun">${texteHtml('ged.depot.communes')}</button><button type="button" data-mode="fichier">${texteHtml('ged.depot.par_fichier')}</button></span>` : ''}
+          <button type="button" class="ged-fermer" data-action="fermer" title="${texteHtml('ged.depot.annuler_echap')}">${iconeHtml('retirer')}</button></header>
+        <div class="ged-dialogue-corps"><p class="aide">${texteHtml('ged.depot.lecture')}</p></div>
         <footer><span class="ged-dialogue-message"></span>
-          <button type="button" data-action="fermer">Annuler</button>
-          <button type="button" class="principal" data-action="enregistrer">Enregistrer</button></footer>
+          <button type="button" data-action="fermer">${texteHtml('commun.annuler')}</button>
+          <button type="button" class="principal" data-action="enregistrer">${texteHtml('commun.enregistrer')}</button></footer>
       </div>`;
     ouvrirModale(this.fond);
     this.corps = this.fond.querySelector('.ged-dialogue-corps');
@@ -70,7 +72,7 @@ export class DialogueDepot {
         });
         e.sens = 'recu';
       } catch (x) {
-        e.erreur = `Mail illisible : ${x.message}`;
+        e.erreur = texte('ged.depot.mail_illisible', { message: x.message });
       }
     }
     this.#proposer();
@@ -103,27 +105,27 @@ export class DialogueDepot {
 
   /** Champs d'informations (communes ou d'un fichier) ; `vides` : libellés des choix « selon le fichier ». */
   #formulaire(meta, { commun = false, mail = null, sens = null } = {}) {
-    const p = commun ? 'Selon chaque fichier' : '';
+    const p = commun ? texteHtml('ged.depot.selon_fichier') : '';
     return `<div class="ged-formulaire">
-      ${commun ? '' : `<label class="large">Titre <input data-m="titre" value="${echapper(meta.titre ?? '')}"></label>`}
-      <label>Catégorie <span data-place="categorie"></span></label>
-      <label>Date <input type="date" data-m="date_document" value="${echapper(meta.date_document ?? '')}" ${commun ? `title="${p}"` : ''}></label>
-      <label>Auteur <input data-m="auteur" value="${echapper(meta.auteur ?? '')}" placeholder="${p}"></label>
-      <label>Confidentialité <span data-place="confidentialite"></span></label>
-      <label>Mots-clés <input data-m="mots_cles" value="${echapper(meta.mots_cles ?? '')}" placeholder="séparés par des virgules"></label>
-      <label class="coche" title="Archivage verrouillé : empreinte et horodatage, ni modification ni suppression"><input type="checkbox" data-m="coffre" ${meta.coffre ? 'checked' : ''}> Coffre-fort</label>
-      ${mail ? `<label class="coche"><input type="checkbox" data-sens ${sens === 'envoye' ? 'checked' : ''}> Mail envoyé (sinon reçu)</label>` : ''}
-      <label class="large">Résumé <textarea rows="2" data-m="resume" placeholder="${p}">${echapper(meta.resume ?? '')}</textarea></label>
-      <label class="large">Notes <textarea rows="2" data-m="notes" placeholder="${p}">${echapper(meta.notes ?? '')}</textarea></label>
+      ${commun ? '' : `<label class="large">${texteHtml('ged.champs.titre')} <input data-m="titre" value="${echapper(meta.titre ?? '')}"></label>`}
+      <label>${texteHtml('ged.champs.categorie')} <span data-place="categorie"></span></label>
+      <label>${texteHtml('ged.champs.date')} <input type="date" data-m="date_document" value="${echapper(meta.date_document ?? '')}" ${commun ? `title="${p}"` : ''}></label>
+      <label>${texteHtml('ged.champs.auteur')} <input data-m="auteur" value="${echapper(meta.auteur ?? '')}" placeholder="${p}"></label>
+      <label>${texteHtml('ged.champs.confidentialite')} <span data-place="confidentialite"></span></label>
+      <label>${texteHtml('ged.champs.mots_cles')} <input data-m="mots_cles" value="${echapper(meta.mots_cles ?? '')}" placeholder="${texteHtml('ged.champs.mots_cles_aide')}"></label>
+      <label class="coche" title="${texteHtml('ged.champs.coffre_aide')}"><input type="checkbox" data-m="coffre" ${meta.coffre ? 'checked' : ''}> ${texteHtml('ged.champs.coffre')}</label>
+      ${mail ? `<label class="coche"><input type="checkbox" data-sens ${sens === 'envoye' ? 'checked' : ''}> ${texteHtml('ged.depot.mail_envoye')}</label>` : ''}
+      <label class="large">${texteHtml('ged.champs.resume')} <textarea rows="2" data-m="resume" placeholder="${p}">${echapper(meta.resume ?? '')}</textarea></label>
+      <label class="large">${texteHtml('ged.champs.notes')} <textarea rows="2" data-m="notes" placeholder="${p}">${echapper(meta.notes ?? '')}</textarea></label>
     </div>`;
   }
 
   /** Branche les champs d'un formulaire sur `meta` (combos de catégorie et de confidentialité). */
   #lier(zone, meta, { propose = null, surSens = null } = {}) {
-    const categorie = creerCombo({ options: this.#categories.map((c) => ({ valeur: c.code, libelle: `${c.libelle}${c.coffre ? ' 🔒' : ''}` })), valeur: meta.categorie ?? '', titre: 'Catégorie' });
-    categorie.placeholder = propose?.categorie ? `Proposée : ${this.#libelleCategorie(propose.categorie)}` : 'Selon chaque fichier';
-    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: meta.confidentialite ?? '', titre: 'Confidentialité' });
-    confidentialite.placeholder = propose?.confidentialite ? `Proposée : ${libelleConfidentialite(propose.confidentialite)}` : 'Interne';
+    const categorie = creerCombo({ options: this.#categories.map((c) => ({ valeur: c.code, libelle: `${c.libelle}${c.coffre ? ` ${icone('verrou')}` : ''}` })), valeur: meta.categorie ?? '', titre: texte('ged.champs.categorie') });
+    categorie.placeholder = propose?.categorie ? texte('ged.depot.proposee', { libelle: this.#libelleCategorie(propose.categorie) }) : texte('ged.depot.selon_fichier');
+    const confidentialite = creerCombo({ options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), valeur: meta.confidentialite ?? '', titre: texte('ged.champs.confidentialite') });
+    confidentialite.placeholder = propose?.confidentialite ? texte('ged.depot.proposee', { libelle: libelleConfidentialite(propose.confidentialite) }) : libelleConfidentialite(NIVEAU_CONFIDENTIALITE.INTERNE);
     zone.querySelector('[data-place="categorie"]').replaceWith(categorie);
     zone.querySelector('[data-place="confidentialite"]').replaceWith(confidentialite);
     categorie.addEventListener('change', () => {
@@ -138,23 +140,23 @@ export class DialogueDepot {
   }
 
   #entete(e) {
-    return `${e.mail ? '✉️' : icone({ nom_fichier: e.fichier.name })} ${echapper(e.fichier.name)} <small>${formatTaille(e.fichier.size)}</small>`;
+    return `${e.mail ? icone('ged_mail') : iconeDocument({ nom_fichier: e.fichier.name })} ${echapper(e.fichier.name)} <small>${formatTaille(e.fichier.size)}</small>`;
   }
 
   #infosMail(e) {
-    return e.mail ? `<div class="ged-depot-mail"><span><b>De</b> ${echapper(e.mail.de)}</span><span><b>À</b> ${echapper(e.mail.a)}</span>
-      ${e.mail.pieces.length ? `<span>📎 ${e.mail.pieces.length} pièce(s) jointe(s) enregistrée(s) à côté du mail : ${e.mail.pieces.map((p) => echapper(p.nom)).join(', ')}</span>` : ''}</div>` : '';
+    return e.mail ? `<div class="ged-depot-mail"><span><b>${texteHtml('ged.apercu.de')}</b> ${echapper(e.mail.de)}</span><span><b>${texteHtml('ged.apercu.a')}</b> ${echapper(e.mail.a)}</span>
+      ${e.mail.pieces.length ? `<span>${iconeHtml('ged_pieces')} ${echapper(pluriel('ged.depot.pieces', e.mail.pieces.length, { noms: e.mail.pieces.map((p) => p.nom).join(', ') }))}</span>` : ''}</div>` : '';
   }
 
   rendre() {
     this.fond.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === this.mode)));
     if (this.mode === 'commun') {
       this.corps.innerHTML = `
-        <fieldset class="ged-depot ged-depot-commun"><legend>Pour tous les fichiers</legend>${this.#formulaire(this.commun, { commun: true })}
-          <p class="aide">Les champs laissés vides gardent la valeur propre à chaque fichier (date du fichier, catégorie proposée…).</p></fieldset>
-        <table class="ged-depot-fichiers"><thead><tr><th>Fichier</th><th>Titre</th><th>Catégorie proposée</th></tr></thead><tbody>
+        <fieldset class="ged-depot ged-depot-commun"><legend>${texteHtml('ged.depot.pour_tous')}</legend>${this.#formulaire(this.commun, { commun: true })}
+          <p class="aide">${texteHtml('ged.depot.vides_aide')}</p></fieldset>
+        <table class="ged-depot-fichiers"><thead><tr><th>${texteHtml('ged.depot.fichier')}</th><th>${texteHtml('ged.champs.titre')}</th><th>${texteHtml('ged.depot.categorie_proposee')}</th></tr></thead><tbody>
           ${this.entrees.map((e, i) => `<tr data-i="${i}"><td>${this.#entete(e)}${e.erreur ? `<br><span class="erreur">${echapper(e.erreur)}</span>` : ''}</td>
-            <td><input data-titre value="${echapper(e.meta.titre)}" aria-label="Titre de ${echapper(e.fichier.name)}"></td>
+            <td><input data-titre value="${echapper(e.meta.titre)}" aria-label="${texteHtml('ged.depot.titre_de', { fichier: e.fichier.name })}"></td>
             <td>${echapper(e.meta.categorie ? this.#libelleCategorie(e.meta.categorie) : e.propose?.categorie ? this.#libelleCategorie(e.propose.categorie) : '—')}
               ${e.propose?.confidentialite ? ` · ${echapper(libelleConfidentialite(e.propose.confidentialite))}` : ''}</td></tr>`).join('')}
         </tbody></table>`;
@@ -200,7 +202,7 @@ export class DialogueDepot {
     try {
       for (const e of this.entrees) {
         const meta = this.#meta(e);
-        if (!meta.titre?.trim()) throw new Error(`Titre obligatoire pour ${e.fichier.name}`);
+        if (!meta.titre?.trim()) throw new Error(texte('ged.depot.titre_obligatoire', { fichier: e.fichier.name }));
         if (e.mail) {
           const { pieces, ...infos } = e.mail;
           const doc = await this.fournisseur.deposer({ fichier: e.fichier, meta: { ...meta, nature: 'mail', mail: { ...infos, sens: e.sens } } });
@@ -210,12 +212,12 @@ export class DialogueDepot {
               fichier: new File([p.contenu], p.nom, { type: p.type }),
               meta: { titre: titreDepuisNom(p.nom), categorie: null, date_document: meta.date_document, auteur: meta.auteur, type_element: meta.type_element,
                 id_element: meta.id_element, repertoire_id: meta.repertoire_id, confidentialite: meta.confidentialite, parent_id: doc.id,
-                notes: `Pièce jointe du mail « ${infos.objet} »` },
+                notes: texte('ged.depot.piece_du_mail', { objet: infos.objet }) },
             }));
           }
         } else crees.push(await this.fournisseur.deposer({ fichier: e.fichier, meta }));
       }
-      this.message(`${crees.length} document(s) enregistré(s)`, 'succes');
+      this.message(pluriel('ged.depot.enregistres', crees.length), 'succes');
       this.fermer(crees);
     } catch (x) {
       this.#erreur(x.message);

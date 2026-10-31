@@ -1,3 +1,4 @@
+import { texte, texteHtml, pluriel, pairesParCode, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { echapper, creerCombo } from '@logibtp/socle/ui';
 import { CONFIDENTIALITES } from '../src/acces.js';
 
@@ -6,7 +7,7 @@ import { CONFIDENTIALITES } from '../src/acces.js';
 // liste est remplacée en bloc (fournisseur.remplacerReglesRetention / remplacerReglesClassification) : le serveur ou
 // le fournisseur mémoire contrôle et normalise ; les règles elles-mêmes (retention.js, classification.js) ne changent pas.
 
-const ACTIONS_FIN = [{ valeur: 'REVOIR', libelle: 'Revoir' }, { valeur: 'DETRUIRE', libelle: 'Détruire (purge proposée)' }];
+const ACTIONS_FIN = pairesParCode('ged.regles.actions_fin', ['REVOIR', 'DETRUIRE']);
 
 /** Liste saisie « a, b ; c » → ['a', 'b', 'c'] (sans vides ni doublons). */
 export const listeDepuisTexte = (t) => [...new Set(String(t ?? '').split(/[,;\n]/).map((x) => x.trim()).filter(Boolean))];
@@ -14,8 +15,8 @@ export const listeDepuisTexte = (t) => [...new Set(String(t ?? '').split(/[,;\n]
 /** Entier saisi, ou null si vide (durée non renseignée). */
 export const entierOuNul = (t) => (String(t ?? '').trim() === '' ? null : Number.parseInt(t, 10));
 
-const NOUVELLE_RETENTION = () => ({ id: 0, libelle: 'Nouvelle règle', categorie: null, type_element: null, duree_active_mois: 24, duree_conservation_mois: null, action_fin: 'REVOIR', priorite: 100, actif: true });
-const NOUVELLE_CLASSIFICATION = () => ({ id: 0, libelle: 'Nouvelle règle', priorite: 100, actif: true, extensions: [], types_mime: [], mots: [], expediteur: null, type_element: null, categorie: null, confidentialite: null, mots_cles: [] });
+const NOUVELLE_RETENTION = () => ({ id: 0, libelle: texte('ged.regles.nouvelle'), categorie: null, type_element: null, duree_active_mois: 24, duree_conservation_mois: null, action_fin: 'REVOIR', priorite: 100, actif: true });
+const NOUVELLE_CLASSIFICATION = () => ({ id: 0, libelle: texte('ged.regles.nouvelle'), priorite: 100, actif: true, extensions: [], types_mime: [], mots: [], expediteur: null, type_element: null, categorie: null, confidentialite: null, mots_cles: [] });
 
 /**
  * Écran de paramétrage des règles de rétention et de classification.
@@ -50,41 +51,41 @@ export class ParametrageReglesGed {
   rendre() {
     const ro = this.admin ? '' : 'disabled';
     const boutons = (cle, ajout) => (this.admin ? `<div class="boutons">
-      <button type="button" data-ajout="${cle}">＋ ${ajout}</button>
-      <button type="button" data-annuler="${cle}" ${this.modifies[cle] ? '' : 'disabled'}>Annuler les modifications</button>
-      <button type="button" class="principal" data-enreg="${cle}">Enregistrer${this.modifies[cle] ? ' ●' : ''}</button></div>` : '');
+      <button type="button" data-ajout="${cle}">${iconeHtml('ajouter')} ${ajout}</button>
+      <button type="button" data-annuler="${cle}" ${this.modifies[cle] ? '' : 'disabled'}>${texteHtml('ged.regles.annuler_modifs')}</button>
+      <button type="button" class="principal" data-enreg="${cle}">${this.#libelleEnregistrer(cle)}</button></div>` : '');
     const ligne = (cle, i, cellules) => `<tr data-liste="${cle}" data-i="${i}">${cellules}
-      <td class="ged-regles-actions"><button type="button" data-haut ${ro || (i === 0 ? 'disabled' : '')} title="Monter (priorité)">↑</button><button type="button" data-bas ${ro || (i === this[cle].length - 1 ? 'disabled' : '')} title="Descendre (priorité)">↓</button><button type="button" data-suppr ${ro} title="Supprimer">✕</button></td></tr>`;
+      <td class="ged-regles-actions"><button type="button" data-haut ${ro || (i === 0 ? 'disabled' : '')} title="${texteHtml('ged.regles.monter')}">${iconeHtml('ged_monter')}</button><button type="button" data-bas ${ro || (i === this[cle].length - 1 ? 'disabled' : '')} title="${texteHtml('ged.regles.descendre')}">${iconeHtml('ged_descendre')}</button><button type="button" data-suppr ${ro} title="${texteHtml('commun.supprimer')}">${iconeHtml('retirer')}</button></td></tr>`;
     const champ = (c, v, attrs = '') => `<input data-c="${c}" value="${echapper(v ?? '')}" ${attrs} ${ro}>`;
     const nombre = (c, v, placeholder) => `<input data-c="${c}" type="number" min="0" step="1" value="${v ?? ''}" placeholder="${placeholder}" ${ro}>`;
     const liste = (c, v) => champ(c, (v ?? []).join(', '), 'data-liste-texte');
     const actif = (v) => `<input data-c="actif" type="checkbox" ${v !== false ? 'checked' : ''} ${ro}>`;
 
     this.conteneur.innerHTML = `<div class="ged-regles">
-      ${this.admin ? '' : '<p class="aide">Lecture seule : paramétrage réservé à un administrateur.</p>'}
+      ${this.admin ? '' : `<p class="aide">${texteHtml('ged.regles.lecture_seule')}</p>`}
       <section class="panneau">
-        <h2>⏳ Rétention</h2>
-        <p class="aide">Pour chaque document, la règle la plus précise s'applique (catégorie et type d'élément, puis catégorie, puis type, puis règle générale ; à précision égale, la priorité la plus faible). Durée active : mois avant l'archivage (vide : jamais) ; conservation : mois avant la fin de conservation (vide : illimitée), comptés depuis la date du document. L'archivage est appliqué chaque nuit et par le bouton ⏳ de la GED ; un document au coffre-fort est archivé sur place.</p>
-        ${this.echeances === null || this.echeances === undefined ? '' : `<p class="aide">${this.echeances ? `<strong>${this.echeances}</strong> document(s) échu(s)` : 'Aucun document échu'} selon les règles enregistrées.</p>`}
+        <h2>${iconeHtml('ged_retention')} ${texteHtml('ged.regles.retention')}</h2>
+        <p class="aide">${texteHtml('ged.regles.retention_aide', { icone: icone('ged_retention') })}</p>
+        ${this.echeances === null || this.echeances === undefined ? '' : `<p class="aide">${this.echeances ? pluriel('ged.regles.echus_html', this.echeances) : texteHtml('ged.regles.aucun_echu')}</p>`}
         <div class="ged-regles-defilement"><table class="table-parametres tableau-compact largeur-contenu">
-          <thead><tr><th>Libellé</th><th>Catégorie</th><th>Type d'élément</th><th>Active (mois)</th><th>Conservation (mois)</th><th>Fin</th><th>Priorité</th><th>Active</th><th></th></tr></thead>
+          <thead><tr><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('ged.champs.categorie')}</th><th>${texteHtml('ged.regles.type_element')}</th><th>${texteHtml('ged.regles.active_mois')}</th><th>${texteHtml('ged.regles.conservation_mois')}</th><th>${texteHtml('ged.regles.fin')}</th><th>${texteHtml('ged.regles.priorite')}</th><th>${texteHtml('ged.regles.active')}</th><th></th></tr></thead>
           <tbody>${this.retention.map((r, i) => ligne('retention', i, `
             <td>${champ('libelle', r.libelle, 'size="18"')}</td>
             <td data-combo="categorie"></td>
-            <td>${champ('type_element', r.type_element, 'size="10" placeholder="tous"')}</td>
-            <td>${nombre('duree_active_mois', r.duree_active_mois, 'jamais')}</td>
-            <td>${nombre('duree_conservation_mois', r.duree_conservation_mois, 'illimitée')}</td>
+            <td>${champ('type_element', r.type_element, `size="10" placeholder="${texteHtml('ged.regles.tous')}"`)}</td>
+            <td>${nombre('duree_active_mois', r.duree_active_mois, texteHtml('ged.regles.jamais'))}</td>
+            <td>${nombre('duree_conservation_mois', r.duree_conservation_mois, texteHtml('ged.regles.illimitee'))}</td>
             <td data-combo="action_fin"></td>
             <td>${nombre('priorite', r.priorite, '100')}</td>
             <td>${actif(r.actif)}</td>`)).join('')}</tbody>
         </table></div>
-        ${boutons('retention', 'Ajouter une règle de rétention')}
+        ${boutons('retention', texteHtml('ged.regles.ajouter_retention'))}
       </section>
       <section class="panneau">
-        <h2>🏷 Classification automatique</h2>
-        <p class="aide">Au dépôt, une règle s'applique quand tous ses critères renseignés sont remplis (extensions, types MIME — un préfixe comme « image/ » suffit —, mots du nom, du titre ou du texte, expéditeur d'un mail, type d'élément). La catégorie vient de la première règle par priorité, la confidentialité la plus stricte l'emporte, les mots-clés se cumulent. Une catégorie ou une confidentialité saisie au dépôt reste prioritaire. Listes séparées par des virgules.</p>
+        <h2>${iconeHtml('ged_classification')} ${texteHtml('ged.regles.classification')}</h2>
+        <p class="aide">${texteHtml('ged.regles.classification_aide')}</p>
         <div class="ged-regles-defilement"><table class="table-parametres tableau-compact largeur-contenu">
-          <thead><tr><th>Libellé</th><th>Priorité</th><th>Extensions</th><th>Types MIME</th><th>Mots</th><th>Expéditeur</th><th>Type d'élément</th><th>→ Catégorie</th><th>→ Confidentialité</th><th>→ Mots-clés</th><th>Active</th><th></th></tr></thead>
+          <thead><tr><th>${texteHtml('commun.libelle')}</th><th>${texteHtml('ged.regles.priorite')}</th><th>${texteHtml('ged.regles.extensions')}</th><th>${texteHtml('ged.regles.types_mime')}</th><th>${texteHtml('ged.regles.mots')}</th><th>${texteHtml('ged.regles.expediteur')}</th><th>${texteHtml('ged.regles.type_element')}</th><th>${texteHtml('ged.regles.vers_categorie')}</th><th>${texteHtml('ged.regles.vers_confidentialite')}</th><th>${texteHtml('ged.regles.vers_mots_cles')}</th><th>${texteHtml('ged.regles.active')}</th><th></th></tr></thead>
           <tbody>${this.classification.map((r, i) => ligne('classification', i, `
             <td>${champ('libelle', r.libelle, 'size="16"')}</td>
             <td>${nombre('priorite', r.priorite, '100')}</td>
@@ -98,14 +99,14 @@ export class ParametrageReglesGed {
             <td>${liste('mots_cles', r.mots_cles)}</td>
             <td>${actif(r.actif)}</td>`)).join('')}</tbody>
         </table></div>
-        ${boutons('classification', 'Ajouter une règle de classification')}
+        ${boutons('classification', texteHtml('ged.regles.ajouter_classification'))}
       </section></div>`;
 
     const z = this.conteneur;
     // Combos du socle (jamais de <select>) : catégorie (vide = toutes ou aucune), action de fin, confidentialité.
     const optionsCombo = {
       categorie: { options: this.categories, vide: true },
-      action_fin: { options: ACTIONS_FIN, vide: false },
+      action_fin: { options: ACTIONS_FIN.map(([valeur, libelle]) => ({ valeur, libelle })), vide: false },
       confidentialite: { options: CONFIDENTIALITES.map(([valeur, libelle]) => ({ valeur, libelle })), vide: true },
     };
     z.querySelectorAll('[data-combo]').forEach((td) => {
@@ -161,13 +162,16 @@ export class ParametrageReglesGed {
     z.querySelectorAll('[data-enreg]').forEach((b) => b.addEventListener('click', () => this.enregistrer(b.dataset.enreg)));
   }
 
+  /** Libellé du bouton Enregistrer, marqué quand la liste a des modifications non enregistrées. */
+  #libelleEnregistrer(cle) { return this.modifies[cle] ? texte('ged.regles.enregistrer_modifie', { marque: icone('ged_modifie') }) : texte('commun.enregistrer'); }
+
   /** Liste modifiée : le bouton Enregistrer l'indique ; `rerendre` pour les changements de structure (ordre, ajout). */
   marquer(cle, rerendre = false) {
     this.modifies[cle] = true;
     if (rerendre) { this.rendre(); return; }
     // Saisie dans un champ : pas de nouveau rendu (le focus passe au champ suivant).
     this.conteneur.querySelector(`[data-annuler="${cle}"]`).disabled = false;
-    this.conteneur.querySelector(`[data-enreg="${cle}"]`).textContent = 'Enregistrer ●';
+    this.conteneur.querySelector(`[data-enreg="${cle}"]`).textContent = this.#libelleEnregistrer(cle);
   }
 
   async enregistrer(cle) {
@@ -180,7 +184,7 @@ export class ParametrageReglesGed {
       this.modifies[cle] = false;
       if (cle === 'retention') await this.compterEcheances();
       this.rendre();
-      this.message(cle === 'retention' ? 'Règles de rétention enregistrées' : 'Règles de classification enregistrées');
+      this.message(cle === 'retention' ? texte('ged.regles.retention_enregistrees') : texte('ged.regles.classification_enregistrees'));
     } catch (e) { this.message(e.message, 'erreur'); }
   }
 }

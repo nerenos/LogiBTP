@@ -5,9 +5,10 @@
 //   - échéances comptées en mois depuis la date du document (à défaut, la date UTC du dépôt), fin de mois ramenée au
 //     dernier jour du mois d'arrivée (31 janvier + 1 mois = 28 ou 29 février) ;
 //   - statut à une date : FIN_CONSERVATION (fin atteinte), A_ARCHIVER (archivage atteint), sinon ACTIF.
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { ajouterMois } from '@logibtp/socle';
 
-export const ACTIONS_FIN = [['REVOIR', 'À revoir'], ['DETRUIRE', 'À détruire']];
+export const ACTIONS_FIN = pairesParCode('ged.actions_fin', ['REVOIR', 'DETRUIRE']);
 
 export const REGLES_RETENTION_DEFAUT = [
   { id: 1, libelle: 'Factures reçues', categorie: 'facture_recue', type_element: null, duree_active_mois: 24, duree_conservation_mois: 120, action_fin: 'REVOIR', priorite: 10, actif: true },

@@ -4,13 +4,12 @@
 //   - SECRET : personne d'autre, pas même un administrateur ;
 //   - CONFIDENTIEL : en plus, les administrateurs ;
 //   - PUBLIC, INTERNE : tout le monde, sauf si des accès sont listés (alors réservé à ces accès et aux administrateurs).
+import { pairesParCode } from '@logibtp/socle/dictionnaire';
 import { NIVEAU_CONFIDENTIALITE, PROFIL } from '@logibtp/socle';
 
 const N = NIVEAU_CONFIDENTIALITE;
 
-export const CONFIDENTIALITES = [
-  [N.PUBLIC, 'Public'], [N.INTERNE, 'Interne'], [N.CONFIDENTIEL, 'Confidentiel'], [N.SECRET, 'Secret'],
-];
+export const CONFIDENTIALITES = pairesParCode('ged.confidentialites', [N.PUBLIC, N.INTERNE, N.CONFIDENTIEL, N.SECRET]);
 
 const NIVEAUX = Object.fromEntries(CONFIDENTIALITES.map(([c], i) => [c, i]));
 

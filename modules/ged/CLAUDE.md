@@ -67,6 +67,12 @@
 - Toute modification d'une règle répliquée : les deux côtés + le jeu de cas.
 - Archivage automatique : l'utilisateur système passe par le filtre d'accès (`AccesGed`) comme un administrateur ; un document SECRET dont il n'est ni l'auteur ni un accès listé n'est donc pas archivé automatiquement (à faire à la main par son auteur).
 
+## Textes, icônes et couleurs (module Personnalisation, lot P3f)
+- Textes `ged.*` de `js/personnalisation/fr.json` (zones `confidentialites`, `etapes`, `actions_fin`, `derivations`, `statuts_retention`, `etats_index`, `colonnes`, `tailles`, `champs`, `fournisseur`, `apercu`, `depot`, `regles`, `explorateur`) ; icônes `ged_*` de `images/icones.json` et communes du socle ; couleurs `--ged-*` de `theme.css`.
+- Icône d'un document : `iconeDocument(doc)` de `fichiers.js` (ancien `icone`). `CONFIDENTIALITES`, `ETAPES`, `ACTIONS_FIN` : `pairesParCode` (même forme qu'avant).
+- Gardés : règles par défaut (`REGLES_RETENTION_DEFAUT`, `REGLES_CLASSIFICATION_DEFAUT`, catégories du fournisseur mémoire), copies des INSERT de `db/051` (données système, § 8 de l'analyse) ; raisons de rupture du coffre (`Chaînage rompu`, `Entrée modifiée`), répliquées avec `ChaineCoffre.cs`.
+- Tests : `js/test/preparation.js` compose socle + module (clé manquante = échec) ; clés du code vérifiées par `client/test/personnalisation.test.js`.
+
 ## Tests
 - `npm test --workspace modules/ged/js` (vitest : jeux partagés, fournisseur mémoire, organisation et cycle de vie, mails, écran des règles hors ligne).
 - `dotnet test modules/ged/dotnet/LogiBTP.Ged.Tests` (ou `dotnet test LogiBTP.slnx`) ; `ArchivageGedTests` (une portée par base, utilisateur système administrateur, base en erreur, désactivation, heure du passage) ; `LOGIBTP_TEST_PG` : normalisation SQL comparée au jeu.
