@@ -278,6 +278,13 @@ public partial class ServiceFiche(FicheDbContext db, SpecialisationFiche special
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Synthèse d'une fiche (droit de voir) : indicateurs et compteurs des onglets fournis par la spécialisation.</summary>
+    public virtual async Task<SyntheseFiche> Synthese(string code, string id, Utilisateur u, CancellationToken ct)
+    {
+        await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);
+        return await specialisation.SyntheseAsync(code, id, u, ct) ?? new SyntheseFiche([], new Dictionary<string, CompteOnglet>());
+    }
+
     public virtual async Task<FicheDto> Charger(string code, string id, bool confidentiel, Utilisateur u, CancellationToken ct)
     {
         var droits = await Exiger(code, u, d => d.Voir, ActionsDroits.Voir, ct);

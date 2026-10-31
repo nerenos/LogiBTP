@@ -109,6 +109,13 @@ public sealed class SpecialisationFicheBtp(IServiceScopeFactory scopes) : Specia
         await SuppressionFiches.Controler(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
     }
 
+    /// <summary>Bandeau de synthèse et compteurs des onglets des fiches du cœur (<see cref="SynthesesFiches"/>).</summary>
+    public override async Task<SyntheseFiche?> SyntheseAsync(string type, string id, Utilisateur u, CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        return await SynthesesFiches.CalculerAsync(scope.ServiceProvider.GetRequiredService<LogiBtpContext>(), type, id, ct);
+    }
+
     private static bool Vrai(object? v) => v is true || (v is string s && s == "true") || (v is JsonElement e && e.ValueKind == JsonValueKind.True);
 
     public override async Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct)

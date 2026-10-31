@@ -27,6 +27,8 @@
     { "nom": "liste : valeur prévue", "champ": { "type": "liste", "options": [{ "valeur": "CDI" }, { "valeur": "CDD" }] }, "valeur": "CDD", "attendu": null },
     { "nom": "liste : valeur inconnue", "champ": { "type": "liste", "options": [{ "valeur": "CDI" }] }, "valeur": "STAGE", "attendu": "LISTE" },
     { "nom": "booléen obligatoire faux accepté", "champ": { "type": "booleen", "obligatoire": true }, "valeur": false, "attendu": null },
+    { "nom": "booléen obligatoire vide accepté (une case vaut non)", "champ": { "type": "booleen", "obligatoire": true }, "valeur": null, "attendu": null },
+    { "nom": "booléen obligatoire par paramétrage vide accepté", "champ": { "type": "booleen", "obligatoire_parametre": true }, "valeur": "", "attendu": null },
     { "nom": "booléen invalide", "champ": { "type": "booleen" }, "valeur": "peut-être", "attendu": "BOOLEEN" },
     { "nom": "expression régulière", "champ": { "type": "texte", "format": "regex:^FR[0-9]{2}" }, "valeur": "FR76 3000", "attendu": null },
     { "nom": "expression régulière non respectée", "champ": { "type": "texte", "format": "regex:^FR[0-9]{2}" }, "valeur": "DE89", "attendu": "FORMAT" },

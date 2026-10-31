@@ -120,7 +120,8 @@ public static partial class ValidationFiche
     public static string? Valider(ChampFiche champ, object? valeurBrute)
     {
         var valeur = Normaliser(valeurBrute);
-        if (Vide(valeur)) return champ.Obligatoire || champ.ObligatoireParametre ? "OBLIGATOIRE" : null;
+        // Une case à cocher n'est jamais obligatoire : elle vaut toujours oui ou non (vide = non à l'enregistrement).
+        if (Vide(valeur)) return champ.Type != "booleen" && (champ.Obligatoire || champ.ObligatoireParametre) ? "OBLIGATOIRE" : null;
         switch (champ.Type)
         {
             case "nombre":

@@ -60,6 +60,7 @@ export class PageFiche extends PageBase {
       // Annuaire : fiche liée (personne, individu, élément) dans la fenêtre, ou dans une nouvelle avec Ctrl / Maj.
       ouvrirUrl: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       ouvrirFiche: ({ type: t, id }, e) => app.naviguer(urlFiche(t, id), { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
+      ouvrirLien: (url, e) => app.naviguer(url, { nouvelleFenetre: Boolean(e && (e.ctrlKey || e.shiftKey || e.metaKey)) }),
       // Onglet Pièces jointes : vue simplifiée de la GED, limitée aux documents de l'élément.
       // Arborescence : la fiche est la racine (projet, affaire, chantier, marché : structure et documents rattachés).
       ged: ({ conteneur, type: typeElement, id: idElement, libelle, modifiable }) => new ExplorateurGed(conteneur, {

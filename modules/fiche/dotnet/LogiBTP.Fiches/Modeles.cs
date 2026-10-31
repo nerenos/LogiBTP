@@ -89,6 +89,8 @@ public sealed class ChampFiche
     /// <summary>Liste : requête SQL (SELECT valeur, libelle…) exécutée en lecture seule à la place des options saisies.</summary>
     public string? Requete { get; set; }
     public string? Aide { get; set; }
+    /// <summary>Exemple de saisie affiché en indication dans le champ vide (« AA-123-AA », « 06 12 34 56 78 »).</summary>
+    public string? Exemple { get; set; }
     public string? Largeur { get; set; }
     public JsonElement? Defaut { get; set; }
     /// <summary>Référentiel affiché en liste déroulante par la fiche spécialisée (bibliothèque, famille, nature…).</summary>
@@ -114,6 +116,18 @@ public sealed class OptionChamp
     public string Valeur { get; set; } = "";
     public string? Libelle { get; set; }
 }
+
+/// <summary>
+/// Indicateur du bandeau de synthèse d'une fiche : code, libellé, valeur affichée, niveau (null, ok, attention, erreur),
+/// adresse facultative (clic).
+/// </summary>
+public sealed record IndicateurFiche(string Code, string Libelle, string Valeur, string? Niveau = null, string? Url = null);
+
+/// <summary>Compteur d'un onglet de la fiche : nombre d'éléments, alerte (élément en défaut).</summary>
+public sealed record CompteOnglet(int Nombre, bool Alerte = false);
+
+/// <summary>Synthèse d'une fiche (SpecialisationFiche.SyntheseAsync) : indicateurs du bandeau, compteurs des onglets par code.</summary>
+public sealed record SyntheseFiche(IReadOnlyList<IndicateurFiche> Indicateurs, IReadOnlyDictionary<string, CompteOnglet> Onglets);
 
 /// <summary>Erreur de saisie d'un champ (code stable : OBLIGATOIRE, LONGUEUR, FORMAT…).</summary>
 public sealed record ErreurChamp(string Champ, string Code, string Message, bool Supplementaire = false);

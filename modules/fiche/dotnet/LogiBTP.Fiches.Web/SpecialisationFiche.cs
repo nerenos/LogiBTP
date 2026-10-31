@@ -49,6 +49,12 @@ public class SpecialisationFiche
     /// </summary>
     public virtual Task<string?> CodeParentChronoAsync(string type, string champ, string valeur, CancellationToken ct) => Task.FromResult<string?>(null);
 
+    /// <summary>
+    /// Synthèse d'une fiche consultable (bandeau d'indicateurs et compteurs des onglets, GET /fiches/{type}/{id}/synthese) ;
+    /// null : aucune.
+    /// </summary>
+    public virtual Task<SyntheseFiche?> SyntheseAsync(string type, string id, Utilisateur u, CancellationToken ct) => Task.FromResult<SyntheseFiche?>(null);
+
     /// <summary>Valeurs des champs gérés (ChampFiche.Gere) d'une fiche : code du champ → valeur (objet, tableau…).</summary>
     public virtual Task<IReadOnlyDictionary<string, object?>> LireGeresAsync(string type, string id, Utilisateur u, CancellationToken ct) =>
         Task.FromResult<IReadOnlyDictionary<string, object?>>(new Dictionary<string, object?>());

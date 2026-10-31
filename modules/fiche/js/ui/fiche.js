@@ -41,8 +41,10 @@ export function definirConfidentielSession(actif) {
 const bulle = (b) => (b.icone ? [b.libelle, b.titre].filter(Boolean).join(' — ') : (b.titre ?? ''));
 
 export class FicheBase {
-  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime, ouvrirFiche = null }) {
+  constructor({ conteneur, fournisseur, type, id = null, mode = MODES.CONSULTATION, message, ged = null, peutParametrer = false, actions = [], surEnregistre, surFerme, surSupprime, ouvrirFiche = null, ouvrirLien = null }) {
     this.conteneur = conteneur;
+    // Ouverture d'une adresse de l'application (indicateur de la synthèse) : (url, événement) ; sinon lien ordinaire.
+    this.ouvrirLien = ouvrirLien;
     // Ouverture d'une autre fiche ({ type, id }, événement) : fiche qui porte déjà un code saisi.
     this.ouvrirFiche = ouvrirFiche;
     // Chrono du code : code prévisionnel (création) et fiche qui porte déjà le code saisi.
@@ -125,7 +127,42 @@ export class FicheBase {
     }
     this.#construire();
     if (this.#creation()) await this.#majCode({ immediat: true });
+    else this.actualiserSynthese();
     return this;
+  }
+
+  /**
+   * Synthèse de la fiche enregistrée (indicateurs du bandeau, compteurs des onglets), lue au serveur puis affichée ;
+   * à rappeler par un onglet qui change ce qu'elle compte. Sans synthèse, le bandeau calculé dans le navigateur reste.
+   */
+  async actualiserSynthese() {
+    if (this.id === null || this.id === undefined || !this.fournisseur.synthese) { this.synthese = null; return; }
+    const id = this.id;
+    const s = await this.fournisseur.synthese(this.type, id).catch(() => null);
+    if (id !== this.id) return;
+    this.synthese = s;
+    if (this.conteneur.querySelector('.fiche-onglets')) this.rendre();
+  }
+
+  /** Bandeau de synthèse affiché (préférence du navigateur par type de fiche, affiché par défaut). */
+  #syntheseVisible() {
+    try { return globalThis.localStorage?.getItem(`fiche.synthese.${this.type}`) !== '0'; } catch { return true; }
+  }
+
+  #basculerSynthese() {
+    const visible = !this.#syntheseVisible();
+    try { globalThis.localStorage?.setItem(`fiche.synthese.${this.type}`, visible ? '1' : '0'); } catch { /* préférence non gardée */ }
+    this.rendre();
+  }
+
+  /** Cartes des indicateurs de la synthèse. */
+  #cartesSynthese() {
+    const l = this.synthese?.indicateurs ?? [];
+    return l.map((i) => {
+      const corps = `<span class="fiche-indicateur-libelle">${echapper(i.libelle)}</span><span class="fiche-indicateur-valeur">${echapper(i.valeur)}</span>`;
+      const classe = `fiche-indicateur${i.niveau ? ` niveau-${echapper(i.niveau)}` : ''}`;
+      return i.url ? `<a class="${classe}" href="${echapper(i.url)}" data-indicateur>${corps}</a>` : `<div class="${classe}">${corps}</div>`;
+    }).join('');
   }
 
   async recharger() {
@@ -232,15 +269,26 @@ export class FicheBase {
     this.#rendreActions();
     this.#rendreBandeau();
     const infos = c.querySelector('.fiche-informations');
-    const html = this.rendreInformations(v);
-    infos.hidden = !html;
+    const cartes = enSaisie(this.mode) ? '' : this.#cartesSynthese();
+    const html = `${this.rendreInformations(v) ?? ''}${cartes}`;
+    infos.hidden = !html || !this.#syntheseVisible();
     infos.innerHTML = html;
+    infos.querySelectorAll('[data-indicateur]').forEach((a) => a.addEventListener('click', (e) => {
+      if (!this.ouvrirLien) return;
+      e.preventDefault();
+      this.ouvrirLien(a.getAttribute('href'), e);
+    }));
     this.#rendreErreurs();
     const sections = this.sections();
     if (!sections.some((s) => s.code === this.section)) this.section = sections[0].code;
     const enErreur = new Set(this.erreurs.map((e) => this.#sectionErreur(sections, e)));
-    c.querySelector('.fiche-onglets').innerHTML = sections.map((s) =>
-      `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''}">${echapper(s.titre)}</button>`).join('');
+    // Compteurs des onglets (synthèse) : nombre en pastille, alerte (élément en défaut) en teinte d'erreur ; 0 : atténué.
+    const compte = (s) => this.synthese?.onglets?.[s.code.replace(/^\+/, '')];
+    const pastille = (n) => (n ? `<span class="fiche-onglet-compte${n.alerte ? ' alerte' : ''}" title="${n.alerte ? 'Élément en défaut' : ''}">${n.alerte ? '⚠ ' : ''}${n.nombre}</span>` : '');
+    c.querySelector('.fiche-onglets').innerHTML = sections.map((s) => {
+      const n = compte(s);
+      return `<button type="button" data-section="${echapper(s.code)}" class="${s.code === this.section ? 'actif' : ''} ${enErreur.has(s.code) ? 'erreur' : ''} ${n && !n.nombre && !n.alerte ? 'vide' : ''}">${echapper(s.titre)}${n && (n.nombre || n.alerte) ? ` ${pastille(n)}` : ''}</button>`;
+    }).join('');
     c.querySelectorAll('[data-section]').forEach((b) => b.addEventListener('click', () => { this.section = b.dataset.section; this.rendre(); }));
     this.#rendreSection(sections.find((s) => s.code === this.section));
   }
@@ -255,6 +303,7 @@ export class FicheBase {
       { libelle: 'Annuler', titre: 'Abandonner les modifications', action: () => this.annuler(), visible: saisie },
       { icone: '⧉', libelle: 'Copier', titre: 'Créer une nouvelle fiche à partir de celle-ci', action: () => this.copier(), visible: !saisie && d.modifier && this.id !== null },
       { icone: '🗑', libelle: 'Supprimer', titre: 'Supprimer cette fiche (refusé si elle est utilisée ailleurs)', action: () => this.supprimer(), visible: !saisie && d.supprimer && this.id !== null },
+      { icone: '📊', libelle: 'Synthèse', titre: 'Afficher ou masquer le bandeau de synthèse (préférence de ce poste)', action: () => this.#basculerSynthese(), visible: !saisie && this.id !== null, actif: this.#syntheseVisible() },
       { icone: '👁', libelle: 'Confidentiel', titre: 'Afficher les informations confidentielles (accès journalisé)', action: () => this.reveler(), visible: masques && d.confidentiel },
       ...this.actionsSupplementaires(),
       // Actions de l'application hôte (imprimer…), hors saisie et sur une fiche enregistrée.
@@ -265,7 +314,7 @@ export class FicheBase {
     const zone = this.conteneur.querySelector('.fiche-actions');
     zone.innerHTML = `${d.confidentiel ? `<label class="fiche-option" title="Ne pas masquer les informations confidentielles pendant cette session (onglet du navigateur)">
       <input type="checkbox" data-session ${confidentielSession() ? 'checked' : ''}> Visible (session)</label>` : ''}
-      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}">${echapper(b.icone ?? b.libelle)}</button>`).join('')}`;
+      ${boutons.map((b, i) => `<button type="button" data-i="${i}" class="${b.principal ? 'principal' : ''}${b.icone ? ' bouton-icone' : ''}" title="${echapper(bulle(b))}" aria-label="${echapper(b.libelle)}"${b.actif === undefined ? '' : ` aria-pressed="${b.actif}"`}>${echapper(b.icone ?? b.libelle)}</button>`).join('')}`;
     zone.querySelectorAll('button[data-i]').forEach((el) => el.addEventListener('click', () => Promise.resolve(boutons[Number(el.dataset.i)].action()).catch((e) => this.#erreur(e))));
     zone.querySelector('[data-session]')?.addEventListener('change', (e) => {
       definirConfidentielSession(e.target.checked);
@@ -343,7 +392,9 @@ export class FicheBase {
     const erreur = this.erreurs.find((e) => e.champ === champ.code && !!e.supplementaire === !!champ.supplementaire);
     const div = document.createElement('div');
     div.className = `fiche-champ ${champ.largeur === 'plein' || champ.type === 'zone' || champ.type === 'html' ? 'plein' : ''} ${erreur ? 'erreur' : ''} ${champ.confidentiel ? 'confidentiel' : ''}`;
-    const marques = `${champ.obligatoire ? '<span class="obligatoire" title="Obligatoire (programme)">*</span>' : ''}${champ.obligatoire_parametre ? '<span class="obligatoire-parametre" title="Obligatoire (paramétrage)">◆</span>' : ''}${champ.confidentiel ? '<span class="marque-confidentiel" title="Information confidentielle">🔒</span>' : ''}`;
+    // Une case à cocher n'est jamais obligatoire (elle vaut oui ou non) : pas de marque.
+    const caseACocher = champ.type === 'booleen';
+    const marques = `${champ.obligatoire && !caseACocher ? '<span class="obligatoire" title="Obligatoire (programme)">*</span>' : ''}${champ.obligatoire_parametre && !caseACocher ? '<span class="obligatoire-parametre" title="Obligatoire (paramétrage)">◆</span>' : ''}${champ.confidentiel ? '<span class="marque-confidentiel" title="Information confidentielle">🔒</span>' : ''}`;
     div.innerHTML = `<label>${echapper(champ.libelle)} ${marques}</label>`;
     if (champ.aide) div.title = champ.aide;
     if (masque) {
@@ -420,7 +471,15 @@ export class FicheBase {
         if (champ.longueur) el.maxLength = champ.longueur;
     }
     el.classList.add('fiche-saisie-champ');
-    if (lecture) { el.disabled = champ.type === 'booleen'; el.readOnly = true; return el; }
+    if (lecture) {
+      el.disabled = champ.type === 'booleen';
+      el.readOnly = true;
+      // Champ vide en consultation : « — » discret (indication, pas une valeur).
+      if (champ.type !== 'booleen' && vide(valeur)) { el.placeholder = '—'; el.classList.add('fiche-vide'); }
+      return el;
+    }
+    // Saisie : exemple de la définition (« AA-123-AA », « 06 12 34 56 78 ») en indication.
+    if (champ.exemple && 'placeholder' in el && !el.placeholder) el.placeholder = champ.exemple;
     el.addEventListener(champ.type === 'booleen' || champ.type === 'liste' ? 'change' : 'input', () => {
       const v = champ.type === 'booleen' ? el.checked : champ.type === 'liste' ? el.valeurCombo : el.value;
       const cible = champ.supplementaire ? this.saisie.proprietes : this.saisie.valeurs;
@@ -719,6 +778,7 @@ export class FicheBase {
       this.mode = MODES.CONSULTATION;
       this.erreurs = [];
       this.rendre();
+      this.actualiserSynthese();
       this.message(cree ? `${this.definition.libelle} créé` : 'Fiche enregistrée', 'succes');
       this.surEnregistre?.(fiche, { cree });
       return true;

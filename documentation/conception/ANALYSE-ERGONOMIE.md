@@ -543,3 +543,21 @@ client` pour les lots qui changent des vues fournies.
   d'affectation à faire avec l'application de terrain).
 - **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (création avec 120 h, condition
   modifiée avec motif, affectation rendue endommagée, rectification à 100 h, refus sans motif ni état de retour).
+
+## 12. Réalisation du lot E7 : fiches (31/10/2026)
+
+- **Synthèse (F1)** : bandeau d'indicateurs en tête de fiche, calculé par le serveur (point d'accroche
+  `SpecialisationFiche.SyntheseAsync`, route `GET /api/fiches/{type}/{id}/synthese`, droit de consultation), relu à
+  l'ouverture et après chaque enregistrement ; masquable par 📊 (préférence du navigateur par type). Cœur
+  (`Btp/SynthesesFiches.cs`) : salarié (heures du mois et de la semaine, congés, habilitations, matériel confié,
+  compte), matériel (affectation en cours, compteurs, prochain entretien, contrôles, coût du mois), marché (montant,
+  facturé et pourcentage, reste, avenants), chantier (marchés, montant, facturé, reste). Un indicateur peut porter un
+  niveau (alerte, attention) et une adresse.
+- **Compteurs d'onglets (F2)** : nombre d'éléments par onglet fourni avec la synthèse (pastille, ⚠ en rouge pour une
+  alerte) ; un onglet vide est atténué.
+- **Champs vides (F3)** : en consultation, « — » atténué ; en saisie, exemple de saisie (`exemple` du champ :
+  immatriculation, téléphone, courriel, numéro de sécurité sociale).
+- **Booléens (FK1)** : une case à cocher n'est jamais obligatoire (règle répliquée `validation.js` ↔
+  `ValidationFiche.cs`, jeu `01_validation.json`), ni marquée comme telle.
+- **Contrôles** : `npm test`, `dotnet test LogiBTP.slnx` ; essai dans le navigateur (fiches salarié, matériel et
+  marché).

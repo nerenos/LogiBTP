@@ -268,8 +268,6 @@ Analyse et découpage en lots : [ANALYSE-DEMANDES-2026-10.md](documentation/conc
 - [ ] E3 : densité confortable / compacte (I6), « Mon terrain » dans le menu Pointage (I9).
 - [ ] E4 à E6 : listes — pastilles de statut, barre réordonnée, création des ordres (L2, L5, O1) ; panneau des vues à
   droite, distinct du panneau des segments (L1) ; totaux et bandeau d'indicateurs répliqués JS / C# (L3, L4).
-- [ ] E7 : fiches — synthèse et compteurs d'onglets, « — » des champs vides, booléens jamais obligatoires (F1–F3,
-  FK1). (E8 salarié et E9 matériel faits.)
 - [ ] Matériel : photo de l'état au retour d'une affectation (dépôt dans la GED du matériel depuis la ligne).
 - [ ] Salariés : retirer `sal_matricule` (recopie du code depuis `db/247`) des requêtes qui le lisent encore (magasin,
   habilitations, comptes), puis la colonne.
