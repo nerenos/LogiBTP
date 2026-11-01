@@ -87,8 +87,28 @@ export const MODULE_FACULTATIF = Object.freeze({
   PLANNING: 'planning',
   POINTAGE: 'pointage',
   REGLEMENT: 'reglement',
+  RENTABILITE: 'rentabilite',
   SOUS_TRAITANCE: 'sous_traitance',
   STOCK: 'stock',
+});
+
+/** Rôle d'un type de pièce dans le module Rentabilité (rentabilite_role_type, db/258). */
+export const ROLE_RENTABILITE = Object.freeze({
+  COMMANDE_VENTE: 'COMMANDE_VENTE',
+  FACTURE_VENTE: 'FACTURE_VENTE',
+  FACTURE_ACOMPTE: 'FACTURE_ACOMPTE',
+  AVOIR_VENTE: 'AVOIR_VENTE',
+  ORDRE_EXECUTION: 'ORDRE_EXECUTION',
+  COMMANDE_ACHAT: 'COMMANDE_ACHAT',
+  RECEPTION_ACHAT: 'RECEPTION_ACHAT',
+  RETOUR_ACHAT: 'RETOUR_ACHAT',
+  FACTURE_ACHAT: 'FACTURE_ACHAT',
+  AVOIR_ACHAT: 'AVOIR_ACHAT',
+  COMMANDE_ST: 'COMMANDE_ST',
+  FACTURE_ST: 'FACTURE_ST',
+  AVOIR_ST: 'AVOIR_ST',
+  RESERVATION_STOCK: 'RESERVATION_STOCK',
+  MOUVEMENT_STOCK: 'MOUVEMENT_STOCK',
 });
 
 /** Sujets publiés entre les fenêtres de l'application (app.publier / app.abonner). */

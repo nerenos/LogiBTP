@@ -90,6 +90,11 @@
   <Folder Name="/modules/notification/">
     <Project Path="modules/notification/dotnet/LogiBTP.Notifications.Web/LogiBTP.Notifications.Web.csproj" />
   </Folder>
+  <Folder Name="/modules/rentabilite/">
+    <Project Path="modules/rentabilite/dotnet/LogiBTP.Rentabilite/LogiBTP.Rentabilite.csproj" />
+    <Project Path="modules/rentabilite/dotnet/LogiBTP.Rentabilite.Web/LogiBTP.Rentabilite.Web.csproj" />
+    <Project Path="modules/rentabilite/dotnet/LogiBTP.Rentabilite.Tests/LogiBTP.Rentabilite.Tests.csproj" />
+  </Folder>
   <Folder Name="/modules/execution/">
     <Project Path="modules/execution/dotnet/LogiBTP.Execution/LogiBTP.Execution.csproj" />
     <Project Path="modules/execution/dotnet/LogiBTP.Execution.Web/LogiBTP.Execution.Web.csproj" />

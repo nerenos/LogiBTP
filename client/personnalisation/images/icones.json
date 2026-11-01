@@ -663,5 +663,10 @@
   "reglements_btp_imputer": "⇄",
   "reglements_btp_tiers": "💳",
   "navigation_btp_densite": "🔍",
-  "ressources_btp_rectifier": "⚖"
+  "ressources_btp_rectifier": "⚖",
+  "navigation_btp_rentabilite": "📈",
+  "navigation_btp_parametrage_rentabilite": "⚙",
+  "rentabilite_btp_recalculer": "⟳",
+  "rentabilite_btp_rapprochement": "⚖",
+  "rentabilite_btp_attente": "⏳"
 }

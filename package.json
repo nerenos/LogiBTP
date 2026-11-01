@@ -21,6 +21,7 @@
     "modules/calendrier/js",
     "modules/mail/js",
     "modules/execution/js",
+    "modules/rentabilite/js",
     "modules/sous-traitance/js",
     "modules/stock/js",
     "modules/comptabilite/js",

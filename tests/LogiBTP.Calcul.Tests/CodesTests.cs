@@ -17,6 +17,7 @@ public class CodesTests
     [InlineData("TYPE_PRIX", typeof(TypesPrix))]
     [InlineData("ARRONDI_REVISION", typeof(ArrondiRevision))]
     [InlineData("MODULE_FACULTATIF", typeof(ModulesFacultatifs))]
+    [InlineData("ROLE_RENTABILITE", typeof(RolesRentabilite))]
     public void Parite_avec_le_js(string nom, Type type) => Assert.Empty(Constantes.Ecarts(Fichier, nom, type));
 
     [Fact]

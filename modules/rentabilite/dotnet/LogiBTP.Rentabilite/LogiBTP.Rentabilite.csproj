@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>LogiBTP.Rentabilite</RootNamespace>
+    <Description>Module Rentabilité LogiBTP : codes, faits et comparaison de deux calculs (faits versionnés).</Description>
+  </PropertyGroup>
+
+</Project>

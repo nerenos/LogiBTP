@@ -284,6 +284,16 @@
 | NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Reglements.Tests |
 | NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Reglements.Tests |
 
+## modules/rentabilite
+
+| Type | Dépendance | Version | Licence | Usage |
+|---|---|---|---|---|
+| npm | vitest | 3.2.7 | MIT | développement (modules/rentabilite/js) |
+| NuGet | Microsoft.NET.Test.Sdk | 17.14.1 | MIT | LogiBTP.Rentabilite.Tests |
+| NuGet | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | LogiBTP.Rentabilite.Web |
+| NuGet | xunit | 2.9.3 | Apache-2.0 | LogiBTP.Rentabilite.Tests |
+| NuGet | xunit.runner.visualstudio | 3.1.4 | Apache-2.0 | LogiBTP.Rentabilite.Tests |
+
 ## modules/sous-traitance
 
 | Type | Dépendance | Version | Licence | Usage |

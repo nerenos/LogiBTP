@@ -24,6 +24,8 @@ export class FicheLogiBTP extends FicheBase {
     this.fil = options.fil ?? null;
     // Modules actifs de la société (boutons propres à un module facultatif).
     this.moduleActif = options.moduleActif ?? (() => true);
+    // Accès aux nœuds de droits (liens vers les écrans d'un module).
+    this.acces = options.acces ?? (() => true);
   }
 
   /** Onglet Suivi : notes, tâches et courriels de la fiche (module CRM), une fois la fiche enregistrée. */

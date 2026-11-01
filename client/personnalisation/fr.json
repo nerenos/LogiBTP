@@ -4284,6 +4284,13 @@
         "revision_prix": {
           "libelle": "Révision des prix : index et formules",
           "info": "Valeurs mensuelles des index (saisie, import CSV), catalogue et modèles de formules"
+        },
+        "rentabilite": {
+          "libelle": "Rentabilité d'un chantier",
+          "info": "Budget, engagé, déboursé et facturé par nature, d'un chantier et de ses ordres"
+        },
+        "parametrage_rentabilite": {
+          "libelle": "Paramétrage de la rentabilité"
         }
       },
       "ventes": {
@@ -5425,7 +5432,10 @@
       "document_cree": "{{nom}} {{numero}} créé",
       "commande": "Commande",
       "avenants": "Avenants",
-      "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ)"
+      "choisir_tiers": "Choisir dans la liste des tiers (F4 ou double-clic dans le champ)",
+      "rentabilite": "Rentabilité",
+      "rentabilite_detail": "Détail",
+      "rentabilite_aide": "Budget, engagé, déboursé et facturé du chantier par nature"
     },
     "colonnes": {
       "facture": "Facture",
@@ -7866,6 +7876,159 @@
       "superieur": "Supérieur"
     }
   },
+  "rentabilite_btp": {
+    "routes": {
+      "accueil": "Rentabilité",
+      "chantier": "Rentabilité du chantier",
+      "faits": "Faits d'un chiffre",
+      "rapprochement": "Rapprochement des faits",
+      "parametres": "Paramétrage de la rentabilité"
+    },
+    "accueil": {
+      "aide": "Choisissez un chantier (code, double-clic ou F4 pour la liste) : son Détail par nature et par ordre s'ouvre. Les chiffres sont recalculés dès qu'une pièce, un pointage, une tâche ou un mouvement de stock les concernant change, et chaque nuit.",
+      "chantier": "Chantier",
+      "file": "Recalculs en attente",
+      "file_vide": "Aucun chantier en attente : les chiffres sont à jour.",
+      "attente_un": "{{nombre}} chantier en attente de recalcul",
+      "attente_autre": "{{nombre}} chantiers en attente de recalcul",
+      "erreurs_un": "{{nombre}} en erreur (nouvel essai différé)",
+      "erreurs_autre": "{{nombre}} en erreur (nouvel essai différé)",
+      "tout": "Tout recalculer",
+      "tout_titre": "Met tous les chantiers ouverts dans la file, avant les autres",
+      "tout_confirmer": "Recalculer tous les chantiers ouverts ? Ils passent dans la file et sont traités en arrière-plan.",
+      "tout_fait_un": "{{nombre}} chantier mis en file",
+      "tout_fait_autre": "{{nombre}} chantiers mis en file"
+    },
+    "chantier": {
+      "titre": "Rentabilité {{code}}",
+      "introuvable": "Chantier introuvable ou non consultable.",
+      "affaire": "Affaire {{affaire}}",
+      "charge": "Chargé d'affaires : {{nom}}",
+      "recalculer": "Recalculer",
+      "recalculer_titre": "Recalcule maintenant les faits du chantier (sans attendre la file)",
+      "recalcule": "Recalcul terminé : {{ajouts}} ajout(s), {{retraits}} retrait(s), {{modifies}} modification(s)",
+      "rapprochement": "Rapprochement",
+      "rapprochement_titre": "Compare le total de chaque pièce à la somme de ses faits",
+      "ordre": "Ordre",
+      "ordre_titre": "Vide : tout le chantier",
+      "sans_ordre": "Sans ordre",
+      "cout": "Coût",
+      "cout_pr": "Prix de revient (PR)",
+      "cout_pa": "Prix d'achat (PA)",
+      "au": "Jusqu'au",
+      "au_titre": "Faits datés jusqu'à ce jour inclus ; vide : tous"
+    },
+    "fraicheur": {
+      "calcule": "Calculé le {{date}} ({{declencheur}})",
+      "erreur": "Dernier calcul en erreur : {{message}}",
+      "version": "Règles de calcul modifiées depuis : recalcul à venir",
+      "jamais": "Jamais calculé",
+      "attente": "En attente de recalcul : {{raison}}"
+    },
+    "declencheurs": {
+      "FILE": "modification signalée",
+      "NUIT": "recalcul de nuit",
+      "MANUEL": "recalcul demandé"
+    },
+    "controles": {
+      "titre": "À vérifier",
+      "regle": "Contrôle",
+      "nombre": "Faits",
+      "heures": "Heures",
+      "montant": "Montant (PA)"
+    },
+    "regles": {
+      "LIGNE_VENDUE": "Ligne vendue de la commande (PV ventilé sur les feuilles au prorata du PR)",
+      "FRAIS_ANNEXES": "Frais annexes de la commande",
+      "POSTE_PIED": "Poste de pied",
+      "COMMANDE": "Ligne de commande (budget d'exécution)",
+      "REPRISE_OE": "Ligne reprise par un ordre d'exécution (retirée)",
+      "OE_REPRISE": "Ligne d'ordre reprenant la commande",
+      "OE_AJOUT": "Ligne ajoutée par l'ordre",
+      "FACTURE_SANS_COMMANDE": "Facture sans commande (budget)",
+      "FACTURE_LIGNE": "Ligne facturée",
+      "COMMANDE_ACHAT": "Commande fournisseur non livrée",
+      "COMMANDE_ST": "Commande de sous-traitance non facturée",
+      "RESERVATION": "Réservation de stock",
+      "CONSOMMATION": "Engagé consommé (livré ou facturé)",
+      "REENGAGEMENT": "Retour à relivrer (réengagé)",
+      "SOLDE": "Commande soldée (reste dégagé)",
+      "RECEPTION": "Réception",
+      "RETOUR": "Retour fournisseur",
+      "ECART_PRIX": "Écart de prix facture / réception",
+      "FACTURE_ACHAT": "Facture fournisseur",
+      "FACTURE_ST": "Facture de sous-traitance",
+      "PIED_ACHAT": "Pied de pièce d'achat (non ventilé)",
+      "SORTIE_STOCK": "Sortie de stock",
+      "RETOUR_STOCK": "Retour au stock",
+      "STOCK_NON_VALORISE": "Mouvements de stock sans prix",
+      "POINTAGE": "Pointage valorisé au coût horaire",
+      "POINTAGE_TAUX_SERVICE": "Pointages valorisés au taux moyen du service",
+      "POINTAGE_NON_VALORISE": "Pointages non valorisés (coût horaire inconnu)",
+      "CARBURANT": "Plein de carburant",
+      "TACHE_AFFECTEE": "Main-d'œuvre planifiée (après le dernier pointage)",
+      "TACHE_THEORIQUE": "Tâche théorique au taux du service",
+      "TACHE_SANS_TAUX": "Tâches planifiées sans taux horaire"
+    },
+    "roles": {
+      "COMMANDE_VENTE": "Commande client (budget)",
+      "FACTURE_VENTE": "Facture client (facturé)",
+      "FACTURE_ACOMPTE": "Facture d'acompte",
+      "AVOIR_VENTE": "Avoir client",
+      "ORDRE_EXECUTION": "Ordre d'exécution (budget d'exécution)",
+      "COMMANDE_ACHAT": "Commande fournisseur (engagé)",
+      "RECEPTION_ACHAT": "Réception fournisseur (déboursé)",
+      "RETOUR_ACHAT": "Retour fournisseur",
+      "FACTURE_ACHAT": "Facture fournisseur (déboursé)",
+      "AVOIR_ACHAT": "Avoir fournisseur",
+      "COMMANDE_ST": "Commande de sous-traitance (engagé)",
+      "FACTURE_ST": "Facture de sous-traitance (déboursé)",
+      "AVOIR_ST": "Avoir de sous-traitance",
+      "RESERVATION_STOCK": "Réservation de stock (engagé)",
+      "MOUVEMENT_STOCK": "Mouvement de stock (déboursé)"
+    },
+    "faits": {
+      "titre": "Faits {{code}}",
+      "fenetre": "Ouvrir dans une nouvelle fenêtre",
+      "jusquau": "jusqu'au {{date}}"
+    },
+    "rapprochement": {
+      "aide": "Pour chaque pièce ou source : le total qu'elle montre et la somme des faits qu'elle a produits. Un écart signale un oubli ou une règle à revoir.",
+      "ecarts_seuls": "Écarts seulement",
+      "retour": "Détail du chantier",
+      "piece": "Pièce",
+      "indicateur": "Indicateur",
+      "champ": "Montant",
+      "attendu": "Total de la pièce",
+      "faits": "Somme des faits",
+      "ecart": "Écart",
+      "ecart_titre": "La somme des faits diffère du total de la pièce",
+      "aucun_ecart": "Aucun écart : chaque pièce est entièrement représentée par ses faits.",
+      "aucune": "Aucune pièce."
+    },
+    "parametres": {
+      "roles": "Rôle des types de pièce",
+      "roles_aide": "Le rôle dit comment une pièce d'un type entre dans les indicateurs ; sans rôle, le type est ignoré.",
+      "type": "Type",
+      "famille": "Famille",
+      "role": "Rôle",
+      "taux": "Taux horaire moyen par service",
+      "taux_aide": "Valorise les pointages sans coût horaire et les tâches planifiées (signalés dans « À vérifier »).",
+      "service": "Service",
+      "taux_horaire": "Taux horaire",
+      "coefs": "Coefficients de frais généraux",
+      "coefs_aide": "Prix de revient = prix d'achat × coefficient, par nature (vide : toutes) à partir d'une date.",
+      "nature": "Nature",
+      "toutes": "Toutes les natures",
+      "depuis": "Depuis le",
+      "coef": "Coefficient",
+      "ajouter": "Coefficient",
+      "retirer": "Retirer",
+      "enregistre": "Paramètres enregistrés : les chantiers ouverts sont mis en file de recalcul",
+      "recalcul": "Toute modification remet les chantiers ouverts dans la file de recalcul.",
+      "lecture": "Consultation : seul un administrateur modifie ces paramètres."
+    }
+  },
   "erreurs": {
     "ACOMPTE_EMIS": "La facture ou le reçu de cet acompte existe déjà",
     "AFF_BOUCLE": "Matériels porteurs en boucle : le porteur choisi est lui-même porté par ce matériel",
@@ -7903,6 +8066,9 @@
     "PLAN_NATURE": "Nature inconnue",
     "PV_AFFICHE_FIXE": "Le PV affiché fixe est réservé aux lignes de prix",
     "REL_LIE": "Relevé introuvable ou lié à un événement ou à un ordre",
+    "RENTABILITE_COEF": "Un coefficient de frais généraux est strictement positif",
+    "RENTABILITE_COEF_DOUBLON": "Deux coefficients pour la même nature à la même date",
+    "RENTABILITE_TAUX": "Un taux horaire est positif ou nul",
     "REV_FERME": "Marché à prix ferme : aucune révision",
     "REV_RIEN": "Aucune régularisation de révision à facturer",
     "REV_SOUS_TRAITANCE": "Marché de sous-traitance : la régularisation passe sur la facture d'avancement suivante",
