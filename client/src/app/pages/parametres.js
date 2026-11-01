@@ -1,9 +1,11 @@
 import { texte, texteHtml, icone, iconeHtml } from '@logibtp/socle/dictionnaire';
 import { PageBase } from '@logibtp/navigation';
-import { echapper, THEMES, DENSITES, lirePreferences, ecrirePreferences } from '@logibtp/socle/ui';
+import { echapper, THEMES, DENSITES, lirePreferences, ecrirePreferences, creerCombo } from '@logibtp/socle/ui';
 import { MODES_REMISE } from '@logibtp/document/ui';
 import { DISPOSITION_MENU, LARGEUR_MENU } from '@logibtp/navigation/ui';
 import { VERSION_MOTEUR } from '../../calcul/index.js';
+import { NAVIGATIONS } from '../terrain/terrain.js';
+import { MODULE_FACULTATIF } from '../codes.js';
 
 /** Paramètres : préférences de navigation, profil (démo), listes, fiches, GED, société, à propos. */
 export class PageParametres extends PageBase {
@@ -17,6 +19,8 @@ export class PageParametres extends PageBase {
     const societe = app.societe ?? {};
     const menu = app.bandeau.disposition;
     const remisesPct = lirePreferences().remises === MODES_REMISE.POURCENTAGE;
+    // Application de terrain (préférences du navigateur) : même condition que le menu « Mon terrain ».
+    const terrain = app.moduleActif(MODULE_FACULTATIF.PLANNING) !== false && app.acces('terrain');
     this.conteneur.innerHTML = `<div class="page-parametres">
       <h1 class="page-titre">${iconeHtml('parametres_btp_page')} ${texteHtml('parametres_btp.general.titre')}</h1>
       <section class="carte"><h2>${texteHtml('parametres_btp.general.affichage')}</h2>
@@ -50,6 +54,12 @@ export class PageParametres extends PageBase {
         <p class="aide">${texteHtml('parametres_btp.general.raccourcis.aide')}</p>
         <p><a href="/parametres/raccourcis">${iconeHtml('parametres_btp_raccourcis')} ${texteHtml('parametres_btp.general.raccourcis.lien')}</a></p>
       </section>
+      ${terrain ? `<section class="carte" id="terrain"><h2>${iconeHtml('terrain_btp_page')} ${texteHtml('terrain_btp.reglages.titre')}</h2>
+        <p class="ligne">${texteHtml('terrain_btp.page.navigation')} <span data-navigation-terrain></span></p>
+        <p class="aide">${texteHtml('terrain_btp.page.navigation_aide')}</p>
+        <label class="ligne"><input type="checkbox" data-presaisie-terrain ${lirePreferences().terrainPresaisie ? 'checked' : ''}> ${texteHtml('terrain_btp.page.presaisie')}</label>
+        <p><a href="/terrain">${iconeHtml('terrain_btp_page')} ${texteHtml('terrain_btp.reglages.retour')}</a></p>
+      </section>` : ''}
       <section class="carte"><h2>${texteHtml('parametres_btp.general.navigation.titre')}</h2>
         <label class="ligne"><input type="checkbox" data-pref="nouvelleFenetre" ${app.preferences.get('nouvelleFenetre') ? 'checked' : ''}>
           ${texteHtml('parametres_btp.general.navigation.nouvelle_fenetre')}</label>
@@ -95,6 +105,13 @@ export class PageParametres extends PageBase {
       app.changerMenu({ [champ.dataset.menu]: champ.type === 'checkbox' ? champ.checked : Number(champ.value) });
       champ.value = champ.type === 'checkbox' ? champ.value : app.bandeau.disposition.largeur;
     });
+    if (terrain) {
+      const n = lirePreferences().terrainNavigation;
+      const nav = creerCombo({ options: Object.entries(NAVIGATIONS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: NAVIGATIONS[n] ? n : 'AUTO', vide: false });
+      nav.addEventListener('change', () => ecrirePreferences({ terrainNavigation: nav.valeurCombo }));
+      this.conteneur.querySelector('[data-navigation-terrain]').append(nav);
+      this.conteneur.querySelector('[data-presaisie-terrain]').addEventListener('change', (e) => ecrirePreferences({ terrainPresaisie: e.target.checked }));
+    }
     this.conteneur.querySelector('[data-pref="nouvelleFenetre"]').addEventListener('change', (e) => app.preferences.set('nouvelleFenetre', e.target.checked));
     this.conteneur.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-action]');

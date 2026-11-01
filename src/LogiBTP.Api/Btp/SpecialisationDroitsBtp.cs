@@ -68,6 +68,10 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
             new("planning", "Planning", Simple, Icone: "📆"),
             new("terrain", "Application de terrain", [ActionsDroits.Consulter], Icone: "📱", Aide: "Ses tâches du planning, leur adresse, leur contact et les pièces diffusées sur le terrain"),
             new("terrain/livraison", "Réception de livraison sur le terrain", [ActionsDroits.Creer], Aide: "Bon de livraison en brouillon depuis une commande du chantier, validé au bureau"),
+            new("terrain/demande", "Demandes d'approvisionnement sur le terrain", [ActionsDroits.Consulter, ActionsDroits.Creer],
+                Aide: "Créer : demande depuis une tâche (ordre E_DAP brouillon) ; Consulter : onglet « Mes demandes »"),
+            new("terrain/avancement", "Avancement des tâches sur le terrain", [ActionsDroits.Creer], Aide: "Avancement réel daté d'une tâche de son planning"),
+            new("terrain/materiel", "Pointage des matériels sur le terrain", [ActionsDroits.Creer], Aide: "Heures d'engin, compteurs et pleins des matériels d'une tâche"),
             new("mail", "Messagerie", Simple, Icone: "📧"),
             new("connexions", "Connexions externes (OAuth)", Simple, Icone: "🔐"),
             new("administration", "Administration", Lecture, Icone: "⚙"),
@@ -155,6 +159,7 @@ public sealed class SpecialisationDroitsBtp : SpecialisationDroits
         // Réception de pose et demande d'approvisionnement : ordres et chantiers de son planning (contrôlé par la route ;
         // la demande crée un ordre E_DAP sous le droit CREER de son type).
         new("/api/terrain/receptions", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
+        // Demandes : nœud terrain/demande (Consulter : ses demandes ; Créer : nouvelle demande, posé par la route).
         new("/api/terrain/demandes", ModeRoute.Action, "terrain", ActionsDroits.Consulter),
         // SAV du terrain : droit à part, refusé par défaut (T20).
         new("/api/terrain/sav", ModeRoute.Module, "execution/sav"),

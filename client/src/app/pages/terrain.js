@@ -2,16 +2,18 @@ import { texte, texteHtml, pluriel, icone, iconeHtml, textesParCode } from '@log
 import { aujourdhui, ajouterJours, ACTION_DROIT } from '@logibtp/socle';
 import { PageBase } from '@logibtp/navigation';
 import { EcranEtapesAtelier } from '@logibtp/execution/ui';
-import { MODULE_FACULTATIF, TYPE_DOCUMENT } from '../codes.js';
-import { echapper, creerCombo, lirePreferences, ecrirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
+import { ecrireDuree } from '@logibtp/pointage';
+import { MODULE_FACULTATIF, TYPE_DOCUMENT, TYPE_FICHE } from '../codes.js';
+import { echapper, lirePreferences, formatDate, confirmer } from '@logibtp/socle/ui';
 import { api } from '../api.js';
 import { ETATS_TACHE, COULEURS_ETAT } from '../planning/etats.js';
-import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger } from '../terrain/terrain.js';
+import { NAVIGATIONS, lundiDe, mobileAffiche, lienItineraire, liensTexte, numeroTel, adressesAPrecharger, actionsTache, minutesPointees, tachesGardees, jourPointage } from '../terrain/terrain.js';
 import { PointageTerrain } from '../terrain/pointage-terrain.js';
 import { SavTerrain } from '../terrain/sav-terrain.js';
+import { DemandesTerrain } from '../terrain/demandes-terrain.js';
 import { recevoirLivraison, pointerMateriel } from '../terrain/complements-terrain.js';
 import { saisirAvancement, envoyerPhotos, signalerNonConformite, demanderApprovisionnement } from '../terrain/actions-tache.js';
-import { fournisseurEtapes } from '../terrain/operations-terrain.js';
+import { fournisseurEtapes, OPERATION_TERRAIN } from '../terrain/operations-terrain.js';
 import { listeOperations, marquerOperation, retirerOperation } from '../hors-ligne/operations.js';
 import { estHorsLigne, ETAT_ATTENTE } from '../hors-ligne/attente.js';
 import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
@@ -23,9 +25,17 @@ import { SUJET_ATTENTE } from '../hors-ligne/synchro.js';
 // non-conformité depuis la carte d'une tâche (terrain/actions-tache.js) ; lot 4 : saisies gardées sur l'appareil hors
 // ligne (terrain/operations-terrain.js), listées en tête (refusées : réessayer, abandonner), lectures de la période
 // préchargées une fois par jour pour être consultées sans réseau ; lot 6 : onglet SAV (droit execution/sav).
+// Évolutions du 01/11/2026 : raccourcis de la carte vers le pointage de la tâche et le fil du chantier, tâche pointée
+// signalée (minutes du jour, ou journée gardée sur l'appareil), aujourd'hui encadré dans la semaine, liste défilante,
+// actions soumises aux droits terrain/demande, avancement, materiel, livraison, onglet Mes demandes ; réglages
+// (application de navigation, présaisie) dans les préférences (/parametres#terrain).
 
-const ONGLETS = textesParCode('terrain_btp.page.onglets', ['jour', 'semaine', 'pointage', 'ordres', 'sav']);
-const ICONES_ONGLET = { pointage: 'pointage_saisie', ordres: 'pointage_ordre', sav: 'terrain_btp_sav' };
+const ONGLETS = textesParCode('terrain_btp.page.onglets', ['jour', 'semaine', 'pointage', 'ordres', 'sav', 'demandes']);
+const ICONES_ONGLET = { pointage: 'pointage_saisie', ordres: 'pointage_ordre', sav: 'terrain_btp_sav', demandes: 'terrain_btp_demande' };
+/** Onglets sans période (pas de barre jour / semaine). */
+const SANS_PERIODE = new Set(['ordres', 'sav', 'demandes']);
+/** Nœud de droits et action de chaque action d'une tâche soumise à un droit propre. */
+const DROITS_ACTION = { avancement: 'terrain/avancement', demande: 'terrain/demande', materiel: 'terrain/materiel', livraison: 'terrain/livraison' };
 
 const jourDe = (instant) => instant.slice(0, 10);
 const heureDe = (instant) => instant.slice(11, 16);
@@ -43,19 +53,19 @@ export class PageTerrain extends PageBase {
     this.titre = texte('terrain_btp.page.titre');
     // Onglets Ordres et SAV : module Exécution actif seulement ; SAV : droit à part, refusé par défaut (T20).
     const execution = this.app.moduleActif(MODULE_FACULTATIF.EXECUTION);
-    this.onglets = Object.fromEntries(Object.entries(ONGLETS).filter(([cle]) => (cle !== 'ordres' && cle !== 'sav') || (execution && (cle === 'ordres' || this.app.peut('execution/sav', ACTION_DROIT.CONSULTER)))));
+    // Mes demandes : droit de consulter terrain/demande.
+    const permis = { ordres: execution, sav: execution && this.app.peut('execution/sav', ACTION_DROIT.CONSULTER), demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER) };
+    this.onglets = Object.fromEntries(Object.entries(ONGLETS).filter(([cle]) => !(cle in permis) || permis[cle]));
+    this.gardees = new Set();
     this.onglet = this.onglets[this.requete.onglet] ? this.requete.onglet : 'jour';
     this.jour = /^\d{4}-\d{2}-\d{2}$/.test(this.requete.jour ?? '') ? this.requete.jour : aujourdhui();
-    this.conteneur.innerHTML = `<div class="page-terrain">
-      <div class="terrain-entete"><h1 class="page-titre">${iconeHtml('terrain_btp_page')} ${texteHtml('terrain_btp.page.titre')}</h1><span class="aide" data-personne></span></div>
+    this.conteneur.innerHTML = `<div class="page-terrain" data-terrain>
       <nav class="terrain-onglets" role="tablist">${Object.entries(this.onglets).map(([cle, l]) => `<button type="button" role="tab" data-onglet="${cle}">${ICONES_ONGLET[cle] ? `${iconeHtml(ICONES_ONGLET[cle])} ` : ''}${echapper(l)}</button>`).join('')}</nav>
       <div class="terrain-periode" data-barre-periode><button type="button" data-decaler="-1" aria-label="${texteHtml('terrain_btp.page.precedente')}">${iconeHtml('precedent')}</button><b data-periode></b>
-        <button type="button" data-decaler="1" aria-label="${texteHtml('terrain_btp.page.suivante')}">${iconeHtml('suivant')}</button><button type="button" data-aujourdhui>${texteHtml('terrain_btp.page.onglets.jour')}</button></div>
+        <button type="button" data-decaler="1" aria-label="${texteHtml('terrain_btp.page.suivante')}">${iconeHtml('suivant')}</button><button type="button" data-aujourdhui>${texteHtml('terrain_btp.page.onglets.jour')}</button>
+        <a class="terrain-bouton" href="/parametres#terrain" data-reglages aria-label="${texteHtml('terrain_btp.page.reglages')}" title="${texteHtml('terrain_btp.page.reglages')}">${iconeHtml('terrain_btp_reglages')}</a></div>
       <div data-attentes></div>
       <div class="terrain-liste" data-liste></div>
-      <details class="terrain-reglages"><summary>${iconeHtml('terrain_btp_reglages')} ${texteHtml('terrain_btp.page.itineraire')}</summary><p class="ligne">${texteHtml('terrain_btp.page.navigation')} <span data-navigation></span></p>
-        <p class="aide">${texteHtml('terrain_btp.page.navigation_aide')}</p>
-        <label class="coche"><input type="checkbox" data-presaisie> ${texteHtml('terrain_btp.page.presaisie')}</label></details>
     </div>`;
     const $ = (s) => this.conteneur.querySelector(s);
     // Changement d'onglet ou de jour : une journée pointée non enregistrée est d'abord confirmée.
@@ -66,18 +76,15 @@ export class PageTerrain extends PageBase {
     })));
     $('[data-aujourdhui]').addEventListener('click', () => aller(() => { this.jour = aujourdhui(); }));
     this.pointage = new PointageTerrain($('[data-liste]'), { app: this.app, modifiee: (m) => { this.#modifiee = m; } });
-    const nav = creerCombo({ options: Object.entries(NAVIGATIONS).map(([valeur, libelle]) => ({ valeur, libelle })), valeur: this.#navigation(), vide: false });
-    nav.addEventListener('change', () => { ecrirePreferences({ terrainNavigation: nav.valeurCombo }); this.#rendre(); });
-    $('[data-navigation]').append(nav);
-    $('[data-presaisie]').checked = Boolean(lirePreferences().terrainPresaisie);
-    $('[data-presaisie]').addEventListener('change', (e) => ecrirePreferences({ terrainPresaisie: e.target.checked }));
-    // Actions d'une carte de tâche (avancement, photos, non-conformité).
+    // Actions d'une carte de tâche (pointage, avancement, photos, non-conformité, demande, matériel, livraison, fil).
     $('[data-liste]').addEventListener('click', async (e) => {
       const b = e.target.closest('[data-action-tache]');
       if (!b) return;
       const t = this.donnees?.taches.find((x) => x.id === Number(b.dataset.tache));
       if (!t) return;
-      if (b.dataset.actionTache === 'avancement') await saisirAvancement(this.app, t);
+      if (b.dataset.actionTache === 'pointage') await aller(() => { this.onglet = 'pointage'; this.jour = b.dataset.jour; this.tacheAPointer = t.id; });
+      else if (b.dataset.actionTache === 'fil') this.app.naviguer(`/crm/fil?type=${TYPE_FICHE.CHANTIER}&id=${t.chantier.id}`);
+      else if (b.dataset.actionTache === 'avancement') await saisirAvancement(this.app, t);
       else if (b.dataset.actionTache === 'photos') await envoyerPhotos(this.app, t);
       else if (b.dataset.actionTache === 'nc') await signalerNonConformite(this.app, t, this.donnees.motifs ?? []);
       else if (b.dataset.actionTache === 'demande') await demanderApprovisionnement(this.app, t);
@@ -85,7 +92,10 @@ export class PageTerrain extends PageBase {
       else if (b.dataset.actionTache === 'materiel') await pointerMateriel(this.app, t);
       else if (b.dataset.actionTache === 'reception') this.app.naviguer(`/terrain/reception/${t.ordre.id}`);
     });
-    this.desabonner = this.app.abonner(SUJET_ATTENTE, () => this.#rendreAttentes());
+    this.desabonner = this.app.abonner(SUJET_ATTENTE, async () => {
+      this.#rendreAttentes();
+      if (this.donnees && (this.onglet === 'jour' || this.onglet === 'semaine')) { await this.#lireGardees(); this.#rendre(); }
+    });
     this.#rendreAttentes();
     await this.#charger();
     this.#precharger();
@@ -130,7 +140,7 @@ export class PageTerrain extends PageBase {
     const premier = await lire(`/api/terrain?${new URLSearchParams({ du: jour, au: jour })}`);
     if (!premier?.personne) return;
     const pieces = new Set();
-    for (const url of adressesAPrecharger(jour, premier.personne.id)) {
+    for (const url of adressesAPrecharger(jour, premier.personne.id, { demandes: this.app.peut('terrain/demande', ACTION_DROIT.CONSULTER) })) {
       const r = await lire(url);
       for (const t of r?.taches ?? []) for (const p of t.pieces ?? []) pieces.add(p.id);
     }
@@ -154,8 +164,15 @@ export class PageTerrain extends PageBase {
     this.conteneur.querySelector('[data-periode]').textContent = du === au ? nomJour(du) : texte('terrain_btp.page.periode', { du: formatDate(du), au: formatDate(au) });
     this.app.routeur?.remplacerUrl(this.urlCourante());
     this.#modifiee = false;
-    this.conteneur.querySelector('[data-barre-periode]').hidden = this.onglet === 'ordres' || this.onglet === 'sav';
-    if (this.onglet === 'pointage') { await this.pointage.ouvrir(du); return; }
+    this.conteneur.querySelector('[data-barre-periode]').hidden = SANS_PERIODE.has(this.onglet);
+    this.conteneur.querySelector('[data-liste]').scrollTop = 0;
+    if (this.onglet === 'pointage') {
+      const tache = this.tacheAPointer ?? null;
+      this.tacheAPointer = null;
+      await this.pointage.ouvrir(du, { tache });
+      return;
+    }
+    if (this.onglet === 'demandes') { await new DemandesTerrain(this.conteneur.querySelector('[data-liste]'), { app: this.app }).ouvrir(); return; }
     if (this.onglet === 'sav') { await new SavTerrain(this.conteneur.querySelector('[data-liste]'), { app: this.app }).ouvrir(); return; }
     if (this.onglet === 'ordres') {
       await new EcranEtapesAtelier(this.conteneur.querySelector('[data-liste]'), fournisseurEtapes(this.app, () => api.terrain.etapes()), { titre: `${icone('pointage_ordre')} ${texte('terrain_btp.page.ordres')}`, message: (t, n) => this.app.message(t, n) }).ouvrir();
@@ -163,6 +180,7 @@ export class PageTerrain extends PageBase {
     }
     try {
       this.donnees = await api.terrain.taches(du, au);
+      await this.#lireGardees();
     } catch (e) {
       if (!estHorsLigne(e)) { this.app.erreur(e); return; }
       this.donnees = null;
@@ -172,34 +190,68 @@ export class PageTerrain extends PageBase {
     this.#rendre();
   }
 
+  /** Journées de pointage gardées sur l'appareil (pas encore envoyées) : leurs tâches sont signalées pointées. */
+  async #lireGardees() {
+    const ops = await listeOperations(this.app.utilisateur()).catch(() => []);
+    this.gardees = tachesGardees(ops.filter((o) => o.type === OPERATION_TERRAIN.JOURNEE));
+  }
+
   #rendre() {
     const d = this.donnees;
     if (!d) return;
     const liste = this.conteneur.querySelector('[data-liste]');
-    this.conteneur.querySelector('[data-personne]').textContent = d.personne?.libelle ?? '';
     if (!d.personne) {
       liste.innerHTML = `<p class="carte avertissement">${texteHtml('terrain_btp.page.sans_salarie')}</p>`;
       return;
     }
-    if (!d.taches.length) {
-      liste.innerHTML = `<p class="terrain-vide">${texteHtml(this.onglet === 'jour' ? 'terrain_btp.page.aucune_jour' : 'terrain_btp.page.aucune_semaine')}</p>`;
+    if (this.onglet === 'jour') {
+      liste.innerHTML = d.taches.length ? d.taches.map((t) => this.#carte(t, this.jour)).join('') : `<p class="terrain-vide">${texteHtml('terrain_btp.page.aucune_jour')}</p>`;
       return;
     }
-    if (this.onglet === 'jour') { liste.innerHTML = d.taches.map((t) => this.#carte(t)).join(''); return; }
-    // Semaine : tâches regroupées par jour (une tâche de plusieurs jours sous chacun de ses jours).
+    // Semaine : tâches regroupées par jour (une tâche de plusieurs jours sous chacun de ses jours) ; aujourd'hui encadré,
+    // affiché même sans tâche, et amené en tête de la liste.
+    const today = aujourdhui();
     const jours = Array.from({ length: 7 }, (_, i) => ajouterJours(d.du, i));
     liste.innerHTML = jours.map((j) => {
       const taches = d.taches.filter((t) => t.debut < `${ajouterJours(j, 1)}T00:00` && t.fin > `${j}T00:00`);
-      return taches.length ? `<h2 class="terrain-jour">${echapper(nomJour(j))}</h2>${taches.map((t) => this.#carte(t)).join('')}` : '';
+      if (!taches.length && j !== today) return '';
+      return `<section class="terrain-journee${j === today ? ' terrain-aujourdhui' : ''}"${j === today ? ' aria-current="date"' : ''}>
+        <h2 class="terrain-jour">${echapper(nomJour(j))}${j === today ? ` <small>${texteHtml('terrain_btp.page.aujourdhui')}</small>` : ''}</h2>
+        ${taches.length ? taches.map((t) => this.#carte(t, j)).join('') : `<p class="aide">${texteHtml('terrain_btp.page.aucune_jour')}</p>`}</section>`;
     }).join('') || `<p class="terrain-vide">${texteHtml('terrain_btp.page.aucune_semaine')}</p>`;
+    const cadre = liste.querySelector('.terrain-aujourdhui');
+    if (cadre && d.taches.length) liste.scrollTop = cadre.offsetTop - liste.offsetTop;
   }
 
-  /** Carte d'une tâche : résumé (horaires, chantier, ordre, état), détail dépliable (lieu, contact, consignes, pièces). */
-  #carte(t) {
+  /** Droits des actions d'une tâche (pointage : droit de saisie de ses heures, fil : module CRM et son droit). */
+  #droitsActions() {
+    const a = this.app;
+    return {
+      ...Object.fromEntries(Object.entries(DROITS_ACTION).map(([cle, noeud]) => [cle, a.peut(noeud, ACTION_DROIT.CREER)])),
+      pointage: a.peut('pointage', ACTION_DROIT.MODIFIER),
+      fil: a.moduleActif(MODULE_FACULTATIF.CRM) && a.acces('crm'),
+    };
+  }
+
+  /**
+   * Carte d'une tâche affichée sous le jour `jour` : résumé (horaires, chantier, ordre, état, pointage du jour), détail
+   * dépliable (lieu, contact, consignes, actions, pièces).
+   */
+  #carte(t, jour) {
     const m = mobileAffiche(t, this.donnees.chantiers);
     const plusieursJours = jourDe(t.debut) !== jourDe(t.fin.endsWith('T00:00') ? ajouterJours(jourDe(t.fin), -1) : t.fin);
     const horaires = plusieursJours ? `${formatDate(jourDe(t.debut))} ${heureDe(t.debut)} → ${formatDate(jourDe(t.fin))} ${heureDe(t.fin)}` : `${heureDe(t.debut)} – ${heureDe(t.fin)}`;
     const etat = t.etat ? `<span class="terrain-etat" style="--couleur:${COULEURS_ETAT[t.etat] ?? COULEURS_ETAT.OPTION}">${echapper(ETATS_TACHE[t.etat] ?? t.etat)}</span>` : '';
+    // Pointage du jour : minutes enregistrées, sinon journée gardée sur l'appareil (envoyée au retour du réseau).
+    const minutes = minutesPointees(t, jour);
+    const gardee = !minutes && this.gardees.has(`${jour}|${t.id}`);
+    const pointee = minutes ? `<span class="terrain-pointee" title="${texteHtml('terrain_btp.page.pointee_aide')}">${iconeHtml('pointage_saisie')} ${texteHtml('terrain_btp.page.pointee', { duree: ecrireDuree(minutes) })}</span>`
+      : gardee ? `<span class="terrain-pointee gardee" title="${texteHtml('terrain_btp.page.pointee_gardee_aide')}">${iconeHtml('terrain_btp_attente')} ${texteHtml('terrain_btp.page.pointee_gardee')}</span>` : '';
+    const today = aujourdhui();
+    const droits = this.#droitsActions();
+    if (t.debut.slice(0, 10) > today) droits.pointage = false;
+    const actions = actionsTache(t, droits, { pose: t.ordre?.type === TYPE_DOCUMENT.E_PO });
+    const jourPointer = jourPointage(t, jour, today);
     const herite = (c) => (c.herite ? ` <small class="aide">${texteHtml('terrain_btp.page.herite')}</small>` : '');
     const tel = m.telephone && numeroTel(m.telephone.valeur);
     const liens = liensTexte(m.liens);
@@ -212,15 +264,13 @@ export class PageTerrain extends PageBase {
       liens.length && `<ul class="terrain-liens">${liens.map((l) => `<li>${l.url ? `<a href="${echapper(l.url)}" target="_blank" rel="noopener noreferrer">${iconeHtml('terrain_btp_lien')} ${echapper(l.libelle)}</a>` : echapper(l.texte)}</li>`).join('')}</ul>`,
       t.equipiers.length && `<p>${iconeHtml('pointage_equipe')} ${t.equipiers.map(echapper).join(', ')}</p>`,
       t.memo && `<p class="aide">${echapper(t.memo)}</p>`,
-      t.chantier && `<div class="terrain-actions">${['avancement', 'photos', 'nc', 'demande', 'materiel',
-        ...(this.app.peut('terrain/livraison', ACTION_DROIT.CREER) ? ['livraison'] : []),
-        ...(t.ordre?.type === TYPE_DOCUMENT.E_PO ? ['reception'] : [])]
-        .map((a) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}">${iconeHtml(`terrain_btp_${a}`)} ${texteHtml(`terrain_btp.page.actions.${a}`)}</button>`).join('')}</div>`,
+      actions.length && `<div class="terrain-actions">${actions
+        .map((a) => `<button type="button" class="terrain-bouton" data-action-tache="${a}" data-tache="${t.id}"${a === 'pointage' ? ` data-jour="${jourPointer}"` : ''}>${iconeHtml(`terrain_btp_${a}`)} ${texteHtml(`terrain_btp.page.actions.${a}`)}</button>`).join('')}</div>`,
       t.pieces.length && `<div class="terrain-pieces"><b>${texteHtml('terrain_btp.page.pieces')}</b>${t.pieces.map((p) => `<a class="terrain-piece" href="${echapper(api.terrain.urlPiece(p.id))}" target="_blank" rel="noopener">
         ${iconeHtml('terrain_btp_piece')} <span>${echapper(p.titre)}</span><small class="aide">${echapper([p.nom_fichier, taille(p.taille)].filter(Boolean).join(' · '))}</small></a>`).join('')}</div>`,
     ].filter(Boolean);
-    return `<details class="terrain-tache" style="--couleur:${echapper(t.couleur ?? 'var(--terrain-tache)')}" ${this.onglet === 'jour' ? 'open' : ''}>
-      <summary><span class="terrain-horaires">${echapper(horaires)}</span> ${etat}
+    return `<details class="terrain-tache${minutes || gardee ? ' terrain-tache-pointee' : ''}" style="--couleur:${echapper(t.couleur ?? 'var(--terrain-tache)')}" ${this.onglet === 'jour' ? 'open' : ''}>
+      <summary><span class="terrain-horaires">${echapper(horaires)}</span> ${etat} ${pointee}
         <b class="terrain-libelle">${echapper(t.libelle)}</b>
         <span class="terrain-element">${t.chantier ? `${iconeHtml('terrain_btp_chantier')} ${echapper(`${t.chantier.code} ${t.chantier.libelle}`)}` : ''}${t.ordre ? ` · ${iconeHtml('pointage_ordre')} ${echapper(t.ordre.numero ?? t.ordre.type)}` : ''}${t.service ? ` · ${echapper(t.service)}` : ''}</span></summary>
       <div class="terrain-detail">${lignes.join('') || `<p class="aide">${texteHtml('terrain_btp.page.sans_information')}</p>`}</div>

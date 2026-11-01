@@ -13,7 +13,8 @@ namespace LogiBTP.Api.Btp;
 /// partie mobile (<c>tac_mobile</c> : adresse, contact, commentaire, liens), les valeurs par défaut de leur chantier
 /// (adresse des travaux, contact sur place et son téléphone) et les pièces de la GED diffusées sur le terrain
 /// (<c>dge_terrain</c>) du chantier, de ses marchés et de l'ordre d'origine de la tâche (ordre ou étape d'ordre).
-/// Pièces confidentielles, secrètes ou à accès restreint jamais proposées. Routes <c>/api/terrain</c> (nœud « terrain »).
+/// Pièces confidentielles, secrètes ou à accès restreint jamais proposées. Minutes pointées par la personne sur chaque
+/// tâche, par jour de la période (état visuel des cartes). Routes <c>/api/terrain</c> (nœud « terrain »).
 /// </summary>
 public static partial class TerrainBtp
 {
@@ -71,6 +72,9 @@ public static partial class TerrainBtp
                   'ordre', CASE WHEN x.ent_id IS NOT NULL THEN json_build_object('id', x.ent_id, 'numero', x.ent_numero, 'objet', x.ent_objet, 'type', x.tyd_code) END,
                   'equipiers', (SELECT coalesce(json_agg(r.libelle ORDER BY r.libelle), '[]') FROM pla_affectation a JOIN v_ressource r ON r.type = a.aff_res_type AND r.id = a.aff_res_id
                                 WHERE a.aff_tac_id = x.tac_id AND NOT (a.aff_res_type IN ('SALARIE', 'INTERIM') AND a.aff_res_id = @s::text)),
+                  'pointages', (SELECT coalesce(json_agg(json_build_object('date', p.jour, 'minutes', p.minutes) ORDER BY p.jour), '[]')
+                                FROM (SELECT to_char(poi_date, 'YYYY-MM-DD') AS jour, sum(poi_minutes)::int AS minutes FROM poi_pointage
+                                      WHERE poi_tac_id = x.tac_id AND poi_sal_id = @s AND poi_couche = 'SAISIE' AND poi_date BETWEEN @du::date AND @au::date GROUP BY poi_date) p),
                   'pieces', (SELECT coalesce(json_agg(json_build_object('id', g.dge_id, 'titre', g.dge_titre, 'categorie', g.dge_categorie, 'element', g.dge_type_element,
                                'nom_fichier', v.vge_nom_fichier, 'type_mime', v.vge_type_mime, 'taille', v.vge_taille) ORDER BY g.dge_titre), '[]')
                              FROM document_ged g

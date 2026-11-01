@@ -38,7 +38,8 @@ export class PointageTerrain {
     this.modifiee = modifiee;
   }
 
-  async ouvrir(jour) {
+  /** Journée `jour` ; `tache` : raccourci depuis la carte d'une tâche (ligne ajoutée si elle manque, puis montrée). */
+  async ouvrir(jour, { tache = null } = {}) {
     this.jour = jour;
     this.operation = await lireOperation(this.app.utilisateur(), OPERATION_TERRAIN.JOURNEE, jour).catch(() => null);
     try {
@@ -55,6 +56,9 @@ export class PointageTerrain {
     const presaisie = !this.operation && !this.lignes.length && !this.d.valide && lirePreferences().terrainPresaisie && jour <= aujourdhui()
       ? presaisirJournee(this.d.taches ?? [], this.d.minutes_prevues, this.#pas) : [];
     this.lignes.push(...presaisie);
+    const t = tache && !this.d.valide ? this.#tache(tache) : null;
+    const ajoutee = Boolean(t && !this.lignes.some((l) => l.tac_id === t.id));
+    if (ajoutee) this.lignes.push(this.#ligneTache(t));
     this.desabonner?.();
     this.desabonner = this.app.abonner(SUJET_ATTENTE, async () => {
       if (!this.operation || !this.zone.isConnected) return;
@@ -64,8 +68,21 @@ export class PointageTerrain {
     });
     this.repas = null;
     if (this.d.personne) api.pointage.repas(this.d.personne.id, jour, jour).then((r) => { this.repas = r[0] ?? null; this.#rendreRepas(); }).catch(() => {});
-    this.modifiee(presaisie.length > 0);
+    this.modifiee(presaisie.length > 0 || ajoutee);
     this.#rendre();
+    const i = tache ? this.lignes.findIndex((l) => l.tac_id === tache) : -1;
+    const bloc = i >= 0 ? this.zone.querySelector(`.terrain-saisie[data-i="${i}"]`) : null;
+    if (bloc) {
+      bloc.scrollIntoView?.({ block: 'center' });
+      bloc.classList.add('signale');
+      bloc.querySelector('[data-minutes]:not([readonly])')?.focus({ preventScroll: true });
+    }
+  }
+
+  /** Nouvelle ligne d'une tâche du jour (chef : membres de l'équipe cochés). */
+  #ligneTache(t) {
+    return { id: null, tac_id: t.id, cha_id: t.cha_id, ent_id: t.ent_id, type_mo: t.type_mo, sous_type: null, minutes: null, motif: null, commentaire: null,
+      membres: t.chef ? t.membres.map((m) => m.id) : [], groupe: null, nb_groupe: 0, equipe: false };
   }
 
   get #pas() { return referentiels?.parametres?.pas_minutes ?? 0; }
@@ -98,9 +115,7 @@ export class PointageTerrain {
     </div>`;
     const $ = (s) => this.zone.querySelector(s);
     this.zone.querySelectorAll('[data-pointer]').forEach((b) => b.addEventListener('click', () => {
-      const t = this.#tache(Number(b.dataset.pointer));
-      this.lignes.push({ id: null, tac_id: t.id, cha_id: t.cha_id, ent_id: t.ent_id, type_mo: t.type_mo, sous_type: null, minutes: null, motif: null, commentaire: null,
-        membres: t.chef ? t.membres.map((m) => m.id) : [], groupe: null, nb_groupe: 0, equipe: false });
+      this.lignes.push(this.#ligneTache(this.#tache(Number(b.dataset.pointer))));
       this.modifiee(true);
       this.#rendre();
     }));

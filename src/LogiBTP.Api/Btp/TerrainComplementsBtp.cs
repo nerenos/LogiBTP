@@ -131,7 +131,7 @@ public static partial class TerrainBtp
                     """, [new NpgsqlParameter("m", m.MatId), new NpgsqlParameter("c", NpgsqlTypes.NpgsqlDbType.Integer) { Value = (object?)t.ChaId ?? DBNull.Value }, new NpgsqlParameter("t", id),
                         new NpgsqlParameter("s", s), new NpgsqlParameter("d", m.Date), new NpgsqlParameter("n", m.Minutes.Value), SqlBtp.P("x", note), new NpgsqlParameter("u", u.Code)], ct);
             return Results.Ok(new { ok = true });
-        });
+        }).ExigeDroit("terrain/materiel", ActionsDroits.Creer);
         return g;
     }
 

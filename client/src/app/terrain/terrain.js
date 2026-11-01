@@ -117,7 +117,7 @@ export async function preparerPhoto(fichier, { origine = false, max = PHOTO_COTE
  * semaine en cours et de la suivante ; journées de pointage et repas de la semaine en cours ; référentiels du
  * pointage, ordres et étapes. Adresses identiques à celles de la page (le service worker garde les réponses par adresse).
  */
-export function adressesAPrecharger(jour, salarie = null) {
+export function adressesAPrecharger(jour, salarie = null, { demandes = false } = {}) {
   const lundi = lundiDe(jour);
   const jours = Array.from({ length: 14 }, (_, i) => ajouterJours(lundi, i));
   const params = (o) => new URLSearchParams(o).toString();
@@ -127,5 +127,42 @@ export function adressesAPrecharger(jour, salarie = null) {
     ...jours.slice(0, 7).map((d) => `/api/terrain/journee?date=${d}`),
     ...(salarie ? jours.slice(0, 7).map((d) => `/api/pointage/repas/${salarie}?du=${d}&au=${d}`) : []),
     '/api/pointage/referentiels', '/api/terrain/etapes',
+    ...(demandes ? ['/api/terrain/demandes'] : []),
   ];
+}
+
+/** Actions proposées sur la carte d'une tâche, dans l'ordre d'affichage, selon les droits et le contexte. */
+export const ACTIONS_TACHE = Object.freeze(['pointage', 'avancement', 'photos', 'nc', 'demande', 'materiel', 'livraison', 'reception', 'fil']);
+
+/**
+ * Actions d'une tâche : `droits` { pointage, avancement, demande, materiel, livraison, fil } (booléens), `pose` : la tâche
+ * vient d'un ordre de pose (réception signée). Sans chantier : aucune action (tout se rattache au chantier).
+ */
+export function actionsTache(tache, droits = {}, { pose = false } = {}) {
+  if (!tache.chantier) return [];
+  const permis = { photos: true, nc: true, reception: pose };
+  return ACTIONS_TACHE.filter((a) => (a in permis ? permis[a] : Boolean(droits[a])));
+}
+
+/** Minutes pointées par la personne sur la tâche ce jour (0 : rien), d'après `tache.pointages` [{ date, minutes }]. */
+export function minutesPointees(tache, jour) {
+  return (tache.pointages ?? []).filter((p) => p.date === jour).reduce((s, p) => s + (Number(p.minutes) || 0), 0);
+}
+
+/**
+ * Tâches dont une journée gardée sur l'appareil (pas encore envoyée) contient une ligne : clés « jour|tâche ».
+ * `operations` : opérations du terrain de type journée ({ id: jour, corps: { lignes: [{ tac_id, minutes }] } }).
+ */
+export function tachesGardees(operations) {
+  const cles = new Set();
+  for (const o of operations ?? []) for (const l of o.corps?.lignes ?? []) if (l.tac_id && l.minutes > 0) cles.add(`${o.id}|${l.tac_id}`);
+  return cles;
+}
+
+/** Jour où pointer une tâche depuis sa carte : le jour affiché s'il est dans la tâche, sinon son premier jour (jamais à venir). */
+export function jourPointage(tache, jourAffiche, aujourdhui) {
+  const debut = tache.debut.slice(0, 10);
+  const fin = tache.fin.endsWith('T00:00') ? ajouterJours(tache.fin.slice(0, 10), -1) : tache.fin.slice(0, 10);
+  const jour = jourAffiche >= debut && jourAffiche <= fin ? jourAffiche : debut;
+  return jour > aujourdhui ? aujourdhui : jour;
 }
